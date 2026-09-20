@@ -326,7 +326,10 @@ function ComandaView({initial,allTables,busy,currencySymbol,close,save,notify}:{
             </div>
             <div className="salon-comanda-context-stat">
               <small>Personas</small>
-              <b>{selTable?.seats??"—"}</b>
+              <span className="salon-comanda-context-stat-value">
+                <Icon name="users" size={14}/>
+                <b>{selTable?.seats??"—"}</b>
+              </span>
             </div>
           </div>
           <ComandaCatalog qtyByProduct={qtyByProduct} onPick={tap} onRemove={untap} currencySymbol={currencySymbol} variant="salon"/>
