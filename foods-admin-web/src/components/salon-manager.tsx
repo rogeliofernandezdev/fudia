@@ -201,20 +201,17 @@ export function SalonManager(){
           </button>
         </div>
 
-        <div className="salon-filter-row">
-          {zones.length>1?(
-            <>
-              <span className="salon-filter-label">Zona</span>
-              <div className="salon-zones" role="group" aria-label="Filtrar por zona">
-                <button className={"salon-zone"+(zone===""?" active":"")} onClick={()=>setZone("")}>Todas</button>
-                {zones.map(z=>(
-                  <button key={z} className={"salon-zone"+(zone===z?" active":"")} onClick={()=>setZone(z)}>{z}</button>
-                ))}
-              </div>
-            </>
-          ):<span/>}
-          <span className="salon-results-count">Mostrando <b>{visible.length}</b> de <b>{tables.length}</b> mesas</span>
-        </div>
+        {zones.length>1&&(
+          <div className="salon-filter-row">
+            <span className="salon-filter-label">Zona</span>
+            <div className="salon-zones" role="group" aria-label="Filtrar por zona">
+              <button className={"salon-zone"+(zone===""?" active":"")} onClick={()=>setZone("")}>Todas</button>
+              {zones.map(z=>(
+                <button key={z} className={"salon-zone"+(zone===z?" active":"")} onClick={()=>setZone(z)}>{z}</button>
+              ))}
+            </div>
+          </div>
+        )}
       </section>
 
       {/* Floor plan */}
