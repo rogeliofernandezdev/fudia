@@ -103,7 +103,7 @@ export function SalonManager(){
   });
   const cancel=useMutation({
     mutationFn:(o:Order)=>apiFetch<Order>(`orders/${o.id}/status`,{method:"PATCH",body:JSON.stringify({status:"cancelado"})}),
-    onSuccess:()=>{setCancelTarget(null);invalidate();notify({tone:"success",title:"Pedido cancelado",message:"La mesa quedó libre."})},
+    onSuccess:()=>{setCancelTarget(null);invalidate();setDetailId(null);notify({tone:"success",title:"Pedido cancelado",message:"La mesa quedó libre."})},
     onError:e=>notify({tone:"danger",title:"Error",message:e.message}),
   });
 
