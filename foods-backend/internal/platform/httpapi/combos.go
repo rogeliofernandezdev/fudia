@@ -139,8 +139,6 @@ func (a *API) listOrderCombos(w http.ResponseWriter, r *http.Request) {
 		AND (p.available_days IS NULL OR extract(dow FROM now() AT TIME ZONE l.timezone)::integer = ANY(p.available_days))
 		AND (p.available_until_time IS NULL OR (now() AT TIME ZONE l.timezone)::time <= p.available_until_time)
 		AND COALESCE(pa.manual_status,'available') <> 'sold_out'
-		AND (p.stock_mode <> 'manual' OR COALESCE(pa.daily_quota,p.default_daily_quota) IS NULL
-		     OR COALESCE(pa.sold_quantity,0) < COALESCE(pa.daily_quota,p.default_daily_quota))
 		AND NOT EXISTS (
 			SELECT 1
 			FROM menu_combo_groups g
@@ -157,8 +155,18 @@ func (a *API) listOrderCombos(w http.ResponseWriter, r *http.Request) {
 				  AND (op.available_days IS NULL OR extract(dow FROM now() AT TIME ZONE l.timezone)::integer = ANY(op.available_days))
 				  AND (op.available_until_time IS NULL OR (now() AT TIME ZONE l.timezone)::time <= op.available_until_time)
 				  AND COALESCE(opa.manual_status,'available') <> 'sold_out'
-				  AND (op.stock_mode <> 'manual' OR COALESCE(opa.daily_quota,op.default_daily_quota) IS NULL
-				       OR COALESCE(opa.sold_quantity,0) < COALESCE(opa.daily_quota,op.default_daily_quota))
+				  AND (
+				    op.quantity_control='none'
+				    OR (op.quantity_control='portions' AND opa.portion_quantity IS NOT NULL
+				        AND COALESCE(opa.sold_quantity,0) < opa.portion_quantity)
+				    OR (op.quantity_control='inventory' AND COALESCE((
+				      SELECT sb.quantity
+				      FROM inventory_items ii
+				      JOIN stock_balances sb ON sb.organization_id=ii.organization_id
+				        AND sb.inventory_item_id=ii.id AND sb.location_id=l.id
+				      WHERE ii.organization_id=op.organization_id AND ii.product_id=op.id AND ii.active
+				    ),0) > 0)
+				  )
 				  AND (
 				    o.default_quota IS NULL OR
 				    COALESCE((
@@ -248,8 +256,6 @@ func (a *API) getOrderCombo(w http.ResponseWriter, r *http.Request) {
 		       AND (p.available_days IS NULL OR extract(dow FROM now() AT TIME ZONE l.timezone)::integer = ANY(p.available_days))
 		       AND (p.available_until_time IS NULL OR (now() AT TIME ZONE l.timezone)::time <= p.available_until_time)
 		       AND COALESCE(pa.manual_status,'available') <> 'sold_out'
-		       AND (p.stock_mode <> 'manual' OR COALESCE(pa.daily_quota,p.default_daily_quota) IS NULL
-		            OR COALESCE(pa.sold_quantity,0) < COALESCE(pa.daily_quota,p.default_daily_quota))
 		FROM products p
 		JOIN menu_combos c ON c.product_id=p.id AND c.organization_id=p.organization_id
 		JOIN locations l ON l.id=$3 AND l.organization_id=p.organization_id AND l.active
@@ -299,8 +305,7 @@ func (a *API) getOrderCombo(w http.ResponseWriter, r *http.Request) {
 			       AND (p.available_days IS NULL OR extract(dow FROM now() AT TIME ZONE l.timezone)::integer = ANY(p.available_days))
 			       AND (p.available_until_time IS NULL OR (now() AT TIME ZONE l.timezone)::time <= p.available_until_time)
 			       AND COALESCE(pa.manual_status,'available') <> 'sold_out'
-			       AND (p.stock_mode <> 'manual' OR COALESCE(pa.daily_quota,p.default_daily_quota) IS NULL
-			            OR COALESCE(pa.sold_quantity,0) < COALESCE(pa.daily_quota,p.default_daily_quota))
+			       
 			       AND (
 			         o.default_quota IS NULL OR
 			         COALESCE((
@@ -415,22 +420,6 @@ func (a *API) saveCombo(w http.ResponseWriter, r *http.Request) {
 		fail(w, 400, "invalid_combo", message)
 		return
 	}
-	for _, group := range in.Groups {
-		for _, option := range group.Options {
-			if option.Quota != nil && *option.Quota > 0 {
-				var stock *int
-				err := a.db.QueryRow(r.Context(), `SELECT default_daily_quota FROM products WHERE id=$1 AND organization_id=$2`, option.ProductID, s.OrganizationID).Scan(&stock)
-				if err != nil {
-					fail(w, 400, "invalid_combo", "Uno de los productos seleccionados no existe.")
-					return
-				}
-				if stock != nil && *option.Quota > *stock {
-					fail(w, 400, "quota_exceeded", "La reserva de una opción supera el stock disponible del producto.")
-					return
-				}
-			}
-		}
-	}
 	tx, err := a.db.Begin(r.Context())
 	if err != nil {
 		fail(w, 503, "combo_unavailable", "No pudimos iniciar el registro.")
@@ -444,7 +433,7 @@ func (a *API) saveCombo(w http.ResponseWriter, r *http.Request) {
 			fail(w, 503, "combo_unavailable", "No pudimos generar el código.")
 			return
 		}
-		err = tx.QueryRow(r.Context(), `INSERT INTO products(organization_id,category_id,sku,name,description,price,active,stock_mode,available_from,available_until,available_days) VALUES($1,$2,$3,$4,$5,$6,true,'none',$7::timestamptz,$8::timestamptz,$9) RETURNING id`, s.OrganizationID, in.CategoryID, sku, strings.TrimSpace(in.Name), strings.TrimSpace(in.Description), in.Price, in.AvailableFrom, in.AvailableUntil, in.AvailableDays).Scan(&id)
+		err = tx.QueryRow(r.Context(), `INSERT INTO products(organization_id,category_id,sku,name,description,price,active,quantity_control,available_from,available_until,available_days) VALUES($1,$2,$3,$4,$5,$6,true,'none',$7::timestamptz,$8::timestamptz,$9) RETURNING id`, s.OrganizationID, in.CategoryID, sku, strings.TrimSpace(in.Name), strings.TrimSpace(in.Description), in.Price, in.AvailableFrom, in.AvailableUntil, in.AvailableDays).Scan(&id)
 		if err == nil {
 			_, err = tx.Exec(r.Context(), `INSERT INTO menu_combos(product_id,organization_id) VALUES($1,$2)`, id, s.OrganizationID)
 		}
