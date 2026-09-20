@@ -1,4 +1,11 @@
 export type InventoryStatus="ok"|"low"|"out";
+export type InventoryPresentationType="unit"|"package"|"box";
+
+export type InventoryPresentation={
+  id:string;
+  presentationType:InventoryPresentationType;
+  unitsPerPresentation:string;
+};
 
 export type InventoryItem={
   productId:string;
@@ -29,6 +36,7 @@ export type InventoryProductOption={
   quantityControl:"inventory";
   unit:string|null;
   minimumStock:string|null;
+  presentations:InventoryPresentation[];
 };
 
 export type InventoryEntryDraft={
@@ -40,6 +48,8 @@ export type InventoryEntryDraft={
   price:string;
   quantity:string;
   unit:string;
+  presentationType:InventoryPresentationType;
+  unitsPerPresentation:string;
   minimumStock:string;
   note:string;
 };
