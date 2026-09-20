@@ -404,7 +404,7 @@ function ComandaView({initial,allTables,busy,currencySymbol,close,save,notify}:{
               </div>
               <strong>{currencySymbol} {money(subtotal)}</strong>
             </div>
-            <Button icon="check" className="salon-comanda-submit" onClick={submit} disabled={busy||!v.lines.length}>
+            <Button icon="receipt" className="salon-comanda-submit" onClick={submit} disabled={busy||!v.lines.length}>
               {busy?"Registrando…":"Registrar comanda"}
             </Button>
           </footer>
@@ -424,7 +424,7 @@ function ComandaView({initial,allTables,busy,currencySymbol,close,save,notify}:{
         </button>
         {v.lines.length>0&&(
           <button type="button" className="salon-comanda-mobile-submit" onClick={submit} disabled={busy}>
-            {busy?"…":"Registrar"}
+            {busy?"…":<><Icon name="receipt" size={14}/><span>Registrar</span></>}
           </button>
         )}
       </div>
