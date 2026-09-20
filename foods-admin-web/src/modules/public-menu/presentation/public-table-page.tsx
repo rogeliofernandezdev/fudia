@@ -3,26 +3,19 @@ import "./mesa-public.css";
 import {useState,useEffect} from "react";
 import {useParams} from "next/navigation";
 import {Icon} from "@/design-system/icons";
-
-type TableInfo={
-  name:string;
-  seats:number;
-  zone:string;
-  organizationName:string;
-  locationName:string;
-};
+import type {PublicTableInfo} from "../domain/types";
+import {getPublicTable} from "../infrastructure/public-menu-api";
 
 export function PublicTablePage(){
   const params=useParams<{qr:string}>();
   const token=params.qr;
-  const[info,setInfo]=useState<TableInfo|null>(null);
+  const[info,setInfo]=useState<PublicTableInfo|null>(null);
   const[loading,setLoading]=useState(true);
   const[error,setError]=useState("");
 
   useEffect(()=>{
     if(!token)return;
-    fetch(`/api/public/tables/${token}`)
-      .then(r=>{if(!r.ok)throw new Error("No pudimos cargar la mesa.");return r.json()})
+    getPublicTable(token)
       .then(data=>setInfo(data))
       .catch(e=>setError(e.message))
       .finally(()=>setLoading(false));
