@@ -207,28 +207,50 @@ func (a *API) prepareOrderItems(r *http.Request, tx pgx.Tx, s scope, existingOrd
 			return nil, 0, &orderPreparationError{Status: 400, Code: "invalid_order", Message: "Cada línea necesita una cantidad mayor a cero."}
 		}
 		productIDValue := strings.TrimSpace(in.ProductID)
-		var productID *string
-		if productIDValue != "" {
-			productID = &productIDValue
+		if productIDValue == "" {
+			return nil, 0, &orderPreparationError{Status: 400, Code: "product_id_required", Message: "Cada línea del pedido debe referenciar un producto."}
 		}
+		productID := &productIDValue
 
 		isCombo := false
-		if productID != nil {
-			if err := tx.QueryRow(r.Context(), `SELECT EXISTS(SELECT 1 FROM menu_combos WHERE product_id=$1 AND organization_id=$2)`, *productID, s.OrganizationID).Scan(&isCombo); err != nil {
-				return nil, 0, &orderPreparationError{Status: 503, Code: "order_unavailable", Message: "No pudimos validar el producto del pedido."}
-			}
+		if err := tx.QueryRow(r.Context(), `SELECT EXISTS(SELECT 1 FROM menu_combos WHERE product_id=$1 AND organization_id=$2)`, *productID, s.OrganizationID).Scan(&isCombo); err != nil {
+			return nil, 0, &orderPreparationError{Status: 503, Code: "order_unavailable", Message: "No pudimos validar el producto del pedido."}
 		}
 
 		if !isCombo {
 			if len(in.Selections) > 0 {
 				return nil, 0, &orderPreparationError{Status: 400, Code: "invalid_combo_selection", Message: "Las opciones enviadas no pertenecen a un menú o combo."}
 			}
-			if strings.TrimSpace(in.Name) == "" || in.UnitPrice < 0 {
-				return nil, 0, &orderPreparationError{Status: 400, Code: "invalid_order", Message: "Cada línea necesita producto y precio válido."}
+			if in.UnitPrice < 0 {
+				return nil, 0, &orderPreparationError{Status: 400, Code: "invalid_order", Message: "Cada línea necesita un precio válido."}
+			}
+			var productName string
+			var available bool
+			err := tx.QueryRow(r.Context(), `
+				SELECT p.name,
+				       p.active
+				       AND (p.available_from IS NULL OR now() >= p.available_from)
+				       AND (p.available_until IS NULL OR now() <= p.available_until)
+				       AND (p.available_days IS NULL OR extract(dow FROM now() AT TIME ZONE l.timezone)::integer = ANY(p.available_days))
+				       AND (p.available_until_time IS NULL OR (now() AT TIME ZONE l.timezone)::time <= p.available_until_time)
+				       AND COALESCE(pa.manual_status,'available') <> 'sold_out'
+				FROM products p
+				JOIN locations l ON l.id=$3 AND l.organization_id=p.organization_id AND l.active
+				LEFT JOIN product_availability pa ON pa.organization_id=p.organization_id AND pa.location_id=l.id
+				  AND pa.product_id=p.id AND pa.business_date=(now() AT TIME ZONE l.timezone)::date
+				WHERE p.id=$1 AND p.organization_id=$2`, *productID, s.OrganizationID, s.LocationID).Scan(&productName, &available)
+			if errors.Is(err, pgx.ErrNoRows) {
+				return nil, 0, &orderPreparationError{Status: 404, Code: "product_not_found", Message: "El producto ya no existe."}
+			}
+			if err != nil {
+				return nil, 0, &orderPreparationError{Status: 503, Code: "order_unavailable", Message: "No pudimos validar el producto."}
+			}
+			if !available {
+				return nil, 0, &orderPreparationError{Status: 409, Code: "product_unavailable", Message: productName + " no está disponible en este momento."}
 			}
 			item := preparedOrderItem{
 				ProductID: productID,
-				Name: strings.TrimSpace(in.Name),
+				Name: productName,
 				Qty: in.Qty,
 				UnitPrice: in.UnitPrice,
 				Note: strings.TrimSpace(in.Note),
@@ -316,8 +338,6 @@ func (a *API) prepareOrderItems(r *http.Request, tx pgx.Tx, s scope, existingOrd
 			       AND (p.available_days IS NULL OR extract(dow FROM now() AT TIME ZONE l.timezone)::integer = ANY(p.available_days))
 			       AND (p.available_until_time IS NULL OR (now() AT TIME ZONE l.timezone)::time <= p.available_until_time)
 			       AND COALESCE(pa.manual_status,'available') <> 'sold_out'
-			       AND (p.stock_mode <> 'manual' OR COALESCE(pa.daily_quota,p.default_daily_quota) IS NULL
-			            OR COALESCE(pa.sold_quantity,0) < COALESCE(pa.daily_quota,p.default_daily_quota))
 			FROM products p
 			JOIN menu_combos mc ON mc.product_id=p.id AND mc.organization_id=p.organization_id
 			JOIN locations l ON l.id=$3 AND l.organization_id=p.organization_id AND l.active
@@ -360,8 +380,18 @@ func (a *API) prepareOrderItems(r *http.Request, tx pgx.Tx, s scope, existingOrd
 			         AND (op.available_days IS NULL OR extract(dow FROM now() AT TIME ZONE l.timezone)::integer = ANY(op.available_days))
 			         AND (op.available_until_time IS NULL OR (now() AT TIME ZONE l.timezone)::time <= op.available_until_time)
 			         AND COALESCE(opa.manual_status,'available') <> 'sold_out'
-			         AND (op.stock_mode <> 'manual' OR COALESCE(opa.daily_quota,op.default_daily_quota) IS NULL
-			              OR COALESCE(opa.sold_quantity,0) < COALESCE(opa.daily_quota,op.default_daily_quota))
+			         AND (
+			           op.quantity_control='none'
+			           OR (op.quantity_control='portions' AND opa.portion_quantity IS NOT NULL
+			               AND COALESCE(opa.sold_quantity,0) < opa.portion_quantity)
+			           OR (op.quantity_control='inventory' AND COALESCE((
+			               SELECT sb.quantity
+			               FROM inventory_items ii
+			               JOIN stock_balances sb ON sb.organization_id=ii.organization_id
+			                 AND sb.inventory_item_id=ii.id AND sb.location_id=l.id
+			               WHERE ii.organization_id=op.organization_id AND ii.product_id=op.id AND ii.active
+			             ),0) > 0)
+			         )
 			       END
 			FROM menu_combo_groups g
 			JOIN locations l ON l.id=$3 AND l.organization_id=$2 AND l.active
