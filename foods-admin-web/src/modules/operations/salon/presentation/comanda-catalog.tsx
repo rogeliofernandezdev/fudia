@@ -3,7 +3,7 @@
 import {useEffect,useRef,useState} from "react";
 import {useQueries,useQuery} from "@tanstack/react-query";
 import {Button,Icon,Pagination} from "@/design-system";
-import type {CatalogProduct,ComboDetail,ComboList,ComboSelection,ConfiguredCombo,ProductList} from "../domain/catalog-types";
+import type {CatalogProduct,ComboDetail,ComboGroup,ComboList,ComboOption,ComboSelection,ComboSummary,ConfiguredCombo,ProductList} from "../domain/catalog-types";
 import {getOrderCombo,listAllProducts,listOrderCategories,listOrderCombos,listProductsByCategory,listSalonProducts,searchProducts} from "../infrastructure/catalog-api";
 
 export type {CatalogProduct,ComboSelection,ConfiguredCombo} from "../domain/catalog-types";
