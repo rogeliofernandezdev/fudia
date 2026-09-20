@@ -41,7 +41,7 @@
   transition:border-color .16s,box-shadow .2s,transform .14s;
   box-shadow:0 1px 3px #10182805,0 8px 24px #1018280a;
 }
-.salon-table:hover{border-color:#ccd6ee;box-shadow:0 4px 14px #172b6310,0 16px 36px #172b6316;transform:translateY(-2px)}
+.salon-table:hover{border-color:#ccd6ee;background:#fff;box-shadow:0 4px 14px #172b6310,0 16px 36px #172b6316;transform:translateY(-2px)}
 .salon-table:focus-visible{outline:3px solid var(--ops-400,#6672d8);outline-offset:2px}
 .salon-table:disabled{cursor:default;opacity:.68}
 .salon-table:disabled:hover{transform:none;border-color:#eceef4;box-shadow:0 1px 3px #10182805,0 8px 24px #1018280a}
@@ -73,10 +73,10 @@
 .salon-table-family{font-size:12px;font-weight:750;color:var(--ops-700,#3946b8);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 
 /* Order info — occupied: total centrado */
-.salon-table-order{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:auto;padding:11px 14px;border-radius:12px;background:var(--ops-700,#3946b8);color:#fff}
+.salon-table-order{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:auto;padding:11px 14px;border-radius:12px;background:var(--primary-600,#4654cd);color:#fff}
 .salon-table-order svg{width:20px;height:20px;flex-shrink:0}
 .salon-table-total{font-size:16px;font-weight:850;font-variant-numeric:tabular-nums;letter-spacing:-.01em;line-height:1}
-.salon-table:hover .salon-table-order{background:var(--ops-800,#2d38a0)}
+.salon-table:hover .salon-table-order{background:var(--primary-700,#3946b8)}
 
 /* CTA for free tables */
 .salon-table-cta{
