@@ -12,8 +12,9 @@ import {getCombo,listComboProducts,listCombos,saveCombo,setComboActive} from "..
 const blank:Draft={name:"",description:"",price:"",groups:[],availableFrom:"",availableUntil:"",availableDays:[]};
 const templates:Group[]=[{name:"Entrada",required:true,minSelections:1,maxSelections:1,options:[]},{name:"Segundo",required:true,minSelections:1,maxSelections:1,options:[]},{name:"Postre",required:false,minSelections:0,maxSelections:1,options:[]},{name:"Bebidas",required:false,minSelections:0,maxSelections:1,options:[]}];
 const DAYS=[{d:1,n:"Lun"},{d:2,n:"Mar"},{d:3,n:"Mié"},{d:4,n:"Jue"},{d:5,n:"Vie"},{d:6,n:"Sáb"},{d:0,n:"Dom"}];
-const STEP_LABELS=["Información","Composición","Disponibilidad","Revisión"];
-const STEP_HINTS=["Datos del menú","Partes y opciones","Horario y cupos","Confirma y guarda"];
+const STEP_LABELS=["Nombre y precio","Qué incluye","Cuándo se vende","Confirmar"];
+const STEP_HINTS=["Presentación y precio","Platos y opciones","Días, horario y cupos","Revisa antes de guardar"];
+const STEP_ICONS=["utensils","kitchen","clock","check"] as const;
 const normalize=(value:string)=>value.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
 function belongsToGroup(product:Product,groupName:string){
   const category=normalize(product.categoryName??"");
@@ -111,8 +112,8 @@ function ComboDetailDialog({query,currencySymbol,close}:{query:ReturnType<typeof
         {query.isLoading?<ComboDetailSkeleton/>:query.isError?<div className="combo-detail-state"><Icon name="alert" size={24}/><b>No pudimos cargar el menú</b><p>{query.error.message}</p><Button kind="secondary" icon="refresh" onClick={()=>query.refetch()}>Reintentar</Button></div>:value&&<>
           <section className="combo-detail-summary"><div><small>PRECIO</small><b>{currencySymbol} {Number(value.price).toFixed(2)}</b></div><div><small>PARTES DEL MENÚ</small><b>{value.groups.length} {value.groups.length===1?"parte":"partes"}</b></div><Status tone={value.active?"green":"gray"}>{value.active?"Activo":"Inactivo"}</Status></section>
           {value.description&&<section className="combo-detail-description"><small>DESCRIPCIÓN</small><p>{value.description}</p></section>}
-          <section className="combo-detail-section"><header><div><small>COMPOSICIÓN</small><h3>Partes del menú y opciones disponibles</h3></div></header>{value.groups.map(group=><article className="combo-detail-group" key={group.id}><div><b>{group.name}</b><small>{group.required?"Obligatorio":"Opcional"} · El cliente elige {group.minSelections}–{group.maxSelections}</small></div><ul>{group.options.map(option=><li key={option.productId}><span>{option.name}</span>{Number(option.surcharge)>0&&<small>+ {currencySymbol} {Number(option.surcharge).toFixed(2)}</small>}</li>)}</ul></article>)}</section>
-          <section className={`combo-detail-availability${singleDay?" single":""}`}>{singleDay?<div><small>VIGENCIA</small><b>Solo hoy · {formatCalendarDate(value.availableFrom)}</b></div>:<><div><small>DÍAS DISPONIBLES</small><b>{days}</b></div><div><small>DESDE</small><b>{formatDate(value.availableFrom)}</b></div><div><small>HASTA</small><b>{formatDate(value.availableUntil)}</b></div></>}</section>
+          <section className="combo-detail-section"><header><div><small>QUÉ INCLUYE</small><h3>Platos y opciones del menú</h3></div></header>{value.groups.map(group=><article className="combo-detail-group" key={group.id}><div><b>{group.name}</b><small>{group.required?"Obligatorio":"Opcional"} · El cliente elige {group.minSelections}–{group.maxSelections}</small></div><ul>{group.options.map(option=><li key={option.productId}><span>{option.name}</span>{Number(option.surcharge)>0&&<small>+ {currencySymbol} {Number(option.surcharge).toFixed(2)}</small>}</li>)}</ul></article>)}</section>
+          <section className={`combo-detail-availability${singleDay?" single":""}`}>{singleDay?<div><small>CUÁNDO SE VENDE</small><b>Solo hoy · {formatCalendarDate(value.availableFrom)}</b></div>:<><div><small>DÍAS DE VENTA</small><b>{days}</b></div><div><small>DESDE</small><b>{formatDate(value.availableFrom)}</b></div><div><small>HASTA</small><b>{formatDate(value.availableUntil)}</b></div></>}</section>
         </>}
       </div>
     </section>
@@ -134,10 +135,10 @@ function ComboWizard({draft,setDraft,step,setStep,products,productsLoading,produ
     <section className="crud-modal combo-wizard modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="combo-wizard-title">
       <header className="combo-wizard-header">
         <div className="combo-wizard-title">
-          <span className="combo-wizard-title-icon"><Icon name="combo" size={20}/></span>
+          <span className="combo-wizard-title-icon"><Icon name="chefHat" size={21}/></span>
           <div>
             <small>{editing?"EDITAR MENÚ O COMBO":"NUEVO MENÚ O COMBO"}</small>
-            <h2 id="combo-wizard-title">{editing?"Editar menú o combo":"Registrar menú o combo"}</h2>
+            <h2 id="combo-wizard-title">{editing?"Actualiza tu menú o combo":"Arma tu menú o combo"}</h2>
             <p>{STEP_LABELS[step-1]} · {STEP_HINTS[step-1]}</p>
           </div>
         </div>
@@ -145,9 +146,9 @@ function ComboWizard({draft,setDraft,step,setStep,products,productsLoading,produ
         <button className="combo-wizard-close" aria-label="Cerrar" onClick={close}><Icon name="close" size={18}/></button>
       </header>
 
-      <nav className="combo-wizard-steps" aria-label="Progreso del registro">
+      <nav className="combo-wizard-steps" aria-label="Pasos para crear el menú">
         {STEP_LABELS.map((label,index)=><button type="button" key={label} className={step===index+1?"active":step>index+1?"complete":""} aria-current={step===index+1?"step":undefined} disabled={index+1>step} onClick={()=>setStep(index+1)}>
-          <span className="combo-step-marker">{step>index+1?<Icon name="check" size={14}/>:index+1}</span>
+          <span className="combo-step-marker"><Icon name={STEP_ICONS[index]} size={16}/></span>
           <span className="combo-step-copy"><b>{label}</b><small>{STEP_HINTS[index]}</small></span>
         </button>)}
       </nav>
@@ -165,7 +166,7 @@ function ComboWizard({draft,setDraft,step,setStep,products,productsLoading,produ
           <div className="combo-wizard-footer-copy">
             <small>{step<4?"Puedes volver a modificar pasos anteriores.":"Revisa los datos antes de guardar."}</small>
           </div>
-          {step<4?<button type="button" className="button primary" onClick={next} disabled={busy}>Continuar<Icon name="chevron" size={16}/></button>:<button className="button primary" onClick={finish} disabled={busy}><Icon name="save" size={16}/>{busy?"Guardando…":editing?"Guardar cambios":"Registrar menú"}</button>}
+          {step<4?<button type="button" className="button primary" onClick={next} disabled={busy}>Continuar<Icon name="chevron" size={16}/></button>:<button className="button primary" onClick={finish} disabled={busy}><Icon name="save" size={16}/>{busy?"Guardando…":editing?"Guardar cambios":"Guardar menú"}</button>}
         </footer>
       </main>
     </section>
@@ -174,7 +175,7 @@ function ComboWizard({draft,setDraft,step,setStep,products,productsLoading,produ
 
 function InfoStep({draft,setDraft,currencySymbol}:{draft:Draft;setDraft:(v:Draft)=>void;currencySymbol:string}){
   return <div className="form-grid">
-    <div className="combo-section-heading span-2"><h3>Datos comerciales</h3><p>Define cómo se mostrará y venderá este menú.</p></div>
+    <div className="combo-section-heading span-2"><span className="combo-section-heading-icon"><Icon name="utensils" size={18}/></span><div><h3>Nombre y precio</h3><p>Define cómo verá el cliente este menú y cuánto costará.</p></div></div>
     <label>Nombre<Input autoFocus value={draft.name} onChange={e=>setDraft({...draft,name:e.target.value})} placeholder="Ej. Menú ejecutivo"/></label>
     <label className="combo-price-field">Precio del menú<div className="money-input"><span>{currencySymbol}</span><Input inputMode="decimal" value={draft.price} onChange={e=>setDraft({...draft,price:e.target.value})} placeholder="0.00"/></div></label>
     <label className="span-2">Descripción<Textarea value={draft.description} onChange={e=>setDraft({...draft,description:e.target.value})} placeholder="Ej. Incluye entrada, segundo y postre" rows={2}/></label>
@@ -188,7 +189,7 @@ function CompositionStep({draft,setDraft,products,productsLoading,productsError,
   if(products.length===0)return <div className="combo-empty-groups"><Icon name="box" size={24}/><b>No hay productos registrados</b><p>Primero crea productos en la sección Productos.</p></div>;
   return <div className="combo-composition">
     <div className="combo-composition-toolbar">
-      <div><b>Partes del menú y opciones</b><small>Crea cada parte —Entrada, Plato principal, Bebida o Postre— y define qué productos podrá elegir el cliente.</small></div>
+      <div className="combo-composition-copy"><span className="combo-section-heading-icon"><Icon name="kitchen" size={18}/></span><div><b>Qué incluye el menú</b><small>Agrega entrada, plato principal, bebida o postre y define qué podrá elegir el cliente.</small></div></div>
       <div><Button kind="secondary" icon="menu" onClick={addTemplate}>Plantilla Menú del día</Button><Button icon="plus" onClick={addGroup}>Agregar parte</Button></div>
     </div>
     {draft.groups.length===0?
@@ -228,7 +229,7 @@ function AvailabilityStep({draft,setDraft}:{draft:Draft;setDraft:(v:Draft)=>void
   const isToday=draft.availableFrom.startsWith(todayStr)&&draft.availableUntil.startsWith(todayStr);
   const setToday=()=>setDraft({...draft,availableDays:[],availableFrom:`${todayStr}T00:00`,availableUntil:`${todayStr}T23:59`});
   return <div className="form-grid combo-availability">
-    <div className="combo-section-heading span-2"><h3>Vigencia del menú</h3><p>Es opcional. Sin fechas ni días seleccionados estará siempre disponible.</p></div>
+    <div className="combo-section-heading span-2"><span className="combo-section-heading-icon"><Icon name="clock" size={18}/></span><div><h3>Cuándo se vende</h3><p>Elige los días y fechas. Si no seleccionas nada, estará disponible siempre.</p></div></div>
     <label className="span-2">Días disponibles
       <div className="days-chips">
         <button type="button" className={isToday?"day-chip today active":"day-chip today"} onClick={setToday}>Hoy</button>
@@ -249,9 +250,9 @@ function ReviewStep({draft,products,currencySymbol}:{draft:Draft;products:Produc
   const daysLabel=isToday?"Solo hoy":draft.availableDays.length?draft.availableDays.map(d=>DAYS.find(x=>x.d===d)?.n).join(", "):"Todos los días";
   const rangeLabel=isToday?`Solo hoy (${fmt(draft.availableFrom).split(" ")[0]})`:draft.availableFrom||draft.availableUntil?`${fmt(draft.availableFrom)||"..."} — ${fmt(draft.availableUntil)||"..."}`:"Sin restricción";
   return <div className="combo-review">
-    <div className="combo-section-heading"><h3>Revisa el menú</h3><p>Confirma la información antes de guardar.</p></div>
+    <div className="combo-section-heading"><span className="combo-section-heading-icon"><Icon name="check" size={18}/></span><div><h3>Todo listo para guardar</h3><p>Revisa el menú como quedará antes de publicarlo para la operación.</p></div></div>
     <div className="combo-review-section">
-      <b>Información</b>
+      <b>Nombre y precio</b>
       <dl>
         <div><dt>Nombre</dt><dd>{draft.name||"Sin nombre"}</dd></div>
         <div><dt>Precio</dt><dd>{currencySymbol} {draft.price||"0.00"}</dd></div>
@@ -259,7 +260,7 @@ function ReviewStep({draft,products,currencySymbol}:{draft:Draft;products:Produc
       </dl>
     </div>
     <div className="combo-review-section">
-      <b>Composición</b>
+      <b>Qué incluye</b>
       {draft.groups.map((group,index)=>
         <div key={index} className="combo-review-group">
           <dt>{group.name} {group.required?"(obligatorio)":"(opcional)"}</dt>
@@ -268,7 +269,7 @@ function ReviewStep({draft,products,currencySymbol}:{draft:Draft;products:Produc
       )}
     </div>
     <div className="combo-review-section">
-      <b>Disponibilidad</b>
+      <b>Cuándo se vende</b>
       <dl>
         <div><dt>Días</dt><dd>{daysLabel}</dd></div>
         <div><dt>Vigencia</dt><dd>{rangeLabel}</dd></div>
