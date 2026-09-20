@@ -3,7 +3,7 @@ import "./customers.css";
 import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Button,ConfirmDialog,Icon,Input,PageHeader,Pagination,RowActionButton,Select,Status,Textarea} from "@/design-system";
-import type {Address,Customer,CustomerCustomerDraft} from "../domain/types";
+import type {Address,Customer,CustomerDraft,Option} from "../domain/types";
 import {getCustomer,listCustomers,saveCustomer,setCustomerActive} from "../infrastructure/customers-api";
 import {useFeedback} from "@/providers/feedback-provider";
 import {useSettings} from "@/providers/settings-context";
@@ -13,7 +13,7 @@ const empty:CustomerDraft={customerType:"person",displayName:"",documentType:"DN
 const segmentLabels:Record<string,string>={new:"Nuevo",recurrent:"Recurrente",frequent:"Frecuente",vip:"VIP"};
 
 export function CustomersManager(){const qc=useQueryClient();const{notify}=useFeedback();const settings=useSettings();const{can}=useSession();const canManage=can("customers.manage");const[q,setQ]=useState("");const[status,setStatus]=useState("");const[segment,setSegment]=useState("");const[page,setPage]=useState(1);const[size,setSize]=useState(10);const[draft,setCustomerDraft]=useState<CustomerDraft|null>(null);const[detailId,setDetailId]=useState<string|null>(null);const[target,setTarget]=useState<Customer|null>(null);
- const list=useQuery({queryKey:["customers",q,status,segment,page,size],queryFn:()=>listCustomers({q,status,segment,page,pageSize:size})});const detail=useQuery({queryKey:["customer",detailId],queryFn:()=>getCustomer(detailId),enabled:Boolean(detailId)});
+ const list=useQuery({queryKey:["customers",q,status,segment,page,size],queryFn:()=>listCustomers({q,status,segment,page,pageSize:size})});const detail=useQuery({queryKey:["customer",detailId],queryFn:()=>getCustomer(detailId!),enabled:Boolean(detailId)});
  const save=useMutation({mutationFn:(v:CustomerDraft)=>saveCustomer(v),onSuccess:()=>{setCustomerDraft(null);void qc.invalidateQueries({queryKey:["customers"]});notify({tone:"success",title:"Cliente guardado",message:"Los datos del cliente quedaron actualizados."})},onError:e=>notify({tone:"danger",title:"No se pudo guardar",message:e.message})});
  const changeStatus=useMutation({mutationFn:(c:Customer)=>setCustomerActive(c.id,!c.active),onSuccess:()=>{setTarget(null);void qc.invalidateQueries({queryKey:["customers"]});notify({tone:"success",title:"Estado actualizado",message:"El cliente conserva su historial y preferencias."})},onError:e=>notify({tone:"danger",title:"No se pudo actualizar",message:e.message})});
  async function edit(id:string){try{const c=await getCustomer(id);setCustomerDraft({id:c.id,customerType:c.customerType,displayName:c.displayName,documentType:c.documentType,documentNumber:c.documentNumber,phone:c.phone,email:c.email,preferredChannel:c.preferredChannel,preferences:c.preferences,notes:c.notes,marketingConsent:c.marketingConsent,vipOverride:c.vipOverride,addresses:c.addresses??[]})}catch(e){notify({tone:"danger",title:"No se pudo cargar",message:(e as Error).message})}}
