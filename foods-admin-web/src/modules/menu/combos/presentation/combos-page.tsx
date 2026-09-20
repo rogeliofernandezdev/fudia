@@ -1,9 +1,9 @@
 "use client";
 import "./combo-wizard.css";
 import "./combo-rules.css";
-import {useState} from "react";
+import {useRef,useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,ConfirmDialog,Icon,Input,PageHeader,Pagination,RowActionButton,Select,Status,Textarea} from "@/design-system";
+import {Button,ConfirmDialog,Icon,Input,PageHeader,Pagination,RemoteModalSkeleton,RowActionButton,Select,Status,Textarea} from "@/design-system";
 import {useFeedback} from "@/providers";
 import {useSettings} from "@/providers/settings-context";
 import type {Combo,ComboDetail,Draft,Group,Product} from "../domain/types";
@@ -28,6 +28,7 @@ export function CombosPage(){
   const client=useQueryClient();
   const[draft,setDraft]=useState<Draft|null>(null);
   const[editingId,setEditingId]=useState<string|null>(null);
+  const cancelledEdit=useRef<string|null>(null);
   const[selected,setSelected]=useState<string|null>(null);
   const[statusTarget,setStatusTarget]=useState<Combo|null>(null);
   const[step,setStep]=useState(1);
@@ -46,12 +47,13 @@ export function CombosPage(){
   const loadForEdit=useMutation({
     mutationFn:(id:string)=>getCombo(id),
     onSuccess:value=>{
+      if(cancelledEdit.current===value.id){cancelledEdit.current=null;return}
       const toLocalInput=(source:string|null)=>{if(!source)return"";const date=new Date(source);const offset=date.getTimezoneOffset()*60000;return new Date(date.getTime()-offset).toISOString().slice(0,16)};
       setEditingId(value.id);
       setDraft({name:value.name,description:value.description,price:value.price,availableFrom:toLocalInput(value.availableFrom),availableUntil:toLocalInput(value.availableUntil),availableDays:value.availableDays??[],groups:value.groups.map(group=>({name:group.name,required:group.required,minSelections:group.minSelections,maxSelections:group.maxSelections,options:group.options.map(option=>({productId:option.productId,surcharge:option.surcharge==="0.00"?"":option.surcharge,quota:option.quota===null?"":String(option.quota)}))}))});
       setStep(1);
     },
-    onError:error=>notify({tone:"danger",title:"No se pudo abrir el menú",message:error.message})
+    onError:(error,requestedId)=>{if(editingId===requestedId)setEditingId(null);notify({tone:"danger",title:"No se pudo abrir el menú",message:error.message})}
   });
   const changeStatus=useMutation({
     mutationFn:(item:Combo)=>setComboActive(item.id,!item.active),
@@ -85,14 +87,14 @@ export function CombosPage(){
           <td><b>{settings.currencyPosition==="before"?`${settings.currencySymbol} ${Number(item.price).toFixed(settings.currencyDecimals)}`:`${Number(item.price).toFixed(settings.currencyDecimals)} ${settings.currencySymbol}`}</b></td>
           <td>{item.groupCount} {item.groupCount===1?"parte":"partes"}</td>
           <td><Status tone={item.active?"green":"gray"}>{item.active?"Activo":"Inactivo"}</Status></td>
-          <td><div className="standard-actions"><RowActionButton action="view" label={`Ver ${item.name}`} onClick={()=>setSelected(item.id)}/><RowActionButton action="edit" label={`Editar ${item.name}`} disabled={loadForEdit.isPending} onClick={()=>loadForEdit.mutate(item.id)}/><RowActionButton action={item.active?"deactivate":"activate"} label={`${item.active?"Desactivar":"Activar"} ${item.name}`} onClick={()=>setStatusTarget(item)}/></div></td>
+          <td><div className="standard-actions"><RowActionButton action="view" label={`Ver ${item.name}`} onClick={()=>setSelected(item.id)}/><RowActionButton action="edit" label={`Editar ${item.name}`} disabled={loadForEdit.isPending} onClick={()=>{cancelledEdit.current=null;setEditingId(item.id);loadForEdit.mutate(item.id)}}/><RowActionButton action={item.active?"deactivate":"activate"} label={`${item.active?"Desactivar":"Activar"} ${item.name}`} onClick={()=>setStatusTarget(item)}/></div></td>
         </tr>)}
       </tbody></table></div>}
       {!combos.isLoading&&!combos.isError&&<Pagination page={page} size={size} total={combos.data?.total??0} onPage={setPage} onSize={value=>{setSize(value);setPage(1)}}/>}
     </section>
     {selected&&<ComboDetailDialog query={detail} currencySymbol={settings.currencySymbol} close={()=>setSelected(null)}/>}
     <ConfirmDialog open={Boolean(statusTarget)} title={`${statusTarget?.active?"Desactivar":"Activar"} menú`} description={statusTarget?.active?`“${statusTarget.name}” dejará de estar disponible para nuevas ventas, pero conservará su historial.`:`“${statusTarget?.name??""}” volverá a estar disponible para la operación.`} confirmLabel={statusTarget?.active?"Desactivar":"Activar"} pending={changeStatus.isPending} onCancel={()=>setStatusTarget(null)} onConfirm={()=>statusTarget&&changeStatus.mutate(statusTarget)}/>
-    {draft&&<ComboWizard draft={draft} setDraft={setDraft} step={step} setStep={setStep} products={products.data?.items??[]} productsLoading={products.isLoading} productsError={products.isError} retryProducts={()=>products.refetch()} currencySymbol={settings.currencySymbol} busy={save.isPending} editing={Boolean(editingId)} close={closeWizard} finish={()=>save.mutate(draft)}/>}
+    {!draft&&editingId&&loadForEdit.isPending&&<RemoteModalSkeleton className="combo-wizard" label="Cargando menú o combo" rows={8} close={()=>{cancelledEdit.current=editingId;setEditingId(null)}}/>}\n    {draft&&<ComboWizard draft={draft} setDraft={setDraft} step={step} setStep={setStep} products={products.data?.items??[]} productsLoading={products.isLoading} productsError={products.isError} retryProducts={()=>products.refetch()} currencySymbol={settings.currencySymbol} busy={save.isPending} editing={Boolean(editingId)} close={closeWizard} finish={()=>save.mutate(draft)}/>}
   </>
 }
 
