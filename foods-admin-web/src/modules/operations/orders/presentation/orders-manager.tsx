@@ -10,6 +10,7 @@ import {getOrder,listOrders,updateOrderStatus} from "../infrastructure/orders-ap
 import {useFeedback} from "@/providers/feedback-provider";
 import {useSettings} from "@/providers/settings-context";
 import {useSession} from "@/providers/session-context";
+import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
 
 
 const channelIcons:Record<string,IconName>={salon:"utensils",mostrador:"store",recojo:"box",delivery:"truck",whatsapp:"share"};
@@ -32,17 +33,17 @@ function parseIsoDate(iso:string):Date|null{
   const d2=new Date(iso);
   return isNaN(d2.getTime())?null:d2;
 }
-function timeAgo(iso:string){
+function timeAgo(iso:string,country?:string,timeZone?:string){
   const d=parseIsoDate(iso);if(!d)return"—";
   const m=Math.floor((Date.now()-d.getTime())/60000);
   if(m<1)return"Justo ahora";if(m<60)return`Hace ${m} min`;
   const h=Math.floor(m/60);if(h<24)return`Hace ${h} h`;
-  return new Intl.DateTimeFormat("es-PE",{dateStyle:"medium",timeStyle:"short"}).format(d);
+  return formatRegionalDateTime(d.toISOString(),{country,timeZone},{dateStyle:"medium",timeStyle:"short"});
 }
 const money=(v:string|number)=>Number(v).toFixed(2);
 
 export function OrdersManager(){
- const qc=useQueryClient();const{notify}=useFeedback();const settings=useSettings();const{can}=useSession();const canManage=can("orders.manage");
+ const qc=useQueryClient();const{notify}=useFeedback();const settings=useSettings();const{can,location}=useSession();const canManage=can("orders.manage");
  const[q,setQ]=useState("");const[channel,setChannel]=useState("");const[status,setStatus]=useState("abiertos");const[page,setPage]=useState(1);const[size,setSize]=useState(12);
  const[detailId,setDetailId]=useState<string|null>(null);const[cancelTarget,setCancelTarget]=useState<Order|null>(null);
  const list=useQuery({queryKey:["orders",q,channel,status,page,size],queryFn:()=>listOrders({q,channel,status,page,pageSize:size})});
@@ -82,7 +83,7 @@ export function OrdersManager(){
       </td>
       <td><span className="order-channel-cell"><Icon name={channelIcons[o.channel]??"receipt"} size={13}/>{channelLabel(o.channel)}</span></td>
       <td><Status tone={meta.tone}>{meta.label}</Status></td>
-      <td><span className="order-registered">{timeAgo(o.createdAt)}</span></td>
+      <td><span className="order-registered">{timeAgo(o.createdAt,location?.country,location?.timezone)}</span></td>
       <td><b className="order-table-total">{settings.currencySymbol} {money(o.total)}</b></td>
       <td><div className="orders-table-actions"><RowActionButton action="view" onClick={()=>setDetailId(o.id)}/></div></td>
      </tr>})}</tbody>
@@ -95,7 +96,7 @@ export function OrdersManager(){
      <Status tone={meta.tone}>{meta.label}</Status>
     </header>
     <dl>
-     <div><dt>REGISTRADO</dt><dd>{timeAgo(o.createdAt)}</dd></div>
+     <div><dt>REGISTRADO</dt><dd>{timeAgo(o.createdAt,location?.country,location?.timezone)}</dd></div>
      <div><dt>TOTAL</dt><dd>{settings.currencySymbol} {money(o.total)}</dd></div>
     </dl>
     {(o.address||(o.tableName&&o.customerName))&&<p className="orders-mobile-detail">{o.address||(o.customerName)}</p>}
@@ -109,6 +110,7 @@ export function OrdersManager(){
 }
 
 function OrderDetail({loading,order,error,channels,currencySymbol,canManage,busy,close,advance,cancel}:{loading:boolean;order?:Order;error?:string;channels:Option[];currencySymbol:string;canManage:boolean;busy:boolean;close:()=>void;advance:(st:string)=>void;cancel:(o:Order)=>void}){
+ const{location}=useSession();
  const channelLabel=(value:string)=>channels.find(option=>option.value===value)?.label??value;
  const meta=order?statusMeta[order.status]??{label:order.status,tone:"gray" as const}:null;
  const action=order?nextAction(order):null;
@@ -138,7 +140,7 @@ function OrderDetail({loading,order,error,channels,currencySymbol,canManage,busy
     <div className="order-detail-body salon-order-detail-body">
      <section className="salon-order-detail-meta" aria-label="Datos del pedido">
       <div><span className="salon-order-detail-meta-icon"><Icon name="receipt" size={15}/></span><span><small>PEDIDO</small><b>{order.code}</b></span></div>
-      <div><span className="salon-order-detail-meta-icon"><Icon name="clock" size={15}/></span><span><small>REGISTRADO</small><b>{timeAgo(order.createdAt)}</b></span></div>
+      <div><span className="salon-order-detail-meta-icon"><Icon name="clock" size={15}/></span><span><small>REGISTRADO</small><b>{timeAgo(order.createdAt,location?.country,location?.timezone)}</b></span></div>
       <div><span className="salon-order-detail-meta-icon"><Icon name="utensils" size={15}/></span><span><small>CONSUMO</small><b>{itemCount} ítem{itemCount===1?"":"s"}</b></span></div>
      </section>
 
