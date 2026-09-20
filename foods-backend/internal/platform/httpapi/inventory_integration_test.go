@@ -419,6 +419,23 @@ func TestListInventoryProductsOnlyReturnsInventoryControlledProducts(t *testing.
 		t.Fatal(err)
 	}
 
+	var inventoryProductID string
+	if err := pool.QueryRow(ctx, `
+		SELECT id
+		FROM products
+		WHERE organization_id=$1 AND name=$2`,
+		s.OrganizationID, inventoryName).Scan(&inventoryProductID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO inventory_items(
+			organization_id,sku,name,unit,minimum_stock,active,product_id
+		)
+		VALUES($1,$2,$3,'botella',0,true,$4)`,
+		s.OrganizationID, fmt.Sprintf("ITEM-%d", nonce), inventoryName, inventoryProductID); err != nil {
+		t.Fatal(err)
+	}
+
 	api := New(pool)
 	req := httptest.NewRequest("GET", "/v1/admin/inventory/products", nil)
 	req = req.WithContext(context.WithValue(req.Context(), scopeKey{}, s))
