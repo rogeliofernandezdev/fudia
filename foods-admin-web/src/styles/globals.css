@@ -61,9 +61,12 @@ td .f2,.row-icon.r2{color:var(--digital-700);background:var(--digital-100)}
 @keyframes spin{to{transform:rotate(360deg)}}
 @media (width<=820px){.context>button:first-child,.context .avatar{display:none}
 .content{padding:22px 14px 45px}}
-@media (width<=600px){.page-header{align-items:flex-start}
+@media (width<=600px){.page-header{min-width:0;align-items:start;display:grid;grid-template-columns:minmax(0,1fr) 44px;gap:12px}
+.page-header>div{min-width:0}
 .page-header h1{font-size:25px}
-.page-header .button{width:44px;padding:0;font-size:0}
+.page-header p{max-width:100%;line-height:1.5}
+.page-header>.button{width:44px;min-width:44px;padding:0;overflow:hidden;font-size:0}
+.page-header>.button span{display:none}
 .toolbar{grid-template-columns:1fr 1fr;display:grid}
 .toolbar label{grid-column:1/-1;min-width:0}
 .context>button:first-child{display:flex}
