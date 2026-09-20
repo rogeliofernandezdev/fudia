@@ -24,8 +24,6 @@ type inventoryItemView struct {
 	Status          string  `json:"status"`
 	UpdatedAt       string  `json:"updatedAt"`
 	QuantityControl string  `json:"quantityControl"`
-	Unit            *string `json:"unit"`
-	MinimumStock    *string `json:"minimumStock"`
 }
 
 type inventoryProductOption struct {
@@ -34,6 +32,8 @@ type inventoryProductOption struct {
 	Name            string  `json:"name"`
 	CategoryName    *string `json:"categoryName"`
 	QuantityControl string  `json:"quantityControl"`
+	Unit            *string `json:"unit"`
+	MinimumStock    *string `json:"minimumStock"`
 }
 
 type inventoryNewProductInput struct {
