@@ -1353,6 +1353,10 @@
   .orders-mobile-cards .order-advance{
     min-width:112px;
   }
+
+  .orders-mobile-cards article>footer .order-advance{
+    border-radius:6px;
+  }
 }
 
 @media (max-width:600px){
@@ -1367,6 +1371,8 @@
     width:100%;
     height:var(--control-height);
     min-height:var(--control-height);
+    padding:0 12px;
+    font-size:11px;
   }
 
   .orders-tabs-row{
