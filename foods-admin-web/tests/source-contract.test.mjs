@@ -121,6 +121,9 @@ test("producto e inventario mantienen una sola fuente de verdad",()=>{
   assert.ok(dialog.includes('busy?"Guardando…":"Guardar"'),"La acción de guardado usa el texto estándar");
   assert.equal(dialog.includes('Registrar entrada'),false,"El footer no usa etiquetas de guardado específicas");
   assert.equal(dialog.includes('<Button icon="plus" disabled={busy}>'),false,"Guardar no duplica el icono estándar del modal");
+  assert.equal(dialog.includes("SKU opcional"),false,"Inventario no expone el SKU interno al usuario");
+  assert.equal(dialog.includes("product.name} · {product.sku"),false,"El selector de Inventario no muestra códigos internos");
+  assert.equal(inventory.includes("Buscar producto o SKU"),false,"El buscador visible de Inventario no expone SKU");
 
   const inventoryApi=read("src/modules/supply/inventory/infrastructure/inventory-api.ts");
   assert.ok(inventoryApi.includes('"inventory/entries"'));

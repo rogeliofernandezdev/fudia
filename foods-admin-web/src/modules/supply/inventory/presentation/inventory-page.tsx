@@ -47,20 +47,20 @@ export function InventoryPage(){
   <PageHeader eyebrow="ABASTECIMIENTO" title="Inventario" description="Consulta la existencia física de los productos del local y registra cada ingreso de mercadería." action={can("inventory.manage")?<Button icon="plus" onClick={()=>setEntryOpen(true)}>Nueva entrada</Button>:undefined}/>
   <section className="panel standardized-management inventory-panel">
    <div className="inventory-toolbar">
-    <label className="ds-input-shell"><Icon name="search" size={18}/><Input value={search} onChange={event=>{setSearch(event.target.value);setPage(1)}} placeholder="Buscar producto o SKU..."/></label>
+    <label className="ds-input-shell"><Icon name="search" size={18}/><Input value={search} onChange={event=>{setSearch(event.target.value);setPage(1)}} placeholder="Buscar producto..."/></label>
     <p><Icon name="store" size={15}/>Existencia física del local activo. Los platos por porciones no aparecen aquí.</p>
    </div>
    {inventory.isLoading?<InventorySkeleton/>:inventory.isError?
     <div className="inventory-state"><Icon name="alert" size={24}/><b>No pudimos cargar el inventario</b><p>{inventory.error.message}</p><Button kind="secondary" icon="refresh" onClick={()=>inventory.refetch()}>Reintentar</Button></div>
    :!items.length?
-    <div className="inventory-state"><Icon name="stock" size={24}/><b>{search?"Sin coincidencias":"Aún no hay productos con inventario"}</b><p>{search?"Prueba con otro nombre o SKU.":"Usa Nueva entrada para recibir un producto existente o crear una mercadería nueva."}</p>{can("inventory.manage")&&!search&&<Button icon="plus" onClick={()=>setEntryOpen(true)}>Nueva entrada</Button>}</div>
+    <div className="inventory-state"><Icon name="stock" size={24}/><b>{search?"Sin coincidencias":"Aún no hay productos con inventario"}</b><p>{search?"Prueba con otro nombre.":"Usa Nueva entrada para recibir un producto existente o crear una mercadería nueva."}</p>{can("inventory.manage")&&!search&&<Button icon="plus" onClick={()=>setEntryOpen(true)}>Nueva entrada</Button>}</div>
    :<div className="table-wrap hover-scroll inventory-table-wrap">
     <table>
      <thead><tr><th>PRODUCTO</th><th>UNIDAD</th><th>EXISTENCIA</th><th>STOCK MÍNIMO</th><th>ESTADO</th></tr></thead>
      <tbody>{items.map((item,index)=>{
       const meta=statusMeta[item.status];
       return <tr className={index%2?"alternate":""} key={item.productId}>
-       <td className="inventory-product-cell"><span className={`row-icon r${index%3}`}><Icon name="stock" size={18}/></span><b>{item.name}</b><small>{item.sku}{item.categoryName?` · ${item.categoryName}`:""}</small></td>
+       <td className="inventory-product-cell"><span className={`row-icon r${index%3}`}><Icon name="stock" size={18}/></span><b>{item.name}</b>{item.categoryName&&<small>{item.categoryName}</small>}</td>
        <td>{item.unit}</td>
        <td><b className="inventory-quantity">{Number(item.quantity).toLocaleString("es-PE",{maximumFractionDigits:3})}</b></td>
        <td>{Number(item.minimumStock).toLocaleString("es-PE",{maximumFractionDigits:3})}</td>

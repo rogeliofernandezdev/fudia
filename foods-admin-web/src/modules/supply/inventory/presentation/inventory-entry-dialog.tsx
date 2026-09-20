@@ -49,7 +49,7 @@ export function InventoryEntryDialog({products,currencySymbol,busy,close,save}:{
       <label>Producto
        <Select autoFocus value={value.productId} onChange={event=>{const product=products.find(item=>item.id===event.target.value);setValue(current=>({...current,productId:event.target.value,unit:product?.unit??current.unit,minimumStock:product?.minimumStock??current.minimumStock}))}} aria-invalid={attempted&&!value.productId}>
         <option value="">{products.length?"Selecciona un producto de inventario":"No hay productos con Inventario físico"}</option>
-        {products.map(product=><option value={product.id} key={product.id}>{product.name} · {product.sku}</option>)}
+        {products.map(product=><option value={product.id} key={product.id}>{product.name}</option>)}
        </Select>
        {attempted&&!value.productId&&<small className="wizard-field-error">Selecciona el producto que estás recibiendo.</small>}
       </label>
@@ -59,7 +59,6 @@ export function InventoryEntryDialog({products,currencySymbol,busy,close,save}:{
       <div className="form-grid">
        <label className="span-2">Nombre del producto<Input autoFocus maxLength={160} value={value.name} onChange={event=>setValue(current=>({...current,name:event.target.value}))} placeholder="Ej. Coca-Cola 500 ml" aria-invalid={attempted&&!value.name.trim()}/>{attempted&&!value.name.trim()&&<small className="wizard-field-error">Ingresa el nombre del producto.</small>}</label>
        <label>Precio de venta<div className="money-input"><span>{currencySymbol}</span><Input inputMode="decimal" value={value.price} onChange={event=>setValue(current=>({...current,price:event.target.value}))} placeholder="0.00" aria-invalid={attempted&&!priceValid}/></div>{attempted&&!priceValid&&<small className="wizard-field-error">Ingresa un precio válido.</small>}</label>
-       <label>SKU opcional<Input maxLength={40} value={value.sku} onChange={event=>setValue(current=>({...current,sku:event.target.value}))} placeholder="Se genera si lo dejas vacío"/></label>
        <label className="span-2">Descripción opcional<Textarea value={value.description} onChange={event=>setValue(current=>({...current,description:event.target.value}))} placeholder="Presentación o detalle comercial"/></label>
       </div>
      </section>}
