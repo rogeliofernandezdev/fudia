@@ -91,24 +91,6 @@ export function CombosPage(){
             <td><div className="standard-actions"><RowActionButton action="view" label={`Ver ${item.name}`} onClick={()=>setSelected(item.id)}/><RowActionButton action="edit" label={`Editar ${item.name}`} disabled={loadForEdit.isPending} onClick={()=>{cancelledEdit.current=null;setEditingId(item.id);loadForEdit.mutate(item.id)}}/><RowActionButton action={item.active?"deactivate":"activate"} label={`${item.active?"Desactivar":"Activar"} ${item.name}`} onClick={()=>setStatusTarget(item)}/></div></td>
           </tr>)}
         </tbody></table></div>
-        <div className="management-cards combo-mobile-cards">
-          {combos.data.items.map((item,index)=><article key={item.id}>
-            <header>
-              <span className={`row-icon r${index%3}`}><Icon name="menu" size={18}/></span>
-              <div><b>{item.name}</b><small>{item.description||"Sin descripción"}</small></div>
-              <Status tone={item.active?"green":"gray"}>{item.active?"Activo":"Inactivo"}</Status>
-            </header>
-            <dl>
-              <div><dt>PRECIO</dt><dd>{settings.currencyPosition==="before"?`${settings.currencySymbol} ${Number(item.price).toFixed(settings.currencyDecimals)}`:`${Number(item.price).toFixed(settings.currencyDecimals)} ${settings.currencySymbol}`}</dd></div>
-              <div><dt>QUÉ INCLUYE</dt><dd>{item.groupCount} {item.groupCount===1?"parte":"partes"}</dd></div>
-            </dl>
-            <footer>
-              <RowActionButton action="view" label={`Ver ${item.name}`} onClick={()=>setSelected(item.id)}/>
-              <RowActionButton action="edit" label={`Editar ${item.name}`} disabled={loadForEdit.isPending} onClick={()=>{cancelledEdit.current=null;setEditingId(item.id);loadForEdit.mutate(item.id)}}/>
-              <RowActionButton action={item.active?"deactivate":"activate"} label={`${item.active?"Desactivar":"Activar"} ${item.name}`} onClick={()=>setStatusTarget(item)}/>
-            </footer>
-          </article>)}
-        </div>
       </>}
       {!combos.isLoading&&!combos.isError&&<Pagination page={page} size={size} total={combos.data?.total??0} onPage={setPage} onSize={value=>{setSize(value);setPage(1)}}/>}
     </section>
