@@ -71,32 +71,60 @@ function CustomerDialog({initial,channels,busy,close,save}:{initial:CustomerDraf
 function CustomerDetail({customer,loading,error,channels,currencySymbol,close}:{customer?:Customer;loading:boolean;error?:string;channels:Option[];currencySymbol:string;close:()=>void}){
  const channelLabel=(value:string)=>value==="none"?"Sin preferencia":channels.find(o=>o.value===value)?.label??value;
  const lastPurchase=customer?.lastPurchaseAt?new Intl.DateTimeFormat("es-PE",{dateStyle:"medium"}).format(new Date(customer.lastPurchaseAt)):"—";
- return <div className="modal-backdrop modal-overlay-in"><section className="crud-modal customer-detail modal-panel-in" role="dialog" aria-modal="true"><div className="modal-accent"/><header><span className="modal-title-icon"><Icon name="users"/></span><div><h2>{customer?.displayName??"Cliente"}</h2><small>DETALLE DEL CLIENTE</small></div><button aria-label="Cerrar" onClick={close}><Icon name="close"/></button></header>
- {loading?<Loading/>:error?<State icon="alert" title="No pudimos cargar el detalle" text={error}/>:customer&&<div className="customer-detail-body">
-  <section className="customer-detail-summary">
-   <div><small>SEGMENTO</small><b>{segmentLabels[customer.segment]}</b></div>
-   <div><small>VISITAS</small><b>{customer.visitCount}</b></div>
-   <div><small>ACUMULADO</small><b>{currencySymbol} {Number(customer.totalSpent).toFixed(2)}</b></div>
-   <div><small>ÚLTIMA COMPRA</small><b>{lastPurchase}</b></div>
-   <Status tone={customer.active?"green":"gray"}>{customer.active?"Activo":"Inactivo"}</Status>
-  </section>
-  <section className="customer-detail-fields">
-   <div><small>DOCUMENTO</small><b>{customer.documentNumber?`${customer.documentType} ${customer.documentNumber}`:"No registrado"}</b></div>
-   <div><small>TELÉFONO</small><b>{customer.phone||"—"}</b></div>
-   <div><small>CORREO</small><b>{customer.email||"—"}</b></div>
-   <div><small>CANAL PREFERIDO</small><b>{channelLabel(customer.preferredChannel)}</b></div>
-   <div><small>COMUNICACIONES</small><b>{customer.marketingConsent?"Autorizadas":"No autorizadas"}</b></div>
-   <div><small>CLIENTE VIP</small><b>{customer.vipOverride?"Sí":"No"}</b></div>
-  </section>
-  <section className="customer-detail-section">
-   <header><div><small>ENTREGAS</small><h3>Direcciones de entrega registradas</h3></div></header>
-   {customer.addresses?.length?customer.addresses.map(a=><div className="customer-detail-address" key={a.id}><div><b>{a.label}</b>{a.default&&<span>Predeterminada</span>}</div><p>{a.address}{a.district?`, ${a.district}`:""}{a.city?`, ${a.city}`:""}</p>{a.reference&&<small>{a.reference}</small>}</div>):<p className="customer-detail-empty">No registradas.</p>}
-  </section>
-  <section className="customer-detail-section">
-   <header><div><small>RELACIÓN</small><h3>Preferencias y notas internas</h3></div></header>
-   <div className="customer-detail-notes"><b>Preferencias</b><p>{customer.preferences||"Sin preferencias registradas."}</p><b>Notas internas</b><p>{customer.notes||"Sin notas."}</p></div>
-  </section>
- </div>}
+ return <div className="modal-backdrop modal-overlay-in"><section className="crud-modal customer-detail modal-panel-in" role="dialog" aria-modal="true" aria-busy={loading}>
+  <div className="modal-accent"/>
+  {loading?<CustomerDetailSkeleton close={close}/>:<>
+   <header><span className="modal-title-icon"><Icon name="users"/></span><div><h2>{customer?.displayName??"Cliente"}</h2><small>DETALLE DEL CLIENTE</small></div><button aria-label="Cerrar" onClick={close}><Icon name="close"/></button></header>
+   {error?<State icon="alert" title="No pudimos cargar el detalle" text={error}/>:customer&&<div className="customer-detail-body">
+    <section className="customer-detail-summary">
+     <div><small>SEGMENTO</small><b>{segmentLabels[customer.segment]}</b></div>
+     <div><small>VISITAS</small><b>{customer.visitCount}</b></div>
+     <div><small>ACUMULADO</small><b>{currencySymbol} {Number(customer.totalSpent).toFixed(2)}</b></div>
+     <div><small>ÚLTIMA COMPRA</small><b>{lastPurchase}</b></div>
+     <Status tone={customer.active?"green":"gray"}>{customer.active?"Activo":"Inactivo"}</Status>
+    </section>
+    <section className="customer-detail-fields">
+     <div><small>DOCUMENTO</small><b>{customer.documentNumber?`${customer.documentType} ${customer.documentNumber}`:"No registrado"}</b></div>
+     <div><small>TELÉFONO</small><b>{customer.phone||"—"}</b></div>
+     <div><small>CORREO</small><b>{customer.email||"—"}</b></div>
+     <div><small>CANAL PREFERIDO</small><b>{channelLabel(customer.preferredChannel)}</b></div>
+     <div><small>COMUNICACIONES</small><b>{customer.marketingConsent?"Autorizadas":"No autorizadas"}</b></div>
+     <div><small>CLIENTE VIP</small><b>{customer.vipOverride?"Sí":"No"}</b></div>
+    </section>
+    <section className="customer-detail-section">
+     <header><div><small>ENTREGAS</small><h3>Direcciones de entrega registradas</h3></div></header>
+     {customer.addresses?.length?customer.addresses.map(a=><div className="customer-detail-address" key={a.id}><div><b>{a.label}</b>{a.default&&<span>Predeterminada</span>}</div><p>{a.address}{a.district?`, ${a.district}`:""}{a.city?`, ${a.city}`:""}</p>{a.reference&&<small>{a.reference}</small>}</div>):<p className="customer-detail-empty">No registradas.</p>}
+    </section>
+    <section className="customer-detail-section">
+     <header><div><small>RELACIÓN</small><h3>Preferencias y notas internas</h3></div></header>
+     <div className="customer-detail-notes"><b>Preferencias</b><p>{customer.preferences||"Sin preferencias registradas."}</p><b>Notas internas</b><p>{customer.notes||"Sin notas."}</p></div>
+    </section>
+   </div>}
+  </>}
  </section></div>
 }
+
+function CustomerDetailSkeleton({close}:{close:()=>void}){
+ return <>
+  <header className="customer-detail-skeleton-head" aria-hidden="true">
+   <span className="customer-detail-skeleton-block customer-detail-skeleton-icon"/>
+   <div className="customer-detail-skeleton-copy"><i/><b/></div>
+   <button aria-label="Cerrar" onClick={close}><Icon name="close"/></button>
+  </header>
+  <div className="customer-detail-body customer-detail-skeleton-body" aria-label="Cargando detalle del cliente">
+   <section className="customer-detail-summary customer-detail-skeleton-summary">
+    {Array.from({length:4},(_,i)=><div key={i}><i/><b/></div>)}
+    <span className="customer-detail-skeleton-block customer-detail-skeleton-status"/>
+   </section>
+   <section className="customer-detail-fields customer-detail-skeleton-fields">
+    {Array.from({length:6},(_,i)=><div key={i}><i/><b/></div>)}
+   </section>
+   {Array.from({length:2},(_,i)=><section className="customer-detail-section customer-detail-skeleton-section" key={i}>
+    <header><div><i/><b/></div></header>
+    <div className="customer-detail-skeleton-lines"><i/><i/><i/></div>
+   </section>)}
+  </div>
+ </>;
+}
+
 function Loading(){return <div className="customers-loading" aria-label="Cargando"><i/><i/><i/><i/></div>}function State({icon,title,text,action}:{icon:"alert"|"users";title:string;text:string;action?:()=>void}){return <div className="catalog-state"><span><Icon name={icon}/></span><b>{title}</b><p>{text}</p>{action&&<Button kind="ghost" onClick={action}>{icon==="users"?"Nuevo cliente":"Reintentar"}</Button>}</div>}
