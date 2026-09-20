@@ -66,6 +66,8 @@ func (a *API) Routes() *http.ServeMux {
 	m.Handle("PATCH /v1/operations/product-availability/{productId}", a.auth(a.requirePermission("menu.manage", http.HandlerFunc(a.updateProductAvailability))))
 	m.Handle("GET /v1/admin/combos", a.auth(a.requirePermission("menu.read", http.HandlerFunc(a.listCombos))))
 	m.Handle("GET /v1/admin/combos/{id}", a.auth(a.requirePermission("menu.read", http.HandlerFunc(a.getCombo))))
+	m.Handle("GET /v1/admin/order-combos", a.auth(a.requirePermission("orders.manage", http.HandlerFunc(a.listOrderCombos))))
+	m.Handle("GET /v1/admin/order-combos/{id}", a.auth(a.requirePermission("orders.manage", http.HandlerFunc(a.getOrderCombo))))
 	m.Handle("POST /v1/admin/combos", a.auth(a.requirePermission("menu.manage", http.HandlerFunc(a.saveCombo))))
 	m.Handle("PATCH /v1/admin/combos/{id}", a.auth(a.requirePermission("menu.manage", http.HandlerFunc(a.saveCombo))))
 	m.Handle("PATCH /v1/admin/combos/{id}/status", a.auth(a.requirePermission("menu.manage", http.HandlerFunc(a.updateComboStatus))))
