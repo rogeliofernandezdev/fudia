@@ -24,6 +24,8 @@ type inventoryItemView struct {
 	Status          string  `json:"status"`
 	UpdatedAt       string  `json:"updatedAt"`
 	QuantityControl string  `json:"quantityControl"`
+	Unit            *string `json:"unit"`
+	MinimumStock    *string `json:"minimumStock"`
 }
 
 type inventoryProductOption struct {
@@ -173,9 +175,10 @@ func (a *API) listInventoryProducts(w http.ResponseWriter, r *http.Request) {
 	s := r.Context().Value(scopeKey{}).(scope)
 	search := "%" + strings.TrimSpace(r.URL.Query().Get("q")) + "%"
 	rows, err := a.db.Query(r.Context(), `
-		SELECT p.id,p.sku,p.name,c.name,p.quantity_control
+		SELECT p.id,p.sku,p.name,c.name,p.quantity_control,ii.unit,ii.minimum_stock::text
 		FROM products p
 		LEFT JOIN menu_categories c ON c.id=p.category_id AND c.organization_id=p.organization_id
+		LEFT JOIN inventory_items ii ON ii.organization_id=p.organization_id AND ii.product_id=p.id AND ii.active
 		WHERE p.organization_id=$1 AND p.active
 		  AND p.quantity_control IN ('none','inventory')
 		  AND NOT EXISTS (SELECT 1 FROM menu_combos mc WHERE mc.product_id=p.id AND mc.organization_id=p.organization_id)
@@ -190,7 +193,7 @@ func (a *API) listInventoryProducts(w http.ResponseWriter, r *http.Request) {
 	items := []inventoryProductOption{}
 	for rows.Next() {
 		var item inventoryProductOption
-		if err := rows.Scan(&item.ID, &item.SKU, &item.Name, &item.CategoryName, &item.QuantityControl); err != nil {
+		if err := rows.Scan(&item.ID, &item.SKU, &item.Name, &item.CategoryName, &item.QuantityControl, &item.Unit, &item.MinimumStock); err != nil {
 			fail(w, 503, "inventory_products_unavailable", "No pudimos cargar los productos.")
 			return
 		}
@@ -285,16 +288,20 @@ func (a *API) createInventoryEntry(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	var inventoryItemID string
+	var inventoryItemID, inventoryUnit string
 	err = tx.QueryRow(r.Context(), `
 		INSERT INTO inventory_items(organization_id,sku,name,unit,minimum_stock,active,product_id)
 		VALUES($1,'SELL-'||upper(substr(replace($2::text,'-',''),1,12)),$3,$4,$5,true,$2)
 		ON CONFLICT (organization_id,product_id) WHERE product_id IS NOT NULL
-		DO UPDATE SET name=EXCLUDED.name,unit=EXCLUDED.unit,minimum_stock=EXCLUDED.minimum_stock,active=true
-		RETURNING id`,
-		s.OrganizationID, productID, productName, in.Unit, in.MinimumStock).Scan(&inventoryItemID)
+		DO UPDATE SET name=EXCLUDED.name,minimum_stock=EXCLUDED.minimum_stock,active=true
+		RETURNING id,unit`,
+		s.OrganizationID, productID, productName, in.Unit, in.MinimumStock).Scan(&inventoryItemID, &inventoryUnit)
 	if err != nil {
 		fail(w, 503, "inventory_unavailable", "No pudimos vincular el producto al inventario.")
+		return
+	}
+	if inventoryUnit != in.Unit {
+		fail(w, 409, "inventory_unit_conflict", "La unidad de este producto es "+inventoryUnit+". Registra la entrada usando la misma unidad.")
 		return
 	}
 
