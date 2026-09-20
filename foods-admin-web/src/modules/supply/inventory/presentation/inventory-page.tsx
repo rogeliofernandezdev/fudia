@@ -36,7 +36,7 @@ export function InventoryPage(){
    void client.invalidateQueries({queryKey:["products"]});
    void client.invalidateQueries({queryKey:["product-availability"]});
    void client.invalidateQueries({queryKey:["inventory-movements"]});
-   notify({tone:"success",title:result.createdProduct?"Producto y entrada registrados":"Entrada registrada",message:`${result.name}: saldo ${formatRegionalNumber(Number(result.balance),location?.country,{maximumFractionDigits:3})} ${result.unit}.`});
+   notify({tone:"success",title:result.createdProduct?"Producto y entrada registrados":"Entrada registrada",message:`${result.name}: +${formatRegionalNumber(Number(result.stockQuantity),location?.country,{maximumFractionDigits:3})} ${result.unit}. Saldo ${formatRegionalNumber(Number(result.balance),location?.country,{maximumFractionDigits:3})} ${result.unit}.`});
   },
   onError:error=>notify({tone:"danger",title:"No se pudo registrar la entrada",message:error.message}),
  });
