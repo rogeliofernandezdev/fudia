@@ -3,7 +3,7 @@
 import "../app/orders.css";
 import "../app/salon.css";
 import "../app/salon-comanda.css";
-import {useState,useCallback} from "react";
+import {useState,useCallback,useEffect,useRef} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Button,ConfirmDialog,Input,PageHeader,Select,Status,Textarea} from "@/design-system";
 import {Icon,IconName} from "@/design-system/icons";
@@ -282,12 +282,25 @@ export function SalonManager(){
 function ComandaView({initial,allTables,busy,currencySymbol,close,save,notify}:{initial:Draft;allTables:FloorTable[];busy:boolean;currencySymbol:string;close:()=>void;save:(v:Draft)=>void;notify:(n:{tone:"danger"|"success";title:string;message:string})=>void}){
   const[v,setV]=useState(initial);
   const[ticketOpen,setTicketOpen]=useState(false);
+  const[focusNoteProductId,setFocusNoteProductId]=useState<string|null>(null);
+  const noteRefs=useRef<Record<string,HTMLInputElement|null>>({});
   const freeTables=allTables.filter(t=>!t.order||t.id===v.tableId);
   const selTable=allTables.find(t=>t.id===v.tableId);
   const tableName=selTable?.name??"";
   const qtyByProduct=Object.fromEntries(v.lines.map(l=>[l.productId,l.qty]));
   const patchLine=(i:number,p:Partial<LineDraft>)=>setV({...v,lines:v.lines.map((l,n)=>n===i?{...l,...p}:l)});
-  const tap=(p:Product)=>setV(prev=>{const i=prev.lines.findIndex(l=>l.productId===p.id);if(i>=0)return{...prev,lines:prev.lines.map((l,n)=>n===i?{...l,qty:l.qty+1}:l)};return{...prev,lines:[...prev.lines,{productId:p.id,name:p.name,qty:1,unitPrice:Number(p.price)||0,note:""}]}});
+  const tap=(p:Product)=>{
+    setFocusNoteProductId(p.id);
+    setV(prev=>{const i=prev.lines.findIndex(l=>l.productId===p.id);if(i>=0)return{...prev,lines:prev.lines.map((l,n)=>n===i?{...l,qty:l.qty+1}:l)};return{...prev,lines:[...prev.lines,{productId:p.id,name:p.name,qty:1,unitPrice:Number(p.price)||0,note:""}]}});
+  };
+  useEffect(()=>{
+    if(!focusNoteProductId)return;
+    const input=noteRefs.current[focusNoteProductId];
+    if(!input)return;
+    input.focus({preventScroll:true});
+    input.scrollIntoView({block:"nearest",behavior:"smooth"});
+    setFocusNoteProductId(null);
+  },[focusNoteProductId,v.lines]);
   const untap=(p:Product)=>setV(prev=>({...prev,lines:prev.lines.map(l=>l.productId===p.id?{...l,qty:l.qty-1}:l).filter(l=>l.qty>0)}));
   const step=(i:number,d:number)=>setV(prev=>({...prev,lines:prev.lines.map((l,n)=>n===i?{...l,qty:l.qty+d}:l).filter(l=>l.qty>0)}));
   const subtotal=v.lines.reduce((a,l)=>a+l.qty*l.unitPrice,0);
@@ -393,7 +406,7 @@ function ComandaView({initial,allTables,busy,currencySymbol,close,save,notify}:{
                           <b>{l.qty}</b>
                           <button type="button" onClick={()=>step(i,1)} aria-label={"Agregar un "+l.name}><Icon name="plus" size={12}/></button>
                         </div>
-                        <Input className="salon-comanda-line-note" value={l.note} onChange={e=>patchLine(i,{note:e.target.value})} placeholder="Nota del plato, ej. sin cebolla" aria-label={"Nota para "+l.name}/>
+                        <Input ref={node=>{noteRefs.current[l.productId]=node}} className="salon-comanda-line-note" value={l.note} onChange={e=>patchLine(i,{note:e.target.value})} placeholder="Nota del plato, ej. sin cebolla" aria-label={"Nota para "+l.name}/>
                       </div>
                     </article>
                   ))}
