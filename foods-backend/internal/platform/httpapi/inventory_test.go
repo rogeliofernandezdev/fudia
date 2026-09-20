@@ -25,8 +25,34 @@ func TestNormalizeInventoryEntryDefaultsUnitAndRequiresPositiveQuantity(t *testi
 	if in.Unit != "und" {
 		t.Fatalf("expected default unit und, got %q", in.Unit)
 	}
+	if in.PresentationType != "unit" || in.UnitsPerPresentation != 1 {
+		t.Fatalf("expected base unit presentation, got type=%q factor=%v", in.PresentationType, in.UnitsPerPresentation)
+	}
 	if _, invalid := normalizeInventoryEntry(inventoryEntryInput{ProductID: "product-1", Quantity: 0}); invalid == "" {
 		t.Fatal("expected zero quantity to be rejected")
+	}
+}
+
+func TestNormalizeInventoryEntryValidatesPackageConversion(t *testing.T) {
+	in, invalid := normalizeInventoryEntry(inventoryEntryInput{
+		ProductID: "product-1", Quantity: 5, Unit: "botella",
+		PresentationType: "package", UnitsPerPresentation: 12,
+	})
+	if invalid != "" {
+		t.Fatalf("expected package entry to be valid: %s", invalid)
+	}
+	if in.PresentationType != "package" || in.UnitsPerPresentation != 12 {
+		t.Fatalf("unexpected package normalization: %#v", in)
+	}
+	if _, invalid := normalizeInventoryEntry(inventoryEntryInput{
+		ProductID: "product-1", Quantity: 5, PresentationType: "package", UnitsPerPresentation: 1,
+	}); invalid == "" {
+		t.Fatal("expected package factor <= 1 to be rejected")
+	}
+	if _, invalid := normalizeInventoryEntry(inventoryEntryInput{
+		ProductID: "product-1", Quantity: 5, PresentationType: "pallet", UnitsPerPresentation: 20,
+	}); invalid == "" {
+		t.Fatal("expected unsupported presentation type to be rejected")
 	}
 }
 
