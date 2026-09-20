@@ -47,7 +47,7 @@ export function InventoryEntryDialog({products,currencySymbol,busy,close,save}:{
      {value.mode==="existing"?<section className="inventory-entry-section">
       <div className="inventory-entry-section-title"><span><Icon name="box" size={17}/></span><div><b>Qué producto ingresó</b><small>La entrada se sumará a su saldo actual en este local.</small></div></div>
       <label>Producto
-       <Select autoFocus value={value.productId} onChange={event=>setValue(current=>({...current,productId:event.target.value}))} aria-invalid={attempted&&!value.productId}>
+       <Select autoFocus value={value.productId} onChange={event=>{const product=products.find(item=>item.id===event.target.value);setValue(current=>({...current,productId:event.target.value,unit:product?.unit??current.unit,minimumStock:product?.minimumStock??current.minimumStock}))}} aria-invalid={attempted&&!value.productId}>
         <option value="">Selecciona un producto</option>
         {products.map(product=><option value={product.id} key={product.id}>{product.name} · {product.sku}</option>)}
        </Select>
