@@ -11,15 +11,6 @@ import {Button,Input,PageHeader,Pagination,RowActionButton,Select,Status,Textare
 import type {Country,Currency,List,Location,LocationDraft,Organization,Profile,ProfileDraft,ProfilesResponse,Rate,RateDraft} from "../domain/types";
 import {createRate as persistRate,deactivateLocation,deactivateProfile as removeProfileApi,deleteRate as removeRateApi,getOrganization,listLocations,listProfiles,listRates,saveLocation,saveProfile as persistProfile,updateOrganization} from "../infrastructure/organizations-api";
 
-type List<T>={items:T[];total:number;page:number;pageSize:number};
-type Country={code:string;name:string;defaultCurrency:string};
-type Currency={code:string;name:string;symbol:string;decimals:number};
-type Organization={id:string;legalName:string;tradeName:string;taxId:string;timezone:string;active:boolean};
-type Profile={id:string;country:string;countryName:string;currency:string;currencySymbol:string;currencyPosition:"before"|"after";currencyDecimals:number;taxName:string;taxRate:string;taxIncluded:boolean;default:boolean;active:boolean;assignedLocations:number};
-type ProfilesResponse=List<Profile>&{countryOptions:Country[];currencyOptions:Currency[]};
-type Location={id:string;name:string;code:string;address:string;phone:string;openingHours:string;latitude:number|null;longitude:number|null;timezone:string;fiscalProfileId:string;country:string;currency:string;active:boolean};
-type Rate={id:string;baseCurrency:string;quoteCurrency:string;rate:string;effectiveAt:string;source:"manual"|"provider";providerReference:string|null;createdByName:string|null};
-
 function Back(){return null}
 function LoadingTable(){return <div className="table-skeleton" aria-label="Cargando datos"><div className="sk-head"><i/><i/><i/><i/><i/></div>{Array.from({length:5},(_,i)=><div className="sk-row" key={i}><i className="sk-name"><span/><b/><small/></i><i/><i/><i/><i/></div>)}</div>}
 function LoadError({message,retry}:{message:string;retry:()=>void}){return <div className="catalog-state error"><span><Icon name="alert"/></span><b>No pudimos cargar la información</b><p>{message}</p><Button kind="secondary" icon="refresh" onClick={retry}>Reintentar</Button></div>}
