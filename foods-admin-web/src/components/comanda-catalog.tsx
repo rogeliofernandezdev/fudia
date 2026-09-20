@@ -12,7 +12,7 @@ type Section={id:string;title:string;items:CatalogProduct[];loading:boolean;erro
 
 const money=(v:string)=>Number(v).toFixed(2);
 
-export function ComandaCatalog({qtyByProduct,onPick,onRemove,currencySymbol}:{qtyByProduct:Record<string,number>;onPick:(p:CatalogProduct)=>void;onRemove:(p:CatalogProduct)=>void;currencySymbol:string}){
+export function ComandaCatalog({qtyByProduct,onPick,onRemove,currencySymbol,variant="default"}:{qtyByProduct:Record<string,number>;onPick:(p:CatalogProduct)=>void;onRemove:(p:CatalogProduct)=>void;currencySymbol:string;variant?:"default"|"salon"}){
   const[pq,setPq]=useState("");
   const[cat,setCat]=useState("");
   const categories=useQuery({queryKey:["order-categories"],queryFn:()=>apiFetch<{items:{id:string;name:string}[]}>("categories?pageSize=100"),staleTime:60000});
@@ -39,7 +39,7 @@ export function ComandaCatalog({qtyByProduct,onPick,onRemove,currencySymbol}:{qt
   const booting=!searching&&(categories.isLoading||(cats.length>0&&perCat.every(q=>q.isLoading)));
 
   return(
-    <div className="comanda-menu comanda-menu-paged">
+    <div className={"comanda-menu comanda-menu-paged"+(variant==="salon"?" comanda-menu-salon":"")}>
       <div className="comanda-menu-hero">
         <div className="comanda-menu-hero-row">
           <h3>La carta</h3>
@@ -69,7 +69,7 @@ export function ComandaCatalog({qtyByProduct,onPick,onRemove,currencySymbol}:{qt
             ):sec.items.length?(
               <div className="comanda-dishes">
                 {sec.items.map(p=>(
-                  <MenuItem key={p.id} p={p} qty={qtyByProduct[p.id]??0} currencySymbol={currencySymbol} onPick={onPick} onRemove={onRemove}/>
+                  <MenuItem key={p.id} p={p} qty={qtyByProduct[p.id]??0} categoryLabel={cats.find(c=>c.id===p.categoryId)?.name??""} currencySymbol={currencySymbol} onPick={onPick} onRemove={onRemove} variant={variant}/>
                 ))}
               </div>
             ):(
@@ -85,7 +85,38 @@ export function ComandaCatalog({qtyByProduct,onPick,onRemove,currencySymbol}:{qt
   );
 }
 
-function MenuItem({p,qty,currencySymbol,onPick,onRemove}:{p:CatalogProduct;qty:number;currencySymbol:string;onPick:(p:CatalogProduct)=>void;onRemove:(p:CatalogProduct)=>void}){
+function MenuItem({p,qty,categoryLabel,currencySymbol,onPick,onRemove,variant}:{p:CatalogProduct;qty:number;categoryLabel:string;currencySymbol:string;onPick:(p:CatalogProduct)=>void;onRemove:(p:CatalogProduct)=>void;variant:"default"|"salon"}){
+  if(variant==="salon"){
+    return(
+      <article className={"comanda-dish comanda-dish-modern"+(qty>0?" picked":"")} aria-label={p.name}>
+        <span className={"comanda-dish-thumb comanda-dish-modern-media"+(p.imageUrl?" has-image":"")}>
+          {p.imageUrl?<img src={p.imageUrl} alt={p.name} loading="lazy"/>:<span className="comanda-dish-image-fallback"><Icon name="utensils" size={24}/><small>Sin imagen</small></span>}
+        </span>
+        <div className="comanda-dish-modern-content">
+          <div className="comanda-dish-modern-copy">
+            {categoryLabel&&<small className="comanda-dish-category">{categoryLabel}</small>}
+            <strong className="comanda-dish-name" title={p.name}>{p.name}</strong>
+          </div>
+          <div className="comanda-dish-modern-footer">
+            <b className="comanda-dish-price">{currencySymbol} {money(p.price)}</b>
+            {qty>0?(
+              <div className="comanda-dish-step" aria-label={`Cantidad de ${p.name}: ${qty}`}>
+                <button type="button" onClick={()=>onRemove(p)} aria-label={`Quitar un ${p.name}`}><Icon name="minus" size={13}/></button>
+                <b>{qty}</b>
+                <button type="button" onClick={()=>onPick(p)} aria-label={`Agregar un ${p.name}`}><Icon name="plus" size={13}/></button>
+              </div>
+            ):(
+              <button type="button" className="comanda-dish-add-button" onClick={()=>onPick(p)} aria-label={`Agregar ${p.name} a la comanda`}>
+                <Icon name="plus" size={14}/>
+                <span>Agregar</span>
+              </button>
+            )}
+          </div>
+        </div>
+      </article>
+    );
+  }
+
   return(
     <article className={"comanda-dish"+(qty>0?" picked":"")} onClick={()=>onPick(p)} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==="Enter"||e.key===" ")onPick(p)}} aria-label={p.name}>
       <span className="comanda-dish-thumb">
