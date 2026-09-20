@@ -124,6 +124,9 @@ test("producto e inventario mantienen una sola fuente de verdad",()=>{
   assert.equal(dialog.includes("SKU opcional"),false,"Inventario no expone el SKU interno al usuario");
   assert.equal(dialog.includes("product.name} · {product.sku"),false,"El selector de Inventario no muestra códigos internos");
   assert.equal(inventory.includes("Buscar producto o SKU"),false,"El buscador visible de Inventario no expone SKU");
+  assert.equal(inventory.includes("item.categoryName"),false,"Inventario no repite la categoría debajo del producto");
+  assert.equal(inventory.includes("Actualizado"),false,"Inventario no muestra metadatos de fecha en la tabla principal");
+  assert.equal(inventory.includes("formatInventoryDate"),false,"La tabla principal no necesita formatear timestamps");
 
   const inventoryApi=read("src/modules/supply/inventory/infrastructure/inventory-api.ts");
   assert.ok(inventoryApi.includes('"inventory/entries"'));
