@@ -237,6 +237,7 @@ test("las rutas principales componen modulos",()=>{
   const expected={
     "src/app/(admin)/pedidos/page.tsx":"@/modules/operations",
     "src/app/(admin)/salon/page.tsx":"@/modules/operations",
+    "src/app/(admin)/cocina/page.tsx":"@/modules/operations",
     "src/app/(admin)/mesas/page.tsx":"@/modules/operations",
     "src/app/(admin)/productos/page.tsx":"@/modules/menu",
     "src/app/(admin)/combos/page.tsx":"@/modules/menu",
