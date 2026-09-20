@@ -94,6 +94,8 @@ func (a *API) Routes() *http.ServeMux {
 	m.Handle("GET /v1/admin/orders/floor", a.auth(a.requirePermission("orders.read", http.HandlerFunc(a.getOrdersFloor))))
 	m.Handle("POST /v1/admin/orders", a.auth(a.requirePermission("orders.manage", http.HandlerFunc(a.createOrder))))
 	m.Handle("GET /v1/admin/orders/{id}", a.auth(a.requirePermission("orders.read", http.HandlerFunc(a.getOrder))))
+	m.Handle("GET /v1/admin/kitchen/tickets", a.auth(a.requirePermission("orders.read", http.HandlerFunc(a.listKitchenTickets))))
+	m.Handle("PATCH /v1/admin/kitchen/tickets/{id}/status", a.auth(a.requirePermission("kitchen.manage", http.HandlerFunc(a.updateKitchenTicketStatus))))
 	m.Handle("PATCH /v1/admin/orders/{id}", a.auth(a.requirePermission("orders.manage", http.HandlerFunc(a.updateOrder))))
 	m.Handle("PATCH /v1/admin/orders/{id}/status", a.auth(a.requirePermission("orders.manage", http.HandlerFunc(a.updateOrderStatus))))
 	m.Handle("GET /v1/admin/roles", a.auth(a.requirePermission("users.read", http.HandlerFunc(a.listRoles))))
