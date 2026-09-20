@@ -17,11 +17,15 @@
 @media (width<=1100px){.sidebar{width:210px}
 .admin-shell>main{margin-left:210px}}
 @media (width<=820px){.admin-shell>main{margin-left:0}
-.topbar{height:64px;padding:0 14px}
-.mobile-nav{background:0 0;border:0;place-items:center;width:44px;height:44px;display:grid}
-.global-search{flex:1;width:auto;max-width:400px}}
+.topbar{height:64px;padding:0 14px;gap:8px}
+.mobile-nav{background:0 0;border:0;place-items:center;width:44px;height:44px;display:grid;flex:0 0 44px}
+.global-search{flex:1;width:auto;max-width:400px}
+.context{min-width:0;margin-left:auto;gap:6px}}
 @media (width<=600px){.global-search{display:none}
-.topbar{justify-content:space-between}}
+.topbar{justify-content:flex-start;padding-inline:10px}
+.context{flex:1;justify-content:flex-end;overflow:visible}
+.platform-link{width:44px;min-width:44px;padding:0;justify-content:center;overflow:hidden;font-size:0}
+.notification-wrap>.icon-button{flex:0 0 44px}}
 .sidebar nav:hover,.sidebar nav:focus-within{scrollbar-width:thin;scrollbar-color:#98a2b366 transparent}
 .sidebar nav::-webkit-scrollbar{width:0;height:0}
 .sidebar nav:hover::-webkit-scrollbar{width:5px}
@@ -29,7 +33,7 @@
 .sidebar a svg{flex:none;display:block}
 .sidebar-brand{flex-shrink:0;justify-content:space-between;align-items:center;height:46px;padding:0 7px;display:flex}
 .sidebar-close{display:none}
-.sidebar nav{scrollbar-width:none;overscroll-behavior-y:contain;min-height:0;margin:20px -4px 12px;padding:0 4px;overflow:auto}
+.sidebar nav{scrollbar-width:none;overscroll-behavior-y:contain;min-height:0;margin:20px -4px 12px;padding:0 4px;overflow:auto;touch-action:pan-y;-webkit-overflow-scrolling:touch}
 .sidebar nav section{margin-bottom:17px}
 .sidebar nav section>small{color:#91a6d0;letter-spacing:.11em;padding:0 10px 7px;font-size:9px;font-weight:800;display:block}
 .sidebar nav a{color:#c5d3ef;border-radius:9px;grid-template-columns:36px minmax(0,1fr) 22px;align-items:center;gap:9px;min-height:46px;padding:0 10px;font-size:12px;font-weight:650;transition:color .16s,background .16s,box-shadow .16s;display:grid;position:relative}
@@ -43,7 +47,7 @@
 .sidebar-user{text-align:left;color:#c9d4ef;background:#ffffff08;border:1px solid #ffffff10;border-radius:10px;grid-template-columns:36px 1fr 22px;align-items:center;gap:9px;min-height:58px;margin-top:auto;padding:8px;transition:background .16s,border-color .16s;display:grid}
 .sidebar-user:hover{background:#ffffff0d;border-color:#ffffff1f}
 .sidebar-scrim{display:none}
-@media (width<=820px){.sidebar{z-index:80;width:min(310px,86vw);display:flex;transform:translate(-105%)}
+@media (width<=820px){.sidebar{z-index:80;width:min(320px,86vw);height:100vh;height:100dvh;max-height:100dvh;padding:max(14px,env(safe-area-inset-top)) 14px max(14px,env(safe-area-inset-bottom));display:flex;transform:translate(-105%)}
 .sidebar.open{transform:translate(0)}
 .sidebar-scrim{backdrop-filter:blur(2px);z-index:70;background:#10182870;border:0;animation:.2s ease-out menu-fade-in;display:block;position:fixed;inset:0}
 .sidebar-close{color:#fff;background:#ffffff0a;border:1px solid #ffffff18;border-radius:9px;place-items:center;width:40px;height:40px;display:grid}
@@ -68,4 +72,4 @@
 .notification-list button small{color:var(--ink-600);margin-top:3px;font-size:8px;font-weight:500}
 .notification-list button em{color:var(--ink-400);font-size:7px;font-style:normal;font-weight:500;position:absolute;top:0;right:0}
 .notification-popover>footer{min-height:43px;color:var(--ops-500);place-items:center;font-size:9px;font-weight:800;display:grid}
-.sidebar{z-index:50;color:#c9d0f2;isolation:isolate;background:var(--ops-800);border-right:1px solid #ffffff14;flex-direction:column;width:250px;height:100vh;padding:25px 18px 18px;transition:width .24s cubic-bezier(.22,1,.36,1),padding .24s cubic-bezier(.22,1,.36,1),transform .24s cubic-bezier(.22,1,.36,1);display:flex;position:fixed;inset:0 auto 0 0;box-shadow:8px 0 28px #173b8818}
+.sidebar{z-index:50;color:#c9d0f2;isolation:isolate;background:var(--ops-800);border-right:1px solid #ffffff14;flex-direction:column;width:250px;height:100vh;height:100dvh;padding:25px 18px 18px;transition:width .24s cubic-bezier(.22,1,.36,1),padding .24s cubic-bezier(.22,1,.36,1),transform .24s cubic-bezier(.22,1,.36,1);display:flex;position:fixed;inset:0 auto 0 0;box-shadow:8px 0 28px #173b8818}
