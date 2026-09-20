@@ -194,9 +194,10 @@ export function ComandaCatalog({qtyByProduct,onPick,onRemove,onConfigureCombo,cu
   );
 }
 
-export function ComboConfigurator({comboId,initialSelections=[],currencySymbol,onClose,onConfirm}:{
+export function ComboConfigurator({comboId,initialSelections=[],editing=false,currencySymbol,onClose,onConfirm}:{
   comboId:string;
   initialSelections?:ComboSelection[];
+  editing?:boolean;
   currencySymbol:string;
   onClose:()=>void;
   onConfirm:(combo:ConfiguredCombo)=>void;
@@ -287,8 +288,8 @@ export function ComboConfigurator({comboId,initialSelections=[],currencySymbol,o
 
         <footer className="combo-config-foot">
           <div><small>Total del menú</small><strong>{currencySymbol} {money(finalPrice)}</strong></div>
-          <Button icon="plus" disabled={!valid||combo.isLoading||combo.isError} onClick={()=>data&&onConfirm({productId:data.id,name:data.name,unitPrice:finalPrice,selections})}>
-            {initialSelections.length?"Guardar opciones":"Agregar a comanda"}
+          <Button icon={editing?"save":"plus"} disabled={!valid||combo.isLoading||combo.isError} onClick={()=>data&&onConfirm({productId:data.id,name:data.name,unitPrice:finalPrice,selections})}>
+            {editing?"Guardar opciones":"Agregar a comanda"}
           </Button>
         </footer>
       </section>
