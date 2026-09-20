@@ -69,7 +69,7 @@ export function ComandaCatalog({qtyByProduct,onPick,onRemove,currencySymbol,vari
             ):sec.items.length?(
               <div className="comanda-dishes">
                 {sec.items.map(p=>(
-                  <MenuItem key={p.id} p={p} qty={qtyByProduct[p.id]??0} categoryLabel={cats.find(c=>c.id===p.categoryId)?.name??""} currencySymbol={currencySymbol} onPick={onPick} onRemove={onRemove} variant={variant}/>
+                  <MenuItem key={p.id} p={p} qty={qtyByProduct[p.id]??0} categoryLabel={searching?(cats.find(c=>c.id===p.categoryId)?.name??""):""} currencySymbol={currencySymbol} onPick={onPick} onRemove={onRemove} variant={variant}/>
                 ))}
               </div>
             ):(
