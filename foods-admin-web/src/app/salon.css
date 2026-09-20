@@ -600,6 +600,15 @@
   justify-content:center;
   gap:7px;
   line-height:1;
+  border-color:#f0c8c4;
+  background:#fff6f5;
+  color:var(--danger,#c9362b);
+}
+
+.salon-order-detail .salon-order-detail-actions .order-detail-cancel:hover:not(:disabled){
+  border-color:#e7aaa4;
+  background:#feeceb;
+  color:#a92c24;
 }
 
 @media(max-width:600px){
