@@ -80,7 +80,10 @@ se limitan a densidad y composición, nunca a reinterpretar el significado del c
   ejemplo, una limonada preparada y una gaseosa de reventa dentro de Bebidas.
   Los productos creados desde Carta y productos nacen como `prepared`; el
   atajo Inventario > Nuevo producto vendible clasifica automáticamente como
-  `retail` sin pedir un paso adicional al usuario.
+  `retail` sin pedir un paso adicional al usuario. Ese alta rápida no muestra
+  el selector de categorías comerciales de Carta: registra la mercadería sin
+  categoría y la clasificación comercial puede asignarse después en Productos
+  si el negocio la necesita.
 - El registro y la edición de producto usan un wizard de tres pasos dentro del
   mismo modal: Información, Operación y Presentación. Avanzar no persiste datos;
   el producto se envía una sola vez desde el último paso. Cada paso valida solo

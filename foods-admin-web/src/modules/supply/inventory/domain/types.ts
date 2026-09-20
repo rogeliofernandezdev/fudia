@@ -2,11 +2,6 @@ export type InventoryStatus="ok"|"low"|"out";
 export type InventoryPresentationType="unit"|"package"|"box";
 export type InventoryKind="product"|"ingredient";
 
-export type InventoryCategoryOption={
-  id:string;
-  name:string;
-};
-
 export type InventoryPresentation={
   id:string;
   presentationType:InventoryPresentationType;
@@ -52,7 +47,6 @@ export type InventoryEntryDraft={
   mode:"existing"|"new_product"|"new_ingredient";
   inventoryItemId:string;
   productId:string;
-  categoryId:string;
   sku:string;
   name:string;
   description:string;

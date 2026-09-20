@@ -15,7 +15,6 @@ const minimumStock=z.string().trim().refine(value=>{
 const common={
   inventoryItemId:z.string(),
   productId:z.string(),
-  categoryId:z.string(),
   sku:z.string().max(40),
   description:z.string().max(1000),
   quantity,
@@ -38,7 +37,6 @@ const newProductSchema=z.object({
   mode:z.literal("new_product"),
   ...common,
   name:z.string().trim().min(1,"Ingresa el nombre del producto.").max(160),
-  categoryId:z.string().trim().min(1,"Selecciona una categoría."),
   price:z.string().trim().regex(/^[0-9]+([.][0-9]{1,2})?$/,"Ingresa un precio válido."),
 });
 
