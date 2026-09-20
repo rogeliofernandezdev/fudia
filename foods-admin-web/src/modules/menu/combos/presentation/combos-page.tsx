@@ -40,7 +40,7 @@ export function CombosPage(){
   const detail=useQuery({queryKey:["combo-detail",selected],queryFn:()=>getCombo(selected!),enabled:Boolean(selected)});
   const save=useMutation({
     mutationFn:(value:Draft)=>saveCombo(value,editingId),
-    onSuccess:()=>{const edited=Boolean(editingId);setDraft(null);setEditingId(null);setStep(1);void client.invalidateQueries({queryKey:["combos"]});void client.invalidateQueries({queryKey:["products"]});notify({tone:"success",title:edited?"Menú actualizado":"Menú registrado",message:edited?"Los cambios ya están disponibles para la operación.":"La composición ya está disponible para la operación."})},
+    onSuccess:()=>{const edited=Boolean(editingId);setDraft(null);setEditingId(null);setStep(1);void client.invalidateQueries({queryKey:["combos"]});void client.invalidateQueries({queryKey:["products"]});notify({tone:"success",title:edited?"Menú actualizado":"Menú registrado",message:edited?"Los cambios ya están disponibles para la operación.":"El menú ya está disponible para la operación."})},
     onError:error=>notify({tone:"danger",title:"No se pudo guardar",message:error.message})
   });
   const loadForEdit=useMutation({
@@ -272,7 +272,7 @@ function ReviewStep({draft,products,currencySymbol}:{draft:Draft;products:Produc
       <b>Cuándo se vende</b>
       <dl>
         <div><dt>Días</dt><dd>{daysLabel}</dd></div>
-        <div><dt>Vigencia</dt><dd>{rangeLabel}</dd></div>
+        <div><dt>Fechas</dt><dd>{rangeLabel}</dd></div>
       </dl>
     </div>
   </div>
