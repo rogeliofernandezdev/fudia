@@ -11,7 +11,7 @@ const walk=dir=>readdirSync(join(root,dir)).flatMap(name=>{
 
 test("la arquitectura no usa un contenedor generico de features",()=>{
   assert.equal(existsSync(join(root,"src/components")),false);
-  for(const moduleName of ["auth","context","customers","dashboard","identity","menu","modules","operations","organizations","platform","public-menu"]){
+  for(const moduleName of ["auth","configuration","context","customers","dashboard","identity","menu","modules","operations","organizations","platform","public-menu","sales","supply"]){
     assert.equal(existsSync(join(root,`src/modules/${moduleName}/index.ts`)),true,`falta index publico: ${moduleName}`);
   }
 });
@@ -35,6 +35,30 @@ test("no quedan imports a components ni CSS antiguo de app",()=>{
   for(const p of source){
     const c=read(p);
     if(c.includes("@/components/")||/from ["'][.]{1,2}\/app\//.test(c)||/import ["'][^"']*\/app\/[^"']*\.css["']/.test(c))bad.push(p);
+  }
+  assert.deepEqual(bad,[]);
+});
+
+test("presentation no construye transporte HTTP",()=>{
+  const presentation=walk("src/modules").filter(p=>p.includes("/presentation/")&&/\.(ts|tsx)$/.test(p));
+  const bad=[];
+  for(const p of presentation){
+    const source=read(p);
+    if(/\bapiFetch\b/.test(source)||/\bfetch\s*\(/.test(source))bad.push(p);
+  }
+  assert.deepEqual(bad,[]);
+});
+
+test("providers shell y pages no construyen transporte HTTP",()=>{
+  const source=[
+    ...walk("src/providers").filter(p=>/\.(ts|tsx)$/.test(p)),
+    ...walk("src/shell").filter(p=>/\.(ts|tsx)$/.test(p)),
+    ...walk("src/app").filter(p=>p.endsWith("/page.tsx")),
+  ];
+  const bad=[];
+  for(const p of source){
+    const content=read(p);
+    if(/\bapiFetch\b/.test(content)||/\bfetch\s*\(/.test(content))bad.push(p);
   }
   assert.deepEqual(bad,[]);
 });
