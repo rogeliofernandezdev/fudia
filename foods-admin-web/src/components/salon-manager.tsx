@@ -29,7 +29,7 @@ const statusMeta:Record<string,{label:string;tone:"green"|"blue"|"orange"|"gray"
   cancelado:{label:"Cancelado",tone:"gray"},
 };
 function nextAction(o:Order):{status:string;label:string;icon:IconName}|null{
-  if(o.status==="nuevo")return{status:"confirmado",label:"Confirmar",icon:"check"};
+  if(o.status==="nuevo")return{status:"confirmado",label:"Confirmar",icon:"receipt"};
   if(o.status==="confirmado")return{status:"preparando",label:"Iniciar preparación",icon:"chefHat"};
   if(o.status==="preparando")return{status:"listo",label:"Marcar listo",icon:"check"};
   if(o.status==="listo")return{status:"entregado",label:"Entregar",icon:"check"};
@@ -546,7 +546,7 @@ function OrderDetail({loading,order,error,currencySymbol,canManage,busy,close,ad
               <footer className="order-detail-actions salon-order-detail-actions">
                 {action&&<Button icon={action.icon} className="order-detail-primary" disabled={busy} onClick={()=>advance(action.status)}>{action.label}</Button>}
                 {order.status==="entregado"&&<span className="order-detail-done"><Icon name="check" size={15}/>Mesa entregada</span>}
-                {!["entregado","cancelado"].includes(order.status)&&<Button icon="close" kind="ghost" className="order-detail-cancel" disabled={busy} onClick={()=>cancel(order)}>Cancelar pedido</Button>}
+                {!["entregado","cancelado"].includes(order.status)&&<Button icon="alert" kind="ghost" className="order-detail-cancel" disabled={busy} onClick={()=>cancel(order)}>Cancelar pedido</Button>}
               </footer>
             )}
           </>
