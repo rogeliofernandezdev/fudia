@@ -199,10 +199,10 @@
 .salon-order-detail .salon-order-detail-head{
   min-height:78px;
   padding:14px 18px;
-  display:flex;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto var(--control-height);
   align-items:center;
-  justify-content:space-between;
-  gap:14px;
+  gap:12px;
   flex-shrink:0;
   border-bottom:1px solid #e4e7ec;
   background:#fff;
@@ -242,6 +242,7 @@
 .salon-order-detail-heading h2{
   margin:0!important;
   overflow:hidden;
+  text-transform:uppercase;
   color:var(--ink-950,#101828);
   font-size:20px!important;
   font-weight:850;
@@ -261,14 +262,16 @@
   white-space:nowrap;
 }
 
-.salon-order-detail-head-actions{
+.salon-order-detail-status{
   display:flex;
   align-items:center;
-  gap:9px;
-  flex-shrink:0;
+  justify-content:flex-end;
+  min-width:0;
 }
 
 .salon-order-detail .salon-order-detail-close{
+  grid-column:3;
+  justify-self:end;
   width:var(--control-height);
   height:var(--control-height);
   display:grid;
@@ -646,8 +649,16 @@
 }
 
 @media(max-width:390px){
-  .salon-order-detail-head-actions .status{
+  .salon-order-detail-status{
     display:none;
+  }
+
+  .salon-order-detail .salon-order-detail-head{
+    grid-template-columns:minmax(0,1fr) var(--control-height);
+  }
+
+  .salon-order-detail .salon-order-detail-close{
+    grid-column:2;
   }
 
   .salon-order-detail-meta{
