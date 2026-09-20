@@ -498,7 +498,7 @@ function ComandaView({initial,mode,allTables,busy,currencySymbol,close,save,noti
                             <span className="salon-comanda-line-inline-qty">{l.qty}×</span>
                             <strong>{l.name}</strong>
                           </div>
-                          <small>{currencySymbol} {money(l.unitPrice)} c/u</small>
+                          {l.qty>1&&<small>{currencySymbol} {money(l.unitPrice)} c/u</small>}
                           {l.itemType==="combo"&&(
                             <div className="salon-comanda-line-selections">
                               {l.selections.map(sel=>
