@@ -90,7 +90,8 @@ function MenuItem({p,qty,categoryLabel,currencySymbol,onPick,onRemove,variant}:{
     return(
       <article className={"comanda-dish comanda-dish-modern"+(qty>0?" picked":"")} aria-label={p.name}>
         <span className={"comanda-dish-thumb comanda-dish-modern-media"+(p.imageUrl?" has-image":"")}>
-          {p.imageUrl?<img src={p.imageUrl} alt={p.name} loading="lazy"/>:<span className="comanda-dish-image-fallback"><Icon name="utensils" size={24}/><small>Sin imagen</small></span>}
+          <span className="comanda-dish-image-fallback"><Icon name="utensils" size={24}/><small>Sin imagen</small></span>
+          {p.imageUrl&&<img src={p.imageUrl} alt={p.name} loading="lazy" onError={e=>{e.currentTarget.hidden=true}}/>}
         </span>
         <div className="comanda-dish-modern-content">
           <div className="comanda-dish-modern-copy">
