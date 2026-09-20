@@ -10,12 +10,6 @@ export type {CatalogProduct,ComboSelection,ConfiguredCombo} from "../domain/cata
 
 type CatalogQuery={data?:ProductList;isLoading:boolean;error?:{message:string}|null};
 type Section={id:string;title:string;items:CatalogProduct[];loading:boolean;error?:{message:string}|null};
-type ComboSummary={id:string;name:string;description:string;price:string;imageUrl:string|null;groupCount:number;optionCount:number};
-type ComboList={items:ComboSummary[];total:number};
-type ComboOption={productId:string;name:string;surcharge:string;available:boolean};
-type ComboGroup={id:string;name:string;required:boolean;minSelections:number;maxSelections:number;options:ComboOption[]};
-type ComboDetail={id:string;name:string;description:string;price:string;imageUrl:string|null;groups:ComboGroup[]};
-
 const money=(v:string|number)=>Number(v).toFixed(2);
 
 export function ComandaCatalog({qtyByProduct,onPick,onRemove,onConfigureCombo,currencySymbol,variant="default"}:{
