@@ -300,7 +300,7 @@ export function ComboConfigurator({comboId,initialSelections=[],editing=false,cu
                       <h4>{group.name}</h4>
                       <small>{minimum>0?`Elige ${minimum}${group.maxSelections>minimum?` a ${group.maxSelections}`:""} de ${group.options.length}`:`${group.options.length} opciones · elección opcional`}</small>
                     </div>
-                    <span className={ready?"ready":"pending"}>{ready?<><Icon name="check" size={12}/>Listo</>:<>{selectedIds.length}/{minimum}</>}</span>
+                    <span className={ready?"ready":"pending"}>{minimum===0&&selectedIds.length===0?"Opcional":ready?<><Icon name="check" size={12}/>Listo</>:<>{selectedIds.length}/{minimum}</>}</span>
                   </header>
                   <div className="combo-config-options">
                     {group.options.map(option=>{
