@@ -118,6 +118,9 @@ test("combos conserva la misma tabla en movil y el shell no desborda",()=>{
   const account=read("src/shell/styles/account-menu.css");
   assert.ok(account.includes("@container admin-main (width<=1040px)"));
   assert.ok(account.includes(".account-popover>header small{overflow:hidden"));
+  assert.ok(account.includes("@media(max-width:820px)"));
+  assert.ok(account.includes(".account-trigger-copy,.account-trigger>svg{display:none!important}"));
+  assert.ok(account.includes(".account-menu{width:44px;min-width:44px;max-width:44px"));
   const globals=read("src/styles/globals.css");
   assert.ok(globals.includes(".page-header>.button{flex:0 0 auto;white-space:nowrap}"));
   const nav=read("src/shell/styles/navigation-state.css");
