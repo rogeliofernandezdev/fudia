@@ -1,6 +1,6 @@
 "use client";
 
-import {useRef,useState} from "react";
+import {useEffect,useRef,useState} from "react";
 import {useQueries,useQuery} from "@tanstack/react-query";
 import {Button,Icon,Pagination} from "@/design-system";
 import {apiFetch} from "@/shared/api/client";
@@ -213,6 +213,28 @@ export function ComboConfigurator({comboId,initialSelections=[],editing=false,cu
     staleTime:15000,
   });
   const data=combo.data;
+  const initialMapped=useRef(false);
+
+  useEffect(()=>{
+    if(!data||initialMapped.current)return;
+    const mapped:Record<string,string[]>={};
+    for(const selection of initialSelections){
+      const normalizedName=selection.groupName.trim().toLowerCase();
+      const group=data.groups.find(item=>item.id===selection.groupId||item.name.trim().toLowerCase()===normalizedName);
+      if(!group||!group.options.some(option=>option.productId===selection.productId))continue;
+      mapped[group.id]=[...(mapped[group.id]??[]),selection.productId];
+    }
+    setSelected(mapped);
+    initialMapped.current=true;
+  },[data,initialSelections]);
+
+  useEffect(()=>{
+    const onKeyDown=(event:KeyboardEvent)=>{
+      if(event.key==="Escape")onClose();
+    };
+    window.addEventListener("keydown",onKeyDown);
+    return()=>window.removeEventListener("keydown",onKeyDown);
+  },[onClose]);
 
   const toggle=(group:ComboGroup,option:ComboOption)=>{
     setSelected(prev=>{
