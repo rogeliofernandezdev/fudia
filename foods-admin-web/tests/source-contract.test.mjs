@@ -88,12 +88,41 @@ test("los modales remotos muestran skeleton mientras esperan datos",()=>{
     "src/modules/menu/products/presentation/catalog-manager.tsx":["RemoteModalSkeleton","categories.isLoading"],
     "src/modules/identity/presentation/users-roles-manager.tsx":["RemoteModalSkeleton","roles.isLoading||locations.isLoading","permissions.isLoading"],
     "src/modules/organizations/presentation/organization-admin.tsx":["RemoteModalSkeleton","profiles.isLoading"],
+    "src/modules/supply/inventory/presentation/inventory-page.tsx":["RemoteModalSkeleton","products.isLoading"],
     "src/design-system/maps/mapbox-location-provider.tsx":["mapLoading","location-map-canvas-skeleton","location-map-suggestions-loading"],
   };
   for(const [p,needles] of Object.entries(contracts)){
     const source=read(p);
     for(const needle of needles)assert.ok(source.includes(needle),`${p} debe incluir ${needle}`);
   }
+});
+
+test("producto e inventario mantienen una sola fuente de verdad",()=>{
+  const productTypes=read("src/modules/menu/products/domain/types.ts");
+  assert.ok(productTypes.includes('QuantityControl="none"|"portions"|"inventory"'));
+  for(const legacy of ["stockMode","defaultDailyQuota","dailyQuota"])assert.equal(productTypes.includes(legacy),false,legacy);
+
+  const productDialog=read("src/modules/menu/products/presentation/product-dialog.tsx");
+  for(const label of ["Sin control","Porciones preparadas","Inventario físico"])assert.ok(productDialog.includes(label),label);
+  assert.equal(productDialog.includes("Cupo diario predeterminado"),false);
+
+  assert.equal(existsSync(join(root,"src/modules/supply/presentation/inventory-page.tsx")),false);
+  const inventory=read("src/modules/supply/inventory/presentation/inventory-page.tsx");
+  assert.ok(inventory.includes("Nueva entrada"));
+  assert.ok(inventory.includes("listInventory"));
+  assert.ok(inventory.includes("createInventoryEntry"));
+  const dialog=read("src/modules/supply/inventory/presentation/inventory-entry-dialog.tsx");
+  assert.ok(dialog.includes("Producto existente"));
+  assert.ok(dialog.includes("Nuevo producto"));
+  assert.ok(dialog.includes("Una sola operación"));
+
+  const inventoryApi=read("src/modules/supply/inventory/infrastructure/inventory-api.ts");
+  assert.ok(inventoryApi.includes('"inventory/entries"'));
+  assert.ok(inventoryApi.includes("newProduct"));
+  const availability=read("src/modules/menu/availability/presentation/product-availability-manager.tsx");
+  assert.ok(availability.includes('quantityControl==="portions"'));
+  assert.ok(availability.includes('quantityControl==="inventory"'));
+  assert.ok(availability.includes("La existencia se actualiza únicamente desde Inventario"));
 });
 
 test("combos conserva la misma tabla en movil y el shell no desborda",()=>{
@@ -145,7 +174,9 @@ test("las rutas principales componen modulos",()=>{
     "src/app/(admin)/combos/page.tsx":"@/modules/menu",
     "src/app/(admin)/clientes/page.tsx":"@/modules/customers",
     "src/app/(admin)/locales/page.tsx":"@/modules/organizations",
-    "src/app/(admin)/configuracion/usuarios/page.tsx":"@/modules/identity"
+    "src/app/(admin)/configuracion/usuarios/page.tsx":"@/modules/identity",
+    "src/app/(admin)/inventario/page.tsx":"@/modules/supply",
+    "src/app/(admin)/kardex/page.tsx":"@/modules/supply"
   };
   for(const [p,dependency] of Object.entries(expected))assert.ok(read(p).includes(dependency),p);
 });
