@@ -96,13 +96,17 @@ test("los modales remotos muestran skeleton mientras esperan datos",()=>{
   }
 });
 
-test("combos conserva su representacion movil y el shell no desborda",()=>{
+test("combos conserva la misma tabla en movil y el shell no desborda",()=>{
   const combos=read("src/modules/menu/combos/presentation/combos-page.tsx");
-  assert.ok(combos.includes("combo-mobile-cards"));
+  assert.ok(combos.includes('className="table-wrap hover-scroll"'));
+  assert.equal(combos.includes("combo-mobile-cards"),false);
   assert.equal(combos.includes("\\n    {draft&&<ComboWizard"),false);
   const comboCss=read("src/modules/menu/combos/presentation/combo-wizard.css");
   assert.ok(comboCss.includes("container-name: combo-list"));
   assert.ok(comboCss.includes("@container combo-list (width <= 820px)"));
+  assert.ok(comboCss.includes(".standardized-management.combo-list .table-wrap"));
+  assert.ok(comboCss.includes("overflow-x: auto"));
+  assert.ok(comboCss.includes("min-width: 720px"));
   const shell=read("src/shell/styles/shell.css");
   assert.ok(shell.includes("height:100dvh"));
   assert.ok(shell.includes("container-name:admin-main"));
@@ -110,8 +114,10 @@ test("combos conserva su representacion movil y el shell no desborda",()=>{
   assert.ok(shell.includes(".platform-link{width:44px"));
   const context=read("src/modules/context/presentation/context-switcher.css");
   assert.ok(context.includes("@container admin-main (width<=1040px)"));
+  assert.ok(context.includes("text-overflow:ellipsis"));
   const account=read("src/shell/styles/account-menu.css");
   assert.ok(account.includes("@container admin-main (width<=1040px)"));
+  assert.ok(account.includes(".account-popover>header small{overflow:hidden"));
   const globals=read("src/styles/globals.css");
   assert.ok(globals.includes(".page-header>.button{flex:0 0 auto;white-space:nowrap}"));
   const nav=read("src/shell/styles/navigation-state.css");
