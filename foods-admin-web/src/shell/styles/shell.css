@@ -6,7 +6,7 @@
 .sidebar-user small{color:#788bb5;margin-top:3px;font-size:8px;font-weight:600}
 .sidebar-user>svg{color:#788bb5;flex-shrink:0;transition:color .15s}
 .sidebar-user:hover>svg{color:#fff}
-.admin-shell>main{min-height:100vh;margin-left:250px;transition:margin-left .24s cubic-bezier(.22,1,.36,1)}
+.admin-shell>main{min-height:100vh;margin-left:250px;container-type:inline-size;container-name:admin-main;transition:margin-left .24s cubic-bezier(.22,1,.36,1)}
 .topbar{border-bottom:1px solid var(--line);backdrop-filter:blur(12px);z-index:10;background:#ffffffed;justify-content:space-between;align-items:center;height:72px;padding:0 30px;display:flex;position:sticky;top:0}
 .global-search{border:1px solid var(--line);width:min(390px,36vw);height:42px;color:var(--ink-400);background:#f9fafb;border-radius:10px;align-items:center;gap:9px;padding:0 13px;display:flex}
 .global-search:focus-within{border-color:var(--ops-500);box-shadow:0 0 0 3px #2f5bc71f}
@@ -16,6 +16,8 @@
 .platform-link:hover{background:#dbe4ff}
 @media (width<=1100px){.sidebar{width:210px}
 .admin-shell>main{margin-left:210px}}
+@container admin-main (width<=900px){.topbar{justify-content:flex-start;gap:8px;padding-inline:16px}.global-search{min-width:0;width:auto;max-width:none;flex:1}.context{min-width:0;margin-left:auto;gap:6px}.platform-link{width:44px;min-width:44px;padding:0;justify-content:center;overflow:hidden;font-size:0}.notification-wrap>.icon-button{flex:0 0 44px}}
+
 @media (width<=820px){.admin-shell>main{margin-left:0}
 .topbar{height:64px;padding:0 14px;gap:8px}
 .mobile-nav{background:0 0;border:0;place-items:center;width:44px;height:44px;display:grid;flex:0 0 44px}
