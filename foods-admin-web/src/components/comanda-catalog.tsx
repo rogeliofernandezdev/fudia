@@ -82,7 +82,7 @@ export function ComandaCatalog({qtyByProduct,onPick,onRemove,currencySymbol,vari
         {variant==="salon"?(
           booting?(
             <MenuRows n={8}/>
-          ):salonCatalog.isError?(
+          ):salonCatalog.isError&&!salonItems.length?(
             <div className="catalog-state empty-catalog-card"><span><Icon name="alert"/></span><b>No pudimos cargar la carta</b><p>{salonCatalog.error.message}</p></div>
           ):salonItems.length?(
             <>
@@ -95,7 +95,7 @@ export function ComandaCatalog({qtyByProduct,onPick,onRemove,currencySymbol,vari
                 <div className="salon-comanda-load-more">
                   <span aria-live="polite"><b>{salonItems.length}</b> de {salonTotal} platos</span>
                   <button type="button" onClick={()=>salonCatalog.fetchNextPage()} disabled={salonCatalog.isFetchingNextPage}>
-                    {salonCatalog.isFetchingNextPage?"Cargando…":`Ver ${salonNextCount} más`}
+                    {salonCatalog.isFetchingNextPage?"Cargando…":salonCatalog.isFetchNextPageError?"Reintentar":`Ver ${salonNextCount} más`}
                   </button>
                 </div>
               )}
