@@ -4,6 +4,8 @@ import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Button,Icon,Input,PageHeader,Pagination,Select,Status} from "@/design-system";
 import {useFeedback} from "@/providers";
+import {useSession} from "@/providers/session-context";
+import {formatRegionalCalendarDate,formatRegionalNumber} from "@/shared/i18n/regional-format";
 import type {AvailabilityItem,AvailabilityStatus} from "../domain/types";
 import {listAvailability,listAvailabilityCategories,updateAvailability} from "../infrastructure/availability-api";
 
@@ -18,6 +20,7 @@ const controlLabels:Record<AvailabilityItem["quantityControl"],string>={
 export function ProductAvailabilityManager(){
  const client=useQueryClient();
  const{notify}=useFeedback();
+ const{location}=useSession();
  const[search,setSearch]=useState("");
  const[categoryId,setCategoryId]=useState("");
  const[page,setPage]=useState(1);
@@ -49,7 +52,7 @@ export function ProductAvailabilityManager(){
 
  const items=query.data?.items??[];
  const businessDate=query.data?.businessDate
-  ?new Intl.DateTimeFormat("es-PE",{weekday:"short",day:"2-digit",month:"short",timeZone:"UTC"}).format(new Date(`${query.data.businessDate}T00:00:00Z`))
+  ?formatRegionalCalendarDate(query.data.businessDate,location?.country,{weekday:"short",day:"2-digit",month:"short"})
   :"Cargando fecha…";
 
  return <>
@@ -80,7 +83,7 @@ export function ProductAvailabilityManager(){
       const portionChanged=item.quantityControl==="portions"&&portionValue!==String(item.portionQuantity??0);
       const manuallySoldOut=item.manualStatus==="sold_out";
       const quantityExhausted=(item.source==="portions"||item.source==="inventory")&&item.status==="sold_out";
-      const inventoryAmount=item.remaining===null?"0":Number(item.remaining).toLocaleString("es-PE",{maximumFractionDigits:3});
+      const inventoryAmount=item.remaining===null?"0":formatRegionalNumber(Number(item.remaining),location?.country,{maximumFractionDigits:3});
       return <article className={`availability-card status-${item.status}`} key={item.productId}>
        <header>
         <span className="availability-image">{item.imageUrl?<img src={item.imageUrl} alt=""/>:<Icon name="box" size={20}/>}</span>
