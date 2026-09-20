@@ -27,14 +27,21 @@ type inventoryItemView struct {
 	QuantityControl string  `json:"quantityControl"`
 }
 
+type inventoryPresentationOption struct {
+	ID                   string `json:"id"`
+	PresentationType     string `json:"presentationType"`
+	UnitsPerPresentation string `json:"unitsPerPresentation"`
+}
+
 type inventoryProductOption struct {
-	ID              string  `json:"id"`
-	SKU             string  `json:"sku"`
-	Name            string  `json:"name"`
-	CategoryName    *string `json:"categoryName"`
-	QuantityControl string  `json:"quantityControl"`
-	Unit            *string `json:"unit"`
-	MinimumStock    *string `json:"minimumStock"`
+	ID              string                        `json:"id"`
+	SKU             string                        `json:"sku"`
+	Name            string                        `json:"name"`
+	CategoryName    *string                       `json:"categoryName"`
+	QuantityControl string                        `json:"quantityControl"`
+	Unit            *string                       `json:"unit"`
+	MinimumStock    *string                       `json:"minimumStock"`
+	Presentations   []inventoryPresentationOption `json:"presentations"`
 }
 
 type inventoryNewProductInput struct {
@@ -46,12 +53,14 @@ type inventoryNewProductInput struct {
 }
 
 type inventoryEntryInput struct {
-	ProductID    string                    `json:"productId"`
-	NewProduct   *inventoryNewProductInput `json:"newProduct"`
-	Quantity     float64                   `json:"quantity"`
-	Unit         string                    `json:"unit"`
-	MinimumStock float64                   `json:"minimumStock"`
-	Note         string                    `json:"note"`
+	ProductID             string                    `json:"productId"`
+	NewProduct            *inventoryNewProductInput `json:"newProduct"`
+	Quantity              float64                   `json:"quantity"`
+	Unit                  string                    `json:"unit"`
+	PresentationType      string                    `json:"presentationType"`
+	UnitsPerPresentation  float64                   `json:"unitsPerPresentation"`
+	MinimumStock          float64                   `json:"minimumStock"`
+	Note                  string                    `json:"note"`
 }
 
 type inventoryMovementView struct {
@@ -93,6 +102,7 @@ func productHasCancellableOrderUsage(ctx context.Context, tx pgx.Tx, organizatio
 func normalizeInventoryEntry(in inventoryEntryInput) (inventoryEntryInput, string) {
 	in.ProductID = strings.TrimSpace(in.ProductID)
 	in.Unit = strings.TrimSpace(in.Unit)
+	in.PresentationType = strings.ToLower(strings.TrimSpace(in.PresentationType))
 	in.Note = strings.TrimSpace(in.Note)
 	if in.Quantity <= 0 {
 		return in, "La cantidad de entrada debe ser mayor que cero."
@@ -102,6 +112,19 @@ func normalizeInventoryEntry(in inventoryEntryInput) (inventoryEntryInput, strin
 	}
 	if in.Unit == "" {
 		in.Unit = "und"
+	}
+	if in.PresentationType == "" {
+		in.PresentationType = "unit"
+	}
+	switch in.PresentationType {
+	case "unit":
+		in.UnitsPerPresentation = 1
+	case "package", "box":
+		if in.UnitsPerPresentation <= 1 {
+			return in, "Indica cuántas unidades base contiene cada paquete o caja."
+		}
+	default:
+		return in, "La presentación de entrada no es válida."
 	}
 	hasExisting := in.ProductID != ""
 	hasNew := in.NewProduct != nil
@@ -176,7 +199,23 @@ func (a *API) listInventoryProducts(w http.ResponseWriter, r *http.Request) {
 	s := r.Context().Value(scopeKey{}).(scope)
 	search := "%" + strings.TrimSpace(r.URL.Query().Get("q")) + "%"
 	rows, err := a.db.Query(r.Context(), `
-		SELECT p.id,p.sku,p.name,c.name,p.quantity_control,ii.unit,ii.minimum_stock::text
+		SELECT p.id,p.sku,p.name,c.name,p.quantity_control,ii.unit,ii.minimum_stock::text,
+		       COALESCE((
+		         SELECT jsonb_agg(
+		           jsonb_build_object(
+		             'id',ip.id,
+		             'presentationType',ip.presentation_type,
+		             'unitsPerPresentation',ip.units_per_presentation::text
+		           )
+		           ORDER BY
+		             CASE ip.presentation_type WHEN 'unit' THEN 0 WHEN 'package' THEN 1 ELSE 2 END,
+		             ip.units_per_presentation
+		         )
+		         FROM inventory_presentations ip
+		         WHERE ip.organization_id=p.organization_id
+		           AND ip.inventory_item_id=ii.id
+		           AND ip.active
+		       ),'[]'::jsonb)
 		FROM products p
 		LEFT JOIN menu_categories c ON c.id=p.category_id AND c.organization_id=p.organization_id
 		LEFT JOIN inventory_items ii ON ii.organization_id=p.organization_id AND ii.product_id=p.id AND ii.active
@@ -194,8 +233,13 @@ func (a *API) listInventoryProducts(w http.ResponseWriter, r *http.Request) {
 	items := []inventoryProductOption{}
 	for rows.Next() {
 		var item inventoryProductOption
-		if err := rows.Scan(&item.ID, &item.SKU, &item.Name, &item.CategoryName, &item.QuantityControl, &item.Unit, &item.MinimumStock); err != nil {
+		var presentationsJSON []byte
+		if err := rows.Scan(&item.ID, &item.SKU, &item.Name, &item.CategoryName, &item.QuantityControl, &item.Unit, &item.MinimumStock, &presentationsJSON); err != nil {
 			fail(w, 503, "inventory_products_unavailable", "No pudimos cargar los productos.")
+			return
+		}
+		if err := json.Unmarshal(presentationsJSON, &item.Presentations); err != nil {
+			fail(w, 503, "inventory_products_unavailable", "No pudimos cargar las presentaciones del producto.")
 			return
 		}
 		items = append(items, item)
@@ -267,7 +311,7 @@ func (a *API) createInventoryEntry(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if quantityControl != "inventory" {
-			fail(w, 409, "quantity_control_conflict", "Solo los productos configurados como Inventario físico pueden recibir entradas. Cambia el control de cantidad desde Productos antes de registrar stock.")
+			fail(w, 409, "quantity_control_conflict", "Solo los productos de Inventario físico pueden recibir entradas. Si es una mercadería nueva, créala desde Nuevo producto físico en esta misma pantalla.")
 			return
 		}
 	}
@@ -285,7 +329,41 @@ func (a *API) createInventoryEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if inventoryUnit != in.Unit {
-		fail(w, 409, "inventory_unit_conflict", "La unidad de este producto es "+inventoryUnit+". Registra la entrada usando la misma unidad.")
+		fail(w, 409, "inventory_unit_conflict", "La unidad base de este producto es "+inventoryUnit+". Registra la entrada usando esa misma unidad base.")
+		return
+	}
+
+	// La presentación base 1:1 siempre existe. Las presentaciones de paquete/caja
+	// se reutilizan en entradas posteriores del mismo producto.
+	if _, err = tx.Exec(r.Context(), `
+		INSERT INTO inventory_presentations(
+			organization_id,inventory_item_id,presentation_type,units_per_presentation,active
+		)
+		VALUES($1,$2,'unit',1,true)
+		ON CONFLICT (organization_id,inventory_item_id,presentation_type,units_per_presentation)
+		DO UPDATE SET active=true,updated_at=now()`,
+		s.OrganizationID, inventoryItemID); err != nil {
+		fail(w, 503, "inventory_unavailable", "No pudimos preparar la presentación base del producto.")
+		return
+	}
+
+	var presentationID string
+	if err = tx.QueryRow(r.Context(), `
+		INSERT INTO inventory_presentations(
+			organization_id,inventory_item_id,presentation_type,units_per_presentation,active
+		)
+		VALUES($1,$2,$3,$4,true)
+		ON CONFLICT (organization_id,inventory_item_id,presentation_type,units_per_presentation)
+		DO UPDATE SET active=true,updated_at=now()
+		RETURNING id`,
+		s.OrganizationID, inventoryItemID, in.PresentationType, in.UnitsPerPresentation).Scan(&presentationID); err != nil {
+		fail(w, 503, "inventory_unavailable", "No pudimos guardar la presentación de entrada.")
+		return
+	}
+
+	stockQuantity := math.Round(in.Quantity*in.UnitsPerPresentation*1000) / 1000
+	if stockQuantity <= 0 {
+		fail(w, 400, "invalid_inventory_entry", "La equivalencia en unidades base debe ser mayor que cero.")
 		return
 	}
 
@@ -307,7 +385,7 @@ func (a *API) createInventoryEntry(w http.ResponseWriter, r *http.Request) {
 		fail(w, 503, "inventory_unavailable", "No pudimos bloquear el saldo de inventario.")
 		return
 	}
-	balanceAfter := current + in.Quantity
+	balanceAfter := current + stockQuantity
 	if _, err = tx.Exec(r.Context(), `
 		UPDATE stock_balances
 		SET quantity=$4,updated_at=now()
@@ -319,10 +397,14 @@ func (a *API) createInventoryEntry(w http.ResponseWriter, r *http.Request) {
 
 	var entryID string
 	if err = tx.QueryRow(r.Context(), `
-		INSERT INTO inventory_entries(organization_id,location_id,product_id,inventory_item_id,quantity,unit,note,created_by)
-		VALUES($1,$2,$3,$4,$5,$6,$7,$8)
+		INSERT INTO inventory_entries(
+			organization_id,location_id,product_id,inventory_item_id,
+			quantity,unit,presentation_id,presentation_type,units_per_presentation,note,created_by
+		)
+		VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
 		RETURNING id`,
-		s.OrganizationID, s.LocationID, productID, inventoryItemID, in.Quantity, in.Unit, in.Note, s.UserID).Scan(&entryID); err != nil {
+		s.OrganizationID, s.LocationID, productID, inventoryItemID,
+		in.Quantity, in.Unit, presentationID, in.PresentationType, in.UnitsPerPresentation, in.Note, s.UserID).Scan(&entryID); err != nil {
 		fail(w, 503, "inventory_unavailable", "No pudimos registrar el documento de entrada.")
 		return
 	}
@@ -330,7 +412,7 @@ func (a *API) createInventoryEntry(w http.ResponseWriter, r *http.Request) {
 	if _, err = tx.Exec(r.Context(), `
 		INSERT INTO stock_movements(organization_id,location_id,product_id,inventory_item_id,movement_type,quantity_delta,balance_after,source_type,source_id,note,created_by)
 		VALUES($1,$2,$3,$4,'entry',$5,$6,'inventory_entry',$7,$8,$9)`,
-		s.OrganizationID, s.LocationID, productID, inventoryItemID, in.Quantity, balanceAfter, entryID, in.Note, s.UserID); err != nil {
+		s.OrganizationID, s.LocationID, productID, inventoryItemID, stockQuantity, balanceAfter, entryID, in.Note, s.UserID); err != nil {
 		fail(w, 503, "inventory_unavailable", "No pudimos registrar el movimiento de Kárdex.")
 		return
 	}
@@ -345,7 +427,9 @@ func (a *API) createInventoryEntry(w http.ResponseWriter, r *http.Request) {
 	a.audit(r, "inventory.entry_created", "product", productID)
 	writeJSON(w, 201, map[string]any{
 		"id": entryID, "productId": productID, "sku": productSKU, "name": productName,
-		"quantity": in.Quantity, "unit": in.Unit, "balance": balanceAfter, "createdProduct": createdProduct,
+		"quantity": in.Quantity, "presentationId": presentationID, "presentationType": in.PresentationType,
+		"unitsPerPresentation": in.UnitsPerPresentation, "stockQuantity": stockQuantity,
+		"unit": in.Unit, "balance": balanceAfter, "createdProduct": createdProduct,
 	})
 }
 
