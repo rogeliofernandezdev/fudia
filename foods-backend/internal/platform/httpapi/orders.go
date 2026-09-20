@@ -54,6 +54,7 @@ type orderItemSelectionInput struct {
 	ProductID string `json:"productId"`
 }
 type orderItemInput struct {
+	ID         string                    `json:"id"`
 	ProductID  string                    `json:"productId"`
 	Name       string                    `json:"name"`
 	Qty        float64                   `json:"qty"`
@@ -189,7 +190,7 @@ func loadOrderItems(ctx context.Context, q orderRowsQuerier, orderID, organizati
 	return items, nil
 }
 
-func (a *API) prepareOrderItems(r *http.Request, tx pgx.Tx, s scope, inputs []orderItemInput) ([]preparedOrderItem, float64, *orderPreparationError) {
+func (a *API) prepareOrderItems(r *http.Request, tx pgx.Tx, s scope, existingOrderID string, inputs []orderItemInput) ([]preparedOrderItem, float64, *orderPreparationError) {
 	prepared := make([]preparedOrderItem, 0, len(inputs))
 	subtotal := 0.0
 
@@ -228,6 +229,69 @@ func (a *API) prepareOrderItems(r *http.Request, tx pgx.Tx, s scope, inputs []or
 			prepared = append(prepared, item)
 			subtotal += item.Qty * item.UnitPrice
 			continue
+		}
+
+		if existingOrderID != "" && strings.TrimSpace(in.ID) != "" {
+			var existingName string
+			var existingUnitPrice float64
+			var existingProductID string
+			var existingType string
+			err := tx.QueryRow(r.Context(), `
+				SELECT name,unit_price::float8,COALESCE(product_id::text,''),item_type
+				FROM order_items
+				WHERE id=$1 AND order_id=$2 AND organization_id=$3`,
+				strings.TrimSpace(in.ID), existingOrderID, s.OrganizationID).Scan(&existingName, &existingUnitPrice, &existingProductID, &existingType)
+			if err == nil && existingType == "combo" && existingProductID == *productID {
+				rows, rowsErr := tx.Query(r.Context(), `
+					SELECT group_id::text,group_name,option_product_id::text,option_name,surcharge::float8
+					FROM order_item_combo_selections
+					WHERE order_item_id=$1 AND organization_id=$2
+					ORDER BY created_at,id`, strings.TrimSpace(in.ID), s.OrganizationID)
+				if rowsErr != nil {
+					return nil, 0, &orderPreparationError{Status: 503, Code: "order_unavailable", Message: "No pudimos validar la configuración existente del menú."}
+				}
+				existingSelections := []preparedOrderSelection{}
+				existingKeys := map[string]bool{}
+				for rows.Next() {
+					var sel preparedOrderSelection
+					if scanErr := rows.Scan(&sel.GroupID, &sel.GroupName, &sel.ProductID, &sel.Name, &sel.Surcharge); scanErr != nil {
+						rows.Close()
+						return nil, 0, &orderPreparationError{Status: 503, Code: "order_unavailable", Message: "No pudimos validar la configuración existente del menú."}
+					}
+					existingSelections = append(existingSelections, sel)
+					existingKeys[sel.GroupID+":"+sel.ProductID] = true
+				}
+				rows.Close()
+				requestedKeys := map[string]bool{}
+				for _, selection := range in.Selections {
+					requestedKeys[strings.TrimSpace(selection.GroupID)+":"+strings.TrimSpace(selection.ProductID)] = true
+				}
+				sameSelections := len(existingKeys) == len(requestedKeys)
+				if sameSelections {
+					for key := range existingKeys {
+						if !requestedKeys[key] {
+							sameSelections = false
+							break
+						}
+					}
+				}
+				if sameSelections {
+					item := preparedOrderItem{
+						ProductID: productID,
+						Name: existingName,
+						Qty: in.Qty,
+						UnitPrice: existingUnitPrice,
+						Note: strings.TrimSpace(in.Note),
+						ItemType: "combo",
+						Selections: existingSelections,
+					}
+					prepared = append(prepared, item)
+					subtotal += item.Qty * item.UnitPrice
+					continue
+				}
+			} else if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+				return nil, 0, &orderPreparationError{Status: 503, Code: "order_unavailable", Message: "No pudimos validar el menú existente."}
+			}
 		}
 
 		var comboName string
@@ -569,7 +633,7 @@ func (a *API) createOrder(w http.ResponseWriter, r *http.Request) {
 		tableID = &in.TableID
 	}
 
-	prepared, subtotal, preparationErr := a.prepareOrderItems(r, tx, s, in.Items)
+	prepared, subtotal, preparationErr := a.prepareOrderItems(r, tx, s, "", in.Items)
 	if preparationErr != nil {
 		fail(w, preparationErr.Status, preparationErr.Code, preparationErr.Message)
 		return
@@ -639,7 +703,7 @@ func (a *API) updateOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	prepared, subtotal, preparationErr := a.prepareOrderItems(r, tx, s, in.Items)
+	prepared, subtotal, preparationErr := a.prepareOrderItems(r, tx, s, r.PathValue("id"), in.Items)
 	if preparationErr != nil {
 		fail(w, preparationErr.Status, preparationErr.Code, preparationErr.Message)
 		return
