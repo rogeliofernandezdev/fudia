@@ -611,7 +611,16 @@
   }
 
   .salon-comanda-catalog{
-    padding-bottom:76px;
+    padding-bottom:0;
+  }
+
+  .salon-comanda-shell .comanda-menu-salon{
+    margin:10px 10px 10px;
+    padding-bottom:0;
+  }
+
+  .salon-comanda-shell .comanda-menu-salon .comanda-scroll{
+    padding-bottom:82px;
   }
 
   .salon-comanda-summary{
@@ -718,6 +727,10 @@
   .salon-comanda-mobile-submit{
     min-height:var(--control-height);
     padding:0 14px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
     border:0;
     border-radius:10px;
     background:#fff;
