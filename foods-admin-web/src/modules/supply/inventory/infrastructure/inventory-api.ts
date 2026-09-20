@@ -21,22 +21,37 @@ export function createInventoryEntry(draft:InventoryEntryDraft){
     note:draft.note.trim(),
   };
   const payload=draft.mode==="existing"
-    ?{...common,productId:draft.productId}
-    :{...common,newProduct:{
-      sku:draft.sku.trim(),
-      name:draft.name.trim(),
-      description:draft.description.trim(),
-      price:draft.price.trim(),
-    }};
-  return apiFetch<{id:string;productId:string;sku:string;name:string;quantity:number;presentationId:string;presentationType:InventoryEntryDraft["presentationType"];unitsPerPresentation:number;stockQuantity:number;unit:string;balance:number;createdProduct:boolean}>("inventory/entries",{
-    method:"POST",
-    body:JSON.stringify(payload),
-  });
+    ?{...common,inventoryItemId:draft.inventoryItemId}
+    :draft.mode==="new_ingredient"
+      ?{...common,newIngredient:{name:draft.name.trim()}}
+      :{...common,newProduct:{
+        sku:draft.sku.trim(),
+        name:draft.name.trim(),
+        description:draft.description.trim(),
+        price:draft.price.trim(),
+      }};
+  return apiFetch<{
+    id:string;
+    inventoryItemId:string;
+    productId:string|null;
+    sku:string;
+    name:string;
+    kind:"product"|"ingredient";
+    quantity:number;
+    presentationId:string;
+    presentationType:InventoryEntryDraft["presentationType"];
+    unitsPerPresentation:number;
+    stockQuantity:number;
+    unit:string;
+    balance:number;
+    createdProduct:boolean;
+    createdInventoryItem:boolean;
+  }>("inventory/entries",{method:"POST",body:JSON.stringify(payload)});
 }
 
-export function listStockMovements(productId=""){
+export function listStockMovements(inventoryItemId=""){
   const params=new URLSearchParams();
-  if(productId)params.set("productId",productId);
+  if(inventoryItemId)params.set("inventoryItemId",inventoryItemId);
   const suffix=params.toString()?`?${params.toString()}`:"";
   return apiFetch<{items:StockMovement[]}>(`inventory/movements${suffix}`);
 }

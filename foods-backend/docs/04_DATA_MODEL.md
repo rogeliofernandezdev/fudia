@@ -38,10 +38,11 @@ local y se resuelve según `products.quantity_control`.
 Las porciones se cargan desde Disponibilidad de la carta. No existe un cupo
 predeterminado en `products`: cada día/local tiene su cantidad real.
 
-La mercadería física se repone únicamente mediante documentos de Inventario.
-`inventory_items.product_id` es un vínculo interno 1:1 para conectar un
-Producto vendible con la infraestructura de existencias; no constituye otro
-catálogo comercial.
+La mercadería física y los insumos de producción se reponen únicamente mediante
+documentos de Inventario. `inventory_items` es el catálogo físico: puede
+representar un insumo interno como carne, papa o aceite sin `product_id`, o una
+mercadería vendible como una gaseosa enlazada 1:1 a `products`. El vínculo
+`inventory_items.product_id` es opcional y no constituye otro catálogo comercial.
 
 Cada `inventory_item` define una **unidad base de stock** (por ejemplo botella,
 lata, unidad, kg o litro). `inventory_presentations` define formas reutilizables
@@ -54,17 +55,20 @@ conserva la cantidad recibida, la presentación y el factor utilizados.
 
 El flujo principal de mercadería física comienza en **Inventario > Nueva entrada**:
 
-1. Si el Producto existe, se selecciona ese mismo `ProductId` y se registra
-   la nueva entrada.
-2. Si no existe, el usuario crea **Nuevo producto** dentro de la entrada.
-3. Se resuelve la presentación de ingreso. La unidad base siempre existe; una
+1. Si el artículo de inventario existe, se selecciona su `InventoryItemId` y
+   se registra la nueva entrada.
+2. Si la mercadería se vende directamente, **Nuevo producto vendible** crea
+   `Product` + `inventory_item` y exige precio de venta.
+3. Si es un ingrediente interno, **Nuevo insumo** crea únicamente
+   `inventory_item`; no crea `Product` ni exige precio de venta.
+4. Se resuelve la presentación de ingreso. La unidad base siempre existe; una
    presentación nueva como paquete x 6 o caja x 12 queda disponible para futuras
    entradas del mismo producto.
-4. Producto, vínculo interno de inventario, presentación, saldo, documento de
-   entrada y movimiento de Kárdex se crean en una sola transacción.
-5. Si cualquier paso falla, la transacción hace rollback y no queda un Producto,
+5. Artículo de inventario, posible Producto vinculado, presentación, saldo,
+   documento de entrada y movimiento de Kárdex se guardan en una sola transacción.
+6. Si cualquier paso falla, la transacción hace rollback y no queda un artículo,
    presentación o saldo parcial.
-6. Las reposiciones posteriores usan siempre el mismo Producto.
+7. Las reposiciones posteriores usan siempre el mismo `InventoryItemId`.
 
 El selector «Producto existente» muestra únicamente productos activos con
 `quantity_control='inventory'`. Los productos con `none` o `portions` no son
@@ -115,7 +119,7 @@ por su cuenta.
 | --- | --- |
 | `products` | Catálogo comercial único y clasificación `quantity_control`. |
 | `product_availability` | Porciones, vendidos y override manual por local/día. |
-| `inventory_items` | Registro interno de inventario; `product_id` vincula 1:1 mercadería vendible y `unit` define la unidad base. |
+| `inventory_items` | Catálogo físico: insumos internos o mercadería vendible; `product_id` es opcional y `unit` define la unidad base. |
 | `inventory_presentations` | Presentaciones reutilizables de ingreso y su factor hacia la unidad base. |
 | `stock_balances` | Saldo físico actual por local e item interno, siempre expresado en unidad base. |
 | `inventory_entries` | Documento auditable: cantidad recibida, presentación, factor y equivalencia en unidad base. |

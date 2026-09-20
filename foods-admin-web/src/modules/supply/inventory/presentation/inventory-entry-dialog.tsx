@@ -26,11 +26,11 @@ function presentationLabel(type:InventoryPresentationType,factor:string,country?
 export function InventoryEntryDialog({products,currencySymbol,busy,close,save}:{products:InventoryProductOption[];currencySymbol:string;busy:boolean;close:()=>void;save:(draft:InventoryEntryDraft)=>void}){
  const{location}=useSession();
  const[value,setValue]=useState<InventoryEntryDraft>({
-  mode:"existing",productId:"",sku:"",name:"",description:"",price:"",
+  mode:"existing",inventoryItemId:"",productId:"",sku:"",name:"",description:"",price:"",
   quantity:"",unit:"und",presentationType:"unit",unitsPerPresentation:"1",minimumStock:"0",note:"",
  });
  const[attempted,setAttempted]=useState(false);
- const selected=useMemo(()=>products.find(product=>product.id===value.productId),[products,value.productId]);
+ const selected=useMemo(()=>products.find(item=>item.id===value.inventoryItemId),[products,value.inventoryItemId]);
  const quantity=Number(value.quantity);
  const factor=value.presentationType==="unit"?1:Number(value.unitsPerPresentation);
  const minimum=Number(value.minimumStock||0);
@@ -39,9 +39,12 @@ export function InventoryEntryDialog({products,currencySymbol,busy,close,save}:{
  const validFactor=value.presentationType==="unit"||(Number.isFinite(factor)&&factor>1);
  const validMinimum=Number.isFinite(minimum)&&minimum>=0;
  const stockQuantity=validQuantity&&validFactor?quantity*factor:0;
+ const commonValid=validQuantity&&validFactor&&validMinimum;
  const valid=value.mode==="existing"
-  ?Boolean(value.productId)&&validQuantity&&validFactor&&validMinimum
-  :Boolean(value.name.trim())&&priceValid&&validQuantity&&validFactor&&validMinimum;
+  ?Boolean(value.inventoryItemId)&&commonValid
+  :value.mode==="new_product"
+    ?Boolean(value.name.trim())&&priceValid&&commonValid
+    :Boolean(value.name.trim())&&commonValid;
  const matchedPresentation=(selected?.presentations??[]).find(item=>
   item.presentationType===value.presentationType&&
   Number(item.unitsPerPresentation)===factor
@@ -50,19 +53,35 @@ export function InventoryEntryDialog({products,currencySymbol,busy,close,save}:{
  const baseUnitLabel=unitLabels[value.unit]??value.unit;
  const quantityLabel=value.presentationType==="package"?"Cantidad de paquetes":value.presentationType==="box"?"Cantidad de cajas":"Cantidad";
 
+ function setMode(mode:InventoryEntryDraft["mode"]){
+  setAttempted(false);
+  setValue(current=>({
+   ...current,
+   mode,
+   inventoryItemId:"",
+   productId:"",
+   name:"",
+   description:"",
+   price:"",
+   presentationType:"unit",
+   unitsPerPresentation:"1",
+  }));
+ }
+
  function submit(event:React.FormEvent){
   event.preventDefault();
   setAttempted(true);
   if(valid)save(value);
  }
 
- function chooseExistingProduct(productId:string){
-  const product=products.find(item=>item.id===productId);
+ function chooseExistingItem(inventoryItemId:string){
+  const item=products.find(option=>option.id===inventoryItemId);
   setValue(current=>({
    ...current,
-   productId,
-   unit:product?.unit??current.unit,
-   minimumStock:product?.minimumStock??current.minimumStock,
+   inventoryItemId,
+   productId:item?.productId??"",
+   unit:item?.unit??current.unit,
+   minimumStock:item?.minimumStock??current.minimumStock,
    presentationType:"unit",
    unitsPerPresentation:"1",
   }));
@@ -92,31 +111,39 @@ export function InventoryEntryDialog({products,currencySymbol,busy,close,save}:{
    </header>
    <form onSubmit={submit} noValidate>
     <div className="inventory-entry-body">
-     <section className="inventory-entry-choice" aria-label="Origen del producto">
-      <button type="button" className={value.mode==="existing"?"active":""} onClick={()=>setValue(current=>({...current,mode:"existing"}))}>
-       <span><Icon name="search" size={18}/></span><b>Producto existente<small>Registrar más stock de un producto con Inventario físico.</small></b>
+     <section className="inventory-entry-choice" aria-label="Tipo de artículo">
+      <button type="button" className={value.mode==="existing"?"active":""} onClick={()=>setMode("existing")}>
+       <span><Icon name="search" size={18}/></span><b>Artículo existente<small>Registrar más stock de un producto o insumo ya creado.</small></b>
       </button>
-      <button type="button" className={value.mode==="new"?"active":""} onClick={()=>setValue(current=>({...current,mode:"new",productId:"",presentationType:"unit",unitsPerPresentation:"1"}))}>
-       <span><Icon name="plus" size={18}/></span><b>Nuevo producto físico<small>Crearlo con Inventario físico y registrar su primera entrada.</small></b>
+      <button type="button" className={value.mode==="new_product"?"active":""} onClick={()=>setMode("new_product")}>
+       <span><Icon name="plus" size={18}/></span><b>Nuevo producto vendible<small>Gaseosa, agua u otra mercadería que también se vende.</small></b>
+      </button>
+      <button type="button" className={value.mode==="new_ingredient"?"active":""} onClick={()=>setMode("new_ingredient")}>
+       <span><Icon name="stock" size={18}/></span><b>Nuevo insumo<small>Carne, papa, zanahoria, aceite u otro ingrediente interno.</small></b>
       </button>
      </section>
 
      {value.mode==="existing"?<section className="inventory-entry-section">
-      <div className="inventory-entry-section-title"><span><Icon name="box" size={17}/></span><div><b>Qué producto ingresó</b><small>La entrada se sumará a su saldo actual en este local.</small></div></div>
-      <label>Producto
-       <Select autoFocus value={value.productId} onChange={event=>chooseExistingProduct(event.target.value)} aria-invalid={attempted&&!value.productId}>
-        <option value="">{products.length?"Selecciona un producto de inventario":"No hay productos con Inventario físico"}</option>
-        {products.map(product=><option value={product.id} key={product.id}>{product.name}</option>)}
+      <div className="inventory-entry-section-title"><span><Icon name="box" size={17}/></span><div><b>Qué ingresó</b><small>La entrada se sumará al saldo actual del artículo en este local.</small></div></div>
+      <label>Artículo
+       <Select autoFocus value={value.inventoryItemId} onChange={event=>chooseExistingItem(event.target.value)} aria-invalid={attempted&&!value.inventoryItemId}>
+        <option value="">{products.length?"Selecciona un producto o insumo":"No hay artículos de inventario"}</option>
+        {products.map(item=><option value={item.id} key={item.id}>{item.name}{item.kind==="ingredient"?" · Insumo":""}</option>)}
        </Select>
-       {attempted&&!value.productId&&<small className="wizard-field-error">Selecciona el producto que estás recibiendo.</small>}
+       {attempted&&!value.inventoryItemId&&<small className="wizard-field-error">Selecciona el artículo que estás recibiendo.</small>}
       </label>
-      {selected&&<div className="inventory-entry-product-note"><Icon name="check" size={15}/><span><b>{selected.name}</b><small>Stock controlado en {unitLabels[selected.unit??"und"]??selected.unit??"unidades"}.</small></span></div>}
-     </section>:<section className="inventory-entry-section">
-      <div className="inventory-entry-section-title"><span><Icon name="plus" size={17}/></span><div><b>Crear producto</b><small>Se creará en el catálogo único de Productos y quedará configurado como Inventario físico.</small></div></div>
+      {selected&&<div className="inventory-entry-product-note"><Icon name="check" size={15}/><span><b>{selected.name}</b><small>{selected.kind==="ingredient"?"Insumo":"Producto vendible"} · Stock controlado en {unitLabels[selected.unit]??selected.unit}.</small></span></div>}
+     </section>:value.mode==="new_product"?<section className="inventory-entry-section">
+      <div className="inventory-entry-section-title"><span><Icon name="plus" size={17}/></span><div><b>Crear producto vendible</b><small>Se creará también en Productos con Inventario físico.</small></div></div>
       <div className="form-grid">
        <label className="span-2">Nombre del producto<Input autoFocus maxLength={160} value={value.name} onChange={event=>setValue(current=>({...current,name:event.target.value}))} placeholder="Ej. Coca-Cola 500 ml" aria-invalid={attempted&&!value.name.trim()}/>{attempted&&!value.name.trim()&&<small className="wizard-field-error">Ingresa el nombre del producto.</small>}</label>
        <label>Precio de venta<div className="money-input"><span>{currencySymbol}</span><Input inputMode="decimal" value={value.price} onChange={event=>setValue(current=>({...current,price:event.target.value}))} placeholder="0.00" aria-invalid={attempted&&!priceValid}/></div>{attempted&&!priceValid&&<small className="wizard-field-error">Ingresa un precio válido.</small>}</label>
        <label className="span-2">Descripción opcional<Textarea value={value.description} onChange={event=>setValue(current=>({...current,description:event.target.value}))} placeholder="Presentación o detalle comercial"/></label>
+      </div>
+     </section>:<section className="inventory-entry-section">
+      <div className="inventory-entry-section-title"><span><Icon name="stock" size={17}/></span><div><b>Crear insumo</b><small>Será inventario interno para compras y recetas; no tendrá precio de venta.</small></div></div>
+      <div className="form-grid">
+       <label className="span-2">Nombre del insumo<Input autoFocus maxLength={160} value={value.name} onChange={event=>setValue(current=>({...current,name:event.target.value}))} placeholder="Ej. Carne de res" aria-invalid={attempted&&!value.name.trim()}/>{attempted&&!value.name.trim()&&<small className="wizard-field-error">Ingresa el nombre del insumo.</small>}</label>
       </div>
      </section>}
 
@@ -148,7 +175,8 @@ export function InventoryEntryDialog({products,currencySymbol,busy,close,save}:{
       {value.presentationType!=="unit"&&validQuantity&&validFactor&&<div className="inventory-entry-product-note"><Icon name="check" size={15}/><span><b>{formatRegionalNumber(quantity,location?.country,{maximumFractionDigits:3})} {value.presentationType==="box"?"cajas":"paquetes"} × {formatRegionalNumber(factor,location?.country,{maximumFractionDigits:3})}</b><small>Se sumarán {formatRegionalNumber(stockQuantity,location?.country,{maximumFractionDigits:3})} {baseUnitLabel} al stock.</small></span></div>}
      </section>
 
-     {value.mode==="new"&&<div className="inventory-entry-atomic-note"><Icon name="lock" size={16}/><p><b>Una sola operación</b>Producto, presentación, saldo, entrada y Kárdex se guardan juntos. Si algo falla, no se crea nada parcialmente.</p></div>}
+     {value.mode!=="existing"&&<div className="inventory-entry-atomic-note"><Icon name="lock" size={16}/><p><b>Una sola operación</b>{value.mode==="new_ingredient"?"Insumo":"Producto"}, presentación, saldo, entrada y Kárdex se guardan juntos. Si algo falla, no se crea nada parcialmente.</p></div>}
+     {attempted&&!valid&&<div className="inventory-entry-validation" role="alert"><Icon name="alert" size={15}/><span>Revisa los campos marcados antes de guardar.</span></div>}
     </div>
     <footer><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy}>{busy?"Guardando…":"Guardar"}</Button></footer>
    </form>

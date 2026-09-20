@@ -36,30 +36,32 @@ export function InventoryPage(){
    void client.invalidateQueries({queryKey:["products"]});
    void client.invalidateQueries({queryKey:["product-availability"]});
    void client.invalidateQueries({queryKey:["inventory-movements"]});
-   notify({tone:"success",title:result.createdProduct?"Producto y entrada registrados":"Entrada registrada",message:`${result.name}: +${formatRegionalNumber(Number(result.stockQuantity),location?.country,{maximumFractionDigits:3})} ${result.unit}. Saldo ${formatRegionalNumber(Number(result.balance),location?.country,{maximumFractionDigits:3})} ${result.unit}.`});
+   const title=result.createdProduct?"Producto y entrada registrados":result.createdInventoryItem&&result.kind==="ingredient"?"Insumo y entrada registrados":"Entrada registrada";
+   notify({tone:"success",title,message:`${result.name}: +${formatRegionalNumber(Number(result.stockQuantity),location?.country,{maximumFractionDigits:3})} ${result.unit}. Saldo ${formatRegionalNumber(Number(result.balance),location?.country,{maximumFractionDigits:3})} ${result.unit}.`});
   },
   onError:error=>notify({tone:"danger",title:"No se pudo registrar la entrada",message:error.message}),
  });
  const items=inventory.data?.items??[];
 
  return <>
-  <PageHeader eyebrow="ABASTECIMIENTO" title="Inventario" description="Consulta la existencia física de los productos del local y registra cada ingreso de mercadería." action={can("inventory.manage")?<Button icon="plus" onClick={()=>setEntryOpen(true)}>Nueva entrada</Button>:undefined}/>
+  <PageHeader eyebrow="ABASTECIMIENTO" title="Inventario" description="Consulta productos e insumos físicos del local y registra cada ingreso de mercadería." action={can("inventory.manage")?<Button icon="plus" onClick={()=>setEntryOpen(true)}>Nueva entrada</Button>:undefined}/>
   <section className="panel standardized-management inventory-panel">
    <div className="inventory-toolbar">
     <label className="ds-input-shell"><Icon name="search" size={18}/><Input value={search} onChange={event=>{setSearch(event.target.value);setPage(1)}} placeholder="Buscar producto..."/></label>
-    <p><Icon name="store" size={15}/>Existencia física del local activo. Los platos por porciones no aparecen aquí.</p>
+    <p><Icon name="store" size={15}/>Existencia física del local activo: productos vendibles e insumos para producción.</p>
    </div>
    {inventory.isLoading?<InventorySkeleton/>:inventory.isError?
     <div className="inventory-state"><Icon name="alert" size={24}/><b>No pudimos cargar el inventario</b><p>{inventory.error.message}</p><Button kind="secondary" icon="refresh" onClick={()=>inventory.refetch()}>Reintentar</Button></div>
    :!items.length?
-    <div className="inventory-state"><Icon name="stock" size={24}/><b>{search?"Sin coincidencias":"Aún no hay productos con inventario"}</b><p>{search?"Prueba con otro nombre.":"Usa Nueva entrada para recibir un producto existente o crear una mercadería nueva."}</p>{can("inventory.manage")&&!search&&<Button icon="plus" onClick={()=>setEntryOpen(true)}>Nueva entrada</Button>}</div>
+    <div className="inventory-state"><Icon name="stock" size={24}/><b>{search?"Sin coincidencias":"Aún no hay artículos con inventario"}</b><p>{search?"Prueba con otro nombre.":"Usa Nueva entrada para recibir un artículo existente o crear un producto o insumo."}</p>{can("inventory.manage")&&!search&&<Button icon="plus" onClick={()=>setEntryOpen(true)}>Nueva entrada</Button>}</div>
    :<div className="table-wrap hover-scroll inventory-table-wrap">
     <table>
-     <thead><tr><th>PRODUCTO</th><th>UNIDAD</th><th>EXISTENCIA</th><th>STOCK MÍNIMO</th><th>ESTADO</th></tr></thead>
+     <thead><tr><th>ARTÍCULO</th><th>TIPO</th><th>UNIDAD</th><th>EXISTENCIA</th><th>STOCK MÍNIMO</th><th>ESTADO</th></tr></thead>
      <tbody>{items.map((item,index)=>{
       const meta=statusMeta[item.status];
-      return <tr className={index%2?"alternate":""} key={item.productId}>
+      return <tr className={index%2?"alternate":""} key={item.inventoryItemId}>
        <td className="inventory-product-cell"><span className={`row-icon r${index%3}`}><Icon name="stock" size={18}/></span><b>{item.name}</b></td>
+       <td>{item.kind==="ingredient"?"Insumo":"Producto"}</td>
        <td>{item.unit}</td>
        <td><b className="inventory-quantity">{formatRegionalNumber(Number(item.quantity),location?.country,{maximumFractionDigits:3})}</b></td>
        <td>{formatRegionalNumber(Number(item.minimumStock),location?.country,{maximumFractionDigits:3})}</td>
@@ -76,5 +78,5 @@ export function InventoryPage(){
 }
 
 function InventorySkeleton(){
- return <div className="inventory-table-wrap"><table aria-label="Cargando inventario"><thead><tr><th>PRODUCTO</th><th>UNIDAD</th><th>EXISTENCIA</th><th>STOCK MÍNIMO</th><th>ESTADO</th></tr></thead><tbody>{Array.from({length:6},(_,index)=><tr className="inventory-skeleton" key={index}>{Array.from({length:5},(_,cell)=><td key={cell}><i/></td>)}</tr>)}</tbody></table></div>;
+ return <div className="inventory-table-wrap"><table aria-label="Cargando inventario"><thead><tr><th>ARTÍCULO</th><th>TIPO</th><th>UNIDAD</th><th>EXISTENCIA</th><th>STOCK MÍNIMO</th><th>ESTADO</th></tr></thead><tbody>{Array.from({length:6},(_,index)=><tr className="inventory-skeleton" key={index}>{Array.from({length:6},(_,cell)=><td key={cell}><i/></td>)}</tr>)}</tbody></table></div>;
 }

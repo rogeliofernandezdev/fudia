@@ -119,8 +119,11 @@ test("producto e inventario mantienen una sola fuente de verdad",()=>{
   assert.ok(inventory.includes("listInventory"));
   assert.ok(inventory.includes("createInventoryEntry"));
   const dialog=read("src/modules/supply/inventory/presentation/inventory-entry-dialog.tsx");
-  assert.ok(dialog.includes("Producto existente"));
+  assert.ok(dialog.includes("Artículo existente"));
   assert.ok(dialog.includes("Nuevo producto"));
+  assert.ok(dialog.includes("Nuevo insumo"),"Inventario permite crear insumos sin producto vendible");
+  assert.ok(dialog.includes("no tendrá precio de venta"),"El flujo de insumos separa inventario de precio comercial");
+  assert.ok(dialog.includes("Revisa los campos marcados antes de guardar."),"Guardar inválido informa el problema al usuario");
   assert.ok(dialog.includes("Una sola operación"));
   assert.ok(dialog.includes('type="submit"'),"Guardar inventario debe enviar el formulario");
   assert.ok(dialog.includes('busy?"Guardando…":"Guardar"'),"La acción de guardado usa el texto estándar");
@@ -151,6 +154,7 @@ test("producto e inventario mantienen una sola fuente de verdad",()=>{
   assert.ok(kardex.includes("Entrada histórica"),"Kárdex identifica entradas históricas sin referencia legible");
   assert.equal(kardex.includes("item.sourceId.slice"),false,"Kárdex no expone fragmentos de UUID");
   assert.equal(kardex.includes("item.productId.slice"),false,"Kárdex no expone el UUID del producto");
+  assert.ok(kardex.includes("item.itemName"),"Kárdex funciona también para insumos sin ProductId");
   assert.equal(kardex.includes("product.name} · {product.sku"),false,"El filtro de Kárdex no expone SKU internos");
   assert.equal(inventory.includes(forbiddenRegionalLocale),false,"Inventario no fija Perú como región");
   assert.ok(regionalFormat.includes("timeZone:context.timeZone||options.timeZone"),"El formateador aplica la zona horaria operativa y conserva un fallback explícito");
@@ -160,6 +164,8 @@ test("producto e inventario mantienen una sola fuente de verdad",()=>{
   const inventoryApi=read("src/modules/supply/inventory/infrastructure/inventory-api.ts");
   assert.ok(inventoryApi.includes('"inventory/entries"'));
   assert.ok(inventoryApi.includes("newProduct"));
+  assert.ok(inventoryApi.includes("newIngredient"),"La API diferencia insumos de productos vendibles");
+  assert.ok(inventoryApi.includes("inventoryItemId"),"Las reposiciones operan sobre el artículo de inventario");
   assert.ok(inventoryApi.includes("presentationType"),"La API envía el tipo de presentación");
   assert.ok(inventoryApi.includes("unitsPerPresentation"),"La API envía el factor de conversión");
   assert.ok(inventoryApi.includes("stockQuantity"),"La respuesta distingue cantidad recibida de cantidad de stock");

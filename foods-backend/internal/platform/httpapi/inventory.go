@@ -14,9 +14,11 @@ import (
 )
 
 type inventoryItemView struct {
-	ProductID       string  `json:"productId"`
+	InventoryItemID string  `json:"inventoryItemId"`
+	ProductID       *string `json:"productId"`
 	SKU             string  `json:"sku"`
 	Name            string  `json:"name"`
+	Kind            string  `json:"kind"`
 	CategoryName    *string `json:"categoryName"`
 	Active          bool    `json:"active"`
 	Unit            string  `json:"unit"`
@@ -24,7 +26,6 @@ type inventoryItemView struct {
 	MinimumStock    string  `json:"minimumStock"`
 	Status          string  `json:"status"`
 	UpdatedAt       time.Time `json:"updatedAt"`
-	QuantityControl string  `json:"quantityControl"`
 }
 
 type inventoryPresentationOption struct {
@@ -35,12 +36,14 @@ type inventoryPresentationOption struct {
 
 type inventoryProductOption struct {
 	ID              string                        `json:"id"`
+	ProductID       *string                       `json:"productId"`
 	SKU             string                        `json:"sku"`
 	Name            string                        `json:"name"`
+	Kind            string                        `json:"kind"`
 	CategoryName    *string                       `json:"categoryName"`
-	QuantityControl string                        `json:"quantityControl"`
-	Unit            *string                       `json:"unit"`
-	MinimumStock    *string                       `json:"minimumStock"`
+	QuantityControl *string                       `json:"quantityControl"`
+	Unit            string                        `json:"unit"`
+	MinimumStock    string                        `json:"minimumStock"`
 	Presentations   []inventoryPresentationOption `json:"presentations"`
 }
 
@@ -52,29 +55,36 @@ type inventoryNewProductInput struct {
 	Price       string  `json:"price"`
 }
 
+type inventoryNewIngredientInput struct {
+	Name string `json:"name"`
+}
+
 type inventoryEntryInput struct {
-	ProductID             string                    `json:"productId"`
-	NewProduct            *inventoryNewProductInput `json:"newProduct"`
-	Quantity              float64                   `json:"quantity"`
-	Unit                  string                    `json:"unit"`
-	PresentationType      string                    `json:"presentationType"`
-	UnitsPerPresentation  float64                   `json:"unitsPerPresentation"`
-	MinimumStock          float64                   `json:"minimumStock"`
-	Note                  string                    `json:"note"`
+	InventoryItemID       string                       `json:"inventoryItemId"`
+	ProductID             string                       `json:"productId"`
+	NewProduct            *inventoryNewProductInput    `json:"newProduct"`
+	NewIngredient         *inventoryNewIngredientInput `json:"newIngredient"`
+	Quantity              float64                      `json:"quantity"`
+	Unit                  string                       `json:"unit"`
+	PresentationType      string                       `json:"presentationType"`
+	UnitsPerPresentation  float64                      `json:"unitsPerPresentation"`
+	MinimumStock          float64                      `json:"minimumStock"`
+	Note                  string                       `json:"note"`
 }
 
 type inventoryMovementView struct {
-	ID            string `json:"id"`
-	ProductID     string `json:"productId"`
-	ProductName   string `json:"productName"`
-	MovementType  string `json:"movementType"`
-	QuantityDelta string `json:"quantityDelta"`
-	BalanceAfter  string `json:"balanceAfter"`
-	SourceType      string `json:"sourceType"`
-	SourceID        string `json:"sourceId"`
-	SourceReference string `json:"sourceReference"`
-	Note            string `json:"note"`
-	CreatedAt     time.Time `json:"createdAt"`
+	ID              string  `json:"id"`
+	InventoryItemID string  `json:"inventoryItemId"`
+	ProductID       *string `json:"productId"`
+	ItemName        string  `json:"itemName"`
+	MovementType    string  `json:"movementType"`
+	QuantityDelta   string  `json:"quantityDelta"`
+	BalanceAfter    string  `json:"balanceAfter"`
+	SourceType      string  `json:"sourceType"`
+	SourceID        string  `json:"sourceId"`
+	SourceReference string  `json:"sourceReference"`
+	Note            string  `json:"note"`
+	CreatedAt       time.Time `json:"createdAt"`
 }
 
 func productHasCancellableOrderUsage(ctx context.Context, tx pgx.Tx, organizationID, productID string) (bool, error) {
@@ -101,6 +111,7 @@ func productHasCancellableOrderUsage(ctx context.Context, tx pgx.Tx, organizatio
 }
 
 func normalizeInventoryEntry(in inventoryEntryInput) (inventoryEntryInput, string) {
+	in.InventoryItemID = strings.TrimSpace(in.InventoryItemID)
 	in.ProductID = strings.TrimSpace(in.ProductID)
 	in.Unit = strings.TrimSpace(in.Unit)
 	in.PresentationType = strings.ToLower(strings.TrimSpace(in.PresentationType))
@@ -135,18 +146,37 @@ func normalizeInventoryEntry(in inventoryEntryInput) (inventoryEntryInput, strin
 	default:
 		return in, "La presentación de entrada no es válida."
 	}
-	hasExisting := in.ProductID != ""
-	hasNew := in.NewProduct != nil
-	if hasExisting == hasNew {
-		return in, "Selecciona un producto existente o crea uno nuevo."
+
+	sourceCount := 0
+	if in.InventoryItemID != "" {
+		sourceCount++
 	}
+	if in.ProductID != "" {
+		sourceCount++
+	}
+	if in.NewProduct != nil {
+		sourceCount++
+	}
+	if in.NewIngredient != nil {
+		sourceCount++
+	}
+	if sourceCount != 1 {
+		return in, "Selecciona un artículo existente, crea un producto vendible o crea un insumo."
+	}
+
 	if in.NewProduct != nil {
 		in.NewProduct.Name = strings.TrimSpace(in.NewProduct.Name)
 		in.NewProduct.SKU = strings.TrimSpace(in.NewProduct.SKU)
 		in.NewProduct.Description = strings.TrimSpace(in.NewProduct.Description)
 		in.NewProduct.Price = strings.TrimSpace(in.NewProduct.Price)
 		if in.NewProduct.Name == "" || in.NewProduct.Price == "" {
-			return in, "El nuevo producto necesita nombre y precio de venta."
+			return in, "El nuevo producto vendible necesita nombre y precio de venta."
+		}
+	}
+	if in.NewIngredient != nil {
+		in.NewIngredient.Name = strings.TrimSpace(in.NewIngredient.Name)
+		if in.NewIngredient.Name == "" {
+			return in, "El nuevo insumo necesita un nombre."
 		}
 	}
 	return in, ""
@@ -159,30 +189,40 @@ func (a *API) listInventory(w http.ResponseWriter, r *http.Request) {
 	var total int
 	if err := a.db.QueryRow(r.Context(), `
 		SELECT count(*)
-		FROM products p
-		WHERE p.organization_id=$1 AND p.quantity_control='inventory'
-		  AND (p.name ILIKE $2 OR p.sku ILIKE $2)`, s.OrganizationID, search).Scan(&total); err != nil {
+		FROM inventory_items ii
+		LEFT JOIN products p
+		  ON p.id=ii.product_id AND p.organization_id=ii.organization_id
+		WHERE ii.organization_id=$1 AND ii.active
+		  AND (COALESCE(p.name,ii.name) ILIKE $2 OR COALESCE(p.sku,ii.sku) ILIKE $2)`,
+		s.OrganizationID, search).Scan(&total); err != nil {
 		fail(w, 503, "inventory_unavailable", "No pudimos cargar el inventario.")
 		return
 	}
 	rows, err := a.db.Query(r.Context(), `
-		SELECT p.id,p.sku,p.name,c.name,p.active,
-		       COALESCE(ii.unit,'und'),COALESCE(sb.quantity,0)::text,COALESCE(ii.minimum_stock,0)::text,
+		SELECT ii.id,p.id,COALESCE(p.sku,ii.sku),COALESCE(p.name,ii.name),
+		       CASE WHEN p.id IS NULL THEN 'ingredient' ELSE 'product' END,
+		       c.name,COALESCE(p.active,ii.active),ii.unit,
+		       COALESCE(sb.quantity,0)::text,ii.minimum_stock::text,
 		       CASE
 		         WHEN COALESCE(sb.quantity,0)<=0 THEN 'out'
-		         WHEN COALESCE(ii.minimum_stock,0)>0 AND COALESCE(sb.quantity,0)<=ii.minimum_stock THEN 'low'
+		         WHEN ii.minimum_stock>0 AND COALESCE(sb.quantity,0)<=ii.minimum_stock THEN 'low'
 		         ELSE 'ok'
 		       END,
-		       COALESCE(sb.updated_at,p.updated_at),
-		       p.quantity_control
-		FROM products p
-		LEFT JOIN menu_categories c ON c.id=p.category_id AND c.organization_id=p.organization_id
-		LEFT JOIN inventory_items ii ON ii.organization_id=p.organization_id AND ii.product_id=p.id
-		LEFT JOIN stock_balances sb ON sb.organization_id=p.organization_id AND sb.location_id=$2 AND sb.inventory_item_id=ii.id
-		WHERE p.organization_id=$1 AND p.quantity_control='inventory'
-		  AND (p.name ILIKE $3 OR p.sku ILIKE $3)
-		ORDER BY p.active DESC,p.name
-		LIMIT $4 OFFSET $5`, s.OrganizationID, s.LocationID, search, size, (page-1)*size)
+		       COALESCE(sb.updated_at,ii.updated_at)
+		FROM inventory_items ii
+		LEFT JOIN products p
+		  ON p.id=ii.product_id AND p.organization_id=ii.organization_id
+		LEFT JOIN menu_categories c
+		  ON c.id=p.category_id AND c.organization_id=p.organization_id
+		LEFT JOIN stock_balances sb
+		  ON sb.organization_id=ii.organization_id
+		 AND sb.location_id=$2
+		 AND sb.inventory_item_id=ii.id
+		WHERE ii.organization_id=$1 AND ii.active
+		  AND (COALESCE(p.name,ii.name) ILIKE $3 OR COALESCE(p.sku,ii.sku) ILIKE $3)
+		ORDER BY COALESCE(p.active,ii.active) DESC,COALESCE(p.name,ii.name)
+		LIMIT $4 OFFSET $5`,
+		s.OrganizationID, s.LocationID, search, size, (page-1)*size)
 	if err != nil {
 		fail(w, 503, "inventory_unavailable", "No pudimos cargar el inventario.")
 		return
@@ -191,7 +231,11 @@ func (a *API) listInventory(w http.ResponseWriter, r *http.Request) {
 	items := []inventoryItemView{}
 	for rows.Next() {
 		var item inventoryItemView
-		if err := rows.Scan(&item.ProductID, &item.SKU, &item.Name, &item.CategoryName, &item.Active, &item.Unit, &item.Quantity, &item.MinimumStock, &item.Status, &item.UpdatedAt, &item.QuantityControl); err != nil {
+		if err := rows.Scan(
+			&item.InventoryItemID, &item.ProductID, &item.SKU, &item.Name, &item.Kind,
+			&item.CategoryName, &item.Active, &item.Unit, &item.Quantity, &item.MinimumStock,
+			&item.Status, &item.UpdatedAt,
+		); err != nil {
 			fail(w, 503, "inventory_unavailable", "No pudimos cargar el inventario.")
 			return
 		}
@@ -208,7 +252,9 @@ func (a *API) listInventoryProducts(w http.ResponseWriter, r *http.Request) {
 	s := r.Context().Value(scopeKey{}).(scope)
 	search := "%" + strings.TrimSpace(r.URL.Query().Get("q")) + "%"
 	rows, err := a.db.Query(r.Context(), `
-		SELECT p.id,p.sku,p.name,c.name,p.quantity_control,ii.unit,ii.minimum_stock::text,
+		SELECT ii.id,p.id,COALESCE(p.sku,ii.sku),COALESCE(p.name,ii.name),
+		       CASE WHEN p.id IS NULL THEN 'ingredient' ELSE 'product' END,
+		       c.name,p.quantity_control,ii.unit,ii.minimum_stock::text,
 		       COALESCE((
 		         SELECT jsonb_agg(
 		           jsonb_build_object(
@@ -221,21 +267,31 @@ func (a *API) listInventoryProducts(w http.ResponseWriter, r *http.Request) {
 		             ip.units_per_presentation
 		         )
 		         FROM inventory_presentations ip
-		         WHERE ip.organization_id=p.organization_id
+		         WHERE ip.organization_id=ii.organization_id
 		           AND ip.inventory_item_id=ii.id
 		           AND ip.active
 		       ),'[]'::jsonb)
-		FROM products p
-		LEFT JOIN menu_categories c ON c.id=p.category_id AND c.organization_id=p.organization_id
-		LEFT JOIN inventory_items ii ON ii.organization_id=p.organization_id AND ii.product_id=p.id AND ii.active
-		WHERE p.organization_id=$1 AND p.active
-		  AND p.quantity_control='inventory'
-		  AND NOT EXISTS (SELECT 1 FROM menu_combos mc WHERE mc.product_id=p.id AND mc.organization_id=p.organization_id)
-		  AND (p.name ILIKE $2 OR p.sku ILIKE $2)
-		ORDER BY p.name
+		FROM inventory_items ii
+		LEFT JOIN products p
+		  ON p.id=ii.product_id AND p.organization_id=ii.organization_id
+		LEFT JOIN menu_categories c
+		  ON c.id=p.category_id AND c.organization_id=p.organization_id
+		WHERE ii.organization_id=$1
+		  AND ii.active
+		  AND (p.id IS NULL OR (
+		    p.active
+		    AND p.quantity_control='inventory'
+		    AND NOT EXISTS (
+		      SELECT 1
+		      FROM menu_combos mc
+		      WHERE mc.product_id=p.id AND mc.organization_id=p.organization_id
+		    )
+		  ))
+		  AND (COALESCE(p.name,ii.name) ILIKE $2 OR COALESCE(p.sku,ii.sku) ILIKE $2)
+		ORDER BY COALESCE(p.name,ii.name)
 		LIMIT 100`, s.OrganizationID, search)
 	if err != nil {
-		fail(w, 503, "inventory_products_unavailable", "No pudimos cargar los productos.")
+		fail(w, 503, "inventory_products_unavailable", "No pudimos cargar los artículos de inventario.")
 		return
 	}
 	defer rows.Close()
@@ -243,12 +299,15 @@ func (a *API) listInventoryProducts(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var item inventoryProductOption
 		var presentationsJSON []byte
-		if err := rows.Scan(&item.ID, &item.SKU, &item.Name, &item.CategoryName, &item.QuantityControl, &item.Unit, &item.MinimumStock, &presentationsJSON); err != nil {
-			fail(w, 503, "inventory_products_unavailable", "No pudimos cargar los productos.")
+		if err := rows.Scan(
+			&item.ID, &item.ProductID, &item.SKU, &item.Name, &item.Kind, &item.CategoryName,
+			&item.QuantityControl, &item.Unit, &item.MinimumStock, &presentationsJSON,
+		); err != nil {
+			fail(w, 503, "inventory_products_unavailable", "No pudimos cargar los artículos de inventario.")
 			return
 		}
 		if err := json.Unmarshal(presentationsJSON, &item.Presentations); err != nil {
-			fail(w, 503, "inventory_products_unavailable", "No pudimos cargar las presentaciones del producto.")
+			fail(w, 503, "inventory_products_unavailable", "No pudimos cargar las presentaciones del artículo.")
 			return
 		}
 		items = append(items, item)
@@ -277,10 +336,13 @@ func (a *API) createInventoryEntry(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback(r.Context())
 
-	productID := in.ProductID
-	var productSKU, productName string
+	var productID *string
+	var itemSKU, itemName, inventoryItemID, inventoryUnit string
 	createdProduct := false
-	if in.NewProduct != nil {
+	createdInventoryItem := false
+
+	switch {
+	case in.NewProduct != nil:
 		productIn := productInput{
 			SKU:             in.NewProduct.SKU,
 			Name:            in.NewProduct.Name,
@@ -293,24 +355,103 @@ func (a *API) createInventoryEntry(w http.ResponseWriter, r *http.Request) {
 			fail(w, 400, "invalid_product", invalidProduct)
 			return
 		}
+		var newProductID string
 		err = tx.QueryRow(r.Context(), `
 			INSERT INTO products(organization_id,category_id,sku,name,description,price,active,quantity_control)
 			VALUES($1,$2,COALESCE(NULLIF($3,''),'PROD-'||upper(substr(replace(gen_random_uuid()::text,'-',''),1,8))),$4,$5,$6,true,'inventory')
 			RETURNING id,sku,name`,
-			s.OrganizationID, in.NewProduct.CategoryID, in.NewProduct.SKU, in.NewProduct.Name, in.NewProduct.Description, in.NewProduct.Price,
-		).Scan(&productID, &productSKU, &productName)
+			s.OrganizationID, in.NewProduct.CategoryID, in.NewProduct.SKU,
+			in.NewProduct.Name, in.NewProduct.Description, in.NewProduct.Price,
+		).Scan(&newProductID, &itemSKU, &itemName)
 		if err != nil {
-			fail(w, 409, "product_conflict", "No pudimos crear el producto. Revisa categoría, código y precio.")
+			fail(w, 409, "product_conflict", "No pudimos crear el producto. Revisa nombre, categoría y precio.")
 			return
 		}
+		productID = &newProductID
 		createdProduct = true
-	} else {
+
+		err = tx.QueryRow(r.Context(), `
+			INSERT INTO inventory_items(
+				organization_id,sku,name,unit,minimum_stock,active,product_id
+			)
+			VALUES($1,'SELL-'||upper(substr(replace($2::text,'-',''),1,12)),$3,$4,$5,true,$2::uuid)
+			RETURNING id,unit`,
+			s.OrganizationID, newProductID, itemName, in.Unit, in.MinimumStock,
+		).Scan(&inventoryItemID, &inventoryUnit)
+		if err != nil {
+			fail(w, 503, "inventory_unavailable", "No pudimos vincular el producto al inventario.")
+			return
+		}
+		createdInventoryItem = true
+
+	case in.NewIngredient != nil:
+		itemName = in.NewIngredient.Name
+		err = tx.QueryRow(r.Context(), `
+			INSERT INTO inventory_items(
+				organization_id,sku,name,unit,minimum_stock,active
+			)
+			VALUES(
+				$1,
+				'ING-'||upper(substr(replace(gen_random_uuid()::text,'-',''),1,10)),
+				$2,$3,$4,true
+			)
+			RETURNING id,sku,unit`,
+			s.OrganizationID, itemName, in.Unit, in.MinimumStock,
+		).Scan(&inventoryItemID, &itemSKU, &inventoryUnit)
+		if err != nil {
+			fail(w, 409, "ingredient_conflict", "No pudimos crear el insumo.")
+			return
+		}
+		createdInventoryItem = true
+
+	case in.InventoryItemID != "":
+		var linkedProductID *string
+		var quantityControl *string
+		err = tx.QueryRow(r.Context(), `
+			SELECT ii.id,ii.sku,COALESCE(p.name,ii.name),ii.unit,p.id,p.quantity_control
+			FROM inventory_items ii
+			LEFT JOIN products p
+			  ON p.id=ii.product_id AND p.organization_id=ii.organization_id
+			WHERE ii.id=$1
+			  AND ii.organization_id=$2
+			  AND ii.active
+			  AND (p.id IS NULL OR p.active)
+			FOR UPDATE OF ii`,
+			in.InventoryItemID, s.OrganizationID,
+		).Scan(&inventoryItemID, &itemSKU, &itemName, &inventoryUnit, &linkedProductID, &quantityControl)
+		if errors.Is(err, pgx.ErrNoRows) {
+			fail(w, 404, "inventory_item_not_found", "El artículo de inventario no existe o está inactivo.")
+			return
+		}
+		if err != nil {
+			fail(w, 503, "inventory_unavailable", "No pudimos validar el artículo de inventario.")
+			return
+		}
+		if linkedProductID != nil {
+			if quantityControl == nil || *quantityControl != "inventory" {
+				fail(w, 409, "quantity_control_conflict", "El producto ya no está configurado como Inventario físico.")
+				return
+			}
+			productID = linkedProductID
+		}
+		if _, err = tx.Exec(r.Context(), `
+			UPDATE inventory_items
+			SET minimum_stock=$3,updated_at=now()
+			WHERE id=$1 AND organization_id=$2`,
+			inventoryItemID, s.OrganizationID, in.MinimumStock); err != nil {
+			fail(w, 503, "inventory_unavailable", "No pudimos actualizar el stock mínimo.")
+			return
+		}
+
+	case in.ProductID != "":
 		var quantityControl string
+		var existingProductID string
 		err = tx.QueryRow(r.Context(), `
 			SELECT id,sku,name,quantity_control
 			FROM products
 			WHERE id=$1 AND organization_id=$2 AND active
-			FOR UPDATE`, productID, s.OrganizationID).Scan(&productID, &productSKU, &productName, &quantityControl)
+			FOR UPDATE`, in.ProductID, s.OrganizationID).
+			Scan(&existingProductID, &itemSKU, &itemName, &quantityControl)
 		if errors.Is(err, pgx.ErrNoRows) {
 			fail(w, 404, "product_not_found", "El producto no existe o está inactivo.")
 			return
@@ -320,30 +461,35 @@ func (a *API) createInventoryEntry(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if quantityControl != "inventory" {
-			fail(w, 409, "quantity_control_conflict", "Solo los productos de Inventario físico pueden recibir entradas. Si es una mercadería nueva, créala desde Nuevo producto físico en esta misma pantalla.")
+			fail(w, 409, "quantity_control_conflict", "Solo los productos de Inventario físico pueden recibir entradas.")
+			return
+		}
+		productID = &existingProductID
+		err = tx.QueryRow(r.Context(), `
+			INSERT INTO inventory_items(
+				organization_id,sku,name,unit,minimum_stock,active,product_id
+			)
+			VALUES($1,'SELL-'||upper(substr(replace($2::text,'-',''),1,12)),$3,$4,$5,true,$2::uuid)
+			ON CONFLICT (organization_id,product_id) WHERE product_id IS NOT NULL
+			DO UPDATE SET
+				name=EXCLUDED.name,
+				minimum_stock=EXCLUDED.minimum_stock,
+				active=true,
+				updated_at=now()
+			RETURNING id,unit`,
+			s.OrganizationID, existingProductID, itemName, in.Unit, in.MinimumStock,
+		).Scan(&inventoryItemID, &inventoryUnit)
+		if err != nil {
+			fail(w, 503, "inventory_unavailable", "No pudimos vincular el producto al inventario.")
 			return
 		}
 	}
 
-	var inventoryItemID, inventoryUnit string
-	err = tx.QueryRow(r.Context(), `
-		INSERT INTO inventory_items(organization_id,sku,name,unit,minimum_stock,active,product_id)
-		VALUES($1,'SELL-'||upper(substr(replace($2::text,'-',''),1,12)),$3,$4,$5,true,$2::uuid)
-		ON CONFLICT (organization_id,product_id) WHERE product_id IS NOT NULL
-		DO UPDATE SET name=EXCLUDED.name,minimum_stock=EXCLUDED.minimum_stock,active=true
-		RETURNING id,unit`,
-		s.OrganizationID, productID, productName, in.Unit, in.MinimumStock).Scan(&inventoryItemID, &inventoryUnit)
-	if err != nil {
-		fail(w, 503, "inventory_unavailable", "No pudimos vincular el producto al inventario.")
-		return
-	}
 	if inventoryUnit != in.Unit {
-		fail(w, 409, "inventory_unit_conflict", "La unidad base de este producto es "+inventoryUnit+". Registra la entrada usando esa misma unidad base.")
+		fail(w, 409, "inventory_unit_conflict", "La unidad base de este artículo es "+inventoryUnit+". Registra la entrada usando esa misma unidad base.")
 		return
 	}
 
-	// La presentación base 1:1 siempre existe. Las presentaciones de paquete/caja
-	// se reutilizan en entradas posteriores del mismo producto.
 	if _, err = tx.Exec(r.Context(), `
 		INSERT INTO inventory_presentations(
 			organization_id,inventory_item_id,presentation_type,units_per_presentation,active
@@ -352,7 +498,7 @@ func (a *API) createInventoryEntry(w http.ResponseWriter, r *http.Request) {
 		ON CONFLICT (organization_id,inventory_item_id,presentation_type,units_per_presentation)
 		DO UPDATE SET active=true,updated_at=now()`,
 		s.OrganizationID, inventoryItemID); err != nil {
-		fail(w, 503, "inventory_unavailable", "No pudimos preparar la presentación base del producto.")
+		fail(w, 503, "inventory_unavailable", "No pudimos preparar la presentación base del artículo.")
 		return
 	}
 
@@ -365,7 +511,8 @@ func (a *API) createInventoryEntry(w http.ResponseWriter, r *http.Request) {
 		ON CONFLICT (organization_id,inventory_item_id,presentation_type,units_per_presentation)
 		DO UPDATE SET active=true,updated_at=now()
 		RETURNING id`,
-		s.OrganizationID, inventoryItemID, in.PresentationType, in.UnitsPerPresentation).Scan(&presentationID); err != nil {
+		s.OrganizationID, inventoryItemID, in.PresentationType, in.UnitsPerPresentation).
+		Scan(&presentationID); err != nil {
 		fail(w, 503, "inventory_unavailable", "No pudimos guardar la presentación de entrada.")
 		return
 	}
@@ -413,15 +560,20 @@ func (a *API) createInventoryEntry(w http.ResponseWriter, r *http.Request) {
 		VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
 		RETURNING id`,
 		s.OrganizationID, s.LocationID, productID, inventoryItemID,
-		in.Quantity, in.Unit, presentationID, in.PresentationType, in.UnitsPerPresentation, in.Note, s.UserID).Scan(&entryID); err != nil {
+		in.Quantity, in.Unit, presentationID, in.PresentationType,
+		in.UnitsPerPresentation, in.Note, s.UserID).Scan(&entryID); err != nil {
 		fail(w, 503, "inventory_unavailable", "No pudimos registrar el documento de entrada.")
 		return
 	}
 
 	if _, err = tx.Exec(r.Context(), `
-		INSERT INTO stock_movements(organization_id,location_id,product_id,inventory_item_id,movement_type,quantity_delta,balance_after,source_type,source_id,note,created_by)
+		INSERT INTO stock_movements(
+			organization_id,location_id,product_id,inventory_item_id,
+			movement_type,quantity_delta,balance_after,source_type,source_id,note,created_by
+		)
 		VALUES($1,$2,$3,$4,'entry',$5,$6,'inventory_entry',$7,$8,$9)`,
-		s.OrganizationID, s.LocationID, productID, inventoryItemID, stockQuantity, balanceAfter, entryID, in.Note, s.UserID); err != nil {
+		s.OrganizationID, s.LocationID, productID, inventoryItemID,
+		stockQuantity, balanceAfter, entryID, in.Note, s.UserID); err != nil {
 		fail(w, 503, "inventory_unavailable", "No pudimos registrar el movimiento de Kárdex.")
 		return
 	}
@@ -430,23 +582,45 @@ func (a *API) createInventoryEntry(w http.ResponseWriter, r *http.Request) {
 		fail(w, 503, "inventory_unavailable", "No pudimos registrar la entrada.")
 		return
 	}
-	if createdProduct {
-		a.audit(r, "product.created_from_inventory", "product", productID)
+
+	if createdProduct && productID != nil {
+		a.audit(r, "product.created_from_inventory", "product", *productID)
 	}
-	a.audit(r, "inventory.entry_created", "product", productID)
+	if createdInventoryItem && productID == nil {
+		a.audit(r, "inventory.ingredient_created", "inventory_item", inventoryItemID)
+	}
+	a.audit(r, "inventory.entry_created", "inventory_item", inventoryItemID)
+
+	kind := "ingredient"
+	if productID != nil {
+		kind = "product"
+	}
 	writeJSON(w, 201, map[string]any{
-		"id": entryID, "productId": productID, "sku": productSKU, "name": productName,
-		"quantity": in.Quantity, "presentationId": presentationID, "presentationType": in.PresentationType,
-		"unitsPerPresentation": in.UnitsPerPresentation, "stockQuantity": stockQuantity,
-		"unit": in.Unit, "balance": balanceAfter, "createdProduct": createdProduct,
+		"id": entryID,
+		"inventoryItemId": inventoryItemID,
+		"productId": productID,
+		"sku": itemSKU,
+		"name": itemName,
+		"kind": kind,
+		"quantity": in.Quantity,
+		"presentationId": presentationID,
+		"presentationType": in.PresentationType,
+		"unitsPerPresentation": in.UnitsPerPresentation,
+		"stockQuantity": stockQuantity,
+		"unit": in.Unit,
+		"balance": balanceAfter,
+		"createdProduct": createdProduct,
+		"createdInventoryItem": createdInventoryItem,
 	})
 }
 
 func (a *API) listInventoryMovements(w http.ResponseWriter, r *http.Request) {
 	s := r.Context().Value(scopeKey{}).(scope)
+	inventoryItemID := strings.TrimSpace(r.URL.Query().Get("inventoryItemId"))
 	productID := strings.TrimSpace(r.URL.Query().Get("productId"))
 	rows, err := a.db.Query(r.Context(), `
-		SELECT sm.id,sm.product_id,p.name,sm.movement_type,sm.quantity_delta::text,sm.balance_after::text,
+		SELECT sm.id,sm.inventory_item_id,sm.product_id,COALESCE(p.name,ii.name),
+		       sm.movement_type,sm.quantity_delta::text,sm.balance_after::text,
 		       sm.source_type,sm.source_id,
 		       COALESCE(
 		         CASE
@@ -469,11 +643,16 @@ func (a *API) listInventoryMovements(w http.ResponseWriter, r *http.Request) {
 		       ),
 		       sm.note,sm.created_at
 		FROM stock_movements sm
-		JOIN products p ON p.id=sm.product_id AND p.organization_id=sm.organization_id
+		JOIN inventory_items ii
+		  ON ii.id=sm.inventory_item_id AND ii.organization_id=sm.organization_id
+		LEFT JOIN products p
+		  ON p.id=sm.product_id AND p.organization_id=sm.organization_id
 		WHERE sm.organization_id=$1 AND sm.location_id=$2
-		  AND ($3='' OR sm.product_id::text=$3)
+		  AND ($3='' OR sm.inventory_item_id::text=$3)
+		  AND ($4='' OR sm.product_id::text=$4)
 		ORDER BY sm.created_at DESC
-		LIMIT 100`, s.OrganizationID, s.LocationID, productID)
+		LIMIT 100`,
+		s.OrganizationID, s.LocationID, inventoryItemID, productID)
 	if err != nil {
 		fail(w, 503, "kardex_unavailable", "No pudimos cargar el Kárdex.")
 		return
@@ -482,7 +661,12 @@ func (a *API) listInventoryMovements(w http.ResponseWriter, r *http.Request) {
 	items := []inventoryMovementView{}
 	for rows.Next() {
 		var item inventoryMovementView
-		if err := rows.Scan(&item.ID, &item.ProductID, &item.ProductName, &item.MovementType, &item.QuantityDelta, &item.BalanceAfter, &item.SourceType, &item.SourceID, &item.SourceReference, &item.Note, &item.CreatedAt); err != nil {
+		if err := rows.Scan(
+			&item.ID, &item.InventoryItemID, &item.ProductID, &item.ItemName,
+			&item.MovementType, &item.QuantityDelta, &item.BalanceAfter,
+			&item.SourceType, &item.SourceID, &item.SourceReference,
+			&item.Note, &item.CreatedAt,
+		); err != nil {
 			fail(w, 503, "kardex_unavailable", "No pudimos cargar el Kárdex.")
 			return
 		}

@@ -15,18 +15,18 @@ const movementLabels={
 };
 export function KardexPage(){
  const{location}=useSession();
- const[productId,setProductId]=useState("");
+ const[inventoryItemId,setInventoryItemId]=useState("");
  const products=useQuery({queryKey:["inventory-products","kardex"],queryFn:()=>listInventoryProducts()});
- const movements=useQuery({queryKey:["inventory-movements",productId],queryFn:()=>listStockMovements(productId)});
+ const movements=useQuery({queryKey:["inventory-movements",inventoryItemId],queryFn:()=>listStockMovements(inventoryItemId)});
  const items=movements.data?.items??[];
 
  return <>
-  <PageHeader eyebrow="ABASTECIMIENTO" title="Kárdex" description="Trazabilidad de entradas, ventas, reversas y ajustes de la existencia física del local."/>
+  <PageHeader eyebrow="ABASTECIMIENTO" title="Kárdex" description="Trazabilidad de entradas, consumos, ventas, reversas y ajustes de la existencia física del local."/>
   <section className="panel standardized-management inventory-panel">
    <div className="inventory-toolbar">
-    <Select value={productId} onChange={event=>setProductId(event.target.value)} disabled={products.isLoading} aria-label="Filtrar Kárdex por producto">
-     <option value="">Todos los productos</option>
-     {products.data?.items.filter(product=>product.quantityControl==="inventory").map(product=><option value={product.id} key={product.id}>{product.name}</option>)}
+    <Select value={inventoryItemId} onChange={event=>setInventoryItemId(event.target.value)} disabled={products.isLoading} aria-label="Filtrar Kárdex por artículo">
+     <option value="">Todos los artículos</option>
+     {products.data?.items.map(item=><option value={item.id} key={item.id}>{item.name}{item.kind==="ingredient"?" · Insumo":""}</option>)}
     </Select>
     <p><Icon name="receipt" size={15}/>Cada venta física deja su movimiento y saldo resultante.</p>
    </div>
@@ -40,7 +40,7 @@ export function KardexPage(){
      const delta=Number(item.quantityDelta);
      return <tr className={index%2?"alternate":""} key={item.id}>
       <td>{formatRegionalDateTime(item.createdAt,{country:location?.country,timeZone:location?.timezone})}</td>
-      <td><b>{item.productName}</b></td>
+      <td><b>{item.itemName}</b></td>
       <td><Status tone={delta>0?"green":"blue"}>{movementLabels[item.movementType]}</Status></td>
       <td><b className="inventory-quantity">{delta>0?"+":""}{formatRegionalNumber(delta,location?.country,{maximumFractionDigits:3})}</b></td>
       <td>{formatRegionalNumber(Number(item.balanceAfter),location?.country,{maximumFractionDigits:3})}</td>

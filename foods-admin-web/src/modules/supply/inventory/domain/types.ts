@@ -1,5 +1,6 @@
 export type InventoryStatus="ok"|"low"|"out";
 export type InventoryPresentationType="unit"|"package"|"box";
+export type InventoryKind="product"|"ingredient";
 
 export type InventoryPresentation={
   id:string;
@@ -8,9 +9,11 @@ export type InventoryPresentation={
 };
 
 export type InventoryItem={
-  productId:string;
+  inventoryItemId:string;
+  productId:string|null;
   sku:string;
   name:string;
+  kind:InventoryKind;
   categoryName:string|null;
   active:boolean;
   unit:string;
@@ -18,7 +21,6 @@ export type InventoryItem={
   minimumStock:string;
   status:InventoryStatus;
   updatedAt:string;
-  quantityControl:"inventory";
 };
 
 export type InventoryList={
@@ -30,17 +32,20 @@ export type InventoryList={
 
 export type InventoryProductOption={
   id:string;
+  productId:string|null;
   sku:string;
   name:string;
+  kind:InventoryKind;
   categoryName:string|null;
-  quantityControl:"inventory";
-  unit:string|null;
-  minimumStock:string|null;
+  quantityControl:"inventory"|null;
+  unit:string;
+  minimumStock:string;
   presentations:InventoryPresentation[];
 };
 
 export type InventoryEntryDraft={
-  mode:"existing"|"new";
+  mode:"existing"|"new_product"|"new_ingredient";
+  inventoryItemId:string;
   productId:string;
   sku:string;
   name:string;
@@ -56,8 +61,9 @@ export type InventoryEntryDraft={
 
 export type StockMovement={
   id:string;
-  productId:string;
-  productName:string;
+  inventoryItemId:string;
+  productId:string|null;
+  itemName:string;
   movementType:"entry"|"sale"|"sale_reversal"|"sale_adjustment";
   quantityDelta:string;
   balanceAfter:string;

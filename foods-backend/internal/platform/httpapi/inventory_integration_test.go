@@ -248,6 +248,116 @@ func TestKardexUsesReadableInventoryEntryReference(t *testing.T) {
 	}
 }
 
+func TestInventoryIngredientEntryDoesNotCreateProduct(t *testing.T) {
+	pool := integrationPool(t)
+	s := seedInventoryScope(t, pool)
+	api := New(pool)
+	name := fmt.Sprintf("Carne de res %d", time.Now().UnixNano())
+
+	body := []byte(fmt.Sprintf(`{"newIngredient":{"name":%q},"quantity":15,"unit":"kg","minimumStock":2,"note":"recepción de insumo"}`, name))
+	req := httptest.NewRequest("POST", "/v1/admin/inventory/entries", bytes.NewReader(body))
+	req = req.WithContext(context.WithValue(req.Context(), scopeKey{}, s))
+	rec := httptest.NewRecorder()
+	api.createInventoryEntry(rec, req)
+	if rec.Code != 201 {
+		t.Fatalf("expected ingredient entry 201, got %d body=%s", rec.Code, rec.Body.String())
+	}
+
+	var result struct {
+		InventoryItemID string  `json:"inventoryItemId"`
+		ProductID       *string `json:"productId"`
+		Kind            string  `json:"kind"`
+		Balance         float64 `json:"balance"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &result); err != nil {
+		t.Fatal(err)
+	}
+	if result.InventoryItemID == "" || result.ProductID != nil || result.Kind != "ingredient" || result.Balance != 15 {
+		t.Fatalf("unexpected ingredient result: %#v", result)
+	}
+
+	var productCount int
+	if err := pool.QueryRow(context.Background(), `
+		SELECT count(*) FROM products WHERE organization_id=$1 AND name=$2`,
+		s.OrganizationID, name).Scan(&productCount); err != nil {
+		t.Fatal(err)
+	}
+	if productCount != 0 {
+		t.Fatalf("ingredient must not create a sellable product, got %d", productCount)
+	}
+
+	var itemProductID *string
+	var balance float64
+	if err := pool.QueryRow(context.Background(), `
+		SELECT ii.product_id::text,sb.quantity::float8
+		FROM inventory_items ii
+		JOIN stock_balances sb
+		  ON sb.organization_id=ii.organization_id
+		 AND sb.inventory_item_id=ii.id
+		 AND sb.location_id=$2
+		WHERE ii.id=$1 AND ii.organization_id=$3`,
+		result.InventoryItemID, s.LocationID, s.OrganizationID).Scan(&itemProductID, &balance); err != nil {
+		t.Fatal(err)
+	}
+	if itemProductID != nil || balance != 15 {
+		t.Fatalf("expected unlinked ingredient with 15 kg, product=%v balance=%v", itemProductID, balance)
+	}
+
+	secondBody := []byte(fmt.Sprintf(`{"inventoryItemId":%q,"quantity":5,"unit":"kg","minimumStock":2}`, result.InventoryItemID))
+	secondReq := httptest.NewRequest("POST", "/v1/admin/inventory/entries", bytes.NewReader(secondBody))
+	secondReq = secondReq.WithContext(context.WithValue(secondReq.Context(), scopeKey{}, s))
+	secondRec := httptest.NewRecorder()
+	api.createInventoryEntry(secondRec, secondReq)
+	if secondRec.Code != 201 {
+		t.Fatalf("expected second ingredient entry 201, got %d body=%s", secondRec.Code, secondRec.Body.String())
+	}
+
+	if err := pool.QueryRow(context.Background(), `
+		SELECT quantity::float8
+		FROM stock_balances
+		WHERE organization_id=$1 AND location_id=$2 AND inventory_item_id=$3`,
+		s.OrganizationID, s.LocationID, result.InventoryItemID).Scan(&balance); err != nil {
+		t.Fatal(err)
+	}
+	if balance != 20 {
+		t.Fatalf("expected reusable ingredient balance 20, got %v", balance)
+	}
+
+	var entryNullProducts, movementNullProducts int
+	if err := pool.QueryRow(context.Background(), `
+		SELECT count(*) FROM inventory_entries
+		WHERE organization_id=$1 AND inventory_item_id=$2 AND product_id IS NULL`,
+		s.OrganizationID, result.InventoryItemID).Scan(&entryNullProducts); err != nil {
+		t.Fatal(err)
+	}
+	if err := pool.QueryRow(context.Background(), `
+		SELECT count(*) FROM stock_movements
+		WHERE organization_id=$1 AND inventory_item_id=$2 AND product_id IS NULL`,
+		s.OrganizationID, result.InventoryItemID).Scan(&movementNullProducts); err != nil {
+		t.Fatal(err)
+	}
+	if entryNullProducts != 2 || movementNullProducts != 2 {
+		t.Fatalf("ingredient traceability must remain product-less, entries=%d movements=%d", entryNullProducts, movementNullProducts)
+	}
+
+	listReq := httptest.NewRequest("GET", "/v1/admin/inventory/movements?inventoryItemId="+result.InventoryItemID, nil)
+	listReq = listReq.WithContext(context.WithValue(listReq.Context(), scopeKey{}, s))
+	listRec := httptest.NewRecorder()
+	api.listInventoryMovements(listRec, listReq)
+	if listRec.Code != 200 {
+		t.Fatalf("expected ingredient kardex 200, got %d body=%s", listRec.Code, listRec.Body.String())
+	}
+	var movementsPayload struct {
+		Items []inventoryMovementView `json:"items"`
+	}
+	if err := json.Unmarshal(listRec.Body.Bytes(), &movementsPayload); err != nil {
+		t.Fatal(err)
+	}
+	if len(movementsPayload.Items) != 2 || movementsPayload.Items[0].ItemName != name {
+		t.Fatalf("expected ingredient in kardex, got %#v", movementsPayload.Items)
+	}
+}
+
 func TestCreateInventoryEntryRollsBackNewProductOnLateFailure(t *testing.T) {
 	pool := integrationPool(t)
 	s := seedInventoryScope(t, pool)
