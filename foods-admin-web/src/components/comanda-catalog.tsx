@@ -123,7 +123,7 @@ export function ComandaCatalog({qtyByProduct,onPick,onRemove,currencySymbol,vari
       </div>
       {variant==="salon"&&salonItems.length>0&&(
         <div className="salon-comanda-pagination-shell">
-          <Pagination page={page} size={pageSize} total={salonTotal} onPage={goToPage} onSize={changePageSize}/>
+          <Pagination page={page} size={pageSize} total={salonTotal} onPage={goToPage} onSize={changePageSize} mode="simple"/>
         </div>
       )}
     </div>
