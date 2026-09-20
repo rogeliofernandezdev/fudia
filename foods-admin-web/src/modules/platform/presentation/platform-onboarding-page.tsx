@@ -1,6 +1,6 @@
 "use client";
-import {useEffect,useState} from "react";
-import {useMutation} from "@tanstack/react-query";
+import {useState} from "react";
+import {useMutation,useQuery} from "@tanstack/react-query";
 import {Icon,IconName} from "@/design-system/icons";
 import {LocationMap} from "@/design-system/location-map";
 import {Input,PageHeader,Select} from "@/design-system/page-header";
@@ -30,15 +30,19 @@ async function api<T>(path:string,init?:RequestInit):Promise<T>{const r=await fe
 
 export function PlatformOnboardingPage(){
   const{notify}=useFeedback();
-  const[ctx,setCtx]=useState<Context|null>(null);
   const[draft,setDraft]=useState<Draft>(blank);
-  const[loaded,setLoaded]=useState(false);
-  const[loadError,setLoadError]=useState("");
   const[step,setStep]=useState(0);
-
-  async function loadContext(){setLoaded(false);setLoadError("");try{const r=await fetch("/api/admin/settings");const data=await r.json();setCtx({countryOptions:data.countryOptions??[],currencyOptions:data.currencyOptions??[]})}catch(e){setLoadError(e instanceof Error?e.message:"No pudimos cargar los catálogos.")}finally{setLoaded(true)}}
-
-  useEffect(()=>{if(!loaded&&!loadError)loadContext()},[]);
+  const context=useQuery<Context>({
+    queryKey:["platform-onboarding-context"],
+    queryFn:async()=>{
+      const r=await fetch("/api/admin/settings");
+      const data=await r.json();
+      if(!r.ok)throw new Error(data.message??"No pudimos cargar los catálogos.");
+      return {countryOptions:data.countryOptions??[],currencyOptions:data.currencyOptions??[]};
+    },
+  });
+  const ctx=context.data;
+  const loadError=context.error instanceof Error?context.error.message:"";
 
   const save=useMutation({
     mutationFn:()=>{const payload={...draft,locationCode:draft.locationCode||draft.locationName.toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,8).padStart(3,"L"),taxRate:String(Number(draft.taxRate)/100),latitude:draft.latitude?Number(draft.latitude):null,longitude:draft.longitude?Number(draft.longitude):null};return api<{message:string}>("/api/platform/organizations",{method:"POST",body:JSON.stringify(payload)})},
@@ -46,14 +50,14 @@ export function PlatformOnboardingPage(){
     onError:e=>notify({tone:"danger",title:"No se pudo registrar",message:e.message}),
   });
 
-  function set<K extends keyof Draft>(k:K,v:Draft[K]){setDraft(d=>({...draft,[k]:v}))}
+  function set<K extends keyof Draft>(k:K,v:Draft[K]){setDraft(current=>({...current,[k]:v}))}
   function selectCountry(code:string){const c=ctx?.countryOptions.find(x=>x.code===code);if(c)set("currency",c.defaultCurrency);set("country",code)}
   const isLast=step===steps.length-1;
   const canNext=step<steps.length-1;
   const canPrev=step>0;
 
   return <><PageHeader eyebrow="PLATAFORMA" title="Registrar empresa" description="Completa los 4 pasos para crear una nueva empresa con su primer local y administrador."/>
-  {loadError?<div className="catalog-state error"><span><Icon name="alert"/></span><b>No pudimos cargar los catálogos</b><p>{loadError}</p><button className="button secondary" onClick={loadContext}>Reintentar</button></div>:
+  {loadError?<div className="catalog-state error"><span><Icon name="alert"/></span><b>No pudimos cargar los catálogos</b><p>{loadError}</p><button className="button secondary" onClick={()=>void context.refetch()}>Reintentar</button></div>:
   <div className="onboarding-wizard">
     <nav className="wizard-steps" aria-label="Pasos del registro">
       {steps.map((s,i)=><button key={s.key} type="button" className={`wizard-step${i===step?" active":""}${i<step?" done":""}`} onClick={()=>setStep(i)} aria-current={i===step?"step":undefined}>
