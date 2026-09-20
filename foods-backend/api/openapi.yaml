@@ -198,10 +198,49 @@ paths:
     parameters: [{ in: path, name: productId, required: true, schema: { type: string, format: uuid } }]
     patch:
       operationId: updateProductAvailability
-      summary: Ajusta el estado y cupo diario del producto únicamente para el local activo
+      summary: Ajusta el estado operativo y, si aplica, las porciones disponibles del día
       security: [{ sessionCookie: [] }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ProductAvailabilityInput" } } } }
       responses: { "204": { description: Disponibilidad actualizada }, "400": { $ref: "#/components/responses/BadRequest" }, "404": { description: Producto no encontrado }, "403": { $ref: "#/components/responses/Forbidden" } }
+  /v1/admin/inventory:
+    get:
+      operationId: listInventory
+      summary: Existencias físicas de productos vendibles en el local activo
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: query, name: q, schema: { type: string } }
+        - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
+        - { in: query, name: pageSize, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+      responses:
+        "200": { description: Inventario por producto, content: { application/json: { schema: { type: object, required: [items, total], properties: { items: { type: array, items: { $ref: "#/components/schemas/InventoryItem" } }, total: { type: integer } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/inventory/products:
+    get:
+      operationId: listInventoryProducts
+      summary: Productos existentes que pueden recibir una entrada de inventario
+      security: [{ sessionCookie: [] }]
+      parameters: [{ in: query, name: q, schema: { type: string } }]
+      responses:
+        "200": { description: Productos seleccionables, content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/InventoryProductOption" } } } } } } }
+  /v1/admin/inventory/entries:
+    post:
+      operationId: createInventoryEntry
+      summary: Registra una entrada; puede crear el Producto y su inventario en la misma transacción
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryEntryInput" } } } }
+      responses:
+        "201": { description: Entrada registrada atómicamente }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "409": { description: Producto o clasificación incompatible }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/inventory/movements:
+    get:
+      operationId: listInventoryMovements
+      summary: Kárdex del local activo
+      security: [{ sessionCookie: [] }]
+      parameters: [{ in: query, name: productId, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Movimientos de stock, content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/StockMovement" } } } } } } }
   /v1/operations/product-availability:
     get:
       operationId: listOperationalProductAvailability
@@ -338,10 +377,15 @@ components:
     ExchangeRateInput: { type: object, required: [baseCurrency, quoteCurrency, rate, effectiveAt, source], properties: { baseCurrency: { type: string, pattern: "^[A-Z]{3}$" }, quoteCurrency: { type: string, pattern: "^[A-Z]{3}$" }, rate: { type: string, pattern: "^[0-9]+(\\.[0-9]+)?$" }, effectiveAt: { type: string, format: date-time }, source: { type: string, enum: [manual, provider] }, providerReference: { type: [string, "null"] } } }
     CategoryInput: { type: object, required: [name, sortOrder], properties: { name: { type: string, maxLength: 120 }, sortOrder: { type: integer, minimum: 0 }, active: { type: boolean } } }
     Category: { allOf: [{ $ref: "#/components/schemas/CategoryInput" }, { type: object, required: [id, active, productCount], properties: { id: { type: string, format: uuid }, active: { type: boolean }, productCount: { type: integer } } }] }
-    ProductInput: { type: object, required: [sku, name, price], properties: { sku: { type: string, maxLength: 40 }, name: { type: string, maxLength: 160 }, description: { type: string, maxLength: 1000 }, categoryId: { type: [string, "null"], format: uuid }, price: { type: string, pattern: "^[0-9]+(\\.[0-9]{1,2})?$" }, active: { type: boolean } } }
-    Product: { allOf: [{ $ref: "#/components/schemas/ProductInput" }, { type: object, required: [id, active], properties: { id: { type: string, format: uuid }, categoryName: { type: [string, "null"] }, active: { type: boolean } } }] }
-    ProductAvailabilityInput: { type: object, required: [status], properties: { status: { type: string, enum: [available, low, sold_out] }, dailyQuota: { type: [integer, "null"], minimum: 0 }, note: { type: string, maxLength: 240 } } }
-    ProductAvailability: { type: object, required: [productId, name, stockMode, status, source, soldQuantity, note, businessDate], properties: { productId: { type: string, format: uuid }, name: { type: string }, categoryName: { type: [string, "null"] }, imageUrl: { type: [string, "null"] }, stockMode: { type: string, enum: [none, manual, linked, recipe] }, status: { type: string, enum: [available, low, sold_out, unavailable] }, source: { type: string, enum: [always, daily_quota, manual_override, schedule, combo_components] }, dailyQuota: { type: [integer, "null"] }, soldQuantity: { type: integer, minimum: 0 }, remaining: { type: [integer, "null"] }, note: { type: string }, businessDate: { type: string, format: date } } }
+    ProductInput: { type: object, required: [name, price], properties: { sku: { type: string, maxLength: 40 }, name: { type: string, maxLength: 160 }, description: { type: string, maxLength: 1000 }, categoryId: { type: [string, "null"], format: uuid }, price: { type: string, pattern: "^[0-9]+(\\.[0-9]{1,2})?$" }, active: { type: boolean }, quantityControl: { type: string, enum: [none, portions, inventory], default: none } } }
+    Product: { allOf: [{ $ref: "#/components/schemas/ProductInput" }, { type: object, required: [id, active, quantityControl], properties: { id: { type: string, format: uuid }, categoryName: { type: [string, "null"] }, active: { type: boolean } } }] }
+    ProductAvailabilityInput: { type: object, required: [status], properties: { status: { type: string, enum: [available, sold_out] }, portionQuantity: { type: [integer, "null"], minimum: 0 }, note: { type: string, maxLength: 240 } } }
+    ProductAvailability: { type: object, required: [productId, name, quantityControl, status, source, soldQuantity, note, businessDate], properties: { productId: { type: string, format: uuid }, name: { type: string }, categoryName: { type: [string, "null"] }, imageUrl: { type: [string, "null"] }, quantityControl: { type: string, enum: [none, portions, inventory] }, status: { type: string, enum: [available, low, sold_out, unavailable] }, source: { type: string, enum: [always, portions, inventory, manual_override, schedule, combo_components] }, portionQuantity: { type: [integer, "null"] }, soldQuantity: { type: integer, minimum: 0 }, remaining: { type: [number, "null"], minimum: 0 }, inventoryUnit: { type: [string, "null"] }, note: { type: string }, businessDate: { type: string, format: date } } }
+    InventoryItem: { type: object, required: [productId, sku, name, active, unit, quantity, minimumStock, status, updatedAt, quantityControl], properties: { productId: { type: string, format: uuid }, sku: { type: string }, name: { type: string }, categoryName: { type: [string, "null"] }, active: { type: boolean }, unit: { type: string }, quantity: { type: string }, minimumStock: { type: string }, status: { type: string, enum: [ok, low, out] }, updatedAt: { type: string, format: date-time }, quantityControl: { type: string, const: inventory } } }
+    InventoryProductOption: { type: object, required: [id, sku, name, quantityControl], properties: { id: { type: string, format: uuid }, sku: { type: string }, name: { type: string }, categoryName: { type: [string, "null"] }, quantityControl: { type: string, enum: [none, inventory] } } }
+    InventoryNewProductInput: { type: object, required: [name, price], properties: { sku: { type: string }, name: { type: string, maxLength: 160 }, description: { type: string, maxLength: 1000 }, categoryId: { type: [string, "null"], format: uuid }, price: { type: string, pattern: "^[0-9]+(\\.[0-9]{1,2})?$" } } }
+    InventoryEntryInput: { type: object, required: [quantity], properties: { productId: { type: string, format: uuid }, newProduct: { anyOf: [{ $ref: "#/components/schemas/InventoryNewProductInput" }, { type: "null" }] }, quantity: { type: number, exclusiveMinimum: 0 }, unit: { type: string, default: und }, minimumStock: { type: number, minimum: 0, default: 0 }, note: { type: string, maxLength: 240 } } }
+    StockMovement: { type: object, required: [id, productId, productName, movementType, quantityDelta, balanceAfter, sourceType, sourceId, note, createdAt], properties: { id: { type: string, format: uuid }, productId: { type: string, format: uuid }, productName: { type: string }, movementType: { type: string, enum: [entry, sale, sale_reversal, sale_adjustment] }, quantityDelta: { type: string }, balanceAfter: { type: string }, sourceType: { type: string, enum: [inventory_entry, order] }, sourceId: { type: string, format: uuid }, note: { type: string }, createdAt: { type: string, format: date-time } } }
     ComboOptionInput: { type: object, required: [productId, surcharge], properties: { productId: { type: string, format: uuid }, surcharge: { type: string, pattern: "^[0-9]+(\\.[0-9]{1,2})?$" } } }
     ComboGroupInput: { type: object, required: [name, required, minSelections, maxSelections, options], properties: { name: { type: string, maxLength: 120 }, required: { type: boolean }, minSelections: { type: integer, minimum: 0 }, maxSelections: { type: integer, minimum: 1 }, options: { type: array, items: { $ref: "#/components/schemas/ComboOptionInput" } } } }
     ComboInput: { type: object, required: [name, description, price, groups], properties: { name: { type: string, maxLength: 160 }, description: { type: string, maxLength: 1000 }, price: { type: string, pattern: "^[0-9]+(\\.[0-9]{1,2})?$" }, categoryId: { type: [string, "null"], format: uuid }, groups: { type: array, minItems: 1, items: { $ref: "#/components/schemas/ComboGroupInput" } } } }
@@ -350,7 +394,7 @@ components:
     CustomerInput: { type: object, required: [customerType, displayName, preferredChannel], properties: { customerType: { type: string, enum: [person, company] }, displayName: { type: string, maxLength: 160 }, documentType: { type: string }, documentNumber: { type: string }, phone: { type: string }, email: { type: string }, preferredChannel: { type: string, enum: [none, whatsapp, phone, email] }, preferences: { type: string }, notes: { type: string }, marketingConsent: { type: boolean }, vipOverride: { type: boolean }, addresses: { type: array, items: { $ref: "#/components/schemas/CustomerAddress" } } } }
     Customer: { allOf: [{ $ref: "#/components/schemas/CustomerInput" }, { type: object, required: [id, code, visitCount, totalSpent, active, segment], properties: { id: { type: string, format: uuid }, code: { type: string }, visitCount: { type: integer, minimum: 0 }, totalSpent: { type: string }, lastPurchaseAt: { type: [string, "null"], format: date-time }, active: { type: boolean }, segment: { type: string, enum: [new, recurrent, frequent, vip] } } }] }
     RoleInput: { type: object, required: [name, menuAccess, permissions], properties: { name: { type: string }, description: { type: string }, menuAccess: { type: array, minItems: 1, items: { type: string } }, permissions: { type: array, minItems: 1, items: { type: string } } } }
-    OrderItemInput: { type: object, required: [name, qty, unitPrice], properties: { productId: { type: string, format: uuid }, name: { type: string, maxLength: 160 }, qty: { type: number, exclusiveMinimum: 0 }, unitPrice: { type: number, minimum: 0 }, note: { type: string, maxLength: 240 } } }
+    OrderItemInput: { type: object, required: [productId, qty, unitPrice], properties: { productId: { type: string, format: uuid }, name: { type: string, maxLength: 160 }, qty: { type: number, exclusiveMinimum: 0 }, unitPrice: { type: number, minimum: 0 }, note: { type: string, maxLength: 240 } } }
     OrderInput: { type: object, required: [channel, items], properties: { channel: { type: string, enum: [salon, mostrador, recojo, delivery, whatsapp] }, customerId: { type: string, format: uuid }, customerName: { type: string, maxLength: 160 }, customerPhone: { type: string, maxLength: 30 }, address: { type: string, maxLength: 240 }, reference: { type: string, maxLength: 240 }, tableId: { type: string, format: uuid }, notes: { type: string, maxLength: 500 }, deliveryFee: { type: number, minimum: 0 }, items: { type: array, minItems: 1, items: { $ref: "#/components/schemas/OrderItemInput" } } } }
     OrderItem: { allOf: [{ $ref: "#/components/schemas/OrderItemInput" }, { type: object, required: [id], properties: { id: { type: string, format: uuid } } }] }
     Order: { type: object, required: [id, code, channel, status, customerName, customerPhone, address, reference, tableId, tableName, notes, subtotal, deliveryFee, total, createdAt, updatedAt], properties: { id: { type: string, format: uuid }, code: { type: string }, channel: { type: string, enum: [salon, mostrador, recojo, delivery, whatsapp] }, status: { type: string, enum: [nuevo, confirmado, preparando, listo, en_camino, entregado, cancelado] }, customerId: { type: string }, customerName: { type: string }, customerPhone: { type: string }, address: { type: string }, reference: { type: string }, tableId: { type: string }, tableName: { type: string }, notes: { type: string }, subtotal: { type: string }, deliveryFee: { type: string }, total: { type: string }, createdAt: { type: string, format: date-time }, updatedAt: { type: string, format: date-time }, items: { type: array, items: { $ref: "#/components/schemas/OrderItem" } } } }
