@@ -68,6 +68,7 @@ test("los estilos especializados se cargan desde su owner",()=>{
     "src/shell/admin-shell.tsx":"./styles/shell.css",
     "src/providers/feedback-provider.tsx":"./styles/feedback.css",
     "src/design-system/confirm-dialog.tsx":"./styles/confirm-dialog.css",
+    "src/design-system/remote-modal-skeleton.tsx":"./styles/remote-modal-skeleton.css",
     "src/design-system/maps/mapbox-location-provider.tsx":"../styles/location-map.css",
     "src/modules/dashboard/presentation/dashboard-view.tsx":"./dashboard.css",
     "src/modules/configuration/presentation/configuration-home-page.tsx":"./configuration.css",
@@ -76,6 +77,23 @@ test("los estilos especializados se cargan desde su owner",()=>{
     "src/modules/platform/presentation/platform-shell.tsx":"./platform-shell.css",
   };
   for(const [p,css] of Object.entries(owners))assert.ok(read(p).includes(css),`${p} no carga ${css}`);
+});
+
+test("los modales remotos muestran skeleton mientras esperan datos",()=>{
+  const contracts={
+    "src/modules/customers/presentation/customers-manager.tsx":["CustomerDetailSkeleton","RemoteModalSkeleton","draftLoading"],
+    "src/modules/operations/orders/presentation/orders-manager.tsx":["OrderDetailSkeleton","aria-busy={loading}"],
+    "src/modules/operations/salon/presentation/salon-manager.tsx":["OrderDetailSkeleton","aria-busy={loading}"],
+    "src/modules/menu/combos/presentation/combos-page.tsx":["ComboDetailSkeleton","RemoteModalSkeleton","loadForEdit.isPending"],
+    "src/modules/menu/products/presentation/catalog-manager.tsx":["RemoteModalSkeleton","categories.isLoading"],
+    "src/modules/identity/presentation/users-roles-manager.tsx":["RemoteModalSkeleton","roles.isLoading||locations.isLoading","permissions.isLoading"],
+    "src/modules/organizations/presentation/organization-admin.tsx":["RemoteModalSkeleton","profiles.isLoading"],
+    "src/design-system/maps/mapbox-location-provider.tsx":["mapLoading","location-map-canvas-skeleton","location-map-suggestions-loading"],
+  };
+  for(const [p,needles] of Object.entries(contracts)){
+    const source=read(p);
+    for(const needle of needles)assert.ok(source.includes(needle),`${p} debe incluir ${needle}`);
+  }
 });
 
 test("el root layout carga solo la base global",()=>{
