@@ -469,17 +469,27 @@
 .salon-comanda-line-title{
   min-width:0;
   display:flex;
-  align-items:baseline;
-  gap:6px;
+  align-items:center;
+  gap:8px;
 }
 
 .salon-comanda-line-inline-qty{
+  min-width:28px;
+  height:28px;
+  padding:0 7px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
   flex:0 0 auto;
-  color:var(--primary-600,#4654cd);
+  border:1px solid #d9def5;
+  border-radius:999px;
+  background:var(--primary-100,#eef0ff);
+  color:var(--ops-700,#3946b8);
   font-family:var(--font-geist-mono,ui-monospace,monospace);
-  font-size:10.5px;
+  font-size:9.5px;
   font-weight:850;
   font-variant-numeric:tabular-nums;
+  line-height:1;
 }
 
 .salon-comanda-line-title strong{
