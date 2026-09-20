@@ -105,9 +105,9 @@
   display:inline-flex;
   align-items:center;
   gap:7px;
-  border:1px solid #ffffff26;
+  border:1px solid #ffffff24;
   border-radius:6px;
-  background:#ffffff0d;
+  background:var(--primary-600,#4654cd);
   color:#fff;
   font-size:10px;
   font-weight:800;
@@ -119,8 +119,8 @@
   width:7px;
   height:7px;
   border-radius:50%;
-  background:var(--brand-600,#63dcae);
-  box-shadow:0 0 0 3px rgba(99,220,174,.13);
+  background:#fff;
+  box-shadow:0 0 0 3px rgba(255,255,255,.14);
 }
 
 .salon-comanda-main{
@@ -145,7 +145,7 @@
   grid-template-columns:auto minmax(0,1fr) auto auto;
   align-items:center;
   gap:12px;
-  border:1px solid #e4e7ec;
+  border:1px solid #dfe3f7;
   border-radius:14px;
   background:#fff;
   box-shadow:0 1px 3px rgba(16,24,40,.04);
@@ -809,6 +809,54 @@
   }
 }
 
+
+/* ── Tabs y cabecera de carta: azul Foods ── */
+.salon-comanda-shell .comanda-menu-salon .comanda-menu-hero{
+  background:#fff;
+}
+
+.salon-comanda-shell .comanda-menu-salon .comanda-menu-count{
+  min-height:24px;
+  padding:0 9px;
+  display:inline-flex;
+  align-items:center;
+  border-radius:999px;
+  background:var(--primary-100,#eef0ff);
+  color:var(--ops-700,#3946b8);
+  font-weight:850;
+}
+
+.salon-comanda-shell .comanda-menu-salon .comanda-seg{
+  gap:6px;
+  padding:4px;
+  border:1px solid #dce1fb;
+  border-radius:10px;
+  background:#f3f5ff;
+}
+
+.salon-comanda-shell .comanda-menu-salon .comanda-seg button{
+  height:var(--control-height);
+  min-height:var(--control-height);
+  padding:0 14px;
+  border:1px solid transparent;
+  border-radius:6px;
+  background:#fff;
+  color:var(--ops-700,#3946b8);
+  box-shadow:0 1px 2px rgba(70,84,205,.05);
+}
+
+.salon-comanda-shell .comanda-menu-salon .comanda-seg button:hover{
+  border-color:#cbd2f4;
+  background:var(--primary-100,#eef0ff);
+  color:var(--ops-700,#3946b8);
+}
+
+.salon-comanda-shell .comanda-menu-salon .comanda-seg button.active{
+  border-color:var(--primary-600,#4654cd);
+  background:var(--primary-600,#4654cd);
+  color:#fff;
+  box-shadow:0 3px 9px rgba(70,84,205,.22);
+}
 
 /* ── Carta moderna: grilla plana, simétrica y con una sola acción ── */
 .salon-comanda-shell .comanda-menu-salon .comanda-dishes{
