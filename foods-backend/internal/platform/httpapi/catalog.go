@@ -319,6 +319,17 @@ func (a *API) updateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if currentControl != in.QuantityControl {
+		if currentControl == "none" && in.QuantityControl != "none" {
+			usedByOpenOrder, usageErr := productHasCancellableOrderUsage(r.Context(), tx, s.OrganizationID, r.PathValue("id"))
+			if usageErr != nil {
+				fail(w, 503, "product_unavailable", "No pudimos validar los pedidos abiertos del producto.")
+				return
+			}
+			if usedByOpenOrder {
+				fail(w, 409, "quantity_control_open_orders", "Cierra o cancela los pedidos abiertos de este producto antes de activar un control de cantidad.")
+				return
+			}
+		}
 		var used bool
 		switch currentControl {
 		case "inventory":
