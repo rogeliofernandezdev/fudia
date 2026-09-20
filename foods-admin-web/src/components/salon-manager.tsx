@@ -7,18 +7,18 @@ import {useState,useCallback,useEffect,useRef} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Button,ConfirmDialog,Input,Select,Status,Textarea} from "@/design-system";
 import {Icon,IconName} from "@/design-system/icons";
-import {ComandaCatalog} from "@/components/comanda-catalog";
+import {CatalogProduct,ComboConfigurator,ComboSelection,ConfiguredCombo,ComandaCatalog} from "@/components/comanda-catalog";
 import {apiFetch} from "@/shared/api/client";
 import {useFeedback} from "@/providers/feedback-provider";
 import {useSession} from "@/providers/session-context";
 import {useSettings} from "@/providers/settings-context";
 
 /* ── types ── */
-type OrderItem={id:string;productId:string;name:string;qty:string;unitPrice:string;note:string};
+type OrderItemSelection={groupId:string;groupName:string;productId:string;name:string;surcharge:string};
+type OrderItem={id:string;productId:string;name:string;qty:string;unitPrice:string;note:string;itemType:"product"|"combo";selections?:OrderItemSelection[]};
 type Order={id:string;code:string;channel:string;status:string;customerId:string;customerName:string;customerPhone:string;address:string;reference:string;tableId:string;tableName:string;notes:string;subtotal:string;deliveryFee:string;total:string;createdAt:string;updatedAt:string;itemCount?:number;items?:OrderItem[]};
 type FloorTable={id:string;name:string;zone:string;seats:number;order:Order|null};
-type Product={id:string;name:string;price:string;categoryId:string|null;imageUrl:string|null};
-type LineDraft={productId:string;name:string;qty:number;unitPrice:number;note:string};
+type LineDraft={lineKey:string;itemType:"product"|"combo";productId:string;name:string;qty:number;unitPrice:number;note:string;selections:ComboSelection[]};
 type Draft={channel:string;customerName:string;customerPhone:string;address:string;reference:string;tableId:string;notes:string;deliveryFee:string;lines:LineDraft[]};
 
 /* ── helpers ── */
@@ -69,11 +69,20 @@ const draftFromOrder=(o:Order):Draft=>({
   notes:o.notes||"",
   deliveryFee:o.deliveryFee||"0",
   lines:(o.items??[]).map(it=>({
+    lineKey:it.id,
+    itemType:it.itemType==="combo"?"combo":"product",
     productId:it.productId,
     name:it.name,
     qty:Number(it.qty)||1,
     unitPrice:Number(it.unitPrice)||0,
     note:it.note||"",
+    selections:(it.selections??[]).map(sel=>({
+      groupId:sel.groupId,
+      groupName:sel.groupName,
+      productId:sel.productId,
+      name:sel.name,
+      surcharge:Number(sel.surcharge)||0,
+    })),
   })),
 });
 
@@ -116,12 +125,12 @@ export function SalonManager(){
     onError:e=>notify({tone:"danger",title:"Error",message:e.message}),
   });
   const create=useMutation({
-    mutationFn:(v:Draft)=>apiFetch<Order>("orders",{method:"POST",body:JSON.stringify({channel:v.channel,customerName:v.customerName,customerPhone:v.customerPhone,address:v.address,reference:v.reference,tableId:v.tableId,notes:v.notes,deliveryFee:Number(v.deliveryFee)||0,items:v.lines.map(l=>({productId:l.productId,name:l.name,qty:l.qty,unitPrice:l.unitPrice,note:l.note}))})}),
+    mutationFn:(v:Draft)=>apiFetch<Order>("orders",{method:"POST",body:JSON.stringify({channel:v.channel,customerName:v.customerName,customerPhone:v.customerPhone,address:v.address,reference:v.reference,tableId:v.tableId,notes:v.notes,deliveryFee:Number(v.deliveryFee)||0,items:v.lines.map(l=>({productId:l.productId,name:l.name,qty:l.qty,unitPrice:l.unitPrice,note:l.note,selections:l.selections.map(sel=>({groupId:sel.groupId,productId:sel.productId}))}))})}),
     onSuccess:o=>{setDraft(null);setEditingOrderId(null);setDetailId(null);invalidate();notify({tone:"success",title:"Mesa abierta",message:`Pedido ${o.code} registrado.`})},
     onError:e=>notify({tone:"danger",title:"Error",message:e.message}),
   });
   const update=useMutation({
-    mutationFn:({id,v}:{id:string;v:Draft})=>apiFetch<Order>(`orders/${id}`,{method:"PATCH",body:JSON.stringify({customerName:v.customerName,customerPhone:v.customerPhone,address:v.address,reference:v.reference,notes:v.notes,deliveryFee:Number(v.deliveryFee)||0,items:v.lines.map(l=>({productId:l.productId,name:l.name,qty:l.qty,unitPrice:l.unitPrice,note:l.note}))})}),
+    mutationFn:({id,v}:{id:string;v:Draft})=>apiFetch<Order>(`orders/${id}`,{method:"PATCH",body:JSON.stringify({customerName:v.customerName,customerPhone:v.customerPhone,address:v.address,reference:v.reference,notes:v.notes,deliveryFee:Number(v.deliveryFee)||0,items:v.lines.map(l=>({productId:l.productId,name:l.name,qty:l.qty,unitPrice:l.unitPrice,note:l.note,selections:l.selections.map(sel=>({groupId:sel.groupId,productId:sel.productId}))}))})}),
     onSuccess:o=>{
       setDraft(null);
       setEditingOrderId(null);
@@ -346,28 +355,52 @@ function ComandaView({initial,mode,allTables,busy,currencySymbol,close,save,noti
   const editing=mode==="edit";
   const[v,setV]=useState(initial);
   const[ticketOpen,setTicketOpen]=useState(false);
-  const[focusNoteProductId,setFocusNoteProductId]=useState<string|null>(null);
+  const[focusNoteKey,setFocusNoteKey]=useState<string|null>(null);
+  const[comboEditor,setComboEditor]=useState<{comboId:string;lineKey?:string;initialSelections:ComboSelection[]}|null>(null);
   const noteRefs=useRef<Record<string,HTMLInputElement|null>>({});
   const freeTables=allTables.filter(t=>!t.order||t.id===v.tableId);
   const selTable=allTables.find(t=>t.id===v.tableId);
   const tableName=selTable?.name??"";
-  const qtyByProduct=Object.fromEntries(v.lines.map(l=>[l.productId,l.qty]));
-  const patchLine=(i:number,p:Partial<LineDraft>)=>setV({...v,lines:v.lines.map((l,n)=>n===i?{...l,...p}:l)});
-  const tap=(p:Product)=>{
+  const qtyByProduct=v.lines.reduce<Record<string,number>>((acc,line)=>{
+    acc[line.productId]=(acc[line.productId]??0)+line.qty;
+    return acc;
+  },{});
+  const patchLine=(i:number,p:Partial<LineDraft>)=>setV(prev=>({...prev,lines:prev.lines.map((l,n)=>n===i?{...l,...p}:l)}));
+  const tap=(p:CatalogProduct)=>{
     setTicketOpen(true);
-    setFocusNoteProductId(p.id);
-    setV(prev=>{const i=prev.lines.findIndex(l=>l.productId===p.id);if(i>=0)return{...prev,lines:prev.lines.map((l,n)=>n===i?{...l,qty:l.qty+1}:l)};return{...prev,lines:[...prev.lines,{productId:p.id,name:p.name,qty:1,unitPrice:Number(p.price)||0,note:""}]}});
+    setFocusNoteKey(p.id);
+    setV(prev=>{
+      const i=prev.lines.findIndex(l=>l.itemType==="product"&&l.productId===p.id);
+      if(i>=0)return{...prev,lines:prev.lines.map((l,n)=>n===i?{...l,qty:l.qty+1}:l)};
+      return{...prev,lines:[...prev.lines,{lineKey:p.id,itemType:"product",productId:p.id,name:p.name,qty:1,unitPrice:Number(p.price)||0,note:"",selections:[]}]};
+    });
   };
   useEffect(()=>{
-    if(!focusNoteProductId)return;
-    const input=noteRefs.current[focusNoteProductId];
+    if(!focusNoteKey)return;
+    const input=noteRefs.current[focusNoteKey];
     if(!input)return;
     input.focus({preventScroll:true});
     input.scrollIntoView({block:"nearest",behavior:"smooth"});
-    setFocusNoteProductId(null);
-  },[focusNoteProductId,v.lines]);
-  const untap=(p:Product)=>setV(prev=>({...prev,lines:prev.lines.map(l=>l.productId===p.id?{...l,qty:l.qty-1}:l).filter(l=>l.qty>0)}));
+    setFocusNoteKey(null);
+  },[focusNoteKey,v.lines]);
+  const untap=(p:CatalogProduct)=>setV(prev=>({...prev,lines:prev.lines.map(l=>l.itemType==="product"&&l.productId===p.id?{...l,qty:l.qty-1}:l).filter(l=>l.qty>0)}));
   const step=(i:number,d:number)=>setV(prev=>({...prev,lines:prev.lines.map((l,n)=>n===i?{...l,qty:l.qty+d}:l).filter(l=>l.qty>0)}));
+  const configureCombo=(comboId:string)=>setComboEditor({comboId,initialSelections:[]});
+  const editCombo=(line:LineDraft)=>setComboEditor({comboId:line.productId,lineKey:line.lineKey,initialSelections:line.selections});
+  const applyCombo=(combo:ConfiguredCombo)=>{
+    const editingLineKey=comboEditor?.lineKey;
+    const generated=typeof crypto!=="undefined"&&typeof crypto.randomUUID==="function"?crypto.randomUUID():`${Date.now()}-${Math.random()}`;
+    const lineKey=editingLineKey??`combo-${combo.productId}-${generated}`;
+    setV(prev=>{
+      if(editingLineKey){
+        return{...prev,lines:prev.lines.map(line=>line.lineKey===editingLineKey?{...line,name:combo.name,unitPrice:combo.unitPrice,selections:combo.selections}:line)};
+      }
+      return{...prev,lines:[...prev.lines,{lineKey,itemType:"combo",productId:combo.productId,name:combo.name,qty:1,unitPrice:combo.unitPrice,note:"",selections:combo.selections}]};
+    });
+    setComboEditor(null);
+    setTicketOpen(true);
+    setFocusNoteKey(lineKey);
+  };
   const subtotal=v.lines.reduce((a,l)=>a+l.qty*l.unitPrice,0);
   const count=v.lines.reduce((a,l)=>a+l.qty,0);
   const submit=()=>{
@@ -419,7 +452,7 @@ function ComandaView({initial,mode,allTables,busy,currencySymbol,close,save,noti
               </span>
             </div>
           </div>
-          <ComandaCatalog qtyByProduct={qtyByProduct} onPick={tap} onRemove={untap} currencySymbol={currencySymbol} variant="salon"/>
+          <ComandaCatalog qtyByProduct={qtyByProduct} onPick={tap} onRemove={untap} onConfigureCombo={configureCombo} currencySymbol={currencySymbol} variant="salon"/>
         </section>
 
         <aside className={"salon-comanda-summary"+(ticketOpen?" open":"")} aria-label="Resumen de la comanda">
@@ -450,28 +483,38 @@ function ComandaView({initial,mode,allTables,busy,currencySymbol,close,save,noti
               <div className="salon-comanda-empty">
                 <span className="salon-comanda-empty-icon"><Icon name="receipt" size={21}/></span>
                 <strong>La comanda está vacía</strong>
-                <p>Selecciona platos de la carta. Aquí aparecerán cantidades, notas y el total del pedido.</p>
+                <p>Selecciona platos, menús o combos. Aquí aparecerán cantidades, opciones, notas y el total.</p>
               </div>
             ):(
               <>
                 <div className="salon-comanda-lines">
                   {v.lines.map((l,i)=>(
-                    <article className="salon-comanda-line" key={l.productId||i}>
+                    <article className={"salon-comanda-line"+(l.itemType==="combo"?" combo":"")} key={l.lineKey}>
                       <div className="salon-comanda-line-main">
                         <span className="salon-comanda-line-qty">{l.qty}×</span>
                         <div className="salon-comanda-line-copy">
                           <strong>{l.name}</strong>
                           <small>{currencySymbol} {money(l.unitPrice)} c/u</small>
+                          {l.itemType==="combo"&&(
+                            <div className="salon-comanda-line-selections">
+                              {l.selections.map(sel=><span key={sel.groupId+sel.productId}><b>{sel.groupName}:</b> {sel.name}{sel.surcharge>0?` (+${currencySymbol} ${money(sel.surcharge)})`:""}</span>)}
+                            </div>
+                          )}
                         </div>
                         <em className="salon-comanda-line-total">{currencySymbol} {money(l.qty*l.unitPrice)}</em>
                       </div>
+                      {l.itemType==="combo"&&(
+                        <button type="button" className="salon-comanda-change-combo" onClick={()=>editCombo(l)}>
+                          <Icon name="edit" size={13}/><span>Cambiar opciones</span>
+                        </button>
+                      )}
                       <div className="salon-comanda-line-controls">
                         <div className="salon-comanda-stepper">
                           <button type="button" onClick={()=>step(i,-1)} aria-label={"Quitar un "+l.name}><Icon name="minus" size={12}/></button>
                           <b>{l.qty}</b>
                           <button type="button" onClick={()=>step(i,1)} aria-label={"Agregar un "+l.name}><Icon name="plus" size={12}/></button>
                         </div>
-                        <Input ref={node=>{noteRefs.current[l.productId]=node}} className="salon-comanda-line-note" value={l.note} onChange={e=>patchLine(i,{note:e.target.value})} placeholder="Nota del plato, ej. sin cebolla" aria-label={"Nota para "+l.name}/>
+                        <Input ref={node=>{noteRefs.current[l.lineKey]=node}} className="salon-comanda-line-note" value={l.note} onChange={e=>patchLine(i,{note:e.target.value})} placeholder="Nota del ítem, ej. sin cebolla" aria-label={"Nota para "+l.name}/>
                       </div>
                     </article>
                   ))}
@@ -486,9 +529,7 @@ function ComandaView({initial,mode,allTables,busy,currencySymbol,close,save,noti
 
           <footer className="salon-comanda-summary-foot">
             <div className="salon-comanda-total">
-              <div className="salon-comanda-total-copy">
-                <span>Subtotal</span>
-              </div>
+              <div className="salon-comanda-total-copy"><span>Subtotal</span></div>
               <strong>{currencySymbol} {money(subtotal)}</strong>
             </div>
             <Button icon={editing?"save":"receipt"} className="salon-comanda-submit" onClick={submit} disabled={busy||!v.lines.length}>
@@ -503,10 +544,7 @@ function ComandaView({initial,mode,allTables,busy,currencySymbol,close,save,noti
       <div className="salon-comanda-mobile-bar">
         <button type="button" className="salon-comanda-mobile-summary" onClick={()=>setTicketOpen(true)} aria-expanded={ticketOpen}>
           <Icon name="receipt" size={17}/>
-          <span>
-            <small>Comanda · {count} ítem{count===1?"":"s"}</small>
-            <b>{currencySymbol} {money(subtotal)}</b>
-          </span>
+          <span><small>Comanda · {count} ítem{count===1?"":"s"}</small><b>{currencySymbol} {money(subtotal)}</b></span>
           <Icon name="chevron" size={15}/>
         </button>
         {v.lines.length>0&&(
@@ -515,6 +553,17 @@ function ComandaView({initial,mode,allTables,busy,currencySymbol,close,save,noti
           </button>
         )}
       </div>
+
+      {comboEditor&&(
+        <ComboConfigurator
+          key={comboEditor.lineKey??comboEditor.comboId}
+          comboId={comboEditor.comboId}
+          initialSelections={comboEditor.initialSelections}
+          currencySymbol={currencySymbol}
+          onClose={()=>setComboEditor(null)}
+          onConfirm={applyCombo}
+        />
+      )}
     </div>
   );
 }
@@ -582,6 +631,11 @@ function OrderDetail({loading,order,error,currencySymbol,canManage,busy,close,ad
                       <div className="order-detail-line-info">
                         <span>{it.name}</span>
                         <small>{currencySymbol} {money(it.unitPrice)} c/u</small>
+                        {it.itemType==="combo"&&(it.selections??[]).length>0&&(
+                          <div className="salon-order-detail-selections">
+                            {(it.selections??[]).map(sel=><small key={sel.groupId+sel.productId}><b>{sel.groupName}:</b> {sel.name}{Number(sel.surcharge)>0?` (+${currencySymbol} ${money(sel.surcharge)})`:""}</small>)}
+                          </div>
+                        )}
                         {it.note&&<em>{it.note}</em>}
                       </div>
                       <strong className="salon-order-detail-line-total">{currencySymbol} {money(Number(it.qty)*Number(it.unitPrice))}</strong>
