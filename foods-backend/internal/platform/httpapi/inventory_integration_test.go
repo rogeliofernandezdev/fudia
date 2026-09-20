@@ -3,6 +3,7 @@ package httpapi
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http/httptest"
 	"os"
@@ -203,6 +204,47 @@ func TestInventoryPackageEntryConvertsToBaseUnits(t *testing.T) {
 	}
 	if presentationCount != 2 {
 		t.Fatalf("expected reusable unit + box presentations, got %d", presentationCount)
+	}
+}
+
+func TestKardexUsesReadableInventoryEntryReference(t *testing.T) {
+	pool := integrationPool(t)
+	s := seedInventoryScope(t, pool)
+	api := New(pool)
+	name := fmt.Sprintf("Kardex agua %d", time.Now().UnixNano())
+
+	body := []byte(fmt.Sprintf(`{"newProduct":{"name":%q,"price":"4.50"},"quantity":12,"unit":"botella","minimumStock":3,"note":"recepción proveedor"}`, name))
+	req := httptest.NewRequest("POST", "/v1/admin/inventory/entries", bytes.NewReader(body))
+	req = req.WithContext(context.WithValue(req.Context(), scopeKey{}, s))
+	rec := httptest.NewRecorder()
+	api.createInventoryEntry(rec, req)
+	if rec.Code != 201 {
+		t.Fatalf("expected entry 201, got %d body=%s", rec.Code, rec.Body.String())
+	}
+
+	listReq := httptest.NewRequest("GET", "/v1/admin/inventory/movements", nil)
+	listReq = listReq.WithContext(context.WithValue(listReq.Context(), scopeKey{}, s))
+	listRec := httptest.NewRecorder()
+	api.listInventoryMovements(listRec, listReq)
+	if listRec.Code != 200 {
+		t.Fatalf("expected kardex 200, got %d body=%s", listRec.Code, listRec.Body.String())
+	}
+
+	var payload struct {
+		Items []inventoryMovementView `json:"items"`
+	}
+	if err := json.Unmarshal(listRec.Body.Bytes(), &payload); err != nil {
+		t.Fatal(err)
+	}
+	if len(payload.Items) != 1 {
+		t.Fatalf("expected one kardex movement, got %d", len(payload.Items))
+	}
+	item := payload.Items[0]
+	if item.MovementType != "entry" || !strings.HasPrefix(item.SourceReference, "ENT-") {
+		t.Fatalf("expected readable inventory entry reference, got type=%q reference=%q", item.MovementType, item.SourceReference)
+	}
+	if item.Note != "recepción proveedor" {
+		t.Fatalf("expected traceability note, got %q", item.Note)
 	}
 }
 
