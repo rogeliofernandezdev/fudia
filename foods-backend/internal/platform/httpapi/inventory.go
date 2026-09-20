@@ -120,6 +120,9 @@ func normalizeInventoryEntry(in inventoryEntryInput) (inventoryEntryInput, strin
 	case "unit":
 		in.UnitsPerPresentation = 1
 	case "package", "box":
+		if math.Abs(in.Quantity-math.Round(in.Quantity)) > 0.000001 {
+			return in, "La cantidad de paquetes o cajas debe ser un número entero. Para fracciones, registra unidades sueltas."
+		}
 		if in.UnitsPerPresentation <= 1 {
 			return in, "Indica cuántas unidades base contiene cada paquete o caja."
 		}
