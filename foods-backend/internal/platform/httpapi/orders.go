@@ -478,13 +478,14 @@ func (a *API) prepareOrderItems(r *http.Request, tx pgx.Tx, s scope, existingOrd
 	})
 	for _, key := range usageKeys {
 		var quota *int
-		var optionName string
+		var optionName, comboProductID, groupName string
 		err := tx.QueryRow(r.Context(), `
-			SELECT o.default_quota,p.name
+			SELECT o.default_quota,p.name,g.combo_product_id::text,g.name
 			FROM menu_combo_options o
+			JOIN menu_combo_groups g ON g.id=o.group_id AND g.organization_id=o.organization_id
 			JOIN products p ON p.id=o.option_product_id AND p.organization_id=o.organization_id
 			WHERE o.group_id=$1 AND o.option_product_id=$2 AND o.organization_id=$3
-			FOR UPDATE OF o`, key.GroupID, key.ProductID, s.OrganizationID).Scan(&quota, &optionName)
+			FOR UPDATE OF o`, key.GroupID, key.ProductID, s.OrganizationID).Scan(&quota, &optionName, &comboProductID, &groupName)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, 0, &orderPreparationError{Status: 409, Code: "combo_option_unavailable", Message: "Una opción del menú ya no está disponible."}
 		}
@@ -502,14 +503,15 @@ func (a *API) prepareOrderItems(r *http.Request, tx pgx.Tx, s scope, existingOrd
 			JOIN order_items oi ON oi.id=ssel.order_item_id AND oi.organization_id=ssel.organization_id
 			JOIN orders ord ON ord.id=oi.order_id AND ord.organization_id=oi.organization_id
 			JOIN locations l ON l.id=ord.location_id AND l.organization_id=ord.organization_id
-			WHERE ssel.organization_id=$3
-			  AND ssel.group_id=$1
-			  AND ssel.option_product_id=$2
-			  AND ord.location_id=$4
+			WHERE ssel.organization_id=$1
+			  AND oi.product_id=$2
+			  AND ssel.group_name=$3
+			  AND ssel.option_product_id=$4
+			  AND ord.location_id=$5
 			  AND ord.status<>'cancelado'
 			  AND (ord.created_at AT TIME ZONE l.timezone)::date=(now() AT TIME ZONE l.timezone)::date
-			  AND ($5='' OR ord.id::text<>$5)`,
-			key.GroupID, key.ProductID, s.OrganizationID, s.LocationID, existingOrderID).Scan(&used)
+			  AND ($6='' OR ord.id::text<>$6)`,
+			s.OrganizationID, comboProductID, groupName, key.ProductID, s.LocationID, existingOrderID).Scan(&used)
 		if err != nil {
 			return nil, 0, &orderPreparationError{Status: 503, Code: "order_unavailable", Message: "No pudimos validar el cupo del menú."}
 		}
