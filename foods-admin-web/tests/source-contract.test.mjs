@@ -63,6 +63,21 @@ test("providers shell y pages no construyen transporte HTTP",()=>{
   assert.deepEqual(bad,[]);
 });
 
+test("los estilos especializados se cargan desde su owner",()=>{
+  const owners={
+    "src/shell/admin-shell.tsx":"./styles/shell.css",
+    "src/providers/feedback-provider.tsx":"./styles/feedback.css",
+    "src/design-system/confirm-dialog.tsx":"./styles/confirm-dialog.css",
+    "src/design-system/maps/mapbox-location-provider.tsx":"../styles/location-map.css",
+    "src/modules/dashboard/presentation/dashboard-view.tsx":"./dashboard.css",
+    "src/modules/configuration/presentation/configuration-home-page.tsx":"./configuration.css",
+    "src/modules/modules/presentation/modules-view.tsx":"./modules.css",
+    "src/modules/platform/presentation/platform-onboarding-page.tsx":"./platform-onboarding.css",
+    "src/modules/platform/presentation/platform-shell.tsx":"./platform-shell.css",
+  };
+  for(const [p,css] of Object.entries(owners))assert.ok(read(p).includes(css),`${p} no carga ${css}`);
+});
+
 test("el root layout carga solo la base global",()=>{
   const c=read("src/app/layout.tsx");
   const cssImports=[...c.matchAll(/import ["']([^"']+\.css)["']/g)].map(m=>m[1]);
