@@ -69,5 +69,5 @@ test("se preservan contratos visuales base",()=>{
   const css=read("src/styles/globals.css").replace(/\s+/g,"");
   for(const token of ["--brand-700","--ops-700","--digital-700","--primary-600","--control-height"])assert.ok(css.includes(token),token);
   const shell=read("src/shell/admin-shell.tsx");
-  for(const label of ["Resumen","Ventas","Menú y productos","Inventario","Compras","Configuración"])assert.ok(shell.includes(label),label);
+  for(const label of ["Reportes","Punto de venta","Carta y productos","Inventario","Compras","CONFIGURACIÓN"])assert.ok(shell.includes(label),label);
 });
