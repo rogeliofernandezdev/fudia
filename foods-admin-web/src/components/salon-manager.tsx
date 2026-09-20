@@ -587,23 +587,24 @@ function OrderDetail({loading,order,error,currencySymbol,canManage,busy,close,ad
                 )}
               </section>
 
-              <section className="salon-order-detail-totals">
-                <div className="salon-order-detail-subtotal">
-                  <span>Subtotal</span>
-                  <b>{currencySymbol} {money(order.subtotal)}</b>
-                </div>
-                {Number(order.deliveryFee)>0&&(
-                  <div className="salon-order-detail-subtotal">
-                    <span>Delivery</span>
-                    <b>{currencySymbol} {money(order.deliveryFee)}</b>
-                  </div>
-                )}
-                <div className="salon-order-detail-grand">
-                  <span>Total del pedido</span>
-                  <strong>{currencySymbol} {money(order.total)}</strong>
-                </div>
-              </section>
             </div>
+
+            <section className="salon-order-detail-totals" aria-label="Totales del pedido">
+              <div className="salon-order-detail-subtotal">
+                <span>Subtotal</span>
+                <b>{currencySymbol} {money(order.subtotal)}</b>
+              </div>
+              {Number(order.deliveryFee)>0&&(
+                <div className="salon-order-detail-subtotal">
+                  <span>Delivery</span>
+                  <b>{currencySymbol} {money(order.deliveryFee)}</b>
+                </div>
+              )}
+              <div className="salon-order-detail-grand">
+                <span>Total del pedido</span>
+                <strong>{currencySymbol} {money(order.total)}</strong>
+              </div>
+            </section>
 
             {canManage&&(
               <footer className="order-detail-actions salon-order-detail-actions">
