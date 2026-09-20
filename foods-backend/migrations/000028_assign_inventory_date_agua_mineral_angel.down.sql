@@ -20,6 +20,14 @@ BEGIN
   LIMIT 1;
 
   IF migration_audit_id IS NULL THEN
+    IF NOT EXISTS (
+      SELECT 1
+      FROM products
+      WHERE name = 'Agua Mineral Angel 700ml'
+    ) THEN
+      RAISE NOTICE 'inventory date rollback skipped: target product is absent';
+      RETURN;
+    END IF;
     RAISE EXCEPTION 'inventory date rollback backup not found';
   END IF;
 
