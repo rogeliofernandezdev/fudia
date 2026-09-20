@@ -107,6 +107,11 @@ func normalizeInventoryEntry(in inventoryEntryInput) (inventoryEntryInput, strin
 	if in.Quantity <= 0 {
 		return in, "La cantidad de entrada debe ser mayor que cero."
 	}
+	in.Quantity = math.Round(in.Quantity*1000) / 1000
+	in.UnitsPerPresentation = math.Round(in.UnitsPerPresentation*1000) / 1000
+	if in.Quantity <= 0 {
+		return in, "La cantidad de entrada debe ser al menos 0.001."
+	}
 	if in.MinimumStock < 0 {
 		return in, "El stock mínimo no puede ser negativo."
 	}
