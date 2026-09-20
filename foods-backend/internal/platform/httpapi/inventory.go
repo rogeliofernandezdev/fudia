@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -22,7 +23,7 @@ type inventoryItemView struct {
 	Quantity        string  `json:"quantity"`
 	MinimumStock    string  `json:"minimumStock"`
 	Status          string  `json:"status"`
-	UpdatedAt       string  `json:"updatedAt"`
+	UpdatedAt       time.Time `json:"updatedAt"`
 	QuantityControl string  `json:"quantityControl"`
 }
 
@@ -63,7 +64,7 @@ type inventoryMovementView struct {
 	SourceType    string `json:"sourceType"`
 	SourceID      string `json:"sourceId"`
 	Note          string `json:"note"`
-	CreatedAt     string `json:"createdAt"`
+	CreatedAt     time.Time `json:"createdAt"`
 }
 
 func productHasCancellableOrderUsage(ctx context.Context, tx pgx.Tx, organizationID, productID string) (bool, error) {
@@ -140,7 +141,7 @@ func (a *API) listInventory(w http.ResponseWriter, r *http.Request) {
 		         WHEN COALESCE(ii.minimum_stock,0)>0 AND COALESCE(sb.quantity,0)<=ii.minimum_stock THEN 'low'
 		         ELSE 'ok'
 		       END,
-		       to_char(COALESCE(sb.updated_at,p.updated_at),'YYYY-MM-DD"T"HH24:MI:SSOF'),
+		       COALESCE(sb.updated_at,p.updated_at),
 		       p.quantity_control
 		FROM products p
 		LEFT JOIN menu_categories c ON c.id=p.category_id AND c.organization_id=p.organization_id
@@ -353,7 +354,7 @@ func (a *API) listInventoryMovements(w http.ResponseWriter, r *http.Request) {
 	productID := strings.TrimSpace(r.URL.Query().Get("productId"))
 	rows, err := a.db.Query(r.Context(), `
 		SELECT sm.id,sm.product_id,p.name,sm.movement_type,sm.quantity_delta::text,sm.balance_after::text,
-		       sm.source_type,sm.source_id,sm.note,to_char(sm.created_at,'YYYY-MM-DD"T"HH24:MI:SSOF')
+		       sm.source_type,sm.source_id,sm.note,sm.created_at
 		FROM stock_movements sm
 		JOIN products p ON p.id=sm.product_id AND p.organization_id=sm.organization_id
 		WHERE sm.organization_id=$1 AND sm.location_id=$2

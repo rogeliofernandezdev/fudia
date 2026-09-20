@@ -13,6 +13,8 @@ const statusMeta={
  low:{label:"Stock bajo",tone:"orange" as const},
  out:{label:"Sin stock",tone:"gray" as const},
 };
+const inventoryDateFormatter=new Intl.DateTimeFormat("es-PE",{dateStyle:"short",timeStyle:"short"});
+function formatInventoryDate(value:string){const date=new Date(value);return Number.isNaN(date.getTime())?"Fecha no disponible":inventoryDateFormatter.format(date)}
 
 export function InventoryPage(){
  const client=useQueryClient();
@@ -62,7 +64,7 @@ export function InventoryPage(){
        <td>{item.unit}</td>
        <td><b className="inventory-quantity">{Number(item.quantity).toLocaleString("es-PE",{maximumFractionDigits:3})}</b></td>
        <td>{Number(item.minimumStock).toLocaleString("es-PE",{maximumFractionDigits:3})}</td>
-       <td><div className="inventory-status-note"><Status tone={meta.tone}>{meta.label}</Status><small>Actualizado {new Intl.DateTimeFormat("es-PE",{dateStyle:"short",timeStyle:"short"}).format(new Date(item.updatedAt))}</small></div></td>
+       <td><div className="inventory-status-note"><Status tone={meta.tone}>{meta.label}</Status><small>Actualizado {formatInventoryDate(item.updatedAt)}</small></div></td>
       </tr>;
      })}</tbody>
     </table>
