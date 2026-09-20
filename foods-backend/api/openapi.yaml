@@ -28,6 +28,17 @@ paths:
       operationId: getAdminDashboard
       security: [{ sessionCookie: [] }]
       responses: { "200": { description: Señales administrativas, content: { application/json: { schema: { $ref: "#/components/schemas/Dashboard" } } } }, "401": { $ref: "#/components/responses/Unauthorized" } }
+  /v1/admin/context:
+    get:
+      operationId: getAdminContext
+      security: [{ sessionCookie: [] }]
+      responses: { "200": { description: Contexto activo de empresa y local, content: { application/json: { schema: { $ref: "#/components/schemas/SessionContext" } } } }, "401": { $ref: "#/components/responses/Unauthorized" } }
+  /v1/admin/switch-context:
+    post:
+      operationId: switchAdminContext
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/SwitchContextInput" } } } }
+      responses: { "200": { description: Contexto activo actualizado, content: { application/json: { schema: { $ref: "#/components/schemas/ContextSwitchResponse" } } } }, "400": { $ref: "#/components/responses/BadRequest" }, "401": { $ref: "#/components/responses/Unauthorized" }, "403": { $ref: "#/components/responses/Forbidden" } }
   /v1/admin/settings:
     get:
       operationId: getOrganizationSettings
@@ -366,6 +377,10 @@ components:
     LoginRequest: { type: object, required: [email, password], properties: { email: { type: string, format: email }, password: { type: string, minLength: 8 } } }
     TenantOnboardingInput: { type: object, required: [legalName, tradeName, taxId, timezone, country, currency, currencyPosition, taxName, taxRate, taxIncluded, locationName, locationCode, address, adminName, adminEmail, adminPassword], properties: { legalName: { type: string }, tradeName: { type: string }, taxId: { type: string, minLength: 6, maxLength: 32 }, timezone: { type: string }, country: { type: string, pattern: "^[A-Z]{2}$", default: PE }, currency: { type: string, pattern: "^[A-Z]{3}$", default: PEN }, currencyPosition: { type: string, enum: [before, after] }, taxName: { type: string }, taxRate: { type: string }, taxIncluded: { type: boolean }, locationName: { type: string }, locationCode: { type: string }, address: { type: string }, adminName: { type: string }, adminEmail: { type: string, format: email }, adminPassword: { type: string, minLength: 8, writeOnly: true } } }
     Dashboard: { type: object, required: [products, criticalStock, purchasesToApprove, currency], properties: { products: { type: integer }, criticalStock: { type: integer }, purchasesToApprove: { type: integer }, currency: { type: string, pattern: "^[A-Z]{3}$" } } }
+    ContextLocation: { type: object, required: [id, name, country, timezone], properties: { id: { type: string, format: uuid }, name: { type: string }, country: { type: string, pattern: "^[A-Z]{2}$" }, timezone: { type: string } } }
+    SessionContext: { type: object, required: [user, organization, location, modules, menuAccess, permissions], properties: { user: { type: object, required: [id, name, platformAdmin], properties: { id: { type: string, format: uuid }, name: { type: string }, platformAdmin: { type: boolean } } }, organization: { type: object, required: [id, name], properties: { id: { type: string, format: uuid }, name: { type: string } } }, location: { $ref: "#/components/schemas/ContextLocation" }, modules: { type: object, additionalProperties: { type: boolean } }, menuAccess: { type: array, items: { type: string } }, permissions: { type: array, items: { type: string } } } }
+    SwitchContextInput: { type: object, required: [organizationId, locationId], properties: { organizationId: { type: string, format: uuid }, locationId: { type: string, format: uuid } } }
+    ContextSwitchResponse: { type: object, required: [organization, location], properties: { organization: { type: object, required: [id, name], properties: { id: { type: string, format: uuid }, name: { type: string } } }, location: { $ref: "#/components/schemas/ContextLocation" } } }
     CurrencyOption: { type: object, required: [code, name, symbol, decimals], properties: { code: { type: string, pattern: "^[A-Z]{3}$" }, name: { type: string }, symbol: { type: string }, decimals: { type: integer, minimum: 0, maximum: 4 } } }
     CountryOption: { type: object, required: [code, name, defaultCurrency], properties: { code: { type: string, pattern: "^[A-Z]{2}$" }, name: { type: string }, defaultCurrency: { type: string, pattern: "^[A-Z]{3}$" } } }
     OrganizationSettingsInput: { type: object, required: [country, currency, currencyPosition, taxName, taxRate, taxIncluded], properties: { country: { type: string, pattern: "^[A-Z]{2}$", default: PE }, currency: { type: string, pattern: "^[A-Z]{3}$", default: PEN }, currencyPosition: { type: string, enum: [before, after] }, taxName: { type: string, maxLength: 30 }, taxRate: { type: number, minimum: 0, maximum: 1 }, taxIncluded: { type: boolean } } }
