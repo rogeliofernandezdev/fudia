@@ -274,7 +274,7 @@ func (a *API) prepareOrderItems(r *http.Request, tx pgx.Tx, s scope, existingOrd
 				for _, selection := range in.Selections {
 					requestedKeys[strings.TrimSpace(selection.GroupID)+":"+strings.TrimSpace(selection.ProductID)] = true
 				}
-				sameSelections := len(existingKeys) == len(requestedKeys)
+				sameSelections := len(in.Selections) == len(requestedKeys) && len(existingKeys) == len(requestedKeys)
 				if sameSelections {
 					for key := range existingKeys {
 						if !requestedKeys[key] {
