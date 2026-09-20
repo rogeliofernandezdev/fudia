@@ -1,5 +1,5 @@
 openapi: 3.1.0
-info: { title: Foods API, version: 0.3.0, description: API operativa y administrativa multiempresa. }
+info: { title: Foods API, version: 0.4.0, description: API operativa y administrativa multiempresa. }
 servers: [{ url: http://localhost:8080 }]
 paths:
   /health:
@@ -404,6 +404,24 @@ paths:
       security: [{ sessionCookie: [] }]
       requestBody: { required: true, content: { application/json: { schema: { type: object, required: [status], properties: { status: { type: string, enum: [confirmado, preparando, listo, en_camino, entregado, cancelado] } } } } } }
       responses: { "200": { description: Estado actualizado, content: { application/json: { schema: { $ref: "#/components/schemas/Order" } } } }, "404": { description: No encontrado }, "409": { description: Transición no permitida } }
+  /v1/admin/kitchen/tickets:
+    get:
+      operationId: listKitchenTickets
+      summary: Cola KDS del local activo con pedidos confirmados, en preparación y listos
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: query, name: channel, schema: { type: string, enum: [salon, mostrador, recojo, delivery, whatsapp] } }
+      responses:
+        "200": { description: Comandas de cocina, content: { application/json: { schema: { type: object, required: [items, counts, channelOptions, serverTime], properties: { items: { type: array, items: { $ref: "#/components/schemas/KitchenTicket" } }, counts: { type: object, required: [confirmado, preparando, listo], properties: { confirmado: { type: integer }, preparando: { type: integer }, listo: { type: integer } } }, channelOptions: { type: array, items: { type: object, required: [value, label], properties: { value: { type: string }, label: { type: string } } } }, serverTime: { type: string, format: date-time } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/kitchen/tickets/{id}/status:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    patch:
+      operationId: updateKitchenTicketStatus
+      summary: Cocina inicia preparación o marca una comanda como lista
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [status], properties: { status: { type: string, enum: [preparando, listo] } } } } } }
+      responses: { "204": { description: Estado de cocina actualizado }, "400": { $ref: "#/components/responses/BadRequest" }, "404": { description: Pedido no encontrado }, "409": { description: La comanda cambió de estado }, "403": { $ref: "#/components/responses/Forbidden" } }
   /v1/admin/roles:
     get: { operationId: listRoles, security: [{ sessionCookie: [] }], responses: { "200": { description: Roles de la empresa } } }
     post:
@@ -499,6 +517,7 @@ components:
     OrderInput: { type: object, required: [channel, items], properties: { channel: { type: string, enum: [salon, mostrador, recojo, delivery, whatsapp] }, customerId: { type: string, format: uuid }, customerName: { type: string, maxLength: 160 }, customerPhone: { type: string, maxLength: 30 }, address: { type: string, maxLength: 240 }, reference: { type: string, maxLength: 240 }, tableId: { type: string, format: uuid }, notes: { type: string, maxLength: 500 }, deliveryFee: { type: number, minimum: 0 }, items: { type: array, minItems: 1, items: { $ref: "#/components/schemas/OrderItemInput" } } } }
     OrderItem: { allOf: [{ $ref: "#/components/schemas/OrderItemInput" }, { type: object, required: [id], properties: { id: { type: string, format: uuid } } }] }
     Order: { type: object, required: [id, code, channel, status, customerName, customerPhone, address, reference, tableId, tableName, notes, subtotal, deliveryFee, total, createdAt, updatedAt], properties: { id: { type: string, format: uuid }, code: { type: string }, channel: { type: string, enum: [salon, mostrador, recojo, delivery, whatsapp] }, status: { type: string, enum: [nuevo, confirmado, preparando, listo, en_camino, entregado, cancelado] }, customerId: { type: string }, customerName: { type: string }, customerPhone: { type: string }, address: { type: string }, reference: { type: string }, tableId: { type: string }, tableName: { type: string }, notes: { type: string }, subtotal: { type: string }, deliveryFee: { type: string }, total: { type: string }, createdAt: { type: string, format: date-time }, updatedAt: { type: string, format: date-time }, items: { type: array, items: { $ref: "#/components/schemas/OrderItem" } } } }
+    KitchenTicket: { type: object, required: [id, code, channel, status, customerName, tableName, notes, createdAt, updatedAt, items], properties: { id: { type: string, format: uuid }, code: { type: string }, channel: { type: string, enum: [salon, mostrador, recojo, delivery, whatsapp] }, status: { type: string, enum: [confirmado, preparando, listo] }, customerName: { type: string }, tableName: { type: string }, notes: { type: string }, createdAt: { type: string, format: date-time }, updatedAt: { type: string, format: date-time }, targetMinutes: { type: [integer, "null"], minimum: 1 }, items: { type: array, items: { $ref: "#/components/schemas/OrderItem" } } } }
     UserAssignment: { type: object, required: [roleId, locationId], properties: { roleId: { type: string, format: uuid }, locationId: { type: string, format: uuid } } }
     UserInput: { type: object, required: [fullName, email, assignments], properties: { fullName: { type: string }, email: { type: string, format: email }, password: { type: string, minLength: 8, writeOnly: true }, assignments: { type: array, minItems: 1, items: { $ref: "#/components/schemas/UserAssignment" } } } }
     Error: { type: object, required: [code, message, correlationId], properties: { code: { type: string }, message: { type: string }, correlationId: { type: string } } }
