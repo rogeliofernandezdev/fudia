@@ -6,7 +6,7 @@ import {useEffect} from "react";
 import {deleteSession,loadSessionContext} from "@/shared/session/session-api";
 
 export type SessionUser={id:string;name:string;platformAdmin:boolean};
-export type SessionContext={user:SessionUser|null;organization:{id:string;name:string}|null;location:{id:string;name:string}|null;modules:Record<string,boolean>|null;menuAccess:string[];permissions:string[];canAccess:(access:string)=>boolean;can:(permission:string)=>boolean;isLoading:boolean;isError:boolean};
+export type SessionContext={user:SessionUser|null;organization:{id:string;name:string}|null;location:{id:string;name:string;country:string;timezone:string}|null;modules:Record<string,boolean>|null;menuAccess:string[];permissions:string[];canAccess:(access:string)=>boolean;can:(permission:string)=>boolean;isLoading:boolean;isError:boolean};
 
 const Context=createContext<SessionContext>({user:null,organization:null,location:null,modules:null,menuAccess:[],permissions:[],canAccess:()=>false,can:()=>false,isLoading:true,isError:false});
 
