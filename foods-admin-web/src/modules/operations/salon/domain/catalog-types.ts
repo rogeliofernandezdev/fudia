@@ -1,0 +1,9 @@
+export type CatalogProduct={id:string;name:string;price:string;categoryId:string|null;imageUrl:string|null};
+export type ComboSelection={groupId:string;groupName:string;productId:string;name:string;surcharge:number};
+export type ConfiguredCombo={productId:string;name:string;unitPrice:number;selections:ComboSelection[]};
+export type ProductList={items:CatalogProduct[];total:number};
+export type ComboSummary={id:string;name:string;description:string;price:string;imageUrl:string|null;groupCount:number;optionCount:number};
+export type ComboList={items:ComboSummary[];total:number};
+export type ComboOption={productId:string;name:string;surcharge:string;available:boolean};
+export type ComboGroup={id:string;name:string;required:boolean;minSelections:number;maxSelections:number;options:ComboOption[]};
+export type ComboDetail={id:string;name:string;description:string;price:string;imageUrl:string|null;groups:ComboGroup[]};
