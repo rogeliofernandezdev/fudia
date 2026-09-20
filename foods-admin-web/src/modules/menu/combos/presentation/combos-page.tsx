@@ -6,6 +6,8 @@ import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Button,ConfirmDialog,Icon,Input,PageHeader,Pagination,RemoteModalSkeleton,RowActionButton,Select,Status,Textarea} from "@/design-system";
 import {useFeedback} from "@/providers";
 import {useSettings} from "@/providers/settings-context";
+import {useSession} from "@/providers/session-context";
+import {formatRegionalCalendarDate,formatRegionalDateTime} from "@/shared/i18n/regional-format";
 import type {Combo,ComboDetail,Draft,Group,Product} from "../domain/types";
 import {getCombo,listComboProducts,listCombos,saveCombo,setComboActive} from "../infrastructure/combos-api";
 
@@ -102,13 +104,14 @@ export function CombosPage(){
 }
 
 function ComboDetailDialog({query,currencySymbol,close}:{query:ReturnType<typeof useQuery<ComboDetail,Error>>;currencySymbol:string;close:()=>void}){
+  const{location}=useSession();
   const value=query.data;
   const from=value?.availableFrom?new Date(value.availableFrom):null;
   const until=value?.availableUntil?new Date(value.availableUntil):null;
   const singleDay=Boolean(from&&until&&until.getTime()>from.getTime()&&until.getTime()-from.getTime()<=24*60*60*1000);
   const days=singleDay?"Solo hoy":value?.availableDays?.length?value.availableDays.map(day=>DAYS.find(item=>item.d===day)?.n).filter(Boolean).join(", "):"Todos los días";
-  const formatDate=(date:string|null|undefined)=>date?new Intl.DateTimeFormat("es-PE",{dateStyle:"medium",timeStyle:"short"}).format(new Date(date)):"Sin límite";
-  const formatCalendarDate=(date:string|null|undefined)=>{if(!date)return"";const[y,m,d]=date.slice(0,10).split("-").map(Number);return new Intl.DateTimeFormat("es-PE",{dateStyle:"long",timeZone:"UTC"}).format(new Date(Date.UTC(y,m-1,d)))};
+  const formatDate=(date:string|null|undefined)=>date?formatRegionalDateTime(date,{country:location?.country,timeZone:location?.timezone},{dateStyle:"medium",timeStyle:"short"}):"Sin límite";
+  const formatCalendarDate=(date:string|null|undefined)=>date?formatRegionalCalendarDate(date,location?.country,{dateStyle:"long"}):"";
   return <div className="modal-backdrop modal-overlay-in" role="presentation">
     <section className="crud-modal combo-detail modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="combo-detail-title" aria-busy={query.isLoading}>
       <div className="modal-accent"/>
