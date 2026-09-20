@@ -1,6 +1,18 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import test from "node:test";
+
+test("no fija un locale regional de Peru en la UI", async () => {
+  const forbiddenRegionalLocale=["es","PE"].join("-");
+  const sourceRoot=new URL("../src/",import.meta.url);
+  const files=(await readdir(sourceRoot,{recursive:true})).filter(path=>/\.(ts|tsx|js|jsx)$/.test(path));
+  const bad=[];
+  for(const path of files){
+    const content=await readFile(new URL(path,sourceRoot),"utf8");
+    if(content.includes(forbiddenRegionalLocale))bad.push(path);
+  }
+  assert.deepEqual(bad,[]);
+});
 
 test("declares installable application metadata", async () => {
   const manifest = await readFile(new URL("../src/app/manifest.ts", import.meta.url), "utf8");
