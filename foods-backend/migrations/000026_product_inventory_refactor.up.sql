@@ -11,6 +11,25 @@ SET quantity_control = CASE stock_mode
   ELSE 'none'
 END;
 
+-- Conserva el cupo que antes vivía en products como porciones del día actual
+-- para cada local. Un override diario existente siempre tiene prioridad.
+INSERT INTO product_availability(
+  organization_id,location_id,product_id,business_date,daily_quota,manual_status,note
+)
+SELECT
+  p.organization_id,
+  l.id,
+  p.id,
+  (now() AT TIME ZONE l.timezone)::date,
+  p.default_daily_quota,
+  'available',
+  'Migrado desde el cupo diario del producto'
+FROM products p
+JOIN locations l ON l.organization_id=p.organization_id AND l.active
+WHERE p.stock_mode='manual' AND p.default_daily_quota IS NOT NULL
+ON CONFLICT (organization_id,location_id,product_id,business_date)
+DO UPDATE SET daily_quota=COALESCE(product_availability.daily_quota,EXCLUDED.daily_quota);
+
 ALTER TABLE products DROP CONSTRAINT IF EXISTS products_quota_requires_manual;
 ALTER TABLE products DROP COLUMN default_daily_quota;
 ALTER TABLE products DROP COLUMN stock_mode;
