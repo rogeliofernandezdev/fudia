@@ -128,6 +128,11 @@ test("producto e inventario mantienen una sola fuente de verdad",()=>{
   assert.equal(dialog.includes('<Button icon="plus" disabled={busy}>'),false,"Guardar no duplica el icono estándar del modal");
   assert.equal(dialog.includes("SKU opcional"),false,"Inventario no expone el SKU interno al usuario");
   assert.equal(dialog.includes("product.name} · {product.sku"),false,"El selector de Inventario no muestra códigos internos");
+  assert.ok(dialog.includes("Presentación de ingreso"),"La entrada permite elegir presentación física");
+  assert.ok(dialog.includes("+ Nuevo paquete"),"La entrada permite registrar paquetes reutilizables");
+  assert.ok(dialog.includes("+ Nueva caja"),"La entrada permite registrar cajas reutilizables");
+  assert.ok(dialog.includes("unitsPerPresentation"),"La presentación define su factor hacia la unidad base");
+  assert.ok(dialog.includes("Se sumarán"),"La UI anticipa la conversión que afectará el stock");
   assert.equal(inventory.includes("Buscar producto o SKU"),false,"El buscador visible de Inventario no expone SKU");
   assert.equal(inventory.includes("item.categoryName"),false,"Inventario no repite la categoría debajo del producto");
   assert.equal(inventory.includes("Actualizado"),false,"Inventario no muestra metadatos de fecha en la tabla principal");
@@ -148,6 +153,9 @@ test("producto e inventario mantienen una sola fuente de verdad",()=>{
   const inventoryApi=read("src/modules/supply/inventory/infrastructure/inventory-api.ts");
   assert.ok(inventoryApi.includes('"inventory/entries"'));
   assert.ok(inventoryApi.includes("newProduct"));
+  assert.ok(inventoryApi.includes("presentationType"),"La API envía el tipo de presentación");
+  assert.ok(inventoryApi.includes("unitsPerPresentation"),"La API envía el factor de conversión");
+  assert.ok(inventoryApi.includes("stockQuantity"),"La respuesta distingue cantidad recibida de cantidad de stock");
   const availability=read("src/modules/menu/availability/presentation/product-availability-manager.tsx");
   assert.ok(availability.includes('quantityControl==="portions"'));
   assert.ok(availability.includes('quantityControl==="inventory"'));
