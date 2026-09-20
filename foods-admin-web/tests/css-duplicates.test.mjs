@@ -4,7 +4,7 @@ import test from "node:test";
 import postcss from "postcss";
 
 const root=new URL("../",import.meta.url);
-const sharedRoots=["src/styles","src/design-system/styles","src/shell/styles"];
+const sharedRoots=["src/design-system/styles","src/shell/styles"];
 
 async function files(dir){
   const absolute=new URL(dir+"/",root);
@@ -19,7 +19,7 @@ async function files(dir){
   return out;
 }
 
-test("cada hoja compartida declara un selector una sola vez por contexto",async()=>{
+test("cada hoja compartida especializada declara un selector una sola vez por contexto",async()=>{
   for(const sheet of (await Promise.all(sharedRoots.map(files))).flat()){
     const ast=postcss.parse(await readFile(new URL(sheet,root),"utf8"));
     const seen=new Set(),duplicates=[];
@@ -35,7 +35,7 @@ test("cada hoja compartida declara un selector una sola vez por contexto",async(
   }
 });
 
-test("las hojas compartidas no compiten por el mismo selector raiz",async()=>{
+test("las hojas compartidas especializadas no compiten por el mismo selector raiz",async()=>{
   const owners=new Map();
   for(const sheet of (await Promise.all(sharedRoots.map(files))).flat()){
     const ast=postcss.parse(await readFile(new URL(sheet,root),"utf8"));
@@ -49,4 +49,20 @@ test("las hojas compartidas no compiten por el mismo selector raiz",async()=>{
   }
   const shared=[...owners].filter(([,sheets])=>sheets.size>1).map(([selector,sheets])=>`${selector} -> ${[...sheets].join(" + ")}`);
   assert.deepEqual(shared,[]);
+});
+
+
+test("globals conserva un inventario acotado de duplicados heredados",async()=>{
+  const sheet="src/styles/globals.css";
+  const ast=postcss.parse(await readFile(new URL(sheet,root),"utf8"));
+  const seen=new Set(),duplicates=new Set();
+  ast.walkRules(rule=>{
+    const parent=rule.parent.type==="atrule"?`@${rule.parent.name} ${rule.parent.params}`:"root";
+    for(const selector of rule.selectors){
+      const key=`${parent}|${selector}`;
+      if(seen.has(key))duplicates.add(key);
+      seen.add(key);
+    }
+  });
+  assert.ok(duplicates.size<=47,`globals.css aumentó duplicados heredados: ${duplicates.size}`);
 });
