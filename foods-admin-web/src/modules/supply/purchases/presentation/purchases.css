@@ -15,7 +15,8 @@
 .purchases-state{min-height:280px}
 .purchase-order-modal{width:min(980px,calc(100vw - 32px));max-height:min(860px,calc(100dvh - 32px))}
 .purchase-form-body{display:grid;gap:14px;padding:18px 20px;overflow:auto;background:var(--cloud-50)}
-.purchase-form-section{display:grid;gap:14px;padding:16px;border:1px solid var(--line);border-radius:12px;background:#fff}
+.purchase-form-section{display:grid;gap:14px;padding:2px 0 18px;border-bottom:1px solid var(--line)}
+.purchase-form-section:last-of-type{padding-bottom:0;border-bottom:0}
 .purchase-section-title{display:flex;align-items:center;gap:10px}
 .purchase-section-title>span{display:grid;place-items:center;width:32px;height:32px;border-radius:8px;background:var(--primary-100);color:var(--ops-700);flex:0 0 auto}
 .purchase-section-title>div{display:grid;gap:2px;min-width:0}
@@ -75,7 +76,7 @@
  .purchases-cards{display:grid}
  .purchase-order-modal,.purchase-detail-modal{width:100vw;height:100dvh;max-height:none;border-radius:0}
  .purchase-form-body,.purchase-detail-body{padding:12px}
- .purchase-form-section{padding:12px}
+ .purchase-form-section{padding:2px 0 16px}
  .purchase-lines-title{align-items:flex-start;flex-wrap:wrap}
  .purchase-lines-title .button{width:100%;margin-left:0}
  .purchase-line{grid-template-columns:28px minmax(0,1fr) var(--control-height);align-items:end}
