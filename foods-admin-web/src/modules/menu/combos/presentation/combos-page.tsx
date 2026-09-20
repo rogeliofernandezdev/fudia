@@ -81,20 +81,41 @@ export function CombosPage(){
       :combos.isError?<div className="combo-empty"><Icon name="alert" size={26}/><b>No pudimos cargar los menús y combos</b><p>{combos.error.message}</p><Button kind="secondary" icon="refresh" onClick={()=>combos.refetch()}>Reintentar</Button></div>
       :!combos.data?.items.length?
         <div className="combo-empty"><Icon name="menu" size={26}/><b>{search||status?"No encontramos resultados":"Aún no hay menús compuestos"}</b><p>{search||status?"Prueba con otro nombre o cambia el filtro de estado.":"Usa la plantilla Menú del día para comenzar rápidamente."}</p>{!search&&!status&&<Button icon="plus" onClick={open}>Crear menú</Button>}</div>
-      :<div className="table-wrap hover-scroll"><table><thead><tr><th>MENÚ O COMBO</th><th>PRECIO</th><th title="Entrada, plato principal, bebida o postre">PARTES DEL MENÚ</th><th>ESTADO</th><th>ACCIONES</th></tr></thead><tbody>
-        {combos.data.items.map((item,index)=><tr className={index%2?"alternate":""} key={item.id}>
-          <td><span className={`row-icon r${index%3}`}><Icon name="menu" size={18}/></span><b>{item.name}</b><small>{item.description||"Sin descripción"}</small></td>
-          <td><b>{settings.currencyPosition==="before"?`${settings.currencySymbol} ${Number(item.price).toFixed(settings.currencyDecimals)}`:`${Number(item.price).toFixed(settings.currencyDecimals)} ${settings.currencySymbol}`}</b></td>
-          <td>{item.groupCount} {item.groupCount===1?"parte":"partes"}</td>
-          <td><Status tone={item.active?"green":"gray"}>{item.active?"Activo":"Inactivo"}</Status></td>
-          <td><div className="standard-actions"><RowActionButton action="view" label={`Ver ${item.name}`} onClick={()=>setSelected(item.id)}/><RowActionButton action="edit" label={`Editar ${item.name}`} disabled={loadForEdit.isPending} onClick={()=>{cancelledEdit.current=null;setEditingId(item.id);loadForEdit.mutate(item.id)}}/><RowActionButton action={item.active?"deactivate":"activate"} label={`${item.active?"Desactivar":"Activar"} ${item.name}`} onClick={()=>setStatusTarget(item)}/></div></td>
-        </tr>)}
-      </tbody></table></div>}
+      :<>
+        <div className="table-wrap hover-scroll"><table><thead><tr><th>MENÚ O COMBO</th><th>PRECIO</th><th title="Entrada, plato principal, bebida o postre">PARTES DEL MENÚ</th><th>ESTADO</th><th>ACCIONES</th></tr></thead><tbody>
+          {combos.data.items.map((item,index)=><tr className={index%2?"alternate":""} key={item.id}>
+            <td><span className={`row-icon r${index%3}`}><Icon name="menu" size={18}/></span><b>{item.name}</b><small>{item.description||"Sin descripción"}</small></td>
+            <td><b>{settings.currencyPosition==="before"?`${settings.currencySymbol} ${Number(item.price).toFixed(settings.currencyDecimals)}`:`${Number(item.price).toFixed(settings.currencyDecimals)} ${settings.currencySymbol}`}</b></td>
+            <td>{item.groupCount} {item.groupCount===1?"parte":"partes"}</td>
+            <td><Status tone={item.active?"green":"gray"}>{item.active?"Activo":"Inactivo"}</Status></td>
+            <td><div className="standard-actions"><RowActionButton action="view" label={`Ver ${item.name}`} onClick={()=>setSelected(item.id)}/><RowActionButton action="edit" label={`Editar ${item.name}`} disabled={loadForEdit.isPending} onClick={()=>{cancelledEdit.current=null;setEditingId(item.id);loadForEdit.mutate(item.id)}}/><RowActionButton action={item.active?"deactivate":"activate"} label={`${item.active?"Desactivar":"Activar"} ${item.name}`} onClick={()=>setStatusTarget(item)}/></div></td>
+          </tr>)}
+        </tbody></table></div>
+        <div className="management-cards combo-mobile-cards">
+          {combos.data.items.map((item,index)=><article key={item.id}>
+            <header>
+              <span className={`row-icon r${index%3}`}><Icon name="menu" size={18}/></span>
+              <div><b>{item.name}</b><small>{item.description||"Sin descripción"}</small></div>
+              <Status tone={item.active?"green":"gray"}>{item.active?"Activo":"Inactivo"}</Status>
+            </header>
+            <dl>
+              <div><dt>PRECIO</dt><dd>{settings.currencyPosition==="before"?`${settings.currencySymbol} ${Number(item.price).toFixed(settings.currencyDecimals)}`:`${Number(item.price).toFixed(settings.currencyDecimals)} ${settings.currencySymbol}`}</dd></div>
+              <div><dt>QUÉ INCLUYE</dt><dd>{item.groupCount} {item.groupCount===1?"parte":"partes"}</dd></div>
+            </dl>
+            <footer>
+              <RowActionButton action="view" label={`Ver ${item.name}`} onClick={()=>setSelected(item.id)}/>
+              <RowActionButton action="edit" label={`Editar ${item.name}`} disabled={loadForEdit.isPending} onClick={()=>{cancelledEdit.current=null;setEditingId(item.id);loadForEdit.mutate(item.id)}}/>
+              <RowActionButton action={item.active?"deactivate":"activate"} label={`${item.active?"Desactivar":"Activar"} ${item.name}`} onClick={()=>setStatusTarget(item)}/>
+            </footer>
+          </article>)}
+        </div>
+      </>}
       {!combos.isLoading&&!combos.isError&&<Pagination page={page} size={size} total={combos.data?.total??0} onPage={setPage} onSize={value=>{setSize(value);setPage(1)}}/>}
     </section>
     {selected&&<ComboDetailDialog query={detail} currencySymbol={settings.currencySymbol} close={()=>setSelected(null)}/>}
     <ConfirmDialog open={Boolean(statusTarget)} title={`${statusTarget?.active?"Desactivar":"Activar"} menú`} description={statusTarget?.active?`“${statusTarget.name}” dejará de estar disponible para nuevas ventas, pero conservará su historial.`:`“${statusTarget?.name??""}” volverá a estar disponible para la operación.`} confirmLabel={statusTarget?.active?"Desactivar":"Activar"} pending={changeStatus.isPending} onCancel={()=>setStatusTarget(null)} onConfirm={()=>statusTarget&&changeStatus.mutate(statusTarget)}/>
-    {!draft&&editingId&&loadForEdit.isPending&&<RemoteModalSkeleton className="combo-wizard" label="Cargando menú o combo" rows={8} close={()=>{cancelledEdit.current=editingId;setEditingId(null)}}/>}\n    {draft&&<ComboWizard draft={draft} setDraft={setDraft} step={step} setStep={setStep} products={products.data?.items??[]} productsLoading={products.isLoading} productsError={products.isError} retryProducts={()=>products.refetch()} currencySymbol={settings.currencySymbol} busy={save.isPending} editing={Boolean(editingId)} close={closeWizard} finish={()=>save.mutate(draft)}/>}
+    {!draft&&editingId&&loadForEdit.isPending&&<RemoteModalSkeleton className="combo-wizard" label="Cargando menú o combo" rows={8} close={()=>{cancelledEdit.current=editingId;setEditingId(null)}}/>}
+    {draft&&<ComboWizard draft={draft} setDraft={setDraft} step={step} setStep={setStep} products={products.data?.items??[]} productsLoading={products.isLoading} productsError={products.isError} retryProducts={()=>products.refetch()} currencySymbol={settings.currencySymbol} busy={save.isPending} editing={Boolean(editingId)} close={closeWizard} finish={()=>save.mutate(draft)}/>}
   </>
 }
 
