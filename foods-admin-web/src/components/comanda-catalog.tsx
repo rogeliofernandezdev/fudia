@@ -214,20 +214,22 @@ export function ComboConfigurator({comboId,initialSelections=[],currencySymbol,o
   const data=combo.data;
 
   const toggle=(group:ComboGroup,option:ComboOption)=>{
-    if(!option.available)return;
     setSelected(prev=>{
       const current=prev[group.id]??[];
-      if(group.maxSelections===1)return{...prev,[group.id]:current.includes(option.productId)?[]:[option.productId]};
       if(current.includes(option.productId))return{...prev,[group.id]:current.filter(id=>id!==option.productId)};
+      if(!option.available)return prev;
+      if(group.maxSelections===1)return{...prev,[group.id]:[option.productId]};
       if(current.length>=group.maxSelections)return prev;
       return{...prev,[group.id]:[...current,option.productId]};
     });
   };
 
   const valid=Boolean(data&&data.groups.every(group=>{
-    const count=(selected[group.id]??[]).length;
+    const selectedIds=selected[group.id]??[];
+    const count=selectedIds.length;
     const minimum=group.required?Math.max(1,group.minSelections):group.minSelections;
-    return count>=minimum&&count<=group.maxSelections;
+    const allAvailable=selectedIds.every(id=>group.options.find(option=>option.productId===id)?.available);
+    return count>=minimum&&count<=group.maxSelections&&allAvailable;
   }));
 
   const selections:ComboSelection[]=data?data.groups.flatMap(group=>
@@ -269,7 +271,7 @@ export function ComboConfigurator({comboId,initialSelections=[],currencySymbol,o
                     {group.options.map(option=>{
                       const active=selectedIds.includes(option.productId);
                       return(
-                        <button type="button" key={option.productId} className={active?"active":""} aria-pressed={active} disabled={!option.available} onClick={()=>toggle(group,option)}>
+                        <button type="button" key={option.productId} className={active?"active":""} aria-pressed={active} disabled={!option.available&&!active} onClick={()=>toggle(group,option)}>
                           <span className="combo-option-check">{active?<Icon name="check" size={13}/>:null}</span>
                           <span className="combo-option-copy"><b>{option.name}</b>{!option.available&&<small>Agotado</small>}</span>
                           <span className="combo-option-price">{Number(option.surcharge)>0?`+${currencySymbol} ${money(option.surcharge)}`:"Incluido"}</span>
