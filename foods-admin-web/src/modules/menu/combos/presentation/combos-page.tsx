@@ -9,15 +9,6 @@ import {useSettings} from "@/providers/settings-context";
 import type {Combo,ComboDetail,Draft,Group,Product} from "../domain/types";
 import {getCombo,listComboProducts,listCombos,saveCombo,setComboActive} from "../infrastructure/combos-api";
 
-type Product={id:string;name:string;categoryName:string|null;price:string;active:boolean;defaultDailyQuota:number|null};
-type Option={productId:string;surcharge:string;quota:string};
-type Group={name:string;required:boolean;minSelections:number;maxSelections:number;options:Option[]};
-type Draft={name:string;description:string;price:string;groups:Group[];availableFrom:string;availableUntil:string;availableDays:number[]};
-type Combo={id:string;name:string;description:string;price:string;active:boolean;groupCount:number};
-type ComboDetailOption={productId:string;name:string;surcharge:string;quota:number|null};
-type ComboDetailGroup={id:string;name:string;required:boolean;minSelections:number;maxSelections:number;options:ComboDetailOption[]};
-type ComboDetail=Combo&{availableFrom:string|null;availableUntil:string|null;availableDays:number[]|null;groups:ComboDetailGroup[]};
-
 const blank:Draft={name:"",description:"",price:"",groups:[],availableFrom:"",availableUntil:"",availableDays:[]};
 const templates:Group[]=[{name:"Entrada",required:true,minSelections:1,maxSelections:1,options:[]},{name:"Segundo",required:true,minSelections:1,maxSelections:1,options:[]},{name:"Postre",required:false,minSelections:0,maxSelections:1,options:[]},{name:"Bebidas",required:false,minSelections:0,maxSelections:1,options:[]}];
 const DAYS=[{d:1,n:"Lun"},{d:2,n:"Mar"},{d:3,n:"Mié"},{d:4,n:"Jue"},{d:5,n:"Vie"},{d:6,n:"Sáb"},{d:0,n:"Dom"}];
