@@ -461,7 +461,11 @@ func (a *API) listInventoryMovements(w http.ResponseWriter, r *http.Request) {
 		             WHERE ie.id=sm.source_id AND ie.organization_id=sm.organization_id
 		           )
 		         END,
-		         ''
+		         CASE
+		           WHEN sm.source_type='order' THEN 'Pedido histórico'
+		           WHEN sm.source_type='inventory_entry' THEN 'Entrada histórica'
+		           ELSE 'Referencia no disponible'
+		         END
 		       ),
 		       sm.note,sm.created_at
 		FROM stock_movements sm
