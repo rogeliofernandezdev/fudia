@@ -800,7 +800,7 @@
 .combo-detail-skeleton-availability b { width:92px; height:10px; }
 @keyframes combo-detail-shimmer { to { transform:translateX(100%); } }
 @container combo-list (width <= 820px) {
-  .combo-list .table-wrap {
+  .standardized-management.combo-list .table-wrap {
     display: block;
     width: 100%;
     overflow-x: auto;
@@ -810,12 +810,12 @@
     scrollbar-gutter: stable;
   }
 
-  .combo-list .table-wrap table {
+  .standardized-management.combo-list .table-wrap table {
     width: 100%;
     min-width: 760px;
   }
 
-  .combo-list .management-cards {
+  .standardized-management.combo-list .management-cards {
     display: none;
   }
 
@@ -847,7 +847,7 @@
     min-width: 0;
   }
 
-  .combo-list .table-wrap table {
+  .standardized-management.combo-list .table-wrap table {
     min-width: 720px;
   }
 }
