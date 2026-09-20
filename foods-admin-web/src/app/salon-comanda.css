@@ -916,87 +916,12 @@
   box-shadow:0 3px 9px rgba(70,84,205,.22);
 }
 
-/* ── Paginación de la carta ── */
-.salon-comanda-shell .comanda-catalog-pagination{
-  padding:10px 12px;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
+/* ── Paginación de la carta: usa la primitiva global Pagination ── */
+.salon-comanda-pagination-shell{
   flex-shrink:0;
-  gap:12px;
   border-top:1px solid #e4e7ec;
-  background:rgba(255,255,255,.97);
-  box-shadow:0 -8px 20px rgba(16,24,40,.05);
-  color:var(--ink-600,#475467);
-  font-size:10.5px;
-  font-weight:700;
-}
-
-.salon-comanda-shell .comanda-catalog-pagination>span{
-  white-space:nowrap;
-}
-
-.salon-comanda-shell .comanda-catalog-pagination nav{
-  display:flex;
-  align-items:center;
-  gap:8px;
-}
-
-.salon-comanda-shell .comanda-catalog-pagination nav button{
-  min-height:var(--control-height);
-  height:var(--control-height);
-  padding:0 10px;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  gap:5px;
-  border:1px solid #d9def5;
-  border-radius:6px;
   background:#fff;
-  color:var(--ops-700,#3946b8);
-  font-size:10.5px;
-  font-weight:800;
-  cursor:pointer;
-  transition:background .15s ease,border-color .15s ease,color .15s ease;
-}
-
-.salon-comanda-shell .comanda-catalog-pagination nav button:hover:not(:disabled){
-  border-color:#bfc7ef;
-  background:var(--primary-100,#eef0ff);
-}
-
-.salon-comanda-shell .comanda-catalog-pagination nav button:disabled{
-  opacity:.42;
-  cursor:not-allowed;
-}
-
-.salon-comanda-shell .comanda-catalog-pagination nav b{
-  min-width:46px;
-  text-align:center;
-  color:var(--ink-950,#101828);
-  font-size:10.5px;
-  font-weight:850;
-  font-variant-numeric:tabular-nums;
-}
-
-@media(max-width:600px){
-  .salon-comanda-shell .comanda-catalog-pagination{
-    padding:8px;
-    gap:8px;
-  }
-
-  .salon-comanda-shell .comanda-catalog-pagination>span{
-    display:none;
-  }
-
-  .salon-comanda-shell .comanda-catalog-pagination nav{
-    width:100%;
-    justify-content:space-between;
-  }
-
-  .salon-comanda-shell .comanda-catalog-pagination nav button{
-    min-width:92px;
-  }
+  box-shadow:0 -8px 20px rgba(16,24,40,.05);
 }
 
 /* ── Carta moderna: grilla plana, simétrica y con una sola acción ── */
