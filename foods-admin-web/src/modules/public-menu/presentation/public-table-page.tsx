@@ -21,7 +21,6 @@ export default function MesaPage(){
 
   useEffect(()=>{
     if(!token)return;
-    setLoading(true);
     fetch(`/api/public/tables/${token}`)
       .then(r=>{if(!r.ok)throw new Error("No pudimos cargar la mesa.");return r.json()})
       .then(data=>setInfo(data))
@@ -29,6 +28,7 @@ export default function MesaPage(){
       .finally(()=>setLoading(false));
   },[token]);
 
+  if(!token)return <main className="mesa-public"><div className="mesa-error"><Icon name="alert" size={32}/><b>QR no válido</b><p>No se recibió el identificador de la mesa.</p></div></main>;
   if(loading)return <main className="mesa-public"><div className="mesa-loading"><i/><p>Cargando información de la mesa…</p></div></main>;
   if(error)return <main className="mesa-public"><div className="mesa-error"><Icon name="alert" size={32}/><b>QR no válido</b><p>{error}</p><p className="mesa-hint">Pide ayuda al personal del restaurante.</p></div></main>;
   if(!info)return <main className="mesa-public"><div className="mesa-error"><b>Mesa no encontrada</b></div></main>;
