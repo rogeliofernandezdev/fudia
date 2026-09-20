@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -69,6 +70,10 @@ type preparedOrderSelection struct {
 	ProductID string
 	Name      string
 	Surcharge float64
+}
+type comboOptionUsageKey struct {
+	GroupID   string
+	ProductID string
 }
 type preparedOrderItem struct {
 	ProductID  *string
@@ -194,6 +199,7 @@ func loadOrderItems(ctx context.Context, q orderRowsQuerier, orderID, organizati
 func (a *API) prepareOrderItems(r *http.Request, tx pgx.Tx, s scope, existingOrderID string, inputs []orderItemInput) ([]preparedOrderItem, float64, *orderPreparationError) {
 	prepared := make([]preparedOrderItem, 0, len(inputs))
 	subtotal := 0.0
+	plannedOptionUsage := map[comboOptionUsageKey]float64{}
 
 	for _, in := range inputs {
 		if in.Qty <= 0 {
@@ -288,6 +294,9 @@ func (a *API) prepareOrderItems(r *http.Request, tx pgx.Tx, s scope, existingOrd
 					}
 					prepared = append(prepared, item)
 					subtotal += item.Qty * item.UnitPrice
+					for _, sel := range existingSelections {
+						plannedOptionUsage[comboOptionUsageKey{GroupID: sel.GroupID, ProductID: sel.ProductID}] += item.Qty
+					}
 					continue
 				}
 			} else if err != nil && !errors.Is(err, pgx.ErrNoRows) {
@@ -452,6 +461,65 @@ func (a *API) prepareOrderItems(r *http.Request, tx pgx.Tx, s scope, existingOrd
 		}
 		prepared = append(prepared, item)
 		subtotal += item.Qty * item.UnitPrice
+		for _, sel := range selections {
+			plannedOptionUsage[comboOptionUsageKey{GroupID: sel.GroupID, ProductID: sel.ProductID}] += item.Qty
+		}
+	}
+
+	usageKeys := make([]comboOptionUsageKey, 0, len(plannedOptionUsage))
+	for key := range plannedOptionUsage {
+		usageKeys = append(usageKeys, key)
+	}
+	sort.Slice(usageKeys, func(i, j int) bool {
+		if usageKeys[i].GroupID == usageKeys[j].GroupID {
+			return usageKeys[i].ProductID < usageKeys[j].ProductID
+		}
+		return usageKeys[i].GroupID < usageKeys[j].GroupID
+	})
+	for _, key := range usageKeys {
+		var quota *int
+		var optionName string
+		err := tx.QueryRow(r.Context(), `
+			SELECT o.default_quota,p.name
+			FROM menu_combo_options o
+			JOIN products p ON p.id=o.option_product_id AND p.organization_id=o.organization_id
+			WHERE o.group_id=$1 AND o.option_product_id=$2 AND o.organization_id=$3
+			FOR UPDATE OF o`, key.GroupID, key.ProductID, s.OrganizationID).Scan(&quota, &optionName)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, 0, &orderPreparationError{Status: 409, Code: "combo_option_unavailable", Message: "Una opción del menú ya no está disponible."}
+		}
+		if err != nil {
+			return nil, 0, &orderPreparationError{Status: 503, Code: "order_unavailable", Message: "No pudimos validar el cupo del menú."}
+		}
+		if quota == nil {
+			continue
+		}
+
+		var used float64
+		err = tx.QueryRow(r.Context(), `
+			SELECT COALESCE(sum(oi.qty),0)::float8
+			FROM order_item_combo_selections ssel
+			JOIN order_items oi ON oi.id=ssel.order_item_id AND oi.organization_id=ssel.organization_id
+			JOIN orders ord ON ord.id=oi.order_id AND ord.organization_id=oi.organization_id
+			JOIN locations l ON l.id=ord.location_id AND l.organization_id=ord.organization_id
+			WHERE ssel.organization_id=$3
+			  AND ssel.group_id=$1
+			  AND ssel.option_product_id=$2
+			  AND ord.location_id=$4
+			  AND ord.status<>'cancelado'
+			  AND (ord.created_at AT TIME ZONE l.timezone)::date=(now() AT TIME ZONE l.timezone)::date
+			  AND ($5='' OR ord.id::text<>$5)`,
+			key.GroupID, key.ProductID, s.OrganizationID, s.LocationID, existingOrderID).Scan(&used)
+		if err != nil {
+			return nil, 0, &orderPreparationError{Status: 503, Code: "order_unavailable", Message: "No pudimos validar el cupo del menú."}
+		}
+		if used+plannedOptionUsage[key] > float64(*quota) {
+			return nil, 0, &orderPreparationError{
+				Status: 409,
+				Code: "combo_option_quota_exceeded",
+				Message: optionName + " ya alcanzó el cupo reservado para este menú.",
+			}
+		}
 	}
 	return prepared, subtotal, nil
 }
