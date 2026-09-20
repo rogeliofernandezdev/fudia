@@ -447,51 +447,103 @@ function ComandaView({initial,allTables,busy,currencySymbol,close,save,notify}:{
 function OrderDetail({loading,order,error,currencySymbol,canManage,busy,close,advance,cancel}:{loading:boolean;order?:Order;error?:string;currencySymbol:string;canManage:boolean;busy:boolean;close:()=>void;advance:(st:string)=>void;cancel:(o:Order)=>void}){
   const meta=order?statusMeta[order.status]??{label:order.status,tone:"gray" as const}:null;
   const action=order?nextAction(order):null;
+  const itemCount=order?(order.items??[]).reduce((sum,it)=>sum+Number(it.qty||0),0):0;
   return(
     <div className="modal-backdrop modal-overlay-in">
-      <section className="crud-modal order-detail modal-panel-in" role="dialog" aria-modal="true">
-        <div className="modal-accent"/>
-        <header>
-          <span className="modal-title-icon"><Icon name="utensils"/></span>
-          <div><h2>Mesa {order?.tableName??order?.code??"—"}</h2><small>PEDIDO ACTIVO</small></div>
-          <button aria-label="Cerrar" onClick={close}><Icon name="close"/></button>
+      <section className="crud-modal order-detail salon-order-detail modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="salon-order-detail-title">
+        <div className="salon-order-detail-accent"/>
+        <header className="salon-order-detail-head">
+          <div className="salon-order-detail-identity">
+            <span className="salon-order-detail-icon"><Icon name="utensils" size={20}/></span>
+            <div className="salon-order-detail-heading">
+              <small>MESA ACTIVA</small>
+              <h2 id="salon-order-detail-title">{order?.tableName||"Mesa"}</h2>
+              <p>{order?.customerName||order?.code||"Pedido en salón"}</p>
+            </div>
+          </div>
+          <div className="salon-order-detail-head-actions">
+            {order&&meta&&<Status tone={meta.tone}>{meta.label}</Status>}
+            <button type="button" className="salon-order-detail-close" aria-label="Cerrar detalle" onClick={close}><Icon name="close" size={17}/></button>
+          </div>
         </header>
+
         {loading?<Loading/>:error?(
           <div className="order-detail-body"><div className="catalog-state error"><span><Icon name="alert" size={22}/></span><b>Error al cargar el pedido</b><p>{error}</p></div></div>
         ):order&&meta&&(
           <>
-            <div className="order-detail-body">
-              <section className="order-detail-summary">
-                <div><small>MESA</small><b>{order.tableName||"—"}</b></div>
-                <div><small>CÓDIGO</small><b>{order.code}</b></div>
-                <div><small>TIEMPO</small><b>{timeAgo(order.createdAt)}</b></div>
-                <Status tone={meta.tone}>{meta.label}</Status>
+            <div className="order-detail-body salon-order-detail-body">
+              <section className="salon-order-detail-meta" aria-label="Datos del pedido">
+                <div>
+                  <span className="salon-order-detail-meta-icon"><Icon name="receipt" size={15}/></span>
+                  <span><small>PEDIDO</small><b>{order.code}</b></span>
+                </div>
+                <div>
+                  <span className="salon-order-detail-meta-icon"><Icon name="clock" size={15}/></span>
+                  <span><small>ABIERTO</small><b>{timeAgo(order.createdAt)}</b></span>
+                </div>
+                <div>
+                  <span className="salon-order-detail-meta-icon"><Icon name="utensils" size={15}/></span>
+                  <span><small>CONSUMO</small><b>{itemCount} ítem{itemCount===1?"":"s"}</b></span>
+                </div>
               </section>
-              <section className="customer-detail-section">
-                <header><div><small>CONSUMO</small><h3>Productos del pedido</h3></div></header>
-                <div className="order-detail-items">
+
+              <section className="salon-order-detail-consumption">
+                <header className="salon-order-detail-section-head">
+                  <div>
+                    <small>DETALLE</small>
+                    <h3>Productos del pedido</h3>
+                  </div>
+                  <span>{(order.items??[]).length} línea{(order.items??[]).length===1?"":"s"}</span>
+                </header>
+
+                <div className="order-detail-items salon-order-detail-items">
                   {(order.items??[]).map(it=>(
-                    <div className="order-detail-line" key={it.id}>
-                      <b>{Number(it.qty)}×</b>
+                    <div className="order-detail-line salon-order-detail-line" key={it.id}>
+                      <b className="salon-order-detail-qty">{Number(it.qty)}×</b>
                       <div className="order-detail-line-info">
                         <span>{it.name}</span>
+                        <small>{currencySymbol} {money(it.unitPrice)} c/u</small>
                         {it.note&&<em>{it.note}</em>}
                       </div>
-                      <strong>{currencySymbol} {money(Number(it.qty)*Number(it.unitPrice))}</strong>
+                      <strong className="salon-order-detail-line-total">{currencySymbol} {money(Number(it.qty)*Number(it.unitPrice))}</strong>
                     </div>
                   ))}
-                  {!(order.items??[]).length&&<p style={{color:"var(--ink-400)",fontSize:"12px",textAlign:"center",padding:"16px"}}>Sin ítems cargados aún.</p>}
+                  {!(order.items??[]).length&&(
+                    <div className="salon-order-detail-empty">
+                      <Icon name="receipt" size={20}/>
+                      <span>Sin ítems cargados aún.</span>
+                    </div>
+                  )}
                 </div>
-                {order.notes&&<div className="customer-detail-notes"><b>Notas</b><p>{order.notes}</p></div>}
+
+                {order.notes&&(
+                  <div className="salon-order-detail-notes">
+                    <span><Icon name="edit" size={15}/></span>
+                    <div><b>Notas generales</b><p>{order.notes}</p></div>
+                  </div>
+                )}
               </section>
-              <section className="order-detail-totals">
-                <div><span>Subtotal</span><b>{currencySymbol} {money(order.subtotal)}</b></div>
-                {Number(order.deliveryFee)>0&&<div><span>Delivery</span><b>{currencySymbol} {money(order.deliveryFee)}</b></div>}
-                <div className="order-detail-grand"><span>Total</span><strong>{currencySymbol} {money(order.total)}</strong></div>
+
+              <section className="salon-order-detail-totals">
+                <div className="salon-order-detail-subtotal">
+                  <span>Subtotal</span>
+                  <b>{currencySymbol} {money(order.subtotal)}</b>
+                </div>
+                {Number(order.deliveryFee)>0&&(
+                  <div className="salon-order-detail-subtotal">
+                    <span>Delivery</span>
+                    <b>{currencySymbol} {money(order.deliveryFee)}</b>
+                  </div>
+                )}
+                <div className="salon-order-detail-grand">
+                  <span>Total del pedido</span>
+                  <strong>{currencySymbol} {money(order.total)}</strong>
+                </div>
               </section>
             </div>
+
             {canManage&&(
-              <footer className="order-detail-actions">
+              <footer className="order-detail-actions salon-order-detail-actions">
                 {action&&<Button className="order-detail-primary" disabled={busy} onClick={()=>advance(action.status)}>{action.label}<Icon name="chevron" size={15}/></Button>}
                 {order.status==="entregado"&&<span className="order-detail-done"><Icon name="check" size={15}/>Mesa entregada</span>}
                 {!["entregado","cancelado"].includes(order.status)&&<Button kind="ghost" className="order-detail-cancel" disabled={busy} onClick={()=>cancel(order)}>Cancelar pedido</Button>}
