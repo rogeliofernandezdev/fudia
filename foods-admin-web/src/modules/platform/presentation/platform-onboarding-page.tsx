@@ -1,4 +1,5 @@
 "use client";
+import "./platform-onboarding.css";
 import {useState} from "react";
 import {useMutation,useQuery} from "@tanstack/react-query";
 import {Icon,IconName} from "@/design-system/icons";
