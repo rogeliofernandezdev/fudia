@@ -8,16 +8,12 @@ import {Button,PageHeader,Pagination,RowActionButton,Status} from "@/design-syst
 import {ConfirmDialog} from "@/design-system/confirm-dialog";
 import {useFeedback} from "@/providers/feedback-provider";
 import {useSession} from "@/providers/session-context";
+import type {RowDraft,Table,ZoneDraft} from "../domain/types";
+import {createTables,deactivateTableOrZone,listActiveZones,listTables,listZones,saveZone as persistZone} from "../infrastructure/tables-api";
 
-type Table={id:string;name:string;seats:number;zone:string;active:boolean;qrToken:string;qrEnabled:boolean};
-type Zone={id:string;name:string;sortOrder:number;active:boolean};
-type List<T>={items:T[];total:number;page?:number;pageSize?:number};
-type RowDraft={id?:string;name:string;seats:string;zone:string;active:boolean;isNew?:boolean};
-type ZoneDraft={id?:string;name:string;sortOrder:number;active:boolean};
 const emptyRow:RowDraft={name:"",seats:"2",zone:"",active:true,isNew:true};
 const emptyZone:ZoneDraft={name:"",sortOrder:0,active:true};
 
-async function api<T>(path:string,init?:RequestInit):Promise<T>{const response=await fetch(`/api/admin/${path}`,{...init,headers:{"Content-Type":"application/json",...init?.headers}});if(response.status===204)return undefined as T;const body=await response.json();if(!response.ok)throw new Error(body.message??"No pudimos completar la operación.");return body}
 
 function TableSkeleton(){return <div className="table-skeleton"><div className="sk-head"><i/><i/><i/><i/><i/><i/></div>{Array.from({length:5}).map((_,i)=><div className="sk-row" key={i}><div className="sk-name"><span/><b/></div><i/><i/><i/><i/><i/></div>)}</div>}
 
@@ -69,12 +65,12 @@ export function TablesManager(){
  const[qrTable,setQrTable]=useState<Table|null>(null);
  const[printQr,setPrintQr]=useState(false);
 
- const tables=useQuery({queryKey:["tables",search,statusFilter,page,pageSize],queryFn:()=>api<List<Table>>(`tables?q=${encodeURIComponent(search)}&status=${statusFilter}&page=${page}&pageSize=${pageSize}`)});
- const zones=useQuery({queryKey:["zones",zonePage,zonePageSize],queryFn:()=>api<List<Zone>>(`zones?page=${zonePage}&pageSize=${zonePageSize}`)});
- const zoneOptions=useQuery({queryKey:["zone-options"],queryFn:()=>api<List<Zone>>("zones?status=active&page=1&pageSize=100")});
- const saveBatch=useMutation({mutationFn:(items:RowDraft[])=>api<{items:Table[]}>("tables/batch",{method:"POST",body:JSON.stringify({items:items.map(r=>({name:r.name,seats:Number(r.seats)||2,zone:r.zone}))})}),onSuccess:()=>{setAdding(false);setNewRows([]);notify({tone:"success",title:"Mesas registradas",message:"Las mesas ya están disponibles en el POS con su QR generado."});void client.invalidateQueries({queryKey:["tables"]})},onError:e=>notify({tone:"danger",title:"No se pudieron registrar",message:e.message})});
- const deactivate=useMutation({mutationFn:(vars:{kind:"tables"|"zones";id:string})=>api(`${vars.kind==="tables"?"tables":"zones"}/${vars.id}`,{method:"DELETE"}),onSuccess:()=>{setConfirm(null);notify({tone:"success",title:"Desactivado",message:"El registro dejó de estar disponible."});void client.invalidateQueries({queryKey:["tables"]});void client.invalidateQueries({queryKey:["zones"]})},onError:e=>notify({tone:"danger",title:"No se pudo desactivar",message:e.message})});
- const saveZone=useMutation({mutationFn:(d:ZoneDraft)=>api<Zone>(d.id?`zones/${d.id}`:"zones",{method:d.id?"PATCH":"POST",body:JSON.stringify(d)}),onSuccess:(_,d)=>{setZoneDraft(null);notify({tone:"success",title:d.id?"Zona actualizada":"Zona registrada",message:"La zona ya está disponible para asignar a las mesas."});void client.invalidateQueries({queryKey:["zones"]})},onError:e=>notify({tone:"danger",title:"No se pudo guardar la zona",message:e.message})});
+ const tables=useQuery({queryKey:["tables",search,statusFilter,page,pageSize],queryFn:()=>listTables({q:search,status:statusFilter,page,pageSize})});
+ const zones=useQuery({queryKey:["zones",zonePage,zonePageSize],queryFn:()=>listZones(zonePage,zonePageSize)});
+ const zoneOptions=useQuery({queryKey:["zone-options"],queryFn:listActiveZones});
+ const saveBatch=useMutation({mutationFn:(items:RowDraft[])=>createTables(items),onSuccess:()=>{setAdding(false);setNewRows([]);notify({tone:"success",title:"Mesas registradas",message:"Las mesas ya están disponibles en el POS con su QR generado."});void client.invalidateQueries({queryKey:["tables"]})},onError:e=>notify({tone:"danger",title:"No se pudieron registrar",message:e.message})});
+ const deactivate=useMutation({mutationFn:(vars:{kind:"tables"|"zones";id:string})=>deactivateTableOrZone(vars.kind,vars.id),onSuccess:()=>{setConfirm(null);notify({tone:"success",title:"Desactivado",message:"El registro dejó de estar disponible."});void client.invalidateQueries({queryKey:["tables"]});void client.invalidateQueries({queryKey:["zones"]})},onError:e=>notify({tone:"danger",title:"No se pudo desactivar",message:e.message})});
+ const saveZone=useMutation({mutationFn:(d:ZoneDraft)=>persistZone(d),onSuccess:(_,d)=>{setZoneDraft(null);notify({tone:"success",title:d.id?"Zona actualizada":"Zona registrada",message:"La zona ya está disponible para asignar a las mesas."});void client.invalidateQueries({queryKey:["zones"]})},onError:e=>notify({tone:"danger",title:"No se pudo guardar la zona",message:e.message})});
 
  const data=tables.data;
  const zoneList=zones.data?.items??[];const activeZoneOptions=zoneOptions.data?.items??[];
