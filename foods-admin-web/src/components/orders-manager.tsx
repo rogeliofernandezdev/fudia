@@ -9,7 +9,8 @@ import {useSettings} from "@/providers/settings-context";
 import {useSession} from "@/providers/session-context";
 
 type Option={value:string;label:string};
-type OrderItem={id:string;productId:string;name:string;qty:string;unitPrice:string;note:string};
+type OrderItemSelection={groupId:string;groupName:string;productId:string;name:string;surcharge:string};
+type OrderItem={id:string;productId:string;name:string;qty:string;unitPrice:string;note:string;itemType?:"product"|"combo";selections?:OrderItemSelection[]};
 type Order={id:string;code:string;channel:string;status:string;customerId:string;customerName:string;customerPhone:string;address:string;reference:string;tableId:string;tableName:string;notes:string;subtotal:string;deliveryFee:string;total:string;createdAt:string;updatedAt:string;items?:OrderItem[]};
 type Response={items:Order[];total:number;channelCounts:Record<string,number>;channelOptions:Option[];statusOptions:Option[]};
 type Product={id:string;name:string;price:string;categoryId:string|null;imageUrl:string|null};
@@ -237,6 +238,7 @@ function OrderDetail({loading,order,error,channels,currencySymbol,canManage,busy
       <b className="line-qty">{Number(it.qty)}×</b>
       <div className="order-detail-line-info">
        <span>{it.name}</span>
+       {(it.selections??[]).map(sel=><small key={sel.groupId+sel.productId}><b>{sel.groupName}:</b> {sel.name}{Number(sel.surcharge)>0?` (+${currencySymbol} ${money(sel.surcharge)})`:""}</small>)}
        {it.note&&<em>Nota: {it.note}</em>}
       </div>
       <strong className="line-price">{currencySymbol} {money(Number(it.qty)*Number(it.unitPrice))}</strong>
