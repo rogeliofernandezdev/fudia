@@ -291,7 +291,7 @@ func (a *API) createInventoryEntry(w http.ResponseWriter, r *http.Request) {
 	var inventoryItemID, inventoryUnit string
 	err = tx.QueryRow(r.Context(), `
 		INSERT INTO inventory_items(organization_id,sku,name,unit,minimum_stock,active,product_id)
-		VALUES($1,'SELL-'||upper(substr(replace($2::text,'-',''),1,12)),$3,$4,$5,true,$2)
+		VALUES($1,'SELL-'||upper(substr(replace($2::text,'-',''),1,12)),$3,$4,$5,true,$2::uuid)
 		ON CONFLICT (organization_id,product_id) WHERE product_id IS NOT NULL
 		DO UPDATE SET name=EXCLUDED.name,minimum_stock=EXCLUDED.minimum_stock,active=true
 		RETURNING id,unit`,
