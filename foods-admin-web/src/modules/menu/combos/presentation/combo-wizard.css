@@ -175,9 +175,16 @@
   border-radius: 9px;
   background: #fff;
   color: var(--ink-500, #667085);
-  font-size: 9px;
-  font-weight: 850;
-  transition: border-color .15s ease, background .15s ease, color .15s ease;
+  transition: border-color .15s ease, background .15s ease, color .15s ease, transform .15s ease;
+}
+
+.combo-step-marker svg {
+  width: 16px;
+  height: 16px;
+}
+
+.combo-wizard-steps button.active .combo-step-marker {
+  transform: translateY(-1px);
 }
 
 .combo-wizard-steps button.active .combo-step-marker {
@@ -248,9 +255,33 @@
 
 .combo-section-heading {
   display: grid;
-  gap: 4px;
+  grid-template-columns: 38px minmax(0,1fr);
+  align-items: center;
+  gap: 10px;
   padding-bottom: 13px;
   border-bottom: 1px solid #e4e7ec;
+}
+
+.combo-section-heading > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.combo-section-heading-icon {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 10px;
+  background: var(--primary-100, #eef0ff);
+  color: var(--ops-700, #3946b8);
+}
+
+.combo-section-heading-icon svg {
+  width: 18px;
+  height: 18px;
 }
 
 .combo-section-heading h3 {
@@ -319,17 +350,27 @@
 
 .combo-composition-toolbar > div:first-child {
   min-width: 0;
+}
+
+.combo-composition-copy {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.combo-composition-copy > div {
+  min-width: 0;
   display: grid;
   gap: 4px;
 }
 
-.combo-composition-toolbar > div:first-child b {
+.combo-composition-copy b {
   color: var(--ink-950, #101828);
   font-size: 11px;
   font-weight: 850;
 }
 
-.combo-composition-toolbar > div:first-child small {
+.combo-composition-copy small {
   color: var(--ink-600, #475467);
   font-size: 8.5px;
   line-height: 1.45;
