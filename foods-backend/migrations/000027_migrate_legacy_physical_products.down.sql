@@ -4,8 +4,19 @@ DO $$
 DECLARE
   target_org uuid;
   candidate_count integer;
+  legacy_product_count integer;
   changed_count integer;
 BEGIN
+  SELECT count(*)
+  INTO legacy_product_count
+  FROM products
+  WHERE name IN ('Cusqueña Dorada 330ml', 'Inca Kola 500ml');
+
+  IF legacy_product_count = 0 THEN
+    RAISE NOTICE 'legacy physical products rollback skipped: target products are absent';
+    RETURN;
+  END IF;
+
   SELECT count(*)
   INTO candidate_count
   FROM (
@@ -19,7 +30,7 @@ BEGIN
 
   IF candidate_count <> 1 THEN
     RAISE EXCEPTION
-      'legacy physical products rollback expected exactly one matching organization, found %',
+      'legacy physical products rollback found target data but expected exactly one matching organization, found %',
       candidate_count;
   END IF;
 
