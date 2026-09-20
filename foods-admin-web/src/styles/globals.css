@@ -1,5 +1,4 @@
 /* Global tokens, reset and shared primitives only. */
-/* Global tokens, reset and shared primitives only. */
 @import "tailwindcss";
 *{box-sizing:border-box}
 html,body{min-height:100%;margin:0}
