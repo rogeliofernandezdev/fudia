@@ -24,7 +24,7 @@ test("app no contiene CSS de negocio",()=>{
 test("todo CSS tiene owner explicito",()=>{
   const css=walk("src").filter(p=>p.endsWith(".css"));
   const invalid=css.filter(p=>![
-    "src/styles/","src/design-system/styles/","src/shell/styles/","src/modules/"
+    "src/styles/","src/design-system/styles/","src/shell/styles/","src/providers/styles/","src/modules/"
   ].some(prefix=>p.startsWith(prefix)));
   assert.deepEqual(invalid,[]);
 });
