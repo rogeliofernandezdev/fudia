@@ -64,6 +64,29 @@ type inventoryMovementView struct {
 	CreatedAt     string `json:"createdAt"`
 }
 
+func productHasCancellableOrderUsage(ctx context.Context, tx pgx.Tx, organizationID, productID string) (bool, error) {
+	var used bool
+	err := tx.QueryRow(ctx, `
+		SELECT EXISTS(
+			SELECT 1
+			FROM orders o
+			JOIN order_items oi ON oi.order_id=o.id AND oi.organization_id=o.organization_id
+			WHERE o.organization_id=$1
+			  AND o.status IN ('nuevo','confirmado','preparando','listo')
+			  AND (
+			    oi.product_id=$2
+			    OR EXISTS(
+			      SELECT 1
+			      FROM order_item_combo_selections s
+			      WHERE s.organization_id=oi.organization_id
+			        AND s.order_item_id=oi.id
+			        AND s.option_product_id=$2
+			    )
+			  )
+		)`, organizationID, productID).Scan(&used)
+	return used, err
+}
+
 func normalizeInventoryEntry(in inventoryEntryInput) (inventoryEntryInput, string) {
 	in.ProductID = strings.TrimSpace(in.ProductID)
 	in.Unit = strings.TrimSpace(in.Unit)
@@ -244,6 +267,15 @@ func (a *API) createInventoryEntry(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if quantityControl == "none" {
+			usedByOpenOrder, usageErr := productHasCancellableOrderUsage(r.Context(), tx, s.OrganizationID, productID)
+			if usageErr != nil {
+				fail(w, 503, "inventory_unavailable", "No pudimos validar los pedidos abiertos del producto.")
+				return
+			}
+			if usedByOpenOrder {
+				fail(w, 409, "quantity_control_open_orders", "Cierra o cancela los pedidos abiertos de este producto antes de activar Inventario.")
+				return
+			}
 			if _, err = tx.Exec(r.Context(), `
 				UPDATE products SET quantity_control='inventory',updated_at=now()
 				WHERE id=$1 AND organization_id=$2`, productID, s.OrganizationID); err != nil {
