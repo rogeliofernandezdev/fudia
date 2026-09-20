@@ -147,6 +147,8 @@ test("producto e inventario mantienen una sola fuente de verdad",()=>{
   assert.equal(kardex.includes(forbiddenRegionalLocale),false,"Kárdex no fija Perú como región");
   assert.ok(kardex.includes("REFERENCIA"),"Kárdex muestra referencia documental en lugar de origen técnico");
   assert.ok(kardex.includes("item.sourceReference"),"Kárdex usa la referencia legible del documento origen");
+  assert.ok(kardex.includes("Pedido histórico"),"Kárdex identifica pedidos históricos sin referencia legible");
+  assert.ok(kardex.includes("Entrada histórica"),"Kárdex identifica entradas históricas sin referencia legible");
   assert.equal(kardex.includes("item.sourceId.slice"),false,"Kárdex no expone fragmentos de UUID");
   assert.equal(kardex.includes("item.productId.slice"),false,"Kárdex no expone el UUID del producto");
   assert.equal(kardex.includes("product.name} · {product.sku"),false,"El filtro de Kárdex no expone SKU internos");
