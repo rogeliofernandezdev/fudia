@@ -4,12 +4,6 @@
    Tokens: primary-600 (#4654CD), ops-800 (#1A2151), brand-700 (#16875F)
 ════════════════════════════════════════════════════════════════ */
 
-.orders-header-actions{
-  display:flex;
-  align-items:center;
-  gap:8px;
-}
-
 .orders-salon-link{
   height:var(--control-height);
   min-height:var(--control-height);
@@ -127,18 +121,6 @@
   gap:4px;
 }
 
-.order-advance{
-  width:auto;
-  height:var(--control-height);
-  min-height:var(--control-height);
-  padding:0 12px;
-  border-radius:6px;
-  font-size:9px;
-  font-weight:800;
-  box-shadow:none;
-  white-space:nowrap;
-}
-
 .orders-mobile-detail{
   margin:0 0 12px;
   padding:8px 9px;
@@ -147,10 +129,6 @@
   color:var(--ink-600,#475467);
   font-size:9px;
   line-height:1.4;
-}
-
-.orders-mobile-cards .order-advance{
-  width:auto;
 }
 
 /* ── Empty State ── */
@@ -1360,15 +1338,7 @@
 }
 
 @media (max-width:600px){
-  .orders-header-actions{
-    width:100%;
-    display:grid;
-    grid-template-columns:1fr 1fr;
-  }
-
-  .orders-salon-link,
-  .orders-header-actions .button{
-    width:100%;
+  .orders-salon-link{
     height:var(--control-height);
     min-height:var(--control-height);
     padding:0 12px;
@@ -1388,8 +1358,3 @@
   .comanda-channel-btn{height:var(--control-height);min-height:var(--control-height)}
 }
 
-@media (max-width:390px){
-  .orders-header-actions{
-    grid-template-columns:1fr;
-  }
-}
