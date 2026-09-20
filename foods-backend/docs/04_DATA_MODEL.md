@@ -18,90 +18,97 @@ mantienen subconjuntos manuales en los frontends.
 
 ## Disponibilidad de productos
 
-Un producto del menú no almacena cantidad. `products` pertenece a la organización
-y el stock pertenece al local (`stock_balances.location_id`), por lo que una
-columna de cantidad en `products` sería incorrecta por definición.
+`products` es el catálogo único de todo lo que se vende. Platos, bebidas,
+mercadería física, menús y opciones de combo se identifican por `ProductId`.
+Pedido y detalle de pedido conservan siempre esa referencia; no existe un segundo
+catálogo vendible dentro de Inventario.
 
-La cantidad disponible siempre se resuelve por local y se deriva del modo de
-control del producto. El stock nunca se edita a mano: cambia solo por documentos
-auditables (compra, producción, venta, merma, ajuste).
+Producto describe **qué se vende**: nombre, precio, categoría, imagen, estado y
+demás datos comerciales. Producto no almacena cantidad. La cantidad pertenece al
+local y se resuelve según `products.quantity_control`.
 
-### Dos niveles de control
+### Control de cantidad por producto
 
-La plataforma sirve tanto al restaurante que no quiere llevar recetas como al que
-necesita costo y consumo exactos. El nivel lo define
-`organizations.inventory_mode`:
-
-| Modo | Alcance |
-| --- | --- |
-| `simple` | Sin insumos ni recetas. Los productos nacen `none` y se usa `manual` para lo que se agota. La interfaz oculta inventario y fichas técnicas. |
-| `detailed` | Habilita insumos, recetas, producción por lote, costo y descuento automático. |
-
-El modo es una decisión de la organización, no un límite del modelo: un producto
-puede pasar de `manual` a `recipe` sin migrar historia ni perder ventas previas.
-
-### Modo de control por producto (`products.stock_mode`)
-
-| Valor | Significado | Disponible |
+| Valor | Significado | Fuente de la cantidad |
 | --- | --- | --- |
-| `none` | Siempre disponible mientras esté activo. | sin límite |
-| `manual` | Cupo del día escrito por el local. | `cupo - vendido_hoy` |
-| `linked` | Uno a uno con un insumo contable (gaseosa, cerveza, agua). | `piso(stock / factor)` |
-| `recipe` | Ficha técnica de insumos. | `piso(min(stock_i / cantidad_i))` |
+| `none` | La venta no depende de una cantidad administrada. | No aplica |
+| `portions` | Producto preparado por porciones, por ejemplo Ají de gallina. | `product_availability.portion_quantity - sold_quantity` por local y fecha |
+| `inventory` | Mercadería física, por ejemplo Coca-Cola o agua mineral. | `stock_balances` del local |
 
-`linked` y `recipe` comparten la misma fórmula: `linked` es una receta de una
-sola línea. Se distinguen para que la interfaz simple no exija crear una ficha.
+Las porciones se cargan desde Disponibilidad de la carta. No existe un cupo
+predeterminado en `products`: cada día/local tiene su cantidad real.
 
-### Elaboración por lote
+La mercadería física se repone únicamente mediante documentos de Inventario.
+`inventory_items.product_id` es un vínculo interno 1:1 para conectar un
+Producto vendible con la infraestructura de existencias; no constituye otro
+catálogo comercial.
 
-Un preparado que no se hace por porción (chicha, salsas, postres) se modela como
-insumo intermedio con `inventory_items.kind='prepared'` y su propia unidad.
+### Flujo de Inventario
 
-Un documento de producción consume insumos crudos y acredita el preparado. Los
-productos que lo venden lo consumen con su factor: una jarra de un litro consume
-`1.000` y un vaso de 300 ml consume `0.300` del mismo insumo. Ambos comparten
-existencia, por lo que vender jarras reduce los vasos disponibles.
+El flujo principal de mercadería física comienza en **Inventario > Nueva entrada**:
 
-No se explota un preparado directamente a sus insumos crudos: eso permitiría
-vender lo que todavía no se ha preparado y oculta cuánto lote está hecho.
+1. Si el Producto existe, se selecciona ese mismo `ProductId` y se registra
+   la nueva entrada.
+2. Si no existe, el usuario crea **Nuevo producto** dentro de la entrada.
+3. Producto, vínculo interno de inventario, saldo, documento de entrada y
+   movimiento de Kárdex se crean en una sola transacción.
+4. Si cualquier paso falla, la transacción hace rollback y no queda un Producto
+   huérfano ni un saldo parcial.
+5. Las reposiciones posteriores usan siempre el mismo Producto.
+
+La pantalla de Productos permanece dedicada al catálogo comercial: alta de
+platos, nombre, precio, categoría, imagen, estado y clasificación de control de
+cantidad. No registra entradas ni modifica stock físico.
+
+### Venta y concurrencia
+
+Al crear un pedido, el backend calcula uso de cantidades únicamente por
+`ProductId`. Para productos directos usa el `product_id` de la línea;
+para combos usa los `ProductId` seleccionados en sus opciones.
+
+- `portions`: bloquea el registro diario y aumenta `sold_quantity`.
+- `inventory`: bloquea el saldo físico con `FOR UPDATE`, valida que la
+  existencia alcance y descuenta el stock.
+- editar un pedido aplica solo el delta entre la versión anterior y la nueva;
+- cancelar un pedido revierte las cantidades consumidas;
+- nunca se confirma una operación que produzca stock negativo.
+
+La actualización de pedido, el descuento/restauración y el movimiento de Kárdex
+comparten la misma transacción. Esto evita sobreventa cuando dos pedidos intentan
+consumir simultáneamente el último stock.
 
 ### Resolución de disponibilidad
 
-Orden de precedencia, idéntico para todos los modos:
+Orden de precedencia:
 
 1. Producto inactivo: no vendible.
-2. Marcado agotado hoy en el local: agotado. Este override siempre gana, porque
-   la realidad física (una olla quemada, una jarra caída) no se deduce del stock.
-3. Cálculo según `stock_mode`.
+2. Override manual `sold_out` del local/día: agotado.
+3. Horario o vigencia comercial fuera de rango: no disponible.
+4. `none`: disponible.
+5. `portions`: disponible si quedan porciones.
+6. `inventory`: disponible si el saldo físico del local es mayor que cero.
+7. Un combo exige suficientes opciones disponibles en cada grupo obligatorio.
 
-La API expone un solo contrato, `availability`, con estado, cantidad restante
-—nula cuando no aplica—, origen del cálculo y el insumo que limita. Los clientes
-no reimplementan la fórmula ni consultan stock para decidir si pueden vender.
+Los clientes consumen este resultado; no duplican la fórmula ni calculan stock
+por su cuenta.
 
 ### Tablas del modelo
 
 | Tabla | Propósito |
 | --- | --- |
-| `product_recipe` | Líneas de ficha técnica: producto, insumo y cantidad. |
-| `product_availability` | Cupo del día, vendido y agotado manual por local y fecha de negocio. |
+| `products` | Catálogo comercial único y clasificación `quantity_control`. |
+| `product_availability` | Porciones, vendidos y override manual por local/día. |
+| `inventory_items` | Registro interno de inventario; `product_id` vincula 1:1 mercadería vendible. |
+| `stock_balances` | Saldo físico actual por local e item interno. |
+| `inventory_entries` | Documento auditable de cada entrada física. |
+| `stock_movements` | Kárdex: entradas, ventas, reversas y ajustes, con saldo resultante. |
 | `menu_combos` | Identifica productos compuestos vendidos como menú o combo. |
-| `menu_combo_groups` | Define grupos ordenados de elección (entrada, segundo, postre, bebida), obligatoriedad y límites. |
-| `menu_combo_options` | Vincula productos existentes como alternativas de cada grupo y permite un recargo. |
+| `menu_combo_groups` | Grupos de elección del combo. |
+| `menu_combo_options` | Productos existentes usados como alternativas del combo. |
 
-La disponibilidad efectiva de un menú se deriva de sus componentes: cada grupo
-obligatorio debe conservar al menos `min_selections` alternativas disponibles en
-el local y día operativo. Así, al agotarse una entrada no desaparece el menú si
-queda otra alternativa; se agota automáticamente cuando un grupo obligatorio ya
-no puede satisfacer su mínimo.
-| `stock_movements` | Bitácora de todo cambio de existencia con su documento de origen. |
-
-`stock_balances` es el saldo derivado de `stock_movements` y nunca se actualiza
-sin registrar el movimiento que lo causa.
-
-La operación diaria conserva `manual_status` (`available`, `low`, `sold_out`),
-el cupo excepcional del local y la cantidad vendida. El registro es único por
-empresa, local, producto y fecha de negocio. Reactivar un producto elimina el
-override de agotado, pero no altera ventas ni movimientos ya registrados.
+`stock_balances` se modifica dentro de la misma transacción que registra el
+`stock_movements` correspondiente. El saldo tiene una restricción de base de
+datos que impide valores negativos.
 
 ## Empresa, locales y configuración financiera
 
