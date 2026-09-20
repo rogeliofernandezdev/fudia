@@ -36,6 +36,10 @@ export function ComandaCatalog({qtyByProduct,onPick,onRemove,currencySymbol,vari
   const single=searching||Boolean(cat);
   const visible=sections.filter(s=>single||s.loading||s.error||s.items.length>0);
   const totalItems=sections.reduce((a,s)=>a+s.items.length,0);
+  const flatItems=[...new Map(visible.flatMap(section=>section.items).map(product=>[product.id,product])).values()];
+  const flatLoading=visible.some(section=>section.loading);
+  const flatError=visible.find(section=>section.error)?.error;
+  const displayCount=variant==="salon"?flatItems.length:totalItems;
   const booting=!searching&&(categories.isLoading||(cats.length>0&&perCat.every(q=>q.isLoading)));
 
   return(
@@ -43,7 +47,7 @@ export function ComandaCatalog({qtyByProduct,onPick,onRemove,currencySymbol,vari
       <div className="comanda-menu-hero">
         <div className="comanda-menu-hero-row">
           <h3>La carta</h3>
-          <span className="comanda-menu-count">{totalItems} platos</span>
+          <span className="comanda-menu-count">{displayCount} platos</span>
         </div>
         <div className="comanda-search-bar">
           <label className="comanda-search"><Icon name="search" size={18}/><input value={pq} onChange={e=>setPq(e.target.value)} placeholder="Buscar en la carta..."/></label>
@@ -57,7 +61,21 @@ export function ComandaCatalog({qtyByProduct,onPick,onRemove,currencySymbol,vari
         </div>
       </div>
       <div className="comanda-scroll">
-        {booting?(
+        {variant==="salon"?(
+          booting||(flatLoading&&!flatItems.length)?(
+            <MenuRows n={8}/>
+          ):flatItems.length?(
+            <div className="comanda-dishes">
+              {flatItems.map(p=>(
+                <MenuItem key={p.id} p={p} qty={qtyByProduct[p.id]??0} currencySymbol={currencySymbol} onPick={onPick} onRemove={onRemove} variant={variant}/>
+              ))}
+            </div>
+          ):flatError?(
+            <div className="catalog-state empty-catalog-card"><span><Icon name="alert"/></span><b>No pudimos cargar la carta</b><p>{flatError.message}</p></div>
+          ):(
+            <div className="catalog-state empty-catalog-card"><span><Icon name="search"/></span><b>Sin platos</b><p>{searching?"Ningún producto coincide con la búsqueda.":"No hay productos activos para mostrar."}</p></div>
+          )
+        ):booting?(
           <MenuSkeleton sections={4}/>
         ):visible.map(sec=>(
           <section className="comanda-menusec" key={sec.id}>
@@ -69,7 +87,7 @@ export function ComandaCatalog({qtyByProduct,onPick,onRemove,currencySymbol,vari
             ):sec.items.length?(
               <div className="comanda-dishes">
                 {sec.items.map(p=>(
-                  <MenuItem key={p.id} p={p} qty={qtyByProduct[p.id]??0} categoryLabel={searching?(cats.find(c=>c.id===p.categoryId)?.name??""):""} currencySymbol={currencySymbol} onPick={onPick} onRemove={onRemove} variant={variant}/>
+                  <MenuItem key={p.id} p={p} qty={qtyByProduct[p.id]??0} currencySymbol={currencySymbol} onPick={onPick} onRemove={onRemove} variant={variant}/>
                 ))}
               </div>
             ):(
@@ -77,7 +95,7 @@ export function ComandaCatalog({qtyByProduct,onPick,onRemove,currencySymbol,vari
             )}
           </section>
         ))}
-        {!booting&&!visible.length&&(
+        {variant!=="salon"&&!booting&&!visible.length&&(
           <div className="catalog-state empty-catalog-card"><span><Icon name="search"/></span><b>Sin platos</b><p>La carta aún no tiene productos activos.</p></div>
         )}
       </div>
@@ -85,33 +103,23 @@ export function ComandaCatalog({qtyByProduct,onPick,onRemove,currencySymbol,vari
   );
 }
 
-function MenuItem({p,qty,categoryLabel,currencySymbol,onPick,onRemove,variant}:{p:CatalogProduct;qty:number;categoryLabel:string;currencySymbol:string;onPick:(p:CatalogProduct)=>void;onRemove:(p:CatalogProduct)=>void;variant:"default"|"salon"}){
+function MenuItem({p,qty,currencySymbol,onPick,onRemove,variant}:{p:CatalogProduct;qty:number;currencySymbol:string;onPick:(p:CatalogProduct)=>void;onRemove:(p:CatalogProduct)=>void;variant:"default"|"salon"}){
   if(variant==="salon"){
     return(
       <article className={"comanda-dish comanda-dish-modern"+(qty>0?" picked":"")} aria-label={p.name}>
         <span className={"comanda-dish-thumb comanda-dish-modern-media"+(p.imageUrl?" has-image":"")}>
           <span className="comanda-dish-image-fallback"><Icon name="utensils" size={24}/><small>Sin imagen</small></span>
           {p.imageUrl&&<img src={p.imageUrl} alt={p.name} loading="lazy" onError={e=>{e.currentTarget.hidden=true}}/>}
+          {qty>0&&<b className="comanda-dish-selected-qty">{qty}×</b>}
         </span>
         <div className="comanda-dish-modern-content">
-          <div className="comanda-dish-modern-copy">
-            {categoryLabel&&<small className="comanda-dish-category">{categoryLabel}</small>}
-            <strong className="comanda-dish-name" title={p.name}>{p.name}</strong>
-          </div>
+          <strong className="comanda-dish-name" title={p.name}>{p.name}</strong>
           <div className="comanda-dish-modern-footer">
             <b className="comanda-dish-price">{currencySymbol} {money(p.price)}</b>
-            {qty>0?(
-              <div className="comanda-dish-step" aria-label={`Cantidad de ${p.name}: ${qty}`}>
-                <button type="button" onClick={()=>onRemove(p)} aria-label={`Quitar un ${p.name}`}><Icon name="minus" size={13}/></button>
-                <b>{qty}</b>
-                <button type="button" onClick={()=>onPick(p)} aria-label={`Agregar un ${p.name}`}><Icon name="plus" size={13}/></button>
-              </div>
-            ):(
-              <button type="button" className="comanda-dish-add-button" onClick={()=>onPick(p)} aria-label={`Agregar ${p.name} a la comanda`}>
-                <Icon name="plus" size={14}/>
-                <span>Agregar</span>
-              </button>
-            )}
+            <button type="button" className="comanda-dish-add-button" onClick={()=>onPick(p)} aria-label={qty>0?`Agregar otro ${p.name}`:`Agregar ${p.name} a la comanda`}>
+              <Icon name="plus" size={14}/>
+              <span>Agregar</span>
+            </button>
           </div>
         </div>
       </article>
@@ -138,7 +146,6 @@ function MenuItem({p,qty,categoryLabel,currencySymbol,onPick,onRemove,variant}:{
     </article>
   );
 }
-
 function MenuRows({n}:{n:number}){
   return(
     <div className="comanda-dishes" aria-hidden="true">
