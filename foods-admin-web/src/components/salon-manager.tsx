@@ -5,7 +5,7 @@ import "../app/salon.css";
 import "../app/salon-comanda.css";
 import {useState,useCallback,useEffect,useRef} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,ConfirmDialog,Input,PageHeader,Select,Status,Textarea} from "@/design-system";
+import {Button,ConfirmDialog,Input,Select,Status,Textarea} from "@/design-system";
 import {Icon,IconName} from "@/design-system/icons";
 import {ComandaCatalog} from "@/components/comanda-catalog";
 import {apiFetch} from "@/shared/api/client";
@@ -165,31 +165,57 @@ export function SalonManager(){
 
   return(
     <>
-      <PageHeader
-        eyebrow="OPERACIÓN"
-        title="Salón"
-        description="Plano de mesas en vivo: toca una libre para abrir comanda o una ocupada para ver su pedido."
-      />
+      <section className="salon-overview" aria-labelledby="salon-title">
+        <div className="salon-overview-copy">
+          <span className="salon-overview-eyebrow"><Icon name="store" size={14}/>Operación de salón</span>
+          <h1 id="salon-title">Salón</h1>
+          <p>Consulta el estado de las mesas y gestiona las comandas activas desde un solo lugar.</p>
+        </div>
 
-      {/* Toolbar */}
-      <div className="salon-toolbar">
-        <label className="salon-search">
-          <Icon name="search" size={18}/>
-          <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Buscar mesa, zona o pedido…"/>
-          {q&&<button type="button" onClick={()=>setQ("")} aria-label="Limpiar búsqueda"><Icon name="close" size={16}/></button>}
-        </label>
-        {zones.length>1&&(
-          <div className="salon-zones">
-            <button className={"salon-zone"+(zone===""?" active":"")} onClick={()=>setZone("")}>Todas</button>
-            {zones.map(z=>(
-              <button key={z} className={"salon-zone"+(zone===z?" active":"")} onClick={()=>setZone(z)}>{z}</button>
-            ))}
+        <div className="salon-overview-stats" aria-label="Resumen del salón">
+          <div className="salon-overview-stat">
+            <span className="salon-overview-stat-icon"><Icon name="grid" size={17}/></span>
+            <span><small>Mesas</small><b>{tables.length}</b></span>
           </div>
-        )}
-        <button className="salon-refresh" onClick={()=>floor.refetch()} aria-label="Actualizar salón" disabled={floor.isFetching}>
-          <Icon name="refresh" size={17}/>
-        </button>
-      </div>
+          <div className="salon-overview-stat free">
+            <span className="salon-overview-stat-icon"><Icon name="check" size={17}/></span>
+            <span><small>Libres</small><b>{freeCount}</b></span>
+          </div>
+          <div className="salon-overview-stat occupied">
+            <span className="salon-overview-stat-icon"><Icon name="receipt" size={17}/></span>
+            <span><small>Ocupadas</small><b>{occupiedCount}</b></span>
+          </div>
+        </div>
+      </section>
+
+      <section className="salon-controls" aria-label="Controles del salón">
+        <div className="salon-toolbar">
+          <label className="salon-search">
+            <Icon name="search" size={18}/>
+            <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Buscar mesa, zona, pedido o familia…"/>
+            {q&&<button type="button" onClick={()=>setQ("")} aria-label="Limpiar búsqueda"><Icon name="close" size={16}/></button>}
+          </label>
+          <button className="salon-refresh" onClick={()=>floor.refetch()} aria-label="Actualizar salón" disabled={floor.isFetching}>
+            <Icon name="refresh" size={17}/>
+            <span>{floor.isFetching?"Actualizando…":"Actualizar"}</span>
+          </button>
+        </div>
+
+        <div className="salon-filter-row">
+          {zones.length>1?(
+            <>
+              <span className="salon-filter-label">Zona</span>
+              <div className="salon-zones" role="group" aria-label="Filtrar por zona">
+                <button className={"salon-zone"+(zone===""?" active":"")} onClick={()=>setZone("")}>Todas</button>
+                {zones.map(z=>(
+                  <button key={z} className={"salon-zone"+(zone===z?" active":"")} onClick={()=>setZone(z)}>{z}</button>
+                ))}
+              </div>
+            </>
+          ):<span/>}
+          <span className="salon-results-count">Mostrando <b>{visible.length}</b> de <b>{tables.length}</b> mesas</span>
+        </div>
+      </section>
 
       {/* Floor plan */}
       {floor.isLoading?(
@@ -268,14 +294,7 @@ export function SalonManager(){
             )}
           </div>
 
-          {/* Legend */}
-          <footer className="salon-legend">
-            <div className="salon-legend-pills">
-              <span className="salon-legend-pill"><i className="free"/>Libres <b>{freeCount}</b></span>
-              <span className="salon-legend-pill"><i className="occupied"/>Ocupadas <b>{occupiedCount}</b></span>
-            </div>
-            {occupiedCount>0&&<span className="salon-legend-note">{occupiedCount} pedido{occupiedCount!==1?"s":""} activo{occupiedCount!==1?"s":""}</span>}
-          </footer>
+
         </>
       )}
 
