@@ -82,29 +82,11 @@ export function ComandaCatalog({qtyByProduct,onPick,onRemove,currencySymbol,vari
           ):salonCatalog.isError?(
             <div className="catalog-state empty-catalog-card"><span><Icon name="alert"/></span><b>No pudimos cargar la carta</b><p>{salonCatalog.error.message}</p></div>
           ):salonItems.length?(
-            <>
-              <div className="comanda-dishes">
-                {salonItems.map(p=>(
-                  <MenuItem key={p.id} p={p} qty={qtyByProduct[p.id]??0} currencySymbol={currencySymbol} onPick={onPick} onRemove={onRemove} variant={variant}/>
-                ))}
-              </div>
-              {salonTotal>SALON_PAGE_SIZE&&(
-                <footer className="comanda-catalog-pagination">
-                  <span>Mostrando {salonStart}–{salonEnd} de {salonTotal}</span>
-                  <nav aria-label="Paginación de la carta">
-                    <button type="button" disabled={page<=1} onClick={()=>setPage(value=>Math.max(1,value-1))} aria-label="Página anterior">
-                      <Icon name="chevronLeft" size={14}/>
-                      <span>Anterior</span>
-                    </button>
-                    <b>{page} / {salonPages}</b>
-                    <button type="button" disabled={page>=salonPages} onClick={()=>setPage(value=>Math.min(salonPages,value+1))} aria-label="Página siguiente">
-                      <span>Siguiente</span>
-                      <Icon name="chevron" size={14}/>
-                    </button>
-                  </nav>
-                </footer>
-              )}
-            </>
+            <div className="comanda-dishes">
+              {salonItems.map(p=>(
+                <MenuItem key={p.id} p={p} qty={qtyByProduct[p.id]??0} currencySymbol={currencySymbol} onPick={onPick} onRemove={onRemove} variant={variant}/>
+              ))}
+            </div>
           ):(
             <div className="catalog-state empty-catalog-card"><span><Icon name="search"/></span><b>Sin platos</b><p>{searching?"Ningún producto coincide con la búsqueda.":"No hay productos activos para mostrar."}</p></div>
           )
@@ -132,6 +114,22 @@ export function ComandaCatalog({qtyByProduct,onPick,onRemove,currencySymbol,vari
           <div className="catalog-state empty-catalog-card"><span><Icon name="search"/></span><b>Sin platos</b><p>La carta aún no tiene productos activos.</p></div>
         )}
       </div>
+      {variant==="salon"&&salonItems.length>0&&salonTotal>SALON_PAGE_SIZE&&(
+        <footer className="comanda-catalog-pagination">
+          <span>Mostrando {salonStart}–{salonEnd} de {salonTotal}</span>
+          <nav aria-label="Paginación de la carta">
+            <button type="button" disabled={page<=1} onClick={()=>setPage(value=>Math.max(1,value-1))} aria-label="Página anterior">
+              <Icon name="chevronLeft" size={14}/>
+              <span>Anterior</span>
+            </button>
+            <b>{page} / {salonPages}</b>
+            <button type="button" disabled={page>=salonPages} onClick={()=>setPage(value=>Math.min(salonPages,value+1))} aria-label="Página siguiente">
+              <span>Siguiente</span>
+              <Icon name="chevron" size={14}/>
+            </button>
+          </nav>
+        </footer>
+      )}
     </div>
   );
 }
