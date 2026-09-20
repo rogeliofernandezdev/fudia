@@ -1,3 +1,6 @@
+ALTER TABLE order_items
+  DROP CONSTRAINT IF EXISTS order_items_product_required;
+
 DROP TABLE IF EXISTS stock_movements;
 DROP TABLE IF EXISTS inventory_entries;
 
