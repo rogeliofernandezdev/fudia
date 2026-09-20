@@ -27,6 +27,8 @@ export type InventoryProductOption={
   name:string;
   categoryName:string|null;
   quantityControl:"none"|"inventory";
+  unit:string|null;
+  minimumStock:string|null;
 };
 
 export type InventoryEntryDraft={
