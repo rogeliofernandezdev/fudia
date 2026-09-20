@@ -846,6 +846,7 @@
 }
 
 .salon-comanda-shell .comanda-menu-salon .comanda-dish-modern-media{
+  position:relative;
   width:92px;
   height:100%;
   min-height:102px;
@@ -863,6 +864,8 @@
 }
 
 .salon-comanda-shell .comanda-menu-salon .comanda-dish-modern-media img{
+  position:absolute;
+  inset:0;
   width:100%;
   height:100%;
   min-height:102px;
