@@ -1,8 +1,8 @@
 "use client";
 
 import {useRef,useState} from "react";
-import {useQueries,useQuery} from "@tanstack/react-query";
-import {Icon,Pagination} from "@/design-system";
+import {useInfiniteQuery,useQueries,useQuery} from "@tanstack/react-query";
+import {Icon} from "@/design-system";
 import {apiFetch} from "@/shared/api/client";
 
 export type CatalogProduct={id:string;name:string;price:string;categoryId:string|null;imageUrl:string|null};
@@ -15,8 +15,6 @@ const money=(v:string)=>Number(v).toFixed(2);
 export function ComandaCatalog({qtyByProduct,onPick,onRemove,currencySymbol,variant="default"}:{qtyByProduct:Record<string,number>;onPick:(p:CatalogProduct)=>void;onRemove:(p:CatalogProduct)=>void;currencySymbol:string;variant?:"default"|"salon"}){
   const[pq,setPq]=useState("");
   const[cat,setCat]=useState("");
-  const[page,setPage]=useState(1);
-  const[pageSize,setPageSize]=useState(10);
   const scrollRef=useRef<HTMLDivElement>(null);
   const categories=useQuery({queryKey:["order-categories"],queryFn:()=>apiFetch<{items:{id:string;name:string}[]}>("categories?pageSize=100"),staleTime:60000});
   const cats=categories.data?.items??[];
@@ -25,13 +23,18 @@ export function ComandaCatalog({qtyByProduct,onPick,onRemove,currencySymbol,vari
   const todos=useQuery({queryKey:["order-catalog","todos"],queryFn:()=>apiFetch<ProductList>("products?status=active&page=1&pageSize=100"),enabled:variant==="default",staleTime:60000});
   const searching=pq.trim().length>0;
   const search=useQuery({queryKey:["order-catalog","search",pq],queryFn:()=>apiFetch<ProductList>(`products?status=active&q=${encodeURIComponent(pq.trim())}&page=1&pageSize=20`),enabled:variant==="default"&&searching,staleTime:60000});
-  const salonCatalog=useQuery({
-    queryKey:["order-catalog","salon",cat,pq.trim(),page,pageSize],
-    queryFn:()=>{
-      const filters=[`status=active`,`page=${page}`,`pageSize=${pageSize}`];
+  const salonCatalog=useInfiniteQuery({
+    queryKey:["order-catalog","salon",cat,pq.trim()],
+    queryFn:({pageParam})=>{
+      const filters=[`status=active`,`page=${pageParam}`,"pageSize=10"];
       if(cat)filters.push(`categoryId=${encodeURIComponent(cat)}`);
       if(searching)filters.push(`q=${encodeURIComponent(pq.trim())}`);
       return apiFetch<ProductList>(`products?${filters.join("&")}`);
+    },
+    initialPageParam:1,
+    getNextPageParam:(lastPage,allPages)=>{
+      const loaded=allPages.reduce((sum,current)=>sum+current.items.length,0);
+      return loaded<lastPage.total?allPages.length+1:undefined;
     },
     enabled:variant==="salon",
     staleTime:60000,
@@ -50,19 +53,12 @@ export function ComandaCatalog({qtyByProduct,onPick,onRemove,currencySymbol,vari
   const single=searching||Boolean(cat);
   const visible=sections.filter(s=>single||s.loading||s.error||s.items.length>0);
   const totalItems=sections.reduce((a,s)=>a+s.items.length,0);
-  const salonItems=salonCatalog.data?.items??[];
-  const salonTotal=salonCatalog.data?.total??0;
+  const salonItems=[...new Map((salonCatalog.data?.pages??[]).flatMap(current=>current.items).map(product=>[product.id,product])).values()];
+  const salonTotal=salonCatalog.data?.pages[0]?.total??0;
+  const salonRemaining=Math.max(0,salonTotal-salonItems.length);
+  const salonNextCount=Math.min(10,salonRemaining);
   const displayCount=variant==="salon"?salonTotal:totalItems;
   const booting=variant==="salon"?salonCatalog.isLoading:(!searching&&(categories.isLoading||(cats.length>0&&perCat.every(q=>q.isLoading))));
-  const goToPage=(next:number)=>{
-    setPage(next);
-    scrollRef.current?.scrollTo({top:0,behavior:"smooth"});
-  };
-  const changePageSize=(next:number)=>{
-    setPageSize(next);
-    setPage(1);
-    scrollRef.current?.scrollTo({top:0,behavior:"smooth"});
-  };
 
   return(
     <div className={"comanda-menu comanda-menu-paged"+(variant==="salon"?" comanda-menu-salon":"")}>
@@ -72,13 +68,13 @@ export function ComandaCatalog({qtyByProduct,onPick,onRemove,currencySymbol,vari
           <span className="comanda-menu-count">{displayCount} platos</span>
         </div>
         <div className="comanda-search-bar">
-          <label className="comanda-search"><Icon name="search" size={18}/><input value={pq} onChange={e=>{setPq(e.target.value);setPage(1)}} placeholder="Buscar en la carta..."/></label>
-          {pq&&<button type="button" className="comanda-clear-search" onClick={()=>{setPq("");setPage(1)}} aria-label="Limpiar búsqueda"><Icon name="close" size={15}/></button>}
+          <label className="comanda-search"><Icon name="search" size={18}/><input value={pq} onChange={e=>{setPq(e.target.value);scrollRef.current?.scrollTo({top:0})}} placeholder="Buscar en la carta..."/></label>
+          {pq&&<button type="button" className="comanda-clear-search" onClick={()=>{setPq("");scrollRef.current?.scrollTo({top:0})}} aria-label="Limpiar búsqueda"><Icon name="close" size={15}/></button>}
         </div>
         <div className="comanda-seg" role="tablist" aria-label="Categorías de la carta">
-          <button type="button" role="tab" aria-selected={cat===""&&!searching} className={cat===""&&!searching?"active":""} onClick={()=>{setCat("");setPq("");setPage(1)}}>Todos</button>
+          <button type="button" role="tab" aria-selected={cat===""&&!searching} className={cat===""&&!searching?"active":""} onClick={()=>{setCat("");setPq("");scrollRef.current?.scrollTo({top:0})}}>Todos</button>
           {cats.map(c=>(
-            <button type="button" role="tab" key={c.id} aria-selected={cat===c.id} className={cat===c.id?"active":""} onClick={()=>{setCat(c.id);setPq("");setPage(1)}}>{c.name}</button>
+            <button type="button" role="tab" key={c.id} aria-selected={cat===c.id} className={cat===c.id?"active":""} onClick={()=>{setCat(c.id);setPq("");scrollRef.current?.scrollTo({top:0})}}>{c.name}</button>
           ))}
         </div>
       </div>
@@ -89,11 +85,21 @@ export function ComandaCatalog({qtyByProduct,onPick,onRemove,currencySymbol,vari
           ):salonCatalog.isError?(
             <div className="catalog-state empty-catalog-card"><span><Icon name="alert"/></span><b>No pudimos cargar la carta</b><p>{salonCatalog.error.message}</p></div>
           ):salonItems.length?(
-            <div className="comanda-dishes">
-              {salonItems.map(p=>(
-                <MenuItem key={p.id} p={p} qty={qtyByProduct[p.id]??0} currencySymbol={currencySymbol} onPick={onPick} onRemove={onRemove} variant={variant}/>
-              ))}
-            </div>
+            <>
+              <div className="comanda-dishes">
+                {salonItems.map(p=>(
+                  <MenuItem key={p.id} p={p} qty={qtyByProduct[p.id]??0} currencySymbol={currencySymbol} onPick={onPick} onRemove={onRemove} variant={variant}/>
+                ))}
+              </div>
+              {salonCatalog.hasNextPage&&(
+                <div className="salon-comanda-load-more">
+                  <span aria-live="polite"><b>{salonItems.length}</b> de {salonTotal} platos</span>
+                  <button type="button" onClick={()=>salonCatalog.fetchNextPage()} disabled={salonCatalog.isFetchingNextPage}>
+                    {salonCatalog.isFetchingNextPage?"Cargando…":`Ver ${salonNextCount} más`}
+                  </button>
+                </div>
+              )}
+            </>
           ):(
             <div className="catalog-state empty-catalog-card"><span><Icon name="search"/></span><b>Sin platos</b><p>{searching?"Ningún producto coincide con la búsqueda.":"No hay productos activos para mostrar."}</p></div>
           )
@@ -121,11 +127,6 @@ export function ComandaCatalog({qtyByProduct,onPick,onRemove,currencySymbol,vari
           <div className="catalog-state empty-catalog-card"><span><Icon name="search"/></span><b>Sin platos</b><p>La carta aún no tiene productos activos.</p></div>
         )}
       </div>
-      {variant==="salon"&&salonItems.length>0&&(
-        <div className="salon-comanda-pagination-shell">
-          <Pagination page={page} size={pageSize} total={salonTotal} onPage={goToPage} onSize={changePageSize} mode="simple"/>
-        </div>
-      )}
     </div>
   );
 }
