@@ -1212,3 +1212,460 @@
     width:88px;
   }
 }
+
+
+/* ── Selector principal: Platos / Menús y combos ── */
+.salon-comanda-shell .comanda-source-tabs{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:6px;
+  margin:10px 0 8px;
+  padding:4px;
+  border:1px solid #dce1fb;
+  border-radius:10px;
+  background:#f3f5ff;
+}
+
+.salon-comanda-shell .comanda-source-tabs button{
+  min-height:var(--control-height);
+  padding:0 14px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  border:1px solid transparent;
+  border-radius:6px;
+  background:#fff;
+  color:var(--ink-600,#475467);
+  font-size:10.5px;
+  font-weight:800;
+  cursor:pointer;
+  transition:background .15s ease,border-color .15s ease,color .15s ease,box-shadow .15s ease;
+}
+
+.salon-comanda-shell .comanda-source-tabs button:hover{
+  border-color:#cbd2f4;
+  background:var(--primary-100,#eef0ff);
+  color:var(--ops-700,#3946b8);
+}
+
+.salon-comanda-shell .comanda-source-tabs button.active{
+  border-color:var(--primary-600,#4654cd);
+  background:var(--primary-600,#4654cd);
+  color:#fff;
+  box-shadow:0 3px 9px rgba(70,84,205,.18);
+}
+
+/* ── Cards de menús y combos ── */
+.salon-comanda-shell .comanda-combo-copy{
+  min-width:0;
+  display:grid;
+  align-content:start;
+  gap:3px;
+}
+
+.salon-comanda-shell .comanda-combo-copy>small{
+  display:-webkit-box;
+  overflow:hidden;
+  color:var(--ink-600,#475467);
+  font-size:9.5px;
+  font-weight:600;
+  line-height:1.35;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:2;
+}
+
+.salon-comanda-shell .comanda-combo-copy>em{
+  color:var(--primary-600,#4654cd);
+  font-size:9px;
+  font-style:normal;
+  font-weight:800;
+}
+
+.salon-comanda-shell .comanda-combo-card .comanda-dish-price{
+  font-size:11.5px!important;
+}
+
+/* ── Composición del combo dentro del resumen ── */
+.salon-comanda-line.combo{
+  border-color:#d8def7;
+  background:#fdfdff;
+}
+
+.salon-comanda-line-selections{
+  margin-top:4px;
+  display:grid;
+  gap:2px;
+}
+
+.salon-comanda-line-selections span{
+  color:var(--ink-600,#475467);
+  font-size:9.5px;
+  line-height:1.35;
+}
+
+.salon-comanda-line-selections span b{
+  color:var(--ink-950,#101828);
+  font-weight:800;
+}
+
+.salon-comanda-change-combo{
+  width:max-content;
+  min-height:28px;
+  padding:0 9px;
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  border:1px solid #d9def5;
+  border-radius:6px;
+  background:var(--primary-100,#eef0ff);
+  color:var(--ops-700,#3946b8);
+  font-size:9.5px;
+  font-weight:800;
+  cursor:pointer;
+}
+
+.salon-comanda-change-combo:hover{
+  border-color:#bfc8ef;
+  background:#e5e9ff;
+}
+
+/* ── Configurador de menú / combo ── */
+.combo-config-backdrop{
+  position:fixed;
+  inset:0;
+  z-index:150;
+  padding:20px;
+  display:grid;
+  place-items:center;
+  background:rgba(16,24,40,.56);
+  backdrop-filter:blur(2px);
+}
+
+.combo-config-modal{
+  width:min(640px,100%);
+  max-height:min(88vh,780px);
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  border:1px solid #dfe3ef;
+  border-radius:14px;
+  background:#fff;
+  box-shadow:0 28px 80px rgba(8,20,45,.3);
+}
+
+.combo-config-head{
+  padding:16px 18px 14px;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) var(--control-height);
+  align-items:start;
+  gap:12px;
+  flex-shrink:0;
+  border-bottom:1px solid #e4e7ec;
+  background:#fff;
+}
+
+.combo-config-head>div{
+  min-width:0;
+}
+
+.combo-config-head small{
+  color:var(--primary-600,#4654cd);
+  font-size:8.5px;
+  font-weight:850;
+  letter-spacing:.1em;
+}
+
+.combo-config-head h3{
+  margin:3px 0 0;
+  color:var(--ink-950,#101828);
+  font-size:18px;
+  font-weight:850;
+  letter-spacing:-.02em;
+}
+
+.combo-config-head p{
+  margin:4px 0 0;
+  color:var(--ink-600,#475467);
+  font-size:10.5px;
+  line-height:1.45;
+}
+
+.combo-config-head>button{
+  width:var(--control-height);
+  height:var(--control-height);
+  display:grid;
+  place-items:center;
+  border:1px solid #e4e7ec;
+  border-radius:6px;
+  background:#fff;
+  color:var(--ink-600,#475467);
+  cursor:pointer;
+}
+
+.combo-config-head>button:hover{
+  background:#f2f4f7;
+  color:var(--ink-950,#101828);
+}
+
+.combo-config-body{
+  min-height:0;
+  padding:14px 18px 18px;
+  display:grid;
+  gap:12px;
+  overflow-y:auto;
+  background:var(--cloud-50,#f7f8fc);
+}
+
+.combo-config-group{
+  overflow:hidden;
+  border:1px solid #e4e7ec;
+  border-radius:12px;
+  background:#fff;
+}
+
+.combo-config-group>header{
+  padding:10px 12px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  border-bottom:1px solid #eef0f4;
+  background:#fff;
+}
+
+.combo-config-group>header>div{
+  display:grid;
+  gap:1px;
+}
+
+.combo-config-group h4{
+  margin:0;
+  color:var(--ink-950,#101828);
+  font-size:12px;
+  font-weight:850;
+}
+
+.combo-config-group header small{
+  color:var(--ink-600,#475467);
+  font-size:9px;
+  font-weight:650;
+}
+
+.combo-config-group header>span{
+  min-width:34px;
+  height:24px;
+  padding:0 7px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:999px;
+  background:var(--primary-100,#eef0ff);
+  color:var(--ops-700,#3946b8);
+  font-size:9px;
+  font-weight:850;
+  font-variant-numeric:tabular-nums;
+}
+
+.combo-config-options{
+  padding:8px;
+  display:grid;
+  gap:6px;
+}
+
+.combo-config-options>button{
+  min-height:46px;
+  padding:8px 10px;
+  display:grid;
+  grid-template-columns:28px minmax(0,1fr) auto;
+  align-items:center;
+  gap:9px;
+  border:1px solid #e4e7ec;
+  border-radius:8px;
+  background:#fff;
+  color:var(--ink-950,#101828);
+  text-align:left;
+  cursor:pointer;
+  transition:border-color .15s ease,background .15s ease,box-shadow .15s ease;
+}
+
+.combo-config-options>button:hover:not(:disabled){
+  border-color:#c7ceef;
+  background:#fbfbff;
+}
+
+.combo-config-options>button.active{
+  border-color:var(--primary-600,#4654cd);
+  background:var(--primary-100,#eef0ff);
+  box-shadow:0 0 0 2px rgba(70,84,205,.08);
+}
+
+.combo-config-options>button:disabled{
+  opacity:.5;
+  cursor:not-allowed;
+  background:#f7f8fa;
+}
+
+.combo-option-check{
+  width:24px;
+  height:24px;
+  display:grid;
+  place-items:center;
+  border:1px solid #d0d5dd;
+  border-radius:7px;
+  background:#fff;
+  color:#fff;
+}
+
+.combo-config-options>button.active .combo-option-check{
+  border-color:var(--primary-600,#4654cd);
+  background:var(--primary-600,#4654cd);
+}
+
+.combo-option-copy{
+  min-width:0;
+  display:grid;
+  gap:1px;
+}
+
+.combo-option-copy b{
+  overflow:hidden;
+  font-size:10.5px;
+  font-weight:800;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.combo-option-copy small{
+  color:var(--danger,#c9362b);
+  font-size:8.5px;
+  font-weight:750;
+}
+
+.combo-option-price{
+  color:var(--ink-600,#475467);
+  font-family:var(--font-geist-mono,ui-monospace,monospace);
+  font-size:9.5px;
+  font-weight:750;
+  white-space:nowrap;
+}
+
+.combo-config-foot{
+  padding:12px 18px 14px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  flex-shrink:0;
+  border-top:1px solid #e4e7ec;
+  background:#fff;
+}
+
+.combo-config-foot>div{
+  display:grid;
+  gap:1px;
+}
+
+.combo-config-foot small{
+  color:var(--ink-600,#475467);
+  font-size:9px;
+  font-weight:700;
+}
+
+.combo-config-foot strong{
+  color:var(--ops-700,#3946b8);
+  font-family:var(--font-geist-mono,ui-monospace,monospace);
+  font-size:20px;
+  font-weight:850;
+  letter-spacing:-.03em;
+}
+
+.combo-config-foot .button{
+  min-height:44px;
+  height:44px;
+  border-radius:10px;
+}
+
+.combo-config-state{
+  min-height:180px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  color:var(--ink-600,#475467);
+  text-align:center;
+}
+
+.combo-config-state b{
+  color:var(--ink-950,#101828);
+  font-size:11px;
+}
+
+.combo-config-state p{
+  max-width:320px;
+  margin:0;
+  font-size:10px;
+}
+
+.combo-config-spinner{
+  width:24px;
+  height:24px;
+  border:2px solid #d9def5;
+  border-top-color:var(--primary-600,#4654cd);
+  border-radius:50%;
+  animation:salon-combo-spin .7s linear infinite;
+}
+
+@keyframes salon-combo-spin{to{transform:rotate(360deg)}}
+
+@media(max-width:600px){
+  .salon-comanda-shell .comanda-source-tabs{
+    margin-top:8px;
+  }
+
+  .salon-comanda-shell .comanda-source-tabs button{
+    padding:0 9px;
+    font-size:9.5px;
+  }
+
+  .combo-config-backdrop{
+    padding:8px;
+    place-items:end center;
+  }
+
+  .combo-config-modal{
+    width:100%;
+    max-height:92vh;
+    border-radius:16px 16px 10px 10px;
+  }
+
+  .combo-config-head{
+    padding:13px 14px 11px;
+  }
+
+  .combo-config-body{
+    padding:10px 12px 14px;
+  }
+
+  .combo-config-foot{
+    padding:10px 12px max(12px,env(safe-area-inset-bottom));
+  }
+}
+
+@media(max-width:390px){
+  .combo-config-foot{
+    align-items:stretch;
+    flex-direction:column;
+  }
+
+  .combo-config-foot .button{
+    width:100%;
+  }
+}
+
+@media(prefers-reduced-motion:reduce){
+  .combo-config-spinner{
+    animation:none;
+  }
+}
