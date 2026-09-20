@@ -324,6 +324,15 @@ function ComandaView({initial,allTables,busy,currencySymbol,close,save,notify}:{
               <span>Mesa</span>
               <strong>{tableName||"Pendiente de seleccionar"}</strong>
             </div>
+            <label className="salon-comanda-context-customer">
+              <span>Cliente / familia <small>Opcional</small></span>
+              <Input
+                value={v.customerName}
+                onChange={e=>setV({...v,customerName:e.target.value})}
+                placeholder="Ej. Familia Quispe"
+                aria-label="Nombre del cliente o familia"
+              />
+            </label>
             <div className="salon-comanda-context-stat">
               <small>Personas</small>
               <span className="salon-comanda-context-stat-value">
