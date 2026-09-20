@@ -270,14 +270,20 @@ export function ComboConfigurator({comboId,initialSelections=[],editing=false,cu
       <section className="combo-config-modal" role="dialog" aria-modal="true" aria-labelledby="combo-config-title">
         <header className="combo-config-head">
           <div>
-            <small>MENÚ O COMBO</small>
-            <h3 id="combo-config-title">{data?.name??"Configurar selección"}</h3>
+            <small>ELIGE LAS OPCIONES</small>
+            <h3 id="combo-config-title">{data?.name??"Elegir opciones"}</h3>
             {data?.description&&<p>{data.description}</p>}
           </div>
-          <button type="button" aria-label="Cerrar configuración" onClick={onClose}><Icon name="close" size={17}/></button>
+          <button type="button" aria-label="Cerrar selección de opciones" onClick={onClose}><Icon name="close" size={17}/></button>
         </header>
 
         <div className="combo-config-body">
+          {!combo.isLoading&&!combo.isError&&data&&(
+            <div className="combo-config-guide">
+              <span><Icon name="combo" size={17}/></span>
+              <div><b>Arma este menú</b><p>Elige las opciones de cada parte. Verás todas las alternativas disponibles antes de agregarlo a la comanda.</p></div>
+            </div>
+          )}
           {combo.isLoading?(
             <div className="combo-config-state"><span className="combo-config-spinner"/><b>Cargando opciones…</b></div>
           ):combo.isError?(
@@ -286,11 +292,15 @@ export function ComboConfigurator({comboId,initialSelections=[],editing=false,cu
             data.groups.map(group=>{
               const selectedIds=selected[group.id]??[];
               const minimum=group.required?Math.max(1,group.minSelections):group.minSelections;
+              const ready=selectedIds.length>=minimum&&selectedIds.length<=group.maxSelections;
               return(
                 <section className="combo-config-group" key={group.id}>
                   <header>
-                    <div><h4>{group.name}</h4><small>{minimum>0?`Elige ${minimum}${group.maxSelections>minimum?` a ${group.maxSelections}`:""}`:"Opcional"}</small></div>
-                    <span>{selectedIds.length}/{group.maxSelections}</span>
+                    <div>
+                      <h4>{group.name}</h4>
+                      <small>{minimum>0?`Elige ${minimum}${group.maxSelections>minimum?` a ${group.maxSelections}`:""} de ${group.options.length}`:`${group.options.length} opciones · elección opcional`}</small>
+                    </div>
+                    <span className={ready?"ready":"pending"}>{ready?<><Icon name="check" size={12}/>Listo</>:<>{selectedIds.length}/{minimum}</>}</span>
                   </header>
                   <div className="combo-config-options">
                     {group.options.map(option=>{
@@ -311,9 +321,15 @@ export function ComboConfigurator({comboId,initialSelections=[],editing=false,cu
         </div>
 
         <footer className="combo-config-foot">
-          <div><small>Total del menú</small><strong>{currencySymbol} {money(finalPrice)}</strong></div>
+          <div className="combo-config-total"><small>Total del menú</small><strong>{currencySymbol} {money(finalPrice)}</strong></div>
+          {!editing&&(
+            <div className="combo-config-multiple">
+              <Icon name="users" size={15}/>
+              <span><b>¿Más de un menú?</b><small>Mismas opciones: aumenta la cantidad en la comanda. Opciones distintas: agrega otro menú por separado.</small></span>
+            </div>
+          )}
           <Button icon={editing?"save":"plus"} disabled={!valid||combo.isLoading||combo.isError} onClick={()=>data&&onConfirm({productId:data.id,name:data.name,unitPrice:finalPrice,selections})}>
-            {editing?"Guardar opciones":"Agregar a comanda"}
+            {editing?"Guardar opciones":"Agregar menú"}
           </Button>
         </footer>
       </section>
@@ -325,7 +341,7 @@ function ComboItem({combo,qty,currencySymbol,onConfigure}:{combo:ComboSummary;qt
   return(
     <article className={"comanda-dish comanda-dish-modern comanda-combo-card"+(qty>0?" picked":"")} aria-label={combo.name}>
       <span className={"comanda-dish-thumb comanda-dish-modern-media"+(combo.imageUrl?" has-image":"")}>
-        <span className="comanda-dish-image-fallback"><Icon name="menu" size={24}/><small>Menú</small></span>
+        <span className="comanda-dish-image-fallback"><Icon name="combo" size={24}/><small>Menú</small></span>
         {combo.imageUrl&&<img src={combo.imageUrl} alt={combo.name} loading="lazy" onError={e=>{e.currentTarget.hidden=true}}/>}
         {qty>0&&<b className="comanda-dish-selected-qty">{qty}×</b>}
       </span>
@@ -337,8 +353,8 @@ function ComboItem({combo,qty,currencySymbol,onConfigure}:{combo:ComboSummary;qt
         </div>
         <div className="comanda-dish-modern-footer">
           <b className="comanda-dish-price">Desde {currencySymbol} {money(combo.price)}</b>
-          <button type="button" className="comanda-dish-add-button" onClick={onConfigure} aria-label={`Configurar ${combo.name}`}>
-            <Icon name="plus" size={14}/><span>Configurar</span>
+          <button type="button" className="comanda-dish-add-button" onClick={onConfigure} aria-label={`Elegir opciones de ${combo.name}`}>
+            <Icon name="combo" size={14}/><span>Elegir opciones</span>
           </button>
         </div>
       </div>
