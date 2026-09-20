@@ -50,6 +50,11 @@ func TestNormalizeInventoryEntryValidatesPackageConversion(t *testing.T) {
 		t.Fatal("expected package factor <= 1 to be rejected")
 	}
 	if _, invalid := normalizeInventoryEntry(inventoryEntryInput{
+		ProductID: "product-1", Quantity: 1.5, PresentationType: "box", UnitsPerPresentation: 12,
+	}); invalid == "" {
+		t.Fatal("expected fractional package quantity to be rejected")
+	}
+	if _, invalid := normalizeInventoryEntry(inventoryEntryInput{
 		ProductID: "product-1", Quantity: 5, PresentationType: "pallet", UnitsPerPresentation: 20,
 	}); invalid == "" {
 		t.Fatal("expected unsupported presentation type to be rejected")
