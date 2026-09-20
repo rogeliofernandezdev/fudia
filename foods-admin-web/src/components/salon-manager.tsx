@@ -285,8 +285,6 @@ function ComandaView({initial,allTables,busy,currencySymbol,close,save,notify}:{
   const freeTables=allTables.filter(t=>!t.order||t.id===v.tableId);
   const selTable=allTables.find(t=>t.id===v.tableId);
   const tableName=selTable?.name??"";
-  const tableLabel=selTable?(selTable.zone?selTable.zone+" · "+selTable.name:selTable.name):"";
-  const tableDescription=selTable?(selTable.zone?selTable.zone+" · "+selTable.seats+" personas":selTable.seats+" personas"):"Selecciona una mesa para continuar";
   const qtyByProduct=Object.fromEntries(v.lines.map(l=>[l.productId,l.qty]));
   const patchLine=(i:number,p:Partial<LineDraft>)=>setV({...v,lines:v.lines.map((l,n)=>n===i?{...l,...p}:l)});
   const tap=(p:Product)=>setV(prev=>{const i=prev.lines.findIndex(l=>l.productId===p.id);if(i>=0)return{...prev,lines:prev.lines.map((l,n)=>n===i?{...l,qty:l.qty+1}:l)};return{...prev,lines:[...prev.lines,{productId:p.id,name:p.name,qty:1,unitPrice:Number(p.price)||0,note:""}]}});
@@ -309,7 +307,6 @@ function ComandaView({initial,allTables,busy,currencySymbol,close,save,notify}:{
           <div className="salon-comanda-heading">
             <span className="salon-comanda-kicker">Nueva comanda</span>
             <h2>{tableName||"Selecciona una mesa"}</h2>
-            <p>{tableDescription}</p>
           </div>
         </div>
         <div className="salon-comanda-header-actions">
@@ -326,7 +323,7 @@ function ComandaView({initial,allTables,busy,currencySymbol,close,save,notify}:{
             <span className="salon-comanda-context-icon"><Icon name="utensils" size={18}/></span>
             <div className="salon-comanda-context-copy">
               <span>Mesa seleccionada</span>
-              <strong>{tableLabel||"Pendiente de seleccionar"}</strong>
+              <strong>{tableName||"Pendiente de seleccionar"}</strong>
             </div>
             <div className="salon-comanda-context-stat">
               <small>Personas</small>
@@ -353,21 +350,15 @@ function ComandaView({initial,allTables,busy,currencySymbol,close,save,notify}:{
             </button>
           </header>
 
-          <div className="salon-comanda-table-card">
-            <span className="salon-comanda-table-icon"><Icon name="utensils" size={17}/></span>
-            {v.tableId?(
-              <div className="salon-comanda-table-copy">
-                <small>Mesa</small>
-                <strong>{tableLabel}</strong>
-                <span>{selTable?.seats??"—"} personas</span>
-              </div>
-            ):(
+          {!v.tableId&&(
+            <div className="salon-comanda-table-card">
+              <span className="salon-comanda-table-icon"><Icon name="utensils" size={17}/></span>
               <Select className="salon-comanda-table-select" value={v.tableId} onChange={e=>setV({...v,tableId:e.target.value})} aria-label="Mesa">
                 <option value="">Selecciona una mesa</option>
                 {freeTables.map(t=><option key={t.id} value={t.id}>{t.zone?t.zone+" · ":""}{t.name}</option>)}
               </Select>
-            )}
-          </div>
+            </div>
+          )}
 
           <div className="salon-comanda-summary-scroll">
             {!v.lines.length?(
