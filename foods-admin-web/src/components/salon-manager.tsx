@@ -58,6 +58,24 @@ function timeAgo(iso:string){
 }
 const money=(v:string|number)=>Number(v).toFixed(2);
 const emptyDraft=(tableId=""):Draft=>({channel:"salon",customerName:"",customerPhone:"",address:"",reference:"",tableId,notes:"",deliveryFee:"0",lines:[]});
+const editableOrderStatus=(status:string)=>status==="nuevo"||status==="confirmado";
+const draftFromOrder=(o:Order):Draft=>({
+  channel:o.channel||"salon",
+  customerName:o.customerName||"",
+  customerPhone:o.customerPhone||"",
+  address:o.address||"",
+  reference:o.reference||"",
+  tableId:o.tableId||"",
+  notes:o.notes||"",
+  deliveryFee:o.deliveryFee||"0",
+  lines:(o.items??[]).map(it=>({
+    productId:it.productId,
+    name:it.name,
+    qty:Number(it.qty)||1,
+    unitPrice:Number(it.unitPrice)||0,
+    note:it.note||"",
+  })),
+});
 
 /* ═══════════════════════════════════════════════════
    SalonManager — vista operativa del mozo
@@ -72,6 +90,7 @@ export function SalonManager(){
   const[q,setQ]=useState("");
   const[detailId,setDetailId]=useState<string|null>(null);
   const[draft,setDraft]=useState<Draft|null>(null);
+  const[editingOrderId,setEditingOrderId]=useState<string|null>(null);
   const[cancelTarget,setCancelTarget]=useState<Order|null>(null);
   const[zone,setZone]=useState("");
 
@@ -98,8 +117,23 @@ export function SalonManager(){
   });
   const create=useMutation({
     mutationFn:(v:Draft)=>apiFetch<Order>("orders",{method:"POST",body:JSON.stringify({channel:v.channel,customerName:v.customerName,customerPhone:v.customerPhone,address:v.address,reference:v.reference,tableId:v.tableId,notes:v.notes,deliveryFee:Number(v.deliveryFee)||0,items:v.lines.map(l=>({productId:l.productId,name:l.name,qty:l.qty,unitPrice:l.unitPrice,note:l.note}))})}),
-    onSuccess:o=>{setDraft(null);setDetailId(null);invalidate();notify({tone:"success",title:"Mesa abierta",message:`Pedido ${o.code} registrado.`})},
+    onSuccess:o=>{setDraft(null);setEditingOrderId(null);setDetailId(null);invalidate();notify({tone:"success",title:"Mesa abierta",message:`Pedido ${o.code} registrado.`})},
     onError:e=>notify({tone:"danger",title:"Error",message:e.message}),
+  });
+  const update=useMutation({
+    mutationFn:({id,v}:{id:string;v:Draft})=>apiFetch<Order>(`orders/${id}`,{method:"PATCH",body:JSON.stringify({customerName:v.customerName,customerPhone:v.customerPhone,address:v.address,reference:v.reference,notes:v.notes,deliveryFee:Number(v.deliveryFee)||0,items:v.lines.map(l=>({productId:l.productId,name:l.name,qty:l.qty,unitPrice:l.unitPrice,note:l.note}))})}),
+    onSuccess:o=>{
+      setDraft(null);
+      setEditingOrderId(null);
+      setDetailId(null);
+      void qc.invalidateQueries({queryKey:["salon-floor"]});
+      void qc.invalidateQueries({queryKey:["order",o.id]});
+      notify({tone:"success",title:"Comanda actualizada",message:`Pedido ${o.code} guardado correctamente.`});
+    },
+    onError:e=>{
+      void qc.invalidateQueries({queryKey:["salon-floor"]});
+      notify({tone:"danger",title:"No se pudo guardar",message:e.message});
+    },
   });
   const cancel=useMutation({
     mutationFn:(o:Order)=>apiFetch<Order>(`orders/${o.id}/status`,{method:"PATCH",body:JSON.stringify({status:"cancelado"})}),
@@ -117,6 +151,17 @@ export function SalonManager(){
   });
   const occupiedCount=tables.filter(t=>t.order).length;
   const freeCount=tables.length-occupiedCount;
+  const closeDraft=()=>{setDraft(null);setEditingOrderId(null)};
+  const openNewDraft=(tableId:string)=>{setEditingOrderId(null);setDraft(emptyDraft(tableId))};
+  const editOrder=(o:Order)=>{
+    if(!editableOrderStatus(o.status)){
+      notify({tone:"danger",title:"Comanda no editable",message:"Solo se puede editar un pedido en estado Nuevo o Confirmado."});
+      return;
+    }
+    setEditingOrderId(o.id);
+    setDraft(draftFromOrder(o));
+    setDetailId(null);
+  };
 
   return(
     <>
@@ -175,7 +220,7 @@ export function SalonManager(){
                 <button
                   key={t.id}
                   className={`salon-table ${tableState}`}
-                  onClick={()=>o?setDetailId(o.id):canManage&&setDraft(emptyDraft(t.id))}
+                  onClick={()=>o?setDetailId(o.id):canManage&&openNewDraft(t.id)}
                   disabled={!o&&!canManage}
                   aria-label={`Mesa ${t.name}${o?`, ocupada, pedido ${o.code}`:", libre"}`}
                 >
@@ -234,15 +279,16 @@ export function SalonManager(){
         </>
       )}
 
-      {/* Comanda nueva */}
+      {/* Nueva / edición de comanda */}
       {draft&&(
         <ComandaView
           initial={draft}
+          mode={editingOrderId?"edit":"create"}
           allTables={tables}
-          busy={create.isPending}
+          busy={editingOrderId?update.isPending:create.isPending}
           currencySymbol={settings.currencySymbol}
-          close={()=>setDraft(null)}
-          save={v=>create.mutate(v)}
+          close={closeDraft}
+          save={v=>editingOrderId?update.mutate({id:editingOrderId,v}):create.mutate(v)}
           notify={notify}
         />
       )}
@@ -258,6 +304,7 @@ export function SalonManager(){
           busy={advance.isPending}
           close={()=>setDetailId(null)}
           advance={st=>advance.mutate({id:detailId,status:st})}
+          edit={editOrder}
           cancel={o=>setCancelTarget(o)}
         />
       )}
@@ -279,7 +326,8 @@ export function SalonManager(){
 /* ═══════════════════════════════════════════════════
    ComandaView — toma de pedido
 ═══════════════════════════════════════════════════ */
-function ComandaView({initial,allTables,busy,currencySymbol,close,save,notify}:{initial:Draft;allTables:FloorTable[];busy:boolean;currencySymbol:string;close:()=>void;save:(v:Draft)=>void;notify:(n:{tone:"danger"|"success";title:string;message:string})=>void}){
+function ComandaView({initial,mode,allTables,busy,currencySymbol,close,save,notify}:{initial:Draft;mode:"create"|"edit";allTables:FloorTable[];busy:boolean;currencySymbol:string;close:()=>void;save:(v:Draft)=>void;notify:(n:{tone:"danger"|"success";title:string;message:string})=>void}){
+  const editing=mode==="edit";
   const[v,setV]=useState(initial);
   const[ticketOpen,setTicketOpen]=useState(false);
   const[focusNoteProductId,setFocusNoteProductId]=useState<string|null>(null);
@@ -312,14 +360,14 @@ function ComandaView({initial,allTables,busy,currencySymbol,close,save,notify}:{
     save(v);
   };
   return(
-    <div className="salon-comanda-shell" role="dialog" aria-modal="true" aria-label="Nueva comanda">
+    <div className="salon-comanda-shell" role="dialog" aria-modal="true" aria-label={editing?"Editar comanda":"Nueva comanda"}>
       <header className="salon-comanda-header">
         <div className="salon-comanda-header-main">
           <button type="button" className="salon-comanda-icon-button" aria-label="Volver al salón" onClick={close}>
             <Icon name="chevronLeft" size={20}/>
           </button>
           <div className="salon-comanda-heading">
-            <h2>Nueva comanda</h2>
+            <h2>{editing?"Editar comanda":"Nueva comanda"}</h2>
           </div>
         </div>
         <div className="salon-comanda-header-actions">
@@ -427,8 +475,8 @@ function ComandaView({initial,allTables,busy,currencySymbol,close,save,notify}:{
               </div>
               <strong>{currencySymbol} {money(subtotal)}</strong>
             </div>
-            <Button icon="receipt" className="salon-comanda-submit" onClick={submit} disabled={busy||!v.lines.length}>
-              {busy?"Registrando…":"Registrar comanda"}
+            <Button icon={editing?"save":"receipt"} className="salon-comanda-submit" onClick={submit} disabled={busy||!v.lines.length}>
+              {busy?(editing?"Guardando…":"Registrando…"):(editing?"Guardar cambios":"Registrar comanda")}
             </Button>
           </footer>
         </aside>
@@ -447,7 +495,7 @@ function ComandaView({initial,allTables,busy,currencySymbol,close,save,notify}:{
         </button>
         {v.lines.length>0&&(
           <button type="button" className="salon-comanda-mobile-submit" onClick={submit} disabled={busy}>
-            {busy?"…":<><Icon name="receipt" size={14}/><span>Registrar</span></>}
+            {busy?"…":<><Icon name={editing?"save":"receipt"} size={14}/><span>{editing?"Guardar":"Registrar"}</span></>}
           </button>
         )}
       </div>
@@ -458,9 +506,10 @@ function ComandaView({initial,allTables,busy,currencySymbol,close,save,notify}:{
 /* ═══════════════════════════════════════════════════
    OrderDetail — detalle del pedido activo en mesa
 ═══════════════════════════════════════════════════ */
-function OrderDetail({loading,order,error,currencySymbol,canManage,busy,close,advance,cancel}:{loading:boolean;order?:Order;error?:string;currencySymbol:string;canManage:boolean;busy:boolean;close:()=>void;advance:(st:string)=>void;cancel:(o:Order)=>void}){
+function OrderDetail({loading,order,error,currencySymbol,canManage,busy,close,advance,edit,cancel}:{loading:boolean;order?:Order;error?:string;currencySymbol:string;canManage:boolean;busy:boolean;close:()=>void;advance:(st:string)=>void;edit:(o:Order)=>void;cancel:(o:Order)=>void}){
   const meta=order?statusMeta[order.status]??{label:order.status,tone:"gray" as const}:null;
   const action=order?nextAction(order):null;
+  const editable=Boolean(order&&editableOrderStatus(order.status));
   const itemCount=order?(order.items??[]).reduce((sum,it)=>sum+Number(it.qty||0),0):0;
   return(
     <div className="modal-backdrop modal-overlay-in">
@@ -559,6 +608,7 @@ function OrderDetail({loading,order,error,currencySymbol,canManage,busy,close,ad
             {canManage&&(
               <footer className="order-detail-actions salon-order-detail-actions">
                 {action&&<Button icon={action.icon} className="order-detail-primary" disabled={busy} onClick={()=>advance(action.status)}>{action.label}</Button>}
+                {editable&&<Button icon="edit" kind="secondary" className="salon-order-detail-edit" disabled={busy} onClick={()=>edit(order)}>Editar comanda</Button>}
                 {order.status==="entregado"&&<span className="order-detail-done"><Icon name="check" size={15}/>Mesa entregada</span>}
                 {!["entregado","cancelado"].includes(order.status)&&<Button icon="alert" kind="ghost" className="order-detail-cancel" disabled={busy} onClick={()=>cancel(order)}>Cancelar pedido</Button>}
               </footer>
