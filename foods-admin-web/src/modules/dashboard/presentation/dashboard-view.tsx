@@ -1,4 +1,5 @@
 "use client";
+import "./dashboard.css";
 import {Icon} from "@/design-system/icons";
 import {Button, PageHeader, Status} from "@/design-system/page-header";
 import {useSession} from "@/providers/session-context";
