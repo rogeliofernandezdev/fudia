@@ -18,7 +18,7 @@ type OrderItemSelection={groupId:string;groupName:string;productId:string;name:s
 type OrderItem={id:string;productId:string;name:string;qty:string;unitPrice:string;note:string;itemType:"product"|"combo";selections?:OrderItemSelection[]};
 type Order={id:string;code:string;channel:string;status:string;customerId:string;customerName:string;customerPhone:string;address:string;reference:string;tableId:string;tableName:string;notes:string;subtotal:string;deliveryFee:string;total:string;createdAt:string;updatedAt:string;itemCount?:number;items?:OrderItem[]};
 type FloorTable={id:string;name:string;zone:string;seats:number;order:Order|null};
-type LineDraft={lineKey:string;sourceItemId?:string;itemType:"product"|"combo";productId:string;name:string;qty:number;unitPrice:number;note:string;selections:ComboSelection[]};
+type LineDraft={lineKey:string;sourceItemId?:string;repriceCombo?:boolean;itemType:"product"|"combo";productId:string;name:string;qty:number;unitPrice:number;note:string;selections:ComboSelection[]};
 type Draft={channel:string;customerName:string;customerPhone:string;address:string;reference:string;tableId:string;notes:string;deliveryFee:string;lines:LineDraft[]};
 
 /* ── helpers ── */
@@ -126,12 +126,12 @@ export function SalonManager(){
     onError:e=>notify({tone:"danger",title:"Error",message:e.message}),
   });
   const create=useMutation({
-    mutationFn:(v:Draft)=>apiFetch<Order>("orders",{method:"POST",body:JSON.stringify({channel:v.channel,customerName:v.customerName,customerPhone:v.customerPhone,address:v.address,reference:v.reference,tableId:v.tableId,notes:v.notes,deliveryFee:Number(v.deliveryFee)||0,items:v.lines.map(l=>({id:l.sourceItemId,productId:l.productId,name:l.name,qty:l.qty,unitPrice:l.unitPrice,note:l.note,selections:l.selections.map(sel=>({groupId:sel.groupId,productId:sel.productId}))}))})}),
+    mutationFn:(v:Draft)=>apiFetch<Order>("orders",{method:"POST",body:JSON.stringify({channel:v.channel,customerName:v.customerName,customerPhone:v.customerPhone,address:v.address,reference:v.reference,tableId:v.tableId,notes:v.notes,deliveryFee:Number(v.deliveryFee)||0,items:v.lines.map(l=>({id:l.sourceItemId,productId:l.productId,name:l.name,qty:l.qty,unitPrice:l.unitPrice,note:l.note,reprice:Boolean(l.repriceCombo),selections:l.selections.map(sel=>({groupId:sel.groupId,productId:sel.productId}))}))})}),
     onSuccess:o=>{setDraft(null);setEditingOrderId(null);setDetailId(null);invalidate();notify({tone:"success",title:"Mesa abierta",message:`Pedido ${o.code} registrado.`})},
     onError:e=>notify({tone:"danger",title:"Error",message:e.message}),
   });
   const update=useMutation({
-    mutationFn:({id,v}:{id:string;v:Draft})=>apiFetch<Order>(`orders/${id}`,{method:"PATCH",body:JSON.stringify({customerName:v.customerName,customerPhone:v.customerPhone,address:v.address,reference:v.reference,notes:v.notes,deliveryFee:Number(v.deliveryFee)||0,items:v.lines.map(l=>({id:l.sourceItemId,productId:l.productId,name:l.name,qty:l.qty,unitPrice:l.unitPrice,note:l.note,selections:l.selections.map(sel=>({groupId:sel.groupId,productId:sel.productId}))}))})}),
+    mutationFn:({id,v}:{id:string;v:Draft})=>apiFetch<Order>(`orders/${id}`,{method:"PATCH",body:JSON.stringify({customerName:v.customerName,customerPhone:v.customerPhone,address:v.address,reference:v.reference,notes:v.notes,deliveryFee:Number(v.deliveryFee)||0,items:v.lines.map(l=>({id:l.sourceItemId,productId:l.productId,name:l.name,qty:l.qty,unitPrice:l.unitPrice,note:l.note,reprice:Boolean(l.repriceCombo),selections:l.selections.map(sel=>({groupId:sel.groupId,productId:sel.productId}))}))})}),
     onSuccess:o=>{
       setDraft(null);
       setEditingOrderId(null);
@@ -394,7 +394,7 @@ function ComandaView({initial,mode,allTables,busy,currencySymbol,close,save,noti
     const lineKey=editingLineKey??`combo-${combo.productId}-${generated}`;
     setV(prev=>{
       if(editingLineKey){
-        return{...prev,lines:prev.lines.map(line=>line.lineKey===editingLineKey?{...line,name:combo.name,unitPrice:combo.unitPrice,selections:combo.selections}:line)};
+        return{...prev,lines:prev.lines.map(line=>line.lineKey===editingLineKey?{...line,name:combo.name,unitPrice:combo.unitPrice,selections:combo.selections,repriceCombo:true}:line)};
       }
       return{...prev,lines:[...prev.lines,{lineKey,itemType:"combo",productId:combo.productId,name:combo.name,qty:1,unitPrice:combo.unitPrice,note:"",selections:combo.selections}]};
     });
