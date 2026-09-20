@@ -63,6 +63,7 @@ export type StockMovement={
   balanceAfter:string;
   sourceType:"inventory_entry"|"order";
   sourceId:string;
+  sourceReference:string;
   note:string;
   createdAt:string;
 };
