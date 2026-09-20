@@ -1181,6 +1181,12 @@
   to{transform:translateX(100%)}
 }
 
+@media(prefers-reduced-motion:reduce){
+  .salon-order-detail-skeleton-block::after{
+    animation:none;
+  }
+}
+
 @media(max-width:600px){
   .modal-backdrop:has(.salon-order-detail){
     padding:10px;
