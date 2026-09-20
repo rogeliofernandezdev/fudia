@@ -22,7 +22,7 @@ export function listAvailabilityCategories(){
   return apiFetch<{items:CategoryOption[]}>("categories?page=1&pageSize=100");
 }
 
-export function updateAvailability(productId:string,payload:{status:"available"|"sold_out";dailyQuota:number|null;note:string}){
+export function updateAvailability(productId:string,payload:{status:"available"|"sold_out";portionQuantity:number|null;note:string}){
   return apiFetch<void>(`product-availability/${productId}`,{
     method:"PATCH",
     body:JSON.stringify(payload),
