@@ -31,7 +31,6 @@ export async function saveProduct(draft:ProductDraft,file:File|null){
     body:JSON.stringify({
       ...draft,
       categoryId:draft.categoryId||null,
-      defaultDailyQuota:draft.stockMode==="manual"?Number(draft.defaultDailyQuota):null,
       prepMinutes:draft.prepMinutes?Number(draft.prepMinutes):null,
       costPrice:draft.costPrice||null,
     }),
