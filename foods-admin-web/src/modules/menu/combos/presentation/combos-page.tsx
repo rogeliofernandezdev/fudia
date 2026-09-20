@@ -6,7 +6,8 @@ import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Button,ConfirmDialog,Icon,Input,PageHeader,Pagination,RowActionButton,Select,Status,Textarea} from "@/design-system";
 import {useFeedback} from "@/providers";
 import {useSettings} from "@/providers/settings-context";
-import {apiFetch} from "@/shared/api/client";
+import type {Combo,ComboDetail,Draft,Group,Product} from "../domain/types";
+import {getCombo,listComboProducts,listCombos,saveCombo,setComboActive} from "../infrastructure/combos-api";
 
 type Product={id:string;name:string;categoryName:string|null;price:string;active:boolean;defaultDailyQuota:number|null};
 type Option={productId:string;surcharge:string;quota:string};
@@ -42,22 +43,16 @@ export function CombosPage(){
   const[size,setSize]=useState(10);
   const[search,setSearch]=useState("");
   const[status,setStatus]=useState("");
-  const combos=useQuery({queryKey:["combos",page,size,search,status],queryFn:()=>apiFetch<{items:Combo[];total:number;page:number;pageSize:number}>(`combos?page=${page}&pageSize=${size}&q=${encodeURIComponent(search)}&status=${status}`)});
-  const products=useQuery({queryKey:["products","combo-picker"],queryFn:()=>apiFetch<{items:Product[]}>("products?page=1&pageSize=100&status=active")});
-  const detail=useQuery({queryKey:["combo-detail",selected],queryFn:()=>apiFetch<ComboDetail>(`combos/${selected}`),enabled:Boolean(selected)});
+  const combos=useQuery({queryKey:["combos",page,size,search,status],queryFn:()=>listCombos(page,size,search,status)});
+  const products=useQuery({queryKey:["products","combo-picker"],queryFn:listComboProducts});
+  const detail=useQuery({queryKey:["combo-detail",selected],queryFn:()=>getCombo(selected!),enabled:Boolean(selected)});
   const save=useMutation({
-    mutationFn:(value:Draft)=>apiFetch<{id:string}>(editingId?`combos/${editingId}`:"combos",{method:editingId?"PATCH":"POST",body:JSON.stringify({
-      ...value,
-      availableFrom:value.availableFrom?new Date(value.availableFrom).toISOString():null,
-      availableUntil:value.availableUntil?new Date(value.availableUntil).toISOString():null,
-      availableDays:value.availableDays.length?value.availableDays:null,
-      groups:value.groups.map(g=>({...g,options:g.options.map(o=>({...o,surcharge:o.surcharge.trim()||"0",quota:o.quota?Number(o.quota):null}))}))
-    })}),
+    mutationFn:(value:Draft)=>saveCombo(value,editingId),
     onSuccess:()=>{const edited=Boolean(editingId);setDraft(null);setEditingId(null);setStep(1);void client.invalidateQueries({queryKey:["combos"]});void client.invalidateQueries({queryKey:["products"]});notify({tone:"success",title:edited?"Menú actualizado":"Menú registrado",message:edited?"Los cambios ya están disponibles para la operación.":"La composición ya está disponible para la operación."})},
     onError:error=>notify({tone:"danger",title:"No se pudo guardar",message:error.message})
   });
   const loadForEdit=useMutation({
-    mutationFn:(id:string)=>apiFetch<ComboDetail>(`combos/${id}`),
+    mutationFn:(id:string)=>getCombo(id),
     onSuccess:value=>{
       const toLocalInput=(source:string|null)=>{if(!source)return"";const date=new Date(source);const offset=date.getTimezoneOffset()*60000;return new Date(date.getTime()-offset).toISOString().slice(0,16)};
       setEditingId(value.id);
@@ -67,7 +62,7 @@ export function CombosPage(){
     onError:error=>notify({tone:"danger",title:"No se pudo abrir el menú",message:error.message})
   });
   const changeStatus=useMutation({
-    mutationFn:(item:Combo)=>apiFetch<void>(`combos/${item.id}/status`,{method:"PATCH",body:JSON.stringify({active:!item.active})}),
+    mutationFn:(item:Combo)=>setComboActive(item.id,!item.active),
     onSuccess:(_,item)=>{
       setStatusTarget(null);
       void client.invalidateQueries({queryKey:["combos"]});
