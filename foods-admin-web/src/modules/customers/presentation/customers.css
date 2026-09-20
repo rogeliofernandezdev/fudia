@@ -57,3 +57,5 @@
  .customer-detail-summary{grid-template-columns:repeat(2,1fr)}
  .customer-detail-fields{grid-template-columns:repeat(2,1fr)}
 }
+
+.customer-modal footer .button.primary > svg{display:none}

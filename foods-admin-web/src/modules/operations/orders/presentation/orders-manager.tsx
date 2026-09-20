@@ -1,5 +1,6 @@
 "use client";
-import "../app/salon.css";
+import "../../styles/orders.css";
+import "../../styles/salon.css";
 import Link from "next/link";
 import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";

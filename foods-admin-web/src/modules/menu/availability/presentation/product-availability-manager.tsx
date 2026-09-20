@@ -1,3 +1,4 @@
+import "./product-availability.css";
 "use client";
 
 import {useState} from "react";

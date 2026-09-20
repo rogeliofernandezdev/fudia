@@ -1,3 +1,4 @@
+import "./product-wizard.css";
 "use client";
 
 import {useRef,useState} from "react";

@@ -1,3 +1,5 @@
+import "./styles/table-actions.css";
+import "./styles/pagination.css";
 import {ButtonHTMLAttributes,forwardRef,InputHTMLAttributes,SelectHTMLAttributes,TextareaHTMLAttributes} from "react";
 import {Icon,IconName} from "@/design-system/icons";
 

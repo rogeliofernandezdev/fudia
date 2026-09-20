@@ -1,3 +1,5 @@
+import "./organization-admin.css";
+import "./settings-fiscal-states.css";
 "use client";
 
 import {useState} from "react";

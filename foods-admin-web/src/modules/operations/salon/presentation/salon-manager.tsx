@@ -1,13 +1,13 @@
 "use client";
 
-import "../app/orders.css";
-import "../app/salon.css";
-import "../app/salon-comanda.css";
+import "../../styles/orders.css";
+import "../../styles/salon.css";
+import "../../styles/salon-comanda.css";
 import {useState,useCallback,useEffect,useRef} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Button,ConfirmDialog,Input,Select,Status,Textarea} from "@/design-system";
 import {Icon,IconName} from "@/design-system/icons";
-import {CatalogProduct,ComboConfigurator,ComboSelection,ConfiguredCombo,ComandaCatalog} from "@/components/comanda-catalog";
+import {CatalogProduct,ComboConfigurator,ComboSelection,ConfiguredCombo,ComandaCatalog} from "./comanda-catalog";
 import {apiFetch} from "@/shared/api/client";
 import {useFeedback} from "@/providers/feedback-provider";
 import {useSession} from "@/providers/session-context";

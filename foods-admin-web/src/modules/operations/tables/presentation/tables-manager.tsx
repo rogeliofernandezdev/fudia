@@ -1,3 +1,4 @@
+import "../../styles/table-qr.css";
 "use client";
 
 import {useState,useEffect,useRef} from "react";

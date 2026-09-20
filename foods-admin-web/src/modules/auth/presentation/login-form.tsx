@@ -1,3 +1,4 @@
+import "./login.css";
 "use client";
 
 import { useState } from "react";
