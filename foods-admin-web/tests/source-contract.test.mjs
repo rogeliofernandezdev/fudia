@@ -124,6 +124,14 @@ test("producto e inventario mantienen una sola fuente de verdad",()=>{
   assert.ok(dialog.includes("Nuevo insumo"),"Inventario permite crear insumos sin producto vendible");
   assert.ok(dialog.includes("no tendrá precio de venta"),"El flujo de insumos separa inventario de precio comercial");
   assert.ok(dialog.includes("Revisa los campos marcados antes de guardar."),"Guardar inválido informa el problema al usuario");
+  const inventoryEntrySchema=read("src/modules/supply/inventory/domain/inventory-entry-schema.ts");
+  assert.ok(dialog.includes("useForm<InventoryEntryDraft>"),"Nueva entrada usa React Hook Form");
+  assert.ok(dialog.includes("resolver:inventoryEntryResolver"),"Nueva entrada delega la validación al resolver");
+  assert.ok(inventoryEntrySchema.includes('z.discriminatedUnion("mode"'),"Zod discrimina reglas según el tipo de registro");
+  assert.ok(inventoryEntrySchema.includes('mode:z.literal("existing")'),"Existe esquema para artículo existente");
+  assert.ok(inventoryEntrySchema.includes('mode:z.literal("new_product")'),"Existe esquema para producto vendible");
+  assert.ok(inventoryEntrySchema.includes('mode:z.literal("new_ingredient")'),"Existe esquema para insumo");
+  assert.equal(dialog.includes("const valid=value.mode"),false,"La vista no mantiene una segunda validación manual de submit");
   assert.ok(dialog.includes("Una sola operación"));
   assert.ok(dialog.includes('type="submit"'),"Guardar inventario debe enviar el formulario");
   assert.ok(dialog.includes('busy?"Guardando…":"Guardar"'),"La acción de guardado usa el texto estándar");
