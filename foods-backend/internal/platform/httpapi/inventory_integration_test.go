@@ -65,6 +65,7 @@ func seedInventoryScope(t *testing.T, pool *pgxpool.Pool) scope {
 		_, _ = pool.Exec(context.Background(), `DELETE FROM orders WHERE organization_id=$1`, organizationID)
 		_, _ = pool.Exec(context.Background(), `DELETE FROM product_availability WHERE organization_id=$1`, organizationID)
 		_, _ = pool.Exec(context.Background(), `DELETE FROM stock_balances WHERE organization_id=$1`, organizationID)
+		_, _ = pool.Exec(context.Background(), `DELETE FROM inventory_presentations WHERE organization_id=$1`, organizationID)
 		_, _ = pool.Exec(context.Background(), `DELETE FROM inventory_items WHERE organization_id=$1`, organizationID)
 		_, _ = pool.Exec(context.Background(), `DELETE FROM products WHERE organization_id=$1`, organizationID)
 		_, _ = pool.Exec(context.Background(), `DELETE FROM audit_log WHERE organization_id=$1`, organizationID)
