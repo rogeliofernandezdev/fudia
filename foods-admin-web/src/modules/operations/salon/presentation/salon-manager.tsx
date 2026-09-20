@@ -8,7 +8,8 @@ import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Button,ConfirmDialog,Input,Select,Status,Textarea} from "@/design-system";
 import {Icon,IconName} from "@/design-system/icons";
 import {CatalogProduct,ComboConfigurator,ComboSelection,ConfiguredCombo,ComandaCatalog} from "./comanda-catalog";
-import {apiFetch} from "@/shared/api/client";
+import type {Draft,FloorTable,LineDraft,Order} from "../domain/types";
+import {createSalonOrder,getSalonFloor,getSalonOrder,updateSalonOrder,updateSalonOrderStatus} from "../infrastructure/salon-api";
 import {useFeedback} from "@/providers/feedback-provider";
 import {useSession} from "@/providers/session-context";
 import {useSettings} from "@/providers/settings-context";
@@ -106,12 +107,12 @@ export function SalonManager(){
 
   const floor=useQuery({
     queryKey:["salon-floor"],
-    queryFn:()=>apiFetch<{items:FloorTable[]}>("orders/floor"),
+    queryFn:getSalonFloor,
     refetchInterval:30000,
   });
   const detail=useQuery({
     queryKey:["order",detailId],
-    queryFn:()=>apiFetch<Order>(`orders/${detailId}`),
+    queryFn:()=>getSalonOrder(detailId!),
     enabled:Boolean(detailId),
   });
 
@@ -121,17 +122,17 @@ export function SalonManager(){
   },[qc,detailId]);
 
   const advance=useMutation({
-    mutationFn:(v:{id:string;status:string})=>apiFetch<Order>(`orders/${v.id}/status`,{method:"PATCH",body:JSON.stringify({status:v.status})}),
+    mutationFn:(v:{id:string;status:string})=>updateSalonOrderStatus(v.id,v.status),
     onSuccess:()=>{invalidate();notify({tone:"success",title:"Pedido actualizado",message:"El estado fue actualizado correctamente."})},
     onError:e=>notify({tone:"danger",title:"Error",message:e.message}),
   });
   const create=useMutation({
-    mutationFn:(v:Draft)=>apiFetch<Order>("orders",{method:"POST",body:JSON.stringify({channel:v.channel,customerName:v.customerName,customerPhone:v.customerPhone,address:v.address,reference:v.reference,tableId:v.tableId,notes:v.notes,deliveryFee:Number(v.deliveryFee)||0,items:v.lines.map(l=>({id:l.sourceItemId,productId:l.productId,name:l.name,qty:l.qty,unitPrice:l.unitPrice,note:l.note,reprice:Boolean(l.repriceCombo),selections:l.selections.map(sel=>({groupId:sel.groupId,productId:sel.productId}))}))})}),
+    mutationFn:(v:Draft)=>createSalonOrder(v),
     onSuccess:o=>{setDraft(null);setEditingOrderId(null);setDetailId(null);invalidate();notify({tone:"success",title:"Mesa abierta",message:`Pedido ${o.code} registrado.`})},
     onError:e=>notify({tone:"danger",title:"Error",message:e.message}),
   });
   const update=useMutation({
-    mutationFn:({id,v}:{id:string;v:Draft})=>apiFetch<Order>(`orders/${id}`,{method:"PATCH",body:JSON.stringify({customerName:v.customerName,customerPhone:v.customerPhone,address:v.address,reference:v.reference,notes:v.notes,deliveryFee:Number(v.deliveryFee)||0,items:v.lines.map(l=>({id:l.sourceItemId,productId:l.productId,name:l.name,qty:l.qty,unitPrice:l.unitPrice,note:l.note,reprice:Boolean(l.repriceCombo),selections:l.selections.map(sel=>({groupId:sel.groupId,productId:sel.productId}))}))})}),
+    mutationFn:({id,v}:{id:string;v:Draft})=>updateSalonOrder(id,v),
     onSuccess:o=>{
       setDraft(null);
       setEditingOrderId(null);
@@ -146,7 +147,7 @@ export function SalonManager(){
     },
   });
   const cancel=useMutation({
-    mutationFn:(o:Order)=>apiFetch<Order>(`orders/${o.id}/status`,{method:"PATCH",body:JSON.stringify({status:"cancelado"})}),
+    mutationFn:(o:Order)=>updateSalonOrderStatus(o.id,"cancelado"),
     onSuccess:()=>{setCancelTarget(null);invalidate();setDetailId(null);notify({tone:"success",title:"Pedido cancelado",message:"La mesa quedó libre."})},
     onError:e=>notify({tone:"danger",title:"Error",message:e.message}),
   });
