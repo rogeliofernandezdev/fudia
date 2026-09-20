@@ -146,7 +146,7 @@
   padding:10px 12px;
   box-sizing:border-box;
   display:grid;
-  grid-template-columns:40px minmax(0,1fr) 84px;
+  grid-template-columns:40px minmax(0,1fr) minmax(190px,240px) 84px;
   align-items:center;
   gap:11px;
   overflow:hidden;
@@ -189,6 +189,36 @@
   line-height:1.2;
   text-overflow:ellipsis;
   white-space:nowrap;
+}
+
+.salon-comanda-context-customer{
+  min-width:0;
+  display:grid;
+  gap:4px;
+}
+
+.salon-comanda-context-customer>span{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  color:var(--ink-600,#475467);
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+}
+
+.salon-comanda-context-customer>span small{
+  color:#98a2b3;
+  font-size:8px;
+  font-weight:750;
+  letter-spacing:0;
+  text-transform:none;
+}
+
+.salon-comanda-context-customer .ds-input{
+  min-width:0;
+  width:100%;
 }
 
 .salon-comanda-context-stat{
@@ -807,6 +837,18 @@
   .salon-comanda-context-stat{
     height:38px;
     padding-left:9px;
+  }
+
+  .salon-comanda-context-stat{
+    grid-column:3;
+    grid-row:1;
+  }
+
+  .salon-comanda-context-customer{
+    grid-column:1/-1;
+    grid-row:2;
+    padding-top:9px;
+    border-top:1px solid #eef0f4;
   }
 
   .salon-comanda-summary-head{
