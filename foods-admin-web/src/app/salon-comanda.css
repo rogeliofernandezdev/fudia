@@ -916,6 +916,86 @@
   box-shadow:0 3px 9px rgba(70,84,205,.22);
 }
 
+/* ── Paginación de la carta ── */
+.salon-comanda-shell .comanda-catalog-pagination{
+  padding:4px 12px 16px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  color:var(--ink-600,#475467);
+  font-size:10.5px;
+  font-weight:700;
+}
+
+.salon-comanda-shell .comanda-catalog-pagination>span{
+  white-space:nowrap;
+}
+
+.salon-comanda-shell .comanda-catalog-pagination nav{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.salon-comanda-shell .comanda-catalog-pagination nav button{
+  min-height:var(--control-height);
+  height:var(--control-height);
+  padding:0 10px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:5px;
+  border:1px solid #d9def5;
+  border-radius:6px;
+  background:#fff;
+  color:var(--ops-700,#3946b8);
+  font-size:10.5px;
+  font-weight:800;
+  cursor:pointer;
+  transition:background .15s ease,border-color .15s ease,color .15s ease;
+}
+
+.salon-comanda-shell .comanda-catalog-pagination nav button:hover:not(:disabled){
+  border-color:#bfc7ef;
+  background:var(--primary-100,#eef0ff);
+}
+
+.salon-comanda-shell .comanda-catalog-pagination nav button:disabled{
+  opacity:.42;
+  cursor:not-allowed;
+}
+
+.salon-comanda-shell .comanda-catalog-pagination nav b{
+  min-width:46px;
+  text-align:center;
+  color:var(--ink-950,#101828);
+  font-size:10.5px;
+  font-weight:850;
+  font-variant-numeric:tabular-nums;
+}
+
+@media(max-width:600px){
+  .salon-comanda-shell .comanda-catalog-pagination{
+    padding:2px 8px 92px;
+    flex-direction:column;
+    align-items:stretch;
+    gap:8px;
+  }
+
+  .salon-comanda-shell .comanda-catalog-pagination>span{
+    text-align:center;
+  }
+
+  .salon-comanda-shell .comanda-catalog-pagination nav{
+    justify-content:center;
+  }
+
+  .salon-comanda-shell .comanda-catalog-pagination nav button{
+    min-width:96px;
+  }
+}
+
 /* ── Carta moderna: grilla plana, simétrica y con una sola acción ── */
 .salon-comanda-shell .comanda-menu-salon .comanda-dishes{
   display:grid;
