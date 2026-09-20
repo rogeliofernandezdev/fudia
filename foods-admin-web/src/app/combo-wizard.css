@@ -962,11 +962,3 @@
   }
 }
 
-  .combo-wizard-steps button { grid-template-columns: 26px; min-height: 44px; }
-  .combo-step-marker { width: 26px; height: 26px; }
-  .combo-step-copy b { font-size: 7px; }
-  .combo-step-line { min-width: 4px; margin-inline: 4px; }
-  .combo-composition > header > div:last-child { grid-template-columns: 1fr; }
-  .combo-composition-toolbar { grid-template-columns: 1fr; }
-  .combo-composition-toolbar > div:last-child { grid-template-columns: 1fr; }
-}
