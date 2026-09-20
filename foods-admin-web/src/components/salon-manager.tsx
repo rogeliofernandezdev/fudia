@@ -321,12 +321,16 @@ function ComandaView({initial,allTables,busy,currencySymbol,close,save,notify}:{
           <div className="salon-comanda-context">
             <span className="salon-comanda-context-icon"><Icon name="utensils" size={18}/></span>
             <div className="salon-comanda-context-copy">
-              <span>Mesa</span>
-              <strong>{tableName||"Pendiente de seleccionar"}</strong>
-            </div>
-            <div className="salon-comanda-context-stat">
-              <small>Personas</small>
-              <b>{selTable?.seats??"—"}</b>
+              <span>Mesa seleccionada</span>
+              <div className="salon-comanda-context-main">
+                <strong>{tableName||"Pendiente de seleccionar"}</strong>
+                {selTable&&(
+                  <span className="salon-comanda-context-seats">
+                    <Icon name="users" size={13}/>
+                    {selTable.seats} personas
+                  </span>
+                )}
+              </div>
             </div>
           </div>
           <ComandaCatalog qtyByProduct={qtyByProduct} onPick={tap} onRemove={untap} currencySymbol={currencySymbol} variant="salon"/>
