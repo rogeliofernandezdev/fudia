@@ -305,8 +305,7 @@ function ComandaView({initial,allTables,busy,currencySymbol,close,save,notify}:{
             <Icon name="chevronLeft" size={20}/>
           </button>
           <div className="salon-comanda-heading">
-            <span className="salon-comanda-kicker">Nueva comanda</span>
-            <h2>{tableName||"Selecciona una mesa"}</h2>
+            <h2>Nueva comanda</h2>
           </div>
         </div>
         <div className="salon-comanda-header-actions">
@@ -322,16 +321,12 @@ function ComandaView({initial,allTables,busy,currencySymbol,close,save,notify}:{
           <div className="salon-comanda-context">
             <span className="salon-comanda-context-icon"><Icon name="utensils" size={18}/></span>
             <div className="salon-comanda-context-copy">
-              <span>Mesa seleccionada</span>
+              <span>Mesa</span>
               <strong>{tableName||"Pendiente de seleccionar"}</strong>
             </div>
             <div className="salon-comanda-context-stat">
               <small>Personas</small>
               <b>{selTable?.seats??"—"}</b>
-            </div>
-            <div className="salon-comanda-context-stat">
-              <small>Productos</small>
-              <b>{count}</b>
             </div>
           </div>
           <ComandaCatalog qtyByProduct={qtyByProduct} onPick={tap} onRemove={untap} currencySymbol={currencySymbol} variant="salon"/>
@@ -402,8 +397,7 @@ function ComandaView({initial,allTables,busy,currencySymbol,close,save,notify}:{
           <footer className="salon-comanda-summary-foot">
             <div className="salon-comanda-total">
               <div className="salon-comanda-total-copy">
-                <span>Subtotal de la comanda</span>
-                <small>{count} producto{count===1?"":"s"} seleccionado{count===1?"":"s"}</small>
+                <span>Subtotal</span>
               </div>
               <strong>{currencySymbol} {money(subtotal)}</strong>
             </div>
