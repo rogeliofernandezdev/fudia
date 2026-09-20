@@ -55,7 +55,7 @@ export function ComandaCatalog({qtyByProduct,onPick,onRemove,currencySymbol,vari
   const salonStart=salonTotal?(page-1)*SALON_PAGE_SIZE+1:0;
   const salonEnd=Math.min(page*SALON_PAGE_SIZE,salonTotal);
   const displayCount=variant==="salon"?salonTotal:totalItems;
-  const booting=variant==="salon"?salonCatalog.isLoading:(!searching&&(categories.isLoading||(cats.length>0&&perCat.every(q=>q.isLoading)));
+  const booting=variant==="salon"?salonCatalog.isLoading:(!searching&&(categories.isLoading||(cats.length>0&&perCat.every(q=>q.isLoading))));
 
   return(
     <div className={"comanda-menu comanda-menu-paged"+(variant==="salon"?" comanda-menu-salon":"")}>
