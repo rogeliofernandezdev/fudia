@@ -278,12 +278,6 @@ export function ComboConfigurator({comboId,initialSelections=[],editing=false,cu
         </header>
 
         <div className="combo-config-body">
-          {!combo.isLoading&&!combo.isError&&data&&(
-            <div className="combo-config-guide">
-              <span><Icon name="combo" size={17}/></span>
-              <div><b>Arma este menú</b><p>Elige las opciones de cada parte. Verás todas las alternativas disponibles antes de agregarlo a la comanda.</p></div>
-            </div>
-          )}
           {combo.isLoading?(
             <div className="combo-config-state"><span className="combo-config-spinner"/><b>Cargando opciones…</b></div>
           ):combo.isError?(
