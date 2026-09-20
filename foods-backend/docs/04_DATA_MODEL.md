@@ -43,6 +43,13 @@ La mercadería física se repone únicamente mediante documentos de Inventario.
 Producto vendible con la infraestructura de existencias; no constituye otro
 catálogo comercial.
 
+Cada `inventory_item` define una **unidad base de stock** (por ejemplo botella,
+lata, unidad, kg o litro). `inventory_presentations` define formas reutilizables
+de recibir esa mercadería: unidad base (factor 1), paquete o caja con un factor
+de conversión. Una entrada de 5 cajas x 12 de un producto cuya unidad base es
+botella aumenta el saldo y el Kárdex en 60 botellas. El documento de entrada
+conserva la cantidad recibida, la presentación y el factor utilizados.
+
 ### Flujo de Inventario
 
 El flujo principal de mercadería física comienza en **Inventario > Nueva entrada**:
@@ -50,21 +57,25 @@ El flujo principal de mercadería física comienza en **Inventario > Nueva entra
 1. Si el Producto existe, se selecciona ese mismo `ProductId` y se registra
    la nueva entrada.
 2. Si no existe, el usuario crea **Nuevo producto** dentro de la entrada.
-3. Producto, vínculo interno de inventario, saldo, documento de entrada y
-   movimiento de Kárdex se crean en una sola transacción.
-4. Si cualquier paso falla, la transacción hace rollback y no queda un Producto
-   huérfano ni un saldo parcial.
-5. Las reposiciones posteriores usan siempre el mismo Producto.
+3. Se resuelve la presentación de ingreso. La unidad base siempre existe; una
+   presentación nueva como paquete x 6 o caja x 12 queda disponible para futuras
+   entradas del mismo producto.
+4. Producto, vínculo interno de inventario, presentación, saldo, documento de
+   entrada y movimiento de Kárdex se crean en una sola transacción.
+5. Si cualquier paso falla, la transacción hace rollback y no queda un Producto,
+   presentación o saldo parcial.
+6. Las reposiciones posteriores usan siempre el mismo Producto.
 
 El selector «Producto existente» muestra únicamente productos activos con
 `quantity_control='inventory'`. Los productos con `none` o `portions` no son
-elegibles para una entrada: primero deben clasificarse explícitamente como
-«Inventario físico» desde Productos. Registrar una entrada nunca cambia de forma
-implícita el modo de control de un plato o producto preparado.
+elegibles para una entrada y registrar stock nunca cambia implícitamente el modo
+de control de un plato o producto preparado. La mercadería física nueva se crea
+desde **Inventario > Nueva entrada > Nuevo producto físico**.
 
 La pantalla de Productos permanece dedicada al catálogo comercial: alta de
-platos, nombre, precio, categoría, imagen, estado y clasificación de control de
-cantidad. No registra entradas ni modifica stock físico.
+platos y edición de nombre, precio, categoría, imagen y estado. Para productos
+físicos existentes muestra su condición de Inventario físico, pero las entradas,
+presentaciones y existencias se administran desde Inventario.
 
 ### Venta y concurrencia
 
@@ -104,9 +115,10 @@ por su cuenta.
 | --- | --- |
 | `products` | Catálogo comercial único y clasificación `quantity_control`. |
 | `product_availability` | Porciones, vendidos y override manual por local/día. |
-| `inventory_items` | Registro interno de inventario; `product_id` vincula 1:1 mercadería vendible. |
-| `stock_balances` | Saldo físico actual por local e item interno. |
-| `inventory_entries` | Documento auditable de cada entrada física. |
+| `inventory_items` | Registro interno de inventario; `product_id` vincula 1:1 mercadería vendible y `unit` define la unidad base. |
+| `inventory_presentations` | Presentaciones reutilizables de ingreso y su factor hacia la unidad base. |
+| `stock_balances` | Saldo físico actual por local e item interno, siempre expresado en unidad base. |
+| `inventory_entries` | Documento auditable: cantidad recibida, presentación, factor y equivalencia en unidad base. |
 | `stock_movements` | Kárdex: entradas, ventas, reversas y ajustes, con saldo resultante. |
 | `menu_combos` | Identifica productos compuestos vendidos como menú o combo. |
 | `menu_combo_groups` | Grupos de elección del combo. |
