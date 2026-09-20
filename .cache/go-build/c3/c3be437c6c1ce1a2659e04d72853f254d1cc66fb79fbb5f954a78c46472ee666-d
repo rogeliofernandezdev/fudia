@@ -1,0 +1,9 @@
+# test log
+getenv GOTMPDIR
+open C:\Users\ROGELI~1.FER\AppData\Local\Temp\TestLoadDotEnv4060867060\001\.env
+open C:\Users\ROGELI~1.FER\AppData\Local\Temp\TestLoadDotEnv4060867060\001\.env
+getenv FOODS_DOTENV_TEST
+getenv FOODS_QUOTED
+getenv FOODS_DOTENV_TEST
+getenv FOODS_QUOTED
+open C:\Users\ROGELI~1.FER\AppData\Local\Temp

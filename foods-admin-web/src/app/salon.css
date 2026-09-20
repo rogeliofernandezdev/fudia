@@ -1,0 +1,177 @@
+/* ════════════════════════════════════════════════════════
+   salon.css v2 — Plano de mesas · Diseño premium
+   Estados: free=verde brand, occupied=azul ops
+════════════════════════════════════════════════════════ */
+
+/* ── Toolbar ── */
+.salon-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:22px;flex-wrap:wrap}
+.salon-search{display:flex;align-items:center;gap:10px;height:var(--control-height);min-height:var(--control-height);flex:1;min-width:200px;padding:0 12px;border:1px solid #e4e7ec;border-radius:6px;background:#fff;color:var(--ink-400);transition:border-color .15s,box-shadow .15s}
+.salon-search:focus-within{border-color:var(--ops-500);box-shadow:0 0 0 3px #2f5bc71f}
+.salon-search input{flex:1;border:0;outline:0;background:none;font-size:11px;font-weight:600;color:var(--ink-950);min-width:0}
+.salon-search input::placeholder{color:#98a2b3;font-weight:400}
+.salon-search>button{display:grid;place-items:center;width:26px;height:26px;border:0;border-radius:6px;background:transparent;color:var(--ink-400);flex-shrink:0;transition:background .12s,color .12s}
+.salon-search>button:hover{color:var(--ops-700)}
+.salon-zones{display:flex;gap:6px;overflow-x:auto;flex-shrink:0;padding-bottom:1px}
+.salon-zone{height:var(--control-height);min-height:var(--control-height);padding:0 14px;border:1px solid #e4e7ec;border-radius:6px;background:#fff;color:var(--ink-500);font-size:11px;font-weight:700;white-space:nowrap;cursor:pointer;transition:all .15s}
+.salon-zone:hover{border-color:#b8c6e8;color:var(--ops-700);background:#fafbff}
+.salon-zone.active{color:var(--ops-700);background:var(--ops-100);border-color:#4654cd40;box-shadow:0 0 0 2px #4654cd14}
+.salon-refresh{width:var(--control-height);height:var(--control-height);display:grid;place-items:center;border:1px solid #e4e7ec;border-radius:6px;background:#fff;color:var(--ink-400);flex-shrink:0;transition:all .15s}
+.salon-refresh:hover{border-color:#b8c6e8;color:var(--ops-700);background:#fafbff}
+.salon-refresh:disabled{opacity:.45;cursor:not-allowed}
+.salon-refresh:not(:disabled):active svg{animation:salon-spin .5s linear}
+@keyframes salon-spin{to{transform:rotate(360deg)}}
+
+/* ── Floor grid ── */
+.salon-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(212px,1fr));gap:16px;align-items:start}
+
+/* ════════════════
+   TABLE CARD
+════════════════ */
+.salon-table{
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  min-height:208px;
+  border-radius:20px;
+  border:1px solid #eceef4;
+  background:#fff;
+  text-align:left;
+  cursor:pointer;
+  overflow:hidden;
+  transition:border-color .16s,box-shadow .2s,transform .14s;
+  box-shadow:0 1px 3px #10182805,0 8px 24px #1018280a;
+}
+.salon-table:hover{border-color:#ccd6ee;box-shadow:0 4px 14px #172b6310,0 16px 36px #172b6316;transform:translateY(-2px)}
+.salon-table:focus-visible{outline:3px solid var(--ops-400,#6672d8);outline-offset:2px}
+.salon-table:disabled{cursor:default;opacity:.68}
+.salon-table:disabled:hover{transform:none;border-color:#eceef4;box-shadow:0 1px 3px #10182805,0 8px 24px #1018280a}
+
+/* State borders */
+.salon-table.free{border-color:#d8efdf}
+.salon-table.occupied{border-color:#d5dbfb}
+
+/* Inner content */
+.salon-table-inner{display:flex;flex-direction:column;gap:10px;flex:1;padding:15px 18px 16px}
+
+/* Top row — estado + tiempo */
+.salon-table-top{display:flex;align-items:center;justify-content:space-between;gap:6px;min-height:24px}
+.salon-table-state{display:inline-flex;align-items:center;padding:5px 10px;border-radius:8px;font-size:9px;font-weight:850;letter-spacing:.07em;text-transform:uppercase}
+.salon-table-state.st-free{background:#e5f8ef;color:var(--brand-700,#16875f)}
+.salon-table-state.st-green{background:#e5f8ef;color:var(--brand-700,#16875f)}
+.salon-table-state.st-blue{background:var(--ops-100,#eef0ff);color:var(--ops-700,#3946b8)}
+.salon-table-state.st-orange{background:#fdf0e2;color:#b45309}
+.salon-table-state.st-gray{background:#f1f4fa;color:var(--ink-500,#667085)}
+.salon-table-elapsed{display:inline-flex;align-items:center;gap:4px;padding:5px 9px;border-radius:8px;background:var(--ops-700);color:#fff;font-size:9px;font-weight:850;letter-spacing:.04em;flex-shrink:0}
+
+/* Mesa identifier — centrado */
+.salon-table-name-row{display:flex;flex-direction:column;align-items:center;gap:5px;margin-top:4px;text-align:center}
+.salon-table-icon{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:#f1f4fa;color:var(--ink-400,#98a2b3);margin-bottom:1px}
+.salon-table.free .salon-table-icon{background:#e5f8ef;color:var(--brand-700,#16875f)}
+.salon-table.occupied .salon-table-icon{background:var(--ops-100,#eef0ff);color:var(--ops-700,#3946b8)}
+.salon-table-name{font-size:23px;font-weight:850;letter-spacing:-.02em;color:var(--ink-950);line-height:1;text-transform:uppercase}
+.salon-table-seats{color:var(--ink-400,#98a2b3);font-size:11px;font-weight:650}
+.salon-table-family{font-size:12px;font-weight:750;color:var(--ops-700,#3946b8);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+
+/* Order info — occupied: total centrado */
+.salon-table-order{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:auto;padding:11px 14px;border-radius:12px;background:var(--ops-700,#3946b8);color:#fff}
+.salon-table-order svg{width:20px;height:20px;flex-shrink:0}
+.salon-table-total{font-size:16px;font-weight:850;font-variant-numeric:tabular-nums;letter-spacing:-.01em;line-height:1}
+.salon-table:hover .salon-table-order{background:var(--ops-800,#2d38a0)}
+
+/* CTA for free tables */
+.salon-table-cta{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  margin-top:auto;
+  padding:11px 16px;
+  border-radius:12px;
+  border:1.5px solid #c8ecd9;
+  background:#f0fdf8;
+  color:var(--brand-700,#16875f);
+  font-size:12px;
+  font-weight:800;
+  width:100%;
+  justify-content:center;
+  transition:all .15s ease;
+  box-shadow:0 1px 3px rgba(22,135,95,.06);
+}
+.salon-table:hover .salon-table-cta{
+  background:#e3f9ee;
+  border-color:#a8dfc2;
+  box-shadow:0 3px 8px rgba(22,135,95,.14);
+  transform:translateY(-1px);
+}
+
+/* ── Legend ── */
+.salon-legend{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  margin-top:20px;
+  padding:12px 20px;
+  border:1.5px solid #e6eaf3;
+  border-radius:14px;
+  background:#fff;
+  box-shadow:0 1px 3px #10182805;
+  color:var(--ink-600);
+  font-size:12px;
+  font-weight:700;
+  flex-wrap:wrap;
+}
+.salon-legend-pills{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.salon-legend-pill{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:5px 12px;
+  border-radius:8px;
+  background:var(--cloud-50);
+  border:1px solid var(--line);
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  color:var(--ink-500);
+}
+.salon-legend i{display:inline-block;width:10px;height:10px;border-radius:3px;flex-shrink:0}
+.salon-legend i.free{background:#10b981}
+.salon-legend i.occupied{background:var(--ops-500,#4654cd)}
+.salon-legend b{font-variant-numeric:tabular-nums;font-size:13px;color:var(--ink-950)}
+.salon-legend-note{color:var(--ink-400);font-size:11px;font-weight:600}
+
+/* ── Empty state ── */
+.salon-empty{grid-column:1/-1;min-height:220px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;color:var(--ink-400);border:1.5px dashed #dde2ef;border-radius:14px;padding:40px}
+.salon-empty svg{width:40px;height:40px;padding:10px;border-radius:11px;color:var(--ops-500);background:var(--ops-100)}
+.salon-empty b{font-size:13px;color:var(--ink-700)}
+.salon-empty p{font-size:11px;margin:0;max-width:260px;line-height:1.5}
+
+/* ── Skeleton ── */
+.salon-skeleton{display:grid;grid-template-columns:repeat(auto-fill,minmax(212px,1fr));gap:16px}
+.salon-skeleton-card{min-height:208px;border-radius:20px;background:linear-gradient(90deg,#f4f6fa,#eceef4,#f4f6fa) 0 0/300% 100%;animation:1.5s infinite salon-shimmer ease-in-out}
+@keyframes salon-shimmer{to{background-position:-300% 0}}
+
+/* ── Responsive ── */
+@media(max-width:960px){
+  .salon-grid,.salon-skeleton{grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
+  .salon-table{min-height:184px}
+  .salon-table-name{font-size:20px}
+}
+@media(max-width:600px){
+  .salon-toolbar{gap:8px}
+  .salon-search{min-width:0}
+  .salon-zones{display:none}
+  .salon-grid,.salon-skeleton{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .salon-table{min-height:168px}
+  .salon-table-name{font-size:18px}
+  .salon-table-inner{padding:13px 14px 14px}
+  .salon-legend{padding:10px 14px;gap:14px}
+}
+@media(max-width:390px){
+  .salon-grid,.salon-skeleton{gap:8px}
+  .salon-table{min-height:156px}
+  .salon-table-name{font-size:16px}
+}
+
+

@@ -1,0 +1,18 @@
+.profile-menu{position:relative}
+.profile-control>svg{color:#98a2b3;transform:rotate(90deg);transition:transform .16s ease}
+.profile-control[aria-expanded="true"]>svg{transform:rotate(-90deg)}
+.profile-popover{position:absolute;top:calc(100% + 10px);right:0;width:242px;padding:8px;border:1px solid #e4e7ec;border-radius:12px;background:#fff;box-shadow:0 16px 38px #1018281f;z-index:80}
+.profile-popover:before{content:"";position:absolute;right:18px;top:-6px;width:11px;height:11px;border-left:1px solid #e4e7ec;border-top:1px solid #e4e7ec;background:#fff;transform:rotate(45deg)}
+.profile-popover header{min-height:58px;padding:7px 8px 11px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #eef0f4}
+.profile-popover header>span:last-child{display:grid;gap:2px;min-width:0}
+.profile-popover header b{overflow:hidden;color:#101828;font-size:11px;text-overflow:ellipsis;white-space:nowrap}
+.profile-popover header small{color:#667085;font-size:9px}
+.profile-signout{width:100%;min-height:44px;margin-top:6px;padding:0 10px;display:grid;grid-template-columns:28px 1fr 18px;align-items:center;gap:7px;border:0;border-radius:8px;color:#c9362b;background:transparent;text-align:left;font-size:11px;font-weight:750;transition:color .16s ease,background .16s ease}
+.profile-signout:hover,.profile-signout:focus-visible{background:#fff0ef;outline:0}
+.profile-signout:disabled{cursor:wait;opacity:.7}
+.profile-signout>svg{justify-self:center}
+.profile-signout>i{width:15px;height:15px;border:2px solid #f2b8b3;border-top-color:#c9362b;border-radius:50%;animation:profile-spin .7s linear infinite}
+@keyframes profile-spin{to{transform:rotate(360deg)}}
+@media(max-width:1350px){.profile-popover{right:0}.profile-control>svg{display:none}}
+@media(max-width:760px){.top-tools{display:flex!important}.top-tools .profile-menu{display:block}.top-tools .profile-control{width:44px!important;height:44px!important;padding:4px!important;display:flex!important}.profile-popover{position:fixed;top:68px;right:12px;width:min(280px,calc(100vw - 24px))}}
+@media(prefers-reduced-motion:reduce){.profile-control>svg{transition:none}.profile-signout>i{animation:none}}

@@ -1,0 +1,359 @@
+openapi: 3.1.0
+info: { title: Foods API, version: 0.2.0, description: API operativa y administrativa multiempresa. }
+servers: [{ url: http://localhost:8080 }]
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      responses: { "200": { description: Disponible, content: { application/json: { schema: { $ref: "#/components/schemas/Health" } } } } }
+  /v1/auth/login:
+    post:
+      operationId: login
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/LoginRequest" } } } }
+      responses: { "200": { description: Sesión creada }, "401": { $ref: "#/components/responses/Unauthorized" } }
+  /v1/auth/logout:
+    post:
+      operationId: logout
+      security: [{ sessionCookie: [] }]
+      responses: { "204": { description: Sesión revocada } }
+  /v1/platform/organizations:
+    post:
+      operationId: onboardOrganization
+      summary: Crea transaccionalmente empresa, perfil fiscal, primer local y administrador
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/TenantOnboardingInput" } } } }
+      responses: { "201": { description: Tenant creado }, "400": { $ref: "#/components/responses/BadRequest" }, "403": { $ref: "#/components/responses/Forbidden" }, "409": { description: Identificación fiscal o correo duplicado } }
+  /v1/admin/dashboard:
+    get:
+      operationId: getAdminDashboard
+      security: [{ sessionCookie: [] }]
+      responses: { "200": { description: Señales administrativas, content: { application/json: { schema: { $ref: "#/components/schemas/Dashboard" } } } }, "401": { $ref: "#/components/responses/Unauthorized" } }
+  /v1/admin/settings:
+    get:
+      operationId: getOrganizationSettings
+      security: [{ sessionCookie: [] }]
+      responses: { "200": { description: Configuración monetaria y fiscal, content: { application/json: { schema: { $ref: "#/components/schemas/OrganizationSettings" } } } }, "401": { $ref: "#/components/responses/Unauthorized" }, "403": { $ref: "#/components/responses/Forbidden" } }
+    patch:
+      operationId: updateOrganizationSettings
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/OrganizationSettingsInput" } } } }
+      responses: { "200": { description: Configuración actualizada, content: { application/json: { schema: { $ref: "#/components/schemas/OrganizationSettings" } } } }, "400": { $ref: "#/components/responses/BadRequest" }, "403": { $ref: "#/components/responses/Forbidden" } }
+  /v1/admin/organization:
+    get:
+      operationId: getOrganization
+      security: [{ sessionCookie: [] }]
+      responses: { "200": { description: Empresa de la sesión, content: { application/json: { schema: { $ref: "#/components/schemas/Organization" } } } }, "403": { $ref: "#/components/responses/Forbidden" } }
+    patch:
+      operationId: updateOrganization
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/OrganizationInput" } } } }
+      responses: { "200": { description: Empresa actualizada }, "400": { $ref: "#/components/responses/BadRequest" }, "403": { $ref: "#/components/responses/Forbidden" } }
+  /v1/admin/fiscal-profiles:
+    get:
+      operationId: listFiscalProfiles
+      security: [{ sessionCookie: [] }]
+      responses: { "200": { description: Perfiles fiscales de la empresa } }
+    post:
+      operationId: createFiscalProfile
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/FiscalProfileInput" } } } }
+      responses: { "201": { description: Perfil creado }, "409": { description: País duplicado o perfil predeterminado inválido } }
+  /v1/admin/fiscal-profiles/{id}:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    patch:
+      operationId: updateFiscalProfile
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/FiscalProfileInput" } } } }
+      responses: { "204": { description: Perfil actualizado }, "409": { description: Conflicto de perfil } }
+    delete:
+      operationId: deactivateFiscalProfile
+      security: [{ sessionCookie: [] }]
+      responses: { "204": { description: Perfil desactivado }, "409": { description: Perfil predeterminado o en uso } }
+  /v1/admin/locations:
+    get:
+      operationId: listLocations
+      security: [{ sessionCookie: [] }]
+      responses: { "200": { description: Locales de la empresa } }
+    post:
+      operationId: createLocation
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/LocationInput" } } } }
+      responses: { "201": { description: Local creado }, "409": { description: Código duplicado o perfil ajeno } }
+  /v1/admin/locations/{id}:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    patch:
+      operationId: updateLocation
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/LocationInput" } } } }
+      responses: { "204": { description: Local actualizado } }
+    delete:
+      operationId: deactivateLocation
+      security: [{ sessionCookie: [] }]
+      responses: { "204": { description: Local desactivado }, "409": { description: Es el local de la sesión actual } }
+  /v1/admin/exchange-rates:
+    get:
+      operationId: listExchangeRates
+      security: [{ sessionCookie: [] }]
+      responses: { "200": { description: Historial de tipos de cambio } }
+    post:
+      operationId: createExchangeRate
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ExchangeRateInput" } } } }
+      responses: { "201": { description: Tipo de cambio registrado }, "409": { description: Par y fecha duplicados } }
+  /v1/admin/exchange-rates/{id}:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    delete:
+      operationId: deleteExchangeRate
+      security: [{ sessionCookie: [] }]
+      responses: { "204": { description: Tipo de cambio eliminado }, "404": { description: No encontrado } }
+  /v1/admin/categories:
+    get:
+      operationId: listCategories
+      security: [{ sessionCookie: [] }]
+      parameters: [{ in: query, name: includeInactive, schema: { type: boolean, default: false } }]
+      responses: { "200": { description: Categorías del menú }, "401": { $ref: "#/components/responses/Unauthorized" }, "403": { $ref: "#/components/responses/Forbidden" } }
+    post:
+      operationId: createCategory
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/CategoryInput" } } } }
+      responses: { "201": { description: Categoría creada, content: { application/json: { schema: { $ref: "#/components/schemas/Category" } } } }, "400": { $ref: "#/components/responses/BadRequest" }, "403": { $ref: "#/components/responses/Forbidden" } }
+  /v1/admin/categories/{id}:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    patch:
+      operationId: updateCategory
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/CategoryInput" } } } }
+      responses: { "200": { description: Categoría actualizada }, "404": { description: No encontrada }, "403": { $ref: "#/components/responses/Forbidden" } }
+    delete:
+      operationId: deactivateCategory
+      summary: Desactiva una categoría sin productos activos
+      security: [{ sessionCookie: [] }]
+      responses: { "204": { description: Categoría desactivada }, "409": { description: La categoría contiene productos activos }, "403": { $ref: "#/components/responses/Forbidden" } }
+  /v1/admin/products:
+    get:
+      operationId: listProducts
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: query, name: q, schema: { type: string } }
+        - { in: query, name: categoryId, schema: { type: string, format: uuid } }
+        - { in: query, name: status, schema: { type: string, enum: [active, inactive] } }
+        - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
+        - { in: query, name: pageSize, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+      responses:
+        "200": { description: Productos, content: { application/json: { schema: { type: object, required: [items, total], properties: { items: { type: array, items: { $ref: "#/components/schemas/Product" } }, total: { type: integer } } } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      operationId: createProduct
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ProductInput" } } } }
+      responses: { "201": { description: Creado, content: { application/json: { schema: { $ref: "#/components/schemas/Product" } } } }, "400": { $ref: "#/components/responses/BadRequest" }, "401": { $ref: "#/components/responses/Unauthorized" } }
+  /v1/admin/products/{id}:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    get:
+      operationId: getProduct
+      security: [{ sessionCookie: [] }]
+      responses: { "200": { description: Producto }, "404": { description: No encontrado }, "403": { $ref: "#/components/responses/Forbidden" } }
+    patch:
+      operationId: updateProduct
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ProductInput" } } } }
+      responses: { "200": { description: Producto actualizado }, "404": { description: No encontrado }, "403": { $ref: "#/components/responses/Forbidden" } }
+    delete:
+      operationId: deactivateProduct
+      summary: Desactiva un producto sin eliminar su historial
+      security: [{ sessionCookie: [] }]
+      responses: { "204": { description: Producto desactivado }, "404": { description: No encontrado }, "403": { $ref: "#/components/responses/Forbidden" } }
+  /v1/admin/combos:
+    get:
+      operationId: listCombos
+      summary: Lista menús y combos con el total de grupos y alternativas
+      security: [{ sessionCookie: [] }]
+      responses: { "200": { description: Menús y combos, content: { application/json: { schema: { type: object, required: [items, total], properties: { items: { type: array, items: { $ref: "#/components/schemas/ComboSummary" } }, total: { type: integer } } } } } }, "403": { $ref: "#/components/responses/Forbidden" } }
+    post:
+      operationId: createCombo
+      summary: Crea un producto compuesto con grupos de selección y alternativas
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ComboInput" } } } }
+      responses: { "201": { description: Menú o combo creado }, "400": { $ref: "#/components/responses/BadRequest" }, "409": { description: Alternativa inválida o conflicto } }
+  /v1/admin/combos/{id}:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    patch:
+      operationId: updateCombo
+      summary: Reemplaza la definición de grupos y alternativas del menú o combo
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ComboInput" } } } }
+      responses: { "201": { description: Menú o combo actualizado }, "400": { $ref: "#/components/responses/BadRequest" }, "404": { description: No encontrado }, "409": { description: Alternativa inválida o conflicto } }
+  /v1/admin/product-availability:
+    get:
+      operationId: listProductAvailability
+      summary: Resuelve la disponibilidad operativa del menú para el local y día de negocio activos
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: query, name: q, schema: { type: string } }
+        - { in: query, name: categoryId, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: Disponibilidad efectiva por producto, content: { application/json: { schema: { type: object, required: [items, businessDate], properties: { items: { type: array, items: { $ref: "#/components/schemas/ProductAvailability" } }, businessDate: { type: string, format: date } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/product-availability/{productId}:
+    parameters: [{ in: path, name: productId, required: true, schema: { type: string, format: uuid } }]
+    patch:
+      operationId: updateProductAvailability
+      summary: Ajusta el estado y cupo diario del producto únicamente para el local activo
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ProductAvailabilityInput" } } } }
+      responses: { "204": { description: Disponibilidad actualizada }, "400": { $ref: "#/components/responses/BadRequest" }, "404": { description: Producto no encontrado }, "403": { $ref: "#/components/responses/Forbidden" } }
+  /v1/operations/product-availability:
+    get:
+      operationId: listOperationalProductAvailability
+      summary: Disponibilidad efectiva del menú para cocina y atención
+      security: [{ sessionCookie: [] }]
+      parameters: [{ in: query, name: q, schema: { type: string } }, { in: query, name: categoryId, schema: { type: string, format: uuid } }]
+      responses: { "200": { description: Menú operativo del local activo }, "403": { $ref: "#/components/responses/Forbidden" } }
+  /v1/operations/product-availability/{productId}:
+    parameters: [{ in: path, name: productId, required: true, schema: { type: string, format: uuid } }]
+    patch:
+      operationId: updateOperationalProductAvailability
+      summary: Marca disponible, pocas unidades o agotado para el día y local activos
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ProductAvailabilityInput" } } } }
+      responses: { "204": { description: Disponibilidad actualizada }, "400": { $ref: "#/components/responses/BadRequest" }, "404": { description: Producto no encontrado }, "403": { $ref: "#/components/responses/Forbidden" } }
+  /v1/admin/customers:
+    get:
+      operationId: listCustomers
+      summary: Lista el directorio de clientes de la empresa activa
+      security: [{ sessionCookie: [] }]
+      parameters: [{ in: query, name: q, schema: { type: string } }, { in: query, name: status, schema: { type: string, enum: [active, inactive] } }, { in: query, name: segment, schema: { type: string, enum: [new, recurrent, frequent, vip] } }]
+      responses: { "200": { description: Directorio paginado de clientes }, "403": { $ref: "#/components/responses/Forbidden" } }
+    post:
+      operationId: createCustomer
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/CustomerInput" } } } }
+      responses: { "201": { description: Cliente creado, content: { application/json: { schema: { $ref: "#/components/schemas/Customer" } } } }, "409": { description: Documento duplicado } }
+  /v1/admin/customers/{id}:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    get:
+      operationId: getCustomer
+      security: [{ sessionCookie: [] }]
+      responses: { "200": { description: Perfil completo del cliente, content: { application/json: { schema: { $ref: "#/components/schemas/Customer" } } } }, "404": { description: No encontrado } }
+    patch:
+      operationId: updateCustomer
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/CustomerInput" } } } }
+      responses: { "200": { description: Cliente actualizado }, "409": { description: Documento duplicado } }
+  /v1/admin/customers/{id}/status:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    patch:
+      operationId: updateCustomerStatus
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [active], properties: { active: { type: boolean } } } } } }
+      responses: { "204": { description: Estado actualizado }, "404": { description: No encontrado } }
+  /v1/admin/orders:
+    get:
+      operationId: listOrders
+      summary: Bandeja de pedidos del local activo
+      security: [{ sessionCookie: [] }]
+      parameters: [{ in: query, name: q, schema: { type: string } }, { in: query, name: channel, schema: { type: string, enum: [salon, mostrador, recojo, delivery, whatsapp] } }, { in: query, name: status, schema: { type: string, enum: [abiertos, nuevo, confirmado, preparando, listo, en_camino, entregado, cancelado] } }]
+      responses: { "200": { description: Pedidos paginados con conteos por canal }, "403": { $ref: "#/components/responses/Forbidden" } }
+    post:
+      operationId: createOrder
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/OrderInput" } } } }
+      responses: { "201": { description: Pedido creado, content: { application/json: { schema: { $ref: "#/components/schemas/Order" } } } }, "400": { description: Datos inválidos } }
+  /v1/admin/orders/floor:
+    get:
+      operationId: getOrdersFloor
+      summary: Plano de salón con mesas activas y su pedido abierto
+      security: [{ sessionCookie: [] }]
+      responses: { "200": { description: Mesas con pedido abierto embebido }, "403": { $ref: "#/components/responses/Forbidden" } }
+  /v1/admin/orders/{id}:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    get:
+      operationId: getOrder
+      security: [{ sessionCookie: [] }]
+      responses: { "200": { description: Pedido con líneas de detalle, content: { application/json: { schema: { $ref: "#/components/schemas/Order" } } } }, "404": { description: No encontrado } }
+  /v1/admin/orders/{id}/status:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    patch:
+      operationId: updateOrderStatus
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [status], properties: { status: { type: string, enum: [confirmado, preparando, listo, en_camino, entregado, cancelado] } } } } } }
+      responses: { "200": { description: Estado actualizado, content: { application/json: { schema: { $ref: "#/components/schemas/Order" } } } }, "404": { description: No encontrado }, "409": { description: Transición no permitida } }
+  /v1/admin/roles:
+    get: { operationId: listRoles, security: [{ sessionCookie: [] }], responses: { "200": { description: Roles de la empresa } } }
+    post:
+      operationId: createRole
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/RoleInput" } } } }
+      responses: { "201": { description: Rol personalizado creado } }
+  /v1/admin/roles/{id}:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    patch:
+      operationId: updateRole
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/RoleInput" } } } }
+      responses: { "200": { description: Rol actualizado }, "409": { description: Rol predeterminado protegido } }
+  /v1/admin/roles/{id}/status:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    patch: { operationId: updateRoleStatus, security: [{ sessionCookie: [] }], responses: { "204": { description: Estado actualizado } } }
+  /v1/admin/permission-catalog:
+    get: { operationId: getPermissionCatalog, security: [{ sessionCookie: [] }], responses: { "200": { description: Catálogo de permisos } } }
+  /v1/admin/users:
+    get: { operationId: listUsers, security: [{ sessionCookie: [] }], responses: { "200": { description: Usuarios paginados de la empresa } } }
+    post:
+      operationId: createUser
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/UserInput" } } } }
+      responses: { "201": { description: Usuario creado } }
+  /v1/admin/users/{id}:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    patch:
+      operationId: updateUser
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/UserInput" } } } }
+      responses: { "200": { description: Usuario actualizado } }
+  /v1/admin/users/{id}/status:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    patch: { operationId: updateUserStatus, security: [{ sessionCookie: [] }], responses: { "204": { description: Estado actualizado }, "409": { description: No puede desactivarse a sí mismo } } }
+components:
+  securitySchemes: { sessionCookie: { type: apiKey, in: cookie, name: foods_session } }
+  parameters:
+    EntityId: { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+  responses:
+    BadRequest: { description: Solicitud inválida, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+    Unauthorized: { description: Sesión inválida, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+    Forbidden: { description: Permiso insuficiente, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+  schemas:
+    Health: { type: object, required: [status, service, version], properties: { status: { type: string, const: ok }, service: { type: string }, version: { type: string } } }
+    LoginRequest: { type: object, required: [email, password], properties: { email: { type: string, format: email }, password: { type: string, minLength: 8 } } }
+    TenantOnboardingInput: { type: object, required: [legalName, tradeName, taxId, timezone, country, currency, currencyPosition, taxName, taxRate, taxIncluded, locationName, locationCode, address, adminName, adminEmail, adminPassword], properties: { legalName: { type: string }, tradeName: { type: string }, taxId: { type: string, minLength: 6, maxLength: 32 }, timezone: { type: string }, country: { type: string, pattern: "^[A-Z]{2}$", default: PE }, currency: { type: string, pattern: "^[A-Z]{3}$", default: PEN }, currencyPosition: { type: string, enum: [before, after] }, taxName: { type: string }, taxRate: { type: string }, taxIncluded: { type: boolean }, locationName: { type: string }, locationCode: { type: string }, address: { type: string }, adminName: { type: string }, adminEmail: { type: string, format: email }, adminPassword: { type: string, minLength: 8, writeOnly: true } } }
+    Dashboard: { type: object, required: [products, criticalStock, purchasesToApprove, currency], properties: { products: { type: integer }, criticalStock: { type: integer }, purchasesToApprove: { type: integer }, currency: { type: string, pattern: "^[A-Z]{3}$" } } }
+    CurrencyOption: { type: object, required: [code, name, symbol, decimals], properties: { code: { type: string, pattern: "^[A-Z]{3}$" }, name: { type: string }, symbol: { type: string }, decimals: { type: integer, minimum: 0, maximum: 4 } } }
+    CountryOption: { type: object, required: [code, name, defaultCurrency], properties: { code: { type: string, pattern: "^[A-Z]{2}$" }, name: { type: string }, defaultCurrency: { type: string, pattern: "^[A-Z]{3}$" } } }
+    OrganizationSettingsInput: { type: object, required: [country, currency, currencyPosition, taxName, taxRate, taxIncluded], properties: { country: { type: string, pattern: "^[A-Z]{2}$", default: PE }, currency: { type: string, pattern: "^[A-Z]{3}$", default: PEN }, currencyPosition: { type: string, enum: [before, after] }, taxName: { type: string, maxLength: 30 }, taxRate: { type: number, minimum: 0, maximum: 1 }, taxIncluded: { type: boolean } } }
+    OrganizationSettings: { allOf: [{ $ref: "#/components/schemas/OrganizationSettingsInput" }, { type: object, required: [currencySymbol, currencyDecimals, currencyOptions, countryOptions], properties: { currencySymbol: { type: string }, currencyDecimals: { type: integer, minimum: 0, maximum: 4 }, currencyOptions: { type: array, items: { $ref: "#/components/schemas/CurrencyOption" } }, countryOptions: { type: array, items: { $ref: "#/components/schemas/CountryOption" } } } }] }
+    OrganizationInput: { type: object, required: [legalName, tradeName, taxId, timezone], properties: { legalName: { type: string, maxLength: 180 }, tradeName: { type: string, maxLength: 180 }, taxId: { type: string, minLength: 6, maxLength: 32 }, timezone: { type: string } } }
+    Organization: { allOf: [{ $ref: "#/components/schemas/OrganizationInput" }, { type: object, required: [id, active], properties: { id: { type: string, format: uuid }, active: { type: boolean } } }] }
+    FiscalProfileInput: { type: object, required: [country, currency, currencyPosition, taxName, taxRate, taxIncluded, default], properties: { country: { type: string, pattern: "^[A-Z]{2}$" }, currency: { type: string, pattern: "^[A-Z]{3}$" }, currencyPosition: { type: string, enum: [before, after] }, taxName: { type: string, maxLength: 30 }, taxRate: { type: string, pattern: "^(0(\\.[0-9]+)?|1(\\.0+)?)$" }, taxIncluded: { type: boolean }, default: { type: boolean } } }
+    LocationInput: { type: object, required: [name, code, address, timezone, fiscalProfileId], properties: { name: { type: string }, code: { type: string, maxLength: 30 }, address: { type: string }, timezone: { type: string }, fiscalProfileId: { type: string, format: uuid }, active: { type: boolean } } }
+    ExchangeRateInput: { type: object, required: [baseCurrency, quoteCurrency, rate, effectiveAt, source], properties: { baseCurrency: { type: string, pattern: "^[A-Z]{3}$" }, quoteCurrency: { type: string, pattern: "^[A-Z]{3}$" }, rate: { type: string, pattern: "^[0-9]+(\\.[0-9]+)?$" }, effectiveAt: { type: string, format: date-time }, source: { type: string, enum: [manual, provider] }, providerReference: { type: [string, "null"] } } }
+    CategoryInput: { type: object, required: [name, sortOrder], properties: { name: { type: string, maxLength: 120 }, sortOrder: { type: integer, minimum: 0 }, active: { type: boolean } } }
+    Category: { allOf: [{ $ref: "#/components/schemas/CategoryInput" }, { type: object, required: [id, active, productCount], properties: { id: { type: string, format: uuid }, active: { type: boolean }, productCount: { type: integer } } }] }
+    ProductInput: { type: object, required: [sku, name, price], properties: { sku: { type: string, maxLength: 40 }, name: { type: string, maxLength: 160 }, description: { type: string, maxLength: 1000 }, categoryId: { type: [string, "null"], format: uuid }, price: { type: string, pattern: "^[0-9]+(\\.[0-9]{1,2})?$" }, active: { type: boolean } } }
+    Product: { allOf: [{ $ref: "#/components/schemas/ProductInput" }, { type: object, required: [id, active], properties: { id: { type: string, format: uuid }, categoryName: { type: [string, "null"] }, active: { type: boolean } } }] }
+    ProductAvailabilityInput: { type: object, required: [status], properties: { status: { type: string, enum: [available, low, sold_out] }, dailyQuota: { type: [integer, "null"], minimum: 0 }, note: { type: string, maxLength: 240 } } }
+    ProductAvailability: { type: object, required: [productId, name, stockMode, status, source, soldQuantity, note, businessDate], properties: { productId: { type: string, format: uuid }, name: { type: string }, categoryName: { type: [string, "null"] }, imageUrl: { type: [string, "null"] }, stockMode: { type: string, enum: [none, manual, linked, recipe] }, status: { type: string, enum: [available, low, sold_out, unavailable] }, source: { type: string, enum: [always, daily_quota, manual_override, schedule, combo_components] }, dailyQuota: { type: [integer, "null"] }, soldQuantity: { type: integer, minimum: 0 }, remaining: { type: [integer, "null"] }, note: { type: string }, businessDate: { type: string, format: date } } }
+    ComboOptionInput: { type: object, required: [productId, surcharge], properties: { productId: { type: string, format: uuid }, surcharge: { type: string, pattern: "^[0-9]+(\\.[0-9]{1,2})?$" } } }
+    ComboGroupInput: { type: object, required: [name, required, minSelections, maxSelections, options], properties: { name: { type: string, maxLength: 120 }, required: { type: boolean }, minSelections: { type: integer, minimum: 0 }, maxSelections: { type: integer, minimum: 1 }, options: { type: array, items: { $ref: "#/components/schemas/ComboOptionInput" } } } }
+    ComboInput: { type: object, required: [name, description, price, groups], properties: { name: { type: string, maxLength: 160 }, description: { type: string, maxLength: 1000 }, price: { type: string, pattern: "^[0-9]+(\\.[0-9]{1,2})?$" }, categoryId: { type: [string, "null"], format: uuid }, groups: { type: array, minItems: 1, items: { $ref: "#/components/schemas/ComboGroupInput" } } } }
+    ComboSummary: { type: object, required: [id, name, description, price, active, groupCount, optionCount], properties: { id: { type: string, format: uuid }, name: { type: string }, description: { type: string }, price: { type: string }, active: { type: boolean }, groupCount: { type: integer, minimum: 0 }, optionCount: { type: integer, minimum: 0 } } }
+    CustomerAddress: { type: object, required: [label, address, countryCode, default], properties: { id: { type: string, format: uuid, readOnly: true }, label: { type: string }, address: { type: string }, reference: { type: string }, district: { type: string }, city: { type: string }, countryCode: { type: string, pattern: "^[A-Z]{2}$" }, default: { type: boolean } } }
+    CustomerInput: { type: object, required: [customerType, displayName, preferredChannel], properties: { customerType: { type: string, enum: [person, company] }, displayName: { type: string, maxLength: 160 }, documentType: { type: string }, documentNumber: { type: string }, phone: { type: string }, email: { type: string }, preferredChannel: { type: string, enum: [none, whatsapp, phone, email] }, preferences: { type: string }, notes: { type: string }, marketingConsent: { type: boolean }, vipOverride: { type: boolean }, addresses: { type: array, items: { $ref: "#/components/schemas/CustomerAddress" } } } }
+    Customer: { allOf: [{ $ref: "#/components/schemas/CustomerInput" }, { type: object, required: [id, code, visitCount, totalSpent, active, segment], properties: { id: { type: string, format: uuid }, code: { type: string }, visitCount: { type: integer, minimum: 0 }, totalSpent: { type: string }, lastPurchaseAt: { type: [string, "null"], format: date-time }, active: { type: boolean }, segment: { type: string, enum: [new, recurrent, frequent, vip] } } }] }
+    RoleInput: { type: object, required: [name, menuAccess, permissions], properties: { name: { type: string }, description: { type: string }, menuAccess: { type: array, minItems: 1, items: { type: string } }, permissions: { type: array, minItems: 1, items: { type: string } } } }
+    OrderItemInput: { type: object, required: [name, qty, unitPrice], properties: { productId: { type: string, format: uuid }, name: { type: string, maxLength: 160 }, qty: { type: number, exclusiveMinimum: 0 }, unitPrice: { type: number, minimum: 0 }, note: { type: string, maxLength: 240 } } }
+    OrderInput: { type: object, required: [channel, items], properties: { channel: { type: string, enum: [salon, mostrador, recojo, delivery, whatsapp] }, customerId: { type: string, format: uuid }, customerName: { type: string, maxLength: 160 }, customerPhone: { type: string, maxLength: 30 }, address: { type: string, maxLength: 240 }, reference: { type: string, maxLength: 240 }, tableId: { type: string, format: uuid }, notes: { type: string, maxLength: 500 }, deliveryFee: { type: number, minimum: 0 }, items: { type: array, minItems: 1, items: { $ref: "#/components/schemas/OrderItemInput" } } } }
+    OrderItem: { allOf: [{ $ref: "#/components/schemas/OrderItemInput" }, { type: object, required: [id], properties: { id: { type: string, format: uuid } } }] }
+    Order: { type: object, required: [id, code, channel, status, customerName, customerPhone, address, reference, tableId, tableName, notes, subtotal, deliveryFee, total, createdAt, updatedAt], properties: { id: { type: string, format: uuid }, code: { type: string }, channel: { type: string, enum: [salon, mostrador, recojo, delivery, whatsapp] }, status: { type: string, enum: [nuevo, confirmado, preparando, listo, en_camino, entregado, cancelado] }, customerId: { type: string }, customerName: { type: string }, customerPhone: { type: string }, address: { type: string }, reference: { type: string }, tableId: { type: string }, tableName: { type: string }, notes: { type: string }, subtotal: { type: string }, deliveryFee: { type: string }, total: { type: string }, createdAt: { type: string, format: date-time }, updatedAt: { type: string, format: date-time }, items: { type: array, items: { $ref: "#/components/schemas/OrderItem" } } } }
+    UserAssignment: { type: object, required: [roleId, locationId], properties: { roleId: { type: string, format: uuid }, locationId: { type: string, format: uuid } } }
+    UserInput: { type: object, required: [fullName, email, assignments], properties: { fullName: { type: string }, email: { type: string, format: email }, password: { type: string, minLength: 8, writeOnly: true }, assignments: { type: array, minItems: 1, items: { $ref: "#/components/schemas/UserAssignment" } } } }
+    Error: { type: object, required: [code, message, correlationId], properties: { code: { type: string }, message: { type: string }, correlationId: { type: string } } }

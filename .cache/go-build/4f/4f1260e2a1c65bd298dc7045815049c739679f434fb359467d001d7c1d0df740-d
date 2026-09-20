@@ -1,0 +1,15 @@
+./api.go
+./catalog.go
+./combos.go
+./context_switch.go
+./country_catalog.go
+./currency_catalog.go
+./customers.go
+./modules.go
+./organization_admin.go
+./platform.go
+./product_availability.go
+./settings.go
+./tables.go
+./users_roles.go
+./zones.go

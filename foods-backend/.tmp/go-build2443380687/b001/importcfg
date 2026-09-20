@@ -1,0 +1,13 @@
+# import config
+packagefile context=C:\Users\rogelio.fernandez\AppData\Local\go-build\72\722b6aa2f2330bad30b9d2db9576d41a9deafdfe2cfe2cba6d8c348dcc707c9b-d
+packagefile encoding/json=C:\Users\rogelio.fernandez\AppData\Local\go-build\8d\8d3d4de612c55807f46418e872a4e5386c0e055d08f17a008e2439d813b12b2b-d
+packagefile github.com/foods-platform/foods-backend/internal/platform/config=C:\Users\rogelio.fernandez\AppData\Local\go-build\e6\e6330da5b058deb157c5458b1ea2d8647eb9f3b726008782dd6e9050c5cbb0e2-d
+packagefile github.com/foods-platform/foods-backend/internal/platform/database=C:\Users\rogelio.fernandez\AppData\Local\go-build\e8\e8a17599f13cb7bb33c5c14d21f7fb5be1b9bd5862aeb187278787a648f198e4-d
+packagefile github.com/foods-platform/foods-backend/internal/platform/httpapi=C:\Users\rogelio.fernandez\AppData\Local\go-build\55\55064793ea78d75e12d82e30377996dadb395cf51fce2494ae818faa4633af68-d
+packagefile log/slog=C:\Users\rogelio.fernandez\AppData\Local\go-build\51\51c3d21e8c41cd5c6f69d90e2aa0e399eeba739e44aa10889683f2986b756cef-d
+packagefile net/http=C:\Users\rogelio.fernandez\AppData\Local\go-build\a1\a1bfa8e5b0d6b60a236e569442abaaaa82b8cc23577f6954eb96bba944cf9b17-d
+packagefile os=C:\Users\rogelio.fernandez\AppData\Local\go-build\48\48486b785849fda8c1a2c4af24f5a674a38a38c0ed3cde036b7639334f3be0ed-d
+packagefile os/signal=C:\Users\rogelio.fernandez\AppData\Local\go-build\d5\d59d96cffcbf0e7fffcefe94452b87a1da6bd3e45554fad2051a02a056e15855-d
+packagefile syscall=C:\Users\rogelio.fernandez\AppData\Local\go-build\fe\fe0b436deabe08219927c8b5f80f458d746cb11cc6d0cc0ace79b61c63aeb795-d
+packagefile time=C:\Users\rogelio.fernandez\AppData\Local\go-build\d8\d8c9d930f581aba89b15c6f852f2197c193cdaa2280033f5272302fd97329ec6-d
+packagefile runtime=C:\Users\rogelio.fernandez\AppData\Local\go-build\65\657b68bd9f59c0014b8dc3bc6f0dcd084df2bee1f33ee80a7844a50bf2f8091c-d

@@ -1,0 +1,8 @@
+.npm-cache/
+.gocache/
+**/node_modules/
+**/.next/
+**/.next-dev/
+**/.env
+**/*.exe
+**/*.log

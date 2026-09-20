@@ -1,0 +1,4 @@
+ALTER TABLE products DROP COLUMN IF EXISTS prep_minutes;
+ALTER TABLE products DROP COLUMN IF EXISTS allergens;
+ALTER TABLE products DROP COLUMN IF EXISTS featured;
+ALTER TABLE products DROP COLUMN IF EXISTS cost_price;

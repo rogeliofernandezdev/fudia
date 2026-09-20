@@ -1,0 +1,1 @@
+ALTER TABLE roles DROP COLUMN IF EXISTS menu_access;
