@@ -337,7 +337,7 @@ function ComandaView({initial,allTables,busy,currencySymbol,close,save,notify}:{
               <b>{count}</b>
             </div>
           </div>
-          <ComandaCatalog qtyByProduct={qtyByProduct} onPick={tap} onRemove={untap} currencySymbol={currencySymbol}/>
+          <ComandaCatalog qtyByProduct={qtyByProduct} onPick={tap} onRemove={untap} currencySymbol={currencySymbol} variant="salon"/>
         </section>
 
         <aside className={"salon-comanda-summary"+(ticketOpen?" open":"")} aria-label="Resumen de la comanda">
