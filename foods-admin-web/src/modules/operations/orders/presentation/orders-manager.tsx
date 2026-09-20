@@ -116,8 +116,9 @@ function OrderDetail({loading,order,error,channels,currencySymbol,canManage,busy
  const subject=order?(order.tableName||order.customerName||"Pedido"):"Pedido";
  const subtitle=order?.tableName&&order.customerName?order.customerName:undefined;
  return <div className="modal-backdrop modal-overlay-in">
-  <section className="crud-modal order-detail salon-order-detail modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="orders-preview-title">
+  <section className="crud-modal order-detail salon-order-detail modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="orders-preview-title" aria-busy={loading}>
    <div className="salon-order-detail-accent"/>
+   {loading?<OrderDetailSkeleton close={close}/>:<>
    <header className="salon-order-detail-head">
     <div className="salon-order-detail-identity">
      <span className="salon-order-detail-icon"><Icon name={order?channelIcons[order.channel]??"receipt":"receipt"} size={20}/></span>
@@ -131,7 +132,7 @@ function OrderDetail({loading,order,error,channels,currencySymbol,canManage,busy
     <button type="button" className="salon-order-detail-close" aria-label="Cerrar detalle" onClick={close}><Icon name="close" size={17}/></button>
    </header>
 
-   {loading?<Loading/>:error?(
+   {error?(
     <div className="order-detail-body"><div className="catalog-state error"><span><Icon name="alert" size={22}/></span><b>Error al cargar el pedido</b><p>{error}</p></div></div>
    ):order&&meta&&<>
     <div className="order-detail-body salon-order-detail-body">
@@ -178,8 +179,59 @@ function OrderDetail({loading,order,error,channels,currencySymbol,canManage,busy
      {cancellable(order)&&<Button icon="alert" kind="ghost" className="order-detail-cancel" disabled={busy} onClick={()=>cancel(order)}>Cancelar pedido</Button>}
     </footer>}
    </>}
+   </>}
   </section>
  </div>;
+}
+
+function OrderDetailSkeleton({close}:{close:()=>void}){
+ return <>
+  <header className="salon-order-detail-head salon-order-detail-skeleton-head" aria-hidden="true">
+   <div className="salon-order-detail-identity">
+    <span className="salon-order-detail-skeleton-block salon-order-detail-skeleton-icon"/>
+    <div className="salon-order-detail-skeleton-copy">
+     <span className="salon-order-detail-skeleton-block short"/>
+     <span className="salon-order-detail-skeleton-block title"/>
+     <span className="salon-order-detail-skeleton-block medium"/>
+    </div>
+   </div>
+   <span className="salon-order-detail-skeleton-block salon-order-detail-skeleton-status"/>
+   <button type="button" className="salon-order-detail-close" aria-label="Cerrar detalle" onClick={close}><Icon name="close" size={17}/></button>
+  </header>
+  <div className="order-detail-body salon-order-detail-body salon-order-detail-skeleton-body" aria-label="Cargando detalle del pedido">
+   <section className="salon-order-detail-meta salon-order-detail-skeleton-meta">
+    {Array.from({length:3},(_,i)=><div key={i}>
+     <span className="salon-order-detail-skeleton-block salon-order-detail-skeleton-meta-icon"/>
+     <span className="salon-order-detail-skeleton-copy">
+      <span className="salon-order-detail-skeleton-block short"/>
+      <span className="salon-order-detail-skeleton-block medium"/>
+     </span>
+    </div>)}
+   </section>
+   <section className="salon-order-detail-consumption salon-order-detail-skeleton-consumption">
+    <div className="salon-order-detail-skeleton-section-head">
+     <div><span className="salon-order-detail-skeleton-block short"/><span className="salon-order-detail-skeleton-block heading"/></div>
+     <span className="salon-order-detail-skeleton-block tiny"/>
+    </div>
+    <div className="order-detail-items salon-order-detail-items salon-order-detail-skeleton-items">
+     {Array.from({length:3},(_,i)=><div className="salon-order-detail-skeleton-line" key={i}>
+      <span className="salon-order-detail-skeleton-block salon-order-detail-skeleton-qty"/>
+      <span className="salon-order-detail-skeleton-copy"><span className="salon-order-detail-skeleton-block line-title"/><span className="salon-order-detail-skeleton-block medium"/></span>
+      <span className="salon-order-detail-skeleton-block price"/>
+     </div>)}
+    </div>
+   </section>
+  </div>
+  <section className="salon-order-detail-totals salon-order-detail-skeleton-totals" aria-hidden="true">
+   <div className="salon-order-detail-subtotal"><span className="salon-order-detail-skeleton-block label"/><span className="salon-order-detail-skeleton-block amount"/></div>
+   <div className="salon-order-detail-grand"><span className="salon-order-detail-skeleton-block total-label"/><span className="salon-order-detail-skeleton-block total-amount"/></div>
+  </section>
+  <footer className="order-detail-actions salon-order-detail-actions salon-order-detail-skeleton-actions" aria-hidden="true">
+   <span className="salon-order-detail-skeleton-block action primary"/>
+   <span className="salon-order-detail-skeleton-block action secondary"/>
+   <span className="salon-order-detail-skeleton-block action tertiary"/>
+  </footer>
+ </>;
 }
 
 function OrdersLoading(){return <div className="orders-loading" aria-label="Cargando pedidos" aria-busy="true">
@@ -191,5 +243,4 @@ function OrdersLoading(){return <div className="orders-loading" aria-label="Carg
   {Array.from({length:3},(_,index)=><article key={index}><div className="orders-mobile-skeleton-head"><i/><span><b/><small/></span><em/></div><div className="orders-mobile-skeleton-meta"><i/><i/></div></article>)}
  </div>
  </div>}
-function Loading(){return <div className="customers-loading" aria-label="Cargando"><i/><i/><i/><i/></div>}
 function State({icon,title,text,action}:{icon:"alert"|"receipt";title:string;text:string;action?:()=>void}){return <div className="catalog-state"><span><Icon name={icon}/></span><b>{title}</b><p>{text}</p>{action&&<Button kind="ghost" onClick={action}>Reintentar</Button>}</div>}
