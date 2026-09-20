@@ -29,5 +29,12 @@
 @keyframes account-spin{to{transform:rotate(360deg)}}
 @media(max-width:1050px){.account-trigger{min-width:44px;width:44px;padding:3px;grid-template-columns:36px}.account-trigger-copy,.account-trigger>svg{display:none}}
 @container admin-main (width<=1040px){.account-trigger{min-width:44px;width:44px;padding:3px;grid-template-columns:36px}.account-trigger-copy,.account-trigger>svg{display:none}}
+@media(max-width:820px){
+  .account-menu{width:44px;min-width:44px;max-width:44px;flex:0 0 44px;overflow:visible}
+  .account-trigger{width:44px;min-width:44px;max-width:44px;height:44px;padding:3px;grid-template-columns:36px;gap:0;overflow:hidden}
+  .account-trigger-copy,.account-trigger>svg{display:none!important}
+  .account-avatar{width:36px;height:36px}
+  .account-popover{position:fixed;top:64px;right:10px;width:min(280px,calc(100vw - 20px));max-width:calc(100vw - 20px)}
+}
 @media(max-width:600px){.account-popover{position:fixed;top:64px;right:12px;width:min(280px,calc(100vw - 24px))}}
 @media(prefers-reduced-motion:reduce){.account-trigger>svg{transition:none}.account-logout>i{animation:none}}
