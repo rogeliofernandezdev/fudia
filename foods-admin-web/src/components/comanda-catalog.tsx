@@ -1,6 +1,6 @@
 "use client";
 
-import {useState} from "react";
+import {useRef,useState} from "react";
 import {useQueries,useQuery} from "@tanstack/react-query";
 import {Icon} from "@/design-system/icons";
 import {apiFetch} from "@/shared/api/client";
@@ -17,6 +17,7 @@ export function ComandaCatalog({qtyByProduct,onPick,onRemove,currencySymbol,vari
   const[pq,setPq]=useState("");
   const[cat,setCat]=useState("");
   const[page,setPage]=useState(1);
+  const scrollRef=useRef<HTMLDivElement>(null);
   const categories=useQuery({queryKey:["order-categories"],queryFn:()=>apiFetch<{items:{id:string;name:string}[]}>("categories?pageSize=100"),staleTime:60000});
   const cats=categories.data?.items??[];
   const catIndex=cats.findIndex(c=>c.id===cat);
@@ -56,6 +57,10 @@ export function ComandaCatalog({qtyByProduct,onPick,onRemove,currencySymbol,vari
   const salonEnd=Math.min(page*SALON_PAGE_SIZE,salonTotal);
   const displayCount=variant==="salon"?salonTotal:totalItems;
   const booting=variant==="salon"?salonCatalog.isLoading:(!searching&&(categories.isLoading||(cats.length>0&&perCat.every(q=>q.isLoading))));
+  const goToPage=(next:number)=>{
+    setPage(next);
+    scrollRef.current?.scrollTo({top:0,behavior:"smooth"});
+  };
 
   return(
     <div className={"comanda-menu comanda-menu-paged"+(variant==="salon"?" comanda-menu-salon":"")}>
@@ -75,7 +80,7 @@ export function ComandaCatalog({qtyByProduct,onPick,onRemove,currencySymbol,vari
           ))}
         </div>
       </div>
-      <div className="comanda-scroll">
+      <div className="comanda-scroll" ref={scrollRef}>
         {variant==="salon"?(
           booting?(
             <MenuRows n={8}/>
@@ -118,12 +123,12 @@ export function ComandaCatalog({qtyByProduct,onPick,onRemove,currencySymbol,vari
         <footer className="comanda-catalog-pagination">
           <span>Mostrando {salonStart}–{salonEnd} de {salonTotal}</span>
           <nav aria-label="Paginación de la carta">
-            <button type="button" disabled={page<=1} onClick={()=>setPage(value=>Math.max(1,value-1))} aria-label="Página anterior">
+            <button type="button" disabled={page<=1} onClick={()=>goToPage(Math.max(1,page-1))} aria-label="Página anterior">
               <Icon name="chevronLeft" size={14}/>
               <span>Anterior</span>
             </button>
             <b>{page} / {salonPages}</b>
-            <button type="button" disabled={page>=salonPages} onClick={()=>setPage(value=>Math.min(salonPages,value+1))} aria-label="Página siguiente">
+            <button type="button" disabled={page>=salonPages} onClick={()=>goToPage(Math.min(salonPages,page+1))} aria-label="Página siguiente">
               <span>Siguiente</span>
               <Icon name="chevron" size={14}/>
             </button>
