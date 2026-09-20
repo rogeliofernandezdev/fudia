@@ -59,7 +59,7 @@ export function InventoryPage(){
      <thead><tr><th>ARTÍCULO</th><th>TIPO</th><th>UNIDAD</th><th>EXISTENCIA</th><th>STOCK MÍNIMO</th><th>ESTADO</th></tr></thead>
      <tbody>{items.map((item,index)=>{
       const meta=statusMeta[item.status];
-      return <tr className={index%2?"alternate":""} key={item.inventoryItemId}>
+      return <tr className={index%2?"alternate":""} key={`${item.inventoryItemId || "inventory"}-${index}`}>
        <td className="inventory-product-cell"><span className={`row-icon r${index%3}`}><Icon name="stock" size={18}/></span><b>{item.name}</b></td>
        <td>{item.kind==="ingredient"?"Insumo":"Producto"}</td>
        <td>{item.unit}</td>
