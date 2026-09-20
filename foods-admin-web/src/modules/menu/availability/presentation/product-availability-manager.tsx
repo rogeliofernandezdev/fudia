@@ -9,15 +9,116 @@ import {listAvailability,listAvailabilityCategories,updateAvailability} from "..
 
 const labels:Record<AvailabilityStatus,string>={available:"Disponible",low:"Pocas unidades",sold_out:"Agotado",unavailable:"Fuera de horario"};
 const tones:Record<AvailabilityStatus,"green"|"orange"|"gray">={available:"green",low:"orange",sold_out:"gray",unavailable:"gray"};
+const controlLabels:Record<AvailabilityItem["quantityControl"],string>={
+  none:"Sin control",
+  portions:"Porciones preparadas",
+  inventory:"Inventario físico",
+};
 
 export function ProductAvailabilityManager(){
- const client=useQueryClient();const{notify}=useFeedback();const[search,setSearch]=useState("");const[categoryId,setCategoryId]=useState("");const[page,setPage]=useState(1);const[size,setSize]=useState(10);const[quotas,setQuotas]=useState<Record<string,string>>({});
+ const client=useQueryClient();
+ const{notify}=useFeedback();
+ const[search,setSearch]=useState("");
+ const[categoryId,setCategoryId]=useState("");
+ const[page,setPage]=useState(1);
+ const[size,setSize]=useState(10);
+ const[portions,setPortions]=useState<Record<string,string>>({});
+
  const query=useQuery({queryKey:["product-availability",search,categoryId,page,size],queryFn:()=>listAvailability({search,categoryId,page,pageSize:size})});
  const categories=useQuery({queryKey:["categories","availability-filter"],queryFn:listAvailabilityCategories});
- const update=useMutation({mutationFn:({item,status}:{item:AvailabilityItem;status:"available"|"sold_out"})=>{const quota=Number(quotas[item.productId]??item.dailyQuota??0);if(item.stockMode==="manual"&&status!=="sold_out"&&(!Number.isInteger(quota)||quota<1))throw new Error("Ingresa un cupo válido mayor que cero.");return updateAvailability(item.productId,{status,dailyQuota:item.stockMode==="manual"?quota:null,note:item.note})},onSuccess:(_,variables)=>{setQuotas(value=>{const next={...value};delete next[variables.item.productId];return next});void client.invalidateQueries({queryKey:["product-availability"]});notify({tone:"success",title:"Disponibilidad actualizada",message:"El cambio ya aplica al local activo."})},onError:e=>notify({tone:"danger",title:"No se pudo actualizar",message:e.message})});
+ const update=useMutation({
+  mutationFn:({item,status}:{item:AvailabilityItem;status:"available"|"sold_out"})=>{
+   const portionQuantity=Number(portions[item.productId]??item.portionQuantity??0);
+   if(item.quantityControl==="portions"&&status!=="sold_out"&&(!Number.isInteger(portionQuantity)||portionQuantity<1)){
+    throw new Error("Ingresa una cantidad de porciones válida mayor que cero.");
+   }
+   return updateAvailability(item.productId,{
+    status,
+    portionQuantity:item.quantityControl==="portions"?portionQuantity:null,
+    note:item.note,
+   });
+  },
+  onSuccess:(_,variables)=>{
+   setPortions(value=>{const next={...value};delete next[variables.item.productId];return next});
+   void client.invalidateQueries({queryKey:["product-availability"]});
+   void client.invalidateQueries({queryKey:["inventory"]});
+   notify({tone:"success",title:"Disponibilidad actualizada",message:"El cambio ya aplica al local activo."});
+  },
+  onError:e=>notify({tone:"danger",title:"No se pudo actualizar",message:e.message}),
+ });
+
  const items=query.data?.items??[];
- const businessDate=query.data?.businessDate?new Intl.DateTimeFormat("es-PE",{weekday:"short",day:"2-digit",month:"short",timeZone:"UTC"}).format(new Date(`${query.data.businessDate}T00:00:00Z`)):"Cargando fecha…";
- return <><PageHeader eyebrow="CARTA Y PRODUCCIÓN" title="Disponibilidad de la carta" description="Controla el cupo y la disponibilidad diaria de productos, platos, menús y combos del local activo." action={<span className="availability-date"><Icon name="clock" size={16}/>{businessDate}</span>}/><section className="panel availability-panel"><header className="availability-toolbar"><div className="availability-filters"><label><Icon name="search" size={18}/><Input value={search} onChange={event=>{setSearch(event.target.value);setPage(1)}} placeholder="Buscar plato o producto..."/></label><Select value={categoryId} onChange={event=>{setCategoryId(event.target.value);setPage(1)}} disabled={categories.isLoading} aria-label="Filtrar por categoría"><option value="">Todas las categorías</option>{categories.data?.items.map(category=><option value={category.id} key={category.id}>{category.name}</option>)}</Select></div><p><Icon name="store" size={16}/>Los cambios solo afectan al local activo.</p></header>{query.isLoading?<AvailabilitySkeleton/>:query.isError?<div className="availability-state"><Icon name="alert" size={24}/><b>No pudimos cargar el menú</b><p>{query.error.message}</p><Button kind="secondary" icon="refresh" onClick={()=>query.refetch()}>Reintentar</Button></div>:!items.length?<div className="availability-state"><Icon name="box" size={24}/><b>Sin productos</b><p>No hay platos activos que coincidan con los filtros.</p></div>:<><div className="availability-list-head" aria-hidden="true"><span>PRODUCTO Y ESTADO</span><span>CONTROL Y EXISTENCIAS</span><span>ACCIONES</span></div><div className="availability-grid">{items.map(item=>{const derived=item.source==="schedule"||item.source==="combo_components";const pending=update.isPending&&update.variables?.item.productId===item.productId;const quotaValue=quotas[item.productId]??String(item.dailyQuota??0);const quotaChanged=item.stockMode==="manual"&&quotaValue!==String(item.dailyQuota??0);const manuallySoldOut=item.manualStatus==="sold_out";const quotaExhausted=item.source==="daily_quota"&&item.status==="sold_out";return <article className={`availability-card status-${item.status}`} key={item.productId}><header><span className="availability-image">{item.imageUrl?<img src={item.imageUrl} alt=""/>:<Icon name="box" size={20}/>}</span><div><b>{item.name}</b><small>{item.categoryName??"Sin categoría"}</small></div><Status tone={tones[item.status]}>{labels[item.status]}</Status></header><div className="availability-metrics"><span><small>CONTROL</small><b>{item.stockMode==="manual"?"Cupo diario":"Siempre disponible"}</b></span>{item.stockMode==="manual"&&<><label><small>CUPO DE HOY</small><Input type="number" min="1" step="1" inputMode="numeric" disabled={derived||pending} value={quotaValue} onChange={event=>setQuotas(value=>({...value,[item.productId]:event.target.value}))}/></label><span><small>VENDIDOS / RESTANTES</small><b>{item.soldQuantity} / {item.remaining??"Sin límite"}</b></span></>}</div>{derived&&<p className="availability-derived"><Icon name="alert" size={14}/>{item.source==="schedule"?"La ficha del producto lo mantiene fuera de horario.":"No hay suficientes opciones disponibles en una parte obligatoria."}</p>}{quotaExhausted&&<p className="availability-derived"><Icon name="alert" size={14}/>El cupo se agotó. Auméntalo y guarda para reactivar el producto.</p>}<footer className={item.stockMode==="manual"?"availability-actions":"availability-actions single"}>{item.stockMode==="manual"&&<Button kind={quotaChanged?"primary":"secondary"} icon="check" disabled={derived||pending||!quotaChanged} onClick={()=>update.mutate({item,status:item.manualStatus})}>{pending?"Actualizando…":"Actualizar cupo"}</Button>}<Button kind={manuallySoldOut?"success":"danger"} icon="power" disabled={derived||pending||quotaExhausted} onClick={()=>update.mutate({item,status:manuallySoldOut?"available":"sold_out"})}>{pending?"Guardando…":manuallySoldOut?"Reactivar":"Marcar agotado"}</Button></footer></article>})}</div></>} {!query.isLoading&&!query.isError&&<Pagination page={page} size={size} total={query.data?.total??items.length} onPage={setPage} onSize={value=>{setSize(value);setPage(1)}}/>}</section></>;
+ const businessDate=query.data?.businessDate
+  ?new Intl.DateTimeFormat("es-PE",{weekday:"short",day:"2-digit",month:"short",timeZone:"UTC"}).format(new Date(`${query.data.businessDate}T00:00:00Z`))
+  :"Cargando fecha…";
+
+ return <>
+  <PageHeader eyebrow="CARTA Y PRODUCCIÓN" title="Disponibilidad de la carta" description="Controla las porciones preparadas y consulta las existencias físicas del local activo." action={<span className="availability-date"><Icon name="clock" size={16}/>{businessDate}</span>}/>
+  <section className="panel availability-panel">
+   <header className="availability-toolbar">
+    <div className="availability-filters">
+     <label><Icon name="search" size={18}/><Input value={search} onChange={event=>{setSearch(event.target.value);setPage(1)}} placeholder="Buscar plato o producto..."/></label>
+     <Select value={categoryId} onChange={event=>{setCategoryId(event.target.value);setPage(1)}} disabled={categories.isLoading} aria-label="Filtrar por categoría">
+      <option value="">Todas las categorías</option>
+      {categories.data?.items.map(category=><option value={category.id} key={category.id}>{category.name}</option>)}
+     </Select>
+    </div>
+    <p><Icon name="store" size={16}/>Las cantidades siempre corresponden al local activo.</p>
+   </header>
+
+   {query.isLoading?<AvailabilitySkeleton/>:query.isError?
+    <div className="availability-state"><Icon name="alert" size={24}/><b>No pudimos cargar la carta</b><p>{query.error.message}</p><Button kind="secondary" icon="refresh" onClick={()=>query.refetch()}>Reintentar</Button></div>
+   :!items.length?
+    <div className="availability-state"><Icon name="box" size={24}/><b>Sin productos</b><p>No hay productos activos que coincidan con los filtros.</p></div>
+   :<>
+    <div className="availability-list-head" aria-hidden="true"><span>PRODUCTO Y ESTADO</span><span>CONTROL Y CANTIDAD</span><span>ACCIONES</span></div>
+    <div className="availability-grid">
+     {items.map(item=>{
+      const derived=item.source==="schedule"||item.source==="combo_components";
+      const pending=update.isPending&&update.variables?.item.productId===item.productId;
+      const portionValue=portions[item.productId]??String(item.portionQuantity??0);
+      const portionChanged=item.quantityControl==="portions"&&portionValue!==String(item.portionQuantity??0);
+      const manuallySoldOut=item.manualStatus==="sold_out";
+      const quantityExhausted=(item.source==="portions"||item.source==="inventory")&&item.status==="sold_out";
+      const inventoryAmount=item.remaining===null?"0":Number(item.remaining).toLocaleString("es-PE",{maximumFractionDigits:3});
+      return <article className={`availability-card status-${item.status}`} key={item.productId}>
+       <header>
+        <span className="availability-image">{item.imageUrl?<img src={item.imageUrl} alt=""/>:<Icon name="box" size={20}/>}</span>
+        <div><b>{item.name}</b><small>{item.categoryName??"Sin categoría"}</small></div>
+        <Status tone={tones[item.status]}>{labels[item.status]}</Status>
+       </header>
+
+       <div className="availability-metrics">
+        <span><small>CONTROL</small><b>{controlLabels[item.quantityControl]}</b></span>
+        {item.quantityControl==="portions"&&<>
+         <label><small>PORCIONES DE HOY</small><Input type="number" min="1" step="1" inputMode="numeric" disabled={derived||pending} value={portionValue} onChange={event=>setPortions(value=>({...value,[item.productId]:event.target.value}))}/></label>
+         <span><small>VENDIDAS / RESTANTES</small><b>{item.soldQuantity} / {item.remaining??0}</b></span>
+        </>}
+        {item.quantityControl==="inventory"&&<>
+         <span><small>EXISTENCIA FÍSICA</small><b>{inventoryAmount} {item.inventoryUnit??"und"}</b></span>
+         <span><small>ORIGEN</small><b>Inventario</b></span>
+        </>}
+        {item.quantityControl==="none"&&<span><small>CANTIDAD</small><b>No se controla</b></span>}
+       </div>
+
+       {item.quantityControl==="inventory"&&!derived&&<p className="availability-derived inventory"><Icon name="stock" size={14}/>La existencia se actualiza únicamente desde Inventario y con las ventas.</p>}
+       {derived&&<p className="availability-derived"><Icon name="alert" size={14}/>{item.source==="schedule"?"La ficha del producto lo mantiene fuera de horario.":"No hay suficientes opciones disponibles en una parte obligatoria."}</p>}
+       {item.quantityControl==="portions"&&item.source==="portions"&&item.status==="sold_out"&&<p className="availability-derived"><Icon name="alert" size={14}/>Las porciones del día se agotaron. Aumenta la cantidad y guarda para continuar vendiendo.</p>}
+       {item.quantityControl==="inventory"&&item.source==="inventory"&&item.status==="sold_out"&&<p className="availability-derived"><Icon name="alert" size={14}/>No queda stock físico. Registra una nueva entrada en Inventario.</p>}
+
+       <footer className={item.quantityControl==="portions"?"availability-actions":"availability-actions single"}>
+        {item.quantityControl==="portions"&&<Button kind={portionChanged?"primary":"secondary"} icon="check" disabled={derived||pending||!portionChanged} onClick={()=>update.mutate({item,status:item.manualStatus})}>{pending?"Actualizando…":"Guardar porciones"}</Button>}
+        <Button kind={manuallySoldOut?"success":"danger"} icon="power" disabled={derived||pending||(!manuallySoldOut&&quantityExhausted)} onClick={()=>update.mutate({item,status:manuallySoldOut?"available":"sold_out"})}>{pending?"Guardando…":manuallySoldOut?"Reactivar":"Marcar agotado"}</Button>
+       </footer>
+      </article>;
+     })}
+    </div>
+   </>}
+   {!query.isLoading&&!query.isError&&<Pagination page={page} size={size} total={query.data?.total??items.length} onPage={setPage} onSize={value=>{setSize(value);setPage(1)}}/>}
+  </section>
+ </>;
 }
 
-function AvailabilitySkeleton(){return <div className="availability-grid" aria-label="Cargando disponibilidad">{Array.from({length:6},(_,index)=><article className="availability-card availability-skeleton" key={index}><header><i/><span/><em/></header><div><i/><i/><i/></div><footer><i/><i/><i/></footer></article>)}</div>}
+function AvailabilitySkeleton(){
+ return <div className="availability-grid" aria-label="Cargando disponibilidad">{Array.from({length:6},(_,index)=><article className="availability-card availability-skeleton" key={index}><header><i/><span/><em/></header><div><i/><i/><i/></div><footer><i/><i/><i/></footer></article>)}</div>;
+}
