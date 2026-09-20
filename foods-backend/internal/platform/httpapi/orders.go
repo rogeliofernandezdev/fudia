@@ -72,8 +72,9 @@ type preparedOrderSelection struct {
 	Surcharge float64
 }
 type comboOptionUsageKey struct {
-	GroupID   string
-	ProductID string
+	ComboProductID string
+	GroupName      string
+	ProductID      string
 }
 type preparedOrderItem struct {
 	ProductID  *string
@@ -295,7 +296,7 @@ func (a *API) prepareOrderItems(r *http.Request, tx pgx.Tx, s scope, existingOrd
 					prepared = append(prepared, item)
 					subtotal += item.Qty * item.UnitPrice
 					for _, sel := range existingSelections {
-						plannedOptionUsage[comboOptionUsageKey{GroupID: sel.GroupID, ProductID: sel.ProductID}] += item.Qty
+						plannedOptionUsage[comboOptionUsageKey{ComboProductID: *productID, GroupName: sel.GroupName, ProductID: sel.ProductID}] += item.Qty
 					}
 					continue
 				}
@@ -462,7 +463,7 @@ func (a *API) prepareOrderItems(r *http.Request, tx pgx.Tx, s scope, existingOrd
 		prepared = append(prepared, item)
 		subtotal += item.Qty * item.UnitPrice
 		for _, sel := range selections {
-			plannedOptionUsage[comboOptionUsageKey{GroupID: sel.GroupID, ProductID: sel.ProductID}] += item.Qty
+			plannedOptionUsage[comboOptionUsageKey{ComboProductID: *productID, GroupName: sel.GroupName, ProductID: sel.ProductID}] += item.Qty
 		}
 	}
 
@@ -471,22 +472,49 @@ func (a *API) prepareOrderItems(r *http.Request, tx pgx.Tx, s scope, existingOrd
 		usageKeys = append(usageKeys, key)
 	}
 	sort.Slice(usageKeys, func(i, j int) bool {
-		if usageKeys[i].GroupID == usageKeys[j].GroupID {
-			return usageKeys[i].ProductID < usageKeys[j].ProductID
+		if usageKeys[i].ComboProductID != usageKeys[j].ComboProductID {
+			return usageKeys[i].ComboProductID < usageKeys[j].ComboProductID
 		}
-		return usageKeys[i].GroupID < usageKeys[j].GroupID
+		if usageKeys[i].GroupName != usageKeys[j].GroupName {
+			return usageKeys[i].GroupName < usageKeys[j].GroupName
+		}
+		return usageKeys[i].ProductID < usageKeys[j].ProductID
 	})
 	for _, key := range usageKeys {
+		var existingUsage float64
+		if existingOrderID != "" {
+			err := tx.QueryRow(r.Context(), `
+				SELECT COALESCE(sum(oi.qty),0)::float8
+				FROM order_item_combo_selections ssel
+				JOIN order_items oi ON oi.id=ssel.order_item_id AND oi.organization_id=ssel.organization_id
+				WHERE ssel.organization_id=$1
+				  AND oi.order_id=$2
+				  AND oi.product_id=$3
+				  AND lower(ssel.group_name)=lower($4)
+				  AND ssel.option_product_id=$5`,
+				s.OrganizationID, existingOrderID, key.ComboProductID, key.GroupName, key.ProductID).Scan(&existingUsage)
+			if err != nil {
+				return nil, 0, &orderPreparationError{Status: 503, Code: "order_unavailable", Message: "No pudimos validar el cupo existente del menú."}
+			}
+		}
+
 		var quota *int
-		var optionName, comboProductID, groupName string
+		var optionName string
 		err := tx.QueryRow(r.Context(), `
-			SELECT o.default_quota,p.name,g.combo_product_id::text,g.name
+			SELECT o.default_quota,p.name
 			FROM menu_combo_options o
 			JOIN menu_combo_groups g ON g.id=o.group_id AND g.organization_id=o.organization_id
 			JOIN products p ON p.id=o.option_product_id AND p.organization_id=o.organization_id
-			WHERE o.group_id=$1 AND o.option_product_id=$2 AND o.organization_id=$3
-			FOR UPDATE OF o`, key.GroupID, key.ProductID, s.OrganizationID).Scan(&quota, &optionName, &comboProductID, &groupName)
+			WHERE g.combo_product_id=$1
+			  AND lower(g.name)=lower($2)
+			  AND o.option_product_id=$3
+			  AND o.organization_id=$4
+			FOR UPDATE OF o`,
+			key.ComboProductID, key.GroupName, key.ProductID, s.OrganizationID).Scan(&quota, &optionName)
 		if errors.Is(err, pgx.ErrNoRows) {
+			if existingOrderID != "" && plannedOptionUsage[key] <= existingUsage {
+				continue
+			}
 			return nil, 0, &orderPreparationError{Status: 409, Code: "combo_option_unavailable", Message: "Una opción del menú ya no está disponible."}
 		}
 		if err != nil {
@@ -496,7 +524,7 @@ func (a *API) prepareOrderItems(r *http.Request, tx pgx.Tx, s scope, existingOrd
 			continue
 		}
 
-		var used float64
+		var externalUsage float64
 		err = tx.QueryRow(r.Context(), `
 			SELECT COALESCE(sum(oi.qty),0)::float8
 			FROM order_item_combo_selections ssel
@@ -505,17 +533,25 @@ func (a *API) prepareOrderItems(r *http.Request, tx pgx.Tx, s scope, existingOrd
 			JOIN locations l ON l.id=ord.location_id AND l.organization_id=ord.organization_id
 			WHERE ssel.organization_id=$1
 			  AND oi.product_id=$2
-			  AND ssel.group_name=$3
+			  AND lower(ssel.group_name)=lower($3)
 			  AND ssel.option_product_id=$4
 			  AND ord.location_id=$5
 			  AND ord.status<>'cancelado'
 			  AND (ord.created_at AT TIME ZONE l.timezone)::date=(now() AT TIME ZONE l.timezone)::date
 			  AND ($6='' OR ord.id::text<>$6)`,
-			s.OrganizationID, comboProductID, groupName, key.ProductID, s.LocationID, existingOrderID).Scan(&used)
+			s.OrganizationID, key.ComboProductID, key.GroupName, key.ProductID, s.LocationID, existingOrderID).Scan(&externalUsage)
 		if err != nil {
 			return nil, 0, &orderPreparationError{Status: 503, Code: "order_unavailable", Message: "No pudimos validar el cupo del menú."}
 		}
-		if used+plannedOptionUsage[key] > float64(*quota) {
+
+		allowedForOrder := float64(*quota) - externalUsage
+		if allowedForOrder < 0 {
+			allowedForOrder = 0
+		}
+		if existingUsage > allowedForOrder {
+			allowedForOrder = existingUsage
+		}
+		if plannedOptionUsage[key] > allowedForOrder {
 			return nil, 0, &orderPreparationError{
 				Status: 409,
 				Code: "combo_option_quota_exceeded",
