@@ -146,7 +146,7 @@ test("producto e inventario mantienen una sola fuente de verdad",()=>{
   assert.ok(kardex.includes("location?.timezone"),"Kárdex toma la zona horaria del local activo");
   assert.equal(kardex.includes(forbiddenRegionalLocale),false,"Kárdex no fija Perú como región");
   assert.equal(inventory.includes(forbiddenRegionalLocale),false,"Inventario no fija Perú como región");
-  assert.ok(regionalFormat.includes("timeZone:context.timeZone||undefined"),"El formateador aplica la zona horaria operativa");
+  assert.ok(regionalFormat.includes("timeZone:context.timeZone||options.timeZone"),"El formateador aplica la zona horaria operativa y conserva un fallback explícito");
   assert.ok(regionalFormat.includes("country?.trim().toUpperCase()"),"El locale regional se deriva del país en contexto");
   assert.ok(sessionApi.includes("country:string;timezone:string"),"La sesión expone país y zona horaria del local");
 
