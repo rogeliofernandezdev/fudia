@@ -2,7 +2,7 @@
 
 import {useRef,useState} from "react";
 import {useQueries,useQuery} from "@tanstack/react-query";
-import {Icon} from "@/design-system/icons";
+import {Icon,Pagination} from "@/design-system";
 import {apiFetch} from "@/shared/api/client";
 
 export type CatalogProduct={id:string;name:string;price:string;categoryId:string|null;imageUrl:string|null};
@@ -11,12 +11,12 @@ type CatalogQuery={data?:ProductList;isLoading:boolean;error?:{message:string}|n
 type Section={id:string;title:string;items:CatalogProduct[];loading:boolean;error?:{message:string}|null};
 
 const money=(v:string)=>Number(v).toFixed(2);
-const SALON_PAGE_SIZE=12;
 
 export function ComandaCatalog({qtyByProduct,onPick,onRemove,currencySymbol,variant="default"}:{qtyByProduct:Record<string,number>;onPick:(p:CatalogProduct)=>void;onRemove:(p:CatalogProduct)=>void;currencySymbol:string;variant?:"default"|"salon"}){
   const[pq,setPq]=useState("");
   const[cat,setCat]=useState("");
   const[page,setPage]=useState(1);
+  const[pageSize,setPageSize]=useState(10);
   const scrollRef=useRef<HTMLDivElement>(null);
   const categories=useQuery({queryKey:["order-categories"],queryFn:()=>apiFetch<{items:{id:string;name:string}[]}>("categories?pageSize=100"),staleTime:60000});
   const cats=categories.data?.items??[];
@@ -26,9 +26,9 @@ export function ComandaCatalog({qtyByProduct,onPick,onRemove,currencySymbol,vari
   const searching=pq.trim().length>0;
   const search=useQuery({queryKey:["order-catalog","search",pq],queryFn:()=>apiFetch<ProductList>(`products?status=active&q=${encodeURIComponent(pq.trim())}&page=1&pageSize=20`),enabled:variant==="default"&&searching,staleTime:60000});
   const salonCatalog=useQuery({
-    queryKey:["order-catalog","salon",cat,pq.trim(),page,SALON_PAGE_SIZE],
+    queryKey:["order-catalog","salon",cat,pq.trim(),page,pageSize],
     queryFn:()=>{
-      const filters=[`status=active`,`page=${page}`,`pageSize=${SALON_PAGE_SIZE}`];
+      const filters=[`status=active`,`page=${page}`,`pageSize=${pageSize}`];
       if(cat)filters.push(`categoryId=${encodeURIComponent(cat)}`);
       if(searching)filters.push(`q=${encodeURIComponent(pq.trim())}`);
       return apiFetch<ProductList>(`products?${filters.join("&")}`);
@@ -52,13 +52,15 @@ export function ComandaCatalog({qtyByProduct,onPick,onRemove,currencySymbol,vari
   const totalItems=sections.reduce((a,s)=>a+s.items.length,0);
   const salonItems=salonCatalog.data?.items??[];
   const salonTotal=salonCatalog.data?.total??0;
-  const salonPages=Math.max(1,Math.ceil(salonTotal/SALON_PAGE_SIZE));
-  const salonStart=salonTotal?(page-1)*SALON_PAGE_SIZE+1:0;
-  const salonEnd=Math.min(page*SALON_PAGE_SIZE,salonTotal);
   const displayCount=variant==="salon"?salonTotal:totalItems;
   const booting=variant==="salon"?salonCatalog.isLoading:(!searching&&(categories.isLoading||(cats.length>0&&perCat.every(q=>q.isLoading))));
   const goToPage=(next:number)=>{
     setPage(next);
+    scrollRef.current?.scrollTo({top:0,behavior:"smooth"});
+  };
+  const changePageSize=(next:number)=>{
+    setPageSize(next);
+    setPage(1);
     scrollRef.current?.scrollTo({top:0,behavior:"smooth"});
   };
 
@@ -119,21 +121,10 @@ export function ComandaCatalog({qtyByProduct,onPick,onRemove,currencySymbol,vari
           <div className="catalog-state empty-catalog-card"><span><Icon name="search"/></span><b>Sin platos</b><p>La carta aún no tiene productos activos.</p></div>
         )}
       </div>
-      {variant==="salon"&&salonItems.length>0&&salonTotal>SALON_PAGE_SIZE&&(
-        <footer className="comanda-catalog-pagination">
-          <span>Mostrando {salonStart}–{salonEnd} de {salonTotal}</span>
-          <nav aria-label="Paginación de la carta">
-            <button type="button" disabled={page<=1} onClick={()=>goToPage(Math.max(1,page-1))} aria-label="Página anterior">
-              <Icon name="chevronLeft" size={14}/>
-              <span>Anterior</span>
-            </button>
-            <b>{page} / {salonPages}</b>
-            <button type="button" disabled={page>=salonPages} onClick={()=>goToPage(Math.min(salonPages,page+1))} aria-label="Página siguiente">
-              <span>Siguiente</span>
-              <Icon name="chevron" size={14}/>
-            </button>
-          </nav>
-        </footer>
+      {variant==="salon"&&salonItems.length>0&&(
+        <div className="salon-comanda-pagination-shell">
+          <Pagination page={page} size={pageSize} total={salonTotal} onPage={goToPage} onSize={changePageSize}/>
+        </div>
       )}
     </div>
   );
