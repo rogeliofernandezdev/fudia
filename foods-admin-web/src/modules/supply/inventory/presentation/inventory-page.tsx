@@ -5,6 +5,7 @@ import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Button,Icon,Input,PageHeader,Pagination,RemoteModalSkeleton,Status} from "@/design-system";
 import {useFeedback,useSettings} from "@/providers";
 import {useSession} from "@/providers/session-context";
+import {formatRegionalNumber} from "@/shared/i18n/regional-format";
 import {InventoryEntryDialog} from "./inventory-entry-dialog";
 import {createInventoryEntry,listInventory,listInventoryProducts} from "../infrastructure/inventory-api";
 
@@ -18,7 +19,7 @@ export function InventoryPage(){
  const client=useQueryClient();
  const{notify}=useFeedback();
  const settings=useSettings();
- const{can}=useSession();
+ const{can,location}=useSession();
  const[search,setSearch]=useState("");
  const[page,setPage]=useState(1);
  const[size,setSize]=useState(10);
@@ -35,7 +36,7 @@ export function InventoryPage(){
    void client.invalidateQueries({queryKey:["products"]});
    void client.invalidateQueries({queryKey:["product-availability"]});
    void client.invalidateQueries({queryKey:["inventory-movements"]});
-   notify({tone:"success",title:result.createdProduct?"Producto y entrada registrados":"Entrada registrada",message:`${result.name}: saldo ${Number(result.balance).toLocaleString("es-PE",{maximumFractionDigits:3})} ${result.unit}.`});
+   notify({tone:"success",title:result.createdProduct?"Producto y entrada registrados":"Entrada registrada",message:`${result.name}: saldo ${formatRegionalNumber(Number(result.balance),location?.country,{maximumFractionDigits:3})} ${result.unit}.`});
   },
   onError:error=>notify({tone:"danger",title:"No se pudo registrar la entrada",message:error.message}),
  });
@@ -60,8 +61,8 @@ export function InventoryPage(){
       return <tr className={index%2?"alternate":""} key={item.productId}>
        <td className="inventory-product-cell"><span className={`row-icon r${index%3}`}><Icon name="stock" size={18}/></span><b>{item.name}</b></td>
        <td>{item.unit}</td>
-       <td><b className="inventory-quantity">{Number(item.quantity).toLocaleString("es-PE",{maximumFractionDigits:3})}</b></td>
-       <td>{Number(item.minimumStock).toLocaleString("es-PE",{maximumFractionDigits:3})}</td>
+       <td><b className="inventory-quantity">{formatRegionalNumber(Number(item.quantity),location?.country,{maximumFractionDigits:3})}</b></td>
+       <td>{formatRegionalNumber(Number(item.minimumStock),location?.country,{maximumFractionDigits:3})}</td>
        <td><Status tone={meta.tone}>{meta.label}</Status></td>
       </tr>;
      })}</tbody>
