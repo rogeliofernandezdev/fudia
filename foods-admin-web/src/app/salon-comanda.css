@@ -472,9 +472,10 @@
   display:flex;
   align-items:center;
   overflow:hidden;
-  border:1px solid #e4e7ec;
+  border:1px solid var(--primary-600,#4654cd);
   border-radius:6px;
-  background:#fff;
+  background:var(--primary-100,#eef0ff);
+  box-shadow:0 2px 7px rgba(70,84,205,.12);
 }
 
 .salon-comanda-stepper button{
@@ -483,29 +484,36 @@
   display:grid;
   place-items:center;
   border:0;
-  background:var(--cloud-50,#f7f8fc);
-  color:var(--ink-600,#475467);
+  background:var(--primary-600,#4654cd);
+  color:#fff;
   cursor:pointer;
-  transition:background .15s ease,color .15s ease;
+  transition:background .15s ease,transform .15s ease;
 }
 
 .salon-comanda-stepper button:hover{
-  background:var(--primary-100,#eef0ff);
-  color:var(--ops-700,#3946b8);
+  background:var(--primary-700,#3946b8);
+}
+
+.salon-comanda-stepper button:active{
+  transform:scale(.94);
 }
 
 .salon-comanda-stepper button:focus-visible{
-  outline:2px solid var(--ops-500,#4654cd);
-  outline-offset:-2px;
+  outline:3px solid rgba(70,84,205,.28);
+  outline-offset:-3px;
 }
 
 .salon-comanda-stepper b{
-  min-width:30px;
+  min-width:32px;
+  height:var(--control-height);
+  display:grid;
+  place-items:center;
   text-align:center;
-  color:var(--ink-950,#101828);
+  background:var(--primary-100,#eef0ff);
+  color:var(--ops-700,#3946b8);
   font-family:var(--font-geist-mono,ui-monospace,monospace);
   font-size:11px;
-  font-weight:700;
+  font-weight:850;
   font-variant-numeric:tabular-nums;
 }
 
