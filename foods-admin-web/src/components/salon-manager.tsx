@@ -326,6 +326,7 @@ function ComandaView({initial,allTables,busy,currencySymbol,close,save,notify}:{
             </div>
             <div className="salon-comanda-context-customer">
               <Input
+                autoFocus
                 value={v.customerName}
                 onChange={e=>setV({...v,customerName:e.target.value})}
                 placeholder="Cliente / familia (opcional)"
