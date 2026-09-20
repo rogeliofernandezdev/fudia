@@ -1,6 +1,7 @@
 "use client";
 import {useMemo} from "react";
 import {useForm} from "react-hook-form";
+import type {FieldPath,FieldPathValue} from "react-hook-form";
 import {Button,Icon,Input,Select,Textarea} from "@/design-system";
 import {useSession} from "@/providers/session-context";
 import {formatRegionalNumber} from "@/shared/i18n/regional-format";
@@ -57,7 +58,7 @@ export function InventoryEntryDialog({products,currencySymbol,busy,close,save}:{
  const quantityLabel=value.presentationType==="package"?"Cantidad de paquetes":value.presentationType==="box"?"Cantidad de cajas":"Cantidad";
  const hasErrors=Object.keys(errors).length>0;
 
- function updateField<K extends keyof InventoryEntryDraft>(field:K,next:InventoryEntryDraft[K]){
+ function updateField<K extends FieldPath<InventoryEntryDraft>>(field:K,next:FieldPathValue<InventoryEntryDraft,K>){
   setValue(field,next,{shouldDirty:true,shouldValidate:isSubmitted});
  }
 
