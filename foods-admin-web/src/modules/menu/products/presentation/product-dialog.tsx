@@ -5,10 +5,8 @@ import AsyncSelect from "react-select/async";
 import type {StylesConfig} from "react-select";
 import {Icon} from "@/design-system/icons";
 import {RichTextEditor} from "@/design-system/rich-text-editor";
+import type {Category,ProductDraft} from "../domain/types";
 
-type StockMode="none"|"manual";
-type Category={id:string;name:string;sortOrder:number;active:boolean;productCount:number};
-type ProductDraft={id?:string;name:string;description:string;categoryId:string;price:string;active:boolean;stockMode:StockMode;defaultDailyQuota:string;imageUrl:string|null;prepMinutes:string;allergens:string[];featured:boolean;costPrice:string};
 type AllergenOption={label:string;value:string};
 const selectStyles:StylesConfig<AllergenOption,true>={control:(base)=>({...base,height:"var(--control-height)",minHeight:"var(--control-height)",borderColor:"#e4e7ec",borderRadius:"6px",fontSize:"11px",fontWeight:600,boxShadow:"none",outline:"none","&:hover":{borderColor:"#d0d5dd"}}),valueContainer:(base)=>({...base,padding:"0 10px",height:"var(--control-height)"}),multiValue:(base)=>({...base,backgroundColor:"var(--ops-100)",borderRadius:"4px",margin:"2px"}),multiValueLabel:(base)=>({...base,color:"var(--ops-700)",fontSize:"10px",fontWeight:600,padding:"2px 6px"}),multiValueRemove:(base)=>({...base,color:"var(--ops-700)",borderRadius:"4px",padding:0,width:"18px","&:hover":{backgroundColor:"var(--danger)",color:"#fff"}}),option:(base,state)=>({...base,fontSize:"11px",fontWeight:600,backgroundColor:state.isSelected?"var(--ops-500)":state.isFocused?"var(--ops-100)":"transparent",color:state.isSelected?"#fff":"var(--ink-700)",cursor:"pointer",padding:"6px 10px"}),menu:(base)=>({...base,zIndex:5,fontSize:"11px",border:"1px solid #e4e7ec",borderRadius:"6px",boxShadow:"0 4px 12px #1018281a"}),input:(base)=>({...base,fontSize:"11px",fontWeight:600,margin:0,padding:0,border:"none",outline:"none",boxShadow:"none",background:"transparent",opacity:1}),placeholder:(base)=>({...base,fontSize:"11px",fontWeight:400,color:"#98a2b3",margin:0,textAlign:"left"}),indicatorSeparator:(base)=>({...base,display:"none"}),dropdownIndicator:(base)=>({...base,padding:"0 8px"})};
 
