@@ -18,9 +18,9 @@ const presentationLabels:Record<InventoryPresentationType,string>={
  package:"Paquete",
  box:"Caja",
 };
-function presentationLabel(type:InventoryPresentationType,factor:string){
+function presentationLabel(type:InventoryPresentationType,factor:string,country?:string|null){
  if(type==="unit")return"Unidad base";
- return `${presentationLabels[type]} x ${Number(factor).toLocaleString("en-US",{maximumFractionDigits:3})}`;
+ return `${presentationLabels[type]} x ${formatRegionalNumber(Number(factor),country,{maximumFractionDigits:3})}`;
 }
 
 export function InventoryEntryDialog({products,currencySymbol,busy,close,save}:{products:InventoryProductOption[];currencySymbol:string;busy:boolean;close:()=>void;save:(draft:InventoryEntryDraft)=>void}){
@@ -42,7 +42,7 @@ export function InventoryEntryDialog({products,currencySymbol,busy,close,save}:{
  const valid=value.mode==="existing"
   ?Boolean(value.productId)&&validQuantity&&validFactor&&validMinimum
   :Boolean(value.name.trim())&&priceValid&&validQuantity&&validFactor&&validMinimum;
- const matchedPresentation=selected?.presentations.find(item=>
+ const matchedPresentation=(selected?.presentations??[]).find(item=>
   item.presentationType===value.presentationType&&
   Number(item.unitsPerPresentation)===factor
  );
@@ -73,7 +73,7 @@ export function InventoryEntryDialog({products,currencySymbol,busy,close,save}:{
    setValue(current=>({...current,presentationType:"unit",unitsPerPresentation:"1"}));
    return;
   }
-  const saved=selected?.presentations.find(item=>item.id===choice);
+  const saved=(selected?.presentations??[]).find(item=>item.id===choice);
   if(saved){
    setValue(current=>({...current,presentationType:saved.presentationType,unitsPerPresentation:saved.unitsPerPresentation}));
    return;
@@ -131,7 +131,7 @@ export function InventoryEntryDialog({products,currencySymbol,busy,close,save}:{
        {value.mode==="existing"&&selected?<label>Presentación de ingreso
         <Select value={presentationChoice} onChange={event=>chooseSavedPresentation(event.target.value)}>
          <option value="unit">Unidad base</option>
-         {selected.presentations.filter(item=>item.presentationType!=="unit").map(item=><option value={item.id} key={item.id}>{presentationLabel(item.presentationType,item.unitsPerPresentation)}</option>)}
+         {(selected.presentations??[]).filter(item=>item.presentationType!=="unit").map(item=><option value={item.id} key={item.id}>{presentationLabel(item.presentationType,item.unitsPerPresentation,location?.country)}</option>)}
          <option value="new-package">+ Nuevo paquete</option>
          <option value="new-box">+ Nueva caja</option>
         </Select>
