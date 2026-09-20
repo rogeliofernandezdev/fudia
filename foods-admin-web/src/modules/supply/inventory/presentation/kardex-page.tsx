@@ -44,7 +44,7 @@ export function KardexPage(){
       <td><Status tone={delta>0?"green":"blue"}>{movementLabels[item.movementType]}</Status></td>
       <td><b className="inventory-quantity">{delta>0?"+":""}{formatRegionalNumber(delta,location?.country,{maximumFractionDigits:3})}</b></td>
       <td>{formatRegionalNumber(Number(item.balanceAfter),location?.country,{maximumFractionDigits:3})}</td>
-      <td><b>{item.sourceReference||"—"}</b>{item.note&&<small>{item.note}</small>}</td>
+      <td><b>{item.sourceReference||(item.sourceType==="order"?"Pedido histórico":"Entrada histórica")}</b>{item.note&&<small>{item.note}</small>}</td>
      </tr>;
     })}</tbody>
    </table></div>}
