@@ -2,9 +2,10 @@
 
 import "../app/orders.css";
 import "../app/salon.css";
+import "../app/salon-comanda.css";
 import {useState,useCallback} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,ConfirmDialog,PageHeader,Select,Status} from "@/design-system";
+import {Button,ConfirmDialog,Input,PageHeader,Select,Status,Textarea} from "@/design-system";
 import {Icon} from "@/design-system/icons";
 import {ComandaCatalog} from "@/components/comanda-catalog";
 import {apiFetch} from "@/shared/api/client";
@@ -284,7 +285,8 @@ function ComandaView({initial,allTables,busy,currencySymbol,close,save,notify}:{
   const freeTables=allTables.filter(t=>!t.order||t.id===v.tableId);
   const selTable=allTables.find(t=>t.id===v.tableId);
   const tableName=selTable?.name??"";
-  const tableLabel=selTable?(selTable.zone?`${selTable.zone} · ${selTable.name}`:selTable.name):"";
+  const tableLabel=selTable?(selTable.zone?selTable.zone+" · "+selTable.name:selTable.name):"";
+  const tableDescription=selTable?(selTable.zone?selTable.zone+" · "+selTable.seats+" personas":selTable.seats+" personas"):"Selecciona una mesa para continuar";
   const qtyByProduct=Object.fromEntries(v.lines.map(l=>[l.productId,l.qty]));
   const patchLine=(i:number,p:Partial<LineDraft>)=>setV({...v,lines:v.lines.map((l,n)=>n===i?{...l,...p}:l)});
   const tap=(p:Product)=>setV(prev=>{const i=prev.lines.findIndex(l=>l.productId===p.id);if(i>=0)return{...prev,lines:prev.lines.map((l,n)=>n===i?{...l,qty:l.qty+1}:l)};return{...prev,lines:[...prev.lines,{productId:p.id,name:p.name,qty:1,unitPrice:Number(p.price)||0,note:""}]}});
@@ -298,72 +300,145 @@ function ComandaView({initial,allTables,busy,currencySymbol,close,save,notify}:{
     save(v);
   };
   return(
-    <div className="comanda" role="dialog" aria-modal="true">
-      <header className="comanda-head">
-        <button className="comanda-back" aria-label="Volver" onClick={close}><Icon name="chevronLeft" size={20}/></button>
-        <div className="comanda-title">
-          <small>Nueva comanda</small>
-          <h2>{tableName||"Elige la mesa"}</h2>
+    <div className="salon-comanda-shell" role="dialog" aria-modal="true" aria-label="Nueva comanda">
+      <header className="salon-comanda-header">
+        <div className="salon-comanda-header-main">
+          <button type="button" className="salon-comanda-icon-button" aria-label="Volver al salón" onClick={close}>
+            <Icon name="chevronLeft" size={20}/>
+          </button>
+          <div className="salon-comanda-heading">
+            <span className="salon-comanda-kicker">Nueva comanda</span>
+            <h2>{tableName||"Selecciona una mesa"}</h2>
+            <p>{tableDescription}</p>
+          </div>
         </div>
-        <span className="comanda-channel-tag"><i/>Salón</span>
-        <button className="comanda-close" aria-label="Cerrar" onClick={close}><Icon name="close" size={18}/></button>
+        <div className="salon-comanda-header-actions">
+          <span className="salon-comanda-channel"><i/>Salón</span>
+          <button type="button" className="salon-comanda-icon-button" aria-label="Cerrar comanda" onClick={close}>
+            <Icon name="close" size={18}/>
+          </button>
+        </div>
       </header>
-      <div className="comanda-body">
-        <ComandaCatalog qtyByProduct={qtyByProduct} onPick={tap} onRemove={untap} currencySymbol={currencySymbol}/>
-        {/* Ticket — recibo */}
-        <aside className={"comanda-ticket"+(ticketOpen?" open":"")}>
-          <i className="comanda-ticket-grip" aria-hidden="true"/>
-          <div className="comanda-receipt-head">
-            <div className="comanda-ticket-headrow">
-              <small className="comanda-eyebrow">Comanda</small>
-              <button type="button" className="comanda-ticket-close" onClick={()=>setTicketOpen(false)} aria-label="Volver a la carta"><Icon name="close" size={16}/></button>
+
+      <div className="salon-comanda-main">
+        <section className="salon-comanda-catalog" aria-label="Carta del restaurante">
+          <div className="salon-comanda-context">
+            <span className="salon-comanda-context-icon"><Icon name="utensils" size={18}/></span>
+            <div className="salon-comanda-context-copy">
+              <span>Mesa seleccionada</span>
+              <strong>{tableLabel||"Pendiente de seleccionar"}</strong>
             </div>
+            <div className="salon-comanda-context-stat">
+              <small>Personas</small>
+              <b>{selTable?.seats??"—"}</b>
+            </div>
+            <div className="salon-comanda-context-stat">
+              <small>Productos</small>
+              <b>{count}</b>
+            </div>
+          </div>
+          <ComandaCatalog qtyByProduct={qtyByProduct} onPick={tap} onRemove={untap} currencySymbol={currencySymbol}/>
+        </section>
+
+        <aside className={"salon-comanda-summary"+(ticketOpen?" open":"")} aria-label="Resumen de la comanda">
+          <i className="salon-comanda-summary-grip" aria-hidden="true"/>
+          <header className="salon-comanda-summary-head">
+            <div className="salon-comanda-summary-title">
+              <span>Pedido actual</span>
+              <h3>Resumen de la comanda</h3>
+            </div>
+            <span className="salon-comanda-count-badge">{count} ítem{count===1?"":"s"}</span>
+            <button type="button" className="salon-comanda-sheet-close" onClick={()=>setTicketOpen(false)} aria-label="Volver a la carta">
+              <Icon name="close" size={16}/>
+            </button>
+          </header>
+
+          <div className="salon-comanda-table-card">
+            <span className="salon-comanda-table-icon"><Icon name="utensils" size={17}/></span>
             {v.tableId?(
-              <div className="comanda-receipt-meta"><span>Mesa</span><i className="comanda-receipt-leader" aria-hidden="true"/><b>{tableLabel}</b></div>
+              <div className="salon-comanda-table-copy">
+                <small>Mesa</small>
+                <strong>{tableLabel}</strong>
+                <span>{selTable?.seats??"—"} personas</span>
+              </div>
             ):(
-              <Select value={v.tableId} onChange={e=>setV({...v,tableId:e.target.value})} aria-label="Mesa">
+              <Select className="salon-comanda-table-select" value={v.tableId} onChange={e=>setV({...v,tableId:e.target.value})} aria-label="Mesa">
                 <option value="">Selecciona una mesa</option>
-                {freeTables.map(t=><option key={t.id} value={t.id}>{t.zone?`${t.zone} · `:""}{t.name}</option>)}
+                {freeTables.map(t=><option key={t.id} value={t.id}>{t.zone?t.zone+" · ":""}{t.name}</option>)}
               </Select>
             )}
           </div>
-          <div className="comanda-receipt-lines">
-            {!v.lines.length&&<p className="comanda-empty"><Icon name="utensils" size={20}/>Toca los platos para armar la comanda</p>}
-            {v.lines.map((l,i)=>(
-              <div className="comanda-receipt-line" key={l.productId||i}>
-                <div className="comanda-receipt-row">
-                  <b>{l.name}</b>
-                  <span className="comanda-receipt-leader" aria-hidden="true"/>
-                  <em>{currencySymbol} {money(l.qty*l.unitPrice)}</em>
-                </div>
-                <div className="comanda-receipt-controls">
-                  <div className="comanda-receipt-stepper">
-                    <button type="button" onClick={()=>step(i,-1)} aria-label="Quitar uno"><Icon name="minus" size={12}/></button>
-                    <b>{l.qty}</b>
-                    <button type="button" onClick={()=>step(i,1)} aria-label="Agregar uno"><Icon name="plus" size={12}/></button>
-                  </div>
-                  <input value={l.note} onChange={e=>patchLine(i,{note:e.target.value})} placeholder="Nota (ej. sin cebolla)" aria-label="Nota"/>
-                </div>
+
+          <div className="salon-comanda-summary-scroll">
+            {!v.lines.length?(
+              <div className="salon-comanda-empty">
+                <span className="salon-comanda-empty-icon"><Icon name="receipt" size={21}/></span>
+                <strong>La comanda está vacía</strong>
+                <p>Selecciona platos de la carta. Aquí aparecerán cantidades, notas y el total del pedido.</p>
               </div>
-            ))}
-            {v.lines.length>0&&<input className="comanda-notes" value={v.notes} onChange={e=>setV({...v,notes:e.target.value})} placeholder="Notas del pedido (cocina o entrega)" aria-label="Notas del pedido"/>}
+            ):(
+              <>
+                <div className="salon-comanda-lines">
+                  {v.lines.map((l,i)=>(
+                    <article className="salon-comanda-line" key={l.productId||i}>
+                      <div className="salon-comanda-line-main">
+                        <span className="salon-comanda-line-qty">{l.qty}×</span>
+                        <div className="salon-comanda-line-copy">
+                          <strong>{l.name}</strong>
+                          <small>{currencySymbol} {money(l.unitPrice)} c/u</small>
+                        </div>
+                        <em className="salon-comanda-line-total">{currencySymbol} {money(l.qty*l.unitPrice)}</em>
+                      </div>
+                      <div className="salon-comanda-line-controls">
+                        <div className="salon-comanda-stepper">
+                          <button type="button" onClick={()=>step(i,-1)} aria-label={"Quitar un "+l.name}><Icon name="minus" size={12}/></button>
+                          <b>{l.qty}</b>
+                          <button type="button" onClick={()=>step(i,1)} aria-label={"Agregar un "+l.name}><Icon name="plus" size={12}/></button>
+                        </div>
+                        <Input className="salon-comanda-line-note" value={l.note} onChange={e=>patchLine(i,{note:e.target.value})} placeholder="Nota del plato, ej. sin cebolla" aria-label={"Nota para "+l.name}/>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+                <div className="salon-comanda-general-notes">
+                  <label htmlFor="salon-comanda-notes">Notas generales</label>
+                  <Textarea id="salon-comanda-notes" rows={3} value={v.notes} onChange={e=>setV({...v,notes:e.target.value})} placeholder="Indicaciones para cocina o atención"/>
+                </div>
+              </>
+            )}
           </div>
-          <footer className="comanda-receipt-foot">
-            <div className="comanda-receipt-total"><span>Subtotal</span><span className="comanda-receipt-leader" aria-hidden="true"/><b>{currencySymbol} {money(subtotal)}</b></div>
+
+          <footer className="salon-comanda-summary-foot">
+            <div className="salon-comanda-total">
+              <div className="salon-comanda-total-copy">
+                <span>Subtotal de la comanda</span>
+                <small>{count} producto{count===1?"":"s"} seleccionado{count===1?"":"s"}</small>
+              </div>
+              <strong>{currencySymbol} {money(subtotal)}</strong>
+            </div>
+            <Button icon="check" className="salon-comanda-submit" onClick={submit} disabled={busy||!v.lines.length}>
+              {busy?"Registrando…":"Registrar comanda"}
+            </Button>
           </footer>
-          <i className="comanda-receipt-zigzag" aria-hidden="true"/>
         </aside>
       </div>
-      <footer className="comanda-foot">
-        <div className="comanda-foot-info"><Icon name="receipt" size={14}/><span><b>{count}</b> ítem{count===1?"":"s"} en la comanda</span></div>
-        <button type="button" className="comanda-foot-finalize" onClick={submit} disabled={busy||!v.lines.length}>{busy?"Registrando…":<>FINALIZAR <b>{currencySymbol} {money(subtotal)}</b></>}</button>
-      </footer>
-      {/* Barra móvil */}
-      <div className={"comanda-bar"+(v.lines.length?" ready":"")}>
-        <button type="button" className="comanda-bar-info" onClick={()=>setTicketOpen(!ticketOpen)} aria-expanded={ticketOpen}>
-          <b>{count}</b> ítem{count===1?"":"s"} · {currencySymbol} {money(subtotal)}<Icon name="chevron" size={15}/>
+
+      <button type="button" className={"salon-comanda-summary-overlay"+(ticketOpen?" open":"")} onClick={()=>setTicketOpen(false)} aria-label="Cerrar resumen"/>
+
+      <div className="salon-comanda-mobile-bar">
+        <button type="button" className="salon-comanda-mobile-summary" onClick={()=>setTicketOpen(true)} aria-expanded={ticketOpen}>
+          <Icon name="receipt" size={17}/>
+          <span>
+            <small>Comanda · {count} ítem{count===1?"":"s"}</small>
+            <b>{currencySymbol} {money(subtotal)}</b>
+          </span>
+          <Icon name="chevron" size={15}/>
         </button>
-        {v.lines.length>0&&<button type="button" className="comanda-bar-finish" onClick={submit} disabled={busy}>{busy?"…":"FINALIZAR"}</button>}
+        {v.lines.length>0&&(
+          <button type="button" className="salon-comanda-mobile-submit" onClick={submit} disabled={busy}>
+            {busy?"…":"Registrar"}
+          </button>
+        )}
       </div>
     </div>
   );
