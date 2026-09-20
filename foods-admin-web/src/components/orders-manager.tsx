@@ -105,7 +105,7 @@ export function OrdersManager(){
      <div><dt>REGISTRADO</dt><dd>{timeAgo(o.createdAt)}</dd></div>
      <div><dt>TOTAL</dt><dd>{settings.currencySymbol} {money(o.total)}</dd></div>
     </dl>
-    {(o.address||o.customerName||o.notes)&&<p className="orders-mobile-detail">{o.tableName&&o.customerName?o.customerName:o.address||o.notes}</p>}
+    {(o.address||o.customerName||o.notes)&&<p className="orders-mobile-detail">{o.tableName&&o.customerName?o.customerName:o.address||o.notes||o.customerName}</p>}
     <footer>
      <RowActionButton action="view" onClick={()=>setDetailId(o.id)}/>
      {canManage&&action&&<Button className="order-advance" onClick={()=>advance.mutate({id:o.id,status:action.status})} disabled={advance.isPending}>{action.label}</Button>}
