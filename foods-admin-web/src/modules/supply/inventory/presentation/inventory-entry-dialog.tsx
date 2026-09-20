@@ -37,10 +37,10 @@ export function InventoryEntryDialog({products,currencySymbol,busy,close,save}:{
     <div className="inventory-entry-body">
      <section className="inventory-entry-choice" aria-label="Origen del producto">
       <button type="button" className={value.mode==="existing"?"active":""} onClick={()=>setValue(current=>({...current,mode:"existing"}))}>
-       <span><Icon name="search" size={18}/></span><b>Producto existente<small>Registrar más stock del mismo producto.</small></b>
+       <span><Icon name="search" size={18}/></span><b>Producto existente<small>Registrar más stock de un producto con Inventario físico.</small></b>
       </button>
       <button type="button" className={value.mode==="new"?"active":""} onClick={()=>setValue(current=>({...current,mode:"new",productId:""}))}>
-       <span><Icon name="plus" size={18}/></span><b>Nuevo producto<small>Crearlo y registrar su primera entrada sin salir de Inventario.</small></b>
+       <span><Icon name="plus" size={18}/></span><b>Nuevo producto físico<small>Crearlo con Inventario físico y registrar su primera entrada.</small></b>
       </button>
      </section>
 
@@ -48,14 +48,14 @@ export function InventoryEntryDialog({products,currencySymbol,busy,close,save}:{
       <div className="inventory-entry-section-title"><span><Icon name="box" size={17}/></span><div><b>Qué producto ingresó</b><small>La entrada se sumará a su saldo actual en este local.</small></div></div>
       <label>Producto
        <Select autoFocus value={value.productId} onChange={event=>{const product=products.find(item=>item.id===event.target.value);setValue(current=>({...current,productId:event.target.value,unit:product?.unit??current.unit,minimumStock:product?.minimumStock??current.minimumStock}))}} aria-invalid={attempted&&!value.productId}>
-        <option value="">Selecciona un producto</option>
+        <option value="">{products.length?"Selecciona un producto de inventario":"No hay productos con Inventario físico"}</option>
         {products.map(product=><option value={product.id} key={product.id}>{product.name} · {product.sku}</option>)}
        </Select>
        {attempted&&!value.productId&&<small className="wizard-field-error">Selecciona el producto que estás recibiendo.</small>}
       </label>
-      {selected&&<div className="inventory-entry-product-note"><Icon name="check" size={15}/><span><b>{selected.name}</b><small>{selected.quantityControl==="inventory"?"Ya controla existencia física.":"Esta primera entrada activará su control por Inventario."}</small></span></div>}
+      {selected&&<div className="inventory-entry-product-note"><Icon name="check" size={15}/><span><b>{selected.name}</b><small>Configurado como Inventario físico.</small></span></div>}
      </section>:<section className="inventory-entry-section">
-      <div className="inventory-entry-section-title"><span><Icon name="plus" size={17}/></span><div><b>Crear producto</b><small>Se creará en el catálogo único de Productos y quedará vinculado al inventario.</small></div></div>
+      <div className="inventory-entry-section-title"><span><Icon name="plus" size={17}/></span><div><b>Crear producto</b><small>Se creará en el catálogo único de Productos y quedará configurado como Inventario físico.</small></div></div>
       <div className="form-grid">
        <label className="span-2">Nombre del producto<Input autoFocus maxLength={160} value={value.name} onChange={event=>setValue(current=>({...current,name:event.target.value}))} placeholder="Ej. Coca-Cola 500 ml" aria-invalid={attempted&&!value.name.trim()}/>{attempted&&!value.name.trim()&&<small className="wizard-field-error">Ingresa el nombre del producto.</small>}</label>
        <label>Precio de venta<div className="money-input"><span>{currencySymbol}</span><Input inputMode="decimal" value={value.price} onChange={event=>setValue(current=>({...current,price:event.target.value}))} placeholder="0.00" aria-invalid={attempted&&!priceValid}/></div>{attempted&&!priceValid&&<small className="wizard-field-error">Ingresa un precio válido.</small>}</label>

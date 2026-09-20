@@ -56,6 +56,12 @@ El flujo principal de mercadería física comienza en **Inventario > Nueva entra
    huérfano ni un saldo parcial.
 5. Las reposiciones posteriores usan siempre el mismo Producto.
 
+El selector «Producto existente» muestra únicamente productos activos con
+`quantity_control='inventory'`. Los productos con `none` o `portions` no son
+elegibles para una entrada: primero deben clasificarse explícitamente como
+«Inventario físico» desde Productos. Registrar una entrada nunca cambia de forma
+implícita el modo de control de un plato o producto preparado.
+
 La pantalla de Productos permanece dedicada al catálogo comercial: alta de
 platos, nombre, precio, categoría, imagen, estado y clasificación de control de
 cantidad. No registra entradas ni modifica stock físico.

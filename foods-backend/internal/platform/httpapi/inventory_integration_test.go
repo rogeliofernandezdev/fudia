@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -171,6 +172,87 @@ func TestCreateInventoryEntryRollsBackNewProductOnLateFailure(t *testing.T) {
 	}
 	if productCount != 0 || itemCount != 0 || balanceCount != 0 {
 		t.Fatalf("rollback left residues product=%d item=%d balance=%d", productCount, itemCount, balanceCount)
+	}
+}
+
+func TestListInventoryProductsOnlyReturnsInventoryControlledProducts(t *testing.T) {
+	pool := integrationPool(t)
+	s := seedInventoryScope(t, pool)
+	ctx := context.Background()
+	nonce := time.Now().UnixNano()
+	noneName := fmt.Sprintf("Ají de gallina %d", nonce)
+	portionsName := fmt.Sprintf("Suspiro a la limeña %d", nonce)
+	inventoryName := fmt.Sprintf("Agua mineral %d", nonce)
+
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO products(organization_id,sku,name,price,quantity_control)
+		VALUES
+			($1,$2,$3,20,'none'),
+			($1,$4,$5,12,'portions'),
+			($1,$6,$7,4,'inventory')`,
+		s.OrganizationID,
+		fmt.Sprintf("NONE-%d", nonce), noneName,
+		fmt.Sprintf("PORT-%d", nonce), portionsName,
+		fmt.Sprintf("INV-%d", nonce), inventoryName,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	api := New(pool)
+	req := httptest.NewRequest("GET", "/v1/admin/inventory/products", nil)
+	req = req.WithContext(context.WithValue(req.Context(), scopeKey{}, s))
+	rec := httptest.NewRecorder()
+	api.listInventoryProducts(rec, req)
+
+	if rec.Code != 200 {
+		t.Fatalf("expected 200, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	body := rec.Body.String()
+	if strings.Contains(body, noneName) {
+		t.Fatalf("product without quantity control must not be selectable: %s", body)
+	}
+	if strings.Contains(body, portionsName) {
+		t.Fatalf("portion-controlled product must not be selectable: %s", body)
+	}
+	if !strings.Contains(body, inventoryName) {
+		t.Fatalf("inventory-controlled product should be selectable: %s", body)
+	}
+}
+
+func TestInventoryEntryRejectsProductWithoutInventoryControl(t *testing.T) {
+	pool := integrationPool(t)
+	s := seedInventoryScope(t, pool)
+	ctx := context.Background()
+	var productID string
+	if err := pool.QueryRow(ctx, `
+		INSERT INTO products(organization_id,sku,name,price,quantity_control)
+		VALUES($1,$2,'Ají de gallina',20,'none')
+		RETURNING id`, s.OrganizationID, fmt.Sprintf("NONE-%d", time.Now().UnixNano())).Scan(&productID); err != nil {
+		t.Fatal(err)
+	}
+
+	api := New(pool)
+	body := []byte(fmt.Sprintf(`{"productId":%q,"quantity":3,"unit":"und","minimumStock":0}`, productID))
+	req := httptest.NewRequest("POST", "/v1/admin/inventory/entries", bytes.NewReader(body))
+	req = req.WithContext(context.WithValue(req.Context(), scopeKey{}, s))
+	rec := httptest.NewRecorder()
+	api.createInventoryEntry(rec, req)
+
+	if rec.Code != 409 {
+		t.Fatalf("expected 409, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), "quantity_control_conflict") {
+		t.Fatalf("expected quantity_control_conflict, got body=%s", rec.Body.String())
+	}
+
+	var itemCount int
+	if err := pool.QueryRow(ctx, `
+		SELECT count(*) FROM inventory_items
+		WHERE organization_id=$1 AND product_id=$2`, s.OrganizationID, productID).Scan(&itemCount); err != nil {
+		t.Fatal(err)
+	}
+	if itemCount != 0 {
+		t.Fatalf("rejected entry must not create inventory item, got %d", itemCount)
 	}
 }
 

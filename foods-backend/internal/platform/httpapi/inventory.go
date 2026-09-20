@@ -180,7 +180,7 @@ func (a *API) listInventoryProducts(w http.ResponseWriter, r *http.Request) {
 		LEFT JOIN menu_categories c ON c.id=p.category_id AND c.organization_id=p.organization_id
 		LEFT JOIN inventory_items ii ON ii.organization_id=p.organization_id AND ii.product_id=p.id AND ii.active
 		WHERE p.organization_id=$1 AND p.active
-		  AND p.quantity_control IN ('none','inventory')
+		  AND p.quantity_control='inventory'
 		  AND NOT EXISTS (SELECT 1 FROM menu_combos mc WHERE mc.product_id=p.id AND mc.organization_id=p.organization_id)
 		  AND (p.name ILIKE $2 OR p.sku ILIKE $2)
 		ORDER BY p.name
@@ -265,26 +265,9 @@ func (a *API) createInventoryEntry(w http.ResponseWriter, r *http.Request) {
 			fail(w, 503, "inventory_unavailable", "No pudimos validar el producto.")
 			return
 		}
-		if quantityControl == "portions" {
-			fail(w, 409, "quantity_control_conflict", "Ese producto se controla por porciones y no puede recibir entradas de inventario.")
+		if quantityControl != "inventory" {
+			fail(w, 409, "quantity_control_conflict", "Solo los productos configurados como Inventario físico pueden recibir entradas. Cambia el control de cantidad desde Productos antes de registrar stock.")
 			return
-		}
-		if quantityControl == "none" {
-			usedByOpenOrder, usageErr := productHasCancellableOrderUsage(r.Context(), tx, s.OrganizationID, productID)
-			if usageErr != nil {
-				fail(w, 503, "inventory_unavailable", "No pudimos validar los pedidos abiertos del producto.")
-				return
-			}
-			if usedByOpenOrder {
-				fail(w, 409, "quantity_control_open_orders", "Cierra o cancela los pedidos abiertos de este producto antes de activar Inventario.")
-				return
-			}
-			if _, err = tx.Exec(r.Context(), `
-				UPDATE products SET quantity_control='inventory',updated_at=now()
-				WHERE id=$1 AND organization_id=$2`, productID, s.OrganizationID); err != nil {
-				fail(w, 503, "inventory_unavailable", "No pudimos activar el control de inventario.")
-				return
-			}
 		}
 	}
 
