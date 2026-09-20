@@ -1,0 +1,27 @@
+name: foods-backend
+
+on:
+  push:
+    paths:
+      - "foods-backend/**"
+      - ".github/workflows/foods-backend.yml"
+  pull_request:
+    paths:
+      - "foods-backend/**"
+      - ".github/workflows/foods-backend.yml"
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: foods-backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: foods-backend/go.mod
+          cache-dependency-path: foods-backend/go.sum
+      - run: go test ./...
+      - run: go vet ./...
+      - run: go build ./cmd/api
