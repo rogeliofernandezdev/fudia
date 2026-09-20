@@ -1,4 +1,4 @@
-.combo-list { overflow: hidden; }
+.combo-list { overflow: hidden; container-type: inline-size; container-name: combo-list; }
 .combo-empty { display: grid; place-content: center; justify-items: center; gap: 10px; min-height: 320px; padding: 32px; color: var(--ink-500); text-align: center; }
 .combo-empty b { color: var(--ink-950); font-size: 13px; }
 .combo-empty p { margin: 0 0 6px; font-size: 10px; }
@@ -799,6 +799,124 @@
 .combo-detail-skeleton-availability span { width:68px; height:7px; }
 .combo-detail-skeleton-availability b { width:92px; height:10px; }
 @keyframes combo-detail-shimmer { to { transform:translateX(100%); } }
+@container combo-list (width <= 820px) {
+  .combo-list .table-wrap {
+    display: none;
+  }
+
+  .combo-list .management-cards {
+    display: grid;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .combo-list .management-cards > article {
+    padding: 14px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: #fff;
+  }
+
+  .combo-list .management-cards article > header {
+    display: grid;
+    grid-template-columns: 38px minmax(0,1fr) auto;
+    align-items: center;
+    gap: 9px;
+  }
+
+  .combo-list .management-cards header .row-icon {
+    margin: 0;
+  }
+
+  .combo-list .management-cards header div {
+    min-width: 0;
+    display: grid;
+    gap: 3px;
+  }
+
+  .combo-list .management-cards header b,
+  .combo-list .management-cards header small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .combo-list .management-cards header b {
+    font-size: 11px;
+  }
+
+  .combo-list .management-cards header small {
+    color: var(--ink-400);
+    font-size: 8px;
+  }
+
+  .combo-list .management-cards dl {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin: 13px 0;
+  }
+
+  .combo-list .management-cards dl div {
+    padding: 9px;
+    border-radius: 8px;
+    background: #f8fafc;
+  }
+
+  .combo-list .management-cards dt {
+    color: var(--ink-400);
+    font-size: 7px;
+    font-weight: 800;
+    letter-spacing: .08em;
+  }
+
+  .combo-list .management-cards dd {
+    margin: 4px 0 0;
+    color: var(--ink-950);
+    font-size: 9px;
+    font-weight: 700;
+  }
+
+  .combo-list .management-cards article > footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 7px;
+    padding: 0;
+    border: 0;
+  }
+
+  .combo-list .standard-pagination {
+    flex-wrap: wrap;
+    align-items: flex-start !important;
+  }
+
+  .combo-list .standard-pagination > span {
+    width: 100%;
+    margin: 0;
+  }
+
+  .combo-list .standard-pagination > label {
+    margin-right: auto;
+  }
+}
+
+@container combo-list (width <= 620px) {
+  .combo-list .toolbar {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .combo-list .toolbar label,
+  .combo-list .toolbar select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .combo-list .management-cards dl {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media(prefers-reduced-motion:reduce) {
   .combo-detail-skeleton-head .combo-detail-skeleton-block::after,
   .combo-detail-skeleton-body span::after,
