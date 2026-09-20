@@ -143,32 +143,61 @@ function ComboWizard({draft,setDraft,step,setStep,products,productsLoading,produ
   function addGroup(){setDraft({...draft,groups:[...draft.groups,{name:"Nueva parte",required:true,minSelections:1,maxSelections:1,options:[]}]})}
   function groupAt(index:number,next:Group){setDraft({...draft,groups:draft.groups.map((group,position)=>position===index?next:group)})}
   return <div className="modal-backdrop modal-overlay-in">
-    <section className="crud-modal combo-wizard modal-panel-in" role="dialog" aria-modal="true">
-      <div className="modal-accent"/>
-      <header>
-        <span className="modal-title-icon"><Icon name="menu" size={18}/></span>
-        <div><small>{editing?"EDITAR MENÚ O COMBO":"NUEVO MENÚ O COMBO"}</small><h2>{STEP_LABELS[step-1]}</h2></div>
-        <button aria-label="Cerrar" onClick={close}><Icon name="close"/></button>
+    <section className="crud-modal combo-wizard modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="combo-wizard-title">
+      <header className="combo-wizard-header">
+        <div className="combo-wizard-title">
+          <span className="combo-wizard-title-icon"><Icon name="combo" size={20}/></span>
+          <div>
+            <small>{editing?"EDITAR MENÚ O COMBO":"NUEVO MENÚ O COMBO"}</small>
+            <h2 id="combo-wizard-title">{editing?"Editar menú o combo":"Registrar menú o combo"}</h2>
+            <p>{STEP_LABELS[step-1]} · {STEP_HINTS[step-1]}</p>
+          </div>
+        </div>
+        <span className="combo-wizard-progress">Paso {step} de {STEP_LABELS.length}</span>
+        <button className="combo-wizard-close" aria-label="Cerrar" onClick={close}><Icon name="close" size={18}/></button>
       </header>
-      <nav className="combo-wizard-steps">
-        {STEP_LABELS.map((label,index)=><Fragment key={label}>
-          <button type="button" className={step===index+1?"active":step>index+1?"complete":""} aria-current={step===index+1?"step":undefined} disabled={index+1>step} onClick={()=>setStep(index+1)}>
-            <span className="combo-step-marker">{step>index+1?<Icon name="check" size={14}/>:index+1}</span>
-            <span className="combo-step-copy"><b>{label}</b><small>{STEP_HINTS[index]}</small></span>
-          </button>
-          {index<STEP_LABELS.length-1&&<span className={`combo-step-line ${step>index+1?"complete":""}`} aria-hidden="true"/>}
-        </Fragment>)}
-      </nav>
-      <div className="combo-wizard-body">
-        {step===1&&<InfoStep draft={draft} setDraft={setDraft} currencySymbol={currencySymbol}/>}
-        {step===2&&<CompositionStep draft={draft} setDraft={setDraft} products={products} productsLoading={productsLoading} productsError={productsError} retryProducts={retryProducts} currencySymbol={currencySymbol} addTemplate={addTemplate} addGroup={addGroup} groupAt={groupAt} quotaError={quotaError}/>}
-        {step===3&&<AvailabilityStep draft={draft} setDraft={setDraft}/>}
-        {step===4&&<ReviewStep draft={draft} products={products} currencySymbol={currencySymbol}/>}
+
+      <div className="combo-wizard-layout">
+        <aside className="combo-wizard-sidebar" aria-label="Progreso del registro">
+          <div className="combo-wizard-sidebar-head">
+            <span>CONFIGURACIÓN</span>
+            <b>{editing?"Actualiza el menú":"Completa el menú"}</b>
+            <small>Define la información comercial, las elecciones y su disponibilidad.</small>
+          </div>
+
+          <nav className="combo-wizard-steps">
+            {STEP_LABELS.map((label,index)=><button type="button" key={label} className={step===index+1?"active":step>index+1?"complete":""} aria-current={step===index+1?"step":undefined} disabled={index+1>step} onClick={()=>setStep(index+1)}>
+              <span className="combo-step-marker">{step>index+1?<Icon name="check" size={14}/>:index+1}</span>
+              <span className="combo-step-copy"><b>{label}</b><small>{STEP_HINTS[index]}</small></span>
+            </button>)}
+          </nav>
+
+          <div className="combo-wizard-sidebar-tip">
+            <Icon name="receipt" size={16}/>
+            <span>
+              <b>{draft.name||"Menú sin nombre"}</b>
+              <small>{draft.price?currencySymbol+" "+Number(draft.price||0).toFixed(2):"Precio pendiente"}</small>
+            </span>
+          </div>
+        </aside>
+
+        <main className="combo-wizard-stage">
+          <div className="combo-wizard-body">
+            {step===1&&<InfoStep draft={draft} setDraft={setDraft} currencySymbol={currencySymbol}/>}
+            {step===2&&<CompositionStep draft={draft} setDraft={setDraft} products={products} productsLoading={productsLoading} productsError={productsError} retryProducts={retryProducts} currencySymbol={currencySymbol} addTemplate={addTemplate} addGroup={addGroup} groupAt={groupAt} quotaError={quotaError}/>}
+            {step===3&&<AvailabilityStep draft={draft} setDraft={setDraft}/>}
+            {step===4&&<ReviewStep draft={draft} products={products} currencySymbol={currencySymbol}/>}
+          </div>
+
+          <footer className="combo-wizard-footer">
+            <button type="button" className="button ghost" onClick={step===1?close:()=>setStep(step-1)} disabled={busy}>{step===1?<><Icon name="close" size={16}/>Cancelar</>:<><Icon name="chevronLeft" size={16}/>Anterior</>}</button>
+            <div className="combo-wizard-footer-copy">
+              <small>{step<4?"Puedes volver a modificar pasos anteriores.":"Revisa los datos antes de guardar."}</small>
+            </div>
+            {step<4?<button type="button" className="button primary" onClick={next} disabled={busy}>Continuar<Icon name="chevron" size={16}/></button>:<button className="button primary" onClick={finish} disabled={busy}><Icon name="save" size={16}/>{busy?"Guardando…":editing?"Guardar cambios":"Registrar menú"}</button>}
+          </footer>
+        </main>
       </div>
-      <footer className="combo-wizard-footer">
-        <button type="button" className="button ghost" onClick={step===1?close:()=>setStep(step-1)} disabled={busy}>{step===1?<><Icon name="close" size={16}/>Cancelar</>:<><Icon name="chevronLeft" size={16}/>Anterior</>}</button>
-        {step<4?<button type="button" className="button primary" onClick={next} disabled={busy}>Continuar<Icon name="chevron" size={16}/></button>:<button className="button primary" onClick={finish} disabled={busy}><Icon name="save" size={16}/>{busy?"Guardando…":"Guardar"}</button>}
-      </footer>
     </section>
   </div>
 }
