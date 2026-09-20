@@ -16,7 +16,7 @@
 .platform-link:hover{background:#dbe4ff}
 @media (width<=1100px){.sidebar{width:210px}
 .admin-shell>main{margin-left:210px}}
-@container admin-main (width<=900px){.topbar{justify-content:flex-start;gap:8px;padding-inline:16px}.global-search{min-width:0;width:auto;max-width:none;flex:1}.context{min-width:0;margin-left:auto;gap:6px}.platform-link{width:44px;min-width:44px;padding:0;justify-content:center;overflow:hidden;font-size:0}.notification-wrap>.icon-button{flex:0 0 44px}}
+@container admin-main (width<=1040px){.topbar{justify-content:flex-start;gap:8px;padding-inline:16px}.global-search{min-width:0;width:auto;max-width:none;flex:1}.context{min-width:0;margin-left:auto;gap:6px}.platform-link{width:44px;min-width:44px;padding:0;justify-content:center;overflow:hidden;font-size:0}.notification-wrap>.icon-button{flex:0 0 44px}}
 
 @media (width<=820px){.admin-shell>main{margin-left:0}
 .topbar{height:64px;padding:0 14px;gap:8px}
