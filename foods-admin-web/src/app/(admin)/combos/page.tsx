@@ -16,7 +16,7 @@ type ComboDetailGroup={id:string;name:string;required:boolean;minSelections:numb
 type ComboDetail=Combo&{availableFrom:string|null;availableUntil:string|null;availableDays:number[]|null;groups:ComboDetailGroup[]};
 
 const blank:Draft={name:"",description:"",price:"",groups:[],availableFrom:"",availableUntil:"",availableDays:[]};
-const templates:Group[]=[{name:"Entrada",required:true,minSelections:1,maxSelections:1,options:[]},{name:"Segundo",required:true,minSelections:1,maxSelections:1,options:[]},{name:"Postre",required:false,minSelections:0,maxSelections:1,options:[]},{name:"Refresco",required:false,minSelections:0,maxSelections:1,options:[]}];
+const templates:Group[]=[{name:"Entrada",required:true,minSelections:1,maxSelections:1,options:[]},{name:"Segundo",required:true,minSelections:1,maxSelections:1,options:[]},{name:"Postre",required:false,minSelections:0,maxSelections:1,options:[]},{name:"Bebidas",required:false,minSelections:0,maxSelections:1,options:[]}];
 const DAYS=[{d:1,n:"Lun"},{d:2,n:"Mar"},{d:3,n:"Mié"},{d:4,n:"Jue"},{d:5,n:"Vie"},{d:6,n:"Sáb"},{d:0,n:"Dom"}];
 const STEP_LABELS=["Información","Composición","Disponibilidad","Revisión"];
 const STEP_HINTS=["Datos del menú","Partes y opciones","Horario y cupos","Confirma y guarda"];
