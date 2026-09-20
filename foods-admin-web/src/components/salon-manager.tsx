@@ -458,13 +458,13 @@ function OrderDetail({loading,order,error,currencySymbol,canManage,busy,close,ad
             <div className="salon-order-detail-heading">
               <small>MESA ACTIVA</small>
               <h2 id="salon-order-detail-title">{order?.tableName||"Mesa"}</h2>
-              <p>{order?.customerName||order?.code||"Pedido en salón"}</p>
+              {order?.customerName&&<p>{order.customerName}</p>}
             </div>
           </div>
-          <div className="salon-order-detail-head-actions">
+          <div className="salon-order-detail-status">
             {order&&meta&&<Status tone={meta.tone}>{meta.label}</Status>}
-            <button type="button" className="salon-order-detail-close" aria-label="Cerrar detalle" onClick={close}><Icon name="close" size={17}/></button>
           </div>
+          <button type="button" className="salon-order-detail-close" aria-label="Cerrar detalle" onClick={close}><Icon name="close" size={17}/></button>
         </header>
 
         {loading?<Loading/>:error?(
