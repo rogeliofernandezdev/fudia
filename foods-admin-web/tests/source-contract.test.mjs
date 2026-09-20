@@ -145,6 +145,11 @@ test("producto e inventario mantienen una sola fuente de verdad",()=>{
   assert.ok(kardex.includes("location?.country"),"Kárdex toma el país del local activo");
   assert.ok(kardex.includes("location?.timezone"),"Kárdex toma la zona horaria del local activo");
   assert.equal(kardex.includes(forbiddenRegionalLocale),false,"Kárdex no fija Perú como región");
+  assert.ok(kardex.includes("REFERENCIA"),"Kárdex muestra referencia documental en lugar de origen técnico");
+  assert.ok(kardex.includes("item.sourceReference"),"Kárdex usa la referencia legible del documento origen");
+  assert.equal(kardex.includes("item.sourceId.slice"),false,"Kárdex no expone fragmentos de UUID");
+  assert.equal(kardex.includes("item.productId.slice"),false,"Kárdex no expone el UUID del producto");
+  assert.equal(kardex.includes("product.name} · {product.sku"),false,"El filtro de Kárdex no expone SKU internos");
   assert.equal(inventory.includes(forbiddenRegionalLocale),false,"Inventario no fija Perú como región");
   assert.ok(regionalFormat.includes("timeZone:context.timeZone||options.timeZone"),"El formateador aplica la zona horaria operativa y conserva un fallback explícito");
   assert.ok(regionalFormat.includes("country?.trim().toUpperCase()"),"El locale regional se deriva del país en contexto");
