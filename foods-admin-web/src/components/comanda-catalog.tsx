@@ -11,17 +11,30 @@ type CatalogQuery={data?:ProductList;isLoading:boolean;error?:{message:string}|n
 type Section={id:string;title:string;items:CatalogProduct[];loading:boolean;error?:{message:string}|null};
 
 const money=(v:string)=>Number(v).toFixed(2);
+const SALON_PAGE_SIZE=12;
 
 export function ComandaCatalog({qtyByProduct,onPick,onRemove,currencySymbol,variant="default"}:{qtyByProduct:Record<string,number>;onPick:(p:CatalogProduct)=>void;onRemove:(p:CatalogProduct)=>void;currencySymbol:string;variant?:"default"|"salon"}){
   const[pq,setPq]=useState("");
   const[cat,setCat]=useState("");
+  const[page,setPage]=useState(1);
   const categories=useQuery({queryKey:["order-categories"],queryFn:()=>apiFetch<{items:{id:string;name:string}[]}>("categories?pageSize=100"),staleTime:60000});
   const cats=categories.data?.items??[];
   const catIndex=cats.findIndex(c=>c.id===cat);
-  const perCat=useQueries({queries:cats.map(c=>({queryKey:["order-catalog",c.id],queryFn:()=>apiFetch<ProductList>(`products?status=active&categoryId=${c.id}&page=1&pageSize=100`),staleTime:60000}))});
-  const todos=useQuery({queryKey:["order-catalog","todos"],queryFn:()=>apiFetch<ProductList>("products?status=active&page=1&pageSize=100"),staleTime:60000});
+  const perCat=useQueries({queries:variant==="default"?cats.map(c=>({queryKey:["order-catalog",c.id],queryFn:()=>apiFetch<ProductList>(`products?status=active&categoryId=${c.id}&page=1&pageSize=100`),staleTime:60000})):[]});
+  const todos=useQuery({queryKey:["order-catalog","todos"],queryFn:()=>apiFetch<ProductList>("products?status=active&page=1&pageSize=100"),enabled:variant==="default",staleTime:60000});
   const searching=pq.trim().length>0;
-  const search=useQuery({queryKey:["order-catalog","search",pq],queryFn:()=>apiFetch<ProductList>(`products?status=active&q=${encodeURIComponent(pq.trim())}&page=1&pageSize=20`),enabled:searching,staleTime:60000});
+  const search=useQuery({queryKey:["order-catalog","search",pq],queryFn:()=>apiFetch<ProductList>(`products?status=active&q=${encodeURIComponent(pq.trim())}&page=1&pageSize=20`),enabled:variant==="default"&&searching,staleTime:60000});
+  const salonCatalog=useQuery({
+    queryKey:["order-catalog","salon",cat,pq.trim(),page,SALON_PAGE_SIZE],
+    queryFn:()=>{
+      const filters=[`status=active`,`page=${page}`,`pageSize=${SALON_PAGE_SIZE}`];
+      if(cat)filters.push(`categoryId=${encodeURIComponent(cat)}`);
+      if(searching)filters.push(`q=${encodeURIComponent(pq.trim())}`);
+      return apiFetch<ProductList>(`products?${filters.join("&")}`);
+    },
+    enabled:variant==="salon",
+    staleTime:60000,
+  });
 
   const norm=(q:CatalogQuery|undefined)=>({items:q?.data?.items??[],loading:q?q.isLoading:true,error:q?.error});
   const orphans=(todos.data?.items??[]).filter(p=>!p.categoryId||!cats.some(c=>c.id===p.categoryId));
@@ -36,11 +49,13 @@ export function ComandaCatalog({qtyByProduct,onPick,onRemove,currencySymbol,vari
   const single=searching||Boolean(cat);
   const visible=sections.filter(s=>single||s.loading||s.error||s.items.length>0);
   const totalItems=sections.reduce((a,s)=>a+s.items.length,0);
-  const flatItems=[...new Map(visible.flatMap(section=>section.items).map(product=>[product.id,product])).values()];
-  const flatLoading=visible.some(section=>section.loading);
-  const flatError=visible.find(section=>section.error)?.error;
-  const displayCount=variant==="salon"?flatItems.length:totalItems;
-  const booting=!searching&&(categories.isLoading||(cats.length>0&&perCat.every(q=>q.isLoading)));
+  const salonItems=salonCatalog.data?.items??[];
+  const salonTotal=salonCatalog.data?.total??0;
+  const salonPages=Math.max(1,Math.ceil(salonTotal/SALON_PAGE_SIZE));
+  const salonStart=salonTotal?(page-1)*SALON_PAGE_SIZE+1:0;
+  const salonEnd=Math.min(page*SALON_PAGE_SIZE,salonTotal);
+  const displayCount=variant==="salon"?salonTotal:totalItems;
+  const booting=variant==="salon"?salonCatalog.isLoading:(!searching&&(categories.isLoading||(cats.length>0&&perCat.every(q=>q.isLoading)));
 
   return(
     <div className={"comanda-menu comanda-menu-paged"+(variant==="salon"?" comanda-menu-salon":"")}>
@@ -50,28 +65,46 @@ export function ComandaCatalog({qtyByProduct,onPick,onRemove,currencySymbol,vari
           <span className="comanda-menu-count">{displayCount} platos</span>
         </div>
         <div className="comanda-search-bar">
-          <label className="comanda-search"><Icon name="search" size={18}/><input value={pq} onChange={e=>setPq(e.target.value)} placeholder="Buscar en la carta..."/></label>
-          {pq&&<button type="button" className="comanda-clear-search" onClick={()=>setPq("")} aria-label="Limpiar búsqueda"><Icon name="close" size={15}/></button>}
+          <label className="comanda-search"><Icon name="search" size={18}/><input value={pq} onChange={e=>{setPq(e.target.value);setPage(1)}} placeholder="Buscar en la carta..."/></label>
+          {pq&&<button type="button" className="comanda-clear-search" onClick={()=>{setPq("");setPage(1)}} aria-label="Limpiar búsqueda"><Icon name="close" size={15}/></button>}
         </div>
         <div className="comanda-seg" role="tablist" aria-label="Categorías de la carta">
-          <button type="button" role="tab" aria-selected={cat===""&&!searching} className={cat===""&&!searching?"active":""} onClick={()=>{setCat("");setPq("")}}>Todos</button>
+          <button type="button" role="tab" aria-selected={cat===""&&!searching} className={cat===""&&!searching?"active":""} onClick={()=>{setCat("");setPq("");setPage(1)}}>Todos</button>
           {cats.map(c=>(
-            <button type="button" role="tab" key={c.id} aria-selected={cat===c.id} className={cat===c.id?"active":""} onClick={()=>{setCat(c.id);setPq("")}}>{c.name}</button>
+            <button type="button" role="tab" key={c.id} aria-selected={cat===c.id} className={cat===c.id?"active":""} onClick={()=>{setCat(c.id);setPq("");setPage(1)}}>{c.name}</button>
           ))}
         </div>
       </div>
       <div className="comanda-scroll">
         {variant==="salon"?(
-          booting||(flatLoading&&!flatItems.length)?(
+          booting?(
             <MenuRows n={8}/>
-          ):flatItems.length?(
-            <div className="comanda-dishes">
-              {flatItems.map(p=>(
-                <MenuItem key={p.id} p={p} qty={qtyByProduct[p.id]??0} currencySymbol={currencySymbol} onPick={onPick} onRemove={onRemove} variant={variant}/>
-              ))}
-            </div>
-          ):flatError?(
-            <div className="catalog-state empty-catalog-card"><span><Icon name="alert"/></span><b>No pudimos cargar la carta</b><p>{flatError.message}</p></div>
+          ):salonCatalog.isError?(
+            <div className="catalog-state empty-catalog-card"><span><Icon name="alert"/></span><b>No pudimos cargar la carta</b><p>{salonCatalog.error.message}</p></div>
+          ):salonItems.length?(
+            <>
+              <div className="comanda-dishes">
+                {salonItems.map(p=>(
+                  <MenuItem key={p.id} p={p} qty={qtyByProduct[p.id]??0} currencySymbol={currencySymbol} onPick={onPick} onRemove={onRemove} variant={variant}/>
+                ))}
+              </div>
+              {salonTotal>SALON_PAGE_SIZE&&(
+                <footer className="comanda-catalog-pagination">
+                  <span>Mostrando {salonStart}–{salonEnd} de {salonTotal}</span>
+                  <nav aria-label="Paginación de la carta">
+                    <button type="button" disabled={page<=1} onClick={()=>setPage(value=>Math.max(1,value-1))} aria-label="Página anterior">
+                      <Icon name="chevronLeft" size={14}/>
+                      <span>Anterior</span>
+                    </button>
+                    <b>{page} / {salonPages}</b>
+                    <button type="button" disabled={page>=salonPages} onClick={()=>setPage(value=>Math.min(salonPages,value+1))} aria-label="Página siguiente">
+                      <span>Siguiente</span>
+                      <Icon name="chevron" size={14}/>
+                    </button>
+                  </nav>
+                </footer>
+              )}
+            </>
           ):(
             <div className="catalog-state empty-catalog-card"><span><Icon name="search"/></span><b>Sin platos</b><p>{searching?"Ningún producto coincide con la búsqueda.":"No hay productos activos para mostrar."}</p></div>
           )
