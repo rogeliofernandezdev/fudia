@@ -73,10 +73,17 @@ func validateCombo(in comboInput) string {
 	if len(in.Groups) == 0 {
 		return "Agrega al menos un grupo al menú."
 	}
+	groupNames := map[string]bool{}
 	for _, group := range in.Groups {
-		if strings.TrimSpace(group.Name) == "" || group.MaxSelections < 1 || group.MinSelections < 0 || group.MaxSelections < group.MinSelections {
+		groupName := strings.TrimSpace(group.Name)
+		if groupName == "" || group.MaxSelections < 1 || group.MinSelections < 0 || group.MaxSelections < group.MinSelections {
 			return "Revisa las reglas de selección de cada grupo."
 		}
+		groupKey := strings.ToLower(groupName)
+		if groupNames[groupKey] {
+			return "Cada grupo del menú necesita un nombre único."
+		}
+		groupNames[groupKey] = true
 		if group.Required && len(group.Options) < group.MinSelections {
 			return "Cada grupo obligatorio necesita alternativas suficientes."
 		}
@@ -160,7 +167,8 @@ func (a *API) listOrderCombos(w http.ResponseWriter, r *http.Request) {
 				      JOIN order_items oi ON oi.id=ssel.order_item_id AND oi.organization_id=ssel.organization_id
 				      JOIN orders ord ON ord.id=oi.order_id AND ord.organization_id=oi.organization_id
 				      WHERE ssel.organization_id=p.organization_id
-				        AND ssel.group_id=o.group_id
+				        AND oi.product_id=p.id
+				        AND ssel.group_name=g.name
 				        AND ssel.option_product_id=o.option_product_id
 				        AND ord.location_id=l.id
 				        AND ord.status<>'cancelado'
@@ -301,7 +309,8 @@ func (a *API) getOrderCombo(w http.ResponseWriter, r *http.Request) {
 			           JOIN order_items oi ON oi.id=ssel.order_item_id AND oi.organization_id=ssel.organization_id
 			           JOIN orders ord ON ord.id=oi.order_id AND ord.organization_id=oi.organization_id
 			           WHERE ssel.organization_id=o.organization_id
-			             AND ssel.group_id=o.group_id
+			             AND oi.product_id=g.combo_product_id
+			             AND ssel.group_name=g.name
 			             AND ssel.option_product_id=o.option_product_id
 			             AND ord.location_id=l.id
 			             AND ord.status<>'cancelado'
@@ -309,6 +318,7 @@ func (a *API) getOrderCombo(w http.ResponseWriter, r *http.Request) {
 			         ),0) < o.default_quota
 			       )
 			FROM menu_combo_options o
+			JOIN menu_combo_groups g ON g.id=o.group_id AND g.organization_id=o.organization_id
 			JOIN products p ON p.id=o.option_product_id AND p.organization_id=o.organization_id
 			JOIN locations l ON l.id=$3 AND l.organization_id=o.organization_id AND l.active
 			LEFT JOIN product_availability pa ON pa.organization_id=p.organization_id AND pa.location_id=l.id
