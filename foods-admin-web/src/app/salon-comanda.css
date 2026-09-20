@@ -139,23 +139,23 @@
 }
 
 .salon-comanda-context{
-  margin:14px 16px 0;
-  padding:11px 14px;
-  display:grid;
-  grid-template-columns:auto minmax(0,1fr) auto;
+  margin:12px 16px 0;
+  padding:10px 12px;
+  display:flex;
   align-items:center;
-  gap:12px;
-  border:1px solid #dfe3f7;
+  gap:11px;
+  border:1px solid #dce1f6;
   border-radius:14px;
   background:#fff;
   box-shadow:0 1px 3px rgba(16,24,40,.04);
 }
 
 .salon-comanda-context-icon{
-  width:38px;
-  height:38px;
+  width:40px;
+  height:40px;
   display:grid;
   place-items:center;
+  flex-shrink:0;
   border-radius:12px;
   background:var(--primary-100,#eef0ff);
   color:var(--primary-600,#4654cd);
@@ -164,10 +164,10 @@
 .salon-comanda-context-copy{
   min-width:0;
   display:grid;
-  gap:2px;
+  gap:3px;
 }
 
-.salon-comanda-context-copy span{
+.salon-comanda-context-copy>span{
   color:var(--ink-600,#475467);
   font-size:9px;
   font-weight:800;
@@ -175,38 +175,40 @@
   text-transform:uppercase;
 }
 
-.salon-comanda-context-copy strong{
+.salon-comanda-context-main{
+  min-width:0;
+  display:flex;
+  align-items:center;
+  gap:9px;
+  flex-wrap:wrap;
+}
+
+.salon-comanda-context-main strong{
   min-width:0;
   color:var(--ink-950,#101828);
-  font-size:13px;
+  font-size:14px;
   font-weight:850;
+  line-height:1.2;
   white-space:nowrap;
   overflow:hidden;
   text-overflow:ellipsis;
 }
 
-.salon-comanda-context-stat{
-  min-width:82px;
-  padding-left:12px;
-  display:grid;
-  gap:1px;
-  border-left:1px solid #e4e7ec;
-  text-align:right;
-}
-
-.salon-comanda-context-stat small{
-  color:var(--ink-600,#475467);
-  font-size:9px;
-  font-weight:750;
-  letter-spacing:.06em;
-  text-transform:uppercase;
-}
-
-.salon-comanda-context-stat b{
-  color:var(--ink-950,#101828);
-  font-size:14px;
-  font-weight:850;
-  font-variant-numeric:tabular-nums;
+.salon-comanda-context-seats{
+  min-height:24px;
+  padding:0 8px;
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  border:1px solid #d9def5;
+  border-radius:999px;
+  background:#f5f6ff;
+  color:var(--ops-700,#3946b8);
+  font-size:9.5px;
+  font-weight:800;
+  letter-spacing:0;
+  text-transform:none;
+  white-space:nowrap;
 }
 
 .salon-comanda-summary{
@@ -737,14 +739,17 @@
 
   .salon-comanda-context{
     margin:10px 10px 0;
-    padding:10px;
-    grid-template-columns:auto minmax(0,1fr) auto;
+    padding:9px 10px;
     gap:9px;
   }
 
-  .salon-comanda-context-stat{
-    min-width:58px;
-    padding-left:9px;
+  .salon-comanda-context-main{
+    gap:7px;
+  }
+
+  .salon-comanda-context-seats{
+    min-height:22px;
+    padding:0 7px;
   }
 
   .salon-comanda-summary-head{
