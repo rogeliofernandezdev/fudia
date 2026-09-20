@@ -193,27 +193,6 @@
 
 .salon-comanda-context-customer{
   min-width:0;
-  display:grid;
-  gap:4px;
-}
-
-.salon-comanda-context-customer>span{
-  display:flex;
-  align-items:center;
-  gap:6px;
-  color:var(--ink-600,#475467);
-  font-size:9px;
-  font-weight:800;
-  letter-spacing:.06em;
-  text-transform:uppercase;
-}
-
-.salon-comanda-context-customer>span small{
-  color:#98a2b3;
-  font-size:8px;
-  font-weight:750;
-  letter-spacing:0;
-  text-transform:none;
 }
 
 .salon-comanda-context-customer .ds-input{
