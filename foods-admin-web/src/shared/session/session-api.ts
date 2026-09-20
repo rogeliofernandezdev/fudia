@@ -1,7 +1,7 @@
 export type SessionContextResponse={
   user:{id:string;name:string;platformAdmin:boolean};
   organization:{id:string;name:string};
-  location:{id:string;name:string};
+  location:{id:string;name:string;country:string;timezone:string};
   modules:Record<string,boolean>;
   menuAccess:string[];
   permissions:string[];
