@@ -124,11 +124,11 @@ test("producto e inventario mantienen una sola fuente de verdad",()=>{
   assert.ok(dialog.includes("Artículo existente"));
   assert.ok(dialog.includes("Nuevo producto"));
   assert.ok(dialog.includes("mercadería vendible con Inventario físico, no como plato preparado"),"Inventario explica que el alta rápida crea mercadería y no platos");
-  assert.ok(dialog.includes('value="Mercadería vendible"'),"Inventario muestra el tipo retail como dato fijo");
-  assert.equal(dialog.includes("Categoría comercial"),false,"Inventario no mezcla categorías de platos con el alta rápida de mercadería");
+  assert.equal(dialog.includes('value="Mercadería vendible"'),false,"Inventario no repite el tipo ya seleccionado");
+  assert.ok(dialog.includes('register("categoryId")'),"El alta rápida solicita categoría para no crear productos sin clasificación");
+  assert.ok(dialog.includes("No hay categorías para mercadería vendible"),"El selector deja claro que solo carga categorías compatibles");
   assert.ok(dialog.includes("Nuevo insumo"),"Inventario permite crear insumos sin producto vendible");
   assert.ok(dialog.includes("no tendrá precio de venta"),"El flujo de insumos separa inventario de precio comercial");
-  assert.equal(dialog.includes('register("categoryId")'),false,"El alta rápida de mercadería no solicita categoría comercial");
   assert.ok(dialog.includes("Revisa los campos marcados antes de guardar."),"Guardar inválido informa el problema al usuario");
   const inventoryEntrySchema=read("src/modules/supply/inventory/domain/inventory-entry-schema.ts");
   assert.ok(dialog.includes("useForm<InventoryEntryDraft>"),"Nueva entrada usa React Hook Form");
@@ -136,7 +136,7 @@ test("producto e inventario mantienen una sola fuente de verdad",()=>{
   assert.ok(inventoryEntrySchema.includes('z.discriminatedUnion("mode"'),"Zod discrimina reglas según el tipo de registro");
   assert.ok(inventoryEntrySchema.includes('mode:z.literal("existing")'),"Existe esquema para artículo existente");
   assert.ok(inventoryEntrySchema.includes('mode:z.literal("new_product")'),"Existe esquema para producto vendible");
-  assert.equal(inventoryEntrySchema.includes("categoryId"),false,"La categoría comercial no forma parte del documento de entrada");
+  assert.ok(inventoryEntrySchema.includes('categoryId:z.string().trim().min(1,"Selecciona una categoría.")'),"La categoría es obligatoria para mercadería nueva");
   assert.ok(inventoryEntrySchema.includes('mode:z.literal("new_ingredient")'),"Existe esquema para insumo");
   assert.equal(dialog.includes("const valid=value.mode"),false,"La vista no mantiene una segunda validación manual de submit");
   assert.ok(dialog.includes("Una sola operación"));
@@ -179,8 +179,9 @@ test("producto e inventario mantienen una sola fuente de verdad",()=>{
   const inventoryApi=read("src/modules/supply/inventory/infrastructure/inventory-api.ts");
   assert.ok(inventoryApi.includes('"inventory/entries"'));
   assert.ok(inventoryApi.includes("newProduct"));
-  assert.equal(inventoryApi.includes("listInventoryCategories"),false,"Inventario no depende del catálogo de categorías para registrar mercadería");
-  assert.equal(inventoryApi.includes("categoryId:draft.categoryId"),false,"La entrada no asigna categorías de platos");
+  assert.ok(inventoryApi.includes("listInventoryCategories"),"Inventario carga categorías compatibles desde el API");
+  assert.ok(inventoryApi.includes('productType:"retail"'),"Inventario filtra categorías por tipo retail");
+  assert.ok(inventoryApi.includes("categoryId:draft.categoryId.trim()"),"La entrada asigna la categoría elegida");
   assert.ok(inventoryApi.includes("newIngredient"),"La API diferencia insumos de productos vendibles");
   assert.ok(inventoryApi.includes("inventoryItemId"),"Las reposiciones operan sobre el artículo de inventario");
   assert.ok(inventoryApi.includes("presentationType"),"La API envía el tipo de presentación");

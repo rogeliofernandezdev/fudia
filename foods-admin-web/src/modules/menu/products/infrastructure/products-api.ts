@@ -1,5 +1,5 @@
 import {apiFetch} from "@/shared/api/client";
-import type {Category,CategoryDraft,List,Product,ProductDraft} from "../domain/types";
+import type {Category,CategoryDraft,List,Product,ProductDraft,ProductType} from "../domain/types";
 
 export type ProductQuery={
   search:string;
@@ -9,8 +9,9 @@ export type ProductQuery={
   pageSize:number;
 };
 
-export function listCategories(page:number,pageSize:number){
+export function listCategories(page:number,pageSize:number,productType?:ProductType){
   const params=new URLSearchParams({includeInactive:"true",page:String(page),pageSize:String(pageSize)});
+  if(productType)params.set("productType",productType);
   return apiFetch<List<Category>>(`categories?${params.toString()}`);
 }
 

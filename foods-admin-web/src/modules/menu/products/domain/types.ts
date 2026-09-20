@@ -1,4 +1,5 @@
-export type Category={id:string;name:string;sortOrder:number;active:boolean;productCount:number};
+export type CategoryProductScope="prepared"|"retail"|"both";
+export type Category={id:string;name:string;sortOrder:number;active:boolean;productScope:CategoryProductScope;productCount:number};
 export type ProductType="prepared"|"retail";
 export type QuantityControl="none"|"portions"|"inventory";
 export type Product={
@@ -34,4 +35,4 @@ export type ProductDraft={
   featured:boolean;
   costPrice:string;
 };
-export type CategoryDraft={id?:string;name:string;sortOrder:number;active:boolean};
+export type CategoryDraft={id?:string;name:string;sortOrder:number;active:boolean;productScope:CategoryProductScope};

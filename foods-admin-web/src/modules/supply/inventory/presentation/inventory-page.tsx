@@ -7,7 +7,7 @@ import {useFeedback,useSettings} from "@/providers";
 import {useSession} from "@/providers/session-context";
 import {formatRegionalNumber} from "@/shared/i18n/regional-format";
 import {InventoryEntryDialog} from "./inventory-entry-dialog";
-import {createInventoryEntry,listInventory,listInventoryProducts} from "../infrastructure/inventory-api";
+import {createInventoryEntry,listInventory,listInventoryCategories,listInventoryProducts} from "../infrastructure/inventory-api";
 
 const statusMeta={
  ok:{label:"Saludable",tone:"green" as const},
@@ -27,6 +27,7 @@ export function InventoryPage(){
 
  const inventory=useQuery({queryKey:["inventory",search,page,size],queryFn:()=>listInventory({q:search,page,pageSize:size})});
  const products=useQuery({queryKey:["inventory-products"],queryFn:()=>listInventoryProducts(),enabled:entryOpen,staleTime:30000});
+ const categories=useQuery({queryKey:["inventory-categories","retail"],queryFn:listInventoryCategories,enabled:entryOpen,staleTime:30000});
  const save=useMutation({
   mutationFn:createInventoryEntry,
   onSuccess:result=>{
@@ -73,7 +74,7 @@ export function InventoryPage(){
    {!inventory.isLoading&&!inventory.isError&&<Pagination page={page} size={size} total={inventory.data?.total??0} onPage={setPage} onSize={value=>{setSize(value);setPage(1)}}/>}
   </section>
 
-  {entryOpen&&(products.isLoading?<RemoteModalSkeleton className="inventory-entry-modal" label="Cargando productos para inventario" rows={6} close={()=>setEntryOpen(false)}/>:<InventoryEntryDialog products={products.data?.items??[]} currencySymbol={settings.currencySymbol} busy={save.isPending} close={()=>setEntryOpen(false)} save={draft=>save.mutate(draft)}/>)}
+  {entryOpen&&(products.isLoading||categories.isLoading?<RemoteModalSkeleton className="inventory-entry-modal" label="Cargando catálogo para inventario" rows={6} close={()=>setEntryOpen(false)}/>:<InventoryEntryDialog products={products.data?.items??[]} categories={categories.data??[]} categoryError={categories.isError?categories.error.message:null} currencySymbol={settings.currencySymbol} busy={save.isPending} close={()=>setEntryOpen(false)} save={draft=>save.mutate(draft)}/>)}
  </>;
 }
 

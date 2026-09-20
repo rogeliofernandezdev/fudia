@@ -38,11 +38,14 @@ local.
 | `prepared` | Plato, bebida u otro producto preparado por el restaurante. |
 | `retail` | Mercadería vendible recibida físicamente, como gaseosas, agua o snacks. |
 
-El tipo no se infiere por el nombre de la categoría. Por ejemplo, «Bebidas»
-puede contener una limonada `prepared` y una gaseosa `retail`. El alta
-comercial normal usa `prepared` por defecto; **Inventario > Nuevo producto
-vendible** fuerza `retail` en backend para que ese atajo nunca cree un plato
-preparado.
+El tipo no se infiere por el nombre de la categoría. Cada categoría declara
+`product_scope`: `prepared`, `retail` o `both`. Así «Bebidas» puede
+aceptar una limonada `prepared` y una gaseosa `retail` usando `both`,
+mientras «Segundos» puede permanecer solo en `prepared`. Inventario solicita
+únicamente categorías activas compatibles con `retail`; no filtra por nombre.
+El alta comercial normal usa `prepared` por defecto; **Inventario > Nuevo
+producto vendible** fuerza `retail` en backend para que ese atajo nunca cree
+un plato preparado.
 
 ### Control de cantidad por producto
 
@@ -75,7 +78,8 @@ El flujo principal de mercadería física comienza en **Inventario > Nueva entra
 1. Si el artículo de inventario existe, se selecciona su `InventoryItemId` y
    se registra la nueva entrada.
 2. Si la mercadería se vende directamente, **Nuevo producto vendible** crea
-   `Product` + `inventory_item`, exige precio de venta y registra
+   `Product` + `inventory_item`, exige una categoría cuyo `product_scope`
+   admita `retail`, exige precio de venta y registra
    `product_type='retail'` + `quantity_control='inventory'` de forma automática.
 3. Si es un ingrediente interno, **Nuevo insumo** crea únicamente
    `inventory_item`; no crea `Product` ni exige precio de venta.

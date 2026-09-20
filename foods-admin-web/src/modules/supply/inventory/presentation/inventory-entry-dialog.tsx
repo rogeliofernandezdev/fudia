@@ -6,7 +6,7 @@ import {Button,Icon,Input,Select,Textarea} from "@/design-system";
 import {useSession} from "@/providers/session-context";
 import {formatRegionalNumber} from "@/shared/i18n/regional-format";
 import {inventoryEntryResolver} from "../domain/inventory-entry-schema";
-import type {InventoryEntryDraft,InventoryPresentationType,InventoryProductOption} from "../domain/types";
+import type {InventoryCategoryOption,InventoryEntryDraft,InventoryPresentationType,InventoryProductOption} from "../domain/types";
 
 const unitLabels:Record<string,string>={
  und:"unidades",
@@ -22,7 +22,7 @@ const presentationLabels:Record<InventoryPresentationType,string>={
  box:"Caja",
 };
 const defaultValues:InventoryEntryDraft={
- mode:"existing",inventoryItemId:"",productId:"",sku:"",name:"",description:"",price:"",
+ mode:"existing",inventoryItemId:"",productId:"",categoryId:"",sku:"",name:"",description:"",price:"",
  quantity:"",unit:"und",presentationType:"unit",unitsPerPresentation:"1",minimumStock:"0",note:"",
 };
 
@@ -31,7 +31,7 @@ function presentationLabel(type:InventoryPresentationType,factor:string,country?
  return `${presentationLabels[type]} x ${formatRegionalNumber(Number(factor),country,{maximumFractionDigits:3})}`;
 }
 
-export function InventoryEntryDialog({products,currencySymbol,busy,close,save}:{products:InventoryProductOption[];currencySymbol:string;busy:boolean;close:()=>void;save:(draft:InventoryEntryDraft)=>void}){
+export function InventoryEntryDialog({products,categories,categoryError,currencySymbol,busy,close,save}:{products:InventoryProductOption[];categories:InventoryCategoryOption[];categoryError:string|null;currencySymbol:string;busy:boolean;close:()=>void;save:(draft:InventoryEntryDraft)=>void}){
  const{location}=useSession();
  const{
   register,handleSubmit,watch,setValue,getValues,reset,
@@ -69,6 +69,7 @@ export function InventoryEntryDialog({products,currencySymbol,busy,close,save}:{
    mode,
    inventoryItemId:"",
    productId:"",
+   categoryId:"",
    name:"",
    description:"",
    price:"",
@@ -140,7 +141,13 @@ export function InventoryEntryDialog({products,currencySymbol,busy,close,save}:{
       <div className="inventory-entry-section-title"><span><Icon name="plus" size={17}/></span><div><b>Crear producto vendible</b><small>Se creará como mercadería vendible con Inventario físico, no como plato preparado.</small></div></div>
       <div className="form-grid">
        <label className="span-2">Nombre del producto<Input autoFocus maxLength={160} {...register("name")} placeholder="Ej. Coca-Cola 500 ml" aria-invalid={Boolean(errors.name)}/>{errors.name?.message&&<small className="wizard-field-error">{errors.name.message}</small>}</label>
-       <label>Tipo de producto<Input value="Mercadería vendible" readOnly aria-readonly="true"/></label>
+       <label>Categoría
+        <Select {...register("categoryId")} disabled={Boolean(categoryError)||categories.length===0} aria-invalid={Boolean(errors.categoryId)||Boolean(categoryError)}>
+         <option value="">{categoryError?"No pudimos cargar las categorías":categories.length?"Selecciona una categoría":"No hay categorías para mercadería vendible"}</option>
+         {categories.map(category=><option value={category.id} key={category.id}>{category.name}</option>)}
+        </Select>
+        {categoryError?<small className="wizard-field-error">{categoryError}</small>:categories.length===0?<small className="wizard-field-error">Configura una categoría como Mercadería vendible o Ambos en Carta y productos.</small>:errors.categoryId?.message&&<small className="wizard-field-error">{errors.categoryId.message}</small>}
+       </label>
        <label>Precio de venta<div className="money-input"><span>{currencySymbol}</span><Input inputMode="decimal" {...register("price")} placeholder="0.00" aria-invalid={Boolean(errors.price)}/></div>{errors.price?.message&&<small className="wizard-field-error">{errors.price.message}</small>}</label>
        <label className="span-2">Descripción opcional<Textarea maxLength={1000} {...register("description")} placeholder="Presentación o detalle comercial"/></label>
       </div>

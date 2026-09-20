@@ -70,3 +70,20 @@ func TestNormalizeProductRejectsUnknownQuantityControl(t *testing.T) {
 		t.Fatal("expected legacy manual control to be rejected")
 	}
 }
+
+
+func TestNormalizeCategoryProductScope(t *testing.T) {
+	scope, invalid := normalizeCategoryProductScope("", "prepared")
+	if invalid != "" || scope != "prepared" {
+		t.Fatalf("expected prepared fallback, got scope=%q invalid=%q", scope, invalid)
+	}
+	for _, value := range []string{"prepared", "retail", "both"} {
+		scope, invalid = normalizeCategoryProductScope(value, "prepared")
+		if invalid != "" || scope != value {
+			t.Fatalf("expected %q, got scope=%q invalid=%q", value, scope, invalid)
+		}
+	}
+	if _, invalid = normalizeCategoryProductScope("other", "prepared"); invalid == "" {
+		t.Fatal("expected invalid category product scope")
+	}
+}

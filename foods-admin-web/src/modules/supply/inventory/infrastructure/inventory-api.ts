@@ -1,5 +1,5 @@
 import {apiFetch} from "@/shared/api/client";
-import type {InventoryEntryDraft,InventoryList,InventoryProductOption,StockMovement} from "../domain/types";
+import type {InventoryCategoryOption,InventoryEntryDraft,InventoryList,InventoryProductOption,StockMovement} from "../domain/types";
 
 export function listInventory(input:{q:string;page:number;pageSize:number}){
   const params=new URLSearchParams({q:input.q,page:String(input.page),pageSize:String(input.pageSize)});
@@ -9,6 +9,22 @@ export function listInventory(input:{q:string;page:number;pageSize:number}){
 export function listInventoryProducts(q=""){
   const params=new URLSearchParams({q});
   return apiFetch<{items:InventoryProductOption[]}>(`inventory/products?${params.toString()}`);
+}
+
+export async function listInventoryCategories(){
+  const pageSize=100;
+  const items:InventoryCategoryOption[]=[];
+  let page=1;
+  let total=0;
+  do{
+    const params=new URLSearchParams({productType:"retail",page:String(page),pageSize:String(pageSize)});
+    const response=await apiFetch<{items:InventoryCategoryOption[];total:number}>(`categories?${params.toString()}`);
+    items.push(...response.items);
+    total=response.total;
+    if(response.items.length===0)break;
+    page++;
+  }while(items.length<total);
+  return items;
 }
 
 export function createInventoryEntry(draft:InventoryEntryDraft){
@@ -27,6 +43,7 @@ export function createInventoryEntry(draft:InventoryEntryDraft){
       :{...common,newProduct:{
         sku:draft.sku.trim(),
         name:draft.name.trim(),
+        categoryId:draft.categoryId.trim(),
         description:draft.description.trim(),
         price:draft.price.trim(),
       }};

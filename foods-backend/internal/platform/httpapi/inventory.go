@@ -172,6 +172,11 @@ func normalizeInventoryEntry(in inventoryEntryInput) (inventoryEntryInput, strin
 		if in.NewProduct.Name == "" || in.NewProduct.Price == "" {
 			return in, "El nuevo producto vendible necesita nombre y precio de venta."
 		}
+		if in.NewProduct.CategoryID == nil || strings.TrimSpace(*in.NewProduct.CategoryID) == "" {
+			return in, "Selecciona una categoría para la mercadería vendible."
+		}
+		categoryID := strings.TrimSpace(*in.NewProduct.CategoryID)
+		in.NewProduct.CategoryID = &categoryID
 	}
 	if in.NewIngredient != nil {
 		in.NewIngredient.Name = strings.TrimSpace(in.NewIngredient.Name)
@@ -354,6 +359,24 @@ func (a *API) createInventoryEntry(w http.ResponseWriter, r *http.Request) {
 		}
 		if _, invalidProduct := normalizeProduct(productIn); invalidProduct != "" {
 			fail(w, 400, "invalid_product", invalidProduct)
+			return
+		}
+		var categoryAllowed bool
+		err = tx.QueryRow(r.Context(), `
+			SELECT EXISTS(
+				SELECT 1
+				FROM menu_categories
+				WHERE id=$1 AND organization_id=$2 AND active
+				  AND product_scope IN ('retail','both')
+			)`,
+			in.NewProduct.CategoryID, s.OrganizationID,
+		).Scan(&categoryAllowed)
+		if err != nil {
+			fail(w, 503, "categories_unavailable", "No pudimos validar la categoría.")
+			return
+		}
+		if !categoryAllowed {
+			fail(w, 409, "category_not_retail", "La categoría seleccionada no admite mercadería vendible.")
 			return
 		}
 		var newProductID string

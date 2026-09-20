@@ -18,12 +18,14 @@ type category struct {
 	Name         string `json:"name"`
 	SortOrder    int    `json:"sortOrder"`
 	Active       bool   `json:"active"`
+	ProductScope string `json:"productScope"`
 	ProductCount int    `json:"productCount"`
 }
 type categoryInput struct {
-	Name      string `json:"name"`
-	SortOrder int    `json:"sortOrder"`
-	Active    *bool  `json:"active,omitempty"`
+	Name         string `json:"name"`
+	SortOrder    int    `json:"sortOrder"`
+	Active       *bool  `json:"active,omitempty"`
+	ProductScope string `json:"productScope"`
 }
 type product struct {
 	ID                 string   `json:"id"`
@@ -94,16 +96,52 @@ func (a *API) nextSKU(r *http.Request, orgID string) (string, error) {
 	return fmt.Sprintf("PROD-%04d", count+1), nil
 }
 
+func normalizeCategoryProductScope(value, fallback string) (string, string) {
+	value = strings.ToLower(strings.TrimSpace(value))
+	if value == "" {
+		return fallback, ""
+	}
+	switch value {
+	case "prepared", "retail", "both":
+		return value, ""
+	default:
+		return value, "El uso de la categoría no es válido."
+	}
+}
+
 func (a *API) listCategories(w http.ResponseWriter, r *http.Request) {
 	s := r.Context().Value(scopeKey{}).(scope)
 	includeInactive := r.URL.Query().Get("includeInactive") == "true"
+	productType := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("productType")))
+	if productType != "" && productType != "prepared" && productType != "retail" {
+		fail(w, 400, "invalid_category_filter", "El tipo de producto para filtrar categorías no es válido.")
+		return
+	}
 	page, size := pageParams(r)
 	var total int
-	if err := a.db.QueryRow(r.Context(), `SELECT count(*) FROM menu_categories WHERE organization_id=$1 AND ($2 OR active)`, s.OrganizationID, includeInactive).Scan(&total); err != nil {
+	if err := a.db.QueryRow(r.Context(), `
+		SELECT count(*)
+		FROM menu_categories
+		WHERE organization_id=$1
+		  AND ($2 OR active)
+		  AND ($3='' OR product_scope='both' OR product_scope=$3)`,
+		s.OrganizationID, includeInactive, productType,
+	).Scan(&total); err != nil {
 		fail(w, 503, "categories_unavailable", "No pudimos cargar las categorías.")
 		return
 	}
-	rows, err := a.db.Query(r.Context(), `SELECT c.id,c.name,c.sort_order,c.active,count(p.id) FROM menu_categories c LEFT JOIN products p ON p.category_id=c.id AND p.organization_id=c.organization_id WHERE c.organization_id=$1 AND ($2 OR c.active) GROUP BY c.id ORDER BY c.sort_order,c.name LIMIT $3 OFFSET $4`, s.OrganizationID, includeInactive, size, (page-1)*size)
+	rows, err := a.db.Query(r.Context(), `
+		SELECT c.id,c.name,c.sort_order,c.active,c.product_scope,count(p.id)
+		FROM menu_categories c
+		LEFT JOIN products p ON p.category_id=c.id AND p.organization_id=c.organization_id
+		WHERE c.organization_id=$1
+		  AND ($2 OR c.active)
+		  AND ($3='' OR c.product_scope='both' OR c.product_scope=$3)
+		GROUP BY c.id
+		ORDER BY c.sort_order,c.name
+		LIMIT $4 OFFSET $5`,
+		s.OrganizationID, includeInactive, productType, size, (page-1)*size,
+	)
 	if err != nil {
 		fail(w, 503, "categories_unavailable", "No pudimos cargar las categorías.")
 		return
@@ -112,7 +150,7 @@ func (a *API) listCategories(w http.ResponseWriter, r *http.Request) {
 	items := []category{}
 	for rows.Next() {
 		var c category
-		if err = rows.Scan(&c.ID, &c.Name, &c.SortOrder, &c.Active, &c.ProductCount); err != nil {
+		if err = rows.Scan(&c.ID, &c.Name, &c.SortOrder, &c.Active, &c.ProductScope, &c.ProductCount); err != nil {
 			fail(w, 503, "categories_unavailable", "No pudimos cargar las categorías.")
 			return
 		}
@@ -127,8 +165,18 @@ func (a *API) createCategory(w http.ResponseWriter, r *http.Request) {
 		fail(w, 400, "invalid_category", "El nombre de la categoría es obligatorio.")
 		return
 	}
+	productScope, invalid := normalizeCategoryProductScope(in.ProductScope, "prepared")
+	if invalid != "" {
+		fail(w, 400, "invalid_category", invalid)
+		return
+	}
 	var c category
-	err := a.db.QueryRow(r.Context(), `INSERT INTO menu_categories(organization_id,name,sort_order) VALUES($1,$2,$3) RETURNING id,name,sort_order,active`, s.OrganizationID, strings.TrimSpace(in.Name), in.SortOrder).Scan(&c.ID, &c.Name, &c.SortOrder, &c.Active)
+	err := a.db.QueryRow(r.Context(), `
+		INSERT INTO menu_categories(organization_id,name,sort_order,product_scope)
+		VALUES($1,$2,$3,$4)
+		RETURNING id,name,sort_order,active,product_scope`,
+		s.OrganizationID, strings.TrimSpace(in.Name), in.SortOrder, productScope,
+	).Scan(&c.ID, &c.Name, &c.SortOrder, &c.Active, &c.ProductScope)
 	if err != nil {
 		fail(w, 409, "category_conflict", "Ya existe una categoría con ese nombre.")
 		return
@@ -143,12 +191,44 @@ func (a *API) updateCategory(w http.ResponseWriter, r *http.Request) {
 		fail(w, 400, "invalid_category", "El nombre de la categoría es obligatorio.")
 		return
 	}
+	productScope, invalid := normalizeCategoryProductScope(in.ProductScope, "")
+	if invalid != "" {
+		fail(w, 400, "invalid_category", invalid)
+		return
+	}
 	active := true
 	if in.Active != nil {
 		active = *in.Active
 	}
+	if productScope == "prepared" || productScope == "retail" {
+		incompatibleType := "retail"
+		if productScope == "retail" {
+			incompatibleType = "prepared"
+		}
+		var incompatibleProducts int
+		if err := a.db.QueryRow(r.Context(), `
+			SELECT count(*)
+			FROM products
+			WHERE organization_id=$1 AND category_id=$2 AND product_type=$3`,
+			s.OrganizationID, r.PathValue("id"), incompatibleType,
+		).Scan(&incompatibleProducts); err != nil {
+			fail(w, 503, "category_unavailable", "No pudimos validar los productos de la categoría.")
+			return
+		}
+		if incompatibleProducts > 0 {
+			fail(w, 409, "category_scope_in_use", "La categoría contiene productos de otro tipo. Usa «Ambos» o mueve esos productos antes de cambiar su uso.")
+			return
+		}
+	}
 	var c category
-	err := a.db.QueryRow(r.Context(), `UPDATE menu_categories SET name=$3,sort_order=$4,active=$5 WHERE id=$2 AND organization_id=$1 RETURNING id,name,sort_order,active`, s.OrganizationID, r.PathValue("id"), strings.TrimSpace(in.Name), in.SortOrder, active).Scan(&c.ID, &c.Name, &c.SortOrder, &c.Active)
+	err := a.db.QueryRow(r.Context(), `
+		UPDATE menu_categories
+		SET name=$3,sort_order=$4,active=$5,
+		    product_scope=COALESCE(NULLIF($6,''),product_scope)
+		WHERE id=$2 AND organization_id=$1
+		RETURNING id,name,sort_order,active,product_scope`,
+		s.OrganizationID, r.PathValue("id"), strings.TrimSpace(in.Name), in.SortOrder, active, productScope,
+	).Scan(&c.ID, &c.Name, &c.SortOrder, &c.Active, &c.ProductScope)
 	if errors.Is(err, pgx.ErrNoRows) {
 		fail(w, 404, "category_not_found", "La categoría no existe.")
 		return

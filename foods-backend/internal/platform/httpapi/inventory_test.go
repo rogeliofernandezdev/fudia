@@ -79,3 +79,20 @@ func TestQuantityUsageDeltaSupportsSaleAndReversal(t *testing.T) {
 		t.Fatalf("unexpected delta: %#v", delta)
 	}
 }
+
+
+func TestNormalizeInventoryEntryRequiresRetailCategory(t *testing.T) {
+	input := inventoryEntryInput{
+		NewProduct: &inventoryNewProductInput{Name: "Agua", Price: "3.00"},
+		Quantity: 1,
+		Unit: "botella",
+	}
+	if _, invalid := normalizeInventoryEntry(input); invalid == "" {
+		t.Fatal("expected category to be required for a new vendible product")
+	}
+	categoryID := "category-1"
+	input.NewProduct.CategoryID = &categoryID
+	if _, invalid := normalizeInventoryEntry(input); invalid != "" {
+		t.Fatalf("expected category to make entry valid, got %q", invalid)
+	}
+}
