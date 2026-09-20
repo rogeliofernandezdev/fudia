@@ -28,5 +28,6 @@
 .account-logout>i{width:14px;height:14px;border:2px solid #f1b8b3;border-top-color:#c9362b;border-radius:50%;animation:account-spin .7s linear infinite}
 @keyframes account-spin{to{transform:rotate(360deg)}}
 @media(max-width:1050px){.account-trigger{min-width:44px;width:44px;padding:3px;grid-template-columns:36px}.account-trigger-copy,.account-trigger>svg{display:none}}
+@container admin-main (width<=900px){.account-trigger{min-width:44px;width:44px;padding:3px;grid-template-columns:36px}.account-trigger-copy,.account-trigger>svg{display:none}}
 @media(max-width:600px){.account-popover{position:fixed;top:64px;right:12px;width:min(280px,calc(100vw - 24px))}}
 @media(prefers-reduced-motion:reduce){.account-trigger>svg{transition:none}.account-logout>i{animation:none}}
