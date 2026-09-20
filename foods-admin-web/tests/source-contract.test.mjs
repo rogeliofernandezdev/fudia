@@ -4,6 +4,7 @@ import {existsSync,readFileSync,readdirSync,statSync} from "node:fs";
 import {join} from "node:path";
 
 const root=process.cwd();
+const forbiddenRegionalLocale=["es","PE"].join("-");
 const read=p=>readFileSync(join(root,p),"utf8");
 const walk=dir=>readdirSync(join(root,dir)).flatMap(name=>{
   const p=join(dir,name);return statSync(join(root,p)).isDirectory()?walk(p):[p];
@@ -36,6 +37,12 @@ test("no quedan imports a components ni CSS antiguo de app",()=>{
     const c=read(p);
     if(c.includes("@/components/")||/from ["'][.]{1,2}\/app\//.test(c)||/import ["'][^"']*\/app\/[^"']*\.css["']/.test(c))bad.push(p);
   }
+  assert.deepEqual(bad,[]);
+});
+
+test("ninguna vista fija el locale regional de Peru",()=>{
+  const source=walk("src").filter(p=>/\.(ts|tsx|js|jsx)$/.test(p));
+  const bad=source.filter(p=>read(p).includes(forbiddenRegionalLocale));
   assert.deepEqual(bad,[]);
 });
 
@@ -132,8 +139,8 @@ test("producto e inventario mantienen una sola fuente de verdad",()=>{
   assert.ok(kardex.includes("formatRegionalDateTime"),"Kárdex usa el formateador regional compartido");
   assert.ok(kardex.includes("location?.country"),"Kárdex toma el país del local activo");
   assert.ok(kardex.includes("location?.timezone"),"Kárdex toma la zona horaria del local activo");
-  assert.equal(kardex.includes("es-PE"),false,"Kárdex no fija Perú como región");
-  assert.equal(inventory.includes("es-PE"),false,"Inventario no fija Perú como región");
+  assert.equal(kardex.includes(forbiddenRegionalLocale),false,"Kárdex no fija Perú como región");
+  assert.equal(inventory.includes(forbiddenRegionalLocale),false,"Inventario no fija Perú como región");
   assert.ok(regionalFormat.includes("timeZone:context.timeZone||undefined"),"El formateador aplica la zona horaria operativa");
   assert.ok(regionalFormat.includes("country?.trim().toUpperCase()"),"El locale regional se deriva del país en contexto");
   assert.ok(sessionApi.includes("country:string;timezone:string"),"La sesión expone país y zona horaria del local");
