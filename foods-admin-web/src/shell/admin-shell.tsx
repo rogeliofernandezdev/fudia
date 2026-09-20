@@ -9,6 +9,7 @@ import {Icon,IconName} from "@/design-system/icons";
 import {Logo} from "@/design-system/logo";
 import {useSession} from "@/providers/session-context";
 import {ContextSwitcher} from "@/modules/context";
+import {deleteSession} from "@/shared/session/session-api";
 
 type NavItem={href:string;name:string;icon:IconName;module:string;access?:string;platformAdminOnly?:boolean};
 type NavGroup={label:string;items:NavItem[]};
@@ -31,7 +32,7 @@ export function AdminShell({children}:{children:React.ReactNode}){
  const visibleGroups=groups.map(g=>({...g,items:g.items.filter(i=>i.platformAdminOnly?user?.platformAdmin:moduleActive(i.module ?? "")&&canAccess(accessKey(i)))})).filter(g=>g.items.length>0);
  const currentItem=groups.flatMap(group=>group.items).sort((a,b)=>b.href.length-a.href.length).find(item=>path===item.href||path.startsWith(`${item.href}/`));
  const blockReason=!currentItem?null:currentItem.platformAdminOnly?user?.platformAdmin?null:"platform":!moduleActive(currentItem.module)?"module":!canAccess(accessKey(currentItem))?"role":null;
- async function logout(){if(signingOut)return;setSigningOut(true);try{await fetch("/api/session",{method:"DELETE"})}finally{queryClient.clear();router.replace("/login");router.refresh()}}
+ async function logout(){if(signingOut)return;setSigningOut(true);try{await deleteSession()}finally{queryClient.clear();router.replace("/login");router.refresh()}}
  useEffect(()=>{if(!menuOpen)return;const previous=document.body.style.overflow;document.body.style.overflow="hidden";const close=(event:KeyboardEvent)=>{if(event.key==="Escape")setMenuOpen(false)};document.addEventListener("keydown",close);return()=>{document.body.style.overflow=previous;document.removeEventListener("keydown",close)}},[menuOpen]);
  useEffect(()=>{if(!accountOpen)return;const close=(event:MouseEvent)=>{if(!accountRef.current?.contains(event.target as Node))setAccountOpen(false)};const escape=(event:KeyboardEvent)=>{if(event.key==="Escape")setAccountOpen(false)};document.addEventListener("mousedown",close);document.addEventListener("keydown",escape);return()=>{document.removeEventListener("mousedown",close);document.removeEventListener("keydown",escape)}},[accountOpen]);
  if(isError)return <main className="admin-session-error"><Icon name="alert" size={24}/><h1>No pudimos cargar tu sesión</h1><p>Comprueba la conexión e inténtalo nuevamente.</p><button type="button" onClick={()=>window.location.reload()}><Icon name="refresh" size={17}/>Reintentar</button></main>;
