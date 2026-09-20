@@ -66,3 +66,16 @@ test("globals conserva un inventario acotado de duplicados heredados",async()=>{
   });
   assert.ok(duplicates.size<=47,`globals.css aumentó duplicados heredados: ${duplicates.size}`);
 });
+
+
+test("globals queda limitado a primitivas compartidas",async()=>{
+  const sheet="src/styles/globals.css";
+  const source=await readFile(new URL(sheet,root),"utf8");
+  assert.ok(Buffer.byteLength(source,"utf8")<=32768,`globals.css volvió a crecer: ${Buffer.byteLength(source,"utf8")} bytes`);
+  for(const featureSelector of [
+    ".login-",".sidebar",".notification-",".feedback-",".confirm-",".location-map-",
+    ".wizard-",".onboarding-wizard",".modules-",".dashboard-grid",".settings-grid",".platform-shell"
+  ]){
+    assert.equal(source.includes(featureSelector),false,`selector de feature en globals.css: ${featureSelector}`);
+  }
+});
