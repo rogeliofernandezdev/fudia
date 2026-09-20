@@ -799,6 +799,25 @@
   white-space:nowrap;
 }
 
+.salon-order-detail-selections{
+  margin-top:3px;
+  display:grid;
+  gap:2px;
+}
+
+.salon-order-detail-selections small{
+  color:var(--ink-600,#475467)!important;
+  font-size:9px!important;
+  font-weight:600!important;
+  line-height:1.35;
+  white-space:normal;
+}
+
+.salon-order-detail-selections small b{
+  color:var(--ink-950,#101828);
+  font-weight:800;
+}
+
 .salon-order-detail-line-total{
   flex-shrink:0;
   color:var(--ink-950,#101828);
