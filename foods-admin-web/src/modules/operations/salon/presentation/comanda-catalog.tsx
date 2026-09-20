@@ -3,13 +3,11 @@
 import {useEffect,useRef,useState} from "react";
 import {useQueries,useQuery} from "@tanstack/react-query";
 import {Button,Icon,Pagination} from "@/design-system";
-import {apiFetch} from "@/shared/api/client";
+import type {CatalogProduct,ComboDetail,ComboList,ComboSelection,ConfiguredCombo,ProductList} from "../domain/catalog-types";
+import {getOrderCombo,listAllProducts,listOrderCategories,listOrderCombos,listProductsByCategory,listSalonProducts,searchProducts} from "../infrastructure/catalog-api";
 
-export type CatalogProduct={id:string;name:string;price:string;categoryId:string|null;imageUrl:string|null};
-export type ComboSelection={groupId:string;groupName:string;productId:string;name:string;surcharge:number};
-export type ConfiguredCombo={productId:string;name:string;unitPrice:number;selections:ComboSelection[]};
+export type {CatalogProduct,ComboSelection,ConfiguredCombo} from "../domain/catalog-types";
 
-type ProductList={items:CatalogProduct[];total:number};
 type CatalogQuery={data?:ProductList;isLoading:boolean;error?:{message:string}|null};
 type Section={id:string;title:string;items:CatalogProduct[];loading:boolean;error?:{message:string}|null};
 type ComboSummary={id:string;name:string;description:string;price:string;imageUrl:string|null;groupCount:number;optionCount:number};
@@ -34,31 +32,22 @@ export function ComandaCatalog({qtyByProduct,onPick,onRemove,onConfigureCombo,cu
   const[catalogKind,setCatalogKind]=useState<"products"|"combos">("products");
   const pageSize=10;
   const scrollRef=useRef<HTMLDivElement>(null);
-  const categories=useQuery({queryKey:["order-categories"],queryFn:()=>apiFetch<{items:{id:string;name:string}[]}>("categories?pageSize=100"),staleTime:60000});
+  const categories=useQuery({queryKey:["order-categories"],queryFn:listOrderCategories,staleTime:60000});
   const cats=categories.data?.items??[];
   const catIndex=cats.findIndex(c=>c.id===cat);
-  const perCat=useQueries({queries:variant==="default"?cats.map(c=>({queryKey:["order-catalog",c.id],queryFn:()=>apiFetch<ProductList>(`products?status=active&categoryId=${c.id}&page=1&pageSize=100`),staleTime:60000})):[]});
-  const todos=useQuery({queryKey:["order-catalog","todos"],queryFn:()=>apiFetch<ProductList>("products?status=active&page=1&pageSize=100"),enabled:variant==="default",staleTime:60000});
+  const perCat=useQueries({queries:variant==="default"?cats.map(c=>({queryKey:["order-catalog",c.id],queryFn:()=>listProductsByCategory(c.id),staleTime:60000})):[]});
+  const todos=useQuery({queryKey:["order-catalog","todos"],queryFn:listAllProducts,enabled:variant==="default",staleTime:60000});
   const searching=pq.trim().length>0;
-  const search=useQuery({queryKey:["order-catalog","search",pq],queryFn:()=>apiFetch<ProductList>(`products?status=active&q=${encodeURIComponent(pq.trim())}&page=1&pageSize=20`),enabled:variant==="default"&&searching,staleTime:60000});
+  const search=useQuery({queryKey:["order-catalog","search",pq],queryFn:()=>searchProducts(pq),enabled:variant==="default"&&searching,staleTime:60000});
   const salonCatalog=useQuery({
     queryKey:["order-catalog","salon",cat,pq.trim(),page,pageSize],
-    queryFn:()=>{
-      const filters=[`status=active`,`page=${page}`,`pageSize=${pageSize}`];
-      if(cat)filters.push(`categoryId=${encodeURIComponent(cat)}`);
-      if(searching)filters.push(`q=${encodeURIComponent(pq.trim())}`);
-      return apiFetch<ProductList>(`products?${filters.join("&")}`);
-    },
+    queryFn:()=>listSalonProducts({categoryId:cat,q:pq,page,pageSize}),
     enabled:variant==="salon"&&catalogKind==="products",
     staleTime:60000,
   });
   const comboCatalog=useQuery({
     queryKey:["order-catalog","combos",pq.trim(),page,pageSize],
-    queryFn:()=>{
-      const filters=[`page=${page}`,`pageSize=${pageSize}`];
-      if(searching)filters.push(`q=${encodeURIComponent(pq.trim())}`);
-      return apiFetch<ComboList>(`order-combos?${filters.join("&")}`);
-    },
+    queryFn:()=>listOrderCombos({q:pq,page,pageSize}),
     enabled:variant==="salon"&&catalogKind==="combos",
     staleTime:30000,
   });
@@ -211,7 +200,7 @@ export function ComboConfigurator({comboId,initialSelections=[],editing=false,cu
   });
   const combo=useQuery({
     queryKey:["order-combo",comboId],
-    queryFn:()=>apiFetch<ComboDetail>(`order-combos/${comboId}`),
+    queryFn:()=>getOrderCombo(comboId),
     staleTime:15000,
   });
   const data=combo.data;
