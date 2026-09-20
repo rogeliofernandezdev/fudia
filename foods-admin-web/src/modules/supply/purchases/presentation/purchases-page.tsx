@@ -158,7 +158,7 @@ function PurchaseOrderDialog({initial,suppliers,inventory,currencySymbol,busy,cl
         {typeof errors.items?.message==="string"&&<div className="purchase-validation" role="alert"><Icon name="alert" size={15}/>{errors.items.message}</div>}
       </section>
       <div className="purchase-total"><span><small>TOTAL ESTIMADO</small><b>{fields.length} {fields.length===1?"línea":"líneas"}</b></span><strong>{currencySymbol} {formatRegionalNumber(total,undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</strong></div>
-    </div><footer><Button kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" icon="check" disabled={busy||!suppliers.length||!inventory.length}>{busy?"Guardando…":"Guardar"}</Button></footer></form>
+    </div><footer><Button kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy||!suppliers.length||!inventory.length}>{busy?"Guardando…":"Guardar"}</Button></footer></form>
     {busy&&<div className="modal-busy" role="status"><i/><span>Guardando…</span></div>}
   </section></div>;
 }
@@ -170,7 +170,7 @@ function SupplierDialog({initial,busy,close,save}:{initial:SupplierDraft;busy:bo
     <label>RUC<Input inputMode="numeric" maxLength={11} {...register("taxId")} aria-invalid={Boolean(errors.taxId)} placeholder="20123456789"/>{errors.taxId?.message&&<small className="wizard-field-error">{errors.taxId.message}</small>}</label>
     <label>Teléfono<Input {...register("phone")} placeholder="Ej. 987 654 321"/></label>
     <label className="span-2">Correo electrónico<Input type="email" {...register("email")} aria-invalid={Boolean(errors.email)} placeholder="compras@proveedor.com"/>{errors.email?.message&&<small className="wizard-field-error">{errors.email.message}</small>}</label>
-  </div><footer><Button kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" icon="check" disabled={busy}>{busy?"Guardando…":"Guardar"}</Button></footer></form>{busy&&<div className="modal-busy" role="status"><i/><span>Guardando…</span></div>}</section></div>;
+  </div><footer><Button kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy}>{busy?"Guardando…":"Guardar"}</Button></footer></form>{busy&&<div className="modal-busy" role="status"><i/><span>Guardando…</span></div>}</section></div>;
 }
 
 function PurchaseDetail({order,canManage,canReceive,busy,currency,country,timezone,close,edit,changeStatus,receive,cancel}:{order:PurchaseOrder;canManage:boolean;canReceive:boolean;busy:boolean;currency:string;country?:string|null;timezone?:string|null;close:()=>void;edit:()=>void;changeStatus:(next:Exclude<PurchaseStatus,"received">)=>void;receive:()=>void;cancel:()=>void}){
