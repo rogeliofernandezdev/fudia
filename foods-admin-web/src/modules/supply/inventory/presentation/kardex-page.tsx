@@ -3,6 +3,8 @@ import "./inventory.css";
 import {useState} from "react";
 import {useQuery} from "@tanstack/react-query";
 import {Button,Icon,PageHeader,Select,Status} from "@/design-system";
+import {useSession} from "@/providers/session-context";
+import {formatRegionalDateTime,formatRegionalNumber} from "@/shared/i18n/regional-format";
 import {listInventoryProducts,listStockMovements} from "../infrastructure/inventory-api";
 
 const movementLabels={
@@ -11,10 +13,8 @@ const movementLabels={
  sale_reversal:"Reversa de venta",
  sale_adjustment:"Ajuste por edición",
 };
-const kardexDateFormatter=new Intl.DateTimeFormat("es-PE",{dateStyle:"short",timeStyle:"short"});
-function formatKardexDate(value:string){const date=new Date(value);return Number.isNaN(date.getTime())?"—":kardexDateFormatter.format(date)}
-
 export function KardexPage(){
+ const{location}=useSession();
  const[productId,setProductId]=useState("");
  const products=useQuery({queryKey:["inventory-products","kardex"],queryFn:()=>listInventoryProducts()});
  const movements=useQuery({queryKey:["inventory-movements",productId],queryFn:()=>listStockMovements(productId)});
@@ -39,11 +39,11 @@ export function KardexPage(){
     <tbody>{items.map((item,index)=>{
      const delta=Number(item.quantityDelta);
      return <tr className={index%2?"alternate":""} key={item.id}>
-      <td>{formatKardexDate(item.createdAt)}</td>
+      <td>{formatRegionalDateTime(item.createdAt,{country:location?.country,timeZone:location?.timezone})}</td>
       <td><b>{item.productName}</b><small>{item.productId.slice(0,8)}</small></td>
       <td><Status tone={delta>0?"green":"blue"}>{movementLabels[item.movementType]}</Status></td>
-      <td><b className="inventory-quantity">{delta>0?"+":""}{delta.toLocaleString("es-PE",{maximumFractionDigits:3})}</b></td>
-      <td>{Number(item.balanceAfter).toLocaleString("es-PE",{maximumFractionDigits:3})}</td>
+      <td><b className="inventory-quantity">{delta>0?"+":""}{formatRegionalNumber(delta,location?.country,{maximumFractionDigits:3})}</b></td>
+      <td>{formatRegionalNumber(Number(item.balanceAfter),location?.country,{maximumFractionDigits:3})}</td>
       <td>{item.sourceType==="order"?"Pedido":"Entrada"}<small>{item.sourceId.slice(0,8)}</small></td>
      </tr>;
     })}</tbody>
