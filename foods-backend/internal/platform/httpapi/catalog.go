@@ -296,14 +296,62 @@ func (a *API) updateProduct(w http.ResponseWriter, r *http.Request) {
 	if skuValue == "" {
 		skuValue = r.PathValue("id")
 	}
-	var p product
-	err := a.db.QueryRow(r.Context(), `UPDATE products SET category_id=$3,sku=$4,name=$5,description=$6,price=$7,active=$8,quantity_control=$9,image_url=$10,prep_minutes=$11,allergens=$12,featured=$13,cost_price=$14,available_from=$15,available_until=$16,available_days=$17,available_until_time=$18,updated_at=now() WHERE organization_id=$1 AND id=$2 RETURNING id,sku,name,description,category_id,price::text,active,quantity_control,image_url,prep_minutes,allergens,featured,cost_price::text,available_from::text,available_until::text,available_days,available_until_time::text`, s.OrganizationID, r.PathValue("id"), in.CategoryID, skuValue, strings.TrimSpace(in.Name), strings.TrimSpace(in.Description), in.Price, active, in.QuantityControl, in.ImageURL, in.PrepMinutes, in.Allergens, featured, in.CostPrice, in.AvailableFrom, in.AvailableUntil, in.AvailableDays, in.AvailableUntilTime).Scan(&p.ID, &p.SKU, &p.Name, &p.Description, &p.CategoryID, &p.Price, &p.Active, &p.QuantityControl, &p.ImageURL, &p.PrepMinutes, &p.Allergens, &p.Featured, &p.CostPrice, &p.AvailableFrom, &p.AvailableUntil, &p.AvailableDays, &p.AvailableUntilTime)
+
+	tx, err := a.db.Begin(r.Context())
+	if err != nil {
+		fail(w, 503, "product_unavailable", "No pudimos actualizar el producto.")
+		return
+	}
+	defer tx.Rollback(r.Context())
+
+	var currentControl string
+	err = tx.QueryRow(r.Context(), `
+		SELECT quantity_control
+		FROM products
+		WHERE organization_id=$1 AND id=$2
+		FOR UPDATE`, s.OrganizationID, r.PathValue("id")).Scan(&currentControl)
 	if errors.Is(err, pgx.ErrNoRows) {
 		fail(w, 404, "product_not_found", "El producto no existe.")
 		return
 	}
 	if err != nil {
+		fail(w, 503, "product_unavailable", "No pudimos validar el producto.")
+		return
+	}
+	if currentControl != in.QuantityControl {
+		var used bool
+		switch currentControl {
+		case "inventory":
+			err = tx.QueryRow(r.Context(), `
+				SELECT EXISTS(
+					SELECT 1 FROM stock_movements
+					WHERE organization_id=$1 AND product_id=$2
+				)`, s.OrganizationID, r.PathValue("id")).Scan(&used)
+		case "portions":
+			err = tx.QueryRow(r.Context(), `
+				SELECT EXISTS(
+					SELECT 1 FROM product_availability
+					WHERE organization_id=$1 AND product_id=$2 AND sold_quantity>0
+				)`, s.OrganizationID, r.PathValue("id")).Scan(&used)
+		}
+		if err != nil {
+			fail(w, 503, "product_unavailable", "No pudimos validar el historial de cantidades.")
+			return
+		}
+		if used {
+			fail(w, 409, "quantity_control_in_use", "No puedes cambiar el control de cantidad porque el producto ya tiene movimientos o ventas asociados.")
+			return
+		}
+	}
+
+	var p product
+	err = tx.QueryRow(r.Context(), `UPDATE products SET category_id=$3,sku=$4,name=$5,description=$6,price=$7,active=$8,quantity_control=$9,image_url=$10,prep_minutes=$11,allergens=$12,featured=$13,cost_price=$14,available_from=$15,available_until=$16,available_days=$17,available_until_time=$18,updated_at=now() WHERE organization_id=$1 AND id=$2 RETURNING id,sku,name,description,category_id,price::text,active,quantity_control,image_url,prep_minutes,allergens,featured,cost_price::text,available_from::text,available_until::text,available_days,available_until_time::text`, s.OrganizationID, r.PathValue("id"), in.CategoryID, skuValue, strings.TrimSpace(in.Name), strings.TrimSpace(in.Description), in.Price, active, in.QuantityControl, in.ImageURL, in.PrepMinutes, in.Allergens, featured, in.CostPrice, in.AvailableFrom, in.AvailableUntil, in.AvailableDays, in.AvailableUntilTime).Scan(&p.ID, &p.SKU, &p.Name, &p.Description, &p.CategoryID, &p.Price, &p.Active, &p.QuantityControl, &p.ImageURL, &p.PrepMinutes, &p.Allergens, &p.Featured, &p.CostPrice, &p.AvailableFrom, &p.AvailableUntil, &p.AvailableDays, &p.AvailableUntilTime)
+	if err != nil {
 		fail(w, 409, "product_conflict", "No se pudo actualizar el producto.")
+		return
+	}
+	if err = tx.Commit(r.Context()); err != nil {
+		fail(w, 503, "product_unavailable", "No pudimos actualizar el producto.")
 		return
 	}
 	a.audit(r, "product.updated", "product", p.ID)
