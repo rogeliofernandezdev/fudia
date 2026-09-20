@@ -42,6 +42,13 @@ COMMENT ON COLUMN products.quantity_control IS
 COMMENT ON COLUMN product_availability.portion_quantity IS
   'Cantidad de porciones preparadas disponibles para el local y día de negocio.';
 
+-- Los pedidos nuevos siempre referencian el catálogo único Producto.
+-- NOT VALID preserva posibles filas históricas antiguas sin bloquear la migración,
+-- pero PostgreSQL exige product_id para toda fila nueva o modificada.
+ALTER TABLE order_items
+  ADD CONSTRAINT order_items_product_required
+  CHECK (product_id IS NOT NULL) NOT VALID;
+
 -- Un producto físico vendible se vincula a un único registro interno de inventario.
 -- inventory_items sigue pudiendo representar insumos no vendibles para recetas futuras.
 ALTER TABLE inventory_items
