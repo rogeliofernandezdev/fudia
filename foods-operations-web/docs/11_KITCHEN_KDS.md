@@ -23,6 +23,29 @@ mantienen entre 6 y 8 px.
 - Las observaciones de cocina se distinguen del nombre del producto.
 - Cada comanda presenta una sola acción primaria según su estado.
 
+## Menús y combos en cocina
+
+Una línea de pedido puede representar un producto simple o un menú/combo configurado.
+El contrato de órdenes expone `itemType` y, cuando `itemType="combo"`, una colección
+`selections` con `groupName`, `name` y `surcharge`. El KDS debe renderizar el
+nombre del menú como línea principal y cada selección debajo, agrupada por la parte
+del menú que originó la elección.
+
+Ejemplo visual:
+
+```text
+1× Menú Ejecutivo
+   Entrada: Papa a la huancaína
+   Fondo: Lomo saltado
+   Bebida: Chicha
+   Nota: sin cebolla
+```
+
+Las selecciones son una instantánea de la venta. Cocina no vuelve a consultar la
+definición actual del combo para reconstruir el ticket, porque el menú puede cambiar
+después de registrada la comanda. Los tickets deben usar exclusivamente la composición
+persistida en la orden.
+
 ## Scroll
 
 - Cada columna tiene scroll vertical independiente y altura ligada al viewport.
