@@ -6,7 +6,7 @@ import "../app/salon-comanda.css";
 import {useState,useCallback} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Button,ConfirmDialog,Input,PageHeader,Select,Status,Textarea} from "@/design-system";
-import {Icon} from "@/design-system/icons";
+import {Icon,IconName} from "@/design-system/icons";
 import {ComandaCatalog} from "@/components/comanda-catalog";
 import {apiFetch} from "@/shared/api/client";
 import {useFeedback} from "@/providers/feedback-provider";
@@ -28,12 +28,12 @@ const statusMeta:Record<string,{label:string;tone:"green"|"blue"|"orange"|"gray"
   en_camino:{label:"En camino",tone:"orange"},entregado:{label:"Entregado",tone:"gray"},
   cancelado:{label:"Cancelado",tone:"gray"},
 };
-function nextAction(o:Order):{status:string;label:string}|null{
-  if(o.status==="nuevo")return{status:"confirmado",label:"Confirmar"};
-  if(o.status==="confirmado")return{status:"preparando",label:"Iniciar"};
-  if(o.status==="preparando")return{status:"listo",label:"Marcar listo"};
-  if(o.status==="listo")return{status:"entregado",label:"Entregar"};
-  if(o.status==="en_camino")return{status:"entregado",label:"Entregar"};
+function nextAction(o:Order):{status:string;label:string;icon:IconName}|null{
+  if(o.status==="nuevo")return{status:"confirmado",label:"Confirmar",icon:"check"};
+  if(o.status==="confirmado")return{status:"preparando",label:"Iniciar preparación",icon:"chefHat"};
+  if(o.status==="preparando")return{status:"listo",label:"Marcar listo",icon:"check"};
+  if(o.status==="listo")return{status:"entregado",label:"Entregar",icon:"check"};
+  if(o.status==="en_camino")return{status:"entregado",label:"Entregar",icon:"check"};
   return null;
 }
 function parseIsoDate(iso:string):Date|null{
@@ -544,9 +544,9 @@ function OrderDetail({loading,order,error,currencySymbol,canManage,busy,close,ad
 
             {canManage&&(
               <footer className="order-detail-actions salon-order-detail-actions">
-                {action&&<Button className="order-detail-primary" disabled={busy} onClick={()=>advance(action.status)}>{action.label}<Icon name="chevron" size={15}/></Button>}
+                {action&&<Button icon={action.icon} className="order-detail-primary" disabled={busy} onClick={()=>advance(action.status)}>{action.label}</Button>}
                 {order.status==="entregado"&&<span className="order-detail-done"><Icon name="check" size={15}/>Mesa entregada</span>}
-                {!["entregado","cancelado"].includes(order.status)&&<Button kind="ghost" className="order-detail-cancel" disabled={busy} onClick={()=>cancel(order)}>Cancelar pedido</Button>}
+                {!["entregado","cancelado"].includes(order.status)&&<Button icon="close" kind="ghost" className="order-detail-cancel" disabled={busy} onClick={()=>cancel(order)}>Cancelar pedido</Button>}
               </footer>
             )}
           </>
