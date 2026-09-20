@@ -1214,46 +1214,92 @@
 }
 
 
-/* ── Selector principal: Platos / Menús y combos ── */
+/* ── Navegación principal: Platos / Menús y combos ── */
 .salon-comanda-shell .comanda-source-tabs{
-  display:grid;
-  grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:6px;
-  margin:10px 0 8px;
-  padding:4px;
-  border:1px solid #dce1fb;
-  border-radius:10px;
-  background:#f3f5ff;
+  min-width:0;
+  margin:8px 0 10px;
+  display:flex;
+  align-items:center;
+  gap:22px;
+  overflow-x:auto;
+  border-bottom:1px solid #e4e7ec;
+  background:transparent;
+  scrollbar-width:none;
+}
+
+.salon-comanda-shell .comanda-source-tabs::-webkit-scrollbar{
+  display:none;
 }
 
 .salon-comanda-shell .comanda-source-tabs button{
-  min-height:var(--control-height);
-  padding:0 14px;
+  position:relative;
+  min-height:42px;
+  padding:0 2px;
   display:inline-flex;
   align-items:center;
-  justify-content:center;
+  justify-content:flex-start;
   gap:7px;
-  border:1px solid transparent;
-  border-radius:6px;
-  background:#fff;
+  flex-shrink:0;
+  border:0;
+  background:transparent;
   color:var(--ink-600,#475467);
   font-size:10.5px;
-  font-weight:800;
+  font-weight:750;
+  white-space:nowrap;
   cursor:pointer;
-  transition:background .15s ease,border-color .15s ease,color .15s ease,box-shadow .15s ease;
+  transition:color .15s ease;
+}
+
+.salon-comanda-shell .comanda-source-tabs button::after{
+  content:"";
+  position:absolute;
+  right:0;
+  bottom:-1px;
+  left:0;
+  height:2px;
+  border-radius:2px 2px 0 0;
+  background:var(--primary-600,#4654cd);
+  transform:scaleX(0);
+  transform-origin:center;
+  transition:transform .16s ease;
+}
+
+.salon-comanda-shell .comanda-source-tabs button svg{
+  box-sizing:content-box;
+  padding:5px;
+  border-radius:7px;
+  background:var(--cloud-50,#f7f8fc);
+  color:var(--ink-600,#475467);
+  transition:background .15s ease,color .15s ease;
 }
 
 .salon-comanda-shell .comanda-source-tabs button:hover{
-  border-color:#cbd2f4;
-  background:var(--primary-100,#eef0ff);
   color:var(--ops-700,#3946b8);
 }
 
+.salon-comanda-shell .comanda-source-tabs button:hover svg{
+  background:var(--primary-100,#eef0ff);
+  color:var(--primary-600,#4654cd);
+}
+
 .salon-comanda-shell .comanda-source-tabs button.active{
-  border-color:var(--primary-600,#4654cd);
-  background:var(--primary-600,#4654cd);
-  color:#fff;
-  box-shadow:0 3px 9px rgba(70,84,205,.18);
+  color:var(--ops-700,#3946b8);
+  font-weight:850;
+}
+
+.salon-comanda-shell .comanda-source-tabs button.active::after{
+  transform:scaleX(1);
+}
+
+.salon-comanda-shell .comanda-source-tabs button.active svg{
+  background:var(--primary-100,#eef0ff);
+  color:var(--primary-600,#4654cd);
+}
+
+.salon-comanda-shell .comanda-source-tabs button:focus-visible{
+  outline:2px solid var(--primary-600,#4654cd);
+  outline-offset:2px;
+  border-radius:6px;
 }
 
 /* ── Cards de menús y combos ── */
@@ -1621,11 +1667,16 @@
 
 @media(max-width:600px){
   .salon-comanda-shell .comanda-source-tabs{
-    margin-top:8px;
+    gap:8px;
+    margin-top:6px;
   }
 
   .salon-comanda-shell .comanda-source-tabs button{
-    padding:0 9px;
+    min-width:0;
+    min-height:44px;
+    padding:0 6px;
+    justify-content:center;
+    flex:1 1 0;
     font-size:9.5px;
   }
 
