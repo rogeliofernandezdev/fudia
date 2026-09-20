@@ -106,12 +106,12 @@ test("combos conserva su representacion movil y el shell no desborda",()=>{
   const shell=read("src/shell/styles/shell.css");
   assert.ok(shell.includes("height:100dvh"));
   assert.ok(shell.includes("container-name:admin-main"));
-  assert.ok(shell.includes("@container admin-main (width<=900px)"));
+  assert.ok(shell.includes("@container admin-main (width<=1040px)"));
   assert.ok(shell.includes(".platform-link{width:44px"));
   const context=read("src/modules/context/presentation/context-switcher.css");
-  assert.ok(context.includes("@container admin-main (width<=900px)"));
+  assert.ok(context.includes("@container admin-main (width<=1040px)"));
   const account=read("src/shell/styles/account-menu.css");
-  assert.ok(account.includes("@container admin-main (width<=900px)"));
+  assert.ok(account.includes("@container admin-main (width<=1040px)"));
   const globals=read("src/styles/globals.css");
   assert.ok(globals.includes(".page-header>.button{flex:0 0 auto;white-space:nowrap}"));
   const nav=read("src/shell/styles/navigation-state.css");
