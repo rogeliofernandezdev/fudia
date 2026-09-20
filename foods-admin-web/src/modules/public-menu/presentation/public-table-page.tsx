@@ -1,6 +1,5 @@
-import "./mesa-public.css";
 "use client";
-
+import "./mesa-public.css";
 import {useState,useEffect} from "react";
 import {useParams} from "next/navigation";
 import {Icon} from "@/design-system/icons";

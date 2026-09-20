@@ -1,6 +1,5 @@
-import "./product-wizard.css";
 "use client";
-
+import "./product-wizard.css";
 import {useRef,useState} from "react";
 import AsyncSelect from "react-select/async";
 import type {StylesConfig} from "react-select";

@@ -1,6 +1,6 @@
+"use client";
 import "./combo-wizard.css";
 import "./combo-rules.css";
-"use client";
 import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Button,ConfirmDialog,Icon,Input,PageHeader,Pagination,RowActionButton,Select,Status,Textarea} from "@/design-system";

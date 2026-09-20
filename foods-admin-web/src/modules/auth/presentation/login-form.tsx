@@ -1,6 +1,5 @@
-import "./login.css";
 "use client";
-
+import "./login.css";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";

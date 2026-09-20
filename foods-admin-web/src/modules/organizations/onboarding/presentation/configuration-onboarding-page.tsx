@@ -1,5 +1,5 @@
-import "./onboarding.css";
 "use client";
+import "./onboarding.css";
 import {useState} from "react";
 import Link from "next/link";
 import {useMutation,useQuery} from "@tanstack/react-query";

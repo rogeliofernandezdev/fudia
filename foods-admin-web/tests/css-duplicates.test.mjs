@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import {readFile,readdir,stat} from "node:fs/promises";
 import test from "node:test";
 import postcss from "postcss";
-import {join,relative} from "node:path";
 
 const root=new URL("../",import.meta.url);
 const sharedRoots=["src/styles","src/design-system/styles","src/shell/styles"];

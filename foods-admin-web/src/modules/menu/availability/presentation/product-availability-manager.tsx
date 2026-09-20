@@ -1,6 +1,5 @@
-import "./product-availability.css";
 "use client";
-
+import "./product-availability.css";
 import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Button,Icon,Input,PageHeader,Pagination,Select,Status} from "@/design-system";

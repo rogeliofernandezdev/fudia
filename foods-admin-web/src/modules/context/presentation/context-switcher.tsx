@@ -1,5 +1,5 @@
-import "./context-switcher.css";
 "use client";
+import "./context-switcher.css";
 import {useState,useEffect,useRef} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Icon} from "@/design-system/icons";

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {existsSync,readFileSync,readdirSync,statSync} from "node:fs";
-import {join,relative} from "node:path";
+import {join} from "node:path";
 
 const root=process.cwd();
 const read=p=>readFileSync(join(root,p),"utf8");

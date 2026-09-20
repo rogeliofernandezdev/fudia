@@ -1,6 +1,5 @@
-import "../../styles/table-qr.css";
 "use client";
-
+import "../../styles/table-qr.css";
 import {useState,useEffect,useRef} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import QRCode from "qrcode";

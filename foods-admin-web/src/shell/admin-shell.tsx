@@ -1,7 +1,6 @@
+"use client";
 import "./styles/account-menu.css";
 import "./styles/navigation-state.css";
-"use client";
-
 import Link from "next/link";
 import {usePathname,useRouter} from "next/navigation";
 import {useEffect,useRef,useState} from "react";

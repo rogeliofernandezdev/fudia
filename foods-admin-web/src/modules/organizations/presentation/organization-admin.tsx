@@ -1,7 +1,6 @@
+"use client";
 import "./organization-admin.css";
 import "./settings-fiscal-states.css";
-"use client";
-
 import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {ConfirmDialog} from "@/design-system/confirm-dialog";
