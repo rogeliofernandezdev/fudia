@@ -15,3 +15,5 @@
 .onboarding-success h2 { margin: 16px 0 6px; }
 .onboarding-success p { color: var(--ink-600); max-width: 520px; margin: 0 0 20px; }
 @media (width <= 600px) { .onboarding-steps { grid-template-columns: repeat(2,1fr); } .onboarding-step > .form-grid { padding: 16px; } .onboarding-actions { padding: 14px 16px; } }
+.settings-back{display:inline-flex;align-items:center;gap:6px;color:var(--ops-500);font-size:11px;font-weight:800;margin-bottom:15px}
+.settings-back:hover{color:var(--ops-700)}
