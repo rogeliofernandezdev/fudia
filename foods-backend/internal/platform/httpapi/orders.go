@@ -58,6 +58,15 @@ type orderInput struct {
 	DeliveryFee   float64          `json:"deliveryFee"`
 	Items         []orderItemInput `json:"items"`
 }
+type orderUpdateInput struct {
+	CustomerName  string           `json:"customerName"`
+	CustomerPhone string           `json:"customerPhone"`
+	Address       string           `json:"address"`
+	Reference     string           `json:"reference"`
+	Notes         string           `json:"notes"`
+	DeliveryFee   float64          `json:"deliveryFee"`
+	Items         []orderItemInput `json:"items"`
+}
 
 const orderColumns = `id,code,channel,status,COALESCE(customer_id::text,''),customer_name,customer_phone,address,reference,COALESCE(table_id::text,''),COALESCE((SELECT name FROM tables t WHERE t.id=orders.table_id),''),notes,subtotal::text,delivery_fee::text,total::text,to_char(created_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),to_char(updated_at,'YYYY-MM-DD"T"HH24:MI:SSOF')`
 
@@ -88,6 +97,9 @@ func validOrderStatus(st string) bool {
 		}
 	}
 	return false
+}
+func editableOrderStatus(st string) bool {
+	return st == "nuevo" || st == "confirmado"
 }
 
 func (a *API) listOrders(w http.ResponseWriter, r *http.Request) {
@@ -283,6 +295,112 @@ func (a *API) createOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	a.audit(r, "created", "order", o.ID)
 	writeJSON(w, 201, o)
+}
+
+func (a *API) updateOrder(w http.ResponseWriter, r *http.Request) {
+	s := r.Context().Value(scopeKey{}).(scope)
+	var in orderUpdateInput
+	if json.NewDecoder(r.Body).Decode(&in) != nil {
+		fail(w, 400, "invalid_order", "Revisa los datos enviados.")
+		return
+	}
+	in.CustomerName = strings.TrimSpace(in.CustomerName)
+	if len(in.Items) == 0 || in.DeliveryFee < 0 {
+		fail(w, 400, "invalid_order", "La comanda necesita al menos un producto y montos válidos.")
+		return
+	}
+	subtotal := 0.0
+	for _, it := range in.Items {
+		if strings.TrimSpace(it.Name) == "" || it.Qty <= 0 || it.UnitPrice < 0 {
+			fail(w, 400, "invalid_order", "Cada línea necesita producto, cantidad mayor a cero y precio válido.")
+			return
+		}
+		subtotal += it.Qty * it.UnitPrice
+	}
+	total := subtotal + in.DeliveryFee
+
+	tx, err := a.db.Begin(r.Context())
+	if err != nil {
+		fail(w, 503, "order_unavailable", "No pudimos actualizar el pedido.")
+		return
+	}
+	defer tx.Rollback(r.Context())
+
+	var currentStatus, channel string
+	err = tx.QueryRow(r.Context(), `SELECT status,channel FROM orders WHERE id=$1 AND organization_id=$2 AND location_id=$3 FOR UPDATE`, r.PathValue("id"), s.OrganizationID, s.LocationID).Scan(&currentStatus, &channel)
+	if errors.Is(err, pgx.ErrNoRows) {
+		fail(w, 404, "order_not_found", "El pedido no existe.")
+		return
+	}
+	if err != nil {
+		fail(w, 503, "order_unavailable", "No pudimos actualizar el pedido.")
+		return
+	}
+	if !editableOrderStatus(currentStatus) {
+		fail(w, 409, "order_not_editable", "Solo se puede editar un pedido en estado Nuevo o Confirmado.")
+		return
+	}
+	if channel == "delivery" && strings.TrimSpace(in.Address) == "" {
+		fail(w, 400, "invalid_order", "El pedido de delivery necesita una dirección.")
+		return
+	}
+
+	_, err = tx.Exec(r.Context(), `UPDATE orders
+		SET customer_name=$4,customer_phone=$5,address=$6,reference=$7,notes=$8,subtotal=$9,delivery_fee=$10,total=$11,updated_at=now()
+		WHERE id=$1 AND organization_id=$2 AND location_id=$3`,
+		r.PathValue("id"), s.OrganizationID, s.LocationID,
+		in.CustomerName, strings.TrimSpace(in.CustomerPhone), strings.TrimSpace(in.Address), strings.TrimSpace(in.Reference), strings.TrimSpace(in.Notes),
+		subtotal, in.DeliveryFee, total)
+	if err != nil {
+		fail(w, 503, "order_unavailable", "No pudimos actualizar el pedido.")
+		return
+	}
+	if _, err = tx.Exec(r.Context(), `DELETE FROM order_items WHERE order_id=$1 AND organization_id=$2`, r.PathValue("id"), s.OrganizationID); err != nil {
+		fail(w, 503, "order_unavailable", "No pudimos actualizar los productos del pedido.")
+		return
+	}
+	for _, it := range in.Items {
+		var productID *string
+		if it.ProductID != "" {
+			productID = &it.ProductID
+		}
+		if _, err = tx.Exec(r.Context(), `INSERT INTO order_items(organization_id,order_id,product_id,name,qty,unit_price,note) VALUES($1,$2,$3,$4,$5,$6,$7)`,
+			s.OrganizationID, r.PathValue("id"), productID, strings.TrimSpace(it.Name), it.Qty, it.UnitPrice, strings.TrimSpace(it.Note)); err != nil {
+			fail(w, 503, "order_unavailable", "No pudimos actualizar los productos del pedido.")
+			return
+		}
+	}
+
+	o, err := scanOrder(tx.QueryRow(r.Context(), `SELECT `+orderColumns+` FROM orders WHERE id=$1 AND organization_id=$2`, r.PathValue("id"), s.OrganizationID))
+	if err != nil {
+		fail(w, 503, "order_unavailable", "No pudimos cargar el pedido actualizado.")
+		return
+	}
+	o.Items = []orderItem{}
+	rows, err := tx.Query(r.Context(), `SELECT id,COALESCE(product_id::text,''),name,qty::text,unit_price::text,note FROM order_items WHERE order_id=$1 AND organization_id=$2 ORDER BY created_at`, o.ID, s.OrganizationID)
+	if err != nil {
+		fail(w, 503, "order_unavailable", "No pudimos cargar los productos actualizados.")
+		return
+	}
+	for rows.Next() {
+		var it orderItem
+		if err = rows.Scan(&it.ID, &it.ProductID, &it.Name, &it.Qty, &it.UnitPrice, &it.Note); err != nil {
+			rows.Close()
+			fail(w, 503, "order_unavailable", "No pudimos cargar los productos actualizados.")
+			return
+		}
+		o.Items = append(o.Items, it)
+		if qty, parseErr := strconv.ParseFloat(it.Qty, 64); parseErr == nil {
+			o.ItemCount += int(qty)
+		}
+	}
+	rows.Close()
+	if err = tx.Commit(r.Context()); err != nil {
+		fail(w, 503, "order_unavailable", "No pudimos actualizar el pedido.")
+		return
+	}
+	a.audit(r, "updated", "order", o.ID)
+	writeJSON(w, 200, o)
 }
 
 func (a *API) updateOrderStatus(w http.ResponseWriter, r *http.Request) {
