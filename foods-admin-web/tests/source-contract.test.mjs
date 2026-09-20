@@ -109,6 +109,9 @@ test("combos conserva la misma tabla en movil y el shell no desborda",()=>{
   assert.ok(comboCss.includes("min-width: 720px"));
   const shell=read("src/shell/styles/shell.css");
   assert.ok(shell.includes("height:100dvh"));
+  assert.ok(shell.includes(".sidebar.open{z-index:90"));
+  assert.ok(shell.includes(".sidebar-scrim{backdrop-filter:blur(2px);z-index:80"));
+  assert.ok(shell.includes(".sidebar{z-index:90"));
   assert.ok(shell.includes("container-name:admin-main"));
   assert.ok(shell.includes("@container admin-main (width<=1040px)"));
   assert.ok(shell.includes(".platform-link{width:44px"));
