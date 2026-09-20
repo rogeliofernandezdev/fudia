@@ -127,9 +127,16 @@ test("producto e inventario mantienen una sola fuente de verdad",()=>{
   assert.equal(inventory.includes("formatInventoryDate"),false,"La tabla principal no necesita formatear timestamps");
 
   const kardex=read("src/modules/supply/inventory/presentation/kardex-page.tsx");
-  assert.ok(kardex.includes("formatKardexDate"),"Kárdex debe encapsular el formateo de createdAt");
-  assert.ok(kardex.includes("Number.isNaN(date.getTime())"),"Kárdex valida createdAt antes de formatearlo");
-  assert.equal(kardex.includes('format(new Date(item.createdAt))'),false,"Kárdex no formatea timestamps sin validarlos");
+  const regionalFormat=read("src/shared/i18n/regional-format.ts");
+  const sessionApi=read("src/shared/session/session-api.ts");
+  assert.ok(kardex.includes("formatRegionalDateTime"),"Kárdex usa el formateador regional compartido");
+  assert.ok(kardex.includes("location?.country"),"Kárdex toma el país del local activo");
+  assert.ok(kardex.includes("location?.timezone"),"Kárdex toma la zona horaria del local activo");
+  assert.equal(kardex.includes("es-PE"),false,"Kárdex no fija Perú como región");
+  assert.equal(inventory.includes("es-PE"),false,"Inventario no fija Perú como región");
+  assert.ok(regionalFormat.includes("timeZone:context.timeZone||undefined"),"El formateador aplica la zona horaria operativa");
+  assert.ok(regionalFormat.includes("country?.trim().toUpperCase()"),"El locale regional se deriva del país en contexto");
+  assert.ok(sessionApi.includes("country:string;timezone:string"),"La sesión expone país y zona horaria del local");
 
   const inventoryApi=read("src/modules/supply/inventory/infrastructure/inventory-api.ts");
   assert.ok(inventoryApi.includes('"inventory/entries"'));
