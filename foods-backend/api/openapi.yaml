@@ -1,5 +1,5 @@
 openapi: 3.1.0
-info: { title: Foods API, version: 0.2.0, description: API operativa y administrativa multiempresa. }
+info: { title: Foods API, version: 0.3.0, description: API operativa y administrativa multiempresa. }
 servers: [{ url: http://localhost:8080 }]
 paths:
   /health:
@@ -256,6 +256,78 @@ paths:
         - { in: query, name: productId, schema: { type: string, format: uuid }, description: Compatibilidad con clientes anteriores }
       responses:
         "200": { description: Movimientos de stock, content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/StockMovement" } } } } } } }
+  /v1/admin/suppliers:
+    get:
+      operationId: listSuppliers
+      summary: Proveedores de la empresa activa
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: query, name: q, schema: { type: string } }
+        - { in: query, name: status, schema: { type: string, enum: [active, inactive] } }
+        - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
+        - { in: query, name: pageSize, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+      responses: { "200": { description: Proveedores paginados }, "403": { $ref: "#/components/responses/Forbidden" } }
+    post:
+      operationId: createSupplier
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/SupplierInput" } } } }
+      responses: { "201": { description: Proveedor creado, content: { application/json: { schema: { $ref: "#/components/schemas/Supplier" } } } }, "400": { $ref: "#/components/responses/BadRequest" }, "409": { description: Datos en conflicto } }
+  /v1/admin/suppliers/{id}:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    patch:
+      operationId: updateSupplier
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/SupplierInput" } } } }
+      responses: { "200": { description: Proveedor actualizado, content: { application/json: { schema: { $ref: "#/components/schemas/Supplier" } } } }, "404": { description: No encontrado } }
+  /v1/admin/suppliers/{id}/status:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    patch:
+      operationId: updateSupplierStatus
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [active], properties: { active: { type: boolean } } } } } }
+      responses: { "204": { description: Estado actualizado }, "409": { description: Tiene órdenes abiertas } }
+  /v1/admin/purchase-orders:
+    get:
+      operationId: listPurchaseOrders
+      summary: Órdenes de compra del local activo
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: query, name: q, schema: { type: string } }
+        - { in: query, name: status, schema: { type: string, enum: [draft, pending_approval, approved, received, cancelled] } }
+        - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
+        - { in: query, name: pageSize, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+      responses: { "200": { description: Órdenes paginadas }, "403": { $ref: "#/components/responses/Forbidden" } }
+    post:
+      operationId: createPurchaseOrder
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/PurchaseOrderInput" } } } }
+      responses: { "201": { description: Orden creada en borrador }, "400": { $ref: "#/components/responses/BadRequest" }, "409": { description: Artículo o proveedor incompatible } }
+  /v1/admin/purchase-orders/{id}:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    get:
+      operationId: getPurchaseOrder
+      security: [{ sessionCookie: [] }]
+      responses: { "200": { description: Orden con detalle, content: { application/json: { schema: { $ref: "#/components/schemas/PurchaseOrder" } } } }, "404": { description: No encontrada } }
+    patch:
+      operationId: updatePurchaseOrder
+      summary: Reemplaza cabecera y líneas de una orden en borrador
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/PurchaseOrderInput" } } } }
+      responses: { "200": { description: Orden actualizada }, "409": { description: La orden ya no es editable } }
+  /v1/admin/purchase-orders/{id}/status:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    patch:
+      operationId: updatePurchaseOrderStatus
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [status], properties: { status: { type: string, enum: [draft, pending_approval, approved, cancelled] } } } } } }
+      responses: { "204": { description: Estado actualizado }, "409": { description: Transición no permitida } }
+  /v1/admin/purchase-orders/{id}/receive:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    post:
+      operationId: receivePurchaseOrder
+      summary: Recibe una orden aprobada y registra Inventario y Kárdex en la misma transacción
+      security: [{ sessionCookie: [] }]
+      responses: { "200": { description: Orden recibida }, "409": { description: La orden no está aprobada } }
   /v1/operations/product-availability:
     get:
       operationId: listOperationalProductAvailability
@@ -407,6 +479,13 @@ components:
     InventoryNewIngredientInput: { type: object, required: [name], properties: { name: { type: string, maxLength: 160 } } }
     InventoryEntryInput: { type: object, required: [quantity], properties: { inventoryItemId: { type: string, format: uuid }, productId: { type: string, format: uuid, description: Compatibilidad con clientes anteriores }, newProduct: { anyOf: [{ $ref: "#/components/schemas/InventoryNewProductInput" }, { type: "null" }] }, newIngredient: { anyOf: [{ $ref: "#/components/schemas/InventoryNewIngredientInput" }, { type: "null" }] }, quantity: { type: number, exclusiveMinimum: 0 }, unit: { type: string, default: und }, presentationType: { type: string, enum: [unit, package, box], default: unit }, unitsPerPresentation: { type: number, exclusiveMinimum: 0, default: 1 }, minimumStock: { type: number, minimum: 0, default: 0 }, note: { type: string, maxLength: 240 } } }
     InventoryEntryResult: { type: object, required: [id, inventoryItemId, productId, sku, name, kind, quantity, presentationId, presentationType, unitsPerPresentation, stockQuantity, unit, balance, createdProduct, createdInventoryItem], properties: { id: { type: string, format: uuid }, inventoryItemId: { type: string, format: uuid }, productId: { type: [string, "null"], format: uuid }, sku: { type: string }, name: { type: string }, kind: { type: string, enum: [product, ingredient] }, quantity: { type: number }, presentationId: { type: string, format: uuid }, presentationType: { type: string, enum: [unit, package, box] }, unitsPerPresentation: { type: number }, stockQuantity: { type: number }, unit: { type: string }, balance: { type: number }, createdProduct: { type: boolean }, createdInventoryItem: { type: boolean } } }
+    SupplierInput: { type: object, required: [name], properties: { taxId: { type: string, maxLength: 11 }, name: { type: string, maxLength: 180 }, email: { type: string, maxLength: 180 }, phone: { type: string, maxLength: 40 } } }
+    Supplier: { allOf: [{ $ref: "#/components/schemas/SupplierInput" }, { type: object, required: [id, active], properties: { id: { type: string, format: uuid }, active: { type: boolean } } }] }
+    PurchaseOrderItemInput: { type: object, required: [inventoryItemId, presentationId, quantity, unitCost], properties: { inventoryItemId: { type: string, format: uuid }, presentationId: { type: string, format: uuid }, quantity: { type: number, exclusiveMinimum: 0 }, unitCost: { type: string, pattern: "^[0-9]+(\\.[0-9]{1,4})?$" } } }
+    PurchaseOrderInput: { type: object, required: [supplierId, items], properties: { supplierId: { type: string, format: uuid }, expectedAt: { type: string, format: date }, notes: { type: string, maxLength: 500 }, items: { type: array, minItems: 1, maxItems: 100, items: { $ref: "#/components/schemas/PurchaseOrderItemInput" } } } }
+    PurchaseOrderSummary: { type: object, required: [id, number, supplierId, supplierName, status, total, notes, itemCount, createdAt, updatedAt], properties: { id: { type: string, format: uuid }, number: { type: string }, supplierId: { type: string, format: uuid }, supplierName: { type: string }, status: { type: string, enum: [draft, pending_approval, approved, received, cancelled] }, total: { type: string }, notes: { type: string }, expectedAt: { type: [string, "null"], format: date }, itemCount: { type: integer, minimum: 0 }, createdAt: { type: string, format: date-time }, updatedAt: { type: string, format: date-time }, approvedAt: { type: [string, "null"], format: date-time }, receivedAt: { type: [string, "null"], format: date-time }, cancelledAt: { type: [string, "null"], format: date-time } } }
+    PurchaseOrderItem: { type: object, required: [id, inventoryItemId, itemName, sku, unit, presentationId, presentationType, unitsPerPresentation, quantity, stockQuantity, unitCost, lineTotal], properties: { id: { type: string, format: uuid }, inventoryItemId: { type: string, format: uuid }, itemName: { type: string }, sku: { type: string }, unit: { type: string }, presentationId: { type: string, format: uuid }, presentationType: { type: string, enum: [unit, package, box] }, unitsPerPresentation: { type: string }, quantity: { type: string }, stockQuantity: { type: string }, unitCost: { type: string }, lineTotal: { type: string } } }
+    PurchaseOrder: { allOf: [{ $ref: "#/components/schemas/PurchaseOrderSummary" }, { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/PurchaseOrderItem" } } } }] }
     StockMovement: { type: object, required: [id, inventoryItemId, productId, itemName, movementType, quantityDelta, balanceAfter, sourceType, sourceId, sourceReference, note, createdAt], properties: { id: { type: string, format: uuid }, inventoryItemId: { type: string, format: uuid }, productId: { type: [string, "null"], format: uuid }, itemName: { type: string }, movementType: { type: string, enum: [entry, sale, sale_reversal, sale_adjustment] }, quantityDelta: { type: string }, balanceAfter: { type: string }, sourceType: { type: string, enum: [inventory_entry, order] }, sourceId: { type: string, format: uuid }, sourceReference: { type: string }, note: { type: string }, createdAt: { type: string, format: date-time } } }
     ComboOptionInput: { type: object, required: [productId, surcharge], properties: { productId: { type: string, format: uuid }, surcharge: { type: string, pattern: "^[0-9]+(\\.[0-9]{1,2})?$" } } }
     ComboGroupInput: { type: object, required: [name, required, minSelections, maxSelections, options], properties: { name: { type: string, maxLength: 120 }, required: { type: boolean }, minSelections: { type: integer, minimum: 0 }, maxSelections: { type: integer, minimum: 1 }, options: { type: array, items: { $ref: "#/components/schemas/ComboOptionInput" } } } }
