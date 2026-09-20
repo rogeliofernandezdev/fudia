@@ -96,6 +96,19 @@ test("los modales remotos muestran skeleton mientras esperan datos",()=>{
   }
 });
 
+test("combos conserva su representacion movil y el shell no desborda",()=>{
+  const combos=read("src/modules/menu/combos/presentation/combos-page.tsx");
+  assert.ok(combos.includes("combo-mobile-cards"));
+  assert.equal(combos.includes("\\n    {draft&&<ComboWizard"),false);
+  const shell=read("src/shell/styles/shell.css");
+  assert.ok(shell.includes("height:100dvh"));
+  assert.ok(shell.includes(".platform-link{width:44px"));
+  const context=read("src/modules/context/presentation/context-switcher.css");
+  assert.ok(context.includes(".context-btn{width:44px"));
+  const nav=read("src/shell/styles/navigation-state.css");
+  assert.ok(nav.includes(".admin-shell[data-sidebar=collapsed] .sidebar{width:min(320px,86vw)"));
+});
+
 test("el root layout carga solo la base global",()=>{
   const c=read("src/app/layout.tsx");
   const cssImports=[...c.matchAll(/import ["']([^"']+\.css)["']/g)].map(m=>m[1]);
