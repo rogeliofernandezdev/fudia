@@ -12,6 +12,7 @@ import type {Draft,FloorTable,LineDraft,Order} from "../domain/types";
 import {createSalonOrder,getSalonFloor,getSalonOrder,updateSalonOrder,updateSalonOrderStatus} from "../infrastructure/salon-api";
 import {useFeedback} from "@/providers/feedback-provider";
 import {useSession} from "@/providers/session-context";
+import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
 import {useSettings} from "@/providers/settings-context";
 
 /* ── helpers ── */
@@ -42,12 +43,12 @@ function occupiedFor(iso:string){
   const m=Math.max(0,Math.floor((Date.now()-d.getTime())/60000));
   if(m<60)return`${m} min`;return`${Math.floor(m/60)}h ${m%60}min`;
 }
-function timeAgo(iso:string){
+function timeAgo(iso:string,country?:string,timeZone?:string){
   const d=parseIsoDate(iso);if(!d)return"—";
   const m=Math.floor((Date.now()-d.getTime())/60000);
   if(m<1)return"Justo ahora";if(m<60)return`Hace ${m} min`;
   const h=Math.floor(m/60);if(h<24)return`Hace ${h} h`;
-  return new Intl.DateTimeFormat("es-PE",{dateStyle:"medium",timeStyle:"short"}).format(d);
+  return formatRegionalDateTime(d.toISOString(),{country,timeZone},{dateStyle:"medium",timeStyle:"short"});
 }
 const money=(v:string|number)=>Number(v).toFixed(2);
 const emptyDraft=(tableId=""):Draft=>({channel:"salon",customerName:"",customerPhone:"",address:"",reference:"",tableId,notes:"",deliveryFee:"0",lines:[]});
@@ -575,6 +576,7 @@ function ComandaView({initial,mode,allTables,busy,currencySymbol,close,save,noti
    OrderDetail — detalle del pedido activo en mesa
 ═══════════════════════════════════════════════════ */
 function OrderDetail({loading,order,error,currencySymbol,canManage,busy,close,advance,edit,cancel}:{loading:boolean;order?:Order;error?:string;currencySymbol:string;canManage:boolean;busy:boolean;close:()=>void;advance:(st:string)=>void;edit:(o:Order)=>void;cancel:(o:Order)=>void}){
+  const{location}=useSession();
   const meta=order?statusMeta[order.status]??{label:order.status,tone:"gray" as const}:null;
   const action=order?nextAction(order):null;
   const editable=Boolean(order&&editableOrderStatus(order.status));
@@ -614,7 +616,7 @@ function OrderDetail({loading,order,error,currencySymbol,canManage,busy,close,ad
                     </div>
                     <div>
                       <span className="salon-order-detail-meta-icon"><Icon name="clock" size={15}/></span>
-                      <span><small>ABIERTO</small><b>{timeAgo(order.createdAt)}</b></span>
+                      <span><small>ABIERTO</small><b>{timeAgo(order.createdAt,location?.country,location?.timezone)}</b></span>
                     </div>
                     <div>
                       <span className="salon-order-detail-meta-icon"><Icon name="utensils" size={15}/></span>
