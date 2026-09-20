@@ -1,0 +1,36 @@
+export type Category={id:string;name:string;sortOrder:number;active:boolean;productCount:number};
+export type StockMode="none"|"manual";
+export type Product={
+  id:string;
+  sku:string;
+  name:string;
+  description:string;
+  categoryId:string|null;
+  categoryName:string|null;
+  price:string;
+  active:boolean;
+  stockMode:StockMode;
+  defaultDailyQuota:number|null;
+  imageUrl:string|null;
+  prepMinutes:number|null;
+  allergens:string[];
+  featured:boolean;
+  costPrice:string|null;
+};
+export type List<T>={items:T[];total:number;page?:number;pageSize?:number};
+export type ProductDraft={
+  id?:string;
+  name:string;
+  description:string;
+  categoryId:string;
+  price:string;
+  active:boolean;
+  stockMode:StockMode;
+  defaultDailyQuota:string;
+  imageUrl:string|null;
+  prepMinutes:string;
+  allergens:string[];
+  featured:boolean;
+  costPrice:string;
+};
+export type CategoryDraft={id?:string;name:string;sortOrder:number;active:boolean};
