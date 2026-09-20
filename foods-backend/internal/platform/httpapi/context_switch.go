@@ -100,12 +100,13 @@ func (a *API) switchContext(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Validar que la empresa y local existen y están activos
-	var orgName, locName string
+	var orgName, locName, locCountry, locTimezone string
 	err := a.db.QueryRow(r.Context(), `
-		SELECT o.trade_name, l.name
+		SELECT o.trade_name, l.name, p.country_code, l.timezone
 		FROM organizations o
 		JOIN locations l ON l.organization_id=o.id AND l.active
-		WHERE o.id=$1 AND l.id=$2 AND o.active`, in.OrganizationID, in.LocationID).Scan(&orgName, &locName)
+		JOIN organization_fiscal_profiles p ON p.id=l.fiscal_profile_id AND p.organization_id=l.organization_id AND p.active
+		WHERE o.id=$1 AND l.id=$2 AND o.active`, in.OrganizationID, in.LocationID).Scan(&orgName, &locName, &locCountry, &locTimezone)
 	if err != nil {
 		fail(w, 404, "context_not_found", "La empresa o local no existe o está inactivo.")
 		return
@@ -147,7 +148,7 @@ func (a *API) switchContext(w http.ResponseWriter, r *http.Request) {
 	a.audit(r, "context.switched", "organization", in.OrganizationID)
 	writeJSON(w, 200, map[string]any{
 		"organization": map[string]string{"id": in.OrganizationID, "name": orgName},
-		"location":     map[string]string{"id": in.LocationID, "name": locName},
+		"location":     map[string]string{"id": in.LocationID, "name": locName, "country": locCountry, "timezone": locTimezone},
 	})
 }
 
