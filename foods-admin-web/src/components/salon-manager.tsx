@@ -98,7 +98,7 @@ export function SalonManager(){
   });
   const create=useMutation({
     mutationFn:(v:Draft)=>apiFetch<Order>("orders",{method:"POST",body:JSON.stringify({channel:v.channel,customerName:v.customerName,customerPhone:v.customerPhone,address:v.address,reference:v.reference,tableId:v.tableId,notes:v.notes,deliveryFee:Number(v.deliveryFee)||0,items:v.lines.map(l=>({productId:l.productId,name:l.name,qty:l.qty,unitPrice:l.unitPrice,note:l.note}))})}),
-    onSuccess:o=>{setDraft(null);invalidate();setDetailId(o.id);notify({tone:"success",title:"Mesa abierta",message:`Pedido ${o.code} registrado.`})},
+    onSuccess:o=>{setDraft(null);setDetailId(null);invalidate();notify({tone:"success",title:"Mesa abierta",message:`Pedido ${o.code} registrado.`})},
     onError:e=>notify({tone:"danger",title:"Error",message:e.message}),
   });
   const cancel=useMutation({
