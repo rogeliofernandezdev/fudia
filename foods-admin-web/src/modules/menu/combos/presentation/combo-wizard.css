@@ -801,102 +801,37 @@
 @keyframes combo-detail-shimmer { to { transform:translateX(100%); } }
 @container combo-list (width <= 820px) {
   .combo-list .table-wrap {
-    display: none;
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-gutter: stable;
+  }
+
+  .combo-list .table-wrap table {
+    width: 100%;
+    min-width: 760px;
   }
 
   .combo-list .management-cards {
-    display: grid;
-    gap: 10px;
-    padding: 12px;
+    display: none;
   }
 
-  .combo-list .management-cards > article {
-    padding: 14px;
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    background: #fff;
-  }
-
-  .combo-list .management-cards article > header {
-    display: grid;
-    grid-template-columns: 38px minmax(0,1fr) auto;
-    align-items: center;
-    gap: 9px;
-  }
-
-  .combo-list .management-cards header .row-icon {
-    margin: 0;
-  }
-
-  .combo-list .management-cards header div {
-    min-width: 0;
-    display: grid;
-    gap: 3px;
-  }
-
-  .combo-list .management-cards header b,
-  .combo-list .management-cards header small {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .combo-list .management-cards header b {
-    font-size: 11px;
-  }
-
-  .combo-list .management-cards header small {
-    color: var(--ink-400);
-    font-size: 8px;
-  }
-
-  .combo-list .management-cards dl {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    margin: 13px 0;
-  }
-
-  .combo-list .management-cards dl div {
-    padding: 9px;
-    border-radius: 8px;
-    background: #f8fafc;
-  }
-
-  .combo-list .management-cards dt {
-    color: var(--ink-400);
-    font-size: 7px;
-    font-weight: 800;
-    letter-spacing: .08em;
-  }
-
-  .combo-list .management-cards dd {
-    margin: 4px 0 0;
-    color: var(--ink-950);
-    font-size: 9px;
-    font-weight: 700;
-  }
-
-  .combo-list .management-cards article > footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 7px;
-    padding: 0;
-    border: 0;
+  .combo-list th,
+  .combo-list td {
+    padding-inline: 12px;
   }
 
   .combo-list .standard-pagination {
+    min-width: 0;
+    gap: 10px;
     flex-wrap: wrap;
-    align-items: flex-start !important;
   }
 
   .combo-list .standard-pagination > span {
-    width: 100%;
-    margin: 0;
-  }
-
-  .combo-list .standard-pagination > label {
-    margin-right: auto;
+    flex: 1 0 100%;
   }
 }
 
@@ -912,8 +847,8 @@
     min-width: 0;
   }
 
-  .combo-list .management-cards dl {
-    grid-template-columns: 1fr;
+  .combo-list .table-wrap table {
+    min-width: 720px;
   }
 }
 
