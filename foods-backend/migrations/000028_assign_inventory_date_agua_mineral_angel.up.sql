@@ -14,9 +14,14 @@ BEGIN
   FROM products
   WHERE name = 'Agua Mineral Angel 700ml';
 
-  IF matches <> 1 THEN
+  IF matches = 0 THEN
+    RAISE NOTICE 'inventory date migration skipped: Agua Mineral Angel 700ml is absent';
+    RETURN;
+  END IF;
+
+  IF matches > 1 THEN
     RAISE EXCEPTION
-      'inventory date migration expected exactly one Agua Mineral Angel 700ml product, found %',
+      'inventory date migration expected at most one Agua Mineral Angel 700ml product, found %',
       matches;
   END IF;
 
