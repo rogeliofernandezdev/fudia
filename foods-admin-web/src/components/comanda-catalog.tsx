@@ -108,10 +108,12 @@ export function ComandaCatalog({qtyByProduct,onPick,onRemove,onConfigureCombo,cu
         {variant==="salon"&&(
           <div className="comanda-source-tabs" role="tablist" aria-label="Tipo de producto">
             <button type="button" role="tab" aria-selected={catalogKind==="products"} className={catalogKind==="products"?"active":""} onClick={()=>switchKind("products")}>
-              <Icon name="utensils" size={15}/><span>Platos</span>
+              <span className="comanda-source-icon"><Icon name="utensils" size={17}/></span>
+              <span className="comanda-source-copy"><b>Platos</b><small>Productos de la carta</small></span>
             </button>
             <button type="button" role="tab" aria-selected={catalogKind==="combos"} className={catalogKind==="combos"?"active":""} onClick={()=>switchKind("combos")}>
-              <Icon name="menu" size={15}/><span>Menús y combos</span>
+              <span className="comanda-source-icon"><Icon name="combo" size={17}/></span>
+              <span className="comanda-source-copy"><b>Menús y combos</b><small>Opciones configurables</small></span>
             </button>
           </div>
         )}
