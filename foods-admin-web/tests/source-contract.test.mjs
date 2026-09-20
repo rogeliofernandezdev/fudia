@@ -123,6 +123,8 @@ test("producto e inventario mantienen una sola fuente de verdad",()=>{
   assert.ok(dialog.includes("Nuevo producto"));
   assert.ok(dialog.includes("Nuevo insumo"),"Inventario permite crear insumos sin producto vendible");
   assert.ok(dialog.includes("no tendrá precio de venta"),"El flujo de insumos separa inventario de precio comercial");
+  assert.ok(dialog.includes('register("categoryId")'),"El alta de producto vendible solicita categoría");
+  assert.ok(dialog.includes("Selecciona una categoría"),"El selector de categoría guía una selección explícita");
   assert.ok(dialog.includes("Revisa los campos marcados antes de guardar."),"Guardar inválido informa el problema al usuario");
   const inventoryEntrySchema=read("src/modules/supply/inventory/domain/inventory-entry-schema.ts");
   assert.ok(dialog.includes("useForm<InventoryEntryDraft>"),"Nueva entrada usa React Hook Form");
@@ -130,6 +132,7 @@ test("producto e inventario mantienen una sola fuente de verdad",()=>{
   assert.ok(inventoryEntrySchema.includes('z.discriminatedUnion("mode"'),"Zod discrimina reglas según el tipo de registro");
   assert.ok(inventoryEntrySchema.includes('mode:z.literal("existing")'),"Existe esquema para artículo existente");
   assert.ok(inventoryEntrySchema.includes('mode:z.literal("new_product")'),"Existe esquema para producto vendible");
+  assert.ok(inventoryEntrySchema.includes('categoryId:z.string().trim().min(1,"Selecciona una categoría.")'),"La categoría es obligatoria al crear un producto vendible");
   assert.ok(inventoryEntrySchema.includes('mode:z.literal("new_ingredient")'),"Existe esquema para insumo");
   assert.equal(dialog.includes("const valid=value.mode"),false,"La vista no mantiene una segunda validación manual de submit");
   assert.ok(dialog.includes("Una sola operación"));
@@ -172,6 +175,8 @@ test("producto e inventario mantienen una sola fuente de verdad",()=>{
   const inventoryApi=read("src/modules/supply/inventory/infrastructure/inventory-api.ts");
   assert.ok(inventoryApi.includes('"inventory/entries"'));
   assert.ok(inventoryApi.includes("newProduct"));
+  assert.ok(inventoryApi.includes("categoryId:draft.categoryId.trim()"),"La entrada envía la categoría del nuevo producto");
+  assert.ok(inventoryApi.includes("listInventoryCategories"),"Inventario obtiene las categorías activas desde el API");
   assert.ok(inventoryApi.includes("newIngredient"),"La API diferencia insumos de productos vendibles");
   assert.ok(inventoryApi.includes("inventoryItemId"),"Las reposiciones operan sobre el artículo de inventario");
   assert.ok(inventoryApi.includes("presentationType"),"La API envía el tipo de presentación");
