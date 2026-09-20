@@ -1,4 +1,5 @@
 "use client";
+import "./modules.css";
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 import {Icon, type IconName} from "@/design-system/icons";
 import {PageHeader} from "@/design-system/page-header";
