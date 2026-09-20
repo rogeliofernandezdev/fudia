@@ -16,7 +16,7 @@ export function ComandaCatalog({qtyByProduct,onPick,onRemove,currencySymbol,vari
   const[pq,setPq]=useState("");
   const[cat,setCat]=useState("");
   const[page,setPage]=useState(1);
-  const[pageSize,setPageSize]=useState(10);
+  const pageSize=10;
   const scrollRef=useRef<HTMLDivElement>(null);
   const categories=useQuery({queryKey:["order-categories"],queryFn:()=>apiFetch<{items:{id:string;name:string}[]}>("categories?pageSize=100"),staleTime:60000});
   const cats=categories.data?.items??[];
@@ -56,11 +56,6 @@ export function ComandaCatalog({qtyByProduct,onPick,onRemove,currencySymbol,vari
   const booting=variant==="salon"?salonCatalog.isLoading:(!searching&&(categories.isLoading||(cats.length>0&&perCat.every(q=>q.isLoading))));
   const goToPage=(next:number)=>{
     setPage(next);
-    scrollRef.current?.scrollTo({top:0,behavior:"smooth"});
-  };
-  const changePageSize=(next:number)=>{
-    setPageSize(next);
-    setPage(1);
     scrollRef.current?.scrollTo({top:0,behavior:"smooth"});
   };
 
@@ -123,7 +118,7 @@ export function ComandaCatalog({qtyByProduct,onPick,onRemove,currencySymbol,vari
       </div>
       {variant==="salon"&&salonItems.length>0&&(
         <div className="salon-comanda-pagination-shell">
-          <Pagination page={page} size={pageSize} total={salonTotal} onPage={goToPage} onSize={changePageSize} mode="simple"/>
+          <Pagination page={page} size={pageSize} total={salonTotal} onPage={goToPage} onSize={()=>{}} mode="compact"/>
         </div>
       )}
     </div>
