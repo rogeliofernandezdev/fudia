@@ -51,6 +51,13 @@ function progress(ticket:KitchenTicket,now:number){
   return Math.min(100,Math.max(0,Math.round(elapsedMinutes(ticket,now)/ticket.targetMinutes*100)));
 }
 
+function priority(ticket:KitchenTicket,now:number){
+  const elapsed=elapsedMinutes(ticket,now);
+  if(ticket.status==="listo")return elapsed;
+  if(!ticket.targetMinutes)return elapsed;
+  return elapsed/ticket.targetMinutes*10000+elapsed;
+}
+
 export function KitchenBoard(){
   const qc=useQueryClient();
   const{notify}=useFeedback();
@@ -103,31 +110,31 @@ export function KitchenBoard(){
     <PageHeader
       eyebrow="OPERACIÓN EN COCINA"
       title="Cocina"
-      description="Prioriza comandas confirmadas, controla el tiempo de preparación y marca lo que ya está listo."
-      action={<div className={`kitchen-live ${tickets.isFetching?"refreshing":""}`}><i/><span>{tickets.isFetching?"Actualizando…":"Actualiza cada 10 s"}</span></div>}
+      description="Comandas confirmadas, preparación y salida en una sola vista."
     />
 
-    <section className="kitchen-summary" aria-label="Resumen de cocina">
-      <SummaryItem icon="clock" label="POR PREPARAR" value={counts.confirmado} tone="pending"/>
-      <SummaryItem icon="chefHat" label="EN PREPARACIÓN" value={counts.preparando} tone="cooking"/>
-      <SummaryItem icon="check" label="LISTOS" value={counts.listo} tone="ready"/>
-      <SummaryItem icon="alert" label="REQUIEREN ATENCIÓN" value={attention} tone="attention"/>
-    </section>
-
     <section className="kitchen-toolbar">
-      <div><small>COLA DE PRODUCCIÓN</small><h2>Comandas por estado</h2><p>Los tiempos objetivo se toman de la configuración de preparación de los productos.</p></div>
-      <label>Canal<Select value={channel} onChange={event=>setChannel(event.target.value)} aria-label="Filtrar comandas por canal"><option value="">Todos los canales</option>{(tickets.data?.channelOptions??[]).map(option=><option value={option.value} key={option.value}>{option.label}</option>)}</Select></label>
+      <div className="kitchen-toolbar-main">
+        <div><h2>Comandas activas</h2><p>Ordenadas por urgencia dentro de cada estado.</p></div>
+        {attention>0&&<span className="kitchen-attention"><Icon name="alert" size={13}/>{attention} {attention===1?"requiere":"requieren"} atención</span>}
+      </div>
+      <div className="kitchen-toolbar-controls">
+        <label>Canal<Select value={channel} onChange={event=>setChannel(event.target.value)} aria-label="Filtrar comandas por canal"><option value="">Todos los canales</option>{(tickets.data?.channelOptions??[]).map(option=><option value={option.value} key={option.value}>{option.label}</option>)}</Select></label>
+        <div className={`kitchen-live ${tickets.isFetching?"refreshing":""}`}><i/><span>{tickets.isFetching?"Actualizando…":"En vivo"}</span></div>
+      </div>
     </section>
 
     <nav className="kitchen-mobile-tabs" aria-label="Estado de las comandas">
-      {lanes.map(lane=><button type="button" aria-pressed={mobileLane===lane.status} className={mobileLane===lane.status?"active":""} onClick={()=>setMobileLane(lane.status)} key={lane.status}><Icon name={lane.icon} size={16}/><span>{lane.shortLabel}</span><b>{counts[lane.status]}</b></button>)}
+      {lanes.map(lane=><button type="button" aria-pressed={mobileLane===lane.status} className={mobileLane===lane.status?"active":""} onClick={()=>setMobileLane(lane.status)} key={lane.status}><Icon name={lane.icon} size={15}/><span>{lane.shortLabel}</span><b>{counts[lane.status]}</b></button>)}
     </nav>
 
     {tickets.isLoading?<KitchenLoading/>:tickets.isError?<KitchenError message={tickets.error.message} retry={()=>tickets.refetch()}/>:<div className="kitchen-board">
       {lanes.map(lane=>{
-        const laneItems=items.filter(ticket=>ticket.status===lane.status);
+        const laneItems=items
+          .filter(ticket=>ticket.status===lane.status)
+          .sort((left,right)=>priority(right,now)-priority(left,now));
         return <section className={`kitchen-lane kitchen-lane-${lane.status}`} data-mobile-active={mobileLane===lane.status} key={lane.status}>
-          <header><span><Icon name={lane.icon} size={17}/></span><h2>{lane.label}</h2><b>{laneItems.length}</b></header>
+          <header><div><Icon name={lane.icon} size={15}/><h2>{lane.label}</h2></div><b>{laneItems.length}</b></header>
           <div className="kitchen-lane-list">
             {laneItems.map(ticket=>{
               const tone=urgency(ticket,now);
@@ -137,26 +144,35 @@ export function KitchenBoard(){
               const next=ticket.status==="confirmado"?"preparando":ticket.status==="preparando"?"listo":null;
               return <article className={`kitchen-ticket ${tone}`} key={ticket.id}>
                 <div className="kitchen-ticket-head">
-                  <div className="kitchen-ticket-identity"><span><Icon name={channelIcons[ticket.channel]??"receipt"} size={16}/></span><div><b>{subject}</b><small>{channelLabel(ticket.channel)} · {ticket.code}</small></div></div>
-                  <div className={`kitchen-ticket-time ${tone}`}><strong>{elapsed}</strong><span>min</span></div>
+                  <div className="kitchen-ticket-identity">
+                    <b>{subject}</b>
+                    <small><Icon name={channelIcons[ticket.channel]??"receipt"} size={12}/>{ticket.code} · {channelLabel(ticket.channel)}</small>
+                  </div>
+                  <div className={`kitchen-ticket-time ${tone}`}>
+                    <strong>{elapsed}</strong><span>min</span>
+                    {ticket.targetMinutes&&ticket.status!=="listo"&&<small>/ {ticket.targetMinutes}</small>}
+                  </div>
                 </div>
 
-                {ticket.targetMinutes&&ticket.status!=="listo"&&<div className="kitchen-ticket-target">Objetivo {ticket.targetMinutes} min</div>}
                 {currentProgress!==null&&<div className="kitchen-progress" aria-label={`Avance de tiempo ${currentProgress}%`}><i style={{width:`${currentProgress}%`}}/></div>}
 
                 <div className="kitchen-ticket-items">
                   {ticket.items.map(item=><div className="kitchen-ticket-item" key={item.id}>
                     <b>{formatRegionalNumber(Number(item.qty),location?.country,{maximumFractionDigits:2})}×</b>
-                    <div><span>{item.name}</span>{(item.selections??[]).map(selection=><small key={selection.groupId+selection.productId}><strong>{selection.groupName}:</strong> {selection.name}</small>)}{item.note&&<em>{item.note}</em>}</div>
+                    <div>
+                      <span>{item.name}</span>
+                      {(item.selections??[]).map(selection=><small key={selection.groupId+selection.productId}><strong>{selection.groupName}:</strong> {selection.name}</small>)}
+                      {item.note&&<em>{item.note}</em>}
+                    </div>
                   </div>)}
                 </div>
 
-                {ticket.notes&&<div className="kitchen-ticket-note"><Icon name="edit" size={14}/><span>{ticket.notes}</span></div>}
+                {ticket.notes&&<div className="kitchen-ticket-note"><Icon name="edit" size={13}/><span>{ticket.notes}</span></div>}
 
-                <footer>{canManage&&next?<Button kind={next==="listo"?"success":"primary"} icon={next==="listo"?"check":"chefHat"} disabled={advance.isPending} onClick={()=>advance.mutate({ticket,status:next})}>{busyId===ticket.id?"Actualizando…":next==="preparando"?"Iniciar preparación":"Marcar listo"}</Button>:ticket.status==="listo"?<span className="kitchen-ready-label"><Icon name="check" size={14}/>Esperando entrega</span>:null}</footer>
+                <footer>{canManage&&next?<Button kind={next==="listo"?"success":"primary"} icon={next==="listo"?"check":"chefHat"} disabled={advance.isPending} onClick={()=>advance.mutate({ticket,status:next})}>{busyId===ticket.id?"Actualizando…":next==="preparando"?"Iniciar preparación":"Marcar listo"}</Button>:ticket.status==="listo"?<span className="kitchen-ready-label"><Icon name="check" size={13}/>Esperando entrega</span>:null}</footer>
               </article>;
             })}
-            {!laneItems.length&&<div className="kitchen-lane-empty"><Icon name={lane.icon} size={20}/><b>Sin comandas</b><span>{lane.status==="confirmado"?"Los pedidos confirmados aparecerán aquí.":lane.status==="preparando"?"Nada se está preparando ahora.":"No hay pedidos esperando entrega."}</span></div>}
+            {!laneItems.length&&<div className="kitchen-lane-empty"><Icon name={lane.icon} size={18}/><b>Sin comandas</b><span>{lane.status==="confirmado"?"Los pedidos confirmados aparecerán aquí.":lane.status==="preparando"?"Nada se está preparando ahora.":"No hay pedidos esperando entrega."}</span></div>}
           </div>
         </section>;
       })}
@@ -164,8 +180,6 @@ export function KitchenBoard(){
   </div>;
 }
 
-function SummaryItem({icon,label,value,tone}:{icon:IconName;label:string;value:number;tone:string}){return <div className={`kitchen-summary-item ${tone}`}><span><Icon name={icon} size={17}/></span><p><small>{label}</small><strong>{value}</strong></p></div>}
-
-function KitchenLoading(){return <div className="kitchen-board kitchen-loading" aria-label="Cargando comandas">{lanes.map(lane=><section className="kitchen-lane" key={lane.status}><header><span/><h2>{lane.label}</h2><b>—</b></header><div className="kitchen-lane-list">{Array.from({length:2},(_,index)=><i className="kitchen-ticket-skeleton" key={index}/>)}</div></section>)}</div>}
+function KitchenLoading(){return <div className="kitchen-board kitchen-loading" aria-label="Cargando comandas">{lanes.map(lane=><section className="kitchen-lane" key={lane.status}><header><div><Icon name={lane.icon} size={15}/><h2>{lane.label}</h2></div><b>—</b></header><div className="kitchen-lane-list">{Array.from({length:2},(_,index)=><i className="kitchen-ticket-skeleton" key={index}/>)}</div></section>)}</div>}
 
 function KitchenError({message,retry}:{message:string;retry:()=>void}){return <div className="kitchen-error"><span><Icon name="alert" size={24}/></span><b>No pudimos cargar la cola de cocina</b><p>{message}</p><Button kind="secondary" icon="refresh" onClick={retry}>Reintentar</Button></div>}
