@@ -1,5 +1,5 @@
 export type Category={id:string;name:string;sortOrder:number;active:boolean;productCount:number};
-export type StockMode="none"|"manual";
+export type QuantityControl="none"|"portions"|"inventory";
 export type Product={
   id:string;
   sku:string;
@@ -9,8 +9,7 @@ export type Product={
   categoryName:string|null;
   price:string;
   active:boolean;
-  stockMode:StockMode;
-  defaultDailyQuota:number|null;
+  quantityControl:QuantityControl;
   imageUrl:string|null;
   prepMinutes:number|null;
   allergens:string[];
@@ -25,8 +24,7 @@ export type ProductDraft={
   categoryId:string;
   price:string;
   active:boolean;
-  stockMode:StockMode;
-  defaultDailyQuota:string;
+  quantityControl:QuantityControl;
   imageUrl:string|null;
   prepMinutes:string;
   allergens:string[];
