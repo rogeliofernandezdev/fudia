@@ -24,8 +24,25 @@ Pedido y detalle de pedido conservan siempre esa referencia; no existe un segund
 catálogo vendible dentro de Inventario.
 
 Producto describe **qué se vende**: nombre, precio, categoría, imagen, estado y
-demás datos comerciales. Producto no almacena cantidad. La cantidad pertenece al
-local y se resuelve según `products.quantity_control`.
+demás datos comerciales. Además separa dos clasificaciones independientes:
+`products.product_type` describe si el producto es preparado o mercadería de
+reventa, mientras `products.quantity_control` describe de dónde sale su
+disponibilidad. La categoría sigue siendo comercial y no determina ninguna de
+esas dos dimensiones. Producto no almacena cantidad; la cantidad pertenece al
+local.
+
+### Tipo de producto
+
+| Valor | Significado |
+| --- | --- |
+| `prepared` | Plato, bebida u otro producto preparado por el restaurante. |
+| `retail` | Mercadería vendible recibida físicamente, como gaseosas, agua o snacks. |
+
+El tipo no se infiere por el nombre de la categoría. Por ejemplo, «Bebidas»
+puede contener una limonada `prepared` y una gaseosa `retail`. El alta
+comercial normal usa `prepared` por defecto; **Inventario > Nuevo producto
+vendible** fuerza `retail` en backend para que ese atajo nunca cree un plato
+preparado.
 
 ### Control de cantidad por producto
 
@@ -58,7 +75,8 @@ El flujo principal de mercadería física comienza en **Inventario > Nueva entra
 1. Si el artículo de inventario existe, se selecciona su `InventoryItemId` y
    se registra la nueva entrada.
 2. Si la mercadería se vende directamente, **Nuevo producto vendible** crea
-   `Product` + `inventory_item` y exige precio de venta.
+   `Product` + `inventory_item`, exige precio de venta y registra
+   `product_type='retail'` + `quantity_control='inventory'` de forma automática.
 3. Si es un ingrediente interno, **Nuevo insumo** crea únicamente
    `inventory_item`; no crea `Product` ni exige precio de venta.
 4. Se resuelve la presentación de ingreso. La unidad base siempre existe; una
@@ -117,7 +135,7 @@ por su cuenta.
 
 | Tabla | Propósito |
 | --- | --- |
-| `products` | Catálogo comercial único y clasificación `quantity_control`. |
+| `products` | Catálogo comercial único; separa `product_type` de `quantity_control`. |
 | `product_availability` | Porciones, vendidos y override manual por local/día. |
 | `inventory_items` | Catálogo físico: insumos internos o mercadería vendible; `product_id` es opcional y `unit` define la unidad base. |
 | `inventory_presentations` | Presentaciones reutilizables de ingreso y su factor hacia la unidad base. |

@@ -75,6 +75,12 @@ se limitan a densidad y composición, nunca a reinterpretar el significado del c
   preparación (minutos), alérgenos (tags seleccionables), plato destacado
   (switch) y precio de costo. Ninguno es obligatorio; el operador puede
   registrar un producto solo con nombre, precio y categoría.
+- Producto separa `productType` (`prepared` o `retail`) de categoría y
+  `quantityControl`. La categoría sigue siendo comercial y puede mezclar, por
+  ejemplo, una limonada preparada y una gaseosa de reventa dentro de Bebidas.
+  Los productos creados desde Carta y productos nacen como `prepared`; el
+  atajo Inventario > Nuevo producto vendible clasifica automáticamente como
+  `retail` sin pedir un paso adicional al usuario.
 - El registro y la edición de producto usan un wizard de tres pasos dentro del
   mismo modal: Información, Operación y Presentación. Avanzar no persiste datos;
   el producto se envía una sola vez desde el último paso. Cada paso valida solo

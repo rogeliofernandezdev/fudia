@@ -106,6 +106,8 @@ test("los modales remotos muestran skeleton mientras esperan datos",()=>{
 
 test("producto e inventario mantienen una sola fuente de verdad",()=>{
   const productTypes=read("src/modules/menu/products/domain/types.ts");
+  assert.ok(productTypes.includes('ProductType="prepared"|"retail"'));
+  assert.ok(productTypes.includes('productType:ProductType'));
   assert.ok(productTypes.includes('QuantityControl="none"|"portions"|"inventory"'));
   for(const legacy of ["stockMode","defaultDailyQuota","dailyQuota"])assert.equal(productTypes.includes(legacy),false,legacy);
 
@@ -121,6 +123,8 @@ test("producto e inventario mantienen una sola fuente de verdad",()=>{
   const dialog=read("src/modules/supply/inventory/presentation/inventory-entry-dialog.tsx");
   assert.ok(dialog.includes("Artículo existente"));
   assert.ok(dialog.includes("Nuevo producto"));
+  assert.ok(dialog.includes("mercadería vendible con Inventario físico, no como plato preparado"),"Inventario explica que el alta rápida crea mercadería y no platos");
+  assert.ok(dialog.includes("Categoría comercial"),"La categoría se presenta como clasificación comercial, no como tipo de producto");
   assert.ok(dialog.includes("Nuevo insumo"),"Inventario permite crear insumos sin producto vendible");
   assert.ok(dialog.includes("no tendrá precio de venta"),"El flujo de insumos separa inventario de precio comercial");
   assert.ok(dialog.includes('register("categoryId")'),"El alta de producto vendible solicita categoría");

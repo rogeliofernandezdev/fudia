@@ -22,13 +22,34 @@ func TestNormalizeProductRequiresIdentity(t *testing.T) {
 	}
 }
 
-func TestNormalizeProductDefaultsToNone(t *testing.T) {
+func TestNormalizeProductDefaultsPreparedAndNone(t *testing.T) {
 	in, invalid := normalizeProduct(productInput{Name: "Ceviche", Price: "45.00"})
 	if invalid != "" {
 		t.Fatalf("unexpected error %q", invalid)
 	}
+	if in.ProductType != "prepared" {
+		t.Fatalf("expected prepared, got %q", in.ProductType)
+	}
 	if in.QuantityControl != "none" {
 		t.Fatalf("expected none, got %q", in.QuantityControl)
+	}
+}
+
+func TestNormalizeProductAcceptsProductTypes(t *testing.T) {
+	for _, productType := range []string{"prepared", "retail"} {
+		in, invalid := normalizeProduct(productInput{Name: "Producto", Price: "10.00", ProductType: productType})
+		if invalid != "" {
+			t.Fatalf("expected %q to be valid, got %q", productType, invalid)
+		}
+		if in.ProductType != productType {
+			t.Fatalf("expected %q, got %q", productType, in.ProductType)
+		}
+	}
+}
+
+func TestNormalizeProductRejectsUnknownProductType(t *testing.T) {
+	if _, invalid := normalizeProduct(productInput{Name: "Producto", Price: "10.00", ProductType: "ingredient"}); invalid == "" {
+		t.Fatal("expected unknown product type to be rejected")
 	}
 }
 

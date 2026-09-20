@@ -349,6 +349,7 @@ func (a *API) createInventoryEntry(w http.ResponseWriter, r *http.Request) {
 			Description:     in.NewProduct.Description,
 			CategoryID:      in.NewProduct.CategoryID,
 			Price:           in.NewProduct.Price,
+			ProductType:     "retail",
 			QuantityControl: "inventory",
 		}
 		if _, invalidProduct := normalizeProduct(productIn); invalidProduct != "" {
@@ -357,8 +358,8 @@ func (a *API) createInventoryEntry(w http.ResponseWriter, r *http.Request) {
 		}
 		var newProductID string
 		err = tx.QueryRow(r.Context(), `
-			INSERT INTO products(organization_id,category_id,sku,name,description,price,active,quantity_control)
-			VALUES($1,$2,COALESCE(NULLIF($3,''),'PROD-'||upper(substr(replace(gen_random_uuid()::text,'-',''),1,8))),$4,$5,$6,true,'inventory')
+			INSERT INTO products(organization_id,category_id,sku,name,description,price,active,product_type,quantity_control)
+			VALUES($1,$2,COALESCE(NULLIF($3,''),'PROD-'||upper(substr(replace(gen_random_uuid()::text,'-',''),1,8))),$4,$5,$6,true,'retail','inventory')
 			RETURNING id,sku,name`,
 			s.OrganizationID, in.NewProduct.CategoryID, in.NewProduct.SKU,
 			in.NewProduct.Name, in.NewProduct.Description, in.NewProduct.Price,

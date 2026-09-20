@@ -1,4 +1,5 @@
 export type Category={id:string;name:string;sortOrder:number;active:boolean;productCount:number};
+export type ProductType="prepared"|"retail";
 export type QuantityControl="none"|"portions"|"inventory";
 export type Product={
   id:string;
@@ -9,6 +10,7 @@ export type Product={
   categoryName:string|null;
   price:string;
   active:boolean;
+  productType:ProductType;
   quantityControl:QuantityControl;
   imageUrl:string|null;
   prepMinutes:number|null;
@@ -24,6 +26,7 @@ export type ProductDraft={
   categoryId:string;
   price:string;
   active:boolean;
+  productType:ProductType;
   quantityControl:QuantityControl;
   imageUrl:string|null;
   prepMinutes:string;

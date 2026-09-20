@@ -138,10 +138,10 @@ export function InventoryEntryDialog({products,categories,categoryError,currency
       </label>
       {selected&&<div className="inventory-entry-product-note"><Icon name="check" size={15}/><span><b>{selected.name}</b><small>{selected.kind==="ingredient"?"Insumo":"Producto vendible"} · Stock controlado en {unitLabels[selected.unit]??selected.unit}.</small></span></div>}
      </section>:value.mode==="new_product"?<section className="inventory-entry-section">
-      <div className="inventory-entry-section-title"><span><Icon name="plus" size={17}/></span><div><b>Crear producto vendible</b><small>Se creará también en Productos con Inventario físico.</small></div></div>
+      <div className="inventory-entry-section-title"><span><Icon name="plus" size={17}/></span><div><b>Crear producto vendible</b><small>Se creará como mercadería vendible con Inventario físico, no como plato preparado.</small></div></div>
       <div className="form-grid">
        <label className="span-2">Nombre del producto<Input autoFocus maxLength={160} {...register("name")} placeholder="Ej. Coca-Cola 500 ml" aria-invalid={Boolean(errors.name)}/>{errors.name?.message&&<small className="wizard-field-error">{errors.name.message}</small>}</label>
-       <label>Categoría
+       <label>Categoría comercial
         <Select {...register("categoryId")} disabled={Boolean(categoryError)||categories.length===0} aria-invalid={Boolean(errors.categoryId)||Boolean(categoryError)}>
          <option value="">{categoryError?"No pudimos cargar las categorías":categories.length?"Selecciona una categoría":"No hay categorías activas"}</option>
          {categories.map(category=><option value={category.id} key={category.id}>{category.name}</option>)}

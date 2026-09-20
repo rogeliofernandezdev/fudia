@@ -92,12 +92,15 @@ func TestInventoryEntryCreatesProductThenReusesIt(t *testing.T) {
 		t.Fatalf("expected first entry 201, got %d body=%s", firstRec.Code, firstRec.Body.String())
 	}
 
-	var productID, control string
+	var productID, productType, control string
 	if err := pool.QueryRow(context.Background(), `
-		SELECT id,quantity_control
+		SELECT id,product_type,quantity_control
 		FROM products
-		WHERE organization_id=$1 AND name=$2`, s.OrganizationID, name).Scan(&productID, &control); err != nil {
+		WHERE organization_id=$1 AND name=$2`, s.OrganizationID, name).Scan(&productID, &productType, &control); err != nil {
 		t.Fatal(err)
+	}
+	if productType != "retail" {
+		t.Fatalf("expected retail product type, got %q", productType)
 	}
 	if control != "inventory" {
 		t.Fatalf("expected inventory control, got %q", control)
