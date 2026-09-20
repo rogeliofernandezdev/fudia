@@ -224,9 +224,9 @@ func (a *API) dashboard(w http.ResponseWriter, r *http.Request) {
 
 func (a *API) getContext(w http.ResponseWriter, r *http.Request) {
 	s := r.Context().Value(scopeKey{}).(scope)
-	var organizationName, locationName string
+	var organizationName, locationName, locationCountry, locationTimezone string
 	var platformAdmin bool
-	err := a.db.QueryRow(r.Context(), `SELECT o.trade_name,l.name,u.platform_admin FROM organizations o JOIN locations l ON l.organization_id=o.id JOIN users u ON u.id=$3 WHERE o.id=$1 AND l.id=$2 AND o.active AND l.active`, s.OrganizationID, s.LocationID, s.UserID).Scan(&organizationName, &locationName, &platformAdmin)
+	err := a.db.QueryRow(r.Context(), `SELECT o.trade_name,l.name,p.country_code,l.timezone,u.platform_admin FROM organizations o JOIN locations l ON l.organization_id=o.id JOIN organization_fiscal_profiles p ON p.id=l.fiscal_profile_id AND p.organization_id=l.organization_id AND p.active JOIN users u ON u.id=$3 WHERE o.id=$1 AND l.id=$2 AND o.active AND l.active`, s.OrganizationID, s.LocationID, s.UserID).Scan(&organizationName, &locationName, &locationCountry, &locationTimezone, &platformAdmin)
 	if err != nil {
 		fail(w, 503, "context_unavailable", "No pudimos cargar el contexto de trabajo.")
 		return
@@ -246,5 +246,5 @@ func (a *API) getContext(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	writeJSON(w, 200, map[string]any{"user": map[string]any{"id": s.UserID, "name": s.Name, "platformAdmin": platformAdmin}, "organization": map[string]string{"id": s.OrganizationID, "name": organizationName}, "location": map[string]string{"id": s.LocationID, "name": locationName}, "modules": modules, "menuAccess": menuAccess, "permissions": permissions})
+	writeJSON(w, 200, map[string]any{"user": map[string]any{"id": s.UserID, "name": s.Name, "platformAdmin": platformAdmin}, "organization": map[string]string{"id": s.OrganizationID, "name": organizationName}, "location": map[string]string{"id": s.LocationID, "name": locationName, "country": locationCountry, "timezone": locationTimezone}, "modules": modules, "menuAccess": menuAccess, "permissions": permissions})
 }
