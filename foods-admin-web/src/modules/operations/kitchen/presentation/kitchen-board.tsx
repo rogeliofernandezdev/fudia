@@ -141,10 +141,7 @@ export function KitchenBoard(){
                   <div className={`kitchen-ticket-time ${tone}`}><strong>{elapsed}</strong><span>min</span></div>
                 </div>
 
-                <div className="kitchen-ticket-timing">
-                  <span>{ticket.status==="listo"?`Listo hace ${elapsed} min`:ticket.status==="preparando"?`${elapsed} min en preparación`:`${elapsed} min en espera`}</span>
-                  <b>{ticket.targetMinutes?`Objetivo ${ticket.targetMinutes} min`:"Sin tiempo objetivo"}</b>
-                </div>
+                {ticket.targetMinutes&&ticket.status!=="listo"&&<div className="kitchen-ticket-target">Objetivo {ticket.targetMinutes} min</div>}
                 {currentProgress!==null&&<div className="kitchen-progress" aria-label={`Avance de tiempo ${currentProgress}%`}><i style={{width:`${currentProgress}%`}}/></div>}
 
                 <div className="kitchen-ticket-items">
