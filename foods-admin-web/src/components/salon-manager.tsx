@@ -493,15 +493,12 @@ function ComandaView({initial,mode,allTables,busy,currencySymbol,close,save,noti
                   {v.lines.map((l,i)=>(
                     <article className={"salon-comanda-line"+(l.itemType==="combo"?" combo":"")} key={l.lineKey}>
                       <div className="salon-comanda-line-main">
-                        {l.itemType!=="combo"&&<span className="salon-comanda-line-qty">{l.qty}×</span>}
                         <div className="salon-comanda-line-copy">
-                          {l.itemType==="combo"?(
-                            <div className="salon-comanda-line-title">
-                              <span className="salon-comanda-line-inline-qty">{l.qty}×</span>
-                              <strong>{l.name}</strong>
-                            </div>
-                          ):<strong>{l.name}</strong>}
-                          {(l.itemType!=="combo"||l.qty>1)&&<small>{currencySymbol} {money(l.unitPrice)} c/u</small>}
+                          <div className="salon-comanda-line-title">
+                            <span className="salon-comanda-line-inline-qty">{l.qty}×</span>
+                            <strong>{l.name}</strong>
+                          </div>
+                          <small>{currencySymbol} {money(l.unitPrice)} c/u</small>
                           {l.itemType==="combo"&&(
                             <div className="salon-comanda-line-selections">
                               {l.selections.map(sel=>
