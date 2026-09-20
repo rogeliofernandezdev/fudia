@@ -185,9 +185,6 @@
 
 .combo-wizard-steps button.active .combo-step-marker {
   transform: translateY(-1px);
-}
-
-.combo-wizard-steps button.active .combo-step-marker {
   border-color: var(--primary-600, #4654cd);
   background: var(--primary-600, #4654cd);
   color: #fff;
