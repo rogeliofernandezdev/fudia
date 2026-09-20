@@ -26,7 +26,7 @@ export function KardexPage(){
    <div className="inventory-toolbar">
     <Select value={productId} onChange={event=>setProductId(event.target.value)} disabled={products.isLoading} aria-label="Filtrar Kárdex por producto">
      <option value="">Todos los productos</option>
-     {products.data?.items.filter(product=>product.quantityControl==="inventory").map(product=><option value={product.id} key={product.id}>{product.name} · {product.sku}</option>)}
+     {products.data?.items.filter(product=>product.quantityControl==="inventory").map(product=><option value={product.id} key={product.id}>{product.name}</option>)}
     </Select>
     <p><Icon name="receipt" size={15}/>Cada venta física deja su movimiento y saldo resultante.</p>
    </div>
@@ -35,16 +35,16 @@ export function KardexPage(){
    :!items.length?
     <div className="inventory-state"><Icon name="receipt" size={24}/><b>Sin movimientos</b><p>Aún no hay entradas o ventas registradas para este filtro.</p></div>
    :<div className="table-wrap hover-scroll inventory-table-wrap"><table>
-    <thead><tr><th>FECHA</th><th>PRODUCTO</th><th>MOVIMIENTO</th><th>CANTIDAD</th><th>SALDO</th><th>ORIGEN</th></tr></thead>
+    <thead><tr><th>FECHA</th><th>PRODUCTO</th><th>MOVIMIENTO</th><th>CANTIDAD</th><th>SALDO</th><th>REFERENCIA</th></tr></thead>
     <tbody>{items.map((item,index)=>{
      const delta=Number(item.quantityDelta);
      return <tr className={index%2?"alternate":""} key={item.id}>
       <td>{formatRegionalDateTime(item.createdAt,{country:location?.country,timeZone:location?.timezone})}</td>
-      <td><b>{item.productName}</b><small>{item.productId.slice(0,8)}</small></td>
+      <td><b>{item.productName}</b></td>
       <td><Status tone={delta>0?"green":"blue"}>{movementLabels[item.movementType]}</Status></td>
       <td><b className="inventory-quantity">{delta>0?"+":""}{formatRegionalNumber(delta,location?.country,{maximumFractionDigits:3})}</b></td>
       <td>{formatRegionalNumber(Number(item.balanceAfter),location?.country,{maximumFractionDigits:3})}</td>
-      <td>{item.sourceType==="order"?"Pedido":"Entrada"}<small>{item.sourceId.slice(0,8)}</small></td>
+      <td><b>{item.sourceReference||"—"}</b>{item.note&&<small>{item.note}</small>}</td>
      </tr>;
     })}</tbody>
    </table></div>}
@@ -53,5 +53,5 @@ export function KardexPage(){
 }
 
 function KardexSkeleton(){
- return <div className="inventory-table-wrap"><table aria-label="Cargando Kárdex"><thead><tr><th>FECHA</th><th>PRODUCTO</th><th>MOVIMIENTO</th><th>CANTIDAD</th><th>SALDO</th><th>ORIGEN</th></tr></thead><tbody>{Array.from({length:7},(_,index)=><tr className="inventory-skeleton" key={index}>{Array.from({length:6},(_,cell)=><td key={cell}><i/></td>)}</tr>)}</tbody></table></div>;
+ return <div className="inventory-table-wrap"><table aria-label="Cargando Kárdex"><thead><tr><th>FECHA</th><th>PRODUCTO</th><th>MOVIMIENTO</th><th>CANTIDAD</th><th>SALDO</th><th>REFERENCIA</th></tr></thead><tbody>{Array.from({length:7},(_,index)=><tr className="inventory-skeleton" key={index}>{Array.from({length:6},(_,cell)=><td key={cell}><i/></td>)}</tr>)}</tbody></table></div>;
 }
