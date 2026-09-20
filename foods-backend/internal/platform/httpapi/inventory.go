@@ -70,9 +70,10 @@ type inventoryMovementView struct {
 	MovementType  string `json:"movementType"`
 	QuantityDelta string `json:"quantityDelta"`
 	BalanceAfter  string `json:"balanceAfter"`
-	SourceType    string `json:"sourceType"`
-	SourceID      string `json:"sourceId"`
-	Note          string `json:"note"`
+	SourceType      string `json:"sourceType"`
+	SourceID        string `json:"sourceId"`
+	SourceReference string `json:"sourceReference"`
+	Note            string `json:"note"`
 	CreatedAt     time.Time `json:"createdAt"`
 }
 
@@ -446,7 +447,23 @@ func (a *API) listInventoryMovements(w http.ResponseWriter, r *http.Request) {
 	productID := strings.TrimSpace(r.URL.Query().Get("productId"))
 	rows, err := a.db.Query(r.Context(), `
 		SELECT sm.id,sm.product_id,p.name,sm.movement_type,sm.quantity_delta::text,sm.balance_after::text,
-		       sm.source_type,sm.source_id,sm.note,sm.created_at
+		       sm.source_type,sm.source_id,
+		       COALESCE(
+		         CASE
+		           WHEN sm.source_type='order' THEN (
+		             SELECT o.code
+		             FROM orders o
+		             WHERE o.id=sm.source_id AND o.organization_id=sm.organization_id
+		           )
+		           WHEN sm.source_type='inventory_entry' THEN (
+		             SELECT ie.code
+		             FROM inventory_entries ie
+		             WHERE ie.id=sm.source_id AND ie.organization_id=sm.organization_id
+		           )
+		         END,
+		         ''
+		       ),
+		       sm.note,sm.created_at
 		FROM stock_movements sm
 		JOIN products p ON p.id=sm.product_id AND p.organization_id=sm.organization_id
 		WHERE sm.organization_id=$1 AND sm.location_id=$2
@@ -461,7 +478,7 @@ func (a *API) listInventoryMovements(w http.ResponseWriter, r *http.Request) {
 	items := []inventoryMovementView{}
 	for rows.Next() {
 		var item inventoryMovementView
-		if err := rows.Scan(&item.ID, &item.ProductID, &item.ProductName, &item.MovementType, &item.QuantityDelta, &item.BalanceAfter, &item.SourceType, &item.SourceID, &item.Note, &item.CreatedAt); err != nil {
+		if err := rows.Scan(&item.ID, &item.ProductID, &item.ProductName, &item.MovementType, &item.QuantityDelta, &item.BalanceAfter, &item.SourceType, &item.SourceID, &item.SourceReference, &item.Note, &item.CreatedAt); err != nil {
 			fail(w, 503, "kardex_unavailable", "No pudimos cargar el Kárdex.")
 			return
 		}
