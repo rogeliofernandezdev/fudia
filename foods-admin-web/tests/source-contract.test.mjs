@@ -115,6 +115,10 @@ test("producto e inventario mantienen una sola fuente de verdad",()=>{
   assert.ok(dialog.includes("Producto existente"));
   assert.ok(dialog.includes("Nuevo producto"));
   assert.ok(dialog.includes("Una sola operación"));
+  assert.ok(dialog.includes('type="submit"'),"Guardar inventario debe enviar el formulario");
+  assert.ok(dialog.includes('busy?"Guardando…":"Guardar"'),"La acción de guardado usa el texto estándar");
+  assert.equal(dialog.includes('Registrar entrada'),false,"El footer no usa etiquetas de guardado específicas");
+  assert.equal(dialog.includes('<Button icon="plus" disabled={busy}>'),false,"Guardar no duplica el icono estándar del modal");
 
   const inventoryApi=read("src/modules/supply/inventory/infrastructure/inventory-api.ts");
   assert.ok(inventoryApi.includes('"inventory/entries"'));

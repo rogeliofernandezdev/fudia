@@ -76,9 +76,9 @@ export function InventoryEntryDialog({products,currencySymbol,busy,close,save}:{
 
      {value.mode==="new"&&<div className="inventory-entry-atomic-note"><Icon name="lock" size={16}/><p><b>Una sola operación</b>Producto, vínculo de inventario, saldo, entrada y Kárdex se guardan juntos. Si algo falla, no se crea nada parcialmente.</p></div>}
     </div>
-    <footer><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button icon="plus" disabled={busy}>{busy?"Registrando…":"Registrar entrada"}</Button></footer>
+    <footer><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy}>{busy?"Guardando…":"Guardar"}</Button></footer>
    </form>
-   {busy&&<div className="modal-busy" role="status"><i/><span>Registrando entrada…</span></div>}
+   {busy&&<div className="modal-busy" role="status"><i/><span>Guardando…</span></div>}
   </section>
  </div>;
 }
