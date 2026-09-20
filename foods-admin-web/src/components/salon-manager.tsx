@@ -290,6 +290,7 @@ function ComandaView({initial,allTables,busy,currencySymbol,close,save,notify}:{
   const qtyByProduct=Object.fromEntries(v.lines.map(l=>[l.productId,l.qty]));
   const patchLine=(i:number,p:Partial<LineDraft>)=>setV({...v,lines:v.lines.map((l,n)=>n===i?{...l,...p}:l)});
   const tap=(p:Product)=>{
+    setTicketOpen(true);
     setFocusNoteProductId(p.id);
     setV(prev=>{const i=prev.lines.findIndex(l=>l.productId===p.id);if(i>=0)return{...prev,lines:prev.lines.map((l,n)=>n===i?{...l,qty:l.qty+1}:l)};return{...prev,lines:[...prev.lines,{productId:p.id,name:p.name,qty:1,unitPrice:Number(p.price)||0,note:""}]}});
   };
