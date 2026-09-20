@@ -12,7 +12,7 @@ type TableInfo={
   locationName:string;
 };
 
-export default function MesaPage(){
+export function PublicTablePage(){
   const params=useParams<{qr:string}>();
   const token=params.qr;
   const[info,setInfo]=useState<TableInfo|null>(null);
