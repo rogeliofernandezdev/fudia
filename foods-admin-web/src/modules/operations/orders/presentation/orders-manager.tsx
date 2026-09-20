@@ -5,7 +5,7 @@ import Link from "next/link";
 import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Button,ConfirmDialog,Icon,IconName,PageHeader,Pagination,RowActionButton,Status} from "@/design-system";
-import type {Order} from "../domain/types";
+import type {Option,Order} from "../domain/types";
 import {getOrder,listOrders,updateOrderStatus} from "../infrastructure/orders-api";
 import {useFeedback} from "@/providers/feedback-provider";
 import {useSettings} from "@/providers/settings-context";
@@ -46,7 +46,7 @@ export function OrdersManager(){
  const[q,setQ]=useState("");const[channel,setChannel]=useState("");const[status,setStatus]=useState("abiertos");const[page,setPage]=useState(1);const[size,setSize]=useState(12);
  const[detailId,setDetailId]=useState<string|null>(null);const[cancelTarget,setCancelTarget]=useState<Order|null>(null);
  const list=useQuery({queryKey:["orders",q,channel,status,page,size],queryFn:()=>listOrders({q,channel,status,page,pageSize:size})});
- const detail=useQuery({queryKey:["order",detailId],queryFn:()=>getOrder(detailId),enabled:Boolean(detailId)});
+ const detail=useQuery({queryKey:["order",detailId],queryFn:()=>getOrder(detailId!),enabled:Boolean(detailId)});
  const invalidate=()=>{void qc.invalidateQueries({queryKey:["orders"]});void qc.invalidateQueries({queryKey:["order",detailId]})};
  const advance=useMutation({mutationFn:(v:{id:string;status:string})=>updateOrderStatus(v.id,v.status),onSuccess:()=>{invalidate();notify({tone:"success",title:"Pedido actualizado",message:"El estado del pedido fue actualizado."})},onError:e=>notify({tone:"danger",title:"No se pudo actualizar",message:e.message})});
  const cancel=useMutation({mutationFn:(o:Order)=>updateOrderStatus(o.id,"cancelado"),onSuccess:()=>{setCancelTarget(null);invalidate();notify({tone:"success",title:"Pedido cancelado",message:"El pedido quedó marcado como cancelado."})},onError:e=>notify({tone:"danger",title:"No se pudo cancelar",message:e.message})});
