@@ -1202,6 +1202,16 @@
     grid-template-columns:86px minmax(0,1fr);
   }
 
+  .salon-comanda-shell .comanda-combo-card .comanda-dish-modern-footer{
+    grid-template-columns:minmax(0,1fr) 112px;
+  }
+
+  .salon-comanda-shell .comanda-combo-card .comanda-dish-add-button{
+    width:112px;
+    padding-inline:7px;
+    font-size:9.5px;
+  }
+
   .salon-comanda-shell .comanda-menu-salon .comanda-dish-modern-media{
     width:86px;
   }
@@ -1378,6 +1388,16 @@
 
 .salon-comanda-shell .comanda-combo-card .comanda-dish-price{
   font-size:11.5px!important;
+}
+
+.salon-comanda-shell .comanda-combo-card .comanda-dish-modern-footer{
+  grid-template-columns:minmax(0,1fr) 124px;
+}
+
+.salon-comanda-shell .comanda-combo-card .comanda-dish-add-button{
+  width:124px;
+  padding-inline:9px;
+  white-space:nowrap;
 }
 
 /* ── Composición del combo dentro del resumen ── */
