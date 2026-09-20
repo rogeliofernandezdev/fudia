@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Button,ConfirmDialog,Icon,IconName,Input,PageHeader,Pagination,Select,Status} from "@/design-system";
@@ -59,11 +60,12 @@ export function OrdersManager(){
  const create=useMutation({mutationFn:(v:Draft)=>apiFetch<Order>("orders",{method:"POST",body:JSON.stringify({channel:v.channel,customerName:v.customerName,customerPhone:v.customerPhone,address:v.address,reference:v.reference,tableId:v.tableId,notes:v.notes,deliveryFee:Number(v.deliveryFee)||0,items:v.lines.map(l=>({productId:l.productId,name:l.name,qty:l.qty,unitPrice:l.unitPrice,note:l.note}))})}),onSuccess:o=>{setDraft(null);invalidate();setDetailId(o.id);notify({tone:"success",title:"Pedido registrado",message:`El pedido ${o.code} quedó en estado Nuevo.`})},onError:e=>notify({tone:"danger",title:"No se pudo registrar",message:e.message})});
  const cancel=useMutation({mutationFn:(o:Order)=>apiFetch<Order>(`orders/${o.id}/status`,{method:"PATCH",body:JSON.stringify({status:"cancelado"})}),onSuccess:()=>{setCancelTarget(null);invalidate();notify({tone:"success",title:"Pedido cancelado",message:"El pedido quedó marcado como cancelado."})},onError:e=>notify({tone:"danger",title:"No se pudo cancelar",message:e.message})});
  const items=list.data?.items??[];const counts=list.data?.channelCounts??{};const channelOptions=list.data?.channelOptions??[];
+ const manualChannels=channelOptions.filter(option=>option.value!=="salon");
  const channelLabel=(v:string)=>channelOptions.find(o=>o.value===v)?.label??v;
  const openTotal=Object.values(counts).reduce((a,b)=>a+b,0);
  const activeChannels=Object.values(counts).filter(value=>value>0).length;
  const filteredTotal=list.data?.total??0;
- return <><PageHeader eyebrow="OPERACIÓN" title="Pedidos" description="Controla pedidos activos de todos los canales, su avance y las entregas desde una sola bandeja." action={canManage?<Button icon="plus" onClick={()=>setDraft(newDraft())}>Registrar pedido</Button>:undefined}/>
+ return <><PageHeader eyebrow="OPERACIÓN" title="Pedidos" description="Supervisa pedidos de todos los canales, su avance y las entregas desde una sola bandeja." action={canManage?<div className="orders-header-actions"><Link href="/salon" className="orders-salon-link"><Icon name="utensils" size={16}/><span>Ir a Salón</span></Link><Button kind="secondary" icon="plus" onClick={()=>setDraft(newDraft())}>Ingreso manual</Button></div>:undefined}/>
  <section className="panel management orders-panel">
   <div className="orders-overview" aria-label="Resumen operativo de pedidos">
    <article className="orders-overview-card primary"><span><Icon name="receipt" size={18}/></span><div><small>PEDIDOS ABIERTOS</small><strong>{openTotal}</strong><p>Pendientes de completar o entregar</p></div></article>
@@ -80,7 +82,7 @@ export function OrdersManager(){
    </button>)}
   </div>
   <div className="orders-controls"><div className="orders-controls-copy"><b>Seguimiento de pedidos</b><small>Busca por código o cliente y filtra por etapa operativa.</small></div><div className="toolbar"><label><Icon name="search" size={18}/><input value={q} onChange={e=>{setQ(e.target.value);setPage(1)}} placeholder="Código, cliente o teléfono..."/></label><select aria-label="Filtrar por estado" value={status} onChange={e=>{setStatus(e.target.value);setPage(1)}}><option value="">Todos los estados</option><option value="abiertos">Abiertos</option>{(list.data?.statusOptions??[]).map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select></div></div>
-  {list.isLoading?<Loading/>:list.isError?<State icon="alert" title="No pudimos cargar los pedidos" text={list.error.message} action={()=>list.refetch()}/>:!items.length?<State icon="receipt" title="Sin pedidos" text={canManage?"Registra el primer pedido o ajusta los filtros.":"No hay pedidos que coincidan con los filtros."} action={canManage?()=>setDraft(newDraft()):undefined}/>:<div className="orders-list">{items.map(o=>{const meta=statusMeta[o.status]??{label:o.status,tone:"gray" as const};const action=nextAction(o);const done=o.status==="entregado"||o.status==="cancelado";const subject=o.tableName||o.customerName||"Pedido sin nombre";return <article className={`order-card channel-${o.channel}${done?" done":""}`} key={o.id} onClick={()=>setDetailId(o.id)}>
+  {list.isLoading?<Loading/>:list.isError?<State icon="alert" title="No pudimos cargar los pedidos" text={list.error.message} action={()=>list.refetch()}/>:!items.length?<State icon="receipt" title="Sin pedidos" text="No hay pedidos que coincidan con los filtros actuales."/>:<div className="orders-list">{items.map(o=>{const meta=statusMeta[o.status]??{label:o.status,tone:"gray" as const};const action=nextAction(o);const done=o.status==="entregado"||o.status==="cancelado";const subject=o.tableName||o.customerName||"Pedido sin nombre";return <article className={`order-card channel-${o.channel}${done?" done":""}`} key={o.id} onClick={()=>setDetailId(o.id)}>
    <span className={"order-channel-icon oc-"+o.channel}><Icon name={channelIcons[o.channel]??"receipt"} size={18}/></span>
    <div className="order-card-info">
     <div className="order-card-kicker"><span className="order-id">{o.code}</span><span className="order-channel-tag"><Icon name={channelIcons[o.channel]??"receipt"} size={12}/>{channelLabel(o.channel)}</span></div>
@@ -100,31 +102,29 @@ export function OrdersManager(){
   </article>})}</div>}
   <Pagination page={page} size={size} total={list.data?.total??0} onPage={setPage} onSize={v=>{setSize(v);setPage(1)}}/>
  </section>
- {draft&&<ComandaView initial={draft} channels={channelOptions} busy={create.isPending} currencySymbol={settings.currencySymbol} close={()=>setDraft(null)} save={v=>create.mutate(v)} notify={notify}/>}
+ {draft&&<ManualOrderView initial={draft} channels={manualChannels} busy={create.isPending} currencySymbol={settings.currencySymbol} close={()=>setDraft(null)} save={v=>create.mutate(v)} notify={notify}/>}
+
  {detailId&&<OrderDetail loading={detail.isLoading} order={detail.data} error={detail.error?.message} channels={channelOptions} currencySymbol={settings.currencySymbol} canManage={canManage} busy={advance.isPending} close={()=>setDetailId(null)} advance={st=>advance.mutate({id:detailId,status:st})} cancel={o=>setCancelTarget(o)}/>}
  <ConfirmDialog open={Boolean(cancelTarget)} title="Cancelar pedido" description={`El pedido ${cancelTarget?.code??""} quedará cancelado y no podrá reactivarse.`} tone="danger" confirmLabel="Cancelar pedido" pending={cancel.isPending} onCancel={()=>setCancelTarget(null)} onConfirm={()=>cancelTarget&&cancel.mutate(cancelTarget)}/></>;
 }
 
-function ComandaView({initial,channels,busy,currencySymbol,close,save,notify}:{initial:Draft;channels:Option[];busy:boolean;currencySymbol:string;close:()=>void;save:(v:Draft)=>void;notify:(n:{tone:"danger"|"success";title:string;message:string})=>void}){
+function ManualOrderView({initial,channels,busy,currencySymbol,close,save,notify}:{initial:Draft;channels:Option[];busy:boolean;currencySymbol:string;close:()=>void;save:(v:Draft)=>void;notify:(n:{tone:"danger"|"success";title:string;message:string})=>void}){
  const[v,setV]=useState(initial);const[ticketOpen,setTicketOpen]=useState(false);
- const floor=useQuery({queryKey:["orders-floor"],queryFn:()=>apiFetch<{items:{id:string;name:string;zone:string;order:{id:string}|null}[]}>("orders/floor"),enabled:v.channel==="salon",staleTime:30000});
- const freeTables=(floor.data?.items??[]).filter(t=>!t.order||t.id===v.tableId);
- const tableName=(floor.data?.items??[]).find(t=>t.id===v.tableId)?.name??"";
  const qtyByProduct=Object.fromEntries(v.lines.map(l=>[l.productId,l.qty]));
  const patchLine=(i:number,p:Partial<LineDraft>)=>setV({...v,lines:v.lines.map((l,n)=>n===i?{...l,...p}:l)});
  const tap=(p:Product)=>setV(prev=>{const i=prev.lines.findIndex(l=>l.productId===p.id);if(i>=0)return{...prev,lines:prev.lines.map((l,n)=>n===i?{...l,qty:l.qty+1}:l)};return{...prev,lines:[...prev.lines,{productId:p.id,name:p.name,qty:1,unitPrice:Number(p.price)||0,note:""}]}});
  const untap=(p:Product)=>setV(prev=>({...prev,lines:prev.lines.map(l=>l.productId===p.id?{...l,qty:l.qty-1}:l).filter(l=>l.qty>0)}));
  const step=(i:number,d:number)=>setV(prev=>({...prev,lines:prev.lines.map((l,n)=>n===i?{...l,qty:l.qty+d}:l).filter(l=>l.qty>0)}));
  const subtotal=v.lines.reduce((a,l)=>a+l.qty*l.unitPrice,0);const fee=Number(v.deliveryFee)||0;const count=v.lines.reduce((a,l)=>a+l.qty,0);
- const needsAddress=v.channel==="delivery";const needsTable=v.channel==="salon";const showContact=v.channel!=="salon"&&v.channel!=="mostrador";
- const channelLabel=(c:string)=>channels.find(o=>o.value===c)?.label??c;
- const submit=()=>{if(!v.lines.length||v.lines.some(l=>!l.name)){notify({tone:"danger",title:"Pedido incompleto",message:"Toca los productos para agregarlos a la comanda."});return};if(needsAddress&&!v.address.trim()){notify({tone:"danger",title:"Falta dirección",message:"El pedido de delivery necesita una dirección de entrega."});return};if(needsTable&&!v.tableId){notify({tone:"danger",title:"Falta mesa",message:"Selecciona la mesa del pedido."});return}save(v)};
+ const needsAddress=v.channel==="delivery";const showContact=v.channel!=="mostrador";
+ const channelLabel=(value:string)=>channels.find(option=>option.value===value)?.label??value;
+ const submit=()=>{if(!v.lines.length||v.lines.some(l=>!l.name)){notify({tone:"danger",title:"Pedido incompleto",message:"Agrega al menos un producto al pedido."});return};if(needsAddress&&!v.address.trim()){notify({tone:"danger",title:"Falta dirección",message:"El pedido de delivery necesita una dirección de entrega."});return}save(v)};
  return <div className="comanda" role="dialog" aria-modal="true" aria-labelledby="comanda-title">
   <header className="comanda-head">
    <button className="comanda-back" aria-label="Volver" onClick={close}><Icon name="chevronLeft" size={20}/></button>
    <div className="comanda-title">
     <small>REGISTRAR PEDIDO</small>
-    <h2 id="comanda-title">{needsTable?(tableName?`Pedido para ${tableName}`:"Elige la mesa"):`Pedido de ${channelLabel(v.channel)}`}</h2>
+    <h2 id="comanda-title">Ingreso manual · {channelLabel(v.channel)}</h2>
    </div>
    <span className="comanda-channel-tag"><i/>{channelLabel(v.channel)}</span>
    <button className="comanda-close" aria-label="Cerrar" onClick={close}><Icon name="close" size={18}/></button>
@@ -135,13 +135,12 @@ function ComandaView({initial,channels,busy,currencySymbol,close,save,notify}:{i
     <i className="comanda-ticket-grip" aria-hidden="true"/>
     <div className="comanda-receipt-head">
      <div className="comanda-ticket-headrow">
-      <small className="comanda-eyebrow">CANAL DEL PEDIDO</small>
+      <div className="comanda-manual-intro"><small className="comanda-eyebrow">INGRESO MANUAL</small><p>Úsalo para pedidos externos o de contingencia. Las mesas se atienden desde Salón.</p></div>
       <button type="button" className="comanda-ticket-close" onClick={()=>setTicketOpen(false)} aria-label="Volver a la carta"><Icon name="close" size={16}/></button>
      </div>
      <div className="comanda-channels">
-      {channels.map(o=><button key={o.value} type="button" className={"comanda-channel-btn"+(v.channel===o.value?" active":"")+" ch-"+o.value} onClick={()=>setV({...v,channel:o.value,tableId:o.value==="salon"?v.tableId:"",address:"",reference:"",deliveryFee:o.value==="delivery"?v.deliveryFee:"0"})}><Icon name={channelIcons[o.value]??"receipt"} size={14}/><span>{o.label}</span></button>)}
+      {channels.map(o=><button key={o.value} type="button" className={"comanda-channel-btn"+(v.channel===o.value?" active":"")+" ch-"+o.value} onClick={()=>setV({...v,channel:o.value,tableId:"",address:"",reference:"",deliveryFee:o.value==="delivery"?v.deliveryFee:"0"})}><Icon name={channelIcons[o.value]??"receipt"} size={14}/><span>{o.label}</span></button>)}
      </div>
-     {needsTable&&<div className="comanda-table-picker"><label>Mesa de atención</label><Select value={v.tableId} onChange={e=>setV({...v,tableId:e.target.value})} aria-label="Mesa"><option value="">Selecciona una mesa libre</option>{freeTables.map(t=><option key={t.id} value={t.id}>{t.zone?`${t.zone} · `:""}{t.name}</option>)}</Select></div>}
      {showContact&&<section className="comanda-form-section">
       <div className="comanda-form-section-head"><small>CLIENTE</small><b>Datos de contacto</b></div>
       <div className="comanda-fields">
@@ -187,8 +186,8 @@ function ComandaView({initial,channels,busy,currencySymbol,close,save,notify}:{i
    </aside>
   </div>
   <footer className="comanda-foot">
-   <div className="comanda-foot-info"><Icon name="receipt" size={14}/><span><b>{count}</b> ítem{count===1?"":"s"} en la comanda</span></div>
-   <button type="button" className="comanda-foot-finalize" onClick={submit} disabled={busy||!v.lines.length}>{busy?"Registrando…":<>REGISTRAR PEDIDO <b>{currencySymbol} {money(subtotal+fee)}</b></>}</button>
+   <div className="comanda-foot-info"><Icon name="receipt" size={14}/><span><b>{count}</b> ítem{count===1?"":"s"} en el pedido</span></div>
+   <button type="button" className="comanda-foot-finalize" onClick={submit} disabled={busy||!v.lines.length}>{busy?"Registrando…":<>GUARDAR INGRESO <b>{currencySymbol} {money(subtotal+fee)}</b></>}</button>
   </footer>
   <div className={"comanda-bar"+(v.lines.length?" ready":"")}>
    <button type="button" className="comanda-bar-info" onClick={()=>setTicketOpen(!ticketOpen)} aria-expanded={ticketOpen}><b>{count}</b> plato{count===1?"":"s"} · {currencySymbol} {money(subtotal+fee)}<Icon name="chevron" size={15}/></button>
