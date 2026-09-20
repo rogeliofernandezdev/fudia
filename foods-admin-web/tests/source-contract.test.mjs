@@ -11,8 +11,8 @@ const walk=dir=>readdirSync(join(root,dir)).flatMap(name=>{
 
 test("la arquitectura no usa un contenedor generico de features",()=>{
   assert.equal(existsSync(join(root,"src/components")),false);
-  for(const module of ["auth","context","customers","dashboard","identity","menu","modules","operations","organizations","platform","public-menu"]){
-    assert.equal(existsSync(join(root,`src/modules/${module}/index.ts`)),true,`falta index publico: ${module}`);
+  for(const moduleName of ["auth","context","customers","dashboard","identity","menu","modules","operations","organizations","platform","public-menu"]){
+    assert.equal(existsSync(join(root,`src/modules/${moduleName}/index.ts`)),true,`falta index publico: ${moduleName}`);
   }
 });
 
