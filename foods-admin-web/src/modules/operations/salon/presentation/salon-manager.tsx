@@ -765,4 +765,3 @@ function OrderDetailSkeleton({close}:{close:()=>void}){
   </>;
 }
 
-function Loading(){return <div className="customers-loading" aria-label="Cargando"><i/><i/><i/><i/></div>}
