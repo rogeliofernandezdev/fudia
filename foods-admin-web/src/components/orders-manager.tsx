@@ -142,15 +142,21 @@ function ComandaView({initial,channels,busy,currencySymbol,close,save,notify}:{i
       {channels.map(o=><button key={o.value} type="button" className={"comanda-channel-btn"+(v.channel===o.value?" active":"")+" ch-"+o.value} onClick={()=>setV({...v,channel:o.value,tableId:o.value==="salon"?v.tableId:"",address:"",reference:"",deliveryFee:o.value==="delivery"?v.deliveryFee:"0"})}><Icon name={channelIcons[o.value]??"receipt"} size={14}/><span>{o.label}</span></button>)}
      </div>
      {needsTable&&<div className="comanda-table-picker"><label>Mesa de atención</label><Select value={v.tableId} onChange={e=>setV({...v,tableId:e.target.value})} aria-label="Mesa"><option value="">Selecciona una mesa libre</option>{freeTables.map(t=><option key={t.id} value={t.id}>{t.zone?`${t.zone} · `:""}{t.name}</option>)}</Select></div>}
-     {showContact&&<div className="comanda-fields">
-      <Input value={v.customerName} onChange={e=>setV({...v,customerName:e.target.value})} placeholder="Nombre del cliente" aria-label="Cliente"/>
-      <Input value={v.customerPhone} onChange={e=>setV({...v,customerPhone:e.target.value})} placeholder="Teléfono de contacto" aria-label="Teléfono"/>
-     </div>}
-     {needsAddress&&<div className="comanda-fields">
-      <Input value={v.address} onChange={e=>setV({...v,address:e.target.value})} placeholder="Dirección de entrega *" aria-label="Dirección"/>
-      <Input value={v.reference} onChange={e=>setV({...v,reference:e.target.value})} placeholder="Referencia de llegada" aria-label="Referencia"/>
-      <label className="comanda-fee"><span>Costo delivery ({currencySymbol})</span><Input type="number" min="0" step="0.5" value={v.deliveryFee} onChange={e=>setV({...v,deliveryFee:e.target.value})} aria-label="Costo de delivery"/></label>
-     </div>}
+     {showContact&&<section className="comanda-form-section">
+      <div className="comanda-form-section-head"><small>CLIENTE</small><b>Datos de contacto</b></div>
+      <div className="comanda-fields">
+       <Input value={v.customerName} onChange={e=>setV({...v,customerName:e.target.value})} placeholder="Nombre del cliente" aria-label="Cliente"/>
+       <Input value={v.customerPhone} onChange={e=>setV({...v,customerPhone:e.target.value})} placeholder="Teléfono de contacto" aria-label="Teléfono"/>
+      </div>
+     </section>}
+     {needsAddress&&<section className="comanda-form-section">
+      <div className="comanda-form-section-head"><small>ENTREGA</small><b>Dirección y costo</b></div>
+      <div className="comanda-fields">
+       <Input value={v.address} onChange={e=>setV({...v,address:e.target.value})} placeholder="Dirección de entrega *" aria-label="Dirección"/>
+       <Input value={v.reference} onChange={e=>setV({...v,reference:e.target.value})} placeholder="Referencia de llegada" aria-label="Referencia"/>
+       <label className="comanda-fee"><span>Costo delivery ({currencySymbol})</span><Input type="number" min="0" step="0.5" value={v.deliveryFee} onChange={e=>setV({...v,deliveryFee:e.target.value})} aria-label="Costo de delivery"/></label>
+      </div>
+     </section>}
     </div>
     <div className="comanda-receipt-lines">
      {!v.lines.length&&<div className="comanda-empty"><span className="comanda-empty-icon"><Icon name="receipt" size={28}/></span><b>Pedido sin productos</b><p>Selecciona productos de la carta para agregarlos al pedido.</p></div>}
