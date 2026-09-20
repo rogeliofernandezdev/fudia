@@ -515,7 +515,9 @@
 }
 
 .salon-order-detail-totals{
+  margin:0 18px 14px;
   overflow:hidden;
+  flex-shrink:0;
   border:1px solid #dfe3ef;
   border-radius:14px;
   background:#fff;
@@ -666,6 +668,10 @@
   .salon-order-detail .salon-order-detail-body{
     padding:12px;
     gap:12px;
+  }
+
+  .salon-order-detail-totals{
+    margin:0 12px 12px;
   }
 
   .salon-order-detail-meta{
