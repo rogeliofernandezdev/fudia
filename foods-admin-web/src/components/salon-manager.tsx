@@ -369,7 +369,8 @@ function ComandaView({initial,mode,allTables,busy,currencySymbol,close,save,noti
   const patchLine=(i:number,p:Partial<LineDraft>)=>setV(prev=>({...prev,lines:prev.lines.map((l,n)=>n===i?{...l,...p}:l)}));
   const tap=(p:CatalogProduct)=>{
     setTicketOpen(true);
-    setFocusNoteKey(p.id);
+    const existingLine=v.lines.find(l=>l.itemType==="product"&&l.productId===p.id);
+    setFocusNoteKey(existingLine?.lineKey??p.id);
     setV(prev=>{
       const i=prev.lines.findIndex(l=>l.itemType==="product"&&l.productId===p.id);
       if(i>=0)return{...prev,lines:prev.lines.map((l,n)=>n===i?{...l,qty:l.qty+1}:l)};
@@ -560,6 +561,7 @@ function ComandaView({initial,mode,allTables,busy,currencySymbol,close,save,noti
           key={comboEditor.lineKey??comboEditor.comboId}
           comboId={comboEditor.comboId}
           initialSelections={comboEditor.initialSelections}
+          editing={Boolean(comboEditor.lineKey)}
           currencySymbol={currencySymbol}
           onClose={()=>setComboEditor(null)}
           onConfirm={applyCombo}
