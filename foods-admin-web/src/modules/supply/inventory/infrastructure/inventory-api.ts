@@ -15,6 +15,8 @@ export function createInventoryEntry(draft:InventoryEntryDraft){
   const common={
     quantity:Number(draft.quantity),
     unit:draft.unit.trim()||"und",
+    presentationType:draft.presentationType,
+    unitsPerPresentation:Number(draft.unitsPerPresentation||1),
     minimumStock:Number(draft.minimumStock||0),
     note:draft.note.trim(),
   };
@@ -26,7 +28,7 @@ export function createInventoryEntry(draft:InventoryEntryDraft){
       description:draft.description.trim(),
       price:draft.price.trim(),
     }};
-  return apiFetch<{id:string;productId:string;sku:string;name:string;quantity:number;unit:string;balance:number;createdProduct:boolean}>("inventory/entries",{
+  return apiFetch<{id:string;productId:string;sku:string;name:string;quantity:number;presentationId:string;presentationType:InventoryEntryDraft["presentationType"];unitsPerPresentation:number;stockQuantity:number;unit:string;balance:number;createdProduct:boolean}>("inventory/entries",{
     method:"POST",
     body:JSON.stringify(payload),
   });
