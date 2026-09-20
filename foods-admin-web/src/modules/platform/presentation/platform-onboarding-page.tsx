@@ -5,19 +5,10 @@ import {Icon,IconName} from "@/design-system/icons";
 import {LocationMap} from "@/design-system/location-map";
 import {Input,PageHeader,Select} from "@/design-system/page-header";
 import {useFeedback} from "@/providers/feedback-provider";
+import type {PlatformOnboardingDraft} from "../domain/types";
+import {createPlatformOrganization,getPlatformOnboardingContext} from "../infrastructure/platform-api";
 
-type Country={code:string;name:string;defaultCurrency:string};
-type Currency={code:string;name:string;symbol:string;decimals:number};
-type Context={countryOptions:Country[];currencyOptions:Currency[]};
-
-type Draft={
-  legalName:string;tradeName:string;taxId:string;timezone:string;
-  country:string;currency:string;currencyPosition:"before"|"after";taxName:string;taxRate:string;taxIncluded:boolean;
-  locationName:string;locationCode:string;address:string;locationPhone:string;locationHours:string;latitude:string;longitude:string;
-  adminName:string;adminEmail:string;adminPassword:string;
-};
-
-const blank:Draft={legalName:"",tradeName:"",taxId:"",timezone:"America/Lima",country:"PE",currency:"PEN",currencyPosition:"before",taxName:"IGV",taxRate:"18",taxIncluded:false,locationName:"",locationCode:"",address:"",locationPhone:"",locationHours:"",latitude:"",longitude:"",adminName:"",adminEmail:"",adminPassword:""};
+const blank:PlatformOnboardingDraft={legalName:"",tradeName:"",taxId:"",timezone:"America/Lima",country:"PE",currency:"PEN",currencyPosition:"before",taxName:"IGV",taxRate:"18",taxIncluded:false,locationName:"",locationCode:"",address:"",locationPhone:"",locationHours:"",latitude:"",longitude:"",adminName:"",adminEmail:"",adminPassword:""};
 
 const steps:Array<{key:string;title:string;icon:IconName;desc:string}>=[
   {key:"empresa",title:"Empresa",icon:"store",desc:"Razón social, RUC y zona horaria"},
@@ -26,31 +17,24 @@ const steps:Array<{key:string;title:string;icon:IconName;desc:string}>=[
   {key:"admin",title:"Administrador",icon:"users",desc:"Usuario y contraseña del admin"},
 ];
 
-async function api<T>(path:string,init?:RequestInit):Promise<T>{const r=await fetch(path,{...init,headers:{"Content-Type":"application/json",...init?.headers}});const b=await r.json();if(!r.ok)throw new Error(b.message??"No pudimos registrar la empresa.");return b}
-
 export function PlatformOnboardingPage(){
   const{notify}=useFeedback();
-  const[draft,setDraft]=useState<Draft>(blank);
+  const[draft,setDraft]=useState<PlatformOnboardingDraft>(blank);
   const[step,setStep]=useState(0);
-  const context=useQuery<Context>({
+  const context=useQuery({
     queryKey:["platform-onboarding-context"],
-    queryFn:async()=>{
-      const r=await fetch("/api/admin/settings");
-      const data=await r.json();
-      if(!r.ok)throw new Error(data.message??"No pudimos cargar los catálogos.");
-      return {countryOptions:data.countryOptions??[],currencyOptions:data.currencyOptions??[]};
-    },
+    queryFn:getPlatformOnboardingContext,
   });
   const ctx=context.data;
   const loadError=context.error instanceof Error?context.error.message:"";
 
   const save=useMutation({
-    mutationFn:()=>{const payload={...draft,locationCode:draft.locationCode||draft.locationName.toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,8).padStart(3,"L"),taxRate:String(Number(draft.taxRate)/100),latitude:draft.latitude?Number(draft.latitude):null,longitude:draft.longitude?Number(draft.longitude):null};return api<{message:string}>("/api/platform/organizations",{method:"POST",body:JSON.stringify(payload)})},
+    mutationFn:()=>createPlatformOrganization(draft),
     onSuccess:()=>{notify({tone:"success",title:"Empresa registrada",message:"La empresa, el local y el administrador quedaron listos."});setDraft(blank);setStep(0)},
     onError:e=>notify({tone:"danger",title:"No se pudo registrar",message:e.message}),
   });
 
-  function set<K extends keyof Draft>(k:K,v:Draft[K]){setDraft(current=>({...current,[k]:v}))}
+  function set<K extends keyof PlatformOnboardingDraft>(k:K,v:PlatformOnboardingDraft[K]){setDraft(current=>({...current,[k]:v}))}
   function selectCountry(code:string){const c=ctx?.countryOptions.find(x=>x.code===code);if(c)set("currency",c.defaultCurrency);set("country",code)}
   const isLast=step===steps.length-1;
   const canNext=step<steps.length-1;
