@@ -27,48 +27,25 @@ func TestNormalizeProductDefaultsToNone(t *testing.T) {
 	if invalid != "" {
 		t.Fatalf("unexpected error %q", invalid)
 	}
-	if in.StockMode != "none" {
-		t.Fatalf("expected none, got %q", in.StockMode)
+	if in.QuantityControl != "none" {
+		t.Fatalf("expected none, got %q", in.QuantityControl)
 	}
 }
 
-func TestNormalizeProductClearsQuotaWhenUnlimited(t *testing.T) {
-	quota := 15
-	in, invalid := normalizeProduct(productInput{Name: "Ceviche", Price: "45.00", StockMode: "none", DefaultDailyQuota: &quota})
-	if invalid != "" {
-		t.Fatalf("unexpected error %q", invalid)
-	}
-	if in.DefaultDailyQuota != nil {
-		t.Fatal("expected quota cleared when product is always available")
-	}
-}
-
-func TestNormalizeProductManualRequiresQuota(t *testing.T) {
-	if _, invalid := normalizeProduct(productInput{Name: "Ceviche", Price: "45.00", StockMode: "manual"}); invalid == "" {
-		t.Fatal("expected manual mode to require a quota")
-	}
-	negative := -1
-	if _, invalid := normalizeProduct(productInput{Name: "Ceviche", Price: "45.00", StockMode: "manual", DefaultDailyQuota: &negative}); invalid == "" {
-		t.Fatal("expected negative quota to be rejected")
-	}
-	zero := 0
-	if _, invalid := normalizeProduct(productInput{Name: "Ceviche", Price: "45.00", StockMode: "manual", DefaultDailyQuota: &zero}); invalid == "" {
-		t.Fatal("expected zero quota to be rejected")
-	}
-	quota := 15
-	in, invalid := normalizeProduct(productInput{Name: "Ceviche", Price: "45.00", StockMode: "manual", DefaultDailyQuota: &quota})
-	if invalid != "" {
-		t.Fatalf("unexpected error %q", invalid)
-	}
-	if in.DefaultDailyQuota == nil || *in.DefaultDailyQuota != 15 {
-		t.Fatal("expected quota preserved")
-	}
-}
-
-func TestNormalizeProductRejectsInventoryModesAndUnknown(t *testing.T) {
-	for _, mode := range []string{"linked", "recipe", "whatever"} {
-		if _, invalid := normalizeProduct(productInput{Name: "Ceviche", Price: "45.00", StockMode: mode}); invalid == "" {
-			t.Fatalf("expected %q to be rejected", mode)
+func TestNormalizeProductAcceptsQuantityControls(t *testing.T) {
+	for _, control := range []string{"none", "portions", "inventory"} {
+		in, invalid := normalizeProduct(productInput{Name: "Producto", Price: "10.00", QuantityControl: control})
+		if invalid != "" {
+			t.Fatalf("expected %q to be valid, got %q", control, invalid)
 		}
+		if in.QuantityControl != control {
+			t.Fatalf("expected %q, got %q", control, in.QuantityControl)
+		}
+	}
+}
+
+func TestNormalizeProductRejectsUnknownQuantityControl(t *testing.T) {
+	if _, invalid := normalizeProduct(productInput{Name: "Producto", Price: "10.00", QuantityControl: "manual"}); invalid == "" {
+		t.Fatal("expected legacy manual control to be rejected")
 	}
 }
