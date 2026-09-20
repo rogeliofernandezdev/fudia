@@ -74,6 +74,68 @@ func seedInventoryScope(t *testing.T, pool *pgxpool.Pool) scope {
 	return s
 }
 
+func TestInventoryEntryCreatesProductThenReusesIt(t *testing.T) {
+	pool := integrationPool(t)
+	s := seedInventoryScope(t, pool)
+	api := New(pool)
+	name := fmt.Sprintf("Agua mineral %d", time.Now().UnixNano())
+
+	firstBody := []byte(fmt.Sprintf(`{"newProduct":{"name":%q,"price":"4.50"},"quantity":12,"unit":"botella","minimumStock":3,"note":"primera compra"}`, name))
+	firstReq := httptest.NewRequest("POST", "/v1/admin/inventory/entries", bytes.NewReader(firstBody))
+	firstReq = firstReq.WithContext(context.WithValue(firstReq.Context(), scopeKey{}, s))
+	firstRec := httptest.NewRecorder()
+	api.createInventoryEntry(firstRec, firstReq)
+	if firstRec.Code != 201 {
+		t.Fatalf("expected first entry 201, got %d body=%s", firstRec.Code, firstRec.Body.String())
+	}
+
+	var productID, control string
+	if err := pool.QueryRow(context.Background(), `
+		SELECT id,quantity_control
+		FROM products
+		WHERE organization_id=$1 AND name=$2`, s.OrganizationID, name).Scan(&productID, &control); err != nil {
+		t.Fatal(err)
+	}
+	if control != "inventory" {
+		t.Fatalf("expected inventory control, got %q", control)
+	}
+
+	secondBody := []byte(fmt.Sprintf(`{"productId":%q,"quantity":5,"unit":"botella","minimumStock":3,"note":"reposición"}`, productID))
+	secondReq := httptest.NewRequest("POST", "/v1/admin/inventory/entries", bytes.NewReader(secondBody))
+	secondReq = secondReq.WithContext(context.WithValue(secondReq.Context(), scopeKey{}, s))
+	secondRec := httptest.NewRecorder()
+	api.createInventoryEntry(secondRec, secondReq)
+	if secondRec.Code != 201 {
+		t.Fatalf("expected second entry 201, got %d body=%s", secondRec.Code, secondRec.Body.String())
+	}
+
+	var productCount, entryCount, movementCount int
+	var balance float64
+	if err := pool.QueryRow(context.Background(), `
+		SELECT count(*) FROM products WHERE organization_id=$1 AND name=$2`, s.OrganizationID, name).Scan(&productCount); err != nil {
+		t.Fatal(err)
+	}
+	if err := pool.QueryRow(context.Background(), `
+		SELECT count(*) FROM inventory_entries WHERE organization_id=$1 AND product_id=$2`, s.OrganizationID, productID).Scan(&entryCount); err != nil {
+		t.Fatal(err)
+	}
+	if err := pool.QueryRow(context.Background(), `
+		SELECT count(*) FROM stock_movements WHERE organization_id=$1 AND product_id=$2 AND movement_type='entry'`, s.OrganizationID, productID).Scan(&movementCount); err != nil {
+		t.Fatal(err)
+	}
+	if err := pool.QueryRow(context.Background(), `
+		SELECT sb.quantity::float8
+		FROM stock_balances sb
+		JOIN inventory_items ii ON ii.organization_id=sb.organization_id AND ii.id=sb.inventory_item_id
+		WHERE sb.organization_id=$1 AND sb.location_id=$2 AND ii.product_id=$3`,
+		s.OrganizationID, s.LocationID, productID).Scan(&balance); err != nil {
+		t.Fatal(err)
+	}
+	if productCount != 1 || entryCount != 2 || movementCount != 2 || balance != 17 {
+		t.Fatalf("unexpected inventory state products=%d entries=%d movements=%d balance=%v", productCount, entryCount, movementCount, balance)
+	}
+}
+
 func TestCreateInventoryEntryRollsBackNewProductOnLateFailure(t *testing.T) {
 	pool := integrationPool(t)
 	s := seedInventoryScope(t, pool)
