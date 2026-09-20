@@ -105,22 +105,45 @@ function ComboDetailDialog({query,currencySymbol,close}:{query:ReturnType<typeof
   const formatDate=(date:string|null|undefined)=>date?new Intl.DateTimeFormat("es-PE",{dateStyle:"medium",timeStyle:"short"}).format(new Date(date)):"Sin límite";
   const formatCalendarDate=(date:string|null|undefined)=>{if(!date)return"";const[y,m,d]=date.slice(0,10).split("-").map(Number);return new Intl.DateTimeFormat("es-PE",{dateStyle:"long",timeZone:"UTC"}).format(new Date(Date.UTC(y,m-1,d)))};
   return <div className="modal-backdrop modal-overlay-in" role="presentation">
-    <section className="crud-modal combo-detail modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="combo-detail-title">
+    <section className="crud-modal combo-detail modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="combo-detail-title" aria-busy={query.isLoading}>
       <div className="modal-accent"/>
-      <header><span className="modal-title-icon"><Icon name="eye" size={18}/></span><div><h2 id="combo-detail-title">{value?.name??"Cargando menú"}</h2><small>DETALLE DEL MENÚ</small></div><button aria-label="Cerrar" onClick={close}><Icon name="close"/></button></header>
-      <div className="combo-detail-body">
-        {query.isLoading?<ComboDetailSkeleton/>:query.isError?<div className="combo-detail-state"><Icon name="alert" size={24}/><b>No pudimos cargar el menú</b><p>{query.error.message}</p><Button kind="secondary" icon="refresh" onClick={()=>query.refetch()}>Reintentar</Button></div>:value&&<>
-          <section className="combo-detail-summary"><div><small>PRECIO</small><b>{currencySymbol} {Number(value.price).toFixed(2)}</b></div><div><small>PARTES DEL MENÚ</small><b>{value.groups.length} {value.groups.length===1?"parte":"partes"}</b></div><Status tone={value.active?"green":"gray"}>{value.active?"Activo":"Inactivo"}</Status></section>
-          {value.description&&<section className="combo-detail-description"><small>DESCRIPCIÓN</small><p>{value.description}</p></section>}
-          <section className="combo-detail-section"><header><div><small>QUÉ INCLUYE</small><h3>Platos y opciones del menú</h3></div></header>{value.groups.map(group=><article className="combo-detail-group" key={group.id}><div><b>{group.name}</b><small>{group.required?"Obligatorio":"Opcional"} · El cliente elige {group.minSelections}–{group.maxSelections}</small></div><ul>{group.options.map(option=><li key={option.productId}><span>{option.name}</span>{Number(option.surcharge)>0&&<small>+ {currencySymbol} {Number(option.surcharge).toFixed(2)}</small>}</li>)}</ul></article>)}</section>
-          <section className={`combo-detail-availability${singleDay?" single":""}`}>{singleDay?<div><small>CUÁNDO SE VENDE</small><b>Solo hoy · {formatCalendarDate(value.availableFrom)}</b></div>:<><div><small>DÍAS DE VENTA</small><b>{days}</b></div><div><small>DESDE</small><b>{formatDate(value.availableFrom)}</b></div><div><small>HASTA</small><b>{formatDate(value.availableUntil)}</b></div></>}</section>
-        </>}
-      </div>
+      {query.isLoading?<ComboDetailSkeleton close={close}/>:<>
+        <header><span className="modal-title-icon"><Icon name="eye" size={18}/></span><div><h2 id="combo-detail-title">{value?.name??"Menú o combo"}</h2><small>DETALLE DEL MENÚ</small></div><button aria-label="Cerrar" onClick={close}><Icon name="close"/></button></header>
+        <div className="combo-detail-body">
+          {query.isError?<div className="combo-detail-state"><Icon name="alert" size={24}/><b>No pudimos cargar el menú</b><p>{query.error.message}</p><Button kind="secondary" icon="refresh" onClick={()=>query.refetch()}>Reintentar</Button></div>:value&&<>
+            <section className="combo-detail-summary"><div><small>PRECIO</small><b>{currencySymbol} {Number(value.price).toFixed(2)}</b></div><div><small>PARTES DEL MENÚ</small><b>{value.groups.length} {value.groups.length===1?"parte":"partes"}</b></div><Status tone={value.active?"green":"gray"}>{value.active?"Activo":"Inactivo"}</Status></section>
+            {value.description&&<section className="combo-detail-description"><small>DESCRIPCIÓN</small><p>{value.description}</p></section>}
+            <section className="combo-detail-section"><header><div><small>QUÉ INCLUYE</small><h3>Platos y opciones del menú</h3></div></header>{value.groups.map(group=><article className="combo-detail-group" key={group.id}><div><b>{group.name}</b><small>{group.required?"Obligatorio":"Opcional"} · El cliente elige {group.minSelections}–{group.maxSelections}</small></div><ul>{group.options.map(option=><li key={option.productId}><span>{option.name}</span>{Number(option.surcharge)>0&&<small>+ {currencySymbol} {Number(option.surcharge).toFixed(2)}</small>}</li>)}</ul></article>)}</section>
+            <section className={`combo-detail-availability${singleDay?" single":""}`}>{singleDay?<div><small>CUÁNDO SE VENDE</small><b>Solo hoy · {formatCalendarDate(value.availableFrom)}</b></div>:<><div><small>DÍAS DE VENTA</small><b>{days}</b></div><div><small>DESDE</small><b>{formatDate(value.availableFrom)}</b></div><div><small>HASTA</small><b>{formatDate(value.availableUntil)}</b></div></>}</section>
+          </>}
+        </div>
+      </>}
     </section>
   </div>
 }
 
-function ComboDetailSkeleton(){return <div className="combo-detail-skeleton" aria-label="Cargando detalle"><i/><div><i/><i/><i/></div><i/><i/></div>}
+function ComboDetailSkeleton({close}:{close:()=>void}){
+ return <>
+  <header className="combo-detail-skeleton-head" aria-hidden="true">
+   <span className="combo-detail-skeleton-block combo-detail-skeleton-icon"/>
+   <div className="combo-detail-skeleton-copy"><span/><b/></div>
+   <button aria-label="Cerrar" onClick={close}><Icon name="close"/></button>
+  </header>
+  <div className="combo-detail-body combo-detail-skeleton-body" aria-label="Cargando detalle del menú">
+   <section className="combo-detail-summary combo-detail-skeleton-summary">
+    <div><span/><b/></div><div><span/><b/></div><i className="combo-detail-skeleton-status"/>
+   </section>
+   <section className="combo-detail-description combo-detail-skeleton-description"><span/><b/><b/></section>
+   <section className="combo-detail-section combo-detail-skeleton-section">
+    <header><div><span/><b/></div></header>
+    {Array.from({length:3},(_,i)=><div className="combo-detail-skeleton-group" key={i}><div><b/><span/></div><div><i/><i/><i/></div></div>)}
+   </section>
+   <section className="combo-detail-availability combo-detail-skeleton-availability">
+    {Array.from({length:3},(_,i)=><div key={i}><span/><b/></div>)}
+   </section>
+  </div>
+ </>;
+}
 
 function ComboWizard({draft,setDraft,step,setStep,products,productsLoading,productsError,retryProducts,currencySymbol,busy,editing,close,finish}:{draft:Draft;setDraft:(value:Draft)=>void;step:number;setStep:(value:number)=>void;products:Product[];productsLoading:boolean;productsError:boolean;retryProducts:()=>void;currencySymbol:string;busy:boolean;editing:boolean;close:()=>void;finish:()=>void}){
   const validInfo=draft.name.trim()!==""&&/^\d+(\.\d{1,2})?$/.test(draft.price);
