@@ -581,117 +581,188 @@ function OrderDetail({loading,order,error,currencySymbol,canManage,busy,close,ad
   const itemCount=order?(order.items??[]).reduce((sum,it)=>sum+Number(it.qty||0),0):0;
   return(
     <div className="modal-backdrop modal-overlay-in">
-      <section className="crud-modal order-detail salon-order-detail modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="salon-order-detail-title">
+      <section className="crud-modal order-detail salon-order-detail modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="salon-order-detail-title" aria-busy={loading}>
         <div className="salon-order-detail-accent"/>
-        <header className="salon-order-detail-head">
-          <div className="salon-order-detail-identity">
-            <span className="salon-order-detail-icon"><Icon name="utensils" size={20}/></span>
-            <div className="salon-order-detail-heading">
-              <small>MESA ACTIVA</small>
-              <h2 id="salon-order-detail-title">{order?.tableName||"Mesa"}</h2>
-              {order?.customerName&&<p>{order.customerName}</p>}
-            </div>
-          </div>
-          <div className="salon-order-detail-status">
-            {order&&meta&&<Status tone={meta.tone}>{meta.label}</Status>}
-          </div>
-          <button type="button" className="salon-order-detail-close" aria-label="Cerrar detalle" onClick={close}><Icon name="close" size={17}/></button>
-        </header>
-
-        {loading?<Loading/>:error?(
-          <div className="order-detail-body"><div className="catalog-state error"><span><Icon name="alert" size={22}/></span><b>Error al cargar el pedido</b><p>{error}</p></div></div>
-        ):order&&meta&&(
+        {loading?(
+          <OrderDetailSkeleton close={close}/>
+        ):(
           <>
-            <div className="order-detail-body salon-order-detail-body">
-              <section className="salon-order-detail-meta" aria-label="Datos del pedido">
-                <div>
-                  <span className="salon-order-detail-meta-icon"><Icon name="receipt" size={15}/></span>
-                  <span><small>PEDIDO</small><b>{order.code}</b></span>
+            <header className="salon-order-detail-head">
+              <div className="salon-order-detail-identity">
+                <span className="salon-order-detail-icon"><Icon name="utensils" size={20}/></span>
+                <div className="salon-order-detail-heading">
+                  <small>MESA ACTIVA</small>
+                  <h2 id="salon-order-detail-title">{order?.tableName||"Mesa"}</h2>
+                  {order?.customerName&&<p>{order.customerName}</p>}
                 </div>
-                <div>
-                  <span className="salon-order-detail-meta-icon"><Icon name="clock" size={15}/></span>
-                  <span><small>ABIERTO</small><b>{timeAgo(order.createdAt)}</b></span>
-                </div>
-                <div>
-                  <span className="salon-order-detail-meta-icon"><Icon name="utensils" size={15}/></span>
-                  <span><small>CONSUMO</small><b>{itemCount} ítem{itemCount===1?"":"s"}</b></span>
-                </div>
-              </section>
+              </div>
+              <div className="salon-order-detail-status">
+                {order&&meta&&<Status tone={meta.tone}>{meta.label}</Status>}
+              </div>
+              <button type="button" className="salon-order-detail-close" aria-label="Cerrar detalle" onClick={close}><Icon name="close" size={17}/></button>
+            </header>
 
-              <section className="salon-order-detail-consumption">
-                <header className="salon-order-detail-section-head">
-                  <div>
-                    <small>DETALLE</small>
-                    <h3>Productos del pedido</h3>
-                  </div>
-                  <span>{(order.items??[]).length} línea{(order.items??[]).length===1?"":"s"}</span>
-                </header>
-
-                <div className="order-detail-items salon-order-detail-items">
-                  {(order.items??[]).map(it=>(
-                    <div className="order-detail-line salon-order-detail-line" key={it.id}>
-                      <b className="salon-order-detail-qty">{Number(it.qty)}×</b>
-                      <div className="order-detail-line-info">
-                        <span>{it.name}</span>
-                        <small>{currencySymbol} {money(it.unitPrice)} c/u</small>
-                        {it.itemType==="combo"&&(it.selections??[]).length>0&&(
-                          <div className="salon-order-detail-selections">
-                            {(it.selections??[]).map(sel=><small key={sel.groupId+sel.productId}><b>{sel.groupName}:</b> {sel.name}{Number(sel.surcharge)>0?` (+${currencySymbol} ${money(sel.surcharge)})`:""}</small>)}
-                          </div>
-                        )}
-                        {it.note&&<em>{it.note}</em>}
-                      </div>
-                      <strong className="salon-order-detail-line-total">{currencySymbol} {money(Number(it.qty)*Number(it.unitPrice))}</strong>
+            {error?(
+              <div className="order-detail-body"><div className="catalog-state error"><span><Icon name="alert" size={22}/></span><b>Error al cargar el pedido</b><p>{error}</p></div></div>
+            ):order&&meta&&(
+              <>
+                <div className="order-detail-body salon-order-detail-body">
+                  <section className="salon-order-detail-meta" aria-label="Datos del pedido">
+                    <div>
+                      <span className="salon-order-detail-meta-icon"><Icon name="receipt" size={15}/></span>
+                      <span><small>PEDIDO</small><b>{order.code}</b></span>
                     </div>
-                  ))}
-                  {!(order.items??[]).length&&(
-                    <div className="salon-order-detail-empty">
-                      <Icon name="receipt" size={20}/>
-                      <span>Sin ítems cargados aún.</span>
+                    <div>
+                      <span className="salon-order-detail-meta-icon"><Icon name="clock" size={15}/></span>
+                      <span><small>ABIERTO</small><b>{timeAgo(order.createdAt)}</b></span>
+                    </div>
+                    <div>
+                      <span className="salon-order-detail-meta-icon"><Icon name="utensils" size={15}/></span>
+                      <span><small>CONSUMO</small><b>{itemCount} ítem{itemCount===1?"":"s"}</b></span>
+                    </div>
+                  </section>
+
+                  <section className="salon-order-detail-consumption">
+                    <header className="salon-order-detail-section-head">
+                      <div>
+                        <small>DETALLE</small>
+                        <h3>Productos del pedido</h3>
+                      </div>
+                      <span>{(order.items??[]).length} línea{(order.items??[]).length===1?"":"s"}</span>
+                    </header>
+
+                    <div className="order-detail-items salon-order-detail-items">
+                      {(order.items??[]).map(it=>(
+                        <div className="order-detail-line salon-order-detail-line" key={it.id}>
+                          <b className="salon-order-detail-qty">{Number(it.qty)}×</b>
+                          <div className="order-detail-line-info">
+                            <span>{it.name}</span>
+                            <small>{currencySymbol} {money(it.unitPrice)} c/u</small>
+                            {it.itemType==="combo"&&(it.selections??[]).length>0&&(
+                              <div className="salon-order-detail-selections">
+                                {(it.selections??[]).map(sel=><small key={sel.groupId+sel.productId}><b>{sel.groupName}:</b> {sel.name}{Number(sel.surcharge)>0?` (+${currencySymbol} ${money(sel.surcharge)})`:""}</small>)}
+                              </div>
+                            )}
+                            {it.note&&<em>{it.note}</em>}
+                          </div>
+                          <strong className="salon-order-detail-line-total">{currencySymbol} {money(Number(it.qty)*Number(it.unitPrice))}</strong>
+                        </div>
+                      ))}
+                      {!(order.items??[]).length&&(
+                        <div className="salon-order-detail-empty">
+                          <Icon name="receipt" size={20}/>
+                          <span>Sin ítems cargados aún.</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {order.notes&&(
+                      <div className="salon-order-detail-notes">
+                        <span><Icon name="edit" size={15}/></span>
+                        <div><b>Notas generales</b><p>{order.notes}</p></div>
+                      </div>
+                    )}
+                  </section>
+                </div>
+
+                <section className="salon-order-detail-totals" aria-label="Totales del pedido">
+                  <div className="salon-order-detail-subtotal">
+                    <span>Subtotal</span>
+                    <b>{currencySymbol} {money(order.subtotal)}</b>
+                  </div>
+                  {Number(order.deliveryFee)>0&&(
+                    <div className="salon-order-detail-subtotal">
+                      <span>Delivery</span>
+                      <b>{currencySymbol} {money(order.deliveryFee)}</b>
                     </div>
                   )}
-                </div>
-
-                {order.notes&&(
-                  <div className="salon-order-detail-notes">
-                    <span><Icon name="edit" size={15}/></span>
-                    <div><b>Notas generales</b><p>{order.notes}</p></div>
+                  <div className="salon-order-detail-grand">
+                    <span>Total del pedido</span>
+                    <strong>{currencySymbol} {money(order.total)}</strong>
                   </div>
+                </section>
+
+                {canManage&&(
+                  <footer className="order-detail-actions salon-order-detail-actions">
+                    {action&&<Button icon={action.icon} className="order-detail-primary" disabled={busy} onClick={()=>advance(action.status)}>{action.label}</Button>}
+                    {editable&&<Button icon="edit" kind="secondary" className="salon-order-detail-edit" disabled={busy} onClick={()=>edit(order)}>Editar comanda</Button>}
+                    {order.status==="entregado"&&<span className="order-detail-done"><Icon name="check" size={15}/>Mesa entregada</span>}
+                    {!["entregado","cancelado"].includes(order.status)&&<Button icon="alert" kind="ghost" className="order-detail-cancel" disabled={busy} onClick={()=>cancel(order)}>Cancelar pedido</Button>}
+                  </footer>
                 )}
-              </section>
-
-            </div>
-
-            <section className="salon-order-detail-totals" aria-label="Totales del pedido">
-              <div className="salon-order-detail-subtotal">
-                <span>Subtotal</span>
-                <b>{currencySymbol} {money(order.subtotal)}</b>
-              </div>
-              {Number(order.deliveryFee)>0&&(
-                <div className="salon-order-detail-subtotal">
-                  <span>Delivery</span>
-                  <b>{currencySymbol} {money(order.deliveryFee)}</b>
-                </div>
-              )}
-              <div className="salon-order-detail-grand">
-                <span>Total del pedido</span>
-                <strong>{currencySymbol} {money(order.total)}</strong>
-              </div>
-            </section>
-
-            {canManage&&(
-              <footer className="order-detail-actions salon-order-detail-actions">
-                {action&&<Button icon={action.icon} className="order-detail-primary" disabled={busy} onClick={()=>advance(action.status)}>{action.label}</Button>}
-                {editable&&<Button icon="edit" kind="secondary" className="salon-order-detail-edit" disabled={busy} onClick={()=>edit(order)}>Editar comanda</Button>}
-                {order.status==="entregado"&&<span className="order-detail-done"><Icon name="check" size={15}/>Mesa entregada</span>}
-                {!["entregado","cancelado"].includes(order.status)&&<Button icon="alert" kind="ghost" className="order-detail-cancel" disabled={busy} onClick={()=>cancel(order)}>Cancelar pedido</Button>}
-              </footer>
+              </>
             )}
           </>
         )}
       </section>
     </div>
   );
+}
+
+function OrderDetailSkeleton({close}:{close:()=>void}){
+  return <>
+    <header className="salon-order-detail-head salon-order-detail-skeleton-head" aria-hidden="true">
+      <div className="salon-order-detail-identity">
+        <span className="salon-order-detail-skeleton-block salon-order-detail-skeleton-icon"/>
+        <div className="salon-order-detail-skeleton-copy">
+          <span className="salon-order-detail-skeleton-block short"/>
+          <span className="salon-order-detail-skeleton-block title"/>
+          <span className="salon-order-detail-skeleton-block medium"/>
+        </div>
+      </div>
+      <span className="salon-order-detail-skeleton-block salon-order-detail-skeleton-status"/>
+      <button type="button" className="salon-order-detail-close" aria-label="Cerrar detalle" onClick={close}><Icon name="close" size={17}/></button>
+    </header>
+
+    <div className="order-detail-body salon-order-detail-body salon-order-detail-skeleton-body" aria-label="Cargando detalle de la mesa">
+      <section className="salon-order-detail-meta salon-order-detail-skeleton-meta">
+        {Array.from({length:3},(_,i)=><div key={i}>
+          <span className="salon-order-detail-skeleton-block salon-order-detail-skeleton-meta-icon"/>
+          <span className="salon-order-detail-skeleton-copy">
+            <span className="salon-order-detail-skeleton-block short"/>
+            <span className="salon-order-detail-skeleton-block medium"/>
+          </span>
+        </div>)}
+      </section>
+
+      <section className="salon-order-detail-consumption salon-order-detail-skeleton-consumption">
+        <div className="salon-order-detail-skeleton-section-head">
+          <div>
+            <span className="salon-order-detail-skeleton-block short"/>
+            <span className="salon-order-detail-skeleton-block heading"/>
+          </div>
+          <span className="salon-order-detail-skeleton-block tiny"/>
+        </div>
+        <div className="order-detail-items salon-order-detail-items salon-order-detail-skeleton-items">
+          {Array.from({length:3},(_,i)=><div className="salon-order-detail-skeleton-line" key={i}>
+            <span className="salon-order-detail-skeleton-block salon-order-detail-skeleton-qty"/>
+            <span className="salon-order-detail-skeleton-copy">
+              <span className="salon-order-detail-skeleton-block line-title"/>
+              <span className="salon-order-detail-skeleton-block medium"/>
+            </span>
+            <span className="salon-order-detail-skeleton-block price"/>
+          </div>)}
+        </div>
+      </section>
+    </div>
+
+    <section className="salon-order-detail-totals salon-order-detail-skeleton-totals" aria-hidden="true">
+      <div className="salon-order-detail-subtotal">
+        <span className="salon-order-detail-skeleton-block label"/>
+        <span className="salon-order-detail-skeleton-block amount"/>
+      </div>
+      <div className="salon-order-detail-grand">
+        <span className="salon-order-detail-skeleton-block total-label"/>
+        <span className="salon-order-detail-skeleton-block total-amount"/>
+      </div>
+    </section>
+
+    <footer className="order-detail-actions salon-order-detail-actions salon-order-detail-skeleton-actions" aria-hidden="true">
+      <span className="salon-order-detail-skeleton-block action primary"/>
+      <span className="salon-order-detail-skeleton-block action secondary"/>
+      <span className="salon-order-detail-skeleton-block action tertiary"/>
+    </footer>
+  </>;
 }
 
 function Loading(){return <div className="customers-loading" aria-label="Cargando"><i/><i/><i/><i/></div>}
