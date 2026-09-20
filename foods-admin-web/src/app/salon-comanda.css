@@ -837,9 +837,6 @@
   .salon-comanda-context-stat{
     height:38px;
     padding-left:9px;
-  }
-
-  .salon-comanda-context-stat{
     grid-column:3;
     grid-row:1;
   }
