@@ -577,11 +577,29 @@
   min-height:44px;
   height:44px;
   border-radius:10px;
+  justify-content:center;
+  gap:7px;
+  line-height:1;
+}
+
+.salon-order-detail .salon-order-detail-actions .order-detail-primary>span,
+.salon-order-detail .salon-order-detail-actions .order-detail-cancel>span{
+  display:inline-flex;
+  align-items:center;
+  line-height:1;
+}
+
+.salon-order-detail .salon-order-detail-actions .order-detail-primary>svg,
+.salon-order-detail .salon-order-detail-actions .order-detail-cancel>svg{
+  flex-shrink:0;
 }
 
 .salon-order-detail .salon-order-detail-actions .order-detail-cancel{
   min-height:44px;
   height:44px;
+  justify-content:center;
+  gap:7px;
+  line-height:1;
 }
 
 @media(max-width:600px){
