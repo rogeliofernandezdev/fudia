@@ -8,6 +8,7 @@ import {getCustomer,listCustomers,saveCustomer,setCustomerActive} from "../infra
 import {useFeedback} from "@/providers/feedback-provider";
 import {useSettings} from "@/providers/settings-context";
 import {useSession} from "@/providers/session-context";
+import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
 
 const empty:CustomerDraft={customerType:"person",displayName:"",documentType:"DNI",documentNumber:"",phone:"",email:"",preferredChannel:"none",preferences:"",notes:"",marketingConsent:false,vipOverride:false,addresses:[]};
 const segmentLabels:Record<string,string>={new:"Nuevo",recurrent:"Recurrente",frequent:"Frecuente",vip:"VIP"};
@@ -69,8 +70,9 @@ function CustomerDialog({initial,channels,busy,close,save}:{initial:CustomerDraf
 }
 
 function CustomerDetail({customer,loading,error,channels,currencySymbol,close}:{customer?:Customer;loading:boolean;error?:string;channels:Option[];currencySymbol:string;close:()=>void}){
+ const{location}=useSession();
  const channelLabel=(value:string)=>value==="none"?"Sin preferencia":channels.find(o=>o.value===value)?.label??value;
- const lastPurchase=customer?.lastPurchaseAt?new Intl.DateTimeFormat("es-PE",{dateStyle:"medium"}).format(new Date(customer.lastPurchaseAt)):"—";
+ const lastPurchase=customer?.lastPurchaseAt?formatRegionalDateTime(customer.lastPurchaseAt,{country:location?.country,timeZone:location?.timezone},{dateStyle:"medium"}):"—";
  return <div className="modal-backdrop modal-overlay-in"><section className="crud-modal customer-detail modal-panel-in" role="dialog" aria-modal="true" aria-busy={loading}>
   <div className="modal-accent"/>
   {loading?<CustomerDetailSkeleton close={close}/>:<>
