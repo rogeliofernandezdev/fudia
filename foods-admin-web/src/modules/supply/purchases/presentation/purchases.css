@@ -56,7 +56,8 @@
 .purchase-detail-actions>div:first-child{display:grid;gap:4px}
 .purchase-detail-actions>div:first-child b{font-size:10px}
 .purchase-detail-actions>div:last-child{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}
-.purchase-skeleton td i{display:block;width:80%;height:12px;border-radius:6px;background:linear-gradient(90deg,#eef0f5,#fafbff,#eef0f5);background-size:200% 100%;animation:skeleton 1.2s infinite}
+.purchases-loading{display:grid;gap:9px;padding:18px}
+.purchases-loading i{display:block;height:58px;border-radius:10px;background:linear-gradient(90deg,#eef0f5,#fafbff,#eef0f5);background-size:200% 100%;animation:skeleton 1.2s infinite}
 @media(max-width:980px){
  .purchases-toolbar{grid-template-columns:1fr 180px}
  .purchases-toolbar>p{grid-column:1/-1}
@@ -92,4 +93,4 @@
  .purchase-detail-actions>div:last-child{display:grid;grid-template-columns:1fr}
  .purchase-detail-actions .button{width:100%}
 }
-@media(prefers-reduced-motion:reduce){.purchase-skeleton td i{animation:none}}
+@media(prefers-reduced-motion:reduce){.purchases-loading i{animation:none}}
