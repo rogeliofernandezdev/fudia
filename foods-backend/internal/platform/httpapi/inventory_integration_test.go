@@ -137,6 +137,74 @@ func TestInventoryEntryCreatesProductThenReusesIt(t *testing.T) {
 	}
 }
 
+func TestInventoryPackageEntryConvertsToBaseUnits(t *testing.T) {
+	pool := integrationPool(t)
+	s := seedInventoryScope(t, pool)
+	api := New(pool)
+	name := fmt.Sprintf("Caja de agua %d", time.Now().UnixNano())
+
+	body := []byte(fmt.Sprintf(`{"newProduct":{"name":%q,"price":"4.50"},"quantity":5,"unit":"botella","presentationType":"box","unitsPerPresentation":12,"minimumStock":6,"note":"5 cajas x 12"}`, name))
+	req := httptest.NewRequest("POST", "/v1/admin/inventory/entries", bytes.NewReader(body))
+	req = req.WithContext(context.WithValue(req.Context(), scopeKey{}, s))
+	rec := httptest.NewRecorder()
+	api.createInventoryEntry(rec, req)
+	if rec.Code != 201 {
+		t.Fatalf("expected package entry 201, got %d body=%s", rec.Code, rec.Body.String())
+	}
+
+	var productID string
+	if err := pool.QueryRow(context.Background(), `
+		SELECT id FROM products WHERE organization_id=$1 AND name=$2`,
+		s.OrganizationID, name).Scan(&productID); err != nil {
+		t.Fatal(err)
+	}
+
+	var entryQuantity, unitsPerPresentation, stockQuantity, balance, movementDelta float64
+	var presentationType string
+	if err := pool.QueryRow(context.Background(), `
+		SELECT quantity::float8,presentation_type,units_per_presentation::float8,stock_quantity::float8
+		FROM inventory_entries
+		WHERE organization_id=$1 AND product_id=$2`,
+		s.OrganizationID, productID).Scan(&entryQuantity, &presentationType, &unitsPerPresentation, &stockQuantity); err != nil {
+		t.Fatal(err)
+	}
+	if err := pool.QueryRow(context.Background(), `
+		SELECT sb.quantity::float8
+		FROM stock_balances sb
+		JOIN inventory_items ii ON ii.id=sb.inventory_item_id AND ii.organization_id=sb.organization_id
+		WHERE sb.organization_id=$1 AND sb.location_id=$2 AND ii.product_id=$3`,
+		s.OrganizationID, s.LocationID, productID).Scan(&balance); err != nil {
+		t.Fatal(err)
+	}
+	if err := pool.QueryRow(context.Background(), `
+		SELECT quantity_delta::float8
+		FROM stock_movements
+		WHERE organization_id=$1 AND product_id=$2 AND movement_type='entry'`,
+		s.OrganizationID, productID).Scan(&movementDelta); err != nil {
+		t.Fatal(err)
+	}
+
+	if entryQuantity != 5 || presentationType != "box" || unitsPerPresentation != 12 || stockQuantity != 60 {
+		t.Fatalf("unexpected entry conversion quantity=%v type=%q factor=%v stock=%v", entryQuantity, presentationType, unitsPerPresentation, stockQuantity)
+	}
+	if balance != 60 || movementDelta != 60 {
+		t.Fatalf("stock and kardex must use base units, balance=%v movement=%v", balance, movementDelta)
+	}
+
+	var presentationCount int
+	if err := pool.QueryRow(context.Background(), `
+		SELECT count(*)
+		FROM inventory_presentations ip
+		JOIN inventory_items ii ON ii.id=ip.inventory_item_id AND ii.organization_id=ip.organization_id
+		WHERE ip.organization_id=$1 AND ii.product_id=$2 AND ip.active`,
+		s.OrganizationID, productID).Scan(&presentationCount); err != nil {
+		t.Fatal(err)
+	}
+	if presentationCount != 2 {
+		t.Fatalf("expected reusable unit + box presentations, got %d", presentationCount)
+	}
+}
+
 func TestCreateInventoryEntryRollsBackNewProductOnLateFailure(t *testing.T) {
 	pool := integrationPool(t)
 	s := seedInventoryScope(t, pool)
