@@ -110,8 +110,8 @@ function OrderDetail({loading,order,error,channels,currencySymbol,canManage,busy
  const meta=order?statusMeta[order.status]??{label:order.status,tone:"gray" as const}:null;
  const action=order?nextAction(order):null;
  const itemCount=order?(order.items??[]).reduce((sum,it)=>sum+Number(it.qty||0),0):0;
- const subject=order?(order.tableName||order.customerName||order.code):"Pedido";
- const subtitle=order?.tableName&&order.customerName?order.customerName:order?.code;
+ const subject=order?(order.tableName||order.customerName||"Pedido"):"Pedido";
+ const subtitle=order?.tableName&&order.customerName?order.customerName:undefined;
  return <div className="modal-backdrop modal-overlay-in">
   <section className="crud-modal order-detail salon-order-detail modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="orders-preview-title">
    <div className="salon-order-detail-accent"/>
