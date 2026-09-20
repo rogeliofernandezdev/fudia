@@ -63,39 +63,39 @@ export function OrdersManager(){
  const manualChannels=channelOptions.filter(option=>option.value!=="salon");
  const channelLabel=(v:string)=>channelOptions.find(o=>o.value===v)?.label??v;
  const openTotal=Object.values(counts).reduce((a,b)=>a+b,0);
- const activeChannels=Object.values(counts).filter(value=>value>0).length;
- const filteredTotal=list.data?.total??0;
  return <><PageHeader eyebrow="OPERACIÓN" title="Pedidos" description="Supervisa pedidos de todos los canales, su avance y las entregas desde una sola bandeja." action={canManage?<div className="orders-header-actions"><Link href="/salon" className="orders-salon-link"><Icon name="utensils" size={16}/><span>Ir a Salón</span></Link><Button kind="secondary" icon="plus" onClick={()=>setDraft(newDraft())}>Ingreso manual</Button></div>:undefined}/>
  <section className="panel management orders-panel">
-  <div className="orders-overview" aria-label="Resumen operativo de pedidos">
-   <article className="orders-overview-card primary"><span><Icon name="receipt" size={18}/></span><div><small>PEDIDOS ABIERTOS</small><strong>{openTotal}</strong><p>Pendientes de completar o entregar</p></div></article>
-   <article className="orders-overview-card"><span><Icon name="grid" size={18}/></span><div><small>CANALES ACTIVOS</small><strong>{activeChannels}</strong><p>Con pedidos abiertos ahora</p></div></article>
-   <article className="orders-overview-card"><span><Icon name="filter" size={18}/></span><div><small>VISTA ACTUAL</small><strong>{filteredTotal}</strong><p>{channel?channelLabel(channel):"Todos los canales"}</p></div></article>
+  <div className="orders-workspace-head">
+   <div className="orders-open-summary">
+    <span className="orders-open-icon"><Icon name="receipt" size={17}/></span>
+    <div><strong>{openTotal} pedidos abiertos</strong><small>{channel?`Viendo ${channelLabel(channel)}`:"Todos los canales"}</small></div>
+   </div>
+   <div className="toolbar">
+    <label><Icon name="search" size={18}/><input value={q} onChange={e=>{setQ(e.target.value);setPage(1)}} placeholder="Código, cliente o teléfono..."/></label>
+    <select aria-label="Filtrar por estado" value={status} onChange={e=>{setStatus(e.target.value);setPage(1)}}><option value="">Todos los estados</option><option value="abiertos">Abiertos</option>{(list.data?.statusOptions??[]).map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select>
+   </div>
   </div>
-  <div className="orders-section-head"><div><small>CANALES</small><h2>¿De dónde vienen los pedidos?</h2></div><p>Los contadores muestran pedidos abiertos por canal.</p></div>
-  <div className="orders-channels">
-   <button className={"orders-ch"+(channel===""?" active":"")} onClick={()=>{setChannel("");setPage(1)}}>
-    <span className="orders-ch-icon"><Icon name="receipt" size={17}/></span><span className="orders-ch-copy"><b>Todos</b><small>Todos los canales</small></span><strong>{openTotal}</strong>
-   </button>
-   {channelOptions.map(o=><button key={o.value} className={"orders-ch"+(channel===o.value?" active":"")} onClick={()=>{setChannel(o.value);setPage(1)}}>
-    <span className="orders-ch-icon"><Icon name={channelIcons[o.value]??"receipt"} size={17}/></span><span className="orders-ch-copy"><b>{o.label}</b><small>Pedidos abiertos</small></span><strong>{counts[o.value]??0}</strong>
-   </button>)}
-  </div>
-  <div className="orders-controls"><div className="orders-controls-copy"><b>Seguimiento de pedidos</b><small>Busca por código o cliente y filtra por etapa operativa.</small></div><div className="toolbar"><label><Icon name="search" size={18}/><input value={q} onChange={e=>{setQ(e.target.value);setPage(1)}} placeholder="Código, cliente o teléfono..."/></label><select aria-label="Filtrar por estado" value={status} onChange={e=>{setStatus(e.target.value);setPage(1)}}><option value="">Todos los estados</option><option value="abiertos">Abiertos</option>{(list.data?.statusOptions??[]).map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select></div></div>
+  <nav className="orders-channels" aria-label="Filtrar pedidos por canal">
+   <button className={"orders-ch"+(channel===""?" active":"")} onClick={()=>{setChannel("");setPage(1)}}><Icon name="receipt" size={15}/><span>Todos</span><b>{openTotal}</b></button>
+   {channelOptions.map(o=><button key={o.value} className={"orders-ch"+(channel===o.value?" active":"")} onClick={()=>{setChannel(o.value);setPage(1)}}><Icon name={channelIcons[o.value]??"receipt"} size={15}/><span>{o.label}</span><b>{counts[o.value]??0}</b></button>)}
+  </nav>
+  <div className="orders-list-head" aria-hidden="true"><span>Pedido</span><span>Estado</span><span>Total</span><span>Acción</span></div>
   {list.isLoading?<Loading/>:list.isError?<State icon="alert" title="No pudimos cargar los pedidos" text={list.error.message} action={()=>list.refetch()}/>:!items.length?<State icon="receipt" title="Sin pedidos" text="No hay pedidos que coincidan con los filtros actuales."/>:<div className="orders-list">{items.map(o=>{const meta=statusMeta[o.status]??{label:o.status,tone:"gray" as const};const action=nextAction(o);const done=o.status==="entregado"||o.status==="cancelado";const subject=o.tableName||o.customerName||"Pedido sin nombre";return <article className={`order-card channel-${o.channel}${done?" done":""}`} key={o.id} onClick={()=>setDetailId(o.id)}>
-   <span className={"order-channel-icon oc-"+o.channel}><Icon name={channelIcons[o.channel]??"receipt"} size={18}/></span>
-   <div className="order-card-info">
-    <div className="order-card-kicker"><span className="order-id">{o.code}</span><span className="order-channel-tag"><Icon name={channelIcons[o.channel]??"receipt"} size={12}/>{channelLabel(o.channel)}</span></div>
-    <div className="order-card-title"><strong>{subject}</strong><Status tone={meta.tone}>{meta.label}</Status></div>
-    <div className="order-card-meta">
-     <span className="order-time-tag"><Icon name="clock" size={12}/>{timeAgo(o.createdAt)}</span>
-     {o.tableName&&o.customerName&&<span className="order-customer-preview"><Icon name="users" size={12}/>{o.customerName}</span>}
-     {o.address&&<span className="order-address-preview" title={o.address}><Icon name="truck" size={12}/>{o.address}</span>}
-     {o.notes&&<span className="order-notes-preview" title={o.notes}><Icon name="edit" size={12}/>{o.notes}</span>}
+   <div className="order-card-main">
+    <span className={"order-channel-icon oc-"+o.channel}><Icon name={channelIcons[o.channel]??"receipt"} size={17}/></span>
+    <div className="order-card-info">
+     <div className="order-card-kicker"><span className="order-id">{o.code}</span><span className="order-channel-tag"><Icon name={channelIcons[o.channel]??"receipt"} size={11}/>{channelLabel(o.channel)}</span></div>
+     <strong className="order-card-subject">{subject}</strong>
+     <div className="order-card-meta">
+      {o.tableName&&o.customerName&&<span className="order-customer-preview"><Icon name="users" size={11}/>{o.customerName}</span>}
+      {o.address&&<span className="order-address-preview" title={o.address}><Icon name="truck" size={11}/>{o.address}</span>}
+      {o.notes&&<span className="order-notes-preview" title={o.notes}><Icon name="edit" size={11}/>{o.notes}</span>}
+     </div>
     </div>
    </div>
-   <div className="order-card-right">
-    <div className="order-total-block"><small>TOTAL</small><b className="order-total">{settings.currencySymbol} {money(o.total)}</b></div>
+   <div className="order-card-state"><Status tone={meta.tone}>{meta.label}</Status><span className="order-time-tag"><Icon name="clock" size={12}/>{timeAgo(o.createdAt)}</span></div>
+   <b className="order-total">{settings.currencySymbol} {money(o.total)}</b>
+   <div className="order-card-action">
     {canManage&&action&&<Button className="order-advance" onClick={e=>{e.stopPropagation();advance.mutate({id:o.id,status:action.status})}} disabled={advance.isPending}>{action.label}<Icon name="chevron" size={14}/></Button>}
     {o.status==="entregado"&&<span className="order-done"><Icon name="check" size={14}/>Entregado</span>}
    </div>
