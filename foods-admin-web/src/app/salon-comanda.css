@@ -142,7 +142,7 @@
   margin:14px 16px 0;
   padding:11px 14px;
   display:grid;
-  grid-template-columns:auto minmax(0,1fr) auto auto;
+  grid-template-columns:auto minmax(0,1fr) auto;
   align-items:center;
   gap:12px;
   border:1px solid #dfe3f7;
@@ -740,10 +740,6 @@
     padding:10px;
     grid-template-columns:auto minmax(0,1fr) auto;
     gap:9px;
-  }
-
-  .salon-comanda-context-stat:first-of-type{
-    display:none;
   }
 
   .salon-comanda-context-stat{
