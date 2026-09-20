@@ -48,6 +48,7 @@ export function MapboxLocationMap({
   const initialZoom = useRef(latitude != null && longitude != null ? 17 : 11);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [searching, setSearching] = useState(false);
+  const [suggesting, setSuggesting] = useState(false);
   const [mapLoading, setMapLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [error, setError] = useState("");
@@ -118,23 +119,27 @@ export function MapboxLocationMap({
       setSuggestions([]);
       setOpen(false);
       setSearching(false);
+      setSuggesting(false);
       return;
     }
     if (!searchTriggeredByTyping.current) {
       setSuggestions([]);
       setOpen(false);
       setSearching(false);
+      setSuggesting(false);
       return;
     }
     if (!token || query.length < 5 || !sessionToken.current) {
       setSuggestions([]);
       setOpen(false);
       setSearching(false);
+      setSuggesting(false);
       return;
     }
     const sequence = ++searchSequence.current;
     const controller = new AbortController();
     setSearching(true);
+    setSuggesting(true);
     const timer = window.setTimeout(async () => {
       try {
         const params = new URLSearchParams({
@@ -159,7 +164,7 @@ export function MapboxLocationMap({
         if (reason instanceof DOMException && reason.name === "AbortError") return;
         if (sequence === searchSequence.current) setError("No se pudieron consultar direcciones en Mapbox.");
       } finally {
-        if (sequence === searchSequence.current) setSearching(false);
+        if (sequence === searchSequence.current) { setSearching(false); setSuggesting(false); }
       }
     }, 400);
     return () => {
@@ -173,6 +178,7 @@ export function MapboxLocationMap({
     searchTriggeredByTyping.current = false;
     setSuggestions([]);
     setOpen(false);
+    setSuggesting(false);
     setSearching(true);
     try {
       const retrieveParams = new URLSearchParams({
@@ -245,7 +251,7 @@ export function MapboxLocationMap({
           placeholder="Escribe calle, número y distrito" autoComplete="off" role="combobox"
           aria-autocomplete="list" aria-expanded={open} className="location-map-input" />
         {searching && <span className="location-map-spinner"><Icon name="refresh" size={14}/></span>}
-        {searching && searchTriggeredByTyping.current && <div className="location-map-suggestions location-map-suggestions-loading" aria-label="Buscando direcciones">
+        {suggesting && <div className="location-map-suggestions location-map-suggestions-loading" aria-label="Buscando direcciones">
           {Array.from({length:3},(_,index)=><div className="location-map-suggestion-skeleton" key={index}><i/><span><b/><small/></span></div>)}
         </div>}
         {open && suggestions.length > 0 && !searching && <div role="listbox" className="location-map-suggestions">
