@@ -61,6 +61,7 @@ type orderItemInput struct {
 	UnitPrice  float64                   `json:"unitPrice"`
 	Note       string                    `json:"note"`
 	Selections []orderItemSelectionInput `json:"selections"`
+	Reprice    bool                      `json:"reprice"`
 }
 type preparedOrderSelection struct {
 	GroupID   string
@@ -231,7 +232,7 @@ func (a *API) prepareOrderItems(r *http.Request, tx pgx.Tx, s scope, existingOrd
 			continue
 		}
 
-		if existingOrderID != "" && strings.TrimSpace(in.ID) != "" {
+		if existingOrderID != "" && strings.TrimSpace(in.ID) != "" && !in.Reprice {
 			var existingName string
 			var existingUnitPrice float64
 			var existingProductID string
