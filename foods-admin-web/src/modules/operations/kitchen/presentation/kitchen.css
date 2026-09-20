@@ -47,8 +47,7 @@
 .kitchen-ticket-time.warning{background:#fff4df;color:#b54708}
 .kitchen-ticket-time.late{background:#fff0ee;color:var(--danger)}
 .kitchen-ticket-time.ready{background:var(--brand-100);color:var(--brand-700)}
-.kitchen-ticket-timing{display:flex;justify-content:space-between;gap:8px;color:var(--ink-400);font-size:8px}
-.kitchen-ticket-timing b{color:var(--ink-600);font-size:8px}
+.kitchen-ticket-target{color:var(--ink-400);font-size:8px;font-weight:750}
 .kitchen-progress{height:4px;overflow:hidden;border-radius:999px;background:#edf0f4}
 .kitchen-progress i{display:block;height:100%;border-radius:inherit;background:var(--ops-500);transition:width .2s ease}
 .kitchen-ticket.warning .kitchen-progress i{background:#f79009}
