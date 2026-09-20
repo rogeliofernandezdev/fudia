@@ -793,6 +793,10 @@ func (a *API) createOrder(w http.ResponseWriter, r *http.Request) {
 		fail(w, 503, "order_unavailable", "No pudimos guardar los productos del pedido.")
 		return
 	}
+	if quantityErr := a.applyOrderQuantityDelta(r.Context(), tx, s, o.ID, preparedQuantityUsage(prepared), "sale"); quantityErr != nil {
+		fail(w, quantityErr.Status, quantityErr.Code, quantityErr.Message)
+		return
+	}
 	if err = tx.Commit(r.Context()); err != nil {
 		fail(w, 503, "order_unavailable", "No pudimos guardar el pedido.")
 		return
@@ -840,9 +844,18 @@ func (a *API) updateOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	previousUsage, err := loadOrderQuantityUsage(r.Context(), tx, s.OrganizationID, r.PathValue("id"))
+	if err != nil {
+		fail(w, 503, "order_unavailable", "No pudimos cargar las cantidades actuales del pedido.")
+		return
+	}
 	prepared, subtotal, preparationErr := a.prepareOrderItems(r, tx, s, r.PathValue("id"), in.Items)
 	if preparationErr != nil {
 		fail(w, preparationErr.Status, preparationErr.Code, preparationErr.Message)
+		return
+	}
+	if quantityErr := a.applyOrderQuantityDelta(r.Context(), tx, s, r.PathValue("id"), quantityUsageDelta(previousUsage, preparedQuantityUsage(prepared)), "sale_adjustment"); quantityErr != nil {
+		fail(w, quantityErr.Status, quantityErr.Code, quantityErr.Message)
 		return
 	}
 	total := subtotal + in.DeliveryFee
@@ -898,8 +911,20 @@ func (a *API) updateOrderStatus(w http.ResponseWriter, r *http.Request) {
 		fail(w, 400, "invalid_status", "El estado no es válido.")
 		return
 	}
+
+	tx, err := a.db.Begin(r.Context())
+	if err != nil {
+		fail(w, 503, "order_unavailable", "No pudimos actualizar el pedido.")
+		return
+	}
+	defer tx.Rollback(r.Context())
+
 	var current string
-	err := a.db.QueryRow(r.Context(), `SELECT status FROM orders WHERE id=$1 AND organization_id=$2`, r.PathValue("id"), s.OrganizationID).Scan(&current)
+	err = tx.QueryRow(r.Context(), `
+		SELECT status
+		FROM orders
+		WHERE id=$1 AND organization_id=$2 AND location_id=$3
+		FOR UPDATE`, r.PathValue("id"), s.OrganizationID, s.LocationID).Scan(&current)
 	if errors.Is(err, pgx.ErrNoRows) {
 		fail(w, 404, "order_not_found", "El pedido no existe.")
 		return
@@ -912,18 +937,44 @@ func (a *API) updateOrderStatus(w http.ResponseWriter, r *http.Request) {
 	for _, next := range orderTransitions[current] {
 		if next == in.Status {
 			allowed = true
+			break
 		}
 	}
 	if !allowed {
 		fail(w, 409, "invalid_transition", "No se puede pasar de "+current+" a "+in.Status+".")
 		return
 	}
-	tag, err := a.db.Exec(r.Context(), `UPDATE orders SET status=$3,updated_at=now() WHERE id=$1 AND organization_id=$2`, r.PathValue("id"), s.OrganizationID, in.Status)
+
+	if in.Status == "cancelado" {
+		usage, usageErr := loadOrderQuantityUsage(r.Context(), tx, s.OrganizationID, r.PathValue("id"))
+		if usageErr != nil {
+			fail(w, 503, "order_unavailable", "No pudimos cargar las cantidades del pedido.")
+			return
+		}
+		if quantityErr := a.applyOrderQuantityDelta(r.Context(), tx, s, r.PathValue("id"), quantityUsageDelta(usage, map[string]float64{}), "sale_reversal"); quantityErr != nil {
+			fail(w, quantityErr.Status, quantityErr.Code, quantityErr.Message)
+			return
+		}
+	}
+
+	tag, err := tx.Exec(r.Context(), `
+		UPDATE orders
+		SET status=$4,updated_at=now()
+		WHERE id=$1 AND organization_id=$2 AND location_id=$3`,
+		r.PathValue("id"), s.OrganizationID, s.LocationID, in.Status)
 	if err != nil || tag.RowsAffected() == 0 {
 		fail(w, 404, "order_not_found", "El pedido no existe.")
 		return
 	}
+	o, err := scanOrder(tx.QueryRow(r.Context(), `SELECT `+orderColumns+` FROM orders WHERE id=$1 AND organization_id=$2 AND location_id=$3`, r.PathValue("id"), s.OrganizationID, s.LocationID))
+	if err != nil {
+		fail(w, 503, "order_unavailable", "No pudimos cargar el pedido actualizado.")
+		return
+	}
+	if err = tx.Commit(r.Context()); err != nil {
+		fail(w, 503, "order_unavailable", "No pudimos actualizar el pedido.")
+		return
+	}
 	a.audit(r, "status_updated", "order", r.PathValue("id"))
-	o, _ := scanOrder(a.db.QueryRow(r.Context(), `SELECT `+orderColumns+` FROM orders WHERE id=$1`, r.PathValue("id")))
 	writeJSON(w, 200, o)
 }
