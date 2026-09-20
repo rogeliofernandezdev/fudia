@@ -34,8 +34,7 @@ type product struct {
 	CategoryName       *string  `json:"categoryName"`
 	Price              string   `json:"price"`
 	Active             bool     `json:"active"`
-	StockMode          string   `json:"stockMode"`
-	DefaultDailyQuota  *int     `json:"defaultDailyQuota"`
+	QuantityControl    string   `json:"quantityControl"`
 	ImageURL           *string  `json:"imageUrl"`
 	PrepMinutes        *int     `json:"prepMinutes"`
 	Allergens          []string `json:"allergens"`
@@ -53,8 +52,7 @@ type productInput struct {
 	CategoryID         *string  `json:"categoryId"`
 	Price              string   `json:"price"`
 	Active             *bool    `json:"active,omitempty"`
-	StockMode          string   `json:"stockMode"`
-	DefaultDailyQuota  *int     `json:"defaultDailyQuota"`
+	QuantityControl    string   `json:"quantityControl"`
 	ImageURL           *string  `json:"imageUrl"`
 	PrepMinutes        *int     `json:"prepMinutes"`
 	Allergens          []string `json:"allergens"`
@@ -193,7 +191,7 @@ func (a *API) listProducts(w http.ResponseWriter, r *http.Request) {
 		fail(w, 503, "products_unavailable", "No pudimos cargar los productos.")
 		return
 	}
-	rows, err := a.db.Query(r.Context(), `SELECT p.id,p.sku,p.name,p.description,p.category_id,c.name,p.price::text,p.active,p.stock_mode,p.default_daily_quota,p.image_url,p.prep_minutes,p.allergens,p.featured,p.cost_price::text,p.available_from::text,p.available_until::text,p.available_days,p.available_until_time::text FROM products p LEFT JOIN menu_categories c ON c.id=p.category_id AND c.organization_id=p.organization_id WHERE p.organization_id=$1 AND (p.name ILIKE $2 OR p.sku ILIKE $2) AND ($3='' OR p.category_id::text=$3) AND ($4='' OR ($4='active' AND p.active) OR ($4='inactive' AND NOT p.active)) AND NOT EXISTS (SELECT 1 FROM menu_combos mc WHERE mc.product_id=p.id) ORDER BY p.updated_at DESC,p.name LIMIT $5 OFFSET $6`, s.OrganizationID, search, categoryID, status, size, (page-1)*size)
+	rows, err := a.db.Query(r.Context(), `SELECT p.id,p.sku,p.name,p.description,p.category_id,c.name,p.price::text,p.active,p.quantity_control,p.image_url,p.prep_minutes,p.allergens,p.featured,p.cost_price::text,p.available_from::text,p.available_until::text,p.available_days,p.available_until_time::text FROM products p LEFT JOIN menu_categories c ON c.id=p.category_id AND c.organization_id=p.organization_id WHERE p.organization_id=$1 AND (p.name ILIKE $2 OR p.sku ILIKE $2) AND ($3='' OR p.category_id::text=$3) AND ($4='' OR ($4='active' AND p.active) OR ($4='inactive' AND NOT p.active)) AND NOT EXISTS (SELECT 1 FROM menu_combos mc WHERE mc.product_id=p.id) ORDER BY p.updated_at DESC,p.name LIMIT $5 OFFSET $6`, s.OrganizationID, search, categoryID, status, size, (page-1)*size)
 	if err != nil {
 		fail(w, 503, "products_unavailable", "No pudimos cargar los productos.")
 		return
@@ -202,7 +200,7 @@ func (a *API) listProducts(w http.ResponseWriter, r *http.Request) {
 	items := []product{}
 	for rows.Next() {
 		var p product
-		if err = rows.Scan(&p.ID, &p.SKU, &p.Name, &p.Description, &p.CategoryID, &p.CategoryName, &p.Price, &p.Active, &p.StockMode, &p.DefaultDailyQuota, &p.ImageURL, &p.PrepMinutes, &p.Allergens, &p.Featured, &p.CostPrice, &p.AvailableFrom, &p.AvailableUntil, &p.AvailableDays, &p.AvailableUntilTime); err != nil {
+		if err = rows.Scan(&p.ID, &p.SKU, &p.Name, &p.Description, &p.CategoryID, &p.CategoryName, &p.Price, &p.Active, &p.QuantityControl, &p.ImageURL, &p.PrepMinutes, &p.Allergens, &p.Featured, &p.CostPrice, &p.AvailableFrom, &p.AvailableUntil, &p.AvailableDays, &p.AvailableUntilTime); err != nil {
 			fail(w, 503, "products_unavailable", "No pudimos cargar los productos.")
 			return
 		}
@@ -213,7 +211,7 @@ func (a *API) listProducts(w http.ResponseWriter, r *http.Request) {
 func (a *API) getProduct(w http.ResponseWriter, r *http.Request) {
 	s := r.Context().Value(scopeKey{}).(scope)
 	var p product
-	err := a.db.QueryRow(r.Context(), `SELECT p.id,p.sku,p.name,p.description,p.category_id,c.name,p.price::text,p.active,p.stock_mode,p.default_daily_quota,p.image_url,p.prep_minutes,p.allergens,p.featured,p.cost_price::text,p.available_from::text,p.available_until::text,p.available_days,p.available_until_time::text FROM products p LEFT JOIN menu_categories c ON c.id=p.category_id AND c.organization_id=p.organization_id WHERE p.organization_id=$1 AND p.id=$2`, s.OrganizationID, r.PathValue("id")).Scan(&p.ID, &p.SKU, &p.Name, &p.Description, &p.CategoryID, &p.CategoryName, &p.Price, &p.Active, &p.StockMode, &p.DefaultDailyQuota, &p.ImageURL, &p.PrepMinutes, &p.Allergens, &p.Featured, &p.CostPrice, &p.AvailableFrom, &p.AvailableUntil, &p.AvailableDays, &p.AvailableUntilTime)
+	err := a.db.QueryRow(r.Context(), `SELECT p.id,p.sku,p.name,p.description,p.category_id,c.name,p.price::text,p.active,p.quantity_control,p.image_url,p.prep_minutes,p.allergens,p.featured,p.cost_price::text,p.available_from::text,p.available_until::text,p.available_days,p.available_until_time::text FROM products p LEFT JOIN menu_categories c ON c.id=p.category_id AND c.organization_id=p.organization_id WHERE p.organization_id=$1 AND p.id=$2`, s.OrganizationID, r.PathValue("id")).Scan(&p.ID, &p.SKU, &p.Name, &p.Description, &p.CategoryID, &p.CategoryName, &p.Price, &p.Active, &p.QuantityControl, &p.ImageURL, &p.PrepMinutes, &p.Allergens, &p.Featured, &p.CostPrice, &p.AvailableFrom, &p.AvailableUntil, &p.AvailableDays, &p.AvailableUntilTime)
 	if errors.Is(err, pgx.ErrNoRows) {
 		fail(w, 404, "product_not_found", "El producto no existe.")
 		return
@@ -225,27 +223,19 @@ func (a *API) getProduct(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, p)
 }
 
-// normalizeProduct aplica el contrato de disponibilidad: devuelve la entrada
-// saneada y un mensaje de error vacío cuando es válida. El SKU se autogenera
-// cuando el usuario no lo envía.
+// normalizeProduct valida únicamente datos comerciales y la clasificación
+// de cantidad. Las cantidades nunca se guardan en products.
 func normalizeProduct(in productInput) (productInput, string) {
 	if strings.TrimSpace(in.Name) == "" || strings.TrimSpace(in.Price) == "" {
 		return in, "Nombre y precio son obligatorios."
 	}
-	if in.StockMode == "" {
-		in.StockMode = "none"
+	if in.QuantityControl == "" {
+		in.QuantityControl = "none"
 	}
-	switch in.StockMode {
-	case "none":
-		in.DefaultDailyQuota = nil
-	case "manual":
-		if in.DefaultDailyQuota == nil || *in.DefaultDailyQuota < 1 {
-			return in, "El cupo diario es obligatorio y debe ser mayor que cero."
-		}
-	case "linked", "recipe":
-		return in, "Ese control de disponibilidad requiere inventario y todavía no está habilitado."
+	switch in.QuantityControl {
+	case "none", "portions", "inventory":
 	default:
-		return in, "El control de disponibilidad no es válido."
+		return in, "El control de cantidad no es válido."
 	}
 	return in, ""
 }
@@ -274,7 +264,7 @@ func (a *API) createProduct(w http.ResponseWriter, r *http.Request) {
 		createFeatured = *in.Featured
 	}
 	var p product
-	err := a.db.QueryRow(r.Context(), `INSERT INTO products(organization_id,category_id,sku,name,description,price,active,stock_mode,default_daily_quota,image_url,prep_minutes,allergens,featured,cost_price,available_from,available_until,available_days,available_until_time) VALUES($1,$2,$3,$4,$5,$6,true,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING id,sku,name,description,category_id,price::text,active,stock_mode,default_daily_quota,image_url,prep_minutes,allergens,featured,cost_price::text,available_from::text,available_until::text,available_days,available_until_time::text`, s.OrganizationID, in.CategoryID, strings.TrimSpace(in.SKU), strings.TrimSpace(in.Name), strings.TrimSpace(in.Description), in.Price, in.StockMode, in.DefaultDailyQuota, in.ImageURL, in.PrepMinutes, in.Allergens, createFeatured, in.CostPrice, in.AvailableFrom, in.AvailableUntil, in.AvailableDays, in.AvailableUntilTime).Scan(&p.ID, &p.SKU, &p.Name, &p.Description, &p.CategoryID, &p.Price, &p.Active, &p.StockMode, &p.DefaultDailyQuota, &p.ImageURL, &p.PrepMinutes, &p.Allergens, &p.Featured, &p.CostPrice, &p.AvailableFrom, &p.AvailableUntil, &p.AvailableDays, &p.AvailableUntilTime)
+	err := a.db.QueryRow(r.Context(), `INSERT INTO products(organization_id,category_id,sku,name,description,price,active,quantity_control,image_url,prep_minutes,allergens,featured,cost_price,available_from,available_until,available_days,available_until_time) VALUES($1,$2,$3,$4,$5,$6,true,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING id,sku,name,description,category_id,price::text,active,quantity_control,image_url,prep_minutes,allergens,featured,cost_price::text,available_from::text,available_until::text,available_days,available_until_time::text`, s.OrganizationID, in.CategoryID, strings.TrimSpace(in.SKU), strings.TrimSpace(in.Name), strings.TrimSpace(in.Description), in.Price, in.QuantityControl, in.ImageURL, in.PrepMinutes, in.Allergens, createFeatured, in.CostPrice, in.AvailableFrom, in.AvailableUntil, in.AvailableDays, in.AvailableUntilTime).Scan(&p.ID, &p.SKU, &p.Name, &p.Description, &p.CategoryID, &p.Price, &p.Active, &p.QuantityControl, &p.ImageURL, &p.PrepMinutes, &p.Allergens, &p.Featured, &p.CostPrice, &p.AvailableFrom, &p.AvailableUntil, &p.AvailableDays, &p.AvailableUntilTime)
 	if err != nil {
 		fail(w, 409, "product_conflict", "Revisa la categoría y el precio.")
 		return
@@ -307,7 +297,7 @@ func (a *API) updateProduct(w http.ResponseWriter, r *http.Request) {
 		skuValue = r.PathValue("id")
 	}
 	var p product
-	err := a.db.QueryRow(r.Context(), `UPDATE products SET category_id=$3,sku=$4,name=$5,description=$6,price=$7,active=$8,stock_mode=$9,default_daily_quota=$10,image_url=$11,prep_minutes=$12,allergens=$13,featured=$14,cost_price=$15,available_from=$16,available_until=$17,available_days=$18,available_until_time=$19,updated_at=now() WHERE organization_id=$1 AND id=$2 RETURNING id,sku,name,description,category_id,price::text,active,stock_mode,default_daily_quota,image_url,prep_minutes,allergens,featured,cost_price::text,available_from::text,available_until::text,available_days,available_until_time::text`, s.OrganizationID, r.PathValue("id"), in.CategoryID, skuValue, strings.TrimSpace(in.Name), strings.TrimSpace(in.Description), in.Price, active, in.StockMode, in.DefaultDailyQuota, in.ImageURL, in.PrepMinutes, in.Allergens, featured, in.CostPrice, in.AvailableFrom, in.AvailableUntil, in.AvailableDays, in.AvailableUntilTime).Scan(&p.ID, &p.SKU, &p.Name, &p.Description, &p.CategoryID, &p.Price, &p.Active, &p.StockMode, &p.DefaultDailyQuota, &p.ImageURL, &p.PrepMinutes, &p.Allergens, &p.Featured, &p.CostPrice, &p.AvailableFrom, &p.AvailableUntil, &p.AvailableDays, &p.AvailableUntilTime)
+	err := a.db.QueryRow(r.Context(), `UPDATE products SET category_id=$3,sku=$4,name=$5,description=$6,price=$7,active=$8,quantity_control=$9,image_url=$10,prep_minutes=$11,allergens=$12,featured=$13,cost_price=$14,available_from=$15,available_until=$16,available_days=$17,available_until_time=$18,updated_at=now() WHERE organization_id=$1 AND id=$2 RETURNING id,sku,name,description,category_id,price::text,active,quantity_control,image_url,prep_minutes,allergens,featured,cost_price::text,available_from::text,available_until::text,available_days,available_until_time::text`, s.OrganizationID, r.PathValue("id"), in.CategoryID, skuValue, strings.TrimSpace(in.Name), strings.TrimSpace(in.Description), in.Price, active, in.QuantityControl, in.ImageURL, in.PrepMinutes, in.Allergens, featured, in.CostPrice, in.AvailableFrom, in.AvailableUntil, in.AvailableDays, in.AvailableUntilTime).Scan(&p.ID, &p.SKU, &p.Name, &p.Description, &p.CategoryID, &p.Price, &p.Active, &p.QuantityControl, &p.ImageURL, &p.PrepMinutes, &p.Allergens, &p.Featured, &p.CostPrice, &p.AvailableFrom, &p.AvailableUntil, &p.AvailableDays, &p.AvailableUntilTime)
 	if errors.Is(err, pgx.ErrNoRows) {
 		fail(w, 404, "product_not_found", "El producto no existe.")
 		return
