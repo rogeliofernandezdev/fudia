@@ -810,19 +810,21 @@
 }
 
 
-/* ── Carta moderna: cards visuales con una sola acción de agregado ── */
+/* ── Carta moderna: grilla plana, simétrica y con una sola acción ── */
 .salon-comanda-shell .comanda-menu-salon .comanda-dishes{
   display:grid;
-  grid-template-columns:repeat(2,minmax(0,1fr));
+  grid-template-columns:repeat(auto-fill,minmax(270px,1fr));
+  align-items:stretch;
   gap:12px;
-  padding:0 12px 14px;
+  padding:14px 12px 18px;
 }
 
 .salon-comanda-shell .comanda-menu-salon .comanda-dish-modern{
-  min-height:118px;
+  height:132px;
+  min-height:132px;
   padding:8px;
   display:grid;
-  grid-template-columns:92px minmax(0,1fr);
+  grid-template-columns:104px minmax(0,1fr);
   align-items:stretch;
   gap:12px;
   border:1px solid #e4e7ec;
@@ -840,16 +842,16 @@
 }
 
 .salon-comanda-shell .comanda-menu-salon .comanda-dish-modern.picked{
-  border-color:var(--ops-500,#4654cd);
+  border-color:#c7ceef;
   background:#fbfbff;
-  box-shadow:0 0 0 2px rgba(70,84,205,.10),0 8px 22px rgba(70,84,205,.08);
+  box-shadow:0 0 0 2px rgba(70,84,205,.08),0 8px 22px rgba(70,84,205,.07);
 }
 
 .salon-comanda-shell .comanda-menu-salon .comanda-dish-modern-media{
   position:relative;
-  width:92px;
-  height:100%;
-  min-height:102px;
+  width:104px;
+  height:116px;
+  min-height:116px;
   display:grid;
   place-items:center;
   overflow:hidden;
@@ -868,7 +870,6 @@
   inset:0;
   width:100%;
   height:100%;
-  min-height:102px;
   display:block;
   object-fit:cover;
 }
@@ -886,72 +887,76 @@
   font-weight:700;
 }
 
+.salon-comanda-shell .comanda-menu-salon .comanda-dish-selected-qty{
+  position:absolute;
+  top:7px;
+  right:7px;
+  z-index:2;
+  min-width:27px;
+  height:27px;
+  padding:0 7px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border:1px solid #ffffffb8;
+  border-radius:999px;
+  background:var(--ops-800,#1a2151);
+  color:#fff;
+  font-size:10px;
+  font-weight:850;
+  font-variant-numeric:tabular-nums;
+  box-shadow:0 3px 10px rgba(26,33,81,.22);
+}
+
 .salon-comanda-shell .comanda-menu-salon .comanda-dish-modern-content{
   min-width:0;
-  display:flex;
-  flex-direction:column;
-  justify-content:space-between;
-  gap:10px;
-  padding:4px 4px 4px 0;
-}
-
-.salon-comanda-shell .comanda-menu-salon .comanda-dish-modern-copy{
-  min-width:0;
+  min-height:0;
   display:grid;
-  gap:5px;
-}
-
-.salon-comanda-shell .comanda-menu-salon .comanda-dish-category{
-  width:max-content;
-  max-width:100%;
-  padding:3px 7px;
-  overflow:hidden;
-  border-radius:6px;
-  background:var(--primary-100,#eef0ff);
-  color:var(--ops-700,#3946b8);
-  font-size:9px;
-  font-weight:800;
-  line-height:1.2;
-  text-overflow:ellipsis;
-  white-space:nowrap;
+  grid-template-rows:minmax(0,1fr) auto;
+  gap:10px;
+  padding:7px 4px 5px 0;
 }
 
 .salon-comanda-shell .comanda-menu-salon .comanda-dish-modern .comanda-dish-name{
   display:-webkit-box;
+  align-self:start;
   overflow:hidden;
   color:var(--ink-950,#101828);
   font-size:13.5px;
   font-weight:800;
-  line-height:1.35;
+  line-height:1.4;
   white-space:normal;
   -webkit-box-orient:vertical;
   -webkit-line-clamp:2;
 }
 
 .salon-comanda-shell .comanda-menu-salon .comanda-dish-modern-footer{
-  display:flex;
+  min-height:var(--control-height);
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 94px;
   align-items:center;
-  justify-content:space-between;
   gap:10px;
 }
 
 .salon-comanda-shell .comanda-menu-salon .comanda-dish-modern .comanda-dish-price{
+  min-width:0;
   color:var(--ink-950,#101828);
   font-family:var(--font-geist-mono,ui-monospace,monospace);
   font-size:13px;
   font-weight:750;
   font-variant-numeric:tabular-nums;
+  white-space:nowrap;
 }
 
 .salon-comanda-shell .comanda-menu-salon .comanda-dish-add-button{
-  min-height:var(--control-height);
+  width:94px;
   height:var(--control-height);
-  padding:0 11px;
+  min-height:var(--control-height);
+  padding:0 10px;
   display:inline-flex;
   align-items:center;
   justify-content:center;
   gap:6px;
-  flex-shrink:0;
   border:0;
   border-radius:6px;
   background:var(--primary-600,#4654cd);
@@ -959,13 +964,13 @@
   font-size:10.5px;
   font-weight:800;
   cursor:pointer;
-  box-shadow:0 3px 9px rgba(70,84,205,.2);
+  box-shadow:0 3px 9px rgba(70,84,205,.18);
   transition:background .15s ease,box-shadow .15s ease;
 }
 
 .salon-comanda-shell .comanda-menu-salon .comanda-dish-add-button:hover{
   background:var(--primary-700,#3946b8);
-  box-shadow:0 5px 12px rgba(70,84,205,.24);
+  box-shadow:0 5px 12px rgba(70,84,205,.22);
 }
 
 .salon-comanda-shell .comanda-menu-salon .comanda-dish-add-button:focus-visible{
@@ -973,66 +978,27 @@
   outline-offset:2px;
 }
 
-.salon-comanda-shell .comanda-menu-salon .comanda-dish-modern .comanda-dish-step{
-  min-height:var(--control-height);
-  height:var(--control-height);
-  padding:0;
-  display:grid;
-  grid-template-columns:var(--control-height) 30px var(--control-height);
-  align-items:center;
-  gap:0;
-  overflow:hidden;
-  border:1px solid var(--ops-500,#4654cd);
-  border-radius:6px;
-  background:#fff;
-  box-shadow:none;
-}
-
-.salon-comanda-shell .comanda-menu-salon .comanda-dish-modern .comanda-dish-step button{
-  width:var(--control-height);
-  height:var(--control-height);
-  display:grid;
-  place-items:center;
-  border:0;
-  border-radius:0;
-  background:#fff;
-  color:var(--ops-700,#3946b8);
-  cursor:pointer;
-}
-
-.salon-comanda-shell .comanda-menu-salon .comanda-dish-modern .comanda-dish-step button:hover{
-  background:var(--primary-100,#eef0ff);
-}
-
-.salon-comanda-shell .comanda-menu-salon .comanda-dish-modern .comanda-dish-step b{
-  min-width:30px;
-  color:var(--ops-700,#3946b8);
-  text-align:center;
-  font-size:11px;
-  font-weight:850;
-  font-variant-numeric:tabular-nums;
-}
-
 .salon-comanda-shell .comanda-menu-salon .comanda-skel{
-  min-height:118px;
+  height:132px;
+  min-height:132px;
   padding:8px;
   display:grid;
-  grid-template-columns:92px minmax(0,1fr) auto;
+  grid-template-columns:104px minmax(0,1fr) 94px;
   grid-template-rows:1fr auto;
-  gap:10px 12px;
   align-items:center;
+  gap:10px 12px;
   border-radius:14px;
 }
 
 .salon-comanda-shell .comanda-menu-salon .comanda-skel-media{
-  width:92px;
-  height:102px;
+  width:104px;
+  height:116px;
   grid-row:1/3;
   border-radius:12px;
 }
 
 .salon-comanda-shell .comanda-menu-salon .comanda-skel-name{
-  width:68%;
+  width:72%;
   align-self:end;
 }
 
@@ -1046,74 +1012,71 @@
 }
 
 .salon-comanda-shell .comanda-menu-salon .comanda-skel-add{
-  width:76px;
+  width:94px;
   height:var(--control-height);
   grid-column:3;
   grid-row:1/3;
   border-radius:6px;
 }
 
-@media(max-width:1260px){
+@media(max-width:600px){
   .salon-comanda-shell .comanda-menu-salon .comanda-dishes{
     grid-template-columns:1fr;
+    gap:10px;
+    padding:10px 8px 14px;
   }
-}
 
-@media(max-width:960px){
-  .salon-comanda-shell .comanda-menu-salon .comanda-dishes{
-    grid-template-columns:repeat(2,minmax(0,1fr));
-  }
-}
-
-@media(max-width:720px){
-  .salon-comanda-shell .comanda-menu-salon .comanda-dishes{
-    grid-template-columns:1fr;
-    padding:0 8px 12px;
-  }
-}
-
-@media(max-width:460px){
   .salon-comanda-shell .comanda-menu-salon .comanda-dish-modern{
-    grid-template-columns:78px minmax(0,1fr);
-    min-height:106px;
+    height:122px;
+    min-height:122px;
+    grid-template-columns:94px minmax(0,1fr);
   }
 
   .salon-comanda-shell .comanda-menu-salon .comanda-dish-modern-media{
-    width:78px;
-    min-height:90px;
-  }
-
-  .salon-comanda-shell .comanda-menu-salon .comanda-dish-modern-media img{
-    min-height:90px;
-  }
-
-  .salon-comanda-shell .comanda-menu-salon .comanda-dish-add-button span{
-    display:none;
-  }
-
-  .salon-comanda-shell .comanda-menu-salon .comanda-dish-add-button{
-    width:var(--control-height);
-    padding:0;
-  }
-
-  .salon-comanda-shell .comanda-menu-salon .comanda-dish-modern .comanda-dish-step{
-    grid-template-columns:var(--control-height) 24px var(--control-height);
-  }
-
-  .salon-comanda-shell .comanda-menu-salon .comanda-dish-modern .comanda-dish-step b{
-    min-width:24px;
+    width:94px;
+    height:106px;
+    min-height:106px;
   }
 
   .salon-comanda-shell .comanda-menu-salon .comanda-skel{
-    grid-template-columns:78px minmax(0,1fr) auto;
+    height:122px;
+    min-height:122px;
+    grid-template-columns:94px minmax(0,1fr) 94px;
   }
 
   .salon-comanda-shell .comanda-menu-salon .comanda-skel-media{
-    width:78px;
-    height:90px;
+    width:94px;
+    height:106px;
+  }
+}
+
+@media(max-width:390px){
+  .salon-comanda-shell .comanda-menu-salon .comanda-dish-modern{
+    grid-template-columns:86px minmax(0,1fr);
+  }
+
+  .salon-comanda-shell .comanda-menu-salon .comanda-dish-modern-media{
+    width:86px;
+  }
+
+  .salon-comanda-shell .comanda-menu-salon .comanda-dish-modern-footer{
+    grid-template-columns:minmax(0,1fr) 88px;
+    gap:8px;
+  }
+
+  .salon-comanda-shell .comanda-menu-salon .comanda-dish-add-button{
+    width:88px;
+  }
+
+  .salon-comanda-shell .comanda-menu-salon .comanda-skel{
+    grid-template-columns:86px minmax(0,1fr) 88px;
+  }
+
+  .salon-comanda-shell .comanda-menu-salon .comanda-skel-media{
+    width:86px;
   }
 
   .salon-comanda-shell .comanda-menu-salon .comanda-skel-add{
-    width:var(--control-height);
+    width:88px;
   }
 }
