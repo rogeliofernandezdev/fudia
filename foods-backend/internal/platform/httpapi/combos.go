@@ -152,6 +152,21 @@ func (a *API) listOrderCombos(w http.ResponseWriter, r *http.Request) {
 				  AND COALESCE(opa.manual_status,'available') <> 'sold_out'
 				  AND (op.stock_mode <> 'manual' OR COALESCE(opa.daily_quota,op.default_daily_quota) IS NULL
 				       OR COALESCE(opa.sold_quantity,0) < COALESCE(opa.daily_quota,op.default_daily_quota))
+				  AND (
+				    o.default_quota IS NULL OR
+				    COALESCE((
+				      SELECT sum(oi.qty)
+				      FROM order_item_combo_selections ssel
+				      JOIN order_items oi ON oi.id=ssel.order_item_id AND oi.organization_id=ssel.organization_id
+				      JOIN orders ord ON ord.id=oi.order_id AND ord.organization_id=oi.organization_id
+				      WHERE ssel.organization_id=p.organization_id
+				        AND ssel.group_id=o.group_id
+				        AND ssel.option_product_id=o.option_product_id
+				        AND ord.location_id=l.id
+				        AND ord.status<>'cancelado'
+				        AND (ord.created_at AT TIME ZONE l.timezone)::date=$3::date
+				    ),0) < o.default_quota
+				  )
 			  ) < GREATEST(g.min_selections,1)
 		)`
 
@@ -278,6 +293,21 @@ func (a *API) getOrderCombo(w http.ResponseWriter, r *http.Request) {
 			       AND COALESCE(pa.manual_status,'available') <> 'sold_out'
 			       AND (p.stock_mode <> 'manual' OR COALESCE(pa.daily_quota,p.default_daily_quota) IS NULL
 			            OR COALESCE(pa.sold_quantity,0) < COALESCE(pa.daily_quota,p.default_daily_quota))
+			       AND (
+			         o.default_quota IS NULL OR
+			         COALESCE((
+			           SELECT sum(oi.qty)
+			           FROM order_item_combo_selections ssel
+			           JOIN order_items oi ON oi.id=ssel.order_item_id AND oi.organization_id=ssel.organization_id
+			           JOIN orders ord ON ord.id=oi.order_id AND ord.organization_id=oi.organization_id
+			           WHERE ssel.organization_id=o.organization_id
+			             AND ssel.group_id=o.group_id
+			             AND ssel.option_product_id=o.option_product_id
+			             AND ord.location_id=l.id
+			             AND ord.status<>'cancelado'
+			             AND (ord.created_at AT TIME ZONE l.timezone)::date=$4::date
+			         ),0) < o.default_quota
+			       )
 			FROM menu_combo_options o
 			JOIN products p ON p.id=o.option_product_id AND p.organization_id=o.organization_id
 			JOIN locations l ON l.id=$3 AND l.organization_id=o.organization_id AND l.active
