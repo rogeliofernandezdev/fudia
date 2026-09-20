@@ -11,6 +11,8 @@ const movementLabels={
  sale_reversal:"Reversa de venta",
  sale_adjustment:"Ajuste por edición",
 };
+const kardexDateFormatter=new Intl.DateTimeFormat("es-PE",{dateStyle:"short",timeStyle:"short"});
+function formatKardexDate(value:string){const date=new Date(value);return Number.isNaN(date.getTime())?"—":kardexDateFormatter.format(date)}
 
 export function KardexPage(){
  const[productId,setProductId]=useState("");
@@ -37,7 +39,7 @@ export function KardexPage(){
     <tbody>{items.map((item,index)=>{
      const delta=Number(item.quantityDelta);
      return <tr className={index%2?"alternate":""} key={item.id}>
-      <td>{new Intl.DateTimeFormat("es-PE",{dateStyle:"short",timeStyle:"short"}).format(new Date(item.createdAt))}</td>
+      <td>{formatKardexDate(item.createdAt)}</td>
       <td><b>{item.productName}</b><small>{item.productId.slice(0,8)}</small></td>
       <td><Status tone={delta>0?"green":"blue"}>{movementLabels[item.movementType]}</Status></td>
       <td><b className="inventory-quantity">{delta>0?"+":""}{delta.toLocaleString("es-PE",{maximumFractionDigits:3})}</b></td>

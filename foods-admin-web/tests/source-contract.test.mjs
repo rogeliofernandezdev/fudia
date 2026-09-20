@@ -115,8 +115,6 @@ test("producto e inventario mantienen una sola fuente de verdad",()=>{
   assert.ok(dialog.includes("Producto existente"));
   assert.ok(dialog.includes("Nuevo producto"));
   assert.ok(dialog.includes("Una sola operación"));
-  assert.ok(inventory.includes("formatInventoryDate"),"Inventario debe tolerar timestamps inválidos sin romper la tabla");
-  assert.ok(inventory.includes("Number.isNaN(date.getTime())"),"Inventario valida la fecha antes de formatearla");
   assert.ok(dialog.includes('type="submit"'),"Guardar inventario debe enviar el formulario");
   assert.ok(dialog.includes('busy?"Guardando…":"Guardar"'),"La acción de guardado usa el texto estándar");
   assert.equal(dialog.includes('Registrar entrada'),false,"El footer no usa etiquetas de guardado específicas");
@@ -127,6 +125,11 @@ test("producto e inventario mantienen una sola fuente de verdad",()=>{
   assert.equal(inventory.includes("item.categoryName"),false,"Inventario no repite la categoría debajo del producto");
   assert.equal(inventory.includes("Actualizado"),false,"Inventario no muestra metadatos de fecha en la tabla principal");
   assert.equal(inventory.includes("formatInventoryDate"),false,"La tabla principal no necesita formatear timestamps");
+
+  const kardex=read("src/modules/supply/inventory/presentation/kardex-page.tsx");
+  assert.ok(kardex.includes("formatKardexDate"),"Kárdex debe encapsular el formateo de createdAt");
+  assert.ok(kardex.includes("Number.isNaN(date.getTime())"),"Kárdex valida createdAt antes de formatearlo");
+  assert.equal(kardex.includes('format(new Date(item.createdAt))'),false,"Kárdex no formatea timestamps sin validarlos");
 
   const inventoryApi=read("src/modules/supply/inventory/infrastructure/inventory-api.ts");
   assert.ok(inventoryApi.includes('"inventory/entries"'));
