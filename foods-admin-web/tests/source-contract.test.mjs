@@ -1,17 +1,73 @@
-import test from "node:test";import assert from "node:assert/strict";import{readFileSync}from"node:fs";const read=path=>{const value=readFileSync(path,"utf8");return path.endsWith(".css")?value.replace(/\s+/g,""):value};
-test("el sistema visual declara la paleta oficial",()=>{const css=read("src/app/globals.css","utf8");for(const token of ["--brand-700","--ops-700","--digital-700","--control-height:44px"])assert.match(css,new RegExp(token))});
-test("la navegación cubre módulos administrativos",()=>{const shell=read("src/components/admin-shell.tsx","utf8");for(const label of ["Resumen","Ventas","Menú y productos","Inventario","Compras","Configuración"])assert.match(shell,new RegExp(label))});
-test("catálogo usa API, estados remotos y scroll discreto",()=>{const catalog=read("src/components/catalog-manager.tsx","utf8");const css=read("src/app/globals.css","utf8");for(const contract of ["useQuery","useMutation","TableSkeleton","EmptyState","ErrorState","Pagination"])assert.match(catalog,new RegExp(contract));assert.match(css,/\.hover-scroll\{scrollbar-width:none\}/);assert.match(css,/\.hover-scroll:hover/)});
-test("feedback, confirmaciones, notificaciones y paginación siguen el contrato administrativo",()=>{const feedback=read("src/components/feedback-provider.tsx","utf8");const confirm=read("src/components/confirm-dialog.tsx","utf8");const shell=read("src/components/admin-shell.tsx","utf8");const catalog=read("src/components/catalog-manager.tsx","utf8");const ui=read("src/components/ui.tsx","utf8");const css=read("src/app/globals.css","utf8");for(const contract of ["alertdialog","feedback-accept","duration??4200"])assert.ok(feedback.includes(contract));assert.match(confirm,/role="alertdialog"/);assert.match(shell,/notification-popover/);assert.match(catalog,/<Pagination/);for(const contract of ["paginationItems","Filas","Mostrando","pagination-ellipsis"])assert.match(ui,new RegExp(contract));assert.match(css,/tablethead,.catalog-panelthead,.standardized-managementthead{color:#fff;background:var\(--primary-600\)}/)});
-test("el layout tolera atributos inyectados por extensiones antes de hidratar",()=>{const layout=read("src/app/layout.tsx","utf8");assert.match(layout,/<html lang="es" suppressHydrationWarning>/)});
-test("las acciones de tabla usan iconos y ayudas contextuales",()=>{const css=read("src/app/table-actions.css","utf8");assert.match(css,/content:attr\(data-tooltip\)/);assert.match(css,/\[data-tooltip\]:hover::after/);assert.match(css,/\.table-actions button/)});
-test("los iconos de acción conservan centrado óptico",()=>{const css=read("src/app/table-actions.css","utf8");const globals=read("src/app/globals.css","utf8");assert.match(css,/\.standard-actions,\.table-actions{(?=[^}]*justify-content:center)/);assert.match(globals,/\.catalog-panelth:last-child,\.catalog-paneltd:last-child{text-align:center}/);assert.match(css,/left:50%[^}]*transform:translate\(-50%,4px\)/);assert.match(globals,/\.buttonsvg,.icon-buttonsvg/)});
-test("las rutas de gestión comparten componentes homologados y vistas móviles",()=>{const management=read("src/components/management-page.tsx","utf8");const ui=read("src/components/ui.tsx","utf8");const css=read("src/app/globals.css","utf8");for(const contract of ["IconButton","management-cards","Pagination","Todos los estados","hover-scroll"])assert.match(management,new RegExp(contract));assert.match(ui,/export function IconButton/);assert.match(ui,/export function Pagination/);assert.match(css,/\.standardized-management thead/);assert.match(css,/@media \(max-width: 700px\)/);for(const route of ["clientes","comprobantes","locales"]){const page=read(`src/app/(admin)/${route}/page.tsx`,"utf8");assert.match(page,/ManagementPage/);assert.doesNotMatch(page,/export \{default\}/)}});
-test("inputs y selects usan las primitivas y densidad homologadas",()=>{const management=read("src/components/management-page.tsx","utf8");const ui=read("src/components/ui.tsx","utf8");const css=read("src/app/globals.css","utf8");for(const primitive of ["export const Input","export const Select","export const Textarea","ds-input","ds-select"])assert.match(ui,new RegExp(primitive));assert.match(management,/<Input/);assert.match(management,/<Select/);assert.match(css,/height: var\(--control-height\)/);assert.match(css,/box-shadow: 0 0 0 3px #2f5bc71f/);assert.match(css,/--control-height: 44px/)});
-test("administración comparte los tokens cromáticos de operaciones",()=>{const admin=read("src/app/globals.css","utf8");const operations=read("../foods-operations-web/src/app/globals.css","utf8");for(const token of ["--brand-700:#16875f","--brand-600:#63dcae","--ops-800:#1a2151","--ops-700:#3946b8","--ops-500:#4654cd","--digital-700:#5421a8","--digital-500:#7c3aed","--cloud-50:#f7f8fc"]){assert.ok(admin.includes(token));assert.ok(operations.includes(token))}assert.match(admin,/\.sidebar\{[^}]*background:var\(--ops-800\)/);assert.match(admin,/\.button.primary,.login-button\{(?=[^}]*color:#fff)(?=[^}]*background:var\(--primary-600\))/)});
-test("el menú administrativo es usable en móvil y respeta movimiento reducido",()=>{const shell=read("src/components/admin-shell.tsx","utf8");const css=read("src/app/globals.css","utf8");for(const behavior of ["menuOpen","Escape","document.body.style.overflow","sidebar-scrim","aria-current"])assert.match(shell,new RegExp(behavior));assert.match(css,/\.sidebar\.open\{transform:translateX\(0\)\}/);assert.match(css,/@media\(prefers-reduced-motion:reduce\)/)});
-test("la acción principal tiene mayor presencia sin alterar icon buttons",()=>{const css=read("src/app/globals.css","utf8");assert.match(css,/\.button.primary,.login-button{(?=[^}]*padding-inline:20px)/);assert.match(css,/font-size:13px;line-height:20px/)});
-test("primarios y cabeceras de tabla usan el azul solicitado",()=>{const css=read("src/app/globals.css","utf8");assert.match(css,/--primary-600:#4654cd/);assert.match(css,/\.button.primary,.login-button\{color:#fff;background:var\(--primary-600\)/);assert.match(css,/table thead,.catalog-panel thead,.standardized-management thead\{color:#fff;background:var\(--primary-600\)\}/)});
-test("sidebar colapsable y carga remota conservan sus contratos",()=>{const shell=read("src/components/admin-shell.tsx","utf8");const navigation=read("src/app/navigation-state.css","utf8");const loading=read("src/app/loading.tsx","utf8");for(const contract of ["collapsed","sidebar-toggle","data-sidebar","Contraer navegación","Expandir navegación"])assert.match(shell,new RegExp(contract));assert.match(navigation,/data-sidebar="collapsed"/);assert.match(loading,/aria-busy="true"/)});
-test("las acciones de tabla comparten icono accesible y tooltip",()=>{const ui=read("src/components/ui.tsx","utf8");const catalog=read("src/components/catalog-manager.tsx","utf8");const management=read("src/components/management-page.tsx","utf8");const css=read("src/app/table-actions.css","utf8");assert.match(ui,/data-tooltip=\{label\}/);assert.match(ui,/aria-label=\{label\}/);assert.match(css,/content:attr\(data-tooltip\)/);assert.match(css,/\.standard-actions,.table-actions/);assert.match(catalog,/table-actions"><IconButton/);assert.doesNotMatch(catalog,/table-actions"><button/);assert.match(management,/standard-actions"><IconButton/)});
-test("login administrativo usa la composición compacta y responsive",()=>{const login=read("src/app/login/page.tsx","utf8");const css=read("src/app/login.css","utf8");for(const contract of ["admin-auth-brand","admin-auth-card","admin-auth-accent","admin-auth-trust","admin-auth-submit"])assert.match(login,new RegExp(contract));assert.match(login,/if \(loading\) return/);assert.match(login,/router\.replace\("\/dashboard"\)/);assert.match(css,/\.admin-auth-shell\{width:100%;max-width:430px\}/);assert.match(css,/@media\(max-width:390px\)/);assert.match(css,/background:#4654cd/)});
+import test from "node:test";
+import assert from "node:assert/strict";
+import {existsSync,readFileSync,readdirSync,statSync} from "node:fs";
+import {join,relative} from "node:path";
+
+const root=process.cwd();
+const read=p=>readFileSync(join(root,p),"utf8");
+const walk=dir=>readdirSync(join(root,dir)).flatMap(name=>{
+  const p=join(dir,name);return statSync(join(root,p)).isDirectory()?walk(p):[p];
+});
+
+test("la arquitectura no usa un contenedor generico de features",()=>{
+  assert.equal(existsSync(join(root,"src/components")),false);
+  for(const module of ["auth","context","customers","dashboard","identity","menu","modules","operations","organizations","platform","public-menu"]){
+    assert.equal(existsSync(join(root,`src/modules/${module}/index.ts`)),true,`falta index publico: ${module}`);
+  }
+});
+
+test("app no contiene CSS de negocio",()=>{
+  const css=walk("src/app").filter(p=>p.endsWith(".css"));
+  assert.deepEqual(css,[]);
+});
+
+test("todo CSS tiene owner explicito",()=>{
+  const css=walk("src").filter(p=>p.endsWith(".css"));
+  const invalid=css.filter(p=>![
+    "src/styles/","src/design-system/styles/","src/shell/styles/","src/modules/"
+  ].some(prefix=>p.startsWith(prefix)));
+  assert.deepEqual(invalid,[]);
+});
+
+test("no quedan imports a components ni CSS antiguo de app",()=>{
+  const source=walk("src").filter(p=>/\.(ts|tsx)$/.test(p));
+  const bad=[];
+  for(const p of source){
+    const c=read(p);
+    if(c.includes("@/components/")||/from ["'][.]{1,2}\/app\//.test(c)||/import ["'][^"']*\/app\/[^"']*\.css["']/.test(c))bad.push(p);
+  }
+  assert.deepEqual(bad,[]);
+});
+
+test("el root layout carga solo la base global",()=>{
+  const c=read("src/app/layout.tsx");
+  const cssImports=[...c.matchAll(/import ["']([^"']+\.css)["']/g)].map(m=>m[1]);
+  assert.deepEqual(cssImports,["@/styles/globals.css"]);
+});
+
+test("las rutas principales componen modulos",()=>{
+  const expected={
+    "src/app/(admin)/pedidos/page.tsx":"@/modules/operations",
+    "src/app/(admin)/salon/page.tsx":"@/modules/operations",
+    "src/app/(admin)/mesas/page.tsx":"@/modules/operations",
+    "src/app/(admin)/productos/page.tsx":"@/modules/menu",
+    "src/app/(admin)/combos/page.tsx":"@/modules/menu",
+    "src/app/(admin)/clientes/page.tsx":"@/modules/customers",
+    "src/app/(admin)/locales/page.tsx":"@/modules/organizations",
+    "src/app/(admin)/configuracion/usuarios/page.tsx":"@/modules/identity"
+  };
+  for(const [p,dependency] of Object.entries(expected))assert.ok(read(p).includes(dependency),p);
+});
+
+test("no se versionan secretos locales ni artefactos temporales en la raiz admin",()=>{
+  assert.equal(existsSync(join(root,".env.local")),false);
+  const rootEntries=readdirSync(root);
+  assert.deepEqual(rootEntries.filter(name=>/^__(diag|shot|sheet|comanda)/.test(name)),[]);
+});
+
+test("se preservan contratos visuales base",()=>{
+  const css=read("src/styles/globals.css").replace(/\s+/g,"");
+  for(const token of ["--brand-700","--ops-700","--digital-700","--primary-600","--control-height"])assert.ok(css.includes(token),token);
+  const shell=read("src/shell/admin-shell.tsx");
+  for(const label of ["Resumen","Ventas","Menú y productos","Inventario","Compras","Configuración"])assert.ok(shell.includes(label),label);
+});

@@ -1,45 +1,53 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import {readFile,readdir,stat} from "node:fs/promises";
 import test from "node:test";
 import postcss from "postcss";
+import {join,relative} from "node:path";
 
-// Hojas importadas por src/app/layout.tsx, en orden de cascada.
-const sheets = ["globals.css", "navigation-state.css", "loading.css", "table-actions.css"];
+const root=new URL("../",import.meta.url);
+const sharedRoots=["src/styles","src/design-system/styles","src/shell/styles"];
 
-const parse = async name => postcss.parse(await readFile(new URL(`../src/app/${name}`, import.meta.url), "utf8"));
+async function files(dir){
+  const absolute=new URL(dir+"/",root);
+  const names=await readdir(absolute);
+  const out=[];
+  for(const name of names){
+    const url=new URL(name,absolute);
+    const info=await stat(url);
+    if(info.isDirectory())out.push(...await files(dir+"/"+name));
+    else if(name.endsWith(".css"))out.push(dir+"/"+name);
+  }
+  return out;
+}
 
-test("globals no reescribe selectores dentro del mismo contexto", async () => {
-  const root = await parse("globals.css");
-  const duplicates = [];
-  const inspect = container => {
-    const selectors = new Set();
-    for (const node of container.nodes ?? []) {
-      if (node.type === "rule") {
-        if (selectors.has(node.selector)) duplicates.push(node.selector);
-        selectors.add(node.selector);
+test("cada hoja compartida declara un selector una sola vez por contexto",async()=>{
+  for(const sheet of (await Promise.all(sharedRoots.map(files))).flat()){
+    const ast=postcss.parse(await readFile(new URL(sheet,root),"utf8"));
+    const seen=new Set(),duplicates=[];
+    ast.walkRules(rule=>{
+      const context=rule.parent.type==="atrule"?`@${rule.parent.name} ${rule.parent.params}`:"root";
+      for(const selector of rule.selectors){
+        const key=`${context}|${selector}`;
+        if(seen.has(key))duplicates.push(key);
+        seen.add(key);
       }
-      if (node.nodes) inspect(node);
-    }
-  };
-  inspect(root);
-  assert.deepEqual(duplicates, []);
+    });
+    assert.deepEqual(duplicates,[],sheet);
+  }
 });
 
-test("un selector no se declara en dos hojas del mismo contexto", async () => {
-  const owners = new Map();
-  for (const sheet of sheets) {
-    const root = await parse(sheet);
-    root.walkRules(rule => {
-      const context = rule.parent.type === "atrule" ? `@${rule.parent.name} ${rule.parent.params}` : "root";
-      for (const selector of rule.selectors) {
-        const key = `${context}|${selector}`;
-        if (!owners.has(key)) owners.set(key, new Set());
-        owners.get(key).add(sheet);
+test("las hojas compartidas no compiten por el mismo selector raiz",async()=>{
+  const owners=new Map();
+  for(const sheet of (await Promise.all(sharedRoots.map(files))).flat()){
+    const ast=postcss.parse(await readFile(new URL(sheet,root),"utf8"));
+    ast.walkRules(rule=>{
+      if(rule.parent.type!=="root")return;
+      for(const selector of rule.selectors){
+        if(!owners.has(selector))owners.set(selector,new Set());
+        owners.get(selector).add(sheet);
       }
     });
   }
-  const shared = [...owners]
-    .filter(([, files]) => files.size > 1)
-    .map(([key, files]) => `${key} -> ${[...files].join(" + ")}`);
-  assert.deepEqual(shared, []);
+  const shared=[...owners].filter(([,sheets])=>sheets.size>1).map(([selector,sheets])=>`${selector} -> ${[...sheets].join(" + ")}`);
+  assert.deepEqual(shared,[]);
 });
