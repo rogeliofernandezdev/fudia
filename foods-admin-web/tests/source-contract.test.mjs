@@ -194,6 +194,7 @@ test("compras concentra orden recepcion y altas de abastecimiento",()=>{
 
   assert.ok(purchases.includes("PurchaseItemDialog"),"La alta de artículo vive dentro del flujo existente de Compras");
   assert.ok(purchasesCss.includes(".purchase-order-modal>.modal-busy{inset:0"),"Guardar una OC bloquea todo el modal");
+  assert.ok(purchases.includes('inert={busy}'),"Guardar una OC desactiva interacción de teclado y puntero en el formulario");
   assert.ok(purchasesCss.includes(".purchase-order-modal{display:flex;flex-direction:column"),"El scroll de la OC no desplaza el overlay de guardado");
   assert.ok(purchasesCss.includes("overflow-y:auto;overscroll-behavior:contain"),"El scroll queda contenido en el cuerpo de la OC");
   assert.ok(purchases.includes("PurchaseReceiptDialog"),"La recepción vive dentro del mismo módulo Compras");
