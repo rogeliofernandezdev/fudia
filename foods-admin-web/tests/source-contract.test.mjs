@@ -182,6 +182,39 @@ test("producto e inventario mantienen una sola fuente de verdad",()=>{
   assert.ok(availability.includes("La existencia se actualiza únicamente desde Inventario"));
 });
 
+test("compras concentra orden recepcion y altas de abastecimiento",()=>{
+  const purchases=read("src/modules/supply/purchases/presentation/purchases-page.tsx");
+  const itemDialog=read("src/modules/supply/purchases/presentation/purchase-item-dialog.tsx");
+  const receiptDialog=read("src/modules/supply/purchases/presentation/purchase-receipt-dialog.tsx");
+  const api=read("src/modules/supply/purchases/infrastructure/purchases-api.ts");
+  const inventory=read("src/modules/supply/inventory/presentation/inventory-page.tsx");
+
+  assert.ok(purchases.includes("PurchaseItemDialog"),"La alta de artículo vive dentro del flujo existente de Compras");
+  assert.ok(purchases.includes("PurchaseReceiptDialog"),"La recepción vive dentro del mismo módulo Compras");
+  assert.ok(purchases.includes("partially_received"),"Compras representa una recepción parcial sin cerrar la orden");
+  for(const column of ["SOLICITADO","RECIBIDO","PENDIENTE"])assert.ok(purchases.includes(column),column);
+  assert.ok(purchases.includes("Buscar artículo existente..."),"La línea permite buscar un artículo ya existente");
+  assert.ok(purchases.includes("Crear nuevo artículo"),"La línea ofrece alta cuando el artículo no existe");
+
+  assert.ok(itemDialog.includes("Nuevo producto vendible"),"Compras conserva el alta de mercadería vendible");
+  assert.ok(itemDialog.includes("Nuevo insumo"),"Compras conserva el alta de insumo no vendible");
+  assert.ok(itemDialog.includes("Stock inicial: 0"),"Crear el artículo desde Compras no mueve inventario");
+  assert.ok(itemDialog.includes("quantityControl"),false);
+  assert.ok(itemDialog.includes("no se vuelve vendible"),"El insumo no se convierte automáticamente en Producto");
+
+  assert.ok(receiptDialog.includes("Registra únicamente lo que llegó."),"Recepción registra cantidades reales");
+  assert.ok(receiptDialog.includes("pendingQuantity"),"Recepción parte de lo pendiente por línea");
+  assert.ok(receiptDialog.includes("Confirmar recepción"),"Solo confirmar recepción dispara la entrada real");
+
+  assert.ok(api.includes('"purchase-inventory-items"'),"Compras usa su propio límite para crear artículos");
+  assert.ok(api.includes("purchase-orders/"),"Recepción permanece vinculada a la orden existente");
+  assert.ok(api.includes("purchaseOrderItemId"),"La recepción identifica cada línea de la orden");
+  assert.equal(api.includes('"inventory/entries"'),false,"Compras no usa la antigua entrada manual de Inventario");
+
+  assert.equal(inventory.includes("Nuevo producto vendible"),false,"Inventario no recupera creación de productos");
+  assert.equal(inventory.includes("Nuevo insumo"),false,"Inventario no recupera creación de insumos");
+});
+
 test("combos conserva la misma tabla en movil y el shell no desborda",()=>{
   const combos=read("src/modules/menu/combos/presentation/combos-page.tsx");
   assert.ok(combos.includes('className="table-wrap hover-scroll"'));
@@ -234,7 +267,8 @@ test("las rutas principales componen modulos",()=>{
     "src/app/(admin)/locales/page.tsx":"@/modules/organizations",
     "src/app/(admin)/configuracion/usuarios/page.tsx":"@/modules/identity",
     "src/app/(admin)/inventario/page.tsx":"@/modules/supply",
-    "src/app/(admin)/kardex/page.tsx":"@/modules/supply"
+    "src/app/(admin)/kardex/page.tsx":"@/modules/supply",
+    "src/app/(admin)/compras/page.tsx":"@/modules/supply"
   };
   for(const [p,dependency] of Object.entries(expected))assert.ok(read(p).includes(dependency),p);
 });
