@@ -32,7 +32,8 @@ func (a *API) listZones(w http.ResponseWriter, r *http.Request) {
 	if size < 1 {
 		size = 50
 	}
-	rows, err := a.db.Query(r.Context(), `SELECT id,name,sort_order,active FROM zones WHERE organization_id=$1 AND location_id=$2 ORDER BY sort_order,name LIMIT $3 OFFSET $4`, s.OrganizationID, s.LocationID, size, (page-1)*size)
+	status := strings.TrimSpace(r.URL.Query().Get("status"))
+	rows, err := a.db.Query(r.Context(), `SELECT id,name,sort_order,active FROM zones WHERE organization_id=$1 AND location_id=$2 AND ($3='' OR ($3='active' AND active) OR ($3='inactive' AND NOT active)) ORDER BY sort_order,name LIMIT $4 OFFSET $5`, s.OrganizationID, s.LocationID, status, size, (page-1)*size)
 	if err != nil {
 		fail(w, 503, "zones_unavailable", "No pudimos cargar las zonas.")
 		return
@@ -48,7 +49,7 @@ func (a *API) listZones(w http.ResponseWriter, r *http.Request) {
 		items = append(items, z)
 	}
 	var total int
-	_ = a.db.QueryRow(r.Context(), `SELECT count(*) FROM zones WHERE organization_id=$1 AND location_id=$2`, s.OrganizationID, s.LocationID).Scan(&total)
+	_ = a.db.QueryRow(r.Context(), `SELECT count(*) FROM zones WHERE organization_id=$1 AND location_id=$2 AND ($3='' OR ($3='active' AND active) OR ($3='inactive' AND NOT active))`, s.OrganizationID, s.LocationID, status).Scan(&total)
 	writeJSON(w, 200, map[string]any{"items": items, "total": total, "page": page, "pageSize": size})
 }
 
