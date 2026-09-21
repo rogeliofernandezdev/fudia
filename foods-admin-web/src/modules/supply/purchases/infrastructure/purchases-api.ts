@@ -122,7 +122,7 @@ export function listPurchaseReceipts(input:{q?:string;from?:string;to?:string;pa
 export function getPurchaseReceipt(id:string){return apiFetch<PurchaseReceiptDetail>(`purchase-receipts/${id}`)}
 export function createPurchaseReturn(draft:PurchaseReturnDraft){
  return apiFetch<{id:string;code:string;kind:string;purchaseOrderId:string;number:string}>(`purchase-receipts/${draft.purchaseReceiptId}/returns`,{method:"POST",body:JSON.stringify({
-  kind:draft.kind,reason:draft.reason.trim(),notes:draft.notes.trim(),
+  idempotencyKey:draft.idempotencyKey,kind:draft.kind,reason:draft.reason.trim(),notes:draft.notes.trim(),
   items:draft.items.filter(i=>Number(i.quantity)>0).map(i=>({purchaseReceiptItemId:i.purchaseReceiptItemId,quantity:Number(i.quantity)})),
  })})
 }
