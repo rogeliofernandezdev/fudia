@@ -479,8 +479,10 @@ function PurchaseOrderDialog({initial,suppliers,inventory,currencySymbol,busy,cl
                   <b>{selected?.name??"Artículo no disponible"}</b>
                   <small>{selected?(selected.kind==="ingredient"?"Insumo":"Producto vendible")+" · Unidad base: "+selected.unit:"Selecciona otro artículo"}</small>
                 </div>
-                <button type="button" className="purchase-line-change" onClick={()=>setItemTarget(index)}>Cambiar</button>
-                <button type="button" className="purchase-line-remove" onClick={()=>remove(index)} aria-label={"Quitar "+(selected?.name??"artículo")}><Icon name="close" size={14}/><span>Quitar</span></button>
+                <div className="purchase-line-actions" aria-label="Acciones del artículo">
+                  <button type="button" className="purchase-line-change" onClick={()=>setItemTarget(index)}><Icon name="edit" size={14}/><span>Cambiar artículo</span></button>
+                  <button type="button" className="purchase-line-remove" onClick={()=>remove(index)} aria-label={"Quitar "+(selected?.name??"artículo")}><Icon name="close" size={14}/><span>Quitar</span></button>
+                </div>
               </div>
               <div className="purchase-line-fields">
                 <label>Presentación<Select {...register(`items.${index}.presentationId`)} disabled={!selected} aria-invalid={Boolean(errors.items?.[index]?.presentationId)}><option value="">Selecciona...</option>{(selected?.presentations??[]).map(presentation=><option value={presentation.id} key={presentation.id}>{presentationName(presentation.presentationType,presentation.unitsPerPresentation,selected?.unit)}</option>)}</Select>{errors.items?.[index]?.presentationId?.message&&<small className="wizard-field-error">{errors.items[index]?.presentationId?.message}</small>}</label>
