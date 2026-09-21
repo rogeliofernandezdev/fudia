@@ -110,17 +110,14 @@ export function KitchenBoard(){
     <PageHeader
       eyebrow="OPERACIÓN EN COCINA"
       title="Cocina"
-      description="Comandas confirmadas, preparación y salida en una sola vista."
+      description="Prepara y libera pedidos del local con una cola clara por estado."
     />
 
-    <section className="kitchen-toolbar">
-      <div className="kitchen-toolbar-main">
-        <div><h2>Comandas activas</h2><p>Ordenadas por urgencia dentro de cada estado.</p></div>
-        {attention>0&&<span className="kitchen-attention"><Icon name="alert" size={13}/>{attention} {attention===1?"requiere":"requieren"} atención</span>}
-      </div>
-      <div className="kitchen-toolbar-controls">
-        <label>Canal<Select value={channel} onChange={event=>setChannel(event.target.value)} aria-label="Filtrar comandas por canal"><option value="">Todos los canales</option>{(tickets.data?.channelOptions??[]).map(option=><option value={option.value} key={option.value}>{option.label}</option>)}</Select></label>
-        <div className={`kitchen-live ${tickets.isFetching?"refreshing":""}`}><i/><span>{tickets.isFetching?"Actualizando…":"En vivo"}</span></div>
+    <section className="kitchen-controlbar" aria-label="Controles de cocina">
+      <label className="kitchen-channel-filter"><span>Canal</span><Select value={channel} onChange={event=>setChannel(event.target.value)} aria-label="Filtrar comandas por canal"><option value="">Todos los canales</option>{(tickets.data?.channelOptions??[]).map(option=><option value={option.value} key={option.value}>{option.label}</option>)}</Select></label>
+      <div className="kitchen-controlbar-status">
+        {attention>0&&<span className="kitchen-attention"><Icon name="alert" size={12}/>{attention} {attention===1?"con demora":"con demora"}</span>}
+        <div className={`kitchen-live ${tickets.isFetching?"refreshing":""}`}><i/><span>{tickets.isFetching?"Actualizando":"En vivo"}</span></div>
       </div>
     </section>
 
@@ -150,7 +147,7 @@ export function KitchenBoard(){
                   </div>
                   <div className={`kitchen-ticket-time ${tone}`}>
                     <strong>{elapsed}</strong><span>min</span>
-                    {ticket.targetMinutes&&ticket.status!=="listo"&&<small>/ {ticket.targetMinutes}</small>}
+                    {ticket.targetMinutes&&ticket.status!=="listo"&&<small>· {ticket.targetMinutes}</small>}
                   </div>
                 </div>
 
@@ -167,9 +164,9 @@ export function KitchenBoard(){
                   </div>)}
                 </div>
 
-                {ticket.notes&&<div className="kitchen-ticket-note"><Icon name="edit" size={13}/><span>{ticket.notes}</span></div>}
+                {ticket.notes&&<div className="kitchen-ticket-note"><Icon name="edit" size={12}/><span>{ticket.notes}</span></div>}
 
-                <footer>{canManage&&next?<Button kind={next==="listo"?"success":"primary"} icon={next==="listo"?"check":"chefHat"} disabled={advance.isPending} onClick={()=>advance.mutate({ticket,status:next})}>{busyId===ticket.id?"Actualizando…":next==="preparando"?"Iniciar preparación":"Marcar listo"}</Button>:ticket.status==="listo"?<span className="kitchen-ready-label"><Icon name="check" size={13}/>Esperando entrega</span>:null}</footer>
+                <footer>{canManage&&next?<Button className="kitchen-ticket-action" kind={next==="listo"?"success":"primary"} icon={next==="listo"?"check":"chefHat"} disabled={advance.isPending} onClick={()=>advance.mutate({ticket,status:next})}>{busyId===ticket.id?"Actualizando…":next==="preparando"?"Iniciar":"Marcar listo"}</Button>:ticket.status==="listo"?<span className="kitchen-ready-label"><Icon name="check" size={12}/>Listo para entregar</span>:null}</footer>
               </article>;
             })}
             {!laneItems.length&&<div className="kitchen-lane-empty"><Icon name={lane.icon} size={18}/><b>Sin comandas</b><span>{lane.status==="confirmado"?"Los pedidos confirmados aparecerán aquí.":lane.status==="preparando"?"Nada se está preparando ahora.":"No hay pedidos esperando entrega."}</span></div>}
