@@ -10,6 +10,7 @@ export function PurchaseReceiptDialog({order,busy,close,save}:{order:PurchaseOrd
   const{location}=useSession();
   const defaults:PurchaseReceiptDraft={
     purchaseOrderId:order.id,
+    idempotencyKey:crypto.randomUUID(),
     notes:"",
     items:order.items.map(item=>({purchaseOrderItemId:item.id,quantity:item.pendingQuantity})),
   };
