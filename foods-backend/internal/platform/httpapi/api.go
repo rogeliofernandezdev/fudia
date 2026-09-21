@@ -196,7 +196,7 @@ func (a *API) requirePermission(permission string, next http.Handler) http.Handl
 			return
 		}
 		var allowed bool
-		err := a.db.QueryRow(r.Context(), `SELECT EXISTS(SELECT 1 FROM user_roles ur JOIN roles ro ON ro.id=ur.role_id WHERE ur.user_id=$1 AND ur.location_id=$2 AND ro.active AND (ro.permissions @> ARRAY['*']::text[] OR ro.permissions @> ARRAY[$3]::text[]))`, s.UserID, s.LocationID, permission).Scan(&allowed)
+		err := a.db.QueryRow(r.Context(), `SELECT EXISTS(SELECT 1 FROM user_roles ur JOIN roles ro ON ro.id=ur.role_id WHERE ur.user_id=$1 AND ur.location_id=$2 AND ro.organization_id=$4 AND ro.active AND (ro.permissions @> ARRAY['*']::text[] OR ro.permissions @> ARRAY[$3]::text[]))`, s.UserID, s.LocationID, permission, s.OrganizationID).Scan(&allowed)
 		if err != nil {
 			fail(w, 503, "permissions_unavailable", "No pudimos validar tus permisos.")
 			return
@@ -371,12 +371,12 @@ func (a *API) getContext(w http.ResponseWriter, r *http.Request) {
 	menuAccess := []string{"*"}
 	if !platformAdmin {
 		permissions = []string{}
-		if err = a.db.QueryRow(r.Context(), `SELECT COALESCE(array_agg(DISTINCT permission), ARRAY[]::text[]) FROM user_roles ur JOIN roles ro ON ro.id=ur.role_id CROSS JOIN LATERAL unnest(ro.permissions) permission WHERE ur.user_id=$1 AND ur.location_id=$2 AND ro.active`, s.UserID, s.LocationID).Scan(&permissions); err != nil {
+		if err = a.db.QueryRow(r.Context(), `SELECT COALESCE(array_agg(DISTINCT permission), ARRAY[]::text[]) FROM user_roles ur JOIN roles ro ON ro.id=ur.role_id CROSS JOIN LATERAL unnest(ro.permissions) permission WHERE ur.user_id=$1 AND ur.location_id=$2 AND ro.organization_id=$3 AND ro.active`, s.UserID, s.LocationID, s.OrganizationID).Scan(&permissions); err != nil {
 			fail(w, 503, "permissions_unavailable", "No pudimos cargar tus permisos.")
 			return
 		}
 		menuAccess = []string{}
-		if err = a.db.QueryRow(r.Context(), `SELECT COALESCE(array_agg(DISTINCT access_key), ARRAY[]::text[]) FROM user_roles ur JOIN roles ro ON ro.id=ur.role_id CROSS JOIN LATERAL unnest(ro.menu_access) access_key WHERE ur.user_id=$1 AND ur.location_id=$2 AND ro.active`, s.UserID, s.LocationID).Scan(&menuAccess); err != nil {
+		if err = a.db.QueryRow(r.Context(), `SELECT COALESCE(array_agg(DISTINCT access_key), ARRAY[]::text[]) FROM user_roles ur JOIN roles ro ON ro.id=ur.role_id CROSS JOIN LATERAL unnest(ro.menu_access) access_key WHERE ur.user_id=$1 AND ur.location_id=$2 AND ro.organization_id=$3 AND ro.active`, s.UserID, s.LocationID, s.OrganizationID).Scan(&menuAccess); err != nil {
 			fail(w, 503, "access_unavailable", "No pudimos cargar tus accesos al sistema.")
 			return
 		}
