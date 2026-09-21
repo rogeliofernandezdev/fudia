@@ -429,3 +429,22 @@ test("identidad alinea permisos administracion plataforma y perfil",()=>{
   assert.ok(profile.includes("saveMyProfile"),"Perfil guarda datos y contraseña por su endpoint real");
   assert.ok(identityApi.includes('apiFetch<MyProfile>("me"'),"Perfil consulta el endpoint autenticado propio");
 });
+
+
+test("perfil respeta inputs y formularios del design system",()=>{
+  const profile=read("src/modules/identity/presentation/profile-page.tsx");
+  const css=read("src/modules/identity/presentation/profile-page.css");
+  const schema=read("src/modules/identity/domain/profile-schema.ts");
+
+  assert.ok(profile.includes("useForm<MyProfileDraft>"),"Perfil usa React Hook Form");
+  assert.ok(profile.includes("resolver:profileResolver"),"Perfil delega validación a Zod");
+  assert.ok(profile.includes("<Input"),"Perfil reutiliza Input del design system");
+  assert.ok(profile.includes('icon="check"'),"La acción de guardar usa el icono homologado");
+  assert.ok(profile.includes('save.isPending?"Guardando…":"Guardar"'),"Guardar conserva el texto estándar");
+  assert.ok(schema.includes('z.object({'),"Perfil define esquema Zod");
+  assert.ok(schema.includes('newPassword.length<8'),"Perfil valida la contraseña nueva");
+  assert.equal(css.includes(".profile-field input{"),false,"Perfil no redefine localmente la geometría de Input");
+  assert.equal(css.includes(".profile-field .ds-input{"),false,"Perfil no sobrescribe la primitiva Input");
+  assert.ok(css.includes(".profile-field .ds-input[readonly]"),"El único estado local del input es el modo solo lectura");
+  assert.ok(css.includes("height:var(--control-height)"),"El skeleton de controles sigue el token de altura");
+});
