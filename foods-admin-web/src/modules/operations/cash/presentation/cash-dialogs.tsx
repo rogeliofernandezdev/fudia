@@ -1,10 +1,34 @@
 "use client";
 import {useForm} from "react-hook-form";
 import {Button,Icon,Input,Status,Textarea} from "@/design-system";
-import {cashMovementResolver,closeCashShiftResolver,openCashShiftResolver} from "../domain/cash-schema";
-import type {CashMovementDraft,CashMovementType,CashShift,CloseCashShiftDraft,OpenCashShiftDraft} from "../domain/types";
+import {cashMovementResolver,cashRegisterResolver,closeCashShiftResolver,openCashShiftResolver} from "../domain/cash-schema";
+import type {CashMovementDraft,CashMovementType,CashRegister,CashRegisterDraft,CashShift,CloseCashShiftDraft,OpenCashShiftDraft} from "../domain/types";
 
-export function OpenCashShiftDialog({busy,close,save}:{busy:boolean;close:()=>void;save:(draft:OpenCashShiftDraft)=>void}){
+export function CashRegisterDialog({busy,close,save}:{busy:boolean;close:()=>void;save:(draft:CashRegisterDraft)=>void}){
+  const{register,handleSubmit,formState:{errors}}=useForm<CashRegisterDraft>({
+    defaultValues:{name:""},
+    resolver:cashRegisterResolver,
+    mode:"onSubmit",
+    reValidateMode:"onChange",
+  });
+  return <div className="modal-backdrop modal-overlay-in"><section className="crud-modal cash-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-register-title" aria-busy={busy}>
+    <div className="modal-accent"/>
+    <header><span className="modal-title-icon"><Icon name="sales" size={18}/></span><div><small>CAJAS</small><h2 id="cash-register-title">Registrar caja</h2></div><button type="button" aria-label="Cerrar" onClick={close} disabled={busy}><Icon name="close"/></button></header>
+    <form onSubmit={handleSubmit(save)} noValidate inert={busy}>
+      <div className="cash-dialog-body">
+        <p className="cash-dialog-intro">Crea una caja del local. Luego podrás iniciar y cerrar turnos sobre esta caja sin perder su historial.</p>
+        <label>Nombre de la caja
+          <Input autoFocus maxLength={80} {...register("name")} aria-invalid={Boolean(errors.name)} placeholder="Ej. Caja principal"/>
+          {errors.name?.message&&<small className="wizard-field-error">{errors.name.message}</small>}
+        </label>
+      </div>
+      <footer><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy}>{busy?"Registrando…":"Registrar caja"}</Button></footer>
+    </form>
+    {busy&&<div className="modal-busy" role="status"><i/><span>Registrando caja…</span></div>}
+  </section></div>;
+}
+
+export function OpenCashShiftDialog({cashRegister,busy,close,save}:{cashRegister:CashRegister;busy:boolean;close:()=>void;save:(draft:OpenCashShiftDraft)=>void}){
   const{register,handleSubmit,formState:{errors}}=useForm<OpenCashShiftDraft>({
     defaultValues:{openingAmount:"0",note:""},
     resolver:openCashShiftResolver,
@@ -13,10 +37,10 @@ export function OpenCashShiftDialog({busy,close,save}:{busy:boolean;close:()=>vo
   });
   return <div className="modal-backdrop modal-overlay-in"><section className="crud-modal cash-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-open-title" aria-busy={busy}>
     <div className="modal-accent"/>
-    <header><span className="modal-title-icon"><Icon name="sales" size={18}/></span><div><small>CAJA</small><h2 id="cash-open-title">Abrir turno</h2></div><button type="button" aria-label="Cerrar" onClick={close} disabled={busy}><Icon name="close"/></button></header>
+    <header><span className="modal-title-icon"><Icon name="clock" size={18}/></span><div><small>{cashRegister.name.toUpperCase()}</small><h2 id="cash-open-title">Iniciar turno</h2></div><button type="button" aria-label="Cerrar" onClick={close} disabled={busy}><Icon name="close"/></button></header>
     <form onSubmit={handleSubmit(save)} noValidate inert={busy}>
       <div className="cash-dialog-body">
-        <p className="cash-dialog-intro">Registra el efectivo con el que inicia tu caja. Este monto será la base del arqueo al cierre.</p>
+        <p className="cash-dialog-intro">Estás iniciando un turno en <b>{cashRegister.name}</b>. Registra el efectivo inicial que quedará como base del arqueo.</p>
         <label>Fondo inicial
           <Input autoFocus type="number" min="0" step="0.01" inputMode="decimal" {...register("openingAmount")} aria-invalid={Boolean(errors.openingAmount)} placeholder="0.00"/>
           {errors.openingAmount?.message&&<small className="wizard-field-error">{errors.openingAmount.message}</small>}
@@ -26,9 +50,9 @@ export function OpenCashShiftDialog({busy,close,save}:{busy:boolean;close:()=>vo
           {errors.note?.message&&<small className="wizard-field-error">{errors.note.message}</small>}
         </label>
       </div>
-      <footer><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy}>{busy?"Abriendo…":"Abrir turno"}</Button></footer>
+      <footer><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy}>{busy?"Iniciando…":"Iniciar turno"}</Button></footer>
     </form>
-    {busy&&<div className="modal-busy" role="status"><i/><span>Abriendo turno…</span></div>}
+    {busy&&<div className="modal-busy" role="status"><i/><span>Iniciando turno…</span></div>}
   </section></div>;
 }
 
@@ -79,7 +103,7 @@ export function CloseCashShiftDialog({shift,busy,formatMoney,close,save}:{shift:
   const differenceTone=Math.abs(difference)<.005?"balanced":difference>0?"positive":"negative";
   return <div className="modal-backdrop modal-overlay-in"><section className="crud-modal cash-modal cash-close-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-close-title" aria-busy={busy}>
     <div className="modal-accent"/>
-    <header><span className="modal-title-icon"><Icon name="lock" size={18}/></span><div><small>ARQUEO DE CAJA</small><h2 id="cash-close-title">Cerrar turno</h2></div><button type="button" aria-label="Cerrar" onClick={close} disabled={busy}><Icon name="close"/></button></header>
+    <header><span className="modal-title-icon"><Icon name="lock" size={18}/></span><div><small>{shift.cashRegisterName.toUpperCase()}</small><h2 id="cash-close-title">Cerrar turno</h2></div><button type="button" aria-label="Cerrar" onClick={close} disabled={busy}><Icon name="close"/></button></header>
     <form onSubmit={handleSubmit(save)} noValidate inert={busy}>
       <div className="cash-dialog-body">
         <section className="cash-close-summary">
@@ -109,9 +133,10 @@ export function CashShiftDetailDialog({shift,formatMoney,formatDateTime,close}:{
   const variance=Number(shift.varianceAmount??0);
   return <div className="modal-backdrop modal-overlay-in"><section className="crud-modal cash-detail-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-detail-title">
     <div className="modal-accent"/>
-    <header><span className="modal-title-icon"><Icon name="sales" size={18}/></span><div><small>DETALLE DE TURNO</small><h2 id="cash-detail-title">{shift.code}</h2></div><button type="button" aria-label="Cerrar" onClick={close}><Icon name="close"/></button></header>
+    <header><span className="modal-title-icon"><Icon name="sales" size={18}/></span><div><small>{shift.cashRegisterName.toUpperCase()}</small><h2 id="cash-detail-title">{shift.code}</h2></div><button type="button" aria-label="Cerrar" onClick={close}><Icon name="close"/></button></header>
     <div className="cash-detail-body">
       <section className="cash-detail-head">
+        <div><small>CAJA</small><b>{shift.cashRegisterName}</b></div>
         <div><small>CAJERO</small><b>{shift.openedByName}</b></div>
         <div><small>APERTURA</small><b>{formatDateTime(shift.openedAt)}</b></div>
         <div><small>CIERRE</small><b>{shift.closedAt?formatDateTime(shift.closedAt):"En curso"}</b></div>
