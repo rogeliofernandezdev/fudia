@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math"
 	"net/http"
 	"sort"
 	"strconv"
@@ -47,8 +48,11 @@ type order struct {
 	Total         string      `json:"total"`
 	CreatedAt     string      `json:"createdAt"`
 	UpdatedAt     string      `json:"updatedAt"`
-	ItemCount     int         `json:"itemCount"`
-	Items         []orderItem `json:"items,omitempty"`
+	ItemCount       int         `json:"itemCount"`
+	Items           []orderItem `json:"items,omitempty"`
+	PaidAmount      string      `json:"paidAmount,omitempty"`
+	RemainingAmount string      `json:"remainingAmount,omitempty"`
+	PaymentStatus   string      `json:"paymentStatus,omitempty"`
 }
 type orderItemSelectionInput struct {
 	GroupID   string `json:"groupId"`
@@ -101,6 +105,7 @@ type orderInput struct {
 	Notes         string           `json:"notes"`
 	DeliveryFee   float64          `json:"deliveryFee"`
 	Items         []orderItemInput `json:"items"`
+	SendToKitchen bool             `json:"sendToKitchen"`
 }
 type orderUpdateInput struct {
 	CustomerName  string           `json:"customerName"`
@@ -118,8 +123,8 @@ var orderChannels = []map[string]string{{"value": "salon", "label": "Salón"}, {
 var orderStatuses = []map[string]string{{"value": "nuevo", "label": "Nuevo"}, {"value": "confirmado", "label": "Confirmado"}, {"value": "preparando", "label": "Preparando"}, {"value": "listo", "label": "Listo"}, {"value": "en_camino", "label": "En camino"}, {"value": "entregado", "label": "Entregado"}, {"value": "cancelado", "label": "Cancelado"}}
 var orderTransitions = map[string][]string{
 	"nuevo":      {"confirmado", "cancelado"},
-	"confirmado": {"preparando", "cancelado"},
-	"preparando": {"listo", "cancelado"},
+	"confirmado": {"cancelado"},
+	"preparando": {"cancelado"},
 	"listo":      {"en_camino", "entregado", "cancelado"},
 	"en_camino":  {"entregado"},
 	"entregado":  {},
@@ -144,6 +149,38 @@ func validOrderStatus(st string) bool {
 }
 func editableOrderStatus(st string) bool {
 	return st == "nuevo" || st == "confirmado"
+}
+
+type orderRowQuerier interface {
+	QueryRow(context.Context, string, ...any) pgx.Row
+}
+
+func loadOrderNetPaid(ctx context.Context, q orderRowQuerier, orderID, organizationID, locationID string) (float64, error) {
+	var paid float64
+	err := q.QueryRow(ctx, `
+		SELECT COALESCE(sum(
+		  p.amount-COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id),0)
+		),0)::float8
+		FROM payments p
+		WHERE p.order_id=$1 AND p.organization_id=$2 AND p.location_id=$3
+	`, orderID, organizationID, locationID).Scan(&paid)
+	return paid, err
+}
+
+func applyOrderPaymentSummary(ctx context.Context, q orderRowQuerier, o *order, organizationID, locationID string) error {
+	paid, err := loadOrderNetPaid(ctx, q, o.ID, organizationID, locationID)
+	if err != nil {
+		return err
+	}
+	total, err := strconv.ParseFloat(o.Total, 64)
+	if err != nil {
+		return err
+	}
+	remaining := math.Max(0, total-paid)
+	o.PaidAmount = strconv.FormatFloat(paid, 'f', 2, 64)
+	o.RemainingAmount = strconv.FormatFloat(remaining, 'f', 2, 64)
+	o.PaymentStatus = paymentStatus(total, paid)
+	return nil
 }
 
 type orderRowsQuerier interface {
@@ -689,6 +726,10 @@ func (a *API) getOrdersFloor(w http.ResponseWriter, r *http.Request) {
 		}
 		if oid != nil {
 			o.ID = *oid
+			if err = applyOrderPaymentSummary(r.Context(), a.db, &o, s.OrganizationID, s.LocationID); err != nil {
+				fail(w, 503, "orders_unavailable", "No pudimos cargar el estado de cobro del salón.")
+				return
+			}
 			ft.Order = &o
 		}
 		items = append(items, ft)
@@ -716,6 +757,10 @@ func (a *API) getOrder(w http.ResponseWriter, r *http.Request) {
 		if q, parseErr := strconv.ParseFloat(it.Qty, 64); parseErr == nil {
 			o.ItemCount += int(q)
 		}
+	}
+	if err = applyOrderPaymentSummary(r.Context(), a.db, &o, s.OrganizationID, s.LocationID); err != nil {
+		fail(w, 503, "order_unavailable", "No pudimos cargar el estado de cobro del pedido.")
+		return
 	}
 	writeJSON(w, 200, o)
 }
@@ -777,15 +822,19 @@ func (a *API) createOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	total := subtotal + in.DeliveryFee
+	initialStatus := "nuevo"
+	if in.SendToKitchen {
+		initialStatus = "confirmado"
+	}
 
 	var o order
 	o, err = scanOrder(tx.QueryRow(r.Context(), `
-		INSERT INTO orders(organization_id,location_id,channel,customer_id,customer_name,customer_phone,address,reference,table_id,notes,subtotal,delivery_fee,total,created_by)
-		VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+		INSERT INTO orders(organization_id,location_id,channel,customer_id,customer_name,customer_phone,address,reference,table_id,notes,subtotal,delivery_fee,total,status,created_by)
+		VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
 		RETURNING `+orderColumns,
 		s.OrganizationID, s.LocationID, in.Channel, customerID, in.CustomerName,
 		strings.TrimSpace(in.CustomerPhone), strings.TrimSpace(in.Address), strings.TrimSpace(in.Reference),
-		tableID, strings.TrimSpace(in.Notes), subtotal, in.DeliveryFee, total, s.UserID))
+		tableID, strings.TrimSpace(in.Notes), subtotal, in.DeliveryFee, total, initialStatus, s.UserID))
 	if err != nil {
 		fail(w, 503, "order_unavailable", "No pudimos guardar el pedido.")
 		return
@@ -803,6 +852,10 @@ func (a *API) createOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.audit(r, "created", "order", o.ID)
+	if in.SendToKitchen {
+		a.audit(r, "kitchen.submitted", "order", o.ID)
+	}
+	_ = applyOrderPaymentSummary(r.Context(), a.db, &o, s.OrganizationID, s.LocationID)
 	writeJSON(w, 201, o)
 }
 
@@ -920,18 +973,23 @@ func (a *API) updateOrderStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback(r.Context())
 
-	var current string
+	var current, channel, tableID string
+	var total float64
 	err = tx.QueryRow(r.Context(), `
-		SELECT status
+		SELECT status,channel,COALESCE(table_id::text,''),total::float8
 		FROM orders
 		WHERE id=$1 AND organization_id=$2 AND location_id=$3
-		FOR UPDATE`, r.PathValue("id"), s.OrganizationID, s.LocationID).Scan(&current)
+		FOR UPDATE`, r.PathValue("id"), s.OrganizationID, s.LocationID).Scan(&current, &channel, &tableID, &total)
 	if errors.Is(err, pgx.ErrNoRows) {
 		fail(w, 404, "order_not_found", "El pedido no existe.")
 		return
 	}
 	if err != nil {
 		fail(w, 503, "order_unavailable", "No pudimos actualizar el pedido.")
+		return
+	}
+	if (current == "confirmado" && in.Status == "preparando") || (current == "preparando" && in.Status == "listo") {
+		fail(w, 409, "kitchen_transition_required", "Los estados de preparación solo se actualizan desde Cocina.")
 		return
 	}
 	allowed := false
@@ -943,6 +1001,20 @@ func (a *API) updateOrderStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	if !allowed {
 		fail(w, 409, "invalid_transition", "No se puede pasar de "+current+" a "+in.Status+".")
+		return
+	}
+
+	paid, paidErr := loadOrderNetPaid(r.Context(), tx, r.PathValue("id"), s.OrganizationID, s.LocationID)
+	if paidErr != nil {
+		fail(w, 503, "order_unavailable", "No pudimos validar el estado de cobro del pedido.")
+		return
+	}
+	if in.Status == "entregado" && channel == "salon" && tableID != "" && paid+0.00001 < total {
+		fail(w, 409, "payment_required_before_delivery", "La mesa no puede liberarse mientras exista saldo pendiente.")
+		return
+	}
+	if in.Status == "cancelado" && paid > 0.00001 {
+		fail(w, 409, "refund_required_before_cancel", "Devuelve primero los pagos registrados antes de cancelar el pedido.")
 		return
 	}
 
@@ -970,6 +1042,10 @@ func (a *API) updateOrderStatus(w http.ResponseWriter, r *http.Request) {
 	o, err := scanOrder(tx.QueryRow(r.Context(), `SELECT `+orderColumns+` FROM orders WHERE id=$1 AND organization_id=$2 AND location_id=$3`, r.PathValue("id"), s.OrganizationID, s.LocationID))
 	if err != nil {
 		fail(w, 503, "order_unavailable", "No pudimos cargar el pedido actualizado.")
+		return
+	}
+	if err = applyOrderPaymentSummary(r.Context(), tx, &o, s.OrganizationID, s.LocationID); err != nil {
+		fail(w, 503, "order_unavailable", "No pudimos cargar el estado de cobro del pedido.")
 		return
 	}
 	if err = tx.Commit(r.Context()); err != nil {
