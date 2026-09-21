@@ -19,8 +19,11 @@ export async function operationsFetch<T>(path:string,init?:RequestInit):Promise<
   const response=await fetch(`/api/operations/${path}`,{...init,headers:{Accept:"application/json",...(init?.body?{"Content-Type":"application/json"}:{}),...(init?.headers??{})},cache:"no-store"});
   if(response.status===204)return undefined as T;
   const text=await response.text();
-  let data:any={};
+  let data:unknown={};
   if(text){try{data=JSON.parse(text)}catch{data={message:text}}}
-  if(!response.ok)throw new OperationsApiError(data?.message??"No se pudo completar la operación.",response.status,data?.code);
+  const payload=typeof data==="object"&&data!==null?data as Record<string,unknown>:{};
+  const message=typeof payload.message==="string"?payload.message:"No se pudo completar la operación.";
+  const code=typeof payload.code==="string"?payload.code:"request_failed";
+  if(!response.ok)throw new OperationsApiError(message,response.status,code);
   return data as T;
 }
