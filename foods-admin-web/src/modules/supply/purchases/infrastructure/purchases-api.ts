@@ -1,5 +1,5 @@
 import {apiFetch} from "@/shared/api/client";
-import type {PurchaseInventoryOption,PurchaseOrder,PurchaseOrderDraft,PurchaseOrdersResponse,PurchaseStatus,Supplier,SupplierDraft,SuppliersResponse} from "../domain/types";
+import type {PurchaseInventoryItemDraft,PurchaseInventoryOption,PurchaseItemCategory,PurchaseOrder,PurchaseOrderDraft,PurchaseOrdersResponse,PurchaseReceiptDraft,PurchaseReceiptResult,PurchaseStatus,Supplier,SupplierDraft,SuppliersResponse} from "../domain/types";
 
 export function listPurchaseOrders(input:{q:string;status:string;page:number;pageSize:number}){
   const params=new URLSearchParams({q:input.q,status:input.status,page:String(input.page),pageSize:String(input.pageSize)});
@@ -28,12 +28,21 @@ export function savePurchaseOrder(draft:PurchaseOrderDraft){
   });
 }
 
-export function setPurchaseOrderStatus(id:string,status:Exclude<PurchaseStatus,"received">){
+export function setPurchaseOrderStatus(id:string,status:"draft"|"pending_approval"|"approved"|"cancelled"){
   return apiFetch<void>(`purchase-orders/${id}/status`,{method:"PATCH",body:JSON.stringify({status})});
 }
 
-export function receivePurchaseOrder(id:string){
-  return apiFetch<{id:string;number:string;status:"received";receivedAt:string}>(`purchase-orders/${id}/receive`,{method:"POST"});
+export function receivePurchaseOrder(draft:PurchaseReceiptDraft){
+  return apiFetch<PurchaseReceiptResult>(`purchase-orders/${draft.purchaseOrderId}/receive`,{
+    method:"POST",
+    body:JSON.stringify({
+      notes:draft.notes.trim(),
+      items:draft.items.filter(item=>Number(item.quantity)>0).map(item=>({
+        purchaseOrderItemId:item.purchaseOrderItemId,
+        quantity:Number(item.quantity),
+      })),
+    }),
+  });
 }
 
 export function listSuppliers(input:{q?:string;status?:string;page?:number;pageSize?:number}={}){
@@ -58,6 +67,42 @@ export function setSupplierActive(id:string,active:boolean){
   return apiFetch<void>(`suppliers/${id}/status`,{method:"PATCH",body:JSON.stringify({active})});
 }
 
-export function listPurchaseInventory(){
-  return apiFetch<{items:PurchaseInventoryOption[]}>("inventory/products");
+export function listPurchaseInventory(q=""){
+  const params=new URLSearchParams({q});
+  return apiFetch<{items:PurchaseInventoryOption[]}>(`purchase-inventory-items?${params.toString()}`);
+}
+
+export async function listPurchaseItemCategories(){
+  const pageSize=100;
+  const items:PurchaseItemCategory[]=[];
+  let page=1;
+  let total=0;
+  do{
+    const params=new URLSearchParams({productType:"retail",page:String(page),pageSize:String(pageSize)});
+    const response=await apiFetch<{items:PurchaseItemCategory[];total:number}>(`purchase-item-categories?${params.toString()}`);
+    items.push(...response.items);
+    total=response.total;
+    if(response.items.length===0)break;
+    page++;
+  }while(items.length<total);
+  return items;
+}
+
+export function createPurchaseInventoryItem(draft:PurchaseInventoryItemDraft){
+  const common={
+    unit:draft.unit,
+    presentationType:draft.presentationType,
+    unitsPerPresentation:Number(draft.presentationType==="unit"?1:draft.unitsPerPresentation),
+    minimumStock:Number(draft.minimumStock||0),
+  };
+  const payload=draft.mode==="new_ingredient"
+    ?{...common,newIngredient:{name:draft.name.trim()}}
+    :{...common,newProduct:{
+      sku:"",
+      name:draft.name.trim(),
+      categoryId:draft.categoryId.trim(),
+      description:draft.description.trim(),
+      price:draft.price.trim(),
+    }};
+  return apiFetch<PurchaseInventoryOption>("purchase-inventory-items",{method:"POST",body:JSON.stringify(payload)});
 }
