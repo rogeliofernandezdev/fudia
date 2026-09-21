@@ -14,3 +14,6 @@ export type Location={id:string;name:string;active:boolean};
 export type PermissionGroup={group:string;items:{value:string;label:string}[]};
 export type UserDraft={id?:string;fullName:string;email:string;password:string;assignments:Assignment[]};
 export type RoleDraft={id?:string;systemKey?:string|null;name:string;description:string;menuAccess?:string[];permissions:string[]};
+
+export type MyProfile={fullName:string;email:string};
+export type MyProfileDraft={fullName:string;currentPassword:string;newPassword:string};
