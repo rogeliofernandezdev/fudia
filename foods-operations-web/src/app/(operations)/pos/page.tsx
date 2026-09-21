@@ -95,7 +95,7 @@ export default function PosPage(){
   }
 
   async function goToPayment(){
-    const order=await persist(false);
+    const order=await persist(true);
     if(order)router.push(`/pos/pago?orderId=${order.id}`);
   }
 
