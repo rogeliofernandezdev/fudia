@@ -4,3 +4,4 @@ export {TablesManager} from "./tables/presentation/tables-manager";
 
 export {KitchenBoard} from "./kitchen/presentation/kitchen-board";
 export {CashPage} from "./cash/presentation/cash-page";
+export {POSPage} from "./pos/presentation/pos-page";
