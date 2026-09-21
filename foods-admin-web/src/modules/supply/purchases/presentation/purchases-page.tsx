@@ -43,18 +43,109 @@ export function PurchasesPage(){
   const[supplierTarget,setSupplierTarget]=useState<Supplier|null>(null);
   const[cancelTarget,setCancelTarget]=useState<PurchaseOrderSummary|PurchaseOrder|null>(null);
   const[receiptOrder,setReceiptOrder]=useState<PurchaseOrder|null>(null);
+  const[receiptLoadingId,setReceiptLoadingId]=useState<string|null>(null);
 
-  const orders=useQuery({queryKey:["purchase-orders",q,status,page,size],queryFn:()=>listPurchaseOrders({q,status,page,pageSize:size}),enabled:tab==="orders"});
-  const suppliers=useQuery({queryKey:["suppliers",q,status,page,size],queryFn:()=>listSuppliers({q,status,page,pageSize:size}),enabled:tab==="suppliers"});
-  const activeSuppliers=useQuery({queryKey:["suppliers","active","purchase-editor"],queryFn:()=>listSuppliers({status:"active",page:1,pageSize:100}),enabled:Boolean(orderDraft),staleTime:30000});
-  const inventory=useQuery({queryKey:["purchase-inventory"],queryFn:()=>listPurchaseInventory(),enabled:Boolean(orderDraft),staleTime:30000});
-  const detail=useQuery({queryKey:["purchase-order",detailId],queryFn:()=>getPurchaseOrder(detailId!),enabled:Boolean(detailId)});
+  const orders=useQuery({
+    queryKey:["purchase-orders",q,status,page,size],
+    queryFn:()=>listPurchaseOrders({q,status,page,pageSize:size}),
+    enabled:tab==="orders",
+  });
+  const receipts=useQuery({
+    queryKey:["purchase-orders","receipts",q,status,page,size],
+    queryFn:()=>listPurchaseOrders({q,status:status||"receivable",page,pageSize:size}),
+    enabled:tab==="receipts",
+  });
+  const suppliers=useQuery({
+    queryKey:["suppliers",q,status,page,size],
+    queryFn:()=>listSuppliers({q,status,page,pageSize:size}),
+    enabled:tab==="suppliers",
+  });
+  const activeSuppliers=useQuery({
+    queryKey:["suppliers","active","purchase-editor"],
+    queryFn:()=>listSuppliers({status:"active",page:1,pageSize:100}),
+    enabled:Boolean(orderDraft),
+    staleTime:30000,
+  });
+  const inventory=useQuery({
+    queryKey:["purchase-inventory"],
+    queryFn:()=>listPurchaseInventory(),
+    enabled:Boolean(orderDraft),
+    staleTime:30000,
+  });
+  const detail=useQuery({
+    queryKey:["purchase-order",detailId],
+    queryFn:()=>getPurchaseOrder(detailId!),
+    enabled:Boolean(detailId),
+  });
 
-  const saveOrder=useMutation({mutationFn:savePurchaseOrder,onSuccess:result=>{setOrderDraft(null);void qc.invalidateQueries({queryKey:["purchase-orders"]});void qc.invalidateQueries({queryKey:["dashboard"]});notify({tone:"success",title:"Orden guardada",message:`${result.number} quedó en borrador y lista para revisión.`})},onError:error=>notify({tone:"danger",title:"No se pudo guardar la orden",message:error.message})});
-  const transition=useMutation({mutationFn:({id,next}:{id:string;next:"draft"|"pending_approval"|"approved"|"cancelled"})=>setPurchaseOrderStatus(id,next),onSuccess:(_,variables)=>{void qc.invalidateQueries({queryKey:["purchase-orders"]});void qc.invalidateQueries({queryKey:["purchase-order"]});void qc.invalidateQueries({queryKey:["dashboard"]});if(variables.next==="cancelled"){setCancelTarget(null)}notify({tone:"success",title:"Estado actualizado",message:"La orden de compra quedó actualizada."})},onError:error=>notify({tone:"danger",title:"No se pudo actualizar la orden",message:error.message})});
-  const receive=useMutation({mutationFn:receivePurchaseOrder,onSuccess:result=>{setReceiptOrder(null);void qc.invalidateQueries({queryKey:["purchase-orders"]});void qc.invalidateQueries({queryKey:["purchase-order"]});void qc.invalidateQueries({queryKey:["purchase-inventory"]});void qc.invalidateQueries({queryKey:["inventory"]});void qc.invalidateQueries({queryKey:["inventory-products"]});void qc.invalidateQueries({queryKey:["inventory-movements"]});void qc.invalidateQueries({queryKey:["dashboard"]});notify({tone:"success",title:result.status==="received"?"Recepción completada":"Recepción parcial registrada",message:`${result.code} quedó vinculada a ${result.number} y actualizó Inventario y Kárdex.`})},onError:error=>notify({tone:"danger",title:"No se pudo registrar la recepción",message:error.message})});
-  const supplierSave=useMutation({mutationFn:saveSupplier,onSuccess:()=>{setSupplierDraft(null);void qc.invalidateQueries({queryKey:["suppliers"]});notify({tone:"success",title:"Proveedor guardado",message:"El directorio de proveedores quedó actualizado."})},onError:error=>notify({tone:"danger",title:"No se pudo guardar el proveedor",message:error.message})});
-  const supplierStatus=useMutation({mutationFn:(supplier:Supplier)=>setSupplierActive(supplier.id,!supplier.active),onSuccess:()=>{setSupplierTarget(null);void qc.invalidateQueries({queryKey:["suppliers"]});notify({tone:"success",title:"Estado actualizado",message:"El proveedor conserva su historial de compras."})},onError:error=>notify({tone:"danger",title:"No se pudo actualizar el proveedor",message:error.message})});
+  const saveOrder=useMutation({
+    mutationFn:savePurchaseOrder,
+    onSuccess:result=>{
+      setOrderDraft(null);
+      void qc.invalidateQueries({queryKey:["purchase-orders"]});
+      void qc.invalidateQueries({queryKey:["dashboard"]});
+      notify({tone:"success",title:"Orden guardada",message:result.number+" quedó en borrador y lista para revisión."});
+    },
+    onError:error=>notify({tone:"danger",title:"No se pudo guardar la orden",message:error.message}),
+  });
+
+  const transition=useMutation({
+    mutationFn:({id,next}:{id:string;next:"draft"|"pending_approval"|"approved"|"cancelled"})=>setPurchaseOrderStatus(id,next),
+    onSuccess:(_,variables)=>{
+      void qc.invalidateQueries({queryKey:["purchase-orders"]});
+      void qc.invalidateQueries({queryKey:["purchase-order"]});
+      void qc.invalidateQueries({queryKey:["dashboard"]});
+      if(variables.next==="cancelled")setCancelTarget(null);
+      notify({
+        tone:"success",
+        title:variables.next==="approved"?"Orden aprobada":"Estado actualizado",
+        message:variables.next==="approved"
+          ?"La orden ya está disponible en Recepciones."
+          :"La orden de compra quedó actualizada.",
+      });
+    },
+    onError:error=>notify({tone:"danger",title:"No se pudo actualizar la orden",message:error.message}),
+  });
+
+  const receive=useMutation({
+    mutationFn:receivePurchaseOrder,
+    onSuccess:result=>{
+      setReceiptOrder(null);
+      void qc.invalidateQueries({queryKey:["purchase-orders"]});
+      void qc.invalidateQueries({queryKey:["purchase-order"]});
+      void qc.invalidateQueries({queryKey:["purchase-inventory"]});
+      void qc.invalidateQueries({queryKey:["inventory"]});
+      void qc.invalidateQueries({queryKey:["inventory-products"]});
+      void qc.invalidateQueries({queryKey:["inventory-movements"]});
+      void qc.invalidateQueries({queryKey:["dashboard"]});
+      notify({
+        tone:"success",
+        title:result.status==="received"?"Recepción completada":"Recepción parcial registrada",
+        message:result.code+" quedó vinculada a "+result.number+" y actualizó Inventario y Kárdex.",
+      });
+    },
+    onError:error=>notify({tone:"danger",title:"No se pudo registrar la recepción",message:error.message}),
+  });
+
+  const supplierSave=useMutation({
+    mutationFn:saveSupplier,
+    onSuccess:()=>{
+      setSupplierDraft(null);
+      void qc.invalidateQueries({queryKey:["suppliers"]});
+      notify({tone:"success",title:"Proveedor guardado",message:"El directorio de proveedores quedó actualizado."});
+    },
+    onError:error=>notify({tone:"danger",title:"No se pudo guardar el proveedor",message:error.message}),
+  });
+
+  const supplierStatus=useMutation({
+    mutationFn:(supplier:Supplier)=>setSupplierActive(supplier.id,!supplier.active),
+    onSuccess:()=>{
+      setSupplierTarget(null);
+      void qc.invalidateQueries({queryKey:["suppliers"]});
+      notify({tone:"success",title:"Estado actualizado",message:"El proveedor conserva su historial de compras."});
+    },
+    onError:error=>notify({tone:"danger",title:"No se pudo actualizar el proveedor",message:error.message}),
+  });
 
   async function editOrder(id:string){
     setOrderDraftLoading(true);
@@ -66,70 +157,259 @@ export function PurchasesPage(){
         supplierId:order.supplierId,
         expectedAt:order.expectedAt??"",
         notes:order.notes,
-        items:order.items.map(item=>({inventoryItemId:item.inventoryItemId,presentationId:item.presentationId,quantity:item.quantity,unitCost:item.unitCost})),
+        items:order.items.map(item=>({
+          inventoryItemId:item.inventoryItemId,
+          presentationId:item.presentationId,
+          quantity:item.quantity,
+          unitCost:item.unitCost,
+        })),
       });
     }catch(error){
       setOrderDraft(null);
       notify({tone:"danger",title:"No se pudo cargar la orden",message:(error as Error).message});
-    }finally{setOrderDraftLoading(false)}
+    }finally{
+      setOrderDraftLoading(false);
+    }
+  }
+
+  async function openReceipt(id:string){
+    setReceiptLoadingId(id);
+    try{
+      const order=await getPurchaseOrder(id);
+      setReceiptOrder(order);
+    }catch(error){
+      notify({tone:"danger",title:"No se pudo preparar la recepción",message:(error as Error).message});
+    }finally{
+      setReceiptLoadingId(null);
+    }
   }
 
   function changeTab(next:PurchaseTab){
-    setTab(next);setQ("");setStatus("");setPage(1);
+    setTab(next);
+    setQ("");
+    setStatus("");
+    setPage(1);
   }
 
   const orderItems=orders.data?.items??[];
+  const receiptItems=receipts.data?.items??[];
   const supplierItems=suppliers.data?.items??[];
   const headerAction=tab==="orders"
     ?canManage?<Button icon="plus" onClick={()=>setOrderDraft({...emptyOrder})}>Nueva orden</Button>:undefined
-    :canManage?<Button icon="plus" onClick={()=>setSupplierDraft({...emptySupplier})}>Nuevo proveedor</Button>:undefined;
+    :tab==="suppliers"&&canManage
+      ?<Button icon="plus" onClick={()=>setSupplierDraft({...emptySupplier})}>Nuevo proveedor</Button>
+      :undefined;
 
   return <>
-    <PageHeader eyebrow="ABASTECIMIENTO" title="Compras" description="Ordena, aprueba y recibe mercadería con trazabilidad directa hacia Inventario y Kárdex." action={headerAction}/>
+    <PageHeader
+      eyebrow="ABASTECIMIENTO"
+      title="Compras"
+      description="Crea órdenes de compra, recibe mercadería y administra proveedores desde flujos separados."
+      action={headerAction}
+    />
+
     <section className="panel standardized-management purchases-panel">
       <div className="purchases-tabs" role="tablist" aria-label="Compras">
-        <button type="button" role="tab" aria-selected={tab==="orders"} className={tab==="orders"?"active":""} onClick={()=>changeTab("orders")}><Icon name="receipt" size={17}/><span>Órdenes de compra</span>{orders.data&&<b>{orders.data.total}</b>}</button>
-        <button type="button" role="tab" aria-selected={tab==="suppliers"} className={tab==="suppliers"?"active":""} onClick={()=>changeTab("suppliers")}><Icon name="truck" size={17}/><span>Proveedores</span>{suppliers.data&&<b>{suppliers.data.total}</b>}</button>
+        <button type="button" role="tab" aria-selected={tab==="orders"} className={tab==="orders"?"active":""} onClick={()=>changeTab("orders")}>
+          <Icon name="receipt" size={17}/><span>Órdenes de compra</span>{orders.data&&<b>{orders.data.total}</b>}
+        </button>
+        <button type="button" role="tab" aria-selected={tab==="receipts"} className={tab==="receipts"?"active":""} onClick={()=>changeTab("receipts")}>
+          <Icon name="stock" size={17}/><span>Recepciones</span>{receipts.data&&<b>{receipts.data.total}</b>}
+        </button>
+        <button type="button" role="tab" aria-selected={tab==="suppliers"} className={tab==="suppliers"?"active":""} onClick={()=>changeTab("suppliers")}>
+          <Icon name="truck" size={17}/><span>Proveedores</span>{suppliers.data&&<b>{suppliers.data.total}</b>}
+        </button>
       </div>
-      {tab==="orders"&&<div className="purchase-flow-overview"><div><small>FLUJO DE COMPRA</small><b>Primero ordenas. Después recibes.</b></div><PurchaseFlowSteps active="order"/></div>}
+
+      {tab!=="suppliers"&&<div className="purchase-flow-overview">
+        <div>
+          <small>{tab==="orders"?"PASO 1":"PASO 2"}</small>
+          <b>{tab==="orders"?"Primero crea y aprueba la orden.":"Recibe únicamente lo que realmente llegó."}</b>
+        </div>
+        <PurchaseFlowSteps active={tab==="orders"?"order":"receipt"}/>
+      </div>}
+
       <div className="purchases-toolbar">
-        <label className="purchases-search"><Icon name="search" size={18}/><Input value={q} onChange={event=>{setQ(event.target.value);setPage(1)}} placeholder={tab==="orders"?"Buscar por orden o proveedor...":"Buscar proveedor o RUC..."}/></label>
-        <Select aria-label="Filtrar por estado" value={status} onChange={event=>{setStatus(event.target.value);setPage(1)}}>
-          {tab==="orders"?<><option value="">Todos los estados</option>{Object.entries(statusMeta).map(([value,meta])=><option value={value} key={value}>{meta.label}</option>)}</>:<><option value="">Todos los estados</option><option value="active">Activos</option><option value="inactive">Inactivos</option></>}
-        </Select>
-        <p><Icon name="store" size={15}/>{tab==="orders"?"Órdenes del local activo; la recepción actualiza existencias automáticamente.":"Proveedores compartidos por la empresa para abastecer cualquiera de sus locales."}</p>
+        <label className="purchases-search">
+          <Icon name="search" size={18}/>
+          <Input
+            value={q}
+            onChange={event=>{setQ(event.target.value);setPage(1)}}
+            placeholder={tab==="suppliers"?"Buscar proveedor o RUC...":tab==="receipts"?"Buscar orden pendiente de recepción...":"Buscar por orden o proveedor..."}
+          />
+        </label>
+
+        {tab==="orders"?<Select aria-label="Filtrar órdenes por estado" value={status} onChange={event=>{setStatus(event.target.value);setPage(1)}}>
+          <option value="">Todos los estados</option>
+          {Object.entries(statusMeta).map(([value,meta])=><option value={value} key={value}>{meta.label}</option>)}
+        </Select>:tab==="receipts"?<Select aria-label="Filtrar recepciones" value={status} onChange={event=>{setStatus(event.target.value);setPage(1)}}>
+          <option value="">Todas pendientes</option>
+          <option value="approved">Sin recibir</option>
+          <option value="partially_received">Recepción parcial</option>
+        </Select>:<Select aria-label="Filtrar proveedores por estado" value={status} onChange={event=>{setStatus(event.target.value);setPage(1)}}>
+          <option value="">Todos los estados</option>
+          <option value="active">Activos</option>
+          <option value="inactive">Inactivos</option>
+        </Select>}
+
+        <p>
+          <Icon name="store" size={15}/>
+          {tab==="orders"
+            ?"La orden registra lo solicitado y no modifica el stock."
+            :tab==="receipts"
+              ?"Solo aparecen órdenes aprobadas con cantidades pendientes."
+              :"Proveedores compartidos por la empresa para abastecer cualquiera de sus locales."}
+        </p>
       </div>
 
       {tab==="orders"?<>
-        {orders.isLoading?<PurchaseTableSkeleton/>:orders.isError?<PurchaseState icon="alert" title="No pudimos cargar las compras" text={orders.error.message} action={()=>orders.refetch()}/>:!orderItems.length?<PurchaseState icon="receipt" title={q||status?"Sin coincidencias":"Aún no hay órdenes de compra"} text={q||status?"Ajusta la búsqueda o los filtros.":canManage?"Crea una orden y agrega los artículos que necesitas abastecer.":"No hay órdenes registradas para este local."} action={canManage&&!q&&!status?()=>setOrderDraft({...emptyOrder}):undefined}/>:<>
-          <div className="table-wrap hover-scroll purchases-table-wrap"><table><thead><tr><th>ORDEN</th><th>PROVEEDOR</th><th>FECHA</th><th>TOTAL</th><th>ESTADO</th><th>ACCIONES</th></tr></thead><tbody>{orderItems.map((order,index)=>{const meta=statusMeta[order.status];return <tr className={index%2?"alternate":""} key={order.id}>
-            <td><span className={`row-icon r${index%3}`}><Icon name="receipt" size={18}/></span><b>{order.number}</b><small>{order.itemCount} {order.itemCount===1?"artículo":"artículos"}</small></td>
-            <td><b>{order.supplierName}</b>{order.expectedAt&&<small>Entrega esperada: {formatRegionalCalendarDate(order.expectedAt,location?.country,{dateStyle:"medium"})}</small>}</td>
-            <td>{formatRegionalDateTime(order.createdAt,{country:location?.country,timeZone:location?.timezone},{dateStyle:"medium"})}</td>
-            <td><b className="purchase-money">{formatMoney(Number(order.total),settings,location?.country)}</b></td>
-            <td><Status tone={meta.tone}>{meta.label}</Status></td>
-            <td><div className="table-actions"><RowActionButton action="view" onClick={()=>setDetailId(order.id)}/>{canManage&&order.status==="draft"&&<RowActionButton action="edit" onClick={()=>void editOrder(order.id)}/>}</div></td>
-          </tr>})}</tbody></table></div>
-          <div className="management-cards purchases-cards">{orderItems.map(order=>{const meta=statusMeta[order.status];return <article key={order.id}><header><span className="row-icon r0"><Icon name="receipt"/></span><div><b>{order.number}</b><small>{order.supplierName}</small></div><Status tone={meta.tone}>{meta.label}</Status></header><dl><div><dt>Artículos</dt><dd>{order.itemCount}</dd></div><div><dt>Total</dt><dd>{formatMoney(Number(order.total),settings,location?.country)}</dd></div><div><dt>Creada</dt><dd>{formatRegionalDateTime(order.createdAt,{country:location?.country,timeZone:location?.timezone},{dateStyle:"short"})}</dd></div></dl><footer><RowActionButton action="view" onClick={()=>setDetailId(order.id)}/>{canManage&&order.status==="draft"&&<RowActionButton action="edit" onClick={()=>void editOrder(order.id)}/>}</footer></article>})}</div>
+        {orders.isLoading?<PurchaseTableSkeleton/>
+        :orders.isError?<PurchaseState icon="alert" title="No pudimos cargar las órdenes" text={orders.error.message} action={()=>orders.refetch()}/>
+        :!orderItems.length?<PurchaseState
+          icon="receipt"
+          title={q||status?"Sin coincidencias":"Aún no hay órdenes de compra"}
+          text={q||status?"Ajusta la búsqueda o los filtros.":canManage?"Crea una orden y agrega los artículos que necesitas abastecer.":"No hay órdenes registradas para este local."}
+          action={canManage&&!q&&!status?()=>setOrderDraft({...emptyOrder}):undefined}
+        />:<>
+          <div className="table-wrap hover-scroll purchases-table-wrap"><table>
+            <thead><tr><th>ORDEN</th><th>PROVEEDOR</th><th>FECHA</th><th>TOTAL</th><th>ESTADO</th><th>ACCIONES</th></tr></thead>
+            <tbody>{orderItems.map((order,index)=>{const meta=statusMeta[order.status];return <tr className={index%2?"alternate":""} key={order.id}>
+              <td><span className={"row-icon r"+index%3}><Icon name="receipt" size={18}/></span><b>{order.number}</b><small>{order.itemCount} {order.itemCount===1?"artículo":"artículos"}</small></td>
+              <td><b>{order.supplierName}</b>{order.expectedAt&&<small>Entrega esperada: {formatRegionalCalendarDate(order.expectedAt,location?.country,{dateStyle:"medium"})}</small>}</td>
+              <td>{formatRegionalDateTime(order.createdAt,{country:location?.country,timeZone:location?.timezone},{dateStyle:"medium"})}</td>
+              <td><b className="purchase-money">{formatMoney(Number(order.total),settings,location?.country)}</b></td>
+              <td><Status tone={meta.tone}>{meta.label}</Status></td>
+              <td><div className="table-actions">
+                <RowActionButton action="view" onClick={()=>setDetailId(order.id)}/>
+                {canManage&&order.status==="draft"&&<RowActionButton action="edit" onClick={()=>void editOrder(order.id)}/>}
+              </div></td>
+            </tr>})}</tbody>
+          </table></div>
+
+          <div className="management-cards purchases-cards">{orderItems.map(order=>{const meta=statusMeta[order.status];return <article key={order.id}>
+            <header><span className="row-icon r0"><Icon name="receipt"/></span><div><b>{order.number}</b><small>{order.supplierName}</small></div><Status tone={meta.tone}>{meta.label}</Status></header>
+            <dl><div><dt>Artículos</dt><dd>{order.itemCount}</dd></div><div><dt>Total</dt><dd>{formatMoney(Number(order.total),settings,location?.country)}</dd></div><div><dt>Creada</dt><dd>{formatRegionalDateTime(order.createdAt,{country:location?.country,timeZone:location?.timezone},{dateStyle:"short"})}</dd></div></dl>
+            <footer><RowActionButton action="view" onClick={()=>setDetailId(order.id)}/>{canManage&&order.status==="draft"&&<RowActionButton action="edit" onClick={()=>void editOrder(order.id)}/>}</footer>
+          </article>})}</div>
         </>}
         {!orders.isLoading&&!orders.isError&&<Pagination page={page} size={size} total={orders.data?.total??0} onPage={setPage} onSize={value=>{setSize(value);setPage(1)}}/>}
+      </>:tab==="receipts"?<>
+        {receipts.isLoading?<PurchaseTableSkeleton/>
+        :receipts.isError?<PurchaseState icon="alert" title="No pudimos cargar las recepciones pendientes" text={receipts.error.message} action={()=>receipts.refetch()}/>
+        :!receiptItems.length?<div className="purchase-receipts-empty">
+          <span><Icon name="check" size={22}/></span>
+          <b>{q||status?"Sin coincidencias":"No hay mercadería pendiente de recibir"}</b>
+          <p>{q||status?"Ajusta la búsqueda o el filtro.":"Cuando una orden sea aprobada aparecerá aquí automáticamente."}</p>
+        </div>:<>
+          <div className="table-wrap hover-scroll purchases-table-wrap purchase-receipts-table"><table>
+            <thead><tr><th>ORDEN</th><th>PROVEEDOR</th><th>ENTREGA ESPERADA</th><th>ARTÍCULOS</th><th>ESTADO</th><th>ACCIÓN</th></tr></thead>
+            <tbody>{receiptItems.map((order,index)=>{const meta=statusMeta[order.status];const loading=receiptLoadingId===order.id;return <tr className={index%2?"alternate":""} key={order.id}>
+              <td><span className={"row-icon r"+index%3}><Icon name="stock" size={18}/></span><b>{order.number}</b><small>Aprobada para recepción</small></td>
+              <td><b>{order.supplierName}</b></td>
+              <td>{order.expectedAt?formatRegionalCalendarDate(order.expectedAt,location?.country,{dateStyle:"medium"}):"Sin fecha"}</td>
+              <td>{order.itemCount}</td>
+              <td><Status tone={meta.tone}>{meta.label}</Status></td>
+              <td><div className="purchase-receipt-actions">
+                <RowActionButton action="view" onClick={()=>setDetailId(order.id)}/>
+                {canReceive&&<Button kind="success" icon="stock" disabled={loading} onClick={()=>void openReceipt(order.id)}>{loading?"Cargando…":order.status==="partially_received"?"Continuar":"Recibir"}</Button>}
+              </div></td>
+            </tr>})}</tbody>
+          </table></div>
+
+          <div className="management-cards purchases-cards purchase-receipt-cards">{receiptItems.map(order=>{const meta=statusMeta[order.status];const loading=receiptLoadingId===order.id;return <article key={order.id}>
+            <header><span className="row-icon r2"><Icon name="stock"/></span><div><b>{order.number}</b><small>{order.supplierName}</small></div><Status tone={meta.tone}>{meta.label}</Status></header>
+            <dl><div><dt>Artículos</dt><dd>{order.itemCount}</dd></div><div><dt>Entrega</dt><dd>{order.expectedAt?formatRegionalCalendarDate(order.expectedAt,location?.country,{dateStyle:"short"}):"—"}</dd></div></dl>
+            <footer><RowActionButton action="view" onClick={()=>setDetailId(order.id)}/>{canReceive&&<Button kind="success" icon="stock" disabled={loading} onClick={()=>void openReceipt(order.id)}>{loading?"Cargando…":order.status==="partially_received"?"Continuar recepción":"Registrar recepción"}</Button>}</footer>
+          </article>})}</div>
+        </>}
+        {!receipts.isLoading&&!receipts.isError&&<Pagination page={page} size={size} total={receipts.data?.total??0} onPage={setPage} onSize={value=>{setSize(value);setPage(1)}}/>}
       </>:<>
-        {suppliers.isLoading?<SupplierTableSkeleton/>:suppliers.isError?<PurchaseState icon="alert" title="No pudimos cargar los proveedores" text={suppliers.error.message} action={()=>suppliers.refetch()}/>:!supplierItems.length?<PurchaseState icon="truck" title={q||status?"Sin coincidencias":"Aún no hay proveedores"} text={q||status?"Ajusta la búsqueda o los filtros.":canManage?"Registra el primer proveedor para empezar a crear órdenes.":"No hay proveedores registrados."} action={canManage&&!q&&!status?()=>setSupplierDraft({...emptySupplier}):undefined}/>:<>
-          <div className="table-wrap hover-scroll purchases-table-wrap"><table><thead><tr><th>PROVEEDOR</th><th>RUC</th><th>CONTACTO</th><th>ESTADO</th><th>ACCIONES</th></tr></thead><tbody>{supplierItems.map((supplier,index)=><tr className={index%2?"alternate":""} key={supplier.id}>
-            <td><span className={`row-icon r${index%3}`}><Icon name="truck" size={18}/></span><b>{supplier.name}</b></td><td>{supplier.taxId||"—"}</td><td>{supplier.phone||supplier.email||"Sin contacto"}{supplier.phone&&supplier.email&&<small>{supplier.email}</small>}</td><td><Status tone={supplier.active?"green":"gray"}>{supplier.active?"Activo":"Inactivo"}</Status></td><td><div className="table-actions">{canManage&&<><RowActionButton action="edit" onClick={()=>setSupplierDraft({id:supplier.id,taxId:supplier.taxId,name:supplier.name,email:supplier.email,phone:supplier.phone})}/><RowActionButton action={supplier.active?"deactivate":"activate"} onClick={()=>setSupplierTarget(supplier)}/></>}</div></td>
-          </tr>)}</tbody></table></div>
-          <div className="management-cards purchases-cards">{supplierItems.map(supplier=><article key={supplier.id}><header><span className="row-icon r1"><Icon name="truck"/></span><div><b>{supplier.name}</b><small>{supplier.taxId||"Sin RUC"}</small></div><Status tone={supplier.active?"green":"gray"}>{supplier.active?"Activo":"Inactivo"}</Status></header><dl><div><dt>Teléfono</dt><dd>{supplier.phone||"—"}</dd></div><div><dt>Correo</dt><dd>{supplier.email||"—"}</dd></div></dl>{canManage&&<footer><RowActionButton action="edit" onClick={()=>setSupplierDraft({id:supplier.id,taxId:supplier.taxId,name:supplier.name,email:supplier.email,phone:supplier.phone})}/><RowActionButton action={supplier.active?"deactivate":"activate"} onClick={()=>setSupplierTarget(supplier)}/></footer>}</article>)}</div>
+        {suppliers.isLoading?<SupplierTableSkeleton/>
+        :suppliers.isError?<PurchaseState icon="alert" title="No pudimos cargar los proveedores" text={suppliers.error.message} action={()=>suppliers.refetch()}/>
+        :!supplierItems.length?<PurchaseState
+          icon="truck"
+          title={q||status?"Sin coincidencias":"Aún no hay proveedores"}
+          text={q||status?"Ajusta la búsqueda o los filtros.":canManage?"Registra el primer proveedor para empezar a crear órdenes.":"No hay proveedores registrados."}
+          action={canManage&&!q&&!status?()=>setSupplierDraft({...emptySupplier}):undefined}
+        />:<>
+          <div className="table-wrap hover-scroll purchases-table-wrap"><table>
+            <thead><tr><th>PROVEEDOR</th><th>RUC</th><th>CONTACTO</th><th>ESTADO</th><th>ACCIONES</th></tr></thead>
+            <tbody>{supplierItems.map((supplier,index)=><tr className={index%2?"alternate":""} key={supplier.id}>
+              <td><span className={"row-icon r"+index%3}><Icon name="truck" size={18}/></span><b>{supplier.name}</b></td>
+              <td>{supplier.taxId||"—"}</td>
+              <td>{supplier.phone||supplier.email||"Sin contacto"}{supplier.phone&&supplier.email&&<small>{supplier.email}</small>}</td>
+              <td><Status tone={supplier.active?"green":"gray"}>{supplier.active?"Activo":"Inactivo"}</Status></td>
+              <td><div className="table-actions">{canManage&&<>
+                <RowActionButton action="edit" onClick={()=>setSupplierDraft({id:supplier.id,taxId:supplier.taxId,name:supplier.name,email:supplier.email,phone:supplier.phone})}/>
+                <RowActionButton action={supplier.active?"deactivate":"activate"} onClick={()=>setSupplierTarget(supplier)}/>
+              </>}</div></td>
+            </tr>)}</tbody>
+          </table></div>
+
+          <div className="management-cards purchases-cards">{supplierItems.map(supplier=><article key={supplier.id}>
+            <header><span className="row-icon r1"><Icon name="truck"/></span><div><b>{supplier.name}</b><small>{supplier.taxId||"Sin RUC"}</small></div><Status tone={supplier.active?"green":"gray"}>{supplier.active?"Activo":"Inactivo"}</Status></header>
+            <dl><div><dt>Teléfono</dt><dd>{supplier.phone||"—"}</dd></div><div><dt>Correo</dt><dd>{supplier.email||"—"}</dd></div></dl>
+            {canManage&&<footer><RowActionButton action="edit" onClick={()=>setSupplierDraft({id:supplier.id,taxId:supplier.taxId,name:supplier.name,email:supplier.email,phone:supplier.phone})}/><RowActionButton action={supplier.active?"deactivate":"activate"} onClick={()=>setSupplierTarget(supplier)}/></footer>}
+          </article>)}</div>
         </>}
         {!suppliers.isLoading&&!suppliers.isError&&<Pagination page={page} size={size} total={suppliers.data?.total??0} onPage={setPage} onSize={value=>{setSize(value);setPage(1)}}/>}
       </>}
     </section>
 
-    {orderDraft&&(orderDraftLoading||activeSuppliers.isLoading||inventory.isLoading?<RemoteModalSkeleton className="purchase-order-modal" label="Cargando datos de compra" rows={7} close={()=>{setOrderDraft(null);setOrderDraftLoading(false)}}/>:activeSuppliers.isError||inventory.isError?<PurchaseEditorError message={(activeSuppliers.error??inventory.error)?.message??"No pudimos cargar los datos necesarios."} close={()=>setOrderDraft(null)} retry={()=>{void activeSuppliers.refetch();void inventory.refetch()}}/>:<PurchaseOrderDialog initial={orderDraft} suppliers={activeSuppliers.data?.items??[]} inventory={inventory.data?.items??[]} currencySymbol={settings.currencySymbol} busy={saveOrder.isPending} close={()=>setOrderDraft(null)} save={draft=>saveOrder.mutate(draft)}/>)}
+    {orderDraft&&(orderDraftLoading||activeSuppliers.isLoading||inventory.isLoading
+      ?<RemoteModalSkeleton className="purchase-order-modal" label="Cargando datos de compra" rows={7} close={()=>{setOrderDraft(null);setOrderDraftLoading(false)}/>
+      :activeSuppliers.isError||inventory.isError
+        ?<PurchaseEditorError message={(activeSuppliers.error??inventory.error)?.message??"No pudimos cargar los datos necesarios."} close={()=>setOrderDraft(null)} retry={()=>{void activeSuppliers.refetch();void inventory.refetch()}}/>
+        :<PurchaseOrderDialog initial={orderDraft} suppliers={activeSuppliers.data?.items??[]} inventory={inventory.data?.items??[]} currencySymbol={settings.currencySymbol} busy={saveOrder.isPending} close={()=>setOrderDraft(null)} save={draft=>saveOrder.mutate(draft)}/>
+    )}
+
     {supplierDraft&&<SupplierDialog initial={supplierDraft} busy={supplierSave.isPending} close={()=>setSupplierDraft(null)} save={draft=>supplierSave.mutate(draft)}/>}
-    {detailId&&(detail.isLoading?<RemoteModalSkeleton className="purchase-detail-modal" label="Cargando orden de compra" rows={6} close={()=>setDetailId(null)}/>:detail.isError?<PurchaseDetailError message={detail.error.message} close={()=>setDetailId(null)}/>:detail.data&&<PurchaseDetail order={detail.data} canManage={canManage} canReceive={canReceive} busy={transition.isPending} currency={formatMoney(Number(detail.data.total),settings,location?.country)} country={location?.country} timezone={location?.timezone} close={()=>setDetailId(null)} edit={()=>{setDetailId(null);void editOrder(detail.data.id)}} changeStatus={next=>transition.mutate({id:detail.data.id,next})} receive={()=>{setReceiptOrder(detail.data);setDetailId(null)}} cancel={()=>setCancelTarget(detail.data)}/>)}
+
+    {detailId&&(detail.isLoading
+      ?<RemoteModalSkeleton className="purchase-detail-modal" label="Cargando orden de compra" rows={6} close={()=>setDetailId(null)}/>
+      :detail.isError
+        ?<PurchaseDetailError message={detail.error.message} close={()=>setDetailId(null)}/>
+        :detail.data&&<PurchaseDetail
+          order={detail.data}
+          canManage={canManage}
+          canReceive={canReceive}
+          busy={transition.isPending}
+          currency={formatMoney(Number(detail.data.total),settings,location?.country)}
+          country={location?.country}
+          timezone={location?.timezone}
+          close={()=>setDetailId(null)}
+          edit={()=>{setDetailId(null);void editOrder(detail.data.id)}}
+          changeStatus={next=>transition.mutate({id:detail.data.id,next})}
+          receive={()=>{setDetailId(null);changeTab("receipts")}}
+          cancel={()=>setCancelTarget(detail.data)}
+        />
+    )}
+
     {receiptOrder&&<PurchaseReceiptDialog order={receiptOrder} busy={receive.isPending} close={()=>setReceiptOrder(null)} save={draft=>receive.mutate(draft)}/>}
-    <ConfirmDialog open={Boolean(supplierTarget)} title={supplierTarget?.active?"Desactivar proveedor":"Activar proveedor"} description={supplierTarget?.active?`“${supplierTarget?.name??""}” dejará de estar disponible para nuevas órdenes. Su historial se conservará.`:`“${supplierTarget?.name??""}” volverá a estar disponible para nuevas órdenes.`} tone={supplierTarget?.active?"danger":"success"} confirmLabel={supplierTarget?.active?"Desactivar":"Activar"} pending={supplierStatus.isPending} onCancel={()=>setSupplierTarget(null)} onConfirm={()=>supplierTarget&&supplierStatus.mutate(supplierTarget)}/>
-    <ConfirmDialog open={Boolean(cancelTarget)} title="Cancelar orden de compra" description={`“${cancelTarget?.number??""}” quedará cancelada y ya no podrá recibirse. El historial se conservará.`} tone="danger" confirmLabel="Cancelar orden" pending={transition.isPending} onCancel={()=>setCancelTarget(null)} onConfirm={()=>cancelTarget&&transition.mutate({id:cancelTarget.id,next:"cancelled"})}/>
+
+    <ConfirmDialog
+      open={Boolean(supplierTarget)}
+      title={supplierTarget?.active?"Desactivar proveedor":"Activar proveedor"}
+      description={supplierTarget?.active
+        ?"“"+(supplierTarget?.name??"")+"” dejará de estar disponible para nuevas órdenes. Su historial se conservará."
+        :"“"+(supplierTarget?.name??"")+"” volverá a estar disponible para nuevas órdenes."}
+      tone={supplierTarget?.active?"danger":"success"}
+      confirmLabel={supplierTarget?.active?"Desactivar":"Activar"}
+      pending={supplierStatus.isPending}
+      onCancel={()=>setSupplierTarget(null)}
+      onConfirm={()=>supplierTarget&&supplierStatus.mutate(supplierTarget)}
+    />
+
+    <ConfirmDialog
+      open={Boolean(cancelTarget)}
+      title="Cancelar orden de compra"
+      description={"“"+(cancelTarget?.number??"")+"” quedará cancelada y ya no podrá recibirse. El historial se conservará."}
+      tone="danger"
+      confirmLabel="Cancelar orden"
+      pending={transition.isPending}
+      onCancel={()=>setCancelTarget(null)}
+      onConfirm={()=>cancelTarget&&transition.mutate({id:cancelTarget.id,next:"cancelled"})}
+    />
   </>;
 }
 
