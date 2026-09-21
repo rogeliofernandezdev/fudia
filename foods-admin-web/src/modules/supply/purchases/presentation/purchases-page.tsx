@@ -55,6 +55,10 @@ export function PurchasesPage(){
     queryFn:()=>listPurchaseOrders({q,status:status||"receivable",page,pageSize:size}),
     enabled:tab==="receipts",
   });
+  const receivableSummary=useQuery({
+    queryKey:["purchase-orders","receivable-summary"],
+    queryFn:()=>listPurchaseOrders({q:"",status:"receivable",page:1,pageSize:1}),
+  });
   const suppliers=useQuery({
     queryKey:["suppliers",q,status,page,size],
     queryFn:()=>listSuppliers({q,status,page,pageSize:size}),
@@ -190,6 +194,7 @@ export function PurchasesPage(){
   }
 
   function changeTab(next:PurchaseTab){
+    if(next==="receipts")void qc.invalidateQueries({queryKey:["purchase-orders","receipts"]});
     setTab(next);
     setQ("");
     setStatus("");
@@ -219,7 +224,7 @@ export function PurchasesPage(){
           <Icon name="receipt" size={17}/><span>Órdenes de compra</span>{orders.data&&<b>{orders.data.total}</b>}
         </button>
         <button type="button" role="tab" aria-selected={tab==="receipts"} className={tab==="receipts"?"active":""} onClick={()=>changeTab("receipts")}>
-          <Icon name="stock" size={17}/><span>Recepciones</span>{receipts.data&&<b>{receipts.data.total}</b>}
+          <Icon name="stock" size={17}/><span>Recepciones</span>{receivableSummary.data&&<b>{receivableSummary.data.total}</b>}
         </button>
         <button type="button" role="tab" aria-selected={tab==="suppliers"} className={tab==="suppliers"?"active":""} onClick={()=>changeTab("suppliers")}>
           <Icon name="truck" size={17}/><span>Proveedores</span>{suppliers.data&&<b>{suppliers.data.total}</b>}
