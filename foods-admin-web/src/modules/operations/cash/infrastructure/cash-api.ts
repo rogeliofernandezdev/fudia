@@ -1,5 +1,5 @@
 import {apiFetch} from "@/shared/api/client";
-import type {CashMovement,CashMovementDraft,CashRegister,CashRegisterDraft,CashShift,CashShiftList,CloseCashShiftDraft,OpenCashShiftDraft} from "../domain/types";
+import type {CashMovement,CashMovementDraft,CashOperation,CashOperationDraft,CashRegister,CashRegisterDraft,CashShift,CashShiftList,CashShiftUser,CashUserOption,CloseCashShiftDraft,OpenCashShiftDraft} from "../domain/types";
 
 export function listCashRegisters(q=""){
   const params=new URLSearchParams();
@@ -11,14 +11,14 @@ export function listCashRegisters(q=""){
 export function createCashRegister(draft:CashRegisterDraft){
   return apiFetch<CashRegister>("cash-registers",{
     method:"POST",
-    body:JSON.stringify({name:draft.name.trim()}),
+    body:JSON.stringify({name:draft.name.trim(),blindClose:draft.blindClose}),
   });
 }
 
 export function updateCashRegister(id:string,draft:CashRegisterDraft){
   return apiFetch<CashRegister>(`cash-registers/${id}`,{
     method:"PATCH",
-    body:JSON.stringify({name:draft.name.trim()}),
+    body:JSON.stringify({name:draft.name.trim(),blindClose:draft.blindClose}),
   });
 }
 
@@ -57,9 +57,48 @@ export function createCashMovement(shiftId:string,draft:CashMovementDraft){
   });
 }
 
+export function listCashUserOptions(){
+  return apiFetch<{items:CashUserOption[]}>("cash-users/options");
+}
+
+export function listCashShiftUsers(shiftId:string){
+  return apiFetch<{items:CashShiftUser[]}>(`cash-shifts/${shiftId}/users`);
+}
+
+export function assignCashShiftUser(shiftId:string,userId:string){
+  return apiFetch<CashShiftUser>(`cash-shifts/${shiftId}/users`,{
+    method:"POST",
+    body:JSON.stringify({userId}),
+  });
+}
+
+export function unassignCashShiftUser(shiftId:string,userId:string){
+  return apiFetch<void>(`cash-shifts/${shiftId}/users/${userId}`,{method:"DELETE"});
+}
+
+export function createCashOperation(shiftId:string,draft:CashOperationDraft){
+  return apiFetch<CashOperation>(`cash-shifts/${shiftId}/operations`,{
+    method:"POST",
+    body:JSON.stringify({
+      operationType:draft.operationType,
+      targetShiftId:draft.targetShiftId,
+      amount:Number(draft.amount),
+      reason:draft.reason.trim(),
+      note:draft.note.trim(),
+    }),
+  });
+}
+
 export function closeCashShift(shiftId:string,draft:CloseCashShiftDraft){
   return apiFetch<CashShift>(`cash-shifts/${shiftId}/close`,{
     method:"POST",
-    body:JSON.stringify({countedAmount:Number(draft.countedAmount),note:draft.note.trim()}),
+    body:JSON.stringify({
+      countedAmount:draft.counts.some(line=>Number(line.quantity)>0)?undefined:Number(draft.countedAmount),
+      counts:draft.counts.filter(line=>Number(line.denomination)>0&&Number(line.quantity)>0).map(line=>({
+        denomination:Number(line.denomination),
+        quantity:Number(line.quantity),
+      })),
+      note:draft.note.trim(),
+    }),
   });
 }
