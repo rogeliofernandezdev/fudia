@@ -471,10 +471,18 @@ func (a *API) openCashShift(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tx, err := a.db.Begin(r.Context())
+	if err != nil {
+		fail(w, 503, "cash_unavailable", "No pudimos iniciar el turno de caja.")
+		return
+	}
+	defer tx.Rollback(r.Context())
+
 	var registerName string
-	if err := a.db.QueryRow(r.Context(), `
+	if err := tx.QueryRow(r.Context(), `
 		SELECT name FROM cash_registers
 		WHERE id=$1 AND organization_id=$2 AND location_id=$3 AND active
+		FOR UPDATE
 	`, in.CashRegisterID, s.OrganizationID, s.LocationID).Scan(&registerName); errors.Is(err, pgx.ErrNoRows) {
 		fail(w, 404, "cash_register_not_found", "La caja seleccionada no existe o está inactiva.")
 		return
@@ -484,7 +492,7 @@ func (a *API) openCashShift(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var id string
-	err := a.db.QueryRow(r.Context(), `
+	err = tx.QueryRow(r.Context(), `
 		INSERT INTO cash_shifts(organization_id,location_id,cash_register_id,business_date,opening_amount,opening_note,opened_by)
 		VALUES(
 		  $1,$2,$3,
@@ -500,6 +508,24 @@ func (a *API) openCashShift(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		fail(w, 503, "cash_unavailable", "No pudimos iniciar el turno de caja.")
+		return
+	}
+
+	if _, err := tx.Exec(r.Context(), `
+		INSERT INTO cash_shift_users(organization_id,location_id,shift_id,user_id,assigned_by)
+		VALUES($1,$2,$3,$4,$4)
+	`, s.OrganizationID, s.LocationID, id, s.UserID); err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			fail(w, 409, "cash_user_already_assigned", "Ya estás asignado a otro turno abierto en este local.")
+			return
+		}
+		fail(w, 503, "cash_unavailable", "No pudimos asignarte al turno.")
+		return
+	}
+
+	if err := tx.Commit(r.Context()); err != nil {
+		fail(w, 503, "cash_unavailable", "No pudimos confirmar la apertura del turno.")
 		return
 	}
 
@@ -537,13 +563,14 @@ func (a *API) createCashMovement(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback(r.Context())
 
+	shiftID := r.PathValue("id")
 	var status string
 	err = tx.QueryRow(r.Context(), `
 		SELECT status
 		FROM cash_shifts
 		WHERE id=$1 AND organization_id=$2 AND location_id=$3
 		FOR UPDATE
-	`, r.PathValue("id"), s.OrganizationID, s.LocationID).Scan(&status)
+	`, shiftID, s.OrganizationID, s.LocationID).Scan(&status)
 	if errors.Is(err, pgx.ErrNoRows) {
 		fail(w, 404, "cash_shift_not_found", "El turno de caja no existe en este local.")
 		return
@@ -556,6 +583,24 @@ func (a *API) createCashMovement(w http.ResponseWriter, r *http.Request) {
 		fail(w, 409, "cash_shift_closed", "El turno ya fue cerrado y no admite nuevos movimientos.")
 		return
 	}
+	if err := requireCashShiftAssignment(r.Context(), tx, s, shiftID); errors.Is(err, pgx.ErrNoRows) {
+		fail(w, 403, "cash_shift_not_assigned", "Debes estar asignado al turno para operar esta caja.")
+		return
+	} else if err != nil {
+		fail(w, 503, "cash_unavailable", "No pudimos validar tu asignación.")
+		return
+	}
+	if in.MovementType == "expense" {
+		expected, err := cashShiftExpected(r.Context(), tx, s, shiftID)
+		if err != nil {
+			fail(w, 503, "cash_unavailable", "No pudimos calcular el saldo esperado.")
+			return
+		}
+		if in.Amount > expected+0.00001 {
+			fail(w, 409, "cash_expense_exceeds_expected", "El egreso supera el efectivo esperado del turno.")
+			return
+		}
+	}
 
 	var item cashMovementView
 	err = tx.QueryRow(r.Context(), `
@@ -566,7 +611,7 @@ func (a *API) createCashMovement(w http.ResponseWriter, r *http.Request) {
 		          amount::text,reason,note,
 		          (SELECT full_name FROM users WHERE id=$8 AND organization_id=$1),
 		          to_char(created_at,'YYYY-MM-DD"T"HH24:MI:SSOF')
-	`, s.OrganizationID, s.LocationID, r.PathValue("id"), in.MovementType, in.Amount, in.Reason, in.Note, s.UserID).
+	`, s.OrganizationID, s.LocationID, shiftID, in.MovementType, in.Amount, in.Reason, in.Note, s.UserID).
 		Scan(&item.ID, &item.MovementType, &item.SourceType, &item.SourceID, &item.Amount, &item.Reason, &item.Note, &item.CreatedByName, &item.CreatedAt)
 	if err != nil {
 		fail(w, 503, "cash_unavailable", "No pudimos registrar el movimiento de caja.")
@@ -583,16 +628,38 @@ func (a *API) createCashMovement(w http.ResponseWriter, r *http.Request) {
 func (a *API) closeCashShift(w http.ResponseWriter, r *http.Request) {
 	s := r.Context().Value(scopeKey{}).(scope)
 	var in struct {
-		CountedAmount float64 `json:"countedAmount"`
-		Note          string  `json:"note"`
+		CountedAmount *float64 `json:"countedAmount"`
+		Note          string   `json:"note"`
+		Counts        []struct {
+			Denomination float64 `json:"denomination"`
+			Quantity     int     `json:"quantity"`
+		} `json:"counts"`
 	}
-	if json.NewDecoder(r.Body).Decode(&in) != nil || in.CountedAmount < 0 {
-		fail(w, 400, "invalid_cash_close", "Ingresa un efectivo contado válido.")
+	if json.NewDecoder(r.Body).Decode(&in) != nil {
+		fail(w, 400, "invalid_cash_close", "Revisa los datos del arqueo.")
 		return
 	}
 	in.Note = strings.TrimSpace(in.Note)
 	if len(in.Note) > 240 {
 		fail(w, 400, "invalid_cash_close", "La observación no puede superar 240 caracteres.")
+		return
+	}
+
+	counted := 0.0
+	if len(in.Counts) > 0 {
+		seen := map[float64]bool{}
+		for _, line := range in.Counts {
+			if line.Denomination <= 0 || line.Quantity < 0 || seen[line.Denomination] {
+				fail(w, 400, "invalid_cash_count", "Revisa las denominaciones del conteo.")
+				return
+			}
+			seen[line.Denomination] = true
+			counted += line.Denomination * float64(line.Quantity)
+		}
+	} else if in.CountedAmount != nil && *in.CountedAmount >= 0 {
+		counted = *in.CountedAmount
+	} else {
+		fail(w, 400, "invalid_cash_close", "Ingresa el efectivo contado o detalla las denominaciones.")
 		return
 	}
 
@@ -603,6 +670,7 @@ func (a *API) closeCashShift(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback(r.Context())
 
+	shiftID := r.PathValue("id")
 	var status string
 	var opening, income, expense float64
 	err = tx.QueryRow(r.Context(), `
@@ -612,7 +680,7 @@ func (a *API) closeCashShift(w http.ResponseWriter, r *http.Request) {
 		FROM cash_shifts cs
 		WHERE cs.id=$1 AND cs.organization_id=$2 AND cs.location_id=$3
 		FOR UPDATE
-	`, r.PathValue("id"), s.OrganizationID, s.LocationID).Scan(&status, &opening, &income, &expense)
+	`, shiftID, s.OrganizationID, s.LocationID).Scan(&status, &opening, &income, &expense)
 	if errors.Is(err, pgx.ErrNoRows) {
 		fail(w, 404, "cash_shift_not_found", "El turno de caja no existe en este local.")
 		return
@@ -626,8 +694,23 @@ func (a *API) closeCashShift(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if len(in.Counts) > 0 {
+		for _, line := range in.Counts {
+			if line.Quantity == 0 {
+				continue
+			}
+			if _, err := tx.Exec(r.Context(), `
+				INSERT INTO cash_count_lines(organization_id,location_id,shift_id,denomination,quantity)
+				VALUES($1,$2,$3,$4,$5)
+			`, s.OrganizationID, s.LocationID, shiftID, line.Denomination, line.Quantity); err != nil {
+				fail(w, 503, "cash_unavailable", "No pudimos guardar el conteo por denominaciones.")
+				return
+			}
+		}
+	}
+
 	expected := opening + income - expense
-	variance := in.CountedAmount - expected
+	variance := counted - expected
 	if _, err := tx.Exec(r.Context(), `
 		UPDATE cash_shifts
 		SET status='closed',
@@ -638,8 +721,17 @@ func (a *API) closeCashShift(w http.ResponseWriter, r *http.Request) {
 		    closed_by=$8,
 		    closed_at=now()
 		WHERE id=$1 AND organization_id=$2 AND location_id=$3
-	`, r.PathValue("id"), s.OrganizationID, s.LocationID, expected, in.CountedAmount, variance, in.Note, s.UserID); err != nil {
+	`, shiftID, s.OrganizationID, s.LocationID, expected, counted, variance, in.Note, s.UserID); err != nil {
 		fail(w, 503, "cash_unavailable", "No pudimos cerrar el turno de caja.")
+		return
+	}
+
+	if _, err := tx.Exec(r.Context(), `
+		UPDATE cash_shift_users
+		SET unassigned_at=now()
+		WHERE organization_id=$1 AND location_id=$2 AND shift_id=$3 AND unassigned_at IS NULL
+	`, s.OrganizationID, s.LocationID, shiftID); err != nil {
+		fail(w, 503, "cash_unavailable", "No pudimos liberar al equipo del turno.")
 		return
 	}
 
@@ -648,7 +740,7 @@ func (a *API) closeCashShift(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	shift, err := a.getCashShiftByID(r, r.PathValue("id"))
+	shift, err := a.getCashShiftByID(r, shiftID)
 	if err != nil {
 		fail(w, 503, "cash_unavailable", "El turno se cerró, pero no pudimos cargar su detalle.")
 		return
