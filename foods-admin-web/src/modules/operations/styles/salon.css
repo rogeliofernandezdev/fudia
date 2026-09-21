@@ -962,9 +962,14 @@
 }
 
 .salon-order-detail .salon-order-detail-actions .order-detail-primary{
-  background:var(--ops-700,#3946b8);
-  border-color:var(--ops-700,#3946b8);
+  background:var(--success-600,#16875f);
+  border-color:var(--success-600,#16875f);
   color:#fff;
+}
+
+.salon-order-detail .salon-order-detail-actions .order-detail-primary:hover:not(:disabled){
+  background:#126f4e;
+  border-color:#126f4e;
 }
 
 .salon-order-detail .salon-order-detail-actions .salon-order-detail-pay{
@@ -984,15 +989,15 @@
 }
 
 .salon-order-detail .salon-order-detail-actions .salon-order-detail-edit{
-  border-color:var(--action-edit,#4654cd);
-  background:var(--action-edit-soft,#eef0ff);
-  color:var(--action-edit,#4654cd);
+  border-color:#c7cdd8;
+  background:#fff;
+  color:#344054;
 }
 
 .salon-order-detail .salon-order-detail-actions .salon-order-detail-edit:hover:not(:disabled){
-  border-color:var(--action-edit-hover,#3946b8);
-  background:var(--action-edit,#4654cd);
-  color:#fff;
+  border-color:#98a2b3;
+  background:#f2f4f7;
+  color:#1d2939;
 }
 
 .salon-order-detail .salon-order-detail-actions .order-detail-done{
