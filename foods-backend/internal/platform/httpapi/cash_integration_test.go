@@ -210,8 +210,8 @@ func TestCashShiftAndRegisterAreScopedToLocation(t *testing.T) {
 
 	var shiftID string
 	if err := pool.QueryRow(ctx, `
-		INSERT INTO cash_shifts(organization_id,location_id,cash_register_id,opening_amount,opened_by)
-		VALUES($1,$2,$3,10,$4)
+		INSERT INTO cash_shifts(organization_id,location_id,cash_register_id,business_date,opening_amount,opened_by)
+		VALUES($1,$2,$3,(now() AT TIME ZONE 'UTC')::date,10,$4)
 		RETURNING id
 	`, s.OrganizationID, otherLocationID, registerID, s.UserID).Scan(&shiftID); err != nil {
 		t.Fatal(err)
