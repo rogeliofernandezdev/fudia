@@ -893,6 +893,15 @@ func (a *API) updateOrder(w http.ResponseWriter, r *http.Request) {
 		fail(w, 409, "order_not_editable", "Solo se puede editar un pedido en estado Nuevo o Confirmado.")
 		return
 	}
+	paid, paidErr := loadOrderNetPaid(r.Context(), tx, r.PathValue("id"), s.OrganizationID, s.LocationID)
+	if paidErr != nil {
+		fail(w, 503, "order_unavailable", "No pudimos validar los pagos del pedido.")
+		return
+	}
+	if paid > 0.00001 {
+		fail(w, 409, "paid_order_not_editable", "No se puede modificar una comanda después de registrar pagos. Devuelve los pagos antes de editarla.")
+		return
+	}
 	if channel == "delivery" && strings.TrimSpace(in.Address) == "" {
 		fail(w, 400, "invalid_order", "El pedido de delivery necesita una dirección.")
 		return
