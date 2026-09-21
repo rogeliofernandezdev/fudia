@@ -114,9 +114,7 @@ export function CashPage(){
     if(next==="history")void qc.invalidateQueries({queryKey:["cash-shifts"]});
   }
 
-  const headerAction=tab==="current"&&!current.isLoading&&!shift&&canManage
-    ?<Button icon="plus" onClick={()=>setOpenDialog(true)}>Abrir turno</Button>
-    :undefined;
+  const headerAction=undefined;
 
   return <div className="cash-page">
     <PageHeader
@@ -128,7 +126,7 @@ export function CashPage(){
 
     <section className="panel standardized-management cash-panel">
       <nav className="cash-tabs" aria-label="Caja y turnos">
-        <button type="button" className={tab==="current"?"active":""} aria-pressed={tab==="current"} onClick={()=>changeTab("current")}><Icon name="sales" size={17}/><span>Caja actual</span>{shift&&<b>Abierta</b>}</button>
+        <button type="button" className={tab==="current"?"active":""} aria-pressed={tab==="current"} onClick={()=>changeTab("current")}><Icon name="sales" size={17}/><span>Caja</span>{shift&&<b>Abierta</b>}</button>
         <button type="button" className={tab==="history"?"active":""} aria-pressed={tab==="history"} onClick={()=>changeTab("history")}><Icon name="clock" size={17}/><span>Turnos</span></button>
       </nav>
 
