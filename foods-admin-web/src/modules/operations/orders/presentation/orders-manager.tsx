@@ -26,7 +26,7 @@ function nextAction(o:Order):{status:string;label:string;icon:IconName}|null{
  if(o.status==="en_camino")return{status:"entregado",label:"Entregar",icon:"check"};
  return null;
 }
-const cancellable=(o:Order)=>!["entregado","cancelado"].includes(o.status)&&Number(o.paidAmount??0)<=0.00001;
+const cancellable=(o:Order)=>(o.status==="nuevo"||o.status==="confirmado")&&Number(o.paidAmount??0)<=0.00001;
 function parseIsoDate(iso:string):Date|null{
   if(!iso)return null;
   const normalized=iso.replace(/([+-]\d{2})$/,"$1:00");
