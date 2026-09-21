@@ -75,6 +75,10 @@ SET unit_cost=poi.unit_cost
 FROM purchase_order_items poi
 WHERE poi.id=pri.purchase_order_item_id AND poi.organization_id=pri.organization_id;
 
+-- Las devoluciones referencian líneas por id + organización.
+ALTER TABLE purchase_receipt_items
+  ADD CONSTRAINT purchase_receipt_items_scope_uq UNIQUE(id,organization_id);
+
 -- Devoluciones/correcciones contra una recepción.
 CREATE TABLE purchase_returns (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
