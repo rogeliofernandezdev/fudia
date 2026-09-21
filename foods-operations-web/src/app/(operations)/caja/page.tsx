@@ -1,6 +1,6 @@
 "use client";
 
-import {useCallback,useEffect,useState} from "react";
+import {useEffect,useState} from "react";
 import {ActionLink,Button,Input,Label} from "@/components/ui/controls";
 import {Icon} from "@/components/icon";
 import {PageHeading} from "@/components/app-shell";
@@ -19,8 +19,9 @@ export default function CashPage(){
   const[counted,setCounted]=useState("");
   const[closeError,setCloseError]=useState("");
 
-  const load=useCallback(async()=>{
-    setLoading(true);setError("");
+  async function load(showLoading=true){
+    if(showLoading)setLoading(true);
+    setError("");
     try{
       const[current,orders]=await Promise.all([
         operationsFetch<{shift:CashShift|null}>("cash-shifts/current"),
@@ -29,10 +30,25 @@ export default function CashPage(){
       setShift(current.shift);
       setPending(orders.items);
     }catch(e){setError(e instanceof Error?e.message:"No se pudo cargar Caja.");}
-    finally{setLoading(false);}
-  },[]);
+    finally{if(showLoading)setLoading(false);}
+  }
 
-  useEffect(()=>{void load();},[load]);
+  useEffect(()=>{
+    let active=true;
+    void Promise.all([
+      operationsFetch<{shift:CashShift|null}>("cash-shifts/current"),
+      operationsFetch<OrdersResponse>("pos/orders?paymentStatus=unpaid&page=1&pageSize=20"),
+    ]).then(([current,orders])=>{
+      if(!active)return;
+      setShift(current.shift);
+      setPending(orders.items);
+    }).catch(e=>{
+      if(active)setError(e instanceof Error?e.message:"No se pudo cargar Caja.");
+    }).finally(()=>{
+      if(active)setLoading(false);
+    });
+    return()=>{active=false;};
+  },[]);
 
   async function closeShift(){
     if(!shift||closing)return;
