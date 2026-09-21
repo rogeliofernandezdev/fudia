@@ -715,6 +715,40 @@ func (a *API) updatePurchaseOrderStatus(w http.ResponseWriter, r *http.Request) 
 
 func (a *API) receivePurchaseOrder(w http.ResponseWriter, r *http.Request) {
 	s := r.Context().Value(scopeKey{}).(scope)
+	var in purchaseReceiptInput
+	if json.NewDecoder(r.Body).Decode(&in) != nil {
+		fail(w, 400, "invalid_purchase_receipt", "Revisa las cantidades recibidas.")
+		return
+	}
+	in.Notes = strings.TrimSpace(in.Notes)
+	if len(in.Notes) > 500 {
+		fail(w, 400, "invalid_purchase_receipt", "Las notas no pueden superar 500 caracteres.")
+		return
+	}
+	if len(in.Items) == 0 {
+		fail(w, 400, "invalid_purchase_receipt", "Registra al menos una cantidad recibida.")
+		return
+	}
+	if len(in.Items) > 100 {
+		fail(w, 400, "invalid_purchase_receipt", "La recepción no puede superar 100 líneas.")
+		return
+	}
+	seen := map[string]bool{}
+	for index := range in.Items {
+		line := &in.Items[index]
+		line.PurchaseOrderItemID = strings.TrimSpace(line.PurchaseOrderItemID)
+		line.Quantity = math.Round(line.Quantity*1000) / 1000
+		if line.PurchaseOrderItemID == "" || line.Quantity <= 0 {
+			fail(w, 400, "invalid_purchase_receipt", "Cada línea recibida necesita artículo y cantidad mayor que cero.")
+			return
+		}
+		if seen[line.PurchaseOrderItemID] {
+			fail(w, 400, "invalid_purchase_receipt", "No repitas el mismo artículo en una recepción.")
+			return
+		}
+		seen[line.PurchaseOrderItemID] = true
+	}
+
 	tx, err := a.db.Begin(r.Context())
 	if err != nil {
 		fail(w, 503, "purchase_unavailable", "No pudimos recibir la orden.")
@@ -723,133 +757,190 @@ func (a *API) receivePurchaseOrder(w http.ResponseWriter, r *http.Request) {
 	defer tx.Rollback(r.Context())
 
 	var number, status string
-	if err = tx.QueryRow(r.Context(), `
+	if err = tx.QueryRow(r.Context(), \`
 		SELECT number,status
 		FROM purchase_orders
 		WHERE id=$1 AND organization_id=$2 AND location_id=$3
-		FOR UPDATE`, r.PathValue("id"), s.OrganizationID, s.LocationID).Scan(&number, &status); errors.Is(err, pgx.ErrNoRows) {
+		FOR UPDATE\`, r.PathValue("id"), s.OrganizationID, s.LocationID).Scan(&number, &status); errors.Is(err, pgx.ErrNoRows) {
 		fail(w, 404, "purchase_not_found", "La orden de compra no existe.")
 		return
 	} else if err != nil {
 		fail(w, 503, "purchase_unavailable", "No pudimos validar la orden.")
 		return
 	}
-	if status != "approved" {
-		fail(w, 409, "purchase_not_approved", "Solo una orden aprobada puede recibirse.")
+	if status != "approved" && status != "partially_received" {
+		fail(w, 409, "purchase_not_receivable", "Solo una orden aprobada o parcialmente recibida puede recibir mercadería.")
+		return
+	}
+
+	var receiptID, receiptCode string
+	if err = tx.QueryRow(r.Context(), \`
+		INSERT INTO purchase_receipts(
+			organization_id,location_id,purchase_order_id,notes,created_by
+		)
+		VALUES($1,$2,$3,$4,$5)
+		RETURNING id,code\`,
+		s.OrganizationID, s.LocationID, r.PathValue("id"), in.Notes, s.UserID,
+	).Scan(&receiptID, &receiptCode); err != nil {
+		fail(w, 503, "purchase_unavailable", "No pudimos crear la recepción.")
 		return
 	}
 
 	type receivingLine struct {
+		ID                   string
 		InventoryItemID      string
 		ProductID            *string
 		ItemName             string
-		Unit                 string
 		PresentationID       string
 		PresentationType     string
 		UnitsPerPresentation float64
-		Quantity             float64
-		StockQuantity        float64
+		OrderedQuantity      float64
+		ReceivedQuantity     float64
+		ReceiveQuantity      float64
 	}
-	rows, err := tx.Query(r.Context(), `
-		SELECT poi.inventory_item_id,ii.product_id,COALESCE(p.name,ii.name),ii.unit,
-		       poi.presentation_id,poi.presentation_type,poi.units_per_presentation::float8,
-		       poi.quantity::float8,poi.stock_quantity::float8
-		FROM purchase_order_items poi
-		JOIN inventory_items ii ON ii.id=poi.inventory_item_id AND ii.organization_id=poi.organization_id
-		LEFT JOIN products p ON p.id=ii.product_id AND p.organization_id=ii.organization_id
-		WHERE poi.purchase_order_id=$1 AND poi.organization_id=$2
-		ORDER BY poi.created_at,poi.id`, r.PathValue("id"), s.OrganizationID)
-	if err != nil {
-		fail(w, 503, "purchase_unavailable", "No pudimos cargar los artículos a recibir.")
-		return
-	}
-	lines := []receivingLine{}
-	for rows.Next() {
+	lines := make([]receivingLine, 0, len(in.Items))
+	for _, requested := range in.Items {
 		var line receivingLine
-		if err := rows.Scan(
-			&line.InventoryItemID, &line.ProductID, &line.ItemName, &line.Unit,
+		err = tx.QueryRow(r.Context(), \`
+			SELECT poi.id,poi.inventory_item_id,ii.product_id,COALESCE(p.name,ii.name),
+			       poi.presentation_id,poi.presentation_type,poi.units_per_presentation::float8,
+			       poi.quantity::float8,poi.received_quantity::float8
+			FROM purchase_order_items poi
+			JOIN inventory_items ii ON ii.id=poi.inventory_item_id AND ii.organization_id=poi.organization_id
+			LEFT JOIN products p ON p.id=ii.product_id AND p.organization_id=ii.organization_id
+			WHERE poi.id=$1 AND poi.purchase_order_id=$2 AND poi.organization_id=$3
+			FOR UPDATE OF poi\`,
+			requested.PurchaseOrderItemID, r.PathValue("id"), s.OrganizationID,
+		).Scan(
+			&line.ID, &line.InventoryItemID, &line.ProductID, &line.ItemName,
 			&line.PresentationID, &line.PresentationType, &line.UnitsPerPresentation,
-			&line.Quantity, &line.StockQuantity,
-		); err != nil {
-			rows.Close()
-			fail(w, 503, "purchase_unavailable", "No pudimos preparar la recepción.")
+			&line.OrderedQuantity, &line.ReceivedQuantity,
+		)
+		if errors.Is(err, pgx.ErrNoRows) {
+			fail(w, 409, "purchase_receipt_item_invalid", "Una línea ya no pertenece a esta orden.")
+			return
+		}
+		if err != nil {
+			fail(w, 503, "purchase_unavailable", "No pudimos validar los artículos de la recepción.")
+			return
+		}
+		line.ReceiveQuantity = requested.Quantity
+		pending := math.Round((line.OrderedQuantity-line.ReceivedQuantity)*1000) / 1000
+		if line.ReceiveQuantity-pending > 0.000001 {
+			fail(w, 409, "purchase_receipt_exceeds_pending", "La cantidad recibida de "+line.ItemName+" supera lo pendiente.")
+			return
+		}
+		if line.PresentationType != "unit" && math.Abs(line.ReceiveQuantity-math.Round(line.ReceiveQuantity)) > 0.000001 {
+			fail(w, 400, "invalid_purchase_receipt_quantity", "Paquetes y cajas deben recibirse en cantidades enteras.")
 			return
 		}
 		lines = append(lines, line)
 	}
-	rows.Close()
-	if len(lines) == 0 {
-		fail(w, 409, "purchase_empty", "La orden no tiene artículos para recibir.")
-		return
-	}
 
 	for _, line := range lines {
-		if _, err = tx.Exec(r.Context(), `
+		stockQuantity := math.Round(line.ReceiveQuantity*line.UnitsPerPresentation*1000) / 1000
+		if _, err = tx.Exec(r.Context(), \`
+			INSERT INTO purchase_receipt_items(
+				organization_id,purchase_receipt_id,purchase_order_item_id,inventory_item_id,
+				presentation_id,quantity,presentation_type,units_per_presentation
+			)
+			VALUES($1,$2,$3,$4,$5,$6,$7,$8)\`,
+			s.OrganizationID, receiptID, line.ID, line.InventoryItemID,
+			line.PresentationID, line.ReceiveQuantity, line.PresentationType, line.UnitsPerPresentation,
+		); err != nil {
+			fail(w, 503, "purchase_unavailable", "No pudimos guardar el detalle de la recepción.")
+			return
+		}
+		if _, err = tx.Exec(r.Context(), \`
 			INSERT INTO stock_balances(organization_id,location_id,inventory_item_id,quantity)
 			VALUES($1,$2,$3,0)
-			ON CONFLICT (location_id,inventory_item_id) DO NOTHING`,
+			ON CONFLICT (location_id,inventory_item_id) DO NOTHING\`,
 			s.OrganizationID, s.LocationID, line.InventoryItemID); err != nil {
 			fail(w, 503, "inventory_unavailable", "No pudimos preparar el saldo de inventario.")
 			return
 		}
 		var current float64
-		if err = tx.QueryRow(r.Context(), `
+		if err = tx.QueryRow(r.Context(), \`
 			SELECT quantity::float8
 			FROM stock_balances
 			WHERE organization_id=$1 AND location_id=$2 AND inventory_item_id=$3
-			FOR UPDATE`, s.OrganizationID, s.LocationID, line.InventoryItemID).Scan(&current); err != nil {
+			FOR UPDATE\`, s.OrganizationID, s.LocationID, line.InventoryItemID).Scan(&current); err != nil {
 			fail(w, 503, "inventory_unavailable", "No pudimos bloquear el saldo de inventario.")
 			return
 		}
-		balanceAfter := current + line.StockQuantity
-		if _, err = tx.Exec(r.Context(), `
+		balanceAfter := math.Round((current+stockQuantity)*1000) / 1000
+		if _, err = tx.Exec(r.Context(), \`
 			UPDATE stock_balances
 			SET quantity=$4,updated_at=now()
-			WHERE organization_id=$1 AND location_id=$2 AND inventory_item_id=$3`,
+			WHERE organization_id=$1 AND location_id=$2 AND inventory_item_id=$3\`,
 			s.OrganizationID, s.LocationID, line.InventoryItemID, balanceAfter); err != nil {
 			fail(w, 503, "inventory_unavailable", "No pudimos actualizar el saldo de inventario.")
 			return
 		}
-		var entryID string
-		note := "Recepción de " + number
-		if err = tx.QueryRow(r.Context(), `
-			INSERT INTO inventory_entries(
-				organization_id,location_id,product_id,inventory_item_id,
-				quantity,unit,presentation_id,presentation_type,units_per_presentation,note,created_by
-			)
-			VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-			RETURNING id`,
-			s.OrganizationID, s.LocationID, line.ProductID, line.InventoryItemID,
-			line.Quantity, line.Unit, line.PresentationID, line.PresentationType,
-			line.UnitsPerPresentation, note, s.UserID,
-		).Scan(&entryID); err != nil {
-			fail(w, 503, "inventory_unavailable", "No pudimos registrar la entrada de inventario.")
-			return
+		note := "Recepción " + receiptCode + " de " + number
+		if in.Notes != "" {
+			note += " · " + in.Notes
 		}
-		if _, err = tx.Exec(r.Context(), `
+		if _, err = tx.Exec(r.Context(), \`
 			INSERT INTO stock_movements(
 				organization_id,location_id,product_id,inventory_item_id,
 				movement_type,quantity_delta,balance_after,source_type,source_id,note,created_by
 			)
-			VALUES($1,$2,$3,$4,'entry',$5,$6,'inventory_entry',$7,$8,$9)`,
+			VALUES($1,$2,$3,$4,'entry',$5,$6,'purchase_receipt',$7,$8,$9)\`,
 			s.OrganizationID, s.LocationID, line.ProductID, line.InventoryItemID,
-			line.StockQuantity, balanceAfter, entryID, note, s.UserID); err != nil {
+			stockQuantity, balanceAfter, receiptID, note, s.UserID); err != nil {
 			fail(w, 503, "inventory_unavailable", "No pudimos registrar el movimiento de Kárdex.")
 			return
 		}
+		if _, err = tx.Exec(r.Context(), \`
+			UPDATE purchase_order_items
+			SET received_quantity=received_quantity+$4
+			WHERE id=$1 AND purchase_order_id=$2 AND organization_id=$3\`,
+			line.ID, r.PathValue("id"), s.OrganizationID, line.ReceiveQuantity); err != nil {
+			fail(w, 503, "purchase_unavailable", "No pudimos actualizar lo recibido de la orden.")
+			return
+		}
 	}
-	if _, err = tx.Exec(r.Context(), `
-		UPDATE purchase_orders
-		SET status='received',received_at=now(),updated_at=now()
-		WHERE id=$1 AND organization_id=$2 AND location_id=$3`,
-		r.PathValue("id"), s.OrganizationID, s.LocationID); err != nil {
-		fail(w, 503, "purchase_unavailable", "No pudimos cerrar la recepción.")
+
+	var pendingCount int
+	if err = tx.QueryRow(r.Context(), \`
+		SELECT count(*)
+		FROM purchase_order_items
+		WHERE purchase_order_id=$1 AND organization_id=$2
+		  AND received_quantity < quantity\`,
+		r.PathValue("id"), s.OrganizationID).Scan(&pendingCount); err != nil {
+		fail(w, 503, "purchase_unavailable", "No pudimos calcular lo pendiente de la orden.")
 		return
 	}
+	nextStatus := "partially_received"
+	var receivedAt *time.Time
+	if pendingCount == 0 {
+		nextStatus = "received"
+		now := time.Now().UTC()
+		receivedAt = &now
+	}
+	if _, err = tx.Exec(r.Context(), \`
+		UPDATE purchase_orders
+		SET status=$4,
+		    received_at=CASE WHEN $4='received' THEN now() ELSE received_at END,
+		    updated_at=now()
+		WHERE id=$1 AND organization_id=$2 AND location_id=$3\`,
+		r.PathValue("id"), s.OrganizationID, s.LocationID, nextStatus); err != nil {
+		fail(w, 503, "purchase_unavailable", "No pudimos actualizar la recepción de la orden.")
+		return
+	}
+
 	if err = tx.Commit(r.Context()); err != nil {
 		fail(w, 503, "purchase_unavailable", "No pudimos recibir la orden.")
 		return
 	}
-	a.audit(r, "purchase.received", "purchase_order", r.PathValue("id"))
-	writeJSON(w, 200, map[string]any{"id": r.PathValue("id"), "number": number, "status": "received", "receivedAt": time.Now().UTC()})
+	a.audit(r, "purchase.receipt_created", "purchase_order", r.PathValue("id"))
+	writeJSON(w, 201, map[string]any{
+		"id": receiptID,
+		"code": receiptCode,
+		"purchaseOrderId": r.PathValue("id"),
+		"number": number,
+		"status": nextStatus,
+		"receivedAt": receivedAt,
+	})
 }
