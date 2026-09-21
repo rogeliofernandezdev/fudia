@@ -160,6 +160,7 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
 }
 
 function POSDetailDialog({loading,error,data,canManage,hasShift,formatMoney,formatDateTime,close,pay,refund}:{loading:boolean;error?:string;data?:POSOrderDetail;canManage:boolean;hasShift:boolean;formatMoney:(value:number)=>string;formatDateTime:(value:string)=>string;close:()=>void;pay:(data:POSOrderDetail)=>void;refund:(payment:Payment)=>void}){
+  const closed=Boolean(data&&["entregado","cancelado"].includes(data.order.status));
   return <div className="modal-backdrop modal-overlay-in"><section className="crud-modal pos-detail-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="pos-detail-title">
     <div className="modal-accent"/>
     <header><span className="modal-title-icon"><Icon name="receipt" size={18}/></span><div><small>DETALLE DE COBRO</small><h2 id="pos-detail-title">{data?.order.code??"Pedido"}</h2></div><button type="button" aria-label="Cerrar" onClick={close}><Icon name="close"/></button></header>
@@ -182,11 +183,11 @@ function POSDetailDialog({loading,error,data,canManage,hasShift,formatMoney,form
         <header><div><small>PAGOS</small><h3>Historial del pedido</h3></div><span>{data.payments.length}</span></header>
         {data.payments.length?<div className="pos-payment-list">{data.payments.map(payment=>{
           const net=Number(payment.netAmount);
-          return <article key={payment.id}><span className="pos-payment-method"><Icon name={payment.method==="cash"?"sales":payment.method==="card"?"receipt":"share"} size={15}/></span><div><b>{payment.method==="cash"?"Efectivo":payment.method==="card"?"Tarjeta":payment.method==="transfer"?"Transferencia":"Otro"}</b><small>{payment.cashRegisterName} · {formatDateTime(payment.createdAt)} · {payment.createdByName}</small>{payment.reference&&<em>{payment.reference}</em>}</div><span className="pos-payment-values"><b>{formatMoney(Number(payment.amount))}</b>{Number(payment.refundedAmount)>0&&<small>Devuelto {formatMoney(Number(payment.refundedAmount))}</small>}</span>{canManage&&net>0&&<Button kind="ghost" className="pos-refund-action" disabled={!hasShift} onClick={()=>refund(payment)}>Devolver</Button>}</article>})}</div>
+          return <article key={payment.id}><span className="pos-payment-method"><Icon name={payment.method==="cash"?"sales":payment.method==="card"?"receipt":"share"} size={15}/></span><div><b>{payment.method==="cash"?"Efectivo":payment.method==="card"?"Tarjeta":payment.method==="transfer"?"Transferencia":"Otro"}</b><small>{payment.cashRegisterName} · {formatDateTime(payment.createdAt)} · {payment.createdByName}</small>{payment.reference&&<em>{payment.reference}</em>}</div><span className="pos-payment-values"><b>{formatMoney(Number(payment.amount))}</b>{Number(payment.refundedAmount)>0&&<small>Devuelto {formatMoney(Number(payment.refundedAmount))}</small>}</span>{canManage&&net>0&&!closed&&<Button kind="ghost" className="pos-refund-action" disabled={!hasShift} onClick={()=>refund(payment)}>Devolver</Button>}</article>})}</div>
         :<div className="pos-payments-empty">Aún no se registraron pagos para este pedido.</div>}
       </section>
     </div>}
-    {data&&canManage&&Number(data.remainingAmount)>0&&<footer className="pos-detail-footer"><Button icon="sales" disabled={!hasShift} onClick={()=>pay(data)}>Cobrar saldo {formatMoney(Number(data.remainingAmount))}</Button></footer>}
+    {data&&canManage&&Number(data.remainingAmount)>0&&data.order.status!=="cancelado"&&<footer className="pos-detail-footer"><Button icon="sales" disabled={!hasShift} onClick={()=>pay(data)}>Cobrar saldo {formatMoney(Number(data.remainingAmount))}</Button></footer>}
   </section></div>;
 }
 
