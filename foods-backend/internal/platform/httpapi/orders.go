@@ -782,6 +782,14 @@ func (a *API) createOrder(w http.ResponseWriter, r *http.Request) {
 		fail(w, 400, "invalid_order", "El pedido de delivery necesita una dirección.")
 		return
 	}
+	if in.Channel == "salon" && strings.TrimSpace(in.TableID) == "" {
+		fail(w, 400, "table_required", "Los pedidos de Salón deben estar asociados a una mesa.")
+		return
+	}
+	if in.Channel != "salon" && strings.TrimSpace(in.TableID) != "" {
+		fail(w, 400, "table_not_allowed", "Solo los pedidos de Salón pueden ocupar una mesa.")
+		return
+	}
 	tx, err := a.db.Begin(r.Context())
 	if err != nil {
 		fail(w, 503, "order_unavailable", "No pudimos guardar el pedido.")
@@ -799,9 +807,16 @@ func (a *API) createOrder(w http.ResponseWriter, r *http.Request) {
 		customerID = &in.CustomerID
 	}
 	if in.TableID != "" {
-		var ok bool
-		if err = tx.QueryRow(r.Context(), `SELECT EXISTS(SELECT 1 FROM tables WHERE id=$1 AND organization_id=$2 AND active)`, in.TableID, s.OrganizationID).Scan(&ok); err != nil || !ok {
+		var lockedTableID string
+		if err = tx.QueryRow(r.Context(), `
+			SELECT id
+			FROM tables
+			WHERE id=$1 AND organization_id=$2 AND active
+			FOR UPDATE`, in.TableID, s.OrganizationID).Scan(&lockedTableID); errors.Is(err, pgx.ErrNoRows) {
 			fail(w, 400, "invalid_order", "La mesa no existe.")
+			return
+		} else if err != nil {
+			fail(w, 503, "order_unavailable", "No pudimos bloquear la mesa para abrir la comanda.")
 			return
 		}
 		var occupied bool
