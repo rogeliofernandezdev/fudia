@@ -46,7 +46,7 @@ export function PurchasesPage(){
   const orders=useQuery({queryKey:["purchase-orders",q,status,page,size],queryFn:()=>listPurchaseOrders({q,status,page,pageSize:size}),enabled:tab==="orders"});
   const suppliers=useQuery({queryKey:["suppliers",q,status,page,size],queryFn:()=>listSuppliers({q,status,page,pageSize:size}),enabled:tab==="suppliers"});
   const activeSuppliers=useQuery({queryKey:["suppliers","active","purchase-editor"],queryFn:()=>listSuppliers({status:"active",page:1,pageSize:100}),enabled:Boolean(orderDraft),staleTime:30000});
-  const inventory=useQuery({queryKey:["purchase-inventory"],queryFn:listPurchaseInventory,enabled:Boolean(orderDraft),staleTime:30000});
+  const inventory=useQuery({queryKey:["purchase-inventory"],queryFn:()=>listPurchaseInventory(),enabled:Boolean(orderDraft),staleTime:30000});
   const detail=useQuery({queryKey:["purchase-order",detailId],queryFn:()=>getPurchaseOrder(detailId!),enabled:Boolean(detailId)});
 
   const saveOrder=useMutation({mutationFn:savePurchaseOrder,onSuccess:result=>{setOrderDraft(null);void qc.invalidateQueries({queryKey:["purchase-orders"]});void qc.invalidateQueries({queryKey:["dashboard"]});notify({tone:"success",title:"Orden guardada",message:`${result.number} quedó en borrador y lista para revisión.`})},onError:error=>notify({tone:"danger",title:"No se pudo guardar la orden",message:error.message})});
