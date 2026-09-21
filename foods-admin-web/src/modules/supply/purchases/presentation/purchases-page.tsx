@@ -472,17 +472,22 @@ function PurchaseOrderDialog({initial,suppliers,inventory,currencySymbol,busy,cl
             const value=lines[index];
             const selected=catalog.find(item=>item.id===value?.inventoryItemId);
             return <article className="purchase-line purchase-line-modern" key={field.id}>
-              <div className="purchase-line-number">{index+1}</div>
-              <div className="purchase-line-item">
-                <small>ARTÍCULO</small>
-                <span className="purchase-line-item-main"><span className="purchase-line-item-icon"><Icon name={selected?.kind==="ingredient"?"stock":"box"} size={16}/></span><span><b>{selected?.name??"Artículo no disponible"}</b><small>{selected?(selected.kind==="ingredient"?"Insumo":"Producto vendible")+" · "+selected.unit:"Selecciona otro artículo"}</small></span></span>
-                <button type="button" onClick={()=>setItemTarget(index)}>Cambiar</button>
+              <div className="purchase-line-head">
+                <span className="purchase-line-number">{index+1}</span>
+                <span className="purchase-line-item-icon"><Icon name={selected?.kind==="ingredient"?"stock":"box"} size={16}/></span>
+                <div className="purchase-line-item-copy">
+                  <b>{selected?.name??"Artículo no disponible"}</b>
+                  <small>{selected?(selected.kind==="ingredient"?"Insumo":"Producto vendible")+" · Unidad base: "+selected.unit:"Selecciona otro artículo"}</small>
+                </div>
+                <button type="button" className="purchase-line-change" onClick={()=>setItemTarget(index)}>Cambiar</button>
+                <button type="button" className="purchase-line-remove" onClick={()=>remove(index)} aria-label={"Quitar "+(selected?.name??"artículo")}><Icon name="close" size={14}/><span>Quitar</span></button>
               </div>
-              <label>Presentación<Select {...register(`items.${index}.presentationId`)} disabled={!selected} aria-invalid={Boolean(errors.items?.[index]?.presentationId)}><option value="">Selecciona...</option>{(selected?.presentations??[]).map(presentation=><option value={presentation.id} key={presentation.id}>{presentationName(presentation.presentationType,presentation.unitsPerPresentation,selected?.unit)}</option>)}</Select>{errors.items?.[index]?.presentationId?.message&&<small className="wizard-field-error">{errors.items[index]?.presentationId?.message}</small>}</label>
-              <label>Cantidad<Input type="number" min="0.001" step="0.001" inputMode="decimal" {...register(`items.${index}.quantity`)} aria-invalid={Boolean(errors.items?.[index]?.quantity)}/>{errors.items?.[index]?.quantity?.message&&<small className="wizard-field-error">{errors.items[index]?.quantity?.message}</small>}</label>
-              <label>Costo unitario<div className="money-input"><span>{currencySymbol}</span><Input inputMode="decimal" {...register(`items.${index}.unitCost`)} placeholder="0.00" aria-invalid={Boolean(errors.items?.[index]?.unitCost)}/></div>{errors.items?.[index]?.unitCost?.message&&<small className="wizard-field-error">{errors.items[index]?.unitCost?.message}</small>}</label>
-              <div className="purchase-line-total"><small>SUBTOTAL</small><b>{currencySymbol} {formatRegionalNumber((Number(value?.quantity)||0)*(Number(value?.unitCost)||0),undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</b></div>
-              <RowActionButton action="remove" label="Quitar línea" onClick={()=>remove(index)}/>
+              <div className="purchase-line-fields">
+                <label>Presentación<Select {...register(`items.${index}.presentationId`)} disabled={!selected} aria-invalid={Boolean(errors.items?.[index]?.presentationId)}><option value="">Selecciona...</option>{(selected?.presentations??[]).map(presentation=><option value={presentation.id} key={presentation.id}>{presentationName(presentation.presentationType,presentation.unitsPerPresentation,selected?.unit)}</option>)}</Select>{errors.items?.[index]?.presentationId?.message&&<small className="wizard-field-error">{errors.items[index]?.presentationId?.message}</small>}</label>
+                <label>Cantidad<Input type="number" min="0.001" step="0.001" inputMode="decimal" {...register(`items.${index}.quantity`)} aria-invalid={Boolean(errors.items?.[index]?.quantity)}/>{errors.items?.[index]?.quantity?.message&&<small className="wizard-field-error">{errors.items[index]?.quantity?.message}</small>}</label>
+                <label>Costo unitario<div className="money-input"><span>{currencySymbol}</span><Input inputMode="decimal" {...register(`items.${index}.unitCost`)} placeholder="0.00" aria-invalid={Boolean(errors.items?.[index]?.unitCost)}/></div>{errors.items?.[index]?.unitCost?.message&&<small className="wizard-field-error">{errors.items[index]?.unitCost?.message}</small>}</label>
+                <div className="purchase-line-total"><small>SUBTOTAL</small><b>{currencySymbol} {formatRegionalNumber((Number(value?.quantity)||0)*(Number(value?.unitCost)||0),undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</b></div>
+              </div>
             </article>;
           })}</div>}
           {typeof errors.items?.message==="string"&&<div className="purchase-validation" role="alert"><Icon name="alert" size={15}/>{errors.items.message}</div>}
