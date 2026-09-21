@@ -1,6 +1,6 @@
 import {z} from "zod";
 import type {FieldError,FieldErrors,Resolver} from "react-hook-form";
-import type {PurchaseOrderDraft,SupplierDraft} from "./types";
+import type {PurchaseInventoryItemDraft,PurchaseOrderDraft,PurchaseReceiptDraft,SupplierDraft} from "./types";
 
 const lineSchema=z.object({
   inventoryItemId:z.string().trim().min(1,"Selecciona un artículo."),
@@ -58,3 +58,56 @@ function makeResolver<T extends Record<string,unknown>>(schema:z.ZodType<T>):Res
 
 export const purchaseOrderResolver=makeResolver<PurchaseOrderDraft>(purchaseOrderSchema);
 export const supplierResolver=makeResolver<SupplierDraft>(supplierSchema);
+
+
+const purchaseInventoryCommon={
+  categoryId:z.string(),
+  name:z.string().trim().min(1,"Ingresa el nombre del artículo.").max(160),
+  description:z.string().max(1000),
+  price:z.string(),
+  unit:z.string().trim().min(1,"Selecciona una unidad base."),
+  presentationType:z.enum(["unit","package","box"]),
+  unitsPerPresentation:z.string(),
+  minimumStock:z.string().trim().refine(value=>{
+    const parsed=Number(value);
+    return value!==""&&Number.isFinite(parsed)&&parsed>=0;
+  },"El stock mínimo no puede ser negativo."),
+};
+
+export const purchaseInventoryItemSchema=z.discriminatedUnion("mode",[
+  z.object({
+    mode:z.literal("new_product"),
+    ...purchaseInventoryCommon,
+    categoryId:z.string().trim().min(1,"Selecciona una categoría."),
+    price:z.string().trim().regex(/^[0-9]+([.][0-9]{1,2})?$/,"Ingresa un precio válido."),
+  }),
+  z.object({
+    mode:z.literal("new_ingredient"),
+    ...purchaseInventoryCommon,
+  }),
+]).superRefine((value,ctx)=>{
+  if(value.presentationType==="unit")return;
+  const factor=Number(value.unitsPerPresentation);
+  if(value.unitsPerPresentation.trim()===""||!Number.isFinite(factor)||factor<=1){
+    ctx.addIssue({code:"custom",path:["unitsPerPresentation"],message:"Debe contener más de una unidad base."});
+  }
+});
+
+export const purchaseReceiptSchema=z.object({
+  purchaseOrderId:z.string().trim().min(1),
+  notes:z.string().max(500,"Las notas no pueden superar 500 caracteres."),
+  items:z.array(z.object({
+    purchaseOrderItemId:z.string().trim().min(1),
+    quantity:z.string().trim().refine(value=>{
+      const parsed=Number(value);
+      return value!==""&&Number.isFinite(parsed)&&parsed>=0;
+    },"Ingresa una cantidad válida."),
+  })).min(1),
+}).superRefine((value,ctx)=>{
+  if(!value.items.some(item=>Number(item.quantity)>0)){
+    ctx.addIssue({code:"custom",path:["items"],message:"Registra al menos una cantidad recibida."});
+  }
+});
+
+export const purchaseInventoryItemResolver=makeResolver<PurchaseInventoryItemDraft>(purchaseInventoryItemSchema);
+export const purchaseReceiptResolver=makeResolver<PurchaseReceiptDraft>(purchaseReceiptSchema);
