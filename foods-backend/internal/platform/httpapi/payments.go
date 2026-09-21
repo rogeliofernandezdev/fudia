@@ -75,15 +75,17 @@ func (a *API) listPOSOrders(w http.ResponseWriter, r *http.Request) {
 	q := strings.TrimSpace(r.URL.Query().Get("q"))
 	status := strings.TrimSpace(r.URL.Query().Get("paymentStatus"))
 	if status == "" {
-		status = "pending"
+		status = "unpaid"
 	}
-	if status != "pending" && status != "partial" && status != "paid" && status != "all" {
+	if status != "unpaid" && status != "pending" && status != "partial" && status != "paid" && status != "all" {
 		fail(w, 400, "invalid_payment_status", "El estado de cobro no es válido.")
 		return
 	}
 
 	filter := ""
 	switch status {
+	case "unpaid":
+		filter = " AND (" + netPaidSQL + ") < o.total"
 	case "pending":
 		filter = " AND (" + netPaidSQL + ") <= 0.00001"
 	case "partial":
