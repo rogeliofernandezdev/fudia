@@ -104,6 +104,7 @@
 .cash-movement-kind{display:inline-flex;align-items:center;gap:5px;padding:5px 7px;border-radius:999px;font-size:8px;font-weight:800}
 .cash-movement-kind.income{background:var(--brand-100);color:var(--brand-700)}
 .cash-movement-kind.expense{background:var(--primary-100);color:var(--danger)}
+.cash-movement-source{display:inline-flex;align-items:center;min-height:24px;padding:0 7px;border-radius:999px;background:var(--cloud-50);color:var(--ink-600);font-size:8px;font-weight:750}
 
 .cash-modal{width:min(520px,calc(100vw - 32px));overflow:hidden}
 .cash-modal>form{display:flex;min-height:0;flex-direction:column}
