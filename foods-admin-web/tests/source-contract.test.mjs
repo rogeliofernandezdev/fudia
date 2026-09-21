@@ -194,11 +194,15 @@ test("compras concentra orden recepcion y altas de abastecimiento",()=>{
 
   assert.ok(purchases.includes("PurchaseItemDialog"),"La alta de artículo vive dentro del flujo existente de Compras");
   assert.ok(purchases.includes("PurchaseReceiptDialog"),"La recepción vive dentro del mismo módulo Compras");
-  assert.ok(purchases.includes("PurchaseFlowSteps"),"La OC y su detalle comparten el indicador de flujo");
-  assert.ok(receiptDialog.includes("PurchaseFlowSteps"),"Recepción reutiliza el mismo indicador de flujo");
+  assert.ok(purchases.includes('tab==="receipts"'),"Compras tiene una vista independiente de Recepciones");
+  assert.ok(purchases.includes("<span>Recepciones</span>"),"La navegación expone Recepciones como workspace propio");
+  assert.ok(purchases.includes('"receivable"'),"La cola de Recepciones consulta solo órdenes recibibles");
+  assert.ok(purchases.includes("No hay mercadería pendiente de recibir"),"Recepciones tiene estado vacío propio");
+  assert.ok(purchases.includes("Solo aparecen órdenes aprobadas con cantidades pendientes."),"Recepciones explica su responsabilidad");
+  assert.ok(purchases.includes("PurchaseFlowSteps"),"La pantalla principal conserva la secuencia Orden → Recepción");
+  assert.equal(receiptDialog.includes("PurchaseFlowSteps"),false,"El modal de recepción no repite el flujo completo");
   assert.ok(flowSteps.includes("Orden de compra"),"El paso 1 es Orden de compra");
   assert.ok(flowSteps.includes("Recepción"),"El paso 2 es Recepción");
-  assert.ok(purchases.includes("Primero ordenas. Después recibes."),"La pantalla principal explica la secuencia operativa");
   assert.ok(purchases.includes("partially_received"),"Compras representa una recepción parcial sin cerrar la orden");
   for(const column of ["SOLICITADO","RECIBIDO","PENDIENTE"])assert.ok(purchases.includes(column),column);
   assert.ok(purchases.includes("Agregar artículo"),"La OC expone un único punto claro para agregar artículos");
@@ -217,6 +221,7 @@ test("compras concentra orden recepcion y altas de abastecimiento",()=>{
   assert.ok(itemDialog.includes("máximo 5 MB"),"La imagen conserva el límite de tamaño");
 
   assert.ok(receiptDialog.includes("Registra únicamente lo que llegó."),"Recepción registra cantidades reales");
+  assert.equal(receiptDialog.includes("actualizará Inventario y quedarán registradas"),false,"El modal evita mensajes redundantes al final");
   assert.ok(receiptDialog.includes("pendingQuantity"),"Recepción parte de lo pendiente por línea");
   assert.ok(receiptDialog.includes("Confirmar recepción"),"Solo confirmar recepción dispara la entrada real");
 
