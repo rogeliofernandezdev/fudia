@@ -98,6 +98,9 @@ WHERE z.location_id IS DISTINCT FROM l.id
       AND existing.name=z.name
   );
 
+ALTER TABLE tables ALTER COLUMN location_id SET NOT NULL;
+ALTER TABLE zones ALTER COLUMN location_id SET NOT NULL;
+
 ALTER TABLE tables
   ADD CONSTRAINT tables_location_org_fkey
   FOREIGN KEY(location_id,organization_id) REFERENCES locations(id,organization_id);
