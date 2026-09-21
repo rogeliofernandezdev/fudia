@@ -480,7 +480,7 @@ function PurchaseOrderDialog({initial,suppliers,inventory,currencySymbol,busy,cl
                   <small>{selected?(selected.kind==="ingredient"?"Insumo":"Producto vendible")+" · Unidad base: "+selected.unit:"Selecciona otro artículo"}</small>
                 </div>
                 <div className="purchase-line-actions" aria-label="Acciones del artículo">
-                  <button type="button" className="purchase-line-remove" onClick={()=>remove(index)} aria-label={"Quitar "+(selected?.name??"artículo")}><Icon name="close" size={14}/><span>Quitar</span></button>
+                  <button type="button" className="purchase-line-remove" onClick={()=>remove(index)} aria-label={"Quitar "+(selected?.name??"artículo")}><Icon name="trash" size={14}/><span>Quitar</span></button>
                 </div>
               </div>
               <div className="purchase-line-fields">
