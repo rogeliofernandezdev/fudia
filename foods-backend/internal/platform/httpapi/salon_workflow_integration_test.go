@@ -1,0 +1,135 @@
+package httpapi
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"net/http/httptest"
+	"strings"
+	"testing"
+	"time"
+)
+
+func TestSalonKitchenPaymentDeliveryWorkflow(t *testing.T) {
+	pool:=integrationPool(t)
+	s:=seedInventoryScope(t,pool)
+	api:=New(pool)
+	ctx:=context.Background()
+	nonce:=time.Now().UnixNano()
+
+	var productID string
+	if err:=pool.QueryRow(ctx,`
+		INSERT INTO products(organization_id,sku,name,price,active,product_type,quantity_control)
+		VALUES($1,$2,$3,25,true,'prepared','none')
+		RETURNING id
+	`,s.OrganizationID,fmt.Sprintf("WF-%d",nonce),fmt.Sprintf("Plato flujo %d",nonce)).Scan(&productID);err!=nil{t.Fatal(err)}
+
+	var tableID string
+	if err:=pool.QueryRow(ctx,`
+		INSERT INTO tables(organization_id,name,seats,zone,active,qr_token,qr_enabled)
+		VALUES($1,$2,4,'Principal',true,encode(gen_random_bytes(16),'hex'),false)
+		RETURNING id
+	`,s.OrganizationID,fmt.Sprintf("Mesa WF %d",nonce)).Scan(&tableID);err!=nil{t.Fatal(err)}
+
+	defer func(){
+		_,_=pool.Exec(context.Background(),`DELETE FROM orders WHERE organization_id=$1 AND table_id=$2`,s.OrganizationID,tableID)
+		_,_=pool.Exec(context.Background(),`DELETE FROM tables WHERE id=$1 AND organization_id=$2`,tableID,s.OrganizationID)
+	}()
+
+	var registerID string
+	if err:=pool.QueryRow(ctx,`
+		INSERT INTO cash_registers(organization_id,location_id,name,created_by)
+		VALUES($1,$2,$3,$4)
+		RETURNING id
+	`,s.OrganizationID,s.LocationID,fmt.Sprintf("Caja WF %d",nonce),s.UserID).Scan(&registerID);err!=nil{t.Fatal(err)}
+	openReq:=httptest.NewRequest("POST","/v1/admin/cash-shifts",bytes.NewReader([]byte(fmt.Sprintf(`{"cashRegisterId":%q,"openingAmount":0}`,registerID))))
+	openReq=openReq.WithContext(context.WithValue(openReq.Context(),scopeKey{},s))
+	openRec:=httptest.NewRecorder()
+	api.openCashShift(openRec,openReq)
+	if openRec.Code!=201{t.Fatalf("open shift: %d %s",openRec.Code,openRec.Body.String())}
+
+	createBody:=[]byte(fmt.Sprintf(`{
+		"channel":"salon",
+		"tableId":%q,
+		"items":[{"productId":%q,"name":"ignorado","qty":1,"unitPrice":1,"note":"sin cebolla","selections":[]}],
+		"sendToKitchen":true
+	}`,tableID,productID))
+	createReq:=httptest.NewRequest("POST","/v1/admin/orders",bytes.NewReader(createBody))
+	createReq=createReq.WithContext(context.WithValue(createReq.Context(),scopeKey{},s))
+	createRec:=httptest.NewRecorder()
+	api.createOrder(createRec,createReq)
+	if createRec.Code!=201{t.Fatalf("create order: %d %s",createRec.Code,createRec.Body.String())}
+	var created order
+	if err:=json.Unmarshal(createRec.Body.Bytes(),&created);err!=nil{t.Fatal(err)}
+	if created.Status!="confirmado"{t.Fatalf("expected confirmed order sent to kitchen, got %q",created.Status)}
+	if created.Total!="25.00"{t.Fatalf("server catalog price must win, got total %q",created.Total)}
+
+	// Salón/Pedidos cannot start preparation; only Cocina can.
+	genericPrepReq:=httptest.NewRequest("PATCH","/v1/admin/orders/"+created.ID+"/status",bytes.NewReader([]byte(`{"status":"preparando"}`)))
+	genericPrepReq.SetPathValue("id",created.ID)
+	genericPrepReq=genericPrepReq.WithContext(context.WithValue(genericPrepReq.Context(),scopeKey{},s))
+	genericPrepRec:=httptest.NewRecorder()
+	api.updateOrderStatus(genericPrepRec,genericPrepReq)
+	if genericPrepRec.Code!=409||!strings.Contains(genericPrepRec.Body.String(),"kitchen_transition_required"){
+		t.Fatalf("generic preparation must be blocked: %d %s",genericPrepRec.Code,genericPrepRec.Body.String())
+	}
+
+	kitchenStartReq:=httptest.NewRequest("PATCH","/v1/admin/kitchen/tickets/"+created.ID+"/status",bytes.NewReader([]byte(`{"status":"preparando"}`)))
+	kitchenStartReq.SetPathValue("id",created.ID)
+	kitchenStartReq=kitchenStartReq.WithContext(context.WithValue(kitchenStartReq.Context(),scopeKey{},s))
+	kitchenStartRec:=httptest.NewRecorder()
+	api.updateKitchenTicketStatus(kitchenStartRec,kitchenStartReq)
+	if kitchenStartRec.Code!=204{t.Fatalf("kitchen start: %d %s",kitchenStartRec.Code,kitchenStartRec.Body.String())}
+
+	kitchenReadyReq:=httptest.NewRequest("PATCH","/v1/admin/kitchen/tickets/"+created.ID+"/status",bytes.NewReader([]byte(`{"status":"listo"}`)))
+	kitchenReadyReq.SetPathValue("id",created.ID)
+	kitchenReadyReq=kitchenReadyReq.WithContext(context.WithValue(kitchenReadyReq.Context(),scopeKey{},s))
+	kitchenReadyRec:=httptest.NewRecorder()
+	api.updateKitchenTicketStatus(kitchenReadyRec,kitchenReadyReq)
+	if kitchenReadyRec.Code!=204{t.Fatalf("kitchen ready: %d %s",kitchenReadyRec.Code,kitchenReadyRec.Body.String())}
+
+	// A ready table with balance cannot be delivered/freed.
+	unpaidDeliverReq:=httptest.NewRequest("PATCH","/v1/admin/orders/"+created.ID+"/status",bytes.NewReader([]byte(`{"status":"entregado"}`)))
+	unpaidDeliverReq.SetPathValue("id",created.ID)
+	unpaidDeliverReq=unpaidDeliverReq.WithContext(context.WithValue(unpaidDeliverReq.Context(),scopeKey{},s))
+	unpaidDeliverRec:=httptest.NewRecorder()
+	api.updateOrderStatus(unpaidDeliverRec,unpaidDeliverReq)
+	if unpaidDeliverRec.Code!=409||!strings.Contains(unpaidDeliverRec.Body.String(),"payment_required_before_delivery"){
+		t.Fatalf("unpaid salon delivery must be blocked: %d %s",unpaidDeliverRec.Code,unpaidDeliverRec.Body.String())
+	}
+
+	payReq:=httptest.NewRequest("POST","/v1/admin/payments",bytes.NewReader([]byte(fmt.Sprintf(`{"orderId":%q,"method":"card","amount":25,"reference":"WF"}`,created.ID))))
+	payReq=payReq.WithContext(context.WithValue(payReq.Context(),scopeKey{},s))
+	payRec:=httptest.NewRecorder()
+	api.createPayment(payRec,payReq)
+	if payRec.Code!=201{t.Fatalf("payment: %d %s",payRec.Code,payRec.Body.String())}
+
+	// Paid orders cannot be cancelled until their payments are refunded.
+	cancelReq:=httptest.NewRequest("PATCH","/v1/admin/orders/"+created.ID+"/status",bytes.NewReader([]byte(`{"status":"cancelado"}`)))
+	cancelReq.SetPathValue("id",created.ID)
+	cancelReq=cancelReq.WithContext(context.WithValue(cancelReq.Context(),scopeKey{},s))
+	cancelRec:=httptest.NewRecorder()
+	api.updateOrderStatus(cancelRec,cancelReq)
+	if cancelRec.Code!=409||!strings.Contains(cancelRec.Body.String(),"refund_required_before_cancel"){
+		t.Fatalf("paid cancellation must be blocked: %d %s",cancelRec.Code,cancelRec.Body.String())
+	}
+
+	deliverReq:=httptest.NewRequest("PATCH","/v1/admin/orders/"+created.ID+"/status",bytes.NewReader([]byte(`{"status":"entregado"}`)))
+	deliverReq.SetPathValue("id",created.ID)
+	deliverReq=deliverReq.WithContext(context.WithValue(deliverReq.Context(),scopeKey{},s))
+	deliverRec:=httptest.NewRecorder()
+	api.updateOrderStatus(deliverRec,deliverReq)
+	if deliverRec.Code!=200{t.Fatalf("paid ready order should deliver: %d %s",deliverRec.Code,deliverRec.Body.String())}
+
+	floorReq:=httptest.NewRequest("GET","/v1/admin/orders/floor",nil)
+	floorReq=floorReq.WithContext(context.WithValue(floorReq.Context(),scopeKey{},s))
+	floorRec:=httptest.NewRecorder()
+	api.getOrdersFloor(floorRec,floorReq)
+	if floorRec.Code!=200{t.Fatalf("floor: %d %s",floorRec.Code,floorRec.Body.String())}
+	var floor struct{Items []struct{ID string `json:"id"`;Order *order `json:"order"`} `json:"items"`}
+	if err:=json.Unmarshal(floorRec.Body.Bytes(),&floor);err!=nil{t.Fatal(err)}
+	for _,item:=range floor.Items{
+		if item.ID==tableID&&item.Order!=nil{t.Fatalf("table must be free after paid delivery, got order %#v",item.Order)}
+	}
+}
