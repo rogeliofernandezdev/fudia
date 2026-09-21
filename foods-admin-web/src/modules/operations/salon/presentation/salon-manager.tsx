@@ -714,8 +714,9 @@ function OrderDetail({loading,order,error,currencySymbol,canManage,busy,close,ad
                     {(order.status==="confirmado"||order.status==="preparando")&&<span className="order-detail-done"><Icon name="chefHat" size={15}/>{order.status==="confirmado"?"Esperando cocina":"En preparación"}</span>}
                     {order.status==="listo"&&remaining>0.00001&&<span className="order-detail-done"><Icon name="sales" size={15}/>Cobra el saldo antes de liberar la mesa</span>}
                     {order.status==="entregado"&&<span className="order-detail-done"><Icon name="check" size={15}/>Mesa entregada</span>}
-                    {!["entregado","cancelado"].includes(order.status)&&!hasPayments&&<Button icon="alert" kind="ghost" className="order-detail-cancel" disabled={busy} onClick={()=>cancel(order)}>Cancelar pedido</Button>}
-                    {!["entregado","cancelado"].includes(order.status)&&hasPayments&&<span className="order-detail-done"><Icon name="alert" size={15}/>Devuelve los pagos en POS antes de cancelar</span>}
+                    {(order.status==="nuevo"||order.status==="confirmado")&&!hasPayments&&<Button icon="alert" kind="ghost" className="order-detail-cancel" disabled={busy} onClick={()=>cancel(order)}>Cancelar pedido</Button>}
+                    {(order.status==="nuevo"||order.status==="confirmado")&&hasPayments&&<span className="order-detail-done"><Icon name="alert" size={15}/>Devuelve los pagos en POS antes de cancelar</span>}
+                    {(order.status==="preparando"||order.status==="listo"||order.status==="en_camino")&&<span className="order-detail-done"><Icon name="alert" size={15}/>La preparación ya inició; cancelación normal bloqueada</span>}
                   </footer>
                 )}
               </>
