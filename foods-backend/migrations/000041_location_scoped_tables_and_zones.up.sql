@@ -126,3 +126,7 @@ ALTER TABLE orders
   ADD CONSTRAINT orders_table_location_fkey
   FOREIGN KEY(table_id,organization_id,location_id)
   REFERENCES tables(id,organization_id,location_id);
+
+CREATE UNIQUE INDEX IF NOT EXISTS orders_one_open_table_uq
+  ON orders(organization_id,location_id,table_id)
+  WHERE table_id IS NOT NULL AND status NOT IN ('entregado','cancelado');
