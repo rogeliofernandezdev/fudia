@@ -2,6 +2,7 @@ DROP TABLE IF EXISTS inventory_transfer_items;
 DROP TABLE IF EXISTS inventory_transfers;
 DROP TABLE IF EXISTS purchase_return_items;
 DROP TABLE IF EXISTS purchase_returns;
+ALTER TABLE purchase_receipt_items DROP CONSTRAINT IF EXISTS purchase_receipt_items_scope_uq;
 DROP INDEX IF EXISTS purchase_receipts_idempotency_uq;
 ALTER TABLE purchase_receipt_items DROP COLUMN IF EXISTS unit_cost;
 ALTER TABLE purchase_receipts DROP COLUMN IF EXISTS idempotency_key;
