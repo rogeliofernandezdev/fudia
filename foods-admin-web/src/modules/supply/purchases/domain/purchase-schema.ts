@@ -95,6 +95,7 @@ export const purchaseInventoryItemSchema=z.discriminatedUnion("mode",[
 
 export const purchaseReceiptSchema=z.object({
   purchaseOrderId:z.string().trim().min(1),
+  idempotencyKey:z.string().trim().min(1),
   notes:z.string().max(500,"Las notas no pueden superar 500 caracteres."),
   items:z.array(z.object({
     purchaseOrderItemId:z.string().trim().min(1),
