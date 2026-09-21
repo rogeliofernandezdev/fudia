@@ -72,6 +72,8 @@ func TestSalonKitchenPaymentDeliveryWorkflow(t *testing.T) {
 	partialPayRec:=httptest.NewRecorder()
 	api.createPayment(partialPayRec,partialPayReq)
 	if partialPayRec.Code!=201{t.Fatalf("partial payment: %d %s",partialPayRec.Code,partialPayRec.Body.String())}
+	var partialPayment paymentView
+	if err:=json.Unmarshal(partialPayRec.Body.Bytes(),&partialPayment);err!=nil{t.Fatal(err)}
 
 	editBody:=[]byte(fmt.Sprintf(`{
 		"customerName":"Cambio indebido",
@@ -157,6 +159,15 @@ func TestSalonKitchenPaymentDeliveryWorkflow(t *testing.T) {
 	deliverRec:=httptest.NewRecorder()
 	api.updateOrderStatus(deliverRec,deliverReq)
 	if deliverRec.Code!=200{t.Fatalf("paid ready order should deliver: %d %s",deliverRec.Code,deliverRec.Body.String())}
+
+	closedRefundReq:=httptest.NewRequest("POST","/v1/admin/payments/"+partialPayment.ID+"/refund",bytes.NewReader([]byte(`{"amount":1,"reason":"Prueba posterior al cierre"}`)))
+	closedRefundReq.SetPathValue("id",partialPayment.ID)
+	closedRefundReq=closedRefundReq.WithContext(context.WithValue(closedRefundReq.Context(),scopeKey{},s))
+	closedRefundRec:=httptest.NewRecorder()
+	api.refundPayment(closedRefundRec,closedRefundReq)
+	if closedRefundRec.Code!=409||!strings.Contains(closedRefundRec.Body.String(),"closed_order_refund_requires_void"){
+		t.Fatalf("closed order refund must be blocked: %d %s",closedRefundRec.Code,closedRefundRec.Body.String())
+	}
 
 	floorReq:=httptest.NewRequest("GET","/v1/admin/orders/floor",nil)
 	floorReq=floorReq.WithContext(context.WithValue(floorReq.Context(),scopeKey{},s))
