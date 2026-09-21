@@ -225,9 +225,10 @@ func (a *API) prepareOrderItems(r *http.Request, tx pgx.Tx, s scope, existingOrd
 				return nil, 0, &orderPreparationError{Status: 400, Code: "invalid_order", Message: "Cada línea necesita un precio válido."}
 			}
 			var productName string
+			var productPrice float64
 			var available bool
 			err := tx.QueryRow(r.Context(), `
-				SELECT p.name,
+				SELECT p.name,p.price::float8,
 				       p.active
 				       AND (p.available_from IS NULL OR now() >= p.available_from)
 				       AND (p.available_until IS NULL OR now() <= p.available_until)
@@ -238,7 +239,7 @@ func (a *API) prepareOrderItems(r *http.Request, tx pgx.Tx, s scope, existingOrd
 				JOIN locations l ON l.id=$3 AND l.organization_id=p.organization_id AND l.active
 				LEFT JOIN product_availability pa ON pa.organization_id=p.organization_id AND pa.location_id=l.id
 				  AND pa.product_id=p.id AND pa.business_date=(now() AT TIME ZONE l.timezone)::date
-				WHERE p.id=$1 AND p.organization_id=$2`, *productID, s.OrganizationID, s.LocationID).Scan(&productName, &available)
+				WHERE p.id=$1 AND p.organization_id=$2`, *productID, s.OrganizationID, s.LocationID).Scan(&productName, &productPrice, &available)
 			if errors.Is(err, pgx.ErrNoRows) {
 				return nil, 0, &orderPreparationError{Status: 404, Code: "product_not_found", Message: "El producto ya no existe."}
 			}
@@ -252,7 +253,7 @@ func (a *API) prepareOrderItems(r *http.Request, tx pgx.Tx, s scope, existingOrd
 				ProductID: productID,
 				Name: productName,
 				Qty: in.Qty,
-				UnitPrice: in.UnitPrice,
+				UnitPrice: productPrice,
 				Note: strings.TrimSpace(in.Note),
 				ItemType: "product",
 			}
