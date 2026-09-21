@@ -184,26 +184,30 @@ func (a *API) listCashRegisters(w http.ResponseWriter, r *http.Request) {
 		fail(w, 503, "cash_unavailable", "No pudimos cargar las cajas del local.")
 		return
 	}
-	defer rows.Close()
-
 	items := []cashRegisterView{}
 	for rows.Next() {
 		var item cashRegisterView
 		if err := rows.Scan(&item.ID, &item.Code, &item.Name, &item.Active); err != nil {
+			rows.Close()
 			fail(w, 503, "cash_unavailable", "No pudimos leer las cajas del local.")
 			return
 		}
-		openShift, err := a.getOpenCashShiftByRegister(r, item.ID)
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		fail(w, 503, "cash_unavailable", "No pudimos completar la consulta de cajas.")
+		return
+	}
+	rows.Close()
+
+	for index := range items {
+		openShift, err := a.getOpenCashShiftByRegister(r, items[index].ID)
 		if err != nil {
 			fail(w, 503, "cash_unavailable", "No pudimos cargar el turno abierto de la caja.")
 			return
 		}
-		item.OpenShift = openShift
-		items = append(items, item)
-	}
-	if err := rows.Err(); err != nil {
-		fail(w, 503, "cash_unavailable", "No pudimos completar la consulta de cajas.")
-		return
+		items[index].OpenShift = openShift
 	}
 	writeJSON(w, 200, map[string]any{"items": items})
 }
