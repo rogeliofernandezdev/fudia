@@ -24,6 +24,14 @@ func moduleEnabled(ctx context.Context,q moduleRowQuerier,organizationID,key str
 	return active,err
 }
 
+func recipesRuntimeEnabled(ctx context.Context,q moduleRowQuerier,organizationID string)(bool,error){
+	recipes,err:=moduleEnabled(ctx,q,organizationID,"recetas")
+	if err!=nil||!recipes{return recipes,err}
+	inventory,err:=moduleEnabled(ctx,q,organizationID,"inventario")
+	if err!=nil{return false,err}
+	return inventory,nil
+}
+
 type recipeItemView struct{
 	ID string `json:"id"`
 	InventoryItemID string `json:"inventoryItemId"`
@@ -55,7 +63,7 @@ type recipeInput struct{
 
 func (a *API) listRecipes(w http.ResponseWriter,r *http.Request){
 	s:=r.Context().Value(scopeKey{}).(scope)
-	enabled,err:=moduleEnabled(r.Context(),a.db,s.OrganizationID,"recetas")
+	enabled,err:=recipesRuntimeEnabled(r.Context(),a.db,s.OrganizationID)
 	if err!=nil{fail(w,503,"module_unavailable","No pudimos validar el módulo de recetas.");return}
 	if !enabled{fail(w,403,"module_disabled","El módulo Recetas no está habilitado para esta empresa.");return}
 	page,size:=pageParams(r)
@@ -82,7 +90,7 @@ func (a *API) listRecipes(w http.ResponseWriter,r *http.Request){
 
 func (a *API) getRecipe(w http.ResponseWriter,r *http.Request){
 	s:=r.Context().Value(scopeKey{}).(scope)
-	enabled,err:=moduleEnabled(r.Context(),a.db,s.OrganizationID,"recetas")
+	enabled,err:=recipesRuntimeEnabled(r.Context(),a.db,s.OrganizationID)
 	if err!=nil{fail(w,503,"module_unavailable","No pudimos validar el módulo de recetas.");return}
 	if !enabled{fail(w,403,"module_disabled","El módulo Recetas no está habilitado para esta empresa.");return}
 	var out recipeView
@@ -108,7 +116,7 @@ func (a *API) getRecipe(w http.ResponseWriter,r *http.Request){
 
 func (a *API) saveRecipe(w http.ResponseWriter,r *http.Request){
 	s:=r.Context().Value(scopeKey{}).(scope)
-	enabled,err:=moduleEnabled(r.Context(),a.db,s.OrganizationID,"recetas")
+	enabled,err:=recipesRuntimeEnabled(r.Context(),a.db,s.OrganizationID)
 	if err!=nil{fail(w,503,"module_unavailable","No pudimos validar el módulo de recetas.");return}
 	if !enabled{fail(w,403,"module_disabled","Habilita Recetas antes de configurarlas.");return}
 	var in recipeInput
@@ -157,7 +165,7 @@ func preparedRecipeProductUsage(items []preparedOrderItem) map[string]float64 {
 }
 
 func desiredRecipeInventoryUsage(ctx context.Context,tx pgx.Tx,s scope,items []preparedOrderItem)(map[string]float64,error){
-	enabled,err:=moduleEnabled(ctx,tx,s.OrganizationID,"recetas");if err!=nil{return nil,err}
+	enabled,err:=recipesRuntimeEnabled(ctx,tx,s.OrganizationID);if err!=nil{return nil,err}
 	out:=map[string]float64{};if !enabled{return out,nil}
 	products:=preparedRecipeProductUsage(items)
 	ids:=make([]string,0,len(products));for id:=range products{ids=append(ids,id)};sort.Strings(ids)
@@ -201,7 +209,7 @@ func applyRecipeUsageDelta(ctx context.Context,tx pgx.Tx,s scope,orderID string,
 		if err!=nil{return &orderPreparationError{Status:503,Code:"recipe_inventory_unavailable",Message:"No pudimos validar el stock de receta."}}
 		if change>bal.Quantity+0.000001{return &orderPreparationError{Status:409,Code:"insufficient_recipe_stock",Message:"No hay stock suficiente de "+bal.Name+" para preparar el pedido."}}
 		after:=math.Round((bal.Quantity-change)*1000)/1000
-		avg:=bal.AverageUnitCost;if after<=0{avg=0}
+		avg:=bal.AverageUnitCost
 		if _,err=tx.Exec(ctx,`UPDATE stock_balances SET quantity=$4,average_unit_cost=$5,updated_at=now() WHERE organization_id=$1 AND location_id=$2 AND inventory_item_id=$3`,s.OrganizationID,s.LocationID,itemID,after,avg);err!=nil{return &orderPreparationError{Status:503,Code:"recipe_inventory_unavailable",Message:"No pudimos actualizar el stock de receta."}}
 		movement:="recipe_consumption";note:="Consumo automático por receta"
 		if change<0{movement="recipe_reversal";note="Reversa de consumo por receta"}
