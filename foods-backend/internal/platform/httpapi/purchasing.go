@@ -50,6 +50,7 @@ type purchaseReceiptLineInput struct {
 
 type purchaseReceiptInput struct {
 	Notes string                     `json:"notes"`
+	IdempotencyKey string            `json:"idempotencyKey"`
 	Items []purchaseReceiptLineInput `json:"items"`
 }
 
@@ -725,6 +726,11 @@ func (a *API) receivePurchaseOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	in.Notes = strings.TrimSpace(in.Notes)
+	in.IdempotencyKey = strings.TrimSpace(in.IdempotencyKey)
+	if len(in.IdempotencyKey)>120 {
+		fail(w,400,"invalid_purchase_receipt","La clave de idempotencia es demasiado larga.")
+		return
+	}
 	if len(in.Notes) > 500 {
 		fail(w, 400, "invalid_purchase_receipt", "Las notas no pueden superar 500 caracteres.")
 		return
@@ -776,6 +782,21 @@ func (a *API) receivePurchaseOrder(w http.ResponseWriter, r *http.Request) {
 		fail(w, 409, "purchase_not_receivable", "Solo una orden aprobada o parcialmente recibida puede recibir mercadería.")
 		return
 	}
+	if in.IdempotencyKey!=""{
+		var existingID,existingCode string
+		var existingStatus string
+		err=tx.QueryRow(r.Context(),`
+			SELECT pr.id,pr.code,po.status
+			FROM purchase_receipts pr
+			JOIN purchase_orders po ON po.id=pr.purchase_order_id AND po.organization_id=pr.organization_id AND po.location_id=pr.location_id
+			WHERE pr.organization_id=$1 AND pr.location_id=$2 AND pr.purchase_order_id=$3 AND pr.idempotency_key=$4
+		`,s.OrganizationID,s.LocationID,r.PathValue("id"),in.IdempotencyKey).Scan(&existingID,&existingCode,&existingStatus)
+		if err==nil{
+			writeJSON(w,200,map[string]any{"id":existingID,"code":existingCode,"purchaseOrderId":r.PathValue("id"),"number":number,"status":existingStatus,"idempotent":true})
+			return
+		}
+		if err!=nil&&!errors.Is(err,pgx.ErrNoRows){fail(w,503,"purchase_unavailable","No pudimos validar la recepción previa.");return}
+	}
 
 	var receiptID, receiptCode string
 	if err = tx.QueryRow(r.Context(), `
@@ -801,6 +822,7 @@ func (a *API) receivePurchaseOrder(w http.ResponseWriter, r *http.Request) {
 		OrderedQuantity      float64
 		ReceivedQuantity     float64
 		ReceiveQuantity      float64
+		UnitCost             float64
 	}
 	lines := make([]receivingLine, 0, len(in.Items))
 	for _, requested := range in.Items {
@@ -808,7 +830,7 @@ func (a *API) receivePurchaseOrder(w http.ResponseWriter, r *http.Request) {
 		err = tx.QueryRow(r.Context(), `
 			SELECT poi.id,poi.inventory_item_id,ii.product_id,COALESCE(p.name,ii.name),
 			       poi.presentation_id,poi.presentation_type,poi.units_per_presentation::float8,
-			       poi.quantity::float8,poi.received_quantity::float8
+			       poi.quantity::float8,poi.received_quantity::float8,poi.unit_cost::float8
 			FROM purchase_order_items poi
 			JOIN inventory_items ii ON ii.id=poi.inventory_item_id AND ii.organization_id=poi.organization_id
 			LEFT JOIN products p ON p.id=ii.product_id AND p.organization_id=ii.organization_id
@@ -818,7 +840,7 @@ func (a *API) receivePurchaseOrder(w http.ResponseWriter, r *http.Request) {
 		).Scan(
 			&line.ID, &line.InventoryItemID, &line.ProductID, &line.ItemName,
 			&line.PresentationID, &line.PresentationType, &line.UnitsPerPresentation,
-			&line.OrderedQuantity, &line.ReceivedQuantity,
+			&line.OrderedQuantity, &line.ReceivedQuantity, &line.UnitCost,
 		)
 		if errors.Is(err, pgx.ErrNoRows) {
 			fail(w, 409, "purchase_receipt_item_invalid", "Una línea ya no pertenece a esta orden.")
@@ -846,38 +868,42 @@ func (a *API) receivePurchaseOrder(w http.ResponseWriter, r *http.Request) {
 		if _, err = tx.Exec(r.Context(), `
 			INSERT INTO purchase_receipt_items(
 				organization_id,purchase_receipt_id,purchase_order_item_id,inventory_item_id,
-				presentation_id,quantity,presentation_type,units_per_presentation
+				presentation_id,quantity,presentation_type,units_per_presentation,unit_cost
 			)
-			VALUES($1,$2,$3,$4,$5,$6,$7,$8)`,
+			VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
 			s.OrganizationID, receiptID, line.ID, line.InventoryItemID,
-			line.PresentationID, line.ReceiveQuantity, line.PresentationType, line.UnitsPerPresentation,
+			line.PresentationID, line.ReceiveQuantity, line.PresentationType, line.UnitsPerPresentation,line.UnitCost,
 		); err != nil {
 			fail(w, 503, "purchase_unavailable", "No pudimos guardar el detalle de la recepción.")
 			return
 		}
 		if _, err = tx.Exec(r.Context(), `
-			INSERT INTO stock_balances(organization_id,location_id,inventory_item_id,quantity)
-			VALUES($1,$2,$3,0)
+			INSERT INTO stock_balances(organization_id,location_id,inventory_item_id,quantity,average_unit_cost)
+			VALUES($1,$2,$3,0,0)
 			ON CONFLICT (location_id,inventory_item_id) DO NOTHING`,
 			s.OrganizationID, s.LocationID, line.InventoryItemID); err != nil {
 			fail(w, 503, "inventory_unavailable", "No pudimos preparar el saldo de inventario.")
 			return
 		}
-		var current float64
+		var current,currentAverage float64
 		if err = tx.QueryRow(r.Context(), `
-			SELECT quantity::float8
+			SELECT quantity::float8,average_unit_cost::float8
 			FROM stock_balances
 			WHERE organization_id=$1 AND location_id=$2 AND inventory_item_id=$3
-			FOR UPDATE`, s.OrganizationID, s.LocationID, line.InventoryItemID).Scan(&current); err != nil {
+			FOR UPDATE`, s.OrganizationID, s.LocationID, line.InventoryItemID).Scan(&current,&currentAverage); err != nil {
 			fail(w, 503, "inventory_unavailable", "No pudimos bloquear el saldo de inventario.")
 			return
 		}
 		balanceAfter := math.Round((current+stockQuantity)*1000) / 1000
+		baseUnitCost:=0.0
+		if line.UnitsPerPresentation>0{baseUnitCost=line.UnitCost/line.UnitsPerPresentation}
+		averageAfter:=currentAverage
+		if balanceAfter>0{averageAfter=math.Round(((current*currentAverage)+(stockQuantity*baseUnitCost))/balanceAfter*10000)/10000}
 		if _, err = tx.Exec(r.Context(), `
 			UPDATE stock_balances
-			SET quantity=$4,updated_at=now()
+			SET quantity=$4,average_unit_cost=$5,updated_at=now()
 			WHERE organization_id=$1 AND location_id=$2 AND inventory_item_id=$3`,
-			s.OrganizationID, s.LocationID, line.InventoryItemID, balanceAfter); err != nil {
+			s.OrganizationID, s.LocationID, line.InventoryItemID, balanceAfter,averageAfter); err != nil {
 			fail(w, 503, "inventory_unavailable", "No pudimos actualizar el saldo de inventario.")
 			return
 		}
@@ -885,14 +911,17 @@ func (a *API) receivePurchaseOrder(w http.ResponseWriter, r *http.Request) {
 		if in.Notes != "" {
 			note += " · " + in.Notes
 		}
+		valueDelta:=math.Round(stockQuantity*baseUnitCost*10000)/10000
+		balanceValue:=math.Round(balanceAfter*averageAfter*10000)/10000
 		if _, err = tx.Exec(r.Context(), `
 			INSERT INTO stock_movements(
 				organization_id,location_id,product_id,inventory_item_id,
-				movement_type,quantity_delta,balance_after,source_type,source_id,note,created_by
+				movement_type,quantity_delta,balance_after,source_type,source_id,note,created_by,
+				unit_cost,value_delta,balance_value_after
 			)
-			VALUES($1,$2,$3,$4,'entry',$5,$6,'purchase_receipt',$7,$8,$9)`,
+			VALUES($1,$2,$3,$4,'entry',$5,$6,'purchase_receipt',$7,$8,$9,$10,$11,$12)`,
 			s.OrganizationID, s.LocationID, line.ProductID, line.InventoryItemID,
-			stockQuantity, balanceAfter, receiptID, note, s.UserID); err != nil {
+			stockQuantity, balanceAfter, receiptID, note, s.UserID,baseUnitCost,valueDelta,balanceValue); err != nil {
 			fail(w, 503, "inventory_unavailable", "No pudimos registrar el movimiento de Kárdex.")
 			return
 		}
