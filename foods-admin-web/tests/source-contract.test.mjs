@@ -203,6 +203,9 @@ test("compras concentra orden recepcion y altas de abastecimiento",()=>{
   assert.ok(purchases.includes("partially_received"),"Compras representa una recepción parcial sin cerrar la orden");
   for(const column of ["SOLICITADO","RECIBIDO","PENDIENTE"])assert.ok(purchases.includes(column),column);
   assert.ok(purchases.includes("Agregar artículo"),"La OC expone un único punto claro para agregar artículos");
+  assert.ok(purchases.includes("fields.length>0&&<Button"),"El botón superior aparece solo cuando ya existen líneas");
+  assert.equal(purchases.includes("Agregar primer artículo"),false,"El estado vacío no duplica el CTA con otra etiqueta");
+  assert.ok(purchases.includes("Guardar borrador"),"Guardar la OC comunica que aún no hay recepción ni movimiento de stock");
   assert.ok(purchases.includes("Aún no agregaste artículos"),"La OC presenta un estado vacío explícito antes de agregar líneas");
   assert.ok(purchases.includes("Cambiar"),"Una línea existente permite reemplazar el artículo sin duplicar controles");
 
