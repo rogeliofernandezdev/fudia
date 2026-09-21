@@ -407,7 +407,11 @@ func (a *API) listPurchaseOrders(w http.ResponseWriter, r *http.Request) {
 	status := strings.TrimSpace(r.URL.Query().Get("status"))
 	where := `po.organization_id=$1 AND po.location_id=$2
 		AND ($3='' OR po.number ILIKE '%'||$3||'%' OR sp.name ILIKE '%'||$3||'%')
-		AND ($4='' OR po.status=$4)`
+		AND (
+		  $4=''
+		  OR ($4='receivable' AND po.status IN ('approved','partially_received'))
+		  OR po.status=$4
+		)`
 	var total int
 	if err := a.db.QueryRow(r.Context(), `
 		SELECT count(*)
