@@ -331,20 +331,20 @@ func (a *API) createPurchaseInventoryItem(w http.ResponseWriter, r *http.Request
 		fail(w, 503, "inventory_unavailable", "No pudimos guardar la presentación del artículo.")
 		return
 	}
-	if _, err = tx.Exec(r.Context(), \`
+	if _, err = tx.Exec(r.Context(), `
 		INSERT INTO stock_balances(organization_id,location_id,inventory_item_id,quantity)
 		VALUES($1,$2,$3,0)
-		ON CONFLICT (location_id,inventory_item_id) DO NOTHING\`,
+		ON CONFLICT (location_id,inventory_item_id) DO NOTHING`,
 		s.OrganizationID, s.LocationID, created.InventoryItemID); err != nil {
 		fail(w, 503, "inventory_unavailable", "No pudimos preparar el artículo con stock cero.")
 		return
 	}
 
-	rows, err := tx.Query(r.Context(), \`
+	rows, err := tx.Query(r.Context(), `
 		SELECT id,presentation_type,units_per_presentation::text
 		FROM inventory_presentations
 		WHERE organization_id=$1 AND inventory_item_id=$2 AND active
-		ORDER BY CASE presentation_type WHEN 'unit' THEN 0 WHEN 'package' THEN 1 ELSE 2 END,units_per_presentation\`,
+		ORDER BY CASE presentation_type WHEN 'unit' THEN 0 WHEN 'package' THEN 1 ELSE 2 END,units_per_presentation`,
 		s.OrganizationID, created.InventoryItemID)
 	if err != nil {
 		fail(w, 503, "inventory_unavailable", "No pudimos cargar las presentaciones del artículo.")
@@ -757,11 +757,11 @@ func (a *API) receivePurchaseOrder(w http.ResponseWriter, r *http.Request) {
 	defer tx.Rollback(r.Context())
 
 	var number, status string
-	if err = tx.QueryRow(r.Context(), \`
+	if err = tx.QueryRow(r.Context(), `
 		SELECT number,status
 		FROM purchase_orders
 		WHERE id=$1 AND organization_id=$2 AND location_id=$3
-		FOR UPDATE\`, r.PathValue("id"), s.OrganizationID, s.LocationID).Scan(&number, &status); errors.Is(err, pgx.ErrNoRows) {
+		FOR UPDATE`, r.PathValue("id"), s.OrganizationID, s.LocationID).Scan(&number, &status); errors.Is(err, pgx.ErrNoRows) {
 		fail(w, 404, "purchase_not_found", "La orden de compra no existe.")
 		return
 	} else if err != nil {
@@ -774,12 +774,12 @@ func (a *API) receivePurchaseOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var receiptID, receiptCode string
-	if err = tx.QueryRow(r.Context(), \`
+	if err = tx.QueryRow(r.Context(), `
 		INSERT INTO purchase_receipts(
 			organization_id,location_id,purchase_order_id,notes,created_by
 		)
 		VALUES($1,$2,$3,$4,$5)
-		RETURNING id,code\`,
+		RETURNING id,code`,
 		s.OrganizationID, s.LocationID, r.PathValue("id"), in.Notes, s.UserID,
 	).Scan(&receiptID, &receiptCode); err != nil {
 		fail(w, 503, "purchase_unavailable", "No pudimos crear la recepción.")
@@ -801,7 +801,7 @@ func (a *API) receivePurchaseOrder(w http.ResponseWriter, r *http.Request) {
 	lines := make([]receivingLine, 0, len(in.Items))
 	for _, requested := range in.Items {
 		var line receivingLine
-		err = tx.QueryRow(r.Context(), \`
+		err = tx.QueryRow(r.Context(), `
 			SELECT poi.id,poi.inventory_item_id,ii.product_id,COALESCE(p.name,ii.name),
 			       poi.presentation_id,poi.presentation_type,poi.units_per_presentation::float8,
 			       poi.quantity::float8,poi.received_quantity::float8
@@ -809,7 +809,7 @@ func (a *API) receivePurchaseOrder(w http.ResponseWriter, r *http.Request) {
 			JOIN inventory_items ii ON ii.id=poi.inventory_item_id AND ii.organization_id=poi.organization_id
 			LEFT JOIN products p ON p.id=ii.product_id AND p.organization_id=ii.organization_id
 			WHERE poi.id=$1 AND poi.purchase_order_id=$2 AND poi.organization_id=$3
-			FOR UPDATE OF poi\`,
+			FOR UPDATE OF poi`,
 			requested.PurchaseOrderItemID, r.PathValue("id"), s.OrganizationID,
 		).Scan(
 			&line.ID, &line.InventoryItemID, &line.ProductID, &line.ItemName,
@@ -839,40 +839,40 @@ func (a *API) receivePurchaseOrder(w http.ResponseWriter, r *http.Request) {
 
 	for _, line := range lines {
 		stockQuantity := math.Round(line.ReceiveQuantity*line.UnitsPerPresentation*1000) / 1000
-		if _, err = tx.Exec(r.Context(), \`
+		if _, err = tx.Exec(r.Context(), `
 			INSERT INTO purchase_receipt_items(
 				organization_id,purchase_receipt_id,purchase_order_item_id,inventory_item_id,
 				presentation_id,quantity,presentation_type,units_per_presentation
 			)
-			VALUES($1,$2,$3,$4,$5,$6,$7,$8)\`,
+			VALUES($1,$2,$3,$4,$5,$6,$7,$8)`,
 			s.OrganizationID, receiptID, line.ID, line.InventoryItemID,
 			line.PresentationID, line.ReceiveQuantity, line.PresentationType, line.UnitsPerPresentation,
 		); err != nil {
 			fail(w, 503, "purchase_unavailable", "No pudimos guardar el detalle de la recepción.")
 			return
 		}
-		if _, err = tx.Exec(r.Context(), \`
+		if _, err = tx.Exec(r.Context(), `
 			INSERT INTO stock_balances(organization_id,location_id,inventory_item_id,quantity)
 			VALUES($1,$2,$3,0)
-			ON CONFLICT (location_id,inventory_item_id) DO NOTHING\`,
+			ON CONFLICT (location_id,inventory_item_id) DO NOTHING`,
 			s.OrganizationID, s.LocationID, line.InventoryItemID); err != nil {
 			fail(w, 503, "inventory_unavailable", "No pudimos preparar el saldo de inventario.")
 			return
 		}
 		var current float64
-		if err = tx.QueryRow(r.Context(), \`
+		if err = tx.QueryRow(r.Context(), `
 			SELECT quantity::float8
 			FROM stock_balances
 			WHERE organization_id=$1 AND location_id=$2 AND inventory_item_id=$3
-			FOR UPDATE\`, s.OrganizationID, s.LocationID, line.InventoryItemID).Scan(&current); err != nil {
+			FOR UPDATE`, s.OrganizationID, s.LocationID, line.InventoryItemID).Scan(&current); err != nil {
 			fail(w, 503, "inventory_unavailable", "No pudimos bloquear el saldo de inventario.")
 			return
 		}
 		balanceAfter := math.Round((current+stockQuantity)*1000) / 1000
-		if _, err = tx.Exec(r.Context(), \`
+		if _, err = tx.Exec(r.Context(), `
 			UPDATE stock_balances
 			SET quantity=$4,updated_at=now()
-			WHERE organization_id=$1 AND location_id=$2 AND inventory_item_id=$3\`,
+			WHERE organization_id=$1 AND location_id=$2 AND inventory_item_id=$3`,
 			s.OrganizationID, s.LocationID, line.InventoryItemID, balanceAfter); err != nil {
 			fail(w, 503, "inventory_unavailable", "No pudimos actualizar el saldo de inventario.")
 			return
@@ -881,21 +881,21 @@ func (a *API) receivePurchaseOrder(w http.ResponseWriter, r *http.Request) {
 		if in.Notes != "" {
 			note += " · " + in.Notes
 		}
-		if _, err = tx.Exec(r.Context(), \`
+		if _, err = tx.Exec(r.Context(), `
 			INSERT INTO stock_movements(
 				organization_id,location_id,product_id,inventory_item_id,
 				movement_type,quantity_delta,balance_after,source_type,source_id,note,created_by
 			)
-			VALUES($1,$2,$3,$4,'entry',$5,$6,'purchase_receipt',$7,$8,$9)\`,
+			VALUES($1,$2,$3,$4,'entry',$5,$6,'purchase_receipt',$7,$8,$9)`,
 			s.OrganizationID, s.LocationID, line.ProductID, line.InventoryItemID,
 			stockQuantity, balanceAfter, receiptID, note, s.UserID); err != nil {
 			fail(w, 503, "inventory_unavailable", "No pudimos registrar el movimiento de Kárdex.")
 			return
 		}
-		if _, err = tx.Exec(r.Context(), \`
+		if _, err = tx.Exec(r.Context(), `
 			UPDATE purchase_order_items
 			SET received_quantity=received_quantity+$4
-			WHERE id=$1 AND purchase_order_id=$2 AND organization_id=$3\`,
+			WHERE id=$1 AND purchase_order_id=$2 AND organization_id=$3`,
 			line.ID, r.PathValue("id"), s.OrganizationID, line.ReceiveQuantity); err != nil {
 			fail(w, 503, "purchase_unavailable", "No pudimos actualizar lo recibido de la orden.")
 			return
@@ -903,11 +903,11 @@ func (a *API) receivePurchaseOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var pendingCount int
-	if err = tx.QueryRow(r.Context(), \`
+	if err = tx.QueryRow(r.Context(), `
 		SELECT count(*)
 		FROM purchase_order_items
 		WHERE purchase_order_id=$1 AND organization_id=$2
-		  AND received_quantity < quantity\`,
+		  AND received_quantity < quantity`,
 		r.PathValue("id"), s.OrganizationID).Scan(&pendingCount); err != nil {
 		fail(w, 503, "purchase_unavailable", "No pudimos calcular lo pendiente de la orden.")
 		return
@@ -919,12 +919,12 @@ func (a *API) receivePurchaseOrder(w http.ResponseWriter, r *http.Request) {
 		now := time.Now().UTC()
 		receivedAt = &now
 	}
-	if _, err = tx.Exec(r.Context(), \`
+	if _, err = tx.Exec(r.Context(), `
 		UPDATE purchase_orders
 		SET status=$4,
 		    received_at=CASE WHEN $4='received' THEN now() ELSE received_at END,
 		    updated_at=now()
-		WHERE id=$1 AND organization_id=$2 AND location_id=$3\`,
+		WHERE id=$1 AND organization_id=$2 AND location_id=$3`,
 		r.PathValue("id"), s.OrganizationID, s.LocationID, nextStatus); err != nil {
 		fail(w, 503, "purchase_unavailable", "No pudimos actualizar la recepción de la orden.")
 		return
