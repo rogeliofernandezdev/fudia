@@ -20,7 +20,7 @@ const statusMeta:Record<PurchaseStatus,{label:string;tone:"green"|"blue"|"orange
   received:{label:"Recibida",tone:"green"},
   cancelled:{label:"Cancelada",tone:"gray"},
 };
-const emptyOrder:PurchaseOrderDraft={id:"",supplierId:"",expectedAt:"",notes:"",items:[{inventoryItemId:"",presentationId:"",quantity:"1",unitCost:""}]};
+const emptyOrder:PurchaseOrderDraft={id:"",supplierId:"",expectedAt:"",notes:"",items:[]};
 const emptySupplier:SupplierDraft={id:"",taxId:"",name:"",email:"",phone:""};
 
 export function PurchasesPage(){
@@ -135,83 +135,99 @@ function PurchaseOrderDialog({initial,suppliers,inventory,currencySymbol,busy,cl
   const qc=useQueryClient();
   const{notify}=useFeedback();
   const[createdItems,setCreatedItems]=useState<PurchaseInventoryOption[]>([]);
-  const[itemSearch,setItemSearch]=useState<Record<number,string>>({});
-  const[newItemLine,setNewItemLine]=useState<number|null>(null);
+  const[itemTarget,setItemTarget]=useState<number|"new"|null>(null);
   const{control,register,handleSubmit,watch,setValue,formState:{errors,isSubmitted}}=useForm<PurchaseOrderDraft>({defaultValues:initial,resolver:purchaseOrderResolver,mode:"onSubmit",reValidateMode:"onChange"});
   const{fields,append,remove}=useFieldArray({control,name:"items"});
-  const categories=useQuery({queryKey:["purchase-item-categories"],queryFn:listPurchaseItemCategories,enabled:newItemLine!==null,staleTime:30000});
+  const lines=watch("items");
+  const catalog=[...inventory,...createdItems.filter(item=>!inventory.some(existing=>existing.id===item.id))];
+  const total=lines.reduce((sum,line)=>sum+(Number(line.quantity)||0)*(Number(line.unitCost)||0),0);
+
+  function applyItem(target:number|"new",item:PurchaseInventoryOption,preferredPresentationId?:string){
+    const presentation=item.presentations.find(option=>option.id===preferredPresentationId)
+      ??item.presentations.find(option=>option.presentationType==="unit")
+      ??item.presentations[0];
+    const next={inventoryItemId:item.id,presentationId:presentation?.id??"",quantity:"1",unitCost:""};
+    if(target==="new")append(next);
+    else{
+      setValue(`items.${target}.inventoryItemId`,item.id,{shouldDirty:true,shouldValidate:isSubmitted});
+      setValue(`items.${target}.presentationId`,presentation?.id??"",{shouldDirty:true,shouldValidate:isSubmitted});
+    }
+    setItemTarget(null);
+  }
+
   const createItem=useMutation({
-    mutationFn:({draft}:{index:number;draft:Parameters<typeof createPurchaseInventoryItem>[0]})=>createPurchaseInventoryItem(draft),
+    mutationFn:({draft,file}:{target:number|"new";draft:Parameters<typeof createPurchaseInventoryItem>[0];file:File|null})=>createPurchaseInventoryItem(draft,file),
     onSuccess:(item,variables)=>{
       setCreatedItems(current=>current.some(existing=>existing.id===item.id)?current:[...current,item]);
       const factor=variables.draft.presentationType==="unit"?1:Number(variables.draft.unitsPerPresentation);
       const presentation=item.presentations.find(option=>
         option.presentationType===variables.draft.presentationType&&Number(option.unitsPerPresentation)===factor
       );
-      chooseItem(variables.index,item.id,item,presentation?.id);
-      setNewItemLine(null);
+      applyItem(variables.target,item,presentation?.id);
       void qc.invalidateQueries({queryKey:["purchase-inventory"]});
       void qc.invalidateQueries({queryKey:["inventory"]});
       void qc.invalidateQueries({queryKey:["products"]});
-      notify({tone:"success",title:"Artículo creado",message:item.name+" quedó con stock 0 y seleccionado en la orden."});
+      notify({tone:"success",title:"Artículo creado",message:item.name+" quedó con stock 0 y agregado a la orden."});
     },
     onError:error=>notify({tone:"danger",title:"No se pudo crear el artículo",message:error.message}),
   });
-  const lines=watch("items");
-  const catalog=[...inventory,...createdItems.filter(item=>!inventory.some(existing=>existing.id===item.id))];
-  const total=lines.reduce((sum,line)=>sum+(Number(line.quantity)||0)*(Number(line.unitCost)||0),0);
-
-  function chooseItem(index:number,id:string,forced?:PurchaseInventoryOption,preferredPresentationId?:string){
-    const option=forced??catalog.find(item=>item.id===id);
-    const presentation=option?.presentations.find(item=>item.id===preferredPresentationId)
-      ??option?.presentations.find(item=>item.presentationType==="unit")
-      ??option?.presentations[0];
-    setValue(`items.${index}.inventoryItemId`,id,{shouldValidate:isSubmitted});
-    setValue(`items.${index}.presentationId`,presentation?.id??"",{shouldValidate:isSubmitted});
-    setItemSearch(current=>({...current,[index]:""}));
-  }
 
   return <>
     <div className="modal-backdrop modal-overlay-in"><section className="crud-modal purchase-order-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="purchase-order-title" aria-busy={busy}><div className="modal-accent"/>
       <header><span className="modal-title-icon"><Icon name="receipt" size={18}/></span><div><small>{initial.id?"EDITAR ORDEN":"NUEVA ORDEN"}</small><h2 id="purchase-order-title">Orden de compra</h2></div><button type="button" aria-label="Cerrar" onClick={close} disabled={busy}><Icon name="close"/></button></header>
       <form onSubmit={handleSubmit(save)} noValidate><div className="purchase-form-body">
-        <section className="purchase-form-section"><div className="purchase-section-title"><span><Icon name="truck" size={17}/></span><div><b>Proveedor y entrega</b><small>Define quién abastece la orden y cuándo esperas recibirla.</small></div></div><div className="form-grid">
-          <label>Proveedor<Select autoFocus {...register("supplierId")} aria-invalid={Boolean(errors.supplierId)}><option value="">{suppliers.length?"Selecciona un proveedor":"No hay proveedores activos"}</option>{suppliers.map(supplier=><option value={supplier.id} key={supplier.id}>{supplier.name}{supplier.taxId?" · "+supplier.taxId:""}</option>)}</Select>{errors.supplierId?.message&&<small className="wizard-field-error">{errors.supplierId.message}</small>}</label>
-          <label>Entrega esperada<Input type="date" {...register("expectedAt")}/></label><div/>
-          <label className="span-2">Notas<Textarea rows={2} maxLength={500} {...register("notes")} placeholder="Condiciones, referencia o indicaciones para la compra"/>{errors.notes?.message&&<small className="wizard-field-error">{errors.notes.message}</small>}</label>
-        </div></section>
-        <section className="purchase-form-section"><div className="purchase-section-title purchase-lines-title"><span><Icon name="stock" size={17}/></span><div><b>Artículos de la orden</b><small>Busca un artículo existente o créalo aquí si todavía no existe.</small></div><Button kind="secondary" icon="plus" onClick={()=>append({inventoryItemId:"",presentationId:"",quantity:"1",unitCost:""})}>Agregar línea</Button></div>
-          <div className="purchase-lines">{fields.map((field,index)=>{
+        <section className="purchase-form-section purchase-order-header-section">
+          <div className="purchase-section-title"><span><Icon name="truck" size={17}/></span><div><b>Proveedor y entrega</b><small>Define quién abastece la orden y cuándo esperas recibirla.</small></div></div>
+          <div className="form-grid purchase-order-meta-grid">
+            <label>Proveedor<Select autoFocus {...register("supplierId")} aria-invalid={Boolean(errors.supplierId)}><option value="">{suppliers.length?"Selecciona un proveedor":"No hay proveedores activos"}</option>{suppliers.map(supplier=><option value={supplier.id} key={supplier.id}>{supplier.name}{supplier.taxId?" · "+supplier.taxId:""}</option>)}</Select>{errors.supplierId?.message&&<small className="wizard-field-error">{errors.supplierId.message}</small>}</label>
+            <label>Entrega esperada<Input type="date" {...register("expectedAt")}/></label>
+            <label className="span-2">Notas<Textarea rows={2} maxLength={500} {...register("notes")} placeholder="Condiciones, referencia o indicaciones para la compra"/>{errors.notes?.message&&<small className="wizard-field-error">{errors.notes.message}</small>}</label>
+          </div>
+        </section>
+
+        <section className="purchase-form-section purchase-order-lines-section">
+          <div className="purchase-section-title purchase-lines-title">
+            <span><Icon name="stock" size={17}/></span>
+            <div><b>Artículos de la orden</b><small>Agrega artículos existentes o crea uno nuevo sin salir de Compras.</small></div>
+            <Button type="button" kind="secondary" icon="plus" onClick={()=>setItemTarget("new")}>Agregar artículo</Button>
+          </div>
+
+          {!fields.length?<div className="purchase-lines-empty">
+            <span><Icon name="stock" size={22}/></span>
+            <div><b>Aún no agregaste artículos</b><small>Usa “Agregar artículo” para buscar uno existente, crear un producto vendible o crear un insumo.</small></div>
+            <Button type="button" kind="secondary" icon="plus" onClick={()=>setItemTarget("new")}>Agregar primer artículo</Button>
+          </div>:<div className="purchase-lines">{fields.map((field,index)=>{
             const value=lines[index];
             const selected=catalog.find(item=>item.id===value?.inventoryItemId);
-            const search=(itemSearch[index]??"").trim().toLowerCase();
-            let options=search?catalog.filter(item=>item.name.toLowerCase().includes(search)):catalog;
-            if(selected&&!options.some(item=>item.id===selected.id))options=[selected,...options];
-            return <article className="purchase-line" key={field.id}>
+            return <article className="purchase-line purchase-line-modern" key={field.id}>
               <div className="purchase-line-number">{index+1}</div>
-              <label className="purchase-item-picker">Artículo
-                <Input value={itemSearch[index]??""} onChange={event=>setItemSearch(current=>({...current,[index]:event.target.value}))} placeholder="Buscar artículo existente..."/>
-                <Select value={value?.inventoryItemId??""} onChange={event=>chooseItem(index,event.target.value)} aria-invalid={Boolean(errors.items?.[index]?.inventoryItemId)}>
-                  <option value="">{options.length?"Selecciona...":"Sin coincidencias"}</option>
-                  {options.map(item=><option value={item.id} key={item.id}>{item.name}{item.kind==="ingredient"?" · Insumo":""}</option>)}
-                </Select>
-                <button type="button" className="purchase-create-item" onClick={()=>setNewItemLine(index)}><Icon name="plus" size={13}/>{search&&options.length===0?"Crear nuevo artículo":"Crear nuevo artículo"}</button>
-                {errors.items?.[index]?.inventoryItemId?.message&&<small className="wizard-field-error">{errors.items[index]?.inventoryItemId?.message}</small>}
-              </label>
+              <div className="purchase-line-item">
+                <small>ARTÍCULO</small>
+                <span className="purchase-line-item-main"><span className="purchase-line-item-icon"><Icon name={selected?.kind==="ingredient"?"stock":"box"} size={16}/></span><span><b>{selected?.name??"Artículo no disponible"}</b><small>{selected?(selected.kind==="ingredient"?"Insumo":"Producto vendible")+" · "+selected.unit:"Selecciona otro artículo"}</small></span></span>
+                <button type="button" onClick={()=>setItemTarget(index)}>Cambiar</button>
+              </div>
               <label>Presentación<Select {...register(`items.${index}.presentationId`)} disabled={!selected} aria-invalid={Boolean(errors.items?.[index]?.presentationId)}><option value="">Selecciona...</option>{(selected?.presentations??[]).map(presentation=><option value={presentation.id} key={presentation.id}>{presentationName(presentation.presentationType,presentation.unitsPerPresentation,selected?.unit)}</option>)}</Select>{errors.items?.[index]?.presentationId?.message&&<small className="wizard-field-error">{errors.items[index]?.presentationId?.message}</small>}</label>
               <label>Cantidad<Input type="number" min="0.001" step="0.001" inputMode="decimal" {...register(`items.${index}.quantity`)} aria-invalid={Boolean(errors.items?.[index]?.quantity)}/>{errors.items?.[index]?.quantity?.message&&<small className="wizard-field-error">{errors.items[index]?.quantity?.message}</small>}</label>
               <label>Costo unitario<div className="money-input"><span>{currencySymbol}</span><Input inputMode="decimal" {...register(`items.${index}.unitCost`)} placeholder="0.00" aria-invalid={Boolean(errors.items?.[index]?.unitCost)}/></div>{errors.items?.[index]?.unitCost?.message&&<small className="wizard-field-error">{errors.items[index]?.unitCost?.message}</small>}</label>
               <div className="purchase-line-total"><small>SUBTOTAL</small><b>{currencySymbol} {formatRegionalNumber((Number(value?.quantity)||0)*(Number(value?.unitCost)||0),undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</b></div>
-              <RowActionButton action="remove" label="Quitar línea" disabled={fields.length===1} onClick={()=>remove(index)}/>
+              <RowActionButton action="remove" label="Quitar línea" onClick={()=>remove(index)}/>
             </article>;
-          })}</div>
+          })}</div>}
           {typeof errors.items?.message==="string"&&<div className="purchase-validation" role="alert"><Icon name="alert" size={15}/>{errors.items.message}</div>}
         </section>
+
         <div className="purchase-total"><span><small>TOTAL ESTIMADO</small><b>{fields.length} {fields.length===1?"línea":"líneas"}</b></span><strong>{currencySymbol} {formatRegionalNumber(total,undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</strong></div>
-      </div><footer><Button kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy||!suppliers.length}>{busy?"Guardando…":"Guardar"}</Button></footer></form>
+      </div><footer><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy||!suppliers.length}>{busy?"Guardando…":"Guardar"}</Button></footer></form>
       {busy&&<div className="modal-busy" role="status"><i/><span>Guardando…</span></div>}
     </section></div>
-    {newItemLine!==null&&(categories.isLoading?<RemoteModalSkeleton className="purchase-item-modal" label="Cargando catálogo para el artículo" rows={6} close={()=>setNewItemLine(null)}/>:<PurchaseItemDialog categories={categories.data??[]} categoryError={categories.isError?categories.error.message:null} currencySymbol={currencySymbol} busy={createItem.isPending} close={()=>setNewItemLine(null)} save={draft=>createItem.mutate({index:newItemLine,draft})}/>)}
+
+    {itemTarget!==null&&<PurchaseItemDialog
+      currencySymbol={currencySymbol}
+      busy={createItem.isPending}
+      close={()=>setItemTarget(null)}
+      choose={item=>applyItem(itemTarget,item)}
+      save={(draft,file)=>createItem.mutate({target:itemTarget,draft,file})}
+    />}
   </>;
 }
 
