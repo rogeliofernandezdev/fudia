@@ -19,7 +19,7 @@ const paymentMeta={
 };
 const channelLabel:Record<string,string>={salon:"Salón",mostrador:"Mostrador",recojo:"Recojo",delivery:"Delivery",whatsapp:"WhatsApp"};
 
-export function POSPage(){
+export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
   const qc=useQueryClient();
   const{notify}=useFeedback();
   const{can,location}=useSession();
@@ -30,7 +30,7 @@ export function POSPage(){
   const[page,setPage]=useState(1);
   const[size,setSize]=useState(10);
   const[paymentTarget,setPaymentTarget]=useState<POSOrderSummary|null>(null);
-  const[detailId,setDetailId]=useState<string|null>(null);
+  const[detailId,setDetailId]=useState<string|null>(initialOrderId||null);
   const[refundTarget,setRefundTarget]=useState<Payment|null>(null);
 
   const current=useQuery({
