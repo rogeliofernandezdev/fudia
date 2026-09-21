@@ -28,7 +28,7 @@ const groups:NavGroup[]=[
 
 export function AdminShell({children}:{children:React.ReactNode}){
  const path=usePathname();const router=useRouter();const queryClient=useQueryClient();const{user,organization,location,modules,menuAccess,canAccess,isLoading,isError}=useSession();const[notifications,setNotifications]=useState(false);const[menuOpen,setMenuOpen]=useState(false);const[collapsed,setCollapsed]=useState(false);const[accountOpen,setAccountOpen]=useState(false);const[signingOut,setSigningOut]=useState(false);const accountRef=useRef<HTMLDivElement>(null);
- function moduleActive(key:string):boolean{if(!modules)return false;const v=modules[key];return v===undefined?true:v}
+ function moduleActive(key:string):boolean{if(!modules)return false;const v=modules[key];const active=v===undefined?true:v;if(!active)return false;if(key==="recetas"){const inventory=modules.inventario;return inventory===undefined?true:inventory}return true}
  const accessKey=(item:NavItem)=>item.access??item.module;
  const visibleGroups=groups.map(g=>({...g,items:g.items.filter(i=>i.platformAdminOnly?user?.platformAdmin:moduleActive(i.module ?? "")&&canAccess(accessKey(i)))})).filter(g=>g.items.length>0);
  const currentItem=groups.flatMap(group=>group.items).sort((a,b)=>b.href.length-a.href.length).find(item=>path===item.href||path.startsWith(`${item.href}/`));
