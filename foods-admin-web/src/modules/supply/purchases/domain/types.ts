@@ -128,6 +128,7 @@ export type PurchaseReceiptLineDraft={
 
 export type PurchaseReceiptDraft={
   purchaseOrderId:string;
+  idempotencyKey:string;
   notes:string;
   items:PurchaseReceiptLineDraft[];
 };
@@ -140,3 +141,10 @@ export type PurchaseReceiptResult={
   status:"partially_received"|"received";
   receivedAt:string|null;
 };
+
+
+export type PurchaseReceiptSummary={id:string;code:string;purchaseOrderId:string;number:string;supplierName:string;notes:string;createdByName:string;createdAt:string;itemCount:number};
+export type PurchaseReceiptItem={id:string;purchaseOrderItemId:string;inventoryItemId:string;itemName:string;quantity:string;presentationType:PresentationType;unitsPerPresentation:string;stockQuantity:string;unitCost:string};
+export type PurchaseReceiptDetail=PurchaseReceiptSummary&{items:PurchaseReceiptItem[]};
+export type PurchaseReturnKind="supplier_return"|"receipt_correction";
+export type PurchaseReturnDraft={purchaseReceiptId:string;kind:PurchaseReturnKind;reason:string;notes:string;items:Array<{purchaseReceiptItemId:string;quantity:string}>};
