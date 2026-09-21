@@ -199,7 +199,7 @@ test("compras concentra orden recepcion y altas de abastecimiento",()=>{
   assert.ok(itemDialog.includes("Nuevo producto vendible"),"Compras conserva el alta de mercadería vendible");
   assert.ok(itemDialog.includes("Nuevo insumo"),"Compras conserva el alta de insumo no vendible");
   assert.ok(itemDialog.includes("Stock inicial: 0"),"Crear el artículo desde Compras no mueve inventario");
-  assert.ok(itemDialog.includes("quantityControl"),false);
+  assert.equal(itemDialog.includes("quantityControl"),false,"El formulario no expone detalles técnicos de control de cantidad");
   assert.ok(itemDialog.includes("no se vuelve vendible"),"El insumo no se convierte automáticamente en Producto");
 
   assert.ok(receiptDialog.includes("Registra únicamente lo que llegó."),"Recepción registra cantidades reales");
