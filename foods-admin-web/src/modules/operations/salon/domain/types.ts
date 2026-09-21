@@ -5,7 +5,7 @@ export type OrderItem={id:string;productId:string;name:string;qty:string;unitPri
 export type Order={
  id:string;code:string;channel:string;status:string;customerId:string;customerName:string;customerPhone:string;
  address:string;reference:string;tableId:string;tableName:string;notes:string;subtotal:string;deliveryFee:string;total:string;
- createdAt:string;updatedAt:string;itemCount?:number;items?:OrderItem[];
+ createdAt:string;updatedAt:string;itemCount?:number;items?:OrderItem[];paidAmount?:string;remainingAmount?:string;paymentStatus?:"pending"|"partial"|"paid";
 };
 export type FloorTable={id:string;name:string;zone:string;seats:number;order:Order|null};
 export type LineDraft={
