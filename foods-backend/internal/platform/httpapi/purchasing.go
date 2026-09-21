@@ -778,10 +778,6 @@ func (a *API) receivePurchaseOrder(w http.ResponseWriter, r *http.Request) {
 		fail(w, 503, "purchase_unavailable", "No pudimos validar la orden.")
 		return
 	}
-	if status != "approved" && status != "partially_received" {
-		fail(w, 409, "purchase_not_receivable", "Solo una orden aprobada o parcialmente recibida puede recibir mercadería.")
-		return
-	}
 	if in.IdempotencyKey!=""{
 		var existingID,existingCode string
 		var existingStatus string
@@ -796,6 +792,10 @@ func (a *API) receivePurchaseOrder(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if err!=nil&&!errors.Is(err,pgx.ErrNoRows){fail(w,503,"purchase_unavailable","No pudimos validar la recepción previa.");return}
+	}
+	if status != "approved" && status != "partially_received" {
+		fail(w, 409, "purchase_not_receivable", "Solo una orden aprobada o parcialmente recibida puede recibir mercadería.")
+		return
 	}
 
 	var receiptID, receiptCode string
