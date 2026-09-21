@@ -43,6 +43,7 @@ type inventoryProductOption struct {
 	CategoryName    *string                       `json:"categoryName"`
 	QuantityControl *string                       `json:"quantityControl"`
 	Unit            string                        `json:"unit"`
+	Quantity        string                        `json:"quantity"`
 	MinimumStock    string                        `json:"minimumStock"`
 	Presentations   []inventoryPresentationOption `json:"presentations"`
 }
@@ -78,13 +79,25 @@ type inventoryMovementView struct {
 	ProductID       *string `json:"productId"`
 	ItemName        string  `json:"itemName"`
 	MovementType    string  `json:"movementType"`
+	AdjustmentType  *string `json:"adjustmentType,omitempty"`
+	Reason          *string `json:"reason,omitempty"`
 	QuantityDelta   string  `json:"quantityDelta"`
+	BalanceBefore   string  `json:"balanceBefore"`
 	BalanceAfter    string  `json:"balanceAfter"`
 	SourceType      string  `json:"sourceType"`
 	SourceID        string  `json:"sourceId"`
 	SourceReference string  `json:"sourceReference"`
 	Note            string  `json:"note"`
+	CreatedByName   string  `json:"createdByName"`
 	CreatedAt       time.Time `json:"createdAt"`
+}
+
+type inventoryAdjustmentInput struct {
+	InventoryItemID string  `json:"inventoryItemId"`
+	MovementType    string  `json:"movementType"`
+	Reason          string  `json:"reason"`
+	Quantity        float64 `json:"quantity"`
+	Observation     string  `json:"observation"`
 }
 
 func productHasCancellableOrderUsage(ctx context.Context, tx pgx.Tx, organizationID, productID string) (bool, error) {
@@ -259,7 +272,7 @@ func (a *API) listInventoryProducts(w http.ResponseWriter, r *http.Request) {
 	rows, err := a.db.Query(r.Context(), `
 		SELECT ii.id,p.id,COALESCE(p.sku,ii.sku),COALESCE(p.name,ii.name),
 		       CASE WHEN p.id IS NULL THEN 'ingredient' ELSE 'product' END,
-		       c.name,p.quantity_control,ii.unit,ii.minimum_stock::text,
+		       c.name,p.quantity_control,ii.unit,COALESCE(sb.quantity,0)::text,ii.minimum_stock::text,
 		       COALESCE((
 		         SELECT jsonb_agg(
 		           jsonb_build_object(
@@ -281,6 +294,10 @@ func (a *API) listInventoryProducts(w http.ResponseWriter, r *http.Request) {
 		  ON p.id=ii.product_id AND p.organization_id=ii.organization_id
 		LEFT JOIN menu_categories c
 		  ON c.id=p.category_id AND c.organization_id=p.organization_id
+		LEFT JOIN stock_balances sb
+		  ON sb.organization_id=ii.organization_id
+		 AND sb.location_id=$2
+		 AND sb.inventory_item_id=ii.id
 		WHERE ii.organization_id=$1
 		  AND ii.active
 		  AND (p.id IS NULL OR (
@@ -292,9 +309,9 @@ func (a *API) listInventoryProducts(w http.ResponseWriter, r *http.Request) {
 		      WHERE mc.product_id=p.id AND mc.organization_id=p.organization_id
 		    )
 		  ))
-		  AND (COALESCE(p.name,ii.name) ILIKE $2 OR COALESCE(p.sku,ii.sku) ILIKE $2)
+		  AND (COALESCE(p.name,ii.name) ILIKE $3 OR COALESCE(p.sku,ii.sku) ILIKE $3)
 		ORDER BY COALESCE(p.name,ii.name)
-		LIMIT 100`, s.OrganizationID, search)
+		LIMIT 100`, s.OrganizationID, s.LocationID, search)
 	if err != nil {
 		fail(w, 503, "inventory_products_unavailable", "No pudimos cargar los artículos de inventario.")
 		return
@@ -306,7 +323,7 @@ func (a *API) listInventoryProducts(w http.ResponseWriter, r *http.Request) {
 		var presentationsJSON []byte
 		if err := rows.Scan(
 			&item.ID, &item.ProductID, &item.SKU, &item.Name, &item.Kind, &item.CategoryName,
-			&item.QuantityControl, &item.Unit, &item.MinimumStock, &presentationsJSON,
+			&item.QuantityControl, &item.Unit, &item.Quantity, &item.MinimumStock, &presentationsJSON,
 		); err != nil {
 			fail(w, 503, "inventory_products_unavailable", "No pudimos cargar los artículos de inventario.")
 			return
@@ -638,13 +655,181 @@ func (a *API) createInventoryEntry(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func validInventoryAdjustmentReason(movementType, reason string) bool {
+	switch movementType {
+	case "entry":
+		return reason == "surplus_adjustment"
+	case "exit":
+		return reason == "shortage_adjustment" || reason == "waste" || reason == "expiration" || reason == "other_exit"
+	default:
+		return false
+	}
+}
+
+func normalizeInventoryAdjustment(in inventoryAdjustmentInput) (inventoryAdjustmentInput, string) {
+	in.InventoryItemID = strings.TrimSpace(in.InventoryItemID)
+	in.MovementType = strings.ToLower(strings.TrimSpace(in.MovementType))
+	in.Reason = strings.ToLower(strings.TrimSpace(in.Reason))
+	in.Observation = strings.TrimSpace(in.Observation)
+	in.Quantity = math.Round(in.Quantity*1000) / 1000
+	if in.InventoryItemID == "" {
+		return in, "Selecciona un artículo existente."
+	}
+	if in.MovementType != "entry" && in.MovementType != "exit" {
+		return in, "Selecciona si el ajuste es una entrada o una salida."
+	}
+	if !validInventoryAdjustmentReason(in.MovementType, in.Reason) {
+		return in, "Selecciona un motivo válido para el tipo de movimiento."
+	}
+	if in.Quantity <= 0 {
+		return in, "La cantidad debe ser mayor que cero."
+	}
+	if len(in.Observation) > 240 {
+		return in, "La observación no puede superar 240 caracteres."
+	}
+	return in, ""
+}
+
+func (a *API) createInventoryAdjustment(w http.ResponseWriter, r *http.Request) {
+	s := r.Context().Value(scopeKey{}).(scope)
+	var in inventoryAdjustmentInput
+	if json.NewDecoder(r.Body).Decode(&in) != nil {
+		fail(w, 400, "invalid_inventory_adjustment", "Revisa los datos del ajuste.")
+		return
+	}
+	var invalid string
+	in, invalid = normalizeInventoryAdjustment(in)
+	if invalid != "" {
+		fail(w, 400, "invalid_inventory_adjustment", invalid)
+		return
+	}
+
+	tx, err := a.db.Begin(r.Context())
+	if err != nil {
+		fail(w, 503, "inventory_unavailable", "No pudimos registrar el ajuste.")
+		return
+	}
+	defer tx.Rollback(r.Context())
+
+	var productID *string
+	var itemName, unit string
+	err = tx.QueryRow(r.Context(), `
+		SELECT ii.product_id,COALESCE(p.name,ii.name),ii.unit
+		FROM inventory_items ii
+		LEFT JOIN products p
+		  ON p.id=ii.product_id AND p.organization_id=ii.organization_id
+		WHERE ii.id=$1 AND ii.organization_id=$2 AND ii.active
+		  AND (p.id IS NULL OR p.active)
+		FOR UPDATE OF ii`, in.InventoryItemID, s.OrganizationID).
+		Scan(&productID, &itemName, &unit)
+	if errors.Is(err, pgx.ErrNoRows) {
+		fail(w, 404, "inventory_item_not_found", "El artículo no existe o está inactivo.")
+		return
+	}
+	if err != nil {
+		fail(w, 503, "inventory_unavailable", "No pudimos validar el artículo.")
+		return
+	}
+
+	if _, err = tx.Exec(r.Context(), `
+		INSERT INTO stock_balances(organization_id,location_id,inventory_item_id,quantity)
+		VALUES($1,$2,$3,0)
+		ON CONFLICT (location_id,inventory_item_id) DO NOTHING`,
+		s.OrganizationID, s.LocationID, in.InventoryItemID); err != nil {
+		fail(w, 503, "inventory_unavailable", "No pudimos preparar el saldo del artículo.")
+		return
+	}
+
+	var stockBefore float64
+	if err = tx.QueryRow(r.Context(), `
+		SELECT quantity::float8
+		FROM stock_balances
+		WHERE organization_id=$1 AND location_id=$2 AND inventory_item_id=$3
+		FOR UPDATE`, s.OrganizationID, s.LocationID, in.InventoryItemID).Scan(&stockBefore); err != nil {
+		fail(w, 503, "inventory_unavailable", "No pudimos bloquear el saldo del artículo.")
+		return
+	}
+
+	delta := in.Quantity
+	if in.MovementType == "exit" {
+		delta = -in.Quantity
+	}
+	stockAfter := math.Round((stockBefore+delta)*1000) / 1000
+	if stockAfter < -0.000001 {
+		fail(w, 409, "insufficient_stock", "La salida supera el stock actual del artículo.")
+		return
+	}
+	if stockAfter < 0 {
+		stockAfter = 0
+	}
+
+	if _, err = tx.Exec(r.Context(), `
+		UPDATE stock_balances
+		SET quantity=$4,updated_at=now()
+		WHERE organization_id=$1 AND location_id=$2 AND inventory_item_id=$3`,
+		s.OrganizationID, s.LocationID, in.InventoryItemID, stockAfter); err != nil {
+		fail(w, 503, "inventory_unavailable", "No pudimos actualizar el stock.")
+		return
+	}
+
+	var adjustmentID string
+	var createdAt time.Time
+	if err = tx.QueryRow(r.Context(), `
+		INSERT INTO inventory_adjustments(
+			organization_id,location_id,inventory_item_id,movement_type,reason,
+			quantity,stock_before,stock_after,observation,created_by
+		)
+		VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+		RETURNING id,created_at`,
+		s.OrganizationID, s.LocationID, in.InventoryItemID, in.MovementType, in.Reason,
+		in.Quantity, stockBefore, stockAfter, in.Observation, s.UserID).
+		Scan(&adjustmentID, &createdAt); err != nil {
+		fail(w, 503, "inventory_unavailable", "No pudimos registrar la trazabilidad del ajuste.")
+		return
+	}
+
+	if _, err = tx.Exec(r.Context(), `
+		INSERT INTO stock_movements(
+			organization_id,location_id,product_id,inventory_item_id,
+			movement_type,quantity_delta,balance_after,source_type,source_id,note,created_by
+		)
+		VALUES($1,$2,$3,$4,'inventory_adjustment',$5,$6,'inventory_adjustment',$7,$8,$9)`,
+		s.OrganizationID, s.LocationID, productID, in.InventoryItemID,
+		delta, stockAfter, adjustmentID, in.Observation, s.UserID); err != nil {
+		fail(w, 503, "inventory_unavailable", "No pudimos registrar el movimiento de Kárdex.")
+		return
+	}
+
+	if err = tx.Commit(r.Context()); err != nil {
+		fail(w, 503, "inventory_unavailable", "No pudimos registrar el ajuste.")
+		return
+	}
+
+	a.audit(r, "inventory.adjusted", "inventory_item", in.InventoryItemID)
+	writeJSON(w, 201, map[string]any{
+		"id": adjustmentID,
+		"inventoryItemId": in.InventoryItemID,
+		"name": itemName,
+		"unit": unit,
+		"movementType": in.MovementType,
+		"reason": in.Reason,
+		"quantity": in.Quantity,
+		"stockBefore": stockBefore,
+		"stockAfter": stockAfter,
+		"observation": in.Observation,
+		"createdAt": createdAt,
+		"createdByName": s.Name,
+	})
+}
+
 func (a *API) listInventoryMovements(w http.ResponseWriter, r *http.Request) {
 	s := r.Context().Value(scopeKey{}).(scope)
 	inventoryItemID := strings.TrimSpace(r.URL.Query().Get("inventoryItemId"))
 	productID := strings.TrimSpace(r.URL.Query().Get("productId"))
 	rows, err := a.db.Query(r.Context(), `
 		SELECT sm.id,sm.inventory_item_id,sm.product_id,COALESCE(p.name,ii.name),
-		       sm.movement_type,sm.quantity_delta::text,sm.balance_after::text,
+		       sm.movement_type,ia.movement_type,ia.reason,sm.quantity_delta::text,
+		       COALESCE(ia.stock_before,sm.balance_after-sm.quantity_delta)::text,sm.balance_after::text,
 		       sm.source_type,sm.source_id,
 		       COALESCE(
 		         CASE
@@ -658,19 +843,25 @@ func (a *API) listInventoryMovements(w http.ResponseWriter, r *http.Request) {
 		             FROM inventory_entries ie
 		             WHERE ie.id=sm.source_id AND ie.organization_id=sm.organization_id
 		           )
+		           WHEN sm.source_type='inventory_adjustment' THEN 'Ajuste de inventario'
 		         END,
 		         CASE
 		           WHEN sm.source_type='order' THEN 'Pedido histórico'
 		           WHEN sm.source_type='inventory_entry' THEN 'Entrada histórica'
+		           WHEN sm.source_type='inventory_adjustment' THEN 'Ajuste de inventario'
 		           ELSE 'Referencia no disponible'
 		         END
 		       ),
-		       sm.note,sm.created_at
+		       sm.note,COALESCE(u.full_name,'Usuario no disponible'),sm.created_at
 		FROM stock_movements sm
 		JOIN inventory_items ii
 		  ON ii.id=sm.inventory_item_id AND ii.organization_id=sm.organization_id
 		LEFT JOIN products p
 		  ON p.id=sm.product_id AND p.organization_id=sm.organization_id
+		LEFT JOIN inventory_adjustments ia
+		  ON ia.id=sm.source_id AND ia.organization_id=sm.organization_id
+		 AND sm.source_type='inventory_adjustment'
+		LEFT JOIN users u ON u.id=sm.created_by
 		WHERE sm.organization_id=$1 AND sm.location_id=$2
 		  AND ($3='' OR sm.inventory_item_id::text=$3)
 		  AND ($4='' OR sm.product_id::text=$4)
@@ -687,9 +878,9 @@ func (a *API) listInventoryMovements(w http.ResponseWriter, r *http.Request) {
 		var item inventoryMovementView
 		if err := rows.Scan(
 			&item.ID, &item.InventoryItemID, &item.ProductID, &item.ItemName,
-			&item.MovementType, &item.QuantityDelta, &item.BalanceAfter,
-			&item.SourceType, &item.SourceID, &item.SourceReference,
-			&item.Note, &item.CreatedAt,
+			&item.MovementType, &item.AdjustmentType, &item.Reason, &item.QuantityDelta,
+			&item.BalanceBefore, &item.BalanceAfter, &item.SourceType, &item.SourceID,
+			&item.SourceReference, &item.Note, &item.CreatedByName, &item.CreatedAt,
 		); err != nil {
 			fail(w, 503, "kardex_unavailable", "No pudimos cargar el Kárdex.")
 			return
