@@ -35,13 +35,18 @@ export default function ReceiptPage(){
     const labels=[...new Set(data.payments.map(p=>p.method==="cash"?"Efectivo":p.method==="card"?"Tarjeta":p.method==="transfer"?"Yape/Plin o transferencia":"Otro"))];
     return labels.join(" + ");
   },[data]);
+  const readyToComplete=data?.order.status==="listo"||data?.order.status==="en_camino";
 
   async function finalize(){
     if(!orderId||!data||data.paymentStatus!=="paid"||busy)return;
+    if(!readyToComplete){
+      router.push("/pedidos");
+      return;
+    }
     setBusy(true);setError("");
     try{
       await operationsFetch<void>(`pos/orders/${orderId}/complete`,{method:"POST"});
-      router.push("/mesas");
+      router.push(data.order.tableName?"/mesas":"/pedidos");
       router.refresh();
     }catch(e){setError(e instanceof Error?e.message:"No se pudo finalizar el pedido.");}
     finally{setBusy(false);}
@@ -81,6 +86,7 @@ export default function ReceiptPage(){
       <small>Estos datos preparan el ticket operativo. La emisión fiscal electrónica requiere el módulo fiscal correspondiente.</small>
     </div>
     <div className="receipt-actions"><Button onClick={()=>window.print()}><Icon name="printer" size={18}/>Imprimir ticket</Button><Button onClick={()=>void share()}><Icon name="whatsapp" size={18}/>Compartir digital</Button></div>
-    <Button tone="primary" className="wide" disabled={busy||data.paymentStatus!=="paid"} onClick={()=>void finalize()}>{busy?"Finalizando…":"Finalizar y liberar mesa"}<Icon name="chevron" size={17}/></Button>
+    {!readyToComplete&&data.paymentStatus==="paid"&&<div className="no-change-note"><Icon name="clock" size={18}/><span><b>Pago cerrado</b><small>La comanda sigue en cocina y no se marcará como entregada antes de estar lista.</small></span></div>}
+    <Button tone="primary" className="wide" disabled={busy||data.paymentStatus!=="paid"} onClick={()=>void finalize()}>{busy?"Finalizando…":readyToComplete?(data.order.tableName?"Finalizar y liberar mesa":"Finalizar pedido"):"Cerrar comprobante"}<Icon name="chevron" size={17}/></Button>
   </div></div>;
 }
