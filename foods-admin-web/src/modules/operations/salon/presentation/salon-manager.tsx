@@ -167,6 +167,10 @@ export function SalonManager(){
       notify({tone:"danger",title:"Comanda no editable",message:"Solo se puede editar un pedido en estado Nuevo o Confirmado."});
       return;
     }
+    if(Number(o.paidAmount??0)>0.00001){
+      notify({tone:"danger",title:"Comanda con pagos",message:"Devuelve primero los pagos registrados antes de modificar la comanda."});
+      return;
+    }
     setEditingOrderId(o.id);
     setDraft(draftFromOrder(o));
     setDetailId(null);
@@ -589,8 +593,8 @@ function OrderDetail({loading,order,error,currencySymbol,canManage,busy,close,ad
   const baseMeta=order?statusMeta[order.status]??{label:order.status,tone:"gray" as const}:null;
   const meta=order&&order.status==="listo"&&order.paymentStatus!=="paid"?{label:"Listo · por cobrar",tone:"orange" as const}:baseMeta;
   const action=order?nextAction(order):null;
-  const editable=Boolean(order&&editableOrderStatus(order.status));
   const paid=Number(order?.paidAmount??0);
+  const editable=Boolean(order&&editableOrderStatus(order.status)&&paid<=0.00001);
   const remaining=Number(order?.remainingAmount??order?.total??0);
   const hasPayments=paid>0.00001;
   const itemCount=order?(order.items??[]).reduce((sum,it)=>sum+Number(it.qty||0),0):0;
