@@ -315,8 +315,8 @@ func TestTablesAndZonesAreIsolatedByLocation(t *testing.T) {
 	if firstTable.ID==secondTable.ID{t.Fatal("locations must have different physical table rows")}
 
 	t.Cleanup(func(){
-		_,_=pool.Exec(context.Background(),`DELETE FROM tables WHERE id=ANY($1::uuid[])`,[]string{firstTable.ID,secondTable.ID})
-		_,_=pool.Exec(context.Background(),`DELETE FROM zones WHERE id=ANY($1::uuid[])`,[]string{firstZone.ID,secondZone.ID})
+		_,_=pool.Exec(context.Background(),`DELETE FROM tables WHERE id=$1 OR id=$2`,firstTable.ID,secondTable.ID)
+		_,_=pool.Exec(context.Background(),`DELETE FROM zones WHERE id=$1 OR id=$2`,firstZone.ID,secondZone.ID)
 		_,_=pool.Exec(context.Background(),`DELETE FROM locations WHERE id=$1 AND organization_id=$2`,secondLocationID,s.OrganizationID)
 	})
 
