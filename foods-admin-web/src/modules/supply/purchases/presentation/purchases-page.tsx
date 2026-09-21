@@ -160,8 +160,8 @@ function PurchaseOrderDialog({initial,suppliers,inventory,currencySymbol,busy,cl
   function chooseItem(index:number,id:string,forced?:PurchaseInventoryOption){
     const option=forced??catalog.find(item=>item.id===id);
     const presentation=option?.presentations.find(item=>item.presentationType==="unit")??option?.presentations[0];
-    setValue(\`items.\${index}.inventoryItemId\`,id,{shouldValidate:isSubmitted});
-    setValue(\`items.\${index}.presentationId\`,presentation?.id??"",{shouldValidate:isSubmitted});
+    setValue(`items.${index}.inventoryItemId`,id,{shouldValidate:isSubmitted});
+    setValue(`items.${index}.presentationId`,presentation?.id??"",{shouldValidate:isSubmitted});
     setItemSearch(current=>({...current,[index]:""}));
   }
 
@@ -192,9 +192,9 @@ function PurchaseOrderDialog({initial,suppliers,inventory,currencySymbol,busy,cl
                 <button type="button" className="purchase-create-item" onClick={()=>setNewItemLine(index)}><Icon name="plus" size={13}/>{search&&options.length===0?"Crear nuevo artículo":"Crear nuevo artículo"}</button>
                 {errors.items?.[index]?.inventoryItemId?.message&&<small className="wizard-field-error">{errors.items[index]?.inventoryItemId?.message}</small>}
               </label>
-              <label>Presentación<Select {...register(\`items.\${index}.presentationId\`)} disabled={!selected} aria-invalid={Boolean(errors.items?.[index]?.presentationId)}><option value="">Selecciona...</option>{(selected?.presentations??[]).map(presentation=><option value={presentation.id} key={presentation.id}>{presentationName(presentation.presentationType,presentation.unitsPerPresentation,selected?.unit)}</option>)}</Select>{errors.items?.[index]?.presentationId?.message&&<small className="wizard-field-error">{errors.items[index]?.presentationId?.message}</small>}</label>
-              <label>Cantidad<Input type="number" min="0.001" step="0.001" inputMode="decimal" {...register(\`items.\${index}.quantity\`)} aria-invalid={Boolean(errors.items?.[index]?.quantity)}/>{errors.items?.[index]?.quantity?.message&&<small className="wizard-field-error">{errors.items[index]?.quantity?.message}</small>}</label>
-              <label>Costo unitario<div className="money-input"><span>{currencySymbol}</span><Input inputMode="decimal" {...register(\`items.\${index}.unitCost\`)} placeholder="0.00" aria-invalid={Boolean(errors.items?.[index]?.unitCost)}/></div>{errors.items?.[index]?.unitCost?.message&&<small className="wizard-field-error">{errors.items[index]?.unitCost?.message}</small>}</label>
+              <label>Presentación<Select {...register(`items.${index}.presentationId`)} disabled={!selected} aria-invalid={Boolean(errors.items?.[index]?.presentationId)}><option value="">Selecciona...</option>{(selected?.presentations??[]).map(presentation=><option value={presentation.id} key={presentation.id}>{presentationName(presentation.presentationType,presentation.unitsPerPresentation,selected?.unit)}</option>)}</Select>{errors.items?.[index]?.presentationId?.message&&<small className="wizard-field-error">{errors.items[index]?.presentationId?.message}</small>}</label>
+              <label>Cantidad<Input type="number" min="0.001" step="0.001" inputMode="decimal" {...register(`items.${index}.quantity`)} aria-invalid={Boolean(errors.items?.[index]?.quantity)}/>{errors.items?.[index]?.quantity?.message&&<small className="wizard-field-error">{errors.items[index]?.quantity?.message}</small>}</label>
+              <label>Costo unitario<div className="money-input"><span>{currencySymbol}</span><Input inputMode="decimal" {...register(`items.${index}.unitCost`)} placeholder="0.00" aria-invalid={Boolean(errors.items?.[index]?.unitCost)}/></div>{errors.items?.[index]?.unitCost?.message&&<small className="wizard-field-error">{errors.items[index]?.unitCost?.message}</small>}</label>
               <div className="purchase-line-total"><small>SUBTOTAL</small><b>{currencySymbol} {formatRegionalNumber((Number(value?.quantity)||0)*(Number(value?.unitCost)||0),undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</b></div>
               <RowActionButton action="remove" label="Quitar línea" disabled={fields.length===1} onClick={()=>remove(index)}/>
             </article>;
