@@ -60,6 +60,7 @@ func seedInventoryScope(t *testing.T, pool *pgxpool.Pool) scope {
 	s := scope{OrganizationID: organizationID, LocationID: locationID, UserID: userID, Name: "Inventory Test"}
 	t.Cleanup(func() {
 		_, _ = pool.Exec(context.Background(), `DELETE FROM stock_movements WHERE organization_id=$1`, organizationID)
+		_, _ = pool.Exec(context.Background(), `DELETE FROM inventory_adjustments WHERE organization_id=$1`, organizationID)
 		_, _ = pool.Exec(context.Background(), `DELETE FROM inventory_entries WHERE organization_id=$1`, organizationID)
 		_, _ = pool.Exec(context.Background(), `DELETE FROM order_item_combo_selections WHERE organization_id=$1`, organizationID)
 		_, _ = pool.Exec(context.Background(), `DELETE FROM order_items WHERE organization_id=$1`, organizationID)
@@ -618,5 +619,110 @@ func TestConcurrentInventorySalesCannotGoNegative(t *testing.T) {
 	}
 	if movementCount != 1 {
 		t.Fatalf("expected one sale movement, got %d", movementCount)
+	}
+}
+
+
+func TestInventoryAdjustmentTracksBalancesAndRejectsNegativeStock(t *testing.T) {
+	pool := integrationPool(t)
+	s := seedInventoryScope(t, pool)
+	ctx := context.Background()
+	api := New(pool)
+
+	var inventoryItemID string
+	if err := pool.QueryRow(ctx, `
+		INSERT INTO inventory_items(organization_id,sku,name,unit,minimum_stock,active)
+		VALUES($1,$2,'Tomate','kg',0,true)
+		RETURNING id`,
+		s.OrganizationID, fmt.Sprintf("ADJ-%d", time.Now().UnixNano()),
+	).Scan(&inventoryItemID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO stock_balances(organization_id,location_id,inventory_item_id,quantity)
+		VALUES($1,$2,$3,10)`,
+		s.OrganizationID, s.LocationID, inventoryItemID); err != nil {
+		t.Fatal(err)
+	}
+
+	body := []byte(fmt.Sprintf(`{"inventoryItemId":%q,"movementType":"exit","reason":"shortage_adjustment","quantity":4,"observation":"conteo físico"}`, inventoryItemID))
+	req := httptest.NewRequest("POST", "/v1/admin/inventory/adjustments", bytes.NewReader(body))
+	req = req.WithContext(context.WithValue(req.Context(), scopeKey{}, s))
+	rec := httptest.NewRecorder()
+	api.createInventoryAdjustment(rec, req)
+	if rec.Code != 201 {
+		t.Fatalf("expected adjustment 201, got %d body=%s", rec.Code, rec.Body.String())
+	}
+
+	var result struct {
+		StockBefore float64 `json:"stockBefore"`
+		StockAfter float64 `json:"stockAfter"`
+		CreatedByName string `json:"createdByName"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &result); err != nil {
+		t.Fatal(err)
+	}
+	if result.StockBefore != 10 || result.StockAfter != 6 || result.CreatedByName != s.Name {
+		t.Fatalf("unexpected adjustment result: %#v", result)
+	}
+
+	var adjustmentCount, movementCount int
+	if err := pool.QueryRow(ctx, `
+		SELECT count(*) FROM inventory_adjustments
+		WHERE organization_id=$1 AND inventory_item_id=$2
+		  AND movement_type='exit' AND reason='shortage_adjustment'
+		  AND stock_before=10 AND stock_after=6
+		  AND created_by=$3`,
+		s.OrganizationID, inventoryItemID, s.UserID).Scan(&adjustmentCount); err != nil {
+		t.Fatal(err)
+	}
+	if err := pool.QueryRow(ctx, `
+		SELECT count(*) FROM stock_movements
+		WHERE organization_id=$1 AND inventory_item_id=$2
+		  AND movement_type='inventory_adjustment'
+		  AND source_type='inventory_adjustment'
+		  AND quantity_delta=-4 AND balance_after=6`,
+		s.OrganizationID, inventoryItemID).Scan(&movementCount); err != nil {
+		t.Fatal(err)
+	}
+	if adjustmentCount != 1 || movementCount != 1 {
+		t.Fatalf("expected one traced adjustment and movement, got adjustments=%d movements=%d", adjustmentCount, movementCount)
+	}
+
+	listReq := httptest.NewRequest("GET", "/v1/admin/inventory/movements?inventoryItemId="+inventoryItemID, nil)
+	listReq = listReq.WithContext(context.WithValue(listReq.Context(), scopeKey{}, s))
+	listRec := httptest.NewRecorder()
+	api.listInventoryMovements(listRec, listReq)
+	if listRec.Code != 200 {
+		t.Fatalf("expected kardex 200, got %d body=%s", listRec.Code, listRec.Body.String())
+	}
+	var payload struct {
+		Items []inventoryMovementView `json:"items"`
+	}
+	if err := json.Unmarshal(listRec.Body.Bytes(), &payload); err != nil {
+		t.Fatal(err)
+	}
+	if len(payload.Items) != 1 || payload.Items[0].BalanceBefore != "10.000" || payload.Items[0].Reason == nil || *payload.Items[0].Reason != "shortage_adjustment" || payload.Items[0].CreatedByName != s.Name {
+		t.Fatalf("unexpected kardex traceability: %#v", payload.Items)
+	}
+
+	negativeBody := []byte(fmt.Sprintf(`{"inventoryItemId":%q,"movementType":"exit","reason":"waste","quantity":7}`, inventoryItemID))
+	negativeReq := httptest.NewRequest("POST", "/v1/admin/inventory/adjustments", bytes.NewReader(negativeBody))
+	negativeReq = negativeReq.WithContext(context.WithValue(negativeReq.Context(), scopeKey{}, s))
+	negativeRec := httptest.NewRecorder()
+	api.createInventoryAdjustment(negativeRec, negativeReq)
+	if negativeRec.Code != 409 || !strings.Contains(negativeRec.Body.String(), "insufficient_stock") {
+		t.Fatalf("expected insufficient_stock 409, got %d body=%s", negativeRec.Code, negativeRec.Body.String())
+	}
+
+	var balance float64
+	if err := pool.QueryRow(ctx, `
+		SELECT quantity::float8 FROM stock_balances
+		WHERE organization_id=$1 AND location_id=$2 AND inventory_item_id=$3`,
+		s.OrganizationID, s.LocationID, inventoryItemID).Scan(&balance); err != nil {
+		t.Fatal(err)
+	}
+	if balance != 6 {
+		t.Fatalf("failed adjustment must preserve balance 6, got %v", balance)
 	}
 }
