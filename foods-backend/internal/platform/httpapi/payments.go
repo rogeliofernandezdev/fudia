@@ -350,18 +350,22 @@ func (a *API) refundPayment(w http.ResponseWriter,r *http.Request){
 	}
 	if err!=nil{fail(w,503,"payments_unavailable","No pudimos validar tu turno de caja.");return}
 
-	var method,orderCode string
+	var method,orderCode,orderStatus string
 	var amount,refunded float64
 	err=tx.QueryRow(r.Context(),`
-		SELECT p.method,o.code,p.amount::float8,
+		SELECT p.method,o.code,o.status,p.amount::float8,
 		       COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id),0)::float8
 		FROM payments p
-		JOIN orders o ON o.id=p.order_id AND o.organization_id=p.organization_id
+		JOIN orders o ON o.id=p.order_id AND o.organization_id=p.organization_id AND o.location_id=p.location_id
 		WHERE p.id=$1 AND p.organization_id=$2 AND p.location_id=$3
 		FOR UPDATE
-	`,r.PathValue("id"),s.OrganizationID,s.LocationID).Scan(&method,&orderCode,&amount,&refunded)
+	`,r.PathValue("id"),s.OrganizationID,s.LocationID).Scan(&method,&orderCode,&orderStatus,&amount,&refunded)
 	if errors.Is(err,pgx.ErrNoRows){fail(w,404,"payment_not_found","El pago no existe en este local.");return}
 	if err!=nil{fail(w,503,"payments_unavailable","No pudimos validar el pago.");return}
+	if orderStatus=="entregado"||orderStatus=="cancelado"{
+		fail(w,409,"closed_order_refund_requires_void","El pedido ya está cerrado. Usa un flujo de anulación o devolución posterior al cierre para no reabrir su saldo operativo.")
+		return
+	}
 	if in.Amount>amount-refunded+0.00001{
 		fail(w,409,"refund_exceeds_payment","La devolución supera el saldo disponible del pago.")
 		return
