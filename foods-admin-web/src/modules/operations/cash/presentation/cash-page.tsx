@@ -2,12 +2,12 @@
 import "./cash.css";
 import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,Icon,Input,PageHeader,Pagination,RemoteModalSkeleton,RowActionButton,Select,Status} from "@/design-system";
+import {Button,ConfirmDialog,Icon,Input,PageHeader,Pagination,RemoteModalSkeleton,RowActionButton,Select,Status} from "@/design-system";
 import {useFeedback,useSession} from "@/providers";
 import {useSettings} from "@/providers/settings-context";
-import {formatRegionalDateTime,formatRegionalNumber} from "@/shared/i18n/regional-format";
-import type {CashMovementType,CashRegister,CashShift} from "../domain/types";
-import {closeCashShift,createCashMovement,createCashRegister,getCashShift,listCashRegisters,listCashShifts,openCashShift} from "../infrastructure/cash-api";
+import {formatRegionalCalendarDate,formatRegionalDateTime,formatRegionalNumber} from "@/shared/i18n/regional-format";
+import type {CashMovementType,CashRegister,CashRegisterDraft,CashShift} from "../domain/types";
+import {closeCashShift,createCashMovement,createCashRegister,getCashShift,listCashRegisters,listCashShifts,openCashShift,setCashRegisterActive,updateCashRegister} from "../infrastructure/cash-api";
 import {CashMovementDialog,CashRegisterDialog,CashShiftDetailDialog,CloseCashShiftDialog,OpenCashShiftDialog} from "./cash-dialogs";
 
 type CashTab="registers"|"history";
@@ -24,6 +24,8 @@ export function CashPage(){
   const[page,setPage]=useState(1);
   const[size,setSize]=useState(10);
   const[registerDialog,setRegisterDialog]=useState(false);
+  const[registerEditTarget,setRegisterEditTarget]=useState<CashRegister|null>(null);
+  const[registerStatusTarget,setRegisterStatusTarget]=useState<CashRegister|null>(null);
   const[shiftTarget,setShiftTarget]=useState<CashRegister|null>(null);
   const[movementTarget,setMovementTarget]=useState<{shift:CashShift;type:CashMovementType}|null>(null);
   const[closeTarget,setCloseTarget]=useState<CashShift|null>(null);
@@ -51,14 +53,39 @@ export function CashPage(){
     void qc.invalidateQueries({queryKey:["cash-shift"]});
   }
 
-  const createRegister=useMutation({
-    mutationFn:createCashRegister,
-    onSuccess:item=>{
+  function openNewRegister(){
+    setRegisterEditTarget(null);
+    setRegisterDialog(true);
+  }
+
+  function openEditRegister(item:CashRegister){
+    setRegisterEditTarget(item);
+    setRegisterDialog(true);
+  }
+
+  const saveRegister=useMutation({
+    mutationFn:({target,draft}:{target:CashRegister|null;draft:CashRegisterDraft})=>target?updateCashRegister(target.id,draft):createCashRegister(draft),
+    onSuccess:(item,variables)=>{
       setRegisterDialog(false);
+      setRegisterEditTarget(null);
       refreshCash();
-      notify({tone:"success",title:"Caja registrada",message:`${item.name} ya puede recibir turnos.`});
+      notify({
+        tone:"success",
+        title:variables.target?"Caja actualizada":"Caja registrada",
+        message:variables.target?item.name+" quedó actualizada.":item.name+" ya puede recibir turnos.",
+      });
     },
-    onError:error=>notify({tone:"danger",title:"No se pudo registrar la caja",message:error.message}),
+    onError:error=>notify({tone:"danger",title:"No se pudo guardar la caja",message:error.message}),
+  });
+
+  const toggleRegister=useMutation({
+    mutationFn:(item:CashRegister)=>setCashRegisterActive(item.id,!item.active),
+    onSuccess:(_,item)=>{
+      setRegisterStatusTarget(null);
+      refreshCash();
+      notify({tone:"success",title:item.active?"Caja desactivada":"Caja activada",message:item.name+" quedó "+(item.active?"fuera":"disponible")+" para nuevos turnos."});
+    },
+    onError:error=>notify({tone:"danger",title:"No se pudo cambiar el estado de la caja",message:error.message}),
   });
 
   const startShift=useMutation({
@@ -85,7 +112,7 @@ export function CashPage(){
     onError:error=>notify({tone:"danger",title:"No se pudo registrar el movimiento",message:error.message}),
   });
 
-  const closeShift=useMutation({
+  const closeShiftMutation=useMutation({
     mutationFn:({shiftId,draft}:{shiftId:string;draft:Parameters<typeof closeCashShift>[1]})=>closeCashShift(shiftId,draft),
     onSuccess:shift=>{
       setCloseTarget(null);
@@ -118,6 +145,10 @@ export function CashPage(){
     return formatRegionalDateTime(value,{country:location?.country,timeZone:location?.timezone},{dateStyle:"medium",timeStyle:"short"});
   }
 
+  function businessDate(value:string){
+    return formatRegionalCalendarDate(value,location?.country,{dateStyle:"medium"});
+  }
+
   function changeTab(next:CashTab){
     setTab(next);
     setQ("");
@@ -127,14 +158,14 @@ export function CashPage(){
   }
 
   const headerAction=tab==="registers"&&canManage&&registerItems.length>0
-    ?<Button icon="plus" onClick={()=>setRegisterDialog(true)}>Registrar caja</Button>
+    ?<Button icon="plus" onClick={openNewRegister}>Registrar caja</Button>
     :undefined;
 
   return <div className="cash-page">
     <PageHeader
       eyebrow="OPERACIÓN"
       title="Caja y turnos"
-      description="Administra las cajas del local y abre un turno sobre cada caja cuando vaya a operar."
+      description="Controla las cajas del local, sus turnos y el efectivo esperado en tiempo real."
       action={headerAction}
     />
 
@@ -152,8 +183,11 @@ export function CashPage(){
           canManage={canManage}
           money={money}
           dateTime={dateTime}
+          businessDate={businessDate}
           retry={()=>registers.refetch()}
-          create={()=>setRegisterDialog(true)}
+          create={openNewRegister}
+          edit={openEditRegister}
+          toggleStatus={setRegisterStatusTarget}
           start={setShiftTarget}
           view={shift=>setDetailId(shift.id)}
           movement={(shift,type)=>setMovementTarget({shift,type})}
@@ -167,7 +201,7 @@ export function CashPage(){
               <option value="open">Abiertos</option>
               <option value="closed">Cerrados</option>
             </Select>
-            <p><Icon name="lock" size={14}/>Los turnos cerrados conservan su caja, arqueo y movimientos.</p>
+            <p><Icon name="lock" size={14}/>Los turnos cerrados conservan su arqueo y trazabilidad.</p>
           </div>
 
           {history.isLoading?<CashHistorySkeleton/>
@@ -200,7 +234,7 @@ export function CashPage(){
     {registerDialog&&<CashRegisterDialog busy={createRegister.isPending} close={()=>setRegisterDialog(false)} save={draft=>createRegister.mutate(draft)}/>}
     {shiftTarget&&<OpenCashShiftDialog cashRegister={shiftTarget} busy={startShift.isPending} close={()=>setShiftTarget(null)} save={draft=>startShift.mutate({cashRegisterId:shiftTarget.id,draft})}/>}
     {movementTarget&&<CashMovementDialog type={movementTarget.type} busy={movement.isPending} close={()=>setMovementTarget(null)} save={draft=>movement.mutate({shiftId:movementTarget.shift.id,draft})}/>}
-    {closeTarget&&<CloseCashShiftDialog shift={closeTarget} busy={closeShift.isPending} formatMoney={money} close={()=>setCloseTarget(null)} save={draft=>closeShift.mutate({shiftId:closeTarget.id,draft})}/>}
+    {closeTarget&&<CloseCashShiftDialog shift={closeTarget} busy={closeShiftMutation.isPending} formatMoney={money} close={()=>setCloseTarget(null)} save={draft=>closeShiftMutation.mutate({shiftId:closeTarget.id,draft})}/>}
     {detailId&&(detail.isLoading
       ?<RemoteModalSkeleton className="cash-detail-modal" label="Cargando turno de caja" rows={6} close={()=>setDetailId(null)}/>
       :detail.isError
