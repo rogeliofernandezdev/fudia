@@ -209,6 +209,12 @@ export function PurchasesPage(){
       setReceiptLoadingId(null);
     }
   }
+  async function openReceiptDetail(id:string){
+    setReceiptDetailLoading(id);
+    try{setReceiptDetail(await getPurchaseReceipt(id))}
+    catch(error){notify({tone:"danger",title:"No se pudo cargar la recepción",message:(error as Error).message})}
+    finally{setReceiptDetailLoading("")}
+  }
 
   function changeTab(next:PurchaseTab){
     if(next==="receipts")void qc.invalidateQueries({queryKey:["purchase-orders","receipts"]});
@@ -220,6 +226,7 @@ export function PurchasesPage(){
 
   const orderItems=orders.data?.items??[];
   const receiptItems=receipts.data?.items??[];
+  const receiptHistoryItems=receiptHistory.data?.items??[];
   const supplierItems=suppliers.data?.items??[];
   const headerAction=tab==="orders"
     ?canManage?<Button icon="plus" onClick={()=>setOrderDraft({...emptyOrder})}>Nueva orden</Button>:undefined
@@ -254,18 +261,18 @@ export function PurchasesPage(){
           <Input
             value={q}
             onChange={event=>{setQ(event.target.value);setPage(1)}}
-            placeholder={tab==="suppliers"?"Buscar proveedor o RUC...":tab==="receipts"?"Buscar orden pendiente de recepción...":"Buscar por orden o proveedor..."}
+            placeholder={tab==="suppliers"?"Buscar proveedor o RUC...":tab==="receipts"?(receiptView==="history"?"Buscar REC, OC o proveedor...":"Buscar orden pendiente de recepción..."):"Buscar por orden o proveedor..."}
           />
         </label>
 
         {tab==="orders"?<Select aria-label="Filtrar órdenes por estado" value={status} onChange={event=>{setStatus(event.target.value);setPage(1)}}>
           <option value="">Todos los estados</option>
           {Object.entries(statusMeta).map(([value,meta])=><option value={value} key={value}>{meta.label}</option>)}
-        </Select>:tab==="receipts"?<Select aria-label="Filtrar recepciones" value={status} onChange={event=>{setStatus(event.target.value);setPage(1)}}>
+        </Select>:tab==="receipts"?(receiptView==="pending"?<Select aria-label="Filtrar recepciones" value={status} onChange={event=>{setStatus(event.target.value);setPage(1)}}>
           <option value="">Todas pendientes</option>
           <option value="approved">Sin recibir</option>
           <option value="partially_received">Recepción parcial</option>
-        </Select>:<Select aria-label="Filtrar proveedores por estado" value={status} onChange={event=>{setStatus(event.target.value);setPage(1)}}>
+        </Select>:<span/>):<Select aria-label="Filtrar proveedores por estado" value={status} onChange={event=>{setStatus(event.target.value);setPage(1)}}>
           <option value="">Todos los estados</option>
           <option value="active">Activos</option>
           <option value="inactive">Inactivos</option>
@@ -276,7 +283,7 @@ export function PurchasesPage(){
           {tab==="orders"
             ?"La orden registra lo solicitado y no modifica el stock."
             :tab==="receipts"
-              ?"Solo aparecen órdenes aprobadas con cantidades pendientes."
+              ?(receiptView==="pending"?"Órdenes aprobadas con cantidades pendientes.":"Historial documental de recepciones, correcciones y devoluciones.")
               :"Proveedores compartidos por la empresa para abastecer cualquiera de sus locales."}
         </p>
       </div>
@@ -313,6 +320,17 @@ export function PurchasesPage(){
         </>}
         {!orders.isLoading&&!orders.isError&&<Pagination page={page} size={size} total={orders.data?.total??0} onPage={setPage} onSize={value=>{setSize(value);setPage(1)}}/>}
       </>:tab==="receipts"?<>
+        <div className="purchases-tabs" style={{marginBottom:12}}>
+          <button type="button" className={receiptView==="pending"?"active":""} onClick={()=>{setReceiptView("pending");setPage(1);setStatus("")}}><Icon name="stock" size={15}/>Pendientes<b>{receivableSummary.data?.total??0}</b></button>
+          <button type="button" className={receiptView==="history"?"active":""} onClick={()=>{setReceiptView("history");setPage(1);setStatus("")}}><Icon name="receipt" size={15}/>Historial</button>
+        </div>
+        {receiptView==="history"?<>
+          {receiptHistory.isLoading?<PurchaseTableSkeleton/>
+          :receiptHistory.isError?<PurchaseState icon="alert" title="No pudimos cargar el historial" text={receiptHistory.error.message} action={()=>receiptHistory.refetch()}/>
+          :!receiptHistoryItems.length?<div className="purchase-receipts-empty"><span><Icon name="receipt" size={22}/></span><b>Sin recepciones registradas</b><p>Las recepciones confirmadas aparecerán aquí.</p></div>
+          :<div className="table-wrap hover-scroll purchases-table-wrap"><table><thead><tr><th>RECEPCIÓN</th><th>OC</th><th>PROVEEDOR</th><th>FECHA</th><th>ARTÍCULOS</th><th>USUARIO</th><th>ACCIÓN</th></tr></thead><tbody>{receiptHistoryItems.map((r,index)=><tr className={index%2?"alternate":""} key={r.id}><td><b>{r.code}</b></td><td>{r.number}</td><td>{r.supplierName}</td><td>{formatRegionalDateTime(r.createdAt,{country:location?.country,timeZone:location?.timezone},{dateStyle:"medium",timeStyle:"short"})}</td><td>{r.itemCount}</td><td>{r.createdByName}</td><td><Button kind="secondary" disabled={receiptDetailLoading===r.id} onClick={()=>void openReceiptDetail(r.id)}>{receiptDetailLoading===r.id?"Cargando…":"Ver recepción"}</Button></td></tr>)}</tbody></table></div>}
+          {!receiptHistory.isLoading&&!receiptHistory.isError&&<Pagination page={page} size={size} total={receiptHistory.data?.total??0} onPage={setPage} onSize={value=>{setSize(value);setPage(1)}}/>}
+        </>:<>
         {receipts.isLoading?<PurchaseTableSkeleton/>
         :receipts.isError?<PurchaseState icon="alert" title="No pudimos cargar las recepciones pendientes" text={receipts.error.message} action={()=>receipts.refetch()}/>
         :!receiptItems.length?<div className="purchase-receipts-empty">
@@ -342,6 +360,7 @@ export function PurchasesPage(){
           </article>})}</div>
         </>}
         {!receipts.isLoading&&!receipts.isError&&<Pagination page={page} size={size} total={receipts.data?.total??0} onPage={setPage} onSize={value=>{setSize(value);setPage(1)}}/>}
+        </>}
       </>:<>
         {suppliers.isLoading?<SupplierTableSkeleton/>
         :suppliers.isError?<PurchaseState icon="alert" title="No pudimos cargar los proveedores" text={suppliers.error.message} action={()=>suppliers.refetch()}/>
