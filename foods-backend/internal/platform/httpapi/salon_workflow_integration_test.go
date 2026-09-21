@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -157,4 +158,92 @@ func TestSalonKitchenPaymentDeliveryWorkflow(t *testing.T) {
 	for _,item:=range floor.Items{
 		if item.ID==tableID&&item.Order!=nil{t.Fatalf("table must be free after paid delivery, got order %#v",item.Order)}
 	}
+}
+
+
+func TestSalonTableOpeningIsSerializedAndChannelScoped(t *testing.T) {
+	pool:=integrationPool(t)
+	s:=seedInventoryScope(t,pool)
+	api:=New(pool)
+	ctx:=context.Background()
+	nonce:=time.Now().UnixNano()
+
+	var productID string
+	if err:=pool.QueryRow(ctx,`
+		INSERT INTO products(organization_id,sku,name,price,active,product_type,quantity_control)
+		VALUES($1,$2,$3,10,true,'prepared','none')
+		RETURNING id
+	`,s.OrganizationID,fmt.Sprintf("TABLE-%d",nonce),fmt.Sprintf("Plato mesa %d",nonce)).Scan(&productID);err!=nil{t.Fatal(err)}
+
+	var tableID string
+	if err:=pool.QueryRow(ctx,`
+		INSERT INTO tables(organization_id,name,seats,zone,active,qr_token,qr_enabled)
+		VALUES($1,$2,4,'Principal',true,encode(gen_random_bytes(16),'hex'),false)
+		RETURNING id
+	`,s.OrganizationID,fmt.Sprintf("Mesa Race %d",nonce)).Scan(&tableID);err!=nil{t.Fatal(err)}
+	t.Cleanup(func(){
+		_,_=pool.Exec(context.Background(),`DELETE FROM orders WHERE organization_id=$1 AND table_id=$2`,s.OrganizationID,tableID)
+		_,_=pool.Exec(context.Background(),`DELETE FROM tables WHERE id=$1 AND organization_id=$2`,tableID,s.OrganizationID)
+	})
+
+	salonNoTableReq:=httptest.NewRequest("POST","/v1/admin/orders",bytes.NewReader([]byte(fmt.Sprintf(
+		`{"channel":"salon","items":[{"productId":%q,"qty":1,"unitPrice":10,"selections":[]}]}`,productID))))
+	salonNoTableReq=salonNoTableReq.WithContext(context.WithValue(salonNoTableReq.Context(),scopeKey{},s))
+	salonNoTableRec:=httptest.NewRecorder()
+	api.createOrder(salonNoTableRec,salonNoTableReq)
+	if salonNoTableRec.Code!=400||!strings.Contains(salonNoTableRec.Body.String(),"table_required"){
+		t.Fatalf("salon without table must be rejected: %d %s",salonNoTableRec.Code,salonNoTableRec.Body.String())
+	}
+
+	counterBody:=[]byte(fmt.Sprintf(
+		`{"channel":"mostrador","tableId":%q,"items":[{"productId":%q,"qty":1,"unitPrice":10,"selections":[]}]}`,
+		tableID,productID))
+	counterReq:=httptest.NewRequest("POST","/v1/admin/orders",bytes.NewReader(counterBody))
+	counterReq=counterReq.WithContext(context.WithValue(counterReq.Context(),scopeKey{},s))
+	counterRec:=httptest.NewRecorder()
+	api.createOrder(counterRec,counterReq)
+	if counterRec.Code!=400||!strings.Contains(counterRec.Body.String(),"table_not_allowed"){
+		t.Fatalf("non-salon table ownership must be rejected: %d %s",counterRec.Code,counterRec.Body.String())
+	}
+
+	body:=[]byte(fmt.Sprintf(
+		`{"channel":"salon","tableId":%q,"items":[{"productId":%q,"qty":1,"unitPrice":10,"selections":[]}]}`,
+		tableID,productID))
+	codes:=make(chan int,2)
+	bodies:=make(chan string,2)
+	var wg sync.WaitGroup
+	for i:=0;i<2;i++{
+		wg.Add(1)
+		go func(){
+			defer wg.Done()
+			req:=httptest.NewRequest("POST","/v1/admin/orders",bytes.NewReader(body))
+			req=req.WithContext(context.WithValue(req.Context(),scopeKey{},s))
+			rec:=httptest.NewRecorder()
+			api.createOrder(rec,req)
+			codes<-rec.Code
+			bodies<-rec.Body.String()
+		}()
+	}
+	wg.Wait()
+	close(codes)
+	close(bodies)
+
+	successes,conflicts:=0,0
+	for code:=range codes{
+		if code==201{successes++}
+		if code==409{conflicts++}
+	}
+	allBodies:=""
+	for body:=range bodies{allBodies+=body}
+	if successes!=1||conflicts!=1||!strings.Contains(allBodies,"table_occupied"){
+		t.Fatalf("expected one opened table and one table_occupied conflict, success=%d conflict=%d bodies=%s",successes,conflicts,allBodies)
+	}
+
+	var openOrders int
+	if err:=pool.QueryRow(ctx,`
+		SELECT count(*)
+		FROM orders
+		WHERE organization_id=$1 AND table_id=$2 AND status NOT IN ('entregado','cancelado')
+	`,s.OrganizationID,tableID).Scan(&openOrders);err!=nil{t.Fatal(err)}
+	if openOrders!=1{t.Fatalf("expected exactly one open order for table, got %d",openOrders)}
 }
