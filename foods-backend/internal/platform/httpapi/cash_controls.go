@@ -386,3 +386,40 @@ func (a *API) createCashOperation(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, 201, operation)
 }
+
+func (a *API) canSeeCashExpected(r *http.Request, s scope) bool {
+	var platformAdmin bool
+	if err := a.db.QueryRow(r.Context(), `SELECT platform_admin FROM users WHERE id=$1 AND active`, s.UserID).Scan(&platformAdmin); err == nil && platformAdmin {
+		return true
+	}
+	var allowed bool
+	if err := a.db.QueryRow(r.Context(), `
+		SELECT EXISTS(
+		  SELECT 1
+		  FROM user_roles ur
+		  JOIN roles ro ON ro.id=ur.role_id
+		  WHERE ur.user_id=$1
+		    AND (ur.location_id IS NULL OR ur.location_id=$2)
+		    AND ro.active
+		    AND (
+		      ro.permissions @> ARRAY['*']::text[]
+		      OR ro.permissions @> ARRAY['cash.expected.read']::text[]
+		    )
+		)
+	`, s.UserID, s.LocationID).Scan(&allowed); err != nil {
+		return false
+	}
+	return allowed
+}
+
+func (a *API) applyCashExpectedVisibility(r *http.Request, shift *cashShiftView) {
+	if shift == nil {
+		return
+	}
+	s := r.Context().Value(scopeKey{}).(scope)
+	shift.ExpectedVisible = true
+	if shift.Status == "open" && shift.BlindClose && !a.canSeeCashExpected(r, s) {
+		shift.ExpectedAmount = ""
+		shift.ExpectedVisible = false
+	}
+}
