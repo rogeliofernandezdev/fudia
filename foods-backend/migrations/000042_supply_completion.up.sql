@@ -64,7 +64,7 @@ ALTER TABLE purchase_receipts
   ADD COLUMN idempotency_key text;
 
 CREATE UNIQUE INDEX purchase_receipts_idempotency_uq
-  ON purchase_receipts(organization_id,location_id,idempotency_key)
+  ON purchase_receipts(organization_id,location_id,purchase_order_id,idempotency_key)
   WHERE idempotency_key IS NOT NULL AND idempotency_key<>'';
 
 ALTER TABLE purchase_receipt_items
@@ -91,6 +91,7 @@ CREATE TABLE purchase_returns (
   kind text NOT NULL CHECK(kind IN ('supplier_return','receipt_correction')),
   reason text NOT NULL,
   notes text NOT NULL DEFAULT '',
+  idempotency_key text,
   created_by uuid NOT NULL REFERENCES users(id),
   created_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE(id,organization_id),
@@ -121,6 +122,9 @@ CREATE TABLE purchase_return_items (
   FOREIGN KEY(inventory_item_id,organization_id) REFERENCES inventory_items(id,organization_id)
 );
 CREATE INDEX purchase_returns_scope_idx ON purchase_returns(organization_id,location_id,created_at DESC);
+CREATE UNIQUE INDEX purchase_returns_idempotency_uq
+  ON purchase_returns(organization_id,location_id,purchase_receipt_id,idempotency_key)
+  WHERE idempotency_key IS NOT NULL AND idempotency_key<>'';
 
 -- Transferencias entre locales.
 CREATE TABLE inventory_transfers (
@@ -130,6 +134,7 @@ CREATE TABLE inventory_transfers (
   to_location_id uuid NOT NULL,
   code text NOT NULL DEFAULT ('TRF-'||upper(substr(replace(gen_random_uuid()::text,'-',''),1,8))),
   notes text NOT NULL DEFAULT '',
+  idempotency_key text,
   created_by uuid NOT NULL REFERENCES users(id),
   created_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE(id,organization_id),
@@ -153,6 +158,9 @@ CREATE TABLE inventory_transfer_items (
   FOREIGN KEY(inventory_item_id,organization_id) REFERENCES inventory_items(id,organization_id)
 );
 CREATE INDEX inventory_transfers_scope_idx ON inventory_transfers(organization_id,from_location_id,to_location_id,created_at DESC);
+CREATE UNIQUE INDEX inventory_transfers_idempotency_uq
+  ON inventory_transfers(organization_id,from_location_id,idempotency_key)
+  WHERE idempotency_key IS NOT NULL AND idempotency_key<>'';
 
 ALTER TABLE stock_movements
   DROP CONSTRAINT IF EXISTS stock_movements_movement_type_check,
