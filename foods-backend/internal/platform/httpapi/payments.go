@@ -287,7 +287,7 @@ func (a *API) createPayment(w http.ResponseWriter,r *http.Request){
 		fail(w,503,"payments_unavailable","No pudimos validar el saldo pendiente.")
 		return
 	}
-	if status=="cancelado"{fail(w,409,"order_not_payable","Un pedido cancelado no admite cobros.");return}
+	if status!="listo"&&status!="en_camino"{fail(w,409,"order_not_ready_for_payment","El pedido solo puede cobrarse cuando está listo para entregar.");return}
 	remaining:=math.Max(0,total-paid)
 	if in.Amount>remaining+0.00001{
 		fail(w,409,"payment_exceeds_remaining","El cobro supera el saldo pendiente del pedido.")
@@ -461,7 +461,7 @@ func (a *API) createPaymentBatch(w http.ResponseWriter,r *http.Request){
 		fail(w,503,"payments_unavailable","No pudimos validar el saldo pendiente.")
 		return
 	}
-	if status=="cancelado"{fail(w,409,"order_not_payable","Un pedido cancelado no admite cobros.");return}
+	if status!="listo"&&status!="en_camino"{fail(w,409,"order_not_ready_for_payment","El pedido solo puede cobrarse cuando está listo para entregar.");return}
 	remaining:=math.Max(0,orderTotal-paid)
 	if totalBatch>remaining+0.00001{
 		fail(w,409,"payment_exceeds_remaining","El cobro supera el saldo pendiente del pedido.")
