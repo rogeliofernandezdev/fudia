@@ -110,6 +110,7 @@ func (a *API) Routes() *http.ServeMux {
 	m.Handle("GET /v1/operations/pos/orders/{id}", a.auth(a.requirePermission("orders.read", http.HandlerFunc(a.getPOSOrder))))
 	m.Handle("POST /v1/operations/payments/batch", a.auth(a.requirePermission("cash.manage", http.HandlerFunc(a.createPaymentBatch))))
 	m.Handle("POST /v1/operations/payments/{id}/refund", a.auth(a.requirePermission("cash.manage", http.HandlerFunc(a.refundPayment))))
+	m.Handle("POST /v1/operations/pos/orders/{id}/complete", a.auth(a.requirePermission("cash.manage", http.HandlerFunc(a.completePaidOrder))))
 	m.Handle("GET /v1/admin/combos", a.auth(a.requirePermission("menu.read", http.HandlerFunc(a.listCombos))))
 	m.Handle("GET /v1/admin/combos/{id}", a.auth(a.requirePermission("menu.read", http.HandlerFunc(a.getCombo))))
 	m.Handle("GET /v1/admin/order-combos", a.auth(a.requirePermission("orders.manage", http.HandlerFunc(a.listOrderCombos))))
