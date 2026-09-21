@@ -266,6 +266,11 @@ test("caja separa cajas fisicas de sus turnos",()=>{
   assert.ok(page.includes("Aún no hay cajas registradas"),"Sin cajas se explica que primero debe registrarse una");
   assert.ok(page.includes("Registrar caja"),"El primer paso funcional es registrar una caja");
   assert.ok(page.includes("Iniciar turno"),"El turno se inicia desde una caja existente");
+  assert.ok(page.includes("cash-overview"),"Cajas muestra un resumen operativo");
+  assert.ok(page.includes("EFECTIVO ESPERADO"),"El resumen agrega el efectivo esperado de turnos abiertos");
+  assert.ok(page.includes("Editar caja"),"Las cajas pueden renombrarse sin perder historial");
+  assert.ok(page.includes("toggleStatus"),"Las cajas pueden activarse o desactivarse");
+  assert.ok(page.includes("businessDate(item.businessDate)"),"El historial usa día operativo");
   assert.ok(page.includes("shiftTarget"),"El turno conserva como objetivo la caja elegida");
   assert.ok(page.includes("cashRegisterName"),"El historial identifica la caja de cada turno");
   assert.ok(page.includes('movement(shift,"income")'),"Un turno abierto permite ingresos manuales");
@@ -279,8 +284,11 @@ test("caja separa cajas fisicas de sus turnos",()=>{
   assert.ok(dialogs.includes("EFECTIVO ESPERADO"),"El arqueo muestra el esperado antes de cerrar");
   assert.ok(dialogs.includes("Efectivo contado"),"El arqueo solicita el efectivo contado");
   assert.ok(dialogs.includes("DIFERENCIA"),"El cierre calcula sobrante o faltante");
+  assert.ok(dialogs.includes("ORIGEN"),"El detalle de turno muestra el origen de cada movimiento");
 
   assert.ok(api.includes('"cash-registers"'),"Frontend consulta y crea cajas del local");
+  assert.ok(api.includes("updateCashRegister"),"Frontend permite renombrar cajas");
+  assert.ok(api.includes("setCashRegisterActive"),"Frontend administra disponibilidad de cajas");
   assert.ok(api.includes("cashRegisterId"),"Abrir turno envía explícitamente la caja seleccionada");
   assert.ok(api.includes("/movements"),"Caja registra movimientos contra el turno");
   assert.ok(api.includes("/close"),"Caja cierra el turno mediante endpoint dedicado");
@@ -288,6 +296,8 @@ test("caja separa cajas fisicas de sus turnos",()=>{
   assert.ok(schema.includes("cashMovementResolver"),"Movimientos usan validación de formulario");
   assert.ok(schema.includes("closeCashShiftResolver"),"El arqueo usa validación de formulario");
   assert.ok(types.includes("openShift:CashShift|null"),"Cada caja conoce si tiene un turno abierto");
+  assert.ok(types.includes("businessDate:string"),"El turno conserva día operativo");
+  assert.ok(types.includes('sourceType:"manual"'),"Los movimientos están preparados para orígenes automáticos");
 });
 
 test("combos conserva la misma tabla en movil y el shell no desborda",()=>{
