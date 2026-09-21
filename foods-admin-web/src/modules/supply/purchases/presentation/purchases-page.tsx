@@ -9,6 +9,7 @@ import {formatRegionalCalendarDate,formatRegionalDateTime,formatRegionalNumber} 
 import {purchaseOrderResolver,supplierResolver} from "../domain/purchase-schema";
 import {PurchaseItemDialog} from "./purchase-item-dialog";
 import {PurchaseReceiptDialog} from "./purchase-receipt-dialog";
+import {PurchaseFlowSteps} from "./purchase-flow-steps";
 import type {PurchaseInventoryOption,PurchaseOrder,PurchaseOrderDraft,PurchaseOrderSummary,PurchaseStatus,PurchaseTab,Supplier,SupplierDraft} from "../domain/types";
 import {createPurchaseInventoryItem,getPurchaseOrder,listPurchaseInventory,listPurchaseItemCategories,listPurchaseOrders,listSuppliers,receivePurchaseOrder,savePurchaseOrder,saveSupplier,setPurchaseOrderStatus,setSupplierActive} from "../infrastructure/purchases-api";
 
@@ -87,9 +88,10 @@ export function PurchasesPage(){
     <PageHeader eyebrow="ABASTECIMIENTO" title="Compras" description="Ordena, aprueba y recibe mercadería con trazabilidad directa hacia Inventario y Kárdex." action={headerAction}/>
     <section className="panel standardized-management purchases-panel">
       <div className="purchases-tabs" role="tablist" aria-label="Compras">
-        <button type="button" role="tab" aria-selected={tab==="orders"} className={tab==="orders"?"active":""} onClick={()=>changeTab("orders")}><Icon name="receipt" size={17}/><span>Órdenes</span>{orders.data&&<b>{orders.data.total}</b>}</button>
+        <button type="button" role="tab" aria-selected={tab==="orders"} className={tab==="orders"?"active":""} onClick={()=>changeTab("orders")}><Icon name="receipt" size={17}/><span>Órdenes de compra</span>{orders.data&&<b>{orders.data.total}</b>}</button>
         <button type="button" role="tab" aria-selected={tab==="suppliers"} className={tab==="suppliers"?"active":""} onClick={()=>changeTab("suppliers")}><Icon name="truck" size={17}/><span>Proveedores</span>{suppliers.data&&<b>{suppliers.data.total}</b>}</button>
       </div>
+      {tab==="orders"&&<div className="purchase-flow-overview"><div><small>FLUJO DE COMPRA</small><b>Primero ordenas. Después recibes.</b></div><PurchaseFlowSteps active="order"/></div>}
       <div className="purchases-toolbar">
         <label className="purchases-search"><Icon name="search" size={18}/><Input value={q} onChange={event=>{setQ(event.target.value);setPage(1)}} placeholder={tab==="orders"?"Buscar por orden o proveedor...":"Buscar proveedor o RUC..."}/></label>
         <Select aria-label="Filtrar por estado" value={status} onChange={event=>{setStatus(event.target.value);setPage(1)}}>
@@ -176,6 +178,7 @@ function PurchaseOrderDialog({initial,suppliers,inventory,currencySymbol,busy,cl
     <div className="modal-backdrop modal-overlay-in"><section className="crud-modal purchase-order-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="purchase-order-title" aria-busy={busy}><div className="modal-accent"/>
       <header><span className="modal-title-icon"><Icon name="receipt" size={18}/></span><div><small>{initial.id?"EDITAR ORDEN":"NUEVA ORDEN"}</small><h2 id="purchase-order-title">Orden de compra</h2></div><button type="button" aria-label="Cerrar" onClick={close} disabled={busy}><Icon name="close"/></button></header>
       <form onSubmit={handleSubmit(save)} noValidate><div className="purchase-form-body">
+        <PurchaseFlowSteps status="draft" active="order"/>
         <section className="purchase-form-section purchase-order-header-section">
           <div className="purchase-section-title"><span><Icon name="truck" size={17}/></span><div><b>Proveedor y entrega</b><small>Define quién abastece la orden y cuándo esperas recibirla.</small></div></div>
           <div className="form-grid purchase-order-meta-grid">
@@ -245,7 +248,9 @@ function PurchaseDetail({order,canManage,canReceive,busy,currency,country,timezo
   const meta=statusMeta[order.status];
   const receivable=order.status==="approved"||order.status==="partially_received";
   const cancellable=order.status==="draft"||order.status==="pending_approval"||order.status==="approved";
+  const flowActive=order.status==="approved"||order.status==="partially_received"||order.status==="received"?"receipt":"order";
   return <div className="modal-backdrop modal-overlay-in"><section className="crud-modal purchase-detail-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="purchase-detail-title" aria-busy={busy}><div className="modal-accent"/><header><span className="modal-title-icon"><Icon name="receipt" size={18}/></span><div><small>ORDEN DE COMPRA</small><h2 id="purchase-detail-title">{order.number}</h2></div><button type="button" aria-label="Cerrar" onClick={close} disabled={busy}><Icon name="close"/></button></header><div className="purchase-detail-body">
+    <PurchaseFlowSteps status={order.status} active={flowActive}/>
     <section className="purchase-detail-summary"><div><small>PROVEEDOR</small><b>{order.supplierName}</b></div><div><small>TOTAL</small><b>{currency}</b></div><div><small>ARTÍCULOS</small><b>{order.itemCount}</b></div><Status tone={meta.tone}>{meta.label}</Status></section>
     <section className="purchase-detail-meta"><div><small>CREADA</small><b>{formatRegionalDateTime(order.createdAt,{country,timeZone:timezone},{dateStyle:"medium",timeStyle:"short"})}</b></div><div><small>ENTREGA ESPERADA</small><b>{order.expectedAt?formatRegionalCalendarDate(order.expectedAt,country,{dateStyle:"medium"}):"Sin fecha"}</b></div><div><small>NOTAS</small><b>{order.notes||"Sin notas"}</b></div></section>
     <section className="purchase-detail-lines"><header><div><small>DETALLE</small><h3>Artículos de la orden</h3></div></header><div className="table-wrap hover-scroll"><table className="purchase-receipt-progress-table"><thead><tr><th>ARTÍCULO</th><th>PRESENTACIÓN</th><th>SOLICITADO</th><th>RECIBIDO</th><th>PENDIENTE</th><th>COSTO</th><th>SUBTOTAL</th></tr></thead><tbody>{order.items.map((item,index)=><tr className={index%2?"alternate":""} key={item.id}><td><b>{item.itemName}</b><small>{item.sku||item.unit}</small></td><td>{presentationName(item.presentationType,item.unitsPerPresentation,item.unit)}</td><td>{formatRegionalNumber(Number(item.quantity),country,{maximumFractionDigits:3})}</td><td><b className="purchase-received-qty">{formatRegionalNumber(Number(item.receivedQuantity),country,{maximumFractionDigits:3})}</b></td><td><b className={Number(item.pendingQuantity)>0?"purchase-pending-qty":""}>{formatRegionalNumber(Number(item.pendingQuantity),country,{maximumFractionDigits:3})}</b></td><td>{formatRegionalNumber(Number(item.unitCost),country,{minimumFractionDigits:2,maximumFractionDigits:4})}</td><td><b>{formatRegionalNumber(Number(item.lineTotal),country,{minimumFractionDigits:2,maximumFractionDigits:2})}</b></td></tr>)}</tbody></table></div></section>
