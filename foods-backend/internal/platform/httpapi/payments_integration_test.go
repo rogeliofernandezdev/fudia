@@ -117,3 +117,70 @@ func TestPaymentAndRefundUpdateCashShiftAutomatically(t *testing.T) {
 		t.Fatalf("expected cash 100 + sale 40 - refund 10 = 130, got %#v",current.Shift)
 	}
 }
+
+
+func TestSplitPaymentBatchAndCompletePaidOrder(t *testing.T) {
+	pool:=integrationPool(t)
+	s:=seedInventoryScope(t,pool)
+	api:=New(pool)
+	ctx:=context.Background()
+
+	var registerID string
+	if err:=pool.QueryRow(ctx,`
+		INSERT INTO cash_registers(organization_id,location_id,name,created_by)
+		VALUES($1,$2,'Caja split',$3)
+		RETURNING id
+	`,s.OrganizationID,s.LocationID,s.UserID).Scan(&registerID);err!=nil{t.Fatal(err)}
+
+	openReq:=httptest.NewRequest("POST","/v1/operations/cash-shifts",bytes.NewReader([]byte(fmt.Sprintf(`{"cashRegisterId":%q,"openingAmount":100}`,registerID))))
+	openReq=openReq.WithContext(context.WithValue(openReq.Context(),scopeKey{},s))
+	openRec:=httptest.NewRecorder()
+	api.openCashShift(openRec,openReq)
+	if openRec.Code!=201{t.Fatalf("open shift: %d %s",openRec.Code,openRec.Body.String())}
+
+	var orderID string
+	if err:=pool.QueryRow(ctx,`
+		INSERT INTO orders(organization_id,location_id,code,channel,status,total,created_by)
+		VALUES($1,$2,$3,'mostrador','listo',60,$4)
+		RETURNING id
+	`,s.OrganizationID,s.LocationID,fmt.Sprintf("PED-SPLIT-%d",time.Now().UnixNano()),s.UserID).Scan(&orderID);err!=nil{t.Fatal(err)}
+
+	batchBody:=[]byte(fmt.Sprintf(`{
+		"orderId":%q,
+		"payments":[
+			{"method":"cash","amount":20,"reference":"Recibido 20.00"},
+			{"method":"card","amount":40,"reference":"VISA-01"}
+		]
+	}`,orderID))
+	batchReq:=httptest.NewRequest("POST","/v1/operations/payments/batch",bytes.NewReader(batchBody))
+	batchReq=batchReq.WithContext(context.WithValue(batchReq.Context(),scopeKey{},s))
+	batchRec:=httptest.NewRecorder()
+	api.createPaymentBatch(batchRec,batchReq)
+	if batchRec.Code!=201{t.Fatalf("split payment: %d %s",batchRec.Code,batchRec.Body.String())}
+
+	var result struct{
+		PaymentIDs []string `json:"paymentIds"`
+		RemainingAmount string `json:"remainingAmount"`
+		PaymentStatus string `json:"paymentStatus"`
+	}
+	if err:=json.Unmarshal(batchRec.Body.Bytes(),&result);err!=nil{t.Fatal(err)}
+	if len(result.PaymentIDs)!=2||result.RemainingAmount!="0.00"||result.PaymentStatus!="paid"{
+		t.Fatalf("unexpected split result: %#v",result)
+	}
+
+	var payments,cashMovements int
+	if err:=pool.QueryRow(ctx,`SELECT count(*) FROM payments WHERE organization_id=$1 AND location_id=$2 AND order_id=$3`,s.OrganizationID,s.LocationID,orderID).Scan(&payments);err!=nil{t.Fatal(err)}
+	if err:=pool.QueryRow(ctx,`SELECT count(*) FROM cash_movements WHERE organization_id=$1 AND location_id=$2 AND source_type='cash_sale' AND amount=20`,s.OrganizationID,s.LocationID).Scan(&cashMovements);err!=nil{t.Fatal(err)}
+	if payments!=2||cashMovements!=1{t.Fatalf("expected 2 payments and 1 cash movement, got payments=%d cash=%d",payments,cashMovements)}
+
+	completeReq:=httptest.NewRequest("POST","/v1/operations/pos/orders/"+orderID+"/complete",nil)
+	completeReq.SetPathValue("id",orderID)
+	completeReq=completeReq.WithContext(context.WithValue(completeReq.Context(),scopeKey{},s))
+	completeRec:=httptest.NewRecorder()
+	api.completePaidOrder(completeRec,completeReq)
+	if completeRec.Code!=204{t.Fatalf("complete order: %d %s",completeRec.Code,completeRec.Body.String())}
+
+	var status string
+	if err:=pool.QueryRow(ctx,`SELECT status FROM orders WHERE id=$1`,orderID).Scan(&status);err!=nil{t.Fatal(err)}
+	if status!="entregado"{t.Fatalf("expected delivered order after completion, got %s",status)}
+}
