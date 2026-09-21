@@ -937,42 +937,81 @@
 }
 
 .salon-order-detail .salon-order-detail-actions{
-  padding:12px 18px 14px;
-  display:flex;
+  padding:14px 18px 16px;
+  display:grid;
+  grid-template-columns:minmax(0,1.12fr) minmax(0,1fr) minmax(0,1.18fr);
   align-items:center;
-  flex-wrap:wrap;
-  gap:9px;
+  gap:10px;
   flex-shrink:0;
   border-top:1px solid #e4e7ec;
   background:#fff;
 }
 
-.salon-order-detail .salon-order-detail-actions .order-detail-primary{
-  min-height:44px;
-  height:44px;
-  flex:1 1 170px;
+.salon-order-detail .salon-order-detail-actions .order-detail-primary,
+.salon-order-detail .salon-order-detail-actions .salon-order-detail-pay,
+.salon-order-detail .salon-order-detail-actions .salon-order-detail-edit{
+  min-height:46px;
+  height:46px;
+  width:100%;
   border-radius:10px;
   justify-content:center;
   gap:7px;
   line-height:1;
 }
 
+.salon-order-detail .salon-order-detail-actions .order-detail-primary{
+  background:var(--ops-700,#3946b8);
+  border-color:var(--ops-700,#3946b8);
+  color:#fff;
+}
+
+.salon-order-detail .salon-order-detail-actions .salon-order-detail-pay{
+  display:inline-flex;
+  align-items:center;
+  border:1px solid #b9c2ff;
+  background:#eef0ff;
+  color:#2f3ca8;
+  font-weight:800;
+  text-decoration:none;
+}
+
+.salon-order-detail .salon-order-detail-actions .salon-order-detail-pay:hover{
+  border-color:#8795ee;
+  background:#e1e5ff;
+  color:#202d91;
+}
+
 .salon-order-detail .salon-order-detail-actions .salon-order-detail-edit{
-  min-height:44px;
-  height:44px;
-  flex:0 1 150px;
-  justify-content:center;
-  gap:7px;
-  border-color:#d9def5;
-  background:#f8f9ff;
-  color:var(--ops-700,#3946b8);
-  line-height:1;
+  border-color:#d7dce5;
+  background:#fff;
+  color:#344054;
 }
 
 .salon-order-detail .salon-order-detail-actions .salon-order-detail-edit:hover:not(:disabled){
-  border-color:#bfc8ef;
-  background:var(--primary-100,#eef0ff);
-  color:var(--ops-800,#1a2151);
+  border-color:#aeb7c6;
+  background:#f8fafc;
+  color:#1d2939;
+}
+
+.salon-order-detail .salon-order-detail-actions .order-detail-done{
+  min-height:46px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  padding:0 12px;
+  border:1px solid #b7e3cf;
+  border-radius:10px;
+  background:#ecfdf3;
+  color:#087a55;
+  font-size:12px;
+  font-weight:800;
+  text-align:center;
+}
+
+.salon-order-detail .salon-order-detail-actions .order-detail-cancel{
+  grid-column:1/-1;
+  justify-self:start;
 }
 
 .salon-order-detail .salon-order-detail-actions .order-detail-primary>span,
