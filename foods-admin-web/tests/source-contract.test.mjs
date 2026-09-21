@@ -200,7 +200,7 @@ test("compras concentra orden recepcion y altas de abastecimiento",()=>{
   assert.ok(purchases.includes("PurchaseReceiptDialog"),"La recepción vive dentro del mismo módulo Compras");
   assert.ok(purchases.includes('openDetail(order.id,"view")'),"El ojo abre el detalle en modo solo lectura");
   assert.ok(purchases.includes('openDetail(order.id,"review")'),"Revisar orden abre un modo operativo distinto");
-  assert.ok(purchases.includes('mode==="review"&&(canManage||canReceive)'),"Las acciones de workflow solo existen en modo revisión");
+  assert.ok(purchases.includes('mode==="review"&&(canManage||canApprove||canReceive)'),"Las acciones de workflow solo existen en modo revisión");
   assert.ok(purchases.includes('mode==="view"?"DETALLE DE ORDEN":"REVISAR ORDEN"'),"El modal comunica claramente si es consulta o revisión");
   assert.ok(purchases.includes("Ir a Recepciones"),"Una orden aprobada deriva al workspace de Recepciones");
   assert.ok(purchases.includes('tab==="receipts"'),"Compras tiene una vista independiente de Recepciones");
