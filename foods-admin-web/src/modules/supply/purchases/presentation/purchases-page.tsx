@@ -176,11 +176,11 @@ function PurchaseOrderDialog({initial,suppliers,inventory,currencySymbol,busy,cl
 
   return <>
     <div className="modal-backdrop modal-overlay-in"><section className="crud-modal purchase-order-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="purchase-order-title" aria-busy={busy}><div className="modal-accent"/>
-      <header><span className="modal-title-icon"><Icon name="receipt" size={18}/></span><div><small>{initial.id?"EDITAR ORDEN":"NUEVA ORDEN"}</small><h2 id="purchase-order-title">Orden de compra</h2></div><button type="button" aria-label="Cerrar" onClick={close} disabled={busy}><Icon name="close"/></button></header>
+      <header><span className="modal-title-icon"><Icon name="receipt" size={18}/></span><div><small>PASO 1 · ORDEN DE COMPRA</small><h2 id="purchase-order-title">{initial.id?"Editar orden":"Nueva orden de compra"}</h2></div><button type="button" aria-label="Cerrar" onClick={close} disabled={busy}><Icon name="close"/></button></header>
       <form onSubmit={handleSubmit(save)} noValidate><div className="purchase-form-body">
         <PurchaseFlowSteps status="draft" active="order"/>
         <section className="purchase-form-section purchase-order-header-section">
-          <div className="purchase-section-title"><span><Icon name="truck" size={17}/></span><div><b>Proveedor y entrega</b><small>Define quién abastece la orden y cuándo esperas recibirla.</small></div></div>
+          <div className="purchase-section-title"><span><Icon name="truck" size={17}/></span><div><b>Datos de la orden</b><small>Selecciona proveedor, fecha esperada y condiciones de compra.</small></div></div>
           <div className="form-grid purchase-order-meta-grid">
             <label>Proveedor<Select autoFocus {...register("supplierId")} aria-invalid={Boolean(errors.supplierId)}><option value="">{suppliers.length?"Selecciona un proveedor":"No hay proveedores activos"}</option>{suppliers.map(supplier=><option value={supplier.id} key={supplier.id}>{supplier.name}{supplier.taxId?" · "+supplier.taxId:""}</option>)}</Select>{errors.supplierId?.message&&<small className="wizard-field-error">{errors.supplierId.message}</small>}</label>
             <label>Entrega esperada<Input type="date" {...register("expectedAt")}/></label>
@@ -191,7 +191,7 @@ function PurchaseOrderDialog({initial,suppliers,inventory,currencySymbol,busy,cl
         <section className="purchase-form-section purchase-order-lines-section">
           <div className="purchase-section-title purchase-lines-title">
             <span><Icon name="stock" size={17}/></span>
-            <div><b>Artículos de la orden</b><small>Agrega artículos existentes o crea uno nuevo sin salir de Compras.</small></div>
+            <div><b>Artículos solicitados</b><small>Define qué vas a pedir, en qué presentación, cantidad y costo.</small></div>
             <Button type="button" kind="secondary" icon="plus" onClick={()=>setItemTarget("new")}>Agregar artículo</Button>
           </div>
 
