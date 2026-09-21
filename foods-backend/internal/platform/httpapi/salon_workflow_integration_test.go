@@ -247,3 +247,95 @@ func TestSalonTableOpeningIsSerializedAndChannelScoped(t *testing.T) {
 	`,s.OrganizationID,tableID).Scan(&openOrders);err!=nil{t.Fatal(err)}
 	if openOrders!=1{t.Fatalf("expected exactly one open order for table, got %d",openOrders)}
 }
+
+
+func TestTablesAndZonesAreIsolatedByLocation(t *testing.T) {
+	pool:=integrationPool(t)
+	s:=seedInventoryScope(t,pool)
+	api:=New(pool)
+	ctx:=context.Background()
+	nonce:=time.Now().UnixNano()
+
+	var secondLocationID string
+	if err:=pool.QueryRow(ctx,`
+		INSERT INTO locations(organization_id,name,code,address)
+		VALUES($1,$2,$3,'')
+		RETURNING id
+	`,s.OrganizationID,fmt.Sprintf("Sucursal %d",nonce),fmt.Sprintf("S%d",nonce%1000000)).Scan(&secondLocationID);err!=nil{t.Fatal(err)}
+	s2:=s
+	s2.LocationID=secondLocationID
+
+	tableName:=fmt.Sprintf("Mesa compartida %d",nonce)
+	tableBody:=[]byte(fmt.Sprintf(`{"name":%q,"seats":4,"zone":"Terraza"}`,tableName))
+
+	createTableFor:=func(current scope) table {
+		req:=httptest.NewRequest("POST","/v1/admin/tables",bytes.NewReader(tableBody))
+		req=req.WithContext(context.WithValue(req.Context(),scopeKey{},current))
+		rec:=httptest.NewRecorder()
+		api.createTable(rec,req)
+		if rec.Code!=201{t.Fatalf("create table at %s: %d %s",current.LocationID,rec.Code,rec.Body.String())}
+		var value table
+		if err:=json.Unmarshal(rec.Body.Bytes(),&value);err!=nil{t.Fatal(err)}
+		return value
+	}
+	firstTable:=createTableFor(s)
+	secondTable:=createTableFor(s2)
+	if firstTable.ID==secondTable.ID{t.Fatal("locations must have different physical table rows")}
+
+	zoneName:=fmt.Sprintf("Terraza %d",nonce)
+	createZoneFor:=func(current scope) {
+		req:=httptest.NewRequest("POST","/v1/admin/zones",bytes.NewReader([]byte(fmt.Sprintf(`{"name":%q,"sortOrder":1}`,zoneName))))
+		req=req.WithContext(context.WithValue(req.Context(),scopeKey{},current))
+		rec:=httptest.NewRecorder()
+		api.createZone(rec,req)
+		if rec.Code!=201{t.Fatalf("create zone at %s: %d %s",current.LocationID,rec.Code,rec.Body.String())}
+	}
+	createZoneFor(s)
+	createZoneFor(s2)
+
+	t.Cleanup(func(){
+		_,_=pool.Exec(context.Background(),`DELETE FROM zones WHERE organization_id=$1 AND name=$2`,s.OrganizationID,zoneName)
+		_,_=pool.Exec(context.Background(),`DELETE FROM tables WHERE organization_id=$1 AND name=$2`,s.OrganizationID,tableName)
+		_,_=pool.Exec(context.Background(),`DELETE FROM locations WHERE id=$1 AND organization_id=$2`,secondLocationID,s.OrganizationID)
+	})
+
+	assertTableList:=func(current scope,wantID string){
+		req:=httptest.NewRequest("GET","/v1/admin/tables?page=1&pageSize=20",nil)
+		req=req.WithContext(context.WithValue(req.Context(),scopeKey{},current))
+		rec:=httptest.NewRecorder()
+		api.listTables(rec,req)
+		if rec.Code!=200{t.Fatalf("list tables: %d %s",rec.Code,rec.Body.String())}
+		var body struct{Items []table `json:"items"`;Total int `json:"total"`}
+		if err:=json.Unmarshal(rec.Body.Bytes(),&body);err!=nil{t.Fatal(err)}
+		found:=false
+		for _,item:=range body.Items{if item.ID==wantID{found=true}}
+		if !found{t.Fatalf("location %s did not return its table %s: %#v",current.LocationID,wantID,body.Items)}
+		for _,item:=range body.Items{
+			if item.Name==tableName&&item.ID!=wantID{
+				t.Fatalf("location %s leaked table %s from another site",current.LocationID,item.ID)
+			}
+		}
+	}
+	assertTableList(s,firstTable.ID)
+	assertTableList(s2,secondTable.ID)
+
+	qrReq:=httptest.NewRequest("GET","/v1/public/tables/"+secondTable.QrToken,nil)
+	qrReq.SetPathValue("token",secondTable.QrToken)
+	qrRec:=httptest.NewRecorder()
+	api.getTableByQR(qrRec,qrReq)
+	if qrRec.Code!=200{t.Fatalf("public QR: %d %s",qrRec.Code,qrRec.Body.String())}
+	var qr struct{LocName string `json:"locationName"`}
+	if err:=json.Unmarshal(qrRec.Body.Bytes(),&qr);err!=nil{t.Fatal(err)}
+	if !strings.HasPrefix(qr.LocName,"Sucursal "){t.Fatalf("QR resolved wrong location: %#v",qr)}
+
+	foreignTableBody:=[]byte(fmt.Sprintf(
+		`{"channel":"salon","tableId":%q,"items":[{"productId":"00000000-0000-0000-0000-000000000001","qty":1,"unitPrice":1,"selections":[]}]}`,
+		firstTable.ID))
+	foreignReq:=httptest.NewRequest("POST","/v1/admin/orders",bytes.NewReader(foreignTableBody))
+	foreignReq=foreignReq.WithContext(context.WithValue(foreignReq.Context(),scopeKey{},s2))
+	foreignRec:=httptest.NewRecorder()
+	api.createOrder(foreignRec,foreignReq)
+	if foreignRec.Code!=400||!strings.Contains(foreignRec.Body.String(),"invalid_order"){
+		t.Fatalf("cross-location table use must be rejected: %d %s",foreignRec.Code,foreignRec.Body.String())
+	}
+}
