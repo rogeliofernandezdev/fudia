@@ -18,7 +18,7 @@
 .cash-register-shift>div{display:grid;gap:5px;padding:13px 14px;min-width:0}
 .cash-register-shift>div+div{border-left:1px solid var(--line)}
 .cash-register-shift small{color:var(--ink-400);font-size:7px;font-weight:850;letter-spacing:.06em}
-.cash-register-shift b{font-size:9px;color:var(--ink-900);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cash-register-shift b{font-size:9px;color:var(--ink-950);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cash-register-shift .expected{background:var(--primary-50)}
 .cash-register-shift .expected small{color:var(--ops-700)}
 .cash-register-shift strong{font-size:13px;color:var(--ink-950);font-variant-numeric:tabular-nums}
@@ -51,6 +51,7 @@
 .cash-history-toolbar>p{display:flex;align-items:center;gap:7px;margin:0;color:var(--ink-400);font-size:8px;line-height:1.4}
 .cash-history-table td:first-child small{display:block;margin:3px 0 0 44px;color:var(--ink-400);font-size:8px}
 .cash-history-table td{font-variant-numeric:tabular-nums}
+.cash-history-table th{color:#fff;background:var(--ops-500);font-weight:850}
 .cash-history-table table{min-width:1120px}
 .cash-balanced{color:var(--brand-700)}
 .cash-positive{color:var(--ops-700)}
