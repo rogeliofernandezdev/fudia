@@ -96,3 +96,47 @@ func TestNormalizeInventoryEntryRequiresRetailCategory(t *testing.T) {
 		t.Fatalf("expected category to make entry valid, got %q", invalid)
 	}
 }
+
+
+func TestNormalizeInventoryAdjustmentValidatesTypeReasonAndQuantity(t *testing.T) {
+	validEntry := inventoryAdjustmentInput{
+		InventoryItemID: "item-1",
+		MovementType: "entry",
+		Reason: "surplus_adjustment",
+		Quantity: 2.3456,
+		Observation: "conteo físico",
+	}
+	normalized, invalid := normalizeInventoryAdjustment(validEntry)
+	if invalid != "" {
+		t.Fatalf("expected valid entry adjustment, got %q", invalid)
+	}
+	if normalized.Quantity != 2.346 {
+		t.Fatalf("expected quantity rounded to 3 decimals, got %v", normalized.Quantity)
+	}
+
+	validExit := inventoryAdjustmentInput{
+		InventoryItemID: "item-1",
+		MovementType: "exit",
+		Reason: "waste",
+		Quantity: 1,
+	}
+	if _, invalid := normalizeInventoryAdjustment(validExit); invalid != "" {
+		t.Fatalf("expected valid exit adjustment, got %q", invalid)
+	}
+
+	if _, invalid := normalizeInventoryAdjustment(inventoryAdjustmentInput{
+		InventoryItemID: "item-1", MovementType: "entry", Reason: "waste", Quantity: 1,
+	}); invalid == "" {
+		t.Fatal("expected exit-only reason to be rejected for entry")
+	}
+	if _, invalid := normalizeInventoryAdjustment(inventoryAdjustmentInput{
+		InventoryItemID: "item-1", MovementType: "exit", Reason: "surplus_adjustment", Quantity: 1,
+	}); invalid == "" {
+		t.Fatal("expected entry-only reason to be rejected for exit")
+	}
+	if _, invalid := normalizeInventoryAdjustment(inventoryAdjustmentInput{
+		InventoryItemID: "item-1", MovementType: "exit", Reason: "waste", Quantity: 0,
+	}); invalid == "" {
+		t.Fatal("expected zero adjustment quantity to be rejected")
+	}
+}
