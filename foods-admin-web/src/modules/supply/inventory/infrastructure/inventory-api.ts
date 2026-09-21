@@ -33,7 +33,7 @@ export function listInventoryTransfers(page=1,pageSize=20){
 }
 export function createInventoryTransfer(draft:InventoryTransferDraft){
   return apiFetch<{id:string;code:string;toLocationId:string;toLocationName:string}>("inventory/transfers",{method:"POST",body:JSON.stringify({
-    toLocationId:draft.toLocationId,notes:draft.notes.trim(),items:draft.items.filter(i=>Number(i.quantity)>0).map(i=>({inventoryItemId:i.inventoryItemId,quantity:Number(i.quantity)})),
+    idempotencyKey:draft.idempotencyKey,toLocationId:draft.toLocationId,notes:draft.notes.trim(),items:draft.items.filter(i=>Number(i.quantity)>0).map(i=>({inventoryItemId:i.inventoryItemId,quantity:Number(i.quantity)})),
   })});
 }
 export function listTransferLocations(){return apiFetch<{items:LocationOption[]}>("locations/available")}
