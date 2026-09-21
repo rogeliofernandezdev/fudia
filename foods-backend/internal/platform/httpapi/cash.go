@@ -11,13 +11,15 @@ import (
 )
 
 type cashMovementView struct {
-	ID            string `json:"id"`
-	MovementType  string `json:"movementType"`
-	Amount        string `json:"amount"`
-	Reason        string `json:"reason"`
-	Note          string `json:"note"`
-	CreatedByName string `json:"createdByName"`
-	CreatedAt     string `json:"createdAt"`
+	ID            string  `json:"id"`
+	MovementType  string  `json:"movementType"`
+	SourceType    string  `json:"sourceType"`
+	SourceID      *string `json:"sourceId"`
+	Amount        string  `json:"amount"`
+	Reason        string  `json:"reason"`
+	Note          string  `json:"note"`
+	CreatedByName string  `json:"createdByName"`
+	CreatedAt     string  `json:"createdAt"`
 }
 
 type cashShiftView struct {
@@ -37,6 +39,7 @@ type cashShiftView struct {
 	ClosingNote           string             `json:"closingNote"`
 	OpenedByName          string             `json:"openedByName"`
 	ClosedByName          string             `json:"closedByName"`
+	BusinessDate          string             `json:"businessDate"`
 	OpenedAt              string             `json:"openedAt"`
 	ClosedAt              *string            `json:"closedAt"`
 	MovementCount         int                `json:"movementCount"`
@@ -72,6 +75,7 @@ const cashShiftColumns = `
 	cs.closing_note,
 	opened.full_name,
 	COALESCE(closed.full_name,''),
+	cs.business_date::text,
 	to_char(cs.opened_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),
 	CASE WHEN cs.closed_at IS NULL THEN NULL ELSE to_char(cs.closed_at,'YYYY-MM-DD"T"HH24:MI:SSOF') END,
 	(SELECT count(*) FROM cash_movements cm WHERE cm.shift_id=cs.id AND cm.organization_id=cs.organization_id)
@@ -96,6 +100,7 @@ func scanCashShift(row pgx.Row) (cashShiftView, error) {
 		&shift.ClosingNote,
 		&shift.OpenedByName,
 		&shift.ClosedByName,
+		&shift.BusinessDate,
 		&shift.OpenedAt,
 		&shift.ClosedAt,
 		&shift.MovementCount,
@@ -106,7 +111,9 @@ func scanCashShift(row pgx.Row) (cashShiftView, error) {
 func (a *API) loadCashMovements(r *http.Request, shiftID string) ([]cashMovementView, error) {
 	s := r.Context().Value(scopeKey{}).(scope)
 	rows, err := a.db.Query(r.Context(), `
-		SELECT cm.id::text,cm.movement_type,cm.amount::text,cm.reason,cm.note,u.full_name,
+		SELECT cm.id::text,cm.movement_type,cm.source_type,
+		       CASE WHEN cm.source_id IS NULL THEN NULL ELSE cm.source_id::text END,
+		       cm.amount::text,cm.reason,cm.note,u.full_name,
 		       to_char(cm.created_at,'YYYY-MM-DD"T"HH24:MI:SSOF')
 		FROM cash_movements cm
 		JOIN users u ON u.id=cm.created_by AND u.organization_id=cm.organization_id
@@ -121,7 +128,7 @@ func (a *API) loadCashMovements(r *http.Request, shiftID string) ([]cashMovement
 	items := []cashMovementView{}
 	for rows.Next() {
 		var item cashMovementView
-		if err := rows.Scan(&item.ID, &item.MovementType, &item.Amount, &item.Reason, &item.Note, &item.CreatedByName, &item.CreatedAt); err != nil {
+		if err := rows.Scan(&item.ID, &item.MovementType, &item.SourceType, &item.SourceID, &item.Amount, &item.Reason, &item.Note, &item.CreatedByName, &item.CreatedAt); err != nil {
 			return nil, err
 		}
 		items = append(items, item)
@@ -243,6 +250,90 @@ func (a *API) createCashRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, 201, item)
+}
+
+func (a *API) updateCashRegister(w http.ResponseWriter, r *http.Request) {
+	s := r.Context().Value(scopeKey{}).(scope)
+	var in struct {
+		Name string `json:"name"`
+	}
+	if json.NewDecoder(r.Body).Decode(&in) != nil {
+		fail(w, 400, "invalid_cash_register", "Revisa los datos de la caja.")
+		return
+	}
+	in.Name = strings.TrimSpace(in.Name)
+	if len(in.Name) < 1 || len(in.Name) > 80 {
+		fail(w, 400, "invalid_cash_register", "El nombre de la caja debe tener entre 1 y 80 caracteres.")
+		return
+	}
+
+	var item cashRegisterView
+	err := a.db.QueryRow(r.Context(), `
+		UPDATE cash_registers
+		SET name=$4,updated_at=now()
+		WHERE id=$1 AND organization_id=$2 AND location_id=$3
+		RETURNING id::text,code,name,active
+	`, r.PathValue("id"), s.OrganizationID, s.LocationID, in.Name).Scan(&item.ID, &item.Code, &item.Name, &item.Active)
+	if errors.Is(err, pgx.ErrNoRows) {
+		fail(w, 404, "cash_register_not_found", "La caja no existe en este local.")
+		return
+	}
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			fail(w, 409, "cash_register_exists", "Ya existe una caja con ese nombre en este local.")
+			return
+		}
+		fail(w, 503, "cash_unavailable", "No pudimos actualizar la caja.")
+		return
+	}
+	openShift, err := a.getOpenCashShiftByRegister(r, item.ID)
+	if err != nil {
+		fail(w, 503, "cash_unavailable", "La caja se actualizó, pero no pudimos cargar su turno.")
+		return
+	}
+	item.OpenShift = openShift
+	writeJSON(w, 200, item)
+}
+
+func (a *API) updateCashRegisterStatus(w http.ResponseWriter, r *http.Request) {
+	s := r.Context().Value(scopeKey{}).(scope)
+	var in struct {
+		Active bool `json:"active"`
+	}
+	if json.NewDecoder(r.Body).Decode(&in) != nil {
+		fail(w, 400, "invalid_cash_register", "Revisa el estado de la caja.")
+		return
+	}
+	if !in.Active {
+		var open bool
+		if err := a.db.QueryRow(r.Context(), `
+			SELECT EXISTS(
+			  SELECT 1 FROM cash_shifts
+			  WHERE cash_register_id=$1 AND organization_id=$2 AND location_id=$3 AND status='open'
+			)
+		`, r.PathValue("id"), s.OrganizationID, s.LocationID).Scan(&open); err != nil {
+			fail(w, 503, "cash_unavailable", "No pudimos validar la caja.")
+			return
+		}
+		if open {
+			fail(w, 409, "cash_register_has_open_shift", "Cierra el turno activo antes de desactivar la caja.")
+			return
+		}
+	}
+	tag, err := a.db.Exec(r.Context(), `
+		UPDATE cash_registers SET active=$4,updated_at=now()
+		WHERE id=$1 AND organization_id=$2 AND location_id=$3
+	`, r.PathValue("id"), s.OrganizationID, s.LocationID, in.Active)
+	if err != nil {
+		fail(w, 503, "cash_unavailable", "No pudimos actualizar el estado de la caja.")
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		fail(w, 404, "cash_register_not_found", "La caja no existe en este local.")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (a *API) getCurrentCashShift(w http.ResponseWriter, r *http.Request) {
@@ -378,8 +469,12 @@ func (a *API) openCashShift(w http.ResponseWriter, r *http.Request) {
 
 	var id string
 	err := a.db.QueryRow(r.Context(), `
-		INSERT INTO cash_shifts(organization_id,location_id,cash_register_id,opening_amount,opening_note,opened_by)
-		VALUES($1,$2,$3,$4,$5,$6)
+		INSERT INTO cash_shifts(organization_id,location_id,cash_register_id,business_date,opening_amount,opening_note,opened_by)
+		VALUES(
+		  $1,$2,$3,
+		  (now() AT TIME ZONE (SELECT timezone FROM locations WHERE id=$2 AND organization_id=$1))::date,
+		  $4,$5,$6
+		)
 		RETURNING id
 	`, s.OrganizationID, s.LocationID, in.CashRegisterID, in.OpeningAmount, in.Note, s.UserID).Scan(&id)
 	if err != nil {
@@ -448,13 +543,15 @@ func (a *API) createCashMovement(w http.ResponseWriter, r *http.Request) {
 
 	var item cashMovementView
 	err = tx.QueryRow(r.Context(), `
-		INSERT INTO cash_movements(organization_id,location_id,shift_id,movement_type,amount,reason,note,created_by)
-		VALUES($1,$2,$3,$4,$5,$6,$7,$8)
-		RETURNING id::text,movement_type,amount::text,reason,note,
+		INSERT INTO cash_movements(organization_id,location_id,shift_id,movement_type,source_type,amount,reason,note,created_by)
+		VALUES($1,$2,$3,$4,'manual',$5,$6,$7,$8)
+		RETURNING id::text,movement_type,source_type,
+		          CASE WHEN source_id IS NULL THEN NULL ELSE source_id::text END,
+		          amount::text,reason,note,
 		          (SELECT full_name FROM users WHERE id=$8 AND organization_id=$1),
 		          to_char(created_at,'YYYY-MM-DD"T"HH24:MI:SSOF')
 	`, s.OrganizationID, s.LocationID, r.PathValue("id"), in.MovementType, in.Amount, in.Reason, in.Note, s.UserID).
-		Scan(&item.ID, &item.MovementType, &item.Amount, &item.Reason, &item.Note, &item.CreatedByName, &item.CreatedAt)
+		Scan(&item.ID, &item.MovementType, &item.SourceType, &item.SourceID, &item.Amount, &item.Reason, &item.Note, &item.CreatedByName, &item.CreatedAt)
 	if err != nil {
 		fail(w, 503, "cash_unavailable", "No pudimos registrar el movimiento de caja.")
 		return
