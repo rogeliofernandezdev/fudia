@@ -336,7 +336,7 @@ export function PurchasesPage(){
         :!receiptItems.length?<div className="purchase-receipts-empty">
           <span><Icon name="check" size={22}/></span>
           <b>{q||status?"Sin coincidencias":"No hay mercadería pendiente de recibir"}</b>
-          <p>{q||status?"Ajusta la búsqueda o el filtro.":"Cuando una orden sea aprobada aparecerá aquí automáticamente."}</p>
+          <p>{q||status?"Ajusta la búsqueda o el filtro.":"Solo aparecen órdenes aprobadas con cantidades pendientes."}</p>
         </div>:<>
           <div className="table-wrap hover-scroll purchases-table-wrap purchase-receipts-table"><table>
             <thead><tr><th>ORDEN</th><th>PROVEEDOR</th><th>ENTREGA ESPERADA</th><th>ARTÍCULOS</th><th>ESTADO</th><th>ACCIÓN</th></tr></thead>
