@@ -71,9 +71,9 @@ function ReceiptContent(){
     }catch{/* El usuario puede cancelar el diálogo nativo. */}
   }
 
-  if(!orderId)return <div className="pos-empty"><Icon name="alert" size={22}/><b>No se pudo abrir el comprobante</b><span>No se encontró el pedido cobrado.</span></div>;
+  if(!orderId)return <div className="pos-empty"><Icon name="receipt" size={22}/><b>No se pudo abrir el comprobante</b><span>No se encontró el pedido cobrado.</span></div>;
   if(loading)return <div className="pos-empty"><b>Cargando comprobante…</b><span>Verificando el pago registrado.</span></div>;
-  if(!data)return <div className="pos-empty"><Icon name="alert" size={22}/><b>No se pudo abrir el comprobante</b><span>{error}</span></div>;
+  if(!data)return <div className="pos-empty"><Icon name="receipt" size={22}/><b>No se pudo abrir el comprobante</b><span>{error}</span></div>;
 
   return <div className="success-page"><div className="success-card">
     <span className="success-icon"><Icon name="check" size={30}/></span>
