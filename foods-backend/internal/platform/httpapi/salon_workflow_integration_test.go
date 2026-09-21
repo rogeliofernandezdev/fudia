@@ -65,6 +65,31 @@ func TestSalonKitchenPaymentDeliveryWorkflow(t *testing.T) {
 	if created.Status!="confirmado"{t.Fatalf("expected confirmed order sent to kitchen, got %q",created.Status)}
 	if created.Total!="25.00"{t.Fatalf("server catalog price must win, got total %q",created.Total)}
 
+	// Once a payment exists, the comanda amount/items cannot be edited.
+	partialPayReq:=httptest.NewRequest("POST","/v1/admin/payments",bytes.NewReader([]byte(fmt.Sprintf(`{"orderId":%q,"method":"card","amount":5,"reference":"ANTICIPO"}`,created.ID))))
+	partialPayReq=partialPayReq.WithContext(context.WithValue(partialPayReq.Context(),scopeKey{},s))
+	partialPayRec:=httptest.NewRecorder()
+	api.createPayment(partialPayRec,partialPayReq)
+	if partialPayRec.Code!=201{t.Fatalf("partial payment: %d %s",partialPayRec.Code,partialPayRec.Body.String())}
+
+	editBody:=[]byte(fmt.Sprintf(`{
+		"customerName":"Cambio indebido",
+		"customerPhone":"",
+		"address":"",
+		"reference":"",
+		"notes":"",
+		"deliveryFee":0,
+		"items":[{"productId":%q,"name":"ignorado","qty":2,"unitPrice":1,"note":"","selections":[]}]
+	}`,productID))
+	editReq:=httptest.NewRequest("PATCH","/v1/admin/orders/"+created.ID,bytes.NewReader(editBody))
+	editReq.SetPathValue("id",created.ID)
+	editReq=editReq.WithContext(context.WithValue(editReq.Context(),scopeKey{},s))
+	editRec:=httptest.NewRecorder()
+	api.updateOrder(editRec,editReq)
+	if editRec.Code!=409||!strings.Contains(editRec.Body.String(),"paid_order_not_editable"){
+		t.Fatalf("paid comanda edit must be blocked: %d %s",editRec.Code,editRec.Body.String())
+	}
+
 	// Salón/Pedidos cannot start preparation; only Cocina can.
 	genericPrepReq:=httptest.NewRequest("PATCH","/v1/admin/orders/"+created.ID+"/status",bytes.NewReader([]byte(`{"status":"preparando"}`)))
 	genericPrepReq.SetPathValue("id",created.ID)
@@ -99,7 +124,7 @@ func TestSalonKitchenPaymentDeliveryWorkflow(t *testing.T) {
 		t.Fatalf("unpaid salon delivery must be blocked: %d %s",unpaidDeliverRec.Code,unpaidDeliverRec.Body.String())
 	}
 
-	payReq:=httptest.NewRequest("POST","/v1/admin/payments",bytes.NewReader([]byte(fmt.Sprintf(`{"orderId":%q,"method":"card","amount":25,"reference":"WF"}`,created.ID))))
+	payReq:=httptest.NewRequest("POST","/v1/admin/payments",bytes.NewReader([]byte(fmt.Sprintf(`{"orderId":%q,"method":"card","amount":20,"reference":"SALDO"}`,created.ID))))
 	payReq=payReq.WithContext(context.WithValue(payReq.Context(),scopeKey{},s))
 	payRec:=httptest.NewRecorder()
 	api.createPayment(payRec,payReq)
