@@ -255,6 +255,7 @@ test("compras concentra orden recepcion y altas de abastecimiento",()=>{
 test("caja separa cajas fisicas de sus turnos",()=>{
   const page=read("src/modules/operations/cash/presentation/cash-page.tsx");
   const dialogs=read("src/modules/operations/cash/presentation/cash-dialogs.tsx");
+  const advancedDialogs=read("src/modules/operations/cash/presentation/cash-advanced-dialogs.tsx");
   const api=read("src/modules/operations/cash/infrastructure/cash-api.ts");
   const schema=read("src/modules/operations/cash/domain/cash-schema.ts");
   const types=read("src/modules/operations/cash/domain/types.ts");
@@ -285,6 +286,12 @@ test("caja separa cajas fisicas de sus turnos",()=>{
   assert.ok(dialogs.includes("Efectivo contado"),"El arqueo solicita el efectivo contado");
   assert.ok(dialogs.includes("DIFERENCIA"),"El cierre calcula sobrante o faltante");
   assert.ok(dialogs.includes("ORIGEN"),"El detalle de turno muestra el origen de cada movimiento");
+  assert.ok(dialogs.includes("Cierre ciego activo"),"El arqueo soporta cierre ciego real");
+  assert.ok(dialogs.includes("Por denominaciones"),"El arqueo permite conteo por denominaciones");
+  assert.ok(dialogs.includes("denominationsForCurrency"),"Las denominaciones se adaptan a la moneda configurada");
+  assert.ok(advancedDialogs.includes("CashTeamDialog"),"Caja administra el equipo asignado al turno");
+  assert.ok(advancedDialogs.includes("CashOperationDialog"),"Caja separa retiros depósitos y transferencias de movimientos manuales");
+  assert.ok(advancedDialogs.includes("Transferencia entre cajas"),"Las transferencias de efectivo tienen un flujo explícito");
 
   assert.ok(api.includes('"cash-registers"'),"Frontend consulta y crea cajas del local");
   assert.ok(api.includes("updateCashRegister"),"Frontend permite renombrar cajas");
@@ -292,12 +299,38 @@ test("caja separa cajas fisicas de sus turnos",()=>{
   assert.ok(api.includes("cashRegisterId"),"Abrir turno envía explícitamente la caja seleccionada");
   assert.ok(api.includes("/movements"),"Caja registra movimientos contra el turno");
   assert.ok(api.includes("/close"),"Caja cierra el turno mediante endpoint dedicado");
+  assert.ok(api.includes("listCashShiftUsers"),"Caja consulta el equipo de cada turno");
+  assert.ok(api.includes("assignCashShiftUser"),"Caja asigna usuarios al turno");
+  assert.ok(api.includes("createCashOperation"),"Caja registra operaciones especiales atómicas");
   assert.ok(schema.includes("cashRegisterResolver"),"El alta de caja valida su formulario");
   assert.ok(schema.includes("cashMovementResolver"),"Movimientos usan validación de formulario");
   assert.ok(schema.includes("closeCashShiftResolver"),"El arqueo usa validación de formulario");
   assert.ok(types.includes("openShift:CashShift|null"),"Cada caja conoce si tiene un turno abierto");
   assert.ok(types.includes("businessDate:string"),"El turno conserva día operativo");
   assert.ok(types.includes('sourceType:"manual"'),"Los movimientos están preparados para orígenes automáticos");
+  assert.ok(types.includes("expectedVisible:boolean"),"El backend controla si el esperado puede mostrarse");
+  assert.ok(types.includes("blindClose:boolean"),"Cada caja conserva su configuración de cierre ciego");
+  assert.ok(types.includes("CashShiftUser"),"El turno soporta múltiples usuarios");
+  assert.ok(types.includes("CashCountLine"),"El cierre conserva conteo por denominaciones");
+});
+
+test("pos cobra pedidos y sincroniza efectivo con caja",()=>{
+  const page=read("src/modules/operations/pos/presentation/pos-page.tsx");
+  const dialogs=read("src/modules/operations/pos/presentation/pos-dialogs.tsx");
+  const api=read("src/modules/operations/pos/infrastructure/pos-api.ts");
+  const route=read("src/app/(admin)/pos/page.tsx");
+
+  assert.ok(route.includes("POSPage"),"/pos ya no es un placeholder");
+  assert.equal(route.includes("ComingSoonPage"),false,"Punto de venta tiene implementación operativa");
+  assert.ok(page.includes("Por cobrar"),"POS conserva pagos parciales en la cola de cobro");
+  assert.ok(page.includes("getCurrentCashShift"),"POS exige un turno asignado para operar");
+  assert.ok(page.includes("No estás asignado a una caja abierta"),"POS explica claramente cuando falta turno");
+  assert.ok(page.includes("PaymentDialog"),"POS registra cobros desde la bandeja");
+  assert.ok(page.includes("RefundDialog"),"POS permite devolver pagos existentes");
+  assert.ok(dialogs.includes("incrementará automáticamente el efectivo esperado"),"El cobro en efectivo comunica su impacto en Caja");
+  assert.ok(dialogs.includes("La devolución saldrá del efectivo esperado"),"La devolución en efectivo comunica su impacto en Caja");
+  assert.ok(api.includes('apiFetch<Payment>("payments"'),"POS registra pagos en el límite oficial");
+  assert.ok(api.includes("/refund"),"POS registra devoluciones ligadas al pago original");
 });
 
 test("combos conserva la misma tabla en movil y el shell no desborda",()=>{
@@ -346,6 +379,7 @@ test("las rutas principales componen modulos",()=>{
     "src/app/(admin)/salon/page.tsx":"@/modules/operations",
     "src/app/(admin)/cocina/page.tsx":"@/modules/operations",
     "src/app/(admin)/mesas/page.tsx":"@/modules/operations",
+    "src/app/(admin)/pos/page.tsx":"@/modules/operations",
     "src/app/(admin)/caja/page.tsx":"@/modules/operations",
     "src/app/(admin)/productos/page.tsx":"@/modules/menu",
     "src/app/(admin)/combos/page.tsx":"@/modules/menu",
