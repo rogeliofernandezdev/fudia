@@ -130,7 +130,7 @@ export function CloseCashShiftDialog({shift,busy,formatMoney,close,save}:{shift:
   </section></div>;
 }
 
-export function CashShiftDetailDialog({shift,formatMoney,formatDateTime,close}:{shift:CashShift;formatMoney:(value:number)=>string;formatDateTime:(value:string)=>string;close:()=>void}){
+export function CashShiftDetailDialog({shift,formatMoney,formatDateTime,formatBusinessDate,close}:{shift:CashShift;formatMoney:(value:number)=>string;formatDateTime:(value:string)=>string;formatBusinessDate:(value:string)=>string;close:()=>void}){
   const variance=Number(shift.varianceAmount??0);
   return <div className="modal-backdrop modal-overlay-in"><section className="crud-modal cash-detail-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-detail-title">
     <div className="modal-accent"/>
@@ -138,7 +138,7 @@ export function CashShiftDetailDialog({shift,formatMoney,formatDateTime,close}:{
     <div className="cash-detail-body">
       <section className="cash-detail-head">
         <div><small>CAJA</small><b>{shift.cashRegisterName}</b></div>
-        <div><small>DÍA OPERATIVO</small><b>{shift.businessDate}</b></div>
+        <div><small>DÍA OPERATIVO</small><b>{formatBusinessDate(shift.businessDate)}</b></div>
         <div><small>CAJERO</small><b>{shift.openedByName}</b></div>
         <div><small>APERTURA</small><b>{formatDateTime(shift.openedAt)}</b></div>
         <div><small>CIERRE</small><b>{shift.closedAt?formatDateTime(shift.closedAt):"En curso"}</b></div>
@@ -154,8 +154,19 @@ export function CashShiftDetailDialog({shift,formatMoney,formatDateTime,close}:{
       {(shift.openingNote||shift.closingNote)&&<section className="cash-detail-notes">{shift.openingNote&&<div><small>APERTURA</small><p>{shift.openingNote}</p></div>}{shift.closingNote&&<div><small>CIERRE</small><p>{shift.closingNote}</p></div>}</section>}
       <section className="cash-detail-movements">
         <header><div><small>MOVIMIENTOS</small><h3>{shift.movementCount} {shift.movementCount===1?"movimiento":"movimientos"}</h3></div></header>
-        {shift.movements?.length?<div className="table-wrap hover-scroll"><table><thead><tr><th>FECHA</th><th>TIPO</th><th>MOTIVO</th><th>USUARIO</th><th>MONTO</th></tr></thead><tbody>{shift.movements.map(item=><tr key={item.id}><td>{formatDateTime(item.createdAt)}</td><td><span className={"cash-movement-kind "+item.movementType}><Icon name={item.movementType==="income"?"plus":"minus"} size={12}/>{item.movementType==="income"?"Ingreso":"Egreso"}</span></td><td><b>{item.reason}</b>{item.note&&<small>{item.note}</small>}</td><td>{item.createdByName}</td><td><b className={item.movementType}>{item.movementType==="income"?"+":"-"}{formatMoney(Number(item.amount))}</b></td></tr>)}</tbody></table></div>:<div className="cash-detail-empty"><Icon name="receipt" size={19}/><span>Este turno no registró movimientos manuales.</span></div>}
+        {shift.movements?.length?<div className="table-wrap hover-scroll"><table><thead><tr><th>FECHA</th><th>TIPO</th><th>ORIGEN</th><th>MOTIVO</th><th>USUARIO</th><th>MONTO</th></tr></thead><tbody>{shift.movements.map(item=><tr key={item.id}><td>{formatDateTime(item.createdAt)}</td><td><span className={"cash-movement-kind "+item.movementType}><Icon name={item.movementType==="income"?"plus":"minus"} size={12}/>{item.movementType==="income"?"Ingreso":"Egreso"}</span></td><td><span className="cash-movement-source">{cashMovementSourceLabel(item.sourceType)}</span></td><td><b>{item.reason}</b>{item.note&&<small>{item.note}</small>}</td><td>{item.createdByName}</td><td><b className={item.movementType}>{item.movementType==="income"?"+":"-"}{formatMoney(Number(item.amount))}</b></td></tr>)}</tbody></table></div>:<div className="cash-detail-empty"><Icon name="receipt" size={19}/><span>Este turno no registró movimientos.</span></div>}
       </section>
     </div>
   </section></div>;
+}
+
+function cashMovementSourceLabel(source:string){
+  if(source==="cash_sale")return"Venta";
+  if(source==="cash_refund")return"Devolución";
+  if(source==="cash_pull")return"Retiro";
+  if(source==="transfer_in")return"Transferencia entrada";
+  if(source==="transfer_out")return"Transferencia salida";
+  if(source==="deposit")return"Depósito";
+  if(source==="adjustment")return"Ajuste";
+  return"Manual";
 }
