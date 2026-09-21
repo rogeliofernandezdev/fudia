@@ -707,9 +707,9 @@ func (a *API) getOrdersFloor(w http.ResponseWriter, r *http.Request) {
 		SELECT t.id,t.name,t.zone,t.seats,
 		  o.id,COALESCE(o.code,''),COALESCE(o.channel,''),COALESCE(o.status,''),COALESCE(o.customer_id::text,''),COALESCE(o.customer_name,''),COALESCE(o.customer_phone,''),COALESCE(o.address,''),COALESCE(o.reference,''),COALESCE(o.table_id::text,''),'',COALESCE(o.notes,''),COALESCE(o.subtotal::text,'0'),COALESCE(o.delivery_fee::text,'0'),COALESCE(o.total::text,'0'),COALESCE(to_char(o.created_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),''),COALESCE(to_char(o.updated_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),''),COALESCE((SELECT sum(i.qty)::int FROM order_items i WHERE i.order_id=o.id),0)
 		FROM tables t
-		LEFT JOIN orders o ON o.table_id=t.id AND o.organization_id=t.organization_id AND o.status NOT IN ('entregado','cancelado')
-		WHERE t.organization_id=$1 AND t.active
-		ORDER BY t.zone,t.name`, s.OrganizationID)
+		LEFT JOIN orders o ON o.table_id=t.id AND o.organization_id=t.organization_id AND o.location_id=t.location_id AND o.status NOT IN ('entregado','cancelado')
+		WHERE t.organization_id=$1 AND t.location_id=$2 AND t.active
+		ORDER BY t.zone,t.name`, s.OrganizationID, s.LocationID)
 	if err != nil {
 		fail(w, 503, "orders_unavailable", "No pudimos cargar el salón.")
 		return
@@ -739,7 +739,7 @@ func (a *API) getOrdersFloor(w http.ResponseWriter, r *http.Request) {
 
 func (a *API) getOrder(w http.ResponseWriter, r *http.Request) {
 	s := r.Context().Value(scopeKey{}).(scope)
-	o, err := scanOrder(a.db.QueryRow(r.Context(), `SELECT `+orderColumns+` FROM orders WHERE id=$1 AND organization_id=$2`, r.PathValue("id"), s.OrganizationID))
+	o, err := scanOrder(a.db.QueryRow(r.Context(), `SELECT `+orderColumns+` FROM orders WHERE id=$1 AND organization_id=$2 AND location_id=$3`, r.PathValue("id"), s.OrganizationID, s.LocationID))
 	if errors.Is(err, pgx.ErrNoRows) {
 		fail(w, 404, "order_not_found", "El pedido no existe.")
 		return
@@ -811,8 +811,8 @@ func (a *API) createOrder(w http.ResponseWriter, r *http.Request) {
 		if err = tx.QueryRow(r.Context(), `
 			SELECT id
 			FROM tables
-			WHERE id=$1 AND organization_id=$2 AND active
-			FOR UPDATE`, in.TableID, s.OrganizationID).Scan(&lockedTableID); errors.Is(err, pgx.ErrNoRows) {
+			WHERE id=$1 AND organization_id=$2 AND location_id=$3 AND active
+			FOR UPDATE`, in.TableID, s.OrganizationID, s.LocationID).Scan(&lockedTableID); errors.Is(err, pgx.ErrNoRows) {
 			fail(w, 400, "invalid_order", "La mesa no existe.")
 			return
 		} else if err != nil {
@@ -820,7 +820,7 @@ func (a *API) createOrder(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		var occupied bool
-		if err = tx.QueryRow(r.Context(), `SELECT EXISTS(SELECT 1 FROM orders WHERE organization_id=$1 AND table_id=$2 AND status NOT IN ('entregado','cancelado'))`, s.OrganizationID, in.TableID).Scan(&occupied); err != nil {
+		if err = tx.QueryRow(r.Context(), `SELECT EXISTS(SELECT 1 FROM orders WHERE organization_id=$1 AND location_id=$2 AND table_id=$3 AND status NOT IN ('entregado','cancelado'))`, s.OrganizationID, s.LocationID, in.TableID).Scan(&occupied); err != nil {
 			fail(w, 503, "order_unavailable", "No pudimos guardar el pedido.")
 			return
 		}
