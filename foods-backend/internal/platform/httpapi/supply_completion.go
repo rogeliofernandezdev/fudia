@@ -107,6 +107,8 @@ type purchaseReceiptItemView struct{
 	UnitsPerPresentation string `json:"unitsPerPresentation"`
 	StockQuantity string `json:"stockQuantity"`
 	UnitCost string `json:"unitCost"`
+	ReturnedQuantity string `json:"returnedQuantity"`
+	ReturnableQuantity string `json:"returnableQuantity"`
 }
 type purchaseReceiptDetail struct{
 	purchaseReceiptSummary
@@ -162,7 +164,9 @@ func (a *API) getPurchaseReceipt(w http.ResponseWriter,r *http.Request){
 	if err!=nil{fail(w,503,"purchase_receipt_unavailable","No pudimos cargar la recepción.");return}
 	rows,err:=a.db.Query(r.Context(),`
 		SELECT pri.id,pri.purchase_order_item_id,pri.inventory_item_id,COALESCE(p.name,ii.name),
-		  pri.quantity::text,pri.presentation_type,pri.units_per_presentation::text,pri.stock_quantity::text,pri.unit_cost::text
+		  pri.quantity::text,pri.presentation_type,pri.units_per_presentation::text,pri.stock_quantity::text,pri.unit_cost::text,
+		  COALESCE((SELECT sum(x.quantity) FROM purchase_return_items x WHERE x.purchase_receipt_item_id=pri.id AND x.organization_id=pri.organization_id),0)::text,
+		  GREATEST(pri.quantity-COALESCE((SELECT sum(x.quantity) FROM purchase_return_items x WHERE x.purchase_receipt_item_id=pri.id AND x.organization_id=pri.organization_id),0),0)::text
 		FROM purchase_receipt_items pri
 		JOIN inventory_items ii ON ii.id=pri.inventory_item_id AND ii.organization_id=pri.organization_id
 		LEFT JOIN products p ON p.id=ii.product_id AND p.organization_id=ii.organization_id
@@ -170,7 +174,7 @@ func (a *API) getPurchaseReceipt(w http.ResponseWriter,r *http.Request){
 	`,out.ID,s.OrganizationID)
 	if err!=nil{fail(w,503,"purchase_receipt_unavailable","No pudimos cargar el detalle de recepción.");return}
 	defer rows.Close();out.Items=[]purchaseReceiptItemView{}
-	for rows.Next(){var x purchaseReceiptItemView;if rows.Scan(&x.ID,&x.PurchaseOrderItemID,&x.InventoryItemID,&x.ItemName,&x.Quantity,&x.PresentationType,&x.UnitsPerPresentation,&x.StockQuantity,&x.UnitCost)!=nil{fail(w,503,"purchase_receipt_unavailable","No pudimos leer el detalle de recepción.");return};out.Items=append(out.Items,x)}
+	for rows.Next(){var x purchaseReceiptItemView;if rows.Scan(&x.ID,&x.PurchaseOrderItemID,&x.InventoryItemID,&x.ItemName,&x.Quantity,&x.PresentationType,&x.UnitsPerPresentation,&x.StockQuantity,&x.UnitCost,&x.ReturnedQuantity,&x.ReturnableQuantity)!=nil{fail(w,503,"purchase_receipt_unavailable","No pudimos leer el detalle de recepción.");return};out.Items=append(out.Items,x)}
 	writeJSON(w,200,out)
 }
 
