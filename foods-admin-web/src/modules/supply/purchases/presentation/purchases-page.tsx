@@ -132,40 +132,81 @@ export function PurchasesPage(){
 }
 
 function PurchaseOrderDialog({initial,suppliers,inventory,currencySymbol,busy,close,save}:{initial:PurchaseOrderDraft;suppliers:Supplier[];inventory:PurchaseInventoryOption[];currencySymbol:string;busy:boolean;close:()=>void;save:(draft:PurchaseOrderDraft)=>void}){
+  const qc=useQueryClient();
+  const{notify}=useFeedback();
+  const[createdItems,setCreatedItems]=useState<PurchaseInventoryOption[]>([]);
+  const[itemSearch,setItemSearch]=useState<Record<number,string>>({});
+  const[newItemLine,setNewItemLine]=useState<number|null>(null);
   const{control,register,handleSubmit,watch,setValue,formState:{errors,isSubmitted}}=useForm<PurchaseOrderDraft>({defaultValues:initial,resolver:purchaseOrderResolver,mode:"onSubmit",reValidateMode:"onChange"});
   const{fields,append,remove}=useFieldArray({control,name:"items"});
+  const categories=useQuery({queryKey:["purchase-item-categories"],queryFn:listPurchaseItemCategories,enabled:newItemLine!==null,staleTime:30000});
+  const createItem=useMutation({
+    mutationFn:({draft}:{index:number;draft:Parameters<typeof createPurchaseInventoryItem>[0]})=>createPurchaseInventoryItem(draft),
+    onSuccess:(item,variables)=>{
+      setCreatedItems(current=>current.some(existing=>existing.id===item.id)?current:[...current,item]);
+      chooseItem(variables.index,item.id,item);
+      setNewItemLine(null);
+      void qc.invalidateQueries({queryKey:["purchase-inventory"]});
+      void qc.invalidateQueries({queryKey:["inventory"]});
+      void qc.invalidateQueries({queryKey:["products"]});
+      notify({tone:"success",title:"Artículo creado",message:item.name+" quedó con stock 0 y seleccionado en la orden."});
+    },
+    onError:error=>notify({tone:"danger",title:"No se pudo crear el artículo",message:error.message}),
+  });
   const lines=watch("items");
+  const catalog=[...inventory,...createdItems.filter(item=>!inventory.some(existing=>existing.id===item.id))];
   const total=lines.reduce((sum,line)=>sum+(Number(line.quantity)||0)*(Number(line.unitCost)||0),0);
-  function chooseItem(index:number,id:string){
-    const option=inventory.find(item=>item.id===id);
+
+  function chooseItem(index:number,id:string,forced?:PurchaseInventoryOption){
+    const option=forced??catalog.find(item=>item.id===id);
     const presentation=option?.presentations.find(item=>item.presentationType==="unit")??option?.presentations[0];
-    setValue(`items.${index}.inventoryItemId`,id,{shouldValidate:isSubmitted});
-    setValue(`items.${index}.presentationId`,presentation?.id??"",{shouldValidate:isSubmitted});
+    setValue(\`items.\${index}.inventoryItemId\`,id,{shouldValidate:isSubmitted});
+    setValue(\`items.\${index}.presentationId\`,presentation?.id??"",{shouldValidate:isSubmitted});
+    setItemSearch(current=>({...current,[index]:""}));
   }
-  return <div className="modal-backdrop modal-overlay-in"><section className="crud-modal purchase-order-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="purchase-order-title" aria-busy={busy}><div className="modal-accent"/>
-    <header><span className="modal-title-icon"><Icon name="receipt" size={18}/></span><div><small>{initial.id?"EDITAR ORDEN":"NUEVA ORDEN"}</small><h2 id="purchase-order-title">Orden de compra</h2></div><button type="button" aria-label="Cerrar" onClick={close} disabled={busy}><Icon name="close"/></button></header>
-    <form onSubmit={handleSubmit(save)} noValidate><div className="purchase-form-body">
-      <section className="purchase-form-section"><div className="purchase-section-title"><span><Icon name="truck" size={17}/></span><div><b>Proveedor y entrega</b><small>Define quién abastece la orden y cuándo esperas recibirla.</small></div></div><div className="form-grid">
-        <label>Proveedor<Select autoFocus {...register("supplierId")} aria-invalid={Boolean(errors.supplierId)}><option value="">{suppliers.length?"Selecciona un proveedor":"No hay proveedores activos"}</option>{suppliers.map(supplier=><option value={supplier.id} key={supplier.id}>{supplier.name}{supplier.taxId?` · ${supplier.taxId}`:""}</option>)}</Select>{errors.supplierId?.message&&<small className="wizard-field-error">{errors.supplierId.message}</small>}</label>
-        <label>Entrega esperada<Input type="date" {...register("expectedAt")}/></label><div/>
-        <label className="span-2">Notas<Textarea rows={2} maxLength={500} {...register("notes")} placeholder="Condiciones, referencia o indicaciones para la compra"/>{errors.notes?.message&&<small className="wizard-field-error">{errors.notes.message}</small>}</label>
-      </div></section>
-      <section className="purchase-form-section"><div className="purchase-section-title purchase-lines-title"><span><Icon name="stock" size={17}/></span><div><b>Artículos de la orden</b><small>El costo se registra por presentación de compra.</small></div><Button kind="secondary" icon="plus" onClick={()=>append({inventoryItemId:"",presentationId:"",quantity:"1",unitCost:""})}>Agregar línea</Button></div>
-        <div className="purchase-lines">{fields.map((field,index)=>{const value=lines[index];const option=inventory.find(item=>item.id===value?.inventoryItemId);return <article className="purchase-line" key={field.id}>
-          <div className="purchase-line-number">{index+1}</div>
-          <label>Artículo<Select value={value?.inventoryItemId??""} onChange={event=>chooseItem(index,event.target.value)} aria-invalid={Boolean(errors.items?.[index]?.inventoryItemId)}><option value="">Selecciona...</option>{inventory.map(item=><option value={item.id} key={item.id}>{item.name}{item.kind==="ingredient"?" · Insumo":""}</option>)}</Select>{errors.items?.[index]?.inventoryItemId?.message&&<small className="wizard-field-error">{errors.items[index]?.inventoryItemId?.message}</small>}</label>
-          <label>Presentación<Select {...register(`items.${index}.presentationId`)} disabled={!option} aria-invalid={Boolean(errors.items?.[index]?.presentationId)}><option value="">Selecciona...</option>{(option?.presentations??[]).map(presentation=><option value={presentation.id} key={presentation.id}>{presentationName(presentation.presentationType,presentation.unitsPerPresentation,option?.unit)}</option>)}</Select>{errors.items?.[index]?.presentationId?.message&&<small className="wizard-field-error">{errors.items[index]?.presentationId?.message}</small>}</label>
-          <label>Cantidad<Input type="number" min="0.001" step="0.001" inputMode="decimal" {...register(`items.${index}.quantity`)} aria-invalid={Boolean(errors.items?.[index]?.quantity)}/>{errors.items?.[index]?.quantity?.message&&<small className="wizard-field-error">{errors.items[index]?.quantity?.message}</small>}</label>
-          <label>Costo unitario<div className="money-input"><span>{currencySymbol}</span><Input inputMode="decimal" {...register(`items.${index}.unitCost`)} placeholder="0.00" aria-invalid={Boolean(errors.items?.[index]?.unitCost)}/></div>{errors.items?.[index]?.unitCost?.message&&<small className="wizard-field-error">{errors.items[index]?.unitCost?.message}</small>}</label>
-          <div className="purchase-line-total"><small>SUBTOTAL</small><b>{currencySymbol} {formatRegionalNumber((Number(value?.quantity)||0)*(Number(value?.unitCost)||0),undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</b></div>
-          <RowActionButton action="remove" label="Quitar línea" disabled={fields.length===1} onClick={()=>remove(index)}/>
-        </article>})}</div>
-        {typeof errors.items?.message==="string"&&<div className="purchase-validation" role="alert"><Icon name="alert" size={15}/>{errors.items.message}</div>}
-      </section>
-      <div className="purchase-total"><span><small>TOTAL ESTIMADO</small><b>{fields.length} {fields.length===1?"línea":"líneas"}</b></span><strong>{currencySymbol} {formatRegionalNumber(total,undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</strong></div>
-    </div><footer><Button kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy||!suppliers.length||!inventory.length}>{busy?"Guardando…":"Guardar"}</Button></footer></form>
-    {busy&&<div className="modal-busy" role="status"><i/><span>Guardando…</span></div>}
-  </section></div>;
+
+  return <>
+    <div className="modal-backdrop modal-overlay-in"><section className="crud-modal purchase-order-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="purchase-order-title" aria-busy={busy}><div className="modal-accent"/>
+      <header><span className="modal-title-icon"><Icon name="receipt" size={18}/></span><div><small>{initial.id?"EDITAR ORDEN":"NUEVA ORDEN"}</small><h2 id="purchase-order-title">Orden de compra</h2></div><button type="button" aria-label="Cerrar" onClick={close} disabled={busy}><Icon name="close"/></button></header>
+      <form onSubmit={handleSubmit(save)} noValidate><div className="purchase-form-body">
+        <section className="purchase-form-section"><div className="purchase-section-title"><span><Icon name="truck" size={17}/></span><div><b>Proveedor y entrega</b><small>Define quién abastece la orden y cuándo esperas recibirla.</small></div></div><div className="form-grid">
+          <label>Proveedor<Select autoFocus {...register("supplierId")} aria-invalid={Boolean(errors.supplierId)}><option value="">{suppliers.length?"Selecciona un proveedor":"No hay proveedores activos"}</option>{suppliers.map(supplier=><option value={supplier.id} key={supplier.id}>{supplier.name}{supplier.taxId?" · "+supplier.taxId:""}</option>)}</Select>{errors.supplierId?.message&&<small className="wizard-field-error">{errors.supplierId.message}</small>}</label>
+          <label>Entrega esperada<Input type="date" {...register("expectedAt")}/></label><div/>
+          <label className="span-2">Notas<Textarea rows={2} maxLength={500} {...register("notes")} placeholder="Condiciones, referencia o indicaciones para la compra"/>{errors.notes?.message&&<small className="wizard-field-error">{errors.notes.message}</small>}</label>
+        </div></section>
+        <section className="purchase-form-section"><div className="purchase-section-title purchase-lines-title"><span><Icon name="stock" size={17}/></span><div><b>Artículos de la orden</b><small>Busca un artículo existente o créalo aquí si todavía no existe.</small></div><Button kind="secondary" icon="plus" onClick={()=>append({inventoryItemId:"",presentationId:"",quantity:"1",unitCost:""})}>Agregar línea</Button></div>
+          <div className="purchase-lines">{fields.map((field,index)=>{
+            const value=lines[index];
+            const selected=catalog.find(item=>item.id===value?.inventoryItemId);
+            const search=(itemSearch[index]??"").trim().toLowerCase();
+            let options=search?catalog.filter(item=>item.name.toLowerCase().includes(search)):catalog;
+            if(selected&&!options.some(item=>item.id===selected.id))options=[selected,...options];
+            return <article className="purchase-line" key={field.id}>
+              <div className="purchase-line-number">{index+1}</div>
+              <label className="purchase-item-picker">Artículo
+                <Input value={itemSearch[index]??""} onChange={event=>setItemSearch(current=>({...current,[index]:event.target.value}))} placeholder="Buscar artículo existente..."/>
+                <Select value={value?.inventoryItemId??""} onChange={event=>chooseItem(index,event.target.value)} aria-invalid={Boolean(errors.items?.[index]?.inventoryItemId)}>
+                  <option value="">{options.length?"Selecciona...":"Sin coincidencias"}</option>
+                  {options.map(item=><option value={item.id} key={item.id}>{item.name}{item.kind==="ingredient"?" · Insumo":""}</option>)}
+                </Select>
+                <button type="button" className="purchase-create-item" onClick={()=>setNewItemLine(index)}><Icon name="plus" size={13}/>{search&&options.length===0?"Crear nuevo artículo":"Crear nuevo artículo"}</button>
+                {errors.items?.[index]?.inventoryItemId?.message&&<small className="wizard-field-error">{errors.items[index]?.inventoryItemId?.message}</small>}
+              </label>
+              <label>Presentación<Select {...register(\`items.\${index}.presentationId\`)} disabled={!selected} aria-invalid={Boolean(errors.items?.[index]?.presentationId)}><option value="">Selecciona...</option>{(selected?.presentations??[]).map(presentation=><option value={presentation.id} key={presentation.id}>{presentationName(presentation.presentationType,presentation.unitsPerPresentation,selected?.unit)}</option>)}</Select>{errors.items?.[index]?.presentationId?.message&&<small className="wizard-field-error">{errors.items[index]?.presentationId?.message}</small>}</label>
+              <label>Cantidad<Input type="number" min="0.001" step="0.001" inputMode="decimal" {...register(\`items.\${index}.quantity\`)} aria-invalid={Boolean(errors.items?.[index]?.quantity)}/>{errors.items?.[index]?.quantity?.message&&<small className="wizard-field-error">{errors.items[index]?.quantity?.message}</small>}</label>
+              <label>Costo unitario<div className="money-input"><span>{currencySymbol}</span><Input inputMode="decimal" {...register(\`items.\${index}.unitCost\`)} placeholder="0.00" aria-invalid={Boolean(errors.items?.[index]?.unitCost)}/></div>{errors.items?.[index]?.unitCost?.message&&<small className="wizard-field-error">{errors.items[index]?.unitCost?.message}</small>}</label>
+              <div className="purchase-line-total"><small>SUBTOTAL</small><b>{currencySymbol} {formatRegionalNumber((Number(value?.quantity)||0)*(Number(value?.unitCost)||0),undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</b></div>
+              <RowActionButton action="remove" label="Quitar línea" disabled={fields.length===1} onClick={()=>remove(index)}/>
+            </article>;
+          })}</div>
+          {typeof errors.items?.message==="string"&&<div className="purchase-validation" role="alert"><Icon name="alert" size={15}/>{errors.items.message}</div>}
+        </section>
+        <div className="purchase-total"><span><small>TOTAL ESTIMADO</small><b>{fields.length} {fields.length===1?"línea":"líneas"}</b></span><strong>{currencySymbol} {formatRegionalNumber(total,undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</strong></div>
+      </div><footer><Button kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy||!suppliers.length}>{busy?"Guardando…":"Guardar"}</Button></footer></form>
+      {busy&&<div className="modal-busy" role="status"><i/><span>Guardando…</span></div>}
+    </section></div>
+    {newItemLine!==null&&(categories.isLoading?<RemoteModalSkeleton className="purchase-item-modal" label="Cargando catálogo para el artículo" rows={6} close={()=>setNewItemLine(null)}/>:<PurchaseItemDialog categories={categories.data??[]} categoryError={categories.isError?categories.error.message:null} currencySymbol={currencySymbol} busy={createItem.isPending} close={()=>setNewItemLine(null)} save={draft=>createItem.mutate({index:newItemLine,draft})}/>)}
+  </>;
 }
 
 function SupplierDialog({initial,busy,close,save}:{initial:SupplierDraft;busy:boolean;close:()=>void;save:(draft:SupplierDraft)=>void}){
