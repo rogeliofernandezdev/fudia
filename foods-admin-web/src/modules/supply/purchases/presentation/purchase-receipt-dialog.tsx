@@ -4,6 +4,7 @@ import {Button,Icon,Input,Textarea} from "@/design-system";
 import {useSession} from "@/providers/session-context";
 import {formatRegionalNumber} from "@/shared/i18n/regional-format";
 import {purchaseReceiptResolver} from "../domain/purchase-schema";
+import {PurchaseFlowSteps} from "./purchase-flow-steps";
 import type {PurchaseOrder,PurchaseReceiptDraft} from "../domain/types";
 
 export function PurchaseReceiptDialog({order,busy,close,save}:{order:PurchaseOrder;busy:boolean;close:()=>void;save:(draft:PurchaseReceiptDraft)=>void}){
@@ -49,6 +50,7 @@ export function PurchaseReceiptDialog({order,busy,close,save}:{order:PurchaseOrd
       </header>
       <form onSubmit={handleSubmit(submit)} noValidate>
         <div className="purchase-receipt-body">
+          <PurchaseFlowSteps status={order.status} active="receipt"/>
           <div className="purchase-receipt-intro"><Icon name="truck" size={17}/><p><b>Registra únicamente lo que llegó.</b> Puedes recibir una parte ahora y completar lo pendiente en otra recepción.</p></div>
           <div className="purchase-receipt-lines">
             {order.items.map((item,index)=><article className="purchase-receipt-line" key={item.id}>
