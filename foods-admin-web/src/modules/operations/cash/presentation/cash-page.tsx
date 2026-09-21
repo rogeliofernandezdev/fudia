@@ -279,7 +279,24 @@ export function CashPage(){
     {registerDialog&&<CashRegisterDialog initial={registerEditTarget} busy={saveRegister.isPending} close={()=>{setRegisterDialog(false);setRegisterEditTarget(null)}} save={draft=>saveRegister.mutate({target:registerEditTarget,draft})}/>} 
     {shiftTarget&&<OpenCashShiftDialog cashRegister={shiftTarget} busy={startShift.isPending} close={()=>setShiftTarget(null)} save={draft=>startShift.mutate({cashRegisterId:shiftTarget.id,draft})}/>}
     {movementTarget&&<CashMovementDialog type={movementTarget.type} busy={movement.isPending} close={()=>setMovementTarget(null)} save={draft=>movement.mutate({shiftId:movementTarget.shift.id,draft})}/>}
-    {closeTarget&&<CloseCashShiftDialog shift={closeTarget} busy={closeShiftMutation.isPending} formatMoney={money} close={()=>setCloseTarget(null)} save={draft=>closeShiftMutation.mutate({shiftId:closeTarget.id,draft})}/>}
+    {closeTarget&&<CloseCashShiftDialog shift={closeTarget} busy={closeShiftMutation.isPending} currency={settings.currency} formatMoney={money} close={()=>setCloseTarget(null)} save={draft=>closeShiftMutation.mutate({shiftId:closeTarget.id,draft})}/>}
+    {teamTarget&&<CashTeamDialog
+      shift={teamTarget}
+      users={teamUsers.data?.items??[]}
+      options={userOptions.data?.items??[]}
+      loading={teamUsers.isLoading||userOptions.isLoading}
+      busyUserId={assignUser.isPending?assignUser.variables?.userId??null:unassignUser.isPending?unassignUser.variables?.userId??null:null}
+      close={()=>setTeamTarget(null)}
+      assign={userId=>assignUser.mutate({shiftId:teamTarget.id,userId})}
+      unassign={userId=>unassignUser.mutate({shiftId:teamTarget.id,userId})}
+    />}
+    {operationTarget&&<CashOperationDialog
+      shift={operationTarget}
+      registers={registerItems}
+      busy={cashOperation.isPending}
+      close={()=>setOperationTarget(null)}
+      save={draft=>cashOperation.mutate({shiftId:operationTarget.id,draft})}
+    />}
     {detailId&&(detail.isLoading
       ?<RemoteModalSkeleton className="cash-detail-modal" label="Cargando turno de caja" rows={6} close={()=>setDetailId(null)}/>
       :detail.isError
