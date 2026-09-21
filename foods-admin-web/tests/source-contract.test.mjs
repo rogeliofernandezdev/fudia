@@ -187,6 +187,8 @@ test("compras concentra orden recepcion y altas de abastecimiento",()=>{
   const itemDialog=read("src/modules/supply/purchases/presentation/purchase-item-dialog.tsx");
   const receiptDialog=read("src/modules/supply/purchases/presentation/purchase-receipt-dialog.tsx");
   const api=read("src/modules/supply/purchases/infrastructure/purchases-api.ts");
+  const productApi=read("src/modules/menu/products/infrastructure/products-api.ts");
+  const productImageApi=read("src/shared/api/product-image.ts");
   const inventory=read("src/modules/supply/inventory/presentation/inventory-page.tsx");
 
   assert.ok(purchases.includes("PurchaseItemDialog"),"La alta de artículo vive dentro del flujo existente de Compras");
@@ -216,6 +218,8 @@ test("compras concentra orden recepcion y altas de abastecimiento",()=>{
   assert.ok(api.includes("purchase-orders/"),"Recepción permanece vinculada a la orden existente");
   assert.ok(api.includes("purchaseOrderItemId"),"La recepción identifica cada línea de la orden");
   assert.ok(api.includes("uploadProductImage"),"Compras reutiliza la carga compartida de imagen");
+  assert.ok(productApi.includes("uploadProductImage"),"Productos usa la misma carga compartida de imagen");
+  assert.ok(productImageApi.includes("/api/admin/products/"),"La carga de imagen mantiene un solo endpoint compartido");
   assert.equal(api.includes('"inventory/entries"'),false,"Compras no usa la antigua entrada manual de Inventario");
 
   assert.equal(inventory.includes("Nuevo producto vendible"),false,"Inventario no recupera creación de productos");
