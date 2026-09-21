@@ -256,6 +256,15 @@ func TestSalonTableOpeningIsSerializedAndChannelScoped(t *testing.T) {
 		WHERE organization_id=$1 AND table_id=$2 AND status NOT IN ('entregado','cancelado')
 	`,s.OrganizationID,tableID).Scan(&openOrders);err!=nil{t.Fatal(err)}
 	if openOrders!=1{t.Fatalf("expected exactly one open order for table, got %d",openOrders)}
+
+	deactivateReq:=httptest.NewRequest("DELETE","/v1/admin/tables/"+tableID,nil)
+	deactivateReq.SetPathValue("id",tableID)
+	deactivateReq=deactivateReq.WithContext(context.WithValue(deactivateReq.Context(),scopeKey{},s))
+	deactivateRec:=httptest.NewRecorder()
+	api.deactivateTable(deactivateRec,deactivateReq)
+	if deactivateRec.Code!=409||!strings.Contains(deactivateRec.Body.String(),"table_in_use"){
+		t.Fatalf("occupied table deactivation must be blocked: %d %s",deactivateRec.Code,deactivateRec.Body.String())
+	}
 }
 
 
@@ -275,9 +284,22 @@ func TestTablesAndZonesAreIsolatedByLocation(t *testing.T) {
 	s2:=s
 	s2.LocationID=secondLocationID
 
-	tableName:=fmt.Sprintf("Mesa compartida %d",nonce)
-	tableBody:=[]byte(fmt.Sprintf(`{"name":%q,"seats":4,"zone":"Terraza"}`,tableName))
+	zoneName:=fmt.Sprintf("Terraza %d",nonce)
+	createZoneFor:=func(current scope) zone {
+		req:=httptest.NewRequest("POST","/v1/admin/zones",bytes.NewReader([]byte(fmt.Sprintf(`{"name":%q,"sortOrder":1}`,zoneName))))
+		req=req.WithContext(context.WithValue(req.Context(),scopeKey{},current))
+		rec:=httptest.NewRecorder()
+		api.createZone(rec,req)
+		if rec.Code!=201{t.Fatalf("create zone at %s: %d %s",current.LocationID,rec.Code,rec.Body.String())}
+		var value zone
+		if err:=json.Unmarshal(rec.Body.Bytes(),&value);err!=nil{t.Fatal(err)}
+		return value
+	}
+	firstZone:=createZoneFor(s)
+	secondZone:=createZoneFor(s2)
 
+	tableName:=fmt.Sprintf("Mesa compartida %d",nonce)
+	tableBody:=[]byte(fmt.Sprintf(`{"name":%q,"seats":4,"zone":%q}`,tableName,zoneName))
 	createTableFor:=func(current scope) table {
 		req:=httptest.NewRequest("POST","/v1/admin/tables",bytes.NewReader(tableBody))
 		req=req.WithContext(context.WithValue(req.Context(),scopeKey{},current))
@@ -292,22 +314,19 @@ func TestTablesAndZonesAreIsolatedByLocation(t *testing.T) {
 	secondTable:=createTableFor(s2)
 	if firstTable.ID==secondTable.ID{t.Fatal("locations must have different physical table rows")}
 
-	zoneName:=fmt.Sprintf("Terraza %d",nonce)
-	createZoneFor:=func(current scope) {
-		req:=httptest.NewRequest("POST","/v1/admin/zones",bytes.NewReader([]byte(fmt.Sprintf(`{"name":%q,"sortOrder":1}`,zoneName))))
-		req=req.WithContext(context.WithValue(req.Context(),scopeKey{},current))
-		rec:=httptest.NewRecorder()
-		api.createZone(rec,req)
-		if rec.Code!=201{t.Fatalf("create zone at %s: %d %s",current.LocationID,rec.Code,rec.Body.String())}
-	}
-	createZoneFor(s)
-	createZoneFor(s2)
-
 	t.Cleanup(func(){
-		_,_=pool.Exec(context.Background(),`DELETE FROM zones WHERE organization_id=$1 AND name=$2`,s.OrganizationID,zoneName)
-		_,_=pool.Exec(context.Background(),`DELETE FROM tables WHERE organization_id=$1 AND name=$2`,s.OrganizationID,tableName)
+		_,_=pool.Exec(context.Background(),`DELETE FROM tables WHERE id=ANY($1::uuid[])`,[]string{firstTable.ID,secondTable.ID})
+		_,_=pool.Exec(context.Background(),`DELETE FROM zones WHERE id=ANY($1::uuid[])`,[]string{firstZone.ID,secondZone.ID})
 		_,_=pool.Exec(context.Background(),`DELETE FROM locations WHERE id=$1 AND organization_id=$2`,secondLocationID,s.OrganizationID)
 	})
+
+	invalidZoneReq:=httptest.NewRequest("POST","/v1/admin/tables",bytes.NewReader([]byte(fmt.Sprintf(`{"name":%q,"seats":2,"zone":"No existe"}`,"Mesa inválida"))))
+	invalidZoneReq=invalidZoneReq.WithContext(context.WithValue(invalidZoneReq.Context(),scopeKey{},s))
+	invalidZoneRec:=httptest.NewRecorder()
+	api.createTable(invalidZoneRec,invalidZoneReq)
+	if invalidZoneRec.Code!=400||!strings.Contains(invalidZoneRec.Body.String(),"invalid_zone"){
+		t.Fatalf("unknown table zone must be rejected: %d %s",invalidZoneRec.Code,invalidZoneRec.Body.String())
+	}
 
 	assertTableList:=func(current scope,wantID string){
 		req:=httptest.NewRequest("GET","/v1/admin/tables?page=1&pageSize=20",nil)
@@ -329,6 +348,29 @@ func TestTablesAndZonesAreIsolatedByLocation(t *testing.T) {
 	assertTableList(s,firstTable.ID)
 	assertTableList(s2,secondTable.ID)
 
+	deactivateZoneReq:=httptest.NewRequest("DELETE","/v1/admin/zones/"+firstZone.ID,nil)
+	deactivateZoneReq.SetPathValue("id",firstZone.ID)
+	deactivateZoneReq=deactivateZoneReq.WithContext(context.WithValue(deactivateZoneReq.Context(),scopeKey{},s))
+	deactivateZoneRec:=httptest.NewRecorder()
+	api.deactivateZone(deactivateZoneRec,deactivateZoneReq)
+	if deactivateZoneRec.Code!=409||!strings.Contains(deactivateZoneRec.Body.String(),"zone_in_use"){
+		t.Fatalf("zone with active tables must be blocked: %d %s",deactivateZoneRec.Code,deactivateZoneRec.Body.String())
+	}
+
+	renamedZone:=zoneName+" Norte"
+	renameReq:=httptest.NewRequest("PATCH","/v1/admin/zones/"+firstZone.ID,bytes.NewReader([]byte(fmt.Sprintf(`{"name":%q,"sortOrder":1,"active":true}`,renamedZone))))
+	renameReq.SetPathValue("id",firstZone.ID)
+	renameReq=renameReq.WithContext(context.WithValue(renameReq.Context(),scopeKey{},s))
+	renameRec:=httptest.NewRecorder()
+	api.updateZone(renameRec,renameReq)
+	if renameRec.Code!=200{t.Fatalf("rename zone: %d %s",renameRec.Code,renameRec.Body.String())}
+
+	var firstTableZone,secondTableZone string
+	if err:=pool.QueryRow(ctx,`SELECT zone FROM tables WHERE id=$1`,firstTable.ID).Scan(&firstTableZone);err!=nil{t.Fatal(err)}
+	if err:=pool.QueryRow(ctx,`SELECT zone FROM tables WHERE id=$1`,secondTable.ID).Scan(&secondTableZone);err!=nil{t.Fatal(err)}
+	if firstTableZone!=renamedZone{t.Fatalf("renamed zone was not propagated to local table: %q",firstTableZone)}
+	if secondTableZone!=zoneName{t.Fatalf("zone rename leaked to another location: %q",secondTableZone)}
+
 	qrReq:=httptest.NewRequest("GET","/v1/public/tables/"+secondTable.QrToken,nil)
 	qrReq.SetPathValue("token",secondTable.QrToken)
 	qrRec:=httptest.NewRecorder()
@@ -349,3 +391,4 @@ func TestTablesAndZonesAreIsolatedByLocation(t *testing.T) {
 		t.Fatalf("cross-location table use must be rejected: %d %s",foreignRec.Code,foreignRec.Body.String())
 	}
 }
+
