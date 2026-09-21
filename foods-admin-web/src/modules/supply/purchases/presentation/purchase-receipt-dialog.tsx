@@ -4,7 +4,6 @@ import {Button,Icon,Input,Textarea} from "@/design-system";
 import {useSession} from "@/providers/session-context";
 import {formatRegionalNumber} from "@/shared/i18n/regional-format";
 import {purchaseReceiptResolver} from "../domain/purchase-schema";
-import {PurchaseFlowSteps} from "./purchase-flow-steps";
 import type {PurchaseOrder,PurchaseReceiptDraft} from "../domain/types";
 
 export function PurchaseReceiptDialog({order,busy,close,save}:{order:PurchaseOrder;busy:boolean;close:()=>void;save:(draft:PurchaseReceiptDraft)=>void}){
@@ -50,7 +49,6 @@ export function PurchaseReceiptDialog({order,busy,close,save}:{order:PurchaseOrd
       </header>
       <form onSubmit={handleSubmit(submit)} noValidate>
         <div className="purchase-receipt-body">
-          <PurchaseFlowSteps status={order.status} active="receipt"/>
           <div className="purchase-receipt-intro"><Icon name="truck" size={17}/><p><b>Registra únicamente lo que llegó.</b> Puedes recibir una parte ahora y completar lo pendiente en otra recepción.</p></div>
           <div className="purchase-receipt-lines">
             {order.items.map((item,index)=><article className="purchase-receipt-line" key={item.id}>
@@ -64,7 +62,6 @@ export function PurchaseReceiptDialog({order,busy,close,save}:{order:PurchaseOrd
           </div>
           {typeof errors.items?.message==="string"&&<div className="purchase-validation" role="alert"><Icon name="alert" size={15}/>{errors.items.message}</div>}
           <label className="purchase-receipt-notes">Observación opcional<Textarea rows={3} maxLength={500} {...register("notes")} placeholder="Documento, lote, incidencia o referencia de esta recepción"/>{errors.notes?.message&&<small className="wizard-field-error">{errors.notes.message}</small>}</label>
-          <div className="purchase-receipt-stock-note"><Icon name="check" size={16}/><p>Al confirmar, solo estas cantidades incrementarán Inventario y quedarán registradas en Kárdex vinculadas a esta orden.</p></div>
         </div>
         <footer><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" kind="success" disabled={busy}>{busy?"Confirmando…":"Confirmar recepción"}</Button></footer>
       </form>
