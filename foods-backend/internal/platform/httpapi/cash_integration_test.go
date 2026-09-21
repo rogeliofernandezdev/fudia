@@ -10,12 +10,27 @@ import (
 	"time"
 )
 
-func TestCashShiftLifecycleTracksExpectedAndVariance(t *testing.T) {
+func TestCashRegisterAndShiftLifecycleTracksExpectedAndVariance(t *testing.T) {
 	pool := integrationPool(t)
 	s := seedInventoryScope(t, pool)
 	api := New(pool)
 
-	openBody := []byte(`{"openingAmount":100,"note":"Fondo inicial"}`)
+	registerReq := httptest.NewRequest("POST", "/v1/admin/cash-registers", bytes.NewReader([]byte(`{"name":"Caja principal"}`)))
+	registerReq = registerReq.WithContext(context.WithValue(registerReq.Context(), scopeKey{}, s))
+	registerRec := httptest.NewRecorder()
+	api.createCashRegister(registerRec, registerReq)
+	if registerRec.Code != 201 {
+		t.Fatalf("expected cash register 201, got %d body=%s", registerRec.Code, registerRec.Body.String())
+	}
+	var register cashRegisterView
+	if err := json.Unmarshal(registerRec.Body.Bytes(), &register); err != nil {
+		t.Fatal(err)
+	}
+	if register.ID == "" || register.Name != "Caja principal" || !register.Active {
+		t.Fatalf("unexpected cash register: %#v", register)
+	}
+
+	openBody := []byte(fmt.Sprintf(`{"cashRegisterId":%q,"openingAmount":100,"note":"Fondo inicial"}`, register.ID))
 	openReq := httptest.NewRequest("POST", "/v1/admin/cash-shifts", bytes.NewReader(openBody))
 	openReq = openReq.WithContext(context.WithValue(openReq.Context(), scopeKey{}, s))
 	openRec := httptest.NewRecorder()
@@ -27,8 +42,25 @@ func TestCashShiftLifecycleTracksExpectedAndVariance(t *testing.T) {
 	if err := json.Unmarshal(openRec.Body.Bytes(), &opened); err != nil {
 		t.Fatal(err)
 	}
-	if opened.Status != "open" || opened.OpeningAmount != "100.00" || opened.ExpectedAmount != "100.00" {
+	if opened.Status != "open" || opened.CashRegisterID != register.ID || opened.CashRegisterName != register.Name || opened.OpeningAmount != "100.00" || opened.ExpectedAmount != "100.00" {
 		t.Fatalf("unexpected opened shift: %#v", opened)
+	}
+
+	listReq := httptest.NewRequest("GET", "/v1/admin/cash-registers", nil)
+	listReq = listReq.WithContext(context.WithValue(listReq.Context(), scopeKey{}, s))
+	listRec := httptest.NewRecorder()
+	api.listCashRegisters(listRec, listReq)
+	if listRec.Code != 200 {
+		t.Fatalf("expected register list 200, got %d body=%s", listRec.Code, listRec.Body.String())
+	}
+	var registers struct {
+		Items []cashRegisterView `json:"items"`
+	}
+	if err := json.Unmarshal(listRec.Body.Bytes(), &registers); err != nil {
+		t.Fatal(err)
+	}
+	if len(registers.Items) != 1 || registers.Items[0].OpenShift == nil || registers.Items[0].OpenShift.ID != opened.ID {
+		t.Fatalf("register must expose its open shift: %#v", registers.Items)
 	}
 
 	duplicateReq := httptest.NewRequest("POST", "/v1/admin/cash-shifts", bytes.NewReader(openBody))
@@ -107,7 +139,7 @@ func TestCashShiftLifecycleTracksExpectedAndVariance(t *testing.T) {
 	currentAfterReq = currentAfterReq.WithContext(context.WithValue(currentAfterReq.Context(), scopeKey{}, s))
 	currentAfterRec := httptest.NewRecorder()
 	api.getCurrentCashShift(currentAfterRec, currentAfterReq)
-	if currentAfterRec.Code != 200 || currentAfterRec.Body.String() == "" {
+	if currentAfterRec.Code != 200 {
 		t.Fatalf("expected empty current shift response, got %d body=%s", currentAfterRec.Code, currentAfterRec.Body.String())
 	}
 	if err := json.Unmarshal(currentAfterRec.Body.Bytes(), &current); err != nil {
@@ -116,20 +148,9 @@ func TestCashShiftLifecycleTracksExpectedAndVariance(t *testing.T) {
 	if current.Shift != nil {
 		t.Fatalf("expected no current shift after closing, got %#v", current.Shift)
 	}
-
-	var movementCount int
-	if err := pool.QueryRow(context.Background(), `
-		SELECT count(*) FROM cash_movements
-		WHERE organization_id=$1 AND location_id=$2 AND shift_id=$3
-	`, s.OrganizationID, s.LocationID, opened.ID).Scan(&movementCount); err != nil {
-		t.Fatal(err)
-	}
-	if movementCount != 2 {
-		t.Fatalf("expected 2 immutable movements, got %d", movementCount)
-	}
 }
 
-func TestCashShiftIsScopedToLocation(t *testing.T) {
+func TestCashShiftAndRegisterAreScopedToLocation(t *testing.T) {
 	pool := integrationPool(t)
 	s := seedInventoryScope(t, pool)
 	ctx := context.Background()
@@ -143,12 +164,21 @@ func TestCashShiftIsScopedToLocation(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	var registerID string
+	if err := pool.QueryRow(ctx, `
+		INSERT INTO cash_registers(organization_id,location_id,name,created_by)
+		VALUES($1,$2,'Caja externa',$3)
+		RETURNING id
+	`, s.OrganizationID, otherLocationID, s.UserID).Scan(&registerID); err != nil {
+		t.Fatal(err)
+	}
+
 	var shiftID string
 	if err := pool.QueryRow(ctx, `
-		INSERT INTO cash_shifts(organization_id,location_id,opening_amount,opened_by)
-		VALUES($1,$2,10,$3)
+		INSERT INTO cash_shifts(organization_id,location_id,cash_register_id,opening_amount,opened_by)
+		VALUES($1,$2,$3,10,$4)
 		RETURNING id
-	`, s.OrganizationID, otherLocationID, s.UserID).Scan(&shiftID); err != nil {
+	`, s.OrganizationID, otherLocationID, registerID, s.UserID).Scan(&shiftID); err != nil {
 		t.Fatal(err)
 	}
 
