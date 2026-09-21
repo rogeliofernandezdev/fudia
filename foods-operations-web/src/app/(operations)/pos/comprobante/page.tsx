@@ -2,7 +2,7 @@
 
 import {Button,Input,Label} from "@/components/ui/controls";
 import {useEffect,useMemo,useState} from "react";
-import {useRouter} from "next/navigation";
+import {useRouter,useSearchParams} from "next/navigation";
 import {Icon} from "@/components/icon";
 import {operationsFetch,POSOrderDetail} from "@/lib/operations-api";
 
@@ -10,7 +10,8 @@ const money=(value:number|string)=>`S/ ${Number(value||0).toFixed(2)}`;
 
 export default function ReceiptPage(){
   const router=useRouter();
-  const[orderId,setOrderId]=useState("");
+  const searchParams=useSearchParams();
+  const orderId=searchParams.get("orderId")??"";
   const[data,setData]=useState<POSOrderDetail|null>(null);
   const[receiptType,setReceiptType]=useState("boleta");
   const[documentId,setDocumentId]=useState("");
@@ -19,14 +20,19 @@ export default function ReceiptPage(){
   const[error,setError]=useState("");
 
   useEffect(()=>{
-    const id=new URLSearchParams(window.location.search).get("orderId")??"";
-    setOrderId(id);
-    if(!id){setError("No se encontró el pedido cobrado.");setLoading(false);return;}
-    void operationsFetch<POSOrderDetail>(`pos/orders/${id}`).then(order=>{
+    if(!orderId)return;
+    let active=true;
+    void operationsFetch<POSOrderDetail>(`pos/orders/${orderId}`).then(order=>{
+      if(!active)return;
       setData(order);
       if(order.paymentStatus!=="paid")setError("El pedido todavía tiene saldo pendiente.");
-    }).catch(e=>setError(e instanceof Error?e.message:"No se pudo cargar el comprobante.")).finally(()=>setLoading(false));
-  },[]);
+    }).catch(e=>{
+      if(active)setError(e instanceof Error?e.message:"No se pudo cargar el comprobante.");
+    }).finally(()=>{
+      if(active)setLoading(false);
+    });
+    return()=>{active=false;};
+  },[orderId]);
 
   const paid=useMemo(()=>data?.payments.reduce((sum,p)=>sum+Number(p.netAmount||0),0)??0,[data]);
   const cash=useMemo(()=>data?.payments.filter(p=>p.method==="cash").reduce((sum,p)=>sum+Number(p.netAmount||0),0)??0,[data]);
@@ -61,6 +67,7 @@ export default function ReceiptPage(){
     }catch{/* El usuario puede cancelar el diálogo nativo. */}
   }
 
+  if(!orderId)return <div className="pos-empty"><Icon name="alert" size={22}/><b>No se pudo abrir el comprobante</b><span>No se encontró el pedido cobrado.</span></div>;
   if(loading)return <div className="pos-empty"><b>Cargando comprobante…</b><span>Verificando el pago registrado.</span></div>;
   if(!data)return <div className="pos-empty"><Icon name="alert" size={22}/><b>No se pudo abrir el comprobante</b><span>{error}</span></div>;
 
