@@ -28,8 +28,8 @@ func (a *API) getMyProfile(w http.ResponseWriter, r *http.Request) {
 	if err := a.db.QueryRow(r.Context(), `
 		SELECT full_name,email
 		FROM users
-		WHERE id=$1 AND organization_id=$2 AND active
-	`, s.UserID, s.OrganizationID).Scan(&out.FullName, &out.Email); err != nil {
+		WHERE id=$1 AND active
+	`, s.UserID).Scan(&out.FullName, &out.Email); err != nil {
 		fail(w, 404, "profile_not_found", "No pudimos cargar tu perfil.")
 		return
 	}
@@ -64,9 +64,9 @@ func (a *API) updateMyProfile(w http.ResponseWriter, r *http.Request) {
 	if err = tx.QueryRow(r.Context(), `
 		SELECT email,password_hash
 		FROM users
-		WHERE id=$1 AND organization_id=$2 AND active
+		WHERE id=$1 AND active
 		FOR UPDATE
-	`, s.UserID, s.OrganizationID).Scan(&email, &hash); errors.Is(err, pgx.ErrNoRows) {
+	`, s.UserID).Scan(&email, &hash); errors.Is(err, pgx.ErrNoRows) {
 		fail(w, 404, "profile_not_found", "Tu cuenta ya no está disponible.")
 		return
 	} else if err != nil {
@@ -90,9 +90,9 @@ func (a *API) updateMyProfile(w http.ResponseWriter, r *http.Request) {
 
 	if _, err = tx.Exec(r.Context(), `
 		UPDATE users
-		SET full_name=$3,password_hash=$4,updated_at=now()
-		WHERE id=$1 AND organization_id=$2
-	`, s.UserID, s.OrganizationID, in.FullName, nextHash); err != nil {
+		SET full_name=$2,password_hash=$3,updated_at=now()
+		WHERE id=$1
+	`, s.UserID, in.FullName, nextHash); err != nil {
 		fail(w, 503, "profile_unavailable", "No pudimos actualizar tu perfil.")
 		return
 	}
