@@ -238,7 +238,7 @@ export function CashPage(){
       ?<RemoteModalSkeleton className="cash-detail-modal" label="Cargando turno de caja" rows={6} close={()=>setDetailId(null)}/>
       :detail.isError
         ?<CashDetailError message={detail.error.message} close={()=>setDetailId(null)}/>
-        :detail.data&&<CashShiftDetailDialog shift={detail.data} formatMoney={money} formatDateTime={dateTime} close={()=>setDetailId(null)}/>)}
+        :detail.data&&<CashShiftDetailDialog shift={detail.data} formatMoney={money} formatDateTime={dateTime} formatBusinessDate={businessDate} close={()=>setDetailId(null)}/>)}
 
     <ConfirmDialog
       open={Boolean(registerStatusTarget)}
