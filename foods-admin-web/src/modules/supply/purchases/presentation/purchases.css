@@ -100,7 +100,7 @@
  .purchase-item-choice{grid-template-columns:1fr}
  .purchase-item-section .form-grid,.purchase-order-meta-grid{grid-template-columns:1fr}
  .purchase-order-meta-grid .span-2{grid-column:auto}
- .purchase-lines-empty{align-items:flex-start;flex-wrap:wrap}
+ .purchase-lines-empty{align-items:stretch;flex-direction:column}
  .purchase-lines-empty .button{width:100%}
  .purchase-existing-list>button{grid-template-columns:34px minmax(0,1fr) 16px}
  .purchase-existing-stock{display:none}
@@ -136,11 +136,8 @@
 .purchase-order-meta-grid{grid-template-columns:minmax(0,1fr) minmax(190px,.55fr)}
 .purchase-order-meta-grid .span-2{grid-column:1/-1}
 .purchase-order-lines-section{background:#f8f9fc}
-.purchase-lines-empty{display:flex;align-items:center;gap:12px;min-height:94px;padding:16px;border:1px dashed var(--line);border-radius:11px;background:#fff}
-.purchase-lines-empty>span{display:grid;place-items:center;width:38px;height:38px;border-radius:10px;background:var(--primary-100);color:var(--primary-700);flex:0 0 auto}
-.purchase-lines-empty>div{display:grid;gap:3px;min-width:0;flex:1}
-.purchase-lines-empty b{font-size:10px;color:var(--ink-950)}
-.purchase-lines-empty small{font-size:8px;color:var(--ink-500);line-height:1.4}
+.purchase-lines-empty{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:52px;padding:4px 0 0}
+.purchase-lines-empty p{margin:0;color:var(--ink-500);font-size:9px;line-height:1.45}
 .purchase-lines-empty .button{flex:0 0 auto}
 .purchase-line-modern{align-items:center}
 .purchase-line-modern>label{align-self:end}
@@ -216,7 +213,7 @@
  .purchase-item-choice{grid-template-columns:1fr}
  .purchase-item-section .form-grid,.purchase-order-meta-grid{grid-template-columns:1fr}
  .purchase-order-meta-grid .span-2,.purchase-item-section .span-2{grid-column:auto}
- .purchase-lines-empty{align-items:flex-start;flex-wrap:wrap}
+ .purchase-lines-empty{align-items:stretch;flex-direction:column}
  .purchase-lines-empty .button{width:100%}
  .purchase-line-modern{grid-template-columns:28px minmax(0,1fr) var(--control-height)}
  .purchase-line-modern .purchase-line-item{grid-column:2/3;grid-row:1}
