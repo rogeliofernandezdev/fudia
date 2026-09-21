@@ -376,6 +376,26 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "409": { description: La orden no es recibible o una cantidad supera lo pendiente }
         "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/cash-registers:
+    get:
+      operationId: listCashRegisters
+      summary: Cajas registradas en el local activo con su turno abierto, si existe
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: query, name: q, schema: { type: string } }
+      responses:
+        "200": { description: Cajas del local, content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/CashRegister" } } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      operationId: createCashRegister
+      summary: Registra una nueva caja física o lógica en el local activo
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/CashRegisterInput" } } } }
+      responses:
+        "201": { description: Caja registrada, content: { application/json: { schema: { $ref: "#/components/schemas/CashRegister" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "409": { description: Ya existe una caja con el mismo nombre }
+        "403": { $ref: "#/components/responses/Forbidden" }
   /v1/admin/cash-shifts/current:
     get:
       operationId: getCurrentCashShift
@@ -399,13 +419,13 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
     post:
       operationId: openCashShift
-      summary: Abre un turno de caja para el usuario y local activos
+      summary: Inicia un turno sobre una caja registrada del local activo
       security: [{ sessionCookie: [] }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/CashShiftOpenInput" } } } }
       responses:
         "201": { description: Turno abierto, content: { application/json: { schema: { $ref: "#/components/schemas/CashShift" } } } }
         "400": { $ref: "#/components/responses/BadRequest" }
-        "409": { description: El usuario ya tiene un turno abierto en el local }
+        "409": { description: La caja ya tiene un turno abierto o el usuario ya opera otro turno }
         "403": { $ref: "#/components/responses/Forbidden" }
   /v1/admin/cash-shifts/{id}:
     parameters: [{ $ref: "#/components/parameters/EntityId" }]
@@ -626,11 +646,13 @@ components:
     InventoryAdjustmentInput: { type: object, required: [inventoryItemId, movementType, reason, quantity], properties: { inventoryItemId: { type: string, format: uuid }, movementType: { type: string, enum: [entry, exit] }, reason: { type: string, enum: [surplus_adjustment, shortage_adjustment, waste, expiration, other_exit] }, quantity: { type: number, exclusiveMinimum: 0 }, observation: { type: string, maxLength: 240 } } }
     InventoryAdjustmentResult: { type: object, required: [id, inventoryItemId, name, unit, movementType, reason, quantity, stockBefore, stockAfter, observation, createdAt, createdByName], properties: { id: { type: string, format: uuid }, inventoryItemId: { type: string, format: uuid }, name: { type: string }, unit: { type: string }, movementType: { type: string, enum: [entry, exit] }, reason: { type: string, enum: [surplus_adjustment, shortage_adjustment, waste, expiration, other_exit] }, quantity: { type: number }, stockBefore: { type: number, minimum: 0 }, stockAfter: { type: number, minimum: 0 }, observation: { type: string }, createdAt: { type: string, format: date-time }, createdByName: { type: string } } }
     StockMovement: { type: object, required: [id, inventoryItemId, productId, itemName, movementType, quantityDelta, balanceBefore, balanceAfter, sourceType, sourceId, sourceReference, note, createdByName, createdAt], properties: { id: { type: string, format: uuid }, inventoryItemId: { type: string, format: uuid }, productId: { type: [string, "null"], format: uuid }, itemName: { type: string }, movementType: { type: string, enum: [entry, sale, sale_reversal, sale_adjustment, inventory_adjustment] }, adjustmentType: { type: [string, "null"], enum: [entry, exit, null] }, reason: { type: [string, "null"], enum: [surplus_adjustment, shortage_adjustment, waste, expiration, other_exit, null] }, quantityDelta: { type: string }, balanceBefore: { type: string }, balanceAfter: { type: string }, sourceType: { type: string, enum: [inventory_entry, order, inventory_adjustment, purchase_receipt] }, sourceId: { type: string, format: uuid }, sourceReference: { type: string }, note: { type: string }, createdByName: { type: string }, createdAt: { type: string, format: date-time } } }
-    CashShiftOpenInput: { type: object, required: [openingAmount], properties: { openingAmount: { type: number, minimum: 0 }, note: { type: string, maxLength: 240 } } }
+    CashRegisterInput: { type: object, required: [name], properties: { name: { type: string, minLength: 1, maxLength: 80 } } }
+    CashRegister: { type: object, required: [id, code, name, active, openShift], properties: { id: { type: string, format: uuid }, code: { type: string }, name: { type: string }, active: { type: boolean }, openShift: { anyOf: [{ $ref: "#/components/schemas/CashShift" }, { type: "null" }] } } }
+    CashShiftOpenInput: { type: object, required: [cashRegisterId, openingAmount], properties: { cashRegisterId: { type: string, format: uuid }, openingAmount: { type: number, minimum: 0 }, note: { type: string, maxLength: 240 } } }
     CashMovementInput: { type: object, required: [movementType, amount, reason], properties: { movementType: { type: string, enum: [income, expense] }, amount: { type: number, exclusiveMinimum: 0 }, reason: { type: string, minLength: 1, maxLength: 120 }, note: { type: string, maxLength: 240 } } }
     CashShiftCloseInput: { type: object, required: [countedAmount], properties: { countedAmount: { type: number, minimum: 0 }, note: { type: string, maxLength: 240 } } }
     CashMovement: { type: object, required: [id, movementType, amount, reason, note, createdByName, createdAt], properties: { id: { type: string, format: uuid }, movementType: { type: string, enum: [income, expense] }, amount: { type: string }, reason: { type: string }, note: { type: string }, createdByName: { type: string }, createdAt: { type: string, format: date-time } } }
-    CashShift: { type: object, required: [id, code, status, openingAmount, incomeAmount, expenseAmount, expectedAmount, openingNote, closingNote, openedByName, closedByName, openedAt, movementCount], properties: { id: { type: string, format: uuid }, code: { type: string }, status: { type: string, enum: [open, closed] }, openingAmount: { type: string }, incomeAmount: { type: string }, expenseAmount: { type: string }, expectedAmount: { type: string }, closingExpectedAmount: { type: [string, "null"] }, closingCountedAmount: { type: [string, "null"] }, varianceAmount: { type: [string, "null"] }, openingNote: { type: string }, closingNote: { type: string }, openedByName: { type: string }, closedByName: { type: string }, openedAt: { type: string, format: date-time }, closedAt: { type: [string, "null"], format: date-time }, movementCount: { type: integer, minimum: 0 }, movements: { type: array, items: { $ref: "#/components/schemas/CashMovement" } } } }
+    CashShift: { type: object, required: [id, code, cashRegisterId, cashRegisterName, status, openingAmount, incomeAmount, expenseAmount, expectedAmount, openingNote, closingNote, openedByName, closedByName, openedAt, movementCount], properties: { id: { type: string, format: uuid }, code: { type: string }, cashRegisterId: { type: string, format: uuid }, cashRegisterName: { type: string }, status: { type: string, enum: [open, closed] }, openingAmount: { type: string }, incomeAmount: { type: string }, expenseAmount: { type: string }, expectedAmount: { type: string }, closingExpectedAmount: { type: [string, "null"] }, closingCountedAmount: { type: [string, "null"] }, varianceAmount: { type: [string, "null"] }, openingNote: { type: string }, closingNote: { type: string }, openedByName: { type: string }, closedByName: { type: string }, openedAt: { type: string, format: date-time }, closedAt: { type: [string, "null"], format: date-time }, movementCount: { type: integer, minimum: 0 }, movements: { type: array, items: { $ref: "#/components/schemas/CashMovement" } } } }
     CashShiftList: { type: object, required: [items, total, page, pageSize], properties: { items: { type: array, items: { $ref: "#/components/schemas/CashShift" } }, total: { type: integer, minimum: 0 }, page: { type: integer, minimum: 1 }, pageSize: { type: integer, minimum: 1 } } }
     ComboOptionInput: { type: object, required: [productId, surcharge], properties: { productId: { type: string, format: uuid }, surcharge: { type: string, pattern: "^[0-9]+(\\.[0-9]{1,2})?$" } } }
     ComboGroupInput: { type: object, required: [name, required, minSelections, maxSelections, options], properties: { name: { type: string, maxLength: 120 }, required: { type: boolean }, minSelections: { type: integer, minimum: 0 }, maxSelections: { type: integer, minimum: 1 }, options: { type: array, items: { $ref: "#/components/schemas/ComboOptionInput" } } } }
