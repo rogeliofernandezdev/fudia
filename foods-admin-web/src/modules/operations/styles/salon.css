@@ -989,7 +989,7 @@
 }
 
 .salon-order-detail .salon-order-detail-actions .salon-order-detail-edit{
-  border-color:var(--line,#e4e7ec);
+  border-color:var(--action-edit,var(--ops-700,#3946b8));
   background:var(--surface,#fff);
   color:var(--action-edit,var(--ops-700,#3946b8));
 }
