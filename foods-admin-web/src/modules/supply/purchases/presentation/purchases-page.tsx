@@ -9,7 +9,6 @@ import {formatRegionalCalendarDate,formatRegionalDateTime,formatRegionalNumber} 
 import {purchaseOrderResolver,supplierResolver} from "../domain/purchase-schema";
 import {PurchaseItemDialog} from "./purchase-item-dialog";
 import {PurchaseReceiptDialog} from "./purchase-receipt-dialog";
-import {PurchaseFlowSteps} from "./purchase-flow-steps";
 import type {PurchaseInventoryOption,PurchaseOrder,PurchaseOrderDraft,PurchaseOrderSummary,PurchaseStatus,PurchaseTab,Supplier,SupplierDraft} from "../domain/types";
 import {createPurchaseInventoryItem,getPurchaseOrder,listPurchaseInventory,listPurchaseItemCategories,listPurchaseOrders,listSuppliers,receivePurchaseOrder,savePurchaseOrder,saveSupplier,setPurchaseOrderStatus,setSupplierActive} from "../infrastructure/purchases-api";
 
@@ -220,14 +219,6 @@ export function PurchasesPage(){
           <Icon name="truck" size={17}/><span>Proveedores</span>{suppliers.data&&<b>{suppliers.data.total}</b>}
         </button>
       </div>
-
-      {tab!=="suppliers"&&<div className="purchase-flow-overview">
-        <div>
-          <small>{tab==="orders"?"PASO 1":"PASO 2"}</small>
-          <b>{tab==="orders"?"Primero crea y aprueba la orden.":"Recibe únicamente lo que realmente llegó."}</b>
-        </div>
-        <PurchaseFlowSteps active={tab==="orders"?"order":"receipt"}/>
-      </div>}
 
       <div className="purchases-toolbar">
         <label className="purchases-search">
