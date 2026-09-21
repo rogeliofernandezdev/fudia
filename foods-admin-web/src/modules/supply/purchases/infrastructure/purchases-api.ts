@@ -1,6 +1,6 @@
 import {apiFetch} from "@/shared/api/client";
 import {uploadProductImage} from "@/shared/api/product-image";
-import type {PurchaseInventoryItemDraft,PurchaseInventoryOption,PurchaseItemCategory,PurchaseOrder,PurchaseOrderDraft,PurchaseOrdersResponse,PurchaseReceiptDraft,PurchaseReceiptResult,PurchaseStatus,Supplier,SupplierDraft,SuppliersResponse} from "../domain/types";
+import type {PurchaseInventoryItemDraft,PurchaseInventoryOption,PurchaseItemCategory,PurchaseOrder,PurchaseOrderDraft,PurchaseOrdersResponse,PurchaseReceiptDetail,PurchaseReceiptDraft,PurchaseReceiptResult,PurchaseReceiptSummary,PurchaseReturnDraft,PurchaseStatus,Supplier,SupplierDraft,SuppliersResponse} from "../domain/types";
 
 export function listPurchaseOrders(input:{q:string;status:string;page:number;pageSize:number}){
   const params=new URLSearchParams({q:input.q,status:input.status,page:String(input.page),pageSize:String(input.pageSize)});
@@ -29,14 +29,18 @@ export function savePurchaseOrder(draft:PurchaseOrderDraft){
   });
 }
 
-export function setPurchaseOrderStatus(id:string,status:"draft"|"pending_approval"|"approved"|"cancelled"){
+export function setPurchaseOrderStatus(id:string,status:"draft"|"pending_approval"|"cancelled"){
   return apiFetch<void>(`purchase-orders/${id}/status`,{method:"PATCH",body:JSON.stringify({status})});
+}
+export function approvePurchaseOrder(id:string){
+  return apiFetch<void>(`purchase-orders/${id}/approve`,{method:"POST"});
 }
 
 export function receivePurchaseOrder(draft:PurchaseReceiptDraft){
   return apiFetch<PurchaseReceiptResult>(`purchase-orders/${draft.purchaseOrderId}/receive`,{
     method:"POST",
     body:JSON.stringify({
+      idempotencyKey:draft.idempotencyKey,
       notes:draft.notes.trim(),
       items:draft.items.filter(item=>Number(item.quantity)>0).map(item=>({
         purchaseOrderItemId:item.purchaseOrderItemId,
@@ -108,4 +112,17 @@ export async function createPurchaseInventoryItem(draft:PurchaseInventoryItemDra
   const item=await apiFetch<PurchaseInventoryOption>("purchase-inventory-items",{method:"POST",body:JSON.stringify(payload)});
   if(file&&item.productId)await uploadProductImage(item.productId,file);
   return item;
+}
+
+
+export function listPurchaseReceipts(input:{q?:string;from?:string;to?:string;page?:number;pageSize?:number}={}){
+ const params=new URLSearchParams({q:input.q??"",from:input.from??"",to:input.to??"",page:String(input.page??1),pageSize:String(input.pageSize??20)});
+ return apiFetch<{items:PurchaseReceiptSummary[];total:number;page:number;pageSize:number}>(`purchase-receipts?${params.toString()}`);
+}
+export function getPurchaseReceipt(id:string){return apiFetch<PurchaseReceiptDetail>(`purchase-receipts/${id}`)}
+export function createPurchaseReturn(draft:PurchaseReturnDraft){
+ return apiFetch<{id:string;code:string;kind:string;purchaseOrderId:string;number:string}>(`purchase-receipts/${draft.purchaseReceiptId}/returns`,{method:"POST",body:JSON.stringify({
+  kind:draft.kind,reason:draft.reason.trim(),notes:draft.notes.trim(),
+  items:draft.items.filter(i=>Number(i.quantity)>0).map(i=>({purchaseReceiptItemId:i.purchaseReceiptItemId,quantity:Number(i.quantity)})),
+ })})
 }
