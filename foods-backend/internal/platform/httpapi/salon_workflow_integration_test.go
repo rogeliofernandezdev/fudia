@@ -28,10 +28,10 @@ func TestSalonKitchenPaymentDeliveryWorkflow(t *testing.T) {
 
 	var tableID string
 	if err:=pool.QueryRow(ctx,`
-		INSERT INTO tables(organization_id,name,seats,zone,active,qr_token,qr_enabled)
-		VALUES($1,$2,4,'Principal',true,encode(gen_random_bytes(16),'hex'),false)
+		INSERT INTO tables(organization_id,location_id,name,seats,zone,active,qr_token,qr_enabled)
+		VALUES($1,$2,$3,4,'Principal',true,encode(gen_random_bytes(16),'hex'),false)
 		RETURNING id
-	`,s.OrganizationID,fmt.Sprintf("Mesa WF %d",nonce)).Scan(&tableID);err!=nil{t.Fatal(err)}
+	`,s.OrganizationID,s.LocationID,fmt.Sprintf("Mesa WF %d",nonce)).Scan(&tableID);err!=nil{t.Fatal(err)}
 
 	defer func(){
 		_,_=pool.Exec(context.Background(),`DELETE FROM orders WHERE organization_id=$1 AND table_id=$2`,s.OrganizationID,tableID)
@@ -177,10 +177,10 @@ func TestSalonTableOpeningIsSerializedAndChannelScoped(t *testing.T) {
 
 	var tableID string
 	if err:=pool.QueryRow(ctx,`
-		INSERT INTO tables(organization_id,name,seats,zone,active,qr_token,qr_enabled)
-		VALUES($1,$2,4,'Principal',true,encode(gen_random_bytes(16),'hex'),false)
+		INSERT INTO tables(organization_id,location_id,name,seats,zone,active,qr_token,qr_enabled)
+		VALUES($1,$2,$3,4,'Principal',true,encode(gen_random_bytes(16),'hex'),false)
 		RETURNING id
-	`,s.OrganizationID,fmt.Sprintf("Mesa Race %d",nonce)).Scan(&tableID);err!=nil{t.Fatal(err)}
+	`,s.OrganizationID,s.LocationID,fmt.Sprintf("Mesa Race %d",nonce)).Scan(&tableID);err!=nil{t.Fatal(err)}
 	t.Cleanup(func(){
 		_,_=pool.Exec(context.Background(),`DELETE FROM orders WHERE organization_id=$1 AND table_id=$2`,s.OrganizationID,tableID)
 		_,_=pool.Exec(context.Background(),`DELETE FROM tables WHERE id=$1 AND organization_id=$2`,tableID,s.OrganizationID)
