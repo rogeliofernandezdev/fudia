@@ -38,6 +38,9 @@ export type Order={
   createdAt:string;
   updatedAt:string;
   items?:OrderItem[];
+  paidAmount?:string;
+  remainingAmount?:string;
+  paymentStatus?:"pending"|"partial"|"paid";
 };
 
 export type OrdersResponse={
