@@ -4,27 +4,28 @@ import {Button,Icon,Input,Status,Textarea} from "@/design-system";
 import {cashMovementResolver,cashRegisterResolver,closeCashShiftResolver,openCashShiftResolver} from "../domain/cash-schema";
 import type {CashMovementDraft,CashMovementType,CashRegister,CashRegisterDraft,CashShift,CloseCashShiftDraft,OpenCashShiftDraft} from "../domain/types";
 
-export function CashRegisterDialog({busy,close,save}:{busy:boolean;close:()=>void;save:(draft:CashRegisterDraft)=>void}){
+export function CashRegisterDialog({initial,busy,close,save}:{initial?:CashRegister|null;busy:boolean;close:()=>void;save:(draft:CashRegisterDraft)=>void}){
+  const editing=Boolean(initial);
   const{register,handleSubmit,formState:{errors}}=useForm<CashRegisterDraft>({
-    defaultValues:{name:""},
+    defaultValues:{name:initial?.name??""},
     resolver:cashRegisterResolver,
     mode:"onSubmit",
     reValidateMode:"onChange",
   });
   return <div className="modal-backdrop modal-overlay-in"><section className="crud-modal cash-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-register-title" aria-busy={busy}>
     <div className="modal-accent"/>
-    <header><span className="modal-title-icon"><Icon name="sales" size={18}/></span><div><small>CAJAS</small><h2 id="cash-register-title">Registrar caja</h2></div><button type="button" aria-label="Cerrar" onClick={close} disabled={busy}><Icon name="close"/></button></header>
+    <header><span className="modal-title-icon"><Icon name="sales" size={18}/></span><div><small>CAJAS</small><h2 id="cash-register-title">{editing?"Editar caja":"Registrar caja"}</h2></div><button type="button" aria-label="Cerrar" onClick={close} disabled={busy}><Icon name="close"/></button></header>
     <form onSubmit={handleSubmit(save)} noValidate inert={busy}>
       <div className="cash-dialog-body">
-        <p className="cash-dialog-intro">Crea una caja del local. Luego podrás iniciar y cerrar turnos sobre esta caja sin perder su historial.</p>
+        <p className="cash-dialog-intro">{editing?"Actualiza el nombre operativo de la caja. Su historial y turnos se conservarán.":"Crea una caja del local. Luego podrás iniciar y cerrar turnos sobre esta caja sin perder su historial."}</p>
         <label>Nombre de la caja
           <Input autoFocus maxLength={80} {...register("name")} aria-invalid={Boolean(errors.name)} placeholder="Ej. Caja principal"/>
           {errors.name?.message&&<small className="wizard-field-error">{errors.name.message}</small>}
         </label>
       </div>
-      <footer><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy}>{busy?"Registrando…":"Registrar caja"}</Button></footer>
+      <footer><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy}>{busy?"Guardando…":editing?"Guardar cambios":"Registrar caja"}</Button></footer>
     </form>
-    {busy&&<div className="modal-busy" role="status"><i/><span>Registrando caja…</span></div>}
+    {busy&&<div className="modal-busy" role="status"><i/><span>Guardando caja…</span></div>}
   </section></div>;
 }
 
@@ -137,6 +138,7 @@ export function CashShiftDetailDialog({shift,formatMoney,formatDateTime,close}:{
     <div className="cash-detail-body">
       <section className="cash-detail-head">
         <div><small>CAJA</small><b>{shift.cashRegisterName}</b></div>
+        <div><small>DÍA OPERATIVO</small><b>{shift.businessDate}</b></div>
         <div><small>CAJERO</small><b>{shift.openedByName}</b></div>
         <div><small>APERTURA</small><b>{formatDateTime(shift.openedAt)}</b></div>
         <div><small>CIERRE</small><b>{shift.closedAt?formatDateTime(shift.closedAt):"En curso"}</b></div>
