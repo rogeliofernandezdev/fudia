@@ -72,7 +72,7 @@ export type StockMovement={
   quantityDelta:string;
   balanceBefore:string;
   balanceAfter:string;
-  sourceType:"inventory_entry"|"order"|"inventory_adjustment";
+  sourceType:"inventory_entry"|"order"|"inventory_adjustment"|"purchase_receipt";
   sourceId:string;
   sourceReference:string;
   note:string;
