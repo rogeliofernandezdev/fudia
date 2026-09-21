@@ -99,7 +99,8 @@ export function SalonManager(){
   const floor=useQuery({
     queryKey:["salon-floor"],
     queryFn:getSalonFloor,
-    refetchInterval:30000,
+    refetchInterval:10000,
+    refetchIntervalInBackground:true,
   });
   const detail=useQuery({
     queryKey:["order",detailId],
