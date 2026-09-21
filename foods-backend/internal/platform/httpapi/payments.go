@@ -388,3 +388,119 @@ func (a *API) refundPayment(w http.ResponseWriter,r *http.Request){
 	if err:=tx.Commit(r.Context());err!=nil{fail(w,503,"payments_unavailable","No pudimos confirmar la devolución.");return}
 	w.WriteHeader(http.StatusNoContent)
 }
+
+func (a *API) createPaymentBatch(w http.ResponseWriter,r *http.Request){
+	s:=r.Context().Value(scopeKey{}).(scope)
+	var in struct{
+		OrderID string `json:"orderId"`
+		Payments []struct{
+			Method string `json:"method"`
+			Amount float64 `json:"amount"`
+			Reference string `json:"reference"`
+		} `json:"payments"`
+	}
+	if json.NewDecoder(r.Body).Decode(&in)!=nil||strings.TrimSpace(in.OrderID)==""||len(in.Payments)==0{
+		fail(w,400,"invalid_payment","Revisa los datos del cobro.")
+		return
+	}
+	in.OrderID=strings.TrimSpace(in.OrderID)
+	totalBatch:=0.0
+	for i:=range in.Payments{
+		p:=&in.Payments[i]
+		p.Method=strings.TrimSpace(p.Method)
+		p.Reference=strings.TrimSpace(p.Reference)
+		if p.Amount<=0||(p.Method!="cash"&&p.Method!="card"&&p.Method!="transfer"&&p.Method!="other"){
+			fail(w,400,"invalid_payment","Todos los medios de pago deben tener método y monto válidos.")
+			return
+		}
+		if len(p.Reference)>120{
+			fail(w,400,"invalid_payment","La referencia no puede superar 120 caracteres.")
+			return
+		}
+		totalBatch+=p.Amount
+	}
+	tx,err:=a.db.Begin(r.Context())
+	if err!=nil{fail(w,503,"payments_unavailable","No pudimos iniciar el cobro.");return}
+	defer tx.Rollback(r.Context())
+
+	shiftID,err:=currentCashShiftID(r.Context(),tx,s)
+	if errors.Is(err,pgx.ErrNoRows){fail(w,409,"cash_shift_required","Debes estar asignado a un turno de caja abierto para cobrar.");return}
+	if err!=nil{fail(w,503,"payments_unavailable","No pudimos validar tu turno de caja.");return}
+
+	var orderCode,status string
+	var orderTotal,paid float64
+	err=tx.QueryRow(r.Context(),`
+		SELECT o.code,o.status,o.total::float8,(`+netPaidSQL+`)::float8
+		FROM orders o
+		WHERE o.id=$1 AND o.organization_id=$2 AND o.location_id=$3
+		FOR UPDATE
+	`,in.OrderID,s.OrganizationID,s.LocationID).Scan(&orderCode,&status,&orderTotal,&paid)
+	if errors.Is(err,pgx.ErrNoRows){fail(w,404,"order_not_found","El pedido no existe en este local.");return}
+	if err!=nil{fail(w,503,"payments_unavailable","No pudimos validar el pedido.");return}
+	if status=="cancelado"{fail(w,409,"order_not_payable","Un pedido cancelado no admite cobros.");return}
+	remaining:=math.Max(0,orderTotal-paid)
+	if totalBatch>remaining+0.00001{
+		fail(w,409,"payment_exceeds_remaining","El cobro supera el saldo pendiente del pedido.")
+		return
+	}
+
+	ids:=make([]string,0,len(in.Payments))
+	for _,p:=range in.Payments{
+		var id string
+		err=tx.QueryRow(r.Context(),`
+			INSERT INTO payments(organization_id,location_id,order_id,shift_id,method,amount,reference,created_by)
+			VALUES($1,$2,$3,$4,$5,$6,$7,$8)
+			RETURNING id::text
+		`,s.OrganizationID,s.LocationID,in.OrderID,shiftID,p.Method,p.Amount,p.Reference,s.UserID).Scan(&id)
+		if err!=nil{fail(w,503,"payments_unavailable","No pudimos registrar uno de los medios de pago.");return}
+		ids=append(ids,id)
+		if p.Method=="cash"{
+			if _,err=tx.Exec(r.Context(),`
+				INSERT INTO cash_movements(
+				  organization_id,location_id,shift_id,movement_type,source_type,source_id,
+				  amount,reason,note,created_by
+				)
+				VALUES($1,$2,$3,'income','cash_sale',$4::uuid,$5,$6,$7,$8)
+			`,s.OrganizationID,s.LocationID,shiftID,id,p.Amount,"Cobro "+orderCode,p.Reference,s.UserID);err!=nil{
+				fail(w,503,"payments_unavailable","No pudimos reflejar el cobro en caja.")
+				return
+			}
+		}
+	}
+	if err=tx.Commit(r.Context());err!=nil{fail(w,503,"payments_unavailable","No pudimos confirmar el cobro.");return}
+	writeJSON(w,201,map[string]any{
+		"paymentIds":ids,
+		"paidNow":strconv.FormatFloat(totalBatch,'f',2,64),
+		"remainingAmount":strconv.FormatFloat(math.Max(0,remaining-totalBatch),'f',2,64),
+		"paymentStatus":paymentStatus(orderTotal,paid+totalBatch),
+	})
+}
+
+func (a *API) completePaidOrder(w http.ResponseWriter,r *http.Request){
+	s:=r.Context().Value(scopeKey{}).(scope)
+	tx,err:=a.db.Begin(r.Context())
+	if err!=nil{fail(w,503,"payments_unavailable","No pudimos finalizar el pedido.");return}
+	defer tx.Rollback(r.Context())
+	var total,paid float64
+	var status string
+	err=tx.QueryRow(r.Context(),`
+		SELECT o.total::float8,(`+netPaidSQL+`)::float8,o.status
+		FROM orders o
+		WHERE o.id=$1 AND o.organization_id=$2 AND o.location_id=$3
+		FOR UPDATE
+	`,r.PathValue("id"),s.OrganizationID,s.LocationID).Scan(&total,&paid,&status)
+	if errors.Is(err,pgx.ErrNoRows){fail(w,404,"order_not_found","El pedido no existe en este local.");return}
+	if err!=nil{fail(w,503,"payments_unavailable","No pudimos validar el pedido.");return}
+	if status=="cancelado"{fail(w,409,"order_not_completable","Un pedido cancelado no puede finalizarse.");return}
+	if paid+0.00001<total{fail(w,409,"payment_incomplete","El pedido todavía tiene saldo pendiente.");return}
+	if _,err=tx.Exec(r.Context(),`
+		UPDATE orders
+		SET status='entregado',updated_at=now()
+		WHERE id=$1 AND organization_id=$2 AND location_id=$3
+	`,r.PathValue("id"),s.OrganizationID,s.LocationID);err!=nil{
+		fail(w,503,"payments_unavailable","No pudimos liberar la mesa.")
+		return
+	}
+	if err=tx.Commit(r.Context());err!=nil{fail(w,503,"payments_unavailable","No pudimos finalizar el pedido.");return}
+	w.WriteHeader(http.StatusNoContent)
+}
