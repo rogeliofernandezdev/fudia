@@ -13,6 +13,8 @@ import (
 type availabilityItem struct {
 	ProductID       string   `json:"productId"`
 	Name            string   `json:"name"`
+	Price           string   `json:"price"`
+	CategoryID      *string  `json:"categoryId"`
 	CategoryName    *string  `json:"categoryName"`
 	ImageURL        *string  `json:"imageUrl"`
 	QuantityControl string   `json:"quantityControl"`
@@ -86,19 +88,21 @@ func (a *API) listProductAvailability(w http.ResponseWriter, r *http.Request) {
 	}
 	search := "%" + strings.TrimSpace(r.URL.Query().Get("q")) + "%"
 	categoryID := r.URL.Query().Get("categoryId")
+	excludeCombos := r.URL.Query().Get("excludeCombos") == "true"
 	var total int
 	if err = a.db.QueryRow(r.Context(), `
 		SELECT count(*)
 		FROM products p
 		WHERE p.organization_id=$1 AND p.active AND p.name ILIKE $2
-		  AND ($3='' OR p.category_id::text=$3)`,
-		s.OrganizationID, search, categoryID).Scan(&total); err != nil {
+		  AND ($3='' OR p.category_id::text=$3)
+		  AND (NOT $4 OR NOT EXISTS (SELECT 1 FROM menu_combos mc WHERE mc.product_id=p.id AND mc.organization_id=p.organization_id))`,
+		s.OrganizationID, search, categoryID, excludeCombos).Scan(&total); err != nil {
 		fail(w, 503, "availability_unavailable", "No pudimos cargar la disponibilidad de la carta.")
 		return
 	}
 
 	rows, err := a.db.Query(r.Context(), `
-		SELECT p.id,p.name,c.name,p.image_url,p.quantity_control,
+		SELECT p.id,p.name,p.price::text,p.category_id,c.name,p.image_url,p.quantity_control,
 		       pa.portion_quantity,COALESCE(pa.sold_quantity,0),COALESCE(pa.manual_status,'available'),COALESCE(pa.note,''),
 		       (p.available_from IS NULL OR now() >= p.available_from)
 		       AND (p.available_until IS NULL OR now() <= p.available_until)
@@ -118,9 +122,10 @@ func (a *API) listProductAvailability(w http.ResponseWriter, r *http.Request) {
 		  ON sb.organization_id=p.organization_id AND sb.location_id=$2 AND sb.inventory_item_id=ii.id
 		WHERE p.organization_id=$1 AND p.active AND p.name ILIKE $4
 		  AND ($5='' OR p.category_id::text=$5)
+		  AND (NOT $6 OR NOT EXISTS (SELECT 1 FROM menu_combos mc WHERE mc.product_id=p.id AND mc.organization_id=p.organization_id))
 		ORDER BY c.sort_order NULLS LAST,c.name,p.name
-		LIMIT $6 OFFSET $7`,
-		s.OrganizationID, s.LocationID, day.Format("2006-01-02"), search, categoryID, size, (page-1)*size)
+		LIMIT $7 OFFSET $8`,
+		s.OrganizationID, s.LocationID, day.Format("2006-01-02"), search, categoryID, excludeCombos, size, (page-1)*size)
 	if err != nil {
 		fail(w, 503, "availability_unavailable", "No pudimos cargar la disponibilidad de la carta.")
 		return
@@ -134,7 +139,7 @@ func (a *API) listProductAvailability(w http.ResponseWriter, r *http.Request) {
 		var scheduleAvailable, isCombo bool
 		var inventoryQuantity, minimumStock float64
 		if err := rows.Scan(
-			&item.ProductID, &item.Name, &item.CategoryName, &item.ImageURL, &item.QuantityControl,
+			&item.ProductID, &item.Name, &item.Price, &item.CategoryID, &item.CategoryName, &item.ImageURL, &item.QuantityControl,
 			&item.PortionQuantity, &item.SoldQuantity, &manualStatus, &item.Note,
 			&scheduleAvailable, &isCombo, &inventoryQuantity, &item.InventoryUnit, &minimumStock,
 		); err != nil {
