@@ -939,7 +939,7 @@
 .salon-order-detail .salon-order-detail-actions{
   padding:14px 18px 16px;
   display:grid;
-  grid-template-columns:minmax(0,1.12fr) minmax(0,1fr) minmax(0,1.18fr);
+  grid-template-columns:repeat(4,minmax(0,1fr));
   align-items:center;
   gap:10px;
   flex-shrink:0;
@@ -1010,8 +1010,7 @@
 }
 
 .salon-order-detail .salon-order-detail-actions .order-detail-cancel{
-  grid-column:1/-1;
-  justify-self:start;
+  width:100%;
 }
 
 .salon-order-detail .salon-order-detail-actions .order-detail-primary>span,
@@ -1291,19 +1290,26 @@
 
   .salon-order-detail .salon-order-detail-actions{
     padding:10px 12px max(10px,env(safe-area-inset-bottom));
-    display:grid;
-    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    display:flex;
+    align-items:stretch;
+    gap:7px;
+    overflow-x:auto;
+    scrollbar-width:none;
+  }
+
+  .salon-order-detail .salon-order-detail-actions::-webkit-scrollbar{
+    display:none;
   }
 
   .salon-order-detail .salon-order-detail-actions .order-detail-primary,
-  .salon-order-detail .salon-order-detail-actions .salon-order-detail-edit{
-    width:100%;
-  }
-
+  .salon-order-detail .salon-order-detail-actions .salon-order-detail-pay,
+  .salon-order-detail .salon-order-detail-actions .salon-order-detail-edit,
   .salon-order-detail .salon-order-detail-actions .order-detail-cancel,
   .salon-order-detail .salon-order-detail-actions .order-detail-done{
-    grid-column:1/-1;
-    width:100%;
+    width:auto;
+    min-width:max-content;
+    flex:1 0 auto;
+    white-space:nowrap;
   }
 }
 
