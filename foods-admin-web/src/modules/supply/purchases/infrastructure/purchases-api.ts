@@ -1,4 +1,5 @@
 import {apiFetch} from "@/shared/api/client";
+import {uploadProductImage} from "@/shared/api/product-image";
 import type {PurchaseInventoryItemDraft,PurchaseInventoryOption,PurchaseItemCategory,PurchaseOrder,PurchaseOrderDraft,PurchaseOrdersResponse,PurchaseReceiptDraft,PurchaseReceiptResult,PurchaseStatus,Supplier,SupplierDraft,SuppliersResponse} from "../domain/types";
 
 export function listPurchaseOrders(input:{q:string;status:string;page:number;pageSize:number}){
@@ -88,7 +89,7 @@ export async function listPurchaseItemCategories(){
   return items;
 }
 
-export function createPurchaseInventoryItem(draft:PurchaseInventoryItemDraft){
+export async function createPurchaseInventoryItem(draft:PurchaseInventoryItemDraft,file:File|null=null){
   const common={
     unit:draft.unit,
     presentationType:draft.presentationType,
@@ -104,5 +105,7 @@ export function createPurchaseInventoryItem(draft:PurchaseInventoryItemDraft){
       description:draft.description.trim(),
       price:draft.price.trim(),
     }};
-  return apiFetch<PurchaseInventoryOption>("purchase-inventory-items",{method:"POST",body:JSON.stringify(payload)});
+  const item=await apiFetch<PurchaseInventoryOption>("purchase-inventory-items",{method:"POST",body:JSON.stringify(payload)});
+  if(file&&item.productId)await uploadProductImage(item.productId,file);
+  return item;
 }
