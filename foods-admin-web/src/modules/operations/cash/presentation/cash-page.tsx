@@ -2,13 +2,14 @@
 import "./cash.css";
 import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,ConfirmDialog,Icon,Input,PageHeader,Pagination,RemoteModalSkeleton,RowActionButton,Select,Status} from "@/design-system";
+import {Button,ConfirmDialog,Icon,IconButton,Input,PageHeader,Pagination,RemoteModalSkeleton,RowActionButton,Select,Status} from "@/design-system";
 import {useFeedback,useSession} from "@/providers";
 import {useSettings} from "@/providers/settings-context";
 import {formatRegionalCalendarDate,formatRegionalDateTime,formatRegionalNumber} from "@/shared/i18n/regional-format";
 import type {CashMovementType,CashRegister,CashRegisterDraft,CashShift} from "../domain/types";
-import {closeCashShift,createCashMovement,createCashRegister,getCashShift,listCashRegisters,listCashShifts,openCashShift,setCashRegisterActive,updateCashRegister} from "../infrastructure/cash-api";
+import {assignCashShiftUser,closeCashShift,createCashMovement,createCashOperation,createCashRegister,getCashShift,listCashRegisters,listCashShifts,listCashShiftUsers,listCashUserOptions,openCashShift,setCashRegisterActive,unassignCashShiftUser,updateCashRegister} from "../infrastructure/cash-api";
 import {CashMovementDialog,CashRegisterDialog,CashShiftDetailDialog,CloseCashShiftDialog,OpenCashShiftDialog} from "./cash-dialogs";
+import {CashOperationDialog,CashTeamDialog} from "./cash-advanced-dialogs";
 
 type CashTab="registers"|"history";
 
@@ -29,6 +30,8 @@ export function CashPage(){
   const[shiftTarget,setShiftTarget]=useState<CashRegister|null>(null);
   const[movementTarget,setMovementTarget]=useState<{shift:CashShift;type:CashMovementType}|null>(null);
   const[closeTarget,setCloseTarget]=useState<CashShift|null>(null);
+  const[teamTarget,setTeamTarget]=useState<CashShift|null>(null);
+  const[operationTarget,setOperationTarget]=useState<CashShift|null>(null);
   const[detailId,setDetailId]=useState<string|null>(null);
 
   const registers=useQuery({
@@ -45,6 +48,16 @@ export function CashPage(){
     queryKey:["cash-shift",detailId],
     queryFn:()=>getCashShift(detailId!),
     enabled:Boolean(detailId),
+  });
+  const teamUsers=useQuery({
+    queryKey:["cash-shift-users",teamTarget?.id],
+    queryFn:()=>listCashShiftUsers(teamTarget!.id),
+    enabled:Boolean(teamTarget),
+  });
+  const userOptions=useQuery({
+    queryKey:["cash-user-options"],
+    queryFn:listCashUserOptions,
+    enabled:Boolean(teamTarget),
   });
 
   function refreshCash(){
@@ -110,6 +123,37 @@ export function CashPage(){
       });
     },
     onError:error=>notify({tone:"danger",title:"No se pudo registrar el movimiento",message:error.message}),
+  });
+
+  const assignUser=useMutation({
+    mutationFn:({shiftId,userId}:{shiftId:string;userId:string})=>assignCashShiftUser(shiftId,userId),
+    onSuccess:()=>{
+      void qc.invalidateQueries({queryKey:["cash-shift-users"]});
+      void qc.invalidateQueries({queryKey:["cash-user-options"]});
+      notify({tone:"success",title:"Usuario asignado",message:"Ya puede operar este turno desde Caja y POS."});
+    },
+    onError:error=>notify({tone:"danger",title:"No se pudo asignar el usuario",message:error.message}),
+  });
+
+  const unassignUser=useMutation({
+    mutationFn:({shiftId,userId}:{shiftId:string;userId:string})=>unassignCashShiftUser(shiftId,userId),
+    onSuccess:()=>{
+      void qc.invalidateQueries({queryKey:["cash-shift-users"]});
+      void qc.invalidateQueries({queryKey:["cash-user-options"]});
+      notify({tone:"success",title:"Usuario retirado",message:"Ya no puede operar este turno."});
+    },
+    onError:error=>notify({tone:"danger",title:"No se pudo retirar el usuario",message:error.message}),
+  });
+
+  const cashOperation=useMutation({
+    mutationFn:({shiftId,draft}:{shiftId:string;draft:Parameters<typeof createCashOperation>[1]})=>createCashOperation(shiftId,draft),
+    onSuccess:(_,variables)=>{
+      setOperationTarget(null);
+      refreshCash();
+      const label=variables.draft.operationType==="transfer"?"Transferencia registrada":variables.draft.operationType==="deposit"?"Depósito registrado":"Retiro registrado";
+      notify({tone:"success",title:label,message:"El efectivo esperado quedó actualizado."});
+    },
+    onError:error=>notify({tone:"danger",title:"No se pudo completar la operación",message:error.message}),
   });
 
   const closeShiftMutation=useMutation({
@@ -191,6 +235,8 @@ export function CashPage(){
           start={setShiftTarget}
           view={shift=>setDetailId(shift.id)}
           movement={(shift,type)=>setMovementTarget({shift,type})}
+          team={setTeamTarget}
+          operation={setOperationTarget}
           close={setCloseTarget}
         />
         :<section className="cash-history">
@@ -255,7 +301,7 @@ export function CashPage(){
   </div>;
 }
 
-function CashRegisters({items,loading,error,canManage,money,dateTime,businessDate,retry,create,edit,toggleStatus,start,view,movement,close}:{items:CashRegister[];loading:boolean;error:string|null;canManage:boolean;money:(value:number)=>string;dateTime:(value:string)=>string;businessDate:(value:string)=>string;retry:()=>void;create:()=>void;edit:(item:CashRegister)=>void;toggleStatus:(item:CashRegister)=>void;start:(item:CashRegister)=>void;view:(shift:CashShift)=>void;movement:(shift:CashShift,type:CashMovementType)=>void;close:(shift:CashShift)=>void}){
+function CashRegisters({items,loading,error,canManage,money,dateTime,businessDate,retry,create,edit,toggleStatus,start,view,movement,team,operation,close}:{items:CashRegister[];loading:boolean;error:string|null;canManage:boolean;money:(value:number)=>string;dateTime:(value:string)=>string;businessDate:(value:string)=>string;retry:()=>void;create:()=>void;edit:(item:CashRegister)=>void;toggleStatus:(item:CashRegister)=>void;start:(item:CashRegister)=>void;view:(shift:CashShift)=>void;movement:(shift:CashShift,type:CashMovementType)=>void;team:(shift:CashShift)=>void;operation:(shift:CashShift)=>void;close:(shift:CashShift)=>void}){
   if(loading)return <CashRegistersSkeleton/>;
   if(error)return <CashError title="No pudimos cargar las cajas" message={error} retry={retry}/>;
   if(!items.length)return <div className="cash-no-registers">
@@ -268,7 +314,8 @@ function CashRegisters({items,loading,error,canManage,money,dateTime,businessDat
   const active=items.filter(item=>item.active);
   const open=active.filter(item=>item.openShift);
   const available=active.length-open.length;
-  const expected=open.reduce((sum,item)=>sum+Number(item.openShift?.expectedAmount??0),0);
+  const hiddenExpected=open.some(item=>item.openShift&&!item.openShift.expectedVisible);
+  const expected=open.reduce((sum,item)=>sum+(item.openShift?.expectedVisible?Number(item.openShift.expectedAmount):0),0);
 
   return <div className="cash-registers-workspace">
     <section className="cash-overview" aria-label="Resumen operativo de cajas">
@@ -279,7 +326,7 @@ function CashRegisters({items,loading,error,canManage,money,dateTime,businessDat
       <div className="cash-overview-metrics">
         <div><small>CAJAS ACTIVAS</small><strong>{active.length}</strong></div>
         <div><small>TURNOS ABIERTOS</small><strong>{open.length}</strong></div>
-        <div className="money"><small>EFECTIVO ESPERADO</small><strong>{money(expected)}</strong></div>
+        <div className="money"><small>EFECTIVO ESPERADO</small><strong>{hiddenExpected?"Cierre ciego":money(expected)}</strong></div>
       </div>
     </section>
 
@@ -310,16 +357,22 @@ function CashRegisters({items,loading,error,canManage,money,dateTime,businessDat
               <p><Icon name="users" size={12}/>{shift.openedByName}<span>·</span><Icon name="clock" size={12}/>{dateTime(shift.openedAt)}</p>
               <em>Día operativo {businessDate(shift.businessDate)}</em>
             </div>
-            <div className="cash-register-balance"><small>SALDO ESPERADO</small><strong>{money(Number(shift.expectedAmount))}</strong><span>{shift.movementCount} {shift.movementCount===1?"movimiento":"movimientos"}</span></div>
+            <div className="cash-register-balance"><small>{shift.expectedVisible?"SALDO ESPERADO":"CIERRE CIEGO"}</small><strong>{shift.expectedVisible?money(Number(shift.expectedAmount)):"Oculto"}</strong><span>{shift.movementCount} {shift.movementCount===1?"movimiento":"movimientos"}</span></div>
           </section>
-          <section className="cash-register-flow">
+          {shift.expectedVisible?<section className="cash-register-flow">
             <div><small>FONDO INICIAL</small><b>{money(Number(shift.openingAmount))}</b></div>
             <div className="income"><small>INGRESOS</small><b>+{money(Number(shift.incomeAmount))}</b></div>
             <div className="expense"><small>EGRESOS</small><b>-{money(Number(shift.expenseAmount))}</b></div>
-          </section>
+          </section>:<div className="cash-register-blind"><Icon name="lock" size={14}/><span>El detalle de efectivo está oculto hasta cerrar el turno.</span></div>}
           <footer>
             <RowActionButton action="view" label="Ver turno" onClick={()=>view(shift)}/>
-            {canManage&&<><Button kind="secondary" icon="plus" onClick={()=>movement(shift,"income")}>Ingreso</Button><Button kind="secondary" icon="minus" onClick={()=>movement(shift,"expense")}>Egreso</Button><Button kind="danger" icon="lock" onClick={()=>close(shift)}>Cerrar turno</Button></>}
+            {canManage&&<>
+              <IconButton icon="users" label="Equipo del turno" onClick={()=>team(shift)}/>
+              <IconButton icon="share" label="Operaciones de caja" onClick={()=>operation(shift)}/>
+              <Button kind="secondary" icon="plus" onClick={()=>movement(shift,"income")}>Ingreso</Button>
+              <Button kind="secondary" icon="minus" onClick={()=>movement(shift,"expense")}>Egreso</Button>
+              <Button kind="danger" icon="lock" onClick={()=>close(shift)}>Cerrar turno</Button>
+            </>}
           </footer>
         </>:<div className="cash-register-idle">
           <span><Icon name={item.active?"clock":"power"} size={20}/></span>
