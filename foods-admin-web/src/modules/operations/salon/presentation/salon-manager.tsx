@@ -717,12 +717,12 @@ function OrderDetail({loading,order,error,currencySymbol,canManage,busy,close,ad
                 {canManage&&(
                   <footer className="order-detail-actions salon-order-detail-actions">
                     {action&&<Button icon={action.icon} className="order-detail-primary" disabled={busy} onClick={()=>advance(action.status)}>{action.label}</Button>}
-                    {remaining>0.00001&&<Link href={`/pos?orderId=${order.id}`} className="button secondary salon-order-detail-pay"><Icon name="payment" size={16}/>Cobrar</Link>}
-                    {editable&&<Button icon="edit" kind="secondary" className="salon-order-detail-edit" disabled={busy} onClick={()=>edit(order)}>Editar</Button>}
-                    {(order.status==="confirmado"||order.status==="preparando")&&<span className="order-detail-done"><Icon name="chefHat" size={15}/>{order.status==="confirmado"?"En cocina":"Preparando"}</span>}
+                    {remaining>0.00001&&<Link href={`/pos?orderId=${order.id}`} className="button secondary salon-order-detail-pay"><Icon name="payment" size={16}/>Cobrar {currencySymbol} {money(remaining)}</Link>}
+                    {editable&&<Button icon="edit" kind="secondary" className="salon-order-detail-edit" disabled={busy} onClick={()=>edit(order)}>Editar comanda</Button>}
+                    {(order.status==="confirmado"||order.status==="preparando")&&<span className="order-detail-done"><Icon name="chefHat" size={15}/>{order.status==="confirmado"?"Esperando cocina":"En preparación"}</span>}
                     {order.status==="listo"&&remaining>0.00001&&<span className="order-detail-done"><Icon name="sales" size={15}/>Cobra el saldo antes de liberar la mesa</span>}
                     {order.status==="entregado"&&<span className="order-detail-done"><Icon name="check" size={15}/>Mesa entregada</span>}
-                    {(order.status==="nuevo"||order.status==="confirmado")&&!hasPayments&&<Button icon="cancel" kind="ghost" className="order-detail-cancel" disabled={busy} onClick={()=>cancel(order)}>Cancelar</Button>}
+                    {(order.status==="nuevo"||order.status==="confirmado")&&!hasPayments&&<Button icon="cancel" kind="ghost" className="order-detail-cancel" disabled={busy} onClick={()=>cancel(order)}>Cancelar pedido</Button>}
                     {(order.status==="nuevo"||order.status==="confirmado")&&hasPayments&&<span className="order-detail-done"><Icon name="alert" size={15}/>Devuelve los pagos en POS antes de cancelar</span>}
                     {(order.status==="preparando"||order.status==="listo"||order.status==="en_camino")&&<span className="order-detail-done"><Icon name="alert" size={15}/>La preparación ya inició; cancelación normal bloqueada</span>}
                   </footer>
