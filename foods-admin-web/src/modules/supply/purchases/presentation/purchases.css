@@ -21,7 +21,6 @@
 .purchase-flow-step.started:not(.done) .purchase-flow-number{background:var(--warning-50);color:var(--warning)}
 .purchase-flow-connector{width:42px;height:2px;border-radius:999px;background:#e4e7ec;flex:0 0 auto}
 .purchase-flow-connector.done{background:var(--brand-600)}
-.purchase-form-body>.purchase-flow-steps,.purchase-detail-body>.purchase-flow-steps,.purchase-receipt-body>.purchase-flow-steps{padding:10px 12px;border-radius:10px;background:#f8f9fc}
 .purchases-toolbar{display:grid;grid-template-columns:minmax(260px,1.2fr) minmax(170px,.5fr) minmax(260px,1fr);align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line);background:#fff}
 .purchases-search{display:flex;align-items:center;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink-400)}
 .purchases-search>svg{margin-left:10px;flex:0 0 auto}
@@ -31,6 +30,15 @@
 .purchase-money{font-variant-numeric:tabular-nums}
 .purchases-cards{display:none}
 .purchases-state{min-height:280px}
+.purchase-receipts-empty{min-height:280px;padding:30px;display:grid;place-content:center;justify-items:center;gap:8px;text-align:center;color:var(--ink-500)}
+.purchase-receipts-empty>span{display:grid;place-items:center;width:46px;height:46px;border-radius:14px;background:var(--brand-100);color:var(--brand-700)}
+.purchase-receipts-empty b{font-size:12px;color:var(--ink-950)}
+.purchase-receipts-empty p{max-width:360px;margin:0;font-size:9px;line-height:1.5}
+.purchase-receipt-actions{display:flex;align-items:center;justify-content:flex-end;gap:7px}
+.purchase-receipt-actions .button{min-width:92px}
+.purchase-receipt-cards footer{display:flex;align-items:center;gap:8px}
+.purchase-receipt-cards footer .button{flex:1}
+
 .purchase-order-modal{width:min(980px,calc(100vw - 32px));max-height:min(860px,calc(100dvh - 32px))}
 .purchase-form-body{display:grid;gap:14px;padding:18px 20px;overflow:auto;background:#fff}
 .purchase-form-section{display:grid;gap:14px;padding:16px;border:0;border-radius:12px;background:var(--cloud-50)}
@@ -85,7 +93,8 @@
  .purchase-line>.ds-icon-button{grid-column:4/5}
 }
 @media(max-width:760px){
- .purchases-tabs{padding:8px 8px 0}
+ .purchases-tabs{padding:8px 8px 0;overflow-x:auto}
+ .purchases-tabs button{min-width:max-content}
  .purchases-tabs button{flex:1;justify-content:center}
  .purchases-toolbar{grid-template-columns:1fr;padding:10px}
  .purchase-flow-overview{align-items:flex-start;flex-direction:column;padding:10px}
@@ -94,7 +103,7 @@
  .purchase-flow-step{flex:1;align-items:flex-start}
  .purchase-flow-step small{white-space:normal;line-height:1.35}
  .purchase-flow-connector{width:22px;margin-top:13px}
- .purchase-form-body>.purchase-flow-steps,.purchase-detail-body>.purchase-flow-steps,.purchase-receipt-body>.purchase-flow-steps{padding:9px}
+
  .purchases-toolbar>p{grid-column:auto}
  .purchases-table-wrap{display:none}
  .purchases-cards{display:grid}
