@@ -130,8 +130,7 @@ export function PurchaseItemDialog({
           </section>
 
           {mode==="existing"?<section className="purchase-item-section purchase-existing-section">
-            <div className="purchase-section-title"><span><Icon name="search" size={17}/></span><div><b>Buscar artículo</b><small>Selecciona uno existente para agregarlo a la orden.</small></div></div>
-            <label className="purchase-existing-search">Artículo
+            <label className="purchase-existing-search">Buscar artículo
               <span className="ds-input-shell purchase-existing-search-control"><Icon name="search" size={16}/><Input autoFocus value={search} onChange={event=>setSearch(event.target.value)} placeholder="Escribe el nombre del producto o insumo"/></span>
             </label>
 
