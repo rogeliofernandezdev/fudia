@@ -692,7 +692,7 @@ func (a *API) updatePurchaseOrderStatus(w http.ResponseWriter, r *http.Request) 
 	}
 	allowed := map[string]map[string]bool{
 		"draft":            {"pending_approval": true, "cancelled": true},
-		"pending_approval": {"draft": true, "approved": true, "cancelled": true},
+		"pending_approval": {"draft": true, "cancelled": true},
 		"approved":         {"cancelled": true},
 	}
 	if !allowed[current][in.Status] {
