@@ -817,7 +817,6 @@ func (a *API) createInventoryAdjustment(w http.ResponseWriter, r *http.Request) 
 	}
 
 	newAverage:=averageCost
-	if stockAfter<=0{newAverage=0}
 	if _, err = tx.Exec(r.Context(), `
 		UPDATE stock_balances
 		SET quantity=$4,average_unit_cost=$5,updated_at=now()
@@ -1091,7 +1090,6 @@ func (a *API) applyOrderQuantityDelta(ctx context.Context, tx pgx.Tx, s scope, o
 			}
 			if nextBalance < 0 { nextBalance = 0 }
 			nextAverage:=averageCost
-			if nextBalance<=0{nextAverage=0}
 			if _, err := tx.Exec(ctx, `
 				UPDATE stock_balances
 				SET quantity=$4,average_unit_cost=$5,updated_at=now()
