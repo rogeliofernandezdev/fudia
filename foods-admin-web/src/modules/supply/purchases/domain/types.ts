@@ -1,5 +1,5 @@
 export type PurchaseStatus="draft"|"pending_approval"|"approved"|"partially_received"|"received"|"cancelled";
-export type PurchaseTab="orders"|"suppliers";
+export type PurchaseTab="orders"|"receipts"|"suppliers";
 export type PresentationType="unit"|"package"|"box";
 
 export type Supplier={
