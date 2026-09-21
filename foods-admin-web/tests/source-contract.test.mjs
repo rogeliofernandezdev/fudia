@@ -252,6 +252,32 @@ test("compras concentra orden recepcion y altas de abastecimiento",()=>{
   assert.equal(inventory.includes("Nuevo insumo"),false,"Inventario no recupera creación de insumos");
 });
 
+test("caja implementa apertura movimientos arqueo y cierre",()=>{
+  const page=read("src/modules/operations/cash/presentation/cash-page.tsx");
+  const dialogs=read("src/modules/operations/cash/presentation/cash-dialogs.tsx");
+  const api=read("src/modules/operations/cash/infrastructure/cash-api.ts");
+  const schema=read("src/modules/operations/cash/domain/cash-schema.ts");
+  const route=read("src/app/(admin)/caja/page.tsx");
+
+  assert.ok(route.includes("CashPage"),"/caja compone el módulo operativo real");
+  assert.ok(page.includes("Caja actual"),"Caja separa el turno actual");
+  assert.ok(page.includes(">Turnos<"),"Caja expone historial de turnos");
+  assert.ok(page.includes("SALDO ESPERADO"),"El turno muestra el efectivo esperado");
+  assert.ok(page.includes('addMovement("income")'),"El turno permite ingresos manuales");
+  assert.ok(page.includes('addMovement("expense")'),"El turno permite egresos manuales");
+  assert.ok(page.includes("CloseCashShiftDialog"),"El cierre se realiza mediante arqueo");
+  assert.ok(page.includes("RowActionButton action=\"view\""),"El historial abre detalle solo lectura");
+  assert.ok(dialogs.includes("EFECTIVO ESPERADO"),"El arqueo muestra el esperado antes de cerrar");
+  assert.ok(dialogs.includes("Efectivo contado"),"El arqueo solicita el efectivo contado");
+  assert.ok(dialogs.includes("DIFERENCIA"),"El cierre calcula sobrante o faltante");
+  assert.ok(dialogs.includes("ya no se podrán registrar nuevos movimientos"),"El cierre comunica su irreversibilidad operativa");
+  assert.ok(api.includes('"cash-shifts/current"'),"Caja consulta el turno abierto del usuario");
+  assert.ok(api.includes("/movements"),"Caja registra movimientos contra el turno");
+  assert.ok(api.includes("/close"),"Caja cierra el turno mediante endpoint dedicado");
+  assert.ok(schema.includes("cashMovementResolver"),"Movimientos usan validación de formulario");
+  assert.ok(schema.includes("closeCashShiftResolver"),"El arqueo usa validación de formulario");
+});
+
 test("combos conserva la misma tabla en movil y el shell no desborda",()=>{
   const combos=read("src/modules/menu/combos/presentation/combos-page.tsx");
   assert.ok(combos.includes('className="table-wrap hover-scroll"'));
@@ -298,6 +324,7 @@ test("las rutas principales componen modulos",()=>{
     "src/app/(admin)/salon/page.tsx":"@/modules/operations",
     "src/app/(admin)/cocina/page.tsx":"@/modules/operations",
     "src/app/(admin)/mesas/page.tsx":"@/modules/operations",
+    "src/app/(admin)/caja/page.tsx":"@/modules/operations",
     "src/app/(admin)/productos/page.tsx":"@/modules/menu",
     "src/app/(admin)/combos/page.tsx":"@/modules/menu",
     "src/app/(admin)/clientes/page.tsx":"@/modules/customers",
