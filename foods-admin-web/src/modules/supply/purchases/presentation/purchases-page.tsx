@@ -144,7 +144,11 @@ function PurchaseOrderDialog({initial,suppliers,inventory,currencySymbol,busy,cl
     mutationFn:({draft}:{index:number;draft:Parameters<typeof createPurchaseInventoryItem>[0]})=>createPurchaseInventoryItem(draft),
     onSuccess:(item,variables)=>{
       setCreatedItems(current=>current.some(existing=>existing.id===item.id)?current:[...current,item]);
-      chooseItem(variables.index,item.id,item);
+      const factor=variables.draft.presentationType==="unit"?1:Number(variables.draft.unitsPerPresentation);
+      const presentation=item.presentations.find(option=>
+        option.presentationType===variables.draft.presentationType&&Number(option.unitsPerPresentation)===factor
+      );
+      chooseItem(variables.index,item.id,item,presentation?.id);
       setNewItemLine(null);
       void qc.invalidateQueries({queryKey:["purchase-inventory"]});
       void qc.invalidateQueries({queryKey:["inventory"]});
@@ -157,9 +161,11 @@ function PurchaseOrderDialog({initial,suppliers,inventory,currencySymbol,busy,cl
   const catalog=[...inventory,...createdItems.filter(item=>!inventory.some(existing=>existing.id===item.id))];
   const total=lines.reduce((sum,line)=>sum+(Number(line.quantity)||0)*(Number(line.unitCost)||0),0);
 
-  function chooseItem(index:number,id:string,forced?:PurchaseInventoryOption){
+  function chooseItem(index:number,id:string,forced?:PurchaseInventoryOption,preferredPresentationId?:string){
     const option=forced??catalog.find(item=>item.id===id);
-    const presentation=option?.presentations.find(item=>item.presentationType==="unit")??option?.presentations[0];
+    const presentation=option?.presentations.find(item=>item.id===preferredPresentationId)
+      ??option?.presentations.find(item=>item.presentationType==="unit")
+      ??option?.presentations[0];
     setValue(`items.${index}.inventoryItemId`,id,{shouldValidate:isSubmitted});
     setValue(`items.${index}.presentationId`,presentation?.id??"",{shouldValidate:isSubmitted});
     setItemSearch(current=>({...current,[index]:""}));
