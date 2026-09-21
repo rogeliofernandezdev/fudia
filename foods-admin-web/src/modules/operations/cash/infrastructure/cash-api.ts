@@ -15,6 +15,20 @@ export function createCashRegister(draft:CashRegisterDraft){
   });
 }
 
+export function updateCashRegister(id:string,draft:CashRegisterDraft){
+  return apiFetch<CashRegister>(`cash-registers/${id}`,{
+    method:"PATCH",
+    body:JSON.stringify({name:draft.name.trim()}),
+  });
+}
+
+export function setCashRegisterActive(id:string,active:boolean){
+  return apiFetch<void>(`cash-registers/${id}/status`,{
+    method:"PATCH",
+    body:JSON.stringify({active}),
+  });
+}
+
 export function listCashShifts(input:{q:string;status:string;page:number;pageSize:number}){
   const params=new URLSearchParams({q:input.q,status:input.status,page:String(input.page),pageSize:String(input.pageSize)});
   return apiFetch<CashShiftList>(`cash-shifts?${params.toString()}`);
