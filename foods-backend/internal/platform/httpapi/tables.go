@@ -43,7 +43,7 @@ func (a *API) listTables(w http.ResponseWriter, r *http.Request) {
 	if size < 1 {
 		size = 10
 	}
-	rows, err := a.db.Query(r.Context(), `SELECT id,name,seats,zone,active,qr_token,qr_enabled FROM tables WHERE organization_id=$1 AND name ILIKE $2 AND ($3='' OR active=($3='active')) ORDER BY name LIMIT $4 OFFSET $5`, s.OrganizationID, q, status, size, (page-1)*size)
+	rows, err := a.db.Query(r.Context(), `SELECT id,name,seats,zone,active,qr_token,qr_enabled FROM tables WHERE organization_id=$1 AND location_id=$2 AND name ILIKE $3 AND ($4='' OR active=($4='active')) ORDER BY name LIMIT $5 OFFSET $6`, s.OrganizationID, s.LocationID, q, status, size, (page-1)*size)
 	if err != nil {
 		fail(w, 503, "tables_unavailable", "No pudimos cargar las mesas.")
 		return
@@ -59,7 +59,7 @@ func (a *API) listTables(w http.ResponseWriter, r *http.Request) {
 		items = append(items, t)
 	}
 	var total int
-	_ = a.db.QueryRow(r.Context(), `SELECT count(*) FROM tables WHERE organization_id=$1 AND name ILIKE $2 AND ($3='' OR active=($3='active'))`, s.OrganizationID, q, status).Scan(&total)
+	_ = a.db.QueryRow(r.Context(), `SELECT count(*) FROM tables WHERE organization_id=$1 AND location_id=$2 AND name ILIKE $3 AND ($4='' OR active=($4='active'))`, s.OrganizationID, s.LocationID, q, status).Scan(&total)
 	writeJSON(w, 200, map[string]any{"items": items, "total": total, "page": page, "pageSize": size})
 }
 
@@ -83,7 +83,7 @@ func (a *API) createTable(w http.ResponseWriter, r *http.Request) {
 		qrEnabled = *in.QrEnabled
 	}
 	var t table
-	err := a.db.QueryRow(r.Context(), `INSERT INTO tables(organization_id,name,seats,zone,active,qr_token,qr_enabled) VALUES($1,$2,$3,$4,true,encode(gen_random_bytes(16),'hex'),$5) RETURNING id,name,seats,zone,active,qr_token,qr_enabled`, s.OrganizationID, strings.TrimSpace(in.Name), seats, strings.TrimSpace(in.Zone), qrEnabled).Scan(&t.ID, &t.Name, &t.Seats, &t.Zone, &t.Active, &t.QrToken, &t.QrEnabled)
+	err := a.db.QueryRow(r.Context(), `INSERT INTO tables(organization_id,location_id,name,seats,zone,active,qr_token,qr_enabled) VALUES($1,$2,$3,$4,$5,true,encode(gen_random_bytes(16),'hex'),$6) RETURNING id,name,seats,zone,active,qr_token,qr_enabled`, s.OrganizationID, s.LocationID, strings.TrimSpace(in.Name), seats, strings.TrimSpace(in.Zone), qrEnabled).Scan(&t.ID, &t.Name, &t.Seats, &t.Zone, &t.Active, &t.QrToken, &t.QrEnabled)
 	if err != nil {
 		fail(w, 409, "table_conflict", "Ya existe una mesa con ese nombre.")
 		return
@@ -123,7 +123,7 @@ func (a *API) createTablesBatch(w http.ResponseWriter, r *http.Request) {
 			qrEnabled = *item.QrEnabled
 		}
 		var t table
-		err := tx.QueryRow(r.Context(), `INSERT INTO tables(organization_id,name,seats,zone,active,qr_token,qr_enabled) VALUES($1,$2,$3,$4,true,encode(gen_random_bytes(16),'hex'),$5) RETURNING id,name,seats,zone,active,qr_token,qr_enabled`, s.OrganizationID, strings.TrimSpace(item.Name), seats, strings.TrimSpace(item.Zone), qrEnabled).Scan(&t.ID, &t.Name, &t.Seats, &t.Zone, &t.Active, &t.QrToken, &t.QrEnabled)
+		err := tx.QueryRow(r.Context(), `INSERT INTO tables(organization_id,location_id,name,seats,zone,active,qr_token,qr_enabled) VALUES($1,$2,$3,$4,$5,true,encode(gen_random_bytes(16),'hex'),$6) RETURNING id,name,seats,zone,active,qr_token,qr_enabled`, s.OrganizationID, s.LocationID, strings.TrimSpace(item.Name), seats, strings.TrimSpace(item.Zone), qrEnabled).Scan(&t.ID, &t.Name, &t.Seats, &t.Zone, &t.Active, &t.QrToken, &t.QrEnabled)
 		if err != nil {
 			fail(w, 409, "table_conflict", "Ya existe una mesa llamada \""+strings.TrimSpace(item.Name)+"\".")
 			return
@@ -162,7 +162,7 @@ func (a *API) updateTable(w http.ResponseWriter, r *http.Request) {
 		qrEnabled = *in.QrEnabled
 	}
 	var t table
-	err := a.db.QueryRow(r.Context(), `UPDATE tables SET name=$3,seats=$4,zone=$5,active=$6,qr_enabled=$7,updated_at=now() WHERE id=$1 AND organization_id=$2 RETURNING id,name,seats,zone,active,qr_token,qr_enabled`, r.PathValue("id"), s.OrganizationID, strings.TrimSpace(in.Name), seats, strings.TrimSpace(in.Zone), active, qrEnabled).Scan(&t.ID, &t.Name, &t.Seats, &t.Zone, &t.Active, &t.QrToken, &t.QrEnabled)
+	err := a.db.QueryRow(r.Context(), `UPDATE tables SET name=$4,seats=$5,zone=$6,active=$7,qr_enabled=$8,updated_at=now() WHERE id=$1 AND organization_id=$2 AND location_id=$3 RETURNING id,name,seats,zone,active,qr_token,qr_enabled`, r.PathValue("id"), s.OrganizationID, s.LocationID, strings.TrimSpace(in.Name), seats, strings.TrimSpace(in.Zone), active, qrEnabled).Scan(&t.ID, &t.Name, &t.Seats, &t.Zone, &t.Active, &t.QrToken, &t.QrEnabled)
 	if err == pgx.ErrNoRows {
 		fail(w, 404, "table_not_found", "La mesa no existe.")
 		return
@@ -177,7 +177,7 @@ func (a *API) updateTable(w http.ResponseWriter, r *http.Request) {
 func (a *API) regenerateTableQR(w http.ResponseWriter, r *http.Request) {
 	s := r.Context().Value(scopeKey{}).(scope)
 	var t table
-	err := a.db.QueryRow(r.Context(), `UPDATE tables SET qr_token=encode(gen_random_bytes(16),'hex'),updated_at=now() WHERE id=$1 AND organization_id=$2 RETURNING id,name,seats,zone,active,qr_token,qr_enabled`, r.PathValue("id"), s.OrganizationID).Scan(&t.ID, &t.Name, &t.Seats, &t.Zone, &t.Active, &t.QrToken, &t.QrEnabled)
+	err := a.db.QueryRow(r.Context(), `UPDATE tables SET qr_token=encode(gen_random_bytes(16),'hex'),updated_at=now() WHERE id=$1 AND organization_id=$2 AND location_id=$3 RETURNING id,name,seats,zone,active,qr_token,qr_enabled`, r.PathValue("id"), s.OrganizationID, s.LocationID).Scan(&t.ID, &t.Name, &t.Seats, &t.Zone, &t.Active, &t.QrToken, &t.QrEnabled)
 	if err == pgx.ErrNoRows {
 		fail(w, 404, "table_not_found", "La mesa no existe.")
 		return
@@ -191,7 +191,7 @@ func (a *API) regenerateTableQR(w http.ResponseWriter, r *http.Request) {
 
 func (a *API) deactivateTable(w http.ResponseWriter, r *http.Request) {
 	s := r.Context().Value(scopeKey{}).(scope)
-	ct, err := a.db.Exec(r.Context(), `UPDATE tables SET active=false,updated_at=now() WHERE id=$1 AND organization_id=$2 AND active=true`, r.PathValue("id"), s.OrganizationID)
+	ct, err := a.db.Exec(r.Context(), `UPDATE tables SET active=false,updated_at=now() WHERE id=$1 AND organization_id=$2 AND location_id=$3 AND active=true`, r.PathValue("id"), s.OrganizationID, s.LocationID)
 	if err != nil {
 		fail(w, 503, "table_unavailable", "No pudimos desactivar la mesa.")
 		return
@@ -224,7 +224,7 @@ func (a *API) getTableByQR(w http.ResponseWriter, r *http.Request) {
 		SELECT t.name, t.seats, t.zone, o.trade_name, l.name
 		FROM tables t
 		JOIN organizations o ON o.id = t.organization_id
-		LEFT JOIN locations l ON l.organization_id = t.organization_id AND l.active
+		JOIN locations l ON l.id=t.location_id AND l.organization_id=t.organization_id AND l.active
 		WHERE t.qr_token = $1 AND t.active = true AND t.qr_enabled = true
 		LIMIT 1`, token).Scan(&t.Name, &t.Seats, &t.Zone, &t.OrgName, &t.LocName)
 	if err != nil {
