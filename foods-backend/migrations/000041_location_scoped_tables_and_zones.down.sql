@@ -1,3 +1,5 @@
+DROP INDEX IF EXISTS orders_one_open_table_uq;
+
 ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_table_location_fkey;
 
 -- Collapse location-specific table copies back to one organization-wide row.
