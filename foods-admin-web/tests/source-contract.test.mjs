@@ -260,8 +260,9 @@ test("caja implementa apertura movimientos arqueo y cierre",()=>{
   const route=read("src/app/(admin)/caja/page.tsx");
 
   assert.ok(route.includes("CashPage"),"/caja compone el módulo operativo real");
-  assert.ok(page.includes("Caja actual"),"Caja separa el turno actual");
+  assert.ok(page.includes(">Caja<"),"Caja usa una pestaña neutral aunque no exista turno abierto");
   assert.ok(page.includes(">Turnos<"),"Caja expone historial de turnos");
+  assert.equal((page.match(/Abrir turno/g)??[]).length,1,"El estado sin turno muestra un solo CTA de apertura");
   assert.ok(page.includes("SALDO ESPERADO"),"El turno muestra el efectivo esperado");
   assert.ok(page.includes('addMovement("income")'),"El turno permite ingresos manuales");
   assert.ok(page.includes('addMovement("expense")'),"El turno permite egresos manuales");
