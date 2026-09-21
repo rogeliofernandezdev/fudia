@@ -270,13 +270,23 @@ func (a *API) createPayment(w http.ResponseWriter,r *http.Request){
 	var orderCode,status string
 	var total,paid float64
 	err=tx.QueryRow(r.Context(),`
-		SELECT o.code,o.status,o.total::float8,(`+netPaidSQL+`)::float8
+		SELECT o.code,o.status,o.total::float8
 		FROM orders o
 		WHERE o.id=$1 AND o.organization_id=$2 AND o.location_id=$3
 		FOR UPDATE
-	`,in.OrderID,s.OrganizationID,s.LocationID).Scan(&orderCode,&status,&total,&paid)
+	`,in.OrderID,s.OrganizationID,s.LocationID).Scan(&orderCode,&status,&total)
 	if errors.Is(err,pgx.ErrNoRows){fail(w,404,"order_not_found","El pedido no existe en este local.");return}
 	if err!=nil{fail(w,503,"payments_unavailable","No pudimos validar el pedido.");return}
+	if err=tx.QueryRow(r.Context(),`
+		SELECT COALESCE(sum(
+		  p.amount-COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id),0)
+		),0)::float8
+		FROM payments p
+		WHERE p.order_id=$1 AND p.organization_id=$2 AND p.location_id=$3
+	`,in.OrderID,s.OrganizationID,s.LocationID).Scan(&paid);err!=nil{
+		fail(w,503,"payments_unavailable","No pudimos validar el saldo pendiente.")
+		return
+	}
 	if status=="cancelado"{fail(w,409,"order_not_payable","Un pedido cancelado no admite cobros.");return}
 	remaining:=math.Max(0,total-paid)
 	if in.Amount>remaining+0.00001{
@@ -430,13 +440,23 @@ func (a *API) createPaymentBatch(w http.ResponseWriter,r *http.Request){
 	var orderCode,status string
 	var orderTotal,paid float64
 	err=tx.QueryRow(r.Context(),`
-		SELECT o.code,o.status,o.total::float8,(`+netPaidSQL+`)::float8
+		SELECT o.code,o.status,o.total::float8
 		FROM orders o
 		WHERE o.id=$1 AND o.organization_id=$2 AND o.location_id=$3
 		FOR UPDATE
-	`,in.OrderID,s.OrganizationID,s.LocationID).Scan(&orderCode,&status,&orderTotal,&paid)
+	`,in.OrderID,s.OrganizationID,s.LocationID).Scan(&orderCode,&status,&orderTotal)
 	if errors.Is(err,pgx.ErrNoRows){fail(w,404,"order_not_found","El pedido no existe en este local.");return}
 	if err!=nil{fail(w,503,"payments_unavailable","No pudimos validar el pedido.");return}
+	if err=tx.QueryRow(r.Context(),`
+		SELECT COALESCE(sum(
+		  p.amount-COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id),0)
+		),0)::float8
+		FROM payments p
+		WHERE p.order_id=$1 AND p.organization_id=$2 AND p.location_id=$3
+	`,in.OrderID,s.OrganizationID,s.LocationID).Scan(&paid);err!=nil{
+		fail(w,503,"payments_unavailable","No pudimos validar el saldo pendiente.")
+		return
+	}
 	if status=="cancelado"{fail(w,409,"order_not_payable","Un pedido cancelado no admite cobros.");return}
 	remaining:=math.Max(0,orderTotal-paid)
 	if totalBatch>remaining+0.00001{
@@ -484,13 +504,23 @@ func (a *API) completePaidOrder(w http.ResponseWriter,r *http.Request){
 	var total,paid float64
 	var status string
 	err=tx.QueryRow(r.Context(),`
-		SELECT o.total::float8,(`+netPaidSQL+`)::float8,o.status
+		SELECT o.total::float8,o.status
 		FROM orders o
 		WHERE o.id=$1 AND o.organization_id=$2 AND o.location_id=$3
 		FOR UPDATE
-	`,r.PathValue("id"),s.OrganizationID,s.LocationID).Scan(&total,&paid,&status)
+	`,r.PathValue("id"),s.OrganizationID,s.LocationID).Scan(&total,&status)
 	if errors.Is(err,pgx.ErrNoRows){fail(w,404,"order_not_found","El pedido no existe en este local.");return}
 	if err!=nil{fail(w,503,"payments_unavailable","No pudimos validar el pedido.");return}
+	if err=tx.QueryRow(r.Context(),`
+		SELECT COALESCE(sum(
+		  p.amount-COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id),0)
+		),0)::float8
+		FROM payments p
+		WHERE p.order_id=$1 AND p.organization_id=$2 AND p.location_id=$3
+	`,r.PathValue("id"),s.OrganizationID,s.LocationID).Scan(&paid);err!=nil{
+		fail(w,503,"payments_unavailable","No pudimos validar el saldo del pedido.")
+		return
+	}
 	if status=="cancelado"{fail(w,409,"order_not_completable","Un pedido cancelado no puede finalizarse.");return}
 	if paid+0.00001<total{fail(w,409,"payment_incomplete","El pedido todavía tiene saldo pendiente.");return}
 	if status!="listo"&&status!="en_camino"{
