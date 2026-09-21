@@ -59,7 +59,12 @@ func seedInventoryScope(t *testing.T, pool *pgxpool.Pool) scope {
 	}
 	s := scope{OrganizationID: organizationID, LocationID: locationID, UserID: userID, Name: "Inventory Test"}
 	t.Cleanup(func() {
+		_, _ = pool.Exec(context.Background(), `DELETE FROM payment_refunds WHERE organization_id=$1`, organizationID)
+		_, _ = pool.Exec(context.Background(), `DELETE FROM payments WHERE organization_id=$1`, organizationID)
+		_, _ = pool.Exec(context.Background(), `DELETE FROM cash_operations WHERE organization_id=$1`, organizationID)
+		_, _ = pool.Exec(context.Background(), `DELETE FROM cash_count_lines WHERE organization_id=$1`, organizationID)
 		_, _ = pool.Exec(context.Background(), `DELETE FROM cash_movements WHERE organization_id=$1`, organizationID)
+		_, _ = pool.Exec(context.Background(), `DELETE FROM cash_shift_users WHERE organization_id=$1`, organizationID)
 		_, _ = pool.Exec(context.Background(), `DELETE FROM cash_shifts WHERE organization_id=$1`, organizationID)
 		_, _ = pool.Exec(context.Background(), `DELETE FROM cash_registers WHERE organization_id=$1`, organizationID)
 		_, _ = pool.Exec(context.Background(), `DELETE FROM stock_movements WHERE organization_id=$1`, organizationID)
