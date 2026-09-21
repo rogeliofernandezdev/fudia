@@ -17,14 +17,16 @@ const channelIcons:Record<string,IconName>={salon:"utensils",mostrador:"store",r
 const statusMeta:Record<string,{label:string;tone:"green"|"blue"|"orange"|"gray"}>={nuevo:{label:"Nuevo",tone:"blue"},confirmado:{label:"Confirmado",tone:"blue"},preparando:{label:"Preparando",tone:"orange"},listo:{label:"Listo",tone:"green"},en_camino:{label:"En camino",tone:"orange"},entregado:{label:"Entregado",tone:"gray"},cancelado:{label:"Cancelado",tone:"gray"}};
 
 function nextAction(o:Order):{status:string;label:string;icon:IconName}|null{
- if(o.status==="nuevo")return{status:"confirmado",label:"Confirmar",icon:"receipt"};
- if(o.status==="confirmado")return{status:"preparando",label:"Iniciar preparación",icon:"chefHat"};
- if(o.status==="preparando")return{status:"listo",label:"Marcar listo",icon:"check"};
- if(o.status==="listo")return o.channel==="delivery"?{status:"en_camino",label:"En camino",icon:"truck"}:{status:"entregado",label:"Entregar",icon:"check"};
+ if(o.status==="nuevo")return{status:"confirmado",label:"Enviar a cocina",icon:"receipt"};
+ if(o.status==="listo"){
+  if(o.channel==="delivery")return{status:"en_camino",label:"En camino",icon:"truck"};
+  if(o.channel==="salon"&&o.paymentStatus!=="paid")return null;
+  return{status:"entregado",label:o.channel==="salon"?"Entregar y liberar mesa":"Entregar",icon:"check"};
+ }
  if(o.status==="en_camino")return{status:"entregado",label:"Entregar",icon:"check"};
  return null;
 }
-const cancellable=(o:Order)=>!["entregado","cancelado"].includes(o.status);
+const cancellable=(o:Order)=>!["entregado","cancelado"].includes(o.status)&&Number(o.paidAmount??0)<=0.00001;
 function parseIsoDate(iso:string):Date|null{
   if(!iso)return null;
   const normalized=iso.replace(/([+-]\d{2})$/,"$1:00");
