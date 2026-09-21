@@ -66,44 +66,15 @@ func TestSalonKitchenPaymentDeliveryWorkflow(t *testing.T) {
 	if created.Status!="confirmado"{t.Fatalf("expected confirmed order sent to kitchen, got %q",created.Status)}
 	if created.Total!="25.00"{t.Fatalf("server catalog price must win, got total %q",created.Total)}
 
-	// Once a payment exists, the comanda amount/items cannot be edited.
-	partialPayReq:=httptest.NewRequest("POST","/v1/admin/payments",bytes.NewReader([]byte(fmt.Sprintf(`{"orderId":%q,"method":"card","amount":5,"reference":"ANTICIPO"}`,created.ID))))
-	partialPayReq=partialPayReq.WithContext(context.WithValue(partialPayReq.Context(),scopeKey{},s))
-	partialPayRec:=httptest.NewRecorder()
-	api.createPayment(partialPayRec,partialPayReq)
-	if partialPayRec.Code!=201{t.Fatalf("partial payment: %d %s",partialPayRec.Code,partialPayRec.Body.String())}
-	var partialPayment paymentView
-	if err:=json.Unmarshal(partialPayRec.Body.Bytes(),&partialPayment);err!=nil{t.Fatal(err)}
-
-	editBody:=[]byte(fmt.Sprintf(`{
-		"customerName":"Cambio indebido",
-		"customerPhone":"",
-		"address":"",
-		"reference":"",
-		"notes":"",
-		"deliveryFee":0,
-		"items":[{"productId":%q,"name":"ignorado","qty":2,"unitPrice":1,"note":"","selections":[]}]
-	}`,productID))
-	editReq:=httptest.NewRequest("PATCH","/v1/admin/orders/"+created.ID,bytes.NewReader(editBody))
-	editReq.SetPathValue("id",created.ID)
-	editReq=editReq.WithContext(context.WithValue(editReq.Context(),scopeKey{},s))
-	editRec:=httptest.NewRecorder()
-	api.updateOrder(editRec,editReq)
-	if editRec.Code!=409||!strings.Contains(editRec.Body.String(),"paid_order_not_editable"){
-		t.Fatalf("paid comanda edit must be blocked: %d %s",editRec.Code,editRec.Body.String())
+	// Cobro antes de que cocina marque el pedido como listo debe estar bloqueado.
+	earlyPayReq:=httptest.NewRequest("POST","/v1/admin/payments",bytes.NewReader([]byte(fmt.Sprintf(`{"orderId":%q,"method":"card","amount":5,"reference":"ANTICIPO"}`,created.ID))))
+	earlyPayReq=earlyPayReq.WithContext(context.WithValue(earlyPayReq.Context(),scopeKey{},s))
+	earlyPayRec:=httptest.NewRecorder()
+	api.createPayment(earlyPayRec,earlyPayReq)
+	if earlyPayRec.Code!=409||!strings.Contains(earlyPayRec.Body.String(),"order_not_ready_for_payment"){
+		t.Fatalf("confirmed salon order must not accept payment before ready: %d %s",earlyPayRec.Code,earlyPayRec.Body.String())
 	}
 
-	// Before preparation, a paid order requires refund before cancellation.
-	paidCancelReq:=httptest.NewRequest("PATCH","/v1/admin/orders/"+created.ID+"/status",bytes.NewReader([]byte(`{"status":"cancelado"}`)))
-	paidCancelReq.SetPathValue("id",created.ID)
-	paidCancelReq=paidCancelReq.WithContext(context.WithValue(paidCancelReq.Context(),scopeKey{},s))
-	paidCancelRec:=httptest.NewRecorder()
-	api.updateOrderStatus(paidCancelRec,paidCancelReq)
-	if paidCancelRec.Code!=409||!strings.Contains(paidCancelRec.Body.String(),"refund_required_before_cancel"){
-		t.Fatalf("paid confirmed cancellation must require refund: %d %s",paidCancelRec.Code,paidCancelRec.Body.String())
-	}
-
-	// Salón/Pedidos cannot start preparation; only Cocina can.
 	genericPrepReq:=httptest.NewRequest("PATCH","/v1/admin/orders/"+created.ID+"/status",bytes.NewReader([]byte(`{"status":"preparando"}`)))
 	genericPrepReq.SetPathValue("id",created.ID)
 	genericPrepReq=genericPrepReq.WithContext(context.WithValue(genericPrepReq.Context(),scopeKey{},s))
@@ -152,6 +123,8 @@ func TestSalonKitchenPaymentDeliveryWorkflow(t *testing.T) {
 	payRec:=httptest.NewRecorder()
 	api.createPayment(payRec,payReq)
 	if payRec.Code!=201{t.Fatalf("payment: %d %s",payRec.Code,payRec.Body.String())}
+	var payment paymentView
+	if err:=json.Unmarshal(payRec.Body.Bytes(),&payment);err!=nil{t.Fatal(err)}
 
 	deliverReq:=httptest.NewRequest("PATCH","/v1/admin/orders/"+created.ID+"/status",bytes.NewReader([]byte(`{"status":"entregado"}`)))
 	deliverReq.SetPathValue("id",created.ID)
@@ -160,7 +133,7 @@ func TestSalonKitchenPaymentDeliveryWorkflow(t *testing.T) {
 	api.updateOrderStatus(deliverRec,deliverReq)
 	if deliverRec.Code!=200{t.Fatalf("paid ready order should deliver: %d %s",deliverRec.Code,deliverRec.Body.String())}
 
-	closedRefundReq:=httptest.NewRequest("POST","/v1/admin/payments/"+partialPayment.ID+"/refund",bytes.NewReader([]byte(`{"amount":1,"reason":"Prueba posterior al cierre"}`)))
+	closedRefundReq:=httptest.NewRequest("POST","/v1/admin/payments/"+payment.ID+"/refund",bytes.NewReader([]byte(`{"amount":1,"reason":"Prueba posterior al cierre"}`)))
 	closedRefundReq.SetPathValue("id",partialPayment.ID)
 	closedRefundReq=closedRefundReq.WithContext(context.WithValue(closedRefundReq.Context(),scopeKey{},s))
 	closedRefundRec:=httptest.NewRecorder()
