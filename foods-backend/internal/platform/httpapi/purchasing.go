@@ -801,11 +801,11 @@ func (a *API) receivePurchaseOrder(w http.ResponseWriter, r *http.Request) {
 	var receiptID, receiptCode string
 	if err = tx.QueryRow(r.Context(), `
 		INSERT INTO purchase_receipts(
-			organization_id,location_id,purchase_order_id,notes,created_by
+			organization_id,location_id,purchase_order_id,notes,created_by,idempotency_key
 		)
-		VALUES($1,$2,$3,$4,$5)
+		VALUES($1,$2,$3,$4,$5,NULLIF($6,''))
 		RETURNING id,code`,
-		s.OrganizationID, s.LocationID, r.PathValue("id"), in.Notes, s.UserID,
+		s.OrganizationID, s.LocationID, r.PathValue("id"), in.Notes, s.UserID, in.IdempotencyKey,
 	).Scan(&receiptID, &receiptCode); err != nil {
 		fail(w, 503, "purchase_unavailable", "No pudimos crear la recepción.")
 		return
