@@ -179,6 +179,7 @@ func (a *API) getPurchaseReceipt(w http.ResponseWriter,r *http.Request){
 }
 
 type purchaseReturnInput struct{
+	IdempotencyKey string `json:"idempotencyKey"`
 	Kind string `json:"kind"`
 	Reason string `json:"reason"`
 	Notes string `json:"notes"`
@@ -192,8 +193,8 @@ func (a *API) createPurchaseReturn(w http.ResponseWriter,r *http.Request){
 	s:=r.Context().Value(scopeKey{}).(scope)
 	var in purchaseReturnInput
 	if json.NewDecoder(r.Body).Decode(&in)!=nil{fail(w,400,"invalid_purchase_return","Revisa la devolución.");return}
-	in.Kind=strings.TrimSpace(in.Kind);in.Reason=strings.TrimSpace(in.Reason);in.Notes=strings.TrimSpace(in.Notes)
-	if (in.Kind!="supplier_return"&&in.Kind!="receipt_correction")||in.Reason==""||len(in.Reason)>160||len(in.Notes)>500||len(in.Items)==0{
+	in.IdempotencyKey=strings.TrimSpace(in.IdempotencyKey);in.Kind=strings.TrimSpace(in.Kind);in.Reason=strings.TrimSpace(in.Reason);in.Notes=strings.TrimSpace(in.Notes)
+	if len(in.IdempotencyKey)>120||(in.Kind!="supplier_return"&&in.Kind!="receipt_correction")||in.Reason==""||len(in.Reason)>160||len(in.Notes)>500||len(in.Items)==0{
 		fail(w,400,"invalid_purchase_return","Indica tipo, motivo y cantidades a devolver.");return
 	}
 	seen:=map[string]bool{}
@@ -210,12 +211,21 @@ func (a *API) createPurchaseReturn(w http.ResponseWriter,r *http.Request){
 	`,r.PathValue("id"),s.OrganizationID,s.LocationID).Scan(&receiptID,&orderID,&supplierID,&number)
 	if errors.Is(err,pgx.ErrNoRows){fail(w,404,"purchase_receipt_not_found","La recepción no existe en este local.");return}
 	if err!=nil{fail(w,503,"purchase_return_unavailable","No pudimos validar la recepción.");return}
+	if in.IdempotencyKey!=""{
+		var existingID,existingCode,existingKind string
+		err=tx.QueryRow(r.Context(),`
+			SELECT id,code,kind FROM purchase_returns
+			WHERE organization_id=$1 AND location_id=$2 AND purchase_receipt_id=$3 AND idempotency_key=$4
+		`,s.OrganizationID,s.LocationID,receiptID,in.IdempotencyKey).Scan(&existingID,&existingCode,&existingKind)
+		if err==nil{writeJSON(w,200,map[string]any{"id":existingID,"code":existingCode,"kind":existingKind,"purchaseOrderId":orderID,"number":number,"idempotent":true});return}
+		if err!=nil&&!errors.Is(err,pgx.ErrNoRows){fail(w,503,"purchase_return_unavailable","No pudimos validar la devolución previa.");return}
+	}
 
 	var returnID,code string
 	err=tx.QueryRow(r.Context(),`
-		INSERT INTO purchase_returns(organization_id,location_id,supplier_id,purchase_order_id,purchase_receipt_id,kind,reason,notes,created_by)
-		VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id,code
-	`,s.OrganizationID,s.LocationID,supplierID,orderID,receiptID,in.Kind,in.Reason,in.Notes,s.UserID).Scan(&returnID,&code)
+		INSERT INTO purchase_returns(organization_id,location_id,supplier_id,purchase_order_id,purchase_receipt_id,kind,reason,notes,idempotency_key,created_by)
+		VALUES($1,$2,$3,$4,$5,$6,$7,$8,NULLIF($9,''),$10) RETURNING id,code
+	`,s.OrganizationID,s.LocationID,supplierID,orderID,receiptID,in.Kind,in.Reason,in.Notes,in.IdempotencyKey,s.UserID).Scan(&returnID,&code)
 	if err!=nil{fail(w,503,"purchase_return_unavailable","No pudimos crear la devolución.");return}
 
 	for _,requested:=range in.Items{
@@ -237,7 +247,7 @@ func (a *API) createPurchaseReturn(w http.ResponseWriter,r *http.Request){
 		bal,err:=lockInventoryBalance(r.Context(),tx,s,itemID);if err!=nil{fail(w,503,"inventory_unavailable","No pudimos bloquear el stock.");return}
 		if stockQty>bal.Quantity+0.000001{fail(w,409,"insufficient_stock","No hay stock suficiente para registrar la devolución.");return}
 		after:=math.Round((bal.Quantity-stockQty)*1000)/1000
-		avg:=bal.AverageUnitCost;if after<=0{avg=0}
+		avg:=bal.AverageUnitCost
 		if _,err=tx.Exec(r.Context(),`UPDATE stock_balances SET quantity=$4,average_unit_cost=$5,updated_at=now() WHERE organization_id=$1 AND location_id=$2 AND inventory_item_id=$3`,s.OrganizationID,s.LocationID,itemID,after,avg);err!=nil{fail(w,503,"inventory_unavailable","No pudimos actualizar el stock.");return}
 		movement:=map[bool]string{true:"receipt_correction",false:"supplier_return"}[in.Kind=="receipt_correction"]
 		if err=insertValuedMovement(r.Context(),tx,s,bal.ProductID,itemID,movement,-stockQty,after,bal.AverageUnitCost,"purchase_return",returnID,code+" · "+in.Reason);err!=nil{fail(w,503,"inventory_unavailable","No pudimos registrar el Kárdex.");return}
@@ -261,6 +271,7 @@ func (a *API) createPurchaseReturn(w http.ResponseWriter,r *http.Request){
 }
 
 type transferInput struct{
+	IdempotencyKey string `json:"idempotencyKey"`
 	ToLocationID string `json:"toLocationId"`
 	Notes string `json:"notes"`
 	Items []struct{InventoryItemID string `json:"inventoryItemId"`;Quantity float64 `json:"quantity"`} `json:"items"`
@@ -270,8 +281,8 @@ func (a *API) createInventoryTransfer(w http.ResponseWriter,r *http.Request){
 	s:=r.Context().Value(scopeKey{}).(scope)
 	var in transferInput
 	if json.NewDecoder(r.Body).Decode(&in)!=nil{fail(w,400,"invalid_transfer","Revisa la transferencia.");return}
-	in.ToLocationID=strings.TrimSpace(in.ToLocationID);in.Notes=strings.TrimSpace(in.Notes)
-	if in.ToLocationID==""||in.ToLocationID==s.LocationID||len(in.Notes)>500||len(in.Items)==0{fail(w,400,"invalid_transfer","Selecciona otro local y al menos un artículo.");return}
+	in.IdempotencyKey=strings.TrimSpace(in.IdempotencyKey);in.ToLocationID=strings.TrimSpace(in.ToLocationID);in.Notes=strings.TrimSpace(in.Notes)
+	if len(in.IdempotencyKey)>120||in.ToLocationID==""||in.ToLocationID==s.LocationID||len(in.Notes)>500||len(in.Items)==0{fail(w,400,"invalid_transfer","Selecciona otro local y al menos un artículo.");return}
 	seen:=map[string]bool{}
 	for i:=range in.Items{in.Items[i].InventoryItemID=strings.TrimSpace(in.Items[i].InventoryItemID);in.Items[i].Quantity=math.Round(in.Items[i].Quantity*1000)/1000;if in.Items[i].InventoryItemID==""||in.Items[i].Quantity<=0||seen[in.Items[i].InventoryItemID]{fail(w,400,"invalid_transfer","Las líneas de transferencia no son válidas.");return};seen[in.Items[i].InventoryItemID]=true}
 	sort.Slice(in.Items,func(i,j int)bool{return in.Items[i].InventoryItemID<in.Items[j].InventoryItemID})
@@ -279,8 +290,14 @@ func (a *API) createInventoryTransfer(w http.ResponseWriter,r *http.Request){
 	tx,err:=a.db.Begin(r.Context());if err!=nil{fail(w,503,"transfer_unavailable","No pudimos iniciar la transferencia.");return};defer tx.Rollback(r.Context())
 	var destination string
 	if err=tx.QueryRow(r.Context(),`SELECT name FROM locations WHERE id=$1 AND organization_id=$2 AND active FOR SHARE`,in.ToLocationID,s.OrganizationID).Scan(&destination);errors.Is(err,pgx.ErrNoRows){fail(w,404,"destination_not_found","El local destino no existe o está inactivo.");return}else if err!=nil{fail(w,503,"transfer_unavailable","No pudimos validar el destino.");return}
+	if in.IdempotencyKey!=""{
+		var existingID,existingCode,existingTo string
+		err=tx.QueryRow(r.Context(),`SELECT id,code,to_location_id::text FROM inventory_transfers WHERE organization_id=$1 AND from_location_id=$2 AND idempotency_key=$3`,s.OrganizationID,s.LocationID,in.IdempotencyKey).Scan(&existingID,&existingCode,&existingTo)
+		if err==nil{writeJSON(w,200,map[string]any{"id":existingID,"code":existingCode,"toLocationId":existingTo,"idempotent":true});return}
+		if err!=nil&&!errors.Is(err,pgx.ErrNoRows){fail(w,503,"transfer_unavailable","No pudimos validar la transferencia previa.");return}
+	}
 	var transferID,code string
-	if err=tx.QueryRow(r.Context(),`INSERT INTO inventory_transfers(organization_id,from_location_id,to_location_id,notes,created_by) VALUES($1,$2,$3,$4,$5) RETURNING id,code`,s.OrganizationID,s.LocationID,in.ToLocationID,in.Notes,s.UserID).Scan(&transferID,&code);err!=nil{fail(w,503,"transfer_unavailable","No pudimos crear la transferencia.");return}
+	if err=tx.QueryRow(r.Context(),`INSERT INTO inventory_transfers(organization_id,from_location_id,to_location_id,notes,idempotency_key,created_by) VALUES($1,$2,$3,$4,NULLIF($5,''),$6) RETURNING id,code`,s.OrganizationID,s.LocationID,in.ToLocationID,in.Notes,in.IdempotencyKey,s.UserID).Scan(&transferID,&code);err!=nil{fail(w,503,"transfer_unavailable","No pudimos crear la transferencia.");return}
 
 	for _,line:=range in.Items{
 		var productID *string;var name string
@@ -300,13 +317,17 @@ func (a *API) createInventoryTransfer(w http.ResponseWriter,r *http.Request){
 		dstAfter:=math.Round((dst.q+line.Quantity)*1000)/1000
 		dstAvg:=src.c
 		if dstAfter>0{dstAvg=math.Round(((dst.q*dst.c)+(line.Quantity*src.c))/dstAfter*10000)/10000}
-		srcAvg:=src.c;if srcAfter<=0{srcAvg=0}
+		srcAvg:=src.c
 		if _,err=tx.Exec(r.Context(),`UPDATE stock_balances SET quantity=$4,average_unit_cost=$5,updated_at=now() WHERE organization_id=$1 AND location_id=$2 AND inventory_item_id=$3`,s.OrganizationID,s.LocationID,line.InventoryItemID,srcAfter,srcAvg);err!=nil{fail(w,503,"transfer_unavailable","No pudimos descontar el origen.");return}
 		if _,err=tx.Exec(r.Context(),`UPDATE stock_balances SET quantity=$4,average_unit_cost=$5,updated_at=now() WHERE organization_id=$1 AND location_id=$2 AND inventory_item_id=$3`,s.OrganizationID,in.ToLocationID,line.InventoryItemID,dstAfter,dstAvg);err!=nil{fail(w,503,"transfer_unavailable","No pudimos ingresar el destino.");return}
 		if _,err=tx.Exec(r.Context(),`INSERT INTO inventory_transfer_items(organization_id,transfer_id,inventory_item_id,quantity,unit_cost) VALUES($1,$2,$3,$4,$5)`,s.OrganizationID,transferID,line.InventoryItemID,line.Quantity,src.c);err!=nil{fail(w,503,"transfer_unavailable","No pudimos guardar el detalle.");return}
 		if err=insertValuedMovement(r.Context(),tx,s,productID,line.InventoryItemID,"transfer_out",-line.Quantity,srcAfter,src.c,"inventory_transfer",transferID,code+" → "+destination);err!=nil{fail(w,503,"transfer_unavailable","No pudimos registrar el Kárdex de origen.");return}
-		destScope:=s;destScope.LocationID=in.ToLocationID
-		if err=insertValuedMovement(r.Context(),tx,destScope,productID,line.InventoryItemID,"transfer_in",line.Quantity,dstAfter,src.c,"inventory_transfer",transferID,code+" desde transferencia");err!=nil{fail(w,503,"transfer_unavailable","No pudimos registrar el Kárdex de destino.");return}
+		valueDelta:=math.Round(line.Quantity*src.c*10000)/10000
+		balanceValue:=math.Round(dstAfter*dstAvg*10000)/10000
+		if _,err=tx.Exec(r.Context(),`
+			INSERT INTO stock_movements(organization_id,location_id,product_id,inventory_item_id,movement_type,quantity_delta,balance_after,source_type,source_id,note,created_by,unit_cost,value_delta,balance_value_after)
+			VALUES($1,$2,$3,$4,'transfer_in',$5,$6,'inventory_transfer',$7,$8,$9,$10,$11,$12)
+		`,s.OrganizationID,in.ToLocationID,productID,line.InventoryItemID,line.Quantity,dstAfter,transferID,code+" desde transferencia",s.UserID,src.c,valueDelta,balanceValue);err!=nil{fail(w,503,"transfer_unavailable","No pudimos registrar el Kárdex de destino.");return}
 	}
 	if err=tx.Commit(r.Context());err!=nil{fail(w,503,"transfer_unavailable","No pudimos confirmar la transferencia.");return}
 	a.audit(r,"inventory.transfer_created","inventory_transfer",transferID)
