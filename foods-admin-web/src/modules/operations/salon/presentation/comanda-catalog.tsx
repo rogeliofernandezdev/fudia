@@ -340,21 +340,26 @@ function ComboItem({combo,qty,currencySymbol,onConfigure}:{combo:ComboSummary;qt
 }
 
 function MenuItem({p,qty,currencySymbol,onPick,onRemove,variant}:{p:CatalogProduct;qty:number;currencySymbol:string;onPick:(p:CatalogProduct)=>void;onRemove:(p:CatalogProduct)=>void;variant:"default"|"salon"}){
+  const availability=p.availabilityStatus??"available";
+  const unavailable=availability==="sold_out"||availability==="unavailable";
   if(variant==="salon"){
     return(
-      <article className={"comanda-dish comanda-dish-modern"+(qty>0?" picked":"")} aria-label={p.name}>
+      <article className={"comanda-dish comanda-dish-modern"+(qty>0?" picked":"")+(unavailable?" unavailable":"")+(availability==="low"?" low":"")} aria-label={p.name}>
         <span className={"comanda-dish-thumb comanda-dish-modern-media"+(p.imageUrl?" has-image":"")}>
           <span className="comanda-dish-image-fallback"><Icon name="utensils" size={24}/><small>Sin imagen</small></span>
           {p.imageUrl&&<img src={p.imageUrl} alt={p.name} loading="lazy" onError={e=>{e.currentTarget.hidden=true}}/>}
           {qty>0&&<b className="comanda-dish-selected-qty">{qty}×</b>}
+          {availability==="low"&&<small className="comanda-dish-availability low">{p.remaining!==null&&p.remaining!==undefined?`Quedan ${p.remaining}`:"Pocas unidades"}</small>}
+          {availability==="sold_out"&&<small className="comanda-dish-availability blocked">Agotado</small>}
+          {availability==="unavailable"&&<small className="comanda-dish-availability blocked">Fuera de horario</small>}
         </span>
         <div className="comanda-dish-modern-content">
           <strong className="comanda-dish-name" title={p.name}>{p.name}</strong>
           <div className="comanda-dish-modern-footer">
             <b className="comanda-dish-price">{currencySymbol} {money(p.price)}</b>
-            <button type="button" className="comanda-dish-add-button" onClick={()=>onPick(p)} aria-label={qty>0?`Agregar otro ${p.name}`:`Agregar ${p.name} a la comanda`}>
-              <Icon name="plus" size={14}/>
-              <span>Agregar</span>
+            <button type="button" className="comanda-dish-add-button" disabled={unavailable} onClick={()=>!unavailable&&onPick(p)} aria-label={unavailable?`${p.name} no disponible`:qty>0?`Agregar otro ${p.name}`:`Agregar ${p.name} a la comanda`}>
+              <Icon name={unavailable?"close":"plus"} size={14}/>
+              <span>{unavailable?"No disponible":"Agregar"}</span>
             </button>
           </div>
         </div>
