@@ -493,6 +493,10 @@ func (a *API) completePaidOrder(w http.ResponseWriter,r *http.Request){
 	if err!=nil{fail(w,503,"payments_unavailable","No pudimos validar el pedido.");return}
 	if status=="cancelado"{fail(w,409,"order_not_completable","Un pedido cancelado no puede finalizarse.");return}
 	if paid+0.00001<total{fail(w,409,"payment_incomplete","El pedido todavía tiene saldo pendiente.");return}
+	if status!="listo"&&status!="en_camino"{
+		fail(w,409,"order_not_ready","El pago está completo, pero la comanda todavía no está lista para entregarse.")
+		return
+	}
 	if _,err=tx.Exec(r.Context(),`
 		UPDATE orders
 		SET status='entregado',updated_at=now()
