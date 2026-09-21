@@ -65,6 +65,7 @@ func (a *API) Routes() *http.ServeMux {
 	m.Handle("GET /v1/admin/inventory", a.auth(a.requirePermission("inventory.read", http.HandlerFunc(a.listInventory))))
 	m.Handle("GET /v1/admin/inventory/products", a.auth(a.requirePermission("inventory.read", http.HandlerFunc(a.listInventoryProducts))))
 	m.Handle("POST /v1/admin/inventory/entries", a.auth(a.requirePermission("inventory.manage", http.HandlerFunc(a.createInventoryEntry))))
+	m.Handle("POST /v1/admin/inventory/adjustments", a.auth(a.requirePermission("inventory.manage", http.HandlerFunc(a.createInventoryAdjustment))))
 	m.Handle("GET /v1/admin/inventory/movements", a.auth(a.requirePermission("inventory.read", http.HandlerFunc(a.listInventoryMovements))))
 	m.Handle("GET /v1/admin/suppliers", a.auth(a.requirePermission("purchases.read", http.HandlerFunc(a.listSuppliers))))
 	m.Handle("POST /v1/admin/suppliers", a.auth(a.requirePermission("purchases.manage", http.HandlerFunc(a.createSupplier))))
