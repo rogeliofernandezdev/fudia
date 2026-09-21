@@ -1,0 +1,32 @@
+name: foods-operations-web
+
+on:
+  push:
+    paths:
+      - "foods-operations-web/**"
+      - ".github/workflows/foods-operations-web.yml"
+  pull_request:
+    paths:
+      - "foods-operations-web/**"
+      - ".github/workflows/foods-operations-web.yml"
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: foods-operations-web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: foods-operations-web/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+        env:
+          FOODS_API_URL: http://localhost:8080
