@@ -124,8 +124,8 @@ var orderStatuses = []map[string]string{{"value": "nuevo", "label": "Nuevo"}, {"
 var orderTransitions = map[string][]string{
 	"nuevo":      {"confirmado", "cancelado"},
 	"confirmado": {"cancelado"},
-	"preparando": {"cancelado"},
-	"listo":      {"en_camino", "entregado", "cancelado"},
+	"preparando": {},
+	"listo":      {"en_camino", "entregado"},
 	"en_camino":  {"entregado"},
 	"entregado":  {},
 	"cancelado":  {},
@@ -1014,6 +1014,10 @@ func (a *API) updateOrderStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	if (current == "confirmado" && in.Status == "preparando") || (current == "preparando" && in.Status == "listo") {
 		fail(w, 409, "kitchen_transition_required", "Los estados de preparación solo se actualizan desde Cocina.")
+		return
+	}
+	if in.Status == "cancelado" && (current == "preparando" || current == "listo" || current == "en_camino") {
+		fail(w, 409, "cancellation_requires_void", "La preparación ya comenzó. Usa un flujo de anulación o merma; no se puede cancelar como si el producto no hubiera sido preparado.")
 		return
 	}
 	allowed := false
