@@ -615,11 +615,19 @@ func (a *API) listInventoryMovements(w http.ResponseWriter, r *http.Request) {
 		             WHERE ie.id=sm.source_id AND ie.organization_id=sm.organization_id
 		           )
 		           WHEN sm.source_type='inventory_adjustment' THEN 'Ajuste de inventario'
+		           WHEN sm.source_type='purchase_receipt' THEN (
+		             SELECT pr.code||' · '||po.number
+		             FROM purchase_receipts pr
+		             JOIN purchase_orders po
+		               ON po.id=pr.purchase_order_id AND po.organization_id=pr.organization_id
+		             WHERE pr.id=sm.source_id AND pr.organization_id=sm.organization_id
+		           )
 		         END,
 		         CASE
 		           WHEN sm.source_type='order' THEN 'Pedido histórico'
 		           WHEN sm.source_type='inventory_entry' THEN 'Entrada histórica'
 		           WHEN sm.source_type='inventory_adjustment' THEN 'Ajuste de inventario'
+		           WHEN sm.source_type='purchase_receipt' THEN 'Recepción de compra'
 		           ELSE 'Referencia no disponible'
 		         END
 		       ),
