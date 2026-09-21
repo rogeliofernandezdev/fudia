@@ -147,4 +147,4 @@ export type PurchaseReceiptSummary={id:string;code:string;purchaseOrderId:string
 export type PurchaseReceiptItem={id:string;purchaseOrderItemId:string;inventoryItemId:string;itemName:string;quantity:string;presentationType:PresentationType;unitsPerPresentation:string;stockQuantity:string;unitCost:string;returnedQuantity:string;returnableQuantity:string};
 export type PurchaseReceiptDetail=PurchaseReceiptSummary&{items:PurchaseReceiptItem[]};
 export type PurchaseReturnKind="supplier_return"|"receipt_correction";
-export type PurchaseReturnDraft={purchaseReceiptId:string;kind:PurchaseReturnKind;reason:string;notes:string;items:Array<{purchaseReceiptItemId:string;quantity:string}>};
+export type PurchaseReturnDraft={idempotencyKey:string;purchaseReceiptId:string;kind:PurchaseReturnKind;reason:string;notes:string;items:Array<{purchaseReceiptItemId:string;quantity:string}>};
