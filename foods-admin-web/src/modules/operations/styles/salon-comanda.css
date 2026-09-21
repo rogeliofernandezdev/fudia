@@ -1927,3 +1927,44 @@
     animation:none;
   }
 }
+
+
+/* Operational availability in Salon catalog */
+.comanda-dish-modern.unavailable{
+  opacity:.72;
+  background:#f8f9fb;
+}
+.comanda-dish-modern.unavailable .comanda-dish-image-fallback,
+.comanda-dish-modern.unavailable img{
+  filter:grayscale(.7);
+}
+.comanda-dish-availability{
+  position:absolute;
+  left:8px;
+  bottom:8px;
+  z-index:2;
+  padding:4px 7px;
+  border-radius:999px;
+  font-size:8px;
+  font-weight:850;
+  letter-spacing:.02em;
+  box-shadow:0 2px 8px rgba(16,24,40,.12);
+}
+.comanda-dish-availability.low{
+  background:#fff4e5;
+  color:#b54708;
+}
+.comanda-dish-availability.blocked{
+  background:#fff;
+  color:#b42318;
+  border:1px solid #fecdca;
+}
+.comanda-dish-modern .comanda-dish-add-button:disabled{
+  cursor:not-allowed;
+  opacity:.65;
+  background:#f2f4f7;
+  color:#667085;
+}
+.salon-comanda-draft{
+  min-height:44px;
+}
