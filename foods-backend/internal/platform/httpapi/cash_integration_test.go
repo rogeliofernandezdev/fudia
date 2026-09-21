@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 )
@@ -42,7 +43,7 @@ func TestCashRegisterAndShiftLifecycleTracksExpectedAndVariance(t *testing.T) {
 	if err := json.Unmarshal(openRec.Body.Bytes(), &opened); err != nil {
 		t.Fatal(err)
 	}
-	if opened.Status != "open" || opened.CashRegisterID != register.ID || opened.CashRegisterName != register.Name || opened.OpeningAmount != "100.00" || opened.ExpectedAmount != "100.00" {
+	if opened.Status != "open" || opened.CashRegisterID != register.ID || opened.CashRegisterName != register.Name || opened.OpeningAmount != "100.00" || opened.ExpectedAmount != "100.00" || opened.BusinessDate == "" {
 		t.Fatalf("unexpected opened shift: %#v", opened)
 	}
 
@@ -71,6 +72,15 @@ func TestCashRegisterAndShiftLifecycleTracksExpectedAndVariance(t *testing.T) {
 		t.Fatalf("expected duplicate open shift 409, got %d body=%s", duplicateRec.Code, duplicateRec.Body.String())
 	}
 
+	statusReq := httptest.NewRequest("PATCH", "/v1/admin/cash-registers/"+register.ID+"/status", bytes.NewReader([]byte(`{"active":false}`)))
+	statusReq.SetPathValue("id", register.ID)
+	statusReq = statusReq.WithContext(context.WithValue(statusReq.Context(), scopeKey{}, s))
+	statusRec := httptest.NewRecorder()
+	api.updateCashRegisterStatus(statusRec, statusReq)
+	if statusRec.Code != 409 {
+		t.Fatalf("expected register with open shift to reject deactivation, got %d body=%s", statusRec.Code, statusRec.Body.String())
+	}
+
 	incomeBody := []byte(`{"movementType":"income","amount":50,"reason":"Cambio recibido","note":"Reposición"}`)
 	incomeReq := httptest.NewRequest("POST", "/v1/admin/cash-shifts/"+opened.ID+"/movements", bytes.NewReader(incomeBody))
 	incomeReq.SetPathValue("id", opened.ID)
@@ -79,6 +89,13 @@ func TestCashRegisterAndShiftLifecycleTracksExpectedAndVariance(t *testing.T) {
 	api.createCashMovement(incomeRec, incomeReq)
 	if incomeRec.Code != 201 {
 		t.Fatalf("expected income 201, got %d body=%s", incomeRec.Code, incomeRec.Body.String())
+	}
+	var income cashMovementView
+	if err := json.Unmarshal(incomeRec.Body.Bytes(), &income); err != nil {
+		t.Fatal(err)
+	}
+	if income.SourceType != "manual" || income.SourceID != nil {
+		t.Fatalf("manual movement must keep explicit source metadata: %#v", income)
 	}
 
 	expenseBody := []byte(`{"movementType":"expense","amount":20,"reason":"Compra menor","note":"Caja chica"}`)
@@ -123,6 +140,24 @@ func TestCashRegisterAndShiftLifecycleTracksExpectedAndVariance(t *testing.T) {
 	}
 	if closed.Status != "closed" || closed.ClosingExpectedAmount == nil || *closed.ClosingExpectedAmount != "130.00" || closed.ClosingCountedAmount == nil || *closed.ClosingCountedAmount != "128.00" || closed.VarianceAmount == nil || *closed.VarianceAmount != "-2.00" {
 		t.Fatalf("unexpected closed shift: %#v", closed)
+	}
+
+	renameReq := httptest.NewRequest("PATCH", "/v1/admin/cash-registers/"+register.ID, bytes.NewReader([]byte(`{"name":"Caja salón"}`)))
+	renameReq.SetPathValue("id", register.ID)
+	renameReq = renameReq.WithContext(context.WithValue(renameReq.Context(), scopeKey{}, s))
+	renameRec := httptest.NewRecorder()
+	api.updateCashRegister(renameRec, renameReq)
+	if renameRec.Code != 200 || !strings.Contains(renameRec.Body.String(), "Caja salón") {
+		t.Fatalf("expected register rename 200, got %d body=%s", renameRec.Code, renameRec.Body.String())
+	}
+
+	statusReq = httptest.NewRequest("PATCH", "/v1/admin/cash-registers/"+register.ID+"/status", bytes.NewReader([]byte(`{"active":false}`)))
+	statusReq.SetPathValue("id", register.ID)
+	statusReq = statusReq.WithContext(context.WithValue(statusReq.Context(), scopeKey{}, s))
+	statusRec = httptest.NewRecorder()
+	api.updateCashRegisterStatus(statusRec, statusReq)
+	if statusRec.Code != 204 {
+		t.Fatalf("expected closed register deactivation 204, got %d body=%s", statusRec.Code, statusRec.Body.String())
 	}
 
 	lateBody := []byte(`{"movementType":"income","amount":1,"reason":"No permitido"}`)
