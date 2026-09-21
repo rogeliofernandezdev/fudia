@@ -1,4 +1,4 @@
-export type PurchaseStatus="draft"|"pending_approval"|"approved"|"received"|"cancelled";
+export type PurchaseStatus="draft"|"pending_approval"|"approved"|"partially_received"|"received"|"cancelled";
 export type PurchaseTab="orders"|"suppliers";
 export type PresentationType="unit"|"package"|"box";
 
@@ -33,8 +33,14 @@ export type PurchaseInventoryOption={
   categoryName:string|null;
   quantityControl:"inventory"|null;
   unit:string;
+  quantity?:string;
   minimumStock:string;
   presentations:PurchasePresentation[];
+};
+
+export type PurchaseItemCategory={
+  id:string;
+  name:string;
 };
 
 export type PurchaseOrderSummary={
@@ -64,6 +70,8 @@ export type PurchaseOrderItem={
   presentationType:PresentationType;
   unitsPerPresentation:string;
   quantity:string;
+  receivedQuantity:string;
+  pendingQuantity:string;
   stockQuantity:string;
   unitCost:string;
   lineTotal:string;
@@ -99,4 +107,36 @@ export type SupplierDraft={
   name:string;
   email:string;
   phone:string;
+};
+
+export type PurchaseInventoryItemDraft={
+  mode:"new_product"|"new_ingredient";
+  categoryId:string;
+  name:string;
+  description:string;
+  price:string;
+  unit:string;
+  presentationType:PresentationType;
+  unitsPerPresentation:string;
+  minimumStock:string;
+};
+
+export type PurchaseReceiptLineDraft={
+  purchaseOrderItemId:string;
+  quantity:string;
+};
+
+export type PurchaseReceiptDraft={
+  purchaseOrderId:string;
+  notes:string;
+  items:PurchaseReceiptLineDraft[];
+};
+
+export type PurchaseReceiptResult={
+  id:string;
+  code:string;
+  purchaseOrderId:string;
+  number:string;
+  status:"partially_received"|"received";
+  receivedAt:string|null;
 };
