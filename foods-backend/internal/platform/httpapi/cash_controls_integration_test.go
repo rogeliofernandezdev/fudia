@@ -145,5 +145,5 @@ func TestCashShiftUsersTransferCountsAndBlindClose(t *testing.T) {
 	if blindRec.Code!=201{t.Fatalf("open blind shift: %d %s",blindRec.Code,blindRec.Body.String())}
 	var blind cashShiftView
 	if err:=json.Unmarshal(blindRec.Body.Bytes(),&blind);err!=nil{t.Fatal(err)}
-	if blind.ExpectedVisible||blind.ExpectedAmount!=""{t.Fatalf("blind shift must hide expected cash from user without permission: %#v",blind)}
+	if blind.ExpectedVisible||blind.ExpectedAmount!=""||blind.OpeningAmount!=""||blind.IncomeAmount!=""||blind.ExpenseAmount!=""{t.Fatalf("blind shift must hide all values that reveal expected cash: %#v",blind)}
 }
