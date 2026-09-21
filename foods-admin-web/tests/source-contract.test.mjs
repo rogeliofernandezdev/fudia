@@ -252,31 +252,42 @@ test("compras concentra orden recepcion y altas de abastecimiento",()=>{
   assert.equal(inventory.includes("Nuevo insumo"),false,"Inventario no recupera creación de insumos");
 });
 
-test("caja implementa apertura movimientos arqueo y cierre",()=>{
+test("caja separa cajas fisicas de sus turnos",()=>{
   const page=read("src/modules/operations/cash/presentation/cash-page.tsx");
   const dialogs=read("src/modules/operations/cash/presentation/cash-dialogs.tsx");
   const api=read("src/modules/operations/cash/infrastructure/cash-api.ts");
   const schema=read("src/modules/operations/cash/domain/cash-schema.ts");
+  const types=read("src/modules/operations/cash/domain/types.ts");
   const route=read("src/app/(admin)/caja/page.tsx");
 
   assert.ok(route.includes("CashPage"),"/caja compone el módulo operativo real");
-  assert.ok(page.includes(">Caja<"),"Caja usa una pestaña neutral aunque no exista turno abierto");
+  assert.ok(page.includes(">Cajas<"),"La vista principal administra cajas registradas");
   assert.ok(page.includes(">Turnos<"),"Caja expone historial de turnos");
-  assert.equal((page.match(/Abrir turno/g)??[]).length,1,"El estado sin turno muestra un solo CTA de apertura");
-  assert.ok(page.includes("SALDO ESPERADO"),"El turno muestra el efectivo esperado");
-  assert.ok(page.includes('addMovement("income")'),"El turno permite ingresos manuales");
-  assert.ok(page.includes('addMovement("expense")'),"El turno permite egresos manuales");
+  assert.ok(page.includes("Aún no hay cajas registradas"),"Sin cajas se explica que primero debe registrarse una");
+  assert.ok(page.includes("Registrar caja"),"El primer paso funcional es registrar una caja");
+  assert.ok(page.includes("Iniciar turno"),"El turno se inicia desde una caja existente");
+  assert.ok(page.includes("shiftTarget"),"El turno conserva como objetivo la caja elegida");
+  assert.ok(page.includes("cashRegisterName"),"El historial identifica la caja de cada turno");
+  assert.ok(page.includes('movement(shift,"income")'),"Un turno abierto permite ingresos manuales");
+  assert.ok(page.includes('movement(shift,"expense")'),"Un turno abierto permite egresos manuales");
   assert.ok(page.includes("CloseCashShiftDialog"),"El cierre se realiza mediante arqueo");
-  assert.ok(page.includes("RowActionButton action=\"view\""),"El historial abre detalle solo lectura");
+  assert.ok(page.includes('RowActionButton action="view"'),"El historial abre detalle solo lectura");
+
+  assert.ok(dialogs.includes("CashRegisterDialog"),"Registrar caja tiene un formulario propio");
+  assert.ok(dialogs.includes("Estás iniciando un turno en"),"El modal de turno deja clara la caja seleccionada");
+  assert.ok(dialogs.includes('cashRegister.name.toUpperCase()'),"El turno muestra el nombre de su caja");
   assert.ok(dialogs.includes("EFECTIVO ESPERADO"),"El arqueo muestra el esperado antes de cerrar");
   assert.ok(dialogs.includes("Efectivo contado"),"El arqueo solicita el efectivo contado");
   assert.ok(dialogs.includes("DIFERENCIA"),"El cierre calcula sobrante o faltante");
-  assert.ok(dialogs.includes("ya no se podrán registrar nuevos movimientos"),"El cierre comunica su irreversibilidad operativa");
-  assert.ok(api.includes('"cash-shifts/current"'),"Caja consulta el turno abierto del usuario");
+
+  assert.ok(api.includes('"cash-registers"'),"Frontend consulta y crea cajas del local");
+  assert.ok(api.includes("cashRegisterId"),"Abrir turno envía explícitamente la caja seleccionada");
   assert.ok(api.includes("/movements"),"Caja registra movimientos contra el turno");
   assert.ok(api.includes("/close"),"Caja cierra el turno mediante endpoint dedicado");
+  assert.ok(schema.includes("cashRegisterResolver"),"El alta de caja valida su formulario");
   assert.ok(schema.includes("cashMovementResolver"),"Movimientos usan validación de formulario");
   assert.ok(schema.includes("closeCashShiftResolver"),"El arqueo usa validación de formulario");
+  assert.ok(types.includes("openShift:CashShift|null"),"Cada caja conoce si tiene un turno abierto");
 });
 
 test("combos conserva la misma tabla en movil y el shell no desborda",()=>{
