@@ -862,6 +862,15 @@ func (a *API) createOrder(w http.ResponseWriter, r *http.Request) {
 		fail(w, quantityErr.Status, quantityErr.Code, quantityErr.Message)
 		return
 	}
+	recipeUsage, recipeErr := desiredRecipeInventoryUsage(r.Context(), tx, s, prepared)
+	if recipeErr != nil {
+		fail(w, 503, "recipe_inventory_unavailable", "No pudimos validar el consumo de recetas.")
+		return
+	}
+	if quantityErr := applyRecipeUsageDelta(r.Context(), tx, s, o.ID, recipeUsage); quantityErr != nil {
+		fail(w, quantityErr.Status, quantityErr.Code, quantityErr.Message)
+		return
+	}
 	if err = tx.Commit(r.Context()); err != nil {
 		fail(w, 503, "order_unavailable", "No pudimos guardar el pedido.")
 		return
@@ -927,12 +936,26 @@ func (a *API) updateOrder(w http.ResponseWriter, r *http.Request) {
 		fail(w, 503, "order_unavailable", "No pudimos cargar las cantidades actuales del pedido.")
 		return
 	}
+	previousRecipeUsage, err := loadNetRecipeUsage(r.Context(), tx, s, r.PathValue("id"))
+	if err != nil {
+		fail(w, 503, "recipe_inventory_unavailable", "No pudimos cargar el consumo actual de recetas.")
+		return
+	}
 	prepared, subtotal, preparationErr := a.prepareOrderItems(r, tx, s, r.PathValue("id"), in.Items)
 	if preparationErr != nil {
 		fail(w, preparationErr.Status, preparationErr.Code, preparationErr.Message)
 		return
 	}
 	if quantityErr := a.applyOrderQuantityDelta(r.Context(), tx, s, r.PathValue("id"), quantityUsageDelta(previousUsage, preparedQuantityUsage(prepared)), "sale_adjustment"); quantityErr != nil {
+		fail(w, quantityErr.Status, quantityErr.Code, quantityErr.Message)
+		return
+	}
+	nextRecipeUsage, recipeErr := desiredRecipeInventoryUsage(r.Context(), tx, s, prepared)
+	if recipeErr != nil {
+		fail(w, 503, "recipe_inventory_unavailable", "No pudimos validar el consumo de recetas.")
+		return
+	}
+	if quantityErr := applyRecipeUsageDelta(r.Context(), tx, s, r.PathValue("id"), recipeUsageDelta(previousRecipeUsage, nextRecipeUsage)); quantityErr != nil {
 		fail(w, quantityErr.Status, quantityErr.Code, quantityErr.Message)
 		return
 	}
@@ -1053,6 +1076,15 @@ func (a *API) updateOrderStatus(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if quantityErr := a.applyOrderQuantityDelta(r.Context(), tx, s, r.PathValue("id"), quantityUsageDelta(usage, map[string]float64{}), "sale_reversal"); quantityErr != nil {
+			fail(w, quantityErr.Status, quantityErr.Code, quantityErr.Message)
+			return
+		}
+		recipeUsage, recipeErr := loadNetRecipeUsage(r.Context(), tx, s, r.PathValue("id"))
+		if recipeErr != nil {
+			fail(w, 503, "recipe_inventory_unavailable", "No pudimos cargar el consumo de recetas del pedido.")
+			return
+		}
+		if quantityErr := applyRecipeUsageDelta(r.Context(), tx, s, r.PathValue("id"), recipeUsageDelta(recipeUsage, map[string]float64{})); quantityErr != nil {
 			fail(w, quantityErr.Status, quantityErr.Code, quantityErr.Message)
 			return
 		}
