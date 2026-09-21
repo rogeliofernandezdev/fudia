@@ -14,6 +14,8 @@ export type CashMovement={
 export type CashShift={
   id:string;
   code:string;
+  cashRegisterId:string;
+  cashRegisterName:string;
   status:CashShiftStatus;
   openingAmount:string;
   incomeAmount:string;
@@ -32,11 +34,23 @@ export type CashShift={
   movements?:CashMovement[];
 };
 
+export type CashRegister={
+  id:string;
+  code:string;
+  name:string;
+  active:boolean;
+  openShift:CashShift|null;
+};
+
 export type CashShiftList={
   items:CashShift[];
   total:number;
   page:number;
   pageSize:number;
+};
+
+export type CashRegisterDraft={
+  name:string;
 };
 
 export type OpenCashShiftDraft={
