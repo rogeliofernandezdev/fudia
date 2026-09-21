@@ -4,6 +4,24 @@
 .purchases-tabs button.active{border-bottom-color:var(--ops-500);color:var(--ops-700)}
 .purchases-tabs button b{display:grid;place-items:center;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:var(--cloud-50);color:var(--ink-600);font-size:8px}
 .purchases-tabs button.active b{background:var(--primary-100);color:var(--ops-700)}
+.purchase-flow-overview{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:12px 14px;background:var(--cloud-50)}
+.purchase-flow-overview>div:first-child{display:grid;gap:3px;min-width:170px}
+.purchase-flow-overview>div:first-child small{color:var(--ink-400);font-size:7px;font-weight:900;letter-spacing:.08em}
+.purchase-flow-overview>div:first-child b{font-size:10px;color:var(--ink-800)}
+.purchase-flow-steps{display:flex;align-items:center;gap:8px;min-width:0}
+.purchase-flow-step{display:flex;align-items:center;gap:8px;min-width:0;color:var(--ink-500)}
+.purchase-flow-step>span:last-child{display:grid;gap:2px;min-width:0}
+.purchase-flow-step b{font-size:9px;color:var(--ink-700);white-space:nowrap}
+.purchase-flow-step small{font-size:7px;color:var(--ink-400);white-space:nowrap}
+.purchase-flow-number{display:grid;place-items:center;width:27px;height:27px;border-radius:999px;background:#eceff3;color:var(--ink-500);font-size:9px;font-weight:900;flex:0 0 auto}
+.purchase-flow-step.active .purchase-flow-number{background:var(--primary-600);color:#fff;box-shadow:0 0 0 4px color-mix(in srgb,var(--primary-600) 12%,transparent)}
+.purchase-flow-step.active b{color:var(--primary-700)}
+.purchase-flow-step.done .purchase-flow-number{background:var(--brand-600);color:#fff}
+.purchase-flow-step.done b{color:var(--brand-700)}
+.purchase-flow-step.started:not(.done) .purchase-flow-number{background:var(--warning-50);color:var(--warning)}
+.purchase-flow-connector{width:42px;height:2px;border-radius:999px;background:#e4e7ec;flex:0 0 auto}
+.purchase-flow-connector.done{background:var(--brand-600)}
+.purchase-form-body>.purchase-flow-steps,.purchase-detail-body>.purchase-flow-steps,.purchase-receipt-body>.purchase-flow-steps{padding:10px 12px;border-radius:10px;background:#f8f9fc}
 .purchases-toolbar{display:grid;grid-template-columns:minmax(260px,1.2fr) minmax(170px,.5fr) minmax(260px,1fr);align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line);background:#fff}
 .purchases-search{display:flex;align-items:center;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink-400)}
 .purchases-search>svg{margin-left:10px;flex:0 0 auto}
@@ -70,6 +88,13 @@
  .purchases-tabs{padding:8px 8px 0}
  .purchases-tabs button{flex:1;justify-content:center}
  .purchases-toolbar{grid-template-columns:1fr;padding:10px}
+ .purchase-flow-overview{align-items:flex-start;flex-direction:column;padding:10px}
+ .purchase-flow-overview>div:first-child{min-width:0}
+ .purchase-flow-steps{width:100%;align-items:flex-start}
+ .purchase-flow-step{flex:1;align-items:flex-start}
+ .purchase-flow-step small{white-space:normal;line-height:1.35}
+ .purchase-flow-connector{width:22px;margin-top:13px}
+ .purchase-form-body>.purchase-flow-steps,.purchase-detail-body>.purchase-flow-steps,.purchase-receipt-body>.purchase-flow-steps{padding:9px}
  .purchases-toolbar>p{grid-column:auto}
  .purchases-table-wrap{display:none}
  .purchases-cards{display:grid}
