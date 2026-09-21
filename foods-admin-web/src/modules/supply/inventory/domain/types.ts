@@ -1,17 +1,7 @@
 export type InventoryStatus="ok"|"low"|"out";
-export type InventoryPresentationType="unit"|"package"|"box";
 export type InventoryKind="product"|"ingredient";
-
-export type InventoryCategoryOption={
-  id:string;
-  name:string;
-};
-
-export type InventoryPresentation={
-  id:string;
-  presentationType:InventoryPresentationType;
-  unitsPerPresentation:string;
-};
+export type InventoryAdjustmentType="entry"|"exit";
+export type InventoryAdjustmentReason="surplus_adjustment"|"shortage_adjustment"|"waste"|"expiration"|"other_exit";
 
 export type InventoryItem={
   inventoryItemId:string;
@@ -44,25 +34,31 @@ export type InventoryProductOption={
   categoryName:string|null;
   quantityControl:"inventory"|null;
   unit:string;
+  quantity:string;
   minimumStock:string;
-  presentations:InventoryPresentation[];
 };
 
-export type InventoryEntryDraft={
-  mode:"existing"|"new_product"|"new_ingredient";
+export type InventoryAdjustmentDraft={
   inventoryItemId:string;
-  productId:string;
-  categoryId:string;
-  sku:string;
-  name:string;
-  description:string;
-  price:string;
+  movementType:InventoryAdjustmentType;
+  reason:InventoryAdjustmentReason;
   quantity:string;
+  observation:string;
+};
+
+export type InventoryAdjustmentResult={
+  id:string;
+  inventoryItemId:string;
+  name:string;
   unit:string;
-  presentationType:InventoryPresentationType;
-  unitsPerPresentation:string;
-  minimumStock:string;
-  note:string;
+  movementType:InventoryAdjustmentType;
+  reason:InventoryAdjustmentReason;
+  quantity:number;
+  stockBefore:number;
+  stockAfter:number;
+  observation:string;
+  createdAt:string;
+  createdByName:string;
 };
 
 export type StockMovement={
@@ -70,12 +66,16 @@ export type StockMovement={
   inventoryItemId:string;
   productId:string|null;
   itemName:string;
-  movementType:"entry"|"sale"|"sale_reversal"|"sale_adjustment";
+  movementType:"entry"|"sale"|"sale_reversal"|"sale_adjustment"|"inventory_adjustment";
+  adjustmentType?:InventoryAdjustmentType|null;
+  reason?:InventoryAdjustmentReason|null;
   quantityDelta:string;
+  balanceBefore:string;
   balanceAfter:string;
-  sourceType:"inventory_entry"|"order";
+  sourceType:"inventory_entry"|"order"|"inventory_adjustment";
   sourceId:string;
   sourceReference:string;
   note:string;
+  createdByName:string;
   createdAt:string;
 };
