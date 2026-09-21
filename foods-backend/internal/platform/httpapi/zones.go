@@ -32,7 +32,7 @@ func (a *API) listZones(w http.ResponseWriter, r *http.Request) {
 	if size < 1 {
 		size = 50
 	}
-	rows, err := a.db.Query(r.Context(), `SELECT id,name,sort_order,active FROM zones WHERE organization_id=$1 ORDER BY sort_order,name LIMIT $2 OFFSET $3`, s.OrganizationID, size, (page-1)*size)
+	rows, err := a.db.Query(r.Context(), `SELECT id,name,sort_order,active FROM zones WHERE organization_id=$1 AND location_id=$2 ORDER BY sort_order,name LIMIT $3 OFFSET $4`, s.OrganizationID, s.LocationID, size, (page-1)*size)
 	if err != nil {
 		fail(w, 503, "zones_unavailable", "No pudimos cargar las zonas.")
 		return
@@ -48,7 +48,7 @@ func (a *API) listZones(w http.ResponseWriter, r *http.Request) {
 		items = append(items, z)
 	}
 	var total int
-	_ = a.db.QueryRow(r.Context(), `SELECT count(*) FROM zones WHERE organization_id=$1`, s.OrganizationID).Scan(&total)
+	_ = a.db.QueryRow(r.Context(), `SELECT count(*) FROM zones WHERE organization_id=$1 AND location_id=$2`, s.OrganizationID, s.LocationID).Scan(&total)
 	writeJSON(w, 200, map[string]any{"items": items, "total": total, "page": page, "pageSize": size})
 }
 
@@ -64,7 +64,7 @@ func (a *API) createZone(w http.ResponseWriter, r *http.Request) {
 		sortOrder = *in.SortOrder
 	}
 	var z zone
-	err := a.db.QueryRow(r.Context(), `INSERT INTO zones(organization_id,name,sort_order,active) VALUES($1,$2,$3,true) RETURNING id,name,sort_order,active`, s.OrganizationID, strings.TrimSpace(in.Name), sortOrder).Scan(&z.ID, &z.Name, &z.SortOrder, &z.Active)
+	err := a.db.QueryRow(r.Context(), `INSERT INTO zones(organization_id,location_id,name,sort_order,active) VALUES($1,$2,$3,$4,true) RETURNING id,name,sort_order,active`, s.OrganizationID, s.LocationID, strings.TrimSpace(in.Name), sortOrder).Scan(&z.ID, &z.Name, &z.SortOrder, &z.Active)
 	if err != nil {
 		fail(w, 409, "zone_conflict", "Ya existe una zona con ese nombre.")
 		return
@@ -89,7 +89,7 @@ func (a *API) updateZone(w http.ResponseWriter, r *http.Request) {
 		active = *in.Active
 	}
 	var z zone
-	err := a.db.QueryRow(r.Context(), `UPDATE zones SET name=$3,sort_order=$4,active=$5 WHERE id=$1 AND organization_id=$2 RETURNING id,name,sort_order,active`, r.PathValue("id"), s.OrganizationID, strings.TrimSpace(in.Name), sortOrder, active).Scan(&z.ID, &z.Name, &z.SortOrder, &z.Active)
+	err := a.db.QueryRow(r.Context(), `UPDATE zones SET name=$4,sort_order=$5,active=$6 WHERE id=$1 AND organization_id=$2 AND location_id=$3 RETURNING id,name,sort_order,active`, r.PathValue("id"), s.OrganizationID, s.LocationID, strings.TrimSpace(in.Name), sortOrder, active).Scan(&z.ID, &z.Name, &z.SortOrder, &z.Active)
 	if err == pgx.ErrNoRows {
 		fail(w, 404, "zone_not_found", "La zona no existe.")
 		return
@@ -103,7 +103,7 @@ func (a *API) updateZone(w http.ResponseWriter, r *http.Request) {
 
 func (a *API) deactivateZone(w http.ResponseWriter, r *http.Request) {
 	s := r.Context().Value(scopeKey{}).(scope)
-	ct, err := a.db.Exec(r.Context(), `UPDATE zones SET active=false WHERE id=$1 AND organization_id=$2 AND active=true`, r.PathValue("id"), s.OrganizationID)
+	ct, err := a.db.Exec(r.Context(), `UPDATE zones SET active=false WHERE id=$1 AND organization_id=$2 AND location_id=$3 AND active=true`, r.PathValue("id"), s.OrganizationID, s.LocationID)
 	if err != nil {
 		fail(w, 503, "zone_unavailable", "No pudimos desactivar la zona.")
 		return
