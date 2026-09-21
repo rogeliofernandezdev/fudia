@@ -466,8 +466,7 @@ function PurchaseOrderDialog({initial,suppliers,inventory,currencySymbol,busy,cl
           </div>
 
           {!fields.length?<div className="purchase-lines-empty">
-            <span><Icon name="stock" size={22}/></span>
-            <div><b>Aún no agregaste artículos</b><small>Busca uno existente o crea un producto vendible o insumo sin salir de la orden.</small></div>
+            <p>Busca un artículo existente o crea uno nuevo para incluirlo en la orden.</p>
             <Button type="button" kind="secondary" icon="plus" onClick={()=>setItemTarget("new")}>Agregar artículo</Button>
           </div>:<div className="purchase-lines">{fields.map((field,index)=>{
             const value=lines[index];
