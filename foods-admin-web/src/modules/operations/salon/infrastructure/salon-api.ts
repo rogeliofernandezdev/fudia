@@ -18,10 +18,11 @@ export function getSalonOrder(id:string){return apiFetch<Order>(`orders/${id}`)}
 export function updateSalonOrderStatus(id:string,status:string){
  return apiFetch<Order>(`orders/${id}/status`,{method:"PATCH",body:JSON.stringify({status})});
 }
-export function createSalonOrder(draft:Draft){
+export function createSalonOrder(draft:Draft,sendToKitchen:boolean){
  return apiFetch<Order>("orders",{method:"POST",body:JSON.stringify({
   channel:draft.channel,customerName:draft.customerName,customerPhone:draft.customerPhone,address:draft.address,
   reference:draft.reference,tableId:draft.tableId,notes:draft.notes,deliveryFee:Number(draft.deliveryFee)||0,items:linesPayload(draft),
+  sendToKitchen,
  })});
 }
 export function updateSalonOrder(id:string,draft:Draft){
