@@ -45,7 +45,7 @@ export function PurchaseReceiptDialog({order,busy,close,save}:{order:PurchaseOrd
       <div className="modal-accent"/>
       <header>
         <span className="modal-title-icon"><Icon name="stock" size={18}/></span>
-        <div><small>RECEPCIÓN</small><h2 id="purchase-receipt-title">{order.number}</h2></div>
+        <div><small>PASO 2 · RECEPCIÓN</small><h2 id="purchase-receipt-title">Recibir {order.number}</h2></div>
         <button type="button" aria-label="Cerrar" onClick={close} disabled={busy}><Icon name="close"/></button>
       </header>
       <form onSubmit={handleSubmit(submit)} noValidate>
