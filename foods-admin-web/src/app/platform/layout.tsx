@@ -1,5 +1,6 @@
 import {PlatformShell} from "@/modules/platform";
+import {SessionProvider} from "@/providers";
 
 export default function PlatformLayout({children}:{children:React.ReactNode}){
-  return <PlatformShell>{children}</PlatformShell>;
+  return <SessionProvider><PlatformShell>{children}</PlatformShell></SessionProvider>;
 }
