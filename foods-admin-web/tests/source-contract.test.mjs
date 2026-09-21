@@ -186,6 +186,7 @@ test("compras concentra orden recepcion y altas de abastecimiento",()=>{
   const purchases=read("src/modules/supply/purchases/presentation/purchases-page.tsx");
   const itemDialog=read("src/modules/supply/purchases/presentation/purchase-item-dialog.tsx");
   const receiptDialog=read("src/modules/supply/purchases/presentation/purchase-receipt-dialog.tsx");
+  const flowSteps=read("src/modules/supply/purchases/presentation/purchase-flow-steps.tsx");
   const api=read("src/modules/supply/purchases/infrastructure/purchases-api.ts");
   const productApi=read("src/modules/menu/products/infrastructure/products-api.ts");
   const productImageApi=read("src/shared/api/product-image.ts");
@@ -193,6 +194,11 @@ test("compras concentra orden recepcion y altas de abastecimiento",()=>{
 
   assert.ok(purchases.includes("PurchaseItemDialog"),"La alta de artículo vive dentro del flujo existente de Compras");
   assert.ok(purchases.includes("PurchaseReceiptDialog"),"La recepción vive dentro del mismo módulo Compras");
+  assert.ok(purchases.includes("PurchaseFlowSteps"),"La OC y su detalle comparten el indicador de flujo");
+  assert.ok(receiptDialog.includes("PurchaseFlowSteps"),"Recepción reutiliza el mismo indicador de flujo");
+  assert.ok(flowSteps.includes("Orden de compra"),"El paso 1 es Orden de compra");
+  assert.ok(flowSteps.includes("Recepción"),"El paso 2 es Recepción");
+  assert.ok(purchases.includes("Primero ordenas. Después recibes."),"La pantalla principal explica la secuencia operativa");
   assert.ok(purchases.includes("partially_received"),"Compras representa una recepción parcial sin cerrar la orden");
   for(const column of ["SOLICITADO","RECIBIDO","PENDIENTE"])assert.ok(purchases.includes(column),column);
   assert.ok(purchases.includes("Agregar artículo"),"La OC expone un único punto claro para agregar artículos");
