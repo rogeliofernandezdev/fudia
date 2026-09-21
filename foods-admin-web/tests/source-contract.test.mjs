@@ -184,6 +184,7 @@ test("producto e inventario mantienen una sola fuente de verdad",()=>{
 
 test("compras concentra orden recepcion y altas de abastecimiento",()=>{
   const purchases=read("src/modules/supply/purchases/presentation/purchases-page.tsx");
+  const purchasesCss=read("src/modules/supply/purchases/presentation/purchases.css");
   const itemDialog=read("src/modules/supply/purchases/presentation/purchase-item-dialog.tsx");
   const receiptDialog=read("src/modules/supply/purchases/presentation/purchase-receipt-dialog.tsx");
   const api=read("src/modules/supply/purchases/infrastructure/purchases-api.ts");
@@ -192,6 +193,9 @@ test("compras concentra orden recepcion y altas de abastecimiento",()=>{
   const inventory=read("src/modules/supply/inventory/presentation/inventory-page.tsx");
 
   assert.ok(purchases.includes("PurchaseItemDialog"),"La alta de artículo vive dentro del flujo existente de Compras");
+  assert.ok(purchasesCss.includes(".purchase-order-modal>.modal-busy{inset:0"),"Guardar una OC bloquea todo el modal");
+  assert.ok(purchasesCss.includes(".purchase-order-modal{display:flex;flex-direction:column"),"El scroll de la OC no desplaza el overlay de guardado");
+  assert.ok(purchasesCss.includes("overflow-y:auto;overscroll-behavior:contain"),"El scroll queda contenido en el cuerpo de la OC");
   assert.ok(purchases.includes("PurchaseReceiptDialog"),"La recepción vive dentro del mismo módulo Compras");
   assert.ok(purchases.includes('tab==="receipts"'),"Compras tiene una vista independiente de Recepciones");
   assert.ok(purchases.includes("<span>Recepciones</span>"),"La navegación expone Recepciones como workspace propio");
