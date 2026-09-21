@@ -4,6 +4,7 @@ import {Button,Icon,Input,Select,Textarea} from "@/design-system";
 import type {PurchaseReceiptDetail,PurchaseReturnDraft,PurchaseReturnKind} from "../domain/types";
 
 export function PurchaseReturnDialog({receipt,busy,close,save}:{receipt:PurchaseReceiptDetail;busy:boolean;close:()=>void;save:(draft:PurchaseReturnDraft)=>void}){
+ const[idempotencyKey]=useState(()=>crypto.randomUUID());
  const[kind,setKind]=useState<PurchaseReturnKind>("receipt_correction");
  const[reason,setReason]=useState("");const[notes,setNotes]=useState("");
  const[quantities,setQuantities]=useState<Record<string,string>>(Object.fromEntries(receipt.items.map(i=>[i.id,""])));
@@ -11,7 +12,7 @@ export function PurchaseReturnDialog({receipt,busy,close,save}:{receipt:Purchase
   const items=receipt.items.map(i=>({purchaseReceiptItemId:i.id,quantity:quantities[i.id]??""})).filter(i=>Number(i.quantity)>0);
   if(!reason.trim()||!items.length)return;
   if(items.some(x=>{const item=receipt.items.find(i=>i.id===x.purchaseReceiptItemId);return item&&Number(x.quantity)>Number(item.returnableQuantity)+0.000001}))return;
-  save({purchaseReceiptId:receipt.id,kind,reason,notes,items});
+  save({idempotencyKey,purchaseReceiptId:receipt.id,kind,reason,notes,items});
  }
  return <div className="modal-backdrop modal-overlay-in"><section className="crud-modal modal-panel-in" role="dialog" aria-modal="true">
   <header><span className="modal-title-icon"><Icon name="truck" size={18}/></span><div><small>{receipt.code} · {receipt.number}</small><h2>Corregir o devolver recepción</h2></div><button onClick={close} aria-label="Cerrar"><Icon name="close"/></button></header>
