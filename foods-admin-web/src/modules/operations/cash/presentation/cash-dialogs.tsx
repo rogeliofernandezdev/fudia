@@ -1,5 +1,6 @@
 "use client";
-import {useForm} from "react-hook-form";
+import {useState} from "react";
+import {useForm,useWatch} from "react-hook-form";
 import {Button,Icon,Input,Status,Textarea} from "@/design-system";
 import {cashMovementResolver,cashRegisterResolver,closeCashShiftResolver,openCashShiftResolver} from "../domain/cash-schema";
 import type {CashMovementDraft,CashMovementType,CashRegister,CashRegisterDraft,CashShift,CloseCashShiftDraft,OpenCashShiftDraft} from "../domain/types";
@@ -7,7 +8,7 @@ import type {CashMovementDraft,CashMovementType,CashRegister,CashRegisterDraft,C
 export function CashRegisterDialog({initial,busy,close,save}:{initial?:CashRegister|null;busy:boolean;close:()=>void;save:(draft:CashRegisterDraft)=>void}){
   const editing=Boolean(initial);
   const{register,handleSubmit,formState:{errors}}=useForm<CashRegisterDraft>({
-    defaultValues:{name:initial?.name??""},
+    defaultValues:{name:initial?.name??"",blindClose:initial?.blindClose??false},
     resolver:cashRegisterResolver,
     mode:"onSubmit",
     reValidateMode:"onChange",
@@ -21,6 +22,11 @@ export function CashRegisterDialog({initial,busy,close,save}:{initial?:CashRegis
         <label>Nombre de la caja
           <Input autoFocus maxLength={80} {...register("name")} aria-invalid={Boolean(errors.name)} placeholder="Ej. Caja principal"/>
           {errors.name?.message&&<small className="wizard-field-error">{errors.name.message}</small>}
+        </label>
+        <label className="switch-row cash-blind-switch">
+          <input type="checkbox" {...register("blindClose")}/>
+          <span/>
+          <b>Cierre ciego<small>El cajero contará el efectivo sin ver el saldo esperado. Supervisores con permiso sí podrán consultarlo.</small></b>
         </label>
       </div>
       <footer><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy}>{busy?"Guardando…":editing?"Guardar cambios":"Registrar caja"}</Button></footer>
@@ -91,33 +97,63 @@ export function CashMovementDialog({type,busy,close,save}:{type:CashMovementType
   </section></div>;
 }
 
-export function CloseCashShiftDialog({shift,busy,formatMoney,close,save}:{shift:CashShift;busy:boolean;formatMoney:(value:number)=>string;close:()=>void;save:(draft:CloseCashShiftDraft)=>void}){
-  const expected=Number(shift.expectedAmount);
-  const{register,handleSubmit,watch,formState:{errors}}=useForm<CloseCashShiftDraft>({
-    defaultValues:{countedAmount:Number.isFinite(expected)?expected.toFixed(2):"",note:""},
+export function CloseCashShiftDialog({shift,busy,currency,formatMoney,close,save}:{shift:CashShift;busy:boolean;currency:string;formatMoney:(value:number)=>string;close:()=>void;save:(draft:CloseCashShiftDraft)=>void}){
+  const blind=shift.blindClose&&!shift.expectedVisible;
+  const expected=Number(shift.expectedAmount||0);
+  const denominations=denominationsForCurrency(currency);
+  const[byDenomination,setByDenomination]=useState(false);
+  const{control,register,handleSubmit,formState:{errors}}=useForm<CloseCashShiftDraft>({
+    defaultValues:{
+      countedAmount:shift.expectedVisible&&Number.isFinite(expected)?expected.toFixed(2):"",
+      note:"",
+      counts:denominations.map(value=>({denomination:String(value),quantity:""})),
+    },
     resolver:closeCashShiftResolver,
     mode:"onSubmit",
     reValidateMode:"onChange",
   });
-  const counted=Number(watch("countedAmount"));
+  const countedValue=useWatch({control,name:"countedAmount"})??"";
+  const countLines=useWatch({control,name:"counts"})??[];
+  const denominationTotal=countLines.reduce((sum,line)=>sum+(Number(line.denomination)||0)*(Number(line.quantity)||0),0);
+  const counted=byDenomination?denominationTotal:Number(countedValue);
   const difference=Number.isFinite(counted)?counted-expected:0;
   const differenceTone=Math.abs(difference)<.005?"balanced":difference>0?"positive":"negative";
+
   return <div className="modal-backdrop modal-overlay-in"><section className="crud-modal cash-modal cash-close-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-close-title" aria-busy={busy}>
     <div className="modal-accent"/>
     <header><span className="modal-title-icon"><Icon name="lock" size={18}/></span><div><small>{shift.cashRegisterName.toUpperCase()}</small><h2 id="cash-close-title">Cerrar turno</h2></div><button type="button" aria-label="Cerrar" onClick={close} disabled={busy}><Icon name="close"/></button></header>
     <form onSubmit={handleSubmit(save)} noValidate inert={busy}>
       <div className="cash-dialog-body">
-        <section className="cash-close-summary">
-          <div><small>FONDO INICIAL</small><b>{formatMoney(Number(shift.openingAmount))}</b></div>
-          <div><small>INGRESOS</small><b>{formatMoney(Number(shift.incomeAmount))}</b></div>
-          <div><small>EGRESOS</small><b>{formatMoney(Number(shift.expenseAmount))}</b></div>
-          <div className="expected"><small>EFECTIVO ESPERADO</small><strong>{formatMoney(expected)}</strong></div>
-        </section>
-        <label>Efectivo contado
+        {blind
+          ?<div className="cash-blind-close-note"><Icon name="lock" size={15}/><span><b>Cierre ciego activo</b><small>Cuenta el efectivo sin consultar el saldo esperado. La diferencia se calculará al confirmar.</small></span></div>
+          :<section className="cash-close-summary">
+            <div><small>FONDO INICIAL</small><b>{formatMoney(Number(shift.openingAmount))}</b></div>
+            <div><small>INGRESOS</small><b>{formatMoney(Number(shift.incomeAmount))}</b></div>
+            <div><small>EGRESOS</small><b>{formatMoney(Number(shift.expenseAmount))}</b></div>
+            <div className="expected"><small>EFECTIVO ESPERADO</small><strong>{formatMoney(expected)}</strong></div>
+          </section>}
+
+        <div className="cash-count-mode">
+          <button type="button" className={!byDenomination?"active":""} onClick={()=>setByDenomination(false)}>Monto total</button>
+          <button type="button" className={byDenomination?"active":""} onClick={()=>setByDenomination(true)}>Por denominaciones</button>
+        </div>
+
+        {!byDenomination?<label>Efectivo contado
           <Input autoFocus type="number" min="0" step="0.01" inputMode="decimal" {...register("countedAmount")} aria-invalid={Boolean(errors.countedAmount)} placeholder="0.00"/>
           {errors.countedAmount?.message&&<small className="wizard-field-error">{errors.countedAmount.message}</small>}
-        </label>
-        {Number.isFinite(counted)&&<div className={"cash-close-difference "+differenceTone}><span><small>DIFERENCIA</small><b>{difference>0?"+":""}{formatMoney(difference)}</b></span><em>{differenceTone==="balanced"?"Caja cuadrada":differenceTone==="positive"?"Sobrante":"Faltante"}</em></div>}
+        </label>:<section className="cash-denomination-count">
+          <header><div><small>CONTEO</small><b>Billetes y monedas</b></div><strong>{formatMoney(denominationTotal)}</strong></header>
+          <div>{denominations.map((value,index)=><label key={value}>
+            <span>{formatMoney(value)}</span>
+            <input type="hidden" {...register(`counts.${index}.denomination`)}/>
+            <Input type="number" min="0" step="1" inputMode="numeric" {...register(`counts.${index}.quantity`)} placeholder="0"/>
+            <b>{formatMoney(value*(Number(countLines[index]?.quantity)||0))}</b>
+          </label>)}</div>
+          {errors.countedAmount?.message&&<small className="wizard-field-error">{errors.countedAmount.message}</small>}
+        </section>}
+
+        {!blind&&Number.isFinite(counted)&&counted>=0&&<div className={"cash-close-difference "+differenceTone}><span><small>DIFERENCIA</small><b>{difference>0?"+":""}{formatMoney(difference)}</b></span><em>{differenceTone==="balanced"?"Caja cuadrada":differenceTone==="positive"?"Sobrante":"Faltante"}</em></div>}
+
         <label>Observación opcional
           <Textarea rows={3} maxLength={240} {...register("note")} placeholder="Explica cualquier diferencia si corresponde"/>
           {errors.note?.message&&<small className="wizard-field-error">{errors.note.message}</small>}
@@ -169,4 +205,11 @@ function cashMovementSourceLabel(source:string){
   if(source==="deposit")return"Depósito";
   if(source==="adjustment")return"Ajuste";
   return"Manual";
+}
+
+function denominationsForCurrency(currency:string){
+  if(currency==="PEN")return[200,100,50,20,10,5,2,1,.5,.2,.1];
+  if(currency==="USD")return[100,50,20,10,5,1,.25,.1,.05,.01];
+  if(currency==="EUR")return[200,100,50,20,10,5,2,1,.5,.2,.1,.05,.02,.01];
+  return[100,50,20,10,5,1];
 }
