@@ -327,3 +327,18 @@ func (a *API) listInventoryTransfers(w http.ResponseWriter,r *http.Request){
 	for rows.Next(){var id,code,from,to,note,user string;var at time.Time;var count int;if rows.Scan(&id,&code,&from,&to,&note,&user,&at,&count)!=nil{continue};items=append(items,map[string]any{"id":id,"code":code,"fromLocationName":from,"toLocationName":to,"notes":note,"createdByName":user,"createdAt":at,"itemCount":count})}
 	writeJSON(w,200,map[string]any{"items":items,"total":total,"page":page,"pageSize":size})
 }
+
+
+func (a *API) approvePurchaseOrder(w http.ResponseWriter,r *http.Request){
+	s:=r.Context().Value(scopeKey{}).(scope)
+	tx,err:=a.db.Begin(r.Context());if err!=nil{fail(w,503,"purchase_unavailable","No pudimos aprobar la orden.");return};defer tx.Rollback(r.Context())
+	var status string
+	err=tx.QueryRow(r.Context(),`SELECT status FROM purchase_orders WHERE id=$1 AND organization_id=$2 AND location_id=$3 FOR UPDATE`,r.PathValue("id"),s.OrganizationID,s.LocationID).Scan(&status)
+	if errors.Is(err,pgx.ErrNoRows){fail(w,404,"purchase_not_found","La orden de compra no existe.");return}
+	if err!=nil{fail(w,503,"purchase_unavailable","No pudimos validar la orden.");return}
+	if status!="pending_approval"{fail(w,409,"purchase_transition_invalid","Solo una orden por aprobar puede aprobarse.");return}
+	if _,err=tx.Exec(r.Context(),`UPDATE purchase_orders SET status='approved',approved_at=now(),updated_at=now() WHERE id=$1 AND organization_id=$2 AND location_id=$3`,r.PathValue("id"),s.OrganizationID,s.LocationID);err!=nil{fail(w,503,"purchase_unavailable","No pudimos aprobar la orden.");return}
+	if err=tx.Commit(r.Context());err!=nil{fail(w,503,"purchase_unavailable","No pudimos confirmar la aprobación.");return}
+	a.audit(r,"purchase.approved","purchase_order",r.PathValue("id"))
+	w.WriteHeader(http.StatusNoContent)
+}
