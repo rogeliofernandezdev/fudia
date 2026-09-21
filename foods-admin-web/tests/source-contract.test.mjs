@@ -198,6 +198,11 @@ test("compras concentra orden recepcion y altas de abastecimiento",()=>{
   assert.ok(purchasesCss.includes(".purchase-order-modal{display:flex;flex-direction:column"),"El scroll de la OC no desplaza el overlay de guardado");
   assert.ok(purchasesCss.includes("overflow-y:auto;overscroll-behavior:contain"),"El scroll queda contenido en el cuerpo de la OC");
   assert.ok(purchases.includes("PurchaseReceiptDialog"),"La recepción vive dentro del mismo módulo Compras");
+  assert.ok(purchases.includes('openDetail(order.id,"view")'),"El ojo abre el detalle en modo solo lectura");
+  assert.ok(purchases.includes('openDetail(order.id,"review")'),"Revisar orden abre un modo operativo distinto");
+  assert.ok(purchases.includes('mode==="review"&&(canManage||canReceive)'),"Las acciones de workflow solo existen en modo revisión");
+  assert.ok(purchases.includes('mode==="view"?"DETALLE DE ORDEN":"REVISAR ORDEN"'),"El modal comunica claramente si es consulta o revisión");
+  assert.ok(purchases.includes("Ir a Recepciones"),"Una orden aprobada deriva al workspace de Recepciones");
   assert.ok(purchases.includes('tab==="receipts"'),"Compras tiene una vista independiente de Recepciones");
   assert.ok(purchases.includes("<span>Recepciones</span>"),"La navegación expone Recepciones como workspace propio");
   assert.ok(purchases.includes('"receivable"'),"La cola de Recepciones consulta solo órdenes recibibles");
