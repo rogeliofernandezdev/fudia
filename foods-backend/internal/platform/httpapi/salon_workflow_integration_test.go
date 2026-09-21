@@ -91,6 +91,16 @@ func TestSalonKitchenPaymentDeliveryWorkflow(t *testing.T) {
 		t.Fatalf("paid comanda edit must be blocked: %d %s",editRec.Code,editRec.Body.String())
 	}
 
+	// Before preparation, a paid order requires refund before cancellation.
+	paidCancelReq:=httptest.NewRequest("PATCH","/v1/admin/orders/"+created.ID+"/status",bytes.NewReader([]byte(`{"status":"cancelado"}`)))
+	paidCancelReq.SetPathValue("id",created.ID)
+	paidCancelReq=paidCancelReq.WithContext(context.WithValue(paidCancelReq.Context(),scopeKey{},s))
+	paidCancelRec:=httptest.NewRecorder()
+	api.updateOrderStatus(paidCancelRec,paidCancelReq)
+	if paidCancelRec.Code!=409||!strings.Contains(paidCancelRec.Body.String(),"refund_required_before_cancel"){
+		t.Fatalf("paid confirmed cancellation must require refund: %d %s",paidCancelRec.Code,paidCancelRec.Body.String())
+	}
+
 	// Salón/Pedidos cannot start preparation; only Cocina can.
 	genericPrepReq:=httptest.NewRequest("PATCH","/v1/admin/orders/"+created.ID+"/status",bytes.NewReader([]byte(`{"status":"preparando"}`)))
 	genericPrepReq.SetPathValue("id",created.ID)
@@ -107,6 +117,16 @@ func TestSalonKitchenPaymentDeliveryWorkflow(t *testing.T) {
 	kitchenStartRec:=httptest.NewRecorder()
 	api.updateKitchenTicketStatus(kitchenStartRec,kitchenStartReq)
 	if kitchenStartRec.Code!=204{t.Fatalf("kitchen start: %d %s",kitchenStartRec.Code,kitchenStartRec.Body.String())}
+
+	// Once preparation starts, normal cancellation is blocked regardless of payment state.
+	startedCancelReq:=httptest.NewRequest("PATCH","/v1/admin/orders/"+created.ID+"/status",bytes.NewReader([]byte(`{"status":"cancelado"}`)))
+	startedCancelReq.SetPathValue("id",created.ID)
+	startedCancelReq=startedCancelReq.WithContext(context.WithValue(startedCancelReq.Context(),scopeKey{},s))
+	startedCancelRec:=httptest.NewRecorder()
+	api.updateOrderStatus(startedCancelRec,startedCancelReq)
+	if startedCancelRec.Code!=409||!strings.Contains(startedCancelRec.Body.String(),"cancellation_requires_void"){
+		t.Fatalf("started preparation cancellation must be blocked: %d %s",startedCancelRec.Code,startedCancelRec.Body.String())
+	}
 
 	kitchenReadyReq:=httptest.NewRequest("PATCH","/v1/admin/kitchen/tickets/"+created.ID+"/status",bytes.NewReader([]byte(`{"status":"listo"}`)))
 	kitchenReadyReq.SetPathValue("id",created.ID)
@@ -130,16 +150,6 @@ func TestSalonKitchenPaymentDeliveryWorkflow(t *testing.T) {
 	payRec:=httptest.NewRecorder()
 	api.createPayment(payRec,payReq)
 	if payRec.Code!=201{t.Fatalf("payment: %d %s",payRec.Code,payRec.Body.String())}
-
-	// Paid orders cannot be cancelled until their payments are refunded.
-	cancelReq:=httptest.NewRequest("PATCH","/v1/admin/orders/"+created.ID+"/status",bytes.NewReader([]byte(`{"status":"cancelado"}`)))
-	cancelReq.SetPathValue("id",created.ID)
-	cancelReq=cancelReq.WithContext(context.WithValue(cancelReq.Context(),scopeKey{},s))
-	cancelRec:=httptest.NewRecorder()
-	api.updateOrderStatus(cancelRec,cancelReq)
-	if cancelRec.Code!=409||!strings.Contains(cancelRec.Body.String(),"refund_required_before_cancel"){
-		t.Fatalf("paid cancellation must be blocked: %d %s",cancelRec.Code,cancelRec.Body.String())
-	}
 
 	deliverReq:=httptest.NewRequest("PATCH","/v1/admin/orders/"+created.ID+"/status",bytes.NewReader([]byte(`{"status":"entregado"}`)))
 	deliverReq.SetPathValue("id",created.ID)
