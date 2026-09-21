@@ -1,5 +1,5 @@
 import {apiFetch} from "@/shared/api/client";
-import type {Location,PermissionGroup,Role,RoleDraft,User,UserDraft} from "../domain/types";
+import type {Location,MyProfile,MyProfileDraft,PermissionGroup,Role,RoleDraft,User,UserDraft} from "../domain/types";
 
 export function listUsers(q:string,page:number,pageSize:number){
   const params=new URLSearchParams({q,page:String(page),pageSize:String(pageSize)});
@@ -38,4 +38,15 @@ export function setUserActive(id:string,active:boolean){
 
 export function setRoleActive(id:string,active:boolean){
   return apiFetch<void>(`roles/${id}/status`,{method:"PATCH",body:JSON.stringify({active})});
+}
+
+export function getMyProfile(){
+  return apiFetch<MyProfile>("me");
+}
+
+export function saveMyProfile(draft:MyProfileDraft){
+  return apiFetch<MyProfile>("me",{
+    method:"PATCH",
+    body:JSON.stringify(draft),
+  });
 }
