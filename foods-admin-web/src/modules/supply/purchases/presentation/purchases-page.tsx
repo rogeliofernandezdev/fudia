@@ -357,7 +357,7 @@ export function PurchasesPage(){
     </section>
 
     {orderDraft&&(orderDraftLoading||activeSuppliers.isLoading||inventory.isLoading
-      ?<RemoteModalSkeleton className="purchase-order-modal" label="Cargando datos de compra" rows={7} close={()=>{setOrderDraft(null);setOrderDraftLoading(false)}/>
+      ?<RemoteModalSkeleton className="purchase-order-modal" label="Cargando datos de compra" rows={7} close={()=>{setOrderDraft(null);setOrderDraftLoading(false)}}/>
       :activeSuppliers.isError||inventory.isError
         ?<PurchaseEditorError message={(activeSuppliers.error??inventory.error)?.message??"No pudimos cargar los datos necesarios."} close={()=>setOrderDraft(null)} retry={()=>{void activeSuppliers.refetch();void inventory.refetch()}}/>
         :<PurchaseOrderDialog initial={orderDraft} suppliers={activeSuppliers.data?.items??[]} inventory={inventory.data?.items??[]} currencySymbol={settings.currencySymbol} busy={saveOrder.isPending} close={()=>setOrderDraft(null)} save={draft=>saveOrder.mutate(draft)}/>
