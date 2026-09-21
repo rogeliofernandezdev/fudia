@@ -42,7 +42,7 @@ export function KardexPage(){
     <div className="inventory-state"><Icon name="alert" size={24}/><b>No pudimos cargar el Kárdex</b><p>{movements.error.message}</p><Button kind="secondary" icon="refresh" onClick={()=>movements.refetch()}>Reintentar</Button></div>
    :!items.length?<div className="inventory-state"><Icon name="receipt" size={24}/><b>Sin movimientos</b><p>Aún no hay movimientos registrados para estos filtros.</p></div>
    :<div className="table-wrap hover-scroll inventory-table-wrap"><table className="kardex-table">
-    <thead><tr><th>FECHA</th><th>ARTÍCULO</th><th>TIPO</th><th>REFERENCIA</th><th>CANTIDAD</th><th>SALDO ANT.</th><th>SALDO</th><th>COSTO U.</th><th>VALOR MOV.</th><th>VALOR SALDO</th><th>USUARIO</th></tr></thead>
+    <thead><tr><th>FECHA</th><th>ARTÍCULO</th><th>TIPO</th><th>MOTIVO</th><th>CANTIDAD</th><th>STOCK ANTERIOR</th><th>STOCK RESULTANTE</th><th>COSTO U.</th><th>VALOR MOV.</th><th>VALOR SALDO</th><th>USUARIO</th></tr></thead>
     <tbody>{items.map((item,index)=>{const delta=Number(item.quantityDelta);return <tr className={index%2?"alternate":""} key={item.id}>
       <td>{formatRegionalDateTime(item.createdAt,{country:location?.country,timeZone:location?.timezone})}</td><td><b>{item.itemName}</b></td>
       <td><Status tone={delta<0?"orange":"green"}>{movementLabel(item)}</Status></td>
