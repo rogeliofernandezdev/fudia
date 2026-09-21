@@ -83,7 +83,7 @@ func (a *API) onboardTenant(w http.ResponseWriter, r *http.Request) {
 		err = tx.QueryRow(r.Context(), `INSERT INTO users(organization_id,email,full_name,password_hash) VALUES($1,$2,$3,$4) RETURNING id`, organizationID, in.AdminEmail, in.AdminName, string(hash)).Scan(&userID)
 	}
 	if err == nil {
-		err = tx.QueryRow(r.Context(), `INSERT INTO roles(organization_id,name,menu_access,permissions) VALUES($1,'Administrador',ARRAY['*'],ARRAY['*']) RETURNING id`, organizationID).Scan(&roleID)
+		roleID, err = seedOrganizationRoles(r.Context(), tx, organizationID)
 	}
 	if err == nil {
 		_, err = tx.Exec(r.Context(), `INSERT INTO user_roles(user_id,role_id,location_id) VALUES($1,$2,$3)`, userID, roleID, locationID)
