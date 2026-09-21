@@ -1,7 +1,7 @@
 "use client";
 
 import {Button,Input,Label} from "@/components/ui/controls";
-import {useEffect,useMemo,useState} from "react";
+import {Suspense,useEffect,useMemo,useState} from "react";
 import Link from "next/link";
 import {useRouter,useSearchParams} from "next/navigation";
 import {Icon} from "@/components/icon";
@@ -16,6 +16,10 @@ const methods=[
 const money=(value:number|string)=>`S/ ${Number(value||0).toFixed(2)}`;
 
 export default function PaymentPage(){
+  return <Suspense fallback={<div className="pos-empty"><b>Cargando cobro…</b><span>Preparando la transacción.</span></div>}><PaymentContent/></Suspense>;
+}
+
+function PaymentContent(){
   const router=useRouter();
   const searchParams=useSearchParams();
   const orderId=searchParams.get("orderId")??"";
