@@ -65,7 +65,7 @@
 .kitchen-ticket-item em{color:#9a4f00;font-size:7px;font-style:normal;font-weight:800;line-height:1.35}
 .kitchen-ticket-note{display:flex;align-items:flex-start;gap:5px;padding:7px 8px;border:0;border-radius:8px;background:#fff8ef;color:#8a4b08;font-size:7px;line-height:1.4}
 .kitchen-ticket>footer{display:flex;align-items:center;justify-content:flex-end;padding-top:3px}
-.kitchen-ticket-action{height:var(--control-height);min-height:var(--control-height);padding-inline:14px;border-radius:8px}
+.kitchen-ticket-action{width:100%;height:var(--control-height);min-height:var(--control-height);justify-content:center;padding-inline:14px;border-radius:8px}
 .kitchen-ready-label{display:flex;align-items:center;gap:5px;padding:6px 9px;border-radius:999px;background:var(--kds-ready-soft);color:var(--kds-ready-dark);font-size:8px;font-weight:900}
 .kitchen-lane-empty{display:grid;justify-items:center;gap:5px;padding:32px 12px;color:var(--ink-400);text-align:center}
 .kitchen-lane-empty>svg{opacity:.75}
