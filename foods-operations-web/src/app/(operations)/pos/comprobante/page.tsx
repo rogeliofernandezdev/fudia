@@ -1,7 +1,7 @@
 "use client";
 
 import {Button,Input,Label} from "@/components/ui/controls";
-import {useEffect,useMemo,useState} from "react";
+import {Suspense,useEffect,useMemo,useState} from "react";
 import {useRouter,useSearchParams} from "next/navigation";
 import {Icon} from "@/components/icon";
 import {operationsFetch,POSOrderDetail} from "@/lib/operations-api";
@@ -9,6 +9,10 @@ import {operationsFetch,POSOrderDetail} from "@/lib/operations-api";
 const money=(value:number|string)=>`S/ ${Number(value||0).toFixed(2)}`;
 
 export default function ReceiptPage(){
+  return <Suspense fallback={<div className="pos-empty"><b>Cargando comprobante…</b><span>Preparando el detalle.</span></div>}><ReceiptContent/></Suspense>;
+}
+
+function ReceiptContent(){
   const router=useRouter();
   const searchParams=useSearchParams();
   const orderId=searchParams.get("orderId")??"";
