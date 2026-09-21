@@ -1,6 +1,10 @@
 import {apiFetch} from "@/shared/api/client";
 import type {CashMovement,CashMovementDraft,CashOperation,CashOperationDraft,CashRegister,CashRegisterDraft,CashShift,CashShiftList,CashShiftUser,CashUserOption,CloseCashShiftDraft,OpenCashShiftDraft} from "../domain/types";
 
+export function getCurrentCashShift(){
+  return apiFetch<{shift:CashShift|null}>("cash-shifts/current");
+}
+
 export function listCashRegisters(q=""){
   const params=new URLSearchParams();
   if(q)params.set("q",q);
