@@ -447,7 +447,7 @@ function PurchaseOrderDialog({initial,suppliers,inventory,currencySymbol,busy,cl
 
   return <>
     <div className="modal-backdrop modal-overlay-in"><section className="crud-modal purchase-order-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="purchase-order-title" aria-busy={busy}><div className="modal-accent"/>
-      <header><span className="modal-title-icon"><Icon name="receipt" size={18}/></span><div><small>PASO 1 · ORDEN DE COMPRA</small><h2 id="purchase-order-title">{initial.id?"Editar orden":"Nueva orden de compra"}</h2></div><button type="button" aria-label="Cerrar" onClick={close} disabled={busy}><Icon name="close"/></button></header>
+      <header><span className="modal-title-icon"><Icon name="receipt" size={18}/></span><div><small>ORDEN DE COMPRA</small><h2 id="purchase-order-title">{initial.id?"Editar orden":"Nueva orden de compra"}</h2></div><button type="button" aria-label="Cerrar" onClick={close} disabled={busy}><Icon name="close"/></button></header>
       <form onSubmit={handleSubmit(save)} noValidate><div className="purchase-form-body">
         <section className="purchase-form-section purchase-order-header-section">
           <div className="purchase-section-title"><span><Icon name="truck" size={17}/></span><div><b>Datos de la orden</b><small>Selecciona proveedor, fecha esperada y condiciones de compra.</small></div></div>
@@ -462,13 +462,13 @@ function PurchaseOrderDialog({initial,suppliers,inventory,currencySymbol,busy,cl
           <div className="purchase-section-title purchase-lines-title">
             <span><Icon name="stock" size={17}/></span>
             <div><b>Artículos solicitados</b><small>Define qué vas a pedir, en qué presentación, cantidad y costo.</small></div>
-            <Button type="button" kind="secondary" icon="plus" onClick={()=>setItemTarget("new")}>Agregar artículo</Button>
+            {fields.length>0&&<Button type="button" kind="secondary" icon="plus" onClick={()=>setItemTarget("new")}>Agregar artículo</Button>}
           </div>
 
           {!fields.length?<div className="purchase-lines-empty">
             <span><Icon name="stock" size={22}/></span>
-            <div><b>Aún no agregaste artículos</b><small>Usa “Agregar artículo” para buscar uno existente, crear un producto vendible o crear un insumo.</small></div>
-            <Button type="button" kind="secondary" icon="plus" onClick={()=>setItemTarget("new")}>Agregar primer artículo</Button>
+            <div><b>Aún no agregaste artículos</b><small>Busca uno existente o crea un producto vendible o insumo sin salir de la orden.</small></div>
+            <Button type="button" kind="secondary" icon="plus" onClick={()=>setItemTarget("new")}>Agregar artículo</Button>
           </div>:<div className="purchase-lines">{fields.map((field,index)=>{
             const value=lines[index];
             const selected=catalog.find(item=>item.id===value?.inventoryItemId);
@@ -489,8 +489,8 @@ function PurchaseOrderDialog({initial,suppliers,inventory,currencySymbol,busy,cl
           {typeof errors.items?.message==="string"&&<div className="purchase-validation" role="alert"><Icon name="alert" size={15}/>{errors.items.message}</div>}
         </section>
 
-        <div className="purchase-total"><span><small>TOTAL ESTIMADO</small><b>{fields.length} {fields.length===1?"línea":"líneas"}</b></span><strong>{currencySymbol} {formatRegionalNumber(total,undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</strong></div>
-      </div><footer><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy||!suppliers.length}>{busy?"Guardando…":"Guardar"}</Button></footer></form>
+        {fields.length>0&&<div className="purchase-total"><span><small>TOTAL ESTIMADO</small><b>{fields.length} {fields.length===1?"línea":"líneas"}</b></span><strong>{currencySymbol} {formatRegionalNumber(total,undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</strong></div>}
+      </div><footer><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy||!suppliers.length||fields.length===0}>{busy?"Guardando…":"Guardar borrador"}</Button></footer></form>
       {busy&&<div className="modal-busy" role="status"><i/><span>Guardando…</span></div>}
     </section></div>
 
