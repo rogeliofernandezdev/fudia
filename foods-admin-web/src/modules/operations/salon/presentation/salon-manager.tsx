@@ -128,7 +128,12 @@ export function SalonManager(){
         message:variables.sendToKitchen?`Pedido ${o.code} registrado y enviado a Cocina.`:`Pedido ${o.code} quedó pendiente de envío a Cocina.`,
       });
     },
-    onError:e=>notify({tone:"danger",title:"Error",message:e.message}),
+    onError:e=>{
+      void qc.invalidateQueries({queryKey:["salon-floor"]});
+      void qc.invalidateQueries({queryKey:["order-catalog","salon"]});
+      void qc.invalidateQueries({queryKey:["order-catalog","combos"]});
+      notify({tone:"danger",title:"No se pudo registrar la comanda",message:e.message});
+    },
   });
   const update=useMutation({
     mutationFn:({id,v}:{id:string;v:Draft})=>updateSalonOrder(id,v),
@@ -142,6 +147,9 @@ export function SalonManager(){
     },
     onError:e=>{
       void qc.invalidateQueries({queryKey:["salon-floor"]});
+      void qc.invalidateQueries({queryKey:["order",editingOrderId]});
+      void qc.invalidateQueries({queryKey:["order-catalog","salon"]});
+      void qc.invalidateQueries({queryKey:["order-catalog","combos"]});
       notify({tone:"danger",title:"No se pudo guardar",message:e.message});
     },
   });
