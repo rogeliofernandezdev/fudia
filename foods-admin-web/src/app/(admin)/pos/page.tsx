@@ -1,2 +1,2 @@
-import {ComingSoonPage} from "@/shared/management";
-export default function Page(){return <ComingSoonPage eyebrow="OPERACIÓN" title="Punto de venta" description="Cobro rápido, comprobantes y facturación."/>}
+import {POSPage} from "@/modules/operations";
+export default function Page(){return <POSPage/>}
