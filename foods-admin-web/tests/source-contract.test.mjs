@@ -405,3 +405,27 @@ test("se preservan contratos visuales base",()=>{
   const shell=read("src/shell/admin-shell.tsx");
   for(const label of ["Reportes","Punto de venta","Carta y productos","Inventario","Compras","CONFIGURACIÓN"])assert.ok(shell.includes(label),label);
 });
+
+
+test("identidad alinea permisos administracion plataforma y perfil",()=>{
+  const identity=read("src/modules/identity/presentation/users-roles-manager.tsx");
+  const shell=read("src/shell/admin-shell.tsx");
+  const platformLayout=read("src/app/platform/layout.tsx");
+  const platformShell=read("src/modules/platform/presentation/platform-shell.tsx");
+  const profile=read("src/modules/identity/presentation/profile-page.tsx");
+  const identityApi=read("src/modules/identity/infrastructure/identity-api.ts");
+
+  assert.ok(identity.includes('const canManage=can("users.manage")'),"Usuarios distingue lectura de administración");
+  assert.ok(identity.includes("canManage&&!u.platformAdmin"),"La UI protege cuentas de plataforma y acciones de escritura");
+  assert.ok(identity.includes("canManage&&role.systemKey!==\"administrator\""),"El Administrador no expone acciones de edición o desactivación");
+  assert.ok(identity.includes('invalidateQueries({queryKey:["session-context"]})'),"Cambios de identidad refrescan permisos de sesión");
+
+  assert.ok(platformLayout.includes("SessionProvider"),"El área de plataforma carga contexto de sesión");
+  assert.ok(platformShell.includes("!user?.platformAdmin"),"El onboarding de empresas tiene guard funcional de platform admin");
+
+  assert.ok(shell.includes('href="/configuracion/perfil"'),"La cuenta enlaza a un perfil funcional");
+  assert.equal(shell.includes("?section=preferences"),false,"No se anuncian preferencias inexistentes");
+  assert.equal(shell.includes("?section=security"),false,"No se anuncia una pantalla de seguridad inexistente");
+  assert.ok(profile.includes("saveMyProfile"),"Perfil guarda datos y contraseña por su endpoint real");
+  assert.ok(identityApi.includes('apiFetch<MyProfile>("me"'),"Perfil consulta el endpoint autenticado propio");
+});
