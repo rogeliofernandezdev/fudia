@@ -216,8 +216,268 @@ func normalizeInventoryEntry(in inventoryEntryInput) (inventoryEntryInput, strin
 }
 
 func createInventoryCatalogItem(ctx context.Context, tx pgx.Tx, organizationID string, in inventoryEntryInput) (inventoryCatalogCreateResult, *inventoryCatalogCreateError) {
-	var result inventoryCatalogCreateResult
-	result.Unit = in.Unit
+	result := inventoryCatalogCreateResult{Unit: in.Unit}
+	switch {
+	case in.NewProduct != nil:
+		productIn := productInput{
+			SKU:             in.NewProduct.SKU,
+			Name:            in.NewProduct.Name,
+			Description:     in.NewProduct.Description,
+			CategoryID:      in.NewProduct.CategoryID,
+			Price:           in.NewProduct.Price,
+			ProductType:     "retail",
+			QuantityControl: "inventory",
+		}
+		if _, invalidProduct := normalizeProduct(productIn); invalidProduct != "" {
+			return result, &inventoryCatalogCreateError{Status: 400, Code: "invalid_product", Message: invalidProduct}
+		}
+		var categoryAllowed bool
+		if err := tx.QueryRow(ctx, `
+			SELECT EXISTS(
+				SELECT 1
+				FROM menu_categories
+				WHERE id=$1 AND organization_id=$2 AND active
+				  AND product_scope IN ('retail','both')
+			)`,
+			in.NewProduct.CategoryID, organizationID,
+		).Scan(&categoryAllowed); err != nil {
+			return result, &inventoryCatalogCreateError{Status: 503, Code: "categories_unavailable", Message: "No pudimos validar la categoría."}
+		}
+		if !categoryAllowed {
+			return result, &inventoryCatalogCreateError{Status: 409, Code: "category_not_retail", Message: "La categoría seleccionada no admite mercadería vendible."}
+		}
+		var productID string
+		if err := tx.QueryRow(ctx, `
+			INSERT INTO products(organization_id,category_id,sku,name,description,price,active,product_type,quantity_control)
+			VALUES($1,$2,COALESCE(NULLIF($3,''),'PROD-'||upper(substr(replace(gen_random_uuid()::text,'-',''),1,8))),$4,$5,$6,true,'retail','inventory')
+			RETURNING id,sku,name`,
+			organizationID, in.NewProduct.CategoryID, in.NewProduct.SKU,
+			in.NewProduct.Name, in.NewProduct.Description, in.NewProduct.Price,
+		).Scan(&productID, &result.SKU, &result.Name); err != nil {
+			return result, &inventoryCatalogCreateError{Status: 409, Code: "product_conflict", Message: "No pudimos crear el producto. Revisa nombre, categoría y precio."}
+		}
+		result.ProductID = &productID
+		result.Kind = "product"
+		if err := tx.QueryRow(ctx, `
+			INSERT INTO inventory_items(
+				organization_id,sku,name,unit,minimum_stock,active,product_id
+			)
+			VALUES($1,'SELL-'||upper(substr(replace($2::text,'-',''),1,12)),$3,$4,$5,true,$2::uuid)
+			RETURNING id,unit`,
+			organizationID, productID, result.Name, in.Unit, in.MinimumStock,
+		).Scan(&result.InventoryItemID, &result.Unit); err != nil {
+			return result, &inventoryCatalogCreateError{Status: 503, Code: "inventory_unavailable", Message: "No pudimos vincular el producto al inventario."}
+		}
+	case in.NewIngredient != nil:
+		result.Name = in.NewIngredient.Name
+		result.Kind = "ingredient"
+		if err := tx.QueryRow(ctx, `
+			INSERT INTO inventory_items(
+				organization_id,sku,name,unit,minimum_stock,active
+			)
+			VALUES(
+				$1,
+				'ING-'||upper(substr(replace(gen_random_uuid()::text,'-',''),1,10)),
+				$2,$3,$4,true
+			)
+			RETURNING id,sku,unit`,
+			organizationID, result.Name, in.Unit, in.MinimumStock,
+		).Scan(&result.InventoryItemID, &result.SKU, &result.Unit); err != nil {
+			return result, &inventoryCatalogCreateError{Status: 409, Code: "ingredient_conflict", Message: "No pudimos crear el insumo."}
+		}
+	default:
+		return result, &inventoryCatalogCreateError{Status: 400, Code: "invalid_inventory_item", Message: "Selecciona el tipo de artículo a crear."}
+	}
+	return result, nil
+}
+
+func ensureInventoryPresentation(ctx context.Context, tx pgx.Tx, organizationID, inventoryItemID, presentationType string, unitsPerPresentation float64) (string, error) {
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO inventory_presentations(
+			organization_id,inventory_item_id,presentation_type,units_per_presentation,active
+		)
+		VALUES($1,$2,'unit',1,true)
+		ON CONFLICT (organization_id,inventory_item_id,presentation_type,units_per_presentation)
+		DO UPDATE SET active=true,updated_at=now()`,
+		organizationID, inventoryItemID); err != nil {
+		return "", err
+	}
+	var presentationID string
+	err := tx.QueryRow(ctx, `
+		INSERT INTO inventory_presentations(
+			organization_id,inventory_item_id,presentation_type,units_per_presentation,active
+		)
+		VALUES($1,$2,$3,$4,true)
+		ON CONFLICT (organization_id,inventory_item_id,presentation_type,units_per_presentation)
+		DO UPDATE SET active=true,updated_at=now()
+		RETURNING id`,
+		organizationID, inventoryItemID, presentationType, unitsPerPresentation).
+		Scan(&presentationID)
+	return presentationID, err
+}
+
+func (a *API) listInventory(w http.ResponseWriter, r *http.Request) {
+	s := r.Context().Value(scopeKey{}).(scope)
+	page, size := pageParams(r)
+	search := "%" + strings.TrimSpace(r.URL.Query().Get("q")) + "%"
+	var total int
+	if err := a.db.QueryRow(r.Context(), `
+		SELECT count(*)
+		FROM inventory_items ii
+		LEFT JOIN products p
+		  ON p.id=ii.product_id AND p.organization_id=ii.organization_id
+		WHERE ii.organization_id=$1 AND ii.active
+		  AND (COALESCE(p.name,ii.name) ILIKE $2 OR COALESCE(p.sku,ii.sku) ILIKE $2)`,
+		s.OrganizationID, search).Scan(&total); err != nil {
+		fail(w, 503, "inventory_unavailable", "No pudimos cargar el inventario.")
+		return
+	}
+	rows, err := a.db.Query(r.Context(), `
+		SELECT ii.id,p.id,COALESCE(p.sku,ii.sku),COALESCE(p.name,ii.name),
+		       CASE WHEN p.id IS NULL THEN 'ingredient' ELSE 'product' END,
+		       c.name,COALESCE(p.active,ii.active),ii.unit,
+		       COALESCE(sb.quantity,0)::text,ii.minimum_stock::text,
+		       CASE
+		         WHEN COALESCE(sb.quantity,0)<=0 THEN 'out'
+		         WHEN ii.minimum_stock>0 AND COALESCE(sb.quantity,0)<=ii.minimum_stock THEN 'low'
+		         ELSE 'ok'
+		       END,
+		       COALESCE(sb.updated_at,ii.updated_at)
+		FROM inventory_items ii
+		LEFT JOIN products p
+		  ON p.id=ii.product_id AND p.organization_id=ii.organization_id
+		LEFT JOIN menu_categories c
+		  ON c.id=p.category_id AND c.organization_id=p.organization_id
+		LEFT JOIN stock_balances sb
+		  ON sb.organization_id=ii.organization_id
+		 AND sb.location_id=$2
+		 AND sb.inventory_item_id=ii.id
+		WHERE ii.organization_id=$1 AND ii.active
+		  AND (COALESCE(p.name,ii.name) ILIKE $3 OR COALESCE(p.sku,ii.sku) ILIKE $3)
+		ORDER BY COALESCE(p.active,ii.active) DESC,COALESCE(p.name,ii.name)
+		LIMIT $4 OFFSET $5`,
+		s.OrganizationID, s.LocationID, search, size, (page-1)*size)
+	if err != nil {
+		fail(w, 503, "inventory_unavailable", "No pudimos cargar el inventario.")
+		return
+	}
+	defer rows.Close()
+	items := []inventoryItemView{}
+	for rows.Next() {
+		var item inventoryItemView
+		if err := rows.Scan(
+			&item.InventoryItemID, &item.ProductID, &item.SKU, &item.Name, &item.Kind,
+			&item.CategoryName, &item.Active, &item.Unit, &item.Quantity, &item.MinimumStock,
+			&item.Status, &item.UpdatedAt,
+		); err != nil {
+			fail(w, 503, "inventory_unavailable", "No pudimos cargar el inventario.")
+			return
+		}
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		fail(w, 503, "inventory_unavailable", "No pudimos cargar el inventario.")
+		return
+	}
+	writeJSON(w, 200, map[string]any{"items": items, "total": total, "page": page, "pageSize": size})
+}
+
+func (a *API) listInventoryProducts(w http.ResponseWriter, r *http.Request) {
+	s := r.Context().Value(scopeKey{}).(scope)
+	search := "%" + strings.TrimSpace(r.URL.Query().Get("q")) + "%"
+	rows, err := a.db.Query(r.Context(), `
+		SELECT ii.id,p.id,COALESCE(p.sku,ii.sku),COALESCE(p.name,ii.name),
+		       CASE WHEN p.id IS NULL THEN 'ingredient' ELSE 'product' END,
+		       c.name,p.quantity_control,ii.unit,COALESCE(sb.quantity,0)::text,ii.minimum_stock::text,
+		       COALESCE((
+		         SELECT jsonb_agg(
+		           jsonb_build_object(
+		             'id',ip.id,
+		             'presentationType',ip.presentation_type,
+		             'unitsPerPresentation',ip.units_per_presentation::text
+		           )
+		           ORDER BY
+		             CASE ip.presentation_type WHEN 'unit' THEN 0 WHEN 'package' THEN 1 ELSE 2 END,
+		             ip.units_per_presentation
+		         )
+		         FROM inventory_presentations ip
+		         WHERE ip.organization_id=ii.organization_id
+		           AND ip.inventory_item_id=ii.id
+		           AND ip.active
+		       ),'[]'::jsonb)
+		FROM inventory_items ii
+		LEFT JOIN products p
+		  ON p.id=ii.product_id AND p.organization_id=ii.organization_id
+		LEFT JOIN menu_categories c
+		  ON c.id=p.category_id AND c.organization_id=p.organization_id
+		LEFT JOIN stock_balances sb
+		  ON sb.organization_id=ii.organization_id
+		 AND sb.location_id=$2
+		 AND sb.inventory_item_id=ii.id
+		WHERE ii.organization_id=$1
+		  AND ii.active
+		  AND (p.id IS NULL OR (
+		    p.active
+		    AND p.quantity_control='inventory'
+		    AND NOT EXISTS (
+		      SELECT 1
+		      FROM menu_combos mc
+		      WHERE mc.product_id=p.id AND mc.organization_id=p.organization_id
+		    )
+		  ))
+		  AND (COALESCE(p.name,ii.name) ILIKE $3 OR COALESCE(p.sku,ii.sku) ILIKE $3)
+		ORDER BY COALESCE(p.name,ii.name)
+		LIMIT 100`, s.OrganizationID, s.LocationID, search)
+	if err != nil {
+		fail(w, 503, "inventory_products_unavailable", "No pudimos cargar los artículos de inventario.")
+		return
+	}
+	defer rows.Close()
+	items := []inventoryProductOption{}
+	for rows.Next() {
+		var item inventoryProductOption
+		var presentationsJSON []byte
+		if err := rows.Scan(
+			&item.ID, &item.ProductID, &item.SKU, &item.Name, &item.Kind, &item.CategoryName,
+			&item.QuantityControl, &item.Unit, &item.Quantity, &item.MinimumStock, &presentationsJSON,
+		); err != nil {
+			fail(w, 503, "inventory_products_unavailable", "No pudimos cargar los artículos de inventario.")
+			return
+		}
+		if err := json.Unmarshal(presentationsJSON, &item.Presentations); err != nil {
+			fail(w, 503, "inventory_products_unavailable", "No pudimos cargar las presentaciones del artículo.")
+			return
+		}
+		items = append(items, item)
+	}
+	writeJSON(w, 200, map[string]any{"items": items})
+}
+
+func (a *API) createInventoryEntry(w http.ResponseWriter, r *http.Request) {
+	s := r.Context().Value(scopeKey{}).(scope)
+	var in inventoryEntryInput
+	if json.NewDecoder(r.Body).Decode(&in) != nil {
+		fail(w, 400, "invalid_inventory_entry", "Revisa los datos de la entrada.")
+		return
+	}
+	var invalid string
+	in, invalid = normalizeInventoryEntry(in)
+	if invalid != "" {
+		fail(w, 400, "invalid_inventory_entry", invalid)
+		return
+	}
+
+	tx, err := a.db.Begin(r.Context())
+	if err != nil {
+		fail(w, 503, "inventory_unavailable", "No pudimos registrar la entrada.")
+		return
+	}
+	defer tx.Rollback(r.Context())
+
+	var productID *string
+	var itemSKU, itemName, inventoryItemID, inventoryUnit string
+	createdProduct := false
+	createdInventoryItem := false
 
 	switch {
 	case in.NewProduct != nil, in.NewIngredient != nil:
@@ -320,8 +580,7 @@ func createInventoryCatalogItem(ctx context.Context, tx pgx.Tx, organizationID s
 		return
 	}
 
-	var presentationID string
-	presentationID, err = ensureInventoryPresentation(
+	presentationID, err := ensureInventoryPresentation(
 		r.Context(), tx, s.OrganizationID, inventoryItemID, in.PresentationType, in.UnitsPerPresentation,
 	)
 	if err != nil {
