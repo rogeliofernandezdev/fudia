@@ -531,7 +531,7 @@
    VISTA DE PEDIDO ACTIVO — Salón
 ════════════════════════════════════════════════════════ */
 .salon-order-detail{
-  width:min(860px,calc(100vw - 32px));
+  width:min(1040px,calc(100vw - 32px));
   max-height:min(90vh,820px);
   overflow:hidden;
   border:1px solid #dfe3ef;
