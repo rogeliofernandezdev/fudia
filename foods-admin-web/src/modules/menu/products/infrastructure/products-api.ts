@@ -1,4 +1,5 @@
 import {apiFetch} from "@/shared/api/client";
+import {uploadProductImage} from "@/shared/api/product-image";
 import type {Category,CategoryDraft,List,Product,ProductDraft,ProductType} from "../domain/types";
 
 export type ProductQuery={
@@ -36,15 +37,7 @@ export async function saveProduct(draft:ProductDraft,file:File|null){
       costPrice:draft.costPrice||null,
     }),
   });
-  if(file&&product.id){
-    const form=new FormData();
-    form.append("file",file);
-    const response=await fetch(`/api/admin/products/${product.id}/image`,{method:"POST",body:form});
-    if(!response.ok){
-      const body=await response.json().catch(()=>({}));
-      throw new Error(body.message??"No pudimos subir la imagen del producto.");
-    }
-  }
+  if(file&&product.id)await uploadProductImage(product.id,file);
   return product;
 }
 
