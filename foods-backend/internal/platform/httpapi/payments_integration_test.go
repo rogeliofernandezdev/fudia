@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 )
@@ -183,4 +184,65 @@ func TestSplitPaymentBatchAndCompletePaidOrder(t *testing.T) {
 	var status string
 	if err:=pool.QueryRow(ctx,`SELECT status FROM orders WHERE id=$1`,orderID).Scan(&status);err!=nil{t.Fatal(err)}
 	if status!="entregado"{t.Fatalf("expected delivered order after completion, got %s",status)}
+}
+
+
+func TestConcurrentPaymentBatchCannotDoubleChargeSameBalance(t *testing.T) {
+	pool:=integrationPool(t)
+	s:=seedInventoryScope(t,pool)
+	api:=New(pool)
+	ctx:=context.Background()
+
+	var registerID string
+	if err:=pool.QueryRow(ctx,`
+		INSERT INTO cash_registers(organization_id,location_id,name,created_by)
+		VALUES($1,$2,'Caja concurrencia',$3)
+		RETURNING id
+	`,s.OrganizationID,s.LocationID,s.UserID).Scan(&registerID);err!=nil{t.Fatal(err)}
+
+	openReq:=httptest.NewRequest("POST","/v1/operations/cash-shifts",bytes.NewReader([]byte(fmt.Sprintf(`{"cashRegisterId":%q,"openingAmount":0}`,registerID))))
+	openReq=openReq.WithContext(context.WithValue(openReq.Context(),scopeKey{},s))
+	openRec:=httptest.NewRecorder()
+	api.openCashShift(openRec,openReq)
+	if openRec.Code!=201{t.Fatalf("open shift: %d %s",openRec.Code,openRec.Body.String())}
+
+	var orderID string
+	if err:=pool.QueryRow(ctx,`
+		INSERT INTO orders(organization_id,location_id,code,channel,status,total,created_by)
+		VALUES($1,$2,$3,'mostrador','listo',50,$4)
+		RETURNING id
+	`,s.OrganizationID,s.LocationID,fmt.Sprintf("PED-RACE-%d",time.Now().UnixNano()),s.UserID).Scan(&orderID);err!=nil{t.Fatal(err)}
+
+	body:=[]byte(fmt.Sprintf(`{"orderId":%q,"payments":[{"method":"card","amount":50,"reference":"race"}]}`,orderID))
+	codes:=make(chan int,2)
+	var wg sync.WaitGroup
+	for i:=0;i<2;i++{
+		wg.Add(1)
+		go func(){
+			defer wg.Done()
+			req:=httptest.NewRequest("POST","/v1/operations/payments/batch",bytes.NewReader(body))
+			req=req.WithContext(context.WithValue(req.Context(),scopeKey{},s))
+			rec:=httptest.NewRecorder()
+			api.createPaymentBatch(rec,req)
+			codes<-rec.Code
+		}()
+	}
+	wg.Wait()
+	close(codes)
+
+	successes,conflicts:=0,0
+	for code:=range codes{
+		if code==201{successes++}
+		if code==409{conflicts++}
+	}
+	if successes!=1||conflicts!=1{
+		t.Fatalf("expected one success and one conflict, got success=%d conflict=%d",successes,conflicts)
+	}
+
+	var count int
+	if err:=pool.QueryRow(ctx,`
+		SELECT count(*) FROM payments
+		WHERE organization_id=$1 AND location_id=$2 AND order_id=$3
+	`,s.OrganizationID,s.LocationID,orderID).Scan(&count);err!=nil{t.Fatal(err)}
+	if count!=1{t.Fatalf("expected exactly one persisted payment, got %d",count)}
 }
