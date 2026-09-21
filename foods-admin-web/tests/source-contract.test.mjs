@@ -208,7 +208,8 @@ test("compras concentra orden recepcion y altas de abastecimiento",()=>{
   assert.ok(purchases.includes("Guardar borrador"),"Guardar la OC comunica que aún no hay recepción ni movimiento de stock");
   assert.ok(purchases.includes("Busca un artículo existente o crea uno nuevo para incluirlo en la orden."),"La OC usa una ayuda breve en el estado vacío");
   assert.equal(purchases.includes("Aún no agregaste artículos"),false,"El estado vacío no repite el título de la sección");
-  assert.ok(purchases.includes("Cambiar"),"Una línea existente permite reemplazar el artículo sin duplicar controles");
+  assert.equal(purchases.includes("Cambiar artículo"),false,"La OC evita una acción redundante que podría conservar datos del artículo anterior");
+  assert.ok(purchases.includes("purchase-line-remove"),"Cada línea conserva una única acción explícita para quitar el artículo");
 
   assert.ok(itemDialog.includes("Artículo existente"),"El selector muestra explícitamente la ruta de artículo existente");
   assert.ok(itemDialog.includes("Escribe el nombre del producto o insumo"),"La búsqueda de artículos vive dentro del selector");
