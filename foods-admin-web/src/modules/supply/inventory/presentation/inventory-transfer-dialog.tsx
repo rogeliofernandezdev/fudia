@@ -6,7 +6,7 @@ import type {InventoryProductOption,InventoryTransferDraft,LocationOption} from 
 export function InventoryTransferDialog({items,locations,currentLocationId,busy,close,save}:{items:InventoryProductOption[];locations:LocationOption[];currentLocationId:string;busy:boolean;close:()=>void;save:(draft:InventoryTransferDraft)=>void}){
  const destinations=locations.filter(l=>l.id!==currentLocationId);
  const[first]=items;
- const[draft,setDraft]=useState<InventoryTransferDraft>({toLocationId:destinations[0]?.id??"",notes:"",items:first?[{inventoryItemId:first.id,quantity:""}]:[]});
+ const[draft,setDraft]=useState<InventoryTransferDraft>({idempotencyKey:crypto.randomUUID(),toLocationId:destinations[0]?.id??"",notes:"",items:first?[{inventoryItemId:first.id,quantity:""}]:[]});
  const selectedIds=useMemo(()=>new Set(draft.items.map(i=>i.inventoryItemId)),[draft.items]);
  function add(){const next=items.find(i=>!selectedIds.has(i.id));if(next)setDraft({...draft,items:[...draft.items,{inventoryItemId:next.id,quantity:""}]})}
  function submit(){
