@@ -204,6 +204,9 @@ test("compras concentra orden recepcion y altas de abastecimiento",()=>{
   assert.ok(purchases.includes('mode==="view"?"DETALLE DE ORDEN":"REVISAR ORDEN"'),"El modal comunica claramente si es consulta o revisión");
   assert.ok(purchases.includes("Ir a Recepciones"),"Una orden aprobada deriva al workspace de Recepciones");
   assert.ok(purchases.includes('tab==="receipts"'),"Compras tiene una vista independiente de Recepciones");
+  assert.ok(purchases.includes('queryKey:["purchase-orders","receivable-summary"]'),"El contador de Recepciones se consulta aunque la pestaña no esté activa");
+  assert.ok(purchases.includes('status:"receivable",page:1,pageSize:1'),"El contador usa la cola de órdenes recibibles");
+  assert.ok(purchases.includes('invalidateQueries({queryKey:["purchase-orders","receipts"]})'),"Entrar a Recepciones refresca su listado");
   assert.ok(purchases.includes("<span>Recepciones</span>"),"La navegación expone Recepciones como workspace propio");
   assert.ok(purchases.includes('"receivable"'),"La cola de Recepciones consulta solo órdenes recibibles");
   assert.ok(purchases.includes("No hay mercadería pendiente de recibir"),"Recepciones tiene estado vacío propio");
