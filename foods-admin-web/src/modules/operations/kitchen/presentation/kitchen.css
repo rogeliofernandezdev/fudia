@@ -1,4 +1,4 @@
-.kitchen-page{--kds-pending:#4f5bd5;--kds-pending-dark:#3946b8;--kds-pending-soft:#f4f5ff;--kds-pending-mid:#e5e8ff;--kds-cooking:#d97706;--kds-cooking-dark:#9a4f00;--kds-cooking-soft:#fff8ee;--kds-cooking-mid:#ffead0;--kds-ready:#16875f;--kds-ready-dark:#117254;--kds-ready-soft:#effaf5;--kds-ready-mid:#d8f2e6;display:grid;gap:12px;min-width:0}
+.kitchen-page{--kds-pending:var(--primary-600);--kds-pending-dark:var(--primary-700);--kds-pending-soft:var(--primary-50);--kds-pending-mid:var(--primary-100);--kds-cooking:var(--warning);--kds-cooking-dark:var(--warning);--kds-cooking-soft:var(--warning-50);--kds-cooking-mid:color-mix(in srgb,var(--warning) 14%,#fff);--kds-ready:var(--brand-600);--kds-ready-dark:var(--brand-700);--kds-ready-soft:var(--brand-100);--kds-ready-mid:color-mix(in srgb,var(--brand-600) 24%,#fff);display:grid;gap:12px;min-width:0}
 .kitchen-controlbar{display:flex;align-items:end;justify-content:space-between;gap:12px;padding:11px 13px;border:1px solid var(--line);border-radius:14px;background:#fff;box-shadow:0 5px 16px rgba(16,24,40,.045)}
 .kitchen-channel-filter{display:grid;grid-template-columns:auto minmax(170px,210px);align-items:center;gap:8px;color:var(--ink-600);font-size:8px;font-weight:850}
 .kitchen-channel-filter>span{color:var(--ink-600);letter-spacing:.04em}
@@ -65,11 +65,7 @@
 .kitchen-ticket-item em{color:#9a4f00;font-size:7px;font-style:normal;font-weight:800;line-height:1.35}
 .kitchen-ticket-note{display:flex;align-items:flex-start;gap:5px;padding:7px 8px;border:0;border-radius:8px;background:#fff8ef;color:#8a4b08;font-size:7px;line-height:1.4}
 .kitchen-ticket>footer{display:flex;align-items:center;justify-content:flex-end;padding-top:3px}
-.kitchen-ticket-action{height:var(--control-height);min-height:var(--control-height);padding-inline:14px;border-radius:8px;box-shadow:0 5px 14px rgba(70,84,205,.14)}
-.kitchen-lane-confirmado .kitchen-ticket-action.primary{background:var(--kds-pending);color:#fff}
-.kitchen-lane-confirmado .kitchen-ticket-action.primary:hover{background:var(--kds-pending-dark)}
-.kitchen-lane-preparando .kitchen-ticket-action.success{background:var(--kds-cooking);color:#fff}
-.kitchen-lane-preparando .kitchen-ticket-action.success:hover{background:var(--kds-cooking-dark)}
+.kitchen-ticket-action{height:var(--control-height);min-height:var(--control-height);padding-inline:14px;border-radius:8px}
 .kitchen-ready-label{display:flex;align-items:center;gap:5px;padding:6px 9px;border-radius:999px;background:var(--kds-ready-soft);color:var(--kds-ready-dark);font-size:8px;font-weight:900}
 .kitchen-lane-empty{display:grid;justify-items:center;gap:5px;padding:32px 12px;color:var(--ink-400);text-align:center}
 .kitchen-lane-empty>svg{opacity:.75}
