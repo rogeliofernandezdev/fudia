@@ -485,6 +485,100 @@ paths:
         "404": { description: Turno no encontrado }
         "409": { description: El turno ya está cerrado }
         "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/cash-users/options:
+    get:
+      operationId: listCashUserOptions
+      summary: Usuarios del local disponibles para asignar a turnos de caja
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Usuarios y turno activo, content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/CashUserOption" } } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/cash-shifts/{id}/users:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    get:
+      operationId: listCashShiftUsers
+      summary: Equipo actualmente asignado al turno
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Equipo del turno, content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/CashShiftUser" } } } } } } }
+    post:
+      operationId: assignCashShiftUser
+      summary: Asigna un usuario del local a un turno abierto
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [userId], properties: { userId: { type: string, format: uuid } } } } } }
+      responses:
+        "201": { description: Usuario asignado, content: { application/json: { schema: { $ref: "#/components/schemas/CashShiftUser" } } } }
+        "404": { description: Turno o usuario no disponible }
+        "409": { description: El usuario ya opera otro turno }
+  /v1/admin/cash-shifts/{id}/users/{userId}:
+    parameters:
+      - { $ref: "#/components/parameters/EntityId" }
+      - { in: path, name: userId, required: true, schema: { type: string, format: uuid } }
+    delete:
+      operationId: unassignCashShiftUser
+      summary: Retira un usuario del turno
+      security: [{ sessionCookie: [] }]
+      responses:
+        "204": { description: Usuario retirado }
+        "404": { description: Usuario no asignado }
+  /v1/admin/cash-shifts/{id}/operations:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    post:
+      operationId: createCashOperation
+      summary: Registra retiro, depósito o transferencia de efectivo entre turnos
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/CashOperationInput" } } } }
+      responses:
+        "201": { description: Operación registrada atómicamente, content: { application/json: { schema: { $ref: "#/components/schemas/CashOperation" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "409": { description: Saldo insuficiente o turno de destino no disponible }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/pos/orders:
+    get:
+      operationId: listPOSOrders
+      summary: Pedidos del local con estado de cobro
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: query, name: q, schema: { type: string } }
+        - { in: query, name: paymentStatus, schema: { type: string, enum: [unpaid, pending, partial, paid, all], default: unpaid } }
+        - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
+        - { in: query, name: pageSize, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+      responses:
+        "200": { description: Pedidos y saldo por cobrar, content: { application/json: { schema: { $ref: "#/components/schemas/POSOrderList" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/pos/orders/{id}:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    get:
+      operationId: getPOSOrder
+      summary: Detalle del pedido con pagos y saldo restante
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Pedido y pagos, content: { application/json: { schema: { $ref: "#/components/schemas/POSOrderDetail" } } } }
+        "404": { description: Pedido no encontrado }
+  /v1/admin/payments:
+    post:
+      operationId: createPayment
+      summary: Registra un cobro contra un pedido usando el turno asignado del usuario
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/PaymentInput" } } } }
+      responses:
+        "201": { description: Cobro registrado, content: { application/json: { schema: { $ref: "#/components/schemas/Payment" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "409": { description: Sin turno activo, pedido no cobrable o monto superior al saldo }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/payments/{id}/refund:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    post:
+      operationId: refundPayment
+      summary: Registra una devolución parcial o total del pago original
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/RefundInput" } } } }
+      responses:
+        "204": { description: Devolución registrada }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { description: Pago no encontrado }
+        "409": { description: La devolución supera el saldo del pago o el efectivo disponible }
+        "403": { $ref: "#/components/responses/Forbidden" }
   /v1/operations/product-availability:
     get:
       operationId: listOperationalProductAvailability
@@ -668,14 +762,25 @@ components:
     InventoryAdjustmentInput: { type: object, required: [inventoryItemId, movementType, reason, quantity], properties: { inventoryItemId: { type: string, format: uuid }, movementType: { type: string, enum: [entry, exit] }, reason: { type: string, enum: [surplus_adjustment, shortage_adjustment, waste, expiration, other_exit] }, quantity: { type: number, exclusiveMinimum: 0 }, observation: { type: string, maxLength: 240 } } }
     InventoryAdjustmentResult: { type: object, required: [id, inventoryItemId, name, unit, movementType, reason, quantity, stockBefore, stockAfter, observation, createdAt, createdByName], properties: { id: { type: string, format: uuid }, inventoryItemId: { type: string, format: uuid }, name: { type: string }, unit: { type: string }, movementType: { type: string, enum: [entry, exit] }, reason: { type: string, enum: [surplus_adjustment, shortage_adjustment, waste, expiration, other_exit] }, quantity: { type: number }, stockBefore: { type: number, minimum: 0 }, stockAfter: { type: number, minimum: 0 }, observation: { type: string }, createdAt: { type: string, format: date-time }, createdByName: { type: string } } }
     StockMovement: { type: object, required: [id, inventoryItemId, productId, itemName, movementType, quantityDelta, balanceBefore, balanceAfter, sourceType, sourceId, sourceReference, note, createdByName, createdAt], properties: { id: { type: string, format: uuid }, inventoryItemId: { type: string, format: uuid }, productId: { type: [string, "null"], format: uuid }, itemName: { type: string }, movementType: { type: string, enum: [entry, sale, sale_reversal, sale_adjustment, inventory_adjustment] }, adjustmentType: { type: [string, "null"], enum: [entry, exit, null] }, reason: { type: [string, "null"], enum: [surplus_adjustment, shortage_adjustment, waste, expiration, other_exit, null] }, quantityDelta: { type: string }, balanceBefore: { type: string }, balanceAfter: { type: string }, sourceType: { type: string, enum: [inventory_entry, order, inventory_adjustment, purchase_receipt] }, sourceId: { type: string, format: uuid }, sourceReference: { type: string }, note: { type: string }, createdByName: { type: string }, createdAt: { type: string, format: date-time } } }
-    CashRegisterInput: { type: object, required: [name], properties: { name: { type: string, minLength: 1, maxLength: 80 } } }
-    CashRegister: { type: object, required: [id, code, name, active, openShift], properties: { id: { type: string, format: uuid }, code: { type: string }, name: { type: string }, active: { type: boolean }, openShift: { anyOf: [{ $ref: "#/components/schemas/CashShift" }, { type: "null" }] } } }
+    CashRegisterInput: { type: object, required: [name], properties: { name: { type: string, minLength: 1, maxLength: 80 }, blindClose: { type: boolean, default: false } } }
+    CashRegister: { type: object, required: [id, code, name, active, blindClose, openShift], properties: { id: { type: string, format: uuid }, code: { type: string }, name: { type: string }, active: { type: boolean }, blindClose: { type: boolean }, openShift: { anyOf: [{ $ref: "#/components/schemas/CashShift" }, { type: "null" }] } } }
     CashShiftOpenInput: { type: object, required: [cashRegisterId, openingAmount], properties: { cashRegisterId: { type: string, format: uuid }, openingAmount: { type: number, minimum: 0 }, note: { type: string, maxLength: 240 } } }
     CashMovementInput: { type: object, required: [movementType, amount, reason], properties: { movementType: { type: string, enum: [income, expense] }, amount: { type: number, exclusiveMinimum: 0 }, reason: { type: string, minLength: 1, maxLength: 120 }, note: { type: string, maxLength: 240 } } }
-    CashShiftCloseInput: { type: object, required: [countedAmount], properties: { countedAmount: { type: number, minimum: 0 }, note: { type: string, maxLength: 240 } } }
+    CashCountLine: { type: object, required: [denomination, quantity], properties: { denomination: { type: number, exclusiveMinimum: 0 }, quantity: { type: integer, minimum: 0 } } }
+    CashShiftCloseInput: { type: object, description: "Informa countedAmount o counts. Si counts contiene líneas, el backend calcula el total contado.", properties: { countedAmount: { type: number, minimum: 0 }, counts: { type: array, items: { $ref: "#/components/schemas/CashCountLine" } }, note: { type: string, maxLength: 240 } } }
     CashMovement: { type: object, required: [id, movementType, sourceType, amount, reason, note, createdByName, createdAt], properties: { id: { type: string, format: uuid }, movementType: { type: string, enum: [income, expense] }, sourceType: { type: string, enum: [manual, cash_sale, cash_refund, cash_pull, transfer_in, transfer_out, deposit, adjustment] }, sourceId: { type: [string, "null"], format: uuid }, amount: { type: string }, reason: { type: string }, note: { type: string }, createdByName: { type: string }, createdAt: { type: string, format: date-time } } }
-    CashShift: { type: object, required: [id, code, cashRegisterId, cashRegisterName, status, openingAmount, incomeAmount, expenseAmount, expectedAmount, openingNote, closingNote, openedByName, closedByName, businessDate, openedAt, movementCount], properties: { id: { type: string, format: uuid }, code: { type: string }, cashRegisterId: { type: string, format: uuid }, cashRegisterName: { type: string }, status: { type: string, enum: [open, closed] }, openingAmount: { type: string }, incomeAmount: { type: string }, expenseAmount: { type: string }, expectedAmount: { type: string }, closingExpectedAmount: { type: [string, "null"] }, closingCountedAmount: { type: [string, "null"] }, varianceAmount: { type: [string, "null"] }, openingNote: { type: string }, closingNote: { type: string }, openedByName: { type: string }, closedByName: { type: string }, businessDate: { type: string, format: date }, openedAt: { type: string, format: date-time }, closedAt: { type: [string, "null"], format: date-time }, movementCount: { type: integer, minimum: 0 }, movements: { type: array, items: { $ref: "#/components/schemas/CashMovement" } } } }
+    CashShift: { type: object, required: [id, code, cashRegisterId, cashRegisterName, blindClose, expectedVisible, status, openingAmount, incomeAmount, expenseAmount, expectedAmount, openingNote, closingNote, openedByName, closedByName, businessDate, openedAt, movementCount], properties: { id: { type: string, format: uuid }, code: { type: string }, cashRegisterId: { type: string, format: uuid }, cashRegisterName: { type: string }, blindClose: { type: boolean }, expectedVisible: { type: boolean, description: "False cuando el turno usa cierre ciego y el usuario no tiene cash.expected.read." }, status: { type: string, enum: [open, closed] }, openingAmount: { type: string }, incomeAmount: { type: string }, expenseAmount: { type: string }, expectedAmount: { type: string, description: "Vacío durante un cierre ciego sin permiso para consultar el esperado." }, closingExpectedAmount: { type: [string, "null"] }, closingCountedAmount: { type: [string, "null"] }, varianceAmount: { type: [string, "null"] }, openingNote: { type: string }, closingNote: { type: string }, openedByName: { type: string }, closedByName: { type: string }, businessDate: { type: string, format: date }, openedAt: { type: string, format: date-time }, closedAt: { type: [string, "null"], format: date-time }, movementCount: { type: integer, minimum: 0 }, movements: { type: array, items: { $ref: "#/components/schemas/CashMovement" } } } }
     CashShiftList: { type: object, required: [items, total, page, pageSize], properties: { items: { type: array, items: { $ref: "#/components/schemas/CashShift" } }, total: { type: integer, minimum: 0 }, page: { type: integer, minimum: 1 }, pageSize: { type: integer, minimum: 1 } } }
+    CashShiftUser: { type: object, required: [userId, name, assignedAt], properties: { userId: { type: string, format: uuid }, name: { type: string }, assignedAt: { type: string, format: date-time } } }
+    CashUserOption: { type: object, required: [id, name], properties: { id: { type: string, format: uuid }, name: { type: string }, assignedShiftId: { type: [string, "null"], format: uuid } } }
+    CashOperationInput: { type: object, required: [operationType, amount, reason], properties: { operationType: { type: string, enum: [cash_pull, deposit, transfer] }, targetShiftId: { type: string, format: uuid }, amount: { type: number, exclusiveMinimum: 0 }, reason: { type: string, minLength: 1, maxLength: 120 }, note: { type: string, maxLength: 240 } } }
+    CashOperation: { type: object, required: [id, operationType, amount, reason, note, createdAt], properties: { id: { type: string, format: uuid }, operationType: { type: string, enum: [cash_pull, deposit, transfer] }, amount: { type: string }, reason: { type: string }, note: { type: string }, createdAt: { type: string, format: date-time } } }
+    POSOrderSummary: { type: object, required: [id, code, channel, status, customerName, tableName, total, paidAmount, remainingAmount, paymentStatus, createdAt], properties: { id: { type: string, format: uuid }, code: { type: string }, channel: { type: string }, status: { type: string }, customerName: { type: string }, tableName: { type: string }, total: { type: string }, paidAmount: { type: string }, remainingAmount: { type: string }, paymentStatus: { type: string, enum: [pending, partial, paid] }, createdAt: { type: string, format: date-time } } }
+    POSOrderList: { type: object, required: [items, total, page, pageSize], properties: { items: { type: array, items: { $ref: "#/components/schemas/POSOrderSummary" } }, total: { type: integer }, page: { type: integer }, pageSize: { type: integer } } }
+    POSOrderDetail: { type: object, required: [order, paidAmount, remainingAmount, paymentStatus, payments], properties: { order: { $ref: "#/components/schemas/Order" }, paidAmount: { type: string }, remainingAmount: { type: string }, paymentStatus: { type: string, enum: [pending, partial, paid] }, payments: { type: array, items: { $ref: "#/components/schemas/Payment" } } } }
+    PaymentInput: { type: object, required: [orderId, method, amount], properties: { orderId: { type: string, format: uuid }, method: { type: string, enum: [cash, card, transfer, other] }, amount: { type: number, exclusiveMinimum: 0 }, reference: { type: string, maxLength: 120 } } }
+    Payment: { type: object, required: [id, orderId, orderCode, shiftId, cashRegisterName, method, amount, refundedAmount, netAmount, reference, createdByName, createdAt], properties: { id: { type: string, format: uuid }, orderId: { type: string, format: uuid }, orderCode: { type: string }, shiftId: { type: string, format: uuid }, cashRegisterName: { type: string }, method: { type: string, enum: [cash, card, transfer, other] }, amount: { type: string }, refundedAmount: { type: string }, netAmount: { type: string }, reference: { type: string }, createdByName: { type: string }, createdAt: { type: string, format: date-time } } }
+    RefundInput: { type: object, required: [amount, reason], properties: { amount: { type: number, exclusiveMinimum: 0 }, reason: { type: string, minLength: 1, maxLength: 120 }, note: { type: string, maxLength: 240 } } }
     ComboOptionInput: { type: object, required: [productId, surcharge], properties: { productId: { type: string, format: uuid }, surcharge: { type: string, pattern: "^[0-9]+(\\.[0-9]{1,2})?$" } } }
     ComboGroupInput: { type: object, required: [name, required, minSelections, maxSelections, options], properties: { name: { type: string, maxLength: 120 }, required: { type: boolean }, minSelections: { type: integer, minimum: 0 }, maxSelections: { type: integer, minimum: 1 }, options: { type: array, items: { $ref: "#/components/schemas/ComboOptionInput" } } } }
     ComboInput: { type: object, required: [name, description, price, groups], properties: { name: { type: string, maxLength: 160 }, description: { type: string, maxLength: 1000 }, price: { type: string, pattern: "^[0-9]+(\\.[0-9]{1,2})?$" }, categoryId: { type: [string, "null"], format: uuid }, groups: { type: array, minItems: 1, items: { $ref: "#/components/schemas/ComboGroupInput" } } } }
