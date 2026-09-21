@@ -29,7 +29,7 @@ export function CashRegisterDialog({initial,busy,close,save}:{initial?:CashRegis
           <b>Cierre ciego<small>El cajero contará el efectivo sin ver el saldo esperado. Supervisores con permiso sí podrán consultarlo.</small></b>
         </label>
       </div>
-      <footer><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy}>{busy?"Guardando…":editing?"Guardar cambios":"Registrar caja"}</Button></footer>
+      <footer><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy}>{busy?"Guardando…":"Guardar"}</Button></footer>
     </form>
     {busy&&<div className="modal-busy" role="status"><i/><span>Guardando caja…</span></div>}
   </section></div>;
