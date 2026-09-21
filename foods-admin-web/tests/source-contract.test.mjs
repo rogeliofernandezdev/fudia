@@ -186,7 +186,6 @@ test("compras concentra orden recepcion y altas de abastecimiento",()=>{
   const purchases=read("src/modules/supply/purchases/presentation/purchases-page.tsx");
   const itemDialog=read("src/modules/supply/purchases/presentation/purchase-item-dialog.tsx");
   const receiptDialog=read("src/modules/supply/purchases/presentation/purchase-receipt-dialog.tsx");
-  const flowSteps=read("src/modules/supply/purchases/presentation/purchase-flow-steps.tsx");
   const api=read("src/modules/supply/purchases/infrastructure/purchases-api.ts");
   const productApi=read("src/modules/menu/products/infrastructure/products-api.ts");
   const productImageApi=read("src/shared/api/product-image.ts");
@@ -199,10 +198,8 @@ test("compras concentra orden recepcion y altas de abastecimiento",()=>{
   assert.ok(purchases.includes('"receivable"'),"La cola de Recepciones consulta solo órdenes recibibles");
   assert.ok(purchases.includes("No hay mercadería pendiente de recibir"),"Recepciones tiene estado vacío propio");
   assert.ok(purchases.includes("Solo aparecen órdenes aprobadas con cantidades pendientes."),"Recepciones explica su responsabilidad");
-  assert.ok(purchases.includes("PurchaseFlowSteps"),"La pantalla principal conserva la secuencia Orden → Recepción");
+  assert.equal(purchases.includes("PurchaseFlowSteps"),false,"La navegación por pestañas evita repetir un stepper dentro del módulo");
   assert.equal(receiptDialog.includes("PurchaseFlowSteps"),false,"El modal de recepción no repite el flujo completo");
-  assert.ok(flowSteps.includes("Orden de compra"),"El paso 1 es Orden de compra");
-  assert.ok(flowSteps.includes("Recepción"),"El paso 2 es Recepción");
   assert.ok(purchases.includes("partially_received"),"Compras representa una recepción parcial sin cerrar la orden");
   for(const column of ["SOLICITADO","RECIBIDO","PENDIENTE"])assert.ok(purchases.includes(column),column);
   assert.ok(purchases.includes("Agregar artículo"),"La OC expone un único punto claro para agregar artículos");
