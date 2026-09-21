@@ -1,8 +1,18 @@
 import {apiFetch} from "@/shared/api/client";
-import type {CashMovement,CashMovementDraft,CashShift,CashShiftList,CloseCashShiftDraft,OpenCashShiftDraft} from "../domain/types";
+import type {CashMovement,CashMovementDraft,CashRegister,CashRegisterDraft,CashShift,CashShiftList,CloseCashShiftDraft,OpenCashShiftDraft} from "../domain/types";
 
-export function getCurrentCashShift(){
-  return apiFetch<{shift:CashShift|null}>("cash-shifts/current");
+export function listCashRegisters(q=""){
+  const params=new URLSearchParams();
+  if(q)params.set("q",q);
+  const suffix=params.toString()?`?${params.toString()}`:"";
+  return apiFetch<{items:CashRegister[]}>(`cash-registers${suffix}`);
+}
+
+export function createCashRegister(draft:CashRegisterDraft){
+  return apiFetch<CashRegister>("cash-registers",{
+    method:"POST",
+    body:JSON.stringify({name:draft.name.trim()}),
+  });
 }
 
 export function listCashShifts(input:{q:string;status:string;page:number;pageSize:number}){
@@ -14,10 +24,10 @@ export function getCashShift(id:string){
   return apiFetch<CashShift>(`cash-shifts/${id}`);
 }
 
-export function openCashShift(draft:OpenCashShiftDraft){
+export function openCashShift(cashRegisterId:string,draft:OpenCashShiftDraft){
   return apiFetch<CashShift>("cash-shifts",{
     method:"POST",
-    body:JSON.stringify({openingAmount:Number(draft.openingAmount),note:draft.note.trim()}),
+    body:JSON.stringify({cashRegisterId,openingAmount:Number(draft.openingAmount),note:draft.note.trim()}),
   });
 }
 
