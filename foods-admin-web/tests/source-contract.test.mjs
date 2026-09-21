@@ -206,7 +206,8 @@ test("compras concentra orden recepcion y altas de abastecimiento",()=>{
   assert.ok(purchases.includes("fields.length>0&&<Button"),"El botón superior aparece solo cuando ya existen líneas");
   assert.equal(purchases.includes("Agregar primer artículo"),false,"El estado vacío no duplica el CTA con otra etiqueta");
   assert.ok(purchases.includes("Guardar borrador"),"Guardar la OC comunica que aún no hay recepción ni movimiento de stock");
-  assert.ok(purchases.includes("Aún no agregaste artículos"),"La OC presenta un estado vacío explícito antes de agregar líneas");
+  assert.ok(purchases.includes("Busca un artículo existente o crea uno nuevo para incluirlo en la orden."),"La OC usa una ayuda breve en el estado vacío");
+  assert.equal(purchases.includes("Aún no agregaste artículos"),false,"El estado vacío no repite el título de la sección");
   assert.ok(purchases.includes("Cambiar"),"Una línea existente permite reemplazar el artículo sin duplicar controles");
 
   assert.ok(itemDialog.includes("Artículo existente"),"El selector muestra explícitamente la ruta de artículo existente");
