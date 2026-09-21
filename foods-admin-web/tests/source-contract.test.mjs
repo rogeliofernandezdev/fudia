@@ -193,14 +193,20 @@ test("compras concentra orden recepcion y altas de abastecimiento",()=>{
   assert.ok(purchases.includes("PurchaseReceiptDialog"),"La recepción vive dentro del mismo módulo Compras");
   assert.ok(purchases.includes("partially_received"),"Compras representa una recepción parcial sin cerrar la orden");
   for(const column of ["SOLICITADO","RECIBIDO","PENDIENTE"])assert.ok(purchases.includes(column),column);
-  assert.ok(purchases.includes("Buscar artículo existente..."),"La línea permite buscar un artículo ya existente");
-  assert.ok(purchases.includes("Crear nuevo artículo"),"La línea ofrece alta cuando el artículo no existe");
+  assert.ok(purchases.includes("Agregar artículo"),"La OC expone un único punto claro para agregar artículos");
+  assert.ok(purchases.includes("Aún no agregaste artículos"),"La OC presenta un estado vacío explícito antes de agregar líneas");
+  assert.ok(purchases.includes("Cambiar"),"Una línea existente permite reemplazar el artículo sin duplicar controles");
 
+  assert.ok(itemDialog.includes("Artículo existente"),"El selector muestra explícitamente la ruta de artículo existente");
+  assert.ok(itemDialog.includes("Escribe el nombre del producto o insumo"),"La búsqueda de artículos vive dentro del selector");
   assert.ok(itemDialog.includes("Nuevo producto vendible"),"Compras conserva el alta de mercadería vendible");
   assert.ok(itemDialog.includes("Nuevo insumo"),"Compras conserva el alta de insumo no vendible");
   assert.ok(itemDialog.includes("Stock inicial: 0"),"Crear el artículo desde Compras no mueve inventario");
   assert.equal(itemDialog.includes("quantityControl"),false,"El formulario no expone detalles técnicos de control de cantidad");
   assert.ok(itemDialog.includes("no se vuelve vendible"),"El insumo no se convierte automáticamente en Producto");
+  assert.ok(itemDialog.includes("Imagen del producto (opcional)"),"El alta vendible migra la imagen del producto");
+  assert.ok(itemDialog.includes('accept="image/png,image/jpeg,image/webp"'),"La imagen conserva los formatos permitidos");
+  assert.ok(itemDialog.includes("máximo 5 MB"),"La imagen conserva el límite de tamaño");
 
   assert.ok(receiptDialog.includes("Registra únicamente lo que llegó."),"Recepción registra cantidades reales");
   assert.ok(receiptDialog.includes("pendingQuantity"),"Recepción parte de lo pendiente por línea");
@@ -209,6 +215,7 @@ test("compras concentra orden recepcion y altas de abastecimiento",()=>{
   assert.ok(api.includes('"purchase-inventory-items"'),"Compras usa su propio límite para crear artículos");
   assert.ok(api.includes("purchase-orders/"),"Recepción permanece vinculada a la orden existente");
   assert.ok(api.includes("purchaseOrderItemId"),"La recepción identifica cada línea de la orden");
+  assert.ok(api.includes("uploadProductImage"),"Compras reutiliza la carga compartida de imagen");
   assert.equal(api.includes('"inventory/entries"'),false,"Compras no usa la antigua entrada manual de Inventario");
 
   assert.equal(inventory.includes("Nuevo producto vendible"),false,"Inventario no recupera creación de productos");
