@@ -22,8 +22,12 @@
 .purchase-receipt-cards footer{display:flex;align-items:center;gap:8px}
 .purchase-receipt-cards footer .button{flex:1}
 
-.purchase-order-modal{width:min(980px,calc(100vw - 32px));max-height:min(860px,calc(100dvh - 32px))}
-.purchase-form-body{display:grid;gap:14px;padding:18px 20px;overflow:auto;background:#fff}
+.purchase-order-modal{display:flex;flex-direction:column;width:min(980px,calc(100vw - 32px));max-height:min(860px,calc(100dvh - 32px));overflow:hidden}
+.purchase-order-modal>form{display:flex;flex:1;min-height:0;flex-direction:column}
+.purchase-order-modal>form>.purchase-form-body{flex:1;min-height:0}
+.purchase-order-modal>form>footer{flex:0 0 auto}
+.purchase-order-modal>.modal-busy{inset:0;z-index:20;border-radius:inherit;background:#edf9f4e8;pointer-events:auto}
+.purchase-form-body{display:grid;gap:14px;padding:18px 20px;overflow-y:auto;overscroll-behavior:contain;background:#fff}
 .purchase-form-section{display:grid;gap:14px;padding:16px;border:0;border-radius:12px;background:var(--cloud-50)}
 .purchase-section-title{display:flex;align-items:center;gap:10px}
 .purchase-section-title>span{display:grid;place-items:center;width:32px;height:32px;border-radius:8px;background:var(--primary-100);color:var(--ops-700);flex:0 0 auto}
@@ -91,6 +95,7 @@
  .purchases-table-wrap{display:none}
  .purchases-cards{display:grid}
  .purchase-order-modal,.purchase-detail-modal,.purchase-item-modal,.purchase-receipt-modal{width:100vw;height:100dvh;max-height:none;border-radius:0}
+ .purchase-order-modal>.modal-busy{border-radius:0}
  .purchase-form-body,.purchase-detail-body{padding:12px}
  .purchase-form-section{padding:12px}
  .purchase-lines-title{align-items:flex-start;flex-wrap:wrap}
