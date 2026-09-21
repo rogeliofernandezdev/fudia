@@ -448,7 +448,7 @@ function PurchaseOrderDialog({initial,suppliers,inventory,currencySymbol,busy,cl
   return <>
     <div className="modal-backdrop modal-overlay-in"><section className="crud-modal purchase-order-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="purchase-order-title" aria-busy={busy}><div className="modal-accent"/>
       <header><span className="modal-title-icon"><Icon name="receipt" size={18}/></span><div><small>ORDEN DE COMPRA</small><h2 id="purchase-order-title">{initial.id?"Editar orden":"Nueva orden de compra"}</h2></div><button type="button" aria-label="Cerrar" onClick={close} disabled={busy}><Icon name="close"/></button></header>
-      <form onSubmit={handleSubmit(save)} noValidate><div className="purchase-form-body">
+      <form onSubmit={handleSubmit(save)} noValidate inert={busy}><div className="purchase-form-body">
         <section className="purchase-form-section purchase-order-header-section">
           <div className="purchase-section-title"><span><Icon name="truck" size={17}/></span><div><b>Datos de la orden</b><small>Selecciona proveedor, fecha esperada y condiciones de compra.</small></div></div>
           <div className="form-grid purchase-order-meta-grid">
