@@ -970,21 +970,29 @@
 .salon-order-detail .salon-order-detail-actions .salon-order-detail-pay{
   display:inline-flex;
   align-items:center;
-  border:1px solid var(--action-pay,#2563eb);\n  background:var(--action-pay,#2563eb);\n  color:#fff;
+  border:1px solid var(--action-pay,#2563eb);
+  background:var(--action-pay,#2563eb);
+  color:#fff;
   font-weight:800;
   text-decoration:none;
 }
 
 .salon-order-detail .salon-order-detail-actions .salon-order-detail-pay:hover{
-  border-color:var(--action-pay-hover,#1d4ed8);\n  background:var(--action-pay-hover,#1d4ed8);\n  color:#fff;
+  border-color:var(--action-pay-hover,#1d4ed8);
+  background:var(--action-pay-hover,#1d4ed8);
+  color:#fff;
 }
 
 .salon-order-detail .salon-order-detail-actions .salon-order-detail-edit{
-  border-color:var(--action-edit,#4654cd);\n  background:var(--action-edit-soft,#eef0ff);\n  color:var(--action-edit,#4654cd);
+  border-color:var(--action-edit,#4654cd);
+  background:var(--action-edit-soft,#eef0ff);
+  color:var(--action-edit,#4654cd);
 }
 
 .salon-order-detail .salon-order-detail-actions .salon-order-detail-edit:hover:not(:disabled){
-  border-color:var(--action-edit-hover,#3946b8);\n  background:var(--action-edit,#4654cd);\n  color:#fff;
+  border-color:var(--action-edit-hover,#3946b8);
+  background:var(--action-edit,#4654cd);
+  color:#fff;
 }
 
 .salon-order-detail .salon-order-detail-actions .order-detail-done{
@@ -1029,11 +1037,15 @@
   justify-content:center;
   gap:7px;
   line-height:1;
-  border-color:var(--action-cancel,#c9362b);\n  background:var(--action-cancel-soft,#fff0ef);\n  color:var(--action-cancel,#c9362b);
+  border-color:var(--action-cancel,#c9362b);
+  background:var(--action-cancel-soft,#fff0ef);
+  color:var(--action-cancel,#c9362b);
 }
 
 .salon-order-detail .salon-order-detail-actions .order-detail-cancel:hover:not(:disabled){
-  border-color:var(--action-cancel-hover,#a92c24);\n  background:var(--action-cancel,#c9362b);\n  color:#fff;
+  border-color:var(--action-cancel-hover,#a92c24);
+  background:var(--action-cancel,#c9362b);
+  color:#fff;
 }
 
 
