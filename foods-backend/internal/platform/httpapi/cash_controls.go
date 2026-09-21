@@ -419,6 +419,9 @@ func (a *API) applyCashExpectedVisibility(r *http.Request, shift *cashShiftView)
 	s := r.Context().Value(scopeKey{}).(scope)
 	shift.ExpectedVisible = true
 	if shift.Status == "open" && shift.BlindClose && !a.canSeeCashExpected(r, s) {
+		shift.OpeningAmount = ""
+		shift.IncomeAmount = ""
+		shift.ExpenseAmount = ""
 		shift.ExpectedAmount = ""
 		shift.ExpectedVisible = false
 	}
