@@ -970,29 +970,21 @@
 .salon-order-detail .salon-order-detail-actions .salon-order-detail-pay{
   display:inline-flex;
   align-items:center;
-  border:1px solid #b9c2ff;
-  background:#eef0ff;
-  color:#2f3ca8;
+  border:1px solid var(--action-pay,#2563eb);\n  background:var(--action-pay,#2563eb);\n  color:#fff;
   font-weight:800;
   text-decoration:none;
 }
 
 .salon-order-detail .salon-order-detail-actions .salon-order-detail-pay:hover{
-  border-color:#8795ee;
-  background:#e1e5ff;
-  color:#202d91;
+  border-color:var(--action-pay-hover,#1d4ed8);\n  background:var(--action-pay-hover,#1d4ed8);\n  color:#fff;
 }
 
 .salon-order-detail .salon-order-detail-actions .salon-order-detail-edit{
-  border-color:#d7dce5;
-  background:#fff;
-  color:#344054;
+  border-color:var(--action-edit,#4654cd);\n  background:var(--action-edit-soft,#eef0ff);\n  color:var(--action-edit,#4654cd);
 }
 
 .salon-order-detail .salon-order-detail-actions .salon-order-detail-edit:hover:not(:disabled){
-  border-color:#aeb7c6;
-  background:#f8fafc;
-  color:#1d2939;
+  border-color:var(--action-edit-hover,#3946b8);\n  background:var(--action-edit,#4654cd);\n  color:#fff;
 }
 
 .salon-order-detail .salon-order-detail-actions .order-detail-done{
@@ -1037,15 +1029,11 @@
   justify-content:center;
   gap:7px;
   line-height:1;
-  border-color:#f0c8c4;
-  background:#fff6f5;
-  color:var(--danger,#c9362b);
+  border-color:var(--action-cancel,#c9362b);\n  background:var(--action-cancel-soft,#fff0ef);\n  color:var(--action-cancel,#c9362b);
 }
 
 .salon-order-detail .salon-order-detail-actions .order-detail-cancel:hover:not(:disabled){
-  border-color:#e7aaa4;
-  background:#feeceb;
-  color:#a92c24;
+  border-color:var(--action-cancel-hover,#a92c24);\n  background:var(--action-cancel,#c9362b);\n  color:#fff;
 }
 
 
