@@ -1,6 +1,6 @@
 import {z} from "zod";
 import type {FieldError,FieldErrors,Resolver} from "react-hook-form";
-import type {CashMovementDraft,CloseCashShiftDraft,OpenCashShiftDraft} from "./types";
+import type {CashMovementDraft,CashRegisterDraft,CloseCashShiftDraft,OpenCashShiftDraft} from "./types";
 
 function moneyField(message:string,{allowZero=false}:{allowZero?:boolean}={}){
   return z.string().trim().refine(value=>{
@@ -22,6 +22,10 @@ function resolverFor<T extends Record<string,unknown>>(schema:z.ZodType<T>):Reso
   };
 }
 
+const registerSchema=z.object({
+  name:z.string().trim().min(1,"Ingresa el nombre de la caja.").max(80,"El nombre no puede superar 80 caracteres."),
+});
+
 const openSchema=z.object({
   openingAmount:moneyField("Ingresa un fondo inicial válido.",{allowZero:true}),
   note:z.string().max(240,"La observación no puede superar 240 caracteres."),
@@ -39,6 +43,7 @@ const closeSchema=z.object({
   note:z.string().max(240,"La observación no puede superar 240 caracteres."),
 });
 
+export const cashRegisterResolver=resolverFor<CashRegisterDraft>(registerSchema);
 export const openCashShiftResolver=resolverFor<OpenCashShiftDraft>(openSchema);
 export const cashMovementResolver=resolverFor<CashMovementDraft>(movementSchema);
 export const closeCashShiftResolver=resolverFor<CloseCashShiftDraft>(closeSchema);
