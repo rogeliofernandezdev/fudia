@@ -34,6 +34,8 @@ func (a *API) Routes() *http.ServeMux {
 	m.Handle("POST /v1/platform/organizations", a.auth(a.requirePlatformAdmin(http.HandlerFunc(a.onboardTenant))))
 	m.Handle("GET /v1/admin/dashboard", a.auth(http.HandlerFunc(a.dashboard)))
 	m.Handle("GET /v1/admin/context", a.auth(http.HandlerFunc(a.getContext)))
+	m.Handle("GET /v1/admin/me", a.auth(http.HandlerFunc(a.getMyProfile)))
+	m.Handle("PATCH /v1/admin/me", a.auth(http.HandlerFunc(a.updateMyProfile)))
 	m.Handle("GET /v1/admin/settings", a.auth(a.requirePermission("organizations.read", http.HandlerFunc(a.getOrgSettings))))
 	m.Handle("PATCH /v1/admin/settings", a.auth(a.requirePermission("organizations.manage", http.HandlerFunc(a.updateOrgSettings))))
 	m.Handle("GET /v1/admin/organization", a.auth(a.requirePermission("organizations.read", http.HandlerFunc(a.getOrganization))))
@@ -194,7 +196,7 @@ func (a *API) requirePermission(permission string, next http.Handler) http.Handl
 			return
 		}
 		var allowed bool
-		err := a.db.QueryRow(r.Context(), `SELECT EXISTS(SELECT 1 FROM user_roles ur JOIN roles ro ON ro.id=ur.role_id WHERE ur.user_id=$1 AND (ur.location_id IS NULL OR ur.location_id=$2) AND ro.active AND (ro.permissions @> ARRAY['*']::text[] OR ro.permissions @> ARRAY[$3]::text[]))`, s.UserID, s.LocationID, permission).Scan(&allowed)
+		err := a.db.QueryRow(r.Context(), `SELECT EXISTS(SELECT 1 FROM user_roles ur JOIN roles ro ON ro.id=ur.role_id WHERE ur.user_id=$1 AND ur.location_id=$2 AND ro.active AND (ro.permissions @> ARRAY['*']::text[] OR ro.permissions @> ARRAY[$3]::text[]))`, s.UserID, s.LocationID, permission).Scan(&allowed)
 		if err != nil {
 			fail(w, 503, "permissions_unavailable", "No pudimos validar tus permisos.")
 			return
@@ -220,14 +222,85 @@ func (a *API) login(w http.ResponseWriter, r *http.Request) {
 		fail(w, 400, "invalid_request", "Revisa los datos enviados.")
 		return
 	}
-	var s scope
-	var hash string
-	var platformAdmin bool
-	err := a.db.QueryRow(r.Context(), `SELECT u.id,u.organization_id,COALESCE(ur.location_id,l.id),u.full_name,u.password_hash,u.platform_admin FROM users u JOIN locations l ON l.organization_id=u.organization_id AND l.active LEFT JOIN user_roles ur ON ur.user_id=u.id AND ur.location_id=l.id WHERE lower(u.email)=lower($1) AND u.active ORDER BY (ur.location_id IS NULL), l.created_at LIMIT 1`, in.Email).Scan(&s.UserID, &s.OrganizationID, &s.LocationID, &s.Name, &hash, &platformAdmin)
-	if err != nil || bcrypt.CompareHashAndPassword([]byte(hash), []byte(in.Password)) != nil {
+	in.Email = strings.ToLower(strings.TrimSpace(in.Email))
+	if in.Email == "" || in.Password == "" {
+		fail(w, 400, "invalid_request", "Correo y contraseña son obligatorios.")
+		return
+	}
+
+	rows, err := a.db.Query(r.Context(), `
+		SELECT id,organization_id,full_name,password_hash,platform_admin
+		FROM users
+		WHERE lower(email)=lower($1) AND active
+		ORDER BY created_at,id
+	`, in.Email)
+	if err != nil {
+		fail(w, 503, "session_unavailable", "No pudimos validar la cuenta.")
+		return
+	}
+	defer rows.Close()
+
+	type loginCandidate struct {
+		UserID, OrganizationID, Name, Hash string
+		PlatformAdmin bool
+	}
+	matches := []loginCandidate{}
+	for rows.Next() {
+		var candidate loginCandidate
+		if err = rows.Scan(&candidate.UserID,&candidate.OrganizationID,&candidate.Name,&candidate.Hash,&candidate.PlatformAdmin); err != nil {
+			fail(w, 503, "session_unavailable", "No pudimos validar la cuenta.")
+			return
+		}
+		if bcrypt.CompareHashAndPassword([]byte(candidate.Hash), []byte(in.Password)) == nil {
+			matches = append(matches, candidate)
+		}
+	}
+	if err = rows.Err(); err != nil {
+		fail(w, 503, "session_unavailable", "No pudimos validar la cuenta.")
+		return
+	}
+	if len(matches) == 0 {
 		fail(w, 401, "invalid_credentials", "Correo o contraseña incorrectos.")
 		return
 	}
+	if len(matches) > 1 {
+		fail(w, 409, "ambiguous_account", "Ese correo pertenece a más de una cuenta con la misma contraseña. Solicita al administrador diferenciar el acceso.")
+		return
+	}
+
+	candidate := matches[0]
+	var locationID string
+	if candidate.PlatformAdmin {
+		err = a.db.QueryRow(r.Context(), `
+			SELECT id
+			FROM locations
+			WHERE organization_id=$1 AND active
+			ORDER BY created_at,id
+			LIMIT 1
+		`, candidate.OrganizationID).Scan(&locationID)
+	} else {
+		err = a.db.QueryRow(r.Context(), `
+			SELECT ur.location_id
+			FROM user_roles ur
+			JOIN roles ro ON ro.id=ur.role_id
+			JOIN locations l ON l.id=ur.location_id AND l.organization_id=ro.organization_id
+			WHERE ur.user_id=$1
+			  AND ro.organization_id=$2
+			  AND ro.active
+			  AND l.active
+			ORDER BY l.created_at,l.id,ro.name
+			LIMIT 1
+		`, candidate.UserID, candidate.OrganizationID).Scan(&locationID)
+	}
+	if errors.Is(err, pgx.ErrNoRows) {
+		fail(w, 403, "account_without_access", "Tu cuenta no tiene un rol activo en ningún local. Contacta a un administrador.")
+		return
+	}
+	if err != nil {
+		fail(w, 503, "session_unavailable", "No pudimos determinar tu local de trabajo.")
+		return
+	}
+
 	tokenBytes := make([]byte, 32)
 	if _, err = rand.Read(tokenBytes); err != nil {
 		fail(w, 500, "session_error", "No se pudo iniciar la sesión.")
@@ -235,13 +308,16 @@ func (a *API) login(w http.ResponseWriter, r *http.Request) {
 	}
 	token := base64.RawURLEncoding.EncodeToString(tokenBytes)
 	sum := sha256.Sum256([]byte(token))
-	_, err = a.db.Exec(r.Context(), `INSERT INTO sessions(token_hash,user_id,organization_id,location_id,expires_at) VALUES($1,$2,$3,$4,$5)`, sum[:], s.UserID, s.OrganizationID, s.LocationID, time.Now().Add(12*time.Hour))
+	_, err = a.db.Exec(r.Context(), `
+		INSERT INTO sessions(token_hash,user_id,organization_id,location_id,expires_at)
+		VALUES($1,$2,$3,$4,$5)
+	`, sum[:], candidate.UserID, candidate.OrganizationID, locationID, time.Now().Add(12*time.Hour))
 	if err != nil {
 		fail(w, 500, "session_error", "No se pudo iniciar la sesión.")
 		return
 	}
 	http.SetCookie(w, &http.Cookie{Name: "foods_session", Value: token, Path: "/", HttpOnly: true, Secure: os.Getenv("FOODS_COOKIE_SECURE") == "true", SameSite: http.SameSiteLaxMode, MaxAge: 43200})
-	writeJSON(w, 200, map[string]any{"user": map[string]any{"id": s.UserID, "name": s.Name, "platformAdmin": platformAdmin}, "expiresIn": 43200})
+	writeJSON(w, 200, map[string]any{"user": map[string]any{"id": candidate.UserID, "name": candidate.Name, "platformAdmin": candidate.PlatformAdmin}, "expiresIn": 43200})
 }
 func (a *API) auth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -295,12 +371,12 @@ func (a *API) getContext(w http.ResponseWriter, r *http.Request) {
 	menuAccess := []string{"*"}
 	if !platformAdmin {
 		permissions = []string{}
-		if err = a.db.QueryRow(r.Context(), `SELECT COALESCE(array_agg(DISTINCT permission), ARRAY[]::text[]) FROM user_roles ur JOIN roles ro ON ro.id=ur.role_id CROSS JOIN LATERAL unnest(ro.permissions) permission WHERE ur.user_id=$1 AND (ur.location_id IS NULL OR ur.location_id=$2) AND ro.active`, s.UserID, s.LocationID).Scan(&permissions); err != nil {
+		if err = a.db.QueryRow(r.Context(), `SELECT COALESCE(array_agg(DISTINCT permission), ARRAY[]::text[]) FROM user_roles ur JOIN roles ro ON ro.id=ur.role_id CROSS JOIN LATERAL unnest(ro.permissions) permission WHERE ur.user_id=$1 AND ur.location_id=$2 AND ro.active`, s.UserID, s.LocationID).Scan(&permissions); err != nil {
 			fail(w, 503, "permissions_unavailable", "No pudimos cargar tus permisos.")
 			return
 		}
 		menuAccess = []string{}
-		if err = a.db.QueryRow(r.Context(), `SELECT COALESCE(array_agg(DISTINCT access_key), ARRAY[]::text[]) FROM user_roles ur JOIN roles ro ON ro.id=ur.role_id CROSS JOIN LATERAL unnest(ro.menu_access) access_key WHERE ur.user_id=$1 AND (ur.location_id IS NULL OR ur.location_id=$2) AND ro.active`, s.UserID, s.LocationID).Scan(&menuAccess); err != nil {
+		if err = a.db.QueryRow(r.Context(), `SELECT COALESCE(array_agg(DISTINCT access_key), ARRAY[]::text[]) FROM user_roles ur JOIN roles ro ON ro.id=ur.role_id CROSS JOIN LATERAL unnest(ro.menu_access) access_key WHERE ur.user_id=$1 AND ur.location_id=$2 AND ro.active`, s.UserID, s.LocationID).Scan(&menuAccess); err != nil {
 			fail(w, 503, "access_unavailable", "No pudimos cargar tus accesos al sistema.")
 			return
 		}
