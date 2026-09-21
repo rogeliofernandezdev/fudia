@@ -3,7 +3,7 @@
 import {Button,Input,Label} from "@/components/ui/controls";
 import {useEffect,useMemo,useState} from "react";
 import Link from "next/link";
-import {useRouter} from "next/navigation";
+import {useRouter,useSearchParams} from "next/navigation";
 import {Icon} from "@/components/icon";
 import {CashShift,operationsFetch,POSOrderDetail} from "@/lib/operations-api";
 
@@ -17,7 +17,8 @@ const money=(value:number|string)=>`S/ ${Number(value||0).toFixed(2)}`;
 
 export default function PaymentPage(){
   const router=useRouter();
-  const[orderId,setOrderId]=useState("");
+  const searchParams=useSearchParams();
+  const orderId=searchParams.get("orderId")??"";
   const[data,setData]=useState<POSOrderDetail|null>(null);
   const[shift,setShift]=useState<CashShift|null>(null);
   const[method,setMethod]=useState("cash");
@@ -30,18 +31,22 @@ export default function PaymentPage(){
   const[error,setError]=useState("");
 
   useEffect(()=>{
-    const id=new URLSearchParams(window.location.search).get("orderId")??"";
-    setOrderId(id);
-    if(!id){setError("Selecciona una cuenta real para cobrar.");setLoading(false);return;}
+    if(!orderId)return;
+    let active=true;
     void Promise.all([
-      operationsFetch<POSOrderDetail>(`pos/orders/${id}`),
+      operationsFetch<POSOrderDetail>(`pos/orders/${orderId}`),
       operationsFetch<{shift:CashShift|null}>("cash-shifts/current"),
     ]).then(([order,current])=>{
+      if(!active)return;
       setData(order);setShift(current.shift);
       setReceived(Number(order.remainingAmount).toFixed(2));
-      setSplitReceived("");
-    }).catch(e=>setError(e instanceof Error?e.message:"No se pudo cargar el cobro.")).finally(()=>setLoading(false));
-  },[]);
+    }).catch(e=>{
+      if(active)setError(e instanceof Error?e.message:"No se pudo cargar el cobro.");
+    }).finally(()=>{
+      if(active)setLoading(false);
+    });
+    return()=>{active=false;};
+  },[orderId]);
 
   const remaining=Number(data?.remainingAmount??0);
   const subtotal=Number(data?.order.total??0)/1.18;
@@ -87,6 +92,7 @@ export default function PaymentPage(){
     finally{setBusy(false);}
   }
 
+  if(!orderId)return <div className="flow-page"><header className="flow-header"><Link href="/caja"><Icon name="chevron" size={18}/>Volver a Caja</Link><div><span>COBRO</span><h1>No se puede procesar</h1><p>Selecciona una cuenta real para cobrar.</p></div></header></div>;
   if(loading)return <div className="pos-empty"><b>Cargando cobro…</b><span>Validando pedido y turno de caja.</span></div>;
   if(!data)return <div className="flow-page"><header className="flow-header"><Link href="/caja"><Icon name="chevron" size={18}/>Volver a Caja</Link><div><span>COBRO</span><h1>No se puede procesar</h1><p>{error}</p></div></header></div>;
 
