@@ -14,6 +14,10 @@ export type InventoryItem={
   unit:string;
   quantity:string;
   minimumStock:string;
+  reorderPoint:string;
+  optimalStock:string;
+  averageUnitCost:string;
+  stockValue:string;
   status:InventoryStatus;
   updatedAt:string;
 };
@@ -36,6 +40,9 @@ export type InventoryProductOption={
   unit:string;
   quantity:string;
   minimumStock:string;
+  reorderPoint:string;
+  optimalStock:string;
+  averageUnitCost:string;
 };
 
 export type InventoryAdjustmentDraft={
@@ -66,16 +73,26 @@ export type StockMovement={
   inventoryItemId:string;
   productId:string|null;
   itemName:string;
-  movementType:"entry"|"sale"|"sale_reversal"|"sale_adjustment"|"inventory_adjustment";
+  movementType:"entry"|"sale"|"sale_reversal"|"sale_adjustment"|"inventory_adjustment"|"supplier_return"|"receipt_correction"|"transfer_out"|"transfer_in"|"recipe_consumption"|"recipe_reversal";
   adjustmentType?:InventoryAdjustmentType|null;
   reason?:InventoryAdjustmentReason|null;
   quantityDelta:string;
   balanceBefore:string;
   balanceAfter:string;
-  sourceType:"inventory_entry"|"order"|"inventory_adjustment"|"purchase_receipt";
+  unitCost:string;
+  valueDelta:string;
+  balanceValueAfter:string;
+  sourceType:"inventory_entry"|"order"|"inventory_adjustment"|"purchase_receipt"|"purchase_return"|"inventory_transfer";
   sourceId:string;
   sourceReference:string;
   note:string;
   createdByName:string;
   createdAt:string;
 };
+
+
+export type InventorySettingsDraft={inventoryItemId:string;minimumStock:string;reorderPoint:string;optimalStock:string};
+export type InventoryTransferDraft={toLocationId:string;notes:string;items:Array<{inventoryItemId:string;quantity:string}>};
+export type InventoryTransferSummary={id:string;code:string;fromLocationName:string;toLocationName:string;notes:string;createdByName:string;createdAt:string;itemCount:number};
+export type LocationOption={id:string;name:string};
+export type StockMovementsResponse={items:StockMovement[];total:number;page:number;pageSize:number};
