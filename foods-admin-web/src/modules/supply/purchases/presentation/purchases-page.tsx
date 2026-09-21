@@ -9,8 +9,9 @@ import {formatRegionalCalendarDate,formatRegionalDateTime,formatRegionalNumber} 
 import {purchaseOrderResolver,supplierResolver} from "../domain/purchase-schema";
 import {PurchaseItemDialog} from "./purchase-item-dialog";
 import {PurchaseReceiptDialog} from "./purchase-receipt-dialog";
-import type {PurchaseInventoryOption,PurchaseOrder,PurchaseOrderDraft,PurchaseOrderSummary,PurchaseStatus,PurchaseTab,Supplier,SupplierDraft} from "../domain/types";
-import {createPurchaseInventoryItem,getPurchaseOrder,listPurchaseInventory,listPurchaseItemCategories,listPurchaseOrders,listSuppliers,receivePurchaseOrder,savePurchaseOrder,saveSupplier,setPurchaseOrderStatus,setSupplierActive} from "../infrastructure/purchases-api";
+import {PurchaseReturnDialog} from "./purchase-return-dialog";
+import type {PurchaseInventoryOption,PurchaseOrder,PurchaseOrderDraft,PurchaseOrderSummary,PurchaseReceiptDetail,PurchaseStatus,PurchaseTab,Supplier,SupplierDraft} from "../domain/types";
+import {approvePurchaseOrder,createPurchaseInventoryItem,createPurchaseReturn,getPurchaseOrder,getPurchaseReceipt,listPurchaseInventory,listPurchaseItemCategories,listPurchaseOrders,listPurchaseReceipts,listSuppliers,receivePurchaseOrder,savePurchaseOrder,saveSupplier,setPurchaseOrderStatus,setSupplierActive} from "../infrastructure/purchases-api";
 
 const statusMeta:Record<PurchaseStatus,{label:string;tone:"green"|"blue"|"orange"|"gray"}>={
   draft:{label:"Borrador",tone:"gray"},
@@ -29,6 +30,7 @@ export function PurchasesPage(){
   const{can,location}=useSession();
   const settings=useSettings();
   const canManage=can("purchases.manage");
+  const canApprove=can("purchases.approve");
   const canReceive=can("purchases.receive");
   const[tab,setTab]=useState<PurchaseTab>("orders");
   const[q,setQ]=useState("");
@@ -44,6 +46,10 @@ export function PurchasesPage(){
   const[cancelTarget,setCancelTarget]=useState<PurchaseOrderSummary|PurchaseOrder|null>(null);
   const[receiptOrder,setReceiptOrder]=useState<PurchaseOrder|null>(null);
   const[receiptLoadingId,setReceiptLoadingId]=useState<string|null>(null);
+  const[receiptView,setReceiptView]=useState<"pending"|"history">("pending");
+  const[receiptDetail,setReceiptDetail]=useState<PurchaseReceiptDetail|null>(null);
+  const[receiptDetailLoading,setReceiptDetailLoading]=useState("");
+  const[returnReceipt,setReturnReceipt]=useState<PurchaseReceiptDetail|null>(null);
 
   const orders=useQuery({
     queryKey:["purchase-orders",q,status,page,size],
@@ -58,6 +64,11 @@ export function PurchasesPage(){
   const receivableSummary=useQuery({
     queryKey:["purchase-orders","receivable-summary"],
     queryFn:()=>listPurchaseOrders({q:"",status:"receivable",page:1,pageSize:1}),
+  });
+  const receiptHistory=useQuery({
+    queryKey:["purchase-receipts",q,page,size],
+    queryFn:()=>listPurchaseReceipts({q,page,pageSize:size}),
+    enabled:tab==="receipts"&&receiptView==="history",
   });
   const suppliers=useQuery({
     queryKey:["suppliers",q,status,page,size],
@@ -94,21 +105,20 @@ export function PurchasesPage(){
   });
 
   const transition=useMutation({
-    mutationFn:({id,next}:{id:string;next:"draft"|"pending_approval"|"approved"|"cancelled"})=>setPurchaseOrderStatus(id,next),
+    mutationFn:({id,next}:{id:string;next:"draft"|"pending_approval"|"cancelled"})=>setPurchaseOrderStatus(id,next),
     onSuccess:(_,variables)=>{
       void qc.invalidateQueries({queryKey:["purchase-orders"]});
       void qc.invalidateQueries({queryKey:["purchase-order"]});
       void qc.invalidateQueries({queryKey:["dashboard"]});
       if(variables.next==="cancelled")setCancelTarget(null);
-      notify({
-        tone:"success",
-        title:variables.next==="approved"?"Orden aprobada":"Estado actualizado",
-        message:variables.next==="approved"
-          ?"La orden ya está disponible en Recepciones."
-          :"La orden de compra quedó actualizada.",
-      });
+      notify({tone:"success",title:"Estado actualizado",message:"La orden de compra quedó actualizada."});
     },
     onError:error=>notify({tone:"danger",title:"No se pudo actualizar la orden",message:error.message}),
+  });
+  const approve=useMutation({
+    mutationFn:approvePurchaseOrder,
+    onSuccess:()=>{void qc.invalidateQueries({queryKey:["purchase-orders"]});void qc.invalidateQueries({queryKey:["purchase-order"]});void qc.invalidateQueries({queryKey:["dashboard"]});notify({tone:"success",title:"Orden aprobada",message:"La orden ya está disponible para recepción."})},
+    onError:error=>notify({tone:"danger",title:"No se pudo aprobar",message:error.message}),
   });
 
   const receive=useMutation({
@@ -121,6 +131,7 @@ export function PurchasesPage(){
       void qc.invalidateQueries({queryKey:["inventory"]});
       void qc.invalidateQueries({queryKey:["inventory-products"]});
       void qc.invalidateQueries({queryKey:["inventory-movements"]});
+      void qc.invalidateQueries({queryKey:["purchase-receipts"]});
       void qc.invalidateQueries({queryKey:["dashboard"]});
       notify({
         tone:"success",
@@ -129,6 +140,12 @@ export function PurchasesPage(){
       });
     },
     onError:error=>notify({tone:"danger",title:"No se pudo registrar la recepción",message:error.message}),
+  });
+
+  const returnPurchase=useMutation({
+    mutationFn:createPurchaseReturn,
+    onSuccess:result=>{setReturnReceipt(null);setReceiptDetail(null);void qc.invalidateQueries({queryKey:["purchase-receipts"]});void qc.invalidateQueries({queryKey:["purchase-orders"]});void qc.invalidateQueries({queryKey:["inventory"]});void qc.invalidateQueries({queryKey:["inventory-products"]});void qc.invalidateQueries({queryKey:["inventory-movements"]});notify({tone:"success",title:result.kind==="receipt_correction"?"Recepción corregida":"Devolución registrada",message:result.code+" actualizó Inventario y Kárdex."})},
+    onError:error=>notify({tone:"danger",title:"No se pudo procesar",message:error.message}),
   });
 
   const supplierSave=useMutation({
