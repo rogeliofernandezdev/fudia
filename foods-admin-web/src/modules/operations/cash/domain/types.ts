@@ -4,6 +4,8 @@ export type CashMovementType="income"|"expense";
 export type CashMovement={
   id:string;
   movementType:CashMovementType;
+  sourceType:"manual"|"cash_sale"|"cash_refund"|"cash_pull"|"transfer_in"|"transfer_out"|"deposit"|"adjustment";
+  sourceId:string|null;
   amount:string;
   reason:string;
   note:string;
@@ -28,6 +30,7 @@ export type CashShift={
   closingNote:string;
   openedByName:string;
   closedByName:string;
+  businessDate:string;
   openedAt:string;
   closedAt:string|null;
   movementCount:number;
