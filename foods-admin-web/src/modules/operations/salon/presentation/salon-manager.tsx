@@ -4,6 +4,7 @@ import "../../styles/orders.css";
 import "../../styles/salon.css";
 import "../../styles/salon-comanda.css";
 import {useState,useCallback,useEffect,useRef} from "react";
+import Link from "next/link";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Button,ConfirmDialog,Input,Select,Status,Textarea} from "@/design-system";
 import {Icon,IconName} from "@/design-system/icons";
@@ -23,11 +24,8 @@ const statusMeta:Record<string,{label:string;tone:"green"|"blue"|"orange"|"gray"
   cancelado:{label:"Cancelado",tone:"gray"},
 };
 function nextAction(o:Order):{status:string;label:string;icon:IconName}|null{
-  if(o.status==="nuevo")return{status:"confirmado",label:"Confirmar",icon:"receipt"};
-  if(o.status==="confirmado")return{status:"preparando",label:"Iniciar preparación",icon:"chefHat"};
-  if(o.status==="preparando")return{status:"listo",label:"Marcar listo",icon:"check"};
-  if(o.status==="listo")return{status:"entregado",label:"Entregar",icon:"check"};
-  if(o.status==="en_camino")return{status:"entregado",label:"Entregar",icon:"check"};
+  if(o.status==="nuevo")return{status:"confirmado",label:"Enviar a cocina",icon:"receipt"};
+  if(o.status==="listo"&&o.paymentStatus==="paid")return{status:"entregado",label:"Entregar y liberar mesa",icon:"check"};
   return null;
 }
 function parseIsoDate(iso:string):Date|null{
@@ -120,8 +118,15 @@ export function SalonManager(){
     onError:e=>notify({tone:"danger",title:"Error",message:e.message}),
   });
   const create=useMutation({
-    mutationFn:(v:Draft)=>createSalonOrder(v),
-    onSuccess:o=>{setDraft(null);setEditingOrderId(null);setDetailId(null);invalidate();notify({tone:"success",title:"Mesa abierta",message:`Pedido ${o.code} registrado.`})},
+    mutationFn:({draft,sendToKitchen}:{draft:Draft;sendToKitchen:boolean})=>createSalonOrder(draft,sendToKitchen),
+    onSuccess:(o,variables)=>{
+      setDraft(null);setEditingOrderId(null);setDetailId(null);invalidate();
+      notify({
+        tone:"success",
+        title:variables.sendToKitchen?"Comanda enviada a cocina":"Borrador guardado",
+        message:variables.sendToKitchen?`Pedido ${o.code} registrado y enviado a Cocina.`:`Pedido ${o.code} quedó pendiente de envío a Cocina.`,
+      });
+    },
     onError:e=>notify({tone:"danger",title:"Error",message:e.message}),
   });
   const update=useMutation({
@@ -241,7 +246,8 @@ export function SalonManager(){
           <div className="salon-grid">
             {visible.map(t=>{
               const o=t.order;
-              const meta=o?statusMeta[o.status]??{label:o.status,tone:"gray" as const}:null;
+              const baseMeta=o?statusMeta[o.status]??{label:o.status,tone:"gray" as const}:null;
+              const meta=o&&o.status==="listo"&&o.paymentStatus!=="paid"?{label:"Listo · por cobrar",tone:"orange" as const}:baseMeta;
               const tableState=o?"occupied":"free";
               return(
                 <button
@@ -308,7 +314,7 @@ export function SalonManager(){
           busy={editingOrderId?update.isPending:create.isPending}
           currencySymbol={settings.currencySymbol}
           close={closeDraft}
-          save={v=>editingOrderId?update.mutate({id:editingOrderId,v}):create.mutate(v)}
+          save={(v,sendToKitchen)=>editingOrderId?update.mutate({id:editingOrderId,v}):create.mutate({draft:v,sendToKitchen})}
           notify={notify}
         />
       )}
@@ -346,7 +352,7 @@ export function SalonManager(){
 /* ═══════════════════════════════════════════════════
    ComandaView — toma de pedido
 ═══════════════════════════════════════════════════ */
-function ComandaView({initial,mode,allTables,busy,currencySymbol,close,save,notify}:{initial:Draft;mode:"create"|"edit";allTables:FloorTable[];busy:boolean;currencySymbol:string;close:()=>void;save:(v:Draft)=>void;notify:(n:{tone:"danger"|"success";title:string;message:string})=>void}){
+function ComandaView({initial,mode,allTables,busy,currencySymbol,close,save,notify}:{initial:Draft;mode:"create"|"edit";allTables:FloorTable[];busy:boolean;currencySymbol:string;close:()=>void;save:(v:Draft,sendToKitchen:boolean)=>void;notify:(n:{tone:"danger"|"success";title:string;message:string})=>void}){
   const editing=mode==="edit";
   const[v,setV]=useState(initial);
   const[ticketOpen,setTicketOpen]=useState(false);
@@ -399,10 +405,10 @@ function ComandaView({initial,mode,allTables,busy,currencySymbol,close,save,noti
   };
   const subtotal=v.lines.reduce((a,l)=>a+l.qty*l.unitPrice,0);
   const count=v.lines.reduce((a,l)=>a+l.qty,0);
-  const submit=()=>{
+  const submit=(sendToKitchen:boolean)=>{
     if(!v.lines.length){notify({tone:"danger",title:"Comanda vacía",message:"Agrega al menos un producto."});return}
     if(!v.tableId){notify({tone:"danger",title:"Falta mesa",message:"Selecciona la mesa del pedido."});return}
-    save(v);
+    save(v,sendToKitchen);
   };
   return(
     <div className="salon-comanda-shell" role="dialog" aria-modal="true" aria-label={editing?"Editar comanda":"Nueva comanda"}>
@@ -535,8 +541,11 @@ function ComandaView({initial,mode,allTables,busy,currencySymbol,close,save,noti
               <div className="salon-comanda-total-copy"><span>Subtotal</span></div>
               <strong>{currencySymbol} {money(subtotal)}</strong>
             </div>
-            <Button icon={editing?"save":"receipt"} className="salon-comanda-submit" onClick={submit} disabled={busy||!v.lines.length}>
-              {busy?(editing?"Guardando…":"Registrando…"):(editing?"Guardar cambios":"Registrar comanda")}
+            {!editing&&<Button icon="save" kind="secondary" className="salon-comanda-draft" onClick={()=>submit(false)} disabled={busy||!v.lines.length}>
+              {busy?"Guardando…":"Guardar borrador"}
+            </Button>}
+            <Button icon={editing?"save":"chefHat"} className="salon-comanda-submit" onClick={()=>submit(!editing)} disabled={busy||!v.lines.length}>
+              {busy?(editing?"Guardando…":"Enviando…"):(editing?"Guardar cambios":"Registrar y enviar a cocina")}
             </Button>
           </footer>
         </aside>
@@ -551,7 +560,7 @@ function ComandaView({initial,mode,allTables,busy,currencySymbol,close,save,noti
           <Icon name="chevron" size={15}/>
         </button>
         {v.lines.length>0&&(
-          <button type="button" className="salon-comanda-mobile-submit" onClick={submit} disabled={busy}>
+          <button type="button" className="salon-comanda-mobile-submit" onClick={()=>submit(!editing)} disabled={busy}>
             {busy?"…":<><Icon name={editing?"save":"receipt"} size={14}/><span>{editing?"Guardar":"Registrar"}</span></>}
           </button>
         )}
@@ -577,9 +586,13 @@ function ComandaView({initial,mode,allTables,busy,currencySymbol,close,save,noti
 ═══════════════════════════════════════════════════ */
 function OrderDetail({loading,order,error,currencySymbol,canManage,busy,close,advance,edit,cancel}:{loading:boolean;order?:Order;error?:string;currencySymbol:string;canManage:boolean;busy:boolean;close:()=>void;advance:(st:string)=>void;edit:(o:Order)=>void;cancel:(o:Order)=>void}){
   const{location}=useSession();
-  const meta=order?statusMeta[order.status]??{label:order.status,tone:"gray" as const}:null;
+  const baseMeta=order?statusMeta[order.status]??{label:order.status,tone:"gray" as const}:null;
+  const meta=order&&order.status==="listo"&&order.paymentStatus!=="paid"?{label:"Listo · por cobrar",tone:"orange" as const}:baseMeta;
   const action=order?nextAction(order):null;
   const editable=Boolean(order&&editableOrderStatus(order.status));
+  const paid=Number(order?.paidAmount??0);
+  const remaining=Number(order?.remainingAmount??order?.total??0);
+  const hasPayments=paid>0.00001;
   const itemCount=order?(order.items??[]).reduce((sum,it)=>sum+Number(it.qty||0),0):0;
   return(
     <div className="modal-backdrop modal-overlay-in">
@@ -678,18 +691,26 @@ function OrderDetail({loading,order,error,currencySymbol,canManage,busy,close,ad
                       <b>{currencySymbol} {money(order.deliveryFee)}</b>
                     </div>
                   )}
+                  <div className="salon-order-detail-subtotal">
+                    <span>Pagado</span>
+                    <b>{currencySymbol} {money(order.paidAmount??0)}</b>
+                  </div>
                   <div className="salon-order-detail-grand">
-                    <span>Total del pedido</span>
-                    <strong>{currencySymbol} {money(order.total)}</strong>
+                    <span>{remaining>0.00001?"Saldo pendiente":"Total pagado"}</span>
+                    <strong>{currencySymbol} {money(remaining>0.00001?remaining:order.total)}</strong>
                   </div>
                 </section>
 
                 {canManage&&(
                   <footer className="order-detail-actions salon-order-detail-actions">
                     {action&&<Button icon={action.icon} className="order-detail-primary" disabled={busy} onClick={()=>advance(action.status)}>{action.label}</Button>}
+                    {remaining>0.00001&&<Link href={`/pos?orderId=${order.id}`} className="button secondary salon-order-detail-pay"><Icon name="sales" size={15}/>Cobrar {currencySymbol} {money(remaining)}</Link>}
                     {editable&&<Button icon="edit" kind="secondary" className="salon-order-detail-edit" disabled={busy} onClick={()=>edit(order)}>Editar comanda</Button>}
+                    {(order.status==="confirmado"||order.status==="preparando")&&<span className="order-detail-done"><Icon name="chefHat" size={15}/>{order.status==="confirmado"?"Esperando cocina":"En preparación"}</span>}
+                    {order.status==="listo"&&remaining>0.00001&&<span className="order-detail-done"><Icon name="sales" size={15}/>Cobra el saldo antes de liberar la mesa</span>}
                     {order.status==="entregado"&&<span className="order-detail-done"><Icon name="check" size={15}/>Mesa entregada</span>}
-                    {!["entregado","cancelado"].includes(order.status)&&<Button icon="alert" kind="ghost" className="order-detail-cancel" disabled={busy} onClick={()=>cancel(order)}>Cancelar pedido</Button>}
+                    {!["entregado","cancelado"].includes(order.status)&&!hasPayments&&<Button icon="alert" kind="ghost" className="order-detail-cancel" disabled={busy} onClick={()=>cancel(order)}>Cancelar pedido</Button>}
+                    {!["entregado","cancelado"].includes(order.status)&&hasPayments&&<span className="order-detail-done"><Icon name="alert" size={15}/>Devuelve los pagos en POS antes de cancelar</span>}
                   </footer>
                 )}
               </>
