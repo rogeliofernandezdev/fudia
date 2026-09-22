@@ -23,13 +23,14 @@ export function InventoryPage(){
  const{notify}=useFeedback();
  const{can,location}=useSession();
  const[search,setSearch]=useState("");
+ const debouncedSearch=useDebouncedValue(search);
  const[page,setPage]=useState(1);
  const[size,setSize]=useState(10);
  const[adjustmentOpen,setAdjustmentOpen]=useState(false);
  const[settingsItem,setSettingsItem]=useState<InventoryItem|null>(null);
  const[transferOpen,setTransferOpen]=useState(false);
 
- const inventory=useQuery({queryKey:["inventory",search,page,size],queryFn:()=>listInventory({q:search,page,pageSize:size})});
+ const inventory=useQuery({queryKey:["inventory",debouncedSearch,page,size],queryFn:()=>listInventory({q:debouncedSearch,page,pageSize:size})});
  const products=useQuery({queryKey:["inventory-products"],queryFn:()=>listInventoryProducts(),enabled:adjustmentOpen||transferOpen,staleTime:10000});
  const locations=useQuery({queryKey:["transfer-locations"],queryFn:listTransferLocations,enabled:transferOpen,staleTime:30000});
  const settingsSave=useMutation({
