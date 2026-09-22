@@ -210,7 +210,7 @@ se limitan a densidad y composición, nunca a reinterpretar el significado del c
 
 ## Componentes y estados
 
-- Usuarios y permisos se separan en dos pestañas. Un usuario puede tener varias asignaciones rol–local. El editor de rol separa claramente «Accesos al sistema» (opciones del menú) de «Permisos de acción» (operaciones dentro de cada pantalla); nunca se presentan como un único concepto. El Administrador `[*]` permanece protegido, los demás roles predeterminados permiten adaptar accesos y permisos conservando nombre y descripción, y los roles personalizados permiten editar toda su definición. La activación se realiza desde la tabla, nunca dentro del formulario.
+- Usuarios y permisos se separan en dos pestañas. Un usuario puede tener varias asignaciones rol–local. El editor de rol separa claramente «Accesos al sistema» (opciones del menú) de «Permisos de acción» (operaciones dentro de cada pantalla); nunca se presentan como un único concepto. El Administrador de plataforma es el único `[*]`: ve todo el catálogo de módulos aunque estén desactivados, en desarrollo o planificados, y es el único que puede habilitar módulos para una empresa. El Administrador de empresa usa permisos explícitos y nunca recibe `*`. Los demás roles predeterminados permiten adaptar accesos y permisos conservando nombre y descripción, y los roles personalizados permiten editar toda su definición. La activación se realiza desde la tabla, nunca dentro del formulario.
 
 - Área táctil mínima de 44 por 44 px en móvil.
 - Skeleton con forma final: el de tablas reproduce cabecera y filas con
@@ -362,3 +362,12 @@ pero la identidad, textos, iconos y colores son exclusivamente Foods.
 ## Directorios maestros
 
 Los módulos de directorio, como Clientes, usan la tabla estandarizada en escritorio y tarjetas equivalentes en móvil. Toda consulta remota debe incluir skeleton, error recuperable, vacío contextual y paginación compartida. Las acciones de fila son únicamente iconos homologados con tooltip; alta y edición usan las primitivas `Input`, `Select`, `Textarea`, `Button`, `Status` y `ConfirmDialog`. Los formularios extensos se agrupan por secciones visuales, sin añadir texto explicativo que no ayude a completar la tarea.
+
+
+### Disponibilidad de módulos
+
+- El catálogo distingue **Disponible**, **En desarrollo** y **Planificado**.
+- `active` representa únicamente si un módulo **Disponible** está habilitado para una empresa; no representa su estado de desarrollo.
+- El Administrador de plataforma ve todos los módulos en navegación y catálogo, incluso si están inactivos o no terminados.
+- Los usuarios de empresa solo ven módulos disponibles, activos para su organización y permitidos por su rol.
+- Un módulo **En desarrollo** o **Planificado** nunca puede activarse para una empresa; el backend debe rechazar cualquier intento aunque el frontend falle.
