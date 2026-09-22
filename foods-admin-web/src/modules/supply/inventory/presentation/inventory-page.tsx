@@ -8,11 +8,12 @@ import {useFeedback} from "@/providers";
 import {useSession} from "@/providers/session-context";
 import {formatRegionalNumber} from "@/shared/i18n/regional-format";
 import {useDebouncedValue} from "@/shared/hooks/use-debounced-value";
+import {createInventoryAdjustment,createInventoryTransfer,listInventory,listInventoryProducts,listTransferLocations,updateInventorySettings} from "../infrastructure/inventory-api";
+import type {InventoryItem} from "../domain/types";
+
 const InventoryAdjustmentDialog=dynamic(()=>import("./inventory-adjustment-dialog").then(module=>module.InventoryAdjustmentDialog),{ssr:false});
 const InventorySettingsDialog=dynamic(()=>import("./inventory-settings-dialog").then(module=>module.InventorySettingsDialog),{ssr:false});
 const InventoryTransferDialog=dynamic(()=>import("./inventory-transfer-dialog").then(module=>module.InventoryTransferDialog),{ssr:false});
-import {createInventoryAdjustment,createInventoryTransfer,listInventory,listInventoryProducts,listTransferLocations,updateInventorySettings} from "../infrastructure/inventory-api";
-import type {InventoryItem} from "../domain/types";
 
 const statusMeta={
  ok:{label:"Saludable",tone:"green" as const},
