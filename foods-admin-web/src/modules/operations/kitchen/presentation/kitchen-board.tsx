@@ -130,7 +130,7 @@ export function KitchenBoard(){
         const laneItems=items
           .filter(ticket=>ticket.status===lane.status)
           .sort((left,right)=>priority(right,now)-priority(left,now));
-        return <section className={`kitchen-lane kitchen-lane-${lane.status}`} data-mobile-active={mobileLane===lane.status} key={lane.status}>
+        return <section className="kitchen-lane" data-status={lane.status} data-mobile-active={mobileLane===lane.status} key={lane.status}>
           <header><div><span className="kitchen-lane-icon"><Icon name={lane.icon} size={15}/></span><h2>{lane.label}</h2></div><b>{laneItems.length}</b></header>
           <div className="kitchen-lane-list">
             {laneItems.map(ticket=>{
