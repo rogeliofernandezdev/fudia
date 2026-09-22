@@ -739,3 +739,43 @@ func TestInventoryAdjustmentTracksBalancesAndRejectsNegativeStock(t *testing.T) 
 		t.Fatalf("failed adjustment must preserve balance 6, got %v", balance)
 	}
 }
+
+
+func TestListInventoryProductsSupportsPaginationForRecipeLookup(t *testing.T) {
+	pool := integrationPool(t)
+	scope := seedInventoryScope(t, pool)
+	api := New(pool)
+
+	for i := 0; i < 25; i++ {
+		if _, err := pool.Exec(context.Background(), `
+			INSERT INTO inventory_items(organization_id,sku,name,unit,minimum_stock,active)
+			VALUES($1,$2,$3,'kg',0,true)`,
+			scope.OrganizationID,
+			fmt.Sprintf("REC-%03d", i),
+			fmt.Sprintf("RecipeLookup %03d", i),
+		); err != nil {
+			t.Fatalf("seed recipe lookup ingredient %d: %v", i, err)
+		}
+	}
+
+	req := httptest.NewRequest("GET", "/v1/admin/inventory/products?q=RecipeLookup&page=2&pageSize=10", nil)
+	req = req.WithContext(context.WithValue(req.Context(), scopeKey{}, scope))
+	rec := httptest.NewRecorder()
+	api.listInventoryProducts(rec, req)
+	if rec.Code != 200 {
+		t.Fatalf("expected 200, got %d body=%s", rec.Code, rec.Body.String())
+	}
+
+	var response struct {
+		Items    []inventoryProductOption `json:"items"`
+		Total    int                      `json:"total"`
+		Page     int                      `json:"page"`
+		PageSize int                      `json:"pageSize"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &response); err != nil {
+		t.Fatalf("decode inventory product lookup: %v", err)
+	}
+	if response.Total != 25 || response.Page != 2 || response.PageSize != 10 || len(response.Items) != 10 {
+		t.Fatalf("unexpected pagination total=%d page=%d pageSize=%d items=%d", response.Total, response.Page, response.PageSize, len(response.Items))
+	}
+}
