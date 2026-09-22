@@ -605,29 +605,40 @@ test("perfil respeta inputs y formularios del design system",()=>{
 });
 
 
-test("mesas conserva edición explícita desde la tabla",()=>{
+test("mesas conserva edición inline dentro de la tabla",()=>{
   const page=read("src/modules/operations/tables/presentation/tables-manager.tsx");
   const api=read("src/modules/operations/tables/infrastructure/tables-api.ts");
   assert.ok(page.includes('RowActionButton action="edit"'),"Mesas expone una acción explícita de edición");
-  assert.ok(page.includes("TableDialog"),"Editar una mesa usa un modal dedicado");
+  assert.ok(page.includes("tableDraft?.id===t.id"),"La fila detecta cuál mesa se está editando");
+  assert.ok(page.includes('className="editing-row table-editing-row"'),"La edición ocurre dentro de la misma fila");
+  assert.ok(page.includes('IconButton icon="check" label="Guardar"'),"La fila usa una acción estándar para guardar");
+  assert.ok(page.includes('IconButton icon="close" label="Cancelar"'),"La fila usa una acción estándar para cancelar");
+  assert.equal(page.includes("TableDialog"),false,"Editar una mesa no abre un modal");
+  assert.equal(page.includes("Mesa activa"),false,"El estado no se duplica dentro de la edición");
+  assert.equal(page.includes("QR habilitado"),false,"La edición básica no mezcla configuración de QR");
+  assert.ok(page.includes('RowActionButton action="activate"'),"Una mesa inactiva se reactiva desde la acción de fila");
+  assert.ok(page.includes('RowActionButton action="deactivate"'),"Una mesa activa se desactiva desde la acción de fila");
   assert.ok(page.includes("persistTable"),"La vista conecta la edición con su API");
-  assert.ok(page.includes("Mesa activa"),"La edición permite reactivar o desactivar la mesa desde su configuración");
-  assert.ok(page.includes("QR habilitado"),"La edición controla si el QR de la mesa está habilitado");
   assert.ok(api.includes('method:"PATCH"'),"La edición persiste con PATCH");
   assert.ok(api.includes('tables/${draft.id}'),"La edición usa el endpoint específico de la mesa");
   assert.equal(page.includes('style={{flexWrap:"wrap"}}'),false,"Mesas no introduce estilos inline para composición");
 });
 
-test("empresa y kardex usan workspaces alineados al design system",()=>{
+test("empresa y kardex respetan no duplicación y patrón de gestión",()=>{
   const company=read("src/modules/organizations/presentation/organization-admin.tsx");
   const companyCss=read("src/modules/organizations/presentation/organization-admin.css");
   const kardex=read("src/modules/supply/inventory/presentation/kardex-page.tsx");
   const inventoryCss=read("src/modules/supply/inventory/presentation/inventory.css");
-  assert.ok(company.includes("organization-summary"),"Empresa tiene una cabecera de identidad propia");
-  assert.ok(company.includes("organization-settings"),"Empresa separa identidad legal y configuración general");
-  assert.ok(companyCss.includes(".organization-savebar"),"Empresa usa una barra de guardado consistente");
+  assert.equal(company.includes("organization-summary"),false,"Empresa no repite los datos del formulario en una tarjeta resumen");
+  assert.ok(company.includes("organization-section"),"Empresa separa identidad legal y configuración general sin duplicar datos");
+  assert.ok(company.includes("organization-section-header"),"Empresa usa cabeceras compactas de sección");
+  assert.ok(companyCss.includes(".organization-savebar"),"Empresa conserva una barra de guardado consistente");
   assert.ok(kardex.includes("kardex-filter-grid"),"Kárdex usa un grid explícito de filtros");
-  assert.ok(kardex.includes("kardex-results-header"),"Kárdex separa filtros de resultados");
+  assert.ok(kardex.includes("kardex-helper"),"Kárdex mantiene la ayuda contextual junto a los filtros");
+  assert.equal(kardex.includes("kardex-results-header"),false,"Kárdex no agrega una cabecera redundante de resultados");
+  assert.equal(kardex.includes("selectedItem"),false,"Kárdex no repite el artículo seleccionado fuera del filtro");
+  assert.equal(kardex.includes('movements.data?.total??0} movimientos'),false,"Kárdex no duplica el total ya mostrado por paginación");
   assert.equal(kardex.includes('style={{flexWrap:"wrap"}}'),false,"Kárdex no depende de estilos inline para el layout");
-  assert.ok(inventoryCss.includes(".kardex-filter-card"),"Kárdex mantiene sus estilos en la hoja del módulo");
+  assert.ok(inventoryCss.includes(".kardex-workspace"),"Kárdex mantiene filtros y resultados en un solo workspace");
 });
+
