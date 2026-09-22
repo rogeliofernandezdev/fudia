@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/json"
 	"errors"
@@ -12,8 +13,11 @@ import (
 )
 
 type myProfileView struct {
-	FullName string `json:"fullName"`
-	Email    string `json:"email"`
+	FullName      string   `json:"fullName"`
+	Email         string   `json:"email"`
+	PlatformAdmin bool     `json:"platformAdmin"`
+	RoleNames     []string `json:"roleNames"`
+	Permissions   []string `json:"permissions"`
 }
 
 type myProfileInput struct {
@@ -22,18 +26,37 @@ type myProfileInput struct {
 	NewPassword     string `json:"newPassword"`
 }
 
+func (a *API) loadMyProfile(ctx context.Context, s scope) (myProfileView, error) {
+	var out myProfileView
+	err:=a.db.QueryRow(ctx,`
+		SELECT u.full_name,u.email,u.platform_admin,
+		       COALESCE(array_agg(DISTINCT r.name) FILTER (WHERE r.id IS NOT NULL),ARRAY[]::text[]),
+		       COALESCE(array_agg(DISTINCT permission) FILTER (WHERE permission IS NOT NULL),ARRAY[]::text[])
+		FROM users u
+		LEFT JOIN user_roles ur ON ur.user_id=u.id AND ur.location_id=$2
+		LEFT JOIN roles r ON r.id=ur.role_id AND r.organization_id=$3 AND r.active
+		LEFT JOIN LATERAL unnest(r.permissions) permission ON true
+		WHERE u.id=$1 AND u.active
+		GROUP BY u.id
+	`,s.UserID,s.LocationID,s.OrganizationID).Scan(&out.FullName,&out.Email,&out.PlatformAdmin,&out.RoleNames,&out.Permissions)
+	if err!=nil{return myProfileView{},err}
+	if out.PlatformAdmin {
+		out.RoleNames=[]string{"Administrador de plataforma"}
+		out.Permissions=[]string{"*"}
+	}
+	if out.RoleNames==nil { out.RoleNames=[]string{} }
+	if out.Permissions==nil { out.Permissions=[]string{} }
+	return out,nil
+}
+
 func (a *API) getMyProfile(w http.ResponseWriter, r *http.Request) {
 	s := r.Context().Value(scopeKey{}).(scope)
-	var out myProfileView
-	if err := a.db.QueryRow(r.Context(), `
-		SELECT full_name,email
-		FROM users
-		WHERE id=$1 AND active
-	`, s.UserID).Scan(&out.FullName, &out.Email); err != nil {
-		fail(w, 404, "profile_not_found", "No pudimos cargar tu perfil.")
+	out,err:=a.loadMyProfile(r.Context(),s)
+	if err!=nil {
+		fail(w,404,"profile_not_found","No pudimos cargar tu perfil.")
 		return
 	}
-	writeJSON(w, 200, out)
+	writeJSON(w,200,out)
 }
 
 func (a *API) updateMyProfile(w http.ResponseWriter, r *http.Request) {
@@ -116,5 +139,10 @@ func (a *API) updateMyProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.audit(r, "user.profile_updated", "user", s.UserID)
-	writeJSON(w, 200, myProfileView{FullName: in.FullName, Email: email})
+	out,loadErr:=a.loadMyProfile(r.Context(),s)
+	if loadErr!=nil {
+		writeJSON(w,200,myProfileView{FullName:in.FullName,Email:email,RoleNames:[]string{},Permissions:[]string{}})
+		return
+	}
+	writeJSON(w,200,out)
 }
