@@ -1,34 +1,447 @@
-.availability-date{min-height:var(--control-height);color:var(--ops-700);background:var(--ops-100);border-radius:9px;align-items:center;gap:7px;padding:0 12px;font-size:10px;font-weight:750;display:inline-flex}
-.availability-panel{overflow:hidden}
-.availability-toolbar{border-bottom:1px solid var(--line);align-items:center;justify-content:space-between;gap:16px;padding:12px 16px;display:flex}
-.availability-filters{width:min(620px,100%);grid-template-columns:minmax(240px,1fr) 210px;gap:9px;display:grid}.availability-toolbar label{width:100%;position:relative}
-.availability-toolbar label>svg{color:var(--ink-400);position:absolute;z-index:1;top:10px;left:12px}
-.availability-toolbar .ds-input{padding-left:40px}
-.availability-toolbar p{color:var(--ink-500);align-items:center;gap:7px;margin:0;font-size:10px;display:flex}
-.availability-list-head{min-height:36px;color:#fff;background:var(--primary-600);grid-template-columns:minmax(220px,1.15fr) minmax(330px,1fr) minmax(250px,.8fr);align-items:center;display:grid}.availability-list-head span{padding:0 16px;letter-spacing:.09em;font-size:8px;font-weight:800}.availability-list-head span:last-child{text-align:center}
-.availability-grid{gap:0;padding:0;display:grid}
-.availability-card{border:0;border-bottom:1px solid var(--line);background:#fff;border-radius:0;grid-template-columns:minmax(220px,1.15fr) minmax(330px,1fr) minmax(250px,.8fr);align-items:stretch;overflow:hidden;transition:background .16s;display:grid}.availability-card:last-child{border-bottom:0}
-.availability-card:hover{background:#fbfcff}
-.availability-card>header{grid-template-columns:42px minmax(0,1fr) auto;align-items:center;gap:12px;padding:10px 16px;display:grid}
-.availability-card>header>div{min-width:0}
-.availability-card>header b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;display:block}
-.availability-card>header small{color:var(--ink-400);margin-top:3px;font-size:9px;display:block}
-.availability-image{width:42px;height:42px;color:var(--ops-700);background:var(--ops-100);border-radius:9px;place-items:center;display:grid;overflow:hidden}
-.availability-image img{object-fit:cover;width:100%;height:100%}
-.availability-metrics{border-inline:1px solid #edf0f4;background:#fafbfc;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:8px 16px;display:grid}
-.availability-metrics>span,.availability-metrics>label{min-width:0;align-content:center;display:grid}
-.availability-metrics small{color:var(--ink-400);letter-spacing:.06em;font-size:7px;font-weight:800}
-.availability-metrics b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:4px;font-size:10px}
-.availability-metrics .ds-input{height:var(--control-height);margin-top:4px}
-.availability-derived{grid-column:1/-1;min-height:34px;margin:0;padding:8px 12px;color:var(--warning-600);background:var(--warning-50);border-top:1px solid #f2d4b5;align-items:center;gap:7px;font-size:9px;font-weight:650;display:flex}.availability-derived.inventory{color:var(--ops-700);background:var(--ops-100);border-color:#c8d6f8}
-.availability-card>footer{grid-template-columns:repeat(2,minmax(0,1fr));align-content:center;gap:8px;padding:8px 16px;display:grid}.availability-card>footer.single{grid-template-columns:1fr}
-.availability-card>footer .button{min-width:0;padding-inline:8px;font-size:9px}
-.availability-card>footer .button.danger{color:var(--warning-600);background:var(--warning-50);border-color:#f2d4b5;box-shadow:none}.availability-card>footer .button.danger:hover{color:#8a3b05;background:#fde8d2;border-color:#e7bd91}
-.availability-state{min-height:300px;text-align:center;color:var(--ink-500);place-content:center;justify-items:center;gap:8px;padding:24px;display:grid}
-.availability-panel>.standard-pagination{border-top:1px solid var(--line);color:var(--ink-400);background:#fff}
-.availability-state b{color:var(--ink-950);font-size:13px}.availability-state p{margin:0 0 8px;font-size:10px}
-.availability-skeleton{pointer-events:none}.availability-skeleton i,.availability-skeleton span,.availability-skeleton em{background:linear-gradient(90deg,#eef1f5,#f8fafc,#eef1f5);background-size:200% 100%;border-radius:7px;animation:availability-shimmer 1.2s infinite;display:block}.availability-skeleton header i{width:42px;height:42px}.availability-skeleton header span{height:12px}.availability-skeleton header em{width:70px;height:24px}.availability-skeleton>div{grid-template-columns:repeat(3,1fr);gap:8px;padding:12px 14px;display:grid}.availability-skeleton>div i{height:34px}.availability-skeleton footer i{height:38px}
-@keyframes availability-shimmer{to{background-position:-200% 0}}
-@media(width<=1100px){.availability-list-head{display:none}.availability-card{grid-template-columns:1fr 1fr}.availability-card>header{grid-column:1/-1}.availability-card>footer{border-top:1px solid #edf0f4}.availability-metrics{border-left:0}}
-@media(width<=600px){.availability-toolbar{align-items:stretch;flex-direction:column;padding:12px}.availability-filters{grid-template-columns:1fr}.availability-toolbar p{font-size:9px}.availability-grid{grid-template-columns:1fr;gap:10px;padding:12px}.availability-card{border:1px solid var(--line);border-radius:10px;grid-template-columns:1fr}.availability-card:last-child{border-bottom:1px solid var(--line)}.availability-card>header{grid-column:auto;grid-template-columns:42px minmax(0,1fr);padding:12px}.availability-card>header .status{grid-column:2}.availability-metrics{border-inline:0;border-block:1px solid #edf0f4;padding:10px 12px}.availability-card>footer{grid-template-columns:1fr;border-top:0;padding:10px 12px}.availability-card>footer .button{width:100%}}
-@media(prefers-reduced-motion:reduce){.availability-card,.availability-skeleton i,.availability-skeleton span,.availability-skeleton em{transition:none;animation:none}}
+.availability-date{
+  min-height:var(--control-height);
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  padding:0 12px;
+  border:1px solid color-mix(in srgb,var(--ops-500) 18%,var(--line));
+  border-radius:10px;
+  background:var(--ops-100);
+  color:var(--ops-700);
+  font-size:10px;
+  font-weight:800;
+}
+
+.availability-panel{
+  overflow:visible;
+  border:0;
+  background:transparent;
+  box-shadow:none;
+}
+
+.availability-toolbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:18px;
+  margin-bottom:12px;
+  padding:14px;
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:var(--surface);
+  box-shadow:0 6px 20px rgba(16,24,40,.04);
+}
+
+.availability-filters{
+  width:min(680px,100%);
+  display:grid;
+  grid-template-columns:minmax(260px,1fr) 220px;
+  gap:10px;
+}
+
+.availability-toolbar label{
+  width:100%;
+  position:relative;
+}
+
+.availability-toolbar label>svg{
+  position:absolute;
+  z-index:1;
+  top:50%;
+  left:12px;
+  transform:translateY(-50%);
+  color:var(--ink-400);
+}
+
+.availability-toolbar .ds-input{
+  padding-left:40px;
+}
+
+.availability-toolbar p{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  margin:0;
+  color:var(--ink-500);
+  font-size:9px;
+  font-weight:650;
+  white-space:nowrap;
+}
+
+.availability-toolbar p svg{
+  color:var(--ops-500);
+}
+
+.availability-list-head{
+  display:grid;
+  grid-template-columns:minmax(250px,1.1fr) minmax(360px,1.25fr) minmax(260px,.8fr);
+  align-items:center;
+  min-height:34px;
+  margin:0 4px 6px;
+  color:var(--ink-400);
+}
+
+.availability-list-head span{
+  padding:0 14px;
+  font-size:8px;
+  font-weight:850;
+  letter-spacing:.11em;
+}
+
+.availability-list-head span:last-child{
+  text-align:center;
+}
+
+.availability-grid{
+  display:grid;
+  gap:10px;
+}
+
+.availability-card{
+  display:grid;
+  grid-template-columns:minmax(250px,1.1fr) minmax(360px,1.25fr) minmax(260px,.8fr);
+  grid-template-areas:
+    "product metrics actions"
+    "notice notice notice";
+  align-items:stretch;
+  overflow:hidden;
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:var(--surface);
+  box-shadow:0 4px 14px rgba(16,24,40,.035);
+  transition:border-color .16s ease,box-shadow .16s ease,transform .16s ease;
+}
+
+.availability-card:hover{
+  border-color:var(--line-strong);
+  box-shadow:0 10px 26px rgba(16,24,40,.07);
+  transform:translateY(-1px);
+}
+
+.availability-card>header{
+  grid-area:product;
+  display:grid;
+  grid-template-columns:46px minmax(0,1fr);
+  align-items:center;
+  gap:12px;
+  min-width:0;
+  padding:14px 16px;
+  position:relative;
+}
+
+.availability-card>header>div{
+  min-width:0;
+  padding-right:6px;
+}
+
+.availability-card>header b{
+  display:block;
+  overflow:hidden;
+  color:var(--ink-950);
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:12px;
+  font-weight:850;
+}
+
+.availability-card>header small{
+  display:block;
+  margin-top:4px;
+  color:var(--ink-400);
+  font-size:9px;
+}
+
+.availability-card>header .status{
+  grid-column:1/-1;
+  justify-self:start;
+  margin-top:2px;
+}
+
+.availability-image{
+  width:46px;
+  height:46px;
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+  border-radius:12px;
+  background:var(--ops-100);
+  color:var(--ops-700);
+}
+
+.availability-image img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+
+.availability-metrics{
+  grid-area:metrics;
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  align-items:center;
+  gap:8px;
+  padding:10px;
+  border-inline:1px solid var(--line);
+  background:var(--cloud-50);
+}
+
+.availability-metrics>span,
+.availability-metrics>label{
+  min-width:0;
+  min-height:58px;
+  display:grid;
+  align-content:center;
+  padding:9px 10px;
+  border-radius:10px;
+  background:var(--surface);
+}
+
+.availability-metrics small{
+  color:var(--ink-400);
+  font-size:7px;
+  font-weight:850;
+  letter-spacing:.065em;
+}
+
+.availability-metrics b{
+  overflow:hidden;
+  margin-top:5px;
+  color:var(--ink-700);
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:10px;
+  font-weight:800;
+}
+
+.availability-metrics .ds-input{
+  height:var(--control-height);
+  margin-top:5px;
+  background:var(--surface);
+}
+
+.availability-card>footer{
+  grid-area:actions;
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  align-content:center;
+  gap:8px;
+  padding:12px 14px;
+  background:var(--surface);
+}
+
+.availability-card>footer.single{
+  grid-template-columns:1fr;
+}
+
+.availability-card>footer .button{
+  width:100%;
+  min-width:0;
+  padding-inline:10px;
+  font-size:9px;
+}
+
+.availability-card>footer .button.danger{
+  border-color:color-mix(in srgb,var(--warning) 28%,var(--line));
+  background:var(--warning-50);
+  color:var(--warning-600);
+  box-shadow:none;
+}
+
+.availability-card>footer .button.danger:hover{
+  border-color:var(--warning);
+  background:color-mix(in srgb,var(--warning-50) 76%,var(--warning) 8%);
+  color:var(--warning);
+}
+
+.availability-derived{
+  grid-area:notice;
+  min-height:38px;
+  display:flex;
+  align-items:center;
+  gap:7px;
+  margin:0;
+  padding:9px 14px;
+  border-top:1px solid color-mix(in srgb,var(--warning) 20%,var(--line));
+  background:var(--warning-50);
+  color:var(--warning-600);
+  font-size:9px;
+  font-weight:700;
+}
+
+.availability-derived.inventory{
+  border-top-color:color-mix(in srgb,var(--ops-500) 18%,var(--line));
+  background:var(--ops-100);
+  color:var(--ops-700);
+}
+
+.availability-state{
+  min-height:300px;
+  display:grid;
+  place-content:center;
+  justify-items:center;
+  gap:8px;
+  padding:28px;
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:var(--surface);
+  color:var(--ink-500);
+  text-align:center;
+}
+
+.availability-state>b{
+  color:var(--ink-950);
+  font-size:13px;
+}
+
+.availability-state p{
+  margin:0 0 8px;
+  font-size:10px;
+}
+
+.availability-panel>.standard-pagination{
+  margin-top:12px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:var(--surface);
+  color:var(--ink-400);
+  overflow:hidden;
+}
+
+.availability-skeleton{
+  pointer-events:none;
+}
+
+.availability-skeleton i,
+.availability-skeleton span,
+.availability-skeleton em{
+  display:block;
+  border-radius:7px;
+  background:linear-gradient(90deg,#eef1f5,#f8fafc,#eef1f5);
+  background-size:200% 100%;
+  animation:availability-shimmer 1.2s infinite;
+}
+
+.availability-skeleton header i{
+  width:46px;
+  height:46px;
+}
+
+.availability-skeleton header span{
+  height:12px;
+}
+
+.availability-skeleton header em{
+  grid-column:1/-1;
+  width:70px;
+  height:24px;
+}
+
+.availability-skeleton>div{
+  grid-area:metrics;
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:8px;
+  padding:10px;
+  border-inline:1px solid var(--line);
+  background:var(--cloud-50);
+}
+
+.availability-skeleton>div i{
+  height:58px;
+  background-color:var(--surface);
+}
+
+.availability-skeleton footer i{
+  height:var(--control-height);
+}
+
+@keyframes availability-shimmer{
+  to{background-position:-200% 0}
+}
+
+@media(width<=1100px){
+  .availability-list-head{
+    display:none;
+  }
+
+  .availability-grid{
+    gap:12px;
+  }
+
+  .availability-card{
+    grid-template-columns:minmax(0,1fr) minmax(300px,.9fr);
+    grid-template-areas:
+      "product actions"
+      "metrics metrics"
+      "notice notice";
+  }
+
+  .availability-metrics{
+    border-inline:0;
+    border-top:1px solid var(--line);
+  }
+
+  .availability-card>footer{
+    border-left:1px solid var(--line);
+  }
+}
+
+@media(width<=720px){
+  .availability-toolbar{
+    align-items:stretch;
+    flex-direction:column;
+    padding:12px;
+  }
+
+  .availability-filters{
+    grid-template-columns:1fr;
+  }
+
+  .availability-toolbar p{
+    white-space:normal;
+  }
+
+  .availability-card{
+    grid-template-columns:1fr;
+    grid-template-areas:
+      "product"
+      "metrics"
+      "notice"
+      "actions";
+  }
+
+  .availability-card>header{
+    padding:13px;
+  }
+
+  .availability-card>footer{
+    grid-template-columns:1fr;
+    border-left:0;
+    border-top:1px solid var(--line);
+    padding:10px 12px;
+  }
+
+  .availability-metrics{
+    grid-template-columns:1fr;
+    padding:10px 12px;
+  }
+
+  .availability-metrics>span,
+  .availability-metrics>label{
+    min-height:auto;
+  }
+
+  .availability-card>footer .button{
+    width:100%;
+  }
+}
+
+@media(prefers-reduced-motion:reduce){
+  .availability-card,
+  .availability-skeleton i,
+  .availability-skeleton span,
+  .availability-skeleton em{
+    transition:none;
+    animation:none;
+  }
+}
