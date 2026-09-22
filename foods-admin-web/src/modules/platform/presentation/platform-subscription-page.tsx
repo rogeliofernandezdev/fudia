@@ -1,54 +1,75 @@
 "use client";
 import "./platform-subscription.css";
-import {useEffect,useMemo,useState} from "react";
+import {useMemo,useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Button,Input,PageHeader,Select} from "@/design-system";
 import {Icon} from "@/design-system/icons";
 import {useFeedback,useSession} from "@/providers";
 import {changeOrganizationSubscription,getCurrentOrganizationSubscription,listSubscriptionPlans,recordSubscriptionPayment} from "../infrastructure/platform-api";
-import type {OrganizationSubscription} from "../domain/types";
+import type {OrganizationSubscription,SubscriptionPlan} from "../domain/types";
 
 type SubscriptionDraft={planId:string;billingCycle:"monthly"|"annual";status:OrganizationSubscription["status"];autoRenew:boolean;termsAccepted:boolean};
 type PaymentDraft={amount:string;currency:string;status:"pending"|"paid"|"failed"|"refunded";provider:string;externalReference:string;paidAt:string};
-const blankPayment:PaymentDraft={amount:"",currency:"",status:"paid",provider:"manual",externalReference:"",paidAt:""};
 
 export function PlatformSubscriptionPage(){
  const{organization}=useSession();
- const{notify}=useFeedback();
- const client=useQueryClient();
  const subscription=useQuery({queryKey:["organization-subscription"],queryFn:getCurrentOrganizationSubscription});
  const plans=useQuery({queryKey:["platform-plans"],queryFn:listSubscriptionPlans});
- const[draft,setDraft]=useState<SubscriptionDraft|null>(null);
- const[payment,setPayment]=useState<PaymentDraft>(blankPayment);
-
- useEffect(()=>{
-  if(!subscription.data)return;
-  setDraft({planId:subscription.data.plan.id,billingCycle:subscription.data.billingCycle,status:subscription.data.status,autoRenew:subscription.data.autoRenew,termsAccepted:false});
-  setPayment(current=>({...current,amount:subscription.data.priceAmount,currency:subscription.data.currency}));
- },[subscription.data]);
-
- const selectedPlan=useMemo(()=>plans.data?.items.find(plan=>plan.id===draft?.planId)??null,[plans.data,draft?.planId]);
- const save=useMutation({
-  mutationFn:()=>draft?changeOrganizationSubscription(draft):Promise.reject(new Error("Suscripción inválida")),
-  onSuccess:()=>{void client.invalidateQueries({queryKey:["organization-subscription"]});void client.invalidateQueries({queryKey:["session-context"]});notify({tone:"success",title:"Suscripción actualizada",message:"El plan, estado y módulos de la empresa quedaron sincronizados."})},
-  onError:e=>notify({tone:"danger",title:"No se pudo actualizar",message:e.message}),
- });
- const pay=useMutation({
-  mutationFn:()=>recordSubscriptionPayment({...payment,paidAt:payment.paidAt?new Date(payment.paidAt).toISOString():""}),
-  onSuccess:()=>{setPayment(current=>({...blankPayment,amount:current.amount,currency:current.currency}));void client.invalidateQueries({queryKey:["organization-subscription"]});notify({tone:"success",title:"Pago registrado",message:"El movimiento quedó asociado a la suscripción."})},
-  onError:e=>notify({tone:"danger",title:"No se pudo registrar",message:e.message}),
- });
 
  if(subscription.isLoading||plans.isLoading)return <><Header organization={organization?.name}/><div className="panel subscription-state">Cargando suscripción…</div></>;
- if(subscription.isError||plans.isError||!subscription.data||!draft)return <><Header organization={organization?.name}/><div className="panel subscription-state error"><b>No pudimos cargar la suscripción.</b><Button kind="secondary" onClick={()=>{void subscription.refetch();void plans.refetch()}}>Reintentar</Button></div></>;
+ if(subscription.isError||plans.isError||!subscription.data)return <><Header organization={organization?.name}/><div className="panel subscription-state error"><b>No pudimos cargar la suscripción.</b><Button kind="secondary" onClick={()=>{void subscription.refetch();void plans.refetch()}}>Reintentar</Button></div></>;
 
- const current=subscription.data;
- const availablePlans=(plans.data?.items??[]).filter(plan=>plan.active&&plan.code!=="legacy"||plan.id===current.plan.id);
+ const key=[subscription.data.id,subscription.data.plan.id,subscription.data.billingCycle,subscription.data.status,subscription.data.autoRenew,subscription.data.renewsAt].join(":");
+ return <><Header organization={organization?.name}/><SubscriptionWorkspace key={key} current={subscription.data} plans={plans.data?.items??[]}/></>;
+}
+
+function SubscriptionWorkspace({current,plans}:{current:OrganizationSubscription;plans:SubscriptionPlan[]}){
+ const{notify}=useFeedback();
+ const client=useQueryClient();
+ const[draft,setDraft]=useState<SubscriptionDraft>({
+  planId:current.plan.id,
+  billingCycle:current.billingCycle,
+  status:current.status,
+  autoRenew:current.autoRenew,
+  termsAccepted:false,
+ });
+ const[payment,setPayment]=useState<PaymentDraft>({
+  amount:current.priceAmount,
+  currency:current.currency,
+  status:"paid",
+  provider:"manual",
+  externalReference:"",
+  paidAt:"",
+ });
+
+ const selectedPlan=useMemo(()=>plans.find(plan=>plan.id===draft.planId)??null,[plans,draft.planId]);
+ const availablePlans=plans.filter(plan=>(plan.active&&plan.code!=="legacy")||plan.id===current.plan.id);
  const planChanged=draft.planId!==current.plan.id;
  const termsChanged=selectedPlan?.termsVersion!==current.termsVersion;
  const needsAcceptance=planChanged&&termsChanged;
 
- return <><Header organization={organization?.name}/>
+ const save=useMutation({
+  mutationFn:()=>changeOrganizationSubscription(draft),
+  onSuccess:data=>{
+   setDraft({planId:data.plan.id,billingCycle:data.billingCycle,status:data.status,autoRenew:data.autoRenew,termsAccepted:false});
+   setPayment(value=>({...value,amount:data.priceAmount,currency:data.currency}));
+   client.setQueryData(["organization-subscription"],data);
+   void client.invalidateQueries({queryKey:["session-context"]});
+   notify({tone:"success",title:"Suscripción actualizada",message:"El plan, estado y módulos de la empresa quedaron sincronizados."});
+  },
+  onError:e=>notify({tone:"danger",title:"No se pudo actualizar",message:e.message}),
+ });
+ const pay=useMutation({
+  mutationFn:()=>recordSubscriptionPayment({...payment,paidAt:payment.paidAt?new Date(payment.paidAt).toISOString():""}),
+  onSuccess:()=>{
+   setPayment(value=>({...value,status:"paid",provider:"manual",externalReference:"",paidAt:""}));
+   void client.invalidateQueries({queryKey:["organization-subscription"]});
+   notify({tone:"success",title:"Pago registrado",message:"El movimiento quedó asociado a la suscripción."});
+  },
+  onError:e=>notify({tone:"danger",title:"No se pudo registrar",message:e.message}),
+ });
+
+ return <>
   <div className="platform-subscription-grid">
    <section className="panel subscription-editor">
     <header><div><small>CONTRATO</small><h2>Plan y ciclo</h2></div><span className={"subscription-state-badge "+current.status}>{statusLabel(current.status)}</span></header>
