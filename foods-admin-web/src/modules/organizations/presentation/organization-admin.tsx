@@ -33,7 +33,7 @@ export function CompanySettings(){
   onSuccess:data=>{client.setQueryData(["organization"],data);setDraft({});notify({tone:"success",title:"Empresa actualizada",message:"Los datos de la empresa se guardaron correctamente."})},
   onError:e=>notify({tone:"danger",title:"No se pudo guardar",message:e.message}),
  });
- const change=<K extends keyof Organization>(key:K,value:Organization[K])=>setDraft(current=>({...current,[key]:value}));
+ function change<K extends keyof Organization>(key:K,value:Organization[K]){setDraft(current=>({...current,[key]:value}))}
  return <><PageHeader eyebrow="CONFIGURACIÓN" title="Empresa" description="Identidad legal y configuración general de la organización."/><Back/>
   {query.isLoading?<section className="panel management"><LoadingTable/></section>:query.isError?<section className="panel management"><LoadError message={query.error.message} retry={()=>query.refetch()}/></section>:
   <div className="organization-workspace">
