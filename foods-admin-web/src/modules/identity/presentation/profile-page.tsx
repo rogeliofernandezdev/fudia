@@ -5,20 +5,21 @@ import {useForm} from "react-hook-form";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Button,Input,PageHeader} from "@/design-system";
 import {useFeedback,useSession} from "@/providers";
+import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
 import type {OrganizationSubscription} from "@/modules/platform";
 import type {MyProfile,MyProfileDraft} from "../domain/types";
 import {profileResolver} from "../domain/profile-schema";
 import {getMyProfile,getOrganizationSubscription,saveMyProfile} from "../infrastructure/identity-api";
 
 export function ProfilePage(){
-  const{can}=useSession();
+  const{can,location}=useSession();
   const profile=useQuery({queryKey:["my-profile"],queryFn:getMyProfile});
   const canViewSubscription=can("subscription.read");
   const subscription=useQuery({queryKey:["organization-subscription"],queryFn:getOrganizationSubscription,enabled:canViewSubscription});
   if(profile.isLoading)return <><ProfileHeader/><ProfileSkeleton/></>;
   if(profile.isError)return <><ProfileHeader/><section className="profile-state"><p>{profile.error.message}</p><Button kind="secondary" onClick={()=>profile.refetch()}>Reintentar</Button></section></>;
   if(!profile.data)return <><ProfileHeader/><section className="profile-state"><p>No pudimos cargar tu perfil.</p></section></>;
-  return <><ProfileHeader/><ProfileForm profile={profile.data}/>{canViewSubscription&&<SubscriptionPanel subscription={subscription.data??null} loading={subscription.isLoading} error={subscription.isError?subscription.error.message:""} retry={()=>subscription.refetch()}/>}</>;
+  return <><ProfileHeader/><ProfileForm profile={profile.data}/>{canViewSubscription&&<SubscriptionPanel subscription={subscription.data??null} loading={subscription.isLoading} error={subscription.isError?subscription.error.message:""} retry={()=>subscription.refetch()} country={location?.country} timeZone={location?.timezone}/>}</>;
 }
 
 function ProfileHeader(){
@@ -92,13 +93,12 @@ function ProfileForm({profile}:{profile:MyProfile}){
 }
 
 const statusLabel:Record<OrganizationSubscription["status"],string>={trial:"Prueba",active:"Activa",past_due:"Pago pendiente",cancelled:"Cancelada"};
-function dateLabel(value:string|null){
+function dateLabel(value:string|null,country?:string,timeZone?:string){
   if(!value)return "—";
-  const date=new Date(value);
-  return Number.isNaN(date.getTime())?"—":new Intl.DateTimeFormat("es-PE",{dateStyle:"medium"}).format(date);
+  return formatRegionalDateTime(value,{country,timeZone},{dateStyle:"medium"});
 }
 
-function SubscriptionPanel({subscription,loading,error,retry}:{subscription:OrganizationSubscription|null;loading:boolean;error:string;retry:()=>void}){
+function SubscriptionPanel({subscription,loading,error,retry,country,timeZone}:{subscription:OrganizationSubscription|null;loading:boolean;error:string;retry:()=>void;country?:string;timeZone?:string}){
   if(loading)return <section className="profile-subscription profile-card"><div className="profile-subscription-loading">Cargando suscripción…</div></section>;
   if(error||!subscription)return <section className="profile-subscription profile-card"><div className="profile-state"><p>{error||"No hay una suscripción registrada para esta empresa."}</p><Button kind="secondary" onClick={retry}>Reintentar</Button></div></section>;
   const payment=subscription.payments[0];
@@ -107,9 +107,9 @@ function SubscriptionPanel({subscription,loading,error,retry}:{subscription:Orga
     <header><div><small>SUSCRIPCIÓN DE LA EMPRESA</small><h2>{subscription.plan.name}</h2><p>{subscription.plan.description}</p></div><span className={"subscription-status "+subscription.status}>{statusLabel[subscription.status]}</span></header>
     <div className="subscription-overview">
       <article><small>PRECIO</small><b>{legacy?"No registrado":subscription.currency+" "+Number(subscription.priceAmount).toFixed(2)}</b><span>{subscription.billingCycle==="annual"?"Facturación anual":"Facturación mensual"}</span></article>
-      <article><small>RENOVACIÓN</small><b>{dateLabel(subscription.renewsAt)}</b><span>{subscription.autoRenew?"Renovación automática":"Renovación manual"}</span></article>
-      <article><small>PRUEBA GRATUITA</small><b>{subscription.plan.trialDays?subscription.plan.trialDays+" días":"No incluida"}</b><span>{subscription.trialEndsAt?"Hasta "+dateLabel(subscription.trialEndsAt):"Sin periodo de prueba activo"}</span></article>
-      <article><small>CONDICIONES</small><b>{subscription.termsVersion??"Pendientes"}</b><span>{subscription.termsAcceptedAt?"Aceptadas "+dateLabel(subscription.termsAcceptedAt):"Sin aceptación registrada"}</span></article>
+      <article><small>RENOVACIÓN</small><b>{dateLabel(subscription.renewsAt,country,timeZone)}</b><span>{subscription.autoRenew?"Renovación automática":"Renovación manual"}</span></article>
+      <article><small>PRUEBA GRATUITA</small><b>{subscription.plan.trialDays?subscription.plan.trialDays+" días":"No incluida"}</b><span>{subscription.trialEndsAt?"Hasta "+dateLabel(subscription.trialEndsAt,country,timeZone):"Sin periodo de prueba activo"}</span></article>
+      <article><small>CONDICIONES</small><b>{subscription.termsVersion??"Pendientes"}</b><span>{subscription.termsAcceptedAt?"Aceptadas "+dateLabel(subscription.termsAcceptedAt,country,timeZone):"Sin aceptación registrada"}</span></article>
     </div>
     <div className="subscription-limits">
       <div><span>Locales</span><b>{subscription.usage.locations+" / "+(subscription.plan.maxLocations??"∞")}</b></div>
@@ -118,7 +118,7 @@ function SubscriptionPanel({subscription,loading,error,retry}:{subscription:Orga
     </div>
     <section className="subscription-payment">
       <div><small>ÚLTIMO PAGO</small><h3>{payment?payment.currency+" "+Number(payment.amount).toFixed(2):"Sin pagos registrados"}</h3></div>
-      {payment&&<div className="subscription-payment-meta"><span>{payment.status==="paid"?"Pagado":payment.status==="pending"?"Pendiente":payment.status==="failed"?"Fallido":"Reembolsado"}</span><b>{payment.provider}</b><small>{dateLabel(payment.paidAt??payment.createdAt)}{payment.externalReference?" · "+payment.externalReference:""}</small></div>}
+      {payment&&<div className="subscription-payment-meta"><span>{payment.status==="paid"?"Pagado":payment.status==="pending"?"Pendiente":payment.status==="failed"?"Fallido":"Reembolsado"}</span><b>{payment.provider}</b><small>{dateLabel(payment.paidAt??payment.createdAt,country,timeZone)}{payment.externalReference?" · "+payment.externalReference:""}</small></div>}
     </section>
     <footer><span>Los cambios de plan, estado y pagos los administra FUDIA desde Plataforma.</span></footer>
   </section>;
