@@ -8,10 +8,10 @@ import {formatRegionalNumber} from "@/shared/i18n/regional-format";
 import type {KitchenStatus,KitchenTicket} from "../domain/types";
 import {listKitchenTickets,updateKitchenTicketStatus} from "../infrastructure/kitchen-api";
 
-const lanes:Array<{status:KitchenStatus;label:string;shortLabel:string;icon:IconName}>= [
-  {status:"confirmado",label:"POR PREPARAR",shortLabel:"Pendientes",icon:"clock"},
-  {status:"preparando",label:"EN PREPARACIÓN",shortLabel:"Preparando",icon:"chefHat"},
-  {status:"listo",label:"LISTOS PARA ENTREGAR",shortLabel:"Listos",icon:"check"},
+const lanes:Array<{status:KitchenStatus;label:string;shortLabel:string;description:string;icon:IconName}>= [
+  {status:"confirmado",label:"POR PREPARAR",shortLabel:"Pendientes",description:"Esperando inicio",icon:"clock"},
+  {status:"preparando",label:"EN PREPARACIÓN",shortLabel:"Preparando",description:"Trabajo activo",icon:"chefHat"},
+  {status:"listo",label:"LISTOS PARA ENTREGAR",shortLabel:"Listos",description:"Esperando entrega",icon:"check"},
 ];
 
 const channelIcons:Record<string,IconName>={
@@ -44,6 +44,24 @@ function urgency(ticket:KitchenTicket,now:number){
   if(ratio>=1)return "late";
   if(ratio>=.75)return "warning";
   return "fresh";
+}
+
+function formatElapsed(minutes:number){
+  if(minutes<60)return `${minutes} min`;
+  const hours=Math.floor(minutes/60);
+  const remainingMinutes=minutes%60;
+  if(hours<24)return remainingMinutes?`${hours} h ${remainingMinutes} min`:`${hours} h`;
+  const days=Math.floor(hours/24);
+  const remainingHours=hours%24;
+  return remainingHours?`${days} d ${remainingHours} h`:`${days} d`;
+}
+
+function urgencyCopy(tone:ReturnType<typeof urgency>){
+  if(tone==="late")return {label:"Con demora",icon:"alert" as IconName};
+  if(tone==="warning")return {label:"Por vencer",icon:"alert" as IconName};
+  if(tone==="ready")return {label:"Listo",icon:"check" as IconName};
+  if(tone==="fresh")return {label:"A tiempo",icon:"clock" as IconName};
+  return {label:"En cola",icon:"clock" as IconName};
 }
 
 function progress(ticket:KitchenTicket,now:number){
@@ -116,7 +134,7 @@ export function KitchenBoard(){
     <section className="kitchen-controlbar" aria-label="Controles de cocina">
       <label className="kitchen-channel-filter"><span>Canal</span><Select value={channel} onChange={event=>setChannel(event.target.value)} aria-label="Filtrar comandas por canal"><option value="">Todos los canales</option>{(tickets.data?.channelOptions??[]).map(option=><option value={option.value} key={option.value}>{option.label}</option>)}</Select></label>
       <div className="kitchen-controlbar-status">
-        {attention>0&&<span className="kitchen-attention"><Icon name="alert" size={12}/>{attention} {attention===1?"con demora":"con demora"}</span>}
+        {attention>0&&<span className="kitchen-attention"><Icon name="alert" size={12}/>{attention} {attention===1?"comanda requiere atención":"comandas requieren atención"}</span>}
         <div className={`kitchen-live ${tickets.isFetching?"refreshing":""}`}><i/><span>{tickets.isFetching?"Actualizando":"En vivo"}</span></div>
       </div>
     </section>
@@ -131,11 +149,13 @@ export function KitchenBoard(){
           .filter(ticket=>ticket.status===lane.status)
           .sort((left,right)=>priority(right,now)-priority(left,now));
         return <section className="kitchen-lane" data-status={lane.status} data-mobile-active={mobileLane===lane.status} key={lane.status}>
-          <header><div><span className="kitchen-lane-icon"><Icon name={lane.icon} size={15}/></span><h2>{lane.label}</h2></div><b>{laneItems.length}</b></header>
+          <header><div className="kitchen-lane-heading"><span className="kitchen-lane-icon"><Icon name={lane.icon} size={15}/></span><span><h2>{lane.label}</h2><small>{lane.description}</small></span></div><b>{laneItems.length}</b></header>
           <div className="kitchen-lane-list">
             {laneItems.map(ticket=>{
               const tone=urgency(ticket,now);
               const elapsed=elapsedMinutes(ticket,now);
+              const elapsedText=formatElapsed(elapsed);
+              const urgencyMeta=urgencyCopy(tone);
               const currentProgress=progress(ticket,now);
               const subject=ticket.tableName||ticket.customerName||channelLabel(ticket.channel)||"Pedido";
               const next=ticket.status==="confirmado"?"preparando":ticket.status==="preparando"?"listo":null;
@@ -146,8 +166,9 @@ export function KitchenBoard(){
                     <small><Icon name={channelIcons[ticket.channel]??"receipt"} size={12}/>{ticket.code} · {channelLabel(ticket.channel)}</small>
                   </div>
                   <div className={`kitchen-ticket-time ${tone}`}>
-                    <strong>{elapsed}</strong><span>min</span>
-                    {ticket.targetMinutes&&ticket.status!=="listo"&&<small>· {ticket.targetMinutes}</small>}
+                    <strong>{elapsedText}</strong>
+                    <span className="kitchen-ticket-time-state"><Icon name={urgencyMeta.icon} size={11}/>{urgencyMeta.label}</span>
+                    {ticket.targetMinutes&&ticket.status!=="listo"&&<small>Objetivo {ticket.targetMinutes} min</small>}
                   </div>
                 </div>
 
@@ -166,7 +187,7 @@ export function KitchenBoard(){
 
                 {ticket.notes&&<div className="kitchen-ticket-note"><Icon name="edit" size={12}/><span>{ticket.notes}</span></div>}
 
-                <footer>{canManage&&next?<Button className="kitchen-ticket-action" kind={next==="listo"?"success":"primary"} icon={next==="listo"?"check":"chefHat"} disabled={advance.isPending} onClick={()=>advance.mutate({ticket,status:next})}>{busyId===ticket.id?"Actualizando…":next==="preparando"?"Iniciar":"Marcar listo"}</Button>:ticket.status==="listo"?<span className="kitchen-ready-label"><Icon name="check" size={12}/>Listo para entregar</span>:null}</footer>
+                <footer>{canManage&&next?<Button className="kitchen-ticket-action" kind="primary" icon={next==="listo"?"check":"chefHat"} disabled={advance.isPending} onClick={()=>advance.mutate({ticket,status:next})}>{busyId===ticket.id?"Actualizando…":next==="preparando"?"Iniciar":"Marcar listo"}</Button>:ticket.status==="listo"?<span className="kitchen-ready-label"><Icon name="check" size={12}/>Listo para entregar</span>:null}</footer>
               </article>;
             })}
             {!laneItems.length&&<div className="kitchen-lane-empty"><Icon name={lane.icon} size={18}/><b>Sin comandas</b><span>{lane.status==="confirmado"?"Los pedidos confirmados aparecerán aquí.":lane.status==="preparando"?"Nada se está preparando ahora.":"No hay pedidos esperando entrega."}</span></div>}
@@ -177,6 +198,6 @@ export function KitchenBoard(){
   </div>;
 }
 
-function KitchenLoading(){return <div className="kitchen-board kitchen-loading" aria-label="Cargando comandas">{lanes.map(lane=><section className="kitchen-lane" key={lane.status}><header><div><span className="kitchen-lane-icon"><Icon name={lane.icon} size={15}/></span><h2>{lane.label}</h2></div><b>—</b></header><div className="kitchen-lane-list">{Array.from({length:2},(_,index)=><i className="kitchen-ticket-skeleton" key={index}/>)}</div></section>)}</div>}
+function KitchenLoading(){return <div className="kitchen-board kitchen-loading" aria-label="Cargando comandas" aria-busy="true">{lanes.map(lane=><section className="kitchen-lane" data-status={lane.status} key={lane.status}><header><div className="kitchen-lane-heading"><span className="kitchen-lane-icon"><Icon name={lane.icon} size={15}/></span><span><h2>{lane.label}</h2><small>{lane.description}</small></span></div><b>—</b></header><div className="kitchen-lane-list">{Array.from({length:2},(_,index)=><article className="kitchen-ticket kitchen-ticket-skeleton" key={index}><div className="kitchen-skeleton-head"><span><i/><small/></span><i/></div><div className="kitchen-skeleton-items"><i/><i/><i/></div><i className="kitchen-skeleton-action"/></article>)}</div></section>)}</div>}
 
 function KitchenError({message,retry}:{message:string;retry:()=>void}){return <div className="kitchen-error"><span><Icon name="alert" size={24}/></span><b>No pudimos cargar la cola de cocina</b><p>{message}</p><Button kind="secondary" icon="refresh" onClick={retry}>Reintentar</Button></div>}
