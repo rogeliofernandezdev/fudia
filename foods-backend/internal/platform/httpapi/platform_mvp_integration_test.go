@@ -20,6 +20,10 @@ func TestPlatformOnboardingCreatesOperationalTenant(t *testing.T){
 	email:=fmt.Sprintf("owner-%d@example.test",nonce)
 	password:="OwnerPass123"
 	taxID:=fmt.Sprintf("%011d",nonce%100000000000)
+	planModules:=make([]string,0,len(mvpModuleKeys))
+	for key:=range mvpModuleKeys{planModules=append(planModules,key)}
+	var planID string
+	if err:=pool.QueryRow(context.Background(),`\n\t\tINSERT INTO subscription_plans(code,name,description,currency,monthly_price,annual_price,trial_days,max_locations,max_users,module_keys,terms_version,active)\n\t\tVALUES($1,'MVP Test','Plan de prueba','PEN',99,990,14,3,20,$2,'test-v1',true)\n\t\tRETURNING id\n\t`,fmt.Sprintf("mvp-%d",nonce),planModules).Scan(&planID);err!=nil{t.Fatal(err)}
 	body:=[]byte(fmt.Sprintf(`{
 		"legalName":"MVP Restaurant SAC",
 		"tradeName":"MVP Restaurant",
@@ -36,8 +40,11 @@ func TestPlatformOnboardingCreatesOperationalTenant(t *testing.T){
 		"address":"Dirección de prueba",
 		"adminName":"Propietario MVP",
 		"adminEmail":%q,
-		"adminPassword":%q
-	}`,taxID,email,password))
+		"adminPassword":%q,
+		"planId":%q,
+		"billingCycle":"monthly",
+		"termsAccepted":true
+	}`,taxID,email,password,planID))
 	req:=httptest.NewRequest("POST","/v1/platform/organizations",bytes.NewReader(body))
 	req=req.WithContext(context.WithValue(req.Context(),scopeKey{},actor))
 	rec:=httptest.NewRecorder()
@@ -50,6 +57,9 @@ func TestPlatformOnboardingCreatesOperationalTenant(t *testing.T){
 	var activeMVP,inactiveFuture int
 	if err:=pool.QueryRow(context.Background(),`SELECT count(*) FROM organization_modules WHERE organization_id=$1 AND active`,created.OrganizationID).Scan(&activeMVP);err!=nil{t.Fatal(err)}
 	if activeMVP!=len(mvpModuleKeys){t.Fatalf("expected %d MVP modules active, got %d",len(mvpModuleKeys),activeMVP)}
+	var subscriptionStatus,billingCycle,price string
+	if err:=pool.QueryRow(context.Background(),`SELECT status,billing_cycle,price_amount::text FROM organization_subscriptions WHERE organization_id=$1 AND plan_id=$2`,created.OrganizationID,planID).Scan(&subscriptionStatus,&billingCycle,&price);err!=nil{t.Fatal(err)}
+	if subscriptionStatus!="trial"||billingCycle!="monthly"||price!="99.00"{t.Fatalf("unexpected subscription: status=%s cycle=%s price=%s",subscriptionStatus,billingCycle,price)}
 	if err:=pool.QueryRow(context.Background(),`SELECT count(*) FROM organization_modules WHERE organization_id=$1 AND module_key IN ('facturacion','integraciones','crm','bi') AND NOT active`,created.OrganizationID).Scan(&inactiveFuture);err!=nil{t.Fatal(err)}
 	if inactiveFuture!=4{t.Fatalf("future modules must start inactive, got %d",inactiveFuture)}
 
