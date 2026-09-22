@@ -103,7 +103,11 @@ se limitan a densidad y composición, nunca a reinterpretar el significado del c
   etiquetas visibles breves y específicas («Guardar cupo», «Agotar hoy», «Reactivar») y conservan un
   `aria-label` descriptivo completo. «Agotar hoy» usa `warning` para texto y borde y
   `warning-50` únicamente como fondo suave en hover; nunca usa rojo destructivo ni
-  invierte a un relleno ámbar sólido. «Pocas
+  invierte a un relleno ámbar sólido. Los avisos operativos de agotamiento dentro de
+  la fila se muestran como una franja `warning-50`, con icono/texto `warning` y acento
+  lateral de advertencia; no se presentan como texto suelto sobre fondo neutro. Las
+  subcolumnas Control, Cupo, Vendidas y Restantes comparten alineación vertical estable
+  y el nombre del tipo de control no se trunca cuando hay espacio suficiente. «Pocas
   unidades» es siempre un estado calculado por las unidades restantes, nunca
   una acción manual. La vista se
   pagina desde el API, permite buscar y filtrar por categoría, diferencia cupo,
