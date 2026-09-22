@@ -97,10 +97,11 @@ se limitan a densidad y composición, nunca a reinterpretar el significado del c
   no se modifica dentro del wizard. Usa una vista
   operativa separada por local con tarjetas compactas, estado textual, cupo y
   filas operativas continuas en escritorio, sin bordes de tarjeta repetidos, y tarjetas apiladas únicamente en
-  móvil, con una acción manual Disponible/Agotado y guardado explícito del cupo. El botón
-  «Actualizar cupo» permanece visible para hacer descubrible la función, pero
-  solo se habilita después de modificar la cantidad. La acción
-  reversible «Marcar agotado» usa ámbar de advertencia, no rojo destructivo. «Pocas
+  móvil, con una acción manual Disponible/Agotado y guardado explícito del cupo. El botón de actualización de cupo permanece visible para hacer descubrible la función, pero
+  solo se habilita después de modificar la cantidad. En filas densas, las acciones usan
+  etiquetas visibles breves («Actualizar», «Agotar», «Disponible») y conservan un
+  `aria-label` descriptivo completo. La acción de agotado usa ámbar de advertencia,
+  no rojo destructivo. «Pocas
   unidades» es siempre un estado calculado por las unidades restantes, nunca
   una acción manual. La vista se
   pagina desde el API, permite buscar y filtrar por categoría, diferencia cupo,
@@ -184,7 +185,7 @@ se limitan a densidad y composición, nunca a reinterpretar el significado del c
 
 ## Tablas y paginación
 
-- Cabecera carbón `ink-950`, texto blanco en mayúsculas, filas alternas sutiles y
+- Cabecera azul `primary-600`, texto blanco en mayúsculas, filas alternas sutiles y
   acciones textuales consistentes; el color semántico se reserva para estados.
 - La paginación informa el rango visible y total, permite 10, 20 o 50 filas y
   muestra páginas, elipsis, anterior y siguiente con estado activo inequívoco.
