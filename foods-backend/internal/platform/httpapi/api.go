@@ -459,25 +459,47 @@ func (a *API) getContext(w http.ResponseWriter, r *http.Request) {
 	s := r.Context().Value(scopeKey{}).(scope)
 	var organizationName, locationName, locationCountry, locationTimezone string
 	var platformAdmin bool
-	err := a.db.QueryRow(r.Context(), `SELECT o.trade_name,l.name,p.country_code,l.timezone,u.platform_admin FROM organizations o JOIN locations l ON l.organization_id=o.id JOIN organization_fiscal_profiles p ON p.id=l.fiscal_profile_id AND p.organization_id=l.organization_id AND p.active JOIN users u ON u.id=$3 WHERE o.id=$1 AND l.id=$2 AND o.active AND l.active`, s.OrganizationID, s.LocationID, s.UserID).Scan(&organizationName, &locationName, &locationCountry, &locationTimezone, &platformAdmin)
+	var permissions, menuAccess []string
+	err := a.db.QueryRow(r.Context(), `
+		SELECT o.trade_name,l.name,p.country_code,l.timezone,u.platform_admin,
+		       CASE WHEN u.platform_admin THEN ARRAY['*']::text[] ELSE COALESCE((
+		         SELECT array_agg(DISTINCT permission ORDER BY permission)
+		         FROM user_roles ur
+		         JOIN roles ro ON ro.id=ur.role_id AND ro.organization_id=$1 AND ro.active
+		         CROSS JOIN LATERAL unnest(ro.permissions) permission
+		         WHERE ur.user_id=$3 AND ur.location_id=$2
+		       ),ARRAY[]::text[]) END,
+		       CASE WHEN u.platform_admin THEN ARRAY['*']::text[] ELSE COALESCE((
+		         SELECT array_agg(DISTINCT access_key ORDER BY access_key)
+		         FROM user_roles ur
+		         JOIN roles ro ON ro.id=ur.role_id AND ro.organization_id=$1 AND ro.active
+		         CROSS JOIN LATERAL unnest(ro.menu_access) access_key
+		         WHERE ur.user_id=$3 AND ur.location_id=$2
+		       ),ARRAY[]::text[]) END
+		FROM organizations o
+		JOIN locations l ON l.organization_id=o.id
+		JOIN organization_fiscal_profiles p ON p.id=l.fiscal_profile_id AND p.organization_id=l.organization_id AND p.active
+		JOIN users u ON u.id=$3 AND u.organization_id=o.id AND u.active
+		WHERE o.id=$1 AND l.id=$2 AND o.active AND l.active
+	`, s.OrganizationID, s.LocationID, s.UserID).Scan(
+		&organizationName, &locationName, &locationCountry, &locationTimezone, &platformAdmin,
+		&permissions, &menuAccess,
+	)
 	if err != nil {
 		fail(w, 503, "context_unavailable", "No pudimos cargar el contexto de trabajo.")
 		return
 	}
 	modules := a.activeModules(s.OrganizationID)
-	permissions := []string{"*"}
-	menuAccess := []string{"*"}
-	if !platformAdmin {
-		permissions = []string{}
-		if err = a.db.QueryRow(r.Context(), `SELECT COALESCE(array_agg(DISTINCT permission), ARRAY[]::text[]) FROM user_roles ur JOIN roles ro ON ro.id=ur.role_id CROSS JOIN LATERAL unnest(ro.permissions) permission WHERE ur.user_id=$1 AND ur.location_id=$2 AND ro.organization_id=$3 AND ro.active`, s.UserID, s.LocationID, s.OrganizationID).Scan(&permissions); err != nil {
-			fail(w, 503, "permissions_unavailable", "No pudimos cargar tus permisos.")
-			return
-		}
-		menuAccess = []string{}
-		if err = a.db.QueryRow(r.Context(), `SELECT COALESCE(array_agg(DISTINCT access_key), ARRAY[]::text[]) FROM user_roles ur JOIN roles ro ON ro.id=ur.role_id CROSS JOIN LATERAL unnest(ro.menu_access) access_key WHERE ur.user_id=$1 AND ur.location_id=$2 AND ro.organization_id=$3 AND ro.active`, s.UserID, s.LocationID, s.OrganizationID).Scan(&menuAccess); err != nil {
-			fail(w, 503, "access_unavailable", "No pudimos cargar tus accesos al sistema.")
-			return
-		}
+	if modules == nil {
+		fail(w, 503, "modules_unavailable", "No pudimos cargar los módulos de la empresa.")
+		return
 	}
-	writeJSON(w, 200, map[string]any{"user": map[string]any{"id": s.UserID, "name": s.Name, "platformAdmin": platformAdmin}, "organization": map[string]string{"id": s.OrganizationID, "name": organizationName}, "location": map[string]string{"id": s.LocationID, "name": locationName, "country": locationCountry, "timezone": locationTimezone}, "modules": modules, "menuAccess": menuAccess, "permissions": permissions})
+	writeJSON(w, 200, map[string]any{
+		"user": map[string]any{"id": s.UserID, "name": s.Name, "platformAdmin": platformAdmin},
+		"organization": map[string]string{"id": s.OrganizationID, "name": organizationName},
+		"location": map[string]string{"id": s.LocationID, "name": locationName, "country": locationCountry, "timezone": locationTimezone},
+		"modules": modules,
+		"menuAccess": menuAccess,
+		"permissions": permissions,
+	})
 }
