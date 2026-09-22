@@ -28,7 +28,7 @@ export function ProfilePage(){
 }
 
 function ProfileHeader(){
-  return <PageHeader eyebrow="CUENTA" title="Mi perfil y seguridad" description="Actualiza tus datos personales y consulta la suscripción vigente de tu empresa."/>;
+  return <PageHeader eyebrow="CUENTA" title="Mi perfil y seguridad" description="Gestiona tus datos personales, acceso y seguridad desde un solo lugar."/>;
 }
 
 function initials(value:string){
@@ -69,12 +69,14 @@ function ProfileForm({profile,organizationName,locationName}:{profile:MyProfile;
           <p><Icon name="mail" size={13}/>{profile.email}</p>
         </div>
       </div>
-      <div className="profile-account-meta">
+      <div className="profile-account-context">
         <span className="profile-account-status"><i/>Cuenta activa</span>
-        <div><small>ROL EN ESTE LOCAL</small><b>{profile.platformAdmin?"Administrador de plataforma":profile.roleNames.length?profile.roleNames.join(" · "):"Sin rol efectivo"}</b></div>
-        {organizationName&&<div><small>EMPRESA</small><b>{organizationName}</b></div>}
-        {locationName&&<div><small>LOCAL ACTIVO</small><b>{locationName}</b></div>}
-        <div><small>PERMISOS EFECTIVOS</small><b>{profile.platformAdmin?"Acceso total":profile.permissions.length}</b></div>
+        <div className="profile-account-meta">
+          <div><small>ROL EN ESTE LOCAL</small><b>{profile.platformAdmin?"Administrador de plataforma":profile.roleNames.length?profile.roleNames.join(" · "):"Sin rol efectivo"}</b></div>
+          {organizationName&&<div><small>EMPRESA</small><b>{organizationName}</b></div>}
+          {locationName&&<div><small>LOCAL ACTIVO</small><b>{locationName}</b></div>}
+          <div><small>PERMISOS</small><b>{profile.platformAdmin?"Acceso total":profile.permissions.length}</b></div>
+        </div>
       </div>
     </section>
     {!profile.platformAdmin&&profile.permissions.length===0&&<section className="profile-access-warning">
@@ -117,7 +119,7 @@ function ProfileForm({profile,organizationName,locationName}:{profile:MyProfile;
             <Input type="password" autoComplete="new-password" {...register("newPassword")} aria-invalid={Boolean(errors.newPassword)} placeholder="Déjala vacía para conservarla"/>
             {errors.newPassword?.message&&<small className="wizard-field-error">{errors.newPassword.message}</small>}
           </label>
-          <div className="profile-security-note"><Icon name="alert" size={14}/><span>Si cambias la contraseña, la actual es obligatoria.</span></div>
+          <div className="profile-security-note"><Icon name="lock" size={14}/><span>Para cambiar la contraseña debes confirmar primero la actual.</span></div>
         </div>
       </section>
 
