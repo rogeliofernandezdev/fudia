@@ -41,7 +41,7 @@ export function ReservationsPage(){
       {list.isLoading?<div className="catalog-state"><b>Cargando reservas…</b></div>:list.isError?<div className="catalog-state error"><span><Icon name="alert"/></span><b>No pudimos cargar las reservas</b><p>{list.error.message}</p></div>:!items.length?<div className="catalog-state"><span><Icon name="clock"/></span><b>Sin reservas registradas</b><p>Registra la primera reserva del local para comenzar.</p></div>:<div className="table-wrap hover-scroll"><table><thead><tr><th>CLIENTE</th><th>FECHA Y HORA</th><th>PERSONAS</th><th>DURACIÓN</th><th>MESA</th><th>ESTADO</th><th>ACCIONES</th></tr></thead><tbody>{items.map((item,i)=>{const meta=statusMeta[item.status];return <tr className={i%2?"alternate":""} key={item.id}><td><span className="row-icon"><Icon name="users"/></span><b>{item.customerName}</b><small>{item.customerPhone||item.notes||"Sin teléfono"}</small></td><td>{date(item.startsAt)}</td><td>{item.guests}</td><td>{item.durationMinutes} min</td><td>{item.tableName||"Por asignar"}</td><td><Status tone={meta.tone}>{meta.label}</Status></td><td><div className="table-actions">{canManage&&item.status!=="cancelled"&&item.status!=="no_show"&&<RowActionButton action="edit" onClick={()=>edit(item)}/>} {canManage&&item.status==="pending"&&<Button kind="ghost" onClick={()=>setStatusTarget({item,status:"confirmed"})}>Confirmar</Button>} {canManage&&item.status==="confirmed"&&<Button kind="ghost" onClick={()=>setStatusTarget({item,status:"seated"})}>Sentar</Button>} {canManage&&["pending","confirmed"].includes(item.status)&&<RowActionButton action="deactivate" label="Cancelar reserva" onClick={()=>setStatusTarget({item,status:"cancelled"})}/>}</div></td></tr>})}</tbody></table></div>}
       {!list.isLoading&&!list.isError&&<Pagination page={page} size={size} total={list.data?.total??0} onPage={setPage} onSize={v=>{setSize(v);setPage(1)}}/>}
     </section>
-    {draft&&<ReservationDialog value={draft} tables={tables.data?.items??[]} busy={save.isPending} close={()=>setDraft(null)} save={v=>save.mutate(v)}/>}
+    {draft&&<ReservationDialog value={draft} tables={tables.data?.items??[]} tablesLoading={tables.isLoading} tablesError={tables.isError?tables.error.message:""} busy={save.isPending} close={()=>setDraft(null)} save={v=>save.mutate(v)}/>}
     <ConfirmDialog open={Boolean(statusTarget)} title="Actualizar reserva" description={statusTarget?`Cambiar ${statusTarget.item.customerName} a “${statusMeta[statusTarget.status].label}”.`:""} confirmLabel="Confirmar" pending={change.isPending} onCancel={()=>setStatusTarget(null)} onConfirm={()=>statusTarget&&change.mutate({id:statusTarget.item.id,status:statusTarget.status})}/>
   </>;
 }
@@ -108,7 +108,7 @@ function ReservationDialog({value:initial,tables,tablesLoading,tablesError,busy,
           </label>
 
           <label className="reservation-notes">
-            Notas <small>Opcional</small>
+            <span className="reservation-label">Notas <small>Opcional</small></span>
             <Textarea maxLength={500} rows={3} {...register("notes")} aria-invalid={Boolean(errors.notes)} placeholder="Preferencias, ocasión o indicaciones para el equipo"/>
             {errors.notes?.message&&<small className="wizard-field-error">{errors.notes.message}</small>}
           </label>
