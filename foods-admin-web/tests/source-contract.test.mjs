@@ -425,7 +425,8 @@ test("cocina mantiene jerarquia KDS y semantica de color",()=>{
   assert.ok(css.includes("--kds-cooking-dark:var(--digital-700)"),"El texto de preparación usa violeta oscuro");
   assert.ok(css.includes("--kds-cooking-soft:var(--digital-100)"),"El fondo de preparación usa violeta suave");
   assert.ok(css.includes(".kitchen-ticket-time.late{background:var(--warning-50);border-color:var(--warning-600);color:var(--warning-600)}"),"La demora usa warning y no danger");
-  assert.equal(css.includes("var(--danger-600)"),false,"Cocina no usa rojo para retrasos operativos");
+  const lateRules=css.split("\n").filter(line=>line.includes(".late"));
+  assert.equal(lateRules.some(line=>line.includes("danger-600")),false,"Los estados de demora no usan danger; rojo queda disponible para errores reales");
   assert.equal(css.includes("#"),false,"Cocina no introduce colores hexadecimales directos");
   assert.equal(css.includes("rgba("),false,"Cocina no introduce colores rgba directos");
 });
@@ -444,6 +445,7 @@ test("las rutas principales componen modulos",()=>{
     "src/app/(admin)/mesas/page.tsx":"@/modules/operations",
     "src/app/(admin)/pos/page.tsx":"@/modules/operations",
     "src/app/(admin)/caja/page.tsx":"@/modules/operations",
+    "src/app/(admin)/reservas/page.tsx":"@/modules/operations",
     "src/app/(admin)/productos/page.tsx":"@/modules/menu",
     "src/app/(admin)/combos/page.tsx":"@/modules/menu",
     "src/app/(admin)/clientes/page.tsx":"@/modules/customers",
@@ -454,6 +456,22 @@ test("las rutas principales componen modulos",()=>{
     "src/app/(admin)/compras/page.tsx":"@/modules/supply"
   };
   for(const [p,dependency] of Object.entries(expected))assert.ok(read(p).includes(dependency),p);
+});
+
+test("mvp admin no presenta datos simulados como operacion real",()=>{
+  const dashboard=read("src/modules/dashboard/presentation/dashboard-view.tsx");
+  const sales=read("src/modules/sales/presentation/sales-page.tsx");
+  const receipts=read("src/modules/sales/presentation/receipts-page.tsx");
+  const reservations=read("src/modules/operations/reservations/presentation/reservations-page.tsx");
+  const configuration=read("src/modules/configuration/presentation/configuration-home-page.tsx");
+  assert.ok(dashboard.includes("getDashboard"),"Dashboard consume datos del backend");
+  assert.equal(dashboard.includes("12,840.50"),false,"Dashboard no conserva ventas ficticias");
+  assert.ok(sales.includes("listSales"),"Ventas consulta pedidos realmente pagados");
+  assert.equal(sales.includes("#10482"),false,"Ventas no conserva filas de ejemplo");
+  assert.ok(receipts.includes("Fuera del MVP actual"),"Comprobantes no simula facturacion aun no implementada");
+  assert.ok(reservations.includes("saveReservation"),"Reservas persiste altas y ediciones");
+  assert.ok(configuration.includes('href:"/configuracion/empresa"'),"Configuracion enlaza los datos de empresa");
+  assert.equal(configuration.includes("Facturación electrónica"),false,"Facturacion futura no se ofrece en el hub MVP");
 });
 
 test("no se versionan secretos locales ni artefactos temporales en la raiz admin",()=>{
