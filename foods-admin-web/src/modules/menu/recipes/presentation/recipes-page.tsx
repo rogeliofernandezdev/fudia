@@ -64,7 +64,7 @@ export function RecipesPage(){
  const canManage=can("recipes.manage");
 
  const recipes=useQuery({queryKey:["recipes",q],queryFn:()=>listRecipes(q)});
- const ingredientDefaults=useQuery({queryKey:["recipe-inventory-options","initial"],queryFn:()=>listRecipeInventory("")});
+ const ingredientDefaults=useQuery({queryKey:["recipe-inventory-options","initial"],queryFn:()=>listRecipeInventory(""),enabled:Boolean(draft)});
 
  const save=useMutation({
   mutationFn:saveRecipe,
