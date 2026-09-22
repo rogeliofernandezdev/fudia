@@ -716,3 +716,34 @@ test("login inicia en la primera ruta realmente accesible",()=>{
   assert.ok(contextSwitcher.includes("firstAccessibleRoute(context)"),"Cambiar de local recalcula la primera ruta accesible");
   assert.ok(noAccess.includes("Sin accesos asignados"),"Existe un destino explícito para roles sin opciones válidas");
 });
+
+
+test("performance frontend limita requests y carga diferida",()=>{
+  const hook=read("src/shared/hooks/use-debounced-value.ts");
+  assert.ok(hook.includes("window.setTimeout"),"El debounce evita consultar en cada pulsación");
+  assert.ok(hook.includes("window.clearTimeout"),"El debounce limpia timers anteriores");
+
+  const searchable=[
+    "src/modules/customers/presentation/customers-manager.tsx",
+    "src/modules/operations/orders/presentation/orders-manager.tsx",
+    "src/modules/operations/pos/presentation/pos-page.tsx",
+    "src/modules/menu/products/presentation/catalog-manager.tsx",
+    "src/modules/supply/inventory/presentation/inventory-page.tsx",
+    "src/modules/supply/purchases/presentation/purchases-page.tsx",
+  ];
+  for(const path of searchable){
+    assert.ok(read(path).includes("useDebouncedValue"),path+" debe reutilizar debounce compartido");
+  }
+
+  const lazy=[
+    "src/modules/menu/products/presentation/catalog-manager.tsx",
+    "src/modules/operations/pos/presentation/pos-page.tsx",
+    "src/modules/supply/inventory/presentation/inventory-page.tsx",
+    "src/modules/supply/purchases/presentation/purchases-page.tsx",
+  ];
+  for(const path of lazy){
+    const source=read(path);
+    assert.ok(source.includes('from "next/dynamic"'),path+" debe cargar acciones pesadas bajo demanda");
+    assert.ok(source.includes("dynamic(()=>import("),path+" debe separar los diálogos del bundle inicial");
+  }
+});
