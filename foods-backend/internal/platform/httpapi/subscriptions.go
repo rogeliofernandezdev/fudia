@@ -329,19 +329,6 @@ func createOrganizationSubscription(ctx context.Context, tx pgx.Tx, organization
 	return syncOrganizationModulesForPlan(ctx, tx, organizationID, plan.ModuleKeys)
 }
 
-func refreshSubscriptionState(ctx context.Context, q interface {
-	Exec(context.Context, string, ...any) (pgconn.CommandTag, error)
-}, organizationID string) {
-	_, _ = q.Exec(ctx, `
-		UPDATE organization_subscriptions
-		SET status='past_due',updated_at=now()
-		WHERE organization_id=$1
-		  AND status IN ('trial','active')
-		  AND renews_at IS NOT NULL
-		  AND renews_at<now()
-	`, organizationID)
-}
-
 func (a *API) getOrganizationSubscription(w http.ResponseWriter, r *http.Request) {
 	s := r.Context().Value(scopeKey{}).(scope)
 	_, _ = a.db.Exec(r.Context(), `
