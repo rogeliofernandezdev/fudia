@@ -1,4 +1,4 @@
-.kitchen-page{--kds-pending:var(--primary-600);--kds-pending-dark:var(--primary-700);--kds-pending-soft:var(--primary-50);--kds-pending-mid:var(--primary-100);--kds-cooking:var(--warning-600);--kds-cooking-dark:var(--warning-600);--kds-cooking-soft:var(--warning-50);--kds-cooking-mid:color-mix(in srgb,var(--warning-600) 12%,var(--surface));--kds-ready:var(--brand-600);--kds-ready-dark:var(--brand-700);--kds-ready-soft:var(--brand-100);--kds-ready-mid:color-mix(in srgb,var(--brand-600) 18%,var(--surface));display:grid;gap:14px;min-width:0}
+.kitchen-page{--kds-pending:var(--primary-600);--kds-pending-dark:var(--primary-700);--kds-pending-soft:var(--primary-50);--kds-pending-mid:var(--primary-100);--kds-cooking:var(--digital-500);--kds-cooking-dark:var(--digital-700);--kds-cooking-soft:var(--digital-100);--kds-cooking-mid:var(--digital-100);--kds-ready:var(--brand-600);--kds-ready-dark:var(--brand-700);--kds-ready-soft:var(--brand-100);--kds-ready-mid:color-mix(in srgb,var(--brand-600) 18%,var(--surface));display:grid;gap:14px;min-width:0}
 .kitchen-controlbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
 .kitchen-channel-filter{display:grid;grid-template-columns:auto minmax(190px,230px);align-items:center;gap:9px;color:var(--ink-600);font-size:8px;font-weight:850}
 .kitchen-channel-filter>span{color:var(--ink-600);letter-spacing:.04em}
@@ -32,7 +32,7 @@
 .kitchen-ticket{display:grid;gap:10px;padding:12px;border:1px solid var(--line);border-radius:14px;background:var(--surface);overflow:hidden;transition:border-color .16s ease,box-shadow .16s ease}
 .kitchen-ticket:hover{border-color:var(--primary-100);box-shadow:var(--shadow)}
 .kitchen-ticket.warning{border-color:var(--warning-600);box-shadow:inset 3px 0 0 var(--warning-600)}
-.kitchen-ticket.late{border-color:var(--danger-600);box-shadow:inset 3px 0 0 var(--danger-600)}
+.kitchen-ticket.late{border-color:var(--warning-600);box-shadow:inset 3px 0 0 var(--warning-600)}
 .kitchen-ticket-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
 .kitchen-ticket-identity{display:grid;gap:4px;min-width:0;padding-top:2px}
 .kitchen-ticket-identity>b{overflow:hidden;color:var(--ink-950);font-size:11px;font-weight:850;text-overflow:ellipsis;white-space:nowrap}
@@ -40,10 +40,10 @@
 .kitchen-ticket-identity>small svg{color:var(--ink-400)}
 .kitchen-ticket-time{min-width:112px;padding:7px 8px;border:1px solid var(--line);border-radius:8px;background:var(--cloud-50);justify-items:end;gap:3px;font-variant-numeric:tabular-nums;flex:0 0 auto;display:grid}
 .kitchen-lane[data-status="confirmado"] .kitchen-ticket-time{background:var(--kds-pending-soft);border-color:var(--primary-100);color:var(--kds-pending-dark)}
-.kitchen-lane[data-status="preparando"] .kitchen-ticket-time{background:var(--kds-cooking-soft);border-color:color-mix(in srgb,var(--warning-600) 35%,var(--line));color:var(--kds-cooking-dark)}
+.kitchen-lane[data-status="preparando"] .kitchen-ticket-time{background:var(--kds-cooking-soft);border-color:var(--digital-100);color:var(--kds-cooking-dark)}
 .kitchen-lane[data-status="listo"] .kitchen-ticket-time{background:var(--kds-ready-soft);border-color:color-mix(in srgb,var(--brand-600) 32%,var(--line));color:var(--kds-ready-dark)}
 .kitchen-ticket-time.warning{background:var(--warning-50);border-color:var(--warning-600);color:var(--warning-600)}
-.kitchen-ticket-time.late{background:var(--danger-50);border-color:var(--danger-600);color:var(--danger-600)}
+.kitchen-ticket-time.late{background:var(--warning-50);border-color:var(--warning-600);color:var(--warning-600)}
 .kitchen-ticket-time strong{font-size:11px;font-weight:900;line-height:1.15;white-space:nowrap}
 .kitchen-ticket-time-state{display:flex;align-items:center;gap:4px;font-size:7px;font-weight:850;white-space:nowrap}
 .kitchen-ticket-time>small{color:currentColor;opacity:.72;font-size:7px;font-weight:700;white-space:nowrap}
@@ -51,7 +51,7 @@
 .kitchen-progress i{display:block;height:100%;border-radius:inherit;background:var(--kds-pending);transition:width .2s ease}
 .kitchen-lane[data-status="preparando"] .kitchen-progress i{background:var(--kds-cooking)}
 .kitchen-ticket.warning .kitchen-progress i{background:var(--warning-600)}
-.kitchen-ticket.late .kitchen-progress i{background:var(--danger-600)}
+.kitchen-ticket.late .kitchen-progress i{background:var(--warning-600)}
 .kitchen-ticket-items{display:grid;padding:3px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
 .kitchen-ticket-item{display:grid;grid-template-columns:32px minmax(0,1fr);gap:8px;padding:7px 0}
 .kitchen-ticket-item>b{display:grid;place-items:center;width:28px;height:24px;border-radius:6px;font-size:8px;font-weight:900;font-variant-numeric:tabular-nums}
