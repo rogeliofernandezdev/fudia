@@ -23,4 +23,15 @@ export async function listRecipeProducts(q=""){
  ));
  return {...first,items:[...first.items,...rest.flatMap(page=>page.items)]};
 }
-export function listRecipeInventory(){return apiFetch<{items:Array<{id:string;name:string;kind:string;unit:string;quantity:string}>}>("inventory/products")}
+type RecipeInventoryLookup={items:Array<{id:string;name:string;kind:string;unit:string;quantity:string}>;total:number;page:number;pageSize:number};
+export async function listRecipeInventory(q=""){
+ const search=q.trim();
+ if(!search)return apiFetch<RecipeInventoryLookup>("inventory/products?page=1&pageSize=10");
+ const first=await apiFetch<RecipeInventoryLookup>(`inventory/products?q=${encodeURIComponent(search)}&page=1&pageSize=100`);
+ if(first.items.length>=first.total)return first;
+ const pages=Math.ceil(first.total/100);
+ const rest=await Promise.all(Array.from({length:pages-1},(_,index)=>
+  apiFetch<RecipeInventoryLookup>(`inventory/products?q=${encodeURIComponent(search)}&page=${index+2}&pageSize=100`)
+ ));
+ return {...first,items:[...first.items,...rest.flatMap(page=>page.items)]};
+}
