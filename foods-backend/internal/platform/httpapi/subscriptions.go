@@ -165,7 +165,9 @@ func (a *API) listSubscriptionPlans(w http.ResponseWriter, r *http.Request) {
 		SELECT id,code,name,description,currency,monthly_price::text,annual_price::text,
 		       trial_days,max_locations,max_users,module_keys,terms_version,active
 		FROM subscription_plans
-		ORDER BY active DESC,name
+		ORDER BY active DESC,
+		         CASE code WHEN 'emprende' THEN 1 WHEN 'impulso' THEN 2 WHEN 'escala' THEN 3 ELSE 4 END,
+		         name
 	`)
 	if err != nil {
 		fail(w, 503, "plans_unavailable", "No pudimos cargar los planes.")
