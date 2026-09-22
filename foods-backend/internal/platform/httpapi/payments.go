@@ -85,40 +85,61 @@ func (a *API) listPOSOrders(w http.ResponseWriter, r *http.Request) {
 	filter := ""
 	switch status {
 	case "unpaid":
-		filter = " AND (" + netPaidSQL + ") < o.total"
+		filter = " AND payment_summary.net_paid < o.total"
 	case "pending":
-		filter = " AND (" + netPaidSQL + ") <= 0.00001"
+		filter = " AND payment_summary.net_paid <= 0.00001"
 	case "partial":
-		filter = " AND (" + netPaidSQL + ") > 0.00001 AND (" + netPaidSQL + ") < o.total"
+		filter = " AND payment_summary.net_paid > 0.00001 AND payment_summary.net_paid < o.total"
 	case "paid":
-		filter = " AND (" + netPaidSQL + ") >= o.total"
+		filter = " AND payment_summary.net_paid >= o.total"
 	}
 
+	baseFrom := `
+		FROM orders o
+		LEFT JOIN tables t
+		  ON t.id=o.table_id
+		 AND t.organization_id=o.organization_id
+		 AND t.location_id=o.location_id
+		LEFT JOIN LATERAL (
+		  SELECT COALESCE(sum(p.amount-COALESCE(refunds.refunded,0)),0) AS net_paid
+		  FROM payments p
+		  LEFT JOIN LATERAL (
+		    SELECT COALESCE(sum(pr.amount),0) AS refunded
+		    FROM payment_refunds pr
+		    WHERE pr.payment_id=p.id
+		      AND pr.organization_id=p.organization_id
+		      AND pr.location_id=p.location_id
+		  ) refunds ON true
+		  WHERE p.order_id=o.id
+		    AND p.organization_id=o.organization_id
+		    AND p.location_id=o.location_id
+		) payment_summary ON true
+	`
 	where := `
 		o.organization_id=$1 AND o.location_id=$2 AND o.status<>'cancelado'
 		AND ($3='' OR o.code ILIKE '%'||$3||'%' OR o.customer_name ILIKE '%'||$3||'%'
-		  OR COALESCE((SELECT name FROM tables t WHERE t.id=o.table_id),'') ILIKE '%'||$3||'%')
+		  OR COALESCE(t.name,'') ILIKE '%'||$3||'%')
 	` + filter
 
 	var totalCount int
-	if err := a.db.QueryRow(r.Context(), "SELECT count(*) FROM orders o WHERE "+where, s.OrganizationID, s.LocationID, q).Scan(&totalCount); err != nil {
+	if err := a.db.QueryRow(r.Context(), "SELECT count(*) "+baseFrom+" WHERE "+where, s.OrganizationID, s.LocationID, q).Scan(&totalCount); err != nil {
 		fail(w, 503, "payments_unavailable", "No pudimos cargar los pedidos por cobrar.")
 		return
 	}
 
 	rows, err := a.db.Query(r.Context(), `
 		SELECT o.id::text,o.code,o.channel,o.status,o.customer_name,
-		       COALESCE((SELECT name FROM tables t WHERE t.id=o.table_id),''),
+		       COALESCE(t.name,''),
 		       o.total::text,
-		       (`+netPaidSQL+`)::text,
-		       GREATEST(o.total-(`+netPaidSQL+`),0)::text,
+		       payment_summary.net_paid::text,
+		       GREATEST(o.total-payment_summary.net_paid,0)::text,
 		       CASE
-		         WHEN (`+netPaidSQL+`) <= 0.00001 THEN 'pending'
-		         WHEN (`+netPaidSQL+`) >= o.total THEN 'paid'
+		         WHEN payment_summary.net_paid <= 0.00001 THEN 'pending'
+		         WHEN payment_summary.net_paid >= o.total THEN 'paid'
 		         ELSE 'partial'
 		       END,
 		       to_char(o.created_at,'YYYY-MM-DD"T"HH24:MI:SSOF')
-		FROM orders o
+	`+baseFrom+`
 		WHERE `+where+`
 		ORDER BY o.created_at DESC,o.id DESC
 		LIMIT $4 OFFSET $5
@@ -140,6 +161,10 @@ func (a *API) listPOSOrders(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		items = append(items,item)
+	}
+	if err := rows.Err(); err != nil {
+		fail(w, 503, "payments_unavailable", "No pudimos cargar los pedidos por cobrar.")
+		return
 	}
 	writeJSON(w,200,map[string]any{"items":items,"total":totalCount,"page":page,"pageSize":size})
 }
