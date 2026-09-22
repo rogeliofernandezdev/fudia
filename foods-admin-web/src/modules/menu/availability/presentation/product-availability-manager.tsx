@@ -117,8 +117,8 @@ export function ProductAvailabilityManager(){
        </div>
 
        <footer className={item.quantityControl==="portions"?"availability-actions":"availability-actions single"}>
-        {item.quantityControl==="portions"&&<Button kind={portionChanged?"primary":"secondary"} icon="check" disabled={derived||pending||!portionChanged} onClick={()=>update.mutate({item,status:item.manualStatus})}>{pending?"Actualizando…":"Actualizar cupo"}</Button>}
-        <Button kind="secondary" className={manuallySoldOut?"availability-available-action":"availability-soldout-action"} icon="power" disabled={derived||pending||(!manuallySoldOut&&quantityExhausted)} onClick={()=>update.mutate({item,status:manuallySoldOut?"available":"sold_out"})}>{pending?"Guardando…":manuallySoldOut?"Marcar disponible":"Marcar agotado"}</Button>
+        {item.quantityControl==="portions"&&<Button kind={portionChanged?"primary":"secondary"} icon="check" disabled={derived||pending||!portionChanged} onClick={()=>update.mutate({item,status:item.manualStatus})} aria-label={`Actualizar cupo de ${item.name}`}>{pending?"Actualizando…":"Actualizar"}</Button>}
+        <Button kind="secondary" className={manuallySoldOut?"availability-available-action":"availability-soldout-action"} icon="power" aria-label={manuallySoldOut?`Marcar ${item.name} como disponible`:`Marcar ${item.name} como agotado`} disabled={derived||pending||(!manuallySoldOut&&quantityExhausted)} onClick={()=>update.mutate({item,status:manuallySoldOut?"available":"sold_out"})}>{pending?"Guardando…":manuallySoldOut?"Disponible":"Agotar"}</Button>
        </footer>
       </article>;
      })}
