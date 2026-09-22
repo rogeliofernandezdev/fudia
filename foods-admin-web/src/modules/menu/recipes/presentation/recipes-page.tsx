@@ -186,14 +186,14 @@ export function RecipesPage(){
    {recipes.isLoading?<RecipeListSkeleton/>:recipes.isError?
     <div className="catalog-state error"><Icon name="alert" size={24}/><b>No pudimos cargar las recetas</b><p>{recipes.error.message}</p><Button kind="secondary" icon="refresh" onClick={()=>recipes.refetch()}>Reintentar</Button></div>
    :!items.length?
-    <div className="catalog-state"><Icon name="chefHat" size={24}/><b>Aún no hay recetas configuradas</b><p>Configura una receta cuando quieras descontar insumos automáticamente al vender un producto preparado.</p>{canManage&&<Button icon="plus" onClick={openNew}>Nueva receta</Button>}</div>
+    <div className="catalog-state"><Icon name="cookingPot" size={24}/><b>Aún no hay recetas configuradas</b><p>Configura una receta cuando quieras descontar insumos automáticamente al vender un producto preparado.</p>{canManage&&<Button icon="plus" onClick={openNew}>Nueva receta</Button>}</div>
    :<div className="table-wrap hover-scroll" tabIndex={0}><table><thead><tr><th>PRODUCTO</th><th>RENDIMIENTO</th><th>INSUMOS</th><th>ESTADO</th><th>ACCIONES</th></tr></thead><tbody>{items.map((r,i)=><tr className={i%2?"alternate":""} key={r.id}><td><b>{r.productName}</b></td><td>{r.yieldQuantity}</td><td>{r.itemCount}</td><td><Status tone={r.active?"green":"gray"}>{r.active?"Activa":"Inactiva"}</Status></td><td>{canManage?<div className="table-actions"><RowActionButton action="edit" label={loadingId===r.productId?"Cargando receta":"Editar receta"} disabled={loadingId===r.productId||statusChange.isPending} onClick={()=>void edit(r.productId)}/><RowActionButton action={r.active?"deactivate":"activate"} label={r.active?"Desactivar receta":"Activar receta"} disabled={statusChange.isPending||loadingId===r.productId} onClick={()=>r.active?setStatusTarget(r):statusChange.mutate({productId:r.productId,active:true})}/></div>:<span className="recipe-read-only">Solo lectura</span>}</td></tr>)}</tbody></table></div>}
   </section>
 
   {draft&&<div className="modal-backdrop modal-overlay-in" role="presentation">
    <section className="crud-modal recipe-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="recipe-modal-title" aria-busy={save.isPending}>
     <header className="recipe-modal-header">
-     <span className="modal-title-icon"><Icon name="chefHat" size={18}/></span>
+     <span className="modal-title-icon"><Icon name="cookingPot" size={18}/></span>
      <div>
       <small>{editingProductId?"EDITAR RECETA":"NUEVA RECETA"}</small>
       <h2 id="recipe-modal-title">{editingProductId?"Editar receta":"Configurar receta"}</h2>
