@@ -171,7 +171,7 @@ func (a *API) Routes() *http.ServeMux {
 	m.Handle("POST /v1/admin/zones", a.auth(a.requirePermission("menu.manage", http.HandlerFunc(a.createZone))))
 	m.Handle("PATCH /v1/admin/zones/{id}", a.auth(a.requirePermission("menu.manage", http.HandlerFunc(a.updateZone))))
 	m.Handle("DELETE /v1/admin/zones/{id}", a.auth(a.requirePermission("menu.manage", http.HandlerFunc(a.deactivateZone))))
-	m.Handle("GET /v1/admin/modules", a.auth(a.requirePermission("organizations.read", http.HandlerFunc(a.listModules))))
+	m.Handle("GET /v1/admin/modules", a.auth(a.requirePlatformAdmin(http.HandlerFunc(a.listModules))))
 	m.Handle("PATCH /v1/admin/modules", a.auth(a.requirePlatformAdmin(http.HandlerFunc(a.toggleModule))))
 	m.Handle("GET /v1/admin/organizations", a.auth(a.requirePlatformAdmin(http.HandlerFunc(a.listOrganizations))))
 	m.Handle("GET /v1/admin/organizations/{id}/locations", a.auth(a.requirePlatformAdmin(http.HandlerFunc(a.listOrgLocations))))
@@ -200,7 +200,7 @@ func (a *API) requirePermission(permission string, next http.Handler) http.Handl
 			return
 		}
 		var allowed bool
-		err := a.db.QueryRow(r.Context(), `SELECT EXISTS(SELECT 1 FROM user_roles ur JOIN roles ro ON ro.id=ur.role_id WHERE ur.user_id=$1 AND ur.location_id=$2 AND ro.organization_id=$4 AND ro.active AND (ro.permissions @> ARRAY['*']::text[] OR ro.permissions @> ARRAY[$3]::text[]))`, s.UserID, s.LocationID, permission, s.OrganizationID).Scan(&allowed)
+		err := a.db.QueryRow(r.Context(), `SELECT EXISTS(SELECT 1 FROM user_roles ur JOIN roles ro ON ro.id=ur.role_id WHERE ur.user_id=$1 AND ur.location_id=$2 AND ro.organization_id=$4 AND ro.active AND ro.permissions @> ARRAY[$3]::text[]))`, s.UserID, s.LocationID, permission, s.OrganizationID).Scan(&allowed)
 		if err != nil {
 			fail(w, 503, "permissions_unavailable", "No pudimos validar tus permisos.")
 			return
