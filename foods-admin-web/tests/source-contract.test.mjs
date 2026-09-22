@@ -179,7 +179,13 @@ test("producto e inventario mantienen una sola fuente de verdad",()=>{
   const availability=read("src/modules/menu/availability/presentation/product-availability-manager.tsx");
   assert.ok(availability.includes('quantityControl==="portions"'));
   assert.ok(availability.includes('quantityControl==="inventory"'));
-  assert.ok(availability.includes("La existencia se actualiza únicamente desde Inventario"));
+  assert.ok(availability.includes("La existencia se actualiza desde Inventario y con las ventas."));
+  assert.ok(availability.includes('can("menu.read")'),"Disponibilidad respeta permiso de lectura");
+  assert.ok(availability.includes('can("menu.manage")'),"Disponibilidad separa permiso de escritura");
+  assert.ok(availability.includes("function saveQuota"),"Guardar cupo tiene un flujo explícito");
+  assert.ok(availability.includes("function setManualStatus"),"Cambiar estado no reutiliza el borrador de cupo");
+  assert.ok(availability.includes("portionQuantity:null,kind:\"status\""),"El cambio de estado no persiste un cupo pendiente");
+  assert.ok(availability.includes("Math.max(1,item.soldQuantity)"),"El cupo nunca baja de lo ya vendido");
 });
 
 test("compras concentra orden recepcion y altas de abastecimiento",()=>{
