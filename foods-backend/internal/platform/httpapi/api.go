@@ -372,41 +372,70 @@ func (a *API) dashboard(w http.ResponseWriter, r *http.Request) {
 	s := r.Context().Value(scopeKey{}).(scope)
 	var salesNet, averageTicket string
 	var paidOrders, openOrders, critical, purchases, reservationsToday, kitchenPending int
-	if err := a.db.QueryRow(r.Context(), `
-		SELECT COALESCE(sum(value),0)::text
-		FROM (
-		  SELECT p.amount AS value
+
+	err := a.db.QueryRow(r.Context(), `
+		WITH loc AS (
+		  SELECT timezone
+		  FROM locations
+		  WHERE id=$2 AND organization_id=$1
+		),
+		today_payments AS (
+		  SELECT p.order_id,p.amount
 		  FROM payments p
-		  JOIN locations l ON l.id=p.location_id AND l.organization_id=p.organization_id
+		  CROSS JOIN loc
 		  WHERE p.organization_id=$1 AND p.location_id=$2
-		    AND (p.created_at AT TIME ZONE l.timezone)::date=(now() AT TIME ZONE l.timezone)::date
-		  UNION ALL
-		  SELECT -pr.amount AS value
+		    AND (p.created_at AT TIME ZONE loc.timezone)::date=(now() AT TIME ZONE loc.timezone)::date
+		),
+		today_refunds AS (
+		  SELECT pr.amount
 		  FROM payment_refunds pr
-		  JOIN locations l ON l.id=pr.location_id AND l.organization_id=pr.organization_id
+		  CROSS JOIN loc
 		  WHERE pr.organization_id=$1 AND pr.location_id=$2
-		    AND (pr.created_at AT TIME ZONE l.timezone)::date=(now() AT TIME ZONE l.timezone)::date
-		) cashflow
-	`, s.OrganizationID, s.LocationID).Scan(&salesNet); err != nil {
-		fail(w,503,"dashboard_unavailable","No pudimos calcular las ventas del día."); return
+		    AND (pr.created_at AT TIME ZONE loc.timezone)::date=(now() AT TIME ZONE loc.timezone)::date
+		),
+		sales AS (
+		  SELECT
+		    COALESCE((SELECT sum(amount) FROM today_payments),0)
+		    - COALESCE((SELECT sum(amount) FROM today_refunds),0) AS net
+		),
+		paid AS (
+		  SELECT count(DISTINCT order_id)::int AS orders
+		  FROM today_payments
+		)
+		SELECT
+		  sales.net::text,
+		  paid.orders,
+		  CASE WHEN paid.orders>0 THEN (sales.net/paid.orders)::text ELSE '0' END,
+		  (SELECT count(*) FROM orders
+		   WHERE organization_id=$1 AND location_id=$2
+		     AND status NOT IN ('entregado','cancelado')),
+		  (SELECT count(*)
+		   FROM inventory_items i
+		   LEFT JOIN stock_balances b
+		     ON b.inventory_item_id=i.id
+		    AND b.organization_id=i.organization_id
+		    AND b.location_id=$2
+		   WHERE i.organization_id=$1 AND i.active
+		     AND COALESCE(b.quantity,0)<=i.minimum_stock),
+		  (SELECT count(*) FROM purchase_orders
+		   WHERE organization_id=$1 AND location_id=$2 AND status='pending_approval'),
+		  (SELECT count(*)
+		   FROM reservations r
+		   CROSS JOIN loc
+		   WHERE r.organization_id=$1 AND r.location_id=$2
+		     AND r.status IN ('pending','confirmed')
+		     AND (r.starts_at AT TIME ZONE loc.timezone)::date=(now() AT TIME ZONE loc.timezone)::date),
+		  (SELECT count(*) FROM orders
+		   WHERE organization_id=$1 AND location_id=$2
+		     AND status IN ('confirmado','preparando'))
+		FROM sales CROSS JOIN paid
+	`, s.OrganizationID, s.LocationID).Scan(
+		&salesNet, &paidOrders, &averageTicket, &openOrders, &critical, &purchases, &reservationsToday, &kitchenPending,
+	)
+	if err != nil {
+		fail(w,503,"dashboard_unavailable","No pudimos calcular el resumen operativo.")
+		return
 	}
-	if err := a.db.QueryRow(r.Context(), `
-		SELECT count(DISTINCT p.order_id)
-		FROM payments p
-		JOIN locations l ON l.id=p.location_id AND l.organization_id=p.organization_id
-		WHERE p.organization_id=$1 AND p.location_id=$2
-		  AND (p.created_at AT TIME ZONE l.timezone)::date=(now() AT TIME ZONE l.timezone)::date
-	`, s.OrganizationID, s.LocationID).Scan(&paidOrders); err != nil {
-		fail(w,503,"dashboard_unavailable","No pudimos calcular los pedidos cobrados."); return
-	}
-	if paidOrders > 0 {
-		if err := a.db.QueryRow(r.Context(), `SELECT (CAST($1 AS numeric)/$2)::text`, salesNet, paidOrders).Scan(&averageTicket); err != nil { averageTicket="0" }
-	} else { averageTicket="0" }
-	_ = a.db.QueryRow(r.Context(), `SELECT count(*) FROM orders WHERE organization_id=$1 AND location_id=$2 AND status NOT IN ('entregado','cancelado')`, s.OrganizationID, s.LocationID).Scan(&openOrders)
-	_ = a.db.QueryRow(r.Context(), `SELECT count(*) FROM inventory_items i LEFT JOIN stock_balances b ON b.inventory_item_id=i.id AND b.organization_id=i.organization_id AND b.location_id=$2 WHERE i.organization_id=$1 AND i.active AND COALESCE(b.quantity,0)<=i.minimum_stock`, s.OrganizationID, s.LocationID).Scan(&critical)
-	_ = a.db.QueryRow(r.Context(), `SELECT count(*) FROM purchase_orders WHERE organization_id=$1 AND location_id=$2 AND status='pending_approval'`, s.OrganizationID, s.LocationID).Scan(&purchases)
-	_ = a.db.QueryRow(r.Context(), `SELECT count(*) FROM reservations r JOIN locations l ON l.id=r.location_id AND l.organization_id=r.organization_id WHERE r.organization_id=$1 AND r.location_id=$2 AND r.status IN ('pending','confirmed') AND (r.starts_at AT TIME ZONE l.timezone)::date=(now() AT TIME ZONE l.timezone)::date`, s.OrganizationID, s.LocationID).Scan(&reservationsToday)
-	_ = a.db.QueryRow(r.Context(), `SELECT count(*) FROM orders WHERE organization_id=$1 AND location_id=$2 AND status IN ('confirmado','preparando')`, s.OrganizationID, s.LocationID).Scan(&kitchenPending)
 
 	hourly := []map[string]any{}
 	rows,err:=a.db.Query(r.Context(), `
