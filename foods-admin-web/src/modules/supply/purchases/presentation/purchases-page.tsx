@@ -1,4 +1,5 @@
 "use client";
+import dynamic from "next/dynamic";
 import "./purchases.css";
 import {useState} from "react";
 import {useFieldArray,useForm} from "react-hook-form";
@@ -8,9 +9,9 @@ import {useFeedback,useSession,useSettings} from "@/providers";
 import {formatRegionalCalendarDate,formatRegionalDateTime,formatRegionalNumber} from "@/shared/i18n/regional-format";
 import {useDebouncedValue} from "@/shared/hooks/use-debounced-value";
 import {purchaseOrderResolver,supplierResolver} from "../domain/purchase-schema";
-import {PurchaseItemDialog} from "./purchase-item-dialog";
-import {PurchaseReceiptDialog} from "./purchase-receipt-dialog";
-import {PurchaseReturnDialog} from "./purchase-return-dialog";
+const PurchaseItemDialog=dynamic(()=>import("./purchase-item-dialog").then(module=>module.PurchaseItemDialog),{ssr:false});
+const PurchaseReceiptDialog=dynamic(()=>import("./purchase-receipt-dialog").then(module=>module.PurchaseReceiptDialog),{ssr:false});
+const PurchaseReturnDialog=dynamic(()=>import("./purchase-return-dialog").then(module=>module.PurchaseReturnDialog),{ssr:false});
 import type {PurchaseInventoryOption,PurchaseOrder,PurchaseOrderDraft,PurchaseOrderSummary,PurchaseReceiptDetail,PurchaseStatus,PurchaseTab,Supplier,SupplierDraft} from "../domain/types";
 import {approvePurchaseOrder,createPurchaseInventoryItem,createPurchaseReturn,getPurchaseOrder,getPurchaseReceipt,listPurchaseInventory,listPurchaseItemCategories,listPurchaseOrders,listPurchaseReceipts,listSuppliers,receivePurchaseOrder,savePurchaseOrder,saveSupplier,setPurchaseOrderStatus,setSupplierActive} from "../infrastructure/purchases-api";
 
