@@ -1,12 +1,12 @@
 .recipe-modal{width:min(780px,calc(100vw - 32px));max-height:min(760px,calc(100dvh - 32px));background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column}
-.recipe-modal-header{min-height:58px;padding:11px 16px;border-bottom:1px solid var(--line);background:var(--surface);grid-template-columns:32px minmax(0,1fr) var(--control-height);align-items:center;gap:11px;display:grid}
+.recipe-modal>.recipe-modal-header{min-height:58px;padding:11px 16px;border-bottom:1px solid var(--line);background:var(--surface);grid-template-columns:32px minmax(0,1fr) var(--control-height);align-items:center;gap:11px;display:grid}
 .recipe-modal-header>div{min-width:0}
 .recipe-modal-header small{color:var(--primary-600);letter-spacing:.11em;font-size:8px;font-weight:850}
 .recipe-modal-header h2{color:var(--ink-950);margin:2px 0 0;font-size:15px;line-height:1.2}
 .recipe-modal-header p{color:var(--ink-600);margin:3px 0 0;font-size:9px;line-height:1.35}
-.recipe-modal-close{width:var(--control-height);height:var(--control-height);color:var(--ink-600);background:var(--surface);border:1px solid var(--line);border-radius:6px;place-items:center;padding:0;display:grid}
-.recipe-modal-close:hover{color:var(--ops-700);background:var(--primary-50);border-color:var(--primary-100)}
-.recipe-form{min-height:0;flex:1;padding:0;display:flex;flex-direction:column}
+.recipe-modal>.recipe-modal-header>.recipe-modal-close{width:var(--control-height);height:var(--control-height);color:var(--ink-600);background:var(--surface);border:1px solid var(--line);border-radius:6px;place-items:center;padding:0;display:grid}
+.recipe-modal>.recipe-modal-header>.recipe-modal-close:hover{color:var(--ops-700);background:var(--primary-50);border-color:var(--primary-100)}
+.recipe-modal form.recipe-form{min-height:0;flex:1;padding:0;display:flex;flex-direction:column}
 .recipe-form-body{min-height:0;padding:14px 16px;overflow:auto}
 .recipe-main-fields{grid-template-columns:minmax(0,1.65fr) minmax(180px,.7fr);gap:12px 16px;display:grid}
 .recipe-main-fields>label{min-width:0;color:var(--ink-700);gap:7px;font-size:10px;font-weight:750;display:grid}
@@ -85,4 +85,4 @@
  .recipe-form-footer{padding:10px 14px}
  .recipe-form-footer .button{flex:1;min-width:0}
 }
-@media(prefers-reduced-motion:reduce){.recipe-modal-close{transition:none}}
+@media(prefers-reduced-motion:reduce){.recipe-modal>.recipe-modal-header>.recipe-modal-close{transition:none}}
