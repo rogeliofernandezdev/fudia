@@ -1,5 +1,5 @@
 type IconName =
-  | "home" | "tables" | "pos" | "kitchen" | "orders" | "cash"
+  | "home" | "tables" | "pos" | "kitchen" | "cookingPot" | "orders" | "cash"
   | "bell" | "chevron" | "search" | "user" | "lock" | "eye"
   | "store" | "clock" | "plus" | "minus" | "trash" | "check"
   | "printer" | "whatsapp" | "bike" | "receipt" | "logout"
@@ -10,6 +10,7 @@ const paths: Record<IconName, React.ReactNode> = {
   tables: <><rect x="4" y="5" width="16" height="12" rx="2"/><path d="M8 17v3m8-3v3M4 10h16M9 5v5m6-5v5"/></>,
   pos: <><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M7 8h10M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h4"/></>,
   kitchen: <><path d="M6 3v7a3 3 0 0 0 3 3V3M6 7h3M9 13v8M16 3c-2 3-2 7 1 9v9M17 12h2V3"/></>,
+  cookingPot: <><path d="M5 10h14l-1 9H6zM4 10h16M8 10V8h8v2M3 13h2m14 0h2"/><path d="M8 5c1-1 1-2 0-3M12 5c1-1 1-2 0-3M16 5c1-1 1-2 0-3"/></>,
   orders: <><path d="M7 3h10v4H7zM5 5H4v16h16V5h-1M8 12h8M8 16h5"/></>,
   cash: <><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h3"/></>,
   bell: <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></>,
