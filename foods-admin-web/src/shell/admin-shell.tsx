@@ -15,13 +15,13 @@ import {deleteSession} from "@/shared/session/session-api";
 import {accessKey,firstAccessibleRoute,moduleIsActive,navigationGroups,navigationItemForPath,visibleNavigation} from "./navigation";
 
 export function AdminShell({children}:{children:React.ReactNode}){
- const path=usePathname();const router=useRouter();const queryClient=useQueryClient();const{user,organization,location,modules,menuAccess,canAccess,isLoading,isError}=useSession();const[notifications,setNotifications]=useState(false);const[menuOpen,setMenuOpen]=useState(false);const[collapsed,setCollapsed]=useState(false);const[accountOpen,setAccountOpen]=useState(false);const[signingOut,setSigningOut]=useState(false);const accountRef=useRef<HTMLDivElement>(null);
+ const path=usePathname();const router=useRouter();const queryClient=useQueryClient();const{user,organization,location,modules,menuAccess,permissions,canAccess,can,isLoading,isError}=useSession();const[notifications,setNotifications]=useState(false);const[menuOpen,setMenuOpen]=useState(false);const[collapsed,setCollapsed]=useState(false);const[accountOpen,setAccountOpen]=useState(false);const[signingOut,setSigningOut]=useState(false);const accountRef=useRef<HTMLDivElement>(null);
  const isPlatformAdmin=Boolean(user?.platformAdmin);
- const navigationContext=user&&modules?{user,modules,menuAccess}:null;
+ const navigationContext=user&&modules?{user,modules,menuAccess,permissions}:null;
  const visibleGroups=navigationContext?visibleNavigation(navigationContext):[];
  const homeHref=navigationContext?firstAccessibleRoute(navigationContext):"/sin-acceso";
  const currentItem=navigationItemForPath(path);
- const blockReason=isPlatformAdmin?null:!currentItem?null:currentItem.platformAdminOnly?"platform":!modules||!moduleIsActive(modules,currentItem.module)?"module":!canAccess(accessKey(currentItem))?"role":null;
+ const blockReason=isPlatformAdmin?null:!currentItem?null:currentItem.platformAdminOnly?"platform":!modules||!moduleIsActive(modules,currentItem.module)?"module":!canAccess(accessKey(currentItem))||Boolean(currentItem.permission&&!can(currentItem.permission))?"role":null;
  async function logout(){if(signingOut)return;setSigningOut(true);try{await deleteSession()}finally{queryClient.clear();router.replace("/login");router.refresh()}}
  useEffect(()=>{if(!menuOpen)return;const previous=document.body.style.overflow;document.body.style.overflow="hidden";const close=(event:KeyboardEvent)=>{if(event.key==="Escape")setMenuOpen(false)};document.addEventListener("keydown",close);return()=>{document.body.style.overflow=previous;document.removeEventListener("keydown",close)}},[menuOpen]);
  useEffect(()=>{if(!accountOpen)return;const close=(event:MouseEvent)=>{if(!accountRef.current?.contains(event.target as Node))setAccountOpen(false)};const escape=(event:KeyboardEvent)=>{if(event.key==="Escape")setAccountOpen(false)};document.addEventListener("mousedown",close);document.addEventListener("keydown",escape);return()=>{document.removeEventListener("mousedown",close);document.removeEventListener("keydown",escape)}},[accountOpen]);
