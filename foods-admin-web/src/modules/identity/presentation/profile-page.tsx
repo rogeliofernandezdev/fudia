@@ -6,20 +6,25 @@ import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Button,Icon,Input,PageHeader} from "@/design-system";
 import {useFeedback,useSession} from "@/providers";
 import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
-import type {OrganizationSubscription} from "@/modules/platform";
+import type {OrganizationSubscription,SubscriptionPlan} from "@/modules/platform";
 import type {MyProfile,MyProfileDraft} from "../domain/types";
 import {profileResolver} from "../domain/profile-schema";
-import {getMyProfile,getOrganizationSubscription,saveMyProfile} from "../infrastructure/identity-api";
+import {getAvailableSubscriptionPlans,getMyProfile,getOrganizationSubscription,saveMyProfile} from "../infrastructure/identity-api";
 
 export function ProfilePage(){
-  const{can,user,organization,location}=useSession();
+  const{can,organization,location}=useSession();
   const profile=useQuery({queryKey:["my-profile"],queryFn:getMyProfile});
+  const plans=useQuery({queryKey:["available-subscription-plans"],queryFn:getAvailableSubscriptionPlans});
   const canViewSubscription=can("subscription.read");
   const subscription=useQuery({queryKey:["organization-subscription"],queryFn:getOrganizationSubscription,enabled:canViewSubscription});
   if(profile.isLoading)return <><ProfileHeader/><ProfileSkeleton/></>;
   if(profile.isError)return <><ProfileHeader/><section className="profile-state"><p>{profile.error.message}</p><Button kind="secondary" onClick={()=>profile.refetch()}>Reintentar</Button></section></>;
   if(!profile.data)return <><ProfileHeader/><section className="profile-state"><p>No pudimos cargar tu perfil.</p></section></>;
-  return <><ProfileHeader/><ProfileForm profile={profile.data} platformAdmin={Boolean(user?.platformAdmin)} organizationName={organization?.name} locationName={location?.name}/>{canViewSubscription&&<SubscriptionPanel subscription={subscription.data??null} loading={subscription.isLoading} error={subscription.isError?subscription.error.message:""} retry={()=>subscription.refetch()} country={location?.country} timeZone={location?.timezone}/>}</>;
+  return <><ProfileHeader/>
+    <ProfileForm profile={profile.data} organizationName={organization?.name} locationName={location?.name}/>
+    <ProfilePlansPanel profile={profile.data} plans={plans.data?.items??[]} loading={plans.isLoading} error={plans.isError?plans.error.message:""} retry={()=>plans.refetch()}/>
+    {canViewSubscription&&<SubscriptionPanel subscription={subscription.data??null} loading={subscription.isLoading} error={subscription.isError?subscription.error.message:""} retry={()=>subscription.refetch()} country={location?.country} timeZone={location?.timezone}/>}
+  </>;
 }
 
 function ProfileHeader(){
@@ -30,7 +35,7 @@ function initials(value:string){
   return value.split(/\s+/).filter(Boolean).slice(0,2).map(part=>part[0]?.toUpperCase()??"").join("")||"FU";
 }
 
-function ProfileForm({profile,platformAdmin,organizationName,locationName}:{profile:MyProfile;platformAdmin:boolean;organizationName?:string;locationName?:string}){
+function ProfileForm({profile,organizationName,locationName}:{profile:MyProfile;organizationName?:string;locationName?:string}){
   const qc=useQueryClient();
   const{notify}=useFeedback();
   const{
@@ -66,11 +71,16 @@ function ProfileForm({profile,platformAdmin,organizationName,locationName}:{prof
       </div>
       <div className="profile-account-meta">
         <span className="profile-account-status"><i/>Cuenta activa</span>
-        <div><small>ROL</small><b>{platformAdmin?"Administrador de plataforma":"Administrador de empresa"}</b></div>
+        <div><small>ROL EN ESTE LOCAL</small><b>{profile.platformAdmin?"Administrador de plataforma":profile.roleNames.length?profile.roleNames.join(" · "):"Sin rol efectivo"}</b></div>
         {organizationName&&<div><small>EMPRESA</small><b>{organizationName}</b></div>}
         {locationName&&<div><small>LOCAL ACTIVO</small><b>{locationName}</b></div>}
+        <div><small>PERMISOS EFECTIVOS</small><b>{profile.platformAdmin?"Acceso total":profile.permissions.length}</b></div>
       </div>
     </section>
+    {!profile.platformAdmin&&profile.permissions.length===0&&<section className="profile-access-warning">
+      <span><Icon name="alert" size={17}/></span>
+      <div><b>Sin permisos efectivos en el local activo</b><p>La cuenta puede iniciar sesión, pero su rol actual no habilita endpoints protegidos. Un administrador debe revisar la asignación en Usuarios y permisos.</p></div>
+    </section>}
 
     <form className="profile-settings-grid" onSubmit={handleSubmit(draft=>save.mutate(draft))} noValidate>
       <section className="profile-card profile-settings-card">
@@ -121,6 +131,56 @@ function ProfileForm({profile,platformAdmin,organizationName,locationName}:{prof
     </form>
   </div>;
 }
+
+function ProfilePlansPanel({profile,plans,loading,error,retry}:{profile:MyProfile;plans:SubscriptionPlan[];loading:boolean;error:string;retry:()=>void}){
+  if(loading)return <section className="profile-card profile-plans-loading">Cargando planes disponibles…</section>;
+  if(error)return <section className="profile-card profile-plans-loading error"><b>No pudimos cargar los planes.</b><Button kind="secondary" onClick={retry}>Reintentar</Button></section>;
+  const current=profile.currentPlan;
+  return <section className="profile-card profile-plans">
+    <header>
+      <div><small>PLANES FUDIA</small><h2>Tu plan y opciones disponibles</h2><p>Compara capacidad y módulos. El plan que usa tu empresa aparece resaltado.</p></div>
+      <div className="profile-current-plan">
+        <small>PLAN ACTUAL</small>
+        <b>{current?.name??"Sin plan asignado"}</b>
+        {current&&<span className={"plan-state-pill "+current.status}>{statusLabel[current.status]}</span>}
+      </div>
+    </header>
+    <div className="profile-plan-grid">
+      {plans.map(plan=>{
+        const active=current?.id===plan.id;
+        return <article className={"profile-plan-card"+(active?" current":"")} key={plan.id}>
+          {active&&<div className="profile-plan-current"><Icon name="check" size={12}/>TU PLAN ACTUAL</div>}
+          <div className="profile-plan-head">
+            <span><Icon name={plan.code==="emprende"?"store":plan.code==="escala"?"grid":"sales"} size={18}/></span>
+            <div><small>{plan.code.toUpperCase()}</small><h3>{plan.name}</h3></div>
+          </div>
+          <p>{plan.description}</p>
+          <div className="profile-plan-price"><span>{plan.currency}</span><b>{Number(plan.monthlyPrice).toFixed(2)}</b><small>/ mes</small></div>
+          <div className="profile-plan-facts">
+            <div><span>Locales</span><b>{plan.maxLocations??"∞"}</b></div>
+            <div><span>Usuarios</span><b>{plan.maxUsers??"∞"}</b></div>
+            <div><span>Prueba</span><b>{plan.trialDays?plan.trialDays+" días":"No"}</b></div>
+          </div>
+          <div className="profile-plan-modules">
+            <span><Icon name="grid" size={13}/>{plan.moduleKeys.length} módulos incluidos</span>
+            <div>{plan.moduleKeys.slice(0,6).map(key=><small key={key}><Icon name="check" size={9}/>{planModuleLabel(key)}</small>)}</div>
+            {plan.moduleKeys.length>6&&<em>+{plan.moduleKeys.length-6} módulos más</em>}
+          </div>
+          <footer>{active?<span><Icon name="check" size={13}/>Plan contratado</span>:<span>Disponible para cambio de plan</span>}</footer>
+        </article>;
+      })}
+    </div>
+    {current?.code==="legacy"&&<div className="profile-plan-legacy"><Icon name="alert" size={15}/><span>La empresa sigue en Plan legado. Plataforma debe migrarla a Emprende, Impulso o Escala cuando corresponda.</span></div>}
+  </section>;
+}
+
+const moduleLabels:Record<string,string>={
+ reportes:"Reportes",pos:"Punto de venta",pedidos:"Pedidos",cocina:"Cocina",mesas:"Mesas",caja:"Caja",
+ reservas:"Reservas",productos:"Productos",combos:"Combos",recetas:"Recetas",inventario:"Inventario",
+ kardex:"Kardex",compras:"Compras",clientes:"Clientes",locales:"Locales",fiscal:"Fiscal",usuarios:"Usuarios",
+};
+function planModuleLabel(key:string){return moduleLabels[key]??key}
+
 
 const statusLabel:Record<OrganizationSubscription["status"],string>={trial:"Prueba",active:"Activa",past_due:"Pago pendiente",cancelled:"Cancelada"};
 function dateLabel(value:string|null,country?:string,timeZone?:string){
