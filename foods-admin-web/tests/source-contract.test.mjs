@@ -603,3 +603,31 @@ test("perfil respeta inputs y formularios del design system",()=>{
   assert.ok(css.includes(".profile-field .ds-input[readonly]"),"El único estado local del input es el modo solo lectura");
   assert.ok(css.includes("height:var(--control-height)"),"El skeleton de controles sigue el token de altura");
 });
+
+
+test("mesas conserva edición explícita desde la tabla",()=>{
+  const page=read("src/modules/operations/tables/presentation/tables-manager.tsx");
+  const api=read("src/modules/operations/tables/infrastructure/tables-api.ts");
+  assert.ok(page.includes('RowActionButton action="edit"'),"Mesas expone una acción explícita de edición");
+  assert.ok(page.includes("TableDialog"),"Editar una mesa usa un modal dedicado");
+  assert.ok(page.includes("persistTable"),"La vista conecta la edición con su API");
+  assert.ok(page.includes("Mesa activa"),"La edición permite reactivar o desactivar la mesa desde su configuración");
+  assert.ok(page.includes("QR habilitado"),"La edición controla si el QR de la mesa está habilitado");
+  assert.ok(api.includes('method:"PATCH"'),"La edición persiste con PATCH");
+  assert.ok(api.includes('tables/${draft.id}'),"La edición usa el endpoint específico de la mesa");
+  assert.equal(page.includes('style={{flexWrap:"wrap"}}'),false,"Mesas no introduce estilos inline para composición");
+});
+
+test("empresa y kardex usan workspaces alineados al design system",()=>{
+  const company=read("src/modules/organizations/presentation/organization-admin.tsx");
+  const companyCss=read("src/modules/organizations/presentation/organization-admin.css");
+  const kardex=read("src/modules/supply/inventory/presentation/kardex-page.tsx");
+  const inventoryCss=read("src/modules/supply/inventory/presentation/inventory.css");
+  assert.ok(company.includes("organization-summary"),"Empresa tiene una cabecera de identidad propia");
+  assert.ok(company.includes("organization-settings"),"Empresa separa identidad legal y configuración general");
+  assert.ok(companyCss.includes(".organization-savebar"),"Empresa usa una barra de guardado consistente");
+  assert.ok(kardex.includes("kardex-filter-grid"),"Kárdex usa un grid explícito de filtros");
+  assert.ok(kardex.includes("kardex-results-header"),"Kárdex separa filtros de resultados");
+  assert.equal(kardex.includes('style={{flexWrap:"wrap"}}'),false,"Kárdex no depende de estilos inline para el layout");
+  assert.ok(inventoryCss.includes(".kardex-filter-card"),"Kárdex mantiene sus estilos en la hoja del módulo");
+});
