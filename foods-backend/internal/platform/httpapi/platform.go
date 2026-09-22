@@ -30,6 +30,9 @@ type tenantOnboardingInput struct {
 	AdminName        string   `json:"adminName"`
 	AdminEmail       string   `json:"adminEmail"`
 	AdminPassword    string   `json:"adminPassword"`
+	PlanID           string   `json:"planId"`
+	BillingCycle     string   `json:"billingCycle"`
+	TermsAccepted    bool     `json:"termsAccepted"`
 }
 
 func (a *API) requirePlatformAdmin(next http.Handler) http.Handler {
@@ -55,8 +58,9 @@ func (a *API) onboardTenant(w http.ResponseWriter, r *http.Request) {
 	in.Country, in.Currency, in.CurrencyPosition = strings.ToUpper(strings.TrimSpace(in.Country)), strings.ToUpper(strings.TrimSpace(in.Currency)), strings.TrimSpace(in.CurrencyPosition)
 	in.TaxName, in.LocationName, in.LocationCode, in.Address = strings.TrimSpace(in.TaxName), strings.TrimSpace(in.LocationName), strings.ToUpper(strings.TrimSpace(in.LocationCode)), strings.TrimSpace(in.Address)
 	in.AdminName, in.AdminEmail = strings.TrimSpace(in.AdminName), strings.ToLower(strings.TrimSpace(in.AdminEmail))
+	in.PlanID, in.BillingCycle = strings.TrimSpace(in.PlanID), strings.TrimSpace(in.BillingCycle)
 	currency, fiscalOK := validateFiscalInput(&fiscalProfileInput{Country: in.Country, Currency: in.Currency, CurrencyPosition: in.CurrencyPosition, TaxName: in.TaxName, TaxRate: in.TaxRate, TaxIncluded: in.TaxIncluded, Default: true})
-	if !fiscalOK || in.LegalName == "" || in.TradeName == "" || len(in.TaxID) < 6 || len(in.TaxID) > 32 || in.Timezone == "" || in.LocationName == "" || in.LocationCode == "" || in.AdminName == "" || !strings.Contains(in.AdminEmail, "@") || len(in.AdminPassword) < 8 {
+	if !fiscalOK || in.LegalName == "" || in.TradeName == "" || len(in.TaxID) < 6 || len(in.TaxID) > 32 || in.Timezone == "" || in.LocationName == "" || in.LocationCode == "" || in.AdminName == "" || !strings.Contains(in.AdminEmail, "@") || len(in.AdminPassword) < 8 || in.PlanID == "" || (in.BillingCycle != "monthly" && in.BillingCycle != "annual") || !in.TermsAccepted {
 		fail(w, 400, "invalid_onboarding", "Completa correctamente empresa, configuración fiscal, local y administrador.")
 		return
 	}
@@ -86,7 +90,7 @@ func (a *API) onboardTenant(w http.ResponseWriter, r *http.Request) {
 		roleID, err = seedOrganizationRoles(r.Context(), tx, organizationID)
 	}
 	if err == nil {
-		err = seedOrganizationModules(r.Context(), tx, organizationID)
+		err = createOrganizationSubscription(r.Context(), tx, organizationID, userID, in.PlanID, in.BillingCycle, in.TermsAccepted)
 	}
 	if err == nil {
 		_, err = tx.Exec(r.Context(), `INSERT INTO user_roles(user_id,role_id,location_id) VALUES($1,$2,$3)`, userID, roleID, locationID)
