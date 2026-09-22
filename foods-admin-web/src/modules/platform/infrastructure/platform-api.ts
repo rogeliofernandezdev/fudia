@@ -1,5 +1,5 @@
 import {apiFetch} from "@/shared/api/client";
-import type {OrganizationSubscription,PlatformOnboardingContext,PlatformOnboardingDraft,SubscriptionPlan,SubscriptionPlanDraft} from "../domain/types";
+import type {OrganizationSubscription,PlatformModule,PlatformOnboardingContext,PlatformOnboardingDraft,SubscriptionPlan,SubscriptionPlanDraft} from "../domain/types";
 
 async function platformFetch<T>(path:string,init?:RequestInit):Promise<T>{
  const response=await fetch(`/api/platform/${path}`,{
@@ -14,6 +14,11 @@ async function platformFetch<T>(path:string,init?:RequestInit):Promise<T>{
 
 export async function listSubscriptionPlans():Promise<{items:SubscriptionPlan[]}>{
  return platformFetch<{items:SubscriptionPlan[]}>("plans");
+}
+
+export async function listReadyModules():Promise<PlatformModule[]>{
+ const data=await apiFetch<{modules:PlatformModule[]}>("modules");
+ return data.modules.filter(module=>module.availability==="ready");
 }
 
 export async function getPlatformOnboardingContext():Promise<PlatformOnboardingContext>{
