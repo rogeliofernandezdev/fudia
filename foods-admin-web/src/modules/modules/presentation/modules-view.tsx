@@ -24,11 +24,11 @@ export function ModulesView() {
     onSuccess: (_data, variables) => {
       void client.invalidateQueries({queryKey: ["modules"]});
       void client.invalidateQueries({queryKey: ["session-context"]});
-      const module=modules.data?.modules.find(item=>item.key===variables.key);
+      const currentModule=modules.data?.modules.find(item=>item.key===variables.key);
       notify({
         tone: "success",
         title: variables.active ? "Módulo activado" : "Módulo desactivado",
-        message: `${module?.name??"El módulo"} ${variables.active ? "ahora está disponible" : "ya no está disponible"} para esta empresa.`,
+        message: `${currentModule?.name??"El módulo"} ${variables.active ? "ahora está disponible" : "ya no está disponible"} para esta empresa.`,
       });
     },
     onError: (e: Error) => notify({tone: "danger", title: "No se pudo actualizar", message: e.message}),
