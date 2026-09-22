@@ -9,6 +9,7 @@ import type {Option,Order} from "../domain/types";
 import {getOrder,listOrders,updateOrderStatus} from "../infrastructure/orders-api";
 import {useFeedback} from "@/providers/feedback-provider";
 import {useSettings} from "@/providers/settings-context";
+import {useDebouncedValue} from "@/shared/hooks/use-debounced-value";
 import {useSession} from "@/providers/session-context";
 import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
 
@@ -46,9 +47,9 @@ const money=(v:string|number)=>Number(v).toFixed(2);
 
 export function OrdersManager(){
  const qc=useQueryClient();const{notify}=useFeedback();const settings=useSettings();const{can,location}=useSession();const canManage=can("orders.manage");
- const[q,setQ]=useState("");const[channel,setChannel]=useState("");const[status,setStatus]=useState("abiertos");const[page,setPage]=useState(1);const[size,setSize]=useState(12);
+ const[q,setQ]=useState("");const debouncedQ=useDebouncedValue(q);const[channel,setChannel]=useState("");const[status,setStatus]=useState("abiertos");const[page,setPage]=useState(1);const[size,setSize]=useState(12);
  const[detailId,setDetailId]=useState<string|null>(null);const[cancelTarget,setCancelTarget]=useState<Order|null>(null);
- const list=useQuery({queryKey:["orders",q,channel,status,page,size],queryFn:()=>listOrders({q,channel,status,page,pageSize:size})});
+ const list=useQuery({queryKey:["orders",debouncedQ,channel,status,page,size],queryFn:()=>listOrders({q:debouncedQ,channel,status,page,pageSize:size})});
  const detail=useQuery({queryKey:["order",detailId],queryFn:()=>getOrder(detailId!),enabled:Boolean(detailId)});
  const invalidate=()=>{void qc.invalidateQueries({queryKey:["orders"]});void qc.invalidateQueries({queryKey:["order",detailId]})};
  const advance=useMutation({mutationFn:(v:{id:string;status:string})=>updateOrderStatus(v.id,v.status),onSuccess:()=>{invalidate();notify({tone:"success",title:"Pedido actualizado",message:"El estado del pedido fue actualizado."})},onError:e=>notify({tone:"danger",title:"No se pudo actualizar",message:e.message})});
