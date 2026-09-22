@@ -14,6 +14,19 @@ export function listActiveZones(){
 export function createTables(items:RowDraft[]){
  return apiFetch<{items:Table[]}>("tables/batch",{method:"POST",body:JSON.stringify({items:items.map(row=>({name:row.name,seats:Number(row.seats)||2,zone:row.zone}))})});
 }
+export function saveTable(draft:RowDraft){
+ if(!draft.id)throw new Error("La mesa no tiene identificador.");
+ return apiFetch<Table>(`tables/${draft.id}`,{
+  method:"PATCH",
+  body:JSON.stringify({
+   name:draft.name.trim(),
+   seats:Number(draft.seats)||2,
+   zone:draft.zone,
+   active:draft.active,
+   qrEnabled:draft.qrEnabled??true,
+  }),
+ });
+}
 export function deactivateTableOrZone(kind:"tables"|"zones",id:string){
  return apiFetch<void>(`${kind}/${id}`,{method:"DELETE"});
 }
