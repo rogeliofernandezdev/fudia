@@ -62,23 +62,40 @@ function ProfileForm({profile,organizationName,locationName}:{profile:MyProfile;
   return <div className="profile-shell">
     <div className="profile-primary-grid">
       <aside className="profile-card profile-identity-card">
-        <div className="profile-identity-cover">
-          <span>PERFIL</span>
-        </div>
+        <header className="profile-identity-head">
+          <div>
+            <span><Icon name="users" size={15}/></span>
+            <div><small>PERFIL</small><b>Cuenta de usuario</b></div>
+          </div>
+          <span className="profile-account-status"><i/>Activa</span>
+        </header>
+
         <div className="profile-identity-body">
-          <div className="profile-identity-avatar-row">
+          <div className="profile-identity-summary">
             <span className="profile-avatar">{initials(profile.fullName)}</span>
-            <span className="profile-account-status"><i/>Cuenta activa</span>
+            <div className="profile-identity-copy">
+              <h2>{profile.fullName}</h2>
+              <p><Icon name="mail" size={13}/>{profile.email}</p>
+            </div>
           </div>
-          <div className="profile-identity-copy">
-            <h2>{profile.fullName}</h2>
-            <p><Icon name="mail" size={13}/>{profile.email}</p>
-          </div>
+
           <div className="profile-identity-details">
-            <div><small>ROL</small><b>{profile.platformAdmin?"Administrador de plataforma":profile.roleNames.length?profile.roleNames.join(" · "):"Sin rol efectivo"}</b></div>
-            {organizationName&&<div><small>EMPRESA</small><b>{organizationName}</b></div>}
-            {locationName&&<div><small>LOCAL ACTIVO</small><b>{locationName}</b></div>}
-            <div><small>PERMISOS</small><b>{profile.platformAdmin?"Acceso total":profile.permissions.length}</b></div>
+            <div>
+              <span><Icon name="users" size={14}/></span>
+              <div><small>ROL</small><b>{profile.platformAdmin?"Administrador de plataforma":profile.roleNames.length?profile.roleNames.join(" · "):"Sin rol efectivo"}</b></div>
+            </div>
+            {organizationName&&<div>
+              <span><Icon name="store" size={14}/></span>
+              <div><small>EMPRESA</small><b>{organizationName}</b></div>
+            </div>}
+            {locationName&&<div>
+              <span><Icon name="grid" size={14}/></span>
+              <div><small>LOCAL ACTIVO</small><b>{locationName}</b></div>
+            </div>}
+            <div>
+              <span><Icon name="lock" size={14}/></span>
+              <div><small>PERMISOS</small><b>{profile.platformAdmin?"Acceso total":profile.permissions.length}</b></div>
+            </div>
           </div>
         </div>
       </aside>
