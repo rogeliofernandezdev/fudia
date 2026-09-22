@@ -214,13 +214,14 @@ func TestIdentityDefaultRolesProtectAdministrator(t *testing.T) {
 	if err = tx.Commit(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	var key string
+	var key,name string
 	var permissions, menus []string
-	if err := api.db.QueryRow(context.Background(), `SELECT system_key,permissions,menu_access FROM roles WHERE id=$1`, adminID).Scan(&key,&permissions,&menus); err != nil {
+	if err := api.db.QueryRow(context.Background(), `SELECT system_key,name,permissions,menu_access FROM roles WHERE id=$1`, adminID).Scan(&key,&name,&permissions,&menus); err != nil {
 		t.Fatal(err)
 	}
-	if key != "administrator" || len(permissions) != 1 || permissions[0] != "*" || len(menus) != 1 || menus[0] != "*" {
-		t.Fatalf("administrator role is not protected/full access: key=%q perms=%v menus=%v", key, permissions, menus)
+	contains:=func(values []string,want string)bool{for _,value:=range values{if value==want{return true}};return false}
+	if key != "administrator" || name != "Administrador de empresa" || contains(permissions,"*") || contains(menus,"*") || !contains(permissions,"users.manage") || !contains(permissions,"organizations.manage") {
+		t.Fatalf("company administrator must be explicit and tenant-scoped: key=%q name=%q perms=%v menus=%v", key,name,permissions,menus)
 	}
 	var defaults int
 	if err := api.db.QueryRow(context.Background(), `SELECT count(*) FROM roles WHERE organization_id=$1 AND system_key IS NOT NULL`, s.OrganizationID).Scan(&defaults); err != nil {
