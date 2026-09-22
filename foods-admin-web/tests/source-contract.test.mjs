@@ -209,6 +209,9 @@ test("producto e inventario mantienen una sola fuente de verdad",()=>{
   assert.ok(recipes.includes('placeholder="Buscar insumo..."'),"La fila de insumo usa autocomplete");
   assert.ok(recipes.includes('inventoryItemId:""'),"Agregar insumo crea una fila vacía sin depender del catálogo cargado");
   assert.equal(recipes.includes("draft.items.length>=(inventory.data?.items.length??0)"),false,"No existe un máximo ligado al tamaño del catálogo cargado");
+  assert.ok(recipes.includes('className="recipe-skeleton-table"'),"El skeleton de recetas usa la misma geometría de tabla");
+  assert.ok(recipes.includes("<th>PRODUCTO</th><th>RENDIMIENTO</th><th>INSUMOS</th><th>ESTADO</th><th>ACCIONES</th>"),"El skeleton conserva las columnas reales");
+  assert.equal(recipes.includes("recipe-list-skeleton-head"),false,"El skeleton no usa barras genéricas como cabecera");
 });
 
 test("compras concentra orden recepcion y altas de abastecimiento",()=>{
