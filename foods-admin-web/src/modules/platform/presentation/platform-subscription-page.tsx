@@ -46,7 +46,7 @@ function SubscriptionWorkspace({current,plans}:{current:OrganizationSubscription
  const availablePlans=plans.filter(plan=>(plan.active&&plan.code!=="legacy")||plan.id===current.plan.id);
  const planChanged=draft.planId!==current.plan.id;
  const termsChanged=selectedPlan?.termsVersion!==current.termsVersion;
- const needsAcceptance=planChanged&&termsChanged;
+ const needsAcceptance=planChanged||termsChanged;
 
  const save=useMutation({
   mutationFn:()=>changeOrganizationSubscription(draft),
