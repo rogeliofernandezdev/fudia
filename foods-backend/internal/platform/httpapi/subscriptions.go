@@ -471,9 +471,16 @@ func (a *API) updateOrganizationSubscription(w http.ResponseWriter, r *http.Requ
 		fail(w,409,"trial_unavailable","El plan seleccionado no incluye prueba gratuita.")
 		return
 	}
-	var currentPlanID string
+	var currentPlanID,currentCycle,currentStatus,currentPrice string
 	var currentTerms *string
-	if err = tx.QueryRow(r.Context(), `SELECT plan_id,terms_version FROM organization_subscriptions WHERE organization_id=$1 FOR UPDATE`, s.OrganizationID).Scan(&currentPlanID,&currentTerms); err != nil {
+	var currentTrialStarts,currentTrialEnds,currentPeriodStarts,currentPeriodEnds,currentRenews *time.Time
+	if err = tx.QueryRow(r.Context(), `
+		SELECT plan_id,billing_cycle,status,price_amount::text,terms_version,
+		       trial_starts_at,trial_ends_at,current_period_starts_at,current_period_ends_at,renews_at
+		FROM organization_subscriptions
+		WHERE organization_id=$1
+		FOR UPDATE
+	`, s.OrganizationID).Scan(&currentPlanID,&currentCycle,&currentStatus,&currentPrice,&currentTerms,&currentTrialStarts,&currentTrialEnds,&currentPeriodStarts,&currentPeriodEnds,&currentRenews); err != nil {
 		fail(w,404,"subscription_not_found","La empresa todavía no tiene una suscripción.")
 		return
 	}
@@ -484,26 +491,41 @@ func (a *API) updateOrganizationSubscription(w http.ResponseWriter, r *http.Requ
 		fail(w,409,"plan_limit_conflict","La empresa supera los límites del plan seleccionado.")
 		return
 	}
-	needsTerms := currentPlanID!=plan.ID || currentTerms==nil || *currentTerms!=plan.TermsVersion
+	planChanged:=currentPlanID!=plan.ID
+	cycleChanged:=currentCycle!=in.BillingCycle
+	needsTerms := planChanged || currentTerms==nil || *currentTerms!=plan.TermsVersion
 	if needsTerms && !in.TermsAccepted {
-		fail(w,409,"terms_required","La nueva versión de condiciones debe aceptarse antes de cambiar el plan.")
+		fail(w,409,"terms_required","La versión vigente de condiciones debe aceptarse antes de aplicar el cambio.")
 		return
 	}
 
 	now := time.Now().UTC()
-	price := plan.MonthlyPrice
-	if in.BillingCycle=="annual" { price=plan.AnnualPrice }
-	var trialStarts,trialEnds,currentEnd,renews *time.Time
-	if in.Status=="trial" {
-		start:=now
-		end:=now.AddDate(0,0,plan.TrialDays)
-		trialStarts=&start;trialEnds=&end;currentEnd=&end;renews=&end
-	} else if in.Status=="active" || in.Status=="past_due" {
-		end:=subscriptionPeriodEnd(now,in.BillingCycle)
-		currentEnd=&end;renews=&end
+	price:=currentPrice
+	if planChanged||cycleChanged {
+		price=plan.MonthlyPrice
+		if in.BillingCycle=="annual" { price=plan.AnnualPrice }
 	}
+	trialStarts,trialEnds:=currentTrialStarts,currentTrialEnds
+	periodStarts,periodEnds,renews:=currentPeriodStarts,currentPeriodEnds,currentRenews
 	var cancelledAt *time.Time
-	if in.Status=="cancelled" { cancelledAt=&now }
+	contractChanged:=planChanged||cycleChanged||currentStatus!=in.Status
+	if contractChanged {
+		switch in.Status {
+		case "trial":
+			start:=now
+			end:=now.AddDate(0,0,plan.TrialDays)
+			trialStarts=&start;trialEnds=&end;periodStarts=&start;periodEnds=&end;renews=&end
+		case "active":
+			end:=subscriptionPeriodEnd(now,in.BillingCycle)
+			trialStarts=nil;trialEnds=nil;periodStarts=&now;periodEnds=&end;renews=&end
+		case "past_due":
+			if periodStarts==nil { periodStarts=&now }
+			if periodEnds==nil { end:=subscriptionPeriodEnd(now,in.BillingCycle);periodEnds=&end;renews=&end }
+		case "cancelled":
+			renews=nil
+			cancelledAt=&now
+		}
+	}
 	termsVersion:=currentTerms
 	var termsAcceptedAt any = nil
 	var termsAcceptedBy any = nil
@@ -520,7 +542,7 @@ func (a *API) updateOrganizationSubscription(w http.ResponseWriter, r *http.Requ
 		    terms_accepted_at=COALESCE($14,terms_accepted_at),terms_accepted_by=COALESCE($15,terms_accepted_by),
 		    cancelled_at=$16,updated_at=now()
 		WHERE organization_id=$1
-	`, s.OrganizationID,plan.ID,in.BillingCycle,price,plan.Currency,in.Status,trialStarts,trialEnds,now,currentEnd,renews,in.AutoRenew,termsVersion,termsAcceptedAt,termsAcceptedBy,cancelledAt)
+	`, s.OrganizationID,plan.ID,in.BillingCycle,price,plan.Currency,in.Status,trialStarts,trialEnds,periodStarts,periodEnds,renews,in.AutoRenew,termsVersion,termsAcceptedAt,termsAcceptedBy,cancelledAt)
 	if err != nil {
 		fail(w,503,"subscription_unavailable","No pudimos actualizar la suscripción.")
 		return
@@ -538,7 +560,6 @@ func (a *API) updateOrganizationSubscription(w http.ResponseWriter, r *http.Requ
 	a.audit(r,"subscription.updated","organization",s.OrganizationID)
 	a.getOrganizationSubscription(w,r)
 }
-
 func (a *API) recordSubscriptionPayment(w http.ResponseWriter, r *http.Request) {
 	s := r.Context().Value(scopeKey{}).(scope)
 	var in subscriptionPaymentInput
