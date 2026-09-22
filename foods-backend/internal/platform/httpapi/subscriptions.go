@@ -582,7 +582,8 @@ func (a *API) recordSubscriptionPayment(w http.ResponseWriter, r *http.Request) 
 	defer tx.Rollback(r.Context())
 	var subscriptionID,billingCycle,currency string
 	var moduleKeys []string
-	if err=tx.QueryRow(r.Context(),`SELECT s.id,s.billing_cycle,s.currency,p.module_keys FROM organization_subscriptions s JOIN subscription_plans p ON p.id=s.plan_id WHERE s.organization_id=$1 FOR UPDATE OF s`,s.OrganizationID).Scan(&subscriptionID,&billingCycle,&currency,&moduleKeys);err!=nil {
+	var currentPeriodEnd *time.Time
+	if err=tx.QueryRow(r.Context(),`SELECT s.id,s.billing_cycle,s.currency,p.module_keys,s.current_period_ends_at FROM organization_subscriptions s JOIN subscription_plans p ON p.id=s.plan_id WHERE s.organization_id=$1 FOR UPDATE OF s`,s.OrganizationID).Scan(&subscriptionID,&billingCycle,&currency,&moduleKeys,&currentPeriodEnd);err!=nil {
 		fail(w,404,"subscription_not_found","La empresa todavía no tiene una suscripción.");return
 	}
 	if in.Currency=="" { in.Currency=currency }
@@ -599,6 +600,7 @@ func (a *API) recordSubscriptionPayment(w http.ResponseWriter, r *http.Request) 
 	}
 	now:=time.Now().UTC()
 	periodStart:=now
+	if currentPeriodEnd!=nil && currentPeriodEnd.After(now) { periodStart=*currentPeriodEnd }
 	periodEnd:=subscriptionPeriodEnd(periodStart,billingCycle)
 	var external any=nil
 	if in.ExternalReference!="" { external=in.ExternalReference }
