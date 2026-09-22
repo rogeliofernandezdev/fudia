@@ -355,21 +355,29 @@ func (a *API) dashboard(w http.ResponseWriter, r *http.Request) {
 	var salesNet, averageTicket string
 	var paidOrders, openOrders, critical, purchases, reservationsToday, kitchenPending int
 	if err := a.db.QueryRow(r.Context(), `
-		SELECT COALESCE(sum(p.amount-COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id),0)),0)::text
-		FROM payments p
-		JOIN locations l ON l.id=p.location_id AND l.organization_id=p.organization_id
-		WHERE p.organization_id=$1 AND p.location_id=$2
-		  AND (p.created_at AT TIME ZONE l.timezone)::date=(now() AT TIME ZONE l.timezone)::date
+		SELECT COALESCE(sum(value),0)::text
+		FROM (
+		  SELECT p.amount AS value
+		  FROM payments p
+		  JOIN locations l ON l.id=p.location_id AND l.organization_id=p.organization_id
+		  WHERE p.organization_id=$1 AND p.location_id=$2
+		    AND (p.created_at AT TIME ZONE l.timezone)::date=(now() AT TIME ZONE l.timezone)::date
+		  UNION ALL
+		  SELECT -pr.amount AS value
+		  FROM payment_refunds pr
+		  JOIN locations l ON l.id=pr.location_id AND l.organization_id=pr.organization_id
+		  WHERE pr.organization_id=$1 AND pr.location_id=$2
+		    AND (pr.created_at AT TIME ZONE l.timezone)::date=(now() AT TIME ZONE l.timezone)::date
+		) cashflow
 	`, s.OrganizationID, s.LocationID).Scan(&salesNet); err != nil {
 		fail(w,503,"dashboard_unavailable","No pudimos calcular las ventas del día."); return
 	}
 	if err := a.db.QueryRow(r.Context(), `
-		SELECT count(*)
-		FROM orders o
-		JOIN locations l ON l.id=o.location_id AND l.organization_id=o.organization_id
-		WHERE o.organization_id=$1 AND o.location_id=$2 AND o.status<>'cancelado'
-		  AND (o.created_at AT TIME ZONE l.timezone)::date=(now() AT TIME ZONE l.timezone)::date
-		  AND (`+netPaidSQL+`) >= o.total
+		SELECT count(DISTINCT p.order_id)
+		FROM payments p
+		JOIN locations l ON l.id=p.location_id AND l.organization_id=p.organization_id
+		WHERE p.organization_id=$1 AND p.location_id=$2
+		  AND (p.created_at AT TIME ZONE l.timezone)::date=(now() AT TIME ZONE l.timezone)::date
 	`, s.OrganizationID, s.LocationID).Scan(&paidOrders); err != nil {
 		fail(w,503,"dashboard_unavailable","No pudimos calcular los pedidos cobrados."); return
 	}
@@ -384,12 +392,19 @@ func (a *API) dashboard(w http.ResponseWriter, r *http.Request) {
 
 	hourly := []map[string]any{}
 	rows,err:=a.db.Query(r.Context(), `
-		SELECT extract(hour FROM p.created_at AT TIME ZONE l.timezone)::int,
-		       COALESCE(sum(p.amount-COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id),0)),0)::text
-		FROM payments p JOIN locations l ON l.id=p.location_id AND l.organization_id=p.organization_id
-		WHERE p.organization_id=$1 AND p.location_id=$2
-		  AND (p.created_at AT TIME ZONE l.timezone)::date=(now() AT TIME ZONE l.timezone)::date
-		GROUP BY 1 ORDER BY 1
+		SELECT hour,COALESCE(sum(value),0)::text
+		FROM (
+		  SELECT extract(hour FROM p.created_at AT TIME ZONE l.timezone)::int AS hour,p.amount AS value
+		  FROM payments p JOIN locations l ON l.id=p.location_id AND l.organization_id=p.organization_id
+		  WHERE p.organization_id=$1 AND p.location_id=$2
+		    AND (p.created_at AT TIME ZONE l.timezone)::date=(now() AT TIME ZONE l.timezone)::date
+		  UNION ALL
+		  SELECT extract(hour FROM pr.created_at AT TIME ZONE l.timezone)::int AS hour,-pr.amount AS value
+		  FROM payment_refunds pr JOIN locations l ON l.id=pr.location_id AND l.organization_id=pr.organization_id
+		  WHERE pr.organization_id=$1 AND pr.location_id=$2
+		    AND (pr.created_at AT TIME ZONE l.timezone)::date=(now() AT TIME ZONE l.timezone)::date
+		) movements
+		GROUP BY hour ORDER BY hour
 	`,s.OrganizationID,s.LocationID)
 	if err==nil {
 		defer rows.Close()
@@ -401,10 +416,14 @@ func (a *API) dashboard(w http.ResponseWriter, r *http.Request) {
 		SELECT oi.name,sum(oi.qty)::text,sum(oi.qty*oi.unit_price)::text
 		FROM order_items oi
 		JOIN orders o ON o.id=oi.order_id AND o.organization_id=oi.organization_id
-		JOIN locations l ON l.id=o.location_id AND l.organization_id=o.organization_id
 		WHERE o.organization_id=$1 AND o.location_id=$2 AND o.status<>'cancelado'
-		  AND (o.created_at AT TIME ZONE l.timezone)::date=(now() AT TIME ZONE l.timezone)::date
 		  AND (`+netPaidSQL+`) >= o.total
+		  AND EXISTS(
+		    SELECT 1 FROM payments today_payment
+		    JOIN locations l ON l.id=today_payment.location_id AND l.organization_id=today_payment.organization_id
+		    WHERE today_payment.order_id=o.id AND today_payment.organization_id=o.organization_id AND today_payment.location_id=o.location_id
+		      AND (today_payment.created_at AT TIME ZONE l.timezone)::date=(now() AT TIME ZONE l.timezone)::date
+		  )
 		GROUP BY oi.name ORDER BY sum(oi.qty) DESC,oi.name LIMIT 5
 	`,s.OrganizationID,s.LocationID)
 	if err==nil {
