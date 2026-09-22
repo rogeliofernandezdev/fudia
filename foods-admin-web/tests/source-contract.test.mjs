@@ -476,11 +476,12 @@ test("mvp admin no presenta datos simulados como operacion real",()=>{
 
 test("platform admin ve todo el catalogo y modulos no listos no se activan desde UI",()=>{
   const shell=read("src/shell/admin-shell.tsx");
+  const navigation=read("src/shell/navigation.ts");
   const view=read("src/modules/modules/presentation/modules-view.tsx");
   const types=read("src/modules/modules/domain/types.ts");
 
   assert.ok(shell.includes("const isPlatformAdmin=Boolean(user?.platformAdmin)"),"El shell identifica explícitamente al admin de plataforma");
-  assert.ok(shell.includes("isPlatformAdmin?true"),"El admin de plataforma no filtra módulos del sidebar");
+  assert.ok(navigation.includes("if(context.user.platformAdmin)return true"),"El admin de plataforma no filtra módulos del sidebar");
   assert.ok(shell.includes("const blockReason=isPlatformAdmin?null"),"El admin de plataforma puede entrar a rutas aunque el módulo esté inactivo");
   assert.ok(types.includes("ModuleAvailability = \"ready\" | \"development\" | \"planned\""),"El frontend modela disponibilidad separada de activación");
   for(const label of ["Disponible","En desarrollo","Planificado"])assert.ok(view.includes(label),label);
@@ -557,8 +558,8 @@ test("no se versionan secretos locales ni artefactos temporales en la raiz admin
 test("se preservan contratos visuales base",()=>{
   const css=read("src/styles/globals.css").replace(/\s+/g,"");
   for(const token of ["--brand-700","--ops-700","--digital-700","--primary-600","--control-height"])assert.ok(css.includes(token),token);
-  const shell=read("src/shell/admin-shell.tsx");
-  for(const label of ["Reportes","Punto de venta","Carta y productos","Inventario","Compras","CONFIGURACIÓN"])assert.ok(shell.includes(label),label);
+  const navigation=read("src/shell/navigation.ts");
+  for(const label of ["Reportes","Punto de venta","Carta y productos","Inventario","Compras","CONFIGURACIÓN"])assert.ok(navigation.includes(label),label);
 });
 
 
@@ -646,12 +647,12 @@ test("empresa y kardex respetan no duplicación y patrón de gestión",()=>{
 });
 
 test("carta y producción usa iconos semánticos por función",()=>{
-  const shell=read("src/shell/admin-shell.tsx");
+  const navigation=read("src/shell/navigation.ts");
   const icons=read("src/design-system/icons.tsx");
   const recipes=read("src/modules/menu/recipes/presentation/recipes-page.tsx");
   const availability=read("src/modules/menu/availability/presentation/product-availability-manager.tsx");
-  assert.ok(shell.includes('name:"Recetas",icon:"cookingPot"'),"Recetas usa cocción/producción, no un rol de chef");
-  assert.ok(shell.includes('name:"Disponibilidad",icon:"availability"'),"Disponibilidad usa un icono específico de plato disponible");
+  assert.ok(navigation.includes('name:"Recetas",icon:"cookingPot"'),"Recetas usa cocción/producción, no un rol de chef");
+  assert.ok(navigation.includes('name:"Disponibilidad",icon:"availability"'),"Disponibilidad usa un icono específico de plato disponible");
   assert.ok(icons.includes("availability:"),"El design system define el icono semántico de disponibilidad");
   assert.ok(recipes.includes('name="cookingPot"'),"La página de Recetas conserva la misma semántica visual");
   assert.ok(availability.includes('name="availability"'),"El estado vacío de disponibilidad usa su icono de dominio");
@@ -660,33 +661,33 @@ test("carta y producción usa iconos semánticos por función",()=>{
 
 
 test("abastecimiento diferencia inventario de kardex por icono",()=>{
-  const shell=read("src/shell/admin-shell.tsx");
+  const navigation=read("src/shell/navigation.ts");
   const icons=read("src/design-system/icons.tsx");
   const kardex=read("src/modules/supply/inventory/presentation/kardex-page.tsx");
-  assert.ok(shell.includes('name:"Inventario",icon:"stock"'),"Inventario conserva el icono de stock físico");
-  assert.ok(shell.includes('name:"Kardex",icon:"ledger"'),"Kárdex usa un icono propio de historial/ledger");
+  assert.ok(navigation.includes('name:"Inventario",icon:"stock"'),"Inventario conserva el icono de stock físico");
+  assert.ok(navigation.includes('name:"Kardex",icon:"ledger"'),"Kárdex usa un icono propio de historial/ledger");
   assert.ok(icons.includes("ledger:"),"El design system define el icono de Kárdex");
   assert.ok(kardex.includes('name="ledger"'),"Kárdex reutiliza su semántica visual dentro de la pantalla");
 });
 
 
 test("los nombres del menú evitan redundancias",()=>{
-  const shell=read("src/shell/admin-shell.tsx");
+  const navigation=read("src/shell/navigation.ts");
   const recipes=read("src/modules/menu/recipes/presentation/recipes-page.tsx");
   const access=read("src/modules/identity/presentation/users-roles-manager.tsx");
-  assert.ok(shell.includes('name:"Recetas",icon:"cookingPot"'),"El menú usa Recetas dentro de Carta y producción");
-  assert.equal(shell.includes('name:"Recetas y producción"'),false,"El menú no repite el nombre del grupo");
-  assert.ok(shell.includes('name:"Usuarios y roles",icon:"users"'),"El menú nombra las dos entidades administradas");
+  assert.ok(navigation.includes('name:"Recetas",icon:"cookingPot"'),"El menú usa Recetas dentro de Carta y producción");
+  assert.equal(navigation.includes('name:"Recetas y producción"'),false,"El menú no repite el nombre del grupo");
+  assert.ok(navigation.includes('name:"Usuarios y roles",icon:"users"'),"El menú nombra las dos entidades administradas");
   assert.ok(recipes.includes('title="Recetas"'),"La página de Recetas usa el mismo nombre");
   assert.ok(access.includes('title="Usuarios y roles"'),"La página de accesos usa Usuarios y roles");
 });
 
 
 test("módulos y navegación comparten nombres funcionales",()=>{
-  const shell=read("src/shell/admin-shell.tsx");
+  const navigation=read("src/shell/navigation.ts");
   const availability=read("src/modules/menu/availability/presentation/product-availability-manager.tsx");
-  assert.ok(shell.includes('name:"Disponibilidad",icon:"availability"'),"El menú usa el nombre corto Disponibilidad");
-  assert.equal(shell.includes('name:"Disponibilidad de la carta"'),false,"El menú no repite el contexto Carta");
+  assert.ok(navigation.includes('name:"Disponibilidad",icon:"availability"'),"El menú usa el nombre corto Disponibilidad");
+  assert.equal(navigation.includes('name:"Disponibilidad de la carta"'),false,"El menú no repite el contexto Carta");
   assert.ok(availability.includes('title="Disponibilidad"'),"La página usa el mismo nombre que el menú");
   assert.equal(availability.includes('title="Disponibilidad de la carta"'),false,"La página no conserva el nombre largo");
 });
