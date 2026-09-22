@@ -72,7 +72,7 @@ export function ProductAvailabilityManager(){
   :"Cargando fecha…";
 
  return <>
-  <PageHeader eyebrow="CARTA Y PRODUCCIÓN" title="Disponibilidad de la carta" description="Administra el cupo diario y consulta la disponibilidad real de cada producto en el local activo." action={<span className="availability-date"><Icon name="clock" size={16}/>{businessDate}</span>}/>
+  <PageHeader eyebrow="CARTA Y PRODUCCIÓN" title="Disponibilidad" description="Administra el cupo diario y consulta la disponibilidad real de cada producto en el local activo." action={<span className="availability-date"><Icon name="clock" size={16}/>{businessDate}</span>}/>
   <section className="panel availability-panel">
    <header className="availability-toolbar">
     <div className="availability-filters">
@@ -86,7 +86,7 @@ export function ProductAvailabilityManager(){
    </header>
 
    {sessionLoading?<div className="availability-table-wrap hover-scroll" tabIndex={0}><AvailabilitySkeleton/></div>:!canRead?
-    <div className="availability-state"><Icon name="alert" size={24}/><b>Sin permiso de lectura</b><p>Tu rol no permite consultar la disponibilidad de la carta.</p></div>
+    <div className="availability-state"><Icon name="alert" size={24}/><b>Sin permiso de lectura</b><p>Tu rol no permite consultar la disponibilidad.</p></div>
    :query.isLoading?<div className="availability-table-wrap hover-scroll" tabIndex={0}><AvailabilitySkeleton/></div>:query.isError?
     <div className="availability-state"><Icon name="alert" size={24}/><b>No pudimos cargar la carta</b><p>{query.error.message}</p><Button kind="secondary" icon="refresh" onClick={()=>query.refetch()}>Reintentar</Button></div>
    :!items.length?
