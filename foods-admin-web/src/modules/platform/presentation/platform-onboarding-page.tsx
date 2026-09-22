@@ -1,7 +1,7 @@
 "use client";
 import "./platform-onboarding.css";
 import Link from "next/link";
-import {useEffect,useState} from "react";
+import {useState} from "react";
 import {useMutation,useQuery} from "@tanstack/react-query";
 import {Icon,IconName} from "@/design-system/icons";
 import {LocationMap} from "@/design-system/location-map";
@@ -33,14 +33,11 @@ export function PlatformOnboardingPage(){
   const context=useQuery({queryKey:["platform-onboarding-context"],queryFn:getPlatformOnboardingContext});
   const ctx=context.data;
   const loadError=context.error instanceof Error?context.error.message:"";
-  const selectedPlan=ctx?.plans.find(plan=>plan.id===draft.planId)??null;
-
-  useEffect(()=>{
-    if(!draft.planId&&ctx?.plans.length)setDraft(current=>({...current,planId:ctx.plans[0].id}));
-  },[ctx?.plans,draft.planId]);
+  const effectivePlanId=draft.planId||ctx?.plans[0]?.id||"";
+  const selectedPlan=ctx?.plans.find(plan=>plan.id===effectivePlanId)??null;
 
   const save=useMutation({
-    mutationFn:()=>createPlatformOrganization(draft),
+    mutationFn:()=>createPlatformOrganization({...draft,planId:effectivePlanId}),
     onSuccess:()=>{notify({tone:"success",title:"Empresa registrada",message:"La empresa, su suscripción, el local y el Administrador de empresa quedaron listos."});setDraft(blank);setStep(0)},
     onError:e=>notify({tone:"danger",title:"No se pudo registrar",message:e.message}),
   });
@@ -78,7 +75,7 @@ export function PlatformOnboardingPage(){
       {step===1&&<section className="panel management">
         <header><span className="modal-title-icon"><Icon name="settings" size={18}/></span><div><small>PASO 2 · PLAN Y CONTRATO</small><h2>Suscripción SaaS</h2></div></header>
         <div className="form-grid">
-          <label className="span-2">Plan contratado<Select required value={draft.planId} onChange={e=>set("planId",e.target.value)}>{ctx.plans.map(plan=><option key={plan.id} value={plan.id}>{plan.name+" · "+plan.code}</option>)}</Select></label>
+          <label className="span-2">Plan contratado<Select required value={effectivePlanId} onChange={e=>set("planId",e.target.value)}>{ctx.plans.map(plan=><option key={plan.id} value={plan.id}>{plan.name+" · "+plan.code}</option>)}</Select></label>
           <label>Ciclo de facturación<Select value={draft.billingCycle} onChange={e=>set("billingCycle",e.target.value as "monthly"|"annual")}><option value="monthly">Mensual</option><option value="annual">Anual</option></Select></label>
           <label>Precio contratado<Input readOnly value={selectedPlan?(selectedPlan.currency+" "+Number(draft.billingCycle==="annual"?selectedPlan.annualPrice:selectedPlan.monthlyPrice).toFixed(2)):""}/></label>
         </div>
