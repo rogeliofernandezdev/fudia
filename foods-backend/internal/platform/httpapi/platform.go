@@ -86,6 +86,9 @@ func (a *API) onboardTenant(w http.ResponseWriter, r *http.Request) {
 		roleID, err = seedOrganizationRoles(r.Context(), tx, organizationID)
 	}
 	if err == nil {
+		err = seedOrganizationModules(r.Context(), tx, organizationID)
+	}
+	if err == nil {
 		_, err = tx.Exec(r.Context(), `INSERT INTO user_roles(user_id,role_id,location_id) VALUES($1,$2,$3)`, userID, roleID, locationID)
 	}
 	if err == nil {
