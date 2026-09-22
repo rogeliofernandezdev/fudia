@@ -35,7 +35,7 @@ export function DashboardView(){
     {count:data.purchasesToApprove,title:"Compras por aprobar",detail:"Órdenes pendientes de aprobación",href:"/compras",tone:"blue"},
     {count:data.kitchenPending,title:"Comandas activas",detail:"Confirmadas o en preparación",href:"/cocina",tone:"green"},
   ].filter(item=>item.count>0):[];
-  if(query.isLoading)return <><PageHeader eyebrow="CONTROL DEL NEGOCIO" title="Cargando operación…" description="Calculando ventas y actividad del local."/><section className="panel catalog-state"><b>Cargando datos reales…</b></section></>;
+  if(query.isLoading)return <><PageHeader eyebrow="CONTROL DEL NEGOCIO" title={`${greeting()}, ${(user?.name??"Admin").split(" ")[0]}`} description={`Actividad real de ${location?.name??"tu local"}.`} action={<Link href="/ventas" className="button secondary"><Icon name="receipt" size={17}/><span>Ver ventas</span></Link>}/><DashboardSkeleton/></>;
   if(query.isError)return <><PageHeader eyebrow="CONTROL DEL NEGOCIO" title="No pudimos cargar el panel" description="Los datos no se reemplazan por valores simulados."/><section className="panel catalog-state error"><span><Icon name="alert"/></span><b>Error de lectura</b><p>{query.error.message}</p><button className="button secondary" onClick={()=>void query.refetch()}>Reintentar</button></section></>;
   return <>
     <PageHeader eyebrow="CONTROL DEL NEGOCIO" title={`${greeting()}, ${(user?.name??"Admin").split(" ")[0]}`} description={`Actividad real de ${location?.name??"tu local"}.`} action={<Link href="/ventas" className="button secondary"><Icon name="receipt" size={17}/><span>Ver ventas</span></Link>}/>
@@ -47,4 +47,28 @@ export function DashboardView(){
     </section>
     <section className="panel top-products"><header><div><small>DESEMPEÑO DEL MENÚ</small><h2>Productos cobrados hoy</h2></div><Link href="/productos">Ver carta</Link></header>{data?.topProducts.length?data.topProducts.map((p,i)=><div className="top-product" key={p.name}><span className={`rank r${i+1}`}>{i+1}</span><b>{p.name}</b><span className="qty">{Number(p.qty)} unidades</span><Status tone="green">{money(p.revenue)}</Status></div>):<div className="catalog-state"><b>Sin productos vendidos todavía</b><p>Los productos aparecerán después de registrar cobros.</p></div>}</section>
   </>;
+}
+
+
+function DashboardSkeleton(){
+  return <div className="dashboard-skeleton" aria-label="Cargando reportes" aria-busy="true">
+    <section className="period dashboard-skeleton-period" aria-hidden="true"><i/><span/></section>
+    <section className="kpi-grid">
+      {Array.from({length:4},(_,index)=><article className="dashboard-skeleton-kpi" key={index}><span/><div><i/><b/><i/></div></article>)}
+    </section>
+    <section className="dashboard-grid">
+      <article className="panel chart-panel dashboard-skeleton-panel">
+        <header><div><i/><b/></div></header>
+        <div className="dashboard-skeleton-chart"><span/><span/><span/><span/><span/><span/><span/></div>
+      </article>
+      <article className="panel alerts dashboard-skeleton-panel">
+        <header><div><i/><b/></div><span/></header>
+        {Array.from({length:3},(_,index)=><div className="dashboard-skeleton-alert" key={index}><span/><div><b/><i/></div><i/></div>)}
+      </article>
+    </section>
+    <section className="panel top-products dashboard-skeleton-panel dashboard-skeleton-products">
+      <header><div><i/><b/></div><span/></header>
+      {Array.from({length:4},(_,index)=><div className="top-product dashboard-skeleton-product" key={index}><span/><b/><i/><em/></div>)}
+    </section>
+  </div>;
 }
