@@ -4,7 +4,7 @@ import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import AsyncSelect from "react-select/async";
 import type {StylesConfig} from "react-select";
-import {Button,ConfirmDialog,FieldLabel,Icon,Input,PageHeader,RowActionButton,Select,Status,Textarea} from "@/design-system";
+import {Button,ConfirmDialog,FieldLabel,Icon,Input,PageHeader,RowActionButton,Status,Textarea} from "@/design-system";
 import {useFeedback,useSession} from "@/providers";
 import {
  getRecipe,
@@ -18,8 +18,8 @@ import {
 
 const empty=(productId=""):RecipeDraft=>({productId,yieldQuantity:"1",notes:"",active:true,items:[]});
 
-type RecipeProductOption={label:string;value:string};
-const recipeProductSelectStyles:StylesConfig<RecipeProductOption,false>={
+type RecipeLookupOption={label:string;value:string;unit?:string};
+const recipeLookupSelectStyles:StylesConfig<RecipeLookupOption,false>={
  control:(base)=>({...base,height:"var(--control-height)",minHeight:"var(--control-height)",borderColor:"var(--line)",borderRadius:"6px",backgroundColor:"var(--surface)",fontSize:"11px",fontWeight:600,boxShadow:"none","&:hover":{borderColor:"var(--line-strong)"}}),
  valueContainer:(base)=>({...base,height:"var(--control-height)",padding:"0 10px"}),
  input:(base)=>({...base,color:"var(--ink-950)",fontSize:"11px",fontWeight:600,margin:0,padding:0}),
@@ -34,13 +34,19 @@ const recipeProductSelectStyles:StylesConfig<RecipeProductOption,false>={
  noOptionsMessage:(base)=>({...base,color:"var(--ink-500)",fontSize:"10px"}),
  loadingMessage:(base)=>({...base,color:"var(--ink-500)",fontSize:"10px"}),
 };
-async function loadRecipeProductOptions(q:string):Promise<RecipeProductOption[]>{
+async function loadRecipeProductOptions(q:string):Promise<RecipeLookupOption[]>{
  const search=q.trim();
  if(search.length>0&&search.length<3)return [];
  const response=await listRecipeProducts(search);
  return response.items
   .filter(product=>product.quantityControl!=="inventory")
   .map(product=>({value:product.id,label:product.name}));
+}
+async function loadRecipeIngredientOptions(q:string):Promise<RecipeLookupOption[]>{
+ const search=q.trim();
+ if(search.length>0&&search.length<3)return [];
+ const response=await listRecipeInventory(search);
+ return response.items.map(item=>({value:item.id,label:item.name,unit:item.unit}));
 }
 
 export function RecipesPage(){
@@ -53,11 +59,12 @@ export function RecipesPage(){
  const[loadingId,setLoadingId]=useState("");
  const[attempted,setAttempted]=useState(false);
  const[statusTarget,setStatusTarget]=useState<RecipeSummary|null>(null);
- const[productOption,setProductOption]=useState<RecipeProductOption|null>(null);
+ const[productOption,setProductOption]=useState<RecipeLookupOption|null>(null);
+ const[ingredientOptions,setIngredientOptions]=useState<Record<string,RecipeLookupOption>>({});
  const canManage=can("recipes.manage");
 
  const recipes=useQuery({queryKey:["recipes",q],queryFn:()=>listRecipes(q)});
- const inventory=useQuery({queryKey:["recipe-inventory"],queryFn:listRecipeInventory});
+ const ingredientDefaults=useQuery({queryKey:["recipe-inventory-options","initial"],queryFn:()=>listRecipeInventory("")});
 
  const save=useMutation({
   mutationFn:saveRecipe,
@@ -65,6 +72,7 @@ export function RecipesPage(){
    setDraft(null);
    setEditingProductId("");
    setProductOption(null);
+   setIngredientOptions({});
    setAttempted(false);
    void qc.invalidateQueries({queryKey:["recipes"]});
    notify({tone:"success",title:"Receta guardada",message:r.productName+" ya usa la configuración de consumo indicada."});
@@ -102,6 +110,7 @@ export function RecipesPage(){
  function openNew(){
   setEditingProductId("");
   setProductOption(null);
+  setIngredientOptions({});
   setAttempted(false);
   setDraft(empty());
  }
@@ -113,6 +122,7 @@ export function RecipesPage(){
    const r=await getRecipe(productId);
    setEditingProductId(productId);
    setProductOption({value:r.productId,label:r.productName});
+   setIngredientOptions(Object.fromEntries(r.items.map(item=>[item.inventoryItemId,{value:item.inventoryItemId,label:item.name??"Insumo",unit:item.unit??""}])));
    setDraft({
     productId:r.productId,
     yieldQuantity:r.yieldQuantity,
@@ -132,13 +142,13 @@ export function RecipesPage(){
   setDraft(null);
   setEditingProductId("");
   setProductOption(null);
+  setIngredientOptions({});
   setAttempted(false);
  }
 
  function addIngredient(){
-  if(!draft)return;
-  const first=inventory.data?.items.find(i=>!draft.items.some(x=>x.inventoryItemId===i.id));
-  if(first)setDraft({...draft,items:[...draft.items,{inventoryItemId:first.id,quantity:"1",wastePercent:"0"}]});
+  if(!draft||draft.items.some(item=>!item.inventoryItemId))return;
+  setDraft({...draft,items:[...draft.items,{inventoryItemId:"",quantity:"1",wastePercent:"0"}]});
  }
 
  function submit(event:React.FormEvent){
@@ -197,7 +207,7 @@ export function RecipesPage(){
       <section className="recipe-main-fields" aria-label="Datos de la receta">
        <label className="recipe-product-field">
         <span>Producto preparado</span>
-        <AsyncSelect<RecipeProductOption,false>
+        <AsyncSelect<RecipeLookupOption,false>
          cacheOptions
          defaultOptions
          inputId="recipe-product"
@@ -213,7 +223,7 @@ export function RecipesPage(){
          loadingMessage={()=>"Buscando productos..."}
          noOptionsMessage={({inputValue})=>inputValue.trim().length>0&&inputValue.trim().length<3?"Escribe al menos 3 caracteres":inputValue.trim()?"No hay coincidencias":"No hay productos preparados disponibles"}
          onChange={option=>{setProductOption(option);setDraft({...draft,productId:option?.value??""})}}
-         styles={recipeProductSelectStyles}
+         styles={recipeLookupSelectStyles}
          className={`react-select-container recipe-product-autocomplete${attempted&&!draft.productId?" invalid":""}`}
          classNamePrefix="rs"
          menuPortalTarget={typeof document==="undefined"?undefined:document.body}
@@ -240,33 +250,60 @@ export function RecipesPage(){
          <span className="recipe-section-icon"><Icon name="stock" size={17}/></span>
          <span><b>Insumos de la receta</b><small>Indica la cantidad consumida para el rendimiento definido arriba.</small></span>
         </div>
-        <Button kind="secondary" icon="plus" disabled={inventory.isLoading||save.isPending||draft.items.length>=(inventory.data?.items.length??0)} onClick={addIngredient}>Agregar insumo</Button>
+        <Button type="button" kind="secondary" icon="plus" disabled={save.isPending||draft.items.some(item=>!item.inventoryItemId)} onClick={addIngredient}>Agregar insumo</Button>
        </header>
 
-       {inventory.isError?<div className="recipe-inline-state error"><Icon name="alert" size={18}/><span><b>No pudimos cargar los insumos</b><small>Reintenta la carga antes de guardar la receta.</small></span><Button kind="secondary" icon="refresh" onClick={()=>inventory.refetch()}>Reintentar</Button></div>
+       {ingredientDefaults.isError&&draft.items.length===0?<div className="recipe-inline-state error"><Icon name="alert" size={18}/><span><b>No pudimos cargar los insumos</b><small>Reintenta la carga o busca un insumo cuando agregues una fila.</small></span><Button kind="secondary" icon="refresh" onClick={()=>ingredientDefaults.refetch()}>Reintentar</Button></div>
        :draft.items.length===0?<div className={attempted?"recipe-inline-state warning":"recipe-inline-state"}><Icon name="stock" size={19}/><span><b>Agrega al menos un insumo</b><small>La receta necesita un insumo con cantidad válida para poder guardarse.</small></span></div>
        :<div className="recipe-ingredients-grid">
         <div className="recipe-ingredients-head" aria-hidden="true"><span>INSUMO</span><span>CANTIDAD</span><span>MERMA %</span><span>ACCIÓN</span></div>
         {draft.items.map((item,index)=>{
-         const selected=inventory.data?.items.find(source=>source.id===item.inventoryItemId);
+         const selected=ingredientOptions[item.inventoryItemId]??null;
+         const usedIds=new Set(draft.items.map(source=>source.inventoryItemId).filter(id=>id&&id!==item.inventoryItemId));
+         const defaultOptions=(ingredientDefaults.data?.items??[])
+          .filter(source=>!usedIds.has(source.id))
+          .map(source=>({value:source.id,label:source.name,unit:source.unit}));
+         const ingredientInvalid=attempted&&!item.inventoryItemId;
          const quantityInvalid=attempted&&Number(item.quantity)<=0;
          const waste=Number(item.wastePercent||0);
          const wasteInvalid=attempted&&(waste<0||waste>=100||!Number.isFinite(waste));
          return <div className="recipe-ingredient-row" key={index}>
           <label className="recipe-ingredient-source" data-label="INSUMO">
-           <Select aria-label={`Insumo ${index+1}`} value={item.inventoryItemId} disabled={save.isPending} onChange={e=>setDraft({...draft,items:draft.items.map((x,i)=>i===index?{...x,inventoryItemId:e.target.value}:x)})}>
-            {(inventory.data?.items??[]).map(source=><option key={source.id} value={source.id} disabled={source.id!==item.inventoryItemId&&draft.items.some(x=>x.inventoryItemId===source.id)}>{source.name} · {source.unit}</option>)}
-           </Select>
+           <AsyncSelect<RecipeLookupOption,false>
+            cacheOptions
+            defaultOptions={defaultOptions}
+            instanceId={`recipe-ingredient-${index}`}
+            loadOptions={async inputValue=>(await loadRecipeIngredientOptions(inputValue)).filter(option=>!usedIds.has(option.value))}
+            value={selected}
+            isDisabled={save.isPending}
+            isClearable
+            isSearchable
+            aria-label={`Insumo ${index+1}`}
+            aria-invalid={ingredientInvalid}
+            placeholder="Buscar insumo..."
+            loadingMessage={()=>"Buscando insumos..."}
+            noOptionsMessage={({inputValue})=>inputValue.trim().length>0&&inputValue.trim().length<3?"Escribe al menos 3 caracteres":inputValue.trim()?"No hay coincidencias":"No hay insumos disponibles"}
+            onChange={option=>{
+             if(option)setIngredientOptions(current=>({...current,[option.value]:option}));
+             setDraft({...draft,items:draft.items.map((source,i)=>i===index?{...source,inventoryItemId:option?.value??""}:source)});
+            }}
+            styles={recipeLookupSelectStyles}
+            className={`react-select-container recipe-ingredient-autocomplete${ingredientInvalid?" invalid":""}`}
+            classNamePrefix="rs"
+            menuPortalTarget={typeof document==="undefined"?undefined:document.body}
+            menuPosition="fixed"
+           />
+           {ingredientInvalid&&<small className="recipe-field-error">Selecciona un insumo.</small>}
           </label>
           <label className="recipe-ingredient-quantity" data-label="CANTIDAD">
-           <div className="recipe-quantity-control"><Input aria-label={`Cantidad del insumo ${index+1}`} type="number" min="0.001" step="0.001" inputMode="decimal" disabled={save.isPending} aria-invalid={quantityInvalid} value={item.quantity} onChange={e=>setDraft({...draft,items:draft.items.map((x,i)=>i===index?{...x,quantity:e.target.value}:x)})}/>{selected&&<small>{selected.unit}</small>}</div>
+           <div className="recipe-quantity-control"><Input aria-label={`Cantidad del insumo ${index+1}`} type="number" min="0.001" step="0.001" inputMode="decimal" disabled={save.isPending} aria-invalid={quantityInvalid} value={item.quantity} onChange={e=>setDraft({...draft,items:draft.items.map((x,i)=>i===index?{...x,quantity:e.target.value}:x)})}/>{selected?.unit&&<small>{selected.unit}</small>}</div>
            {quantityInvalid&&<small className="recipe-field-error">Mayor que 0.</small>}
           </label>
           <label className="recipe-ingredient-waste" data-label="MERMA %">
            <Input aria-label={`Merma del insumo ${index+1}`} type="number" min="0" max="99.9999" step="0.01" inputMode="decimal" disabled={save.isPending} aria-invalid={wasteInvalid} value={item.wastePercent} onChange={e=>setDraft({...draft,items:draft.items.map((x,i)=>i===index?{...x,wastePercent:e.target.value}:x)})}/>
            {wasteInvalid&&<small className="recipe-field-error">Entre 0 y 99.99.</small>}
           </label>
-          <div className="recipe-ingredient-action" data-label="ACCIÓN"><RowActionButton action="remove" label={`Quitar ${selected?.name??"insumo"}`} disabled={save.isPending} onClick={()=>setDraft({...draft,items:draft.items.filter((_,i)=>i!==index)})}/></div>
+          <div className="recipe-ingredient-action" data-label="ACCIÓN"><RowActionButton action="remove" label={`Quitar ${selected?.label??"insumo"}`} disabled={save.isPending} onClick={()=>setDraft({...draft,items:draft.items.filter((_,i)=>i!==index)})}/></div>
          </div>;
         })}
        </div>}
