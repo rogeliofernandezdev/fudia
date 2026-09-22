@@ -35,7 +35,9 @@ const recipeProductSelectStyles:StylesConfig<RecipeProductOption,false>={
  loadingMessage:(base)=>({...base,color:"var(--ink-500)",fontSize:"10px"}),
 };
 async function loadRecipeProductOptions(q:string):Promise<RecipeProductOption[]>{
- const response=await listRecipeProducts(q);
+ const search=q.trim();
+ if(search.length>0&&search.length<3)return [];
+ const response=await listRecipeProducts(search);
  return response.items
   .filter(product=>product.quantityControl!=="inventory")
   .map(product=>({value:product.id,label:product.sku?product.name+" · "+product.sku:product.name}));
@@ -209,7 +211,7 @@ export function RecipesPage(){
          aria-invalid={attempted&&!draft.productId}
          placeholder="Buscar producto preparado..."
          loadingMessage={()=>"Buscando productos..."}
-         noOptionsMessage={({inputValue})=>inputValue.trim()?"No hay coincidencias":"No hay productos preparados disponibles"}
+         noOptionsMessage={({inputValue})=>inputValue.trim().length>0&&inputValue.trim().length<3?"Escribe al menos 3 caracteres":inputValue.trim()?"No hay coincidencias":"No hay productos preparados disponibles"}
          onChange={option=>{setProductOption(option);setDraft({...draft,productId:option?.value??""})}}
          styles={recipeProductSelectStyles}
          className={`react-select-container recipe-product-autocomplete${attempted&&!draft.productId?" invalid":""}`}
