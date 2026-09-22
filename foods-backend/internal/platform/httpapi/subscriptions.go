@@ -560,7 +560,8 @@ func (a *API) recordSubscriptionPayment(w http.ResponseWriter, r *http.Request) 
 	if err!=nil { fail(w,503,"payment_unavailable","No pudimos registrar el pago.");return }
 	defer tx.Rollback(r.Context())
 	var subscriptionID,billingCycle,currency string
-	if err=tx.QueryRow(r.Context(),`SELECT id,billing_cycle,currency FROM organization_subscriptions WHERE organization_id=$1 FOR UPDATE`,s.OrganizationID).Scan(&subscriptionID,&billingCycle,&currency);err!=nil {
+	var moduleKeys []string
+	if err=tx.QueryRow(r.Context(),`SELECT s.id,s.billing_cycle,s.currency,p.module_keys FROM organization_subscriptions s JOIN subscription_plans p ON p.id=s.plan_id WHERE s.organization_id=$1 FOR UPDATE OF s`,s.OrganizationID).Scan(&subscriptionID,&billingCycle,&currency,&moduleKeys);err!=nil {
 		fail(w,404,"subscription_not_found","La empresa todavía no tiene una suscripción.");return
 	}
 	if in.Currency=="" { in.Currency=currency }
@@ -593,6 +594,7 @@ func (a *API) recordSubscriptionPayment(w http.ResponseWriter, r *http.Request) 
 			SET status='active',current_period_starts_at=$2,current_period_ends_at=$3,renews_at=$3,cancelled_at=NULL,updated_at=now()
 			WHERE organization_id=$1
 		`,s.OrganizationID,periodStart,periodEnd)
+		if err==nil { err=syncOrganizationModulesForPlan(r.Context(),tx,s.OrganizationID,moduleKeys) }
 	}
 	if err!=nil || tx.Commit(r.Context())!=nil { fail(w,503,"payment_unavailable","No pudimos confirmar el pago.");return }
 	a.audit(r,"subscription.payment_recorded","subscription_payment",id)
