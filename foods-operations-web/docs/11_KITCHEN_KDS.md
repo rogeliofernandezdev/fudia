@@ -13,9 +13,7 @@ entregarse sin navegar por pantallas secundarias.
 4. Colas Por preparar → En preparación → Listos para entregar.
 
 Las superficies son neutras. Azul, violeta, verde y naranja comunican estado;
-no decoran tarjetas completas. Cada carril conserva borde y cuerpo neutros. La cabecera completa usa el fondo
-semántico suave de su estado; icono y contador se apoyan en superficie blanca para
-mantener contraste. No se usan franjas superiores ni barras laterales de color.
+no decoran tarjetas completas. Cada carril conserva borde y cuerpo neutros. La cabecera completa usa un fondo semántico claramente distinguible: azul `primary-600`, violeta `digital-500` o verde `brand-700`. Título y descripción usan blanco; icono y contador se apoyan en superficie blanca para mantener contraste. No se usan franjas superiores ni barras laterales de color.
 Los nombres de mesa se muestran en mayúsculas para facilitar el escaneo rápido.
 Las sombras internas se evitan y los radios se mantienen entre 6 y 8 px.
 
