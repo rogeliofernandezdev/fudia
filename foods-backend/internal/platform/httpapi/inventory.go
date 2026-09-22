@@ -405,6 +405,7 @@ func (a *API) listInventory(w http.ResponseWriter, r *http.Request) {
 func (a *API) listInventoryProducts(w http.ResponseWriter, r *http.Request) {
 	s := r.Context().Value(scopeKey{}).(scope)
 	search := "%" + strings.TrimSpace(r.URL.Query().Get("q")) + "%"
+	page, size := pageParams(r)
 	rows, err := a.db.Query(r.Context(), `
 		SELECT ii.id,p.id,COALESCE(p.sku,ii.sku),COALESCE(p.name,ii.name),
 		       CASE WHEN p.id IS NULL THEN 'ingredient' ELSE 'product' END,
@@ -428,7 +429,8 @@ func (a *API) listInventoryProducts(w http.ResponseWriter, r *http.Request) {
 		         WHERE ip.organization_id=ii.organization_id
 		           AND ip.inventory_item_id=ii.id
 		           AND ip.active
-		       ),'[]'::jsonb)
+		       ),'[]'::jsonb),
+		       count(*) OVER()
 		FROM inventory_items ii
 		LEFT JOIN products p
 		  ON p.id=ii.product_id AND p.organization_id=ii.organization_id
@@ -455,20 +457,21 @@ func (a *API) listInventoryProducts(w http.ResponseWriter, r *http.Request) {
 		  ))
 		  AND (COALESCE(p.name,ii.name) ILIKE $3 OR COALESCE(p.sku,ii.sku) ILIKE $3)
 		ORDER BY COALESCE(p.name,ii.name)
-		LIMIT 100`, s.OrganizationID, s.LocationID, search)
+		LIMIT $4 OFFSET $5`, s.OrganizationID, s.LocationID, search, size, (page-1)*size)
 	if err != nil {
 		fail(w, 503, "inventory_products_unavailable", "No pudimos cargar los artículos de inventario.")
 		return
 	}
 	defer rows.Close()
 	items := []inventoryProductOption{}
+	total := 0
 	for rows.Next() {
 		var item inventoryProductOption
 		var presentationsJSON []byte
 		if err := rows.Scan(
 			&item.ID, &item.ProductID, &item.SKU, &item.Name, &item.Kind, &item.CategoryName,
 			&item.QuantityControl, &item.Unit, &item.Quantity, &item.MinimumStock,
-			&item.ReorderPoint, &item.OptimalStock, &item.AverageUnitCost, &presentationsJSON,
+			&item.ReorderPoint, &item.OptimalStock, &item.AverageUnitCost, &presentationsJSON, &total,
 		); err != nil {
 			fail(w, 503, "inventory_products_unavailable", "No pudimos cargar los artículos de inventario.")
 			return
@@ -479,7 +482,11 @@ func (a *API) listInventoryProducts(w http.ResponseWriter, r *http.Request) {
 		}
 		items = append(items, item)
 	}
-	writeJSON(w, 200, map[string]any{"items": items})
+	if err := rows.Err(); err != nil {
+		fail(w, 503, "inventory_products_unavailable", "No pudimos cargar los artículos de inventario.")
+		return
+	}
+	writeJSON(w, 200, map[string]any{"items": items, "total": total, "page": page, "pageSize": size})
 }
 
 func (a *API) createInventoryEntry(w http.ResponseWriter, r *http.Request) {
