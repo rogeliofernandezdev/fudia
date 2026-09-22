@@ -236,7 +236,11 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 	_ = json.NewEncoder(w).Encode(v)
 }
 func fail(w http.ResponseWriter, status int, code, msg string) {
-	writeJSON(w, status, apiError{Code: code, Message: msg, CorrelationID: "request"})
+	correlationID := w.Header().Get("X-Request-ID")
+	if correlationID == "" {
+		correlationID = "request"
+	}
+	writeJSON(w, status, apiError{Code: code, Message: msg, CorrelationID: correlationID})
 }
 func (a *API) login(w http.ResponseWriter, r *http.Request) {
 	var in struct{ Email, Password string }
