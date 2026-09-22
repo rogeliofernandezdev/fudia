@@ -6,6 +6,7 @@ import Link from "next/link";
 import {usePathname,useRouter} from "next/navigation";
 import {useEffect,useRef,useState} from "react";
 import {useQueryClient} from "@tanstack/react-query";
+import {FullScreenLoader} from "@/design-system";
 import {Icon,IconName} from "@/design-system/icons";
 import {Logo} from "@/design-system/logo";
 import {useSession} from "@/providers/session-context";
@@ -37,7 +38,7 @@ export function AdminShell({children}:{children:React.ReactNode}){
  useEffect(()=>{if(!menuOpen)return;const previous=document.body.style.overflow;document.body.style.overflow="hidden";const close=(event:KeyboardEvent)=>{if(event.key==="Escape")setMenuOpen(false)};document.addEventListener("keydown",close);return()=>{document.body.style.overflow=previous;document.removeEventListener("keydown",close)}},[menuOpen]);
  useEffect(()=>{if(!accountOpen)return;const close=(event:MouseEvent)=>{if(!accountRef.current?.contains(event.target as Node))setAccountOpen(false)};const escape=(event:KeyboardEvent)=>{if(event.key==="Escape")setAccountOpen(false)};document.addEventListener("mousedown",close);document.addEventListener("keydown",escape);return()=>{document.removeEventListener("mousedown",close);document.removeEventListener("keydown",escape)}},[accountOpen]);
  if(isError)return <main className="admin-session-error"><Icon name="alert" size={24}/><h1>No pudimos cargar tu sesión</h1><p>Comprueba la conexión e inténtalo nuevamente.</p><button type="button" onClick={()=>window.location.reload()}><Icon name="refresh" size={17}/>Reintentar</button></main>;
- if(isLoading||!user||!location||!modules||!menuAccess)return <div className="admin-session-loading" aria-label="Cargando sesión" aria-busy="true"><aside><Logo inverse/><div className="admin-session-nav-skeleton">{Array.from({length:8},(_,index)=><i key={index}/>)}</div></aside><main><header><i/><span/><b/></header><section><i/><div>{Array.from({length:6},(_,index)=><span key={index}/>)}</div></section></main></div>;
+ if(isLoading||!user||!location||!modules||!menuAccess)return <FullScreenLoader label="Preparando tu espacio"/>;
  return <div className="admin-shell" data-sidebar={collapsed?"collapsed":"expanded"}>
   {menuOpen&&<button className="sidebar-scrim" aria-label="Cerrar navegación" onClick={()=>setMenuOpen(false)}/>} 
   <aside className={`sidebar${menuOpen?" open":""}`} aria-label="Navegación principal"><div className="sidebar-brand"><Link href="/dashboard" onClick={()=>setMenuOpen(false)}><Logo inverse/></Link><button className="sidebar-close" onClick={()=>setMenuOpen(false)} aria-label="Cerrar navegación"><Icon name="close"/></button></div><nav>{visibleGroups.map(group=><section key={group.label}><small>{group.label}</small>{group.items.map(item=><Link key={item.href} href={item.href} onClick={()=>setMenuOpen(false)} className={path.startsWith(item.href)?"active":""} aria-current={path.startsWith(item.href)?"page":undefined}><span className="nav-icon"><Icon name={item.icon}/></span><span>{item.name}</span></Link>)}</section>)}</nav></aside>
