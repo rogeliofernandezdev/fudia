@@ -410,6 +410,11 @@ test("cocina mantiene jerarquia KDS y semantica de color",()=>{
   assert.ok(kitchen.includes("kitchen-skeleton-items"),"El skeleton conserva líneas de productos");
   assert.ok(css.includes('.kitchen-lane{position:relative;min-width:0;border:1px solid var(--line);border-radius:14px;background:var(--cloud-50)'),"Cada carril es un panel operativo neutro");
   assert.ok(css.includes("background:var(--cloud-100)"),"El progreso usa tokens del sistema");
+  assert.ok(css.includes("--kds-cooking:var(--digital-500)"),"En preparación usa violeta del patrón operativo");
+  assert.ok(css.includes("--kds-cooking-dark:var(--digital-700)"),"El texto de preparación usa violeta oscuro");
+  assert.ok(css.includes("--kds-cooking-soft:var(--digital-100)"),"El fondo de preparación usa violeta suave");
+  assert.ok(css.includes(".kitchen-ticket-time.late{background:var(--warning-50);border-color:var(--warning-600);color:var(--warning-600)}"),"La demora usa warning y no danger");
+  assert.equal(css.includes("var(--danger-600)"),false,"Cocina no usa rojo para retrasos operativos");
   assert.equal(css.includes("#"),false,"Cocina no introduce colores hexadecimales directos");
   assert.equal(css.includes("rgba("),false,"Cocina no introduce colores rgba directos");
 });
