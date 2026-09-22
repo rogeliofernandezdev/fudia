@@ -17,6 +17,7 @@ type reservationView struct {
 	CustomerPhone string  `json:"customerPhone"`
 	StartsAt      string  `json:"startsAt"`
 	Guests        int     `json:"guests"`
+	DurationMinutes int   `json:"durationMinutes"`
 	TableID       *string `json:"tableId,omitempty"`
 	TableName     string  `json:"tableName"`
 	Status        string  `json:"status"`
@@ -30,6 +31,7 @@ type reservationInput struct {
 	CustomerPhone string  `json:"customerPhone"`
 	StartsAt      string  `json:"startsAt"`
 	Guests        int     `json:"guests"`
+	DurationMinutes int   `json:"durationMinutes"`
 	TableID       *string `json:"tableId,omitempty"`
 	Notes         string  `json:"notes"`
 }
@@ -63,8 +65,9 @@ func parseReservationInput(in *reservationInput)(time.Time,bool){
 	in.CustomerName=strings.TrimSpace(in.CustomerName)
 	in.CustomerPhone=strings.TrimSpace(in.CustomerPhone)
 	in.Notes=strings.TrimSpace(in.Notes)
+	if in.DurationMinutes==0{in.DurationMinutes=90}
 	startsAt,err:=time.Parse(time.RFC3339,in.StartsAt)
-	if err!=nil||startsAt.Before(time.Now().Add(-5*time.Minute))||in.CustomerName==""||len(in.CustomerName)>180||len(in.CustomerPhone)>40||in.Guests<1||in.Guests>100||len(in.Notes)>500{
+	if err!=nil||startsAt.Before(time.Now().Add(-5*time.Minute))||in.CustomerName==""||len(in.CustomerName)>180||len(in.CustomerPhone)>40||in.Guests<1||in.Guests>100||in.DurationMinutes<15||in.DurationMinutes>360||len(in.Notes)>500{
 		return time.Time{},false
 	}
 	return startsAt,true
@@ -78,7 +81,7 @@ func scanReservation(row pgx.Row)(reservationView,error){
 
 func reservationColumns() string {
 	return `r.id::text,r.customer_id::text,r.customer_name,r.customer_phone,
-	to_char(r.starts_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),r.guests,r.table_id::text,
+	to_char(r.starts_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),r.guests,r.duration_minutes,r.table_id::text,
 	COALESCE((SELECT name FROM tables rt WHERE rt.id=r.table_id AND rt.organization_id=r.organization_id AND rt.location_id=r.location_id),''),
 	r.status,r.notes,to_char(r.created_at,'YYYY-MM-DD"T"HH24:MI:SSOF')`
 }
@@ -102,9 +105,10 @@ func (a *API) validateReservationReferences(r *http.Request, s scope, in reserva
 			 SELECT 1 FROM reservations
 			 WHERE organization_id=$1 AND location_id=$2 AND table_id=$3
 			   AND status IN ('pending','confirmed','seated')
-			   AND starts_at=$4
-			   AND ($5='' OR id::text<>$5)
-			)`,s.OrganizationID,s.LocationID,*in.TableID,in.StartsAt,excludeID).Scan(&conflict);err!=nil{
+			   AND starts_at < $4::timestamptz + make_interval(mins=>$5)
+			   AND starts_at + make_interval(mins=>duration_minutes) > $4::timestamptz
+			   AND ($6='' OR id::text<>$6)
+			)`,s.OrganizationID,s.LocationID,*in.TableID,in.StartsAt,in.DurationMinutes,excludeID).Scan(&conflict);err!=nil{
 			return &apiError{Code:"reservation_unavailable",Message:"No pudimos validar la disponibilidad de la mesa."}
 		}
 		if conflict{return &apiError{Code:"reservation_conflict",Message:"La mesa ya tiene una reserva en ese horario."}}
@@ -152,10 +156,10 @@ func (a *API) createReservation(w http.ResponseWriter,r *http.Request){
 	in.StartsAt=startsAt.UTC().Format(time.RFC3339)
 	if problem:=a.validateReservationReferences(r,s,in,"");problem!=nil{fail(w,400,problem.Code,problem.Message);return}
 	item,err:=scanReservation(a.db.QueryRow(r.Context(),`
-		INSERT INTO reservations AS r(organization_id,location_id,customer_id,customer_name,customer_phone,starts_at,guests,table_id,notes,created_by)
-		VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+		INSERT INTO reservations AS r(organization_id,location_id,customer_id,customer_name,customer_phone,starts_at,guests,duration_minutes,table_id,notes,created_by)
+		VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
 		RETURNING `+reservationColumns()+`
-	`,s.OrganizationID,s.LocationID,in.CustomerID,in.CustomerName,in.CustomerPhone,startsAt,in.Guests,in.TableID,in.Notes,s.UserID))
+	`,s.OrganizationID,s.LocationID,in.CustomerID,in.CustomerName,in.CustomerPhone,startsAt,in.Guests,in.DurationMinutes,in.TableID,in.Notes,s.UserID))
 	if err!=nil{fail(w,503,"reservations_unavailable","No pudimos registrar la reserva.");return}
 	a.audit(r,"reservation.created","reservation",item.ID)
 	writeJSON(w,201,item)
@@ -174,10 +178,10 @@ func (a *API) updateReservation(w http.ResponseWriter,r *http.Request){
 	if err:=a.db.QueryRow(r.Context(),`SELECT status FROM reservations WHERE id=$1 AND organization_id=$2 AND location_id=$3`,id,s.OrganizationID,s.LocationID).Scan(&current);errors.Is(err,pgx.ErrNoRows){fail(w,404,"reservation_not_found","La reserva no existe.");return}else if err!=nil{fail(w,503,"reservations_unavailable","No pudimos validar la reserva.");return}
 	if current!="pending"&&current!="confirmed"{fail(w,409,"reservation_not_editable","Solo una reserva pendiente o confirmada puede editarse.");return}
 	item,err:=scanReservation(a.db.QueryRow(r.Context(),`
-		UPDATE reservations r SET customer_id=$4,customer_name=$5,customer_phone=$6,starts_at=$7,guests=$8,table_id=$9,notes=$10,updated_at=now()
+		UPDATE reservations r SET customer_id=$4,customer_name=$5,customer_phone=$6,starts_at=$7,guests=$8,duration_minutes=$9,table_id=$10,notes=$11,updated_at=now()
 		WHERE r.id=$1 AND r.organization_id=$2 AND r.location_id=$3
 		RETURNING `+reservationColumns()+`
-	`,id,s.OrganizationID,s.LocationID,in.CustomerID,in.CustomerName,in.CustomerPhone,startsAt,in.Guests,in.TableID,in.Notes))
+	`,id,s.OrganizationID,s.LocationID,in.CustomerID,in.CustomerName,in.CustomerPhone,startsAt,in.Guests,in.DurationMinutes,in.TableID,in.Notes))
 	if errors.Is(err,pgx.ErrNoRows){fail(w,404,"reservation_not_found","La reserva no existe.");return}
 	if err!=nil{fail(w,503,"reservations_unavailable","No pudimos actualizar la reserva.");return}
 	a.audit(r,"reservation.updated","reservation",item.ID)
