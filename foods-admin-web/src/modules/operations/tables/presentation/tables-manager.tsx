@@ -4,7 +4,7 @@ import {useState,useEffect,useRef} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import QRCode from "qrcode";
 import {Icon} from "@/design-system/icons";
-import {Button,PageHeader,Pagination,RowActionButton,Status} from "@/design-system/page-header";
+import {Button,IconButton,PageHeader,Pagination,RowActionButton,Status} from "@/design-system/page-header";
 import {ConfirmDialog} from "@/design-system/confirm-dialog";
 import {useFeedback} from "@/providers/feedback-provider";
 import {useSession} from "@/providers/session-context";
@@ -87,13 +87,24 @@ export function TablesManager(){
  function cancelAdd(){setAdding(false);setNewRows([])}
 
  return <><PageHeader eyebrow="OPERACIÓN" title="Mesas y zonas" description="Registra las mesas y zonas del local. Cada mesa genera un QR para vincular el proceso de atención."/>
- <div className="catalog-tabs-row"><div className="catalog-tabs"><button className={tab==="tables"?"active":""} onClick={()=>setTab("tables")}><Icon name="grid" size={16}/>Mesas<b>{tables.data?.total??0}</b></button><button className={tab==="zones"?"active":""} onClick={()=>setTab("zones")}><Icon name="store" size={16}/>Zonas<b>{zones.data?.total??0}</b></button></div>{tab==="tables"&&!adding&&<div className="qr-batch-actions"><Button icon="qr" kind="secondary" onClick={()=>setPrintQr(true)}>Imprimir QRs</Button>{canManageTables&&<Button icon="plus" onClick={()=>{setAdding(true);addRow()}}>Nueva mesa</Button>}</div>}{tab==="zones"&&canManageZones&&<Button icon="plus" onClick={()=>setZoneDraft(emptyZone)}>Nueva zona</Button>}</div>
+ <div className="catalog-tabs-row"><div className="catalog-tabs"><button className={tab==="tables"?"active":""} onClick={()=>setTab("tables")}><Icon name="grid" size={16}/>Mesas<b>{tables.data?.total??0}</b></button><button className={tab==="zones"?"active":""} onClick={()=>setTab("zones")}><Icon name="store" size={16}/>Zonas<b>{zones.data?.total??0}</b></button></div>{tab==="tables"&&!adding&&!tableDraft&&<div className="qr-batch-actions"><Button icon="qr" kind="secondary" onClick={()=>setPrintQr(true)}>Imprimir QRs</Button>{canManageTables&&<Button icon="plus" onClick={()=>{setAdding(true);addRow()}}>Nueva mesa</Button>}</div>}{tab==="zones"&&canManageZones&&<Button icon="plus" onClick={()=>setZoneDraft(emptyZone)}>Nueva zona</Button>}</div>
 
  {tab==="tables"?<section className="panel management catalog-panel"><div className="toolbar"><label><Icon name="search" size={18}/><input value={search} onChange={e=>{setSearch(e.target.value);setPage(1)}} placeholder="Buscar por nombre..."/></label><select aria-label="Filtrar por estado" value={statusFilter} onChange={e=>{setStatusFilter(e.target.value);setPage(1)}}><option value="">Todos los estados</option><option value="active">Activas</option><option value="inactive">Inactivas</option></select></div>
  {tables.isLoading?<TableSkeleton/>:tables.isError?<div className="catalog-state error"><span><Icon name="alert"/></span><b>No pudimos cargar las mesas</b><p>{tables.error.message}</p><Button onClick={()=>tables.refetch()}>Reintentar</Button></div>:!adding&&!data?.items.length?<div className="catalog-state"><span><Icon name="grid"/></span><b>No encontramos mesas</b><p>{search||statusFilter?"Ajusta los filtros para ver otros resultados.":"Crea la primera mesa para comenzar a operar."}</p>{canManageTables&&<Button icon="plus" onClick={()=>{setAdding(true);addRow()}}>Nueva mesa</Button>}</div>:<>
  <div className="table-wrap hover-scroll"><table><thead><tr><th>MESA</th><th>ZONA</th><th>ASIENTOS</th><th>ESTADO</th><th>QR</th><th>ACCIONES</th></tr></thead><tbody>
  {adding&&newRows.map((r,idx)=><tr className="editing-row" key={`new-${idx}`}><td><input className="ds-input" autoFocus={idx===0} value={r.name} onChange={e=>updateRow(idx,{name:e.target.value})} placeholder="Ej. Mesa 1"/></td><td><select className="ds-select" value={r.zone} onChange={e=>updateRow(idx,{zone:e.target.value})}><option value="">Sin zona</option>{activeZoneOptions.map(z=><option key={z.id} value={z.name}>{z.name}</option>)}</select></td><td><input className="ds-input seats-input" type="number" min="1" inputMode="numeric" value={r.seats} onChange={e=>updateRow(idx,{seats:e.target.value})}/></td><td>—</td><td><i className="table-muted">Se genera al guardar</i></td><td><div className="table-actions"><RowActionButton action="remove" onClick={()=>newRows.length>1?removeRow(idx):cancelAdd()}/></div></td></tr>)}
- {data?.items.map((t,i)=><tr className={i%2?"alternate":""} key={t.id}><td><span className={`row-icon r${i%3}`}><Icon name="grid" size={18}/></span><b>{t.name}</b></td><td>{t.zone||"Sin zona"}</td><td><b>{t.seats}</b></td><td><Status tone={t.active?"green":"gray"}>{t.active?"Activa":"Inactiva"}</Status></td><td>{t.qrEnabled&&t.qrToken?<button className="qr-cell-btn" onClick={()=>setQrTable(t)} title="Escanear QR de la mesa"><Icon name="qr" size={18}/><span>Escanear</span></button>:<span className="table-muted">—</span>}</td><td><div className="table-actions">{canManageTables&&<RowActionButton action="edit" label={`Editar ${t.name}`} onClick={()=>setTableDraft({id:t.id,name:t.name,seats:String(t.seats),zone:t.zone,active:t.active,qrEnabled:t.qrEnabled})}/>} {canManageTables&&t.active&&<RowActionButton action="deactivate" onClick={()=>setConfirm({kind:"tables",id:t.id,name:t.name})}/>}</div></td></tr>)}
+ {data?.items.map((t,i)=>{
+  const editing=tableDraft?.id===t.id;
+  const validEdit=Boolean(tableDraft?.name.trim())&&Number(tableDraft?.seats)>0;
+  return <tr className={editing?"editing-row table-editing-row":i%2?"alternate":""} key={t.id}>
+   <td>{editing?<input className="ds-input" autoFocus maxLength={80} value={tableDraft.name} onChange={e=>setTableDraft({...tableDraft,name:e.target.value})}/>:<><span className={`row-icon r${i%3}`}><Icon name="grid" size={18}/></span><b>{t.name}</b></>}</td>
+   <td>{editing?<select className="ds-select" value={tableDraft.zone} onChange={e=>setTableDraft({...tableDraft,zone:e.target.value})}><option value="">Sin zona</option>{activeZoneOptions.map(z=><option key={z.id} value={z.name}>{z.name}</option>)}</select>:t.zone||"Sin zona"}</td>
+   <td>{editing?<input className="ds-input seats-input" type="number" min="1" max="99" inputMode="numeric" value={tableDraft.seats} onChange={e=>setTableDraft({...tableDraft,seats:e.target.value})}/>:<b>{t.seats}</b>}</td>
+   <td><Status tone={t.active?"green":"gray"}>{t.active?"Activa":"Inactiva"}</Status></td>
+   <td>{t.qrEnabled&&t.qrToken?<button className="qr-cell-btn" onClick={()=>setQrTable(t)} title="Escanear QR de la mesa"><Icon name="qr" size={18}/><span>Escanear</span></button>:<span className="table-muted">—</span>}</td>
+   <td><div className="table-actions">{editing?<><IconButton icon="check" label="Guardar" disabled={saveTable.isPending||!validEdit} onClick={()=>tableDraft&&saveTable.mutate(tableDraft)}/><IconButton icon="close" label="Cancelar" disabled={saveTable.isPending} onClick={()=>setTableDraft(null)}/></>:canManageTables&&<><RowActionButton action="edit" label={`Editar ${t.name}`} onClick={()=>setTableDraft({id:t.id,name:t.name,seats:String(t.seats),zone:t.zone,active:t.active,qrEnabled:t.qrEnabled})}/>{t.active?<RowActionButton action="deactivate" onClick={()=>setConfirm({kind:"tables",id:t.id,name:t.name})}/>:<RowActionButton action="activate" onClick={()=>saveTable.mutate({id:t.id,name:t.name,seats:String(t.seats),zone:t.zone,active:true,qrEnabled:t.qrEnabled})}/>}</>}</div></td>
+  </tr>;
+ })}
  </tbody></table></div>
  {adding&&<div className="batch-actions"><div><Button icon="plus" kind="ghost" onClick={addRow}>Nueva fila</Button></div><div><button type="button" className="button ghost" onClick={cancelAdd}>Cancelar</button><button type="button" className="button primary" disabled={saveBatch.isPending||!validNewRows.length} onClick={saveAll}>{saveBatch.isPending?"Guardando...":`Guardar ${validNewRows.length||""} ${validNewRows.length===1?"mesa":"mesas"}`}</button></div></div>}
  {!adding&&<Pagination page={page} size={pageSize} total={data?.total??0} onPage={setPage} onSize={value=>{setPageSize(value);setPage(1)}}/>}
@@ -104,31 +115,11 @@ export function TablesManager(){
  <div className="table-wrap hover-scroll"><table><thead><tr><th>ZONA</th><th>ORDEN</th><th>ESTADO</th><th>ACCIONES</th></tr></thead><tbody>{zoneList.map((z,i)=><tr className={i%2?"alternate":""} key={z.id}><td><span className={`row-icon r${i%3}`}><Icon name="store" size={18}/></span><b>{z.name}</b></td><td>{z.sortOrder}</td><td><Status tone={z.active?"green":"gray"}>{z.active?"Activa":"Inactiva"}</Status></td><td><div className="table-actions"><RowActionButton action="edit" onClick={()=>setZoneDraft({id:z.id,name:z.name,sortOrder:z.sortOrder,active:z.active})}/>{z.active&&<RowActionButton action="deactivate" onClick={()=>setConfirm({kind:"zones",id:z.id,name:z.name})}/>}</div></td></tr>)}</tbody></table></div><Pagination page={zonePage} size={zonePageSize} total={zones.data?.total??0} onPage={setZonePage} onSize={value=>{setZonePageSize(value);setZonePage(1)}}/>
  </>}</section>}
 
- {tableDraft&&<TableDialog draft={tableDraft} zones={activeZoneOptions.map(zone=>zone.name)} busy={saveTable.isPending} close={()=>setTableDraft(null)} save={draft=>saveTable.mutate(draft)}/>} 
  {zoneDraft&&<ZoneDialog draft={zoneDraft} busy={saveZone.isPending} close={()=>setZoneDraft(null)} save={d=>saveZone.mutate(d)}/>}
  {qrTable&&<QrDialog table={qrTable} restaurantName={organization?.name??"Restaurante"} close={()=>setQrTable(null)}/>}
  {printQr&&<PrintQrDialog tables={data?.items??[]} restaurantName={organization?.name??"Restaurante"} close={()=>setPrintQr(false)}/>}
  <ConfirmDialog open={Boolean(confirm)} title={`Desactivar ${confirm?.kind==="tables"?"mesa":"zona"}`} description={`"${confirm?.name??""}" dejará de estar disponible para nuevas operaciones.`} confirmLabel="Desactivar" pending={deactivate.isPending} onCancel={()=>setConfirm(null)} onConfirm={()=>confirm&&deactivate.mutate({kind:confirm.kind,id:confirm.id})}/>
  </>;
-}
-
-function TableDialog({draft,zones,busy,close,save}:{draft:RowDraft;zones:string[];busy:boolean;close:()=>void;save:(draft:RowDraft)=>void}){
- const[value,setValue]=useState(draft);
- const zoneOptions=value.zone&&!zones.includes(value.zone)?[value.zone,...zones]:zones;
- const valid=value.name.trim().length>0&&Number(value.seats)>0;
- return <div className="modal-backdrop modal-overlay-in" role="presentation"><section className="crud-modal compact modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="table-edit-title" aria-busy={busy}><div className="modal-accent"/><header><span className="modal-title-icon"><Icon name="grid" size={18}/></span><div><small>EDITAR MESA</small><h2 id="table-edit-title">Configuración de la mesa</h2></div><button onClick={close} disabled={busy} aria-label="Cerrar"><Icon name="close"/></button></header>
- <form onSubmit={event=>{event.preventDefault();if(valid)save(value)}}>
-  <div className="form-grid">
-   <label className="span-2">Nombre de la mesa<input className="ds-input" required maxLength={80} value={value.name} onChange={event=>setValue({...value,name:event.target.value})} placeholder="Ej. Mesa 1"/></label>
-   <label>Asientos<input className="ds-input" required type="number" min="1" max="99" inputMode="numeric" value={value.seats} onChange={event=>setValue({...value,seats:event.target.value})}/></label>
-   <label>Zona<select className="ds-select" value={value.zone} onChange={event=>setValue({...value,zone:event.target.value})}><option value="">Sin zona</option>{zoneOptions.map(zone=><option value={zone} key={zone}>{zone}</option>)}</select></label>
-   <label className="switch-row compact"><input type="checkbox" checked={value.active} onChange={event=>setValue({...value,active:event.target.checked})}/><span/><b>Mesa activa</b></label>
-   <label className="switch-row compact"><input type="checkbox" checked={value.qrEnabled??true} onChange={event=>setValue({...value,qrEnabled:event.target.checked})}/><span/><b>QR habilitado</b></label>
-  </div>
-  <div className="table-edit-note"><Icon name="alert" size={14}/><span>Desactivar una mesa con pedidos abiertos será rechazado por seguridad.</span></div>
-  <footer><button type="button" className="button ghost" disabled={busy} onClick={close}>Cancelar</button><button type="submit" className="button primary" disabled={busy||!valid}>{busy?"Guardando…":"Guardar"}</button></footer>
- </form>
- </section></div>;
 }
 
 function QrDialog({table,restaurantName,close}:{table:Table;restaurantName:string;close:()=>void}){
