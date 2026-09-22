@@ -7,6 +7,7 @@ CREATE TABLE reservations (
   customer_phone text NOT NULL DEFAULT '',
   starts_at timestamptz NOT NULL,
   guests integer NOT NULL CHECK (guests > 0 AND guests <= 100),
+  duration_minutes integer NOT NULL DEFAULT 90 CHECK (duration_minutes BETWEEN 15 AND 360),
   table_id uuid,
   status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','confirmed','seated','cancelled','no_show')),
   notes text NOT NULL DEFAULT '',
