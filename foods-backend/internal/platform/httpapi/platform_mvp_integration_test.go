@@ -86,6 +86,18 @@ func TestPlatformOnboardingCreatesOperationalTenant(t *testing.T){
 	if err:=pool.QueryRow(context.Background(),`SELECT count(*) FROM roles WHERE organization_id=$1 AND system_key IS NOT NULL`,created.OrganizationID).Scan(&defaults);err!=nil{t.Fatal(err)}
 	if defaults!=len(defaultOrganizationRoles){t.Fatalf("expected %d predefined roles, got %d",len(defaultOrganizationRoles),defaults)}
 
+	permissionScope:=scope{UserID:created.AdministratorID,OrganizationID:created.OrganizationID,LocationID:created.LocationID,Name:"Propietario MVP"}
+	permissionReq:=httptest.NewRequest("GET","/permission-check",nil)
+	permissionReq=permissionReq.WithContext(context.WithValue(permissionReq.Context(),scopeKey{},permissionScope))
+	permissionRec:=httptest.NewRecorder()
+	api.requirePermission("dashboard.read",http.HandlerFunc(func(w http.ResponseWriter,r *http.Request){w.WriteHeader(http.StatusNoContent)})).ServeHTTP(permissionRec,permissionReq)
+	if permissionRec.Code!=http.StatusNoContent{t.Fatalf("company administrator permission middleware failed: %d %s",permissionRec.Code,permissionRec.Body.String())}
+	deniedReq:=httptest.NewRequest("GET","/permission-check",nil)
+	deniedReq=deniedReq.WithContext(context.WithValue(deniedReq.Context(),scopeKey{},permissionScope))
+	deniedRec:=httptest.NewRecorder()
+	api.requirePermission("nonexistent.permission",http.HandlerFunc(func(w http.ResponseWriter,r *http.Request){w.WriteHeader(http.StatusNoContent)})).ServeHTTP(deniedRec,deniedReq)
+	if deniedRec.Code!=http.StatusForbidden||!strings.Contains(deniedRec.Body.String(),"forbidden"){t.Fatalf("missing permission must return forbidden, got %d %s",deniedRec.Code,deniedRec.Body.String())}
+
 	loginReq:=httptest.NewRequest("POST","/v1/auth/login",bytes.NewReader([]byte(fmt.Sprintf(`{"email":%q,"password":%q}`,email,password))))
 	loginRec:=httptest.NewRecorder()
 	api.login(loginRec,loginReq)
