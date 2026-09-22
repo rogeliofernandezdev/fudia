@@ -160,7 +160,6 @@ func (a *API) updateReservation(w http.ResponseWriter,r *http.Request){
 	if problem:=a.validateReservationReferences(r,s,in,id);problem!=nil{fail(w,400,problem.Code,problem.Message);return}
 	item,err:=scanReservation(a.db.QueryRow(r.Context(),`
 		UPDATE reservations r SET customer_id=$4,customer_name=$5,customer_phone=$6,starts_at=$7,guests=$8,table_id=$9,notes=$10,updated_at=now()
-		FROM tables t
 		WHERE r.id=$1 AND r.organization_id=$2 AND r.location_id=$3
 		RETURNING `+reservationColumns()+`
 	`,id,s.OrganizationID,s.LocationID,in.CustomerID,in.CustomerName,in.CustomerPhone,startsAt,in.Guests,in.TableID,in.Notes))
