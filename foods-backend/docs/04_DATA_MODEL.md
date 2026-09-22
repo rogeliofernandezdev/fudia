@@ -56,7 +56,10 @@ un plato preparado.
 | `inventory` | Mercadería física, por ejemplo Coca-Cola o agua mineral. | `stock_balances` del local |
 
 Las porciones se cargan desde Disponibilidad de la carta. No existe un cupo
-predeterminado en `products`: cada día/local tiene su cantidad real.
+predeterminado en `products`: cada día/local tiene su cantidad real. El cupo
+`portion_quantity` nunca puede reducirse por debajo de `sold_quantity`; esta
+invariante se valida en backend bajo bloqueo transaccional para no competir con
+la creación, edición o reversa de pedidos.
 
 La mercadería física y los insumos de producción se reponen únicamente mediante
 documentos de Inventario. `inventory_items` es el catálogo físico: puede
