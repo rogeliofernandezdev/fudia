@@ -408,7 +408,10 @@ test("cocina mantiene jerarquia KDS y semantica de color",()=>{
   assert.equal(kitchen.includes('kind={next==="listo"?"success":"primary"}'),false,"Verde queda reservado al estado listo");
   assert.ok(kitchen.includes("kitchen-skeleton-head"),"El skeleton reproduce la tarjeta de comanda");
   assert.ok(kitchen.includes("kitchen-skeleton-items"),"El skeleton conserva líneas de productos");
-  assert.ok(css.includes('.kitchen-lane{position:relative;min-width:0;border:1px solid var(--line);border-radius:14px;background:var(--cloud-50)'),"Cada carril es un panel operativo neutro");
+  assert.ok(css.includes('.kitchen-lane{min-width:0;border:1px solid var(--line);border-radius:14px;background:var(--cloud-50)'),"Cada carril es un panel operativo neutro");
+  assert.ok(css.includes('border-left:4px solid transparent'),"El estado se marca con acento vertical en la cabecera");
+  assert.equal(css.includes(".kitchen-lane::before"),false,"Los carriles no usan franja superior de color");
+  assert.ok(kitchen.includes("ticket.tableName?.toUpperCase()"),"Los nombres de mesa se muestran en mayúsculas");
   assert.ok(css.includes("background:var(--cloud-100)"),"El progreso usa tokens del sistema");
   assert.ok(css.includes("--kds-cooking:var(--digital-500)"),"En preparación usa violeta del patrón operativo");
   assert.ok(css.includes("--kds-cooking-dark:var(--digital-700)"),"El texto de preparación usa violeta oscuro");
