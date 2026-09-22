@@ -32,7 +32,7 @@ func (a *API) Routes() *http.ServeMux {
 	m.HandleFunc("POST /v1/auth/login", a.login)
 	m.HandleFunc("POST /v1/auth/logout", a.logout)
 	m.Handle("POST /v1/platform/organizations", a.auth(a.requirePlatformAdmin(http.HandlerFunc(a.onboardTenant))))
-	m.Handle("GET /v1/admin/dashboard", a.auth(http.HandlerFunc(a.dashboard)))
+	m.Handle("GET /v1/admin/dashboard", a.auth(a.requirePermission("dashboard.read", http.HandlerFunc(a.dashboard))))
 	m.Handle("GET /v1/admin/context", a.auth(http.HandlerFunc(a.getContext)))
 	m.Handle("GET /v1/admin/me", a.auth(http.HandlerFunc(a.getMyProfile)))
 	m.Handle("PATCH /v1/admin/me", a.auth(http.HandlerFunc(a.updateMyProfile)))
@@ -140,6 +140,10 @@ func (a *API) Routes() *http.ServeMux {
 	m.Handle("PATCH /v1/admin/customers/{id}", a.auth(a.requirePermission("customers.manage", http.HandlerFunc(a.updateCustomer))))
 	m.Handle("PATCH /v1/admin/customers/{id}/status", a.auth(a.requirePermission("customers.manage", http.HandlerFunc(a.updateCustomerStatus))))
 	m.Handle("GET /v1/admin/orders", a.auth(a.requirePermission("orders.read", http.HandlerFunc(a.listOrders))))
+	m.Handle("GET /v1/admin/reservations", a.auth(a.requirePermission("reservations.read", http.HandlerFunc(a.listReservations))))
+	m.Handle("POST /v1/admin/reservations", a.auth(a.requirePermission("reservations.manage", http.HandlerFunc(a.createReservation))))
+	m.Handle("PATCH /v1/admin/reservations/{id}", a.auth(a.requirePermission("reservations.manage", http.HandlerFunc(a.updateReservation))))
+	m.Handle("PATCH /v1/admin/reservations/{id}/status", a.auth(a.requirePermission("reservations.manage", http.HandlerFunc(a.updateReservationStatus))))
 	m.Handle("GET /v1/admin/orders/floor", a.auth(a.requirePermission("orders.read", http.HandlerFunc(a.getOrdersFloor))))
 	m.Handle("POST /v1/admin/orders", a.auth(a.requirePermission("orders.manage", http.HandlerFunc(a.createOrder))))
 	m.Handle("GET /v1/admin/orders/{id}", a.auth(a.requirePermission("orders.read", http.HandlerFunc(a.getOrder))))
@@ -348,13 +352,70 @@ func (a *API) auth(next http.Handler) http.Handler {
 }
 func (a *API) dashboard(w http.ResponseWriter, r *http.Request) {
 	s := r.Context().Value(scopeKey{}).(scope)
-	var products, critical, purchases int
-	_ = a.db.QueryRow(r.Context(), `SELECT count(*) FROM products WHERE organization_id=$1 AND active`, s.OrganizationID).Scan(&products)
-	_ = a.db.QueryRow(r.Context(), `SELECT count(*) FROM inventory_items i LEFT JOIN stock_balances b ON b.inventory_item_id=i.id AND b.location_id=$2 WHERE i.organization_id=$1 AND COALESCE(b.quantity,0)<=i.minimum_stock`, s.OrganizationID, s.LocationID).Scan(&critical)
+	var salesNet, averageTicket string
+	var paidOrders, openOrders, critical, purchases, reservationsToday, kitchenPending int
+	if err := a.db.QueryRow(r.Context(), `
+		SELECT COALESCE(sum(p.amount-COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id),0)),0)::text
+		FROM payments p
+		JOIN locations l ON l.id=p.location_id AND l.organization_id=p.organization_id
+		WHERE p.organization_id=$1 AND p.location_id=$2
+		  AND (p.created_at AT TIME ZONE l.timezone)::date=(now() AT TIME ZONE l.timezone)::date
+	`, s.OrganizationID, s.LocationID).Scan(&salesNet); err != nil {
+		fail(w,503,"dashboard_unavailable","No pudimos calcular las ventas del día."); return
+	}
+	if err := a.db.QueryRow(r.Context(), `
+		SELECT count(*)
+		FROM orders o
+		JOIN locations l ON l.id=o.location_id AND l.organization_id=o.organization_id
+		WHERE o.organization_id=$1 AND o.location_id=$2 AND o.status<>'cancelado'
+		  AND (o.created_at AT TIME ZONE l.timezone)::date=(now() AT TIME ZONE l.timezone)::date
+		  AND (`+netPaidSQL+`) >= o.total
+	`, s.OrganizationID, s.LocationID).Scan(&paidOrders); err != nil {
+		fail(w,503,"dashboard_unavailable","No pudimos calcular los pedidos cobrados."); return
+	}
+	if paidOrders > 0 {
+		if err := a.db.QueryRow(r.Context(), `SELECT (CAST($1 AS numeric)/$2)::text`, salesNet, paidOrders).Scan(&averageTicket); err != nil { averageTicket="0" }
+	} else { averageTicket="0" }
+	_ = a.db.QueryRow(r.Context(), `SELECT count(*) FROM orders WHERE organization_id=$1 AND location_id=$2 AND status NOT IN ('entregado','cancelado')`, s.OrganizationID, s.LocationID).Scan(&openOrders)
+	_ = a.db.QueryRow(r.Context(), `SELECT count(*) FROM inventory_items i LEFT JOIN stock_balances b ON b.inventory_item_id=i.id AND b.organization_id=i.organization_id AND b.location_id=$2 WHERE i.organization_id=$1 AND i.active AND COALESCE(b.quantity,0)<=i.minimum_stock`, s.OrganizationID, s.LocationID).Scan(&critical)
 	_ = a.db.QueryRow(r.Context(), `SELECT count(*) FROM purchase_orders WHERE organization_id=$1 AND location_id=$2 AND status='pending_approval'`, s.OrganizationID, s.LocationID).Scan(&purchases)
-	var currency string
-	_ = a.db.QueryRow(r.Context(), `SELECT p.currency FROM locations l JOIN organization_fiscal_profiles p ON p.id=l.fiscal_profile_id AND p.organization_id=l.organization_id WHERE l.id=$1 AND l.organization_id=$2 AND l.active AND p.active`, s.LocationID, s.OrganizationID).Scan(&currency)
-	writeJSON(w, 200, map[string]any{"products": products, "criticalStock": critical, "purchasesToApprove": purchases, "currency": currency})
+	_ = a.db.QueryRow(r.Context(), `SELECT count(*) FROM reservations r JOIN locations l ON l.id=r.location_id AND l.organization_id=r.organization_id WHERE r.organization_id=$1 AND r.location_id=$2 AND r.status IN ('pending','confirmed') AND (r.starts_at AT TIME ZONE l.timezone)::date=(now() AT TIME ZONE l.timezone)::date`, s.OrganizationID, s.LocationID).Scan(&reservationsToday)
+	_ = a.db.QueryRow(r.Context(), `SELECT count(*) FROM orders WHERE organization_id=$1 AND location_id=$2 AND status IN ('confirmado','preparando')`, s.OrganizationID, s.LocationID).Scan(&kitchenPending)
+
+	hourly := []map[string]any{}
+	rows,err:=a.db.Query(r.Context(), `
+		SELECT extract(hour FROM p.created_at AT TIME ZONE l.timezone)::int,
+		       COALESCE(sum(p.amount-COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id),0)),0)::text
+		FROM payments p JOIN locations l ON l.id=p.location_id AND l.organization_id=p.organization_id
+		WHERE p.organization_id=$1 AND p.location_id=$2
+		  AND (p.created_at AT TIME ZONE l.timezone)::date=(now() AT TIME ZONE l.timezone)::date
+		GROUP BY 1 ORDER BY 1
+	`,s.OrganizationID,s.LocationID)
+	if err==nil {
+		defer rows.Close()
+		for rows.Next(){var hour int;var total string;if rows.Scan(&hour,&total)==nil{hourly=append(hourly,map[string]any{"hour":hour,"total":total})}}
+	}
+
+	topProducts:=[]map[string]any{}
+	productRows,err:=a.db.Query(r.Context(), `
+		SELECT oi.name,sum(oi.qty)::text,sum(oi.qty*oi.unit_price)::text
+		FROM order_items oi
+		JOIN orders o ON o.id=oi.order_id AND o.organization_id=oi.organization_id
+		JOIN locations l ON l.id=o.location_id AND l.organization_id=o.organization_id
+		WHERE o.organization_id=$1 AND o.location_id=$2 AND o.status<>'cancelado'
+		  AND (o.created_at AT TIME ZONE l.timezone)::date=(now() AT TIME ZONE l.timezone)::date
+		  AND (`+netPaidSQL+`) >= o.total
+		GROUP BY oi.name ORDER BY sum(oi.qty) DESC,oi.name LIMIT 5
+	`,s.OrganizationID,s.LocationID)
+	if err==nil {
+		defer productRows.Close()
+		for productRows.Next(){var name,qty,revenue string;if productRows.Scan(&name,&qty,&revenue)==nil{topProducts=append(topProducts,map[string]any{"name":name,"qty":qty,"revenue":revenue})}}
+	}
+	writeJSON(w,200,map[string]any{
+		"salesNet":salesNet,"paidOrders":paidOrders,"averageTicket":averageTicket,"openOrders":openOrders,
+		"criticalStock":critical,"purchasesToApprove":purchases,"reservationsToday":reservationsToday,
+		"kitchenPending":kitchenPending,"hourlySales":hourly,"topProducts":topProducts,
+	})
 }
 
 func (a *API) getContext(w http.ResponseWriter, r *http.Request) {
