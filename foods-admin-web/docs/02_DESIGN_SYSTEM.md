@@ -100,14 +100,13 @@ se limitan a densidad y composición, nunca a reinterpretar el significado del c
   filas operativas continuas en escritorio, sin bordes de tarjeta repetidos, y tarjetas apiladas únicamente en
   móvil, con una acción manual Disponible/Agotado y guardado explícito del cupo. El botón de actualización de cupo permanece visible para hacer descubrible la función, pero
   solo se habilita después de modificar la cantidad. En filas densas, las acciones usan
-  etiquetas visibles breves y específicas («Guardar cupo», «Agotar hoy», «Reactivar») y conservan un
-  `aria-label` descriptivo completo. «Agotar hoy» usa `warning` para texto y borde y
+  etiquetas visibles breves y específicas («Guardar», «Agotar hoy», «Reactivar») y conservan un
+  `aria-label` descriptivo completo. En la fila de disponibilidad, «Guardar» nunca se parte en dos líneas. «Agotar hoy» usa `warning` para texto y borde y
   `warning-50` únicamente como fondo suave en hover; nunca usa rojo destructivo ni
   invierte a un relleno ámbar sólido. Los avisos operativos de agotamiento dentro de
   la fila se muestran como una franja `warning-50`, con icono/texto `warning` y acento
   lateral de advertencia; no se presentan como texto suelto sobre fondo neutro. Las
-  subcolumnas Control, Cupo, Vendidas y Restantes comparten alineación vertical estable
-  y el nombre del tipo de control no se trunca cuando hay espacio suficiente. «Pocas
+  subcolumnas Control, Cupo, Vendidas y Restantes comparten exactamente la misma retícula vertical: etiqueta arriba y valor/control centrado debajo. Producto, Estado, Control del día y Acciones ocupan explícitamente la misma fila principal; los avisos ocupan una segunda fila completa. El nombre del tipo de control no se trunca cuando hay espacio suficiente. «Pocas
   unidades» es siempre un estado calculado por las unidades restantes, nunca
   una acción manual. La vista se
   pagina desde el API, permite buscar y filtrar por categoría, diferencia cupo,
