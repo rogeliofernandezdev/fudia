@@ -65,68 +65,78 @@ function ProfileForm({profile,organizationName,locationName}:{profile:MyProfile;
         <span className="profile-avatar">{initials(profile.fullName)}</span>
         <div className="profile-account-copy">
           <small>CUENTA PERSONAL</small>
-          <h2>{profile.fullName}</h2>
+          <div className="profile-account-title">
+            <h2>{profile.fullName}</h2>
+            <span className="profile-account-status"><i/>Activa</span>
+          </div>
           <p><Icon name="mail" size={13}/>{profile.email}</p>
         </div>
       </div>
-      <div className="profile-account-context">
-        <span className="profile-account-status"><i/>Cuenta activa</span>
-        <div className="profile-account-meta">
-          <div><small>ROL EN ESTE LOCAL</small><b>{profile.platformAdmin?"Administrador de plataforma":profile.roleNames.length?profile.roleNames.join(" · "):"Sin rol efectivo"}</b></div>
-          {organizationName&&<div><small>EMPRESA</small><b>{organizationName}</b></div>}
-          {locationName&&<div><small>LOCAL ACTIVO</small><b>{locationName}</b></div>}
-          <div><small>PERMISOS</small><b>{profile.platformAdmin?"Acceso total":profile.permissions.length}</b></div>
-        </div>
+      <div className="profile-account-meta">
+        <div><small>ROL</small><b>{profile.platformAdmin?"Administrador de plataforma":profile.roleNames.length?profile.roleNames.join(" · "):"Sin rol efectivo"}</b></div>
+        {organizationName&&<div><small>EMPRESA</small><b>{organizationName}</b></div>}
+        {locationName&&<div><small>LOCAL ACTIVO</small><b>{locationName}</b></div>}
+        <div><small>PERMISOS</small><b>{profile.platformAdmin?"Acceso total":profile.permissions.length}</b></div>
       </div>
     </section>
+
     {!profile.platformAdmin&&profile.permissions.length===0&&<section className="profile-access-warning">
       <span><Icon name="alert" size={17}/></span>
       <div><b>Sin permisos efectivos en el local activo</b><p>La cuenta puede iniciar sesión, pero su rol actual no habilita endpoints protegidos. Un administrador debe revisar la asignación en Usuarios y permisos.</p></div>
     </section>}
 
-    <form className="profile-settings-grid" onSubmit={handleSubmit(draft=>save.mutate(draft))} noValidate>
-      <section className="profile-card profile-settings-card">
-        <header>
-          <span><Icon name="users" size={18}/></span>
-          <div><small>IDENTIDAD</small><h2>Datos personales</h2><p>Información visible dentro de FUDIA.</p></div>
-        </header>
-        <div className="profile-settings-fields">
-          <label className="profile-field">
-            <span>Nombre completo</span>
-            <Input maxLength={180} {...register("fullName")} aria-invalid={Boolean(errors.fullName)}/>
-            {errors.fullName?.message&&<small className="wizard-field-error">{errors.fullName.message}</small>}
-          </label>
-          <label className="profile-field">
-            <span>Correo electrónico <small>Solo lectura</small></span>
-            <div className="profile-readonly-field"><Icon name="mail" size={15}/><span>{profile.email}</span><Icon name="lock" size={13}/></div>
-          </label>
+    <form className="profile-card profile-settings-workspace" onSubmit={handleSubmit(draft=>save.mutate(draft))} noValidate>
+      <header className="profile-settings-header">
+        <div>
+          <span><Icon name="settings" size={17}/></span>
+          <div><small>CONFIGURACIÓN DE CUENTA</small><h2>Datos y seguridad</h2><p>Actualiza únicamente la información que necesites cambiar.</p></div>
         </div>
-      </section>
+      </header>
 
-      <section className="profile-card profile-settings-card security">
-        <header>
-          <span><Icon name="lock" size={18}/></span>
-          <div><small>SEGURIDAD</small><h2>Cambiar contraseña</h2><p>Usa una contraseña única para proteger tu cuenta.</p></div>
-        </header>
-        <div className="profile-settings-fields">
-          <label className="profile-field">
-            <span>Contraseña actual</span>
-            <Input type="password" autoComplete="current-password" {...register("currentPassword")} aria-invalid={Boolean(errors.currentPassword)} placeholder="Ingresa tu contraseña actual"/>
-            {errors.currentPassword?.message&&<small className="wizard-field-error">{errors.currentPassword.message}</small>}
-          </label>
-          <label className="profile-field">
-            <span>Nueva contraseña <small>Mínimo 8 caracteres</small></span>
-            <Input type="password" autoComplete="new-password" {...register("newPassword")} aria-invalid={Boolean(errors.newPassword)} placeholder="Déjala vacía para conservarla"/>
-            {errors.newPassword?.message&&<small className="wizard-field-error">{errors.newPassword.message}</small>}
-          </label>
-          <div className="profile-security-note"><Icon name="lock" size={14}/><span>Para cambiar la contraseña debes confirmar primero la actual.</span></div>
-        </div>
-      </section>
+      <div className="profile-settings-columns">
+        <section className="profile-settings-section">
+          <header>
+            <span><Icon name="users" size={16}/></span>
+            <div><small>IDENTIDAD</small><h3>Datos personales</h3></div>
+          </header>
+          <div className="profile-settings-fields">
+            <label className="profile-field">
+              <span>Nombre completo</span>
+              <Input maxLength={180} {...register("fullName")} aria-invalid={Boolean(errors.fullName)}/>
+              {errors.fullName?.message&&<small className="wizard-field-error">{errors.fullName.message}</small>}
+            </label>
+            <label className="profile-field">
+              <span>Correo electrónico <small>Solo lectura</small></span>
+              <div className="profile-readonly-field"><Icon name="mail" size={15}/><span>{profile.email}</span><Icon name="lock" size={13}/></div>
+            </label>
+          </div>
+        </section>
+
+        <section className="profile-settings-section security">
+          <header>
+            <span><Icon name="lock" size={16}/></span>
+            <div><small>SEGURIDAD</small><h3>Cambiar contraseña</h3></div>
+          </header>
+          <div className="profile-settings-fields">
+            <label className="profile-field">
+              <span>Contraseña actual</span>
+              <Input type="password" autoComplete="current-password" {...register("currentPassword")} aria-invalid={Boolean(errors.currentPassword)} placeholder="Ingresa tu contraseña actual"/>
+              {errors.currentPassword?.message&&<small className="wizard-field-error">{errors.currentPassword.message}</small>}
+            </label>
+            <label className="profile-field">
+              <span>Nueva contraseña <small>Mínimo 8 caracteres</small></span>
+              <Input type="password" autoComplete="new-password" {...register("newPassword")} aria-invalid={Boolean(errors.newPassword)} placeholder="Déjala vacía para conservarla"/>
+              {errors.newPassword?.message&&<small className="wizard-field-error">{errors.newPassword.message}</small>}
+            </label>
+            <div className="profile-security-note"><Icon name="lock" size={14}/><span>Confirma tu contraseña actual solo si deseas reemplazarla.</span></div>
+          </div>
+        </section>
+      </div>
 
       <footer className="profile-savebar">
         <div>
           <span className={isDirty?"dirty":""}><i/>{isDirty?"Cambios sin guardar":"Todo actualizado"}</span>
-          <small>{isDirty?"Revisa tus cambios antes de continuar.":"Tu perfil está sincronizado con FUDIA."}</small>
+          <small>{isDirty?"Guarda para aplicar los cambios de esta cuenta.":"Tu perfil está sincronizado con FUDIA."}</small>
         </div>
         <Button type="submit" icon="check" disabled={save.isPending||!isDirty}>{save.isPending?"Guardando…":"Guardar"}</Button>
       </footer>
@@ -302,9 +312,12 @@ function UsageRow({icon,label,value,max}:{icon:"store"|"users";label:string;valu
 
 function ProfileSkeleton(){
   return <div className="profile-shell" aria-label="Cargando perfil" aria-busy="true">
-    <section className="profile-card profile-skeleton">
-      <section><i/><div><span/><span/></div></section>
-      <section><i/><div><span/><span/></div></section>
+    <section className="profile-card profile-skeleton profile-skeleton-account">
+      <i/><div><span/><span/><span/></div>
+    </section>
+    <section className="profile-card profile-skeleton profile-skeleton-settings">
+      <header><i/><span/></header>
+      <div><section><i/><span/><span/></section><section><i/><span/><span/></section></div>
       <footer><i/></footer>
     </section>
   </div>;
