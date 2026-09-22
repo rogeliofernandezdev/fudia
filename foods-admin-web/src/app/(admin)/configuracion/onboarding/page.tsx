@@ -1,2 +1,2 @@
-import {ConfigurationOnboardingPage} from "@/modules/organizations";
-export default function Page(){return <ConfigurationOnboardingPage/>}
+import {redirect} from "next/navigation";
+export default function Page(){redirect("/platform/onboarding")}
