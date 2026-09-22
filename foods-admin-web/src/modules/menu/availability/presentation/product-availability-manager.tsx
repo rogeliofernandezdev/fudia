@@ -20,35 +20,51 @@ const controlLabels:Record<AvailabilityItem["quantityControl"],string>={
 export function ProductAvailabilityManager(){
  const client=useQueryClient();
  const{notify}=useFeedback();
- const{location}=useSession();
+ const{location,can,isLoading:sessionLoading}=useSession();
  const[search,setSearch]=useState("");
  const[categoryId,setCategoryId]=useState("");
  const[page,setPage]=useState(1);
  const[size,setSize]=useState(10);
  const[portions,setPortions]=useState<Record<string,string>>({});
+ const canRead=can("menu.read");
+ const canManage=can("menu.manage");
 
- const query=useQuery({queryKey:["product-availability",search,categoryId,page,size],queryFn:()=>listAvailability({search,categoryId,page,pageSize:size})});
- const categories=useQuery({queryKey:["categories","availability-filter"],queryFn:listAvailabilityCategories});
+ const query=useQuery({
+  queryKey:["product-availability",location?.id,search,categoryId,page,size],
+  queryFn:()=>listAvailability({search,categoryId,page,pageSize:size}),
+  enabled:!!location?.id&&canRead,
+ });
+ const categories=useQuery({queryKey:["categories","availability-filter"],queryFn:listAvailabilityCategories,enabled:canRead});
  const update=useMutation({
-  mutationFn:({item,status}:{item:AvailabilityItem;status:"available"|"sold_out"})=>{
-   const portionQuantity=Number(portions[item.productId]??item.portionQuantity??0);
-   if(item.quantityControl==="portions"&&status!=="sold_out"&&(!Number.isInteger(portionQuantity)||portionQuantity<1)){
-    throw new Error("Ingresa una cantidad de porciones válida mayor que cero.");
-   }
-   return updateAvailability(item.productId,{
-    status,
-    portionQuantity:item.quantityControl==="portions"?portionQuantity:null,
-    note:item.note,
-   });
-  },
+  mutationFn:({item,status,portionQuantity}:{item:AvailabilityItem;status:"available"|"sold_out";portionQuantity:number|null;kind:"quota"|"status"})=>
+   updateAvailability(item.productId,{status,portionQuantity,note:item.note}),
   onSuccess:(_,variables)=>{
-   setPortions(value=>{const next={...value};delete next[variables.item.productId];return next});
+   if(variables.kind==="quota"){
+    setPortions(value=>{const next={...value};delete next[variables.item.productId];return next});
+   }
    void client.invalidateQueries({queryKey:["product-availability"]});
-   void client.invalidateQueries({queryKey:["inventory"]});
-   notify({tone:"success",title:"Disponibilidad actualizada",message:"El cambio ya aplica al local activo."});
+   notify({
+    tone:"success",
+    title:variables.kind==="quota"?"Cupo actualizado":"Disponibilidad actualizada",
+    message:variables.kind==="quota"?"El cupo del día quedó guardado.":"El estado manual ya aplica al local activo.",
+   });
   },
   onError:e=>notify({tone:"danger",title:"No se pudo actualizar",message:e.message}),
  });
+
+ function saveQuota(item:AvailabilityItem){
+  const portionQuantity=Number(portions[item.productId]??item.portionQuantity??0);
+  const minimum=Math.max(1,item.soldQuantity);
+  if(!Number.isInteger(portionQuantity)||portionQuantity<minimum){
+   notify({tone:"danger",title:"Cupo no válido",message:`El cupo de hoy debe ser un entero de al menos ${minimum}, porque ya hay ${item.soldQuantity} vendidas.`});
+   return;
+  }
+  update.mutate({item,status:item.manualStatus,portionQuantity,kind:"quota"});
+ }
+
+ function setManualStatus(item:AvailabilityItem,status:"available"|"sold_out"){
+  update.mutate({item,status,portionQuantity:null,kind:"status"});
+ }
 
  const items=query.data?.items??[];
  const businessDate=query.data?.businessDate
@@ -69,7 +85,9 @@ export function ProductAvailabilityManager(){
     <p className="availability-context"><Icon name="store" size={16}/>Las cantidades corresponden al local activo.</p>
    </header>
 
-   {query.isLoading?<div className="availability-table-wrap hover-scroll" tabIndex={0}><AvailabilitySkeleton/></div>:query.isError?
+   {sessionLoading?<div className="availability-table-wrap hover-scroll" tabIndex={0}><AvailabilitySkeleton/></div>:!canRead?
+    <div className="availability-state"><Icon name="alert" size={24}/><b>Sin permiso de lectura</b><p>Tu rol no permite consultar la disponibilidad de la carta.</p></div>
+   :query.isLoading?<div className="availability-table-wrap hover-scroll" tabIndex={0}><AvailabilitySkeleton/></div>:query.isError?
     <div className="availability-state"><Icon name="alert" size={24}/><b>No pudimos cargar la carta</b><p>{query.error.message}</p><Button kind="secondary" icon="refresh" onClick={()=>query.refetch()}>Reintentar</Button></div>
    :!items.length?
     <div className="availability-state"><Icon name="box" size={24}/><b>Sin productos</b><p>No hay productos activos que coincidan con los filtros.</p></div>
@@ -81,6 +99,9 @@ export function ProductAvailabilityManager(){
       const pending=update.isPending&&update.variables?.item.productId===item.productId;
       const portionValue=portions[item.productId]??String(item.portionQuantity??0);
       const portionChanged=item.quantityControl==="portions"&&portionValue!==String(item.portionQuantity??0);
+      const portionMinimum=Math.max(1,item.soldQuantity);
+      const portionNumber=Number(portionValue);
+      const portionValid=Number.isInteger(portionNumber)&&portionNumber>=portionMinimum;
       const manuallySoldOut=item.manualStatus==="sold_out";
       const quantityExhausted=(item.source==="portions"||item.source==="inventory")&&item.status==="sold_out";
       const inventoryAmount=item.remaining===null?"0":formatRegionalNumber(Number(item.remaining),location?.country,{maximumFractionDigits:3});
@@ -100,7 +121,7 @@ export function ProductAvailabilityManager(){
         <div className={`availability-control-grid control-${item.quantityControl}`}>
          <span className="availability-control-kind"><small>CONTROL</small><b>{controlLabels[item.quantityControl]}</b></span>
          {item.quantityControl==="portions"&&<>
-          <label><small>CUPO DE HOY</small><Input aria-label={`Cupo de hoy para ${item.name}`} type="number" min="1" step="1" inputMode="numeric" disabled={derived||pending} value={portionValue} onChange={event=>setPortions(value=>({...value,[item.productId]:event.target.value}))}/></label>
+          <label><small>CUPO DE HOY</small><Input aria-label={`Cupo de hoy para ${item.name}. Mínimo ${portionMinimum}`} type="number" min={portionMinimum} step="1" inputMode="numeric" disabled={!canManage||derived||update.isPending} value={portionValue} onChange={event=>setPortions(value=>({...value,[item.productId]:event.target.value}))}/></label>
           <span><small>VENDIDAS</small><b>{item.soldQuantity}</b></span>
           <span><small>RESTANTES</small><b>{item.remaining??0}</b></span>
          </>}
@@ -117,15 +138,17 @@ export function ProductAvailabilityManager(){
        {item.quantityControl==="portions"&&item.source==="portions"&&item.status==="sold_out"&&<p className="availability-derived"><Icon name="alert" size={14}/>Cupo agotado. Aumenta el cupo de hoy y guarda el cambio para continuar vendiendo.</p>}
        {item.quantityControl==="inventory"&&item.source==="inventory"&&item.status==="sold_out"&&<p className="availability-derived"><Icon name="alert" size={14}/>No queda stock físico. Registra una nueva entrada en Inventario.</p>}
 
-       <footer className={item.quantityControl==="portions"?"availability-actions":"availability-actions single"}>
-        {item.quantityControl==="portions"&&<Button kind={portionChanged?"primary":"secondary"} icon="check" disabled={derived||pending||!portionChanged} onClick={()=>update.mutate({item,status:item.manualStatus})} aria-label={`Guardar cupo de ${item.name}`}>{pending?"Guardando…":"Guardar"}</Button>}
-        <Button kind="secondary" className={manuallySoldOut?"availability-available-action":"availability-soldout-action"} icon="power" aria-label={manuallySoldOut?`Marcar ${item.name} como disponible`:`Marcar ${item.name} como agotado`} disabled={derived||pending||(!manuallySoldOut&&quantityExhausted)} onClick={()=>update.mutate({item,status:manuallySoldOut?"available":"sold_out"})}>{pending?"Guardando…":manuallySoldOut?"Reactivar":"Agotar hoy"}</Button>
+       <footer className={canManage&&item.quantityControl==="portions"?"availability-actions":"availability-actions single"}>
+        {canManage?<>
+         {item.quantityControl==="portions"&&<Button kind={portionChanged&&portionValid?"primary":"secondary"} icon="check" disabled={derived||update.isPending||!portionChanged||!portionValid} onClick={()=>saveQuota(item)} aria-label={`Guardar cupo de ${item.name}`}>{pending?"Guardando…":"Guardar"}</Button>}
+         <Button kind="secondary" className={manuallySoldOut?"availability-available-action":"availability-soldout-action"} icon="power" aria-label={manuallySoldOut?`Marcar ${item.name} como disponible`:`Marcar ${item.name} como agotado`} disabled={derived||update.isPending||(!manuallySoldOut&&quantityExhausted)} onClick={()=>setManualStatus(item,manuallySoldOut?"available":"sold_out")}>{pending?"Guardando…":manuallySoldOut?"Reactivar":"Agotar hoy"}</Button>
+        </>:<span className="availability-read-only">Solo lectura</span>}
        </footer>
       </article>;
      })}
     </div>
    </div>}
-   {!query.isLoading&&!query.isError&&<Pagination page={page} size={size} total={query.data?.total??items.length} onPage={setPage} onSize={value=>{setSize(value);setPage(1)}}/>}
+   {!sessionLoading&&canRead&&!query.isLoading&&!query.isError&&<Pagination page={page} size={size} total={query.data?.total??items.length} onPage={setPage} onSize={value=>{setSize(value);setPage(1)}}/>}
   </section>
  </>;
 }
