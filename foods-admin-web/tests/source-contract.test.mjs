@@ -668,3 +668,15 @@ test("abastecimiento diferencia inventario de kardex por icono",()=>{
   assert.ok(icons.includes("ledger:"),"El design system define el icono de Kárdex");
   assert.ok(kardex.includes('name="ledger"'),"Kárdex reutiliza su semántica visual dentro de la pantalla");
 });
+
+
+test("los nombres del menú evitan redundancias",()=>{
+  const shell=read("src/shell/admin-shell.tsx");
+  const recipes=read("src/modules/menu/recipes/presentation/recipes-page.tsx");
+  const access=read("src/modules/identity/presentation/users-roles-manager.tsx");
+  assert.ok(shell.includes('name:"Recetas",icon:"cookingPot"'),"El menú usa Recetas dentro de Carta y producción");
+  assert.equal(shell.includes('name:"Recetas y producción"'),false,"El menú no repite el nombre del grupo");
+  assert.ok(shell.includes('name:"Usuarios y roles",icon:"users"'),"El menú nombra las dos entidades administradas");
+  assert.ok(recipes.includes('title="Recetas"'),"La página de Recetas usa el mismo nombre");
+  assert.ok(access.includes('title="Usuarios y roles"'),"La página de accesos usa Usuarios y roles");
+});
