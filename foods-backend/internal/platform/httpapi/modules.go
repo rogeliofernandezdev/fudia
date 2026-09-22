@@ -19,10 +19,36 @@ type moduleDef struct {
 	Category    string `json:"category"`
 }
 
+const (
+	moduleAvailabilityReady       = "ready"
+	moduleAvailabilityDevelopment = "development"
+	moduleAvailabilityPlanned     = "planned"
+)
+
 var mvpModuleKeys = map[string]bool{
 	"reportes":true,"pos":true,"pedidos":true,"cocina":true,"mesas":true,"caja":true,"reservas":true,
 	"productos":true,"combos":true,"recetas":true,"inventario":true,"kardex":true,"compras":true,
 	"clientes":true,"locales":true,"fiscal":true,"usuarios":true,
+}
+
+var developmentModuleKeys = map[string]bool{
+	"carta_qr":true,
+	"facturacion":true,
+	"integraciones":true,
+}
+
+func moduleAvailability(key string) string {
+	if mvpModuleKeys[key] {
+		return moduleAvailabilityReady
+	}
+	if developmentModuleKeys[key] {
+		return moduleAvailabilityDevelopment
+	}
+	return moduleAvailabilityPlanned
+}
+
+func moduleCanActivate(key string) bool {
+	return moduleAvailability(key) == moduleAvailabilityReady
 }
 
 func seedOrganizationModules(ctx context.Context, tx pgx.Tx, organizationID string) error {
@@ -32,7 +58,7 @@ func seedOrganizationModules(ctx context.Context, tx pgx.Tx, organizationID stri
 			VALUES($1,$2,$3)
 			ON CONFLICT(organization_id,module_key)
 			DO UPDATE SET active=EXCLUDED.active,updated_at=now()
-		`, organizationID, module.Key, mvpModuleKeys[module.Key])
+		`, organizationID, module.Key, moduleCanActivate(module.Key))
 		if err != nil { return err }
 	}
 	return nil
@@ -109,16 +135,18 @@ func (a *API) listModules(w http.ResponseWriter, r *http.Request) {
 	catalog := make([]map[string]any, 0, len(moduleCatalog))
 	for _, m := range moduleCatalog {
 		active, exists := activeMap[m.Key]
-		if !exists {
+		availability := moduleAvailability(m.Key)
+		if !exists || availability != moduleAvailabilityReady {
 			active = false
 		}
 		catalog = append(catalog, map[string]any{
-			"key":         m.Key,
-			"name":        m.Name,
-			"description": m.Description,
-			"icon":        m.Icon,
-			"category":    m.Category,
-			"active":      active,
+			"key":          m.Key,
+			"name":         m.Name,
+			"description":  m.Description,
+			"icon":         m.Icon,
+			"category":     m.Category,
+			"availability": availability,
+			"active":       active,
 		})
 	}
 	writeJSON(w, 200, map[string]any{"modules": catalog})
@@ -134,7 +162,7 @@ func (a *API) toggleModule(w http.ResponseWriter, r *http.Request) {
 		fail(w, 400, "invalid_request", "Revisa los datos enviados.")
 		return
 	}
-	// Validar que el módulo existe en el catálogo
+	// Validar que el módulo existe en el catálogo.
 	valid := false
 	for _, m := range moduleCatalog {
 		if m.Key == in.Key {
@@ -144,6 +172,10 @@ func (a *API) toggleModule(w http.ResponseWriter, r *http.Request) {
 	}
 	if !valid {
 		fail(w, 400, "invalid_module", "El módulo no existe.")
+		return
+	}
+	if in.Active && !moduleCanActivate(in.Key) {
+		fail(w, 409, "module_not_ready", "Este módulo todavía no está disponible para empresas.")
 		return
 	}
 	_, err := a.db.Exec(r.Context(), `INSERT INTO organization_modules(organization_id, module_key, active) VALUES($1,$2,$3) ON CONFLICT(organization_id, module_key) DO UPDATE SET active=EXCLUDED.active, updated_at=now()`, s.OrganizationID, in.Key, in.Active)
@@ -168,7 +200,7 @@ func (a *API) activeModules(orgID string) map[string]bool {
 		var key string
 		var active bool
 		_ = rows.Scan(&key, &active)
-		result[key] = active
+		result[key] = active && moduleCanActivate(key)
 	}
 	return result
 }
