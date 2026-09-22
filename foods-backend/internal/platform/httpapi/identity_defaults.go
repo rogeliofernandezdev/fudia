@@ -116,7 +116,7 @@ func tenantHasAdministrator(ctx context.Context, q identityQueryRower, organizat
 			  AND NOT u.platform_admin
 			  AND r.active
 			  AND l.active
-			  AND (r.permissions @> ARRAY['*']::text[] OR r.permissions @> ARRAY['users.manage']::text[])
+			  AND r.permissions @> ARRAY['users.manage']::text[]
 		)
 	`, organizationID).Scan(&ok)
 	return ok, err
