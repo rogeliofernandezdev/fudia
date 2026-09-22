@@ -483,7 +483,13 @@ test("reservas respeta el contrato de formularios y jerarquia del modal",()=>{
   assert.ok(schema.includes("reservationSchema=z.object"),"Reservas define esquema Zod");
   assert.ok(page.includes('className="form-grid reservation-form-grid"'),"El modal usa una reticula propia sobre el formulario estandar");
   assert.ok(css.includes("grid-template-columns:minmax(0,1.35fr) minmax(170px,.65fr)"),"La columna principal conserva mayor jerarquia");
-  assert.ok(page.indexOf("Fecha y hora")<page.indexOf("Personas")&&page.indexOf("Personas")<page.indexOf(">Mesa<")&&page.indexOf(">Mesa<")<page.indexOf("Duración de mesa"),"El flujo visual sigue fecha, personas, mesa y duracion");
+  const modalStart=page.indexOf("function ReservationDialog");
+  const modal=page.slice(modalStart);
+  const dateIndex=modal.indexOf("Fecha y hora");
+  const guestsIndex=modal.indexOf("Personas");
+  const tableIndex=modal.indexOf("\n            Mesa\n");
+  const durationIndex=modal.indexOf("Duración de mesa");
+  assert.ok(dateIndex>=0&&guestsIndex>dateIndex&&tableIndex>guestsIndex&&durationIndex>tableIndex,"El flujo visual sigue fecha, personas, mesa y duracion");
   assert.ok(page.includes('{busy?"Guardando…":"Guardar"}'),"El CTA usa el texto estandar Guardar");
   assert.equal(page.includes("Guardar reserva"),false,"El modal no agrega sufijos al CTA Guardar");
   assert.ok(page.includes("tablesLoading")&&page.includes("tablesError"),"La dependencia remota de mesas expone carga y error");
