@@ -1,9 +1,8 @@
-import {ManagementPage} from "@/shared/management";
+import {Icon} from "@/design-system/icons";
+import {PageHeader} from "@/design-system/page-header";
 
 export function ReceiptsPage(){
-  return <ManagementPage eyebrow="VENTA" title="Comprobantes" description="Consulta emisión electrónica, respuesta SUNAT y entrega al cliente." action="Exportar comprobantes" actionIcon="download" columns={["COMPROBANTE","CLIENTE","TOTAL"]} rows={[
-    {name:"B001-00482",detail:"Boleta · Hoy 14:36",category:"María Torres",value:"S/ 124.00",state:"Aceptado"},
-    {name:"F001-00126",detail:"Factura · Hoy 14:28",category:"Empresa Andina SAC",value:"S/ 680.00",state:"Aceptado"},
-    {name:"B001-00481",detail:"Boleta · Hoy 14:20",category:"Cliente general",value:"S/ 58.50",state:"Pendiente",tone:"orange"},
-  ]}/>;
+  return <><PageHeader eyebrow="VENTA" title="Comprobantes" description="La facturación electrónica se habilitará en una fase posterior al MVP operativo."/>
+    <section className="panel management"><div className="catalog-state"><span><Icon name="receipt" size={24}/></span><b>Fuera del MVP actual</b><p>No se muestran comprobantes simulados. Los pedidos y pagos reales continúan disponibles en Ventas y Punto de venta.</p></div></section>
+  </>;
 }
