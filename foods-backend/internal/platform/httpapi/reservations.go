@@ -75,7 +75,7 @@ func parseReservationInput(in *reservationInput)(time.Time,bool){
 
 func scanReservation(row pgx.Row)(reservationView,error){
 	var item reservationView
-	err:=row.Scan(&item.ID,&item.CustomerID,&item.CustomerName,&item.CustomerPhone,&item.StartsAt,&item.Guests,&item.TableID,&item.TableName,&item.Status,&item.Notes,&item.CreatedAt)
+	err:=row.Scan(&item.ID,&item.CustomerID,&item.CustomerName,&item.CustomerPhone,&item.StartsAt,&item.Guests,&item.DurationMinutes,&item.TableID,&item.TableName,&item.Status,&item.Notes,&item.CreatedAt)
 	return item,err
 }
 
