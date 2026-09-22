@@ -411,7 +411,8 @@ test("cocina mantiene jerarquia KDS y semantica de color",()=>{
   assert.ok(css.includes('.kitchen-lane{min-width:0;border:1px solid var(--line);border-radius:14px;background:var(--cloud-50)'),"Cada carril es un panel operativo neutro");
   assert.ok(css.includes('.kitchen-lane[data-status="confirmado"]>header{background:var(--kds-pending)}'),"Por preparar usa azul sólido del patrón");
   assert.ok(css.includes('.kitchen-lane[data-status="preparando"]>header{background:var(--kds-cooking)}'),"En preparación usa violeta sólido del patrón");
-  assert.ok(css.includes('.kitchen-lane[data-status="listo"]>header{background:var(--kds-ready-dark)}'),"Listo usa verde sólido oscuro");
+  assert.ok(css.includes('.kitchen-lane[data-status="listo"]>header{background:var(--kds-ready)}'),"Listo usa brand-600 como fondo");
+  assert.ok(css.includes('.kitchen-lane[data-status="listo"]>header h2{color:var(--kds-ready-dark)}'),"Listo usa brand-700 para el título");
   assert.ok(css.includes('.kitchen-lane>header h2{overflow:hidden;margin:0;color:var(--surface)'),"Los títulos de carril conservan contraste blanco");
   assert.equal(css.includes("border-left:4px solid transparent"),false,"Los carriles no usan barra lateral de color");
   assert.equal(css.includes(".kitchen-lane::before"),false,"Los carriles no usan franja superior de color");
