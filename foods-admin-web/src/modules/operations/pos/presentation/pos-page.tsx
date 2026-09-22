@@ -1,6 +1,7 @@
 "use client";
 import "./pos.css";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Button,Icon,Input,PageHeader,Pagination,RowActionButton,Select,Status} from "@/design-system";
@@ -11,7 +12,8 @@ import {useDebouncedValue} from "@/shared/hooks/use-debounced-value";
 import {getCurrentCashShift} from "../../cash/infrastructure/cash-api";
 import type {Payment,POSOrderDetail,POSOrderSummary} from "../domain/types";
 import {createPayment,getPOSOrder,listPOSOrders,refundPayment} from "../infrastructure/pos-api";
-import {PaymentDialog,RefundDialog} from "./pos-dialogs";
+const PaymentDialog=dynamic(()=>import("./pos-dialogs").then(module=>module.PaymentDialog),{ssr:false});
+const RefundDialog=dynamic(()=>import("./pos-dialogs").then(module=>module.RefundDialog),{ssr:false});
 
 const paymentMeta={
   pending:{label:"Sin pagos",tone:"gray" as const},
