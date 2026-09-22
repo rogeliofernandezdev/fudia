@@ -143,7 +143,6 @@ function SubscriptionPanel({subscription,loading,error,retry,country,timeZone}:{
   const renewal=subscription.renewsAt?dateLabel(subscription.renewsAt,country,timeZone):"Sin fecha programada";
   const trial=subscription.plan.trialDays?subscription.plan.trialDays+" días":"No incluida";
   const terms=subscription.termsVersion??"Pendientes";
-  const limitLabel=(value:number,max:number|null)=>value+" / "+(max??"∞");
 
   return <section className={"profile-subscription profile-card"+(legacy?" legacy":"")}>
     <div className="subscription-hero">
