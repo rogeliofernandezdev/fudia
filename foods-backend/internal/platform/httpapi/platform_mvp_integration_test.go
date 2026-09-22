@@ -127,3 +127,50 @@ func TestDefaultRolesOnlyExposeUsableMVPMenus(t *testing.T){
 		}
 	}
 }
+
+func TestDashboardReflectsRealPaymentsAndRefunds(t *testing.T){
+	pool:=integrationPool(t)
+	s:=seedInventoryScope(t,pool)
+	api:=New(pool)
+	ctx:=context.Background()
+	nonce:=time.Now().UnixNano()
+	var registerID string
+	if err:=pool.QueryRow(ctx,`
+		INSERT INTO cash_registers(organization_id,location_id,name,created_by)
+		VALUES($1,$2,$3,$4) RETURNING id
+	`,s.OrganizationID,s.LocationID,fmt.Sprintf("Caja dashboard %d",nonce),s.UserID).Scan(&registerID);err!=nil{t.Fatal(err)}
+	openReq:=httptest.NewRequest("POST","/v1/admin/cash-shifts",bytes.NewReader([]byte(fmt.Sprintf(`{"cashRegisterId":%q,"openingAmount":0}`,registerID))))
+	openReq=openReq.WithContext(context.WithValue(openReq.Context(),scopeKey{},s))
+	openRec:=httptest.NewRecorder();api.openCashShift(openRec,openReq)
+	if openRec.Code!=201{t.Fatalf("open dashboard shift: %d %s",openRec.Code,openRec.Body.String())}
+
+	var orderID string
+	if err:=pool.QueryRow(ctx,`
+		INSERT INTO orders(organization_id,location_id,code,channel,status,total,created_by)
+		VALUES($1,$2,$3,'mostrador','listo',50,$4) RETURNING id
+	`,s.OrganizationID,s.LocationID,fmt.Sprintf("PED-DASH-%d",nonce),s.UserID).Scan(&orderID);err!=nil{t.Fatal(err)}
+	payReq:=httptest.NewRequest("POST","/v1/admin/payments",bytes.NewReader([]byte(fmt.Sprintf(`{"orderId":%q,"method":"card","amount":50,"reference":"DASH"}`,orderID))))
+	payReq=payReq.WithContext(context.WithValue(payReq.Context(),scopeKey{},s))
+	payRec:=httptest.NewRecorder();api.createPayment(payRec,payReq)
+	if payRec.Code!=201{t.Fatalf("dashboard payment: %d %s",payRec.Code,payRec.Body.String())}
+	var payment paymentView
+	if err:=json.Unmarshal(payRec.Body.Bytes(),&payment);err!=nil{t.Fatal(err)}
+
+	readDashboard:=func()(string,int){
+		req:=httptest.NewRequest("GET","/v1/admin/dashboard",nil);req=req.WithContext(context.WithValue(req.Context(),scopeKey{},s))
+		rec:=httptest.NewRecorder();api.dashboard(rec,req)
+		if rec.Code!=200{t.Fatalf("dashboard: %d %s",rec.Code,rec.Body.String())}
+		var body struct{SalesNet string `json:"salesNet"`;PaidOrders int `json:"paidOrders"`}
+		if err:=json.Unmarshal(rec.Body.Bytes(),&body);err!=nil{t.Fatal(err)}
+		return body.SalesNet,body.PaidOrders
+	}
+	sales,tickets:=readDashboard()
+	if sales!="50.00"||tickets!=1{t.Fatalf("dashboard should reflect payment, sales=%s tickets=%d",sales,tickets)}
+
+	refundReq:=httptest.NewRequest("POST","/v1/admin/payments/"+payment.ID+"/refund",bytes.NewReader([]byte(`{"amount":10,"reason":"Ajuste dashboard"}`)))
+	refundReq.SetPathValue("id",payment.ID);refundReq=refundReq.WithContext(context.WithValue(refundReq.Context(),scopeKey{},s))
+	refundRec:=httptest.NewRecorder();api.refundPayment(refundRec,refundReq)
+	if refundRec.Code!=204{t.Fatalf("dashboard refund: %d %s",refundRec.Code,refundRec.Body.String())}
+	sales,tickets=readDashboard()
+	if sales!="40.00"||tickets!=1{t.Fatalf("dashboard should net refunds by movement date, sales=%s tickets=%d",sales,tickets)}
+}
