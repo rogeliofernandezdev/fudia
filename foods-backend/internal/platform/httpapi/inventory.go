@@ -337,7 +337,7 @@ func (a *API) listInventory(w http.ResponseWriter, r *http.Request) {
 		LEFT JOIN products p
 		  ON p.id=ii.product_id AND p.organization_id=ii.organization_id
 		WHERE ii.organization_id=$1 AND ii.active
-		  AND (COALESCE(p.name,ii.name) ILIKE $2 OR COALESCE(p.sku,ii.sku) ILIKE $2)`,
+		  AND (p.name ILIKE $2 OR ii.name ILIKE $2 OR p.sku ILIKE $2 OR ii.sku ILIKE $2)`,
 		s.OrganizationID, search).Scan(&total); err != nil {
 		fail(w, 503, "inventory_unavailable", "No pudimos cargar el inventario.")
 		return
@@ -372,7 +372,7 @@ func (a *API) listInventory(w http.ResponseWriter, r *http.Request) {
 		 AND ils.location_id=$2
 		 AND ils.inventory_item_id=ii.id
 		WHERE ii.organization_id=$1 AND ii.active
-		  AND (COALESCE(p.name,ii.name) ILIKE $3 OR COALESCE(p.sku,ii.sku) ILIKE $3)
+		  AND (p.name ILIKE $3 OR ii.name ILIKE $3 OR p.sku ILIKE $3 OR ii.sku ILIKE $3)
 		ORDER BY COALESCE(p.active,ii.active) DESC,COALESCE(p.name,ii.name)
 		LIMIT $4 OFFSET $5`,
 		s.OrganizationID, s.LocationID, search, size, (page-1)*size)
@@ -455,7 +455,7 @@ func (a *API) listInventoryProducts(w http.ResponseWriter, r *http.Request) {
 		      WHERE mc.product_id=p.id AND mc.organization_id=p.organization_id
 		    )
 		  ))
-		  AND (COALESCE(p.name,ii.name) ILIKE $3 OR COALESCE(p.sku,ii.sku) ILIKE $3)
+		  AND (p.name ILIKE $3 OR ii.name ILIKE $3 OR p.sku ILIKE $3 OR ii.sku ILIKE $3)
 		ORDER BY COALESCE(p.name,ii.name)
 		LIMIT $4 OFFSET $5`, s.OrganizationID, s.LocationID, search, size, (page-1)*size)
 	if err != nil {
