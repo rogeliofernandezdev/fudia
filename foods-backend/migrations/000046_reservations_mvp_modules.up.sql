@@ -42,7 +42,7 @@ SET menu_access=CASE system_key
   WHEN 'location_manager' THEN ARRAY['dashboard','pos','pedidos','cocina','mesas','caja','reservas','productos','disponibilidad','combos','recetas','inventario','kardex','compras','clientes','locales','fiscal','usuarios']::text[]
   WHEN 'shift_supervisor' THEN ARRAY['dashboard','pos','pedidos','cocina','mesas','caja','reservas','productos','disponibilidad','combos','clientes']::text[]
   WHEN 'cashier' THEN ARRAY['pos','pedidos','mesas','caja','clientes']::text[]
-  WHEN 'waiter' THEN ARRAY['pos','pedidos','mesas','reservas']::text[]
+  WHEN 'waiter' THEN ARRAY['pedidos','mesas','reservas']::text[]
   WHEN 'buyer' THEN ARRAY['inventario','kardex','compras']::text[]
   WHEN 'accounting' THEN ARRAY['dashboard','caja','fiscal']::text[]
   ELSE menu_access END,
