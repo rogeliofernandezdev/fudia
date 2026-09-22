@@ -186,6 +186,31 @@ func (a *API) listSubscriptionPlans(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]any{"items": items})
 }
 
+func (a *API) listAvailableSubscriptionPlans(w http.ResponseWriter, r *http.Request) {
+	rows, err := a.db.Query(r.Context(), `
+		SELECT id,code,name,description,currency,monthly_price::text,annual_price::text,
+		       trial_days,max_locations,max_users,module_keys,terms_version,active
+		FROM subscription_plans
+		WHERE active AND code<>'legacy'
+		ORDER BY CASE code WHEN 'emprende' THEN 1 WHEN 'impulso' THEN 2 WHEN 'escala' THEN 3 ELSE 4 END,name
+	`)
+	if err != nil {
+		fail(w, 503, "plans_unavailable", "No pudimos cargar los planes disponibles.")
+		return
+	}
+	defer rows.Close()
+	items := []subscriptionPlanView{}
+	for rows.Next() {
+		var item subscriptionPlanView
+		if err = rows.Scan(&item.ID,&item.Code,&item.Name,&item.Description,&item.Currency,&item.MonthlyPrice,&item.AnnualPrice,&item.TrialDays,&item.MaxLocations,&item.MaxUsers,&item.ModuleKeys,&item.TermsVersion,&item.Active); err != nil {
+			fail(w, 503, "plans_unavailable", "No pudimos cargar los planes disponibles.")
+			return
+		}
+		items = append(items,item)
+	}
+	writeJSON(w,200,map[string]any{"items":items})
+}
+
 func (a *API) createSubscriptionPlan(w http.ResponseWriter, r *http.Request) {
 	a.saveSubscriptionPlan(w, r, true)
 }
