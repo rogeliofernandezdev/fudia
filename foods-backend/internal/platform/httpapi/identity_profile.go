@@ -39,17 +39,31 @@ func (a *API) loadMyProfile(ctx context.Context, s scope) (myProfileView, error)
 	var planID,planCode,planName,planStatus string
 	err:=a.db.QueryRow(ctx,`
 		SELECT u.full_name,u.email,u.platform_admin,
-		       COALESCE(array_agg(DISTINCT r.name) FILTER (WHERE r.id IS NOT NULL),ARRAY[]::text[]),
-		       COALESCE(array_agg(DISTINCT permission) FILTER (WHERE permission IS NOT NULL),ARRAY[]::text[]),
-		       COALESCE(sp.id::text,\'\'),COALESCE(sp.code,\'\'),COALESCE(sp.name,\'\'),COALESCE(os.status,\'\')
+		       COALESCE((
+		         SELECT array_agg(DISTINCT r.name ORDER BY r.name)
+		         FROM user_roles ur
+		         JOIN roles r ON r.id=ur.role_id
+		         WHERE ur.user_id=u.id
+		           AND ur.location_id=$2
+		           AND r.organization_id=$3
+		           AND r.active
+		       ),ARRAY[]::text[]),
+		       COALESCE((
+		         SELECT array_agg(DISTINCT permission ORDER BY permission)
+		         FROM user_roles ur
+		         JOIN roles r ON r.id=ur.role_id
+		         CROSS JOIN LATERAL unnest(r.permissions) permission
+		         WHERE ur.user_id=u.id
+		           AND ur.location_id=$2
+		           AND r.organization_id=$3
+		           AND r.active
+		       ),ARRAY[]::text[]),
+		       COALESCE(sp.id::text,''),COALESCE(sp.code,''),COALESCE(sp.name,''),COALESCE(os.status,'')
 		FROM users u
-		LEFT JOIN user_roles ur ON ur.user_id=u.id AND ur.location_id=$2
-		LEFT JOIN roles r ON r.id=ur.role_id AND r.organization_id=$3 AND r.active
-		LEFT JOIN LATERAL unnest(r.permissions) permission ON true
 		LEFT JOIN organization_subscriptions os ON os.organization_id=$3
 		LEFT JOIN subscription_plans sp ON sp.id=os.plan_id
-		WHERE u.id=$1 AND u.active
-		GROUP BY u.id,sp.id,sp.code,sp.name,os.status
+		WHERE u.id=$1 AND u.organization_id=$3 AND u.active
+		LIMIT 1
 	`,s.UserID,s.LocationID,s.OrganizationID).Scan(&out.FullName,&out.Email,&out.PlatformAdmin,&out.RoleNames,&out.Permissions,&planID,&planCode,&planName,&planStatus)
 	if err!=nil{return myProfileView{},err}
 	if out.PlatformAdmin {
@@ -67,8 +81,12 @@ func (a *API) loadMyProfile(ctx context.Context, s scope) (myProfileView, error)
 func (a *API) getMyProfile(w http.ResponseWriter, r *http.Request) {
 	s := r.Context().Value(scopeKey{}).(scope)
 	out,err:=a.loadMyProfile(r.Context(),s)
+	if errors.Is(err,pgx.ErrNoRows) {
+		fail(w,404,"profile_not_found","Tu cuenta ya no está disponible.")
+		return
+	}
 	if err!=nil {
-		fail(w,404,"profile_not_found","No pudimos cargar tu perfil.")
+		fail(w,503,"profile_unavailable","No pudimos cargar tu perfil.")
 		return
 	}
 	writeJSON(w,200,out)
