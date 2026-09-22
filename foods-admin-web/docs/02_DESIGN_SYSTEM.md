@@ -426,3 +426,17 @@ plan, estado o registrar cobros sigue siendo una acción exclusiva de Plataforma
 - Una opción debe nombrar las entidades que realmente administra. La pantalla
   de acceso usa `Usuarios y roles`: los permisos son atributos configurados
   dentro de cada rol y no necesitan repetirse en el nombre del módulo.
+
+
+### Ruta inicial por rol
+
+- Después del login nunca se redirige de forma fija a `/dashboard`.
+- La entrada se calcula con el mismo catálogo que construye el sidebar y respeta,
+  en este orden, módulo contratado, acceso de menú y permiso mínimo de lectura.
+- Se abre la primera opción realmente accesible según el orden de navegación.
+  Ejemplos predeterminados: Mesero → Pedidos, Cocinero → Cocina, Cajero → Punto
+  de venta y Almacenero → Inventario.
+- El logo de FUDIA y el cambio de local reutilizan exactamente la misma regla.
+- Si ningún módulo satisface las tres condiciones, la cuenta entra a
+  `/sin-acceso`, donde se informa que debe revisarse su rol. No se muestra un
+  Dashboard bloqueado como página inicial.
