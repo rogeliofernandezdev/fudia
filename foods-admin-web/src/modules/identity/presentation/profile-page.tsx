@@ -161,8 +161,12 @@ function ProfilePlansPanel({profile,plans,loading,error,retry}:{profile:MyProfil
         </div>
       </div>
       <div className="profile-current-plan">
+        <div>
+          <small>PLAN ACTUAL</small>
+          <b>{current?.name??"Sin plan asignado"}</b>
+          <p>{current?"Plan comercial asociado a tu empresa.":"Aún no hay un plan comercial asignado."}</p>
+        </div>
         {current&&<span className={"plan-state-pill "+current.status}><i/>{statusLabel[current.status]}</span>}
-        <div><small>PLAN ACTUAL</small><b>{current?.name??"Sin plan asignado"}</b><p>{current?"Plan comercial asociado a tu empresa.":"Aún no hay un plan comercial asignado."}</p></div>
       </div>
     </header>
 

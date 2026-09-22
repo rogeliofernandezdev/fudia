@@ -107,26 +107,38 @@
 .profile-access-warning b{font-size:9px}
 .profile-access-warning p{margin:0;color:#8b6a36;font-size:8px;line-height:1.45}
 
-.profile-plans{margin-top:18px;border-color:#d9dee8;background:#fff;box-shadow:0 8px 22px #1018280a;position:relative}
-.profile-plans::before{content:"";position:absolute;inset:0 0 auto;height:2px;background:var(--ops-500);z-index:2}
-.profile-plans-hero{padding:20px 22px;border-bottom:1px solid #e7eaf0;background:#fff;display:flex;align-items:flex-start;justify-content:space-between;gap:24px}
+.profile-plans{margin-top:18px;border-color:#cfd8ec;box-shadow:0 14px 34px #10182810;background:#fff;position:relative}
+.profile-plans::before{content:"";position:absolute;inset:0 0 auto;height:3px;background:var(--ops-500);z-index:2}
+.profile-plans-hero{padding:18px 20px;border-bottom:1px solid #dfe5f0;background:var(--ops-100);display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,360px);align-items:center;gap:24px}
 .profile-plans-title{display:flex;align-items:flex-start;gap:13px;min-width:0}
-.profile-plans-icon{width:42px;height:42px;border:1px solid #dfe4ef;border-radius:11px;color:var(--ops-700);background:#f7f8fc;display:grid;place-items:center;flex:0 0 auto}
+.profile-plans-icon{width:44px;height:44px;border-radius:12px;color:#fff;background:var(--ops-500);border:1px solid var(--ops-700);box-shadow:0 8px 18px #4654cd20;display:grid;place-items:center;flex:0 0 auto}
 .profile-plans-title>div{display:grid;gap:2px}
-.profile-plans-title small{color:var(--ops-500);font-size:7px;font-weight:850;letter-spacing:.1em}
+.profile-plans-title small{color:var(--ops-700);font-size:7px;font-weight:850;letter-spacing:.1em}
 .profile-plans-title h2{margin:3px 0 0;color:var(--ink-950);font-size:17px;line-height:1.25;letter-spacing:-.02em}
-.profile-plans-title p{max-width:660px;margin:5px 0 0;color:var(--ink-500);font-size:9px;line-height:1.5}
-.profile-current-plan{min-width:220px;border-left:1px solid #e7eaf0;padding-left:18px;display:flex;align-items:flex-start;justify-content:flex-end;gap:12px}
-.profile-current-plan>div{min-width:145px;text-align:right;display:grid;gap:2px}
-.profile-current-plan small{color:var(--ink-400);font-size:7px;font-weight:850;letter-spacing:.1em}
-.profile-current-plan b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink-950);font-size:15px;letter-spacing:-.02em}
+.profile-plans-title p{max-width:660px;margin:5px 0 0;color:var(--ink-600);font-size:9px;line-height:1.5}
+
+.profile-current-plan{min-width:0;border:1px solid #d5dced;border-radius:12px;background:#fff;padding:11px 12px;box-shadow:0 5px 14px #1018280a;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:12px}
+.profile-current-plan>div{min-width:0;text-align:left;display:grid;gap:2px}
+.profile-current-plan small{color:var(--ops-500);font-size:7px;font-weight:850;letter-spacing:.1em}
+.profile-current-plan b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink-950);font-size:14px;letter-spacing:-.02em}
 .profile-current-plan p{margin:0;color:var(--ink-400);font-size:8px;line-height:1.35}
 .plan-state-pill{border:1px solid #e1e5eb;border-radius:20px;padding:5px 8px;display:inline-flex;align-items:center;gap:6px;font-size:8px;font-weight:850;background:#fff;color:var(--ink-600);white-space:nowrap}
 .plan-state-pill i{width:6px;height:6px;border-radius:50%;background:currentColor}
 .plan-state-pill.active{border-color:#cfe8de;background:var(--brand-100);color:var(--brand-700)}
-.plan-state-pill.trial{border-color:#d9def0;background:var(--ops-100);color:var(--ops-700)}
+.plan-state-pill.trial{border-color:#d9def0;background:#fff;color:var(--ops-700)}
 .plan-state-pill.past_due{border-color:#f1cf83;background:var(--warning-50);color:var(--warning)}
 .plan-state-pill.cancelled{border-color:#f3c6c2;background:#fff;color:var(--danger)}
+
+@media(width<=820px){
+ .profile-plans-hero{grid-template-columns:1fr;padding:16px}
+ .profile-current-plan{width:100%}
+}
+@media(width<=480px){
+ .profile-plans-title{align-items:flex-start}
+ .profile-plans-icon{width:38px;height:38px;border-radius:10px}
+ .profile-current-plan{grid-template-columns:1fr}
+ .plan-state-pill{justify-self:start}
+}
 
 .profile-plan-grid{padding:18px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;background:#f7f8fc}
 .profile-plan-card{position:relative;min-width:0;border:1px solid #d8deeb;border-radius:13px;background:#fff;overflow:hidden;box-shadow:0 6px 16px #10182808;display:flex;flex-direction:column;transition:border-color .15s,box-shadow .15s,transform .15s}
