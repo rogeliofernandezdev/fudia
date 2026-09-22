@@ -371,3 +371,21 @@ Los módulos de directorio, como Clientes, usan la tabla estandarizada en escrit
 - El Administrador de plataforma ve todos los módulos en navegación y catálogo, incluso si están inactivos o no terminados.
 - Los usuarios de empresa solo ven módulos disponibles, activos para su organización y permitidos por su rol.
 - Un módulo **En desarrollo** o **Planificado** nunca puede activarse para una empresa; el backend debe rechazar cualquier intento aunque el frontend falle.
+
+## Onboarding comercial y suscripción
+
+Existe un único onboarding de tenant en `/platform/onboarding`. La ruta
+histórica de Configuración redirige a ese flujo y no mantiene una segunda
+implementación. El alta se compone de Empresa → Plan y contrato → Fiscal →
+Primer local → Administrador.
+
+El paso Plan y contrato consume el catálogo SaaS del backend: nunca hardcodea
+precios ni paquetes. Muestra precio según ciclo, prueba, límites, módulos y
+versión de condiciones, y exige registrar la aceptación antes de crear el
+tenant. Plataforma administra el catálogo en `/platform/plans` y la
+suscripción de la empresa activa en `/platform/subscription`.
+
+El Administrador de empresa con permiso `subscription.read` ve en Mi perfil
+un resumen de solo lectura con plan, estado, precio/ciclo, renovación, prueba,
+condiciones, uso frente a límites, módulos incluidos y último pago. Cambiar
+plan, estado o registrar cobros sigue siendo una acción exclusiva de Plataforma.
