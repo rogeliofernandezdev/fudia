@@ -7,6 +7,7 @@ import {Button,Icon,Input,PageHeader,Pagination,RowActionButton,Select,Status} f
 import {useFeedback,useSession} from "@/providers";
 import {useSettings} from "@/providers/settings-context";
 import {formatRegionalDateTime,formatRegionalNumber} from "@/shared/i18n/regional-format";
+import {useDebouncedValue} from "@/shared/hooks/use-debounced-value";
 import {getCurrentCashShift} from "../../cash/infrastructure/cash-api";
 import type {Payment,POSOrderDetail,POSOrderSummary} from "../domain/types";
 import {createPayment,getPOSOrder,listPOSOrders,refundPayment} from "../infrastructure/pos-api";
@@ -26,6 +27,7 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
   const settings=useSettings();
   const canManage=can("cash.manage");
   const[q,setQ]=useState("");
+  const debouncedQ=useDebouncedValue(q);
   const[paymentStatus,setPaymentStatus]=useState("unpaid");
   const[page,setPage]=useState(1);
   const[size,setSize]=useState(10);
@@ -39,8 +41,8 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
     refetchInterval:30000,
   });
   const orders=useQuery({
-    queryKey:["pos-orders",q,paymentStatus,page,size],
-    queryFn:()=>listPOSOrders({q,paymentStatus,page,pageSize:size}),
+    queryKey:["pos-orders",debouncedQ,paymentStatus,page,size],
+    queryFn:()=>listPOSOrders({q:debouncedQ,paymentStatus,page,pageSize:size}),
     refetchInterval:30000,
   });
   const detail=useQuery({
