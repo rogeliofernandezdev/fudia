@@ -37,7 +37,7 @@ func (a *API) requirePlatformAdmin(next http.Handler) http.Handler {
 		s := r.Context().Value(scopeKey{}).(scope)
 		var allowed bool
 		if err := a.db.QueryRow(r.Context(), `SELECT platform_admin FROM users WHERE id=$1 AND active`, s.UserID).Scan(&allowed); err != nil || !allowed {
-			fail(w, 403, "platform_forbidden", "Solo un administrador de plataforma puede registrar empresas.")
+			fail(w, 403, "platform_forbidden", "Solo el administrador de plataforma puede realizar esta acción.")
 			return
 		}
 		next.ServeHTTP(w, r)
