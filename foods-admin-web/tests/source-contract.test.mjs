@@ -194,9 +194,14 @@ test("producto e inventario mantienen una sola fuente de verdad",()=>{
   assert.ok(recipes.includes("cacheOptions"),"El autocomplete reutiliza resultados recientes");
   assert.equal(recipes.includes('<Select value={draft.productId}'),false,"Producto preparado no vuelve a un select nativo");
   assert.ok(recipesApi.includes('products?status=active&q='),"La búsqueda de productos se delega al backend");
-  assert.ok(recipesApi.includes("pageSize=10"),"El autocomplete limita cada respuesta a 10 productos");
+  assert.ok(recipesApi.includes('products?status=active&page=1&pageSize=10'),"La apertura inicial carga solo 10 productos");
+  assert.ok(recipesApi.includes("pageSize=100"),"Las búsquedas usan páginas amplias para reunir coincidencias");
+  assert.ok(recipesApi.includes("Math.ceil(first.total/100)"),"La búsqueda recorre todas las páginas hasta reunir todas las coincidencias");
+  assert.ok(recipesApi.includes("rest.flatMap(page=>page.items)"),"La búsqueda combina todas las páginas del API");
   assert.ok(recipes.includes("search.length>0&&search.length<3"),"El autocomplete no consulta con uno o dos caracteres");
   assert.ok(recipes.includes("Escribe al menos 3 caracteres"),"La UI comunica el umbral mínimo de búsqueda");
+  assert.ok(recipes.includes("label:product.name"),"El autocomplete muestra únicamente el nombre del producto");
+  assert.equal(recipes.includes("product.sku?product.name"),false,"El autocomplete no muestra SKU");
 });
 
 test("compras concentra orden recepcion y altas de abastecimiento",()=>{
