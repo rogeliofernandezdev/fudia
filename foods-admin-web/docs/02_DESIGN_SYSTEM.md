@@ -23,6 +23,7 @@ densidad para tablas, formularios y análisis.
 | ops-500 | #4654CD | foco y estado activo |
 | digital-700 | #5421A8 | WhatsApp e integraciones |
 | digital-500 | #7C3AED | acento digital |
+| digital-100 | #F2ECFF | fondo violeta suave para estados operativos |
 | ink-950 | #101828 | texto principal |
 | ink-600 | #475467 | texto secundario |
 | cloud-50 | #F7F8FC | fondo |
@@ -120,12 +121,13 @@ se limitan a densidad y composición, nunca a reinterpretar el significado del c
 - Cocina usa un KDS de tres carriles operativos: «Por preparar», «En preparación»
   y «Listos para entregar». Cada carril es un panel neutro `cloud-50/surface`
   con borde estándar; el color semántico se limita al acento de estado, icono,
-  contador y etiquetas: azul para pendiente, ámbar para preparación/demora y
-  verde únicamente para el estado listo. Los botones que cambian el flujo son
+  contador y etiquetas: azul para «Por preparar», violeta para «En preparación»,
+  verde para «Listo» y ámbar exclusivamente para «Por vencer» o «Con demora». Los botones que cambian el flujo son
   acciones primarias azules; el verde no se usa como CTA antes de confirmar el
   éxito. Las tarjetas son densas, con borde `line`, radio de 14 px y sin
   sombras o transformaciones decorativas que compitan con la información.
-  El tiempo nunca se muestra como minutos de cuatro cifras: se formatea como
+  `danger` no se usa para retrasos de cocina porque se reserva para errores y
+  acciones destructivas. El tiempo nunca se muestra como minutos de cuatro cifras: se formatea como
   minutos, horas/minutos o días/horas según corresponda. La urgencia siempre
   incluye texto explícito («A tiempo», «Por vencer», «Con demora», «Listo»);
   nunca depende solo del color. El objetivo de preparación aparece como dato
