@@ -110,12 +110,12 @@ export function ProductAvailabilityManager(){
          </>}
          {item.quantityControl==="none"&&<span><small>CANTIDAD</small><b>No se controla</b></span>}
         </div>
-
-        {item.quantityControl==="inventory"&&!derived&&<p className="availability-derived inventory"><Icon name="stock" size={14}/>La existencia se actualiza desde Inventario y con las ventas.</p>}
-        {derived&&<p className="availability-derived"><Icon name="alert" size={14}/>{item.source==="schedule"?"La ficha del producto lo mantiene fuera de horario.":"No hay suficientes opciones disponibles en una parte obligatoria."}</p>}
-        {item.quantityControl==="portions"&&item.source==="portions"&&item.status==="sold_out"&&<p className="availability-derived"><Icon name="alert" size={14}/>Las porciones del día se agotaron. Aumenta el cupo y actualízalo para continuar vendiendo.</p>}
-        {item.quantityControl==="inventory"&&item.source==="inventory"&&item.status==="sold_out"&&<p className="availability-derived"><Icon name="alert" size={14}/>No queda stock físico. Registra una nueva entrada en Inventario.</p>}
        </div>
+
+       {item.quantityControl==="inventory"&&!derived&&<p className="availability-derived inventory"><Icon name="stock" size={14}/>La existencia se actualiza desde Inventario y con las ventas.</p>}
+       {derived&&<p className="availability-derived"><Icon name="alert" size={14}/>{item.source==="schedule"?"La ficha del producto lo mantiene fuera de horario.":"No hay suficientes opciones disponibles en una parte obligatoria."}</p>}
+       {item.quantityControl==="portions"&&item.source==="portions"&&item.status==="sold_out"&&<p className="availability-derived"><Icon name="alert" size={14}/>Cupo agotado. Aumenta el cupo de hoy y guarda el cambio para continuar vendiendo.</p>}
+       {item.quantityControl==="inventory"&&item.source==="inventory"&&item.status==="sold_out"&&<p className="availability-derived"><Icon name="alert" size={14}/>No queda stock físico. Registra una nueva entrada en Inventario.</p>}
 
        <footer className={item.quantityControl==="portions"?"availability-actions":"availability-actions single"}>
         {item.quantityControl==="portions"&&<Button kind={portionChanged?"primary":"secondary"} icon="check" disabled={derived||pending||!portionChanged} onClick={()=>update.mutate({item,status:item.manualStatus})} aria-label={`Actualizar cupo de ${item.name}`}>{pending?"Guardando…":"Guardar cupo"}</Button>}
