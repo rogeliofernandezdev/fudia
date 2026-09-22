@@ -11,6 +11,7 @@ function payload(draft:ReservationDraft){
     customerPhone:draft.customerPhone.trim(),
     startsAt:new Date(draft.startsAt).toISOString(),
     guests:Number(draft.guests),
+    durationMinutes:Number(draft.durationMinutes),
     tableId:draft.tableId||null,
     notes:draft.notes.trim(),
   };
