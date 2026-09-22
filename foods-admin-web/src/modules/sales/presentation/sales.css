@@ -1,0 +1,14 @@
+.sales-skeleton td{height:60px}
+.sales-skeleton i,.sales-skeleton b,.sales-skeleton span{display:block;background:linear-gradient(90deg,#eef1f5,#f8fafc,#eef1f5);background-size:200% 100%;animation:sales-shimmer 1.2s infinite}
+.sales-skeleton td>i{width:72px;height:10px;border-radius:6px}
+.sales-skeleton-name{align-items:center;gap:10px;display:flex}
+.sales-skeleton-name>span{flex:0 0 34px;width:34px;height:34px;border-radius:9px}
+.sales-skeleton-name>div{gap:6px;display:grid}
+.sales-skeleton-name b{width:88px;height:11px;border-radius:6px}
+.sales-skeleton-name i{width:62px;height:8px;border-radius:5px}
+.sales-skeleton-customer{gap:6px;display:grid}
+.sales-skeleton-customer b{width:120px;height:10px;border-radius:6px}
+.sales-skeleton-customer i{width:86px;height:8px;border-radius:5px}
+.sales-skeleton-status{width:64px;height:24px;border-radius:20px!important}
+@keyframes sales-shimmer{to{background-position:-200% 0}}
+@media(prefers-reduced-motion:reduce){.sales-skeleton i,.sales-skeleton b,.sales-skeleton span{animation:none}}
