@@ -1,10 +1,46 @@
 import {apiFetch} from "@/shared/api/client";
-import type {PlatformOnboardingContext,PlatformOnboardingDraft} from "../domain/types";
+import type {OrganizationSubscription,PlatformOnboardingContext,PlatformOnboardingDraft,SubscriptionPlan,SubscriptionPlanDraft} from "../domain/types";
+
+async function platformFetch<T>(path:string,init?:RequestInit):Promise<T>{
+ const response=await fetch(`/api/platform/${path}`,{
+  ...init,
+  headers:{"Content-Type":"application/json",...init?.headers},
+ });
+ if(response.status===204)return undefined as T;
+ const body=await response.json().catch(()=>({}));
+ if(!response.ok)throw new Error(body.message??"No pudimos completar la operación.");
+ return body as T;
+}
+
+export async function listSubscriptionPlans():Promise<{items:SubscriptionPlan[]}>{
+ return platformFetch<{items:SubscriptionPlan[]}>("plans");
+}
 
 export async function getPlatformOnboardingContext():Promise<PlatformOnboardingContext>{
- const data=await apiFetch<Partial<PlatformOnboardingContext>>("settings");
- return {countryOptions:data.countryOptions??[],currencyOptions:data.currencyOptions??[]};
+ const[data,plans]=await Promise.all([
+  apiFetch<Partial<PlatformOnboardingContext>>("settings"),
+  listSubscriptionPlans(),
+ ]);
+ return {
+  countryOptions:data.countryOptions??[],
+  currencyOptions:data.currencyOptions??[],
+  plans:plans.items.filter(plan=>plan.active&&plan.code!=="legacy"),
+ };
 }
+
+export async function saveSubscriptionPlan(draft:SubscriptionPlanDraft):Promise<SubscriptionPlan>{
+ const payload={
+  ...draft,
+  trialDays:Number(draft.trialDays)||0,
+  maxLocations:draft.maxLocations.trim()?Number(draft.maxLocations):null,
+  maxUsers:draft.maxUsers.trim()?Number(draft.maxUsers):null,
+ };
+ return platformFetch<SubscriptionPlan>(draft.id?`plans/${draft.id}`:"plans",{
+  method:draft.id?"PATCH":"POST",
+  body:JSON.stringify(payload),
+ });
+}
+
 export async function createPlatformOrganization(draft:PlatformOnboardingDraft){
  const payload={
   ...draft,
@@ -13,12 +49,16 @@ export async function createPlatformOrganization(draft:PlatformOnboardingDraft){
   latitude:draft.latitude?Number(draft.latitude):null,
   longitude:draft.longitude?Number(draft.longitude):null,
  };
- const response=await fetch("/api/platform/organizations",{
+ return platformFetch<{organizationId:string;fiscalProfileId:string;locationId:string;administratorId:string}>("organizations",{
   method:"POST",
-  headers:{"Content-Type":"application/json"},
   body:JSON.stringify(payload),
  });
- const body=await response.json();
- if(!response.ok)throw new Error(body.message??"No pudimos registrar la empresa.");
- return body as {message:string};
+}
+
+export async function changeOrganizationSubscription(input:{planId:string;billingCycle:"monthly"|"annual";status:OrganizationSubscription["status"];autoRenew:boolean;termsAccepted:boolean}){
+ return platformFetch<OrganizationSubscription>("subscription",{method:"PATCH",body:JSON.stringify(input)});
+}
+
+export async function recordSubscriptionPayment(input:{amount:string;currency:string;status:"pending"|"paid"|"failed"|"refunded";provider:string;externalReference:string;paidAt:string}){
+ return platformFetch<{id:string}>("subscription/payments",{method:"POST",body:JSON.stringify(input)});
 }
