@@ -324,8 +324,8 @@ y detalle; no se limita a apilar columnas de escritorio.
 ## Menú
 
 - Fondo `ops-800`, opción activa `ops-500` e iconos contenidos en una caja estable.
-- Los iconos describen la función, no el rol de la persona: «Recetas y producción»
-  usa `cookingPot` por preparación/producción; «Disponibilidad de la carta» usa
+- Los iconos describen la función, no el rol de la persona: «Recetas»
+  usa `cookingPot` por preparación/producción; «Disponibilidad» usa
   `availability`, un plato con confirmación de disponibilidad. No se usa un check
   genérico como icono principal de módulo.
 - En Abastecimiento, Inventario usa `stock` porque representa existencia física;
@@ -421,7 +421,8 @@ plan, estado o registrar cobros sigue siendo una acción exclusiva de Plataforma
 
 - Los nombres de navegación evitan repetir el nombre del grupo. Dentro de
   `CARTA Y PRODUCCIÓN`, el módulo se llama `Recetas`, no
-  `Recetas y producción`.
+  `Recetas y producción`. Por la misma regla, la opción se llama `Disponibilidad`,
+  no `Disponibilidad de la carta`.
 - Una opción debe nombrar las entidades que realmente administra. La pantalla
   de acceso usa `Usuarios y roles`: los permisos son atributos configurados
   dentro de cada rol y no necesitan repetirse en el nombre del módulo.
