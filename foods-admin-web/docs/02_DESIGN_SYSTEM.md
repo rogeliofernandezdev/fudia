@@ -210,9 +210,14 @@ se limitan a densidad y composición, nunca a reinterpretar el significado del c
   Nombre comercial, Identificación fiscal o Zona horaria ya presentes en el
   formulario. Cada dato aparece una sola vez; el estado de la empresa puede
   vivir en la cabecera de la sección legal porque no se edita en ese formulario.
-- Kárdex sigue el patrón de gestión en un único panel: filtros, ayuda contextual,
-  listado y paginación. No repite el total de movimientos en una cabecera si la
-  paginación ya informa el total y el rango visible.
+- Kárdex reutiliza exactamente el patrón de gestión de Inventario: `PageHeader`,
+  un único panel `standardized-management`, barra compacta de filtros, tabla
+  estándar y paginación compartida. La primera columna es Artículo y usa el mismo
+  patrón visual de entidad que Inventario; Fecha y trazabilidad son atributos del
+  movimiento. En móvil la tabla tiene tarjetas equivalentes mediante
+  `management-cards`; nunca desaparece el contenido al ocultarse la tabla.
+  No se agrega una segunda cabecera de resultados ni se repite el total si la
+  paginación ya informa rango y total.
 - La configuración presenta la jerarquía Empresa → Perfiles por país → Locales.
   País, moneda e impuesto se editan en el perfil fiscal de la empresa; cada local
   selecciona un perfil existente. Los tipos de cambio se gestionan en una vista
@@ -319,6 +324,10 @@ y detalle; no se limita a apilar columnas de escritorio.
 ## Menú
 
 - Fondo `ops-800`, opción activa `ops-500` e iconos contenidos en una caja estable.
+- Los iconos describen la función, no el rol de la persona: «Recetas y producción»
+  usa `cookingPot` por preparación/producción; «Disponibilidad de la carta» usa
+  `availability`, un plato con confirmación de disponibilidad. No se usa un check
+  genérico como icono principal de módulo.
 - El hover modifica color y superficie sin desplazar ni escalar elementos.
 - El drawer móvil bloquea el fondo, cierra con Escape, overlay o navegación y
   conserva scroll interno.
