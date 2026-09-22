@@ -53,15 +53,24 @@
 .recipe-form-footer{min-height:56px;background:var(--surface);border-top:1px solid var(--line);justify-content:flex-end;align-items:center;gap:9px;padding:9px 16px;display:flex}
 .recipe-form-footer .button{height:var(--control-height);min-width:108px}
 .recipe-read-only{color:var(--ink-500);font-size:9px;font-weight:700}
-.recipe-list-skeleton{display:grid}
-.recipe-list-skeleton-head,.recipe-list-skeleton-row{grid-template-columns:2fr 1fr 1fr 1fr 1fr;align-items:center;gap:16px;padding:0 16px}
-.recipe-list-skeleton-head{min-height:42px;background:var(--primary-600)}
-.recipe-list-skeleton-row{min-height:58px;border-bottom:1px solid var(--line)}
-.recipe-list-skeleton-row:last-child{border-bottom:0}
-.recipe-list-skeleton i{height:9px;background:var(--cloud-100);border-radius:6px;display:block}
-.recipe-list-skeleton-head i{background:var(--primary-100)}
-.recipe-list-skeleton-row i:first-child{width:72%}
-.recipe-list-skeleton-row i:not(:first-child){width:55%;justify-self:center}
+.recipe-skeleton-wrap{overflow:hidden}
+.recipe-skeleton-table{table-layout:fixed;width:100%}
+.recipe-skeleton-table th:nth-child(1){width:38%}
+.recipe-skeleton-table th:nth-child(2){width:16%}
+.recipe-skeleton-table th:nth-child(3){width:14%}
+.recipe-skeleton-table th:nth-child(4){width:16%}
+.recipe-skeleton-table th:nth-child(5){width:16%}
+.recipe-skeleton-table td{height:58px;vertical-align:middle}
+.recipe-skeleton-table i,.recipe-skeleton-product small{background:var(--cloud-100);border-radius:6px;display:block;animation:recipe-skeleton-shimmer 1.2s ease-in-out infinite}
+.recipe-skeleton-product{width:min(220px,82%);gap:6px;display:grid}
+.recipe-skeleton-product i{width:72%;height:10px}
+.recipe-skeleton-product small{width:44%;height:7px}
+.recipe-skeleton-number{width:54px;height:10px;margin-inline:auto}
+.recipe-skeleton-number.short{width:36px}
+.recipe-skeleton-status{width:76px;height:24px;border-radius:999px!important;margin-inline:auto}
+.recipe-skeleton-actions{justify-content:center;gap:8px;display:flex}
+.recipe-skeleton-actions i{width:var(--control-height);height:var(--control-height);border-radius:6px}
+@keyframes recipe-skeleton-shimmer{0%,100%{opacity:.55}50%{opacity:1}}
 @media(width<=600px){
  .recipe-modal{width:100vw;height:100dvh;max-height:none;border:0;border-radius:0}
  .recipe-modal-header{padding:11px 14px}
