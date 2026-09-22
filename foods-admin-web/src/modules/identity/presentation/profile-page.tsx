@@ -155,7 +155,10 @@ function ProfilePlansPanel({profile,plans,loading,error,retry}:{profile:MyProfil
             <div><small>{plan.code.toUpperCase()}</small><h3>{plan.name}</h3></div>
           </div>
           <p>{plan.description}</p>
-          <div className="profile-plan-price"><span>{plan.currency}</span><b>{Number(plan.monthlyPrice).toFixed(2)}</b><small>/ mes</small></div>
+          <div className="profile-plan-price">
+            <div><span>{plan.currency}</span><b>{Number(plan.monthlyPrice).toFixed(2)}</b><small>/ mes</small></div>
+            <em>{plan.currency+" "+Number(plan.annualPrice).toFixed(2)+" / año"}</em>
+          </div>
           <div className="profile-plan-facts">
             <div><span>Locales</span><b>{plan.maxLocations??"∞"}</b></div>
             <div><span>Usuarios</span><b>{plan.maxUsers??"∞"}</b></div>
@@ -166,7 +169,7 @@ function ProfilePlansPanel({profile,plans,loading,error,retry}:{profile:MyProfil
             <div>{plan.moduleKeys.slice(0,6).map(key=><small key={key}><Icon name="check" size={9}/>{planModuleLabel(key)}</small>)}</div>
             {plan.moduleKeys.length>6&&<em>+{plan.moduleKeys.length-6} módulos más</em>}
           </div>
-          <footer>{active?<span><Icon name="check" size={13}/>Plan contratado</span>:<span>Disponible para cambio de plan</span>}</footer>
+          <footer>{active?<span><Icon name="check" size={13}/>Plan contratado</span>:<span><Icon name="check" size={12}/>Disponible para cambio de plan</span>}</footer>
         </article>;
       })}
     </div>
