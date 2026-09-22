@@ -408,6 +408,8 @@ test("cocina mantiene jerarquia KDS y semantica de color",()=>{
   assert.equal(kitchen.includes('kind={next==="listo"?"success":"primary"}'),false,"Verde queda reservado al estado listo");
   assert.ok(kitchen.includes("kitchen-skeleton-head"),"El skeleton reproduce la tarjeta de comanda");
   assert.ok(kitchen.includes("kitchen-skeleton-items"),"El skeleton conserva líneas de productos");
+  assert.ok(kitchen.includes('status:"preparando",label:"EN PREPARACIÓN",shortLabel:"Preparando",description:"Trabajo activo",icon:"cookingPot"'),"En preparación usa una olla humeante como señal visual");
+  assert.ok(kitchen.includes('icon={next==="listo"?"check":"cookingPot"}'),"La acción Iniciar usa la misma metáfora de preparación");
   assert.ok(css.includes('.kitchen-lane{min-width:0;border:1px solid var(--line);border-radius:14px;background:var(--cloud-50)'),"Cada carril es un panel operativo neutro");
   assert.ok(css.includes('.kitchen-lane[data-status="confirmado"]>header{background:var(--kds-pending)}'),"Por preparar usa azul sólido del patrón");
   assert.ok(css.includes('.kitchen-lane[data-status="preparando"]>header{background:var(--kds-cooking)}'),"En preparación usa violeta sólido del patrón");
