@@ -196,9 +196,23 @@ se limitan a densidad y composición, nunca a reinterpretar el significado del c
 - Las mesas se registran en una tabla con filas editables y botón `+` para
   agregar múltiples mesas en un solo proceso. No se usa modal para crear
   mesas. El guardado envía todas las filas válidas en un solo `POST` batch.
+  **La edición de una mesa existente también ocurre en su misma fila de tabla**:
+  Nombre, Zona y Asientos se convierten en controles del design system y la
+  columna Acciones muestra Guardar/Cancelar. No se abre modal de edición ni se
+  desplaza al usuario fuera del listado. Estado activo/inactivo se cambia solo
+  mediante la acción de fila correspondiente; no se duplica como switch dentro
+  de la edición. La configuración del QR permanece como una capacidad separada
+  de la edición de datos básicos de la mesa.
 - Las zonas (Terraza, Salón, Barra, etc.) se administran en un tab dentro de
   la página de Mesas, con su propio CRUD. El campo Zona al crear/editar mesas
   es un select que carga las zonas activas del API, no un input libre.
+- La pantalla Empresa no agrega una tarjeta resumen que repita Razón social,
+  Nombre comercial, Identificación fiscal o Zona horaria ya presentes en el
+  formulario. Cada dato aparece una sola vez; el estado de la empresa puede
+  vivir en la cabecera de la sección legal porque no se edita en ese formulario.
+- Kárdex sigue el patrón de gestión en un único panel: filtros, ayuda contextual,
+  listado y paginación. No repite el total de movimientos en una cabecera si la
+  paginación ya informa el total y el rango visible.
 - La configuración presenta la jerarquía Empresa → Perfiles por país → Locales.
   País, moneda e impuesto se editan en el perfil fiscal de la empresa; cada local
   selecciona un perfil existente. Los tipos de cambio se gestionan en una vista
