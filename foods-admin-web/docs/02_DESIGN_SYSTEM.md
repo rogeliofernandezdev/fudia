@@ -117,6 +117,19 @@ se limitan a densidad y composición, nunca a reinterpretar el significado del c
   entre 1 y las porciones ya vendidas. Un usuario con `menu.read` pero sin `menu.manage`
   ve la pantalla en modo solo lectura: conserva filtros, estados y cantidades, pero no
   puede editar cupos ni ejecutar acciones.
+- El formulario de Recetas usa un modal de edición compacto y estructurado en dos
+  zonas: datos de la receta e insumos. La cabecera sigue el patrón estándar de
+  58 px mínimo, icono de 32 px, título de 15 px y cierre con
+  `--control-height`. El producto y el rendimiento son los datos principales;
+  las notas son opcionales y no dominan visualmente el formulario. La composición
+  de insumos vive en una sección propia con cabecera azul `primary-600` en
+  escritorio, columnas Insumo, Cantidad, Merma y acción homologada de quitar.
+  «Agregar insumo» pertenece a la cabecera de esa sección, nunca al footer. El
+  footer contiene únicamente «Cancelar» y «Guardar», con la misma altura. El
+  modal no incluye selector de Estado: activar o desactivar una receta se realiza
+  desde la tabla mediante la acción de fila correspondiente. En móvil, el modal
+  ocupa la pantalla y cada insumo se reorganiza como una tarjeta de edición sin
+  perder unidad, cantidad, merma ni acción de quitar.
 - El producto solicita explícitamente el control de disponibilidad mediante
   tarjetas radio: «Siempre disponible» o «Cupo diario». «Siempre disponible»
   no muestra un contador; «Cupo diario» revela y exige un entero mayor que cero
