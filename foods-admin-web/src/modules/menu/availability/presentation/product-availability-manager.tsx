@@ -118,7 +118,7 @@ export function ProductAvailabilityManager(){
        {item.quantityControl==="inventory"&&item.source==="inventory"&&item.status==="sold_out"&&<p className="availability-derived"><Icon name="alert" size={14}/>No queda stock físico. Registra una nueva entrada en Inventario.</p>}
 
        <footer className={item.quantityControl==="portions"?"availability-actions":"availability-actions single"}>
-        {item.quantityControl==="portions"&&<Button kind={portionChanged?"primary":"secondary"} icon="check" disabled={derived||pending||!portionChanged} onClick={()=>update.mutate({item,status:item.manualStatus})} aria-label={`Actualizar cupo de ${item.name}`}>{pending?"Guardando…":"Guardar cupo"}</Button>}
+        {item.quantityControl==="portions"&&<Button kind={portionChanged?"primary":"secondary"} icon="check" disabled={derived||pending||!portionChanged} onClick={()=>update.mutate({item,status:item.manualStatus})} aria-label={`Guardar cupo de ${item.name}`}>{pending?"Guardando…":"Guardar"}</Button>}
         <Button kind="secondary" className={manuallySoldOut?"availability-available-action":"availability-soldout-action"} icon="power" aria-label={manuallySoldOut?`Marcar ${item.name} como disponible`:`Marcar ${item.name} como agotado`} disabled={derived||pending||(!manuallySoldOut&&quantityExhausted)} onClick={()=>update.mutate({item,status:manuallySoldOut?"available":"sold_out"})}>{pending?"Guardando…":manuallySoldOut?"Reactivar":"Agotar hoy"}</Button>
        </footer>
       </article>;
