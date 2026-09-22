@@ -13,8 +13,10 @@ entregarse sin navegar por pantallas secundarias.
 4. Colas Por preparar → En preparación → Listos para entregar.
 
 Las superficies son neutras. Azul, violeta, verde y naranja comunican estado;
-no decoran tarjetas completas. Las sombras internas se evitan y los radios se
-mantienen entre 6 y 8 px.
+no decoran tarjetas completas. Cada carril conserva borde neutro y usa un acento
+vertical de estado en el borde izquierdo de la cabecera, no una franja superior.
+Los nombres de mesa se muestran en mayúsculas para facilitar el escaneo rápido.
+Las sombras internas se evitan y los radios se mantienen entre 6 y 8 px.
 
 ## Orden y tiempo
 
