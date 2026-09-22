@@ -610,7 +610,7 @@ test("mesas conserva edición inline dentro de la tabla",()=>{
   const api=read("src/modules/operations/tables/infrastructure/tables-api.ts");
   assert.ok(page.includes('RowActionButton action="edit"'),"Mesas expone una acción explícita de edición");
   assert.ok(page.includes("tableDraft?.id===t.id"),"La fila detecta cuál mesa se está editando");
-  assert.ok(page.includes('className="editing-row table-editing-row"'),"La edición ocurre dentro de la misma fila");
+  assert.ok(page.includes("editing-row table-editing-row"),"La edición ocurre dentro de la misma fila");
   assert.ok(page.includes('IconButton icon="check" label="Guardar"'),"La fila usa una acción estándar para guardar");
   assert.ok(page.includes('IconButton icon="close" label="Cancelar"'),"La fila usa una acción estándar para cancelar");
   assert.equal(page.includes("TableDialog"),false,"Editar una mesa no abre un modal");
