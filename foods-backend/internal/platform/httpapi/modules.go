@@ -89,13 +89,13 @@ var moduleCatalog = []moduleDef{
 	{Key: "kiosco", Name: "Kiosco de autoservicio", Description: "Autopedido en kiosco físico", Icon: "grid", Category: "Operación"},
 
 	// Carta y producción
-	{Key: "productos", Name: "Carta y productos", Description: "Productos, categorías, alérgenos e imágenes", Icon: "utensils", Category: "Carta y producción"},
+	{Key: "productos", Name: "Carta y productos", Description: "Productos, categorías, disponibilidad, alérgenos e imágenes", Icon: "utensils", Category: "Carta y producción"},
 	{Key: "combos", Name: "Menús y combos", Description: "Menús compuestos, grupos de elección y alternativas", Icon: "combo", Category: "Carta y producción"},
-	{Key: "recetas", Name: "Recetas y producción", Description: "Recetas base, finales, porcionables y descartables", Icon: "chefHat", Category: "Carta y producción"},
+	{Key: "recetas", Name: "Recetas", Description: "Recetas base, finales, porcionables y descartables", Icon: "cookingPot", Category: "Carta y producción"},
 
 	// Abastecimiento
 	{Key: "inventario", Name: "Inventario", Description: "Stock por local, mínimos y alertas", Icon: "stock", Category: "Abastecimiento"},
-	{Key: "kardex", Name: "Kardex", Description: "Movimientos detallados de inventario", Icon: "stock", Category: "Abastecimiento"},
+	{Key: "kardex", Name: "Kardex", Description: "Movimientos detallados de inventario", Icon: "ledger", Category: "Abastecimiento"},
 	{Key: "compras", Name: "Compras", Description: "Órdenes de compra, proveedores y recepción", Icon: "truck", Category: "Abastecimiento"},
 	{Key: "logistica", Name: "Logística", Description: "Distribución entre locales y ventas logísticas", Icon: "truck", Category: "Abastecimiento"},
 
@@ -119,7 +119,7 @@ var moduleCatalog = []moduleDef{
 
 	// Configuración
 	{Key: "fiscal", Name: "Fiscal y moneda", Description: "Perfiles fiscales, monedas, impuestos y tasas", Icon: "receipt", Category: "Configuración"},
-	{Key: "usuarios", Name: "Usuarios y permisos", Description: "Equipo, roles y accesos", Icon: "users", Category: "Configuración"},
+	{Key: "usuarios", Name: "Usuarios y roles", Description: "Equipo, roles y accesos", Icon: "users", Category: "Configuración"},
 	{Key: "facturacion", Name: "Facturación", Description: "Series y comprobantes electrónicos", Icon: "receipt", Category: "Configuración"},
 	{Key: "integraciones", Name: "Integraciones", Description: "WhatsApp, pagos e impresión", Icon: "settings", Category: "Configuración"},
 	{Key: "whatsapp_bot", Name: "WhatsApp IA para pedidos", Description: "Bot de pedidos por WhatsApp con IA", Icon: "settings", Category: "Configuración"},
