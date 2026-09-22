@@ -41,3 +41,17 @@ inventario trazable y emitir comprobantes electrónicos para Perú.
 - Flota logística avanzada.
 - Contabilidad general completa.
 - Motor propio de homologación SUNAT.
+
+## Suscripción SaaS
+
+El alta comercial de una empresa se realiza desde Plataforma y exige un plan
+activo. El plan define moneda, precio mensual y anual, días de prueba, límites
+de locales y usuarios, versión de condiciones y módulos incluidos. La
+suscripción de cada empresa conserva el precio contratado, ciclo, estado
+(`trial`, `active`, `past_due` o `cancelled`), periodo vigente, fecha de
+renovación y aceptación de condiciones.
+
+Los pagos de suscripción se registran separados de los pagos de pedidos. El
+modelo es independiente del proveedor para permitir integrar posteriormente una
+pasarela sin acoplar el dominio. Los cambios de plan aplican los módulos del
+nuevo entitlement y no permiten bajar a límites inferiores al uso activo.
