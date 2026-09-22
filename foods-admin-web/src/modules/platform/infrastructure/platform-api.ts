@@ -60,6 +60,10 @@ export async function createPlatformOrganization(draft:PlatformOnboardingDraft){
  });
 }
 
+export async function getCurrentOrganizationSubscription(){
+ return apiFetch<OrganizationSubscription>("subscription");
+}
+
 export async function changeOrganizationSubscription(input:{planId:string;billingCycle:"monthly"|"annual";status:OrganizationSubscription["status"];autoRenew:boolean;termsAccepted:boolean}){
  return platformFetch<OrganizationSubscription>("subscription",{method:"PATCH",body:JSON.stringify(input)});
 }
