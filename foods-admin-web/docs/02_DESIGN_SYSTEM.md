@@ -111,7 +111,12 @@ se limitan a densidad y composición, nunca a reinterpretar el significado del c
   una acción manual. La vista se
   pagina desde el API, permite buscar y filtrar por categoría, diferencia cupo,
   vendidos y restantes, y bloquea acciones manuales cuando el estado se deriva
-  del horario o de componentes obligatorios de un menú.
+  del horario o de componentes obligatorios de un menú. «Guardar» modifica únicamente
+  el cupo escrito; «Agotar hoy» y «Reactivar» modifican únicamente el override manual
+  y nunca persisten un cupo pendiente de guardar. El cupo mínimo editable es el mayor
+  entre 1 y las porciones ya vendidas. Un usuario con `menu.read` pero sin `menu.manage`
+  ve la pantalla en modo solo lectura: conserva filtros, estados y cantidades, pero no
+  puede editar cupos ni ejecutar acciones.
 - El producto solicita explícitamente el control de disponibilidad mediante
   tarjetas radio: «Siempre disponible» o «Cupo diario». «Siempre disponible»
   no muestra un contador; «Cupo diario» revela y exige un entero mayor que cero
