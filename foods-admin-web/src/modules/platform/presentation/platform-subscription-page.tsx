@@ -5,6 +5,7 @@ import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Button,Input,PageHeader,Select} from "@/design-system";
 import {Icon} from "@/design-system/icons";
 import {useFeedback,useSession} from "@/providers";
+import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
 import {changeOrganizationSubscription,getCurrentOrganizationSubscription,listSubscriptionPlans,recordSubscriptionPayment} from "../infrastructure/platform-api";
 import type {OrganizationSubscription,SubscriptionPlan} from "../domain/types";
 
@@ -12,7 +13,7 @@ type SubscriptionDraft={planId:string;billingCycle:"monthly"|"annual";status:Org
 type PaymentDraft={amount:string;currency:string;status:"pending"|"paid"|"failed"|"refunded";provider:string;externalReference:string;paidAt:string};
 
 export function PlatformSubscriptionPage(){
- const{organization}=useSession();
+ const{organization,location}=useSession();
  const subscription=useQuery({queryKey:["organization-subscription"],queryFn:getCurrentOrganizationSubscription});
  const plans=useQuery({queryKey:["platform-plans"],queryFn:listSubscriptionPlans});
 
@@ -20,10 +21,10 @@ export function PlatformSubscriptionPage(){
  if(subscription.isError||plans.isError||!subscription.data)return <><Header organization={organization?.name}/><div className="panel subscription-state error"><b>No pudimos cargar la suscripción.</b><Button kind="secondary" onClick={()=>{void subscription.refetch();void plans.refetch()}}>Reintentar</Button></div></>;
 
  const key=[subscription.data.id,subscription.data.plan.id,subscription.data.billingCycle,subscription.data.status,subscription.data.autoRenew,subscription.data.renewsAt].join(":");
- return <><Header organization={organization?.name}/><SubscriptionWorkspace key={key} current={subscription.data} plans={plans.data?.items??[]}/></>;
+ return <><Header organization={organization?.name}/><SubscriptionWorkspace key={key} current={subscription.data} plans={plans.data?.items??[]} country={location?.country} timeZone={location?.timezone}/></>;
 }
 
-function SubscriptionWorkspace({current,plans}:{current:OrganizationSubscription;plans:SubscriptionPlan[]}){
+function SubscriptionWorkspace({current,plans,country,timeZone}:{current:OrganizationSubscription;plans:SubscriptionPlan[];country?:string;timeZone?:string}){
  const{notify}=useFeedback();
  const client=useQueryClient();
  const[draft,setDraft]=useState<SubscriptionDraft>({
@@ -105,7 +106,7 @@ function SubscriptionWorkspace({current,plans}:{current:OrganizationSubscription
 
   <section className="panel subscription-history">
    <header><div><small>HISTORIAL RECIENTE</small><h2>Pagos de suscripción</h2></div><b>{current.payments.length}</b></header>
-   {current.payments.length?<div className="table-wrap"><table><thead><tr><th>FECHA</th><th>MONTO</th><th>ESTADO</th><th>PROVEEDOR</th><th>REFERENCIA</th></tr></thead><tbody>{current.payments.map(item=><tr key={item.id}><td>{dateLabel(item.paidAt??item.createdAt)}</td><td><b>{item.currency+" "+Number(item.amount).toFixed(2)}</b></td><td>{paymentStatus(item.status)}</td><td>{item.provider}</td><td>{item.externalReference??"—"}</td></tr>)}</tbody></table></div>:<div className="subscription-empty">Todavía no hay pagos registrados para esta empresa.</div>}
+   {current.payments.length?<div className="table-wrap"><table><thead><tr><th>FECHA</th><th>MONTO</th><th>ESTADO</th><th>PROVEEDOR</th><th>REFERENCIA</th></tr></thead><tbody>{current.payments.map(item=><tr key={item.id}><td>{dateLabel(item.paidAt??item.createdAt,country,timeZone)}</td><td><b>{item.currency+" "+Number(item.amount).toFixed(2)}</b></td><td>{paymentStatus(item.status)}</td><td>{item.provider}</td><td>{item.externalReference??"—"}</td></tr>)}</tbody></table></div>:<div className="subscription-empty">Todavía no hay pagos registrados para esta empresa.</div>}
   </section>
  </>;
 }
@@ -113,4 +114,4 @@ function SubscriptionWorkspace({current,plans}:{current:OrganizationSubscription
 function Header({organization}:{organization?:string}){return <PageHeader eyebrow="PLATAFORMA" title="Suscripción de empresa" description={organization?"Gestiona contrato, plan y cobros de "+organization+".":"Gestiona el contrato y cobros de la empresa activa."}/>;}
 function statusLabel(status:OrganizationSubscription["status"]){return status==="trial"?"Prueba":status==="active"?"Activa":status==="past_due"?"Pago pendiente":"Cancelada";}
 function paymentStatus(status:string){return status==="paid"?"Pagado":status==="pending"?"Pendiente":status==="failed"?"Fallido":"Reembolsado";}
-function dateLabel(value:string){const date=new Date(value);return Number.isNaN(date.getTime())?"—":new Intl.DateTimeFormat("es-PE",{dateStyle:"medium"}).format(date)}
+function dateLabel(value:string,country?:string,timeZone?:string){return formatRegionalDateTime(value,{country,timeZone},{dateStyle:"medium"})}
