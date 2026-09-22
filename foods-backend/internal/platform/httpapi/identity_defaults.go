@@ -23,7 +23,7 @@ var companyAdministratorMenuAccess = []string{
 }
 
 var companyAdministratorPermissions = []string{
-	"dashboard.read","users.read","users.manage","organizations.read","organizations.manage","fiscal.read",
+	"dashboard.read","users.read","users.manage","organizations.read","organizations.manage","fiscal.read","subscription.read",
 	"menu.read","menu.manage","recipes.manage","customers.read","customers.manage",
 	"orders.read","orders.manage","kitchen.manage","tables.read","tables.manage","reservations.read","reservations.manage",
 	"cash.read","cash.manage","cash.expected.read","receipts.read","receipts.manage",
