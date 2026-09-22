@@ -10,20 +10,19 @@
 .kitchen-mobile-tabs{display:none}
 .kitchen-board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:start}
 .kitchen-lane{min-width:0;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;overflow:visible}
-.kitchen-lane>header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;padding:9px 10px;border:0;border-radius:12px;box-shadow:none}
+.kitchen-lane>header{display:grid;grid-template-columns:36px minmax(0,1fr) 36px;align-items:center;gap:10px;margin-bottom:10px;padding:9px 10px;border:0;border-radius:12px;box-shadow:none}
 .kitchen-lane[data-status="confirmado"]>header{background:var(--kds-pending-soft)}
 .kitchen-lane[data-status="preparando"]>header{background:var(--kds-cooking-soft)}
 .kitchen-lane[data-status="listo"]>header{background:var(--kds-ready-soft)}
-.kitchen-lane>header>div{display:flex;align-items:center;gap:8px;min-width:0}
 .kitchen-lane-icon{display:grid;place-items:center;width:36px;height:36px;border-radius:12px;flex:0 0 auto;box-shadow:none}
 .kitchen-lane[data-status="confirmado"] .kitchen-lane-icon{background:var(--kds-pending-mid);color:var(--kds-pending-dark)}
 .kitchen-lane[data-status="preparando"] .kitchen-lane-icon{background:var(--kds-cooking-mid);color:var(--kds-cooking-dark)}
 .kitchen-lane[data-status="listo"] .kitchen-lane-icon{background:var(--kds-ready-mid);color:var(--kds-ready-dark)}
-.kitchen-lane>header h2{margin:0;font-size:12px;font-weight:900;letter-spacing:.035em}
+.kitchen-lane>header h2{margin:0;min-width:0;text-align:center;font-size:12px;font-weight:900;letter-spacing:.035em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .kitchen-lane[data-status="confirmado"]>header h2{color:var(--kds-pending-dark)}
 .kitchen-lane[data-status="preparando"]>header h2{color:var(--kds-cooking-dark)}
 .kitchen-lane[data-status="listo"]>header h2{color:var(--kds-ready-dark)}
-.kitchen-lane>header>b{display:grid;place-items:center;min-width:28px;height:28px;padding:0 8px;border-radius:999px;font-size:8px;font-weight:900;font-variant-numeric:tabular-nums}
+.kitchen-lane>header>b{display:grid;place-items:center;justify-self:end;width:28px;height:28px;padding:0;border-radius:999px;font-size:8px;font-weight:900;font-variant-numeric:tabular-nums}
 .kitchen-lane[data-status="confirmado"]>header>b{background:var(--kds-pending-mid);color:var(--kds-pending-dark)}
 .kitchen-lane[data-status="preparando"]>header>b{background:var(--kds-cooking-mid);color:var(--kds-cooking-dark)}
 .kitchen-lane[data-status="listo"]>header>b{background:var(--kds-ready-mid);color:var(--kds-ready-dark)}
