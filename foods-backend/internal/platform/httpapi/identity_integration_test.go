@@ -376,3 +376,52 @@ func containsString(values []string, want string) bool {
 	}
 	return false
 }
+
+
+func TestIdentityListUsersIncludesAssignments(t *testing.T) {
+	api, s, roleID := seedIdentityAdministrator(t)
+	ctx := context.Background()
+	hash, err := bcrypt.GenerateFromPassword([]byte("ListUserPass123"), bcrypt.DefaultCost)
+	if err != nil {
+		t.Fatal(err)
+	}
+	email := fmt.Sprintf("list-user-%d@example.test", time.Now().UnixNano())
+	var userID string
+	if err = api.db.QueryRow(ctx, `
+		INSERT INTO users(organization_id,email,full_name,password_hash)
+		VALUES($1,$2,'Usuario listado',$3)
+		RETURNING id
+	`, s.OrganizationID, email, string(hash)).Scan(&userID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = api.db.Exec(ctx, `
+		INSERT INTO user_roles(user_id,role_id,location_id)
+		VALUES($1,$2,$3)
+	`, userID, roleID, s.LocationID); err != nil {
+		t.Fatal(err)
+	}
+
+	req := httptest.NewRequest("GET", "/v1/admin/users?q="+email+"&page=1&pageSize=20", nil)
+	req = req.WithContext(context.WithValue(req.Context(), scopeKey{}, s))
+	rec := httptest.NewRecorder()
+	api.listUsers(rec, req)
+	if rec.Code != 200 {
+		t.Fatalf("list users: %d %s", rec.Code, rec.Body.String())
+	}
+	var out struct {
+		Items []userView `json:"items"`
+		Total int        `json:"total"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
+		t.Fatal(err)
+	}
+	if out.Total != 1 || len(out.Items) != 1 {
+		t.Fatalf("expected one filtered user, total=%d items=%d", out.Total, len(out.Items))
+	}
+	if out.Items[0].ID != userID || len(out.Items[0].Assignments) != 1 {
+		t.Fatalf("expected assignment for listed user: %+v", out.Items[0])
+	}
+	if out.Items[0].Assignments[0].RoleID != roleID || out.Items[0].Assignments[0].LocationID != s.LocationID {
+		t.Fatalf("unexpected assignment: %+v", out.Items[0].Assignments[0])
+	}
+}
