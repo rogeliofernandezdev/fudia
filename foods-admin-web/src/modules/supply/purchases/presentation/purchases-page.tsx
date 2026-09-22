@@ -6,6 +6,7 @@ import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Button,ConfirmDialog,Icon,Input,PageHeader,Pagination,RemoteModalSkeleton,RowActionButton,Select,Status,Textarea} from "@/design-system";
 import {useFeedback,useSession,useSettings} from "@/providers";
 import {formatRegionalCalendarDate,formatRegionalDateTime,formatRegionalNumber} from "@/shared/i18n/regional-format";
+import {useDebouncedValue} from "@/shared/hooks/use-debounced-value";
 import {purchaseOrderResolver,supplierResolver} from "../domain/purchase-schema";
 import {PurchaseItemDialog} from "./purchase-item-dialog";
 import {PurchaseReceiptDialog} from "./purchase-receipt-dialog";
@@ -34,6 +35,7 @@ export function PurchasesPage(){
   const canReceive=can("purchases.receive");
   const[tab,setTab]=useState<PurchaseTab>("orders");
   const[q,setQ]=useState("");
+  const debouncedQ=useDebouncedValue(q);
   const[status,setStatus]=useState("");
   const[page,setPage]=useState(1);
   const[size,setSize]=useState(10);
@@ -52,13 +54,13 @@ export function PurchasesPage(){
   const[returnReceipt,setReturnReceipt]=useState<PurchaseReceiptDetail|null>(null);
 
   const orders=useQuery({
-    queryKey:["purchase-orders",q,status,page,size],
-    queryFn:()=>listPurchaseOrders({q,status,page,pageSize:size}),
+    queryKey:["purchase-orders",debouncedQ,status,page,size],
+    queryFn:()=>listPurchaseOrders({q:debouncedQ,status,page,pageSize:size}),
     enabled:tab==="orders",
   });
   const receipts=useQuery({
-    queryKey:["purchase-orders","receipts",q,status,page,size],
-    queryFn:()=>listPurchaseOrders({q,status:status||"receivable",page,pageSize:size}),
+    queryKey:["purchase-orders","receipts",debouncedQ,status,page,size],
+    queryFn:()=>listPurchaseOrders({q:debouncedQ,status:status||"receivable",page,pageSize:size}),
     enabled:tab==="receipts",
   });
   const receivableSummary=useQuery({
@@ -66,13 +68,13 @@ export function PurchasesPage(){
     queryFn:()=>listPurchaseOrders({q:"",status:"receivable",page:1,pageSize:1}),
   });
   const receiptHistory=useQuery({
-    queryKey:["purchase-receipts",q,page,size],
-    queryFn:()=>listPurchaseReceipts({q,page,pageSize:size}),
+    queryKey:["purchase-receipts",debouncedQ,page,size],
+    queryFn:()=>listPurchaseReceipts({q:debouncedQ,page,pageSize:size}),
     enabled:tab==="receipts"&&receiptView==="history",
   });
   const suppliers=useQuery({
-    queryKey:["suppliers",q,status,page,size],
-    queryFn:()=>listSuppliers({q,status,page,pageSize:size}),
+    queryKey:["suppliers",debouncedQ,status,page,size],
+    queryFn:()=>listSuppliers({q:debouncedQ,status,page,pageSize:size}),
     enabled:tab==="suppliers",
   });
   const activeSuppliers=useQuery({
