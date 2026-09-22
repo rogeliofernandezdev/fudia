@@ -19,7 +19,68 @@ function LoadingTable(){return <div className="table-skeleton" aria-label="Carga
 function LoadError({message,retry}:{message:string;retry:()=>void}){return <div className="catalog-state error"><span><Icon name="alert"/></span><b>No pudimos cargar la información</b><p>{message}</p><Button kind="secondary" icon="refresh" onClick={retry}>Reintentar</Button></div>}
 function Empty({title,text,action,label}:{title:string;text:string;action:()=>void;label:string}){return <div className="catalog-state"><span><Icon name="store"/></span><b>{title}</b><p>{text}</p><Button onClick={action}>{label}</Button></div>}
 
-export function CompanySettings(){const{notify}=useFeedback();const client=useQueryClient();const query=useQuery({queryKey:["organization"],queryFn:getOrganization});const[draft,setDraft]=useState<Partial<Organization>>({});const value={...query.data,...draft} as Organization;const save=useMutation({mutationFn:()=>updateOrganization(value),onSuccess:data=>{client.setQueryData(["organization"],data);setDraft({});notify({tone:"success",title:"Empresa actualizada",message:"Los datos de la empresa se guardaron correctamente."})},onError:e=>notify({tone:"danger",title:"No se pudo guardar",message:e.message})});return <><PageHeader eyebrow="CONFIGURACIÓN" title="Empresa" description="Identidad legal y valores generales del tenant."/><Back/>{query.isLoading?<section className="panel management"><LoadingTable/></section>:query.isError?<section className="panel management"><LoadError message={query.error.message} retry={()=>query.refetch()}/></section>:<section className="panel management organization-form"><header><div><small>DATOS GENERALES</small><h2>Información de la empresa</h2></div><Status>{value.active?"Activa":"Inactiva"}</Status></header><form className="form-grid" onSubmit={e=>{e.preventDefault();save.mutate()}}><label className="span-2">Razón social<Input required maxLength={180} value={value.legalName} onChange={e=>setDraft(x=>({...x,legalName:e.target.value}))}/></label><label>Nombre comercial<Input required maxLength={180} value={value.tradeName} onChange={e=>setDraft(x=>({...x,tradeName:e.target.value}))}/></label><label>Identificación fiscal<Input required minLength={6} maxLength={32} value={value.taxId} onChange={e=>setDraft(x=>({...x,taxId:e.target.value}))}/></label><label className="span-2">Zona horaria predeterminada<Input required value={value.timezone} onChange={e=>setDraft(x=>({...x,timezone:e.target.value}))} placeholder="America/Lima"/></label><footer className="span-2"><Button kind="ghost" icon="refresh" disabled={!Object.keys(draft).length||save.isPending} onClick={()=>setDraft({})}>Cancelar</Button><Button type="submit" icon="check" disabled={!Object.keys(draft).length||save.isPending}>{save.isPending?"Guardando…":"Guardar"}</Button></footer></form></section>}</>}
+export function CompanySettings(){
+ const{notify}=useFeedback();
+ const{can}=useSession();
+ const canManage=can("organizations.manage");
+ const client=useQueryClient();
+ const query=useQuery({queryKey:["organization"],queryFn:getOrganization});
+ const[draft,setDraft]=useState<Partial<Organization>>({});
+ const value={...query.data,...draft} as Organization;
+ const dirty=Object.keys(draft).length>0;
+ const save=useMutation({
+  mutationFn:()=>updateOrganization(value),
+  onSuccess:data=>{client.setQueryData(["organization"],data);setDraft({});notify({tone:"success",title:"Empresa actualizada",message:"Los datos de la empresa se guardaron correctamente."})},
+  onError:e=>notify({tone:"danger",title:"No se pudo guardar",message:e.message}),
+ });
+ const change=<K extends keyof Organization>(key:K,value:Organization[K])=>setDraft(current=>({...current,[key]:value}));
+ return <><PageHeader eyebrow="CONFIGURACIÓN" title="Empresa" description="Identidad legal y configuración general de la organización."/><Back/>
+  {query.isLoading?<section className="panel management"><LoadingTable/></section>:query.isError?<section className="panel management"><LoadError message={query.error.message} retry={()=>query.refetch()}/></section>:
+  <div className="organization-workspace">
+   <section className="panel organization-summary">
+    <div className="organization-summary-main">
+     <span className="organization-mark"><Icon name="store" size={22}/></span>
+     <div><small>EMPRESA ACTIVA</small><h2>{value.tradeName}</h2><p>{value.legalName}</p></div>
+    </div>
+    <div className="organization-summary-meta">
+     <div><small>IDENTIFICACIÓN FISCAL</small><b>{value.taxId}</b></div>
+     <div><small>ZONA HORARIA</small><b>{value.timezone}</b></div>
+     <Status tone={value.active?"green":"gray"}>{value.active?"Activa":"Inactiva"}</Status>
+    </div>
+   </section>
+
+   <form className="organization-settings" onSubmit={event=>{event.preventDefault();if(canManage&&dirty)save.mutate()}}>
+    <section className="panel organization-section">
+     <header>
+      <span><Icon name="receipt" size={18}/></span>
+      <div><small>IDENTIDAD LEGAL</small><h2>Datos de la empresa</h2><p>Información utilizada en documentos, configuración fiscal y administración.</p></div>
+     </header>
+     <div className="organization-fields">
+      <label className="span-2">Razón social<Input required readOnly={!canManage} maxLength={180} value={value.legalName} onChange={event=>change("legalName",event.target.value)}/></label>
+      <label>Nombre comercial<Input required readOnly={!canManage} maxLength={180} value={value.tradeName} onChange={event=>change("tradeName",event.target.value)}/></label>
+      <label>Identificación fiscal<Input required readOnly={!canManage} minLength={6} maxLength={32} value={value.taxId} onChange={event=>change("taxId",event.target.value)}/></label>
+     </div>
+    </section>
+
+    <section className="panel organization-section">
+     <header>
+      <span><Icon name="settings" size={18}/></span>
+      <div><small>CONFIGURACIÓN GENERAL</small><h2>Preferencias del tenant</h2><p>Valores base que se utilizan cuando no existe una configuración específica por local.</p></div>
+     </header>
+     <div className="organization-fields single">
+      <label>Zona horaria predeterminada<Input required readOnly={!canManage} value={value.timezone} onChange={event=>change("timezone",event.target.value)} placeholder="America/Lima"/><small>Formato IANA, por ejemplo America/Lima.</small></label>
+      <div className="organization-config-note"><Icon name="alert" size={15}/><div><b>Configuración por local</b><span>País, moneda, impuestos, dirección y horario se administran desde Locales y Fiscal.</span></div></div>
+     </div>
+    </section>
+
+    {canManage&&<footer className="organization-savebar">
+     <div><span className={dirty?"dirty":""}><i/>{dirty?"Cambios sin guardar":"Todo actualizado"}</span><small>{dirty?"Guarda para aplicar la nueva configuración.":"Los datos coinciden con la información almacenada."}</small></div>
+     <div><Button kind="ghost" icon="refresh" disabled={!dirty||save.isPending} onClick={()=>setDraft({})}>Cancelar</Button><Button type="submit" icon="check" disabled={!dirty||save.isPending}>{save.isPending?"Guardando…":"Guardar"}</Button></div>
+    </footer>}
+   </form>
+  </div>}
+ </>;
+}
 
 const blankLocation:LocationDraft={name:"",code:"",address:"",phone:"",openingHours:"",latitude:null,longitude:null,timezone:"America/Lima",fiscalProfileId:"",active:true};
 export function LocationsManager(){const{notify}=useFeedback();const client=useQueryClient();const[page,setPage]=useState(1);const[size,setSize]=useState(10);const[draft,setDraft]=useState<LocationDraft|null>(null);const[remove,setRemove]=useState<Location|null>(null);const locations=useQuery({queryKey:["locations",page,size],queryFn:()=>listLocations(page,size)});const profiles=useQuery({queryKey:["fiscal-profiles-options"],queryFn:()=>listProfiles(1,100)});const save=useMutation({mutationFn:(v:LocationDraft)=>saveLocation(v),onSuccess:()=>{setDraft(null);void client.invalidateQueries({queryKey:["locations"]});void client.invalidateQueries({queryKey:["fiscal-profiles"]});notify({tone:"success",title:"Local guardado",message:"El local y su perfil fiscal quedaron asociados correctamente."})},onError:e=>notify({tone:"danger",title:"No se pudo guardar",message:e.message})});const deactivate=useMutation({mutationFn:(id:string)=>deactivateLocation(id),onSuccess:()=>{setRemove(null);void client.invalidateQueries({queryKey:["locations"]});notify({tone:"success",title:"Local desactivado",message:"El local conserva su historial y ya no admite nuevas operaciones."})},onError:e=>{setRemove(null);notify({tone:"danger",title:"No se pudo desactivar",message:e.message})}});const list=locations.data;const create=()=>setDraft({...blankLocation,fiscalProfileId:profiles.data?.items.find(x=>x.default)?.id??""});return <><PageHeader eyebrow="NEGOCIO" title="Locales" description="Administra sedes y asigna a cada una su jurisdicción fiscal." action={<Button onClick={create}>Nuevo local</Button>}/><Back/><section className="panel management catalog-panel">{locations.isLoading?<LoadingTable/>:locations.isError?<LoadError message={locations.error.message} retry={()=>locations.refetch()}/>:!list?.items.length?<Empty title="Aún no hay locales" text="Registra el primer local para iniciar la operación." label="Nuevo local" action={create}/>:<div className="table-wrap hover-scroll"><table><thead><tr><th>LOCAL</th><th>CONTACTO</th><th>PAÍS / MONEDA</th><th>HORARIO</th><th>ESTADO</th><th>ACCIONES</th></tr></thead><tbody>{list.items.map((item,i)=><tr className={i%2?"alternate":""} key={item.id}><td><span className={`row-icon r${i%3}`}><Icon name="store" size={18}/></span><b>{item.name}</b><small>{item.address||"Sin dirección"}</small></td><td>{item.phone||"—"}<small>{item.openingHours||""}</small></td><td><b>{item.country} / {item.currency}</b></td><td>{item.timezone}</td><td><Status tone={item.active?"green":"gray"}>{item.active?"Activo":"Inactivo"}</Status></td><td><div className="table-actions"><RowActionButton action="edit" onClick={()=>setDraft({...item})}/>{item.active&&<RowActionButton action="deactivate" onClick={()=>setRemove(item)}/>}</div></td></tr>)}</tbody></table></div>}<Pagination page={page} size={size} total={list?.total??0} onPage={setPage} onSize={v=>{setSize(v);setPage(1)}}/></section>{draft&&(profiles.isLoading?<RemoteModalSkeleton className="compact" label="Cargando datos del local" close={()=>setDraft(null)}/>:<LocationDialog value={draft} profiles={profiles.data?.items.filter(x=>x.active)??[]} busy={save.isPending} close={()=>setDraft(null)} save={v=>save.mutate(v)}/>)}<ConfirmDialog open={Boolean(remove)} title="Desactivar local" description={`El local “${remove?.name??""}” dejará de admitir nuevas operaciones, pero conservará su historial.`} confirmLabel="Desactivar" pending={deactivate.isPending} onCancel={()=>setRemove(null)} onConfirm={()=>remove&&deactivate.mutate(remove.id)}/></>}
