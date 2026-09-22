@@ -474,6 +474,24 @@ test("mvp admin no presenta datos simulados como operacion real",()=>{
   assert.equal(configuration.includes("Facturación electrónica"),false,"Facturacion futura no se ofrece en el hub MVP");
 });
 
+test("reportes y ventas usan skeleton con forma final",()=>{
+  const dashboard=read("src/modules/dashboard/presentation/dashboard-view.tsx");
+  const dashboardCss=read("src/modules/dashboard/presentation/dashboard.css");
+  const sales=read("src/modules/sales/presentation/sales-page.tsx");
+  const salesCss=read("src/modules/sales/presentation/sales.css");
+  assert.ok(dashboard.includes("<DashboardSkeleton/>"),"Reportes usa skeleton dedicado durante la carga");
+  assert.ok(dashboard.includes('aria-label="Cargando reportes"'),"El skeleton de Reportes expone estado accesible");
+  for(const shape of ["dashboard-skeleton-kpi","dashboard-skeleton-chart","dashboard-skeleton-alert","dashboard-skeleton-product"])assert.ok(dashboard.includes(shape),`Reportes reproduce ${shape}`);
+  assert.ok(dashboardCss.includes("@keyframes dashboard-shimmer"),"Reportes anima únicamente la geometría skeleton");
+  assert.equal(dashboard.includes("Cargando datos reales…"),false,"Reportes no usa un estado de carga genérico");
+
+  assert.ok(sales.includes("<SalesTableSkeleton/>"),"Ventas usa skeleton dedicado durante la carga");
+  assert.ok(sales.includes("<th>PEDIDO</th><th>CLIENTE / MESA</th><th>CANAL</th><th>FECHA</th><th>TOTAL</th><th>ESTADO</th>"),"Ventas conserva la cabecera final durante la carga");
+  assert.ok(sales.includes("sales-skeleton-name")&&sales.includes("sales-skeleton-customer")&&sales.includes("sales-skeleton-status"),"Ventas reproduce la estructura de las filas reales");
+  assert.ok(salesCss.includes("@keyframes sales-shimmer"),"Ventas define shimmer del skeleton");
+  assert.equal(sales.includes("Cargando ventas…"),false,"Ventas no usa un estado de carga genérico");
+});
+
 test("reservas respeta el contrato de formularios y jerarquia del modal",()=>{
   const page=read("src/modules/operations/reservations/presentation/reservations-page.tsx");
   const schema=read("src/modules/operations/reservations/domain/reservation-schema.ts");
