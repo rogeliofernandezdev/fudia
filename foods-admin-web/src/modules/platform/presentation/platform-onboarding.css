@@ -1,6 +1,6 @@
 /* Owned styles extracted from the former global stylesheet. */
 .onboarding-wizard{display:grid;gap:18px;margin-top:21px}
-.wizard-steps{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.wizard-steps{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
 .wizard-step{border:1px solid var(--line);text-align:left;background:#fff;border-radius:12px;align-items:center;gap:10px;padding:12px 14px;display:flex;cursor:pointer;transition:border-color .15s,background .15s}
 .wizard-step:hover{border-color:#d0d5dd}
 .wizard-step.active{border-color:var(--ops-500);background:var(--ops-100)}
@@ -21,3 +21,17 @@
 .wizard-footer{flex-direction:column-reverse;align-items:stretch}
 .wizard-footer>div{justify-content:center}}
 .onboarding-form{display:grid;gap:15px;margin-top:21px}
+
+.onboarding-plan-summary{border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);gap:0}
+.onboarding-plan-summary>div{padding:14px 16px;display:grid;gap:4px}
+.onboarding-plan-summary>div+div{border-left:1px solid var(--line)}
+.onboarding-plan-summary small{color:var(--ink-400);font-size:7px;font-weight:850;letter-spacing:.08em}
+.onboarding-plan-summary b{font-size:10px}
+.onboarding-terms{border-top:1px solid var(--line);padding:14px 18px;display:grid;grid-template-columns:24px 1fr;gap:10px;align-items:start;cursor:pointer}
+.onboarding-terms>input{position:absolute;opacity:0}
+.onboarding-terms>span{width:22px;height:22px;border:1px solid #d0d5dd;border-radius:6px;background:#fff;color:transparent;display:grid;place-items:center}
+.onboarding-terms:has(input:checked)>span{color:#fff;border-color:var(--ops-500);background:var(--ops-500)}
+.onboarding-terms>div{display:grid;gap:3px}
+.onboarding-terms b{font-size:10px}
+.onboarding-terms small{color:var(--ink-500);font-size:8px;line-height:1.45}
+@media(max-width:900px){.wizard-steps{grid-template-columns:repeat(2,1fr)}.onboarding-plan-summary{grid-template-columns:repeat(2,1fr)}.onboarding-plan-summary>div+div{border-left:0;border-top:1px solid #edf0f4}}
