@@ -155,8 +155,8 @@ export function RecipesPage(){
     <header className="recipe-modal-header">
      <span className="modal-title-icon"><Icon name="chefHat" size={18}/></span>
      <div>
-      <small>RECETA DE INSUMOS</small>
-      <h2 id="recipe-modal-title">Configurar receta</h2>
+      <small>{editingProductId?"EDITAR RECETA":"NUEVA RECETA"}</small>
+      <h2 id="recipe-modal-title">{editingProductId?"Editar receta":"Configurar receta"}</h2>
       <p>Define cuánto produce la receta y qué insumos consume.</p>
      </div>
      <button className="recipe-modal-close" onClick={closeRecipe} disabled={save.isPending} aria-label="Cerrar"><Icon name="close" size={18}/></button>
@@ -166,7 +166,7 @@ export function RecipesPage(){
      <div className="recipe-form-body">
       <section className="recipe-main-fields" aria-label="Datos de la receta">
        <label className="recipe-product-field">
-        <span>Producto</span>
+        <span>Producto preparado</span>
         <Select value={draft.productId} disabled={Boolean(editingProductId)||products.isLoading||save.isPending} aria-invalid={attempted&&!draft.productId} onChange={e=>setDraft({...draft,productId:e.target.value})}>
          <option value="">{products.isLoading?"Cargando productos...":"Selecciona producto"}</option>
          {availableProducts.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
@@ -212,7 +212,7 @@ export function RecipesPage(){
            </Select>
           </label>
           <label className="recipe-ingredient-quantity" data-label="CANTIDAD">
-           <div><Input aria-label={`Cantidad del insumo ${index+1}`} type="number" min="0.001" step="0.001" inputMode="decimal" disabled={save.isPending} aria-invalid={quantityInvalid} value={item.quantity} onChange={e=>setDraft({...draft,items:draft.items.map((x,i)=>i===index?{...x,quantity:e.target.value}:x)})}/>{selected&&<small>{selected.unit}</small>}</div>
+           <div className="recipe-quantity-control"><Input aria-label={`Cantidad del insumo ${index+1}`} type="number" min="0.001" step="0.001" inputMode="decimal" disabled={save.isPending} aria-invalid={quantityInvalid} value={item.quantity} onChange={e=>setDraft({...draft,items:draft.items.map((x,i)=>i===index?{...x,quantity:e.target.value}:x)})}/>{selected&&<small>{selected.unit}</small>}</div>
            {quantityInvalid&&<small className="recipe-field-error">Mayor que 0.</small>}
           </label>
           <label className="recipe-ingredient-waste" data-label="MERMA %">
@@ -226,10 +226,10 @@ export function RecipesPage(){
       </section>
      </div>
 
-     <footer className="recipe-form-footer">
-      <Button kind="ghost" disabled={save.isPending} onClick={closeRecipe}>Cancelar</Button>
+     <div className="recipe-form-footer">
+      <Button kind="ghost" icon="close" disabled={save.isPending} onClick={closeRecipe}>Cancelar</Button>
       <Button type="submit" icon="check" disabled={save.isPending}>{save.isPending?"Guardando…":"Guardar"}</Button>
-     </footer>
+     </div>
     </form>
    </section>
   </div>}
