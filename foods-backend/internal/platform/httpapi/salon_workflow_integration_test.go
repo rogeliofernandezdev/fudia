@@ -134,7 +134,7 @@ func TestSalonKitchenPaymentDeliveryWorkflow(t *testing.T) {
 	if deliverRec.Code!=200{t.Fatalf("paid ready order should deliver: %d %s",deliverRec.Code,deliverRec.Body.String())}
 
 	closedRefundReq:=httptest.NewRequest("POST","/v1/admin/payments/"+payment.ID+"/refund",bytes.NewReader([]byte(`{"amount":1,"reason":"Prueba posterior al cierre"}`)))
-	closedRefundReq.SetPathValue("id",partialPayment.ID)
+	closedRefundReq.SetPathValue("id",payment.ID)
 	closedRefundReq=closedRefundReq.WithContext(context.WithValue(closedRefundReq.Context(),scopeKey{},s))
 	closedRefundRec:=httptest.NewRecorder()
 	api.refundPayment(closedRefundRec,closedRefundReq)
