@@ -122,7 +122,7 @@ se limitan a densidad y composición, nunca a reinterpretar el significado del c
   y «Listos para entregar». Cada carril es un panel neutro `cloud-50/surface`
   con borde estándar; el color semántico se limita al acento de estado, icono,
   contador y etiquetas: azul para «Por preparar», violeta para «En preparación»,
-  verde para «Listo» y ámbar exclusivamente para «Por vencer» o «Con demora». Los botones que cambian el flujo son
+  verde para «Listo» y ámbar exclusivamente para «Por vencer» o «Con demora». El carril no usa una franja de color en el borde superior: mantiene el panel neutro y comunica el estado mediante una barra vertical de 4 px en el borde izquierdo de su cabecera, además de icono y contador semánticos. Los nombres de mesa se muestran en mayúsculas (`MESA 1`, `MESA 2`) para facilitar el escaneo; nombres de clientes y otros identificadores conservan su escritura original. Los botones que cambian el flujo son
   acciones primarias azules; el verde no se usa como CTA antes de confirmar el
   éxito. Las tarjetas son densas, con borde `line`, radio de 14 px y sin
   sombras o transformaciones decorativas que compitan con la información.
