@@ -157,9 +157,6 @@ func TestIdentityTenantAdminCannotModifyPlatformAdmin(t *testing.T) {
 	`, s.OrganizationID, email, string(hash)).Scan(&platformID); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := pool.Exec(ctx, `INSERT INTO user_roles(user_id,role_id,location_id) VALUES($1,$2,$3)`, platformID, adminRoleID, s.LocationID); err != nil {
-		t.Fatal(err)
-	}
 
 	body := []byte(fmt.Sprintf(`{"fullName":"Platform alterado","email":%q,"password":"","assignments":[{"roleId":%q,"locationId":%q}]}`, email, adminRoleID, s.LocationID))
 	req := httptest.NewRequest("PATCH", "/v1/admin/users/"+platformID, bytes.NewReader(body))
