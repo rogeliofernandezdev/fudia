@@ -192,3 +192,15 @@ func TestDashboardReflectsRealPaymentsAndRefunds(t *testing.T){
 	sales,tickets=readDashboard()
 	if sales!="40.00"||tickets!=1{t.Fatalf("dashboard should net refunds by movement date, sales=%s tickets=%d",sales,tickets)}
 }
+
+func TestPlatformAdministratorIsUnique(t *testing.T){
+	pool:=integrationPool(t)
+	first:=seedInventoryScope(t,pool)
+	second:=seedInventoryScope(t,pool)
+	if _,err:=pool.Exec(context.Background(),`UPDATE users SET platform_admin=true WHERE id=$1`,first.UserID);err!=nil{
+		t.Fatalf("enable first platform administrator: %v",err)
+	}
+	if _,err:=pool.Exec(context.Background(),`UPDATE users SET platform_admin=true WHERE id=$1`,second.UserID);err==nil{
+		t.Fatal("expected database to reject a second platform administrator")
+	}
+}
