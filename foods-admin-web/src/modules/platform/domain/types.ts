@@ -1,6 +1,8 @@
 export type Country={code:string;name:string;defaultCurrency:string};
 export type Currency={code:string;name:string;symbol:string;decimals:number};
 
+export type PlatformModule={key:string;name:string;description:string;category:string;availability:"ready"|"development"|"planned"};
+
 export type SubscriptionPlan={
  id:string;
  code:string;
