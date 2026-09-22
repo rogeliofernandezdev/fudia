@@ -204,3 +204,46 @@ func TestPlatformAdministratorIsUnique(t *testing.T){
 		t.Fatal("expected database to reject a second platform administrator")
 	}
 }
+
+func TestModuleAvailabilityProtectsTenantActivation(t *testing.T){
+	pool:=integrationPool(t)
+	s:=seedInventoryScope(t,pool)
+	api:=New(pool)
+
+	if got:=moduleAvailability("reportes");got!=moduleAvailabilityReady{
+		t.Fatalf("reportes must be ready, got %s",got)
+	}
+	if got:=moduleAvailability("carta_qr");got!=moduleAvailabilityDevelopment{
+		t.Fatalf("carta_qr must be development, got %s",got)
+	}
+	if got:=moduleAvailability("crm");got!=moduleAvailabilityPlanned{
+		t.Fatalf("crm must be planned, got %s",got)
+	}
+
+	req:=httptest.NewRequest("PATCH","/v1/admin/modules",bytes.NewReader([]byte(`{"key":"carta_qr","active":true}`)))
+	req=req.WithContext(context.WithValue(req.Context(),scopeKey{},s))
+	rec:=httptest.NewRecorder()
+	api.toggleModule(rec,req)
+	if rec.Code!=409||!strings.Contains(rec.Body.String(),"module_not_ready"){
+		t.Fatalf("development module activation must be rejected: %d %s",rec.Code,rec.Body.String())
+	}
+
+	_,err:=pool.Exec(context.Background(),`
+		INSERT INTO organization_modules(organization_id,module_key,active)
+		VALUES($1,'crm',true)
+		ON CONFLICT(organization_id,module_key) DO UPDATE SET active=true,updated_at=now()
+	`,s.OrganizationID)
+	if err!=nil{t.Fatal(err)}
+	active:=api.activeModules(s.OrganizationID)
+	if active["crm"]{
+		t.Fatal("planned module must remain inactive even with stale active=true data")
+	}
+
+	readyReq:=httptest.NewRequest("PATCH","/v1/admin/modules",bytes.NewReader([]byte(`{"key":"reportes","active":true}`)))
+	readyReq=readyReq.WithContext(context.WithValue(readyReq.Context(),scopeKey{},s))
+	readyRec:=httptest.NewRecorder()
+	api.toggleModule(readyRec,readyReq)
+	if readyRec.Code!=204{
+		t.Fatalf("ready module should be activable: %d %s",readyRec.Code,readyRec.Body.String())
+	}
+}
