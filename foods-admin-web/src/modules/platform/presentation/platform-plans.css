@@ -1,20 +1,60 @@
-.plan-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:20px}
-.plan-card{padding:0;overflow:hidden}
-.plan-card>header{min-height:68px;border-bottom:1px solid var(--line);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px}
-.plan-card>header small{color:var(--ops-500);font-size:8px;font-weight:850;letter-spacing:.12em}
-.plan-card>header h2{margin:3px 0 0;font-size:16px}
-.plan-card>p{min-height:52px;margin:0;padding:14px 18px;color:var(--ink-600);font-size:10px;line-height:1.55}
-.plan-status{color:var(--ink-500);background:#f2f4f7;border-radius:20px;padding:5px 8px;font-size:8px;font-weight:800}
+.plan-toolbar{min-height:64px;border:1px solid var(--line);border-radius:14px;background:#fff;padding:11px 14px 11px 17px;display:flex;align-items:center;justify-content:space-between;gap:16px;box-shadow:0 8px 24px #10182808}
+.plan-toolbar>div:first-child{display:grid;gap:3px}
+.plan-toolbar>div:first-child b{font-size:11px}
+.plan-toolbar>div:first-child span{color:var(--ink-400);font-size:8px}
+.plan-cycle{height:38px;border:1px solid var(--line);border-radius:10px;background:#f6f7f9;padding:3px;display:flex;gap:3px}
+.plan-cycle button{height:30px;border:0;border-radius:7px;background:transparent;color:var(--ink-500);padding:0 11px;font-size:9px;font-weight:800}
+.plan-cycle button.active{background:#fff;color:var(--ops-700);box-shadow:0 2px 7px #10182814}
+.plan-cycle button span{margin-left:4px;color:var(--brand-700);font-size:7px}
+.plan-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:16px;align-items:start}
+.plan-card{padding:0;overflow:hidden;position:relative;border-color:#e2e6ed;box-shadow:0 12px 30px #1018280a}
+.plan-card.recommended{border-color:#aeb9ff;box-shadow:0 14px 34px #4654cd17}
+.plan-ribbon{height:27px;color:#fff;background:linear-gradient(90deg,var(--ops-500),var(--digital-500));display:grid;place-items:center;font-size:7px;font-weight:850;letter-spacing:.1em}
+.plan-card>header{min-height:72px;border-bottom:1px solid #edf0f4;padding:13px 15px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.plan-heading{display:flex;align-items:center;gap:10px;min-width:0}
+.plan-icon{width:36px;height:36px;border-radius:10px;color:var(--ops-700);background:var(--ops-100);display:grid;place-items:center;flex:0 0 auto}
+.plan-heading small{color:var(--ops-500);font-size:7px;font-weight:850;letter-spacing:.1em}
+.plan-heading h2{margin:2px 0 0;font-size:15px;letter-spacing:-.02em}
+.plan-status{color:var(--ink-500);background:#f2f4f7;border-radius:20px;padding:5px 7px;font-size:7px;font-weight:800;white-space:nowrap}
 .plan-status.active{color:var(--brand-700);background:var(--brand-100)}
-.plan-prices{display:grid;grid-template-columns:1fr 1fr;border-block:1px solid var(--line)}
-.plan-prices>div{padding:14px 18px;display:grid;gap:4px}
-.plan-prices>div+div{border-left:1px solid var(--line)}
-.plan-prices small,.plan-card dt{color:var(--ink-400);font-size:8px;font-weight:800;letter-spacing:.06em}
-.plan-prices b{font-size:16px}
-.plan-card dl{display:grid;grid-template-columns:repeat(2,1fr);gap:0;margin:0;padding:8px 18px}
-.plan-card dl>div{padding:10px 0}
-.plan-card dd{margin:4px 0 0;color:var(--ink-950);font-size:10px;font-weight:750}
-.plan-card>footer{border-top:1px solid var(--line);padding:12px 18px;display:flex;justify-content:flex-end}
+.plan-description{min-height:65px;margin:0;padding:13px 15px;color:var(--ink-500);font-size:9px;line-height:1.55}
+.plan-price{border-block:1px solid #edf0f4;background:#fbfcff;padding:15px;display:grid;gap:5px}
+.plan-price>small{color:var(--ink-400);font-size:7px;font-weight:850;letter-spacing:.09em}
+.plan-price>div{display:flex;align-items:baseline;gap:5px}
+.plan-price>div span{color:var(--ink-500);font-size:9px;font-weight:800}
+.plan-price>div b{font-size:25px;line-height:1;letter-spacing:-.045em}
+.plan-price>div em{color:var(--ink-400);font-size:8px;font-style:normal}
+.plan-price>p{margin:0;color:var(--ink-400);font-size:7px;line-height:1.4}
+.plan-capacity{display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid #edf0f4}
+.plan-capacity>div{padding:10px;display:grid;grid-template-columns:26px 1fr;gap:6px;align-items:center}
+.plan-capacity>div+div{border-left:1px solid #edf0f4}
+.plan-capacity>div>span{width:26px;height:26px;border-radius:7px;color:var(--ink-500);background:#f5f7fa;display:grid;place-items:center}
+.plan-capacity small{display:block;color:var(--ink-400);font-size:6px;font-weight:800;letter-spacing:.07em}
+.plan-capacity b{display:block;margin-top:2px;font-size:9px}
+.plan-includes>header{min-height:55px;border-bottom:1px solid #edf0f4;padding:10px 14px;background:#fff;display:flex;align-items:center;justify-content:space-between}
+.plan-includes>header small{color:var(--ops-500);font-size:7px;font-weight:850;letter-spacing:.1em}
+.plan-includes>header h3{margin:2px 0 0;font-size:10px}
+.plan-includes>header>span{min-width:27px;height:27px;border-radius:8px;color:var(--ops-700);background:var(--ops-100);display:grid;place-items:center;font-size:8px;font-weight:850}
+.plan-feature-list{padding:4px 13px}
+.plan-feature-list>div{min-height:45px;border-bottom:1px solid #f0f2f5;padding:8px 0;display:grid;grid-template-columns:20px 1fr;gap:7px;align-items:start}
+.plan-feature-list>div:last-child{border-bottom:0}
+.plan-feature-list>div>span{width:18px;height:18px;border-radius:50%;color:var(--brand-700);background:var(--brand-100);display:grid;place-items:center;margin-top:1px}
+.plan-feature-list>div>div{display:grid;gap:2px}
+.plan-feature-list b{font-size:8px}
+.plan-feature-list small{color:var(--ink-400);font-size:7px;line-height:1.35}
+.plan-card>footer{min-height:61px;border-top:1px solid var(--line);padding:10px 13px;display:flex;align-items:center;justify-content:space-between;gap:10px;background:#fbfcfe}
+.plan-card>footer>div{display:grid;gap:2px}
+.plan-card>footer small{color:var(--ink-400);font-size:6px;font-weight:800;letter-spacing:.08em}
+.plan-card>footer b{font-size:8px}
+.plan-card>footer .button{min-width:105px}
+@media(max-width:1160px){.plan-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:760px){
+ .plan-toolbar{align-items:stretch;flex-direction:column}
+ .plan-cycle{width:100%}
+ .plan-cycle button{flex:1}
+ .plan-grid{grid-template-columns:1fr}
+ .plan-module-group>div{grid-template-columns:1fr}
+}
 .plan-state{margin-top:20px;padding:28px;display:grid;justify-items:center;gap:10px;text-align:center}
 .plan-state p{margin:0;color:var(--ink-600);font-size:10px}
 .plan-state.error{color:var(--danger)}
