@@ -283,3 +283,96 @@ func TestIdentityProfilePasswordChange(t *testing.T) {
 		t.Fatalf("profile/password did not update correctly name=%q", name)
 	}
 }
+
+
+func TestIdentityProfileLoadsAfterRoleChange(t *testing.T) {
+	api, adminScope, _ := seedIdentityAdministrator(t)
+	pool := api.db
+	ctx := context.Background()
+
+	var firstRoleID, nextRoleID string
+	if err := pool.QueryRow(ctx, `
+		INSERT INTO roles(organization_id,name,description,menu_access,permissions)
+		VALUES($1,$2,'Rol inicial',ARRAY['pedidos'],ARRAY['orders.read'])
+		RETURNING id
+	`, adminScope.OrganizationID, fmt.Sprintf("Mesero %d", time.Now().UnixNano())).Scan(&firstRoleID); err != nil {
+		t.Fatal(err)
+	}
+	if err := pool.QueryRow(ctx, `
+		INSERT INTO roles(organization_id,name,description,menu_access,permissions)
+		VALUES($1,$2,'Rol actualizado',ARRAY['dashboard','usuarios'],ARRAY['dashboard.read','users.read'])
+		RETURNING id
+	`, adminScope.OrganizationID, fmt.Sprintf("Administrador prueba %d", time.Now().UnixNano())).Scan(&nextRoleID); err != nil {
+		t.Fatal(err)
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte("GastonPass123"), bcrypt.DefaultCost)
+	if err != nil {
+		t.Fatal(err)
+	}
+	email := fmt.Sprintf("gaston-%d@example.test", time.Now().UnixNano())
+	var targetID string
+	if err = pool.QueryRow(ctx, `
+		INSERT INTO users(organization_id,email,full_name,password_hash)
+		VALUES($1,$2,'Gaston Acurio',$3)
+		RETURNING id
+	`, adminScope.OrganizationID, email, string(hash)).Scan(&targetID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = pool.Exec(ctx, `
+		INSERT INTO user_roles(user_id,role_id,location_id)
+		VALUES($1,$2,$3)
+	`, targetID, firstRoleID, adminScope.LocationID); err != nil {
+		t.Fatal(err)
+	}
+
+	updateBody := []byte(fmt.Sprintf(
+		`{"fullName":"Gaston Acurio","email":%q,"password":"","assignments":[{"roleId":%q,"locationId":%q}]}`,
+		email, nextRoleID, adminScope.LocationID,
+	))
+	updateReq := httptest.NewRequest("PATCH", "/v1/admin/users/"+targetID, bytes.NewReader(updateBody))
+	updateReq.SetPathValue("id", targetID)
+	updateReq = updateReq.WithContext(context.WithValue(updateReq.Context(), scopeKey{}, adminScope))
+	updateRec := httptest.NewRecorder()
+	api.updateUser(updateRec, updateReq)
+	if updateRec.Code != 200 {
+		t.Fatalf("role change failed: %d %s", updateRec.Code, updateRec.Body.String())
+	}
+
+	targetScope := scope{
+		UserID: targetID,
+		OrganizationID: adminScope.OrganizationID,
+		LocationID: adminScope.LocationID,
+		Name: "Gaston Acurio",
+	}
+	profileReq := httptest.NewRequest("GET", "/v1/admin/me", nil)
+	profileReq = profileReq.WithContext(context.WithValue(profileReq.Context(), scopeKey{}, targetScope))
+	profileRec := httptest.NewRecorder()
+	api.getMyProfile(profileRec, profileReq)
+	if profileRec.Code != 200 {
+		t.Fatalf("profile after role change: %d %s", profileRec.Code, profileRec.Body.String())
+	}
+
+	var profile myProfileView
+	if err := json.Unmarshal(profileRec.Body.Bytes(), &profile); err != nil {
+		t.Fatal(err)
+	}
+	if profile.FullName != "Gaston Acurio" {
+		t.Fatalf("unexpected profile name %q", profile.FullName)
+	}
+	if len(profile.RoleNames) != 1 || !strings.HasPrefix(profile.RoleNames[0], "Administrador prueba ") {
+		t.Fatalf("expected updated role in profile, got %v", profile.RoleNames)
+	}
+	if len(profile.Permissions) != 2 || !containsString(profile.Permissions, "dashboard.read") || !containsString(profile.Permissions, "users.read") {
+		t.Fatalf("expected updated permissions in profile, got %v", profile.Permissions)
+	}
+}
+
+func containsString(values []string, want string) bool {
+	for _, value := range values {
+		if value == want {
+			return true
+		}
+	}
+	return false
+}
