@@ -1,0 +1,10 @@
+.reservation-form-grid{grid-template-columns:minmax(0,1.35fr) minmax(170px,.65fr);align-items:start}
+.reservation-form-grid label{min-width:0}
+.reservation-notes{grid-column:1/-1}
+.reservation-table-state{color:var(--ink-400);margin-top:-1px;font-size:8px;font-weight:600;line-height:1.4}
+.reservation-table-state.error{color:var(--danger)}
+.reservation-modal .wizard-field-error{margin-top:-1px}
+@media (width<=600px){
+  .reservation-form-grid{grid-template-columns:1fr}
+  .reservation-notes{grid-column:auto}
+}
