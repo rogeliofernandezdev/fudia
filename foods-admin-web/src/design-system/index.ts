@@ -5,3 +5,5 @@ export {ConfirmDialog} from "./confirm-dialog";
 export {LocationMap, type Coordinates} from "./location-map";
 
 export {RemoteModalSkeleton} from "./remote-modal-skeleton";
+
+export {FullScreenLoader} from "./full-screen-loader";
