@@ -88,7 +88,12 @@ func TestReservationsPersistCapacityAndSchedule(t *testing.T){
 	if ok.Code!=201{t.Fatalf("create reservation: %d %s",ok.Code,ok.Body.String())}
 	var item reservationView
 	if err:=json.Unmarshal(ok.Body.Bytes(),&item);err!=nil{t.Fatal(err)}
-	if item.TableID==nil||*item.TableID!=tableID||item.Status!="pending"{t.Fatalf("unexpected reservation: %#v",item)}
+	if item.TableID==nil||*item.TableID!=tableID||item.Status!="pending"||item.DurationMinutes!=90{t.Fatalf("unexpected reservation: %#v",item)}
+	overlapStart:=time.Now().UTC().Add(24*time.Hour+30*time.Minute).Truncate(time.Minute).Format(time.RFC3339)
+	overlapBody:=[]byte(fmt.Sprintf(`{"customerName":"Solapada","startsAt":%q,"guests":2,"durationMinutes":60,"tableId":%q}`,overlapStart,tableID))
+	overlapReq:=httptest.NewRequest("POST","/v1/admin/reservations",bytes.NewReader(overlapBody));overlapReq=overlapReq.WithContext(context.WithValue(overlapReq.Context(),scopeKey{},s))
+	overlapRec:=httptest.NewRecorder();api.createReservation(overlapRec,overlapReq)
+	if overlapRec.Code!=400||!strings.Contains(overlapRec.Body.String(),"reservation_conflict"){t.Fatalf("overlapping reservation must conflict: %d %s",overlapRec.Code,overlapRec.Body.String())}
 	conflict:=create(2)
 	if conflict.Code!=400||!strings.Contains(conflict.Body.String(),"reservation_conflict"){t.Fatalf("same table/time must conflict: %d %s",conflict.Code,conflict.Body.String())}
 
