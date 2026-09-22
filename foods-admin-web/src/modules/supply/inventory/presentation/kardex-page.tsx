@@ -45,13 +45,13 @@ export function KardexPage(){
     </div>
     <div className="kardex-toolbar-side">
      {activeFilters>0&&<Button kind="ghost" icon="refresh" onClick={resetFilters}>Limpiar</Button>}
-     <p><Icon name="receipt" size={14}/>Cada movimiento conserva cantidad, costo, saldo y usuario.</p>
+     <p><Icon name="ledger" size={14}/>Cada movimiento conserva cantidad, costo, saldo y usuario.</p>
     </div>
    </div>
 
    {movements.isLoading?<KardexSkeleton/>:movements.isError?
     <div className="inventory-state"><Icon name="alert" size={24}/><b>No pudimos cargar el Kárdex</b><p>{movements.error.message}</p><Button kind="secondary" icon="refresh" onClick={()=>movements.refetch()}>Reintentar</Button></div>
-   :!items.length?<div className="inventory-state"><Icon name="receipt" size={24}/><b>Sin movimientos</b><p>{activeFilters?"No encontramos movimientos que coincidan con los filtros seleccionados.":"Aún no hay movimientos registrados en este local."}</p>{activeFilters>0&&<Button kind="secondary" icon="refresh" onClick={resetFilters}>Ver todos</Button>}</div>
+   :!items.length?<div className="inventory-state"><Icon name="ledger" size={24}/><b>Sin movimientos</b><p>{activeFilters?"No encontramos movimientos que coincidan con los filtros seleccionados.":"Aún no hay movimientos registrados en este local."}</p>{activeFilters>0&&<Button kind="secondary" icon="refresh" onClick={resetFilters}>Ver todos</Button>}</div>
    :<>
     <div className="table-wrap hover-scroll inventory-table-wrap">
      <table className="kardex-table">
