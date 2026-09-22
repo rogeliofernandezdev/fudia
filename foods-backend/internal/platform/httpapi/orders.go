@@ -705,6 +705,89 @@ func (a *API) getOrdersFloor(w http.ResponseWriter, r *http.Request) {
 	}
 	rows, err := a.db.Query(r.Context(), `
 		SELECT t.id,t.name,t.zone,t.seats,
+		  o.id,COALESCE(o.code,''),COALESCE(o.channel,''),COALESCE(o.status,''),COALESCE(o.customer_id::text,''),COALESCE(o.customer_name,''),COALESCE(o.customer_phone,''),COALESCE(o.address,''),COALESCE(o.reference,''),COALESCE(o.table_id::text,''),'',COALESCE(o.notes,''),COALESCE(o.subtotal::text,'0'),COALESCE(o.delivery_fee::text,'0'),COALESCE(o.total::text,'0'),COALESCE(to_char(o.created_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),''),COALESCE(to_char(o.updated_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),''),
+		  COALESCE(item_totals.item_count,0),COALESCE(payment_totals.paid,0)::text
+		FROM tables t
+		LEFT JOIN orders o
+		  ON o.table_id=t.id
+		 AND o.organization_id=t.organization_id
+		 AND o.location_id=t.location_id
+		 AND o.status NOT IN ('entregado','cancelado')
+		LEFT JOIN LATERAL (
+		  SELECT COALESCE(sum(i.qty)::int,0) AS item_count
+		  FROM order_items i
+		  WHERE i.order_id=o.id AND i.organization_id=o.organization_id
+		) item_totals ON o.id IS NOT NULL
+		LEFT JOIN LATERAL (
+		  SELECT COALESCE(sum(p.amount-COALESCE(refunds.refunded,0)),0) AS paid
+		  FROM payments p
+		  LEFT JOIN LATERAL (
+		    SELECT COALESCE(sum(pr.amount),0) AS refunded
+		    FROM payment_refunds pr
+		    WHERE pr.payment_id=p.id
+		      AND pr.organization_id=p.organization_id
+		      AND pr.location_id=p.location_id
+		  ) refunds ON true
+		  WHERE p.order_id=o.id
+		    AND p.organization_id=o.organization_id
+		    AND p.location_id=o.location_id
+		) payment_totals ON o.id IS NOT NULL
+		WHERE t.organization_id=$1 AND t.location_id=$2 AND t.active
+		ORDER BY t.zone,t.name
+	`, s.OrganizationID, s.LocationID)
+	if err != nil {
+		fail(w, 503, "orders_unavailable", "No pudimos cargar el salón.")
+		return
+	}
+	defer rows.Close()
+	items := []floorTable{}
+	for rows.Next() {
+		var ft floorTable
+		var o order
+		var oid *string
+		var paidText string
+		if err = rows.Scan(
+			&ft.ID, &ft.Name, &ft.Zone, &ft.Seats,
+			&oid, &o.Code, &o.Channel, &o.Status, &o.CustomerID, &o.CustomerName, &o.CustomerPhone,
+			&o.Address, &o.Reference, &o.TableID, &o.TableName, &o.Notes, &o.Subtotal, &o.DeliveryFee,
+			&o.Total, &o.CreatedAt, &o.UpdatedAt, &o.ItemCount, &paidText,
+		); err != nil {
+			fail(w, 503, "orders_unavailable", "No pudimos cargar el salón.")
+			return
+		}
+		if oid != nil {
+			o.ID = *oid
+			paid, parsePaidErr := strconv.ParseFloat(paidText, 64)
+			total, parseTotalErr := strconv.ParseFloat(o.Total, 64)
+			if parsePaidErr != nil || parseTotalErr != nil {
+				fail(w, 503, "orders_unavailable", "No pudimos calcular el estado de cobro del salón.")
+				return
+			}
+			o.PaidAmount = strconv.FormatFloat(paid, 'f', 2, 64)
+			o.RemainingAmount = strconv.FormatFloat(math.Max(0, total-paid), 'f', 2, 64)
+			o.PaymentStatus = paymentStatus(total, paid)
+			ft.Order = &o
+		}
+		items = append(items, ft)
+	}
+	if err = rows.Err(); err != nil {
+		fail(w, 503, "orders_unavailable", "No pudimos cargar el salón.")
+		return
+	}
+	writeJSON(w, 200, map[string]any{"items": items})
+}
+
+func (a *API) getOrdersFloor(w http.ResponseWriter, r *http.Request) {
+	s := r.Context().Value(scopeKey{}).(scope)
+	type floorTable struct {
+		ID    string `json:"id"`
+		Name  string `json:"name"`
+		Zone  string `json:"zone"`
+		Seats int    `json:"seats"`
+		Order *order `json:"order"`
+	}
+	rows, err := a.db.Query(r.Context(), `
+		SELECT t.id,t.name,t.zone,t.seats,
 		  o.id,COALESCE(o.code,''),COALESCE(o.channel,''),COALESCE(o.status,''),COALESCE(o.customer_id::text,''),COALESCE(o.customer_name,''),COALESCE(o.customer_phone,''),COALESCE(o.address,''),COALESCE(o.reference,''),COALESCE(o.table_id::text,''),'',COALESCE(o.notes,''),COALESCE(o.subtotal::text,'0'),COALESCE(o.delivery_fee::text,'0'),COALESCE(o.total::text,'0'),COALESCE(to_char(o.created_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),''),COALESCE(to_char(o.updated_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),''),COALESCE((SELECT sum(i.qty)::int FROM order_items i WHERE i.order_id=o.id),0)
 		FROM tables t
 		LEFT JOIN orders o ON o.table_id=t.id AND o.organization_id=t.organization_id AND o.location_id=t.location_id AND o.status NOT IN ('entregado','cancelado')
