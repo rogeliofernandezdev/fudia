@@ -650,8 +650,8 @@ test("carta y producción usa iconos semánticos por función",()=>{
   const icons=read("src/design-system/icons.tsx");
   const recipes=read("src/modules/menu/recipes/presentation/recipes-page.tsx");
   const availability=read("src/modules/menu/availability/presentation/product-availability-manager.tsx");
-  assert.ok(shell.includes('name:"Recetas y producción",icon:"cookingPot"'),"Recetas y producción usa cocción/producción, no un rol de chef");
-  assert.ok(shell.includes('name:"Disponibilidad de la carta",icon:"availability"'),"Disponibilidad usa un icono específico de plato disponible");
+  assert.ok(shell.includes('name:"Recetas",icon:"cookingPot"'),"Recetas usa cocción/producción, no un rol de chef");
+  assert.ok(shell.includes('name:"Disponibilidad",icon:"availability"'),"Disponibilidad usa un icono específico de plato disponible");
   assert.ok(icons.includes("availability:"),"El design system define el icono semántico de disponibilidad");
   assert.ok(recipes.includes('name="cookingPot"'),"La página de Recetas conserva la misma semántica visual");
   assert.ok(availability.includes('name="availability"'),"El estado vacío de disponibilidad usa su icono de dominio");
@@ -679,4 +679,14 @@ test("los nombres del menú evitan redundancias",()=>{
   assert.ok(shell.includes('name:"Usuarios y roles",icon:"users"'),"El menú nombra las dos entidades administradas");
   assert.ok(recipes.includes('title="Recetas"'),"La página de Recetas usa el mismo nombre");
   assert.ok(access.includes('title="Usuarios y roles"'),"La página de accesos usa Usuarios y roles");
+});
+
+
+test("módulos y navegación comparten nombres funcionales",()=>{
+  const shell=read("src/shell/admin-shell.tsx");
+  const availability=read("src/modules/menu/availability/presentation/product-availability-manager.tsx");
+  assert.ok(shell.includes('name:"Disponibilidad",icon:"availability"'),"El menú usa el nombre corto Disponibilidad");
+  assert.equal(shell.includes('name:"Disponibilidad de la carta"'),false,"El menú no repite el contexto Carta");
+  assert.ok(availability.includes('title="Disponibilidad"'),"La página usa el mismo nombre que el menú");
+  assert.equal(availability.includes('title="Disponibilidad de la carta"'),false,"La página no conserva el nombre largo");
 });
