@@ -67,7 +67,7 @@
 .recipe-skeleton-product small{width:44%;height:7px}
 .recipe-skeleton-number{width:54px;height:10px;margin-inline:auto}
 .recipe-skeleton-number.short{width:36px}
-.recipe-skeleton-status{width:76px;height:24px;border-radius:999px!important;margin-inline:auto}
+.recipe-skeleton-status{width:76px;height:24px;border-radius:999px;margin-inline:auto}
 .recipe-skeleton-actions{justify-content:center;gap:8px;display:flex}
 .recipe-skeleton-actions i{width:var(--control-height);height:var(--control-height);border-radius:6px}
 @keyframes recipe-skeleton-shimmer{0%,100%{opacity:.55}50%{opacity:1}}
@@ -98,4 +98,4 @@
  .recipe-form-footer{padding:10px 14px}
  .recipe-form-footer .button{flex:1;min-width:0}
 }
-@media(prefers-reduced-motion:reduce){.recipe-modal>.recipe-modal-header>.recipe-modal-close{transition:none}}
+@media(prefers-reduced-motion:reduce){.recipe-modal>.recipe-modal-header>.recipe-modal-close{transition:none}.recipe-skeleton-table i,.recipe-skeleton-product small{animation:none}}
