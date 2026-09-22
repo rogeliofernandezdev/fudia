@@ -225,12 +225,26 @@ func (a *API) updateProductAvailability(w http.ResponseWriter, r *http.Request) 
 		fail(w, 400, "invalid_availability", "La cantidad de porciones no puede ser negativa.")
 		return
 	}
+	in.Note = strings.TrimSpace(in.Note)
+	if len([]rune(in.Note)) > 240 {
+		fail(w, 400, "invalid_availability", "La nota no puede superar 240 caracteres.")
+		return
+	}
+
+	tx, err := a.db.Begin(r.Context())
+	if err != nil {
+		fail(w, 503, "availability_unavailable", "No pudimos iniciar la actualización de disponibilidad.")
+		return
+	}
+	defer tx.Rollback(r.Context())
+
 	productID := r.PathValue("productId")
 	var quantityControl string
-	err = a.db.QueryRow(r.Context(), `
+	err = tx.QueryRow(r.Context(), `
 		SELECT quantity_control
 		FROM products
-		WHERE id=$1 AND organization_id=$2 AND active`,
+		WHERE id=$1 AND organization_id=$2 AND active
+		FOR UPDATE`,
 		productID, s.OrganizationID).Scan(&quantityControl)
 	if errors.Is(err, pgx.ErrNoRows) {
 		fail(w, 404, "product_not_found", "El producto no existe o está inactivo.")
@@ -241,21 +255,53 @@ func (a *API) updateProductAvailability(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if quantityControl != "portions" {
-		in.PortionQuantity = nil
-	} else if in.Status != "sold_out" && (in.PortionQuantity == nil || *in.PortionQuantity < 1) {
-		fail(w, 400, "invalid_availability", "Ingresa cuántas porciones están disponibles hoy.")
+	var currentPortionQuantity *int
+	var soldQuantity int
+	err = tx.QueryRow(r.Context(), `
+		SELECT portion_quantity,sold_quantity
+		FROM product_availability
+		WHERE organization_id=$1 AND location_id=$2 AND product_id=$3 AND business_date=$4::date
+		FOR UPDATE`,
+		s.OrganizationID, s.LocationID, productID, day.Format("2006-01-02")).Scan(&currentPortionQuantity, &soldQuantity)
+	hasDailyAvailability := true
+	if errors.Is(err, pgx.ErrNoRows) {
+		hasDailyAvailability = false
+		soldQuantity = 0
+		err = nil
+	}
+	if err != nil {
+		fail(w, 503, "availability_unavailable", "No pudimos validar la disponibilidad actual.")
 		return
 	}
 
-	_, err = a.db.Exec(r.Context(), `
+	if quantityControl != "portions" {
+		in.PortionQuantity = nil
+	} else {
+		if in.PortionQuantity == nil && hasDailyAvailability {
+			in.PortionQuantity = currentPortionQuantity
+		}
+		if in.PortionQuantity != nil && *in.PortionQuantity < soldQuantity {
+			fail(w, 409, "portion_quantity_below_sold", "El cupo de hoy no puede ser menor que las porciones ya vendidas.")
+			return
+		}
+		if in.Status != "sold_out" && (in.PortionQuantity == nil || *in.PortionQuantity < 1) {
+			fail(w, 400, "invalid_availability", "Ingresa cuántas porciones están disponibles hoy.")
+			return
+		}
+	}
+
+	_, err = tx.Exec(r.Context(), `
 		INSERT INTO product_availability(organization_id,location_id,product_id,business_date,portion_quantity,manual_status,note,updated_by)
 		VALUES($1,$2,$3,$4,$5,$6,$7,$8)
 		ON CONFLICT (organization_id,location_id,product_id,business_date)
 		DO UPDATE SET portion_quantity=EXCLUDED.portion_quantity,manual_status=EXCLUDED.manual_status,note=EXCLUDED.note,updated_by=EXCLUDED.updated_by,updated_at=now()`,
-		s.OrganizationID, s.LocationID, productID, day.Format("2006-01-02"), in.PortionQuantity, in.Status, strings.TrimSpace(in.Note), s.UserID)
+		s.OrganizationID, s.LocationID, productID, day.Format("2006-01-02"), in.PortionQuantity, in.Status, in.Note, s.UserID)
 	if err != nil {
 		fail(w, 503, "availability_unavailable", "No pudimos actualizar la disponibilidad.")
+		return
+	}
+	if err = tx.Commit(r.Context()); err != nil {
+		fail(w, 503, "availability_unavailable", "No pudimos confirmar la actualización de disponibilidad.")
 		return
 	}
 	a.audit(r, "product.availability_updated", "product", productID)
