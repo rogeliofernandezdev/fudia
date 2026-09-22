@@ -22,9 +22,9 @@
 .kitchen-lane[data-status="preparando"] .kitchen-lane-icon{background:var(--surface);color:var(--kds-cooking-dark)}
 .kitchen-lane[data-status="listo"] .kitchen-lane-icon{background:var(--surface);color:var(--kds-ready-dark)}
 .kitchen-lane>header h2{overflow:hidden;margin:0;color:var(--surface);font-size:11px;font-weight:850;letter-spacing:.01em;text-overflow:ellipsis;white-space:nowrap}
-.kitchen-lane[data-status="listo"]>header h2{color:var(--kds-ready-dark)}
+.kitchen-lane[data-status="listo"]>header h2{color:var(--ink-950)}
 .kitchen-lane>header small{color:var(--surface);opacity:.82;font-size:7px;font-weight:650;line-height:1.25}
-.kitchen-lane[data-status="listo"]>header small{color:var(--kds-ready-dark);opacity:.88}
+.kitchen-lane[data-status="listo"]>header small{color:var(--ink-600);opacity:1}
 .kitchen-lane>header>b{display:grid;place-items:center;min-width:26px;height:26px;padding:0 7px;border-radius:999px;font-size:8px;font-weight:900;font-variant-numeric:tabular-nums}
 .kitchen-lane[data-status="confirmado"]>header>b{background:var(--surface);color:var(--kds-pending-dark)}
 .kitchen-lane[data-status="preparando"]>header>b{background:var(--surface);color:var(--kds-cooking-dark)}
