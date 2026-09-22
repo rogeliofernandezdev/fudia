@@ -121,6 +121,10 @@ se limitan a densidad y composición, nunca a reinterpretar el significado del c
   zonas: datos de la receta e insumos. La cabecera sigue el patrón estándar de
   58 px mínimo, icono de 32 px, título de 15 px y cierre con
   `--control-height`. El producto y el rendimiento son los datos principales;
+  «Producto preparado» usa el autocomplete asíncrono compartido basado en
+  `react-select/async`, con búsqueda remota por nombre/SKU, selección única,
+  `cacheOptions` y el mismo patrón visual `react-select-container` usado en los
+  demás formularios; no se reemplaza por un `<select>` nativo con catálogo completo.
   las notas son opcionales y no dominan visualmente el formulario. La composición
   de insumos vive en una sección propia con cabecera azul `primary-600` en
   escritorio, columnas Insumo, Cantidad, Merma y acción homologada de quitar.
