@@ -40,7 +40,7 @@ async function loadRecipeProductOptions(q:string):Promise<RecipeProductOption[]>
  const response=await listRecipeProducts(search);
  return response.items
   .filter(product=>product.quantityControl!=="inventory")
-  .map(product=>({value:product.id,label:product.sku?product.name+" · "+product.sku:product.name}));
+  .map(product=>({value:product.id,label:product.name}));
 }
 
 export function RecipesPage(){
