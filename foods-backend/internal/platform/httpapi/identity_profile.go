@@ -12,12 +12,20 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+type myProfilePlanView struct {
+	ID     string `json:"id"`
+	Code   string `json:"code"`
+	Name   string `json:"name"`
+	Status string `json:"status"`
+}
+
 type myProfileView struct {
-	FullName      string   `json:"fullName"`
-	Email         string   `json:"email"`
-	PlatformAdmin bool     `json:"platformAdmin"`
-	RoleNames     []string `json:"roleNames"`
-	Permissions   []string `json:"permissions"`
+	FullName      string             `json:"fullName"`
+	Email         string             `json:"email"`
+	PlatformAdmin bool               `json:"platformAdmin"`
+	RoleNames     []string           `json:"roleNames"`
+	Permissions   []string           `json:"permissions"`
+	CurrentPlan   *myProfilePlanView `json:"currentPlan"`
 }
 
 type myProfileInput struct {
@@ -28,17 +36,21 @@ type myProfileInput struct {
 
 func (a *API) loadMyProfile(ctx context.Context, s scope) (myProfileView, error) {
 	var out myProfileView
+	var planID,planCode,planName,planStatus *string
 	err:=a.db.QueryRow(ctx,`
 		SELECT u.full_name,u.email,u.platform_admin,
 		       COALESCE(array_agg(DISTINCT r.name) FILTER (WHERE r.id IS NOT NULL),ARRAY[]::text[]),
-		       COALESCE(array_agg(DISTINCT permission) FILTER (WHERE permission IS NOT NULL),ARRAY[]::text[])
+		       COALESCE(array_agg(DISTINCT permission) FILTER (WHERE permission IS NOT NULL),ARRAY[]::text[]),
+		       sp.id,sp.code,sp.name,os.status
 		FROM users u
 		LEFT JOIN user_roles ur ON ur.user_id=u.id AND ur.location_id=$2
 		LEFT JOIN roles r ON r.id=ur.role_id AND r.organization_id=$3 AND r.active
 		LEFT JOIN LATERAL unnest(r.permissions) permission ON true
+		LEFT JOIN organization_subscriptions os ON os.organization_id=$3
+		LEFT JOIN subscription_plans sp ON sp.id=os.plan_id
 		WHERE u.id=$1 AND u.active
-		GROUP BY u.id
-	`,s.UserID,s.LocationID,s.OrganizationID).Scan(&out.FullName,&out.Email,&out.PlatformAdmin,&out.RoleNames,&out.Permissions)
+		GROUP BY u.id,sp.id,sp.code,sp.name,os.status
+	`,s.UserID,s.LocationID,s.OrganizationID).Scan(&out.FullName,&out.Email,&out.PlatformAdmin,&out.RoleNames,&out.Permissions,&planID,&planCode,&planName,&planStatus)
 	if err!=nil{return myProfileView{},err}
 	if out.PlatformAdmin {
 		out.RoleNames=[]string{"Administrador de plataforma"}
@@ -46,6 +58,9 @@ func (a *API) loadMyProfile(ctx context.Context, s scope) (myProfileView, error)
 	}
 	if out.RoleNames==nil { out.RoleNames=[]string{} }
 	if out.Permissions==nil { out.Permissions=[]string{} }
+	if planID!=nil && planCode!=nil && planName!=nil && planStatus!=nil {
+		out.CurrentPlan=&myProfilePlanView{ID:*planID,Code:*planCode,Name:*planName,Status:*planStatus}
+	}
 	return out,nil
 }
 
