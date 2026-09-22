@@ -3,7 +3,7 @@ type IconName =
   | "bell" | "chevron" | "search" | "user" | "lock" | "eye"
   | "store" | "clock" | "plus" | "minus" | "trash" | "check"
   | "printer" | "whatsapp" | "bike" | "receipt" | "logout"
-  | "wifi" | "filter" | "card" | "wallet" | "menu" | "close" | "fingerprint";
+  | "wifi" | "filter" | "card" | "wallet" | "menu" | "close" | "fingerprint" | "refresh";
 
 const paths: Record<IconName, React.ReactNode> = {
   home: <><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10M9 20v-6h6v6"/></>,
@@ -37,6 +37,7 @@ const paths: Record<IconName, React.ReactNode> = {
   menu: <path d="M4 7h16M4 12h16M4 17h16"/>,
   close: <path d="M6 6l12 12M18 6 6 18"/>,
   fingerprint: <><path d="M12 11a2 2 0 0 1 2 2c0 3.5-.8 6.2-2 8"/><path d="M8.2 20c1.1-2.3 1.8-4.5 1.8-7a2 2 0 0 1 4 0"/><path d="M6 17.5c.6-1.7 1-3.2 1-4.5a5 5 0 0 1 10 0c0 2.9-.5 5.5-1.5 7.7"/><path d="M4.2 14.5A7.8 7.8 0 0 1 4 13a8 8 0 0 1 16 0c0 2.1-.2 4.2-.8 6"/><path d="M6.6 5.4A8 8 0 0 1 12 3"/></>,
+  refresh: <><path d="M20 11a8 8 0 1 0-2.34 5.66"/><path d="M20 4v7h-7"/></>,
 };
 
 export function Icon({ name, size = 20, className = "" }: { name: IconName; size?: number; className?: string }) {
