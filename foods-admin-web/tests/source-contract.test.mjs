@@ -202,6 +202,13 @@ test("producto e inventario mantienen una sola fuente de verdad",()=>{
   assert.ok(recipes.includes("Escribe al menos 3 caracteres"),"La UI comunica el umbral mínimo de búsqueda");
   assert.ok(recipes.includes("label:product.name"),"El autocomplete muestra únicamente el nombre del producto");
   assert.equal(recipes.includes("product.sku?product.name"),false,"El autocomplete no muestra SKU");
+  assert.ok(recipesApi.includes('inventory/products?page=1&pageSize=10'),"Insumos carga solo 10 opciones al abrir");
+  assert.ok(recipesApi.includes('inventory/products?q='),"La búsqueda de insumos se delega al backend");
+  assert.ok(recipesApi.includes("Math.ceil(first.total/100)"),"La búsqueda de insumos recorre todas las páginas necesarias");
+  assert.ok(recipes.includes("loadRecipeIngredientOptions"),"Cada insumo usa búsqueda remota");
+  assert.ok(recipes.includes('placeholder="Buscar insumo..."'),"La fila de insumo usa autocomplete");
+  assert.ok(recipes.includes('inventoryItemId:""'),"Agregar insumo crea una fila vacía sin depender del catálogo cargado");
+  assert.equal(recipes.includes("draft.items.length>=(inventory.data?.items.length??0)"),false,"No existe un máximo ligado al tamaño del catálogo cargado");
 });
 
 test("compras concentra orden recepcion y altas de abastecimiento",()=>{
