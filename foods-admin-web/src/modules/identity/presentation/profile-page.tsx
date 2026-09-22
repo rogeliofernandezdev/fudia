@@ -148,7 +148,7 @@ function ProfilePlansPanel({profile,plans,loading,error,retry}:{profile:MyProfil
     <div className="profile-plan-grid">
       {plans.map(plan=>{
         const active=current?.id===plan.id;
-        return <article className={"profile-plan-card"+(active?" current":"")} key={plan.id}>
+        return <article className={"profile-plan-card plan-"+plan.code+(active?" current":"")} key={plan.id}>
           {active&&<div className="profile-plan-current"><Icon name="check" size={12}/>TU PLAN ACTUAL</div>}
           <div className="profile-plan-head">
             <span><Icon name={plan.code==="emprende"?"store":plan.code==="escala"?"grid":"sales"} size={18}/></span>
