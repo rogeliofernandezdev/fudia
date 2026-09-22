@@ -41,7 +41,7 @@ func (a *API) Routes() *http.ServeMux {
 	m.Handle("GET /v1/admin/context", a.auth(http.HandlerFunc(a.getContext)))
 	m.Handle("GET /v1/admin/me", a.auth(http.HandlerFunc(a.getMyProfile)))
 	m.Handle("PATCH /v1/admin/me", a.auth(http.HandlerFunc(a.updateMyProfile)))
-	m.Handle("GET /v1/admin/subscription", a.auth(a.requirePermission("organizations.read", http.HandlerFunc(a.getOrganizationSubscription))))
+	m.Handle("GET /v1/admin/subscription", a.auth(a.requirePermission("subscription.read", http.HandlerFunc(a.getOrganizationSubscription))))
 	m.Handle("GET /v1/admin/settings", a.auth(a.requirePermission("organizations.read", http.HandlerFunc(a.getOrgSettings))))
 	m.Handle("PATCH /v1/admin/settings", a.auth(a.requirePermission("organizations.manage", http.HandlerFunc(a.updateOrgSettings))))
 	m.Handle("GET /v1/admin/organization", a.auth(a.requirePermission("organizations.read", http.HandlerFunc(a.getOrganization))))
