@@ -331,8 +331,18 @@ export function RecipesPage(){
 }
 
 function RecipeListSkeleton(){
- return <div className="recipe-list-skeleton" aria-label="Cargando recetas">
-  <div className="recipe-list-skeleton-head">{Array.from({length:5},(_,i)=><i key={i}/>)}</div>
-  {Array.from({length:5},(_,row)=><div className="recipe-list-skeleton-row" key={row}>{Array.from({length:5},(_,cell)=><i key={cell}/>)}</div>)}
+ return <div className="table-wrap recipe-skeleton-wrap" aria-label="Cargando recetas" aria-busy="true">
+  <table className="recipe-skeleton-table">
+   <thead><tr><th>PRODUCTO</th><th>RENDIMIENTO</th><th>INSUMOS</th><th>ESTADO</th><th>ACCIONES</th></tr></thead>
+   <tbody>
+    {Array.from({length:5},(_,row)=><tr className={row%2?"alternate":""} key={row}>
+     <td><span className="recipe-skeleton-product"><i/><small/></span></td>
+     <td><i className="recipe-skeleton-number"/></td>
+     <td><i className="recipe-skeleton-number short"/></td>
+     <td><i className="recipe-skeleton-status"/></td>
+     <td><span className="recipe-skeleton-actions"><i/><i/></span></td>
+    </tr>)}
+   </tbody>
+  </table>
  </div>;
 }
