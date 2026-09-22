@@ -206,32 +206,74 @@ func (a *API) listUsers(w http.ResponseWriter, r *http.Request) {
 	page, size := pageParams(r)
 	q := strings.TrimSpace(r.URL.Query().Get("q"))
 	status := r.URL.Query().Get("status")
+
 	var total int
-	_ = a.db.QueryRow(r.Context(), `SELECT count(*) FROM users WHERE organization_id=$1 AND ($2='' OR full_name ILIKE '%'||$2||'%' OR email ILIKE '%'||$2||'%') AND ($3='' OR ($3='active' AND active) OR ($3='inactive' AND NOT active))`, s.OrganizationID, q, status).Scan(&total)
-	rows, err := a.db.Query(r.Context(), `SELECT id,full_name,email,active,platform_admin FROM users WHERE organization_id=$1 AND ($2='' OR full_name ILIKE '%'||$2||'%' OR email ILIKE '%'||$2||'%') AND ($3='' OR ($3='active' AND active) OR ($3='inactive' AND NOT active)) ORDER BY full_name LIMIT $4 OFFSET $5`, s.OrganizationID, q, status, size, (page-1)*size)
+	if err := a.db.QueryRow(r.Context(), `
+		SELECT count(*)
+		FROM users
+		WHERE organization_id=$1
+		  AND ($2='' OR full_name ILIKE '%'||$2||'%' OR email ILIKE '%'||$2||'%')
+		  AND ($3='' OR ($3='active' AND active) OR ($3='inactive' AND NOT active))
+	`, s.OrganizationID, q, status).Scan(&total); err != nil {
+		fail(w, 503, "users_unavailable", "No pudimos cargar los usuarios.")
+		return
+	}
+
+	rows, err := a.db.Query(r.Context(), `
+		SELECT u.id,u.full_name,u.email,u.active,u.platform_admin,
+		       COALESCE(
+		         jsonb_agg(
+		           jsonb_build_object(
+		             'roleId',ur.role_id::text,
+		             'roleName',r.name,
+		             'locationId',ur.location_id::text,
+		             'locationName',l.name
+		           )
+		           ORDER BY l.name,r.name
+		         ) FILTER (WHERE ur.role_id IS NOT NULL AND r.id IS NOT NULL AND l.id IS NOT NULL),
+		         '[]'::jsonb
+		       )
+		FROM (
+		  SELECT id,full_name,email,active,platform_admin
+		  FROM users
+		  WHERE organization_id=$1
+		    AND ($2='' OR full_name ILIKE '%'||$2||'%' OR email ILIKE '%'||$2||'%')
+		    AND ($3='' OR ($3='active' AND active) OR ($3='inactive' AND NOT active))
+		  ORDER BY full_name,id
+		  LIMIT $4 OFFSET $5
+		) u
+		LEFT JOIN user_roles ur ON ur.user_id=u.id
+		LEFT JOIN roles r ON r.id=ur.role_id AND r.organization_id=$1
+		LEFT JOIN locations l ON l.id=ur.location_id AND l.organization_id=$1
+		GROUP BY u.id,u.full_name,u.email,u.active,u.platform_admin
+		ORDER BY u.full_name,u.id
+	`, s.OrganizationID, q, status, size, (page-1)*size)
 	if err != nil {
 		fail(w, 503, "users_unavailable", "No pudimos cargar los usuarios.")
 		return
 	}
 	defer rows.Close()
+
 	items := []userView{}
 	for rows.Next() {
 		var v userView
-		if rows.Scan(&v.ID, &v.FullName, &v.Email, &v.Active, &v.PlatformAdmin) != nil {
-			continue
+		var assignmentsJSON []byte
+		if err = rows.Scan(&v.ID, &v.FullName, &v.Email, &v.Active, &v.PlatformAdmin, &assignmentsJSON); err != nil {
+			fail(w, 503, "users_unavailable", "No pudimos leer los usuarios.")
+			return
 		}
 		v.Assignments = []userAssignment{}
-		ar, _ := a.db.Query(r.Context(), `SELECT ur.role_id,r.name,ur.location_id,l.name FROM user_roles ur JOIN roles r ON r.id=ur.role_id JOIN locations l ON l.id=ur.location_id WHERE ur.user_id=$1 AND r.organization_id=$2 ORDER BY l.name,r.name`, v.ID, s.OrganizationID)
-		if ar != nil {
-			for ar.Next() {
-				var x userAssignment
-				if ar.Scan(&x.RoleID, &x.RoleName, &x.LocationID, &x.LocationName) == nil {
-					v.Assignments = append(v.Assignments, x)
-				}
+		if len(assignmentsJSON) > 0 {
+			if err = json.Unmarshal(assignmentsJSON, &v.Assignments); err != nil {
+				fail(w, 503, "users_unavailable", "No pudimos leer los accesos de los usuarios.")
+				return
 			}
-			ar.Close()
 		}
 		items = append(items, v)
+	}
+	if err = rows.Err(); err != nil {
+		fail(w, 503, "users_unavailable", "No pudimos cargar los usuarios.")
+		return
 	}
 	writeJSON(w, 200, map[string]any{"items": items, "total": total, "page": page, "pageSize": size})
 }
