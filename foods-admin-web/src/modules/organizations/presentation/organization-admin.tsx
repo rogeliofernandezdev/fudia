@@ -36,49 +36,34 @@ export function CompanySettings(){
  function change<K extends keyof Organization>(key:K,value:Organization[K]){setDraft(current=>({...current,[key]:value}))}
  return <><PageHeader eyebrow="CONFIGURACIÓN" title="Empresa" description="Identidad legal y configuración general de la organización."/><Back/>
   {query.isLoading?<section className="panel management"><LoadingTable/></section>:query.isError?<section className="panel management"><LoadError message={query.error.message} retry={()=>query.refetch()}/></section>:
-  <div className="organization-workspace">
-   <section className="panel organization-summary">
-    <div className="organization-summary-main">
-     <span className="organization-mark"><Icon name="store" size={22}/></span>
-     <div><small>EMPRESA ACTIVA</small><h2>{value.tradeName}</h2><p>{value.legalName}</p></div>
-    </div>
-    <div className="organization-summary-meta">
-     <div><small>IDENTIFICACIÓN FISCAL</small><b>{value.taxId}</b></div>
-     <div><small>ZONA HORARIA</small><b>{value.timezone}</b></div>
+  <form className="organization-settings" onSubmit={event=>{event.preventDefault();if(canManage&&dirty)save.mutate()}}>
+   <section className="panel organization-section">
+    <header className="organization-section-header">
+     <div className="organization-section-title"><span><Icon name="receipt" size={18}/></span><div><small>IDENTIDAD LEGAL</small><h2>Datos de la empresa</h2><p>Información utilizada en documentos, configuración fiscal y administración.</p></div></div>
      <Status tone={value.active?"green":"gray"}>{value.active?"Activa":"Inactiva"}</Status>
+    </header>
+    <div className="organization-fields">
+     <label className="span-2">Razón social<Input required readOnly={!canManage} maxLength={180} value={value.legalName} onChange={event=>change("legalName",event.target.value)}/></label>
+     <label>Nombre comercial<Input required readOnly={!canManage} maxLength={180} value={value.tradeName} onChange={event=>change("tradeName",event.target.value)}/></label>
+     <label>Identificación fiscal<Input required readOnly={!canManage} minLength={6} maxLength={32} value={value.taxId} onChange={event=>change("taxId",event.target.value)}/></label>
     </div>
    </section>
 
-   <form className="organization-settings" onSubmit={event=>{event.preventDefault();if(canManage&&dirty)save.mutate()}}>
-    <section className="panel organization-section">
-     <header>
-      <span><Icon name="receipt" size={18}/></span>
-      <div><small>IDENTIDAD LEGAL</small><h2>Datos de la empresa</h2><p>Información utilizada en documentos, configuración fiscal y administración.</p></div>
-     </header>
-     <div className="organization-fields">
-      <label className="span-2">Razón social<Input required readOnly={!canManage} maxLength={180} value={value.legalName} onChange={event=>change("legalName",event.target.value)}/></label>
-      <label>Nombre comercial<Input required readOnly={!canManage} maxLength={180} value={value.tradeName} onChange={event=>change("tradeName",event.target.value)}/></label>
-      <label>Identificación fiscal<Input required readOnly={!canManage} minLength={6} maxLength={32} value={value.taxId} onChange={event=>change("taxId",event.target.value)}/></label>
-     </div>
-    </section>
+   <section className="panel organization-section">
+    <header className="organization-section-header">
+     <div className="organization-section-title"><span><Icon name="settings" size={18}/></span><div><small>CONFIGURACIÓN GENERAL</small><h2>Preferencias del tenant</h2><p>Valor base utilizado cuando un local no define una configuración específica.</p></div></div>
+    </header>
+    <div className="organization-fields single">
+     <label>Zona horaria predeterminada<Input required readOnly={!canManage} value={value.timezone} onChange={event=>change("timezone",event.target.value)} placeholder="America/Lima"/><small>Formato IANA, por ejemplo America/Lima.</small></label>
+     <div className="organization-config-note"><Icon name="alert" size={15}/><div><b>Configuración por local</b><span>País, moneda, impuestos, dirección y horario se administran desde Locales y Fiscal.</span></div></div>
+    </div>
+   </section>
 
-    <section className="panel organization-section">
-     <header>
-      <span><Icon name="settings" size={18}/></span>
-      <div><small>CONFIGURACIÓN GENERAL</small><h2>Preferencias del tenant</h2><p>Valores base que se utilizan cuando no existe una configuración específica por local.</p></div>
-     </header>
-     <div className="organization-fields single">
-      <label>Zona horaria predeterminada<Input required readOnly={!canManage} value={value.timezone} onChange={event=>change("timezone",event.target.value)} placeholder="America/Lima"/><small>Formato IANA, por ejemplo America/Lima.</small></label>
-      <div className="organization-config-note"><Icon name="alert" size={15}/><div><b>Configuración por local</b><span>País, moneda, impuestos, dirección y horario se administran desde Locales y Fiscal.</span></div></div>
-     </div>
-    </section>
-
-    {canManage&&<footer className="organization-savebar">
-     <div><span className={dirty?"dirty":""}><i/>{dirty?"Cambios sin guardar":"Todo actualizado"}</span><small>{dirty?"Guarda para aplicar la nueva configuración.":"Los datos coinciden con la información almacenada."}</small></div>
-     <div><Button kind="ghost" icon="refresh" disabled={!dirty||save.isPending} onClick={()=>setDraft({})}>Cancelar</Button><Button type="submit" icon="check" disabled={!dirty||save.isPending}>{save.isPending?"Guardando…":"Guardar"}</Button></div>
-    </footer>}
-   </form>
-  </div>}
+   {canManage&&<footer className="organization-savebar">
+    <div><span className={dirty?"dirty":""}><i/>{dirty?"Cambios sin guardar":"Todo actualizado"}</span><small>{dirty?"Guarda para aplicar la nueva configuración.":"Los datos coinciden con la información almacenada."}</small></div>
+    <div><Button kind="ghost" icon="refresh" disabled={!dirty||save.isPending} onClick={()=>setDraft({})}>Cancelar</Button><Button type="submit" icon="check" disabled={!dirty||save.isPending}>{save.isPending?"Guardando…":"Guardar"}</Button></div>
+   </footer>}
+  </form>}
  </>;
 }
 
