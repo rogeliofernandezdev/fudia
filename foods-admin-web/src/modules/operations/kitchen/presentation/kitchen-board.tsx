@@ -157,7 +157,7 @@ export function KitchenBoard(){
               const elapsedText=formatElapsed(elapsed);
               const urgencyMeta=urgencyCopy(tone);
               const currentProgress=progress(ticket,now);
-              const subject=ticket.tableName||ticket.customerName||channelLabel(ticket.channel)||"Pedido";
+              const subject=ticket.tableName?.toUpperCase()||ticket.customerName||channelLabel(ticket.channel)||"Pedido";
               const next=ticket.status==="confirmado"?"preparando":ticket.status==="preparando"?"listo":null;
               return <article className={`kitchen-ticket ${tone}`} key={ticket.id}>
                 <div className="kitchen-ticket-head">
