@@ -122,12 +122,13 @@ se limitan a densidad y composición, nunca a reinterpretar el significado del c
   58 px mínimo, icono de 32 px, título de 15 px y cierre con
   `--control-height`. El producto y el rendimiento son los datos principales;
   «Producto preparado» usa el autocomplete asíncrono compartido basado en
-  `react-select/async`, con búsqueda remota por nombre/SKU, selección única,
-  `cacheOptions` y el mismo patrón visual `react-select-container` usado en los
-  demás formularios. Al abrir muestra como máximo 10 productos; con 1 o 2 caracteres
-  no consulta el backend y solicita completar al menos 3; desde 3 caracteres consulta
-  el API y devuelve como máximo 10 coincidencias. No se reemplaza por un `<select>`
-  nativo ni se descarga el catálogo completo.
+  `react-select/async`, con selección única, `cacheOptions` y el mismo patrón visual
+  `react-select-container` usado en los demás formularios. Las opciones muestran solo
+  el nombre del producto, sin SKU. Al abrir muestra como máximo 10 productos; con 1 o
+  2 caracteres no consulta el backend y solicita completar al menos 3; desde 3
+  caracteres consulta el API y reúne todas las coincidencias de la búsqueda, recorriendo
+  la paginación del endpoint cuando sea necesario. No se reemplaza por un `<select>`
+  nativo ni se descarga el catálogo completo antes de que el usuario busque.
   las notas son opcionales y no dominan visualmente el formulario. La composición
   de insumos vive en una sección propia con cabecera azul `primary-600` en
   escritorio, columnas Insumo, Cantidad, Merma y acción homologada de quitar.
