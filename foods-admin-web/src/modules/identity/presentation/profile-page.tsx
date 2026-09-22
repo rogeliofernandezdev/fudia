@@ -116,7 +116,7 @@ function ProfileForm({profile,platformAdmin,organizationName,locationName}:{prof
           <span className={isDirty?"dirty":""}><i/>{isDirty?"Cambios sin guardar":"Todo actualizado"}</span>
           <small>{isDirty?"Revisa tus cambios antes de continuar.":"Tu perfil está sincronizado con FUDIA."}</small>
         </div>
-        <Button type="submit" icon="check" disabled={save.isPending||!isDirty}>{save.isPending?"Guardando…":"Guardar cambios"}</Button>
+        <Button type="submit" icon="check" disabled={save.isPending||!isDirty}>{save.isPending?"Guardando…":"Guardar"}</Button>
       </footer>
     </form>
   </div>;
