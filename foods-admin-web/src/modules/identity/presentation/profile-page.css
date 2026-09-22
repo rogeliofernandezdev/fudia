@@ -30,7 +30,7 @@
 .profile-field{display:grid;gap:7px;color:#344054;font-size:9px;font-weight:750}
 .profile-field>span{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .profile-field>span small{color:var(--ink-400);font-size:7px;font-weight:650}
-.profile-field .ds-input{min-height:44px}
+.profile-field .ds-input[readonly]{color:var(--ink-600);background:#f5f7fa;cursor:default}
 .profile-readonly-field{min-height:44px;border:1px solid #e0e4eb;border-radius:10px;background:#f5f7fa;padding:0 12px;color:var(--ink-500);display:grid;grid-template-columns:18px 1fr 16px;gap:8px;align-items:center;font-size:10px}
 .profile-readonly-field span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .profile-security-note{min-height:38px;border:1px solid #e9e4ff;background:#f8f6ff;border-radius:9px;padding:8px 10px;color:#6156ad;display:flex;align-items:center;gap:7px;font-size:8px;font-weight:700}
