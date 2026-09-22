@@ -3,7 +3,7 @@ import "./profile-page.css";
 
 import {useForm} from "react-hook-form";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,Input,PageHeader} from "@/design-system";
+import {Button,Icon,Input,PageHeader} from "@/design-system";
 import {useFeedback,useSession} from "@/providers";
 import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
 import type {OrganizationSubscription} from "@/modules/platform";
@@ -97,31 +97,113 @@ function dateLabel(value:string|null,country?:string,timeZone?:string){
   if(!value)return "—";
   return formatRegionalDateTime(value,{country,timeZone},{dateStyle:"medium"});
 }
+function usagePercent(value:number,max:number|null){
+  if(max===null)return value>0?Math.min(20+value*4,72):6;
+  if(max<=0)return 0;
+  return Math.min(100,Math.max(4,Math.round(value/max*100)));
+}
 
 function SubscriptionPanel({subscription,loading,error,retry,country,timeZone}:{subscription:OrganizationSubscription|null;loading:boolean;error:string;retry:()=>void;country?:string;timeZone?:string}){
-  if(loading)return <section className="profile-subscription profile-card"><div className="profile-subscription-loading">Cargando suscripción…</div></section>;
+  if(loading)return <section className="profile-subscription profile-card"><div className="profile-subscription-loading"><span/><div><b>Cargando suscripción</b><small>Consultando plan, límites y facturación…</small></div></div></section>;
   if(error||!subscription)return <section className="profile-subscription profile-card"><div className="profile-state"><p>{error||"No hay una suscripción registrada para esta empresa."}</p><Button kind="secondary" onClick={retry}>Reintentar</Button></div></section>;
+
   const payment=subscription.payments[0];
   const legacy=subscription.plan.code==="legacy";
-  return <section className="profile-subscription profile-card">
-    <header><div><small>SUSCRIPCIÓN DE LA EMPRESA</small><h2>{subscription.plan.name}</h2><p>{subscription.plan.description}</p></div><span className={"subscription-status "+subscription.status}>{statusLabel[subscription.status]}</span></header>
-    <div className="subscription-overview">
-      <article><small>PRECIO</small><b>{legacy?"No registrado":subscription.currency+" "+Number(subscription.priceAmount).toFixed(2)}</b><span>{subscription.billingCycle==="annual"?"Facturación anual":"Facturación mensual"}</span></article>
-      <article><small>RENOVACIÓN</small><b>{dateLabel(subscription.renewsAt,country,timeZone)}</b><span>{subscription.autoRenew?"Renovación automática":"Renovación manual"}</span></article>
-      <article><small>PRUEBA GRATUITA</small><b>{subscription.plan.trialDays?subscription.plan.trialDays+" días":"No incluida"}</b><span>{subscription.trialEndsAt?"Hasta "+dateLabel(subscription.trialEndsAt,country,timeZone):"Sin periodo de prueba activo"}</span></article>
-      <article><small>CONDICIONES</small><b>{subscription.termsVersion??"Pendientes"}</b><span>{subscription.termsAcceptedAt?"Aceptadas "+dateLabel(subscription.termsAcceptedAt,country,timeZone):"Sin aceptación registrada"}</span></article>
+  const price=legacy?"Sin precio registrado":subscription.currency+" "+Number(subscription.priceAmount).toFixed(2);
+  const renewal=subscription.renewsAt?dateLabel(subscription.renewsAt,country,timeZone):"Sin fecha programada";
+  const trial=subscription.plan.trialDays?subscription.plan.trialDays+" días":"No incluida";
+  const terms=subscription.termsVersion??"Pendientes";
+  const limitLabel=(value:number,max:number|null)=>value+" / "+(max??"∞");
+
+  return <section className={"profile-subscription profile-card"+(legacy?" legacy":"")}>
+    <div className="subscription-hero">
+      <div className="subscription-plan-identity">
+        <span className="subscription-plan-icon"><Icon name="payment" size={22}/></span>
+        <div>
+          <small>SUSCRIPCIÓN DE LA EMPRESA</small>
+          <div className="subscription-title-row"><h2>{subscription.plan.name}</h2>{legacy&&<span className="legacy-tag">HISTÓRICO</span>}</div>
+          <p>{subscription.plan.description||"Plan comercial vigente para la empresa."}</p>
+        </div>
+      </div>
+      <div className="subscription-hero-side">
+        <span className={"subscription-status "+subscription.status}><i/>{statusLabel[subscription.status]}</span>
+        <div className="subscription-price">
+          <small>{subscription.billingCycle==="annual"?"FACTURACIÓN ANUAL":"FACTURACIÓN MENSUAL"}</small>
+          <b>{price}</b>
+          {!legacy&&<span>{subscription.autoRenew?"Renovación automática":"Renovación manual"}</span>}
+        </div>
+      </div>
     </div>
-    <div className="subscription-limits">
-      <div><span>Locales</span><b>{subscription.usage.locations+" / "+(subscription.plan.maxLocations??"∞")}</b></div>
-      <div><span>Usuarios</span><b>{subscription.usage.users+" / "+(subscription.plan.maxUsers??"∞")}</b></div>
-      <div><span>Módulos incluidos</span><b>{subscription.plan.moduleKeys.length}</b></div>
+
+    {legacy&&<div className="subscription-legacy-note">
+      <span><Icon name="alert" size={16}/></span>
+      <div><b>Plan anterior al catálogo comercial</b><small>La empresa conserva acceso mientras FUDIA migra precio, renovación y condiciones a un plan comercial.</small></div>
+    </div>}
+
+    <div className="subscription-metrics">
+      <article>
+        <span className="subscription-metric-icon"><Icon name="payment" size={17}/></span>
+        <div><small>PRECIO CONTRATADO</small><b>{price}</b><p>{subscription.billingCycle==="annual"?"Ciclo anual":"Ciclo mensual"}</p></div>
+      </article>
+      <article>
+        <span className="subscription-metric-icon"><Icon name="clock" size={17}/></span>
+        <div><small>PRÓXIMA RENOVACIÓN</small><b>{renewal}</b><p>{subscription.autoRenew?"Automática":"Manual"}</p></div>
+      </article>
+      <article>
+        <span className="subscription-metric-icon"><Icon name="power" size={17}/></span>
+        <div><small>PRUEBA GRATUITA</small><b>{trial}</b><p>{subscription.trialEndsAt?"Hasta "+dateLabel(subscription.trialEndsAt,country,timeZone):"Sin periodo activo"}</p></div>
+      </article>
+      <article>
+        <span className="subscription-metric-icon"><Icon name="receipt" size={17}/></span>
+        <div><small>CONDICIONES</small><b>{terms}</b><p>{subscription.termsAcceptedAt?"Aceptadas "+dateLabel(subscription.termsAcceptedAt,country,timeZone):"Aceptación pendiente"}</p></div>
+      </article>
     </div>
-    <section className="subscription-payment">
-      <div><small>ÚLTIMO PAGO</small><h3>{payment?payment.currency+" "+Number(payment.amount).toFixed(2):"Sin pagos registrados"}</h3></div>
-      {payment&&<div className="subscription-payment-meta"><span>{payment.status==="paid"?"Pagado":payment.status==="pending"?"Pendiente":payment.status==="failed"?"Fallido":"Reembolsado"}</span><b>{payment.provider}</b><small>{dateLabel(payment.paidAt??payment.createdAt,country,timeZone)}{payment.externalReference?" · "+payment.externalReference:""}</small></div>}
-    </section>
-    <footer><span>Los cambios de plan, estado y pagos los administra FUDIA desde Plataforma.</span></footer>
+
+    <div className="subscription-body">
+      <section className="subscription-usage-card">
+        <header><div><small>USO DEL PLAN</small><h3>Capacidad contratada</h3></div><span><Icon name="grid" size={16}/></span></header>
+        <div className="subscription-usage-list">
+          <UsageRow icon="store" label="Locales" value={subscription.usage.locations} max={subscription.plan.maxLocations}/>
+          <UsageRow icon="users" label="Usuarios" value={subscription.usage.users} max={subscription.plan.maxUsers}/>
+          <div className="subscription-usage-row modules">
+            <span className="usage-icon"><Icon name="grid" size={15}/></span>
+            <div className="usage-copy"><div><b>Módulos incluidos</b><strong>{subscription.plan.moduleKeys.length}</strong></div><small>{subscription.plan.moduleKeys.length?"Habilitados según el plan contratado":"Sin módulos comerciales registrados"}</small></div>
+          </div>
+        </div>
+      </section>
+
+      <section className="subscription-payment-card">
+        <header><div><small>FACTURACIÓN</small><h3>Último pago</h3></div><span className="payment-icon"><Icon name="receipt" size={16}/></span></header>
+        {payment?<div className="subscription-payment-detail">
+          <div className="payment-amount"><small>MONTO</small><b>{payment.currency+" "+Number(payment.amount).toFixed(2)}</b></div>
+          <span className={"payment-state "+payment.status}>{payment.status==="paid"?"Pagado":payment.status==="pending"?"Pendiente":payment.status==="failed"?"Fallido":"Reembolsado"}</span>
+          <dl>
+            <div><dt>Proveedor</dt><dd>{payment.provider}</dd></div>
+            <div><dt>Fecha</dt><dd>{dateLabel(payment.paidAt??payment.createdAt,country,timeZone)}</dd></div>
+            {payment.externalReference&&<div><dt>Referencia</dt><dd>{payment.externalReference}</dd></div>}
+          </dl>
+        </div>:<div className="subscription-payment-empty">
+          <span><Icon name="receipt" size={22}/></span>
+          <b>Sin pagos registrados</b>
+          <small>Los pagos de la suscripción aparecerán aquí cuando se registren desde Plataforma.</small>
+        </div>}
+      </section>
+    </div>
+
+    <footer className="subscription-footer-note"><Icon name="lock" size={13}/><span>Los cambios de plan, estado y pagos los administra FUDIA desde Plataforma.</span></footer>
   </section>;
+}
+
+function UsageRow({icon,label,value,max}:{icon:"store"|"users";label:string;value:number;max:number|null}){
+  const percent=usagePercent(value,max);
+  return <div className="subscription-usage-row">
+    <span className="usage-icon"><Icon name={icon} size={15}/></span>
+    <div className="usage-copy">
+      <div><b>{label}</b><strong>{value+" / "+(max??"∞")}</strong></div>
+      <div className="usage-track" aria-label={label+" utilizado"}><i style={{width:percent+"%"}}/></div>
+      <small>{max===null?"Sin límite definido":Math.max(0,max-value)+" disponibles"}</small>
+    </div>
+  </div>;
 }
 
 function ProfileSkeleton(){
