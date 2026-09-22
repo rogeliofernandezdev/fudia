@@ -412,7 +412,7 @@ test("cocina mantiene jerarquia KDS y semantica de color",()=>{
   assert.ok(css.includes('.kitchen-lane[data-status="confirmado"]>header{background:var(--kds-pending)}'),"Por preparar usa azul sólido del patrón");
   assert.ok(css.includes('.kitchen-lane[data-status="preparando"]>header{background:var(--kds-cooking)}'),"En preparación usa violeta sólido del patrón");
   assert.ok(css.includes('.kitchen-lane[data-status="listo"]>header{background:var(--kds-ready-dark)}'),"Listo usa verde sólido oscuro");
-  assert.ok(css.includes('.kitchen-lane>header h2{color:var(--surface)}'),"Los títulos de carril conservan contraste blanco");
+  assert.ok(css.includes('.kitchen-lane>header h2{overflow:hidden;margin:0;color:var(--surface)'),"Los títulos de carril conservan contraste blanco");
   assert.equal(css.includes("border-left:4px solid transparent"),false,"Los carriles no usan barra lateral de color");
   assert.equal(css.includes(".kitchen-lane::before"),false,"Los carriles no usan franja superior de color");
   assert.ok(kitchen.includes("ticket.tableName?.toUpperCase()"),"Los nombres de mesa se muestran en mayúsculas");
