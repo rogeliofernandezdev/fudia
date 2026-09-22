@@ -103,3 +103,22 @@ func TestReservationsPersistCapacityAndSchedule(t *testing.T){
 	listRec:=httptest.NewRecorder();api.listReservations(listRec,listReq)
 	if listRec.Code!=200||!strings.Contains(listRec.Body.String(),item.ID){t.Fatalf("confirmed reservation not listed: %d %s",listRec.Code,listRec.Body.String())}
 }
+
+func TestDefaultRolesOnlyExposeUsableMVPMenus(t *testing.T){
+	required:=map[string]string{
+		"dashboard":"dashboard.read","pos":"cash.read","pedidos":"orders.read","cocina":"orders.read",
+		"mesas":"tables.read","caja":"cash.read","reservas":"reservations.read","productos":"menu.read",
+		"disponibilidad":"menu.read","combos":"menu.read","recetas":"menu.read","inventario":"inventory.read",
+		"kardex":"inventory.read","compras":"purchases.read","clientes":"customers.read","locales":"organizations.read",
+		"fiscal":"organizations.read","usuarios":"users.read",
+	}
+	contains:=func(values []string,want string)bool{for _,value:=range values{if value==want||value=="*"{return true}};return false}
+	for _,role:=range defaultOrganizationRoles{
+		for _,menu:=range role.MenuAccess{
+			if menu=="*"{continue}
+			permission,ok:=required[menu]
+			if !ok{t.Fatalf("default role %s exposes non-MVP or unmapped menu %s",role.Name,menu)}
+			if !contains(role.Permissions,permission){t.Fatalf("default role %s exposes %s without %s",role.Name,menu,permission)}
+		}
+	}
+}
