@@ -118,7 +118,7 @@ func TestSalonKitchenPaymentDeliveryWorkflow(t *testing.T) {
 		t.Fatalf("unpaid salon delivery must be blocked: %d %s",unpaidDeliverRec.Code,unpaidDeliverRec.Body.String())
 	}
 
-	payReq:=httptest.NewRequest("POST","/v1/admin/payments",bytes.NewReader([]byte(fmt.Sprintf(`{"orderId":%q,"method":"card","amount":20,"reference":"SALDO"}`,created.ID))))
+	payReq:=httptest.NewRequest("POST","/v1/admin/payments",bytes.NewReader([]byte(fmt.Sprintf(`{"orderId":%q,"method":"card","amount":25,"reference":"SALDO"}`,created.ID))))
 	payReq=payReq.WithContext(context.WithValue(payReq.Context(),scopeKey{},s))
 	payRec:=httptest.NewRecorder()
 	api.createPayment(payRec,payReq)
