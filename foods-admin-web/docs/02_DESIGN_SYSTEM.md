@@ -415,3 +415,13 @@ El Administrador de empresa con permiso `subscription.read` ve en Mi perfil
 un resumen de solo lectura con plan, estado, precio/ciclo, renovación, prueba,
 condiciones, uso frente a límites, módulos incluidos y último pago. Cambiar
 plan, estado o registrar cobros sigue siendo una acción exclusiva de Plataforma.
+
+
+### Nombres de navegación
+
+- Los nombres de navegación evitan repetir el nombre del grupo. Dentro de
+  `CARTA Y PRODUCCIÓN`, el módulo se llama `Recetas`, no
+  `Recetas y producción`.
+- Una opción debe nombrar las entidades que realmente administra. La pantalla
+  de acceso usa `Usuarios y roles`: los permisos son atributos configurados
+  dentro de cada rol y no necesitan repetirse en el nombre del módulo.
