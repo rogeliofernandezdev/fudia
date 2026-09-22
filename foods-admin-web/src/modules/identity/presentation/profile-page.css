@@ -128,7 +128,7 @@
 
 .profile-plans{margin-top:18px;border-color:#cfd8ec;box-shadow:0 14px 34px #10182810;background:#fff;position:relative}
 .profile-plans::before{content:"";position:absolute;inset:0 0 auto;height:3px;background:var(--ops-500);z-index:2}
-.profile-plans-hero{padding:18px 20px;border-bottom:1px solid #dfe5f0;background:var(--ops-100);display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,360px);align-items:center;gap:24px}
+.profile-plans-hero{padding:18px 20px;border-bottom:1px solid #dfe5f0;background:#fff;display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,360px);align-items:center;gap:24px}
 .profile-plans-title{display:flex;align-items:flex-start;gap:13px;min-width:0}
 .profile-plans-icon{width:44px;height:44px;border-radius:12px;color:#fff;background:var(--ops-500);border:1px solid var(--ops-700);box-shadow:0 8px 18px #4654cd20;display:grid;place-items:center;flex:0 0 auto}
 .profile-plans-title>div{display:grid;gap:2px}
