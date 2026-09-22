@@ -184,14 +184,17 @@ function ProfilePlansPanel({profile,plans,loading,error,retry}:{profile:MyProfil
           </div>
 
           <div className="profile-plan-facts">
-            <div><span>Locales</span><b>{plan.maxLocations??"∞"}</b></div>
-            <div><span>Usuarios</span><b>{plan.maxUsers??"∞"}</b></div>
-            <div><span>Prueba</span><b>{plan.trialDays?plan.trialDays+" días":"No"}</b></div>
+            <div><small>LOCALES</small><b>{plan.maxLocations??"∞"}</b><span>{plan.maxLocations===1?"local incluido":"locales incluidos"}</span></div>
+            <div><small>USUARIOS</small><b>{plan.maxUsers??"∞"}</b><span>{plan.maxUsers===1?"usuario incluido":"usuarios incluidos"}</span></div>
+            <div><small>PRUEBA</small><b>{plan.trialDays?plan.trialDays+" días":"No"}</b><span>{plan.trialDays?"sin costo":"no incluida"}</span></div>
           </div>
 
           <div className="profile-plan-modules">
-            <span><Icon name="grid" size={13}/>{plan.moduleKeys.length} módulos incluidos</span>
-            <div>{plan.moduleKeys.slice(0,6).map(key=><small key={key}><Icon name="check" size={9}/>{planModuleLabel(key)}</small>)}</div>
+            <div className="profile-plan-modules-head">
+              <span><Icon name="grid" size={13}/>Módulos incluidos</span>
+              <b>{plan.moduleKeys.length}</b>
+            </div>
+            <div className="profile-plan-module-list">{plan.moduleKeys.slice(0,6).map(key=><small key={key}><Icon name="check" size={9}/>{planModuleLabel(key)}</small>)}</div>
             {plan.moduleKeys.length>6&&<em>+{plan.moduleKeys.length-6} módulos adicionales</em>}
           </div>
 
