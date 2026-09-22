@@ -13,6 +13,10 @@
 .recipe-main-fields>label>span:first-child{align-items:center;gap:6px;display:flex}
 .recipe-main-fields>label>span>small{color:var(--ink-400);font-size:8px;font-weight:600}
 .recipe-product-field{grid-column:1}
+.recipe-product-autocomplete{min-width:0}
+.recipe-product-autocomplete .rs__control{height:var(--control-height);min-height:var(--control-height);border-radius:6px}
+.recipe-product-autocomplete.invalid .rs__control{border-color:var(--danger-600)!important}
+.recipe-product-autocomplete .rs__control--is-disabled{background:var(--cloud-50)}
 .recipe-yield-field{grid-column:2}
 .recipe-notes-field{grid-column:1/-1}
 .recipe-notes-field .ds-textarea{min-height:64px}
