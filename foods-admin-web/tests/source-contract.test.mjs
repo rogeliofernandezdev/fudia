@@ -399,6 +399,21 @@ test("combos conserva la misma tabla en movil y el shell no desborda",()=>{
   assert.ok(nav.includes(".admin-shell[data-sidebar=collapsed] .sidebar{width:min(320px,86vw)"));
 });
 
+test("cocina mantiene jerarquia KDS y semantica de color",()=>{
+  const kitchen=read("src/modules/operations/kitchen/presentation/kitchen-board.tsx");
+  const css=read("src/modules/operations/kitchen/presentation/kitchen.css");
+  assert.ok(kitchen.includes("function formatElapsed"),"Cocina formatea tiempos largos en unidades legibles");
+  for(const label of ["A tiempo","Por vencer","Con demora","Listo"])assert.ok(kitchen.includes(label),label);
+  assert.ok(kitchen.includes('kind="primary"'),"Las transiciones de cocina usan acción primaria azul");
+  assert.equal(kitchen.includes('kind={next==="listo"?"success":"primary"}'),false,"Verde queda reservado al estado listo");
+  assert.ok(kitchen.includes("kitchen-skeleton-head"),"El skeleton reproduce la tarjeta de comanda");
+  assert.ok(kitchen.includes("kitchen-skeleton-items"),"El skeleton conserva líneas de productos");
+  assert.ok(css.includes('.kitchen-lane{position:relative;min-width:0;border:1px solid var(--line);border-radius:14px;background:var(--cloud-50)'),"Cada carril es un panel operativo neutro");
+  assert.ok(css.includes("background:var(--cloud-100)"),"El progreso usa tokens del sistema");
+  assert.equal(css.includes("#"),false,"Cocina no introduce colores hexadecimales directos");
+  assert.equal(css.includes("rgba("),false,"Cocina no introduce colores rgba directos");
+});
+
 test("el root layout carga solo la base global",()=>{
   const c=read("src/app/layout.tsx");
   const cssImports=[...c.matchAll(/import ["']([^"']+\.css)["']/g)].map(m=>m[1]);
