@@ -12,21 +12,25 @@ import {profileResolver} from "../domain/profile-schema";
 import {getMyProfile,getOrganizationSubscription,saveMyProfile} from "../infrastructure/identity-api";
 
 export function ProfilePage(){
-  const{can,location}=useSession();
+  const{can,user,organization,location}=useSession();
   const profile=useQuery({queryKey:["my-profile"],queryFn:getMyProfile});
   const canViewSubscription=can("subscription.read");
   const subscription=useQuery({queryKey:["organization-subscription"],queryFn:getOrganizationSubscription,enabled:canViewSubscription});
   if(profile.isLoading)return <><ProfileHeader/><ProfileSkeleton/></>;
   if(profile.isError)return <><ProfileHeader/><section className="profile-state"><p>{profile.error.message}</p><Button kind="secondary" onClick={()=>profile.refetch()}>Reintentar</Button></section></>;
   if(!profile.data)return <><ProfileHeader/><section className="profile-state"><p>No pudimos cargar tu perfil.</p></section></>;
-  return <><ProfileHeader/><ProfileForm profile={profile.data}/>{canViewSubscription&&<SubscriptionPanel subscription={subscription.data??null} loading={subscription.isLoading} error={subscription.isError?subscription.error.message:""} retry={()=>subscription.refetch()} country={location?.country} timeZone={location?.timezone}/>}</>;
+  return <><ProfileHeader/><ProfileForm profile={profile.data} platformAdmin={Boolean(user?.platformAdmin)} organizationName={organization?.name} locationName={location?.name}/>{canViewSubscription&&<SubscriptionPanel subscription={subscription.data??null} loading={subscription.isLoading} error={subscription.isError?subscription.error.message:""} retry={()=>subscription.refetch()} country={location?.country} timeZone={location?.timezone}/>}</>;
 }
 
 function ProfileHeader(){
   return <PageHeader eyebrow="CUENTA" title="Mi perfil y seguridad" description="Actualiza tus datos personales y consulta la suscripción vigente de tu empresa."/>;
 }
 
-function ProfileForm({profile}:{profile:MyProfile}){
+function initials(value:string){
+  return value.split(/\s+/).filter(Boolean).slice(0,2).map(part=>part[0]?.toUpperCase()??"").join("")||"FU";
+}
+
+function ProfileForm({profile,platformAdmin,organizationName,locationName}:{profile:MyProfile;platformAdmin:boolean;organizationName?:string;locationName?:string}){
   const qc=useQueryClient();
   const{notify}=useFeedback();
   const{
@@ -51,44 +55,70 @@ function ProfileForm({profile}:{profile:MyProfile}){
   });
 
   return <div className="profile-shell">
-    <section className="profile-card">
-      <form className="profile-form" onSubmit={handleSubmit(draft=>save.mutate(draft))} noValidate>
-        <section className="profile-section">
-          <div className="profile-section-title"><h2>Datos personales</h2></div>
-          <div className="profile-grid">
-            <label className="profile-field">
-              <span>Nombre completo</span>
-              <Input autoFocus maxLength={180} {...register("fullName")} aria-invalid={Boolean(errors.fullName)}/>
-              {errors.fullName?.message&&<small className="wizard-field-error">{errors.fullName.message}</small>}
-            </label>
-            <label className="profile-field">
-              <span>Correo electrónico <small>No editable</small></span>
-              <Input readOnly value={profile.email}/>
-            </label>
-          </div>
-        </section>
-
-        <section className="profile-section">
-          <div className="profile-section-title"><h2>Contraseña</h2></div>
-          <div className="profile-grid">
-            <label className="profile-field">
-              <span>Contraseña actual</span>
-              <Input type="password" autoComplete="current-password" {...register("currentPassword")} aria-invalid={Boolean(errors.currentPassword)} placeholder="Ingresa tu contraseña actual"/>
-              {errors.currentPassword?.message&&<small className="wizard-field-error">{errors.currentPassword.message}</small>}
-            </label>
-            <label className="profile-field">
-              <span>Nueva contraseña <small>Mínimo 8 caracteres</small></span>
-              <Input type="password" autoComplete="new-password" {...register("newPassword")} aria-invalid={Boolean(errors.newPassword)} placeholder="Déjala vacía para conservarla"/>
-              {errors.newPassword?.message&&<small className="wizard-field-error">{errors.newPassword.message}</small>}
-            </label>
-          </div>
-        </section>
-
-        <footer className="profile-actions">
-          <Button type="submit" icon="check" disabled={save.isPending||!isDirty}>{save.isPending?"Guardando…":"Guardar"}</Button>
-        </footer>
-      </form>
+    <section className="profile-card profile-account">
+      <div className="profile-account-main">
+        <span className="profile-avatar">{initials(profile.fullName)}</span>
+        <div className="profile-account-copy">
+          <small>CUENTA PERSONAL</small>
+          <h2>{profile.fullName}</h2>
+          <p><Icon name="mail" size={13}/>{profile.email}</p>
+        </div>
+      </div>
+      <div className="profile-account-meta">
+        <span className="profile-account-status"><i/>Cuenta activa</span>
+        <div><small>ROL</small><b>{platformAdmin?"Administrador de plataforma":"Administrador de empresa"}</b></div>
+        {organizationName&&<div><small>EMPRESA</small><b>{organizationName}</b></div>}
+        {locationName&&<div><small>LOCAL ACTIVO</small><b>{locationName}</b></div>}
+      </div>
     </section>
+
+    <form className="profile-settings-grid" onSubmit={handleSubmit(draft=>save.mutate(draft))} noValidate>
+      <section className="profile-card profile-settings-card">
+        <header>
+          <span><Icon name="users" size={18}/></span>
+          <div><small>IDENTIDAD</small><h2>Datos personales</h2><p>Información visible dentro de FUDIA.</p></div>
+        </header>
+        <div className="profile-settings-fields">
+          <label className="profile-field">
+            <span>Nombre completo</span>
+            <Input maxLength={180} {...register("fullName")} aria-invalid={Boolean(errors.fullName)}/>
+            {errors.fullName?.message&&<small className="wizard-field-error">{errors.fullName.message}</small>}
+          </label>
+          <label className="profile-field">
+            <span>Correo electrónico <small>Solo lectura</small></span>
+            <div className="profile-readonly-field"><Icon name="mail" size={15}/><span>{profile.email}</span><Icon name="lock" size={13}/></div>
+          </label>
+        </div>
+      </section>
+
+      <section className="profile-card profile-settings-card security">
+        <header>
+          <span><Icon name="lock" size={18}/></span>
+          <div><small>SEGURIDAD</small><h2>Cambiar contraseña</h2><p>Usa una contraseña única para proteger tu cuenta.</p></div>
+        </header>
+        <div className="profile-settings-fields">
+          <label className="profile-field">
+            <span>Contraseña actual</span>
+            <Input type="password" autoComplete="current-password" {...register("currentPassword")} aria-invalid={Boolean(errors.currentPassword)} placeholder="Ingresa tu contraseña actual"/>
+            {errors.currentPassword?.message&&<small className="wizard-field-error">{errors.currentPassword.message}</small>}
+          </label>
+          <label className="profile-field">
+            <span>Nueva contraseña <small>Mínimo 8 caracteres</small></span>
+            <Input type="password" autoComplete="new-password" {...register("newPassword")} aria-invalid={Boolean(errors.newPassword)} placeholder="Déjala vacía para conservarla"/>
+            {errors.newPassword?.message&&<small className="wizard-field-error">{errors.newPassword.message}</small>}
+          </label>
+          <div className="profile-security-note"><Icon name="alert" size={14}/><span>Si cambias la contraseña, la actual es obligatoria.</span></div>
+        </div>
+      </section>
+
+      <footer className="profile-savebar">
+        <div>
+          <span className={isDirty?"dirty":""}><i/>{isDirty?"Cambios sin guardar":"Todo actualizado"}</span>
+          <small>{isDirty?"Revisa tus cambios antes de continuar.":"Tu perfil está sincronizado con FUDIA."}</small>
+        </div>
+        <Button type="submit" icon="check" disabled={save.isPending||!isDirty}>{save.isPending?"Guardando…":"Guardar cambios"}</Button>
+      </footer>
+    </form>
   </div>;
 }
 
