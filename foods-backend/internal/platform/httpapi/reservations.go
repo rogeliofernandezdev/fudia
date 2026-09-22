@@ -140,7 +140,7 @@ func (a *API) createReservation(w http.ResponseWriter,r *http.Request){
 	in.StartsAt=startsAt.UTC().Format(time.RFC3339)
 	if problem:=a.validateReservationReferences(r,s,in,"");problem!=nil{fail(w,400,problem.Code,problem.Message);return}
 	item,err:=scanReservation(a.db.QueryRow(r.Context(),`
-		INSERT INTO reservations(organization_id,location_id,customer_id,customer_name,customer_phone,starts_at,guests,table_id,notes,created_by)
+		INSERT INTO reservations AS r(organization_id,location_id,customer_id,customer_name,customer_phone,starts_at,guests,table_id,notes,created_by)
 		VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
 		RETURNING `+reservationColumns()+`
 	`,s.OrganizationID,s.LocationID,in.CustomerID,in.CustomerName,in.CustomerPhone,startsAt,in.Guests,in.TableID,in.Notes,s.UserID))
