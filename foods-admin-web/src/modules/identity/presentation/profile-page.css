@@ -103,11 +103,6 @@
 .profile-skeleton-settings>footer i{width:142px;height:var(--control-height)}
 
 @media(width<=980px){
- .profile-primary-grid{grid-template-columns:1fr}
- .profile-identity-card{display:grid;grid-template-columns:220px 1fr}
- .profile-identity-cover{height:auto;min-height:160px;align-items:flex-start}
- .profile-identity-body{padding:18px}
- .profile-identity-avatar-row{margin-top:0}
  .profile-skeleton-identity{display:grid;grid-template-columns:220px 1fr}
  .profile-skeleton-identity>header{height:auto;min-height:160px}
  .profile-skeleton-identity>div>i{margin-top:0}
@@ -117,10 +112,6 @@
  .profile-skeleton-settings>div>section{grid-template-columns:1fr}
 }
 @media(width<=620px){
- .profile-identity-card{display:block}
- .profile-identity-cover{height:58px;min-height:0}
- .profile-identity-body{padding:0 15px 15px}
- .profile-identity-avatar-row{margin-top:-28px}
  .profile-settings-header,.profile-settings-section{padding-inline:14px}
  .profile-savebar{align-items:stretch;flex-direction:column}
  .profile-savebar .button{width:100%}
