@@ -23,7 +23,11 @@ func TestPlatformOnboardingCreatesOperationalTenant(t *testing.T){
 	planModules:=make([]string,0,len(mvpModuleKeys))
 	for key:=range mvpModuleKeys{planModules=append(planModules,key)}
 	var planID string
-	if err:=pool.QueryRow(context.Background(),`\n\t\tINSERT INTO subscription_plans(code,name,description,currency,monthly_price,annual_price,trial_days,max_locations,max_users,module_keys,terms_version,active)\n\t\tVALUES($1,'MVP Test','Plan de prueba','PEN',99,990,14,3,20,$2,'test-v1',true)\n\t\tRETURNING id\n\t`,fmt.Sprintf("mvp-%d",nonce),planModules).Scan(&planID);err!=nil{t.Fatal(err)}
+	if err:=pool.QueryRow(context.Background(),`
+		INSERT INTO subscription_plans(code,name,description,currency,monthly_price,annual_price,trial_days,max_locations,max_users,module_keys,terms_version,active)
+		VALUES($1,'MVP Test','Plan de prueba','PEN',99,990,14,3,20,$2,'test-v1',true)
+		RETURNING id
+	`,fmt.Sprintf("mvp-%d",nonce),planModules).Scan(&planID);err!=nil{t.Fatal(err)}
 	body:=[]byte(fmt.Sprintf(`{
 		"legalName":"MVP Restaurant SAC",
 		"tradeName":"MVP Restaurant",
