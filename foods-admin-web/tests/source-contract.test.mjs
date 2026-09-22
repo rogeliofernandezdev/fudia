@@ -474,6 +474,20 @@ test("mvp admin no presenta datos simulados como operacion real",()=>{
   assert.equal(configuration.includes("Facturación electrónica"),false,"Facturacion futura no se ofrece en el hub MVP");
 });
 
+test("platform admin ve todo el catalogo y modulos no listos no se activan desde UI",()=>{
+  const shell=read("src/shell/admin-shell.tsx");
+  const view=read("src/modules/modules/presentation/modules-view.tsx");
+  const types=read("src/modules/modules/domain/types.ts");
+
+  assert.ok(shell.includes("const isPlatformAdmin=Boolean(user?.platformAdmin)"),"El shell identifica explícitamente al admin de plataforma");
+  assert.ok(shell.includes("isPlatformAdmin?true"),"El admin de plataforma no filtra módulos del sidebar");
+  assert.ok(shell.includes("const blockReason=isPlatformAdmin?null"),"El admin de plataforma puede entrar a rutas aunque el módulo esté inactivo");
+  assert.ok(types.includes("ModuleAvailability = \"ready\" | \"development\" | \"planned\""),"El frontend modela disponibilidad separada de activación");
+  for(const label of ["Disponible","En desarrollo","Planificado"])assert.ok(view.includes(label),label);
+  assert.ok(view.includes("const activable=m.availability===\"ready\""),"Solo módulos listos son activables");
+  assert.ok(view.includes("disabled={!activable||toggle.isPending}"),"El toggle se bloquea para módulos no disponibles");
+  assert.ok(view.includes("Solo los módulos disponibles pueden habilitarse para una empresa."),"La UI explica la regla de activación");
+});
 test("pantallas completas usan loader FUDIA y cargas internas conservan skeleton",()=>{
   const routeLoading=read("src/app/loading.tsx");
   const loader=read("src/design-system/full-screen-loader.tsx");
