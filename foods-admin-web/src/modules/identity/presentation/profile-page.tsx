@@ -13,7 +13,7 @@ import {getMyProfile,getOrganizationSubscription,saveMyProfile} from "../infrast
 export function ProfilePage(){
   const{can}=useSession();
   const profile=useQuery({queryKey:["my-profile"],queryFn:getMyProfile});
-  const canViewSubscription=can("organizations.read");
+  const canViewSubscription=can("subscription.read");
   const subscription=useQuery({queryKey:["organization-subscription"],queryFn:getOrganizationSubscription,enabled:canViewSubscription});
   if(profile.isLoading)return <><ProfileHeader/><ProfileSkeleton/></>;
   if(profile.isError)return <><ProfileHeader/><section className="profile-state"><p>{profile.error.message}</p><Button kind="secondary" onClick={()=>profile.refetch()}>Reintentar</Button></section></>;
