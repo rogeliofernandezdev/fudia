@@ -29,16 +29,15 @@ export function KardexPage(){
  const products=useQuery({queryKey:["inventory-products","kardex"],queryFn:()=>listInventoryProducts()});
  const movements=useQuery({queryKey:["inventory-movements",inventoryItemId,movementType,sourceType,from,to,page,size],queryFn:()=>listStockMovements({inventoryItemId,movementType,sourceType,from,to,page,pageSize:size})});
  const items=movements.data?.items??[];
- const selectedItem=products.data?.items.find(item=>item.id===inventoryItemId);
  const activeFilters=[inventoryItemId,movementType,sourceType,from,to].filter(Boolean).length;
  const resetFilters=()=>{setInventoryItemId("");setMovementType("");setSourceType("");setFrom("");setTo("");setPage(1)};
  return <>
   <PageHeader eyebrow="ABASTECIMIENTO" title="Kárdex" description="Trazabilidad física y valorizada de cada movimiento de inventario del local."/>
-  <section className="panel kardex-filter-card">
-   <header>
-    <div className="kardex-filter-title"><span><Icon name="filter" size={17}/></span><div><small>CONSULTA</small><h2>Filtros de movimientos</h2><p>Acota el historial por artículo, operación, origen o periodo.</p></div></div>
+  <section className="panel standardized-management inventory-panel kardex-workspace">
+   <div className="kardex-toolbar-head">
+    <div><small>FILTROS</small><h2>Movimientos de inventario</h2><p>Filtra por artículo, tipo de movimiento, origen o periodo.</p></div>
     {activeFilters>0&&<Button kind="ghost" icon="refresh" onClick={resetFilters}>Limpiar filtros</Button>}
-   </header>
+   </div>
    <div className="kardex-filter-grid">
     <label><span>Artículo</span><Select value={inventoryItemId} onChange={e=>{setInventoryItemId(e.target.value);setPage(1)}} disabled={products.isLoading} aria-label="Filtrar Kárdex por artículo"><option value="">Todos los artículos</option>{products.data?.items.map(item=><option value={item.id} key={item.id}>{item.name}{item.kind==="ingredient"?" · Insumo":""}</option>)}</Select></label>
     <label><span>Tipo de movimiento</span><Select value={movementType} onChange={e=>{setMovementType(e.target.value);setPage(1)}} aria-label="Tipo de movimiento"><option value="">Todos los movimientos</option>{Object.entries(movementLabels).map(([v,l])=><option key={v} value={v}>{l}</option>)}</Select></label>
@@ -46,18 +45,8 @@ export function KardexPage(){
     <label><span>Desde</span><Input type="date" value={from} onChange={e=>{setFrom(e.target.value);setPage(1)}} aria-label="Desde"/></label>
     <label><span>Hasta</span><Input type="date" value={to} onChange={e=>{setTo(e.target.value);setPage(1)}} aria-label="Hasta"/></label>
    </div>
-   <footer><Icon name="receipt" size={14}/><span>Cada movimiento conserva cantidad, costo, valor, saldo resultante y usuario responsable.</span></footer>
-  </section>
+   <div className="kardex-helper"><Icon name="receipt" size={14}/><span>Cada movimiento conserva cantidad, costo, valor, saldo resultante y usuario responsable.</span></div>
 
-  <section className="panel standardized-management inventory-panel kardex-results">
-   <header className="kardex-results-header">
-    <div><small>TRAZABILIDAD</small><h2>Movimientos registrados</h2></div>
-    <div className="kardex-result-meta">
-     {selectedItem&&<span><Icon name="box" size={13}/>{selectedItem.name}</span>}
-     {activeFilters>0&&<span><Icon name="filter" size={13}/>{activeFilters} {activeFilters===1?"filtro activo":"filtros activos"}</span>}
-     <b>{movements.data?.total??0} movimientos</b>
-    </div>
-   </header>
    {movements.isLoading?<KardexSkeleton/>:movements.isError?
     <div className="inventory-state"><Icon name="alert" size={24}/><b>No pudimos cargar el Kárdex</b><p>{movements.error.message}</p><Button kind="secondary" icon="refresh" onClick={()=>movements.refetch()}>Reintentar</Button></div>
    :!items.length?<div className="inventory-state kardex-empty"><span><Icon name="receipt" size={25}/></span><b>Sin movimientos</b><p>{activeFilters?"No encontramos movimientos que coincidan con los filtros seleccionados.":"Aún no hay movimientos registrados en este local."}</p>{activeFilters>0&&<Button kind="secondary" icon="refresh" onClick={resetFilters}>Ver todos los movimientos</Button>}</div>
