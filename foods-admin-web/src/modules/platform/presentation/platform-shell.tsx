@@ -19,6 +19,7 @@ export function PlatformShell({children}:{children:React.ReactNode}){
       <nav className="platform-nav" aria-label="Administración de plataforma">
         <Link className={path==="/platform/onboarding"?"active":""} href="/platform/onboarding"><Icon name="plus" size={15}/>Registrar empresa</Link>
         <Link className={path==="/platform/plans"?"active":""} href="/platform/plans"><Icon name="settings" size={15}/>Planes SaaS</Link>
+        <Link className={path==="/platform/subscription"?"active":""} href="/platform/subscription"><Icon name="receipt" size={15}/>Suscripción actual</Link>
       </nav>
       <span className="platform-badge"><Icon name="power" size={14}/>PLATAFORMA</span>
       <Link href="/dashboard" className="platform-exit"><Icon name="chevronLeft" size={16}/>Volver al admin</Link>
