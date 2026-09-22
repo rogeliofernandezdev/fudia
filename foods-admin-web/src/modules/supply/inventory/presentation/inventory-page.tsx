@@ -6,6 +6,7 @@ import {Button,Icon,Input,PageHeader,Pagination,RemoteModalSkeleton,RowActionBut
 import {useFeedback} from "@/providers";
 import {useSession} from "@/providers/session-context";
 import {formatRegionalNumber} from "@/shared/i18n/regional-format";
+import {useDebouncedValue} from "@/shared/hooks/use-debounced-value";
 import {InventoryAdjustmentDialog} from "./inventory-adjustment-dialog";
 import {InventorySettingsDialog} from "./inventory-settings-dialog";
 import {InventoryTransferDialog} from "./inventory-transfer-dialog";
