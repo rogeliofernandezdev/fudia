@@ -1,4 +1,5 @@
 import {apiFetch} from "@/shared/api/client";
+import type {OrganizationSubscription} from "@/modules/platform";
 import type {Location,MyProfile,MyProfileDraft,PermissionGroup,Role,RoleDraft,User,UserDraft} from "../domain/types";
 
 export function listUsers(q:string,page:number,pageSize:number){
@@ -49,4 +50,8 @@ export function saveMyProfile(draft:MyProfileDraft){
     method:"PATCH",
     body:JSON.stringify(draft),
   });
+}
+
+export function getOrganizationSubscription(){
+  return apiFetch<OrganizationSubscription>("subscription");
 }
