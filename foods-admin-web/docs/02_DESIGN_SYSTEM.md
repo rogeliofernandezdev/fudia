@@ -27,7 +27,8 @@ densidad para tablas, formularios y análisis.
 | ink-600 | #475467 | texto secundario |
 | cloud-50 | #F7F8FC | fondo |
 | surface | #FFFFFF | paneles |
-| warning | #B54708 | alertas |
+| warning | #B54708 | alertas y texto/borde de acciones de advertencia |
+| warning-50 | #FFF3E8 | fondo suave y hover de acciones de advertencia |
 | danger | #C9362B | errores y acciones destructivas |
 
 Usar superficies mayormente neutras, azul para navegación y acciones, verde para
@@ -99,9 +100,10 @@ se limitan a densidad y composición, nunca a reinterpretar el significado del c
   filas operativas continuas en escritorio, sin bordes de tarjeta repetidos, y tarjetas apiladas únicamente en
   móvil, con una acción manual Disponible/Agotado y guardado explícito del cupo. El botón de actualización de cupo permanece visible para hacer descubrible la función, pero
   solo se habilita después de modificar la cantidad. En filas densas, las acciones usan
-  etiquetas visibles breves («Actualizar», «Agotar», «Disponible») y conservan un
-  `aria-label` descriptivo completo. La acción de agotado usa ámbar de advertencia,
-  no rojo destructivo. «Pocas
+  etiquetas visibles breves y específicas («Guardar cupo», «Agotar hoy», «Reactivar») y conservan un
+  `aria-label` descriptivo completo. «Agotar hoy» usa `warning` para texto y borde y
+  `warning-50` únicamente como fondo suave en hover; nunca usa rojo destructivo ni
+  invierte a un relleno ámbar sólido. «Pocas
   unidades» es siempre un estado calculado por las unidades restantes, nunca
   una acción manual. La vista se
   pagina desde el API, permite buscar y filtrar por categoría, diferencia cupo,
