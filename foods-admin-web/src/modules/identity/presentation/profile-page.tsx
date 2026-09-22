@@ -156,8 +156,8 @@ function ProfilePlansPanel({profile,plans,loading,error,retry}:{profile:MyProfil
         <span className="profile-plans-icon"><Icon name="grid" size={18}/></span>
         <div>
           <small>PLANES FUDIA</small>
-          <h2>Capacidad para cada etapa de tu operación</h2>
-          <p>Compara precio, límites y módulos incluidos sin salir de tu perfil.</p>
+          <h2>Tu plan y opciones disponibles</h2>
+          <p>Compara capacidad, precio y módulos incluidos en cada plan.</p>
         </div>
       </div>
       <div className="profile-current-plan">
