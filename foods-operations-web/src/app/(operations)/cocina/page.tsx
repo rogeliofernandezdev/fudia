@@ -31,9 +31,9 @@ const initialTickets: Ticket[] = [
 
 const channelIcon = { Mesa: "tables", Delivery: "bike", Mostrador: "store", Recojo: "store" } as const;
 
-const columns: { id: TicketState; label: string; mobileLabel: string; icon: "clock" | "kitchen" | "check"; tone: "operational" | "primary" | "neutral" }[] = [
+const columns: { id: TicketState; label: string; mobileLabel: string; icon: "clock" | "cookingPot" | "check"; tone: "operational" | "primary" | "neutral" }[] = [
   { id: "pending", label: "Por preparar", mobileLabel: "Pendientes", icon: "clock", tone: "operational" },
-  { id: "cooking", label: "En preparación", mobileLabel: "Preparando", icon: "kitchen", tone: "primary" },
+  { id: "cooking", label: "En preparación", mobileLabel: "Preparando", icon: "cookingPot", tone: "primary" },
   { id: "ready", label: "Listos para entregar", mobileLabel: "Listos", icon: "check", tone: "neutral" },
 ];
 
@@ -85,7 +85,7 @@ export default function KitchenPage() {
 
     <section className="kds-overview" aria-label="Resumen de comandas">
       <div><span className="pending"><Icon name="clock" size={18}/></span><p><small>POR PREPARAR</small><strong>{pendingCount}</strong></p></div>
-      <div><span className="cooking"><Icon name="kitchen" size={18}/></span><p><small>EN PREPARACIÓN</small><strong>{cookingCount}</strong></p></div>
+      <div><span className="cooking"><Icon name="cookingPot" size={18}/></span><p><small>EN PREPARACIÓN</small><strong>{cookingCount}</strong></p></div>
       <div><span className="ready"><Icon name="check" size={18}/></span><p><small>LISTOS</small><strong>{readyCount}</strong></p></div>
       <div><span className="attention"><Icon name="clock" size={18}/></span><p><small>REQUIEREN ATENCIÓN</small><strong>{attentionCount}</strong></p></div>
     </section>
@@ -133,7 +133,7 @@ export default function KitchenPage() {
                 </div>
                 <footer className="kds-card-footer">
                   <Button tone={col.tone} className="kds-btn wide" onClick={() => col.id === "ready" ? dismiss(ticket.id) : advance(ticket.id)}>
-                    {col.id === "pending" && <><Icon name="kitchen" size={16}/>Iniciar</>}
+                    {col.id === "pending" && <><Icon name="cookingPot" size={16}/>Iniciar</>}
                     {col.id === "cooking" && <><Icon name="check" size={16}/>Marcar listo</>}
                     {col.id === "ready" && <><Icon name="check" size={16}/>Entregado</>}
                   </Button>
