@@ -15,8 +15,25 @@ type organizationRoleSeed struct {
 	Permissions []string
 }
 
+var companyAdministratorMenuAccess = []string{
+	"dashboard","pos","pedidos","cocina","mesas","caja","reservas","productos","disponibilidad","combos","recetas",
+	"inventario","kardex","compras","logistica","clientes","locales","fiscal","usuarios","call_center","carta_qr","kiosco",
+	"delivery","delivery_apps","repartidores","crm","puntos","ofertas","personal","costos","bi","app_manager","facturacion",
+	"integraciones","whatsapp_bot",
+}
+
+var companyAdministratorPermissions = []string{
+	"dashboard.read","users.read","users.manage","organizations.read","organizations.manage","fiscal.read",
+	"menu.read","menu.manage","recipes.manage","customers.read","customers.manage",
+	"orders.read","orders.manage","kitchen.manage","tables.read","tables.manage","reservations.read","reservations.manage",
+	"cash.read","cash.manage","cash.expected.read","receipts.read","receipts.manage",
+	"inventory.read","inventory.manage","inventory.transfer",
+	"purchases.read","purchases.manage","purchases.approve","purchases.receive",
+	"reports.read","audit.read","delivery.read","delivery.manage",
+}
+
 var defaultOrganizationRoles = []organizationRoleSeed{
-	{Name:"Administrador",SystemKey:"administrator",Description:"Acceso total a la empresa y sus locales",MenuAccess:[]string{"*"},Permissions:[]string{"*"}},
+	{Name:"Administrador de empresa",SystemKey:"administrator",Description:"Administra la empresa, sus locales, equipo y operación sin privilegios de plataforma",MenuAccess:companyAdministratorMenuAccess,Permissions:companyAdministratorPermissions},
 	{Name:"Gerente de local",SystemKey:"location_manager",Description:"Gestiona la operación completa de los locales asignados",MenuAccess:[]string{"dashboard","pos","pedidos","cocina","mesas","caja","reservas","productos","disponibilidad","combos","recetas","inventario","kardex","compras","clientes","locales","fiscal","usuarios"},Permissions:[]string{"dashboard.read","organizations.read","organizations.manage","users.read","users.manage","menu.read","menu.manage","recipes.manage","customers.read","customers.manage","orders.read","orders.manage","kitchen.manage","tables.read","tables.manage","cash.read","cash.manage","cash.expected.read","reservations.read","reservations.manage","inventory.read","inventory.manage","inventory.transfer","purchases.read","purchases.manage","purchases.approve","purchases.receive","reports.read"}},
 	{Name:"Supervisor de turno",SystemKey:"shift_supervisor",Description:"Supervisa atención, comandas, mesas, caja y reservas",MenuAccess:[]string{"dashboard","pos","pedidos","cocina","mesas","caja","reservas","productos","disponibilidad","combos","clientes"},Permissions:[]string{"dashboard.read","menu.read","customers.read","customers.manage","orders.read","orders.manage","kitchen.manage","tables.read","tables.manage","cash.read","cash.manage","cash.expected.read","reservations.read","reservations.manage"}},
 	{Name:"Cajero",SystemKey:"cashier",Description:"Opera caja, cobros y arqueos",MenuAccess:[]string{"pos","pedidos","mesas","caja","clientes"},Permissions:[]string{"menu.read","customers.read","customers.manage","orders.read","orders.manage","tables.read","cash.read","cash.manage"}},
