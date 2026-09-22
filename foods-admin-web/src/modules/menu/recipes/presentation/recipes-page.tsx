@@ -1,7 +1,9 @@
 "use client";
 import "./recipes.css";
-import {useMemo,useState} from "react";
+import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
+import AsyncSelect from "react-select/async";
+import type {StylesConfig} from "react-select";
 import {Button,ConfirmDialog,FieldLabel,Icon,Input,PageHeader,RowActionButton,Select,Status,Textarea} from "@/design-system";
 import {useFeedback,useSession} from "@/providers";
 import {
@@ -16,6 +18,29 @@ import {
 
 const empty=(productId=""):RecipeDraft=>({productId,yieldQuantity:"1",notes:"",active:true,items:[]});
 
+type RecipeProductOption={label:string;value:string};
+const recipeProductSelectStyles:StylesConfig<RecipeProductOption,false>={
+ control:(base)=>({...base,height:"var(--control-height)",minHeight:"var(--control-height)",borderColor:"var(--line)",borderRadius:"6px",backgroundColor:"var(--surface)",fontSize:"11px",fontWeight:600,boxShadow:"none","&:hover":{borderColor:"var(--line-strong)"}}),
+ valueContainer:(base)=>({...base,height:"var(--control-height)",padding:"0 10px"}),
+ input:(base)=>({...base,color:"var(--ink-950)",fontSize:"11px",fontWeight:600,margin:0,padding:0}),
+ singleValue:(base)=>({...base,color:"var(--ink-950)",fontSize:"11px",fontWeight:600}),
+ placeholder:(base)=>({...base,color:"var(--ink-400)",fontSize:"11px",fontWeight:400}),
+ indicatorSeparator:(base)=>({...base,display:"none"}),
+ dropdownIndicator:(base)=>({...base,color:"var(--ink-500)",padding:"0 9px","&:hover":{color:"var(--ops-700)"}}),
+ clearIndicator:(base)=>({...base,color:"var(--ink-400)",padding:"0 6px","&:hover":{color:"var(--danger-600)"}}),
+ menu:(base)=>({...base,zIndex:20,border:"1px solid var(--line)",borderRadius:"6px",backgroundColor:"var(--surface)",boxShadow:"var(--shadow)",overflow:"hidden"}),
+ menuPortal:(base)=>({...base,zIndex:200}),
+ option:(base,state)=>({...base,cursor:"pointer",padding:"8px 10px",fontSize:"11px",fontWeight:600,backgroundColor:state.isSelected?"var(--primary-600)":state.isFocused?"var(--primary-100)":"var(--surface)",color:state.isSelected?"var(--surface)":"var(--ink-700)"}),
+ noOptionsMessage:(base)=>({...base,color:"var(--ink-500)",fontSize:"10px"}),
+ loadingMessage:(base)=>({...base,color:"var(--ink-500)",fontSize:"10px"}),
+};
+async function loadRecipeProductOptions(q:string):Promise<RecipeProductOption[]>{
+ const response=await listRecipeProducts(q);
+ return response.items
+  .filter(product=>product.quantityControl!=="inventory")
+  .map(product=>({value:product.id,label:product.sku?product.name+" · "+product.sku:product.name}));
+}
+
 export function RecipesPage(){
  const qc=useQueryClient();
  const{notify}=useFeedback();
@@ -26,18 +51,18 @@ export function RecipesPage(){
  const[loadingId,setLoadingId]=useState("");
  const[attempted,setAttempted]=useState(false);
  const[statusTarget,setStatusTarget]=useState<RecipeSummary|null>(null);
+ const[productOption,setProductOption]=useState<RecipeProductOption|null>(null);
  const canManage=can("recipes.manage");
 
  const recipes=useQuery({queryKey:["recipes",q],queryFn:()=>listRecipes(q)});
- const products=useQuery({queryKey:["recipe-products"],queryFn:listRecipeProducts});
  const inventory=useQuery({queryKey:["recipe-inventory"],queryFn:listRecipeInventory});
- const availableProducts=useMemo(()=>(products.data?.items??[]).filter(p=>p.quantityControl!=="inventory"),[products.data]);
 
  const save=useMutation({
   mutationFn:saveRecipe,
   onSuccess:r=>{
    setDraft(null);
    setEditingProductId("");
+   setProductOption(null);
    setAttempted(false);
    void qc.invalidateQueries({queryKey:["recipes"]});
    notify({tone:"success",title:"Receta guardada",message:r.productName+" ya usa la configuración de consumo indicada."});
@@ -74,6 +99,7 @@ export function RecipesPage(){
 
  function openNew(){
   setEditingProductId("");
+  setProductOption(null);
   setAttempted(false);
   setDraft(empty());
  }
@@ -84,6 +110,7 @@ export function RecipesPage(){
   try{
    const r=await getRecipe(productId);
    setEditingProductId(productId);
+   setProductOption({value:r.productId,label:r.productName});
    setDraft({
     productId:r.productId,
     yieldQuantity:r.yieldQuantity,
@@ -102,6 +129,7 @@ export function RecipesPage(){
   if(save.isPending)return;
   setDraft(null);
   setEditingProductId("");
+  setProductOption(null);
   setAttempted(false);
  }
 
@@ -167,12 +195,29 @@ export function RecipesPage(){
       <section className="recipe-main-fields" aria-label="Datos de la receta">
        <label className="recipe-product-field">
         <span>Producto preparado</span>
-        <Select value={draft.productId} disabled={Boolean(editingProductId)||products.isLoading||save.isPending} aria-invalid={attempted&&!draft.productId} onChange={e=>setDraft({...draft,productId:e.target.value})}>
-         <option value="">{products.isLoading?"Cargando productos...":"Selecciona producto"}</option>
-         {availableProducts.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
-        </Select>
-        {attempted&&!draft.productId&&<small className="recipe-field-error">Selecciona el producto de la receta.</small>}
-        {products.isError&&<small className="recipe-field-error">No se pudieron cargar los productos.</small>}
+        <AsyncSelect<RecipeProductOption,false>
+         cacheOptions
+         defaultOptions
+         inputId="recipe-product"
+         instanceId="recipe-product-autocomplete"
+         loadOptions={loadRecipeProductOptions}
+         value={productOption}
+         isDisabled={Boolean(editingProductId)||save.isPending}
+         isClearable={!editingProductId}
+         isSearchable
+         aria-label="Producto preparado"
+         aria-invalid={attempted&&!draft.productId}
+         placeholder="Buscar producto preparado..."
+         loadingMessage={()=>"Buscando productos..."}
+         noOptionsMessage={({inputValue})=>inputValue.trim()?"No hay coincidencias":"No hay productos preparados disponibles"}
+         onChange={option=>{setProductOption(option);setDraft({...draft,productId:option?.value??""})}}
+         styles={recipeProductSelectStyles}
+         className={`react-select-container recipe-product-autocomplete${attempted&&!draft.productId?" invalid":""}`}
+         classNamePrefix="rs"
+         menuPortalTarget={typeof document==="undefined"?undefined:document.body}
+         menuPosition="fixed"
+        />
+        {attempted&&!draft.productId&&<small className="recipe-field-error">Busca y selecciona el producto de la receta.</small>}
        </label>
 
        <label className="recipe-yield-field">
