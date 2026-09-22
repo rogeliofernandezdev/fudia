@@ -273,6 +273,16 @@ func (a *API) saveUser(w http.ResponseWriter, r *http.Request, update bool) {
 	}
 	defer tx.Rollback(r.Context())
 
+	if !update {
+		if err=ensureSubscriptionCapacity(r.Context(),tx,s.OrganizationID,"users");errors.Is(err,errSubscriptionLimit){
+			fail(w,409,"plan_limit_reached","El plan contratado alcanzó el máximo de usuarios.")
+			return
+		}else if err!=nil{
+			fail(w,503,"subscription_unavailable","No pudimos validar los límites del plan.")
+			return
+		}
+	}
+
 	actorPlatformAdmin, err := actorIsPlatformAdmin(r.Context(), tx, s.UserID)
 	if err != nil {
 		fail(w, 503, "user_unavailable", "No pudimos validar al administrador actual.")
