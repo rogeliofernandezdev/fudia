@@ -409,9 +409,10 @@ test("cocina mantiene jerarquia KDS y semantica de color",()=>{
   assert.ok(kitchen.includes("kitchen-skeleton-head"),"El skeleton reproduce la tarjeta de comanda");
   assert.ok(kitchen.includes("kitchen-skeleton-items"),"El skeleton conserva líneas de productos");
   assert.ok(css.includes('.kitchen-lane{min-width:0;border:1px solid var(--line);border-radius:14px;background:var(--cloud-50)'),"Cada carril es un panel operativo neutro");
-  assert.ok(css.includes('.kitchen-lane[data-status="confirmado"]>header{background:var(--kds-pending-mid)}'),"Por preparar usa fondo azul suave en cabecera");
-  assert.ok(css.includes('.kitchen-lane[data-status="preparando"]>header{background:var(--kds-cooking-mid)}'),"En preparación usa fondo violeta suave en cabecera");
-  assert.ok(css.includes('.kitchen-lane[data-status="listo"]>header{background:var(--kds-ready-soft)}'),"Listo usa fondo verde suave en cabecera");
+  assert.ok(css.includes('.kitchen-lane[data-status="confirmado"]>header{background:var(--kds-pending)}'),"Por preparar usa azul sólido del patrón");
+  assert.ok(css.includes('.kitchen-lane[data-status="preparando"]>header{background:var(--kds-cooking)}'),"En preparación usa violeta sólido del patrón");
+  assert.ok(css.includes('.kitchen-lane[data-status="listo"]>header{background:var(--kds-ready-dark)}'),"Listo usa verde sólido oscuro");
+  assert.ok(css.includes('.kitchen-lane>header h2{color:var(--surface)}'),"Los títulos de carril conservan contraste blanco");
   assert.equal(css.includes("border-left:4px solid transparent"),false,"Los carriles no usan barra lateral de color");
   assert.equal(css.includes(".kitchen-lane::before"),false,"Los carriles no usan franja superior de color");
   assert.ok(kitchen.includes("ticket.tableName?.toUpperCase()"),"Los nombres de mesa se muestran en mayúsculas");
