@@ -207,7 +207,18 @@ func (a *API) requirePermission(permission string, next http.Handler) http.Handl
 			return
 		}
 		var allowed bool
-		err := a.db.QueryRow(r.Context(), `SELECT EXISTS(SELECT 1 FROM user_roles ur JOIN roles ro ON ro.id=ur.role_id WHERE ur.user_id=$1 AND ur.location_id=$2 AND ro.organization_id=$4 AND ro.active AND ro.permissions @> ARRAY[$3]::text[]))`, s.UserID, s.LocationID, permission, s.OrganizationID).Scan(&allowed)
+		err := a.db.QueryRow(r.Context(), `
+			SELECT EXISTS(
+				SELECT 1
+				FROM user_roles ur
+				JOIN roles ro ON ro.id=ur.role_id
+				WHERE ur.user_id=$1
+				  AND ur.location_id=$2
+				  AND ro.organization_id=$3
+				  AND ro.active
+				  AND $4 = ANY(ro.permissions)
+			)
+		`, s.UserID, s.LocationID, s.OrganizationID, permission).Scan(&allowed)
 		if err != nil {
 			fail(w, 503, "permissions_unavailable", "No pudimos validar tus permisos.")
 			return
