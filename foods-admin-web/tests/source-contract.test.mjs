@@ -186,6 +186,14 @@ test("producto e inventario mantienen una sola fuente de verdad",()=>{
   assert.ok(availability.includes("function setManualStatus"),"Cambiar estado no reutiliza el borrador de cupo");
   assert.ok(availability.includes("portionQuantity:null,kind:\"status\""),"El cambio de estado no persiste un cupo pendiente");
   assert.ok(availability.includes("Math.max(1,item.soldQuantity)"),"El cupo nunca baja de lo ya vendido");
+
+  const recipes=read("src/modules/menu/recipes/presentation/recipes-page.tsx");
+  const recipesApi=read("src/modules/menu/recipes/infrastructure/recipes-api.ts");
+  assert.ok(recipes.includes('AsyncSelect from "react-select/async"'),"Recetas reutiliza el autocomplete asíncrono existente");
+  assert.ok(recipes.includes("loadOptions={loadRecipeProductOptions}"),"Producto preparado busca opciones de forma asíncrona");
+  assert.ok(recipes.includes("cacheOptions"),"El autocomplete reutiliza resultados recientes");
+  assert.equal(recipes.includes('<Select value={draft.productId}'),false,"Producto preparado no vuelve a un select nativo");
+  assert.ok(recipesApi.includes('products?status=active&q='),"La búsqueda de productos se delega al backend");
 });
 
 test("compras concentra orden recepcion y altas de abastecimiento",()=>{
