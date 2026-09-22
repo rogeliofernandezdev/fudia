@@ -328,6 +328,9 @@ y detalle; no se limita a apilar columnas de escritorio.
   usa `cookingPot` por preparación/producción; «Disponibilidad de la carta» usa
   `availability`, un plato con confirmación de disponibilidad. No se usa un check
   genérico como icono principal de módulo.
+- En Abastecimiento, Inventario usa `stock` porque representa existencia física;
+  Kárdex usa `ledger` porque representa el historial valorizado de movimientos.
+  Dos módulos vecinos no comparten icono si su función operativa es distinta.
 - El hover modifica color y superficie sin desplazar ni escalar elementos.
 - El drawer móvil bloquea el fondo, cierra con Escape, overlay o navegación y
   conserva scroll interno.
