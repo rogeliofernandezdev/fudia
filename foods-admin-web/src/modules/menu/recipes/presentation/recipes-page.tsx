@@ -174,7 +174,7 @@ export function RecipesPage(){
  return <>
   <PageHeader
    eyebrow="CARTA Y PRODUCCIÓN"
-   title="Recetas y producción"
+   title="Recetas"
    description="Define el consumo de insumos de los productos preparados. Inventario y Kárdex continúan operando aunque una receta esté desactivada."
    action={canManage?<Button icon="plus" onClick={openNew}>Nueva receta</Button>:undefined}
   />
