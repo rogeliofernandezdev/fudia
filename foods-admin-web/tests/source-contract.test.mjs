@@ -690,3 +690,28 @@ test("módulos y navegación comparten nombres funcionales",()=>{
   assert.ok(availability.includes('title="Disponibilidad"'),"La página usa el mismo nombre que el menú");
   assert.equal(availability.includes('title="Disponibilidad de la carta"'),false,"La página no conserva el nombre largo");
 });
+
+
+test("login inicia en la primera ruta realmente accesible",()=>{
+  const login=read("src/modules/auth/presentation/login-form.tsx");
+  const shell=read("src/shell/admin-shell.tsx");
+  const navigation=read("src/shell/navigation.ts");
+  const contextSwitcher=read("src/modules/context/presentation/context-switcher.tsx");
+  const noAccess=read("src/app/(admin)/sin-acceso/page.tsx");
+
+  assert.ok(login.includes("loadSessionContext"),"Login carga permisos y módulos antes de redirigir");
+  assert.ok(login.includes("firstAccessibleRoute(context)"),"Login calcula la ruta inicial desde el contexto real");
+  assert.equal(login.includes('router.replace("/dashboard")'),false,"Login no asume que todos pueden ver Reportes");
+
+  assert.ok(navigation.includes('return visibleNavigation(context)[0]?.items[0]?.href??"/sin-acceso"'),"La ruta inicial sigue el orden visible del menú");
+  assert.ok(navigation.includes("context.menuAccess.includes"),"La ruta exige acceso de menú");
+  assert.ok(navigation.includes("context.permissions.includes"),"La ruta exige permiso del endpoint");
+  assert.ok(navigation.includes("moduleIsActive(context.modules,item.module)"),"La ruta exige módulo activo");
+  assert.ok(navigation.includes('permission:"orders.read"'),"Las rutas operativas declaran su permiso mínimo");
+  assert.ok(navigation.includes('permission:"inventory.read"'),"Abastecimiento declara permiso mínimo de lectura");
+
+  assert.ok(shell.includes("href={homeHref}"),"El logo usa la misma ruta inicial accesible");
+  assert.ok(shell.includes("router.push(homeHref)"),"El fallback de acceso usa la misma ruta inicial");
+  assert.ok(contextSwitcher.includes("firstAccessibleRoute(context)"),"Cambiar de local recalcula la primera ruta accesible");
+  assert.ok(noAccess.includes("Sin accesos asignados"),"Existe un destino explícito para roles sin opciones válidas");
+});
