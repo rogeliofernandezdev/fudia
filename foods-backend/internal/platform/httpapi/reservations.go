@@ -67,7 +67,8 @@ func scanReservation(row pgx.Row)(reservationView,error){
 func reservationColumns() string {
 	return `r.id::text,r.customer_id::text,r.customer_name,r.customer_phone,
 	to_char(r.starts_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),r.guests,r.table_id::text,
-	COALESCE(t.name,''),r.status,r.notes,to_char(r.created_at,'YYYY-MM-DD"T"HH24:MI:SSOF')`
+	COALESCE((SELECT name FROM tables rt WHERE rt.id=r.table_id AND rt.organization_id=r.organization_id AND rt.location_id=r.location_id),''),
+	r.status,r.notes,to_char(r.created_at,'YYYY-MM-DD"T"HH24:MI:SSOF')`
 }
 
 func (a *API) validateReservationReferences(r *http.Request, s scope, in reservationInput, excludeID string) *apiError {
