@@ -117,6 +117,20 @@ se limitan a densidad y composición, nunca a reinterpretar el significado del c
   entre 1 y las porciones ya vendidas. Un usuario con `menu.read` pero sin `menu.manage`
   ve la pantalla en modo solo lectura: conserva filtros, estados y cantidades, pero no
   puede editar cupos ni ejecutar acciones.
+- Cocina usa un KDS de tres carriles operativos: «Por preparar», «En preparación»
+  y «Listos para entregar». Cada carril es un panel neutro `cloud-50/surface`
+  con borde estándar; el color semántico se limita al acento de estado, icono,
+  contador y etiquetas: azul para pendiente, ámbar para preparación/demora y
+  verde únicamente para el estado listo. Los botones que cambian el flujo son
+  acciones primarias azules; el verde no se usa como CTA antes de confirmar el
+  éxito. Las tarjetas son densas, con borde `line`, radio de 14 px y sin
+  sombras o transformaciones decorativas que compitan con la información.
+  El tiempo nunca se muestra como minutos de cuatro cifras: se formatea como
+  minutos, horas/minutos o días/horas según corresponda. La urgencia siempre
+  incluye texto explícito («A tiempo», «Por vencer», «Con demora», «Listo»);
+  nunca depende solo del color. El objetivo de preparación aparece como dato
+  secundario. El skeleton reproduce cabecera, identidad, líneas de productos y
+  acción de cada tarjeta, no bloques rectangulares genéricos.
 - El formulario de Recetas usa un modal de edición compacto y estructurado en dos
   zonas: datos de la receta e insumos. La cabecera sigue el patrón estándar de
   58 px mínimo, icono de 32 px, título de 15 px y cierre con
