@@ -1,10 +1,13 @@
 "use client";
+import "./reservations.css";
 import {useState} from "react";
+import {useForm} from "react-hook-form";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,ConfirmDialog,Icon,Input,PageHeader,Pagination,RowActionButton,Select,Status,Textarea} from "@/design-system";
+import {Button,ConfirmDialog,FieldLabel,Icon,Input,PageHeader,Pagination,RowActionButton,Select,Status,Textarea} from "@/design-system";
 import {useFeedback,useSession} from "@/providers";
 import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
 import {listTables} from "../../tables/infrastructure/tables-api";
+import {reservationResolver} from "../domain/reservation-schema";
 import type {Reservation,ReservationDraft,ReservationStatus} from "../domain/types";
 import {listReservations,saveReservation,setReservationStatus} from "../infrastructure/reservations-api";
 
@@ -43,7 +46,79 @@ export function ReservationsPage(){
   </>;
 }
 
-function ReservationDialog({value:initial,tables,busy,close,save}:{value:ReservationDraft;tables:Array<{id:string;name:string;seats:number;active:boolean}>;busy:boolean;close:()=>void;save:(v:ReservationDraft)=>void}){
-  const[value,setValue]=useState(initial);
-  return <div className="modal-backdrop modal-overlay-in"><section className="crud-modal modal-panel-in" role="dialog" aria-modal="true"><div className="modal-accent"/><header><span className="modal-title-icon"><Icon name="clock"/></span><div><small>{value.id?"EDITAR RESERVA":"NUEVA RESERVA"}</small><h2>Datos de la reserva</h2></div><button aria-label="Cerrar" onClick={close}><Icon name="close"/></button></header><form onSubmit={e=>{e.preventDefault();save(value)}}><div className="form-grid"><label>Cliente<Input required maxLength={180} value={value.customerName} onChange={e=>setValue({...value,customerName:e.target.value})}/></label><label>Teléfono<Input maxLength={40} value={value.customerPhone} onChange={e=>setValue({...value,customerPhone:e.target.value})}/></label><label>Fecha y hora<Input required type="datetime-local" value={value.startsAt} onChange={e=>setValue({...value,startsAt:e.target.value})}/></label><label>Personas<Input required type="number" min="1" max="100" value={value.guests} onChange={e=>setValue({...value,guests:e.target.value})}/></label><label>Duración (min)<Input required type="number" min="15" max="360" step="15" value={value.durationMinutes} onChange={e=>setValue({...value,durationMinutes:e.target.value})}/></label><label className="span-2">Mesa<Select value={value.tableId} onChange={e=>setValue({...value,tableId:e.target.value})}><option value="">Asignar después</option>{tables.filter(t=>t.active&&t.seats>=Number(value.guests||0)).map(t=><option key={t.id} value={t.id}>{t.name} · {t.seats} personas</option>)}</Select></label><label className="span-2">Notas<Textarea maxLength={500} rows={3} value={value.notes} onChange={e=>setValue({...value,notes:e.target.value})}/></label></div><footer><Button kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy||!value.startsAt}>{busy?"Guardando…":"Guardar reserva"}</Button></footer></form></section></div>;
+function ReservationDialog({value:initial,tables,tablesLoading,tablesError,busy,close,save}:{value:ReservationDraft;tables:Array<{id:string;name:string;seats:number;active:boolean}>;tablesLoading:boolean;tablesError:string;busy:boolean;close:()=>void;save:(v:ReservationDraft)=>void}){
+  const{
+    register,handleSubmit,watch,
+    formState:{errors},
+  }=useForm<ReservationDraft>({
+    defaultValues:initial,
+    resolver:reservationResolver,
+    mode:"onSubmit",
+    reValidateMode:"onChange",
+  });
+  const guests=Number(watch("guests")||0);
+  const eligibleTables=tables.filter(table=>table.id===initial.tableId||(table.active&&table.seats>=guests));
+
+  return <div className="modal-backdrop modal-overlay-in" role="presentation">
+    <section className="crud-modal reservation-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="reservation-title" aria-busy={busy}>
+      <div className="modal-accent"/>
+      <header>
+        <span className="modal-title-icon"><Icon name="clock" size={18}/></span>
+        <div><small>{initial.id?"EDITAR RESERVA":"NUEVA RESERVA"}</small><h2 id="reservation-title">Datos de la reserva</h2></div>
+        <button type="button" aria-label="Cerrar" disabled={busy} onClick={close}><Icon name="close"/></button>
+      </header>
+      <form onSubmit={handleSubmit(save)} noValidate>
+        <div className="form-grid reservation-form-grid">
+          <label>
+            Cliente
+            <Input autoFocus autoComplete="name" maxLength={180} {...register("customerName")} aria-invalid={Boolean(errors.customerName)} placeholder="Nombre del cliente"/>
+            {errors.customerName?.message&&<small className="wizard-field-error">{errors.customerName.message}</small>}
+          </label>
+          <label>
+            Teléfono
+            <Input type="tel" autoComplete="tel" maxLength={40} {...register("customerPhone")} aria-invalid={Boolean(errors.customerPhone)} placeholder="Ej. 999 999 999"/>
+            {errors.customerPhone?.message&&<small className="wizard-field-error">{errors.customerPhone.message}</small>}
+          </label>
+
+          <label>
+            Fecha y hora
+            <Input type="datetime-local" {...register("startsAt")} aria-invalid={Boolean(errors.startsAt)}/>
+            {errors.startsAt?.message&&<small className="wizard-field-error">{errors.startsAt.message}</small>}
+          </label>
+          <label>
+            Personas
+            <Input type="number" inputMode="numeric" min="1" max="100" {...register("guests")} aria-invalid={Boolean(errors.guests)}/>
+            {errors.guests?.message&&<small className="wizard-field-error">{errors.guests.message}</small>}
+          </label>
+
+          <label>
+            Mesa
+            <Select {...register("tableId")}>
+              <option value="">Asignar después</option>
+              {eligibleTables.map(table=><option key={table.id} value={table.id}>{table.name} · {table.seats} personas</option>)}
+            </Select>
+            {tablesLoading&&<small className="reservation-table-state">Cargando mesas disponibles…</small>}
+            {!tablesLoading&&tablesError&&<small className="reservation-table-state error">No pudimos cargar las mesas. Puedes guardar sin asignar.</small>}
+            {!tablesLoading&&!tablesError&&!eligibleTables.length&&<small className="reservation-table-state">No hay mesas activas con capacidad suficiente.</small>}
+          </label>
+          <label>
+            <FieldLabel hint="Tiempo durante el cual la mesa queda ocupada para evitar reservas solapadas.">Duración de mesa (min)</FieldLabel>
+            <Input type="number" inputMode="numeric" min="15" max="360" step="15" {...register("durationMinutes")} aria-invalid={Boolean(errors.durationMinutes)}/>
+            {errors.durationMinutes?.message&&<small className="wizard-field-error">{errors.durationMinutes.message}</small>}
+          </label>
+
+          <label className="reservation-notes">
+            Notas <small>Opcional</small>
+            <Textarea maxLength={500} rows={3} {...register("notes")} aria-invalid={Boolean(errors.notes)} placeholder="Preferencias, ocasión o indicaciones para el equipo"/>
+            {errors.notes?.message&&<small className="wizard-field-error">{errors.notes.message}</small>}
+          </label>
+        </div>
+        <footer>
+          <Button kind="ghost" onClick={close} disabled={busy}>Cancelar</Button>
+          <Button type="submit" disabled={busy}>{busy?"Guardando…":"Guardar"}</Button>
+        </footer>
+      </form>
+      {busy&&<div className="modal-busy" role="status"><i/><span>Guardando…</span></div>}
+    </section>
+  </div>;
 }
