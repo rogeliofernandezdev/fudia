@@ -22,8 +22,8 @@ export function ProfilePage(){
   if(!profile.data)return <><ProfileHeader/><section className="profile-state"><p>No pudimos cargar tu perfil.</p></section></>;
   return <><ProfileHeader/>
     <ProfileForm profile={profile.data} organizationName={organization?.name} locationName={location?.name}/>
-    <ProfilePlansPanel profile={profile.data} plans={plans.data?.items??[]} loading={plans.isLoading} error={plans.isError?plans.error.message:""} retry={()=>plans.refetch()}/>
     {canViewSubscription&&<SubscriptionPanel subscription={subscription.data??null} loading={subscription.isLoading} error={subscription.isError?subscription.error.message:""} retry={()=>subscription.refetch()} country={location?.country} timeZone={location?.timezone}/>}
+    <ProfilePlansPanel profile={profile.data} plans={plans.data?.items??[]} loading={plans.isLoading} error={plans.isError?plans.error.message:""} retry={()=>plans.refetch()}/>
   </>;
 }
 
