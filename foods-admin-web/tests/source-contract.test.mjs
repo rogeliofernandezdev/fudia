@@ -657,3 +657,14 @@ test("carta y producción usa iconos semánticos por función",()=>{
   assert.ok(availability.includes('name="availability"'),"El estado vacío de disponibilidad usa su icono de dominio");
 });
 
+
+
+test("abastecimiento diferencia inventario de kardex por icono",()=>{
+  const shell=read("src/shell/admin-shell.tsx");
+  const icons=read("src/design-system/icons.tsx");
+  const kardex=read("src/modules/supply/inventory/presentation/kardex-page.tsx");
+  assert.ok(shell.includes('name:"Inventario",icon:"stock"'),"Inventario conserva el icono de stock físico");
+  assert.ok(shell.includes('name:"Kardex",icon:"ledger"'),"Kárdex usa un icono propio de historial/ledger");
+  assert.ok(icons.includes("ledger:"),"El design system define el icono de Kárdex");
+  assert.ok(kardex.includes('name="ledger"'),"Kárdex reutiliza su semántica visual dentro de la pantalla");
+});
