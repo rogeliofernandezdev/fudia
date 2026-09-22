@@ -474,6 +474,26 @@ test("mvp admin no presenta datos simulados como operacion real",()=>{
   assert.equal(configuration.includes("Facturación electrónica"),false,"Facturacion futura no se ofrece en el hub MVP");
 });
 
+test("pantallas completas usan loader FUDIA y cargas internas conservan skeleton",()=>{
+  const routeLoading=read("src/app/loading.tsx");
+  const loader=read("src/design-system/full-screen-loader.tsx");
+  const loaderCss=read("src/design-system/styles/full-screen-loader.css");
+  const shell=read("src/shell/admin-shell.tsx");
+  const platform=read("src/modules/platform/presentation/platform-shell.tsx");
+
+  assert.ok(routeLoading.includes("<FullScreenLoader"),"La transición de ruta usa el loader FUDIA");
+  assert.ok(shell.includes('<FullScreenLoader label="Preparando tu espacio"/>'),"El bootstrap de sesión Admin usa el loader de pantalla completa");
+  assert.ok(platform.includes('<FullScreenLoader label="Validando acceso de plataforma"/>'),"Plataforma usa el mismo loader de pantalla completa");
+  assert.ok(loader.includes("<Logo/>"),"El loader reutiliza el logo oficial del design system");
+  assert.ok(loaderCss.includes("full-screen-logo-paint"),"El logo se revela mediante la animación de pintado");
+  assert.ok(loaderCss.includes("position:fixed;inset:0"),"El loader cubre la pantalla completa");
+  assert.ok(loaderCss.includes("prefers-reduced-motion:reduce"),"El loader respeta reducción de movimiento");
+  assert.equal(existsSync(join(root,"src/styles/loading.css")),false,"El skeleton genérico de pantalla completa fue retirado");
+  assert.ok(read("src/modules/sales/presentation/sales-page.tsx").includes("<SalesTableSkeleton/>"),"Ventas conserva skeleton interno");
+  assert.ok(read("src/modules/dashboard/presentation/dashboard-view.tsx").includes("<DashboardSkeleton/>"),"Reportes conserva skeleton interno");
+  assert.ok(read("src/design-system/remote-modal-skeleton.tsx").includes("RemoteModalSkeleton"),"Los modales remotos conservan skeleton interno");
+});
+
 test("reportes y ventas usan skeleton con forma final",()=>{
   const dashboard=read("src/modules/dashboard/presentation/dashboard-view.tsx");
   const dashboardCss=read("src/modules/dashboard/presentation/dashboard.css");
