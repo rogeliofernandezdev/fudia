@@ -473,14 +473,14 @@ func (a *API) updateOrganizationSubscription(w http.ResponseWriter, r *http.Requ
 	}
 	var currentPlanID,currentCycle,currentStatus,currentPrice string
 	var currentTerms *string
-	var currentTrialStarts,currentTrialEnds,currentPeriodStarts,currentPeriodEnds,currentRenews *time.Time
+	var currentTrialStarts,currentTrialEnds,currentPeriodStarts,currentPeriodEnds,currentRenews,currentCancelledAt *time.Time
 	if err = tx.QueryRow(r.Context(), `
 		SELECT plan_id,billing_cycle,status,price_amount::text,terms_version,
-		       trial_starts_at,trial_ends_at,current_period_starts_at,current_period_ends_at,renews_at
+		       trial_starts_at,trial_ends_at,current_period_starts_at,current_period_ends_at,renews_at,cancelled_at
 		FROM organization_subscriptions
 		WHERE organization_id=$1
 		FOR UPDATE
-	`, s.OrganizationID).Scan(&currentPlanID,&currentCycle,&currentStatus,&currentPrice,&currentTerms,&currentTrialStarts,&currentTrialEnds,&currentPeriodStarts,&currentPeriodEnds,&currentRenews); err != nil {
+	`, s.OrganizationID).Scan(&currentPlanID,&currentCycle,&currentStatus,&currentPrice,&currentTerms,&currentTrialStarts,&currentTrialEnds,&currentPeriodStarts,&currentPeriodEnds,&currentRenews,&currentCancelledAt); err != nil {
 		fail(w,404,"subscription_not_found","La empresa todavía no tiene una suscripción.")
 		return
 	}
@@ -507,7 +507,7 @@ func (a *API) updateOrganizationSubscription(w http.ResponseWriter, r *http.Requ
 	}
 	trialStarts,trialEnds:=currentTrialStarts,currentTrialEnds
 	periodStarts,periodEnds,renews:=currentPeriodStarts,currentPeriodEnds,currentRenews
-	var cancelledAt *time.Time
+	cancelledAt:=currentCancelledAt
 	contractChanged:=planChanged||cycleChanged||currentStatus!=in.Status
 	if contractChanged {
 		switch in.Status {
@@ -517,13 +517,14 @@ func (a *API) updateOrganizationSubscription(w http.ResponseWriter, r *http.Requ
 			trialStarts=&start;trialEnds=&end;periodStarts=&start;periodEnds=&end;renews=&end
 		case "active":
 			end:=subscriptionPeriodEnd(now,in.BillingCycle)
-			trialStarts=nil;trialEnds=nil;periodStarts=&now;periodEnds=&end;renews=&end
+			trialStarts=nil;trialEnds=nil;periodStarts=&now;periodEnds=&end;renews=&end;cancelledAt=nil
 		case "past_due":
+			cancelledAt=nil
 			if periodStarts==nil { periodStarts=&now }
 			if periodEnds==nil { end:=subscriptionPeriodEnd(now,in.BillingCycle);periodEnds=&end;renews=&end }
 		case "cancelled":
 			renews=nil
-			cancelledAt=&now
+			if currentStatus!="cancelled" { cancelledAt=&now }
 		}
 	}
 	termsVersion:=currentTerms
