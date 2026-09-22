@@ -151,42 +151,55 @@ function ProfilePlansPanel({profile,plans,loading,error,retry}:{profile:MyProfil
   if(error)return <section className="profile-card profile-plans-loading error"><b>No pudimos cargar los planes.</b><Button kind="secondary" onClick={retry}>Reintentar</Button></section>;
   const current=profile.currentPlan;
   return <section className="profile-card profile-plans">
-    <header>
-      <div><small>PLANES FUDIA</small><h2>Tu plan y opciones disponibles</h2><p>Compara capacidad y módulos. El plan que usa tu empresa aparece resaltado.</p></div>
+    <header className="profile-plans-hero">
+      <div className="profile-plans-title">
+        <span className="profile-plans-icon"><Icon name="grid" size={18}/></span>
+        <div>
+          <small>PLANES FUDIA</small>
+          <h2>Capacidad para cada etapa de tu operación</h2>
+          <p>Compara precio, límites y módulos incluidos sin salir de tu perfil.</p>
+        </div>
+      </div>
       <div className="profile-current-plan">
         <small>PLAN ACTUAL</small>
-        <b>{current?.name??"Sin plan asignado"}</b>
-        {current&&<span className={"plan-state-pill "+current.status}>{statusLabel[current.status]}</span>}
+        <div><b>{current?.name??"Sin plan asignado"}</b>{current&&<span className={"plan-state-pill "+current.status}>{statusLabel[current.status]}</span>}</div>
       </div>
     </header>
+
     <div className="profile-plan-grid">
       {plans.map(plan=>{
         const active=current?.id===plan.id;
         return <article className={"profile-plan-card plan-"+plan.code+(active?" current":"")} key={plan.id}>
-          {active&&<div className="profile-plan-current"><Icon name="check" size={12}/>TU PLAN ACTUAL</div>}
-          <div className="profile-plan-head">
-            <span><Icon name={plan.code==="emprende"?"store":plan.code==="escala"?"grid":"sales"} size={18}/></span>
-            <div><small>{plan.code.toUpperCase()}</small><h3>{plan.name}</h3></div>
+          <div className="profile-plan-top">
+            <div className="profile-plan-name-row">
+              <span className="profile-plan-icon"><Icon name={plan.code==="emprende"?"store":plan.code==="escala"?"grid":"sales"} size={18}/></span>
+              <div><small>{plan.code.toUpperCase()}</small><h3>{plan.name}</h3></div>
+              {active&&<span className="profile-plan-current"><Icon name="check" size={11}/>ACTUAL</span>}
+            </div>
+            <p>{plan.description}</p>
+            <div className="profile-plan-price">
+              <div><span>{plan.currency}</span><b>{Number(plan.monthlyPrice).toFixed(2)}</b><small>/ mes</small></div>
+              <em>{plan.currency+" "+Number(plan.annualPrice).toFixed(2)+" al año"}</em>
+            </div>
           </div>
-          <p>{plan.description}</p>
-          <div className="profile-plan-price">
-            <div><span>{plan.currency}</span><b>{Number(plan.monthlyPrice).toFixed(2)}</b><small>/ mes</small></div>
-            <em>{plan.currency+" "+Number(plan.annualPrice).toFixed(2)+" / año"}</em>
-          </div>
+
           <div className="profile-plan-facts">
             <div><span>Locales</span><b>{plan.maxLocations??"∞"}</b></div>
             <div><span>Usuarios</span><b>{plan.maxUsers??"∞"}</b></div>
             <div><span>Prueba</span><b>{plan.trialDays?plan.trialDays+" días":"No"}</b></div>
           </div>
+
           <div className="profile-plan-modules">
             <span><Icon name="grid" size={13}/>{plan.moduleKeys.length} módulos incluidos</span>
             <div>{plan.moduleKeys.slice(0,6).map(key=><small key={key}><Icon name="check" size={9}/>{planModuleLabel(key)}</small>)}</div>
-            {plan.moduleKeys.length>6&&<em>+{plan.moduleKeys.length-6} módulos más</em>}
+            {plan.moduleKeys.length>6&&<em>+{plan.moduleKeys.length-6} módulos adicionales</em>}
           </div>
-          <footer>{active?<span><Icon name="check" size={13}/>Plan contratado</span>:<span><Icon name="check" size={12}/>Disponible para cambio de plan</span>}</footer>
+
+          <footer className={active?"active":""}>{active?<span><Icon name="check" size={13}/>Plan contratado</span>:<span>Disponible para cambio de plan</span>}</footer>
         </article>;
       })}
     </div>
+
     {current?.code==="legacy"&&<div className="profile-plan-legacy"><Icon name="alert" size={15}/><span>La empresa sigue en Plan legado. Plataforma debe migrarla a Emprende, Impulso o Escala cuando corresponda.</span></div>}
   </section>;
 }
