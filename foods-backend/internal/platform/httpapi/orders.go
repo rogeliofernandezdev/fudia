@@ -777,49 +777,6 @@ func (a *API) getOrdersFloor(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]any{"items": items})
 }
 
-func (a *API) getOrdersFloor(w http.ResponseWriter, r *http.Request) {
-	s := r.Context().Value(scopeKey{}).(scope)
-	type floorTable struct {
-		ID    string `json:"id"`
-		Name  string `json:"name"`
-		Zone  string `json:"zone"`
-		Seats int    `json:"seats"`
-		Order *order `json:"order"`
-	}
-	rows, err := a.db.Query(r.Context(), `
-		SELECT t.id,t.name,t.zone,t.seats,
-		  o.id,COALESCE(o.code,''),COALESCE(o.channel,''),COALESCE(o.status,''),COALESCE(o.customer_id::text,''),COALESCE(o.customer_name,''),COALESCE(o.customer_phone,''),COALESCE(o.address,''),COALESCE(o.reference,''),COALESCE(o.table_id::text,''),'',COALESCE(o.notes,''),COALESCE(o.subtotal::text,'0'),COALESCE(o.delivery_fee::text,'0'),COALESCE(o.total::text,'0'),COALESCE(to_char(o.created_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),''),COALESCE(to_char(o.updated_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),''),COALESCE((SELECT sum(i.qty)::int FROM order_items i WHERE i.order_id=o.id),0)
-		FROM tables t
-		LEFT JOIN orders o ON o.table_id=t.id AND o.organization_id=t.organization_id AND o.location_id=t.location_id AND o.status NOT IN ('entregado','cancelado')
-		WHERE t.organization_id=$1 AND t.location_id=$2 AND t.active
-		ORDER BY t.zone,t.name`, s.OrganizationID, s.LocationID)
-	if err != nil {
-		fail(w, 503, "orders_unavailable", "No pudimos cargar el salón.")
-		return
-	}
-	defer rows.Close()
-	items := []floorTable{}
-	for rows.Next() {
-		var ft floorTable
-		var o order
-		var oid *string
-		if err = rows.Scan(&ft.ID, &ft.Name, &ft.Zone, &ft.Seats, &oid, &o.Code, &o.Channel, &o.Status, &o.CustomerID, &o.CustomerName, &o.CustomerPhone, &o.Address, &o.Reference, &o.TableID, &o.TableName, &o.Notes, &o.Subtotal, &o.DeliveryFee, &o.Total, &o.CreatedAt, &o.UpdatedAt, &o.ItemCount); err != nil {
-			fail(w, 503, "orders_unavailable", "No pudimos cargar el salón.")
-			return
-		}
-		if oid != nil {
-			o.ID = *oid
-			if err = applyOrderPaymentSummary(r.Context(), a.db, &o, s.OrganizationID, s.LocationID); err != nil {
-				fail(w, 503, "orders_unavailable", "No pudimos cargar el estado de cobro del salón.")
-				return
-			}
-			ft.Order = &o
-		}
-		items = append(items, ft)
-	}
-	writeJSON(w, 200, map[string]any{"items": items})
-}
-
 func (a *API) getOrder(w http.ResponseWriter, r *http.Request) {
 	s := r.Context().Value(scopeKey{}).(scope)
 	o, err := scanOrder(a.db.QueryRow(r.Context(), `SELECT `+orderColumns+` FROM orders WHERE id=$1 AND organization_id=$2 AND location_id=$3`, r.PathValue("id"), s.OrganizationID, s.LocationID))
