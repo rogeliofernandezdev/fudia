@@ -10,9 +10,7 @@ button:focus-visible,a:focus-visible{outline-offset:2px;outline:3px solid #2f5bc
 .logo{color:var(--ops-700);letter-spacing:-.06em;align-items:center;gap:9px;font-size:23px;font-weight:800;display:flex}
 .logo-mark{background:#fff;border-radius:11px;place-items:center;width:36px;height:36px;display:grid;overflow:hidden;box-shadow:0 6px 16px #173d8f24}
 .logo-mark img{object-fit:cover;width:36px;height:36px;display:block}
-.logo em{background:var(--ops-100);letter-spacing:.05em;border-radius:6px;padding:4px 7px;font-size:8px;font-style:normal}
 .logo.inverse{color:#fff}
-.logo.inverse em{color:#cdd9ff;background:#ffffff12}
 .avatar{color:#fff;background:linear-gradient(145deg, var(--ops-500), var(--digital-500));border-radius:10px;flex-shrink:0;place-items:center;width:36px;height:36px;font-size:10px;font-weight:800;display:grid}
 .context{align-items:center;gap:9px;display:flex}
 .context>button{min-height:var(--control-height);border:1px solid var(--line);background:#fff}
