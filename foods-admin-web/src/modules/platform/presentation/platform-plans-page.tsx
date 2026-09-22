@@ -20,12 +20,14 @@ export function PlatformPlansPage(){
  const modules=useQuery({queryKey:["platform-ready-modules"],queryFn:listReadyModules});
  const catalogs=useQuery({queryKey:["platform-onboarding-context"],queryFn:getPlatformOnboardingContext});
  const[draft,setDraft]=useState<SubscriptionPlanDraft|null>(null);
+ const[billing,setBilling]=useState<"monthly"|"annual">("monthly");
  const save=useMutation({
   mutationFn:saveSubscriptionPlan,
   onSuccess:()=>{setDraft(null);void client.invalidateQueries({queryKey:["platform-plans"]});void client.invalidateQueries({queryKey:["platform-onboarding-context"]});notify({tone:"success",title:"Plan guardado",message:"Precios, límites y módulos del plan quedaron actualizados."})},
   onError:e=>notify({tone:"danger",title:"No se pudo guardar",message:e.message}),
  });
  const visible=(plans.data?.items??[]).filter(plan=>plan.code!=="legacy");
+ const moduleMap=new Map((modules.data??[]).map(module=>[module.key,module]));
  const edit=(plan:SubscriptionPlan)=>setDraft({
   id:plan.id,code:plan.code,name:plan.name,description:plan.description,currency:plan.currency,
   monthlyPrice:plan.monthlyPrice,annualPrice:plan.annualPrice,trialDays:plan.trialDays,
@@ -33,16 +35,58 @@ export function PlatformPlansPage(){
   moduleKeys:plan.moduleKeys,termsVersion:plan.termsVersion,active:plan.active,
  });
 
- return <><PageHeader eyebrow="PLATAFORMA" title="Planes SaaS" description="Define precio, prueba, límites, condiciones y módulos incluidos en cada plan." action={<Button icon="plus" onClick={()=>setDraft({...blank})}>Nuevo plan</Button>}/>
+ return <>
+  <PageHeader eyebrow="PLATAFORMA" title="Planes SaaS" description="Define la oferta comercial de FUDIA: precio, prueba, límites y módulos de cada nivel." action={<Button icon="plus" onClick={()=>setDraft({...blank})}>Nuevo plan</Button>}/>
+  <div className="plan-toolbar">
+    <div>
+      <b>Catálogo comercial</b>
+      <span>Los cambios aplican a nuevas contrataciones; el precio ya contratado se conserva.</span>
+    </div>
+    <div className="plan-cycle" role="group" aria-label="Ciclo de facturación">
+      <button type="button" className={billing==="monthly"?"active":""} onClick={()=>setBilling("monthly")}>Mensual</button>
+      <button type="button" className={billing==="annual"?"active":""} onClick={()=>setBilling("annual")}>Anual <span>2 meses aprox.</span></button>
+    </div>
+  </div>
   {(plans.isLoading||modules.isLoading||catalogs.isLoading)?<div className="panel plan-state">Cargando planes…</div>:
    (plans.isError||modules.isError||catalogs.isError)?<div className="panel plan-state error"><b>No pudimos cargar la configuración de planes.</b><Button kind="secondary" onClick={()=>{void plans.refetch();void modules.refetch();void catalogs.refetch()}}>Reintentar</Button></div>:
-   <div className="plan-grid">{visible.length?visible.map(plan=><article className="panel plan-card" key={plan.id}>
-    <header><div><small>{plan.code.toUpperCase()}</small><h2>{plan.name}</h2></div><span className={plan.active?"plan-status active":"plan-status"}>{plan.active?"Disponible":"Inactivo"}</span></header>
-    <p>{plan.description||"Sin descripción comercial."}</p>
-    <div className="plan-prices"><div><small>MENSUAL</small><b>{plan.currency+" "+Number(plan.monthlyPrice).toFixed(2)}</b></div><div><small>ANUAL</small><b>{plan.currency+" "+Number(plan.annualPrice).toFixed(2)}</b></div></div>
-    <dl><div><dt>Prueba gratuita</dt><dd>{plan.trialDays?plan.trialDays+" días":"Sin prueba"}</dd></div><div><dt>Locales</dt><dd>{plan.maxLocations??"Sin límite"}</dd></div><div><dt>Usuarios</dt><dd>{plan.maxUsers??"Sin límite"}</dd></div><div><dt>Módulos</dt><dd>{plan.moduleKeys.length}</dd></div><div><dt>Condiciones</dt><dd>{plan.termsVersion}</dd></div></dl>
-    <footer><Button kind="secondary" onClick={()=>edit(plan)}>Editar plan</Button></footer>
-   </article>):<div className="panel plan-state"><b>No hay planes comerciales.</b><p>Crea el primer plan antes de registrar una empresa nueva.</p><Button icon="plus" onClick={()=>setDraft({...blank})}>Nuevo plan</Button></div>}</div>}
+   <div className="plan-grid">{visible.length?visible.map(plan=>{
+     const recommended=plan.code==="impulso";
+     const price=billing==="annual"?Number(plan.annualPrice):Number(plan.monthlyPrice);
+     const equivalent=billing==="annual"?price/12:price;
+     const savings=billing==="annual"?Math.max(0,Number(plan.monthlyPrice)*12-price):0;
+     const included=plan.moduleKeys.map(key=>moduleMap.get(key)).filter((module):module is PlatformModule=>Boolean(module));
+     return <article className={"panel plan-card"+(recommended?" recommended":"")} key={plan.id}>
+       {recommended&&<div className="plan-ribbon">MÁS EQUILIBRADO</div>}
+       <header>
+         <div className="plan-heading">
+           <span className="plan-icon"><Icon name={plan.code==="emprende"?"store":plan.code==="escala"?"grid":"sales"} size={19}/></span>
+           <div><small>{plan.code.toUpperCase()}</small><h2>{plan.name}</h2></div>
+         </div>
+         <span className={plan.active?"plan-status active":"plan-status"}>{plan.active?"Disponible":"Inactivo"}</span>
+       </header>
+       <p className="plan-description">{plan.description||"Sin descripción comercial."}</p>
+       <div className="plan-price">
+         <small>{billing==="annual"?"PRECIO ANUAL":"PRECIO MENSUAL"}</small>
+         <div><span>{plan.currency}</span><b>{price.toFixed(2)}</b><em>{billing==="annual"?"/ año":"/ mes"}</em></div>
+         {billing==="annual"?<p>Equivale a {plan.currency+" "+equivalent.toFixed(2)} / mes{savings>0?" · ahorro "+plan.currency+" "+savings.toFixed(2):""}</p>:<p>{plan.trialDays?plan.trialDays+" días de prueba gratuita":"Sin periodo de prueba"}</p>}
+       </div>
+       <div className="plan-capacity">
+         <div><span><Icon name="store" size={14}/></span><div><small>LOCALES</small><b>{plan.maxLocations??"∞"}</b></div></div>
+         <div><span><Icon name="users" size={14}/></span><div><small>USUARIOS</small><b>{plan.maxUsers??"∞"}</b></div></div>
+         <div><span><Icon name="clock" size={14}/></span><div><small>PRUEBA</small><b>{plan.trialDays?plan.trialDays+" días":"No"}</b></div></div>
+       </div>
+       <section className="plan-includes">
+         <header><div><small>INCLUYE</small><h3>{included.length} módulos de FUDIA</h3></div><span>{included.length}</span></header>
+         <div className="plan-feature-list">
+           {included.map(module=><div key={module.key}><span><Icon name="check" size={11}/></span><div><b>{module.name}</b><small>{module.description}</small></div></div>)}
+         </div>
+       </section>
+       <footer>
+         <div><small>CONDICIONES</small><b>{plan.termsVersion}</b></div>
+         <Button kind={recommended?"primary":"secondary"} onClick={()=>edit(plan)}>Editar plan</Button>
+       </footer>
+     </article>;
+   }):<div className="panel plan-state"><b>No hay planes comerciales.</b><p>Crea el primer plan antes de registrar una empresa nueva.</p><Button icon="plus" onClick={()=>setDraft({...blank})}>Nuevo plan</Button></div>}</div>}
   {draft&&<PlanDialog value={draft} modules={modules.data??[]} currencies={catalogs.data?.currencyOptions??[]} busy={save.isPending} close={()=>setDraft(null)} save={value=>save.mutate(value)}/>}
  </>;
 }
