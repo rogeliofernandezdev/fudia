@@ -74,7 +74,7 @@ export function ProductAvailabilityManager(){
    :!items.length?
     <div className="availability-state"><Icon name="box" size={24}/><b>Sin productos</b><p>No hay productos activos que coincidan con los filtros.</p></div>
    :<>
-    <div className="availability-list-head" aria-hidden="true"><span>PRODUCTO Y ESTADO</span><span>CONTROL Y CANTIDAD</span><span>ACCIONES</span></div>
+    <div className="availability-list-head" aria-hidden="true"><span>PRODUCTO</span><span>DISPONIBILIDAD</span><span>ACCIONES</span></div>
     <div className="availability-grid">
      {items.map(item=>{
       const derived=item.source==="schedule"||item.source==="combo_components";
@@ -110,7 +110,7 @@ export function ProductAvailabilityManager(){
        {item.quantityControl==="inventory"&&item.source==="inventory"&&item.status==="sold_out"&&<p className="availability-derived"><Icon name="alert" size={14}/>No queda stock físico. Registra una nueva entrada en Inventario.</p>}
 
        <footer className={item.quantityControl==="portions"?"availability-actions":"availability-actions single"}>
-        {item.quantityControl==="portions"&&<Button kind={portionChanged?"primary":"secondary"} icon="check" disabled={derived||pending||!portionChanged} onClick={()=>update.mutate({item,status:item.manualStatus})}>{pending?"Actualizando…":"Guardar porciones"}</Button>}
+        {item.quantityControl==="portions"&&<Button kind={portionChanged?"primary":"secondary"} icon="check" disabled={derived||pending||!portionChanged} onClick={()=>update.mutate({item,status:item.manualStatus})}>{pending?"Actualizando…":"Actualizar cupo"}</Button>}
         <Button kind={manuallySoldOut?"success":"danger"} icon="power" disabled={derived||pending||(!manuallySoldOut&&quantityExhausted)} onClick={()=>update.mutate({item,status:manuallySoldOut?"available":"sold_out"})}>{pending?"Guardando…":manuallySoldOut?"Reactivar":"Marcar agotado"}</Button>
        </footer>
       </article>;
