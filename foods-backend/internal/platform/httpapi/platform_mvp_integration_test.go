@@ -52,9 +52,22 @@ func TestPlatformOnboardingCreatesOperationalTenant(t *testing.T){
 	if err:=pool.QueryRow(context.Background(),`SELECT count(*) FROM organization_modules WHERE organization_id=$1 AND module_key IN ('facturacion','integraciones','crm','bi') AND NOT active`,created.OrganizationID).Scan(&inactiveFuture);err!=nil{t.Fatal(err)}
 	if inactiveFuture!=4{t.Fatalf("future modules must start inactive, got %d",inactiveFuture)}
 
-	var adminRoles,defaults int
-	if err:=pool.QueryRow(context.Background(),`SELECT count(*) FROM user_roles ur JOIN roles r ON r.id=ur.role_id WHERE ur.user_id=$1 AND ur.location_id=$2 AND r.system_key='administrator' AND r.permissions=ARRAY['*']::text[] AND r.menu_access=ARRAY['*']::text[]`,created.AdministratorID,created.LocationID).Scan(&adminRoles);err!=nil{t.Fatal(err)}
-	if adminRoles!=1{t.Fatalf("tenant owner did not receive administrator role")}
+	var adminRoles,defaults,wildcardRoles int
+	if err:=pool.QueryRow(context.Background(),`
+		SELECT count(*) FROM user_roles ur JOIN roles r ON r.id=ur.role_id
+		WHERE ur.user_id=$1 AND ur.location_id=$2 AND r.system_key='administrator'
+		  AND r.name='Administrador de empresa'
+		  AND r.permissions @> ARRAY['users.manage','organizations.manage']::text[]
+		  AND NOT ('*'=ANY(r.permissions)) AND NOT ('*'=ANY(r.menu_access))
+	`,created.AdministratorID,created.LocationID).Scan(&adminRoles);err!=nil{t.Fatal(err)}
+	if adminRoles!=1{t.Fatalf("tenant owner did not receive explicit company administrator role")}
+	if err:=pool.QueryRow(context.Background(),`SELECT count(*) FROM roles WHERE organization_id=$1 AND ('*'=ANY(permissions) OR '*'=ANY(menu_access))`,created.OrganizationID).Scan(&wildcardRoles);err!=nil{t.Fatal(err)}
+	if wildcardRoles!=0{t.Fatalf("tenant roles must never carry wildcard access, got %d",wildcardRoles)}
+	moduleReq:=httptest.NewRequest("PATCH","/v1/admin/modules",bytes.NewReader([]byte(`{"key":"crm","active":true}`)))
+	moduleReq=moduleReq.WithContext(context.WithValue(moduleReq.Context(),scopeKey{},scope{UserID:created.AdministratorID,OrganizationID:created.OrganizationID,LocationID:created.LocationID,Name:"Propietario MVP"}))
+	moduleRec:=httptest.NewRecorder()
+	api.requirePlatformAdmin(http.HandlerFunc(api.toggleModule)).ServeHTTP(moduleRec,moduleReq)
+	if moduleRec.Code!=403||!strings.Contains(moduleRec.Body.String(),"platform_forbidden"){t.Fatalf("company administrator must not toggle modules: %d %s",moduleRec.Code,moduleRec.Body.String())}
 	if err:=pool.QueryRow(context.Background(),`SELECT count(*) FROM roles WHERE organization_id=$1 AND system_key IS NOT NULL`,created.OrganizationID).Scan(&defaults);err!=nil{t.Fatal(err)}
 	if defaults!=len(defaultOrganizationRoles){t.Fatalf("expected %d predefined roles, got %d",len(defaultOrganizationRoles),defaults)}
 
@@ -119,8 +132,12 @@ func TestDefaultRolesOnlyExposeUsableMVPMenus(t *testing.T){
 	}
 	contains:=func(values []string,want string)bool{for _,value:=range values{if value==want||value=="*"{return true}};return false}
 	for _,role:=range defaultOrganizationRoles{
+		if contains(role.Permissions,"*")||contains(role.MenuAccess,"*"){t.Fatalf("tenant role %s must not contain wildcard access",role.Name)}
+		if role.SystemKey=="administrator"{
+			if role.Name!="Administrador de empresa"||!contains(role.Permissions,"users.manage")||!contains(role.Permissions,"organizations.manage"){t.Fatalf("invalid company administrator definition: %#v",role)}
+			continue
+		}
 		for _,menu:=range role.MenuAccess{
-			if menu=="*"{continue}
 			permission,ok:=required[menu]
 			if !ok{t.Fatalf("default role %s exposes non-MVP or unmapped menu %s",role.Name,menu)}
 			if !contains(role.Permissions,permission){t.Fatalf("default role %s exposes %s without %s",role.Name,menu,permission)}
