@@ -52,14 +52,23 @@ func moduleCanActivate(key string) bool {
 }
 
 func seedOrganizationModules(ctx context.Context, tx pgx.Tx, organizationID string) error {
-	for _, module := range moduleCatalog {
-		_, err := tx.Exec(ctx, `
+	keys:=make([]string,0,len(mvpModuleKeys))
+	for key:=range mvpModuleKeys { keys=append(keys,key) }
+	return syncOrganizationModulesForPlan(ctx,tx,organizationID,keys)
+}
+
+func syncOrganizationModulesForPlan(ctx context.Context, tx pgx.Tx, organizationID string, moduleKeys []string) error {
+	allowed:=map[string]bool{}
+	for _,key:=range moduleKeys { allowed[key]=true }
+	for _,module:=range moduleCatalog {
+		active:=allowed[module.Key]&&moduleCanActivate(module.Key)
+		_,err:=tx.Exec(ctx,`
 			INSERT INTO organization_modules(organization_id,module_key,active)
 			VALUES($1,$2,$3)
 			ON CONFLICT(organization_id,module_key)
 			DO UPDATE SET active=EXCLUDED.active,updated_at=now()
-		`, organizationID, module.Key, moduleCanActivate(module.Key))
-		if err != nil { return err }
+		`,organizationID,module.Key,active)
+		if err!=nil{return err}
 	}
 	return nil
 }
