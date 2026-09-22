@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"sort"
+
+	"github.com/jackc/pgx/v5"
 )
 
 // ModuleCatalog define el catálogo de módulos disponibles en la plataforma.
@@ -15,6 +17,25 @@ type moduleDef struct {
 	Description string `json:"description"`
 	Icon        string `json:"icon"`
 	Category    string `json:"category"`
+}
+
+var mvpModuleKeys = map[string]bool{
+	"reportes":true,"pos":true,"pedidos":true,"cocina":true,"mesas":true,"caja":true,"reservas":true,
+	"productos":true,"combos":true,"recetas":true,"inventario":true,"kardex":true,"compras":true,
+	"clientes":true,"locales":true,"fiscal":true,"usuarios":true,
+}
+
+func seedOrganizationModules(ctx context.Context, tx pgx.Tx, organizationID string) error {
+	for _, module := range moduleCatalog {
+		_, err := tx.Exec(ctx, `
+			INSERT INTO organization_modules(organization_id,module_key,active)
+			VALUES($1,$2,$3)
+			ON CONFLICT(organization_id,module_key)
+			DO UPDATE SET active=EXCLUDED.active,updated_at=now()
+		`, organizationID, module.Key, mvpModuleKeys[module.Key])
+		if err != nil { return err }
+	}
+	return nil
 }
 
 var moduleCatalog = []moduleDef{
@@ -84,12 +105,12 @@ func (a *API) listModules(w http.ResponseWriter, r *http.Request) {
 		_ = rows.Scan(&key, &active)
 		activeMap[key] = active
 	}
-	// Módulos que no están en la tabla se asumen activos (compatibilidad)
+	// Ausencia de configuración equivale a módulo inactivo: producción falla de forma segura.
 	catalog := make([]map[string]any, 0, len(moduleCatalog))
 	for _, m := range moduleCatalog {
 		active, exists := activeMap[m.Key]
 		if !exists {
-			active = true
+			active = false
 		}
 		catalog = append(catalog, map[string]any{
 			"key":         m.Key,
