@@ -633,12 +633,27 @@ test("empresa y kardex respetan no duplicación y patrón de gestión",()=>{
   assert.ok(company.includes("organization-section"),"Empresa separa identidad legal y configuración general sin duplicar datos");
   assert.ok(company.includes("organization-section-header"),"Empresa usa cabeceras compactas de sección");
   assert.ok(companyCss.includes(".organization-savebar"),"Empresa conserva una barra de guardado consistente");
-  assert.ok(kardex.includes("kardex-filter-grid"),"Kárdex usa un grid explícito de filtros");
-  assert.ok(kardex.includes("kardex-helper"),"Kárdex mantiene la ayuda contextual junto a los filtros");
+  assert.ok(kardex.includes('className="panel standardized-management inventory-panel"'),"Kárdex usa el panel estándar de gestión");
+  assert.ok(kardex.includes("inventory-toolbar kardex-toolbar"),"Kárdex reutiliza la barra de Inventario");
+  assert.ok(kardex.includes("management-cards kardex-cards"),"Kárdex ofrece tarjetas equivalentes en móvil");
+  assert.ok(kardex.includes("<th>ARTÍCULO</th><th>FECHA</th>"),"Kárdex presenta primero la entidad gestionada");
+  assert.ok(kardex.includes('className="inventory-product-cell"'),"La primera columna reutiliza el patrón de entidad de Inventario");
   assert.equal(kardex.includes("kardex-results-header"),false,"Kárdex no agrega una cabecera redundante de resultados");
   assert.equal(kardex.includes("selectedItem"),false,"Kárdex no repite el artículo seleccionado fuera del filtro");
   assert.equal(kardex.includes('movements.data?.total??0} movimientos'),false,"Kárdex no duplica el total ya mostrado por paginación");
   assert.equal(kardex.includes('style={{flexWrap:"wrap"}}'),false,"Kárdex no depende de estilos inline para el layout");
-  assert.ok(inventoryCss.includes(".kardex-workspace"),"Kárdex mantiene filtros y resultados en un solo workspace");
+  assert.ok(inventoryCss.includes(".kardex-toolbar"),"Kárdex mantiene solo estilos complementarios al patrón compartido");
+});
+
+test("carta y producción usa iconos semánticos por función",()=>{
+  const shell=read("src/shell/admin-shell.tsx");
+  const icons=read("src/design-system/icons.tsx");
+  const recipes=read("src/modules/menu/recipes/presentation/recipes-page.tsx");
+  const availability=read("src/modules/menu/availability/presentation/product-availability-manager.tsx");
+  assert.ok(shell.includes('name:"Recetas y producción",icon:"cookingPot"'),"Recetas y producción usa cocción/producción, no un rol de chef");
+  assert.ok(shell.includes('name:"Disponibilidad de la carta",icon:"availability"'),"Disponibilidad usa un icono específico de plato disponible");
+  assert.ok(icons.includes("availability:"),"El design system define el icono semántico de disponibilidad");
+  assert.ok(recipes.includes('name="cookingPot"'),"La página de Recetas conserva la misma semántica visual");
+  assert.ok(availability.includes('name="availability"'),"El estado vacío de disponibilidad usa su icono de dominio");
 });
 
