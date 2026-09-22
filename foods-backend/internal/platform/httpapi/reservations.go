@@ -38,6 +38,18 @@ func validReservationStatus(status string) bool {
 	return status=="pending"||status=="confirmed"||status=="seated"||status=="cancelled"||status=="no_show"
 }
 
+func validReservationTransition(current,next string) bool {
+	if current==next{return true}
+	switch current {
+	case "pending":
+		return next=="confirmed"||next=="seated"||next=="cancelled"||next=="no_show"
+	case "confirmed":
+		return next=="seated"||next=="cancelled"||next=="no_show"
+	default:
+		return false
+	}
+}
+
 func normalizeOptionalID(value *string) *string {
 	if value==nil{return nil}
 	trimmed:=strings.TrimSpace(*value)
@@ -52,7 +64,7 @@ func parseReservationInput(in *reservationInput)(time.Time,bool){
 	in.CustomerPhone=strings.TrimSpace(in.CustomerPhone)
 	in.Notes=strings.TrimSpace(in.Notes)
 	startsAt,err:=time.Parse(time.RFC3339,in.StartsAt)
-	if err!=nil||in.CustomerName==""||len(in.CustomerName)>180||len(in.CustomerPhone)>40||in.Guests<1||in.Guests>100||len(in.Notes)>500{
+	if err!=nil||startsAt.Before(time.Now().Add(-5*time.Minute))||in.CustomerName==""||len(in.CustomerName)>180||len(in.CustomerPhone)>40||in.Guests<1||in.Guests>100||len(in.Notes)>500{
 		return time.Time{},false
 	}
 	return startsAt,true
@@ -89,7 +101,7 @@ func (a *API) validateReservationReferences(r *http.Request, s scope, in reserva
 			SELECT EXISTS(
 			 SELECT 1 FROM reservations
 			 WHERE organization_id=$1 AND location_id=$2 AND table_id=$3
-			   AND status IN ('pending','confirmed')
+			   AND status IN ('pending','confirmed','seated')
 			   AND starts_at=$4
 			   AND ($5='' OR id::text<>$5)
 			)`,s.OrganizationID,s.LocationID,*in.TableID,in.StartsAt,excludeID).Scan(&conflict);err!=nil{
@@ -158,6 +170,9 @@ func (a *API) updateReservation(w http.ResponseWriter,r *http.Request){
 	if !ok{fail(w,400,"invalid_reservation","Completa cliente, fecha, hora y número de personas.");return}
 	in.StartsAt=startsAt.UTC().Format(time.RFC3339)
 	if problem:=a.validateReservationReferences(r,s,in,id);problem!=nil{fail(w,400,problem.Code,problem.Message);return}
+	var current string
+	if err:=a.db.QueryRow(r.Context(),`SELECT status FROM reservations WHERE id=$1 AND organization_id=$2 AND location_id=$3`,id,s.OrganizationID,s.LocationID).Scan(&current);errors.Is(err,pgx.ErrNoRows){fail(w,404,"reservation_not_found","La reserva no existe.");return}else if err!=nil{fail(w,503,"reservations_unavailable","No pudimos validar la reserva.");return}
+	if current!="pending"&&current!="confirmed"{fail(w,409,"reservation_not_editable","Solo una reserva pendiente o confirmada puede editarse.");return}
 	item,err:=scanReservation(a.db.QueryRow(r.Context(),`
 		UPDATE reservations r SET customer_id=$4,customer_name=$5,customer_phone=$6,starts_at=$7,guests=$8,table_id=$9,notes=$10,updated_at=now()
 		WHERE r.id=$1 AND r.organization_id=$2 AND r.location_id=$3
@@ -173,9 +188,16 @@ func (a *API) updateReservationStatus(w http.ResponseWriter,r *http.Request){
 	s:=r.Context().Value(scopeKey{}).(scope)
 	var in struct{Status string `json:"status"`}
 	if json.NewDecoder(r.Body).Decode(&in)!=nil||!validReservationStatus(in.Status){fail(w,400,"invalid_reservation_status","El estado de reserva no es válido.");return}
-	tag,err:=a.db.Exec(r.Context(),`UPDATE reservations SET status=$4,updated_at=now() WHERE id=$1 AND organization_id=$2 AND location_id=$3`,r.PathValue("id"),s.OrganizationID,s.LocationID,in.Status)
-	if err!=nil{fail(w,503,"reservations_unavailable","No pudimos actualizar la reserva.");return}
-	if tag.RowsAffected()==0{fail(w,404,"reservation_not_found","La reserva no existe.");return}
+	tx,err:=a.db.Begin(r.Context())
+	if err!=nil{fail(w,503,"reservations_unavailable","No pudimos iniciar la actualización.");return}
+	defer tx.Rollback(r.Context())
+	var current string
+	err=tx.QueryRow(r.Context(),`SELECT status FROM reservations WHERE id=$1 AND organization_id=$2 AND location_id=$3 FOR UPDATE`,r.PathValue("id"),s.OrganizationID,s.LocationID).Scan(&current)
+	if errors.Is(err,pgx.ErrNoRows){fail(w,404,"reservation_not_found","La reserva no existe.");return}
+	if err!=nil{fail(w,503,"reservations_unavailable","No pudimos validar la reserva.");return}
+	if !validReservationTransition(current,in.Status){fail(w,409,"invalid_reservation_transition","La reserva ya no admite ese cambio de estado.");return}
+	if _,err=tx.Exec(r.Context(),`UPDATE reservations SET status=$4,updated_at=now() WHERE id=$1 AND organization_id=$2 AND location_id=$3`,r.PathValue("id"),s.OrganizationID,s.LocationID,in.Status);err!=nil{fail(w,503,"reservations_unavailable","No pudimos actualizar la reserva.");return}
+	if err=tx.Commit(r.Context());err!=nil{fail(w,503,"reservations_unavailable","No pudimos confirmar la actualización.");return}
 	a.audit(r,"reservation.status_updated","reservation",r.PathValue("id"))
 	w.WriteHeader(http.StatusNoContent)
 }
