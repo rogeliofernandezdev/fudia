@@ -90,7 +90,7 @@ export function ProductAvailabilityManager(){
    :query.isLoading?<div className="availability-table-wrap hover-scroll" tabIndex={0}><AvailabilitySkeleton/></div>:query.isError?
     <div className="availability-state"><Icon name="alert" size={24}/><b>No pudimos cargar la carta</b><p>{query.error.message}</p><Button kind="secondary" icon="refresh" onClick={()=>query.refetch()}>Reintentar</Button></div>
    :!items.length?
-    <div className="availability-state"><Icon name="box" size={24}/><b>Sin productos</b><p>No hay productos activos que coincidan con los filtros.</p></div>
+    <div className="availability-state"><Icon name="availability" size={24}/><b>Sin productos</b><p>No hay productos activos que coincidan con los filtros.</p></div>
    :<div className="availability-table-wrap hover-scroll" tabIndex={0}>
     <div className="availability-list-head" aria-hidden="true"><span>PRODUCTO</span><span>ESTADO</span><span>CONTROL DEL DÍA</span><span>ACCIONES</span></div>
     <div className="availability-grid">
