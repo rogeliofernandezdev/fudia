@@ -1,11 +1,12 @@
 import type { ReactNode } from "react";
-export type IconName = "grid"|"sales"|"receipt"|"menu"|"utensils"|"chefHat"|"kitchen"|"combo"|"stock"|"truck"|"users"|"store"|"settings"|"search"|"bell"|"plus"|"minus"|"chevron"|"chevronLeft"|"filter"|"download"|"alert"|"check"|"clock"|"box"|"logout"|"eye"|"lock"|"mail"|"edit"|"power"|"save"|"refresh"|"close"|"panelCollapse"|"panelExpand"|"qr"|"share"|"trash"|"arrowRightCircle"|"payment"|"cancel";
+export type IconName = "grid"|"sales"|"receipt"|"menu"|"utensils"|"chefHat"|"cookingPot"|"kitchen"|"combo"|"stock"|"truck"|"users"|"store"|"settings"|"search"|"bell"|"plus"|"minus"|"chevron"|"chevronLeft"|"filter"|"download"|"alert"|"check"|"clock"|"box"|"logout"|"eye"|"lock"|"mail"|"edit"|"power"|"save"|"refresh"|"close"|"panelCollapse"|"panelExpand"|"qr"|"share"|"trash"|"arrowRightCircle"|"payment"|"cancel";
 const paths: Record<IconName, ReactNode> = {
   grid:<><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></>,
   sales:<><path d="M4 19V9m6 10V5m6 14v-7m4 7H2"/></>, receipt:<><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6m-6 4h6"/></>,
   menu:<><path d="M4 7h16M4 12h16M4 17h16"/></>,
   utensils:<><path d="M7 3v7m-3-7v4a3 3 0 0 0 6 0V3M7 10v11M16 3v18M16 3c3 2 4 5 4 8h-4"/></>,
   chefHat:<><path d="M6 10a4 4 0 0 1 1-7 5 5 0 0 1 10 0 4 4 0 0 1 1 7v8H6zM6 15h12M9 18v3m6-3v3"/></>,
+  cookingPot:<><path d="M5 10h14l-1 9H6zM4 10h16M8 10V8h8v2M3 13h2m14 0h2"/><path d="M8 5c1-1 1-2 0-3M12 5c1-1 1-2 0-3M16 5c1-1 1-2 0-3"/></>,
   kitchen:<><path d="M4 17h16M6 17a6 6 0 0 1 12 0M12 8v3M10 8h4M3 21h18"/></>,
   combo:<><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 11h18M12 4v16"/></>,
   stock:<><path d="m4 8 8-4 8 4-8 4zM4 8v8l8 4 8-4V8M12 12v8"/></>,
