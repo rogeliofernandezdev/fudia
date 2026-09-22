@@ -170,33 +170,45 @@ function ProfilePlansPanel({profile,plans,loading,error,retry}:{profile:MyProfil
       {plans.map(plan=>{
         const active=current?.id===plan.id;
         return <article className={"profile-plan-card plan-"+plan.code+(active?" current":"")} key={plan.id}>
-          <div className="profile-plan-top">
-            <div className="profile-plan-name-row">
+          <div className="profile-plan-card-hero">
+            <div className="profile-plan-identity">
               <span className="profile-plan-icon"><Icon name={plan.code==="emprende"?"store":plan.code==="escala"?"grid":"sales"} size={18}/></span>
-              <div><small>{plan.code.toUpperCase()}</small><h3>{plan.name}</h3></div>
-              {active&&<span className="profile-plan-current"><Icon name="check" size={11}/>ACTUAL</span>}
+              <div>
+                <small>{plan.code.toUpperCase()}</small>
+                <div className="profile-plan-title-row"><h3>{plan.name}</h3>{active&&<span className="profile-plan-current"><Icon name="check" size={11}/>ACTUAL</span>}</div>
+                <p>{plan.description}</p>
+              </div>
             </div>
-            <p>{plan.description}</p>
             <div className="profile-plan-price">
-              <div><span>{plan.currency}</span><b>{Number(plan.monthlyPrice).toFixed(2)}</b><small>/ mes</small></div>
-              <em>{plan.currency+" "+Number(plan.annualPrice).toFixed(2)+" al año"}</em>
+              <small>PRECIO MENSUAL</small>
+              <div><span>{plan.currency}</span><b>{Number(plan.monthlyPrice).toFixed(2)}</b><em>/ mes</em></div>
+              <p>{plan.currency+" "+Number(plan.annualPrice).toFixed(2)+" al año"}</p>
             </div>
           </div>
 
           <div className="profile-plan-facts">
-            <div><small>LOCALES</small><b>{plan.maxLocations??"∞"}</b><span>{plan.maxLocations===1?"local incluido":"locales incluidos"}</span></div>
-            <div><small>USUARIOS</small><b>{plan.maxUsers??"∞"}</b><span>{plan.maxUsers===1?"usuario incluido":"usuarios incluidos"}</span></div>
-            <div><small>PRUEBA</small><b>{plan.trialDays?plan.trialDays+" días":"No"}</b><span>{plan.trialDays?"sin costo":"no incluida"}</span></div>
+            <article>
+              <span className="profile-plan-fact-icon"><Icon name="store" size={14}/></span>
+              <div><small>LOCALES</small><b>{plan.maxLocations??"∞"}</b><p>{plan.maxLocations===1?"local incluido":"locales incluidos"}</p></div>
+            </article>
+            <article>
+              <span className="profile-plan-fact-icon"><Icon name="users" size={14}/></span>
+              <div><small>USUARIOS</small><b>{plan.maxUsers??"∞"}</b><p>{plan.maxUsers===1?"usuario incluido":"usuarios incluidos"}</p></div>
+            </article>
+            <article>
+              <span className="profile-plan-fact-icon"><Icon name="clock" size={14}/></span>
+              <div><small>PRUEBA</small><b>{plan.trialDays?plan.trialDays+" días":"No"}</b><p>{plan.trialDays?"sin costo":"no incluida"}</p></div>
+            </article>
           </div>
 
-          <div className="profile-plan-modules">
-            <div className="profile-plan-modules-head">
-              <span><Icon name="grid" size={13}/>Módulos incluidos</span>
-              <b>{plan.moduleKeys.length}</b>
-            </div>
+          <section className="profile-plan-modules">
+            <header>
+              <div><small>INCLUYE</small><h4>Módulos del plan</h4></div>
+              <span><Icon name="grid" size={14}/><b>{plan.moduleKeys.length}</b></span>
+            </header>
             <div className="profile-plan-module-list">{plan.moduleKeys.slice(0,6).map(key=><small key={key}><Icon name="check" size={9}/>{planModuleLabel(key)}</small>)}</div>
             {plan.moduleKeys.length>6&&<em>+{plan.moduleKeys.length-6} módulos adicionales</em>}
-          </div>
+          </section>
 
           <footer className={active?"active":""}>{active?<span><Icon name="check" size={13}/>Plan contratado</span>:<span>Disponible para cambio de plan</span>}</footer>
         </article>;
