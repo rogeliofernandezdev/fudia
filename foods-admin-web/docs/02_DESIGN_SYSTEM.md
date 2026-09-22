@@ -129,7 +129,12 @@ se limitan a densidad y composición, nunca a reinterpretar el significado del c
   modal no incluye selector de Estado: activar o desactivar una receta se realiza
   desde la tabla mediante la acción de fila correspondiente. En móvil, el modal
   ocupa la pantalla y cada insumo se reorganiza como una tarjeta de edición sin
-  perder unidad, cantidad, merma ni acción de quitar.
+  perder unidad, cantidad, merma ni acción de quitar. Cantidad y unidad forman
+  un único control compuesto, con un solo borde y foco en el contenedor. La
+  columna Acción reserva el ancho completo del control cuadrado y nunca recorta
+  el botón de quitar. El formulario de Recetas no hereda padding ni iconos
+  decorativos del footer CRUD genérico: su espaciado pertenece al módulo y cada
+  acción muestra un único icono explícito.
 - El producto solicita explícitamente el control de disponibilidad mediante
   tarjetas radio: «Siempre disponible» o «Cupo diario». «Siempre disponible»
   no muestra un contador; «Cupo diario» revela y exige un entero mayor que cero
