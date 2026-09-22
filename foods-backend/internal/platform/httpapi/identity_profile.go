@@ -36,12 +36,12 @@ type myProfileInput struct {
 
 func (a *API) loadMyProfile(ctx context.Context, s scope) (myProfileView, error) {
 	var out myProfileView
-	var planID,planCode,planName,planStatus *string
+	var planID,planCode,planName,planStatus string
 	err:=a.db.QueryRow(ctx,`
 		SELECT u.full_name,u.email,u.platform_admin,
 		       COALESCE(array_agg(DISTINCT r.name) FILTER (WHERE r.id IS NOT NULL),ARRAY[]::text[]),
 		       COALESCE(array_agg(DISTINCT permission) FILTER (WHERE permission IS NOT NULL),ARRAY[]::text[]),
-		       sp.id,sp.code,sp.name,os.status
+		       COALESCE(sp.id::text,\'\'),COALESCE(sp.code,\'\'),COALESCE(sp.name,\'\'),COALESCE(os.status,\'\')
 		FROM users u
 		LEFT JOIN user_roles ur ON ur.user_id=u.id AND ur.location_id=$2
 		LEFT JOIN roles r ON r.id=ur.role_id AND r.organization_id=$3 AND r.active
@@ -58,8 +58,8 @@ func (a *API) loadMyProfile(ctx context.Context, s scope) (myProfileView, error)
 	}
 	if out.RoleNames==nil { out.RoleNames=[]string{} }
 	if out.Permissions==nil { out.Permissions=[]string{} }
-	if planID!=nil && planCode!=nil && planName!=nil && planStatus!=nil {
-		out.CurrentPlan=&myProfilePlanView{ID:*planID,Code:*planCode,Name:*planName,Status:*planStatus}
+	if planID!="" {
+		out.CurrentPlan=&myProfilePlanView{ID:planID,Code:planCode,Name:planName,Status:planStatus}
 	}
 	return out,nil
 }
