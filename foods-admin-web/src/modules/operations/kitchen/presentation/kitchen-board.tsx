@@ -9,9 +9,9 @@ import type {KitchenStatus,KitchenTicket} from "../domain/types";
 import {listKitchenTickets,updateKitchenTicketStatus} from "../infrastructure/kitchen-api";
 
 const lanes:Array<{status:KitchenStatus;label:string;shortLabel:string;icon:IconName}>= [
-  {status:"confirmado",label:"Por preparar",shortLabel:"Pendientes",icon:"clock"},
-  {status:"preparando",label:"En preparación",shortLabel:"Preparando",icon:"chefHat"},
-  {status:"listo",label:"Listos para entregar",shortLabel:"Listos",icon:"check"},
+  {status:"confirmado",label:"POR PREPARAR",shortLabel:"Pendientes",icon:"clock"},
+  {status:"preparando",label:"EN PREPARACIÓN",shortLabel:"Preparando",icon:"chefHat"},
+  {status:"listo",label:"LISTOS PARA ENTREGAR",shortLabel:"Listos",icon:"check"},
 ];
 
 const channelIcons:Record<string,IconName>={
