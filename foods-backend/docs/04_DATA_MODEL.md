@@ -223,3 +223,27 @@ su identificador para mantener trazabilidad.
   con `currency_decimals` es solo de presentación.
 - Los catálogos de países y monedas son datos de referencia del backend. Los tipos
   de cambio son datos temporales de negocio y siempre están acotados por empresa.
+
+## Planes y suscripciones SaaS
+
+`subscription_plans` es el catálogo comercial administrado por Plataforma.
+Cada plan define precio mensual/anual, moneda, prueba gratuita, límites de
+locales y usuarios, módulos habilitados y versión de condiciones. Los precios
+del catálogo no sustituyen el precio ya contratado por una empresa.
+
+`organization_subscriptions` conserva una instantánea contractual por empresa:
+plan, ciclo, precio, moneda, estado, periodo vigente, renovación automática,
+prueba, cancelación y versión/fecha de aceptación de condiciones. Un cambio de
+plan o ciclo toma el precio vigente del plan; cambios administrativos que no
+alteran plan ni ciclo conservan el precio y las fechas del periodo existente.
+
+`subscription_payments` registra cobros SaaS independientemente del proveedor
+de pago. Un pago confirmado reactiva la suscripción, avanza el periodo desde el
+fin del periodo vigente cuando corresponde y vuelve a aplicar los módulos del
+plan.
+
+Los límites `max_locations` y `max_users` se validan en backend dentro de la
+misma transacción que crea el recurso. Un downgrade se rechaza si la empresa ya
+supera los límites del plan destino. Los módulos activos de
+`organization_modules` se sincronizan desde `subscription_plans.module_keys`;
+solo módulos marcados como disponibles por la plataforma pueden activarse.
