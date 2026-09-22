@@ -56,25 +56,25 @@ export function ProductAvailabilityManager(){
   :"Cargando fecha…";
 
  return <>
-  <PageHeader eyebrow="CARTA Y PRODUCCIÓN" title="Disponibilidad de la carta" description="Controla las porciones preparadas y consulta las existencias físicas del local activo." action={<span className="availability-date"><Icon name="clock" size={16}/>{businessDate}</span>}/>
+  <PageHeader eyebrow="CARTA Y PRODUCCIÓN" title="Disponibilidad de la carta" description="Administra el cupo diario y consulta la disponibilidad real de cada producto en el local activo." action={<span className="availability-date"><Icon name="clock" size={16}/>{businessDate}</span>}/>
   <section className="panel availability-panel">
    <header className="availability-toolbar">
     <div className="availability-filters">
-     <label><Icon name="search" size={18}/><Input value={search} onChange={event=>{setSearch(event.target.value);setPage(1)}} placeholder="Buscar plato o producto..."/></label>
+     <label className="availability-search"><Icon name="search" size={18}/><Input value={search} onChange={event=>{setSearch(event.target.value);setPage(1)}} placeholder="Buscar plato o producto..."/></label>
      <Select value={categoryId} onChange={event=>{setCategoryId(event.target.value);setPage(1)}} disabled={categories.isLoading} aria-label="Filtrar por categoría">
       <option value="">Todas las categorías</option>
       {categories.data?.items.map(category=><option value={category.id} key={category.id}>{category.name}</option>)}
      </Select>
     </div>
-    <p><Icon name="store" size={16}/>Las cantidades siempre corresponden al local activo.</p>
+    <p className="availability-context"><Icon name="store" size={16}/>Las cantidades corresponden al local activo.</p>
    </header>
 
-   {query.isLoading?<AvailabilitySkeleton/>:query.isError?
+   {query.isLoading?<div className="availability-table-wrap hover-scroll" tabIndex={0}><AvailabilitySkeleton/></div>:query.isError?
     <div className="availability-state"><Icon name="alert" size={24}/><b>No pudimos cargar la carta</b><p>{query.error.message}</p><Button kind="secondary" icon="refresh" onClick={()=>query.refetch()}>Reintentar</Button></div>
    :!items.length?
     <div className="availability-state"><Icon name="box" size={24}/><b>Sin productos</b><p>No hay productos activos que coincidan con los filtros.</p></div>
-   :<>
-    <div className="availability-list-head" aria-hidden="true"><span>PRODUCTO Y ESTADO</span><span>CONTROL Y CANTIDAD</span><span>ACCIONES</span></div>
+   :<div className="availability-table-wrap hover-scroll" tabIndex={0}>
+    <div className="availability-list-head" aria-hidden="true"><span>PRODUCTO</span><span>ESTADO</span><span>CONTROL DEL DÍA</span><span>ACCIONES</span></div>
     <div className="availability-grid">
      {items.map(item=>{
       const derived=item.source==="schedule"||item.source==="combo_components";
@@ -85,43 +85,60 @@ export function ProductAvailabilityManager(){
       const quantityExhausted=(item.source==="portions"||item.source==="inventory")&&item.status==="sold_out";
       const inventoryAmount=item.remaining===null?"0":formatRegionalNumber(Number(item.remaining),location?.country,{maximumFractionDigits:3});
       return <article className={`availability-card status-${item.status}`} key={item.productId}>
-       <header>
+       <header className="availability-product">
         <span className="availability-image">{item.imageUrl?<img src={item.imageUrl} alt=""/>:<Icon name="box" size={20}/>}</span>
         <div><b>{item.name}</b><small>{item.categoryName??"Sin categoría"}</small></div>
-        <Status tone={tones[item.status]}>{labels[item.status]}</Status>
        </header>
 
-       <div className="availability-metrics">
-        <span><small>CONTROL</small><b>{controlLabels[item.quantityControl]}</b></span>
-        {item.quantityControl==="portions"&&<>
-         <label><small>PORCIONES DE HOY</small><Input type="number" min="1" step="1" inputMode="numeric" disabled={derived||pending} value={portionValue} onChange={event=>setPortions(value=>({...value,[item.productId]:event.target.value}))}/></label>
-         <span><small>VENDIDAS / RESTANTES</small><b>{item.soldQuantity} / {item.remaining??0}</b></span>
-        </>}
-        {item.quantityControl==="inventory"&&<>
-         <span><small>EXISTENCIA FÍSICA</small><b>{inventoryAmount} {item.inventoryUnit??"und"}</b></span>
-         <span><small>ORIGEN</small><b>Inventario</b></span>
-        </>}
-        {item.quantityControl==="none"&&<span><small>CANTIDAD</small><b>No se controla</b></span>}
+       <div className="availability-status-cell">
+        <Status tone={tones[item.status]}>{labels[item.status]}</Status>
+        <small>{derived?"Estado automático":manuallySoldOut?"Cambio manual":"Estado operativo"}</small>
        </div>
 
-       {item.quantityControl==="inventory"&&!derived&&<p className="availability-derived inventory"><Icon name="stock" size={14}/>La existencia se actualiza únicamente desde Inventario y con las ventas.</p>}
-       {derived&&<p className="availability-derived"><Icon name="alert" size={14}/>{item.source==="schedule"?"La ficha del producto lo mantiene fuera de horario.":"No hay suficientes opciones disponibles en una parte obligatoria."}</p>}
-       {item.quantityControl==="portions"&&item.source==="portions"&&item.status==="sold_out"&&<p className="availability-derived"><Icon name="alert" size={14}/>Las porciones del día se agotaron. Aumenta la cantidad y guarda para continuar vendiendo.</p>}
-       {item.quantityControl==="inventory"&&item.source==="inventory"&&item.status==="sold_out"&&<p className="availability-derived"><Icon name="alert" size={14}/>No queda stock físico. Registra una nueva entrada en Inventario.</p>}
+       <div className="availability-control-cell">
+        <div className={`availability-control-grid control-${item.quantityControl}`}>
+         <span className="availability-control-kind"><small>CONTROL</small><b>{controlLabels[item.quantityControl]}</b></span>
+         {item.quantityControl==="portions"&&<>
+          <label><small>CUPO DE HOY</small><Input aria-label={`Cupo de hoy para ${item.name}`} type="number" min="1" step="1" inputMode="numeric" disabled={derived||pending} value={portionValue} onChange={event=>setPortions(value=>({...value,[item.productId]:event.target.value}))}/></label>
+          <span><small>VENDIDAS</small><b>{item.soldQuantity}</b></span>
+          <span><small>RESTANTES</small><b>{item.remaining??0}</b></span>
+         </>}
+         {item.quantityControl==="inventory"&&<>
+          <span><small>EXISTENCIA</small><b>{inventoryAmount} {item.inventoryUnit??"und"}</b></span>
+          <span><small>ORIGEN</small><b>Inventario</b></span>
+         </>}
+         {item.quantityControl==="none"&&<span><small>CANTIDAD</small><b>No se controla</b></span>}
+        </div>
+
+        {item.quantityControl==="inventory"&&!derived&&<p className="availability-derived inventory"><Icon name="stock" size={14}/>La existencia se actualiza desde Inventario y con las ventas.</p>}
+        {derived&&<p className="availability-derived"><Icon name="alert" size={14}/>{item.source==="schedule"?"La ficha del producto lo mantiene fuera de horario.":"No hay suficientes opciones disponibles en una parte obligatoria."}</p>}
+        {item.quantityControl==="portions"&&item.source==="portions"&&item.status==="sold_out"&&<p className="availability-derived"><Icon name="alert" size={14}/>Las porciones del día se agotaron. Aumenta el cupo y actualízalo para continuar vendiendo.</p>}
+        {item.quantityControl==="inventory"&&item.source==="inventory"&&item.status==="sold_out"&&<p className="availability-derived"><Icon name="alert" size={14}/>No queda stock físico. Registra una nueva entrada en Inventario.</p>}
+       </div>
 
        <footer className={item.quantityControl==="portions"?"availability-actions":"availability-actions single"}>
-        {item.quantityControl==="portions"&&<Button kind={portionChanged?"primary":"secondary"} icon="check" disabled={derived||pending||!portionChanged} onClick={()=>update.mutate({item,status:item.manualStatus})}>{pending?"Actualizando…":"Guardar porciones"}</Button>}
-        <Button kind={manuallySoldOut?"success":"danger"} icon="power" disabled={derived||pending||(!manuallySoldOut&&quantityExhausted)} onClick={()=>update.mutate({item,status:manuallySoldOut?"available":"sold_out"})}>{pending?"Guardando…":manuallySoldOut?"Reactivar":"Marcar agotado"}</Button>
+        {item.quantityControl==="portions"&&<Button kind={portionChanged?"primary":"secondary"} icon="check" disabled={derived||pending||!portionChanged} onClick={()=>update.mutate({item,status:item.manualStatus})}>{pending?"Actualizando…":"Actualizar cupo"}</Button>}
+        <Button kind="secondary" className={manuallySoldOut?"availability-available-action":"availability-soldout-action"} icon="power" disabled={derived||pending||(!manuallySoldOut&&quantityExhausted)} onClick={()=>update.mutate({item,status:manuallySoldOut?"available":"sold_out"})}>{pending?"Guardando…":manuallySoldOut?"Marcar disponible":"Marcar agotado"}</Button>
        </footer>
       </article>;
      })}
     </div>
-   </>}
+   </div>}
    {!query.isLoading&&!query.isError&&<Pagination page={page} size={size} total={query.data?.total??items.length} onPage={setPage} onSize={value=>{setSize(value);setPage(1)}}/>}
   </section>
  </>;
 }
 
 function AvailabilitySkeleton(){
- return <div className="availability-grid" aria-label="Cargando disponibilidad">{Array.from({length:6},(_,index)=><article className="availability-card availability-skeleton" key={index}><header><i/><span/><em/></header><div><i/><i/><i/></div><footer><i/><i/><i/></footer></article>)}</div>;
+ return <>
+  <div className="availability-list-head availability-skeleton-head" aria-hidden="true"><span><i/></span><span><i/></span><span><i/></span><span><i/></span></div>
+  <div className="availability-grid" aria-label="Cargando disponibilidad">
+   {Array.from({length:6},(_,index)=><article className="availability-card availability-skeleton" key={index}>
+    <header className="availability-product"><i className="availability-skeleton-image"/><div><span/><em/></div></header>
+    <div className="availability-status-cell"><i className="availability-skeleton-status"/><em/></div>
+    <div className="availability-control-cell"><div className="availability-skeleton-metrics"><i/><i/><i/><i/></div></div>
+    <footer className="availability-actions"><i/><i/></footer>
+   </article>)}
+  </div>
+ </>;
 }
