@@ -15,7 +15,7 @@ const steps:Array<{key:string;title:string;icon:IconName;desc:string}>=[
   {key:"empresa",title:"Empresa",icon:"store",desc:"Razón social, RUC y zona horaria"},
   {key:"fiscal",title:"Fiscal y moneda",icon:"receipt",desc:"País, moneda e impuesto"},
   {key:"local",title:"Primer local",icon:"box",desc:"Dirección, teléfono y horario"},
-  {key:"admin",title:"Administrador",icon:"users",desc:"Usuario y contraseña del admin"},
+  {key:"admin",title:"Administrador de empresa",icon:"users",desc:"Responsable principal de la organización"},
 ];
 
 export function PlatformOnboardingPage(){
@@ -31,7 +31,7 @@ export function PlatformOnboardingPage(){
 
   const save=useMutation({
     mutationFn:()=>createPlatformOrganization(draft),
-    onSuccess:()=>{notify({tone:"success",title:"Empresa registrada",message:"La empresa, el local y el administrador quedaron listos."});setDraft(blank);setStep(0)},
+    onSuccess:()=>{notify({tone:"success",title:"Empresa registrada",message:"La empresa, el local y su Administrador de empresa quedaron listos."});setDraft(blank);setStep(0)},
     onError:e=>notify({tone:"danger",title:"No se pudo registrar",message:e.message}),
   });
 
@@ -41,7 +41,7 @@ export function PlatformOnboardingPage(){
   const canNext=step<steps.length-1;
   const canPrev=step>0;
 
-  return <><PageHeader eyebrow="PLATAFORMA" title="Registrar empresa" description="Completa los 4 pasos para crear una nueva empresa con su primer local y administrador."/>
+  return <><PageHeader eyebrow="PLATAFORMA" title="Registrar empresa" description="Completa los 4 pasos para crear una nueva empresa con su primer local y Administrador de empresa."/>
   {loadError?<div className="catalog-state error"><span><Icon name="alert"/></span><b>No pudimos cargar los catálogos</b><p>{loadError}</p><button className="button secondary" onClick={()=>void context.refetch()}>Reintentar</button></div>:
   <div className="onboarding-wizard">
     <nav className="wizard-steps" aria-label="Pasos del registro">
@@ -86,7 +86,7 @@ export function PlatformOnboardingPage(){
       </section>}
 
       {step===3&&<section className="panel management">
-        <header><span className="modal-title-icon"><Icon name="users" size={18}/></span><div><small>PASO 4 · ADMINISTRADOR</small><h2>Administrador de la empresa</h2></div></header>
+        <header><span className="modal-title-icon"><Icon name="users" size={18}/></span><div><small>PASO 4 · ADMINISTRADOR DE EMPRESA</small><h2>Responsable principal de la empresa</h2></div></header>
         <div className="form-grid">
           <label className="span-2">Nombre completo<Input required value={draft.adminName} onChange={e=>set("adminName",e.target.value)} placeholder="Juan Pérez"/></label>
           <label className="span-2">Correo electrónico<Input required type="email" value={draft.adminEmail} onChange={e=>set("adminEmail",e.target.value)} placeholder="admin@restaurante.com"/></label>
