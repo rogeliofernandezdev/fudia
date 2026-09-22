@@ -23,6 +23,9 @@ CREATE UNIQUE INDEX users_single_platform_admin_uq
   ON users ((platform_admin))
   WHERE platform_admin;
 
+DELETE FROM user_roles
+WHERE user_id IN (SELECT id FROM users WHERE platform_admin);
+
 UPDATE roles
 SET name='Administrador de empresa',
     description='Administra la empresa, sus locales, equipo y operación sin privilegios de plataforma',
