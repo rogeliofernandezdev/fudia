@@ -10,7 +10,7 @@ import {listKitchenTickets,updateKitchenTicketStatus} from "../infrastructure/ki
 
 const lanes:Array<{status:KitchenStatus;label:string;shortLabel:string;description:string;icon:IconName}>= [
   {status:"confirmado",label:"POR PREPARAR",shortLabel:"Pendientes",description:"Esperando inicio",icon:"clock"},
-  {status:"preparando",label:"EN PREPARACIÓN",shortLabel:"Preparando",description:"Trabajo activo",icon:"chefHat"},
+  {status:"preparando",label:"EN PREPARACIÓN",shortLabel:"Preparando",description:"Trabajo activo",icon:"cookingPot"},
   {status:"listo",label:"LISTOS PARA ENTREGAR",shortLabel:"Listos",description:"Esperando entrega",icon:"check"},
 ];
 
@@ -187,7 +187,7 @@ export function KitchenBoard(){
 
                 {ticket.notes&&<div className="kitchen-ticket-note"><Icon name="edit" size={12}/><span>{ticket.notes}</span></div>}
 
-                <footer>{canManage&&next?<Button className="kitchen-ticket-action" kind="primary" icon={next==="listo"?"check":"chefHat"} disabled={advance.isPending} onClick={()=>advance.mutate({ticket,status:next})}>{busyId===ticket.id?"Actualizando…":next==="preparando"?"Iniciar":"Marcar listo"}</Button>:ticket.status==="listo"?<span className="kitchen-ready-label"><Icon name="check" size={12}/>Listo para entregar</span>:null}</footer>
+                <footer>{canManage&&next?<Button className="kitchen-ticket-action" kind="primary" icon={next==="listo"?"check":"cookingPot"} disabled={advance.isPending} onClick={()=>advance.mutate({ticket,status:next})}>{busyId===ticket.id?"Actualizando…":next==="preparando"?"Iniciar":"Marcar listo"}</Button>:ticket.status==="listo"?<span className="kitchen-ready-label"><Icon name="check" size={12}/>Listo para entregar</span>:null}</footer>
               </article>;
             })}
             {!laneItems.length&&<div className="kitchen-lane-empty"><Icon name={lane.icon} size={18}/><b>Sin comandas</b><span>{lane.status==="confirmado"?"Los pedidos confirmados aparecerán aquí.":lane.status==="preparando"?"Nada se está preparando ahora.":"No hay pedidos esperando entrega."}</span></div>}
