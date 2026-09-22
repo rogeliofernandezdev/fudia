@@ -55,3 +55,20 @@ Los pagos de suscripción se registran separados de los pagos de pedidos. El
 modelo es independiente del proveedor para permitir integrar posteriormente una
 pasarela sin acoplar el dominio. Los cambios de plan aplican los módulos del
 nuevo entitlement y no permiten bajar a límites inferiores al uso activo.
+
+### Catálogo comercial inicial
+
+FUDIA inicia con tres planes editables desde Plataforma. No son reglas
+hardcodeadas del frontend: viven en `subscription_plans` y pueden cambiar sin
+desplegar una nueva versión.
+
+| Plan | Precio mensual | Precio anual | Locales | Usuarios | Enfoque |
+| --- | ---: | ---: | ---: | ---: | --- |
+| Emprende | PEN 89 | PEN 890 | 1 | 6 | Operación esencial de un restaurante |
+| Impulso | PEN 169 | PEN 1,690 | 3 | 20 | Crecimiento con recetas, inventario y reservas |
+| Escala | PEN 299 | PEN 2,990 | 10 | 60 | Operación multi-local y compras |
+
+Los tres incluyen 14 días de prueba. Emprende cubre POS, pedidos, cocina,
+mesas, caja, productos, clientes, reportes y administración base. Impulso añade
+reservas, combos, recetas, inventario y Kardex. Escala incorpora además compras
+y completa todos los módulos actualmente disponibles del núcleo comercial.
