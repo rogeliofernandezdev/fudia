@@ -129,10 +129,17 @@ se limitan a densidad y composición, nunca a reinterpretar el significado del c
   caracteres consulta el API y reúne todas las coincidencias de la búsqueda, recorriendo
   la paginación del endpoint cuando sea necesario. No se reemplaza por un `<select>`
   nativo ni se descarga el catálogo completo antes de que el usuario busque.
-  las notas son opcionales y no dominan visualmente el formulario. La composición
+  Las notas son opcionales y no dominan visualmente el formulario. La composición
   de insumos vive en una sección propia con cabecera azul `primary-600` en
   escritorio, columnas Insumo, Cantidad, Merma y acción homologada de quitar.
-  «Agregar insumo» pertenece a la cabecera de esa sección, nunca al footer. El
+  Cada fila de Insumo usa el mismo patrón de autocomplete asíncrono: al abrir
+  muestra hasta 10 artículos de inventario, con 1 o 2 caracteres no consulta,
+  y desde 3 caracteres reúne todas las coincidencias paginadas del API. Las
+  opciones ya usadas por otras filas se excluyen. «Agregar insumo» crea una
+  fila vacía y no depende del tamaño del catálogo cargado, por lo que no existe
+  un máximo artificial de 5, 10 o 100 insumos; el límite funcional es únicamente
+  no repetir el mismo artículo dentro de una receta. «Agregar insumo» pertenece
+  a la cabecera de esa sección, nunca al footer. El
   footer contiene únicamente «Cancelar» y «Guardar», con la misma altura. El
   modal no incluye selector de Estado: activar o desactivar una receta se realiza
   desde la tabla mediante la acción de fila correspondiente. En móvil, el modal
