@@ -474,6 +474,22 @@ test("mvp admin no presenta datos simulados como operacion real",()=>{
   assert.equal(configuration.includes("Facturación electrónica"),false,"Facturacion futura no se ofrece en el hub MVP");
 });
 
+test("reservas respeta el contrato de formularios y jerarquia del modal",()=>{
+  const page=read("src/modules/operations/reservations/presentation/reservations-page.tsx");
+  const schema=read("src/modules/operations/reservations/domain/reservation-schema.ts");
+  const css=read("src/modules/operations/reservations/presentation/reservations.css");
+  assert.ok(page.includes("useForm<ReservationDraft>"),"Reservas usa React Hook Form");
+  assert.ok(page.includes("resolver:reservationResolver"),"Reservas delega validacion a Zod");
+  assert.ok(schema.includes("reservationSchema=z.object"),"Reservas define esquema Zod");
+  assert.ok(page.includes('className="form-grid reservation-form-grid"'),"El modal usa una reticula propia sobre el formulario estandar");
+  assert.ok(css.includes("grid-template-columns:minmax(0,1.35fr) minmax(170px,.65fr)"),"La columna principal conserva mayor jerarquia");
+  assert.ok(page.indexOf("Fecha y hora")<page.indexOf("Personas")&&page.indexOf("Personas")<page.indexOf(">Mesa<")&&page.indexOf(">Mesa<")<page.indexOf("Duración de mesa"),"El flujo visual sigue fecha, personas, mesa y duracion");
+  assert.ok(page.includes('{busy?"Guardando…":"Guardar"}'),"El CTA usa el texto estandar Guardar");
+  assert.equal(page.includes("Guardar reserva"),false,"El modal no agrega sufijos al CTA Guardar");
+  assert.ok(page.includes("tablesLoading")&&page.includes("tablesError"),"La dependencia remota de mesas expone carga y error");
+  assert.ok(css.includes("@media (width<=600px)"),"El modal define reorganizacion movil");
+});
+
 test("no se versionan secretos locales ni artefactos temporales en la raiz admin",()=>{
   assert.equal(existsSync(join(root,".env.local")),false);
   const rootEntries=readdirSync(root);
