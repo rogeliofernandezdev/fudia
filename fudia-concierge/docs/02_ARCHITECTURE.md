@@ -60,7 +60,7 @@ La cola aplica:
 - reintentos;
 - dead-letter al agotar intentos.
 
-Cada worker limita sus mensajes en vuelo con `QUEUE_WORKER_CONCURRENCY`. La capacidad libre se pasa a Redis como límite de lectura, por lo que el proceso no reclama más entregas de las que puede ejecutar. Conversaciones distintas pueden avanzar en paralelo; los mensajes de una misma conversación siguen serializados por el lock distribuido renovable.
+Cada worker limita sus mensajes en vuelo con `QUEUE_WORKER_CONCURRENCY`. La capacidad libre se pasa a Redis como límite de lectura, por lo que el proceso no reclama más entregas de las que puede ejecutar. Mientras una entrega permanece activa —incluido el tiempo esperando el lock de conversación— el worker renueva periódicamente su idle time en Redis para que `XAUTOCLAIM` no la recupere prematuramente. Conversaciones distintas pueden avanzar en paralelo; los mensajes de una misma conversación siguen serializados por el lock distribuido renovable.
 
 Durante el apagado, el worker deja de iterar trabajo nuevo y drena las entregas en vuelo dentro de `QUEUE_SHUTDOWN_GRACE_SECONDS`. Si se excede esa ventana, la tarea se cancela y Redis puede recuperar posteriormente cualquier entrega no confirmada.
 
