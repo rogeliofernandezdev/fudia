@@ -14,8 +14,7 @@ from src.api.webhook import router as webhook_router
 from src.infrastructure.concurrency import RedisConversationLock
 from src.infrastructure.fudia_client import FudiaClient
 from src.infrastructure.openai_adapter import (
-    OpenAIIntentRouter,
-    OpenAIScopeClassifier,
+    OpenAIConciergeRouter,
     OpenAIToolAgent,
 )
 from src.infrastructure.queue import RedisInboundQueue
@@ -88,15 +87,10 @@ def create_app(
         cfg.whatsapp_graph_version,
     )
 
-    scope = OpenAIScopeClassifier(
+    router = OpenAIConciergeRouter(
         openai_client,
         cfg.openai_model,
-        prompts / "scope_router.md",
-    )
-    intent_router = OpenAIIntentRouter(
-        openai_client,
-        cfg.openai_model,
-        prompts / "intent_router.md",
+        prompts / "concierge_router.md",
     )
     agents = {
         "menu": OpenAIToolAgent(
@@ -128,8 +122,7 @@ def create_app(
     service = ConciergeService(
         store,
         fudia,
-        scope,
-        intent_router,
+        router,
         agents,  # type: ignore[arg-type]
         conversation_lock=conversation_lock,
         rate_limiter=rate_limiter,
