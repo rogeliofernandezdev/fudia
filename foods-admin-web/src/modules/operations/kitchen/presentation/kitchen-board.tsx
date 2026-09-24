@@ -1,6 +1,6 @@
 "use client";
 import "./kitchen.css";
-import {useEffect,useMemo,useState} from "react";
+import {useEffect,useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Button,Icon,IconName,PageHeader,Select} from "@/design-system";
 import {useFeedback,useSession} from "@/providers";
@@ -116,10 +116,10 @@ export function KitchenBoard(){
   const now=serverBase&&tickets.dataUpdatedAt?serverBase+Math.max(0,clock-tickets.dataUpdatedAt):clock;
   const items=tickets.data?.items??[];
   const counts=tickets.data?.counts??{confirmado:0,preparando:0,listo:0};
-  const attention=useMemo(()=>items.filter(ticket=>{
+  const attention=items.filter(ticket=>{
     const tone=urgency(ticket,now);
     return tone==="warning"||tone==="late";
-  }).length,[items,now]);
+  }).length;
 
   const channelLabel=(value:string)=>tickets.data?.channelOptions.find(option=>option.value===value)?.label??value;
   const busyId=advance.isPending?advance.variables?.ticket.id:null;
