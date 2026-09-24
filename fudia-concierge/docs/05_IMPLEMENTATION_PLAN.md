@@ -49,7 +49,7 @@
 
 ## Bloque 5 — Endurecimiento de producción en código
 
-- [x] Router multiagente `menu/order/service`.
+- [x] Router unificado `out_of_scope/menu/order/service` con una sola llamada IA de clasificación por mensaje.
 - [x] Tools separadas por dominio y mínimo privilegio aplicado en código.
 - [x] Redis Streams en lugar de `BackgroundTasks`.
 - [x] Concurrencia acotada por worker con backpressure al leer la cola.
