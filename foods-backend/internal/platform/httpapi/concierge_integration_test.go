@@ -201,6 +201,14 @@ func TestConciergeQRCodeMenuOrderAndKitchenWorkflow(t *testing.T) {
 	if orderCount!=1{
 		t.Fatalf("second Concierge round must reuse the open order, count=%d",orderCount)
 	}
+	var requestCount int
+	if err:=pool.QueryRow(ctx,`
+		SELECT count(*) FROM concierge_order_requests
+		WHERE organization_id=$1 AND location_id=$2 AND order_id=$3
+	`,s.OrganizationID,s.LocationID,created.ID).Scan(&requestCount);err!=nil{t.Fatal(err)}
+	if requestCount!=2{
+		t.Fatalf("expected one idempotency record per Concierge round, got %d",requestCount)
+	}
 	var appendAuditCount int
 	if err:=pool.QueryRow(ctx,`
 		SELECT count(*) FROM audit_log
