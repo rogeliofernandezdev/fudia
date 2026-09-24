@@ -7,7 +7,7 @@ from src.infrastructure.concurrency import (
     MemoryConversationLock,
     conversation_identity,
 )
-from src.infrastructure.queue import MemoryInboundQueue
+from src.infrastructure.queue import MemoryInboundQueue, QueueDelivery
 from src.infrastructure.state_store import MemoryConversationStore
 from src.services.queue_worker import QueueWorker
 
@@ -148,7 +148,7 @@ class TouchTrackingQueue(MemoryInboundQueue):
 
     async def touch(
         self,
-        delivery: object,
+        delivery: QueueDelivery,
     ) -> bool:
         self.touches += 1
         return True
