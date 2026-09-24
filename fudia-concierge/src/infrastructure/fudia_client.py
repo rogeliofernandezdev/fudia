@@ -6,6 +6,7 @@ from urllib.parse import quote
 import httpx
 
 from src.domain.models import (
+    BillSummary,
     ComboDetail,
     MenuItem,
     MenuResponse,
@@ -148,6 +149,7 @@ class FudiaClient:
         phone: str,
         lines: list[dict[str, Any]],
         conversation_id: str,
+        request_id: str,
     ) -> OrderResult:
         body = await self._json(
             "POST",
@@ -155,7 +157,25 @@ class FudiaClient:
             json={
                 "customerPhone": phone,
                 "conversationId": conversation_id,
+                "requestId": request_id,
                 "items": lines,
             },
         )
         return OrderResult.model_validate(body)
+
+
+    async def request_bill(
+        self,
+        token: str,
+        phone: str,
+        conversation_id: str,
+    ) -> BillSummary:
+        body = await self._json(
+            "POST",
+            f"/v1/integrations/concierge/{quote(token, safe='')}/bill",
+            json={
+                "customerPhone": phone,
+                "conversationId": conversation_id,
+            },
+        )
+        return BillSummary.model_validate(body)
