@@ -15,11 +15,13 @@
 
 ## Bloque 2 — Contrato Fudia
 
-- [ ] Menú público derivado del QR.
-- [ ] Creación de pedido derivada del QR.
-- [ ] Revalidación disponibilidad/stock.
-- [ ] Integración KDS.
-- [ ] Test QR -> pedido -> KDS.
+- [x] Menú server-to-server derivado del QR.
+- [x] Creación de pedido derivada del QR.
+- [x] Revalidación de precio, disponibilidad y stock en foods-backend.
+- [x] Integración KDS con canal WhatsApp.
+- [x] Idempotencia por conversación ante reintentos.
+- [x] Credencial propia para el contrato Concierge -> foods-backend.
+- [x] Test QR -> pedido -> KDS.
 
 ## Bloque 3 — QR y configuración
 
