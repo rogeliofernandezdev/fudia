@@ -86,6 +86,23 @@ func TestPlatformOnboardingCreatesOperationalTenant(t *testing.T){
 	if err:=pool.QueryRow(context.Background(),`SELECT count(*) FROM roles WHERE organization_id=$1 AND system_key IS NOT NULL`,created.OrganizationID).Scan(&defaults);err!=nil{t.Fatal(err)}
 	if defaults!=len(defaultOrganizationRoles){t.Fatalf("expected %d predefined roles, got %d",len(defaultOrganizationRoles),defaults)}
 
+	var paymentMethods,expenseCategories,cashRegisters,zones int
+	if err:=pool.QueryRow(context.Background(),`SELECT count(*) FROM payment_methods WHERE organization_id=$1 AND active`,created.OrganizationID).Scan(&paymentMethods);err!=nil{t.Fatal(err)}
+	if paymentMethods!=5{t.Fatalf("expected 5 default payment methods, got %d",paymentMethods)}
+	if err:=pool.QueryRow(context.Background(),`SELECT count(*) FROM expense_categories WHERE organization_id=$1 AND active`,created.OrganizationID).Scan(&expenseCategories);err!=nil{t.Fatal(err)}
+	if expenseCategories!=6{t.Fatalf("expected 6 default expense categories, got %d",expenseCategories)}
+	if err:=pool.QueryRow(context.Background(),`SELECT count(*) FROM cash_registers WHERE organization_id=$1 AND location_id=$2 AND active AND name='Caja principal'`,created.OrganizationID,created.LocationID).Scan(&cashRegisters);err!=nil{t.Fatal(err)}
+	if cashRegisters!=1{t.Fatalf("expected Caja principal after onboarding, got %d",cashRegisters)}
+	if err:=pool.QueryRow(context.Background(),`SELECT count(*) FROM zones WHERE organization_id=$1 AND location_id=$2 AND active AND name='Principal'`,created.OrganizationID,created.LocationID).Scan(&zones);err!=nil{t.Fatal(err)}
+	if zones!=1{t.Fatalf("expected Principal zone after onboarding, got %d",zones)}
+
+	var registerID string
+	if err:=pool.QueryRow(context.Background(),`SELECT id FROM cash_registers WHERE organization_id=$1 AND location_id=$2 AND name='Caja principal'`,created.OrganizationID,created.LocationID).Scan(&registerID);err!=nil{t.Fatal(err)}
+	openReq:=httptest.NewRequest("POST","/v1/admin/cash-shifts",bytes.NewReader([]byte(fmt.Sprintf(`{"cashRegisterId":%q,"openingAmount":0}`,registerID))))
+	openReq=openReq.WithContext(context.WithValue(openReq.Context(),scopeKey{},scope{UserID:created.AdministratorID,OrganizationID:created.OrganizationID,LocationID:created.LocationID,Name:"Propietario MVP"}))
+	openRec:=httptest.NewRecorder();api.openCashShift(openRec,openReq)
+	if openRec.Code!=201{t.Fatalf("new tenant must be able to open its default cash register: %d %s",openRec.Code,openRec.Body.String())}
+
 	permissionScope:=scope{UserID:created.AdministratorID,OrganizationID:created.OrganizationID,LocationID:created.LocationID,Name:"Propietario MVP"}
 	permissionReq:=httptest.NewRequest("GET","/permission-check",nil)
 	permissionReq=permissionReq.WithContext(context.WithValue(permissionReq.Context(),scopeKey{},permissionScope))

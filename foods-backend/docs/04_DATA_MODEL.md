@@ -157,6 +157,12 @@ por su cuenta.
 `stock_movements` correspondiente. El saldo tiene una restricción de base de
 datos que impide valores negativos.
 
+## Configuración inicial de una empresa
+
+El onboarding de una organización crea en una sola transacción la empresa, su perfil fiscal por defecto, el local principal, el administrador, los roles predefinidos, la suscripción y los módulos permitidos por el plan. Además copia desde plantillas persistidas en base de datos los medios de pago, categorías iniciales de gasto, una zona `Principal` y una `Caja principal` para el primer local.
+
+Estas filas son configuración inicial editable, no datos comerciales de ejemplo. No se crean productos, proveedores, recetas, mesas, clientes ni movimientos ficticios.
+
 ## Medios de pago
 
 `payment_methods` es el catálogo de medios de pago por empresa y constituye la única fuente de verdad para Cobros y Gastos. Cada fila define código estable, nombre visible, estado, disponibilidad para ventas o gastos y si el medio representa movimiento físico de efectivo. `payments` y `expenses` referencian el catálogo mediante clave foránea compuesta `(organization_id, code)`.
