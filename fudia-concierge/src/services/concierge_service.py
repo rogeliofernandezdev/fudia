@@ -42,6 +42,11 @@ class ConciergeService:
                     "El QR no está activo o ya no corresponde a una mesa. "
                     "Pide ayuda al personal del restaurante."
                 )
+            if not table.conciergeEnabled:
+                return (
+                    "Fudia Concierge no está disponible en este local en este momento. "
+                    "Pide ayuda al personal del restaurante."
+                )
             session.qr_token = token
             session.conversation_id = uuid4().hex
             session.table = table

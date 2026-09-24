@@ -17,6 +17,8 @@ class TableContext(BaseModel):
     zone: str = ""
     organizationName: str
     locationName: str
+    conciergeEnabled: bool = False
+    whatsappPhone: str = ""
 
 
 class MenuItem(BaseModel):

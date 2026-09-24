@@ -10,8 +10,9 @@ from src.services.tools import ConciergeTools, explicit_confirmation
 
 
 class FakeFudia:
-    def __init__(self) -> None:
+    def __init__(self, concierge_enabled: bool = True) -> None:
         self.order_calls: list[dict[str, Any]] = []
+        self.concierge_enabled = concierge_enabled
 
     async def resolve_table(self, token: str) -> TableContext:
         assert token == "a" * 32
@@ -21,6 +22,8 @@ class FakeFudia:
             zone="Principal",
             organizationName="Restaurante Demo",
             locationName="Local principal",
+            conciergeEnabled=self.concierge_enabled,
+            whatsappPhone="+51987654321" if self.concierge_enabled else "",
         )
 
     async def search_menu(
@@ -98,6 +101,17 @@ async def test_bootstrap_qr_resolves_table_and_persists_session() -> None:
     assert session.qr_token == "a" * 32
     assert session.table is not None
     assert session.table.name == "M1"
+
+
+@pytest.mark.asyncio
+async def test_disabled_concierge_rejects_qr() -> None:
+    store = MemoryConversationStore()
+    service = ConciergeService(store, FakeFudia(concierge_enabled=False), QuietEngine())
+
+    reply = await service.handle_message("51999999999", "FUDIA:" + "a" * 32)
+
+    assert "no está disponible" in reply
+    assert await store.get("51999999999") is None
 
 
 @pytest.mark.asyncio
