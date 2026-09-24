@@ -161,6 +161,26 @@ TOOLS: list[dict[str, Any]] = [
     },
     {
         "type": "function",
+        "name": "request_human",
+        "description": (
+            "Solicita atención humana real para la mesa cuando el cliente "
+            "pide hablar con una persona, mozo o encargado."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "reason": {
+                    "type": "string",
+                    "description": "Motivo breve y concreto de la atención solicitada.",
+                }
+            },
+            "required": ["reason"],
+            "additionalProperties": False,
+        },
+        "strict": True,
+    },
+    {
+        "type": "function",
         "name": "view_cart",
         "description": "Consulta el carrito actual.",
         "parameters": {"type": "object", "properties": {}, "additionalProperties": False},
