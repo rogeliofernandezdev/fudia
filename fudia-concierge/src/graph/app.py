@@ -5,20 +5,67 @@ from typing import Any
 
 from langgraph.graph import END, StateGraph
 
+from src.domain.intents import AgentIntent
 from src.domain.models import ConversationSession
 from src.graph.state import ConciergeGraphState
 
-Processor = Callable[[ConversationSession, str], Awaitable[str]]
+Router = Callable[
+    [ConversationSession, str],
+    Awaitable[AgentIntent],
+]
+Processor = Callable[
+    [ConversationSession, str],
+    Awaitable[str],
+]
 
 
-def build_graph(processor: Processor) -> Any:
+def build_graph(
+    router: Router,
+    processors: dict[AgentIntent, Processor],
+) -> Any:
     graph = StateGraph(ConciergeGraphState)
 
-    async def concierge_node(state: ConciergeGraphState) -> dict[str, str]:
-        reply = await processor(state["session"], state["user_message"])
-        return {"reply": reply}
+    async def route_node(
+        state: ConciergeGraphState,
+    ) -> dict[str, AgentIntent]:
+        intent = await router(
+            state["session"],
+            state["user_message"],
+        )
+        return {"intent": intent}
 
-    graph.add_node("concierge", concierge_node)
-    graph.set_entry_point("concierge")
-    graph.add_edge("concierge", END)
+    def specialist_node(
+        intent: AgentIntent,
+    ) -> Callable[
+        [ConciergeGraphState],
+        Awaitable[dict[str, str]],
+    ]:
+        async def run(
+            state: ConciergeGraphState,
+        ) -> dict[str, str]:
+            reply = await processors[intent](
+                state["session"],
+                state["user_message"],
+            )
+            return {"reply": reply}
+
+        return run
+
+    graph.add_node("route", route_node)
+    graph.add_node("menu", specialist_node("menu"))
+    graph.add_node("order", specialist_node("order"))
+    graph.add_node("service", specialist_node("service"))
+    graph.set_entry_point("route")
+    graph.add_conditional_edges(
+        "route",
+        lambda state: state["intent"],
+        {
+            "menu": "menu",
+            "order": "order",
+            "service": "service",
+        },
+    )
+    graph.add_edge("menu", END)
+    graph.add_edge("order", END)
+    graph.add_edge("service", END)
     return graph.compile()
