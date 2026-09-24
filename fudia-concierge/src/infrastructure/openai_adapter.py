@@ -11,6 +11,12 @@ from openai import AsyncOpenAI
 
 from src.domain.intents import INTENTS, AgentIntent
 from src.domain.models import ConversationSession
+from src.metrics import (
+    AGENT_DURATION,
+    AGENT_REQUESTS,
+    INTENT_ROUTES,
+    SCOPE_DECISIONS,
+)
 from src.observability import fingerprint, log_event
 
 logger = logging.getLogger(__name__)
@@ -66,10 +72,18 @@ class OpenAIScopeClassifier:
             instructions=self.instructions,
             input=scope_input,
         )
-        return (
+        allowed = (
             (response.output_text or "").strip().upper()
             == "IN_SCOPE"
         )
+        SCOPE_DECISIONS.labels(
+            decision=(
+                "in_scope"
+                if allowed
+                else "out_of_scope"
+            )
+        ).inc()
+        return allowed
 
 
 class OpenAIIntentRouter:
@@ -106,8 +120,15 @@ class OpenAIIntentRouter:
         )
         value = (response.output_text or "").strip().lower()
         if value not in INTENTS:
+            INTENT_ROUTES.labels(
+                intent="fallback_order"
+            ).inc()
             return "order"
-        return cast(AgentIntent, value)
+        intent = cast(AgentIntent, value)
+        INTENT_ROUTES.labels(
+            intent=intent
+        ).inc()
+        return intent
 
 
 class OpenAIToolAgent:
@@ -175,6 +196,14 @@ class OpenAIToolAgent:
             ]
             if not calls:
                 text = (response.output_text or "").strip()
+                duration = time.perf_counter() - started
+                AGENT_REQUESTS.labels(
+                    agent=self.agent_name,
+                    result="completed",
+                ).inc()
+                AGENT_DURATION.labels(
+                    agent=self.agent_name
+                ).observe(duration)
                 log_event(
                     logger,
                     "concierge.agent.completed",
@@ -183,7 +212,7 @@ class OpenAIToolAgent:
                     agent=self.agent_name,
                     model=self.model,
                     durationMs=round(
-                        (time.perf_counter() - started) * 1000,
+                        duration * 1000,
                         1,
                     ),
                     toolCalls=tool_calls,
@@ -225,6 +254,15 @@ class OpenAIToolAgent:
             )
             capture_usage(response)
 
+        AGENT_REQUESTS.labels(
+            agent=self.agent_name,
+            result="tool_limit",
+        ).inc()
+        AGENT_DURATION.labels(
+            agent=self.agent_name
+        ).observe(
+            time.perf_counter() - started
+        )
         log_event(
             logger,
             "concierge.agent.tool_limit",
