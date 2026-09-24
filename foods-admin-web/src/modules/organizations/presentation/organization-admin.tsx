@@ -9,7 +9,7 @@ import {useSession} from "@/providers/session-context";
 import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
 import {Icon} from "@/design-system/icons";
 import {LocationMap} from "@/design-system/location-map";
-import {Button,Input,PageHeader,Pagination,RowActionButton,Select,Status,Textarea} from "@/design-system/page-header";
+import {Button,Input,PageHeader,Pagination,RowActionButton,Select,Status} from "@/design-system/page-header";
 import {RemoteModalSkeleton} from "@/design-system/remote-modal-skeleton";
 import type {Country,Currency,List,Location,LocationDraft,Organization,Profile,ProfileDraft,ProfilesResponse,Rate,RateDraft} from "../domain/types";
 import {createRate as persistRate,deactivateLocation,deactivateProfile as removeProfileApi,deleteRate as removeRateApi,getOrganization,listLocations,listProfiles,listRates,saveLocation,saveProfile as persistProfile,updateOrganization} from "../infrastructure/organizations-api";
