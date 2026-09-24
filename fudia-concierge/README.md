@@ -28,4 +28,10 @@ Fudia Concierge interpreta la conversación y mantiene el carrito temporal. food
 
 ## Estado
 
-La primera vertical implementa webhook, QR, sesión, carrito, herramientas y confirmación protegida. Ver docs/05_IMPLEMENTATION_PLAN.md.
+El alcance funcional de esta etapa está implementado: QR y configuración por local,
+WhatsApp con aislamiento por número receptor, catálogo real, carrito, combos,
+modificadores, confirmación protegida, pedidos/KDS, rondas adicionales sobre una
+comanda abierta, handoff humano, observabilidad y bandeja operativa real.
+
+Queda como validación de despliegue la prueba contra credenciales reales de
+Meta/OpenAI/Redis. Ver `docs/05_IMPLEMENTATION_PLAN.md`.
