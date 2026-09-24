@@ -17,10 +17,9 @@ QueueWorker
     v
 ConciergeService
     |
-    +--> scope classifier
-    |
-    +--> LangGraph intent router
+    +--> LangGraph unified router
            |
+           +--> out_of_scope
            +--> menu agent ----+
            +--> order agent ---+--> ToolRegistry --> foods-backend
            +--> service agent -+
@@ -68,13 +67,13 @@ El modelo de entrega es al menos una vez; las mutaciones de negocio críticas us
 
 ## Orquestación multiagente
 
-LangGraph enruta cada mensaje permitido hacia un especialista con privilegio mínimo:
+LangGraph usa una única decisión de routing por mensaje: `out_of_scope`, `menu`, `order` o `service`. `out_of_scope` termina el flujo sin invocar un agente; las tres rutas operativas llegan a un especialista con privilegio mínimo:
 
 - `menu`: solo tools de lectura de carta, combos y modificadores;
 - `order`: tools de carta necesarias para resolver productos y mutaciones del carrito/pedido;
 - `service`: únicamente cuenta y handoff humano.
 
-El router de intención no responde al cliente. Cada agente dispone de su propio prompt y de un subconjunto de schemas. `ToolRegistry` vuelve a aplicar la misma autorización en código para impedir que un agente invoque una tool fuera de su dominio.
+El router no responde al cliente y cualquier salida inválida se trata como `out_of_scope`. Cada agente dispone de su propio prompt y de un subconjunto de schemas. `ToolRegistry` vuelve a aplicar la misma autorización en código para impedir que un agente invoque una tool fuera de su dominio.
 
 Los servicios de tools se separan en `MenuTools`, `OrderTools` y `ServiceTools`; `ConciergeTools` queda únicamente como fachada de compatibilidad.
 
