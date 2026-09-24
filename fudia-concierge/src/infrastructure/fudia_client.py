@@ -40,7 +40,7 @@ class FudiaClient:
 
     async def _json(self, method: str, path: str, **kwargs: Any) -> dict[str, Any]:
         headers = dict(kwargs.pop("headers", {}))
-        if path.startswith("/v1/public/concierge/") and self.api_key:
+        if path.startswith("/v1/integrations/concierge/") and self.api_key:
             headers["X-Fudia-Concierge-Key"] = self.api_key
         response = await self._http().request(
             method, self.base_url + path, headers=headers, **kwargs
@@ -71,7 +71,7 @@ class FudiaClient:
             params["productId"] = product_id.strip()
         body = await self._json(
             "GET",
-            f"/v1/public/concierge/{quote(token, safe='')}/menu",
+            f"/v1/integrations/concierge/{quote(token, safe='')}/menu",
             params=params,
         )
         return MenuResponse.model_validate(body)
@@ -89,7 +89,7 @@ class FudiaClient:
     ) -> OrderResult:
         body = await self._json(
             "POST",
-            f"/v1/public/concierge/{quote(token, safe='')}/orders",
+            f"/v1/integrations/concierge/{quote(token, safe='')}/orders",
             json={
                 "customerPhone": phone,
                 "conversationId": conversation_id,

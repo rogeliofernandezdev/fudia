@@ -47,14 +47,14 @@ func TestConciergeQRCodeMenuOrderAndKitchenWorkflow(t *testing.T) {
 		_,_=pool.Exec(context.Background(),`DELETE FROM tables WHERE id=$1 AND organization_id=$2`,tableID,s.OrganizationID)
 	})
 
-	unauthorizedReq:=httptest.NewRequest("GET","/v1/public/concierge/"+qrToken+"/menu?q=Concierge",nil)
+	unauthorizedReq:=httptest.NewRequest("GET","/v1/integrations/concierge/"+qrToken+"/menu?q=Concierge",nil)
 	unauthorizedRec:=httptest.NewRecorder()
 	api.Routes().ServeHTTP(unauthorizedRec,unauthorizedReq)
 	if unauthorizedRec.Code!=401||!strings.Contains(unauthorizedRec.Body.String(),"concierge_unauthorized"){
 		t.Fatalf("concierge API must require service credential: %d %s",unauthorizedRec.Code,unauthorizedRec.Body.String())
 	}
 
-	menuReq:=httptest.NewRequest("GET","/v1/public/concierge/"+qrToken+"/menu?q=Concierge",nil)
+	menuReq:=httptest.NewRequest("GET","/v1/integrations/concierge/"+qrToken+"/menu?q=Concierge",nil)
 	menuReq.Header.Set("X-Fudia-Concierge-Key","concierge-test-key")
 	menuRec:=httptest.NewRecorder()
 	api.Routes().ServeHTTP(menuRec,menuReq)
@@ -75,7 +75,7 @@ func TestConciergeQRCodeMenuOrderAndKitchenWorkflow(t *testing.T) {
 	  "conversationId":"conv-%d",
 	  "items":[{"productId":%q,"qty":2,"unitPrice":0.01,"name":"precio inventado","note":"sin cebolla","selections":[]}]
 	}`,nonce,productID))
-	orderReq:=httptest.NewRequest("POST","/v1/public/concierge/"+qrToken+"/orders",bytes.NewReader(orderBody))
+	orderReq:=httptest.NewRequest("POST","/v1/integrations/concierge/"+qrToken+"/orders",bytes.NewReader(orderBody))
 	orderReq.Header.Set("X-Fudia-Concierge-Key","concierge-test-key")
 	orderRec:=httptest.NewRecorder()
 	api.Routes().ServeHTTP(orderRec,orderReq)

@@ -4,13 +4,13 @@
 
 GET /v1/public/tables/{token}
 
-## Extensión inicial
+## Integración server-to-server
 
-GET /v1/public/concierge/{token}/menu
+GET /v1/integrations/concierge/{token}/menu
 
 Parámetros: q y productId.
 
-POST /v1/public/concierge/{token}/orders
+POST /v1/integrations/concierge/{token}/orders
 
 El backend deriva organización, local y mesa desde el QR y recalcula precios. El body no acepta organizationId, locationId, tableId ni unitPrice como fuente de verdad.
 
