@@ -17,6 +17,7 @@ class MessageService(Protocol):
         phone: str,
         text: str,
         recipient_phone: str = "",
+        channel_id: str = "",
     ) -> str: ...
 
 
@@ -59,6 +60,7 @@ class QueueWorker:
                 message.phone,
                 message.text,
                 message.recipient_phone,
+                message.sender_phone_id,
             )
             await self.whatsapp.send_text(
                 message.phone,
