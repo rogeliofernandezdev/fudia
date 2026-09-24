@@ -1,195 +1,281 @@
 "use client";
 
-import { Button } from "@/components/ui/controls";
+import {useCallback,useEffect,useState} from "react";
+import {Button} from "@/components/ui/controls";
+import {Icon} from "@/components/icon";
+import {operationsFetch} from "@/lib/operations-api";
 
+type Channel="salon"|"mostrador"|"recojo"|"delivery"|"whatsapp";
+type OrderStatus="nuevo"|"confirmado"|"preparando"|"listo"|"en_camino"|"entregado"|"cancelado";
+type OrderItem={id:string;productId:string;name:string;qty:string;unitPrice:string;note:string;itemType:string};
+type Order={
+ id:string;code:string;channel:Channel;status:OrderStatus;customerName:string;customerPhone:string;
+ address:string;reference:string;tableId:string;tableName:string;notes:string;subtotal:string;deliveryFee:string;
+ total:string;createdAt:string;updatedAt:string;items?:OrderItem[];
+};
+type Option={value:string;label:string};
+type OrderList={
+ items:Order[];total:number;page:number;pageSize:number;channelCounts:Record<string,number>;
+ channelOptions:Option[];statusOptions:Option[];currencySymbol:string;
+};
+type ChannelFilter=Channel|"all";
 
-import { useState } from "react";
-import { Icon } from "@/components/icon";
-
-type Channel = "whatsapp" | "delivery" | "recojo";
-
-type OrderLine = { name: string; qty: number; price: string; note?: string };
-
-type Order = {
-  id: string;
-  client: string;
-  phone: string;
-  channel: Channel;
-  state: "Nuevo" | "Confirmado" | "Preparando" | "Listo" | "En camino" | "Entregado";
-  total: string;
-  subtotal: string;
-  delivery: string;
-  time: string;
-  address?: string;
-  lines: OrderLine[];
+const channelPresentation:Record<Channel,{fallback:string;icon:"whatsapp"|"bike"|"store"|"tables"}>={
+ whatsapp:{fallback:"WhatsApp",icon:"whatsapp"},
+ delivery:{fallback:"Delivery",icon:"bike"},
+ recojo:{fallback:"Recojo",icon:"store"},
+ mostrador:{fallback:"Mostrador",icon:"store"},
+ salon:{fallback:"Salón",icon:"tables"},
 };
 
-const channelInfo: Record<Channel, { label: string; icon: "whatsapp" | "bike" | "store" }> = {
-  whatsapp: { label: "WhatsApp", icon: "whatsapp" },
-  delivery: { label: "Delivery", icon: "bike" },
-  recojo: { label: "Recojo", icon: "store" },
+const stateLabel:Record<OrderStatus,string>={
+ nuevo:"Nuevo",confirmado:"Confirmado",preparando:"Preparando",listo:"Listo",
+ en_camino:"En camino",entregado:"Entregado",cancelado:"Cancelado",
+};
+const stateTone:Record<OrderStatus,string>={
+ nuevo:"violet",confirmado:"blue",preparando:"blue",listo:"green",
+ en_camino:"violet",entregado:"muted",cancelado:"muted",
 };
 
-const initialOrders: Order[] = [
-  { id: "#W-018", client: "Juan Pérez", phone: "+51 987 654 321", channel: "whatsapp", state: "Nuevo", total: "S/ 49.90", subtotal: "S/ 44.90", delivery: "S/ 5.00", time: "Hace 2 min", lines: [{ name: "Lomo saltado", qty: 1, price: "S/ 24.00", note: "Sin cebolla" }, { name: "Chicha morada", qty: 1, price: "S/ 8.00" }, { name: "Suspiro limeño", qty: 1, price: "S/ 12.90" }] },
-  { id: "#D-042", client: "Andrea Ruiz", phone: "+51 912 345 678", channel: "delivery", state: "Preparando", total: "S/ 76.00", subtotal: "S/ 68.00", delivery: "S/ 8.00", time: "Hace 8 min", address: "Av. Larco 845, Miraflores", lines: [{ name: "Ceviche clásico", qty: 1, price: "S/ 32.00" }, { name: "Ají de gallina", qty: 1, price: "S/ 22.00", note: "Sin pan" }, { name: "Inca Kola", qty: 2, price: "S/ 7.00" }] },
-  { id: "#R-031", client: "Carlos Díaz", phone: "+51 998 887 766", channel: "recojo", state: "Listo", total: "S/ 38.50", subtotal: "S/ 38.50", delivery: "S/ 0.00", time: "Hace 16 min", lines: [{ name: "Arroz con pollo", qty: 1, price: "S/ 24.00" }, { name: "Papa a la huancaína", qty: 1, price: "S/ 14.50" }] },
-  { id: "#W-017", client: "María Torres", phone: "+51 955 443 322", channel: "whatsapp", state: "En camino", total: "S/ 92.00", subtotal: "S/ 82.00", delivery: "S/ 10.00", time: "Hace 24 min", address: "Jr. de la Unión 500, Centro", lines: [{ name: "Arroz con mariscos", qty: 2, price: "S/ 35.00" }, { name: "Chicha morada", qty: 2, price: "S/ 6.00" }] },
-  { id: "#D-041", client: "Pedro Salas", phone: "+51 977 665 544", channel: "delivery", state: "Confirmado", total: "S/ 54.00", subtotal: "S/ 48.00", delivery: "S/ 6.00", time: "Hace 12 min", address: "Calle Las Begonias 450, San Isidro", lines: [{ name: "Lomo saltado", qty: 1, price: "S/ 24.00" }, { name: "Ceviche mixto", qty: 1, price: "S/ 24.00" }] },
-  { id: "#R-030", client: "Lucía Ortiz", phone: "+51 988 776 655", channel: "recojo", state: "Preparando", total: "S/ 29.90", subtotal: "S/ 29.90", delivery: "S/ 0.00", time: "Hace 6 min", lines: [{ name: "Ají de gallina", qty: 1, price: "S/ 22.00" }, { name: "Suspiro limeño", qty: 1, price: "S/ 7.90" }] },
-];
+const channels:ChannelFilter[]=["all","whatsapp","delivery","recojo","mostrador","salon"];
+const PAGE_SIZE=20;
 
-const nextState: Record<Order["state"], Order["state"] | null> = {
-  Nuevo: "Confirmado",
-  Confirmado: "Preparando",
-  Preparando: "Listo",
-  Listo: "Entregado",
-  "En camino": "Entregado",
-  Entregado: null,
-};
+function formatMoney(symbol:string,value:string){
+ const amount=Number(value);
+ const formatted=Number.isFinite(amount)?amount.toFixed(2):value;
+ return symbol?symbol+" "+formatted:formatted;
+}
+function formatCreatedAt(value:string){
+ const date=new Date(value);
+ if(Number.isNaN(date.getTime()))return value;
+ return new Intl.DateTimeFormat("es-PE",{
+  day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit",
+ }).format(date);
+}
+function lineTotal(item:OrderItem){
+ const qty=Number(item.qty);
+ const price=Number(item.unitPrice);
+ if(!Number.isFinite(qty)||!Number.isFinite(price))return item.unitPrice;
+ return (qty*price).toFixed(2);
+}
+function nextAction(order:Order):{label:string;status:OrderStatus}|null{
+ if(order.status==="nuevo")return{label:"Confirmar",status:"confirmado"};
+ if(order.status==="listo"&&order.channel==="delivery")return{label:"En camino",status:"en_camino"};
+ if(order.status==="listo")return{label:"Entregar",status:"entregado"};
+ if(order.status==="en_camino")return{label:"Entregar",status:"entregado"};
+ return null;
+}
+function contactWhatsApp(phone:string){
+ const digits=phone.replace(/\D/g,"");
+ if(!digits)return;
+ window.open("https://wa.me/"+digits,"_blank","noopener,noreferrer");
+}
 
-const actionLabel: Record<Order["state"], string> = {
-  Nuevo: "Confirmar",
-  Confirmado: "Iniciar",
-  Preparando: "Marcar listo",
-  Listo: "Entregar",
-  "En camino": "Entregar",
-  Entregado: "Entregado",
-};
+export default function OrdersPage(){
+ const[channel,setChannel]=useState<ChannelFilter>("all");
+ const[page,setPage]=useState(1);
+ const[data,setData]=useState<OrderList|null>(null);
+ const[loading,setLoading]=useState(true);
+ const[error,setError]=useState("");
+ const[selected,setSelected]=useState<Order|null>(null);
+ const[detailLoading,setDetailLoading]=useState(false);
+ const[actionId,setActionId]=useState<string|null>(null);
 
-const stateTone: Record<Order["state"], string> = {
-  Nuevo: "violet",
-  Confirmado: "blue",
-  Preparando: "blue",
-  Listo: "green",
-  "En camino": "violet",
-  Entregado: "muted",
-};
+ const load=useCallback(async()=>{
+  setLoading(true);
+  try{
+   const params=new URLSearchParams({
+    status:"abiertos",page:String(page),pageSize:String(PAGE_SIZE),
+   });
+   if(channel!=="all")params.set("channel",channel);
+   const result=await operationsFetch<OrderList>("orders?"+params.toString());
+   setData(result);
+   setError("");
+  }catch(e){
+   setError(e instanceof Error?e.message:"No pudimos cargar los pedidos.");
+  }finally{
+   setLoading(false);
+  }
+ },[channel,page]);
 
-const channels: { id: Channel | "all"; label: string; icon: "whatsapp" | "bike" | "store" | "orders" }[] = [
-  { id: "all", label: "Todos", icon: "orders" },
-  { id: "whatsapp", label: "WhatsApp", icon: "whatsapp" },
-  { id: "delivery", label: "Delivery", icon: "bike" },
-  { id: "recojo", label: "Recojo", icon: "store" },
-];
+ useEffect(()=>{
+  const task=window.setTimeout(()=>void load(),0);
+  return()=>window.clearTimeout(task);
+ },[load]);
 
-export default function OrdersPage() {
-  const [orders, setOrders] = useState(initialOrders);
-  const [channel, setChannel] = useState<Channel | "all">("all");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+ const selectOrder=async(order:Order)=>{
+  setSelected(order);
+  setDetailLoading(true);
+  try{
+   const detail=await operationsFetch<Order>("orders/"+order.id);
+   setSelected(detail);
+  }catch(e){
+   setError(e instanceof Error?e.message:"No pudimos cargar el detalle.");
+  }finally{
+   setDetailLoading(false);
+  }
+ };
 
-  const countFor = (ch: Channel) => orders.filter(o => o.channel === ch).length;
-  const visible = channel === "all" ? orders : orders.filter(o => o.channel === channel);
-  const selected = orders.find(o => o.id === selectedId) ?? null;
+ const changeChannel=(value:ChannelFilter)=>{
+  setChannel(value);
+  setPage(1);
+  setSelected(null);
+ };
 
-  const advance = (id: string) => {
-    setOrders(prev => prev.map(o => {
-      if (o.id !== id) return o;
-      const next = nextState[o.state];
-      return next ? { ...o, state: next, time: "Justo ahora" } : o;
-    }));
-  };
+ const advance=async(order:Order)=>{
+  const action=nextAction(order);
+  if(!action||actionId)return;
+  setActionId(order.id);
+  try{
+   await operationsFetch<Order>("orders/"+order.id+"/status",{
+    method:"PATCH",
+    body:JSON.stringify({status:action.status}),
+   });
+   if(selected?.id===order.id){
+    const detail=await operationsFetch<Order>("orders/"+order.id);
+    setSelected(detail);
+   }
+   await load();
+  }catch(e){
+   setError(e instanceof Error?e.message:"No pudimos actualizar el pedido.");
+  }finally{
+   setActionId(null);
+  }
+ };
 
-  const advanceSelected = () => { if (selectedId) advance(selectedId); };
+ const labelFor=(value:Channel)=>{
+  const dynamic=data?.channelOptions.find(option=>option.value===value)?.label;
+  return dynamic??channelPresentation[value].fallback;
+ };
+ const countFor=(value:Channel)=>data?.channelCounts[value]??0;
+ const allCount=data?Object.values(data.channelCounts).reduce((sum,count)=>sum+count,0):0;
+ const totalPages=data?Math.max(1,Math.ceil(data.total/data.pageSize)):1;
+ const currency=data?.currencySymbol??"";
 
-  return <div className="orders-page">
-    <header className="orders-header">
-      <div>
-        <span className="orders-eyebrow">VENTA OMNICANAL</span>
-        <h1>Pedidos</h1>
-        <p>WhatsApp, delivery y recojo en una sola bandeja.</p>
+ return <div className="orders-page">
+  <header className="orders-header">
+   <div>
+    <span className="orders-eyebrow">VENTA OMNICANAL</span>
+    <h1>Pedidos</h1>
+    <p>Pedidos reales del local activo, incluidos los confirmados por Fudia Concierge.</p>
+   </div>
+  </header>
+
+  <div className="orders-channels" aria-label="Filtrar pedidos por canal">
+   {channels.map(value=>{
+    const info=value==="all"?{fallback:"Todos",icon:"orders" as const}:channelPresentation[value];
+    const count=value==="all"?allCount:countFor(value);
+    return <Button key={value} className={"orders-ch"+(channel===value?" active":"")} onClick={()=>changeChannel(value)}>
+     <Icon name={info.icon} size={18}/>
+     <span>{value==="all"?"Todos":labelFor(value)}</span>
+     <b>{count}</b>
+    </Button>;
+   })}
+  </div>
+
+  {error&&<div className="orders-live-error" role="alert"><Icon name="wifi" size={18}/><span>{error}</span><Button onClick={()=>void load()}><Icon name="refresh" size={15}/>Reintentar</Button></div>}
+
+  <div className="orders-list" aria-busy={loading}>
+   {loading&&Array.from({length:5},(_,index)=><div className="order-card orders-skeleton" key={index} aria-hidden="true">
+    <i/><span><b/><small/></span><em/>
+   </div>)}
+
+   {!loading&&data?.items.map(order=>{
+    const info=channelPresentation[order.channel];
+    const tone=stateTone[order.status];
+    const action=nextAction(order);
+    const person=order.customerName||order.tableName||"Cliente";
+    return <article className={"order-card"+(order.id===selected?.id?" selected":"")} key={order.id} onClick={()=>void selectOrder(order)}>
+     <div className="order-card-left">
+      <div className={"order-channel-icon "+order.channel}><Icon name={info.icon} size={18}/></div>
+      <div className="order-card-info">
+       <div className="order-card-top">
+        <strong>{person}</strong>
+        <span className="order-id">{order.code}</span>
+       </div>
+       <div className="order-card-meta">
+        <span className="order-channel-tag"><Icon name={info.icon} size={12}/>{labelFor(order.channel)}</span>
+        <span className={"order-state-tag os-"+tone}>{stateLabel[order.status]}</span>
+        <small>{formatCreatedAt(order.createdAt)}</small>
+        {order.tableName&&<small>· {order.tableName}</small>}
+       </div>
       </div>
-      <Button tone="primary" className="orders-new"><Icon name="plus" size={18}/>Nuevo pedido</Button>
+     </div>
+     <div className="order-card-right">
+      <b className="order-total">{formatMoney(currency,order.total)}</b>
+      {action?<Button tone="operational" className="order-advance" disabled={actionId===order.id} onClick={event=>{event.stopPropagation();void advance(order);}}>
+       {actionId===order.id?"Guardando…":action.label}<Icon name="chevron" size={14}/>
+      </Button>:<span className="order-managed">{order.status==="confirmado"||order.status==="preparando"?"Gestionado en cocina":stateLabel[order.status]}</span>}
+     </div>
+    </article>;
+   })}
+
+   {!loading&&data&&data.items.length===0&&<div className="orders-empty">
+    <Icon name={channel==="whatsapp"?"whatsapp":"orders"} size={28}/>
+    <b>Sin pedidos activos</b>
+    <span>No hay pedidos pendientes en este canal.</span>
+   </div>}
+  </div>
+
+  {!loading&&data&&data.total>0&&<footer className="orders-live-pagination">
+   <span>Mostrando {(data.page-1)*data.pageSize+1}–{Math.min(data.page*data.pageSize,data.total)} de {data.total}</span>
+   <div>
+    <Button disabled={page<=1} onClick={()=>setPage(current=>Math.max(1,current-1))}>Anterior</Button>
+    <b>{page} / {totalPages}</b>
+    <Button disabled={page>=totalPages} onClick={()=>setPage(current=>Math.min(totalPages,current+1))}>Siguiente</Button>
+   </div>
+  </footer>}
+
+  {selected&&<aside className="order-detail-overlay" onClick={()=>setSelected(null)}>
+   <div className="order-detail" onClick={event=>event.stopPropagation()}>
+    <header className="order-detail-head">
+     <div className="order-detail-head-left">
+      <div className={"order-channel-icon "+selected.channel}><Icon name={channelPresentation[selected.channel].icon} size={20}/></div>
+      <div>
+       <h2>{selected.customerName||selected.tableName||"Cliente"}</h2>
+       <small>{selected.code} · {labelFor(selected.channel)}{selected.tableName?" · "+selected.tableName:""}</small>
+      </div>
+     </div>
+     <Button className="order-detail-close" onClick={()=>setSelected(null)} aria-label="Cerrar"><Icon name="close" size={18}/></Button>
     </header>
 
-    <div className="orders-channels">
-      {channels.map(ch => {
-        const count = ch.id === "all" ? orders.length : countFor(ch.id as Channel);
-        return <Button key={ch.id} className={"orders-ch" + (channel === ch.id ? " active" : "")} onClick={() => setChannel(ch.id)}>
-          <Icon name={ch.icon} size={18}/>
-          <span>{ch.label}</span>
-          <b>{count}</b>
-        </Button>;
-      })}
+    <div className="order-detail-status">
+     <span className={"order-state-tag os-"+stateTone[selected.status]}>{stateLabel[selected.status]}</span>
+     <small>{formatCreatedAt(selected.createdAt)}</small>
     </div>
 
-    <div className="orders-list">
-      {visible.map(order => {
-        const ch = channelInfo[order.channel];
-        const tone = stateTone[order.state];
-        const canAdvance = nextState[order.state] !== null;
-        return <article className={"order-card" + (order.id === selectedId ? " selected" : "")} key={order.id} onClick={() => setSelectedId(order.id)}>
-          <div className="order-card-left">
-            <div className={"order-channel-icon " + order.channel}><Icon name={ch.icon} size={18}/></div>
-            <div className="order-card-info">
-              <div className="order-card-top">
-                <strong>{order.client}</strong>
-                <span className="order-id">{order.id}</span>
-              </div>
-              <div className="order-card-meta">
-                <span className="order-channel-tag"><Icon name={ch.icon} size={12}/>{ch.label}</span>
-                <span className={"order-state-tag os-" + tone}>{order.state}</span>
-                <small>{order.time}</small>
-              </div>
-            </div>
-          </div>
-          <div className="order-card-right">
-            <b className="order-total">{order.total}</b>
-            {canAdvance
-              ? <Button tone="operational" className="order-advance" onClick={e => { e.stopPropagation(); advance(order.id); }}>{actionLabel[order.state]}<Icon name="chevron" size={14}/></Button>
-              : <span className="order-done"><Icon name="check" size={14}/>Entregado</span>}
-          </div>
-        </article>;
-      })}
-      {visible.length === 0 && <div className="orders-empty"><Icon name="orders" size={28}/><b>Sin pedidos</b><span>No hay pedidos en este canal.</span></div>}
+    {(selected.customerPhone||selected.address)&&<div className="order-detail-contact">
+     {selected.customerPhone&&<div><Icon name="whatsapp" size={15}/><span>{selected.customerPhone}</span></div>}
+     {selected.address&&<div><Icon name="bike" size={15}/><span>{selected.address}</span></div>}
+    </div>}
+
+    <div className="order-detail-items">
+     <h3>Detalle del pedido</h3>
+     {detailLoading?<div className="order-detail-loading">Cargando detalle…</div>:
+      selected.items?.map(item=><div className="order-detail-line" key={item.id}>
+       <b>{item.qty}×</b>
+       <div className="order-detail-line-info">
+        <span>{item.name}</span>
+        {item.note&&<em>{item.note}</em>}
+       </div>
+       <strong>{formatMoney(currency,lineTotal(item))}</strong>
+      </div>)}
+     {!detailLoading&&(!selected.items||selected.items.length===0)&&<div className="order-detail-loading">Sin líneas disponibles.</div>}
     </div>
 
-    {selected && <aside className="order-detail-overlay" onClick={() => setSelectedId(null)}>
-      <div className="order-detail" onClick={e => e.stopPropagation()}>
-        <header className="order-detail-head">
-          <div className="order-detail-head-left">
-            <div className={"order-channel-icon " + selected.channel}><Icon name={channelInfo[selected.channel].icon} size={20}/></div>
-            <div>
-              <h2>{selected.client}</h2>
-              <small>{selected.id} · {channelInfo[selected.channel].label}</small>
-            </div>
-          </div>
-          <Button className="order-detail-close" onClick={() => setSelectedId(null)} aria-label="Cerrar"><Icon name="close" size={18}/></Button>
-        </header>
+    <div className="order-detail-totals">
+     <div><span>Subtotal</span><b>{formatMoney(currency,selected.subtotal)}</b></div>
+     {Number(selected.deliveryFee)>0&&<div><span>Delivery</span><b>{formatMoney(currency,selected.deliveryFee)}</b></div>}
+     <div className="order-detail-grand"><span>Total</span><strong>{formatMoney(currency,selected.total)}</strong></div>
+    </div>
 
-        <div className="order-detail-status">
-          <span className={"order-state-tag os-" + stateTone[selected.state]}>{selected.state}</span>
-          <small>{selected.time}</small>
-        </div>
-
-        <div className="order-detail-contact">
-          <div><Icon name="whatsapp" size={15}/><span>{selected.phone}</span></div>
-          {selected.address && <div><Icon name="bike" size={15}/><span>{selected.address}</span></div>}
-        </div>
-
-        <div className="order-detail-items">
-          <h3>Detalle del pedido</h3>
-          {selected.lines.map(line => <div className="order-detail-line" key={line.name}>
-            <b>{line.qty}×</b>
-            <div className="order-detail-line-info">
-              <span>{line.name}</span>
-              {line.note && <em>{line.note}</em>}
-            </div>
-            <strong>{line.price}</strong>
-          </div>)}
-        </div>
-
-        <div className="order-detail-totals">
-          <div><span>Subtotal</span><b>{selected.subtotal}</b></div>
-          <div><span>Delivery</span><b>{selected.delivery}</b></div>
-          <div className="order-detail-grand"><span>Total</span><strong>{selected.total}</strong></div>
-        </div>
-
-        <footer className="order-detail-actions">
-          {nextState[selected.state] ? <Button tone="operational" className="order-detail-primary" onClick={advanceSelected}>{actionLabel[selected.state]}<Icon name="chevron" size={16}/></Button> : <span className="order-detail-done"><Icon name="check" size={16}/>Pedido entregado</span>}
-          <Button className="order-detail-secondary"><Icon name="whatsapp" size={16}/>Contactar</Button>
-        </footer>
-      </div>
-    </aside>}
-  </div>;
+    <footer className="order-detail-actions">
+     {nextAction(selected)&&<Button tone="operational" className="order-detail-primary" disabled={actionId===selected.id} onClick={()=>void advance(selected)}>
+      {actionId===selected.id?"Guardando…":nextAction(selected)?.label}<Icon name="chevron" size={16}/>
+     </Button>}
+     {selected.customerPhone&&<Button className="order-detail-secondary" onClick={()=>contactWhatsApp(selected.customerPhone)}><Icon name="whatsapp" size={16}/>Contactar</Button>}
+    </footer>
+   </div>
+  </aside>}
+ </div>;
 }
