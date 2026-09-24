@@ -31,7 +31,7 @@ def extract_qr_token(text: str) -> str | None:
 
 
 def obviously_out_of_scope(text: str) -> bool:
-    value = text.strip()
+    value = text.strip().strip("¿?¡!").strip()
     if not value:
         return False
     return bool(
