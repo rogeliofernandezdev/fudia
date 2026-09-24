@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { Icon } from "./icon";
 import { Logo } from "./logo";
+import { ConciergeHandoffNotifications } from "./concierge-handoff-notifications";
 import { Select } from "./ui/controls";
 
 const navigation = [
@@ -93,7 +94,7 @@ export function AppShell({ children, title }: { children: React.ReactNode; title
           <button className="quick-search" aria-label="Búsqueda rápida"><Icon name="search"/><span>Buscar</span><kbd>⌘ K</kbd></button>
           <div className="sync-state"><i><Icon name="wifi" size={14}/></i><span><b>En línea</b><small>Sincronizado ahora</small></span></div>
           <div className="shift-state"><Icon name="clock" size={16}/><span><small>TURNO ACTIVO</small><b>04 h 32 min</b></span></div>
-          <button className="notification-button" aria-label="Notificaciones"><Icon name="bell"/><i/><em>3</em></button>
+          <ConciergeHandoffNotifications/>
           <div className="profile-menu">
             <button className="profile-control" type="button" aria-label="Abrir opciones de Rogelio" aria-haspopup="menu" aria-expanded={profileOpen} onClick={() => setProfileOpen(value => !value)}><span className="avatar">RF</span><span><b>Rogelio</b><small>Administrador</small></span><Icon name="chevron" size={15}/></button>
             {profileOpen && <div className="profile-popover" role="menu">
