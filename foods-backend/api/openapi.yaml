@@ -1,5 +1,5 @@
 openapi: 3.1.0
-info: { title: Foods API, version: 0.13.0, description: API operativa y administrativa multiempresa. }
+info: { title: Foods API, version: 0.14.0, description: API operativa y administrativa multiempresa. }
 servers: [{ url: http://localhost:8080 }]
 paths:
   /health:
@@ -22,7 +22,7 @@ paths:
       security: [{ conciergeServiceKey: [] }]
       parameters:
         - { in: path, name: token, required: true, schema: { type: string, minLength: 32, maxLength: 32 } }
-        - { in: query, name: q, schema: { type: string }, description: Búsqueda por nombre o descripción }
+        - { in: query, name: q, schema: { type: string }, description: Búsqueda por nombre, descripción o categoría; vacío devuelve la carta operativa }
         - { in: query, name: productId, schema: { type: string, format: uuid }, description: Revalidación exacta de una línea seleccionada }
       responses:
         "200": { description: Carta operativa del local, content: { application/json: { schema: { $ref: "#/components/schemas/ConciergeMenuResponse" } } } }
@@ -73,6 +73,23 @@ paths:
         "401": { description: Credencial de Fudia Concierge inválida }
         "404": { description: QR inexistente, inactivo o deshabilitado }
         "409": { description: Mesa ocupada o producto/stock ya no disponible }
+  /v1/integrations/concierge/{token}/bill:
+    post:
+      operationId: requestConciergeBill
+      summary: Solicita la cuenta y devuelve el consumo acumulado real de la mesa con pagos y saldo pendiente
+      security: [{ conciergeServiceKey: [] }]
+      parameters:
+        - { in: path, name: token, required: true, schema: { type: string, minLength: 32, maxLength: 32 } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ConciergeBillRequest" }
+      responses:
+        "200": { description: Cuenta actual de la mesa, content: { application/json: { schema: { $ref: "#/components/schemas/ConciergeBill" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { description: Credencial de Fudia Concierge inválida }
+        "404": { description: QR inválido o mesa sin cuenta abierta }
   /v1/integrations/concierge/{token}/handoffs:
     post:
       operationId: requestConciergeHandoff
@@ -1191,7 +1208,9 @@ components:
     OrderModifierSelectionInput: { type: object, required: [groupId, optionId], properties: { groupId: { type: string, format: uuid }, optionId: { type: string, format: uuid } } }
     OrderModifierSelection: { type: object, required: [groupId, groupName, optionId, name, surcharge], properties: { groupId: { type: string, format: uuid }, groupName: { type: string }, optionId: { type: string, format: uuid }, name: { type: string }, surcharge: { type: string } } }
     ConciergeOrderItemInput: { type: object, required: [productId, qty], description: "No acepta precio como fuente de verdad; foods-backend usa el catálogo vigente.", properties: { productId: { type: string, format: uuid }, qty: { type: number, exclusiveMinimum: 0 }, note: { type: string, maxLength: 240 }, selections: { type: array, items: { $ref: "#/components/schemas/OrderComboSelectionInput" } }, modifiers: { type: array, items: { $ref: "#/components/schemas/OrderModifierSelectionInput" } } } }
-    ConciergeOrderInput: { type: object, required: [customerPhone, conversationId, items], description: "organizationId, locationId, tableId y unitPrice se derivan o recalculan en foods-backend.", properties: { customerName: { type: string, maxLength: 160 }, customerPhone: { type: string, maxLength: 32 }, conversationId: { type: string, maxLength: 160 }, notes: { type: string, maxLength: 240 }, items: { type: array, minItems: 1, maxItems: 50, items: { $ref: "#/components/schemas/ConciergeOrderItemInput" } } } }
+    ConciergeOrderInput: { type: object, required: [customerPhone, conversationId, items], description: "organizationId, locationId, tableId y unitPrice se derivan o recalculan en foods-backend. requestId identifica de forma idempotente cada ronda; si se omite por compatibilidad, se usa conversationId.", properties: { customerName: { type: string, maxLength: 160 }, customerPhone: { type: string, maxLength: 32 }, conversationId: { type: string, maxLength: 160 }, requestId: { type: string, maxLength: 160 }, notes: { type: string, maxLength: 240 }, items: { type: array, minItems: 1, maxItems: 50, items: { $ref: "#/components/schemas/ConciergeOrderItemInput" } } } }
+    ConciergeBillRequest: { type: object, required: [conversationId, customerPhone], properties: { conversationId: { type: string, minLength: 1, maxLength: 160 }, customerPhone: { type: string, maxLength: 32 } } }
+    ConciergeBill: { type: object, required: [orderId, code, tableName, status, currencySymbol, items, total, paidAmount, remainingAmount, paymentStatus], properties: { orderId: { type: string, format: uuid }, code: { type: string }, tableName: { type: string }, status: { type: string }, currencySymbol: { type: string }, items: { type: array, items: { $ref: "#/components/schemas/OrderItem" } }, total: { type: string }, paidAmount: { type: string }, remainingAmount: { type: string }, paymentStatus: { type: string } } }
     ConciergeHandoffInput: { type: object, required: [conversationId, customerPhone, reason], properties: { conversationId: { type: string, minLength: 1, maxLength: 160 }, customerPhone: { type: string, maxLength: 32 }, reason: { type: string, maxLength: 240 } } }
     ConciergeHandoff: { type: object, required: [id, tableId, tableName, conversationId, customerPhone, reason, status, requestedAt], properties: { id: { type: string, format: uuid }, tableId: { type: string, format: uuid }, tableName: { type: string }, conversationId: { type: string }, customerPhone: { type: string }, reason: { type: string }, status: { type: string, enum: [pending, resolved] }, requestedAt: { type: string, format: date-time }, resolvedAt: { type: [string, "null"], format: date-time }, resolvedByName: { type: [string, "null"] } } }
     OrderItemInput: { type: object, required: [productId, qty, unitPrice], properties: { productId: { type: string, format: uuid }, name: { type: string, maxLength: 160 }, qty: { type: number, exclusiveMinimum: 0 }, unitPrice: { type: number, minimum: 0 }, note: { type: string, maxLength: 240 }, selections: { type: array, items: { $ref: "#/components/schemas/OrderComboSelectionInput" } }, modifiers: { type: array, items: { $ref: "#/components/schemas/OrderModifierSelectionInput" } }, reprice: { type: boolean } } }
@@ -1199,7 +1218,7 @@ components:
     OrderItem: { allOf: [{ $ref: "#/components/schemas/OrderItemInput" }, { type: object, required: [id], properties: { id: { type: string, format: uuid }, modifiers: { type: array, items: { $ref: "#/components/schemas/OrderModifierSelection" } } } }] }
     Order: { type: object, required: [id, code, channel, status, customerName, customerPhone, address, reference, tableId, tableName, notes, subtotal, deliveryFee, total, createdAt, updatedAt], properties: { id: { type: string, format: uuid }, code: { type: string }, channel: { type: string, enum: [salon, mostrador, recojo, delivery, whatsapp] }, status: { type: string, enum: [nuevo, confirmado, preparando, listo, en_camino, entregado, cancelado] }, customerId: { type: string }, customerName: { type: string }, customerPhone: { type: string }, address: { type: string }, reference: { type: string }, tableId: { type: string }, tableName: { type: string }, notes: { type: string }, subtotal: { type: string }, deliveryFee: { type: string }, total: { type: string }, createdAt: { type: string, format: date-time }, updatedAt: { type: string, format: date-time }, items: { type: array, items: { $ref: "#/components/schemas/OrderItem" } } } }
     OperationalOrderList: { type: object, required: [items, total, page, pageSize, channelCounts, channelOptions, statusOptions, currencySymbol], properties: { items: { type: array, items: { $ref: "#/components/schemas/Order" } }, total: { type: integer }, page: { type: integer }, pageSize: { type: integer }, channelCounts: { type: object, additionalProperties: { type: integer } }, channelOptions: { type: array, items: { $ref: "#/components/schemas/Option" } }, statusOptions: { type: array, items: { $ref: "#/components/schemas/Option" } }, currencySymbol: { type: string } } }
-    KitchenTicket: { type: object, required: [id, code, channel, status, customerName, tableName, notes, createdAt, updatedAt, items], properties: { id: { type: string, format: uuid }, code: { type: string }, channel: { type: string, enum: [salon, mostrador, recojo, delivery, whatsapp] }, status: { type: string, enum: [confirmado, preparando, listo] }, customerName: { type: string }, tableName: { type: string }, notes: { type: string }, createdAt: { type: string, format: date-time }, updatedAt: { type: string, format: date-time }, targetMinutes: { type: [integer, "null"], minimum: 1 }, items: { type: array, items: { $ref: "#/components/schemas/OrderItem" } } } }
+    KitchenTicket: { type: object, required: [id, orderId, roundNumber, code, channel, status, customerName, tableName, notes, createdAt, updatedAt, items], properties: { id: { type: string, format: uuid }, orderId: { type: string, format: uuid }, roundNumber: { type: integer, minimum: 0 }, code: { type: string }, channel: { type: string, enum: [salon, mostrador, recojo, delivery, whatsapp] }, status: { type: string, enum: [confirmado, preparando, listo] }, customerName: { type: string }, tableName: { type: string }, notes: { type: string }, createdAt: { type: string, format: date-time }, updatedAt: { type: string, format: date-time }, targetMinutes: { type: [integer, "null"], minimum: 1 }, items: { type: array, items: { $ref: "#/components/schemas/OrderItem" } } } }
     UserAssignment: { type: object, required: [roleId, locationId], properties: { roleId: { type: string, format: uuid }, locationId: { type: string, format: uuid } } }
     UserInput: { type: object, required: [fullName, email, assignments], properties: { fullName: { type: string }, email: { type: string, format: email }, password: { type: string, minLength: 8, writeOnly: true }, assignments: { type: array, minItems: 1, items: { $ref: "#/components/schemas/UserAssignment" } } } }
     Error: { type: object, required: [code, message, correlationId], properties: { code: { type: string }, message: { type: string }, correlationId: { type: string } } }
