@@ -35,6 +35,7 @@ var developmentModuleKeys = map[string]bool{
 	"carta_qr":true,
 	"facturacion":true,
 	"integraciones":true,
+	"whatsapp_bot":true,
 }
 
 func moduleAvailability(key string) string {
@@ -122,7 +123,7 @@ var moduleCatalog = []moduleDef{
 	{Key: "usuarios", Name: "Usuarios y roles", Description: "Equipo, roles y accesos", Icon: "users", Category: "Configuración"},
 	{Key: "facturacion", Name: "Facturación", Description: "Series y comprobantes electrónicos", Icon: "receipt", Category: "Configuración"},
 	{Key: "integraciones", Name: "Integraciones", Description: "WhatsApp, pagos e impresión", Icon: "settings", Category: "Configuración"},
-	{Key: "whatsapp_bot", Name: "WhatsApp IA para pedidos", Description: "Bot de pedidos por WhatsApp con IA", Icon: "settings", Category: "Configuración"},
+	{Key: "whatsapp_bot", Name: "Fudia Concierge", Description: "Pedidos conversacionales iniciados desde el QR por WhatsApp", Icon: "settings", Category: "Configuración"},
 }
 
 func (a *API) listModules(w http.ResponseWriter, r *http.Request) {

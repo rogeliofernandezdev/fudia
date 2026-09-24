@@ -361,19 +361,27 @@ func (a *API) getTableByQR(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var t struct {
-		Name    string `json:"name"`
-		Seats   int    `json:"seats"`
-		Zone    string `json:"zone"`
-		OrgName string `json:"organizationName"`
-		LocName string `json:"locationName"`
+		Name             string `json:"name"`
+		Seats            int    `json:"seats"`
+		Zone             string `json:"zone"`
+		OrgName          string `json:"organizationName"`
+		LocName          string `json:"locationName"`
+		ConciergeEnabled bool   `json:"conciergeEnabled"`
+		WhatsAppPhone    string `json:"whatsappPhone"`
 	}
 	err := a.db.QueryRow(r.Context(), `
-		SELECT t.name, t.seats, t.zone, o.trade_name, l.name
+		SELECT t.name,t.seats,t.zone,o.trade_name,l.name,
+		       COALESCE(cs.active,false) AND COALESCE(cs.whatsapp_phone,'')<>'',
+		       COALESCE(cs.whatsapp_phone,'')
 		FROM tables t
-		JOIN organizations o ON o.id = t.organization_id
+		JOIN organizations o ON o.id=t.organization_id AND o.active
 		JOIN locations l ON l.id=t.location_id AND l.organization_id=t.organization_id AND l.active
-		WHERE t.qr_token = $1 AND t.active = true AND t.qr_enabled = true
-		LIMIT 1`, token).Scan(&t.Name, &t.Seats, &t.Zone, &t.OrgName, &t.LocName)
+		LEFT JOIN concierge_settings cs
+		  ON cs.organization_id=t.organization_id AND cs.location_id=t.location_id
+		WHERE t.qr_token=$1 AND t.active=true AND t.qr_enabled=true
+		LIMIT 1`, token).Scan(
+		&t.Name,&t.Seats,&t.Zone,&t.OrgName,&t.LocName,&t.ConciergeEnabled,&t.WhatsAppPhone,
+	)
 	if err != nil {
 		fail(w, 404, "table_not_found", "La mesa no existe o el QR no está activo.")
 		return

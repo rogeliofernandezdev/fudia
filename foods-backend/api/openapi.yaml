@@ -1,5 +1,5 @@
 openapi: 3.1.0
-info: { title: Foods API, version: 0.10.0, description: API operativa y administrativa multiempresa. }
+info: { title: Foods API, version: 0.11.0, description: API operativa y administrativa multiempresa. }
 servers: [{ url: http://localhost:8080 }]
 paths:
   /health:
@@ -117,6 +117,23 @@ paths:
       security: [{ sessionCookie: [] }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/SwitchContextInput" } } } }
       responses: { "200": { description: Contexto activo actualizado, content: { application/json: { schema: { $ref: "#/components/schemas/ContextSwitchResponse" } } } }, "400": { $ref: "#/components/responses/BadRequest" }, "401": { $ref: "#/components/responses/Unauthorized" }, "403": { $ref: "#/components/responses/Forbidden" } }
+  /v1/admin/concierge-settings:
+    get:
+      operationId: getConciergeSettings
+      summary: Consulta la configuración de Fudia Concierge para el local activo
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Configuración del local, content: { application/json: { schema: { $ref: "#/components/schemas/ConciergeSettings" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    patch:
+      operationId: updateConciergeSettings
+      summary: Configura el número de WhatsApp y activación de Fudia Concierge para el local activo
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ConciergeSettingsInput" } } } }
+      responses:
+        "200": { description: Configuración actualizada, content: { application/json: { schema: { $ref: "#/components/schemas/ConciergeSettings" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
   /v1/admin/settings:
     get:
       operationId: getOrganizationSettings
@@ -1002,7 +1019,9 @@ components:
     CustomerInput: { type: object, required: [customerType, displayName, preferredChannel], properties: { customerType: { type: string, enum: [person, company] }, displayName: { type: string, maxLength: 160 }, documentType: { type: string }, documentNumber: { type: string }, phone: { type: string }, email: { type: string }, preferredChannel: { type: string, enum: [none, whatsapp, phone, email] }, preferences: { type: string }, notes: { type: string }, marketingConsent: { type: boolean }, vipOverride: { type: boolean }, addresses: { type: array, items: { $ref: "#/components/schemas/CustomerAddress" } } } }
     Customer: { allOf: [{ $ref: "#/components/schemas/CustomerInput" }, { type: object, required: [id, code, visitCount, totalSpent, active, segment], properties: { id: { type: string, format: uuid }, code: { type: string }, visitCount: { type: integer, minimum: 0 }, totalSpent: { type: string }, lastPurchaseAt: { type: [string, "null"], format: date-time }, active: { type: boolean }, segment: { type: string, enum: [new, recurrent, frequent, vip] } } }] }
     RoleInput: { type: object, required: [name, menuAccess, permissions], properties: { name: { type: string }, description: { type: string }, menuAccess: { type: array, minItems: 1, items: { type: string } }, permissions: { type: array, minItems: 1, items: { type: string } } } }
-    PublicTableContext: { type: object, required: [name, seats, zone, organizationName, locationName], properties: { name: { type: string }, seats: { type: integer, minimum: 1 }, zone: { type: string }, organizationName: { type: string }, locationName: { type: string } } }
+    ConciergeSettingsInput: { type: object, required: [active, whatsappPhone], properties: { active: { type: boolean }, whatsappPhone: { type: string, pattern: "^\\+[1-9][0-9]{7,14}$", description: "Número internacional E.164. Puede estar vacío solo si active=false." } } }
+    ConciergeSettings: { allOf: [{ $ref: "#/components/schemas/ConciergeSettingsInput" }, { type: object, required: [organizationName, locationName], properties: { organizationName: { type: string }, locationName: { type: string } } }] }
+    PublicTableContext: { type: object, required: [name, seats, zone, organizationName, locationName, conciergeEnabled, whatsappPhone], properties: { name: { type: string }, seats: { type: integer, minimum: 1 }, zone: { type: string }, organizationName: { type: string }, locationName: { type: string }, conciergeEnabled: { type: boolean }, whatsappPhone: { type: string, description: "Número E.164 del local; vacío cuando Concierge no está configurado." } } }
     ConciergeMenuItem: { type: object, required: [productId, name, description, price, status, isCombo], properties: { productId: { type: string, format: uuid }, name: { type: string }, description: { type: string }, price: { type: string }, categoryName: { type: [string, "null"] }, imageUrl: { type: [string, "null"] }, status: { type: string, enum: [available, low, sold_out, unavailable] }, isCombo: { type: boolean } } }
     ConciergeMenuResponse: { type: object, required: [items, currencySymbol], properties: { items: { type: array, items: { $ref: "#/components/schemas/ConciergeMenuItem" } }, currencySymbol: { type: string } } }
     ConciergeOrderItemInput: { type: object, required: [productId, qty], description: "No acepta precio como fuente de verdad; foods-backend usa el catálogo vigente.", properties: { productId: { type: string, format: uuid }, qty: { type: number, exclusiveMinimum: 0 }, note: { type: string, maxLength: 240 } } }

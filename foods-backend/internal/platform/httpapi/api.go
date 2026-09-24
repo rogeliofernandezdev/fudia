@@ -44,6 +44,8 @@ func (a *API) Routes() *http.ServeMux {
 	m.Handle("GET /v1/admin/subscription", a.auth(a.requirePermission("subscription.read", http.HandlerFunc(a.getOrganizationSubscription))))
 	m.Handle("GET /v1/admin/plans", a.auth(http.HandlerFunc(a.listAvailableSubscriptionPlans)))
 	m.Handle("GET /v1/admin/settings", a.auth(a.requirePermission("organizations.read", http.HandlerFunc(a.getOrgSettings))))
+	m.Handle("GET /v1/admin/concierge-settings", a.auth(a.requirePermission("organizations.read", http.HandlerFunc(a.getConciergeSettings))))
+	m.Handle("PATCH /v1/admin/concierge-settings", a.auth(a.requirePermission("organizations.manage", http.HandlerFunc(a.updateConciergeSettings))))
 	m.Handle("GET /v1/admin/payment-methods", a.auth(a.requirePermission("organizations.read", http.HandlerFunc(a.listPaymentMethodsAdmin))))
 	m.Handle("POST /v1/admin/payment-methods", a.auth(a.requirePermission("organizations.manage", http.HandlerFunc(a.createPaymentMethod))))
 	m.Handle("PATCH /v1/admin/payment-methods/{code}", a.auth(a.requirePermission("organizations.manage", http.HandlerFunc(a.updatePaymentMethod))))
