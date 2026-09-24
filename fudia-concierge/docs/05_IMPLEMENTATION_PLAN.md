@@ -34,8 +34,19 @@
 
 ## Bloque 4 — Conversación avanzada
 
-- [ ] Combos conversacionales con grupos y selecciones validadas por Fudia.
-- [ ] Modificadores de productos simples.
-- [ ] Agregar a comanda ya abierta.
-- [ ] Handoff humano.
-- [ ] Observabilidad.
+- [x] Combos conversacionales con grupos y selecciones validadas por Fudia.
+- [x] Modificadores de productos simples.
+- [x] Agregar nuevas rondas a una comanda ya abierta.
+- [x] Handoff humano persistente y resoluble desde Operaciones.
+- [x] Observabilidad estructurada con privacidad.
+- [x] Bandeja operativa de pedidos conectada a datos reales.
+- [x] Aislamiento por número receptor de WhatsApp.
+- [x] Módulo `whatsapp_bot` listo para activación por entitlement.
+
+## Bloque 5 — Despliegue y endurecimiento externo
+
+- [ ] Validar webhook real de Meta con firma y varios números conectados.
+- [ ] Validar envío real con el `phone_number_id` receptor.
+- [ ] Configurar secretos de OpenAI, Meta, Redis y Fudia en el entorno.
+- [ ] Crear alertas operativas a partir de los eventos estructurados.
+- [ ] Ejecutar prueba de humo QR -> WhatsApp -> pedido -> KDS en producción controlada.
