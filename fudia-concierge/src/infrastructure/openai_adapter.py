@@ -5,244 +5,45 @@ import logging
 import time
 from collections.abc import Awaitable, Callable
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any, cast
 
 from openai import AsyncOpenAI
 
+from src.domain.intents import AgentIntent, INTENTS
 from src.domain.models import ConversationSession
 from src.observability import fingerprint, log_event
 
 logger = logging.getLogger(__name__)
 
-ToolHandler = Callable[[str, dict[str, Any]], Awaitable[dict[str, Any]]]
-
-
-class AssistantEngine(Protocol):
-    async def is_in_scope(
-        self,
-        session: ConversationSession,
-        user_message: str,
-    ) -> bool: ...
-
-    async def reply(
-        self,
-        session: ConversationSession,
-        user_message: str,
-        tool_handler: ToolHandler,
-    ) -> str: ...
-
-
-TOOLS: list[dict[str, Any]] = [
-    {
-        "type": "function",
-        "name": "search_menu",
-        "description": (
-            "Busca productos reales por nombre, descripción o categoría. "
-            "Usa query vacío para consultar la carta disponible."
-        ),
-        "parameters": {
-            "type": "object",
-            "properties": {"query": {"type": "string"}},
-            "required": ["query"],
-            "additionalProperties": False,
-        },
-        "strict": True,
-    },
-    {
-        "type": "function",
-        "name": "add_item",
-        "description": "Agrega al carrito un producto devuelto por search_menu.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "productId": {"type": "string"},
-                "quantity": {"type": "number", "minimum": 0.01},
-                "note": {"type": "string"},
-            },
-            "required": ["productId", "quantity", "note"],
-            "additionalProperties": False,
-        },
-        "strict": True,
-    },
-    {
-        "type": "function",
-        "name": "get_modifier_options",
-        "description": (
-            "Obtiene los grupos y opciones reales de modificadores para un "
-            "producto devuelto por search_menu cuando hasModifiers es true."
-        ),
-        "parameters": {
-            "type": "object",
-            "properties": {"productId": {"type": "string"}},
-            "required": ["productId"],
-            "additionalProperties": False,
-        },
-        "strict": True,
-    },
-    {
-        "type": "function",
-        "name": "add_modified_item",
-        "description": (
-            "Agrega un producto configurable usando solo opciones devueltas "
-            "por get_modifier_options."
-        ),
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "productId": {"type": "string"},
-                "quantity": {"type": "number", "minimum": 0.01},
-                "note": {"type": "string"},
-                "modifiers": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "groupId": {"type": "string"},
-                            "optionId": {"type": "string"},
-                        },
-                        "required": ["groupId", "optionId"],
-                        "additionalProperties": False,
-                    },
-                },
-            },
-            "required": [
-                "productId",
-                "quantity",
-                "note",
-                "modifiers",
-            ],
-            "additionalProperties": False,
-        },
-        "strict": True,
-    },
-    {
-        "type": "function",
-        "name": "get_combo_options",
-        "description": (
-            "Obtiene los grupos, reglas y alternativas reales de un combo "
-            "devuelto por search_menu."
-        ),
-        "parameters": {
-            "type": "object",
-            "properties": {"productId": {"type": "string"}},
-            "required": ["productId"],
-            "additionalProperties": False,
-        },
-        "strict": True,
-    },
-    {
-        "type": "function",
-        "name": "add_combo_item",
-        "description": (
-            "Agrega un combo con las selecciones elegidas entre las opciones "
-            "devueltas por get_combo_options."
-        ),
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "productId": {"type": "string"},
-                "quantity": {"type": "number", "minimum": 0.01},
-                "note": {"type": "string"},
-                "selections": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "groupId": {"type": "string"},
-                            "productId": {"type": "string"},
-                        },
-                        "required": ["groupId", "productId"],
-                        "additionalProperties": False,
-                    },
-                },
-            },
-            "required": ["productId", "quantity", "note", "selections"],
-            "additionalProperties": False,
-        },
-        "strict": True,
-    },
-    {
-        "type": "function",
-        "name": "remove_item",
-        "description": "Retira un producto del carrito.",
-        "parameters": {
-            "type": "object",
-            "properties": {"productId": {"type": "string"}},
-            "required": ["productId"],
-            "additionalProperties": False,
-        },
-        "strict": True,
-    },
-    {
-        "type": "function",
-        "name": "request_human",
-        "description": (
-            "Solicita atención humana real para la mesa cuando el cliente "
-            "pide hablar con una persona, mozo o encargado."
-        ),
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "reason": {
-                    "type": "string",
-                    "description": "Motivo breve y concreto de la atención solicitada.",
-                }
-            },
-            "required": ["reason"],
-            "additionalProperties": False,
-        },
-        "strict": True,
-    },
-    {
-        "type": "function",
-        "name": "view_cart",
-        "description": "Consulta el carrito actual.",
-        "parameters": {"type": "object", "properties": {}, "additionalProperties": False},
-        "strict": True,
-    },
-    {
-        "type": "function",
-        "name": "prepare_confirmation",
-        "description": "Prepara el resumen que debe confirmar el cliente.",
-        "parameters": {"type": "object", "properties": {}, "additionalProperties": False},
-        "strict": True,
-    },
-    {
-        "type": "function",
-        "name": "confirm_order",
-        "description": "Confirma una nueva ronda del consumo solo después de una confirmación explícita.",
-        "parameters": {"type": "object", "properties": {}, "additionalProperties": False},
-        "strict": True,
-    },
-    {
-        "type": "function",
-        "name": "request_bill",
-        "description": (
-            "Solicita la cuenta de la mesa y obtiene del backend el consumo "
-            "acumulado, total, pagos y saldo pendiente."
-        ),
-        "parameters": {"type": "object", "properties": {}, "additionalProperties": False},
-        "strict": True,
-    },
+ToolHandler = Callable[
+    [str, dict[str, Any]],
+    Awaitable[dict[str, Any]],
 ]
 
 
-class OpenAIConciergeEngine:
+def _conversation_context(
+    session: ConversationSession,
+    limit: int,
+) -> list[dict[str, str]]:
+    return [
+        {
+            "role": item.role,
+            "content": item.content,
+        }
+        for item in session.messages[-limit:]
+    ]
+
+
+class OpenAIScopeClassifier:
     def __init__(
         self,
-        api_key: str,
+        client: AsyncOpenAI,
         model: str,
-        prompt_path: Path | None = None,
-        scope_prompt_path: Path | None = None,
-        client: AsyncOpenAI | None = None,
+        prompt_path: Path,
     ) -> None:
+        self.client = client
         self.model = model
-        self.client = client or AsyncOpenAI(api_key=api_key)
-        prompts_dir = Path(__file__).resolve().parents[2] / "prompts"
-        system_path = prompt_path or prompts_dir / "system.md"
-        scope_path = scope_prompt_path or prompts_dir / "scope_router.md"
-        self.instructions = system_path.read_text(encoding="utf-8")
-        self.scope_instructions = scope_path.read_text(encoding="utf-8")
+        self.instructions = prompt_path.read_text(encoding="utf-8")
 
     async def is_in_scope(
         self,
@@ -251,20 +52,81 @@ class OpenAIConciergeEngine:
     ) -> bool:
         recent = session.messages[-6:]
         context = "\n".join(
-            f"{message.role}: {message.content}" for message in recent
+            f"{message.role}: {message.content}"
+            for message in recent
         )
         scope_input = (
-            "Recent restaurant-order context:\n"
-            f"{context or '(none)'}\n\n"
-            "Current customer message:\n"
+            "Contexto reciente del pedido:\n"
+            f"{context or '(sin contexto)'}\n\n"
+            "Mensaje actual del cliente:\n"
             f"{user_message}"
         )
         response = await self.client.responses.create(
             model=self.model,
-            instructions=self.scope_instructions,
+            instructions=self.instructions,
             input=scope_input,
         )
-        return (response.output_text or "").strip().upper() == "IN_SCOPE"
+        return (
+            (response.output_text or "").strip().upper()
+            == "IN_SCOPE"
+        )
+
+
+class OpenAIIntentRouter:
+    def __init__(
+        self,
+        client: AsyncOpenAI,
+        model: str,
+        prompt_path: Path,
+    ) -> None:
+        self.client = client
+        self.model = model
+        self.instructions = prompt_path.read_text(encoding="utf-8")
+
+    async def route(
+        self,
+        session: ConversationSession,
+        user_message: str,
+    ) -> AgentIntent:
+        context = "\n".join(
+            f"{message.role}: {message.content}"
+            for message in session.messages[-8:]
+        )
+        router_input = (
+            "Contexto reciente:\n"
+            f"{context or '(sin contexto)'}\n\n"
+            "Mensaje actual:\n"
+            f"{user_message}\n\n"
+            f"awaiting_confirmation={session.awaiting_confirmation}"
+        )
+        response = await self.client.responses.create(
+            model=self.model,
+            instructions=self.instructions,
+            input=router_input,
+        )
+        value = (response.output_text or "").strip().lower()
+        if value not in INTENTS:
+            return "order"
+        return cast(AgentIntent, value)
+
+
+class OpenAIToolAgent:
+    def __init__(
+        self,
+        client: AsyncOpenAI,
+        model: str,
+        system_prompt_path: Path,
+        role_prompt_path: Path,
+        tool_schemas: list[dict[str, Any]],
+        agent_name: AgentIntent,
+    ) -> None:
+        self.client = client
+        self.model = model
+        self.agent_name = agent_name
+        base = system_prompt_path.read_text(encoding="utf-8")
+        role = role_prompt_path.read_text(encoding="utf-8")
+        self.instructions = f"{base}\n\n{role}"
+        self.tool_schemas = tool_schemas
 
     async def reply(
         self,
@@ -282,38 +144,48 @@ class OpenAIConciergeEngine:
             usage = getattr(response, "usage", None)
             if usage is None:
                 return
-            input_tokens += int(getattr(usage, "input_tokens", 0) or 0)
-            output_tokens += int(getattr(usage, "output_tokens", 0) or 0)
+            input_tokens += int(
+                getattr(usage, "input_tokens", 0) or 0
+            )
+            output_tokens += int(
+                getattr(usage, "output_tokens", 0) or 0
+            )
 
-        history = [
-            {"role": item.role, "content": item.content}
-            for item in session.messages[-12:]
-        ]
-        history.append({"role": "user", "content": user_message})
-
+        history = _conversation_context(session, 12)
+        history.append(
+            {
+                "role": "user",
+                "content": user_message,
+            }
+        )
         response = await self.client.responses.create(
             model=self.model,
             instructions=self.instructions,
             input=history,  # type: ignore[arg-type]
-            tools=TOOLS,  # type: ignore[arg-type]
+            tools=self.tool_schemas,  # type: ignore[arg-type]
         )
         capture_usage(response)
 
         for _ in range(8):
-            calls: list[Any] = [
+            calls = [
                 item
                 for item in response.output
-                if getattr(item, "type", "") == "function_call"
+                if getattr(item, "type", "")
+                == "function_call"
             ]
             if not calls:
                 text = (response.output_text or "").strip()
                 log_event(
                     logger,
-                    "concierge.llm.completed",
+                    "concierge.agent.completed",
                     conversation=session.conversation_id,
                     phone=fingerprint(session.phone),
+                    agent=self.agent_name,
                     model=self.model,
-                    durationMs=round((time.perf_counter() - started) * 1000, 1),
+                    durationMs=round(
+                        (time.perf_counter() - started) * 1000,
+                        1,
+                    ),
                     toolCalls=tool_calls,
                     inputTokens=input_tokens,
                     outputTokens=output_tokens,
@@ -324,15 +196,24 @@ class OpenAIConciergeEngine:
             tool_calls += len(calls)
             for call in calls:
                 try:
-                    arguments = json.loads(call.arguments or "{}")
+                    arguments = json.loads(
+                        call.arguments or "{}"
+                    )
                 except json.JSONDecodeError:
                     arguments = {}
-                result = await tool_handler(call.name, arguments)
+                result = await tool_handler(
+                    call.name,
+                    arguments,
+                )
                 outputs.append(
                     {
                         "type": "function_call_output",
                         "call_id": call.call_id,
-                        "output": json.dumps(result, ensure_ascii=False, default=str),
+                        "output": json.dumps(
+                            result,
+                            ensure_ascii=False,
+                            default=str,
+                        ),
                     }
                 )
 
@@ -340,19 +221,17 @@ class OpenAIConciergeEngine:
                 model=self.model,
                 previous_response_id=response.id,
                 input=outputs,  # type: ignore[arg-type]
-                tools=TOOLS,  # type: ignore[arg-type]
+                tools=self.tool_schemas,  # type: ignore[arg-type]
             )
             capture_usage(response)
 
         log_event(
             logger,
-            "concierge.llm.tool_limit",
+            "concierge.agent.tool_limit",
             conversation=session.conversation_id,
             phone=fingerprint(session.phone),
+            agent=self.agent_name,
             model=self.model,
-            durationMs=round((time.perf_counter() - started) * 1000, 1),
             toolCalls=tool_calls,
-            inputTokens=input_tokens,
-            outputTokens=output_tokens,
         )
         return "No pude completar la operación. Intenta nuevamente."
