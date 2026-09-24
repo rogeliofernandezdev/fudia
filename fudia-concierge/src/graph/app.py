@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
+from typing import Any
 
 from langgraph.graph import END, StateGraph
 
@@ -10,7 +11,7 @@ from src.graph.state import ConciergeGraphState
 Processor = Callable[[ConversationSession, str], Awaitable[str]]
 
 
-def build_graph(processor: Processor):
+def build_graph(processor: Processor) -> Any:
     graph = StateGraph(ConciergeGraphState)
 
     async def concierge_node(state: ConciergeGraphState) -> dict[str, str]:

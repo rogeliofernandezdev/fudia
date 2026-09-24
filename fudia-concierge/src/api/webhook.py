@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 @router.get("")
-async def verify_webhook(request: Request):
+async def verify_webhook(request: Request) -> PlainTextResponse:
     settings = request.app.state.settings
     mode = request.query_params.get("hub.mode")
     token = request.query_params.get("hub.verify_token")

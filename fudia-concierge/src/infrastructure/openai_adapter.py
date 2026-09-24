@@ -114,12 +114,12 @@ class OpenAIConciergeEngine:
         response = await self.client.responses.create(
             model=self.model,
             instructions=self.instructions,
-            input=history,
-            tools=TOOLS,
+            input=history,  # type: ignore[arg-type]
+            tools=TOOLS,  # type: ignore[arg-type]
         )
 
         for _ in range(8):
-            calls = [
+            calls: list[Any] = [
                 item
                 for item in response.output
                 if getattr(item, "type", "") == "function_call"
@@ -146,8 +146,8 @@ class OpenAIConciergeEngine:
             response = await self.client.responses.create(
                 model=self.model,
                 previous_response_id=response.id,
-                input=outputs,
-                tools=TOOLS,
+                input=outputs,  # type: ignore[arg-type]
+                tools=TOOLS,  # type: ignore[arg-type]
             )
 
         return "No pude completar la operación. Intenta nuevamente."
