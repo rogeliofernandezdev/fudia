@@ -4,10 +4,13 @@ import hashlib
 import hmac
 import json
 import logging
+import time
 from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from fastapi.responses import PlainTextResponse
+
+from src.observability import fingerprint, log_event
 
 router = APIRouter(prefix="/webhook", tags=["whatsapp"])
 logger = logging.getLogger(__name__)
@@ -29,11 +32,30 @@ async def _process_message(
     text: str,
     message_id: str,
 ) -> None:
+    started = time.perf_counter()
+    safe_message_id = fingerprint(message_id)
+    safe_phone = fingerprint(phone)
     try:
         reply = await service.handle_message(phone, text)
         await whatsapp.send_text(phone, reply)
-    except Exception:
-        logger.exception("No se pudo procesar el mensaje %s", message_id)
+        log_event(
+            logger,
+            "concierge.message.processed",
+            message=safe_message_id,
+            phone=safe_phone,
+            durationMs=round((time.perf_counter() - started) * 1000, 1),
+            replyChars=len(reply),
+        )
+    except Exception as exc:
+        log_event(
+            logger,
+            "concierge.message.failed",
+            message=safe_message_id,
+            phone=safe_phone,
+            durationMs=round((time.perf_counter() - started) * 1000, 1),
+            errorType=type(exc).__name__,
+        )
+        logger.exception("No se pudo procesar el mensaje %s", safe_message_id)
 
 
 @router.get("")
