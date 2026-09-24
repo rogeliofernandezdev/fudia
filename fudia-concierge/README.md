@@ -4,7 +4,7 @@ Asistente conversacional de Fudia para atender por WhatsApp a un comensal sentad
 
 ## Flujo
 
-QR de mesa -> webhook Meta -> Redis Stream durable -> worker -> filtro de alcance -> router LangGraph -> agente especialista -> tools permitidas -> foods-backend -> respuesta WhatsApp.
+QR de mesa -> webhook Meta -> Redis Stream durable -> worker -> router unificado LangGraph -> agente especialista -> tools permitidas -> foods-backend -> respuesta WhatsApp.
 
 Fudia Concierge mantiene únicamente el estado conversacional y el carrito temporal de la ronda en curso. foods-backend revalida producto, disponibilidad, precio, mesa y stock antes de registrar cada ronda y conserva la comanda acumulada como fuente de verdad.
 
@@ -12,7 +12,7 @@ Cuando el cliente solicita la cuenta, Concierge consulta el consumo real de la m
 
 ## Arquitectura multiagente
 
-Cada mensaje dentro del alcance es enrutado a uno de tres especialistas:
+Cada mensaje se clasifica en una sola llamada como `out_of_scope`, `menu`, `order` o `service`. Los mensajes válidos se enrutan a uno de tres especialistas:
 
 - `menu`: lectura de carta, categorías, combos y modificadores;
 - `order`: carrito, configuración, confirmación y envío de rondas;
@@ -58,8 +58,7 @@ Cada especialista recibe únicamente sus schemas de tools y `ToolRegistry` vuelv
 
 ## Prompts
 
-- `prompts/scope_router.md`: clasificación cerrada `IN_SCOPE / OUT_OF_SCOPE`.
-- `prompts/intent_router.md`: selección `menu / order / service`.
+- `prompts/concierge_router.md`: clasificación unificada `out_of_scope / menu / order / service`.
 - `prompts/system.md`: reglas comunes.
 - `prompts/menu_agent.md`: especialista de carta.
 - `prompts/order_agent.md`: especialista de pedido.
