@@ -4,6 +4,8 @@ from typing import Any
 import pytest
 
 from src.domain.models import (
+    BillItem,
+    BillSummary,
     ComboDetail,
     ComboGroup,
     ComboOption,
@@ -24,6 +26,7 @@ from src.services.tools import ConciergeTools, explicit_confirmation
 class FakeFudia:
     def __init__(self, concierge_enabled: bool = True) -> None:
         self.order_calls: list[dict[str, Any]] = []
+        self.bill_calls: list[dict[str, Any]] = []
         self.handoff_calls: list[dict[str, Any]] = []
         self.handoff_status = "none"
         self.concierge_enabled = concierge_enabled
@@ -123,6 +126,7 @@ class FakeFudia:
         phone: str,
         lines: list[dict[str, Any]],
         conversation_id: str,
+        request_id: str,
     ) -> OrderResult:
         self.order_calls.append(
             {
@@ -130,6 +134,7 @@ class FakeFudia:
                 "phone": phone,
                 "lines": lines,
                 "conversation_id": conversation_id,
+                "request_id": request_id,
             }
         )
         return OrderResult(
@@ -137,6 +142,40 @@ class FakeFudia:
             code="PED-001",
             status="confirmado",
             total=Decimal("32.50"),
+        )
+
+    async def request_bill(
+        self,
+        token: str,
+        phone: str,
+        conversation_id: str,
+    ) -> BillSummary:
+        self.bill_calls.append(
+            {
+                "token": token,
+                "phone": phone,
+                "conversation_id": conversation_id,
+            }
+        )
+        return BillSummary(
+            orderId="o1",
+            code="PED-001",
+            tableName="M1",
+            status="listo",
+            currencySymbol="S/",
+            items=[
+                BillItem(
+                    id="i1",
+                    productId="p1",
+                    name="Lomo saltado",
+                    qty=Decimal("2"),
+                    unitPrice=Decimal("32.50"),
+                )
+            ],
+            total=Decimal("65.00"),
+            paidAmount=Decimal("10.00"),
+            remainingAmount=Decimal("55.00"),
+            paymentStatus="partial",
         )
 
 
@@ -238,7 +277,63 @@ async def test_cart_requires_explicit_confirmation_before_order() -> None:
     assert confirmed["ok"] is True
     assert confirmed["order"]["code"] == "PED-001"
     assert len(fudia.order_calls) == 1
+    assert fudia.order_calls[0]["conversation_id"] == session.conversation_id
+    assert fudia.order_calls[0]["request_id"]
     assert session.cart == []
+    assert session.pending_order_request_id is None
+
+
+@pytest.mark.asyncio
+async def test_each_confirmed_round_uses_a_new_request_id() -> None:
+    fudia = FakeFudia()
+    session = ConversationSession(phone="51999999999", qr_token="a" * 32)
+
+    first_tools = ConciergeTools(fudia, session, "quiero uno")
+    await first_tools.execute(
+        "add_item", {"productId": "p1", "quantity": 1, "note": ""}
+    )
+    await first_tools.execute("prepare_confirmation", {})
+    first_request_id = session.pending_order_request_id
+    assert first_request_id
+
+    await ConciergeTools(fudia, session, "Sí").execute("confirm_order", {})
+
+    second_tools = ConciergeTools(fudia, session, "otro más")
+    await second_tools.execute(
+        "add_item", {"productId": "p1", "quantity": 1, "note": ""}
+    )
+    await second_tools.execute("prepare_confirmation", {})
+    second_request_id = session.pending_order_request_id
+    assert second_request_id
+    assert second_request_id != first_request_id
+
+    await ConciergeTools(fudia, session, "Sí").execute("confirm_order", {})
+
+    assert len(fudia.order_calls) == 2
+    assert fudia.order_calls[0]["conversation_id"] == session.conversation_id
+    assert fudia.order_calls[1]["conversation_id"] == session.conversation_id
+    assert fudia.order_calls[0]["request_id"] != fudia.order_calls[1]["request_id"]
+
+
+@pytest.mark.asyncio
+async def test_bill_uses_backend_total_and_blocks_unconfirmed_cart() -> None:
+    fudia = FakeFudia()
+    session = ConversationSession(phone="51999999999", qr_token="a" * 32)
+
+    tools = ConciergeTools(fudia, session, "la cuenta")
+    bill = await tools.execute("request_bill", {})
+    assert bill["ok"] is True
+    assert bill["bill"]["total"] == "65.00"
+    assert bill["bill"]["paidAmount"] == "10.00"
+    assert bill["bill"]["remainingAmount"] == "55.00"
+    assert len(fudia.bill_calls) == 1
+
+    await tools.execute(
+        "add_item", {"productId": "p1", "quantity": 1, "note": ""}
+    )
+    blocked = await tools.execute("request_bill", {})
+    assert blocked["code"] == "unconfirmed_cart"
+    assert len(fudia.bill_calls) == 1
 
 
 @pytest.mark.asyncio
