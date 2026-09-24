@@ -1,4 +1,4 @@
-from pydantic import model_validator
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -22,6 +22,16 @@ class Settings(BaseSettings):
     queue_consumer: str = ""
     queue_max_attempts: int = 5
     queue_visibility_timeout_ms: int = 30_000
+    queue_worker_concurrency: int = Field(
+        default=8,
+        ge=1,
+        le=100,
+    )
+    queue_shutdown_grace_seconds: float = Field(
+        default=15.0,
+        gt=0,
+        le=120,
+    )
 
     conversation_lock_ttl_seconds: int = 30
     conversation_lock_wait_seconds: float = 8.0
