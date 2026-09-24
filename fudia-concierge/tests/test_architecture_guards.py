@@ -131,3 +131,7 @@ def test_prometheus_registry_contains_concierge_metrics() -> None:
         "fudia_concierge_queue_deliveries_total"
         in payload
     )
+    assert (
+        "fudia_concierge_queue_in_flight"
+        in payload
+    )
