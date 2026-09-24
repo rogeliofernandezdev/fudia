@@ -1,7 +1,8 @@
 "use client";
+/* eslint-disable @next/next/no-img-element -- Local blob previews must bypass Next image optimization. */
 import {useDeferredValue,useRef,useState} from "react";
 import {useQuery} from "@tanstack/react-query";
-import {useForm} from "react-hook-form";
+import {useForm,useWatch} from "react-hook-form";
 import {Button,Icon,Input,Select,Textarea} from "@/design-system";
 import {useSession} from "@/providers/session-context";
 import {formatRegionalNumber} from "@/shared/i18n/regional-format";
@@ -54,13 +55,14 @@ export function PurchaseItemDialog({
     staleTime:30000,
   });
 
-  const{register,handleSubmit,watch,setValue,formState:{errors,isSubmitted}}=useForm<PurchaseInventoryItemDraft>({
+  const{control,register,handleSubmit,setValue,formState:{errors,isSubmitted}}=useForm<PurchaseInventoryItemDraft>({
     defaultValues:defaults,
     resolver:purchaseInventoryItemResolver,
     mode:"onSubmit",
     reValidateMode:"onChange",
   });
-  const value=watch();
+  const watchedName=useWatch({control,name:"name"});
+  const presentationType=useWatch({control,name:"presentationType"})??"unit";
 
   function changeMode(next:ItemMode){
     setMode(next);
@@ -161,7 +163,7 @@ export function PurchaseItemDialog({
                   <label className="purchase-item-image span-2">Imagen del producto (opcional)
                     <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={event=>{const file=event.target.files?.[0];if(file)selectFile(file)}}/>
                     <div className="purchase-image-drop" role="button" tabIndex={0} onClick={()=>fileRef.current?.click()} onKeyDown={event=>{if(event.key==="Enter"||event.key===" ")fileRef.current?.click()}}>
-                      {previewUrl?<><img src={previewUrl} alt={value.name||"Vista previa del producto"}/><button type="button" className="purchase-image-clear" onClick={event=>{event.stopPropagation();clearImage()}} aria-label="Quitar imagen"><Icon name="close" size={15}/></button></>:<div><Icon name="box" size={23}/><b>Seleccionar imagen</b><small>PNG, JPEG o WebP · máximo 5 MB</small></div>}
+                      {previewUrl?<><img src={previewUrl} alt={watchedName||"Vista previa del producto"}/><button type="button" className="purchase-image-clear" onClick={event=>{event.stopPropagation();clearImage()}} aria-label="Quitar imagen"><Icon name="close" size={15}/></button></>:<div><Icon name="box" size={23}/><b>Seleccionar imagen</b><small>PNG, JPEG o WebP · máximo 5 MB</small></div>}
                     </div>
                     {imageError&&<small className="wizard-field-error">{imageError}</small>}
                   </label>
@@ -173,8 +175,8 @@ export function PurchaseItemDialog({
               <div className="purchase-section-title"><span><Icon name="box" size={17}/></span><div><b>Unidad y presentación</b><small>Define cómo se almacenará y cómo se comprará este artículo.</small></div></div>
               <div className="form-grid">
                 <label>Unidad base<Select {...register("unit")} aria-invalid={Boolean(errors.unit)}><option value="und">Unidad</option><option value="botella">Botella</option><option value="lata">Lata</option><option value="caja">Caja</option><option value="kg">Kilogramo</option><option value="l">Litro</option></Select>{errors.unit?.message&&<small className="wizard-field-error">{errors.unit.message}</small>}</label>
-                <label>Presentación<Select value={value.presentationType} onChange={event=>changePresentation(event.target.value as PresentationType)} aria-invalid={Boolean(errors.presentationType)||Boolean(errors.unitsPerPresentation)}><option value="unit">Unidad base</option><option value="package">Paquete</option><option value="box">Caja</option></Select></label>
-                {value.presentationType!=="unit"&&<label>Unidades por {value.presentationType==="box"?"caja":"paquete"}<Input type="number" min="1.001" step="0.001" inputMode="decimal" {...register("unitsPerPresentation")} placeholder="Ej. 12" aria-invalid={Boolean(errors.unitsPerPresentation)}/>{errors.unitsPerPresentation?.message&&<small className="wizard-field-error">{errors.unitsPerPresentation.message}</small>}</label>}
+                <label>Presentación<Select value={presentationType} onChange={event=>changePresentation(event.target.value as PresentationType)} aria-invalid={Boolean(errors.presentationType)||Boolean(errors.unitsPerPresentation)}><option value="unit">Unidad base</option><option value="package">Paquete</option><option value="box">Caja</option></Select></label>
+                {presentationType!=="unit"&&<label>Unidades por {presentationType==="box"?"caja":"paquete"}<Input type="number" min="1.001" step="0.001" inputMode="decimal" {...register("unitsPerPresentation")} placeholder="Ej. 12" aria-invalid={Boolean(errors.unitsPerPresentation)}/>{errors.unitsPerPresentation?.message&&<small className="wizard-field-error">{errors.unitsPerPresentation.message}</small>}</label>}
                 <label>Stock mínimo<Input type="number" min="0" step="0.001" inputMode="decimal" {...register("minimumStock")} aria-invalid={Boolean(errors.minimumStock)}/>{errors.minimumStock?.message&&<small className="wizard-field-error">{errors.minimumStock.message}</small>}</label>
               </div>
             </section>
