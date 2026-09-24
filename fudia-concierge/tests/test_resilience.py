@@ -141,6 +141,19 @@ class BlockingService:
             self.active -= 1
 
 
+class TouchTrackingQueue(MemoryInboundQueue):
+    def __init__(self) -> None:
+        super().__init__()
+        self.touches = 0
+
+    async def touch(
+        self,
+        delivery: object,
+    ) -> bool:
+        self.touches += 1
+        return True
+
+
 class LockingService:
     def __init__(self) -> None:
         self.lock = MemoryConversationLock()
@@ -313,6 +326,44 @@ async def test_worker_parallelizes_distinct_conversations_but_serializes_same_on
     await asyncio.wait_for(task, timeout=2)
 
     assert len(whatsapp.sent) == 3
+
+
+@pytest.mark.asyncio
+async def test_queue_worker_renews_visibility_while_processing() -> None:
+    queue = TouchTrackingQueue()
+    service = BlockingService()
+    whatsapp = FakeWhatsApp()
+    worker = QueueWorker(
+        queue,
+        service,
+        whatsapp,
+        max_concurrency=1,
+        visibility_heartbeat_seconds=0.01,
+    )
+    message_id = "wamid.visibility"
+    await queue.enqueue(
+        InboundMessage(
+            message_id=message_id,
+            phone="51933333333",
+            text="hola",
+        )
+    )
+
+    task = asyncio.create_task(worker.run())
+    while queue.touches == 0:
+        await asyncio.sleep(0.01)
+
+    assert service.active == 1
+    assert queue.touches >= 1
+
+    service.release.set()
+    await wait_for_queue_status(
+        queue,
+        {message_id},
+        "completed",
+    )
+    await worker.stop()
+    await asyncio.wait_for(task, timeout=2)
 
 
 @pytest.mark.asyncio
