@@ -1,3 +1,6 @@
+DROP TRIGGER IF EXISTS organizations_seed_payment_methods ON organizations;
+DROP FUNCTION IF EXISTS seed_payment_methods_for_organization();
+
 ALTER TABLE expenses DROP CONSTRAINT IF EXISTS expenses_payment_method_fk;
 ALTER TABLE payments DROP CONSTRAINT IF EXISTS payments_payment_method_fk;
 
