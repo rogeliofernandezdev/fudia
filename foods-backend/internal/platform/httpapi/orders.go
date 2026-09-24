@@ -29,6 +29,7 @@ type orderItem struct {
 	Note       string               `json:"note"`
 	ItemType   string               `json:"itemType"`
 	Selections []orderItemSelection `json:"selections,omitempty"`
+	Modifiers  []orderItemModifier  `json:"modifiers,omitempty"`
 }
 type order struct {
 	ID            string      `json:"id"`
@@ -66,6 +67,7 @@ type orderItemInput struct {
 	UnitPrice  float64                   `json:"unitPrice"`
 	Note       string                    `json:"note"`
 	Selections []orderItemSelectionInput `json:"selections"`
+	Modifiers  []orderItemModifierInput  `json:"modifiers"`
 	Reprice    bool                      `json:"reprice"`
 }
 type preparedOrderSelection struct {
@@ -88,6 +90,7 @@ type preparedOrderItem struct {
 	Note       string
 	ItemType   string
 	Selections []preparedOrderSelection
+	Modifiers  []preparedOrderModifier
 }
 type orderPreparationError struct {
 	Status  int
@@ -217,11 +220,11 @@ func loadOrderItems(ctx context.Context, q orderRowsQuerier, orderID, organizati
 	if err != nil {
 		return nil, err
 	}
-	defer selectionRows.Close()
 	for selectionRows.Next() {
 		var itemID string
 		var sel orderItemSelection
 		if err := selectionRows.Scan(&itemID, &sel.GroupID, &sel.GroupName, &sel.ProductID, &sel.Name, &sel.Surcharge); err != nil {
+			selectionRows.Close()
 			return nil, err
 		}
 		if idx, ok := indexByID[itemID]; ok {
@@ -229,6 +232,36 @@ func loadOrderItems(ctx context.Context, q orderRowsQuerier, orderID, organizati
 		}
 	}
 	if err := selectionRows.Err(); err != nil {
+		selectionRows.Close()
+		return nil, err
+	}
+	selectionRows.Close()
+
+	modifierRows, err := q.Query(ctx, `
+		SELECT m.order_item_id::text,m.group_id::text,m.group_name,
+		       m.option_id::text,m.option_name,m.surcharge::text
+		FROM order_item_modifier_selections m
+		JOIN order_items i ON i.id=m.order_item_id AND i.organization_id=m.organization_id
+		WHERE i.order_id=$1 AND i.organization_id=$2
+		ORDER BY m.created_at,m.id`, orderID, organizationID)
+	if err != nil {
+		return nil, err
+	}
+	defer modifierRows.Close()
+	for modifierRows.Next() {
+		var itemID string
+		var modifier orderItemModifier
+		if err := modifierRows.Scan(
+			&itemID, &modifier.GroupID, &modifier.GroupName,
+			&modifier.OptionID, &modifier.Name, &modifier.Surcharge,
+		); err != nil {
+			return nil, err
+		}
+		if idx, ok := indexByID[itemID]; ok {
+			items[idx].Modifiers = append(items[idx].Modifiers, modifier)
+		}
+	}
+	if err := modifierRows.Err(); err != nil {
 		return nil, err
 	}
 	return items, nil
@@ -286,17 +319,31 @@ func (a *API) prepareOrderItems(r *http.Request, tx pgx.Tx, s scope, existingOrd
 			if !available {
 				return nil, 0, &orderPreparationError{Status: 409, Code: "product_unavailable", Message: productName + " no está disponible en este momento."}
 			}
+			modifiers, modifierSurcharge, modifierErr := prepareProductModifiers(
+				r.Context(), tx, s.OrganizationID, *productID, in.Modifiers,
+			)
+			if modifierErr != nil {
+				return nil, 0, modifierErr
+			}
 			item := preparedOrderItem{
 				ProductID: productID,
 				Name: productName,
 				Qty: in.Qty,
-				UnitPrice: productPrice,
+				UnitPrice: productPrice + modifierSurcharge,
 				Note: strings.TrimSpace(in.Note),
 				ItemType: "product",
+				Modifiers: modifiers,
 			}
 			prepared = append(prepared, item)
 			subtotal += item.Qty * item.UnitPrice
 			continue
+		}
+
+		if len(in.Modifiers) > 0 {
+			return nil, 0, &orderPreparationError{
+				Status: 400, Code: "invalid_modifier_selection",
+				Message: "Los modificadores simples no pertenecen a un menú o combo.",
+			}
 		}
 
 		if existingOrderID != "" && strings.TrimSpace(in.ID) != "" && !in.Reprice {
@@ -644,6 +691,17 @@ func insertPreparedOrderItems(ctx context.Context, tx pgx.Tx, organizationID, or
 				INSERT INTO order_item_combo_selections(organization_id,order_item_id,group_id,group_name,option_product_id,option_name,surcharge)
 				VALUES($1,$2,$3,$4,$5,$6,$7)`,
 				organizationID, itemID, sel.GroupID, sel.GroupName, sel.ProductID, sel.Name, sel.Surcharge); err != nil {
+				return err
+			}
+		}
+		for _, modifier := range it.Modifiers {
+			if _, err := tx.Exec(ctx, `
+				INSERT INTO order_item_modifier_selections(
+				  organization_id,order_item_id,group_id,group_name,option_id,option_name,surcharge
+				)
+				VALUES($1,$2,$3,$4,$5,$6,$7)`,
+				organizationID, itemID, modifier.GroupID, modifier.GroupName,
+				modifier.OptionID, modifier.Name, modifier.Surcharge); err != nil {
 				return err
 			}
 		}
