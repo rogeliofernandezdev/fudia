@@ -140,6 +140,10 @@ def create_app(
         service,
         whatsapp,
         max_concurrency=cfg.queue_worker_concurrency,
+        visibility_heartbeat_seconds=max(
+            0.1,
+            cfg.queue_visibility_timeout_ms / 3000.0,
+        ),
     )
 
     app.state.settings = cfg
