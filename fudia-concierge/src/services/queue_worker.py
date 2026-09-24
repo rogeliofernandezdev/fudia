@@ -86,6 +86,9 @@ class QueueWorker:
 
                 for delivery in deliveries:
                     self._start_delivery(delivery)
+        except asyncio.CancelledError:
+            await self._cancel_in_flight()
+            raise
         finally:
             await self._drain()
 
@@ -116,6 +119,16 @@ class QueueWorker:
             *tuple(self._in_flight),
             return_exceptions=True,
         )
+
+    async def _cancel_in_flight(self) -> None:
+        tasks = tuple(self._in_flight)
+        for task in tasks:
+            task.cancel()
+        if tasks:
+            await asyncio.gather(
+                *tasks,
+                return_exceptions=True,
+            )
 
     async def process(
         self,
