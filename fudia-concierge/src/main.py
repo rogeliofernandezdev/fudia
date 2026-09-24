@@ -139,6 +139,7 @@ def create_app(
         inbound_queue,
         service,
         whatsapp,
+        max_concurrency=cfg.queue_worker_concurrency,
     )
 
     app.state.settings = cfg
@@ -165,11 +166,19 @@ def create_app(
         await worker.stop()
         task = app.state.queue_worker_task
         if task is not None:
-            task.cancel()
-            with contextlib.suppress(
-                asyncio.CancelledError
-            ):
-                await task
+            try:
+                await asyncio.wait_for(
+                    task,
+                    timeout=(
+                        cfg.queue_shutdown_grace_seconds
+                    ),
+                )
+            except TimeoutError:
+                task.cancel()
+                with contextlib.suppress(
+                    asyncio.CancelledError
+                ):
+                    await task
         await inbound_queue.close()
         await conversation_lock.close()
         await rate_limiter.close()
