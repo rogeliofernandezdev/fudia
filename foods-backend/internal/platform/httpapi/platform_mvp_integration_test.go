@@ -259,6 +259,9 @@ func TestModuleAvailabilityProtectsTenantActivation(t *testing.T){
 	if got:=moduleAvailability("carta_qr");got!=moduleAvailabilityDevelopment{
 		t.Fatalf("carta_qr must be development, got %s",got)
 	}
+	if got:=moduleAvailability("whatsapp_bot");got!=moduleAvailabilityReady{
+		t.Fatalf("whatsapp_bot must be ready, got %s",got)
+	}
 	if got:=moduleAvailability("crm");got!=moduleAvailabilityPlanned{
 		t.Fatalf("crm must be planned, got %s",got)
 	}
@@ -280,6 +283,14 @@ func TestModuleAvailabilityProtectsTenantActivation(t *testing.T){
 	active:=api.activeModules(s.OrganizationID)
 	if active["crm"]{
 		t.Fatal("planned module must remain inactive even with stale active=true data")
+	}
+
+	conciergeReq:=httptest.NewRequest("PATCH","/v1/admin/modules",bytes.NewReader([]byte(`{"key":"whatsapp_bot","active":true}`)))
+	conciergeReq=conciergeReq.WithContext(context.WithValue(conciergeReq.Context(),scopeKey{},s))
+	conciergeRec:=httptest.NewRecorder()
+	api.toggleModule(conciergeRec,conciergeReq)
+	if conciergeRec.Code!=204{
+		t.Fatalf("Fudia Concierge should be activable: %d %s",conciergeRec.Code,conciergeRec.Body.String())
 	}
 
 	readyReq:=httptest.NewRequest("PATCH","/v1/admin/modules",bytes.NewReader([]byte(`{"key":"reportes","active":true}`)))
