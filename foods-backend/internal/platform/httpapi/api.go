@@ -185,7 +185,7 @@ func (a *API) Routes() *http.ServeMux {
 	m.Handle("PATCH /v1/admin/tables/{id}", a.auth(a.requirePermission("tables.manage", http.HandlerFunc(a.updateTable))))
 	m.Handle("DELETE /v1/admin/tables/{id}", a.auth(a.requirePermission("tables.manage", http.HandlerFunc(a.deactivateTable))))
 	m.Handle("POST /v1/admin/tables/{id}/qr", a.auth(a.requirePermission("tables.manage", http.HandlerFunc(a.regenerateTableQR))))
-	m.Handle("GET /v1/public/tables/{token}", http.HandlerFunc(a.getTableByQR))
+	m.Handle("GET /v1/public/tables/{token}", http.HandlerFunc(a.getTableByQR))\n\tm.Handle("GET /v1/public/concierge/{token}/menu", http.HandlerFunc(a.listConciergeMenu))\n\tm.Handle("POST /v1/public/concierge/{token}/orders", http.HandlerFunc(a.createConciergeOrder))
 	m.Handle("GET /v1/admin/zones", a.auth(a.requirePermission("menu.read", http.HandlerFunc(a.listZones))))
 	m.Handle("POST /v1/admin/zones", a.auth(a.requirePermission("menu.manage", http.HandlerFunc(a.createZone))))
 	m.Handle("PATCH /v1/admin/zones/{id}", a.auth(a.requirePermission("menu.manage", http.HandlerFunc(a.updateZone))))

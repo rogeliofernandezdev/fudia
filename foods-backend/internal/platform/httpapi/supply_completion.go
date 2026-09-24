@@ -42,7 +42,7 @@ func lockInventoryBalance(ctx context.Context, tx pgx.Tx, s scope, inventoryItem
 	return out,err
 }
 
-func insertValuedMovement(ctx context.Context,tx pgx.Tx,s scope,productID *string,inventoryItemID,movementType string,delta,balanceAfter,unitCost float64,sourceType,sourceID,note string) error {
+func nullableUserID(id string) any {\n\tid=strings.TrimSpace(id)\n\tif id==""{return nil}\n\treturn id\n}\n\nfunc insertValuedMovement(ctx context.Context,tx pgx.Tx,s scope,productID *string,inventoryItemID,movementType string,delta,balanceAfter,unitCost float64,sourceType,sourceID,note string) error {
 	valueDelta:=math.Round(delta*unitCost*10000)/10000
 	balanceValue:=math.Round(balanceAfter*unitCost*10000)/10000
 	_,err:=tx.Exec(ctx,`
@@ -52,7 +52,7 @@ func insertValuedMovement(ctx context.Context,tx pgx.Tx,s scope,productID *strin
 		  unit_cost,value_delta,balance_value_after
 		)
 		VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
-	`,s.OrganizationID,s.LocationID,productID,inventoryItemID,movementType,delta,balanceAfter,sourceType,sourceID,note,s.UserID,unitCost,valueDelta,balanceValue)
+	`,s.OrganizationID,s.LocationID,productID,inventoryItemID,movementType,delta,balanceAfter,sourceType,sourceID,note,nullableUserID(s.UserID),unitCost,valueDelta,balanceValue)
 	return err
 }
 

@@ -1100,7 +1100,7 @@ func (a *API) updateOrderStatus(w http.ResponseWriter, r *http.Request) {
 		fail(w, 503, "order_unavailable", "No pudimos validar el estado de cobro del pedido.")
 		return
 	}
-	if in.Status == "entregado" && channel == "salon" && tableID != "" && paid+0.00001 < total {
+	if in.Status == "entregado" && tableID != "" && paid+0.00001 < total {
 		fail(w, 409, "payment_required_before_delivery", "La mesa no puede liberarse mientras exista saldo pendiente.")
 		return
 	}
