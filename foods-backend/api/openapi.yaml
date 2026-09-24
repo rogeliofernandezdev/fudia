@@ -1,5 +1,5 @@
 openapi: 3.1.0
-info: { title: Foods API, version: 0.12.0, description: API operativa y administrativa multiempresa. }
+info: { title: Foods API, version: 0.13.0, description: API operativa y administrativa multiempresa. }
 servers: [{ url: http://localhost:8080 }]
 paths:
   /health:
@@ -284,6 +284,28 @@ paths:
       summary: Desactiva un producto sin eliminar su historial
       security: [{ sessionCookie: [] }]
       responses: { "204": { description: Producto desactivado }, "404": { description: No encontrado }, "403": { $ref: "#/components/responses/Forbidden" } }
+  /v1/admin/products/{id}/modifiers:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    get:
+      operationId: getProductModifiers
+      summary: Carga los grupos y opciones de modificadores de un producto simple
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Configuración de modificadores, content: { application/json: { schema: { $ref: "#/components/schemas/ProductModifierConfig" } } } }
+        "404": { description: Producto no encontrado }
+        "409": { description: Los combos administran sus propias opciones }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    put:
+      operationId: saveProductModifiers
+      summary: Reemplaza atómicamente la configuración de modificadores de un producto simple
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ProductModifierConfigInput" } } } }
+      responses:
+        "200": { description: Configuración guardada, content: { application/json: { schema: { $ref: "#/components/schemas/ProductModifierConfig" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { description: Producto no encontrado }
+        "409": { description: Configuración incompatible o duplicada }
+        "403": { $ref: "#/components/responses/Forbidden" }
   /v1/admin/combos:
     get:
       operationId: listCombos
@@ -974,6 +996,12 @@ components:
     Category: { allOf: [{ $ref: "#/components/schemas/CategoryInput" }, { type: object, required: [id, active, productScope, productCount], properties: { id: { type: string, format: uuid }, active: { type: boolean }, productCount: { type: integer } } }] }
     ProductInput: { type: object, required: [name, price], properties: { sku: { type: string, maxLength: 40 }, name: { type: string, maxLength: 160 }, description: { type: string, maxLength: 1000 }, categoryId: { type: [string, "null"], format: uuid }, price: { type: string, pattern: "^[0-9]+(\\.[0-9]{1,2})?$" }, active: { type: boolean }, productType: { type: string, enum: [prepared, retail], default: prepared, description: "Clasificación operativa independiente de categoría y control de cantidad." }, quantityControl: { type: string, enum: [none, portions, inventory], default: none } } }
     Product: { allOf: [{ $ref: "#/components/schemas/ProductInput" }, { type: object, required: [id, active, productType, quantityControl], properties: { id: { type: string, format: uuid }, categoryName: { type: [string, "null"] }, active: { type: boolean } } }] }
+    ProductModifierOptionInput: { type: object, required: [name, surcharge], properties: { name: { type: string, minLength: 1, maxLength: 80 }, surcharge: { type: string, description: "Recargo monetario no negativo; foods-backend es la fuente de verdad." } } }
+    ProductModifierGroupInput: { type: object, required: [name, required, minSelections, maxSelections, options], properties: { name: { type: string, minLength: 1, maxLength: 80 }, required: { type: boolean }, minSelections: { type: integer, minimum: 0 }, maxSelections: { type: integer, minimum: 1 }, options: { type: array, items: { $ref: "#/components/schemas/ProductModifierOptionInput" } } } }
+    ProductModifierConfigInput: { type: object, required: [groups], properties: { groups: { type: array, items: { $ref: "#/components/schemas/ProductModifierGroupInput" } } } }
+    ProductModifierOption: { allOf: [{ $ref: "#/components/schemas/ProductModifierOptionInput" }, { type: object, required: [id], properties: { id: { type: string, format: uuid } } }] }
+    ProductModifierGroup: { type: object, required: [id, name, required, minSelections, maxSelections, options], properties: { id: { type: string, format: uuid }, name: { type: string }, required: { type: boolean }, minSelections: { type: integer }, maxSelections: { type: integer }, options: { type: array, items: { $ref: "#/components/schemas/ProductModifierOption" } } } }
+    ProductModifierConfig: { type: object, required: [productId, groups], properties: { productId: { type: string, format: uuid }, groups: { type: array, items: { $ref: "#/components/schemas/ProductModifierGroup" } } } }
     ProductAvailabilityInput: { type: object, required: [status], properties: { status: { type: string, enum: [available, sold_out] }, portionQuantity: { type: [integer, "null"], minimum: 0, description: "Para control portions, no puede ser menor que soldQuantity; al marcar available debe ser al menos 1. null conserva el cupo diario existente cuando ya existe un registro." }, note: { type: string, maxLength: 240 } } }
     ProductAvailability: { type: object, required: [productId, name, quantityControl, status, source, manualStatus, soldQuantity, note, businessDate], properties: { productId: { type: string, format: uuid }, name: { type: string }, categoryName: { type: [string, "null"] }, imageUrl: { type: [string, "null"] }, quantityControl: { type: string, enum: [none, portions, inventory] }, status: { type: string, enum: [available, low, sold_out, unavailable] }, source: { type: string, enum: [always, portions, inventory, manual_override, schedule, combo_components] }, manualStatus: { type: string, enum: [available, sold_out] }, portionQuantity: { type: [integer, "null"] }, soldQuantity: { type: integer, minimum: 0 }, remaining: { type: [number, "null"], minimum: 0 }, inventoryUnit: { type: [string, "null"] }, note: { type: string }, businessDate: { type: string, format: date } } }
     InventoryItem: { type: object, required: [inventoryItemId, productId, sku, name, kind, active, unit, quantity, minimumStock, status, updatedAt], properties: { inventoryItemId: { type: string, format: uuid }, productId: { type: [string, "null"], format: uuid }, sku: { type: string }, name: { type: string }, kind: { type: string, enum: [product, ingredient] }, categoryName: { type: [string, "null"] }, active: { type: boolean }, unit: { type: string }, quantity: { type: string }, minimumStock: { type: string }, status: { type: string, enum: [ok, low, out] }, updatedAt: { type: string, format: date-time } } }
