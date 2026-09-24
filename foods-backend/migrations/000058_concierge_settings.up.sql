@@ -9,7 +9,7 @@ CREATE TABLE concierge_settings (
   UNIQUE (organization_id,location_id),
   FOREIGN KEY (location_id,organization_id) REFERENCES locations(id,organization_id) ON DELETE CASCADE,
   CONSTRAINT concierge_settings_whatsapp_phone_check CHECK (
-    whatsapp_phone='' OR whatsapp_phone ~ '^\\+[1-9][0-9]{7,14}$'
+    whatsapp_phone='' OR whatsapp_phone ~ '^\+[1-9][0-9]{7,14}$'
   )
 );
 

@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-var conciergeWhatsAppPhonePattern = regexp.MustCompile(`^\\+[1-9][0-9]{7,14}$`)
+var conciergeWhatsAppPhonePattern = regexp.MustCompile(`^\+[1-9][0-9]{7,14}$`)
 
 type conciergeSettingsView struct {
 	Active           bool   `json:"active"`
