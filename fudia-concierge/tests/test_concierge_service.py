@@ -10,6 +10,9 @@ from src.domain.models import (
     ConversationSession,
     MenuItem,
     MenuResponse,
+    ModifierConfig,
+    ModifierGroup,
+    ModifierOption,
     OrderResult,
     TableContext,
 )
