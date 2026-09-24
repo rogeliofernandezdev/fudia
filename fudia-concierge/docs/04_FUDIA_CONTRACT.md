@@ -1,22 +1,23 @@
 # Contrato con Fudia
 
-## Existente
+Los endpoints de integración exigen X-Fudia-Concierge-Key; el QR no sustituye esta credencial.
 
-GET /v1/public/tables/{token}
-
-## Integración server-to-server
-
-Los endpoints de Concierge exigen `X-Fudia-Concierge-Key`; el QR no sustituye esta credencial.
-
+## Carta
 
 GET /v1/integrations/concierge/{token}/menu
 
-Parámetros: q y productId.
+q busca por nombre, descripción o categoría. productId revalida una selección exacta.
+
+## Rondas
 
 POST /v1/integrations/concierge/{token}/orders
 
-El backend deriva organización, local y mesa desde el QR y recalcula precios. El body no acepta organizationId, locationId, tableId ni unitPrice como fuente de verdad. `conversationId` actúa como clave idempotente dentro del local: un reintento recupera el pedido ya creado en lugar de duplicarlo.
+foods-backend deriva organización, local y mesa desde el QR y recalcula precios y disponibilidad. conversationId permanece estable durante la conversación. requestId identifica idempotentemente cada ronda; repetirlo recupera la misma operación y una ronda posterior usa otro requestId.
 
-## Evolución
+La primera ronda abre la comanda. Las posteriores se agregan al mismo consumo y crean tickets KDS independientes.
 
-Antes de ampliar canales se incorporarán credenciales rotables por instalación/empresa, rate limiting por QR/teléfono y observabilidad de abuso.
+## Cuenta
+
+POST /v1/integrations/concierge/{token}/bill
+
+Devuelve el consumo acumulado real, moneda, productos, total, pagos registrados, saldo pendiente y estado de pago. Registra la solicitud de cuenta, pero no registra un pago.
