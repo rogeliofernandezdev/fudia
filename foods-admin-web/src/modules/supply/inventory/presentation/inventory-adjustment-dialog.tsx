@@ -1,6 +1,6 @@
 "use client";
 import {useMemo} from "react";
-import {useForm} from "react-hook-form";
+import {useForm,useWatch} from "react-hook-form";
 import {Button,Icon,Input,Select,Textarea} from "@/design-system";
 import {useSession} from "@/providers/session-context";
 import {formatRegionalNumber} from "@/shared/i18n/regional-format";
@@ -28,7 +28,7 @@ const defaults:InventoryAdjustmentDraft={
 export function InventoryAdjustmentDialog({items,busy,close,save}:{items:InventoryProductOption[];busy:boolean;close:()=>void;save:(draft:InventoryAdjustmentDraft)=>void}){
   const{location}=useSession();
   const{
-    register,handleSubmit,watch,setValue,setError,
+    control,register,handleSubmit,setValue,setError,
     formState:{errors,isSubmitted},
   }=useForm<InventoryAdjustmentDraft>({
     defaultValues:defaults,
@@ -37,12 +37,14 @@ export function InventoryAdjustmentDialog({items,busy,close,save}:{items:Invento
     reValidateMode:"onChange",
   });
 
-  const value=watch();
-  const selected=useMemo(()=>items.find(item=>item.id===value.inventoryItemId),[items,value.inventoryItemId]);
-  const reasons=value.movementType==="entry"?entryReasons:exitReasons;
+  const inventoryItemId=useWatch({control,name:"inventoryItemId"});
+  const movementType=useWatch({control,name:"movementType"})??"entry";
+  const quantityValue=useWatch({control,name:"quantity"});
+  const selected=useMemo(()=>items.find(item=>item.id===inventoryItemId),[items,inventoryItemId]);
+  const reasons=movementType==="entry"?entryReasons:exitReasons;
   const currentStock=Number(selected?.quantity??0);
-  const quantity=Number(value.quantity||0);
-  const projected=value.movementType==="entry"?currentStock+quantity:currentStock-quantity;
+  const quantity=Number(quantityValue||0);
+  const projected=movementType==="entry"?currentStock+quantity:currentStock-quantity;
   const hasErrors=Object.keys(errors).length>0;
 
   function changeMovement(type:InventoryAdjustmentType){
@@ -86,7 +88,7 @@ export function InventoryAdjustmentDialog({items,busy,close,save}:{items:Invento
 
           <div className="inventory-adjustment-grid">
             <label>Tipo de movimiento
-              <Select value={value.movementType} onChange={event=>changeMovement(event.target.value as InventoryAdjustmentType)}>
+              <Select value={movementType} onChange={event=>changeMovement(event.target.value as InventoryAdjustmentType)}>
                 <option value="entry">Entrada</option>
                 <option value="exit">Salida</option>
               </Select>
@@ -107,9 +109,9 @@ export function InventoryAdjustmentDialog({items,busy,close,save}:{items:Invento
             </label>
           </div>
 
-          {selected&&Number.isFinite(quantity)&&quantity>0&&<div className={"inventory-adjustment-preview "+value.movementType}>
-            <Icon name={value.movementType==="entry"?"plus":"minus"} size={15}/>
-            <span><b>Stock resultante: {formatRegionalNumber(Math.max(0,projected),location?.country,{maximumFractionDigits:3})} {selected.unit}</b><small>Actual {formatRegionalNumber(currentStock,location?.country,{maximumFractionDigits:3})} {selected.unit} · {value.movementType==="entry"?"+":"-"}{formatRegionalNumber(quantity,location?.country,{maximumFractionDigits:3})} {selected.unit}</small></span>
+          {selected&&Number.isFinite(quantity)&&quantity>0&&<div className={"inventory-adjustment-preview "+movementType}>
+            <Icon name={movementType==="entry"?"plus":"minus"} size={15}/>
+            <span><b>Stock resultante: {formatRegionalNumber(Math.max(0,projected),location?.country,{maximumFractionDigits:3})} {selected.unit}</b><small>Actual {formatRegionalNumber(currentStock,location?.country,{maximumFractionDigits:3})} {selected.unit} · {movementType==="entry"?"+":"-"}{formatRegionalNumber(quantity,location?.country,{maximumFractionDigits:3})} {selected.unit}</small></span>
           </div>}
 
           {isSubmitted&&hasErrors&&<div className="inventory-adjustment-validation" role="alert"><Icon name="alert" size={15}/><span>Revisa los campos marcados antes de guardar.</span></div>}
