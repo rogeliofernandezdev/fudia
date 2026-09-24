@@ -37,7 +37,7 @@ func TestConciergeQRCodeMenuOrderAndKitchenWorkflow(t *testing.T) {
 		INSERT INTO products(
 		  organization_id,sku,name,description,price,active,product_type,quantity_control
 		)
-		VALUES($1,$2,'Combo Conversacional','Combo para prueba Concierge',20,true,'prepared','none')
+		VALUES($1,$2,'Combo Conversacional','Combo para prueba',20,true,'prepared','none')
 		RETURNING id
 	`,s.OrganizationID,fmt.Sprintf("CCB-%d",nonce)).Scan(&comboID);err!=nil{t.Fatal(err)}
 	if _,err:=pool.Exec(ctx,`INSERT INTO menu_combos(product_id,organization_id) VALUES($1,$2)`,comboID,s.OrganizationID);err!=nil{t.Fatal(err)}
@@ -87,6 +87,8 @@ func TestConciergeQRCodeMenuOrderAndKitchenWorkflow(t *testing.T) {
 	t.Cleanup(func(){
 		_,_=pool.Exec(context.Background(),`DELETE FROM concierge_order_requests WHERE organization_id=$1 AND table_id=$2`,s.OrganizationID,tableID)
 		_,_=pool.Exec(context.Background(),`DELETE FROM orders WHERE organization_id=$1 AND table_id=$2`,s.OrganizationID,tableID)
+		_,_=pool.Exec(context.Background(),`DELETE FROM menu_combo_groups WHERE organization_id=$1 AND combo_product_id=$2`,s.OrganizationID,comboID)
+		_,_=pool.Exec(context.Background(),`DELETE FROM menu_combos WHERE organization_id=$1 AND product_id=$2`,s.OrganizationID,comboID)
 		_,_=pool.Exec(context.Background(),`DELETE FROM tables WHERE id=$1 AND organization_id=$2`,tableID,s.OrganizationID)
 	})
 
