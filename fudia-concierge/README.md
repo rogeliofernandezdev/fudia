@@ -4,11 +4,43 @@ Asistente conversacional de Fudia para atender por WhatsApp a un comensal sentad
 
 ## Flujo
 
-QR de mesa -> WhatsApp -> Fudia Concierge -> foods-backend -> carta/disponibilidad -> ronda confirmada -> KDS -> nuevas rondas -> cuenta acumulada.
+QR de mesa -> webhook Meta -> Redis Stream durable -> worker -> filtro de alcance -> router LangGraph -> agente especialista -> tools permitidas -> foods-backend -> respuesta WhatsApp.
 
-Fudia Concierge mantiene únicamente el carrito temporal de la ronda en curso. foods-backend revalida producto, disponibilidad, precio, mesa y stock antes de registrar cada ronda y conserva la comanda acumulada como fuente de verdad.
+Fudia Concierge mantiene únicamente el estado conversacional y el carrito temporal de la ronda en curso. foods-backend revalida producto, disponibilidad, precio, mesa y stock antes de registrar cada ronda y conserva la comanda acumulada como fuente de verdad.
 
 Cuando el cliente solicita la cuenta, Concierge consulta el consumo real de la mesa en backend y muestra productos, total, pagos registrados y saldo pendiente. Solicitar la cuenta no registra un pago; el cobro continúa por Caja/POS.
+
+## Arquitectura multiagente
+
+Cada mensaje dentro del alcance es enrutado a uno de tres especialistas:
+
+- `menu`: lectura de carta, categorías, combos y modificadores;
+- `order`: carrito, configuración, confirmación y envío de rondas;
+- `service`: cuenta y handoff humano.
+
+Cada especialista recibe únicamente sus schemas de tools y `ToolRegistry` vuelve a aplicar el mismo límite en código. El prompt no constituye una frontera de seguridad.
+
+## Resiliencia
+
+- Redis Streams para entrega durable del webhook.
+- Deduplicación atómica por `message_id`.
+- ACK únicamente después de procesar y enviar la respuesta.
+- Reintentos y dead-letter al agotar intentos.
+- Lock distribuido renovable por conversación.
+- Sesiones aisladas por `phone_number_id` de Meta + cliente.
+- Rate limiting por conversación.
+- Límite de tamaño de mensaje.
+- Retries con backoff para lecturas de backend, creación idempotente de rondas y envío WhatsApp.
+- `/live` para liveness y `/ready` para dependencias críticas.
+
+## Observabilidad
+
+- logs JSON sin conversaciones, QR ni teléfonos en claro;
+- `traceId` correlacionable desde cola hasta backend;
+- métricas Prometheus en `/metrics`;
+- métricas de cola, agentes, tools, negocio, backend y WhatsApp;
+- fingerprints SHA-256 truncados para identificadores externos en logs;
+- eval corpus para alcance, routing e intentos de prompt injection.
 
 ## Stack
 
@@ -17,25 +49,32 @@ Cuando el cliente solicita la cuenta, Concierge consulta el consumo real de la m
 - LangGraph
 - OpenAI Responses API con function tools
 - WhatsApp Business Cloud API
-- Redis para sesión conversacional efímera
-- HTTP/OpenAPI para integración con foods-backend
+- Redis para sesión, locks, rate limiting y cola durable
+- Prometheus client
+- HTTP para integración con foods-backend
 
 ## Prompts
 
-- `prompts/system.md`: comportamiento conversacional y orquestación del pedido.
 - `prompts/scope_router.md`: clasificación cerrada `IN_SCOPE / OUT_OF_SCOPE`.
-- Las reglas de negocio críticas no viven en prompts: se validan en tools y foods-backend.
+- `prompts/intent_router.md`: selección `menu / order / service`.
+- `prompts/system.md`: reglas comunes.
+- `prompts/menu_agent.md`: especialista de carta.
+- `prompts/order_agent.md`: especialista de pedido.
+- `prompts/service_agent.md`: especialista de servicio.
+
+Las reglas de negocio críticas no viven en prompts: se validan en services/tools y foods-backend.
 
 ## Desarrollo local
 
-1. Copiar .env.example a .env.
-2. Configurar OPENAI_API_KEY, REDIS_URL y las credenciales de WhatsApp.
-3. Instalar: python -m pip install -e ".[dev]"
-4. Ejecutar: uvicorn src.main:app --reload --port 8010
-5. Verificar: ruff check . ; mypy src config ; pytest -q ; python -m build
+1. Copiar `.env.example` a `.env`.
+2. Configurar OpenAI, Redis y credenciales de WhatsApp.
+3. Instalar de forma reproducible: `python -m pip install -c constraints.txt -e ".[dev]"`.
+4. Ejecutar: `uvicorn src.main:app --reload --port 8010`.
+5. Verificar: `ruff check . ; mypy src config ; pytest -q ; python -m build`.
+6. Evals live, cuando exista `OPENAI_API_KEY`: `python scripts/run_evals.py`.
 
 ## Estado
 
-El alcance funcional incluye QR y configuración por local, carta real por nombre/descripción/categoría, carrito, combos, modificadores, confirmación protegida, rondas independientes sobre una misma comanda, KDS, solicitud de cuenta con total real, handoff humano y observabilidad.
+El alcance de código definido para Concierge está cerrado: QR/configuración por local, carta real, carrito, combos, modificadores, confirmación protegida, rondas independientes sobre una misma comanda, KDS, solicitud de cuenta con total real, handoff humano, multiagente, aislamiento multi-tenant, cola durable, retries, rate limiting, readiness, métricas, trazabilidad, evals y contenedor no-root.
 
-Queda como validación de despliegue la prueba contra credenciales reales de Meta/OpenAI/Redis.
+El repositorio y CI pueden declararse cerrados para este alcance. La validación con credenciales reales de Meta/OpenAI/Redis y una prueba de humo en el entorno desplegado son un **gate de activación externa**, no trabajo de código pendiente, y no se consideran ejecutados mientras no se proporcionen esas credenciales y entorno.
