@@ -112,6 +112,7 @@ class CartLine(BaseModel):
 
 class ConversationSession(BaseModel):
     phone: str
+    channel_key: str = "default"
     conversation_id: str = Field(default_factory=lambda: uuid4().hex)
     qr_token: str | None = None
     table: TableContext | None = None
@@ -151,3 +152,11 @@ class OrderResult(BaseModel):
     code: str
     status: str
     total: Decimal
+
+
+class InboundMessage(BaseModel):
+    message_id: str
+    phone: str
+    text: str
+    sender_phone_id: str = ""
+    recipient_phone: str = ""
