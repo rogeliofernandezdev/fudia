@@ -9,10 +9,7 @@ from openai import AsyncOpenAI
 
 from config.settings import settings
 from src.domain.models import ConversationSession
-from src.infrastructure.openai_adapter import (
-    OpenAIIntentRouter,
-    OpenAIScopeClassifier,
-)
+from src.infrastructure.openai_adapter import OpenAIConciergeRouter
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -34,15 +31,10 @@ async def main() -> None:
     client = AsyncOpenAI(
         api_key=settings.openai_api_key
     )
-    scope = OpenAIScopeClassifier(
+    router = OpenAIConciergeRouter(
         client,
         settings.openai_model,
-        ROOT / "prompts" / "scope_router.md",
-    )
-    router = OpenAIIntentRouter(
-        client,
-        settings.openai_model,
-        ROOT / "prompts" / "intent_router.md",
+        ROOT / "prompts" / "concierge_router.md",
     )
     failures: list[str] = []
 
@@ -57,13 +49,14 @@ async def main() -> None:
                 phone="eval",
                 qr_token="a" * 32,
             )
+            route = await router.route(
+                session,
+                str(case["input"]),
+            )
             actual = (
-                "IN_SCOPE"
-                if await scope.is_in_scope(
-                    session,
-                    str(case["input"]),
-                )
-                else "OUT_OF_SCOPE"
+                "OUT_OF_SCOPE"
+                if route == "out_of_scope"
+                else "IN_SCOPE"
             )
             if actual != case["expected"]:
                 failures.append(
