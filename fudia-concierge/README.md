@@ -23,6 +23,8 @@ Cada especialista recibe únicamente sus schemas de tools y `ToolRegistry` vuelv
 ## Resiliencia
 
 - Redis Streams para entrega durable del webhook.
+- Concurrencia acotada por worker con backpressure antes de reclamar mensajes.
+- Procesamiento paralelo de conversaciones distintas y serialización por conversación.
 - Deduplicación atómica por `message_id`.
 - ACK únicamente después de procesar y enviar la respuesta.
 - Reintentos y dead-letter al agotar intentos.
@@ -38,7 +40,7 @@ Cada especialista recibe únicamente sus schemas de tools y `ToolRegistry` vuelv
 - logs JSON sin conversaciones, QR ni teléfonos en claro;
 - `traceId` correlacionable desde cola hasta backend;
 - métricas Prometheus en `/metrics`;
-- métricas de cola, agentes, tools, negocio, backend y WhatsApp;
+- métricas de cola, mensajes en vuelo, agentes, tools, negocio, backend y WhatsApp;
 - fingerprints SHA-256 truncados para identificadores externos en logs;
 - eval corpus para alcance, routing e intentos de prompt injection.
 
@@ -75,6 +77,6 @@ Las reglas de negocio críticas no viven en prompts: se validan en services/tool
 
 ## Estado
 
-El alcance de código definido para Concierge está cerrado: QR/configuración por local, carta real, carrito, combos, modificadores, confirmación protegida, rondas independientes sobre una misma comanda, KDS, solicitud de cuenta con total real, handoff humano, multiagente, aislamiento multi-tenant, cola durable, retries, rate limiting, readiness, métricas, trazabilidad, evals y contenedor no-root.
+El alcance de código definido para Concierge está cerrado: QR/configuración por local, carta real, carrito, combos, modificadores, confirmación protegida, rondas independientes sobre una misma comanda, KDS, solicitud de cuenta con total real, handoff humano, multiagente, aislamiento multi-tenant, cola durable, concurrencia acotada con backpressure, retries, rate limiting, readiness, métricas, trazabilidad, evals y contenedor no-root.
 
 El repositorio y CI pueden declararse cerrados para este alcance. La validación con credenciales reales de Meta/OpenAI/Redis y una prueba de humo en el entorno desplegado son un **gate de activación externa**, no trabajo de código pendiente, y no se consideran ejecutados mientras no se proporcionen esas credenciales y entorno.
