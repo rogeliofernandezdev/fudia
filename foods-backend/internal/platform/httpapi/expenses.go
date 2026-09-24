@@ -47,14 +47,6 @@ type expenseInput struct {
 
 var expenseAmountPattern = regexp.MustCompile("^[0-9]{1,12}([.][0-9]{1,2})?$")
 
-var expensePaymentMethods = []map[string]string{
-	{"value": "cash", "label": "Efectivo"},
-	{"value": "bank_transfer", "label": "Transferencia bancaria"},
-	{"value": "card", "label": "Tarjeta"},
-	{"value": "digital_wallet", "label": "Billetera digital"},
-	{"value": "other", "label": "Otro"},
-}
-
 const expenseColumns = `
 	e.id::text,e.category_id::text,c.name,e.description,e.amount::text,e.payment_method,
 	e.business_date::text,e.reference,e.notes,e.status,created.full_name,
@@ -80,15 +72,6 @@ func validExpenseAmount(value string) bool {
 	}
 	plain := strings.ReplaceAll(value, ".", "")
 	return strings.Trim(plain, "0") != ""
-}
-
-func validExpensePaymentMethod(value string) bool {
-	for _, option := range expensePaymentMethods {
-		if option["value"] == value {
-			return true
-		}
-	}
-	return false
 }
 
 func (a *API) loadExpense(r *http.Request, id string) (expenseView, error) {
@@ -151,12 +134,17 @@ func (a *API) listExpenses(w http.ResponseWriter, r *http.Request) {
 		}
 		items = append(items, item)
 	}
+	options, err := a.paymentMethodOptions(r.Context(), s.OrganizationID, "expenses")
+	if err != nil {
+		fail(w, 503, "payment_methods_unavailable", "No pudimos cargar los medios de pago.")
+		return
+	}
 	writeJSON(w, 200, map[string]any{
 		"items":                items,
 		"total":                total,
 		"page":                 page,
 		"pageSize":             size,
-		"paymentMethodOptions": expensePaymentMethods,
+		"paymentMethodOptions": options,
 	})
 }
 
@@ -174,12 +162,19 @@ func (a *API) createExpense(w http.ResponseWriter, r *http.Request) {
 	in.BusinessDate = strings.TrimSpace(in.BusinessDate)
 	in.Reference = strings.TrimSpace(in.Reference)
 	in.Notes = strings.TrimSpace(in.Notes)
-	if in.CategoryID == "" || in.Description == "" || len(in.Description) > 180 || !validExpenseAmount(in.Amount) || !validExpensePaymentMethod(in.PaymentMethod) || len(in.Reference) > 120 || len(in.Notes) > 500 {
+	if in.CategoryID == "" || in.Description == "" || len(in.Description) > 180 || !validExpenseAmount(in.Amount) || in.PaymentMethod == "" || len(in.Reference) > 120 || len(in.Notes) > 500 {
 		fail(w, 400, "invalid_expense", "Completa categoría, descripción, importe y medio de pago válidos.")
 		return
 	}
 	if _, err := time.Parse("2006-01-02", in.BusinessDate); err != nil {
 		fail(w, 400, "invalid_expense", "La fecha del gasto no es válida.")
+		return
+	}
+	if _, err := getPaymentMethod(r.Context(), a.db, s.OrganizationID, in.PaymentMethod, "expenses"); errors.Is(err, pgx.ErrNoRows) {
+		fail(w, 400, "invalid_payment_method", "Selecciona un medio de pago activo para gastos.")
+		return
+	} else if err != nil {
+		fail(w, 503, "payment_methods_unavailable", "No pudimos validar el medio de pago.")
 		return
 	}
 	var categoryActive bool

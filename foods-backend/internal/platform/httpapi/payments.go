@@ -270,10 +270,6 @@ func (a *API) createPayment(w http.ResponseWriter,r *http.Request){
 		fail(w,400,"invalid_payment","Revisa los datos del cobro.")
 		return
 	}
-	if in.Method!="cash"&&in.Method!="card"&&in.Method!="transfer"&&in.Method!="other"{
-		fail(w,400,"invalid_payment_method","Selecciona un método de pago válido.")
-		return
-	}
 	in.OrderID=strings.TrimSpace(in.OrderID)
 	in.Reference=strings.TrimSpace(in.Reference)
 	if len(in.Reference)>120{
@@ -284,6 +280,10 @@ func (a *API) createPayment(w http.ResponseWriter,r *http.Request){
 	tx,err:=a.db.Begin(r.Context())
 	if err!=nil{fail(w,503,"payments_unavailable","No pudimos iniciar el cobro.");return}
 	defer tx.Rollback(r.Context())
+
+	methodDef,err:=getPaymentMethod(r.Context(),tx,s.OrganizationID,in.Method,"sales")
+	if errors.Is(err,pgx.ErrNoRows){fail(w,400,"invalid_payment_method","Selecciona un medio de pago activo.");return}
+	if err!=nil{fail(w,503,"payment_methods_unavailable","No pudimos validar el medio de pago.");return}
 
 	shiftID,err:=currentCashShiftID(r.Context(),tx,s)
 	if errors.Is(err,pgx.ErrNoRows){
@@ -327,7 +327,7 @@ func (a *API) createPayment(w http.ResponseWriter,r *http.Request){
 	`,s.OrganizationID,s.LocationID,in.OrderID,shiftID,in.Method,in.Amount,in.Reference,s.UserID).Scan(&id)
 	if err!=nil{fail(w,503,"payments_unavailable","No pudimos registrar el cobro.");return}
 
-	if in.Method=="cash"{
+	if methodDef.AffectsCash{
 		if _,err:=tx.Exec(r.Context(),`
 			INSERT INTO cash_movements(
 			  organization_id,location_id,shift_id,movement_type,source_type,source_id,
@@ -375,16 +375,18 @@ func (a *API) refundPayment(w http.ResponseWriter,r *http.Request){
 	}
 	if err!=nil{fail(w,503,"payments_unavailable","No pudimos validar tu turno de caja.");return}
 
-	var method,orderCode,orderStatus string
+	var affectsCash bool
+	var orderCode,orderStatus string
 	var amount,refunded float64
 	err=tx.QueryRow(r.Context(),`
-		SELECT p.method,o.code,o.status,p.amount::float8,
+		SELECT pm.affects_cash,o.code,o.status,p.amount::float8,
 		       COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id),0)::float8
 		FROM payments p
+		JOIN payment_methods pm ON pm.organization_id=p.organization_id AND pm.code=p.method
 		JOIN orders o ON o.id=p.order_id AND o.organization_id=p.organization_id AND o.location_id=p.location_id
 		WHERE p.id=$1 AND p.organization_id=$2 AND p.location_id=$3
 		FOR UPDATE
-	`,r.PathValue("id"),s.OrganizationID,s.LocationID).Scan(&method,&orderCode,&orderStatus,&amount,&refunded)
+	`,r.PathValue("id"),s.OrganizationID,s.LocationID).Scan(&affectsCash,&orderCode,&orderStatus,&amount,&refunded)
 	if errors.Is(err,pgx.ErrNoRows){fail(w,404,"payment_not_found","El pago no existe en este local.");return}
 	if err!=nil{fail(w,503,"payments_unavailable","No pudimos validar el pago.");return}
 	if orderStatus=="entregado"||orderStatus=="cancelado"{
@@ -395,7 +397,7 @@ func (a *API) refundPayment(w http.ResponseWriter,r *http.Request){
 		fail(w,409,"refund_exceeds_payment","La devolución supera el saldo disponible del pago.")
 		return
 	}
-	if method=="cash"{
+	if affectsCash{
 		expected,err:=cashShiftExpected(r.Context(),tx,s,shiftID)
 		if err!=nil{fail(w,503,"payments_unavailable","No pudimos validar el efectivo disponible.");return}
 		if in.Amount>expected+0.00001{
@@ -412,7 +414,7 @@ func (a *API) refundPayment(w http.ResponseWriter,r *http.Request){
 	`,s.OrganizationID,s.LocationID,r.PathValue("id"),shiftID,in.Amount,in.Reason,in.Note,s.UserID).Scan(&refundID)
 	if err!=nil{fail(w,503,"payments_unavailable","No pudimos registrar la devolución.");return}
 
-	if method=="cash"{
+	if affectsCash{
 		if _,err:=tx.Exec(r.Context(),`
 			INSERT INTO cash_movements(
 			  organization_id,location_id,shift_id,movement_type,source_type,source_id,
@@ -448,7 +450,7 @@ func (a *API) createPaymentBatch(w http.ResponseWriter,r *http.Request){
 		p:=&in.Payments[i]
 		p.Method=strings.TrimSpace(p.Method)
 		p.Reference=strings.TrimSpace(p.Reference)
-		if p.Amount<=0||(p.Method!="cash"&&p.Method!="card"&&p.Method!="transfer"&&p.Method!="other"){
+		if p.Amount<=0||p.Method==""{
 			fail(w,400,"invalid_payment","Todos los medios de pago deben tener método y monto válidos.")
 			return
 		}
@@ -461,6 +463,15 @@ func (a *API) createPaymentBatch(w http.ResponseWriter,r *http.Request){
 	tx,err:=a.db.Begin(r.Context())
 	if err!=nil{fail(w,503,"payments_unavailable","No pudimos iniciar el cobro.");return}
 	defer tx.Rollback(r.Context())
+
+	methodDefs:=map[string]paymentMethodView{}
+	for _,p:=range in.Payments{
+		if _,ok:=methodDefs[p.Method];ok{continue}
+		methodDef,lookupErr:=getPaymentMethod(r.Context(),tx,s.OrganizationID,p.Method,"sales")
+		if errors.Is(lookupErr,pgx.ErrNoRows){fail(w,400,"invalid_payment_method","Uno de los medios de pago no está activo para ventas.");return}
+		if lookupErr!=nil{fail(w,503,"payment_methods_unavailable","No pudimos validar los medios de pago.");return}
+		methodDefs[p.Method]=methodDef
+	}
 
 	shiftID,err:=currentCashShiftID(r.Context(),tx,s)
 	if errors.Is(err,pgx.ErrNoRows){fail(w,409,"cash_shift_required","Debes estar asignado a un turno de caja abierto para cobrar.");return}
@@ -503,7 +514,7 @@ func (a *API) createPaymentBatch(w http.ResponseWriter,r *http.Request){
 		`,s.OrganizationID,s.LocationID,in.OrderID,shiftID,p.Method,p.Amount,p.Reference,s.UserID).Scan(&id)
 		if err!=nil{fail(w,503,"payments_unavailable","No pudimos registrar uno de los medios de pago.");return}
 		ids=append(ids,id)
-		if p.Method=="cash"{
+		if methodDefs[p.Method].AffectsCash{
 			if _,err=tx.Exec(r.Context(),`
 				INSERT INTO cash_movements(
 				  organization_id,location_id,shift_id,movement_type,source_type,source_id,

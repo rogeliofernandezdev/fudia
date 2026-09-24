@@ -28,7 +28,7 @@ func TestExpenseLifecycleIsLocationScopedAndAuditable(t *testing.T) {
 		t.Fatalf("unexpected category: %#v", category)
 	}
 
-	expenseReq := httptest.NewRequest("POST", "/v1/admin/expenses", bytes.NewReader([]byte(`{"categoryId":"` + category.ID + `","description":"Internet del local","amount":"89.90","paymentMethod":"bank_transfer","businessDate":"2026-09-23","reference":"OP-100","notes":"Plan mensual"}`)))
+	expenseReq := httptest.NewRequest("POST", "/v1/admin/expenses", bytes.NewReader([]byte(`{"categoryId":"` + category.ID + `","description":"Internet del local","amount":"89.90","paymentMethod":"transfer","businessDate":"2026-09-23","reference":"OP-100","notes":"Plan mensual"}`)))
 	expenseReq = expenseReq.WithContext(context.WithValue(expenseReq.Context(), scopeKey{}, s))
 	expenseRec := httptest.NewRecorder()
 	api.createExpense(expenseRec, expenseReq)
