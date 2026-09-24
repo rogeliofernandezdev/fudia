@@ -28,6 +28,19 @@ paths:
         "200": { description: Carta operativa del local, content: { application/json: { schema: { $ref: "#/components/schemas/ConciergeMenuResponse" } } } }
         "401": { description: Credencial de Fudia Concierge inválida }
         "404": { description: QR inexistente, inactivo o deshabilitado }
+  /v1/integrations/concierge/{token}/products/{id}/modifiers:
+    get:
+      operationId: getConciergeProductModifiers
+      summary: Obtiene los grupos y opciones de modificadores de un producto para la mesa derivada del QR
+      security: [{ conciergeServiceKey: [] }]
+      parameters:
+        - { in: path, name: token, required: true, schema: { type: string, minLength: 32, maxLength: 32 } }
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: Modificadores configurados para el producto, content: { application/json: { schema: { $ref: "#/components/schemas/ProductModifierConfig" } } } }
+        "401": { description: Credencial de Fudia Concierge inválida }
+        "404": { description: QR o producto inexistente }
+        "409": { description: El producto es un combo y usa su propio selector }
   /v1/integrations/concierge/{token}/combos/{id}:
     get:
       operationId: getConciergeCombo
@@ -1063,7 +1076,7 @@ components:
     ConciergeSettingsInput: { type: object, required: [active, whatsappPhone], properties: { active: { type: boolean }, whatsappPhone: { type: string, pattern: "^\\+[1-9][0-9]{7,14}$", description: "Número internacional E.164. Puede estar vacío solo si active=false." } } }
     ConciergeSettings: { allOf: [{ $ref: "#/components/schemas/ConciergeSettingsInput" }, { type: object, required: [organizationName, locationName], properties: { organizationName: { type: string }, locationName: { type: string } } }] }
     PublicTableContext: { type: object, required: [name, seats, zone, organizationName, locationName, conciergeEnabled, whatsappPhone], properties: { name: { type: string }, seats: { type: integer, minimum: 1 }, zone: { type: string }, organizationName: { type: string }, locationName: { type: string }, conciergeEnabled: { type: boolean }, whatsappPhone: { type: string, description: "Número E.164 del local; vacío cuando Concierge no está configurado." } } }
-    ConciergeMenuItem: { type: object, required: [productId, name, description, price, status, isCombo], properties: { productId: { type: string, format: uuid }, name: { type: string }, description: { type: string }, price: { type: string }, categoryName: { type: [string, "null"] }, imageUrl: { type: [string, "null"] }, status: { type: string, enum: [available, low, sold_out, unavailable] }, isCombo: { type: boolean } } }
+    ConciergeMenuItem: { type: object, required: [productId, name, description, price, status, isCombo, hasModifiers], properties: { productId: { type: string, format: uuid }, name: { type: string }, description: { type: string }, price: { type: string }, categoryName: { type: [string, "null"] }, imageUrl: { type: [string, "null"] }, status: { type: string, enum: [available, low, sold_out, unavailable] }, isCombo: { type: boolean }, hasModifiers: { type: boolean } } }
     ConciergeMenuResponse: { type: object, required: [items, currencySymbol], properties: { items: { type: array, items: { $ref: "#/components/schemas/ConciergeMenuItem" } }, currencySymbol: { type: string } } }
     ConciergeComboOption: { type: object, required: [productId, name, surcharge, available], properties: { productId: { type: string, format: uuid }, name: { type: string }, surcharge: { type: string }, available: { type: boolean } } }
     ConciergeComboGroup: { type: object, required: [id, name, required, minSelections, maxSelections, options], properties: { id: { type: string, format: uuid }, name: { type: string }, required: { type: boolean }, minSelections: { type: integer, minimum: 0 }, maxSelections: { type: integer, minimum: 1 }, options: { type: array, items: { $ref: "#/components/schemas/ConciergeComboOption" } } } }

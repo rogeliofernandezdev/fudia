@@ -39,14 +39,15 @@ type conciergeQRContext struct {
 }
 
 type conciergeMenuItem struct {
-	ProductID    string  `json:"productId"`
-	Name         string  `json:"name"`
-	Description  string  `json:"description"`
-	Price        string  `json:"price"`
-	CategoryName *string `json:"categoryName"`
-	ImageURL     *string `json:"imageUrl"`
-	Status       string  `json:"status"`
-	IsCombo      bool    `json:"isCombo"`
+	ProductID     string  `json:"productId"`
+	Name          string  `json:"name"`
+	Description   string  `json:"description"`
+	Price         string  `json:"price"`
+	CategoryName  *string `json:"categoryName"`
+	ImageURL      *string `json:"imageUrl"`
+	Status        string  `json:"status"`
+	IsCombo       bool    `json:"isCombo"`
+	HasModifiers  bool    `json:"hasModifiers"`
 }
 
 type conciergeOrderInput struct {
@@ -116,6 +117,7 @@ func (a *API) listConciergeMenu(w http.ResponseWriter, r *http.Request) {
 		       AND (p.available_days IS NULL OR extract(dow FROM now() AT TIME ZONE l.timezone)::integer = ANY(p.available_days))
 		       AND (p.available_until_time IS NULL OR (now() AT TIME ZONE l.timezone)::time <= p.available_until_time),
 		       EXISTS(SELECT 1 FROM menu_combos mc WHERE mc.product_id=p.id AND mc.organization_id=p.organization_id),
+		       EXISTS(SELECT 1 FROM product_modifier_groups pmg WHERE pmg.product_id=p.id AND pmg.organization_id=p.organization_id),
 		       COALESCE(sb.quantity,0)::float8,COALESCE(ii.minimum_stock,0)::float8
 		FROM products p
 		JOIN locations l ON l.id=$2 AND l.organization_id=p.organization_id AND l.active
@@ -150,7 +152,7 @@ func (a *API) listConciergeMenu(w http.ResponseWriter, r *http.Request) {
 		if err := rows.Scan(
 			&item.ProductID,&item.Name,&item.Description,&item.Price,&item.CategoryName,&item.ImageURL,
 			&quantityControl,&portionQuantity,&soldQuantity,&manualStatus,&scheduleAvailable,&isCombo,
-			&inventoryQuantity,&minimumStock,
+			&item.HasModifiers,&inventoryQuantity,&minimumStock,
 		); err != nil {
 			fail(w, 503, "concierge_unavailable", "No pudimos leer la carta.")
 			return
@@ -198,6 +200,51 @@ func (a *API) listConciergeMenu(w http.ResponseWriter, r *http.Request) {
 }
 
 
+
+func (a *API) getConciergeProductModifiers(w http.ResponseWriter, r *http.Request) {
+	qr, err := a.resolveConciergeQR(r.Context(), r.PathValue("token"))
+	if errors.Is(err, pgx.ErrNoRows) {
+		fail(w, 404, "table_not_found", "La mesa no existe o el QR no está activo.")
+		return
+	}
+	if err != nil {
+		fail(w, 503, "concierge_unavailable", "No pudimos resolver el QR.")
+		return
+	}
+
+	productID := strings.TrimSpace(r.PathValue("id"))
+	var exists, isCombo bool
+	if err = a.db.QueryRow(r.Context(), `
+		SELECT EXISTS(
+		         SELECT 1 FROM products
+		         WHERE id=$1 AND organization_id=$2 AND active
+		       ),
+		       EXISTS(
+		         SELECT 1 FROM menu_combos
+		         WHERE product_id=$1 AND organization_id=$2
+		       )
+	`, productID, qr.Scope.OrganizationID).Scan(&exists, &isCombo); err != nil {
+		fail(w, 503, "modifiers_unavailable", "No pudimos validar el producto.")
+		return
+	}
+	if !exists {
+		fail(w, 404, "product_not_found", "El producto no existe o está inactivo.")
+		return
+	}
+	if isCombo {
+		fail(w, 409, "modifiers_not_supported_for_combo", "Este producto administra sus opciones como menú o combo.")
+		return
+	}
+
+	out, err := loadProductModifiers(
+		r.Context(), a.db, qr.Scope.OrganizationID, productID,
+	)
+	if err != nil {
+		fail(w, 503, "modifiers_unavailable", "No pudimos cargar los modificadores.")
+		return
+	}
+	writeJSON(w, 200, out)
+}
 
 type conciergeComboOption struct {
 	ProductID string `json:"productId"`

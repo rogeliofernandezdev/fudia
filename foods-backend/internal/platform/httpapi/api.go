@@ -191,6 +191,7 @@ func (a *API) Routes() *http.ServeMux {
 	m.Handle("POST /v1/admin/tables/{id}/qr", a.auth(a.requirePermission("tables.manage", http.HandlerFunc(a.regenerateTableQR))))
 	m.Handle("GET /v1/public/tables/{token}", http.HandlerFunc(a.getTableByQR))
 	m.Handle("GET /v1/integrations/concierge/{token}/menu", a.conciergeServiceAuth(http.HandlerFunc(a.listConciergeMenu)))
+	m.Handle("GET /v1/integrations/concierge/{token}/products/{id}/modifiers", a.conciergeServiceAuth(http.HandlerFunc(a.getConciergeProductModifiers)))
 	m.Handle("GET /v1/integrations/concierge/{token}/combos/{id}", a.conciergeServiceAuth(http.HandlerFunc(a.getConciergeCombo)))
 	m.Handle("POST /v1/integrations/concierge/{token}/orders", a.conciergeServiceAuth(http.HandlerFunc(a.createConciergeOrder)))
 	m.Handle("GET /v1/admin/zones", a.auth(a.requirePermission("menu.read", http.HandlerFunc(a.listZones))))
