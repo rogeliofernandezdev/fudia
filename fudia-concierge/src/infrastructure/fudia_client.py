@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 from urllib.parse import quote
 
@@ -17,7 +18,12 @@ from src.domain.models import (
 
 
 class FudiaError(RuntimeError):
-    def __init__(self, status_code: int, code: str, message: str) -> None:
+    def __init__(
+        self,
+        status_code: int,
+        code: str,
+        message: str,
+    ) -> None:
         super().__init__(message)
         self.status_code = status_code
         self.code = code
@@ -38,74 +44,219 @@ class FudiaClient:
 
     def _http(self) -> httpx.AsyncClient:
         if self._client is None:
-            self._client = httpx.AsyncClient(timeout=15.0)
+            self._client = httpx.AsyncClient(
+                timeout=httpx.Timeout(
+                    15.0,
+                    connect=3.0,
+                )
+            )
         return self._client
 
     async def close(self) -> None:
-        if self._client is not None and self._external_client is None:
+        if (
+            self._client is not None
+            and self._external_client is None
+        ):
             await self._client.aclose()
             self._client = None
 
-    async def _json(self, method: str, path: str, **kwargs: Any) -> dict[str, Any]:
-        headers = dict(kwargs.pop("headers", {}))
-        if path.startswith("/v1/integrations/concierge/") and self.api_key:
-            headers["X-Fudia-Concierge-Key"] = self.api_key
-        response = await self._http().request(
-            method, self.base_url + path, headers=headers, **kwargs
+    async def _json(
+        self,
+        method: str,
+        path: str,
+        *,
+        retryable: bool = False,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
+        headers = dict(
+            kwargs.pop("headers", {})
         )
+        if (
+            path.startswith(
+                "/v1/integrations/concierge/"
+            )
+            and self.api_key
+        ):
+            headers[
+                "X-Fudia-Concierge-Key"
+            ] = self.api_key
+
+        safe_retry = (
+            retryable
+            or method.upper() == "GET"
+        )
+        attempts = 3 if safe_retry else 1
+        response: httpx.Response | None = None
+
+        for attempt in range(attempts):
+            try:
+                response = await self._http().request(
+                    method,
+                    self.base_url + path,
+                    headers=headers,
+                    **kwargs,
+                )
+            except httpx.TransportError as exc:
+                if attempt + 1 >= attempts:
+                    raise FudiaError(
+                        503,
+                        "fudia_unreachable",
+                        (
+                            "No pudimos comunicarnos "
+                            "con Fudia."
+                        ),
+                    ) from exc
+                await asyncio.sleep(
+                    0.2 * (2**attempt)
+                )
+                continue
+
+            should_retry = (
+                response.status_code == 429
+                or response.status_code >= 500
+            )
+            if (
+                should_retry
+                and attempt + 1 < attempts
+            ):
+                retry_after = response.headers.get(
+                    "Retry-After",
+                    "",
+                )
+                try:
+                    delay = min(
+                        float(retry_after),
+                        5.0,
+                    )
+                except ValueError:
+                    delay = 0.2 * (2**attempt)
+                await asyncio.sleep(delay)
+                continue
+            break
+
+        if response is None:
+            raise FudiaError(
+                503,
+                "fudia_unreachable",
+                "No pudimos comunicarnos con Fudia.",
+            )
+
         try:
             body = response.json()
         except ValueError:
             body = {}
+
         if not response.is_success:
             raise FudiaError(
                 response.status_code,
-                str(body.get("code", "fudia_error")),
-                str(body.get("message", "Fudia no pudo completar la operación.")),
+                str(
+                    body.get(
+                        "code",
+                        "fudia_error",
+                    )
+                ),
+                str(
+                    body.get(
+                        "message",
+                        (
+                            "Fudia no pudo completar "
+                            "la operación."
+                        ),
+                    )
+                ),
             )
         return body
 
-    async def resolve_table(self, token: str) -> TableContext:
-        body = await self._json("GET", f"/v1/public/tables/{quote(token, safe='')}")
+    async def ready(self) -> bool:
+        try:
+            await self._http().get(
+                self.base_url + "/",
+                timeout=2.0,
+            )
+            return True
+        except httpx.TransportError:
+            return False
+
+    async def resolve_table(
+        self,
+        token: str,
+    ) -> TableContext:
+        body = await self._json(
+            "GET",
+            (
+                "/v1/public/tables/"
+                f"{quote(token, safe='')}"
+            ),
+        )
         return TableContext.model_validate(body)
 
     async def search_menu(
-        self, token: str, query: str = "", product_id: str = ""
+        self,
+        token: str,
+        query: str = "",
+        product_id: str = "",
     ) -> MenuResponse:
         params: dict[str, str] = {}
         if query.strip():
             params["q"] = query.strip()
         if product_id.strip():
-            params["productId"] = product_id.strip()
+            params[
+                "productId"
+            ] = product_id.strip()
         body = await self._json(
             "GET",
-            f"/v1/integrations/concierge/{quote(token, safe='')}/menu",
+            (
+                "/v1/integrations/concierge/"
+                f"{quote(token, safe='')}/menu"
+            ),
             params=params,
         )
         return MenuResponse.model_validate(body)
 
-    async def get_product(self, token: str, product_id: str) -> MenuItem | None:
-        menu = await self.search_menu(token, product_id=product_id)
-        return menu.items[0] if menu.items else None
+    async def get_product(
+        self,
+        token: str,
+        product_id: str,
+    ) -> MenuItem | None:
+        menu = await self.search_menu(
+            token,
+            product_id=product_id,
+        )
+        return (
+            menu.items[0]
+            if menu.items
+            else None
+        )
 
-    async def get_combo(self, token: str, product_id: str) -> ComboDetail:
+    async def get_combo(
+        self,
+        token: str,
+        product_id: str,
+    ) -> ComboDetail:
         body = await self._json(
             "GET",
             (
-                f"/v1/integrations/concierge/{quote(token, safe='')}"
-                f"/combos/{quote(product_id, safe='')}"
+                "/v1/integrations/concierge/"
+                f"{quote(token, safe='')}"
+                "/combos/"
+                f"{quote(product_id, safe='')}"
             ),
         )
         return ComboDetail.model_validate(body)
 
     async def get_modifiers(
-        self, token: str, product_id: str
+        self,
+        token: str,
+        product_id: str,
     ) -> ModifierConfig:
         body = await self._json(
             "GET",
             (
-                f"/v1/integrations/concierge/{quote(token, safe='')}"
-                f"/products/{quote(product_id, safe='')}/modifiers"
+                "/v1/integrations/concierge/"
+                f"{quote(token, safe='')}"
+                "/products/"
+                f"{quote(product_id, safe='')}"
+                "/modifiers"
             ),
         )
         return ModifierConfig.model_validate(body)
@@ -120,7 +271,8 @@ class FudiaClient:
         return await self._json(
             "POST",
             (
-                f"/v1/integrations/concierge/{quote(token, safe='')}"
+                "/v1/integrations/concierge/"
+                f"{quote(token, safe='')}"
                 "/handoffs"
             ),
             json={
@@ -138,8 +290,10 @@ class FudiaClient:
         return await self._json(
             "GET",
             (
-                f"/v1/integrations/concierge/{quote(token, safe='')}"
-                f"/handoffs/{quote(conversation_id, safe='')}"
+                "/v1/integrations/concierge/"
+                f"{quote(token, safe='')}"
+                "/handoffs/"
+                f"{quote(conversation_id, safe='')}"
             ),
         )
 
@@ -153,7 +307,11 @@ class FudiaClient:
     ) -> OrderResult:
         body = await self._json(
             "POST",
-            f"/v1/integrations/concierge/{quote(token, safe='')}/orders",
+            (
+                "/v1/integrations/concierge/"
+                f"{quote(token, safe='')}/orders"
+            ),
+            retryable=True,
             json={
                 "customerPhone": phone,
                 "conversationId": conversation_id,
@@ -163,7 +321,6 @@ class FudiaClient:
         )
         return OrderResult.model_validate(body)
 
-
     async def request_bill(
         self,
         token: str,
@@ -172,7 +329,10 @@ class FudiaClient:
     ) -> BillSummary:
         body = await self._json(
             "POST",
-            f"/v1/integrations/concierge/{quote(token, safe='')}/bill",
+            (
+                "/v1/integrations/concierge/"
+                f"{quote(token, safe='')}/bill"
+            ),
             json={
                 "customerPhone": phone,
                 "conversationId": conversation_id,
