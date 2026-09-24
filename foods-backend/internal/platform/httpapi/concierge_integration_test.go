@@ -33,37 +33,37 @@ func TestConciergeQRCodeMenuOrderAndKitchenWorkflow(t *testing.T) {
 
 
 	var comboID,optionAID,optionBID,groupID string
-	if err:=pool.QueryRow(ctx,\`
+	if err:=pool.QueryRow(ctx,`
 		INSERT INTO products(
 		  organization_id,sku,name,description,price,active,product_type,quantity_control
 		)
 		VALUES($1,$2,'Combo Conversacional','Combo para prueba Concierge',20,true,'prepared','none')
 		RETURNING id
-	\`,s.OrganizationID,fmt.Sprintf("CCB-%d",nonce)).Scan(&comboID);err!=nil{t.Fatal(err)}
-	if _,err:=pool.Exec(ctx,\`INSERT INTO menu_combos(product_id,organization_id) VALUES($1,$2)\`,comboID,s.OrganizationID);err!=nil{t.Fatal(err)}
-	if err:=pool.QueryRow(ctx,\`
+	`,s.OrganizationID,fmt.Sprintf("CCB-%d",nonce)).Scan(&comboID);err!=nil{t.Fatal(err)}
+	if _,err:=pool.Exec(ctx,`INSERT INTO menu_combos(product_id,organization_id) VALUES($1,$2)`,comboID,s.OrganizationID);err!=nil{t.Fatal(err)}
+	if err:=pool.QueryRow(ctx,`
 		INSERT INTO products(organization_id,sku,name,description,price,active,product_type,quantity_control)
 		VALUES($1,$2,'Papas clásicas','Opción del combo',8,true,'prepared','none')
 		RETURNING id
-	\`,s.OrganizationID,fmt.Sprintf("OPA-%d",nonce)).Scan(&optionAID);err!=nil{t.Fatal(err)}
-	if err:=pool.QueryRow(ctx,\`
+	`,s.OrganizationID,fmt.Sprintf("OPA-%d",nonce)).Scan(&optionAID);err!=nil{t.Fatal(err)}
+	if err:=pool.QueryRow(ctx,`
 		INSERT INTO products(organization_id,sku,name,description,price,active,product_type,quantity_control)
 		VALUES($1,$2,'Papas especiales','Opción con recargo',11,true,'prepared','none')
 		RETURNING id
-	\`,s.OrganizationID,fmt.Sprintf("OPB-%d",nonce)).Scan(&optionBID);err!=nil{t.Fatal(err)}
-	if err:=pool.QueryRow(ctx,\`
+	`,s.OrganizationID,fmt.Sprintf("OPB-%d",nonce)).Scan(&optionBID);err!=nil{t.Fatal(err)}
+	if err:=pool.QueryRow(ctx,`
 		INSERT INTO menu_combo_groups(
 		  organization_id,combo_product_id,name,required,min_selections,max_selections,sort_order
 		)
 		VALUES($1,$2,'Acompañamiento',true,1,1,0)
 		RETURNING id
-	\`,s.OrganizationID,comboID).Scan(&groupID);err!=nil{t.Fatal(err)}
-	if _,err:=pool.Exec(ctx,\`
+	`,s.OrganizationID,comboID).Scan(&groupID);err!=nil{t.Fatal(err)}
+	if _,err:=pool.Exec(ctx,`
 		INSERT INTO menu_combo_options(
 		  organization_id,group_id,option_product_id,surcharge,sort_order
 		)
 		VALUES($1,$2,$3,0,0),($1,$2,$4,3,1)
-	\`,s.OrganizationID,groupID,optionAID,optionBID);err!=nil{t.Fatal(err)}
+	`,s.OrganizationID,groupID,optionAID,optionBID);err!=nil{t.Fatal(err)}
 
 	var tableID,qrToken string
 	if err:=pool.QueryRow(ctx,`

@@ -200,28 +200,28 @@ func (a *API) listConciergeMenu(w http.ResponseWriter, r *http.Request) {
 
 
 type conciergeComboOption struct {
-	ProductID string \`json:"productId"\`
-	Name string \`json:"name"\`
-	Surcharge string \`json:"surcharge"\`
-	Available bool \`json:"available"\`
+	ProductID string `json:"productId"`
+	Name string `json:"name"`
+	Surcharge string `json:"surcharge"`
+	Available bool `json:"available"`
 }
 
 type conciergeComboGroup struct {
-	ID string \`json:"id"\`
-	Name string \`json:"name"\`
-	Required bool \`json:"required"\`
-	MinSelections int \`json:"minSelections"\`
-	MaxSelections int \`json:"maxSelections"\`
-	Options []conciergeComboOption \`json:"options"\`
+	ID string `json:"id"`
+	Name string `json:"name"`
+	Required bool `json:"required"`
+	MinSelections int `json:"minSelections"`
+	MaxSelections int `json:"maxSelections"`
+	Options []conciergeComboOption `json:"options"`
 }
 
 type conciergeComboDetail struct {
-	ID string \`json:"id"\`
-	Name string \`json:"name"\`
-	Description string \`json:"description"\`
-	Price string \`json:"price"\`
-	ImageURL *string \`json:"imageUrl"\`
-	Groups []conciergeComboGroup \`json:"groups"\`
+	ID string `json:"id"`
+	Name string `json:"name"`
+	Description string `json:"description"`
+	Price string `json:"price"`
+	ImageURL *string `json:"imageUrl"`
+	Groups []conciergeComboGroup `json:"groups"`
 }
 
 func (a *API) getConciergeCombo(w http.ResponseWriter, r *http.Request) {
@@ -245,7 +245,7 @@ func (a *API) getConciergeCombo(w http.ResponseWriter, r *http.Request) {
 	var out conciergeComboDetail
 	out.ID = id
 	var available bool
-	err = a.db.QueryRow(r.Context(), \`
+	err = a.db.QueryRow(r.Context(), `
 		SELECT p.name,p.description,p.price::text,p.image_url,
 		       p.active
 		       AND (p.available_from IS NULL OR now() >= p.available_from)
@@ -260,7 +260,7 @@ func (a *API) getConciergeCombo(w http.ResponseWriter, r *http.Request) {
 		  ON pa.organization_id=p.organization_id AND pa.location_id=l.id
 		 AND pa.product_id=p.id AND pa.business_date=$4
 		WHERE p.id::text=$1 AND p.organization_id=$2
-	\`, id, qr.Scope.OrganizationID, qr.Scope.LocationID, day.Format("2006-01-02")).
+	`, id, qr.Scope.OrganizationID, qr.Scope.LocationID, day.Format("2006-01-02")).
 		Scan(&out.Name,&out.Description,&out.Price,&out.ImageURL,&available)
 	if errors.Is(err, pgx.ErrNoRows) {
 		fail(w, 404, "combo_not_found", "El menú o combo no existe.")
@@ -284,12 +284,12 @@ func (a *API) getConciergeCombo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	groupRows, err := a.db.Query(r.Context(), \`
+	groupRows, err := a.db.Query(r.Context(), `
 		SELECT id::text,name,required,min_selections,max_selections
 		FROM menu_combo_groups
 		WHERE combo_product_id::text=$1 AND organization_id=$2
 		ORDER BY sort_order,id
-	\`, id, qr.Scope.OrganizationID)
+	`, id, qr.Scope.OrganizationID)
 	if err != nil {
 		fail(w, 503, "combo_unavailable", "No pudimos cargar los grupos del menú.")
 		return
@@ -306,7 +306,7 @@ func (a *API) getConciergeCombo(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		rows, queryErr := a.db.Query(r.Context(), \`
+		rows, queryErr := a.db.Query(r.Context(), `
 			SELECT o.option_product_id::text,p.name,o.surcharge::text,
 			       p.active
 			       AND (p.available_from IS NULL OR now() >= p.available_from)
@@ -351,7 +351,7 @@ func (a *API) getConciergeCombo(w http.ResponseWriter, r *http.Request) {
 			 AND pa.product_id=p.id AND pa.business_date=$4
 			WHERE o.group_id::text=$1 AND o.organization_id=$2
 			ORDER BY o.sort_order,o.id
-		\`, group.ID, qr.Scope.OrganizationID, qr.Scope.LocationID, day.Format("2006-01-02"), id, group.Name)
+		`, group.ID, qr.Scope.OrganizationID, qr.Scope.LocationID, day.Format("2006-01-02"), id, group.Name)
 		if queryErr != nil {
 			fail(w, 503, "combo_unavailable", "No pudimos cargar las opciones del menú.")
 			return
