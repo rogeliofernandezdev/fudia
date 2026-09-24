@@ -2,8 +2,8 @@
 
 ## Objetivo
 
-Implementar la experiencia conversacional del comensal para Fudia. El primer
-canal es WhatsApp iniciado desde el QR de una mesa.
+Implementar la experiencia conversacional del comensal para Fudia. El canal
+del alcance actual es WhatsApp iniciado desde el QR de una mesa.
 
 ## Reglas
 
