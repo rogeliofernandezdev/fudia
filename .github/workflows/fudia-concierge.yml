@@ -17,13 +17,14 @@ jobs:
       run:
         working-directory: fudia-concierge
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: fudia-concierge/pyproject.toml
-      - run: python -m pip install --upgrade pip
+          cache-dependency-path: |
+            fudia-concierge/pyproject.toml
+            fudia-concierge/constraints.txt
       - run: python -m pip install -c constraints.txt -e ".[dev]"
       - run: ruff check .
       - run: mypy src config
