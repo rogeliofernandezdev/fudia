@@ -19,7 +19,7 @@
 - [x] Creación de pedido derivada del QR.
 - [x] Revalidación de precio, disponibilidad y stock en foods-backend.
 - [x] Integración KDS con canal WhatsApp.
-- [x] Idempotencia por conversación ante reintentos.
+- [x] Idempotencia por ronda con conversationId estable y requestId independiente.
 - [x] Credencial propia para el contrato Concierge -> foods-backend.
 - [x] Test QR -> pedido -> KDS.
 
@@ -36,7 +36,9 @@
 
 - [x] Combos conversacionales con grupos y selecciones validadas por Fudia.
 - [x] Modificadores de productos simples.
-- [x] Agregar nuevas rondas a una comanda ya abierta.
+- [x] Agregar nuevas rondas a una misma comanda aunque rondas anteriores estén preparando o listas.
+- [x] KDS independiente por ronda sin reprocesar productos anteriores.
+- [x] Solicitud de cuenta con consumo acumulado, pagos y saldo desde foods-backend.
 - [x] Handoff humano persistente y resoluble desde Operaciones.
 - [x] Observabilidad estructurada con privacidad.
 - [x] Bandeja operativa de pedidos conectada a datos reales.
@@ -49,4 +51,4 @@
 - [ ] Validar envío real con el `phone_number_id` receptor.
 - [ ] Configurar secretos de OpenAI, Meta, Redis y Fudia en el entorno.
 - [ ] Crear alertas operativas a partir de los eventos estructurados.
-- [ ] Ejecutar prueba de humo QR -> WhatsApp -> pedido -> KDS en producción controlada.
+- [ ] Ejecutar prueba de humo QR -> WhatsApp -> múltiples rondas -> KDS -> cuenta en producción controlada.
