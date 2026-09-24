@@ -1,5 +1,5 @@
 openapi: 3.1.0
-info: { title: Foods API, version: 0.11.0, description: API operativa y administrativa multiempresa. }
+info: { title: Foods API, version: 0.12.0, description: API operativa y administrativa multiempresa. }
 servers: [{ url: http://localhost:8080 }]
 paths:
   /health:
@@ -28,6 +28,19 @@ paths:
         "200": { description: Carta operativa del local, content: { application/json: { schema: { $ref: "#/components/schemas/ConciergeMenuResponse" } } } }
         "401": { description: Credencial de Fudia Concierge inválida }
         "404": { description: QR inexistente, inactivo o deshabilitado }
+  /v1/integrations/concierge/{token}/combos/{id}:
+    get:
+      operationId: getConciergeCombo
+      summary: Obtiene grupos y alternativas operativas de un combo para el local derivado del QR
+      security: [{ conciergeServiceKey: [] }]
+      parameters:
+        - { in: path, name: token, required: true, schema: { type: string, minLength: 32, maxLength: 32 } }
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: Combo con grupos, reglas y opciones disponibles, content: { application/json: { schema: { $ref: "#/components/schemas/ConciergeComboDetail" } } } }
+        "401": { description: Credencial de Fudia Concierge inválida }
+        "404": { description: QR o combo inexistente }
+        "409": { description: Combo no disponible }
   /v1/integrations/concierge/{token}/orders:
     post:
       operationId: createConciergeOrder
@@ -1024,6 +1037,9 @@ components:
     PublicTableContext: { type: object, required: [name, seats, zone, organizationName, locationName, conciergeEnabled, whatsappPhone], properties: { name: { type: string }, seats: { type: integer, minimum: 1 }, zone: { type: string }, organizationName: { type: string }, locationName: { type: string }, conciergeEnabled: { type: boolean }, whatsappPhone: { type: string, description: "Número E.164 del local; vacío cuando Concierge no está configurado." } } }
     ConciergeMenuItem: { type: object, required: [productId, name, description, price, status, isCombo], properties: { productId: { type: string, format: uuid }, name: { type: string }, description: { type: string }, price: { type: string }, categoryName: { type: [string, "null"] }, imageUrl: { type: [string, "null"] }, status: { type: string, enum: [available, low, sold_out, unavailable] }, isCombo: { type: boolean } } }
     ConciergeMenuResponse: { type: object, required: [items, currencySymbol], properties: { items: { type: array, items: { $ref: "#/components/schemas/ConciergeMenuItem" } }, currencySymbol: { type: string } } }
+    ConciergeComboOption: { type: object, required: [productId, name, surcharge, available], properties: { productId: { type: string, format: uuid }, name: { type: string }, surcharge: { type: string }, available: { type: boolean } } }
+    ConciergeComboGroup: { type: object, required: [id, name, required, minSelections, maxSelections, options], properties: { id: { type: string, format: uuid }, name: { type: string }, required: { type: boolean }, minSelections: { type: integer, minimum: 0 }, maxSelections: { type: integer, minimum: 1 }, options: { type: array, items: { $ref: "#/components/schemas/ConciergeComboOption" } } } }
+    ConciergeComboDetail: { type: object, required: [id, name, description, price, groups], properties: { id: { type: string, format: uuid }, name: { type: string }, description: { type: string }, price: { type: string }, imageUrl: { type: [string, "null"] }, groups: { type: array, items: { $ref: "#/components/schemas/ConciergeComboGroup" } } } }
     ConciergeOrderItemInput: { type: object, required: [productId, qty], description: "No acepta precio como fuente de verdad; foods-backend usa el catálogo vigente.", properties: { productId: { type: string, format: uuid }, qty: { type: number, exclusiveMinimum: 0 }, note: { type: string, maxLength: 240 } } }
     ConciergeOrderInput: { type: object, required: [customerPhone, conversationId, items], description: "organizationId, locationId, tableId y unitPrice se derivan o recalculan en foods-backend.", properties: { customerName: { type: string, maxLength: 160 }, customerPhone: { type: string, maxLength: 32 }, conversationId: { type: string, maxLength: 160 }, notes: { type: string, maxLength: 240 }, items: { type: array, minItems: 1, maxItems: 50, items: { $ref: "#/components/schemas/ConciergeOrderItemInput" } } } }
     OrderItemInput: { type: object, required: [productId, qty, unitPrice], properties: { productId: { type: string, format: uuid }, name: { type: string, maxLength: 160 }, qty: { type: number, exclusiveMinimum: 0 }, unitPrice: { type: number, minimum: 0 }, note: { type: string, maxLength: 240 } } }

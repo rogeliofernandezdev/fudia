@@ -197,6 +197,190 @@ func (a *API) listConciergeMenu(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]any{"items":items,"currencySymbol":ctx.CurrencySymbol})
 }
 
+
+
+type conciergeComboOption struct {
+	ProductID string \`json:"productId"\`
+	Name string \`json:"name"\`
+	Surcharge string \`json:"surcharge"\`
+	Available bool \`json:"available"\`
+}
+
+type conciergeComboGroup struct {
+	ID string \`json:"id"\`
+	Name string \`json:"name"\`
+	Required bool \`json:"required"\`
+	MinSelections int \`json:"minSelections"\`
+	MaxSelections int \`json:"maxSelections"\`
+	Options []conciergeComboOption \`json:"options"\`
+}
+
+type conciergeComboDetail struct {
+	ID string \`json:"id"\`
+	Name string \`json:"name"\`
+	Description string \`json:"description"\`
+	Price string \`json:"price"\`
+	ImageURL *string \`json:"imageUrl"\`
+	Groups []conciergeComboGroup \`json:"groups"\`
+}
+
+func (a *API) getConciergeCombo(w http.ResponseWriter, r *http.Request) {
+	qr, err := a.resolveConciergeQR(r.Context(), r.PathValue("token"))
+	if errors.Is(err, pgx.ErrNoRows) {
+		fail(w, 404, "table_not_found", "La mesa no existe o el QR no está activo.")
+		return
+	}
+	if err != nil {
+		fail(w, 503, "concierge_unavailable", "No pudimos resolver el QR.")
+		return
+	}
+
+	id := strings.TrimSpace(r.PathValue("id"))
+	day, err := a.businessDate(r, qr.Scope)
+	if err != nil {
+		fail(w, 503, "combo_unavailable", "No pudimos determinar la fecha operativa.")
+		return
+	}
+
+	var out conciergeComboDetail
+	out.ID = id
+	var available bool
+	err = a.db.QueryRow(r.Context(), \`
+		SELECT p.name,p.description,p.price::text,p.image_url,
+		       p.active
+		       AND (p.available_from IS NULL OR now() >= p.available_from)
+		       AND (p.available_until IS NULL OR now() <= p.available_until)
+		       AND (p.available_days IS NULL OR extract(dow FROM now() AT TIME ZONE l.timezone)::integer = ANY(p.available_days))
+		       AND (p.available_until_time IS NULL OR (now() AT TIME ZONE l.timezone)::time <= p.available_until_time)
+		       AND COALESCE(pa.manual_status,'available') <> 'sold_out'
+		FROM products p
+		JOIN menu_combos mc ON mc.product_id=p.id AND mc.organization_id=p.organization_id
+		JOIN locations l ON l.id=$3 AND l.organization_id=p.organization_id AND l.active
+		LEFT JOIN product_availability pa
+		  ON pa.organization_id=p.organization_id AND pa.location_id=l.id
+		 AND pa.product_id=p.id AND pa.business_date=$4
+		WHERE p.id::text=$1 AND p.organization_id=$2
+	\`, id, qr.Scope.OrganizationID, qr.Scope.LocationID, day.Format("2006-01-02")).
+		Scan(&out.Name,&out.Description,&out.Price,&out.ImageURL,&available)
+	if errors.Is(err, pgx.ErrNoRows) {
+		fail(w, 404, "combo_not_found", "El menú o combo no existe.")
+		return
+	}
+	if err != nil {
+		fail(w, 503, "combo_unavailable", "No pudimos cargar el menú.")
+		return
+	}
+	if !available {
+		fail(w, 409, "combo_unavailable", "Este menú o combo no está disponible en este momento.")
+		return
+	}
+	viable, err := a.comboAvailableForLocation(r, qr.Scope, id, day)
+	if err != nil {
+		fail(w, 503, "combo_unavailable", "No pudimos validar las alternativas del menú.")
+		return
+	}
+	if !viable {
+		fail(w, 409, "combo_unavailable", "Este menú no tiene suficientes alternativas disponibles.")
+		return
+	}
+
+	groupRows, err := a.db.Query(r.Context(), \`
+		SELECT id::text,name,required,min_selections,max_selections
+		FROM menu_combo_groups
+		WHERE combo_product_id::text=$1 AND organization_id=$2
+		ORDER BY sort_order,id
+	\`, id, qr.Scope.OrganizationID)
+	if err != nil {
+		fail(w, 503, "combo_unavailable", "No pudimos cargar los grupos del menú.")
+		return
+	}
+	defer groupRows.Close()
+
+	out.Groups = []conciergeComboGroup{}
+	for groupRows.Next() {
+		var group conciergeComboGroup
+		if err := groupRows.Scan(
+			&group.ID,&group.Name,&group.Required,&group.MinSelections,&group.MaxSelections,
+		); err != nil {
+			fail(w, 503, "combo_unavailable", "No pudimos leer los grupos del menú.")
+			return
+		}
+
+		rows, queryErr := a.db.Query(r.Context(), \`
+			SELECT o.option_product_id::text,p.name,o.surcharge::text,
+			       p.active
+			       AND (p.available_from IS NULL OR now() >= p.available_from)
+			       AND (p.available_until IS NULL OR now() <= p.available_until)
+			       AND (p.available_days IS NULL OR extract(dow FROM now() AT TIME ZONE l.timezone)::integer = ANY(p.available_days))
+			       AND (p.available_until_time IS NULL OR (now() AT TIME ZONE l.timezone)::time <= p.available_until_time)
+			       AND COALESCE(pa.manual_status,'available') <> 'sold_out'
+			       AND (
+			         p.quantity_control='none'
+			         OR (p.quantity_control='portions' AND pa.portion_quantity IS NOT NULL
+			             AND COALESCE(pa.sold_quantity,0) < pa.portion_quantity)
+			         OR (p.quantity_control='inventory' AND COALESCE((
+			           SELECT sb.quantity
+			           FROM inventory_items ii
+			           JOIN stock_balances sb
+			             ON sb.organization_id=ii.organization_id
+			            AND sb.inventory_item_id=ii.id AND sb.location_id=l.id
+			           WHERE ii.organization_id=p.organization_id AND ii.product_id=p.id AND ii.active
+			         ),0) > 0)
+			       )
+			       AND (
+			         o.default_quota IS NULL OR
+			         COALESCE((
+			           SELECT sum(oi.qty)
+			           FROM order_item_combo_selections sel
+			           JOIN order_items oi ON oi.id=sel.order_item_id AND oi.organization_id=sel.organization_id
+			           JOIN orders ord ON ord.id=oi.order_id AND ord.organization_id=oi.organization_id
+			           WHERE sel.organization_id=o.organization_id
+			             AND oi.product_id=$5
+			             AND lower(sel.group_name)=lower($6)
+			             AND sel.option_product_id=o.option_product_id
+			             AND ord.location_id=l.id
+			             AND ord.status<>'cancelado'
+			             AND (ord.created_at AT TIME ZONE l.timezone)::date=$4::date
+			         ),0) < o.default_quota
+			       )
+			FROM menu_combo_options o
+			JOIN products p ON p.id=o.option_product_id AND p.organization_id=o.organization_id
+			JOIN locations l ON l.id=$3 AND l.organization_id=o.organization_id AND l.active
+			LEFT JOIN product_availability pa
+			  ON pa.organization_id=p.organization_id AND pa.location_id=l.id
+			 AND pa.product_id=p.id AND pa.business_date=$4
+			WHERE o.group_id::text=$1 AND o.organization_id=$2
+			ORDER BY o.sort_order,o.id
+		\`, group.ID, qr.Scope.OrganizationID, qr.Scope.LocationID, day.Format("2006-01-02"), id, group.Name)
+		if queryErr != nil {
+			fail(w, 503, "combo_unavailable", "No pudimos cargar las opciones del menú.")
+			return
+		}
+		group.Options = []conciergeComboOption{}
+		for rows.Next() {
+			var option conciergeComboOption
+			if scanErr := rows.Scan(&option.ProductID,&option.Name,&option.Surcharge,&option.Available); scanErr != nil {
+				rows.Close()
+				fail(w, 503, "combo_unavailable", "No pudimos leer las opciones del menú.")
+				return
+			}
+			group.Options = append(group.Options, option)
+		}
+		if rowsErr := rows.Err(); rowsErr != nil {
+			rows.Close()
+			fail(w, 503, "combo_unavailable", "No pudimos completar las opciones del menú.")
+			return
+		}
+		rows.Close()
+		out.Groups = append(out.Groups, group)
+	}
+	if err := groupRows.Err(); err != nil {
+		fail(w, 503, "combo_unavailable", "No pudimos completar los grupos del menú.")
+		return
+	}
+	writeJSON(w, 200, out)
+}
+
 func (a *API) createConciergeOrder(w http.ResponseWriter, r *http.Request) {
 	qr, err := a.resolveConciergeQR(r.Context(), r.PathValue("token"))
 	if errors.Is(err, pgx.ErrNoRows) {
