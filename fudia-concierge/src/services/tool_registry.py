@@ -5,6 +5,7 @@ from typing import Any
 from src.domain.intents import AgentIntent
 from src.domain.models import ConversationSession
 from src.infrastructure.fudia_client import FudiaClient, FudiaError
+from src.metrics import BUSINESS_ACTIONS, TOOL_CALLS
 from src.services.menu_tools import MenuTools
 from src.services.order_tools import OrderTools
 from src.services.service_tools import ServiceTools
@@ -61,17 +62,57 @@ class ToolRegistry:
         args: dict[str, Any],
     ) -> dict[str, Any]:
         if name not in TOOLS_BY_INTENT[intent]:
+            TOOL_CALLS.labels(
+                agent=intent,
+                tool=name,
+                result="denied",
+            ).inc()
             return {
                 "ok": False,
                 "code": "tool_not_allowed_for_agent",
             }
         try:
             if intent == "menu":
-                return await self.menu.execute(name, args)
-            if intent == "order":
-                return await self.order.execute(name, args)
-            return await self.service.execute(name, args)
+                result = await self.menu.execute(
+                    name,
+                    args,
+                )
+            elif intent == "order":
+                result = await self.order.execute(
+                    name,
+                    args,
+                )
+            else:
+                result = await self.service.execute(
+                    name,
+                    args,
+                )
+            outcome = (
+                "ok"
+                if result.get("ok") is True
+                else "error"
+            )
+            TOOL_CALLS.labels(
+                agent=intent,
+                tool=name,
+                result=outcome,
+            ).inc()
+            if name in {
+                "confirm_order",
+                "request_bill",
+                "request_human",
+            }:
+                BUSINESS_ACTIONS.labels(
+                    action=name,
+                    result=outcome,
+                ).inc()
+            return result
         except FudiaError as exc:
+            TOOL_CALLS.labels(
+                agent=intent,
+                tool=name,
+                result="backend_error",
+            ).inc()
             return {
                 "ok": False,
                 "code": exc.code,
@@ -86,10 +127,21 @@ class ToolRegistry:
     ) -> dict[str, Any]:
         try:
             if name in ORDER_TOOLS:
-                return await self.order.execute(name, args)
-            if name in SERVICE_TOOLS:
-                return await self.service.execute(name, args)
-            return {"ok": False, "code": "unknown_tool"}
+                result = await self.order.execute(
+                    name,
+                    args,
+                )
+            elif name in SERVICE_TOOLS:
+                result = await self.service.execute(
+                    name,
+                    args,
+                )
+            else:
+                return {
+                    "ok": False,
+                    "code": "unknown_tool",
+                }
+            return result
         except FudiaError as exc:
             return {
                 "ok": False,
