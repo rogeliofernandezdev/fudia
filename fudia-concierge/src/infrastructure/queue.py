@@ -26,6 +26,7 @@ class InboundQueue(Protocol):
         limit: int = 10,
     ) -> list[QueueDelivery]: ...
     async def ack(self, delivery: QueueDelivery) -> None: ...
+    async def touch(self, delivery: QueueDelivery) -> bool: ...
     async def retry(self, delivery: QueueDelivery) -> bool: ...
     async def ping(self) -> bool: ...
 
@@ -240,6 +241,21 @@ class RedisInboundQueue:
         )
         await pipeline.execute()
 
+    async def touch(
+        self,
+        delivery: QueueDelivery,
+    ) -> bool:
+        claimed: Any = await self.client.execute_command(
+            "XCLAIM",
+            self.stream,
+            self.group,
+            self.consumer,
+            0,
+            delivery.entry_id,
+            "JUSTID",
+        )
+        return bool(claimed)
+
     async def retry(
         self,
         delivery: QueueDelivery,
@@ -353,6 +369,17 @@ class MemoryInboundQueue:
         self.status[
             delivery.message.message_id
         ] = "completed"
+
+    async def touch(
+        self,
+        delivery: QueueDelivery,
+    ) -> bool:
+        return (
+            self.status.get(
+                delivery.message.message_id
+            )
+            == "queued"
+        )
 
     async def retry(
         self,
