@@ -155,7 +155,7 @@ func TestDefaultRolesOnlyExposeUsableMVPMenus(t *testing.T){
 		"mesas":"tables.read","caja":"cash.read","reservas":"reservations.read","productos":"menu.read",
 		"disponibilidad":"menu.read","combos":"menu.read","recetas":"menu.read","inventario":"inventory.read",
 		"kardex":"inventory.read","compras":"purchases.read","clientes":"customers.read","locales":"organizations.read",
-		"fiscal":"organizations.read","usuarios":"users.read",
+		"fiscal":"organizations.read","usuarios":"users.read","costos":"expenses.read",
 	}
 	contains:=func(values []string,want string)bool{for _,value:=range values{if value==want||value=="*"{return true}};return false}
 	for _,role:=range defaultOrganizationRoles{
