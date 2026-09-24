@@ -6,7 +6,13 @@ import time
 from typing import Protocol
 
 from src.infrastructure.queue import InboundQueue, QueueDelivery
-from src.observability import fingerprint, log_event
+from src.metrics import QUEUE_DELIVERIES, QUEUE_DURATION
+from src.observability import (
+    begin_trace,
+    end_trace,
+    fingerprint,
+    log_event,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +61,9 @@ class QueueWorker:
     ) -> None:
         message = delivery.message
         started = time.perf_counter()
+        trace_token = begin_trace(
+            message.message_id
+        )
         try:
             reply = await self.service.handle_message(
                 message.phone,
@@ -68,6 +77,11 @@ class QueueWorker:
                 message.sender_phone_id,
             )
             await self.queue.ack(delivery)
+            duration = time.perf_counter() - started
+            QUEUE_DELIVERIES.labels(
+                result="completed"
+            ).inc()
+            QUEUE_DURATION.observe(duration)
             log_event(
                 logger,
                 "concierge.queue.completed",
@@ -77,8 +91,7 @@ class QueueWorker:
                 phone=fingerprint(message.phone),
                 attempt=delivery.attempt,
                 durationMs=round(
-                    (time.perf_counter() - started)
-                    * 1000,
+                    duration * 1000,
                     1,
                 ),
             )
@@ -88,6 +101,13 @@ class QueueWorker:
             will_retry = await self.queue.retry(
                 delivery
             )
+            QUEUE_DELIVERIES.labels(
+                result=(
+                    "retry"
+                    if will_retry
+                    else "dead_letter"
+                )
+            ).inc()
             log_event(
                 logger,
                 "concierge.queue.failed",
@@ -103,6 +123,8 @@ class QueueWorker:
                 "No se pudo procesar mensaje %s",
                 fingerprint(message.message_id),
             )
+        finally:
+            end_trace(trace_token)
 
     async def stop(self) -> None:
         self._stop.set()
