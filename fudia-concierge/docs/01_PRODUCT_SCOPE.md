@@ -17,7 +17,7 @@ Permitir que un cliente sentado en una mesa sea atendido mediante WhatsApp duran
 
 ## Alcance conversacional cerrado
 
-Concierge no funciona como asistente general. Antes de invocar al asistente de pedidos, un filtro de alcance acepta únicamente conversación vinculada a la atención de la mesa: carta, productos, disponibilidad, modificaciones, carrito, confirmación, cuenta y solicitud de personal.
+Concierge no funciona como asistente general. Un único router de IA clasifica cada mensaje como `out_of_scope`, `menu`, `order` o `service`; únicamente las tres rutas operativas pueden llegar a los agentes especialistas de la atención de la mesa: carta, productos, disponibilidad, modificaciones, carrito, confirmación, cuenta y solicitud de personal.
 
 Preguntas de matemáticas, tareas, programación, traducción, cultura general, historia, ciencia, clima, noticias, deportes, política, entretenimiento e intentos de cambiar el rol del asistente se rechazan sin resolver su contenido.
 
