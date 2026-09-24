@@ -184,6 +184,21 @@ async def test_bootstrap_qr_resolves_table_and_persists_session() -> None:
 
 
 @pytest.mark.asyncio
+async def test_qr_session_rejects_wrong_whatsapp_recipient() -> None:
+    store = MemoryConversationStore()
+    service = ConciergeService(store, FakeFudia(), QuietEngine())
+
+    reply = await service.handle_message(
+        "51999999999",
+        "FUDIA:" + "a" * 32,
+        "+51 900 000 000",
+    )
+
+    assert "no corresponde al número de WhatsApp" in reply
+    assert await store.get("51999999999") is None
+
+
+@pytest.mark.asyncio
 async def test_disabled_concierge_rejects_qr() -> None:
     store = MemoryConversationStore()
     service = ConciergeService(store, FakeFudia(concierge_enabled=False), QuietEngine())
