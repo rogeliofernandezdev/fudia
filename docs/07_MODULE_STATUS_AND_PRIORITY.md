@@ -8,10 +8,12 @@
 
 - Fecha: **2026-09-24**
 - Rama revisada: `feat/redesign-nueva-comanda`
-- Commit de hardening Concierge verificado por CI: `fa73d2c7f03078e0e43d4035fb69a02e125c45c9`
-- CI de cierre Concierge:
-  - `fudia-concierge`: **success** en lint, mypy, pytest, build Python y build Docker.
-  - `foods-backend` y `foods-admin-web`: se mantienen como dependencias reales del flujo y se verifican en la puerta final de rama.
+- Commit de implementación/hardening verificado: `27db62e5d770b9fb7ebf35a95475bb0117a5b112`
+- Puerta final de rama:
+  - `foods-backend` run **1382**: **success** — migrate, tests, vet y build.
+  - `foods-admin-web` run **2016**: **success** — lint, typecheck, tests y build.
+  - `fudia-concierge` run **324**: **success** — ruff, mypy, pytest, build Python y build Docker.
+  - inspección de logs de los tres jobs: **0 warnings**.
 - Trabajo activo: **P0 — Facturación electrónica**
 - Fudia Concierge: **✅ 100% cerrado en repositorio/CI para el alcance definido**
 - Gate externo de Concierge: validación de go-live con credenciales reales; no es código pendiente.
