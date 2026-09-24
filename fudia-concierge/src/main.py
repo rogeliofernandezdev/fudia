@@ -170,14 +170,13 @@ def create_app(
         await worker.stop()
         task = app.state.queue_worker_task
         if task is not None:
-            try:
-                await asyncio.wait_for(
-                    task,
-                    timeout=(
-                        cfg.queue_shutdown_grace_seconds
-                    ),
-                )
-            except TimeoutError:
+            done, _ = await asyncio.wait(
+                {task},
+                timeout=(
+                    cfg.queue_shutdown_grace_seconds
+                ),
+            )
+            if task not in done:
                 task.cancel()
                 with contextlib.suppress(
                     asyncio.CancelledError
