@@ -5,7 +5,7 @@ export const expenseSchema=z.object({
  categoryId:z.string().trim().min(1,"Selecciona una categoría."),
  description:z.string().trim().min(1,"Ingresa una descripción.").max(180,"La descripción no puede superar 180 caracteres."),
  amount:z.string().trim().regex(/^[0-9]{1,12}([.][0-9]{1,2})?$/,"Ingresa un importe válido.").refine(value=>Number(value)>0,"El importe debe ser mayor que cero."),
- paymentMethod:z.enum(["cash","bank_transfer","card","digital_wallet","other"]),
+ paymentMethod:z.string().trim().min(1,"Selecciona un medio de pago."),
  businessDate:z.string().trim().min(1,"Selecciona la fecha."),
  reference:z.string().trim().max(120,"La referencia no puede superar 120 caracteres."),
  notes:z.string().trim().max(500,"Las notas no pueden superar 500 caracteres."),

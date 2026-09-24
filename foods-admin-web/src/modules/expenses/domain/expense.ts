@@ -1,6 +1,6 @@
 export type ExpenseStatus="active"|"void";
 export type ExpenseTab="expenses"|"categories";
-export type ExpensePaymentMethod="cash"|"bank_transfer"|"card"|"digital_wallet"|"other";
+export type ExpensePaymentMethod=string;
 export type Option={value:string;label:string};
 export type Expense={id:string;categoryId:string;categoryName:string;description:string;amount:string;paymentMethod:ExpensePaymentMethod;businessDate:string;reference:string;notes:string;status:ExpenseStatus;createdByName:string;createdAt:string;voidedByName:string;voidedAt:string|null;voidReason:string};
 export type ExpenseDraft={categoryId:string;description:string;amount:string;paymentMethod:ExpensePaymentMethod;businessDate:string;reference:string;notes:string};
