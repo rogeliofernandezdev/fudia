@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import re
 from collections.abc import Awaitable, Callable
 from typing import Any, cast
@@ -95,6 +96,7 @@ class ConciergeService:
         conversation_lock: ConversationLock | None = None,
         rate_limiter: RateLimiter | None = None,
         max_message_chars: int = 2000,
+        lock_heartbeat_seconds: float = 5.0,
     ) -> None:
         self.store = store
         self.fudia = fudia
@@ -103,6 +105,7 @@ class ConciergeService:
         )
         self.rate_limiter = rate_limiter or AllowAllRateLimiter()
         self.max_message_chars = max_message_chars
+        self.lock_heartbeat_seconds = lock_heartbeat_seconds
 
         self.scope_classifier: ScopeClassifier
         self.intent_router: IntentRouter
@@ -204,6 +207,7 @@ class ConciergeService:
         phone: str,
         text: str,
         recipient_phone: str = "",
+        channel_id: str = "",
     ) -> str:
         if len(text) > self.max_message_chars:
             return (
@@ -211,7 +215,11 @@ class ConciergeService:
                 "Envíame solo lo necesario para gestionar tu pedido."
             )
 
-        channel_key = _phone_digits(recipient_phone) or "default"
+        channel_key = (
+            channel_id.strip()
+            or _phone_digits(recipient_phone)
+            or "default"
+        )
         identity = conversation_identity(phone, channel_key)
         if not await self.rate_limiter.allow(identity):
             return (
@@ -220,6 +228,12 @@ class ConciergeService:
             )
 
         lock_token = await self.conversation_lock.acquire(identity)
+        heartbeat = asyncio.create_task(
+            self._keep_lock_alive(
+                identity,
+                lock_token,
+            )
+        )
         try:
             return await self._handle_locked_message(
                 phone,
@@ -228,10 +242,33 @@ class ConciergeService:
                 channel_key,
             )
         finally:
+            heartbeat.cancel()
+            try:
+                await heartbeat
+            except asyncio.CancelledError:
+                pass
             await self.conversation_lock.release(
                 identity,
                 lock_token,
             )
+
+    async def _keep_lock_alive(
+        self,
+        identity: str,
+        token: str,
+    ) -> None:
+        while True:
+            await asyncio.sleep(
+                self.lock_heartbeat_seconds
+            )
+            refreshed = (
+                await self.conversation_lock.refresh(
+                    identity,
+                    token,
+                )
+            )
+            if not refreshed:
+                return
 
     async def _handle_locked_message(
         self,
