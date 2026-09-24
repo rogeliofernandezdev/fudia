@@ -7,12 +7,12 @@ INBOUND_MESSAGES = Counter(
 )
 SCOPE_DECISIONS = Counter(
     "fudia_concierge_scope_decisions_total",
-    "Scope gate decisions.",
+    "Scope decisions produced by the unified router.",
     ["decision"],
 )
 INTENT_ROUTES = Counter(
     "fudia_concierge_intent_routes_total",
-    "Intent router decisions.",
+    "Routing decisions produced by the unified router.",
     ["intent"],
 )
 AGENT_REQUESTS = Counter(
