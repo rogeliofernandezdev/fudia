@@ -401,6 +401,39 @@ async def test_queue_worker_stop_drains_in_flight_delivery() -> None:
 
 
 @pytest.mark.asyncio
+async def test_hard_worker_cancellation_leaves_delivery_unacked() -> None:
+    queue = MemoryInboundQueue()
+    service = BlockingService()
+    whatsapp = FakeWhatsApp()
+    worker = QueueWorker(
+        queue,
+        service,
+        whatsapp,
+        max_concurrency=1,
+    )
+    message_id = "wamid.cancelled"
+    await queue.enqueue(
+        InboundMessage(
+            message_id=message_id,
+            phone="51944444444",
+            text="hola",
+        )
+    )
+
+    task = asyncio.create_task(worker.run())
+    while service.active == 0:
+        await asyncio.sleep(0)
+
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+
+    assert queue.status[message_id] == "queued"
+    assert whatsapp.sent == []
+    assert service.active == 0
+
+
+@pytest.mark.asyncio
 async def test_queue_worker_acks_only_after_reply_is_sent() -> None:
     queue = MemoryInboundQueue()
     service = FakeService()
