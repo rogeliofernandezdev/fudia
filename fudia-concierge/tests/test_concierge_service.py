@@ -192,6 +192,21 @@ class CountingEngine:
         return "Continuemos con tu pedido."
 
 
+class ScopedEngine:
+    def __init__(self, allowed: bool) -> None:
+        self.allowed = allowed
+        self.scope_calls = 0
+        self.reply_calls = 0
+
+    async def is_in_scope(self, session, user_message) -> bool:
+        self.scope_calls += 1
+        return self.allowed
+
+    async def reply(self, session, user_message, tool_handler) -> str:
+        self.reply_calls += 1
+        return "Continuemos con tu pedido."
+
+
 
 def test_extract_qr_token() -> None:
     assert extract_qr_token("Hola FUDIA:" + "A" * 32) == "a" * 32
@@ -253,6 +268,56 @@ async def test_service_requires_qr_before_conversation() -> None:
     service = ConciergeService(MemoryConversationStore(), FakeFudia(), QuietEngine())
     reply = await service.handle_message("51999999999", "Quiero un lomo")
     assert "escanea el QR" in reply
+
+
+@pytest.mark.asyncio
+async def test_math_question_is_blocked_before_the_main_model() -> None:
+    store = MemoryConversationStore()
+    engine = CountingEngine()
+    service = ConciergeService(store, FakeFudia(), engine)
+
+    await service.handle_message("51999999999", "FUDIA:" + "a" * 32)
+    reply = await service.handle_message(
+        "51999999999",
+        "¿Cuánto es 3/4 + 2/5?",
+    )
+
+    assert "únicamente con el pedido" in reply
+    assert engine.calls == 0
+
+
+@pytest.mark.asyncio
+async def test_general_question_is_rejected_by_scope_gate() -> None:
+    store = MemoryConversationStore()
+    engine = ScopedEngine(allowed=False)
+    service = ConciergeService(store, FakeFudia(), engine)
+
+    await service.handle_message("51999999999", "FUDIA:" + "a" * 32)
+    reply = await service.handle_message(
+        "51999999999",
+        "¿Quién fue Napoleón?",
+    )
+
+    assert "únicamente con el pedido" in reply
+    assert engine.scope_calls == 1
+    assert engine.reply_calls == 0
+
+
+@pytest.mark.asyncio
+async def test_order_question_passes_scope_gate() -> None:
+    store = MemoryConversationStore()
+    engine = ScopedEngine(allowed=True)
+    service = ConciergeService(store, FakeFudia(), engine)
+
+    await service.handle_message("51999999999", "FUDIA:" + "a" * 32)
+    reply = await service.handle_message(
+        "51999999999",
+        "Quiero ver las bebidas",
+    )
+
+    assert reply == "Continuemos con tu pedido."
+    assert engine.scope_calls == 1
+    assert engine.reply_calls == 1
 
 
 @pytest.mark.asyncio
