@@ -2,7 +2,7 @@
 import dynamic from "next/dynamic";
 import "./purchases.css";
 import {useState} from "react";
-import {useFieldArray,useForm} from "react-hook-form";
+import {useFieldArray,useForm,useWatch} from "react-hook-form";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Button,ConfirmDialog,Icon,Input,PageHeader,Pagination,RemoteModalSkeleton,RowActionButton,Select,Status,Textarea} from "@/design-system";
 import {useFeedback,useSession,useSettings} from "@/providers";
@@ -10,7 +10,7 @@ import {formatRegionalCalendarDate,formatRegionalDateTime,formatRegionalNumber} 
 import {useDebouncedValue} from "@/shared/hooks/use-debounced-value";
 import {purchaseOrderResolver,supplierResolver} from "../domain/purchase-schema";
 import type {PurchaseInventoryOption,PurchaseOrder,PurchaseOrderDraft,PurchaseOrderSummary,PurchaseReceiptDetail,PurchaseStatus,PurchaseTab,Supplier,SupplierDraft} from "../domain/types";
-import {approvePurchaseOrder,createPurchaseInventoryItem,createPurchaseReturn,getPurchaseOrder,getPurchaseReceipt,listPurchaseInventory,listPurchaseItemCategories,listPurchaseOrders,listPurchaseReceipts,listSuppliers,receivePurchaseOrder,savePurchaseOrder,saveSupplier,setPurchaseOrderStatus,setSupplierActive} from "../infrastructure/purchases-api";
+import {approvePurchaseOrder,createPurchaseInventoryItem,createPurchaseReturn,getPurchaseOrder,getPurchaseReceipt,listPurchaseInventory,listPurchaseOrders,listPurchaseReceipts,listSuppliers,receivePurchaseOrder,savePurchaseOrder,saveSupplier,setPurchaseOrderStatus,setSupplierActive} from "../infrastructure/purchases-api";
 
 const PurchaseItemDialog=dynamic(()=>import("./purchase-item-dialog").then(module=>module.PurchaseItemDialog),{ssr:false});
 const PurchaseReceiptDialog=dynamic(()=>import("./purchase-receipt-dialog").then(module=>module.PurchaseReceiptDialog),{ssr:false});
@@ -465,9 +465,9 @@ function PurchaseOrderDialog({initial,suppliers,inventory,currencySymbol,busy,cl
   const{notify}=useFeedback();
   const[createdItems,setCreatedItems]=useState<PurchaseInventoryOption[]>([]);
   const[itemTarget,setItemTarget]=useState<number|"new"|null>(null);
-  const{control,register,handleSubmit,watch,setValue,formState:{errors,isSubmitted}}=useForm<PurchaseOrderDraft>({defaultValues:initial,resolver:purchaseOrderResolver,mode:"onSubmit",reValidateMode:"onChange"});
+  const{control,register,handleSubmit,setValue,formState:{errors,isSubmitted}}=useForm<PurchaseOrderDraft>({defaultValues:initial,resolver:purchaseOrderResolver,mode:"onSubmit",reValidateMode:"onChange"});
   const{fields,append,remove}=useFieldArray({control,name:"items"});
-  const lines=watch("items");
+  const lines=useWatch({control,name:"items"})??[];
   const catalog=[...inventory,...createdItems.filter(item=>!inventory.some(existing=>existing.id===item.id))];
   const total=lines.reduce((sum,line)=>sum+(Number(line.quantity)||0)*(Number(line.unitCost)||0),0);
 
