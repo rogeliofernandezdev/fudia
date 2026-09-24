@@ -134,12 +134,13 @@ func TestConciergeQRCodeMenuOrderAndKitchenWorkflow(t *testing.T) {
 
 	orderBody:=[]byte(fmt.Sprintf(`{
 	  "customerPhone":"51999999999",
-	  "conversationId":"conv-%d",
+	  "conversationId":"conv-session-%d",
+	  "requestId":"round-1-%d",
 	  "items":[
 	    {"productId":%q,"qty":2,"unitPrice":0.01,"name":"precio inventado","note":"sin cebolla","selections":[]},
 	    {"productId":%q,"qty":1,"unitPrice":0.01,"name":"combo inventado","note":"","selections":[{"groupId":%q,"productId":%q}]}
 	  ]
-	}`,nonce,productID,comboID,groupID,optionBID))
+	}`,nonce,nonce,productID,comboID,groupID,optionBID))
 	orderReq:=httptest.NewRequest("POST","/v1/integrations/concierge/"+qrToken+"/orders",bytes.NewReader(orderBody))
 	orderReq.Header.Set("X-Fudia-Concierge-Key","concierge-test-key")
 	orderRec:=httptest.NewRecorder()
@@ -179,9 +180,10 @@ func TestConciergeQRCodeMenuOrderAndKitchenWorkflow(t *testing.T) {
 
 	extraBody:=[]byte(fmt.Sprintf(`{
 	  "customerPhone":"51999999999",
-	  "conversationId":"conv-extra-%d",
+	  "conversationId":"conv-session-%d",
+	  "requestId":"round-2-%d",
 	  "items":[{"productId":%q,"qty":1,"unitPrice":999,"name":"otro precio falso","note":"","selections":[]}]
-	}`,nonce,productID))
+	}`,nonce,nonce,productID))
 	extraReq:=httptest.NewRequest("POST","/v1/integrations/concierge/"+qrToken+"/orders",bytes.NewReader(extraBody))
 	extraReq.Header.Set("X-Fudia-Concierge-Key","concierge-test-key")
 	extraRec:=httptest.NewRecorder()
@@ -331,9 +333,10 @@ func TestConciergeAppendsToConfirmedSalonOrderWithoutImpersonatingStaff(t *testi
 
 	body:=[]byte(fmt.Sprintf(`{
 	  "customerPhone":"51999999999",
-	  "conversationId":"salon-extra-%d",
+	  "conversationId":"salon-session-%d",
+	  "requestId":"salon-round-%d",
 	  "items":[{"productId":%q,"qty":1,"note":"","selections":[]}]
-	}`,nonce,addedProductID))
+	}`,nonce,nonce,addedProductID))
 	req:=httptest.NewRequest("POST","/v1/integrations/concierge/"+qrToken+"/orders",bytes.NewReader(body))
 	req.Header.Set("X-Fudia-Concierge-Key","concierge-test-key")
 	rec:=httptest.NewRecorder()
