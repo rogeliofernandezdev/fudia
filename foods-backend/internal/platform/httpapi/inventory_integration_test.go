@@ -45,6 +45,9 @@ func seedInventoryScope(t *testing.T, pool *pgxpool.Pool) scope {
 		RETURNING id`, fmt.Sprintf("Inventory Test %d", nonce), taxID).Scan(&organizationID); err != nil {
 		t.Fatalf("seed organization: %v", err)
 	}
+	if err := seedOrganizationPaymentMethods(ctx, pool, organizationID); err != nil {
+		t.Fatalf("seed payment methods: %v", err)
+	}
 	if err := pool.QueryRow(ctx, `
 		INSERT INTO locations(organization_id,name,code,address)
 		VALUES($1,'Principal',$2,'')
