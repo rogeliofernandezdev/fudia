@@ -137,6 +137,8 @@ func (a *API) Routes() *http.ServeMux {
 	m.Handle("GET /v1/operations/products", a.auth(a.requirePermission("menu.read", http.HandlerFunc(a.listProducts))))
 	m.Handle("GET /v1/operations/products/{id}/modifiers", a.auth(a.requirePermission("menu.read", http.HandlerFunc(a.getProductModifiers))))
 	m.Handle("GET /v1/operations/product-availability", a.auth(a.requirePermission("menu.read", http.HandlerFunc(a.listProductAvailability))))
+	m.Handle("GET /v1/operations/orders", a.auth(a.requirePermission("orders.read", http.HandlerFunc(a.listOrders))))
+	m.Handle("GET /v1/operations/orders/{id}", a.auth(a.requirePermission("orders.read", http.HandlerFunc(a.getOrder))))
 	m.Handle("POST /v1/operations/orders", a.auth(a.requirePermission("orders.manage", http.HandlerFunc(a.createOrder))))
 	m.Handle("PATCH /v1/operations/orders/{id}/status", a.auth(a.requirePermission("orders.manage", http.HandlerFunc(a.updateOrderStatus))))
 	m.Handle("PATCH /v1/operations/product-availability/{productId}", a.auth(a.requirePermission("menu.manage", http.HandlerFunc(a.updateProductAvailability))))
