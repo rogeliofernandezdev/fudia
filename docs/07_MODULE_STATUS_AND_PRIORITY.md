@@ -8,12 +8,14 @@
 
 - Fecha: **2026-09-24**
 - Rama revisada: `feat/redesign-nueva-comanda`
-- Commit base auditado: `77ab7c7118ac03e820d4db630d1b9e99d3e0afc2`
+- Commit base funcional auditado: `e91a81a562cad96f333e41badca3f06d9be3b2e0`
 - CI del commit base:
   - `foods-backend`: **success**
-  - `foods-admin-web`: **success**
+  - `foods-admin-web`: **en validación documental posterior; último código funcional sin cambios de frontend**
   - `foods-operations-web`: **success**
-- Próxima prioridad acordada: **Facturación electrónica**
+  - `fudia-concierge`: **success**
+- Trabajo activo por decisión de producto: **Fudia Concierge**
+- Siguiente bloque concreto: **configuración por empresa/local + acceso desde QR**
 
 ## Cómo interpretar los estados
 
@@ -158,7 +160,42 @@ esté terminado. Falta la parte de costeo y rentabilidad.
 | Usuarios y roles | `usuarios` | 🟢 Ready / activable | Roles/permisos forman parte del onboarding. Auditoría de cierre pendiente. |
 | Facturación | `facturacion` | 🔵 En desarrollo | Pantallas actuales no constituyen facturación electrónica real. **Siguiente prioridad.** |
 | Integraciones | `integraciones` | 🔵 En desarrollo | Pendiente completar adaptadores operativos. |
-| WhatsApp IA para pedidos | `whatsapp_bot` | ⚪ Planificado | Fase omnicanal posterior. |
+| WhatsApp IA para pedidos | `whatsapp_bot` | 🔵 En desarrollo | Fudia Concierge ya tiene fundación, contrato server-to-server, menú por QR, confirmación protegida, pedido idempotente y entrada a KDS. Falta configuración administrativa, deeplink QR y capacidades avanzadas. |
+
+---
+
+## Trabajo activo — Fudia Concierge
+
+Por decisión de producto se adelantó la vertical conversacional que originalmente
+estaba dentro de P3. Esto no elimina la prioridad estratégica de Facturación;
+simplemente registra el frente que se está implementando ahora.
+
+### Cerrado en la primera etapa
+
+- quinto proyecto desplegable `fudia-concierge/`;
+- FastAPI, LangGraph, OpenAI Responses API y tools;
+- webhook Meta con deduplicación y validación de firma;
+- sesión/carrito efímero en Redis;
+- confirmación explícita protegida también por código;
+- contrato `/v1/integrations/concierge/{token}/...` protegido con credencial server-to-server;
+- resolución de empresa/local/mesa exclusivamente desde QR;
+- menú operativo consultado desde foods-backend;
+- precio, disponibilidad y stock revalidados por foods-backend;
+- pedido real con canal `whatsapp`;
+- idempotencia por `conversationId`;
+- auditoría sin suplantar a un usuario interno;
+- llegada del pedido confirmado a Pedidos/KDS;
+- prueba integrada QR -> menú -> pedido -> KDS;
+- CI propio de Concierge.
+
+### Pendiente inmediato
+
+- configuración de WhatsApp/Concierge por empresa y local;
+- activación/desactivación administrativa;
+- número de WhatsApp configurable;
+- botón **Pedir por WhatsApp** en `/mesa/[qr]`;
+- deeplink seguro que incluya el token opaco;
+- prueba E2E desde página QR hasta recepción del pedido.
 
 ---
 
@@ -221,11 +258,7 @@ Cerrar y auditar `reportes` utilizando datos reales de:
 
 ### P3 — Integraciones y WhatsApp
 
-- infraestructura de integraciones;
-- configuración segura de proveedores;
-- WhatsApp para recepción de pedidos;
-- confirmación humana;
-- trazabilidad de conversación a pedido.
+Fudia Concierge se adelantó como trabajo activo. Su fundación y contrato de pedidos ya están implementados. En esta prioridad quedarán las integraciones adicionales, configuración completa, handoff humano y endurecimiento multicanal.
 
 ### P4 — Carta digital QR
 
@@ -245,21 +278,31 @@ disponibilidad, mesas y pedidos.
 
 ## CONTINUAR DESDE AQUÍ
 
-Cuando se retome este proyecto, empezar por:
+Cuando se retome este proyecto, continuar por:
 
-> **P0 — Facturación electrónica**
+> **Fudia Concierge — Bloque 3: configuración y acceso desde QR**
+
+Orden inmediato:
+
+1. definir persistencia de configuración Concierge por empresa/local;
+2. administrar número de WhatsApp y estado activo/inactivo sin hardcodear;
+3. reemplazar la pantalla placeholder `/whatsapp-bot` por configuración real;
+4. conectar `/mesa/[qr]` con **Pedir por WhatsApp**;
+5. generar el deeplink con `FUDIA:<qr_token>`;
+6. probar QR -> WhatsApp -> conversación -> confirmación -> pedido -> KDS.
 
 Puntos existentes desde los que continuar:
 
-- `foods-admin-web/src/app/(admin)/configuracion/facturacion/page.tsx`
-- `foods-admin-web/src/modules/sales/presentation/receipts-page.tsx`
-- módulo técnico `facturacion` actualmente en estado `development`;
-- perfiles fiscales de empresa ya existentes;
-- pedidos, clientes, pagos, caja y medios de pago ya disponibles como dependencias.
+- `fudia-concierge/`;
+- `fudia-concierge/docs/05_IMPLEMENTATION_PLAN.md`;
+- `foods-backend/internal/platform/httpapi/concierge.go`;
+- `foods-backend/internal/platform/httpapi/concierge_integration_test.go`;
+- `foods-admin-web/src/app/mesa/[qr]/page.tsx`;
+- `foods-admin-web/src/app/(admin)/whatsapp-bot/page.tsx`.
 
-Antes de implementar, definir el contrato del adaptador del proveedor
-electrónico y el modelo persistente de comprobantes/series. Después actualizar
-OpenAPI, backend, Admin Web y Operations Web según corresponda.
+Después de cerrar esta vertical inicial, reevaluar el retorno a **P0 —
+Facturación electrónica**, que continúa siendo el hueco principal del circuito
+fiscal de venta.
 
 ---
 
