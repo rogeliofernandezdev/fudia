@@ -35,13 +35,9 @@ densidad para tablas, formularios y análisis.
 Usar superficies mayormente neutras, azul para navegación y acciones, verde para
 éxito y violeta para canales digitales.
 
-## Paridad con Operaciones
+## Identidad operativa
 
-`foods-admin-web` y `foods-operations-web` comparten exactamente los tokens de
-identidad y su semántica. La navegación lateral usa azul oscuro `ops-800`, la selección
-azul operativo más luminoso, las acciones primarias y tablas usan `primary-600`, y los
-canales digitales usan violeta. El verde se reserva para éxito. Las diferencias entre aplicaciones
-se limitan a densidad y composición, nunca a reinterpretar el significado del color.
+`foods-admin-web` concentra la experiencia web operativa y administrativa. La navegación lateral usa azul oscuro `ops-800`, la selección azul operativo más luminoso, las acciones primarias y tablas usan `primary-600`, y los canales digitales usan violeta. El verde se reserva para éxito.
 
 ## Tipografía y forma
 
