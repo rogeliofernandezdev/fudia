@@ -1,14 +1,17 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Awaitable, Callable
+from typing import Any
 from uuid import uuid4
 
+from src.ai.contracts import ConversationAgent, IntentRouter, ScopeClassifier
+from src.domain.intents import AgentIntent
 from src.domain.models import ChatMessage, ConversationSession
 from src.graph.app import build_graph
 from src.infrastructure.fudia_client import FudiaClient, FudiaError
-from src.infrastructure.openai_adapter import AssistantEngine
 from src.infrastructure.state_store import ConversationStore
-from src.services.tools import ConciergeTools
+from src.services.tool_registry import ToolRegistry
 
 QR_PATTERN = re.compile(r"(?i)\bFUDIA:([a-f0-9]{32})\b")
 ARITHMETIC_ONLY_PATTERN = re.compile(
@@ -23,6 +26,24 @@ OFF_SCOPE_REPLY = (
     "agregar o retirar productos, confirmar pedidos, pedir la cuenta o solicitar "
     "atención del personal."
 )
+
+
+class _LegacyRouter:
+    async def route(
+        self,
+        session: ConversationSession,
+        user_message: str,
+    ) -> AgentIntent:
+        return "order"
+
+
+class _AllowScope:
+    async def is_in_scope(
+        self,
+        session: ConversationSession,
+        user_message: str,
+    ) -> bool:
+        return True
 
 
 def extract_qr_token(text: str) -> str | None:
@@ -41,10 +62,17 @@ def obviously_out_of_scope(text: str) -> bool:
 
 
 def _phone_digits(value: str) -> str:
-    return "".join(character for character in value if character.isdigit())
+    return "".join(
+        character
+        for character in value
+        if character.isdigit()
+    )
 
 
-def _recipient_matches_configured(recipient: str, configured: str) -> bool:
+def _recipient_matches_configured(
+    recipient: str,
+    configured: str,
+) -> bool:
     if not recipient or not configured:
         return True
     return _phone_digits(recipient) == _phone_digits(configured)
@@ -55,17 +83,105 @@ class ConciergeService:
         self,
         store: ConversationStore,
         fudia: FudiaClient,
-        engine: AssistantEngine,
+        scope_classifier: ScopeClassifier | ConversationAgent,
+        intent_router: IntentRouter | None = None,
+        agents: dict[AgentIntent, ConversationAgent] | None = None,
     ) -> None:
         self.store = store
         self.fudia = fudia
-        self.engine = engine
-        self.graph = build_graph(self._process_ready_session)
+
+        if intent_router is None or agents is None:
+            legacy_agent = scope_classifier
+            if hasattr(scope_classifier, "is_in_scope"):
+                self.scope_classifier = scope_classifier
+            else:
+                self.scope_classifier = _AllowScope()
+            self.intent_router = _LegacyRouter()
+            self.agents: dict[AgentIntent, ConversationAgent] = {
+                "menu": legacy_agent,
+                "order": legacy_agent,
+                "service": legacy_agent,
+            }
+        else:
+            self.scope_classifier = scope_classifier
+            self.intent_router = intent_router
+            self.agents = agents
+
+        processors: dict[
+            AgentIntent,
+            Callable[
+                [ConversationSession, str],
+                Awaitable[str],
+            ],
+        ] = {
+            intent: self._processor(intent)
+            for intent in ("menu", "order", "service")
+        }
+        self.graph = build_graph(
+            self.intent_router.route,
+            processors,
+        )
+
+    def _processor(
+        self,
+        intent: AgentIntent,
+    ) -> Callable[
+        [ConversationSession, str],
+        Awaitable[str],
+    ]:
+        async def process(
+            session: ConversationSession,
+            user_message: str,
+        ) -> str:
+            registry = ToolRegistry(
+                self.fudia,
+                session,
+                user_message,
+            )
+
+            async def execute(
+                name: str,
+                args: dict[str, Any],
+            ) -> dict[str, Any]:
+                return await registry.execute_for(
+                    intent,
+                    name,
+                    args,
+                )
+
+            reply = await self.agents[intent].reply(
+                session,
+                user_message,
+                execute,
+            )
+            session.messages.extend(
+                [
+                    ChatMessage(
+                        role="user",
+                        content=user_message,
+                    ),
+                    ChatMessage(
+                        role="assistant",
+                        content=reply,
+                    ),
+                ]
+            )
+            session.messages = session.messages[-20:]
+            await self.store.save(session)
+            return reply
+
+        return process
 
     async def handle_message(
-        self, phone: str, text: str, recipient_phone: str = ""
+        self,
+        phone: str,
+        text: str,
+        recipient_phone: str = "",
     ) -> str:
-        session = await self.store.get(phone) or ConversationSession(phone=phone)
+        session = (
+            await self.store.get(phone)
+            or ConversationSession(phone=phone)
+        )
         token = extract_qr_token(text)
 
         if token:
@@ -78,11 +194,12 @@ class ConciergeService:
                 )
             if not table.conciergeEnabled:
                 return (
-                    "Fudia Concierge no está disponible en este local en este momento. "
-                    "Pide ayuda al personal del restaurante."
+                    "Fudia Concierge no está disponible en este local "
+                    "en este momento. Pide ayuda al personal del restaurante."
                 )
             if not _recipient_matches_configured(
-                recipient_phone, table.whatsappPhone
+                recipient_phone,
+                table.whatsappPhone,
             ):
                 return (
                     "Este QR no corresponde al número de WhatsApp que recibió "
@@ -93,6 +210,7 @@ class ConciergeService:
             session.table = table
             session.cart = []
             session.awaiting_confirmation = False
+            session.pending_order_request_id = None
             session.handoff_pending = False
             session.messages = []
             reply = (
@@ -103,9 +221,14 @@ class ConciergeService:
                 [
                     ChatMessage(
                         role="user",
-                        content="Inicié mi pedido desde el QR de la mesa.",
+                        content=(
+                            "Inicié mi pedido desde el QR de la mesa."
+                        ),
                     ),
-                    ChatMessage(role="assistant", content=reply),
+                    ChatMessage(
+                        role="assistant",
+                        content=reply,
+                    ),
                 ]
             )
             await self.store.save(session)
@@ -117,7 +240,8 @@ class ConciergeService:
                 "desde ese enlace."
             )
         if not _recipient_matches_configured(
-            recipient_phone, session.table.whatsappPhone
+            recipient_phone,
+            session.table.whatsappPhone,
         ):
             return (
                 "Esta conversación pertenece a otro número de WhatsApp del "
@@ -146,35 +270,24 @@ class ConciergeService:
         if obviously_out_of_scope(text):
             return OFF_SCOPE_REPLY
 
-        scope_checker = getattr(self.engine, "is_in_scope", None)
-        if callable(scope_checker):
-            try:
-                if not await scope_checker(session, text):
-                    return OFF_SCOPE_REPLY
-            except Exception:
-                return (
-                    "No pude validar tu solicitud en este momento. "
-                    "Intenta nuevamente con algo relacionado con tu pedido."
-                )
+        try:
+            if not await self.scope_classifier.is_in_scope(
+                session,
+                text,
+            ):
+                return OFF_SCOPE_REPLY
+        except Exception:
+            return (
+                "No pude validar tu solicitud en este momento. "
+                "Intenta nuevamente con algo relacionado con tu pedido."
+            )
 
         result = await self.graph.ainvoke(
-            {"session": session, "user_message": text, "reply": ""}
+            {
+                "session": session,
+                "user_message": text,
+                "intent": "order",
+                "reply": "",
+            }
         )
         return str(result["reply"])
-
-    async def _process_ready_session(
-        self,
-        session: ConversationSession,
-        user_message: str,
-    ) -> str:
-        tools = ConciergeTools(self.fudia, session, user_message)
-        reply = await self.engine.reply(session, user_message, tools.execute)
-        session.messages.extend(
-            [
-                ChatMessage(role="user", content=user_message),
-                ChatMessage(role="assistant", content=reply),
-            ]
-        )
-        session.messages = session.messages[-20:]
-        await self.store.save(session)
-        return reply
