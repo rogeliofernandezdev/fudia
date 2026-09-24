@@ -29,3 +29,5 @@ jobs:
       - run: mypy src config
       - run: pytest -q
       - run: python -m build
+      - name: Build hardened Docker image
+        run: docker build -t fudia-concierge:ci .
