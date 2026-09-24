@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     env: str = "development"
     log_level: str = "INFO"
     fudia_api_url: str = "http://localhost:8080"
+    fudia_concierge_api_key: str = ""
     redis_url: str = "redis://localhost:6379/0"
     session_ttl_seconds: int = 43_200
 

@@ -2,14 +2,32 @@ package httpapi
 
 import (
 	"context"
+	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
 )
+
+func (a *API) conciergeServiceAuth(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		expected := strings.TrimSpace(os.Getenv("FUDIA_CONCIERGE_API_KEY"))
+		provided := strings.TrimSpace(r.Header.Get("X-Fudia-Concierge-Key"))
+		if expected == "" {
+			fail(w, 503, "concierge_not_configured", "Fudia Concierge no está configurado.")
+			return
+		}
+		if len(expected) != len(provided) || subtle.ConstantTimeCompare([]byte(expected), []byte(provided)) != 1 {
+			fail(w, 401, "concierge_unauthorized", "Credencial de Concierge inválida.")
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
 
 type conciergeQRContext struct {
 	Scope            scope

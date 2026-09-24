@@ -17,8 +17,14 @@ class FudiaError(RuntimeError):
 
 
 class FudiaClient:
-    def __init__(self, base_url: str, client: httpx.AsyncClient | None = None) -> None:
+    def __init__(
+        self,
+        base_url: str,
+        api_key: str = "",
+        client: httpx.AsyncClient | None = None,
+    ) -> None:
         self.base_url = base_url.rstrip("/")
+        self.api_key = api_key
         self._external_client = client
         self._client: httpx.AsyncClient | None = client
 
@@ -33,7 +39,12 @@ class FudiaClient:
             self._client = None
 
     async def _json(self, method: str, path: str, **kwargs: Any) -> dict[str, Any]:
-        response = await self._http().request(method, self.base_url + path, **kwargs)
+        headers = dict(kwargs.pop("headers", {}))
+        if path.startswith("/v1/public/concierge/") and self.api_key:
+            headers["X-Fudia-Concierge-Key"] = self.api_key
+        response = await self._http().request(
+            method, self.base_url + path, headers=headers, **kwargs
+        )
         try:
             body = response.json()
         except ValueError:

@@ -20,7 +20,7 @@ def create_app(app_settings: Settings | None = None) -> FastAPI:
     logging.basicConfig(level=getattr(logging, cfg.log_level.upper(), logging.INFO))
 
     app = FastAPI(title="Fudia Concierge", version="0.1.0")
-    fudia = FudiaClient(cfg.fudia_api_url)
+    fudia = FudiaClient(cfg.fudia_api_url, cfg.fudia_concierge_api_key)
     store = RedisConversationStore(cfg.redis_url, cfg.session_ttl_seconds)
     deduplicator = RedisMessageDeduplicator(cfg.redis_url)
     engine = OpenAIConciergeEngine(cfg.openai_api_key, cfg.openai_model)
