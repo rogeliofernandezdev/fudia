@@ -43,15 +43,23 @@ class QueueWorker:
         service: MessageService,
         whatsapp: WhatsAppSender,
         max_concurrency: int = 8,
+        visibility_heartbeat_seconds: float = 10.0,
     ) -> None:
         if max_concurrency < 1:
             raise ValueError(
                 "max_concurrency must be at least 1"
             )
+        if visibility_heartbeat_seconds <= 0:
+            raise ValueError(
+                "visibility_heartbeat_seconds must be positive"
+            )
         self.queue = queue
         self.service = service
         self.whatsapp = whatsapp
         self.max_concurrency = max_concurrency
+        self.visibility_heartbeat_seconds = (
+            visibility_heartbeat_seconds
+        )
         self._stop = asyncio.Event()
         self._in_flight: set[
             asyncio.Future[None]
@@ -118,6 +126,9 @@ class QueueWorker:
         trace_token = begin_trace(
             message.message_id
         )
+        visibility_heartbeat = asyncio.create_task(
+            self._keep_delivery_visible(delivery)
+        )
         QUEUE_IN_FLIGHT.inc()
         try:
             reply = await self.service.handle_message(
@@ -179,8 +190,24 @@ class QueueWorker:
                 fingerprint(message.message_id),
             )
         finally:
+            visibility_heartbeat.cancel()
+            try:
+                await visibility_heartbeat
+            except asyncio.CancelledError:
+                pass
             QUEUE_IN_FLIGHT.dec()
             end_trace(trace_token)
+
+    async def _keep_delivery_visible(
+        self,
+        delivery: QueueDelivery,
+    ) -> None:
+        while True:
+            await asyncio.sleep(
+                self.visibility_heartbeat_seconds
+            )
+            if not await self.queue.touch(delivery):
+                return
 
     async def stop(self) -> None:
         self._stop.set()
