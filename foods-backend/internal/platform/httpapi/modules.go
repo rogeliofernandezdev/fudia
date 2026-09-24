@@ -28,14 +28,13 @@ const (
 var mvpModuleKeys = map[string]bool{
 	"reportes":true,"pos":true,"pedidos":true,"cocina":true,"mesas":true,"caja":true,"reservas":true,
 	"productos":true,"combos":true,"recetas":true,"inventario":true,"kardex":true,"compras":true,
-	"clientes":true,"locales":true,"fiscal":true,"usuarios":true,"costos":true,
+	"clientes":true,"locales":true,"fiscal":true,"usuarios":true,"costos":true,"whatsapp_bot":true,
 }
 
 var developmentModuleKeys = map[string]bool{
 	"carta_qr":true,
 	"facturacion":true,
 	"integraciones":true,
-	"whatsapp_bot":true,
 }
 
 func moduleAvailability(key string) string {
