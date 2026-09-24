@@ -52,6 +52,7 @@ class ConciergeService:
             session.table = table
             session.cart = []
             session.awaiting_confirmation = False
+            session.handoff_pending = False
             session.messages = []
             reply = (
                 f"Hola, estás en {table.organizationName}, mesa {table.name}. "
@@ -74,6 +75,25 @@ class ConciergeService:
                 "Para comenzar, escanea el QR de tu mesa y abre WhatsApp "
                 "desde ese enlace."
             )
+
+        if session.handoff_pending:
+            try:
+                handoff = await self.fudia.get_handoff_status(
+                    session.qr_token,
+                    session.conversation_id,
+                )
+            except FudiaError:
+                return (
+                    "Ya solicitaste atención del personal. "
+                    "No pude verificar todavía si fue atendida."
+                )
+            if str(handoff.get("status", "")) == "pending":
+                return (
+                    "El personal del local ya fue avisado. "
+                    "Espera un momento mientras se acercan a tu mesa."
+                )
+            session.handoff_pending = False
+            await self.store.save(session)
 
         result = await self.graph.ainvoke(
             {"session": session, "user_message": text, "reply": ""}
