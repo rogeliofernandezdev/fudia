@@ -18,6 +18,16 @@ def extract_qr_token(text: str) -> str | None:
     return match.group(1).lower() if match else None
 
 
+def _phone_digits(value: str) -> str:
+    return "".join(character for character in value if character.isdigit())
+
+
+def _recipient_matches_configured(recipient: str, configured: str) -> bool:
+    if not recipient or not configured:
+        return True
+    return _phone_digits(recipient) == _phone_digits(configured)
+
+
 class ConciergeService:
     def __init__(
         self,
@@ -30,7 +40,9 @@ class ConciergeService:
         self.engine = engine
         self.graph = build_graph(self._process_ready_session)
 
-    async def handle_message(self, phone: str, text: str) -> str:
+    async def handle_message(
+        self, phone: str, text: str, recipient_phone: str = ""
+    ) -> str:
         session = await self.store.get(phone) or ConversationSession(phone=phone)
         token = extract_qr_token(text)
 
@@ -46,6 +58,13 @@ class ConciergeService:
                 return (
                     "Fudia Concierge no está disponible en este local en este momento. "
                     "Pide ayuda al personal del restaurante."
+                )
+            if not _recipient_matches_configured(
+                recipient_phone, table.whatsappPhone
+            ):
+                return (
+                    "Este QR no corresponde al número de WhatsApp que recibió "
+                    "el mensaje. Vuelve a abrir WhatsApp desde el QR de tu mesa."
                 )
             session.qr_token = token
             session.conversation_id = uuid4().hex
@@ -74,6 +93,13 @@ class ConciergeService:
             return (
                 "Para comenzar, escanea el QR de tu mesa y abre WhatsApp "
                 "desde ese enlace."
+            )
+        if not _recipient_matches_configured(
+            recipient_phone, session.table.whatsappPhone
+        ):
+            return (
+                "Esta conversación pertenece a otro número de WhatsApp del "
+                "restaurante. Vuelve a abrirla desde el QR de tu mesa."
             )
 
         if session.handoff_pending:
