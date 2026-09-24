@@ -50,9 +50,12 @@ export function ConciergeHandoffNotifications(){
  },[]);
 
  useEffect(()=>{
-  void load();
+  const first=window.setTimeout(()=>void load(),0);
   const timer=window.setInterval(()=>void load(),15000);
-  return()=>window.clearInterval(timer);
+  return()=>{
+   window.clearTimeout(first);
+   window.clearInterval(timer);
+  };
  },[load]);
 
  const resolve=async(id:string)=>{
