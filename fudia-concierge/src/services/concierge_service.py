@@ -6,8 +6,8 @@ from collections.abc import Awaitable, Callable
 from typing import Any, cast
 from uuid import uuid4
 
-from src.ai.contracts import ConversationAgent, IntentRouter, ScopeClassifier
-from src.domain.intents import AgentIntent
+from src.ai.contracts import ConciergeRouter, ConversationAgent
+from src.domain.intents import AgentIntent, ConciergeRoute
 from src.domain.models import ChatMessage, ConversationSession
 from src.graph.app import build_graph
 from src.infrastructure.concurrency import (
@@ -41,17 +41,8 @@ class _LegacyRouter:
         self,
         session: ConversationSession,
         user_message: str,
-    ) -> AgentIntent:
+    ) -> ConciergeRoute:
         return "order"
-
-
-class _AllowScope:
-    async def is_in_scope(
-        self,
-        session: ConversationSession,
-        user_message: str,
-    ) -> bool:
-        return True
 
 
 def extract_qr_token(text: str) -> str | None:
@@ -91,8 +82,7 @@ class ConciergeService:
         self,
         store: ConversationStore,
         fudia: FudiaClient,
-        scope_classifier: ScopeClassifier | ConversationAgent,
-        intent_router: IntentRouter | None = None,
+        router: ConciergeRouter | ConversationAgent,
         agents: dict[AgentIntent, ConversationAgent] | None = None,
         conversation_lock: ConversationLock | None = None,
         rate_limiter: RateLimiter | None = None,
@@ -108,34 +98,25 @@ class ConciergeService:
         self.max_message_chars = max_message_chars
         self.lock_heartbeat_seconds = lock_heartbeat_seconds
 
-        self.scope_classifier: ScopeClassifier
-        self.intent_router: IntentRouter
+        self.router: ConciergeRouter
         self.agents: dict[AgentIntent, ConversationAgent]
 
-        if intent_router is None or agents is None:
+        if agents is None:
             legacy_agent = cast(
                 ConversationAgent,
-                scope_classifier,
+                router,
             )
-            if hasattr(scope_classifier, "is_in_scope"):
-                self.scope_classifier = cast(
-                    ScopeClassifier,
-                    scope_classifier,
-                )
-            else:
-                self.scope_classifier = _AllowScope()
-            self.intent_router = _LegacyRouter()
+            self.router = _LegacyRouter()
             self.agents = {
                 "menu": legacy_agent,
                 "order": legacy_agent,
                 "service": legacy_agent,
             }
         else:
-            self.scope_classifier = cast(
-                ScopeClassifier,
-                scope_classifier,
+            self.router = cast(
+                ConciergeRouter,
+                router,
             )
-            self.intent_router = intent_router
             self.agents = agents
 
         processors: dict[
@@ -149,8 +130,9 @@ class ConciergeService:
             for intent in ("menu", "order", "service")
         }
         self.graph = build_graph(
-            self.intent_router.route,
+            self.router.route,
             processors,
+            OFF_SCOPE_REPLY,
         )
 
     def _processor(
@@ -377,21 +359,6 @@ class ConciergeService:
                 decision="out_of_scope"
             ).inc()
             return OFF_SCOPE_REPLY
-
-        try:
-            if not await self.scope_classifier.is_in_scope(
-                session,
-                text,
-            ):
-                return OFF_SCOPE_REPLY
-        except Exception:
-            SCOPE_DECISIONS.labels(
-                decision="error"
-            ).inc()
-            return (
-                "No pude validar tu solicitud en este momento. "
-                "Intenta nuevamente con algo relacionado con tu pedido."
-            )
 
         result = await self.graph.ainvoke(
             {
