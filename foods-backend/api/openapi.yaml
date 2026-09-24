@@ -885,6 +885,51 @@ paths:
         "204": { description: Solicitud marcada como atendida }
         "404": { description: Solicitud inexistente o ya atendida }
         "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/operations/orders:
+    get:
+      operationId: listOperationalOrders
+      summary: Lista pedidos reales del local activo para la bandeja operativa
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: query, name: q, schema: { type: string } }
+        - { in: query, name: channel, schema: { type: string, enum: [salon, mostrador, recojo, delivery, whatsapp] } }
+        - { in: query, name: status, schema: { type: string, enum: [abiertos, nuevo, confirmado, preparando, listo, en_camino, entregado, cancelado] } }
+        - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
+        - { in: query, name: pageSize, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+      responses:
+        "200": { description: Pedidos paginados con conteos y moneda del local, content: { application/json: { schema: { $ref: "#/components/schemas/OperationalOrderList" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      operationId: createOperationalOrder
+      summary: Crea un pedido desde la operación
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/OrderInput" } } } }
+      responses:
+        "201": { description: Pedido creado, content: { application/json: { schema: { $ref: "#/components/schemas/Order" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/operations/orders/{id}:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    get:
+      operationId: getOperationalOrder
+      summary: Obtiene un pedido real con líneas y estado de cobro
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Pedido con detalle, content: { application/json: { schema: { $ref: "#/components/schemas/Order" } } } }
+        "404": { description: Pedido no encontrado }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/operations/orders/{id}/status:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    patch:
+      operationId: updateOperationalOrderStatus
+      summary: Aplica una transición operativa permitida del pedido
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [status], properties: { status: { type: string, enum: [confirmado, en_camino, entregado, cancelado] } } } } } }
+      responses:
+        "200": { description: Pedido actualizado, content: { application/json: { schema: { $ref: "#/components/schemas/Order" } } } }
+        "404": { description: Pedido no encontrado }
+        "409": { description: Transición no permitida o requiere Cocina }
+        "403": { $ref: "#/components/responses/Forbidden" }
   /v1/operations/payment-methods:
     get:
       operationId: listOperationalPaymentMethods
@@ -1153,6 +1198,7 @@ components:
     OrderInput: { type: object, required: [channel, items], properties: { channel: { type: string, enum: [salon, mostrador, recojo, delivery, whatsapp] }, customerId: { type: string, format: uuid }, customerName: { type: string, maxLength: 160 }, customerPhone: { type: string, maxLength: 30 }, address: { type: string, maxLength: 240 }, reference: { type: string, maxLength: 240 }, tableId: { type: string, format: uuid }, notes: { type: string, maxLength: 500 }, deliveryFee: { type: number, minimum: 0 }, items: { type: array, minItems: 1, items: { $ref: "#/components/schemas/OrderItemInput" } } } }
     OrderItem: { allOf: [{ $ref: "#/components/schemas/OrderItemInput" }, { type: object, required: [id], properties: { id: { type: string, format: uuid }, modifiers: { type: array, items: { $ref: "#/components/schemas/OrderModifierSelection" } } } }] }
     Order: { type: object, required: [id, code, channel, status, customerName, customerPhone, address, reference, tableId, tableName, notes, subtotal, deliveryFee, total, createdAt, updatedAt], properties: { id: { type: string, format: uuid }, code: { type: string }, channel: { type: string, enum: [salon, mostrador, recojo, delivery, whatsapp] }, status: { type: string, enum: [nuevo, confirmado, preparando, listo, en_camino, entregado, cancelado] }, customerId: { type: string }, customerName: { type: string }, customerPhone: { type: string }, address: { type: string }, reference: { type: string }, tableId: { type: string }, tableName: { type: string }, notes: { type: string }, subtotal: { type: string }, deliveryFee: { type: string }, total: { type: string }, createdAt: { type: string, format: date-time }, updatedAt: { type: string, format: date-time }, items: { type: array, items: { $ref: "#/components/schemas/OrderItem" } } } }
+    OperationalOrderList: { type: object, required: [items, total, page, pageSize, channelCounts, channelOptions, statusOptions, currencySymbol], properties: { items: { type: array, items: { $ref: "#/components/schemas/Order" } }, total: { type: integer }, page: { type: integer }, pageSize: { type: integer }, channelCounts: { type: object, additionalProperties: { type: integer } }, channelOptions: { type: array, items: { $ref: "#/components/schemas/Option" } }, statusOptions: { type: array, items: { $ref: "#/components/schemas/Option" } }, currencySymbol: { type: string } } }
     KitchenTicket: { type: object, required: [id, code, channel, status, customerName, tableName, notes, createdAt, updatedAt, items], properties: { id: { type: string, format: uuid }, code: { type: string }, channel: { type: string, enum: [salon, mostrador, recojo, delivery, whatsapp] }, status: { type: string, enum: [confirmado, preparando, listo] }, customerName: { type: string }, tableName: { type: string }, notes: { type: string }, createdAt: { type: string, format: date-time }, updatedAt: { type: string, format: date-time }, targetMinutes: { type: [integer, "null"], minimum: 1 }, items: { type: array, items: { $ref: "#/components/schemas/OrderItem" } } } }
     UserAssignment: { type: object, required: [roleId, locationId], properties: { roleId: { type: string, format: uuid }, locationId: { type: string, format: uuid } } }
     UserInput: { type: object, required: [fullName, email, assignments], properties: { fullName: { type: string }, email: { type: string, format: email }, password: { type: string, minLength: 8, writeOnly: true }, assignments: { type: array, minItems: 1, items: { $ref: "#/components/schemas/UserAssignment" } } } }
