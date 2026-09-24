@@ -1,7 +1,7 @@
 "use client";
 import "./reservations.css";
 import {useState} from "react";
-import {useForm} from "react-hook-form";
+import {useForm,useWatch} from "react-hook-form";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Button,ConfirmDialog,FieldLabel,Icon,Input,PageHeader,Pagination,RowActionButton,Select,Status,Textarea} from "@/design-system";
 import {useFeedback,useSession} from "@/providers";
@@ -48,7 +48,7 @@ export function ReservationsPage(){
 
 function ReservationDialog({value:initial,tables,tablesLoading,tablesError,busy,close,save}:{value:ReservationDraft;tables:Array<{id:string;name:string;seats:number;active:boolean}>;tablesLoading:boolean;tablesError:string;busy:boolean;close:()=>void;save:(v:ReservationDraft)=>void}){
   const{
-    register,handleSubmit,watch,
+    control,register,handleSubmit,
     formState:{errors},
   }=useForm<ReservationDraft>({
     defaultValues:initial,
@@ -56,7 +56,7 @@ function ReservationDialog({value:initial,tables,tablesLoading,tablesError,busy,
     mode:"onSubmit",
     reValidateMode:"onChange",
   });
-  const guests=Number(watch("guests")||0);
+  const guests=Number(useWatch({control,name:"guests"})||0);
   const eligibleTables=tables.filter(table=>table.id===initial.tableId||(table.active&&table.seats>=guests));
 
   return <div className="modal-backdrop modal-overlay-in" role="presentation">
