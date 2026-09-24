@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     whatsapp_token: str = ""
     whatsapp_phone_id: str = ""
     whatsapp_verify_token: str = ""
+    whatsapp_app_secret: str = ""
     whatsapp_graph_version: str = ""
 
 
