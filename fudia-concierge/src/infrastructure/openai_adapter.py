@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import logging
+import time
 from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any, Protocol
@@ -8,6 +10,9 @@ from typing import Any, Protocol
 from openai import AsyncOpenAI
 
 from src.domain.models import ConversationSession
+from src.observability import fingerprint, log_event
+
+logger = logging.getLogger(__name__)
 
 ToolHandler = Callable[[str, dict[str, Any]], Awaitable[dict[str, Any]]]
 
@@ -222,6 +227,19 @@ class OpenAIConciergeEngine:
         user_message: str,
         tool_handler: ToolHandler,
     ) -> str:
+        started = time.perf_counter()
+        tool_calls = 0
+        input_tokens = 0
+        output_tokens = 0
+
+        def capture_usage(response: Any) -> None:
+            nonlocal input_tokens, output_tokens
+            usage = getattr(response, "usage", None)
+            if usage is None:
+                return
+            input_tokens += int(getattr(usage, "input_tokens", 0) or 0)
+            output_tokens += int(getattr(usage, "output_tokens", 0) or 0)
+
         history = [
             {"role": item.role, "content": item.content}
             for item in session.messages[-12:]
@@ -234,6 +252,7 @@ class OpenAIConciergeEngine:
             input=history,  # type: ignore[arg-type]
             tools=TOOLS,  # type: ignore[arg-type]
         )
+        capture_usage(response)
 
         for _ in range(8):
             calls: list[Any] = [
@@ -243,9 +262,21 @@ class OpenAIConciergeEngine:
             ]
             if not calls:
                 text = (response.output_text or "").strip()
+                log_event(
+                    logger,
+                    "concierge.llm.completed",
+                    conversation=session.conversation_id,
+                    phone=fingerprint(session.phone),
+                    model=self.model,
+                    durationMs=round((time.perf_counter() - started) * 1000, 1),
+                    toolCalls=tool_calls,
+                    inputTokens=input_tokens,
+                    outputTokens=output_tokens,
+                )
                 return text or "¿Qué deseas pedir?"
 
             outputs: list[dict[str, str]] = []
+            tool_calls += len(calls)
             for call in calls:
                 try:
                     arguments = json.loads(call.arguments or "{}")
@@ -266,5 +297,17 @@ class OpenAIConciergeEngine:
                 input=outputs,  # type: ignore[arg-type]
                 tools=TOOLS,  # type: ignore[arg-type]
             )
+            capture_usage(response)
 
+        log_event(
+            logger,
+            "concierge.llm.tool_limit",
+            conversation=session.conversation_id,
+            phone=fingerprint(session.phone),
+            model=self.model,
+            durationMs=round((time.perf_counter() - started) * 1000, 1),
+            toolCalls=tool_calls,
+            inputTokens=input_tokens,
+            outputTokens=output_tokens,
+        )
         return "No pude completar la operación. Intenta nuevamente."
