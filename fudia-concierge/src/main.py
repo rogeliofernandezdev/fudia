@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import logging
 from pathlib import Path
 
@@ -9,13 +11,15 @@ from openai import AsyncOpenAI
 from config.settings import Settings, settings
 from src.api.health import router as health_router
 from src.api.webhook import router as webhook_router
-from src.infrastructure.dedup import RedisMessageDeduplicator
+from src.infrastructure.concurrency import RedisConversationLock
 from src.infrastructure.fudia_client import FudiaClient
 from src.infrastructure.openai_adapter import (
     OpenAIIntentRouter,
     OpenAIScopeClassifier,
     OpenAIToolAgent,
 )
+from src.infrastructure.queue import RedisInboundQueue
+from src.infrastructure.rate_limit import RedisRateLimiter
 from src.infrastructure.state_store import RedisConversationStore
 from src.infrastructure.tool_schemas import (
     MENU_TOOL_SCHEMAS,
@@ -24,6 +28,7 @@ from src.infrastructure.tool_schemas import (
 )
 from src.infrastructure.whatsapp_adapter import MetaWhatsAppAdapter
 from src.services.concierge_service import ConciergeService
+from src.services.queue_worker import QueueWorker
 
 
 def create_app(
@@ -40,7 +45,7 @@ def create_app(
 
     app = FastAPI(
         title="Fudia Concierge",
-        version="0.2.0",
+        version="0.3.0",
     )
     prompts = (
         Path(__file__).resolve().parents[1]
@@ -57,8 +62,25 @@ def create_app(
         cfg.redis_url,
         cfg.session_ttl_seconds,
     )
-    deduplicator = RedisMessageDeduplicator(
-        cfg.redis_url
+    conversation_lock = RedisConversationLock(
+        cfg.redis_url,
+        cfg.conversation_lock_ttl_seconds,
+        cfg.conversation_lock_wait_seconds,
+    )
+    rate_limiter = RedisRateLimiter(
+        cfg.redis_url,
+        cfg.rate_limit_messages,
+        cfg.rate_limit_window_seconds,
+    )
+    inbound_queue = RedisInboundQueue(
+        cfg.redis_url,
+        stream=cfg.queue_stream,
+        group=cfg.queue_group,
+        consumer=cfg.queue_consumer,
+        max_attempts=cfg.queue_max_attempts,
+        visibility_timeout_ms=(
+            cfg.queue_visibility_timeout_ms
+        ),
     )
     whatsapp = MetaWhatsAppAdapter(
         cfg.whatsapp_token,
@@ -103,25 +125,56 @@ def create_app(
         ),
     }
 
-    app.state.settings = cfg
-    app.state.concierge_service = ConciergeService(
+    service = ConciergeService(
         store,
         fudia,
         scope,
         intent_router,
         agents,  # type: ignore[arg-type]
+        conversation_lock=conversation_lock,
+        rate_limiter=rate_limiter,
+        max_message_chars=cfg.max_message_chars,
     )
+    worker = QueueWorker(
+        inbound_queue,
+        service,
+        whatsapp,
+    )
+
+    app.state.settings = cfg
+    app.state.concierge_service = service
     app.state.whatsapp = whatsapp
-    app.state.deduplicator = deduplicator
+    app.state.inbound_queue = inbound_queue
+    app.state.fudia = fudia
+    app.state.conversation_store = store
+    app.state.queue_worker = worker
+    app.state.queue_worker_task = None
 
     app.include_router(health_router)
     app.include_router(webhook_router)
 
+    @app.on_event("startup")
+    async def startup() -> None:
+        await inbound_queue.start()
+        app.state.queue_worker_task = (
+            asyncio.create_task(worker.run())
+        )
+
     @app.on_event("shutdown")
     async def shutdown() -> None:
+        await worker.stop()
+        task = app.state.queue_worker_task
+        if task is not None:
+            task.cancel()
+            with contextlib.suppress(
+                asyncio.CancelledError
+            ):
+                await task
+        await inbound_queue.close()
+        await conversation_lock.close()
+        await rate_limiter.close()
         await fudia.close()
         await store.close()
-        await deduplicator.close()
         await whatsapp.close()
         await openai_client.close()
 
