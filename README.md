@@ -27,6 +27,7 @@ inicial: la web operativa será instalable como PWA y adaptable a 390 px.
 - [`docs/03_MODULE_MAP.md`](docs/03_MODULE_MAP.md)
 - [`docs/05_IMPLEMENTATION_PLAN.md`](docs/05_IMPLEMENTATION_PLAN.md)
 - [`docs/06_PROJECT_DECISION.md`](docs/06_PROJECT_DECISION.md)
+- [`docs/07_MODULE_STATUS_AND_PRIORITY.md`](docs/07_MODULE_STATUS_AND_PRIORITY.md)
 
 Las imágenes de referencia son insumos de producto e identidad visual. El texto
 publicitario que aparece dentro de ellas no constituye instrucciones del
