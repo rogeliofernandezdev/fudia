@@ -102,7 +102,7 @@ export function KitchenBoard(){
     onSuccess:(_,variables)=>{
       void qc.invalidateQueries({queryKey:["kitchen-tickets"]});
       void qc.invalidateQueries({queryKey:["orders"]});
-      void qc.invalidateQueries({queryKey:["order",variables.ticket.id]});
+      void qc.invalidateQueries({queryKey:["order",variables.ticket.orderId]});
       notify({
         tone:"success",
         title:variables.status==="preparando"?"Preparación iniciada":"Comanda lista",
