@@ -117,9 +117,33 @@ class ConversationSession(BaseModel):
     table: TableContext | None = None
     cart: list[CartLine] = Field(default_factory=list)
     awaiting_confirmation: bool = False
+    pending_order_request_id: str | None = None
     last_order_id: str | None = None
     handoff_pending: bool = False
     messages: list[ChatMessage] = Field(default_factory=list)
+
+
+class BillItem(BaseModel):
+    id: str
+    productId: str = ""
+    name: str
+    qty: Decimal
+    unitPrice: Decimal
+    note: str = ""
+    itemType: str = "product"
+
+
+class BillSummary(BaseModel):
+    orderId: str
+    code: str
+    tableName: str
+    status: str
+    currencySymbol: str
+    items: list[BillItem] = Field(default_factory=list)
+    total: Decimal
+    paidAmount: Decimal
+    remainingAmount: Decimal
+    paymentStatus: str
 
 
 class OrderResult(BaseModel):
