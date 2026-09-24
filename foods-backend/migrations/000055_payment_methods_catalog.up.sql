@@ -45,6 +45,26 @@ SELECT o.id,t.code,t.name,t.description,t.active,t.sales_enabled,t.expenses_enab
 FROM organizations o
 CROSS JOIN payment_method_templates t;
 
+CREATE OR REPLACE FUNCTION seed_payment_methods_for_organization()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $
+BEGIN
+  INSERT INTO payment_methods(
+    organization_id,code,name,description,active,sales_enabled,expenses_enabled,affects_cash,sort_order
+  )
+  SELECT NEW.id,code,name,description,active,sales_enabled,expenses_enabled,affects_cash,sort_order
+  FROM payment_method_templates
+  ON CONFLICT (organization_id,code) DO NOTHING;
+  RETURN NEW;
+END;
+$;
+
+CREATE TRIGGER organizations_seed_payment_methods
+AFTER INSERT ON organizations
+FOR EACH ROW
+EXECUTE FUNCTION seed_payment_methods_for_organization();
+
 ALTER TABLE payments DROP CONSTRAINT IF EXISTS payments_method_check;
 ALTER TABLE expenses DROP CONSTRAINT IF EXISTS expenses_payment_method_check;
 
