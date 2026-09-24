@@ -4,10 +4,13 @@ from typing import Any
 import pytest
 
 from src.domain.models import ChatMessage, ConversationSession
-from src.infrastructure.openai_adapter import OpenAIConciergeEngine
+from src.infrastructure.openai_adapter import (
+    OpenAIIntentRouter,
+    OpenAIScopeClassifier,
+)
 
 
-class FakeScopeResponse:
+class FakeResponse:
     def __init__(self, output_text: str) -> None:
         self.output_text = output_text
 
@@ -17,9 +20,9 @@ class FakeResponses:
         self.output_text = output_text
         self.calls: list[dict[str, Any]] = []
 
-    async def create(self, **kwargs: Any) -> FakeScopeResponse:
+    async def create(self, **kwargs: Any) -> FakeResponse:
         self.calls.append(kwargs)
-        return FakeScopeResponse(self.output_text)
+        return FakeResponse(self.output_text)
 
 
 class FakeOpenAI:
@@ -27,51 +30,114 @@ class FakeOpenAI:
         self.responses = FakeResponses(output_text)
 
 
-def build_engine(
+def prompt(
     tmp_path: Path,
-    output_text: str,
-) -> tuple[OpenAIConciergeEngine, FakeOpenAI]:
-    system_prompt = tmp_path / "system.md"
-    scope_prompt = tmp_path / "scope_router.md"
-    system_prompt.write_text("conversation and ordering behavior", encoding="utf-8")
-    scope_prompt.write_text("scope classification only", encoding="utf-8")
-    client = FakeOpenAI(output_text)
-    engine = OpenAIConciergeEngine(
-        api_key="test",
-        model="test-model",
-        prompt_path=system_prompt,
-        scope_prompt_path=scope_prompt,
-        client=client,  # type: ignore[arg-type]
-    )
-    return engine, client
+    name: str,
+    content: str,
+) -> Path:
+    path = tmp_path / name
+    path.write_text(content, encoding="utf-8")
+    return path
 
 
 @pytest.mark.asyncio
-async def test_scope_classifier_rejects_out_of_scope_label(tmp_path: Path) -> None:
-    engine, client = build_engine(tmp_path, "OUT_OF_SCOPE")
+async def test_scope_classifier_is_fail_closed(
+    tmp_path: Path,
+) -> None:
+    client = FakeOpenAI("OUT_OF_SCOPE")
+    classifier = OpenAIScopeClassifier(
+        client,  # type: ignore[arg-type]
+        "test-model",
+        prompt(
+            tmp_path,
+            "scope.md",
+            "scope classification only",
+        ),
+    )
     session = ConversationSession(
         phone="51999999999",
         qr_token="a" * 32,
         messages=[
-            ChatMessage(role="assistant", content="¿Qué deseas pedir?"),
+            ChatMessage(
+                role="assistant",
+                content="¿Qué deseas pedir?",
+            ),
         ],
     )
 
-    allowed = await engine.is_in_scope(session, "¿Quién fue Napoleón?")
+    assert (
+        await classifier.is_in_scope(
+            session,
+            "¿Quién fue Napoleón?",
+        )
+        is False
+    )
+    assert (
+        client.responses.calls[0]["instructions"]
+        == "scope classification only"
+    )
 
-    assert allowed is False
-    assert len(client.responses.calls) == 1
-    assert client.responses.calls[0]["model"] == "test-model"
-    assert client.responses.calls[0]["instructions"] == "scope classification only"
-    assert "Current customer message" in client.responses.calls[0]["input"]
+    ambiguous = FakeOpenAI(
+        "IN_SCOPE porque parece válido"
+    )
+    ambiguous_classifier = OpenAIScopeClassifier(
+        ambiguous,  # type: ignore[arg-type]
+        "test-model",
+        prompt(
+            tmp_path,
+            "scope2.md",
+            "scope",
+        ),
+    )
+    assert (
+        await ambiguous_classifier.is_in_scope(
+            session,
+            "hazme una tarea",
+        )
+        is False
+    )
 
 
 @pytest.mark.asyncio
-async def test_scope_classifier_only_accepts_exact_in_scope_label(tmp_path: Path) -> None:
-    session = ConversationSession(phone="51999999999", qr_token="a" * 32)
+async def test_intent_router_accepts_only_known_intents(
+    tmp_path: Path,
+) -> None:
+    session = ConversationSession(
+        phone="51999999999",
+        qr_token="a" * 32,
+    )
+    menu_client = FakeOpenAI("menu")
+    router = OpenAIIntentRouter(
+        menu_client,  # type: ignore[arg-type]
+        "test-model",
+        prompt(
+            tmp_path,
+            "intent.md",
+            "route",
+        ),
+    )
+    assert (
+        await router.route(
+            session,
+            "¿Qué bebidas tienen?",
+        )
+        == "menu"
+    )
 
-    engine, _ = build_engine(tmp_path, "IN_SCOPE")
-    assert await engine.is_in_scope(session, "Quiero una bebida") is True
-
-    ambiguous_engine, _ = build_engine(tmp_path, "IN_SCOPE porque parece válido")
-    assert await ambiguous_engine.is_in_scope(session, "Hazme una tarea") is False
+    invalid_client = FakeOpenAI("anything")
+    invalid_router = OpenAIIntentRouter(
+        invalid_client,  # type: ignore[arg-type]
+        "test-model",
+        prompt(
+            tmp_path,
+            "intent2.md",
+            "route",
+        ),
+    )
+    assert (
+        await invalid_router.route(
+            session,
+            "quiero dos",
+        )
+        == "order"
+    )
