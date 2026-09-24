@@ -24,6 +24,8 @@ from src.services.tools import ConciergeTools, explicit_confirmation
 class FakeFudia:
     def __init__(self, concierge_enabled: bool = True) -> None:
         self.order_calls: list[dict[str, Any]] = []
+        self.handoff_calls: list[dict[str, Any]] = []
+        self.handoff_status = "none"
         self.concierge_enabled = concierge_enabled
 
     async def resolve_table(self, token: str) -> TableContext:
@@ -90,6 +92,31 @@ class FakeFudia:
             ],
         )
 
+    async def request_handoff(
+        self,
+        token: str,
+        phone: str,
+        conversation_id: str,
+        reason: str,
+    ) -> dict[str, Any]:
+        self.handoff_status = "pending"
+        self.handoff_calls.append(
+            {
+                "token": token,
+                "phone": phone,
+                "conversation_id": conversation_id,
+                "reason": reason,
+            }
+        )
+        return {"id": "h1", "status": "pending", "tableName": "M1"}
+
+    async def get_handoff_status(
+        self,
+        token: str,
+        conversation_id: str,
+    ) -> dict[str, Any]:
+        return {"status": self.handoff_status}
+
     async def create_order(
         self,
         token: str,
@@ -116,6 +143,15 @@ class FakeFudia:
 class QuietEngine:
     async def reply(self, session, user_message, tool_handler) -> str:
         return "¿Qué deseas agregar?"
+
+class CountingEngine:
+    def __init__(self) -> None:
+        self.calls = 0
+
+    async def reply(self, session, user_message, tool_handler) -> str:
+        self.calls += 1
+        return "Continuemos con tu pedido."
+
 
 
 def test_extract_qr_token() -> None:
@@ -188,6 +224,50 @@ async def test_cart_requires_explicit_confirmation_before_order() -> None:
     assert confirmed["order"]["code"] == "PED-001"
     assert len(fudia.order_calls) == 1
     assert session.cart == []
+
+
+@pytest.mark.asyncio
+async def test_request_human_persists_handoff_and_marks_session() -> None:
+    fudia = FakeFudia()
+    session = ConversationSession(phone="51999999999", qr_token="a" * 32)
+    tools = ConciergeTools(fudia, session, "quiero hablar con un mozo")
+
+    result = await tools.execute(
+        "request_human",
+        {"reason": "El cliente quiere hablar con un mozo."},
+    )
+
+    assert result["ok"] is True
+    assert session.handoff_pending is True
+    assert len(fudia.handoff_calls) == 1
+    assert fudia.handoff_calls[0]["conversation_id"] == session.conversation_id
+
+
+@pytest.mark.asyncio
+async def test_pending_handoff_pauses_llm_until_staff_resolves_it() -> None:
+    store = MemoryConversationStore()
+    fudia = FakeFudia()
+    engine = CountingEngine()
+    service = ConciergeService(store, fudia, engine)
+
+    await service.handle_message("51999999999", "FUDIA:" + "a" * 32)
+    session = await store.get("51999999999")
+    assert session is not None
+    session.handoff_pending = True
+    await store.save(session)
+    fudia.handoff_status = "pending"
+
+    waiting = await service.handle_message("51999999999", "quiero otra bebida")
+    assert "personal del local ya fue avisado" in waiting
+    assert engine.calls == 0
+
+    fudia.handoff_status = "resolved"
+    resumed = await service.handle_message("51999999999", "quiero otra bebida")
+    assert resumed == "Continuemos con tu pedido."
+    assert engine.calls == 1
+    updated = await store.get("51999999999")
+    assert updated is not None
+    assert updated.handoff_pending is False
 
 
 @pytest.mark.asyncio
