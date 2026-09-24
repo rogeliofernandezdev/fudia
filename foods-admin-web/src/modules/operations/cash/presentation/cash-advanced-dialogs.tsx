@@ -1,6 +1,6 @@
 "use client";
 import {useMemo,useState} from "react";
-import {useForm} from "react-hook-form";
+import {useForm,useWatch} from "react-hook-form";
 import {Button,Icon,Input,Select,Textarea} from "@/design-system";
 import {cashOperationResolver} from "../domain/cash-schema";
 import type {CashOperationDraft,CashRegister,CashShift,CashShiftUser,CashUserOption} from "../domain/types";
@@ -32,13 +32,13 @@ export function CashTeamDialog({shift,users,options,loading,busyUserId,close,ass
 
 export function CashOperationDialog({shift,registers,busy,close,save}:{shift:CashShift;registers:CashRegister[];busy:boolean;close:()=>void;save:(draft:CashOperationDraft)=>void}){
   const targets=registers.filter(item=>item.openShift&&item.openShift.id!==shift.id);
-  const{register,handleSubmit,watch,formState:{errors}}=useForm<CashOperationDraft>({
+  const{control,register,handleSubmit,formState:{errors}}=useForm<CashOperationDraft>({
     defaultValues:{operationType:"cash_pull",targetShiftId:"",amount:"",reason:"",note:""},
     resolver:cashOperationResolver,
     mode:"onSubmit",
     reValidateMode:"onChange",
   });
-  const type=watch("operationType");
+  const type=useWatch({control,name:"operationType"});
   const label=type==="deposit"?"Registrar depósito":type==="transfer"?"Transferir efectivo":"Registrar retiro";
   return <div className="modal-backdrop modal-overlay-in"><section className="crud-modal cash-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-operation-title" aria-busy={busy}>
     <div className="modal-accent"/>
