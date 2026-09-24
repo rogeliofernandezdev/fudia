@@ -26,7 +26,45 @@ def test_extracts_only_text_messages() -> None:
             }
         ]
     }
-    assert _incoming_text_messages(payload) == [("m1", "51999999999", "hola")]
+    assert _incoming_text_messages(payload) == [
+        ("m1", "51999999999", "hola", "", "")
+    ]
+
+
+def test_extracts_inbound_whatsapp_number_context() -> None:
+    payload = {
+        "entry": [
+            {
+                "changes": [
+                    {
+                        "value": {
+                            "metadata": {
+                                "display_phone_number": "+51 987 654 321",
+                                "phone_number_id": "meta-phone-123",
+                            },
+                            "messages": [
+                                {
+                                    "id": "m1",
+                                    "from": "51999999999",
+                                    "type": "text",
+                                    "text": {"body": "hola"},
+                                }
+                            ],
+                        }
+                    }
+                ]
+            }
+        ]
+    }
+    assert _incoming_text_messages(payload) == [
+        (
+            "m1",
+            "51999999999",
+            "hola",
+            "meta-phone-123",
+            "+51 987 654 321",
+        )
+    ]
 
 
 def test_validates_meta_signature() -> None:
