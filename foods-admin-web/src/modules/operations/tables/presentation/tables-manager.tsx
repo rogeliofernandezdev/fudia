@@ -1,6 +1,6 @@
 "use client";
 import "../../styles/table-qr.css";
-import Image from "next/image";
+import NextImage from "next/image";
 import {useState,useEffect,useMemo,useRef} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import QRCode from "qrcode";
@@ -152,7 +152,7 @@ function QrDialog({table,restaurantName,close}:{table:Table;restaurantName:strin
  <div className="qr-dialog-body">
    <div className="qr-hero">
      <div className="qr-hero-glow"/>
-     <div className="qr-brand"><Image src="/assets/images/logo.png" alt="fudIA" width={24} height={24}/><b>{restaurantName}</b></div>
+     <div className="qr-brand"><NextImage src="/assets/images/logo.png" alt="fudIA" width={24} height={24}/><b>{restaurantName}</b></div>
      <div className="qr-canvas-wrap"><canvas ref={canvasRef}/></div>
      <div className="qr-hero-label"><Icon name="qr" size={14}/><span>Escanea para acceder</span></div>
    </div>
@@ -212,7 +212,7 @@ function PrintQrDialog({tables,restaurantName,close}:{tables:Table[];restaurantN
    {printable.length===0?<div className="qr-print-empty"><Icon name="qr" size={32}/><b>No hay mesas con QR activo</b><p>Crea mesas o activa sus QRs para imprimir.</p></div>:
    <div className="qr-print-grid">{printable.map(t=><div key={t.id} className="qr-print-card">
      <div className="qr-print-card-accent"/>
-     <div className="qr-print-card-brand"><span className="qr-print-card-logo"><Image src="/assets/images/logo.png" alt="fudIA" width={28} height={28}/></span><b>{restaurantName}</b></div>
+     <div className="qr-print-card-brand"><span className="qr-print-card-logo"><NextImage src="/assets/images/logo.png" alt="fudIA" width={28} height={28}/></span><b>{restaurantName}</b></div>
      <canvas ref={el=>{canvasRefs.current[t.id]=el}}/>
      <div className="qr-print-card-footer"><Icon name="qr" size={12}/><span>Escanea para ver la carta y hacer tu pedido</span></div>
    </div>)}</div>}
