@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import socket
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Any, Protocol
 
 import redis.asyncio as redis
 from redis.exceptions import ResponseError
@@ -128,7 +128,7 @@ class RedisInboundQueue:
         self,
         count: int,
     ) -> list[QueueDelivery]:
-        claimed = await self.client.xautoclaim(
+        claimed: Any = await self.client.xautoclaim(
             self.stream,
             self.group,
             self.consumer,
@@ -136,13 +136,35 @@ class RedisInboundQueue:
             start_id="0-0",
             count=count,
         )
-        if not claimed or len(claimed) < 2:
+        if (
+            not isinstance(claimed, (list, tuple))
+            or len(claimed) < 2
+        ):
             return []
-        entries = claimed[1]
-        return [
-            self._delivery(entry_id, values)
-            for entry_id, values in entries
-        ]
+
+        raw_entries: Any = claimed[1]
+        if not isinstance(raw_entries, list):
+            return []
+
+        deliveries: list[QueueDelivery] = []
+        for raw_entry in raw_entries:
+            if (
+                not isinstance(raw_entry, (list, tuple))
+                or len(raw_entry) != 2
+            ):
+                continue
+            entry_id = str(raw_entry[0])
+            raw_values: Any = raw_entry[1]
+            if not isinstance(raw_values, dict):
+                continue
+            values = {
+                str(key): str(value)
+                for key, value in raw_values.items()
+            }
+            deliveries.append(
+                self._delivery(entry_id, values)
+            )
+        return deliveries
 
     async def read(
         self,
