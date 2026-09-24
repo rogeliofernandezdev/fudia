@@ -54,8 +54,27 @@ type conciergeOrderInput struct {
 	CustomerName   string           `json:"customerName"`
 	CustomerPhone  string           `json:"customerPhone"`
 	ConversationID string           `json:"conversationId"`
+	RequestID      string           `json:"requestId"`
 	Notes          string           `json:"notes"`
 	Items          []orderItemInput `json:"items"`
+}
+
+type conciergeBillRequestInput struct {
+	ConversationID string `json:"conversationId"`
+	CustomerPhone  string `json:"customerPhone"`
+}
+
+type conciergeBill struct {
+	OrderID         string      `json:"orderId"`
+	Code            string      `json:"code"`
+	TableName       string      `json:"tableName"`
+	Status          string      `json:"status"`
+	CurrencySymbol  string      `json:"currencySymbol"`
+	Items           []orderItem `json:"items"`
+	Total           string      `json:"total"`
+	PaidAmount      string      `json:"paidAmount"`
+	RemainingAmount string      `json:"remainingAmount"`
+	PaymentStatus   string      `json:"paymentStatus"`
 }
 
 func (a *API) resolveConciergeQR(ctx context.Context, token string) (conciergeQRContext, error) {
@@ -130,7 +149,7 @@ func (a *API) listConciergeMenu(w http.ResponseWriter, r *http.Request) {
 		LEFT JOIN stock_balances sb
 		  ON sb.organization_id=p.organization_id AND sb.location_id=$2 AND sb.inventory_item_id=ii.id
 		WHERE p.organization_id=$1 AND p.active
-		  AND ($4='' OR p.name ILIKE $5 OR p.description ILIKE $5)
+		  AND ($4='' OR p.name ILIKE $5 OR p.description ILIKE $5 OR COALESCE(c.name,'') ILIKE $5)
 		  AND ($6='' OR p.id::text=$6)
 		ORDER BY c.sort_order NULLS LAST,c.name NULLS LAST,p.name
 		LIMIT 30
@@ -447,9 +466,13 @@ func (a *API) createConciergeOrder(w http.ResponseWriter, r *http.Request) {
 	in.CustomerName = strings.TrimSpace(in.CustomerName)
 	in.CustomerPhone = strings.TrimSpace(in.CustomerPhone)
 	in.ConversationID = strings.TrimSpace(in.ConversationID)
+	in.RequestID = strings.TrimSpace(in.RequestID)
+	if in.RequestID == "" {
+		in.RequestID = in.ConversationID
+	}
 	in.Notes = strings.TrimSpace(in.Notes)
 	if len(in.Items) == 0 || len(in.Items) > 50 || len(in.CustomerPhone) > 32 ||
-		in.ConversationID == "" || len(in.ConversationID) > 160 || len(in.Notes) > 240 {
+		in.ConversationID == "" || len(in.ConversationID) > 160 || in.RequestID == "" || len(in.RequestID) > 160 || len(in.Notes) > 240 {
 		fail(w, 400, "invalid_order", "Revisa los productos y datos del pedido.")
 		return
 	}
@@ -482,8 +505,8 @@ func (a *API) createConciergeOrder(w http.ResponseWriter, r *http.Request) {
 	err = tx.QueryRow(r.Context(), `
 		SELECT order_id::text
 		FROM concierge_order_requests
-		WHERE organization_id=$1 AND location_id=$2 AND table_id=$3 AND conversation_id=$4
-	`, qr.Scope.OrganizationID, qr.Scope.LocationID, qr.TableID, in.ConversationID).Scan(&existingOrderID)
+		WHERE organization_id=$1 AND location_id=$2 AND table_id=$3 AND request_id=$4
+	`, qr.Scope.OrganizationID, qr.Scope.LocationID, qr.TableID, in.RequestID).Scan(&existingOrderID)
 	if err == nil {
 		var existing order
 		existing, err = scanOrder(tx.QueryRow(r.Context(), `
@@ -550,8 +573,8 @@ func (a *API) createConciergeOrder(w http.ResponseWriter, r *http.Request) {
 			fail(w, 409, "table_occupied", "La mesa tiene una comanda abierta gestionada por otro canal.")
 			return
 		}
-		if openStatus!="confirmado" {
-			fail(w, 409, "concierge_order_not_editable", "La comanda ya está en preparación o dejó de ser editable.")
+		if openStatus!="confirmado" && openStatus!="preparando" && openStatus!="listo" {
+			fail(w, 409, "concierge_order_not_editable", "La comanda ya no admite nuevas rondas desde Concierge.")
 			return
 		}
 		paid,paidErr:=loadOrderNetPaid(r.Context(),tx,openOrderID,qr.Scope.OrganizationID,qr.Scope.LocationID)
@@ -564,12 +587,21 @@ func (a *API) createConciergeOrder(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		if err=ensureKitchenRoundForOrder(r.Context(),tx,qr.Scope,openOrderID,openStatus);err!=nil {
+			fail(w,503,"order_unavailable","No pudimos preparar la trazabilidad de las rondas de cocina.")
+			return
+		}
+		roundID,_,roundErr:=createKitchenRound(r.Context(),tx,qr.Scope,openOrderID,"confirmado","concierge")
+		if roundErr!=nil {
+			fail(w,503,"order_unavailable","No pudimos abrir la nueva ronda de cocina.")
+			return
+		}
 		prepared,addedSubtotal,preparationErr:=a.prepareOrderItems(r,tx,qr.Scope,"",in.Items)
 		if preparationErr!=nil {
 			fail(w,preparationErr.Status,preparationErr.Code,preparationErr.Message)
 			return
 		}
-		if err=insertPreparedOrderItems(r.Context(),tx,qr.Scope.OrganizationID,openOrderID,prepared);err!=nil {
+		if err=insertPreparedOrderItemsForRound(r.Context(),tx,qr.Scope.OrganizationID,openOrderID,roundID,prepared);err!=nil {
 			fail(w,503,"order_unavailable","No pudimos agregar los productos a la comanda.")
 			return
 		}
@@ -598,12 +630,16 @@ func (a *API) createConciergeOrder(w http.ResponseWriter, r *http.Request) {
 			fail(w,503,"order_unavailable","No pudimos actualizar el total de la comanda.")
 			return
 		}
+		if err=syncOrderKitchenStatus(r.Context(),tx,qr.Scope,openOrderID);err!=nil {
+			fail(w,503,"order_unavailable","No pudimos actualizar el estado general de la comanda.")
+			return
+		}
 		if _,err=tx.Exec(r.Context(),`
 			INSERT INTO concierge_order_requests(
-			  organization_id,location_id,table_id,conversation_id,order_id
+			  organization_id,location_id,table_id,conversation_id,request_id,order_id
 			)
-			VALUES($1,$2,$3,$4,$5)
-		`,qr.Scope.OrganizationID,qr.Scope.LocationID,qr.TableID,in.ConversationID,openOrderID);err!=nil {
+			VALUES($1,$2,$3,$4,$5,$6)
+		`,qr.Scope.OrganizationID,qr.Scope.LocationID,qr.TableID,in.ConversationID,in.RequestID,openOrderID);err!=nil {
 			fail(w,503,"order_unavailable","No pudimos registrar la idempotencia del pedido.")
 			return
 		}
@@ -615,10 +651,11 @@ func (a *API) createConciergeOrder(w http.ResponseWriter, r *http.Request) {
 			  jsonb_build_object(
 			    'source','fudia_concierge',
 			    'conversationId',$4::text,
-			    'tableId',$5::text,
-			    'existingChannel',$6::text
+			    'requestId',$5::text,
+			    'tableId',$6::text,
+			    'existingChannel',$7::text
 			  ))
-		`,qr.Scope.OrganizationID,qr.Scope.LocationID,openOrderID,in.ConversationID,qr.TableID,openChannel);err!=nil {
+		`,qr.Scope.OrganizationID,qr.Scope.LocationID,openOrderID,in.ConversationID,in.RequestID,qr.TableID,openChannel);err!=nil {
 			fail(w,503,"order_unavailable","No pudimos registrar la trazabilidad del pedido.")
 			return
 		}
@@ -677,7 +714,12 @@ func (a *API) createConciergeOrder(w http.ResponseWriter, r *http.Request) {
 		fail(w, 503, "order_unavailable", "No pudimos guardar el pedido.")
 		return
 	}
-	if err = insertPreparedOrderItems(r.Context(), tx, qr.Scope.OrganizationID, out.ID, prepared); err != nil {
+	roundID, _, roundErr := createKitchenRound(r.Context(), tx, qr.Scope, out.ID, "confirmado", "concierge")
+	if roundErr != nil {
+		fail(w, 503, "order_unavailable", "No pudimos abrir la primera ronda de cocina.")
+		return
+	}
+	if err = insertPreparedOrderItemsForRound(r.Context(), tx, qr.Scope.OrganizationID, out.ID, roundID, prepared); err != nil {
 		fail(w, 503, "order_unavailable", "No pudimos guardar los productos.")
 		return
 	}
@@ -698,10 +740,10 @@ func (a *API) createConciergeOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	if _, err = tx.Exec(r.Context(), `
 		INSERT INTO concierge_order_requests(
-		  organization_id,location_id,table_id,conversation_id,order_id
+		  organization_id,location_id,table_id,conversation_id,request_id,order_id
 		)
-		VALUES($1,$2,$3,$4,$5)
-	`, qr.Scope.OrganizationID, qr.Scope.LocationID, qr.TableID, in.ConversationID, out.ID); err != nil {
+		VALUES($1,$2,$3,$4,$5,$6)
+	`, qr.Scope.OrganizationID, qr.Scope.LocationID, qr.TableID, in.ConversationID, in.RequestID, out.ID); err != nil {
 		fail(w, 503, "order_unavailable", "No pudimos registrar la idempotencia del pedido.")
 		return
 	}
@@ -710,8 +752,8 @@ func (a *API) createConciergeOrder(w http.ResponseWriter, r *http.Request) {
 		  organization_id,location_id,user_id,action,entity_type,entity_id,metadata
 		)
 		VALUES($1,$2,NULL,'concierge.order.created','order',$3,
-		  jsonb_build_object('source','fudia_concierge','conversationId',$4::text,'tableId',$5::text))
-	`, qr.Scope.OrganizationID, qr.Scope.LocationID, out.ID, in.ConversationID, qr.TableID); err != nil {
+		  jsonb_build_object('source','fudia_concierge','conversationId',$4::text,'requestId',$5::text,'tableId',$6::text))
+	`, qr.Scope.OrganizationID, qr.Scope.LocationID, out.ID, in.ConversationID, in.RequestID, qr.TableID); err != nil {
 		fail(w, 503, "order_unavailable", "No pudimos registrar la trazabilidad del pedido.")
 		return
 	}
@@ -728,4 +770,84 @@ func (a *API) createConciergeOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = applyOrderPaymentSummary(r.Context(), a.db, &out, qr.Scope.OrganizationID, qr.Scope.LocationID)
 	writeJSON(w, 201, out)
+}
+
+
+func (a *API) requestConciergeBill(w http.ResponseWriter, r *http.Request) {
+	qr, err := a.resolveConciergeQR(r.Context(), r.PathValue("token"))
+	if errors.Is(err, pgx.ErrNoRows) {
+		fail(w, 404, "table_not_found", "La mesa no existe o el QR no está activo.")
+		return
+	}
+	if err != nil {
+		fail(w, 503, "concierge_unavailable", "No pudimos resolver el QR.")
+		return
+	}
+
+	var in conciergeBillRequestInput
+	if json.NewDecoder(r.Body).Decode(&in) != nil {
+		fail(w, 400, "invalid_bill_request", "No pudimos procesar la solicitud de cuenta.")
+		return
+	}
+	in.ConversationID = strings.TrimSpace(in.ConversationID)
+	in.CustomerPhone = strings.TrimSpace(in.CustomerPhone)
+	if in.ConversationID == "" || len(in.ConversationID) > 160 || len(in.CustomerPhone) > 32 {
+		fail(w, 400, "invalid_bill_request", "Revisa los datos de la solicitud de cuenta.")
+		return
+	}
+
+	out, err := scanOrder(a.db.QueryRow(r.Context(), `
+		SELECT `+orderColumns+`
+		FROM orders
+		WHERE organization_id=$1 AND location_id=$2 AND table_id=$3
+		  AND status NOT IN ('entregado','cancelado')
+		ORDER BY created_at DESC,id
+		LIMIT 1
+	`, qr.Scope.OrganizationID, qr.Scope.LocationID, qr.TableID))
+	if errors.Is(err, pgx.ErrNoRows) {
+		fail(w, 404, "open_order_not_found", "La mesa no tiene una cuenta abierta.")
+		return
+	}
+	if err != nil {
+		fail(w, 503, "bill_unavailable", "No pudimos cargar la cuenta de la mesa.")
+		return
+	}
+	out.Items, err = loadOrderItems(r.Context(), a.db, out.ID, qr.Scope.OrganizationID)
+	if err != nil {
+		fail(w, 503, "bill_unavailable", "No pudimos cargar el detalle de la cuenta.")
+		return
+	}
+	if err = applyOrderPaymentSummary(r.Context(), a.db, &out, qr.Scope.OrganizationID, qr.Scope.LocationID); err != nil {
+		fail(w, 503, "bill_unavailable", "No pudimos calcular el saldo pendiente.")
+		return
+	}
+
+	if _, err = a.db.Exec(r.Context(), `
+		INSERT INTO audit_log(
+		  organization_id,location_id,user_id,action,entity_type,entity_id,metadata
+		)
+		VALUES($1,$2,NULL,'concierge.bill.requested','order',$3,
+		  jsonb_build_object(
+		    'source','fudia_concierge',
+		    'conversationId',$4::text,
+		    'tableId',$5::text,
+		    'customerPhonePresent',($6::text<>'')
+		  ))
+	`, qr.Scope.OrganizationID, qr.Scope.LocationID, out.ID, in.ConversationID, qr.TableID, in.CustomerPhone); err != nil {
+		fail(w, 503, "bill_unavailable", "No pudimos registrar la solicitud de cuenta.")
+		return
+	}
+
+	writeJSON(w, 200, conciergeBill{
+		OrderID: out.ID,
+		Code: out.Code,
+		TableName: qr.TableName,
+		Status: out.Status,
+		CurrencySymbol: qr.CurrencySymbol,
+		Items: out.Items,
+		Total: out.Total,
+		PaidAmount: out.PaidAmount,
+		RemainingAmount: out.RemainingAmount,
+		PaymentStatus: out.PaymentStatus,
+	})
 }
