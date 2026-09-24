@@ -2,8 +2,8 @@ import json
 from pathlib import Path
 
 import pytest
-from pydantic import ValidationError
 from prometheus_client import generate_latest
+from pydantic import ValidationError
 
 from config.settings import Settings
 from src.domain.models import ConversationSession
