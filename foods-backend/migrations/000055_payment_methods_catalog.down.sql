@@ -13,3 +13,4 @@ ALTER TABLE expenses
   CHECK (payment_method IN ('cash','bank_transfer','card','digital_wallet','other'));
 
 DROP TABLE IF EXISTS payment_methods;
+DROP TABLE IF EXISTS payment_method_templates;

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 type paymentMethodView struct {
@@ -21,6 +22,22 @@ type paymentMethodView struct {
 
 type paymentMethodQueryRower interface {
 	QueryRow(context.Context, string, ...any) pgx.Row
+}
+
+type paymentMethodExecer interface {
+	Exec(context.Context, string, ...any) (pgconn.CommandTag, error)
+}
+
+func seedOrganizationPaymentMethods(ctx context.Context, q paymentMethodExecer, organizationID string) error {
+	_, err := q.Exec(ctx, `
+		INSERT INTO payment_methods(
+			organization_id,code,name,description,active,sales_enabled,expenses_enabled,affects_cash,sort_order
+		)
+		SELECT $1,code,name,description,active,sales_enabled,expenses_enabled,affects_cash,sort_order
+		FROM payment_method_templates
+		ON CONFLICT (organization_id,code) DO NOTHING
+	`, organizationID)
+	return err
 }
 
 func paymentMethodUsageColumn(usage string) (string, bool) {

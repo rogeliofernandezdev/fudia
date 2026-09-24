@@ -90,6 +90,9 @@ func (a *API) onboardTenant(w http.ResponseWriter, r *http.Request) {
 		roleID, err = seedOrganizationRoles(r.Context(), tx, organizationID)
 	}
 	if err == nil {
+		err = seedOrganizationPaymentMethods(r.Context(), tx, organizationID)
+	}
+	if err == nil {
 		err = createOrganizationSubscription(r.Context(), tx, organizationID, userID, in.PlanID, in.BillingCycle, in.TermsAccepted)
 	}
 	if err == nil {
