@@ -1,6 +1,7 @@
 "use client";
 import "../../styles/table-qr.css";
-import {useState,useEffect,useRef} from "react";
+import Image from "next/image";
+import {useState,useEffect,useMemo,useRef} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import QRCode from "qrcode";
 import {Icon} from "@/design-system/icons";
@@ -16,40 +17,6 @@ const emptyZone:ZoneDraft={name:"",sortOrder:0,active:true};
 
 
 function TableSkeleton(){return <div className="table-skeleton"><div className="sk-head"><i/><i/><i/><i/><i/><i/></div>{Array.from({length:5}).map((_,i)=><div className="sk-row" key={i}><div className="sk-name"><span/><b/></div><i/><i/><i/><i/><i/></div>)}</div>}
-
-async function printAllQrs(tables:Table[],restaurantName:string){
- const origin=typeof window!=="undefined"?window.location.origin:"";
- const printable=tables.filter(t=>t.qrEnabled&&t.qrToken&&t.active);
- if(!printable.length){alert("No hay mesas con QR activo para imprimir.");return}
- // Generar los QRs en canvases temporales
- const cards=await Promise.all(printable.map(t=>new Promise<string>((resolve)=>{
-   const canvas=document.createElement("canvas");
-   QRCode.toCanvas(canvas,`${origin}/mesa/${t.qrToken}`,{width:200,margin:1,color:{dark:"#0f1c2e",light:"#ffffff"}},(err)=>{if(err){resolve("");return}
-     resolve(`<div class="qr-print-card"><div class="qr-print-card-brand"><img src="${origin}/assets/images/logo.png" alt="fudIA" width="32" height="32"/><b>${restaurantName}</b></div><img src="${canvas.toDataURL("image/png")}" class="qr-print-card-img"/><p class="qr-print-card-hint">Escanea para ver la carta y hacer tu pedido</p></div>`);
-   });
- })));
- const html=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>QRs de Mesas - ${restaurantName}</title>
- <style>
-   *{box-sizing:border-box;margin:0;padding:0}
-   body{font-family:Manrope,Arial,sans-serif;background:#fff;padding:0}
-   .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding:20mm}
-   @media print{.no-print{display:none}body{padding:0}.grid{gap:10px;padding:10mm}}
-   .qr-print-card{border:2px solid #e4e7ec;border-radius:18px;padding:20px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:14px;page-break-inside:avoid}
-   .qr-print-card-brand{display:flex;align-items:center;gap:8px}
-   .qr-print-card-brand img{border-radius:8px}
-   .qr-print-card-brand b{font-size:16px;font-weight:800;color:#3946b8;letter-spacing:-.03em}
-   .qr-print-card-img{width:200px;height:200px;border-radius:8px}
-   .qr-print-card-hint{font-size:9px;color:#98a2b3;line-height:1.4}
-   .actions{position:fixed;top:16px;right:16px;display:flex;gap:10px;z-index:100}
-   .actions button{padding:10px 18px;border:1px solid #e4e7ec;border-radius:10px;background:#fff;font-size:12px;font-weight:700;cursor:pointer}
-   .actions button.primary{background:#63dcae;color:#fff;border-color:transparent}
- </style></head><body>
- <div class="no-print actions"><button class="primary" onclick="window.print()">Imprimir</button><button onclick="window.close()">Cerrar</button></div>
- <div class="grid">${cards.join("")}</div>
- </body></html>`;
- const w=window.open("","_blank","width=900,height=700");
- if(w){w.document.write(html);w.document.close();}
-}
 
 export function TablesManager(){
  const client=useQueryClient();const{notify}=useFeedback();
@@ -171,7 +138,7 @@ function QrDialog({table,restaurantName,close}:{table:Table;restaurantName:strin
      if(!blob)return;
      const file=new File([blob],`qr-mesa-${table.name.replace(/\s+/g,"-").toLowerCase()}.png`,{type:"image/png"});
      if(navigator.canShare&&navigator.canShare({files:[file]})){
-       try{await navigator.share({title:`QR Mesa ${table.name}`,text:`Escanea para acceder a la mesa ${table.name}`,files:[file]})}catch(_){}
+       try{await navigator.share({title:`QR Mesa ${table.name}`,text:`Escanea para acceder a la mesa ${table.name}`,files:[file]})}catch{}
      }else if(navigator.share){
        navigator.share({title:`QR Mesa ${table.name}`,text:`Escanea para acceder a la mesa ${table.name}`,url:qrUrl}).catch(()=>{});
      }else{
@@ -185,7 +152,7 @@ function QrDialog({table,restaurantName,close}:{table:Table;restaurantName:strin
  <div className="qr-dialog-body">
    <div className="qr-hero">
      <div className="qr-hero-glow"/>
-     <div className="qr-brand"><img src="/assets/images/logo.png" alt="fudIA" width={24} height={24}/><b>{restaurantName}</b></div>
+     <div className="qr-brand"><Image src="/assets/images/logo.png" alt="fudIA" width={24} height={24}/><b>{restaurantName}</b></div>
      <div className="qr-canvas-wrap"><canvas ref={canvasRef}/></div>
      <div className="qr-hero-label"><Icon name="qr" size={14}/><span>Escanea para acceder</span></div>
    </div>
@@ -212,7 +179,7 @@ function ZoneDialog({draft,busy,close,save}:{draft:ZoneDraft;busy:boolean;close:
 function PrintQrDialog({tables,restaurantName,close}:{tables:Table[];restaurantName:string;close:()=>void}){
  const canvasRefs=useRef<Record<string,HTMLCanvasElement|null>>({});
  const origin=typeof window!=="undefined"?window.location.origin:"";
- const printable=tables.filter(t=>t.qrEnabled&&t.qrToken&&t.active);
+ const printable=useMemo(()=>tables.filter(t=>t.qrEnabled&&t.qrToken&&t.active),[tables]);
 
  useEffect(()=>{
    printable.forEach(t=>{
@@ -231,7 +198,7 @@ function PrintQrDialog({tables,restaurantName,close}:{tables:Table[];restaurantN
        });
      }
    });
- },[printable.length]);
+ },[origin,printable]);
 
  function doPrint(){
    document.body.classList.add("printing-qrs");
@@ -245,7 +212,7 @@ function PrintQrDialog({tables,restaurantName,close}:{tables:Table[];restaurantN
    {printable.length===0?<div className="qr-print-empty"><Icon name="qr" size={32}/><b>No hay mesas con QR activo</b><p>Crea mesas o activa sus QRs para imprimir.</p></div>:
    <div className="qr-print-grid">{printable.map(t=><div key={t.id} className="qr-print-card">
      <div className="qr-print-card-accent"/>
-     <div className="qr-print-card-brand"><span className="qr-print-card-logo"><img src="/assets/images/logo.png" alt="fudIA" width={28} height={28}/></span><b>{restaurantName}</b></div>
+     <div className="qr-print-card-brand"><span className="qr-print-card-logo"><Image src="/assets/images/logo.png" alt="fudIA" width={28} height={28}/></span><b>{restaurantName}</b></div>
      <canvas ref={el=>{canvasRefs.current[t.id]=el}}/>
      <div className="qr-print-card-footer"><Icon name="qr" size={12}/><span>Escanea para ver la carta y hacer tu pedido</span></div>
    </div>)}</div>}
