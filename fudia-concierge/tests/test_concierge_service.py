@@ -192,19 +192,14 @@ class CountingEngine:
         return "Continuemos con tu pedido."
 
 
-class ScopedEngine:
-    def __init__(self, allowed: bool) -> None:
-        self.allowed = allowed
-        self.scope_calls = 0
-        self.reply_calls = 0
+class FixedRouter:
+    def __init__(self, route: str) -> None:
+        self.value = route
+        self.calls = 0
 
-    async def is_in_scope(self, session, user_message) -> bool:
-        self.scope_calls += 1
-        return self.allowed
-
-    async def reply(self, session, user_message, tool_handler) -> str:
-        self.reply_calls += 1
-        return "Continuemos con tu pedido."
+    async def route(self, session, user_message) -> str:
+        self.calls += 1
+        return self.value
 
 
 
@@ -287,10 +282,20 @@ async def test_math_question_is_blocked_before_the_main_model() -> None:
 
 
 @pytest.mark.asyncio
-async def test_general_question_is_rejected_by_scope_gate() -> None:
+async def test_general_question_is_rejected_by_unified_router() -> None:
     store = MemoryConversationStore()
-    engine = ScopedEngine(allowed=False)
-    service = ConciergeService(store, FakeFudia(), engine)
+    router = FixedRouter("out_of_scope")
+    agent = CountingEngine()
+    service = ConciergeService(
+        store,
+        FakeFudia(),
+        router,  # type: ignore[arg-type]
+        {
+            "menu": agent,
+            "order": agent,
+            "service": agent,
+        },
+    )
 
     await service.handle_message("51999999999", "FUDIA:" + "a" * 32)
     reply = await service.handle_message(
@@ -299,15 +304,25 @@ async def test_general_question_is_rejected_by_scope_gate() -> None:
     )
 
     assert "únicamente con el pedido" in reply
-    assert engine.scope_calls == 1
-    assert engine.reply_calls == 0
+    assert router.calls == 1
+    assert agent.calls == 0
 
 
 @pytest.mark.asyncio
-async def test_order_question_passes_scope_gate() -> None:
+async def test_valid_route_invokes_one_specialist() -> None:
     store = MemoryConversationStore()
-    engine = ScopedEngine(allowed=True)
-    service = ConciergeService(store, FakeFudia(), engine)
+    router = FixedRouter("menu")
+    agent = CountingEngine()
+    service = ConciergeService(
+        store,
+        FakeFudia(),
+        router,  # type: ignore[arg-type]
+        {
+            "menu": agent,
+            "order": agent,
+            "service": agent,
+        },
+    )
 
     await service.handle_message("51999999999", "FUDIA:" + "a" * 32)
     reply = await service.handle_message(
@@ -316,8 +331,8 @@ async def test_order_question_passes_scope_gate() -> None:
     )
 
     assert reply == "Continuemos con tu pedido."
-    assert engine.scope_calls == 1
-    assert engine.reply_calls == 1
+    assert router.calls == 1
+    assert agent.calls == 1
 
 
 @pytest.mark.asyncio
