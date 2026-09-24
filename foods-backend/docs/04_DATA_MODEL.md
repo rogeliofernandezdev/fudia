@@ -157,6 +157,17 @@ por su cuenta.
 `stock_movements` correspondiente. El saldo tiene una restricción de base de
 datos que impide valores negativos.
 
+## Gastos operativos
+
+Los gastos operativos son documentos del local y no reemplazan la contabilidad general.
+`expense_categories` pertenece a la empresa y define el catálogo reutilizable; `expenses`
+pertenece además al local activo y conserva fecha de negocio, descripción, importe exacto
+`numeric`, medio de pago, referencia, notas y usuario creador.
+
+Un gasto confirmado no se edita ni elimina. Una corrección se realiza mediante anulación
+auditable, conservando usuario, fecha y motivo. El registro del gasto no modifica
+implícitamente un turno de caja: Caja y turnos mantiene su propia trazabilidad de efectivo.
+
 ## Empresa, locales y configuración financiera
 
 La jerarquía de autoridad es `organization` → `organization_fiscal_profiles` →

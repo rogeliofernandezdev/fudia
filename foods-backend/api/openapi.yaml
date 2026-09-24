@@ -1,5 +1,5 @@
 openapi: 3.1.0
-info: { title: Foods API, version: 0.7.0, description: API operativa y administrativa multiempresa. }
+info: { title: Foods API, version: 0.8.0, description: API operativa y administrativa multiempresa. }
 servers: [{ url: http://localhost:8080 }]
 paths:
   /health:
@@ -418,6 +418,65 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "409": { description: La orden no es recibible o una cantidad supera lo pendiente }
         "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/expenses:
+    get:
+      operationId: listExpenses
+      summary: Lista gastos operativos del local activo
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: query, name: q, schema: { type: string } }
+        - { in: query, name: categoryId, schema: { type: string, format: uuid } }
+        - { in: query, name: status, schema: { type: string, enum: [active, void] } }
+        - { in: query, name: from, schema: { type: string, format: date } }
+        - { in: query, name: to, schema: { type: string, format: date } }
+        - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
+        - { in: query, name: pageSize, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+      responses:
+        "200": { description: Gastos paginados del local, content: { application/json: { schema: { type: object, required: [items, total, page, pageSize, paymentMethodOptions], properties: { items: { type: array, items: { $ref: "#/components/schemas/Expense" } }, total: { type: integer }, page: { type: integer }, pageSize: { type: integer }, paymentMethodOptions: { type: array, items: { $ref: "#/components/schemas/Option" } } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      operationId: createExpense
+      summary: Registra un gasto operativo en el local activo
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ExpenseInput" } } } }
+      responses: { "201": { description: Gasto registrado, content: { application/json: { schema: { $ref: "#/components/schemas/Expense" } } } }, "400": { $ref: "#/components/responses/BadRequest" }, "409": { description: Categoría inactiva }, "403": { $ref: "#/components/responses/Forbidden" } }
+  /v1/admin/expenses/{id}/void:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    post:
+      operationId: voidExpense
+      summary: Anula un gasto conservando el registro y su trazabilidad
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ExpenseVoidInput" } } } }
+      responses: { "200": { description: Gasto anulado, content: { application/json: { schema: { $ref: "#/components/schemas/Expense" } } } }, "404": { description: Gasto no encontrado }, "409": { description: Gasto ya anulado }, "403": { $ref: "#/components/responses/Forbidden" } }
+  /v1/admin/expense-categories:
+    get:
+      operationId: listExpenseCategories
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: query, name: q, schema: { type: string } }
+        - { in: query, name: status, schema: { type: string, enum: [active, inactive] } }
+        - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
+        - { in: query, name: pageSize, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+      responses: { "200": { description: Categorías de gasto paginadas }, "403": { $ref: "#/components/responses/Forbidden" } }
+    post:
+      operationId: createExpenseCategory
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ExpenseCategoryInput" } } } }
+      responses: { "201": { description: Categoría creada }, "409": { description: Nombre duplicado }, "403": { $ref: "#/components/responses/Forbidden" } }
+  /v1/admin/expense-categories/{id}:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    patch:
+      operationId: updateExpenseCategory
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ExpenseCategoryInput" } } } }
+      responses: { "200": { description: Categoría actualizada }, "404": { description: Categoría no encontrada }, "409": { description: Nombre duplicado } }
+  /v1/admin/expense-categories/{id}/status:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    patch:
+      operationId: updateExpenseCategoryStatus
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [active], properties: { active: { type: boolean } } } } } }
+      responses: { "204": { description: Estado actualizado }, "404": { description: Categoría no encontrada } }
   /v1/admin/cash-registers:
     get:
       operationId: listCashRegisters
@@ -833,6 +892,12 @@ components:
     ComboInput: { type: object, required: [name, description, price, groups], properties: { name: { type: string, maxLength: 160 }, description: { type: string, maxLength: 1000 }, price: { type: string, pattern: "^[0-9]+(\\.[0-9]{1,2})?$" }, categoryId: { type: [string, "null"], format: uuid }, groups: { type: array, minItems: 1, items: { $ref: "#/components/schemas/ComboGroupInput" } } } }
     ComboSummary: { type: object, required: [id, name, description, price, active, groupCount, optionCount], properties: { id: { type: string, format: uuid }, name: { type: string }, description: { type: string }, price: { type: string }, active: { type: boolean }, groupCount: { type: integer, minimum: 0 }, optionCount: { type: integer, minimum: 0 } } }
     CustomerAddress: { type: object, required: [label, address, countryCode, default], properties: { id: { type: string, format: uuid, readOnly: true }, label: { type: string }, address: { type: string }, reference: { type: string }, district: { type: string }, city: { type: string }, countryCode: { type: string, pattern: "^[A-Z]{2}$" }, default: { type: boolean } } }
+    Option: { type: object, required: [value, label], properties: { value: { type: string }, label: { type: string } } }
+    ExpenseCategoryInput: { type: object, required: [name], properties: { name: { type: string, minLength: 1, maxLength: 100 } } }
+    ExpenseCategory: { allOf: [{ $ref: "#/components/schemas/ExpenseCategoryInput" }, { type: object, required: [id, active], properties: { id: { type: string, format: uuid }, active: { type: boolean } } }] }
+    ExpenseInput: { type: object, required: [categoryId, description, amount, paymentMethod, businessDate], properties: { categoryId: { type: string, format: uuid }, description: { type: string, minLength: 1, maxLength: 180 }, amount: { type: string, pattern: "^[0-9]{1,12}(\\.[0-9]{1,2})?$" }, paymentMethod: { type: string, enum: [cash, bank_transfer, card, digital_wallet, other] }, businessDate: { type: string, format: date }, reference: { type: string, maxLength: 120 }, notes: { type: string, maxLength: 500 } } }
+    ExpenseVoidInput: { type: object, required: [reason], properties: { reason: { type: string, minLength: 4, maxLength: 240 } } }
+    Expense: { allOf: [{ $ref: "#/components/schemas/ExpenseInput" }, { type: object, required: [id, categoryName, status, createdByName, createdAt, voidedByName, voidReason], properties: { id: { type: string, format: uuid }, categoryName: { type: string }, status: { type: string, enum: [active, void] }, createdByName: { type: string }, createdAt: { type: string, format: date-time }, voidedByName: { type: string }, voidedAt: { type: [string, "null"], format: date-time }, voidReason: { type: string } } }] }
     CustomerInput: { type: object, required: [customerType, displayName, preferredChannel], properties: { customerType: { type: string, enum: [person, company] }, displayName: { type: string, maxLength: 160 }, documentType: { type: string }, documentNumber: { type: string }, phone: { type: string }, email: { type: string }, preferredChannel: { type: string, enum: [none, whatsapp, phone, email] }, preferences: { type: string }, notes: { type: string }, marketingConsent: { type: boolean }, vipOverride: { type: boolean }, addresses: { type: array, items: { $ref: "#/components/schemas/CustomerAddress" } } } }
     Customer: { allOf: [{ $ref: "#/components/schemas/CustomerInput" }, { type: object, required: [id, code, visitCount, totalSpent, active, segment], properties: { id: { type: string, format: uuid }, code: { type: string }, visitCount: { type: integer, minimum: 0 }, totalSpent: { type: string }, lastPurchaseAt: { type: [string, "null"], format: date-time }, active: { type: boolean }, segment: { type: string, enum: [new, recurrent, frequent, vip] } } }] }
     RoleInput: { type: object, required: [name, menuAccess, permissions], properties: { name: { type: string }, description: { type: string }, menuAccess: { type: array, minItems: 1, items: { type: string } }, permissions: { type: array, minItems: 1, items: { type: string } } } }

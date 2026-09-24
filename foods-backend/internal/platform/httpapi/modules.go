@@ -28,7 +28,7 @@ const (
 var mvpModuleKeys = map[string]bool{
 	"reportes":true,"pos":true,"pedidos":true,"cocina":true,"mesas":true,"caja":true,"reservas":true,
 	"productos":true,"combos":true,"recetas":true,"inventario":true,"kardex":true,"compras":true,
-	"clientes":true,"locales":true,"fiscal":true,"usuarios":true,
+	"clientes":true,"locales":true,"fiscal":true,"usuarios":true,"costos":true,
 }
 
 var developmentModuleKeys = map[string]bool{
@@ -113,7 +113,7 @@ var moduleCatalog = []moduleDef{
 	{Key: "locales", Name: "Locales", Description: "Gestión de sedes y configuración por local", Icon: "store", Category: "Negocio"},
 
 	// Inteligencia
-	{Key: "costos", Name: "Costos y gastos", Description: "Costos de producción, gastos operativos y rentabilidad", Icon: "stock", Category: "Inteligencia"},
+	{Key: "costos", Name: "Gastos", Description: "Registro y control de gastos operativos por local", Icon: "stock", Category: "Inteligencia"},
 	{Key: "bi", Name: "Restaurant BI", Description: "Business intelligence y analítica avanzada", Icon: "grid", Category: "Inteligencia"},
 	{Key: "app_manager", Name: "App manager", Description: "Supervisión operativa remota", Icon: "settings", Category: "Inteligencia"},
 
