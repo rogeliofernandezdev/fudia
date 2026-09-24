@@ -289,12 +289,13 @@ class ConciergeTools:
                             "minSelections": minimum,
                             "maxSelections": modifier_group.maxSelections,
                         }
-                    options = {
-                        option.id: option for option in modifier_group.options
+                    modifier_options = {
+                        modifier_option.id: modifier_option
+                        for modifier_option in modifier_group.options
                     }
                     for option_id in modifier_selected:
-                        option = modifier_options.get(option_id)
-                        if option is None:
+                        modifier_option = modifier_options.get(option_id)
+                        if modifier_option is None:
                             return {
                                 "ok": False,
                                 "code": "invalid_modifier_selection",
@@ -304,12 +305,12 @@ class ConciergeTools:
                             CartModifier(
                                 group_id=modifier_group.id,
                                 group_name=modifier_group.name,
-                                option_id=option.id,
-                                name=option.name,
-                                surcharge=option.surcharge,
+                                option_id=modifier_option.id,
+                                name=modifier_option.name,
+                                surcharge=modifier_option.surcharge,
                             )
                         )
-                        modifier_surcharge_total += option.surcharge
+                        modifier_surcharge_total += modifier_option.surcharge
 
                 self.session.cart.append(
                     CartLine(
