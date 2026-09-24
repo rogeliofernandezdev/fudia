@@ -177,6 +177,40 @@ func TestConciergeQRCodeMenuOrderAndKitchenWorkflow(t *testing.T) {
 		t.Fatalf("idempotent retry duplicated the order, count=%d",orderCount)
 	}
 
+	extraBody:=[]byte(fmt.Sprintf(`{
+	  "customerPhone":"51999999999",
+	  "conversationId":"conv-extra-%d",
+	  "items":[{"productId":%q,"qty":1,"unitPrice":999,"name":"otro precio falso","note":"","selections":[]}]
+	}`,nonce,productID))
+	extraReq:=httptest.NewRequest("POST","/v1/integrations/concierge/"+qrToken+"/orders",bytes.NewReader(extraBody))
+	extraReq.Header.Set("X-Fudia-Concierge-Key","concierge-test-key")
+	extraRec:=httptest.NewRecorder()
+	api.Routes().ServeHTTP(extraRec,extraReq)
+	if extraRec.Code!=200{
+		t.Fatalf("second concierge round must append to its open order: %d %s",extraRec.Code,extraRec.Body.String())
+	}
+	var expanded order
+	if err:=json.Unmarshal(extraRec.Body.Bytes(),&expanded);err!=nil{t.Fatal(err)}
+	if expanded.ID!=created.ID||expanded.Total!="105.50"{
+		t.Fatalf("unexpected expanded concierge order: %#v",expanded)
+	}
+	if err:=pool.QueryRow(ctx,`
+		SELECT count(*) FROM orders
+		WHERE organization_id=$1 AND location_id=$2 AND table_id=$3
+	`,s.OrganizationID,s.LocationID,tableID).Scan(&orderCount);err!=nil{t.Fatal(err)}
+	if orderCount!=1{
+		t.Fatalf("second Concierge round must reuse the open order, count=%d",orderCount)
+	}
+	var appendAuditCount int
+	if err:=pool.QueryRow(ctx,`
+		SELECT count(*) FROM audit_log
+		WHERE organization_id=$1 AND entity_id=$2
+		  AND action='concierge.order.items_added' AND user_id IS NULL
+	`,s.OrganizationID,created.ID).Scan(&appendAuditCount);err!=nil{t.Fatal(err)}
+	if appendAuditCount!=1{
+		t.Fatalf("expected one Concierge append audit event, got %d",appendAuditCount)
+	}
+
 	var createdBy *string
 	if err:=pool.QueryRow(ctx,`
 		SELECT created_by::text

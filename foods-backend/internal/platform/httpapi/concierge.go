@@ -470,19 +470,132 @@ func (a *API) createConciergeOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var occupied bool
-	if err = tx.QueryRow(r.Context(), `
-		SELECT EXISTS(
-		  SELECT 1 FROM orders
-		  WHERE organization_id=$1 AND location_id=$2 AND table_id=$3
-		    AND status NOT IN ('entregado','cancelado')
-		)
-	`, qr.Scope.OrganizationID, qr.Scope.LocationID, qr.TableID).Scan(&occupied); err != nil {
-		fail(w, 503, "order_unavailable", "No pudimos validar la mesa.")
+	var openOrderID,openStatus,openChannel string
+	var openCreatedBy *string
+	var openSubtotal,openDeliveryFee float64
+	var conciergeOwned bool
+	err = tx.QueryRow(r.Context(), `
+		SELECT o.id::text,o.status,o.channel,o.subtotal::float8,o.delivery_fee::float8,
+		       o.created_by::text,
+		       EXISTS(
+		         SELECT 1 FROM audit_log a
+		         WHERE a.organization_id=o.organization_id
+		           AND a.entity_id=o.id
+		           AND a.entity_type='order'
+		           AND a.action='concierge.order.created'
+		       )
+		FROM orders o
+		WHERE o.organization_id=$1 AND o.location_id=$2 AND o.table_id=$3
+		  AND o.status NOT IN ('entregado','cancelado')
+		ORDER BY o.created_at DESC,o.id
+		LIMIT 1
+		FOR UPDATE
+	`, qr.Scope.OrganizationID, qr.Scope.LocationID, qr.TableID).Scan(
+		&openOrderID,&openStatus,&openChannel,&openSubtotal,&openDeliveryFee,&openCreatedBy,&conciergeOwned,
+	)
+	if err == nil {
+		if openChannel!="whatsapp" || openCreatedBy!=nil || !conciergeOwned {
+			fail(w, 409, "table_occupied", "La mesa tiene una comanda abierta gestionada por otro canal.")
+			return
+		}
+		if openStatus!="confirmado" {
+			fail(w, 409, "concierge_order_not_editable", "La comanda ya está en preparación o dejó de ser editable.")
+			return
+		}
+		paid,paidErr:=loadOrderNetPaid(r.Context(),tx,openOrderID,qr.Scope.OrganizationID,qr.Scope.LocationID)
+		if paidErr!=nil {
+			fail(w, 503, "order_unavailable", "No pudimos validar los pagos de la comanda.")
+			return
+		}
+		if paid>0.00001 {
+			fail(w, 409, "paid_order_not_editable", "La comanda ya tiene pagos registrados y no puede ampliarse desde Concierge.")
+			return
+		}
+
+		prepared,addedSubtotal,preparationErr:=a.prepareOrderItems(r,tx,qr.Scope,"",in.Items)
+		if preparationErr!=nil {
+			fail(w,preparationErr.Status,preparationErr.Code,preparationErr.Message)
+			return
+		}
+		if err=insertPreparedOrderItems(r.Context(),tx,qr.Scope.OrganizationID,openOrderID,prepared);err!=nil {
+			fail(w,503,"order_unavailable","No pudimos agregar los productos a la comanda.")
+			return
+		}
+		if quantityErr:=a.applyOrderQuantityDelta(
+			r.Context(),tx,qr.Scope,openOrderID,preparedQuantityUsage(prepared),"sale",
+		);quantityErr!=nil {
+			fail(w,quantityErr.Status,quantityErr.Code,quantityErr.Message)
+			return
+		}
+		recipeUsage,recipeErr:=desiredRecipeInventoryUsage(r.Context(),tx,qr.Scope,prepared)
+		if recipeErr!=nil {
+			fail(w,503,"recipe_inventory_unavailable","No pudimos validar el consumo de recetas.")
+			return
+		}
+		if quantityErr:=applyRecipeUsageDelta(r.Context(),tx,qr.Scope,openOrderID,recipeUsage);quantityErr!=nil {
+			fail(w,quantityErr.Status,quantityErr.Code,quantityErr.Message)
+			return
+		}
+		nextSubtotal:=openSubtotal+addedSubtotal
+		nextTotal:=nextSubtotal+openDeliveryFee
+		if _,err=tx.Exec(r.Context(),`
+			UPDATE orders
+			SET subtotal=$4,total=$5,updated_at=now()
+			WHERE id=$1 AND organization_id=$2 AND location_id=$3
+		`,openOrderID,qr.Scope.OrganizationID,qr.Scope.LocationID,nextSubtotal,nextTotal);err!=nil {
+			fail(w,503,"order_unavailable","No pudimos actualizar el total de la comanda.")
+			return
+		}
+		if _,err=tx.Exec(r.Context(),`
+			INSERT INTO concierge_order_requests(
+			  organization_id,location_id,table_id,conversation_id,order_id
+			)
+			VALUES($1,$2,$3,$4,$5)
+		`,qr.Scope.OrganizationID,qr.Scope.LocationID,qr.TableID,in.ConversationID,openOrderID);err!=nil {
+			fail(w,503,"order_unavailable","No pudimos registrar la idempotencia del pedido.")
+			return
+		}
+		if _,err=tx.Exec(r.Context(),`
+			INSERT INTO audit_log(
+			  organization_id,location_id,user_id,action,entity_type,entity_id,metadata
+			)
+			VALUES($1,$2,NULL,'concierge.order.items_added','order',$3,
+			  jsonb_build_object('source','fudia_concierge','conversationId',$4::text,'tableId',$5::text))
+		`,qr.Scope.OrganizationID,qr.Scope.LocationID,openOrderID,in.ConversationID,qr.TableID);err!=nil {
+			fail(w,503,"order_unavailable","No pudimos registrar la trazabilidad del pedido.")
+			return
+		}
+		if err=tx.Commit(r.Context());err!=nil {
+			fail(w,503,"order_unavailable","No pudimos confirmar los productos adicionales.")
+			return
+		}
+
+		var out order
+		out,err=scanOrder(a.db.QueryRow(r.Context(),`
+			SELECT `+orderColumns+`
+			FROM orders
+			WHERE id=$1 AND organization_id=$2 AND location_id=$3
+		`,openOrderID,qr.Scope.OrganizationID,qr.Scope.LocationID))
+		if err!=nil {
+			fail(w,503,"order_unavailable","No pudimos recuperar la comanda actualizada.")
+			return
+		}
+		out.Items,err=loadOrderItems(r.Context(),a.db,out.ID,qr.Scope.OrganizationID)
+		if err!=nil {
+			fail(w,503,"order_unavailable","No pudimos recuperar los productos actualizados.")
+			return
+		}
+		for _,item:=range out.Items {
+			if qty,parseErr:=strconv.ParseFloat(item.Qty,64);parseErr==nil {
+				out.ItemCount+=int(qty)
+			}
+		}
+		_ = applyOrderPaymentSummary(r.Context(),a.db,&out,qr.Scope.OrganizationID,qr.Scope.LocationID)
+		writeJSON(w,200,out)
 		return
 	}
-	if occupied {
-		fail(w, 409, "table_occupied", "La mesa ya tiene un pedido abierto.")
+	if !errors.Is(err,pgx.ErrNoRows) {
+		fail(w,503,"order_unavailable","No pudimos validar las comandas abiertas de la mesa.")
 		return
 	}
 
