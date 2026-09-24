@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Awaitable, Callable
-from typing import Any
+from typing import Any, cast
 from uuid import uuid4
 
 from src.ai.contracts import ConversationAgent, IntentRouter, ScopeClassifier
@@ -90,20 +90,33 @@ class ConciergeService:
         self.store = store
         self.fudia = fudia
 
+        self.scope_classifier: ScopeClassifier
+        self.intent_router: IntentRouter
+        self.agents: dict[AgentIntent, ConversationAgent]
+
         if intent_router is None or agents is None:
-            legacy_agent = scope_classifier
+            legacy_agent = cast(
+                ConversationAgent,
+                scope_classifier,
+            )
             if hasattr(scope_classifier, "is_in_scope"):
-                self.scope_classifier = scope_classifier
+                self.scope_classifier = cast(
+                    ScopeClassifier,
+                    scope_classifier,
+                )
             else:
                 self.scope_classifier = _AllowScope()
             self.intent_router = _LegacyRouter()
-            self.agents: dict[AgentIntent, ConversationAgent] = {
+            self.agents = {
                 "menu": legacy_agent,
                 "order": legacy_agent,
                 "service": legacy_agent,
             }
         else:
-            self.scope_classifier = scope_classifier
+            self.scope_classifier = cast(
+                ScopeClassifier,
+                scope_classifier,
+            )
             self.intent_router = intent_router
             self.agents = agents
 
