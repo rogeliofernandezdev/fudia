@@ -18,6 +18,7 @@ from src.infrastructure.concurrency import (
 from src.infrastructure.fudia_client import FudiaClient, FudiaError
 from src.infrastructure.rate_limit import AllowAllRateLimiter, RateLimiter
 from src.infrastructure.state_store import ConversationStore
+from src.metrics import RATE_LIMITED, SCOPE_DECISIONS
 from src.services.tool_registry import ToolRegistry
 
 QR_PATTERN = re.compile(r"(?i)\bFUDIA:([a-f0-9]{32})\b")
@@ -222,6 +223,7 @@ class ConciergeService:
         )
         identity = conversation_identity(phone, channel_key)
         if not await self.rate_limiter.allow(identity):
+            RATE_LIMITED.inc()
             return (
                 "Has enviado muchos mensajes en poco tiempo. "
                 "Continúa con tu pedido dentro de un momento."
@@ -371,6 +373,9 @@ class ConciergeService:
             await self.store.save(session)
 
         if obviously_out_of_scope(text):
+            SCOPE_DECISIONS.labels(
+                decision="out_of_scope"
+            ).inc()
             return OFF_SCOPE_REPLY
 
         try:
@@ -380,6 +385,9 @@ class ConciergeService:
             ):
                 return OFF_SCOPE_REPLY
         except Exception:
+            SCOPE_DECISIONS.labels(
+                decision="error"
+            ).inc()
             return (
                 "No pude validar tu solicitud en este momento. "
                 "Intenta nuevamente con algo relacionado con tu pedido."
