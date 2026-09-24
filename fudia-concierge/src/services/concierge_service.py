@@ -11,11 +11,33 @@ from src.infrastructure.state_store import ConversationStore
 from src.services.tools import ConciergeTools
 
 QR_PATTERN = re.compile(r"(?i)\bFUDIA:([a-f0-9]{32})\b")
+ARITHMETIC_ONLY_PATTERN = re.compile(
+    r"(?i)^\s*(?:cu[aá]nto\s+(?:es|da)\s+|calcula\s+|resuelve\s+)?"
+    r"[0-9\s.,/()+\-*x×÷=]+\??\s*$"
+)
+MATH_TOPIC_PATTERN = re.compile(
+    r"(?i)\b(fracciones?|ecuaciones?|ra[ií]z cuadrada|derivadas?|integrales?)\b"
+)
+OFF_SCOPE_REPLY = (
+    "Puedo ayudarte únicamente con el pedido de esta mesa: consultar la carta, "
+    "agregar o retirar productos, confirmar pedidos, pedir la cuenta o solicitar "
+    "atención del personal."
+)
 
 
 def extract_qr_token(text: str) -> str | None:
     match = QR_PATTERN.search(text)
     return match.group(1).lower() if match else None
+
+
+def obviously_out_of_scope(text: str) -> bool:
+    value = text.strip()
+    if not value:
+        return False
+    return bool(
+        ARITHMETIC_ONLY_PATTERN.fullmatch(value)
+        or MATH_TOPIC_PATTERN.search(value)
+    )
 
 
 def _phone_digits(value: str) -> str:
@@ -120,6 +142,20 @@ class ConciergeService:
                 )
             session.handoff_pending = False
             await self.store.save(session)
+
+        if obviously_out_of_scope(text):
+            return OFF_SCOPE_REPLY
+
+        scope_checker = getattr(self.engine, "is_in_scope", None)
+        if callable(scope_checker):
+            try:
+                if not await scope_checker(session, text):
+                    return OFF_SCOPE_REPLY
+            except Exception:
+                return (
+                    "No pude validar tu solicitud en este momento. "
+                    "Intenta nuevamente con algo relacionado con tu pedido."
+                )
 
         result = await self.graph.ainvoke(
             {"session": session, "user_message": text, "reply": ""}
