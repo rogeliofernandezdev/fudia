@@ -45,7 +45,7 @@ type expenseInput struct {
 	Notes         string `json:"notes"`
 }
 
-var expenseAmountPattern = regexp.MustCompile("^[0-9]{1,12}(\.[0-9]{1,2})?$")
+var expenseAmountPattern = regexp.MustCompile("^[0-9]{1,12}([.][0-9]{1,2})?$")
 
 var expensePaymentMethods = []map[string]string{
 	{"value": "cash", "label": "Efectivo"},
