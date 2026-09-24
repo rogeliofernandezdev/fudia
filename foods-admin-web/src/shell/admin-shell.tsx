@@ -12,7 +12,7 @@ import {Logo} from "@/design-system/logo";
 import {useSession} from "@/providers/session-context";
 import {ContextSwitcher} from "@/modules/context";
 import {deleteSession} from "@/shared/session/session-api";
-import {accessKey,firstAccessibleRoute,moduleIsActive,navigationGroups,navigationItemForPath,visibleNavigation} from "./navigation";
+import {accessKey,firstAccessibleRoute,moduleIsActive,navigationItemForPath,visibleNavigation} from "./navigation";
 
 export function AdminShell({children}:{children:React.ReactNode}){
  const path=usePathname();const router=useRouter();const queryClient=useQueryClient();const{user,organization,location,modules,menuAccess,permissions,canAccess,can,isLoading,isError}=useSession();const[notifications,setNotifications]=useState(false);const[menuOpen,setMenuOpen]=useState(false);const[collapsed,setCollapsed]=useState(false);const[accountOpen,setAccountOpen]=useState(false);const[signingOut,setSigningOut]=useState(false);const accountRef=useRef<HTMLDivElement>(null);
