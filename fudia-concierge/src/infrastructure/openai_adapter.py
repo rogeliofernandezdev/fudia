@@ -167,7 +167,7 @@ class OpenAIToolAgent:
         capture_usage(response)
 
         for _ in range(8):
-            calls = [
+            calls: list[Any] = [
                 item
                 for item in response.output
                 if getattr(item, "type", "")
