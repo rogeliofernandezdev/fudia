@@ -48,10 +48,15 @@ export function PaymentMethodsPage(){
  return <><PageHeader eyebrow="CONFIGURACIÓN" title="Medios de pago" description="Administra el catálogo único utilizado por cobros, caja y gastos." action={canManage?<Button icon="plus" onClick={create}>Nuevo medio</Button>:undefined}/>
   <section className="panel management catalog-panel">
    <div className="payment-method-toolbar">
-    <div className="payment-method-filters">
-     <label className="payment-method-search"><Icon name="search" size={16}/><Input aria-label="Buscar medios de pago" value={q} onChange={e=>{setQ(e.target.value);setPage(1)}} placeholder="Buscar por nombre o código…"/></label>
-     <Select aria-label="Filtrar por estado" value={status} onChange={e=>{setStatus(e.target.value);setPage(1)}}><option value="">Todos los estados</option><option value="active">Activos</option><option value="inactive">Inactivos</option></Select>
-    </div>
+    <label className="payment-method-search">
+     <Icon name="search" size={18}/>
+     <Input aria-label="Buscar medios de pago" value={q} onChange={e=>{setQ(e.target.value);setPage(1)}} placeholder="Buscar por nombre, código o descripción..."/>
+    </label>
+    <Select className="payment-method-status-filter" aria-label="Filtrar por estado" value={status} onChange={e=>{setStatus(e.target.value);setPage(1)}}>
+     <option value="">Todos los estados</option>
+     <option value="active">Activos</option>
+     <option value="inactive">Inactivos</option>
+    </Select>
    </div>
    {query.isLoading?<PaymentMethodsLoading/>:query.isError?<div className="payment-method-empty"><span><Icon name="alert"/></span><b>No pudimos cargar los medios de pago</b><p>{query.error.message}</p><Button kind="secondary" icon="refresh" onClick={()=>query.refetch()}>Reintentar</Button></div>:!query.data?.items.length?<div className="payment-method-empty"><span><Icon name="payment"/></span><b>No hay medios de pago para mostrar</b><p>{q||status?"Cambia los filtros para ampliar la búsqueda.":"Crea el primer medio de pago de la empresa."}</p>{canManage&&!q&&!status&&<Button onClick={create}>Nuevo medio</Button>}</div>:<div className="table-wrap hover-scroll"><table className="payment-method-table"><thead><tr><th>MEDIO</th><th>VENTAS</th><th>GASTOS</th><th>CAJA</th><th>ORDEN</th><th>ESTADO</th><th>ACCIONES</th></tr></thead><tbody>{query.data.items.map((item,i)=><tr className={i%2?"alternate":""} key={item.code}><td><div className="payment-method-name"><div><span className={`row-icon r${i%3}`}><Icon name="payment" size={18}/></span><b>{item.name}</b><code>{item.code}</code></div><small>{item.description||"Sin descripción"}</small></div></td><td><Flag on={item.salesEnabled}>Disponible</Flag></td><td><Flag on={item.expensesEnabled}>Disponible</Flag></td><td><Flag on={item.affectsCash}>{item.affectsCash?"Impacta":"No impacta"}</Flag></td><td>{item.sortOrder}</td><td><Status tone={item.active?"green":"gray"}>{item.active?"Activo":"Inactivo"}</Status></td><td><div className="table-actions">{canManage&&<><RowActionButton action="edit" onClick={()=>edit(item)}/><RowActionButton action={item.active?"deactivate":"activate"} onClick={()=>setStatusTarget(item)}/></>}</div></td></tr>)}</tbody></table></div>}
    <Pagination page={page} size={size} total={query.data?.total??0} onPage={setPage} onSize={value=>{setSize(value);setPage(1)}}/>
