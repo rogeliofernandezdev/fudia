@@ -52,6 +52,57 @@ TOOLS: list[dict[str, Any]] = [
     },
     {
         "type": "function",
+        "name": "get_modifier_options",
+        "description": (
+            "Obtiene los grupos y opciones reales de modificadores para un "
+            "producto devuelto por search_menu cuando hasModifiers es true."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {"productId": {"type": "string"}},
+            "required": ["productId"],
+            "additionalProperties": False,
+        },
+        "strict": True,
+    },
+    {
+        "type": "function",
+        "name": "add_modified_item",
+        "description": (
+            "Agrega un producto configurable usando solo opciones devueltas "
+            "por get_modifier_options."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "productId": {"type": "string"},
+                "quantity": {"type": "number", "minimum": 0.01},
+                "note": {"type": "string"},
+                "modifiers": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "groupId": {"type": "string"},
+                            "optionId": {"type": "string"},
+                        },
+                        "required": ["groupId", "optionId"],
+                        "additionalProperties": False,
+                    },
+                },
+            },
+            "required": [
+                "productId",
+                "quantity",
+                "note",
+                "modifiers",
+            ],
+            "additionalProperties": False,
+        },
+        "strict": True,
+    },
+    {
+        "type": "function",
         "name": "get_combo_options",
         "description": (
             "Obtiene los grupos, reglas y alternativas reales de un combo "

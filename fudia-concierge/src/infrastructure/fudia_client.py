@@ -5,7 +5,14 @@ from urllib.parse import quote
 
 import httpx
 
-from src.domain.models import ComboDetail, MenuItem, MenuResponse, OrderResult, TableContext
+from src.domain.models import (
+    ComboDetail,
+    MenuItem,
+    MenuResponse,
+    ModifierConfig,
+    OrderResult,
+    TableContext,
+)
 
 
 class FudiaError(RuntimeError):
@@ -89,6 +96,18 @@ class FudiaClient:
             ),
         )
         return ComboDetail.model_validate(body)
+
+    async def get_modifiers(
+        self, token: str, product_id: str
+    ) -> ModifierConfig:
+        body = await self._json(
+            "GET",
+            (
+                f"/v1/integrations/concierge/{quote(token, safe='')}"
+                f"/products/{quote(product_id, safe='')}/modifiers"
+            ),
+        )
+        return ModifierConfig.model_validate(body)
 
     async def create_order(
         self,

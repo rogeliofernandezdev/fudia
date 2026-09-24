@@ -229,3 +229,102 @@ async def test_combo_selection_is_validated_and_forwarded() -> None:
     assert fudia.order_calls[0]["lines"][0]["selections"] == [
         {"groupId": "g1", "productId": "opt2"}
     ]
+
+
+class FakeModifierFudia(FakeFudia):
+    async def search_menu(
+        self, token: str, query: str = "", product_id: str = ""
+    ) -> MenuResponse:
+        item = MenuItem(
+            productId="p-mod",
+            name="Hamburguesa",
+            price=Decimal("20.00"),
+            categoryName="Platos",
+            status="available",
+            isCombo=False,
+            hasModifiers=True,
+        )
+        if product_id and product_id != "p-mod":
+            return MenuResponse(items=[], currencySymbol="S/")
+        return MenuResponse(items=[item], currencySymbol="S/")
+
+    async def get_modifiers(
+        self, token: str, product_id: str
+    ) -> ModifierConfig:
+        assert product_id == "p-mod"
+        return ModifierConfig(
+            productId=product_id,
+            groups=[
+                ModifierGroup(
+                    id="g1",
+                    name="Tamaño",
+                    required=True,
+                    minSelections=1,
+                    maxSelections=1,
+                    options=[
+                        ModifierOption(
+                            id="o1",
+                            name="Grande",
+                            surcharge=Decimal("5.00"),
+                        ),
+                        ModifierOption(
+                            id="o2",
+                            name="Mediana",
+                            surcharge=Decimal("0"),
+                        ),
+                    ],
+                )
+            ],
+        )
+
+
+@pytest.mark.asyncio
+async def test_modified_item_requires_real_modifier_ids() -> None:
+    fudia = FakeModifierFudia()
+    from src.domain.models import ConversationSession
+
+    session = ConversationSession(
+        phone="51999999999",
+        qr_token="a" * 32,
+    )
+    tools = ConciergeTools(fudia, session, "quiero una grande")
+
+    plain = await tools.execute(
+        "add_item",
+        {"productId": "p-mod", "quantity": 1, "note": ""},
+    )
+    assert plain["code"] == "modifier_review_required"
+
+    incomplete = await tools.execute(
+        "add_modified_item",
+        {
+            "productId": "p-mod",
+            "quantity": 1,
+            "note": "",
+            "modifiers": [],
+        },
+    )
+    assert incomplete["code"] == "modifier_group_incomplete"
+
+    added = await tools.execute(
+        "add_modified_item",
+        {
+            "productId": "p-mod",
+            "quantity": 1,
+            "note": "",
+            "modifiers": [{"groupId": "g1", "optionId": "o1"}],
+        },
+    )
+    assert added["ok"] is True
+    assert added["cart"]["total"] == "25.00"
+    assert added["cart"]["items"][0]["modifiers"][0]["name"] == "Grande"
+
+    prepared = await tools.execute("prepare_confirmation", {})
+    assert prepared["ok"] is True
+    confirmed = await ConciergeTools(
+        fudia, session, "Sí"
+    ).execute("confirm_order", {})
+    assert confirmed["ok"] is True
+    assert fudia.order_calls[0]["lines"][0]["modifiers"] == [
+        {"groupId": "g1", "optionId": "o1"}
+    ]

@@ -30,6 +30,7 @@ class MenuItem(BaseModel):
     imageUrl: str | None = None
     status: str = "available"
     isCombo: bool = False
+    hasModifiers: bool = False
 
 
 class MenuResponse(BaseModel):
@@ -62,10 +63,38 @@ class ComboDetail(BaseModel):
     groups: list[ComboGroup] = Field(default_factory=list)
 
 
+class ModifierOption(BaseModel):
+    id: str
+    name: str
+    surcharge: Decimal
+
+
+class ModifierGroup(BaseModel):
+    id: str
+    name: str
+    required: bool
+    minSelections: int
+    maxSelections: int
+    options: list[ModifierOption] = Field(default_factory=list)
+
+
+class ModifierConfig(BaseModel):
+    productId: str
+    groups: list[ModifierGroup] = Field(default_factory=list)
+
+
 class CartSelection(BaseModel):
     group_id: str
     group_name: str
     product_id: str
+    name: str
+    surcharge: Decimal
+
+
+class CartModifier(BaseModel):
+    group_id: str
+    group_name: str
+    option_id: str
     name: str
     surcharge: Decimal
 
@@ -78,6 +107,7 @@ class CartLine(BaseModel):
     note: str = ""
     item_type: str = "product"
     selections: list[CartSelection] = Field(default_factory=list)
+    modifiers: list[CartModifier] = Field(default_factory=list)
 
 
 class ConversationSession(BaseModel):

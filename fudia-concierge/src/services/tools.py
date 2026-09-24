@@ -5,7 +5,12 @@ import unicodedata
 from decimal import Decimal
 from typing import Any
 
-from src.domain.models import CartLine, CartSelection, ConversationSession
+from src.domain.models import (
+    CartLine,
+    CartModifier,
+    CartSelection,
+    ConversationSession,
+)
 from src.infrastructure.fudia_client import FudiaClient, FudiaError
 
 
@@ -76,6 +81,16 @@ class ConciergeTools:
                         }
                         for selection in line.selections
                     ],
+                    "modifiers": [
+                        {
+                            "groupId": modifier.group_id,
+                            "groupName": modifier.group_name,
+                            "optionId": modifier.option_id,
+                            "name": modifier.name,
+                            "surcharge": str(modifier.surcharge),
+                        }
+                        for modifier in line.modifiers
+                    ],
                 }
             )
         return {"items": items, "total": str(total.quantize(Decimal("0.01")))}
@@ -98,6 +113,7 @@ class ConciergeTools:
                             "categoryName": item.categoryName,
                             "status": item.status,
                             "isCombo": item.isCombo,
+                            "hasModifiers": item.hasModifiers,
                         }
                         for item in menu.items
                     ],
@@ -121,6 +137,12 @@ class ConciergeTools:
                         "code": "combo_requires_options",
                         "name": item.name,
                     }
+                if item.hasModifiers:
+                    return {
+                        "ok": False,
+                        "code": "modifier_review_required",
+                        "name": item.name,
+                    }
 
                 existing = next(
                     (line for line in self.session.cart if line.product_id == product_id),
@@ -142,6 +164,164 @@ class ConciergeTools:
                             note=note,
                         )
                     )
+                self.session.awaiting_confirmation = False
+                return {"ok": True, "cart": self._cart_payload()}
+
+            if name == "get_modifier_options":
+                product_id = str(args.get("productId", "")).strip()
+                if not product_id:
+                    return {"ok": False, "code": "invalid_product"}
+                item = await self.fudia.get_product(self._token(), product_id)
+                if item is None:
+                    return {"ok": False, "code": "product_not_found"}
+                if item.isCombo:
+                    return {
+                        "ok": False,
+                        "code": "combo_requires_options",
+                        "name": item.name,
+                    }
+                config = await self.fudia.get_modifiers(
+                    self._token(), product_id
+                )
+                return {
+                    "ok": True,
+                    "product": {
+                        "productId": item.productId,
+                        "name": item.name,
+                        "price": str(item.price),
+                    },
+                    "groups": [
+                        {
+                            "groupId": group.id,
+                            "name": group.name,
+                            "required": group.required,
+                            "minSelections": group.minSelections,
+                            "maxSelections": group.maxSelections,
+                            "options": [
+                                {
+                                    "optionId": option.id,
+                                    "name": option.name,
+                                    "surcharge": str(option.surcharge),
+                                }
+                                for option in group.options
+                            ],
+                        }
+                        for group in config.groups
+                    ],
+                }
+
+            if name == "add_modified_item":
+                product_id = str(args.get("productId", "")).strip()
+                quantity = float(args.get("quantity", 0))
+                note = str(args.get("note", "")).strip()
+                raw_modifiers = args.get("modifiers", [])
+                if (
+                    not product_id
+                    or quantity <= 0
+                    or not isinstance(raw_modifiers, list)
+                ):
+                    return {"ok": False, "code": "invalid_item"}
+
+                item = await self.fudia.get_product(
+                    self._token(), product_id
+                )
+                if item is None:
+                    return {"ok": False, "code": "product_not_found"}
+                if item.status not in {"available", "low"}:
+                    return {
+                        "ok": False,
+                        "code": "product_unavailable",
+                        "name": item.name,
+                    }
+                if item.isCombo:
+                    return {
+                        "ok": False,
+                        "code": "combo_requires_options",
+                        "name": item.name,
+                    }
+
+                config = await self.fudia.get_modifiers(
+                    self._token(), product_id
+                )
+                groups_by_id = {group.id: group for group in config.groups}
+                selected_by_group: dict[str, list[str]] = {}
+                seen: set[tuple[str, str]] = set()
+                for raw in raw_modifiers:
+                    if not isinstance(raw, dict):
+                        return {
+                            "ok": False,
+                            "code": "invalid_modifier_selection",
+                        }
+                    group_id = str(raw.get("groupId", "")).strip()
+                    option_id = str(raw.get("optionId", "")).strip()
+                    key = (group_id, option_id)
+                    if not group_id or not option_id or key in seen:
+                        return {
+                            "ok": False,
+                            "code": "invalid_modifier_selection",
+                        }
+                    if group_id not in groups_by_id:
+                        return {
+                            "ok": False,
+                            "code": "invalid_modifier_selection",
+                        }
+                    seen.add(key)
+                    selected_by_group.setdefault(group_id, []).append(
+                        option_id
+                    )
+
+                modifiers: list[CartModifier] = []
+                surcharge_total = Decimal("0")
+                for group in config.groups:
+                    selected = selected_by_group.get(group.id, [])
+                    minimum = max(
+                        group.minSelections,
+                        1 if group.required else 0,
+                    )
+                    if (
+                        len(selected) < minimum
+                        or len(selected) > group.maxSelections
+                    ):
+                        return {
+                            "ok": False,
+                            "code": "modifier_group_incomplete",
+                            "group": group.name,
+                            "minSelections": minimum,
+                            "maxSelections": group.maxSelections,
+                        }
+                    options = {
+                        option.id: option for option in group.options
+                    }
+                    for option_id in selected:
+                        option = options.get(option_id)
+                        if option is None:
+                            return {
+                                "ok": False,
+                                "code": "invalid_modifier_selection",
+                                "group": group.name,
+                            }
+                        modifiers.append(
+                            CartModifier(
+                                group_id=group.id,
+                                group_name=group.name,
+                                option_id=option.id,
+                                name=option.name,
+                                surcharge=option.surcharge,
+                            )
+                        )
+                        surcharge_total += option.surcharge
+
+                self.session.cart.append(
+                    CartLine(
+                        product_id=item.productId,
+                        name=item.name,
+                        quantity=quantity,
+                        unit_price=item.price + surcharge_total,
+                        note=note,
+                        item_type="product",
+                        modifiers=modifiers,
+                    )
+                )
                 self.session.awaiting_confirmation = False
                 return {"ok": True, "cart": self._cart_payload()}
 
