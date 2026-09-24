@@ -748,7 +748,22 @@ func (a *API) listOrders(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	writeJSON(w, 200, map[string]any{"items": items, "total": total, "page": page, "pageSize": size, "channelCounts": channelCounts, "channelOptions": orderChannels, "statusOptions": orderStatuses})
+	var currencySymbol string
+	if err := a.db.QueryRow(r.Context(), `
+		SELECT p.currency_symbol
+		FROM locations l
+		JOIN organization_fiscal_profiles p
+		  ON p.id=l.fiscal_profile_id AND p.organization_id=l.organization_id AND p.active
+		WHERE l.id=$1 AND l.organization_id=$2 AND l.active
+	`, s.LocationID, s.OrganizationID).Scan(&currencySymbol); err != nil {
+		fail(w, 503, "orders_unavailable", "No pudimos cargar la moneda del local.")
+		return
+	}
+	writeJSON(w, 200, map[string]any{
+		"items": items, "total": total, "page": page, "pageSize": size,
+		"channelCounts": channelCounts, "channelOptions": orderChannels,
+		"statusOptions": orderStatuses, "currencySymbol": currencySymbol,
+	})
 }
 
 // getOrdersFloor devuelve el plano de salón: cada mesa activa con su pedido abierto (si tiene)
