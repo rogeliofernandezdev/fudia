@@ -24,7 +24,7 @@ jobs:
           cache: pip
           cache-dependency-path: fudia-concierge/pyproject.toml
       - run: python -m pip install --upgrade pip
-      - run: python -m pip install -e ".[dev]"
+      - run: python -m pip install -c constraints.txt -e ".[dev]"
       - run: ruff check .
       - run: mypy src config
       - run: pytest -q
