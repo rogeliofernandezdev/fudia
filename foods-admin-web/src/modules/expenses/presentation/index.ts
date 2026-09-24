@@ -1,3 +1,1 @@
-export const expensesModule = {
-  name: 'expenses',
-};
+export {ExpensesPage} from "./expenses-page";

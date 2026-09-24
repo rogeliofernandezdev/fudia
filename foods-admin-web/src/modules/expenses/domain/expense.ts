@@ -1,18 +1,9 @@
-export type ExpenseStatus = 'ACTIVE' | 'VOID';
-
-export interface Expense {
-  id: string;
-  categoryId: string;
-  description: string;
-  amount: number;
-  paymentMethod: string;
-  status: ExpenseStatus;
-  createdAt: string;
-  createdBy?: string;
-}
-
-export interface ExpenseCategory {
-  id: string;
-  name: string;
-  active: boolean;
-}
+export type ExpenseStatus="active"|"void";
+export type ExpenseTab="expenses"|"categories";
+export type ExpensePaymentMethod="cash"|"bank_transfer"|"card"|"digital_wallet"|"other";
+export type Option={value:string;label:string};
+export type Expense={id:string;categoryId:string;categoryName:string;description:string;amount:string;paymentMethod:ExpensePaymentMethod;businessDate:string;reference:string;notes:string;status:ExpenseStatus;createdByName:string;createdAt:string;voidedByName:string;voidedAt:string|null;voidReason:string};
+export type ExpenseDraft={categoryId:string;description:string;amount:string;paymentMethod:ExpensePaymentMethod;businessDate:string;reference:string;notes:string};
+export type ExpensesResponse={items:Expense[];total:number;page:number;pageSize:number;paymentMethodOptions:Option[]};
+export type ExpenseCategory={id:string;name:string;active:boolean};
+export type ExpenseCategoriesResponse={items:ExpenseCategory[];total:number;page:number;pageSize:number};
