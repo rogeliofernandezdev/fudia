@@ -53,6 +53,7 @@
 - [x] Tools separadas por dominio y mínimo privilegio aplicado en código.
 - [x] Redis Streams en lugar de `BackgroundTasks`.
 - [x] Concurrencia acotada por worker con backpressure al leer la cola.
+- [x] Renovación de visibilidad para mensajes en vuelo.
 - [x] Shutdown con drenaje de mensajes en vuelo.
 - [x] Deduplicación atómica por mensaje.
 - [x] ACK, reintentos y dead-letter.
