@@ -1,5 +1,5 @@
 openapi: 3.1.0
-info: { title: Foods API, version: 0.8.0, description: API operativa y administrativa multiempresa. }
+info: { title: Foods API, version: 0.9.0, description: API operativa y administrativa multiempresa. }
 servers: [{ url: http://localhost:8080 }]
 paths:
   /health:
@@ -656,6 +656,15 @@ paths:
       responses:
         "200": { description: Pedido y pagos, content: { application/json: { schema: { $ref: "#/components/schemas/POSOrderDetail" } } } }
         "404": { description: Pedido no encontrado }
+  /v1/admin/payment-methods:
+    get:
+      operationId: listAdminPaymentMethods
+      summary: Lista los medios de pago activos configurados para la empresa
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: query, name: usage, required: true, schema: { type: string, enum: [sales, expenses] } }
+      responses:
+        "200": { description: Catálogo de medios de pago, content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/PaymentMethod" } } } } } } }
   /v1/admin/payments:
     post:
       operationId: createPayment
@@ -680,6 +689,15 @@ paths:
         "404": { description: Pago no encontrado }
         "409": { description: La devolución supera el saldo del pago o el efectivo disponible }
         "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/operations/payment-methods:
+    get:
+      operationId: listOperationalPaymentMethods
+      summary: Lista los medios de pago activos para la operación
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: query, name: usage, required: true, schema: { type: string, enum: [sales, expenses] } }
+      responses:
+        "200": { description: Catálogo de medios de pago, content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/PaymentMethod" } } } } } } }
   /v1/operations/product-availability:
     get:
       operationId: listOperationalProductAvailability
@@ -884,8 +902,9 @@ components:
     POSOrderSummary: { type: object, required: [id, code, channel, status, customerName, tableName, total, paidAmount, remainingAmount, paymentStatus, createdAt], properties: { id: { type: string, format: uuid }, code: { type: string }, channel: { type: string }, status: { type: string }, customerName: { type: string }, tableName: { type: string }, total: { type: string }, paidAmount: { type: string }, remainingAmount: { type: string }, paymentStatus: { type: string, enum: [pending, partial, paid] }, createdAt: { type: string, format: date-time } } }
     POSOrderList: { type: object, required: [items, total, page, pageSize], properties: { items: { type: array, items: { $ref: "#/components/schemas/POSOrderSummary" } }, total: { type: integer }, page: { type: integer }, pageSize: { type: integer } } }
     POSOrderDetail: { type: object, required: [order, paidAmount, remainingAmount, paymentStatus, payments], properties: { order: { $ref: "#/components/schemas/Order" }, paidAmount: { type: string }, remainingAmount: { type: string }, paymentStatus: { type: string, enum: [pending, partial, paid] }, payments: { type: array, items: { $ref: "#/components/schemas/Payment" } } } }
-    PaymentInput: { type: object, required: [orderId, method, amount], properties: { orderId: { type: string, format: uuid }, method: { type: string, enum: [cash, card, transfer, other] }, amount: { type: number, exclusiveMinimum: 0 }, reference: { type: string, maxLength: 120 } } }
-    Payment: { type: object, required: [id, orderId, orderCode, shiftId, cashRegisterName, method, amount, refundedAmount, netAmount, reference, createdByName, createdAt], properties: { id: { type: string, format: uuid }, orderId: { type: string, format: uuid }, orderCode: { type: string }, shiftId: { type: string, format: uuid }, cashRegisterName: { type: string }, method: { type: string, enum: [cash, card, transfer, other] }, amount: { type: string }, refundedAmount: { type: string }, netAmount: { type: string }, reference: { type: string }, createdByName: { type: string }, createdAt: { type: string, format: date-time } } }
+    PaymentMethod: { type: object, required: [code, name, description, active, salesEnabled, expensesEnabled, affectsCash, sortOrder], properties: { code: { type: string }, name: { type: string }, description: { type: string }, active: { type: boolean }, salesEnabled: { type: boolean }, expensesEnabled: { type: boolean }, affectsCash: { type: boolean }, sortOrder: { type: integer } } }
+    PaymentInput: { type: object, required: [orderId, method, amount], properties: { orderId: { type: string, format: uuid }, method: { type: string }, amount: { type: number, exclusiveMinimum: 0 }, reference: { type: string, maxLength: 120 } } }
+    Payment: { type: object, required: [id, orderId, orderCode, shiftId, cashRegisterName, method, amount, refundedAmount, netAmount, reference, createdByName, createdAt], properties: { id: { type: string, format: uuid }, orderId: { type: string, format: uuid }, orderCode: { type: string }, shiftId: { type: string, format: uuid }, cashRegisterName: { type: string }, method: { type: string }, amount: { type: string }, refundedAmount: { type: string }, netAmount: { type: string }, reference: { type: string }, createdByName: { type: string }, createdAt: { type: string, format: date-time } } }
     RefundInput: { type: object, required: [amount, reason], properties: { amount: { type: number, exclusiveMinimum: 0 }, reason: { type: string, minLength: 1, maxLength: 120 }, note: { type: string, maxLength: 240 } } }
     ComboOptionInput: { type: object, required: [productId, surcharge], properties: { productId: { type: string, format: uuid }, surcharge: { type: string, pattern: "^[0-9]+(\\.[0-9]{1,2})?$" } } }
     ComboGroupInput: { type: object, required: [name, required, minSelections, maxSelections, options], properties: { name: { type: string, maxLength: 120 }, required: { type: boolean }, minSelections: { type: integer, minimum: 0 }, maxSelections: { type: integer, minimum: 1 }, options: { type: array, items: { $ref: "#/components/schemas/ComboOptionInput" } } } }
@@ -895,7 +914,7 @@ components:
     Option: { type: object, required: [value, label], properties: { value: { type: string }, label: { type: string } } }
     ExpenseCategoryInput: { type: object, required: [name], properties: { name: { type: string, minLength: 1, maxLength: 100 } } }
     ExpenseCategory: { allOf: [{ $ref: "#/components/schemas/ExpenseCategoryInput" }, { type: object, required: [id, active], properties: { id: { type: string, format: uuid }, active: { type: boolean } } }] }
-    ExpenseInput: { type: object, required: [categoryId, description, amount, paymentMethod, businessDate], properties: { categoryId: { type: string, format: uuid }, description: { type: string, minLength: 1, maxLength: 180 }, amount: { type: string, pattern: "^[0-9]{1,12}(\\.[0-9]{1,2})?$" }, paymentMethod: { type: string, enum: [cash, bank_transfer, card, digital_wallet, other] }, businessDate: { type: string, format: date }, reference: { type: string, maxLength: 120 }, notes: { type: string, maxLength: 500 } } }
+    ExpenseInput: { type: object, required: [categoryId, description, amount, paymentMethod, businessDate], properties: { categoryId: { type: string, format: uuid }, description: { type: string, minLength: 1, maxLength: 180 }, amount: { type: string, pattern: "^[0-9]{1,12}(\\.[0-9]{1,2})?$" }, paymentMethod: { type: string }, businessDate: { type: string, format: date }, reference: { type: string, maxLength: 120 }, notes: { type: string, maxLength: 500 } } }
     ExpenseVoidInput: { type: object, required: [reason], properties: { reason: { type: string, minLength: 4, maxLength: 240 } } }
     Expense: { allOf: [{ $ref: "#/components/schemas/ExpenseInput" }, { type: object, required: [id, categoryName, status, createdByName, createdAt, voidedByName, voidReason], properties: { id: { type: string, format: uuid }, categoryName: { type: string }, status: { type: string, enum: [active, void] }, createdByName: { type: string }, createdAt: { type: string, format: date-time }, voidedByName: { type: string }, voidedAt: { type: [string, "null"], format: date-time }, voidReason: { type: string } } }] }
     CustomerInput: { type: object, required: [customerType, displayName, preferredChannel], properties: { customerType: { type: string, enum: [person, company] }, displayName: { type: string, maxLength: 160 }, documentType: { type: string }, documentNumber: { type: string }, phone: { type: string }, email: { type: string }, preferredChannel: { type: string, enum: [none, whatsapp, phone, email] }, preferences: { type: string }, notes: { type: string }, marketingConsent: { type: boolean }, vipOverride: { type: boolean }, addresses: { type: array, items: { $ref: "#/components/schemas/CustomerAddress" } } } }

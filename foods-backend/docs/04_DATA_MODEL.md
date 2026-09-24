@@ -157,6 +157,12 @@ por su cuenta.
 `stock_movements` correspondiente. El saldo tiene una restricción de base de
 datos que impide valores negativos.
 
+## Medios de pago
+
+`payment_methods` es el catálogo de medios de pago por empresa y constituye la única fuente de verdad para Cobros y Gastos. Cada fila define código estable, nombre visible, estado, disponibilidad para ventas o gastos y si el medio representa movimiento físico de efectivo. `payments` y `expenses` referencian el catálogo mediante clave foránea compuesta `(organization_id, code)`.
+
+Los valores iniciales se siembran durante la migración, pero la lógica de aplicación no contiene una lista cerrada de medios de pago.
+
 ## Gastos operativos
 
 Los gastos operativos son documentos del local y no reemplazan la contabilidad general.

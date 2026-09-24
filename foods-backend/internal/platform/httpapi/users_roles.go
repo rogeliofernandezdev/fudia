@@ -62,7 +62,7 @@ var menuAccessCatalog = []map[string]any{
 	{"group": "Abastecimiento", "items": []map[string]string{{"value": "inventario", "label": "Inventario"}, {"value": "kardex", "label": "Kardex"}, {"value": "compras", "label": "Compras"}, {"value": "logistica", "label": "Logística"}}},
 	{"group": "Delivery", "items": []map[string]string{{"value": "delivery", "label": "Delivery propio"}, {"value": "delivery_apps", "label": "Apps de delivery"}, {"value": "repartidores", "label": "App repartidores"}}},
 	{"group": "Negocio", "items": []map[string]string{{"value": "clientes", "label": "Clientes"}, {"value": "crm", "label": "CRM y fidelización"}, {"value": "puntos", "label": "Plaza puntos"}, {"value": "ofertas", "label": "Ofertas y descuentos"}, {"value": "personal", "label": "Personal y asistencias"}, {"value": "locales", "label": "Locales"}}},
-	{"group": "Inteligencia", "items": []map[string]string{{"value": "costos", "label": "Gastos"}, {"value": "bi", "label": "Restaurant BI"}, {"value": "app_manager", "label": "App manager"}}},
+	{"group": "Inteligencia", "items": []map[string]string{{"value": "costos", "label": "Costos y gastos"}, {"value": "bi", "label": "Restaurant BI"}, {"value": "app_manager", "label": "App manager"}}},
 	{"group": "Configuración", "items": []map[string]string{{"value": "fiscal", "label": "Fiscal y moneda"}, {"value": "usuarios", "label": "Usuarios y permisos"}, {"value": "facturacion", "label": "Facturación"}, {"value": "integraciones", "label": "Integraciones"}, {"value": "whatsapp_bot", "label": "WhatsApp IA para pedidos"}}},
 }
 
