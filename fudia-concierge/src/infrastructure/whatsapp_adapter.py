@@ -5,6 +5,8 @@ from typing import Protocol
 
 import httpx
 
+from src.metrics import WHATSAPP_OUTBOUND
+
 
 class WhatsAppAdapter(Protocol):
     async def send_text(
@@ -82,6 +84,9 @@ class MetaWhatsAppAdapter:
                 )
             except httpx.TransportError:
                 if attempt == 2:
+                    WHATSAPP_OUTBOUND.labels(
+                        result="transport_error"
+                    ).inc()
                     raise
                 await asyncio.sleep(
                     0.2 * (2**attempt)
@@ -109,9 +114,20 @@ class MetaWhatsAppAdapter:
             break
 
         if response is None:
+            WHATSAPP_OUTBOUND.labels(
+                result="no_response"
+            ).inc()
             raise RuntimeError(
                 "WhatsApp no respondió."
             )
+        if response.is_success:
+            WHATSAPP_OUTBOUND.labels(
+                result="success"
+            ).inc()
+        else:
+            WHATSAPP_OUTBOUND.labels(
+                result="http_error"
+            ).inc()
         response.raise_for_status()
 
     async def close(self) -> None:
