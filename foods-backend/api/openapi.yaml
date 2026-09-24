@@ -844,6 +844,17 @@ paths:
         - { in: query, name: usage, required: true, schema: { type: string, enum: [sales, expenses] } }
       responses:
         "200": { description: Catálogo de medios de pago, content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/PaymentMethod" } } } } } } }
+  /v1/operations/products/{id}/modifiers:
+    get:
+      operationId: getOperationalProductModifiers
+      summary: Carga modificadores del producto para construir una línea de POS
+      security: [{ sessionCookie: [] }]
+      parameters: [{ $ref: "#/components/parameters/EntityId" }]
+      responses:
+        "200": { description: Configuración de modificadores, content: { application/json: { schema: { $ref: "#/components/schemas/ProductModifierConfig" } } } }
+        "404": { description: Producto no encontrado }
+        "409": { description: El producto es un combo }
+        "403": { $ref: "#/components/responses/Forbidden" }
   /v1/operations/product-availability:
     get:
       operationId: listOperationalProductAvailability
