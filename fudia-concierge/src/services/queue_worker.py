@@ -202,12 +202,30 @@ class QueueWorker:
         self,
         delivery: QueueDelivery,
     ) -> None:
-        while True:
-            await asyncio.sleep(
-                self.visibility_heartbeat_seconds
+        try:
+            while True:
+                await asyncio.sleep(
+                    self.visibility_heartbeat_seconds
+                )
+                if not await self.queue.touch(delivery):
+                    return
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            log_event(
+                logger,
+                "concierge.queue.visibility_heartbeat_failed",
+                message=fingerprint(
+                    delivery.message.message_id
+                ),
+                errorType=type(exc).__name__,
             )
-            if not await self.queue.touch(delivery):
-                return
+            logger.exception(
+                "No se pudo renovar la visibilidad del mensaje %s",
+                fingerprint(
+                    delivery.message.message_id
+                ),
+            )
 
     async def stop(self) -> None:
         self._stop.set()
