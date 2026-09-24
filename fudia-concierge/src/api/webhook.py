@@ -31,13 +31,15 @@ async def _process_message(
     phone: str,
     text: str,
     message_id: str,
+    sender_phone_id: str,
+    recipient_phone: str,
 ) -> None:
     started = time.perf_counter()
     safe_message_id = fingerprint(message_id)
     safe_phone = fingerprint(phone)
     try:
-        reply = await service.handle_message(phone, text)
-        await whatsapp.send_text(phone, reply)
+        reply = await service.handle_message(phone, text, recipient_phone)
+        await whatsapp.send_text(phone, reply, sender_phone_id)
         log_event(
             logger,
             "concierge.message.processed",
@@ -72,11 +74,16 @@ async def verify_webhook(request: Request) -> PlainTextResponse:
     return PlainTextResponse("Fudia Concierge webhook")
 
 
-def _incoming_text_messages(data: dict[str, Any]) -> list[tuple[str, str, str]]:
-    result: list[tuple[str, str, str]] = []
+def _incoming_text_messages(
+    data: dict[str, Any],
+) -> list[tuple[str, str, str, str, str]]:
+    result: list[tuple[str, str, str, str, str]] = []
     for entry in data.get("entry", []):
         for change in entry.get("changes", []):
             value = change.get("value", {})
+            metadata = value.get("metadata", {})
+            sender_phone_id = str(metadata.get("phone_number_id", ""))
+            recipient_phone = str(metadata.get("display_phone_number", ""))
             for message in value.get("messages", []):
                 if message.get("type") != "text":
                     continue
@@ -85,6 +92,8 @@ def _incoming_text_messages(data: dict[str, Any]) -> list[tuple[str, str, str]]:
                         str(message.get("id", "")),
                         str(message.get("from", "")),
                         str(message.get("text", {}).get("body", "")),
+                        sender_phone_id,
+                        recipient_phone,
                     )
                 )
     return result
@@ -113,7 +122,7 @@ async def receive_webhook(
     whatsapp = request.app.state.whatsapp
     dedup = request.app.state.deduplicator
 
-    for message_id, phone, text in _incoming_text_messages(data):
+    for message_id, phone, text, sender_phone_id, recipient_phone in _incoming_text_messages(data):
         if not phone or not text:
             continue
         if not await dedup.claim(message_id):
@@ -126,6 +135,8 @@ async def receive_webhook(
             phone,
             text,
             message_id,
+            sender_phone_id,
+            recipient_phone,
         )
 
     return {"status": "accepted", "accepted": accepted}
