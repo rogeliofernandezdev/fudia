@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @next/next/no-img-element -- Local blob previews must bypass Next image optimization. */
 import "./product-wizard.css";
 import {useRef,useState} from "react";
 import AsyncSelect from "react-select/async";
