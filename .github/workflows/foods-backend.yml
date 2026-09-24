@@ -10,6 +10,11 @@ on:
       - "foods-backend/**"
       - ".github/workflows/foods-backend.yml"
 
+env:
+  GIT_CONFIG_COUNT: "1"
+  GIT_CONFIG_KEY_0: init.defaultBranch
+  GIT_CONFIG_VALUE_0: main
+
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -20,6 +25,7 @@ jobs:
           POSTGRES_DB: foods_test
           POSTGRES_USER: foods
           POSTGRES_PASSWORD: foods
+          POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
         ports:
           - 5432:5432
         options: >-
