@@ -4,10 +4,7 @@ from typing import Any
 import pytest
 
 from src.domain.models import ChatMessage, ConversationSession
-from src.infrastructure.openai_adapter import (
-    OpenAIIntentRouter,
-    OpenAIScopeClassifier,
-)
+from src.infrastructure.openai_adapter import OpenAIConciergeRouter
 
 
 class FakeResponse:
@@ -40,21 +37,8 @@ def prompt(
     return path
 
 
-@pytest.mark.asyncio
-async def test_scope_classifier_is_fail_closed(
-    tmp_path: Path,
-) -> None:
-    client = FakeOpenAI("OUT_OF_SCOPE")
-    classifier = OpenAIScopeClassifier(
-        client,  # type: ignore[arg-type]
-        "test-model",
-        prompt(
-            tmp_path,
-            "scope.md",
-            "scope classification only",
-        ),
-    )
-    session = ConversationSession(
+def session() -> ConversationSession:
+    return ConversationSession(
         phone="51999999999",
         qr_token="a" * 32,
         messages=[
@@ -65,79 +49,97 @@ async def test_scope_classifier_is_fail_closed(
         ],
     )
 
-    assert (
-        await classifier.is_in_scope(
-            session,
-            "¿Quién fue Napoleón?",
-        )
-        is False
-    )
-    assert (
-        client.responses.calls[0]["instructions"]
-        == "scope classification only"
-    )
 
-    ambiguous = FakeOpenAI(
-        "IN_SCOPE porque parece válido"
-    )
-    ambiguous_classifier = OpenAIScopeClassifier(
-        ambiguous,  # type: ignore[arg-type]
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("output", "expected"),
+    [
+        ("menu", "menu"),
+        ("order", "order"),
+        ("service", "service"),
+        ("out_of_scope", "out_of_scope"),
+    ],
+)
+async def test_unified_router_accepts_only_known_routes(
+    tmp_path: Path,
+    output: str,
+    expected: str,
+) -> None:
+    client = FakeOpenAI(output)
+    router = OpenAIConciergeRouter(
+        client,  # type: ignore[arg-type]
         "test-model",
         prompt(
             tmp_path,
-            "scope2.md",
-            "scope",
+            "router.md",
+            "route exactly once",
         ),
     )
+
     assert (
-        await ambiguous_classifier.is_in_scope(
-            session,
-            "hazme una tarea",
+        await router.route(
+            session(),
+            "mensaje",
         )
-        is False
+        == expected
+    )
+    assert len(client.responses.calls) == 1
+    assert (
+        client.responses.calls[0]["instructions"]
+        == "route exactly once"
     )
 
 
 @pytest.mark.asyncio
-async def test_intent_router_accepts_only_known_intents(
+async def test_unified_router_is_fail_closed_on_invalid_output(
     tmp_path: Path,
 ) -> None:
-    session = ConversationSession(
-        phone="51999999999",
-        qr_token="a" * 32,
+    client = FakeOpenAI(
+        "menu porque parece una consulta"
     )
-    menu_client = FakeOpenAI("menu")
-    router = OpenAIIntentRouter(
-        menu_client,  # type: ignore[arg-type]
+    router = OpenAIConciergeRouter(
+        client,  # type: ignore[arg-type]
         "test-model",
         prompt(
             tmp_path,
-            "intent.md",
+            "router.md",
             "route",
         ),
-    )
-    assert (
-        await router.route(
-            session,
-            "¿Qué bebidas tienen?",
-        )
-        == "menu"
     )
 
-    invalid_client = FakeOpenAI("anything")
-    invalid_router = OpenAIIntentRouter(
-        invalid_client,  # type: ignore[arg-type]
+    assert (
+        await router.route(
+            session(),
+            "¿Quién fue Napoleón?",
+        )
+        == "out_of_scope"
+    )
+
+
+@pytest.mark.asyncio
+async def test_unified_router_sends_context_and_confirmation_state(
+    tmp_path: Path,
+) -> None:
+    client = FakeOpenAI("order")
+    router = OpenAIConciergeRouter(
+        client,  # type: ignore[arg-type]
         "test-model",
         prompt(
             tmp_path,
-            "intent2.md",
+            "router.md",
             "route",
         ),
     )
-    assert (
-        await invalid_router.route(
-            session,
-            "quiero dos",
-        )
-        == "order"
+    current = session()
+    current.awaiting_confirmation = True
+
+    await router.route(
+        current,
+        "sí",
     )
+
+    router_input = str(
+        client.responses.calls[0]["input"]
+    )
+    assert "¿Qué deseas pedir?" in router_input
+    assert "awaiting_confirmation=True" in router_input
