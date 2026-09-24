@@ -1,9 +1,9 @@
-.payment-method-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
-.payment-method-filters{display:flex;gap:8px;align-items:center;flex:1}
-.payment-method-search{position:relative;max-width:380px;flex:1}
-.payment-method-search svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--ink-400)}
-.payment-method-search .ds-input{padding-left:36px;width:100%}
-.payment-method-filters .ds-select{min-width:150px}
+.payment-method-toolbar{display:grid;grid-template-columns:minmax(280px,1fr) 190px;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line);background:#fff}
+.payment-method-search{display:flex;align-items:center;min-width:0;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink-400);overflow:hidden}
+.payment-method-search>svg{margin-left:10px;flex:0 0 auto}
+.payment-method-search .ds-input{width:100%;min-width:0;flex:1;border:0;box-shadow:none;background:transparent;padding-left:9px}
+.payment-method-search .ds-input:focus{box-shadow:none}
+.payment-method-status-filter{width:190px}
 .payment-method-table td:first-child{min-width:230px}
 .payment-method-name{display:grid;gap:3px}
 .payment-method-name>div{display:flex;align-items:center;gap:9px}
@@ -36,4 +36,4 @@
 .payment-method-toggle small{display:block;color:var(--ink-400);font-size:7px;line-height:1.4;margin-top:3px}
 .payment-method-form footer{display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--line);padding-top:14px}
 .payment-method-warning{border:1px solid #f1d9ae;background:#fffaf0;color:#805b17;border-radius:9px;padding:9px 11px;font-size:8px;line-height:1.45}
-@media(width<=700px){.payment-method-toolbar{align-items:stretch;flex-direction:column}.payment-method-filters{align-items:stretch;flex-direction:column}.payment-method-search{max-width:none}.payment-method-filters .ds-select{width:100%}.payment-method-grid,.payment-method-toggle-grid{grid-template-columns:1fr}.payment-method-grid .span-2{grid-column:auto}}
+@media(width<=700px){.payment-method-toolbar{grid-template-columns:1fr;padding:10px 12px}.payment-method-status-filter{width:100%}.payment-method-grid,.payment-method-toggle-grid{grid-template-columns:1fr}.payment-method-grid .span-2{grid-column:auto}}
