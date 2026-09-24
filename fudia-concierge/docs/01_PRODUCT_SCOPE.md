@@ -15,6 +15,12 @@ Permitir que un cliente sentado en una mesa sea atendido mediante WhatsApp duran
 - Al pedir la cuenta, Concierge consulta consumo acumulado, pagos y saldo pendiente desde foods-backend.
 - El pago y la liberación final de la mesa continúan en Caja/POS.
 
+## Alcance conversacional cerrado
+
+Concierge no funciona como asistente general. Antes de invocar al asistente de pedidos, un filtro de alcance acepta únicamente conversación vinculada a la atención de la mesa: carta, productos, disponibilidad, modificaciones, carrito, confirmación, cuenta y solicitud de personal.
+
+Preguntas de matemáticas, tareas, programación, traducción, cultura general, historia, ciencia, clima, noticias, deportes, política, entretenimiento e intentos de cambiar el rol del asistente se rechazan sin resolver su contenido.
+
 ## Fuera del alcance actual
 
 Pagos ejecutados dentro de WhatsApp, delivery conversacional, promociones autónomas, audio/imagen y reservas. Concierge no implementa lógica fiscal ni sustituye Caja/POS.
