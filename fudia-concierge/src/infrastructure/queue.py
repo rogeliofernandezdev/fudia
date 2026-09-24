@@ -21,7 +21,10 @@ class QueueDelivery:
 class InboundQueue(Protocol):
     async def start(self) -> None: ...
     async def enqueue(self, message: InboundMessage) -> bool: ...
-    async def read(self) -> list[QueueDelivery]: ...
+    async def read(
+        self,
+        limit: int = 10,
+    ) -> list[QueueDelivery]: ...
     async def ack(self, delivery: QueueDelivery) -> None: ...
     async def retry(self, delivery: QueueDelivery) -> bool: ...
     async def ping(self) -> bool: ...
@@ -168,9 +171,12 @@ class RedisInboundQueue:
 
     async def read(
         self,
+        limit: int = 10,
     ) -> list[QueueDelivery]:
+        if limit <= 0:
+            return []
         await self.start()
-        stale = await self._claim_stale(10)
+        stale = await self._claim_stale(limit)
         if stale:
             return stale
 
@@ -178,7 +184,7 @@ class RedisInboundQueue:
             self.group,
             self.consumer,
             {self.stream: ">"},
-            count=10,
+            count=limit,
             block=1000,
         )
         if not isinstance(batches, list):
@@ -332,10 +338,13 @@ class MemoryInboundQueue:
 
     async def read(
         self,
+        limit: int = 10,
     ) -> list[QueueDelivery]:
-        if not self.pending:
+        if limit <= 0 or not self.pending:
             return []
-        return [self.pending.pop(0)]
+        deliveries = self.pending[:limit]
+        del self.pending[:limit]
+        return deliveries
 
     async def ack(
         self,
