@@ -450,6 +450,25 @@ class ConciergeTools:
                     "cart": self._cart_payload(),
                 }
 
+            if name == "request_human":
+                reason = str(args.get("reason", "")).strip()
+                if len(reason) > 240:
+                    return {"ok": False, "code": "handoff_reason_too_long"}
+                if not reason:
+                    reason = "El comensal solicitó atención del personal."
+                handoff = await self.fudia.request_handoff(
+                    self._token(),
+                    self.session.phone,
+                    self.session.conversation_id,
+                    reason,
+                )
+                self.session.handoff_pending = True
+                return {
+                    "ok": True,
+                    "status": str(handoff.get("status", "pending")),
+                    "tableName": str(handoff.get("tableName", "")),
+                }
+
             if name == "view_cart":
                 return {"ok": True, "cart": self._cart_payload()}
 
