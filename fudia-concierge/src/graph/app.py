@@ -52,18 +52,12 @@ def build_graph(
         return run
 
     graph.add_node("route", route_node)
-    graph.add_node(  # type: ignore[arg-type]
-        "menu",
-        specialist_node("menu"),
-    )
-    graph.add_node(  # type: ignore[arg-type]
-        "order",
-        specialist_node("order"),
-    )
-    graph.add_node(  # type: ignore[arg-type]
-        "service",
-        specialist_node("service"),
-    )
+    menu_node: Any = specialist_node("menu")
+    order_node: Any = specialist_node("order")
+    service_node: Any = specialist_node("service")
+    graph.add_node("menu", menu_node)
+    graph.add_node("order", order_node)
+    graph.add_node("service", service_node)
     graph.set_entry_point("route")
     graph.add_conditional_edges(
         "route",
