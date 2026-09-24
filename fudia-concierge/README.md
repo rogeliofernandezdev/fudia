@@ -20,6 +20,12 @@ Cuando el cliente solicita la cuenta, Concierge consulta el consumo real de la m
 - Redis para sesión conversacional efímera
 - HTTP/OpenAPI para integración con foods-backend
 
+## Prompts
+
+- `prompts/system.md`: comportamiento conversacional y orquestación del pedido.
+- `prompts/scope_router.md`: clasificación cerrada `IN_SCOPE / OUT_OF_SCOPE`.
+- Las reglas de negocio críticas no viven en prompts: se validan en tools y foods-backend.
+
 ## Desarrollo local
 
 1. Copiar .env.example a .env.

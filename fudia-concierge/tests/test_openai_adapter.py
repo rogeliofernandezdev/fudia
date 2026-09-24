@@ -27,14 +27,20 @@ class FakeOpenAI:
         self.responses = FakeResponses(output_text)
 
 
-def build_engine(tmp_path: Path, output_text: str) -> tuple[OpenAIConciergeEngine, FakeOpenAI]:
-    prompt = tmp_path / "system.md"
-    prompt.write_text("restaurant ordering only", encoding="utf-8")
+def build_engine(
+    tmp_path: Path,
+    output_text: str,
+) -> tuple[OpenAIConciergeEngine, FakeOpenAI]:
+    system_prompt = tmp_path / "system.md"
+    scope_prompt = tmp_path / "scope_router.md"
+    system_prompt.write_text("conversation and ordering behavior", encoding="utf-8")
+    scope_prompt.write_text("scope classification only", encoding="utf-8")
     client = FakeOpenAI(output_text)
     engine = OpenAIConciergeEngine(
         api_key="test",
         model="test-model",
-        prompt_path=prompt,
+        prompt_path=system_prompt,
+        scope_prompt_path=scope_prompt,
         client=client,  # type: ignore[arg-type]
     )
     return engine, client
@@ -56,6 +62,7 @@ async def test_scope_classifier_rejects_out_of_scope_label(tmp_path: Path) -> No
     assert allowed is False
     assert len(client.responses.calls) == 1
     assert client.responses.calls[0]["model"] == "test-model"
+    assert client.responses.calls[0]["instructions"] == "scope classification only"
     assert "Current customer message" in client.responses.calls[0]["input"]
 
 
