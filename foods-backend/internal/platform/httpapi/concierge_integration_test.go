@@ -249,20 +249,35 @@ func TestConciergeQRCodeMenuOrderAndKitchenWorkflow(t *testing.T) {
 	if kitchenRec.Code!=200||!strings.Contains(kitchenRec.Body.String(),created.ID){
 		t.Fatalf("concierge order must reach KDS: %d %s",kitchenRec.Code,kitchenRec.Body.String())
 	}
+	var kitchen struct{ Items []kitchenTicket `json:"items"` }
+	if err:=json.Unmarshal(kitchenRec.Body.Bytes(),&kitchen);err!=nil{t.Fatal(err)}
+	processedRounds:=0
+	for _,ticket:=range kitchen.Items{
+		if ticket.OrderID!=created.ID{continue}
+		processedRounds++
+		startReq:=httptest.NewRequest("PATCH","/v1/admin/kitchen/tickets/"+ticket.ID+"/status",bytes.NewReader([]byte(`{"status":"preparando"}`)))
+		startReq.SetPathValue("id",ticket.ID)
+		startReq=startReq.WithContext(context.WithValue(startReq.Context(),scopeKey{},s))
+		startRec:=httptest.NewRecorder()
+		api.updateKitchenTicketStatus(startRec,startReq)
+		if startRec.Code!=204{t.Fatalf("kitchen round start: %d %s",startRec.Code,startRec.Body.String())}
 
-	startReq:=httptest.NewRequest("PATCH","/v1/admin/kitchen/tickets/"+created.ID+"/status",bytes.NewReader([]byte(`{"status":"preparando"}`)))
-	startReq.SetPathValue("id",created.ID)
-	startReq=startReq.WithContext(context.WithValue(startReq.Context(),scopeKey{},s))
-	startRec:=httptest.NewRecorder()
-	api.updateKitchenTicketStatus(startRec,startReq)
-	if startRec.Code!=204{t.Fatalf("kitchen start: %d %s",startRec.Code,startRec.Body.String())}
+		readyReq:=httptest.NewRequest("PATCH","/v1/admin/kitchen/tickets/"+ticket.ID+"/status",bytes.NewReader([]byte(`{"status":"listo"}`)))
+		readyReq.SetPathValue("id",ticket.ID)
+		readyReq=readyReq.WithContext(context.WithValue(readyReq.Context(),scopeKey{},s))
+		readyRec:=httptest.NewRecorder()
+		api.updateKitchenTicketStatus(readyRec,readyReq)
+		if readyRec.Code!=204{t.Fatalf("kitchen round ready: %d %s",readyRec.Code,readyRec.Body.String())}
+	}
+	if processedRounds!=2{t.Fatalf("expected two independent kitchen rounds, got %d",processedRounds)}
 
-	readyReq:=httptest.NewRequest("PATCH","/v1/admin/kitchen/tickets/"+created.ID+"/status",bytes.NewReader([]byte(`{"status":"listo"}`)))
-	readyReq.SetPathValue("id",created.ID)
-	readyReq=readyReq.WithContext(context.WithValue(readyReq.Context(),scopeKey{},s))
-	readyRec:=httptest.NewRecorder()
-	api.updateKitchenTicketStatus(readyRec,readyReq)
-	if readyRec.Code!=204{t.Fatalf("kitchen ready: %d %s",readyRec.Code,readyRec.Body.String())}
+	billReq:=httptest.NewRequest("POST","/v1/integrations/concierge/"+qrToken+"/bill",bytes.NewReader([]byte(fmt.Sprintf(`{"conversationId":"conv-session-%d","customerPhone":"51999999999"}`,nonce))))
+	billReq.Header.Set("X-Fudia-Concierge-Key","concierge-test-key")
+	billRec:=httptest.NewRecorder()
+	api.Routes().ServeHTTP(billRec,billReq)
+	if billRec.Code!=200||!strings.Contains(billRec.Body.String(),`"total":"105.50"`){
+		t.Fatalf("bill must return backend total: %d %s",billRec.Code,billRec.Body.String())
+	}
 
 	deliverReq:=httptest.NewRequest("PATCH","/v1/admin/orders/"+created.ID+"/status",bytes.NewReader([]byte(`{"status":"entregado"}`)))
 	deliverReq.SetPathValue("id",created.ID)
