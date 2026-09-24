@@ -109,6 +109,39 @@ class FudiaClient:
         )
         return ModifierConfig.model_validate(body)
 
+    async def request_handoff(
+        self,
+        token: str,
+        phone: str,
+        conversation_id: str,
+        reason: str,
+    ) -> dict[str, Any]:
+        return await self._json(
+            "POST",
+            (
+                f"/v1/integrations/concierge/{quote(token, safe='')}"
+                "/handoffs"
+            ),
+            json={
+                "customerPhone": phone,
+                "conversationId": conversation_id,
+                "reason": reason,
+            },
+        )
+
+    async def get_handoff_status(
+        self,
+        token: str,
+        conversation_id: str,
+    ) -> dict[str, Any]:
+        return await self._json(
+            "GET",
+            (
+                f"/v1/integrations/concierge/{quote(token, safe='')}"
+                f"/handoffs/{quote(conversation_id, safe='')}"
+            ),
+        )
+
     async def create_order(
         self,
         token: str,
