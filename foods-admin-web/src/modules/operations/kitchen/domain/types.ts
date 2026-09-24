@@ -23,6 +23,8 @@ export type KitchenItem={
 
 export type KitchenTicket={
   id:string;
+  orderId:string;
+  roundNumber:number;
   code:string;
   channel:string;
   status:KitchenStatus;
