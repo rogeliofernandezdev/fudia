@@ -494,7 +494,12 @@ func (a *API) createConciergeOrder(w http.ResponseWriter, r *http.Request) {
 		&openOrderID,&openStatus,&openChannel,&openSubtotal,&openDeliveryFee,&openCreatedBy,&conciergeOwned,
 	)
 	if err == nil {
-		if openChannel!="whatsapp" || openCreatedBy!=nil || !conciergeOwned {
+		if openChannel=="whatsapp" {
+			if openCreatedBy!=nil || !conciergeOwned {
+				fail(w, 409, "table_occupied", "La mesa tiene una comanda abierta de WhatsApp que no pertenece a Fudia Concierge.")
+				return
+			}
+		} else if openChannel!="salon" {
 			fail(w, 409, "table_occupied", "La mesa tiene una comanda abierta gestionada por otro canal.")
 			return
 		}
@@ -560,8 +565,13 @@ func (a *API) createConciergeOrder(w http.ResponseWriter, r *http.Request) {
 			  organization_id,location_id,user_id,action,entity_type,entity_id,metadata
 			)
 			VALUES($1,$2,NULL,'concierge.order.items_added','order',$3,
-			  jsonb_build_object('source','fudia_concierge','conversationId',$4::text,'tableId',$5::text))
-		`,qr.Scope.OrganizationID,qr.Scope.LocationID,openOrderID,in.ConversationID,qr.TableID);err!=nil {
+			  jsonb_build_object(
+			    'source','fudia_concierge',
+			    'conversationId',$4::text,
+			    'tableId',$5::text,
+			    'existingChannel',$6::text
+			  ))
+		`,qr.Scope.OrganizationID,qr.Scope.LocationID,openOrderID,in.ConversationID,qr.TableID,openChannel);err!=nil {
 			fail(w,503,"order_unavailable","No pudimos registrar la trazabilidad del pedido.")
 			return
 		}

@@ -271,3 +271,107 @@ func TestConciergeQRCodeMenuOrderAndKitchenWorkflow(t *testing.T) {
 		t.Fatalf("unpaid QR table order must not release table: %d %s",deliverRec.Code,deliverRec.Body.String())
 	}
 }
+
+
+func TestConciergeAppendsToConfirmedSalonOrderWithoutImpersonatingStaff(t *testing.T) {
+	pool:=integrationPool(t)
+	s:=seedInventoryScope(t,pool)
+	api:=New(pool)
+	ctx:=context.Background()
+	nonce:=time.Now().UnixNano()
+	t.Setenv("FUDIA_CONCIERGE_API_KEY","concierge-test-key")
+
+	var baseProductID,addedProductID string
+	if err:=pool.QueryRow(ctx,`
+		INSERT INTO products(
+		  organization_id,sku,name,description,price,active,product_type,quantity_control
+		)
+		VALUES($1,$2,'Agua de mesa','Pedido inicial',10,true,'retail','none')
+		RETURNING id
+	`,s.OrganizationID,fmt.Sprintf("SAL-BASE-%d",nonce)).Scan(&baseProductID);err!=nil{t.Fatal(err)}
+	if err:=pool.QueryRow(ctx,`
+		INSERT INTO products(
+		  organization_id,sku,name,description,price,active,product_type,quantity_control
+		)
+		VALUES($1,$2,'Postre Concierge','Ronda adicional',12.50,true,'prepared','none')
+		RETURNING id
+	`,s.OrganizationID,fmt.Sprintf("SAL-ADD-%d",nonce)).Scan(&addedProductID);err!=nil{t.Fatal(err)}
+
+	var tableID,qrToken string
+	if err:=pool.QueryRow(ctx,`
+		INSERT INTO tables(
+		  organization_id,location_id,name,seats,zone,active,qr_token,qr_enabled
+		)
+		VALUES($1,$2,$3,4,'Principal',true,encode(gen_random_bytes(16),'hex'),true)
+		RETURNING id,qr_token
+	`,s.OrganizationID,s.LocationID,fmt.Sprintf("Mesa salón Concierge %d",nonce)).
+		Scan(&tableID,&qrToken);err!=nil{t.Fatal(err)}
+	if _,err:=pool.Exec(ctx,`
+		INSERT INTO concierge_settings(organization_id,location_id,whatsapp_phone,active)
+		VALUES($1,$2,'+51987654321',true)
+		ON CONFLICT(organization_id,location_id)
+		DO UPDATE SET whatsapp_phone=EXCLUDED.whatsapp_phone,active=true,updated_at=now()
+	`,s.OrganizationID,s.LocationID);err!=nil{t.Fatal(err)}
+
+	var orderID string
+	if err:=pool.QueryRow(ctx,`
+		INSERT INTO orders(
+		  organization_id,location_id,channel,status,table_id,
+		  subtotal,delivery_fee,total,created_by
+		)
+		VALUES($1,$2,'salon','confirmado',$3,10,0,10,$4)
+		RETURNING id
+	`,s.OrganizationID,s.LocationID,tableID,s.UserID).Scan(&orderID);err!=nil{t.Fatal(err)}
+	if _,err:=pool.Exec(ctx,`
+		INSERT INTO order_items(
+		  organization_id,order_id,product_id,name,qty,unit_price,note,item_type
+		)
+		VALUES($1,$2,$3,'Agua de mesa',1,10,'','product')
+	`,s.OrganizationID,orderID,baseProductID);err!=nil{t.Fatal(err)}
+
+	body:=[]byte(fmt.Sprintf(`{
+	  "customerPhone":"51999999999",
+	  "conversationId":"salon-extra-%d",
+	  "items":[{"productId":%q,"qty":1,"note":"","selections":[]}]
+	}`,nonce,addedProductID))
+	req:=httptest.NewRequest("POST","/v1/integrations/concierge/"+qrToken+"/orders",bytes.NewReader(body))
+	req.Header.Set("X-Fudia-Concierge-Key","concierge-test-key")
+	rec:=httptest.NewRecorder()
+	api.Routes().ServeHTTP(rec,req)
+	if rec.Code!=200{
+		t.Fatalf("Concierge must append to a confirmed salon order: %d %s",rec.Code,rec.Body.String())
+	}
+	var expanded order
+	if err:=json.Unmarshal(rec.Body.Bytes(),&expanded);err!=nil{t.Fatal(err)}
+	if expanded.ID!=orderID||expanded.Channel!="salon"||expanded.Total!="22.50"{
+		t.Fatalf("unexpected expanded salon order: %#v",expanded)
+	}
+
+	var orderCount,requestCount,auditCount int
+	if err:=pool.QueryRow(ctx,`
+		SELECT count(*) FROM orders
+		WHERE organization_id=$1 AND location_id=$2 AND table_id=$3
+	`,s.OrganizationID,s.LocationID,tableID).Scan(&orderCount);err!=nil{t.Fatal(err)}
+	if orderCount!=1{t.Fatalf("Concierge duplicated the salon order, count=%d",orderCount)}
+	if err:=pool.QueryRow(ctx,`
+		SELECT count(*) FROM concierge_order_requests
+		WHERE organization_id=$1 AND location_id=$2 AND order_id=$3
+	`,s.OrganizationID,s.LocationID,orderID).Scan(&requestCount);err!=nil{t.Fatal(err)}
+	if requestCount!=1{t.Fatalf("expected one Concierge request linked to salon order, got %d",requestCount)}
+	if err:=pool.QueryRow(ctx,`
+		SELECT count(*) FROM audit_log
+		WHERE organization_id=$1 AND entity_id=$2
+		  AND action='concierge.order.items_added'
+		  AND metadata->>'existingChannel'='salon'
+	`,s.OrganizationID,orderID).Scan(&auditCount);err!=nil{t.Fatal(err)}
+	if auditCount!=1{t.Fatalf("expected Concierge append audit on salon order, got %d",auditCount)}
+
+	var createdBy *string
+	if err:=pool.QueryRow(ctx,`
+		SELECT created_by::text FROM orders
+		WHERE id=$1 AND organization_id=$2
+	`,orderID,s.OrganizationID).Scan(&createdBy);err!=nil{t.Fatal(err)}
+	if createdBy==nil||*createdBy!=s.UserID{
+		t.Fatalf("Concierge must preserve original staff ownership, got %v",createdBy)
+	}
+}
