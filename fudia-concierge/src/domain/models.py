@@ -37,12 +37,47 @@ class MenuResponse(BaseModel):
     currencySymbol: str = ""
 
 
+class ComboOption(BaseModel):
+    productId: str
+    name: str
+    surcharge: Decimal
+    available: bool
+
+
+class ComboGroup(BaseModel):
+    id: str
+    name: str
+    required: bool
+    minSelections: int
+    maxSelections: int
+    options: list[ComboOption] = Field(default_factory=list)
+
+
+class ComboDetail(BaseModel):
+    id: str
+    name: str
+    description: str = ""
+    price: Decimal
+    imageUrl: str | None = None
+    groups: list[ComboGroup] = Field(default_factory=list)
+
+
+class CartSelection(BaseModel):
+    group_id: str
+    group_name: str
+    product_id: str
+    name: str
+    surcharge: Decimal
+
+
 class CartLine(BaseModel):
     product_id: str
     name: str
     quantity: float
     unit_price: Decimal
     note: str = ""
+    item_type: str = "product"
+    selections: list[CartSelection] = Field(default_factory=list)
 
 
 class ConversationSession(BaseModel):

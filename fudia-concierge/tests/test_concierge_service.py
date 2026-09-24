@@ -3,7 +3,16 @@ from typing import Any
 
 import pytest
 
-from src.domain.models import ConversationSession, MenuItem, MenuResponse, OrderResult, TableContext
+from src.domain.models import (
+    ComboDetail,
+    ComboGroup,
+    ComboOption,
+    ConversationSession,
+    MenuItem,
+    MenuResponse,
+    OrderResult,
+    TableContext,
+)
 from src.infrastructure.state_store import MemoryConversationStore
 from src.services.concierge_service import ConciergeService, extract_qr_token
 from src.services.tools import ConciergeTools, explicit_confirmation
@@ -45,6 +54,38 @@ class FakeFudia:
     async def get_product(self, token: str, product_id: str) -> MenuItem | None:
         response = await self.search_menu(token, product_id=product_id)
         return response.items[0] if response.items else None
+
+    async def get_combo(self, token: str, product_id: str) -> ComboDetail:
+        assert token == "a" * 32
+        assert product_id == "combo1"
+        return ComboDetail(
+            id="combo1",
+            name="Combo criollo",
+            price=Decimal("20.00"),
+            groups=[
+                ComboGroup(
+                    id="g1",
+                    name="Acompañamiento",
+                    required=True,
+                    minSelections=1,
+                    maxSelections=1,
+                    options=[
+                        ComboOption(
+                            productId="opt1",
+                            name="Papas",
+                            surcharge=Decimal("0"),
+                            available=True,
+                        ),
+                        ComboOption(
+                            productId="opt2",
+                            name="Yuca",
+                            surcharge=Decimal("3.00"),
+                            available=True,
+                        ),
+                    ],
+                )
+            ],
+        )
 
     async def create_order(
         self,
@@ -144,3 +185,47 @@ async def test_cart_requires_explicit_confirmation_before_order() -> None:
     assert confirmed["order"]["code"] == "PED-001"
     assert len(fudia.order_calls) == 1
     assert session.cart == []
+
+
+@pytest.mark.asyncio
+async def test_combo_selection_is_validated_and_forwarded() -> None:
+    fudia = FakeFudia()
+    session = ConversationSession(phone="51999999999", qr_token="a" * 32)
+    tools = ConciergeTools(fudia, session, "quiero el combo con yuca")
+
+    incomplete = await tools.execute(
+        "add_combo_item",
+        {
+            "productId": "combo1",
+            "quantity": 1,
+            "note": "",
+            "selections": [],
+        },
+    )
+    assert incomplete["code"] == "combo_group_incomplete"
+    assert session.cart == []
+
+    added = await tools.execute(
+        "add_combo_item",
+        {
+            "productId": "combo1",
+            "quantity": 1,
+            "note": "",
+            "selections": [{"groupId": "g1", "productId": "opt2"}],
+        },
+    )
+    assert added["ok"] is True
+    assert added["cart"]["total"] == "23.00"
+    assert session.cart[0].item_type == "combo"
+    assert session.cart[0].selections[0].name == "Yuca"
+
+    prepared = await tools.execute("prepare_confirmation", {})
+    assert prepared["ok"] is True
+    confirmed = await ConciergeTools(fudia, session, "Sí").execute(
+        "confirm_order", {}
+    )
+    assert confirmed["ok"] is True
+    assert fudia.order_calls[0]["lines"][0]["productId"] == "combo1"
+    assert fudia.order_calls[0]["lines"][0]["selections"] == [
+        {"groupId": "g1", "productId": "opt2"}
+    ]

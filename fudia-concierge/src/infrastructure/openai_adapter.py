@@ -52,6 +52,52 @@ TOOLS: list[dict[str, Any]] = [
     },
     {
         "type": "function",
+        "name": "get_combo_options",
+        "description": (
+            "Obtiene los grupos, reglas y alternativas reales de un combo "
+            "devuelto por search_menu."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {"productId": {"type": "string"}},
+            "required": ["productId"],
+            "additionalProperties": False,
+        },
+        "strict": True,
+    },
+    {
+        "type": "function",
+        "name": "add_combo_item",
+        "description": (
+            "Agrega un combo con las selecciones elegidas entre las opciones "
+            "devueltas por get_combo_options."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "productId": {"type": "string"},
+                "quantity": {"type": "number", "minimum": 0.01},
+                "note": {"type": "string"},
+                "selections": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "groupId": {"type": "string"},
+                            "productId": {"type": "string"},
+                        },
+                        "required": ["groupId", "productId"],
+                        "additionalProperties": False,
+                    },
+                },
+            },
+            "required": ["productId", "quantity", "note", "selections"],
+            "additionalProperties": False,
+        },
+        "strict": True,
+    },
+    {
+        "type": "function",
         "name": "remove_item",
         "description": "Retira un producto del carrito.",
         "parameters": {

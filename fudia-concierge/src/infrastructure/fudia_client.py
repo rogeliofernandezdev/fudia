@@ -5,7 +5,7 @@ from urllib.parse import quote
 
 import httpx
 
-from src.domain.models import MenuItem, MenuResponse, OrderResult, TableContext
+from src.domain.models import ComboDetail, MenuItem, MenuResponse, OrderResult, TableContext
 
 
 class FudiaError(RuntimeError):
@@ -79,6 +79,16 @@ class FudiaClient:
     async def get_product(self, token: str, product_id: str) -> MenuItem | None:
         menu = await self.search_menu(token, product_id=product_id)
         return menu.items[0] if menu.items else None
+
+    async def get_combo(self, token: str, product_id: str) -> ComboDetail:
+        body = await self._json(
+            "GET",
+            (
+                f"/v1/integrations/concierge/{quote(token, safe='')}"
+                f"/combos/{quote(product_id, safe='')}"
+            ),
+        )
+        return ComboDetail.model_validate(body)
 
     async def create_order(
         self,

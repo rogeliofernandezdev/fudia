@@ -5,7 +5,7 @@ import unicodedata
 from decimal import Decimal
 from typing import Any
 
-from src.domain.models import CartLine, ConversationSession
+from src.domain.models import CartLine, CartSelection, ConversationSession
 from src.infrastructure.fudia_client import FudiaClient, FudiaError
 
 
@@ -65,6 +65,17 @@ class ConciergeTools:
                     "unitPrice": str(line.unit_price),
                     "lineTotal": str(line_total.quantize(Decimal("0.01"))),
                     "note": line.note,
+                    "itemType": line.item_type,
+                    "selections": [
+                        {
+                            "groupId": selection.group_id,
+                            "groupName": selection.group_name,
+                            "productId": selection.product_id,
+                            "name": selection.name,
+                            "surcharge": str(selection.surcharge),
+                        }
+                        for selection in line.selections
+                    ],
                 }
             )
         return {"items": items, "total": str(total.quantize(Decimal("0.01")))}
@@ -107,7 +118,7 @@ class ConciergeTools:
                 if item.isCombo:
                     return {
                         "ok": False,
-                        "code": "combo_requires_selection_support",
+                        "code": "combo_requires_options",
                         "name": item.name,
                     }
 
@@ -131,6 +142,118 @@ class ConciergeTools:
                             note=note,
                         )
                     )
+                self.session.awaiting_confirmation = False
+                return {"ok": True, "cart": self._cart_payload()}
+
+            if name == "get_combo_options":
+                product_id = str(args.get("productId", "")).strip()
+                if not product_id:
+                    return {"ok": False, "code": "invalid_combo"}
+                combo = await self.fudia.get_combo(self._token(), product_id)
+                return {
+                    "ok": True,
+                    "combo": {
+                        "productId": combo.id,
+                        "name": combo.name,
+                        "price": str(combo.price),
+                        "groups": [
+                            {
+                                "groupId": group.id,
+                                "name": group.name,
+                                "required": group.required,
+                                "minSelections": group.minSelections,
+                                "maxSelections": group.maxSelections,
+                                "options": [
+                                    {
+                                        "productId": option.productId,
+                                        "name": option.name,
+                                        "surcharge": str(option.surcharge),
+                                        "available": option.available,
+                                    }
+                                    for option in group.options
+                                ],
+                            }
+                            for group in combo.groups
+                        ],
+                    },
+                }
+
+            if name == "add_combo_item":
+                product_id = str(args.get("productId", "")).strip()
+                quantity = float(args.get("quantity", 0))
+                note = str(args.get("note", "")).strip()
+                raw_selections = args.get("selections", [])
+                if not product_id or quantity <= 0 or not isinstance(raw_selections, list):
+                    return {"ok": False, "code": "invalid_combo"}
+
+                combo = await self.fudia.get_combo(self._token(), product_id)
+                groups_by_id = {group.id: group for group in combo.groups}
+                selected_by_group: dict[str, list[str]] = {}
+                seen: set[tuple[str, str]] = set()
+
+                for raw in raw_selections:
+                    if not isinstance(raw, dict):
+                        return {"ok": False, "code": "invalid_combo_selection"}
+                    group_id = str(raw.get("groupId", "")).strip()
+                    option_id = str(raw.get("productId", "")).strip()
+                    key = (group_id, option_id)
+                    if not group_id or not option_id or key in seen:
+                        return {"ok": False, "code": "invalid_combo_selection"}
+                    if group_id not in groups_by_id:
+                        return {"ok": False, "code": "invalid_combo_selection"}
+                    seen.add(key)
+                    selected_by_group.setdefault(group_id, []).append(option_id)
+
+                selections: list[CartSelection] = []
+                surcharge_total = Decimal("0")
+                for group in combo.groups:
+                    selected = selected_by_group.get(group.id, [])
+                    minimum = max(group.minSelections, 1 if group.required else 0)
+                    if len(selected) < minimum or len(selected) > group.maxSelections:
+                        return {
+                            "ok": False,
+                            "code": "combo_group_incomplete",
+                            "group": group.name,
+                            "minSelections": minimum,
+                            "maxSelections": group.maxSelections,
+                        }
+                    options = {option.productId: option for option in group.options}
+                    for option_id in selected:
+                        option = options.get(option_id)
+                        if option is None:
+                            return {
+                                "ok": False,
+                                "code": "invalid_combo_selection",
+                                "group": group.name,
+                            }
+                        if not option.available:
+                            return {
+                                "ok": False,
+                                "code": "combo_option_unavailable",
+                                "name": option.name,
+                            }
+                        selections.append(
+                            CartSelection(
+                                group_id=group.id,
+                                group_name=group.name,
+                                product_id=option.productId,
+                                name=option.name,
+                                surcharge=option.surcharge,
+                            )
+                        )
+                        surcharge_total += option.surcharge
+
+                self.session.cart.append(
+                    CartLine(
+                        product_id=combo.id,
+                        name=combo.name,
+                        quantity=quantity,
+                        unit_price=combo.price + surcharge_total,
+                        note=note,
+                        item_type="combo",
+                        selections=selections,
+                    )
+                )
                 self.session.awaiting_confirmation = False
                 return {"ok": True, "cart": self._cart_payload()}
 
@@ -179,7 +302,13 @@ class ConciergeTools:
                             "productId": line.product_id,
                             "qty": line.quantity,
                             "note": line.note,
-                            "selections": [],
+                            "selections": [
+                                {
+                                    "groupId": selection.group_id,
+                                    "productId": selection.product_id,
+                                }
+                                for selection in line.selections
+                            ],
                         }
                         for line in self.session.cart
                     ],
