@@ -30,7 +30,10 @@ TOOLS: list[dict[str, Any]] = [
     {
         "type": "function",
         "name": "search_menu",
-        "description": "Busca productos reales de la carta de esta mesa.",
+        "description": (
+            "Busca productos reales por nombre, descripción o categoría. "
+            "Usa query vacío para consultar la carta disponible."
+        ),
         "parameters": {
             "type": "object",
             "properties": {"query": {"type": "string"}},
@@ -201,7 +204,17 @@ TOOLS: list[dict[str, Any]] = [
     {
         "type": "function",
         "name": "confirm_order",
-        "description": "Crea el pedido solo después de una confirmación explícita.",
+        "description": "Confirma una nueva ronda del consumo solo después de una confirmación explícita.",
+        "parameters": {"type": "object", "properties": {}, "additionalProperties": False},
+        "strict": True,
+    },
+    {
+        "type": "function",
+        "name": "request_bill",
+        "description": (
+            "Solicita la cuenta de la mesa y obtiene del backend el consumo "
+            "acumulado, total, pagos y saldo pendiente."
+        ),
         "parameters": {"type": "object", "properties": {}, "additionalProperties": False},
         "strict": True,
     },
