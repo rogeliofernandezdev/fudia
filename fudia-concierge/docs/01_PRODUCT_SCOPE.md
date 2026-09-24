@@ -2,18 +2,19 @@
 
 ## Propósito
 
-Permitir que un cliente sentado en una mesa inicie y confirme un pedido mediante una conversación natural por WhatsApp, sin duplicar el dominio comercial de Fudia.
+Permitir que un cliente sentado en una mesa sea atendido mediante WhatsApp durante todo su consumo, sin duplicar el dominio comercial de Fudia.
 
-## Primera vertical
+## Flujo funcional
 
-- El QR abre una conversación que contiene un token opaco de mesa.
-- Concierge resuelve restaurante, local y mesa mediante foods-backend.
-- El cliente consulta productos reales de la carta.
-- El modelo agrega, quita y revisa líneas solo mediante herramientas.
-- La confirmación exige una respuesta explícita.
-- foods-backend revalida precio, disponibilidad y stock.
-- El pedido se registra con canal WhatsApp y entra confirmado a Cocina/KDS.
+- El QR identifica restaurante, local y mesa mediante foods-backend.
+- El cliente consulta carta, platos, menús/combos, bebidas y otras categorías reales.
+- Disponibilidad, stock, precio y configuración proceden exclusivamente de foods-backend.
+- Cada ronda exige confirmación explícita y se revalida al persistir.
+- La primera ronda abre la comanda; las siguientes se agregan al mismo consumo.
+- Cada ronda conserva su propio estado de Cocina/KDS para no reprocesar productos anteriores.
+- Al pedir la cuenta, Concierge consulta consumo acumulado, pagos y saldo pendiente desde foods-backend.
+- El pago y la liberación final de la mesa continúan en Caja/POS.
 
-## Fuera de esta primera vertical
+## Fuera del alcance actual
 
-Pagos dentro de WhatsApp, delivery, promociones, audio/imagen, reservas, múltiples comandas simultáneas por mesa y selección completa de combos.
+Pagos ejecutados dentro de WhatsApp, delivery conversacional, promociones autónomas, audio/imagen y reservas. Concierge no implementa lógica fiscal ni sustituye Caja/POS.
