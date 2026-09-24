@@ -490,6 +490,13 @@ class ConciergeTools:
                                 }
                                 for selection in line.selections
                             ],
+                            "modifiers": [
+                                {
+                                    "groupId": modifier.group_id,
+                                    "optionId": modifier.option_id,
+                                }
+                                for modifier in line.modifiers
+                            ],
                         }
                         for line in self.session.cart
                     ],
