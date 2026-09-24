@@ -191,7 +191,11 @@ type orderRowsQuerier interface {
 }
 
 func loadOrderItems(ctx context.Context, q orderRowsQuerier, orderID, organizationID string) ([]orderItem, error) {
-	rows, err := q.Query(ctx, `SELECT id,COALESCE(product_id::text,''),name,qty::text,unit_price::text,note,item_type FROM order_items WHERE order_id=$1 AND organization_id=$2 ORDER BY created_at,id`, orderID, organizationID)
+	return loadOrderItemsForRound(ctx, q, orderID, organizationID, "")
+}
+
+func loadOrderItemsForRound(ctx context.Context, q orderRowsQuerier, orderID, organizationID, roundID string) ([]orderItem, error) {
+	rows, err := q.Query(ctx, `SELECT id,COALESCE(product_id::text,''),name,qty::text,unit_price::text,note,item_type FROM order_items WHERE order_id=$1 AND organization_id=$2 AND ($3='' OR kitchen_round_id::text=$3) ORDER BY created_at,id`, orderID, organizationID, roundID)
 	if err != nil {
 		return nil, err
 	}
@@ -216,7 +220,8 @@ func loadOrderItems(ctx context.Context, q orderRowsQuerier, orderID, organizati
 		FROM order_item_combo_selections s
 		JOIN order_items i ON i.id=s.order_item_id AND i.organization_id=s.organization_id
 		WHERE i.order_id=$1 AND i.organization_id=$2
-		ORDER BY s.created_at,s.id`, orderID, organizationID)
+		  AND ($3='' OR i.kitchen_round_id::text=$3)
+		ORDER BY s.created_at,s.id`, orderID, organizationID, roundID)
 	if err != nil {
 		return nil, err
 	}
@@ -243,7 +248,8 @@ func loadOrderItems(ctx context.Context, q orderRowsQuerier, orderID, organizati
 		FROM order_item_modifier_selections m
 		JOIN order_items i ON i.id=m.order_item_id AND i.organization_id=m.organization_id
 		WHERE i.order_id=$1 AND i.organization_id=$2
-		ORDER BY m.created_at,m.id`, orderID, organizationID)
+		  AND ($3='' OR i.kitchen_round_id::text=$3)
+		ORDER BY m.created_at,m.id`, orderID, organizationID, roundID)
 	if err != nil {
 		return nil, err
 	}
@@ -678,12 +684,16 @@ func (a *API) prepareOrderItems(r *http.Request, tx pgx.Tx, s scope, existingOrd
 }
 
 func insertPreparedOrderItems(ctx context.Context, tx pgx.Tx, organizationID, orderID string, items []preparedOrderItem) error {
+	return insertPreparedOrderItemsForRound(ctx, tx, organizationID, orderID, "", items)
+}
+
+func insertPreparedOrderItemsForRound(ctx context.Context, tx pgx.Tx, organizationID, orderID, roundID string, items []preparedOrderItem) error {
 	for _, it := range items {
 		var itemID string
 		if err := tx.QueryRow(ctx, `
-			INSERT INTO order_items(organization_id,order_id,product_id,name,qty,unit_price,note,item_type)
-			VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
-			organizationID, orderID, it.ProductID, it.Name, it.Qty, it.UnitPrice, it.Note, it.ItemType).Scan(&itemID); err != nil {
+			INSERT INTO order_items(organization_id,order_id,product_id,name,qty,unit_price,note,item_type,kitchen_round_id)
+			VALUES($1,$2,$3,$4,$5,$6,$7,$8,NULLIF($9,'')::uuid) RETURNING id`,
+			organizationID, orderID, it.ProductID, it.Name, it.Qty, it.UnitPrice, it.Note, it.ItemType, roundID).Scan(&itemID); err != nil {
 			return err
 		}
 		for _, sel := range it.Selections {
@@ -1028,6 +1038,15 @@ func (a *API) updateOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	if !editableOrderStatus(currentStatus) {
 		fail(w, 409, "order_not_editable", "Solo se puede editar un pedido en estado Nuevo o Confirmado.")
+		return
+	}
+	var hasKitchenRounds bool
+	if err = tx.QueryRow(r.Context(), `SELECT EXISTS(SELECT 1 FROM order_kitchen_rounds WHERE order_id=$1 AND organization_id=$2 AND location_id=$3)`, r.PathValue("id"), s.OrganizationID, s.LocationID).Scan(&hasKitchenRounds); err != nil {
+		fail(w, 503, "order_unavailable", "No pudimos validar las rondas de cocina.")
+		return
+	}
+	if hasKitchenRounds {
+		fail(w, 409, "round_order_not_editable", "Esta comanda ya tiene rondas enviadas a cocina. Agrega una nueva ronda en lugar de reemplazar sus productos.")
 		return
 	}
 	paid, paidErr := loadOrderNetPaid(r.Context(), tx, r.PathValue("id"), s.OrganizationID, s.LocationID)
