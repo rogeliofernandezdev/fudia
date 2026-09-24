@@ -1,17 +1,17 @@
 "use client";
-import {useForm} from "react-hook-form";
+import {useForm,useWatch} from "react-hook-form";
 import {Button,Icon,Input,Select,Textarea} from "@/design-system";
 import {paymentResolver,refundResolver} from "../domain/pos-schema";
 import type {Payment,PaymentDraft,POSOrderSummary,RefundDraft} from "../domain/types";
 
 export function PaymentDialog({order,shiftName,busy,formatMoney,close,save}:{order:POSOrderSummary;shiftName:string;busy:boolean;formatMoney:(value:number)=>string;close:()=>void;save:(draft:PaymentDraft)=>void}){
-  const{register,handleSubmit,watch,formState:{errors}}=useForm<PaymentDraft>({
+  const{control,register,handleSubmit,formState:{errors}}=useForm<PaymentDraft>({
     defaultValues:{method:"cash",amount:Number(order.remainingAmount).toFixed(2),reference:""},
     resolver:paymentResolver,
     mode:"onSubmit",
     reValidateMode:"onChange",
   });
-  const method=watch("method");
+  const method=useWatch({control,name:"method"});
   return <div className="modal-backdrop modal-overlay-in"><section className="crud-modal pos-payment-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="pos-payment-title" aria-busy={busy}>
     <div className="modal-accent"/>
     <header><span className="modal-title-icon"><Icon name="sales" size={18}/></span><div><small>COBRO</small><h2 id="pos-payment-title">{order.code}</h2></div><button type="button" aria-label="Cerrar" onClick={close} disabled={busy}><Icon name="close"/></button></header>
