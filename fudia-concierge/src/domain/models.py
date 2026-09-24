@@ -118,6 +118,7 @@ class ConversationSession(BaseModel):
     cart: list[CartLine] = Field(default_factory=list)
     awaiting_confirmation: bool = False
     last_order_id: str | None = None
+    handoff_pending: bool = False
     messages: list[ChatMessage] = Field(default_factory=list)
 
 
