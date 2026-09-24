@@ -243,9 +243,9 @@ class ConciergeTools:
                 config = await self.fudia.get_modifiers(
                     self._token(), product_id
                 )
-                groups_by_id = {group.id: group for group in config.groups}
-                selected_by_group: dict[str, list[str]] = {}
-                seen: set[tuple[str, str]] = set()
+                modifier_groups_by_id = {group.id: group for group in config.groups}
+                modifier_selected_by_group: dict[str, list[str]] = {}
+                modifier_seen: set[tuple[str, str]] = set()
                 for raw in raw_modifiers:
                     if not isinstance(raw, dict):
                         return {
@@ -255,71 +255,71 @@ class ConciergeTools:
                     group_id = str(raw.get("groupId", "")).strip()
                     option_id = str(raw.get("optionId", "")).strip()
                     key = (group_id, option_id)
-                    if not group_id or not option_id or key in seen:
+                    if not group_id or not option_id or key in modifier_seen:
                         return {
                             "ok": False,
                             "code": "invalid_modifier_selection",
                         }
-                    if group_id not in groups_by_id:
+                    if group_id not in modifier_groups_by_id:
                         return {
                             "ok": False,
                             "code": "invalid_modifier_selection",
                         }
-                    seen.add(key)
-                    selected_by_group.setdefault(group_id, []).append(
+                    modifier_seen.add(key)
+                    modifier_selected_by_group.setdefault(group_id, []).append(
                         option_id
                     )
 
-                modifiers: list[CartModifier] = []
-                surcharge_total = Decimal("0")
-                for group in config.groups:
-                    selected = selected_by_group.get(group.id, [])
+                selected_modifiers: list[CartModifier] = []
+                modifier_surcharge_total = Decimal("0")
+                for modifier_group in config.groups:
+                    modifier_selected = modifier_selected_by_group.get(modifier_group.id, [])
                     minimum = max(
-                        group.minSelections,
-                        1 if group.required else 0,
+                        modifier_group.minSelections,
+                        1 if modifier_group.required else 0,
                     )
                     if (
-                        len(selected) < minimum
-                        or len(selected) > group.maxSelections
+                        len(modifier_selected) < minimum
+                        or len(modifier_selected) > modifier_group.maxSelections
                     ):
                         return {
                             "ok": False,
                             "code": "modifier_group_incomplete",
-                            "group": group.name,
+                            "group": modifier_group.name,
                             "minSelections": minimum,
-                            "maxSelections": group.maxSelections,
+                            "maxSelections": modifier_group.maxSelections,
                         }
                     options = {
-                        option.id: option for option in group.options
+                        option.id: option for option in modifier_group.options
                     }
-                    for option_id in selected:
-                        option = options.get(option_id)
+                    for option_id in modifier_selected:
+                        option = modifier_options.get(option_id)
                         if option is None:
                             return {
                                 "ok": False,
                                 "code": "invalid_modifier_selection",
-                                "group": group.name,
+                                "group": modifier_group.name,
                             }
-                        modifiers.append(
+                        selected_modifiers.append(
                             CartModifier(
-                                group_id=group.id,
-                                group_name=group.name,
+                                group_id=modifier_group.id,
+                                group_name=modifier_group.name,
                                 option_id=option.id,
                                 name=option.name,
                                 surcharge=option.surcharge,
                             )
                         )
-                        surcharge_total += option.surcharge
+                        modifier_surcharge_total += option.surcharge
 
                 self.session.cart.append(
                     CartLine(
                         product_id=item.productId,
                         name=item.name,
                         quantity=quantity,
-                        unit_price=item.price + surcharge_total,
+                        unit_price=item.price + modifier_surcharge_total,
                         note=note,
                         item_type="product",
-                        modifiers=modifiers,
+                        modifiers=selected_modifiers,
                     )
                 )
                 self.session.awaiting_confirmation = False
