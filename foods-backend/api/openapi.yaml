@@ -659,12 +659,52 @@ paths:
   /v1/admin/payment-methods:
     get:
       operationId: listAdminPaymentMethods
-      summary: Lista los medios de pago activos configurados para la empresa
+      summary: Lista el catálogo administrable de medios de pago de la empresa
       security: [{ sessionCookie: [] }]
       parameters:
-        - { in: query, name: usage, required: true, schema: { type: string, enum: [sales, expenses] } }
+        - { in: query, name: q, schema: { type: string } }
+        - { in: query, name: status, schema: { type: string, enum: [active, inactive] } }
+        - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
+        - { in: query, name: pageSize, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
       responses:
-        "200": { description: Catálogo de medios de pago, content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/PaymentMethod" } } } } } } }
+        "200": { description: Catálogo paginado de medios de pago }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      operationId: createPaymentMethod
+      summary: Crea un medio de pago para la empresa
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/PaymentMethodInput" } } } }
+      responses:
+        "201": { description: Medio creado, content: { application/json: { schema: { $ref: "#/components/schemas/PaymentMethod" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "409": { description: Código duplicado o configuración operativa inválida }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/payment-methods/{code}:
+    parameters:
+      - { in: path, name: code, required: true, schema: { type: string, pattern: "^[a-z0-9][a-z0-9_-]{0,39}$" } }
+    patch:
+      operationId: updatePaymentMethod
+      summary: Actualiza el nombre y comportamiento; el código interno es inmutable
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/PaymentMethodInput" } } } }
+      responses:
+        "200": { description: Medio actualizado, content: { application/json: { schema: { $ref: "#/components/schemas/PaymentMethod" } } } }
+        "404": { description: Medio no encontrado }
+        "409": { description: El cambio dejaría sin medios operativos a ventas o gastos }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/payment-methods/{code}/status:
+    parameters:
+      - { in: path, name: code, required: true, schema: { type: string, pattern: "^[a-z0-9][a-z0-9_-]{0,39}$" } }
+    patch:
+      operationId: updatePaymentMethodStatus
+      summary: Activa o desactiva un medio preservando su historial
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [active], properties: { active: { type: boolean } } } } } }
+      responses:
+        "204": { description: Estado actualizado }
+        "404": { description: Medio no encontrado }
+        "409": { description: Debe permanecer al menos un medio activo para ventas y uno para gastos }
+        "403": { $ref: "#/components/responses/Forbidden" }
   /v1/admin/payments:
     post:
       operationId: createPayment
@@ -902,6 +942,7 @@ components:
     POSOrderSummary: { type: object, required: [id, code, channel, status, customerName, tableName, total, paidAmount, remainingAmount, paymentStatus, createdAt], properties: { id: { type: string, format: uuid }, code: { type: string }, channel: { type: string }, status: { type: string }, customerName: { type: string }, tableName: { type: string }, total: { type: string }, paidAmount: { type: string }, remainingAmount: { type: string }, paymentStatus: { type: string, enum: [pending, partial, paid] }, createdAt: { type: string, format: date-time } } }
     POSOrderList: { type: object, required: [items, total, page, pageSize], properties: { items: { type: array, items: { $ref: "#/components/schemas/POSOrderSummary" } }, total: { type: integer }, page: { type: integer }, pageSize: { type: integer } } }
     POSOrderDetail: { type: object, required: [order, paidAmount, remainingAmount, paymentStatus, payments], properties: { order: { $ref: "#/components/schemas/Order" }, paidAmount: { type: string }, remainingAmount: { type: string }, paymentStatus: { type: string, enum: [pending, partial, paid] }, payments: { type: array, items: { $ref: "#/components/schemas/Payment" } } } }
+    PaymentMethodInput: { type: object, required: [name, salesEnabled, expensesEnabled, affectsCash, sortOrder], properties: { code: { type: string, pattern: "^[a-z0-9][a-z0-9_-]{0,39}$" }, name: { type: string, minLength: 1, maxLength: 80 }, description: { type: string, maxLength: 180 }, salesEnabled: { type: boolean }, expensesEnabled: { type: boolean }, affectsCash: { type: boolean }, sortOrder: { type: integer, minimum: 0, maximum: 9999 } } }
     PaymentMethod: { type: object, required: [code, name, description, active, salesEnabled, expensesEnabled, affectsCash, sortOrder], properties: { code: { type: string }, name: { type: string }, description: { type: string }, active: { type: boolean }, salesEnabled: { type: boolean }, expensesEnabled: { type: boolean }, affectsCash: { type: boolean }, sortOrder: { type: integer } } }
     PaymentInput: { type: object, required: [orderId, method, amount], properties: { orderId: { type: string, format: uuid }, method: { type: string }, amount: { type: number, exclusiveMinimum: 0 }, reference: { type: string, maxLength: 120 } } }
     Payment: { type: object, required: [id, orderId, orderCode, shiftId, cashRegisterName, method, amount, refundedAmount, netAmount, reference, createdByName, createdAt], properties: { id: { type: string, format: uuid }, orderId: { type: string, format: uuid }, orderCode: { type: string }, shiftId: { type: string, format: uuid }, cashRegisterName: { type: string }, method: { type: string }, amount: { type: string }, refundedAmount: { type: string }, netAmount: { type: string }, reference: { type: string }, createdByName: { type: string }, createdAt: { type: string, format: date-time } } }
