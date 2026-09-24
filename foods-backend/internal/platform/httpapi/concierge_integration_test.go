@@ -42,6 +42,14 @@ func TestConciergeQRCodeMenuOrderAndKitchenWorkflow(t *testing.T) {
 		Scan(&tableID,&qrToken);err!=nil{
 		t.Fatal(err)
 	}
+	if _,err:=pool.Exec(ctx,`
+		INSERT INTO concierge_settings(organization_id,location_id,whatsapp_phone,active)
+		VALUES($1,$2,'+51987654321',true)
+		ON CONFLICT(organization_id,location_id)
+		DO UPDATE SET whatsapp_phone=EXCLUDED.whatsapp_phone,active=true,updated_at=now()
+	`,s.OrganizationID,s.LocationID);err!=nil{
+		t.Fatal(err)
+	}
 	t.Cleanup(func(){
 		_,_=pool.Exec(context.Background(),`DELETE FROM concierge_order_requests WHERE organization_id=$1 AND table_id=$2`,s.OrganizationID,tableID)
 		_,_=pool.Exec(context.Background(),`DELETE FROM orders WHERE organization_id=$1 AND table_id=$2`,s.OrganizationID,tableID)

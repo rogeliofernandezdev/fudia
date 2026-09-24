@@ -372,7 +372,7 @@ func (a *API) getTableByQR(w http.ResponseWriter, r *http.Request) {
 	err := a.db.QueryRow(r.Context(), `
 		SELECT t.name,t.seats,t.zone,o.trade_name,l.name,
 		       COALESCE(cs.active,false) AND COALESCE(cs.whatsapp_phone,'')<>'',
-		       COALESCE(cs.whatsapp_phone,'')
+		       CASE WHEN COALESCE(cs.active,false) THEN COALESCE(cs.whatsapp_phone,'') ELSE '' END
 		FROM tables t
 		JOIN organizations o ON o.id=t.organization_id AND o.active
 		JOIN locations l ON l.id=t.location_id AND l.organization_id=t.organization_id AND l.active
