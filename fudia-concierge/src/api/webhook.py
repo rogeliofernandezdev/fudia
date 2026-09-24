@@ -9,6 +9,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import PlainTextResponse
 
 from src.domain.models import InboundMessage
+from src.metrics import INBOUND_MESSAGES
 
 router = APIRouter(
     prefix="/webhook",
@@ -172,6 +173,13 @@ async def receive_webhook(
         )
         if queued:
             accepted += 1
+            INBOUND_MESSAGES.labels(
+                result="queued"
+            ).inc()
+        else:
+            INBOUND_MESSAGES.labels(
+                result="duplicate"
+            ).inc()
 
     return {
         "status": "accepted",
