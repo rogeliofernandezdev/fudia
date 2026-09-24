@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import time
 from typing import Any
 from urllib.parse import quote
 
@@ -15,6 +16,8 @@ from src.domain.models import (
     OrderResult,
     TableContext,
 )
+from src.metrics import BACKEND_DURATION, BACKEND_REQUESTS
+from src.observability import current_trace_id
 
 
 class FudiaError(RuntimeError):
@@ -28,6 +31,24 @@ class FudiaError(RuntimeError):
         self.status_code = status_code
         self.code = code
         self.message = message
+
+
+def _endpoint_label(path: str) -> str:
+    if "/menu" in path:
+        return "menu"
+    if "/orders" in path:
+        return "orders"
+    if "/bill" in path:
+        return "bill"
+    if "/handoffs" in path:
+        return "handoffs"
+    if "/combos/" in path:
+        return "combos"
+    if "/modifiers" in path:
+        return "modifiers"
+    if "/v1/public/tables/" in path:
+        return "table"
+    return "other"
 
 
 class FudiaClient:
@@ -71,6 +92,11 @@ class FudiaClient:
         headers = dict(
             kwargs.pop("headers", {})
         )
+        trace_id = current_trace_id()
+        if trace_id:
+            headers["X-Correlation-ID"] = trace_id
+        started = time.perf_counter()
+        endpoint = _endpoint_label(path)
         if (
             path.startswith(
                 "/v1/integrations/concierge/"
@@ -146,7 +172,17 @@ class FudiaClient:
         except ValueError:
             body = {}
 
+        duration = time.perf_counter() - started
         if not response.is_success:
+            BACKEND_REQUESTS.labels(
+                method=method.upper(),
+                endpoint=endpoint,
+                result="error",
+            ).inc()
+            BACKEND_DURATION.labels(
+                method=method.upper(),
+                endpoint=endpoint,
+            ).observe(duration)
             raise FudiaError(
                 response.status_code,
                 str(
@@ -165,6 +201,15 @@ class FudiaClient:
                     )
                 ),
             )
+        BACKEND_REQUESTS.labels(
+            method=method.upper(),
+            endpoint=endpoint,
+            result="success",
+        ).inc()
+        BACKEND_DURATION.labels(
+            method=method.upper(),
+            endpoint=endpoint,
+        ).observe(duration)
         return body
 
     async def ready(self) -> bool:
