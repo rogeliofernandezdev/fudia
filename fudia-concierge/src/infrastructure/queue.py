@@ -174,19 +174,43 @@ class RedisInboundQueue:
         if stale:
             return stale
 
-        batches = await self.client.xreadgroup(
+        batches: Any = await self.client.xreadgroup(
             self.group,
             self.consumer,
             {self.stream: ">"},
             count=10,
             block=1000,
         )
+        if not isinstance(batches, list):
+            return []
+
         deliveries: list[QueueDelivery] = []
-        for _, entries in batches:
-            deliveries.extend(
-                self._delivery(entry_id, values)
-                for entry_id, values in entries
-            )
+        for raw_batch in batches:
+            if (
+                not isinstance(raw_batch, (list, tuple))
+                or len(raw_batch) != 2
+            ):
+                continue
+            raw_entries: Any = raw_batch[1]
+            if not isinstance(raw_entries, list):
+                continue
+            for raw_entry in raw_entries:
+                if (
+                    not isinstance(raw_entry, (list, tuple))
+                    or len(raw_entry) != 2
+                ):
+                    continue
+                entry_id = str(raw_entry[0])
+                raw_values: Any = raw_entry[1]
+                if not isinstance(raw_values, dict):
+                    continue
+                values = {
+                    str(key): str(value)
+                    for key, value in raw_values.items()
+                }
+                deliveries.append(
+                    self._delivery(entry_id, values)
+                )
         return deliveries
 
     async def ack(
