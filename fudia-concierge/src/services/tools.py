@@ -4,6 +4,7 @@ import re
 import unicodedata
 from decimal import Decimal
 from typing import Any
+from uuid import uuid4
 
 from src.domain.models import (
     CartLine,
@@ -165,6 +166,7 @@ class ConciergeTools:
                         )
                     )
                 self.session.awaiting_confirmation = False
+                self.session.pending_order_request_id = None
                 return {"ok": True, "cart": self._cart_payload()}
 
             if name == "get_modifier_options":
@@ -324,6 +326,7 @@ class ConciergeTools:
                     )
                 )
                 self.session.awaiting_confirmation = False
+                self.session.pending_order_request_id = None
                 return {"ok": True, "cart": self._cart_payload()}
 
             if name == "get_combo_options":
@@ -436,6 +439,7 @@ class ConciergeTools:
                     )
                 )
                 self.session.awaiting_confirmation = False
+                self.session.pending_order_request_id = None
                 return {"ok": True, "cart": self._cart_payload()}
 
             if name == "remove_item":
@@ -445,6 +449,7 @@ class ConciergeTools:
                     line for line in self.session.cart if line.product_id != product_id
                 ]
                 self.session.awaiting_confirmation = False
+                self.session.pending_order_request_id = None
                 return {
                     "ok": len(self.session.cart) != before,
                     "cart": self._cart_payload(),
@@ -476,6 +481,8 @@ class ConciergeTools:
                 if not self.session.cart:
                     return {"ok": False, "code": "empty_cart"}
                 self.session.awaiting_confirmation = True
+                if not self.session.pending_order_request_id:
+                    self.session.pending_order_request_id = uuid4().hex
                 return {
                     "ok": True,
                     "requiresExplicitConfirmation": True,
@@ -520,9 +527,11 @@ class ConciergeTools:
                         for line in self.session.cart
                     ],
                     conversation_id=self.session.conversation_id,
+                    request_id=self.session.pending_order_request_id or uuid4().hex,
                 )
                 self.session.cart = []
                 self.session.awaiting_confirmation = False
+                self.session.pending_order_request_id = None
                 self.session.last_order_id = result.id
                 return {
                     "ok": True,
@@ -531,6 +540,51 @@ class ConciergeTools:
                         "code": result.code,
                         "status": result.status,
                         "total": str(result.total),
+                    },
+                }
+
+            if name == "request_bill":
+                if self.session.cart:
+                    return {
+                        "ok": False,
+                        "code": "unconfirmed_cart",
+                        "message": (
+                            "Hay productos en el carrito que todavía no fueron "
+                            "confirmados."
+                        ),
+                        "cart": self._cart_payload(),
+                    }
+                bill = await self.fudia.request_bill(
+                    self._token(),
+                    self.session.phone,
+                    self.session.conversation_id,
+                )
+                return {
+                    "ok": True,
+                    "bill": {
+                        "orderId": bill.orderId,
+                        "code": bill.code,
+                        "tableName": bill.tableName,
+                        "status": bill.status,
+                        "currencySymbol": bill.currencySymbol,
+                        "items": [
+                            {
+                                "name": item.name,
+                                "quantity": str(item.qty),
+                                "unitPrice": str(item.unitPrice),
+                                "lineTotal": str(
+                                    (item.qty * item.unitPrice).quantize(
+                                        Decimal("0.01")
+                                    )
+                                ),
+                                "note": item.note,
+                            }
+                            for item in bill.items
+                        ],
+                        "total": str(bill.total),
+                        "paidAmount": str(bill.paidAmount),
+                        "remainingAmount": str(bill.remainingAmount),
+                        "paymentStatus": bill.paymentStatus,
                     },
                 }
 
