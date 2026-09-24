@@ -43,6 +43,7 @@ func TestConciergeQRCodeMenuOrderAndKitchenWorkflow(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func(){
+		_,_=pool.Exec(context.Background(),`DELETE FROM concierge_order_requests WHERE organization_id=$1 AND table_id=$2`,s.OrganizationID,tableID)
 		_,_=pool.Exec(context.Background(),`DELETE FROM orders WHERE organization_id=$1 AND table_id=$2`,s.OrganizationID,tableID)
 		_,_=pool.Exec(context.Background(),`DELETE FROM tables WHERE id=$1 AND organization_id=$2`,tableID,s.OrganizationID)
 	})
@@ -89,6 +90,27 @@ func TestConciergeQRCodeMenuOrderAndKitchenWorkflow(t *testing.T) {
 	}
 	if created.Total!="55.00"{
 		t.Fatalf("backend catalog price must win, got %s",created.Total)
+	}
+
+	retryReq:=httptest.NewRequest("POST","/v1/integrations/concierge/"+qrToken+"/orders",bytes.NewReader(orderBody))
+	retryReq.Header.Set("X-Fudia-Concierge-Key","concierge-test-key")
+	retryRec:=httptest.NewRecorder()
+	api.Routes().ServeHTTP(retryRec,retryReq)
+	if retryRec.Code!=200{
+		t.Fatalf("idempotent retry must recover the order: %d %s",retryRec.Code,retryRec.Body.String())
+	}
+	var retried order
+	if err:=json.Unmarshal(retryRec.Body.Bytes(),&retried);err!=nil{t.Fatal(err)}
+	if retried.ID!=created.ID||retried.Code!=created.Code{
+		t.Fatalf("retry created a different order: created=%s retried=%s",created.ID,retried.ID)
+	}
+	var orderCount int
+	if err:=pool.QueryRow(ctx,`
+		SELECT count(*) FROM orders
+		WHERE organization_id=$1 AND location_id=$2 AND table_id=$3
+	`,s.OrganizationID,s.LocationID,tableID).Scan(&orderCount);err!=nil{t.Fatal(err)}
+	if orderCount!=1{
+		t.Fatalf("idempotent retry duplicated the order, count=%d",orderCount)
 	}
 
 	var createdBy *string
