@@ -8,14 +8,15 @@
 
 - Fecha: **2026-09-24**
 - Rama revisada: `feat/redesign-nueva-comanda`
-- Commit base funcional auditado: `e91a81a562cad96f333e41badca3f06d9be3b2e0`
+- Commit base funcional auditado: `97835260cec6a971b0305eecc085d8bce7378fc7`
 - CI del commit base:
   - `foods-backend`: **success**
-  - `foods-admin-web`: **en validación documental posterior; último código funcional sin cambios de frontend**
+  - `foods-admin-web`: **success**
   - `foods-operations-web`: **success**
   - `fudia-concierge`: **success**
 - Trabajo activo por decisión de producto: **Fudia Concierge**
-- Siguiente bloque concreto: **configuración por empresa/local + acceso desde QR**
+- Bloques cerrados de Concierge: **Fundación + contrato Fudia + QR/configuración**
+- Siguiente bloque concreto: **conversación avanzada — combos**
 
 ## Cómo interpretar los estados
 
@@ -160,7 +161,7 @@ esté terminado. Falta la parte de costeo y rentabilidad.
 | Usuarios y roles | `usuarios` | 🟢 Ready / activable | Roles/permisos forman parte del onboarding. Auditoría de cierre pendiente. |
 | Facturación | `facturacion` | 🔵 En desarrollo | Pantallas actuales no constituyen facturación electrónica real. **Siguiente prioridad.** |
 | Integraciones | `integraciones` | 🔵 En desarrollo | Pendiente completar adaptadores operativos. |
-| WhatsApp IA para pedidos | `whatsapp_bot` | 🔵 En desarrollo | Fudia Concierge ya tiene fundación, contrato server-to-server, menú por QR, confirmación protegida, pedido idempotente y entrada a KDS. Falta configuración administrativa, deeplink QR y capacidades avanzadas. |
+| Fudia Concierge | `whatsapp_bot` | 🔵 En desarrollo | Fundación, contrato server-to-server, menú/pedido por QR, configuración por local, deeplink WhatsApp, confirmación protegida, idempotencia y entrada a KDS están implementados. Faltan combos/modificadores, comanda existente, handoff y observabilidad. |
 
 ---
 
@@ -188,14 +189,28 @@ simplemente registra el frente que se está implementando ahora.
 - prueba integrada QR -> menú -> pedido -> KDS;
 - CI propio de Concierge.
 
+### Cerrado en la segunda etapa — QR y configuración
+
+- configuración persistente por empresa/local;
+- número público de WhatsApp en formato internacional;
+- activación/desactivación administrativa en `/whatsapp-bot`;
+- contrato de integración bloqueado cuando el local desactiva Concierge;
+- QR público expone Concierge únicamente cuando está activo;
+- botón **Pedir por WhatsApp** en `/mesa/[qr]`;
+- deeplink con mensaje `FUDIA:<qr_token>`;
+- inicio de sesión rechazado si el QR pertenece a un local con Concierge desactivado;
+- OpenAPI actualizado y migración reversible;
+- CI verde de backend, Admin Web, Operations Web y Concierge.
+
+La prueba automatizada cubre QR -> menú -> pedido -> KDS dentro de Fudia. La validación contra la infraestructura real de Meta/WhatsApp queda como prueba de despliegue, ya que requiere credenciales y webhook externos.
+
 ### Pendiente inmediato
 
-- configuración de WhatsApp/Concierge por empresa y local;
-- activación/desactivación administrativa;
-- número de WhatsApp configurable;
-- botón **Pedir por WhatsApp** en `/mesa/[qr]`;
-- deeplink seguro que incluya el token opaco;
-- prueba E2E desde página QR hasta recepción del pedido.
+- combos conversacionales con grupos/opciones;
+- modificadores de productos simples;
+- agregar a una comanda existente de la mesa;
+- handoff humano;
+- observabilidad y endurecimiento operativo.
 
 ---
 
@@ -280,29 +295,18 @@ disponibilidad, mesas y pedidos.
 
 Cuando se retome este proyecto, continuar por:
 
-> **Fudia Concierge — Bloque 3: configuración y acceso desde QR**
+> **Fudia Concierge — Bloque 4: combos conversacionales**
 
 Orden inmediato:
 
-1. definir persistencia de configuración Concierge por empresa/local;
-2. administrar número de WhatsApp y estado activo/inactivo sin hardcodear;
-3. reemplazar la pantalla placeholder `/whatsapp-bot` por configuración real;
-4. conectar `/mesa/[qr]` con **Pedir por WhatsApp**;
-5. generar el deeplink con `FUDIA:<qr_token>`;
-6. probar QR -> WhatsApp -> conversación -> confirmación -> pedido -> KDS.
+1. exponer al servicio Concierge la configuración real de grupos y opciones de un combo;
+2. añadir una tool para consultar las opciones requeridas;
+3. permitir que GPT seleccione únicamente IDs ofrecidos por Fudia;
+4. enviar las selecciones al pedido sin aceptar precios generados por el modelo;
+5. dejar que `foods-backend` revalide mínimos, máximos, disponibilidad y recargos;
+6. probar conversación de combo -> confirmación -> pedido -> KDS.
 
-Puntos existentes desde los que continuar:
-
-- `fudia-concierge/`;
-- `fudia-concierge/docs/05_IMPLEMENTATION_PLAN.md`;
-- `foods-backend/internal/platform/httpapi/concierge.go`;
-- `foods-backend/internal/platform/httpapi/concierge_integration_test.go`;
-- `foods-admin-web/src/app/mesa/[qr]/page.tsx`;
-- `foods-admin-web/src/app/(admin)/whatsapp-bot/page.tsx`.
-
-Después de cerrar esta vertical inicial, reevaluar el retorno a **P0 —
-Facturación electrónica**, que continúa siendo el hueco principal del circuito
-fiscal de venta.
+Después de completar combos/modificadores y el handoff operativo, reevaluar el retorno a **P0 — Facturación electrónica**, que continúa siendo el hueco principal del circuito fiscal de venta.
 
 ---
 

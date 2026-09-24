@@ -25,14 +25,17 @@
 
 ## Bloque 3 — QR y configuración
 
-- [ ] Número WhatsApp configurable por empresa.
-- [ ] Botón Pedir por WhatsApp en página QR.
-- [ ] Deeplink con token.
-- [ ] Activar/desactivar Concierge por empresa/local.
+- [x] Número WhatsApp configurable por empresa/local.
+- [x] Botón Pedir por WhatsApp en página QR.
+- [x] Deeplink con token.
+- [x] Activar/desactivar Concierge por empresa/local.
+- [x] El contrato server-to-server queda bloqueado cuando el local desactiva Concierge.
+- [x] La sesión conversacional rechaza un QR de un local con Concierge desactivado.
 
 ## Bloque 4 — Conversación avanzada
 
-- [ ] Combos/modificadores.
+- [ ] Combos conversacionales con grupos y selecciones validadas por Fudia.
+- [ ] Modificadores de productos simples.
 - [ ] Agregar a comanda ya abierta.
 - [ ] Handoff humano.
 - [ ] Observabilidad.
