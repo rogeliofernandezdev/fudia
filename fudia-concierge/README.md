@@ -24,6 +24,7 @@ Cada especialista recibe únicamente sus schemas de tools y `ToolRegistry` vuelv
 
 - Redis Streams para entrega durable del webhook.
 - Concurrencia acotada por worker con backpressure antes de reclamar mensajes.
+- Heartbeat de visibilidad para entregas activas, evitando reclamaciones prematuras mientras esperan un lock de conversación.
 - Procesamiento paralelo de conversaciones distintas y serialización por conversación.
 - Deduplicación atómica por `message_id`.
 - ACK únicamente después de procesar y enviar la respuesta.
