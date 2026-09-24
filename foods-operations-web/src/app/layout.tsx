@@ -4,6 +4,7 @@ import "./globals.css";
 import "./navigation-state.css";
 import "./loading.css";
 import "./profile-menu.css";
+import "./concierge-handoff.css";
 import "./product-availability.css";
 
 const manrope = Manrope({ subsets: ["latin"], variable: "--font-manrope" });
