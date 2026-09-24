@@ -1,12 +1,14 @@
 # Fudia Concierge
 
-Asistente conversacional de Fudia para que un comensal pueda iniciar un pedido desde el QR de su mesa y continuarlo por WhatsApp.
+Asistente conversacional de Fudia para atender por WhatsApp a un comensal sentado en una mesa, desde el escaneo del QR hasta la solicitud de la cuenta.
 
-## Flujo inicial
+## Flujo
 
-QR de mesa -> WhatsApp -> Fudia Concierge -> herramientas -> foods-backend -> pedido confirmado -> Pedidos / KDS.
+QR de mesa -> WhatsApp -> Fudia Concierge -> foods-backend -> carta/disponibilidad -> ronda confirmada -> KDS -> nuevas rondas -> cuenta acumulada.
 
-Fudia Concierge interpreta la conversación y mantiene el carrito temporal. foods-backend vuelve a validar producto, disponibilidad, precio, mesa y stock antes de registrar un pedido.
+Fudia Concierge mantiene únicamente el carrito temporal de la ronda en curso. foods-backend revalida producto, disponibilidad, precio, mesa y stock antes de registrar cada ronda y conserva la comanda acumulada como fuente de verdad.
+
+Cuando el cliente solicita la cuenta, Concierge consulta el consumo real de la mesa en backend y muestra productos, total, pagos registrados y saldo pendiente. Solicitar la cuenta no registra un pago; el cobro continúa por Caja/POS.
 
 ## Stack
 
@@ -28,10 +30,6 @@ Fudia Concierge interpreta la conversación y mantiene el carrito temporal. food
 
 ## Estado
 
-El alcance funcional de esta etapa está implementado: QR y configuración por local,
-WhatsApp con aislamiento por número receptor, catálogo real, carrito, combos,
-modificadores, confirmación protegida, pedidos/KDS, rondas adicionales sobre una
-comanda abierta, handoff humano, observabilidad y bandeja operativa real.
+El alcance funcional incluye QR y configuración por local, carta real por nombre/descripción/categoría, carrito, combos, modificadores, confirmación protegida, rondas independientes sobre una misma comanda, KDS, solicitud de cuenta con total real, handoff humano y observabilidad.
 
-Queda como validación de despliegue la prueba contra credenciales reales de
-Meta/OpenAI/Redis. Ver `docs/05_IMPLEMENTATION_PLAN.md`.
+Queda como validación de despliegue la prueba contra credenciales reales de Meta/OpenAI/Redis.
