@@ -201,6 +201,15 @@ class RedisInboundQueue:
             transaction=True
         )
         if next_attempt >= self.max_attempts:
+            pipeline.xadd(
+                f"{self.stream}:dead",
+                {
+                    "payload": (
+                        delivery.message.model_dump_json()
+                    ),
+                    "attempt": str(next_attempt),
+                },
+            )
             pipeline.xack(
                 self.stream,
                 self.group,
