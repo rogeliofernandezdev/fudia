@@ -12,7 +12,6 @@
 - CI del commit base:
   - `foods-backend`: **success**
   - `foods-admin-web`: **success**
-  - `foods-operations-web`: **success**
   - `fudia-concierge`: **success**
 - Trabajo activo por decisión de producto: **Fudia Concierge**
 - Bloques cerrados de Concierge: **Fundación + contrato Fudia + QR/configuración + conversación avanzada**
@@ -200,7 +199,7 @@ simplemente registra el frente que se está implementando ahora.
 - deeplink con mensaje `FUDIA:<qr_token>`;
 - inicio de sesión rechazado si el QR pertenece a un local con Concierge desactivado;
 - OpenAPI actualizado y migración reversible;
-- CI verde de backend, Admin Web, Operations Web y Concierge.
+- CI verde de backend, Admin Web y Concierge.
 
 La prueba automatizada cubre QR -> menú -> pedido -> KDS dentro de Fudia. La validación contra la infraestructura real de Meta/WhatsApp queda como prueba de despliegue, ya que requiere credenciales y webhook externos.
 
@@ -210,7 +209,7 @@ La prueba automatizada cubre QR -> menú -> pedido -> KDS dentro de Fudia. La va
 - modificadores de productos simples con IDs y recargos validados por backend;
 - nuevas rondas sobre una comanda existente de la mesa sin duplicar la orden;
 - handoff humano persistente con pausa del bot, aviso operativo y resolución por personal;
-- campana de Operaciones conectada a solicitudes reales de Concierge;
+- campana de Admin Web conectada a solicitudes reales de Concierge;
 - logs estructurados de latencia, tools y tokens sin copiar conversaciones ni teléfonos en claro;
 - aislamiento por número de WhatsApp: el QR se contrasta con el número receptor configurado;
 - respuesta de Meta desde el `phone_number_id` que recibió el mensaje;
