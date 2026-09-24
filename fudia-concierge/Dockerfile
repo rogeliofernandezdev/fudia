@@ -13,7 +13,7 @@ COPY config ./config
 COPY src ./src
 COPY prompts ./prompts
 
-RUN python -m pip install --no-cache-dir \
+RUN python -m pip install --no-cache-dir --root-user-action=ignore \
     -c constraints.txt .
 
 RUN chown -R fudia:fudia /app
