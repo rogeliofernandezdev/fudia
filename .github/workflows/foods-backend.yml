@@ -33,8 +33,8 @@ jobs:
     env:
       DATABASE_URL: postgres://foods:foods@localhost:5432/foods_test?sslmode=disable
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
           go-version-file: foods-backend/go.mod
           cache-dependency-path: foods-backend/go.sum
