@@ -28,6 +28,12 @@ class ConversationLock(Protocol):
         identity: str,
     ) -> str: ...
 
+    async def refresh(
+        self,
+        identity: str,
+        token: str,
+    ) -> bool: ...
+
     async def release(
         self,
         identity: str,
@@ -36,6 +42,13 @@ class ConversationLock(Protocol):
 
 
 class RedisConversationLock:
+    _REFRESH_SCRIPT = """
+    if redis.call('GET', KEYS[1]) == ARGV[1] then
+      return redis.call('PEXPIRE', KEYS[1], ARGV[2])
+    end
+    return 0
+    """
+
     _RELEASE_SCRIPT = """
     if redis.call('GET', KEYS[1]) == ARGV[1] then
       return redis.call('DEL', KEYS[1])
@@ -84,6 +97,21 @@ class RedisConversationLock:
                 )
             await asyncio.sleep(0.05)
 
+    async def refresh(
+        self,
+        identity: str,
+        token: str,
+    ) -> bool:
+        key = f"fudia:concierge:lock:{identity}"
+        result = await self.client.eval(
+            self._REFRESH_SCRIPT,
+            1,
+            key,
+            token,
+            self.ttl_ms,
+        )
+        return bool(result)
+
     async def release(
         self,
         identity: str,
@@ -115,6 +143,14 @@ class MemoryConversationLock:
         )
         await lock.acquire()
         return identity
+
+    async def refresh(
+        self,
+        identity: str,
+        token: str,
+    ) -> bool:
+        lock = self._locks.get(identity)
+        return bool(lock and lock.locked())
 
     async def release(
         self,
