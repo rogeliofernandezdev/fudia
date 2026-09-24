@@ -215,7 +215,7 @@ func (a *API) createConciergeOrder(w http.ResponseWriter, r *http.Request) {
 	in.ConversationID = strings.TrimSpace(in.ConversationID)
 	in.Notes = strings.TrimSpace(in.Notes)
 	if len(in.Items) == 0 || len(in.Items) > 50 || len(in.CustomerPhone) > 32 ||
-		len(in.ConversationID) > 160 || len(in.Notes) > 240 {
+		in.ConversationID == "" || len(in.ConversationID) > 160 || len(in.Notes) > 240 {
 		fail(w, 400, "invalid_order", "Revisa los productos y datos del pedido.")
 		return
 	}
@@ -241,6 +241,45 @@ func (a *API) createConciergeOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	if err != nil {
 		fail(w, 503, "order_unavailable", "No pudimos validar la mesa.")
+		return
+	}
+
+	var existingOrderID string
+	err = tx.QueryRow(r.Context(), `
+		SELECT order_id::text
+		FROM concierge_order_requests
+		WHERE organization_id=$1 AND location_id=$2 AND table_id=$3 AND conversation_id=$4
+	`, qr.Scope.OrganizationID, qr.Scope.LocationID, qr.TableID, in.ConversationID).Scan(&existingOrderID)
+	if err == nil {
+		var existing order
+		existing, err = scanOrder(tx.QueryRow(r.Context(), `
+			SELECT `+orderColumns+`
+			FROM orders
+			WHERE id=$1 AND organization_id=$2 AND location_id=$3
+		`, existingOrderID, qr.Scope.OrganizationID, qr.Scope.LocationID))
+		if err != nil {
+			fail(w, 503, "order_unavailable", "No pudimos recuperar el pedido confirmado.")
+			return
+		}
+		existing.Items, err = loadOrderItems(r.Context(), tx, existing.ID, qr.Scope.OrganizationID)
+		if err != nil {
+			fail(w, 503, "order_unavailable", "No pudimos recuperar los productos del pedido.")
+			return
+		}
+		for _, item := range existing.Items {
+			if qty, parseErr := strconv.ParseFloat(item.Qty, 64); parseErr == nil {
+				existing.ItemCount += int(qty)
+			}
+		}
+		if err = applyOrderPaymentSummary(r.Context(), tx, &existing, qr.Scope.OrganizationID, qr.Scope.LocationID); err != nil {
+			fail(w, 503, "order_unavailable", "No pudimos recuperar el estado del pedido.")
+			return
+		}
+		writeJSON(w, 200, existing)
+		return
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		fail(w, 503, "order_unavailable", "No pudimos validar la idempotencia del pedido.")
 		return
 	}
 
@@ -298,6 +337,15 @@ func (a *API) createConciergeOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	if quantityErr := applyRecipeUsageDelta(r.Context(), tx, qr.Scope, out.ID, recipeUsage); quantityErr != nil {
 		fail(w, quantityErr.Status, quantityErr.Code, quantityErr.Message)
+		return
+	}
+	if _, err = tx.Exec(r.Context(), `
+		INSERT INTO concierge_order_requests(
+		  organization_id,location_id,table_id,conversation_id,order_id
+		)
+		VALUES($1,$2,$3,$4,$5)
+	`, qr.Scope.OrganizationID, qr.Scope.LocationID, qr.TableID, in.ConversationID, out.ID); err != nil {
+		fail(w, 503, "order_unavailable", "No pudimos registrar la idempotencia del pedido.")
 		return
 	}
 	if _, err = tx.Exec(r.Context(), `
