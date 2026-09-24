@@ -9,7 +9,7 @@ from typing import Any, cast
 
 from openai import AsyncOpenAI
 
-from src.domain.intents import AgentIntent, INTENTS
+from src.domain.intents import INTENTS, AgentIntent
 from src.domain.models import ConversationSession
 from src.observability import fingerprint, log_event
 
