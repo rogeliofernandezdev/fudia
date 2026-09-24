@@ -183,7 +183,7 @@ class ConciergeTools:
                         }
                         for line in self.session.cart
                     ],
-                    conversation_id=self.session.phone,
+                    conversation_id=self.session.conversation_id,
                 )
                 self.session.cart = []
                 self.session.awaiting_confirmation = False

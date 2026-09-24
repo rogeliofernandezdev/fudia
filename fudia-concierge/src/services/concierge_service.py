@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from uuid import uuid4
 
 from src.domain.models import ChatMessage, ConversationSession
 from src.graph.app import build_graph
@@ -42,6 +43,7 @@ class ConciergeService:
                     "Pide ayuda al personal del restaurante."
                 )
             session.qr_token = token
+            session.conversation_id = uuid4().hex
             session.table = table
             session.cart = []
             session.awaiting_confirmation = False

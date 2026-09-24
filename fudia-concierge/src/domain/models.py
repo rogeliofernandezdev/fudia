@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from decimal import Decimal
+from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
@@ -44,6 +45,7 @@ class CartLine(BaseModel):
 
 class ConversationSession(BaseModel):
     phone: str
+    conversation_id: str = Field(default_factory=lambda: uuid4().hex)
     qr_token: str | None = None
     table: TableContext | None = None
     cart: list[CartLine] = Field(default_factory=list)
