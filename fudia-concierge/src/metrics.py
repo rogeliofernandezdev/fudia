@@ -1,4 +1,4 @@
-from prometheus_client import Counter, Histogram
+from prometheus_client import Counter, Gauge, Histogram
 
 INBOUND_MESSAGES = Counter(
     "fudia_concierge_inbound_messages_total",
@@ -34,6 +34,10 @@ QUEUE_DELIVERIES = Counter(
     "fudia_concierge_queue_deliveries_total",
     "Queue processing outcomes.",
     ["result"],
+)
+QUEUE_IN_FLIGHT = Gauge(
+    "fudia_concierge_queue_in_flight",
+    "Queue deliveries currently being processed.",
 )
 QUEUE_DURATION = Histogram(
     "fudia_concierge_queue_duration_seconds",
