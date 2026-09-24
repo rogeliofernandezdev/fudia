@@ -3,8 +3,8 @@
 ## Bloque 1 — Fundación
 
 - [x] Proyecto en monorepo.
-- [x] FastAPI y health.
-- [x] Webhook WhatsApp.
+- [x] FastAPI, liveness y readiness.
+- [x] Webhook WhatsApp con firma.
 - [x] Adaptador WhatsApp.
 - [x] OpenAI Responses API con tools.
 - [x] LangGraph.
@@ -19,9 +19,11 @@
 - [x] Creación de pedido derivada del QR.
 - [x] Revalidación de precio, disponibilidad y stock en foods-backend.
 - [x] Integración KDS con canal WhatsApp.
-- [x] Idempotencia por ronda con conversationId estable y requestId independiente.
+- [x] Idempotencia por ronda con `conversationId` estable y `requestId` independiente.
 - [x] Credencial propia para el contrato Concierge -> foods-backend.
 - [x] Test QR -> pedido -> KDS.
+- [x] Cuenta acumulada desde backend.
+- [x] Handoff humano persistente.
 
 ## Bloque 3 — QR y configuración
 
@@ -29,26 +31,51 @@
 - [x] Botón Pedir por WhatsApp en página QR.
 - [x] Deeplink con token.
 - [x] Activar/desactivar Concierge por empresa/local.
-- [x] El contrato server-to-server queda bloqueado cuando el local desactiva Concierge.
-- [x] La sesión conversacional rechaza un QR de un local con Concierge desactivado.
+- [x] Contrato server-to-server bloqueado cuando el local desactiva Concierge.
+- [x] Sesión conversacional rechaza QR de local desactivado.
+- [x] Admin Web con loading, error, validación y permisos.
+- [x] Layout adaptable en la configuración y página pública de mesa.
 
 ## Bloque 4 — Conversación avanzada
 
-- [x] Combos conversacionales con grupos y selecciones validadas por Fudia.
-- [x] Modificadores de productos simples.
-- [x] Agregar nuevas rondas a una misma comanda aunque rondas anteriores estén preparando o listas.
-- [x] KDS independiente por ronda sin reprocesar productos anteriores.
-- [x] Solicitud de cuenta con consumo acumulado, pagos y saldo desde foods-backend.
-- [x] Handoff humano persistente y resoluble desde Operaciones.
-- [x] Observabilidad estructurada con privacidad.
-- [x] Bandeja operativa de pedidos conectada a datos reales.
-- [x] Aislamiento por número receptor de WhatsApp.
-- [x] Módulo `whatsapp_bot` listo para activación por entitlement.
+- [x] Combos conversacionales.
+- [x] Modificadores.
+- [x] Nuevas rondas sobre una misma comanda aunque rondas anteriores estén preparando/listas.
+- [x] KDS independiente por ronda.
+- [x] Solicitud de cuenta con consumo, pagos y saldo reales.
+- [x] Handoff humano resoluble desde Operaciones.
+- [x] Bandeja operativa conectada a datos reales.
+- [x] Módulo `whatsapp_bot` activable por entitlement.
 
-## Bloque 5 — Despliegue y endurecimiento externo
+## Bloque 5 — Endurecimiento de producción en código
 
-- [ ] Validar webhook real de Meta con firma y varios números conectados.
-- [ ] Validar envío real con el `phone_number_id` receptor.
-- [ ] Configurar secretos de OpenAI, Meta, Redis y Fudia en el entorno.
-- [ ] Crear alertas operativas a partir de los eventos estructurados.
-- [ ] Ejecutar prueba de humo QR -> WhatsApp -> múltiples rondas -> KDS -> cuenta en producción controlada.
+- [x] Router multiagente `menu/order/service`.
+- [x] Tools separadas por dominio y mínimo privilegio aplicado en código.
+- [x] Redis Streams en lugar de `BackgroundTasks`.
+- [x] Deduplicación atómica por mensaje.
+- [x] ACK, reintentos y dead-letter.
+- [x] Lock distribuido renovable por conversación.
+- [x] Sesiones aisladas por `phone_number_id + cliente`.
+- [x] Rate limiting y límite de tamaño de entrada.
+- [x] Timeouts y retries seguros/idempotentes.
+- [x] Fail-fast de configuración en producción.
+- [x] `/live`, `/ready` y `/metrics`.
+- [x] Correlation tracing.
+- [x] Métricas Prometheus sin PII como labels.
+- [x] Eval corpus de scope, intents y prompt injection.
+- [x] Tests de separación de privilegios.
+- [x] Dependencias fijadas + constraints reproducibles.
+- [x] Contenedor no-root con healthcheck.
+- [x] CI valida lint, tipos, tests, build Python y build Docker.
+
+## Estado de cierre
+
+**Implementación de repositorio: 100% para el alcance definido de Fudia Concierge.**
+
+No quedan ❌ ni ⚠️ de implementación conocidos en este alcance después de la puerta de CI.
+
+## Gate externo de activación
+
+Antes de un go-live real se debe ejecutar, en el entorno autorizado, la validación con credenciales reales de Meta/OpenAI/Redis/Fudia y una prueba de humo QR -> WhatsApp -> múltiples rondas -> KDS -> cuenta.
+
+Ese gate requiere infraestructura y secretos externos. No se marca como ejecutado desde el repositorio y no representa código pendiente.
