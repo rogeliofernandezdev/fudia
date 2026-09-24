@@ -9,7 +9,7 @@ from typing import Any, cast
 
 from openai import AsyncOpenAI
 
-from src.domain.intents import INTENTS, AgentIntent
+from src.domain.intents import ROUTES, AgentIntent, ConciergeRoute
 from src.domain.models import ConversationSession
 from src.metrics import (
     AGENT_DURATION,
@@ -40,7 +40,7 @@ def _conversation_context(
     ]
 
 
-class OpenAIScopeClassifier:
+class OpenAIConciergeRouter:
     def __init__(
         self,
         client: AsyncOpenAI,
@@ -49,67 +49,23 @@ class OpenAIScopeClassifier:
     ) -> None:
         self.client = client
         self.model = model
-        self.instructions = prompt_path.read_text(encoding="utf-8")
-
-    async def is_in_scope(
-        self,
-        session: ConversationSession,
-        user_message: str,
-    ) -> bool:
-        recent = session.messages[-6:]
-        context = "\n".join(
-            f"{message.role}: {message.content}"
-            for message in recent
+        self.instructions = prompt_path.read_text(
+            encoding="utf-8"
         )
-        scope_input = (
-            "Contexto reciente del pedido:\n"
-            f"{context or '(sin contexto)'}\n\n"
-            "Mensaje actual del cliente:\n"
-            f"{user_message}"
-        )
-        response = await self.client.responses.create(
-            model=self.model,
-            instructions=self.instructions,
-            input=scope_input,
-        )
-        allowed = (
-            (response.output_text or "").strip().upper()
-            == "IN_SCOPE"
-        )
-        SCOPE_DECISIONS.labels(
-            decision=(
-                "in_scope"
-                if allowed
-                else "out_of_scope"
-            )
-        ).inc()
-        return allowed
-
-
-class OpenAIIntentRouter:
-    def __init__(
-        self,
-        client: AsyncOpenAI,
-        model: str,
-        prompt_path: Path,
-    ) -> None:
-        self.client = client
-        self.model = model
-        self.instructions = prompt_path.read_text(encoding="utf-8")
 
     async def route(
         self,
         session: ConversationSession,
         user_message: str,
-    ) -> AgentIntent:
+    ) -> ConciergeRoute:
         context = "\n".join(
             f"{message.role}: {message.content}"
             for message in session.messages[-8:]
         )
         router_input = (
-            "Contexto reciente:\n"
+            "Contexto reciente del pedido:\n"
             f"{context or '(sin contexto)'}\n\n"
-            "Mensaje actual:\n"
+            "Mensaje actual del cliente:\n"
             f"{user_message}\n\n"
             f"awaiting_confirmation={session.awaiting_confirmation}"
         )
@@ -118,17 +74,31 @@ class OpenAIIntentRouter:
             instructions=self.instructions,
             input=router_input,
         )
-        value = (response.output_text or "").strip().lower()
-        if value not in INTENTS:
-            INTENT_ROUTES.labels(
-                intent="fallback_order"
+        value = (
+            response.output_text or ""
+        ).strip().lower()
+
+        if value not in ROUTES:
+            SCOPE_DECISIONS.labels(
+                decision="invalid_route"
             ).inc()
-            return "order"
-        intent = cast(AgentIntent, value)
-        INTENT_ROUTES.labels(
-            intent=intent
+            INTENT_ROUTES.labels(
+                intent="out_of_scope"
+            ).inc()
+            return "out_of_scope"
+
+        route = cast(ConciergeRoute, value)
+        SCOPE_DECISIONS.labels(
+            decision=(
+                "out_of_scope"
+                if route == "out_of_scope"
+                else "in_scope"
+            )
         ).inc()
-        return intent
+        INTENT_ROUTES.labels(
+            intent=route
+        ).inc()
+        return route
 
 
 class OpenAIToolAgent:
