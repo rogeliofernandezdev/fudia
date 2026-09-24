@@ -42,7 +42,13 @@ func lockInventoryBalance(ctx context.Context, tx pgx.Tx, s scope, inventoryItem
 	return out,err
 }
 
-func nullableUserID(id string) any {\n\tid=strings.TrimSpace(id)\n\tif id==""{return nil}\n\treturn id\n}\n\nfunc insertValuedMovement(ctx context.Context,tx pgx.Tx,s scope,productID *string,inventoryItemID,movementType string,delta,balanceAfter,unitCost float64,sourceType,sourceID,note string) error {
+func nullableUserID(id string) any {
+	id=strings.TrimSpace(id)
+	if id==""{return nil}
+	return id
+}
+
+func insertValuedMovement(ctx context.Context,tx pgx.Tx,s scope,productID *string,inventoryItemID,movementType string,delta,balanceAfter,unitCost float64,sourceType,sourceID,note string) error {
 	valueDelta:=math.Round(delta*unitCost*10000)/10000
 	balanceValue:=math.Round(balanceAfter*unitCost*10000)/10000
 	_,err:=tx.Exec(ctx,`
