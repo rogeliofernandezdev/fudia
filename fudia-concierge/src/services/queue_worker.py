@@ -6,7 +6,7 @@ import time
 from typing import Protocol
 
 from src.infrastructure.queue import InboundQueue, QueueDelivery
-from src.metrics import QUEUE_DELIVERIES, QUEUE_DURATION
+from src.metrics import QUEUE_DELIVERIES, QUEUE_DURATION, QUEUE_IN_FLIGHT
 from src.observability import (
     begin_trace,
     end_trace,
@@ -42,18 +42,72 @@ class QueueWorker:
         queue: InboundQueue,
         service: MessageService,
         whatsapp: WhatsAppSender,
+        max_concurrency: int = 8,
     ) -> None:
+        if max_concurrency < 1:
+            raise ValueError(
+                "max_concurrency must be at least 1"
+            )
         self.queue = queue
         self.service = service
         self.whatsapp = whatsapp
+        self.max_concurrency = max_concurrency
         self._stop = asyncio.Event()
+        self._in_flight: set[
+            asyncio.Future[None]
+        ] = set()
 
     async def run(self) -> None:
         await self.queue.start()
-        while not self._stop.is_set():
-            deliveries = await self.queue.read()
-            for delivery in deliveries:
-                await self.process(delivery)
+        try:
+            while not self._stop.is_set():
+                capacity = (
+                    self.max_concurrency
+                    - len(self._in_flight)
+                )
+                if capacity <= 0:
+                    await self._wait_for_capacity()
+                    continue
+
+                deliveries = await self.queue.read(
+                    limit=capacity
+                )
+                if not deliveries:
+                    await asyncio.sleep(0)
+                    continue
+
+                for delivery in deliveries:
+                    self._start_delivery(delivery)
+        finally:
+            await self._drain()
+
+    def _start_delivery(
+        self,
+        delivery: QueueDelivery,
+    ) -> None:
+        task = asyncio.create_task(
+            self.process(delivery)
+        )
+        self._in_flight.add(task)
+        task.add_done_callback(
+            self._in_flight.discard
+        )
+
+    async def _wait_for_capacity(self) -> None:
+        if not self._in_flight:
+            return
+        await asyncio.wait(
+            tuple(self._in_flight),
+            return_when=asyncio.FIRST_COMPLETED,
+        )
+
+    async def _drain(self) -> None:
+        if not self._in_flight:
+            return
+        await asyncio.gather(
+            *tuple(self._in_flight),
+            return_exceptions=True,
+        )
 
     async def process(
         self,
@@ -64,6 +118,7 @@ class QueueWorker:
         trace_token = begin_trace(
             message.message_id
         )
+        QUEUE_IN_FLIGHT.inc()
         try:
             reply = await self.service.handle_message(
                 message.phone,
@@ -124,6 +179,7 @@ class QueueWorker:
                 fingerprint(message.message_id),
             )
         finally:
+            QUEUE_IN_FLIGHT.dec()
             end_trace(trace_token)
 
     async def stop(self) -> None:
