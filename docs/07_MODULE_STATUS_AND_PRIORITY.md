@@ -8,14 +8,13 @@
 
 - Fecha: **2026-09-24**
 - Rama revisada: `feat/redesign-nueva-comanda`
-- Commit base funcional auditado: `4786e541e960f7fbeef8aa98b69210197179ecfc`
-- CI del commit base:
-  - `foods-backend`: **success**
-  - `foods-admin-web`: **success**
-  - `fudia-concierge`: **success**
-- Trabajo activo por decisión de producto: **Fudia Concierge**
-- Bloques cerrados de Concierge: **Fundación + contrato Fudia + QR/configuración + conversación avanzada**
-- Siguiente prioridad global: **Facturación electrónica**
+- Commit de hardening Concierge verificado por CI: `fa73d2c7f03078e0e43d4035fb69a02e125c45c9`
+- CI de cierre Concierge:
+  - `fudia-concierge`: **success** en lint, mypy, pytest, build Python y build Docker.
+  - `foods-backend` y `foods-admin-web`: se mantienen como dependencias reales del flujo y se verifican en la puerta final de rama.
+- Trabajo activo: **P0 — Facturación electrónica**
+- Fudia Concierge: **✅ 100% cerrado en repositorio/CI para el alcance definido**
+- Gate externo de Concierge: validación de go-live con credenciales reales; no es código pendiente.
 
 ## Cómo interpretar los estados
 
@@ -160,67 +159,61 @@ esté terminado. Falta la parte de costeo y rentabilidad.
 | Usuarios y roles | `usuarios` | 🟢 Ready / activable | Roles/permisos forman parte del onboarding. Auditoría de cierre pendiente. |
 | Facturación | `facturacion` | 🔵 En desarrollo | Pantallas actuales no constituyen facturación electrónica real. **Siguiente prioridad.** |
 | Integraciones | `integraciones` | 🔵 En desarrollo | Pendiente completar adaptadores operativos. |
-| Fudia Concierge | `whatsapp_bot` | 🟢 Ready / activable | QR, WhatsApp, menú real, pedidos/KDS, combos, modificadores, rondas sobre comanda existente, handoff humano, observabilidad y bandeja operativa real están implementados. La activación sigue dependiendo del plan/entitlement de la empresa. |
+| Fudia Concierge | `whatsapp_bot` | ✅ **100% cerrado** | QR/WhatsApp, menú real, pedidos/KDS, combos, modificadores, rondas, cuenta, handoff, multiagente, cola durable, aislamiento multicanal, resiliencia, observabilidad, evals y CI/Docker están cerrados. La activación comercial sigue dependiendo del plan/entitlement; el go-live requiere credenciales externas. |
 
 ---
 
-## Trabajo activo — Fudia Concierge
+## Cierre auditado — Fudia Concierge
 
-Por decisión de producto se adelantó la vertical conversacional que originalmente
-estaba dentro de P3. Esto no elimina la prioridad estratégica de Facturación;
-simplemente registra el frente que se está implementando ahora.
+Concierge completa el alcance funcional y técnico definido para esta etapa.
 
-### Cerrado en la primera etapa
+### Capacidades funcionales cerradas
 
-- quinto proyecto desplegable `fudia-concierge/`;
-- FastAPI, LangGraph, OpenAI Responses API y tools;
-- webhook Meta con deduplicación y validación de firma;
-- sesión/carrito efímero en Redis;
-- confirmación explícita protegida también por código;
-- contrato `/v1/integrations/concierge/{token}/...` protegido con credencial server-to-server;
-- resolución de empresa/local/mesa exclusivamente desde QR;
-- menú operativo consultado desde foods-backend;
-- precio, disponibilidad y stock revalidados por foods-backend;
-- pedido real con canal `whatsapp`;
-- idempotencia por `conversationId`;
-- auditoría sin suplantar a un usuario interno;
-- llegada del pedido confirmado a Pedidos/KDS;
-- prueba integrada QR -> menú -> pedido -> KDS;
-- CI propio de Concierge.
+- QR resuelto por foods-backend y configuración por empresa/local;
+- número de WhatsApp administrable y activación/desactivación;
+- carta real por nombre, descripción y categoría;
+- disponibilidad, precio y stock revalidados en backend;
+- carrito temporal, combos y modificadores;
+- confirmación explícita protegida por código;
+- `conversationId` estable y `requestId` idempotente por ronda;
+- múltiples rondas sobre una misma comanda aunque rondas anteriores avancen en KDS;
+- tickets de cocina independientes por ronda;
+- cuenta acumulada, pagos y saldo leídos desde backend;
+- handoff humano persistente y resoluble;
+- bandeja operativa real;
+- aislamiento por número receptor/tenancy.
 
-### Cerrado en la segunda etapa — QR y configuración
+### Hardening cerrado
 
-- configuración persistente por empresa/local;
-- número público de WhatsApp en formato internacional;
-- activación/desactivación administrativa en `/whatsapp-bot`;
-- contrato de integración bloqueado cuando el local desactiva Concierge;
-- QR público expone Concierge únicamente cuando está activo;
-- botón **Pedir por WhatsApp** en `/mesa/[qr]`;
-- deeplink con mensaje `FUDIA:<qr_token>`;
-- inicio de sesión rechazado si el QR pertenece a un local con Concierge desactivado;
-- OpenAPI actualizado y migración reversible;
-- CI verde de backend, Admin Web y Concierge.
+- LangGraph con router real a especialistas `menu`, `order` y `service`;
+- schemas de tools separados por especialista y autorización duplicada en `ToolRegistry`;
+- Redis Streams durable en lugar de `BackgroundTasks`;
+- deduplicación atómica, ACK, retries, recuperación de pendientes y dead-letter;
+- lock Redis renovable por conversación;
+- sesión identificada por `phone_number_id + cliente`, hasheada en Redis;
+- rate limiting y límite de entrada;
+- timeouts y retries seguros/idempotentes;
+- fail-fast de secretos/configuración en producción;
+- endpoints `/live`, `/ready` y `/metrics`;
+- correlation tracing y métricas Prometheus de baja cardinalidad;
+- eval corpus de scope, intención y prompt injection;
+- tests de mínimo privilegio;
+- dependencias fijadas/constraints;
+- contenedor no-root con healthcheck;
+- CI valida lint, tipos, tests, build de paquete y build Docker.
 
-La prueba automatizada cubre QR -> menú -> pedido -> KDS dentro de Fudia. La validación contra la infraestructura real de Meta/WhatsApp queda como prueba de despliegue, ya que requiere credenciales y webhook externos.
+### Evidencia de interfaz y contrato
 
-### Cerrado en la tercera etapa — conversación avanzada
+- Admin Web de Concierge incluye loading, error, reintento, validación E.164, permisos y layout adaptable;
+- página QR pública incluye estados loading/error y deeplink WhatsApp;
+- backend tiene migraciones reversibles e integration tests para settings, handoff, rondas, KDS y cuenta;
+- el contrato server-to-server usa credencial propia y no confía en datos comerciales proporcionados por el modelo.
 
-- combos conversacionales con grupos, mínimos, máximos y recargos revalidados por Fudia;
-- modificadores de productos simples con IDs y recargos validados por backend;
-- nuevas rondas sobre una comanda existente de la mesa sin duplicar la orden;
-- handoff humano persistente con pausa del bot, aviso operativo y resolución por personal;
-- campana de Admin Web conectada a solicitudes reales de Concierge;
-- logs estructurados de latencia, tools y tokens sin copiar conversaciones ni teléfonos en claro;
-- aislamiento por número de WhatsApp: el QR se contrasta con el número receptor configurado;
-- respuesta de Meta desde el `phone_number_id` que recibió el mensaje;
-- bandeja `/pedidos` conectada al backend real, sin pedidos simulados;
-- módulo `whatsapp_bot` marcado `ready` y activable sin modificar automáticamente los planes comerciales.
+### Gate externo de activación
 
-### Pendiente de despliegue/operación
+Antes de un go-live real se debe validar el webhook y envío con credenciales reales de Meta/OpenAI/Redis/Fudia y ejecutar una prueba de humo QR -> WhatsApp -> múltiples rondas -> KDS -> cuenta.
 
-- validar webhook y envío contra credenciales reales de Meta en el entorno desplegado;
-- configurar secretos de OpenAI/Meta/Redis/backend fuera del repositorio;
-- definir alertas y dashboards sobre los eventos estructurados de observabilidad.
+Ese gate depende del entorno y secretos autorizados. **No es una deuda de implementación del repositorio y no se declara ejecutado sin evidencia externa.**
 
 ---
 
@@ -281,9 +274,9 @@ Cerrar y auditar `reportes` utilizando datos reales de:
 - inventario;
 - margen/rentabilidad.
 
-### P3 — Integraciones y WhatsApp
+### P3 — Integraciones adicionales
 
-Fudia Concierge se adelantó como trabajo activo. Su fundación y contrato de pedidos ya están implementados. En esta prioridad quedarán las integraciones adicionales, configuración completa, handoff humano y endurecimiento multicanal.
+Fudia Concierge ya quedó cerrado para su alcance actual. En esta prioridad futura quedan únicamente integraciones distintas de Concierge o ampliaciones de producto que todavía no formen parte del alcance cerrado.
 
 ### P4 — Carta digital QR
 
@@ -307,9 +300,9 @@ Cuando se retome este proyecto, continuar por:
 
 > **P0 — Facturación electrónica**
 
-Fudia Concierge ya completó el alcance funcional acordado para esta etapa y está
-`ready`/activable. La única validación externa pendiente es la prueba de
-despliegue contra credenciales reales de Meta/OpenAI/Redis.
+Fudia Concierge está **✅ 100% cerrado en repositorio/CI** para el alcance definido.
+Su prueba con credenciales reales pertenece al gate de activación del entorno y
+no bloquea el inicio de **P0 — Facturación electrónica**.
 
 Punto de continuación de Facturación:
 
