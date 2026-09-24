@@ -6,7 +6,9 @@ import httpx
 
 
 class WhatsAppAdapter(Protocol):
-    async def send_text(self, phone: str, message: str) -> None: ...
+    async def send_text(
+        self, phone: str, message: str, sender_phone_id: str = ""
+    ) -> None: ...
 
 
 class MetaWhatsAppAdapter:
@@ -28,12 +30,15 @@ class MetaWhatsAppAdapter:
             self._client = httpx.AsyncClient(timeout=15.0)
         return self._client
 
-    async def send_text(self, phone: str, message: str) -> None:
-        if not self.token or not self.phone_id or not self.graph_version:
+    async def send_text(
+        self, phone: str, message: str, sender_phone_id: str = ""
+    ) -> None:
+        phone_id = sender_phone_id.strip() or self.phone_id
+        if not self.token or not phone_id or not self.graph_version:
             raise RuntimeError("WhatsApp no está configurado.")
         url = (
             f"https://graph.facebook.com/{self.graph_version}/"
-            f"{self.phone_id}/messages"
+            f"{phone_id}/messages"
         )
         response = await self._http().post(
             url,
