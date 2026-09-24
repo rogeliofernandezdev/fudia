@@ -8,15 +8,15 @@
 
 - Fecha: **2026-09-24**
 - Rama revisada: `feat/redesign-nueva-comanda`
-- Commit base funcional auditado: `97835260cec6a971b0305eecc085d8bce7378fc7`
+- Commit base funcional auditado: `4786e541e960f7fbeef8aa98b69210197179ecfc`
 - CI del commit base:
   - `foods-backend`: **success**
   - `foods-admin-web`: **success**
   - `foods-operations-web`: **success**
   - `fudia-concierge`: **success**
 - Trabajo activo por decisión de producto: **Fudia Concierge**
-- Bloques cerrados de Concierge: **Fundación + contrato Fudia + QR/configuración**
-- Siguiente bloque concreto: **conversación avanzada — combos**
+- Bloques cerrados de Concierge: **Fundación + contrato Fudia + QR/configuración + conversación avanzada**
+- Siguiente prioridad global: **Facturación electrónica**
 
 ## Cómo interpretar los estados
 
@@ -161,7 +161,7 @@ esté terminado. Falta la parte de costeo y rentabilidad.
 | Usuarios y roles | `usuarios` | 🟢 Ready / activable | Roles/permisos forman parte del onboarding. Auditoría de cierre pendiente. |
 | Facturación | `facturacion` | 🔵 En desarrollo | Pantallas actuales no constituyen facturación electrónica real. **Siguiente prioridad.** |
 | Integraciones | `integraciones` | 🔵 En desarrollo | Pendiente completar adaptadores operativos. |
-| Fudia Concierge | `whatsapp_bot` | 🔵 En desarrollo | Fundación, contrato server-to-server, menú/pedido por QR, configuración por local, deeplink WhatsApp, confirmación protegida, idempotencia y entrada a KDS están implementados. Faltan combos/modificadores, comanda existente, handoff y observabilidad. |
+| Fudia Concierge | `whatsapp_bot` | 🟢 Ready / activable | QR, WhatsApp, menú real, pedidos/KDS, combos, modificadores, rondas sobre comanda existente, handoff humano, observabilidad y bandeja operativa real están implementados. La activación sigue dependiendo del plan/entitlement de la empresa. |
 
 ---
 
@@ -204,13 +204,24 @@ simplemente registra el frente que se está implementando ahora.
 
 La prueba automatizada cubre QR -> menú -> pedido -> KDS dentro de Fudia. La validación contra la infraestructura real de Meta/WhatsApp queda como prueba de despliegue, ya que requiere credenciales y webhook externos.
 
-### Pendiente inmediato
+### Cerrado en la tercera etapa — conversación avanzada
 
-- combos conversacionales con grupos/opciones;
-- modificadores de productos simples;
-- agregar a una comanda existente de la mesa;
-- handoff humano;
-- observabilidad y endurecimiento operativo.
+- combos conversacionales con grupos, mínimos, máximos y recargos revalidados por Fudia;
+- modificadores de productos simples con IDs y recargos validados por backend;
+- nuevas rondas sobre una comanda existente de la mesa sin duplicar la orden;
+- handoff humano persistente con pausa del bot, aviso operativo y resolución por personal;
+- campana de Operaciones conectada a solicitudes reales de Concierge;
+- logs estructurados de latencia, tools y tokens sin copiar conversaciones ni teléfonos en claro;
+- aislamiento por número de WhatsApp: el QR se contrasta con el número receptor configurado;
+- respuesta de Meta desde el `phone_number_id` que recibió el mensaje;
+- bandeja `/pedidos` conectada al backend real, sin pedidos simulados;
+- módulo `whatsapp_bot` marcado `ready` y activable sin modificar automáticamente los planes comerciales.
+
+### Pendiente de despliegue/operación
+
+- validar webhook y envío contra credenciales reales de Meta en el entorno desplegado;
+- configurar secretos de OpenAI/Meta/Redis/backend fuera del repositorio;
+- definir alertas y dashboards sobre los eventos estructurados de observabilidad.
 
 ---
 
@@ -295,18 +306,21 @@ disponibilidad, mesas y pedidos.
 
 Cuando se retome este proyecto, continuar por:
 
-> **Fudia Concierge — Bloque 4: combos conversacionales**
+> **P0 — Facturación electrónica**
 
-Orden inmediato:
+Fudia Concierge ya completó el alcance funcional acordado para esta etapa y está
+`ready`/activable. La única validación externa pendiente es la prueba de
+despliegue contra credenciales reales de Meta/OpenAI/Redis.
 
-1. exponer al servicio Concierge la configuración real de grupos y opciones de un combo;
-2. añadir una tool para consultar las opciones requeridas;
-3. permitir que GPT seleccione únicamente IDs ofrecidos por Fudia;
-4. enviar las selecciones al pedido sin aceptar precios generados por el modelo;
-5. dejar que `foods-backend` revalide mínimos, máximos, disponibilidad y recargos;
-6. probar conversación de combo -> confirmación -> pedido -> KDS.
+Punto de continuación de Facturación:
 
-Después de completar combos/modificadores y el handoff operativo, reevaluar el retorno a **P0 — Facturación electrónica**, que continúa siendo el hueco principal del circuito fiscal de venta.
+1. definir modelo persistente de series y comprobantes;
+2. definir contrato del adaptador de proveedor homologado;
+3. implementar configuración administrativa por empresa/local;
+4. emitir boleta/factura desde una venta/pago real;
+5. implementar historial, estados, reintentos idempotentes y auditoría;
+6. integrar notas/anulaciones según soporte del proveedor;
+7. cerrar OpenAPI, pruebas y flujo POS -> comprobante fiscal.
 
 ---
 
