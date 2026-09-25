@@ -181,7 +181,6 @@ class ConciergeService:
         self,
         phone: str,
         text: str,
-        recipient_phone: str = "",
         channel_id: str = "",
     ) -> str:
         if len(text) > self.max_message_chars:
@@ -192,7 +191,6 @@ class ConciergeService:
 
         channel_key = (
             channel_id.strip()
-            or _phone_digits(recipient_phone)
             or "default"
         )
         identity = conversation_identity(phone, channel_key)
