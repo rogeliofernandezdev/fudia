@@ -8,11 +8,11 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func seededOnboardingBody(t *testing.T, pool interface {
-	QueryRow(context.Context, string, ...any) interface{ Scan(...any) error }
-}, planCode, taxID, email string) []byte {
+func seededOnboardingBody(t *testing.T, pool *pgxpool.Pool, planCode, taxID, email string) []byte {
 	t.Helper()
 	var planID string
 	if err := pool.QueryRow(context.Background(), `
