@@ -135,3 +135,23 @@ def test_prometheus_registry_contains_concierge_metrics() -> None:
         "fudia_concierge_queue_in_flight"
         in payload
     )
+
+
+def test_whatsapp_number_is_resolved_from_meta_not_app_config() -> None:
+    settings_source = (
+        ROOT / "config" / "settings.py"
+    ).read_text(encoding="utf-8")
+    env_example = (
+        ROOT / ".env.example"
+    ).read_text(encoding="utf-8")
+    adapter = (
+        ROOT
+        / "src"
+        / "infrastructure"
+        / "whatsapp_adapter.py"
+    ).read_text(encoding="utf-8")
+
+    assert "FUDIA_WHATSAPP_PHONE" not in settings_source
+    assert "FUDIA_WHATSAPP_PHONE" not in env_example
+    assert "WHATSAPP_PHONE_ID" in env_example
+    assert "display_phone_number" in adapter
