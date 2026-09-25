@@ -27,12 +27,13 @@
 
 ## Bloque 3 — QR y configuración
 
-- [x] Un único número global de WhatsApp para Fudia; el acceso por empresa depende exclusivamente del módulo `whatsapp_bot` administrado por plataforma.
+- [x] Un único bot global; el número oficial permanece administrado exclusivamente en Meta / WhatsApp Business.
 - [x] Botón Pedir por WhatsApp en página QR.
 - [x] Deeplink con token.
-- [x] Activar/desactivar Concierge por empresa/local.
-- [x] Contrato server-to-server bloqueado cuando el local desactiva Concierge.
-- [x] Sesión conversacional rechaza QR de local desactivado.
+- [x] Entitlement `whatsapp_bot` activable únicamente por administrador global para cada empresa.
+- [x] Contrato server-to-server bloqueado cuando la empresa no tiene `whatsapp_bot` activo.
+- [x] Sesión conversacional rechaza QR de empresa sin Concierge habilitado.
+- [x] Deeplink resuelto por Concierge consultando a Meta desde `WHATSAPP_PHONE_ID`, sin número duplicado en Fudia.
 - [x] Admin Web con loading, error, validación y permisos.
 - [x] Layout adaptable en la configuración y página pública de mesa.
 
