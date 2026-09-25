@@ -69,7 +69,7 @@ Las reglas de negocio críticas no viven en prompts: se validan en services/tool
 ## Desarrollo local
 
 1. Copiar `.env.example` a `.env`.
-2. Configurar OpenAI, Redis y credenciales de WhatsApp.
+2. Configurar OpenAI, Redis y credenciales de Meta/WhatsApp. `WHATSAPP_PHONE_ID` es el identificador técnico del activo en Meta, no el número telefónico. El número visible se obtiene desde Meta y no se configura en Fudia.
 3. Instalar de forma reproducible: `python -m pip install -c constraints.txt -e ".[dev]"`.
 4. Ejecutar: `uvicorn src.main:app --reload --port 8010`.
 5. Verificar: `ruff check . ; mypy src config ; pytest -q ; python -m build`.
