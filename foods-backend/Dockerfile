@@ -15,6 +15,11 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
     -ldflags="-s -w -X main.version=${VERSION}" \
     -o /out/foods-api \
     ./cmd/api
+RUN CGO_ENABLED=0 GOOS=linux go build \
+    -trimpath \
+    -ldflags="-s -w" \
+    -o /out/foods-migrate \
+    ./cmd/migrate
 
 FROM alpine:3.22 AS runtime
 
@@ -25,6 +30,8 @@ RUN apk add --no-cache ca-certificates tzdata \
 WORKDIR /app
 
 COPY --from=builder /out/foods-api ./foods-api
+COPY --from=builder /out/foods-migrate ./foods-migrate
+COPY migrations ./migrations
 
 ENV HTTP_ADDR=:8080
 
