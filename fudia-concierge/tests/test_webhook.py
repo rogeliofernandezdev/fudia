@@ -1,7 +1,7 @@
 import hashlib
 import hmac
 
-from src.api.webhook import _incoming_text_messages
+from src.api.webhook import _incoming_text_messages, _matches_configured_phone_id
 
 
 def test_extracts_only_text_messages() -> None:
@@ -79,3 +79,18 @@ def test_validates_meta_signature() -> None:
     assert _valid_meta_signature(payload, signature, secret)
     assert not _valid_meta_signature(payload, "sha256=bad", secret)
     assert not _valid_meta_signature(payload, signature, "")
+
+
+def test_accepts_only_configured_global_whatsapp_phone_id() -> None:
+    assert _matches_configured_phone_id(
+        "meta-phone-123",
+        "meta-phone-123",
+    )
+    assert not _matches_configured_phone_id(
+        "meta-phone-other",
+        "meta-phone-123",
+    )
+    assert _matches_configured_phone_id(
+        "meta-phone-123",
+        "",
+    )
