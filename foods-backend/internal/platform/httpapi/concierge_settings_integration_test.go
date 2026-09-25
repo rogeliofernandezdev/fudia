@@ -15,7 +15,6 @@ func TestConciergeEntitlementControlsPublicQRCode(t *testing.T) {
 	api := New(pool)
 	ctx := context.Background()
 	nonce := time.Now().UnixNano()
-	t.Setenv("FUDIA_WHATSAPP_PHONE", "+51987654321")
 	t.Setenv("FUDIA_CONCIERGE_API_KEY", "concierge-test-key")
 
 	if _, err := pool.Exec(ctx, `
@@ -49,14 +48,20 @@ func TestConciergeEntitlementControlsPublicQRCode(t *testing.T) {
 		t.Fatalf("public table before entitlement: %d %s", publicRec.Code, publicRec.Body.String())
 	}
 	var before struct {
-		ConciergeEnabled bool   `json:"conciergeEnabled"`
-		WhatsAppPhone    string `json:"whatsappPhone"`
+		ConciergeEnabled bool `json:"conciergeEnabled"`
 	}
 	if err := json.Unmarshal(publicRec.Body.Bytes(), &before); err != nil {
 		t.Fatal(err)
 	}
-	if before.ConciergeEnabled || before.WhatsAppPhone != "" {
+	if before.ConciergeEnabled {
 		t.Fatalf("concierge must be unavailable before global activation: %#v", before)
+	}
+	var publicBody map[string]any
+	if err := json.Unmarshal(publicRec.Body.Bytes(), &publicBody); err != nil {
+		t.Fatal(err)
+	}
+	if _, exists := publicBody["whatsappPhone"]; exists {
+		t.Fatalf("public table must not expose an app-stored WhatsApp number: %#v", publicBody)
 	}
 
 	blockedReq := httptest.NewRequest("GET", "/v1/integrations/concierge/"+token+"/menu", nil)
@@ -78,7 +83,7 @@ func TestConciergeEntitlementControlsPublicQRCode(t *testing.T) {
 	if err := json.Unmarshal(statusRec.Body.Bytes(), &disabled); err != nil {
 		t.Fatal(err)
 	}
-	if disabled.Active || disabled.Available || !disabled.ManagedByPlatform {
+	if disabled.Active || !disabled.ManagedByPlatform {
 		t.Fatalf("unexpected disabled concierge status: %#v", disabled)
 	}
 
@@ -98,14 +103,13 @@ func TestConciergeEntitlementControlsPublicQRCode(t *testing.T) {
 		t.Fatalf("public table after entitlement: %d %s", publicAfterRec.Code, publicAfterRec.Body.String())
 	}
 	var after struct {
-		ConciergeEnabled bool   `json:"conciergeEnabled"`
-		WhatsAppPhone    string `json:"whatsappPhone"`
+		ConciergeEnabled bool `json:"conciergeEnabled"`
 	}
 	if err := json.Unmarshal(publicAfterRec.Body.Bytes(), &after); err != nil {
 		t.Fatal(err)
 	}
-	if !after.ConciergeEnabled || after.WhatsAppPhone != "+51987654321" {
-		t.Fatalf("public QR must expose the global Fudia WhatsApp after activation: %#v", after)
+	if !after.ConciergeEnabled {
+		t.Fatalf("public QR must expose Concierge availability after activation: %#v", after)
 	}
 
 	allowedReq := httptest.NewRequest("GET", "/v1/integrations/concierge/"+token+"/menu", nil)
@@ -127,7 +131,14 @@ func TestConciergeEntitlementControlsPublicQRCode(t *testing.T) {
 	if err := json.Unmarshal(statusAfterRec.Body.Bytes(), &enabled); err != nil {
 		t.Fatal(err)
 	}
-	if !enabled.Active || !enabled.Available || enabled.WhatsAppPhone != "+51987654321" || !enabled.ManagedByPlatform {
+	if !enabled.Active || !enabled.ManagedByPlatform {
 		t.Fatalf("unexpected active concierge status: %#v", enabled)
+	}
+	var statusBody map[string]any
+	if err := json.Unmarshal(statusAfterRec.Body.Bytes(), &statusBody); err != nil {
+		t.Fatal(err)
+	}
+	if _, exists := statusBody["whatsappPhone"]; exists {
+		t.Fatalf("admin status must not expose a duplicated WhatsApp number: %#v", statusBody)
 	}
 }
