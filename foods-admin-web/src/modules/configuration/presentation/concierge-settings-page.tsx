@@ -25,7 +25,7 @@ export function ConciergeSettingsPage(){
        <div><b>Fudia Concierge no está habilitado para esta empresa</b><small>El administrador global de Fudia puede activar el módulo <code>whatsapp_bot</code> cuando forme parte del contrato o plan de la empresa.</small></div>
       </div>:<div className="concierge-status-card ready">
        <span><Icon name="check" size={20}/></span>
-       <div><b>Módulo habilitado por Fudia</b><small>Los QR de las mesas pueden iniciar pedidos en el WhatsApp oficial conectado a Fudia Concierge.</small></div>
+       <div><b>Módulo habilitado por Fudia</b><small>La empresa está autorizada a usar Concierge. La identidad y operación del canal oficial se administran en Meta / WhatsApp Business.</small></div>
       </div>}
 
       <div className="concierge-readonly-field">
