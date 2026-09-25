@@ -19,11 +19,18 @@ async def start_whatsapp(
             token
         )
     except FudiaError as exc:
+        status_code = (
+            404
+            if exc.status_code == 404
+            else 503
+        )
         raise HTTPException(
-            status_code=404,
+            status_code=status_code,
             detail=(
                 "El QR no está activo o ya no "
                 "corresponde a una mesa."
+                if status_code == 404
+                else "No pudimos validar el QR."
             ),
         ) from exc
 
