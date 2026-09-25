@@ -69,6 +69,7 @@ jobs:
               "aws ecr get-login-password --region '${AWS_REGION}' | docker login --username AWS --password-stdin '${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com'",
               "docker network inspect '${DOCKER_NETWORK}' >/dev/null 2>&1 || docker network create '${DOCKER_NETWORK}'",
               "docker pull '${IMAGE_URI}'",
+              "docker run --rm --network '${DOCKER_NETWORK}' --env-file /home/ubuntu/backend.env --entrypoint ./foods-migrate '${IMAGE_URI}'",
               "docker rm -f '${CONTAINER_NAME}-previous' >/dev/null 2>&1 || true",
               "if docker inspect '${CONTAINER_NAME}' >/dev/null 2>&1; then docker stop '${CONTAINER_NAME}' && docker rename '${CONTAINER_NAME}' '${CONTAINER_NAME}-previous'; fi",
               "docker run -d --name '${CONTAINER_NAME}' --restart unless-stopped --network '${DOCKER_NETWORK}' --env-file /home/ubuntu/backend.env -p 8080:8080 '${IMAGE_URI}'",
