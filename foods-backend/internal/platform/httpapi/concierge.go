@@ -85,9 +85,10 @@ func (a *API) resolveConciergeQR(ctx context.Context, token string) (conciergeQR
 		FROM tables t
 		JOIN organizations o ON o.id=t.organization_id AND o.active
 		JOIN locations l ON l.id=t.location_id AND l.organization_id=t.organization_id AND l.active
-		JOIN concierge_settings cs
-		  ON cs.organization_id=t.organization_id AND cs.location_id=t.location_id
-		 AND cs.active AND cs.whatsapp_phone<>''
+		JOIN organization_modules om
+		  ON om.organization_id=t.organization_id
+		 AND om.module_key='whatsapp_bot'
+		 AND om.active
 		JOIN organization_fiscal_profiles p
 		  ON p.id=l.fiscal_profile_id AND p.organization_id=l.organization_id AND p.active
 		WHERE t.qr_token=$1 AND t.active AND t.qr_enabled
