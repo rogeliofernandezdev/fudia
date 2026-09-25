@@ -32,7 +32,6 @@ class WhatsAppSender(Protocol):
         self,
         phone: str,
         message: str,
-        sender_phone_id: str = "",
     ) -> None: ...
 
 
@@ -153,7 +152,6 @@ class QueueWorker:
             await self.whatsapp.send_text(
                 message.phone,
                 reply,
-                message.sender_phone_id,
             )
             await self.queue.ack(delivery)
             duration = time.perf_counter() - started
