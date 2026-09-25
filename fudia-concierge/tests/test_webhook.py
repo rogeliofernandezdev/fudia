@@ -27,7 +27,7 @@ def test_extracts_only_text_messages() -> None:
         ]
     }
     assert _incoming_text_messages(payload) == [
-        ("m1", "51999999999", "hola", "", "")
+        ("m1", "51999999999", "hola", "")
     ]
 
 
@@ -62,7 +62,6 @@ def test_extracts_inbound_whatsapp_number_context() -> None:
             "51999999999",
             "hola",
             "meta-phone-123",
-            "+51 987 654 321",
         )
     ]
 
