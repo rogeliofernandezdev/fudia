@@ -243,7 +243,7 @@ async def test_qr_session_rejects_wrong_whatsapp_recipient() -> None:
         "+51 900 000 000",
     )
 
-    assert "no corresponde al número de WhatsApp" in reply
+    assert "WhatsApp oficial de Fudia" in reply
     assert await store.get("51999999999") is None
 
 
@@ -254,7 +254,7 @@ async def test_disabled_concierge_rejects_qr() -> None:
 
     reply = await service.handle_message("51999999999", "FUDIA:" + "a" * 32)
 
-    assert "no está disponible" in reply
+    assert "no está habilitado" in reply
     assert await store.get("51999999999") is None
 
 
