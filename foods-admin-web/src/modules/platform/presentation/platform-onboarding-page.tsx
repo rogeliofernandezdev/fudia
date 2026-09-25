@@ -5,6 +5,7 @@ import {useState} from "react";
 import {useMutation,useQuery} from "@tanstack/react-query";
 import {Icon,IconName} from "@/design-system/icons";
 import {LocationMap} from "@/design-system/location-map";
+import {ApiClientError} from "@/shared/api/client";
 import {Input,PageHeader,Select} from "@/design-system/page-header";
 import {useFeedback} from "@/providers/feedback-provider";
 import type {PlatformOnboardingDraft} from "../domain/types";
@@ -39,7 +40,7 @@ export function PlatformOnboardingPage(){
   const save=useMutation({
     mutationFn:()=>createPlatformOrganization({...draft,planId:effectivePlanId}),
     onSuccess:()=>{notify({tone:"success",title:"Empresa registrada",message:"La empresa, su suscripción, el local y el Administrador de empresa quedaron listos."});setDraft(blank);setStep(0)},
-    onError:e=>notify({tone:"danger",title:"No se pudo registrar",message:e.message}),
+    onError:e=>{const message=e instanceof ApiClientError&&e.status>=500&&e.correlationId?`${e.message} Código de seguimiento: ${e.correlationId}`:e.message;notify({tone:"danger",title:"No se pudo registrar",message})},
   });
 
   function set<K extends keyof PlatformOnboardingDraft>(k:K,v:PlatformOnboardingDraft[K]){setDraft(current=>({...current,[k]:v}))}

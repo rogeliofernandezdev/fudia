@@ -5,6 +5,7 @@ export class ApiClientError extends Error {
     message: string,
     readonly code: string,
     readonly status: number,
+    readonly correlationId?: string,
   ) {
     super(message);
     this.name = "ApiClientError";

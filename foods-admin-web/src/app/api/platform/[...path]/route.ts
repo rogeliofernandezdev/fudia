@@ -12,11 +12,18 @@ async function proxy(request:NextRequest,{params}:{params:Promise<{path:string[]
   if(hasBody)headers.set("Content-Type","application/json");
   try{
     const response=await fetch(target,{method:request.method,headers,body:hasBody?await request.text():undefined,cache:"no-store"});
-    if(response.status===204)return new NextResponse(null,{status:204});
+    const responseHeaders=new Headers();
+    const contentType=response.headers.get("content-type");
+    const requestId=response.headers.get("x-request-id");
+    if(contentType)responseHeaders.set("Content-Type",contentType);
+    if(requestId)responseHeaders.set("X-Request-ID",requestId);
+    if(response.status===204)return new NextResponse(null,{status:204,headers:responseHeaders});
     const text=await response.text();
-    return new NextResponse(text,{status:response.status,headers:{"Content-Type":response.headers.get("content-type")??"application/json"}});
-  }catch{
-    return NextResponse.json({code:"api_unavailable",message:"El servicio no está disponible. Intenta nuevamente.",correlationId:"bff"},{status:503});
+    return new NextResponse(text,{status:response.status,headers:responseHeaders});
+  }catch(error){
+    const correlationId=globalThis.crypto.randomUUID();
+    console.error(JSON.stringify({event:"platform_proxy_failed",correlationId,method:request.method,path:`/v1/platform/${path.join("/")}`,error:error instanceof Error?error.message:"unknown_error"}));
+    return NextResponse.json({code:"api_unavailable",message:"El servicio no está disponible. Intenta nuevamente.",correlationId},{status:503,headers:{"X-Request-ID":correlationId}});
   }
 }
 

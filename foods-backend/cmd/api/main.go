@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"encoding/json"
 	"log/slog"
 	"net/http"
@@ -28,6 +26,7 @@ type healthResponse struct {
 
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	slog.SetDefault(logger)
 	if err := config.LoadDotEnv(".env"); err != nil {
 		logger.Error("configuration_unavailable", "error", err)
 		os.Exit(1)
@@ -77,13 +76,14 @@ func requestLogger(logger *slog.Logger, next http.Handler) http.Handler {
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		started := time.Now()
-		requestID := newRequestID()
+		requestID := httpapi.NewCorrelationID()
 		w.Header().Set("X-Request-ID", requestID)
 		rw := &statusRecorder{ResponseWriter: w, status: 200}
 		next.ServeHTTP(rw, r)
 		duration := time.Since(started)
 		attrs := []any{
 			"request_id", requestID,
+			"correlation_id", requestID,
 			"method", r.Method,
 			"path", r.URL.Path,
 			"status", rw.status,
@@ -95,14 +95,6 @@ func requestLogger(logger *slog.Logger, next http.Handler) http.Handler {
 		}
 		logger.Info("http_request", attrs...)
 	})
-}
-
-func newRequestID() string {
-	var value [12]byte
-	if _, err := rand.Read(value[:]); err != nil {
-		return strconv.FormatInt(time.Now().UnixNano(), 36)
-	}
-	return hex.EncodeToString(value[:])
 }
 
 type statusRecorder struct {

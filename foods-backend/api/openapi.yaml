@@ -136,7 +136,7 @@ paths:
       summary: Crea transaccionalmente empresa, perfil fiscal, primer local y administrador
       security: [{ sessionCookie: [] }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/TenantOnboardingInput" } } } }
-      responses: { "201": { description: Tenant creado }, "400": { $ref: "#/components/responses/BadRequest" }, "403": { $ref: "#/components/responses/Forbidden" }, "409": { description: Identificación fiscal o correo duplicado } }
+      responses: { "201": { description: Tenant creado }, "400": { $ref: "#/components/responses/BadRequest" }, "403": { $ref: "#/components/responses/Forbidden" }, "409": { description: Conflicto de datos del usuario, como identificación fiscal duplicada o plan no disponible, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }, "500": { description: Error interno de onboarding con correlationId para seguimiento, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }, "503": { description: Dependencia temporalmente no disponible con correlationId para seguimiento, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } } }
   /v1/platform/plans:
     get:
       operationId: listSubscriptionPlans
@@ -1221,4 +1221,4 @@ components:
     KitchenTicket: { type: object, required: [id, orderId, roundNumber, code, channel, status, customerName, tableName, notes, createdAt, updatedAt, items], properties: { id: { type: string, format: uuid }, orderId: { type: string, format: uuid }, roundNumber: { type: integer, minimum: 0 }, code: { type: string }, channel: { type: string, enum: [salon, mostrador, recojo, delivery, whatsapp] }, status: { type: string, enum: [confirmado, preparando, listo] }, customerName: { type: string }, tableName: { type: string }, notes: { type: string }, createdAt: { type: string, format: date-time }, updatedAt: { type: string, format: date-time }, targetMinutes: { type: [integer, "null"], minimum: 1 }, items: { type: array, items: { $ref: "#/components/schemas/OrderItem" } } } }
     UserAssignment: { type: object, required: [roleId, locationId], properties: { roleId: { type: string, format: uuid }, locationId: { type: string, format: uuid } } }
     UserInput: { type: object, required: [fullName, email, assignments], properties: { fullName: { type: string }, email: { type: string, format: email }, password: { type: string, minLength: 8, writeOnly: true }, assignments: { type: array, minItems: 1, items: { $ref: "#/components/schemas/UserAssignment" } } } }
-    Error: { type: object, required: [code, message, correlationId], properties: { code: { type: string }, message: { type: string }, correlationId: { type: string } } }
+    Error: { type: object, required: [code, message, correlationId], properties: { code: { type: string }, message: { type: string }, correlationId: { type: string, format: uuid } } }

@@ -1,4 +1,4 @@
-import {apiFetch} from "@/shared/api/client";
+import {ApiClientError,apiFetch} from "@/shared/api/client";
 import type {OrganizationSubscription,PlatformModule,PlatformOnboardingContext,PlatformOnboardingDraft,SubscriptionPlan,SubscriptionPlanDraft} from "../domain/types";
 
 async function platformFetch<T>(path:string,init?:RequestInit):Promise<T>{
@@ -7,8 +7,22 @@ async function platformFetch<T>(path:string,init?:RequestInit):Promise<T>{
   headers:{"Content-Type":"application/json",...init?.headers},
  });
  if(response.status===204)return undefined as T;
- const body=await response.json().catch(()=>({}));
- if(!response.ok)throw new Error(body.message??"No pudimos completar la operación.");
+ const raw=await response.text();
+ let body:({message?:string;code?:string;correlationId?:string}&Record<string,unknown>);
+ try{body=raw?JSON.parse(raw):{}}catch{
+  throw new ApiClientError(
+   "No pudimos interpretar la respuesta del servidor.",
+   "invalid_server_response",
+   response.status,
+   response.headers.get("X-Request-ID")??undefined,
+  );
+ }
+ if(!response.ok)throw new ApiClientError(
+  body.message??"No pudimos completar la operación.",
+  body.code??"unknown_error",
+  response.status,
+  body.correlationId??response.headers.get("X-Request-ID")??undefined,
+ );
  return body as T;
 }
 
