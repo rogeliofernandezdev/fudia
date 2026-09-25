@@ -16,7 +16,6 @@ class WhatsAppAdapter(Protocol):
         self,
         phone: str,
         message: str,
-        sender_phone_id: str = "",
     ) -> None: ...
 
 
@@ -158,7 +157,6 @@ class MetaWhatsAppAdapter:
         self,
         phone: str,
         message: str,
-        sender_phone_id: str = "",
     ) -> None:
         self._ensure_configured()
         url = (
