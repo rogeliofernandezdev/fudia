@@ -38,9 +38,11 @@ Una conversación mantiene un `conversationId` estable. Cada ronda confirmada us
 
 ## Canal WhatsApp global
 
-Fudia opera un único bot y un único número oficial de WhatsApp para todas las empresas. Ninguna organización ni local configura credenciales Meta ni un número propio.
+Fudia opera un único bot de WhatsApp para todas las empresas. El número oficial se administra exclusivamente en Meta / WhatsApp Business; no se persiste ni se configura manualmente en foods-backend, Admin Web ni en variables propias de negocio.
 
-El QR de mesa contiene un token opaco que permite a foods-backend resolver `organization_id`, `location_id` y `table_id`. La empresa puede usar Concierge únicamente cuando `organization_modules.whatsapp_bot` está activo; esa activación pertenece a la administración global de plataforma. El QR público solo ofrece “Pedir por WhatsApp” cuando el módulo está activo y el número global de Fudia está configurado.
+`WHATSAPP_PHONE_ID` identifica técnicamente el activo de Meta usado por Concierge. Cuando un comensal pulsa “Pedir por WhatsApp”, Admin Web delega en `/start/{qr}`; Concierge valida el QR y el entitlement `organization_modules.whatsapp_bot`, consulta a Meta el `display_phone_number` asociado al Phone Number ID y genera el deeplink `wa.me`. La respuesta de Meta se mantiene solo en caché temporal.
+
+El QR de mesa contiene un token opaco que permite a foods-backend resolver `organization_id`, `location_id` y `table_id`. La activación de `whatsapp_bot` pertenece exclusivamente a la administración global de plataforma.
 
 Como todos los restaurantes comparten el mismo chat oficial, escanear un nuevo QR reemplaza el contexto conversacional activo del cliente por la nueva empresa/local/mesa y reinicia el carrito temporal de Concierge.
 
@@ -50,7 +52,7 @@ La identidad de sesión se deriva de:
 
 `phone_number_id de Meta + teléfono del cliente`.
 
-Esa identidad se hashea antes de formar la clave Redis. Esto evita que el mismo cliente colisione entre números/tenants distintos.
+Esa identidad se hashea antes de formar la clave Redis. El tenant no se deriva del número de WhatsApp: siempre lo determina el QR activo de la conversación.
 
 Cada conversación se serializa mediante un lock Redis renovable. Si otra entrega de la misma conversación llega mientras la primera sigue procesándose, espera el lock o se reintenta desde la cola. La sesión y el carrito se persisten únicamente bajo esa identidad compuesta.
 
