@@ -94,7 +94,6 @@ class FakeService:
         self,
         phone: str,
         text: str,
-        recipient_phone: str = "",
         channel_id: str = "",
     ) -> str:
         self.calls += 1
@@ -126,7 +125,6 @@ class BlockingService:
         self,
         phone: str,
         text: str,
-        recipient_phone: str = "",
         channel_id: str = "",
     ) -> str:
         self.active += 1
@@ -167,7 +165,6 @@ class LockingService:
         self,
         phone: str,
         text: str,
-        recipient_phone: str = "",
         channel_id: str = "",
     ) -> str:
         identity = conversation_identity(
@@ -447,7 +444,6 @@ async def test_queue_worker_acks_only_after_reply_is_sent() -> None:
         phone="51999999999",
         text="quiero una bebida",
         sender_phone_id="meta-phone",
-        recipient_phone="+51 999",
     )
     await queue.enqueue(message)
     delivery = (await queue.read())[0]
