@@ -5,7 +5,7 @@ from src.infrastructure.whatsapp_adapter import MetaWhatsAppAdapter
 
 
 @pytest.mark.asyncio
-async def test_send_text_uses_inbound_sender_phone_id() -> None:
+async def test_send_text_always_uses_global_phone_id() -> None:
     requested_urls: list[str] = []
 
     async def handler(request: httpx.Request) -> httpx.Response:
@@ -27,18 +27,26 @@ async def test_send_text_uses_inbound_sender_phone_id() -> None:
     )
 
     assert requested_urls == [
-        "https://graph.facebook.com/v99.0/inbound-phone-id/messages"
+        "https://graph.facebook.com/v99.0/global-phone-id/messages"
     ]
     await client.aclose()
 
 
 @pytest.mark.asyncio
-async def test_send_text_falls_back_to_configured_phone_id() -> None:
+async def test_start_url_resolves_display_number_from_meta_and_caches_it() -> None:
     requested_urls: list[str] = []
 
     async def handler(request: httpx.Request) -> httpx.Response:
         requested_urls.append(str(request.url))
-        return httpx.Response(200, json={"messages": [{"id": "wamid.2"}]})
+        assert request.headers["Authorization"] == "Bearer token"
+        assert request.url.params["fields"] == "display_phone_number"
+        return httpx.Response(
+            200,
+            json={
+                "id": "global-phone-id",
+                "display_phone_number": "+51 987 654 321",
+            },
+        )
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
     adapter = MetaWhatsAppAdapter(
@@ -48,9 +56,44 @@ async def test_send_text_falls_back_to_configured_phone_id() -> None:
         client=client,
     )
 
-    await adapter.send_text("51999999999", "Hola")
+    first = await adapter.start_url("a" * 32)
+    second = await adapter.start_url("b" * 32)
 
-    assert requested_urls == [
-        "https://graph.facebook.com/v99.0/global-phone-id/messages"
-    ]
+    assert first == (
+        "https://wa.me/51987654321"
+        "?text=FUDIA%3A" + "a" * 32
+    )
+    assert second == (
+        "https://wa.me/51987654321"
+        "?text=FUDIA%3A" + "b" * 32
+    )
+    assert len(requested_urls) == 1
+    assert requested_urls[0].startswith(
+        "https://graph.facebook.com/v99.0/global-phone-id"
+    )
+    await client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_start_url_rejects_invalid_meta_display_number() -> None:
+    async def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={"display_phone_number": "invalid"},
+        )
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    adapter = MetaWhatsAppAdapter(
+        token="token",
+        phone_id="global-phone-id",
+        graph_version="v99.0",
+        client=client,
+    )
+
+    with pytest.raises(
+        RuntimeError,
+        match="número de WhatsApp válido",
+    ):
+        await adapter.start_url("a" * 32)
+
     await client.aclose()
