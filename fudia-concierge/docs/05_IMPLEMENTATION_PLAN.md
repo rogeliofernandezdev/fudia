@@ -27,7 +27,7 @@
 
 ## Bloque 3 — QR y configuración
 
-- [x] Número WhatsApp configurable por empresa/local.
+- [x] Un único número global de WhatsApp para Fudia; el acceso por empresa depende exclusivamente del módulo `whatsapp_bot` administrado por plataforma.
 - [x] Botón Pedir por WhatsApp en página QR.
 - [x] Deeplink con token.
 - [x] Activar/desactivar Concierge por empresa/local.
