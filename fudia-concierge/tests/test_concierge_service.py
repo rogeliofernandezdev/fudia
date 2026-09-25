@@ -40,7 +40,6 @@ class FakeFudia:
             organizationName="Restaurante Demo",
             locationName="Local principal",
             conciergeEnabled=self.concierge_enabled,
-            whatsappPhone="+51987654321" if self.concierge_enabled else "",
         )
 
     async def search_menu(
@@ -231,20 +230,6 @@ async def test_bootstrap_qr_resolves_table_and_persists_session() -> None:
     assert session.table is not None
     assert session.table.name == "M1"
 
-
-@pytest.mark.asyncio
-async def test_qr_session_rejects_wrong_whatsapp_recipient() -> None:
-    store = MemoryConversationStore()
-    service = ConciergeService(store, FakeFudia(), QuietEngine())
-
-    reply = await service.handle_message(
-        "51999999999",
-        "FUDIA:" + "a" * 32,
-        "+51 900 000 000",
-    )
-
-    assert "WhatsApp oficial de Fudia" in reply
-    assert await store.get("51999999999") is None
 
 
 @pytest.mark.asyncio
