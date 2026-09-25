@@ -32,3 +32,15 @@
 .concierge-error{padding:36px 18px;display:grid;gap:8px;place-items:center;text-align:center}
 .concierge-error b{font-size:12px}.concierge-error p{font-size:8px;color:var(--ink-400);margin:0}
 @media(width<=820px){.concierge-config{grid-template-columns:1fr}.concierge-overview{grid-template-columns:1fr}.concierge-state{justify-self:start}}
+
+.concierge-status-card{border:1px solid var(--line);border-radius:12px;padding:13px;display:grid;grid-template-columns:34px 1fr;gap:10px;align-items:start}
+.concierge-status-card>span{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;background:var(--cloud-50)}
+.concierge-status-card b{font-size:9px}
+.concierge-status-card small{display:block;color:var(--ink-400);font-size:7px;line-height:1.5;margin-top:3px}
+.concierge-status-card.ready{border-color:#b8dec8;background:#f4fbf7}.concierge-status-card.ready>span{color:var(--brand-700);background:#e7f6ed}
+.concierge-status-card.locked{background:#fafafa}.concierge-status-card.locked>span{color:var(--ink-500)}
+.concierge-status-card.warning{border-color:#f1d9ae;background:#fffaf0}.concierge-status-card.warning>span{color:#805b17;background:#fff3d8}
+.concierge-readonly-field{border:1px solid var(--line);border-radius:12px;padding:13px;display:grid;gap:4px}
+.concierge-readonly-field small{font-size:7px;color:var(--ink-400);font-weight:850;letter-spacing:.08em}
+.concierge-readonly-field b{font-size:13px}
+.concierge-readonly-field p{font-size:7px;line-height:1.45;color:var(--ink-400);margin:0}
