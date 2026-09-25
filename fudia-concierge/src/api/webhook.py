@@ -67,6 +67,17 @@ async def verify_webhook(
     )
 
 
+def _matches_configured_phone_id(
+    incoming_phone_id: str,
+    configured_phone_id: str,
+) -> bool:
+    configured = configured_phone_id.strip()
+    return (
+        not configured
+        or incoming_phone_id == configured
+    )
+
+
 def _incoming_text_messages(
     data: dict[str, Any],
 ) -> list[tuple[str, str, str, str, str]]:
@@ -166,9 +177,9 @@ async def receive_webhook(
             request.app.state.settings
             .whatsapp_phone_id.strip()
         )
-        if (
-            configured_phone_id
-            and sender_phone_id != configured_phone_id
+        if not _matches_configured_phone_id(
+            sender_phone_id,
+            configured_phone_id,
         ):
             INBOUND_MESSAGES.labels(
                 result="wrong_phone_id"
