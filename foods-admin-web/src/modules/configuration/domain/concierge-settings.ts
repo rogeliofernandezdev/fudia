@@ -1,11 +1,8 @@
 export type ConciergeSettings={
  active:boolean;
+ available:boolean;
  whatsappPhone:string;
  organizationName:string;
  locationName:string;
-};
-
-export type ConciergeSettingsDraft={
- active:boolean;
- whatsappPhone:string;
+ managedByPlatform:boolean;
 };
