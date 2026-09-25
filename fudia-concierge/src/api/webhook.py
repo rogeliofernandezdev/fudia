@@ -80,9 +80,9 @@ def _matches_configured_phone_id(
 
 def _incoming_text_messages(
     data: dict[str, Any],
-) -> list[tuple[str, str, str, str, str]]:
+) -> list[tuple[str, str, str, str]]:
     result: list[
-        tuple[str, str, str, str, str]
+        tuple[str, str, str, str]
     ] = []
     for entry in data.get("entry", []):
         for change in entry.get("changes", []):
@@ -91,12 +91,6 @@ def _incoming_text_messages(
             sender_phone_id = str(
                 metadata.get(
                     "phone_number_id",
-                    "",
-                )
-            )
-            recipient_phone = str(
-                metadata.get(
-                    "display_phone_number",
                     "",
                 )
             )
@@ -117,7 +111,6 @@ def _incoming_text_messages(
                             ).get("body", "")
                         ),
                         sender_phone_id,
-                        recipient_phone,
                     )
                 )
     return result
@@ -169,7 +162,6 @@ async def receive_webhook(
         phone,
         text,
         sender_phone_id,
-        recipient_phone,
     ) in _incoming_text_messages(data):
         if not message_id or not phone or not text:
             continue
@@ -191,7 +183,6 @@ async def receive_webhook(
                 phone=phone,
                 text=text,
                 sender_phone_id=sender_phone_id,
-                recipient_phone=recipient_phone,
             )
         )
         if queued:
