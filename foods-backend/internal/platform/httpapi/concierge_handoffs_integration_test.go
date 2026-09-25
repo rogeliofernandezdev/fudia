@@ -28,11 +28,11 @@ func TestConciergeHandoffLifecycle(t *testing.T) {
 	`,s.OrganizationID,s.LocationID,fmt.Sprintf("Mesa Handoff %d",nonce)).
 		Scan(&tableID,&qrToken);err!=nil{t.Fatal(err)}
 	if _,err:=pool.Exec(ctx,`
-		INSERT INTO concierge_settings(organization_id,location_id,whatsapp_phone,active)
-		VALUES($1,$2,'+51987654321',true)
-		ON CONFLICT(organization_id,location_id)
-		DO UPDATE SET whatsapp_phone=EXCLUDED.whatsapp_phone,active=true,updated_at=now()
-	`,s.OrganizationID,s.LocationID);err!=nil{t.Fatal(err)}
+		INSERT INTO organization_modules(organization_id,module_key,active)
+		VALUES($1,'whatsapp_bot',true)
+		ON CONFLICT(organization_id,module_key)
+		DO UPDATE SET active=true,updated_at=now()
+	`,s.OrganizationID);err!=nil{t.Fatal(err)}
 	t.Cleanup(func(){
 		_,_=pool.Exec(context.Background(),`DELETE FROM concierge_handoffs WHERE organization_id=$1 AND table_id=$2`,s.OrganizationID,tableID)
 		_,_=pool.Exec(context.Background(),`DELETE FROM tables WHERE id=$1 AND organization_id=$2`,tableID,s.OrganizationID)
