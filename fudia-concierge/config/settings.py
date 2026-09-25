@@ -59,6 +59,7 @@ class Settings(BaseSettings):
             "REDIS_URL": self.redis_url,
             "OPENAI_API_KEY": self.openai_api_key,
             "WHATSAPP_TOKEN": self.whatsapp_token,
+            "WHATSAPP_PHONE_ID": self.whatsapp_phone_id,
             "WHATSAPP_VERIFY_TOKEN": self.whatsapp_verify_token,
             "WHATSAPP_APP_SECRET": self.whatsapp_app_secret,
             "WHATSAPP_GRAPH_VERSION": self.whatsapp_graph_version,
