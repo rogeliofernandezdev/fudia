@@ -18,5 +18,5 @@ del alcance actual es WhatsApp iniciado desde el QR de una mesa.
 9. Mantener adaptadores separados para OpenAI, WhatsApp, Redis y Fudia.
 10. Añadir pruebas para cada herramienta que pueda cambiar el carrito o crear pedidos.
 11. No copiar lógica contable, OCR ni SUNAT desde tuconta-assistant.
-12. WhatsApp es un canal global de Fudia: un solo bot y un solo número; ninguna empresa o local configura su propio número. El uso de Concierge depende de `whatsapp_bot`, activable únicamente desde plataforma.
+12. WhatsApp es un canal global de Fudia: un solo bot. El número oficial es propiedad de la configuración de Meta / WhatsApp Business y no debe duplicarse como configuración de Fudia. El uso de Concierge depende de `whatsapp_bot`, activable únicamente desde plataforma.
 13. Ejecutar ruff, mypy, pytest y build antes de cerrar cambios.
