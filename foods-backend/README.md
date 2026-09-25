@@ -17,3 +17,15 @@ dentro de una transacción.
 
 Rutas iniciales: `/health`, `/v1/auth/login`, `/v1/admin/dashboard` y
 `/v1/admin/products`. El alcance de organización y local se deriva de la sesión.
+
+
+## Fudia Concierge
+
+El canal de WhatsApp es global para toda la plataforma. `FUDIA_WHATSAPP_PHONE`
+contiene el número público oficial en formato E.164 usado para construir los enlaces
+`wa.me` de los QR. `FUDIA_CONCIERGE_API_KEY` autentica las llamadas internas
+desde el servicio Concierge.
+
+Ninguna empresa ni local configura un número propio. El acceso de una organización
+se controla mediante `organization_modules.whatsapp_bot`, administrado únicamente
+desde la plataforma global.
