@@ -36,6 +36,14 @@ foods-backend es responsable de tenancy, identidad del QR, menú, categorías, d
 
 Una conversación mantiene un `conversationId` estable. Cada ronda confirmada usa un `requestId` distinto como clave idempotente. No se replica el catálogo comercial ni se calcula la cuenta desde memoria conversacional.
 
+## Canal WhatsApp global
+
+Fudia opera un único bot y un único número oficial de WhatsApp para todas las empresas. Ninguna organización ni local configura credenciales Meta ni un número propio.
+
+El QR de mesa contiene un token opaco que permite a foods-backend resolver `organization_id`, `location_id` y `table_id`. La empresa puede usar Concierge únicamente cuando `organization_modules.whatsapp_bot` está activo; esa activación pertenece a la administración global de plataforma. El QR público solo ofrece “Pedir por WhatsApp” cuando el módulo está activo y el número global de Fudia está configurado.
+
+Como todos los restaurantes comparten el mismo chat oficial, escanear un nuevo QR reemplaza el contexto conversacional activo del cliente por la nueva empresa/local/mesa y reinicia el carrito temporal de Concierge.
+
 ## Aislamiento y concurrencia
 
 La identidad de sesión se deriva de:
