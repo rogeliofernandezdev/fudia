@@ -22,7 +22,6 @@ class MessageService(Protocol):
         self,
         phone: str,
         text: str,
-        recipient_phone: str = "",
         channel_id: str = "",
     ) -> str: ...
 
@@ -146,7 +145,6 @@ class QueueWorker:
             reply = await self.service.handle_message(
                 message.phone,
                 message.text,
-                message.recipient_phone,
                 message.sender_phone_id,
             )
             await self.whatsapp.send_text(
