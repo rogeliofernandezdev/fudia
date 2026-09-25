@@ -265,7 +265,8 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 func fail(w http.ResponseWriter, status int, code, msg string) {
 	correlationID := w.Header().Get("X-Request-ID")
 	if correlationID == "" {
-		correlationID = "request"
+		correlationID = NewCorrelationID()
+		w.Header().Set("X-Request-ID", correlationID)
 	}
 	writeJSON(w, status, apiError{Code: code, Message: msg, CorrelationID: correlationID})
 }
