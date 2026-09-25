@@ -13,7 +13,7 @@ export function ConciergeSettingsPage(){
    {query.isLoading?<section className="panel concierge-loading">Cargando estado de Fudia Concierge…</section>:query.isError?<section className="panel concierge-error"><Icon name="alert" size={26}/><b>No pudimos cargar Fudia Concierge</b><p>{query.error.message}</p><Button kind="secondary" icon="refresh" onClick={()=>query.refetch()}>Reintentar</Button></section>:data&&<>
     <section className="panel concierge-overview">
      <div><span><Icon name="mail" size={22}/></span><section><h2>{data.organizationName}</h2><p>{data.locationName} · El módulo se administra desde la plataforma global de Fudia.</p></section></div>
-     <span className={`concierge-state ${data.available?"active":""}`}><i/>{data.available?"Disponible":data.active?"Activado":"No contratado"}</span>
+     <span className={`concierge-state ${data.available?"active":""}`}><i/>{data.available?"Disponible":data.active?"Activado":"No habilitado"}</span>
     </section>
 
     <div className="concierge-config">
