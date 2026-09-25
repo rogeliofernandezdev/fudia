@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+import re
+import time
 from typing import Protocol
+from urllib.parse import quote
 
 import httpx
 
@@ -30,6 +33,8 @@ class MetaWhatsAppAdapter:
         self.graph_version = graph_version.strip("/")
         self._external_client = client
         self._client: httpx.AsyncClient | None = client
+        self._display_phone_digits = ""
+        self._display_phone_expires_at = 0.0
 
     def _http(self) -> httpx.AsyncClient:
         if self._client is None:
@@ -41,29 +46,125 @@ class MetaWhatsAppAdapter:
             )
         return self._client
 
-    async def send_text(
-        self,
-        phone: str,
-        message: str,
-        sender_phone_id: str = "",
-    ) -> None:
-        phone_id = (
-            sender_phone_id.strip()
-            or self.phone_id
-        )
+    def _ensure_configured(self) -> None:
         if (
             not self.token
-            or not phone_id
+            or not self.phone_id
             or not self.graph_version
         ):
             raise RuntimeError(
                 "WhatsApp no está configurado."
             )
 
+    async def display_phone_digits(self) -> str:
+        now = time.monotonic()
+        if (
+            self._display_phone_digits
+            and now < self._display_phone_expires_at
+        ):
+            return self._display_phone_digits
+
+        self._ensure_configured()
         url = (
             "https://graph.facebook.com/"
             f"{self.graph_version}/"
-            f"{phone_id}/messages"
+            f"{self.phone_id}"
+        )
+        response: httpx.Response | None = None
+        for attempt in range(3):
+            try:
+                response = await self._http().get(
+                    url,
+                    headers={
+                        "Authorization": (
+                            f"Bearer {self.token}"
+                        )
+                    },
+                    params={
+                        "fields": "display_phone_number"
+                    },
+                )
+            except httpx.TransportError:
+                if attempt == 2:
+                    raise
+                await asyncio.sleep(
+                    0.2 * (2**attempt)
+                )
+                continue
+
+            should_retry = (
+                response.status_code == 429
+                or response.status_code >= 500
+            )
+            if should_retry and attempt < 2:
+                retry_after = response.headers.get(
+                    "Retry-After",
+                    "",
+                )
+                try:
+                    delay = min(
+                        float(retry_after),
+                        5.0,
+                    )
+                except ValueError:
+                    delay = 0.2 * (2**attempt)
+                await asyncio.sleep(delay)
+                continue
+            break
+
+        if response is None:
+            raise RuntimeError(
+                "Meta no respondió."
+            )
+        response.raise_for_status()
+        body = response.json()
+        digits = re.sub(
+            r"\D",
+            "",
+            str(
+                body.get(
+                    "display_phone_number",
+                    "",
+                )
+            ),
+        )
+        if not re.fullmatch(
+            r"[1-9][0-9]{7,14}",
+            digits,
+        ):
+            raise RuntimeError(
+                "Meta no devolvió un número de WhatsApp válido."
+            )
+
+        self._display_phone_digits = digits
+        self._display_phone_expires_at = now + 300.0
+        return digits
+
+    async def start_url(
+        self,
+        qr_token: str,
+    ) -> str:
+        digits = await self.display_phone_digits()
+        message = quote(
+            f"FUDIA:{qr_token}",
+            safe="",
+        )
+        return (
+            f"https://wa.me/{digits}"
+            f"?text={message}"
+        )
+
+    async def send_text(
+        self,
+        phone: str,
+        message: str,
+        sender_phone_id: str = "",
+    ) -> None:
+        self._ensure_configured()
+        url = (
+            "https://graph.facebook.com/"
+            f"{self.graph_version}/"
+            f"{self.phone_id}/messages"
         )
         response: httpx.Response | None = None
         for attempt in range(3):
