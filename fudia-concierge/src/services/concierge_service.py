@@ -280,16 +280,16 @@ class ConciergeService:
                 )
             if not table.conciergeEnabled:
                 return (
-                    "Fudia Concierge no está disponible en este local "
-                    "en este momento. Pide ayuda al personal del restaurante."
+                    "Fudia Concierge no está habilitado para este restaurante "
+                    "en este momento. Pide ayuda al personal."
                 )
             if not _recipient_matches_configured(
                 recipient_phone,
                 table.whatsappPhone,
             ):
                 return (
-                    "Este QR no corresponde al número de WhatsApp que recibió "
-                    "el mensaje. Vuelve a abrir WhatsApp desde el QR de tu mesa."
+                    "Este mensaje no llegó al WhatsApp oficial de Fudia. "
+                    "Vuelve a abrir WhatsApp desde el QR de tu mesa."
                 )
             session.channel_key = channel_key
             session.qr_token = token
@@ -331,8 +331,8 @@ class ConciergeService:
             session.table.whatsappPhone,
         ):
             return (
-                "Esta conversación pertenece a otro número de WhatsApp del "
-                "restaurante. Vuelve a abrirla desde el QR de tu mesa."
+                "Esta conversación no corresponde al WhatsApp oficial de Fudia. "
+                "Vuelve a abrirla desde el QR de tu mesa."
             )
 
         if session.handoff_pending:
