@@ -68,14 +68,6 @@ def _phone_digits(value: str) -> str:
     )
 
 
-def _recipient_matches_configured(
-    recipient: str,
-    configured: str,
-) -> bool:
-    if not recipient or not configured:
-        return True
-    return _phone_digits(recipient) == _phone_digits(configured)
-
 
 class ConciergeService:
     def __init__(
@@ -283,14 +275,6 @@ class ConciergeService:
                     "Fudia Concierge no está habilitado para este restaurante "
                     "en este momento. Pide ayuda al personal."
                 )
-            if not _recipient_matches_configured(
-                recipient_phone,
-                table.whatsappPhone,
-            ):
-                return (
-                    "Este mensaje no llegó al WhatsApp oficial de Fudia. "
-                    "Vuelve a abrir WhatsApp desde el QR de tu mesa."
-                )
             session.channel_key = channel_key
             session.qr_token = token
             session.conversation_id = uuid4().hex
@@ -326,15 +310,6 @@ class ConciergeService:
                 "Para comenzar, escanea el QR de tu mesa y abre WhatsApp "
                 "desde ese enlace."
             )
-        if not _recipient_matches_configured(
-            recipient_phone,
-            session.table.whatsappPhone,
-        ):
-            return (
-                "Esta conversación no corresponde al WhatsApp oficial de Fudia. "
-                "Vuelve a abrirla desde el QR de tu mesa."
-            )
-
         if session.handoff_pending:
             try:
                 handoff = await self.fudia.get_handoff_status(
