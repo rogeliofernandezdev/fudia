@@ -16,6 +16,7 @@ func TestConciergeEntitlementControlsPublicQRCode(t *testing.T) {
 	ctx := context.Background()
 	nonce := time.Now().UnixNano()
 	t.Setenv("FUDIA_WHATSAPP_PHONE", "+51987654321")
+	t.Setenv("FUDIA_CONCIERGE_API_KEY", "concierge-test-key")
 
 	if _, err := pool.Exec(ctx, `
 		INSERT INTO organization_modules(organization_id,module_key,active)
@@ -58,6 +59,14 @@ func TestConciergeEntitlementControlsPublicQRCode(t *testing.T) {
 		t.Fatalf("concierge must be unavailable before global activation: %#v", before)
 	}
 
+	blockedReq := httptest.NewRequest("GET", "/v1/integrations/concierge/"+token+"/menu", nil)
+	blockedReq.Header.Set("X-Fudia-Concierge-Key", "concierge-test-key")
+	blockedRec := httptest.NewRecorder()
+	api.Routes().ServeHTTP(blockedRec, blockedReq)
+	if blockedRec.Code != 404 {
+		t.Fatalf("concierge must reject interaction before module activation: %d %s", blockedRec.Code, blockedRec.Body.String())
+	}
+
 	statusReq := httptest.NewRequest("GET", "/v1/admin/concierge-settings", nil)
 	statusReq = statusReq.WithContext(context.WithValue(statusReq.Context(), scopeKey{}, s))
 	statusRec := httptest.NewRecorder()
@@ -97,6 +106,14 @@ func TestConciergeEntitlementControlsPublicQRCode(t *testing.T) {
 	}
 	if !after.ConciergeEnabled || after.WhatsAppPhone != "+51987654321" {
 		t.Fatalf("public QR must expose the global Fudia WhatsApp after activation: %#v", after)
+	}
+
+	allowedReq := httptest.NewRequest("GET", "/v1/integrations/concierge/"+token+"/menu", nil)
+	allowedReq.Header.Set("X-Fudia-Concierge-Key", "concierge-test-key")
+	allowedRec := httptest.NewRecorder()
+	api.Routes().ServeHTTP(allowedRec, allowedReq)
+	if allowedRec.Code != 200 {
+		t.Fatalf("concierge must allow interaction after module activation: %d %s", allowedRec.Code, allowedRec.Body.String())
 	}
 
 	statusAfterReq := httptest.NewRequest("GET", "/v1/admin/concierge-settings", nil)
