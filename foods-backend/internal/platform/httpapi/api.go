@@ -539,7 +539,7 @@ func (a *API) getContext(w http.ResponseWriter, r *http.Request) {
 		FROM organizations o
 		JOIN locations l ON l.organization_id=o.id
 		JOIN organization_fiscal_profiles p ON p.id=l.fiscal_profile_id AND p.organization_id=l.organization_id AND p.active
-		JOIN users u ON u.id=$3 AND u.organization_id=o.id AND u.active
+		JOIN users u ON u.id=$3 AND u.active AND (u.platform_admin OR u.organization_id=o.id)
 		WHERE o.id=$1 AND l.id=$2 AND o.active AND l.active
 	`, s.OrganizationID, s.LocationID, s.UserID).Scan(
 		&organizationName, &locationName, &locationCountry, &locationTimezone, &platformAdmin,
