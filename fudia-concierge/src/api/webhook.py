@@ -162,6 +162,18 @@ async def receive_webhook(
     ) in _incoming_text_messages(data):
         if not message_id or not phone or not text:
             continue
+        configured_phone_id = (
+            request.app.state.settings
+            .whatsapp_phone_id.strip()
+        )
+        if (
+            configured_phone_id
+            and sender_phone_id != configured_phone_id
+        ):
+            INBOUND_MESSAGES.labels(
+                result="wrong_phone_id"
+            ).inc()
+            continue
         queued = await queue.enqueue(
             InboundMessage(
                 message_id=message_id,
