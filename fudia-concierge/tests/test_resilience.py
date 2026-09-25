@@ -103,16 +103,15 @@ class FakeService:
 
 class FakeWhatsApp:
     def __init__(self) -> None:
-        self.sent: list[tuple[str, str, str]] = []
+        self.sent: list[tuple[str, str]] = []
 
     async def send_text(
         self,
         phone: str,
         message: str,
-        sender_phone_id: str = "",
     ) -> None:
         self.sent.append(
-            (phone, message, sender_phone_id)
+            (phone, message)
         )
 
 
@@ -460,7 +459,6 @@ async def test_queue_worker_acks_only_after_reply_is_sent() -> None:
         (
             "51999999999",
             "respuesta",
-            "meta-phone",
         )
     ]
     assert queue.status["wamid.2"] == "completed"
