@@ -158,4 +158,3 @@ class InboundMessage(BaseModel):
     phone: str
     text: str
     sender_phone_id: str = ""
-    recipient_phone: str = ""
