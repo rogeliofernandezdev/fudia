@@ -6,12 +6,6 @@ import {Icon} from "@/design-system/icons";
 import type {PublicTableInfo} from "../domain/types";
 import {getPublicTable} from "../infrastructure/public-menu-api";
 
-export function conciergeWhatsAppUrl(phone:string,token:string){
- const digits=phone.replace(/\D/g,"");
- const message=encodeURIComponent(`FUDIA:${token}`);
- return `https://wa.me/${digits}?text=${message}`;
-}
-
 export function PublicTablePage(){
   const params=useParams<{qr:string}>();
   const token=params.qr;
@@ -49,7 +43,7 @@ export function PublicTablePage(){
       </div>
     </section>
     <section className="mesa-actions">
-      {info.conciergeEnabled&&info.whatsappPhone&&<a className="mesa-action concierge" href={conciergeWhatsAppUrl(info.whatsappPhone,token)}>
+      {info.conciergeEnabled&&<a className="mesa-action concierge" href={`/api/public/concierge/${encodeURIComponent(token)}`}>
         <Icon name="mail" size={22}/>
         <div><b>Pedir por WhatsApp</b><small>Conversa con Fudia Concierge</small></div>
       </a>}
