@@ -5,7 +5,7 @@ from src.infrastructure.whatsapp_adapter import MetaWhatsAppAdapter
 
 
 @pytest.mark.asyncio
-async def test_send_text_always_uses_global_phone_id() -> None:
+async def test_send_text_uses_global_phone_id() -> None:
     requested_urls: list[str] = []
 
     async def handler(request: httpx.Request) -> httpx.Response:
@@ -23,7 +23,6 @@ async def test_send_text_always_uses_global_phone_id() -> None:
     await adapter.send_text(
         "51999999999",
         "Hola",
-        sender_phone_id="inbound-phone-id",
     )
 
     assert requested_urls == [
