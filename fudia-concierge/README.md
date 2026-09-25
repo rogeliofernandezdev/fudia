@@ -77,6 +77,6 @@ Las reglas de negocio críticas no viven en prompts: se validan en services/tool
 
 ## Estado
 
-El alcance de código definido para Concierge está cerrado: QR/configuración por local, carta real, carrito, combos, modificadores, confirmación protegida, rondas independientes sobre una misma comanda, KDS, solicitud de cuenta con total real, handoff humano, multiagente, aislamiento multi-tenant, cola durable, concurrencia acotada con backpressure, retries, rate limiting, readiness, métricas, trazabilidad, evals y contenedor no-root.
+El alcance de código definido para Concierge está cerrado: QR por mesa y habilitación global por módulo, carta real, carrito, combos, modificadores, confirmación protegida, rondas independientes sobre una misma comanda, KDS, solicitud de cuenta con total real, handoff humano, multiagente, aislamiento multi-tenant, cola durable, concurrencia acotada con backpressure, retries, rate limiting, readiness, métricas, trazabilidad, evals y contenedor no-root.
 
 El repositorio y CI pueden declararse cerrados para este alcance. La validación con credenciales reales de Meta/OpenAI/Redis y una prueba de humo en el entorno desplegado son un **gate de activación externa**, no trabajo de código pendiente, y no se consideran ejecutados mientras no se proporcionen esas credenciales y entorno.
