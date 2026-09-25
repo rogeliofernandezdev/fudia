@@ -369,22 +369,37 @@ func (a *API) getTableByQR(w http.ResponseWriter, r *http.Request) {
 		ConciergeEnabled bool   `json:"conciergeEnabled"`
 		WhatsAppPhone    string `json:"whatsappPhone"`
 	}
+	var moduleActive bool
 	err := a.db.QueryRow(r.Context(), `
 		SELECT t.name,t.seats,t.zone,o.trade_name,l.name,
-		       COALESCE(cs.active,false) AND COALESCE(cs.whatsapp_phone,'')<>'',
-		       CASE WHEN COALESCE(cs.active,false) THEN COALESCE(cs.whatsapp_phone,'') ELSE '' END
+		       COALESCE(om.active,false)
 		FROM tables t
 		JOIN organizations o ON o.id=t.organization_id AND o.active
-		JOIN locations l ON l.id=t.location_id AND l.organization_id=t.organization_id AND l.active
-		LEFT JOIN concierge_settings cs
-		  ON cs.organization_id=t.organization_id AND cs.location_id=t.location_id
+		JOIN locations l
+		  ON l.id=t.location_id
+		 AND l.organization_id=t.organization_id
+		 AND l.active
+		LEFT JOIN organization_modules om
+		  ON om.organization_id=t.organization_id
+		 AND om.module_key='whatsapp_bot'
 		WHERE t.qr_token=$1 AND t.active=true AND t.qr_enabled=true
-		LIMIT 1`, token).Scan(
-		&t.Name,&t.Seats,&t.Zone,&t.OrgName,&t.LocName,&t.ConciergeEnabled,&t.WhatsAppPhone,
+		LIMIT 1
+	`, token).Scan(
+		&t.Name,
+		&t.Seats,
+		&t.Zone,
+		&t.OrgName,
+		&t.LocName,
+		&moduleActive,
 	)
 	if err != nil {
 		fail(w, 404, "table_not_found", "La mesa no existe o el QR no está activo.")
 		return
+	}
+	t.WhatsAppPhone = globalConciergeWhatsAppPhone()
+	t.ConciergeEnabled = moduleActive && t.WhatsAppPhone != ""
+	if !t.ConciergeEnabled {
+		t.WhatsAppPhone = ""
 	}
 	writeJSON(w, 200, t)
 }
