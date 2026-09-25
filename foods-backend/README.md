@@ -21,11 +21,6 @@ Rutas iniciales: `/health`, `/v1/auth/login`, `/v1/admin/dashboard` y
 
 ## Fudia Concierge
 
-El canal de WhatsApp es global para toda la plataforma. `FUDIA_WHATSAPP_PHONE`
-contiene el número público oficial en formato E.164 usado para construir los enlaces
-`wa.me` de los QR. `FUDIA_CONCIERGE_API_KEY` autentica las llamadas internas
-desde el servicio Concierge.
+El canal de WhatsApp es global para toda la plataforma. El número oficial se administra exclusivamente en Meta / WhatsApp Business y no se duplica en la configuración de foods-backend.
 
-Ninguna empresa ni local configura un número propio. El acceso de una organización
-se controla mediante `organization_modules.whatsapp_bot`, administrado únicamente
-desde la plataforma global.
+`FUDIA_CONCIERGE_API_KEY` autentica las llamadas internas desde el servicio Concierge. El acceso de una organización se controla mediante `organization_modules.whatsapp_bot`, administrado únicamente desde la plataforma global.
