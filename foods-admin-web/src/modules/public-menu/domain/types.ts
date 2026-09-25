@@ -5,5 +5,4 @@ export type PublicTableInfo={
  organizationName:string;
  locationName:string;
  conciergeEnabled:boolean;
- whatsappPhone:string;
 };
