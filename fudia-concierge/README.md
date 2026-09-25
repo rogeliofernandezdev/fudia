@@ -4,7 +4,7 @@ Asistente conversacional de Fudia para atender por WhatsApp a un comensal sentad
 
 ## Flujo
 
-QR de mesa -> webhook Meta -> Redis Stream durable -> worker -> router unificado LangGraph -> agente especialista -> tools permitidas -> foods-backend -> respuesta WhatsApp.
+QR de mesa -> endpoint de inicio -> Meta resuelve el número oficial desde `WHATSAPP_PHONE_ID` -> WhatsApp -> webhook Meta -> Redis Stream durable -> worker -> router unificado LangGraph -> agente especialista -> tools permitidas -> foods-backend -> respuesta WhatsApp.
 
 Fudia Concierge mantiene únicamente el estado conversacional y el carrito temporal de la ronda en curso. foods-backend revalida producto, disponibilidad, precio, mesa y stock antes de registrar cada ronda y conserva la comanda acumulada como fuente de verdad.
 
