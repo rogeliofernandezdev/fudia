@@ -214,7 +214,6 @@ class ConciergeService:
             return await self._handle_locked_message(
                 phone,
                 text,
-                recipient_phone,
                 channel_key,
             )
         finally:
@@ -250,7 +249,6 @@ class ConciergeService:
         self,
         phone: str,
         text: str,
-        recipient_phone: str,
         channel_key: str,
     ) -> str:
         session = (
