@@ -367,9 +367,7 @@ func (a *API) getTableByQR(w http.ResponseWriter, r *http.Request) {
 		OrgName          string `json:"organizationName"`
 		LocName          string `json:"locationName"`
 		ConciergeEnabled bool   `json:"conciergeEnabled"`
-		WhatsAppPhone    string `json:"whatsappPhone"`
 	}
-	var moduleActive bool
 	err := a.db.QueryRow(r.Context(), `
 		SELECT t.name,t.seats,t.zone,o.trade_name,l.name,
 		       COALESCE(om.active,false)
@@ -390,16 +388,11 @@ func (a *API) getTableByQR(w http.ResponseWriter, r *http.Request) {
 		&t.Zone,
 		&t.OrgName,
 		&t.LocName,
-		&moduleActive,
+		&t.ConciergeEnabled,
 	)
 	if err != nil {
 		fail(w, 404, "table_not_found", "La mesa no existe o el QR no está activo.")
 		return
-	}
-	t.WhatsAppPhone = globalConciergeWhatsAppPhone()
-	t.ConciergeEnabled = moduleActive && t.WhatsAppPhone != ""
-	if !t.ConciergeEnabled {
-		t.WhatsAppPhone = ""
 	}
 	writeJSON(w, 200, t)
 }
