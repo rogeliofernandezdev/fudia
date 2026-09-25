@@ -747,3 +747,19 @@ test("performance frontend limita requests y carga diferida",()=>{
     assert.ok(source.includes("dynamic(()=>import("),path+" debe separar los diálogos del bundle inicial");
   }
 });
+
+
+test("Concierge no duplica el número administrado por Meta",()=>{
+  const publicPage=read("src/modules/public-menu/presentation/public-table-page.tsx");
+  const publicTypes=read("src/modules/public-menu/domain/types.ts");
+  const settings=read("src/modules/configuration/presentation/concierge-settings-page.tsx");
+  const startProxy=read("src/app/api/public/concierge/[qr]/route.ts");
+
+  assert.ok(publicPage.includes("/api/public/concierge/"),"El QR delega el inicio al servicio Concierge");
+  assert.equal(publicPage.includes("wa.me/"),false,"Admin Web no construye enlaces con un número almacenado");
+  assert.equal(publicPage.includes("whatsappPhone"),false,"La página pública no recibe un número de WhatsApp");
+  assert.equal(publicTypes.includes("whatsappPhone"),false,"El contrato público no contiene el número");
+  assert.equal(settings.includes("data.whatsappPhone"),false,"La configuración de empresa no muestra un número persistido");
+  assert.ok(settings.includes("Meta / WhatsApp Business"),"La UI identifica Meta como administrador del canal");
+  assert.ok(startProxy.includes("FUDIA_CONCIERGE_URL"),"El BFF delega el deeplink al servicio Concierge");
+});
