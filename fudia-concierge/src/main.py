@@ -10,6 +10,7 @@ from openai import AsyncOpenAI
 
 from config.settings import Settings, settings
 from src.api.health import router as health_router
+from src.api.start import router as start_router
 from src.api.webhook import router as webhook_router
 from src.infrastructure.concurrency import RedisConversationLock
 from src.infrastructure.fudia_client import FudiaClient
@@ -149,6 +150,7 @@ def create_app(
     app.state.queue_worker_task = None
 
     app.include_router(health_router)
+    app.include_router(start_router)
     app.include_router(webhook_router)
 
     @app.on_event("startup")
