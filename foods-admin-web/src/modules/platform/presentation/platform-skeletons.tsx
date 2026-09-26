@@ -1,3 +1,5 @@
+import "./platform-skeletons.css";
+
 export function PlatformPlansSkeleton(){
   return <div className="plan-grid" aria-label="Cargando planes" aria-busy="true">
     {Array.from({length:3},(_,index)=><article className="panel plan-card skeleton-card" key={index}>
