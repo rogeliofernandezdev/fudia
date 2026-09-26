@@ -23,3 +23,38 @@ export const navigationGroups:NavGroup[]=[
  {label:"CONFIGURACIÓN",items:[{href:"/configuracion/empresa",name:"Empresa",icon:"store",module:"locales",access:"locales",permission:"organizations.read"},{href:"/configuracion/fiscal",name:"Fiscal y moneda",icon:"receipt",module:"fiscal",permission:"organizations.read"},{href:"/configuracion/medios-pago",name:"Medios de pago",icon:"payment",module:"fiscal",access:"fiscal",permission:"organizations.read"},{href:"/configuracion/usuarios",name:"Usuarios y roles",icon:"users",module:"usuarios",permission:"users.read"},{href:"/configuracion/facturacion",name:"Facturación",icon:"receipt",module:"facturacion"},{href:"/configuracion/modulos",name:"Módulos",icon:"settings",module:"fiscal",platformAdminOnly:true},{href:"/configuracion/integraciones",name:"Integraciones",icon:"settings",module:"integraciones"},{href:"/whatsapp-bot",name:"Fudia Concierge",icon:"settings",module:"whatsapp_bot",permission:"organizations.read"}]}
 ];
 
+type AccessContext=Pick<SessionContextResponse,"user"|"modules"|"menuAccess"|"permissions">;
+
+export function accessKey(item:NavItem){return item.access??item.module}
+
+export function moduleIsActive(modules:Record<string,boolean>,key:string){
+  if(!modules[key])return false;
+  if(key==="recetas")return modules.inventario!==false;
+  return true;
+}
+
+export function canOpenNavigationItem(item:NavItem,context:AccessContext){
+  if(context.user.platformAdmin)return true;
+  if(item.platformAdminOnly)return false;
+  if(!moduleIsActive(context.modules,item.module))return false;
+  if(!(context.menuAccess.includes("*")||context.menuAccess.includes(accessKey(item))))return false;
+  if(item.permission&&!(context.permissions.includes("*")||context.permissions.includes(item.permission)))return false;
+  return true;
+}
+
+export function visibleNavigation(context:AccessContext){
+  return navigationGroups
+    .map(group=>({...group,items:group.items.filter(item=>canOpenNavigationItem(item,context))}))
+    .filter(group=>group.items.length>0);
+}
+
+export function firstAccessibleRoute(context:AccessContext){
+  return visibleNavigation(context)[0]?.items[0]?.href??"/sin-acceso";
+}
+
+export function navigationItemForPath(path:string){
+  return navigationGroups
+    .flatMap(group=>group.items)
+    .sort((a,b)=>b.href.length-a.href.length)
+    .find(item=>path===item.href||path.startsWith(item.href+"/"));
+}
