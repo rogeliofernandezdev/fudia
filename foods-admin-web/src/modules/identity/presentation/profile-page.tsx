@@ -17,7 +17,12 @@ export function ProfilePage(){
   const plans=useQuery({queryKey:["available-subscription-plans"],queryFn:getAvailableSubscriptionPlans});
   const canViewSubscription=can("subscription.read");
   const subscription=useQuery({queryKey:["organization-subscription"],queryFn:getOrganizationSubscription,enabled:canViewSubscription});
-  if(profile.isLoading)return <><ProfileHeader/><ProfileSkeleton/></>;
+  if(profile.isLoading)return <>
+    <ProfileHeader/>
+    <ProfileSkeleton/>
+    {canViewSubscription&&<SubscriptionSkeleton/>}
+    <ProfilePlansSkeleton/>
+  </>;
   if(profile.isError)return <><ProfileHeader/><section className="profile-state"><p>{profile.error.message}</p><Button kind="secondary" onClick={()=>profile.refetch()}>Reintentar</Button></section></>;
   if(!profile.data)return <><ProfileHeader/><section className="profile-state"><p>No pudimos cargar tu perfil.</p></section></>;
   return <><ProfileHeader/>
@@ -164,7 +169,7 @@ function ProfileForm({profile,organizationName,locationName}:{profile:MyProfile;
 }
 
 function ProfilePlansPanel({profile,plans,loading,error,retry}:{profile:MyProfile;plans:SubscriptionPlan[];loading:boolean;error:string;retry:()=>void}){
-  if(loading)return <section className="profile-card profile-plans-loading">Cargando planes disponibles…</section>;
+  if(loading)return <ProfilePlansSkeleton/>;
   if(error)return <section className="profile-card profile-plans-loading error"><b>No pudimos cargar los planes.</b><Button kind="secondary" onClick={retry}>Reintentar</Button></section>;
   const current=profile.currentPlan;
   return <section className="profile-card profile-plans">
@@ -260,7 +265,7 @@ function usagePercent(value:number,max:number|null){
 }
 
 function SubscriptionPanel({subscription,loading,error,retry,country,timeZone}:{subscription:OrganizationSubscription|null;loading:boolean;error:string;retry:()=>void;country?:string;timeZone?:string}){
-  if(loading)return <section className="profile-subscription profile-card"><div className="profile-subscription-loading"><span/><div><b>Cargando suscripción</b><small>Consultando plan, límites y facturación…</small></div></div></section>;
+  if(loading)return <SubscriptionSkeleton/>;
   if(error||!subscription)return <section className="profile-subscription profile-card"><div className="profile-state"><p>{error||"No hay una suscripción registrada para esta empresa."}</p><Button kind="secondary" onClick={retry}>Reintentar</Button></div></section>;
 
   const payment=subscription.payments[0];
@@ -359,6 +364,54 @@ function UsageRow({icon,label,value,max}:{icon:"store"|"users";label:string;valu
       <small>{max===null?"Sin límite definido":Math.max(0,max-value)+" disponibles"}</small>
     </div>
   </div>;
+}
+
+function SkeletonLines({compact=false}:{compact?:boolean}){
+  return <div className={"profile-loading-lines"+(compact?" compact":"")} aria-hidden="true"><i/><i/><i/></div>;
+}
+
+function ProfilePlansSkeleton(){
+  return <section className="profile-card profile-plans profile-plans-skeleton" aria-label="Cargando planes SaaS" aria-busy="true">
+    <header className="profile-plans-hero">
+      <div className="profile-plans-title"><span className="profile-loading-block plan-main-icon"/><SkeletonLines/></div>
+      <div className="profile-current-plan"><SkeletonLines compact/><span className="profile-loading-block plan-status"/></div>
+    </header>
+    <div className="profile-plan-grid">
+      {[0,1,2].map(plan=><article className="profile-plan-card" key={plan}>
+        <div className="profile-plan-card-hero">
+          <div className="profile-plan-identity"><span className="profile-loading-block plan-card-icon"/><SkeletonLines/></div>
+          <div className="profile-loading-block plan-price-block"/>
+        </div>
+        <div className="profile-plan-facts">{[0,1,2].map(fact=><article key={fact}><span className="profile-loading-block plan-fact-icon"/><SkeletonLines compact/></article>)}</div>
+        <section className="profile-plan-modules">
+          <header><SkeletonLines compact/><span className="profile-loading-block plan-module-count"/></header>
+          <div className="profile-loading-module-grid">{[0,1,2,3].map(item=><i key={item}/>)}</div>
+        </section>
+        <footer><span className="profile-loading-block plan-footer-line"/></footer>
+      </article>)}
+    </div>
+  </section>;
+}
+
+function SubscriptionSkeleton(){
+  return <section className="profile-subscription profile-card profile-subscription-skeleton" aria-label="Cargando suscripción actual" aria-busy="true">
+    <div className="subscription-hero">
+      <div className="subscription-plan-identity"><span className="profile-loading-block subscription-main-icon"/><SkeletonLines/></div>
+      <div className="subscription-hero-side"><span className="profile-loading-block subscription-status-block"/><SkeletonLines compact/></div>
+    </div>
+    <div className="subscription-metrics">{[0,1,2,3].map(metric=><article key={metric}><span className="profile-loading-block subscription-metric-block"/><SkeletonLines compact/></article>)}</div>
+    <div className="subscription-body">
+      <section className="subscription-usage-card">
+        <header><SkeletonLines compact/><span className="profile-loading-block subscription-header-icon"/></header>
+        <div className="subscription-usage-list">{[0,1,2].map(row=><div className="subscription-usage-row" key={row}><span className="profile-loading-block subscription-row-icon"/><div className="profile-loading-usage"><i/><i/><i/></div></div>)}</div>
+      </section>
+      <section className="subscription-payment-card">
+        <header><SkeletonLines compact/><span className="profile-loading-block subscription-header-icon"/></header>
+        <div className="profile-loading-payment"><i/><i/><i/><i/></div>
+      </section>
+    </div>
+    <footer className="subscription-footer-note"><span className="profile-loading-block subscription-footer-line"/></footer>
+  </section>;
 }
 
 function ProfileSkeleton(){

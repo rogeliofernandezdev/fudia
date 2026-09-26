@@ -58,6 +58,30 @@
 .plan-state{margin-top:20px;padding:28px;display:grid;justify-items:center;gap:10px;text-align:center}
 .plan-state p{margin:0;color:var(--ink-600);font-size:10px}
 .plan-state.error{color:var(--danger)}
+.platform-plan-skeleton{pointer-events:none}
+.platform-plan-skeleton .platform-skeleton-block,.platform-plan-skeleton .platform-skeleton-copy i{border-radius:20px}
+.platform-plan-skeleton .plan-icon-placeholder{width:36px;height:36px;border-radius:10px;flex:0 0 auto}
+.platform-plan-skeleton .plan-heading>div{width:132px;display:grid;gap:7px}
+.platform-plan-skeleton .eyebrow{width:54px;height:7px}
+.platform-plan-skeleton .heading{width:104px;height:15px}
+.platform-plan-skeleton .status{width:62px;height:23px}
+.platform-skeleton-copy{display:grid;align-content:center;gap:8px}
+.platform-skeleton-copy i{height:8px;border-radius:20px}
+.platform-skeleton-copy i:first-child{width:92%}
+.platform-skeleton-copy i:last-child{width:68%}
+.platform-plan-skeleton .plan-price .price{width:58%;height:25px}
+.platform-plan-skeleton .plan-price .caption{width:70%;height:7px}
+.platform-plan-skeleton .capacity-icon{width:26px;height:26px;border-radius:7px}
+.platform-plan-skeleton .plan-capacity span{display:grid;gap:5px}
+.platform-plan-skeleton .plan-capacity .value{width:34px;height:9px}
+.platform-plan-skeleton .section-title{width:108px;height:10px;margin-top:6px}
+.platform-plan-skeleton .counter{width:27px;height:27px;border-radius:8px}
+.platform-plan-skeleton .feature-icon{width:18px;height:18px;border-radius:50%}
+.platform-plan-skeleton .plan-feature-list span{display:grid;gap:6px}
+.platform-plan-skeleton .feature-title{width:45%;height:8px}
+.platform-plan-skeleton .feature-copy{width:80%;height:7px}
+.platform-plan-skeleton .footer-copy{width:72px;height:8px}
+.platform-plan-skeleton .footer-action{width:105px;height:36px;border-radius:9px}
 .plan-dialog{width:min(760px,100%)}
 .plan-form{padding:20px;display:grid;gap:18px}
 .plan-modules{border:1px solid var(--line);border-radius:12px;overflow:hidden}

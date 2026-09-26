@@ -7,6 +7,7 @@ import {Icon} from "@/design-system/icons";
 import {useFeedback} from "@/providers";
 import type {PlatformModule,SubscriptionPlan,SubscriptionPlanDraft} from "../domain/types";
 import {getPlatformOnboardingContext,listReadyModules,listSubscriptionPlans,saveSubscriptionPlan} from "../infrastructure/platform-api";
+import {PlatformPlansSkeleton} from "./platform-skeletons";
 
 const blank:SubscriptionPlanDraft={
  code:"",name:"",description:"",currency:"PEN",monthlyPrice:"",annualPrice:"",trialDays:0,
@@ -47,7 +48,7 @@ export function PlatformPlansPage(){
       <button type="button" className={billing==="annual"?"active":""} onClick={()=>setBilling("annual")}>Anual <span>2 meses aprox.</span></button>
     </div>
   </div>
-  {(plans.isLoading||modules.isLoading||catalogs.isLoading)?<div className="panel plan-state">Cargando planes…</div>:
+  {(plans.isLoading||modules.isLoading||catalogs.isLoading)?<PlatformPlansSkeleton/>:
    (plans.isError||modules.isError||catalogs.isError)?<div className="panel plan-state error"><b>No pudimos cargar la configuración de planes.</b><Button kind="secondary" onClick={()=>{void plans.refetch();void modules.refetch();void catalogs.refetch()}}>Reintentar</Button></div>:
    <div className="plan-grid">{visible.length?visible.map(plan=>{
      const recommended=plan.code==="impulso";

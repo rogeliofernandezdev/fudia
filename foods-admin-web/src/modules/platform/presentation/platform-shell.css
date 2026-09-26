@@ -11,3 +11,6 @@
 .platform-nav a:hover{background:#f2f4f7;color:var(--ink-950)}
 .platform-nav a.active{color:var(--ops-700);background:var(--ops-100)}
 @media(max-width:760px){.platform-topbar{height:auto;min-height:72px;flex-wrap:wrap;padding:12px 16px}.platform-nav{order:3;width:100%;margin:0}.platform-nav a{flex:1;justify-content:center}.platform-badge{margin-left:auto}.platform-content{padding:22px 14px 45px}}
+.platform-skeleton-block,.platform-skeleton-copy i{display:block;background:linear-gradient(90deg,#e8ebf2 20%,#f8f9fc 42%,#e8ebf2 64%);background-size:220% 100%;animation:platform-skeleton-shimmer 1.35s ease-in-out infinite}
+@keyframes platform-skeleton-shimmer{to{background-position:-220% 0}}
+@media(prefers-reduced-motion:reduce){.platform-skeleton-block,.platform-skeleton-copy i{animation:none}}

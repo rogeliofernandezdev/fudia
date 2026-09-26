@@ -27,5 +27,19 @@
 .subscription-empty,.subscription-state{padding:28px;text-align:center;color:var(--ink-500);font-size:10px}
 .subscription-state{margin-top:20px;display:grid;justify-items:center;gap:10px}
 .subscription-state.error{color:var(--danger)}
+.platform-subscription-card-skeleton,.platform-subscription-history-skeleton{pointer-events:none}
+.platform-subscription-card-skeleton .platform-skeleton-block,.platform-subscription-history-skeleton .platform-skeleton-block{border-radius:20px}
+.platform-subscription-card-skeleton .eyebrow,.platform-subscription-history-skeleton .eyebrow{width:72px;height:7px}
+.platform-subscription-card-skeleton .heading,.platform-subscription-history-skeleton .heading{width:138px;height:14px;margin-top:7px}
+.platform-subscription-card-skeleton .header-action{width:62px;height:24px}
+.platform-subscription-skeleton-fields{padding:18px}
+.platform-subscription-skeleton-fields>div{display:grid;gap:8px}
+.platform-subscription-skeleton-fields .label{width:68px;height:7px}
+.platform-subscription-skeleton-fields .control{width:100%;height:38px;border-radius:9px}
+.platform-subscription-preview-skeleton .value{width:44px;height:10px;margin:3px auto 0}
+.platform-subscription-card-skeleton>footer{border-top:1px solid var(--line);padding:12px 18px;display:flex;justify-content:flex-end}
+.platform-subscription-card-skeleton>footer .button{width:118px;height:38px;border-radius:9px}
+.platform-subscription-history-skeleton .counter{width:28px;height:28px;border-radius:8px}
+.platform-subscription-history-skeleton .table-line{width:78%;height:9px}
 @media(max-width:900px){.platform-subscription-grid{grid-template-columns:1fr}.subscription-plan-preview{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:600px){.subscription-plan-preview{grid-template-columns:1fr 1fr}.subscription-history table{min-width:650px}}

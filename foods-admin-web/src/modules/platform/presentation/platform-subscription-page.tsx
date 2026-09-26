@@ -8,6 +8,7 @@ import {useFeedback,useSession} from "@/providers";
 import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
 import {changeOrganizationSubscription,getCurrentOrganizationSubscription,listSubscriptionPlans,recordSubscriptionPayment} from "../infrastructure/platform-api";
 import type {OrganizationSubscription,SubscriptionPlan} from "../domain/types";
+import {PlatformSubscriptionSkeleton} from "./platform-skeletons";
 
 type SubscriptionDraft={planId:string;billingCycle:"monthly"|"annual";status:OrganizationSubscription["status"];autoRenew:boolean;termsAccepted:boolean};
 type PaymentDraft={amount:string;currency:string;status:"pending"|"paid"|"failed"|"refunded";provider:string;externalReference:string;paidAt:string};
@@ -17,7 +18,7 @@ export function PlatformSubscriptionPage(){
  const subscription=useQuery({queryKey:["organization-subscription"],queryFn:getCurrentOrganizationSubscription});
  const plans=useQuery({queryKey:["platform-plans"],queryFn:listSubscriptionPlans});
 
- if(subscription.isLoading||plans.isLoading)return <><Header organization={organization?.name}/><div className="panel subscription-state">Cargando suscripción…</div></>;
+ if(subscription.isLoading||plans.isLoading)return <><Header organization={organization?.name}/><PlatformSubscriptionSkeleton/></>;
  if(subscription.isError||plans.isError||!subscription.data)return <><Header organization={organization?.name}/><div className="panel subscription-state error"><b>No pudimos cargar la suscripción.</b><Button kind="secondary" onClick={()=>{void subscription.refetch();void plans.refetch()}}>Reintentar</Button></div></>;
 
  const key=[subscription.data.id,subscription.data.plan.id,subscription.data.billingCycle,subscription.data.status,subscription.data.autoRenew,subscription.data.renewsAt].join(":");
