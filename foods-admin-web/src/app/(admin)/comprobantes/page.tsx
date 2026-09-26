@@ -1,2 +1,2 @@
-import {ManagementPage} from "@/components/management-page";
-export default function Page(){return <ManagementPage eyebrow="VENTA" title="Comprobantes" description="Consulta emisión electrónica, respuesta SUNAT y entrega al cliente." action="Exportar comprobantes" actionIcon="download" columns={["COMPROBANTE","CLIENTE","TOTAL"]} rows={[{name:"B001-00482",detail:"Boleta · Hoy 14:36",category:"María Torres",value:"S/ 124.00",state:"Aceptado"},{name:"F001-00126",detail:"Factura · Hoy 14:28",category:"Empresa Andina SAC",value:"S/ 680.00",state:"Aceptado"},{name:"B001-00481",detail:"Boleta · Hoy 14:20",category:"Cliente general",value:"S/ 58.50",state:"Pendiente",tone:"orange"}]}/>}
+import {ReceiptsPage} from "@/modules/sales";
+export default function Page(){return <ReceiptsPage/>}

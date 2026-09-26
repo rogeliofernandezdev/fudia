@@ -1,0 +1,37 @@
+name: foods-admin-web
+
+on:
+  push:
+    paths:
+      - "foods-admin-web/**"
+      - ".github/workflows/foods-admin-web.yml"
+  pull_request:
+    paths:
+      - "foods-admin-web/**"
+      - ".github/workflows/foods-admin-web.yml"
+
+env:
+  GIT_CONFIG_COUNT: "1"
+  GIT_CONFIG_KEY_0: init.defaultBranch
+  GIT_CONFIG_VALUE_0: main
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: foods-admin-web
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: foods-admin-web/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+        env:
+          FOODS_API_URL: http://localhost:8080

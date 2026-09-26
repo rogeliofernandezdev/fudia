@@ -1,2 +1,2 @@
-import {CatalogManager} from "@/components/catalog-manager";
+import {CatalogManager} from "@/modules/menu";
 export default function Page(){return <CatalogManager/>}

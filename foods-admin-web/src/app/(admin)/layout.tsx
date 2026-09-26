@@ -1,4 +1,4 @@
-import {AdminShell} from "@/components/admin-shell";
+import {AdminShell} from "@/shell/admin-shell";
 import {SessionProvider, SettingsProvider} from "@/providers";
 
 export const dynamic = "force-dynamic";

@@ -23,23 +23,21 @@ densidad para tablas, formularios y análisis.
 | ops-500 | #4654CD | foco y estado activo |
 | digital-700 | #5421A8 | WhatsApp e integraciones |
 | digital-500 | #7C3AED | acento digital |
+| digital-100 | #F2ECFF | fondo violeta suave para estados operativos |
 | ink-950 | #101828 | texto principal |
 | ink-600 | #475467 | texto secundario |
 | cloud-50 | #F7F8FC | fondo |
 | surface | #FFFFFF | paneles |
-| warning | #B54708 | alertas |
+| warning | #B54708 | alertas y texto/borde de acciones de advertencia |
+| warning-50 | #FFF3E8 | fondo suave y hover de acciones de advertencia |
 | danger | #C9362B | errores y acciones destructivas |
 
 Usar superficies mayormente neutras, azul para navegación y acciones, verde para
 éxito y violeta para canales digitales.
 
-## Paridad con Operaciones
+## Identidad operativa
 
-`foods-admin-web` y `foods-operations-web` comparten exactamente los tokens de
-identidad y su semántica. La navegación lateral usa azul oscuro `ops-800`, la selección
-azul operativo más luminoso, las acciones primarias y tablas usan `primary-600`, y los
-canales digitales usan violeta. El verde se reserva para éxito. Las diferencias entre aplicaciones
-se limitan a densidad y composición, nunca a reinterpretar el significado del color.
+`foods-admin-web` concentra la experiencia web operativa y administrativa. La navegación lateral usa azul oscuro `ops-800`, la selección azul operativo más luminoso, las acciones primarias y tablas usan `primary-600`, y los canales digitales usan violeta. El verde se reserva para éxito.
 
 ## Tipografía y forma
 
@@ -75,6 +73,16 @@ se limitan a densidad y composición, nunca a reinterpretar el significado del c
   preparación (minutos), alérgenos (tags seleccionables), plato destacado
   (switch) y precio de costo. Ninguno es obligatorio; el operador puede
   registrar un producto solo con nombre, precio y categoría.
+- Producto separa `productType` (`prepared` o `retail`) de categoría y
+  `quantityControl`. La categoría sigue siendo comercial y puede mezclar, por
+  ejemplo, una limonada preparada y una gaseosa de reventa dentro de Bebidas.
+  Los productos creados desde Carta y productos nacen como `prepared`; el
+  atajo Inventario > Nuevo producto vendible clasifica automáticamente como
+  `retail` sin pedir un paso adicional al usuario. El tipo no se repite como
+  un campo de solo lectura porque ya está expresado por la opción seleccionada.
+  El alta rápida sí exige categoría, pero el selector consulta únicamente
+  categorías cuyo `productScope` sea `retail` o `both`; nunca muestra
+  categorías exclusivas de platos preparados.
 - El registro y la edición de producto usan un wizard de tres pasos dentro del
   mismo modal: Información, Operación y Presentación. Avanzar no persiste datos;
   el producto se envía una sola vez desde el último paso. Cada paso valida solo
@@ -87,15 +95,73 @@ se limitan a densidad y composición, nunca a reinterpretar el significado del c
   no se modifica dentro del wizard. Usa una vista
   operativa separada por local con tarjetas compactas, estado textual, cupo y
   filas operativas continuas en escritorio, sin bordes de tarjeta repetidos, y tarjetas apiladas únicamente en
-  móvil, con una acción manual Disponible/Agotado y guardado explícito del cupo. El botón
-  «Actualizar cupo» permanece visible para hacer descubrible la función, pero
-  solo se habilita después de modificar la cantidad. La acción
-  reversible «Marcar agotado» usa ámbar de advertencia, no rojo destructivo. «Pocas
+  móvil, con una acción manual Disponible/Agotado y guardado explícito del cupo. El botón de actualización de cupo permanece visible para hacer descubrible la función, pero
+  solo se habilita después de modificar la cantidad. En filas densas, las acciones usan
+  etiquetas visibles breves y específicas («Guardar», «Agotar hoy», «Reactivar») y conservan un
+  `aria-label` descriptivo completo. En la fila de disponibilidad, «Guardar» nunca se parte en dos líneas. «Agotar hoy» usa `warning` para texto y borde y
+  `warning-50` únicamente como fondo suave en hover; nunca usa rojo destructivo ni
+  invierte a un relleno ámbar sólido. Los avisos operativos de agotamiento dentro de
+  la fila se muestran como una franja `warning-50`, con icono/texto `warning` y acento
+  lateral de advertencia; no se presentan como texto suelto sobre fondo neutro. Las
+  subcolumnas Control, Cupo, Vendidas y Restantes comparten exactamente la misma retícula vertical: etiqueta arriba y valor/control centrado debajo. Producto, Estado, Control del día y Acciones ocupan explícitamente la misma fila principal; los avisos ocupan una segunda fila completa. El nombre del tipo de control no se trunca cuando hay espacio suficiente. «Pocas
   unidades» es siempre un estado calculado por las unidades restantes, nunca
   una acción manual. La vista se
   pagina desde el API, permite buscar y filtrar por categoría, diferencia cupo,
   vendidos y restantes, y bloquea acciones manuales cuando el estado se deriva
-  del horario o de componentes obligatorios de un menú.
+  del horario o de componentes obligatorios de un menú. «Guardar» modifica únicamente
+  el cupo escrito; «Agotar hoy» y «Reactivar» modifican únicamente el override manual
+  y nunca persisten un cupo pendiente de guardar. El cupo mínimo editable es el mayor
+  entre 1 y las porciones ya vendidas. Un usuario con `menu.read` pero sin `menu.manage`
+  ve la pantalla en modo solo lectura: conserva filtros, estados y cantidades, pero no
+  puede editar cupos ni ejecutar acciones.
+- Cocina usa un KDS de tres carriles operativos: «Por preparar», «En preparación»
+  y «Listos para entregar». Cada carril es un panel neutro `cloud-50/surface`
+  con borde estándar; el color semántico se limita al acento de estado, icono,
+  contador y etiquetas: azul para «Por preparar», violeta para «En preparación»,
+  verde para «Listo» y ámbar exclusivamente para «Por vencer» o «Con demora». El cuerpo del carril permanece neutro y la cabecera completa usa un fondo semántico de contraste medio/alto: `primary-600` para «Por preparar», `digital-500` para «En preparación» y `brand-600` para «Listo». Azul y violeta usan título/descripción en `surface`; el verde `brand-600` usa `ink-950` para el título y `ink-600` para la descripción, evitando que el texto se pierda sobre el fondo menta. Icono y contador se apoyan en `surface` y conservan `brand-700` como acento. Esta diferencia cromática debe ser evidente incluso al escanear la pantalla rápidamente. No se añaden franjas superiores ni barras laterales de color. Los nombres de mesa se muestran en mayúsculas (`MESA 1`, `MESA 2`) para facilitar el escaneo; nombres de clientes y otros identificadores conservan su escritura original. Los botones que cambian el flujo son
+  acciones primarias azules; el verde no se usa como CTA antes de confirmar el
+  éxito. Las tarjetas son densas, con borde `line`, radio de 14 px y sin
+  sombras o transformaciones decorativas que compitan con la información.
+  `danger` no se usa para retrasos de cocina porque se reserva para errores y
+  acciones destructivas. El tiempo nunca se muestra como minutos de cuatro cifras: se formatea como
+  minutos, horas/minutos o días/horas según corresponda. La urgencia siempre
+  incluye texto explícito («A tiempo», «Por vencer», «Con demora», «Listo»);
+  nunca depende solo del color. El objetivo de preparación aparece como dato
+  secundario. El skeleton reproduce cabecera, identidad, líneas de productos y
+  acción de cada tarjeta, no bloques rectangulares genéricos.
+- El formulario de Recetas usa un modal de edición compacto y estructurado en dos
+  zonas: datos de la receta e insumos. La cabecera sigue el patrón estándar de
+  58 px mínimo, icono de 32 px, título de 15 px y cierre con
+  `--control-height`. El producto y el rendimiento son los datos principales;
+  «Producto preparado» usa el autocomplete asíncrono compartido basado en
+  `react-select/async`, con selección única, `cacheOptions` y el mismo patrón visual
+  `react-select-container` usado en los demás formularios. Las opciones muestran solo
+  el nombre del producto, sin SKU. Al abrir muestra como máximo 10 productos; con 1 o
+  2 caracteres no consulta el backend y solicita completar al menos 3; desde 3
+  caracteres consulta el API y reúne todas las coincidencias de la búsqueda, recorriendo
+  la paginación del endpoint cuando sea necesario. No se reemplaza por un `<select>`
+  nativo ni se descarga el catálogo completo antes de que el usuario busque.
+  Las notas son opcionales y no dominan visualmente el formulario. La composición
+  de insumos vive en una sección propia con cabecera azul `primary-600` en
+  escritorio, columnas Insumo, Cantidad, Merma y acción homologada de quitar.
+  Cada fila de Insumo usa el mismo patrón de autocomplete asíncrono: al abrir
+  muestra hasta 10 artículos de inventario, con 1 o 2 caracteres no consulta,
+  y desde 3 caracteres reúne todas las coincidencias paginadas del API. Las
+  opciones ya usadas por otras filas se excluyen. «Agregar insumo» crea una
+  fila vacía y no depende del tamaño del catálogo cargado, por lo que no existe
+  un máximo artificial de 5, 10 o 100 insumos; el límite funcional es únicamente
+  no repetir el mismo artículo dentro de una receta. «Agregar insumo» pertenece
+  a la cabecera de esa sección, nunca al footer. El
+  footer contiene únicamente «Cancelar» y «Guardar», con la misma altura. El
+  modal no incluye selector de Estado: activar o desactivar una receta se realiza
+  desde la tabla mediante la acción de fila correspondiente. En móvil, el modal
+  ocupa la pantalla y cada insumo se reorganiza como una tarjeta de edición sin
+  perder unidad, cantidad, merma ni acción de quitar. Cantidad y unidad forman
+  un único control compuesto, con un solo borde y foco en el contenedor. La
+  columna Acción reserva el ancho completo del control cuadrado y nunca recorta
+  el botón de quitar. El formulario de Recetas no hereda padding ni iconos
+  decorativos del footer CRUD genérico: su espaciado pertenece al módulo y cada
+  acción muestra un único icono explícito.
 - El producto solicita explícitamente el control de disponibilidad mediante
   tarjetas radio: «Siempre disponible» o «Cupo diario». «Siempre disponible»
   no muestra un contador; «Cupo diario» revela y exige un entero mayor que cero
@@ -126,9 +192,28 @@ se limitan a densidad y composición, nunca a reinterpretar el significado del c
 - Las mesas se registran en una tabla con filas editables y botón `+` para
   agregar múltiples mesas en un solo proceso. No se usa modal para crear
   mesas. El guardado envía todas las filas válidas en un solo `POST` batch.
+  **La edición de una mesa existente también ocurre en su misma fila de tabla**:
+  Nombre, Zona y Asientos se convierten en controles del design system y la
+  columna Acciones muestra Guardar/Cancelar. No se abre modal de edición ni se
+  desplaza al usuario fuera del listado. Estado activo/inactivo se cambia solo
+  mediante la acción de fila correspondiente; no se duplica como switch dentro
+  de la edición. La configuración del QR permanece como una capacidad separada
+  de la edición de datos básicos de la mesa.
 - Las zonas (Terraza, Salón, Barra, etc.) se administran en un tab dentro de
   la página de Mesas, con su propio CRUD. El campo Zona al crear/editar mesas
   es un select que carga las zonas activas del API, no un input libre.
+- La pantalla Empresa no agrega una tarjeta resumen que repita Razón social,
+  Nombre comercial, Identificación fiscal o Zona horaria ya presentes en el
+  formulario. Cada dato aparece una sola vez; el estado de la empresa puede
+  vivir en la cabecera de la sección legal porque no se edita en ese formulario.
+- Kárdex reutiliza exactamente el patrón de gestión de Inventario: `PageHeader`,
+  un único panel `standardized-management`, barra compacta de filtros, tabla
+  estándar y paginación compartida. La primera columna es Artículo y usa el mismo
+  patrón visual de entidad que Inventario; Fecha y trazabilidad son atributos del
+  movimiento. En móvil la tabla tiene tarjetas equivalentes mediante
+  `management-cards`; nunca desaparece el contenido al ocultarse la tabla.
+  No se agrega una segunda cabecera de resultados ni se repite el total si la
+  paginación ya informa rango y total.
 - La configuración presenta la jerarquía Empresa → Perfiles por país → Locales.
   País, moneda e impuesto se editan en el perfil fiscal de la empresa; cada local
   selecciona un perfil existente. Los tipos de cambio se gestionan en una vista
@@ -140,7 +225,7 @@ se limitan a densidad y composición, nunca a reinterpretar el significado del c
 
 ## Componentes y estados
 
-- Usuarios y permisos se separan en dos pestañas. Un usuario puede tener varias asignaciones rol–local. El editor de rol separa claramente «Accesos al sistema» (opciones del menú) de «Permisos de acción» (operaciones dentro de cada pantalla); nunca se presentan como un único concepto. El Administrador `[*]` permanece protegido, los demás roles predeterminados permiten adaptar accesos y permisos conservando nombre y descripción, y los roles personalizados permiten editar toda su definición. La activación se realiza desde la tabla, nunca dentro del formulario.
+- Usuarios y permisos se separan en dos pestañas. Un usuario puede tener varias asignaciones rol–local. El editor de rol separa claramente «Accesos al sistema» (opciones del menú) de «Permisos de acción» (operaciones dentro de cada pantalla); nunca se presentan como un único concepto. El Administrador de plataforma es el único `[*]`: ve todo el catálogo de módulos aunque estén desactivados, en desarrollo o planificados, y es el único que puede habilitar módulos para una empresa. El Administrador de empresa usa permisos explícitos y nunca recibe `*`. Los demás roles predeterminados permiten adaptar accesos y permisos conservando nombre y descripción, y los roles personalizados permiten editar toda su definición. La activación se realiza desde la tabla, nunca dentro del formulario.
 
 - Área táctil mínima de 44 por 44 px en móvil.
 - Skeleton con forma final: el de tablas reproduce cabecera y filas con
@@ -174,7 +259,7 @@ se limitan a densidad y composición, nunca a reinterpretar el significado del c
 
 ## Tablas y paginación
 
-- Cabecera carbón `ink-950`, texto blanco en mayúsculas, filas alternas sutiles y
+- Cabecera azul `primary-600`, texto blanco en mayúsculas, filas alternas sutiles y
   acciones textuales consistentes; el color semántico se reserva para estados.
 - La paginación informa el rango visible y total, permite 10, 20 o 50 filas y
   muestra páginas, elipsis, anterior y siguiente con estado activo inequívoco.
@@ -235,6 +320,13 @@ y detalle; no se limita a apilar columnas de escritorio.
 ## Menú
 
 - Fondo `ops-800`, opción activa `ops-500` e iconos contenidos en una caja estable.
+- Los iconos describen la función, no el rol de la persona: «Recetas»
+  usa `cookingPot` por preparación/producción; «Disponibilidad» usa
+  `availability`, un plato con confirmación de disponibilidad. No se usa un check
+  genérico como icono principal de módulo.
+- En Abastecimiento, Inventario usa `stock` porque representa existencia física;
+  Kárdex usa `ledger` porque representa el historial valorizado de movimientos.
+  Dos módulos vecinos no comparten icono si su función operativa es distinta.
 - El hover modifica color y superficie sin desplazar ni escalar elementos.
 - El drawer móvil bloquea el fondo, cierra con Escape, overlay o navegación y
   conserva scroll interno.
@@ -292,3 +384,55 @@ pero la identidad, textos, iconos y colores son exclusivamente Foods.
 ## Directorios maestros
 
 Los módulos de directorio, como Clientes, usan la tabla estandarizada en escritorio y tarjetas equivalentes en móvil. Toda consulta remota debe incluir skeleton, error recuperable, vacío contextual y paginación compartida. Las acciones de fila son únicamente iconos homologados con tooltip; alta y edición usan las primitivas `Input`, `Select`, `Textarea`, `Button`, `Status` y `ConfirmDialog`. Los formularios extensos se agrupan por secciones visuales, sin añadir texto explicativo que no ayude a completar la tarea.
+
+
+### Disponibilidad de módulos
+
+- El catálogo distingue **Disponible**, **En desarrollo** y **Planificado**.
+- `active` representa únicamente si un módulo **Disponible** está habilitado para una empresa; no representa su estado de desarrollo.
+- El Administrador de plataforma ve todos los módulos en navegación y catálogo, incluso si están inactivos o no terminados.
+- Los usuarios de empresa solo ven módulos disponibles, activos para su organización y permitidos por su rol.
+- Un módulo **En desarrollo** o **Planificado** nunca puede activarse para una empresa; el backend debe rechazar cualquier intento aunque el frontend falle.
+
+## Onboarding comercial y suscripción
+
+Existe un único onboarding de tenant en `/platform/onboarding`. La ruta
+histórica de Configuración redirige a ese flujo y no mantiene una segunda
+implementación. El alta se compone de Empresa → Plan y contrato → Fiscal →
+Primer local → Administrador.
+
+El paso Plan y contrato consume el catálogo SaaS del backend: nunca hardcodea
+precios ni paquetes. Muestra precio según ciclo, prueba, límites, módulos y
+versión de condiciones, y exige registrar la aceptación antes de crear el
+tenant. Plataforma administra el catálogo en `/platform/plans` y la
+suscripción de la empresa activa en `/platform/subscription`.
+
+El Administrador de empresa con permiso `subscription.read` ve en Mi perfil
+un resumen de solo lectura con plan, estado, precio/ciclo, renovación, prueba,
+condiciones, uso frente a límites, módulos incluidos y último pago. Cambiar
+plan, estado o registrar cobros sigue siendo una acción exclusiva de Plataforma.
+
+
+### Nombres de navegación
+
+- Los nombres de navegación evitan repetir el nombre del grupo. Dentro de
+  `CARTA Y PRODUCCIÓN`, el módulo se llama `Recetas`, no
+  `Recetas y producción`. Por la misma regla, la opción se llama `Disponibilidad`,
+  no `Disponibilidad de la carta`.
+- Una opción debe nombrar las entidades que realmente administra. La pantalla
+  de acceso usa `Usuarios y roles`: los permisos son atributos configurados
+  dentro de cada rol y no necesitan repetirse en el nombre del módulo.
+
+
+### Ruta inicial por rol
+
+- Después del login nunca se redirige de forma fija a `/dashboard`.
+- La entrada se calcula con el mismo catálogo que construye el sidebar y respeta,
+  en este orden, módulo contratado, acceso de menú y permiso mínimo de lectura.
+- Se abre la primera opción realmente accesible según el orden de navegación.
+  Ejemplos predeterminados: Mesero → Pedidos, Cocinero → Cocina, Cajero → Punto
+  de venta y Almacenero → Inventario.
+- El logo de FUDIA y el cambio de local reutilizan exactamente la misma regla.
+- Si ningún módulo satisface las tres condiciones, la cuenta entra a
+  `/sin-acceso`, donde se informa que debe revisarse su rol. No se muestra un
+  Dashboard bloqueado como página inicial.

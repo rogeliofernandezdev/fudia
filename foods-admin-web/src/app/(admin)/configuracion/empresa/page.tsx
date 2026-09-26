@@ -1,2 +1,2 @@
-import {CompanySettings} from "@/components/organization-admin";
-export default function EmpresaPage(){return <CompanySettings/>}
+import {CompanySettings} from "@/modules/organizations";
+export default function Page(){return <CompanySettings/>}

@@ -1,5 +1,5 @@
 "use client";
-
+import "./login.css";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -7,6 +7,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Icon, type IconName } from "@/design-system/icons";
 import { Input } from "@/design-system/page-header";
 import { login } from "../infrastructure/auth-api";
+import {loadSessionContext} from "@/shared/session/session-api";
+import {firstAccessibleRoute} from "@/shell/navigation";
 
 const trustItems: Array<{ icon: IconName; label: string }> = [
   { icon: "lock", label: "Conexión segura" },
@@ -33,7 +35,9 @@ export function LoginForm() {
         password: String(data.get("password") ?? ""),
       });
       queryClient.clear();
-      router.replace("/dashboard");
+      const context=await loadSessionContext();
+      queryClient.setQueryData(["session-context"],context);
+      router.replace(firstAccessibleRoute(context));
       router.refresh();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "No pudimos iniciar sesión.");

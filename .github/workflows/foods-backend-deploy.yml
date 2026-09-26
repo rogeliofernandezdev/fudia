@@ -1,0 +1,97 @@
+name: foods-backend-deploy
+
+on:
+  push:
+    branches:
+      - feat/redesign-nueva-comanda
+    paths:
+      - "foods-backend/**"
+      - ".github/workflows/foods-backend-deploy.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: fudia-dev-backend-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: dev
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
+      ECR_REPO: ${{ vars.ECR_BACKEND_REPO }}
+      EC2_INSTANCE_ID: ${{ vars.EC2_INSTANCE_ID }}
+      DOCKER_NETWORK: ${{ vars.DOCKER_NETWORK }}
+      CONTAINER_NAME: ${{ vars.BACKEND_CONTAINER }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push backend image
+        id: image
+        shell: bash
+        run: |
+          SHORT_SHA="${GITHUB_SHA::8}"
+          IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}"
+          docker build \
+            --build-arg VERSION="${SHORT_SHA}" \
+            -t "${IMAGE}:${SHORT_SHA}" \
+            -t "${IMAGE}:latest" \
+            ./foods-backend
+          docker push "${IMAGE}:${SHORT_SHA}"
+          docker push "${IMAGE}:latest"
+          echo "uri=${IMAGE}:${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy backend to EC2
+        shell: bash
+        env:
+          IMAGE_URI: ${{ steps.image.outputs.uri }}
+        run: |
+          cat > /tmp/commands.json <<EOF
+          {
+            "commands": [
+              "set -eu",
+              "aws ecr get-login-password --region '${AWS_REGION}' | docker login --username AWS --password-stdin '${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com'",
+              "docker network inspect '${DOCKER_NETWORK}' >/dev/null 2>&1 || docker network create '${DOCKER_NETWORK}'",
+              "docker pull '${IMAGE_URI}'",
+              "docker run --rm --network '${DOCKER_NETWORK}' --env-file /home/ubuntu/backend.env --entrypoint ./foods-migrate '${IMAGE_URI}'",
+              "docker rm -f '${CONTAINER_NAME}-previous' >/dev/null 2>&1 || true",
+              "if docker inspect '${CONTAINER_NAME}' >/dev/null 2>&1; then docker stop '${CONTAINER_NAME}' && docker rename '${CONTAINER_NAME}' '${CONTAINER_NAME}-previous'; fi",
+              "docker run -d --name '${CONTAINER_NAME}' --restart unless-stopped --network '${DOCKER_NETWORK}' --env-file /home/ubuntu/backend.env -p 8080:8080 '${IMAGE_URI}'",
+              "sleep 5",
+              "test \"\$(docker inspect -f '{{.State.Running}}' '${CONTAINER_NAME}')\" = true"
+            ]
+          }
+          EOF
+          COMMAND_ID=$(aws ssm send-command \
+            --region "${AWS_REGION}" \
+            --instance-ids "${EC2_INSTANCE_ID}" \
+            --document-name "AWS-RunShellScript" \
+            --parameters file:///tmp/commands.json \
+            --query "Command.CommandId" \
+            --output text)
+          aws ssm wait command-executed \
+            --region "${AWS_REGION}" \
+            --command-id "${COMMAND_ID}" \
+            --instance-id "${EC2_INSTANCE_ID}"
+          aws ssm get-command-invocation \
+            --region "${AWS_REGION}" \
+            --command-id "${COMMAND_ID}" \
+            --instance-id "${EC2_INSTANCE_ID}" \
+            --query "{Status:Status,Output:StandardOutputContent,Error:StandardErrorContent}" \
+            --output json

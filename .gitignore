@@ -4,5 +4,10 @@
 **/.next/
 **/.next-dev/
 **/.env
+**/.env.local
+**/.env.*.local
 **/*.exe
 **/*.log
+
+foods-admin-web/__*.png
+foods-admin-web/__*.cjs

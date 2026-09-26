@@ -1,22 +1,35 @@
 package httpapi
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
+	"math"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
 )
 
-type orderItem struct {
-	ID        string `json:"id"`
+type orderItemSelection struct {
+	GroupID   string `json:"groupId"`
+	GroupName string `json:"groupName"`
 	ProductID string `json:"productId"`
 	Name      string `json:"name"`
-	Qty       string `json:"qty"`
-	UnitPrice string `json:"unitPrice"`
-	Note      string `json:"note"`
+	Surcharge string `json:"surcharge"`
+}
+type orderItem struct {
+	ID         string               `json:"id"`
+	ProductID  string               `json:"productId"`
+	Name       string               `json:"name"`
+	Qty        string               `json:"qty"`
+	UnitPrice  string               `json:"unitPrice"`
+	Note       string               `json:"note"`
+	ItemType   string               `json:"itemType"`
+	Selections []orderItemSelection `json:"selections,omitempty"`
+	Modifiers  []orderItemModifier  `json:"modifiers,omitempty"`
 }
 type order struct {
 	ID            string      `json:"id"`
@@ -36,15 +49,53 @@ type order struct {
 	Total         string      `json:"total"`
 	CreatedAt     string      `json:"createdAt"`
 	UpdatedAt     string      `json:"updatedAt"`
-	ItemCount     int         `json:"itemCount"`
-	Items         []orderItem `json:"items,omitempty"`
+	ItemCount       int         `json:"itemCount"`
+	Items           []orderItem `json:"items,omitempty"`
+	PaidAmount      string      `json:"paidAmount,omitempty"`
+	RemainingAmount string      `json:"remainingAmount,omitempty"`
+	PaymentStatus   string      `json:"paymentStatus,omitempty"`
+}
+type orderItemSelectionInput struct {
+	GroupID   string `json:"groupId"`
+	ProductID string `json:"productId"`
 }
 type orderItemInput struct {
-	ProductID string  `json:"productId"`
-	Name      string  `json:"name"`
-	Qty       float64 `json:"qty"`
-	UnitPrice float64 `json:"unitPrice"`
-	Note      string  `json:"note"`
+	ID         string                    `json:"id"`
+	ProductID  string                    `json:"productId"`
+	Name       string                    `json:"name"`
+	Qty        float64                   `json:"qty"`
+	UnitPrice  float64                   `json:"unitPrice"`
+	Note       string                    `json:"note"`
+	Selections []orderItemSelectionInput `json:"selections"`
+	Modifiers  []orderItemModifierInput  `json:"modifiers"`
+	Reprice    bool                      `json:"reprice"`
+}
+type preparedOrderSelection struct {
+	GroupID   string
+	GroupName string
+	ProductID string
+	Name      string
+	Surcharge float64
+}
+type comboOptionUsageKey struct {
+	ComboProductID string
+	GroupName      string
+	ProductID      string
+}
+type preparedOrderItem struct {
+	ProductID  *string
+	Name       string
+	Qty        float64
+	UnitPrice  float64
+	Note       string
+	ItemType   string
+	Selections []preparedOrderSelection
+	Modifiers  []preparedOrderModifier
+}
+type orderPreparationError struct {
+	Status  int
+	Code    string
+	Message string
 }
 type orderInput struct {
 	Channel       string           `json:"channel"`
@@ -57,6 +108,16 @@ type orderInput struct {
 	Notes         string           `json:"notes"`
 	DeliveryFee   float64          `json:"deliveryFee"`
 	Items         []orderItemInput `json:"items"`
+	SendToKitchen bool             `json:"sendToKitchen"`
+}
+type orderUpdateInput struct {
+	CustomerName  string           `json:"customerName"`
+	CustomerPhone string           `json:"customerPhone"`
+	Address       string           `json:"address"`
+	Reference     string           `json:"reference"`
+	Notes         string           `json:"notes"`
+	DeliveryFee   float64          `json:"deliveryFee"`
+	Items         []orderItemInput `json:"items"`
 }
 
 const orderColumns = `id,code,channel,status,COALESCE(customer_id::text,''),customer_name,customer_phone,address,reference,COALESCE(table_id::text,''),COALESCE((SELECT name FROM tables t WHERE t.id=orders.table_id),''),notes,subtotal::text,delivery_fee::text,total::text,to_char(created_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),to_char(updated_at,'YYYY-MM-DD"T"HH24:MI:SSOF')`
@@ -65,9 +126,9 @@ var orderChannels = []map[string]string{{"value": "salon", "label": "Salón"}, {
 var orderStatuses = []map[string]string{{"value": "nuevo", "label": "Nuevo"}, {"value": "confirmado", "label": "Confirmado"}, {"value": "preparando", "label": "Preparando"}, {"value": "listo", "label": "Listo"}, {"value": "en_camino", "label": "En camino"}, {"value": "entregado", "label": "Entregado"}, {"value": "cancelado", "label": "Cancelado"}}
 var orderTransitions = map[string][]string{
 	"nuevo":      {"confirmado", "cancelado"},
-	"confirmado": {"preparando", "cancelado"},
-	"preparando": {"listo", "cancelado"},
-	"listo":      {"en_camino", "entregado", "cancelado"},
+	"confirmado": {"cancelado"},
+	"preparando": {},
+	"listo":      {"en_camino", "entregado"},
 	"en_camino":  {"entregado"},
 	"entregado":  {},
 	"cancelado":  {},
@@ -88,6 +149,574 @@ func validOrderStatus(st string) bool {
 		}
 	}
 	return false
+}
+func editableOrderStatus(st string) bool {
+	return st == "nuevo" || st == "confirmado"
+}
+
+type orderRowQuerier interface {
+	QueryRow(context.Context, string, ...any) pgx.Row
+}
+
+func loadOrderNetPaid(ctx context.Context, q orderRowQuerier, orderID, organizationID, locationID string) (float64, error) {
+	var paid float64
+	err := q.QueryRow(ctx, `
+		SELECT COALESCE(sum(
+		  p.amount-COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id),0)
+		),0)::float8
+		FROM payments p
+		WHERE p.order_id=$1 AND p.organization_id=$2 AND p.location_id=$3
+	`, orderID, organizationID, locationID).Scan(&paid)
+	return paid, err
+}
+
+func applyOrderPaymentSummary(ctx context.Context, q orderRowQuerier, o *order, organizationID, locationID string) error {
+	paid, err := loadOrderNetPaid(ctx, q, o.ID, organizationID, locationID)
+	if err != nil {
+		return err
+	}
+	total, err := strconv.ParseFloat(o.Total, 64)
+	if err != nil {
+		return err
+	}
+	remaining := math.Max(0, total-paid)
+	o.PaidAmount = strconv.FormatFloat(paid, 'f', 2, 64)
+	o.RemainingAmount = strconv.FormatFloat(remaining, 'f', 2, 64)
+	o.PaymentStatus = paymentStatus(total, paid)
+	return nil
+}
+
+type orderRowsQuerier interface {
+	Query(context.Context, string, ...any) (pgx.Rows, error)
+}
+
+func loadOrderItems(ctx context.Context, q orderRowsQuerier, orderID, organizationID string) ([]orderItem, error) {
+	return loadOrderItemsForRound(ctx, q, orderID, organizationID, "")
+}
+
+func loadOrderItemsForRound(ctx context.Context, q orderRowsQuerier, orderID, organizationID, roundID string) ([]orderItem, error) {
+	rows, err := q.Query(ctx, `SELECT id,COALESCE(product_id::text,''),name,qty::text,unit_price::text,note,item_type FROM order_items WHERE order_id=$1 AND organization_id=$2 AND ($3='' OR kitchen_round_id::text=$3) ORDER BY created_at,id`, orderID, organizationID, roundID)
+	if err != nil {
+		return nil, err
+	}
+	items := []orderItem{}
+	indexByID := map[string]int{}
+	for rows.Next() {
+		var it orderItem
+		if err := rows.Scan(&it.ID, &it.ProductID, &it.Name, &it.Qty, &it.UnitPrice, &it.Note, &it.ItemType); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		indexByID[it.ID] = len(items)
+		items = append(items, it)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	selectionRows, err := q.Query(ctx, `
+		SELECT s.order_item_id::text,s.group_id::text,s.group_name,s.option_product_id::text,s.option_name,s.surcharge::text
+		FROM order_item_combo_selections s
+		JOIN order_items i ON i.id=s.order_item_id AND i.organization_id=s.organization_id
+		WHERE i.order_id=$1 AND i.organization_id=$2
+		  AND ($3='' OR i.kitchen_round_id::text=$3)
+		ORDER BY s.created_at,s.id`, orderID, organizationID, roundID)
+	if err != nil {
+		return nil, err
+	}
+	for selectionRows.Next() {
+		var itemID string
+		var sel orderItemSelection
+		if err := selectionRows.Scan(&itemID, &sel.GroupID, &sel.GroupName, &sel.ProductID, &sel.Name, &sel.Surcharge); err != nil {
+			selectionRows.Close()
+			return nil, err
+		}
+		if idx, ok := indexByID[itemID]; ok {
+			items[idx].Selections = append(items[idx].Selections, sel)
+		}
+	}
+	if err := selectionRows.Err(); err != nil {
+		selectionRows.Close()
+		return nil, err
+	}
+	selectionRows.Close()
+
+	modifierRows, err := q.Query(ctx, `
+		SELECT m.order_item_id::text,m.group_id::text,m.group_name,
+		       m.option_id::text,m.option_name,m.surcharge::text
+		FROM order_item_modifier_selections m
+		JOIN order_items i ON i.id=m.order_item_id AND i.organization_id=m.organization_id
+		WHERE i.order_id=$1 AND i.organization_id=$2
+		  AND ($3='' OR i.kitchen_round_id::text=$3)
+		ORDER BY m.created_at,m.id`, orderID, organizationID, roundID)
+	if err != nil {
+		return nil, err
+	}
+	defer modifierRows.Close()
+	for modifierRows.Next() {
+		var itemID string
+		var modifier orderItemModifier
+		if err := modifierRows.Scan(
+			&itemID, &modifier.GroupID, &modifier.GroupName,
+			&modifier.OptionID, &modifier.Name, &modifier.Surcharge,
+		); err != nil {
+			return nil, err
+		}
+		if idx, ok := indexByID[itemID]; ok {
+			items[idx].Modifiers = append(items[idx].Modifiers, modifier)
+		}
+	}
+	if err := modifierRows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+func (a *API) prepareOrderItems(r *http.Request, tx pgx.Tx, s scope, existingOrderID string, inputs []orderItemInput) ([]preparedOrderItem, float64, *orderPreparationError) {
+	prepared := make([]preparedOrderItem, 0, len(inputs))
+	subtotal := 0.0
+	plannedOptionUsage := map[comboOptionUsageKey]float64{}
+
+	for _, in := range inputs {
+		if in.Qty <= 0 {
+			return nil, 0, &orderPreparationError{Status: 400, Code: "invalid_order", Message: "Cada línea necesita una cantidad mayor a cero."}
+		}
+		productIDValue := strings.TrimSpace(in.ProductID)
+		if productIDValue == "" {
+			return nil, 0, &orderPreparationError{Status: 400, Code: "product_id_required", Message: "Cada línea del pedido debe referenciar un producto."}
+		}
+		productID := &productIDValue
+
+		isCombo := false
+		if err := tx.QueryRow(r.Context(), `SELECT EXISTS(SELECT 1 FROM menu_combos WHERE product_id=$1 AND organization_id=$2)`, *productID, s.OrganizationID).Scan(&isCombo); err != nil {
+			return nil, 0, &orderPreparationError{Status: 503, Code: "order_unavailable", Message: "No pudimos validar el producto del pedido."}
+		}
+
+		if !isCombo {
+			if len(in.Selections) > 0 {
+				return nil, 0, &orderPreparationError{Status: 400, Code: "invalid_combo_selection", Message: "Las opciones enviadas no pertenecen a un menú o combo."}
+			}
+			if in.UnitPrice < 0 {
+				return nil, 0, &orderPreparationError{Status: 400, Code: "invalid_order", Message: "Cada línea necesita un precio válido."}
+			}
+			var productName string
+			var productPrice float64
+			var available bool
+			err := tx.QueryRow(r.Context(), `
+				SELECT p.name,p.price::float8,
+				       p.active
+				       AND (p.available_from IS NULL OR now() >= p.available_from)
+				       AND (p.available_until IS NULL OR now() <= p.available_until)
+				       AND (p.available_days IS NULL OR extract(dow FROM now() AT TIME ZONE l.timezone)::integer = ANY(p.available_days))
+				       AND (p.available_until_time IS NULL OR (now() AT TIME ZONE l.timezone)::time <= p.available_until_time)
+				       AND COALESCE(pa.manual_status,'available') <> 'sold_out'
+				FROM products p
+				JOIN locations l ON l.id=$3 AND l.organization_id=p.organization_id AND l.active
+				LEFT JOIN product_availability pa ON pa.organization_id=p.organization_id AND pa.location_id=l.id
+				  AND pa.product_id=p.id AND pa.business_date=(now() AT TIME ZONE l.timezone)::date
+				WHERE p.id=$1 AND p.organization_id=$2`, *productID, s.OrganizationID, s.LocationID).Scan(&productName, &productPrice, &available)
+			if errors.Is(err, pgx.ErrNoRows) {
+				return nil, 0, &orderPreparationError{Status: 404, Code: "product_not_found", Message: "El producto ya no existe."}
+			}
+			if err != nil {
+				return nil, 0, &orderPreparationError{Status: 503, Code: "order_unavailable", Message: "No pudimos validar el producto."}
+			}
+			if !available {
+				return nil, 0, &orderPreparationError{Status: 409, Code: "product_unavailable", Message: productName + " no está disponible en este momento."}
+			}
+			modifiers, modifierSurcharge, modifierErr := prepareProductModifiers(
+				r.Context(), tx, s.OrganizationID, *productID, in.Modifiers,
+			)
+			if modifierErr != nil {
+				return nil, 0, modifierErr
+			}
+			item := preparedOrderItem{
+				ProductID: productID,
+				Name: productName,
+				Qty: in.Qty,
+				UnitPrice: productPrice + modifierSurcharge,
+				Note: strings.TrimSpace(in.Note),
+				ItemType: "product",
+				Modifiers: modifiers,
+			}
+			prepared = append(prepared, item)
+			subtotal += item.Qty * item.UnitPrice
+			continue
+		}
+
+		if len(in.Modifiers) > 0 {
+			return nil, 0, &orderPreparationError{
+				Status: 400, Code: "invalid_modifier_selection",
+				Message: "Los modificadores simples no pertenecen a un menú o combo.",
+			}
+		}
+
+		if existingOrderID != "" && strings.TrimSpace(in.ID) != "" && !in.Reprice {
+			var existingName string
+			var existingUnitPrice float64
+			var existingProductID string
+			var existingType string
+			err := tx.QueryRow(r.Context(), `
+				SELECT name,unit_price::float8,COALESCE(product_id::text,''),item_type
+				FROM order_items
+				WHERE id=$1 AND order_id=$2 AND organization_id=$3`,
+				strings.TrimSpace(in.ID), existingOrderID, s.OrganizationID).Scan(&existingName, &existingUnitPrice, &existingProductID, &existingType)
+			if err == nil && existingType == "combo" && existingProductID == *productID {
+				rows, rowsErr := tx.Query(r.Context(), `
+					SELECT group_id::text,group_name,option_product_id::text,option_name,surcharge::float8
+					FROM order_item_combo_selections
+					WHERE order_item_id=$1 AND organization_id=$2
+					ORDER BY created_at,id`, strings.TrimSpace(in.ID), s.OrganizationID)
+				if rowsErr != nil {
+					return nil, 0, &orderPreparationError{Status: 503, Code: "order_unavailable", Message: "No pudimos validar la configuración existente del menú."}
+				}
+				existingSelections := []preparedOrderSelection{}
+				existingKeys := map[string]bool{}
+				for rows.Next() {
+					var sel preparedOrderSelection
+					if scanErr := rows.Scan(&sel.GroupID, &sel.GroupName, &sel.ProductID, &sel.Name, &sel.Surcharge); scanErr != nil {
+						rows.Close()
+						return nil, 0, &orderPreparationError{Status: 503, Code: "order_unavailable", Message: "No pudimos validar la configuración existente del menú."}
+					}
+					existingSelections = append(existingSelections, sel)
+					existingKeys[sel.GroupID+":"+sel.ProductID] = true
+				}
+				rows.Close()
+				requestedKeys := map[string]bool{}
+				for _, selection := range in.Selections {
+					requestedKeys[strings.TrimSpace(selection.GroupID)+":"+strings.TrimSpace(selection.ProductID)] = true
+				}
+				sameSelections := len(in.Selections) == len(requestedKeys) && len(existingKeys) == len(requestedKeys)
+				if sameSelections {
+					for key := range existingKeys {
+						if !requestedKeys[key] {
+							sameSelections = false
+							break
+						}
+					}
+				}
+				if sameSelections {
+					item := preparedOrderItem{
+						ProductID: productID,
+						Name: existingName,
+						Qty: in.Qty,
+						UnitPrice: existingUnitPrice,
+						Note: strings.TrimSpace(in.Note),
+						ItemType: "combo",
+						Selections: existingSelections,
+					}
+					prepared = append(prepared, item)
+					subtotal += item.Qty * item.UnitPrice
+					for _, sel := range existingSelections {
+						plannedOptionUsage[comboOptionUsageKey{ComboProductID: *productID, GroupName: sel.GroupName, ProductID: sel.ProductID}] += item.Qty
+					}
+					continue
+				}
+			} else if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+				return nil, 0, &orderPreparationError{Status: 503, Code: "order_unavailable", Message: "No pudimos validar el menú existente."}
+			}
+		}
+
+		var comboName string
+		var basePrice float64
+		var comboAvailable bool
+		err := tx.QueryRow(r.Context(), `
+			SELECT p.name,p.price::float8,
+			       p.active
+			       AND (p.available_from IS NULL OR now() >= p.available_from)
+			       AND (p.available_until IS NULL OR now() <= p.available_until)
+			       AND (p.available_days IS NULL OR extract(dow FROM now() AT TIME ZONE l.timezone)::integer = ANY(p.available_days))
+			       AND (p.available_until_time IS NULL OR (now() AT TIME ZONE l.timezone)::time <= p.available_until_time)
+			       AND COALESCE(pa.manual_status,'available') <> 'sold_out'
+			FROM products p
+			JOIN menu_combos mc ON mc.product_id=p.id AND mc.organization_id=p.organization_id
+			JOIN locations l ON l.id=$3 AND l.organization_id=p.organization_id AND l.active
+			LEFT JOIN product_availability pa ON pa.organization_id=p.organization_id AND pa.location_id=l.id
+			  AND pa.product_id=p.id AND pa.business_date=(now() AT TIME ZONE l.timezone)::date
+			WHERE p.id=$1 AND p.organization_id=$2`, *productID, s.OrganizationID, s.LocationID).Scan(&comboName, &basePrice, &comboAvailable)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, 0, &orderPreparationError{Status: 404, Code: "combo_not_found", Message: "El menú o combo ya no existe."}
+		}
+		if err != nil {
+			return nil, 0, &orderPreparationError{Status: 503, Code: "order_unavailable", Message: "No pudimos validar el menú o combo."}
+		}
+		if !comboAvailable {
+			return nil, 0, &orderPreparationError{Status: 409, Code: "combo_unavailable", Message: comboName + " no está disponible en este momento."}
+		}
+
+		type comboOption struct {
+			ProductID string
+			Name string
+			Surcharge float64
+			Available bool
+		}
+		type comboGroup struct {
+			ID string
+			Name string
+			Required bool
+			Min int
+			Max int
+			Options map[string]comboOption
+		}
+		groups := map[string]*comboGroup{}
+		groupOrder := []string{}
+		rows, err := tx.Query(r.Context(), `
+			SELECT g.id::text,g.name,g.required,g.min_selections,g.max_selections,
+			       COALESCE(o.option_product_id::text,''),COALESCE(op.name,''),COALESCE(o.surcharge::float8,0),
+			       CASE WHEN op.id IS NULL THEN false ELSE
+			         op.active
+			         AND (op.available_from IS NULL OR now() >= op.available_from)
+			         AND (op.available_until IS NULL OR now() <= op.available_until)
+			         AND (op.available_days IS NULL OR extract(dow FROM now() AT TIME ZONE l.timezone)::integer = ANY(op.available_days))
+			         AND (op.available_until_time IS NULL OR (now() AT TIME ZONE l.timezone)::time <= op.available_until_time)
+			         AND COALESCE(opa.manual_status,'available') <> 'sold_out'
+			         AND (
+			           op.quantity_control='none'
+			           OR (op.quantity_control='portions' AND opa.portion_quantity IS NOT NULL
+			               AND COALESCE(opa.sold_quantity,0) < opa.portion_quantity)
+			           OR (op.quantity_control='inventory' AND COALESCE((
+			               SELECT sb.quantity
+			               FROM inventory_items ii
+			               JOIN stock_balances sb ON sb.organization_id=ii.organization_id
+			                 AND sb.inventory_item_id=ii.id AND sb.location_id=l.id
+			               WHERE ii.organization_id=op.organization_id AND ii.product_id=op.id AND ii.active
+			             ),0) > 0)
+			         )
+			       END
+			FROM menu_combo_groups g
+			JOIN locations l ON l.id=$3 AND l.organization_id=$2 AND l.active
+			LEFT JOIN menu_combo_options o ON o.group_id=g.id AND o.organization_id=g.organization_id
+			LEFT JOIN products op ON op.id=o.option_product_id AND op.organization_id=g.organization_id
+			LEFT JOIN product_availability opa ON opa.organization_id=g.organization_id AND opa.location_id=l.id
+			  AND opa.product_id=op.id AND opa.business_date=(now() AT TIME ZONE l.timezone)::date
+			WHERE g.combo_product_id=$1 AND g.organization_id=$2
+			ORDER BY g.sort_order,g.id,o.sort_order,o.id`, *productID, s.OrganizationID, s.LocationID)
+		if err != nil {
+			return nil, 0, &orderPreparationError{Status: 503, Code: "order_unavailable", Message: "No pudimos validar las opciones del menú."}
+		}
+		for rows.Next() {
+			var groupID, groupName, optionID, optionName string
+			var required bool
+			var minSel, maxSel int
+			var surcharge float64
+			var available bool
+			if err := rows.Scan(&groupID, &groupName, &required, &minSel, &maxSel, &optionID, &optionName, &surcharge, &available); err != nil {
+				rows.Close()
+				return nil, 0, &orderPreparationError{Status: 503, Code: "order_unavailable", Message: "No pudimos validar las opciones del menú."}
+			}
+			group, ok := groups[groupID]
+			if !ok {
+				group = &comboGroup{ID: groupID, Name: groupName, Required: required, Min: minSel, Max: maxSel, Options: map[string]comboOption{}}
+				groups[groupID] = group
+				groupOrder = append(groupOrder, groupID)
+			}
+			if optionID != "" {
+				group.Options[optionID] = comboOption{ProductID: optionID, Name: optionName, Surcharge: surcharge, Available: available}
+			}
+		}
+		rows.Close()
+		if err := rows.Err(); err != nil {
+			return nil, 0, &orderPreparationError{Status: 503, Code: "order_unavailable", Message: "No pudimos validar las opciones del menú."}
+		}
+
+		selectedByGroup := map[string][]string{}
+		seen := map[string]bool{}
+		for _, selection := range in.Selections {
+			groupID := strings.TrimSpace(selection.GroupID)
+			optionID := strings.TrimSpace(selection.ProductID)
+			if groupID == "" || optionID == "" {
+				return nil, 0, &orderPreparationError{Status: 400, Code: "invalid_combo_selection", Message: "Revisa las opciones seleccionadas del menú."}
+			}
+			key := groupID + ":" + optionID
+			if seen[key] {
+				return nil, 0, &orderPreparationError{Status: 400, Code: "invalid_combo_selection", Message: "Una opción del menú está repetida."}
+			}
+			seen[key] = true
+			selectedByGroup[groupID] = append(selectedByGroup[groupID], optionID)
+		}
+
+		selections := []preparedOrderSelection{}
+		surchargeTotal := 0.0
+		for groupID := range selectedByGroup {
+			if _, ok := groups[groupID]; !ok {
+				return nil, 0, &orderPreparationError{Status: 400, Code: "invalid_combo_selection", Message: "Una de las opciones no pertenece a este menú."}
+			}
+		}
+		for _, groupID := range groupOrder {
+			group := groups[groupID]
+			selected := selectedByGroup[groupID]
+			minimum := group.Min
+			if group.Required && minimum < 1 {
+				minimum = 1
+			}
+			if len(selected) < minimum || len(selected) > group.Max {
+				return nil, 0, &orderPreparationError{Status: 400, Code: "invalid_combo_selection", Message: "Completa correctamente el grupo " + group.Name + "."}
+			}
+			for _, optionID := range selected {
+				option, ok := group.Options[optionID]
+				if !ok {
+					return nil, 0, &orderPreparationError{Status: 400, Code: "invalid_combo_selection", Message: "Una de las opciones no pertenece a " + group.Name + "."}
+				}
+				if !option.Available {
+					return nil, 0, &orderPreparationError{Status: 409, Code: "combo_option_unavailable", Message: option.Name + " ya no está disponible."}
+				}
+				selections = append(selections, preparedOrderSelection{
+					GroupID: group.ID,
+					GroupName: group.Name,
+					ProductID: option.ProductID,
+					Name: option.Name,
+					Surcharge: option.Surcharge,
+				})
+				surchargeTotal += option.Surcharge
+			}
+		}
+
+		item := preparedOrderItem{
+			ProductID: productID,
+			Name: comboName,
+			Qty: in.Qty,
+			UnitPrice: basePrice + surchargeTotal,
+			Note: strings.TrimSpace(in.Note),
+			ItemType: "combo",
+			Selections: selections,
+		}
+		prepared = append(prepared, item)
+		subtotal += item.Qty * item.UnitPrice
+		for _, sel := range selections {
+			plannedOptionUsage[comboOptionUsageKey{ComboProductID: *productID, GroupName: sel.GroupName, ProductID: sel.ProductID}] += item.Qty
+		}
+	}
+
+	usageKeys := make([]comboOptionUsageKey, 0, len(plannedOptionUsage))
+	for key := range plannedOptionUsage {
+		usageKeys = append(usageKeys, key)
+	}
+	sort.Slice(usageKeys, func(i, j int) bool {
+		if usageKeys[i].ComboProductID != usageKeys[j].ComboProductID {
+			return usageKeys[i].ComboProductID < usageKeys[j].ComboProductID
+		}
+		if usageKeys[i].GroupName != usageKeys[j].GroupName {
+			return usageKeys[i].GroupName < usageKeys[j].GroupName
+		}
+		return usageKeys[i].ProductID < usageKeys[j].ProductID
+	})
+	for _, key := range usageKeys {
+		var existingUsage float64
+		if existingOrderID != "" {
+			err := tx.QueryRow(r.Context(), `
+				SELECT COALESCE(sum(oi.qty),0)::float8
+				FROM order_item_combo_selections ssel
+				JOIN order_items oi ON oi.id=ssel.order_item_id AND oi.organization_id=ssel.organization_id
+				WHERE ssel.organization_id=$1
+				  AND oi.order_id=$2
+				  AND oi.product_id=$3
+				  AND lower(ssel.group_name)=lower($4)
+				  AND ssel.option_product_id=$5`,
+				s.OrganizationID, existingOrderID, key.ComboProductID, key.GroupName, key.ProductID).Scan(&existingUsage)
+			if err != nil {
+				return nil, 0, &orderPreparationError{Status: 503, Code: "order_unavailable", Message: "No pudimos validar el cupo existente del menú."}
+			}
+		}
+
+		var quota *int
+		var optionName string
+		err := tx.QueryRow(r.Context(), `
+			SELECT o.default_quota,p.name
+			FROM menu_combo_options o
+			JOIN menu_combo_groups g ON g.id=o.group_id AND g.organization_id=o.organization_id
+			JOIN products p ON p.id=o.option_product_id AND p.organization_id=o.organization_id
+			WHERE g.combo_product_id=$1
+			  AND lower(g.name)=lower($2)
+			  AND o.option_product_id=$3
+			  AND o.organization_id=$4
+			FOR UPDATE OF o`,
+			key.ComboProductID, key.GroupName, key.ProductID, s.OrganizationID).Scan(&quota, &optionName)
+		if errors.Is(err, pgx.ErrNoRows) {
+			if existingOrderID != "" && plannedOptionUsage[key] <= existingUsage {
+				continue
+			}
+			return nil, 0, &orderPreparationError{Status: 409, Code: "combo_option_unavailable", Message: "Una opción del menú ya no está disponible."}
+		}
+		if err != nil {
+			return nil, 0, &orderPreparationError{Status: 503, Code: "order_unavailable", Message: "No pudimos validar el cupo del menú."}
+		}
+		if quota == nil {
+			continue
+		}
+
+		var externalUsage float64
+		err = tx.QueryRow(r.Context(), `
+			SELECT COALESCE(sum(oi.qty),0)::float8
+			FROM order_item_combo_selections ssel
+			JOIN order_items oi ON oi.id=ssel.order_item_id AND oi.organization_id=ssel.organization_id
+			JOIN orders ord ON ord.id=oi.order_id AND ord.organization_id=oi.organization_id
+			JOIN locations l ON l.id=ord.location_id AND l.organization_id=ord.organization_id
+			WHERE ssel.organization_id=$1
+			  AND oi.product_id=$2
+			  AND lower(ssel.group_name)=lower($3)
+			  AND ssel.option_product_id=$4
+			  AND ord.location_id=$5
+			  AND ord.status<>'cancelado'
+			  AND (ord.created_at AT TIME ZONE l.timezone)::date=(now() AT TIME ZONE l.timezone)::date
+			  AND ($6='' OR ord.id::text<>$6)`,
+			s.OrganizationID, key.ComboProductID, key.GroupName, key.ProductID, s.LocationID, existingOrderID).Scan(&externalUsage)
+		if err != nil {
+			return nil, 0, &orderPreparationError{Status: 503, Code: "order_unavailable", Message: "No pudimos validar el cupo del menú."}
+		}
+
+		allowedForOrder := float64(*quota) - externalUsage
+		if allowedForOrder < 0 {
+			allowedForOrder = 0
+		}
+		if existingUsage > allowedForOrder {
+			allowedForOrder = existingUsage
+		}
+		if plannedOptionUsage[key] > allowedForOrder {
+			return nil, 0, &orderPreparationError{
+				Status: 409,
+				Code: "combo_option_quota_exceeded",
+				Message: optionName + " ya alcanzó el cupo reservado para este menú.",
+			}
+		}
+	}
+	return prepared, subtotal, nil
+}
+
+func insertPreparedOrderItems(ctx context.Context, tx pgx.Tx, organizationID, orderID string, items []preparedOrderItem) error {
+	return insertPreparedOrderItemsForRound(ctx, tx, organizationID, orderID, "", items)
+}
+
+func insertPreparedOrderItemsForRound(ctx context.Context, tx pgx.Tx, organizationID, orderID, roundID string, items []preparedOrderItem) error {
+	for _, it := range items {
+		var itemID string
+		if err := tx.QueryRow(ctx, `
+			INSERT INTO order_items(organization_id,order_id,product_id,name,qty,unit_price,note,item_type,kitchen_round_id)
+			VALUES($1,$2,$3,$4,$5,$6,$7,$8,NULLIF($9,'')::uuid) RETURNING id`,
+			organizationID, orderID, it.ProductID, it.Name, it.Qty, it.UnitPrice, it.Note, it.ItemType, roundID).Scan(&itemID); err != nil {
+			return err
+		}
+		for _, sel := range it.Selections {
+			if _, err := tx.Exec(ctx, `
+				INSERT INTO order_item_combo_selections(organization_id,order_item_id,group_id,group_name,option_product_id,option_name,surcharge)
+				VALUES($1,$2,$3,$4,$5,$6,$7)`,
+				organizationID, itemID, sel.GroupID, sel.GroupName, sel.ProductID, sel.Name, sel.Surcharge); err != nil {
+				return err
+			}
+		}
+		for _, modifier := range it.Modifiers {
+			if _, err := tx.Exec(ctx, `
+				INSERT INTO order_item_modifier_selections(
+				  organization_id,order_item_id,group_id,group_name,option_id,option_name,surcharge
+				)
+				VALUES($1,$2,$3,$4,$5,$6,$7)`,
+				organizationID, itemID, modifier.GroupID, modifier.GroupName,
+				modifier.OptionID, modifier.Name, modifier.Surcharge); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func (a *API) listOrders(w http.ResponseWriter, r *http.Request) {
@@ -129,7 +758,22 @@ func (a *API) listOrders(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	writeJSON(w, 200, map[string]any{"items": items, "total": total, "page": page, "pageSize": size, "channelCounts": channelCounts, "channelOptions": orderChannels, "statusOptions": orderStatuses})
+	var currencySymbol string
+	if err := a.db.QueryRow(r.Context(), `
+		SELECT p.currency_symbol
+		FROM locations l
+		JOIN organization_fiscal_profiles p
+		  ON p.id=l.fiscal_profile_id AND p.organization_id=l.organization_id AND p.active
+		WHERE l.id=$1 AND l.organization_id=$2 AND l.active
+	`, s.LocationID, s.OrganizationID).Scan(&currencySymbol); err != nil {
+		fail(w, 503, "orders_unavailable", "No pudimos cargar la moneda del local.")
+		return
+	}
+	writeJSON(w, 200, map[string]any{
+		"items": items, "total": total, "page": page, "pageSize": size,
+		"channelCounts": channelCounts, "channelOptions": orderChannels,
+		"statusOptions": orderStatuses, "currencySymbol": currencySymbol,
+	})
 }
 
 // getOrdersFloor devuelve el plano de salón: cada mesa activa con su pedido abierto (si tiene)
@@ -144,11 +788,36 @@ func (a *API) getOrdersFloor(w http.ResponseWriter, r *http.Request) {
 	}
 	rows, err := a.db.Query(r.Context(), `
 		SELECT t.id,t.name,t.zone,t.seats,
-		  o.id,COALESCE(o.code,''),COALESCE(o.channel,''),COALESCE(o.status,''),COALESCE(o.customer_id::text,''),COALESCE(o.customer_name,''),COALESCE(o.customer_phone,''),COALESCE(o.address,''),COALESCE(o.reference,''),COALESCE(o.table_id::text,''),'',COALESCE(o.notes,''),COALESCE(o.subtotal::text,'0'),COALESCE(o.delivery_fee::text,'0'),COALESCE(o.total::text,'0'),COALESCE(to_char(o.created_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),''),COALESCE(to_char(o.updated_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),''),COALESCE((SELECT sum(i.qty)::int FROM order_items i WHERE i.order_id=o.id),0)
+		  o.id,COALESCE(o.code,''),COALESCE(o.channel,''),COALESCE(o.status,''),COALESCE(o.customer_id::text,''),COALESCE(o.customer_name,''),COALESCE(o.customer_phone,''),COALESCE(o.address,''),COALESCE(o.reference,''),COALESCE(o.table_id::text,''),'',COALESCE(o.notes,''),COALESCE(o.subtotal::text,'0'),COALESCE(o.delivery_fee::text,'0'),COALESCE(o.total::text,'0'),COALESCE(to_char(o.created_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),''),COALESCE(to_char(o.updated_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),''),
+		  COALESCE(item_totals.item_count,0),COALESCE(payment_totals.paid,0)::text
 		FROM tables t
-		LEFT JOIN orders o ON o.table_id=t.id AND o.organization_id=t.organization_id AND o.status NOT IN ('entregado','cancelado')
-		WHERE t.organization_id=$1 AND t.active
-		ORDER BY t.zone,t.name`, s.OrganizationID)
+		LEFT JOIN orders o
+		  ON o.table_id=t.id
+		 AND o.organization_id=t.organization_id
+		 AND o.location_id=t.location_id
+		 AND o.status NOT IN ('entregado','cancelado')
+		LEFT JOIN LATERAL (
+		  SELECT COALESCE(sum(i.qty)::int,0) AS item_count
+		  FROM order_items i
+		  WHERE i.order_id=o.id AND i.organization_id=o.organization_id
+		) item_totals ON o.id IS NOT NULL
+		LEFT JOIN LATERAL (
+		  SELECT COALESCE(sum(p.amount-COALESCE(refunds.refunded,0)),0) AS paid
+		  FROM payments p
+		  LEFT JOIN LATERAL (
+		    SELECT COALESCE(sum(pr.amount),0) AS refunded
+		    FROM payment_refunds pr
+		    WHERE pr.payment_id=p.id
+		      AND pr.organization_id=p.organization_id
+		      AND pr.location_id=p.location_id
+		  ) refunds ON true
+		  WHERE p.order_id=o.id
+		    AND p.organization_id=o.organization_id
+		    AND p.location_id=o.location_id
+		) payment_totals ON o.id IS NOT NULL
+		WHERE t.organization_id=$1 AND t.location_id=$2 AND t.active
+		ORDER BY t.zone,t.name
+	`, s.OrganizationID, s.LocationID)
 	if err != nil {
 		fail(w, 503, "orders_unavailable", "No pudimos cargar el salón.")
 		return
@@ -159,22 +828,41 @@ func (a *API) getOrdersFloor(w http.ResponseWriter, r *http.Request) {
 		var ft floorTable
 		var o order
 		var oid *string
-		if err = rows.Scan(&ft.ID, &ft.Name, &ft.Zone, &ft.Seats, &oid, &o.Code, &o.Channel, &o.Status, &o.CustomerID, &o.CustomerName, &o.CustomerPhone, &o.Address, &o.Reference, &o.TableID, &o.TableName, &o.Notes, &o.Subtotal, &o.DeliveryFee, &o.Total, &o.CreatedAt, &o.UpdatedAt, &o.ItemCount); err != nil {
+		var paidText string
+		if err = rows.Scan(
+			&ft.ID, &ft.Name, &ft.Zone, &ft.Seats,
+			&oid, &o.Code, &o.Channel, &o.Status, &o.CustomerID, &o.CustomerName, &o.CustomerPhone,
+			&o.Address, &o.Reference, &o.TableID, &o.TableName, &o.Notes, &o.Subtotal, &o.DeliveryFee,
+			&o.Total, &o.CreatedAt, &o.UpdatedAt, &o.ItemCount, &paidText,
+		); err != nil {
 			fail(w, 503, "orders_unavailable", "No pudimos cargar el salón.")
 			return
 		}
 		if oid != nil {
 			o.ID = *oid
+			paid, parsePaidErr := strconv.ParseFloat(paidText, 64)
+			total, parseTotalErr := strconv.ParseFloat(o.Total, 64)
+			if parsePaidErr != nil || parseTotalErr != nil {
+				fail(w, 503, "orders_unavailable", "No pudimos calcular el estado de cobro del salón.")
+				return
+			}
+			o.PaidAmount = strconv.FormatFloat(paid, 'f', 2, 64)
+			o.RemainingAmount = strconv.FormatFloat(math.Max(0, total-paid), 'f', 2, 64)
+			o.PaymentStatus = paymentStatus(total, paid)
 			ft.Order = &o
 		}
 		items = append(items, ft)
+	}
+	if err = rows.Err(); err != nil {
+		fail(w, 503, "orders_unavailable", "No pudimos cargar el salón.")
+		return
 	}
 	writeJSON(w, 200, map[string]any{"items": items})
 }
 
 func (a *API) getOrder(w http.ResponseWriter, r *http.Request) {
 	s := r.Context().Value(scopeKey{}).(scope)
-	o, err := scanOrder(a.db.QueryRow(r.Context(), `SELECT `+orderColumns+` FROM orders WHERE id=$1 AND organization_id=$2`, r.PathValue("id"), s.OrganizationID))
+	o, err := scanOrder(a.db.QueryRow(r.Context(), `SELECT `+orderColumns+` FROM orders WHERE id=$1 AND organization_id=$2 AND location_id=$3`, r.PathValue("id"), s.OrganizationID, s.LocationID))
 	if errors.Is(err, pgx.ErrNoRows) {
 		fail(w, 404, "order_not_found", "El pedido no existe.")
 		return
@@ -183,21 +871,19 @@ func (a *API) getOrder(w http.ResponseWriter, r *http.Request) {
 		fail(w, 503, "order_unavailable", "No pudimos cargar el pedido.")
 		return
 	}
-	o.Items = []orderItem{}
-	rows, err := a.db.Query(r.Context(), `SELECT id,COALESCE(product_id::text,''),name,qty::text,unit_price::text,note FROM order_items WHERE order_id=$1 AND organization_id=$2 ORDER BY created_at`, o.ID, s.OrganizationID)
-	if err == nil {
-		defer rows.Close()
-		for rows.Next() {
-			var it orderItem
-			if rows.Scan(&it.ID, &it.ProductID, &it.Name, &it.Qty, &it.UnitPrice, &it.Note) == nil {
-				o.Items = append(o.Items, it)
-			}
-		}
+	o.Items, err = loadOrderItems(r.Context(), a.db, o.ID, s.OrganizationID)
+	if err != nil {
+		fail(w, 503, "order_unavailable", "No pudimos cargar los productos del pedido.")
+		return
 	}
 	for _, it := range o.Items {
-		if q, err := strconv.ParseFloat(it.Qty, 64); err == nil {
+		if q, parseErr := strconv.ParseFloat(it.Qty, 64); parseErr == nil {
 			o.ItemCount += int(q)
 		}
+	}
+	if err = applyOrderPaymentSummary(r.Context(), a.db, &o, s.OrganizationID, s.LocationID); err != nil {
+		fail(w, 503, "order_unavailable", "No pudimos cargar el estado de cobro del pedido.")
+		return
 	}
 	writeJSON(w, 200, o)
 }
@@ -219,12 +905,21 @@ func (a *API) createOrder(w http.ResponseWriter, r *http.Request) {
 		fail(w, 400, "invalid_order", "El pedido de delivery necesita una dirección.")
 		return
 	}
+	if in.Channel == "salon" && strings.TrimSpace(in.TableID) == "" {
+		fail(w, 400, "table_required", "Los pedidos de Salón deben estar asociados a una mesa.")
+		return
+	}
+	if in.Channel != "salon" && strings.TrimSpace(in.TableID) != "" {
+		fail(w, 400, "table_not_allowed", "Solo los pedidos de Salón pueden ocupar una mesa.")
+		return
+	}
 	tx, err := a.db.Begin(r.Context())
 	if err != nil {
 		fail(w, 503, "order_unavailable", "No pudimos guardar el pedido.")
 		return
 	}
 	defer tx.Rollback(r.Context())
+
 	var customerID, tableID *string
 	if in.CustomerID != "" {
 		var ok bool
@@ -235,13 +930,20 @@ func (a *API) createOrder(w http.ResponseWriter, r *http.Request) {
 		customerID = &in.CustomerID
 	}
 	if in.TableID != "" {
-		var ok bool
-		if err = tx.QueryRow(r.Context(), `SELECT EXISTS(SELECT 1 FROM tables WHERE id=$1 AND organization_id=$2 AND active)`, in.TableID, s.OrganizationID).Scan(&ok); err != nil || !ok {
+		var lockedTableID string
+		if err = tx.QueryRow(r.Context(), `
+			SELECT id
+			FROM tables
+			WHERE id=$1 AND organization_id=$2 AND location_id=$3 AND active
+			FOR UPDATE`, in.TableID, s.OrganizationID, s.LocationID).Scan(&lockedTableID); errors.Is(err, pgx.ErrNoRows) {
 			fail(w, 400, "invalid_order", "La mesa no existe.")
+			return
+		} else if err != nil {
+			fail(w, 503, "order_unavailable", "No pudimos bloquear la mesa para abrir la comanda.")
 			return
 		}
 		var occupied bool
-		if err = tx.QueryRow(r.Context(), `SELECT EXISTS(SELECT 1 FROM orders WHERE organization_id=$1 AND table_id=$2 AND status NOT IN ('entregado','cancelado'))`, s.OrganizationID, in.TableID).Scan(&occupied); err != nil {
+		if err = tx.QueryRow(r.Context(), `SELECT EXISTS(SELECT 1 FROM orders WHERE organization_id=$1 AND location_id=$2 AND table_id=$3 AND status NOT IN ('entregado','cancelado'))`, s.OrganizationID, s.LocationID, in.TableID).Scan(&occupied); err != nil {
 			fail(w, 503, "order_unavailable", "No pudimos guardar el pedido.")
 			return
 		}
@@ -251,38 +953,186 @@ func (a *API) createOrder(w http.ResponseWriter, r *http.Request) {
 		}
 		tableID = &in.TableID
 	}
-	subtotal := 0.0
-	for _, it := range in.Items {
-		if strings.TrimSpace(it.Name) == "" || it.Qty <= 0 || it.UnitPrice < 0 {
-			fail(w, 400, "invalid_order", "Cada línea necesita producto, cantidad mayor a cero y precio válido.")
-			return
-		}
-		subtotal += it.Qty * it.UnitPrice
+
+	prepared, subtotal, preparationErr := a.prepareOrderItems(r, tx, s, "", in.Items)
+	if preparationErr != nil {
+		fail(w, preparationErr.Status, preparationErr.Code, preparationErr.Message)
+		return
 	}
 	total := subtotal + in.DeliveryFee
+	initialStatus := "nuevo"
+	if in.SendToKitchen {
+		initialStatus = "confirmado"
+	}
+
 	var o order
-	o, err = scanOrder(tx.QueryRow(r.Context(), `INSERT INTO orders(organization_id,location_id,channel,customer_id,customer_name,customer_phone,address,reference,table_id,notes,subtotal,delivery_fee,total,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING `+orderColumns,
-		s.OrganizationID, s.LocationID, in.Channel, customerID, in.CustomerName, strings.TrimSpace(in.CustomerPhone), strings.TrimSpace(in.Address), strings.TrimSpace(in.Reference), tableID, strings.TrimSpace(in.Notes), subtotal, in.DeliveryFee, total, s.UserID))
+	o, err = scanOrder(tx.QueryRow(r.Context(), `
+		INSERT INTO orders(organization_id,location_id,channel,customer_id,customer_name,customer_phone,address,reference,table_id,notes,subtotal,delivery_fee,total,status,created_by)
+		VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+		RETURNING `+orderColumns,
+		s.OrganizationID, s.LocationID, in.Channel, customerID, in.CustomerName,
+		strings.TrimSpace(in.CustomerPhone), strings.TrimSpace(in.Address), strings.TrimSpace(in.Reference),
+		tableID, strings.TrimSpace(in.Notes), subtotal, in.DeliveryFee, total, initialStatus, s.UserID))
 	if err != nil {
 		fail(w, 503, "order_unavailable", "No pudimos guardar el pedido.")
 		return
 	}
-	for _, it := range in.Items {
-		var productID *string
-		if it.ProductID != "" {
-			productID = &it.ProductID
-		}
-		if _, err = tx.Exec(r.Context(), `INSERT INTO order_items(organization_id,order_id,product_id,name,qty,unit_price,note) VALUES($1,$2,$3,$4,$5,$6,$7)`, s.OrganizationID, o.ID, productID, strings.TrimSpace(it.Name), it.Qty, it.UnitPrice, strings.TrimSpace(it.Note)); err != nil {
-			fail(w, 503, "order_unavailable", "No pudimos guardar el pedido.")
-			return
-		}
+	if err = insertPreparedOrderItems(r.Context(), tx, s.OrganizationID, o.ID, prepared); err != nil {
+		fail(w, 503, "order_unavailable", "No pudimos guardar los productos del pedido.")
+		return
+	}
+	if quantityErr := a.applyOrderQuantityDelta(r.Context(), tx, s, o.ID, preparedQuantityUsage(prepared), "sale"); quantityErr != nil {
+		fail(w, quantityErr.Status, quantityErr.Code, quantityErr.Message)
+		return
+	}
+	recipeUsage, recipeErr := desiredRecipeInventoryUsage(r.Context(), tx, s, prepared)
+	if recipeErr != nil {
+		fail(w, 503, "recipe_inventory_unavailable", "No pudimos validar el consumo de recetas.")
+		return
+	}
+	if quantityErr := applyRecipeUsageDelta(r.Context(), tx, s, o.ID, recipeUsage); quantityErr != nil {
+		fail(w, quantityErr.Status, quantityErr.Code, quantityErr.Message)
+		return
 	}
 	if err = tx.Commit(r.Context()); err != nil {
 		fail(w, 503, "order_unavailable", "No pudimos guardar el pedido.")
 		return
 	}
 	a.audit(r, "created", "order", o.ID)
+	if in.SendToKitchen {
+		a.audit(r, "kitchen.submitted", "order", o.ID)
+	}
+	_ = applyOrderPaymentSummary(r.Context(), a.db, &o, s.OrganizationID, s.LocationID)
 	writeJSON(w, 201, o)
+}
+
+func (a *API) updateOrder(w http.ResponseWriter, r *http.Request) {
+	s := r.Context().Value(scopeKey{}).(scope)
+	var in orderUpdateInput
+	if json.NewDecoder(r.Body).Decode(&in) != nil {
+		fail(w, 400, "invalid_order", "Revisa los datos enviados.")
+		return
+	}
+	in.CustomerName = strings.TrimSpace(in.CustomerName)
+	if len(in.Items) == 0 || in.DeliveryFee < 0 {
+		fail(w, 400, "invalid_order", "La comanda necesita al menos un producto y montos válidos.")
+		return
+	}
+
+	tx, err := a.db.Begin(r.Context())
+	if err != nil {
+		fail(w, 503, "order_unavailable", "No pudimos actualizar el pedido.")
+		return
+	}
+	defer tx.Rollback(r.Context())
+
+	var currentStatus, channel string
+	err = tx.QueryRow(r.Context(), `SELECT status,channel FROM orders WHERE id=$1 AND organization_id=$2 AND location_id=$3 FOR UPDATE`, r.PathValue("id"), s.OrganizationID, s.LocationID).Scan(&currentStatus, &channel)
+	if errors.Is(err, pgx.ErrNoRows) {
+		fail(w, 404, "order_not_found", "El pedido no existe.")
+		return
+	}
+	if err != nil {
+		fail(w, 503, "order_unavailable", "No pudimos actualizar el pedido.")
+		return
+	}
+	if !editableOrderStatus(currentStatus) {
+		fail(w, 409, "order_not_editable", "Solo se puede editar un pedido en estado Nuevo o Confirmado.")
+		return
+	}
+	var hasKitchenRounds bool
+	if err = tx.QueryRow(r.Context(), `SELECT EXISTS(SELECT 1 FROM order_kitchen_rounds WHERE order_id=$1 AND organization_id=$2 AND location_id=$3)`, r.PathValue("id"), s.OrganizationID, s.LocationID).Scan(&hasKitchenRounds); err != nil {
+		fail(w, 503, "order_unavailable", "No pudimos validar las rondas de cocina.")
+		return
+	}
+	if hasKitchenRounds {
+		fail(w, 409, "round_order_not_editable", "Esta comanda ya tiene rondas enviadas a cocina. Agrega una nueva ronda en lugar de reemplazar sus productos.")
+		return
+	}
+	paid, paidErr := loadOrderNetPaid(r.Context(), tx, r.PathValue("id"), s.OrganizationID, s.LocationID)
+	if paidErr != nil {
+		fail(w, 503, "order_unavailable", "No pudimos validar los pagos del pedido.")
+		return
+	}
+	if paid > 0.00001 {
+		fail(w, 409, "paid_order_not_editable", "No se puede modificar una comanda después de registrar pagos. Devuelve los pagos antes de editarla.")
+		return
+	}
+	if channel == "delivery" && strings.TrimSpace(in.Address) == "" {
+		fail(w, 400, "invalid_order", "El pedido de delivery necesita una dirección.")
+		return
+	}
+
+	previousUsage, err := loadOrderQuantityUsage(r.Context(), tx, s.OrganizationID, r.PathValue("id"))
+	if err != nil {
+		fail(w, 503, "order_unavailable", "No pudimos cargar las cantidades actuales del pedido.")
+		return
+	}
+	previousRecipeUsage, err := loadNetRecipeUsage(r.Context(), tx, s, r.PathValue("id"))
+	if err != nil {
+		fail(w, 503, "recipe_inventory_unavailable", "No pudimos cargar el consumo actual de recetas.")
+		return
+	}
+	prepared, subtotal, preparationErr := a.prepareOrderItems(r, tx, s, r.PathValue("id"), in.Items)
+	if preparationErr != nil {
+		fail(w, preparationErr.Status, preparationErr.Code, preparationErr.Message)
+		return
+	}
+	if quantityErr := a.applyOrderQuantityDelta(r.Context(), tx, s, r.PathValue("id"), quantityUsageDelta(previousUsage, preparedQuantityUsage(prepared)), "sale_adjustment"); quantityErr != nil {
+		fail(w, quantityErr.Status, quantityErr.Code, quantityErr.Message)
+		return
+	}
+	nextRecipeUsage, recipeErr := desiredRecipeInventoryUsage(r.Context(), tx, s, prepared)
+	if recipeErr != nil {
+		fail(w, 503, "recipe_inventory_unavailable", "No pudimos validar el consumo de recetas.")
+		return
+	}
+	if quantityErr := applyRecipeUsageDelta(r.Context(), tx, s, r.PathValue("id"), recipeUsageDelta(previousRecipeUsage, nextRecipeUsage)); quantityErr != nil {
+		fail(w, quantityErr.Status, quantityErr.Code, quantityErr.Message)
+		return
+	}
+	total := subtotal + in.DeliveryFee
+
+	_, err = tx.Exec(r.Context(), `UPDATE orders
+		SET customer_name=$4,customer_phone=$5,address=$6,reference=$7,notes=$8,subtotal=$9,delivery_fee=$10,total=$11,updated_at=now()
+		WHERE id=$1 AND organization_id=$2 AND location_id=$3`,
+		r.PathValue("id"), s.OrganizationID, s.LocationID,
+		in.CustomerName, strings.TrimSpace(in.CustomerPhone), strings.TrimSpace(in.Address), strings.TrimSpace(in.Reference), strings.TrimSpace(in.Notes),
+		subtotal, in.DeliveryFee, total)
+	if err != nil {
+		fail(w, 503, "order_unavailable", "No pudimos actualizar el pedido.")
+		return
+	}
+	if _, err = tx.Exec(r.Context(), `DELETE FROM order_items WHERE order_id=$1 AND organization_id=$2`, r.PathValue("id"), s.OrganizationID); err != nil {
+		fail(w, 503, "order_unavailable", "No pudimos actualizar los productos del pedido.")
+		return
+	}
+	if err = insertPreparedOrderItems(r.Context(), tx, s.OrganizationID, r.PathValue("id"), prepared); err != nil {
+		fail(w, 503, "order_unavailable", "No pudimos actualizar los productos del pedido.")
+		return
+	}
+
+	o, err := scanOrder(tx.QueryRow(r.Context(), `SELECT `+orderColumns+` FROM orders WHERE id=$1 AND organization_id=$2`, r.PathValue("id"), s.OrganizationID))
+	if err != nil {
+		fail(w, 503, "order_unavailable", "No pudimos cargar el pedido actualizado.")
+		return
+	}
+	o.Items, err = loadOrderItems(r.Context(), tx, o.ID, s.OrganizationID)
+	if err != nil {
+		fail(w, 503, "order_unavailable", "No pudimos cargar los productos actualizados.")
+		return
+	}
+	for _, it := range o.Items {
+		if qty, parseErr := strconv.ParseFloat(it.Qty, 64); parseErr == nil {
+			o.ItemCount += int(qty)
+		}
+	}
+	if err = tx.Commit(r.Context()); err != nil {
+		fail(w, 503, "order_unavailable", "No pudimos actualizar el pedido.")
+		return
+	}
+	a.audit(r, "updated", "order", o.ID)
+	writeJSON(w, 200, o)
 }
 
 func (a *API) updateOrderStatus(w http.ResponseWriter, r *http.Request) {
@@ -294,8 +1144,21 @@ func (a *API) updateOrderStatus(w http.ResponseWriter, r *http.Request) {
 		fail(w, 400, "invalid_status", "El estado no es válido.")
 		return
 	}
-	var current string
-	err := a.db.QueryRow(r.Context(), `SELECT status FROM orders WHERE id=$1 AND organization_id=$2`, r.PathValue("id"), s.OrganizationID).Scan(&current)
+
+	tx, err := a.db.Begin(r.Context())
+	if err != nil {
+		fail(w, 503, "order_unavailable", "No pudimos actualizar el pedido.")
+		return
+	}
+	defer tx.Rollback(r.Context())
+
+	var current, channel, tableID string
+	var total float64
+	err = tx.QueryRow(r.Context(), `
+		SELECT status,channel,COALESCE(table_id::text,''),total::float8
+		FROM orders
+		WHERE id=$1 AND organization_id=$2 AND location_id=$3
+		FOR UPDATE`, r.PathValue("id"), s.OrganizationID, s.LocationID).Scan(&current, &channel, &tableID, &total)
 	if errors.Is(err, pgx.ErrNoRows) {
 		fail(w, 404, "order_not_found", "El pedido no existe.")
 		return
@@ -304,22 +1167,83 @@ func (a *API) updateOrderStatus(w http.ResponseWriter, r *http.Request) {
 		fail(w, 503, "order_unavailable", "No pudimos actualizar el pedido.")
 		return
 	}
+	if (current == "confirmado" && in.Status == "preparando") || (current == "preparando" && in.Status == "listo") {
+		fail(w, 409, "kitchen_transition_required", "Los estados de preparación solo se actualizan desde Cocina.")
+		return
+	}
+	if in.Status == "cancelado" && (current == "preparando" || current == "listo" || current == "en_camino") {
+		fail(w, 409, "cancellation_requires_void", "La preparación ya comenzó. Usa un flujo de anulación o merma; no se puede cancelar como si el producto no hubiera sido preparado.")
+		return
+	}
 	allowed := false
 	for _, next := range orderTransitions[current] {
 		if next == in.Status {
 			allowed = true
+			break
 		}
 	}
 	if !allowed {
 		fail(w, 409, "invalid_transition", "No se puede pasar de "+current+" a "+in.Status+".")
 		return
 	}
-	tag, err := a.db.Exec(r.Context(), `UPDATE orders SET status=$3,updated_at=now() WHERE id=$1 AND organization_id=$2`, r.PathValue("id"), s.OrganizationID, in.Status)
+
+	paid, paidErr := loadOrderNetPaid(r.Context(), tx, r.PathValue("id"), s.OrganizationID, s.LocationID)
+	if paidErr != nil {
+		fail(w, 503, "order_unavailable", "No pudimos validar el estado de cobro del pedido.")
+		return
+	}
+	if in.Status == "entregado" && tableID != "" && paid+0.00001 < total {
+		fail(w, 409, "payment_required_before_delivery", "La mesa no puede liberarse mientras exista saldo pendiente.")
+		return
+	}
+	if in.Status == "cancelado" && paid > 0.00001 {
+		fail(w, 409, "refund_required_before_cancel", "Devuelve primero los pagos registrados antes de cancelar el pedido.")
+		return
+	}
+
+	if in.Status == "cancelado" {
+		usage, usageErr := loadOrderQuantityUsage(r.Context(), tx, s.OrganizationID, r.PathValue("id"))
+		if usageErr != nil {
+			fail(w, 503, "order_unavailable", "No pudimos cargar las cantidades del pedido.")
+			return
+		}
+		if quantityErr := a.applyOrderQuantityDelta(r.Context(), tx, s, r.PathValue("id"), quantityUsageDelta(usage, map[string]float64{}), "sale_reversal"); quantityErr != nil {
+			fail(w, quantityErr.Status, quantityErr.Code, quantityErr.Message)
+			return
+		}
+		recipeUsage, recipeErr := loadNetRecipeUsage(r.Context(), tx, s, r.PathValue("id"))
+		if recipeErr != nil {
+			fail(w, 503, "recipe_inventory_unavailable", "No pudimos cargar el consumo de recetas del pedido.")
+			return
+		}
+		if quantityErr := applyRecipeUsageDelta(r.Context(), tx, s, r.PathValue("id"), recipeUsageDelta(recipeUsage, map[string]float64{})); quantityErr != nil {
+			fail(w, quantityErr.Status, quantityErr.Code, quantityErr.Message)
+			return
+		}
+	}
+
+	tag, err := tx.Exec(r.Context(), `
+		UPDATE orders
+		SET status=$4,updated_at=now()
+		WHERE id=$1 AND organization_id=$2 AND location_id=$3`,
+		r.PathValue("id"), s.OrganizationID, s.LocationID, in.Status)
 	if err != nil || tag.RowsAffected() == 0 {
 		fail(w, 404, "order_not_found", "El pedido no existe.")
 		return
 	}
+	o, err := scanOrder(tx.QueryRow(r.Context(), `SELECT `+orderColumns+` FROM orders WHERE id=$1 AND organization_id=$2 AND location_id=$3`, r.PathValue("id"), s.OrganizationID, s.LocationID))
+	if err != nil {
+		fail(w, 503, "order_unavailable", "No pudimos cargar el pedido actualizado.")
+		return
+	}
+	if err = applyOrderPaymentSummary(r.Context(), tx, &o, s.OrganizationID, s.LocationID); err != nil {
+		fail(w, 503, "order_unavailable", "No pudimos cargar el estado de cobro del pedido.")
+		return
+	}
+	if err = tx.Commit(r.Context()); err != nil {
+		fail(w, 503, "order_unavailable", "No pudimos actualizar el pedido.")
+		return
+	}
 	a.audit(r, "status_updated", "order", r.PathValue("id"))
-	o, _ := scanOrder(a.db.QueryRow(r.Context(), `SELECT `+orderColumns+` FROM orders WHERE id=$1`, r.PathValue("id")))
 	writeJSON(w, 200, o)
 }

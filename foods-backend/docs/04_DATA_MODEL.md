@@ -18,90 +18,167 @@ mantienen subconjuntos manuales en los frontends.
 
 ## Disponibilidad de productos
 
-Un producto del menú no almacena cantidad. `products` pertenece a la organización
-y el stock pertenece al local (`stock_balances.location_id`), por lo que una
-columna de cantidad en `products` sería incorrecta por definición.
+`products` es el catálogo único de todo lo que se vende. Platos, bebidas,
+mercadería física, menús y opciones de combo se identifican por `ProductId`.
+Pedido y detalle de pedido conservan siempre esa referencia; no existe un segundo
+catálogo vendible dentro de Inventario.
 
-La cantidad disponible siempre se resuelve por local y se deriva del modo de
-control del producto. El stock nunca se edita a mano: cambia solo por documentos
-auditables (compra, producción, venta, merma, ajuste).
+Producto describe **qué se vende**: nombre, precio, categoría, imagen, estado y
+demás datos comerciales. Además separa dos clasificaciones independientes:
+`products.product_type` describe si el producto es preparado o mercadería de
+reventa, mientras `products.quantity_control` describe de dónde sale su
+disponibilidad. La categoría sigue siendo comercial y no determina ninguna de
+esas dos dimensiones. Producto no almacena cantidad; la cantidad pertenece al
+local.
 
-### Dos niveles de control
+### Tipo de producto
 
-La plataforma sirve tanto al restaurante que no quiere llevar recetas como al que
-necesita costo y consumo exactos. El nivel lo define
-`organizations.inventory_mode`:
-
-| Modo | Alcance |
+| Valor | Significado |
 | --- | --- |
-| `simple` | Sin insumos ni recetas. Los productos nacen `none` y se usa `manual` para lo que se agota. La interfaz oculta inventario y fichas técnicas. |
-| `detailed` | Habilita insumos, recetas, producción por lote, costo y descuento automático. |
+| `prepared` | Plato, bebida u otro producto preparado por el restaurante. |
+| `retail` | Mercadería vendible recibida físicamente, como gaseosas, agua o snacks. |
 
-El modo es una decisión de la organización, no un límite del modelo: un producto
-puede pasar de `manual` a `recipe` sin migrar historia ni perder ventas previas.
+El tipo no se infiere por el nombre de la categoría. Cada categoría declara
+`product_scope`: `prepared`, `retail` o `both`. Así «Bebidas» puede
+aceptar una limonada `prepared` y una gaseosa `retail` usando `both`,
+mientras «Segundos» puede permanecer solo en `prepared`. Inventario solicita
+únicamente categorías activas compatibles con `retail`; no filtra por nombre.
+El alta comercial normal usa `prepared` por defecto; **Inventario > Nuevo
+producto vendible** fuerza `retail` en backend para que ese atajo nunca cree
+un plato preparado.
 
-### Modo de control por producto (`products.stock_mode`)
+### Control de cantidad por producto
 
-| Valor | Significado | Disponible |
+| Valor | Significado | Fuente de la cantidad |
 | --- | --- | --- |
-| `none` | Siempre disponible mientras esté activo. | sin límite |
-| `manual` | Cupo del día escrito por el local. | `cupo - vendido_hoy` |
-| `linked` | Uno a uno con un insumo contable (gaseosa, cerveza, agua). | `piso(stock / factor)` |
-| `recipe` | Ficha técnica de insumos. | `piso(min(stock_i / cantidad_i))` |
+| `none` | La venta no depende de una cantidad administrada. | No aplica |
+| `portions` | Producto preparado por porciones, por ejemplo Ají de gallina. | `product_availability.portion_quantity - sold_quantity` por local y fecha |
+| `inventory` | Mercadería física, por ejemplo Coca-Cola o agua mineral. | `stock_balances` del local |
 
-`linked` y `recipe` comparten la misma fórmula: `linked` es una receta de una
-sola línea. Se distinguen para que la interfaz simple no exija crear una ficha.
+Las porciones se cargan desde Disponibilidad de la carta. No existe un cupo
+predeterminado en `products`: cada día/local tiene su cantidad real. El cupo
+`portion_quantity` nunca puede reducirse por debajo de `sold_quantity`; esta
+invariante se valida en backend bajo bloqueo transaccional para no competir con
+la creación, edición o reversa de pedidos.
 
-### Elaboración por lote
+La mercadería física y los insumos de producción se reponen únicamente mediante
+documentos de Inventario. `inventory_items` es el catálogo físico: puede
+representar un insumo interno como carne, papa o aceite sin `product_id`, o una
+mercadería vendible como una gaseosa enlazada 1:1 a `products`. El vínculo
+`inventory_items.product_id` es opcional y no constituye otro catálogo comercial.
 
-Un preparado que no se hace por porción (chicha, salsas, postres) se modela como
-insumo intermedio con `inventory_items.kind='prepared'` y su propia unidad.
+Cada `inventory_item` define una **unidad base de stock** (por ejemplo botella,
+lata, unidad, kg o litro). `inventory_presentations` define formas reutilizables
+de recibir esa mercadería: unidad base (factor 1), paquete o caja con un factor
+de conversión. Una entrada de 5 cajas x 12 de un producto cuya unidad base es
+botella aumenta el saldo y el Kárdex en 60 botellas. El documento de entrada
+conserva la cantidad recibida, la presentación y el factor utilizados.
 
-Un documento de producción consume insumos crudos y acredita el preparado. Los
-productos que lo venden lo consumen con su factor: una jarra de un litro consume
-`1.000` y un vaso de 300 ml consume `0.300` del mismo insumo. Ambos comparten
-existencia, por lo que vender jarras reduce los vasos disponibles.
+### Flujo de Inventario
 
-No se explota un preparado directamente a sus insumos crudos: eso permitiría
-vender lo que todavía no se ha preparado y oculta cuánto lote está hecho.
+El flujo principal de mercadería física comienza en **Inventario > Nueva entrada**:
+
+1. Si el artículo de inventario existe, se selecciona su `InventoryItemId` y
+   se registra la nueva entrada.
+2. Si la mercadería se vende directamente, **Nuevo producto vendible** crea
+   `Product` + `inventory_item`, exige una categoría cuyo `product_scope`
+   admita `retail`, exige precio de venta y registra
+   `product_type='retail'` + `quantity_control='inventory'` de forma automática.
+3. Si es un ingrediente interno, **Nuevo insumo** crea únicamente
+   `inventory_item`; no crea `Product` ni exige precio de venta.
+4. Se resuelve la presentación de ingreso. La unidad base siempre existe; una
+   presentación nueva como paquete x 6 o caja x 12 queda disponible para futuras
+   entradas del mismo producto.
+5. Artículo de inventario, posible Producto vinculado, presentación, saldo,
+   documento de entrada y movimiento de Kárdex se guardan en una sola transacción.
+6. Si cualquier paso falla, la transacción hace rollback y no queda un artículo,
+   presentación o saldo parcial.
+7. Las reposiciones posteriores usan siempre el mismo `InventoryItemId`.
+
+El selector «Producto existente» muestra únicamente productos activos con
+`quantity_control='inventory'`. Los productos con `none` o `portions` no son
+elegibles para una entrada y registrar stock nunca cambia implícitamente el modo
+de control de un plato o producto preparado. La mercadería física nueva se crea
+desde **Inventario > Nueva entrada > Nuevo producto físico**.
+
+La pantalla de Productos permanece dedicada al catálogo comercial: alta de
+platos y edición de nombre, precio, categoría, imagen y estado. Para productos
+físicos existentes muestra su condición de Inventario físico, pero las entradas,
+presentaciones y existencias se administran desde Inventario.
+
+### Venta y concurrencia
+
+Al crear un pedido, el backend calcula uso de cantidades únicamente por
+`ProductId`. Para productos directos usa el `product_id` de la línea;
+para combos usa los `ProductId` seleccionados en sus opciones.
+
+- `portions`: bloquea el registro diario y aumenta `sold_quantity`.
+- `inventory`: bloquea el saldo físico con `FOR UPDATE`, valida que la
+  existencia alcance y descuenta el stock.
+- editar un pedido aplica solo el delta entre la versión anterior y la nueva;
+- cancelar un pedido revierte las cantidades consumidas;
+- nunca se confirma una operación que produzca stock negativo.
+
+La actualización de pedido, el descuento/restauración y el movimiento de Kárdex
+comparten la misma transacción. Esto evita sobreventa cuando dos pedidos intentan
+consumir simultáneamente el último stock.
 
 ### Resolución de disponibilidad
 
-Orden de precedencia, idéntico para todos los modos:
+Orden de precedencia:
 
 1. Producto inactivo: no vendible.
-2. Marcado agotado hoy en el local: agotado. Este override siempre gana, porque
-   la realidad física (una olla quemada, una jarra caída) no se deduce del stock.
-3. Cálculo según `stock_mode`.
+2. Override manual `sold_out` del local/día: agotado.
+3. Horario o vigencia comercial fuera de rango: no disponible.
+4. `none`: disponible.
+5. `portions`: disponible si quedan porciones.
+6. `inventory`: disponible si el saldo físico del local es mayor que cero.
+7. Un combo exige suficientes opciones disponibles en cada grupo obligatorio.
 
-La API expone un solo contrato, `availability`, con estado, cantidad restante
-—nula cuando no aplica—, origen del cálculo y el insumo que limita. Los clientes
-no reimplementan la fórmula ni consultan stock para decidir si pueden vender.
+Los clientes consumen este resultado; no duplican la fórmula ni calculan stock
+por su cuenta.
 
 ### Tablas del modelo
 
 | Tabla | Propósito |
 | --- | --- |
-| `product_recipe` | Líneas de ficha técnica: producto, insumo y cantidad. |
-| `product_availability` | Cupo del día, vendido y agotado manual por local y fecha de negocio. |
+| `products` | Catálogo comercial único; separa `product_type` de `quantity_control`. |
+| `product_availability` | Porciones, vendidos y override manual por local/día. |
+| `inventory_items` | Catálogo físico: insumos internos o mercadería vendible; `product_id` es opcional y `unit` define la unidad base. |
+| `inventory_presentations` | Presentaciones reutilizables de ingreso y su factor hacia la unidad base. |
+| `stock_balances` | Saldo físico actual por local e item interno, siempre expresado en unidad base. |
+| `inventory_entries` | Documento auditable: cantidad recibida, presentación, factor y equivalencia en unidad base. |
+| `stock_movements` | Kárdex: entradas, ventas, reversas y ajustes, con saldo resultante. |
 | `menu_combos` | Identifica productos compuestos vendidos como menú o combo. |
-| `menu_combo_groups` | Define grupos ordenados de elección (entrada, segundo, postre, bebida), obligatoriedad y límites. |
-| `menu_combo_options` | Vincula productos existentes como alternativas de cada grupo y permite un recargo. |
+| `menu_combo_groups` | Grupos de elección del combo. |
+| `menu_combo_options` | Productos existentes usados como alternativas del combo. |
 
-La disponibilidad efectiva de un menú se deriva de sus componentes: cada grupo
-obligatorio debe conservar al menos `min_selections` alternativas disponibles en
-el local y día operativo. Así, al agotarse una entrada no desaparece el menú si
-queda otra alternativa; se agota automáticamente cuando un grupo obligatorio ya
-no puede satisfacer su mínimo.
-| `stock_movements` | Bitácora de todo cambio de existencia con su documento de origen. |
+`stock_balances` se modifica dentro de la misma transacción que registra el
+`stock_movements` correspondiente. El saldo tiene una restricción de base de
+datos que impide valores negativos.
 
-`stock_balances` es el saldo derivado de `stock_movements` y nunca se actualiza
-sin registrar el movimiento que lo causa.
+## Configuración inicial de una empresa
 
-La operación diaria conserva `manual_status` (`available`, `low`, `sold_out`),
-el cupo excepcional del local y la cantidad vendida. El registro es único por
-empresa, local, producto y fecha de negocio. Reactivar un producto elimina el
-override de agotado, pero no altera ventas ni movimientos ya registrados.
+El onboarding de una organización crea en una sola transacción la empresa, su perfil fiscal por defecto, el local principal, el administrador, los roles predefinidos, la suscripción y los módulos permitidos por el plan. Además copia desde plantillas persistidas en base de datos los medios de pago, categorías iniciales de gasto, una zona `Principal` y una `Caja principal` para el primer local.
+
+Estas filas son configuración inicial editable, no datos comerciales de ejemplo. No se crean productos, proveedores, recetas, mesas, clientes ni movimientos ficticios.
+
+## Medios de pago
+
+`payment_methods` es el catálogo de medios de pago por empresa y constituye la única fuente de verdad para Cobros y Gastos. Cada fila define código estable, nombre visible, estado, disponibilidad para ventas o gastos y si el medio representa movimiento físico de efectivo. `payments` y `expenses` referencian el catálogo mediante clave foránea compuesta `(organization_id, code)`.
+
+Los valores iniciales se siembran durante la migración, pero la lógica de aplicación no contiene una lista cerrada de medios de pago.
+
+## Gastos operativos
+
+Los gastos operativos son documentos del local y no reemplazan la contabilidad general.
+`expense_categories` pertenece a la empresa y define el catálogo reutilizable; `expenses`
+pertenece además al local activo y conserva fecha de negocio, descripción, importe exacto
+`numeric`, medio de pago, referencia, notas y usuario creador.
+
+Un gasto confirmado no se edita ni elimina. Una corrección se realiza mediante anulación
+auditable, conservando usuario, fecha y motivo. El registro del gasto no modifica
+implícitamente un turno de caja: Caja y turnos mantiene su propia trazabilidad de efectivo.
 
 ## Empresa, locales y configuración financiera
 
@@ -169,3 +246,27 @@ su identificador para mantener trazabilidad.
   con `currency_decimals` es solo de presentación.
 - Los catálogos de países y monedas son datos de referencia del backend. Los tipos
   de cambio son datos temporales de negocio y siempre están acotados por empresa.
+
+## Planes y suscripciones SaaS
+
+`subscription_plans` es el catálogo comercial administrado por Plataforma.
+Cada plan define precio mensual/anual, moneda, prueba gratuita, límites de
+locales y usuarios, módulos habilitados y versión de condiciones. Los precios
+del catálogo no sustituyen el precio ya contratado por una empresa.
+
+`organization_subscriptions` conserva una instantánea contractual por empresa:
+plan, ciclo, precio, moneda, estado, periodo vigente, renovación automática,
+prueba, cancelación y versión/fecha de aceptación de condiciones. Un cambio de
+plan o ciclo toma el precio vigente del plan; cambios administrativos que no
+alteran plan ni ciclo conservan el precio y las fechas del periodo existente.
+
+`subscription_payments` registra cobros SaaS independientemente del proveedor
+de pago. Un pago confirmado reactiva la suscripción, avanza el periodo desde el
+fin del periodo vigente cuando corresponde y vuelve a aplicar los módulos del
+plan.
+
+Los límites `max_locations` y `max_users` se validan en backend dentro de la
+misma transacción que crea el recurso. Un downgrade se rechaza si la empresa ya
+supera los límites del plan destino. Los módulos activos de
+`organization_modules` se sincronizan desde `subscription_plans.module_keys`;
+solo módulos marcados como disponibles por la plataforma pueden activarse.

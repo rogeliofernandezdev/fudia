@@ -19,5 +19,5 @@ export type SwitchContextInput = {
 
 export type ContextResponse = {
   organization: { id: string; name: string };
-  location: { id: string; name: string };
+  location: { id: string; name: string; country: string; timezone: string };
 };

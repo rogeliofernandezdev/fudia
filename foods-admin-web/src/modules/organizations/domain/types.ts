@@ -1,0 +1,11 @@
+export type List<T>={items:T[];total:number;page:number;pageSize:number};
+export type Country={code:string;name:string;defaultCurrency:string};
+export type Currency={code:string;name:string;symbol:string;decimals:number};
+export type Organization={id:string;legalName:string;tradeName:string;taxId:string;timezone:string;active:boolean};
+export type Profile={id:string;country:string;countryName:string;currency:string;currencySymbol:string;currencyPosition:"before"|"after";currencyDecimals:number;taxName:string;taxRate:string;taxIncluded:boolean;default:boolean;active:boolean;assignedLocations:number};
+export type ProfilesResponse=List<Profile>&{countryOptions:Country[];currencyOptions:Currency[]};
+export type Location={id:string;name:string;code:string;address:string;phone:string;openingHours:string;latitude:number|null;longitude:number|null;timezone:string;fiscalProfileId:string;country:string;currency:string;active:boolean};
+export type LocationDraft={id?:string;name:string;code:string;address:string;phone:string;openingHours:string;latitude:number|null;longitude:number|null;timezone:string;fiscalProfileId:string;active:boolean};
+export type Rate={id:string;baseCurrency:string;quoteCurrency:string;rate:string;effectiveAt:string;source:"manual"|"provider";providerReference:string|null;createdByName:string|null};
+export type ProfileDraft={id?:string;country:string;currency:string;currencyPosition:"before"|"after";taxName:string;taxPercent:string;taxIncluded:boolean;default:boolean};
+export type RateDraft={baseCurrency:string;quoteCurrency:string;rate:string;effectiveAt:string;source:"manual"|"provider";providerReference:string};

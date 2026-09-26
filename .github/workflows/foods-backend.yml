@@ -1,0 +1,50 @@
+name: foods-backend
+
+on:
+  push:
+    paths:
+      - "foods-backend/**"
+      - ".github/workflows/foods-backend.yml"
+  pull_request:
+    paths:
+      - "foods-backend/**"
+      - ".github/workflows/foods-backend.yml"
+
+env:
+  GIT_CONFIG_COUNT: "1"
+  GIT_CONFIG_KEY_0: init.defaultBranch
+  GIT_CONFIG_VALUE_0: main
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: foods_test
+          POSTGRES_USER: foods
+          POSTGRES_PASSWORD: foods
+          POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U foods -d foods_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    defaults:
+      run:
+        working-directory: foods-backend
+    env:
+      DATABASE_URL: postgres://foods:foods@localhost:5432/foods_test?sslmode=disable
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: foods-backend/go.mod
+          cache-dependency-path: foods-backend/go.sum
+      - run: go run ./cmd/migrate
+      - run: go test ./...
+      - run: go vet ./...
+      - run: go build -o /tmp/foods-api ./cmd/api

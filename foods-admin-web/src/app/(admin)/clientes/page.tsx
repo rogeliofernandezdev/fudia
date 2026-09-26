@@ -1,2 +1,2 @@
-import {CustomersManager} from "@/components/customers-manager";
+import {CustomersManager} from "@/modules/customers";
 export default function Page(){return <CustomersManager/>}

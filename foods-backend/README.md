@@ -17,3 +17,10 @@ dentro de una transacción.
 
 Rutas iniciales: `/health`, `/v1/auth/login`, `/v1/admin/dashboard` y
 `/v1/admin/products`. El alcance de organización y local se deriva de la sesión.
+
+
+## Fudia Concierge
+
+El canal de WhatsApp es global para toda la plataforma. El número oficial se administra exclusivamente en Meta / WhatsApp Business y no se duplica en la configuración de foods-backend.
+
+`FUDIA_CONCIERGE_API_KEY` autentica las llamadas internas desde el servicio Concierge. El acceso de una organización se controla mediante `organization_modules.whatsapp_bot`, administrado únicamente desde la plataforma global.

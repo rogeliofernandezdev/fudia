@@ -30,13 +30,24 @@ func main() {
 	defer db.Close()
 
 	var existing string
-	err = db.QueryRow(ctx, `SELECT id FROM users WHERE lower(email)=lower($1) LIMIT 1`, adminEmail).Scan(&existing)
+	err = db.QueryRow(ctx, `SELECT id FROM users WHERE platform_admin AND active ORDER BY created_at,id LIMIT 1`).Scan(&existing)
 	if err == nil {
-		fmt.Printf("administrator already exists\nemail: %s\n", adminEmail)
+		fmt.Printf("platform administrator already exists\n")
 		return
 	}
 	if !errors.Is(err, pgx.ErrNoRows) {
-		exit("check administrator", err)
+		exit("check platform administrator", err)
+	}
+	err = db.QueryRow(ctx, `SELECT id FROM users WHERE lower(email)=lower($1) AND active ORDER BY created_at,id LIMIT 1`, adminEmail).Scan(&existing)
+	if err == nil {
+		if _, err = db.Exec(ctx, `UPDATE users SET platform_admin=true,updated_at=now() WHERE id=$1`, existing); err != nil {
+			exit("promote platform administrator", err)
+		}
+		fmt.Printf("platform administrator enabled\nemail: %s\n", adminEmail)
+		return
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		exit("check bootstrap account", err)
 	}
 
 	password, err := temporaryPassword()
@@ -53,7 +64,7 @@ func main() {
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	var organizationID, locationID, userID, roleID string
+	var organizationID, locationID, userID string
 	err = tx.QueryRow(ctx, `INSERT INTO organizations(legal_name,trade_name,tax_id) VALUES('Foods Restaurante Demo S.A.C.','Foods Restaurante','00000000000') ON CONFLICT(tax_id) DO UPDATE SET trade_name=EXCLUDED.trade_name RETURNING id`).Scan(&organizationID)
 	if err != nil {
 		exit("create organization", err)
@@ -62,16 +73,9 @@ func main() {
 	if err != nil {
 		exit("create location", err)
 	}
-	err = tx.QueryRow(ctx, `INSERT INTO users(organization_id,email,full_name,password_hash) VALUES($1,$2,'Administrador Foods',$3) RETURNING id`, organizationID, adminEmail, string(hash)).Scan(&userID)
+	err = tx.QueryRow(ctx, `INSERT INTO users(organization_id,email,full_name,password_hash,platform_admin) VALUES($1,$2,'Administrador de plataforma',$3,true) RETURNING id`, organizationID, adminEmail, string(hash)).Scan(&userID)
 	if err != nil {
 		exit("create administrator", err)
-	}
-	err = tx.QueryRow(ctx, `INSERT INTO roles(organization_id,name,permissions) VALUES($1,'Administrador',ARRAY['*']) ON CONFLICT(organization_id,name) DO UPDATE SET permissions=EXCLUDED.permissions RETURNING id`, organizationID).Scan(&roleID)
-	if err != nil {
-		exit("create role", err)
-	}
-	if _, err = tx.Exec(ctx, `INSERT INTO user_roles(user_id,role_id,location_id) VALUES($1,$2,$3)`, userID, roleID, locationID); err != nil {
-		exit("assign role", err)
 	}
 	if _, err = tx.Exec(ctx, `INSERT INTO audit_log(organization_id,location_id,user_id,action,entity_type,entity_id,metadata) VALUES($1,$2,$3,'bootstrap','user',$3,'{"source":"bootstrap-admin"}')`, organizationID, locationID, userID); err != nil {
 		exit("audit bootstrap", err)
@@ -79,7 +83,7 @@ func main() {
 	if err = tx.Commit(ctx); err != nil {
 		exit("commit bootstrap", err)
 	}
-	fmt.Printf("administrator created\nemail: %s\ntemporary password: %s\n", adminEmail, password)
+	fmt.Printf("platform administrator created\nemail: %s\ntemporary password: %s\n", adminEmail, password)
 }
 
 func temporaryPassword() (string, error) {

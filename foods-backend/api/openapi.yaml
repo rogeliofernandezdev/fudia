@@ -1,11 +1,125 @@
 openapi: 3.1.0
-info: { title: Foods API, version: 0.2.0, description: API operativa y administrativa multiempresa. }
+info: { title: Foods API, version: 0.14.0, description: API operativa y administrativa multiempresa. }
 servers: [{ url: http://localhost:8080 }]
 paths:
   /health:
     get:
       operationId: getHealth
       responses: { "200": { description: Disponible, content: { application/json: { schema: { $ref: "#/components/schemas/Health" } } } } }
+  /v1/public/tables/{token}:
+    get:
+      operationId: getPublicTableByQr
+      summary: Resuelve un QR activo a su contexto público de mesa
+      parameters:
+        - { in: path, name: token, required: true, schema: { type: string, minLength: 32, maxLength: 32 } }
+      responses:
+        "200": { description: Mesa activa, content: { application/json: { schema: { $ref: "#/components/schemas/PublicTableContext" } } } }
+        "404": { description: QR inexistente, inactivo o deshabilitado }
+  /v1/integrations/concierge/{token}/menu:
+    get:
+      operationId: listConciergeMenu
+      summary: Consulta productos y disponibilidad del local derivado exclusivamente del QR
+      security: [{ conciergeServiceKey: [] }]
+      parameters:
+        - { in: path, name: token, required: true, schema: { type: string, minLength: 32, maxLength: 32 } }
+        - { in: query, name: q, schema: { type: string }, description: Búsqueda por nombre, descripción o categoría; vacío devuelve la carta operativa }
+        - { in: query, name: productId, schema: { type: string, format: uuid }, description: Revalidación exacta de una línea seleccionada }
+      responses:
+        "200": { description: Carta operativa del local, content: { application/json: { schema: { $ref: "#/components/schemas/ConciergeMenuResponse" } } } }
+        "401": { description: Credencial de Fudia Concierge inválida }
+        "404": { description: QR inexistente, inactivo o deshabilitado }
+  /v1/integrations/concierge/{token}/products/{id}/modifiers:
+    get:
+      operationId: getConciergeProductModifiers
+      summary: Obtiene los grupos y opciones de modificadores de un producto para la mesa derivada del QR
+      security: [{ conciergeServiceKey: [] }]
+      parameters:
+        - { in: path, name: token, required: true, schema: { type: string, minLength: 32, maxLength: 32 } }
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: Modificadores configurados para el producto, content: { application/json: { schema: { $ref: "#/components/schemas/ProductModifierConfig" } } } }
+        "401": { description: Credencial de Fudia Concierge inválida }
+        "404": { description: QR o producto inexistente }
+        "409": { description: El producto es un combo y usa su propio selector }
+  /v1/integrations/concierge/{token}/combos/{id}:
+    get:
+      operationId: getConciergeCombo
+      summary: Obtiene grupos y alternativas operativas de un combo para el local derivado del QR
+      security: [{ conciergeServiceKey: [] }]
+      parameters:
+        - { in: path, name: token, required: true, schema: { type: string, minLength: 32, maxLength: 32 } }
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: Combo con grupos, reglas y opciones disponibles, content: { application/json: { schema: { $ref: "#/components/schemas/ConciergeComboDetail" } } } }
+        "401": { description: Credencial de Fudia Concierge inválida }
+        "404": { description: QR o combo inexistente }
+        "409": { description: Combo no disponible }
+  /v1/integrations/concierge/{token}/orders:
+    post:
+      operationId: createConciergeOrder
+      summary: Crea un pedido WhatsApp de mesa; Fudia deriva tenencia y mesa del QR y recalcula precios y disponibilidad
+      security: [{ conciergeServiceKey: [] }]
+      parameters:
+        - { in: path, name: token, required: true, schema: { type: string, minLength: 32, maxLength: 32 } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ConciergeOrderInput" }
+      responses:
+        "200": { description: Reintento idempotente; devuelve el pedido ya creado para conversationId, content: { application/json: { schema: { $ref: "#/components/schemas/Order" } } } }
+        "201": { description: Pedido confirmado y disponible para KDS, content: { application/json: { schema: { $ref: "#/components/schemas/Order" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { description: Credencial de Fudia Concierge inválida }
+        "404": { description: QR inexistente, inactivo o deshabilitado }
+        "409": { description: Mesa ocupada o producto/stock ya no disponible }
+  /v1/integrations/concierge/{token}/bill:
+    post:
+      operationId: requestConciergeBill
+      summary: Solicita la cuenta y devuelve el consumo acumulado real de la mesa con pagos y saldo pendiente
+      security: [{ conciergeServiceKey: [] }]
+      parameters:
+        - { in: path, name: token, required: true, schema: { type: string, minLength: 32, maxLength: 32 } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ConciergeBillRequest" }
+      responses:
+        "200": { description: Cuenta actual de la mesa, content: { application/json: { schema: { $ref: "#/components/schemas/ConciergeBill" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { description: Credencial de Fudia Concierge inválida }
+        "404": { description: QR inválido o mesa sin cuenta abierta }
+  /v1/integrations/concierge/{token}/handoffs:
+    post:
+      operationId: requestConciergeHandoff
+      summary: Registra o actualiza una solicitud pendiente de atención humana para la conversación y mesa derivadas del QR
+      security: [{ conciergeServiceKey: [] }]
+      parameters:
+        - { in: path, name: token, required: true, schema: { type: string, minLength: 32, maxLength: 32 } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ConciergeHandoffInput" }
+      responses:
+        "200": { description: Solicitud pendiente registrada de forma idempotente, content: { application/json: { schema: { $ref: "#/components/schemas/ConciergeHandoff" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { description: Credencial de Fudia Concierge inválida }
+        "404": { description: QR inexistente, inactivo o deshabilitado }
+  /v1/integrations/concierge/{token}/handoffs/{conversationId}:
+    get:
+      operationId: getConciergeHandoffStatus
+      summary: Consulta la última solicitud de atención de una conversación
+      security: [{ conciergeServiceKey: [] }]
+      parameters:
+        - { in: path, name: token, required: true, schema: { type: string, minLength: 32, maxLength: 32 } }
+        - { in: path, name: conversationId, required: true, schema: { type: string, maxLength: 160 } }
+      responses:
+        "200": { description: Estado de handoff; devuelve status=none cuando no existe una solicitud, content: { application/json: { schema: { type: object } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { description: Credencial de Fudia Concierge inválida }
+        "404": { description: QR inexistente, inactivo o deshabilitado }
   /v1/auth/login:
     post:
       operationId: login
@@ -22,12 +136,77 @@ paths:
       summary: Crea transaccionalmente empresa, perfil fiscal, primer local y administrador
       security: [{ sessionCookie: [] }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/TenantOnboardingInput" } } } }
-      responses: { "201": { description: Tenant creado }, "400": { $ref: "#/components/responses/BadRequest" }, "403": { $ref: "#/components/responses/Forbidden" }, "409": { description: Identificación fiscal o correo duplicado } }
+      responses: { "201": { description: Tenant creado }, "400": { $ref: "#/components/responses/BadRequest" }, "403": { $ref: "#/components/responses/Forbidden" }, "409": { description: Conflicto de datos del usuario, como identificación fiscal duplicada o plan no disponible, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }, "500": { description: Error interno de onboarding con correlationId para seguimiento, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }, "503": { description: Dependencia temporalmente no disponible con correlationId para seguimiento, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } } }
+  /v1/platform/plans:
+    get:
+      operationId: listSubscriptionPlans
+      security: [{ sessionCookie: [] }]
+      responses: { "200": { description: Catálogo SaaS de planes } }
+    post:
+      operationId: createSubscriptionPlan
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/SubscriptionPlanInput" } } } }
+      responses: { "201": { description: Plan creado }, "400": { $ref: "#/components/responses/BadRequest" }, "403": { $ref: "#/components/responses/Forbidden" }, "409": { description: Código o configuración en conflicto } }
+  /v1/platform/plans/{id}:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    patch:
+      operationId: updateSubscriptionPlan
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/SubscriptionPlanInput" } } } }
+      responses: { "200": { description: Plan actualizado }, "409": { description: El cambio viola uso actual o configuración del plan } }
+  /v1/platform/subscription:
+    patch:
+      operationId: updateOrganizationSubscription
+      summary: Cambia plan, ciclo o estado de la empresa activa y sincroniza sus módulos
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/SubscriptionUpdateInput" } } } }
+      responses: { "200": { description: Suscripción actualizada, content: { application/json: { schema: { $ref: "#/components/schemas/OrganizationSubscription" } } } }, "409": { description: Límites o condiciones pendientes } }
+  /v1/platform/subscription/payments:
+    post:
+      operationId: recordSubscriptionPayment
+      summary: Registra un cobro SaaS independiente del proveedor de pagos
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/SubscriptionPaymentInput" } } } }
+      responses: { "201": { description: Pago registrado }, "409": { description: Referencia duplicada o moneda incompatible } }
   /v1/admin/dashboard:
     get:
       operationId: getAdminDashboard
       security: [{ sessionCookie: [] }]
       responses: { "200": { description: Señales administrativas, content: { application/json: { schema: { $ref: "#/components/schemas/Dashboard" } } } }, "401": { $ref: "#/components/responses/Unauthorized" } }
+  /v1/admin/subscription:
+    get:
+      operationId: getOrganizationSubscription
+      summary: Consulta el contrato SaaS de la empresa activa
+      security: [{ sessionCookie: [] }]
+      responses: { "200": { description: Suscripción, límites, uso y pagos recientes, content: { application/json: { schema: { $ref: "#/components/schemas/OrganizationSubscription" } } } }, "403": { $ref: "#/components/responses/Forbidden" }, "404": { description: Suscripción no registrada } }
+  /v1/admin/context:
+    get:
+      operationId: getAdminContext
+      security: [{ sessionCookie: [] }]
+      responses: { "200": { description: Contexto activo de empresa y local, content: { application/json: { schema: { $ref: "#/components/schemas/SessionContext" } } } }, "401": { $ref: "#/components/responses/Unauthorized" } }
+  /v1/admin/switch-context:
+    post:
+      operationId: switchAdminContext
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/SwitchContextInput" } } } }
+      responses: { "200": { description: Contexto activo actualizado, content: { application/json: { schema: { $ref: "#/components/schemas/ContextSwitchResponse" } } } }, "400": { $ref: "#/components/responses/BadRequest" }, "401": { $ref: "#/components/responses/Unauthorized" }, "403": { $ref: "#/components/responses/Forbidden" } }
+  /v1/admin/concierge-settings:
+    get:
+      operationId: getConciergeSettings
+      summary: Consulta la configuración de Fudia Concierge para el local activo
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Configuración del local, content: { application/json: { schema: { $ref: "#/components/schemas/ConciergeSettings" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    patch:
+      operationId: updateConciergeSettings
+      summary: Configura el número de WhatsApp y activación de Fudia Concierge para el local activo
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ConciergeSettingsInput" } } } }
+      responses:
+        "200": { description: Configuración actualizada, content: { application/json: { schema: { $ref: "#/components/schemas/ConciergeSettings" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
   /v1/admin/settings:
     get:
       operationId: getOrganizationSettings
@@ -110,7 +289,9 @@ paths:
     get:
       operationId: listCategories
       security: [{ sessionCookie: [] }]
-      parameters: [{ in: query, name: includeInactive, schema: { type: boolean, default: false } }]
+      parameters:
+        - { in: query, name: includeInactive, schema: { type: boolean, default: false } }
+        - { in: query, name: productType, schema: { type: string, enum: [prepared, retail] }, description: Filtra categorías compatibles con el tipo de producto }
       responses: { "200": { description: Categorías del menú }, "401": { $ref: "#/components/responses/Unauthorized" }, "403": { $ref: "#/components/responses/Forbidden" } }
     post:
       operationId: createCategory
@@ -163,6 +344,28 @@ paths:
       summary: Desactiva un producto sin eliminar su historial
       security: [{ sessionCookie: [] }]
       responses: { "204": { description: Producto desactivado }, "404": { description: No encontrado }, "403": { $ref: "#/components/responses/Forbidden" } }
+  /v1/admin/products/{id}/modifiers:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    get:
+      operationId: getProductModifiers
+      summary: Carga los grupos y opciones de modificadores de un producto simple
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Configuración de modificadores, content: { application/json: { schema: { $ref: "#/components/schemas/ProductModifierConfig" } } } }
+        "404": { description: Producto no encontrado }
+        "409": { description: Los combos administran sus propias opciones }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    put:
+      operationId: saveProductModifiers
+      summary: Reemplaza atómicamente la configuración de modificadores de un producto simple
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ProductModifierConfigInput" } } } }
+      responses:
+        "200": { description: Configuración guardada, content: { application/json: { schema: { $ref: "#/components/schemas/ProductModifierConfig" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { description: Producto no encontrado }
+        "409": { description: Configuración incompatible o duplicada }
+        "403": { $ref: "#/components/responses/Forbidden" }
   /v1/admin/combos:
     get:
       operationId: listCombos
@@ -191,17 +394,579 @@ paths:
       parameters:
         - { in: query, name: q, schema: { type: string } }
         - { in: query, name: categoryId, schema: { type: string, format: uuid } }
+        - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
+        - { in: query, name: pageSize, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
       responses:
-        "200": { description: Disponibilidad efectiva por producto, content: { application/json: { schema: { type: object, required: [items, businessDate], properties: { items: { type: array, items: { $ref: "#/components/schemas/ProductAvailability" } }, businessDate: { type: string, format: date } } } } } }
+        "200": { description: Disponibilidad efectiva por producto, content: { application/json: { schema: { type: object, required: [items, businessDate, total, page, pageSize], properties: { items: { type: array, items: { $ref: "#/components/schemas/ProductAvailability" } }, businessDate: { type: string, format: date }, total: { type: integer, minimum: 0 }, page: { type: integer, minimum: 1 }, pageSize: { type: integer, minimum: 1 } } } } } }
         "403": { $ref: "#/components/responses/Forbidden" }
   /v1/admin/product-availability/{productId}:
     parameters: [{ in: path, name: productId, required: true, schema: { type: string, format: uuid } }]
     patch:
       operationId: updateProductAvailability
-      summary: Ajusta el estado y cupo diario del producto únicamente para el local activo
+      summary: Ajusta el estado operativo y, si aplica, las porciones disponibles del día
       security: [{ sessionCookie: [] }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ProductAvailabilityInput" } } } }
-      responses: { "204": { description: Disponibilidad actualizada }, "400": { $ref: "#/components/responses/BadRequest" }, "404": { description: Producto no encontrado }, "403": { $ref: "#/components/responses/Forbidden" } }
+      responses: { "204": { description: Disponibilidad actualizada }, "400": { $ref: "#/components/responses/BadRequest" }, "404": { description: Producto no encontrado }, "409": { description: El cupo solicitado es menor que las porciones ya vendidas }, "403": { $ref: "#/components/responses/Forbidden" } }
+  /v1/admin/inventory:
+    get:
+      operationId: listInventory
+      summary: Existencias físicas de productos vendibles e insumos en el local activo
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: query, name: q, schema: { type: string } }
+        - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
+        - { in: query, name: pageSize, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+      responses:
+        "200": { description: Inventario por producto, content: { application/json: { schema: { type: object, required: [items, total], properties: { items: { type: array, items: { $ref: "#/components/schemas/InventoryItem" } }, total: { type: integer } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/inventory/products:
+    get:
+      operationId: listInventoryProducts
+      summary: Artículos activos de inventario con existencia del local activo
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: query, name: q, schema: { type: string } }
+        - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
+        - { in: query, name: pageSize, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+      responses:
+        "200": { description: Artículos seleccionables paginados, content: { application/json: { schema: { type: object, required: [items, total, page, pageSize], properties: { items: { type: array, items: { $ref: "#/components/schemas/InventoryProductOption" } }, total: { type: integer, minimum: 0 }, page: { type: integer, minimum: 1 }, pageSize: { type: integer, minimum: 1 } } } } } }
+  /v1/admin/inventory/entries:
+    post:
+      operationId: createInventoryEntry
+      summary: Registra una entrada; puede crear un producto vendible o un insumo en la misma transacción
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryEntryInput" } } } }
+      responses:
+        "201": { description: Entrada registrada atómicamente, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryEntryResult" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "409": { description: Producto o clasificación incompatible }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/inventory/adjustments:
+    post:
+      operationId: createInventoryAdjustment
+      summary: Registra un ajuste manual de entrada o salida sin permitir stock negativo
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryAdjustmentInput" } } } }
+      responses:
+        "201": { description: Ajuste registrado con saldo anterior, saldo resultante, fecha y usuario, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryAdjustmentResult" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { description: Artículo no encontrado }
+        "409": { description: La salida supera el stock actual }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/inventory/movements:
+    get:
+      operationId: listInventoryMovements
+      summary: Kárdex del local activo
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: query, name: inventoryItemId, schema: { type: string, format: uuid } }
+        - { in: query, name: productId, schema: { type: string, format: uuid }, description: Compatibilidad con clientes anteriores }
+      responses:
+        "200": { description: Movimientos de stock, content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/StockMovement" } } } } } } }
+  /v1/admin/suppliers:
+    get:
+      operationId: listSuppliers
+      summary: Proveedores de la empresa activa
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: query, name: q, schema: { type: string } }
+        - { in: query, name: status, schema: { type: string, enum: [active, inactive] } }
+        - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
+        - { in: query, name: pageSize, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+      responses: { "200": { description: Proveedores paginados }, "403": { $ref: "#/components/responses/Forbidden" } }
+    post:
+      operationId: createSupplier
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/SupplierInput" } } } }
+      responses: { "201": { description: Proveedor creado, content: { application/json: { schema: { $ref: "#/components/schemas/Supplier" } } } }, "400": { $ref: "#/components/responses/BadRequest" }, "409": { description: Datos en conflicto } }
+  /v1/admin/suppliers/{id}:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    patch:
+      operationId: updateSupplier
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/SupplierInput" } } } }
+      responses: { "200": { description: Proveedor actualizado, content: { application/json: { schema: { $ref: "#/components/schemas/Supplier" } } } }, "404": { description: No encontrado } }
+  /v1/admin/suppliers/{id}/status:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    patch:
+      operationId: updateSupplierStatus
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [active], properties: { active: { type: boolean } } } } } }
+      responses: { "204": { description: Estado actualizado }, "409": { description: Tiene órdenes abiertas } }
+  /v1/admin/purchase-inventory-items:
+    get:
+      operationId: listPurchaseInventoryItems
+      summary: Artículos existentes disponibles para líneas de orden de compra
+      security: [{ sessionCookie: [] }]
+      parameters: [{ in: query, name: q, schema: { type: string } }]
+      responses:
+        "200": { description: Artículos de inventario seleccionables, content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/InventoryProductOption" } } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      operationId: createPurchaseInventoryItem
+      summary: Crea desde Compras un producto vendible o insumo con stock inicial cero
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/PurchaseInventoryItemInput" } } } }
+      responses:
+        "201": { description: Artículo creado con stock cero, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryProductOption" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "409": { description: Categoría, producto o artículo en conflicto }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/purchase-item-categories:
+    get:
+      operationId: listPurchaseItemCategories
+      summary: Categorías compatibles con mercadería vendible para altas desde Compras
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: query, name: productType, schema: { type: string, enum: [retail] } }
+        - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
+        - { in: query, name: pageSize, schema: { type: integer, minimum: 1, maximum: 100, default: 100 } }
+      responses:
+        "200": { description: Categorías compatibles }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/purchase-orders:
+    get:
+      operationId: listPurchaseOrders
+      summary: Órdenes de compra del local activo
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: query, name: q, schema: { type: string } }
+        - { in: query, name: status, description: "Usa receivable para listar solo órdenes aprobadas o parcialmente recibidas con recepción pendiente.", schema: { type: string, enum: [draft, pending_approval, approved, partially_received, received, cancelled, receivable] } }
+        - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
+        - { in: query, name: pageSize, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+      responses: { "200": { description: Órdenes paginadas }, "403": { $ref: "#/components/responses/Forbidden" } }
+    post:
+      operationId: createPurchaseOrder
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/PurchaseOrderInput" } } } }
+      responses: { "201": { description: Orden creada en borrador }, "400": { $ref: "#/components/responses/BadRequest" }, "409": { description: Artículo o proveedor incompatible } }
+  /v1/admin/purchase-orders/{id}:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    get:
+      operationId: getPurchaseOrder
+      security: [{ sessionCookie: [] }]
+      responses: { "200": { description: Orden con detalle, content: { application/json: { schema: { $ref: "#/components/schemas/PurchaseOrder" } } } }, "404": { description: No encontrada } }
+    patch:
+      operationId: updatePurchaseOrder
+      summary: Reemplaza cabecera y líneas de una orden en borrador
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/PurchaseOrderInput" } } } }
+      responses: { "200": { description: Orden actualizada }, "409": { description: La orden ya no es editable } }
+  /v1/admin/purchase-orders/{id}/status:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    patch:
+      operationId: updatePurchaseOrderStatus
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [status], properties: { status: { type: string, enum: [draft, pending_approval, approved, cancelled] } } } } } }
+      responses: { "204": { description: Estado actualizado }, "409": { description: Transición no permitida } }
+  /v1/admin/purchase-orders/{id}/receive:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    post:
+      operationId: receivePurchaseOrder
+      summary: Registra una recepción parcial o final y mueve solo las cantidades realmente recibidas
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/PurchaseReceiptInput" } } } }
+      responses:
+        "201": { description: Recepción registrada y vinculada a la orden, content: { application/json: { schema: { $ref: "#/components/schemas/PurchaseReceiptResult" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "409": { description: La orden no es recibible o una cantidad supera lo pendiente }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/expenses:
+    get:
+      operationId: listExpenses
+      summary: Lista gastos operativos del local activo
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: query, name: q, schema: { type: string } }
+        - { in: query, name: categoryId, schema: { type: string, format: uuid } }
+        - { in: query, name: status, schema: { type: string, enum: [active, void] } }
+        - { in: query, name: from, schema: { type: string, format: date } }
+        - { in: query, name: to, schema: { type: string, format: date } }
+        - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
+        - { in: query, name: pageSize, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+      responses:
+        "200": { description: Gastos paginados del local, content: { application/json: { schema: { type: object, required: [items, total, page, pageSize, paymentMethodOptions], properties: { items: { type: array, items: { $ref: "#/components/schemas/Expense" } }, total: { type: integer }, page: { type: integer }, pageSize: { type: integer }, paymentMethodOptions: { type: array, items: { $ref: "#/components/schemas/Option" } } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      operationId: createExpense
+      summary: Registra un gasto operativo en el local activo
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ExpenseInput" } } } }
+      responses: { "201": { description: Gasto registrado, content: { application/json: { schema: { $ref: "#/components/schemas/Expense" } } } }, "400": { $ref: "#/components/responses/BadRequest" }, "409": { description: Categoría inactiva }, "403": { $ref: "#/components/responses/Forbidden" } }
+  /v1/admin/expenses/{id}/void:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    post:
+      operationId: voidExpense
+      summary: Anula un gasto conservando el registro y su trazabilidad
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ExpenseVoidInput" } } } }
+      responses: { "200": { description: Gasto anulado, content: { application/json: { schema: { $ref: "#/components/schemas/Expense" } } } }, "404": { description: Gasto no encontrado }, "409": { description: Gasto ya anulado }, "403": { $ref: "#/components/responses/Forbidden" } }
+  /v1/admin/expense-categories:
+    get:
+      operationId: listExpenseCategories
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: query, name: q, schema: { type: string } }
+        - { in: query, name: status, schema: { type: string, enum: [active, inactive] } }
+        - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
+        - { in: query, name: pageSize, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+      responses: { "200": { description: Categorías de gasto paginadas }, "403": { $ref: "#/components/responses/Forbidden" } }
+    post:
+      operationId: createExpenseCategory
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ExpenseCategoryInput" } } } }
+      responses: { "201": { description: Categoría creada }, "409": { description: Nombre duplicado }, "403": { $ref: "#/components/responses/Forbidden" } }
+  /v1/admin/expense-categories/{id}:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    patch:
+      operationId: updateExpenseCategory
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ExpenseCategoryInput" } } } }
+      responses: { "200": { description: Categoría actualizada }, "404": { description: Categoría no encontrada }, "409": { description: Nombre duplicado } }
+  /v1/admin/expense-categories/{id}/status:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    patch:
+      operationId: updateExpenseCategoryStatus
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [active], properties: { active: { type: boolean } } } } } }
+      responses: { "204": { description: Estado actualizado }, "404": { description: Categoría no encontrada } }
+  /v1/admin/cash-registers:
+    get:
+      operationId: listCashRegisters
+      summary: Cajas registradas en el local activo con su turno abierto, si existe
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: query, name: q, schema: { type: string } }
+      responses:
+        "200": { description: Cajas del local, content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/CashRegister" } } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      operationId: createCashRegister
+      summary: Registra una nueva caja física o lógica en el local activo
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/CashRegisterInput" } } } }
+      responses:
+        "201": { description: Caja registrada, content: { application/json: { schema: { $ref: "#/components/schemas/CashRegister" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "409": { description: Ya existe una caja con el mismo nombre }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/cash-registers/{id}:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    patch:
+      operationId: updateCashRegister
+      summary: Renombra una caja del local activo
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/CashRegisterInput" } } } }
+      responses:
+        "200": { description: Caja actualizada, content: { application/json: { schema: { $ref: "#/components/schemas/CashRegister" } } } }
+        "404": { description: Caja no encontrada }
+        "409": { description: Nombre duplicado }
+  /v1/admin/cash-registers/{id}/status:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    patch:
+      operationId: updateCashRegisterStatus
+      summary: Activa o desactiva una caja; no permite desactivar si tiene turno abierto
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [active], properties: { active: { type: boolean } } } } } }
+      responses:
+        "204": { description: Estado actualizado }
+        "404": { description: Caja no encontrada }
+        "409": { description: La caja tiene un turno abierto }
+  /v1/admin/cash-shifts/current:
+    get:
+      operationId: getCurrentCashShift
+      summary: Turno de caja abierto del usuario en el local activo
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Turno actual o null, content: { application/json: { schema: { type: object, required: [shift], properties: { shift: { anyOf: [{ $ref: "#/components/schemas/CashShift" }, { type: "null" }] } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/cash-shifts:
+    get:
+      operationId: listCashShifts
+      summary: Historial de turnos de caja del local activo
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: query, name: q, schema: { type: string } }
+        - { in: query, name: status, schema: { type: string, enum: [open, closed] } }
+        - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
+        - { in: query, name: pageSize, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+      responses:
+        "200": { description: Turnos paginados, content: { application/json: { schema: { $ref: "#/components/schemas/CashShiftList" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      operationId: openCashShift
+      summary: Inicia un turno sobre una caja registrada del local activo
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/CashShiftOpenInput" } } } }
+      responses:
+        "201": { description: Turno abierto, content: { application/json: { schema: { $ref: "#/components/schemas/CashShift" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "409": { description: La caja ya tiene un turno abierto o el usuario ya opera otro turno }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/cash-shifts/{id}:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    get:
+      operationId: getCashShift
+      summary: Detalle de un turno de caja del local activo
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Turno con movimientos, content: { application/json: { schema: { $ref: "#/components/schemas/CashShift" } } } }
+        "404": { description: Turno no encontrado en el local activo }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/cash-shifts/{id}/movements:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    post:
+      operationId: createCashMovement
+      summary: Registra un ingreso o egreso manual en un turno abierto
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/CashMovementInput" } } } }
+      responses:
+        "201": { description: Movimiento registrado, content: { application/json: { schema: { $ref: "#/components/schemas/CashMovement" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { description: Turno no encontrado }
+        "409": { description: El turno ya está cerrado }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/cash-shifts/{id}/close:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    post:
+      operationId: closeCashShift
+      summary: Cierra el turno con arqueo, saldo esperado y diferencia
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/CashShiftCloseInput" } } } }
+      responses:
+        "200": { description: Turno cerrado, content: { application/json: { schema: { $ref: "#/components/schemas/CashShift" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { description: Turno no encontrado }
+        "409": { description: El turno ya está cerrado }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/cash-users/options:
+    get:
+      operationId: listCashUserOptions
+      summary: Usuarios del local disponibles para asignar a turnos de caja
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Usuarios y turno activo, content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/CashUserOption" } } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/cash-shifts/{id}/users:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    get:
+      operationId: listCashShiftUsers
+      summary: Equipo actualmente asignado al turno
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Equipo del turno, content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/CashShiftUser" } } } } } } }
+    post:
+      operationId: assignCashShiftUser
+      summary: Asigna un usuario del local a un turno abierto
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [userId], properties: { userId: { type: string, format: uuid } } } } } }
+      responses:
+        "201": { description: Usuario asignado, content: { application/json: { schema: { $ref: "#/components/schemas/CashShiftUser" } } } }
+        "404": { description: Turno o usuario no disponible }
+        "409": { description: El usuario ya opera otro turno }
+  /v1/admin/cash-shifts/{id}/users/{userId}:
+    parameters:
+      - { $ref: "#/components/parameters/EntityId" }
+      - { in: path, name: userId, required: true, schema: { type: string, format: uuid } }
+    delete:
+      operationId: unassignCashShiftUser
+      summary: Retira un usuario del turno
+      security: [{ sessionCookie: [] }]
+      responses:
+        "204": { description: Usuario retirado }
+        "404": { description: Usuario no asignado }
+  /v1/admin/cash-shifts/{id}/operations:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    post:
+      operationId: createCashOperation
+      summary: Registra retiro, depósito o transferencia de efectivo entre turnos
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/CashOperationInput" } } } }
+      responses:
+        "201": { description: Operación registrada atómicamente, content: { application/json: { schema: { $ref: "#/components/schemas/CashOperation" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "409": { description: Saldo insuficiente o turno de destino no disponible }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/pos/orders:
+    get:
+      operationId: listPOSOrders
+      summary: Pedidos del local con estado de cobro
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: query, name: q, schema: { type: string } }
+        - { in: query, name: paymentStatus, schema: { type: string, enum: [unpaid, pending, partial, paid, all], default: unpaid } }
+        - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
+        - { in: query, name: pageSize, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+      responses:
+        "200": { description: Pedidos y saldo por cobrar, content: { application/json: { schema: { $ref: "#/components/schemas/POSOrderList" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/pos/orders/{id}:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    get:
+      operationId: getPOSOrder
+      summary: Detalle del pedido con pagos y saldo restante
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Pedido y pagos, content: { application/json: { schema: { $ref: "#/components/schemas/POSOrderDetail" } } } }
+        "404": { description: Pedido no encontrado }
+  /v1/admin/payment-methods:
+    get:
+      operationId: listAdminPaymentMethods
+      summary: Lista el catálogo administrable de medios de pago de la empresa
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: query, name: q, schema: { type: string } }
+        - { in: query, name: status, schema: { type: string, enum: [active, inactive] } }
+        - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
+        - { in: query, name: pageSize, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+      responses:
+        "200": { description: Catálogo paginado de medios de pago }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      operationId: createPaymentMethod
+      summary: Crea un medio de pago para la empresa
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/PaymentMethodInput" } } } }
+      responses:
+        "201": { description: Medio creado, content: { application/json: { schema: { $ref: "#/components/schemas/PaymentMethod" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "409": { description: Código duplicado o configuración operativa inválida }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/payment-methods/{code}:
+    parameters:
+      - { in: path, name: code, required: true, schema: { type: string, pattern: "^[a-z0-9][a-z0-9_-]{0,39}$" } }
+    patch:
+      operationId: updatePaymentMethod
+      summary: Actualiza el nombre y comportamiento; el código interno es inmutable
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/PaymentMethodInput" } } } }
+      responses:
+        "200": { description: Medio actualizado, content: { application/json: { schema: { $ref: "#/components/schemas/PaymentMethod" } } } }
+        "404": { description: Medio no encontrado }
+        "409": { description: El cambio dejaría sin medios operativos a ventas o gastos }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/payment-methods/{code}/status:
+    parameters:
+      - { in: path, name: code, required: true, schema: { type: string, pattern: "^[a-z0-9][a-z0-9_-]{0,39}$" } }
+    patch:
+      operationId: updatePaymentMethodStatus
+      summary: Activa o desactiva un medio preservando su historial
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [active], properties: { active: { type: boolean } } } } } }
+      responses:
+        "204": { description: Estado actualizado }
+        "404": { description: Medio no encontrado }
+        "409": { description: Debe permanecer al menos un medio activo para ventas y uno para gastos }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/payments:
+    post:
+      operationId: createPayment
+      summary: Registra un cobro contra un pedido usando el turno asignado del usuario
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/PaymentInput" } } } }
+      responses:
+        "201": { description: Cobro registrado, content: { application/json: { schema: { $ref: "#/components/schemas/Payment" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "409": { description: Sin turno activo, pedido no cobrable o monto superior al saldo }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/payments/{id}/refund:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    post:
+      operationId: refundPayment
+      summary: Registra una devolución parcial o total del pago original
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/RefundInput" } } } }
+      responses:
+        "204": { description: Devolución registrada }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { description: Pago no encontrado }
+        "409": { description: La devolución supera el saldo del pago o el efectivo disponible }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/operations/concierge-handoffs:
+    get:
+      operationId: listOperationalConciergeHandoffs
+      summary: Lista solicitudes de atención humana del local activo
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: query, name: status, schema: { type: string, enum: [pending, resolved], default: pending } }
+      responses:
+        "200": { description: Solicitudes de atención, content: { application/json: { schema: { type: object, required: [items, total], properties: { items: { type: array, items: { $ref: "#/components/schemas/ConciergeHandoff" } }, total: { type: integer } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/operations/concierge-handoffs/{id}/resolve:
+    patch:
+      operationId: resolveOperationalConciergeHandoff
+      summary: Marca como atendida una solicitud pendiente de Fudia Concierge
+      security: [{ sessionCookie: [] }]
+      parameters: [{ $ref: "#/components/parameters/EntityId" }]
+      responses:
+        "204": { description: Solicitud marcada como atendida }
+        "404": { description: Solicitud inexistente o ya atendida }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/operations/orders:
+    get:
+      operationId: listOperationalOrders
+      summary: Lista pedidos reales del local activo para la bandeja operativa
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: query, name: q, schema: { type: string } }
+        - { in: query, name: channel, schema: { type: string, enum: [salon, mostrador, recojo, delivery, whatsapp] } }
+        - { in: query, name: status, schema: { type: string, enum: [abiertos, nuevo, confirmado, preparando, listo, en_camino, entregado, cancelado] } }
+        - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
+        - { in: query, name: pageSize, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+      responses:
+        "200": { description: Pedidos paginados con conteos y moneda del local, content: { application/json: { schema: { $ref: "#/components/schemas/OperationalOrderList" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      operationId: createOperationalOrder
+      summary: Crea un pedido desde la operación
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/OrderInput" } } } }
+      responses:
+        "201": { description: Pedido creado, content: { application/json: { schema: { $ref: "#/components/schemas/Order" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/operations/orders/{id}:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    get:
+      operationId: getOperationalOrder
+      summary: Obtiene un pedido real con líneas y estado de cobro
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Pedido con detalle, content: { application/json: { schema: { $ref: "#/components/schemas/Order" } } } }
+        "404": { description: Pedido no encontrado }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/operations/orders/{id}/status:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    patch:
+      operationId: updateOperationalOrderStatus
+      summary: Aplica una transición operativa permitida del pedido
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [status], properties: { status: { type: string, enum: [confirmado, en_camino, entregado, cancelado] } } } } } }
+      responses:
+        "200": { description: Pedido actualizado, content: { application/json: { schema: { $ref: "#/components/schemas/Order" } } } }
+        "404": { description: Pedido no encontrado }
+        "409": { description: Transición no permitida o requiere Cocina }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/operations/payment-methods:
+    get:
+      operationId: listOperationalPaymentMethods
+      summary: Lista los medios de pago activos para la operación
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: query, name: usage, required: true, schema: { type: string, enum: [sales, expenses] } }
+      responses:
+        "200": { description: Catálogo de medios de pago, content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/PaymentMethod" } } } } } } }
+  /v1/operations/products/{id}/modifiers:
+    get:
+      operationId: getOperationalProductModifiers
+      summary: Carga modificadores del producto para construir una línea de POS
+      security: [{ sessionCookie: [] }]
+      parameters: [{ $ref: "#/components/parameters/EntityId" }]
+      responses:
+        "200": { description: Configuración de modificadores, content: { application/json: { schema: { $ref: "#/components/schemas/ProductModifierConfig" } } } }
+        "404": { description: Producto no encontrado }
+        "409": { description: El producto es un combo }
+        "403": { $ref: "#/components/responses/Forbidden" }
   /v1/operations/product-availability:
     get:
       operationId: listOperationalProductAvailability
@@ -278,6 +1043,24 @@ paths:
       security: [{ sessionCookie: [] }]
       requestBody: { required: true, content: { application/json: { schema: { type: object, required: [status], properties: { status: { type: string, enum: [confirmado, preparando, listo, en_camino, entregado, cancelado] } } } } } }
       responses: { "200": { description: Estado actualizado, content: { application/json: { schema: { $ref: "#/components/schemas/Order" } } } }, "404": { description: No encontrado }, "409": { description: Transición no permitida } }
+  /v1/admin/kitchen/tickets:
+    get:
+      operationId: listKitchenTickets
+      summary: Cola KDS del local activo con pedidos confirmados, en preparación y listos
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: query, name: channel, schema: { type: string, enum: [salon, mostrador, recojo, delivery, whatsapp] } }
+      responses:
+        "200": { description: Comandas de cocina, content: { application/json: { schema: { type: object, required: [items, counts, channelOptions, serverTime], properties: { items: { type: array, items: { $ref: "#/components/schemas/KitchenTicket" } }, counts: { type: object, required: [confirmado, preparando, listo], properties: { confirmado: { type: integer }, preparando: { type: integer }, listo: { type: integer } } }, channelOptions: { type: array, items: { type: object, required: [value, label], properties: { value: { type: string }, label: { type: string } } } }, serverTime: { type: string, format: date-time } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/kitchen/tickets/{id}/status:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    patch:
+      operationId: updateKitchenTicketStatus
+      summary: Cocina inicia preparación o marca una comanda como lista
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [status], properties: { status: { type: string, enum: [preparando, listo] } } } } } }
+      responses: { "204": { description: Estado de cocina actualizado }, "400": { $ref: "#/components/responses/BadRequest" }, "404": { description: Pedido no encontrado }, "409": { description: La comanda cambió de estado }, "403": { $ref: "#/components/responses/Forbidden" } }
   /v1/admin/roles:
     get: { operationId: listRoles, security: [{ sessionCookie: [] }], responses: { "200": { description: Roles de la empresa } } }
     post:
@@ -315,7 +1098,7 @@ paths:
     parameters: [{ $ref: "#/components/parameters/EntityId" }]
     patch: { operationId: updateUserStatus, security: [{ sessionCookie: [] }], responses: { "204": { description: Estado actualizado }, "409": { description: No puede desactivarse a sí mismo } } }
 components:
-  securitySchemes: { sessionCookie: { type: apiKey, in: cookie, name: foods_session } }
+  securitySchemes: { sessionCookie: { type: apiKey, in: cookie, name: foods_session }, conciergeServiceKey: { type: apiKey, in: header, name: X-Fudia-Concierge-Key } }
   parameters:
     EntityId: { in: path, name: id, required: true, schema: { type: string, format: uuid } }
   responses:
@@ -325,8 +1108,17 @@ components:
   schemas:
     Health: { type: object, required: [status, service, version], properties: { status: { type: string, const: ok }, service: { type: string }, version: { type: string } } }
     LoginRequest: { type: object, required: [email, password], properties: { email: { type: string, format: email }, password: { type: string, minLength: 8 } } }
-    TenantOnboardingInput: { type: object, required: [legalName, tradeName, taxId, timezone, country, currency, currencyPosition, taxName, taxRate, taxIncluded, locationName, locationCode, address, adminName, adminEmail, adminPassword], properties: { legalName: { type: string }, tradeName: { type: string }, taxId: { type: string, minLength: 6, maxLength: 32 }, timezone: { type: string }, country: { type: string, pattern: "^[A-Z]{2}$", default: PE }, currency: { type: string, pattern: "^[A-Z]{3}$", default: PEN }, currencyPosition: { type: string, enum: [before, after] }, taxName: { type: string }, taxRate: { type: string }, taxIncluded: { type: boolean }, locationName: { type: string }, locationCode: { type: string }, address: { type: string }, adminName: { type: string }, adminEmail: { type: string, format: email }, adminPassword: { type: string, minLength: 8, writeOnly: true } } }
+    SubscriptionPlanInput: { type: object, required: [code, name, currency, monthlyPrice, annualPrice, trialDays, moduleKeys, termsVersion, active], properties: { code: { type: string, pattern: "^[a-z0-9][a-z0-9_-]{1,39}$" }, name: { type: string }, description: { type: string }, currency: { type: string, pattern: "^[A-Z]{3}$" }, monthlyPrice: { type: string }, annualPrice: { type: string }, trialDays: { type: integer, minimum: 0, maximum: 365 }, maxLocations: { type: [integer, "null"], minimum: 1 }, maxUsers: { type: [integer, "null"], minimum: 1 }, moduleKeys: { type: array, minItems: 1, uniqueItems: true, items: { type: string } }, termsVersion: { type: string }, active: { type: boolean } } }
+    SubscriptionPlan: { allOf: [{ $ref: "#/components/schemas/SubscriptionPlanInput" }, { type: object, required: [id], properties: { id: { type: string, format: uuid } } }] }
+    SubscriptionUpdateInput: { type: object, required: [planId, billingCycle, status, autoRenew, termsAccepted], properties: { planId: { type: string, format: uuid }, billingCycle: { type: string, enum: [monthly, annual] }, status: { type: string, enum: [trial, active, past_due, cancelled] }, autoRenew: { type: boolean }, termsAccepted: { type: boolean } } }
+    SubscriptionPaymentInput: { type: object, required: [amount, currency, status, provider], properties: { amount: { type: string }, currency: { type: string, pattern: "^[A-Z]{3}$" }, status: { type: string, enum: [pending, paid, failed, refunded] }, provider: { type: string }, externalReference: { type: string }, paidAt: { type: string, format: date-time } } }
+    OrganizationSubscription: { type: object, required: [id, plan, billingCycle, priceAmount, currency, status, autoRenew, usage, payments], properties: { id: { type: string, format: uuid }, plan: { $ref: "#/components/schemas/SubscriptionPlan" }, billingCycle: { type: string, enum: [monthly, annual] }, priceAmount: { type: string }, currency: { type: string }, status: { type: string, enum: [trial, active, past_due, cancelled] }, trialStartsAt: { type: [string, "null"], format: date-time }, trialEndsAt: { type: [string, "null"], format: date-time }, currentPeriodStartsAt: { type: [string, "null"], format: date-time }, currentPeriodEndsAt: { type: [string, "null"], format: date-time }, renewsAt: { type: [string, "null"], format: date-time }, autoRenew: { type: boolean }, termsVersion: { type: [string, "null"] }, termsAcceptedAt: { type: [string, "null"], format: date-time }, usage: { type: object, required: [locations, users], properties: { locations: { type: integer }, users: { type: integer } } }, payments: { type: array, items: { type: object } } } }
+    TenantOnboardingInput: { type: object, required: [legalName, tradeName, taxId, timezone, planId, billingCycle, termsAccepted, country, currency, currencyPosition, taxName, taxRate, taxIncluded, locationName, locationCode, address, adminName, adminEmail, adminPassword], properties: { legalName: { type: string }, tradeName: { type: string }, taxId: { type: string, minLength: 6, maxLength: 32 }, timezone: { type: string }, planId: { type: string, format: uuid }, billingCycle: { type: string, enum: [monthly, annual] }, termsAccepted: { type: boolean, const: true }, country: { type: string, pattern: "^[A-Z]{2}$", default: PE }, currency: { type: string, pattern: "^[A-Z]{3}$", default: PEN }, currencyPosition: { type: string, enum: [before, after] }, taxName: { type: string }, taxRate: { type: string }, taxIncluded: { type: boolean }, locationName: { type: string }, locationCode: { type: string }, address: { type: string }, adminName: { type: string }, adminEmail: { type: string, format: email }, adminPassword: { type: string, minLength: 8, writeOnly: true } } }
     Dashboard: { type: object, required: [products, criticalStock, purchasesToApprove, currency], properties: { products: { type: integer }, criticalStock: { type: integer }, purchasesToApprove: { type: integer }, currency: { type: string, pattern: "^[A-Z]{3}$" } } }
+    ContextLocation: { type: object, required: [id, name, country, timezone], properties: { id: { type: string, format: uuid }, name: { type: string }, country: { type: string, pattern: "^[A-Z]{2}$" }, timezone: { type: string } } }
+    SessionContext: { type: object, required: [user, organization, location, modules, menuAccess, permissions], properties: { user: { type: object, required: [id, name, platformAdmin], properties: { id: { type: string, format: uuid }, name: { type: string }, platformAdmin: { type: boolean } } }, organization: { type: object, required: [id, name], properties: { id: { type: string, format: uuid }, name: { type: string } } }, location: { $ref: "#/components/schemas/ContextLocation" }, modules: { type: object, additionalProperties: { type: boolean } }, menuAccess: { type: array, items: { type: string } }, permissions: { type: array, items: { type: string } } } }
+    SwitchContextInput: { type: object, required: [organizationId, locationId], properties: { organizationId: { type: string, format: uuid }, locationId: { type: string, format: uuid } } }
+    ContextSwitchResponse: { type: object, required: [organization, location], properties: { organization: { type: object, required: [id, name], properties: { id: { type: string, format: uuid }, name: { type: string } } }, location: { $ref: "#/components/schemas/ContextLocation" } } }
     CurrencyOption: { type: object, required: [code, name, symbol, decimals], properties: { code: { type: string, pattern: "^[A-Z]{3}$" }, name: { type: string }, symbol: { type: string }, decimals: { type: integer, minimum: 0, maximum: 4 } } }
     CountryOption: { type: object, required: [code, name, defaultCurrency], properties: { code: { type: string, pattern: "^[A-Z]{2}$" }, name: { type: string }, defaultCurrency: { type: string, pattern: "^[A-Z]{3}$" } } }
     OrganizationSettingsInput: { type: object, required: [country, currency, currencyPosition, taxName, taxRate, taxIncluded], properties: { country: { type: string, pattern: "^[A-Z]{2}$", default: PE }, currency: { type: string, pattern: "^[A-Z]{3}$", default: PEN }, currencyPosition: { type: string, enum: [before, after] }, taxName: { type: string, maxLength: 30 }, taxRate: { type: number, minimum: 0, maximum: 1 }, taxIncluded: { type: boolean } } }
@@ -336,24 +1128,97 @@ components:
     FiscalProfileInput: { type: object, required: [country, currency, currencyPosition, taxName, taxRate, taxIncluded, default], properties: { country: { type: string, pattern: "^[A-Z]{2}$" }, currency: { type: string, pattern: "^[A-Z]{3}$" }, currencyPosition: { type: string, enum: [before, after] }, taxName: { type: string, maxLength: 30 }, taxRate: { type: string, pattern: "^(0(\\.[0-9]+)?|1(\\.0+)?)$" }, taxIncluded: { type: boolean }, default: { type: boolean } } }
     LocationInput: { type: object, required: [name, code, address, timezone, fiscalProfileId], properties: { name: { type: string }, code: { type: string, maxLength: 30 }, address: { type: string }, timezone: { type: string }, fiscalProfileId: { type: string, format: uuid }, active: { type: boolean } } }
     ExchangeRateInput: { type: object, required: [baseCurrency, quoteCurrency, rate, effectiveAt, source], properties: { baseCurrency: { type: string, pattern: "^[A-Z]{3}$" }, quoteCurrency: { type: string, pattern: "^[A-Z]{3}$" }, rate: { type: string, pattern: "^[0-9]+(\\.[0-9]+)?$" }, effectiveAt: { type: string, format: date-time }, source: { type: string, enum: [manual, provider] }, providerReference: { type: [string, "null"] } } }
-    CategoryInput: { type: object, required: [name, sortOrder], properties: { name: { type: string, maxLength: 120 }, sortOrder: { type: integer, minimum: 0 }, active: { type: boolean } } }
-    Category: { allOf: [{ $ref: "#/components/schemas/CategoryInput" }, { type: object, required: [id, active, productCount], properties: { id: { type: string, format: uuid }, active: { type: boolean }, productCount: { type: integer } } }] }
-    ProductInput: { type: object, required: [sku, name, price], properties: { sku: { type: string, maxLength: 40 }, name: { type: string, maxLength: 160 }, description: { type: string, maxLength: 1000 }, categoryId: { type: [string, "null"], format: uuid }, price: { type: string, pattern: "^[0-9]+(\\.[0-9]{1,2})?$" }, active: { type: boolean } } }
-    Product: { allOf: [{ $ref: "#/components/schemas/ProductInput" }, { type: object, required: [id, active], properties: { id: { type: string, format: uuid }, categoryName: { type: [string, "null"] }, active: { type: boolean } } }] }
-    ProductAvailabilityInput: { type: object, required: [status], properties: { status: { type: string, enum: [available, low, sold_out] }, dailyQuota: { type: [integer, "null"], minimum: 0 }, note: { type: string, maxLength: 240 } } }
-    ProductAvailability: { type: object, required: [productId, name, stockMode, status, source, soldQuantity, note, businessDate], properties: { productId: { type: string, format: uuid }, name: { type: string }, categoryName: { type: [string, "null"] }, imageUrl: { type: [string, "null"] }, stockMode: { type: string, enum: [none, manual, linked, recipe] }, status: { type: string, enum: [available, low, sold_out, unavailable] }, source: { type: string, enum: [always, daily_quota, manual_override, schedule, combo_components] }, dailyQuota: { type: [integer, "null"] }, soldQuantity: { type: integer, minimum: 0 }, remaining: { type: [integer, "null"] }, note: { type: string }, businessDate: { type: string, format: date } } }
+    CategoryInput: { type: object, required: [name, sortOrder], properties: { name: { type: string, maxLength: 120 }, sortOrder: { type: integer, minimum: 0 }, active: { type: boolean }, productScope: { type: string, enum: [prepared, retail, both], default: prepared, description: "Indica si la categoría puede clasificar productos preparados, mercadería vendible o ambos." } } }
+    Category: { allOf: [{ $ref: "#/components/schemas/CategoryInput" }, { type: object, required: [id, active, productScope, productCount], properties: { id: { type: string, format: uuid }, active: { type: boolean }, productCount: { type: integer } } }] }
+    ProductInput: { type: object, required: [name, price], properties: { sku: { type: string, maxLength: 40 }, name: { type: string, maxLength: 160 }, description: { type: string, maxLength: 1000 }, categoryId: { type: [string, "null"], format: uuid }, price: { type: string, pattern: "^[0-9]+(\\.[0-9]{1,2})?$" }, active: { type: boolean }, productType: { type: string, enum: [prepared, retail], default: prepared, description: "Clasificación operativa independiente de categoría y control de cantidad." }, quantityControl: { type: string, enum: [none, portions, inventory], default: none } } }
+    Product: { allOf: [{ $ref: "#/components/schemas/ProductInput" }, { type: object, required: [id, active, productType, quantityControl], properties: { id: { type: string, format: uuid }, categoryName: { type: [string, "null"] }, active: { type: boolean } } }] }
+    ProductModifierOptionInput: { type: object, required: [name, surcharge], properties: { name: { type: string, minLength: 1, maxLength: 80 }, surcharge: { type: string, description: "Recargo monetario no negativo; foods-backend es la fuente de verdad." } } }
+    ProductModifierGroupInput: { type: object, required: [name, required, minSelections, maxSelections, options], properties: { name: { type: string, minLength: 1, maxLength: 80 }, required: { type: boolean }, minSelections: { type: integer, minimum: 0 }, maxSelections: { type: integer, minimum: 1 }, options: { type: array, items: { $ref: "#/components/schemas/ProductModifierOptionInput" } } } }
+    ProductModifierConfigInput: { type: object, required: [groups], properties: { groups: { type: array, items: { $ref: "#/components/schemas/ProductModifierGroupInput" } } } }
+    ProductModifierOption: { allOf: [{ $ref: "#/components/schemas/ProductModifierOptionInput" }, { type: object, required: [id], properties: { id: { type: string, format: uuid } } }] }
+    ProductModifierGroup: { type: object, required: [id, name, required, minSelections, maxSelections, options], properties: { id: { type: string, format: uuid }, name: { type: string }, required: { type: boolean }, minSelections: { type: integer }, maxSelections: { type: integer }, options: { type: array, items: { $ref: "#/components/schemas/ProductModifierOption" } } } }
+    ProductModifierConfig: { type: object, required: [productId, groups], properties: { productId: { type: string, format: uuid }, groups: { type: array, items: { $ref: "#/components/schemas/ProductModifierGroup" } } } }
+    ProductAvailabilityInput: { type: object, required: [status], properties: { status: { type: string, enum: [available, sold_out] }, portionQuantity: { type: [integer, "null"], minimum: 0, description: "Para control portions, no puede ser menor que soldQuantity; al marcar available debe ser al menos 1. null conserva el cupo diario existente cuando ya existe un registro." }, note: { type: string, maxLength: 240 } } }
+    ProductAvailability: { type: object, required: [productId, name, quantityControl, status, source, manualStatus, soldQuantity, note, businessDate], properties: { productId: { type: string, format: uuid }, name: { type: string }, categoryName: { type: [string, "null"] }, imageUrl: { type: [string, "null"] }, quantityControl: { type: string, enum: [none, portions, inventory] }, status: { type: string, enum: [available, low, sold_out, unavailable] }, source: { type: string, enum: [always, portions, inventory, manual_override, schedule, combo_components] }, manualStatus: { type: string, enum: [available, sold_out] }, portionQuantity: { type: [integer, "null"] }, soldQuantity: { type: integer, minimum: 0 }, remaining: { type: [number, "null"], minimum: 0 }, inventoryUnit: { type: [string, "null"] }, note: { type: string }, businessDate: { type: string, format: date } } }
+    InventoryItem: { type: object, required: [inventoryItemId, productId, sku, name, kind, active, unit, quantity, minimumStock, status, updatedAt], properties: { inventoryItemId: { type: string, format: uuid }, productId: { type: [string, "null"], format: uuid }, sku: { type: string }, name: { type: string }, kind: { type: string, enum: [product, ingredient] }, categoryName: { type: [string, "null"] }, active: { type: boolean }, unit: { type: string }, quantity: { type: string }, minimumStock: { type: string }, status: { type: string, enum: [ok, low, out] }, updatedAt: { type: string, format: date-time } } }
+    InventoryPresentation: { type: object, required: [id, presentationType, unitsPerPresentation], properties: { id: { type: string, format: uuid }, presentationType: { type: string, enum: [unit, package, box] }, unitsPerPresentation: { type: string } } }
+    InventoryProductOption: { type: object, required: [id, productId, sku, name, kind, quantityControl, unit, quantity, minimumStock, presentations], properties: { id: { type: string, format: uuid, description: InventoryItemId }, productId: { type: [string, "null"], format: uuid }, sku: { type: string }, name: { type: string }, kind: { type: string, enum: [product, ingredient] }, categoryName: { type: [string, "null"] }, quantityControl: { type: [string, "null"], enum: [inventory, null] }, unit: { type: string }, quantity: { type: string, description: Existencia actual en la unidad base del local activo }, minimumStock: { type: string }, presentations: { type: array, items: { $ref: "#/components/schemas/InventoryPresentation" } } } }
+    InventoryNewProductInput: { type: object, required: [name, price, categoryId], description: "Mercadería vendible clasificada siempre como productType=retail y quantityControl=inventory.", properties: { sku: { type: string }, name: { type: string, maxLength: 160 }, description: { type: string, maxLength: 1000 }, categoryId: { type: string, format: uuid, description: "Debe ser una categoría activa compatible con retail." }, price: { type: string, pattern: "^[0-9]+(\\.[0-9]{1,2})?$" } } }
+    InventoryNewIngredientInput: { type: object, required: [name], properties: { name: { type: string, maxLength: 160 } } }
+    InventoryEntryInput: { type: object, required: [quantity], properties: { inventoryItemId: { type: string, format: uuid }, productId: { type: string, format: uuid, description: Compatibilidad con clientes anteriores }, newProduct: { anyOf: [{ $ref: "#/components/schemas/InventoryNewProductInput" }, { type: "null" }] }, newIngredient: { anyOf: [{ $ref: "#/components/schemas/InventoryNewIngredientInput" }, { type: "null" }] }, quantity: { type: number, exclusiveMinimum: 0 }, unit: { type: string, default: und }, presentationType: { type: string, enum: [unit, package, box], default: unit }, unitsPerPresentation: { type: number, exclusiveMinimum: 0, default: 1 }, minimumStock: { type: number, minimum: 0, default: 0 }, note: { type: string, maxLength: 240 } } }
+    InventoryEntryResult: { type: object, required: [id, inventoryItemId, productId, sku, name, kind, quantity, presentationId, presentationType, unitsPerPresentation, stockQuantity, unit, balance, createdProduct, createdInventoryItem], properties: { id: { type: string, format: uuid }, inventoryItemId: { type: string, format: uuid }, productId: { type: [string, "null"], format: uuid }, sku: { type: string }, name: { type: string }, kind: { type: string, enum: [product, ingredient] }, quantity: { type: number }, presentationId: { type: string, format: uuid }, presentationType: { type: string, enum: [unit, package, box] }, unitsPerPresentation: { type: number }, stockQuantity: { type: number }, unit: { type: string }, balance: { type: number }, createdProduct: { type: boolean }, createdInventoryItem: { type: boolean } } }
+    PurchaseInventoryItemInput: { type: object, properties: { newProduct: { anyOf: [{ $ref: "#/components/schemas/InventoryNewProductInput" }, { type: "null" }] }, newIngredient: { anyOf: [{ $ref: "#/components/schemas/InventoryNewIngredientInput" }, { type: "null" }] }, unit: { type: string, default: und }, presentationType: { type: string, enum: [unit, package, box], default: unit }, unitsPerPresentation: { type: number, exclusiveMinimum: 0, default: 1 }, minimumStock: { type: number, minimum: 0, default: 0 } }, description: "Debe informar exactamente newProduct o newIngredient. El artículo se crea con stock 0 y sin movimiento de Kárdex." }
+    SupplierInput: { type: object, required: [name], properties: { taxId: { type: string, maxLength: 11 }, name: { type: string, maxLength: 180 }, email: { type: string, maxLength: 180 }, phone: { type: string, maxLength: 40 } } }
+    Supplier: { allOf: [{ $ref: "#/components/schemas/SupplierInput" }, { type: object, required: [id, active], properties: { id: { type: string, format: uuid }, active: { type: boolean } } }] }
+    PurchaseReceiptLineInput: { type: object, required: [purchaseOrderItemId, quantity], properties: { purchaseOrderItemId: { type: string, format: uuid }, quantity: { type: number, exclusiveMinimum: 0 } } }
+    PurchaseReceiptInput: { type: object, required: [items], properties: { notes: { type: string, maxLength: 500 }, items: { type: array, minItems: 1, maxItems: 100, items: { $ref: "#/components/schemas/PurchaseReceiptLineInput" } } } }
+    PurchaseReceiptResult: { type: object, required: [id, code, purchaseOrderId, number, status], properties: { id: { type: string, format: uuid }, code: { type: string }, purchaseOrderId: { type: string, format: uuid }, number: { type: string }, status: { type: string, enum: [partially_received, received] }, receivedAt: { type: [string, "null"], format: date-time } } }
+    PurchaseOrderItemInput: { type: object, required: [inventoryItemId, presentationId, quantity, unitCost], properties: { inventoryItemId: { type: string, format: uuid }, presentationId: { type: string, format: uuid }, quantity: { type: number, exclusiveMinimum: 0 }, unitCost: { type: string, pattern: "^[0-9]+(\\.[0-9]{1,4})?$" } } }
+    PurchaseOrderInput: { type: object, required: [supplierId, items], properties: { supplierId: { type: string, format: uuid }, expectedAt: { type: string, format: date }, notes: { type: string, maxLength: 500 }, items: { type: array, minItems: 1, maxItems: 100, items: { $ref: "#/components/schemas/PurchaseOrderItemInput" } } } }
+    PurchaseOrderSummary: { type: object, required: [id, number, supplierId, supplierName, status, total, notes, itemCount, createdAt, updatedAt], properties: { id: { type: string, format: uuid }, number: { type: string }, supplierId: { type: string, format: uuid }, supplierName: { type: string }, status: { type: string, enum: [draft, pending_approval, approved, received, cancelled] }, total: { type: string }, notes: { type: string }, expectedAt: { type: [string, "null"], format: date }, itemCount: { type: integer, minimum: 0 }, createdAt: { type: string, format: date-time }, updatedAt: { type: string, format: date-time }, approvedAt: { type: [string, "null"], format: date-time }, receivedAt: { type: [string, "null"], format: date-time }, cancelledAt: { type: [string, "null"], format: date-time } } }
+    PurchaseOrderItem: { type: object, required: [id, inventoryItemId, itemName, sku, unit, presentationId, presentationType, unitsPerPresentation, quantity, receivedQuantity, pendingQuantity, stockQuantity, unitCost, lineTotal], properties: { id: { type: string, format: uuid }, inventoryItemId: { type: string, format: uuid }, itemName: { type: string }, sku: { type: string }, unit: { type: string }, presentationId: { type: string, format: uuid }, presentationType: { type: string, enum: [unit, package, box] }, unitsPerPresentation: { type: string }, quantity: { type: string }, receivedQuantity: { type: string }, pendingQuantity: { type: string }, stockQuantity: { type: string }, unitCost: { type: string }, lineTotal: { type: string } } }
+    PurchaseOrder: { allOf: [{ $ref: "#/components/schemas/PurchaseOrderSummary" }, { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/PurchaseOrderItem" } } } }] }
+    InventoryAdjustmentInput: { type: object, required: [inventoryItemId, movementType, reason, quantity], properties: { inventoryItemId: { type: string, format: uuid }, movementType: { type: string, enum: [entry, exit] }, reason: { type: string, enum: [surplus_adjustment, shortage_adjustment, waste, expiration, other_exit] }, quantity: { type: number, exclusiveMinimum: 0 }, observation: { type: string, maxLength: 240 } } }
+    InventoryAdjustmentResult: { type: object, required: [id, inventoryItemId, name, unit, movementType, reason, quantity, stockBefore, stockAfter, observation, createdAt, createdByName], properties: { id: { type: string, format: uuid }, inventoryItemId: { type: string, format: uuid }, name: { type: string }, unit: { type: string }, movementType: { type: string, enum: [entry, exit] }, reason: { type: string, enum: [surplus_adjustment, shortage_adjustment, waste, expiration, other_exit] }, quantity: { type: number }, stockBefore: { type: number, minimum: 0 }, stockAfter: { type: number, minimum: 0 }, observation: { type: string }, createdAt: { type: string, format: date-time }, createdByName: { type: string } } }
+    StockMovement: { type: object, required: [id, inventoryItemId, productId, itemName, movementType, quantityDelta, balanceBefore, balanceAfter, sourceType, sourceId, sourceReference, note, createdByName, createdAt], properties: { id: { type: string, format: uuid }, inventoryItemId: { type: string, format: uuid }, productId: { type: [string, "null"], format: uuid }, itemName: { type: string }, movementType: { type: string, enum: [entry, sale, sale_reversal, sale_adjustment, inventory_adjustment] }, adjustmentType: { type: [string, "null"], enum: [entry, exit, null] }, reason: { type: [string, "null"], enum: [surplus_adjustment, shortage_adjustment, waste, expiration, other_exit, null] }, quantityDelta: { type: string }, balanceBefore: { type: string }, balanceAfter: { type: string }, sourceType: { type: string, enum: [inventory_entry, order, inventory_adjustment, purchase_receipt] }, sourceId: { type: string, format: uuid }, sourceReference: { type: string }, note: { type: string }, createdByName: { type: string }, createdAt: { type: string, format: date-time } } }
+    CashRegisterInput: { type: object, required: [name], properties: { name: { type: string, minLength: 1, maxLength: 80 }, blindClose: { type: boolean, default: false } } }
+    CashRegister: { type: object, required: [id, code, name, active, blindClose, openShift], properties: { id: { type: string, format: uuid }, code: { type: string }, name: { type: string }, active: { type: boolean }, blindClose: { type: boolean }, openShift: { anyOf: [{ $ref: "#/components/schemas/CashShift" }, { type: "null" }] } } }
+    CashShiftOpenInput: { type: object, required: [cashRegisterId, openingAmount], properties: { cashRegisterId: { type: string, format: uuid }, openingAmount: { type: number, minimum: 0 }, note: { type: string, maxLength: 240 } } }
+    CashMovementInput: { type: object, required: [movementType, amount, reason], properties: { movementType: { type: string, enum: [income, expense] }, amount: { type: number, exclusiveMinimum: 0 }, reason: { type: string, minLength: 1, maxLength: 120 }, note: { type: string, maxLength: 240 } } }
+    CashCountLine: { type: object, required: [denomination, quantity], properties: { denomination: { type: number, exclusiveMinimum: 0 }, quantity: { type: integer, minimum: 0 } } }
+    CashShiftCloseInput: { type: object, description: "Informa countedAmount o counts. Si counts contiene líneas, el backend calcula el total contado.", properties: { countedAmount: { type: number, minimum: 0 }, counts: { type: array, items: { $ref: "#/components/schemas/CashCountLine" } }, note: { type: string, maxLength: 240 } } }
+    CashMovement: { type: object, required: [id, movementType, sourceType, amount, reason, note, createdByName, createdAt], properties: { id: { type: string, format: uuid }, movementType: { type: string, enum: [income, expense] }, sourceType: { type: string, enum: [manual, cash_sale, cash_refund, cash_pull, transfer_in, transfer_out, deposit, adjustment] }, sourceId: { type: [string, "null"], format: uuid }, amount: { type: string }, reason: { type: string }, note: { type: string }, createdByName: { type: string }, createdAt: { type: string, format: date-time } } }
+    CashShift: { type: object, required: [id, code, cashRegisterId, cashRegisterName, blindClose, expectedVisible, status, openingAmount, incomeAmount, expenseAmount, expectedAmount, openingNote, closingNote, openedByName, closedByName, businessDate, openedAt, movementCount], properties: { id: { type: string, format: uuid }, code: { type: string }, cashRegisterId: { type: string, format: uuid }, cashRegisterName: { type: string }, blindClose: { type: boolean }, expectedVisible: { type: boolean, description: "False cuando el turno usa cierre ciego y el usuario no tiene cash.expected.read." }, status: { type: string, enum: [open, closed] }, openingAmount: { type: string }, incomeAmount: { type: string }, expenseAmount: { type: string }, expectedAmount: { type: string, description: "Vacío durante un cierre ciego sin permiso para consultar el esperado." }, closingExpectedAmount: { type: [string, "null"] }, closingCountedAmount: { type: [string, "null"] }, varianceAmount: { type: [string, "null"] }, openingNote: { type: string }, closingNote: { type: string }, openedByName: { type: string }, closedByName: { type: string }, businessDate: { type: string, format: date }, openedAt: { type: string, format: date-time }, closedAt: { type: [string, "null"], format: date-time }, movementCount: { type: integer, minimum: 0 }, movements: { type: array, items: { $ref: "#/components/schemas/CashMovement" } } } }
+    CashShiftList: { type: object, required: [items, total, page, pageSize], properties: { items: { type: array, items: { $ref: "#/components/schemas/CashShift" } }, total: { type: integer, minimum: 0 }, page: { type: integer, minimum: 1 }, pageSize: { type: integer, minimum: 1 } } }
+    CashShiftUser: { type: object, required: [userId, name, assignedAt], properties: { userId: { type: string, format: uuid }, name: { type: string }, assignedAt: { type: string, format: date-time } } }
+    CashUserOption: { type: object, required: [id, name], properties: { id: { type: string, format: uuid }, name: { type: string }, assignedShiftId: { type: [string, "null"], format: uuid } } }
+    CashOperationInput: { type: object, required: [operationType, amount, reason], properties: { operationType: { type: string, enum: [cash_pull, deposit, transfer] }, targetShiftId: { type: string, format: uuid }, amount: { type: number, exclusiveMinimum: 0 }, reason: { type: string, minLength: 1, maxLength: 120 }, note: { type: string, maxLength: 240 } } }
+    CashOperation: { type: object, required: [id, operationType, amount, reason, note, createdAt], properties: { id: { type: string, format: uuid }, operationType: { type: string, enum: [cash_pull, deposit, transfer] }, amount: { type: string }, reason: { type: string }, note: { type: string }, createdAt: { type: string, format: date-time } } }
+    POSOrderSummary: { type: object, required: [id, code, channel, status, customerName, tableName, total, paidAmount, remainingAmount, paymentStatus, createdAt], properties: { id: { type: string, format: uuid }, code: { type: string }, channel: { type: string }, status: { type: string }, customerName: { type: string }, tableName: { type: string }, total: { type: string }, paidAmount: { type: string }, remainingAmount: { type: string }, paymentStatus: { type: string, enum: [pending, partial, paid] }, createdAt: { type: string, format: date-time } } }
+    POSOrderList: { type: object, required: [items, total, page, pageSize], properties: { items: { type: array, items: { $ref: "#/components/schemas/POSOrderSummary" } }, total: { type: integer }, page: { type: integer }, pageSize: { type: integer } } }
+    POSOrderDetail: { type: object, required: [order, paidAmount, remainingAmount, paymentStatus, payments], properties: { order: { $ref: "#/components/schemas/Order" }, paidAmount: { type: string }, remainingAmount: { type: string }, paymentStatus: { type: string, enum: [pending, partial, paid] }, payments: { type: array, items: { $ref: "#/components/schemas/Payment" } } } }
+    PaymentMethodInput: { type: object, required: [name, salesEnabled, expensesEnabled, affectsCash, sortOrder], properties: { code: { type: string, pattern: "^[a-z0-9][a-z0-9_-]{0,39}$" }, name: { type: string, minLength: 1, maxLength: 80 }, description: { type: string, maxLength: 180 }, salesEnabled: { type: boolean }, expensesEnabled: { type: boolean }, affectsCash: { type: boolean }, sortOrder: { type: integer, minimum: 0, maximum: 9999 } } }
+    PaymentMethod: { type: object, required: [code, name, description, active, salesEnabled, expensesEnabled, affectsCash, sortOrder], properties: { code: { type: string }, name: { type: string }, description: { type: string }, active: { type: boolean }, salesEnabled: { type: boolean }, expensesEnabled: { type: boolean }, affectsCash: { type: boolean }, sortOrder: { type: integer } } }
+    PaymentInput: { type: object, required: [orderId, method, amount], properties: { orderId: { type: string, format: uuid }, method: { type: string }, amount: { type: number, exclusiveMinimum: 0 }, reference: { type: string, maxLength: 120 } } }
+    Payment: { type: object, required: [id, orderId, orderCode, shiftId, cashRegisterName, method, amount, refundedAmount, netAmount, reference, createdByName, createdAt], properties: { id: { type: string, format: uuid }, orderId: { type: string, format: uuid }, orderCode: { type: string }, shiftId: { type: string, format: uuid }, cashRegisterName: { type: string }, method: { type: string }, amount: { type: string }, refundedAmount: { type: string }, netAmount: { type: string }, reference: { type: string }, createdByName: { type: string }, createdAt: { type: string, format: date-time } } }
+    RefundInput: { type: object, required: [amount, reason], properties: { amount: { type: number, exclusiveMinimum: 0 }, reason: { type: string, minLength: 1, maxLength: 120 }, note: { type: string, maxLength: 240 } } }
     ComboOptionInput: { type: object, required: [productId, surcharge], properties: { productId: { type: string, format: uuid }, surcharge: { type: string, pattern: "^[0-9]+(\\.[0-9]{1,2})?$" } } }
     ComboGroupInput: { type: object, required: [name, required, minSelections, maxSelections, options], properties: { name: { type: string, maxLength: 120 }, required: { type: boolean }, minSelections: { type: integer, minimum: 0 }, maxSelections: { type: integer, minimum: 1 }, options: { type: array, items: { $ref: "#/components/schemas/ComboOptionInput" } } } }
     ComboInput: { type: object, required: [name, description, price, groups], properties: { name: { type: string, maxLength: 160 }, description: { type: string, maxLength: 1000 }, price: { type: string, pattern: "^[0-9]+(\\.[0-9]{1,2})?$" }, categoryId: { type: [string, "null"], format: uuid }, groups: { type: array, minItems: 1, items: { $ref: "#/components/schemas/ComboGroupInput" } } } }
     ComboSummary: { type: object, required: [id, name, description, price, active, groupCount, optionCount], properties: { id: { type: string, format: uuid }, name: { type: string }, description: { type: string }, price: { type: string }, active: { type: boolean }, groupCount: { type: integer, minimum: 0 }, optionCount: { type: integer, minimum: 0 } } }
     CustomerAddress: { type: object, required: [label, address, countryCode, default], properties: { id: { type: string, format: uuid, readOnly: true }, label: { type: string }, address: { type: string }, reference: { type: string }, district: { type: string }, city: { type: string }, countryCode: { type: string, pattern: "^[A-Z]{2}$" }, default: { type: boolean } } }
+    Option: { type: object, required: [value, label], properties: { value: { type: string }, label: { type: string } } }
+    ExpenseCategoryInput: { type: object, required: [name], properties: { name: { type: string, minLength: 1, maxLength: 100 } } }
+    ExpenseCategory: { allOf: [{ $ref: "#/components/schemas/ExpenseCategoryInput" }, { type: object, required: [id, active], properties: { id: { type: string, format: uuid }, active: { type: boolean } } }] }
+    ExpenseInput: { type: object, required: [categoryId, description, amount, paymentMethod, businessDate], properties: { categoryId: { type: string, format: uuid }, description: { type: string, minLength: 1, maxLength: 180 }, amount: { type: string, pattern: "^[0-9]{1,12}(\\.[0-9]{1,2})?$" }, paymentMethod: { type: string }, businessDate: { type: string, format: date }, reference: { type: string, maxLength: 120 }, notes: { type: string, maxLength: 500 } } }
+    ExpenseVoidInput: { type: object, required: [reason], properties: { reason: { type: string, minLength: 4, maxLength: 240 } } }
+    Expense: { allOf: [{ $ref: "#/components/schemas/ExpenseInput" }, { type: object, required: [id, categoryName, status, createdByName, createdAt, voidedByName, voidReason], properties: { id: { type: string, format: uuid }, categoryName: { type: string }, status: { type: string, enum: [active, void] }, createdByName: { type: string }, createdAt: { type: string, format: date-time }, voidedByName: { type: string }, voidedAt: { type: [string, "null"], format: date-time }, voidReason: { type: string } } }] }
     CustomerInput: { type: object, required: [customerType, displayName, preferredChannel], properties: { customerType: { type: string, enum: [person, company] }, displayName: { type: string, maxLength: 160 }, documentType: { type: string }, documentNumber: { type: string }, phone: { type: string }, email: { type: string }, preferredChannel: { type: string, enum: [none, whatsapp, phone, email] }, preferences: { type: string }, notes: { type: string }, marketingConsent: { type: boolean }, vipOverride: { type: boolean }, addresses: { type: array, items: { $ref: "#/components/schemas/CustomerAddress" } } } }
     Customer: { allOf: [{ $ref: "#/components/schemas/CustomerInput" }, { type: object, required: [id, code, visitCount, totalSpent, active, segment], properties: { id: { type: string, format: uuid }, code: { type: string }, visitCount: { type: integer, minimum: 0 }, totalSpent: { type: string }, lastPurchaseAt: { type: [string, "null"], format: date-time }, active: { type: boolean }, segment: { type: string, enum: [new, recurrent, frequent, vip] } } }] }
     RoleInput: { type: object, required: [name, menuAccess, permissions], properties: { name: { type: string }, description: { type: string }, menuAccess: { type: array, minItems: 1, items: { type: string } }, permissions: { type: array, minItems: 1, items: { type: string } } } }
-    OrderItemInput: { type: object, required: [name, qty, unitPrice], properties: { productId: { type: string, format: uuid }, name: { type: string, maxLength: 160 }, qty: { type: number, exclusiveMinimum: 0 }, unitPrice: { type: number, minimum: 0 }, note: { type: string, maxLength: 240 } } }
+    ConciergeSettingsInput: { type: object, required: [active, whatsappPhone], properties: { active: { type: boolean }, whatsappPhone: { type: string, pattern: "^\\+[1-9][0-9]{7,14}$", description: "Número internacional E.164. Puede estar vacío solo si active=false." } } }
+    ConciergeSettings: { allOf: [{ $ref: "#/components/schemas/ConciergeSettingsInput" }, { type: object, required: [organizationName, locationName], properties: { organizationName: { type: string }, locationName: { type: string } } }] }
+    PublicTableContext: { type: object, required: [name, seats, zone, organizationName, locationName, conciergeEnabled, whatsappPhone], properties: { name: { type: string }, seats: { type: integer, minimum: 1 }, zone: { type: string }, organizationName: { type: string }, locationName: { type: string }, conciergeEnabled: { type: boolean }, whatsappPhone: { type: string, description: "Número E.164 del local; vacío cuando Concierge no está configurado." } } }
+    ConciergeMenuItem: { type: object, required: [productId, name, description, price, status, isCombo, hasModifiers], properties: { productId: { type: string, format: uuid }, name: { type: string }, description: { type: string }, price: { type: string }, categoryName: { type: [string, "null"] }, imageUrl: { type: [string, "null"] }, status: { type: string, enum: [available, low, sold_out, unavailable] }, isCombo: { type: boolean }, hasModifiers: { type: boolean } } }
+    ConciergeMenuResponse: { type: object, required: [items, currencySymbol], properties: { items: { type: array, items: { $ref: "#/components/schemas/ConciergeMenuItem" } }, currencySymbol: { type: string } } }
+    ConciergeComboOption: { type: object, required: [productId, name, surcharge, available], properties: { productId: { type: string, format: uuid }, name: { type: string }, surcharge: { type: string }, available: { type: boolean } } }
+    ConciergeComboGroup: { type: object, required: [id, name, required, minSelections, maxSelections, options], properties: { id: { type: string, format: uuid }, name: { type: string }, required: { type: boolean }, minSelections: { type: integer, minimum: 0 }, maxSelections: { type: integer, minimum: 1 }, options: { type: array, items: { $ref: "#/components/schemas/ConciergeComboOption" } } } }
+    ConciergeComboDetail: { type: object, required: [id, name, description, price, groups], properties: { id: { type: string, format: uuid }, name: { type: string }, description: { type: string }, price: { type: string }, imageUrl: { type: [string, "null"] }, groups: { type: array, items: { $ref: "#/components/schemas/ConciergeComboGroup" } } } }
+    OrderComboSelectionInput: { type: object, required: [groupId, productId], properties: { groupId: { type: string, format: uuid }, productId: { type: string, format: uuid } } }
+    OrderModifierSelectionInput: { type: object, required: [groupId, optionId], properties: { groupId: { type: string, format: uuid }, optionId: { type: string, format: uuid } } }
+    OrderModifierSelection: { type: object, required: [groupId, groupName, optionId, name, surcharge], properties: { groupId: { type: string, format: uuid }, groupName: { type: string }, optionId: { type: string, format: uuid }, name: { type: string }, surcharge: { type: string } } }
+    ConciergeOrderItemInput: { type: object, required: [productId, qty], description: "No acepta precio como fuente de verdad; foods-backend usa el catálogo vigente.", properties: { productId: { type: string, format: uuid }, qty: { type: number, exclusiveMinimum: 0 }, note: { type: string, maxLength: 240 }, selections: { type: array, items: { $ref: "#/components/schemas/OrderComboSelectionInput" } }, modifiers: { type: array, items: { $ref: "#/components/schemas/OrderModifierSelectionInput" } } } }
+    ConciergeOrderInput: { type: object, required: [customerPhone, conversationId, items], description: "organizationId, locationId, tableId y unitPrice se derivan o recalculan en foods-backend. requestId identifica de forma idempotente cada ronda; si se omite por compatibilidad, se usa conversationId.", properties: { customerName: { type: string, maxLength: 160 }, customerPhone: { type: string, maxLength: 32 }, conversationId: { type: string, maxLength: 160 }, requestId: { type: string, maxLength: 160 }, notes: { type: string, maxLength: 240 }, items: { type: array, minItems: 1, maxItems: 50, items: { $ref: "#/components/schemas/ConciergeOrderItemInput" } } } }
+    ConciergeBillRequest: { type: object, required: [conversationId, customerPhone], properties: { conversationId: { type: string, minLength: 1, maxLength: 160 }, customerPhone: { type: string, maxLength: 32 } } }
+    ConciergeBill: { type: object, required: [orderId, code, tableName, status, currencySymbol, items, total, paidAmount, remainingAmount, paymentStatus], properties: { orderId: { type: string, format: uuid }, code: { type: string }, tableName: { type: string }, status: { type: string }, currencySymbol: { type: string }, items: { type: array, items: { $ref: "#/components/schemas/OrderItem" } }, total: { type: string }, paidAmount: { type: string }, remainingAmount: { type: string }, paymentStatus: { type: string } } }
+    ConciergeHandoffInput: { type: object, required: [conversationId, customerPhone, reason], properties: { conversationId: { type: string, minLength: 1, maxLength: 160 }, customerPhone: { type: string, maxLength: 32 }, reason: { type: string, maxLength: 240 } } }
+    ConciergeHandoff: { type: object, required: [id, tableId, tableName, conversationId, customerPhone, reason, status, requestedAt], properties: { id: { type: string, format: uuid }, tableId: { type: string, format: uuid }, tableName: { type: string }, conversationId: { type: string }, customerPhone: { type: string }, reason: { type: string }, status: { type: string, enum: [pending, resolved] }, requestedAt: { type: string, format: date-time }, resolvedAt: { type: [string, "null"], format: date-time }, resolvedByName: { type: [string, "null"] } } }
+    OrderItemInput: { type: object, required: [productId, qty, unitPrice], properties: { productId: { type: string, format: uuid }, name: { type: string, maxLength: 160 }, qty: { type: number, exclusiveMinimum: 0 }, unitPrice: { type: number, minimum: 0 }, note: { type: string, maxLength: 240 }, selections: { type: array, items: { $ref: "#/components/schemas/OrderComboSelectionInput" } }, modifiers: { type: array, items: { $ref: "#/components/schemas/OrderModifierSelectionInput" } }, reprice: { type: boolean } } }
     OrderInput: { type: object, required: [channel, items], properties: { channel: { type: string, enum: [salon, mostrador, recojo, delivery, whatsapp] }, customerId: { type: string, format: uuid }, customerName: { type: string, maxLength: 160 }, customerPhone: { type: string, maxLength: 30 }, address: { type: string, maxLength: 240 }, reference: { type: string, maxLength: 240 }, tableId: { type: string, format: uuid }, notes: { type: string, maxLength: 500 }, deliveryFee: { type: number, minimum: 0 }, items: { type: array, minItems: 1, items: { $ref: "#/components/schemas/OrderItemInput" } } } }
-    OrderItem: { allOf: [{ $ref: "#/components/schemas/OrderItemInput" }, { type: object, required: [id], properties: { id: { type: string, format: uuid } } }] }
+    OrderItem: { allOf: [{ $ref: "#/components/schemas/OrderItemInput" }, { type: object, required: [id], properties: { id: { type: string, format: uuid }, modifiers: { type: array, items: { $ref: "#/components/schemas/OrderModifierSelection" } } } }] }
     Order: { type: object, required: [id, code, channel, status, customerName, customerPhone, address, reference, tableId, tableName, notes, subtotal, deliveryFee, total, createdAt, updatedAt], properties: { id: { type: string, format: uuid }, code: { type: string }, channel: { type: string, enum: [salon, mostrador, recojo, delivery, whatsapp] }, status: { type: string, enum: [nuevo, confirmado, preparando, listo, en_camino, entregado, cancelado] }, customerId: { type: string }, customerName: { type: string }, customerPhone: { type: string }, address: { type: string }, reference: { type: string }, tableId: { type: string }, tableName: { type: string }, notes: { type: string }, subtotal: { type: string }, deliveryFee: { type: string }, total: { type: string }, createdAt: { type: string, format: date-time }, updatedAt: { type: string, format: date-time }, items: { type: array, items: { $ref: "#/components/schemas/OrderItem" } } } }
+    OperationalOrderList: { type: object, required: [items, total, page, pageSize, channelCounts, channelOptions, statusOptions, currencySymbol], properties: { items: { type: array, items: { $ref: "#/components/schemas/Order" } }, total: { type: integer }, page: { type: integer }, pageSize: { type: integer }, channelCounts: { type: object, additionalProperties: { type: integer } }, channelOptions: { type: array, items: { $ref: "#/components/schemas/Option" } }, statusOptions: { type: array, items: { $ref: "#/components/schemas/Option" } }, currencySymbol: { type: string } } }
+    KitchenTicket: { type: object, required: [id, orderId, roundNumber, code, channel, status, customerName, tableName, notes, createdAt, updatedAt, items], properties: { id: { type: string, format: uuid }, orderId: { type: string, format: uuid }, roundNumber: { type: integer, minimum: 0 }, code: { type: string }, channel: { type: string, enum: [salon, mostrador, recojo, delivery, whatsapp] }, status: { type: string, enum: [confirmado, preparando, listo] }, customerName: { type: string }, tableName: { type: string }, notes: { type: string }, createdAt: { type: string, format: date-time }, updatedAt: { type: string, format: date-time }, targetMinutes: { type: [integer, "null"], minimum: 1 }, items: { type: array, items: { $ref: "#/components/schemas/OrderItem" } } } }
     UserAssignment: { type: object, required: [roleId, locationId], properties: { roleId: { type: string, format: uuid }, locationId: { type: string, format: uuid } } }
     UserInput: { type: object, required: [fullName, email, assignments], properties: { fullName: { type: string }, email: { type: string, format: email }, password: { type: string, minLength: 8, writeOnly: true }, assignments: { type: array, minItems: 1, items: { $ref: "#/components/schemas/UserAssignment" } } } }
-    Error: { type: object, required: [code, message, correlationId], properties: { code: { type: string }, message: { type: string }, correlationId: { type: string } } }
+    Error: { type: object, required: [code, message, correlationId], properties: { code: { type: string }, message: { type: string }, correlationId: { type: string, format: uuid } } }

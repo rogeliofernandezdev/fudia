@@ -1,2 +1,2 @@
-import {UsersRolesManager} from "@/components/users-roles-manager";
-export default function UsuariosPage(){return <UsersRolesManager/>}
+import {UsersRolesManager} from "@/modules/identity";
+export default function Page(){return <UsersRolesManager/>}

@@ -1,6 +1,7 @@
 "use client";
 
 import "mapbox-gl/dist/mapbox-gl.css";
+import "../styles/location-map.css";
 import { useEffect, useRef, useState } from "react";
 import type { Map as MapboxMap, Marker as MapboxMarker } from "mapbox-gl";
 import { Icon } from "@/design-system/icons";
@@ -47,6 +48,8 @@ export function MapboxLocationMap({
   const initialZoom = useRef(latitude != null && longitude != null ? 17 : 11);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [searching, setSearching] = useState(false);
+  const [suggesting, setSuggesting] = useState(false);
+  const [mapLoading, setMapLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [error, setError] = useState("");
   const token = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN ?? "";
@@ -64,6 +67,7 @@ export function MapboxLocationMap({
     let active = true;
     let localMap: MapboxMap | null = null;
     let localMarker: MapboxMarker | null = null;
+    setMapLoading(true);
     void import("mapbox-gl").then(({ default: mapboxgl }) => {
       if (!active || !container.current) return;
       mapboxgl.accessToken = token;
@@ -77,6 +81,7 @@ export function MapboxLocationMap({
         attributionControl: true,
       });
       localMap.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");
+      localMap.once("load", () => { if (active) setMapLoading(false); });
       localMarker = new mapboxgl.Marker({ color: "#2f5bc7", draggable: true })
         .setLngLat(initial)
         .addTo(localMap);
@@ -90,7 +95,7 @@ export function MapboxLocationMap({
       });
       map.current = localMap;
       marker.current = localMarker;
-    }).catch(() => setError("No se pudo cargar Mapbox."));
+    }).catch(() => { setMapLoading(false); setError("No se pudo cargar Mapbox."); });
     return () => {
       active = false;
       localMarker?.remove();
@@ -114,23 +119,27 @@ export function MapboxLocationMap({
       setSuggestions([]);
       setOpen(false);
       setSearching(false);
+      setSuggesting(false);
       return;
     }
     if (!searchTriggeredByTyping.current) {
       setSuggestions([]);
       setOpen(false);
       setSearching(false);
+      setSuggesting(false);
       return;
     }
     if (!token || query.length < 5 || !sessionToken.current) {
       setSuggestions([]);
       setOpen(false);
       setSearching(false);
+      setSuggesting(false);
       return;
     }
     const sequence = ++searchSequence.current;
     const controller = new AbortController();
     setSearching(true);
+    setSuggesting(true);
     const timer = window.setTimeout(async () => {
       try {
         const params = new URLSearchParams({
@@ -155,7 +164,7 @@ export function MapboxLocationMap({
         if (reason instanceof DOMException && reason.name === "AbortError") return;
         if (sequence === searchSequence.current) setError("No se pudieron consultar direcciones en Mapbox.");
       } finally {
-        if (sequence === searchSequence.current) setSearching(false);
+        if (sequence === searchSequence.current) { setSearching(false); setSuggesting(false); }
       }
     }, 400);
     return () => {
@@ -169,6 +178,7 @@ export function MapboxLocationMap({
     searchTriggeredByTyping.current = false;
     setSuggestions([]);
     setOpen(false);
+    setSuggesting(false);
     setSearching(true);
     try {
       const retrieveParams = new URLSearchParams({
@@ -241,7 +251,10 @@ export function MapboxLocationMap({
           placeholder="Escribe calle, número y distrito" autoComplete="off" role="combobox"
           aria-autocomplete="list" aria-expanded={open} className="location-map-input" />
         {searching && <span className="location-map-spinner"><Icon name="refresh" size={14}/></span>}
-        {open && suggestions.length > 0 && <div role="listbox" className="location-map-suggestions">
+        {suggesting && <div className="location-map-suggestions location-map-suggestions-loading" aria-label="Buscando direcciones">
+          {Array.from({length:3},(_,index)=><div className="location-map-suggestion-skeleton" key={index}><i/><span><b/><small/></span></div>)}
+        </div>}
+        {open && suggestions.length > 0 && !searching && <div role="listbox" className="location-map-suggestions">
           {suggestions.map((suggestion) => <button key={suggestion.mapbox_id} type="button"
             role="option" aria-selected="false" onMouseDown={(event) => event.preventDefault()}
             onClick={() => void selectAddress(suggestion)}
@@ -255,7 +268,10 @@ export function MapboxLocationMap({
         </div>}
       </span>
     </label>
-    <div ref={container} className="location-map-canvas" aria-label="Mapa para seleccionar la ubicación del local" />
+    <div className="location-map-canvas-shell">
+      <div ref={container} className="location-map-canvas" aria-label="Mapa para seleccionar la ubicación del local" />
+      {mapLoading&&<div className="location-map-canvas-skeleton" role="status" aria-label="Cargando mapa"><i/><i/><i/><span/></div>}
+    </div>
     <div className="location-map-footer">
       <p>Selecciona una sugerencia y, si hace falta, ajusta el punto en el mapa.</p>
       {latitude != null && longitude != null && <span className="location-map-badge">Ubicación definida</span>}

@@ -1,0 +1,39 @@
+name: fudia-concierge
+
+on:
+  push:
+    paths:
+      - "fudia-concierge/**"
+      - ".github/workflows/fudia-concierge.yml"
+  pull_request:
+    paths:
+      - "fudia-concierge/**"
+      - ".github/workflows/fudia-concierge.yml"
+
+env:
+  GIT_CONFIG_COUNT: "1"
+  GIT_CONFIG_KEY_0: init.defaultBranch
+  GIT_CONFIG_VALUE_0: main
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: fudia-concierge
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            fudia-concierge/pyproject.toml
+            fudia-concierge/constraints.txt
+      - run: python -m pip install -c constraints.txt -e ".[dev]"
+      - run: ruff check .
+      - run: mypy src config
+      - run: pytest -q
+      - run: python -m build
+      - name: Build hardened Docker image
+        run: docker build -t fudia-concierge:ci .

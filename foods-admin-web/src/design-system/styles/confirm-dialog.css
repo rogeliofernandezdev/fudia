@@ -1,0 +1,11 @@
+/* Owned styles extracted from the former global stylesheet. */
+.confirm-overlay{backdrop-filter:blur(2px);z-index:130;background:#10182880;place-items:center;padding:16px;display:grid;position:fixed;inset:0}
+.confirm-card{border:1px solid var(--line);background:#fff;border-radius:16px;width:min(384px,100%);padding:24px;box-shadow:0 24px 70px #1018284d}
+.confirm-icon{border-radius:11px;place-items:center;width:44px;height:44px;display:grid}
+.confirm-icon.danger{color:var(--danger);background:#fff1f0;box-shadow:inset 0 0 0 1px #f9d1cd}
+.confirm-icon.success{color:var(--brand-600);background:var(--brand-100);box-shadow:inset 0 0 0 1px #c9e9dd}
+.confirm-card h2{margin:16px 0 0;font-size:14px}
+.confirm-card p{color:var(--ink-600);margin:8px 0 0;font-size:10px;line-height:1.8}
+.confirm-card footer{justify-content:flex-end;gap:8px;margin-top:22px;display:flex}
+.confirm-card .button.ghost:before{content:"";background:currentColor;flex:0 0 14px;align-self:center;width:14px;height:14px;margin:0;display:block;-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'%3E%3Cpath d='M6 6l12 12M18 6 6 18'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'%3E%3Cpath d='M6 6l12 12M18 6 6 18'/%3E%3C/svg%3E");-webkit-mask-position:50%;mask-position:50%;-webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
+.confirm-card footer .button{justify-content:center;align-items:center;line-height:1}
