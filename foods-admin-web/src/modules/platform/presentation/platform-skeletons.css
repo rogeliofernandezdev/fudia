@@ -1,0 +1,8 @@
+.skeleton-card{overflow:hidden}
+.skeleton-line,.skeleton-price,.skeleton-feature i,.skeleton-feature span,.skeleton-field i,.skeleton-field span,.skeleton-row i{display:block;background:var(--surface-200,#e5e7eb);border-radius:8px;animation:skeleton-pulse 1.4s ease-in-out infinite}
+.skeleton-line{height:14px;width:60%;margin-bottom:14px}.skeleton-line.wide{width:80%}.skeleton-line.title{height:24px;width:45%}
+.skeleton-price{height:72px;margin:20px 0}.skeleton-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.skeleton-row i{height:56px}
+.skeleton-feature{display:flex;gap:10px;margin-top:14px}.skeleton-feature i{width:24px;height:24px}.skeleton-feature span{height:24px;flex:1}
+.skeleton-field{display:flex;gap:12px;margin-top:16px}.skeleton-field i{height:42px;width:120px}.skeleton-field span{height:42px;flex:1}
+.skeleton-history{padding:20px;margin-top:20px}
+@keyframes skeleton-pulse{50%{opacity:.55}}
