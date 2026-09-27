@@ -12,26 +12,27 @@
 .wizard-step:focus-visible{outline:2px solid var(--ops-500);outline-offset:4px;border-radius:8px}
 .wizard-step::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;border-radius:99px;background:var(--cloud-100);transition:background .2s}
 .wizard-step.done::after{background:var(--brand-600)}
-.wizard-step.active::after{background:linear-gradient(90deg,var(--primary-600) 60%,var(--primary-100) 60%)}
-.wizard-step-icon{display:grid;place-items:center;flex-shrink:0;width:36px;height:36px;border-radius:10px;background:var(--cloud-100);color:var(--ink-500);transition:background .18s,color .18s,box-shadow .18s,transform .18s}
+.wizard-step.active::after{background:linear-gradient(90deg,var(--primary-600) 0 40%,var(--primary-100) 40% 60%,var(--primary-600) 60% 100%);background-size:200% 100%;animation:onb-progress 1.6s linear infinite}
+@keyframes onb-progress{from{background-position:100% 0}to{background-position:-100% 0}}
+.wizard-step-icon{display:grid;place-items:center;flex-shrink:0;width:38px;height:38px;border-radius:11px;background:var(--cloud-100);color:var(--ink-500);transition:background .18s,color .18s,box-shadow .18s,transform .18s}
 .wizard-step:not(:disabled):not(.active):hover .wizard-step-icon{transform:translateY(-1px)}
 .wizard-step.active .wizard-step-icon{background:var(--primary-600);color:#fff;box-shadow:0 6px 14px -6px #4654cd99}
 .wizard-step.done .wizard-step-icon{background:var(--brand-100);color:var(--brand-700);box-shadow:inset 0 0 0 1px #16875f26}
-.wizard-step-label{display:grid;gap:2px;min-width:0}
-.wizard-step-label b{font-size:12px;font-weight:750;color:var(--ink-500);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wizard-step-label{display:grid;gap:3px;min-width:0}
+.wizard-step-label b{font-size:12.5px;font-weight:750;letter-spacing:-.005em;color:var(--ink-500);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .wizard-step-label small{font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-400)}
 .wizard-step.active .wizard-step-label b{color:var(--ink-950)}
 .wizard-step.active .wizard-step-label small{color:var(--primary-600)}
 .wizard-step.done .wizard-step-label b{color:var(--ink-950)}
 .wizard-step.done .wizard-step-label small{color:var(--brand-700)}
-@media(prefers-reduced-motion:reduce){.wizard-step::after,.wizard-step-icon{transition:none}}
+@media(prefers-reduced-motion:reduce){.wizard-step::after,.wizard-step-icon{transition:none;animation:none}.wizard-step.active::after{background:var(--primary-600)}}
 
 /* Panel del paso */
 .onboarding-form .panel.management{overflow:visible;border:0;border-radius:0;background:var(--surface);box-shadow:none}
-.onboarding-form .panel.management header{display:flex;align-items:center;justify-content:flex-start;gap:12px;min-height:58px;padding:16px 24px 0;background:var(--surface);border-bottom:0}
+.onboarding-form .panel.management header{display:flex;align-items:center;justify-content:flex-start;gap:12px;min-height:58px;padding:18px 24px 14px;background:var(--surface);border-bottom:1px solid var(--cloud-100)}
 .onboarding-form .panel.management header .modal-title-icon{width:32px;height:32px;display:grid;place-items:center;border-radius:10px;background:var(--primary-100);color:var(--primary-600);box-shadow:none}
 .onboarding-form .panel.management header h2{margin:0;text-align:left;font-size:17px;font-weight:800;letter-spacing:-.01em;color:var(--ink-950)}
-.onboarding-form .panel.management .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 18px;padding:18px 24px 24px}
+.onboarding-form .panel.management .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 20px;padding:20px 24px 24px}
 .onboarding-form .panel.management .form-grid .span-2{grid-column:span 2}
 
 /* Campos */
@@ -41,14 +42,15 @@
 .onboarding-form .field-error{font-size:11px;font-weight:650;line-height:1.35;color:var(--danger)}
 
 /* Plan contratado */
-.onboarding-plan-summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:1px;margin:0 24px;overflow:hidden;border-radius:14px;background:var(--line)}
-.onboarding-plan-summary div{padding:12px;background:var(--cloud-50)}
+.onboarding-plan-summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:1px;margin:0 24px;overflow:hidden;border:1px solid var(--line);border-radius:12px;background:var(--line)}
+.onboarding-plan-summary div{padding:12px 14px;background:var(--surface)}
 .onboarding-plan-summary dt{font-size:10px;font-weight:700;color:var(--ink-500)}
 .onboarding-plan-summary dd{margin:3px 0 0;font-size:14px;font-weight:800;color:var(--ink-950);font-variant-numeric:tabular-nums}
-.onboarding-terms{position:relative;display:flex;align-items:center;gap:10px;margin:14px 24px 24px;padding:12px 14px;border-radius:14px;background:var(--cloud-50);cursor:pointer}
+.onboarding-terms{position:relative;display:flex;align-items:center;gap:12px;margin:14px 24px 24px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface);cursor:pointer;transition:border-color .15s,background .15s}
+.onboarding-terms:has(input:checked){border-color:var(--brand-600);background:var(--brand-100)}
 .onboarding-terms input{position:absolute;opacity:0;width:1px;height:1px}
 .onboarding-terms>span{width:20px;height:20px;flex-shrink:0;display:grid;place-items:center;border:1.5px solid var(--ink-400);border-radius:6px;background:#fff;color:transparent}
-.onboarding-terms input:checked+span{border-color:var(--primary-600);background:var(--primary-600);color:#fff}
+.onboarding-terms input:checked+span{border-color:var(--brand-700);background:var(--brand-700);color:#fff}
 .onboarding-terms input:focus-visible+span{outline:2px solid var(--ops-500);outline-offset:2px}
 .onboarding-terms b{font-size:12px;font-weight:700;color:var(--ink-950)}
 .onboarding-terms .field-error{margin-top:2px}
@@ -58,7 +60,9 @@
 .wizard-footer{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:14px 24px;border-top:1px solid var(--line);background:var(--cloud-50)}
 .wizard-footer>div{display:flex;gap:8px}
 .wizard-footer .button{height:var(--control-height)}
-.wizard-footer .button.primary{min-width:120px;justify-content:center}
+.wizard-footer .button.primary{min-width:140px;justify-content:center}
+.wizard-footer .button.ghost{border-color:transparent;background:transparent;color:var(--ink-600);padding-left:8px}
+.wizard-footer .button.ghost:hover{background:var(--cloud-100);color:var(--ink-950)}
 
 /* Skeleton */
 .platform-onboarding-skeleton .wizard-step{cursor:default}
