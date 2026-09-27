@@ -1,3 +1,3 @@
-import {RestaurantSetupGuide} from "@/modules/configuration";
+import {RestaurantSetupPage} from "@/modules/setup";
 
-export default function Page(){return <RestaurantSetupGuide/>}
+export default function Page(){return <RestaurantSetupPage/>}

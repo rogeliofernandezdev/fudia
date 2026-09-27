@@ -718,7 +718,9 @@ test("login inicia en la primera ruta realmente accesible",()=>{
 });
 
 test("la puesta en marcha guía según los módulos contratados",()=>{
-  const setup=read("src/modules/setup/presentation/restaurant-setup-page.tsx");
+  const setup=read("src/modules/setup/presentation/setup-steps.ts");
+  const route=read("src/app/(admin)/configuracion/puesta-en-marcha/page.tsx");
+  assert.ok(route.includes('from "@/modules/setup"'),"La ruta consume la pantalla que muestra el avance real");
   const navigation=read("src/shell/navigation.ts");
   const session=read("src/shared/session/session-api.ts");
   const shell=read("src/shell/admin-shell.tsx");

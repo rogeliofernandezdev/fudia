@@ -419,6 +419,21 @@ plan, estado o registrar cobros sigue siendo una acción exclusiva de Plataforma
 
 ### Puesta en marcha operativa
 
+La ruta compone una única pantalla del módulo `setup`. La cabecera de bienvenida
+reúne la acción «Iniciar recorrido guiado» y el avance esencial real. La hoja de
+ruta usa pasos numerados sobre fondo neutro, selección azul suave y estados
+textuales. El detalle tiene altura natural, instrucciones breves, un consejo
+y una acción para abrir la sección con guía; no usa un panel lateral oscuro ni
+reserva grandes espacios vacíos. En móvil la hoja de ruta tiene scroll horizontal
+y las modalidades de atención se presentan como radios en filas.
+
+El recorrido acompaña las pantallas reales con un panel contextual minimizable
+y un contorno en el área explicada. «Anterior» y «Siguiente» navegan por las
+opciones permitidas; el último paso vuelve a la revisión. Recorrer la guía no
+marca requisitos como completos: la API conserva esa autoridad. La carga se
+comparte por empresa y local, y se consulta de nuevo al regresar al resumen.
+
+
 Después de crear la empresa, su Administrador entra a
 `/configuracion/puesta-en-marcha`. El asistente lee contadores reales de la API,
 no simula datos ni duplica formularios: deriva al mantenimiento correspondiente
