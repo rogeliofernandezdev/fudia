@@ -47,22 +47,27 @@ export function LoginForm() {
 
   return <main className="admin-auth-page">
     <section className="admin-auth-shell" aria-labelledby="login-title">
-      <div className="admin-auth-context">ADMINISTRACIÓN</div>
+      <div className="admin-auth-brand">
+        <Image src="/assets/images/login.png" alt="fudIA" width={1536} height={1024} priority />
+        <span className="admin-auth-context">Administración</span>
+      </div>
       <div className="admin-auth-card">
         <div className="admin-auth-accent" aria-hidden="true" />
         <div className="admin-auth-body">
-          <h1 className="admin-auth-sr-only" id="login-title">Iniciar sesión</h1>
+          <div className="admin-auth-intro">
+            <h1 id="login-title">Bienvenido de nuevo</h1>
+            <p>Ingresa con el correo y la contraseña de tu empresa.</p>
+          </div>
           <form className="admin-auth-form" onSubmit={submit} noValidate>
-            <div className="admin-auth-form-logo"><Image src="/assets/images/login.png" alt="fudIA" width={1536} height={1024} priority /></div>
             {error && <div className="admin-auth-error" role="alert"><Icon name="alert" size={17}/><span>{error}</span></div>}
             <FormField label="Correo electrónico" error={errors.email?.message}><div className={"admin-auth-field"+(errors.email?" has-error":"")}><Icon name="mail" size={17}/><Input className="admin-auth-input" id="admin-email" type="email" inputMode="email" autoComplete="username" placeholder="nombre@restaurante.com" aria-invalid={Boolean(errors.email)} {...register("email")} /></div></FormField>
-            <FormField label="Contraseña" error={errors.password?.message}><div className={"admin-auth-field"+(errors.password?" has-error":"")}><Icon name="lock" size={17}/><Input className="admin-auth-input admin-auth-input-password" id="admin-password" type={showPassword ? "text" : "password"} autoComplete="current-password" placeholder="Ingresa tu contraseña" aria-invalid={Boolean(errors.password)} {...register("password")}/><button type="button" onClick={() => setShowPassword(value => !value)} aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"} aria-pressed={showPassword}><Icon name="eye" size={17}/></button></div></FormField>
-            <button className="admin-auth-submit" type="submit" disabled={loading} aria-live="polite">{loading ? <><i aria-hidden="true"/>Verificando acceso…</> : <>Ingresar al sistema <Icon name="lock" size={17}/></>}</button>
+            <FormField label="Contraseña" error={errors.password?.message}><div className={"admin-auth-field"+(errors.password?" has-error":"")}><Icon name="lock" size={17}/><Input className="admin-auth-input admin-auth-input-password" id="admin-password" type={showPassword ? "text" : "password"} autoComplete="current-password" placeholder="Tu contraseña" aria-invalid={Boolean(errors.password)} {...register("password")}/><button type="button" onClick={() => setShowPassword(value => !value)} aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"} aria-pressed={showPassword}><Icon name="eye" size={17}/></button></div></FormField>
+            <button className="admin-auth-submit" type="submit" disabled={loading} aria-live="polite">{loading ? <><i aria-hidden="true"/>Verificando acceso…</> : <>Ingresar<Icon name="chevron" size={17}/></>}</button>
           </form>
-          <div className="admin-auth-trust">{trustItems.map(item => <div key={item.label}><Icon name={item.icon} size={16}/><span>{item.label}</span></div>)}</div>
+          <ul className="admin-auth-trust">{trustItems.map(item => <li key={item.label}><Icon name={item.icon} size={14}/><span>{item.label}</span></li>)}</ul>
         </div>
       </div>
-      <footer className="admin-auth-footer"><Icon name="lock" size={13}/> © 2026 fudIA. Todos los derechos reservados.</footer>
+      <footer className="admin-auth-footer">© 2026 fudIA · Todos los derechos reservados</footer>
     </section>
   </main>;
 }
