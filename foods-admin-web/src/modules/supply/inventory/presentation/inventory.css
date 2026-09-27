@@ -31,7 +31,26 @@
 .inventory-adjustment-preview>span{display:grid;gap:2px}
 .inventory-adjustment-preview b{font-size:10px}
 .inventory-adjustment-preview small{font-size:10px;color:var(--ink-600)}
-.inventory-adjustment-validation{min-height:40px;padding:9px 11px;border:1px solid #f3c4c4;border-radius:9px;background:#fff5f5;color:var(--danger);display:flex;align-items:center;gap:8px;font-size:10px;font-weight:700}
+.inventory-validation{min-height:40px;padding:9px 11px;border:1px solid #f3c4c4;border-radius:9px;background:var(--danger-50);color:var(--danger);display:flex;align-items:center;gap:8px;font-size:11px;font-weight:700}
+/* Transferencia entre locales */
+.inventory-transfer-modal{width:min(680px,calc(100vw - 28px));overflow:hidden}
+.inventory-transfer-modal form{padding:0}
+.inventory-transfer-modal form>footer{margin:0;padding:15px 20px}
+.inventory-transfer-body{max-height:min(68vh,640px);padding:18px 20px;overflow:auto;display:grid;gap:16px;background:#fff}
+.inventory-transfer-route{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:end;gap:12px}
+.inventory-transfer-origin{display:grid;gap:5px;min-width:0}
+.inventory-transfer-origin small{font-size:11px;font-weight:700;color:var(--ink-950)}
+.inventory-transfer-origin strong{display:flex;align-items:center;height:var(--control-height);padding:0 12px;border:1px solid #e4e7ec;border-radius:6px;background:var(--cloud-50);font-size:11px;font-weight:700;color:var(--ink-600);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.inventory-transfer-arrow{display:grid;place-items:center;height:var(--control-height);color:var(--ink-400)}
+.inventory-transfer-lines{display:grid;gap:10px}
+.inventory-transfer-lines-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.inventory-transfer-lines-head b{font-size:12px;font-weight:800;color:var(--ink-950)}
+.inventory-transfer-line{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(96px,.6fr) minmax(110px,.7fr) var(--control-height);align-items:start;gap:10px;padding:12px;border:1px solid var(--line);border-radius:10px;background:#fafbff}
+.inventory-transfer-available{display:grid;gap:5px;min-width:0}
+.inventory-transfer-available small{font-size:11px;font-weight:700;color:var(--ink-950)}
+.inventory-transfer-available b{display:flex;align-items:center;height:var(--control-height);font-size:11px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--ink-600);white-space:nowrap}
+.inventory-transfer-line-actions{display:grid;align-content:start;padding-top:calc(11px * 1.15 + 5px)}
+.inventory-transfer-empty{margin:0;padding:14px;border:1px dashed var(--line);border-radius:10px;font-size:11px;color:var(--ink-500);text-align:center}
 
 .kardex-reason{display:grid;gap:2px}
 .kardex-balance{font-family:var(--font-mono);font-size:10px;font-weight:750}
@@ -40,7 +59,18 @@
 @media(max-width:600px){
  .inventory-toolbar{align-items:stretch;flex-direction:column}
  .inventory-toolbar .ds-input-shell,.inventory-toolbar .ds-select{width:100%;min-width:0}
- .inventory-adjustment-modal{width:100vw;height:100dvh;max-height:none;border-radius:0}
+ .inventory-adjustment-modal,.inventory-transfer-modal{width:100%;height:100%;max-height:none;border-radius:14px}
+ .inventory-transfer-body{max-height:none;flex:1;padding:14px}
+ .inventory-transfer-modal form{min-height:0;flex:1;display:flex;flex-direction:column}
+ .inventory-transfer-route{grid-template-columns:1fr}
+ .inventory-transfer-arrow{display:none}
+ .inventory-transfer-line{grid-template-columns:minmax(0,1fr) var(--control-height)}
+ .inventory-transfer-line>.form-field{grid-column:1}
+ .inventory-transfer-available{grid-column:1;grid-auto-flow:column;justify-content:start;align-items:center;gap:8px}
+ .inventory-transfer-available b{height:auto}
+ .inventory-transfer-line-actions{grid-column:2;grid-row:1}
+ .inventory-transfer-lines-head{flex-wrap:wrap}
+ .inventory-transfer-modal footer .button{flex:1}
  .inventory-adjustment-body{max-height:none;flex:1;padding:14px}
  .inventory-adjustment-modal form{min-height:0;flex:1;display:flex;flex-direction:column}
  .inventory-adjustment-grid{grid-template-columns:1fr}
