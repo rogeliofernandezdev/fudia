@@ -5,6 +5,7 @@ export type SessionContextResponse={
   modules:Record<string,boolean>;
   menuAccess:string[];
   permissions:string[];
+  setupRequired:boolean;
 };
 
 export async function loadSessionContext():Promise<SessionContextResponse>{

@@ -22,6 +22,22 @@
 .wizard-footer>div{justify-content:center}}
 .onboarding-form{display:grid;gap:15px;margin-top:21px}
 
+.platform-onboarding-skeleton .wizard-step{cursor:default;min-width:0}
+.onboarding-skeleton-icon{width:32px;height:32px;border-radius:8px;flex:0 0 auto}
+.onboarding-skeleton-step-copy{display:grid;gap:6px;min-width:0;flex:1}
+.onboarding-skeleton-step-copy i{height:8px;border-radius:4px}
+.onboarding-skeleton-step-copy i:first-child{width:70%;height:11px}
+.onboarding-skeleton-step-copy i:last-child{width:100%}
+.onboarding-skeleton-progress{width:96px;height:12px;border-radius:4px}
+.platform-onboarding-skeleton .panel>header{justify-content:flex-start;gap:12px}
+.onboarding-skeleton-heading{display:grid;gap:8px}
+.onboarding-skeleton-heading i{width:108px;height:9px;border-radius:4px}
+.onboarding-skeleton-heading i:last-child{width:136px;height:15px}
+.onboarding-skeleton-field{min-width:0;display:grid;gap:7px}
+.onboarding-skeleton-label{width:88px;height:13px;border-radius:4px}
+.onboarding-skeleton-control{width:100%;height:var(--control-height);border-radius:6px}
+.onboarding-skeleton-action{width:112px;height:var(--control-height);border-radius:6px}
+
 .onboarding-plan-summary{border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);gap:0}
 .onboarding-plan-summary>div{padding:14px 16px;display:grid;gap:4px}
 .onboarding-plan-summary>div+div{border-left:1px solid var(--line)}

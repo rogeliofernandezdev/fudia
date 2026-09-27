@@ -17,20 +17,20 @@ import (
 const tenantOnboardingFlow = "platform.onboarding"
 
 const (
-	onboardingStepValidate             = "validate_input"
-	onboardingStepHashPassword         = "hash_admin_password"
-	onboardingStepBeginTransaction     = "begin_transaction"
-	onboardingStepCreateOrganization   = "create_organization"
-	onboardingStepConfigureFiscal      = "configure_fiscal_profile"
-	onboardingStepCreateLocation       = "create_location"
-	onboardingStepCreateAdministrator  = "create_administrator"
-	onboardingStepSeedRoles            = "seed_roles"
-	onboardingStepSeedPaymentMethods   = "seed_payment_methods"
-	onboardingStepSeedDefaults         = "seed_operational_defaults"
-	onboardingStepCreateSubscription   = "create_subscription"
-	onboardingStepAssignAdministrator  = "assign_administrator_role"
-	onboardingStepWriteAudit           = "write_audit"
-	onboardingStepCommitTransaction    = "commit_transaction"
+	onboardingStepValidate            = "validate_input"
+	onboardingStepHashPassword        = "hash_admin_password"
+	onboardingStepBeginTransaction    = "begin_transaction"
+	onboardingStepCreateOrganization  = "create_organization"
+	onboardingStepConfigureFiscal     = "configure_fiscal_profile"
+	onboardingStepCreateLocation      = "create_location"
+	onboardingStepCreateAdministrator = "create_administrator"
+	onboardingStepSeedRoles           = "seed_roles"
+	onboardingStepSeedPaymentMethods  = "seed_payment_methods"
+	onboardingStepSeedDefaults        = "seed_operational_defaults"
+	onboardingStepCreateSubscription  = "create_subscription"
+	onboardingStepAssignAdministrator = "assign_administrator_role"
+	onboardingStepWriteAudit          = "write_audit"
+	onboardingStepCommitTransaction   = "commit_transaction"
 )
 
 type tenantOnboardingInput struct {
@@ -326,6 +326,11 @@ func (a *API) onboardTenant(w http.ResponseWriter, r *http.Request) {
 	}
 	logFlowStep(w, r, tenantOnboardingFlow, onboardingStepSeedDefaults, "organization_id", organizationID, "location_id", locationID)
 
+	if _, err = tx.Exec(r.Context(), `INSERT INTO organization_operational_setup(organization_id) VALUES($1)`, organizationID); err != nil {
+		failOnboardingStep(w, r, onboardingStepSeedDefaults, err)
+		return
+	}
+
 	if err = createOrganizationSubscription(r.Context(), tx, organizationID, userID, in.PlanID, in.BillingCycle, in.TermsAccepted); err != nil {
 		failOnboardingStep(w, r, onboardingStepCreateSubscription, err)
 		return
@@ -352,9 +357,9 @@ func (a *API) onboardTenant(w http.ResponseWriter, r *http.Request) {
 	logFlowCompleted(w, r, tenantOnboardingFlow, "organization_id", organizationID, "location_id", locationID, "administrator_id", userID)
 
 	writeJSON(w, http.StatusCreated, map[string]string{
-		"organizationId": organizationID,
+		"organizationId":  organizationID,
 		"fiscalProfileId": profileID,
-		"locationId": locationID,
+		"locationId":      locationID,
 		"administratorId": userID,
 	})
 }

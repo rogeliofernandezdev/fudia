@@ -86,7 +86,7 @@ func TestPlatformOnboardingCreatesOperationalTenant(t *testing.T){
 	if err:=pool.QueryRow(context.Background(),`SELECT count(*) FROM roles WHERE organization_id=$1 AND system_key IS NOT NULL`,created.OrganizationID).Scan(&defaults);err!=nil{t.Fatal(err)}
 	if defaults!=len(defaultOrganizationRoles){t.Fatalf("expected %d predefined roles, got %d",len(defaultOrganizationRoles),defaults)}
 
-	var paymentMethods,expenseCategories,cashRegisters,zones int
+	var paymentMethods,expenseCategories,cashRegisters,zones,setupPending int
 	if err:=pool.QueryRow(context.Background(),`SELECT count(*) FROM payment_methods WHERE organization_id=$1 AND active`,created.OrganizationID).Scan(&paymentMethods);err!=nil{t.Fatal(err)}
 	if paymentMethods!=5{t.Fatalf("expected 5 default payment methods, got %d",paymentMethods)}
 	if err:=pool.QueryRow(context.Background(),`SELECT count(*) FROM expense_categories WHERE organization_id=$1 AND active`,created.OrganizationID).Scan(&expenseCategories);err!=nil{t.Fatal(err)}
@@ -95,6 +95,8 @@ func TestPlatformOnboardingCreatesOperationalTenant(t *testing.T){
 	if cashRegisters!=1{t.Fatalf("expected Caja principal after onboarding, got %d",cashRegisters)}
 	if err:=pool.QueryRow(context.Background(),`SELECT count(*) FROM zones WHERE organization_id=$1 AND location_id=$2 AND active AND name='Principal'`,created.OrganizationID,created.LocationID).Scan(&zones);err!=nil{t.Fatal(err)}
 	if zones!=1{t.Fatalf("expected Principal zone after onboarding, got %d",zones)}
+	if err:=pool.QueryRow(context.Background(),`SELECT count(*) FROM organization_operational_setup WHERE organization_id=$1 AND service_mode IS NULL AND completed_at IS NULL`,created.OrganizationID).Scan(&setupPending);err!=nil{t.Fatal(err)}
+	if setupPending!=1{t.Fatalf("expected pending restaurant setup after onboarding, got %d",setupPending)}
 
 	var registerID string
 	if err:=pool.QueryRow(context.Background(),`SELECT id FROM cash_registers WHERE organization_id=$1 AND location_id=$2 AND name='Caja principal'`,created.OrganizationID,created.LocationID).Scan(&registerID);err!=nil{t.Fatal(err)}

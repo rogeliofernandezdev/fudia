@@ -717,6 +717,21 @@ test("login inicia en la primera ruta realmente accesible",()=>{
   assert.ok(noAccess.includes("Sin accesos asignados"),"Existe un destino explícito para roles sin opciones válidas");
 });
 
+test("la puesta en marcha guía según los módulos contratados",()=>{
+  const setup=read("src/modules/setup/presentation/restaurant-setup-page.tsx");
+  const navigation=read("src/shell/navigation.ts");
+  const session=read("src/shared/session/session-api.ts");
+  const shell=read("src/shell/admin-shell.tsx");
+
+  assert.ok(setup.includes("setup.modules.inventario"),"Inventario solo aparece cuando el plan lo habilita");
+  assert.ok(setup.includes("setup.modules.recetas"),"Recetas solo aparece cuando el plan lo habilita");
+  assert.ok(setup.includes("setup.modules.compras"),"Compras solo aparece cuando el plan lo habilita");
+  assert.ok(setup.includes('setup.serviceMode==="dine_in"||setup.serviceMode==="mixed"'),"Las mesas son obligatorias únicamente para atención en salón");
+  assert.ok(session.includes("setupRequired:boolean"),"El contexto informa si la empresa sigue pendiente");
+  assert.ok(navigation.includes('return "/configuracion/puesta-en-marcha"'),"El Administrador entra primero al asistente pendiente");
+  assert.ok(shell.includes("Configuración inicial pendiente"),"La navegación mantiene un recordatorio de configuración");
+});
+
 
 test("performance frontend limita requests y carga diferida",()=>{
   const hook=read("src/shared/hooks/use-debounced-value.ts");

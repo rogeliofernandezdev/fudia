@@ -10,6 +10,7 @@ import {Input,PageHeader,Select} from "@/design-system/page-header";
 import {useFeedback} from "@/providers/feedback-provider";
 import type {PlatformOnboardingDraft} from "../domain/types";
 import {createPlatformOrganization,getPlatformOnboardingContext} from "../infrastructure/platform-api";
+import {PlatformOnboardingSkeleton} from "./platform-skeletons";
 
 const blank:PlatformOnboardingDraft={
  legalName:"",tradeName:"",taxId:"",timezone:"America/Lima",
@@ -51,7 +52,7 @@ export function PlatformOnboardingPage(){
 
   return <><PageHeader eyebrow="PLATAFORMA" title="Registrar empresa" description="Alta única y transaccional: empresa, contrato, fiscalidad, primer local y Administrador de empresa."/>
   {loadError?<div className="catalog-state error"><span><Icon name="alert"/></span><b>No pudimos cargar los catálogos</b><p>{loadError}</p><button className="button secondary" onClick={()=>void context.refetch()}>Reintentar</button></div>:
-  context.isLoading?<div className="catalog-state"><b>Cargando configuración…</b></div>:
+  context.isLoading?<PlatformOnboardingSkeleton stepCount={steps.length}/>:
   !ctx?.plans.length?<div className="catalog-state"><span><Icon name="settings"/></span><b>Primero crea un plan comercial</b><p>El alta de una empresa exige un plan activo con precio, límites, condiciones y módulos definidos.</p><Link className="button primary" href="/platform/plans"><Icon name="plus" size={16}/>Crear plan</Link></div>:
   <div className="onboarding-wizard">
     <nav className="wizard-steps" aria-label="Pasos del registro">

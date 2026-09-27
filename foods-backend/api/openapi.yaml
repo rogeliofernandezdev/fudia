@@ -184,6 +184,24 @@ paths:
       operationId: getAdminContext
       security: [{ sessionCookie: [] }]
       responses: { "200": { description: Contexto activo de empresa y local, content: { application/json: { schema: { $ref: "#/components/schemas/SessionContext" } } } }, "401": { $ref: "#/components/responses/Unauthorized" } }
+  /v1/admin/restaurant-setup:
+    get:
+      operationId: getRestaurantSetup
+      summary: Consulta el avance real de la puesta en marcha del restaurante
+      security: [{ sessionCookie: [] }]
+      responses: { "200": { description: Estado de puesta en marcha, content: { application/json: { schema: { $ref: "#/components/schemas/RestaurantSetup" } } } }, "403": { $ref: "#/components/responses/Forbidden" } }
+    patch:
+      operationId: updateRestaurantSetup
+      summary: Define el tipo de atención del restaurante
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/RestaurantSetupInput" } } } }
+      responses: { "200": { description: Puesta en marcha actualizada, content: { application/json: { schema: { $ref: "#/components/schemas/RestaurantSetup" } } } }, "400": { $ref: "#/components/responses/BadRequest" }, "403": { $ref: "#/components/responses/Forbidden" } }
+  /v1/admin/restaurant-setup/complete:
+    post:
+      operationId: completeRestaurantSetup
+      summary: Finaliza la puesta en marcha cuando la operación mínima está configurada
+      security: [{ sessionCookie: [] }]
+      responses: { "200": { description: Restaurante listo para operar, content: { application/json: { schema: { $ref: "#/components/schemas/RestaurantSetup" } } } }, "403": { $ref: "#/components/responses/Forbidden" }, "409": { description: Faltan requisitos obligatorios } }
   /v1/admin/switch-context:
     post:
       operationId: switchAdminContext
@@ -1116,7 +1134,10 @@ components:
     TenantOnboardingInput: { type: object, required: [legalName, tradeName, taxId, timezone, planId, billingCycle, termsAccepted, country, currency, currencyPosition, taxName, taxRate, taxIncluded, locationName, locationCode, address, adminName, adminEmail, adminPassword], properties: { legalName: { type: string }, tradeName: { type: string }, taxId: { type: string, minLength: 6, maxLength: 32 }, timezone: { type: string }, planId: { type: string, format: uuid }, billingCycle: { type: string, enum: [monthly, annual] }, termsAccepted: { type: boolean, const: true }, country: { type: string, pattern: "^[A-Z]{2}$", default: PE }, currency: { type: string, pattern: "^[A-Z]{3}$", default: PEN }, currencyPosition: { type: string, enum: [before, after] }, taxName: { type: string }, taxRate: { type: string }, taxIncluded: { type: boolean }, locationName: { type: string }, locationCode: { type: string }, address: { type: string }, adminName: { type: string }, adminEmail: { type: string, format: email }, adminPassword: { type: string, minLength: 8, writeOnly: true } } }
     Dashboard: { type: object, required: [products, criticalStock, purchasesToApprove, currency], properties: { products: { type: integer }, criticalStock: { type: integer }, purchasesToApprove: { type: integer }, currency: { type: string, pattern: "^[A-Z]{3}$" } } }
     ContextLocation: { type: object, required: [id, name, country, timezone], properties: { id: { type: string, format: uuid }, name: { type: string }, country: { type: string, pattern: "^[A-Z]{2}$" }, timezone: { type: string } } }
-    SessionContext: { type: object, required: [user, organization, location, modules, menuAccess, permissions], properties: { user: { type: object, required: [id, name, platformAdmin], properties: { id: { type: string, format: uuid }, name: { type: string }, platformAdmin: { type: boolean } } }, organization: { type: object, required: [id, name], properties: { id: { type: string, format: uuid }, name: { type: string } } }, location: { $ref: "#/components/schemas/ContextLocation" }, modules: { type: object, additionalProperties: { type: boolean } }, menuAccess: { type: array, items: { type: string } }, permissions: { type: array, items: { type: string } } } }
+    SessionContext: { type: object, required: [user, organization, location, modules, menuAccess, permissions, setupRequired], properties: { user: { type: object, required: [id, name, platformAdmin], properties: { id: { type: string, format: uuid }, name: { type: string }, platformAdmin: { type: boolean } } }, organization: { type: object, required: [id, name], properties: { id: { type: string, format: uuid }, name: { type: string } } }, location: { $ref: "#/components/schemas/ContextLocation" }, modules: { type: object, additionalProperties: { type: boolean } }, menuAccess: { type: array, items: { type: string } }, permissions: { type: array, items: { type: string } }, setupRequired: { type: boolean } } }
+    RestaurantSetupInput: { type: object, required: [serviceMode], properties: { serviceMode: { type: string, enum: [counter, dine_in, mixed] } } }
+    RestaurantSetupCounts: { type: object, required: [categories, products, tables, cashRegisters, users, inventoryItems, recipes, suppliers], properties: { categories: { type: integer, minimum: 0 }, products: { type: integer, minimum: 0 }, tables: { type: integer, minimum: 0 }, cashRegisters: { type: integer, minimum: 0 }, users: { type: integer, minimum: 0 }, inventoryItems: { type: integer, minimum: 0 }, recipes: { type: integer, minimum: 0 }, suppliers: { type: integer, minimum: 0 } } }
+    RestaurantSetup: { type: object, required: [serviceMode, coreReady, counts, modules], properties: { serviceMode: { type: string, enum: [counter, dine_in, mixed, ""] }, completedAt: { type: [string, "null"], format: date-time }, coreReady: { type: boolean }, counts: { $ref: "#/components/schemas/RestaurantSetupCounts" }, modules: { type: object, additionalProperties: { type: boolean } } } }
     SwitchContextInput: { type: object, required: [organizationId, locationId], properties: { organizationId: { type: string, format: uuid }, locationId: { type: string, format: uuid } } }
     ContextSwitchResponse: { type: object, required: [organization, location], properties: { organization: { type: object, required: [id, name], properties: { id: { type: string, format: uuid }, name: { type: string } } }, location: { $ref: "#/components/schemas/ContextLocation" } } }
     CurrencyOption: { type: object, required: [code, name, symbol, decimals], properties: { code: { type: string, pattern: "^[A-Z]{3}$" }, name: { type: string }, symbol: { type: string }, decimals: { type: integer, minimum: 0, maximum: 4 } } }

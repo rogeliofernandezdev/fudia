@@ -163,6 +163,14 @@ El onboarding de una organización crea en una sola transacción la empresa, su 
 
 Estas filas son configuración inicial editable, no datos comerciales de ejemplo. No se crean productos, proveedores, recetas, mesas, clientes ni movimientos ficticios.
 
+`organization_operational_setup` conserva el avance de la puesta en marcha por
+empresa. El tipo de atención puede ser mostrador, salón o mixto; salón y mixto
+exigen al menos una mesa activa. Para finalizar también se requiere una
+categoría activa, un producto activo asociado a categoría y una caja activa en
+el local. Usuarios adicionales, inventario, recetas y proveedores son pasos
+opcionales y solo se presentan cuando el plan habilita sus módulos. Por ello el
+plan básico no depende de recetas para comenzar a vender.
+
 ## Medios de pago
 
 `payment_methods` es el catálogo de medios de pago por empresa y constituye la única fuente de verdad para Cobros y Gastos. Cada fila define código estable, nombre visible, estado, disponibilidad para ventas o gastos y si el medio representa movimiento físico de efectivo. `payments` y `expenses` referencian el catálogo mediante clave foránea compuesta `(organization_id, code)`.

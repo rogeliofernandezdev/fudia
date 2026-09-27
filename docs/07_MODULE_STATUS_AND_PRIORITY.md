@@ -56,6 +56,11 @@ Una empresa nueva queda creada en una sola transacción con:
 No se crean datos comerciales ficticios como productos, proveedores, clientes,
 recetas, mesas o movimientos.
 
+Al primer ingreso, el Administrador de empresa recibe un asistente persistente
+de puesta en marcha. Este valida la operación real (tipo de atención, carta,
+caja y mesas cuando corresponda) y muestra pasos opcionales según los módulos
+contratados. El plan Emprende no presenta ni exige Recetas, Inventario o Compras.
+
 ### ✅ Medios de pago
 
 - Catálogo único por empresa en `payment_methods`.

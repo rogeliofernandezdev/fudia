@@ -39,6 +39,9 @@ func (a *API) Routes() *http.ServeMux {
 	m.Handle("POST /v1/platform/subscription/payments", a.auth(a.requirePlatformAdmin(http.HandlerFunc(a.recordSubscriptionPayment))))
 	m.Handle("GET /v1/admin/dashboard", a.auth(a.requirePermission("dashboard.read", http.HandlerFunc(a.dashboard))))
 	m.Handle("GET /v1/admin/context", a.auth(http.HandlerFunc(a.getContext)))
+	m.Handle("GET /v1/admin/restaurant-setup", a.auth(a.requirePermission("organizations.read", http.HandlerFunc(a.getRestaurantSetup))))
+	m.Handle("PATCH /v1/admin/restaurant-setup", a.auth(a.requirePermission("organizations.manage", http.HandlerFunc(a.updateRestaurantSetup))))
+	m.Handle("POST /v1/admin/restaurant-setup/complete", a.auth(a.requirePermission("organizations.manage", http.HandlerFunc(a.completeRestaurantSetup))))
 	m.Handle("GET /v1/admin/me", a.auth(http.HandlerFunc(a.getMyProfile)))
 	m.Handle("PATCH /v1/admin/me", a.auth(http.HandlerFunc(a.updateMyProfile)))
 	m.Handle("GET /v1/admin/subscription", a.auth(a.requirePermission("subscription.read", http.HandlerFunc(a.getOrganizationSubscription))))
@@ -296,12 +299,12 @@ func (a *API) login(w http.ResponseWriter, r *http.Request) {
 
 	type loginCandidate struct {
 		UserID, OrganizationID, Name, Hash string
-		PlatformAdmin bool
+		PlatformAdmin                      bool
 	}
 	matches := []loginCandidate{}
 	for rows.Next() {
 		var candidate loginCandidate
-		if err = rows.Scan(&candidate.UserID,&candidate.OrganizationID,&candidate.Name,&candidate.Hash,&candidate.PlatformAdmin); err != nil {
+		if err = rows.Scan(&candidate.UserID, &candidate.OrganizationID, &candidate.Name, &candidate.Hash, &candidate.PlatformAdmin); err != nil {
 			fail(w, 503, "session_unavailable", "No pudimos validar la cuenta.")
 			return
 		}
@@ -465,12 +468,12 @@ func (a *API) dashboard(w http.ResponseWriter, r *http.Request) {
 		&salesNet, &paidOrders, &averageTicket, &openOrders, &critical, &purchases, &reservationsToday, &kitchenPending,
 	)
 	if err != nil {
-		fail(w,503,"dashboard_unavailable","No pudimos calcular el resumen operativo.")
+		fail(w, 503, "dashboard_unavailable", "No pudimos calcular el resumen operativo.")
 		return
 	}
 
 	hourly := []map[string]any{}
-	rows,err:=a.db.Query(r.Context(), `
+	rows, err := a.db.Query(r.Context(), `
 		SELECT hour,COALESCE(sum(value),0)::text
 		FROM (
 		  SELECT extract(hour FROM p.created_at AT TIME ZONE l.timezone)::int AS hour,p.amount AS value
@@ -484,14 +487,20 @@ func (a *API) dashboard(w http.ResponseWriter, r *http.Request) {
 		    AND (pr.created_at AT TIME ZONE l.timezone)::date=(now() AT TIME ZONE l.timezone)::date
 		) movements
 		GROUP BY hour ORDER BY hour
-	`,s.OrganizationID,s.LocationID)
-	if err==nil {
+	`, s.OrganizationID, s.LocationID)
+	if err == nil {
 		defer rows.Close()
-		for rows.Next(){var hour int;var total string;if rows.Scan(&hour,&total)==nil{hourly=append(hourly,map[string]any{"hour":hour,"total":total})}}
+		for rows.Next() {
+			var hour int
+			var total string
+			if rows.Scan(&hour, &total) == nil {
+				hourly = append(hourly, map[string]any{"hour": hour, "total": total})
+			}
+		}
 	}
 
-	topProducts:=[]map[string]any{}
-	productRows,err:=a.db.Query(r.Context(), `
+	topProducts := []map[string]any{}
+	productRows, err := a.db.Query(r.Context(), `
 		SELECT oi.name,sum(oi.qty)::text,sum(oi.qty*oi.unit_price)::text
 		FROM order_items oi
 		JOIN orders o ON o.id=oi.order_id AND o.organization_id=oi.organization_id
@@ -504,15 +513,20 @@ func (a *API) dashboard(w http.ResponseWriter, r *http.Request) {
 		      AND (today_payment.created_at AT TIME ZONE l.timezone)::date=(now() AT TIME ZONE l.timezone)::date
 		  )
 		GROUP BY oi.name ORDER BY sum(oi.qty) DESC,oi.name LIMIT 5
-	`,s.OrganizationID,s.LocationID)
-	if err==nil {
+	`, s.OrganizationID, s.LocationID)
+	if err == nil {
 		defer productRows.Close()
-		for productRows.Next(){var name,qty,revenue string;if productRows.Scan(&name,&qty,&revenue)==nil{topProducts=append(topProducts,map[string]any{"name":name,"qty":qty,"revenue":revenue})}}
+		for productRows.Next() {
+			var name, qty, revenue string
+			if productRows.Scan(&name, &qty, &revenue) == nil {
+				topProducts = append(topProducts, map[string]any{"name": name, "qty": qty, "revenue": revenue})
+			}
+		}
 	}
-	writeJSON(w,200,map[string]any{
-		"salesNet":salesNet,"paidOrders":paidOrders,"averageTicket":averageTicket,"openOrders":openOrders,
-		"criticalStock":critical,"purchasesToApprove":purchases,"reservationsToday":reservationsToday,
-		"kitchenPending":kitchenPending,"hourlySales":hourly,"topProducts":topProducts,
+	writeJSON(w, 200, map[string]any{
+		"salesNet": salesNet, "paidOrders": paidOrders, "averageTicket": averageTicket, "openOrders": openOrders,
+		"criticalStock": critical, "purchasesToApprove": purchases, "reservationsToday": reservationsToday,
+		"kitchenPending": kitchenPending, "hourlySales": hourly, "topProducts": topProducts,
 	})
 }
 
@@ -555,12 +569,26 @@ func (a *API) getContext(w http.ResponseWriter, r *http.Request) {
 		fail(w, 503, "modules_unavailable", "No pudimos cargar los módulos de la empresa.")
 		return
 	}
+	setupRequired := false
+	if !platformAdmin {
+		if err = a.db.QueryRow(r.Context(), `
+			SELECT completed_at IS NULL
+			FROM organization_operational_setup
+			WHERE organization_id=$1
+		`, s.OrganizationID).Scan(&setupRequired); errors.Is(err, pgx.ErrNoRows) {
+			setupRequired = true
+		} else if err != nil {
+			fail(w, 503, "context_unavailable", "No pudimos cargar el estado inicial de la empresa.")
+			return
+		}
+	}
 	writeJSON(w, 200, map[string]any{
-		"user": map[string]any{"id": s.UserID, "name": s.Name, "platformAdmin": platformAdmin},
-		"organization": map[string]string{"id": s.OrganizationID, "name": organizationName},
-		"location": map[string]string{"id": s.LocationID, "name": locationName, "country": locationCountry, "timezone": locationTimezone},
-		"modules": modules,
-		"menuAccess": menuAccess,
-		"permissions": permissions,
+		"user":          map[string]any{"id": s.UserID, "name": s.Name, "platformAdmin": platformAdmin},
+		"organization":  map[string]string{"id": s.OrganizationID, "name": organizationName},
+		"location":      map[string]string{"id": s.LocationID, "name": locationName, "country": locationCountry, "timezone": locationTimezone},
+		"modules":       modules,
+		"menuAccess":    menuAccess,
+		"permissions":   permissions,
+		"setupRequired": setupRequired,
 	})
 }

@@ -20,10 +20,10 @@ export const navigationGroups:NavGroup[]=[
  {label:"DELIVERY",items:[{href:"/delivery",name:"Delivery propio",icon:"truck",module:"delivery"},{href:"/delivery-apps",name:"Apps de delivery",icon:"settings",module:"delivery_apps"},{href:"/repartidores",name:"App repartidores",icon:"truck",module:"repartidores"}]},
  {label:"NEGOCIO",items:[{href:"/clientes",name:"Clientes",icon:"users",module:"clientes",permission:"customers.read"},{href:"/crm",name:"CRM y fidelización",icon:"users",module:"crm"},{href:"/puntos",name:"Plaza puntos",icon:"users",module:"puntos"},{href:"/ofertas",name:"Ofertas y descuentos",icon:"sales",module:"ofertas"},{href:"/personal",name:"Personal y asistencias",icon:"users",module:"personal"},{href:"/locales",name:"Locales",icon:"store",module:"locales",permission:"organizations.read"}]},
  {label:"INTELIGENCIA",items:[{href:"/costos",name:"Costos y gastos",icon:"stock",module:"costos",permission:"expenses.read"},{href:"/bi",name:"Restaurant BI",icon:"grid",module:"bi"},{href:"/app-manager",name:"App manager",icon:"settings",module:"app_manager"}]},
- {label:"CONFIGURACIÓN",items:[{href:"/configuracion/empresa",name:"Empresa",icon:"store",module:"locales",access:"locales",permission:"organizations.read"},{href:"/configuracion/fiscal",name:"Fiscal y moneda",icon:"receipt",module:"fiscal",permission:"organizations.read"},{href:"/configuracion/medios-pago",name:"Medios de pago",icon:"payment",module:"fiscal",access:"fiscal",permission:"organizations.read"},{href:"/configuracion/usuarios",name:"Usuarios y roles",icon:"users",module:"usuarios",permission:"users.read"},{href:"/configuracion/facturacion",name:"Facturación",icon:"receipt",module:"facturacion"},{href:"/configuracion/modulos",name:"Módulos",icon:"settings",module:"fiscal",platformAdminOnly:true},{href:"/configuracion/integraciones",name:"Integraciones",icon:"settings",module:"integraciones"},{href:"/whatsapp-bot",name:"Fudia Concierge",icon:"settings",module:"whatsapp_bot",permission:"organizations.read"}]}
+ {label:"CONFIGURACIÓN",items:[{href:"/configuracion/puesta-en-marcha",name:"Puesta en marcha",icon:"arrowRightCircle",module:"locales",access:"locales",permission:"organizations.manage"},{href:"/configuracion/empresa",name:"Empresa",icon:"store",module:"locales",access:"locales",permission:"organizations.read"},{href:"/configuracion/fiscal",name:"Fiscal y moneda",icon:"receipt",module:"fiscal",permission:"organizations.read"},{href:"/configuracion/medios-pago",name:"Medios de pago",icon:"payment",module:"fiscal",access:"fiscal",permission:"organizations.read"},{href:"/configuracion/usuarios",name:"Usuarios y roles",icon:"users",module:"usuarios",permission:"users.read"},{href:"/configuracion/facturacion",name:"Facturación",icon:"receipt",module:"facturacion"},{href:"/configuracion/modulos",name:"Módulos",icon:"settings",module:"fiscal",platformAdminOnly:true},{href:"/configuracion/integraciones",name:"Integraciones",icon:"settings",module:"integraciones"},{href:"/whatsapp-bot",name:"Fudia Concierge",icon:"settings",module:"whatsapp_bot",permission:"organizations.read"}]}
 ];
 
-type AccessContext=Pick<SessionContextResponse,"user"|"modules"|"menuAccess"|"permissions">;
+type AccessContext=Pick<SessionContextResponse,"user"|"modules"|"menuAccess"|"permissions"|"setupRequired">;
 
 export function accessKey(item:NavItem){return item.access??item.module}
 
@@ -49,6 +49,7 @@ export function visibleNavigation(context:AccessContext){
 }
 
 export function firstAccessibleRoute(context:AccessContext){
+  if(!context.user.platformAdmin&&context.setupRequired&&(context.permissions.includes("*")||context.permissions.includes("organizations.manage")))return "/configuracion/puesta-en-marcha";
   return visibleNavigation(context)[0]?.items[0]?.href??"/sin-acceso";
 }
 

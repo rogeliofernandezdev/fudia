@@ -1,5 +1,26 @@
 import "./platform-skeletons.css";
 
+export function PlatformOnboardingSkeleton({stepCount}:{stepCount:number}){
+  return <div className="onboarding-wizard platform-onboarding-skeleton" role="status" aria-label="Cargando configuración de empresa" aria-busy="true">
+    <div className="wizard-steps" aria-hidden="true">
+      {Array.from({length:stepCount},(_,index)=><div className="wizard-step" key={index}>
+        <span className="platform-skeleton-block onboarding-skeleton-icon"/>
+        <div className="onboarding-skeleton-step-copy"><i className="platform-skeleton-block"/><i className="platform-skeleton-block"/></div>
+      </div>)}
+    </div>
+    <div className="onboarding-form" aria-hidden="true">
+      <div className="wizard-progress"><i className="platform-skeleton-block onboarding-skeleton-progress"/></div>
+      <section className="panel management">
+        <header><span className="platform-skeleton-block onboarding-skeleton-icon"/><div className="onboarding-skeleton-heading"><i className="platform-skeleton-block"/><i className="platform-skeleton-block"/></div></header>
+        <div className="form-grid">
+          {Array.from({length:4},(_,index)=><div className={"onboarding-skeleton-field"+(index===0||index===3?" span-2":"")} key={index}><i className="platform-skeleton-block onboarding-skeleton-label"/><i className="platform-skeleton-block onboarding-skeleton-control"/></div>)}
+        </div>
+      </section>
+      <div className="wizard-footer"><div/><div><i className="platform-skeleton-block onboarding-skeleton-action"/></div></div>
+    </div>
+  </div>;
+}
+
 export function PlatformPlansSkeleton(){
   return <div className="plan-grid" aria-label="Cargando planes" aria-busy="true">
     {Array.from({length:3},(_,index)=><article className="panel plan-card platform-plan-skeleton" key={index}>

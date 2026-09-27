@@ -401,6 +401,11 @@ histórica de Configuración redirige a ese flujo y no mantiene una segunda
 implementación. El alta se compone de Empresa → Plan y contrato → Fiscal →
 Primer local → Administrador.
 
+Mientras se carga el contexto de `/platform/onboarding`, el skeleton reproduce
+los cinco pasos, la cabecera, los campos del primer formulario y la acción
+inferior. Reutiliza el shimmer de Plataforma, `--control-height` y la misma
+rejilla responsive del wizard; no muestra texto genérico de carga.
+
 El paso Plan y contrato consume el catálogo SaaS del backend: nunca hardcodea
 precios ni paquetes. Muestra precio según ciclo, prueba, límites, módulos y
 versión de condiciones, y exige registrar la aceptación antes de crear el
@@ -411,6 +416,23 @@ El Administrador de empresa con permiso `subscription.read` ve en Mi perfil
 un resumen de solo lectura con plan, estado, precio/ciclo, renovación, prueba,
 condiciones, uso frente a límites, módulos incluidos y último pago. Cambiar
 plan, estado o registrar cobros sigue siendo una acción exclusiva de Plataforma.
+
+### Puesta en marcha operativa
+
+Después de crear la empresa, su Administrador entra a
+`/configuracion/puesta-en-marcha`. El asistente lee contadores reales de la API,
+no simula datos ni duplica formularios: deriva al mantenimiento correspondiente
+y comprueba los cambios al regresar. Son obligatorios el tipo de atención, una
+categoría, un producto vendible y una caja; las mesas solo son obligatorias para
+salón o modalidad mixta.
+
+Los pasos opcionales se construyen desde los módulos activos de la suscripción.
+Inventario, recetas y proveedores no aparecen cuando el plan no los incluye;
+en particular, el plan básico nunca muestra Recetas. Mientras la puesta en
+marcha siga pendiente, la navegación conserva un recordatorio visible y el
+login del Administrador de empresa abre primero el asistente. Carga, error y
+estado listo respetan los patrones visuales generales y el flujo funciona desde
+390 px.
 
 
 ### Nombres de navegación
