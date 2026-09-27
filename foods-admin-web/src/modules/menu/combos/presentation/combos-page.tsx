@@ -197,7 +197,7 @@ function ComboWizard({draft,setDraft,step,setStep,products,productsLoading,produ
           <div className="combo-wizard-footer-copy">
             <small>{step<4?"Puedes volver a modificar pasos anteriores.":"Revisa los datos antes de guardar."}</small>
           </div>
-          {step<4?<button type="button" className="button primary" onClick={next} disabled={busy}>Continuar<Icon name="chevron" size={16}/></button>:<button className="button primary" onClick={finish} disabled={busy}><Icon name="save" size={16}/>{busy?"Guardando…":editing?"Guardar cambios":"Guardar menú"}</button>}
+          {step<4?<button type="button" className="button primary" onClick={next} disabled={busy}>Continuar<Icon name="chevron" size={16}/></button>:<button className="button primary" onClick={finish} disabled={busy}><Icon name="check" size={16}/>{busy?"Guardando…":"Guardar"}</button>}
         </footer>
       </main>
     </section>

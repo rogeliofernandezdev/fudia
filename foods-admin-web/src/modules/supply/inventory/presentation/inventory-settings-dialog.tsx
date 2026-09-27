@@ -17,6 +17,6 @@ export function InventorySettingsDialog({item,busy,close,save}:{item:InventoryIt
    <label>Punto de reorden<Input type="number" min="0" step="0.001" value={value.reorderPoint} onChange={e=>setValue({...value,reorderPoint:e.target.value})}/></label>
    <label className="span-2">Stock óptimo<Input type="number" min="0" step="0.001" value={value.optimalStock} onChange={e=>setValue({...value,optimalStock:e.target.value})}/></label>
   </div>
-  <footer><Button kind="ghost" onClick={close}>Cancelar</Button><Button disabled={busy} onClick={submit}>{busy?"Guardando…":"Guardar niveles"}</Button></footer>
+  <footer><Button kind="ghost" onClick={close}>Cancelar</Button><Button disabled={busy} onClick={submit}>{busy?"Guardando…":"Guardar"}</Button></footer>
  </section></div>
 }

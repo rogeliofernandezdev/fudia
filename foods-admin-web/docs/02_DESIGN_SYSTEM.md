@@ -246,6 +246,10 @@ Usar superficies mayormente neutras, azul para navegación y acciones, verde par
   «Guardar» (sin sufijos como «producto», «categoría», «mesa» o «zona», y sin
   variantes como «Guardar cambios»). El estado ocupado dice «Guardando…».
   Esta regla aplica a productos, categorías, zonas y cualquier otro registro.
+  Excepción: cuando el botón fija un estado del flujo distinto de la acción
+  principal («Guardar borrador» frente a «Registrar y enviar a cocina» o a la
+  aprobación de una orden de compra), el sufijo se conserva porque comunica
+  que aún no hay efecto operativo.
 - Los botones «Guardar» y «Cancelar» de un mismo footer tienen idéntica altura
   (`--control-height`). El ícono de «Guardar» es un check (✓), no un disquete.
 - La cabecera de los modales de registro es compacta: padding 11×16 px,

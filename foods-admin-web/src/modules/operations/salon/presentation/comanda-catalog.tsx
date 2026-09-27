@@ -306,8 +306,8 @@ export function ComboConfigurator({comboId,initialSelections=[],editing=false,cu
               <span><b>¿Más de un menú?</b><small>Mismas opciones: aumenta la cantidad en la comanda. Opciones distintas: agrega otro menú por separado.</small></span>
             </div>
           )}
-          <Button icon={editing?"save":"plus"} disabled={!valid||combo.isLoading||combo.isError} onClick={()=>data&&onConfirm({productId:data.id,name:data.name,unitPrice:finalPrice,selections})}>
-            {editing?"Guardar opciones":"Agregar menú"}
+          <Button icon={editing?"check":"plus"} disabled={!valid||combo.isLoading||combo.isError} onClick={()=>data&&onConfirm({productId:data.id,name:data.name,unitPrice:finalPrice,selections})}>
+            {editing?"Guardar":"Agregar menú"}
           </Button>
         </footer>
       </section>

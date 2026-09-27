@@ -554,11 +554,11 @@ function ComandaView({initial,mode,allTables,busy,currencySymbol,close,save,noti
               <div className="salon-comanda-total-copy"><span>Subtotal</span></div>
               <strong>{currencySymbol} {money(subtotal)}</strong>
             </div>
-            {!editing&&<Button icon="save" kind="secondary" className="salon-comanda-draft" onClick={()=>submit(false)} disabled={busy||!v.lines.length}>
+            {!editing&&<Button icon="check" kind="secondary" className="salon-comanda-draft" onClick={()=>submit(false)} disabled={busy||!v.lines.length}>
               {busy?"Guardando…":"Guardar borrador"}
             </Button>}
-            <Button icon={editing?"save":"chefHat"} className="salon-comanda-submit" onClick={()=>submit(!editing)} disabled={busy||!v.lines.length}>
-              {busy?(editing?"Guardando…":"Enviando…"):(editing?"Guardar cambios":"Registrar y enviar a cocina")}
+            <Button icon={editing?"check":"chefHat"} className="salon-comanda-submit" onClick={()=>submit(!editing)} disabled={busy||!v.lines.length}>
+              {busy?(editing?"Guardando…":"Enviando…"):(editing?"Guardar":"Registrar y enviar a cocina")}
             </Button>
           </footer>
         </aside>
