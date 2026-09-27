@@ -5,7 +5,8 @@ import {Icon,type IconName} from "@/design-system/icons";
 import {PageHeader} from "@/design-system/page-header";
 import {useSession} from "@/providers";
 
-const sections:Array<{icon:IconName;title:string;description:string;href:string;permission?:string;platformAdminOnly?:boolean;module?:string}>=[
+const sections:Array<{icon:IconName;title:string;description:string;href:string;permission?:string;platformAdminOnly?:boolean;module?:string;access?:string}>=[
+  {icon:"check",title:"Puesta en marcha",description:"Guía paso a paso para preparar el restaurante",href:"/configuracion/puesta-en-marcha",permission:"organizations.read",module:"locales",access:"locales"},
   {icon:"store",title:"Empresa",description:"Razón social, nombre comercial e identidad general",href:"/configuracion/empresa",permission:"organizations.manage"},
   {icon:"receipt",title:"País y configuración fiscal",description:"Perfiles, monedas, impuestos y tasas",href:"/configuracion/fiscal",permission:"organizations.read"},
   {icon:"payment",title:"Medios de pago",description:"Catálogo único para ventas, caja y gastos",href:"/configuracion/medios-pago",permission:"organizations.read"},
@@ -15,10 +16,11 @@ const sections:Array<{icon:IconName;title:string;description:string;href:string;
 ];
 
 export function ConfigurationHomePage(){
-  const{user,can,modules}=useSession();
+  const{user,can,canAccess,modules}=useSession();
   const visible=sections.filter(section=>{
     if(section.platformAdminOnly)return Boolean(user?.platformAdmin);
     if(section.module&&!user?.platformAdmin&&!modules?.[section.module])return false;
+    if(section.access&&!user?.platformAdmin&&!canAccess(section.access))return false;
     return section.permission?can(section.permission):true;
   });
   return <><PageHeader eyebrow="CONFIGURACIÓN" title="Configuración" description="Administra la estructura y los accesos necesarios para operar el restaurante."/>
