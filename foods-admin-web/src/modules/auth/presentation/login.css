@@ -11,7 +11,8 @@
 .admin-auth-form{margin-top:0;display:grid;gap:20px}
 .admin-auth-form-logo{width:180px;margin:-10px auto -4px;display:block}
 .admin-auth-form-logo img{width:100%;height:auto;display:block}
-.admin-auth-form>label{display:grid;gap:8px;color:#344054;font-size:11px;font-weight:750}
+.admin-auth-form>.form-field{gap:8px;color:#344054}
+.admin-auth-field.has-error .admin-auth-input{border-color:var(--danger)}
 .admin-auth-field{height:44px;position:relative;color:#98a2b3}
 .admin-auth-field>svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);pointer-events:none}
 .admin-auth-field .admin-auth-input{width:100%;height:44px;min-height:44px;padding:0 12px 0 40px;border:1px solid #dfe3ea;border-radius:7px;outline:0;color:#101828;background:#fff;box-shadow:none;font:600 11px/1 var(--font-manrope),sans-serif;transition:border-color .16s ease,box-shadow .16s ease}

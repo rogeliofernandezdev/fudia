@@ -1,11 +1,13 @@
 "use client";
 import "./platform-plans.css";
 import {useMemo,useState} from "react";
+import {Controller,useForm} from "react-hook-form";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,Input,PageHeader,Select,Textarea} from "@/design-system";
+import {Button,FormField,Input,PageHeader,Select,Textarea} from "@/design-system";
 import {Icon} from "@/design-system/icons";
 import {useFeedback} from "@/providers";
 import type {PlatformModule,SubscriptionPlan,SubscriptionPlanDraft} from "../domain/types";
+import {planResolver} from "../domain/plan-schema";
 import {getPlatformOnboardingContext,listReadyModules,listSubscriptionPlans,saveSubscriptionPlan} from "../infrastructure/platform-api";
 import {PlatformPlansSkeleton} from "./platform-skeletons";
 
@@ -85,29 +87,30 @@ export function PlatformPlansPage(){
 }
 
 function PlanDialog({value:initial,modules,currencies,busy,close,save}:{value:SubscriptionPlanDraft;modules:PlatformModule[];currencies:{code:string;name:string}[];busy:boolean;close:()=>void;save:(value:SubscriptionPlanDraft)=>void}){
- const[value,setValue]=useState(initial);
+ const{register,control,handleSubmit,setValue,formState:{errors}}=useForm<SubscriptionPlanDraft>({defaultValues:initial,resolver:planResolver,mode:"onSubmit",reValidateMode:"onChange"});
  const groups=useMemo(()=>Array.from(new Set(modules.map(module=>module.category))),[modules]);
- const toggle=(key:string)=>setValue(current=>({...current,moduleKeys:current.moduleKeys.includes(key)?current.moduleKeys.filter(item=>item!==key):[...current.moduleKeys,key]}));
- const valid=Boolean(value.code.trim().length>=2&&value.name.trim()&&value.monthlyPrice!==""&&value.annualPrice!==""&&value.termsVersion.trim()&&value.moduleKeys.length>0);
- return <div className="modal-backdrop"><section className="crud-modal plan-dialog" role="dialog" aria-modal="true" aria-labelledby="plan-dialog-title"><div className="modal-accent"/><header><span className="modal-title-icon"><Icon name="settings"/></span><div><small>{value.id?"EDITAR PLAN":"NUEVO PLAN"}</small><h2 id="plan-dialog-title">Configuración comercial</h2></div><button aria-label="Cerrar" disabled={busy} onClick={close}><Icon name="close"/></button></header>
-  <form onSubmit={e=>{e.preventDefault();if(valid)save(value)}}>
+ return <div className="modal-backdrop"><section className="crud-modal plan-dialog" role="dialog" aria-modal="true" aria-labelledby="plan-dialog-title"><div className="modal-accent"/><header><span className="modal-title-icon"><Icon name="payment"/></span><div><small>{initial.id?"EDITAR PLAN":"NUEVO PLAN"}</small><h2 id="plan-dialog-title">Configuración comercial</h2></div><button aria-label="Cerrar" disabled={busy} onClick={close}><Icon name="close"/></button></header>
+  <form onSubmit={handleSubmit(value=>save({...value,trialDays:Number(value.trialDays)}))} noValidate>
    <div className="plan-form">
     <div className="form-grid">
-     <label>Código<Input required minLength={2} maxLength={40} value={value.code} onChange={e=>setValue({...value,code:e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g,"")})} placeholder="ej. crecimiento"/></label>
-     <label>Nombre<Input required maxLength={120} value={value.name} onChange={e=>setValue({...value,name:e.target.value})} placeholder="Crecimiento"/></label>
-     <label className="span-2">Descripción<Textarea maxLength={500} rows={2} value={value.description} onChange={e=>setValue({...value,description:e.target.value})}/></label>
-     <label>Moneda<Select required value={value.currency} onChange={e=>setValue({...value,currency:e.target.value})}>{currencies.map(item=><option key={item.code} value={item.code}>{item.code+" — "+item.name}</option>)}</Select></label>
-     <label>Versión de condiciones<Input required maxLength={80} value={value.termsVersion} onChange={e=>setValue({...value,termsVersion:e.target.value})} placeholder="2026-09"/></label>
-     <label>Precio mensual<Input required type="number" min="0" step="0.01" value={value.monthlyPrice} onChange={e=>setValue({...value,monthlyPrice:e.target.value})}/></label>
-     <label>Precio anual<Input required type="number" min="0" step="0.01" value={value.annualPrice} onChange={e=>setValue({...value,annualPrice:e.target.value})}/></label>
-     <label>Días de prueba<Input required type="number" min="0" max="365" step="1" value={value.trialDays} onChange={e=>setValue({...value,trialDays:Number(e.target.value)})}/></label>
-     <label>Máx. locales<Input type="number" min="1" step="1" value={value.maxLocations} onChange={e=>setValue({...value,maxLocations:e.target.value})} placeholder="Vacío = sin límite"/></label>
-     <label>Máx. usuarios<Input type="number" min="1" step="1" value={value.maxUsers} onChange={e=>setValue({...value,maxUsers:e.target.value})} placeholder="Vacío = sin límite"/></label>
-     <label className="switch-row compact"><input type="checkbox" checked={value.active} onChange={e=>setValue({...value,active:e.target.checked})}/><span/><b>Plan disponible para nuevas empresas</b></label>
+     <FormField label="Código" help="Identificador técnico; no se muestra al cliente." error={errors.code?.message}><Input minLength={2} maxLength={40} {...register("code",{onChange:e=>setValue("code",e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g,""))})} placeholder="ej. crecimiento"/></FormField>
+     <FormField label="Nombre" error={errors.name?.message}><Input maxLength={120} {...register("name")} placeholder="Crecimiento"/></FormField>
+     <FormField className="span-2" label="Descripción" optional error={errors.description?.message}><Textarea maxLength={500} rows={2} {...register("description")}/></FormField>
+     <FormField label="Moneda" error={errors.currency?.message}><Select {...register("currency")}>{currencies.map(item=><option key={item.code} value={item.code}>{item.code+" — "+item.name}</option>)}</Select></FormField>
+     <FormField label="Versión de condiciones" error={errors.termsVersion?.message}><Input maxLength={80} {...register("termsVersion")} placeholder="2026-09"/></FormField>
+     <FormField label="Precio mensual" error={errors.monthlyPrice?.message}><Input type="number" inputMode="decimal" min="0" step="0.01" {...register("monthlyPrice")}/></FormField>
+     <FormField label="Precio anual" error={errors.annualPrice?.message}><Input type="number" inputMode="decimal" min="0" step="0.01" {...register("annualPrice")}/></FormField>
+     <FormField label="Días de prueba" error={errors.trialDays?.message}><Input type="number" inputMode="numeric" min="0" max="365" step="1" {...register("trialDays")}/></FormField>
+     <FormField label="Máx. locales" help="Vacío = sin límite." error={errors.maxLocations?.message}><Input type="number" inputMode="numeric" min="1" step="1" {...register("maxLocations")}/></FormField>
+     <FormField label="Máx. usuarios" help="Vacío = sin límite." error={errors.maxUsers?.message}><Input type="number" inputMode="numeric" min="1" step="1" {...register("maxUsers")}/></FormField>
+     <label className="switch-row compact"><input type="checkbox" {...register("active")}/><span/><b>Plan disponible para nuevas empresas</b></label>
     </div>
-    <section className="plan-modules"><header><div><small>ENTITLEMENTS</small><h3>Módulos incluidos</h3></div><b>{value.moduleKeys.length}</b></header>{groups.map(group=><div className="plan-module-group" key={group}><strong>{group}</strong><div>{modules.filter(module=>module.category===group).map(module=><label key={module.key} className={value.moduleKeys.includes(module.key)?"selected":""}><input type="checkbox" checked={value.moduleKeys.includes(module.key)} onChange={()=>toggle(module.key)}/><span><Icon name="check" size={12}/></span><div><b>{module.name}</b><small>{module.description}</small></div></label>)}</div></div>)}</section>
+    <Controller control={control} name="moduleKeys" render={({field})=>{
+     const selected=field.value;const toggle=(key:string)=>field.onChange(selected.includes(key)?selected.filter(item=>item!==key):[...selected,key]);
+     return <section className={"plan-modules"+(errors.moduleKeys?" has-error":"")}><header><div><small>ENTITLEMENTS</small><h3>Módulos incluidos</h3>{errors.moduleKeys?.message&&<small className="field-error" role="alert">{errors.moduleKeys.message}</small>}</div><b>{selected.length}</b></header>{groups.map(group=><div className="plan-module-group" key={group}><strong>{group}</strong><div>{modules.filter(module=>module.category===group).map(module=><label key={module.key} className={selected.includes(module.key)?"selected":""}><input type="checkbox" checked={selected.includes(module.key)} onChange={()=>toggle(module.key)}/><span><Icon name="check" size={12}/></span><div><b>{module.name}</b><small>{module.description}</small></div></label>)}</div></div>)}</section>;
+    }}/>
    </div>
-   <footer><Button kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy||!valid}>{busy?"Guardando…":"Guardar"}</Button></footer>
+   <footer><Button kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" icon="check" disabled={busy}>{busy?"Guardando…":"Guardar"}</Button></footer>
   </form>
  </section></div>;
 }

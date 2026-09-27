@@ -71,7 +71,8 @@
 .plan-form{display:grid;gap:18px;padding:20px}
 .plan-modules{overflow:hidden;border:1px solid var(--line);border-radius:12px}
 .plan-modules>header{display:flex;align-items:center;justify-content:space-between;min-height:56px;padding:10px 16px;background:var(--cloud-50);border-bottom:1px solid var(--line)}
-.plan-modules>header small{font-size:9px;font-weight:850;letter-spacing:.1em;color:var(--ops-500)}
+.plan-modules>header small:not(.field-error){font-size:9px;font-weight:850;letter-spacing:.1em;color:var(--ops-500)}
+.plan-modules.has-error{border-color:var(--danger)}
 .plan-modules>header h3{margin:3px 0 0;font-size:13px}
 .plan-modules>header>b{display:grid;place-items:center;min-width:28px;height:28px;border-radius:8px;font-size:11px;color:var(--ops-700);background:var(--ops-100)}
 .plan-module-group{padding:14px 16px}

@@ -1,13 +1,15 @@
 "use client";
 import "./payment-methods.css";
 import {useState} from "react";
+import {useForm} from "react-hook-form";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,Input,PageHeader,Pagination,RowActionButton,Select,Status,Textarea} from "@/design-system/page-header";
+import {Button,FormField,Input,PageHeader,Pagination,RowActionButton,Select,Status,Textarea} from "@/design-system";
 import {ConfirmDialog} from "@/design-system/confirm-dialog";
 import {Icon} from "@/design-system/icons";
 import {useFeedback} from "@/providers/feedback-provider";
 import {useSession} from "@/providers/session-context";
 import type {PaymentMethod,PaymentMethodDraft} from "../domain/payment-method";
+import {paymentMethodResolver} from "../domain/payment-method-schema";
 import {listPaymentMethods,savePaymentMethod,setPaymentMethodActive} from "../infrastructure/payment-methods-api";
 
 const blank:PaymentMethodDraft={
@@ -71,27 +73,24 @@ function Flag({on,children}:{on:boolean;children:React.ReactNode}){return <span 
 function PaymentMethodsLoading(){return <div className="table-skeleton" aria-label="Cargando medios de pago"><div className="sk-head"><i/><i/><i/><i/><i/></div>{Array.from({length:5},(_,i)=><div className="sk-row" key={i}><i className="sk-name"><span/><b/><small/></i><i/><i/><i/><i/></div>)}</div>}
 
 function PaymentMethodDialog({value:initial,editing,busy,close,save}:{value:PaymentMethodDraft;editing:boolean;busy:boolean;close:()=>void;save:(value:PaymentMethodDraft)=>void}){
- const[value,setValue]=useState(initial);
- const codeValid=/^[a-z0-9][a-z0-9_-]{0,39}$/.test(value.code);
- const canSubmit=(editing||codeValid)&&value.name.trim().length>0&&(value.salesEnabled||value.expensesEnabled)&&value.sortOrder>=0&&value.sortOrder<=9999&&!busy;
- function submit(event:React.FormEvent){event.preventDefault();if(canSubmit)save({...value,code:value.code.trim().toLowerCase(),name:value.name.trim(),description:value.description.trim()})}
+ const{register,handleSubmit,setValue,formState:{errors}}=useForm<PaymentMethodDraft>({defaultValues:initial,resolver:paymentMethodResolver,mode:"onSubmit",reValidateMode:"onChange"});
+ const submit=handleSubmit(value=>save({...value,code:value.code.trim().toLowerCase(),name:value.name.trim(),description:value.description.trim(),sortOrder:Number(value.sortOrder)}));
  return <div className="payment-method-modal-overlay"><section className="payment-method-modal" role="dialog" aria-modal="true" aria-labelledby="payment-method-title">
   <header><span><Icon name="payment"/></span><div><small>{editing?"EDITAR MEDIO":"NUEVO MEDIO"}</small><h2 id="payment-method-title">Configuración del medio de pago</h2></div><button type="button" aria-label="Cerrar" onClick={close}><Icon name="close"/></button></header>
-  <form className="payment-method-form" onSubmit={submit}>
+  <form className="payment-method-form" onSubmit={submit} noValidate>
    <div className="payment-method-grid">
-    <label>Código interno<Input required={!editing} readOnly={editing} maxLength={40} value={value.code} onChange={e=>setValue({...value,code:e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g,"")})} placeholder="ej. voucher"/><small>{editing?"El código es inmutable porque identifica pagos históricos.":"Usa minúsculas, números, guion o guion bajo."}</small></label>
-    <label>Orden<Input required type="number" min={0} max={9999} value={value.sortOrder} onChange={e=>setValue({...value,sortOrder:Number(e.target.value)})}/><small>Menor número = aparece primero.</small></label>
-    <label className="span-2">Nombre<Input required maxLength={80} value={value.name} onChange={e=>setValue({...value,name:e.target.value})} placeholder="Ej. Vale corporativo"/></label>
-    <label className="span-2">Descripción<Textarea maxLength={180} rows={3} value={value.description} onChange={e=>setValue({...value,description:e.target.value})} placeholder="Describe cuándo debe utilizarse este medio."/></label>
+    <FormField label="Código interno" help={editing?"El código no se puede cambiar.":"Minúsculas, números, guion o guion bajo."} error={errors.code?.message}><Input readOnly={editing} maxLength={40} {...register("code",{onChange:e=>setValue("code",e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g,""))})} placeholder="ej. voucher"/></FormField>
+    <FormField label="Orden" help="Menor número aparece primero." error={errors.sortOrder?.message}><Input type="number" inputMode="numeric" min={0} max={9999} {...register("sortOrder")}/></FormField>
+    <FormField className="span-2" label="Nombre" error={errors.name?.message}><Input maxLength={80} {...register("name")} placeholder="Ej. Vale corporativo"/></FormField>
+    <FormField className="span-2" label="Descripción" optional error={errors.description?.message}><Textarea maxLength={180} rows={3} {...register("description")} placeholder="Describe cuándo debe utilizarse este medio."/></FormField>
    </div>
    <div className="payment-method-toggle-grid">
-    <label className="payment-method-toggle"><input type="checkbox" checked={value.salesEnabled} onChange={e=>setValue({...value,salesEnabled:e.target.checked})}/><span><b>Ventas</b><small>Disponible al cobrar pedidos.</small></span></label>
-    <label className="payment-method-toggle"><input type="checkbox" checked={value.expensesEnabled} onChange={e=>setValue({...value,expensesEnabled:e.target.checked})}/><span><b>Gastos</b><small>Disponible al registrar gastos.</small></span></label>
-    <label className="payment-method-toggle"><input type="checkbox" checked={value.affectsCash} onChange={e=>setValue({...value,affectsCash:e.target.checked})}/><span><b>Impacta Caja</b><small>Se considera movimiento físico de efectivo en cobros y devoluciones.</small></span></label>
+    <label className="payment-method-toggle"><input type="checkbox" {...register("salesEnabled")}/><span><b>Ventas</b><small>Disponible al cobrar pedidos.</small></span></label>
+    <label className="payment-method-toggle"><input type="checkbox" {...register("expensesEnabled")}/><span><b>Gastos</b><small>Disponible al registrar gastos.</small></span></label>
+    <label className="payment-method-toggle"><input type="checkbox" {...register("affectsCash")}/><span><b>Impacta Caja</b><small>Se considera movimiento físico de efectivo en cobros y devoluciones.</small></span></label>
    </div>
-   {!value.salesEnabled&&!value.expensesEnabled&&<div className="payment-method-warning">El medio debe estar habilitado al menos para Ventas o para Gastos.</div>}
-   {!editing&&!codeValid&&value.code&&<div className="payment-method-warning">El código debe iniciar con letra o número y usar solo minúsculas, números, guiones o guion bajo.</div>}
-   <footer><Button kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" icon="save" disabled={!canSubmit}>{busy?"Guardando…":"Guardar"}</Button></footer>
+   {errors.salesEnabled?.message&&<div className="payment-method-warning" role="alert">{errors.salesEnabled.message}</div>}
+   <footer><Button kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" icon="check" disabled={busy}>{busy?"Guardando…":"Guardar"}</Button></footer>
   </form>
  </section></div>
 }

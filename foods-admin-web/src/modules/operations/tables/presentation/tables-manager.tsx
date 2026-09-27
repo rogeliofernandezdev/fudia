@@ -1,15 +1,15 @@
 "use client";
 import "../../styles/table-qr.css";
 import NextImage from "next/image";
-import {useState,useEffect,useMemo,useRef} from "react";
+import {useState,useEffect,useMemo,useRef} from "react";import {useForm} from "react-hook-form";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import QRCode from "qrcode";
-import {Icon} from "@/design-system/icons";
+import {Icon} from "@/design-system/icons";import {FormField,Input} from "@/design-system";
 import {Button,IconButton,PageHeader,Pagination,RowActionButton,Status} from "@/design-system/page-header";
 import {ConfirmDialog} from "@/design-system/confirm-dialog";
 import {useFeedback} from "@/providers/feedback-provider";
 import {useSession} from "@/providers/session-context";
-import type {RowDraft,Table,ZoneDraft} from "../domain/types";
+import {zoneResolver} from "../domain/zone-schema";import type {RowDraft,Table,ZoneDraft} from "../domain/types";
 import {createTables,deactivateTableOrZone,listActiveZones,listTables,listZones,saveTable as persistTable,saveZone as persistZone} from "../infrastructure/tables-api";
 
 const emptyRow:RowDraft={name:"",seats:"2",zone:"",active:true,isNew:true};
@@ -169,11 +169,11 @@ function QrDialog({table,restaurantName,close}:{table:Table;restaurantName:strin
 }
 
 function ZoneDialog({draft,busy,close,save}:{draft:ZoneDraft;busy:boolean;close:()=>void;save:(d:ZoneDraft)=>void}){
- const[value,setValue]=useState(draft);
- return <div className="modal-backdrop modal-overlay-in" role="presentation"><section className="crud-modal compact modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="zone-title" aria-busy={busy}><div className="modal-accent"/><header><span className="modal-title-icon"><Icon name="store" size={18}/></span><div><small>{value.id?"EDITAR ZONA":"NUEVA ZONA"}</small><h2 id="zone-title">Información de la zona</h2></div><button onClick={close} disabled={busy} aria-label="Cerrar"><Icon name="close"/></button></header><form onSubmit={e=>{e.preventDefault();save(value)}}><div className="form-grid">
- <label className="span-2">Nombre de la zona<input required maxLength={60} value={value.name} onChange={e=>setValue({...value,name:e.target.value})} placeholder="Ej. Terraza"/></label>
- <label className="span-2">Orden<input type="number" min="0" inputMode="numeric" value={value.sortOrder} onChange={e=>setValue({...value,sortOrder:Number(e.target.value)})} placeholder="0"/></label>
- </div><footer><button type="button" className="button ghost" disabled={busy} onClick={close}>Cancelar</button><button type="submit" className="button primary" disabled={busy}>Guardar</button></footer></form></section></div>;
+ const{register,handleSubmit,formState:{errors}}=useForm<ZoneDraft>({defaultValues:draft,resolver:zoneResolver,mode:"onSubmit",reValidateMode:"onChange"});
+ return <div className="modal-backdrop modal-overlay-in" role="presentation"><section className="crud-modal compact modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="zone-title" aria-busy={busy}><div className="modal-accent"/><header><span className="modal-title-icon"><Icon name="store" size={18}/></span><div><small>{draft.id?"EDITAR ZONA":"NUEVA ZONA"}</small><h2 id="zone-title">Información de la zona</h2></div><button onClick={close} disabled={busy} aria-label="Cerrar"><Icon name="close"/></button></header><form onSubmit={handleSubmit(value=>save({...value,sortOrder:Number(value.sortOrder)}))} noValidate><div className="form-grid">
+ <FormField className="span-2" label="Nombre de la zona" error={errors.name?.message}><Input autoFocus maxLength={60} {...register("name")} placeholder="Ej. Terraza"/></FormField>
+ <FormField className="span-2" label="Orden" help="Menor número aparece primero." error={errors.sortOrder?.message}><Input type="number" min="0" inputMode="numeric" {...register("sortOrder")} placeholder="0"/></FormField>
+ </div><footer><button type="button" className="button ghost" disabled={busy} onClick={close}>Cancelar</button><button type="submit" className="button primary" disabled={busy}>{busy?"Guardando…":"Guardar"}</button></footer></form></section></div>;
 }
 
 function PrintQrDialog({tables,restaurantName,close}:{tables:Table[];restaurantName:string;close:()=>void}){

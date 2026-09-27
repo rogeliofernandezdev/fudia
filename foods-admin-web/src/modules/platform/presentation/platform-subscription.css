@@ -25,6 +25,7 @@
 
 .subscription-accept{position:relative;display:flex;align-items:flex-start;gap:12px;margin:0 20px 20px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;cursor:pointer;transition:border-color .15s,background .15s}
 .subscription-accept:has(input:checked){border-color:var(--brand-600);background:var(--brand-100)}
+.subscription-accept.has-error{border-color:var(--danger);background:var(--danger-50)}
 .subscription-accept>input{position:absolute;opacity:0;width:1px;height:1px}
 .subscription-accept>span{display:grid;place-items:center;flex-shrink:0;width:20px;height:20px;margin-top:1px;border:1.5px solid var(--ink-400);border-radius:6px;color:transparent;background:#fff}
 .subscription-accept:has(input:checked)>span{color:#fff;border-color:var(--brand-700);background:var(--brand-700)}
