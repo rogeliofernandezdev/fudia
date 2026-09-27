@@ -96,18 +96,32 @@ Usar superficies mayormente neutras, azul para navegación y acciones, verde par
 - La pantalla se denomina «Disponibilidad de la carta» y pertenece a «Carta y
   producción», porque incluye productos, platos, bebidas, menús y combos; no
   se presenta como disponibilidad de un único menú. La disponibilidad cotidiana
-  no se modifica dentro del wizard. Usa una vista
-  operativa separada por local con tarjetas compactas, estado textual, cupo y
-  filas operativas continuas en escritorio, sin bordes de tarjeta repetidos, y tarjetas apiladas únicamente en
-  móvil, con una acción manual Disponible/Agotado y guardado explícito del cupo. El botón de actualización de cupo permanece visible para hacer descubrible la función, pero
-  solo se habilita después de modificar la cantidad. En filas densas, las acciones usan
-  etiquetas visibles breves y específicas («Guardar», «Agotar hoy», «Reactivar») y conservan un
-  `aria-label` descriptivo completo. En la fila de disponibilidad, «Guardar» nunca se parte en dos líneas. «Agotar hoy» usa `warning` para texto y borde y
-  `warning-50` únicamente como fondo suave en hover; nunca usa rojo destructivo ni
-  invierte a un relleno ámbar sólido. Los avisos operativos de agotamiento dentro de
-  la fila se muestran como una franja `warning-50`, con icono/texto `warning` y acento
-  lateral de advertencia; no se presentan como texto suelto sobre fondo neutro. Las
-  subcolumnas Control, Cupo, Vendidas y Restantes comparten exactamente la misma retícula vertical: etiqueta arriba y valor/control centrado debajo. Producto, Estado, Control del día y Acciones ocupan explícitamente la misma fila principal; los avisos ocupan una segunda fila completa. El nombre del tipo de control no se trunca cuando hay espacio suficiente. «Pocas
+  no se modifica dentro del wizard. Usa una vista operativa separada por
+  local con una retícula de columnas fijas compartida por cabecera y filas:
+  Producto, Estado, Control, Cupo de hoy, Vendidas, Restantes y Acciones. La
+  cabecera es la estándar de tablas (`primary-600`, 10 px/800) y las filas son
+  continuas, sin bordes de tarjeta ni etiquetas repetidas por fila; en móvil
+  cada fila pasa a tarjeta y las etiquetas de columna aparecen mediante
+  `data-label`. Las columnas no cambian según el tipo de control: cuando un
+  valor no aplica se muestra «—». Control muestra solo el tipo («Porciones
+  preparadas», «Inventario físico», «Sin control»); en inventario, la
+  aclaración de que la existencia se actualiza desde Inventario y con las
+  ventas vive en un tooltip, no en una franja. Restantes muestra las porciones
+  restantes o la existencia física con su unidad. El estado lleva una
+  aclaración debajo solo cuando aporta («Agotado manualmente», «Calculado
+  automáticamente»). La barra de filtros contiene únicamente búsqueda y
+  categoría. La acción manual es Disponible/Agotado con guardado explícito del
+  cupo. El botón de actualización de cupo permanece visible para hacer
+  descubrible la función, pero solo se habilita después de modificar la
+  cantidad. Las acciones usan etiquetas visibles breves y específicas
+  («Guardar», «Agotar hoy», «Reactivar») y conservan un `aria-label`
+  descriptivo completo; «Guardar» nunca se parte en dos líneas. «Agotar hoy»
+  usa `warning` para texto y borde y `warning-50` únicamente como fondo suave
+  en hover; nunca usa rojo destructivo ni invierte a un relleno ámbar sólido.
+  Los avisos operativos (fuera de horario, componentes obligatorios, cupo o
+  stock agotado) ocupan una segunda fila completa como franja `warning-50` con
+  icono/texto `warning` y acento lateral; no se presentan como texto suelto
+  sobre fondo neutro. «Pocas
   unidades» es siempre un estado calculado por las unidades restantes, nunca
   una acción manual. La vista se
   pagina desde el API, permite buscar y filtrar por categoría, diferencia cupo,
