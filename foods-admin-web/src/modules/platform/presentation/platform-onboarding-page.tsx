@@ -1,7 +1,7 @@
 "use client";
 import "./platform-onboarding.css";
 import Link from "next/link";
-import {useEffect,useMemo,useState} from "react";
+import {useEffect,useMemo,useState,type CSSProperties} from "react";
 import {useForm,useWatch} from "react-hook-form";
 import {useMutation,useQuery} from "@tanstack/react-query";
 import {Icon,IconName} from "@/design-system/icons";
@@ -82,11 +82,11 @@ export function PlatformOnboardingPage(){
   context.isLoading?<PlatformOnboardingSkeleton stepCount={steps.length}/>:
   !ctx?.plans.length?<div className="catalog-state"><span><Icon name="settings"/></span><b>Primero crea un plan comercial</b><p>El alta de una empresa exige un plan activo con precio, límites, condiciones y módulos definidos.</p><Link className="button primary" href="/platform/plans"><Icon name="plus" size={16}/>Crear plan</Link></div>:
   <div className="onboarding-wizard">
-    <nav className="wizard-steps" aria-label="Pasos del registro">
+    <nav className="wizard-steps" aria-label="Pasos del registro" style={{"--onb-progress":reached} as CSSProperties}>
       {steps.map((s,i)=><button key={s.key} type="button" className={"wizard-step"+(i===step?" active":i<reached?" done":"")} onClick={()=>goTo(i)} disabled={i>reached||save.isPending} aria-current={i===step?"step":undefined}>
         <span className="wizard-step-icon">
           <Icon name={s.icon} size={16}/>
-          {i<reached&&i!==step&&<span className="wizard-step-badge"><Icon name="check" size={10}/></span>}
+          {i<reached&&i!==step&&<span key={`badge-${i}`} className="wizard-step-badge"><Icon name="check" size={14}/></span>}
         </span>
         <span className="wizard-step-label">{s.title}</span>
       </button>)}
