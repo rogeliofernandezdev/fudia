@@ -1,16 +1,34 @@
 /* platform presentation styles. */
 .platform-shell{min-height:100vh;background:var(--cloud-50)}
-.platform-topbar{border-bottom:1px solid var(--line);background:#fff;justify-content:space-between;align-items:center;gap:16px;height:72px;padding:0 30px;display:flex;position:sticky;top:0;z-index:10}
-.platform-badge{color:var(--ops-700);background:var(--ops-100);border-radius:6px;padding:4px 8px;font-size:8px;font-weight:850;letter-spacing:.12em;display:inline-flex;align-items:center;gap:5px}
-.platform-exit{color:var(--ink-600);font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:6px}
-.platform-exit:hover{color:var(--ink-950)}
+.platform-topbar{position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:20px;height:64px;padding:0 24px;background:#fffffff2;backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.platform-brand{display:flex;align-items:center;gap:14px;min-width:0}
+.platform-brand>a{display:inline-flex;border-radius:12px}
+.platform-brand>a:focus-visible{outline:2px solid var(--ops-500);outline-offset:3px}
+.platform-brand .logo{font-size:20px}
+.platform-brand .logo-mark{width:32px;height:32px;border-radius:9px;box-shadow:none}
+.platform-brand .logo-mark img{width:32px;height:32px}
+.platform-brand-divider{width:1px;height:26px;background:var(--line)}
+.platform-context{display:grid;gap:1px;line-height:1.15}
+.platform-context small{font-size:9px;font-weight:850;letter-spacing:.12em;text-transform:uppercase;color:var(--ops-500)}
+.platform-context b{font-size:12px;font-weight:750;color:var(--ink-950);white-space:nowrap}
+.platform-nav{display:flex;align-items:center;gap:2px;margin-left:auto;padding:3px;border-radius:10px;background:var(--cloud-50);border:1px solid var(--line)}
+.platform-nav a{height:calc(var(--control-height) - 8px);padding:0 12px;border-radius:7px;color:var(--ink-600);display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:750;white-space:nowrap;transition:background .15s,color .15s,box-shadow .15s}
+.platform-nav a:hover{color:var(--ink-950)}
+.platform-nav a.active{color:var(--ops-700);background:#fff;box-shadow:0 1px 2px #1018280f,0 0 0 1px var(--line)}
+.platform-nav a:focus-visible{outline:2px solid var(--ops-500);outline-offset:1px}
+.platform-exit{flex-shrink:0;font-size:11px;padding:0 12px 0 8px}
 .platform-content{max-width:960px;margin:auto;padding:29px 32px 60px}
-
-.platform-nav{display:flex;align-items:center;gap:6px;margin-left:auto}
-.platform-nav a{height:var(--control-height);padding:0 11px;border-radius:8px;color:var(--ink-600);display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:750}
-.platform-nav a:hover{background:#f2f4f7;color:var(--ink-950)}
-.platform-nav a.active{color:var(--ops-700);background:var(--ops-100)}
-@media(max-width:760px){.platform-topbar{height:auto;min-height:72px;flex-wrap:wrap;padding:12px 16px}.platform-nav{order:3;width:100%;margin:0}.platform-nav a{flex:1;justify-content:center}.platform-badge{margin-left:auto}.platform-content{padding:22px 14px 45px}}
+@media(max-width:900px){.platform-context{display:none}.platform-brand-divider{display:none}}
+@media(max-width:760px){
+  .platform-topbar{flex-wrap:wrap;height:auto;gap:10px 12px;padding:10px 14px}
+  .platform-nav{order:3;width:100%;margin:0}
+  .platform-nav a{flex:0 0 auto;justify-content:center;height:var(--control-height);padding:0 12px}
+  .platform-nav a:not(.active) span{display:none}
+  .platform-nav a.active{flex:1}
+  .platform-exit{margin-left:auto;width:auto;font-size:0;gap:0;padding:0 10px}
+  .platform-exit svg{margin:0}
+  .platform-content{padding:22px 14px 45px}
+}
 .platform-skeleton-block,.platform-skeleton-copy i{display:block;background:linear-gradient(90deg,#e8ebf2 20%,#f8f9fc 42%,#e8ebf2 64%);background-size:220% 100%;animation:platform-skeleton-shimmer 1.35s ease-in-out infinite}
 @keyframes platform-skeleton-shimmer{to{background-position:-220% 0}}
 @media(prefers-reduced-motion:reduce){.platform-skeleton-block,.platform-skeleton-copy i{animation:none}}
