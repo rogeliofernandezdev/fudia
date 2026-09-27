@@ -1,21 +1,24 @@
 /* Platform onboarding wizard — foods-admin-web design system */
 .onboarding-wizard{display:grid;gap:14px;margin-top:16px;position:relative}
 
-/* Pasos horizontales */
-.wizard-steps{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
-.wizard-step{display:flex;align-items:center;justify-content:center;gap:8px;min-width:0;min-height:var(--control-height);padding:0 10px;border:1px solid transparent;border-radius:99px;background:var(--cloud-50);text-align:center;cursor:pointer;transition:background .12s,color .12s}
-.wizard-step:disabled{cursor:not-allowed;opacity:.5}
-.wizard-step:focus-visible{outline:2px solid var(--ops-500);outline-offset:2px}
-.wizard-step.active{background:var(--primary-600)}
-.wizard-step.active .wizard-step-icon,.wizard-step.active .wizard-step-label{color:#fff}
-.wizard-step.done{background:var(--brand-100)}
-.wizard-step-icon{width:22px;height:22px;flex-shrink:0;display:grid;place-items:center;color:var(--ink-500)}
-.wizard-step.done .wizard-step-icon{color:var(--brand-700)}
-.wizard-step-label{font-size:12px;font-weight:700;color:var(--ink-700);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Stepper: círculos conectados por una línea de progreso */
+.wizard-steps{display:grid;grid-template-columns:repeat(5,1fr);align-items:start}
+.wizard-step{position:relative;display:grid;justify-items:center;gap:8px;min-width:0;padding:4px 4px 0;border:0;background:none;text-align:center;cursor:pointer}
+.wizard-step:disabled{cursor:not-allowed}
+.wizard-step:focus-visible{outline:2px solid var(--ops-500);outline-offset:2px;border-radius:8px}
+.wizard-step::before{content:"";position:absolute;top:19px;left:calc(-50% - 2px);width:calc(100% + 4px);height:2px;background:var(--line);z-index:0}
+.wizard-step:first-child::before{content:none}
+.wizard-step.done::before{background:var(--primary-600)}
+.wizard-step-icon{position:relative;z-index:1;width:38px;height:38px;flex-shrink:0;display:grid;place-items:center;border-radius:50%;background:var(--surface);border:2px solid var(--line);color:var(--ink-500);font-weight:800;font-size:14px;transition:background .15s,border-color .15s,color .15s}
+.wizard-step.active .wizard-step-icon{border-color:var(--primary-600);color:var(--primary-600);box-shadow:0 0 0 4px var(--primary-100)}
+.wizard-step.done .wizard-step-icon{background:var(--primary-600);border-color:var(--primary-600);color:#fff}
+.wizard-step-label{font-size:12px;font-weight:600;color:var(--ink-500);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.wizard-step.active .wizard-step-label{color:var(--ink-950);font-weight:800}
+.wizard-step.done .wizard-step-label{color:var(--ink-700)}
 
 /* Panel del paso */
 .onboarding-form{display:grid;gap:12px}
-.onboarding-form .panel.management{overflow:hidden;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:none}
+.onboarding-form .panel.management{overflow:hidden;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:var(--shadow)}
 .onboarding-form .panel.management header{display:flex;align-items:center;justify-content:flex-start;gap:12px;min-height:58px;padding:14px 20px;background:var(--surface);border-bottom:1px solid var(--line)}
 .onboarding-form .panel.management header .modal-title-icon{width:32px;height:32px;display:grid;place-items:center;border-radius:10px;background:var(--primary-600);color:#fff}
 .onboarding-form .panel.management header h2{margin:0;text-align:left;font-size:17px;font-weight:750;color:var(--ink-950)}
@@ -67,8 +70,9 @@
   .onboarding-form .panel.management .form-grid .span-2{grid-column:auto}
 }
 @media(max-width:600px){
-  .wizard-steps{grid-template-columns:repeat(5,minmax(150px,1fr));overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:4px}
-  .wizard-step{scroll-snap-align:start}
+  .wizard-step-label{font-size:10px}
+  .wizard-step-icon{width:32px;height:32px;font-size:12px}
+  .wizard-step::before{top:16px}
   .onboarding-plan-summary{grid-template-columns:1fr 1fr;margin:0 14px}
   .onboarding-terms{margin:14px}
   .onboarding-form .panel.management .form-grid{padding:14px}
