@@ -12,7 +12,7 @@ import {getDashboard} from "../infrastructure/dashboard-api";
 function greeting(){const h=new Date().getHours();if(h<12)return"Buenos días";if(h<19)return"Buenas tardes";return"Buenas noches"}
 function formatDate(){const d=new Date();const days=["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];const months=["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];return `${days[d.getDay()]}, ${d.getDate()} de ${months[d.getMonth()]}`}
 
-type Kpi={label:string;value:string;note:string;icon:IconName;tone?:"primary"};
+type Kpi={label:string;value:string;note:string;icon:IconName;tone:"primary"|"blue"|"green"|"violet"};
 type AlertItem={count:number;title:string;detail:string;href:string;tone:"warning"|"info"|"ok";icon:IconName};
 
 export function DashboardView(){
@@ -39,9 +39,9 @@ export function DashboardView(){
 
   const kpis:Kpi[]=[
     {label:"Ventas netas",value:money(data.salesNet),note:"Cobros netos de hoy",icon:"sales",tone:"primary"},
-    {label:"Pedidos cobrados",value:String(data.paidOrders),note:`Ticket promedio ${money(data.averageTicket)}`,icon:"orders"},
-    {label:"Pedidos abiertos",value:String(data.openOrders),note:data.kitchenPending?`${data.kitchenPending} en cola de cocina`:"Sin cola pendiente",icon:"kitchen"},
-    {label:"Reservas de hoy",value:String(data.reservationsToday),note:"Pendientes o confirmadas",icon:"calendar"},
+    {label:"Pedidos cobrados",value:String(data.paidOrders),note:`Ticket promedio ${money(data.averageTicket)}`,icon:"orders",tone:"green"},
+    {label:"Pedidos abiertos",value:String(data.openOrders),note:data.kitchenPending?`${data.kitchenPending} en cola de cocina`:"Sin cola pendiente",icon:"kitchen",tone:"blue"},
+    {label:"Reservas de hoy",value:String(data.reservationsToday),note:"Pendientes o confirmadas",icon:"calendar",tone:"violet"},
   ];
   const hourly=data.hourlySales.map(item=>({hour:item.hour,total:Number(item.total)||0}));
   const max=Math.max(1,...hourly.map(item=>item.total));
@@ -56,16 +56,15 @@ export function DashboardView(){
   return <>
     {header}
     <section className="kpi-grid" aria-label="Indicadores de hoy">
-      {kpis.map(k=><article key={k.label} className={k.tone?"kpi "+k.tone:"kpi"}>
-        <header><small>{k.label}</small><Icon name={k.icon} size={18}/></header>
-        <strong>{k.value}</strong>
-        <em>{k.note}</em>
+      {kpis.map(k=><article key={k.label} className={"kpi "+k.tone}>
+        <span className="kpi-icon"><Icon name={k.icon} size={20}/></span>
+        <div><small>{k.label}</small><strong>{k.value}</strong><em>{k.note}</em></div>
       </article>)}
     </section>
 
     <section className="dashboard-grid">
       <article className="panel chart-panel">
-        <header><div><small>RENDIMIENTO</small><h2>Ventas cobradas por hora</h2></div>{peak&&peak.total>0&&<span className="chart-peak">Pico {String(peak.hour).padStart(2,"0")}:00 · {money(peak.total)}</span>}</header>
+        <header><span className="panel-icon"><Icon name="sales" size={18}/></span><div><small>RENDIMIENTO</small><h2>Ventas cobradas por hora</h2></div>{peak&&peak.total>0&&<span className="chart-peak">Pico {String(peak.hour).padStart(2,"0")}:00 · {money(peak.total)}</span>}</header>
         {hourly.length?<div className="chart">
           <div className="chart-y" aria-hidden="true"><span>{compact(max)}</span><span>{compact(max/2)}</span><span>0</span></div>
           <div className="chart-plot">
@@ -78,7 +77,7 @@ export function DashboardView(){
       </article>
 
       <article className="panel alerts">
-        <header><div><small>REQUIERE ATENCIÓN</small><h2>Alertas operativas</h2></div>{alerts.length>0&&<b>{alerts.length}</b>}</header>
+        <header><span className="panel-icon warning"><Icon name="alert" size={18}/></span><div><small>REQUIERE ATENCIÓN</small><h2>Alertas operativas</h2></div>{alerts.length>0&&<b>{alerts.length}</b>}</header>
         {alerts.length?<div className="alert-list">{alerts.map(a=><Link className={"alert-row "+a.tone} key={a.title} href={a.href}>
           <span className="alert-icon"><Icon name={a.icon} size={17}/></span>
           <span className="alert-copy"><b>{a.title}</b><small>{a.detail}</small></span>
@@ -89,7 +88,7 @@ export function DashboardView(){
     </section>
 
     <section className="panel top-products">
-      <header><div><small>DESEMPEÑO DEL MENÚ</small><h2>Productos cobrados hoy</h2></div><Link href="/productos" className="panel-link">Ver carta<Icon name="chevron" size={14}/></Link></header>
+      <header><span className="panel-icon"><Icon name="utensils" size={18}/></span><div><small>DESEMPEÑO DEL MENÚ</small><h2>Productos cobrados hoy</h2></div><Link href="/productos" className="panel-link">Ver carta<Icon name="chevron" size={14}/></Link></header>
       {data.topProducts.length?<ol className="top-list">{data.topProducts.map((p,i)=>{
         const revenue=Number(p.revenue)||0;
         return <li className="top-product" key={p.name}>
@@ -104,20 +103,20 @@ export function DashboardView(){
 function DashboardSkeleton(){
   return <div className="dashboard-skeleton" aria-label="Cargando reportes" aria-busy="true">
     <section className="kpi-grid">
-      {Array.from({length:4},(_,index)=><article className="kpi dashboard-skeleton-kpi" key={index}><header><i className="sk" style={{width:90,height:10}}/><i className="sk" style={{width:18,height:18,borderRadius:5}}/></header><i className="sk" style={{width:"55%",height:26}}/><i className="sk" style={{width:"70%",height:10}}/></article>)}
+      {Array.from({length:4},(_,index)=><article className="kpi dashboard-skeleton-kpi" key={index}><i className="sk" style={{width:40,height:40,borderRadius:12}}/><div><i className="sk" style={{width:90,height:10}}/><i className="sk" style={{width:"55%",height:26}}/><i className="sk" style={{width:"70%",height:10}}/></div></article>)}
     </section>
     <section className="dashboard-grid">
       <article className="panel chart-panel dashboard-skeleton-panel">
-        <header><div><i className="sk" style={{width:80,height:9}}/><i className="sk" style={{width:170,height:14}}/></div></header>
+        <header><i className="sk" style={{width:32,height:32,borderRadius:10}}/><div><i className="sk" style={{width:80,height:9}}/><i className="sk" style={{width:170,height:14}}/></div></header>
         <div className="dashboard-skeleton-chart">{[34,48,63,46,72,58,82,40,55].map((h,i)=><span className="sk" key={i} style={{height:h+"%"}}/>)}</div>
       </article>
       <article className="panel alerts dashboard-skeleton-panel">
-        <header><div><i className="sk" style={{width:100,height:9}}/><i className="sk" style={{width:140,height:14}}/></div></header>
+        <header><i className="sk" style={{width:32,height:32,borderRadius:10}}/><div><i className="sk" style={{width:100,height:9}}/><i className="sk" style={{width:140,height:14}}/></div></header>
         <div className="alert-list">{Array.from({length:3},(_,index)=><div className="alert-row dashboard-skeleton-alert" key={index}><i className="sk" style={{width:36,height:36,borderRadius:10}}/><span className="alert-copy"><i className="sk" style={{width:110,height:11}}/><i className="sk" style={{width:150,height:9}}/></span><i className="sk" style={{width:28,height:22,borderRadius:99}}/></div>)}</div>
       </article>
     </section>
     <section className="panel top-products dashboard-skeleton-panel">
-      <header><div><i className="sk" style={{width:110,height:9}}/><i className="sk" style={{width:160,height:14}}/></div><i className="sk" style={{width:70,height:11}}/></header>
+      <header><i className="sk" style={{width:32,height:32,borderRadius:10}}/><div><i className="sk" style={{width:110,height:9}}/><i className="sk" style={{width:160,height:14}}/></div><i className="sk" style={{width:70,height:11}}/></header>
       <ol className="top-list">{Array.from({length:4},(_,index)=><li className="top-product dashboard-skeleton-product" key={index}><i className="sk" style={{width:26,height:26,borderRadius:8}}/><div className="top-copy"><div><i className="sk" style={{width:150,height:11}}/><i className="sk" style={{width:70,height:9,marginLeft:"auto"}}/><i className="sk" style={{width:70,height:11}}/></div><i className="sk" style={{width:"100%",height:4,borderRadius:99}}/></div></li>)}</ol>
     </section>
   </div>;
