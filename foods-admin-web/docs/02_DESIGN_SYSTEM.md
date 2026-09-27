@@ -401,6 +401,14 @@ histórica de Configuración redirige a ese flujo y no mantiene una segunda
 implementación. El alta se compone de Empresa → Plan y contrato → Fiscal →
 Primer local → Administrador.
 
+`/configuracion/puesta-en-marcha` es una guía posterior al alta para preparar
+la operación de un restaurante existente. Recorre las pantallas ya disponibles:
+empresa, fiscalidad, locales, usuarios, medios de pago, carta, mesas y caja.
+Cada opción explica en un tooltip y en un panel visible qué datos revisar o
+registrar, y enlaza a su pantalla real. Oculta las opciones a las que el usuario
+no puede acceder. El punto de avance se conserva en este navegador por usuario,
+empresa y local; avanzar en la guía no certifica que se hayan guardado datos.
+
 El paso Plan y contrato consume el catálogo SaaS del backend: nunca hardcodea
 precios ni paquetes. Muestra precio según ciclo, prueba, límites, módulos y
 versión de condiciones, y exige registrar la aceptación antes de crear el

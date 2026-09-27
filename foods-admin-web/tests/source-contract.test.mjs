@@ -559,7 +559,7 @@ test("se preservan contratos visuales base",()=>{
   const css=read("src/styles/globals.css").replace(/\s+/g,"");
   for(const token of ["--brand-700","--ops-700","--digital-700","--primary-600","--control-height"])assert.ok(css.includes(token),token);
   const navigation=read("src/shell/navigation.ts");
-  for(const label of ["Reportes","Punto de venta","Carta y productos","Inventario","Compras","CONFIGURACIÓN"])assert.ok(navigation.includes(label),label);
+  for(const label of ["Dashboard","Punto de venta","Carta y productos","Inventario","Compras","CONFIGURACIÓN"])assert.ok(navigation.includes(label),label);
 });
 
 
