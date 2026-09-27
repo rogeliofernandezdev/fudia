@@ -65,10 +65,10 @@ export function PlatformPlansPage(){
          <div><span>{plan.currency}</span><b>{price.toFixed(2)}</b><em>{billing==="annual"?"/ año":"/ mes"}</em></div>
          <p>{billing==="annual"?"Equivale a "+plan.currency+" "+equivalent.toFixed(2)+" al mes"+(savings>0?" · ahorras "+plan.currency+" "+savings.toFixed(2):""):plan.trialDays?plan.trialDays+" días de prueba gratuita":"Sin periodo de prueba"}</p>
        </div>
-       <p className="plan-capacity">
-         <span><Icon name="store" size={14}/>{plan.maxLocations??"Sin límite de"} {plan.maxLocations===1?"local":"locales"}</span>
-         <span><Icon name="users" size={14}/>{plan.maxUsers??"Sin límite de"} usuarios</span>
-       </p>
+       <dl className="plan-capacity">
+         <div><dt>Locales</dt><dd>{plan.maxLocations??"Sin límite"}</dd></div>
+         <div><dt>Usuarios</dt><dd>{plan.maxUsers??"Sin límite"}</dd></div>
+       </dl>
        <section className="plan-includes">
          <header><h3>Incluye {included.length} módulos</h3></header>
          <ul className="plan-feature-list">{included.map(module=><li key={module.key} title={module.description}><Icon name="check" size={12}/>{module.name}</li>)}</ul>
