@@ -4,6 +4,7 @@ export function PlatformOnboardingSkeleton({stepCount}:{stepCount:number}){
   return <div className="onboarding-wizard platform-onboarding-skeleton" role="status" aria-label="Cargando configuración de empresa" aria-busy="true">
     <div className="wizard-steps" aria-hidden="true">
       {Array.from({length:stepCount},(_,index)=><div className="wizard-step" key={index}>
+        <span className="platform-skeleton-block onboarding-skeleton-icon"/>
         <i className="platform-skeleton-block onboarding-skeleton-step-copy"/>
       </div>)}
     </div>
