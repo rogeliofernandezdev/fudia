@@ -54,8 +54,7 @@ export function LoginForm() {
             <Image src="/assets/images/login.png" alt="fudIA" width={1536} height={1024} priority />
           </div>
           <div className="admin-auth-intro">
-            <h1 id="login-title">Iniciar sesión</h1>
-            <p>Ingresa con tu cuenta de administración.</p>
+            <h1 id="login-title">Accede a tu panel de administración</h1>
           </div>
           <form className="admin-auth-form" onSubmit={submit} noValidate>
             {error && <div className="admin-auth-error" role="alert"><Icon name="alert" size={17}/><span>{error}</span></div>}

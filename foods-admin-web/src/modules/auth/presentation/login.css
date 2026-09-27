@@ -7,9 +7,8 @@
 .admin-auth-accent{height:3px;background:var(--primary-600)}
 .admin-auth-body{padding:28px 32px 26px}
 .admin-auth-intro{text-align:center}
-.admin-auth-intro h1{margin:0;font-size:22px;line-height:1.2;letter-spacing:-.03em;color:var(--ink-950)}
-.admin-auth-intro p{margin:6px 0 0;font-size:12px;line-height:1.5;color:var(--ink-600)}
-.admin-auth-form{margin-top:24px;display:grid;gap:16px}
+.admin-auth-intro h1{margin:0;font-size:20px;line-height:1.25;letter-spacing:-.02em;color:var(--ink-950)}
+.admin-auth-form{margin-top:22px;display:grid;gap:16px}
 .admin-auth-form>.form-field{gap:6px}
 .admin-auth-field{height:44px;position:relative;color:var(--ink-400)}
 .admin-auth-field>svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);pointer-events:none}
