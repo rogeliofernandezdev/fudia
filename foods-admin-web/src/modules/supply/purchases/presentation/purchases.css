@@ -9,7 +9,6 @@
 .purchases-search>svg{margin-left:10px;flex:0 0 auto}
 .purchases-search .ds-input{border:0;box-shadow:none}
 .purchases-toolbar>p{display:flex;align-items:center;gap:7px;margin:0;color:var(--ink-400);font-size:10px;line-height:1.35}
-.purchases-table-wrap td small{display:block;margin-top:3px;color:var(--ink-400);font-size:10px;font-weight:600}
 .purchase-money{font-variant-numeric:tabular-nums}
 .purchases-cards{display:none}
 .purchases-state{min-height:280px}
@@ -72,7 +71,6 @@
 .purchase-detail-lines>header{padding:12px 14px;border-bottom:1px solid var(--line)}
 .purchase-detail-lines h3{margin:3px 0 0;font-size:12px}
 .purchase-detail-lines>header small{color:var(--ink-400);font-size:10px;font-weight:850;letter-spacing:.08em}
-.purchase-detail-lines td small{display:block;margin-top:3px;color:var(--ink-400);font-size:10px}
 .purchase-detail-actions{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 16px;border:1px solid #cfd5ff;border-radius:12px;background:#fff}
 .purchase-detail-actions>div:first-child{display:grid;gap:4px}
 .purchase-detail-actions>div:first-child b{font-size:10px}

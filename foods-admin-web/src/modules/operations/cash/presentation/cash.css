@@ -93,7 +93,6 @@
 .cash-history-search>svg{margin-left:10px;flex:0 0 auto}
 .cash-history-search .ds-input{border:0;box-shadow:none}
 .cash-history-toolbar>p{display:flex;align-items:center;gap:7px;margin:0;color:var(--ink-400);font-size:10px;line-height:1.4}
-.cash-history-table td:first-child small{display:block;margin:3px 0 0 44px;color:var(--ink-400);font-size:10px}
 .cash-history-table td{font-variant-numeric:tabular-nums}
 .cash-history-table table{min-width:1020px}
 .cash-balanced{color:var(--brand-700)}
@@ -195,7 +194,6 @@
 .cash-detail-movements>header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px}
 .cash-detail-movements>header small{color:var(--ink-400);font-size:10px;font-weight:850;letter-spacing:.07em}
 .cash-detail-movements h3{margin:3px 0 0;font-size:11px}
-.cash-detail-movements td small{display:block;margin-top:3px;color:var(--ink-400);font-size:10px}
 .cash-detail-movements td:last-child{text-align:right;font-variant-numeric:tabular-nums}
 .cash-detail-movements td:last-child .income{color:var(--brand-700)}
 .cash-detail-movements td:last-child .expense{color:var(--danger)}
