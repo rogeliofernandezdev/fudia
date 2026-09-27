@@ -52,11 +52,10 @@ export function LoginForm() {
         <div className="admin-auth-body">
           <div className="admin-auth-brand">
             <Image src="/assets/images/login.png" alt="fudIA" width={1536} height={1024} priority />
-            <span className="admin-auth-context">Administración</span>
           </div>
           <div className="admin-auth-intro">
             <h1 id="login-title">Iniciar sesión</h1>
-            <p>Ingresa con el correo y la contraseña de tu empresa.</p>
+            <p>Ingresa con tu cuenta de administración.</p>
           </div>
           <form className="admin-auth-form" onSubmit={submit} noValidate>
             {error && <div className="admin-auth-error" role="alert"><Icon name="alert" size={17}/><span>{error}</span></div>}

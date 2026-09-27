@@ -1,9 +1,8 @@
 /* Acceso administrativo — composición centrada y compacta */
 .admin-auth-page{min-height:100dvh;padding:40px 20px;display:grid;place-items:center;color:var(--ink-950);background:var(--cloud-50);background-image:radial-gradient(60% 50% at 50% 0%,var(--primary-100) 0%,transparent 70%)}
 .admin-auth-shell{width:100%;max-width:420px}
-.admin-auth-brand{display:grid;justify-items:center;gap:8px;margin-bottom:20px}
+.admin-auth-brand{display:grid;justify-items:center;margin-bottom:16px}
 .admin-auth-brand img{width:140px;height:auto;display:block;mix-blend-mode:multiply}
-.admin-auth-context{display:inline-flex;align-items:center;height:22px;padding:0 10px;border-radius:99px;font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--ops-700);background:var(--ops-100)}
 .admin-auth-card{overflow:hidden;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:0 12px 40px -12px #1018282b}
 .admin-auth-accent{height:3px;background:var(--primary-600)}
 .admin-auth-body{padding:28px 32px 26px}
