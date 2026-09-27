@@ -1,6 +1,7 @@
 "use client";
 import "./styles/form-field.css";
 import {cloneElement,isValidElement,useId,type ReactElement,type ReactNode} from "react";
+import {Input,Select,Textarea} from "./page-header";
 
 type FormFieldProps={
   label:ReactNode;
@@ -24,7 +25,8 @@ export function FormField({label,help,error,optional,className="",as="label",chi
   const id=useId();
   const helpId=`${id}-help`,errorId=`${id}-error`;
   const describedBy=error?errorId:help?helpId:undefined;
-  const control=isValidElement(children)
+  const describable=isValidElement(children)&&(typeof children.type==="string"||children.type===Input||children.type===Select||children.type===Textarea);
+  const control=describable
     ?cloneElement(children as ReactElement<Record<string,unknown>>,{
       "aria-describedby":[describedBy,(children.props as Record<string,unknown>)["aria-describedby"]].filter(Boolean).join(" ")||undefined,
       "aria-invalid":error?true:(children.props as Record<string,unknown>)["aria-invalid"],
