@@ -52,17 +52,14 @@ export function PlatformPlansPage(){
      const price=billing==="annual"?Number(plan.annualPrice):Number(plan.monthlyPrice);
      const equivalent=billing==="annual"?price/12:price;
      const savings=billing==="annual"?Math.max(0,Number(plan.monthlyPrice)*12-price):0;
-     const included=plan.moduleKeys.map(key=>moduleMap.get(key)).filter((module):module is PlatformModule=>Boolean(module));
+     const included=plan.moduleKeys.map(key=>moduleMap.get(key)).filter((module):module is PlatformModule=>Boolean(module)).sort((a,b)=>a.name.localeCompare(b.name,"es"));
      return <article className={"panel plan-card"+(recommended?" recommended":"")} key={plan.id}>
        <header>
          <div className="plan-heading">
            <span className="plan-icon"><Icon name={plan.code==="emprende"?"store":plan.code==="escala"?"grid":"sales"} size={20}/></span>
-           <div><small>{plan.code.toUpperCase()}</small><h2>{plan.name}</h2></div>
+           <div><small>{plan.code.toUpperCase()}{recommended&&<em>Recomendado</em>}</small><h2>{plan.name}</h2></div>
          </div>
-         <div className="plan-badges">
-           {recommended&&<span className="plan-status recommended">Recomendado</span>}
-           <span className={plan.active?"plan-status active":"plan-status"}>{plan.active?"Disponible":"Inactivo"}</span>
-         </div>
+         <span className={plan.active?"plan-status active":"plan-status"}>{plan.active?"Disponible":"Inactivo"}</span>
        </header>
        <div className="plan-price">
          <div><span>{plan.currency}</span><b>{price.toFixed(2)}</b><em>{billing==="annual"?"/ año":"/ mes"}</em></div>
