@@ -1,36 +1,35 @@
 /* Platform onboarding wizard — foods-admin-web design system */
-.onboarding-wizard{display:grid;gap:14px;margin-top:16px;position:relative}
+.onboarding-wizard{display:grid;gap:0;margin-top:16px;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:var(--shadow);overflow:hidden}
+
+/* Una sola tarjeta: stepper · cabecera del paso · cuerpo · acciones */
+.onboarding-form{display:grid;gap:0}
 
 /* Stepper: círculos conectados por una línea de progreso continua */
-.wizard-steps{display:grid;grid-template-columns:repeat(5,1fr)}
-.wizard-step{position:relative;display:flex;flex-direction:column;align-items:center;gap:8px;min-width:0;padding:0;border:0;background:none;cursor:pointer}
+.wizard-steps{display:grid;grid-template-columns:repeat(5,1fr);padding:22px 24px 18px;background:var(--cloud-50);border-bottom:1px solid var(--line)}
+.wizard-step{position:relative;display:flex;flex-direction:column;align-items:center;gap:10px;min-width:0;padding:0;border:0;background:none;cursor:pointer}
 .wizard-step:disabled{cursor:not-allowed}
 .wizard-step:focus-visible{outline:2px solid var(--ops-500);outline-offset:2px;border-radius:8px}
-
-.wizard-step-icon{position:relative;z-index:1;display:grid;place-items:center;flex-shrink:0;width:36px;height:36px;border-radius:50%;border:2px solid var(--line);background:var(--surface);color:var(--ink-400);transition:background .18s,border-color .18s,color .18s}
-.wizard-step.active .wizard-step-icon{border-color:var(--primary-600);color:var(--primary-600);box-shadow:0 0 0 4px var(--primary-100)}
+.wizard-step-icon{position:relative;z-index:1;display:grid;place-items:center;flex-shrink:0;width:40px;height:40px;border-radius:50%;border:2px solid var(--line-strong);background:var(--surface);color:var(--ink-500);transition:background .18s,border-color .18s,color .18s,box-shadow .18s}
+.wizard-step:not(:disabled):not(.active):hover .wizard-step-icon{border-color:var(--primary-600);color:var(--primary-600)}
+.wizard-step.active .wizard-step-icon{border-color:var(--primary-600);background:var(--primary-600);color:#fff;box-shadow:0 0 0 4px var(--primary-100)}
 .wizard-step.done .wizard-step-icon{border-color:var(--primary-600);background:var(--primary-600);color:#fff}
-
-/* Línea conectora: mitad izquierda y mitad derecha de cada paso, para que la unión entre dos pasos se pinte de forma independiente */
-.wizard-step::before,.wizard-step::after{content:"";position:absolute;top:17px;height:2px;width:50%;background:var(--line);z-index:0}
+/* Línea conectora en dos mitades para pintar cada tramo por separado */
+.wizard-step::before,.wizard-step::after{content:"";position:absolute;top:19px;height:2px;width:50%;background:var(--line-strong);z-index:0}
 .wizard-step::before{left:0}
 .wizard-step::after{right:0}
 .wizard-step:first-child::before{content:none}
 .wizard-step:last-child::after{content:none}
-.wizard-step.done::before,.wizard-step.done::after{background:var(--primary-600)}
-.wizard-step.active::before{background:var(--primary-600)}
-
+.wizard-step.done::before,.wizard-step.done::after,.wizard-step.active::before{background:var(--primary-600)}
 .wizard-step-label{font-size:12px;font-weight:650;color:var(--ink-500);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-.wizard-step.active .wizard-step-label{color:var(--ink-950);font-weight:800}
-.wizard-step.done .wizard-step-label{color:var(--ink-700)}
+.wizard-step.active .wizard-step-label{color:var(--primary-700);font-weight:800}
+.wizard-step.done .wizard-step-label{color:var(--ink-950)}
 
 /* Panel del paso */
-.onboarding-form{display:grid;gap:12px}
-.onboarding-form .panel.management{overflow:hidden;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:var(--shadow)}
-.onboarding-form .panel.management header{display:flex;align-items:center;justify-content:flex-start;gap:12px;min-height:58px;padding:14px 20px;background:var(--surface);border-bottom:1px solid var(--line)}
-.onboarding-form .panel.management header .modal-title-icon{width:32px;height:32px;display:grid;place-items:center;border-radius:10px;background:var(--primary-600);color:#fff}
-.onboarding-form .panel.management header h2{margin:0;text-align:left;font-size:17px;font-weight:750;color:var(--ink-950)}
-.onboarding-form .panel.management .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 18px;padding:22px 20px}
+.onboarding-form .panel.management{overflow:visible;border:0;border-radius:0;background:var(--surface);box-shadow:none}
+.onboarding-form .panel.management header{display:flex;align-items:center;justify-content:flex-start;gap:12px;min-height:58px;padding:16px 24px 0;background:var(--surface);border-bottom:0}
+.onboarding-form .panel.management header .modal-title-icon{width:32px;height:32px;display:grid;place-items:center;border-radius:10px;background:var(--primary-100);color:var(--primary-600);box-shadow:none}
+.onboarding-form .panel.management header h2{margin:0;text-align:left;font-size:17px;font-weight:800;letter-spacing:-.01em;color:var(--ink-950)}
+.onboarding-form .panel.management .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 18px;padding:18px 24px 24px}
 .onboarding-form .panel.management .form-grid .span-2{grid-column:span 2}
 
 /* Campos */
@@ -40,11 +39,11 @@
 .onboarding-form .field-error{font-size:11px;font-weight:650;line-height:1.35;color:var(--danger)}
 
 /* Plan contratado */
-.onboarding-plan-summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:1px;margin:0 18px;overflow:hidden;border-radius:14px;background:var(--line)}
+.onboarding-plan-summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:1px;margin:0 24px;overflow:hidden;border-radius:14px;background:var(--line)}
 .onboarding-plan-summary div{padding:12px;background:var(--cloud-50)}
 .onboarding-plan-summary dt{font-size:10px;font-weight:700;color:var(--ink-500)}
 .onboarding-plan-summary dd{margin:3px 0 0;font-size:14px;font-weight:800;color:var(--ink-950);font-variant-numeric:tabular-nums}
-.onboarding-terms{position:relative;display:flex;align-items:center;gap:10px;margin:14px 18px 18px;padding:12px 14px;border-radius:14px;background:var(--cloud-50);cursor:pointer}
+.onboarding-terms{position:relative;display:flex;align-items:center;gap:10px;margin:14px 24px 24px;padding:12px 14px;border-radius:14px;background:var(--cloud-50);cursor:pointer}
 .onboarding-terms input{position:absolute;opacity:0;width:1px;height:1px}
 .onboarding-terms>span{width:20px;height:20px;flex-shrink:0;display:grid;place-items:center;border:1.5px solid var(--ink-400);border-radius:6px;background:#fff;color:transparent}
 .onboarding-terms input:checked+span{border-color:var(--primary-600);background:var(--primary-600);color:#fff}
@@ -54,14 +53,14 @@
 .onboarding-terms.has-error{background:#fff4f3}
 
 /* Acciones */
-.wizard-footer{display:flex;justify-content:space-between;align-items:center;gap:8px;padding-top:12px;border-top:1px solid var(--line)}
+.wizard-footer{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:14px 24px;border-top:1px solid var(--line);background:var(--cloud-50)}
 .wizard-footer>div{display:flex;gap:8px}
 .wizard-footer .button{height:var(--control-height)}
 .wizard-footer .button.primary{min-width:120px;justify-content:center}
 
 /* Skeleton */
 .platform-onboarding-skeleton .wizard-step{cursor:default}
-.onboarding-skeleton-icon{width:36px;height:36px;flex-shrink:0;border-radius:50%}
+.onboarding-skeleton-icon{width:40px;height:40px;flex-shrink:0;border-radius:50%}
 .onboarding-skeleton-step-copy{width:60%;max-width:80px;height:11px;border-radius:6px}
 .onboarding-skeleton-heading{display:grid;gap:6px}
 .onboarding-skeleton-heading i:first-child{width:90px;height:9px;border-radius:6px}
@@ -77,13 +76,16 @@
   .onboarding-form .panel.management .form-grid .span-2{grid-column:auto}
 }
 @media(max-width:600px){
-  .wizard-step-icon{width:30px;height:30px}
-  .wizard-step::before,.wizard-step::after{top:14px}
-  .wizard-step-label{font-size:10px}
+  .wizard-steps{padding:16px 12px}
+  .wizard-step-icon{width:34px;height:34px}
+  .wizard-step::before,.wizard-step::after{top:16px}
+  .wizard-step-label{display:none}
   .onboarding-plan-summary{grid-template-columns:1fr 1fr;margin:0 14px}
+  .onboarding-plan-summary div:last-child:nth-child(odd){grid-column:span 2}
   .onboarding-terms{margin:14px}
-  .onboarding-form .panel.management .form-grid{padding:14px}
-  .wizard-footer{position:sticky;bottom:0;padding:12px 0;background:var(--cloud-50)}
+  .onboarding-form .panel.management .form-grid{padding:14px 14px 18px}
+  .onboarding-form .panel.management header{padding:14px 14px 0}
+  .wizard-footer{position:sticky;bottom:0;padding:12px 14px}
   .wizard-footer .button{flex:1}
   .wizard-footer>div:empty{display:none}
   .wizard-footer>div{flex:1}
