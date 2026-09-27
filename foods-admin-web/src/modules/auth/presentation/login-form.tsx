@@ -55,7 +55,7 @@ export function LoginForm() {
             <span className="admin-auth-context">Administración</span>
           </div>
           <div className="admin-auth-intro">
-            <h1 id="login-title">Bienvenido de nuevo</h1>
+            <h1 id="login-title">Iniciar sesión</h1>
             <p>Ingresa con el correo y la contraseña de tu empresa.</p>
           </div>
           <form className="admin-auth-form" onSubmit={submit} noValidate>
