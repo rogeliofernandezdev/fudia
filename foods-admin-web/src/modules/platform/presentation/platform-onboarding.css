@@ -1,18 +1,19 @@
 /* Platform onboarding wizard — foods-admin-web design system */
 .onboarding-wizard{display:grid;gap:14px;margin-top:16px;position:relative}
 
-/* Stepper: círculos conectados por una línea de progreso */
-.wizard-steps{display:grid;grid-template-columns:repeat(5,1fr);align-items:start}
-.wizard-step{position:relative;display:grid;justify-items:center;gap:8px;min-width:0;padding:4px 4px 0;border:0;background:none;text-align:center;cursor:pointer}
+/* Stepper: tabs tipográficos con línea de acento deslizante */
+.wizard-steps{position:relative;display:grid;grid-template-columns:repeat(5,1fr);border-bottom:1px solid var(--line)}
+.wizard-step{position:relative;display:flex;align-items:baseline;justify-content:center;gap:6px;min-width:0;padding:0 4px 14px;border:0;background:none;cursor:pointer}
 .wizard-step:disabled{cursor:not-allowed}
-.wizard-step:focus-visible{outline:2px solid var(--ops-500);outline-offset:2px;border-radius:8px}
-.wizard-step::before{content:"";position:absolute;top:19px;left:calc(-50% - 2px);width:calc(100% + 4px);height:2px;background:var(--line);z-index:0}
-.wizard-step:first-child::before{content:none}
-.wizard-step.done::before{background:var(--primary-600)}
-.wizard-step-icon{position:relative;z-index:1;width:38px;height:38px;flex-shrink:0;display:grid;place-items:center;border-radius:50%;background:var(--surface);border:2px solid var(--line);color:var(--ink-500);font-weight:800;font-size:14px;transition:background .15s,border-color .15s,color .15s}
-.wizard-step.active .wizard-step-icon{border-color:var(--primary-600);color:var(--primary-600);box-shadow:0 0 0 4px var(--primary-100)}
-.wizard-step.done .wizard-step-icon{background:var(--primary-600);border-color:var(--primary-600);color:#fff}
-.wizard-step-label{font-size:12px;font-weight:600;color:var(--ink-500);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.wizard-step:disabled .wizard-step-label{color:var(--ink-400)}
+.wizard-step:focus-visible{outline:2px solid var(--ops-500);outline-offset:-2px;border-radius:4px}
+.wizard-step::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:transparent;transition:background .15s}
+.wizard-step.active::after{background:var(--primary-600)}
+.wizard-step.done::after{background:var(--brand-600)}
+.wizard-step-icon{font-size:11px;font-weight:800;color:var(--ink-400);font-variant-numeric:tabular-nums}
+.wizard-step.active .wizard-step-icon{color:var(--primary-600)}
+.wizard-step.done .wizard-step-icon{color:var(--brand-700)}
+.wizard-step-label{font-size:13px;font-weight:650;color:var(--ink-500);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .wizard-step.active .wizard-step-label{color:var(--ink-950);font-weight:800}
 .wizard-step.done .wizard-step-label{color:var(--ink-700)}
 
@@ -52,10 +53,8 @@
 .wizard-footer .button.primary{min-width:120px;justify-content:center}
 
 /* Skeleton */
-.platform-onboarding-skeleton .wizard-step{cursor:default;background:var(--cloud-50)}
-.onboarding-skeleton-icon{width:22px;height:22px;flex-shrink:0;border-radius:6px}
-.onboarding-skeleton-step-copy{flex:1;max-width:70px}
-.onboarding-skeleton-step-copy i{height:11px;border-radius:6px}
+.platform-onboarding-skeleton .wizard-step{cursor:default}
+.onboarding-skeleton-step-copy{width:70%;max-width:90px;height:13px;border-radius:6px;margin-bottom:14px}
 .onboarding-skeleton-heading{display:grid;gap:6px}
 .onboarding-skeleton-heading i:first-child{width:90px;height:9px;border-radius:6px}
 .onboarding-skeleton-heading i:last-child{width:160px;height:15px;border-radius:6px}
@@ -70,9 +69,9 @@
   .onboarding-form .panel.management .form-grid .span-2{grid-column:auto}
 }
 @media(max-width:600px){
-  .wizard-step-label{font-size:10px}
-  .wizard-step-icon{width:32px;height:32px;font-size:12px}
-  .wizard-step::before{top:16px}
+  .wizard-step{padding-bottom:10px}
+  .wizard-step-icon{display:none}
+  .wizard-step-label{font-size:11px}
   .onboarding-plan-summary{grid-template-columns:1fr 1fr;margin:0 14px}
   .onboarding-terms{margin:14px}
   .onboarding-form .panel.management .form-grid{padding:14px}
