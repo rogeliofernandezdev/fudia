@@ -347,12 +347,16 @@ acción dominante; botones secundarios e iconográficos mantienen su geometría.
 
 ## Acceso administrativo
 
-El login usa una composición centrada y compacta: marca superior, tarjeta de un
-solo formulario con línea de acento índigo, título y ayuda centrados, controles
-de 44 px, acción principal a todo el ancho e indicadores de confianza al pie.
-En móvil aumenta los controles a 48 px y reduce únicamente el padding; no cambia
-el orden ni oculta información funcional. La referencia define la geometría,
-pero la identidad, textos, iconos y colores son exclusivamente Foods.
+El login usa una composición centrada y compacta: tarjeta única con línea de
+acento índigo, marca centrada dentro de la tarjeta como único encabezado (el
+`h1` existe solo para lectores de pantalla; no hay título ni texto de ayuda
+visibles), campos con las primitivas `FormField` e `Input` del design system,
+acción principal a todo el ancho con icono de candado e indicadores de
+confianza al pie. La página redefine `--control-height` a 44 px (48 px en
+móvil) en lugar de fijar alturas literales; radio, tipografía y foco de los
+campos son los estándar. En móvil reduce únicamente el padding; no cambia el
+orden ni oculta información funcional. La referencia define la geometría, pero
+la identidad, textos, iconos y colores son exclusivamente Foods.
 
 ## Integridad CSS
 
