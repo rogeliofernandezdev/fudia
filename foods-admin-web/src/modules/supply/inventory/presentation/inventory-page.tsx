@@ -76,7 +76,6 @@ export function InventoryPage(){
   <section className="panel standardized-management inventory-panel">
    <div className="inventory-toolbar">
     <label className="ds-input-shell"><Icon name="search" size={18}/><Input value={search} onChange={event=>{setSearch(event.target.value);setPage(1)}} placeholder="Buscar artículo..."/></label>
-    <p><Icon name="store" size={15}/>Existencia física del local activo en su unidad base.</p>
    </div>
    {inventory.isLoading?<InventorySkeleton/>:inventory.isError?
     <div className="inventory-state"><Icon name="alert" size={24}/><b>No pudimos cargar el inventario</b><p>{inventory.error.message}</p><Button kind="secondary" icon="refresh" onClick={()=>inventory.refetch()}>Reintentar</Button></div>

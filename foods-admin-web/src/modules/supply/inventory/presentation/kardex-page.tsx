@@ -37,16 +37,17 @@ export function KardexPage(){
   <section className="panel standardized-management inventory-panel">
    <div className="inventory-toolbar kardex-toolbar">
     <div className="kardex-filters">
-     <label><span>Artículo</span><Select value={inventoryItemId} onChange={event=>{setInventoryItemId(event.target.value);setPage(1)}} disabled={products.isLoading} aria-label="Filtrar Kárdex por artículo"><option value="">Todos los artículos</option>{products.data?.items.map(item=><option value={item.id} key={item.id}>{item.name}{item.kind==="ingredient"?" · Insumo":""}</option>)}</Select></label>
-     <label><span>Movimiento</span><Select value={movementType} onChange={event=>{setMovementType(event.target.value);setPage(1)}} aria-label="Filtrar por tipo de movimiento"><option value="">Todos los movimientos</option>{Object.entries(movementLabels).map(([value,label])=><option key={value} value={value}>{label}</option>)}</Select></label>
-     <label><span>Origen</span><Select value={sourceType} onChange={event=>{setSourceType(event.target.value);setPage(1)}} aria-label="Filtrar por origen"><option value="">Todos los orígenes</option><option value="purchase_receipt">Recepción de compra</option><option value="purchase_return">Devolución/corrección</option><option value="inventory_transfer">Transferencia</option><option value="order">Pedido / receta</option><option value="inventory_adjustment">Ajuste</option><option value="inventory_entry">Entrada manual</option></Select></label>
-     <label><span>Desde</span><Input type="date" value={from} onChange={event=>{setFrom(event.target.value);setPage(1)}} aria-label="Fecha desde"/></label>
-     <label><span>Hasta</span><Input type="date" value={to} onChange={event=>{setTo(event.target.value);setPage(1)}} aria-label="Fecha hasta"/></label>
+     <Select value={inventoryItemId} onChange={event=>{setInventoryItemId(event.target.value);setPage(1)}} disabled={products.isLoading} aria-label="Filtrar Kárdex por artículo"><option value="">Todos los artículos</option>{products.data?.items.map(item=><option value={item.id} key={item.id}>{item.name}{item.kind==="ingredient"?" · Insumo":""}</option>)}</Select>
+     <Select value={movementType} onChange={event=>{setMovementType(event.target.value);setPage(1)}} aria-label="Filtrar por tipo de movimiento"><option value="">Todos los movimientos</option>{Object.entries(movementLabels).map(([value,label])=><option key={value} value={value}>{label}</option>)}</Select>
+     <Select value={sourceType} onChange={event=>{setSourceType(event.target.value);setPage(1)}} aria-label="Filtrar por origen"><option value="">Todos los orígenes</option><option value="purchase_receipt">Recepción de compra</option><option value="purchase_return">Devolución/corrección</option><option value="inventory_transfer">Transferencia</option><option value="order">Pedido / receta</option><option value="inventory_adjustment">Ajuste</option><option value="inventory_entry">Entrada manual</option></Select>
+     <div className="kardex-range" role="group" aria-label="Periodo">
+      <Icon name="calendar" size={15}/>
+      <Input type="date" value={from} max={to||undefined} onChange={event=>{setFrom(event.target.value);setPage(1)}} aria-label="Fecha desde"/>
+      <span aria-hidden="true">–</span>
+      <Input type="date" value={to} min={from||undefined} onChange={event=>{setTo(event.target.value);setPage(1)}} aria-label="Fecha hasta"/>
+     </div>
     </div>
-    <div className="kardex-toolbar-side">
-     {activeFilters>0&&<Button kind="ghost" icon="refresh" onClick={resetFilters}>Limpiar</Button>}
-     <p><Icon name="ledger" size={14}/>Cada movimiento conserva cantidad, costo, saldo y usuario.</p>
-    </div>
+    {activeFilters>0&&<Button kind="ghost" icon="refresh" onClick={resetFilters}>Limpiar</Button>}
    </div>
 
    {movements.isLoading?<KardexSkeleton/>:movements.isError?
