@@ -5,7 +5,7 @@ import "./role-editor.css";
 import "./role-editor-refinement.css";
 import {useState,useMemo} from "react";import {useFieldArray,useForm} from "react-hook-form";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,ConfirmDialog,FormField,Icon,Input,PageHeader,Pagination,RemoteModalSkeleton,RowActionButton,Status,Textarea} from "@/design-system";
+import {Button,ConfirmDialog,FormField,Icon,Input,PageHeader,Pagination,RemoteModalSkeleton,RowActionButton,Select,Status,Textarea} from "@/design-system";
 import {roleResolver,userResolver} from "../domain/access-schema";import type {Location,PermissionGroup,Role,RoleDraft,User,UserDraft} from "../domain/types";
 import {getPermissionCatalog,listLocations,listRoles,listUsers,saveRole as persistRole,saveUser as persistUser,setRoleActive,setUserActive} from "../infrastructure/identity-api";
 import {useFeedback} from "@/providers/feedback-provider";
