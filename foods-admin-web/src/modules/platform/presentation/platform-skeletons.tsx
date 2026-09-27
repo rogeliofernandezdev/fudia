@@ -5,7 +5,7 @@ export function PlatformOnboardingSkeleton({stepCount}:{stepCount:number}){
     <div className="wizard-steps" aria-hidden="true">
       {Array.from({length:stepCount},(_,index)=><div className="wizard-step" key={index}>
         <span className="platform-skeleton-block onboarding-skeleton-icon"/>
-        <i className="platform-skeleton-block onboarding-skeleton-step-copy"/>
+        <span className="onboarding-skeleton-step-copy"><i className="platform-skeleton-block"/><i className="platform-skeleton-block"/></span>
       </div>)}
     </div>
     <div className="onboarding-form" aria-hidden="true">

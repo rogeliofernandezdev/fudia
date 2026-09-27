@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-export type IconName = "grid"|"sales"|"receipt"|"menu"|"utensils"|"chefHat"|"cookingPot"|"kitchen"|"combo"|"stock"|"truck"|"users"|"store"|"settings"|"search"|"bell"|"plus"|"minus"|"chevron"|"chevronLeft"|"filter"|"download"|"alert"|"check"|"clock"|"box"|"logout"|"eye"|"lock"|"mail"|"edit"|"power"|"save"|"refresh"|"close"|"panelCollapse"|"panelExpand"|"qr"|"share"|"trash"|"arrowRightCircle"|"payment"|"cancel"|"availability"|"ledger";
+export type IconName = "grid"|"sales"|"receipt"|"menu"|"utensils"|"chefHat"|"cookingPot"|"kitchen"|"combo"|"stock"|"truck"|"users"|"store"|"settings"|"search"|"bell"|"plus"|"minus"|"chevron"|"chevronLeft"|"filter"|"download"|"alert"|"check"|"clock"|"box"|"logout"|"eye"|"lock"|"mail"|"edit"|"power"|"save"|"refresh"|"close"|"panelCollapse"|"panelExpand"|"qr"|"share"|"trash"|"arrowRightCircle"|"payment"|"cancel"|"availability"|"ledger"|"building"|"contract"|"mapPin"|"userCheck";
 const paths: Record<IconName, ReactNode> = {
   grid:<><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></>,
   sales:<><path d="M4 19V9m6 10V5m6 14v-7m4 7H2"/></>, receipt:<><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6m-6 4h6"/></>,
@@ -19,5 +19,9 @@ const paths: Record<IconName, ReactNode> = {
   cancel:<><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6m0-6-6 6"/></>,
   availability:<><path d="M4 17h12M6 17a6 6 0 0 1 10.7-3.7M12 8v3M10 8h4M3 21h14"/><path d="m16 8 2 2 4-5"/></>,
   ledger:<><path d="M5 3h14v18H5zM8 7h8M8 11h5M8 15h8"/><path d="m14 11 2 2 3-3"/></>,
+  building:<><path d="M4 21V5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v16M15 9h4a1 1 0 0 1 1 1v11M2 21h20M8 8h3m-3 4h3m-3 4h3"/></>,
+  contract:<><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4M9 11h6"/><path d="M9 16c1-2 2-2 3 0s2 2 3 0"/></>,
+  mapPin:<><path d="M12 21s7-6 7-11a7 7 0 0 0-14 0c0 5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></>,
+  userCheck:<><circle cx="10" cy="8" r="4"/><path d="M3 21a7 7 0 0 1 12-5"/><path d="m16 18 2 2 4-4"/></>,
 };
 export function Icon({name,size=20,className}:{name:IconName,size?:number;className?:string}) { return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={className}>{paths[name]}</svg> }

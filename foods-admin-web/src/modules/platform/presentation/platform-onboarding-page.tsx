@@ -24,11 +24,11 @@ const blank:PlatformOnboardingDraft={
 };
 
 const steps:Array<{key:string;title:string;icon:IconName;heading:string}>=[
-  {key:"empresa",title:"Empresa",icon:"store",heading:"Datos legales"},
-  {key:"plan",title:"Plan y contrato",icon:"settings",heading:"Suscripción SaaS"},
+  {key:"empresa",title:"Empresa",icon:"building",heading:"Datos legales"},
+  {key:"plan",title:"Plan y contrato",icon:"contract",heading:"Suscripción SaaS"},
   {key:"fiscal",title:"Fiscal",icon:"receipt",heading:"Perfil fiscal del primer local"},
-  {key:"local",title:"Primer local",icon:"box",heading:"Sede inicial"},
-  {key:"admin",title:"Administrador",icon:"users",heading:"Administrador de empresa"},
+  {key:"local",title:"Primer local",icon:"mapPin",heading:"Sede inicial"},
+  {key:"admin",title:"Administrador",icon:"userCheck",heading:"Administrador de empresa"},
 ];
 const lastStep=steps.length-1;
 
@@ -84,8 +84,8 @@ export function PlatformOnboardingPage(){
   <div className="onboarding-wizard">
     <nav className="wizard-steps" aria-label="Pasos del registro">
       {steps.map((s,i)=><button key={s.key} type="button" className={"wizard-step"+(i===step?" active":i<reached?" done":"")} onClick={()=>goTo(i)} disabled={i>reached||save.isPending} aria-current={i===step?"step":undefined}>
-        <span className="wizard-step-icon">{i<reached&&i!==step?<Icon name="check" size={16}/>:<Icon name={s.icon} size={16}/>}</span>
-        <span className="wizard-step-label">{s.title}</span>
+        <span className="wizard-step-icon">{i<reached&&i!==step?<Icon name="check" size={18}/>:<Icon name={s.icon} size={18}/>}</span>
+        <span className="wizard-step-label"><small>{i===step?"En curso":i<reached?"Completado":"Pendiente"}</small><b>{s.title}</b></span>
       </button>)}
     </nav>
 

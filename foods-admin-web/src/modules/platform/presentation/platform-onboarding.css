@@ -4,25 +4,25 @@
 /* Una sola tarjeta: stepper · cabecera del paso · cuerpo · acciones */
 .onboarding-form{display:grid;gap:0}
 
-/* Stepper: círculos conectados por una línea de progreso continua */
-.wizard-steps{display:grid;grid-template-columns:repeat(5,1fr);padding:22px 24px 18px;background:var(--cloud-50);border-bottom:1px solid var(--line)}
-.wizard-step{position:relative;display:flex;flex-direction:column;align-items:center;gap:10px;min-width:0;padding:0;border:0;background:none;cursor:pointer}
+/* Stepper: segmentos con tile de icono y barra de progreso por tramo */
+.wizard-steps{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;padding:18px 24px 16px;background:var(--surface);border-bottom:1px solid var(--line)}
+.wizard-step{position:relative;display:flex;align-items:center;gap:10px;min-width:0;padding:0 0 12px;border:0;background:none;text-align:left;cursor:pointer}
 .wizard-step:disabled{cursor:not-allowed}
-.wizard-step:focus-visible{outline:2px solid var(--ops-500);outline-offset:2px;border-radius:8px}
-.wizard-step-icon{position:relative;z-index:1;display:grid;place-items:center;flex-shrink:0;width:40px;height:40px;border-radius:50%;border:2px solid var(--line-strong);background:var(--surface);color:var(--ink-500);transition:background .18s,border-color .18s,color .18s,box-shadow .18s}
-.wizard-step:not(:disabled):not(.active):hover .wizard-step-icon{border-color:var(--primary-600);color:var(--primary-600)}
-.wizard-step.active .wizard-step-icon{border-color:var(--primary-600);background:var(--primary-600);color:#fff;box-shadow:0 0 0 4px var(--primary-100)}
-.wizard-step.done .wizard-step-icon{border-color:var(--primary-600);background:var(--primary-600);color:#fff}
-/* Línea conectora en dos mitades para pintar cada tramo por separado */
-.wizard-step::before,.wizard-step::after{content:"";position:absolute;top:19px;height:2px;width:50%;background:var(--line-strong);z-index:0}
-.wizard-step::before{left:0}
-.wizard-step::after{right:0}
-.wizard-step:first-child::before{content:none}
-.wizard-step:last-child::after{content:none}
-.wizard-step.done::before,.wizard-step.done::after,.wizard-step.active::before{background:var(--primary-600)}
-.wizard-step-label{font-size:12px;font-weight:650;color:var(--ink-500);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-.wizard-step.active .wizard-step-label{color:var(--primary-700);font-weight:800}
-.wizard-step.done .wizard-step-label{color:var(--ink-950)}
+.wizard-step:focus-visible{outline:2px solid var(--ops-500);outline-offset:4px;border-radius:8px}
+.wizard-step::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;border-radius:99px;background:var(--cloud-100);transition:background .2s}
+.wizard-step.done::after{background:var(--primary-600)}
+.wizard-step.active::after{background:linear-gradient(90deg,var(--primary-600) 55%,var(--primary-100) 55%)}
+.wizard-step-icon{display:grid;place-items:center;flex-shrink:0;width:36px;height:36px;border-radius:10px;background:var(--cloud-100);color:var(--ink-500);transition:background .18s,color .18s,box-shadow .18s}
+.wizard-step:not(:disabled):not(.active):hover .wizard-step-icon{background:var(--primary-100);color:var(--primary-600)}
+.wizard-step.active .wizard-step-icon{background:var(--primary-600);color:#fff;box-shadow:0 6px 14px -6px #4654cd99}
+.wizard-step.done .wizard-step-icon{background:var(--primary-100);color:var(--primary-700)}
+.wizard-step-label{display:grid;gap:1px;min-width:0}
+.wizard-step-label b{font-size:12px;font-weight:750;color:var(--ink-500);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wizard-step-label small{font-size:10px;font-weight:650;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-400)}
+.wizard-step.active .wizard-step-label b{color:var(--ink-950)}
+.wizard-step.active .wizard-step-label small{color:var(--primary-600)}
+.wizard-step.done .wizard-step-label b{color:var(--ink-700)}
+.wizard-step.done .wizard-step-label small{color:var(--primary-700)}
 
 /* Panel del paso */
 .onboarding-form .panel.management{overflow:visible;border:0;border-radius:0;background:var(--surface);box-shadow:none}
@@ -60,8 +60,10 @@
 
 /* Skeleton */
 .platform-onboarding-skeleton .wizard-step{cursor:default}
-.onboarding-skeleton-icon{width:40px;height:40px;flex-shrink:0;border-radius:50%}
-.onboarding-skeleton-step-copy{width:60%;max-width:80px;height:11px;border-radius:6px}
+.onboarding-skeleton-icon{width:36px;height:36px;flex-shrink:0;border-radius:10px}
+.onboarding-skeleton-step-copy{display:grid;gap:5px;flex:1;max-width:110px}
+.onboarding-skeleton-step-copy i{height:9px;border-radius:6px}
+.onboarding-skeleton-step-copy i:first-child{width:55%}
 .onboarding-skeleton-heading{display:grid;gap:6px}
 .onboarding-skeleton-heading i:first-child{width:90px;height:9px;border-radius:6px}
 .onboarding-skeleton-heading i:last-child{width:160px;height:15px;border-radius:6px}
@@ -76,9 +78,9 @@
   .onboarding-form .panel.management .form-grid .span-2{grid-column:auto}
 }
 @media(max-width:600px){
-  .wizard-steps{padding:16px 12px}
+  .wizard-steps{padding:14px 14px 12px;gap:6px}
+  .wizard-step{justify-content:center;padding-bottom:10px}
   .wizard-step-icon{width:34px;height:34px}
-  .wizard-step::before,.wizard-step::after{top:16px}
   .wizard-step-label{display:none}
   .onboarding-plan-summary{grid-template-columns:1fr 1fr;margin:0 14px}
   .onboarding-plan-summary div:last-child:nth-child(odd){grid-column:span 2}
