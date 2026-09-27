@@ -8,7 +8,7 @@ import {Icon,type IconName} from "@/design-system/icons";
 import {useSession} from "@/providers";
 import {canOpenNavigationItem,navigationItemForPath} from "@/shell/navigation";
 
-type GuideStep={
+export type GuideStep={
   id:string;
   title:string;
   icon:IconName;
@@ -18,7 +18,7 @@ type GuideStep={
 };
 
 // These are instructions for existing screens, never substitute business data from the API.
-const guideSteps:GuideStep[]=[
+export const guideSteps:GuideStep[]=[
   {id:"empresa",title:"Empresa",icon:"store",href:"/configuracion/empresa",tooltip:"Revisa la identidad legal del restaurante antes de operar.",details:["Confirma la razón social, el nombre comercial y la identificación fiscal.","Revisa la zona horaria predeterminada; el primer administrador ya fue creado al dar de alta la empresa."]},
   {id:"fiscal",title:"Fiscal y moneda",icon:"receipt",href:"/configuracion/fiscal",tooltip:"Comprueba el país, la moneda y el impuesto del perfil fiscal.",details:["Revisa el perfil fiscal inicial: país, moneda, nombre y porcentaje del impuesto.","Registra tipos de cambio solo si vas a operar en más de una moneda."]},
   {id:"locales",title:"Locales",icon:"store",href:"/locales",tooltip:"Completa los datos del local donde atenderás a los clientes.",details:["Verifica el local principal y completa su dirección, teléfono, horario y zona horaria.","Asigna el perfil fiscal que corresponda; agrega otros locales solo si los necesitas."]},
@@ -62,7 +62,7 @@ export function RestaurantSetupGuide(){
   const finished=selectedId==="done";
 
   return <>
-    <PageHeader eyebrow="CONFIGURACIÓN" title="Puesta en marcha" description="Un recorrido por lo que necesitas revisar o registrar para comenzar a atender en tu restaurante."/>
+    <PageHeader eyebrow="CONFIGURACIÓN" title="Puesta en marcha" description="Recorre cada pantalla con indicaciones sobre lo que debes registrar para comenzar a atender." action={organization&&step&&!finished?<Link className="button primary" href={`${step.href}?guia=puesta-en-marcha`} onClick={()=>showStep(step.id)} aria-label="Iniciar recorrido guiado"><Icon name="check" size={18}/><span>Iniciar recorrido guiado</span></Link>:undefined}/>
     {!organization?<section className="setup-guide-empty panel"><Icon name="store" size={28}/><h2>Selecciona una empresa</h2><p>Elige la empresa y el local para ver su recorrido de puesta en marcha.</p></section>:
     !steps.length?<section className="setup-guide-empty panel"><Icon name="lock" size={28}/><h2>Sin opciones disponibles</h2><p>Tu rol aún no puede abrir las pantallas de configuración. Pide al administrador que revise tus accesos.</p></section>:
     <section className="setup-guide" aria-label="Asistente de puesta en marcha">
@@ -73,7 +73,7 @@ export function RestaurantSetupGuide(){
             <span className="setup-guide-number">{i+1}</span><span className="setup-guide-step-icon"><Icon name={item.icon} size={19}/></span><span className="setup-guide-step-copy"><b>{item.title}</b><small>{item.tooltip}</small></span><Icon name="chevron" size={17}/>
           </button>)}
         </nav>
-        {finished?<div className="setup-guide-callout" aria-live="polite"><span className="setup-guide-callout-icon"><Icon name="check" size={24}/></span><small>FIN DEL RECORRIDO</small><h2>Ya conoces las opciones para empezar</h2><p>El recorrido no comprueba los datos guardados. Revisa que la carta, las mesas, los medios de pago y el turno de caja estén listos antes de atender.</p><div className="setup-guide-actions"><Button kind="secondary" onClick={()=>showStep(steps[0].id)}>Repetir guía</Button>{navigationItemForPath("/pos")&&context&&canOpenNavigationItem(navigationItemForPath("/pos")!,context)&&<Link className="button primary" href="/pos"><Icon name="sales" size={18}/>Ir al punto de venta</Link>}</div></div>:
+        {finished?<div className="setup-guide-callout" aria-live="polite"><span className="setup-guide-callout-icon"><Icon name="check" size={24}/></span><small>FIN DEL RECORRIDO</small><h2>Ya conoces las opciones para empezar</h2><p>El recorrido no comprueba los datos guardados. Revisa que la carta, las mesas, los medios de pago y el turno de caja estén listos antes de atender.</p><div className="setup-guide-actions"><Link className="button secondary" href={`${steps[0].href}?guia=puesta-en-marcha`} onClick={()=>showStep(steps[0].id)}>Repetir recorrido</Link>{navigationItemForPath("/pos")&&context&&canOpenNavigationItem(navigationItemForPath("/pos")!,context)&&<Link className="button primary" href="/pos"><Icon name="sales" size={18}/>Ir al punto de venta</Link>}</div></div>:
         <div className="setup-guide-callout" aria-live="polite" aria-labelledby="setup-guide-current-title">
           <span className="setup-guide-callout-icon"><Icon name={step.icon} size={24}/></span>
           <small>ASISTENTE · {index+1} / {steps.length}</small>
@@ -81,8 +81,8 @@ export function RestaurantSetupGuide(){
           <p>{step.tooltip}</p>
           <h3>Qué debes registrar o revisar</h3>
           <ul>{step.details.map(detail=><li key={detail}><Icon name="check" size={16}/>{detail}</li>)}</ul>
-          <p className="setup-guide-hint">{can(step.id==="usuarios"?"users.manage":step.id==="mesas"?"tables.manage":step.id==="caja"?"cash.manage":step.id==="productos"?"menu.manage":"organizations.manage")?"Cuando termines en esa pantalla, vuelve aquí y continúa con la siguiente opción.":"Puedes consultar esta opción. Para registrar cambios, pide a un administrador el permiso correspondiente."}</p>
-          <div className="setup-guide-actions"><Link className="button primary" href={step.href}><Icon name="chevron" size={18}/>Abrir {step.title}</Link><div><Button kind="secondary" disabled={index===0} onClick={()=>showStep(steps[index-1].id)}>Anterior</Button><Button kind="secondary" onClick={()=>showStep(steps[index+1]?.id??"done")}>{index===steps.length-1?"Finalizar guía":"Siguiente"}</Button></div></div>
+          <p className="setup-guide-hint">{can(step.id==="usuarios"?"users.manage":step.id==="mesas"?"tables.manage":step.id==="caja"?"cash.manage":step.id==="productos"?"menu.manage":"organizations.manage")?"El asistente te acompañará en cada pantalla. Cuando termines de registrar los datos, pulsa Siguiente en el tooltip para abrir la próxima opción.":"Puedes consultar esta opción. Para registrar cambios, pide a un administrador el permiso correspondiente."}</p>
+          <div className="setup-guide-actions"><Link className="button primary" href={`${step.href}?guia=puesta-en-marcha`} onClick={()=>showStep(step.id)}><Icon name="chevron" size={18}/>Iniciar recorrido aquí</Link><div><Button kind="secondary" disabled={index===0} onClick={()=>showStep(steps[index-1].id)}>Anterior</Button><Button kind="secondary" onClick={()=>showStep(steps[index+1]?.id??"done")}>{index===steps.length-1?"Ver cierre":"Ver siguiente opción"}</Button></div></div>
         </div>}
       </div>
       <p className="setup-guide-footnote">Tu avance se guarda en este navegador para la empresa y el local seleccionados. La guía no cambia la configuración por sí sola.</p>

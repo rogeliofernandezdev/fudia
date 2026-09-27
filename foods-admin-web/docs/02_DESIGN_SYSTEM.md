@@ -405,9 +405,12 @@ Primer local → Administrador.
 la operación de un restaurante existente. Recorre las pantallas ya disponibles:
 empresa, fiscalidad, locales, usuarios, medios de pago, carta, mesas y caja.
 Cada opción explica en un tooltip y en un panel visible qué datos revisar o
-registrar, y enlaza a su pantalla real. Oculta las opciones a las que el usuario
-no puede acceder. El punto de avance se conserva en este navegador por usuario,
-empresa y local; avanzar en la guía no certifica que se hayan guardado datos.
+registrar. Al iniciar el recorrido abre la pantalla real de cada opción y
+muestra allí el tooltip, con controles Anterior y Siguiente para pasar a la
+próxima pantalla. El tooltip se puede minimizar mientras se completan formularios.
+Oculta las opciones a las que el usuario no puede acceder. El punto de avance
+se conserva en este navegador por usuario, empresa y local; avanzar en la guía
+no certifica que se hayan guardado datos.
 
 El paso Plan y contrato consume el catálogo SaaS del backend: nunca hardcodea
 precios ni paquetes. Muestra precio según ciclo, prueba, límites, módulos y
