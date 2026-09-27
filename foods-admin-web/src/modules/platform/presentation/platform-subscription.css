@@ -36,7 +36,7 @@
 /* Historial */
 .subscription-history{margin-top:16px}
 .subscription-history>header>b{display:grid;place-items:center;min-width:28px;height:28px;margin-left:auto;border-radius:8px;font-size:11px;color:var(--ops-700);background:var(--ops-100)}
-.subscription-history td{height:52px;font-size:11px}
+.subscription-history td{height:52px}
 .subscription-pay-status{display:inline-flex;align-items:center;height:22px;padding:0 9px;border-radius:99px;font-size:10px;font-weight:750;color:var(--ink-600);background:var(--cloud-100)}
 .subscription-pay-status.paid{color:var(--brand-700);background:var(--brand-100)}
 .subscription-pay-status.pending{color:var(--warning);background:var(--warning-50)}

@@ -45,9 +45,10 @@ Usar superficies mayormente neutras, azul para navegación y acciones, verde par
 - Radio de 14 px en tarjetas y 6 px en controles.
 - Bordes #E4E7EC y sombras discretas.
 - Cifras tabulares para KPI, montos y porcentajes.
-- Tamaño mínimo de texto en módulos: 10 px. Los eyebrows y etiquetas
-  auxiliares usan 10 px; campos, ayudas y errores usan 11 px; cuerpo 12–13 px.
-  La prueba `tests/type-scale.test.mjs` bloquea cualquier `font-size` menor.
+- Tamaño mínimo de texto en toda la aplicación (módulos, `globals.css` y
+  design system): 10 px. Los eyebrows y etiquetas auxiliares usan 10 px;
+  campos, ayudas y errores usan 11 px; cuerpo 12–13 px. La prueba
+  `tests/type-scale.test.mjs` bloquea cualquier `font-size` menor.
 - Inputs, tablas, botones y estados provienen del design system.
 
 ## Layout
@@ -268,6 +269,10 @@ Usar superficies mayormente neutras, azul para navegación y acciones, verde par
 
 - Cabecera azul `primary-600`, texto blanco en mayúsculas, filas alternas sutiles y
   acciones textuales consistentes; el color semántico se reserva para estados.
+- Escala tipográfica única para todas las tablas, definida en `globals.css` y
+  nunca sobrescrita por módulo: cabecera 10 px / 800 con tracking 0.1em, celdas
+  11 px, líneas secundarias (`small`) 10 px. La paginación comparte esa escala:
+  rango «Mostrando X–Y de Z», selector de filas y botones a 11 px.
 - La paginación informa el rango visible y total, permite 10, 20 o 50 filas y
   muestra páginas, elipsis, anterior y siguiente con estado activo inequívoco.
 - Toda tabla de gestión incluye paginación, incluida la de categorías.

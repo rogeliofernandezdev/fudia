@@ -18,9 +18,10 @@ async function files(dir){
   return out;
 }
 
-test(`ningún módulo declara texto menor a ${MIN_PX}px`,async()=>{
+test(`ninguna hoja de estilos declara texto menor a ${MIN_PX}px`,async()=>{
   const offenders=[];
-  for(const sheet of await files("src/modules")){
+  const sheets=[...await files("src/modules"),...await files("src/styles"),...await files("src/design-system")];
+  for(const sheet of sheets){
     const source=await readFile(new URL(sheet,root),"utf8");
     for(const match of source.matchAll(/font-size:\s*([0-9.]+)px/g)){
       if(Number(match[1])<MIN_PX)offenders.push(`${sheet}: ${match[0]}`);

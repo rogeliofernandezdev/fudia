@@ -15,7 +15,6 @@
 .pos-search>svg{margin-left:10px;flex:0 0 auto}
 .pos-search .ds-input{border:0;box-shadow:none}
 .pos-toolbar>p{display:flex;align-items:center;gap:7px;margin:0;color:var(--ink-400);font-size:10px;line-height:1.4}
-.pos-table th{color:#fff;background:var(--ops-500);font-weight:850}
 .pos-table td:first-child small{display:block;margin:3px 0 0 44px;color:var(--ink-400);font-size:10px}
 .pos-balance{color:var(--ops-700);font-size:11px}
 .pos-actions{display:flex;align-items:center;justify-content:center;gap:7px}
