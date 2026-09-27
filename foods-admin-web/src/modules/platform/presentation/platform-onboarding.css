@@ -52,9 +52,10 @@
 .onboarding-terms>span{width:20px;height:20px;flex-shrink:0;display:grid;place-items:center;border:1.5px solid var(--ink-400);border-radius:6px;background:#fff;color:transparent}
 .onboarding-terms input:checked+span{border-color:var(--brand-700);background:var(--brand-700);color:#fff}
 .onboarding-terms input:focus-visible+span{outline:2px solid var(--ops-500);outline-offset:2px}
+.onboarding-terms>div{display:grid;gap:4px;min-width:0}
 .onboarding-terms b{font-size:12px;font-weight:700;color:var(--ink-950)}
-.onboarding-terms .field-error{margin-top:2px}
-.onboarding-terms.has-error{background:#fff4f3}
+.onboarding-terms.has-error{border-color:var(--danger);background:var(--danger-50)}
+.onboarding-terms.has-error>span{border-color:var(--danger)}
 
 /* Acciones */
 .wizard-footer{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:14px 24px;border-top:1px solid var(--line);background:var(--cloud-50)}
