@@ -8,7 +8,7 @@
   display: grid;
   gap: 3px;
   color: var(--ink-500);
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 700;
 }
 

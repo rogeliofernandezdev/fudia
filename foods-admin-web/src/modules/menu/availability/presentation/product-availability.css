@@ -5,11 +5,11 @@
 .availability-search{width:100%;position:relative}
 .availability-search>svg{color:var(--ink-400);z-index:1;position:absolute;top:50%;left:12px;transform:translateY(-50%)}
 .availability-search .ds-input{padding-left:40px}
-.availability-context{color:var(--ink-600);align-items:center;gap:7px;margin:0;font-size:9px;font-weight:650;display:flex}
+.availability-context{color:var(--ink-600);align-items:center;gap:7px;margin:0;font-size:10px;font-weight:650;display:flex}
 .availability-context svg{color:var(--ops-500)}
 .availability-table-wrap{overscroll-behavior:contain;width:100%;overflow-x:auto}
 .availability-list-head{min-width:1120px;min-height:42px;color:var(--surface);background:var(--primary-600);grid-template-columns:minmax(270px,1.1fr) 150px minmax(470px,1.7fr) minmax(240px,.8fr);align-items:center;display:grid}
-.availability-list-head span{height:100%;border-left:1px solid var(--primary-700);align-items:center;padding:0 16px;letter-spacing:.1em;font-size:8px;font-weight:850;display:flex}
+.availability-list-head span{height:100%;border-left:1px solid var(--primary-700);align-items:center;padding:0 16px;letter-spacing:.1em;font-size:10px;font-weight:850;display:flex}
 .availability-list-head span:first-child{border-left:0}
 .availability-list-head span:last-child{justify-content:center}
 .availability-grid{gap:0;padding:0;display:grid}
@@ -20,11 +20,11 @@
 .availability-product{min-width:0;grid-column:1;grid-row:1;grid-template-columns:44px minmax(0,1fr);align-items:center;gap:11px;padding:11px 16px;display:grid}
 .availability-product>div{min-width:0}
 .availability-product b{overflow:hidden;color:var(--ink-950);text-overflow:ellipsis;white-space:nowrap;font-size:11px;font-weight:800;display:block}
-.availability-product small{overflow:hidden;color:var(--ink-400);text-overflow:ellipsis;white-space:nowrap;margin-top:3px;font-size:8px;font-weight:600;display:block}
+.availability-product small{overflow:hidden;color:var(--ink-400);text-overflow:ellipsis;white-space:nowrap;margin-top:3px;font-size:10px;font-weight:600;display:block}
 .availability-image{width:44px;height:44px;color:var(--ops-700);background:var(--ops-100);border:1px solid var(--primary-100);border-radius:9px;place-items:center;display:grid;overflow:hidden}
 .availability-image img{object-fit:cover;width:100%;height:100%}
 .availability-status-cell{grid-column:2;grid-row:1;border-left:1px solid var(--line);align-content:center;justify-items:start;gap:5px;padding:10px 14px;display:grid}
-.availability-status-cell>small{color:var(--ink-400);font-size:8px;font-weight:650}
+.availability-status-cell>small{color:var(--ink-400);font-size:10px;font-weight:650}
 .availability-control-cell{min-width:0;grid-column:3;grid-row:1;border-inline:1px solid var(--line);align-content:stretch;padding:0;display:grid}
 .availability-control-grid{min-width:0;min-height:100%;align-items:stretch;display:grid}
 .availability-control-grid.control-portions{grid-template-columns:1.4fr 1.05fr .78fr .78fr}
@@ -32,16 +32,16 @@
 .availability-control-grid.control-none{grid-template-columns:minmax(140px,1.1fr) minmax(130px,1fr)}
 .availability-control-grid>span,.availability-control-grid>label{min-width:0;border-left:1px solid var(--line);grid-template-rows:18px 1fr;align-content:stretch;align-items:center;padding:10px 14px;display:grid}
 .availability-control-grid>*:first-child{border-left:0}
-.availability-control-grid small{align-self:start;color:var(--ink-400);letter-spacing:.07em;font-size:7px;font-weight:850;line-height:1}
+.availability-control-grid small{align-self:start;color:var(--ink-400);letter-spacing:.07em;font-size:10px;font-weight:850;line-height:1}
 .availability-control-grid b{overflow:hidden;color:var(--ink-700);text-overflow:ellipsis;white-space:nowrap;margin-top:0;font-size:10px;font-weight:750;font-variant-numeric:tabular-nums;align-self:center;line-height:1.25}
 .availability-control-kind b{color:var(--ink-950);white-space:normal;line-height:1.25}
 .availability-control-grid .ds-input{height:var(--control-height);margin-top:0;background:var(--surface);font-size:10px;font-weight:750;font-variant-numeric:tabular-nums;align-self:center}
-.availability-derived{grid-column:1/-1;grid-row:2;color:var(--warning-600);background:var(--warning-50);border-left:3px solid var(--warning-600);align-items:center;gap:8px;margin:0;padding:9px 16px;font-size:9px;font-weight:700;line-height:1.4;display:flex}
+.availability-derived{grid-column:1/-1;grid-row:2;color:var(--warning-600);background:var(--warning-50);border-left:3px solid var(--warning-600);align-items:center;gap:8px;margin:0;padding:9px 16px;font-size:10px;font-weight:700;line-height:1.4;display:flex}
 .availability-derived.inventory{color:var(--ops-700);background:var(--ops-100);border-left-color:var(--ops-500)}
 .availability-actions{grid-column:4;grid-row:1;grid-template-columns:minmax(96px,1fr) minmax(104px,1fr);align-content:center;gap:8px;padding:11px 14px;display:grid}
 .availability-actions.single{grid-template-columns:1fr}
-.availability-actions .button{min-width:0;height:var(--control-height);border-radius:6px;padding-inline:10px;font-size:9px;white-space:nowrap}
-.availability-read-only{min-height:var(--control-height);color:var(--ink-600);background:var(--cloud-50);border:1px solid var(--line);border-radius:6px;place-items:center;padding:0 10px;font-size:9px;font-weight:750;display:grid}
+.availability-actions .button{min-width:0;height:var(--control-height);border-radius:6px;padding-inline:10px;font-size:10px;white-space:nowrap}
+.availability-read-only{min-height:var(--control-height);color:var(--ink-600);background:var(--cloud-50);border:1px solid var(--line);border-radius:6px;place-items:center;padding:0 10px;font-size:10px;font-weight:750;display:grid}
 .availability-actions .availability-soldout-action{color:var(--warning-600);background:var(--surface);border-color:var(--warning-600)}
 .availability-actions .availability-soldout-action:hover{color:var(--warning-600);background:var(--warning-50);border-color:var(--warning-600)}
 .availability-actions .availability-available-action{color:var(--ops-700);background:var(--surface);border-color:var(--primary-100)}
@@ -65,7 +65,7 @@
  .availability-date{grid-column:1/-1;width:max-content;margin-top:2px}
  .availability-toolbar{align-items:stretch;flex-direction:column;padding:12px}
  .availability-filters{grid-template-columns:1fr;width:100%}
- .availability-context{font-size:9px}
+ .availability-context{font-size:10px}
  .availability-table-wrap{overflow:visible}
  .availability-list-head{display:none}
  .availability-grid{grid-template-columns:1fr;gap:10px;padding:12px}

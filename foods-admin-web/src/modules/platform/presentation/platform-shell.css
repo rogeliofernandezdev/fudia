@@ -9,7 +9,7 @@
 .platform-brand .logo-mark img{width:32px;height:32px}
 .platform-brand-divider{width:1px;height:26px;background:#fff}
 .platform-context{display:grid;gap:1px;line-height:1.15}
-.platform-context small{font-size:9px;font-weight:850;letter-spacing:.12em;text-transform:uppercase;color:#ffffffb8}
+.platform-context small{font-size:10px;font-weight:850;letter-spacing:.12em;text-transform:uppercase;color:#ffffffb8}
 .platform-context b{font-size:12px;font-weight:750;color:#fff;white-space:nowrap}
 .platform-nav{display:flex;align-items:center;gap:2px;margin-left:auto;padding:3px;border-radius:10px;background:#0000001f;border:1px solid #ffffff1f}
 .platform-nav a{height:calc(var(--control-height) - 8px);padding:0 12px;border-radius:7px;color:#ffffffd9;display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:750;white-space:nowrap;transition:background .15s,color .15s}

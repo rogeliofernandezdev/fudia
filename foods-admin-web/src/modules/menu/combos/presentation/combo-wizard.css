@@ -54,7 +54,7 @@
 
 .combo-wizard-title small {
   color: var(--primary-600, #4654cd);
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 850;
   letter-spacing: .1em;
 }
@@ -71,7 +71,7 @@
 .combo-wizard-title p {
   margin: 0;
   color: var(--ink-600, #475467);
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1.35;
 }
 
@@ -85,7 +85,7 @@
   border-radius: 999px;
   background: var(--primary-100, #eef0ff);
   color: var(--ops-700, #3946b8);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 800;
   white-space: nowrap;
 }
@@ -206,7 +206,7 @@
 .combo-step-copy b {
   overflow: hidden;
   color: var(--ink-950, #101828);
-  font-size: 9.5px;
+  font-size: 10px;
   font-weight: 850;
   line-height: 1.2;
   text-overflow: ellipsis;
@@ -216,7 +216,7 @@
 .combo-step-copy small {
   overflow: hidden;
   color: var(--ink-500, #667085);
-  font-size: 7.5px;
+  font-size: 10px;
   font-weight: 600;
   line-height: 1.25;
   text-overflow: ellipsis;
@@ -292,7 +292,7 @@
 .combo-section-heading p {
   margin: 0;
   color: var(--ink-600, #475467);
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1.5;
 }
 
@@ -313,7 +313,7 @@
   align-content: start;
   gap: 7px;
   color: var(--ink-700, #344054);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 750;
 }
 
@@ -369,7 +369,7 @@
 
 .combo-composition-copy small {
   color: var(--ink-600, #475467);
-  font-size: 8.5px;
+  font-size: 10px;
   line-height: 1.45;
 }
 
@@ -399,7 +399,7 @@
 
 .combo-empty-groups p {
   margin: 0;
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .combo-group {
@@ -432,7 +432,7 @@
   align-items: center;
   gap: 8px;
   color: var(--ink-700, #344054);
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .combo-toggle > input {
@@ -470,7 +470,7 @@
 }
 
 .combo-toggle b {
-  font-size: 8.5px;
+  font-size: 10px;
   font-weight: 800;
 }
 
@@ -478,7 +478,7 @@
   display: grid;
   gap: 5px;
   color: var(--ink-600, #475467);
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 750;
 }
 
@@ -559,7 +559,7 @@
 .combo-option-name small {
   margin-top: 3px;
   color: var(--ink-500, #667085);
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 600;
 }
 
@@ -575,7 +575,7 @@
   border-radius: 9px;
   background: #f8f9ff;
   color: var(--ops-700, #3946b8);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 800;
   cursor: pointer;
   transition: border-color .15s ease, background .15s ease;
@@ -602,7 +602,7 @@
   border-radius: 8px;
   background: #fff;
   color: var(--ink-600, #475467);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 750;
   cursor: pointer;
 }
@@ -664,14 +664,14 @@
 
 .combo-review-section dt {
   color: var(--ink-600, #475467);
-  font-size: 8.5px;
+  font-size: 10px;
   font-weight: 700;
 }
 
 .combo-review-section dd {
   margin: 0;
   color: var(--ink-950, #101828);
-  font-size: 9.5px;
+  font-size: 10px;
 }
 
 .combo-wizard-footer {
@@ -703,7 +703,7 @@
 
 .combo-wizard-footer-copy small {
   color: var(--ink-500, #667085);
-  font-size: 8px;
+  font-size: 10px;
   line-height: 1.3;
 }
 
@@ -714,7 +714,7 @@
 .combo-detail > header h2 { margin: 0; }
 .combo-detail > header small { order: 2; }
 .combo-detail-summary > div { display: grid; gap: 5px; }
-.combo-detail-summary small, .combo-detail-description small, .combo-detail-availability small { color: var(--ink-400); font-size: 7px; font-weight: 850; letter-spacing: .08em; }
+.combo-detail-summary small, .combo-detail-description small, .combo-detail-availability small { color: var(--ink-400); font-size: 10px; font-weight: 850; letter-spacing: .08em; }
 .combo-detail-summary b { font-size: 13px; }
 .combo-detail-description { padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
 .combo-detail-description p { margin: 7px 0 0; color: var(--ink-600); font-size: 10px; line-height: 1.55; }
@@ -725,16 +725,16 @@
 .combo-detail-group:last-child { border-bottom: 0; }
 .combo-detail-group > div { display: grid; align-content: start; gap: 4px; }
 .combo-detail-group b { font-size: 10px; }
-.combo-detail-group small { color: var(--ink-400); font-size: 8px; }
+.combo-detail-group small { color: var(--ink-400); font-size: 10px; }
 .combo-detail-group ul { display: flex; flex-wrap: wrap; gap: 7px; margin: 0; padding: 0; list-style: none; }
-.combo-detail-group li { display: inline-flex; align-items: center; gap: 5px; min-height: 28px; padding: 5px 9px; border: 1px solid var(--line); border-radius: 7px; background: #fafbfc; font-size: 9px; font-weight: 700; }
+.combo-detail-group li { display: inline-flex; align-items: center; gap: 5px; min-height: 28px; padding: 5px 9px; border: 1px solid var(--line); border-radius: 7px; background: #fafbfc; font-size: 10px; font-weight: 700; }
 .combo-detail-availability { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
 .combo-detail-availability.single { grid-template-columns: 1fr; }
 .combo-detail-availability > div { display: grid; gap: 6px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
 .combo-detail-availability b { font-size: 10px; }
 .combo-detail-footer { display: flex; justify-content: flex-end; padding: 13px 20px; border-top: 1px solid var(--line); background: #fff; }
 .combo-detail-state { display: grid; place-items: center; gap: 8px; min-height: 280px; color: var(--ink-500); text-align: center; }
-.combo-detail-state p { margin: 0 0 6px; font-size: 9px; }
+.combo-detail-state p { margin: 0 0 6px; font-size: 10px; }
 .combo-detail-skeleton-head .combo-detail-skeleton-block,
 .combo-detail-skeleton-body span,
 .combo-detail-skeleton-body b,
@@ -917,7 +917,7 @@
   }
 
   .combo-step-copy b {
-    font-size: 7.5px;
+    font-size: 10px;
   }
 
   .combo-step-copy small {
@@ -1014,7 +1014,7 @@
 }
 @media (width <= 430px) {
   .combo-wizard-title small {
-    font-size: 7px;
+    font-size: 10px;
   }
 
   .combo-wizard-steps {
@@ -1043,7 +1043,7 @@
 
   .combo-step-copy b {
     overflow: visible;
-    font-size: 6.8px;
+    font-size: 10px;
     line-height: 1.1;
     text-overflow: clip;
     white-space: normal;

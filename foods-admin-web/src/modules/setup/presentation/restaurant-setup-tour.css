@@ -2,7 +2,7 @@
 .setup-tour{position:fixed;right:24px;bottom:24px;z-index:60;width:min(360px,calc(100vw - 32px));color:var(--ink-950)}
 .setup-tour-card{border:1px solid #c7cdee;border-radius:14px;background:var(--surface);box-shadow:0 12px 40px #1a215126;overflow:auto;max-height:calc(100dvh - 100px)}
 .setup-tour-card>header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 12px 9px 18px;background:var(--primary-50);border-bottom:1px solid #e5e8f7}
-.setup-tour-card>header>span{display:flex;align-items:center;gap:7px;color:var(--ops-700);font-size:9px;font-weight:800;letter-spacing:.08em}
+.setup-tour-card>header>span{display:flex;align-items:center;gap:7px;color:var(--ops-700);font-size:10px;font-weight:800;letter-spacing:.08em}
 .setup-tour-card>header>button{display:grid;place-items:center;width:var(--control-height);height:var(--control-height);border:0;border-radius:6px;background:transparent;color:var(--ink-500)}
 .setup-tour-body{padding:18px 20px 0}
 .setup-tour-count{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--ink-500);font-size:10px}

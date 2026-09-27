@@ -2,14 +2,14 @@
 .inventory-toolbar{border-bottom:1px solid var(--line);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
 .inventory-toolbar .ds-input-shell{width:min(420px,100%)}
 .inventory-toolbar .ds-select{min-width:220px}
-.inventory-toolbar p{margin:0;color:var(--ink-500);font-size:9px;display:flex;align-items:center;gap:6px}
+.inventory-toolbar p{margin:0;color:var(--ink-500);font-size:10px;display:flex;align-items:center;gap:6px}
 .inventory-table-wrap{display:block;width:100%;overflow-x:auto;overscroll-behavior-inline:contain;-webkit-overflow-scrolling:touch}
 .inventory-table-wrap table{min-width:760px}
 .kardex-table{min-width:1080px!important}
 .inventory-product-cell small{max-width:260px}
 .inventory-quantity{font-family:var(--font-mono);font-size:11px;font-weight:800}
 .inventory-status-note{display:grid;gap:3px}
-.inventory-status-note small{color:var(--ink-400);font-size:8px}
+.inventory-status-note small{color:var(--ink-400);font-size:10px}
 .inventory-state{min-height:280px;padding:24px;display:grid;place-content:center;justify-items:center;text-align:center;gap:8px;color:var(--ink-500)}
 .inventory-state b{color:var(--ink-950);font-size:13px}
 .inventory-state p{margin:0 0 6px;font-size:10px}
@@ -22,7 +22,7 @@
 .inventory-adjustment-field,.inventory-adjustment-grid>label{display:grid;gap:6px;color:var(--ink-700);font-size:10px;font-weight:750}
 .inventory-adjustment-balance{display:grid;grid-template-columns:1fr 1fr;gap:1px;overflow:hidden;border:1px solid var(--line);border-radius:10px;background:var(--line)}
 .inventory-adjustment-balance>div{padding:12px 14px;background:var(--cloud-50);display:grid;gap:4px}
-.inventory-adjustment-balance small{color:var(--ink-400);font-size:7px;font-weight:850;letter-spacing:.08em}
+.inventory-adjustment-balance small{color:var(--ink-400);font-size:10px;font-weight:850;letter-spacing:.08em}
 .inventory-adjustment-balance strong{font-family:var(--font-mono);font-size:13px;color:var(--ink-950)}
 .inventory-adjustment-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px 14px}
 .inventory-adjustment-grid .span-2{grid-column:1/-1}
@@ -30,15 +30,15 @@
 .inventory-adjustment-preview.entry{background:var(--brand-100);color:var(--brand-700)}
 .inventory-adjustment-preview.exit{background:var(--warning-50);color:var(--warning)}
 .inventory-adjustment-preview>span{display:grid;gap:2px}
-.inventory-adjustment-preview b{font-size:9px}
-.inventory-adjustment-preview small{font-size:8px;color:var(--ink-600)}
-.inventory-adjustment-validation{min-height:40px;padding:9px 11px;border:1px solid #f3c4c4;border-radius:9px;background:#fff5f5;color:var(--danger);display:flex;align-items:center;gap:8px;font-size:9px;font-weight:700}
+.inventory-adjustment-preview b{font-size:10px}
+.inventory-adjustment-preview small{font-size:10px;color:var(--ink-600)}
+.inventory-adjustment-validation{min-height:40px;padding:9px 11px;border:1px solid #f3c4c4;border-radius:9px;background:#fff5f5;color:var(--danger);display:flex;align-items:center;gap:8px;font-size:10px;font-weight:700}
 
 .kardex-trace{display:grid;gap:2px}
-.kardex-trace b{font-size:9px}
-.kardex-trace small{display:block;color:var(--ink-400);font-size:8px}
+.kardex-trace b{font-size:10px}
+.kardex-trace small{display:block;color:var(--ink-400);font-size:10px}
 .kardex-reason{display:grid;gap:2px}
-.kardex-reason small{color:var(--ink-400);font-size:8px}
+.kardex-reason small{color:var(--ink-400);font-size:10px}
 .kardex-balance{font-family:var(--font-mono);font-size:10px;font-weight:750}
 
 @keyframes inventory-shimmer{to{background-position:-200% 0}}
@@ -59,16 +59,16 @@
 .kardex-toolbar{align-items:flex-end}
 .kardex-filters{min-width:0;flex:1;display:grid;grid-template-columns:minmax(210px,1.35fr) repeat(2,minmax(170px,1fr)) minmax(145px,.78fr) minmax(145px,.78fr);gap:9px}
 .kardex-filters label{min-width:0;display:grid;gap:5px}
-.kardex-filters label>span{color:var(--ink-500);font-size:7px;font-weight:800;letter-spacing:.06em}
+.kardex-filters label>span{color:var(--ink-500);font-size:10px;font-weight:800;letter-spacing:.06em}
 .kardex-toolbar-side{display:grid;justify-items:end;gap:7px;flex:0 0 auto}
-.kardex-toolbar-side p{margin:0;white-space:nowrap;color:var(--ink-400);font-size:7px;display:flex;align-items:center;gap:5px}
+.kardex-toolbar-side p{margin:0;white-space:nowrap;color:var(--ink-400);font-size:10px;display:flex;align-items:center;gap:5px}
 .kardex-toolbar-side .button{height:var(--control-height)}
 .kardex-table th{white-space:nowrap}
 .kardex-table td{vertical-align:middle}
 .kardex-cards article>footer{min-height:auto!important;padding:0!important;align-items:flex-start!important;background:transparent!important;display:flex!important;justify-content:space-between!important;gap:10px!important}
 .kardex-cards article>footer>span{min-width:0;display:grid;gap:2px}
-.kardex-cards article>footer b{font-size:8px}
-.kardex-cards article>footer small{color:var(--ink-400);font-size:7px}
+.kardex-cards article>footer b{font-size:10px}
+.kardex-cards article>footer small{color:var(--ink-400);font-size:10px}
 .kardex-skeleton-cards{display:none}
 .kardex-skeleton-cards article header>i{width:38px;height:38px;border-radius:9px;background:#eef1f5}
 .kardex-skeleton-cards article header div{display:grid;gap:5px}

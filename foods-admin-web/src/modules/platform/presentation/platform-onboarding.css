@@ -20,7 +20,7 @@
 .wizard-step.done .wizard-step-icon{background:var(--brand-100);color:var(--brand-700);box-shadow:inset 0 0 0 1px #16875f26}
 .wizard-step-label{display:grid;gap:3px;min-width:0}
 .wizard-step-label b{font-size:12.5px;font-weight:750;letter-spacing:-.005em;color:var(--ink-500);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.wizard-step-label small{font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-400)}
+.wizard-step-label small{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-400)}
 .wizard-step.active .wizard-step-label b{color:var(--ink-950)}
 .wizard-step.active .wizard-step-label small{color:var(--primary-600)}
 .wizard-step.done .wizard-step-label b{color:var(--ink-950)}

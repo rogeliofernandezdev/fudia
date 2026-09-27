@@ -71,7 +71,7 @@
 
 .salon-comanda-kicker{
   color:var(--navigation-text,#c9d0f2);
-  font-size:9px;
+  font-size:10px;
   font-weight:850;
   letter-spacing:.12em;
   text-transform:uppercase;
@@ -174,7 +174,7 @@
 
 .salon-comanda-context-copy>span{
   color:var(--ink-600,#475467);
-  font-size:9px;
+  font-size:10px;
   font-weight:800;
   letter-spacing:.08em;
   text-transform:uppercase;
@@ -215,7 +215,7 @@
 
 .salon-comanda-context-stat small{
   color:var(--ink-600,#475467);
-  font-size:9px;
+  font-size:10px;
   font-weight:800;
   letter-spacing:.06em;
   text-transform:uppercase;
@@ -267,7 +267,7 @@
 
 .salon-comanda-summary-title span{
   color:var(--ops-500,#4654cd);
-  font-size:9px;
+  font-size:10px;
   font-weight:850;
   letter-spacing:.1em;
   text-transform:uppercase;
@@ -338,7 +338,7 @@
 
 .salon-comanda-table-copy small{
   color:var(--ink-600,#475467);
-  font-size:9px;
+  font-size:10px;
   font-weight:800;
   letter-spacing:.08em;
   text-transform:uppercase;
@@ -467,7 +467,7 @@
   background:var(--primary-100,#eef0ff);
   color:var(--ops-700,#3946b8);
   font-family:var(--font-geist-mono,ui-monospace,monospace);
-  font-size:9.5px;
+  font-size:10px;
   font-weight:850;
   font-variant-numeric:tabular-nums;
   line-height:1;
@@ -609,7 +609,7 @@
 
 .salon-comanda-total-copy small{
   color:var(--ink-600,#475467);
-  font-size:9.5px;
+  font-size:10px;
 }
 
 .salon-comanda-total strong{
@@ -760,7 +760,7 @@
 
   .salon-comanda-mobile-summary small{
     color:#c9d0f2;
-    font-size:9px;
+    font-size:10px;
     font-weight:700;
   }
 
@@ -895,7 +895,7 @@
   }
 
   .salon-comanda-channel{
-    font-size:9px;
+    font-size:10px;
   }
 
   .salon-comanda-context-icon{
@@ -1047,7 +1047,7 @@
 
 .salon-comanda-shell .comanda-menu-salon .comanda-dish-image-fallback small{
   color:var(--ink-600,#475467);
-  font-size:9px;
+  font-size:10px;
   font-weight:700;
 }
 
@@ -1226,7 +1226,7 @@
   .salon-comanda-shell .comanda-combo-card .comanda-dish-add-button{
     width:112px;
     padding-inline:7px;
-    font-size:9.5px;
+    font-size:10px;
   }
 
   .salon-comanda-shell .comanda-menu-salon .comanda-dish-modern-media{
@@ -1357,7 +1357,7 @@
 .salon-comanda-shell .comanda-source-copy small{
   overflow:hidden;
   color:var(--ink-600,#475467);
-  font-size:8.5px;
+  font-size:10px;
   font-weight:600;
   line-height:1.2;
   text-overflow:ellipsis;
@@ -1389,7 +1389,7 @@
   display:-webkit-box;
   overflow:hidden;
   color:var(--ink-600,#475467);
-  font-size:9.5px;
+  font-size:10px;
   font-weight:600;
   line-height:1.35;
   -webkit-box-orient:vertical;
@@ -1398,7 +1398,7 @@
 
 .salon-comanda-shell .comanda-combo-copy>em{
   color:var(--primary-600,#4654cd);
-  font-size:9px;
+  font-size:10px;
   font-style:normal;
   font-weight:800;
 }
@@ -1436,7 +1436,7 @@
   align-items:baseline;
   gap:7px;
   color:var(--ink-600,#475467);
-  font-size:9.5px;
+  font-size:10px;
   line-height:1.35;
 }
 
@@ -1465,7 +1465,7 @@
   border-radius:6px;
   background:var(--primary-100,#eef0ff);
   color:var(--ops-700,#3946b8);
-  font-size:9.5px;
+  font-size:10px;
   font-weight:800;
   cursor:pointer;
 }
@@ -1516,7 +1516,7 @@
 
 .combo-config-head small{
   color:var(--primary-600,#4654cd);
-  font-size:8.5px;
+  font-size:10px;
   font-weight:850;
   letter-spacing:.1em;
 }
@@ -1597,7 +1597,7 @@
 
 .combo-config-group header small{
   color:var(--ink-600,#475467);
-  font-size:9px;
+  font-size:10px;
   font-weight:650;
 }
 
@@ -1611,7 +1611,7 @@
   gap:4px;
   flex-shrink:0;
   border-radius:999px;
-  font-size:8.5px;
+  font-size:10px;
   font-weight:850;
   font-variant-numeric:tabular-nums;
 }
@@ -1702,14 +1702,14 @@
 
 .combo-option-copy small{
   color:var(--danger,#c9362b);
-  font-size:8.5px;
+  font-size:10px;
   font-weight:750;
 }
 
 .combo-option-price{
   color:var(--ink-600,#475467);
   font-family:var(--font-geist-mono,ui-monospace,monospace);
-  font-size:9.5px;
+  font-size:10px;
   font-weight:750;
   white-space:nowrap;
 }
@@ -1732,7 +1732,7 @@
 
 .combo-config-foot small{
   color:var(--ink-600,#475467);
-  font-size:9px;
+  font-size:10px;
   font-weight:700;
 }
 
@@ -1769,12 +1769,12 @@
 
 .combo-config-multiple b{
   color:var(--ink-950,#101828);
-  font-size:8.5px;
+  font-size:10px;
   font-weight:850;
 }
 
 .combo-config-multiple small{
-  font-size:7.8px;
+  font-size:10px;
   font-weight:650;
   line-height:1.35;
 }
@@ -1837,11 +1837,11 @@
   }
 
   .salon-comanda-shell .comanda-source-copy b{
-    font-size:9.5px;
+    font-size:10px;
   }
 
   .salon-comanda-shell .comanda-source-copy small{
-    font-size:8px;
+    font-size:10px;
   }
 
   .combo-config-backdrop{
@@ -1945,7 +1945,7 @@
   z-index:2;
   padding:4px 7px;
   border-radius:999px;
-  font-size:8px;
+  font-size:10px;
   font-weight:850;
   letter-spacing:.02em;
   box-shadow:0 2px 8px rgba(16,24,40,.12);

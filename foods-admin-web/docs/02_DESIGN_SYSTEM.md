@@ -45,6 +45,9 @@ Usar superficies mayormente neutras, azul para navegación y acciones, verde par
 - Radio de 14 px en tarjetas y 6 px en controles.
 - Bordes #E4E7EC y sombras discretas.
 - Cifras tabulares para KPI, montos y porcentajes.
+- Tamaño mínimo de texto en módulos: 10 px. Los eyebrows y etiquetas
+  auxiliares usan 10 px; campos, ayudas y errores usan 11 px; cuerpo 12–13 px.
+  La prueba `tests/type-scale.test.mjs` bloquea cualquier `font-size` menor.
 - Inputs, tablas, botones y estados provienen del design system.
 
 ## Layout
