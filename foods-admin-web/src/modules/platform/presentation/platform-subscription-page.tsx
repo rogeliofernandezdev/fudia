@@ -72,10 +72,9 @@ function SubscriptionWorkspace({current,plans,country,timeZone}:{current:Organiz
  });
 
  return <>
-  <SubscriptionSummary current={current} country={country} timeZone={timeZone}/>
   <div className="platform-subscription-grid">
    <section className="panel subscription-editor">
-    <header><div><small>Contrato</small><h2>Plan y ciclo</h2></div></header>
+    <header><div><small>Contrato</small><h2>Plan y ciclo</h2></div><span className={"subscription-state-badge "+current.status}>{statusLabel(current.status)}</span></header>
     <form onSubmit={e=>{e.preventDefault();save.mutate()}}>
      <div className="form-grid">
       <label className="span-2">Plan<Select value={draft.planId} onChange={e=>setDraft({...draft,planId:e.target.value,termsAccepted:false})}>{availablePlans.map(plan=><option value={plan.id} key={plan.id}>{plan.name+" · "+plan.code}</option>)}</Select></label>
@@ -84,7 +83,7 @@ function SubscriptionWorkspace({current,plans,country,timeZone}:{current:Organiz
       <label>Precio del plan<Input readOnly value={selectedPlan?(selectedPlan.currency+" "+Number(draft.billingCycle==="annual"?selectedPlan.annualPrice:selectedPlan.monthlyPrice).toFixed(2)):""}/></label>
       <label className="switch-row compact"><input type="checkbox" checked={draft.autoRenew} onChange={e=>setDraft({...draft,autoRenew:e.target.checked})}/><span/><b>Renovación automática</b></label>
      </div>
-     {selectedPlan&&<dl className="subscription-plan-preview"><div><dt>Prueba</dt><dd>{selectedPlan.trialDays?selectedPlan.trialDays+" días":"No"}</dd></div><div><dt>Locales</dt><dd>{selectedPlan.maxLocations??"Sin límite"}</dd></div><div><dt>Usuarios</dt><dd>{selectedPlan.maxUsers??"Sin límite"}</dd></div><div><dt>Módulos</dt><dd>{selectedPlan.moduleKeys.length}</dd></div><div><dt>Condiciones</dt><dd>{selectedPlan.termsVersion}</dd></div></dl>}
+     {selectedPlan&&<dl className="subscription-plan-preview"><div><dt>Prueba</dt><dd>{selectedPlan.trialDays?selectedPlan.trialDays+" días":"No"}</dd></div><div><dt>Locales</dt><dd>{selectedPlan.maxLocations??"Sin límite"}<small>En uso: {current.usage.locations}</small></dd></div><div><dt>Usuarios</dt><dd>{selectedPlan.maxUsers??"Sin límite"}<small>En uso: {current.usage.users}</small></dd></div><div><dt>Módulos</dt><dd>{selectedPlan.moduleKeys.length}</dd></div><div><dt>Condiciones</dt><dd>{selectedPlan.termsVersion}</dd></div></dl>}
      {needsAcceptance&&<label className="subscription-accept"><input type="checkbox" checked={draft.termsAccepted} onChange={e=>setDraft({...draft,termsAccepted:e.target.checked})}/><span><Icon name="check" size={13}/></span><div><b>El cliente aceptó las nuevas condiciones</b><small>Se registrará la aceptación de la versión {selectedPlan?.termsVersion} al aplicar el cambio de plan.</small></div></label>}
      <footer><Button type="submit" icon="check" disabled={save.isPending||(needsAcceptance&&!draft.termsAccepted)}>{save.isPending?"Guardando…":"Aplicar cambio"}</Button></footer>
     </form>
@@ -113,39 +112,6 @@ function SubscriptionWorkspace({current,plans,country,timeZone}:{current:Organiz
  </>;
 }
 
-function SubscriptionSummary({current,country,timeZone}:{current:OrganizationSubscription;country?:string;timeZone?:string}){
- const price=current.currency+" "+Number(current.priceAmount).toFixed(2)+(current.billingCycle==="annual"?" / año":" / mes");
- const nextDate=current.status==="trial"?current.trialEndsAt:current.renewsAt??current.currentPeriodEndsAt;
- const nextLabel=current.status==="trial"?"Fin de prueba":current.autoRenew?"Próxima renovación":"Fin del periodo";
- const lastPayment=current.payments.find(item=>item.status==="paid")??null;
- return <section className="subscription-summary">
-  <div className="subscription-summary-main">
-   <span className={"subscription-state-badge "+current.status}>{statusLabel(current.status)}</span>
-   <h2>{current.plan.name}</h2>
-   <p>{price} · {current.billingCycle==="annual"?"Facturación anual":"Facturación mensual"}{current.autoRenew?" · Renovación automática":""}</p>
-  </div>
-  <dl className="subscription-summary-facts">
-   <div><dt>{nextLabel}</dt><dd>{nextDate?dateLabel(nextDate,country,timeZone):"—"}</dd></div>
-   <div><dt>Condiciones</dt><dd>{current.termsVersion??"—"}{current.termsAcceptedAt?<small>Aceptadas el {dateLabel(current.termsAcceptedAt,country,timeZone)}</small>:<small>Sin aceptación registrada</small>}</dd></div>
-   <div><dt>Último pago</dt><dd>{lastPayment?lastPayment.currency+" "+Number(lastPayment.amount).toFixed(2):"—"}{lastPayment&&<small>{dateLabel(lastPayment.paidAt??lastPayment.createdAt,country,timeZone)}</small>}</dd></div>
-  </dl>
-  <div className="subscription-usage">
-   <UsageMeter icon="store" label="Locales" used={current.usage.locations} max={current.plan.maxLocations}/>
-   <UsageMeter icon="users" label="Usuarios" used={current.usage.users} max={current.plan.maxUsers}/>
-  </div>
- </section>;
-}
-function UsageMeter({icon,label,used,max}:{icon:"store"|"users";label:string;used:number;max:number|null}){
- const ratio=max?Math.min(1,used/max):0;
- const tone=max&&used>=max?"full":max&&ratio>=.8?"near":"";
- return <div className={"subscription-meter "+tone}>
-  <span className="subscription-meter-icon"><Icon name={icon} size={16}/></span>
-  <div>
-   <div className="subscription-meter-copy"><b>{label}</b><span>{used}{max?" de "+max:" · sin límite"}</span></div>
-   <div className="subscription-meter-bar" role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={max??undefined} aria-valuenow={used}><i style={{width:(max?ratio*100:0)+"%"}}/></div>
-  </div>
- </div>;
-}
 function Header({organization}:{organization?:string}){return <PageHeader eyebrow="PLATAFORMA" title="Suscripción de empresa" description={organization?"Gestiona contrato, plan y cobros de "+organization+".":"Gestiona el contrato y cobros de la empresa activa."}/>;}
 function statusLabel(status:OrganizationSubscription["status"]){return status==="trial"?"Prueba":status==="active"?"Activa":status==="past_due"?"Pago pendiente":"Cancelada";}
 function paymentStatus(status:string){return status==="paid"?"Pagado":status==="pending"?"Pendiente":status==="failed"?"Fallido":"Reembolsado";}

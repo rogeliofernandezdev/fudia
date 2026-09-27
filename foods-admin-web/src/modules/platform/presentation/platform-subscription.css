@@ -1,28 +1,5 @@
 /* Suscripción de empresa — Plataforma */
 
-/* Resumen del contrato vigente */
-.subscription-summary{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1.3fr);gap:0;margin-top:20px;overflow:hidden;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:var(--shadow)}
-.subscription-summary-main{display:grid;align-content:start;gap:8px;padding:22px 24px;border-right:1px solid var(--line)}
-.subscription-summary-main .subscription-state-badge{justify-self:start}
-.subscription-summary-main h2{margin:2px 0 0;font-size:24px;font-weight:800;letter-spacing:-.02em;color:var(--ink-950)}
-.subscription-summary-main p{margin:0;font-size:12px;color:var(--ink-600)}
-.subscription-summary-facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;margin:0;background:var(--line)}
-.subscription-summary-facts>div{display:grid;align-content:start;gap:4px;padding:16px 18px;background:var(--surface)}
-.subscription-summary-facts dt{font-size:10px;font-weight:750;color:var(--ink-500)}
-.subscription-summary-facts dd{display:grid;gap:2px;margin:0;font-size:14px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--ink-950)}
-.subscription-summary-facts dd small{font-size:11px;font-weight:600;color:var(--ink-600)}
-.subscription-usage{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:16px 24px 18px;border-top:1px solid var(--line);background:var(--cloud-50)}
-.subscription-meter{display:grid;grid-template-columns:32px 1fr;gap:12px;align-items:center}
-.subscription-meter-icon{display:grid;place-items:center;width:32px;height:32px;border-radius:9px;color:var(--ink-600);background:var(--surface);border:1px solid var(--line)}
-.subscription-meter-copy{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:6px}
-.subscription-meter-copy b{font-size:12px;color:var(--ink-950)}
-.subscription-meter-copy span{font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink-600)}
-.subscription-meter-bar{height:6px;overflow:hidden;border-radius:99px;background:var(--line)}
-.subscription-meter-bar i{display:block;height:100%;border-radius:99px;background:var(--primary-600);transition:width .3s}
-.subscription-meter.near .subscription-meter-bar i{background:var(--warning)}
-.subscription-meter.full .subscription-meter-bar i{background:var(--danger)}
-.subscription-meter.full .subscription-meter-copy span{color:var(--danger)}
-
 /* Estado del contrato */
 .subscription-state-badge{display:inline-flex;align-items:center;height:22px;padding:0 9px;border-radius:99px;font-size:10px;font-weight:750;white-space:nowrap;color:var(--ink-600);background:var(--cloud-100)}
 .subscription-state-badge.active{color:var(--brand-700);background:var(--brand-100)}
@@ -31,9 +8,9 @@
 .subscription-state-badge.cancelled{color:var(--danger);background:var(--danger-50)}
 
 /* Paneles de edición */
-.platform-subscription-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:16px;margin-top:16px;align-items:start}
+.platform-subscription-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:16px;margin-top:20px;align-items:start}
 .subscription-editor,.subscription-history{overflow:hidden;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:var(--shadow)}
-.subscription-editor>header,.subscription-history>header{display:flex;align-items:center;justify-content:flex-start;text-align:left;gap:12px;min-height:58px;padding:14px 20px;border-bottom:1px solid var(--line)}
+.subscription-editor>header,.subscription-history>header{display:flex;align-items:center;justify-content:space-between;text-align:left;gap:12px;min-height:58px;padding:14px 20px;border-bottom:1px solid var(--line)}
 .subscription-editor>header small,.subscription-history>header small{display:block;font-size:9px;font-weight:850;letter-spacing:.1em;text-transform:uppercase;color:var(--ops-500)}
 .subscription-editor>header h2,.subscription-history>header h2{margin:2px 0 0;font-size:15px;font-weight:800;color:var(--ink-950)}
 .subscription-editor form>.form-grid{gap:16px 18px;padding:20px}
@@ -43,7 +20,8 @@
 .subscription-plan-preview{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;margin:0 20px 20px;overflow:hidden;border:1px solid var(--line);border-radius:12px;background:var(--line)}
 .subscription-plan-preview>div{padding:10px 12px;background:var(--surface)}
 .subscription-plan-preview dt{font-size:10px;font-weight:700;color:var(--ink-500)}
-.subscription-plan-preview dd{margin:3px 0 0;font-size:13px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--ink-950)}
+.subscription-plan-preview dd{display:grid;gap:1px;margin:3px 0 0;font-size:13px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--ink-950)}
+.subscription-plan-preview dd small{font-size:10px;font-weight:600;color:var(--ink-600)}
 
 .subscription-accept{position:relative;display:flex;align-items:flex-start;gap:12px;margin:0 20px 20px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;cursor:pointer;transition:border-color .15s,background .15s}
 .subscription-accept:has(input:checked){border-color:var(--brand-600);background:var(--brand-100)}
@@ -83,15 +61,10 @@
 .platform-subscription-history-skeleton .table-line{width:78%;height:11px}
 
 @media(max-width:900px){
- .subscription-summary{grid-template-columns:1fr}
- .subscription-summary-main{border-right:0;border-bottom:1px solid var(--line)}
  .platform-subscription-grid{grid-template-columns:1fr}
  .subscription-plan-preview{grid-template-columns:repeat(3,1fr)}
 }
 @media(max-width:600px){
- .subscription-summary-facts{grid-template-columns:1fr}
- .subscription-usage{grid-template-columns:1fr;padding:14px}
- .subscription-summary-main{padding:18px 14px}
  .subscription-editor form>.form-grid{padding:14px}
  .subscription-plan-preview{grid-template-columns:1fr 1fr;margin:0 14px 14px}
  .subscription-plan-preview div:last-child:nth-child(odd){grid-column:span 2}
