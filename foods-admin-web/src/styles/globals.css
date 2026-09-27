@@ -12,12 +12,12 @@ button:focus-visible,a:focus-visible{outline-offset:2px;outline:3px solid #2f5bc
 .logo-mark img{object-fit:cover;width:36px;height:36px;display:block}
 .logo.inverse{color:#fff}
 .avatar{color:#fff;background:linear-gradient(145deg, var(--ops-500), var(--digital-500));border-radius:10px;flex-shrink:0;place-items:center;width:36px;height:36px;font-size:10px;font-weight:800;display:grid}
-.context{align-items:center;gap:9px;display:flex}
-.context>button{min-height:var(--control-height);border:1px solid var(--line);background:#fff}
-.context>button:first-child{color:var(--ops-700);border-radius:10px;align-items:center;gap:9px;padding:0 11px;display:flex}
-.context button span{text-align:left;font-size:10px;font-weight:800;display:grid}
-.context button small{color:var(--ink-400);letter-spacing:.08em;font-size:7px}
-.icon-button{width:var(--control-height);height:var(--control-height);border-radius:8px;place-items:center;display:grid;position:relative}
+.context{align-items:center;gap:4px;display:flex}
+.context>button{min-height:var(--control-height);border:1px solid transparent;background:transparent;transition:background .15s,border-color .15s}
+.context>button:hover,.context>button:focus-visible{background:var(--cloud-100)}
+.context>button:first-child{color:var(--ink-950);border-radius:10px;align-items:center;gap:10px;padding:0 10px;display:flex}
+.icon-button{width:var(--control-height);height:var(--control-height);border:1px solid transparent;border-radius:10px;place-items:center;display:grid;position:relative;color:var(--ink-600);background:transparent;transition:background .15s,color .15s}
+.icon-button:hover,.icon-button:focus-visible{background:var(--cloud-100);color:var(--ink-950)}
 .icon-button i{background:var(--digital-500);border:2px solid #fff;border-radius:50%;width:7px;height:7px;position:absolute;top:9px;right:10px}
 .content{max-width:1450px;margin:auto;padding:29px 32px 60px}
 .page-header{justify-content:space-between;align-items:flex-end;gap:20px;margin-bottom:21px;display:flex}.page-header>div{min-width:0}.page-header>.button{flex:0 0 auto;white-space:nowrap}
