@@ -39,10 +39,7 @@ export function PlatformPlansPage(){
  return <>
   <PageHeader eyebrow="PLATAFORMA" title="Planes SaaS" description="Define la oferta comercial de FUDIA: precio, prueba, límites y módulos de cada nivel." action={<Button icon="plus" onClick={()=>setDraft({...blank})}>Nuevo plan</Button>}/>
   <div className="plan-toolbar">
-    <div>
-      <b>Catálogo comercial</b>
-      <span>Los cambios aplican a nuevas contrataciones; el precio ya contratado se conserva.</span>
-    </div>
+    <b>Catálogo comercial</b>
     <div className="plan-cycle" role="group" aria-label="Ciclo de facturación">
       <button type="button" className={billing==="monthly"?"active":""} onClick={()=>setBilling("monthly")}>Mensual</button>
       <button type="button" className={billing==="annual"?"active":""} onClick={()=>setBilling("annual")}>Anual<span>ahorra ~2 meses</span></button>
@@ -71,14 +68,13 @@ export function PlatformPlansPage(){
          <div><span>{plan.currency}</span><b>{price.toFixed(2)}</b><em>{billing==="annual"?"/ año":"/ mes"}</em></div>
          <p>{billing==="annual"?"Equivale a "+plan.currency+" "+equivalent.toFixed(2)+" al mes"+(savings>0?" · ahorras "+plan.currency+" "+savings.toFixed(2):""):plan.trialDays?plan.trialDays+" días de prueba gratuita":"Sin periodo de prueba"}</p>
        </div>
-       <p className="plan-description">{plan.description||"Sin descripción comercial."}</p>
        <p className="plan-capacity">
          <span><Icon name="store" size={14}/>{plan.maxLocations??"Sin límite de"} {plan.maxLocations===1?"local":"locales"}</span>
          <span><Icon name="users" size={14}/>{plan.maxUsers??"Sin límite de"} usuarios</span>
        </p>
        <section className="plan-includes">
          <header><h3>Incluye {included.length} módulos</h3></header>
-         <ul className="plan-feature-list">{included.map(module=><li key={module.key} title={module.description}>{module.name}</li>)}</ul>
+         <ul className="plan-feature-list">{included.map(module=><li key={module.key} title={module.description}><Icon name="check" size={12}/>{module.name}</li>)}</ul>
        </section>
        <footer>
          <div><small>Condiciones</small><b>{plan.termsVersion}</b></div>
