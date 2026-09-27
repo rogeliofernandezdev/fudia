@@ -36,15 +36,15 @@
 .sidebar-brand{flex-shrink:0;justify-content:space-between;align-items:center;height:46px;padding:0 7px;display:flex}
 .sidebar-close{display:none}
 .sidebar nav{scrollbar-width:none;overscroll-behavior-y:contain;min-height:0;margin:20px -4px 12px;padding:0 4px;overflow:auto;touch-action:pan-y;-webkit-overflow-scrolling:touch}
-.sidebar nav section{margin-bottom:17px}
+.sidebar nav section{margin-bottom:14px}
 .sidebar nav section>small{color:#91a6d0;letter-spacing:.11em;padding:0 10px 7px;font-size:9px;font-weight:800;display:block}
-.sidebar nav a{color:#c5d3ef;border-radius:9px;grid-template-columns:36px minmax(0,1fr) 22px;align-items:center;gap:9px;min-height:46px;padding:0 10px;font-size:12px;font-weight:650;transition:color .16s,background .16s,box-shadow .16s;display:grid;position:relative}
+.sidebar nav a{color:#c5d3ef;border-radius:9px;grid-template-columns:32px minmax(0,1fr) 22px;align-items:center;gap:8px;min-height:40px;padding:0 8px;font-size:12px;font-weight:650;transition:color .16s,background .16s,box-shadow .16s;display:grid;position:relative}
 .sidebar nav a:hover{color:#fff;background:#ffffff0d}
-.sidebar nav a.active{color:#fff;background:var(--ops-500);box-shadow:0 6px 16px #07163228}
+.sidebar nav a.active{color:#fff;background:var(--ops-500)}
 .sidebar nav a.active:before{content:"";background:#7390ff;border-radius:0 3px 3px 0;width:3px;height:28px;display:none;position:absolute;left:-18px}
-.nav-icon{color:#b6c7e8;background:#ffffff08;border-radius:8px;place-items:center;width:34px;height:34px;transition:color .16s,background .16s;display:grid}
-.sidebar nav a:hover .nav-icon{color:#fff;background:#ffffff10}
-.sidebar nav a.active .nav-icon{color:#fff;background:#ffffff14}
+.nav-icon{color:#b6c7e8;background:transparent;border-radius:8px;place-items:center;width:32px;height:32px;transition:color .16s,background .16s;display:grid}
+.sidebar nav a:hover .nav-icon{color:#fff;background:transparent}
+.sidebar nav a.active .nav-icon{color:#fff;background:#ffffff1f}
 .sidebar nav a em{background:var(--digital-500);color:#fff;border-radius:7px;justify-self:end;place-items:center;height:20px;font-size:8px;font-style:normal;display:grid}
 .sidebar-user{text-align:left;color:#c9d4ef;background:#ffffff08;border:1px solid #ffffff10;border-radius:10px;grid-template-columns:36px 1fr 22px;align-items:center;gap:9px;min-height:58px;margin-top:auto;padding:8px;transition:background .16s,border-color .16s;display:grid}
 .sidebar-user:hover{background:#ffffff0d;border-color:#ffffff1f}
