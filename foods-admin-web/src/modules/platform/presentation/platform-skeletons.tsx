@@ -24,10 +24,10 @@ export function PlatformPlansSkeleton(){
   return <div className="plan-grid" aria-label="Cargando planes" aria-busy="true">
     {Array.from({length:3},(_,index)=><article className="panel plan-card platform-plan-skeleton" key={index}>
       <header><div className="plan-heading"><i className="platform-skeleton-block plan-icon-placeholder"/><div><i className="platform-skeleton-block eyebrow"/><i className="platform-skeleton-block heading"/></div></div><i className="platform-skeleton-block status"/></header>
+      <div className="plan-price"><i className="platform-skeleton-block price"/><i className="platform-skeleton-block caption"/></div>
       <div className="plan-description platform-skeleton-copy"><i/><i/></div>
-      <div className="plan-price"><i className="platform-skeleton-block eyebrow"/><i className="platform-skeleton-block price"/><i className="platform-skeleton-block caption"/></div>
       <div className="plan-capacity">{Array.from({length:3},(_,item)=><div key={item}><i className="platform-skeleton-block capacity-icon"/><span><i className="platform-skeleton-block eyebrow"/><i className="platform-skeleton-block value"/></span></div>)}</div>
-      <section className="plan-includes"><header><div><i className="platform-skeleton-block eyebrow"/><i className="platform-skeleton-block section-title"/></div><i className="platform-skeleton-block counter"/></header><div className="plan-feature-list">{Array.from({length:5},(_,item)=><div key={item}><i className="platform-skeleton-block feature-icon"/><span><i className="platform-skeleton-block feature-title"/><i className="platform-skeleton-block feature-copy"/></span></div>)}</div></section>
+      <section className="plan-includes"><header><i className="platform-skeleton-block section-title"/><i className="platform-skeleton-block counter"/></header><div className="plan-feature-list">{Array.from({length:5},(_,item)=><div key={item}><i className="platform-skeleton-block feature-icon"/><span><i className="platform-skeleton-block feature-title"/><i className="platform-skeleton-block feature-copy"/></span></div>)}</div></section>
       <footer><div><i className="platform-skeleton-block eyebrow"/><i className="platform-skeleton-block footer-copy"/></div><i className="platform-skeleton-block footer-action"/></footer>
     </article>)}
   </div>;
