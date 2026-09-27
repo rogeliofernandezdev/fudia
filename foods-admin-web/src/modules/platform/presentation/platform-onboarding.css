@@ -10,16 +10,19 @@
 .wizard-step-label{display:grid;gap:2px}
 .wizard-step-label b{font-size:10px;font-weight:800;color:var(--ink-950)}
 .wizard-step-label small{color:var(--ink-600);font-size:8px}
+
 .onboarding-form{display:grid;gap:12px;margin-top:16px}
 .onboarding-form .panel.management{overflow:hidden;border-radius:12px;border:1px solid #E4E7EC;background:var(--surface);box-shadow:none}
-.onboarding-form .panel.management header{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--cloud-50);border-bottom:1px solid #E4E7EC}
-.onboarding-form .panel.management header h2{margin:2px 0;text-align:left;font-size:15px;color:var(--ink-950)}
+.onboarding-form .panel.management header{display:flex;align-items:center;justify-content:flex-start;gap:12px;padding:14px 18px;background:var(--surface);border-bottom:1px solid #E4E7EC}
+.onboarding-form .panel.management header .modal-title-icon{width:34px;height:34px;display:grid;place-items:center;border-radius:10px;background:var(--primary-600);color:#fff}
+.onboarding-form .panel.management header h2{margin:0;text-align:left;font-size:16px;color:var(--ink-950)}
 .onboarding-form .panel.management header small{font-size:9px;letter-spacing:.1em;color:var(--primary-600);font-weight:850}
 .onboarding-form .panel.management .form-grid{padding:18px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 14px}
 .onboarding-form .panel.management .form-grid .span-2{grid-column:span 2}
 .onboarding-form label{display:grid;gap:5px;font-size:11px;font-weight:700;color:var(--ink-950)}
 .onboarding-form input,.onboarding-form select{min-height:40px;border-radius:6px;border-color:#E4E7EC}
-.wizard-progress{display:none}
-.wizard-footer{justify-content:space-between;align-items:center;gap:8px;margin-top:4px;padding-top:12px;border-top:1px solid #E4E7EC;display:flex}
+
+.wizard-footer{justify-content:flex-end;align-items:center;gap:8px;margin-top:4px;padding-top:12px;border-top:1px solid #E4E7EC;display:flex}
+.wizard-footer .button.primary{min-width:120px;justify-content:center}
 @media(max-width:820px){.wizard-steps{grid-template-columns:1fr 1fr}.onboarding-form .panel.management .form-grid{grid-template-columns:1fr}.onboarding-form .panel.management .form-grid .span-2{grid-column:auto}}
 @media(max-width:600px){.wizard-steps{grid-template-columns:1fr}.onboarding-form .panel.management .form-grid{padding:14px}.wizard-footer{flex-direction:column-reverse;align-items:stretch}}
