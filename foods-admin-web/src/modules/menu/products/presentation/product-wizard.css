@@ -10,7 +10,6 @@
 .product-wizard-steps button.complete > span { color: var(--success-600); background: var(--brand-100); }
 .product-wizard-body { min-height: 360px; max-height: min(58vh, 560px); overflow: auto; scrollbar-gutter: stable; }
 .product-wizard .wizard-pane { padding: 20px; animation: product-pane-in .18s ease-out; }
-.wizard-field-error { color: var(--danger); font-size: 8px; font-weight: 650; }
 .product-presentation { grid-template-columns: minmax(220px,.75fr) minmax(300px,1.25fr); gap: 16px; display: grid; }
 .product-presentation .image-upload { margin: 0; padding: 0; }
 .product-availability { border: 1px solid var(--line); border-radius: 10px; padding: 14px; }

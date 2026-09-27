@@ -122,7 +122,7 @@ function ProfileForm({profile,organizationName,locationName}:{profile:MyProfile;
             <label className="profile-field">
               <span>Nombre completo</span>
               <Input maxLength={180} {...register("fullName")} aria-invalid={Boolean(errors.fullName)}/>
-              {errors.fullName?.message&&<small className="wizard-field-error">{errors.fullName.message}</small>}
+              {errors.fullName?.message&&<small className="field-error">{errors.fullName.message}</small>}
             </label>
             <label className="profile-field">
               <span>Correo electrónico <small>Solo lectura</small></span>
@@ -140,12 +140,12 @@ function ProfileForm({profile,organizationName,locationName}:{profile:MyProfile;
             <label className="profile-field">
               <span>Contraseña actual</span>
               <Input type="password" autoComplete="current-password" {...register("currentPassword")} aria-invalid={Boolean(errors.currentPassword)} placeholder="Contraseña actual"/>
-              {errors.currentPassword?.message&&<small className="wizard-field-error">{errors.currentPassword.message}</small>}
+              {errors.currentPassword?.message&&<small className="field-error">{errors.currentPassword.message}</small>}
             </label>
             <label className="profile-field">
               <span>Nueva contraseña <small>Mínimo 8 caracteres</small></span>
               <Input type="password" autoComplete="new-password" {...register("newPassword")} aria-invalid={Boolean(errors.newPassword)} placeholder="Nueva contraseña"/>
-              {errors.newPassword?.message&&<small className="wizard-field-error">{errors.newPassword.message}</small>}
+              {errors.newPassword?.message&&<small className="field-error">{errors.newPassword.message}</small>}
             </label>
           </div>
           <div className="profile-security-note"><Icon name="lock" size={14}/><span>Tu contraseña actual solo es necesaria si vas a cambiarla.</span></div>

@@ -33,11 +33,11 @@ export function PaymentDialog({order,shiftName,busy,formatMoney,close,save}:{ord
         </label>
         <label>Monto
           <Input type="number" min="0.01" max={order.remainingAmount} step="0.01" inputMode="decimal" {...register("amount")} aria-invalid={Boolean(errors.amount)}/>
-          {errors.amount?.message&&<small className="wizard-field-error">{errors.amount.message}</small>}
+          {errors.amount?.message&&<small className="field-error">{errors.amount.message}</small>}
         </label>
         {method!=="cash"&&<label>Referencia opcional
           <Input maxLength={120} {...register("reference")} placeholder={method==="card"?"Ej. voucher o últimos 4 dígitos":method==="transfer"?"Ej. código de operación":"Referencia del cobro"}/>
-          {errors.reference?.message&&<small className="wizard-field-error">{errors.reference.message}</small>}
+          {errors.reference?.message&&<small className="field-error">{errors.reference.message}</small>}
         </label>}
         {method==="cash"&&<div className="pos-cash-impact"><Icon name="plus" size={14}/><span>Este cobro incrementará automáticamente el efectivo esperado del turno.</span></div>}
       </div>
@@ -63,11 +63,11 @@ export function RefundDialog({payment,busy,formatMoney,close,save}:{payment:Paym
         <div className="pos-refund-source"><small>PAGO DISPONIBLE PARA DEVOLVER</small><strong>{formatMoney(max)}</strong><span>{payment.method==="cash"?"Efectivo":payment.method==="card"?"Tarjeta":payment.method==="transfer"?"Transferencia":"Otro"} · {payment.cashRegisterName}</span></div>
         <label>Monto a devolver
           <Input autoFocus type="number" min="0.01" max={payment.netAmount} step="0.01" inputMode="decimal" {...register("amount")} aria-invalid={Boolean(errors.amount)}/>
-          {errors.amount?.message&&<small className="wizard-field-error">{errors.amount.message}</small>}
+          {errors.amount?.message&&<small className="field-error">{errors.amount.message}</small>}
         </label>
         <label>Motivo
           <Input maxLength={120} {...register("reason")} aria-invalid={Boolean(errors.reason)} placeholder="Ej. Cobro duplicado"/>
-          {errors.reason?.message&&<small className="wizard-field-error">{errors.reason.message}</small>}
+          {errors.reason?.message&&<small className="field-error">{errors.reason.message}</small>}
         </label>
         <label>Observación opcional
           <Textarea rows={3} maxLength={240} {...register("note")} placeholder="Detalle adicional de la devolución"/>

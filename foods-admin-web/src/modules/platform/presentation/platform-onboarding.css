@@ -35,12 +35,6 @@
 .onboarding-form .panel.management .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 20px;padding:20px 24px 24px}
 .onboarding-form .panel.management .form-grid .span-2{grid-column:span 2}
 
-/* Campos */
-.onboarding-field{display:grid;gap:5px;align-content:start;min-width:0;font-size:11px;font-weight:700;color:var(--ink-950)}
-.onboarding-field input,.onboarding-field select{height:var(--control-height)}
-.onboarding-field.has-error input,.onboarding-field.has-error select{border-color:var(--danger)}
-.onboarding-form .field-error{font-size:11px;font-weight:650;line-height:1.35;color:var(--danger)}
-
 /* Plan contratado */
 .onboarding-plan-summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:1px;margin:0 24px;overflow:hidden;border:1px solid var(--line);border-radius:12px;background:var(--line)}
 .onboarding-plan-summary div{padding:12px 14px;background:var(--surface)}

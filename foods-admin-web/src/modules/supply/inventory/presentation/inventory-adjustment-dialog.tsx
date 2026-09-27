@@ -78,7 +78,7 @@ export function InventoryAdjustmentDialog({items,busy,close,save}:{items:Invento
               <option value="">{items.length?"Selecciona un artículo existente":"No hay artículos disponibles"}</option>
               {items.map(item=><option value={item.id} key={item.id}>{item.name}{item.kind==="ingredient"?" · Insumo":""}</option>)}
             </Select>
-            {errors.inventoryItemId?.message&&<small className="wizard-field-error">{errors.inventoryItemId.message}</small>}
+            {errors.inventoryItemId?.message&&<small className="field-error">{errors.inventoryItemId.message}</small>}
           </label>
 
           {selected&&<section className="inventory-adjustment-balance" aria-label="Saldo actual">
@@ -97,15 +97,15 @@ export function InventoryAdjustmentDialog({items,busy,close,save}:{items:Invento
               <Select {...register("reason")} aria-invalid={Boolean(errors.reason)}>
                 {reasons.map(reason=><option value={reason.value} key={reason.value}>{reason.label}</option>)}
               </Select>
-              {errors.reason?.message&&<small className="wizard-field-error">{errors.reason.message}</small>}
+              {errors.reason?.message&&<small className="field-error">{errors.reason.message}</small>}
             </label>
             <label>Cantidad{selected?" ("+selected.unit+")":""}
               <Input type="number" min="0.001" step="0.001" inputMode="decimal" {...register("quantity")} placeholder="0" aria-invalid={Boolean(errors.quantity)}/>
-              {errors.quantity?.message&&<small className="wizard-field-error">{errors.quantity.message}</small>}
+              {errors.quantity?.message&&<small className="field-error">{errors.quantity.message}</small>}
             </label>
             <label className="span-2">Observación opcional
               <Textarea maxLength={240} rows={3} {...register("observation")} placeholder="Agrega una referencia si necesitas explicar el ajuste"/>
-              {errors.observation?.message&&<small className="wizard-field-error">{errors.observation.message}</small>}
+              {errors.observation?.message&&<small className="field-error">{errors.observation.message}</small>}
             </label>
           </div>
 

@@ -57,15 +57,15 @@ export function CashOperationDialog({shift,registers,busy,close,save}:{shift:Cas
             <option value="">{targets.length?"Selecciona una caja con turno abierto":"No hay otra caja operando"}</option>
             {targets.map(item=><option value={item.openShift!.id} key={item.id}>{item.name} · {item.openShift!.code}</option>)}
           </Select>
-          {errors.targetShiftId?.message&&<small className="wizard-field-error">{errors.targetShiftId.message}</small>}
+          {errors.targetShiftId?.message&&<small className="field-error">{errors.targetShiftId.message}</small>}
         </label>}
         <label>Monto
           <Input type="number" min="0.01" step="0.01" inputMode="decimal" {...register("amount")} aria-invalid={Boolean(errors.amount)} placeholder="0.00"/>
-          {errors.amount?.message&&<small className="wizard-field-error">{errors.amount.message}</small>}
+          {errors.amount?.message&&<small className="field-error">{errors.amount.message}</small>}
         </label>
         <label>Motivo
           <Input maxLength={120} {...register("reason")} aria-invalid={Boolean(errors.reason)} placeholder={type==="deposit"?"Ej. Depósito de seguridad":type==="transfer"?"Ej. Reposición de cambio":"Ej. Retiro preventivo"}/>
-          {errors.reason?.message&&<small className="wizard-field-error">{errors.reason.message}</small>}
+          {errors.reason?.message&&<small className="field-error">{errors.reason.message}</small>}
         </label>
         <label>Observación opcional
           <Textarea rows={3} maxLength={240} {...register("note")} placeholder="Referencia adicional"/>

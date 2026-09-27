@@ -7,12 +7,11 @@ import {useMutation,useQuery} from "@tanstack/react-query";
 import {Icon,IconName} from "@/design-system/icons";
 import {LocationMap} from "@/design-system/location-map";
 import {ApiClientError} from "@/shared/api/client";
-import {Input,PageHeader,Select} from "@/design-system/page-header";
+import {FormField as Field,Input,PageHeader,Select} from "@/design-system";
 import {useFeedback} from "@/providers/feedback-provider";
 import type {PlatformOnboardingDraft} from "../domain/types";
 import {onboardingResolver,onboardingStepFields} from "../domain/onboarding-schemas";
 import {createPlatformOrganization,getPlatformOnboardingContext} from "../infrastructure/platform-api";
-import {OnboardingFormField as Field} from "./onboarding-form-field";
 import {PlatformOnboardingSkeleton} from "./platform-skeletons";
 
 const blank:PlatformOnboardingDraft={
@@ -73,7 +72,6 @@ export function PlatformOnboardingPage(){
     if(index>=0&&index!==step)setStep(index);
   });
   const err=(field:keyof PlatformOnboardingDraft)=>errors[field]?.message;
-  const invalid=(field:keyof PlatformOnboardingDraft)=>Boolean(errors[field]);
   const countryField=register("country",{onChange:e=>{const c=ctx?.countryOptions.find(x=>x.code===e.target.value);if(c)setValue("currency",c.defaultCurrency)}});
   const current=steps[step];
 
@@ -94,15 +92,15 @@ export function PlatformOnboardingPage(){
         <header><span className="modal-title-icon"><Icon name={current.icon} size={18}/></span><h2>{current.heading}</h2></header>
 
         {step===0&&<div className="form-grid">
-          <Field className="span-2" label="Razón social" error={err("legalName")}><Input maxLength={180} {...register("legalName")} aria-invalid={invalid("legalName")} placeholder="Restaurante Perú SAC" autoComplete="organization"/></Field>
-          <Field label="Nombre comercial" error={err("tradeName")}><Input maxLength={180} {...register("tradeName")} aria-invalid={invalid("tradeName")} placeholder="Mi restaurante"/></Field>
-          <Field label="Identificación fiscal" error={err("taxId")}><Input maxLength={32} inputMode="numeric" {...register("taxId")} aria-invalid={invalid("taxId")} placeholder="RUC 20512345678"/></Field>
-          <Field className="span-2" label="Zona horaria" error={err("timezone")}><Select {...register("timezone")} aria-invalid={invalid("timezone")}>{timezones.map(z=><option key={z} value={z}>{z.replaceAll("_"," ")}</option>)}</Select></Field>
+          <Field className="span-2" label="Razón social" error={err("legalName")}><Input maxLength={180} {...register("legalName")} placeholder="Restaurante Perú SAC" autoComplete="organization"/></Field>
+          <Field label="Nombre comercial" error={err("tradeName")}><Input maxLength={180} {...register("tradeName")} placeholder="Mi restaurante"/></Field>
+          <Field label="Identificación fiscal" error={err("taxId")}><Input maxLength={32} inputMode="numeric" {...register("taxId")} placeholder="RUC 20512345678"/></Field>
+          <Field className="span-2" label="Zona horaria" error={err("timezone")}><Select {...register("timezone")}>{timezones.map(z=><option key={z} value={z}>{z.replaceAll("_"," ")}</option>)}</Select></Field>
         </div>}
 
         {step===1&&<>
           <div className="form-grid">
-            <Field className="span-2" label="Plan contratado" error={err("planId")}><Select {...register("planId")} aria-invalid={invalid("planId")}>{ctx.plans.map(plan=><option key={plan.id} value={plan.id}>{plan.name+" · "+plan.code}</option>)}</Select></Field>
+            <Field className="span-2" label="Plan contratado" error={err("planId")}><Select {...register("planId")}>{ctx.plans.map(plan=><option key={plan.id} value={plan.id}>{plan.name+" · "+plan.code}</option>)}</Select></Field>
             <Field label="Ciclo de facturación"><Select {...register("billingCycle")}><option value="monthly">Mensual</option><option value="annual">Anual</option></Select></Field>
             <Field label="Precio contratado"><Input readOnly tabIndex={-1} value={selectedPlan?(selectedPlan.currency+" "+Number(billingCycle==="annual"?selectedPlan.annualPrice:selectedPlan.monthlyPrice).toFixed(2)):""}/></Field>
           </div>
@@ -113,35 +111,35 @@ export function PlatformOnboardingPage(){
             <div><dt>Módulos</dt><dd>{selectedPlan.moduleKeys.length}</dd></div>
             <div><dt>Condiciones</dt><dd>{selectedPlan.termsVersion}</dd></div>
           </dl>}
-          <label className={"onboarding-terms"+(invalid("termsAccepted")?" has-error":"")}>
+          <label className={"onboarding-terms"+(errors.termsAccepted?" has-error":"")}>
             <input type="checkbox" {...register("termsAccepted")}/><span aria-hidden="true"><Icon name="check" size={13}/></span>
             <div><b>Condiciones aceptadas por el cliente</b>{err("termsAccepted")&&<small className="field-error" role="alert">{err("termsAccepted")}</small>}</div>
           </label>
         </>}
 
         {step===2&&<div className="form-grid">
-          <Field label="País" error={err("country")}><Select {...countryField} aria-invalid={invalid("country")}>{ctx.countryOptions.map(c=><option key={c.code} value={c.code}>{c.name+" ("+c.code+")"}</option>)}</Select></Field>
-          <Field label="Moneda" error={err("currency")}><Select {...register("currency")} aria-invalid={invalid("currency")}>{ctx.currencyOptions.map(c=><option key={c.code} value={c.code}>{c.code+" — "+c.name}</option>)}</Select></Field>
-          <Field label="Nombre del impuesto" error={err("taxName")}><Input maxLength={30} {...register("taxName")} aria-invalid={invalid("taxName")} placeholder="IGV"/></Field>
-          <Field label="Porcentaje %" error={err("taxRate")}><Input type="number" inputMode="decimal" min="0" max="100" step="0.0001" {...register("taxRate")} aria-invalid={invalid("taxRate")} placeholder="18"/></Field>
+          <Field label="País" error={err("country")}><Select {...countryField}>{ctx.countryOptions.map(c=><option key={c.code} value={c.code}>{c.name+" ("+c.code+")"}</option>)}</Select></Field>
+          <Field label="Moneda" error={err("currency")}><Select {...register("currency")}>{ctx.currencyOptions.map(c=><option key={c.code} value={c.code}>{c.code+" — "+c.name}</option>)}</Select></Field>
+          <Field label="Nombre del impuesto" error={err("taxName")}><Input maxLength={30} {...register("taxName")} placeholder="IGV"/></Field>
+          <Field label="Porcentaje %" error={err("taxRate")}><Input type="number" inputMode="decimal" min="0" max="100" step="0.0001" {...register("taxRate")} placeholder="18"/></Field>
           <Field label="Posición del símbolo"><Select {...register("currencyPosition")}><option value="before">Antes del monto</option><option value="after">Después del monto</option></Select></Field>
           <label className="switch-row compact"><input type="checkbox" {...register("taxIncluded")}/><span/><b>Impuesto incluido en el precio</b></label>
         </div>}
 
         {step===3&&<div className="form-grid">
-          <Field className="span-2" label="Nombre del local" error={err("locationName")}><Input {...register("locationName")} aria-invalid={invalid("locationName")} placeholder="Sede principal"/></Field>
+          <Field className="span-2" label="Nombre del local" error={err("locationName")}><Input {...register("locationName")} placeholder="Sede principal"/></Field>
           <Field label="Teléfono"><Input type="tel" {...register("locationPhone")} placeholder="+51 999 888 777"/></Field>
           <Field label="Horario de atención"><Input {...register("locationHours")} placeholder="Lun-Dom 12:00-23:00"/></Field>
-          <div className={"onboarding-field span-2"+(invalid("address")?" has-error":"")}>
+          <div className={"form-field span-2"+(errors.address?" has-error":"")}>
             <LocationMap latitude={latitude?Number(latitude):null} longitude={longitude?Number(longitude):null} address={address} onAddressChange={a=>setValue("address",a,{shouldValidate:Boolean(errors.address)})} onChange={c=>{setValue("latitude",c.lat.toFixed(7));setValue("longitude",c.lng.toFixed(7))}}/>
             {err("address")&&<small className="field-error" role="alert">{err("address")}</small>}
           </div>
         </div>}
 
         {step===4&&<div className="form-grid">
-          <Field className="span-2" label="Nombre completo" error={err("adminName")}><Input {...register("adminName")} aria-invalid={invalid("adminName")} placeholder="Juan Pérez" autoComplete="off"/></Field>
-          <Field className="span-2" label="Correo electrónico" error={err("adminEmail")}><Input type="email" {...register("adminEmail")} aria-invalid={invalid("adminEmail")} placeholder="admin@restaurante.com" autoComplete="off"/></Field>
-          <Field className="span-2" label="Contraseña" error={err("adminPassword")}><Input type="password" {...register("adminPassword")} aria-invalid={invalid("adminPassword")} placeholder="Mínimo 8 caracteres" autoComplete="new-password"/></Field>
+          <Field className="span-2" label="Nombre completo" error={err("adminName")}><Input {...register("adminName")} placeholder="Juan Pérez" autoComplete="off"/></Field>
+          <Field className="span-2" label="Correo electrónico" error={err("adminEmail")}><Input type="email" {...register("adminEmail")} placeholder="admin@restaurante.com" autoComplete="off"/></Field>
+          <Field className="span-2" label="Contraseña" error={err("adminPassword")}><Input type="password" {...register("adminPassword")} placeholder="Mínimo 8 caracteres" autoComplete="new-password"/></Field>
         </div>}
       </section>
 

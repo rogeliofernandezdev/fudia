@@ -57,12 +57,12 @@ export function PurchaseReceiptDialog({order,busy,close,save}:{order:PurchaseOrd
               <div><small>SOLICITADO</small><b>{formatRegionalNumber(Number(item.quantity),location?.country,{maximumFractionDigits:3})}</b></div>
               <div><small>RECIBIDO</small><b>{formatRegionalNumber(Number(item.receivedQuantity),location?.country,{maximumFractionDigits:3})}</b></div>
               <div><small>PENDIENTE</small><b>{formatRegionalNumber(Number(item.pendingQuantity),location?.country,{maximumFractionDigits:3})}</b></div>
-              <label>Recibir ahora<Input type="number" min="0" max={item.pendingQuantity} step={item.presentationType==="unit"?"0.001":"1"} inputMode="decimal" {...register(`items.${index}.quantity`)} aria-invalid={Boolean(errors.items?.[index]?.quantity)}/>{errors.items?.[index]?.quantity?.message&&<small className="wizard-field-error">{errors.items[index]?.quantity?.message}</small>}</label>
+              <label>Recibir ahora<Input type="number" min="0" max={item.pendingQuantity} step={item.presentationType==="unit"?"0.001":"1"} inputMode="decimal" {...register(`items.${index}.quantity`)} aria-invalid={Boolean(errors.items?.[index]?.quantity)}/>{errors.items?.[index]?.quantity?.message&&<small className="field-error">{errors.items[index]?.quantity?.message}</small>}</label>
               <input type="hidden" {...register(`items.${index}.purchaseOrderItemId`)}/>
             </article>)}
           </div>
           {typeof errors.items?.message==="string"&&<div className="purchase-validation" role="alert"><Icon name="alert" size={15}/>{errors.items.message}</div>}
-          <label className="purchase-receipt-notes">Observación opcional<Textarea rows={3} maxLength={500} {...register("notes")} placeholder="Documento, lote, incidencia o referencia de esta recepción"/>{errors.notes?.message&&<small className="wizard-field-error">{errors.notes.message}</small>}</label>
+          <label className="purchase-receipt-notes">Observación opcional<Textarea rows={3} maxLength={500} {...register("notes")} placeholder="Documento, lote, incidencia o referencia de esta recepción"/>{errors.notes?.message&&<small className="field-error">{errors.notes.message}</small>}</label>
         </div>
         <footer><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" kind="success" disabled={busy}>{busy?"Confirmando…":"Confirmar recepción"}</Button></footer>
       </form>

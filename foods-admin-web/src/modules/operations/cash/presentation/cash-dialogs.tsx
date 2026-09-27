@@ -21,7 +21,7 @@ export function CashRegisterDialog({initial,busy,close,save}:{initial?:CashRegis
         <p className="cash-dialog-intro">{editing?"Actualiza el nombre operativo de la caja. Su historial y turnos se conservarán.":"Crea una caja del local. Luego podrás iniciar y cerrar turnos sobre esta caja sin perder su historial."}</p>
         <label>Nombre de la caja
           <Input autoFocus maxLength={80} {...register("name")} aria-invalid={Boolean(errors.name)} placeholder="Ej. Caja principal"/>
-          {errors.name?.message&&<small className="wizard-field-error">{errors.name.message}</small>}
+          {errors.name?.message&&<small className="field-error">{errors.name.message}</small>}
         </label>
         <label className="switch-row cash-blind-switch">
           <input type="checkbox" {...register("blindClose")}/>
@@ -50,11 +50,11 @@ export function OpenCashShiftDialog({cashRegister,busy,close,save}:{cashRegister
         <p className="cash-dialog-intro">Estás iniciando un turno en <b>{cashRegister.name}</b>. Registra el efectivo inicial que quedará como base del arqueo.</p>
         <label>Fondo inicial
           <Input autoFocus type="number" min="0" step="0.01" inputMode="decimal" {...register("openingAmount")} aria-invalid={Boolean(errors.openingAmount)} placeholder="0.00"/>
-          {errors.openingAmount?.message&&<small className="wizard-field-error">{errors.openingAmount.message}</small>}
+          {errors.openingAmount?.message&&<small className="field-error">{errors.openingAmount.message}</small>}
         </label>
         <label>Observación opcional
           <Textarea rows={3} maxLength={240} {...register("note")} placeholder="Ej. Fondo recibido del turno anterior"/>
-          {errors.note?.message&&<small className="wizard-field-error">{errors.note.message}</small>}
+          {errors.note?.message&&<small className="field-error">{errors.note.message}</small>}
         </label>
       </div>
       <footer><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy}>{busy?"Iniciando…":"Iniciar turno"}</Button></footer>
@@ -80,15 +80,15 @@ export function CashMovementDialog({type,busy,close,save}:{type:CashMovementType
         <p className="cash-dialog-intro">{isIncome?"Registra efectivo que entra a la caja fuera de un cobro de venta.":"Registra efectivo que sale de caja y deja el motivo trazable."}</p>
         <label>Monto
           <Input autoFocus type="number" min="0.01" step="0.01" inputMode="decimal" {...register("amount")} aria-invalid={Boolean(errors.amount)} placeholder="0.00"/>
-          {errors.amount?.message&&<small className="wizard-field-error">{errors.amount.message}</small>}
+          {errors.amount?.message&&<small className="field-error">{errors.amount.message}</small>}
         </label>
         <label>Motivo
           <Input maxLength={120} {...register("reason")} aria-invalid={Boolean(errors.reason)} placeholder={isIncome?"Ej. Reposición de fondo":"Ej. Compra menor o retiro"}/>
-          {errors.reason?.message&&<small className="wizard-field-error">{errors.reason.message}</small>}
+          {errors.reason?.message&&<small className="field-error">{errors.reason.message}</small>}
         </label>
         <label>Observación opcional
           <Textarea rows={3} maxLength={240} {...register("note")} placeholder="Referencia o detalle adicional"/>
-          {errors.note?.message&&<small className="wizard-field-error">{errors.note.message}</small>}
+          {errors.note?.message&&<small className="field-error">{errors.note.message}</small>}
         </label>
       </div>
       <footer><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" kind={isIncome?"success":"primary"} disabled={busy}>{busy?"Guardando…":isIncome?"Registrar ingreso":"Registrar egreso"}</Button></footer>
@@ -140,7 +140,7 @@ export function CloseCashShiftDialog({shift,busy,currency,formatMoney,close,save
 
         {!byDenomination?<label>Efectivo contado
           <Input autoFocus type="number" min="0" step="0.01" inputMode="decimal" {...register("countedAmount")} aria-invalid={Boolean(errors.countedAmount)} placeholder="0.00"/>
-          {errors.countedAmount?.message&&<small className="wizard-field-error">{errors.countedAmount.message}</small>}
+          {errors.countedAmount?.message&&<small className="field-error">{errors.countedAmount.message}</small>}
         </label>:<section className="cash-denomination-count">
           <header><div><small>CONTEO</small><b>Billetes y monedas</b></div><strong>{formatMoney(denominationTotal)}</strong></header>
           <div>{denominations.map((value,index)=><label key={value}>
@@ -149,14 +149,14 @@ export function CloseCashShiftDialog({shift,busy,currency,formatMoney,close,save
             <Input type="number" min="0" step="1" inputMode="numeric" {...register(`counts.${index}.quantity`)} placeholder="0"/>
             <b>{formatMoney(value*(Number(countLines[index]?.quantity)||0))}</b>
           </label>)}</div>
-          {errors.countedAmount?.message&&<small className="wizard-field-error">{errors.countedAmount.message}</small>}
+          {errors.countedAmount?.message&&<small className="field-error">{errors.countedAmount.message}</small>}
         </section>}
 
         {!blind&&Number.isFinite(counted)&&counted>=0&&<div className={"cash-close-difference "+differenceTone}><span><small>DIFERENCIA</small><b>{difference>0?"+":""}{formatMoney(difference)}</b></span><em>{differenceTone==="balanced"?"Caja cuadrada":differenceTone==="positive"?"Sobrante":"Faltante"}</em></div>}
 
         <label>Observación opcional
           <Textarea rows={3} maxLength={240} {...register("note")} placeholder="Explica cualquier diferencia si corresponde"/>
-          {errors.note?.message&&<small className="wizard-field-error">{errors.note.message}</small>}
+          {errors.note?.message&&<small className="field-error">{errors.note.message}</small>}
         </label>
         <p className="cash-close-warning"><Icon name="alert" size={14}/>Al cerrar el turno ya no se podrán registrar nuevos movimientos.</p>
       </div>

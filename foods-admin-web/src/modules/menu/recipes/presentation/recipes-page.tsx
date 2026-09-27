@@ -229,13 +229,13 @@ export function RecipesPage(){
          menuPortalTarget={typeof document==="undefined"?undefined:document.body}
          menuPosition="fixed"
         />
-        {attempted&&!draft.productId&&<small className="recipe-field-error">Busca y selecciona el producto de la receta.</small>}
+        {attempted&&!draft.productId&&<small className="field-error">Busca y selecciona el producto de la receta.</small>}
        </label>
 
        <label className="recipe-yield-field">
         <FieldLabel hint="Cantidad de producto final que obtienes con los insumos indicados.">Rendimiento</FieldLabel>
         <Input type="number" min="0.001" step="0.001" inputMode="decimal" value={draft.yieldQuantity} aria-invalid={attempted&&Number(draft.yieldQuantity)<=0} onChange={e=>setDraft({...draft,yieldQuantity:e.target.value})}/>
-        {attempted&&Number(draft.yieldQuantity)<=0&&<small className="recipe-field-error">Debe ser mayor que cero.</small>}
+        {attempted&&Number(draft.yieldQuantity)<=0&&<small className="field-error">Debe ser mayor que cero.</small>}
        </label>
 
        <label className="recipe-notes-field">
@@ -293,15 +293,15 @@ export function RecipesPage(){
             menuPortalTarget={typeof document==="undefined"?undefined:document.body}
             menuPosition="fixed"
            />
-           {ingredientInvalid&&<small className="recipe-field-error">Selecciona un insumo.</small>}
+           {ingredientInvalid&&<small className="field-error">Selecciona un insumo.</small>}
           </label>
           <label className="recipe-ingredient-quantity" data-label="CANTIDAD">
            <div className="recipe-quantity-control"><Input aria-label={`Cantidad del insumo ${index+1}`} type="number" min="0.001" step="0.001" inputMode="decimal" disabled={save.isPending} aria-invalid={quantityInvalid} value={item.quantity} onChange={e=>setDraft({...draft,items:draft.items.map((x,i)=>i===index?{...x,quantity:e.target.value}:x)})}/>{selected?.unit&&<small>{selected.unit}</small>}</div>
-           {quantityInvalid&&<small className="recipe-field-error">Mayor que 0.</small>}
+           {quantityInvalid&&<small className="field-error">Mayor que 0.</small>}
           </label>
           <label className="recipe-ingredient-waste" data-label="MERMA %">
            <Input aria-label={`Merma del insumo ${index+1}`} type="number" min="0" max="99.9999" step="0.01" inputMode="decimal" disabled={save.isPending} aria-invalid={wasteInvalid} value={item.wastePercent} onChange={e=>setDraft({...draft,items:draft.items.map((x,i)=>i===index?{...x,wastePercent:e.target.value}:x)})}/>
-           {wasteInvalid&&<small className="recipe-field-error">Entre 0 y 99.99.</small>}
+           {wasteInvalid&&<small className="field-error">Entre 0 y 99.99.</small>}
           </label>
           <div className="recipe-ingredient-action" data-label="ACCIÓN"><RowActionButton action="remove" label={`Quitar ${selected?.label??"insumo"}`} disabled={save.isPending} onClick={()=>setDraft({...draft,items:draft.items.filter((_,i)=>i!==index)})}/></div>
          </div>;

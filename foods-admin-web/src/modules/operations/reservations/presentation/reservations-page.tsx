@@ -72,23 +72,23 @@ function ReservationDialog({value:initial,tables,tablesLoading,tablesError,busy,
           <label>
             Cliente
             <Input autoFocus autoComplete="name" maxLength={180} {...register("customerName")} aria-invalid={Boolean(errors.customerName)} placeholder="Nombre del cliente"/>
-            {errors.customerName?.message&&<small className="wizard-field-error">{errors.customerName.message}</small>}
+            {errors.customerName?.message&&<small className="field-error">{errors.customerName.message}</small>}
           </label>
           <label>
             Teléfono
             <Input type="tel" autoComplete="tel" maxLength={40} {...register("customerPhone")} aria-invalid={Boolean(errors.customerPhone)} placeholder="Ej. 999 999 999"/>
-            {errors.customerPhone?.message&&<small className="wizard-field-error">{errors.customerPhone.message}</small>}
+            {errors.customerPhone?.message&&<small className="field-error">{errors.customerPhone.message}</small>}
           </label>
 
           <label>
             Fecha y hora
             <Input type="datetime-local" {...register("startsAt")} aria-invalid={Boolean(errors.startsAt)}/>
-            {errors.startsAt?.message&&<small className="wizard-field-error">{errors.startsAt.message}</small>}
+            {errors.startsAt?.message&&<small className="field-error">{errors.startsAt.message}</small>}
           </label>
           <label>
             Personas
             <Input type="number" inputMode="numeric" min="1" max="100" {...register("guests")} aria-invalid={Boolean(errors.guests)}/>
-            {errors.guests?.message&&<small className="wizard-field-error">{errors.guests.message}</small>}
+            {errors.guests?.message&&<small className="field-error">{errors.guests.message}</small>}
           </label>
 
           <label>
@@ -104,13 +104,13 @@ function ReservationDialog({value:initial,tables,tablesLoading,tablesError,busy,
           <label>
             <FieldLabel hint="Tiempo durante el cual la mesa queda ocupada para evitar reservas solapadas.">Duración de mesa (min)</FieldLabel>
             <Input type="number" inputMode="numeric" min="15" max="360" step="15" {...register("durationMinutes")} aria-invalid={Boolean(errors.durationMinutes)}/>
-            {errors.durationMinutes?.message&&<small className="wizard-field-error">{errors.durationMinutes.message}</small>}
+            {errors.durationMinutes?.message&&<small className="field-error">{errors.durationMinutes.message}</small>}
           </label>
 
           <label className="reservation-notes">
             <span className="reservation-label">Notas <small>Opcional</small></span>
             <Textarea maxLength={500} rows={3} {...register("notes")} aria-invalid={Boolean(errors.notes)} placeholder="Preferencias, ocasión o indicaciones para el equipo"/>
-            {errors.notes?.message&&<small className="wizard-field-error">{errors.notes.message}</small>}
+            {errors.notes?.message&&<small className="field-error">{errors.notes.message}</small>}
           </label>
         </div>
         <footer>
