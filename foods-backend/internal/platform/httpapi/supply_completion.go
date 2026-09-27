@@ -127,10 +127,11 @@ func (a *API) listPurchaseReceipts(w http.ResponseWriter,r *http.Request){
 	q:=strings.TrimSpace(r.URL.Query().Get("q"))
 	from:=strings.TrimSpace(r.URL.Query().Get("from"))
 	to:=strings.TrimSpace(r.URL.Query().Get("to"))
+	if !validDateFilters(from,to){fail(w,400,"invalid_receipt_filter","Revisa el rango de fechas.");return}
 	where:=`pr.organization_id=$1 AND pr.location_id=$2
 	  AND ($3='' OR pr.code ILIKE '%'||$3||'%' OR po.number ILIKE '%'||$3||'%' OR sp.name ILIKE '%'||$3||'%')
-	  AND ($4='' OR pr.created_at >= $4::date)
-	  AND ($5='' OR pr.created_at < ($5::date + interval '1 day'))`
+	  AND ($4='' OR pr.created_at >= ($4::date::timestamp AT TIME ZONE (SELECT timezone FROM locations WHERE id=$2 AND organization_id=$1)))
+	  AND ($5='' OR pr.created_at < (($5::date + interval '1 day')::timestamp AT TIME ZONE (SELECT timezone FROM locations WHERE id=$2 AND organization_id=$1)))`
 	var total int
 	if err:=a.db.QueryRow(r.Context(),`SELECT count(*) FROM purchase_receipts pr
 		JOIN purchase_orders po ON po.id=pr.purchase_order_id AND po.organization_id=pr.organization_id

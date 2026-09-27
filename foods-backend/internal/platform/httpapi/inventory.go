@@ -885,13 +885,14 @@ func (a *API) listInventoryMovements(w http.ResponseWriter, r *http.Request) {
 	sourceType:=strings.TrimSpace(r.URL.Query().Get("sourceType"))
 	from:=strings.TrimSpace(r.URL.Query().Get("from"))
 	to:=strings.TrimSpace(r.URL.Query().Get("to"))
+	if !validDateFilters(from,to){fail(w,400,"invalid_kardex_filter","Revisa el rango de fechas.");return}
 	where:=`sm.organization_id=$1 AND sm.location_id=$2
 	  AND ($3='' OR sm.inventory_item_id::text=$3)
 	  AND ($4='' OR sm.product_id::text=$4)
 	  AND ($5='' OR sm.movement_type=$5)
 	  AND ($6='' OR sm.source_type=$6)
-	  AND ($7='' OR sm.created_at >= $7::date)
-	  AND ($8='' OR sm.created_at < ($8::date + interval '1 day'))`
+	  AND ($7='' OR sm.created_at >= ($7::date::timestamp AT TIME ZONE (SELECT timezone FROM locations WHERE id=$2 AND organization_id=$1)))
+	  AND ($8='' OR sm.created_at < (($8::date + interval '1 day')::timestamp AT TIME ZONE (SELECT timezone FROM locations WHERE id=$2 AND organization_id=$1)))`
 	var total int
 	if err:=a.db.QueryRow(r.Context(),"SELECT count(*) FROM stock_movements sm WHERE "+where,s.OrganizationID,s.LocationID,inventoryItemID,productID,movementType,sourceType,from,to).Scan(&total);err!=nil{
 		fail(w,503,"kardex_unavailable","No pudimos contar los movimientos del Kárdex.");return
@@ -1114,4 +1115,17 @@ func (a *API) applyOrderQuantityDelta(ctx context.Context, tx pgx.Tx, s scope, o
 		}
 	}
 	return nil
+}
+
+// validDateFilters accepts empty values or ISO dates (YYYY-MM-DD) for range filters.
+func validDateFilters(values ...string) bool {
+	for _, value := range values {
+		if value == "" {
+			continue
+		}
+		if _, err := time.Parse("2006-01-02", value); err != nil {
+			return false
+		}
+	}
+	return true
 }
