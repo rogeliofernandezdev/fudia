@@ -9,7 +9,12 @@
 .wizard-step:focus-visible{outline:2px solid var(--ops-500);outline-offset:2px}
 .wizard-step.active{background:linear-gradient(155deg,var(--primary-600),var(--primary-700));color:#fff;box-shadow:0 6px 16px -4px #4654cd66}
 .wizard-step.done{color:var(--brand-700)}
-.wizard-step-icon{display:grid;place-items:center;flex-shrink:0;color:inherit}
+.wizard-step.done:not(:disabled):hover{background:var(--brand-100)}
+.wizard-step-icon{position:relative;display:grid;place-items:center;flex-shrink:0;width:26px;height:26px;border-radius:50%;background:#0000;color:inherit;transition:background .18s}
+.wizard-step.active .wizard-step-icon{background:#ffffff26}
+.wizard-step.done .wizard-step-icon{background:var(--brand-100)}
+.wizard-step-badge{position:absolute;right:-3px;bottom:-3px;display:grid;place-items:center;width:14px;height:14px;border-radius:50%;background:var(--brand-600);color:#fff;border:2px solid var(--cloud-50)}
+.wizard-step.active .wizard-step-badge{border-color:var(--primary-700)}
 .wizard-step-label{font-size:12px;font-weight:750;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 
 /* Panel del paso */
@@ -49,7 +54,7 @@
 
 /* Skeleton */
 .platform-onboarding-skeleton .wizard-step{cursor:default}
-.onboarding-skeleton-icon{width:16px;height:16px;flex-shrink:0;border-radius:4px}
+.onboarding-skeleton-icon{width:26px;height:26px;flex-shrink:0;border-radius:50%}
 .onboarding-skeleton-step-copy{width:60%;max-width:80px;height:11px;border-radius:6px}
 .onboarding-skeleton-heading{display:grid;gap:6px}
 .onboarding-skeleton-heading i:first-child{width:90px;height:9px;border-radius:6px}

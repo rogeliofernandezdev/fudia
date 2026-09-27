@@ -84,7 +84,10 @@ export function PlatformOnboardingPage(){
   <div className="onboarding-wizard">
     <nav className="wizard-steps" aria-label="Pasos del registro">
       {steps.map((s,i)=><button key={s.key} type="button" className={"wizard-step"+(i===step?" active":i<reached?" done":"")} onClick={()=>goTo(i)} disabled={i>reached||save.isPending} aria-current={i===step?"step":undefined}>
-        <span className="wizard-step-icon">{i<reached&&i!==step?<Icon name="check" size={16}/>:<Icon name={s.icon} size={16}/>}</span>
+        <span className="wizard-step-icon">
+          <Icon name={s.icon} size={16}/>
+          {i<reached&&i!==step&&<span className="wizard-step-badge"><Icon name="check" size={10}/></span>}
+        </span>
         <span className="wizard-step-label">{s.title}</span>
       </button>)}
     </nav>
