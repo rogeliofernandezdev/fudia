@@ -63,11 +63,12 @@ export function PlatformPlansPage(){
        </header>
        <div className="plan-price">
          <div><span>{plan.currency}</span><b>{price.toFixed(2)}</b><em>{billing==="annual"?"/ año":"/ mes"}</em></div>
-         <p>{billing==="annual"?"Equivale a "+plan.currency+" "+equivalent.toFixed(2)+" al mes"+(savings>0?" · ahorras "+plan.currency+" "+savings.toFixed(2):""):plan.trialDays?plan.trialDays+" días de prueba gratuita":"Sin periodo de prueba"}</p>
+         {billing==="annual"&&<p>Equivale a {plan.currency+" "+equivalent.toFixed(2)} al mes{savings>0?" · ahorras "+plan.currency+" "+savings.toFixed(2):""}</p>}
        </div>
        <dl className="plan-capacity">
-         <div><dt>Locales</dt><dd>{plan.maxLocations??"Sin límite"}</dd></div>
-         <div><dt>Usuarios</dt><dd>{plan.maxUsers??"Sin límite"}</dd></div>
+         <div><dt>Locales</dt><dd>{plan.maxLocations??"∞"}</dd></div>
+         <div><dt>Usuarios</dt><dd>{plan.maxUsers??"∞"}</dd></div>
+         <div><dt>Prueba</dt><dd>{plan.trialDays?plan.trialDays+" días":"No"}</dd></div>
        </dl>
        <section className="plan-includes">
          <header><h3>Incluye {included.length} módulos</h3></header>
