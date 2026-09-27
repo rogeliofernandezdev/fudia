@@ -1,45 +1,101 @@
-.platform-subscription-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:16px;margin-top:20px}
-.subscription-editor{overflow:hidden}
-.subscription-editor>header,.subscription-history>header{min-height:64px;border-bottom:1px solid var(--line);padding:13px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
-.subscription-editor>header small,.subscription-history>header small{color:var(--ops-500);font-size:8px;font-weight:850;letter-spacing:.1em}
-.subscription-editor>header h2,.subscription-history>header h2{margin:3px 0 0;font-size:14px}
-.subscription-editor form>.form-grid{padding:18px}
-.subscription-editor form>footer{border-top:1px solid var(--line);padding:12px 18px;display:flex;justify-content:flex-end}
-.subscription-state-badge{border-radius:20px;padding:5px 8px;font-size:8px;font-weight:800;background:#f2f4f7;color:var(--ink-600)}
+/* Suscripción de empresa — Plataforma */
+
+/* Resumen del contrato vigente */
+.subscription-summary{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1.3fr);gap:0;margin-top:20px;overflow:hidden;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:var(--shadow)}
+.subscription-summary-main{display:grid;align-content:start;gap:8px;padding:22px 24px;border-right:1px solid var(--line)}
+.subscription-summary-main .subscription-state-badge{justify-self:start}
+.subscription-summary-main h2{margin:2px 0 0;font-size:24px;font-weight:800;letter-spacing:-.02em;color:var(--ink-950)}
+.subscription-summary-main p{margin:0;font-size:12px;color:var(--ink-600)}
+.subscription-summary-facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;margin:0;background:var(--line)}
+.subscription-summary-facts>div{display:grid;align-content:start;gap:4px;padding:16px 18px;background:var(--surface)}
+.subscription-summary-facts dt{font-size:10px;font-weight:750;color:var(--ink-500)}
+.subscription-summary-facts dd{display:grid;gap:2px;margin:0;font-size:14px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--ink-950)}
+.subscription-summary-facts dd small{font-size:11px;font-weight:600;color:var(--ink-600)}
+.subscription-usage{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:16px 24px 18px;border-top:1px solid var(--line);background:var(--cloud-50)}
+.subscription-meter{display:grid;grid-template-columns:32px 1fr;gap:12px;align-items:center}
+.subscription-meter-icon{display:grid;place-items:center;width:32px;height:32px;border-radius:9px;color:var(--ink-600);background:var(--surface);border:1px solid var(--line)}
+.subscription-meter-copy{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:6px}
+.subscription-meter-copy b{font-size:12px;color:var(--ink-950)}
+.subscription-meter-copy span{font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink-600)}
+.subscription-meter-bar{height:6px;overflow:hidden;border-radius:99px;background:var(--line)}
+.subscription-meter-bar i{display:block;height:100%;border-radius:99px;background:var(--primary-600);transition:width .3s}
+.subscription-meter.near .subscription-meter-bar i{background:var(--warning)}
+.subscription-meter.full .subscription-meter-bar i{background:var(--danger)}
+.subscription-meter.full .subscription-meter-copy span{color:var(--danger)}
+
+/* Estado del contrato */
+.subscription-state-badge{display:inline-flex;align-items:center;height:22px;padding:0 9px;border-radius:99px;font-size:10px;font-weight:750;white-space:nowrap;color:var(--ink-600);background:var(--cloud-100)}
 .subscription-state-badge.active{color:var(--brand-700);background:var(--brand-100)}
 .subscription-state-badge.trial{color:var(--ops-700);background:var(--ops-100)}
 .subscription-state-badge.past_due{color:var(--warning);background:var(--warning-50)}
 .subscription-state-badge.cancelled{color:var(--danger);background:var(--danger-50)}
-.subscription-plan-preview{border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);background:#fbfcfe}
-.subscription-plan-preview>div{padding:11px 10px;display:grid;gap:3px;text-align:center}
-.subscription-plan-preview small{color:var(--ink-400);font-size:7px;font-weight:800}
-.subscription-plan-preview b{font-size:9px}
-.subscription-accept{border-top:1px solid var(--line);padding:13px 16px;display:grid;grid-template-columns:24px 1fr;gap:9px;cursor:pointer}
-.subscription-accept>input{position:absolute;opacity:0}
-.subscription-accept>span{width:22px;height:22px;border:1px solid #d0d5dd;border-radius:6px;color:transparent;display:grid;place-items:center}
-.subscription-accept:has(input:checked)>span{background:var(--ops-500);border-color:var(--ops-500);color:#fff}
+
+/* Paneles de edición */
+.platform-subscription-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:16px;margin-top:16px;align-items:start}
+.subscription-editor,.subscription-history{overflow:hidden;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:var(--shadow)}
+.subscription-editor>header,.subscription-history>header{display:flex;align-items:center;justify-content:flex-start;text-align:left;gap:12px;min-height:58px;padding:14px 20px;border-bottom:1px solid var(--line)}
+.subscription-header-icon{display:grid;place-items:center;flex-shrink:0;width:32px;height:32px;border-radius:10px;color:var(--primary-600);background:var(--primary-100)}
+.subscription-editor>header small,.subscription-history>header small{display:block;font-size:9px;font-weight:850;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-500)}
+.subscription-editor>header h2,.subscription-history>header h2{margin:2px 0 0;font-size:15px;font-weight:800;color:var(--ink-950)}
+.subscription-editor form>.form-grid{gap:16px 18px;padding:20px}
+.subscription-editor form>footer{display:flex;justify-content:flex-end;padding:12px 20px;border-top:1px solid var(--line);background:var(--cloud-50)}
+.subscription-editor .form-grid label{font-size:11px;font-weight:700;color:var(--ink-950)}
+
+.subscription-plan-preview{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;margin:0 20px 20px;overflow:hidden;border:1px solid var(--line);border-radius:12px;background:var(--line)}
+.subscription-plan-preview>div{padding:10px 12px;background:var(--surface)}
+.subscription-plan-preview dt{font-size:10px;font-weight:700;color:var(--ink-500)}
+.subscription-plan-preview dd{margin:3px 0 0;font-size:13px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--ink-950)}
+
+.subscription-accept{position:relative;display:flex;align-items:flex-start;gap:12px;margin:0 20px 20px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;cursor:pointer;transition:border-color .15s,background .15s}
+.subscription-accept:has(input:checked){border-color:var(--brand-600);background:var(--brand-100)}
+.subscription-accept>input{position:absolute;opacity:0;width:1px;height:1px}
+.subscription-accept>span{display:grid;place-items:center;flex-shrink:0;width:20px;height:20px;margin-top:1px;border:1.5px solid var(--ink-400);border-radius:6px;color:transparent;background:#fff}
+.subscription-accept:has(input:checked)>span{color:#fff;border-color:var(--brand-700);background:var(--brand-700)}
 .subscription-accept div{display:grid;gap:3px}
-.subscription-accept b{font-size:9px}
-.subscription-accept small{color:var(--ink-500);font-size:8px}
-.subscription-history{margin-top:16px;overflow:hidden}
-.subscription-history>header>b{min-width:28px;height:28px;border-radius:8px;background:var(--ops-100);color:var(--ops-700);display:grid;place-items:center;font-size:9px}
-.subscription-history td{height:52px}
-.subscription-empty,.subscription-state{padding:28px;text-align:center;color:var(--ink-500);font-size:10px}
+.subscription-accept b{font-size:12px;color:var(--ink-950)}
+.subscription-accept small{font-size:11px;line-height:1.4;color:var(--ink-600)}
+
+/* Historial */
+.subscription-history{margin-top:16px}
+.subscription-history>header>b{display:grid;place-items:center;min-width:28px;height:28px;margin-left:auto;border-radius:8px;font-size:11px;color:var(--ops-700);background:var(--ops-100)}
+.subscription-history td{height:52px;font-size:11px}
+.subscription-pay-status{display:inline-flex;align-items:center;height:22px;padding:0 9px;border-radius:99px;font-size:10px;font-weight:750;color:var(--ink-600);background:var(--cloud-100)}
+.subscription-pay-status.paid{color:var(--brand-700);background:var(--brand-100)}
+.subscription-pay-status.pending{color:var(--warning);background:var(--warning-50)}
+.subscription-pay-status.failed,.subscription-pay-status.refunded{color:var(--danger);background:var(--danger-50)}
+.subscription-empty,.subscription-state{padding:32px;text-align:center;font-size:12px;color:var(--ink-600)}
 .subscription-state{margin-top:20px;display:grid;justify-items:center;gap:10px}
 .subscription-state.error{color:var(--danger)}
+
+/* Skeleton */
 .platform-subscription-card-skeleton,.platform-subscription-history-skeleton{pointer-events:none}
-.platform-subscription-card-skeleton .platform-skeleton-block,.platform-subscription-history-skeleton .platform-skeleton-block{border-radius:20px}
-.platform-subscription-card-skeleton .eyebrow,.platform-subscription-history-skeleton .eyebrow{width:72px;height:7px}
-.platform-subscription-card-skeleton .heading,.platform-subscription-history-skeleton .heading{width:138px;height:14px;margin-top:7px}
-.platform-subscription-card-skeleton .header-action{width:62px;height:24px}
-.platform-subscription-skeleton-fields{padding:18px}
+.platform-subscription-card-skeleton .platform-skeleton-block,.platform-subscription-history-skeleton .platform-skeleton-block{border-radius:6px}
+.platform-subscription-card-skeleton .eyebrow,.platform-subscription-history-skeleton .eyebrow{width:72px;height:9px}
+.platform-subscription-card-skeleton .heading,.platform-subscription-history-skeleton .heading{width:138px;height:15px;margin-top:6px}
+.platform-subscription-card-skeleton .header-action{width:72px;height:22px;margin-left:auto;border-radius:99px}
+.platform-subscription-skeleton-fields{padding:20px}
 .platform-subscription-skeleton-fields>div{display:grid;gap:8px}
-.platform-subscription-skeleton-fields .label{width:68px;height:7px}
-.platform-subscription-skeleton-fields .control{width:100%;height:38px;border-radius:9px}
-.platform-subscription-preview-skeleton .value{width:44px;height:10px;margin:3px auto 0}
-.platform-subscription-card-skeleton>footer{border-top:1px solid var(--line);padding:12px 18px;display:flex;justify-content:flex-end}
-.platform-subscription-card-skeleton>footer .button{width:118px;height:38px;border-radius:9px}
-.platform-subscription-history-skeleton .counter{width:28px;height:28px;border-radius:8px}
-.platform-subscription-history-skeleton .table-line{width:78%;height:9px}
-@media(max-width:900px){.platform-subscription-grid{grid-template-columns:1fr}.subscription-plan-preview{grid-template-columns:repeat(3,1fr)}}
-@media(max-width:600px){.subscription-plan-preview{grid-template-columns:1fr 1fr}.subscription-history table{min-width:650px}}
+.platform-subscription-skeleton-fields .label{width:68px;height:10px}
+.platform-subscription-skeleton-fields .control{width:100%;height:var(--control-height)}
+.platform-subscription-preview-skeleton .value{width:44px;height:13px;margin-top:4px}
+.platform-subscription-card-skeleton>footer{display:flex;justify-content:flex-end;padding:12px 20px;border-top:1px solid var(--line);background:var(--cloud-50)}
+.platform-subscription-card-skeleton>footer .button{width:130px;height:var(--control-height);border-radius:10px}
+.platform-subscription-history-skeleton .counter{width:28px;height:28px;margin-left:auto;border-radius:8px}
+.platform-subscription-history-skeleton .table-line{width:78%;height:11px}
+
+@media(max-width:900px){
+ .subscription-summary{grid-template-columns:1fr}
+ .subscription-summary-main{border-right:0;border-bottom:1px solid var(--line)}
+ .platform-subscription-grid{grid-template-columns:1fr}
+ .subscription-plan-preview{grid-template-columns:repeat(3,1fr)}
+}
+@media(max-width:600px){
+ .subscription-summary-facts{grid-template-columns:1fr}
+ .subscription-usage{grid-template-columns:1fr;padding:14px}
+ .subscription-summary-main{padding:18px 14px}
+ .subscription-editor form>.form-grid{padding:14px}
+ .subscription-plan-preview{grid-template-columns:1fr 1fr;margin:0 14px 14px}
+ .subscription-plan-preview div:last-child:nth-child(odd){grid-column:span 2}
+ .subscription-accept{margin:0 14px 14px}
+ .subscription-history table{min-width:650px}
+}

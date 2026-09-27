@@ -37,14 +37,14 @@ export function PlatformSubscriptionSkeleton(){
   return <>
     <div className="platform-subscription-grid" aria-label="Cargando suscripción" aria-busy="true">
       {Array.from({length:2},(_,index)=><section className="panel subscription-editor platform-subscription-card-skeleton" key={index}>
-        <header><div><i className="platform-skeleton-block eyebrow"/><i className="platform-skeleton-block heading"/></div><i className="platform-skeleton-block header-action"/></header>
+        <header><i className="platform-skeleton-block subscription-header-icon"/><div><i className="platform-skeleton-block eyebrow"/><i className="platform-skeleton-block heading"/></div></header>
         <div className="form-grid platform-subscription-skeleton-fields">{Array.from({length:6},(_,field)=><div className={field===0&&index===0?"span-2":""} key={field}><i className="platform-skeleton-block label"/><i className="platform-skeleton-block control"/></div>)}</div>
         {index===0&&<div className="subscription-plan-preview platform-subscription-preview-skeleton">{Array.from({length:5},(_,item)=><div key={item}><i className="platform-skeleton-block eyebrow"/><i className="platform-skeleton-block value"/></div>)}</div>}
         <footer><i className="platform-skeleton-block button"/></footer>
       </section>)}
     </div>
     <section className="panel subscription-history platform-subscription-history-skeleton" aria-label="Cargando historial de pagos" aria-busy="true">
-      <header><div><i className="platform-skeleton-block eyebrow"/><i className="platform-skeleton-block heading"/></div><i className="platform-skeleton-block counter"/></header>
+      <header><i className="platform-skeleton-block subscription-header-icon"/><div><i className="platform-skeleton-block eyebrow"/><i className="platform-skeleton-block heading"/></div><i className="platform-skeleton-block counter"/></header>
       <div className="table-wrap"><table><thead><tr><th>FECHA</th><th>MONTO</th><th>ESTADO</th><th>PROVEEDOR</th><th>REFERENCIA</th></tr></thead><tbody>{Array.from({length:4},(_,row)=><tr key={row}>{Array.from({length:5},(_,cell)=><td key={cell}><i className="platform-skeleton-block table-line"/></td>)}</tr>)}</tbody></table></div>
     </section>
   </>;
