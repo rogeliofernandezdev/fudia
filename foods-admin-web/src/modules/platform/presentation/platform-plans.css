@@ -11,11 +11,10 @@
 .plan-card{position:relative;display:flex;flex-direction:column;padding:0;overflow:hidden;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:var(--shadow)}
 .plan-card.recommended{border-color:var(--primary-600);box-shadow:0 0 0 1px var(--primary-600),var(--shadow)}
 
-.plan-card>header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:18px 20px 0}
+.plan-card>header{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:76px;padding:18px 20px 0}
 .plan-heading{display:flex;align-items:center;gap:12px;min-width:0}
 .plan-icon{display:grid;place-items:center;flex:0 0 auto;width:40px;height:40px;border-radius:11px;color:var(--primary-600);background:var(--primary-100)}
-.plan-heading small{display:flex;align-items:center;gap:8px;font-size:9px;font-weight:850;letter-spacing:.1em;color:var(--ink-500)}
-.plan-heading small em{display:inline-flex;align-items:center;height:18px;padding:0 7px;border-radius:99px;font-size:9px;font-style:normal;letter-spacing:.04em;color:var(--primary-700);background:var(--primary-100)}
+.plan-heading small{display:block;font-size:9px;font-weight:850;letter-spacing:.1em;text-transform:uppercase;color:var(--primary-600)}
 .plan-heading h2{margin:2px 0 0;font-size:17px;font-weight:800;letter-spacing:-.01em;color:var(--ink-950)}
 .plan-status{display:inline-flex;align-items:center;height:22px;padding:0 9px;border-radius:99px;font-size:10px;font-weight:750;white-space:nowrap;color:var(--ink-600);background:var(--cloud-100)}
 .plan-status.active{color:var(--brand-700);background:var(--brand-100)}

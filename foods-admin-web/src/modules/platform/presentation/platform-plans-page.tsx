@@ -57,7 +57,7 @@ export function PlatformPlansPage(){
        <header>
          <div className="plan-heading">
            <span className="plan-icon"><Icon name={plan.code==="emprende"?"store":plan.code==="escala"?"grid":"sales"} size={20}/></span>
-           <div><small>{plan.code.toUpperCase()}{recommended&&<em>Recomendado</em>}</small><h2>{plan.name}</h2></div>
+           <div>{recommended&&<small>Recomendado</small>}<h2>{plan.name}</h2></div>
          </div>
          <span className={plan.active?"plan-status active":"plan-status"}>{plan.active?"Disponible":"Inactivo"}</span>
        </header>
