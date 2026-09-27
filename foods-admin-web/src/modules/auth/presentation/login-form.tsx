@@ -53,7 +53,7 @@ export function LoginForm() {
           <div className="admin-auth-brand">
             <Image src="/assets/images/login.png" alt="fudIA" width={1536} height={1024} priority />
           </div>
-          <h1 className="admin-auth-sr-only" id="login-title">Iniciar sesión</h1>
+          <h1 className="sr-only" id="login-title">Iniciar sesión</h1>
           <form className="admin-auth-form" onSubmit={submit} noValidate>
             {error && <div className="admin-auth-error" role="alert"><Icon name="alert" size={17}/><span>{error}</span></div>}
             <FormField label="Correo electrónico" error={errors.email?.message}><div className={"admin-auth-field"+(errors.email?" has-error":"")}><Icon name="mail" size={17}/><Input className="admin-auth-input" id="admin-email" type="email" inputMode="email" autoComplete="username" placeholder="nombre@restaurante.com" aria-invalid={Boolean(errors.email)} {...register("email")} /></div></FormField>

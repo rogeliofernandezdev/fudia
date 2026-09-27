@@ -45,11 +45,20 @@
 .inventory-transfer-lines{display:grid;gap:10px}
 .inventory-transfer-lines-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .inventory-transfer-lines-head b{font-size:12px;font-weight:800;color:var(--ink-950)}
-.inventory-transfer-line{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(96px,.6fr) minmax(110px,.7fr) var(--control-height);align-items:start;gap:10px;padding:12px;border:1px solid var(--line);border-radius:10px;background:#fafbff}
-.inventory-transfer-available{display:grid;gap:5px;min-width:0}
-.inventory-transfer-available small{font-size:11px;font-weight:700;color:var(--ink-950)}
-.inventory-transfer-available b{display:flex;align-items:center;height:var(--control-height);font-size:11px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--ink-600);white-space:nowrap}
-.inventory-transfer-line-actions{display:grid;align-content:start;padding-top:calc(11px * 1.15 + 5px)}
+.inventory-transfer-modal .table-wrap table{min-width:0}
+.inventory-transfer-table th{height:36px;padding:0 10px}
+.inventory-transfer-table th:last-child{width:calc(var(--control-height) + 20px)}
+.inventory-transfer-table .table-actions{min-width:0}
+.inventory-transfer-table td{height:auto;padding:8px 10px;vertical-align:middle;white-space:normal}
+.inventory-transfer-table td:last-child{text-align:center}
+.inventory-transfer-table td .field-error{display:block;margin-top:4px}
+.inventory-transfer-table tr.has-error td{background:var(--danger-50)}
+.inventory-transfer-table .ds-select{min-width:200px}
+.inventory-transfer-available{font-size:11px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--ink-600);white-space:nowrap!important}
+.inventory-transfer-quantity{display:flex;align-items:center;gap:8px;min-width:150px}
+.inventory-transfer-quantity .ds-input{width:96px}
+.inventory-transfer-quantity span{font-size:11px;font-weight:700;color:var(--ink-500);white-space:nowrap}
+.inventory-transfer-hint{display:none;margin-top:4px;font-size:10px;font-weight:600;line-height:1.3;color:var(--ink-500)}
 .inventory-transfer-empty{margin:0;padding:14px;border:1px dashed var(--line);border-radius:10px;font-size:11px;color:var(--ink-500);text-align:center}
 
 .kardex-reason{display:grid;gap:2px}
@@ -64,12 +73,13 @@
  .inventory-transfer-modal form{min-height:0;flex:1;display:flex;flex-direction:column}
  .inventory-transfer-route{grid-template-columns:1fr}
  .inventory-transfer-arrow{display:none}
- .inventory-transfer-line{grid-template-columns:minmax(0,1fr) var(--control-height)}
- .inventory-transfer-line>.form-field{grid-column:1}
- .inventory-transfer-available{grid-column:1;grid-auto-flow:column;justify-content:start;align-items:center;gap:8px}
- .inventory-transfer-available b{height:auto}
- .inventory-transfer-line-actions{grid-column:2;grid-row:1}
  .inventory-transfer-lines-head{flex-wrap:wrap}
+ .inventory-transfer-table .ds-select{min-width:150px}
+ .inventory-transfer-table th:nth-child(2),.inventory-transfer-table td.inventory-transfer-available,.inventory-transfer-quantity span{display:none}
+ .inventory-transfer-hint{display:block}
+ .inventory-transfer-quantity{min-width:0}
+ .inventory-transfer-quantity .ds-input{width:84px}
+ .inventory-transfer-table td{padding:8px 6px}
  .inventory-transfer-modal footer .button{flex:1}
  .inventory-adjustment-body{max-height:none;flex:1;padding:14px}
  .inventory-adjustment-modal form{min-height:0;flex:1;display:flex;flex-direction:column}

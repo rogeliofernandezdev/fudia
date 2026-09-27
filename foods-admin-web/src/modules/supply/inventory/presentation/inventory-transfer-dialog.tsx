@@ -64,23 +64,22 @@ export function InventoryTransferDialog({items,locations,currentLocationId,busy,
               <b id="inventory-transfer-lines-title">Artículos a transferir</b>
               <Button type="button" kind="secondary" icon="plus" onClick={add} disabled={busy||fields.length>=items.length}>Agregar artículo</Button>
             </div>
-            {fields.map((field,index)=>{
-              const line=lines[index];
-              const item=items.find(option=>option.id===line?.inventoryItemId);
-              const lineErrors=errors.items?.[index];
-              return <div className="inventory-transfer-line" key={field.id}>
-                <FormField label="Artículo" error={lineErrors?.inventoryItemId?.message}>
-                  <Select {...register(`items.${index}.inventoryItemId`)}>
+            {fields.length>0&&<div className="table-wrap"><table className="inventory-transfer-table">
+              <thead><tr><th>ARTÍCULO</th><th>DISPONIBLE</th><th>CANTIDAD</th><th><span className="sr-only">Acciones</span></th></tr></thead>
+              <tbody>{fields.map((field,index)=>{
+                const line=lines[index];
+                const item=items.find(option=>option.id===line?.inventoryItemId);
+                const lineErrors=errors.items?.[index];
+                return <tr key={field.id} className={lineErrors?"has-error":""}>
+                  <td><Select aria-label="Artículo" aria-invalid={Boolean(lineErrors?.inventoryItemId)} {...register(`items.${index}.inventoryItemId`)}>
                     {items.map(option=><option key={option.id} value={option.id} disabled={selectedIds.has(option.id)&&option.id!==line?.inventoryItemId}>{option.name}{option.kind==="ingredient"?" · Insumo":""}</option>)}
-                  </Select>
-                </FormField>
-                <div className="inventory-transfer-available"><small>Disponible</small><b>{item?amount(item.quantity)+" "+item.unit:"—"}</b></div>
-                <FormField label={"Cantidad"+(item?" ("+item.unit+")":"")} error={lineErrors?.quantity?.message}>
-                  <Input type="number" min="0.001" step="0.001" inputMode="decimal" placeholder="0" {...register(`items.${index}.quantity`)}/>
-                </FormField>
-                <div className="inventory-transfer-line-actions"><RowActionButton action="remove" label="Quitar artículo" onClick={()=>remove(index)} disabled={busy||fields.length===1}/></div>
-              </div>;
-            })}
+                  </Select>{lineErrors?.inventoryItemId?.message&&<small className="field-error">{lineErrors.inventoryItemId.message}</small>}</td>
+                  <td className="inventory-transfer-available">{item?amount(item.quantity)+" "+item.unit:"—"}</td>
+                  <td><div className="inventory-transfer-quantity"><Input type="number" min="0.001" step="0.001" inputMode="decimal" placeholder="0" aria-label={"Cantidad"+(item?" en "+item.unit:"")} aria-invalid={Boolean(lineErrors?.quantity)} {...register(`items.${index}.quantity`)}/><span>{item?.unit}</span></div>{item&&<small className="inventory-transfer-hint">Disponible {amount(item.quantity)} {item.unit}</small>}{lineErrors?.quantity?.message&&<small className="field-error">{lineErrors.quantity.message}</small>}</td>
+                  <td><div className="table-actions"><RowActionButton action="remove" label="Quitar artículo" onClick={()=>remove(index)} disabled={busy||fields.length===1}/></div></td>
+                </tr>;
+              })}</tbody>
+            </table></div>}
             {!fields.length&&<p className="inventory-transfer-empty">{items.length?"Agrega el primer artículo que quieres mover.":"Este local no tiene artículos con stock para transferir."}</p>}
             {errors.items?.message&&<small className="field-error" role="alert">{errors.items.message}</small>}
           </section>
