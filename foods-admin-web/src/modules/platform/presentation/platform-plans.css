@@ -29,26 +29,15 @@
 .plan-price>div b{font-size:30px;line-height:1;letter-spacing:-.03em;font-variant-numeric:tabular-nums;color:var(--ink-950)}
 .plan-price>div em{font-size:12px;font-style:normal;color:var(--ink-500)}
 .plan-price>p{margin:0;font-size:11px;line-height:1.45;color:var(--ink-600)}
-.plan-description{min-height:0;margin:0;padding:12px 20px 18px;font-size:12px;line-height:1.55;color:var(--ink-600)}
+.plan-description{min-height:0;margin:0;padding:12px 20px 12px;font-size:12px;line-height:1.55;color:var(--ink-600)}
 
-.plan-capacity{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--cloud-50)}
-.plan-capacity>div{display:grid;grid-template-columns:28px 1fr;gap:8px;align-items:center;padding:12px 10px 12px 12px;min-width:0}
-.plan-capacity>div+div{border-left:1px solid var(--line)}
-.plan-capacity>div>span{display:grid;place-items:center;width:28px;height:28px;border-radius:8px;color:var(--ink-600);background:var(--surface);border:1px solid var(--line)}
-.plan-capacity small{display:block;font-size:9px;font-weight:800;letter-spacing:.07em;color:var(--ink-500)}
-.plan-capacity b{display:block;margin-top:2px;font-size:13px;font-variant-numeric:tabular-nums;color:var(--ink-950);white-space:nowrap}
-
-.plan-includes>header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:14px 20px 6px}
-.plan-includes>header h3{margin:0;font-size:12px;font-weight:800;color:var(--ink-950)}
-.plan-includes>header>span{font-size:11px;font-weight:700;color:var(--ink-600)}
-.plan-feature-list{display:grid;padding:0 20px 10px}
-.plan-feature-list>div{display:grid;grid-template-columns:20px 1fr;gap:10px;align-items:start;padding:9px 0;border-bottom:1px solid var(--cloud-100)}
-.plan-feature-list>div:last-child{border-bottom:0}
-.plan-feature-list>div>span{display:grid;place-items:center;width:20px;height:20px;margin-top:1px;border-radius:50%;color:var(--brand-700);background:var(--brand-100)}
-.plan-feature-list>div>div{display:grid;gap:2px;min-width:0}
-.plan-feature-list b{font-size:12px;color:var(--ink-950)}
-.plan-feature-list small{font-size:11px;line-height:1.4;color:var(--ink-600)}
-
+.plan-capacity{display:flex;flex-wrap:wrap;gap:6px 16px;margin:0;padding:0 20px 16px;font-size:11px;font-weight:700;color:var(--ink-600)}
+.plan-capacity span{display:inline-flex;align-items:center;gap:6px}
+.plan-capacity svg{color:var(--ink-500)}
+.plan-includes{padding:14px 20px 18px;border-top:1px solid var(--line)}
+.plan-includes>header h3{margin:0 0 10px;font-size:11px;font-weight:800;letter-spacing:.02em;color:var(--ink-500)}
+.plan-feature-list{display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:0;list-style:none}
+.plan-feature-list li{display:inline-flex;align-items:center;height:26px;padding:0 10px;border-radius:99px;font-size:11px;font-weight:700;color:var(--ink-700);background:var(--cloud-100)}
 .plan-card>footer{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px 12px 20px;border-top:1px solid var(--line);background:var(--cloud-50)}
 .plan-card>footer>div{display:grid;gap:2px}
 .plan-card>footer small{font-size:10px;font-weight:700;color:var(--ink-500)}
@@ -73,15 +62,9 @@
 .platform-skeleton-copy i:last-child{width:68%}
 .platform-plan-skeleton .plan-price .price{width:58%;height:30px}
 .platform-plan-skeleton .plan-price .caption{width:70%;height:10px}
-.platform-plan-skeleton .capacity-icon{width:28px;height:28px;border-radius:8px}
-.platform-plan-skeleton .plan-capacity span{display:grid;gap:5px}
-.platform-plan-skeleton .plan-capacity .value{width:34px;height:12px}
-.platform-plan-skeleton .section-title{width:70px;height:12px}
-.platform-plan-skeleton .counter{width:70px;height:11px}
-.platform-plan-skeleton .feature-icon{width:20px;height:20px;border-radius:50%}
-.platform-plan-skeleton .plan-feature-list span{display:grid;gap:6px}
-.platform-plan-skeleton .feature-title{width:45%;height:11px}
-.platform-plan-skeleton .feature-copy{width:80%;height:10px}
+.platform-plan-skeleton .plan-capacity i{width:90px;height:11px}
+.platform-plan-skeleton .section-title{width:110px;height:11px;margin-bottom:10px}
+.platform-plan-skeleton .plan-feature-list i{width:76px;height:26px;border-radius:99px}
 .platform-plan-skeleton .footer-copy{width:72px;height:11px}
 .platform-plan-skeleton .footer-action{width:120px;height:var(--control-height);border-radius:10px}
 

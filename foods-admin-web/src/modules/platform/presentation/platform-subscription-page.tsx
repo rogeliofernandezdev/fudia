@@ -75,7 +75,7 @@ function SubscriptionWorkspace({current,plans,country,timeZone}:{current:Organiz
   <SubscriptionSummary current={current} country={country} timeZone={timeZone}/>
   <div className="platform-subscription-grid">
    <section className="panel subscription-editor">
-    <header><span className="subscription-header-icon"><Icon name="contract" size={18}/></span><div><small>Contrato</small><h2>Plan y ciclo</h2></div></header>
+    <header><div><small>Contrato</small><h2>Plan y ciclo</h2></div></header>
     <form onSubmit={e=>{e.preventDefault();save.mutate()}}>
      <div className="form-grid">
       <label className="span-2">Plan<Select value={draft.planId} onChange={e=>setDraft({...draft,planId:e.target.value,termsAccepted:false})}>{availablePlans.map(plan=><option value={plan.id} key={plan.id}>{plan.name+" · "+plan.code}</option>)}</Select></label>
@@ -91,7 +91,7 @@ function SubscriptionWorkspace({current,plans,country,timeZone}:{current:Organiz
    </section>
 
    <section className="panel subscription-editor">
-    <header><span className="subscription-header-icon"><Icon name="payment" size={18}/></span><div><small>Cobro SaaS</small><h2>Registrar pago</h2></div></header>
+    <header><div><small>Cobro SaaS</small><h2>Registrar pago</h2></div></header>
     <form onSubmit={e=>{e.preventDefault();pay.mutate()}}>
      <div className="form-grid">
       <label>Monto<Input required type="number" min="0" step="0.01" value={payment.amount} onChange={e=>setPayment({...payment,amount:e.target.value})}/></label>
@@ -107,7 +107,7 @@ function SubscriptionWorkspace({current,plans,country,timeZone}:{current:Organiz
   </div>
 
   <section className="panel subscription-history">
-   <header><span className="subscription-header-icon"><Icon name="ledger" size={18}/></span><div><small>Historial</small><h2>Pagos de suscripción</h2></div><b>{current.payments.length}</b></header>
+   <header><div><small>Historial</small><h2>Pagos de suscripción</h2></div><b>{current.payments.length}</b></header>
    {current.payments.length?<div className="table-wrap"><table><thead><tr><th>FECHA</th><th>MONTO</th><th>ESTADO</th><th>PROVEEDOR</th><th>REFERENCIA</th></tr></thead><tbody>{current.payments.map(item=><tr key={item.id}><td>{dateLabel(item.paidAt??item.createdAt,country,timeZone)}</td><td><b>{item.currency+" "+Number(item.amount).toFixed(2)}</b></td><td><span className={"subscription-pay-status "+item.status}>{paymentStatus(item.status)}</span></td><td>{item.provider}</td><td>{item.externalReference??"—"}</td></tr>)}</tbody></table></div>:<div className="subscription-empty">Todavía no hay pagos registrados para esta empresa.</div>}
   </section>
  </>;

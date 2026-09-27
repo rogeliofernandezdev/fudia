@@ -69,19 +69,16 @@ export function PlatformPlansPage(){
        </header>
        <div className="plan-price">
          <div><span>{plan.currency}</span><b>{price.toFixed(2)}</b><em>{billing==="annual"?"/ año":"/ mes"}</em></div>
-         {billing==="annual"?<p>Equivale a {plan.currency+" "+equivalent.toFixed(2)} al mes{savings>0?" · ahorras "+plan.currency+" "+savings.toFixed(2):""}</p>:<p>{plan.trialDays?plan.trialDays+" días de prueba gratuita":"Sin periodo de prueba"}</p>}
+         <p>{billing==="annual"?"Equivale a "+plan.currency+" "+equivalent.toFixed(2)+" al mes"+(savings>0?" · ahorras "+plan.currency+" "+savings.toFixed(2):""):plan.trialDays?plan.trialDays+" días de prueba gratuita":"Sin periodo de prueba"}</p>
        </div>
        <p className="plan-description">{plan.description||"Sin descripción comercial."}</p>
-       <div className="plan-capacity">
-         <div><span><Icon name="store" size={14}/></span><div><small>LOCALES</small><b>{plan.maxLocations??"∞"}</b></div></div>
-         <div><span><Icon name="users" size={14}/></span><div><small>USUARIOS</small><b>{plan.maxUsers??"∞"}</b></div></div>
-         <div><span><Icon name="clock" size={14}/></span><div><small>PRUEBA</small><b>{plan.trialDays?plan.trialDays+" días":"No"}</b></div></div>
-       </div>
+       <p className="plan-capacity">
+         <span><Icon name="store" size={14}/>{plan.maxLocations??"Sin límite de"} {plan.maxLocations===1?"local":"locales"}</span>
+         <span><Icon name="users" size={14}/>{plan.maxUsers??"Sin límite de"} usuarios</span>
+       </p>
        <section className="plan-includes">
-         <header><h3>Incluye</h3><span>{included.length} módulos</span></header>
-         <div className="plan-feature-list">
-           {included.map(module=><div key={module.key}><span><Icon name="check" size={11}/></span><div><b>{module.name}</b><small>{module.description}</small></div></div>)}
-         </div>
+         <header><h3>Incluye {included.length} módulos</h3></header>
+         <ul className="plan-feature-list">{included.map(module=><li key={module.key} title={module.description}>{module.name}</li>)}</ul>
        </section>
        <footer>
          <div><small>Condiciones</small><b>{plan.termsVersion}</b></div>
