@@ -23,12 +23,12 @@ const blank:PlatformOnboardingDraft={
  adminName:"",adminEmail:"",adminPassword:"",
 };
 
-const steps:Array<{key:string;title:string;icon:IconName;desc:string;heading:string}>=[
-  {key:"empresa",title:"Empresa",icon:"store",desc:"Razón social, RUC y zona horaria",heading:"Datos legales"},
-  {key:"plan",title:"Plan y contrato",icon:"settings",desc:"Suscripción, ciclo y condiciones",heading:"Suscripción SaaS"},
-  {key:"fiscal",title:"Fiscal",icon:"receipt",desc:"País, moneda e impuesto",heading:"Perfil fiscal del primer local"},
-  {key:"local",title:"Primer local",icon:"box",desc:"Dirección, teléfono y horario",heading:"Sede inicial"},
-  {key:"admin",title:"Administrador",icon:"users",desc:"Responsable principal de la organización",heading:"Administrador de empresa"},
+const steps:Array<{key:string;title:string;icon:IconName;heading:string}>=[
+  {key:"empresa",title:"Empresa",icon:"store",heading:"Datos legales"},
+  {key:"plan",title:"Plan y contrato",icon:"settings",heading:"Suscripción SaaS"},
+  {key:"fiscal",title:"Fiscal",icon:"receipt",heading:"Perfil fiscal del primer local"},
+  {key:"local",title:"Primer local",icon:"box",heading:"Sede inicial"},
+  {key:"admin",title:"Administrador",icon:"users",heading:"Administrador de empresa"},
 ];
 const lastStep=steps.length-1;
 
@@ -85,7 +85,7 @@ export function PlatformOnboardingPage(){
     <nav className="wizard-steps" aria-label="Pasos del registro">
       {steps.map((s,i)=><button key={s.key} type="button" className={"wizard-step"+(i===step?" active":i<reached?" done":"")} onClick={()=>goTo(i)} disabled={i>reached||save.isPending} aria-current={i===step?"step":undefined}>
         <span className="wizard-step-icon">{i<reached&&i!==step?<Icon name="check" size={16}/>:<Icon name={s.icon} size={16}/>}</span>
-        <span className="wizard-step-label"><b>{s.title}</b><small>{s.desc}</small></span>
+        <span className="wizard-step-label">{s.title}</span>
       </button>)}
     </nav>
 
@@ -115,7 +115,7 @@ export function PlatformOnboardingPage(){
           </dl>}
           <label className={"onboarding-terms"+(invalid("termsAccepted")?" has-error":"")}>
             <input type="checkbox" {...register("termsAccepted")}/><span aria-hidden="true"><Icon name="check" size={13}/></span>
-            <div><b>Condiciones aceptadas por el cliente</b><small>Confirma que la contratación y la versión {selectedPlan?.termsVersion??"vigente"} fueron aceptadas antes de crear la empresa.</small>{err("termsAccepted")&&<small className="field-error" role="alert">{err("termsAccepted")}</small>}</div>
+            <div><b>Condiciones aceptadas por el cliente</b>{err("termsAccepted")&&<small className="field-error" role="alert">{err("termsAccepted")}</small>}</div>
           </label>
         </>}
 
