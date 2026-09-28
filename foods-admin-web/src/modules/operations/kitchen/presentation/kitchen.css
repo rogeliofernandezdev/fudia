@@ -50,8 +50,11 @@
 .kitchen-ticket-item>div{display:grid;gap:2px;min-width:0}
 .kitchen-ticket-item span{color:var(--ink-950);font-size:12px;font-weight:800;line-height:1.3}
 .kitchen-ticket-item small{color:var(--ink-600);font-size:10px;line-height:1.35}
-.kitchen-ticket-item em{color:var(--warning-600);font-size:10px;font-style:normal;font-weight:800;line-height:1.35}
-.kitchen-ticket-note{margin:0;color:var(--warning-600);font-size:10px;font-weight:700;line-height:1.4}
+.kitchen-ticket-item em{display:inline-flex;align-items:center;gap:4px;width:fit-content;max-width:100%;margin-top:2px;padding:3px 7px;border-radius:6px;background:var(--warning-50);color:var(--warning-600);font-size:10px;font-style:normal;font-weight:800;line-height:1.35}
+.kitchen-ticket-item em svg{flex:0 0 auto}
+.kitchen-ticket-note{display:flex;align-items:flex-start;gap:6px;margin:0;padding:8px 10px;border-radius:6px;background:var(--warning-50);color:var(--warning-600);font-size:10px;font-weight:700;line-height:1.4}
+.kitchen-ticket-note svg{flex:0 0 auto;margin-top:1px}
+.kitchen-ticket-note b{font-weight:900}
 .kitchen-ticket-action{width:100%;height:var(--control-height);min-height:var(--control-height);justify-content:center;border-radius:6px}
 .kitchen-ready-label{display:flex;align-items:center;justify-content:center;gap:6px;min-height:var(--control-height);color:var(--kds-ready-dark);font-size:11px;font-weight:850}
 

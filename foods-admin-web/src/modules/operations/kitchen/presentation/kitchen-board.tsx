@@ -164,12 +164,12 @@ export function KitchenBoard(){
                     <div>
                       <span>{item.name}</span>
                       {(item.selections??[]).map(selection=><small key={selection.groupId+selection.productId}>{selection.groupName}: {selection.name}</small>)}
-                      {item.note&&<em>{item.note}</em>}
+                      {item.note&&<em><Icon name="edit" size={11}/>{item.note}</em>}
                     </div>
                   </div>)}
                 </div>
 
-                {ticket.notes&&<p className="kitchen-ticket-note">{ticket.notes}</p>}
+                {ticket.notes&&<p className="kitchen-ticket-note"><Icon name="edit" size={12}/><span><b>Nota del pedido:</b> {ticket.notes}</span></p>}
 
                 {canManage&&next?<Button className="kitchen-ticket-action" kind="primary" icon={next==="listo"?"check":"cookingPot"} disabled={advance.isPending} onClick={()=>advance.mutate({ticket,status:next})}>{busyId===ticket.id?"Actualizando…":next==="preparando"?"Iniciar":"Marcar listo"}</Button>:ticket.status==="listo"?<span className="kitchen-ready-label"><Icon name="check" size={12}/>Listo para entregar</span>:null}
               </article>;
