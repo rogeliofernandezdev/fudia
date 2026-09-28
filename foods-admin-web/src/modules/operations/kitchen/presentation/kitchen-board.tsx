@@ -47,21 +47,21 @@ function urgency(ticket:KitchenTicket,now:number){
 }
 
 function formatElapsed(minutes:number){
+  if(minutes<1)return "Ahora";
   if(minutes<60)return `${minutes} min`;
   const hours=Math.floor(minutes/60);
   const remainingMinutes=minutes%60;
   if(hours<24)return remainingMinutes?`${hours} h ${remainingMinutes} min`:`${hours} h`;
   const days=Math.floor(hours/24);
-  const remainingHours=hours%24;
-  return remainingHours?`${days} d ${remainingHours} h`:`${days} d`;
+  return days===1?"1 día":`${days} días`;
 }
 
-function urgencyCopy(tone:ReturnType<typeof urgency>){
-  if(tone==="late")return {label:"Con demora",icon:"alert" as IconName};
-  if(tone==="warning")return {label:"Por vencer",icon:"alert" as IconName};
-  if(tone==="ready")return {label:"Listo",icon:"check" as IconName};
-  if(tone==="fresh")return {label:"A tiempo",icon:"clock" as IconName};
-  return {label:"En cola",icon:"clock" as IconName};
+function urgencyCopy(tone:ReturnType<typeof urgency>):{label:string|null;icon:IconName}{
+  if(tone==="late")return {label:"Con demora",icon:"alert"};
+  if(tone==="warning")return {label:"Por vencer",icon:"alert"};
+  if(tone==="ready")return {label:"Listo",icon:"check"};
+  if(tone==="fresh")return {label:"A tiempo",icon:"clock"};
+  return {label:null,icon:"clock"};
 }
 
 function priority(ticket:KitchenTicket,now:number){
@@ -155,7 +155,7 @@ export function KitchenBoard(){
                     <b>{subject}</b>
                     <small>{ticket.code}{ticket.targetMinutes&&ticket.status!=="listo"?` · Objetivo ${ticket.targetMinutes} min`:""}</small>
                   </div>
-                  <span className={`kitchen-ticket-time ${tone}`}><Icon name={urgencyMeta.icon} size={12}/><strong>{elapsedText}</strong><span>· {urgencyMeta.label}</span></span>
+                  <span className={`kitchen-ticket-time ${tone}`}><Icon name={urgencyMeta.icon} size={12}/><strong>{elapsedText}</strong>{urgencyMeta.label&&<span>· {urgencyMeta.label}</span>}</span>
                 </div>
 
                 <div className="kitchen-ticket-items">
