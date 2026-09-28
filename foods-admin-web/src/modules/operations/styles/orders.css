@@ -1600,6 +1600,21 @@
     overflow:hidden;
   }
 
+  /* Todas las pestañas visibles: rejilla de 3 columnas, sin scroll */
+  .orders-tabs{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:6px;
+    padding:8px;
+    overflow:visible;
+  }
+
+  .orders-tab{
+    min-width:0;
+    gap:7px;
+    padding:0 10px;
+  }
+
   .orders-panel .toolbar{
     grid-template-columns:1fr;
   }
@@ -1699,14 +1714,7 @@
   }
 
   .orders-tabs{
-    gap:6px;
-    padding:8px;
-  }
-
-  .orders-tab{
-    flex:0 0 auto;
-    min-width:124px;
-    padding:0 12px;
+    grid-template-columns:repeat(2,minmax(0,1fr));
   }
 
   .order-detail{
