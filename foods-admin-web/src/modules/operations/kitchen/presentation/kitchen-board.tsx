@@ -163,7 +163,7 @@ export function KitchenBoard(){
                 <div className="kitchen-ticket-head">
                   <div className="kitchen-ticket-identity">
                     <b>{subject}</b>
-                    <small><Icon name={channelIcons[ticket.channel]??"receipt"} size={12}/>{ticket.code} · {channelLabel(ticket.channel)}</small>
+                    <small><Icon name={channelIcons[ticket.channel]??"receipt"} size={12}/>{ticket.code} · {channelLabel(ticket.channel)}{ticket.roundNumber>1&&<span className="kitchen-round">Ronda {ticket.roundNumber}</span>}</small>
                   </div>
                   <div className={`kitchen-ticket-time ${tone}`}>
                     <strong>{elapsedText}</strong>
