@@ -6,110 +6,195 @@
 
 .orders-panel{display:grid;gap:18px}
 
-/* ── Channels Filter Bar ── */
-.orders-channels{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+/* ── Barra superior: tabs de canal + filtros ── */
+.orders-bar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+}
+
+/* Tabs de canal: control segmentado sobre pista neutra.
+   El tab activo se eleva en blanco; el icono toma el color del canal. */
+.orders-channels{
+  display:inline-flex;
+  align-items:center;
+  gap:2px;
+  max-width:100%;
+  padding:4px;
+  border:1px solid var(--line, #e4e7ec);
+  border-radius:12px;
+  background:var(--cloud-100, #f3f6fa);
+  overflow-x:auto;
+  scroll-snap-type:x proximity;
+  scrollbar-width:none;
+}
+.orders-channels::-webkit-scrollbar{display:none}
 .orders-ch{
-  min-height:var(--control-height);
-  height:var(--control-height);
-  padding:0 14px;
+  position:relative;
   display:inline-flex;
   align-items:center;
   gap:8px;
-  border:1px solid #e4e7ec;
-  border-radius:6px;
-  background:#fff;
+  height:calc(var(--control-height) - 2px);
+  padding:0 12px 0 6px;
+  border:0;
+  border-radius:8px;
+  background:transparent;
   color:var(--ink-600, #475467);
   font-size:11px;
   font-weight:750;
+  line-height:1;
+  white-space:nowrap;
+  flex-shrink:0;
+  scroll-snap-align:start;
   cursor:pointer;
-  transition:all .15s ease;
+  transition:background .15s ease,color .15s ease,box-shadow .15s ease;
 }
 .orders-ch:hover{
-  border-color:#b4c2ea;
-  color:var(--ops-700, #3946b8);
-  background:#fafbff;
-  transform:translateY(-1px);
+  color:var(--ink-950, #101828);
+  background:rgba(255,255,255,.72);
 }
 .orders-ch.active{
   color:var(--ops-700, #3946b8);
-  background:var(--primary-100, #eef0ff);
-  border-color:#4654cd55;
-  box-shadow:0 0 0 2px rgba(70,84,205,.12);
+  background:var(--surface, #fff);
+  box-shadow:0 1px 2px rgba(16,24,40,.08),0 3px 10px rgba(16,24,40,.06);
 }
+.orders-ch-icon{
+  width:26px;
+  height:26px;
+  display:grid;
+  place-items:center;
+  border-radius:7px;
+  background:var(--surface, #fff);
+  color:var(--ink-500, #667085);
+  box-shadow:inset 0 0 0 1px var(--line, #e4e7ec);
+  transition:background .15s ease,color .15s ease,box-shadow .15s ease;
+}
+.orders-ch:hover .orders-ch-icon{color:var(--ink-700, #344054)}
+.orders-ch.active .orders-ch-icon{
+  box-shadow:none;
+  background:var(--ops-100, #eef0ff);
+  color:var(--ops-700, #3946b8);
+}
+/* Color de canal en el tab activo (misma semántica que las tarjetas) */
+.orders-ch.ch-whatsapp.active .orders-ch-icon{background:var(--digital-100, #f2ecff);color:var(--digital-700, #5421a8)}
+.orders-ch.ch-delivery.active .orders-ch-icon{background:var(--brand-100, #e8f7f1);color:var(--brand-700, #16875f)}
+.orders-ch.ch-recojo.active .orders-ch-icon{background:var(--warning-50, #fff3e8);color:#b45309}
+.orders-ch.ch-mostrador.active .orders-ch-icon{background:#f1f5f9;color:var(--ink-600, #475467)}
 .orders-ch b{
   min-width:20px;
   height:20px;
   padding:0 6px;
   display:inline-grid;
   place-items:center;
-  border-radius:6px;
-  background:var(--cloud-100, #edf1f7);
-  font-size:11px;
-  font-weight:800;
+  border-radius:999px;
+  background:var(--line, #e4e7ec);
   color:var(--ink-600, #475467);
+  font-size:10px;
+  font-weight:800;
   font-variant-numeric:tabular-nums;
-  transition:all .15s;
+  transition:background .15s ease,color .15s ease;
+}
+.orders-ch[data-empty="true"] b{
+  background:transparent;
+  color:var(--ink-400, #98a2b3);
+  box-shadow:inset 0 0 0 1px var(--line, #e4e7ec);
 }
 .orders-ch.active b{
-  background:#fff;
-  color:var(--ops-700, #3946b8);
-  box-shadow:0 1px 3px rgba(70,84,205,.18);
+  background:var(--ops-500, #4654cd);
+  color:#fff;
+  box-shadow:none;
 }
 .orders-ch svg{flex-shrink:0}
 
-/* ── Toolbar ── */
-.orders-panel .toolbar{
+/* Filtros: búsqueda y estado con la misma altura que los tabs */
+.orders-filters{
   display:flex;
-  gap:12px;
   align-items:center;
-  padding:12px 14px;
-  background:#fff;
-  border:1.5px solid var(--line, #e4e7ec);
-  border-radius:12px;
-  box-shadow:0 1px 3px rgba(16,24,40,.03);
+  justify-content:flex-end;
+  gap:8px;
+  flex:1 1 320px;
+  min-width:0;
 }
-.orders-panel .toolbar label{
+.orders-search{
   display:flex;
   align-items:center;
-  gap:10px;
+  gap:8px;
+  flex:1 1 220px;
+  min-width:180px;
+  max-width:360px;
   height:var(--control-height);
-  flex:1;
-  padding:0 12px;
-  border:1px solid #e4e7ec;
+  padding:0 8px 0 12px;
+  border:1px solid var(--line, #e4e7ec);
   border-radius:6px;
-  background:#fff;
+  background:var(--surface, #fff);
   color:var(--ink-400, #98a2b3);
-  transition:border-color .15s,background .15s,box-shadow .15s;
+  transition:border-color .15s ease,box-shadow .15s ease,color .15s ease;
 }
-.orders-panel .toolbar label:focus-within{
-  border-color:var(--ops-500, #5462d4);
+.orders-search:focus-within{
+  border-color:var(--ops-500, #4654cd);
   box-shadow:0 0 0 3px #2f5bc71f;
+  color:var(--ops-700, #3946b8);
 }
-.orders-panel .toolbar input{
+.orders-search input{
+  flex:1;
+  min-width:0;
   border:0;
   outline:0;
   background:transparent;
-  width:100%;
   font-size:11px;
   font-weight:600;
   color:var(--ink-950, #101828);
 }
-.orders-panel .toolbar input::placeholder{color:#98a2b3}
-.orders-panel .toolbar select{
-  height:var(--control-height);
-  min-width:170px;
-  padding:0 30px 0 12px;
-  border:1px solid #e4e7ec;
+.orders-search input::placeholder{color:var(--ink-400, #98a2b3)}
+.orders-search-clear{
+  width:24px;
+  height:24px;
+  display:grid;
+  place-items:center;
+  border:0;
   border-radius:6px;
-  background:#fff;
+  background:var(--cloud-100, #f3f6fa);
+  color:var(--ink-600, #475467);
+  cursor:pointer;
+  transition:background .15s ease;
+}
+.orders-search-clear:hover{background:var(--line, #e4e7ec)}
+.orders-status{
+  position:relative;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  height:var(--control-height);
+  padding:0 10px 0 12px;
+  border:1px solid var(--line, #e4e7ec);
+  border-radius:6px;
+  background:var(--surface, #fff);
+  color:var(--ink-600, #475467);
+  transition:border-color .15s ease,box-shadow .15s ease;
+}
+.orders-status:focus-within{
+  border-color:var(--ops-500, #4654cd);
+  box-shadow:0 0 0 3px #2f5bc71f;
+}
+.orders-status select{
+  appearance:none;
+  height:100%;
+  padding:0 18px 0 0;
+  border:0;
+  outline:0;
+  background:transparent;
   color:var(--ink-700, #344054);
   font-size:11px;
   font-weight:700;
-  transition:border-color .15s,box-shadow .15s;
+  cursor:pointer;
 }
-.orders-panel .toolbar select:focus{
-  border-color:var(--ops-500, #5462d4);
-  box-shadow:0 0 0 3px #2f5bc71f;
+.orders-status>svg:last-child{
+  position:absolute;
+  right:8px;
+  color:var(--ink-400, #98a2b3);
+  pointer-events:none;
 }
 
 /* ── Orders List and Modern Cards ── */
@@ -120,8 +205,8 @@
   justify-content:space-between;
   gap:16px;
   padding:14px 18px;
-  border:1.5px solid #e2e8f0;
-  border-left:5px solid #94a3b8;
+  border:1px solid var(--line, #e4e7ec);
+  border-left:4px solid #94a3b8;
   border-radius:14px;
   background:#fff;
   cursor:pointer;
@@ -129,9 +214,12 @@
   transition:all .16s ease;
 }
 .order-card:hover{
-  border-color:#cbd5e1;
+  border-color:var(--line-strong, #d5dce7);
   box-shadow:0 4px 18px rgba(16,24,40,.07),0 1px 3px rgba(16,24,40,.04);
-  transform:translateY(-1px);
+}
+.order-card:focus-visible{
+  outline:3px solid #2f5bc72b;
+  outline-offset:2px;
 }
 .order-card.done{opacity:.68}
 
@@ -256,7 +344,6 @@
 }
 .order-advance:hover:not(:disabled){
   background:var(--primary-700, #3946b8);
-  transform:translateX(1px);
 }
 .order-done{display:inline-flex;align-items:center;gap:5px;color:var(--brand-700, #16875f);font-size:12px;font-weight:800}
 
@@ -1326,6 +1413,10 @@
 
 /* ── Responsive ── */
 @media (max-width:960px){
+  .orders-bar{flex-direction:column;align-items:stretch}
+  .orders-channels{width:100%}
+  .orders-filters{flex-basis:auto;justify-content:stretch}
+  .orders-search{max-width:none}
   .comanda-body{grid-template-columns:1fr}
   .comanda-foot{display:none}
   .comanda-menu{padding-bottom:80px}
@@ -1411,8 +1502,10 @@
   .comanda-title{gap:0}
   .comanda-title small{display:none}
   .comanda-title h2{font-size:16px}
-  .orders-channels{overflow-x:auto;flex-wrap:nowrap;padding-bottom:4px}
-  .orders-ch{white-space:nowrap;flex-shrink:0}
+  .orders-channels{border-radius:10px}
+  .orders-ch{padding:0 10px 0 5px}
+  .orders-filters{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+  .orders-search{min-width:0}
   .order-card{flex-direction:column;align-items:stretch;gap:12px}
   .order-card-right{justify-content:space-between;align-items:center}
   .order-detail-summary{grid-template-columns:repeat(2,1fr)}

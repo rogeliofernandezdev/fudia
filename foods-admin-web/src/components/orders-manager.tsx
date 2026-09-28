@@ -1,5 +1,5 @@
 "use client";
-import {useState} from "react";
+import {useState,type KeyboardEvent} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Button,ConfirmDialog,Icon,IconName,Input,PageHeader,Pagination,Select,Status} from "@/design-system";
 import {apiFetch} from "@/shared/api/client";
@@ -60,14 +60,30 @@ export function OrdersManager(){
  const items=list.data?.items??[];const counts=list.data?.channelCounts??{};const channelOptions=list.data?.channelOptions??[];
  const channelLabel=(v:string)=>channelOptions.find(o=>o.value===v)?.label??v;
  const openTotal=Object.values(counts).reduce((a,b)=>a+b,0);
+ const tabs:{value:string;label:string;icon:IconName;count:number}[]=[{value:"",label:"Todos",icon:"receipt",count:openTotal},...channelOptions.map(o=>({value:o.value,label:o.label,icon:channelIcons[o.value]??"receipt",count:counts[o.value]??0}))];
+ const pickChannel=(v:string)=>{setChannel(v);setPage(1)};
+ const onTabKey=(e:KeyboardEvent<HTMLButtonElement>,i:number)=>{
+  const dir=e.key==="ArrowRight"?1:e.key==="ArrowLeft"?-1:e.key==="Home"?-i:e.key==="End"?tabs.length-1-i:0;
+  if(!dir)return;e.preventDefault();
+  const next=tabs[(i+dir+tabs.length)%tabs.length];pickChannel(next.value);
+  (e.currentTarget.parentElement?.children[(i+dir+tabs.length)%tabs.length] as HTMLElement|undefined)?.focus();
+ };
  return <><PageHeader eyebrow="OPERACIÓN" title="Pedidos" description="Salón, mostrador, recojo, delivery y WhatsApp en una sola bandeja." action={canManage?<Button icon="plus" onClick={()=>setDraft(newDraft())}>Nuevo pedido</Button>:undefined}/>
  <section className="panel management orders-panel">
-  <div className="orders-channels">
-   <button className={"orders-ch"+(channel===""?" active":"")} onClick={()=>{setChannel("");setPage(1)}}><Icon name="receipt" size={17}/><span>Todos</span><b>{openTotal}</b></button>
-   {channelOptions.map(o=><button key={o.value} className={"orders-ch"+(channel===o.value?" active":"")} onClick={()=>{setChannel(o.value);setPage(1)}}><Icon name={channelIcons[o.value]??"receipt"} size={17}/><span>{o.label}</span><b>{counts[o.value]??0}</b></button>)}
+  <div className="orders-bar">
+   <div className="orders-channels" role="tablist" aria-label="Canal de venta">
+    {tabs.map((t,i)=><button key={t.value||"all"} type="button" role="tab" id={`orders-tab-${t.value||"all"}`} aria-selected={channel===t.value} aria-controls="orders-list" tabIndex={channel===t.value?0:-1} data-empty={t.count===0} className={"orders-ch ch-"+(t.value||"all")+(channel===t.value?" active":"")} onClick={()=>pickChannel(t.value)} onKeyDown={e=>onTabKey(e,i)}>
+     <i className="orders-ch-icon" aria-hidden="true"><Icon name={t.icon} size={16}/></i>
+     <span>{t.label}</span>
+     <b>{t.count}</b>
+    </button>)}
+   </div>
+   <div className="orders-filters">
+    <label className="orders-search"><Icon name="search" size={17}/><input value={q} onChange={e=>{setQ(e.target.value);setPage(1)}} placeholder="Código, cliente o teléfono" aria-label="Buscar pedidos"/>{q&&<button type="button" className="orders-search-clear" aria-label="Limpiar búsqueda" onClick={()=>{setQ("");setPage(1)}}><Icon name="close" size={14}/></button>}</label>
+    <label className="orders-status"><Icon name="filter" size={15}/><select aria-label="Filtrar por estado" value={status} onChange={e=>{setStatus(e.target.value);setPage(1)}}><option value="">Todos los estados</option><option value="abiertos">Abiertos</option>{(list.data?.statusOptions??[]).map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select><Icon name="chevron" size={14}/></label>
+   </div>
   </div>
-  <div className="toolbar"><label><Icon name="search" size={18}/><input value={q} onChange={e=>{setQ(e.target.value);setPage(1)}} placeholder="Buscar por código, cliente o teléfono..."/></label><select aria-label="Filtrar por estado" value={status} onChange={e=>{setStatus(e.target.value);setPage(1)}}><option value="">Todos los estados</option><option value="abiertos">Abiertos</option>{(list.data?.statusOptions??[]).map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select></div>
-  {list.isLoading?<Loading/>:list.isError?<State icon="alert" title="No pudimos cargar los pedidos" text={list.error.message} action={()=>list.refetch()}/>:!items.length?<State icon="receipt" title="Sin pedidos" text={canManage?"Registra el primer pedido o ajusta los filtros.":"No hay pedidos que coincidan con los filtros."} action={canManage?()=>setDraft(newDraft()):undefined}/>:<div className="orders-list">{items.map(o=>{const meta=statusMeta[o.status]??{label:o.status,tone:"gray" as const};const action=nextAction(o);const done=o.status==="entregado"||o.status==="cancelado";return <article className={`order-card channel-${o.channel}${done?" done":""}`} key={o.id} onClick={()=>setDetailId(o.id)}>
+  <div id="orders-list" role="tabpanel" aria-labelledby={`orders-tab-${channel||"all"}`}>{list.isLoading?<Loading/>:list.isError?<State icon="alert" title="No pudimos cargar los pedidos" text={list.error.message} action={()=>list.refetch()}/>:!items.length?<State icon="receipt" title="Sin pedidos" text={canManage?"Registra el primer pedido o ajusta los filtros.":"No hay pedidos que coincidan con los filtros."} action={canManage?()=>setDraft(newDraft()):undefined}/>:<div className="orders-list">{items.map(o=>{const meta=statusMeta[o.status]??{label:o.status,tone:"gray" as const};const action=nextAction(o);const done=o.status==="entregado"||o.status==="cancelado";return <article className={`order-card channel-${o.channel}${done?" done":""}`} key={o.id} role="button" tabIndex={0} aria-label={`Ver pedido ${o.code}`} onClick={()=>setDetailId(o.id)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();setDetailId(o.id)}}}>
    <div className="order-card-left">
     <span className={"order-channel-icon oc-"+o.channel}><Icon name={channelIcons[o.channel]??"receipt"} size={18}/></span>
     <div className="order-card-info">
@@ -93,7 +109,7 @@ export function OrdersManager(){
     {canManage&&action&&<Button className="order-advance" onClick={e=>{e.stopPropagation();advance.mutate({id:o.id,status:action.status})}} disabled={advance.isPending}>{action.label}<Icon name="chevron" size={14}/></Button>}
     {o.status==="entregado"&&<span className="order-done"><Icon name="check" size={14}/>Entregado</span>}
    </div>
-  </article>})}</div>}
+  </article>})}</div>}</div>
   <Pagination page={page} size={size} total={list.data?.total??0} onPage={setPage} onSize={v=>{setSize(v);setPage(1)}}/>
  </section>
  {draft&&<ComandaView initial={draft} channels={channelOptions} busy={create.isPending} currencySymbol={settings.currencySymbol} close={()=>setDraft(null)} save={v=>create.mutate(v)} notify={notify}/>}
