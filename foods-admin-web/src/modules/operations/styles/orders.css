@@ -75,13 +75,15 @@
 }
 
 .orders-tab{
-  flex:0 0 auto;
+  flex:1 1 0;
+  min-width:0;
   display:inline-flex;
   align-items:center;
+  justify-content:center;
   gap:8px;
   height:var(--control-height);
   min-height:var(--control-height);
-  padding:0 14px 0 12px;
+  padding:0 14px;
   border:0;
   border-radius:6px;
   background:transparent;
@@ -138,9 +140,12 @@
 
 .orders-tab-label{
   white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
 }
 
 .orders-tab-count{
+  flex:0 0 auto;
   display:inline-grid;
   place-items:center;
   min-width:20px;
@@ -1689,7 +1694,9 @@
   }
 
   .orders-tab{
-    padding:0 11px 0 10px;
+    flex:0 0 auto;
+    min-width:112px;
+    padding:0 12px;
   }
 
   .order-detail{
