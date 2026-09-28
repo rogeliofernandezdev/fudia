@@ -42,30 +42,124 @@
   color:var(--ops-800,#1a2151);
 }
 
+/* ── Tabs de canal: mosaico de tarjetas ──
+   Cada canal es una tarjeta con icono, nombre y cantidad de pedidos
+   abiertos. La activa se marca con borde y fondo azul claro; el icono
+   toma el color del canal (azul salón, violeta WhatsApp, resto neutro).
+   Radio de 6 px porque son controles, no paneles. */
 .orders-tabs-row{
   min-width:0;
-  margin-bottom:12px;
+  margin-bottom:14px;
+  display:block;
 }
 
 .orders-tabs{
-  max-width:100%;
-  height:auto;
-  min-height:46px;
-  overflow-x:auto;
-  overflow-y:hidden;
-  scrollbar-width:none;
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:8px;
+  width:100%;
 }
 
-.orders-tabs::-webkit-scrollbar{
-  display:none;
+.orders-tab{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-height:56px;
+  padding:10px 12px;
+  border:1px solid var(--line,#e4e7ec);
+  border-radius:6px;
+  background:#fff;
+  color:var(--ink-600,#475467);
+  text-align:left;
+  cursor:pointer;
+  transition:border-color .15s ease,background .15s ease,box-shadow .15s ease;
 }
 
-.orders-tabs button{
-  flex:0 0 auto;
+.orders-tab:hover{
+  border-color:var(--line-strong,#d5dce7);
+  background:var(--cloud-50,#f7f8fc);
 }
 
-.orders-tabs svg{
+.orders-tab.active{
+  border-color:var(--primary-600,#4654cd);
+  background:var(--primary-50,#f6f7ff);
+  box-shadow:inset 0 0 0 1px var(--primary-600,#4654cd);
+}
+
+.orders-tab-icon{
+  width:34px;
+  height:34px;
   flex-shrink:0;
+  display:grid;
+  place-items:center;
+  border-radius:6px;
+  background:#f2f4f7;
+  color:var(--ink-600,#475467);
+  transition:background .15s ease,color .15s ease;
+}
+
+.orders-tab.ch-salon .orders-tab-icon{
+  background:var(--primary-100,#eef0ff);
+  color:var(--ops-700,#3946b8);
+}
+
+.orders-tab.ch-whatsapp .orders-tab-icon{
+  background:#f3ebff;
+  color:var(--digital-700,#5421a8);
+}
+
+.orders-tab.active .orders-tab-icon{
+  background:var(--primary-600,#4654cd);
+  color:#fff;
+}
+
+.orders-tab-text{
+  display:grid;
+  gap:2px;
+  min-width:0;
+}
+
+.orders-tab-label{
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  color:var(--ink-500,#667085);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.orders-tab-count{
+  font-size:16px;
+  font-weight:800;
+  line-height:1.1;
+  letter-spacing:-.01em;
+  color:var(--ink-950,#101828);
+  font-variant-numeric:tabular-nums;
+}
+
+.orders-tab.active .orders-tab-label{
+  color:var(--ops-700,#3946b8);
+}
+
+.orders-tab.active .orders-tab-count{
+  color:var(--primary-600,#4654cd);
+}
+
+.orders-tab[data-empty="true"] .orders-tab-count{
+  color:var(--ink-400,#98a2b3);
+}
+
+.orders-tabs.no-counts .orders-tab-label{
+  font-size:11px;
+  letter-spacing:0;
+  text-transform:none;
+  color:var(--ink-950,#101828);
+}
+
+.orders-tabs.no-counts .orders-tab.active .orders-tab-label{
+  color:var(--primary-600,#4654cd);
 }
 
 .orders-panel{
@@ -1433,11 +1527,6 @@
     overflow:hidden;
   }
 
-  .orders-tabs{
-    width:100%;
-    display:flex;
-  }
-
   .orders-panel .toolbar{
     grid-template-columns:1fr;
   }
@@ -1474,13 +1563,17 @@
   }
 
   .orders-table th:nth-child(1){width:auto}
-  .orders-table th:nth-child(3){width:96px}
-  .orders-table th:nth-child(5){width:84px}
-  .orders-table th:nth-child(6){width:52px}
+  .orders-table th:nth-child(3){width:92px}
+  .orders-table th:nth-child(5){width:96px}
+  .orders-table th:nth-child(6){width:48px}
 
   .orders-table th,
   .orders-table td{
-    padding-inline:10px;
+    padding-inline:8px;
+  }
+
+  .orders-table td:nth-child(5){
+    white-space:nowrap;
   }
 
   .orders-table td:first-child>b,
@@ -1537,19 +1630,21 @@
   }
 
   .orders-tabs{
-    gap:2px;
-    padding:4px;
+    display:flex;
+    gap:8px;
+    overflow-x:auto;
+    scroll-snap-type:x proximity;
+    scrollbar-width:none;
+    padding-bottom:2px;
   }
 
-  .orders-tabs button{
-    padding:0 10px;
-    gap:6px;
+  .orders-tabs::-webkit-scrollbar{
+    display:none;
   }
 
-  .orders-tabs button b{
-    min-width:19px;
-    height:18px;
-    padding:0 4px;
+  .orders-tab{
+    flex:0 0 150px;
+    scroll-snap-align:start;
   }
 
   .order-detail{

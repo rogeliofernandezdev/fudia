@@ -2,7 +2,7 @@
 import "../../styles/orders.css";
 import "../../styles/salon.css";
 import Link from "next/link";
-import {useState} from "react";
+import {useState,type KeyboardEvent} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Button,ConfirmDialog,Icon,IconName,PageHeader,Pagination,RowActionButton,Status} from "@/design-system";
 import type {Option,Order} from "../domain/types";
@@ -59,17 +59,27 @@ export function OrdersManager(){
  const channelLabel=(v:string)=>channelOptions.find(o=>o.value===v)?.label??v;
  const openTotal=Object.values(counts).reduce((a,b)=>a+b,0);
  const showChannelCounts=status==="abiertos";
+ const tabs:{value:string;label:string;icon:IconName;count:number}[]=[{value:"",label:"Todos",icon:"receipt",count:openTotal},...channelOptions.map(o=>({value:o.value,label:o.label,icon:channelIcons[o.value]??"receipt",count:counts[o.value]??0}))];
+ const pickChannel=(v:string)=>{setChannel(v);setPage(1)};
+ const onTabKey=(e:KeyboardEvent<HTMLButtonElement>,i:number)=>{
+  const target=e.key==="ArrowRight"?(i+1)%tabs.length:e.key==="ArrowLeft"?(i-1+tabs.length)%tabs.length:e.key==="Home"?0:e.key==="End"?tabs.length-1:-1;
+  if(target<0||target===i)return;
+  e.preventDefault();pickChannel(tabs[target].value);
+  (e.currentTarget.parentElement?.children[target] as HTMLElement|undefined)?.focus();
+ };
  const hasActiveFilters=Boolean(q||channel||status!=="abiertos");
  const emptyTitle=hasActiveFilters?"Sin coincidencias":"Sin pedidos abiertos";
  const emptyText=hasActiveFilters?"Prueba con otro canal, estado o término de búsqueda.":"Los pedidos nuevos aparecerán aquí cuando ingresen.";
  return <div className="orders-page-shell"><PageHeader eyebrow="OPERACIÓN OMNICANAL" title="Pedidos" description="Revisa el origen, estado y avance de cada pedido sin perder el contexto operativo." action={canManage?<Link href={pageRoutes.diningRoom} className="orders-salon-link"><Icon name="utensils" size={16}/><span>Abrir salón</span></Link>:undefined}/>
- <div className="catalog-tabs-row orders-tabs-row">
-  <div className="catalog-tabs orders-tabs" role="tablist" aria-label="Filtrar pedidos por canal">
-   <button type="button" role="tab" aria-selected={channel===""} className={channel===""?"active":""} onClick={()=>{setChannel("");setPage(1)}}><Icon name="receipt" size={14}/><span>Todos</span>{showChannelCounts&&<b>{openTotal}</b>}</button>
-   {channelOptions.map(o=><button type="button" role="tab" aria-selected={channel===o.value} key={o.value} className={channel===o.value?"active":""} onClick={()=>{setChannel(o.value);setPage(1)}}><Icon name={channelIcons[o.value]??"receipt"} size={14}/><span>{o.label}</span>{showChannelCounts&&<b>{counts[o.value]??0}</b>}</button>)}
+ <div className="orders-tabs-row">
+  <div className={"orders-tabs"+(showChannelCounts?"":" no-counts")} role="tablist" aria-label="Filtrar pedidos por canal">
+   {tabs.map((t,i)=><button type="button" role="tab" key={t.value||"all"} id={`orders-tab-${t.value||"all"}`} aria-selected={channel===t.value} aria-controls="orders-tabpanel" tabIndex={channel===t.value?0:-1} data-empty={showChannelCounts&&t.count===0} className={"orders-tab ch-"+(t.value||"all")+(channel===t.value?" active":"")} onClick={()=>pickChannel(t.value)} onKeyDown={e=>onTabKey(e,i)}>
+    <i className="orders-tab-icon" aria-hidden="true"><Icon name={t.icon} size={17}/></i>
+    <span className="orders-tab-text"><span className="orders-tab-label">{t.label}</span>{showChannelCounts&&<b className="orders-tab-count">{t.count}</b>}</span>
+   </button>)}
   </div>
  </div>
- <section className="panel management standardized-management orders-panel">
+ <section className="panel management standardized-management orders-panel" id="orders-tabpanel" role="tabpanel" aria-labelledby={`orders-tab-${channel||"all"}`}>
   <div className="toolbar">
    <label><Icon name="search" size={18}/><input aria-label="Buscar pedidos" value={q} onChange={e=>{setQ(e.target.value);setPage(1)}} placeholder="Buscar código, cliente o teléfono"/></label>
    <select aria-label="Filtrar por estado" value={status} onChange={e=>{setStatus(e.target.value);setPage(1)}}><option value="">Todos los estados</option><option value="abiertos">Abiertos</option>{(list.data?.statusOptions??[]).map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select>
