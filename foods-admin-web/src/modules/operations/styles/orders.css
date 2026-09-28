@@ -42,11 +42,11 @@
   color:var(--ops-800,#1a2151);
 }
 
-/* ── Tabs de canal: chips tipo POS ──
-   Mismo lenguaje que las categorías de la comanda: píldoras blancas,
-   la activa se llena de primary-600. El icono lleva el color del canal
-   (azul salón, violeta WhatsApp; el resto neutro) y el contador cambia a
-   blanco sobre azul cuando el tab está activo. */
+/* ── Tabs de canal: pestañas con subrayado ──
+   Fila plana sobre una línea base. La pestaña activa se marca con un
+   subrayado de primary-600 y su icono se llena del mismo azul; el resto
+   queda neutro. El icono toma el color del canal (azul salón, violeta
+   WhatsApp). Radio de 6 px en icono y contador, como todo control. */
 .orders-tabs-row{
   min-width:0;
   margin-bottom:14px;
@@ -55,10 +55,11 @@
 
 .orders-tabs{
   display:flex;
-  align-items:center;
-  gap:8px;
+  align-items:flex-end;
+  gap:4px;
+  width:100%;
   max-width:100%;
-  padding:2px;
+  border-bottom:1px solid var(--line,#e4e7ec);
   overflow-x:auto;
   overflow-y:hidden;
   scroll-snap-type:x proximity;
@@ -70,16 +71,17 @@
 }
 
 .orders-tab{
+  position:relative;
   flex:0 0 auto;
   display:inline-flex;
   align-items:center;
   gap:8px;
   height:var(--control-height);
   min-height:var(--control-height);
-  padding:0 14px 0 8px;
-  border:1px solid var(--line,#e4e7ec);
-  border-radius:999px;
-  background:#fff;
+  padding:0 12px;
+  border:0;
+  border-radius:6px 6px 0 0;
+  background:transparent;
   color:var(--ink-600,#475467);
   font-size:11px;
   font-weight:800;
@@ -87,20 +89,32 @@
   white-space:nowrap;
   scroll-snap-align:start;
   cursor:pointer;
-  transition:background .15s ease,border-color .15s ease,color .15s ease,box-shadow .15s ease;
+  transition:color .15s ease,background .15s ease;
+}
+
+.orders-tab::after{
+  content:"";
+  position:absolute;
+  left:10px;
+  right:10px;
+  bottom:-1px;
+  height:2px;
+  border-radius:2px 2px 0 0;
+  background:transparent;
+  transition:background .15s ease;
 }
 
 .orders-tab:hover{
-  border-color:#b4c2ea;
-  background:var(--primary-50,#f6f7ff);
-  color:var(--ops-700,#3946b8);
+  color:var(--ink-950,#101828);
+  background:var(--cloud-100,#f3f6fa);
 }
 
 .orders-tab.active{
-  border-color:var(--primary-600,#4654cd);
+  color:var(--primary-600,#4654cd);
+}
+
+.orders-tab.active::after{
   background:var(--primary-600,#4654cd);
-  color:#fff;
-  box-shadow:0 4px 12px rgba(70,84,205,.28);
 }
 
 .orders-tab-icon{
@@ -108,7 +122,7 @@
   height:24px;
   display:grid;
   place-items:center;
-  border-radius:999px;
+  border-radius:6px;
   background:#f2f4f7;
   color:var(--ink-600,#475467);
   transition:background .15s ease,color .15s ease;
@@ -125,7 +139,7 @@
 }
 
 .orders-tab.active .orders-tab-icon{
-  background:rgba(255,255,255,.18);
+  background:var(--primary-600,#4654cd);
   color:#fff;
 }
 
@@ -135,7 +149,7 @@
   padding:0 6px;
   display:inline-grid;
   place-items:center;
-  border-radius:999px;
+  border-radius:6px;
   background:#f2f4f7;
   color:var(--ink-600,#475467);
   font-size:10px;
@@ -151,7 +165,7 @@
 }
 
 .orders-tab.active b{
-  background:#fff;
+  background:var(--primary-100,#eef0ff);
   color:var(--primary-600,#4654cd);
   box-shadow:none;
 }
@@ -1668,13 +1682,11 @@
   }
 
   .orders-tabs{
-    gap:6px;
-    margin:0 -4px;
-    padding:2px 4px;
+    gap:0;
   }
 
   .orders-tab{
-    padding:0 12px 0 6px;
+    padding:0 10px;
     gap:6px;
   }
 
