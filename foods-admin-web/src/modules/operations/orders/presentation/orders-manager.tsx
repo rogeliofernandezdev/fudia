@@ -72,12 +72,13 @@ export function OrdersManager(){
  const emptyText=hasActiveFilters?"Prueba con otro canal, estado o término de búsqueda.":"Los pedidos nuevos aparecerán aquí cuando ingresen.";
  return <div className="orders-page-shell"><PageHeader eyebrow="OPERACIÓN OMNICANAL" title="Pedidos" description="Revisa el origen, estado y avance de cada pedido sin perder el contexto operativo." action={canManage?<Link href={pageRoutes.diningRoom} className="orders-salon-link"><Icon name="utensils" size={16}/><span>Abrir salón</span></Link>:undefined}/>
  <div className="orders-tabs-row">
+  {list.isPending?<div className="orders-tabs orders-tabs-skeleton" aria-hidden="true">{Array.from({length:4},(_,i)=><span className={"orders-tab"+(i===0?" active":"")} key={i}><i className="orders-tab-icon"/><span className="orders-tab-text"><i/><i/></span></span>)}</div>:
   <div className={"orders-tabs"+(showChannelCounts?"":" no-counts")} role="tablist" aria-label="Filtrar pedidos por canal">
    {tabs.map((t,i)=><button type="button" role="tab" key={t.value||"all"} id={`orders-tab-${t.value||"all"}`} aria-selected={channel===t.value} aria-controls="orders-tabpanel" tabIndex={channel===t.value?0:-1} data-empty={showChannelCounts&&t.count===0} className={"orders-tab ch-"+(t.value||"all")+(channel===t.value?" active":"")} onClick={()=>pickChannel(t.value)} onKeyDown={e=>onTabKey(e,i)}>
     <i className="orders-tab-icon" aria-hidden="true"><Icon name={t.icon} size={17}/></i>
     <span className="orders-tab-text"><span className="orders-tab-label">{t.label}</span>{showChannelCounts&&<b className="orders-tab-count">{t.count}</b>}</span>
    </button>)}
-  </div>
+  </div>}
  </div>
  <section className="panel management standardized-management orders-panel" id="orders-tabpanel" role="tabpanel" aria-labelledby={`orders-tab-${channel||"all"}`} aria-busy={list.isFetching&&list.isPlaceholderData}>
   <div className="toolbar">
