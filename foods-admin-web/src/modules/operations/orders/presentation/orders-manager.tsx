@@ -93,19 +93,6 @@ export function OrdersManager(){
      </tr>})}</tbody>
     </table>
    </div>
-   <div className="management-cards orders-mobile-cards">{items.map(o=>{const meta=statusMeta[o.status]??{label:o.status,tone:"gray" as const};const subject=o.tableName||o.customerName||"Pedido";return <article key={o.id}>
-    <header>
-     <span className={"row-icon order-row-icon oc-"+o.channel}><Icon name={channelIcons[o.channel]??"receipt"} size={17}/></span>
-     <div><b>{subject}</b><small>{o.code} · {channelLabel(o.channel)}</small></div>
-     <Status tone={meta.tone}>{meta.label}</Status>
-    </header>
-    <dl>
-     <div><dt>REGISTRADO</dt><dd>{timeAgo(o.createdAt,location?.country,location?.timezone)}</dd></div>
-     <div><dt>TOTAL</dt><dd>{settings.currencySymbol} {money(o.total)}</dd></div>
-    </dl>
-    {(o.address||(o.tableName&&o.customerName))&&<p className="orders-mobile-detail">{o.address||(o.customerName)}</p>}
-    <footer><RowActionButton action="view" onClick={()=>setDetailId(o.id)}/></footer>
-   </article>})}</div>
   </>}
   <Pagination page={page} size={size} total={list.data?.total??0} onPage={setPage} onSize={v=>{setSize(v);setPage(1)}}/>
  </section>
@@ -244,9 +231,6 @@ function OrdersLoading(){return <div className="orders-loading" aria-label="Carg
  <div className="table-skeleton orders-table-skeleton">
   <div className="sk-head"><i/><i/><i/><i/><i/><i/></div>
   {Array.from({length:5},(_,index)=><div className="sk-row" key={index}><i className="sk-name"><span/><b/></i><i/><i/><i/><i/><i/></div>)}
- </div>
- <div className="orders-mobile-skeleton">
-  {Array.from({length:3},(_,index)=><article key={index}><div className="orders-mobile-skeleton-head"><i/><span><b/><small/></span><em/></div><div className="orders-mobile-skeleton-meta"><i/><i/></div></article>)}
  </div>
  </div>}
 function State({icon,title,text,action}:{icon:"alert"|"receipt";title:string;text:string;action?:()=>void}){return <div className="catalog-state"><span><Icon name={icon}/></span><b>{title}</b><p>{text}</p>{action&&<Button kind="ghost" onClick={action}>Reintentar</Button>}</div>}

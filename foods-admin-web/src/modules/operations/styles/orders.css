@@ -181,16 +181,6 @@
   gap:4px;
 }
 
-.orders-mobile-detail{
-  margin:0 0 12px;
-  padding:8px 9px;
-  border-radius:8px;
-  background:#f8fafc;
-  color:var(--ink-600,#475467);
-  font-size:10px;
-  line-height:1.4;
-}
-
 .orders-loading{
   min-height:340px;
 }
@@ -198,10 +188,6 @@
 .orders-table-skeleton .sk-head,
 .orders-table-skeleton .sk-row{
   grid-template-columns:2.4fr .9fr 1fr 1fr .9fr .65fr;
-}
-
-.orders-mobile-skeleton{
-  display:none;
 }
 
 /* ── Empty State ── */
@@ -1468,80 +1454,55 @@
     grid-column:1/-1;
   }
 
-  .orders-table-skeleton{
+  /* Tabla compacta: sigue siendo tabla; se ocultan Canal y Registrado.
+     El canal ya se lee en el icono de la fila. */
+  .orders-panel.standardized-management .table-wrap{
+    display:block;
+    overflow:visible;
+  }
+
+  .orders-panel .table-wrap .orders-table{
+    min-width:0;
+    width:100%;
+  }
+
+  .orders-table th:nth-child(2),
+  .orders-table td:nth-child(2),
+  .orders-table th:nth-child(4),
+  .orders-table td:nth-child(4){
     display:none;
+  }
+
+  .orders-table th:nth-child(1){width:auto}
+  .orders-table th:nth-child(3){width:96px}
+  .orders-table th:nth-child(5){width:84px}
+  .orders-table th:nth-child(6){width:52px}
+
+  .orders-table th,
+  .orders-table td{
+    padding-inline:10px;
+  }
+
+  .orders-table td:first-child>b,
+  .orders-table td:first-child small{
+    max-width:calc(100% - 42px);
   }
 
   .orders-loading{
     min-height:0;
   }
 
-  .orders-mobile-skeleton{
-    display:grid;
-    gap:10px;
-    padding:12px;
+  .orders-table-skeleton .sk-head,
+  .orders-table-skeleton .sk-row{
+    grid-template-columns:2fr .9fr .8fr .5fr;
+    padding-inline:10px;
   }
 
-  .orders-mobile-skeleton article{
-    display:grid;
-    gap:12px;
-    padding:14px;
-    border:1px solid var(--line,#e4e7ec);
-    border-radius:12px;
-    background:#fff;
-  }
-
-  .orders-mobile-skeleton-head{
-    display:grid;
-    grid-template-columns:38px 1fr 58px;
-    gap:9px;
-    align-items:center;
-  }
-
-  .orders-mobile-skeleton-head>i{
-    width:34px;
-    height:34px;
-    border-radius:9px;
-  }
-
-  .orders-mobile-skeleton-head>span{
-    display:grid;
-    gap:6px;
-  }
-
-  .orders-mobile-skeleton-head b,
-  .orders-mobile-skeleton-head small,
-  .orders-mobile-skeleton-head em,
-  .orders-mobile-skeleton-meta i{
-    display:block;
-    border-radius:5px;
-  }
-
-  .orders-mobile-skeleton-head b{width:55%;height:10px}
-  .orders-mobile-skeleton-head small{width:78%;height:8px}
-  .orders-mobile-skeleton-head em{width:58px;height:22px}
-  .orders-mobile-skeleton-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-  .orders-mobile-skeleton-meta i{height:42px}
-
-  .orders-mobile-skeleton-head>i,
-  .orders-mobile-skeleton-head b,
-  .orders-mobile-skeleton-head small,
-  .orders-mobile-skeleton-head em,
-  .orders-mobile-skeleton-meta i{
-    background:linear-gradient(90deg,#eef0f4,#f6f7f9,#eef0f4) 0 0/220% 100%;
-    animation:1.4s infinite shimmer;
-  }
-
-  .orders-mobile-cards .row-icon{
-    margin:0;
-  }
-
-  .orders-mobile-cards article{
-    box-shadow:0 1px 2px #10182808;
-  }
-
-  .orders-mobile-cards article>footer{
-    align-items:center;
+  .orders-table-skeleton .sk-head i:nth-child(2),
+  .orders-table-skeleton .sk-head i:nth-child(4),
+  .orders-table-skeleton .sk-row i:nth-child(2),
+  .orders-table-skeleton .sk-row i:nth-child(4){
+    display:none;
   }
 
   .order-detail-context{
