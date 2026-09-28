@@ -95,12 +95,11 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
   function dateTime(value:string){
     return formatRegionalDateTime(value,{country:location?.country,timeZone:location?.timezone},{dateStyle:"medium",timeStyle:"short"});
   }
-  function summaryFromDetail(data:POSOrderDetail):POSOrderSummary{
-    return{
-      id:data.order.id,code:data.order.code,channel:data.order.channel,status:data.order.status,
-      customerName:data.order.customerName,tableName:data.order.tableName,total:data.order.total,
-      paidAmount:data.paidAmount,remainingAmount:data.remainingAmount,paymentStatus:data.paymentStatus,createdAt:data.order.createdAt,
-    };
+  function actionsFor(item:POSOrderSummary){
+    return <div className="pos-actions">
+      <RowActionButton action="view" label={`Ver detalle de ${item.code}`} onClick={()=>setDetailId(item.id)}/>
+      {canManage&&item.paymentStatus!=="paid"&&<RowActionButton action="charge" label={shift?`Cobrar ${item.code}`:"Abre un turno para cobrar"} disabled={!shift} onClick={()=>setPaymentTarget(item)}/>} 
+    </div>;
   }
 
   return <div className="pos-page">
@@ -108,8 +107,8 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
 
     <section className={"pos-shift-banner "+(shift?"active":"missing")}>
       <span className="pos-shift-icon"><Icon name={shift?"register":"alert"} size={19}/></span>
-      {current.isLoading?<div><small>TURNO DE CAJA</small><b>Cargando turno…</b></div>
-      :shift?<><div><small>TURNO ACTIVO</small><b>{shift.cashRegisterName} · {shift.code}</b><p>Operado por {shift.openedByName}</p></div><Status tone="green">Listo para cobrar</Status></>
+      {current.isLoading?<div className="pos-shift-loading" aria-label="Cargando turno" aria-busy="true"><i/><i/></div>
+      :shift?<><div className="pos-shift-copy"><small>TURNO ACTIVO</small><b>{shift.cashRegisterName}<span>· {shift.code}</span></b><p>Operado por {shift.openedByName}</p></div><Status tone="green">Listo para cobrar</Status></>
       :<><div><small>TURNO REQUERIDO</small><b>No estás asignado a una caja abierta</b><p>Inicia o únete a un turno antes de registrar cobros o devoluciones.</p></div><Link href={pageRoutes.cash} className="button secondary"><Icon name="register" size={16}/><span>Ir a Caja</span></Link></>}
     </section>
 
@@ -123,7 +122,6 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
           <option value="paid">Pagados</option>
           <option value="all">Todos</option>
         </Select>
-        <p><Icon name="cash" size={14}/>Los cobros en efectivo actualizan automáticamente el turno activo.</p>
       </div>
 
       {orders.isLoading?<POSLoading/>
@@ -133,18 +131,29 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
         <thead><tr><th>PEDIDO</th><th>CANAL</th><th className="pos-money">TOTAL</th><th className="pos-money">PAGADO</th><th className="pos-money">SALDO</th><th>COBRO</th><th className="pos-th-actions">ACCIONES</th></tr></thead>
         <tbody>{items.map((item,index)=>{
           const meta=paymentMeta[item.paymentStatus];
-          const subject=item.tableName||item.customerName||"Pedido";
+          const subject=item.tableName||item.customerName||item.code;
           return <tr className={index%2?"alternate":""} key={item.id}>
-            <td><span className={"row-icon pos-row-icon pc-"+item.channel}><Icon name={channelIcons[item.channel]??"receipt"} size={17}/></span><b>{subject}</b><small>{item.code} · {dateTime(item.createdAt)}</small></td>
+            <td><span className="row-icon pos-row-icon"><Icon name="receipt" size={17}/></span><b>{subject}</b></td>
             <td><span className="pos-channel-cell"><Icon name={channelIcons[item.channel]??"receipt"} size={13}/>{channelLabel[item.channel]??item.channel}</span></td>
             <td className="pos-money"><b>{money(Number(item.total))}</b></td>
             <td className="pos-money">{money(Number(item.paidAmount))}</td>
             <td className="pos-money"><strong className="pos-balance">{money(Number(item.remainingAmount))}</strong></td>
             <td><Status tone={meta.tone}>{meta.label}</Status></td>
-            <td><div className="pos-actions"><RowActionButton action="view" onClick={()=>setDetailId(item.id)}/>{canManage&&item.paymentStatus!=="paid"&&<Button className="pos-pay-row" icon="cash" disabled={!shift} onClick={()=>setPaymentTarget(item)}>Cobrar</Button>}</div></td>
+            <td>{actionsFor(item)}</td>
           </tr>;
         })}</tbody>
       </table></div>}
+
+      {!orders.isLoading&&!orders.isError&&items.length>0&&<div className="management-cards pos-order-cards">{items.map(item=>{
+        const meta=paymentMeta[item.paymentStatus];
+        const subject=item.tableName||item.customerName||item.code;
+        return <article key={item.id}>
+          <header><span className="row-icon pos-row-icon"><Icon name="receipt" size={17}/></span><div><b>{subject}</b></div><Status tone={meta.tone}>{meta.label}</Status></header>
+          <div className="pos-card-channel"><Icon name={channelIcons[item.channel]??"receipt"} size={14}/><span>{channelLabel[item.channel]??item.channel}</span></div>
+          <dl><div><dt>Total</dt><dd>{money(Number(item.total))}</dd></div><div><dt>Pagado</dt><dd>{money(Number(item.paidAmount))}</dd></div><div className="remaining"><dt>Saldo</dt><dd>{money(Number(item.remainingAmount))}</dd></div></dl>
+          <footer>{actionsFor(item)}</footer>
+        </article>;
+      })}</div>}
 
       {!orders.isLoading&&!orders.isError&&<Pagination page={page} size={size} total={orders.data?.total??0} onPage={setPage} onSize={value=>{setSize(value);setPage(1)}}/>}
     </section>
@@ -160,18 +169,17 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
       formatMoney={money}
       formatDateTime={dateTime}
       close={()=>setDetailId(null)}
-      pay={data=>setPaymentTarget(summaryFromDetail(data))}
       refund={setRefundTarget}
     />}
   </div>;
 }
 
-function POSDetailDialog({loading,error,data,canManage,hasShift,formatMoney,formatDateTime,close,pay,refund}:{loading:boolean;error?:string;data?:POSOrderDetail;canManage:boolean;hasShift:boolean;formatMoney:(value:number)=>string;formatDateTime:(value:string)=>string;close:()=>void;pay:(data:POSOrderDetail)=>void;refund:(payment:Payment)=>void}){
+function POSDetailDialog({loading,error,data,canManage,hasShift,formatMoney,formatDateTime,close,refund}:{loading:boolean;error?:string;data?:POSOrderDetail;canManage:boolean;hasShift:boolean;formatMoney:(value:number)=>string;formatDateTime:(value:string)=>string;close:()=>void;refund:(payment:Payment)=>void}){
   const closed=Boolean(data&&["entregado","cancelado"].includes(data.order.status));
   return <div className="modal-backdrop modal-overlay-in"><section className="crud-modal pos-detail-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="pos-detail-title">
     <div className="modal-accent"/>
-    <header><span className="modal-title-icon"><Icon name="receipt" size={18}/></span><div><small>DETALLE DE COBRO</small><h2 id="pos-detail-title">{data?.order.code??"Pedido"}</h2></div><button type="button" aria-label="Cerrar" onClick={close}><Icon name="close"/></button></header>
-    {loading?<div className="pos-detail-loading">{Array.from({length:5},(_,index)=><i key={index}/>)}</div>
+    <header><span className="modal-title-icon"><Icon name="receipt" size={18}/></span><div className="pos-modal-heading"><small>DETALLE DE COBRO</small><h2 id="pos-detail-title">{data?.order.code??"Pedido"}</h2>{data&&<p>{data.order.tableName||data.order.customerName||channelLabel[data.order.channel]||"Pedido del local"}</p>}</div><button type="button" aria-label="Cerrar" onClick={close}><Icon name="close"/></button></header>
+    {loading?<POSDetailLoading/>
     :error?<POSState icon="alert" title="No pudimos cargar el cobro" text={error}/>
     :data&&<div className="pos-detail-body">
       <section className="pos-detail-summary">
@@ -194,10 +202,17 @@ function POSDetailDialog({loading,error,data,canManage,hasShift,formatMoney,form
         :<div className="pos-payments-empty">Aún no se registraron pagos para este pedido.</div>}
       </section>
     </div>}
-    {data&&canManage&&Number(data.remainingAmount)>0&&data.order.status!=="cancelado"&&<footer className="pos-detail-footer"><Button icon="cash" disabled={!hasShift} onClick={()=>pay(data)}>Cobrar saldo {formatMoney(Number(data.remainingAmount))}</Button></footer>}
   </section></div>;
 }
 
-function POSLoading(){return <div className="pos-loading">{Array.from({length:6},(_,index)=><i key={index}/>)}</div>}
+function POSLoading(){return <>
+  <div className="table-wrap pos-table-wrap pos-table-skeleton" aria-label="Cargando pedidos" aria-busy="true"><table className="pos-table"><thead><tr><th>PEDIDO</th><th>CANAL</th><th>TOTAL</th><th>PAGADO</th><th>SALDO</th><th>COBRO</th><th>ACCIONES</th></tr></thead><tbody>{Array.from({length:5},(_,index)=><tr key={index}><td><span className="pos-sk-entity"><i/><span><b/></span></span></td>{Array.from({length:5},(_,cell)=><td key={cell}><i className="pos-sk-line"/></td>)}<td><span className="pos-sk-actions"><i/><i/></span></td></tr>)}</tbody></table></div>
+  <div className="management-cards pos-order-cards pos-card-skeleton" aria-hidden="true">{Array.from({length:4},(_,index)=><article key={index}><header><i/><span><b/></span><i/></header><i/><div/><footer><i/><i/></footer></article>)}</div>
+</>}
+
+function POSDetailLoading(){return <div className="pos-detail-body pos-detail-loading" aria-label="Cargando detalle del pedido" aria-busy="true">
+  <section className="pos-detail-summary pos-detail-summary-skeleton">{Array.from({length:4},(_,index)=><i key={index}/>)}</section>
+  {Array.from({length:2},(_,section)=><section className="pos-detail-section pos-detail-section-skeleton" key={section}><header><span><i/><b/></span><i/></header>{Array.from({length:3},(_,row)=><div key={row}><i/><span><b/><small/></span><i/></div>)}</section>)}
+</div>}
 
 function POSState({icon,title,text,retry}:{icon:"alert"|"receipt";title:string;text:string;retry?:()=>void}){return <div className="pos-state"><span><Icon name={icon} size={22}/></span><b>{title}</b><p>{text}</p>{retry&&<Button kind="secondary" icon="refresh" onClick={retry}>Reintentar</Button>}</div>}

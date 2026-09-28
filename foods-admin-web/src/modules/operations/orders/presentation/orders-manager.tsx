@@ -82,7 +82,7 @@ export function OrdersManager(){
  </div>
  <section className="panel management standardized-management orders-panel" id="orders-tabpanel" role="tabpanel" aria-labelledby={`orders-tab-${channel||"all"}`} aria-busy={list.isFetching&&list.isPlaceholderData}>
   <div className="toolbar">
-   <label><Icon name="search" size={18}/><input aria-label="Buscar pedidos" value={q} onChange={e=>{setQ(e.target.value);setPage(1)}} placeholder="Buscar código, cliente o teléfono"/></label>
+   <label><Icon name="search" size={18}/><input aria-label="Buscar pedidos" value={q} onChange={e=>{setQ(e.target.value);setPage(1)}} placeholder="Buscar cliente, mesa o teléfono"/></label>
    <select aria-label="Filtrar por estado" value={status} onChange={e=>{setStatus(e.target.value);setPage(1)}}><option value="">Todos los estados</option><option value="abiertos">Abiertos</option>{(list.data?.statusOptions??[]).map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select>
    {hasActiveFilters&&<button type="button" className="orders-clear-filters" onClick={()=>{setQ("");setChannel("");setStatus("abiertos");setPage(1)}}><Icon name="close" size={15}/>Limpiar filtros</button>}
   </div>
@@ -90,11 +90,11 @@ export function OrdersManager(){
    <div className="table-wrap hover-scroll">
     <table className="orders-table">
      <thead><tr><th>PEDIDO</th><th>CANAL</th><th>ESTADO</th><th>REGISTRADO</th><th>TOTAL</th><th>ACCIONES</th></tr></thead>
-     <tbody>{items.map((o,index)=>{const meta=statusMeta[o.status]??{label:o.status,tone:"gray" as const};const subject=o.tableName||o.customerName||"Pedido";const secondary=o.tableName&&o.customerName?`${o.code} · ${o.customerName}`:o.code;return <tr className={index%2?"alternate":""} key={o.id}>
+     <tbody>{items.map((o,index)=>{const meta=statusMeta[o.status]??{label:o.status,tone:"gray" as const};const subject=o.tableName||o.customerName||"Pedido";const secondary=o.tableName&&o.customerName?o.customerName:undefined;return <tr className={index%2?"alternate":""} key={o.id}>
       <td>
        <span className={"row-icon order-row-icon oc-"+o.channel}><Icon name={channelIcons[o.channel]??"receipt"} size={17}/></span>
        <b>{subject}</b>
-       <small>{secondary}</small>
+       {secondary&&<small>{secondary}</small>}
       </td>
       <td><span className="order-channel-cell"><Icon name={channelIcons[o.channel]??"receipt"} size={13}/>{channelLabel(o.channel)}</span></td>
       <td><Status tone={meta.tone}>{meta.label}</Status></td>
@@ -108,7 +108,7 @@ export function OrdersManager(){
   <Pagination page={page} size={size} total={list.data?.total??0} onPage={setPage} onSize={v=>{setSize(v);setPage(1)}}/>
  </section>
  {detailId&&<OrderDetail loading={detail.isLoading} order={detail.data} error={detail.error?.message} channels={channelOptions} currencySymbol={settings.currencySymbol} canManage={canManage} busy={advance.isPending} close={()=>setDetailId(null)} advance={st=>advance.mutate({id:detailId,status:st})} cancel={o=>setCancelTarget(o)}/>}
- <ConfirmDialog open={Boolean(cancelTarget)} title="Cancelar pedido" description={`El pedido ${cancelTarget?.code??""} quedará cancelado y no podrá reactivarse.`} tone="danger" confirmLabel="Cancelar pedido" pending={cancel.isPending} onCancel={()=>setCancelTarget(null)} onConfirm={()=>cancelTarget&&cancel.mutate(cancelTarget)}/></div>;
+ <ConfirmDialog open={Boolean(cancelTarget)} title="Cancelar pedido" description={`${cancelTarget?.tableName||cancelTarget?.customerName||"El pedido seleccionado"} quedará cancelado y no podrá reactivarse.`} tone="danger" confirmLabel="Cancelar pedido" pending={cancel.isPending} onCancel={()=>setCancelTarget(null)} onConfirm={()=>cancelTarget&&cancel.mutate(cancelTarget)}/></div>;
 }
 
 function OrderDetail({loading,order,error,channels,currencySymbol,canManage,busy,close,advance,cancel}:{loading:boolean;order?:Order;error?:string;channels:Option[];currencySymbol:string;canManage:boolean;busy:boolean;close:()=>void;advance:(st:string)=>void;cancel:(o:Order)=>void}){
@@ -140,8 +140,7 @@ function OrderDetail({loading,order,error,channels,currencySymbol,canManage,busy
     <div className="order-detail-body"><div className="catalog-state error"><span><Icon name="alert" size={22}/></span><b>Error al cargar el pedido</b><p>{error}</p></div></div>
    ):order&&meta&&<>
     <div className="order-detail-body salon-order-detail-body">
-     <section className="salon-order-detail-meta" aria-label="Datos del pedido">
-      <div><span className="salon-order-detail-meta-icon"><Icon name="receipt" size={15}/></span><span><small>PEDIDO</small><b>{order.code}</b></span></div>
+     <section className="salon-order-detail-meta orders-order-meta" aria-label="Datos del pedido">
       <div><span className="salon-order-detail-meta-icon"><Icon name="clock" size={15}/></span><span><small>REGISTRADO</small><b>{timeAgo(order.createdAt,location?.country,location?.timezone)}</b></span></div>
       <div><span className="salon-order-detail-meta-icon"><Icon name="utensils" size={15}/></span><span><small>CONSUMO</small><b>{itemCount} ítem{itemCount===1?"":"s"}</b></span></div>
      </section>
@@ -203,8 +202,8 @@ function OrderDetailSkeleton({close}:{close:()=>void}){
    <button type="button" className="salon-order-detail-close" aria-label="Cerrar detalle" onClick={close}><Icon name="close" size={17}/></button>
   </header>
   <div className="order-detail-body salon-order-detail-body salon-order-detail-skeleton-body" aria-label="Cargando detalle del pedido">
-   <section className="salon-order-detail-meta salon-order-detail-skeleton-meta">
-    {Array.from({length:3},(_,i)=><div key={i}>
+   <section className="salon-order-detail-meta orders-order-meta salon-order-detail-skeleton-meta">
+    {Array.from({length:2},(_,i)=><div key={i}>
      <span className="salon-order-detail-skeleton-block salon-order-detail-skeleton-meta-icon"/>
      <span className="salon-order-detail-skeleton-copy">
       <span className="salon-order-detail-skeleton-block short"/>

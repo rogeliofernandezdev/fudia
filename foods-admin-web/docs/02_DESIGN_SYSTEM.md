@@ -232,6 +232,25 @@ Usar superficies mayormente neutras, azul para navegación y acciones, verde par
   `management-cards`; nunca desaparece el contenido al ocultarse la tabla.
   No se agrega una segunda cabecera de resultados ni se repite el total si la
   paginación ya informa rango y total.
+- Punto de venta (`/pos`) usa un único panel de gestión con búsqueda y filtro de
+  estado. En escritorio presenta tabla estándar y en móvil tarjetas equivalentes;
+  la acción de cobrar es iconográfica, usa `RowActionButton` y muestra tooltip,
+  igual que el resto de acciones de fila. El turno de caja se presenta como
+  contexto compacto y no como una segunda cabecera de página.
+- El skeleton del POS conserva la geometría de cabecera, columnas, filas y
+  acciones; el detalle reproduce resumen, productos y pagos. No se reemplaza
+  por barras genéricas ni por un spinner aislado.
+- Los modales de cobro y devolución usan la cabecera modal estándar, `FormField`
+  con primitivas del design system y pie de acciones consistente. La mutación
+  mantiene visible el contexto y muestra el estado ocupado en el botón que la
+  originó. El selector de método de pago conserva una sola línea, un indicador
+  de radio visible y foco accesible. El verde se reserva para cobros en efectivo
+  confirmados o mensajes de éxito; selección y saldo usan azul operativo.
+- El detalle de cobro es de consulta: se cierra únicamente con la `X` de la
+  cabecera y no repite la acción general de cobro. Registrar un cobro se inicia
+  desde la acción iconográfica de la tabla; la devolución permanece junto al
+  pago concreto porque requiere ese contexto. Nunca se agrega un botón
+  redundante «Cerrar» en el pie.
 - La configuración presenta la jerarquía Empresa → Perfiles por país → Locales.
   País, moneda e impuesto se editan en el perfil fiscal de la empresa; cada local
   selecciona un perfil existente. Los tipos de cambio se gestionan en una vista

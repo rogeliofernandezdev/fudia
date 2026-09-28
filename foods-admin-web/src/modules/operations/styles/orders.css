@@ -296,6 +296,8 @@
   white-space:nowrap;
 }
 
+.orders-order-meta{grid-template-columns:repeat(2,minmax(0,1fr))}
+
 .orders-table td:nth-child(5){
   text-align:right;
 }

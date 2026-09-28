@@ -765,6 +765,31 @@ test("performance frontend limita requests y carga diferida",()=>{
   }
 });
 
+test("el POS comparte patrones de tabla, móvil y modales",()=>{
+  const page=read("src/modules/operations/pos/presentation/pos-page.tsx");
+  const dialogs=read("src/modules/operations/pos/presentation/pos-dialogs.tsx");
+  const styles=read("src/modules/operations/pos/presentation/pos.css");
+  const designSystem=read("docs/02_DESIGN_SYSTEM.md");
+
+  assert.ok(page.includes('className="management-cards pos-order-cards"'),"El POS conserva tarjetas equivalentes en móvil");
+  assert.ok(page.includes('action="charge"'),"Cobrar usa la acción iconográfica homologada");
+  assert.equal(page.includes("Cobrar saldo"),false,"El detalle de consulta no duplica la acción de cobro");
+  assert.ok(page.includes('className="table-wrap pos-table-wrap pos-table-skeleton"'),"El skeleton reproduce la tabla final");
+  assert.ok(page.includes("<POSDetailLoading/>"),"El detalle remoto tiene skeleton propio");
+  assert.ok(dialogs.includes("FormField"),"Cobro y devolución usan campos compartidos");
+  assert.equal(dialogs.includes('type="submit" icon="check"'),false,"El botón primario no duplica el icono aportado por el estilo global");
+  assert.equal(dialogs.includes('className="modal-busy"'),false,"La mutación no cubre ni oculta el contexto del formulario");
+  assert.ok(styles.includes(".pos-method>i:after"),"El método de pago tiene un radio visible");
+  assert.ok(designSystem.includes("Punto de venta (`/pos`)"),"El comportamiento queda documentado en la autoridad visual local");
+});
+
+test("Pedidos no expone el identificador técnico como información visual",()=>{
+  const orders=read("src/modules/operations/orders/presentation/orders-manager.tsx");
+  assert.equal(orders.includes("o.code"),false,"La tabla no muestra el código técnico del pedido");
+  assert.equal(orders.includes("order.code"),false,"El detalle no repite el código técnico del pedido");
+  assert.ok(orders.includes("orders-order-meta"),"El resumen se reorganiza al retirar ese dato");
+});
+
 
 test("Concierge no duplica el número administrado por Meta",()=>{
   const publicPage=read("src/modules/public-menu/presentation/public-table-page.tsx");
