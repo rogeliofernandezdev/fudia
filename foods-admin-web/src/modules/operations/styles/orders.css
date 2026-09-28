@@ -42,25 +42,28 @@
   color:var(--ops-800,#1a2151);
 }
 
-/* ── Tabs de canal: franja oscura con pestaña activa blanca ──
-   La franja usa el azul oscuro de navegación (ops-800) y corona el
-   panel. Las pestañas inactivas van en texto claro; la activa es una
-   pestaña blanca que se funde con el panel, con el icono en el color
-   del canal. Se ve desde lejos y se lee como pestaña. */
+/* ── Tabs de canal: pestañas de carpeta ──
+   Fila clara que corona el panel. Cada pestaña es una solapa con borde;
+   la activa es blanca, un poco más alta, con un filete azul arriba y
+   se funde con el panel. Las inactivas quedan en cloud-100 detrás de
+   la línea. Icono, nombre y conteo. Sin colores de fondo fuertes. */
 .orders-tabs-row{
   min-width:0;
   margin:0;
   display:block;
+  border:1px solid var(--line,#e4e7ec);
+  border-bottom:0;
   border-radius:14px 14px 0 0;
-  background:var(--ops-800,#1a2151);
+  background:var(--cloud-50,#f7f8fc);
 }
 
 .orders-tabs{
   display:flex;
   align-items:flex-end;
-  gap:4px;
+  gap:6px;
   width:100%;
-  padding:8px 10px 0;
+  padding:10px 12px 0;
+  border-bottom:1px solid var(--line,#e4e7ec);
   overflow-x:auto;
   overflow-y:hidden;
   scroll-snap-type:x proximity;
@@ -72,16 +75,19 @@
 }
 
 .orders-tab{
+  position:relative;
   flex:0 0 auto;
   display:inline-flex;
   align-items:center;
   gap:8px;
   min-height:var(--control-height);
-  padding:6px 14px 6px 12px;
-  border:0;
+  margin-bottom:-1px;
+  padding:7px 14px 7px 12px;
+  border:1px solid var(--line,#e4e7ec);
+  border-bottom:0;
   border-radius:8px 8px 0 0;
-  background:transparent;
-  color:var(--navigation-text,#c9d0f2);
+  background:var(--cloud-100,#f3f6fa);
+  color:var(--ink-600,#475467);
   font-size:11px;
   font-weight:750;
   line-height:1;
@@ -92,26 +98,40 @@
 }
 
 .orders-tab:hover{
-  background:rgba(255,255,255,.08);
-  color:#fff;
+  background:var(--surface,#fff);
+  color:var(--ink-950,#101828);
 }
 
 .orders-tab.active{
+  padding-top:10px;
   background:var(--surface,#fff);
   color:var(--ink-950,#101828);
   font-weight:800;
+  box-shadow:inset 0 3px 0 var(--primary-600,#4654cd);
+}
+
+.orders-tab.active::after{
+  content:"";
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:-1px;
+  height:2px;
+  background:var(--surface,#fff);
 }
 
 .orders-tab-icon{
   display:grid;
   place-items:center;
-  color:currentColor;
-  opacity:.8;
-  transition:opacity .15s ease,color .15s ease;
+  color:var(--ink-400,#98a2b3);
+  transition:color .15s ease;
+}
+
+.orders-tab:hover .orders-tab-icon{
+  color:var(--ink-600,#475467);
 }
 
 .orders-tab.active .orders-tab-icon{
-  opacity:1;
   color:var(--primary-600,#4654cd);
 }
 
@@ -141,34 +161,32 @@
   height:18px;
   padding:0 6px;
   border-radius:999px;
-  background:rgba(255,255,255,.14);
-  color:#fff;
+  background:var(--surface,#fff);
+  color:var(--ink-600,#475467);
   font-size:10px;
   font-weight:800;
   font-variant-numeric:tabular-nums;
+  box-shadow:inset 0 0 0 1px var(--line,#e4e7ec);
   transition:background .15s ease,color .15s ease;
 }
 
 .orders-tab[data-empty="true"] .orders-tab-count{
   background:transparent;
-  color:var(--navigation-text,#c9d0f2);
-  box-shadow:inset 0 0 0 1px rgba(255,255,255,.22);
-  opacity:.75;
+  color:var(--ink-400,#98a2b3);
 }
 
 .orders-tab.active .orders-tab-count{
   background:var(--primary-600,#4654cd);
   color:#fff;
   box-shadow:none;
-  opacity:1;
 }
 
 .orders-tab.active[data-empty="true"] .orders-tab-count{
-  background:var(--cloud-100,#f3f6fa);
-  color:var(--ink-500,#667085);
+  background:var(--primary-100,#eef0ff);
+  color:var(--primary-600,#4654cd);
 }
 
-/* Skeleton de pestañas: misma silueta sobre la franja oscura */
+/* Skeleton de pestañas: misma silueta que las reales */
 .orders-tabs-skeleton .orders-tab{
   pointer-events:none;
 }
@@ -177,14 +195,9 @@
   display:block;
   height:10px;
   border-radius:4px;
-  background:linear-gradient(90deg,rgba(255,255,255,.14),rgba(255,255,255,.3),rgba(255,255,255,.14));
+  background:linear-gradient(90deg,var(--line,#e4e7ec),var(--surface,#fff),var(--line,#e4e7ec));
   background-size:200% 100%;
   animation:orders-tabs-shimmer 1.2s ease-in-out infinite;
-}
-
-.orders-tabs-skeleton .orders-tab.active i{
-  background:linear-gradient(90deg,var(--cloud-100,#f3f6fa),var(--surface,#fff),var(--cloud-100,#f3f6fa));
-  background-size:200% 100%;
 }
 
 .orders-tabs-skeleton .orders-tab-icon{
@@ -1681,12 +1694,12 @@
   }
 
   .orders-tabs{
-    gap:2px;
-    padding:6px 8px 0;
+    gap:4px;
+    padding:8px 8px 0;
   }
 
   .orders-tab{
-    padding:6px 11px 6px 10px;
+    padding:7px 11px 7px 10px;
   }
 
   .order-detail{
