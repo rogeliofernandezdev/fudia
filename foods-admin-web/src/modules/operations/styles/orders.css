@@ -42,17 +42,26 @@
   color:var(--ops-800,#1a2151);
 }
 
+/* ── Tabs de canal: chips tipo POS ──
+   Mismo lenguaje que las categorías de la comanda: píldoras blancas,
+   la activa se llena de primary-600. El icono lleva el color del canal
+   (azul salón, violeta WhatsApp; el resto neutro) y el contador cambia a
+   blanco sobre azul cuando el tab está activo. */
 .orders-tabs-row{
   min-width:0;
-  margin-bottom:12px;
+  margin-bottom:14px;
+  gap:10px;
 }
 
 .orders-tabs{
+  display:flex;
+  align-items:center;
+  gap:8px;
   max-width:100%;
-  height:auto;
-  min-height:46px;
+  padding:2px;
   overflow-x:auto;
   overflow-y:hidden;
+  scroll-snap-type:x proximity;
   scrollbar-width:none;
 }
 
@@ -60,11 +69,94 @@
   display:none;
 }
 
-.orders-tabs button{
+.orders-tab{
   flex:0 0 auto;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  height:var(--control-height);
+  min-height:var(--control-height);
+  padding:0 14px 0 8px;
+  border:1px solid var(--line,#e4e7ec);
+  border-radius:999px;
+  background:#fff;
+  color:var(--ink-600,#475467);
+  font-size:11px;
+  font-weight:800;
+  line-height:1;
+  white-space:nowrap;
+  scroll-snap-align:start;
+  cursor:pointer;
+  transition:background .15s ease,border-color .15s ease,color .15s ease,box-shadow .15s ease;
 }
 
-.orders-tabs svg{
+.orders-tab:hover{
+  border-color:#b4c2ea;
+  background:var(--primary-50,#f6f7ff);
+  color:var(--ops-700,#3946b8);
+}
+
+.orders-tab.active{
+  border-color:var(--primary-600,#4654cd);
+  background:var(--primary-600,#4654cd);
+  color:#fff;
+  box-shadow:0 4px 12px rgba(70,84,205,.28);
+}
+
+.orders-tab-icon{
+  width:24px;
+  height:24px;
+  display:grid;
+  place-items:center;
+  border-radius:999px;
+  background:#f2f4f7;
+  color:var(--ink-600,#475467);
+  transition:background .15s ease,color .15s ease;
+}
+
+.orders-tab.ch-salon .orders-tab-icon{
+  background:var(--primary-100,#eef0ff);
+  color:var(--ops-700,#3946b8);
+}
+
+.orders-tab.ch-whatsapp .orders-tab-icon{
+  background:#f3ebff;
+  color:var(--digital-700,#5421a8);
+}
+
+.orders-tab.active .orders-tab-icon{
+  background:rgba(255,255,255,.18);
+  color:#fff;
+}
+
+.orders-tab b{
+  min-width:20px;
+  height:20px;
+  padding:0 6px;
+  display:inline-grid;
+  place-items:center;
+  border-radius:999px;
+  background:#f2f4f7;
+  color:var(--ink-600,#475467);
+  font-size:10px;
+  font-weight:800;
+  font-variant-numeric:tabular-nums;
+  transition:background .15s ease,color .15s ease;
+}
+
+.orders-tab[data-empty="true"] b{
+  background:transparent;
+  color:var(--ink-400,#98a2b3);
+  box-shadow:inset 0 0 0 1px var(--line,#e4e7ec);
+}
+
+.orders-tab.active b{
+  background:#fff;
+  color:var(--primary-600,#4654cd);
+  box-shadow:none;
+}
+
+.orders-tab svg{
   flex-shrink:0;
 }
 
@@ -1576,19 +1668,14 @@
   }
 
   .orders-tabs{
-    gap:2px;
-    padding:4px;
-  }
-
-  .orders-tabs button{
-    padding:0 10px;
     gap:6px;
+    margin:0 -4px;
+    padding:2px 4px;
   }
 
-  .orders-tabs button b{
-    min-width:19px;
-    height:18px;
-    padding:0 4px;
+  .orders-tab{
+    padding:0 12px 0 6px;
+    gap:6px;
   }
 
   .order-detail{
