@@ -42,27 +42,17 @@
   color:var(--ops-800,#1a2151);
 }
 
-/* ── Tabs de canal: pestañas con subrayado ──
-   Fila plana sobre una línea base. La pestaña activa se marca con un
-   subrayado de primary-600 y su icono se llena del mismo azul; el resto
-   queda neutro. El icono toma el color del canal (azul salón, violeta
-   WhatsApp). Radio de 6 px en icono y contador, como todo control. */
 .orders-tabs-row{
   min-width:0;
-  margin-bottom:14px;
-  gap:10px;
+  margin-bottom:12px;
 }
 
 .orders-tabs{
-  display:flex;
-  align-items:flex-end;
-  gap:4px;
-  width:100%;
   max-width:100%;
-  border-bottom:1px solid var(--line,#e4e7ec);
+  height:auto;
+  min-height:46px;
   overflow-x:auto;
   overflow-y:hidden;
-  scroll-snap-type:x proximity;
   scrollbar-width:none;
 }
 
@@ -70,107 +60,11 @@
   display:none;
 }
 
-.orders-tab{
-  position:relative;
+.orders-tabs button{
   flex:0 0 auto;
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  height:var(--control-height);
-  min-height:var(--control-height);
-  padding:0 12px;
-  border:0;
-  border-radius:6px 6px 0 0;
-  background:transparent;
-  color:var(--ink-600,#475467);
-  font-size:11px;
-  font-weight:800;
-  line-height:1;
-  white-space:nowrap;
-  scroll-snap-align:start;
-  cursor:pointer;
-  transition:color .15s ease,background .15s ease;
 }
 
-.orders-tab::after{
-  content:"";
-  position:absolute;
-  left:10px;
-  right:10px;
-  bottom:-1px;
-  height:2px;
-  border-radius:2px 2px 0 0;
-  background:transparent;
-  transition:background .15s ease;
-}
-
-.orders-tab:hover{
-  color:var(--ink-950,#101828);
-  background:var(--cloud-100,#f3f6fa);
-}
-
-.orders-tab.active{
-  color:var(--primary-600,#4654cd);
-}
-
-.orders-tab.active::after{
-  background:var(--primary-600,#4654cd);
-}
-
-.orders-tab-icon{
-  width:24px;
-  height:24px;
-  display:grid;
-  place-items:center;
-  border-radius:6px;
-  background:#f2f4f7;
-  color:var(--ink-600,#475467);
-  transition:background .15s ease,color .15s ease;
-}
-
-.orders-tab.ch-salon .orders-tab-icon{
-  background:var(--primary-100,#eef0ff);
-  color:var(--ops-700,#3946b8);
-}
-
-.orders-tab.ch-whatsapp .orders-tab-icon{
-  background:#f3ebff;
-  color:var(--digital-700,#5421a8);
-}
-
-.orders-tab.active .orders-tab-icon{
-  background:var(--primary-600,#4654cd);
-  color:#fff;
-}
-
-.orders-tab b{
-  min-width:20px;
-  height:20px;
-  padding:0 6px;
-  display:inline-grid;
-  place-items:center;
-  border-radius:6px;
-  background:#f2f4f7;
-  color:var(--ink-600,#475467);
-  font-size:10px;
-  font-weight:800;
-  font-variant-numeric:tabular-nums;
-  transition:background .15s ease,color .15s ease;
-}
-
-.orders-tab[data-empty="true"] b{
-  background:transparent;
-  color:var(--ink-400,#98a2b3);
-  box-shadow:inset 0 0 0 1px var(--line,#e4e7ec);
-}
-
-.orders-tab.active b{
-  background:var(--primary-100,#eef0ff);
-  color:var(--primary-600,#4654cd);
-  box-shadow:none;
-}
-
-.orders-tab svg{
+.orders-tabs svg{
   flex-shrink:0;
 }
 
@@ -1682,12 +1576,19 @@
   }
 
   .orders-tabs{
-    gap:0;
+    gap:2px;
+    padding:4px;
   }
 
-  .orders-tab{
+  .orders-tabs button{
     padding:0 10px;
     gap:6px;
+  }
+
+  .orders-tabs button b{
+    min-width:19px;
+    height:18px;
+    padding:0 4px;
   }
 
   .order-detail{
