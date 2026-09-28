@@ -16,7 +16,7 @@ export function zodResolver<T extends FieldValues>(schema:ZodType):Resolver<T>{
     for(const issue of result.error.issues){
       if(issue.path.length)assign(errors,issue.path.map(segment=>typeof segment==="symbol"?String(segment):segment),{type:issue.code,message:issue.message});
     }
-    return {values:{} as T,errors:errors as FieldErrors<T>};
+    return {values:{},errors:errors as FieldErrors<T>};
   };
 }
 

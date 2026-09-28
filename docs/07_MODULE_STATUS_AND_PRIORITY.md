@@ -64,7 +64,7 @@ contratados. El plan Emprende no presenta ni exige Recetas, Inventario o Compras
 ### ✅ Medios de pago
 
 - Catálogo único por empresa en `payment_methods`.
-- Administración desde `/configuracion/medios-pago`.
+- Administración desde `/settings/payment-methods`.
 - Crear, editar, ordenar, activar y desactivar.
 - Uso independiente para Ventas y Gastos.
 - Propiedad `affects_cash` para determinar impacto físico en Caja.
@@ -242,7 +242,7 @@ Debe incluir como mínimo:
 4. datos tributarios del cliente;
 5. adaptador de proveedor homologado;
 6. estados de emisión, errores y reintentos idempotentes;
-7. historial real en `/ventas/comprobantes`;
+7. historial real en `/sales` y `/receipts`;
 8. impresión/representación del comprobante;
 9. notas de crédito/anulación según soporte del proveedor;
 10. permisos, auditoría, OpenAPI y pruebas;

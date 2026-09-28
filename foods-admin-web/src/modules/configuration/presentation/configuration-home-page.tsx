@@ -4,14 +4,15 @@ import Link from "next/link";
 import {Icon,type IconName} from "@/design-system/icons";
 import {PageHeader} from "@/design-system/page-header";
 import {useSession} from "@/providers";
+import {pageRoutes} from "@/shared/routing/page-routes";
 
 const sections:Array<{icon:IconName;title:string;description:string;href:string;permission?:string;platformAdminOnly?:boolean;module?:string;access?:string}>=[
-  {icon:"store",title:"Empresa",description:"Razón social, nombre comercial e identidad general",href:"/configuracion/empresa",permission:"organizations.manage"},
-  {icon:"receipt",title:"País y configuración fiscal",description:"Perfiles, monedas, impuestos y tasas",href:"/configuracion/fiscal",permission:"organizations.read"},
-  {icon:"payment",title:"Medios de pago",description:"Catálogo único para ventas, caja y gastos",href:"/configuracion/medios-pago",permission:"organizations.read"},
-  {icon:"users",title:"Usuarios y permisos",description:"Equipo, roles y accesos por local",href:"/configuracion/usuarios",permission:"users.read"},
-  {icon:"settings",title:"Módulos",description:"Control de módulos contratado por empresa",href:"/configuracion/modulos",platformAdminOnly:true},
-  {icon:"mail",title:"Fudia Concierge",description:"Pedidos conversacionales por WhatsApp desde el QR",href:"/whatsapp-bot",permission:"organizations.read",module:"whatsapp_bot"},
+  {icon:"store",title:"Empresa",description:"Razón social, nombre comercial e identidad general",href:pageRoutes.organizationSettings,permission:"organizations.manage"},
+  {icon:"receipt",title:"País y configuración fiscal",description:"Perfiles, monedas, impuestos y tasas",href:pageRoutes.taxSettings,permission:"organizations.read"},
+  {icon:"payment",title:"Medios de pago",description:"Catálogo único para ventas, caja y gastos",href:pageRoutes.paymentMethods,permission:"organizations.read"},
+  {icon:"users",title:"Usuarios y permisos",description:"Equipo, roles y accesos por local",href:pageRoutes.usersSettings,permission:"users.read"},
+  {icon:"settings",title:"Módulos",description:"Control de módulos contratado por empresa",href:pageRoutes.modulesSettings,platformAdminOnly:true},
+  {icon:"mail",title:"Fudia Concierge",description:"Pedidos conversacionales por WhatsApp desde el QR",href:pageRoutes.concierge,permission:"organizations.read",module:"whatsapp_bot"},
 ];
 
 export function ConfigurationHomePage(){

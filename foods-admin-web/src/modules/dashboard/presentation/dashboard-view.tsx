@@ -7,6 +7,7 @@ import {PageHeader} from "@/design-system/page-header";
 import {useSession} from "@/providers/session-context";
 import {useSettings} from "@/providers/settings-context";
 import {formatRegionalNumber} from "@/shared/i18n/regional-format";
+import {pageRoutes} from "@/shared/routing/page-routes";
 import {getDashboard} from "../infrastructure/dashboard-api";
 
 function greeting(){const h=new Date().getHours();if(h<12)return"Buenos días";if(h<19)return"Buenas tardes";return"Buenas noches"}
@@ -31,7 +32,7 @@ export function DashboardView(){
     return formatRegionalNumber(n,location?.country,{maximumFractionDigits:0});
   };
   const firstName=(user?.name??"Admin").split(" ")[0];
-  const header=<PageHeader eyebrow="CONTROL DEL NEGOCIO" title={`${greeting()}, ${firstName}`} description={`${formatDate()} · ${location?.name??"tu local"} · se actualiza cada 30 s`} action={<Link href="/ventas" className="button secondary"><Icon name="sales" size={17}/><span>Ver ventas</span></Link>}/>;
+  const header=<PageHeader eyebrow="CONTROL DEL NEGOCIO" title={`${greeting()}, ${firstName}`} description={`${formatDate()} · ${location?.name??"tu local"} · se actualiza cada 30 s`} action={<Link href={pageRoutes.sales} className="button secondary"><Icon name="sales" size={17}/><span>Ver ventas</span></Link>}/>;
 
   if(query.isLoading)return <>{header}<DashboardSkeleton/></>;
   if(query.isError)return <><PageHeader eyebrow="CONTROL DEL NEGOCIO" title="No pudimos cargar el panel" description="Los datos no se reemplazan por valores simulados."/><section className="panel catalog-state error"><span><Icon name="alert"/></span><b>Error de lectura</b><p>{query.error.message}</p><button className="button secondary" onClick={()=>void query.refetch()}>Reintentar</button></section></>;
@@ -46,11 +47,11 @@ export function DashboardView(){
   const hourly=data.hourlySales.map(item=>({hour:item.hour,total:Number(item.total)||0}));
   const max=Math.max(1,...hourly.map(item=>item.total));
   const peak=hourly.reduce<{hour:number;total:number}|null>((best,item)=>!best||item.total>best.total?item:best,null);
-  const alerts:AlertItem[]=[
-    {count:data.criticalStock,title:"Stock crítico",detail:"Insumos en mínimo o agotados",href:"/inventario",tone:"warning",icon:"stock"},
-    {count:data.purchasesToApprove,title:"Compras por aprobar",detail:"Órdenes pendientes de aprobación",href:"/compras",tone:"info",icon:"cart"},
-    {count:data.kitchenPending,title:"Comandas activas",detail:"Confirmadas o en preparación",href:"/cocina",tone:"ok",icon:"kitchen"},
-  ].filter(item=>item.count>0);
+  const alerts=([
+    {count:data.criticalStock,title:"Stock crítico",detail:"Insumos en mínimo o agotados",href:pageRoutes.inventory,tone:"warning",icon:"stock"},
+    {count:data.purchasesToApprove,title:"Compras por aprobar",detail:"Órdenes pendientes de aprobación",href:pageRoutes.purchases,tone:"info",icon:"cart"},
+    {count:data.kitchenPending,title:"Comandas activas",detail:"Confirmadas o en preparación",href:pageRoutes.kitchen,tone:"ok",icon:"kitchen"},
+  ] satisfies AlertItem[]).filter(item=>item.count>0);
   const topMax=Math.max(1,...data.topProducts.map(p=>Number(p.revenue)||0));
 
   return <>
@@ -88,7 +89,7 @@ export function DashboardView(){
     </section>
 
     <section className="panel top-products">
-      <header><span className="panel-icon"><Icon name="utensils" size={18}/></span><div><small>DESEMPEÑO DEL MENÚ</small><h2>Productos cobrados hoy</h2></div><Link href="/productos" className="panel-link">Ver carta<Icon name="chevron" size={14}/></Link></header>
+      <header><span className="panel-icon"><Icon name="utensils" size={18}/></span><div><small>DESEMPEÑO DEL MENÚ</small><h2>Productos cobrados hoy</h2></div><Link href={pageRoutes.products} className="panel-link">Ver carta<Icon name="chevron" size={14}/></Link></header>
       {data.topProducts.length?<ol className="top-list">{data.topProducts.map((p,i)=>{
         const revenue=Number(p.revenue)||0;
         return <li className="top-product" key={p.name}>

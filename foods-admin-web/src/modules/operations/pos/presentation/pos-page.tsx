@@ -9,6 +9,7 @@ import {useFeedback,useSession} from "@/providers";
 import {useSettings} from "@/providers/settings-context";
 import {formatRegionalDateTime,formatRegionalNumber} from "@/shared/i18n/regional-format";
 import {useDebouncedValue} from "@/shared/hooks/use-debounced-value";
+import {pageRoutes} from "@/shared/routing/page-routes";
 import {getCurrentCashShift} from "../../cash/infrastructure/cash-api";
 import type {Payment,POSOrderDetail,POSOrderSummary} from "../domain/types";
 import {createPayment,getPOSOrder,listPOSOrders,refundPayment} from "../infrastructure/pos-api";
@@ -107,7 +108,7 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
       <span className="pos-shift-icon"><Icon name={shift?"sales":"alert"} size={19}/></span>
       {current.isLoading?<div><small>TURNO DE CAJA</small><b>Cargando turno…</b></div>
       :shift?<><div><small>TURNO ACTIVO</small><b>{shift.cashRegisterName} · {shift.code}</b><p>Operado por {shift.openedByName}</p></div><Status tone="green">Listo para cobrar</Status></>
-      :<><div><small>TURNO REQUERIDO</small><b>No estás asignado a una caja abierta</b><p>Inicia o únete a un turno antes de registrar cobros o devoluciones.</p></div><Link href="/caja" className="button secondary"><Icon name="sales" size={16}/><span>Ir a Caja</span></Link></>}
+      :<><div><small>TURNO REQUERIDO</small><b>No estás asignado a una caja abierta</b><p>Inicia o únete a un turno antes de registrar cobros o devoluciones.</p></div><Link href={pageRoutes.cash} className="button secondary"><Icon name="sales" size={16}/><span>Ir a Caja</span></Link></>}
     </section>
 
     <section className="panel standardized-management pos-panel">

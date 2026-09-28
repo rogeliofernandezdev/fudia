@@ -7,6 +7,7 @@ import {useMutation,useQueryClient} from "@tanstack/react-query";
 import {Button,Icon,PageHeader,Status} from "@/design-system";
 import {useFeedback} from "@/providers/feedback-provider";
 import {firstAccessibleRoute} from "@/shell/navigation";
+import {pageRoutes} from "@/shared/routing/page-routes";
 import {useRestaurantSetup} from "../application/use-restaurant-setup";
 import type {RestaurantSetup} from "../domain/types";
 import {completeRestaurantSetup,updateRestaurantServiceMode} from "../infrastructure/setup-api";
@@ -33,7 +34,7 @@ export function RestaurantSetupPage(){
   const canManage=session.can("organizations.manage");
   const guideStep=steps.find(step=>step.key!=="review"&&canVisit(step.href));
   const configured=Boolean(setup?.completedAt&&setup.coreReady);
-  const homeHref=session.user&&session.modules?firstAccessibleRoute({...session,user:session.user,modules:session.modules,setupRequired:false}):"/sin-acceso";
+  const homeHref=session.user&&session.modules?firstAccessibleRoute({...session,user:session.user,modules:session.modules,setupRequired:false}):pageRoutes.noAccess;
 
   const saveMode=useMutation({
     mutationFn:updateRestaurantServiceMode,

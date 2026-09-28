@@ -291,7 +291,7 @@ test("caja separa cajas fisicas de sus turnos",()=>{
   const api=read("src/modules/operations/cash/infrastructure/cash-api.ts");
   const schema=read("src/modules/operations/cash/domain/cash-schema.ts");
   const types=read("src/modules/operations/cash/domain/types.ts");
-  const route=read("src/app/(admin)/caja/page.tsx");
+  const route=read("src/app/(admin)/cash/page.tsx");
 
   assert.ok(route.includes("CashPage"),"/caja compone el módulo operativo real");
   assert.ok(page.includes(">Cajas<"),"La vista principal administra cajas registradas");
@@ -439,21 +439,21 @@ test("el root layout carga solo la base global",()=>{
 
 test("las rutas principales componen modulos",()=>{
   const expected={
-    "src/app/(admin)/pedidos/page.tsx":"@/modules/operations",
-    "src/app/(admin)/salon/page.tsx":"@/modules/operations",
-    "src/app/(admin)/cocina/page.tsx":"@/modules/operations",
-    "src/app/(admin)/mesas/page.tsx":"@/modules/operations",
+    "src/app/(admin)/orders/page.tsx":"@/modules/operations",
+    "src/app/(admin)/dining-room/page.tsx":"@/modules/operations",
+    "src/app/(admin)/kitchen/page.tsx":"@/modules/operations",
+    "src/app/(admin)/tables/page.tsx":"@/modules/operations",
     "src/app/(admin)/pos/page.tsx":"@/modules/operations",
-    "src/app/(admin)/caja/page.tsx":"@/modules/operations",
-    "src/app/(admin)/reservas/page.tsx":"@/modules/operations",
-    "src/app/(admin)/productos/page.tsx":"@/modules/menu",
+    "src/app/(admin)/cash/page.tsx":"@/modules/operations",
+    "src/app/(admin)/reservations/page.tsx":"@/modules/operations",
+    "src/app/(admin)/products/page.tsx":"@/modules/menu",
     "src/app/(admin)/combos/page.tsx":"@/modules/menu",
-    "src/app/(admin)/clientes/page.tsx":"@/modules/customers",
-    "src/app/(admin)/locales/page.tsx":"@/modules/organizations",
-    "src/app/(admin)/configuracion/usuarios/page.tsx":"@/modules/identity",
-    "src/app/(admin)/inventario/page.tsx":"@/modules/supply",
-    "src/app/(admin)/kardex/page.tsx":"@/modules/supply",
-    "src/app/(admin)/compras/page.tsx":"@/modules/supply"
+    "src/app/(admin)/customers/page.tsx":"@/modules/customers",
+    "src/app/(admin)/locations/page.tsx":"@/modules/organizations",
+    "src/app/(admin)/settings/users/page.tsx":"@/modules/identity",
+    "src/app/(admin)/inventory/page.tsx":"@/modules/supply",
+    "src/app/(admin)/stock-ledger/page.tsx":"@/modules/supply",
+    "src/app/(admin)/purchases/page.tsx":"@/modules/supply"
   };
   for(const [p,dependency] of Object.entries(expected))assert.ok(read(p).includes(dependency),p);
 });
@@ -470,7 +470,7 @@ test("mvp admin no presenta datos simulados como operacion real",()=>{
   assert.equal(sales.includes("#10482"),false,"Ventas no conserva filas de ejemplo");
   assert.ok(receipts.includes("Fuera del MVP actual"),"Comprobantes no simula facturacion aun no implementada");
   assert.ok(reservations.includes("saveReservation"),"Reservas persiste altas y ediciones");
-  assert.ok(configuration.includes('href:"/configuracion/empresa"'),"Configuracion enlaza los datos de empresa");
+  assert.ok(configuration.includes("href:pageRoutes.organizationSettings"),"Configuracion enlaza los datos de empresa");
   assert.equal(configuration.includes("Facturación electrónica"),false,"Facturacion futura no se ofrece en el hub MVP");
 });
 
@@ -579,7 +579,7 @@ test("identidad alinea permisos administracion plataforma y perfil",()=>{
   assert.ok(platformLayout.includes("SessionProvider"),"El área de plataforma carga contexto de sesión");
   assert.ok(platformShell.includes("!user?.platformAdmin"),"El onboarding de empresas tiene guard funcional de platform admin");
 
-  assert.ok(shell.includes('href="/configuracion/perfil"'),"La cuenta enlaza a un perfil funcional");
+  assert.ok(shell.includes("href={pageRoutes.profileSettings}"),"La cuenta enlaza a un perfil funcional");
   assert.equal(shell.includes("?section=preferences"),false,"No se anuncian preferencias inexistentes");
   assert.equal(shell.includes("?section=security"),false,"No se anuncia una pantalla de seguridad inexistente");
   assert.ok(profile.includes("saveMyProfile"),"Perfil guarda datos y contraseña por su endpoint real");
@@ -698,13 +698,13 @@ test("login inicia en la primera ruta realmente accesible",()=>{
   const shell=read("src/shell/admin-shell.tsx");
   const navigation=read("src/shell/navigation.ts");
   const contextSwitcher=read("src/modules/context/presentation/context-switcher.tsx");
-  const noAccess=read("src/app/(admin)/sin-acceso/page.tsx");
+  const noAccess=read("src/app/(admin)/no-access/page.tsx");
 
   assert.ok(login.includes("loadSessionContext"),"Login carga permisos y módulos antes de redirigir");
   assert.ok(login.includes("firstAccessibleRoute(context)"),"Login calcula la ruta inicial desde el contexto real");
   assert.equal(login.includes('router.replace("/dashboard")'),false,"Login no asume que todos pueden ver Reportes");
 
-  assert.ok(navigation.includes('return visibleNavigation(context)[0]?.items[0]?.href??"/sin-acceso"'),"La ruta inicial sigue el orden visible del menú");
+  assert.ok(navigation.includes("return visibleNavigation(context)[0]?.items[0]?.href??pageRoutes.noAccess"),"La ruta inicial sigue el orden visible del menú");
   assert.ok(navigation.includes("context.menuAccess.includes"),"La ruta exige acceso de menú");
   assert.ok(navigation.includes("context.permissions.includes"),"La ruta exige permiso del endpoint");
   assert.ok(navigation.includes("moduleIsActive(context.modules,item.module)"),"La ruta exige módulo activo");
@@ -719,7 +719,7 @@ test("login inicia en la primera ruta realmente accesible",()=>{
 
 test("la puesta en marcha guía según los módulos contratados",()=>{
   const setup=read("src/modules/setup/presentation/setup-steps.ts");
-  const route=read("src/app/(admin)/configuracion/puesta-en-marcha/page.tsx");
+  const route=read("src/app/(admin)/settings/getting-started/page.tsx");
   assert.ok(route.includes('from "@/modules/setup"'),"La ruta consume la pantalla que muestra el avance real");
   const navigation=read("src/shell/navigation.ts");
   const session=read("src/shared/session/session-api.ts");
@@ -730,7 +730,7 @@ test("la puesta en marcha guía según los módulos contratados",()=>{
   assert.ok(setup.includes("setup.modules.compras"),"Compras solo aparece cuando el plan lo habilita");
   assert.ok(setup.includes('setup.serviceMode==="dine_in"||setup.serviceMode==="mixed"'),"Las mesas son obligatorias únicamente para atención en salón");
   assert.ok(session.includes("setupRequired:boolean"),"El contexto informa si la empresa sigue pendiente");
-  assert.ok(navigation.includes('return "/configuracion/puesta-en-marcha"'),"El Administrador entra primero al asistente pendiente");
+  assert.ok(navigation.includes("return pageRoutes.gettingStarted"),"El Administrador entra primero al asistente pendiente");
   assert.ok(shell.includes("Configuración inicial pendiente"),"La navegación mantiene un recordatorio de configuración");
 });
 
@@ -779,4 +779,22 @@ test("Concierge no duplica el número administrado por Meta",()=>{
   assert.equal(settings.includes("data.whatsappPhone"),false,"La configuración de empresa no muestra un número persistido");
   assert.ok(settings.includes("Meta / WhatsApp Business"),"La UI identifica Meta como administrador del canal");
   assert.ok(startProxy.includes("FUDIA_CONCIERGE_URL"),"El BFF delega el deeplink al servicio Concierge");
+});
+
+test("las URL públicas usan inglés y conservan compatibilidad al refrescar",()=>{
+  const routes=read("src/shared/routing/page-routes.ts");
+  const config=read("next.config.ts");
+  const navigation=read("src/shell/navigation.ts");
+
+  for(const route of ["/sales","/orders","/dining-room","/kitchen","/tables","/cash","/products","/inventory","/settings/users","/no-access"]){
+    assert.ok(routes.includes(`\"${route}\"`),`Falta la ruta canónica ${route}`);
+  }
+  assert.ok(config.includes("async redirects()"),"Las rutas antiguas redirigen a su URL canónica");
+  assert.equal(config.includes("async rewrites()"),false,"Las rutas canónicas existen físicamente y no dependen de rewrites");
+  assert.ok(config.includes("legacyPageRedirects"),"Next reutiliza el catálogo central de rutas antiguas");
+  assert.ok(navigation.includes('from "@/shared/routing/page-routes"'),"El menú usa el catálogo central");
+  assert.equal(navigation.includes('href:"/productos"'),false,"El menú no expone rutas antiguas en español");
+  assert.ok(routes.includes('{legacy:"/mesa/:qr",canonical:pageRoutes.publicTable}'),"La carta pública conserva compatibilidad dinámica");
+  assert.ok(read("src/app/(admin)/products/page.tsx").includes('from "@/modules/menu"'),"La ruta Products existe físicamente para soportar refresh directo");
+  assert.ok(read("src/app/(admin)/settings/users/page.tsx").includes('from "@/modules/identity"'),"La configuración de usuarios existe físicamente en inglés");
 });

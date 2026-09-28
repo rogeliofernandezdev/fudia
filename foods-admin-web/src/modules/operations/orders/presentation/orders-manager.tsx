@@ -12,6 +12,7 @@ import {useSettings} from "@/providers/settings-context";
 import {useDebouncedValue} from "@/shared/hooks/use-debounced-value";
 import {useSession} from "@/providers/session-context";
 import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
+import {pageRoutes} from "@/shared/routing/page-routes";
 
 
 const channelIcons:Record<string,IconName>={salon:"utensils",mostrador:"store",recojo:"box",delivery:"truck",whatsapp:"share"};
@@ -61,7 +62,7 @@ export function OrdersManager(){
  const hasActiveFilters=Boolean(q||channel||status!=="abiertos");
  const emptyTitle=hasActiveFilters?"Sin coincidencias":"Sin pedidos abiertos";
  const emptyText=hasActiveFilters?"Prueba con otro canal, estado o término de búsqueda.":"Los pedidos nuevos aparecerán aquí cuando ingresen.";
- return <div className="orders-page-shell"><PageHeader eyebrow="OPERACIÓN OMNICANAL" title="Pedidos" description="Revisa el origen, estado y avance de cada pedido sin perder el contexto operativo." action={canManage?<Link href="/salon" className="orders-salon-link"><Icon name="utensils" size={16}/><span>Abrir salón</span></Link>:undefined}/>
+ return <div className="orders-page-shell"><PageHeader eyebrow="OPERACIÓN OMNICANAL" title="Pedidos" description="Revisa el origen, estado y avance de cada pedido sin perder el contexto operativo." action={canManage?<Link href={pageRoutes.diningRoom} className="orders-salon-link"><Icon name="utensils" size={16}/><span>Abrir salón</span></Link>:undefined}/>
  <div className="catalog-tabs-row orders-tabs-row">
   <div className="catalog-tabs orders-tabs" role="tablist" aria-label="Filtrar pedidos por canal">
    <button type="button" role="tab" aria-selected={channel===""} className={channel===""?"active":""} onClick={()=>{setChannel("");setPage(1)}}><Icon name="receipt" size={14}/><span>Todos</span>{showChannelCounts&&<b>{openTotal}</b>}</button>

@@ -9,6 +9,7 @@ import {Button,IconButton,PageHeader,Pagination,RowActionButton,Status} from "@/
 import {ConfirmDialog} from "@/design-system/confirm-dialog";
 import {useFeedback} from "@/providers/feedback-provider";
 import {useSession} from "@/providers/session-context";
+import {publicTablePath} from "@/shared/routing/page-routes";
 import {zoneResolver} from "../domain/zone-schema";import type {RowDraft,Table,ZoneDraft} from "../domain/types";
 import {createTables,deactivateTableOrZone,listActiveZones,listTables,listZones,saveTable as persistTable,saveZone as persistZone} from "../infrastructure/tables-api";
 
@@ -91,7 +92,7 @@ export function TablesManager(){
 
 function QrDialog({table,restaurantName,close}:{table:Table;restaurantName:string;close:()=>void}){
  const canvasRef=useRef<HTMLCanvasElement>(null);
- const qrUrl=typeof window!=="undefined"?`${window.location.origin}/mesa/${table.qrToken}`:"";
+ const qrUrl=typeof window!=="undefined"?`${window.location.origin}${publicTablePath(table.qrToken)}`:"";
 
  useEffect(()=>{
    if(canvasRef.current&&qrUrl){
@@ -185,7 +186,7 @@ function PrintQrDialog({tables,restaurantName,close}:{tables:Table[];restaurantN
    printable.forEach(t=>{
      const canvas=canvasRefs.current[t.id];
      if(canvas){
-       QRCode.toCanvas(canvas,`${origin}/mesa/${t.qrToken}`,{width:200,margin:1,color:{dark:"#1a2151",light:"#ffffff"}},(err)=>{
+       QRCode.toCanvas(canvas,`${origin}${publicTablePath(t.qrToken)}`,{width:200,margin:1,color:{dark:"#1a2151",light:"#ffffff"}},(err)=>{
          if(err){console.error(err);return}
          // Superponer el logo en el centro del QR
          const ctx=canvas.getContext("2d");if(!ctx)return;

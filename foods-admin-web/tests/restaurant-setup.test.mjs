@@ -4,9 +4,16 @@ import {readFileSync} from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
 
+const routesSource=readFileSync(new URL("../src/shared/routing/page-routes.ts",import.meta.url),"utf8");
+const routesCompiled=ts.transpileModule(routesSource,{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText;
+const routesContext={exports:{}};
+vm.runInNewContext(routesCompiled,routesContext);
 const source=readFileSync(new URL("../src/modules/setup/presentation/setup-steps.ts",import.meta.url),"utf8");
 const compiled=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText;
-const context={exports:{}};
+const context={exports:{},require:specifier=>{
+  if(specifier==="@/shared/routing/page-routes")return routesContext.exports;
+  throw new Error(`Dependencia no configurada: ${specifier}`);
+}};
 vm.runInNewContext(compiled,context);
 const {buildSetupSteps,setupGuideHref,setupOverviewHref}=context.exports;
 const empty={serviceMode:"",completedAt:null,coreReady:false,counts:{categories:0,products:0,tables:0,cashRegisters:0,users:1,inventoryItems:0,recipes:0,suppliers:0},modules:{}};
@@ -43,8 +50,8 @@ test("la carta exige categoría y producto; recorrer pasos no altera requisitos"
 test("los enlaces de guía abren la sección real y el resumen conserva el paso",()=>{
   const step=buildSetupSteps(empty).find(step=>step.key==="catalog");
   const href=setupGuideHref(step);
-  assert.equal(href.pathname,"/productos");
+  assert.equal(href.pathname,"/products");
   assert.equal(href.query.guia,"puesta-en-marcha");
   assert.equal(href.query.paso,"catalog");
-  assert.equal(setupOverviewHref(step.key),"/configuracion/puesta-en-marcha?paso=catalog");
+  assert.equal(setupOverviewHref(step.key),"/settings/getting-started?paso=catalog");
 });

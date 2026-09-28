@@ -465,7 +465,7 @@ comparte por empresa y local, y se consulta de nuevo al regresar al resumen.
 
 
 Después de crear la empresa, su Administrador entra a
-`/configuracion/puesta-en-marcha`. El asistente lee contadores reales de la API,
+`/settings/getting-started`. El asistente lee contadores reales de la API,
 no simula datos ni duplica formularios: deriva al mantenimiento correspondiente
 y comprueba los cambios al regresar. Son obligatorios el tipo de atención, una
 categoría, un producto vendible y una caja; las mesas solo son obligatorias para
@@ -501,5 +501,19 @@ estado listo respetan los patrones visuales generales y el flujo funciona desde
   de venta y Almacenero → Inventario.
 - El logo de FUDIA y el cambio de local reutilizan exactamente la misma regla.
 - Si ningún módulo satisface las tres condiciones, la cuenta entra a
-  `/sin-acceso`, donde se informa que debe revisarse su rol. No se muestra un
+  `/no-access`, donde se informa que debe revisarse su rol. No se muestra un
   Dashboard bloqueado como página inicial.
+
+
+### Convención de URL
+
+- Los segmentos públicos de las páginas se escriben en inglés; el contenido y
+  las etiquetas visibles se mantienen en español.
+- `src/shared/routing/page-routes.ts` es la única autoridad para construir
+  enlaces internos. Una pantalla no debe escribir nuevamente una ruta literal.
+- Las URL históricas en español redirigen a su equivalente canónico en inglés.
+  Cada ruta canónica corresponde a una carpeta real de App Router, por lo que
+  abrir un enlace directo o actualizar el navegador nunca depende de una
+  navegación previa del cliente ni de un `rewrite`.
+- Al renombrar una ruta se conserva temporalmente su alias en
+  `legacyPageAliases`; no se duplican pantallas ni lógica de negocio.
