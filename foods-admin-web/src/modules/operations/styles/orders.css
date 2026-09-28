@@ -42,11 +42,11 @@
   color:var(--ops-800,#1a2151);
 }
 
-/* ── Tabs de canal: pestañas de carpeta ──
-   Fila clara que corona el panel. Cada pestaña es una solapa con borde;
-   la activa es blanca, un poco más alta, con un filete azul arriba y
-   se funde con el panel. Las inactivas quedan en cloud-100 detrás de
-   la línea. Icono, nombre y conteo. Sin colores de fondo fuertes. */
+/* ── Tabs de canal: bloque activo sólido ──
+   Fila blanca que corona el panel, separada por una línea. Las pestañas
+   inactivas son texto con icono y conteo; la activa es un bloque azul
+   primary-600 de esquinas 6 px con texto blanco. Contraste alto sin
+   franjas de color de fondo. */
 .orders-tabs-row{
   min-width:0;
   margin:0;
@@ -54,15 +54,15 @@
   border:1px solid var(--line,#e4e7ec);
   border-bottom:0;
   border-radius:14px 14px 0 0;
-  background:var(--cloud-50,#f7f8fc);
+  background:var(--surface,#fff);
 }
 
 .orders-tabs{
   display:flex;
-  align-items:flex-end;
+  align-items:center;
   gap:6px;
   width:100%;
-  padding:10px 12px 0;
+  padding:10px 12px;
   border-bottom:1px solid var(--line,#e4e7ec);
   overflow-x:auto;
   overflow-y:hidden;
@@ -75,18 +75,16 @@
 }
 
 .orders-tab{
-  position:relative;
   flex:0 0 auto;
   display:inline-flex;
   align-items:center;
   gap:8px;
+  height:var(--control-height);
   min-height:var(--control-height);
-  margin-bottom:-1px;
-  padding:7px 14px 7px 12px;
-  border:1px solid var(--line,#e4e7ec);
-  border-bottom:0;
-  border-radius:8px 8px 0 0;
-  background:var(--cloud-100,#f3f6fa);
+  padding:0 14px 0 12px;
+  border:0;
+  border-radius:6px;
+  background:transparent;
   color:var(--ink-600,#475467);
   font-size:11px;
   font-weight:750;
@@ -98,26 +96,14 @@
 }
 
 .orders-tab:hover{
-  background:var(--surface,#fff);
+  background:var(--cloud-100,#f3f6fa);
   color:var(--ink-950,#101828);
 }
 
 .orders-tab.active{
-  padding-top:10px;
-  background:var(--surface,#fff);
-  color:var(--ink-950,#101828);
+  background:var(--primary-600,#4654cd);
+  color:#fff;
   font-weight:800;
-  box-shadow:inset 0 3px 0 var(--primary-600,#4654cd);
-}
-
-.orders-tab.active::after{
-  content:"";
-  position:absolute;
-  left:0;
-  right:0;
-  bottom:-1px;
-  height:2px;
-  background:var(--surface,#fff);
 }
 
 .orders-tab-icon{
@@ -127,20 +113,20 @@
   transition:color .15s ease;
 }
 
-.orders-tab:hover .orders-tab-icon{
-  color:var(--ink-600,#475467);
-}
-
-.orders-tab.active .orders-tab-icon{
-  color:var(--primary-600,#4654cd);
-}
-
-.orders-tab.ch-salon.active .orders-tab-icon{
+.orders-tab.ch-salon .orders-tab-icon{
   color:var(--ops-700,#3946b8);
 }
 
-.orders-tab.ch-whatsapp.active .orders-tab-icon{
+.orders-tab.ch-whatsapp .orders-tab-icon{
   color:var(--digital-700,#5421a8);
+}
+
+.orders-tab:hover .orders-tab-icon{
+  color:var(--ink-700,#344054);
+}
+
+.orders-tab.active .orders-tab-icon{
+  color:#fff;
 }
 
 .orders-tab-text{
@@ -161,29 +147,29 @@
   height:18px;
   padding:0 6px;
   border-radius:999px;
-  background:var(--surface,#fff);
+  background:var(--cloud-100,#f3f6fa);
   color:var(--ink-600,#475467);
   font-size:10px;
   font-weight:800;
   font-variant-numeric:tabular-nums;
-  box-shadow:inset 0 0 0 1px var(--line,#e4e7ec);
   transition:background .15s ease,color .15s ease;
 }
 
 .orders-tab[data-empty="true"] .orders-tab-count{
   background:transparent;
   color:var(--ink-400,#98a2b3);
+  box-shadow:inset 0 0 0 1px var(--line,#e4e7ec);
 }
 
 .orders-tab.active .orders-tab-count{
-  background:var(--primary-600,#4654cd);
-  color:#fff;
+  background:#fff;
+  color:var(--primary-600,#4654cd);
   box-shadow:none;
 }
 
 .orders-tab.active[data-empty="true"] .orders-tab-count{
-  background:var(--primary-100,#eef0ff);
-  color:var(--primary-600,#4654cd);
+  background:rgba(255,255,255,.2);
+  color:#fff;
 }
 
 /* Skeleton de pestañas: misma silueta que las reales */
@@ -191,11 +177,15 @@
   pointer-events:none;
 }
 
+.orders-tabs-skeleton .orders-tab.active{
+  background:var(--primary-100,#eef0ff);
+}
+
 .orders-tabs-skeleton i{
   display:block;
   height:10px;
   border-radius:4px;
-  background:linear-gradient(90deg,var(--line,#e4e7ec),var(--surface,#fff),var(--line,#e4e7ec));
+  background:linear-gradient(90deg,var(--cloud-100,#f3f6fa),var(--line,#e4e7ec),var(--cloud-100,#f3f6fa));
   background-size:200% 100%;
   animation:orders-tabs-shimmer 1.2s ease-in-out infinite;
 }
@@ -1695,11 +1685,11 @@
 
   .orders-tabs{
     gap:4px;
-    padding:8px 8px 0;
+    padding:8px;
   }
 
   .orders-tab{
-    padding:7px 11px 7px 10px;
+    padding:0 11px 0 10px;
   }
 
   .order-detail{
