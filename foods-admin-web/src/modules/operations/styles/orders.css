@@ -81,8 +81,8 @@
   align-items:center;
   justify-content:center;
   gap:8px;
-  height:var(--control-height);
-  min-height:var(--control-height);
+  height:calc(var(--control-height) + 8px);
+  min-height:calc(var(--control-height) + 8px);
   padding:0 14px;
   border:0;
   border-radius:6px;
@@ -148,9 +148,9 @@
   flex:0 0 auto;
   display:inline-grid;
   place-items:center;
-  min-width:20px;
-  height:18px;
-  padding:0 6px;
+  min-width:22px;
+  height:20px;
+  padding:0 7px;
   border-radius:999px;
   background:var(--cloud-100,#f3f6fa);
   color:var(--ink-600,#475467);
