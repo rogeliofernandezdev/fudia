@@ -1,25 +1,45 @@
+/* pos.css — Punto de venta (cobros y devoluciones). Tokens Foods:
+   azul para acciones y saldo, verde solo para éxito, ámbar para pago
+   parcial. Montos con cifras tabulares y tamaño legible. */
 .pos-page{display:grid}
-.pos-shift-banner{display:flex;align-items:center;gap:12px;margin-bottom:16px;padding:13px 15px;border-radius:12px;border:1px solid var(--line);background:#fff}
+
+/* Turno de caja */
+.pos-shift-banner{display:flex;align-items:center;gap:12px;margin-bottom:16px;padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:#fff}
 .pos-shift-banner.active{border-color:var(--brand-100);background:var(--brand-100)}
-.pos-shift-banner.missing{background:var(--cloud-50)}
+.pos-shift-banner.missing{border-color:var(--line-strong);background:var(--cloud-50)}
 .pos-shift-icon{display:grid;place-items:center;width:38px;height:38px;border-radius:10px;background:#fff;color:var(--ops-700);flex:0 0 auto}
+.pos-shift-banner.missing .pos-shift-icon{color:var(--warning-600)}
 .pos-shift-banner>div{display:grid;gap:2px;min-width:0;flex:1}
-.pos-shift-banner small{color:var(--ink-400);font-size:10px;font-weight:900;letter-spacing:.08em}
-.pos-shift-banner b{font-size:11px;color:var(--ink-950)}
+.pos-shift-banner small{color:var(--ink-500);font-size:10px;font-weight:900;letter-spacing:.08em}
+.pos-shift-banner b{font-size:12px;color:var(--ink-950)}
 .pos-shift-banner p{margin:0;color:var(--ink-500);font-size:10px}
 .pos-shift-banner>.status,.pos-shift-banner>.button{flex:0 0 auto}
 
+/* Panel y barra de filtros */
 .pos-panel{overflow:hidden}
 .pos-toolbar{display:grid;grid-template-columns:minmax(260px,1fr) 190px minmax(280px,1fr);gap:10px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line)}
-.pos-search{display:flex;align-items:center;border:1px solid var(--line);border-radius:8px;color:var(--ink-400)}
+.pos-search{display:flex;align-items:center;height:var(--control-height);border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink-400);transition:border-color .15s ease,box-shadow .15s ease}
+.pos-search:focus-within{border-color:var(--ops-500);box-shadow:0 0 0 3px #2f5bc71f}
 .pos-search>svg{margin-left:10px;flex:0 0 auto}
 .pos-search .ds-input{border:0;box-shadow:none}
-.pos-toolbar>p{display:flex;align-items:center;gap:7px;margin:0;color:var(--ink-400);font-size:10px;line-height:1.4}
-.pos-balance{color:var(--ops-700);font-size:11px}
-.pos-actions{display:flex;align-items:center;justify-content:center;gap:7px}
-.pos-pay-row{height:34px;padding:0 11px;font-size:10px}
-.pos-table-wrap table{min-width:900px}
+.pos-toolbar>p{display:flex;align-items:center;gap:7px;margin:0;color:var(--ink-500);font-size:10px;line-height:1.4}
+.pos-toolbar>p svg{color:var(--brand-700);flex:0 0 auto}
 
+/* Tabla */
+.pos-table-wrap table{min-width:860px}
+.pos-table th.pos-money{text-align:right;white-space:nowrap}
+.pos-table td.pos-money{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;font-size:11px}
+.pos-table td.pos-money>b{font-size:11px}
+.pos-table th.pos-th-actions{text-align:center}
+.pos-balance{color:var(--ops-700);font-size:12px;font-weight:900}
+.pos-row-icon.pc-salon{color:var(--ops-700);background:var(--primary-100)}
+.pos-row-icon.pc-whatsapp{color:var(--digital-700);background:#f3ebff}
+.pos-row-icon.pc-delivery,.pos-row-icon.pc-mostrador,.pos-row-icon.pc-recojo{color:var(--ink-600);background:#f2f4f7}
+.pos-channel-cell{display:inline-flex;align-items:center;gap:6px;color:var(--ink-600);font-size:10px;font-weight:700;white-space:nowrap}
+.pos-actions{display:flex;align-items:center;justify-content:center;gap:7px}
+.pos-pay-row{height:var(--control-height);min-height:var(--control-height);padding:0 12px;font-size:10px}
+
+/* Estados */
 .pos-state{display:grid;place-content:center;justify-items:center;gap:7px;min-height:300px;padding:34px;text-align:center;color:var(--ink-500)}
 .pos-state>span{display:grid;place-items:center;width:48px;height:48px;border-radius:13px;background:var(--primary-100);color:var(--primary-700)}
 .pos-state>b{font-size:12px;color:var(--ink-950)}
@@ -27,60 +47,79 @@
 .pos-loading,.pos-detail-loading{display:grid;gap:8px;padding:16px}
 .pos-loading i,.pos-detail-loading i{display:block;height:58px;border-radius:9px;background:linear-gradient(90deg,var(--cloud-50),var(--primary-50),var(--cloud-50));background-size:200% 100%;animation:skeleton 1.2s infinite}
 
-.pos-payment-modal{width:min(520px,calc(100vw - 32px));overflow:hidden}
+/* Modal de cobro y devolución */
+.pos-payment-modal{width:min(560px,calc(100vw - 32px));overflow:hidden}
 .pos-payment-modal>form{display:flex;flex-direction:column;min-height:0}
 .pos-payment-modal>.modal-busy{inset:0;z-index:20;border-radius:inherit;pointer-events:auto}
 .pos-payment-body{display:grid;gap:14px}
 .pos-payment-body>label{display:grid;gap:7px;color:var(--ink-600);font-size:10px;font-weight:800}
-.pos-payment-summary{display:grid;grid-template-columns:1fr 1fr 1.2fr;border-radius:10px;overflow:hidden;background:var(--cloud-50)}
-.pos-payment-summary>div{display:grid;gap:4px;padding:11px 12px}
+.pos-payment-summary{display:grid;grid-template-columns:1fr 1fr 1.3fr;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--cloud-50)}
+.pos-payment-summary>div{display:grid;gap:4px;padding:12px 14px}
 .pos-payment-summary>div+div{border-left:1px solid var(--line)}
-.pos-payment-summary small,.pos-refund-source small{color:var(--ink-400);font-size:10px;font-weight:850;letter-spacing:.06em}
-.pos-payment-summary b{font-size:10px}
+.pos-payment-summary small,.pos-refund-source small{color:var(--ink-500);font-size:10px;font-weight:850;letter-spacing:.06em}
+.pos-payment-summary b{font-size:13px;font-variant-numeric:tabular-nums}
 .pos-payment-summary .remaining{background:var(--primary-100)}
-.pos-payment-summary .remaining strong{font-size:15px;color:var(--ops-700)}
-.pos-shift-note,.pos-cash-impact,.pos-refund-warning{display:flex;align-items:flex-start;gap:8px;padding:10px 12px;border-radius:9px;background:var(--cloud-50);color:var(--ink-600);font-size:10px;line-height:1.45}
-.pos-cash-impact{background:var(--brand-100);color:var(--brand-700)}
-.pos-refund-warning{background:var(--primary-50);color:var(--danger)}
-.pos-refund-source{display:grid;gap:4px;padding:12px;border-radius:10px;background:var(--cloud-50)}
-.pos-refund-source strong{font-size:17px;color:var(--ink-950)}
+.pos-payment-summary .remaining strong{font-size:18px;color:var(--ops-700);font-variant-numeric:tabular-nums}
+
+/* Método de pago: tarjetas radio con icono */
+.pos-methods{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin:0;padding:0;border:0;min-width:0}
+.pos-methods>legend{grid-column:1/-1;padding:0;color:var(--ink-600);font-size:10px;font-weight:800}
+.pos-method{position:relative;display:grid;justify-items:center;gap:6px;padding:10px 6px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink-600);font-size:10px;font-weight:800;text-align:center;cursor:pointer;transition:border-color .15s ease,background .15s ease,color .15s ease}
+.pos-method>input{position:absolute;inset:0;margin:0;opacity:0;cursor:pointer}
+.pos-method:hover{border-color:var(--line-strong);background:var(--cloud-50)}
+.pos-method.active{border-color:var(--primary-600);background:var(--primary-50);color:var(--ops-700);box-shadow:inset 0 0 0 1px var(--primary-600)}
+.pos-method:focus-within{box-shadow:0 0 0 3px #2f5bc71f}
+.pos-method-icon{display:grid;place-items:center;width:34px;height:34px;border-radius:6px;background:var(--cloud-100);color:var(--ink-600);transition:background .15s ease,color .15s ease}
+.pos-method.active .pos-method-icon{background:var(--primary-600);color:#fff}
+
+.pos-shift-note{display:flex;align-items:flex-start;gap:8px;padding:10px 12px;border-radius:6px;background:var(--cloud-50);color:var(--ink-600);font-size:10px;line-height:1.45}
+.pos-cash-impact{display:flex;align-items:flex-start;gap:8px;padding:10px 12px;border-radius:6px;background:var(--brand-100);color:var(--brand-700);font-size:10px;line-height:1.45}
+.pos-refund-warning{display:flex;align-items:flex-start;gap:8px;padding:10px 12px;border-radius:6px;background:var(--warning-50);color:var(--warning-600);font-size:10px;line-height:1.45}
+.pos-shift-note svg,.pos-cash-impact svg,.pos-refund-warning svg{flex:0 0 auto;margin-top:1px}
+.pos-refund-source{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--cloud-50)}
+.pos-refund-source>div{display:grid;gap:3px;min-width:0}
+.pos-refund-source strong{font-size:18px;color:var(--ink-950);font-variant-numeric:tabular-nums}
 .pos-refund-source span{color:var(--ink-500);font-size:10px}
 
+/* Modal de detalle */
 .pos-detail-modal{display:flex;flex-direction:column;width:min(900px,calc(100vw - 32px));max-height:min(820px,calc(100dvh - 32px));overflow:hidden}
 .pos-detail-body{display:grid;gap:14px;padding:18px;overflow-y:auto;background:var(--cloud-50)}
-.pos-detail-summary{display:grid;grid-template-columns:1fr 1fr 1.2fr auto;align-items:center;gap:1px;border-radius:11px;overflow:hidden;background:var(--line)}
+.pos-detail-summary{display:grid;grid-template-columns:1fr 1fr 1.3fr auto;align-items:center;gap:1px;border-radius:11px;overflow:hidden;background:var(--line)}
 .pos-detail-summary>div{display:grid;gap:4px;padding:12px 14px;background:#fff}
-.pos-detail-summary small{color:var(--ink-400);font-size:10px;font-weight:850;letter-spacing:.06em}
-.pos-detail-summary b{font-size:10px}
+.pos-detail-summary small{color:var(--ink-500);font-size:10px;font-weight:850;letter-spacing:.06em}
+.pos-detail-summary b{font-size:13px;font-variant-numeric:tabular-nums}
 .pos-detail-summary .remaining{background:var(--primary-100)}
-.pos-detail-summary .remaining strong{font-size:17px;color:var(--ops-700)}
+.pos-detail-summary .remaining strong{font-size:18px;color:var(--ops-700);font-variant-numeric:tabular-nums}
 .pos-detail-summary>.status{margin:0 12px}
 .pos-detail-section{overflow:hidden;border-radius:11px;background:#fff}
 .pos-detail-section>header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border-bottom:1px solid var(--line)}
 .pos-detail-section>header>div{display:grid;gap:2px}
-.pos-detail-section>header small{color:var(--ink-400);font-size:10px;font-weight:850;letter-spacing:.06em}
+.pos-detail-section>header small{color:var(--ink-500);font-size:10px;font-weight:850;letter-spacing:.06em}
 .pos-detail-section h3{margin:0;font-size:11px}
-.pos-detail-section>header>span{color:var(--ink-400);font-size:10px}
+.pos-detail-section>header>span{color:var(--ink-500);font-size:10px;font-weight:700}
 .pos-order-lines{display:grid}
-.pos-order-lines>div{display:grid;grid-template-columns:34px 1fr auto;align-items:start;gap:10px;padding:11px 14px}
+.pos-order-lines>div{display:grid;grid-template-columns:32px 1fr auto;align-items:center;gap:10px;padding:10px 14px}
 .pos-order-lines>div+div{border-top:1px solid var(--line)}
-.pos-order-lines>div>b{display:grid;place-items:center;width:30px;height:30px;border-radius:8px;background:var(--primary-100);color:var(--ops-700);font-size:10px}
-.pos-order-lines>div>span{display:grid;gap:3px;font-size:10px;font-weight:750}
-.pos-order-lines small{color:var(--ink-400);font-size:10px;font-weight:500}
-.pos-order-lines strong{font-size:10px;font-variant-numeric:tabular-nums}
+.pos-order-lines>div>b{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--primary-100);color:var(--ops-700);font-size:10px;font-weight:900;font-variant-numeric:tabular-nums}
+.pos-order-lines>div>span{display:grid;gap:3px;font-size:11px;font-weight:750}
+.pos-order-lines small{display:inline-flex;align-items:center;gap:4px;width:fit-content;padding:2px 7px;border-radius:6px;background:#fef3c7;color:#6b4a0a;font-size:10px;font-weight:700}
+.pos-order-lines strong{font-size:11px;font-variant-numeric:tabular-nums}
 .pos-payment-list{display:grid}
 .pos-payment-list article{display:grid;grid-template-columns:34px minmax(0,1fr) auto auto;align-items:center;gap:10px;padding:11px 14px}
 .pos-payment-list article+article{border-top:1px solid var(--line)}
-.pos-payment-method{display:grid;place-items:center;width:32px;height:32px;border-radius:8px;background:var(--primary-100);color:var(--ops-700)}
+.pos-payment-method{display:grid;place-items:center;width:32px;height:32px;border-radius:8px;background:var(--primary-100);color:var(--ops-700);flex:0 0 auto}
+.pos-payment-method.pm-cash{background:var(--brand-100);color:var(--brand-700)}
+.pos-payment-method.pm-transfer{background:#f3ebff;color:var(--digital-700)}
+.pos-payment-method.pm-other{background:var(--cloud-100);color:var(--ink-600)}
 .pos-payment-list article>div{display:grid;gap:2px;min-width:0}
-.pos-payment-list article>div b{font-size:10px}
-.pos-payment-list article>div small{color:var(--ink-400);font-size:10px}
-.pos-payment-list article>div em{color:var(--ink-500);font-size:10px;font-style:normal}
+.pos-payment-list article>div b{font-size:11px}
+.pos-payment-list article>div small{color:var(--ink-500);font-size:10px}
+.pos-payment-list article>div em{color:var(--ink-600);font-size:10px;font-style:normal}
 .pos-payment-values{display:grid;justify-items:end;gap:2px}
-.pos-payment-values b{font-size:10px}
-.pos-payment-values small{color:var(--danger);font-size:10px}
-.pos-refund-action{height:32px;padding:0 9px;font-size:10px}
-.pos-payments-empty{padding:28px;text-align:center;color:var(--ink-400);font-size:10px}
+.pos-payment-values b{font-size:12px;font-variant-numeric:tabular-nums}
+.pos-payment-values small{color:var(--danger);font-size:10px;font-weight:700}
+.pos-refund-action{height:var(--control-height);min-height:var(--control-height);padding:0 10px;font-size:10px}
+.pos-payments-empty{padding:28px;text-align:center;color:var(--ink-500);font-size:10px}
 .pos-detail-footer{display:flex;justify-content:flex-end;padding:12px 16px;border-top:1px solid var(--line);background:#fff}
 
 @media(max-width:860px){
@@ -98,6 +137,7 @@
  .pos-payment-modal>.modal-busy{border-radius:0}
  .pos-payment-summary{grid-template-columns:1fr}
  .pos-payment-summary>div+div{border-left:0;border-top:1px solid var(--line)}
+ .pos-methods{grid-template-columns:repeat(2,minmax(0,1fr))}
  .pos-detail-body{padding:12px}
  .pos-detail-summary{grid-template-columns:1fr}
  .pos-payment-list article{grid-template-columns:34px 1fr}
