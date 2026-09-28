@@ -74,7 +74,7 @@ export function OrdersManager(){
  <div className="orders-tabs-row">
   {list.isPending?<div className="orders-tabs orders-tabs-skeleton" aria-hidden="true">{Array.from({length:4},(_,i)=><span className={"orders-tab"+(i===0?" active":"")} key={i}><i className="orders-tab-icon"/><span className="orders-tab-text"><i/><i/></span></span>)}</div>:
   <div className={"orders-tabs"+(showChannelCounts?"":" no-counts")} role="tablist" aria-label="Filtrar pedidos por canal">
-   {tabs.map((t,i)=><button type="button" role="tab" key={t.value||"all"} id={`orders-tab-${t.value||"all"}`} aria-selected={channel===t.value} aria-controls="orders-tabpanel" tabIndex={channel===t.value?0:-1} data-empty={showChannelCounts&&t.count===0} className={"orders-tab ch-"+(t.value||"all")+(channel===t.value?" active":"")} data-tooltip={showChannelCounts?`${t.label} · ${t.count} ${t.count===1?"pedido abierto":"pedidos abiertos"}`:t.label} onClick={()=>pickChannel(t.value)} onKeyDown={e=>onTabKey(e,i)}>
+   {tabs.map((t,i)=><button type="button" role="tab" key={t.value||"all"} id={`orders-tab-${t.value||"all"}`} aria-selected={channel===t.value} aria-controls="orders-tabpanel" tabIndex={channel===t.value?0:-1} data-empty={showChannelCounts&&t.count===0} className={"orders-tab ch-"+(t.value||"all")+(channel===t.value?" active":"")} onClick={()=>pickChannel(t.value)} onKeyDown={e=>onTabKey(e,i)}>
     <i className="orders-tab-icon" aria-hidden="true"><Icon name={t.icon} size={17}/></i>
     <span className="orders-tab-text"><span className="orders-tab-label">{t.label}</span>{showChannelCounts&&<b className="orders-tab-count">{t.count}</b>}</span>
    </button>)}

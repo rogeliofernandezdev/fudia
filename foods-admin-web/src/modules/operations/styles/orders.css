@@ -64,10 +64,17 @@
   width:100%;
   padding:12px;
   border-bottom:1px solid var(--line,#e4e7ec);
+  overflow-x:auto;
+  overflow-y:hidden;
+  scroll-snap-type:x proximity;
+  scrollbar-width:none;
+}
+
+.orders-tabs::-webkit-scrollbar{
+  display:none;
 }
 
 .orders-tab{
-  position:relative;
   flex:1 1 0;
   min-width:0;
   display:inline-flex;
@@ -85,6 +92,7 @@
   font-weight:750;
   line-height:1;
   white-space:nowrap;
+  scroll-snap-align:start;
   cursor:pointer;
   transition:background .15s ease,color .15s ease,border-color .15s ease,box-shadow .15s ease;
 }
@@ -1588,12 +1596,17 @@
 }
 
 @media (max-width:700px){
+  .orders-tabs-row{
+    overflow:hidden;
+  }
+
   /* Todas las pestañas visibles: rejilla de 3 columnas, sin scroll */
   .orders-tabs{
     display:grid;
     grid-template-columns:repeat(3,minmax(0,1fr));
     gap:6px;
     padding:8px;
+    overflow:visible;
   }
 
   .orders-tab{
