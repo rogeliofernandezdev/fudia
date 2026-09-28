@@ -42,27 +42,25 @@
   color:var(--ops-800,#1a2151);
 }
 
-/* ── Tabs de canal: franja sobria dentro del panel ──
-   Fila blanca que corona el panel. Cada pestaña es texto con un icono
-   pequeño y el conteo en un pill discreto; la activa se marca en tinta
-   oscura con un subrayado fino primary-600. Sin cajas ni rellenos. */
+/* ── Tabs de canal: franja oscura con pestaña activa blanca ──
+   La franja usa el azul oscuro de navegación (ops-800) y corona el
+   panel. Las pestañas inactivas van en texto claro; la activa es una
+   pestaña blanca que se funde con el panel, con el icono en el color
+   del canal. Se ve desde lejos y se lee como pestaña. */
 .orders-tabs-row{
   min-width:0;
   margin:0;
   display:block;
-  border:1px solid var(--line,#e4e7ec);
-  border-bottom:0;
   border-radius:14px 14px 0 0;
-  background:var(--surface,#fff);
+  background:var(--ops-800,#1a2151);
 }
 
 .orders-tabs{
   display:flex;
-  align-items:stretch;
-  gap:22px;
+  align-items:flex-end;
+  gap:4px;
   width:100%;
-  padding:0 18px;
-  border-bottom:1px solid var(--line,#e4e7ec);
+  padding:8px 10px 0;
   overflow-x:auto;
   overflow-y:hidden;
   scroll-snap-type:x proximity;
@@ -74,62 +72,46 @@
 }
 
 .orders-tab{
-  position:relative;
   flex:0 0 auto;
   display:inline-flex;
   align-items:center;
   gap:8px;
   min-height:var(--control-height);
-  padding:7px 2px;
+  padding:6px 14px 6px 12px;
   border:0;
+  border-radius:8px 8px 0 0;
   background:transparent;
-  color:var(--ink-600,#475467);
-  font-size:12px;
-  font-weight:700;
+  color:var(--navigation-text,#c9d0f2);
+  font-size:11px;
+  font-weight:750;
   line-height:1;
   white-space:nowrap;
   scroll-snap-align:start;
   cursor:pointer;
-  transition:color .15s ease;
-}
-
-.orders-tab::after{
-  content:"";
-  position:absolute;
-  left:0;
-  right:0;
-  bottom:-1px;
-  height:2px;
-  border-radius:2px 2px 0 0;
-  background:transparent;
-  transition:background .15s ease;
+  transition:background .15s ease,color .15s ease;
 }
 
 .orders-tab:hover{
-  color:var(--ink-950,#101828);
+  background:rgba(255,255,255,.08);
+  color:#fff;
 }
 
 .orders-tab.active{
+  background:var(--surface,#fff);
   color:var(--ink-950,#101828);
   font-weight:800;
-}
-
-.orders-tab.active::after{
-  background:var(--primary-600,#4654cd);
 }
 
 .orders-tab-icon{
   display:grid;
   place-items:center;
-  color:var(--ink-400,#98a2b3);
-  transition:color .15s ease;
-}
-
-.orders-tab:hover .orders-tab-icon{
-  color:var(--ink-600,#475467);
+  color:currentColor;
+  opacity:.8;
+  transition:opacity .15s ease,color .15s ease;
 }
 
 .orders-tab.active .orders-tab-icon{
+  opacity:1;
   color:var(--primary-600,#4654cd);
 }
 
@@ -159,32 +141,34 @@
   height:18px;
   padding:0 6px;
   border-radius:999px;
-  background:var(--cloud-100,#f3f6fa);
-  color:var(--ink-500,#667085);
+  background:rgba(255,255,255,.14);
+  color:#fff;
   font-size:10px;
   font-weight:800;
   font-variant-numeric:tabular-nums;
   transition:background .15s ease,color .15s ease;
 }
 
-.orders-tab.active .orders-tab-count{
-  background:var(--primary-100,#eef0ff);
-  color:var(--primary-600,#4654cd);
-}
-
 .orders-tab[data-empty="true"] .orders-tab-count{
   background:transparent;
-  color:var(--ink-400,#98a2b3);
-  box-shadow:inset 0 0 0 1px var(--line,#e4e7ec);
+  color:var(--navigation-text,#c9d0f2);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.22);
+  opacity:.75;
+}
+
+.orders-tab.active .orders-tab-count{
+  background:var(--primary-600,#4654cd);
+  color:#fff;
+  box-shadow:none;
+  opacity:1;
 }
 
 .orders-tab.active[data-empty="true"] .orders-tab-count{
-  background:transparent;
-  color:var(--primary-600,#4654cd);
-  box-shadow:inset 0 0 0 1px var(--primary-100,#eef0ff);
+  background:var(--cloud-100,#f3f6fa);
+  color:var(--ink-500,#667085);
 }
 
-/* Skeleton de pestañas: misma silueta que las reales */
+/* Skeleton de pestañas: misma silueta sobre la franja oscura */
 .orders-tabs-skeleton .orders-tab{
   pointer-events:none;
 }
@@ -193,9 +177,14 @@
   display:block;
   height:10px;
   border-radius:4px;
-  background:linear-gradient(90deg,var(--cloud-100,#f3f6fa),var(--surface,#fff),var(--cloud-100,#f3f6fa));
+  background:linear-gradient(90deg,rgba(255,255,255,.14),rgba(255,255,255,.3),rgba(255,255,255,.14));
   background-size:200% 100%;
   animation:orders-tabs-shimmer 1.2s ease-in-out infinite;
+}
+
+.orders-tabs-skeleton .orders-tab.active i{
+  background:linear-gradient(90deg,var(--cloud-100,#f3f6fa),var(--surface,#fff),var(--cloud-100,#f3f6fa));
+  background-size:200% 100%;
 }
 
 .orders-tabs-skeleton .orders-tab-icon{
@@ -1692,8 +1681,12 @@
   }
 
   .orders-tabs{
-    gap:16px;
-    padding:0 14px;
+    gap:2px;
+    padding:6px 8px 0;
+  }
+
+  .orders-tab{
+    padding:6px 11px 6px 10px;
   }
 
   .order-detail{
