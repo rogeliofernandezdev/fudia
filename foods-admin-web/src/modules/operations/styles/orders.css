@@ -166,6 +166,14 @@
   overflow:hidden;
 }
 
+/* Al cambiar de tab o filtro se conserva la lista anterior atenuada
+   hasta que llega la nueva; los tabs y sus conteos no desaparecen. */
+.orders-panel[aria-busy="true"] .table-wrap{
+  opacity:.55;
+  pointer-events:none;
+  transition:opacity .15s ease;
+}
+
 .orders-panel .toolbar{
   min-height:64px;
   align-items:center;

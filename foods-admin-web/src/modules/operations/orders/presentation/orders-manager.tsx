@@ -3,7 +3,7 @@ import "../../styles/orders.css";
 import "../../styles/salon.css";
 import Link from "next/link";
 import {useState,type KeyboardEvent} from "react";
-import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
+import {keepPreviousData,useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Button,ConfirmDialog,Icon,IconName,PageHeader,Pagination,RowActionButton,Status} from "@/design-system";
 import type {Option,Order} from "../domain/types";
 import {getOrder,listOrders,updateOrderStatus} from "../infrastructure/orders-api";
@@ -50,7 +50,7 @@ export function OrdersManager(){
  const qc=useQueryClient();const{notify}=useFeedback();const settings=useSettings();const{can,location}=useSession();const canManage=can("orders.manage");
  const[q,setQ]=useState("");const debouncedQ=useDebouncedValue(q);const[channel,setChannel]=useState("");const[status,setStatus]=useState("abiertos");const[page,setPage]=useState(1);const[size,setSize]=useState(12);
  const[detailId,setDetailId]=useState<string|null>(null);const[cancelTarget,setCancelTarget]=useState<Order|null>(null);
- const list=useQuery({queryKey:["orders",debouncedQ,channel,status,page,size],queryFn:()=>listOrders({q:debouncedQ,channel,status,page,pageSize:size})});
+ const list=useQuery({queryKey:["orders",debouncedQ,channel,status,page,size],queryFn:()=>listOrders({q:debouncedQ,channel,status,page,pageSize:size}),placeholderData:keepPreviousData});
  const detail=useQuery({queryKey:["order",detailId],queryFn:()=>getOrder(detailId!),enabled:Boolean(detailId)});
  const invalidate=()=>{void qc.invalidateQueries({queryKey:["orders"]});void qc.invalidateQueries({queryKey:["order",detailId]})};
  const advance=useMutation({mutationFn:(v:{id:string;status:string})=>updateOrderStatus(v.id,v.status),onSuccess:()=>{invalidate();notify({tone:"success",title:"Pedido actualizado",message:"El estado del pedido fue actualizado."})},onError:e=>notify({tone:"danger",title:"No se pudo actualizar",message:e.message})});
@@ -79,13 +79,13 @@ export function OrdersManager(){
    </button>)}
   </div>
  </div>
- <section className="panel management standardized-management orders-panel" id="orders-tabpanel" role="tabpanel" aria-labelledby={`orders-tab-${channel||"all"}`}>
+ <section className="panel management standardized-management orders-panel" id="orders-tabpanel" role="tabpanel" aria-labelledby={`orders-tab-${channel||"all"}`} aria-busy={list.isFetching&&list.isPlaceholderData}>
   <div className="toolbar">
    <label><Icon name="search" size={18}/><input aria-label="Buscar pedidos" value={q} onChange={e=>{setQ(e.target.value);setPage(1)}} placeholder="Buscar código, cliente o teléfono"/></label>
    <select aria-label="Filtrar por estado" value={status} onChange={e=>{setStatus(e.target.value);setPage(1)}}><option value="">Todos los estados</option><option value="abiertos">Abiertos</option>{(list.data?.statusOptions??[]).map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select>
    {hasActiveFilters&&<button type="button" className="orders-clear-filters" onClick={()=>{setQ("");setChannel("");setStatus("abiertos");setPage(1)}}><Icon name="close" size={15}/>Limpiar filtros</button>}
   </div>
-  {list.isLoading?<OrdersLoading/>:list.isError?<State icon="alert" title="No pudimos cargar los pedidos" text={list.error.message} action={()=>list.refetch()}/>:!items.length?<State icon="receipt" title={emptyTitle} text={emptyText}/>:<>
+  {list.isPending?<OrdersLoading/>:list.isError?<State icon="alert" title="No pudimos cargar los pedidos" text={list.error.message} action={()=>list.refetch()}/>:!items.length?<State icon="receipt" title={emptyTitle} text={emptyText}/>:<>
    <div className="table-wrap hover-scroll">
     <table className="orders-table">
      <thead><tr><th>PEDIDO</th><th>CANAL</th><th>ESTADO</th><th>REGISTRADO</th><th>TOTAL</th><th>ACCIONES</th></tr></thead>

@@ -1,7 +1,7 @@
 "use client";
 import "./kitchen.css";
 import {useEffect,useState} from "react";
-import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
+import {keepPreviousData,useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Button,Icon,IconName,PageHeader,Select} from "@/design-system";
 import {useFeedback,useSession} from "@/providers";
 import {formatRegionalNumber} from "@/shared/i18n/regional-format";
@@ -90,6 +90,7 @@ export function KitchenBoard(){
     queryFn:()=>listKitchenTickets(channel),
     refetchInterval:10000,
     refetchIntervalInBackground:true,
+    placeholderData:keepPreviousData,
   });
 
   const advance=useMutation({
@@ -134,7 +135,7 @@ export function KitchenBoard(){
       {lanes.map(lane=><button type="button" aria-pressed={mobileLane===lane.status} className={mobileLane===lane.status?"active":""} onClick={()=>setMobileLane(lane.status)} key={lane.status}><Icon name={lane.icon} size={15}/><span>{lane.shortLabel}</span><b>{counts[lane.status]}</b></button>)}
     </nav>
 
-    {tickets.isLoading?<KitchenLoading/>:tickets.isError?<KitchenError message={tickets.error.message} retry={()=>tickets.refetch()}/>:<div className="kitchen-board">
+    {tickets.isPending?<KitchenLoading/>:tickets.isError?<KitchenError message={tickets.error.message} retry={()=>tickets.refetch()}/>:<div className="kitchen-board">
       {lanes.map(lane=>{
         const laneItems=items
           .filter(ticket=>ticket.status===lane.status)
