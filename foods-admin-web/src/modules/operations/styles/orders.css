@@ -43,10 +43,10 @@
 }
 
 /* ── Tabs de canal: bloque activo sólido ──
-   Fila blanca que corona el panel, separada por una línea. Las pestañas
-   inactivas son texto con icono y conteo; la activa es un bloque azul
-   primary-600 de esquinas 6 px con texto blanco. Contraste alto sin
-   franjas de color de fondo. */
+   Fila blanca que corona el panel. Cada pestaña reparte el ancho a
+   partes iguales: icono en caja de 26 px con el color del canal, nombre
+   y conteo. La activa es un bloque primary-600 de 6 px con texto blanco
+   y sombra discreta; las inactivas son planas y se tiñen al pasar. */
 .orders-tabs-row{
   min-width:0;
   margin:0;
@@ -60,9 +60,9 @@
 .orders-tabs{
   display:flex;
   align-items:center;
-  gap:6px;
+  gap:8px;
   width:100%;
-  padding:10px 12px;
+  padding:12px;
   border-bottom:1px solid var(--line,#e4e7ec);
   overflow-x:auto;
   overflow-y:hidden;
@@ -80,61 +80,73 @@
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  gap:8px;
+  gap:9px;
   height:calc(var(--control-height) + 8px);
   min-height:calc(var(--control-height) + 8px);
-  padding:0 14px;
-  border:0;
+  padding:0 12px;
+  border:1px solid transparent;
   border-radius:6px;
   background:transparent;
-  color:var(--ink-600,#475467);
+  color:var(--ink-700,#344054);
   font-size:11px;
   font-weight:750;
   line-height:1;
   white-space:nowrap;
   scroll-snap-align:start;
   cursor:pointer;
-  transition:background .15s ease,color .15s ease;
+  transition:background .15s ease,color .15s ease,border-color .15s ease,box-shadow .15s ease;
 }
 
 .orders-tab:hover{
-  background:var(--cloud-100,#f3f6fa);
+  border-color:var(--line,#e4e7ec);
+  background:var(--cloud-50,#f7f8fc);
   color:var(--ink-950,#101828);
 }
 
+.orders-tab:focus-visible{
+  outline:3px solid #2f5bc72b;
+  outline-offset:1px;
+}
+
 .orders-tab.active{
+  border-color:var(--primary-600,#4654cd);
   background:var(--primary-600,#4654cd);
   color:#fff;
   font-weight:800;
+  box-shadow:0 1px 2px rgba(70,84,205,.25);
 }
 
 .orders-tab-icon{
+  flex:0 0 auto;
+  width:26px;
+  height:26px;
   display:grid;
   place-items:center;
-  color:var(--ink-400,#98a2b3);
-  transition:color .15s ease;
+  border-radius:6px;
+  background:var(--cloud-100,#f3f6fa);
+  color:var(--ink-600,#475467);
+  transition:background .15s ease,color .15s ease;
 }
 
 .orders-tab.ch-salon .orders-tab-icon{
+  background:var(--primary-100,#eef0ff);
   color:var(--ops-700,#3946b8);
 }
 
 .orders-tab.ch-whatsapp .orders-tab-icon{
+  background:#f3ebff;
   color:var(--digital-700,#5421a8);
 }
 
-.orders-tab:hover .orders-tab-icon{
-  color:var(--ink-700,#344054);
-}
-
 .orders-tab.active .orders-tab-icon{
+  background:rgba(255,255,255,.18);
   color:#fff;
 }
 
 .orders-tab-text{
   display:inline-flex;
   align-items:center;
-  gap:7px;
+  gap:8px;
   min-width:0;
 }
 
@@ -196,9 +208,7 @@
 }
 
 .orders-tabs-skeleton .orders-tab-icon{
-  width:15px;
-  height:15px;
-  border-radius:4px;
+  background:var(--cloud-100,#f3f6fa);
 }
 
 .orders-tabs-skeleton .orders-tab-text i:first-child{
@@ -1689,13 +1699,13 @@
   }
 
   .orders-tabs{
-    gap:4px;
+    gap:6px;
     padding:8px;
   }
 
   .orders-tab{
     flex:0 0 auto;
-    min-width:112px;
+    min-width:124px;
     padding:0 12px;
   }
 
