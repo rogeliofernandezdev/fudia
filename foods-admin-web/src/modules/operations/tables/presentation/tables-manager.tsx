@@ -9,7 +9,7 @@ import {Button,IconButton,PageHeader,Pagination,RowActionButton,Status} from "@/
 import {ConfirmDialog} from "@/design-system/confirm-dialog";
 import {useFeedback} from "@/providers/feedback-provider";
 import {useSession} from "@/providers/session-context";
-import {publicTablePath} from "@/shared/routing/page-routes";
+import {publicConciergePath} from "@/shared/routing/page-routes";
 import {zoneResolver} from "../domain/zone-schema";import type {RowDraft,Table,ZoneDraft} from "../domain/types";
 import {createTables,deactivateTableOrZone,listActiveZones,listTables,listZones,saveTable as persistTable,saveZone as persistZone} from "../infrastructure/tables-api";
 
@@ -54,7 +54,7 @@ export function TablesManager(){
  function saveAll(){if(!validNewRows.length){notify({tone:"danger",title:"Sin mesas para guardar",message:"Agrega al menos una mesa con nombre."});return}saveBatch.mutate(validNewRows)}
  function cancelAdd(){setAdding(false);setNewRows([])}
 
- return <><PageHeader eyebrow="OPERACIÓN" title="Mesas y zonas" description="Registra las mesas y zonas del local. Cada mesa genera un QR para vincular el proceso de atención."/>
+ return <><PageHeader eyebrow="OPERACIÓN" title="Mesas y zonas" description="Registra las mesas y zonas del local. Cada mesa genera un QR para iniciar la atención por WhatsApp."/>
  <div className="catalog-tabs-row"><div className="catalog-tabs"><button className={tab==="tables"?"active":""} onClick={()=>setTab("tables")}><Icon name="grid" size={16}/>Mesas<b>{tables.data?.total??0}</b></button><button className={tab==="zones"?"active":""} onClick={()=>setTab("zones")}><Icon name="store" size={16}/>Zonas<b>{zones.data?.total??0}</b></button></div>{tab==="tables"&&!adding&&!tableDraft&&<div className="qr-batch-actions"><Button icon="qr" kind="secondary" onClick={()=>setPrintQr(true)}>Imprimir QRs</Button>{canManageTables&&<Button icon="plus" onClick={()=>{setAdding(true);addRow()}}>Nueva mesa</Button>}</div>}{tab==="zones"&&canManageZones&&<Button icon="plus" onClick={()=>setZoneDraft(emptyZone)}>Nueva zona</Button>}</div>
 
  {tab==="tables"?<section className="panel management catalog-panel"><div className="toolbar"><label><Icon name="search" size={18}/><input value={search} onChange={e=>{setSearch(e.target.value);setPage(1)}} placeholder="Buscar por nombre..."/></label><select aria-label="Filtrar por estado" value={statusFilter} onChange={e=>{setStatusFilter(e.target.value);setPage(1)}}><option value="">Todos los estados</option><option value="active">Activas</option><option value="inactive">Inactivas</option></select></div>
@@ -92,7 +92,7 @@ export function TablesManager(){
 
 function QrDialog({table,restaurantName,close}:{table:Table;restaurantName:string;close:()=>void}){
  const canvasRef=useRef<HTMLCanvasElement>(null);
- const qrUrl=typeof window!=="undefined"?`${window.location.origin}${publicTablePath(table.qrToken)}`:"";
+ const qrUrl=typeof window!=="undefined"?`${window.location.origin}${publicConciergePath(table.qrToken)}`:"";
 
  useEffect(()=>{
    if(canvasRef.current&&qrUrl){
@@ -125,7 +125,7 @@ function QrDialog({table,restaurantName,close}:{table:Table;restaurantName:strin
      const qrImg=new Image();qrImg.onload=()=>{
        ctx.drawImage(qrImg,50,170,240,240);
        ctx.fillStyle="#98a2b3";ctx.font="10px Manrope,Arial";
-       ctx.fillText("Escanea para ver la carta y hacer tu pedido",170,430);
+       ctx.fillText("Escanea para pedir por WhatsApp",170,430);
        const link=document.createElement("a");
        link.download=`qr-mesa-${table.name.replace(/\s+/g,"-").toLowerCase()}.png`;
        link.href=c.toDataURL("image/png");link.click();
@@ -139,9 +139,9 @@ function QrDialog({table,restaurantName,close}:{table:Table;restaurantName:strin
      if(!blob)return;
      const file=new File([blob],`qr-mesa-${table.name.replace(/\s+/g,"-").toLowerCase()}.png`,{type:"image/png"});
      if(navigator.canShare&&navigator.canShare({files:[file]})){
-       try{await navigator.share({title:`QR Mesa ${table.name}`,text:`Escanea para acceder a la mesa ${table.name}`,files:[file]})}catch{}
+       try{await navigator.share({title:`QR Mesa ${table.name}`,text:`Escanea para pedir desde la mesa ${table.name} por WhatsApp`,files:[file]})}catch{}
      }else if(navigator.share){
-       navigator.share({title:`QR Mesa ${table.name}`,text:`Escanea para acceder a la mesa ${table.name}`,url:qrUrl}).catch(()=>{});
+       navigator.share({title:`QR Mesa ${table.name}`,text:`Escanea para pedir desde la mesa ${table.name} por WhatsApp`,url:qrUrl}).catch(()=>{});
      }else{
        navigator.clipboard.writeText(qrUrl);
      }
@@ -155,10 +155,10 @@ function QrDialog({table,restaurantName,close}:{table:Table;restaurantName:strin
      <div className="qr-hero-glow"/>
      <div className="qr-brand"><NextImage src="/assets/images/logo.png" alt="fudIA" width={24} height={24}/><b>{restaurantName}</b></div>
      <div className="qr-canvas-wrap"><canvas ref={canvasRef}/></div>
-     <div className="qr-hero-label"><Icon name="qr" size={14}/><span>Escanea para acceder</span></div>
+     <div className="qr-hero-label"><Icon name="qr" size={14}/><span>Escanea para pedir</span></div>
    </div>
    <div className="qr-info">
-     <p className="qr-hint">El cliente escanea este código desde su celular para ver la carta digital, llamar al mozo y hacer pedidos desde la mesa.</p>
+     <p className="qr-hint">El cliente escanea este código desde su celular para iniciar su pedido con Fudia Concierge en WhatsApp.</p>
      <div className="qr-url"><Icon name="share" size={14}/><span>{qrUrl}</span></div>
    </div>
  </div>
@@ -186,7 +186,7 @@ function PrintQrDialog({tables,restaurantName,close}:{tables:Table[];restaurantN
    printable.forEach(t=>{
      const canvas=canvasRefs.current[t.id];
      if(canvas){
-       QRCode.toCanvas(canvas,`${origin}${publicTablePath(t.qrToken)}`,{width:200,margin:1,color:{dark:"#1a2151",light:"#ffffff"}},(err)=>{
+       QRCode.toCanvas(canvas,`${origin}${publicConciergePath(t.qrToken)}`,{width:200,margin:1,color:{dark:"#1a2151",light:"#ffffff"}},(err)=>{
          if(err){console.error(err);return}
          // Superponer el logo en el centro del QR
          const ctx=canvas.getContext("2d");if(!ctx)return;
@@ -215,7 +215,7 @@ function PrintQrDialog({tables,restaurantName,close}:{tables:Table[];restaurantN
      <div className="qr-print-card-accent"/>
      <div className="qr-print-card-brand"><span className="qr-print-card-logo"><NextImage src="/assets/images/logo.png" alt="fudIA" width={28} height={28}/></span><b>{restaurantName}</b></div>
      <canvas ref={el=>{canvasRefs.current[t.id]=el}}/>
-     <div className="qr-print-card-footer"><Icon name="qr" size={12}/><span>Escanea para ver la carta y hacer tu pedido</span></div>
+     <div className="qr-print-card-footer"><Icon name="qr" size={12}/><span>Escanea para pedir por WhatsApp</span></div>
    </div>)}</div>}
  </div>
  <footer className="qr-footer">

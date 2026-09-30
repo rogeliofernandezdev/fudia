@@ -12,7 +12,7 @@ const walk=dir=>readdirSync(join(root,dir)).flatMap(name=>{
 
 test("la arquitectura no usa un contenedor generico de features",()=>{
   assert.equal(existsSync(join(root,"src/components")),false);
-  for(const moduleName of ["auth","configuration","context","customers","dashboard","identity","menu","modules","operations","organizations","platform","public-menu","sales","supply"]){
+  for(const moduleName of ["auth","configuration","context","customers","dashboard","identity","menu","modules","operations","organizations","platform","sales","supply"]){
     assert.equal(existsSync(join(root,`src/modules/${moduleName}/index.ts`)),true,`falta index publico: ${moduleName}`);
   }
 });
@@ -791,16 +791,18 @@ test("Pedidos no expone el identificador técnico como información visual",()=>
 });
 
 
-test("Concierge no duplica el número administrado por Meta",()=>{
-  const publicPage=read("src/modules/public-menu/presentation/public-table-page.tsx");
-  const publicTypes=read("src/modules/public-menu/domain/types.ts");
+test("el QR de mesa abre Concierge sin una interfaz intermedia",()=>{
+  const tables=read("src/modules/operations/tables/presentation/tables-manager.tsx");
+  const legacyRedirect=read("src/app/table/[qr]/page.tsx");
+  const routes=read("src/shared/routing/page-routes.ts");
   const settings=read("src/modules/configuration/presentation/concierge-settings-page.tsx");
   const startProxy=read("src/app/api/public/concierge/[qr]/route.ts");
 
-  assert.ok(publicPage.includes("/api/public/concierge/"),"El QR delega el inicio al servicio Concierge");
-  assert.equal(publicPage.includes("wa.me/"),false,"Admin Web no construye enlaces con un número almacenado");
-  assert.equal(publicPage.includes("whatsappPhone"),false,"La página pública no recibe un número de WhatsApp");
-  assert.equal(publicTypes.includes("whatsappPhone"),false,"El contrato público no contiene el número");
+  assert.ok(routes.includes('publicConcierge:"/api/public/concierge/:qr"'),"El catálogo declara la entrada pública a Concierge");
+  assert.ok(tables.includes("publicConciergePath"),"Los QR nuevos apuntan directamente a Concierge");
+  assert.equal(tables.includes("publicTablePath"),false,"Los QR nuevos no apuntan a la pantalla retirada");
+  assert.ok(legacyRedirect.includes("redirect(publicConciergePath(qr))"),"Los QR antiguos redirigen a Concierge sin renderizar una interfaz");
+  assert.equal(tables.includes("wa.me/"),false,"Admin Web no construye enlaces con un número almacenado");
   assert.equal(settings.includes("data.whatsappPhone"),false,"La configuración de empresa no muestra un número persistido");
   assert.ok(settings.includes("Meta / WhatsApp Business"),"La UI identifica Meta como administrador del canal");
   assert.ok(startProxy.includes("FUDIA_CONCIERGE_URL"),"El BFF delega el deeplink al servicio Concierge");
@@ -819,7 +821,7 @@ test("las URL públicas usan inglés y conservan compatibilidad al refrescar",()
   assert.ok(config.includes("legacyPageRedirects"),"Next reutiliza el catálogo central de rutas antiguas");
   assert.ok(navigation.includes('from "@/shared/routing/page-routes"'),"El menú usa el catálogo central");
   assert.equal(navigation.includes('href:"/productos"'),false,"El menú no expone rutas antiguas en español");
-  assert.ok(routes.includes('{legacy:"/mesa/:qr",canonical:pageRoutes.publicTable}'),"La carta pública conserva compatibilidad dinámica");
+  assert.ok(routes.includes('{legacy:"/mesa/:qr",canonical:pageRoutes.publicTable}'),"El QR antiguo conserva compatibilidad dinámica");
   assert.ok(read("src/app/(admin)/products/page.tsx").includes('from "@/modules/menu"'),"La ruta Products existe físicamente para soportar refresh directo");
   assert.ok(read("src/app/(admin)/settings/users/page.tsx").includes('from "@/modules/identity"'),"La configuración de usuarios existe físicamente en inglés");
 });

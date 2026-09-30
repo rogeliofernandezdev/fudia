@@ -2,16 +2,20 @@
 
 ## Estado
 
-Aceptado para iniciar.
+Aceptado y actualizado tras la consolidación de frontends.
 
 ## Decisión
 
-Crear cuatro proyectos desplegables dentro de este workspace.
+Mantener cuatro proyectos desplegables dentro de este workspace.
 
 1. `foods-backend`.
-2. `foods-operations-web`.
-3. `foods-admin-web`.
+2. `foods-admin-web`.
+3. `fudia-concierge`.
 4. `foods-infrastructure`.
+
+`foods-admin-web` concentra POS, mesas, pedidos, comandas, caja y las funciones
+administrativas. Las rutas y permisos por rol separan cada modo de trabajo sin
+duplicar autenticación, contratos, componentes ni sistema visual.
 
 ## Alternativas descartadas
 
@@ -20,10 +24,11 @@ Crear cuatro proyectos desplegables dentro de este workspace.
 Eleva coordinación, observabilidad y consistencia transaccional antes de tener
 volumen que lo justifique. Los módulos vivirán primero en un monolito modular.
 
-### Un único frontend
+### Dos frontends para operación y administración
 
-Acopla despliegues y prioridades muy distintas: la caja y cocina necesitan
-estabilidad y rapidez táctil; la administración necesita densidad analítica.
+Duplican autenticación, navegación, sistema visual, integración con OpenAPI y
+mantenimiento responsive. La separación necesaria se resuelve mediante rutas,
+layouts, permisos y vertical slices dentro de `foods-admin-web`.
 
 ### Aplicaciones separadas para POS, KDS y mozos
 

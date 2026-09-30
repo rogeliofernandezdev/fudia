@@ -212,7 +212,8 @@ Concierge completa el alcance funcional y técnico definido para esta etapa.
 ### Evidencia de interfaz y contrato
 
 - Admin Web de Concierge incluye loading, error, reintento, validación E.164, permisos y layout adaptable;
-- página QR pública incluye estados loading/error y deeplink WhatsApp;
+- el QR público abre Concierge/WhatsApp directamente; la ruta histórica solo
+  redirige para conservar los códigos ya impresos y no renderiza una interfaz;
 - backend tiene migraciones reversibles e integration tests para settings, handoff, rondas, KDS y cuenta;
 - el contrato server-to-server usa credencial propia y no confía en datos comerciales proporcionados por el modelo.
 

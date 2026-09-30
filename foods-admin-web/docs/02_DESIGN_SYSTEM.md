@@ -217,6 +217,10 @@ Usar superficies mayormente neutras, azul para navegación y acciones, verde par
   mediante la acción de fila correspondiente; no se duplica como switch dentro
   de la edición. La configuración del QR permanece como una capacidad separada
   de la edición de datos básicos de la mesa.
+- El QR impreso de cada mesa abre directamente Fudia Concierge en WhatsApp por
+  medio de `/api/public/concierge/:qr`. No se muestra una pantalla pública
+  intermedia con acciones duplicadas. `/table/:qr` existe únicamente como
+  redirección técnica para conservar la compatibilidad de QR ya impresos.
 - Las zonas (Terraza, Salón, Barra, etc.) se administran en un tab dentro de
   la página de Mesas, con su propio CRUD. El campo Zona al crear/editar mesas
   es un select que carga las zonas activas del API, no un input libre.

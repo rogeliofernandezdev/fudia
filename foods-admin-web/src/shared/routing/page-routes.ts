@@ -45,6 +45,7 @@ export const pageRoutes={
   concierge:"/whatsapp-bot",
   receipts:"/receipts",
   noAccess:"/no-access",
+  publicConcierge:"/api/public/concierge/:qr",
   publicTable:"/table/:qr",
   platformOnboarding:"/platform/onboarding",
   platformPlans:"/platform/plans",
@@ -97,6 +98,6 @@ export const legacyPageRedirects=[
   {legacy:"/configuracion/onboarding",canonical:pageRoutes.platformOnboarding},
 ] as const;
 
-export function publicTablePath(qr:string){
-  return pageRoutes.publicTable.replace(":qr",encodeURIComponent(qr));
+export function publicConciergePath(qr:string){
+  return pageRoutes.publicConcierge.replace(":qr",encodeURIComponent(qr));
 }
