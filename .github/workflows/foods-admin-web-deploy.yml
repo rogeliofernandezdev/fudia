@@ -28,6 +28,8 @@ jobs:
       EC2_INSTANCE_ID: ${{ vars.EC2_INSTANCE_ID }}
       DOCKER_NETWORK: ${{ vars.DOCKER_NETWORK }}
       CONTAINER_NAME: ${{ vars.FRONTEND_CONTAINER }}
+      NEXT_PUBLIC_MAP_PROVIDER: ${{ vars.NEXT_PUBLIC_MAP_PROVIDER }}
+      NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN: ${{ secrets.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN }}
 
     steps:
       - name: Checkout
@@ -49,9 +51,11 @@ jobs:
           SHORT_SHA="${GITHUB_SHA::8}"
           IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}"
           docker build \
-            -t "${IMAGE}:${SHORT_SHA}" \
-            -t "${IMAGE}:latest" \
-            ./foods-admin-web
+          --build-arg NEXT_PUBLIC_MAP_PROVIDER="${NEXT_PUBLIC_MAP_PROVIDER}" \
+          --build-arg NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN="${NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN}" \
+          -t "${IMAGE}:${SHORT_SHA}" \
+          -t "${IMAGE}:latest" \
+          ./foods-admin-web
           docker push "${IMAGE}:${SHORT_SHA}"
           docker push "${IMAGE}:latest"
           echo "uri=${IMAGE}:${SHORT_SHA}" >> "$GITHUB_OUTPUT"
