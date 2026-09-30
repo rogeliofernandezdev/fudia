@@ -6,7 +6,7 @@ import {useSearchParams} from "next/navigation";
 import {useEffect,useState} from "react";
 import {Button,Icon} from "@/design-system";
 import {useRestaurantSetup} from "../application/use-restaurant-setup";
-import {buildSetupSteps,setupOverviewHref,setupGuideHref} from "./setup-steps";
+import {buildSetupSteps,setupOverviewHref} from "./setup-steps";
 
 const tourTargets:Record<string,string>={
   operation:'[data-tour="operation"]',

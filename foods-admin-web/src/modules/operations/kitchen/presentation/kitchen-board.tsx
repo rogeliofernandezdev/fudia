@@ -8,19 +8,11 @@ import {formatRegionalNumber} from "@/shared/i18n/regional-format";
 import type {KitchenStatus,KitchenTicket} from "../domain/types";
 import {listKitchenTickets,updateKitchenTicketStatus} from "../infrastructure/kitchen-api";
 
-const lanes:Array<{status:KitchenStatus;label:string;shortLabel:string;icon:IconName}>= [
-  {status:"confirmado",label:"POR PREPARAR",shortLabel:"Pendientes",icon:"clock"},
-  {status:"preparando",label:"EN PREPARACIÓN",shortLabel:"Preparando",icon:"cookingPot"},
-  {status:"listo",label:"LISTOS PARA ENTREGAR",shortLabel:"Listos",icon:"check"},
+const lanes:Array<{status:KitchenStatus;label:string;shortLabel:string;description:string;icon:IconName}>= [
+  {status:"confirmado",label:"POR PREPARAR",shortLabel:"Pendientes",description:"Pedidos nuevos",icon:"clock"},
+  {status:"preparando",label:"EN PREPARACIÓN",shortLabel:"Preparando",description:"Trabajo activo",icon:"cookingPot"},
+  {status:"listo",label:"LISTOS PARA ENTREGAR",shortLabel:"Listos",description:"Esperando entrega",icon:"check"},
 ];
-
-const channelIcons:Record<string,IconName>={
-  salon:"utensils",
-  mostrador:"store",
-  recojo:"box",
-  delivery:"truck",
-  whatsapp:"share",
-};
 
 function parseIsoDate(value:string){
   if(!value)return null;
@@ -141,7 +133,7 @@ export function KitchenBoard(){
           .filter(ticket=>ticket.status===lane.status)
           .sort((left,right)=>priority(right,now)-priority(left,now));
         return <section className="kitchen-lane" data-status={lane.status} data-mobile-active={mobileLane===lane.status} key={lane.status}>
-          <header><span className="kitchen-lane-icon"><Icon name={lane.icon} size={15}/></span><h2>{lane.label}</h2><b>{laneItems.length}</b></header>
+          <header><span className="kitchen-lane-icon"><Icon name={lane.icon} size={15}/></span><span className="kitchen-lane-copy"><h2>{lane.label}</h2><small>{lane.description}</small></span><b>{laneItems.length}</b></header>
           <div className="kitchen-lane-list">
             {laneItems.map(ticket=>{
               const tone=urgency(ticket,now);
@@ -183,6 +175,6 @@ export function KitchenBoard(){
   </div>;
 }
 
-function KitchenLoading(){return <div className="kitchen-board kitchen-loading" aria-label="Cargando comandas" aria-busy="true">{lanes.map(lane=><section className="kitchen-lane" data-status={lane.status} key={lane.status}><header><span className="kitchen-lane-icon"><Icon name={lane.icon} size={15}/></span><h2>{lane.label}</h2><b>—</b></header><div className="kitchen-lane-list">{Array.from({length:2},(_,index)=><article className="kitchen-ticket kitchen-ticket-skeleton" key={index}><div className="kitchen-skeleton-head"><span><i/><small/></span><i/></div><div className="kitchen-skeleton-items"><i/><i/><i/></div><i className="kitchen-skeleton-action"/></article>)}</div></section>)}</div>}
+function KitchenLoading(){return <div className="kitchen-board kitchen-loading" aria-label="Cargando comandas" aria-busy="true">{lanes.map(lane=><section className="kitchen-lane" data-status={lane.status} key={lane.status}><header><span className="kitchen-lane-icon"><Icon name={lane.icon} size={15}/></span><span className="kitchen-lane-copy"><h2>{lane.label}</h2><small>{lane.description}</small></span><b>—</b></header><div className="kitchen-lane-list">{Array.from({length:2},(_,index)=><article className="kitchen-ticket kitchen-ticket-skeleton" key={index}><div className="kitchen-skeleton-head"><span><i/><small/></span><i/></div><div className="kitchen-skeleton-items"><i/><i/><i/></div><i className="kitchen-skeleton-action"/></article>)}</div></section>)}</div>}
 
 function KitchenError({message,retry}:{message:string;retry:()=>void}){return <div className="kitchen-error"><span><Icon name="alert" size={24}/></span><b>No pudimos cargar la cola de cocina</b><p>{message}</p><Button kind="secondary" icon="refresh" onClick={retry}>Reintentar</Button></div>}

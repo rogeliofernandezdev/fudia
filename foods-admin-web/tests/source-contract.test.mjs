@@ -2,12 +2,14 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {existsSync,readFileSync,readdirSync,statSync} from "node:fs";
 import {join} from "node:path";
+import {execFileSync} from "node:child_process";
 
 const root=process.cwd();
 const forbiddenRegionalLocale=["es","PE"].join("-");
-const read=p=>readFileSync(join(root,p),"utf8");
+const normalize=p=>p.replaceAll("\\","/");
+const read=p=>readFileSync(join(root,p),"utf8").replaceAll("\r\n","\n");
 const walk=dir=>readdirSync(join(root,dir)).flatMap(name=>{
-  const p=join(dir,name);return statSync(join(root,p)).isDirectory()?walk(p):[p];
+  const p=normalize(join(dir,name));return statSync(join(root,p)).isDirectory()?walk(p):[p];
 });
 
 test("la arquitectura no usa un contenedor generico de features",()=>{
@@ -550,7 +552,9 @@ test("reservas respeta el contrato de formularios y jerarquia del modal",()=>{
 });
 
 test("no se versionan secretos locales ni artefactos temporales en la raiz admin",()=>{
-  assert.equal(existsSync(join(root,".env.local")),false);
+  const trackedEnv=execFileSync("git",["ls-files","--",".env.local"],{cwd:root,encoding:"utf8"}).trim();
+  assert.equal(trackedEnv,"",".env.local no debe estar versionado");
+  assert.ok(read("../.gitignore").includes("**/.env.local"),"El repositorio ignora los secretos locales");
   const rootEntries=readdirSync(root);
   assert.deepEqual(rootEntries.filter(name=>/^__(diag|shot|sheet|comanda)/.test(name)),[]);
 });

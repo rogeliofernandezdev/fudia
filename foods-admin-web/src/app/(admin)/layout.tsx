@@ -1,6 +1,6 @@
 import {AdminShell} from "@/shell/admin-shell";
 import {SessionProvider, SettingsProvider} from "@/providers";
-import {RestaurantOnboardingGate} from "@/components/restaurant-onboarding-gate";
+import {RestaurantOnboardingGate} from "@/modules/setup";
 
 export const dynamic = "force-dynamic";
 
