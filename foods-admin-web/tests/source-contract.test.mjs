@@ -724,7 +724,10 @@ test("login inicia en la primera ruta realmente accesible",()=>{
 test("la puesta en marcha guía según los módulos contratados",()=>{
   const setup=read("src/modules/setup/presentation/setup-steps.ts");
   const route=read("src/app/(admin)/settings/getting-started/page.tsx");
+  const layout=read("src/app/(admin)/layout.tsx");
   assert.ok(route.includes('from "@/modules/setup"'),"La ruta consume la pantalla que muestra el avance real");
+  assert.equal(layout.includes("RestaurantOnboardingGate"),false,"El layout no puede ocultar el asistente real con una bienvenida duplicada");
+  assert.equal(existsSync(join(root,"src/modules/setup/presentation/restaurant-onboarding-gate.tsx")),false,"No queda un gate sin estilos compitiendo con la puesta en marcha");
   const navigation=read("src/shell/navigation.ts");
   const session=read("src/shared/session/session-api.ts");
   const shell=read("src/shell/admin-shell.tsx");
