@@ -1,3 +1,5 @@
+import {apiFetch} from "@/shared/api/client";
+
 export type OrgSettings={
   country:string;
   currency:string;
@@ -12,7 +14,5 @@ export type OrgSettings={
 };
 
 export async function loadOrgSettings():Promise<OrgSettings>{
-  const response=await fetch("/api/admin/settings");
-  if(!response.ok)throw new Error(`settings_${response.status}`);
-  return response.json();
+  return apiFetch<OrgSettings>("settings");
 }

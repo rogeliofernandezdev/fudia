@@ -728,6 +728,10 @@ test("una sesión activa no se reemplaza silenciosamente",()=>{
   const session=read("src/providers/session-context.tsx");
   const providers=read("src/providers/providers.tsx");
   const shell=read("src/shell/admin-shell.tsx");
+  const apiClient=read("src/shared/api/client.ts");
+  const expiration=read("src/shared/session/expire-session.ts");
+  const platformApi=read("src/modules/platform/infrastructure/platform-api.ts");
+  const imageApi=read("src/shared/api/product-image.ts");
 
   assert.ok(route.includes('request.cookies.get("foods_session")'),"El BFF detecta la cookie existente antes de autenticar otra cuenta");
   assert.ok(route.includes('code:"session_already_active"'),"El segundo login recibe un conflicto explícito");
@@ -738,6 +742,11 @@ test("una sesión activa no se reemplaza silenciosamente",()=>{
   assert.ok(providers.includes("listenForSessionChange"),"Todas las rutas reaccionan al cambio de identidad en otra pestaña");
   assert.ok(session.includes("isUnauthorized"),"Una sesión vencida se diferencia de un error temporal");
   assert.ok(shell.includes("AdminSessionError"),"Los fallos de sesión conservan una presentación completa");
+  assert.ok(apiClient.includes("expireBrowserSession"),"Cualquier 401 operativo cierra la sesión");
+  assert.ok(platformApi.includes("expireBrowserSession"),"La administración de plataforma también reacciona al 401");
+  assert.ok(imageApi.includes("expireBrowserSession"),"La carga de archivos también reacciona al 401");
+  assert.ok(expiration.includes('broadcastSessionChange("signed-out")'),"La expiración se comunica entre pestañas");
+  assert.ok(expiration.includes('window.location.replace("/login")'),"La expiración siempre termina en el login");
 });
 
 test("la puesta en marcha guía según los módulos contratados",()=>{

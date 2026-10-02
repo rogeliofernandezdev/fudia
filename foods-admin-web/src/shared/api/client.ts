@@ -1,4 +1,5 @@
 "use client";
+import {expireBrowserSession} from "@/shared/session/expire-session";
 
 export class ApiClientError extends Error {
   constructor(
@@ -12,13 +13,12 @@ export class ApiClientError extends Error {
   }
 }
 
-let logoutInProgress = false;
-
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`/api/admin/${path}`, {
     ...init,
     headers: { "Content-Type": "application/json", ...init?.headers },
   });
+  if(response.status===401)expireBrowserSession();
   if (response.status === 204) return undefined as T;
   const raw = await response.text();
   let body: {message?: string; code?: string} & Record<string, unknown>;
@@ -36,12 +36,6 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
     );
   }
   if (!response.ok) {
-    if (response.status === 401 && !logoutInProgress) {
-      logoutInProgress = true;
-      void fetch("/api/session", { method: "DELETE" })
-        .catch(() => {})
-        .finally(() => window.location.assign("/login"));
-    }
     throw new ApiClientError(
       body.message ?? "No pudimos completar la operación.",
       body.code ?? "unknown_error",

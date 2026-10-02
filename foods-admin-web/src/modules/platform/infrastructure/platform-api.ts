@@ -1,4 +1,5 @@
 import {ApiClientError,apiFetch} from "@/shared/api/client";
+import {expireBrowserSession} from "@/shared/session/expire-session";
 import type {OrganizationSubscription,PlatformModule,PlatformOnboardingContext,PlatformOnboardingDraft,SubscriptionPlan,SubscriptionPlanDraft} from "../domain/types";
 
 async function platformFetch<T>(path:string,init?:RequestInit):Promise<T>{
@@ -6,6 +7,7 @@ async function platformFetch<T>(path:string,init?:RequestInit):Promise<T>{
   ...init,
   headers:{"Content-Type":"application/json",...init?.headers},
  });
+ if(response.status===401)expireBrowserSession();
  if(response.status===204)return undefined as T;
  const raw=await response.text();
  let body:({message?:string;code?:string;correlationId?:string}&Record<string,unknown>);
