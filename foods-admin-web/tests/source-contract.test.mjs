@@ -75,6 +75,7 @@ test("providers shell y pages no construyen transporte HTTP",()=>{
 test("los estilos especializados se cargan desde su owner",()=>{
   const owners={
     "src/shell/admin-shell.tsx":"./styles/shell.css",
+    "src/shell/admin-session-error.tsx":"./styles/session-error.css",
     "src/providers/feedback-provider.tsx":"./styles/feedback.css",
     "src/design-system/confirm-dialog.tsx":"./styles/confirm-dialog.css",
     "src/design-system/remote-modal-skeleton.tsx":"./styles/remote-modal-skeleton.css",
@@ -719,6 +720,24 @@ test("login inicia en la primera ruta realmente accesible",()=>{
   assert.ok(shell.includes("router.push(homeHref)"),"El fallback de acceso usa la misma ruta inicial");
   assert.ok(contextSwitcher.includes("firstAccessibleRoute(context)"),"Cambiar de local recalcula la primera ruta accesible");
   assert.ok(noAccess.includes("Sin accesos asignados"),"Existe un destino explícito para roles sin opciones válidas");
+});
+
+test("una sesión activa no se reemplaza silenciosamente",()=>{
+  const route=read("src/app/api/session/route.ts");
+  const login=read("src/modules/auth/presentation/login-form.tsx");
+  const session=read("src/providers/session-context.tsx");
+  const providers=read("src/providers/providers.tsx");
+  const shell=read("src/shell/admin-shell.tsx");
+
+  assert.ok(route.includes('request.cookies.get("foods_session")'),"El BFF detecta la cookie existente antes de autenticar otra cuenta");
+  assert.ok(route.includes('code:"session_already_active"'),"El segundo login recibe un conflicto explícito");
+  assert.ok(login.includes("Cerrar sesión y cambiar de cuenta"),"Cambiar de cuenta exige cerrar la sesión anterior");
+  assert.ok(login.includes('broadcastSessionChange("signed-in")'),"El login avisa a las demás pestañas");
+  assert.ok(shell.includes('broadcastSessionChange("signed-out")'),"El logout avisa a las demás pestañas");
+  assert.ok(session.includes('refetchOnWindowFocus:"always"'),"El contexto se vuelve a validar al recuperar el foco");
+  assert.ok(providers.includes("listenForSessionChange"),"Todas las rutas reaccionan al cambio de identidad en otra pestaña");
+  assert.ok(session.includes("isUnauthorized"),"Una sesión vencida se diferencia de un error temporal");
+  assert.ok(shell.includes("AdminSessionError"),"Los fallos de sesión conservan una presentación completa");
 });
 
 test("la puesta en marcha guía según los módulos contratados",()=>{

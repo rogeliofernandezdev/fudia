@@ -6,17 +6,18 @@ import {useEffect} from "react";
 import {deleteSession,loadSessionContext} from "@/shared/session/session-api";
 
 export type SessionUser={id:string;name:string;platformAdmin:boolean};
-export type SessionContext={user:SessionUser|null;organization:{id:string;name:string}|null;location:{id:string;name:string;country:string;timezone:string}|null;modules:Record<string,boolean>|null;menuAccess:string[];permissions:string[];setupRequired:boolean;canAccess:(access:string)=>boolean;can:(permission:string)=>boolean;isLoading:boolean;isError:boolean};
+export type SessionContext={user:SessionUser|null;organization:{id:string;name:string}|null;location:{id:string;name:string;country:string;timezone:string}|null;modules:Record<string,boolean>|null;menuAccess:string[];permissions:string[];setupRequired:boolean;canAccess:(access:string)=>boolean;can:(permission:string)=>boolean;isLoading:boolean;isError:boolean;isUnauthorized:boolean};
 
-const Context=createContext<SessionContext>({user:null,organization:null,location:null,modules:null,menuAccess:[],permissions:[],setupRequired:false,canAccess:()=>false,can:()=>false,isLoading:true,isError:false});
+const Context=createContext<SessionContext>({user:null,organization:null,location:null,modules:null,menuAccess:[],permissions:[],setupRequired:false,canAccess:()=>false,can:()=>false,isLoading:true,isError:false,isUnauthorized:false});
 
 export function SessionProvider({children}:{children:React.ReactNode}){
   const router=useRouter();
-  const query=useQuery({queryKey:["session-context"],queryFn:loadSessionContext,staleTime:300000,retry:1});
-  useEffect(()=>{if(query.isError){const err=String(query.error);if(err.includes("context_401")){void deleteSession().catch(()=>{}).finally(()=>{router.replace("/login");router.refresh()})}}},[query.isError,query.error,router]);
+  const query=useQuery({queryKey:["session-context"],queryFn:loadSessionContext,staleTime:300000,refetchOnWindowFocus:"always",retry:1});
+  const isUnauthorized=query.isError&&String(query.error).includes("context_401");
+  useEffect(()=>{if(isUnauthorized){void deleteSession().catch(()=>{}).finally(()=>{router.replace("/login");router.refresh()})}},[isUnauthorized,router]);
   const permissions=query.data?.permissions??[];
   const menuAccess=query.data?.menuAccess??[];
-  const value:SessionContext={user:query.data?.user??null,organization:query.data?.organization??null,location:query.data?.location??null,modules:query.data?.modules??null,menuAccess,permissions,setupRequired:query.data?.setupRequired??false,canAccess:(access)=>menuAccess.includes("*")||menuAccess.includes(access),can:(permission)=>permissions.includes("*")||permissions.includes(permission),isLoading:query.isLoading,isError:query.isError};
+  const value:SessionContext={user:query.data?.user??null,organization:query.data?.organization??null,location:query.data?.location??null,modules:query.data?.modules??null,menuAccess,permissions,setupRequired:query.data?.setupRequired??false,canAccess:(access)=>menuAccess.includes("*")||menuAccess.includes(access),can:(permission)=>permissions.includes("*")||permissions.includes(permission),isLoading:query.isLoading,isError:query.isError,isUnauthorized};
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }
 
