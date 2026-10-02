@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"sort"
+
+	"github.com/jackc/pgx/v5"
 )
 
 // ModuleCatalog define el catálogo de módulos disponibles en la plataforma.
@@ -15,6 +17,60 @@ type moduleDef struct {
 	Description string `json:"description"`
 	Icon        string `json:"icon"`
 	Category    string `json:"category"`
+}
+
+const (
+	moduleAvailabilityReady       = "ready"
+	moduleAvailabilityDevelopment = "development"
+	moduleAvailabilityPlanned     = "planned"
+)
+
+var mvpModuleKeys = map[string]bool{
+	"reportes":true,"pos":true,"pedidos":true,"cocina":true,"mesas":true,"caja":true,"reservas":true,
+	"productos":true,"combos":true,"recetas":true,"inventario":true,"kardex":true,"compras":true,
+	"clientes":true,"locales":true,"fiscal":true,"usuarios":true,"costos":true,"whatsapp_bot":true,
+}
+
+var developmentModuleKeys = map[string]bool{
+	"carta_qr":true,
+	"facturacion":true,
+	"integraciones":true,
+}
+
+func moduleAvailability(key string) string {
+	if mvpModuleKeys[key] {
+		return moduleAvailabilityReady
+	}
+	if developmentModuleKeys[key] {
+		return moduleAvailabilityDevelopment
+	}
+	return moduleAvailabilityPlanned
+}
+
+func moduleCanActivate(key string) bool {
+	return moduleAvailability(key) == moduleAvailabilityReady
+}
+
+func seedOrganizationModules(ctx context.Context, tx pgx.Tx, organizationID string) error {
+	keys:=make([]string,0,len(mvpModuleKeys))
+	for key:=range mvpModuleKeys { keys=append(keys,key) }
+	return syncOrganizationModulesForPlan(ctx,tx,organizationID,keys)
+}
+
+func syncOrganizationModulesForPlan(ctx context.Context, tx pgx.Tx, organizationID string, moduleKeys []string) error {
+	allowed:=map[string]bool{}
+	for _,key:=range moduleKeys { allowed[key]=true }
+	for _,module:=range moduleCatalog {
+		active:=allowed[module.Key]&&moduleCanActivate(module.Key)
+		_,err:=tx.Exec(ctx,`
+			INSERT INTO organization_modules(organization_id,module_key,active)
+			VALUES($1,$2,$3)
+			ON CONFLICT(organization_id,module_key)
+			DO UPDATE SET active=EXCLUDED.active,updated_at=now()
+		`,organizationID,module.Key,active)
+		if err!=nil{return err}
+	}
+	return nil
 }
 
 var moduleCatalog = []moduleDef{
@@ -33,13 +89,13 @@ var moduleCatalog = []moduleDef{
 	{Key: "kiosco", Name: "Kiosco de autoservicio", Description: "Autopedido en kiosco físico", Icon: "grid", Category: "Operación"},
 
 	// Carta y producción
-	{Key: "productos", Name: "Carta y productos", Description: "Productos, categorías, alérgenos e imágenes", Icon: "utensils", Category: "Carta y producción"},
+	{Key: "productos", Name: "Carta y productos", Description: "Productos, categorías, disponibilidad, alérgenos e imágenes", Icon: "utensils", Category: "Carta y producción"},
 	{Key: "combos", Name: "Menús y combos", Description: "Menús compuestos, grupos de elección y alternativas", Icon: "combo", Category: "Carta y producción"},
-	{Key: "recetas", Name: "Recetas y producción", Description: "Recetas base, finales, porcionables y descartables", Icon: "chefHat", Category: "Carta y producción"},
+	{Key: "recetas", Name: "Recetas", Description: "Recetas base, finales, porcionables y descartables", Icon: "cookingPot", Category: "Carta y producción"},
 
 	// Abastecimiento
 	{Key: "inventario", Name: "Inventario", Description: "Stock por local, mínimos y alertas", Icon: "stock", Category: "Abastecimiento"},
-	{Key: "kardex", Name: "Kardex", Description: "Movimientos detallados de inventario", Icon: "stock", Category: "Abastecimiento"},
+	{Key: "kardex", Name: "Kardex", Description: "Movimientos detallados de inventario", Icon: "ledger", Category: "Abastecimiento"},
 	{Key: "compras", Name: "Compras", Description: "Órdenes de compra, proveedores y recepción", Icon: "truck", Category: "Abastecimiento"},
 	{Key: "logistica", Name: "Logística", Description: "Distribución entre locales y ventas logísticas", Icon: "truck", Category: "Abastecimiento"},
 
@@ -63,10 +119,10 @@ var moduleCatalog = []moduleDef{
 
 	// Configuración
 	{Key: "fiscal", Name: "Fiscal y moneda", Description: "Perfiles fiscales, monedas, impuestos y tasas", Icon: "receipt", Category: "Configuración"},
-	{Key: "usuarios", Name: "Usuarios y permisos", Description: "Equipo, roles y accesos", Icon: "users", Category: "Configuración"},
+	{Key: "usuarios", Name: "Usuarios y roles", Description: "Equipo, roles y accesos", Icon: "users", Category: "Configuración"},
 	{Key: "facturacion", Name: "Facturación", Description: "Series y comprobantes electrónicos", Icon: "receipt", Category: "Configuración"},
 	{Key: "integraciones", Name: "Integraciones", Description: "WhatsApp, pagos e impresión", Icon: "settings", Category: "Configuración"},
-	{Key: "whatsapp_bot", Name: "WhatsApp IA para pedidos", Description: "Bot de pedidos por WhatsApp con IA", Icon: "settings", Category: "Configuración"},
+	{Key: "whatsapp_bot", Name: "Fudia Concierge", Description: "Pedidos conversacionales iniciados desde el QR por WhatsApp", Icon: "settings", Category: "Configuración"},
 }
 
 func (a *API) listModules(w http.ResponseWriter, r *http.Request) {
@@ -84,20 +140,22 @@ func (a *API) listModules(w http.ResponseWriter, r *http.Request) {
 		_ = rows.Scan(&key, &active)
 		activeMap[key] = active
 	}
-	// Módulos que no están en la tabla se asumen activos (compatibilidad)
+	// Ausencia de configuración equivale a módulo inactivo: producción falla de forma segura.
 	catalog := make([]map[string]any, 0, len(moduleCatalog))
 	for _, m := range moduleCatalog {
 		active, exists := activeMap[m.Key]
-		if !exists {
-			active = true
+		availability := moduleAvailability(m.Key)
+		if !exists || availability != moduleAvailabilityReady {
+			active = false
 		}
 		catalog = append(catalog, map[string]any{
-			"key":         m.Key,
-			"name":        m.Name,
-			"description": m.Description,
-			"icon":        m.Icon,
-			"category":    m.Category,
-			"active":      active,
+			"key":          m.Key,
+			"name":         m.Name,
+			"description":  m.Description,
+			"icon":         m.Icon,
+			"category":     m.Category,
+			"availability": availability,
+			"active":       active,
 		})
 	}
 	writeJSON(w, 200, map[string]any{"modules": catalog})
@@ -113,7 +171,7 @@ func (a *API) toggleModule(w http.ResponseWriter, r *http.Request) {
 		fail(w, 400, "invalid_request", "Revisa los datos enviados.")
 		return
 	}
-	// Validar que el módulo existe en el catálogo
+	// Validar que el módulo existe en el catálogo.
 	valid := false
 	for _, m := range moduleCatalog {
 		if m.Key == in.Key {
@@ -123,6 +181,10 @@ func (a *API) toggleModule(w http.ResponseWriter, r *http.Request) {
 	}
 	if !valid {
 		fail(w, 400, "invalid_module", "El módulo no existe.")
+		return
+	}
+	if in.Active && !moduleCanActivate(in.Key) {
+		fail(w, 409, "module_not_ready", "Este módulo todavía no está disponible para empresas.")
 		return
 	}
 	_, err := a.db.Exec(r.Context(), `INSERT INTO organization_modules(organization_id, module_key, active) VALUES($1,$2,$3) ON CONFLICT(organization_id, module_key) DO UPDATE SET active=EXCLUDED.active, updated_at=now()`, s.OrganizationID, in.Key, in.Active)
@@ -147,7 +209,7 @@ func (a *API) activeModules(orgID string) map[string]bool {
 		var key string
 		var active bool
 		_ = rows.Scan(&key, &active)
-		result[key] = active
+		result[key] = active && moduleCanActivate(key)
 	}
 	return result
 }

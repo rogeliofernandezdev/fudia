@@ -18,12 +18,14 @@ type category struct {
 	Name         string `json:"name"`
 	SortOrder    int    `json:"sortOrder"`
 	Active       bool   `json:"active"`
+	ProductScope string `json:"productScope"`
 	ProductCount int    `json:"productCount"`
 }
 type categoryInput struct {
-	Name      string `json:"name"`
-	SortOrder int    `json:"sortOrder"`
-	Active    *bool  `json:"active,omitempty"`
+	Name         string `json:"name"`
+	SortOrder    int    `json:"sortOrder"`
+	Active       *bool  `json:"active,omitempty"`
+	ProductScope string `json:"productScope"`
 }
 type product struct {
 	ID                 string   `json:"id"`
@@ -34,8 +36,8 @@ type product struct {
 	CategoryName       *string  `json:"categoryName"`
 	Price              string   `json:"price"`
 	Active             bool     `json:"active"`
-	StockMode          string   `json:"stockMode"`
-	DefaultDailyQuota  *int     `json:"defaultDailyQuota"`
+	ProductType        string   `json:"productType"`
+	QuantityControl    string   `json:"quantityControl"`
 	ImageURL           *string  `json:"imageUrl"`
 	PrepMinutes        *int     `json:"prepMinutes"`
 	Allergens          []string `json:"allergens"`
@@ -53,8 +55,8 @@ type productInput struct {
 	CategoryID         *string  `json:"categoryId"`
 	Price              string   `json:"price"`
 	Active             *bool    `json:"active,omitempty"`
-	StockMode          string   `json:"stockMode"`
-	DefaultDailyQuota  *int     `json:"defaultDailyQuota"`
+	ProductType        string   `json:"productType"`
+	QuantityControl    string   `json:"quantityControl"`
 	ImageURL           *string  `json:"imageUrl"`
 	PrepMinutes        *int     `json:"prepMinutes"`
 	Allergens          []string `json:"allergens"`
@@ -94,16 +96,52 @@ func (a *API) nextSKU(r *http.Request, orgID string) (string, error) {
 	return fmt.Sprintf("PROD-%04d", count+1), nil
 }
 
+func normalizeCategoryProductScope(value, fallback string) (string, string) {
+	value = strings.ToLower(strings.TrimSpace(value))
+	if value == "" {
+		return fallback, ""
+	}
+	switch value {
+	case "prepared", "retail", "both":
+		return value, ""
+	default:
+		return value, "El uso de la categoría no es válido."
+	}
+}
+
 func (a *API) listCategories(w http.ResponseWriter, r *http.Request) {
 	s := r.Context().Value(scopeKey{}).(scope)
 	includeInactive := r.URL.Query().Get("includeInactive") == "true"
+	productType := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("productType")))
+	if productType != "" && productType != "prepared" && productType != "retail" {
+		fail(w, 400, "invalid_category_filter", "El tipo de producto para filtrar categorías no es válido.")
+		return
+	}
 	page, size := pageParams(r)
 	var total int
-	if err := a.db.QueryRow(r.Context(), `SELECT count(*) FROM menu_categories WHERE organization_id=$1 AND ($2 OR active)`, s.OrganizationID, includeInactive).Scan(&total); err != nil {
+	if err := a.db.QueryRow(r.Context(), `
+		SELECT count(*)
+		FROM menu_categories
+		WHERE organization_id=$1
+		  AND ($2 OR active)
+		  AND ($3='' OR product_scope='both' OR product_scope=$3)`,
+		s.OrganizationID, includeInactive, productType,
+	).Scan(&total); err != nil {
 		fail(w, 503, "categories_unavailable", "No pudimos cargar las categorías.")
 		return
 	}
-	rows, err := a.db.Query(r.Context(), `SELECT c.id,c.name,c.sort_order,c.active,count(p.id) FROM menu_categories c LEFT JOIN products p ON p.category_id=c.id AND p.organization_id=c.organization_id WHERE c.organization_id=$1 AND ($2 OR c.active) GROUP BY c.id ORDER BY c.sort_order,c.name LIMIT $3 OFFSET $4`, s.OrganizationID, includeInactive, size, (page-1)*size)
+	rows, err := a.db.Query(r.Context(), `
+		SELECT c.id,c.name,c.sort_order,c.active,c.product_scope,count(p.id)
+		FROM menu_categories c
+		LEFT JOIN products p ON p.category_id=c.id AND p.organization_id=c.organization_id
+		WHERE c.organization_id=$1
+		  AND ($2 OR c.active)
+		  AND ($3='' OR c.product_scope='both' OR c.product_scope=$3)
+		GROUP BY c.id
+		ORDER BY c.sort_order,c.name
+		LIMIT $4 OFFSET $5`,
+		s.OrganizationID, includeInactive, productType, size, (page-1)*size,
+	)
 	if err != nil {
 		fail(w, 503, "categories_unavailable", "No pudimos cargar las categorías.")
 		return
@@ -112,7 +150,7 @@ func (a *API) listCategories(w http.ResponseWriter, r *http.Request) {
 	items := []category{}
 	for rows.Next() {
 		var c category
-		if err = rows.Scan(&c.ID, &c.Name, &c.SortOrder, &c.Active, &c.ProductCount); err != nil {
+		if err = rows.Scan(&c.ID, &c.Name, &c.SortOrder, &c.Active, &c.ProductScope, &c.ProductCount); err != nil {
 			fail(w, 503, "categories_unavailable", "No pudimos cargar las categorías.")
 			return
 		}
@@ -127,8 +165,18 @@ func (a *API) createCategory(w http.ResponseWriter, r *http.Request) {
 		fail(w, 400, "invalid_category", "El nombre de la categoría es obligatorio.")
 		return
 	}
+	productScope, invalid := normalizeCategoryProductScope(in.ProductScope, "prepared")
+	if invalid != "" {
+		fail(w, 400, "invalid_category", invalid)
+		return
+	}
 	var c category
-	err := a.db.QueryRow(r.Context(), `INSERT INTO menu_categories(organization_id,name,sort_order) VALUES($1,$2,$3) RETURNING id,name,sort_order,active`, s.OrganizationID, strings.TrimSpace(in.Name), in.SortOrder).Scan(&c.ID, &c.Name, &c.SortOrder, &c.Active)
+	err := a.db.QueryRow(r.Context(), `
+		INSERT INTO menu_categories(organization_id,name,sort_order,product_scope)
+		VALUES($1,$2,$3,$4)
+		RETURNING id,name,sort_order,active,product_scope`,
+		s.OrganizationID, strings.TrimSpace(in.Name), in.SortOrder, productScope,
+	).Scan(&c.ID, &c.Name, &c.SortOrder, &c.Active, &c.ProductScope)
 	if err != nil {
 		fail(w, 409, "category_conflict", "Ya existe una categoría con ese nombre.")
 		return
@@ -143,12 +191,44 @@ func (a *API) updateCategory(w http.ResponseWriter, r *http.Request) {
 		fail(w, 400, "invalid_category", "El nombre de la categoría es obligatorio.")
 		return
 	}
+	productScope, invalid := normalizeCategoryProductScope(in.ProductScope, "")
+	if invalid != "" {
+		fail(w, 400, "invalid_category", invalid)
+		return
+	}
 	active := true
 	if in.Active != nil {
 		active = *in.Active
 	}
+	if productScope == "prepared" || productScope == "retail" {
+		incompatibleType := "retail"
+		if productScope == "retail" {
+			incompatibleType = "prepared"
+		}
+		var incompatibleProducts int
+		if err := a.db.QueryRow(r.Context(), `
+			SELECT count(*)
+			FROM products
+			WHERE organization_id=$1 AND category_id=$2 AND product_type=$3`,
+			s.OrganizationID, r.PathValue("id"), incompatibleType,
+		).Scan(&incompatibleProducts); err != nil {
+			fail(w, 503, "category_unavailable", "No pudimos validar los productos de la categoría.")
+			return
+		}
+		if incompatibleProducts > 0 {
+			fail(w, 409, "category_scope_in_use", "La categoría contiene productos de otro tipo. Usa «Ambos» o mueve esos productos antes de cambiar su uso.")
+			return
+		}
+	}
 	var c category
-	err := a.db.QueryRow(r.Context(), `UPDATE menu_categories SET name=$3,sort_order=$4,active=$5 WHERE id=$2 AND organization_id=$1 RETURNING id,name,sort_order,active`, s.OrganizationID, r.PathValue("id"), strings.TrimSpace(in.Name), in.SortOrder, active).Scan(&c.ID, &c.Name, &c.SortOrder, &c.Active)
+	err := a.db.QueryRow(r.Context(), `
+		UPDATE menu_categories
+		SET name=$3,sort_order=$4,active=$5,
+		    product_scope=COALESCE(NULLIF($6,''),product_scope)
+		WHERE id=$2 AND organization_id=$1
+		RETURNING id,name,sort_order,active,product_scope`,
+		s.OrganizationID, r.PathValue("id"), strings.TrimSpace(in.Name), in.SortOrder, active, productScope,
+	).Scan(&c.ID, &c.Name, &c.SortOrder, &c.Active, &c.ProductScope)
 	if errors.Is(err, pgx.ErrNoRows) {
 		fail(w, 404, "category_not_found", "La categoría no existe.")
 		return
@@ -193,7 +273,7 @@ func (a *API) listProducts(w http.ResponseWriter, r *http.Request) {
 		fail(w, 503, "products_unavailable", "No pudimos cargar los productos.")
 		return
 	}
-	rows, err := a.db.Query(r.Context(), `SELECT p.id,p.sku,p.name,p.description,p.category_id,c.name,p.price::text,p.active,p.stock_mode,p.default_daily_quota,p.image_url,p.prep_minutes,p.allergens,p.featured,p.cost_price::text,p.available_from::text,p.available_until::text,p.available_days,p.available_until_time::text FROM products p LEFT JOIN menu_categories c ON c.id=p.category_id AND c.organization_id=p.organization_id WHERE p.organization_id=$1 AND (p.name ILIKE $2 OR p.sku ILIKE $2) AND ($3='' OR p.category_id::text=$3) AND ($4='' OR ($4='active' AND p.active) OR ($4='inactive' AND NOT p.active)) AND NOT EXISTS (SELECT 1 FROM menu_combos mc WHERE mc.product_id=p.id) ORDER BY p.updated_at DESC,p.name LIMIT $5 OFFSET $6`, s.OrganizationID, search, categoryID, status, size, (page-1)*size)
+	rows, err := a.db.Query(r.Context(), `SELECT p.id,p.sku,p.name,p.description,p.category_id,c.name,p.price::text,p.active,p.product_type,p.quantity_control,p.image_url,p.prep_minutes,p.allergens,p.featured,p.cost_price::text,p.available_from::text,p.available_until::text,p.available_days,p.available_until_time::text FROM products p LEFT JOIN menu_categories c ON c.id=p.category_id AND c.organization_id=p.organization_id WHERE p.organization_id=$1 AND (p.name ILIKE $2 OR p.sku ILIKE $2) AND ($3='' OR p.category_id::text=$3) AND ($4='' OR ($4='active' AND p.active) OR ($4='inactive' AND NOT p.active)) AND NOT EXISTS (SELECT 1 FROM menu_combos mc WHERE mc.product_id=p.id) ORDER BY p.updated_at DESC,p.name LIMIT $5 OFFSET $6`, s.OrganizationID, search, categoryID, status, size, (page-1)*size)
 	if err != nil {
 		fail(w, 503, "products_unavailable", "No pudimos cargar los productos.")
 		return
@@ -202,7 +282,7 @@ func (a *API) listProducts(w http.ResponseWriter, r *http.Request) {
 	items := []product{}
 	for rows.Next() {
 		var p product
-		if err = rows.Scan(&p.ID, &p.SKU, &p.Name, &p.Description, &p.CategoryID, &p.CategoryName, &p.Price, &p.Active, &p.StockMode, &p.DefaultDailyQuota, &p.ImageURL, &p.PrepMinutes, &p.Allergens, &p.Featured, &p.CostPrice, &p.AvailableFrom, &p.AvailableUntil, &p.AvailableDays, &p.AvailableUntilTime); err != nil {
+		if err = rows.Scan(&p.ID, &p.SKU, &p.Name, &p.Description, &p.CategoryID, &p.CategoryName, &p.Price, &p.Active, &p.ProductType, &p.QuantityControl, &p.ImageURL, &p.PrepMinutes, &p.Allergens, &p.Featured, &p.CostPrice, &p.AvailableFrom, &p.AvailableUntil, &p.AvailableDays, &p.AvailableUntilTime); err != nil {
 			fail(w, 503, "products_unavailable", "No pudimos cargar los productos.")
 			return
 		}
@@ -213,7 +293,7 @@ func (a *API) listProducts(w http.ResponseWriter, r *http.Request) {
 func (a *API) getProduct(w http.ResponseWriter, r *http.Request) {
 	s := r.Context().Value(scopeKey{}).(scope)
 	var p product
-	err := a.db.QueryRow(r.Context(), `SELECT p.id,p.sku,p.name,p.description,p.category_id,c.name,p.price::text,p.active,p.stock_mode,p.default_daily_quota,p.image_url,p.prep_minutes,p.allergens,p.featured,p.cost_price::text,p.available_from::text,p.available_until::text,p.available_days,p.available_until_time::text FROM products p LEFT JOIN menu_categories c ON c.id=p.category_id AND c.organization_id=p.organization_id WHERE p.organization_id=$1 AND p.id=$2`, s.OrganizationID, r.PathValue("id")).Scan(&p.ID, &p.SKU, &p.Name, &p.Description, &p.CategoryID, &p.CategoryName, &p.Price, &p.Active, &p.StockMode, &p.DefaultDailyQuota, &p.ImageURL, &p.PrepMinutes, &p.Allergens, &p.Featured, &p.CostPrice, &p.AvailableFrom, &p.AvailableUntil, &p.AvailableDays, &p.AvailableUntilTime)
+	err := a.db.QueryRow(r.Context(), `SELECT p.id,p.sku,p.name,p.description,p.category_id,c.name,p.price::text,p.active,p.product_type,p.quantity_control,p.image_url,p.prep_minutes,p.allergens,p.featured,p.cost_price::text,p.available_from::text,p.available_until::text,p.available_days,p.available_until_time::text FROM products p LEFT JOIN menu_categories c ON c.id=p.category_id AND c.organization_id=p.organization_id WHERE p.organization_id=$1 AND p.id=$2`, s.OrganizationID, r.PathValue("id")).Scan(&p.ID, &p.SKU, &p.Name, &p.Description, &p.CategoryID, &p.CategoryName, &p.Price, &p.Active, &p.ProductType, &p.QuantityControl, &p.ImageURL, &p.PrepMinutes, &p.Allergens, &p.Featured, &p.CostPrice, &p.AvailableFrom, &p.AvailableUntil, &p.AvailableDays, &p.AvailableUntilTime)
 	if errors.Is(err, pgx.ErrNoRows) {
 		fail(w, 404, "product_not_found", "El producto no existe.")
 		return
@@ -225,27 +305,28 @@ func (a *API) getProduct(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, p)
 }
 
-// normalizeProduct aplica el contrato de disponibilidad: devuelve la entrada
-// saneada y un mensaje de error vacío cuando es válida. El SKU se autogenera
-// cuando el usuario no lo envía.
+// normalizeProduct valida únicamente datos comerciales y la clasificación
+// de cantidad. Las cantidades nunca se guardan en products.
 func normalizeProduct(in productInput) (productInput, string) {
 	if strings.TrimSpace(in.Name) == "" || strings.TrimSpace(in.Price) == "" {
 		return in, "Nombre y precio son obligatorios."
 	}
-	if in.StockMode == "" {
-		in.StockMode = "none"
+	in.ProductType = strings.ToLower(strings.TrimSpace(in.ProductType))
+	if in.ProductType == "" {
+		in.ProductType = "prepared"
 	}
-	switch in.StockMode {
-	case "none":
-		in.DefaultDailyQuota = nil
-	case "manual":
-		if in.DefaultDailyQuota == nil || *in.DefaultDailyQuota < 1 {
-			return in, "El cupo diario es obligatorio y debe ser mayor que cero."
-		}
-	case "linked", "recipe":
-		return in, "Ese control de disponibilidad requiere inventario y todavía no está habilitado."
+	switch in.ProductType {
+	case "prepared", "retail":
 	default:
-		return in, "El control de disponibilidad no es válido."
+		return in, "El tipo de producto no es válido."
+	}
+	if in.QuantityControl == "" {
+		in.QuantityControl = "none"
+	}
+	switch in.QuantityControl {
+	case "none", "portions", "inventory":
+	default:
+		return in, "El control de cantidad no es válido."
 	}
 	return in, ""
 }
@@ -274,7 +355,7 @@ func (a *API) createProduct(w http.ResponseWriter, r *http.Request) {
 		createFeatured = *in.Featured
 	}
 	var p product
-	err := a.db.QueryRow(r.Context(), `INSERT INTO products(organization_id,category_id,sku,name,description,price,active,stock_mode,default_daily_quota,image_url,prep_minutes,allergens,featured,cost_price,available_from,available_until,available_days,available_until_time) VALUES($1,$2,$3,$4,$5,$6,true,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING id,sku,name,description,category_id,price::text,active,stock_mode,default_daily_quota,image_url,prep_minutes,allergens,featured,cost_price::text,available_from::text,available_until::text,available_days,available_until_time::text`, s.OrganizationID, in.CategoryID, strings.TrimSpace(in.SKU), strings.TrimSpace(in.Name), strings.TrimSpace(in.Description), in.Price, in.StockMode, in.DefaultDailyQuota, in.ImageURL, in.PrepMinutes, in.Allergens, createFeatured, in.CostPrice, in.AvailableFrom, in.AvailableUntil, in.AvailableDays, in.AvailableUntilTime).Scan(&p.ID, &p.SKU, &p.Name, &p.Description, &p.CategoryID, &p.Price, &p.Active, &p.StockMode, &p.DefaultDailyQuota, &p.ImageURL, &p.PrepMinutes, &p.Allergens, &p.Featured, &p.CostPrice, &p.AvailableFrom, &p.AvailableUntil, &p.AvailableDays, &p.AvailableUntilTime)
+	err := a.db.QueryRow(r.Context(), `INSERT INTO products(organization_id,category_id,sku,name,description,price,active,product_type,quantity_control,image_url,prep_minutes,allergens,featured,cost_price,available_from,available_until,available_days,available_until_time) VALUES($1,$2,$3,$4,$5,$6,true,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING id,sku,name,description,category_id,price::text,active,product_type,quantity_control,image_url,prep_minutes,allergens,featured,cost_price::text,available_from::text,available_until::text,available_days,available_until_time::text`, s.OrganizationID, in.CategoryID, strings.TrimSpace(in.SKU), strings.TrimSpace(in.Name), strings.TrimSpace(in.Description), in.Price, in.ProductType, in.QuantityControl, in.ImageURL, in.PrepMinutes, in.Allergens, createFeatured, in.CostPrice, in.AvailableFrom, in.AvailableUntil, in.AvailableDays, in.AvailableUntilTime).Scan(&p.ID, &p.SKU, &p.Name, &p.Description, &p.CategoryID, &p.Price, &p.Active, &p.ProductType, &p.QuantityControl, &p.ImageURL, &p.PrepMinutes, &p.Allergens, &p.Featured, &p.CostPrice, &p.AvailableFrom, &p.AvailableUntil, &p.AvailableDays, &p.AvailableUntilTime)
 	if err != nil {
 		fail(w, 409, "product_conflict", "Revisa la categoría y el precio.")
 		return
@@ -289,6 +370,7 @@ func (a *API) updateProduct(w http.ResponseWriter, r *http.Request) {
 		fail(w, 400, "invalid_product", "Nombre y precio son obligatorios.")
 		return
 	}
+	productTypeProvided := strings.TrimSpace(in.ProductType) != ""
 	in, invalid := normalizeProduct(in)
 	if invalid != "" {
 		fail(w, 400, "invalid_product", invalid)
@@ -306,14 +388,76 @@ func (a *API) updateProduct(w http.ResponseWriter, r *http.Request) {
 	if skuValue == "" {
 		skuValue = r.PathValue("id")
 	}
-	var p product
-	err := a.db.QueryRow(r.Context(), `UPDATE products SET category_id=$3,sku=$4,name=$5,description=$6,price=$7,active=$8,stock_mode=$9,default_daily_quota=$10,image_url=$11,prep_minutes=$12,allergens=$13,featured=$14,cost_price=$15,available_from=$16,available_until=$17,available_days=$18,available_until_time=$19,updated_at=now() WHERE organization_id=$1 AND id=$2 RETURNING id,sku,name,description,category_id,price::text,active,stock_mode,default_daily_quota,image_url,prep_minutes,allergens,featured,cost_price::text,available_from::text,available_until::text,available_days,available_until_time::text`, s.OrganizationID, r.PathValue("id"), in.CategoryID, skuValue, strings.TrimSpace(in.Name), strings.TrimSpace(in.Description), in.Price, active, in.StockMode, in.DefaultDailyQuota, in.ImageURL, in.PrepMinutes, in.Allergens, featured, in.CostPrice, in.AvailableFrom, in.AvailableUntil, in.AvailableDays, in.AvailableUntilTime).Scan(&p.ID, &p.SKU, &p.Name, &p.Description, &p.CategoryID, &p.Price, &p.Active, &p.StockMode, &p.DefaultDailyQuota, &p.ImageURL, &p.PrepMinutes, &p.Allergens, &p.Featured, &p.CostPrice, &p.AvailableFrom, &p.AvailableUntil, &p.AvailableDays, &p.AvailableUntilTime)
+
+	tx, err := a.db.Begin(r.Context())
+	if err != nil {
+		fail(w, 503, "product_unavailable", "No pudimos actualizar el producto.")
+		return
+	}
+	defer tx.Rollback(r.Context())
+
+	var currentControl, currentProductType string
+	err = tx.QueryRow(r.Context(), `
+		SELECT quantity_control,product_type
+		FROM products
+		WHERE organization_id=$1 AND id=$2
+		FOR UPDATE`, s.OrganizationID, r.PathValue("id")).Scan(&currentControl, &currentProductType)
 	if errors.Is(err, pgx.ErrNoRows) {
 		fail(w, 404, "product_not_found", "El producto no existe.")
 		return
 	}
 	if err != nil {
+		fail(w, 503, "product_unavailable", "No pudimos validar el producto.")
+		return
+	}
+	if !productTypeProvided {
+		in.ProductType = currentProductType
+	}
+	if currentControl != in.QuantityControl {
+		if currentControl == "none" && in.QuantityControl != "none" {
+			usedByOpenOrder, usageErr := productHasCancellableOrderUsage(r.Context(), tx, s.OrganizationID, r.PathValue("id"))
+			if usageErr != nil {
+				fail(w, 503, "product_unavailable", "No pudimos validar los pedidos abiertos del producto.")
+				return
+			}
+			if usedByOpenOrder {
+				fail(w, 409, "quantity_control_open_orders", "Cierra o cancela los pedidos abiertos de este producto antes de activar un control de cantidad.")
+				return
+			}
+		}
+		var used bool
+		switch currentControl {
+		case "inventory":
+			err = tx.QueryRow(r.Context(), `
+				SELECT EXISTS(
+					SELECT 1 FROM stock_movements
+					WHERE organization_id=$1 AND product_id=$2
+				)`, s.OrganizationID, r.PathValue("id")).Scan(&used)
+		case "portions":
+			err = tx.QueryRow(r.Context(), `
+				SELECT EXISTS(
+					SELECT 1 FROM product_availability
+					WHERE organization_id=$1 AND product_id=$2 AND sold_quantity>0
+				)`, s.OrganizationID, r.PathValue("id")).Scan(&used)
+		}
+		if err != nil {
+			fail(w, 503, "product_unavailable", "No pudimos validar el historial de cantidades.")
+			return
+		}
+		if used {
+			fail(w, 409, "quantity_control_in_use", "No puedes cambiar el control de cantidad porque el producto ya tiene movimientos o ventas asociados.")
+			return
+		}
+	}
+
+	var p product
+	err = tx.QueryRow(r.Context(), `UPDATE products SET category_id=$3,sku=$4,name=$5,description=$6,price=$7,active=$8,product_type=$9,quantity_control=$10,image_url=$11,prep_minutes=$12,allergens=$13,featured=$14,cost_price=$15,available_from=$16,available_until=$17,available_days=$18,available_until_time=$19,updated_at=now() WHERE organization_id=$1 AND id=$2 RETURNING id,sku,name,description,category_id,price::text,active,product_type,quantity_control,image_url,prep_minutes,allergens,featured,cost_price::text,available_from::text,available_until::text,available_days,available_until_time::text`, s.OrganizationID, r.PathValue("id"), in.CategoryID, skuValue, strings.TrimSpace(in.Name), strings.TrimSpace(in.Description), in.Price, active, in.ProductType, in.QuantityControl, in.ImageURL, in.PrepMinutes, in.Allergens, featured, in.CostPrice, in.AvailableFrom, in.AvailableUntil, in.AvailableDays, in.AvailableUntilTime).Scan(&p.ID, &p.SKU, &p.Name, &p.Description, &p.CategoryID, &p.Price, &p.Active, &p.ProductType, &p.QuantityControl, &p.ImageURL, &p.PrepMinutes, &p.Allergens, &p.Featured, &p.CostPrice, &p.AvailableFrom, &p.AvailableUntil, &p.AvailableDays, &p.AvailableUntilTime)
+	if err != nil {
 		fail(w, 409, "product_conflict", "No se pudo actualizar el producto.")
+		return
+	}
+	if err = tx.Commit(r.Context()); err != nil {
+		fail(w, 503, "product_unavailable", "No pudimos actualizar el producto.")
 		return
 	}
 	a.audit(r, "product.updated", "product", p.ID)

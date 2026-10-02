@@ -1,0 +1,39 @@
+[
+  {
+    "input": "¿Qué bebidas tienen?",
+    "expected": "menu"
+  },
+  {
+    "input": "¿Cuánto cuesta el ceviche?",
+    "expected": "menu"
+  },
+  {
+    "input": "¿Qué opciones trae el combo familiar?",
+    "expected": "menu"
+  },
+  {
+    "input": "Quiero dos gaseosas",
+    "expected": "order"
+  },
+  {
+    "input": "Quita una cerveza",
+    "expected": "order"
+  },
+  {
+    "input": "Sí, confirma el pedido",
+    "expected": "order",
+    "awaitingConfirmation": true
+  },
+  {
+    "input": "Quiero la cuenta",
+    "expected": "service"
+  },
+  {
+    "input": "¿Cuánto debo?",
+    "expected": "service"
+  },
+  {
+    "input": "Llama a un mozo por favor",
+    "expected": "service"
+  }
+]

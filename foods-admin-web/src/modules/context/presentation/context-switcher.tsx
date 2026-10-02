@@ -1,10 +1,13 @@
 "use client";
+import "./context-switcher.css";
 import {useState,useEffect,useRef} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Icon} from "@/design-system/icons";
 import {useSession} from "@/providers/session-context";
 import {useFeedback} from "@/providers/feedback-provider";
 import {listOrganizations,listOrgLocations,listAvailableLocations,switchContext} from "../infrastructure/context-api";
+import {loadSessionContext} from "@/shared/session/session-api";
+import {firstAccessibleRoute} from "@/shell/navigation";
 
 export function ContextSwitcher(){
   const{user,organization,location}=useSession();
@@ -24,7 +27,18 @@ export function ContextSwitcher(){
 
   const switchMut=useMutation({
     mutationFn:switchContext,
-    onSuccess:(data)=>{setOpen(false);notify({tone:"success",title:"Cambio aplicado",message:`Ahora operas en ${data.organization.name} · ${data.location.name}.`});queryClient.clear();queryClient.invalidateQueries({queryKey:["session-context"]});window.location.reload()},
+    onSuccess:async(data)=>{
+      setOpen(false);
+      notify({tone:"success",title:"Cambio aplicado",message:`Ahora operas en ${data.organization.name} · ${data.location.name}.`});
+      queryClient.clear();
+      try{
+        const context=await loadSessionContext();
+        queryClient.setQueryData(["session-context"],context);
+        window.location.assign(firstAccessibleRoute(context));
+      }catch{
+        window.location.reload();
+      }
+    },
     onError:(e:Error)=>notify({tone:"danger",title:"No se pudo cambiar",message:e.message})
   });
 

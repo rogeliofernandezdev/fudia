@@ -1,0 +1,31 @@
+"use client";
+import "./configuration.css";
+import Link from "next/link";
+import {Icon,type IconName} from "@/design-system/icons";
+import {PageHeader} from "@/design-system/page-header";
+import {useSession} from "@/providers";
+import {pageRoutes} from "@/shared/routing/page-routes";
+
+const sections:Array<{icon:IconName;title:string;description:string;href:string;permission?:string;platformAdminOnly?:boolean;module?:string;access?:string}>=[
+  {icon:"store",title:"Empresa",description:"Razón social, nombre comercial e identidad general",href:pageRoutes.organizationSettings,permission:"organizations.manage"},
+  {icon:"receipt",title:"País y configuración fiscal",description:"Perfiles, monedas, impuestos y tasas",href:pageRoutes.taxSettings,permission:"organizations.read"},
+  {icon:"payment",title:"Medios de pago",description:"Catálogo único para ventas, caja y gastos",href:pageRoutes.paymentMethods,permission:"organizations.read"},
+  {icon:"users",title:"Usuarios y permisos",description:"Equipo, roles y accesos por local",href:pageRoutes.usersSettings,permission:"users.read"},
+  {icon:"settings",title:"Módulos",description:"Control de módulos contratado por empresa",href:pageRoutes.modulesSettings,platformAdminOnly:true},
+  {icon:"mail",title:"Fudia Concierge",description:"Pedidos conversacionales por WhatsApp desde el QR",href:pageRoutes.concierge,permission:"organizations.read",module:"whatsapp_bot"},
+];
+
+export function ConfigurationHomePage(){
+  const{user,can,canAccess,modules}=useSession();
+  const visible=sections.filter(section=>{
+    if(section.platformAdminOnly)return Boolean(user?.platformAdmin);
+    if(section.module&&!user?.platformAdmin&&!modules?.[section.module])return false;
+    if(section.access&&!user?.platformAdmin&&!canAccess(section.access))return false;
+    return section.permission?can(section.permission):true;
+  });
+  return <><PageHeader eyebrow="CONFIGURACIÓN" title="Configuración" description="Administra la estructura y los accesos necesarios para operar el restaurante."/>
+    <section className="settings-grid">
+      {visible.map(section=><Link key={section.title} href={section.href}><span><Icon name={section.icon}/></span><b>{section.title}<small>{section.description}</small></b><Icon name="chevron"/></Link>)}
+    </section>
+  </>;
+}

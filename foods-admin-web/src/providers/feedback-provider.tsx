@@ -1,4 +1,5 @@
 "use client";
+import "./styles/feedback.css";
 import {createContext,useCallback,useContext,useEffect,useMemo,useRef,useState} from "react";import {Icon} from "@/design-system/icons";
 type Tone="success"|"danger"|"info";type Input={tone:Tone;title:string;message:string;duration?:number};type Item=Input&{id:number};
 const Context=createContext<{notify:(input:Input)=>void}|null>(null);

@@ -2,18 +2,17 @@
 
 ## Decisión
 
-La solución tendrá cuatro proyectos desplegables coordinados por contrato. Se
+La solución tendrá cinco proyectos desplegables coordinados por contrato. Se
 conserva la base técnica de `bodegas`: monolito modular, arquitectura hexagonal,
 vertical slices, PostgreSQL, REST/OpenAPI y mensajería solo donde aporte valor.
 
 ```text
 operations-web (PWA) ─┐
-                      ├─ HTTPS/OpenAPI ─ backend ─ PostgreSQL
-admin-web ────────────┘                    │
-                                           ├─ SUNAT/proveedor OSE
-                                           ├─ WhatsApp Business Provider
-                                           ├─ impresoras/print bridge
-                                           └─ pagos y notificaciones
+                      ├─ HTTPS/OpenAPI ─ foods-backend ─ PostgreSQL
+admin-web ────────────┤                       │
+                      │                       ├─ SUNAT/proveedor OSE
+WhatsApp ─ concierge ─┘                       ├─ impresoras/print bridge
+                                              └─ pagos y notificaciones
 
 infrastructure: despliegue, secretos, red, observabilidad y colas
 ```
@@ -53,3 +52,17 @@ La empresa es la frontera de tenencia. Sus perfiles fiscales se separan por paí
 cada local referencia uno de esos perfiles. Moneda, impuesto y tipo de cambio no
 se duplican como preferencias del usuario ni como columnas independientes del
 local. Los tipos de cambio son históricos, efectivos por fecha y auditables.
+
+
+## Fudia Concierge
+
+- Python/FastAPI + LangGraph.
+- OpenAI se usa para interpretar conversación y seleccionar herramientas; no es
+  fuente de verdad de catálogo, disponibilidad, precios ni pedidos.
+- Redis conserva únicamente sesión y carrito conversacional efímero.
+- La integración con `foods-backend` es server-to-server mediante contrato
+  versionado y credencial propia.
+- El QR es una capacidad de contexto: permite identificar empresa, local y mesa,
+  pero no reemplaza la autenticación del servicio para crear pedidos.
+- `foods-backend` recalcula precio, valida disponibilidad/stock y persiste el
+  pedido antes de que entre a KDS.

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -25,6 +26,7 @@ type healthResponse struct {
 
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	slog.SetDefault(logger)
 	if err := config.LoadDotEnv(".env"); err != nil {
 		logger.Error("configuration_unavailable", "error", err)
 		os.Exit(1)
@@ -66,11 +68,32 @@ func envOrDefault(key, fallback string) string {
 }
 
 func requestLogger(logger *slog.Logger, next http.Handler) http.Handler {
+	slowAfter := 500 * time.Millisecond
+	if raw := os.Getenv("SLOW_REQUEST_MS"); raw != "" {
+		if ms, err := strconv.Atoi(raw); err == nil && ms > 0 {
+			slowAfter = time.Duration(ms) * time.Millisecond
+		}
+	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		started := time.Now()
+		requestID := httpapi.NewCorrelationID()
+		w.Header().Set("X-Request-ID", requestID)
 		rw := &statusRecorder{ResponseWriter: w, status: 200}
 		next.ServeHTTP(rw, r)
-		logger.Info("http_request", "method", r.Method, "path", r.URL.Path, "status", rw.status, "duration_ms", time.Since(started).Milliseconds())
+		duration := time.Since(started)
+		attrs := []any{
+			"request_id", requestID,
+			"correlation_id", requestID,
+			"method", r.Method,
+			"path", r.URL.Path,
+			"status", rw.status,
+			"duration_ms", duration.Milliseconds(),
+		}
+		if duration >= slowAfter {
+			logger.Warn("http_request_slow", attrs...)
+			return
+		}
+		logger.Info("http_request", attrs...)
 	})
 }
 

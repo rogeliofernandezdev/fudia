@@ -1,0 +1,98 @@
+/* Planes SaaS — catálogo comercial de Plataforma */
+.plan-toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:64px;padding:12px 16px 12px 20px;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:var(--shadow)}
+.plan-toolbar>b{font-size:13px;color:var(--ink-950)}
+.plan-cycle{display:flex;gap:3px;height:var(--control-height);padding:3px;border:1px solid var(--line);border-radius:10px;background:var(--cloud-50)}
+.plan-cycle button{display:inline-flex;align-items:center;gap:6px;padding:0 14px;border:0;border-radius:7px;background:transparent;color:var(--ink-600);font-size:11px;font-weight:750;cursor:pointer;transition:background .15s,color .15s}
+.plan-cycle button.active{color:var(--ops-700);background:#fff;box-shadow:var(--shadow)}
+.plan-cycle button span{font-size:10px;font-weight:700;color:var(--brand-700)}
+.plan-cycle button:focus-visible{outline:2px solid var(--ops-500);outline-offset:1px}
+
+.plan-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:16px;align-items:stretch}
+.plan-card{position:relative;display:flex;flex-direction:column;padding:0;overflow:hidden;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:var(--shadow)}
+.plan-card.recommended{border-color:var(--primary-600);box-shadow:0 0 0 1px var(--primary-600),var(--shadow)}
+
+.plan-card>header{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:76px;padding:18px 20px 0}
+.plan-heading{display:flex;align-items:center;gap:12px;min-width:0}
+.plan-icon{display:grid;place-items:center;flex:0 0 auto;width:40px;height:40px;border-radius:11px;color:var(--primary-600);background:var(--primary-100)}
+.plan-heading small{display:block;font-size:10px;font-weight:850;letter-spacing:.1em;text-transform:uppercase;color:var(--primary-600)}
+.plan-heading h2{margin:2px 0 0;font-size:17px;font-weight:800;letter-spacing:-.01em;color:var(--ink-950)}
+.plan-status{display:inline-flex;align-items:center;height:22px;padding:0 9px;border-radius:99px;font-size:10px;font-weight:750;white-space:nowrap;color:var(--ink-600);background:var(--cloud-100)}
+.plan-status.active{color:var(--brand-700);background:var(--brand-100)}
+
+.plan-price{display:grid;gap:4px;padding:18px 20px 16px}
+.plan-price>div{display:flex;align-items:baseline;gap:6px}
+.plan-price>div span{font-size:12px;font-weight:750;color:var(--ink-600)}
+.plan-price>div b{font-size:30px;line-height:1;letter-spacing:-.03em;font-variant-numeric:tabular-nums;color:var(--ink-950)}
+.plan-price>div em{font-size:12px;font-style:normal;color:var(--ink-500)}
+.plan-price>p{margin:0;font-size:11px;line-height:1.45;color:var(--ink-600)}
+
+.plan-capacity{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;margin:0 20px 20px;overflow:hidden;border:1px solid var(--line);border-radius:12px;background:var(--line)}
+.plan-capacity>div{display:grid;gap:3px;padding:10px 12px;background:var(--cloud-50)}
+.plan-capacity dt{font-size:10px;font-weight:750;color:var(--ink-500)}
+.plan-capacity dd{margin:0;font-size:14px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--ink-950);white-space:nowrap}
+.plan-includes{flex:1;padding:16px 20px 20px;border-top:1px solid var(--line)}
+.plan-includes>header{display:block;min-height:0;padding:0;margin:0 0 12px;border:0;background:none}
+.plan-includes>header h3{margin:0;font-size:11px;font-weight:800;letter-spacing:.02em;color:var(--ink-500)}
+.plan-feature-list{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;margin:0;padding:0;list-style:none}
+.plan-feature-list li{display:flex;align-items:center;gap:8px;min-width:0;font-size:12px;font-weight:650;color:var(--ink-950);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.plan-feature-list li svg{flex-shrink:0;color:var(--brand-700)}
+.plan-card>footer{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:auto;padding:12px 16px 12px 20px;border-top:1px solid var(--line);background:var(--cloud-50)}
+.plan-card>footer>div{display:grid;gap:2px}
+.plan-card>footer small{font-size:10px;font-weight:700;color:var(--ink-500)}
+.plan-card>footer b{font-size:12px;color:var(--ink-950)}
+
+.plan-state{margin-top:20px;padding:32px;display:grid;justify-items:center;gap:10px;text-align:center}
+.plan-state b{font-size:14px}
+.plan-state p{margin:0;font-size:12px;color:var(--ink-600)}
+.plan-state.error{color:var(--danger)}
+
+/* Skeleton */
+.platform-plan-skeleton{pointer-events:none}
+.platform-plan-skeleton .platform-skeleton-block,.platform-plan-skeleton .platform-skeleton-copy i{border-radius:6px}
+.platform-plan-skeleton .plan-icon-placeholder{width:40px;height:40px;border-radius:11px;flex:0 0 auto}
+.platform-plan-skeleton .plan-heading>div{width:132px;display:grid;gap:7px}
+.platform-plan-skeleton .eyebrow{width:54px;height:9px}
+.platform-plan-skeleton .heading{width:104px;height:16px}
+.platform-plan-skeleton .status{width:72px;height:22px;border-radius:99px}
+.platform-skeleton-copy{display:grid;align-content:center;gap:8px}
+.platform-skeleton-copy i{height:10px}
+.platform-skeleton-copy i:first-child{width:92%}
+.platform-skeleton-copy i:last-child{width:68%}
+.platform-plan-skeleton .plan-price .price{width:58%;height:30px}
+.platform-plan-skeleton .plan-price .caption{width:70%;height:10px}
+.platform-plan-skeleton .plan-capacity i{width:60%;height:14px}
+.platform-plan-skeleton .section-title{width:110px;height:11px;margin-bottom:10px}
+.platform-plan-skeleton .plan-feature-list i{width:80%;height:12px}
+.platform-plan-skeleton .footer-copy{width:72px;height:11px}
+.platform-plan-skeleton .footer-action{width:120px;height:var(--control-height);border-radius:10px}
+
+/* Diálogo de plan */
+.plan-dialog{width:min(760px,100%)}
+.plan-form{display:grid;gap:18px;padding:20px}
+.plan-modules{overflow:hidden;border:1px solid var(--line);border-radius:12px}
+.plan-modules>header{display:flex;align-items:center;justify-content:space-between;min-height:56px;padding:10px 16px;background:var(--cloud-50);border-bottom:1px solid var(--line)}
+.plan-modules>header small:not(.field-error){font-size:10px;font-weight:850;letter-spacing:.1em;color:var(--ops-500)}
+.plan-modules.has-error{border-color:var(--danger)}
+.plan-modules>header h3{margin:3px 0 0;font-size:13px}
+.plan-modules>header>b{display:grid;place-items:center;min-width:28px;height:28px;border-radius:8px;font-size:11px;color:var(--ops-700);background:var(--ops-100)}
+.plan-module-group{padding:14px 16px}
+.plan-module-group+.plan-module-group{border-top:1px solid var(--line)}
+.plan-module-group>strong{font-size:11px;color:var(--ink-600)}
+.plan-module-group>div{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.plan-module-group label{position:relative;display:grid;grid-template-columns:22px 1fr;gap:10px;align-items:start;padding:10px;border:1px solid var(--line);border-radius:10px;cursor:pointer}
+.plan-module-group label.selected{border-color:var(--ops-500);background:var(--ops-100)}
+.plan-module-group label>input{position:absolute;opacity:0}
+.plan-module-group label>span{display:grid;place-items:center;width:22px;height:22px;border:1.5px solid var(--ink-400);border-radius:6px;color:transparent;background:#fff}
+.plan-module-group label.selected>span{color:#fff;border-color:var(--ops-500);background:var(--ops-500)}
+.plan-module-group label div{display:grid;gap:2px}
+.plan-module-group label b{font-size:12px}
+.plan-module-group label small{font-size:11px;line-height:1.4;color:var(--ink-600)}
+
+@media(max-width:1160px){.plan-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:760px){
+ .plan-toolbar{align-items:stretch;flex-direction:column}
+ .plan-cycle{width:100%}
+ .plan-cycle button{flex:1;justify-content:center}
+ .plan-grid{grid-template-columns:1fr}
+ .plan-module-group>div{grid-template-columns:1fr}
+}

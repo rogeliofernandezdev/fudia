@@ -282,10 +282,27 @@ func (a *API) createLocation(w http.ResponseWriter, r *http.Request) {
 		fail(w, 400, "invalid_location", "Completa los datos obligatorios del local.")
 		return
 	}
+	tx,err:=a.db.Begin(r.Context())
+	if err!=nil {
+		fail(w,503,"location_unavailable","No pudimos crear el local.")
+		return
+	}
+	defer tx.Rollback(r.Context())
+	if err=ensureSubscriptionCapacity(r.Context(),tx,s.OrganizationID,"locations");errors.Is(err,errSubscriptionLimit){
+		fail(w,409,"plan_limit_reached","El plan contratado alcanzó el máximo de locales.")
+		return
+	}else if err!=nil{
+		fail(w,503,"subscription_unavailable","No pudimos validar los límites del plan.")
+		return
+	}
 	var out locationView
-	err := a.db.QueryRow(r.Context(), `INSERT INTO locations(organization_id,name,code,address,phone,opening_hours,latitude,longitude,timezone,fiscal_profile_id) SELECT $1,$2,$3,$4,$5,$6,$7,$8,$9,p.id FROM organization_fiscal_profiles p WHERE p.id=$10 AND p.organization_id=$1 AND p.active RETURNING id,name,code,address,phone,opening_hours,latitude,longitude,timezone,fiscal_profile_id,(SELECT country_code FROM organization_fiscal_profiles WHERE id=fiscal_profile_id),(SELECT currency FROM organization_fiscal_profiles WHERE id=fiscal_profile_id),active`, s.OrganizationID, in.Name, in.Code, in.Address, in.Phone, in.OpeningHours, in.Latitude, in.Longitude, in.Timezone, in.FiscalProfileID).Scan(&out.ID, &out.Name, &out.Code, &out.Address, &out.Phone, &out.OpeningHours, &out.Latitude, &out.Longitude, &out.Timezone, &out.FiscalProfileID, &out.Country, &out.Currency, &out.Active)
+	err = tx.QueryRow(r.Context(), `INSERT INTO locations(organization_id,name,code,address,phone,opening_hours,latitude,longitude,timezone,fiscal_profile_id) SELECT $1,$2,$3,$4,$5,$6,$7,$8,$9,p.id FROM organization_fiscal_profiles p WHERE p.id=$10 AND p.organization_id=$1 AND p.active RETURNING id,name,code,address,phone,opening_hours,latitude,longitude,timezone,fiscal_profile_id,(SELECT country_code FROM organization_fiscal_profiles WHERE id=fiscal_profile_id),(SELECT currency FROM organization_fiscal_profiles WHERE id=fiscal_profile_id),active`, s.OrganizationID, in.Name, in.Code, in.Address, in.Phone, in.OpeningHours, in.Latitude, in.Longitude, in.Timezone, in.FiscalProfileID).Scan(&out.ID, &out.Name, &out.Code, &out.Address, &out.Phone, &out.OpeningHours, &out.Latitude, &out.Longitude, &out.Timezone, &out.FiscalProfileID, &out.Country, &out.Currency, &out.Active)
 	if err != nil {
 		fail(w, 409, "location_conflict", "El código ya existe o el perfil fiscal no pertenece a la empresa.")
+		return
+	}
+	if err=tx.Commit(r.Context());err!=nil{
+		fail(w,503,"location_unavailable","No pudimos confirmar el nuevo local.")
 		return
 	}
 	a.audit(r, "location.created", "location", out.ID)
