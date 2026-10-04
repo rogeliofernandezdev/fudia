@@ -1,6 +1,6 @@
 import {ApiClientError,apiFetch} from "@/shared/api/client";
 import {expireBrowserSession} from "@/shared/session/expire-session";
-import type {OrganizationSubscription,PlatformModule,PlatformOnboardingContext,PlatformOnboardingDraft,SubscriptionPlan,SubscriptionPlanDraft} from "../domain/types";
+import type {OrganizationSubscription,PlatformModule,PlatformOnboardingContext,PlatformOnboardingDraft,SubscriptionPlan,SubscriptionPlanDraft,PlatformWhatsAppChannel,PlatformWhatsAppChannelDraft} from "../domain/types";
 
 async function platformFetch<T>(path:string,init?:RequestInit):Promise<T>{
  const response=await fetch(`/api/platform/${path}`,{
@@ -87,3 +87,6 @@ export async function changeOrganizationSubscription(input:{planId:string;billin
 export async function recordSubscriptionPayment(input:{amount:string;currency:string;status:"pending"|"paid"|"failed"|"refunded";provider:string;externalReference:string;paidAt:string}){
  return platformFetch<{id:string}>("subscription/payments",{method:"POST",body:JSON.stringify(input)});
 }
+
+export async function listPlatformWhatsAppChannels(){return platformFetch<{items:PlatformWhatsAppChannel[]}>("whatsapp-channels");}
+export async function savePlatformWhatsAppChannel(draft:PlatformWhatsAppChannelDraft,id?:string){return platformFetch<PlatformWhatsAppChannel>(id?`whatsapp-channels/${id}`:"whatsapp-channels",{method:id?"PATCH":"POST",body:JSON.stringify({...draft,phoneNumberId:draft.phoneNumberId||null,secretRef:draft.secretRef||null})});}
