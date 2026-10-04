@@ -1,6 +1,6 @@
 import {ApiClientError,apiFetch} from "@/shared/api/client";
 import {expireBrowserSession} from "@/shared/session/expire-session";
-import type {OrganizationSubscription,PlatformModule,PlatformOnboardingContext,PlatformOnboardingDraft,SubscriptionPlan,SubscriptionPlanDraft,PlatformWhatsAppChannel,PlatformWhatsAppChannelDraft} from "../domain/types";
+import type {Country,Currency,OrganizationSubscription,PlatformModule,PlatformOnboardingContext,PlatformOnboardingDraft,SubscriptionPlan,SubscriptionPlanDraft,PlatformWhatsAppChannel,PlatformWhatsAppChannelDraft} from "../domain/types";
 
 async function platformFetch<T>(path:string,init?:RequestInit):Promise<T>{
  const response=await fetch(`/api/platform/${path}`,{
@@ -47,6 +47,10 @@ export async function getPlatformOnboardingContext():Promise<PlatformOnboardingC
   currencyOptions:data.currencyOptions??[],
   plans:plans.items.filter(plan=>plan.active&&plan.code!=="legacy"),
  };
+}
+
+export async function getPlatformGlobalCatalogs():Promise<{countryOptions:Country[];currencyOptions:Currency[]}>{
+ return platformFetch<{countryOptions:Country[];currencyOptions:Currency[]}>("onboarding/catalogs?scope=all");
 }
 
 export async function saveSubscriptionPlan(draft:SubscriptionPlanDraft):Promise<SubscriptionPlan>{
