@@ -39,7 +39,7 @@ export async function listReadyModules():Promise<PlatformModule[]>{
 
 export async function getPlatformOnboardingContext():Promise<PlatformOnboardingContext>{
  const[data,plans]=await Promise.all([
-  apiFetch<Partial<PlatformOnboardingContext>>("settings"),
+  platformFetch<Pick<PlatformOnboardingContext,"countryOptions"|"currencyOptions">>("onboarding/catalogs"),
   listSubscriptionPlans(),
  ]);
  return {
