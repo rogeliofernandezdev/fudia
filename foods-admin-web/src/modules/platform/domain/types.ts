@@ -73,3 +73,6 @@ export type PlatformOnboardingDraft={
  locationName:string;locationCode:string;address:string;locationPhone:string;locationHours:string;latitude:string;longitude:string;
  adminName:string;adminEmail:string;adminPassword:string;
 };
+
+export type PlatformWhatsAppChannel={id:string;countryCode:string;countryName:string;phoneNumber:string;phoneNumberId?:string;displayName:string;secretRef?:string;active:boolean};
+export type PlatformWhatsAppChannelDraft={countryCode:string;phoneNumber:string;phoneNumberId:string;displayName:string;secretRef:string;active:boolean};
