@@ -24,6 +24,7 @@ export function PlatformShell({children}:{children:React.ReactNode}){
         <Link className={path==="/platform/onboarding"?"active":""} href="/platform/onboarding" aria-current={path==="/platform/onboarding"?"page":undefined}><Icon name="building" size={16}/><span>Registrar empresa</span></Link>
         <Link className={path==="/platform/plans"?"active":""} href="/platform/plans" aria-current={path==="/platform/plans"?"page":undefined}><Icon name="payment" size={16}/><span>Planes SaaS</span></Link>
         <Link className={path==="/platform/subscription"?"active":""} href="/platform/subscription" aria-current={path==="/platform/subscription"?"page":undefined}><Icon name="receipt" size={16}/><span>Suscripción actual</span></Link>
+        <Link className={path==="/platform/configuracion-global"?"active":""} href="/platform/configuracion-global" aria-current={path==="/platform/configuracion-global"?"page":undefined}><Icon name="grid" size={16}/><span>Configuración Global</span></Link>
       </nav>
       <Link href="/dashboard" className="button secondary platform-exit" aria-label="Volver al admin"><Icon name="chevronLeft" size={16}/>Volver al admin</Link>
     </header>
