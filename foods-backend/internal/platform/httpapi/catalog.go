@@ -249,7 +249,7 @@ func (a *API) deactivateCategory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if products > 0 {
-		fail(w, 409, "category_in_use", "Desactiva o mueve sus productos antes de desactivar la categoría.")
+		fail(w, 409, "category_in_use", "La categoría se encuentra en uso porque tiene productos activos asociados. Desactiva esos productos o muévelos a otra categoría antes de desactivarla.")
 		return
 	}
 	tag, err := a.db.Exec(r.Context(), `UPDATE menu_categories SET active=false WHERE organization_id=$1 AND id=$2 AND active`, s.OrganizationID, id)
