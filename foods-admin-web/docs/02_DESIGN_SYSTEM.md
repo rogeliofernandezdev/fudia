@@ -290,6 +290,10 @@ Usar superficies mayormente neutras, azul para navegación y acciones, verde par
   jerarquía siguen el estándar de Bodegas, reinterpretado con tokens Foods.
 - Confirmaciones destructivas son diálogos independientes: explican el impacto,
   conservan «Cancelar» como acción segura y bloquean la repetición durante el envío.
+  La cabecera agrupa icono y título en una fila; el registro afectado se destaca
+  en una superficie neutra, seguido del impacto y una nota de historial opcional.
+  El pie se separa con borde y fondo neutro. Los botones no repiten el icono de
+  advertencia; en móvil comparten el ancho y conservan el área táctil estándar.
 - En todo modal de registro o edición, el botón de guardado solo dice
   «Guardar» (sin sufijos como «producto», «categoría», «mesa» o «zona», y sin
   variantes como «Guardar cambios»). El estado ocupado dice «Guardando…».
