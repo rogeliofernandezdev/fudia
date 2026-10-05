@@ -14,9 +14,13 @@ estados de envío.
 - `FeedbackProvider`: única salida para éxito, error e información después de una
   acción remota. Diálogo centrado, accesible, cerrable y con movimiento reducido.
 - `ConfirmDialog`: requerido antes de desactivar o ejecutar una acción sensible;
-  muestra consecuencias, acción segura y estado pendiente. La cabecera alinea
-  icono y título; el cuerpo permite `subject` (etiqueta y nombre del registro) y
-  `note` para separar contexto, impacto e historial. El pie tiene borde superior,
+  muestra el registro afectado, acción segura y estado pendiente. La cabecera alinea
+  icono y título; el cuerpo permite `subject` (nombre del registro y etiqueta opcional) y
+  `description` y `note` opcionales cuando aportan información a la decisión.
+  Productos y categorías solo muestran título, registro y acciones; no añaden
+  explicaciones genéricas de disponibilidad ni historial. `children` permite
+  contenido propio de cada flujo; los campos omitidos no dejan bloques vacíos.
+  Las notas no imponen un icono de historial. El pie tiene borde superior,
   botones sin iconos redundantes y altura `--control-height`; en móvil ambos
   ocupan el ancho disponible. Cancelar recibe el foco inicial. Título y descripción
   tienen identificadores únicos vinculados al diálogo.

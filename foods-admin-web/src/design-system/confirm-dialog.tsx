@@ -1,14 +1,15 @@
 "use client";
 
-import {useId} from "react";
+import {Children,useId,type ReactNode} from "react";
 import "./styles/confirm-dialog.css";
 import {Icon} from "@/design-system/icons";
 
 type ConfirmDialogProps={
   open:boolean;
   title:string;
-  description:string;
-  subject?:{label:string;name:string};
+  description?:string;
+  subject?:{label?:string;name:string};
+  children?:ReactNode;
   note?:string;
   tone?:"danger"|"success";
   confirmLabel:string;
@@ -17,21 +18,23 @@ type ConfirmDialogProps={
   onConfirm:()=>void;
 };
 
-export function ConfirmDialog({open,title,description,subject,note,tone="danger",confirmLabel,pending=false,onCancel,onConfirm}:ConfirmDialogProps){
+export function ConfirmDialog({open,title,description,subject,children,note,tone="danger",confirmLabel,pending=false,onCancel,onConfirm}:ConfirmDialogProps){
   const id=useId();
   if(!open)return null;
+  const hasDescription=Boolean(subject||description||note)||Children.toArray(children).length>0;
 
   return <div className="confirm-overlay">
-    <section className="confirm-card" role="alertdialog" aria-modal="true" aria-labelledby={`${id}-title`} aria-describedby={`${id}-description`} aria-busy={pending}>
+    <section className="confirm-card" role="alertdialog" aria-modal="true" aria-labelledby={`${id}-title`} aria-describedby={hasDescription?`${id}-description`:undefined} aria-busy={pending}>
       <header className="confirm-header">
         <span className={`confirm-icon ${tone}`}><Icon name={tone==="danger"?"alert":"check"} size={20}/></span>
         <h2 id={`${id}-title`}>{title}</h2>
       </header>
-      <div className="confirm-body" id={`${id}-description`}>
-        {subject&&<div className="confirm-subject"><span>{subject.label}</span><strong>{subject.name}</strong></div>}
-        <p className="confirm-description">{description}</p>
-        {note&&<p className="confirm-note"><Icon name="ledger" size={16}/><span>{note}</span></p>}
-      </div>
+      {hasDescription&&<div className="confirm-body" id={`${id}-description`}>
+        {subject&&<div className="confirm-subject">{subject.label&&<span>{subject.label}</span>}<strong>{subject.name}</strong></div>}
+        {description&&<p className="confirm-description">{description}</p>}
+        {children}
+        {note&&<p className="confirm-note">{note}</p>}
+      </div>}
       <footer className="confirm-actions">
         <button type="button" className="button ghost" autoFocus disabled={pending} onClick={onCancel}>Cancelar</button>
         <button type="button" className={`button ${tone}`} disabled={pending} onClick={onConfirm}>{pending?"Procesando…":confirmLabel}</button>
