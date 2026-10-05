@@ -37,13 +37,13 @@ test("un país sin sugerencia no hereda silenciosamente la zona anterior",()=>{
   assert.equal(value.timezone,"");
 });
 
-test("zona horaria permanece y se valida en Empresa",()=>{
-  const company={legalName:"Empresa SAC",tradeName:"Empresa",taxId:"12345678",timezone:""};
-  assert.equal(companySchema.safeParse(company).success,false);
-  assert.equal(companySchema.safeParse({...company,timezone:"America/New_York"}).success,true);
-  assert.equal(onboardingStepFields[0].includes("timezone"),true);
-  assert.equal(onboardingStepFields[3].includes("timezone"),false);
-  assert.equal(locationSchema.safeParse({locationName:"Principal",address:"Dirección de prueba"}).success,true);
+test("zona obligatoria en Primer local, no en Empresa",()=>{
+  assert.equal(companySchema.safeParse({legalName:"Empresa SAC",tradeName:"Empresa",taxId:"12345678"}).success,true);
+  assert.equal(onboardingStepFields[0].includes("timezone"),false);
+  assert.equal(onboardingStepFields[3].includes("timezone"),true);
+  const local={locationName:"Principal",address:"Dirección de prueba",timezone:""};
+  assert.equal(locationSchema.safeParse(local).success,false);
+  assert.equal(locationSchema.safeParse({...local,timezone:"America/New_York"}).success,true);
 });
 
 test("búsqueda por ciudad o IANA mantiene el identificador persistido",()=>{
