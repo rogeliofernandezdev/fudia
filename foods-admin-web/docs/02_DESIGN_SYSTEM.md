@@ -87,12 +87,14 @@ Usar superficies mayormente neutras, azul para navegación y acciones, verde par
   El alta rápida sí exige categoría, pero el selector consulta únicamente
   categorías cuyo `productScope` sea `retail` o `both`; nunca muestra
   categorías exclusivas de platos preparados.
-- El registro y la edición de producto usan un wizard de tres pasos dentro del
-  mismo modal: Información, Operación y Presentación. Avanzar no persiste datos;
-  el producto se envía una sola vez desde el último paso. Cada paso valida solo
-  los campos que contiene, conserva el estado al retroceder y muestra un resumen
-  antes de guardar. En móvil el wizard ocupa la pantalla completa y mantiene las
-  acciones de navegación visibles.
+- El registro y la edición de producto usan un formulario con información adicional
+  desplegable. La cabecera y el footer con «Cancelar» y «Guardar» permanecen
+  visibles; solo los campos tienen desplazamiento, también en móvil desde 390 px.
+  El envío requiere activar explícitamente «Guardar» mediante clic, toque o teclado
+  con el botón enfocado. Enter desde los campos no guarda el producto y conserva
+  su función en la descripción y los selectores. Una sola solicitud puede estar
+  en curso, incluida la validación previa; ante un error se permite corregir y reintentar.
+
 - La pantalla se denomina «Disponibilidad de la carta» y pertenece a «Carta y
   producción», porque incluye productos, platos, bebidas, menús y combos; no
   se presenta como disponibilidad de un único menú. La disponibilidad cotidiana
