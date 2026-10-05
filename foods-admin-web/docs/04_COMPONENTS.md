@@ -87,9 +87,9 @@ visible comunica el estado a lectores de pantalla.
 
 Activar y Desactivar se presentan como un interruptor en la columna Acciones,
 con `role="switch"` y `aria-checked` derivado del estado confirmado: encendido
-(azul, perilla derecha) para un registro activo; apagado (neutro, perilla izquierda)
-para uno inactivo. El interruptor muestra el estado actual, nunca el estado que
-tendrá después de pulsarlo. El tooltip comunica la acción siguiente: Activar o
+(verde `brand-700`, perilla derecha) para un registro activo; apagado
+(rojo `danger-600`, perilla izquierda) para uno inactivo. El interruptor muestra
+el estado actual, nunca el estado que tendrá después de pulsarlo. El tooltip comunica la acción siguiente: Activar o
 Desactivar. `stateLabel` identifica el registro con un nombre accesible estable.
 
 La caja táctil conserva `--control-height`; el SVG mide 28 px, centrado y sin

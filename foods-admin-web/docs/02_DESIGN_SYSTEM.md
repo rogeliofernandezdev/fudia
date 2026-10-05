@@ -277,8 +277,9 @@ Usar superficies mayormente neutras, azul para navegación y acciones, verde par
 - Estados con texto e icono; nunca solo color. Activo/Activa usa un check
   circular verde; Inactivo/Inactiva usa un signo menos circular neutro. Se
   construyen con `Status active={...}` para compartir semántica y geometría.
-  Activar/Desactivar se maneja con un interruptor: azul y perilla derecha
-  cuando el registro está activo; neutro y perilla izquierda cuando está inactivo.
+  Activar/Desactivar se maneja con un interruptor: verde (`brand-700`) y perilla
+  derecha cuando el registro está activo; rojo (`danger-600`) y perilla izquierda
+  cuando está inactivo.
   El tooltip indica la acción siguiente y el nombre accesible identifica el
   registro sin cambiar al alternar el estado. La desactivación conserva su
   confirmación. Check y símbolo de prohibición no se usan como estas acciones.
