@@ -26,3 +26,11 @@ La tabla de Carta y productos permite activar un producto inactivo mediante
 `PATCH /v1/admin/products/{id}/status`, enviando únicamente `active`. La operación
 conserva la ficha comercial y el historial, exige `menu.manage` y refresca los
 listados del catálogo, disponibilidad, comandas y selectores de abastecimiento.
+
+## Estado de categorías
+
+Las categorías inactivas ofrecen la acción Activar mediante
+`PATCH /v1/admin/categories/{id}/status`. Solo cambia `active`, conserva nombre,
+orden, uso y asociaciones, y exige `menu.manage`. La activación refresca
+`categories`, `purchase-item-categories`, `order-categories` y `order-catalog`.
+La desactivación sigue bloqueada cuando hay productos activos asociados.

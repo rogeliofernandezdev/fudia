@@ -240,6 +240,33 @@ func (a *API) updateCategory(w http.ResponseWriter, r *http.Request) {
 	a.audit(r, "category.updated", "menu_category", c.ID)
 	writeJSON(w, 200, c)
 }
+func (a *API) updateCategoryStatus(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Active *bool `json:"active"`
+	}
+	if json.NewDecoder(r.Body).Decode(&in) != nil || in.Active == nil {
+		fail(w, 400, "invalid_status", "Indica si la categoría debe estar activa o inactiva.")
+		return
+	}
+	if !*in.Active {
+		a.deactivateCategory(w, r)
+		return
+	}
+	s := r.Context().Value(scopeKey{}).(scope)
+	id := r.PathValue("id")
+	tag, err := a.db.Exec(r.Context(), `UPDATE menu_categories SET active=true WHERE organization_id=$1 AND id=$2`, s.OrganizationID, id)
+	if err != nil {
+		fail(w, 503, "category_unavailable", "No pudimos actualizar el estado de la categoría.")
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		fail(w, 404, "category_not_found", "La categoría no existe.")
+		return
+	}
+	a.audit(r, "category.activated", "menu_category", id)
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (a *API) deactivateCategory(w http.ResponseWriter, r *http.Request) {
 	s := r.Context().Value(scopeKey{}).(scope)
 	id := r.PathValue("id")

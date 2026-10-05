@@ -17,17 +17,17 @@ function compile(path,resolve){
  return exports;
 }
 
-function mount({active=false,canManage=true,pending=false,activate=async()=>{}}={}){
+function mount({kind="products",active=false,canManage=true,pending=false,activate=async()=>{}}={}){
  const client=new QueryClient({defaultOptions:{queries:{staleTime:60000,retry:false}}});
  const notifications=[];
- const keys=["products","product-availability","order-catalog","purchase-item-picker","inventory-products"];
+ const keys=kind==="categories"?["categories","purchase-item-categories","order-categories","order-catalog"]:["products","product-availability","order-catalog","purchase-item-picker","inventory-products"];
  for(const key of keys)client.setQueryData([key],[]);
  const {CatalogManager}=compile("modules/menu/products/presentation/catalog-manager.tsx",name=>{
   if(name==="next/dynamic")return {default:()=>"ProductDialog"};
-  if(name==="react")return {useState:value=>[value,()=>{}],useEffect:()=>{}};
+  if(name==="react")return {useState:value=>[value==="products"?kind:value,()=>{}],useEffect:()=>{}};
   if(name==="@tanstack/react-query")return {
    useQueryClient:()=>client,
-   useQuery:options=>({data:{items:options.queryKey[0]==="products"?[{...product,active}]:[],total:1}}),
+   useQuery:options=>({data:{items:options.queryKey[0]===kind?[{...product,sortOrder:2,productScope:"retail",productCount:0,active}]:[],total:1}}),
    useMutation:options=>({isPending:pending,variables:product.id,mutate:async variables=>{
     try{const result=await options.mutationFn(variables);options.onSuccess?.(result,variables)}
     catch(error){options.onError?.(error)}
@@ -37,7 +37,7 @@ function mount({active=false,canManage=true,pending=false,activate=async()=>{}}=
   if(name==="@/providers/session-context")return {useSession:()=>({can:()=>canManage})};
   if(name==="@/providers/settings-context")return {useSettings:()=>({currencyDecimals:2,currencySymbol:"S/",currencyPosition:"before"})};
   if(name==="@/shared/hooks/use-debounced-value")return {useDebouncedValue:value=>value};
-  if(name==="../infrastructure/products-api")return {setProductActive:activate};
+  if(name==="../infrastructure/products-api")return {setProductActive:activate,setCategoryActive:activate};
   if(name==="@/design-system")return {RowActionButton:"RowActionButton"};
   if(name.startsWith("@/")||name.startsWith("../"))return {};
   return require(name);
@@ -98,6 +98,59 @@ test("el API de estado no reenvía ni sobrescribe la ficha comercial",async()=>{
  });
  await setProductActive(product.id,true);
  assert.equal(requests[0].path,"products/agua/status");
+ assert.equal(requests[0].init.method,"PATCH");
+ assert.deepEqual(JSON.parse(requests[0].init.body),{active:true});
+});
+
+test("una categoría inactiva ofrece Activar y una activa ofrece Desactivar",()=>{
+ for(const active of [false,true]){
+  const view=mount({kind:"categories",active});
+  assert.deepEqual(view.actions.map(node=>node.props.action),["edit",active?"deactivate":"activate"]);
+  if(!active)assert.equal(view.actions[1].props.label,"Activar categoría");
+  view.client.clear();
+ }
+});
+
+test("activar una categoría refresca la tabla y los selectores de productos y compras",async()=>{
+ const calls=[];
+ const view=mount({kind:"categories",activate:async(id,active)=>calls.push([id,active])});
+ await view.actions.find(node=>node.props.action==="activate").props.onClick();
+ assert.deepEqual(calls,[[product.id,true]]);
+ assert.equal(view.notifications[0].title,"Categoría activada");
+ for(const key of view.keys)assert.equal(view.client.getQueryState([key]).isInvalidated,true,key);
+ view.client.clear();
+});
+
+test("un error al activar una categoría conserva la caché y comunica el error",async()=>{
+ const view=mount({kind:"categories",activate:async()=>{throw new Error("La categoría no existe.")}});
+ await view.actions.find(node=>node.props.action==="activate").props.onClick();
+ assert.equal(view.notifications[0].title,"No se pudo activar la categoría");
+ assert.equal(view.notifications[0].message,"La categoría no existe.");
+ for(const key of view.keys)assert.equal(view.client.getQueryState([key]).isInvalidated,false,key);
+ view.client.clear();
+});
+
+test("activar una categoría requiere permiso y evita peticiones duplicadas",()=>{
+ const readonly=mount({kind:"categories",canManage:false});
+ assert.equal(readonly.actions.some(node=>node.props.action==="activate"),false);
+ readonly.client.clear();
+ const busy=mount({kind:"categories",pending:true});
+ const action=busy.actions.find(node=>node.props.action==="activate");
+ assert.equal(action.props.disabled,true);
+ assert.equal(action.props["aria-busy"],true);
+ assert.equal(action.props.label,"Activando categoría");
+ busy.client.clear();
+});
+
+test("el API de estado de categoría envía únicamente active",async()=>{
+ const requests=[];
+ const {setCategoryActive}=compile("modules/menu/products/infrastructure/products-api.ts",name=>{
+  if(name==="@/shared/api/client")return {apiFetch:async(path,init)=>requests.push({path,init})};
+  if(name==="@/shared/api/product-image")return {};
+  return require(name);
+ });
+ await setCategoryActive("bebidas",true);
+ assert.equal(requests[0].path,"categories/bebidas/status");
  assert.equal(requests[0].init.method,"PATCH");
  assert.deepEqual(JSON.parse(requests[0].init.body),{active:true});
 });

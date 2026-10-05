@@ -339,6 +339,14 @@ paths:
       summary: Desactiva una categoría sin productos activos
       security: [{ sessionCookie: [] }]
       responses: { "204": { description: Categoría desactivada }, "409": { description: La categoría contiene productos activos }, "403": { $ref: "#/components/responses/Forbidden" } }
+  /v1/admin/categories/{id}/status:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    patch:
+      operationId: updateCategoryStatus
+      summary: Activa o desactiva una categoría conservando sus datos y productos asociados
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [active], properties: { active: { type: boolean } } } } } }
+      responses: { "204": { description: Estado de la categoría actualizado }, "400": { $ref: "#/components/responses/BadRequest" }, "401": { $ref: "#/components/responses/Unauthorized" }, "403": { $ref: "#/components/responses/Forbidden" }, "404": { description: Categoría no encontrada o ya inactiva al desactivarla }, "409": { description: La categoría contiene productos activos y no puede desactivarse }, "503": { description: No se pudo actualizar la categoría } }
   /v1/admin/products:
     get:
       operationId: listProducts

@@ -31,6 +31,28 @@ func TestProductStatusRouteRequiresSession(t *testing.T) {
 	}
 }
 
+func TestCategoryStatusRequiresExplicitBoolean(t *testing.T) {
+	for _, body := range []string{`{}`, `{"active":null}`, `{"active":"true"}`, `not-json`} {
+		t.Run(body, func(t *testing.T) {
+			req := httptest.NewRequest("PATCH", "/v1/admin/categories/category/status", strings.NewReader(body))
+			rec := httptest.NewRecorder()
+			New(nil).updateCategoryStatus(rec, req)
+			if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "invalid_status") {
+				t.Fatalf("expected invalid_status without accessing the database, got %d %s", rec.Code, rec.Body.String())
+			}
+		})
+	}
+}
+
+func TestCategoryStatusRouteRequiresSession(t *testing.T) {
+	req := httptest.NewRequest("PATCH", "/v1/admin/categories/category/status", strings.NewReader(`{"active":true}`))
+	rec := httptest.NewRecorder()
+	New(nil).Routes().ServeHTTP(rec, req)
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected authenticated category status route, got %d %s", rec.Code, rec.Body.String())
+	}
+}
+
 func TestPageParamsBounds(t *testing.T) {
 	r := httptest.NewRequest("GET", "/v1/admin/products?page=2&pageSize=500", nil)
 	page, size := pageParams(r)
