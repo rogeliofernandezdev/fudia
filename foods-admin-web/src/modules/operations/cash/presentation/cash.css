@@ -45,7 +45,7 @@
 .cash-register-live-copy{display:grid;align-content:center;gap:3px;min-width:0}
 .cash-register-live-copy>small{color:var(--ops-500);font-size:10px;font-weight:900;letter-spacing:.08em}
 .cash-register-live-copy>b{font-size:12px;color:var(--ink-950)}
-.cash-register-live-copy p{display:flex;align-items:center;gap:5px;margin:0;color:var(--ink-500);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cash-register-live-copy p{display:flex;align-items:center;gap:5px;margin:0;color:var(--ink-500);font-size:10px;white-space:normal;overflow-wrap:anywhere}
 .cash-register-live-copy p span{color:var(--ink-400)}
 .cash-register-live-copy em{margin-top:3px;color:var(--ink-400);font-size:10px;font-style:normal}
 .cash-register-balance{display:grid;align-content:center;justify-items:end;gap:3px;min-width:145px;padding-left:16px;border-left:1px solid var(--line)}
@@ -95,6 +95,7 @@
 .cash-history-toolbar>p{display:flex;align-items:center;gap:7px;margin:0;color:var(--ink-400);font-size:10px;line-height:1.4}
 .cash-history-table td{font-variant-numeric:tabular-nums}
 .cash-history-table table{min-width:1020px}
+.cash-attribution{min-width:150px;max-width:260px;white-space:normal;overflow-wrap:anywhere}
 .cash-balanced{color:var(--brand-700)}
 .cash-positive{color:var(--ops-700)}
 .cash-negative{color:var(--danger)}
@@ -176,8 +177,9 @@
 
 .cash-detail-modal{display:flex;flex-direction:column;width:min(940px,calc(100vw - 32px));max-height:min(820px,calc(100dvh - 32px));overflow:hidden}
 .cash-detail-body{display:grid;gap:14px;padding:18px;overflow-y:auto;background:var(--cloud-50)}
-.cash-detail-head{display:grid;grid-template-columns:repeat(5,minmax(0,1fr)) auto;align-items:center;gap:12px;padding:13px 15px;border-radius:11px;background:#fff}
-.cash-detail-head>div{display:grid;gap:4px}
+.cash-detail-head{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:center;gap:12px;padding:13px 15px;border-radius:11px;background:#fff}
+.cash-detail-head>div{display:grid;gap:4px;min-width:0;overflow-wrap:anywhere}
+.cash-detail-head>div>span{color:var(--ink-600);font-size:10px}
 .cash-detail-head small,.cash-detail-notes small{color:var(--ink-400);font-size:10px;font-weight:850;letter-spacing:.06em}
 .cash-detail-head b{font-size:10px}
 .cash-detail-totals{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:1px;border-radius:11px;background:var(--line);overflow:hidden}

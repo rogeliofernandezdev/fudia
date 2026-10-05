@@ -555,3 +555,12 @@ estado listo respetan los patrones visuales generales y el flujo funciona desde
   navegación previa del cliente ni de un `rewrite`.
 - Al renombrar una ruta se conserva temporalmente su alias en
   `legacyPageAliases`; no se duplican pantallas ni lógica de negocio.
+
+### Atribución en Caja y turnos
+
+La etiqueta ambigua «Cajero» se reemplaza por «Equipo actual» durante un turno
+abierto y «Cerrado por» en los turnos cerrados. El equipo puede tener varios
+integrantes; si se retiran todos, se muestra «Sin usuarios asignados». El detalle
+conserva «Abierto por» con la fecha de apertura y «Cerrado por» con la fecha de
+cierre. La autoría de cada movimiento permanece en su propia fila. Asignar o
+retirar usuarios refresca las cajas, el historial y el detalle inmediatamente.

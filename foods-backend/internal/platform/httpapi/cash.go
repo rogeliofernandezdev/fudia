@@ -41,6 +41,7 @@ type cashShiftView struct {
 	ClosingNote           string             `json:"closingNote"`
 	OpenedByName          string             `json:"openedByName"`
 	ClosedByName          string             `json:"closedByName"`
+	ActiveUserNames       []string           `json:"activeUserNames"`
 	BusinessDate          string             `json:"businessDate"`
 	OpenedAt              string             `json:"openedAt"`
 	ClosedAt              *string            `json:"closedAt"`
@@ -79,6 +80,15 @@ const cashShiftColumns = `
 	cs.closing_note,
 	opened.full_name,
 	COALESCE(closed.full_name,''),
+	ARRAY(
+	  SELECT u.full_name
+	  FROM cash_shift_users su
+	  JOIN users u ON u.id=su.user_id AND u.organization_id=su.organization_id
+	  WHERE su.shift_id=cs.id AND su.organization_id=cs.organization_id
+	    AND su.location_id=cs.location_id AND su.unassigned_at IS NULL
+	    AND cs.status='open'
+	  ORDER BY su.assigned_at,u.full_name,su.user_id
+	),
 	cs.business_date::text,
 	to_char(cs.opened_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),
 	CASE WHEN cs.closed_at IS NULL THEN NULL ELSE to_char(cs.closed_at,'YYYY-MM-DD"T"HH24:MI:SSOF') END,
@@ -105,6 +115,7 @@ func scanCashShift(row pgx.Row) (cashShiftView, error) {
 		&shift.ClosingNote,
 		&shift.OpenedByName,
 		&shift.ClosedByName,
+		&shift.ActiveUserNames,
 		&shift.BusinessDate,
 		&shift.OpenedAt,
 		&shift.ClosedAt,
@@ -391,7 +402,14 @@ func (a *API) listCashShifts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	where := `cs.organization_id=$1 AND cs.location_id=$2
-		AND ($3='' OR cs.code ILIKE '%'||$3||'%' OR cr.name ILIKE '%'||$3||'%' OR opened.full_name ILIKE '%'||$3||'%' OR COALESCE(closed.full_name,'') ILIKE '%'||$3||'%')
+		AND ($3='' OR cs.code ILIKE '%'||$3||'%' OR cr.name ILIKE '%'||$3||'%' OR opened.full_name ILIKE '%'||$3||'%' OR COALESCE(closed.full_name,'') ILIKE '%'||$3||'%'
+		  OR EXISTS (
+		    SELECT 1 FROM cash_shift_users su
+		    JOIN users u ON u.id=su.user_id AND u.organization_id=su.organization_id
+		    WHERE su.shift_id=cs.id AND su.organization_id=cs.organization_id
+		      AND su.location_id=cs.location_id AND su.unassigned_at IS NULL
+		      AND cs.status='open' AND u.full_name ILIKE '%'||$3||'%'
+		  ))
 		AND ($4='' OR cs.status=$4)`
 
 	var total int

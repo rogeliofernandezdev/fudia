@@ -1,4 +1,5 @@
 "use client";
+import {cashShiftAttribution} from "../domain/shift-attribution";
 import {useState} from "react";
 import {useForm,useWatch} from "react-hook-form";
 import {Button,Icon,Input,Status,Textarea} from "@/design-system";
@@ -175,9 +176,9 @@ export function CashShiftDetailDialog({shift,formatMoney,formatDateTime,formatBu
       <section className="cash-detail-head">
         <div><small>CAJA</small><b>{shift.cashRegisterName}</b></div>
         <div><small>DÍA OPERATIVO</small><b>{formatBusinessDate(shift.businessDate)}</b></div>
-        <div><small>CAJERO</small><b>{shift.openedByName}</b></div>
-        <div><small>APERTURA</small><b>{formatDateTime(shift.openedAt)}</b></div>
-        <div><small>CIERRE</small><b>{shift.closedAt?formatDateTime(shift.closedAt):"En curso"}</b></div>
+        {shift.status==="open"&&<div><small>EQUIPO ACTUAL</small><b>{cashShiftAttribution(shift).name}</b></div>}
+        <div><small>ABIERTO POR</small><b>{shift.openedByName}</b><span>{formatDateTime(shift.openedAt)}</span></div>
+        <div><small>CERRADO POR</small><b>{shift.status==="closed"?cashShiftAttribution(shift).name:"En curso"}</b>{shift.closedAt&&<span>{formatDateTime(shift.closedAt)}</span>}</div>
         <Status tone={shift.status==="open"?"green":"gray"}>{shift.status==="open"?"Abierto":"Cerrado"}</Status>
       </section>
       <section className="cash-detail-totals">

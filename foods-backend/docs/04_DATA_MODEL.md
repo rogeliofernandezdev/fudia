@@ -289,3 +289,12 @@ telefónico. La elección final se valida con `time.LoadLocation` y se persiste
 como zona del primer local y valor inicial de la empresa. No se restringe al país:
 los locales posteriores mantienen zonas independientes. La migración no modifica
 empresas ni locales existentes.
+
+## Atribución de turnos de caja
+
+`cash_shifts.opened_by` conserva quién abrió el turno y `closed_by` registra al
+usuario autenticado que lo cerró. Retirar a alguien del equipo no modifica esos
+hechos. `cash_shift_users` conserva las asignaciones y sus fechas de retiro;
+`activeUserNames` expone únicamente el equipo vigente del turno abierto y devuelve
+un arreglo vacío al cerrar. La búsqueda de turnos admite al abridor, al autor del
+cierre y a los integrantes actuales, siempre dentro de la empresa y local.

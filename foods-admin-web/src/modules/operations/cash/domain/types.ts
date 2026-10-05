@@ -32,6 +32,7 @@ export type CashShift={
   closingNote:string;
   openedByName:string;
   closedByName:string;
+  activeUserNames:string[];
   businessDate:string;
   openedAt:string;
   closedAt:string|null;

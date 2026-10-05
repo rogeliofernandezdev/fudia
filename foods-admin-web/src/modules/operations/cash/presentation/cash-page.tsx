@@ -6,6 +6,7 @@ import {Button,ConfirmDialog,Icon,IconButton,Input,PageHeader,Pagination,RemoteM
 import {useFeedback,useSession} from "@/providers";
 import {useSettings} from "@/providers/settings-context";
 import {formatRegionalCalendarDate,formatRegionalDateTime,formatRegionalNumber} from "@/shared/i18n/regional-format";
+import {cashShiftAttribution} from "../domain/shift-attribution";
 import type {CashMovementType,CashRegister,CashRegisterDraft,CashShift} from "../domain/types";
 import {assignCashShiftUser,closeCashShift,createCashMovement,createCashOperation,createCashRegister,getCashShift,listCashRegisters,listCashShifts,listCashShiftUsers,listCashUserOptions,openCashShift,setCashRegisterActive,unassignCashShiftUser,updateCashRegister} from "../infrastructure/cash-api";
 import {CashMovementDialog,CashRegisterDialog,CashShiftDetailDialog,CloseCashShiftDialog,OpenCashShiftDialog} from "./cash-dialogs";
@@ -130,6 +131,7 @@ export function CashPage(){
     onSuccess:()=>{
       void qc.invalidateQueries({queryKey:["cash-shift-users"]});
       void qc.invalidateQueries({queryKey:["cash-user-options"]});
+      refreshCash();
       notify({tone:"success",title:"Usuario asignado",message:"Ya puede operar este turno desde Caja y POS."});
     },
     onError:error=>notify({tone:"danger",title:"No se pudo asignar el usuario",message:error.message}),
@@ -140,6 +142,7 @@ export function CashPage(){
     onSuccess:()=>{
       void qc.invalidateQueries({queryKey:["cash-shift-users"]});
       void qc.invalidateQueries({queryKey:["cash-user-options"]});
+      refreshCash();
       notify({tone:"success",title:"Usuario retirado",message:"Ya no puede operar este turno."});
     },
     onError:error=>notify({tone:"danger",title:"No se pudo retirar el usuario",message:error.message}),
@@ -241,7 +244,7 @@ export function CashPage(){
         />
         :<section className="cash-history">
           <div className="cash-history-toolbar">
-            <label className="cash-history-search"><Icon name="search" size={17}/><Input value={q} onChange={event=>{setQ(event.target.value);setPage(1)}} placeholder="Buscar por turno, caja o cajero..."/></label>
+            <label className="cash-history-search"><Icon name="search" size={17}/><Input value={q} onChange={event=>{setQ(event.target.value);setPage(1)}} placeholder="Buscar por turno, caja o persona..."/></label>
             <Select aria-label="Filtrar turnos" value={status} onChange={event=>{setStatus(event.target.value);setPage(1)}}>
               <option value="">Todos los turnos</option>
               <option value="open">Abiertos</option>
@@ -254,14 +257,15 @@ export function CashPage(){
           :history.isError?<CashError title="No pudimos cargar los turnos" message={history.error.message} retry={()=>history.refetch()}/>
           :!historyItems.length?<div className="cash-history-empty"><span><Icon name="clock" size={21}/></span><b>{q||status?"Sin coincidencias":"Aún no hay turnos registrados"}</b><p>{q||status?"Ajusta la búsqueda o el filtro.":"Cuando una caja cierre su primer turno aparecerá aquí para consulta."}</p></div>
           :<div className="table-wrap hover-scroll cash-history-table"><table>
-            <thead><tr><th>TURNO</th><th>CAJA</th><th>DÍA OPERATIVO</th><th>CAJERO</th><th>APERTURA</th><th>CIERRE</th><th>DIFERENCIA</th><th>ESTADO</th><th>ACCIONES</th></tr></thead>
+            <thead><tr><th>TURNO</th><th>CAJA</th><th>DÍA OPERATIVO</th><th>EQUIPO / CIERRE</th><th>APERTURA</th><th>CIERRE</th><th>DIFERENCIA</th><th>ESTADO</th><th>ACCIONES</th></tr></thead>
             <tbody>{historyItems.map((item,index)=>{
               const variance=Number(item.varianceAmount??0);
+              const attribution=cashShiftAttribution(item);
               return <tr className={index%2?"alternate":""} key={item.id}>
                 <td><span className="row-icon"><Icon name="clock" size={17}/></span><b>{item.code}</b><small>{item.movementCount} {item.movementCount===1?"movimiento":"movimientos"}</small></td>
                 <td><b>{item.cashRegisterName}</b></td>
                 <td>{businessDate(item.businessDate)}</td>
-                <td>{item.openedByName}</td>
+                <td className="cash-attribution"><b>{attribution.name}</b><small>{attribution.label}</small></td>
                 <td>{dateTime(item.openedAt)}</td>
                 <td>{item.closedAt?dateTime(item.closedAt):"—"}</td>
                 <td><b className={item.status==="open"?"cash-neutral":variance===0?"cash-balanced":variance>0?"cash-positive":"cash-negative"}>{item.status==="open"?"—":(variance>0?"+":"")+money(variance)}</b></td>
@@ -371,7 +375,8 @@ function CashRegisters({items,loading,error,canManage,money,dateTime,businessDat
             <div className="cash-register-live-copy">
               <small>TURNO EN CURSO</small>
               <b>{shift.code}</b>
-              <p><Icon name="users" size={12}/>{shift.openedByName}<span>·</span><Icon name="clock" size={12}/>{dateTime(shift.openedAt)}</p>
+              <p><Icon name="users" size={12}/>Equipo actual: {cashShiftAttribution(shift).name}</p>
+              <p><Icon name="clock" size={12}/>Abierto por {shift.openedByName} · {dateTime(shift.openedAt)}</p>
               <em>Día operativo {businessDate(shift.businessDate)}</em>
             </div>
             <div className="cash-register-balance"><small>{shift.expectedVisible?"SALDO ESPERADO":"CIERRE CIEGO"}</small><strong>{shift.expectedVisible?money(Number(shift.expectedAmount)):"Oculto"}</strong><span>{shift.movementCount} {shift.movementCount===1?"movimiento":"movimientos"}</span></div>
