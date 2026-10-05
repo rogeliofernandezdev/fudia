@@ -17,6 +17,7 @@ func TestPlatformOnboardingCreatesOperationalTenant(t *testing.T){
 	actor:=seedInventoryScope(t,pool)
 	api:=New(pool)
 	nonce:=time.Now().UnixNano()
+	seedOperationalWhatsAppChannel(t,pool,"PE",fmt.Sprint(nonce))
 	email:=fmt.Sprintf("owner-%d@example.test",nonce)
 	password:="OwnerPass123"
 	taxID:=fmt.Sprintf("%011d",nonce%100000000000)
@@ -150,7 +151,7 @@ func TestReservationsPersistCapacityAndSchedule(t *testing.T){
 	if item.TableID==nil||*item.TableID!=tableID||item.Status!="pending"||item.DurationMinutes!=90{t.Fatalf("unexpected reservation: %#v",item)}
 	overlapStart:=time.Now().UTC().Add(24*time.Hour+30*time.Minute).Truncate(time.Minute).Format(time.RFC3339)
 	overlapBody:=[]byte(fmt.Sprintf(`{"customerName":"Solapada","startsAt":%q,"guests":2,"durationMinutes":60,"tableId":%q}`,overlapStart,tableID))
-	overlapReq:=httptest.NewRequest("POST","/v1/admin/reservations",bytes.NewReader(overlapBody));overlapReq=overlapReq.WithContext(context.WithValue(overlapReq.Context(),scopeKey{},s))
+	overlapReq:=httptest.NewRequest("POST","/v1/admin/reservations/",bytes.NewReader(overlapBody));overlapReq=overlapReq.WithContext(context.WithValue(overlapReq.Context(),scopeKey{},s))
 	overlapRec:=httptest.NewRecorder();api.createReservation(overlapRec,overlapReq)
 	if overlapRec.Code!=400||!strings.Contains(overlapRec.Body.String(),"reservation_conflict"){t.Fatalf("overlapping reservation must conflict: %d %s",overlapRec.Code,overlapRec.Body.String())}
 	conflict:=create(2)
