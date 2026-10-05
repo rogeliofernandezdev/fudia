@@ -5,17 +5,17 @@ import SearchSelect,{type SelectInstance,type StylesConfig} from "react-select";
 import {timezoneOptions,type TimezoneOption} from "@/shared/format/timezones";
 
 const styles:StylesConfig<TimezoneOption,false>={
-  control:(base,state)=>({...base,minHeight:"var(--control-height)",height:"var(--control-height)",borderRadius:6,borderColor:state.selectProps["aria-invalid"]?"var(--danger)":state.isFocused?"var(--primary-600)":"var(--line)",boxShadow:state.isFocused?"0 0 0 2px var(--primary-100)":"none",backgroundColor:"var(--surface)",fontSize:11,"&:hover":{borderColor:"var(--primary-600)"}}),
-  valueContainer:base=>({...base,padding:"0 10px"}),
-  input:base=>({...base,margin:0,padding:0,color:"var(--ink-950)",fontSize:11}),
-  singleValue:base=>({...base,color:"var(--ink-950)",fontSize:11,fontWeight:600}),
-  placeholder:base=>({...base,color:"var(--ink-400)",fontSize:11,fontWeight:400}),
+  control:(base,state)=>({...base,minHeight:"var(--control-height)",height:"var(--control-height)",borderRadius:"var(--radius-control)",borderColor:state.selectProps["aria-invalid"]?"var(--danger)":state.isFocused?"var(--primary-600)":"var(--line)",boxShadow:state.isFocused?"0 0 0 var(--stroke-2) var(--primary-100)":"none",backgroundColor:"var(--surface)",fontSize:"var(--font-size-control)","&:hover":{borderColor:"var(--primary-600)"}}),
+  valueContainer:base=>({...base,padding:"0 var(--space-10)"}),
+  input:base=>({...base,margin:0,padding:0,color:"var(--ink-950)",fontSize:"var(--font-size-control)"}),
+  singleValue:base=>({...base,color:"var(--ink-950)",fontSize:"var(--font-size-control)",fontWeight:"var(--font-weight-600)"}),
+  placeholder:base=>({...base,color:"var(--ink-400)",fontSize:"var(--font-size-control)",fontWeight:"var(--font-weight-400)"}),
   indicatorSeparator:base=>({...base,display:"none"}),
-  dropdownIndicator:base=>({...base,padding:"0 9px"}),
-  menu:base=>({...base,backgroundColor:"var(--surface)",borderRadius:6,overflow:"hidden"}),
+  dropdownIndicator:base=>({...base,padding:"0 var(--space-9)"}),
+  menu:base=>({...base,backgroundColor:"var(--surface)",borderRadius:"var(--radius-control)",overflow:"hidden"}),
   menuPortal:base=>({...base,zIndex:200}),
-  option:(base,state)=>({...base,minHeight:"var(--control-height)",display:"flex",alignItems:"center",fontSize:11,overflowWrap:"anywhere",backgroundColor:state.isSelected?"var(--primary-600)":state.isFocused?"var(--primary-100)":"var(--surface)",color:state.isSelected?"var(--surface)":"var(--ink-700)"}),
-  noOptionsMessage:base=>({...base,fontSize:11}),
+  option:(base,state)=>({...base,minHeight:"var(--control-height)",display:"flex",alignItems:"center",fontSize:"var(--font-size-control)",overflowWrap:"anywhere",backgroundColor:state.isSelected?"var(--primary-600)":state.isFocused?"var(--primary-100)":"var(--surface)",color:state.isSelected?"var(--surface)":"var(--ink-700)"}),
+  noOptionsMessage:base=>({...base,fontSize:"var(--font-size-control)"}),
 };
 
 type Props={

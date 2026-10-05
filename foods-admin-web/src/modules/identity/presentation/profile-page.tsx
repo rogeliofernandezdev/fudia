@@ -148,17 +148,17 @@ function UsageRow({label,value,max}:{label:string;value:number;max:number|null})
 
 function ProfileSkeleton(){
   return <section className="profile-card profile-account profile-skeleton" aria-label="Cargando perfil" aria-busy="true">
-    <header className="profile-account-head"><i className="profile-sk profile-sk-avatar"/><div className="profile-account-copy"><i className="profile-sk" style={{width:"40%",height:16}}/><i className="profile-sk" style={{width:"60%",height:11}}/></div></header>
-    <div className="profile-fields">{[0,1].map(i=><div className="form-field" key={i}><i className="profile-sk" style={{width:100,height:11}}/><i className="profile-sk profile-sk-control"/></div>)}</div>
-    <section className="profile-password"><i className="profile-sk" style={{width:140,height:13}}/><div className="profile-fields">{[0,1].map(i=><div className="form-field" key={i}><i className="profile-sk" style={{width:110,height:11}}/><i className="profile-sk profile-sk-control"/></div>)}</div></section>
-    <footer className="profile-actions"><i className="profile-sk" style={{width:120,height:"var(--control-height)",borderRadius:10}}/></footer>
+    <header className="profile-account-head"><i className="profile-sk profile-sk-avatar"/><div className="profile-account-copy"><i className="profile-sk" style={{width:"40%",height:"var(--size-16)"}}/><i className="profile-sk" style={{width:"60%",height:"var(--size-11)"}}/></div></header>
+    <div className="profile-fields">{[0,1].map(i=><div className="form-field" key={i}><i className="profile-sk" style={{width:"var(--size-100)",height:"var(--size-11)"}}/><i className="profile-sk profile-sk-control"/></div>)}</div>
+    <section className="profile-password"><i className="profile-sk" style={{width:"var(--size-140)",height:"var(--size-13)"}}/><div className="profile-fields">{[0,1].map(i=><div className="form-field" key={i}><i className="profile-sk" style={{width:"var(--size-110)",height:"var(--size-11)"}}/><i className="profile-sk profile-sk-control"/></div>)}</div></section>
+    <footer className="profile-actions"><i className="profile-sk" style={{width:"var(--size-120)",height:"var(--control-height)",borderRadius:"var(--radius-10)"}}/></footer>
   </section>;
 }
 
 function SubscriptionSkeleton(){
   return <section className="profile-card profile-subscription profile-skeleton" aria-label="Cargando suscripción" aria-busy="true">
-    <header className="profile-subscription-head"><div><i className="profile-sk" style={{width:150,height:10}}/><i className="profile-sk" style={{width:120,height:20}}/><i className="profile-sk" style={{width:180,height:11}}/></div><i className="profile-sk" style={{width:70,height:22,borderRadius:99}}/></header>
-    <dl className="profile-facts">{[0,1,2,3].map(i=><div key={i}><i className="profile-sk" style={{width:90,height:10}}/><i className="profile-sk" style={{width:70,height:14}}/></div>)}</dl>
-    <div className="profile-usage">{[0,1].map(i=><div className="profile-usage-row" key={i}><i className="profile-sk" style={{width:"50%",height:11}}/><i className="profile-sk" style={{width:"100%",height:6,borderRadius:99}}/></div>)}</div>
+    <header className="profile-subscription-head"><div><i className="profile-sk" style={{width:"var(--size-150)",height:"var(--size-10)"}}/><i className="profile-sk" style={{width:"var(--size-120)",height:"var(--size-20)"}}/><i className="profile-sk" style={{width:"var(--size-180)",height:"var(--size-11)"}}/></div><i className="profile-sk" style={{width:"var(--size-70)",height:"var(--size-22)",borderRadius:"var(--radius-99)"}}/></header>
+    <dl className="profile-facts">{[0,1,2,3].map(i=><div key={i}><i className="profile-sk" style={{width:"var(--size-90)",height:"var(--size-10)"}}/><i className="profile-sk" style={{width:"var(--size-70)",height:"var(--size-14)"}}/></div>)}</dl>
+    <div className="profile-usage">{[0,1].map(i=><div className="profile-usage-row" key={i}><i className="profile-sk" style={{width:"50%",height:"var(--size-11)"}}/><i className="profile-sk" style={{width:"100%",height:"var(--size-6)",borderRadius:"var(--radius-99)"}}/></div>)}</div>
   </section>;
 }

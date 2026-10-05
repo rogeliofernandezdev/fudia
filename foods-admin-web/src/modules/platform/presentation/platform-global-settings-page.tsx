@@ -4,26 +4,14 @@ import "./platform-global-settings.css";
 import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import CountrySelect from "react-select";
-import type {StylesConfig} from "react-select";
+import {createLookupSelectStyles} from "@/design-system/search-select-styles";
 import {Button,FormField,Icon,Input,PageHeader,RowActionButton,Status} from "@/design-system";
 import {useFeedback} from "@/providers";
 import type {PlatformWhatsAppChannel,PlatformWhatsAppChannelDraft} from "../domain/types";
 import {getPlatformGlobalCatalogs,listPlatformWhatsAppChannels,savePlatformWhatsAppChannel} from "../infrastructure/platform-api";
 
 type CountryLookupOption={label:string;value:string};
-const countrySelectStyles:StylesConfig<CountryLookupOption,false>={
- control:(base)=>({...base,height:"var(--control-height)",minHeight:"var(--control-height)",borderColor:"var(--line)",borderRadius:"6px",backgroundColor:"var(--surface)",fontSize:"11px",fontWeight:600,boxShadow:"none","&:hover":{borderColor:"var(--line-strong)"}}),
- valueContainer:(base)=>({...base,height:"var(--control-height)",padding:"0 10px"}),
- input:(base)=>({...base,color:"var(--ink-950)",fontSize:"11px",fontWeight:600,margin:0,padding:0}),
- singleValue:(base)=>({...base,color:"var(--ink-950)",fontSize:"11px",fontWeight:600}),
- placeholder:(base)=>({...base,color:"var(--ink-400)",fontSize:"11px",fontWeight:400}),
- indicatorSeparator:(base)=>({...base,display:"none"}),
- dropdownIndicator:(base)=>({...base,color:"var(--ink-500)",padding:"0 9px"}),
- menu:(base)=>({...base,zIndex:20,border:"1px solid var(--line)",borderRadius:"6px",backgroundColor:"var(--surface)",boxShadow:"var(--shadow)",overflow:"hidden"}),
- menuPortal:(base)=>({...base,zIndex:200}),
- option:(base,state)=>({...base,cursor:"pointer",padding:"8px 10px",fontSize:"11px",fontWeight:600,backgroundColor:state.isSelected?"var(--primary-600)":state.isFocused?"var(--primary-100)":"var(--surface)",color:state.isSelected?"var(--surface)":"var(--ink-700)"}),
- noOptionsMessage:(base)=>({...base,color:"var(--ink-500)",fontSize:"10px"}),
-};
+const countrySelectStyles=createLookupSelectStyles<CountryLookupOption>();
 const blank:PlatformWhatsAppChannelDraft={countryCode:"PE",phoneNumber:"",displayName:"",active:false};
 
 export function PlatformGlobalSettingsPage(){

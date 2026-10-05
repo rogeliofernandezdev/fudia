@@ -4,6 +4,7 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import "../styles/location-map.css";
 import { useEffect, useRef, useState } from "react";
 import type { Map as MapboxMap, Marker as MapboxMarker } from "mapbox-gl";
+import { readCssToken } from "@/design-system/theme";
 import { Icon } from "@/design-system/icons";
 import { Input } from "@/design-system/page-header";
 import type { Coordinates, LocationMapProps } from "./map-provider";
@@ -82,7 +83,7 @@ export function MapboxLocationMap({
       });
       localMap.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");
       localMap.once("load", () => { if (active) setMapLoading(false); });
-      localMarker = new mapboxgl.Marker({ color: "#2f5bc7", draggable: true })
+      localMarker = new mapboxgl.Marker({ color: readCssToken("--map-marker"), draggable: true })
         .setLngLat(initial)
         .addTo(localMap);
       localMarker.on("dragend", () => {

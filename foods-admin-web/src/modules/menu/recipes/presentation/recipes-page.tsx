@@ -3,7 +3,7 @@ import "./recipes.css";
 import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import AsyncSelect from "react-select/async";
-import type {StylesConfig} from "react-select";
+import {createLookupSelectStyles} from "@/design-system/search-select-styles";
 import {Button,ConfirmDialog,FieldLabel,Icon,Input,PageHeader,RowActionButton,Status,Textarea} from "@/design-system";
 import {useFeedback,useSession} from "@/providers";
 import {
@@ -19,21 +19,11 @@ import {
 const empty=(productId=""):RecipeDraft=>({productId,yieldQuantity:"1",notes:"",active:true,items:[]});
 
 type RecipeLookupOption={label:string;value:string;unit?:string};
-const recipeLookupSelectStyles:StylesConfig<RecipeLookupOption,false>={
- control:(base)=>({...base,height:"var(--control-height)",minHeight:"var(--control-height)",borderColor:"var(--line)",borderRadius:"6px",backgroundColor:"var(--surface)",fontSize:"11px",fontWeight:600,boxShadow:"none","&:hover":{borderColor:"var(--line-strong)"}}),
- valueContainer:(base)=>({...base,height:"var(--control-height)",padding:"0 10px"}),
- input:(base)=>({...base,color:"var(--ink-950)",fontSize:"11px",fontWeight:600,margin:0,padding:0}),
- singleValue:(base)=>({...base,color:"var(--ink-950)",fontSize:"11px",fontWeight:600}),
- placeholder:(base)=>({...base,color:"var(--ink-400)",fontSize:"11px",fontWeight:400}),
- indicatorSeparator:(base)=>({...base,display:"none"}),
- dropdownIndicator:(base)=>({...base,color:"var(--ink-500)",padding:"0 9px","&:hover":{color:"var(--ops-700)"}}),
- clearIndicator:(base)=>({...base,color:"var(--ink-400)",padding:"0 6px","&:hover":{color:"var(--danger-600)"}}),
- menu:(base)=>({...base,zIndex:20,border:"1px solid var(--line)",borderRadius:"6px",backgroundColor:"var(--surface)",boxShadow:"var(--shadow)",overflow:"hidden"}),
- menuPortal:(base)=>({...base,zIndex:200}),
- option:(base,state)=>({...base,cursor:"pointer",padding:"8px 10px",fontSize:"11px",fontWeight:600,backgroundColor:state.isSelected?"var(--primary-600)":state.isFocused?"var(--primary-100)":"var(--surface)",color:state.isSelected?"var(--surface)":"var(--ink-700)"}),
- noOptionsMessage:(base)=>({...base,color:"var(--ink-500)",fontSize:"10px"}),
- loadingMessage:(base)=>({...base,color:"var(--ink-500)",fontSize:"10px"}),
-};
+const recipeLookupSelectStyles=createLookupSelectStyles<RecipeLookupOption>({
+ dropdownIndicator:base=>({...base,color:"var(--ink-500)",padding:"0 var(--space-9)","&:hover":{color:"var(--ops-700)"}}),
+ clearIndicator:base=>({...base,color:"var(--ink-400)",padding:"0 var(--space-6)","&:hover":{color:"var(--danger-600)"}}),
+ loadingMessage:base=>({...base,color:"var(--ink-500)",fontSize:"var(--font-size-label)"}),
+});
 async function loadRecipeProductOptions(q:string):Promise<RecipeLookupOption[]>{
  const search=q.trim();
  if(search.length>0&&search.length<3)return [];

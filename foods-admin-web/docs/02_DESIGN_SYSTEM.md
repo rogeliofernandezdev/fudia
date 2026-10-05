@@ -8,6 +8,39 @@ densidad para tablas, formularios y análisis.
 
 ## Paleta
 
+La autoridad de valores está en `src/styles/variables.css`. `globals.css` la
+importa una sola vez, después de Tailwind, y el layout raíz carga esa base para
+todas las rutas. Las hojas de componentes y módulos consumen `var(...)` y
+conservan la propiedad de sus selectores.
+
+La hoja se organiza en paleta, matices, transparencias, alias semánticos,
+espaciado, dimensiones, tipografía, radios, bordes, sombras y movimiento.
+`--space-12` representa el paso actual de 12 px; modificarlo actualiza todos
+sus usos. Espaciado, dimensiones y tipografía tienen escalas independientes
+para poder ajustar la densidad sin alterar el tamaño del texto o los iconos.
+Los matices secundarios conservan los colores existentes; los nombres
+semánticos (`primary`, `brand`, `danger`, etc.) son la API recomendada.
+Las transparencias derivan de su color base y los alias apuntan al token
+canónico: no se vuelve a escribir el mismo hexadecimal.
+
+Los contratos compartidos incluyen `--radius-control`, `--radius-card`,
+`--font-size-label`, `--font-size-control`, `--control-height` y los tokens
+de animación del modal. Los valores particulares por contexto y la altura
+táctil móvil también se declaran en esa hoja. Las condiciones de media queries
+y container queries conservan sus medidas literales, porque CSS no admite
+custom properties en esas condiciones.
+
+Los selectores de búsqueda de Recetas y Países reutilizan
+`createLookupSelectStyles`, con extensiones explícitas cuando corresponde.
+Canvas y Mapbox obtienen los colores mediante `readCssToken`, porque esas
+APIs necesitan un valor resuelto. Las fuentes se resuelven en `body`, donde
+Next proporciona sus variables de fuente.
+
+`tests/design-tokens.test.mjs` impide redefinir tokens fuera de esta hoja,
+duplicar colores, introducir valores de diseño literales en las hojas de
+componentes o usar referencias inexistentes o circulares. La prueba de tamaño
+mínimo de texto resuelve las variables antes de revisar las medidas.
+
 | Token | Valor | Uso |
 | --- | --- | --- |
 | primary-600 | #4654CD | botones primarios y encabezados de tabla |

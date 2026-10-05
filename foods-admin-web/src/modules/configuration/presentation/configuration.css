@@ -1,9 +1,9 @@
 /* configuration presentation styles. */
-.settings-grid{grid-template-columns:repeat(2,1fr);gap:14px;display:grid}
-.settings-grid>a,.settings-grid>button{border:1px solid var(--line);text-align:left;background:#fff;border-radius:14px;grid-template-columns:46px 1fr 24px;align-items:center;gap:12px;min-height:84px;padding:15px;display:grid}
-.settings-grid>a>span,.settings-grid>button>span{width:45px;height:45px;color:var(--ops-700);background:var(--ops-100);border-radius:11px;place-items:center;display:grid}
-.settings-grid b{font-size:12px;display:grid}
-.settings-grid small{color:var(--ink-400);margin-top:5px;font-size:10px;font-weight:500}
+.settings-grid{grid-template-columns:repeat(2,1fr);gap:var(--space-14);display:grid}
+.settings-grid>a,.settings-grid>button{border:var(--stroke-1) solid var(--line);text-align:left;background:var(--surface);border-radius:var(--radius-card);grid-template-columns:var(--size-46) 1fr var(--size-24);align-items:center;gap:var(--space-12);min-height:var(--size-84);padding:var(--space-15);display:grid}
+.settings-grid>a>span,.settings-grid>button>span{width:var(--size-45);height:var(--size-45);color:var(--ops-700);background:var(--ops-100);border-radius:var(--radius-11);place-items:center;display:grid}
+.settings-grid b{font-size:var(--font-size-12);display:grid}
+.settings-grid small{color:var(--ink-400);margin-top:var(--space-5);font-size:var(--font-size-label);font-weight:var(--font-weight-500)}
 @media (width<=600px){.settings-grid{grid-template-columns:1fr}}
 .settings-grid button svg{flex:none;display:block}
-.settings-grid button:focus-visible{outline:2px solid var(--ops-500);outline-offset:2px}
+.settings-grid button:focus-visible{outline:var(--stroke-2) solid var(--ops-500);outline-offset:var(--space-2)}

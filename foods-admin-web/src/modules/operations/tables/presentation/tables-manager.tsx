@@ -4,6 +4,7 @@ import NextImage from "next/image";
 import {useState,useEffect,useMemo,useRef} from "react";import {useForm} from "react-hook-form";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import QRCode from "qrcode";
+import {readCssToken} from "@/design-system/theme";
 import {Icon} from "@/design-system/icons";import {FormField,Input} from "@/design-system";
 import {Button,IconButton,PageHeader,Pagination,RowActionButton,Status} from "@/design-system/page-header";
 import {ConfirmDialog} from "@/design-system/confirm-dialog";
@@ -96,14 +97,14 @@ function QrDialog({table,restaurantName,close}:{table:Table;restaurantName:strin
 
  useEffect(()=>{
    if(canvasRef.current&&qrUrl){
-     QRCode.toCanvas(canvasRef.current,qrUrl,{width:240,margin:2,color:{dark:"#1a2151",light:"#ffffff"}},(err)=>{
+     QRCode.toCanvas(canvasRef.current,qrUrl,{width:240,margin:2,color:{dark:readCssToken("--navigation-900"),light:readCssToken("--surface")}},(err)=>{
        if(err){console.error(err);return}
        const canvas=canvasRef.current;if(!canvas)return;
        const ctx=canvas.getContext("2d");if(!ctx)return;
        const logo=new Image();logo.crossOrigin="anonymous";
        logo.onload=()=>{
          const size=52;const x=(canvas.width-size)/2;const y=(canvas.height-size)/2;
-         ctx.fillStyle="#fff";ctx.fillRect(x-5,y-5,size+10,size+10);
+         ctx.fillStyle=readCssToken("--surface");ctx.fillRect(x-5,y-5,size+10,size+10);
          ctx.save();ctx.beginPath();ctx.roundRect(x,y,size,size,10);ctx.clip();ctx.drawImage(logo,x,y,size,size);ctx.restore();
        };logo.src="/assets/images/logo.png";
      });
@@ -116,15 +117,15 @@ function QrDialog({table,restaurantName,close}:{table:Table;restaurantName:strin
    const c=document.createElement("canvas");
    c.width=340;c.height=440;
    const ctx=c.getContext("2d");if(!ctx)return;
-   ctx.fillStyle="#fff";ctx.fillRect(0,0,340,440);
-   ctx.strokeStyle="#e4e7ec";ctx.lineWidth=2;ctx.roundRect(16,16,308,408,18);ctx.stroke();
+   ctx.fillStyle=readCssToken("--surface");ctx.fillRect(0,0,340,440);
+   ctx.strokeStyle=readCssToken("--line");ctx.lineWidth=2;ctx.roundRect(16,16,308,408,18);ctx.stroke();
    const logo=new Image();logo.crossOrigin="anonymous";
    logo.onload=()=>{
      ctx.save();ctx.beginPath();ctx.roundRect(130,40,80,80,12);ctx.clip();ctx.drawImage(logo,130,40,80,80);ctx.restore();
-     ctx.fillStyle="#3946b8";ctx.font="800 20px Manrope,Arial";ctx.textAlign="center";ctx.fillText(restaurantName,170,148);
+     ctx.fillStyle=readCssToken("--primary-700");ctx.font=`${readCssToken("--font-weight-800")} ${readCssToken("--font-size-20")} ${readCssToken("--font-sans")}`;ctx.textAlign="center";ctx.fillText(restaurantName,170,148);
      const qrImg=new Image();qrImg.onload=()=>{
        ctx.drawImage(qrImg,50,170,240,240);
-       ctx.fillStyle="#98a2b3";ctx.font="10px Manrope,Arial";
+       ctx.fillStyle=readCssToken("--ink-400");ctx.font=`${readCssToken("--font-size-label")} ${readCssToken("--font-sans")}`;
        ctx.fillText("Escanea para pedir por WhatsApp",170,430);
        const link=document.createElement("a");
        link.download=`qr-mesa-${table.name.replace(/\s+/g,"-").toLowerCase()}.png`;
@@ -186,14 +187,14 @@ function PrintQrDialog({tables,restaurantName,close}:{tables:Table[];restaurantN
    printable.forEach(t=>{
      const canvas=canvasRefs.current[t.id];
      if(canvas){
-       QRCode.toCanvas(canvas,`${origin}${publicConciergePath(t.qrToken)}`,{width:200,margin:1,color:{dark:"#1a2151",light:"#ffffff"}},(err)=>{
+       QRCode.toCanvas(canvas,`${origin}${publicConciergePath(t.qrToken)}`,{width:200,margin:1,color:{dark:readCssToken("--navigation-900"),light:readCssToken("--surface")}},(err)=>{
          if(err){console.error(err);return}
          // Superponer el logo en el centro del QR
          const ctx=canvas.getContext("2d");if(!ctx)return;
          const logo=new Image();logo.crossOrigin="anonymous";
          logo.onload=()=>{
            const size=44;const x=(canvas.width-size)/2;const y=(canvas.height-size)/2;
-           ctx.fillStyle="#fff";ctx.fillRect(x-4,y-4,size+8,size+8);
+           ctx.fillStyle=readCssToken("--surface");ctx.fillRect(x-4,y-4,size+8,size+8);
            ctx.save();ctx.beginPath();ctx.roundRect(x,y,size,size,8);ctx.clip();ctx.drawImage(logo,x,y,size,size);ctx.restore();
          };logo.src="/assets/images/logo.png";
        });

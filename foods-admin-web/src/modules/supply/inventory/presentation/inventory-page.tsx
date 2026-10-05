@@ -71,7 +71,7 @@ export function InventoryPage(){
    eyebrow="ABASTECIMIENTO"
    title="Inventario"
    description="Consulta existencias del local y registra ajustes manuales con trazabilidad."
-   action={(can("inventory.manage")||can("inventory.transfer"))?<div style={{display:"flex",gap:8}}>{can("inventory.transfer")&&<Button kind="secondary" icon="truck" disabled={noInventory} onClick={()=>setTransferOpen(true)}>Transferir</Button>}{can("inventory.manage")&&<Button icon="edit" disabled={noInventory} onClick={()=>setAdjustmentOpen(true)}>Registrar ajuste</Button>}</div>:undefined}
+   action={(can("inventory.manage")||can("inventory.transfer"))?<div style={{display:"flex",gap:"var(--space-8)"}}>{can("inventory.transfer")&&<Button kind="secondary" icon="truck" disabled={noInventory} onClick={()=>setTransferOpen(true)}>Transferir</Button>}{can("inventory.manage")&&<Button icon="edit" disabled={noInventory} onClick={()=>setAdjustmentOpen(true)}>Registrar ajuste</Button>}</div>:undefined}
   />
   <section className="panel standardized-management inventory-panel">
    <div className="inventory-toolbar">

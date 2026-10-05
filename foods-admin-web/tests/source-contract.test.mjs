@@ -1,4 +1,5 @@
 import test from "node:test";
+import {resolveDesignScales} from "./helpers/design-tokens.mjs";
 import assert from "node:assert/strict";
 import {existsSync,readFileSync,readdirSync,statSync} from "node:fs";
 import {join} from "node:path";
@@ -8,6 +9,7 @@ const root=process.cwd();
 const forbiddenRegionalLocale=["es","PE"].join("-");
 const normalize=p=>p.replaceAll("\\","/");
 const read=p=>readFileSync(join(root,p),"utf8").replaceAll("\r\n","\n");
+const readCss=p=>resolveDesignScales(read(p));
 const walk=dir=>readdirSync(join(root,dir)).flatMap(name=>{
   const p=normalize(join(dir,name));return statSync(join(root,p)).isDirectory()?walk(p):[p];
 });
@@ -219,7 +221,7 @@ test("producto e inventario mantienen una sola fuente de verdad",()=>{
 
 test("compras concentra orden recepcion y altas de abastecimiento",()=>{
   const purchases=read("src/modules/supply/purchases/presentation/purchases-page.tsx");
-  const purchasesCss=read("src/modules/supply/purchases/presentation/purchases.css");
+  const purchasesCss=readCss("src/modules/supply/purchases/presentation/purchases.css");
   const itemDialog=read("src/modules/supply/purchases/presentation/purchase-item-dialog.tsx");
   const receiptDialog=read("src/modules/supply/purchases/presentation/purchase-receipt-dialog.tsx");
   const api=read("src/modules/supply/purchases/infrastructure/purchases-api.ts");
@@ -373,13 +375,13 @@ test("combos conserva la misma tabla en movil y el shell no desborda",()=>{
   assert.ok(combos.includes('className="table-wrap hover-scroll"'));
   assert.equal(combos.includes("combo-mobile-cards"),false);
   assert.equal(combos.includes("\\n    {draft&&<ComboWizard"),false);
-  const comboCss=read("src/modules/menu/combos/presentation/combo-wizard.css");
+  const comboCss=readCss("src/modules/menu/combos/presentation/combo-wizard.css");
   assert.ok(comboCss.includes("container-name: combo-list"));
   assert.ok(comboCss.includes("@container combo-list (width <= 820px)"));
   assert.ok(comboCss.includes(".standardized-management.combo-list .table-wrap"));
   assert.ok(comboCss.includes("overflow-x: auto"));
   assert.ok(comboCss.includes("min-width: 720px"));
-  const shell=read("src/shell/styles/shell.css");
+  const shell=readCss("src/shell/styles/shell.css");
   assert.ok(shell.includes("height:100dvh"));
   assert.ok(shell.includes(".sidebar.open{z-index:90"));
   assert.ok(shell.includes(".sidebar-scrim{backdrop-filter:blur(2px);z-index:80"));
@@ -387,24 +389,24 @@ test("combos conserva la misma tabla en movil y el shell no desborda",()=>{
   assert.ok(shell.includes("container-name:admin-main"));
   assert.ok(shell.includes("@container admin-main (width<=1040px)"));
   assert.ok(shell.includes(".platform-link{width:44px"));
-  const context=read("src/modules/context/presentation/context-switcher.css");
+  const context=readCss("src/modules/context/presentation/context-switcher.css");
   assert.ok(context.includes("@container admin-main (width<=1040px)"));
   assert.ok(context.includes("text-overflow:ellipsis"));
-  const account=read("src/shell/styles/account-menu.css");
+  const account=readCss("src/shell/styles/account-menu.css");
   assert.ok(account.includes("@container admin-main (width<=1040px)"));
   assert.ok(account.includes(".account-popover>header small{overflow:hidden"));
   assert.ok(account.includes("@media(max-width:820px)"));
   assert.ok(account.includes(".account-trigger-copy,.account-trigger>svg{display:none!important}"));
   assert.ok(account.includes(".account-menu{width:44px;min-width:44px;max-width:44px"));
-  const globals=read("src/styles/globals.css");
+  const globals=readCss("src/styles/globals.css");
   assert.ok(globals.includes(".page-header>.button{flex:0 0 auto;white-space:nowrap}"));
-  const nav=read("src/shell/styles/navigation-state.css");
+  const nav=readCss("src/shell/styles/navigation-state.css");
   assert.ok(nav.includes(".admin-shell[data-sidebar=collapsed] .sidebar{width:min(320px,86vw)"));
 });
 
 test("cocina mantiene jerarquia KDS y semantica de color",()=>{
   const kitchen=read("src/modules/operations/kitchen/presentation/kitchen-board.tsx");
-  const css=read("src/modules/operations/kitchen/presentation/kitchen.css");
+  const css=readCss("src/modules/operations/kitchen/presentation/kitchen.css");
   assert.ok(kitchen.includes("function formatElapsed"),"Cocina formatea tiempos largos en unidades legibles");
   for(const label of ["A tiempo","Por vencer","Con demora","Listo"])assert.ok(kitchen.includes(label),label);
   assert.ok(kitchen.includes('kind="primary"'),"Las transiciones de cocina usan acción primaria azul");
@@ -424,9 +426,9 @@ test("cocina mantiene jerarquia KDS y semantica de color",()=>{
   assert.equal(css.includes(".kitchen-lane::before"),false,"Los carriles no usan franja superior de color");
   assert.ok(kitchen.includes("ticket.tableName?.toUpperCase()"),"Los nombres de mesa se muestran en mayúsculas");
   assert.ok(css.includes("background:var(--cloud-100)"),"El progreso usa tokens del sistema");
-  assert.ok(css.includes("--kds-cooking:var(--digital-500)"),"En preparación usa violeta del patrón operativo");
-  assert.ok(css.includes("--kds-cooking-dark:var(--digital-700)"),"El texto de preparación usa violeta oscuro");
-  assert.ok(css.includes("--kds-cooking-soft:var(--digital-100)"),"El fondo de preparación usa violeta suave");
+  assert.ok(read("src/styles/variables.css").replace(/\s+/g,"").includes("--kds-cooking:var(--digital-500)"),"En preparación usa violeta del patrón operativo");
+  assert.ok(read("src/styles/variables.css").replace(/\s+/g,"").includes("--kds-cooking-dark:var(--digital-700)"),"El texto de preparación usa violeta oscuro");
+  assert.ok(read("src/styles/variables.css").replace(/\s+/g,"").includes("--kds-cooking-soft:var(--digital-100)"),"El fondo de preparación usa violeta suave");
   assert.ok(css.includes(".kitchen-ticket-time.late{background:var(--warning-50);border-color:var(--warning-600);color:var(--warning-600)}"),"La demora usa warning y no danger");
   const lateRules=css.split("\n").filter(line=>line.includes(".late"));
   assert.equal(lateRules.some(line=>line.includes("danger-600")),false,"Los estados de demora no usan danger; rojo queda disponible para errores reales");
@@ -495,7 +497,7 @@ test("platform admin ve todo el catalogo y modulos no listos no se activan desde
 test("pantallas completas usan loader FUDIA y cargas internas conservan skeleton",()=>{
   const routeLoading=read("src/app/loading.tsx");
   const loader=read("src/design-system/full-screen-loader.tsx");
-  const loaderCss=read("src/design-system/styles/full-screen-loader.css");
+  const loaderCss=readCss("src/design-system/styles/full-screen-loader.css");
   const shell=read("src/shell/admin-shell.tsx");
   const platform=read("src/modules/platform/presentation/platform-shell.tsx");
 
@@ -514,9 +516,9 @@ test("pantallas completas usan loader FUDIA y cargas internas conservan skeleton
 
 test("reportes y ventas usan skeleton con forma final",()=>{
   const dashboard=read("src/modules/dashboard/presentation/dashboard-view.tsx");
-  const dashboardCss=read("src/modules/dashboard/presentation/dashboard.css");
+  const dashboardCss=readCss("src/modules/dashboard/presentation/dashboard.css");
   const sales=read("src/modules/sales/presentation/sales-page.tsx");
-  const salesCss=read("src/modules/sales/presentation/sales.css");
+  const salesCss=readCss("src/modules/sales/presentation/sales.css");
   assert.ok(dashboard.includes("<DashboardSkeleton/>"),"Reportes usa skeleton dedicado durante la carga");
   assert.ok(dashboard.includes('aria-label="Cargando reportes"'),"El skeleton de Reportes expone estado accesible");
   for(const shape of ["dashboard-skeleton-kpi","dashboard-skeleton-chart","dashboard-skeleton-alert","dashboard-skeleton-product"])assert.ok(dashboard.includes(shape),`Reportes reproduce ${shape}`);
@@ -533,7 +535,7 @@ test("reportes y ventas usan skeleton con forma final",()=>{
 test("reservas respeta el contrato de formularios y jerarquia del modal",()=>{
   const page=read("src/modules/operations/reservations/presentation/reservations-page.tsx");
   const schema=read("src/modules/operations/reservations/domain/reservation-schema.ts");
-  const css=read("src/modules/operations/reservations/presentation/reservations.css");
+  const css=readCss("src/modules/operations/reservations/presentation/reservations.css");
   assert.ok(page.includes("useForm<ReservationDraft>"),"Reservas usa React Hook Form");
   assert.ok(page.includes("resolver:reservationResolver"),"Reservas delega validacion a Zod");
   assert.ok(schema.includes("reservationSchema=z.object"),"Reservas define esquema Zod");
@@ -561,7 +563,7 @@ test("no se versionan secretos locales ni artefactos temporales en la raiz admin
 });
 
 test("se preservan contratos visuales base",()=>{
-  const css=read("src/styles/globals.css").replace(/\s+/g,"");
+  const css=read("src/styles/variables.css").replace(/\s+/g,"");
   for(const token of ["--brand-700","--ops-700","--digital-700","--primary-600","--control-height"])assert.ok(css.includes(token),token);
   const navigation=read("src/shell/navigation.ts");
   for(const label of ["Dashboard","Punto de venta","Carta y productos","Inventario","Compras","CONFIGURACIÓN"])assert.ok(navigation.includes(label),label);
@@ -594,7 +596,7 @@ test("identidad alinea permisos administracion plataforma y perfil",()=>{
 
 test("perfil respeta inputs y formularios del design system",()=>{
   const profile=read("src/modules/identity/presentation/profile-page.tsx");
-  const css=read("src/modules/identity/presentation/profile-page.css");
+  const css=readCss("src/modules/identity/presentation/profile-page.css");
   const schema=read("src/modules/identity/domain/profile-schema.ts");
 
   assert.ok(profile.includes("useForm<MyProfileDraft>"),"Perfil usa React Hook Form");
@@ -632,9 +634,9 @@ test("mesas conserva edición inline dentro de la tabla",()=>{
 
 test("empresa y kardex respetan no duplicación y patrón de gestión",()=>{
   const company=read("src/modules/organizations/presentation/organization-admin.tsx");
-  const companyCss=read("src/modules/organizations/presentation/organization-admin.css");
+  const companyCss=readCss("src/modules/organizations/presentation/organization-admin.css");
   const kardex=read("src/modules/supply/inventory/presentation/kardex-page.tsx");
-  const inventoryCss=read("src/modules/supply/inventory/presentation/inventory.css");
+  const inventoryCss=readCss("src/modules/supply/inventory/presentation/inventory.css");
   assert.equal(company.includes("organization-summary"),false,"Empresa no repite los datos del formulario en una tarjeta resumen");
   assert.ok(company.includes("organization-section"),"Empresa separa identidad legal y configuración general sin duplicar datos");
   assert.ok(company.includes("organization-section-header"),"Empresa usa cabeceras compactas de sección");
@@ -833,7 +835,7 @@ test("performance frontend limita requests y carga diferida",()=>{
 test("el POS comparte patrones de tabla, móvil y modales",()=>{
   const page=read("src/modules/operations/pos/presentation/pos-page.tsx");
   const dialogs=read("src/modules/operations/pos/presentation/pos-dialogs.tsx");
-  const styles=read("src/modules/operations/pos/presentation/pos.css");
+  const styles=readCss("src/modules/operations/pos/presentation/pos.css");
   const designSystem=read("docs/02_DESIGN_SYSTEM.md");
 
   assert.ok(page.includes('className="management-cards pos-order-cards"'),"El POS conserva tarjetas equivalentes en móvil");

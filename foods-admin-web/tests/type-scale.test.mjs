@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {readFile,readdir,stat} from "node:fs/promises";
 import test from "node:test";
+import {resolveDesignScales} from "./helpers/design-tokens.mjs";
 
 const root=new URL("../",import.meta.url);
 const MIN_PX=10;
@@ -22,7 +23,7 @@ test(`ninguna hoja de estilos declara texto menor a ${MIN_PX}px`,async()=>{
   const offenders=[];
   const sheets=[...await files("src/modules"),...await files("src/styles"),...await files("src/design-system")];
   for(const sheet of sheets){
-    const source=await readFile(new URL(sheet,root),"utf8");
+    const source=resolveDesignScales(await readFile(new URL(sheet,root),"utf8"));
     for(const match of source.matchAll(/font-size:\s*([0-9.]+)px/g)){
       if(Number(match[1])<MIN_PX)offenders.push(`${sheet}: ${match[0]}`);
     }

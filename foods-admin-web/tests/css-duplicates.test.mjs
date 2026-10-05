@@ -71,7 +71,10 @@ test("globals conserva un inventario acotado de duplicados heredados",async()=>{
 test("globals queda limitado a primitivas compartidas",async()=>{
   const sheet="src/styles/globals.css";
   const source=await readFile(new URL(sheet,root),"utf8");
-  assert.ok(Buffer.byteLength(source,"utf8")<=32768,`globals.css volvió a crecer: ${Buffer.byteLength(source,"utf8")} bytes`);
+  // Token references are longer than literals; count styling declarations instead.
+  let declarations=0;
+  postcss.parse(source).walkDecls(()=>declarations++);
+  assert.ok(declarations<=1063,`globals.css añadió estilos fuera de las primitivas: ${declarations}`);
   for(const featureSelector of [
     ".login-",".sidebar",".notification-",".feedback-",".confirm-",".location-map-",
     ".wizard-",".onboarding-wizard",".modules-",".dashboard-grid",".settings-grid",".platform-shell"

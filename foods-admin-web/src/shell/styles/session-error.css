@@ -1,18 +1,18 @@
-.admin-session-error-page{--control-height:44px;min-height:100dvh;padding:32px 20px;display:grid;grid-template-rows:auto 1fr auto;place-items:center;color:var(--ink-950);background:radial-gradient(60% 46% at 50% 0,var(--primary-100) 0,transparent 72%),var(--cloud-50)}
-.admin-session-error-brand{width:min(480px,100%);display:flex;justify-content:center;padding-block:8px}
-.admin-session-error-page>small{font-size:10px;line-height:1.5;text-align:center;color:var(--ink-500)}
-.admin-session-error{width:min(520px,100%);min-height:clamp(320px,52vh,440px);padding:40px 36px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:var(--shadow)}
+.admin-session-error-page{min-height:100dvh;padding:var(--space-32) var(--space-20);display:grid;grid-template-rows:auto 1fr auto;place-items:center;color:var(--ink-950);background:radial-gradient(60% 46% at 50% 0,var(--primary-100) 0,transparent 72%),var(--cloud-50)}
+.admin-session-error-brand{width:min(var(--size-480),100%);display:flex;justify-content:center;padding-block:var(--space-8)}
+.admin-session-error-page>small{font-size:var(--font-size-label);line-height:var(--line-height-1-5);text-align:center;color:var(--ink-500)}
+.admin-session-error{width:min(var(--size-520),100%);min-height:clamp(var(--size-320),52vh,var(--size-440));padding:var(--space-40) var(--space-36);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;border:var(--stroke-1) solid var(--line);border-radius:var(--radius-card);background:var(--surface);box-shadow:var(--shadow)}
 .admin-session-error-page>.admin-session-error{min-height:auto}
-.admin-session-error-icon{width:52px;height:52px;display:grid;place-items:center;border-radius:14px;color:var(--primary-700);background:var(--primary-100)}
-.admin-session-error-eyebrow{margin-top:18px;font-size:10px;font-weight:800;letter-spacing:.09em;color:var(--primary-700)}
-.admin-session-error h1{margin:12px 0 8px;font-size:22px;line-height:1.25;letter-spacing:-.025em}
-.admin-session-error p{max-width:430px;margin:0;font-size:12px;line-height:1.7;color:var(--ink-600)}
-.admin-session-error-actions{width:100%;margin-top:24px;display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
-.admin-session-error-actions>button,.admin-session-error-actions>.button{min-height:var(--control-height);padding-inline:16px;display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:6px;font-size:11px;font-weight:750;cursor:pointer}
-.admin-session-error-primary{border:1px solid var(--primary-600);color:var(--surface);background:var(--primary-600)}
-.admin-session-error-secondary{border:1px solid var(--line-strong);color:var(--ink-700);background:var(--surface)}
+.admin-session-error-icon{width:var(--size-52);height:var(--size-52);display:grid;place-items:center;border-radius:var(--radius-card);color:var(--primary-700);background:var(--primary-100)}
+.admin-session-error-eyebrow{margin-top:var(--space-18);font-size:var(--font-size-label);font-weight:var(--font-weight-800);letter-spacing:var(--tracking-0-09-em);color:var(--primary-700)}
+.admin-session-error h1{margin:var(--space-12) 0 var(--space-8);font-size:var(--font-size-22);line-height:var(--line-height-1-25);letter-spacing:calc(var(--tracking-0-025-em) * -1)}
+.admin-session-error p{max-width:var(--size-430);margin:0;font-size:var(--font-size-12);line-height:var(--line-height-1-7);color:var(--ink-600)}
+.admin-session-error-actions{width:100%;margin-top:var(--space-24);display:flex;justify-content:center;gap:var(--space-10);flex-wrap:wrap}
+.admin-session-error-actions>button,.admin-session-error-actions>.button{min-height:var(--control-height);padding-inline:var(--space-16);display:inline-flex;align-items:center;justify-content:center;gap:var(--space-8);border-radius:var(--radius-control);font-size:var(--font-size-control);font-weight:var(--font-weight-750);cursor:pointer}
+.admin-session-error-primary{border:var(--stroke-1) solid var(--primary-600);color:var(--surface);background:var(--primary-600)}
+.admin-session-error-secondary{border:var(--stroke-1) solid var(--line-strong);color:var(--ink-700);background:var(--surface)}
 .admin-session-error-primary:hover{background:var(--primary-700)}
 .admin-session-error-secondary:hover{border-color:var(--primary-600);color:var(--primary-700);background:var(--primary-50)}
-.admin-session-error-primary:focus-visible,.admin-session-error-secondary:focus-visible{outline:3px solid var(--primary-100);outline-offset:2px}
+.admin-session-error-primary:focus-visible,.admin-session-error-secondary:focus-visible{outline:var(--stroke-3) solid var(--primary-100);outline-offset:var(--space-2)}
 .admin-session-error-primary:disabled,.admin-session-error-secondary:disabled{cursor:wait;opacity:.7}
-@media(width<=600px){.admin-session-error-page{padding:24px 14px}.admin-session-error{min-height:360px;padding:32px 22px}.admin-session-error h1{font-size:20px}.admin-session-error-actions{display:grid}.admin-session-error-actions>button,.admin-session-error-actions>.button{width:100%}}
+@media(width<=600px){.admin-session-error-page{padding:var(--space-24) var(--space-14)}.admin-session-error{min-height:var(--size-360);padding:var(--space-32) var(--space-22)}.admin-session-error h1{font-size:var(--font-size-20)}.admin-session-error-actions{display:grid}.admin-session-error-actions>button,.admin-session-error-actions>.button{width:100%}}

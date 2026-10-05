@@ -104,21 +104,21 @@ export function DashboardView(){
 function DashboardSkeleton(){
   return <div className="dashboard-skeleton" aria-label="Cargando reportes" aria-busy="true">
     <section className="kpi-grid">
-      {Array.from({length:4},(_,index)=><article className="kpi dashboard-skeleton-kpi" key={index}><i className="sk" style={{width:40,height:40,borderRadius:12}}/><div><i className="sk" style={{width:90,height:10}}/><i className="sk" style={{width:"55%",height:26}}/><i className="sk" style={{width:"70%",height:10}}/></div></article>)}
+      {Array.from({length:4},(_,index)=><article className="kpi dashboard-skeleton-kpi" key={index}><i className="sk" style={{width:"var(--size-40)",height:"var(--size-40)",borderRadius:"var(--radius-12)"}}/><div><i className="sk" style={{width:"var(--size-90)",height:"var(--size-10)"}}/><i className="sk" style={{width:"55%",height:"var(--size-26)"}}/><i className="sk" style={{width:"70%",height:"var(--size-10)"}}/></div></article>)}
     </section>
     <section className="dashboard-grid">
       <article className="panel chart-panel dashboard-skeleton-panel">
-        <header><i className="sk" style={{width:32,height:32,borderRadius:10}}/><div><i className="sk" style={{width:80,height:9}}/><i className="sk" style={{width:170,height:14}}/></div></header>
+        <header><i className="sk" style={{width:"var(--size-32)",height:"var(--size-32)",borderRadius:"var(--radius-10)"}}/><div><i className="sk" style={{width:"var(--size-80)",height:"var(--size-9)"}}/><i className="sk" style={{width:"var(--size-170)",height:"var(--size-14)"}}/></div></header>
         <div className="dashboard-skeleton-chart">{[34,48,63,46,72,58,82,40,55].map((h,i)=><span className="sk" key={i} style={{height:h+"%"}}/>)}</div>
       </article>
       <article className="panel alerts dashboard-skeleton-panel">
-        <header><i className="sk" style={{width:32,height:32,borderRadius:10}}/><div><i className="sk" style={{width:100,height:9}}/><i className="sk" style={{width:140,height:14}}/></div></header>
-        <div className="alert-list">{Array.from({length:3},(_,index)=><div className="alert-row dashboard-skeleton-alert" key={index}><i className="sk" style={{width:36,height:36,borderRadius:10}}/><span className="alert-copy"><i className="sk" style={{width:110,height:11}}/><i className="sk" style={{width:150,height:9}}/></span><i className="sk" style={{width:28,height:22,borderRadius:99}}/></div>)}</div>
+        <header><i className="sk" style={{width:"var(--size-32)",height:"var(--size-32)",borderRadius:"var(--radius-10)"}}/><div><i className="sk" style={{width:"var(--size-100)",height:"var(--size-9)"}}/><i className="sk" style={{width:"var(--size-140)",height:"var(--size-14)"}}/></div></header>
+        <div className="alert-list">{Array.from({length:3},(_,index)=><div className="alert-row dashboard-skeleton-alert" key={index}><i className="sk" style={{width:"var(--size-36)",height:"var(--size-36)",borderRadius:"var(--radius-10)"}}/><span className="alert-copy"><i className="sk" style={{width:"var(--size-110)",height:"var(--size-11)"}}/><i className="sk" style={{width:"var(--size-150)",height:"var(--size-9)"}}/></span><i className="sk" style={{width:"var(--size-28)",height:"var(--size-22)",borderRadius:"var(--radius-99)"}}/></div>)}</div>
       </article>
     </section>
     <section className="panel top-products dashboard-skeleton-panel">
-      <header><i className="sk" style={{width:32,height:32,borderRadius:10}}/><div><i className="sk" style={{width:110,height:9}}/><i className="sk" style={{width:160,height:14}}/></div><i className="sk" style={{width:70,height:11}}/></header>
-      <ol className="top-list">{Array.from({length:4},(_,index)=><li className="top-product dashboard-skeleton-product" key={index}><i className="sk" style={{width:26,height:26,borderRadius:8}}/><div className="top-copy"><div><i className="sk" style={{width:150,height:11}}/><i className="sk" style={{width:70,height:9,marginLeft:"auto"}}/><i className="sk" style={{width:70,height:11}}/></div><i className="sk" style={{width:"100%",height:4,borderRadius:99}}/></div></li>)}</ol>
+      <header><i className="sk" style={{width:"var(--size-32)",height:"var(--size-32)",borderRadius:"var(--radius-10)"}}/><div><i className="sk" style={{width:"var(--size-110)",height:"var(--size-9)"}}/><i className="sk" style={{width:"var(--size-160)",height:"var(--size-14)"}}/></div><i className="sk" style={{width:"var(--size-70)",height:"var(--size-11)"}}/></header>
+      <ol className="top-list">{Array.from({length:4},(_,index)=><li className="top-product dashboard-skeleton-product" key={index}><i className="sk" style={{width:"var(--size-26)",height:"var(--size-26)",borderRadius:"var(--radius-8)"}}/><div className="top-copy"><div><i className="sk" style={{width:"var(--size-150)",height:"var(--size-11)"}}/><i className="sk" style={{width:"var(--size-70)",height:"var(--size-9)",marginLeft:"auto"}}/><i className="sk" style={{width:"var(--size-70)",height:"var(--size-11)"}}/></div><i className="sk" style={{width:"100%",height:"var(--size-4)",borderRadius:"var(--radius-99)"}}/></div></li>)}</ol>
     </section>
   </div>;
 }
