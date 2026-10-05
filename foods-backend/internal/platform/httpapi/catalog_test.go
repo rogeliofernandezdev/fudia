@@ -1,9 +1,35 @@
 package httpapi
 
 import (
+	"context"
+	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
+
+func TestProductStatusRequiresExplicitBoolean(t *testing.T) {
+	for _, body := range []string{`{}`, `{"active":null}`, `{"active":"true"}`, `not-json`} {
+		t.Run(body, func(t *testing.T) {
+			req := httptest.NewRequest("PATCH", "/v1/admin/products/product/status", strings.NewReader(body))
+			req = req.WithContext(context.WithValue(req.Context(), scopeKey{}, scope{}))
+			rec := httptest.NewRecorder()
+			New(nil).updateProductStatus(rec, req)
+			if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "invalid_status") {
+				t.Fatalf("expected invalid_status without accessing the database, got %d %s", rec.Code, rec.Body.String())
+			}
+		})
+	}
+}
+
+func TestProductStatusRouteRequiresSession(t *testing.T) {
+	req := httptest.NewRequest("PATCH", "/v1/admin/products/product/status", strings.NewReader(`{"active":true}`))
+	rec := httptest.NewRecorder()
+	New(nil).Routes().ServeHTTP(rec, req)
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected authenticated product status route, got %d %s", rec.Code, rec.Body.String())
+	}
+}
 
 func TestPageParamsBounds(t *testing.T) {
 	r := httptest.NewRequest("GET", "/v1/admin/products?page=2&pageSize=500", nil)
@@ -70,7 +96,6 @@ func TestNormalizeProductRejectsUnknownQuantityControl(t *testing.T) {
 		t.Fatal("expected legacy manual control to be rejected")
 	}
 }
-
 
 func TestNormalizeCategoryProductScope(t *testing.T) {
 	scope, invalid := normalizeCategoryProductScope("", "prepared")

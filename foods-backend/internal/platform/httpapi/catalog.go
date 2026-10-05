@@ -463,6 +463,35 @@ func (a *API) updateProduct(w http.ResponseWriter, r *http.Request) {
 	a.audit(r, "product.updated", "product", p.ID)
 	writeJSON(w, 200, p)
 }
+func (a *API) updateProductStatus(w http.ResponseWriter, r *http.Request) {
+	s := r.Context().Value(scopeKey{}).(scope)
+	var in struct {
+		Active *bool `json:"active"`
+	}
+	if json.NewDecoder(r.Body).Decode(&in) != nil || in.Active == nil {
+		fail(w, 400, "invalid_status", "Indica si el producto debe estar activo o inactivo.")
+		return
+	}
+	id := r.PathValue("id")
+	tag, err := a.db.Exec(r.Context(), `
+		UPDATE products SET active=$3,updated_at=now()
+		WHERE organization_id=$1 AND id=$2`, s.OrganizationID, id, *in.Active)
+	if err != nil {
+		fail(w, 503, "product_unavailable", "No pudimos actualizar el estado del producto.")
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		fail(w, 404, "product_not_found", "El producto no existe.")
+		return
+	}
+	action := "product.deactivated"
+	if *in.Active {
+		action = "product.activated"
+	}
+	a.audit(r, action, "product", id)
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (a *API) deactivateProduct(w http.ResponseWriter, r *http.Request) {
 	s := r.Context().Value(scopeKey{}).(scope)
 	id := r.PathValue("id")

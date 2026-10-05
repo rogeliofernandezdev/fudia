@@ -19,3 +19,10 @@ se cargan con `next/dynamic` cuando la acción realmente se abre.
 
 El prefetch de datos se incorpora solo en rutas frecuentes y cuando la medición
 demuestre que reduce latencia sin duplicar tráfico.
+
+## Estado de productos
+
+La tabla de Carta y productos permite activar un producto inactivo mediante
+`PATCH /v1/admin/products/{id}/status`, enviando únicamente `active`. La operación
+conserva la ficha comercial y el historial, exige `menu.manage` y refresca los
+listados del catálogo, disponibilidad, comandas y selectores de abastecimiento.

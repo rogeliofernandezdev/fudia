@@ -373,6 +373,14 @@ paths:
       summary: Desactiva un producto sin eliminar su historial
       security: [{ sessionCookie: [] }]
       responses: { "204": { description: Producto desactivado }, "404": { description: No encontrado }, "403": { $ref: "#/components/responses/Forbidden" } }
+  /v1/admin/products/{id}/status:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    patch:
+      operationId: updateProductStatus
+      summary: Activa o desactiva un producto sin modificar su ficha ni su historial
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [active], properties: { active: { type: boolean } } } } } }
+      responses: { "204": { description: Estado del producto actualizado }, "400": { $ref: "#/components/responses/BadRequest" }, "401": { $ref: "#/components/responses/Unauthorized" }, "403": { $ref: "#/components/responses/Forbidden" }, "404": { description: Producto no encontrado }, "503": { description: No se pudo actualizar el producto } }
   /v1/admin/products/{id}/modifiers:
     parameters: [{ $ref: "#/components/parameters/EntityId" }]
     get:

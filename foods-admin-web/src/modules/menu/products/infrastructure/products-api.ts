@@ -52,6 +52,10 @@ export function deactivateCatalogItem(kind:"products"|"categories",id:string){
   return apiFetch<void>(`${kind}/${id}`,{method:"DELETE"});
 }
 
+export function setProductActive(id:string,active:boolean){
+  return apiFetch<void>(`products/${id}/status`,{method:"PATCH",body:JSON.stringify({active})});
+}
+
 export async function listAllergens(q:string){
   const params=new URLSearchParams({q});
   const response=await apiFetch<{items:string[]}>(`allergens?${params.toString()}`);
