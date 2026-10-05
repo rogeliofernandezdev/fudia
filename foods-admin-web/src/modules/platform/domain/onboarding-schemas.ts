@@ -3,6 +3,7 @@ import type {FieldError,FieldErrors,Resolver} from "react-hook-form";
 import type {PlatformOnboardingDraft} from "./types";
 
 export const companySchema=z.object({
+  timezone:z.string().trim().min(1,"Selecciona la zona horaria"),
   legalName:z.string().trim().min(2,"Ingresa la razón social").max(180),
   tradeName:z.string().trim().min(2,"Ingresa el nombre comercial").max(180),
   taxId:z.string().trim().min(6,"La identificación fiscal es obligatoria").max(32),
@@ -24,7 +25,6 @@ export const fiscalSchema=z.object({
 });
 
 export const locationSchema=z.object({
-  timezone:z.string().trim().min(1,"Selecciona la zona horaria"),
   locationName:z.string().trim().min(2,"Ingresa el nombre del local"),
   address:z.string().trim().min(3,"Ingresa la dirección"),
   locationPhone:z.string().optional(),

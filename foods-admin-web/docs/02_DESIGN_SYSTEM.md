@@ -454,7 +454,7 @@ histórica de Configuración redirige a ese flujo y no mantiene una segunda
 implementación. El alta se compone de Empresa → Plan y contrato → Fiscal →
 Primer local → Administrador.
 
-La zona horaria pertenece al paso Primer local y usa un autocomplete buscable por
+La zona horaria permanece en su ubicación original del paso Empresa y usa un autocomplete buscable por
 ciudad o identificador IANA. Se sugiere desde `defaultTimezone` del catálogo del
 país y permanece editable. Cambiar de país actualiza la sugerencia; retroceder o
 refrescar catálogos conserva la elección del usuario. La empresa se inicializa

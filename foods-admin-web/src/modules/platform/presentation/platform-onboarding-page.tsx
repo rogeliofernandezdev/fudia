@@ -121,6 +121,9 @@ export function PlatformOnboardingPage(){
           <Field className="span-2" label="Razón social" error={err("legalName")}><Input maxLength={180} {...register("legalName")} placeholder="Restaurante Perú SAC" autoComplete="organization"/></Field>
           <Field label="Nombre comercial" error={err("tradeName")}><Input maxLength={180} {...register("tradeName")} placeholder="Mi restaurante"/></Field>
           <Field label="Identificación fiscal" error={err("taxId")}><Input maxLength={32} inputMode="numeric" {...register("taxId")} placeholder="RUC 20512345678"/></Field>
+          <Field as="div" className="span-2" label="Zona horaria" help="Busca por ciudad o zona. Se usará inicialmente en la empresa y el primer local." error={err("timezone")}>
+            <Controller name="timezone" control={control} render={({field})=><TimezoneSelect value={field.value} onChange={field.onChange} onBlur={field.onBlur} name={field.name} inputRef={field.ref} invalid={Boolean(errors.timezone)} disabled={save.isPending}/>}/>
+          </Field>
         </div>}
 
         {step===1&&<>
@@ -152,9 +155,6 @@ export function PlatformOnboardingPage(){
         </div>}
 
         {step===3&&<div className="form-grid">
-          <Field as="div" className="span-2" label="Zona horaria" help="Sugerida según el país. Puedes cambiarla para este local." error={err("timezone")}>
-            <Controller name="timezone" control={control} render={({field})=><TimezoneSelect value={field.value} onChange={field.onChange} onBlur={field.onBlur} name={field.name} inputRef={field.ref} invalid={Boolean(errors.timezone)} disabled={save.isPending}/>}/>
-          </Field>
           <Field className="span-2" label="Nombre del local" error={err("locationName")}><Input {...register("locationName")} placeholder="Sede principal"/></Field>
           <Field label="Teléfono"><Input type="tel" {...register("locationPhone")} placeholder="+51 999 888 777"/></Field>
           <Field label="Horario de atención"><Input {...register("locationHours")} placeholder="Lun-Dom 12:00-23:00"/></Field>
