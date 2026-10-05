@@ -144,7 +144,7 @@ export function PlatformOnboardingPage(){
 
         {step===2&&<div className="form-grid">
           <Field label="País" error={err("country")}><Select {...register("country")} onChange={event=>changeCountry(event.target.value)}>{ctx.countryOptions.map(c=><option key={c.code} value={c.code}>{c.name+" ("+c.code+")"}</option>)}</Select></Field>
-          <Field label="Moneda asociada" help="Se asigna automáticamente según el país." error={err("currency")}><Input readOnly tabIndex={-1} {...register("currency")}/></Field>
+          <Field label="Moneda asociada" help="Se asigna automáticamente según el país." error={err("currency")}><Input className="onboarding-currency-readonly" readOnly tabIndex={-1} {...register("currency")}/></Field>
           <Field label="Nombre del impuesto" error={err("taxName")}><Input maxLength={30} {...register("taxName")} placeholder="IGV"/></Field>
           <Field label="Porcentaje %" error={err("taxRate")}><Input type="number" inputMode="decimal" min="0" max="100" step="0.0001" {...register("taxRate")} placeholder="18"/></Field>
           <Field label="Posición del símbolo"><Select {...register("currencyPosition")}><option value="before">Antes del monto</option><option value="after">Después del monto</option></Select></Field>

@@ -35,6 +35,9 @@
 .onboarding-form .panel.management .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 20px;padding:20px 24px 24px}
 .onboarding-form .panel.management .form-grid .span-2{grid-column:span 2}
 
+/* Moneda derivada del país: visible y de solo lectura. */
+.onboarding-form .onboarding-currency-readonly{background:var(--cloud-100);border-color:var(--line);color:var(--ink-600);cursor:default}
+
 /* Plan contratado */
 .onboarding-plan-summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:1px;margin:0 24px;overflow:hidden;border:1px solid var(--line);border-radius:12px;background:var(--line)}
 .onboarding-plan-summary div{padding:12px 14px;background:var(--surface)}
