@@ -23,7 +23,7 @@ export type Order={
   id:string;
   code:string;
   channel:string;
-  status:string;
+  status:string;completedAt?:string;
   customerId:string;
   customerName:string;
   customerPhone:string;

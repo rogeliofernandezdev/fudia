@@ -34,3 +34,11 @@ Las categorías inactivas ofrecen la acción Activar mediante
 orden, uso y asociaciones, y exige `menu.manage`. La activación refresca
 `categories`, `purchase-item-categories`, `order-categories` y `order-catalog`.
 La desactivación sigue bloqueada cuando hay productos activos asociados.
+
+## Entrega en Salón
+
+Salón y Pedidos ofrecen «Marcar como entregado» cuando Cocina termina una
+comanda. El estado `entregado` conserva la mesa ocupada y el enlace a cobro
+mientras la cuenta está abierta (`completedAt` ausente). Tras pagar, «Liberar
+mesa» registra el cierre. Las mutaciones refrescan Salón, Pedidos y POS para
+mantener sincronizados entrega, saldo y ocupación.

@@ -449,7 +449,7 @@ func (a *API) dashboard(w http.ResponseWriter, r *http.Request) {
 		  CASE WHEN paid.orders>0 THEN (sales.net/paid.orders)::text ELSE '0' END,
 		  (SELECT count(*) FROM orders
 		   WHERE organization_id=$1 AND location_id=$2
-		     AND status NOT IN ('entregado','cancelado')),
+		     AND status<>'cancelado' AND (status<>'entregado' OR (channel='salon' AND completed_at IS NULL))),
 		  (SELECT count(*)
 		   FROM inventory_items i
 		   LEFT JOIN stock_balances b

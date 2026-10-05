@@ -254,7 +254,7 @@ func (a *API) updateTable(w http.ResponseWriter, r *http.Request) {
 			SELECT EXISTS(
 				SELECT 1 FROM orders
 				WHERE organization_id=$1 AND location_id=$2 AND table_id=$3
-				  AND status NOT IN ('entregado','cancelado')
+				  AND status<>'cancelado' AND (status<>'entregado' OR (channel='salon' AND completed_at IS NULL))
 			)
 		`, s.OrganizationID, s.LocationID, r.PathValue("id")).Scan(&occupied); err != nil {
 			fail(w, 503, "table_unavailable", "No pudimos validar el estado de la mesa.")
@@ -329,7 +329,7 @@ func (a *API) deactivateTable(w http.ResponseWriter, r *http.Request) {
 		SELECT EXISTS(
 			SELECT 1 FROM orders
 			WHERE organization_id=$1 AND location_id=$2 AND table_id=$3
-			  AND status NOT IN ('entregado','cancelado')
+			  AND status<>'cancelado' AND (status<>'entregado' OR (channel='salon' AND completed_at IS NULL))
 		)
 	`, s.OrganizationID, s.LocationID, r.PathValue("id")).Scan(&occupied); err != nil {
 		fail(w, 503, "table_unavailable", "No pudimos validar el estado de la mesa.")

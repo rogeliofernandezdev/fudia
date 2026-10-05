@@ -6,6 +6,16 @@ las operaciones de local llevan también location_id.
 
 Fechas se guardan en UTC; importes monetarios usan numeric, nunca flotantes.
 
+## Entrega y cierre de pedidos de mesa
+
+En Salón, `status='entregado'` confirma que el mozo llevó el pedido a la mesa.
+Puede registrarse desde `listo` antes del pago. `orders.completed_at` identifica
+el cierre de la cuenta; una mesa entregada sin ese valor sigue ocupada y aparece
+en pedidos abiertos, cobro y solicitudes de cuenta. El índice de mesa abierta
+también incluye estas cuentas para impedir otra comanda sobre la misma mesa.
+La liberación exige saldo cero y registra `completed_at`. Los pedidos entregados
+anteriores a esta separación conservan su cierre mediante la migración 70.
+
 Cada organización configura la moneda ISO 4217, posición del símbolo, precisión,
 nombre y tasa del impuesto general, y si el precio publicado ya lo incluye.
 Los documentos conservan una copia de estos valores al emitirse para evitar que

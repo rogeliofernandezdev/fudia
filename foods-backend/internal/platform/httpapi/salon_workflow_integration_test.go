@@ -66,6 +66,12 @@ func TestSalonKitchenPaymentDeliveryWorkflow(t *testing.T) {
 	if created.Status!="confirmado"{t.Fatalf("expected confirmed order sent to kitchen, got %q",created.Status)}
 	if created.Total!="25.00"{t.Fatalf("server catalog price must win, got total %q",created.Total)}
 
+	earlyDeliveryReq:=httptest.NewRequest("PATCH","/v1/admin/orders/"+created.ID+"/status",bytes.NewReader([]byte(`{"status":"entregado"}`)))
+	earlyDeliveryReq.SetPathValue("id",created.ID)
+	earlyDeliveryReq=earlyDeliveryReq.WithContext(context.WithValue(earlyDeliveryReq.Context(),scopeKey{},s))
+	earlyDeliveryRec:=httptest.NewRecorder();api.updateOrderStatus(earlyDeliveryRec,earlyDeliveryReq)
+	if earlyDeliveryRec.Code!=409||!strings.Contains(earlyDeliveryRec.Body.String(),"invalid_transition"){t.Fatalf("waiter must not skip kitchen preparation: %d %s",earlyDeliveryRec.Code,earlyDeliveryRec.Body.String())}
+
 	// Cobro antes de que cocina marque el pedido como listo debe estar bloqueado.
 	earlyPayReq:=httptest.NewRequest("POST","/v1/admin/payments",bytes.NewReader([]byte(fmt.Sprintf(`{"orderId":%q,"method":"card","amount":5,"reference":"ANTICIPO"}`,created.ID))))
 	earlyPayReq=earlyPayReq.WithContext(context.WithValue(earlyPayReq.Context(),scopeKey{},s))
@@ -108,15 +114,77 @@ func TestSalonKitchenPaymentDeliveryWorkflow(t *testing.T) {
 	api.updateKitchenTicketStatus(kitchenReadyRec,kitchenReadyReq)
 	if kitchenReadyRec.Code!=204{t.Fatalf("kitchen ready: %d %s",kitchenReadyRec.Code,kitchenReadyRec.Body.String())}
 
-	// A ready table with balance cannot be delivered/freed.
+	// The waiter may record service before payment without releasing the table.
 	unpaidDeliverReq:=httptest.NewRequest("PATCH","/v1/admin/orders/"+created.ID+"/status",bytes.NewReader([]byte(`{"status":"entregado"}`)))
 	unpaidDeliverReq.SetPathValue("id",created.ID)
 	unpaidDeliverReq=unpaidDeliverReq.WithContext(context.WithValue(unpaidDeliverReq.Context(),scopeKey{},s))
 	unpaidDeliverRec:=httptest.NewRecorder()
 	api.updateOrderStatus(unpaidDeliverRec,unpaidDeliverReq)
-	if unpaidDeliverRec.Code!=409||!strings.Contains(unpaidDeliverRec.Body.String(),"payment_required_before_delivery"){
-		t.Fatalf("unpaid salon delivery must be blocked: %d %s",unpaidDeliverRec.Code,unpaidDeliverRec.Body.String())
+	if unpaidDeliverRec.Code!=200{
+		t.Fatalf("unpaid salon delivery: %d %s",unpaidDeliverRec.Code,unpaidDeliverRec.Body.String())
 	}
+	var delivered order
+	if err:=json.Unmarshal(unpaidDeliverRec.Body.Bytes(),&delivered);err!=nil{t.Fatal(err)}
+	if delivered.Status!="entregado"||delivered.CompletedAt!=""||delivered.PaymentStatus!="pending"{
+		t.Fatalf("service must retain an open balance: %#v",delivered)
+	}
+	assertOccupied:=func(){
+		t.Helper()
+		req:=httptest.NewRequest("GET","/v1/admin/orders/floor",nil)
+		req=req.WithContext(context.WithValue(req.Context(),scopeKey{},s))
+		rec:=httptest.NewRecorder();api.getOrdersFloor(rec,req)
+		if rec.Code!=200||!strings.Contains(rec.Body.String(),`"status":"entregado"`){t.Fatalf("served table must remain occupied: %d %s",rec.Code,rec.Body.String())}
+	}
+	assertOccupied()
+	var deliveryAudit int
+	if err:=pool.QueryRow(ctx,`SELECT count(*) FROM audit_log WHERE organization_id=$1 AND location_id=$2 AND user_id=$3 AND entity_id=$4 AND action='order.delivered'`,s.OrganizationID,s.LocationID,s.UserID,created.ID).Scan(&deliveryAudit);err!=nil||deliveryAudit!=1{t.Fatalf("waiter delivery must be audited: count=%d err=%v",deliveryAudit,err)}
+	openListReq:=httptest.NewRequest("GET","/v1/admin/orders?status=abiertos",nil)
+	openListReq=openListReq.WithContext(context.WithValue(openListReq.Context(),scopeKey{},s))
+	openListRec:=httptest.NewRecorder();api.listOrders(openListRec,openListReq)
+	if openListRec.Code!=200||!strings.Contains(openListRec.Body.String(),created.ID){t.Fatalf("served unpaid order must remain open: %d %s",openListRec.Code,openListRec.Body.String())}
+	duplicateReq:=httptest.NewRequest("POST","/v1/admin/orders",bytes.NewReader(createBody))
+	duplicateReq=duplicateReq.WithContext(context.WithValue(duplicateReq.Context(),scopeKey{},s))
+	duplicateRec:=httptest.NewRecorder();api.createOrder(duplicateRec,duplicateReq)
+	if duplicateRec.Code!=409||!strings.Contains(duplicateRec.Body.String(),"table_occupied"){t.Fatalf("service must not permit another account on the table: %d %s",duplicateRec.Code,duplicateRec.Body.String())}
+	deactivateReq:=httptest.NewRequest("DELETE","/v1/admin/tables/"+tableID,nil)
+	deactivateReq.SetPathValue("id",tableID)
+	deactivateReq=deactivateReq.WithContext(context.WithValue(deactivateReq.Context(),scopeKey{},s))
+	deactivateRec:=httptest.NewRecorder();api.deactivateTable(deactivateRec,deactivateReq)
+	if deactivateRec.Code!=409||!strings.Contains(deactivateRec.Body.String(),"table_in_use"){t.Fatalf("served table must remain in use: %d %s",deactivateRec.Code,deactivateRec.Body.String())}
+	releaseReq:=httptest.NewRequest("PATCH","/v1/admin/orders/"+created.ID+"/status",bytes.NewReader([]byte(`{"status":"entregado"}`)))
+	releaseReq.SetPathValue("id",created.ID)
+	releaseReq=releaseReq.WithContext(context.WithValue(releaseReq.Context(),scopeKey{},s))
+	releaseRec:=httptest.NewRecorder();api.updateOrderStatus(releaseRec,releaseReq)
+	if releaseRec.Code!=409||!strings.Contains(releaseRec.Body.String(),"payment_required_before_delivery"){t.Fatalf("unpaid table must not be released: %d %s",releaseRec.Code,releaseRec.Body.String())}
+	completeUnpaidReq:=httptest.NewRequest("POST","/v1/operations/pos/orders/"+created.ID+"/complete",nil)
+	completeUnpaidReq.SetPathValue("id",created.ID)
+	completeUnpaidReq=completeUnpaidReq.WithContext(context.WithValue(completeUnpaidReq.Context(),scopeKey{},s))
+	completeUnpaidRec:=httptest.NewRecorder();api.completePaidOrder(completeUnpaidRec,completeUnpaidReq)
+	if completeUnpaidRec.Code!=409||!strings.Contains(completeUnpaidRec.Body.String(),"payment_incomplete"){t.Fatalf("POS must not close an unpaid delivered account: %d %s",completeUnpaidRec.Code,completeUnpaidRec.Body.String())}
+	for _,foreignScope:=range []scope{
+		{OrganizationID:s.OrganizationID,LocationID:"00000000-0000-0000-0000-000000000001",UserID:s.UserID},
+		{OrganizationID:"00000000-0000-0000-0000-000000000001",LocationID:s.LocationID,UserID:s.UserID},
+	}{
+		foreignReq:=httptest.NewRequest("PATCH","/v1/admin/orders/"+created.ID+"/status",bytes.NewReader([]byte(`{"status":"entregado"}`)))
+		foreignReq.SetPathValue("id",created.ID)
+		foreignReq=foreignReq.WithContext(context.WithValue(foreignReq.Context(),scopeKey{},foreignScope))
+		foreignRec:=httptest.NewRecorder();api.updateOrderStatus(foreignRec,foreignReq)
+		if foreignRec.Code!=404{t.Fatalf("delivery/release must respect company and local: %d %s",foreignRec.Code,foreignRec.Body.String())}
+	}
+	// Split payments and a refund remain available while the served account is open.
+	batchReq:=httptest.NewRequest("POST","/v1/admin/payments/batch",bytes.NewReader([]byte(fmt.Sprintf(`{"orderId":%q,"payments":[{"method":"card","amount":5,"reference":"PARCIAL"}]}`,created.ID))))
+	batchReq=batchReq.WithContext(context.WithValue(batchReq.Context(),scopeKey{},s))
+	batchRec:=httptest.NewRecorder();api.createPaymentBatch(batchRec,batchReq)
+	if batchRec.Code!=201{t.Fatalf("batch payment after service: %d %s",batchRec.Code,batchRec.Body.String())}
+	var partialID string
+	if err:=pool.QueryRow(ctx,`SELECT id FROM payments WHERE order_id=$1 AND reference='PARCIAL'`,created.ID).Scan(&partialID);err!=nil{t.Fatal(err)}
+	refundReq:=httptest.NewRequest("POST","/v1/admin/payments/"+partialID+"/refund",bytes.NewReader([]byte(`{"amount":5,"reason":"Cambiar medio de pago"}`)))
+	refundReq.SetPathValue("id",partialID)
+	refundReq=refundReq.WithContext(context.WithValue(refundReq.Context(),scopeKey{},s))
+	refundRec:=httptest.NewRecorder();api.refundPayment(refundRec,refundReq)
+	if refundRec.Code!=204{t.Fatalf("refund before closure: %d %s",refundRec.Code,refundRec.Body.String())}
+	assertOccupied()
+
 
 	payReq:=httptest.NewRequest("POST","/v1/admin/payments",bytes.NewReader([]byte(fmt.Sprintf(`{"orderId":%q,"method":"card","amount":25,"reference":"SALDO"}`,created.ID))))
 	payReq=payReq.WithContext(context.WithValue(payReq.Context(),scopeKey{},s))
@@ -131,7 +199,10 @@ func TestSalonKitchenPaymentDeliveryWorkflow(t *testing.T) {
 	deliverReq=deliverReq.WithContext(context.WithValue(deliverReq.Context(),scopeKey{},s))
 	deliverRec:=httptest.NewRecorder()
 	api.updateOrderStatus(deliverRec,deliverReq)
-	if deliverRec.Code!=200{t.Fatalf("paid ready order should deliver: %d %s",deliverRec.Code,deliverRec.Body.String())}
+	if deliverRec.Code!=200{t.Fatalf("paid served table should close: %d %s",deliverRec.Code,deliverRec.Body.String())}
+	var closed order
+	if err:=json.Unmarshal(deliverRec.Body.Bytes(),&closed);err!=nil{t.Fatal(err)}
+	if closed.CompletedAt==""||closed.Status!="entregado"{t.Fatalf("closure must retain delivery and record completion: %#v",closed)}
 
 	closedRefundReq:=httptest.NewRequest("POST","/v1/admin/payments/"+payment.ID+"/refund",bytes.NewReader([]byte(`{"amount":1,"reason":"Prueba posterior al cierre"}`)))
 	closedRefundReq.SetPathValue("id",payment.ID)

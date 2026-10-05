@@ -557,7 +557,7 @@ func (a *API) createConciergeOrder(w http.ResponseWriter, r *http.Request) {
 		       )
 		FROM orders o
 		WHERE o.organization_id=$1 AND o.location_id=$2 AND o.table_id=$3
-		  AND o.status NOT IN ('entregado','cancelado')
+		  AND o.status<>'cancelado' AND (o.status<>'entregado' OR (o.channel='salon' AND o.completed_at IS NULL))
 		ORDER BY o.created_at DESC,o.id
 		LIMIT 1
 		FOR UPDATE
@@ -801,7 +801,7 @@ func (a *API) requestConciergeBill(w http.ResponseWriter, r *http.Request) {
 		SELECT `+orderColumns+`
 		FROM orders
 		WHERE organization_id=$1 AND location_id=$2 AND table_id=$3
-		  AND status NOT IN ('entregado','cancelado')
+		  AND status<>'cancelado' AND (status<>'entregado' OR (channel='salon' AND completed_at IS NULL))
 		ORDER BY created_at DESC,id
 		LIMIT 1
 	`, qr.Scope.OrganizationID, qr.Scope.LocationID, qr.TableID))

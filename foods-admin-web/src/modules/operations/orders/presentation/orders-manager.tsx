@@ -15,19 +15,12 @@ import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
 import {pageRoutes} from "@/shared/routing/page-routes";
 
 
+import {nextOrderAction} from "../domain/order-actions";
+
 const channelIcons:Record<string,IconName>={salon:"utensils",mostrador:"store",recojo:"box",delivery:"truck",whatsapp:"share"};
 const statusMeta:Record<string,{label:string;tone:"green"|"blue"|"orange"|"gray"}>={nuevo:{label:"Nuevo",tone:"blue"},confirmado:{label:"Confirmado",tone:"blue"},preparando:{label:"Preparando",tone:"orange"},listo:{label:"Listo",tone:"green"},en_camino:{label:"En camino",tone:"orange"},entregado:{label:"Entregado",tone:"gray"},cancelado:{label:"Cancelado",tone:"gray"}};
 
-function nextAction(o:Order):{status:string;label:string;icon:IconName}|null{
- if(o.status==="nuevo")return{status:"confirmado",label:"Enviar a cocina",icon:"receipt"};
- if(o.status==="listo"){
-  if(o.channel==="delivery")return{status:"en_camino",label:"En camino",icon:"truck"};
-  if(o.channel==="salon"&&o.paymentStatus!=="paid")return null;
-  return{status:"entregado",label:o.channel==="salon"?"Entregar y liberar mesa":"Entregar",icon:"check"};
- }
- if(o.status==="en_camino")return{status:"entregado",label:"Entregar",icon:"check"};
- return null;
-}
+
 const cancellable=(o:Order)=>(o.status==="nuevo"||o.status==="confirmado")&&Number(o.paidAmount??0)<=0.00001;
 function parseIsoDate(iso:string):Date|null{
   if(!iso)return null;
@@ -52,7 +45,7 @@ export function OrdersManager(){
  const[detailId,setDetailId]=useState<string|null>(null);const[cancelTarget,setCancelTarget]=useState<Order|null>(null);
  const list=useQuery({queryKey:["orders",debouncedQ,channel,status,page,size],queryFn:()=>listOrders({q:debouncedQ,channel,status,page,pageSize:size}),placeholderData:keepPreviousData});
  const detail=useQuery({queryKey:["order",detailId],queryFn:()=>getOrder(detailId!),enabled:Boolean(detailId)});
- const invalidate=()=>{void qc.invalidateQueries({queryKey:["orders"]});void qc.invalidateQueries({queryKey:["order",detailId]})};
+ const invalidate=()=>{void qc.invalidateQueries({queryKey:["orders"]});for(const key of ["order","salon-floor","pos-orders","pos-order","dashboard"])void qc.invalidateQueries({queryKey:[key]})};
  const advance=useMutation({mutationFn:(v:{id:string;status:string})=>updateOrderStatus(v.id,v.status),onSuccess:()=>{invalidate();notify({tone:"success",title:"Pedido actualizado",message:"El estado del pedido fue actualizado."})},onError:e=>notify({tone:"danger",title:"No se pudo actualizar",message:e.message})});
  const cancel=useMutation({mutationFn:(o:Order)=>updateOrderStatus(o.id,"cancelado"),onSuccess:()=>{setCancelTarget(null);invalidate();notify({tone:"success",title:"Pedido cancelado",message:"El pedido quedó marcado como cancelado."})},onError:e=>notify({tone:"danger",title:"No se pudo cancelar",message:e.message})});
  const items=list.data?.items??[];const counts=list.data?.channelCounts??{};const channelOptions=list.data?.channelOptions??[];
@@ -115,7 +108,7 @@ function OrderDetail({loading,order,error,channels,currencySymbol,canManage,busy
  const{location}=useSession();
  const channelLabel=(value:string)=>channels.find(option=>option.value===value)?.label??value;
  const meta=order?statusMeta[order.status]??{label:order.status,tone:"gray" as const}:null;
- const action=order?nextAction(order):null;
+ const action=order?nextOrderAction(order):null;
  const itemCount=order?(order.items??[]).reduce((sum,it)=>sum+Number(it.qty||0),0):0;
  const subject=order?(order.tableName||order.customerName||"Pedido"):"Pedido";
  const subtitle=order?.tableName&&order.customerName?order.customerName:undefined;
@@ -178,7 +171,8 @@ function OrderDetail({loading,order,error,channels,currencySymbol,canManage,busy
 
     {canManage&&<footer className="order-detail-actions salon-order-detail-actions">
      {action&&<Button icon={action.icon} className="order-detail-primary" disabled={busy} onClick={()=>advance(action.status)}>{action.label}</Button>}
-     {order.status==="entregado"&&<span className="order-detail-done"><Icon name="check" size={15}/>Pedido completado</span>}
+     {order.channel==="salon"&&order.status==="entregado"&&!order.completedAt&&order.paymentStatus!=="paid"&&<Link href={`/pos?orderId=${order.id}`} className="button secondary salon-order-detail-pay"><Icon name="payment" size={16}/>Cobrar saldo</Link>}
+     {order.status==="entregado"&&<span className="order-detail-done"><Icon name="check" size={15}/>{order.channel==="salon"&&!order.completedAt?"Pedido entregado · cuenta abierta":"Pedido completado"}</span>}
      {cancellable(order)&&<Button icon="alert" kind="ghost" className="order-detail-cancel" disabled={busy} onClick={()=>cancel(order)}>Cancelar pedido</Button>}
     </footer>}
    </>}

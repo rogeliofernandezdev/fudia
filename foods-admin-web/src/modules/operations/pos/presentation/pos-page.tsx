@@ -60,6 +60,7 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
   function refresh(){
     void qc.invalidateQueries({queryKey:["pos-orders"]});
     void qc.invalidateQueries({queryKey:["pos-order"]});
+    for(const key of ["salon-floor","orders","order"])void qc.invalidateQueries({queryKey:[key]});
     void qc.invalidateQueries({queryKey:["cash-registers"]});
     void qc.invalidateQueries({queryKey:["cash-shift"]});
   }
@@ -176,7 +177,7 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
 }
 
 function POSDetailDialog({loading,error,data,canManage,hasShift,formatMoney,formatDateTime,close,refund}:{loading:boolean;error?:string;data?:POSOrderDetail;canManage:boolean;hasShift:boolean;formatMoney:(value:number)=>string;formatDateTime:(value:string)=>string;close:()=>void;refund:(payment:Payment)=>void}){
-  const closed=Boolean(data&&["entregado","cancelado"].includes(data.order.status));
+  const closed=Boolean(data&&(data.order.completedAt||data.order.status==="cancelado"||(data.order.status==="entregado"&&data.order.channel!=="salon")));
   return <div className="modal-backdrop modal-overlay-in"><section className="crud-modal pos-detail-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="pos-detail-title">
     <div className="modal-accent"/>
     <header><span className="modal-title-icon"><Icon name="receipt" size={18}/></span><div className="pos-modal-heading"><small>DETALLE DE COBRO</small><h2 id="pos-detail-title">{data?.order.code??"Pedido"}</h2>{data&&<p>{data.order.tableName||data.order.customerName||channelLabel[data.order.channel]||"Pedido del local"}</p>}</div><button type="button" aria-label="Cerrar" onClick={close}><Icon name="close"/></button></header>

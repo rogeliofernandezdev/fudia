@@ -36,6 +36,7 @@ type order struct {
 	Code          string      `json:"code"`
 	Channel       string      `json:"channel"`
 	Status        string      `json:"status"`
+	CompletedAt   string      `json:"completedAt,omitempty"`
 	CustomerID    string      `json:"customerId"`
 	CustomerName  string      `json:"customerName"`
 	CustomerPhone string      `json:"customerPhone"`
@@ -120,7 +121,7 @@ type orderUpdateInput struct {
 	Items         []orderItemInput `json:"items"`
 }
 
-const orderColumns = `id,code,channel,status,COALESCE(customer_id::text,''),customer_name,customer_phone,address,reference,COALESCE(table_id::text,''),COALESCE((SELECT name FROM tables t WHERE t.id=orders.table_id),''),notes,subtotal::text,delivery_fee::text,total::text,to_char(created_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),to_char(updated_at,'YYYY-MM-DD"T"HH24:MI:SSOF')`
+const orderColumns = `id,code,channel,status,COALESCE(customer_id::text,''),customer_name,customer_phone,address,reference,COALESCE(table_id::text,''),COALESCE((SELECT name FROM tables t WHERE t.id=orders.table_id),''),notes,subtotal::text,delivery_fee::text,total::text,to_char(created_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),to_char(updated_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),COALESCE(to_char(completed_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),'')`
 
 var orderChannels = []map[string]string{{"value": "salon", "label": "Salón"}, {"value": "mostrador", "label": "Mostrador"}, {"value": "recojo", "label": "Recojo"}, {"value": "delivery", "label": "Delivery"}, {"value": "whatsapp", "label": "WhatsApp"}}
 var orderStatuses = []map[string]string{{"value": "nuevo", "label": "Nuevo"}, {"value": "confirmado", "label": "Confirmado"}, {"value": "preparando", "label": "Preparando"}, {"value": "listo", "label": "Listo"}, {"value": "en_camino", "label": "En camino"}, {"value": "entregado", "label": "Entregado"}, {"value": "cancelado", "label": "Cancelado"}}
@@ -136,7 +137,7 @@ var orderTransitions = map[string][]string{
 
 func scanOrder(row pgx.Row) (order, error) {
 	var o order
-	err := row.Scan(&o.ID, &o.Code, &o.Channel, &o.Status, &o.CustomerID, &o.CustomerName, &o.CustomerPhone, &o.Address, &o.Reference, &o.TableID, &o.TableName, &o.Notes, &o.Subtotal, &o.DeliveryFee, &o.Total, &o.CreatedAt, &o.UpdatedAt)
+	err := row.Scan(&o.ID, &o.Code, &o.Channel, &o.Status, &o.CustomerID, &o.CustomerName, &o.CustomerPhone, &o.Address, &o.Reference, &o.TableID, &o.TableName, &o.Notes, &o.Subtotal, &o.DeliveryFee, &o.Total, &o.CreatedAt, &o.UpdatedAt, &o.CompletedAt)
 	return o, err
 }
 func validOrderChannel(ch string) bool {
@@ -725,13 +726,13 @@ func (a *API) listOrders(w http.ResponseWriter, r *http.Request) {
 	q := strings.TrimSpace(r.URL.Query().Get("q"))
 	channel := r.URL.Query().Get("channel")
 	status := r.URL.Query().Get("status")
-	where := `organization_id=$1 AND location_id=$2 AND ($3='' OR code ILIKE '%'||$3||'%' OR customer_name ILIKE '%'||$3||'%' OR customer_phone ILIKE '%'||$3||'%') AND ($4='' OR channel=$4) AND ($5='' OR ($5='abiertos' AND status NOT IN ('entregado','cancelado')) OR status=$5)`
+	where := `organization_id=$1 AND location_id=$2 AND ($3='' OR code ILIKE '%'||$3||'%' OR customer_name ILIKE '%'||$3||'%' OR customer_phone ILIKE '%'||$3||'%') AND ($4='' OR channel=$4) AND ($5='' OR ($5='abiertos' AND status<>'cancelado' AND (status<>'entregado' OR (channel='salon' AND completed_at IS NULL))) OR status=$5)`
 	var total int
 	if err := a.db.QueryRow(r.Context(), `SELECT count(*) FROM orders WHERE `+where, s.OrganizationID, s.LocationID, q, channel, status).Scan(&total); err != nil {
 		fail(w, 503, "orders_unavailable", "No pudimos cargar los pedidos.")
 		return
 	}
-	rows, err := a.db.Query(r.Context(), `SELECT `+orderColumns+` FROM orders WHERE `+where+` ORDER BY CASE WHEN status IN ('entregado','cancelado') THEN 1 ELSE 0 END, created_at DESC LIMIT $6 OFFSET $7`, s.OrganizationID, s.LocationID, q, channel, status, size, (page-1)*size)
+	rows, err := a.db.Query(r.Context(), `SELECT `+orderColumns+` FROM orders WHERE `+where+` ORDER BY CASE WHEN status='cancelado' OR completed_at IS NOT NULL OR (status='entregado' AND channel<>'salon') THEN 1 ELSE 0 END, created_at DESC LIMIT $6 OFFSET $7`, s.OrganizationID, s.LocationID, q, channel, status, size, (page-1)*size)
 	if err != nil {
 		fail(w, 503, "orders_unavailable", "No pudimos cargar los pedidos.")
 		return
@@ -747,7 +748,7 @@ func (a *API) listOrders(w http.ResponseWriter, r *http.Request) {
 		items = append(items, o)
 	}
 	channelCounts := map[string]int{}
-	countRows, err := a.db.Query(r.Context(), `SELECT channel, count(*) FROM orders WHERE organization_id=$1 AND location_id=$2 AND status NOT IN ('entregado','cancelado') GROUP BY channel`, s.OrganizationID, s.LocationID)
+	countRows, err := a.db.Query(r.Context(), `SELECT channel, count(*) FROM orders WHERE organization_id=$1 AND location_id=$2 AND status<>'cancelado' AND (status<>'entregado' OR (channel='salon' AND completed_at IS NULL)) GROUP BY channel`, s.OrganizationID, s.LocationID)
 	if err == nil {
 		defer countRows.Close()
 		for countRows.Next() {
@@ -789,13 +790,13 @@ func (a *API) getOrdersFloor(w http.ResponseWriter, r *http.Request) {
 	rows, err := a.db.Query(r.Context(), `
 		SELECT t.id,t.name,t.zone,t.seats,
 		  o.id,COALESCE(o.code,''),COALESCE(o.channel,''),COALESCE(o.status,''),COALESCE(o.customer_id::text,''),COALESCE(o.customer_name,''),COALESCE(o.customer_phone,''),COALESCE(o.address,''),COALESCE(o.reference,''),COALESCE(o.table_id::text,''),'',COALESCE(o.notes,''),COALESCE(o.subtotal::text,'0'),COALESCE(o.delivery_fee::text,'0'),COALESCE(o.total::text,'0'),COALESCE(to_char(o.created_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),''),COALESCE(to_char(o.updated_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),''),
-		  COALESCE(item_totals.item_count,0),COALESCE(payment_totals.paid,0)::text
+		  COALESCE(item_totals.item_count,0),COALESCE(payment_totals.paid,0)::text,COALESCE(to_char(o.completed_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),'')
 		FROM tables t
 		LEFT JOIN orders o
 		  ON o.table_id=t.id
 		 AND o.organization_id=t.organization_id
 		 AND o.location_id=t.location_id
-		 AND o.status NOT IN ('entregado','cancelado')
+		 AND o.status<>'cancelado' AND (o.status<>'entregado' OR (o.channel='salon' AND o.completed_at IS NULL))
 		LEFT JOIN LATERAL (
 		  SELECT COALESCE(sum(i.qty)::int,0) AS item_count
 		  FROM order_items i
@@ -833,7 +834,7 @@ func (a *API) getOrdersFloor(w http.ResponseWriter, r *http.Request) {
 			&ft.ID, &ft.Name, &ft.Zone, &ft.Seats,
 			&oid, &o.Code, &o.Channel, &o.Status, &o.CustomerID, &o.CustomerName, &o.CustomerPhone,
 			&o.Address, &o.Reference, &o.TableID, &o.TableName, &o.Notes, &o.Subtotal, &o.DeliveryFee,
-			&o.Total, &o.CreatedAt, &o.UpdatedAt, &o.ItemCount, &paidText,
+			&o.Total, &o.CreatedAt, &o.UpdatedAt, &o.ItemCount, &paidText, &o.CompletedAt,
 		); err != nil {
 			fail(w, 503, "orders_unavailable", "No pudimos cargar el salón.")
 			return
@@ -943,7 +944,7 @@ func (a *API) createOrder(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		var occupied bool
-		if err = tx.QueryRow(r.Context(), `SELECT EXISTS(SELECT 1 FROM orders WHERE organization_id=$1 AND location_id=$2 AND table_id=$3 AND status NOT IN ('entregado','cancelado'))`, s.OrganizationID, s.LocationID, in.TableID).Scan(&occupied); err != nil {
+		if err = tx.QueryRow(r.Context(), `SELECT EXISTS(SELECT 1 FROM orders WHERE organization_id=$1 AND location_id=$2 AND table_id=$3 AND status<>'cancelado' AND (status<>'entregado' OR (channel='salon' AND completed_at IS NULL)))`, s.OrganizationID, s.LocationID, in.TableID).Scan(&occupied); err != nil {
 			fail(w, 503, "order_unavailable", "No pudimos guardar el pedido.")
 			return
 		}
@@ -1153,12 +1154,13 @@ func (a *API) updateOrderStatus(w http.ResponseWriter, r *http.Request) {
 	defer tx.Rollback(r.Context())
 
 	var current, channel, tableID string
+	var completed bool
 	var total float64
 	err = tx.QueryRow(r.Context(), `
-		SELECT status,channel,COALESCE(table_id::text,''),total::float8
+		SELECT status,channel,COALESCE(table_id::text,''),total::float8,completed_at IS NOT NULL
 		FROM orders
 		WHERE id=$1 AND organization_id=$2 AND location_id=$3
-		FOR UPDATE`, r.PathValue("id"), s.OrganizationID, s.LocationID).Scan(&current, &channel, &tableID, &total)
+		FOR UPDATE`, r.PathValue("id"), s.OrganizationID, s.LocationID).Scan(&current, &channel, &tableID, &total, &completed)
 	if errors.Is(err, pgx.ErrNoRows) {
 		fail(w, 404, "order_not_found", "El pedido no existe.")
 		return
@@ -1175,7 +1177,8 @@ func (a *API) updateOrderStatus(w http.ResponseWriter, r *http.Request) {
 		fail(w, 409, "cancellation_requires_void", "La preparación ya comenzó. Usa un flujo de anulación o merma; no se puede cancelar como si el producto no hubiera sido preparado.")
 		return
 	}
-	allowed := false
+	releasingTable := current == "entregado" && in.Status == "entregado" && channel == "salon" && tableID != "" && !completed
+	allowed := releasingTable
 	for _, next := range orderTransitions[current] {
 		if next == in.Status {
 			allowed = true
@@ -1192,7 +1195,7 @@ func (a *API) updateOrderStatus(w http.ResponseWriter, r *http.Request) {
 		fail(w, 503, "order_unavailable", "No pudimos validar el estado de cobro del pedido.")
 		return
 	}
-	if in.Status == "entregado" && tableID != "" && paid+0.00001 < total {
+	if in.Status == "entregado" && tableID != "" && (channel != "salon" || releasingTable) && paid+0.00001 < total {
 		fail(w, 409, "payment_required_before_delivery", "La mesa no puede liberarse mientras exista saldo pendiente.")
 		return
 	}
@@ -1224,9 +1227,10 @@ func (a *API) updateOrderStatus(w http.ResponseWriter, r *http.Request) {
 
 	tag, err := tx.Exec(r.Context(), `
 		UPDATE orders
-		SET status=$4,updated_at=now()
+		SET status=$4,updated_at=now(),
+		    completed_at=CASE WHEN $4='entregado' AND ($5 OR channel<>'salon') THEN COALESCE(completed_at,now()) ELSE completed_at END
 		WHERE id=$1 AND organization_id=$2 AND location_id=$3`,
-		r.PathValue("id"), s.OrganizationID, s.LocationID, in.Status)
+		r.PathValue("id"), s.OrganizationID, s.LocationID, in.Status, paid+0.00001 >= total)
 	if err != nil || tag.RowsAffected() == 0 {
 		fail(w, 404, "order_not_found", "El pedido no existe.")
 		return
@@ -1244,6 +1248,13 @@ func (a *API) updateOrderStatus(w http.ResponseWriter, r *http.Request) {
 		fail(w, 503, "order_unavailable", "No pudimos actualizar el pedido.")
 		return
 	}
-	a.audit(r, "status_updated", "order", r.PathValue("id"))
+	action := "status_updated"
+	if in.Status == "entregado" {
+		action = "order.delivered"
+		if o.CompletedAt != "" {
+			action = "order.completed"
+		}
+	}
+	a.audit(r, action, "order", r.PathValue("id"))
 	writeJSON(w, 200, o)
 }

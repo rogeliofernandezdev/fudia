@@ -7,7 +7,7 @@ import {useState,useCallback,useEffect,useRef} from "react";
 import Link from "next/link";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Button,ConfirmDialog,Input,Select,Status,Textarea} from "@/design-system";
-import {Icon,IconName} from "@/design-system/icons";
+import {Icon} from "@/design-system/icons";
 import {CatalogProduct,ComboConfigurator,ComboSelection,ConfiguredCombo,ComandaCatalog} from "./comanda-catalog";
 import type {Draft,FloorTable,LineDraft,Order} from "../domain/types";
 import {createSalonOrder,getSalonFloor,getSalonOrder,updateSalonOrder,updateSalonOrderStatus} from "../infrastructure/salon-api";
@@ -16,6 +16,8 @@ import {useSession} from "@/providers/session-context";
 import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
 import {useSettings} from "@/providers/settings-context";
 
+import {nextOrderAction} from "../../orders/domain/order-actions";
+
 /* ── helpers ── */
 const statusMeta:Record<string,{label:string;tone:"green"|"blue"|"orange"|"gray"}>={
   nuevo:{label:"Nuevo",tone:"blue"},confirmado:{label:"Confirmado",tone:"blue"},
@@ -23,11 +25,7 @@ const statusMeta:Record<string,{label:string;tone:"green"|"blue"|"orange"|"gray"
   en_camino:{label:"En camino",tone:"orange"},entregado:{label:"Entregado",tone:"gray"},
   cancelado:{label:"Cancelado",tone:"gray"},
 };
-function nextAction(o:Order):{status:string;label:string;icon:IconName}|null{
-  if(o.status==="nuevo")return{status:"confirmado",label:"Enviar a cocina",icon:"receipt"};
-  if(o.status==="listo"&&o.paymentStatus==="paid")return{status:"entregado",label:"Entregar y liberar mesa",icon:"check"};
-  return null;
-}
+
 function parseIsoDate(iso:string):Date|null{
   if(!iso)return null;
   const normalized=iso.replace(/([+-]\d{2})$/,"$1:00");
@@ -110,12 +108,12 @@ export function SalonManager(){
 
   const invalidate=useCallback(()=>{
     void qc.invalidateQueries({queryKey:["salon-floor"]});
-    void qc.invalidateQueries({queryKey:["order",detailId]});
-  },[qc,detailId]);
+    for(const key of ["orders","order","pos-orders","pos-order","dashboard"])void qc.invalidateQueries({queryKey:[key]});
+  },[qc]);
 
   const advance=useMutation({
     mutationFn:(v:{id:string;status:string})=>updateSalonOrderStatus(v.id,v.status),
-    onSuccess:()=>{invalidate();notify({tone:"success",title:"Pedido actualizado",message:"El estado fue actualizado correctamente."})},
+    onSuccess:(order)=>{invalidate();notify({tone:"success",title:order.status==="entregado"?(order.completedAt?"Mesa liberada":"Pedido entregado"):"Pedido actualizado",message:order.status==="entregado"&&!order.completedAt?"La entrega quedó registrada. La mesa conserva su cuenta abierta hasta finalizar el cobro.":"El estado fue actualizado correctamente."})},
     onError:e=>notify({tone:"danger",title:"Error",message:e.message}),
   });
   const create=useMutation({
@@ -260,7 +258,7 @@ export function SalonManager(){
             {visible.map(t=>{
               const o=t.order;
               const baseMeta=o?statusMeta[o.status]??{label:o.status,tone:"gray" as const}:null;
-              const meta=o&&o.status==="listo"&&o.paymentStatus!=="paid"?{label:"Listo · por cobrar",tone:"orange" as const}:baseMeta;
+              const meta=o&&(o.status==="listo"||o.status==="entregado")&&o.paymentStatus!=="paid"?{label:`${baseMeta?.label} · por cobrar`,tone:"orange" as const}:baseMeta;
               const tableState=o?"occupied":"free";
               return(
                 <button
@@ -600,12 +598,12 @@ function ComandaView({initial,mode,allTables,busy,currencySymbol,close,save,noti
 function OrderDetail({loading,order,error,currencySymbol,canManage,busy,close,advance,edit,cancel}:{loading:boolean;order?:Order;error?:string;currencySymbol:string;canManage:boolean;busy:boolean;close:()=>void;advance:(st:string)=>void;edit:(o:Order)=>void;cancel:(o:Order)=>void}){
   const{location}=useSession();
   const baseMeta=order?statusMeta[order.status]??{label:order.status,tone:"gray" as const}:null;
-  const meta=order&&order.status==="listo"&&order.paymentStatus!=="paid"?{label:"Listo · por cobrar",tone:"orange" as const}:baseMeta;
-  const action=order?nextAction(order):null;
+  const meta=order&&(order.status==="listo"||order.status==="entregado")&&order.paymentStatus!=="paid"?{label:`${baseMeta?.label} · por cobrar`,tone:"orange" as const}:baseMeta;
+  const action=order?nextOrderAction(order):null;
   const paid=Number(order?.paidAmount??0);
   const editable=Boolean(order&&editableOrderStatus(order.status)&&paid<=0.00001);
   const remaining=Number(order?.remainingAmount??order?.total??0);
-  const canCharge=Boolean(order&&order.status==="listo"&&remaining>0.00001);
+  const canCharge=Boolean(order&&(order.status==="listo"||order.status==="entregado")&&!order.completedAt&&remaining>0.00001);
   const hasPayments=paid>0.00001;
   const itemCount=order?(order.items??[]).reduce((sum,it)=>sum+Number(it.qty||0),0):0;
   return(
@@ -720,8 +718,8 @@ function OrderDetail({loading,order,error,currencySymbol,canManage,busy,close,ad
                     {action&&<Button icon={action.icon} className="order-detail-primary" disabled={busy} onClick={()=>advance(action.status)}>{action.label}</Button>}
                     {canCharge&&<Link href={`/pos?orderId=${order.id}`} className="button secondary salon-order-detail-pay"><Icon name="payment" size={16}/>Cobrar {currencySymbol} {money(remaining)}</Link>}
                     {editable&&<Button icon="edit" kind="secondary" className="salon-order-detail-edit" disabled={busy} onClick={()=>edit(order)}>Editar comanda</Button>}
-                    {order.status==="listo"&&remaining>0.00001&&<span className="order-detail-done"><Icon name="sales" size={15}/>Cobra el saldo antes de liberar la mesa</span>}
-                    {order.status==="entregado"&&<span className="order-detail-done"><Icon name="check" size={15}/>Mesa entregada</span>}
+                    {(order.status==="listo"||order.status==="entregado")&&remaining>0.00001&&<span className="order-detail-done"><Icon name="sales" size={15}/>Cobra el saldo antes de liberar la mesa</span>}
+                    {order.status==="entregado"&&<span className="order-detail-done"><Icon name="check" size={15}/>{order.completedAt?"Mesa liberada":"Pedido entregado"}</span>}
                     {(order.status==="nuevo"||order.status==="confirmado")&&!hasPayments&&<Button icon="cancel" kind="ghost" className="order-detail-cancel" disabled={busy} onClick={()=>cancel(order)}>Cancelar pedido</Button>}
                     {(order.status==="nuevo"||order.status==="confirmado")&&hasPayments&&<span className="order-detail-done"><Icon name="alert" size={15}/>Devuelve los pagos en POS antes de cancelar</span>}
                   </footer>

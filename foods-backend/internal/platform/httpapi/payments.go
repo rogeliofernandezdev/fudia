@@ -293,13 +293,14 @@ func (a *API) createPayment(w http.ResponseWriter,r *http.Request){
 	if err!=nil{fail(w,503,"payments_unavailable","No pudimos validar tu turno de caja.");return}
 
 	var orderCode,status string
+	var completed, salon bool
 	var total,paid float64
 	err=tx.QueryRow(r.Context(),`
-		SELECT o.code,o.status,o.total::float8
+		SELECT o.code,o.status,o.total::float8,o.completed_at IS NOT NULL,o.channel='salon'
 		FROM orders o
 		WHERE o.id=$1 AND o.organization_id=$2 AND o.location_id=$3
 		FOR UPDATE
-	`,in.OrderID,s.OrganizationID,s.LocationID).Scan(&orderCode,&status,&total)
+	`,in.OrderID,s.OrganizationID,s.LocationID).Scan(&orderCode,&status,&total,&completed,&salon)
 	if errors.Is(err,pgx.ErrNoRows){fail(w,404,"order_not_found","El pedido no existe en este local.");return}
 	if err!=nil{fail(w,503,"payments_unavailable","No pudimos validar el pedido.");return}
 	if err=tx.QueryRow(r.Context(),`
@@ -312,7 +313,7 @@ func (a *API) createPayment(w http.ResponseWriter,r *http.Request){
 		fail(w,503,"payments_unavailable","No pudimos validar el saldo pendiente.")
 		return
 	}
-	if status!="listo"&&status!="en_camino"{fail(w,409,"order_not_ready_for_payment","El pedido solo puede cobrarse cuando está listo para entregar.");return}
+	if completed||(status!="listo"&&status!="en_camino"&&!(salon&&status=="entregado")){fail(w,409,"order_not_ready_for_payment","El pedido solo puede cobrarse cuando está listo o entregado y sigue abierto.");return}
 	remaining:=math.Max(0,total-paid)
 	if in.Amount>remaining+0.00001{
 		fail(w,409,"payment_exceeds_remaining","El cobro supera el saldo pendiente del pedido.")
@@ -377,19 +378,20 @@ func (a *API) refundPayment(w http.ResponseWriter,r *http.Request){
 
 	var affectsCash bool
 	var orderCode,orderStatus string
+	var completed, salon bool
 	var amount,refunded float64
 	err=tx.QueryRow(r.Context(),`
-		SELECT pm.affects_cash,o.code,o.status,p.amount::float8,
+		SELECT pm.affects_cash,o.code,o.status,p.amount::float8,o.completed_at IS NOT NULL,o.channel='salon',
 		       COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id),0)::float8
 		FROM payments p
 		JOIN payment_methods pm ON pm.organization_id=p.organization_id AND pm.code=p.method
 		JOIN orders o ON o.id=p.order_id AND o.organization_id=p.organization_id AND o.location_id=p.location_id
 		WHERE p.id=$1 AND p.organization_id=$2 AND p.location_id=$3
 		FOR UPDATE
-	`,r.PathValue("id"),s.OrganizationID,s.LocationID).Scan(&affectsCash,&orderCode,&orderStatus,&amount,&refunded)
+	`,r.PathValue("id"),s.OrganizationID,s.LocationID).Scan(&affectsCash,&orderCode,&orderStatus,&amount,&completed,&salon,&refunded)
 	if errors.Is(err,pgx.ErrNoRows){fail(w,404,"payment_not_found","El pago no existe en este local.");return}
 	if err!=nil{fail(w,503,"payments_unavailable","No pudimos validar el pago.");return}
-	if orderStatus=="entregado"||orderStatus=="cancelado"{
+	if completed||(orderStatus=="entregado"&&!salon)||orderStatus=="cancelado"{
 		fail(w,409,"closed_order_refund_requires_void","El pedido ya está cerrado. Usa un flujo de anulación o devolución posterior al cierre para no reabrir su saldo operativo.")
 		return
 	}
@@ -478,13 +480,14 @@ func (a *API) createPaymentBatch(w http.ResponseWriter,r *http.Request){
 	if err!=nil{fail(w,503,"payments_unavailable","No pudimos validar tu turno de caja.");return}
 
 	var orderCode,status string
+	var completed, salon bool
 	var orderTotal,paid float64
 	err=tx.QueryRow(r.Context(),`
-		SELECT o.code,o.status,o.total::float8
+		SELECT o.code,o.status,o.total::float8,o.completed_at IS NOT NULL,o.channel='salon'
 		FROM orders o
 		WHERE o.id=$1 AND o.organization_id=$2 AND o.location_id=$3
 		FOR UPDATE
-	`,in.OrderID,s.OrganizationID,s.LocationID).Scan(&orderCode,&status,&orderTotal)
+	`,in.OrderID,s.OrganizationID,s.LocationID).Scan(&orderCode,&status,&orderTotal,&completed,&salon)
 	if errors.Is(err,pgx.ErrNoRows){fail(w,404,"order_not_found","El pedido no existe en este local.");return}
 	if err!=nil{fail(w,503,"payments_unavailable","No pudimos validar el pedido.");return}
 	if err=tx.QueryRow(r.Context(),`
@@ -497,7 +500,7 @@ func (a *API) createPaymentBatch(w http.ResponseWriter,r *http.Request){
 		fail(w,503,"payments_unavailable","No pudimos validar el saldo pendiente.")
 		return
 	}
-	if status!="listo"&&status!="en_camino"{fail(w,409,"order_not_ready_for_payment","El pedido solo puede cobrarse cuando está listo para entregar.");return}
+	if completed||(status!="listo"&&status!="en_camino"&&!(salon&&status=="entregado")){fail(w,409,"order_not_ready_for_payment","El pedido solo puede cobrarse cuando está listo o entregado y sigue abierto.");return}
 	remaining:=math.Max(0,orderTotal-paid)
 	if totalBatch>remaining+0.00001{
 		fail(w,409,"payment_exceeds_remaining","El cobro supera el saldo pendiente del pedido.")
@@ -543,12 +546,13 @@ func (a *API) completePaidOrder(w http.ResponseWriter,r *http.Request){
 	defer tx.Rollback(r.Context())
 	var total,paid float64
 	var status string
+	var salon bool
 	err=tx.QueryRow(r.Context(),`
-		SELECT o.total::float8,o.status
+		SELECT o.total::float8,o.status,o.channel='salon'
 		FROM orders o
 		WHERE o.id=$1 AND o.organization_id=$2 AND o.location_id=$3
 		FOR UPDATE
-	`,r.PathValue("id"),s.OrganizationID,s.LocationID).Scan(&total,&status)
+	`,r.PathValue("id"),s.OrganizationID,s.LocationID).Scan(&total,&status,&salon)
 	if errors.Is(err,pgx.ErrNoRows){fail(w,404,"order_not_found","El pedido no existe en este local.");return}
 	if err!=nil{fail(w,503,"payments_unavailable","No pudimos validar el pedido.");return}
 	if err=tx.QueryRow(r.Context(),`
@@ -563,18 +567,19 @@ func (a *API) completePaidOrder(w http.ResponseWriter,r *http.Request){
 	}
 	if status=="cancelado"{fail(w,409,"order_not_completable","Un pedido cancelado no puede finalizarse.");return}
 	if paid+0.00001<total{fail(w,409,"payment_incomplete","El pedido todavía tiene saldo pendiente.");return}
-	if status!="listo"&&status!="en_camino"{
+	if status!="listo"&&status!="en_camino"&&!(salon&&status=="entregado"){
 		fail(w,409,"order_not_ready","El pago está completo, pero la comanda todavía no está lista para entregarse.")
 		return
 	}
 	if _,err=tx.Exec(r.Context(),`
 		UPDATE orders
-		SET status='entregado',updated_at=now()
+		SET status='entregado',updated_at=now(),completed_at=COALESCE(completed_at,now())
 		WHERE id=$1 AND organization_id=$2 AND location_id=$3
 	`,r.PathValue("id"),s.OrganizationID,s.LocationID);err!=nil{
 		fail(w,503,"payments_unavailable","No pudimos liberar la mesa.")
 		return
 	}
 	if err=tx.Commit(r.Context());err!=nil{fail(w,503,"payments_unavailable","No pudimos finalizar el pedido.");return}
+	a.audit(r,"order.completed","order",r.PathValue("id"))
 	w.WriteHeader(http.StatusNoContent)
 }

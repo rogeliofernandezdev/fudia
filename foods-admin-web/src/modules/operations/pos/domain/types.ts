@@ -6,6 +6,7 @@ export type POSOrderSummary={
   code:string;
   channel:string;
   status:string;
+  completedAt?:string;
   customerName:string;
   tableName:string;
   total:string;
@@ -30,6 +31,7 @@ export type POSOrder={
   code:string;
   channel:string;
   status:string;
+  completedAt?:string;
   customerName:string;
   tableName:string;
   notes:string;
