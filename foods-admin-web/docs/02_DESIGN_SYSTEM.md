@@ -558,9 +558,13 @@ estado listo respetan los patrones visuales generales y el flujo funciona desde
 
 ### Atribución en Caja y turnos
 
-La etiqueta ambigua «Cajero» se reemplaza por «Equipo actual» durante un turno
-abierto y «Cerrado por» en los turnos cerrados. El equipo puede tener varios
-integrantes; si se retiran todos, se muestra «Sin usuarios asignados». El detalle
-conserva «Abierto por» con la fecha de apertura y «Cerrado por» con la fecha de
-cierre. La autoría de cada movimiento permanece en su propia fila. Asignar o
-retirar usuarios refresca las cajas, el historial y el detalle inmediatamente.
+En un turno abierto, «Cajero» identifica a quien abrió ese turno y quedó a cargo.
+Al cerrar y abrir el siguiente turno, se muestra al nuevo abridor. El «Equipo
+actual» se presenta por separado: asignar o retirar integrantes modifica los
+permisos de operación, pero no transfiere la responsabilidad del turno.
+En el historial de turnos cerrados, «Cerrado por» identifica a quien realizó el
+cierre; el detalle conserva también «Abierto por» y ambas fechas. La autoría de
+cada movimiento permanece en su propia fila. Asignar o retirar usuarios refresca
+las cajas, el historial y el detalle inmediatamente. Punto de venta muestra al
+mismo cajero del turno activo. El cambio de responsable se realiza cerrando el
+turno y abriendo uno nuevo; no se infiere por la sesión que consulta la pantalla.

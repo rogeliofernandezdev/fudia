@@ -6,7 +6,7 @@ import {Button,ConfirmDialog,Icon,IconButton,Input,PageHeader,Pagination,RemoteM
 import {useFeedback,useSession} from "@/providers";
 import {useSettings} from "@/providers/settings-context";
 import {formatRegionalCalendarDate,formatRegionalDateTime,formatRegionalNumber} from "@/shared/i18n/regional-format";
-import {cashShiftAttribution} from "../domain/shift-attribution";
+import {cashShiftAttribution,cashShiftTeamName} from "../domain/shift-attribution";
 import type {CashMovementType,CashRegister,CashRegisterDraft,CashShift} from "../domain/types";
 import {assignCashShiftUser,closeCashShift,createCashMovement,createCashOperation,createCashRegister,getCashShift,listCashRegisters,listCashShifts,listCashShiftUsers,listCashUserOptions,openCashShift,setCashRegisterActive,unassignCashShiftUser,updateCashRegister} from "../infrastructure/cash-api";
 import {CashMovementDialog,CashRegisterDialog,CashShiftDetailDialog,CloseCashShiftDialog,OpenCashShiftDialog} from "./cash-dialogs";
@@ -257,7 +257,7 @@ export function CashPage(){
           :history.isError?<CashError title="No pudimos cargar los turnos" message={history.error.message} retry={()=>history.refetch()}/>
           :!historyItems.length?<div className="cash-history-empty"><span><Icon name="clock" size={21}/></span><b>{q||status?"Sin coincidencias":"Aún no hay turnos registrados"}</b><p>{q||status?"Ajusta la búsqueda o el filtro.":"Cuando una caja cierre su primer turno aparecerá aquí para consulta."}</p></div>
           :<div className="table-wrap hover-scroll cash-history-table"><table>
-            <thead><tr><th>TURNO</th><th>CAJA</th><th>DÍA OPERATIVO</th><th>EQUIPO / CIERRE</th><th>APERTURA</th><th>CIERRE</th><th>DIFERENCIA</th><th>ESTADO</th><th>ACCIONES</th></tr></thead>
+            <thead><tr><th>TURNO</th><th>CAJA</th><th>DÍA OPERATIVO</th><th>CAJERO / CIERRE</th><th>APERTURA</th><th>CIERRE</th><th>DIFERENCIA</th><th>ESTADO</th><th>ACCIONES</th></tr></thead>
             <tbody>{historyItems.map((item,index)=>{
               const variance=Number(item.varianceAmount??0);
               const attribution=cashShiftAttribution(item);
@@ -375,8 +375,9 @@ function CashRegisters({items,loading,error,canManage,money,dateTime,businessDat
             <div className="cash-register-live-copy">
               <small>TURNO EN CURSO</small>
               <b>{shift.code}</b>
-              <p><Icon name="users" size={12}/>Equipo actual: {cashShiftAttribution(shift).name}</p>
-              <p><Icon name="clock" size={12}/>Abierto por {shift.openedByName} · {dateTime(shift.openedAt)}</p>
+              <p><Icon name="users" size={12}/>Cajero: {cashShiftAttribution(shift).name}</p>
+              <p>Equipo actual: {cashShiftTeamName(shift)}</p>
+              <p><Icon name="clock" size={12}/>Apertura: {dateTime(shift.openedAt)}</p>
               <em>Día operativo {businessDate(shift.businessDate)}</em>
             </div>
             <div className="cash-register-balance"><small>{shift.expectedVisible?"SALDO ESPERADO":"CIERRE CIEGO"}</small><strong>{shift.expectedVisible?money(Number(shift.expectedAmount)):"Oculto"}</strong><span>{shift.movementCount} {shift.movementCount===1?"movimiento":"movimientos"}</span></div>

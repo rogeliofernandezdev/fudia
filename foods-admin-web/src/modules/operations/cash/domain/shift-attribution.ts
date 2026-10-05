@@ -1,12 +1,13 @@
 import type {CashShift} from "./types";
 
-// Opening is an audit event, never a fallback for the current team or closer.
-export function cashShiftAttribution(shift:Pick<CashShift,"status"|"closedByName"|"activeUserNames">){
+// Each new shift belongs to its opener; team changes do not transfer responsibility.
+export function cashShiftAttribution(shift:Pick<CashShift,"status"|"openedByName"|"closedByName">){
   if(shift.status==="closed"){
     return {label:"Cerrado por",name:shift.closedByName||"Sin registro de cierre"};
   }
-  return {
-    label:"Equipo actual",
-    name:shift.activeUserNames?.join(", ")||(shift.activeUserNames?"Sin usuarios asignados":"Equipo no disponible"),
-  };
+  return {label:"Cajero",name:shift.openedByName||"Sin responsable registrado"};
+}
+
+export function cashShiftTeamName(shift:Pick<CashShift,"activeUserNames">){
+  return shift.activeUserNames?.join(", ")||(shift.activeUserNames?"Sin usuarios asignados":"Equipo no disponible");
 }
