@@ -465,6 +465,12 @@ versión de condiciones, y exige registrar la aceptación antes de crear el
 tenant. Plataforma administra el catálogo en `/platform/plans` y la
 suscripción de la empresa activa en `/platform/subscription`.
 
+El Administrador de plataforma accede a «Países y WhatsApp» directamente desde
+el grupo Configuración del menú principal y también desde la navegación del área
+de plataforma. La pantalla muestra la moneda predeterminada de cada país y
+administra su número, `phone_number_id`, referencia segura del secreto y estado.
+Los usuarios de empresa nunca ven este acceso.
+
 El Administrador de empresa con permiso `subscription.read` ve en Mi perfil
 un resumen de solo lectura con plan, estado, precio/ciclo, renovación, prueba,
 condiciones, uso frente a límites, módulos incluidos y último pago. Cambiar

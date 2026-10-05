@@ -2,7 +2,7 @@
 
 import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,FormField,Input,PageHeader,Select} from "@/design-system";
+import {Button,FormField,Icon,Input,PageHeader,RowActionButton,Select,Status} from "@/design-system";
 import {useFeedback} from "@/providers";
 import type {PlatformWhatsAppChannel,PlatformWhatsAppChannelDraft} from "../domain/types";
 import {getPlatformGlobalCatalogs,listPlatformWhatsAppChannels,savePlatformWhatsAppChannel} from "../infrastructure/platform-api";
@@ -43,17 +43,17 @@ export function PlatformGlobalSettingsPage(){
  };
 
  return <>
-  <PageHeader eyebrow="PLATAFORMA" title="Configuración Global" description="Administra los canales globales de WhatsApp por país. Solo los países con al menos un canal activo quedan disponibles para nuevas empresas." action={<Button icon="plus" onClick={start}>Nuevo canal</Button>}/>
+  <PageHeader eyebrow="PLATAFORMA" title="Países y WhatsApp" description="Administra el número de WhatsApp de cada país y consulta su moneda predeterminada. Solo los países con un canal activo quedan disponibles para nuevas empresas." action={<Button icon="plus" onClick={start}>Nuevo canal</Button>}/>
   {(catalogs.isLoading||channels.isLoading)?<div className="panel catalog-state"><b>Cargando configuración global…</b></div>:
    (catalogs.isError||channels.isError)?<div className="panel catalog-state"><b>No pudimos cargar la configuración global.</b><Button kind="secondary" onClick={()=>{void catalogs.refetch();void channels.refetch()}}>Reintentar</Button></div>:
    <div className="panel">
-    <div className="table-responsive"><table><thead><tr><th>País</th><th>Nombre</th><th>Número</th><th>Phone Number ID</th><th>Estado</th><th/></tr></thead><tbody>
-     {(channels.data?.items??[]).map(item=><tr key={item.id}><td>{item.countryName} ({item.countryCode})</td><td>{item.displayName}</td><td>{item.phoneNumber}</td><td>{item.phoneNumberId??"Pendiente"}</td><td>{item.active?"Activo":"Borrador"}</td><td><Button kind="secondary" icon="edit" onClick={()=>edit(item)}>Editar</Button></td></tr>)}
-     {!(channels.data?.items??[]).length&&<tr><td colSpan={6}>Todavía no hay canales configurados.</td></tr>}
+    <div className="table-responsive"><table><thead><tr><th>País</th><th>Moneda</th><th>Nombre</th><th>Número</th><th>Phone Number ID</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>
+     {(channels.data?.items??[]).map(item=><tr key={item.id}><td>{item.countryName} ({item.countryCode})</td><td>{catalogs.data?.countryOptions.find(country=>country.code===item.countryCode)?.defaultCurrency??"—"}</td><td>{item.displayName}</td><td>{item.phoneNumber}</td><td>{item.phoneNumberId??"Pendiente"}</td><td><Status tone={item.active?"green":"gray"}>{item.active?"Activo":"Borrador"}</Status></td><td><div className="table-actions"><RowActionButton action="edit" label={`Editar canal ${item.displayName}`} onClick={()=>edit(item)}/></div></td></tr>)}
+     {!(channels.data?.items??[]).length&&<tr><td colSpan={7}>Todavía no hay canales configurados.</td></tr>}
     </tbody></table></div>
    </div>}
 
-  {draft&&<div className="modal-backdrop"><section className="crud-modal" role="dialog" aria-modal="true" aria-labelledby="global-channel-title"><header><div><small>{editingId?"EDITAR CANAL":"NUEVO CANAL"}</small><h2 id="global-channel-title">Canal global de WhatsApp</h2></div></header>
+  {draft&&<div className="modal-backdrop modal-overlay-in"><section className="crud-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="global-channel-title" aria-busy={save.isPending}><div className="modal-accent"/><header><span className="modal-title-icon"><Icon name="chat" size={18}/></span><div><small>{editingId?"EDITAR CANAL":"NUEVO CANAL"}</small><h2 id="global-channel-title">Canal global de WhatsApp</h2></div><button type="button" aria-label="Cerrar" disabled={save.isPending} onClick={()=>{setDraft(null);setEditingId(undefined)}}><Icon name="close"/></button></header>
    <div className="form-grid">
     <FormField label="País"><Select value={draft.countryCode} onChange={e=>setDraft({...draft,countryCode:e.target.value})}>{(catalogs.data?.countryOptions??[]).map(item=><option key={item.code} value={item.code}>{item.name} ({item.code}) · {item.defaultCurrency}</option>)}</Select></FormField>
     <FormField label="Nombre visible"><Input value={draft.displayName} onChange={e=>setDraft({...draft,displayName:e.target.value})} placeholder="FudIA Perú"/></FormField>

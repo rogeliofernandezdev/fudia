@@ -50,6 +50,7 @@ export const pageRoutes={
   platformOnboarding:"/platform/onboarding",
   platformPlans:"/platform/plans",
   platformSubscription:"/platform/subscription",
+  platformGlobalSettings:"/platform/configuracion-global",
   login:"/login",
 } as const;
 

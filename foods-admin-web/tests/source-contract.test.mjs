@@ -697,6 +697,26 @@ test("módulos y navegación comparten nombres funcionales",()=>{
   assert.equal(availability.includes('title="Disponibilidad de la carta"'),false,"La página no conserva el nombre largo");
 });
 
+test("países y WhatsApp tiene acceso completo para plataforma",()=>{
+  const routes=read("src/shared/routing/page-routes.ts");
+  const navigation=read("src/shell/navigation.ts");
+  const platformShell=read("src/modules/platform/presentation/platform-shell.tsx");
+  const page=read("src/modules/platform/presentation/platform-global-settings-page.tsx");
+  const route=read("src/app/platform/configuracion-global/page.tsx");
+  const publicApi=read("src/modules/platform/index.ts");
+
+  assert.ok(routes.includes('platformGlobalSettings:"/platform/configuracion-global"'),"El catálogo central declara la ruta de configuración global");
+  assert.ok(navigation.includes('href:pageRoutes.platformGlobalSettings,name:"Países y WhatsApp",icon:"chat",module:"integraciones",platformAdminOnly:true'),"El menú principal expone el acceso solo al administrador de plataforma");
+  assert.ok(platformShell.includes('href={pageRoutes.platformGlobalSettings}'),"La navegación de Plataforma reutiliza la misma ruta");
+  assert.ok(platformShell.includes("<span>Países y WhatsApp</span>"),"Ambos accesos usan un nombre funcional y reconocible");
+  assert.ok(route.includes('from "@/modules/platform"'),"La ruta consume la API pública del módulo");
+  assert.ok(publicApi.includes("PlatformGlobalSettingsPage"),"El módulo de Plataforma exporta la pantalla global");
+  assert.ok(page.includes('title="Países y WhatsApp"'),"La pantalla conserva el nombre del menú");
+  assert.ok(page.includes("<th>Moneda</th>"),"El listado muestra la moneda predeterminada del país");
+  assert.ok(page.includes("RowActionButton"),"La edición usa la acción de tabla homologada");
+  assert.ok(page.includes('aria-label="Cerrar"'),"El formulario modal ofrece un cierre accesible");
+});
+
 
 test("login inicia en la primera ruta realmente accesible",()=>{
   const login=read("src/modules/auth/presentation/login-form.tsx");
