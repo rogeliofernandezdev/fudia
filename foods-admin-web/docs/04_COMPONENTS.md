@@ -15,8 +15,9 @@ estados de envío.
   acción remota. Diálogo centrado, accesible, cerrable y con movimiento reducido.
 - `ConfirmDialog`: requerido antes de desactivar o ejecutar una acción sensible;
   muestra el registro afectado, acción segura y estado pendiente. Su presentación
-  es compacta: icono, título, mensaje directo y acciones, sin recuadros internos
-  ni divisores. `description` admite texto o JSX para destacar únicamente el
+  es compacta: icono y título en una misma fila, centrados verticalmente, seguidos
+  del mensaje directo y acciones, sin recuadros internos ni divisores. El icono
+  conserva su tamaño y el título puede partirse en líneas sin desplazarlo. `description` admite texto o JSX para destacar únicamente el
   nombre con `<strong>` dentro de una frase. Productos y categorías preguntan
   «¿Deseas desactivar el producto/la categoría “nombre”?», sin explicaciones
   genéricas de disponibilidad ni historial. `subject`, `note` y `children` son

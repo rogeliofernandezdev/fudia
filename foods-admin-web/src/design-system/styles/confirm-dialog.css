@@ -1,10 +1,10 @@
 .confirm-overlay{position:fixed;inset:0;z-index:130;display:grid;place-items:center;padding:16px;background:#10182880;backdrop-filter:blur(3px)}
 .confirm-card{display:flex;flex-direction:column;width:min(400px,100%);max-height:calc(100dvh - 32px);padding:24px;overflow:hidden;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:0 24px 70px #1018284d}
-.confirm-header{display:grid;flex:none;gap:16px}
-.confirm-icon{display:grid;place-items:center;width:44px;height:44px;border-radius:10px}
+.confirm-header{display:flex;flex:none;align-items:center;gap:12px}
+.confirm-icon{display:grid;place-items:center;flex:0 0 44px;width:44px;height:44px;border-radius:10px}
 .confirm-icon.danger{color:var(--danger-600);background:var(--danger-50)}
 .confirm-icon.success{color:var(--brand-700);background:var(--brand-100)}
-.confirm-card h2{margin:0;color:var(--ink-950);font-size:16px;font-weight:500;line-height:1.4;overflow-wrap:anywhere}
+.confirm-card h2{flex:1;min-width:0;margin:0;color:var(--ink-950);font-size:16px;font-weight:500;line-height:1.4;overflow-wrap:anywhere}
 .confirm-body{display:grid;align-content:start;gap:12px;min-height:0;margin-top:10px;overflow:auto}
 .confirm-description{margin:0;color:var(--ink-600);font-size:13px;font-weight:400;line-height:1.65;overflow-wrap:anywhere}
 .confirm-description strong{color:var(--ink-950);font-weight:750}

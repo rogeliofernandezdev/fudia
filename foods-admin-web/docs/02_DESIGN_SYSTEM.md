@@ -290,8 +290,8 @@ Usar superficies mayormente neutras, azul para navegación y acciones, verde par
   jerarquía siguen el estándar de Bodegas, reinterpretado con tokens Foods.
 - Confirmaciones destructivas son diálogos independientes: identifican el registro,
   conservan «Cancelar» como acción segura y bloquean la repetición durante el envío.
-  La composición es simple: icono, título, frase y acciones dentro de una sola
-  superficie, sin tarjetas internas ni divisores. La frase usa texto regular y
+  La composición es simple: icono y título alineados verticalmente en una fila,
+  frase y acciones dentro de una sola superficie, sin tarjetas internas ni divisores. La frase usa texto regular y
   negrita únicamente en el nombre del registro. Impacto e historial solo se
   muestran si aportan información necesaria para decidir; productos y categorías
   usan una pregunta breve sin explicaciones genéricas. Los botones no repiten
