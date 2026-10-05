@@ -212,12 +212,17 @@ func (a *API) onboardTenant(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	currency, fiscalOK := validateFiscalInput(&fiscalProfileInput{
+	currency, fiscalOK, catalogErr := a.validatePlatformFiscalInput(r.Context(), &fiscalProfileInput{
 		Country: in.Country, Currency: in.Currency, CurrencyPosition: in.CurrencyPosition,
 		TaxName: in.TaxName, TaxRate: in.TaxRate, TaxIncluded: in.TaxIncluded, Default: true,
-	})
+	}, true)
+	if catalogErr != nil {
+		logFlowFailure(w, r, tenantOnboardingFlow, onboardingStepValidate, catalogErr)
+		fail(w, http.StatusServiceUnavailable, "catalogs_unavailable", "No pudimos validar la configuración global de países, monedas y WhatsApp. Intenta nuevamente.")
+		return
+	}
 	if !fiscalOK {
-		rejectOnboarding(w, r, "invalid_fiscal_profile", "Revisa el país, la moneda, el impuesto y la posición del símbolo.")
+		rejectOnboarding(w, r, "invalid_fiscal_profile", "El país o la moneda no están habilitados, o el país todavía no tiene un canal de WhatsApp operativo.")
 		return
 	}
 	if in.LocationName == "" || in.LocationCode == "" || len(in.LocationName) > 180 || len(in.LocationCode) > 80 {
