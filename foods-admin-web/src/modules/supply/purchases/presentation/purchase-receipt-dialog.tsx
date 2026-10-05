@@ -1,4 +1,5 @@
 "use client";
+import {Dialog} from "@/design-system/dialog";
 import {useForm} from "react-hook-form";
 import {Button,Icon,Input,Textarea} from "@/design-system";
 import {useSession} from "@/providers/session-context";
@@ -41,7 +42,7 @@ export function PurchaseReceiptDialog({order,busy,close,save}:{order:PurchaseOrd
   }
 
   return <div className="modal-backdrop modal-overlay-in" role="presentation">
-    <section className="crud-modal purchase-receipt-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="purchase-receipt-title" aria-busy={busy}>
+    <Dialog className="crud-modal purchase-receipt-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="purchase-receipt-title" aria-busy={busy}>
       <div className="modal-accent"/>
       <header>
         <span className="modal-title-icon"><Icon name="stock" size={18}/></span>
@@ -67,6 +68,6 @@ export function PurchaseReceiptDialog({order,busy,close,save}:{order:PurchaseOrd
         <footer><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" kind="success" disabled={busy}>{busy?"Confirmando…":"Confirmar recepción"}</Button></footer>
       </form>
       {busy&&<div className="modal-busy" role="status"><i/><span>Confirmando recepción…</span></div>}
-    </section>
+    </Dialog>
   </div>;
 }

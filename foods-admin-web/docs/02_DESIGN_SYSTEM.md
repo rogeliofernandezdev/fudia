@@ -80,7 +80,9 @@ Usar superficies mayormente neutras, azul para navegación y acciones, verde par
 - Cifras tabulares para KPI, montos y porcentajes.
 - Tamaño mínimo de texto en toda la aplicación (módulos, `globals.css` y
   design system): 10 px. Los eyebrows y etiquetas auxiliares usan 10 px;
-  campos, ayudas y errores usan 11 px; cuerpo 12–13 px. La prueba
+  campos y botones usan 13 px en escritorio; labels 12 px; cuerpo 14 px.
+  Los controles usan 16 px en móvil para mejorar lectura y evitar zoom al enfocar.
+  La prueba
   `tests/type-scale.test.mjs` bloquea cualquier `font-size` menor.
 - Inputs, tablas, botones y estados provienen del design system.
 
@@ -240,7 +242,7 @@ Usar superficies mayormente neutras, azul para navegación y acciones, verde par
   se hardcodean alérgenos en el código.
 - El control de alérgenos respeta el mismo diseño que los demás inputs:
   `--control-height` de altura, borde `#e4e7ec`, radio de 6 px, fuente de
-  11 px, sin outline ni box-shadow al hacer focus, y placeholder alineado a
+  `--font-size-control`, anillo de foco azul compartido y placeholder alineado a
   la izquierda.
 - Las mesas se registran en una tabla con filas editables y botón `+` para
   agregar múltiples mesas en un solo proceso. No se usa modal para crear
@@ -321,6 +323,12 @@ Usar superficies mayormente neutras, azul para navegación y acciones, verde par
   semántico, título, explicación breve y acción «Aceptar». El botón «Aceptar»
   usa `--control-height` como todos los demás botones. El comportamiento y
   jerarquía siguen el estándar de Bodegas, reinterpretado con tokens Foods.
+- Excepción operativa: Cocina no muestra ese diálogo al pasar una comanda a
+  Preparando/Listo; el cambio entre paneles confirma la operación. Los errores
+  conservan el aviso. Éxito se cierra automáticamente o con Aceptar/X; errores e
+  información requieren una acción explícita. Escape y el fondo no cierran los
+  modales; los formularios conservan X/Cancelar. Todos reutilizan `Dialog` para
+  retener y restaurar el foco, sin agregar nuevas formas de cierre.
 - Confirmaciones destructivas son diálogos independientes: identifican el registro,
   conservan «Cancelar» como acción segura y bloquean la repetición durante el envío.
   La composición es simple: icono y título alineados verticalmente en una fila,
@@ -357,11 +365,11 @@ Usar superficies mayormente neutras, azul para navegación y acciones, verde par
 ## Tablas y paginación
 
 - Cabecera azul `primary-600`, texto blanco en mayúsculas, filas alternas sutiles y
-  acciones textuales consistentes; el color semántico se reserva para estados.
+  acciones iconográficas consistentes; el color semántico se reserva para estados.
 - Escala tipográfica única para todas las tablas, definida en `globals.css` y
-  nunca sobrescrita por módulo: cabecera 10 px / 800 con tracking 0.1em, celdas
-  11 px, líneas secundarias (`small`) 10 px. La paginación comparte esa escala:
-  rango «Mostrando X–Y de Z», selector de filas y botones a 11 px.
+  nunca sobrescrita por módulo: cabecera y líneas secundarias usan
+  `--font-size-label` (12 px); celdas, paginación y controles usan
+  `--font-size-control` (13 px en escritorio). La cabecera conserva peso 800.
 - La paginación informa el rango visible y total, permite 10, 20 o 50 filas y
   muestra páginas, elipsis, anterior y siguiente con estado activo inequívoco.
 - Toda tabla de gestión incluye paginación, incluida la de categorías.
@@ -379,19 +387,18 @@ Usar superficies mayormente neutras, azul para navegación y acciones, verde par
   `--control-height` (38 px en escritorio, 44 px en móvil). Ningún botón usa
   alturas fijas distintas; un valor literal fuera de `--control-height` se
   considera defecto.
-  botones de icono, acciones de fila y controles de paginación. La altura se
-  declara siempre con el token `--control-height` y nunca con un valor fijo.
-- `--control-height` vale 36 px en escritorio y se redefine a 44 px en
+- `--control-height` vale 38 px en escritorio y se redefine a 44 px en
   `@media(max-width:600px)` para conservar el área táctil. Un solo cambio de
   token reajusta toda la aplicación; no se permiten overrides `!important`
-  por control ni excepciones por pantalla.
+  por control ni excepciones arbitrarias por pantalla. Los dispositivos con
+  puntero táctil también usan 44 px, independientemente del ancho.
 - Los controles cuadrados de icono usan `--control-height` en ancho y alto para
   alinearse con los campos vecinos. Los inputs anidados dentro de un contenedor
   con borde usan `calc(var(--control-height) - 2px)`.
 - El radio de los controles es 6 px de forma uniforme; 14 px se reserva para
   tarjetas y paneles.
-- En escritorio, los campos siguen la densidad de Bodegas: 36 px de altura,
-  radio de 6 px, borde neutro y texto de 11 px. En móvil aumentan a 44 px para
+- En escritorio, los campos usan 38 px de altura,
+  radio de 6 px, borde neutro y texto de 13 px. En móvil aumentan a 44 px para
   conservar el área táctil. El foco usa anillo azul Foods y el error rojo semántico.
 - Los inputs compuestos con prefijo (montos, «S/») declaran el borde en el
   contenedor, no en cada parte; el prefijo y el input interno no duplican ni
@@ -435,9 +442,11 @@ y detalle; no se limita a apilar columnas de escritorio.
 
 ## Acción principal
 
-El botón primario azul `#4654CD` mide 48 px de alto, usa padding horizontal de 20 px,
-texto de 13/20 px y radio de 10 px. Esta mayor presencia se reserva para la
-acción dominante; botones secundarios e iconográficos mantienen su geometría.
+El botón primario usa `primary-600` (`#4654CD`), `--control-height`,
+`--font-size-control` y `--radius-control`, igual que los demás controles.
+Su jerarquía procede del color, no de una altura distinta. Los avisos exitosos
+conservan verde `brand-600` y usan texto `ink-950`; blanco sobre menta no tiene
+contraste suficiente. El hover verde oscuro usa texto blanco.
 
 ## Acceso administrativo
 

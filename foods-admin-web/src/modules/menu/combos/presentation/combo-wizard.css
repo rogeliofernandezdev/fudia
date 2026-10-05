@@ -19,7 +19,7 @@
   min-height: var(--size-82);
   padding: var(--space-14) var(--space-18);
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto var(--size-38);
+  grid-template-columns: minmax(0, 1fr) var(--control-height);
   align-items: center;
   gap: var(--space-14);
   flex: 0 0 auto;
@@ -75,24 +75,9 @@
   line-height: var(--line-height-1-35);
 }
 
-.combo-wizard-progress {
-  min-height: var(--size-30);
-  padding: 0 var(--space-10);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: var(--stroke-1) solid var(--palette-blue-56);
-  border-radius: var(--radius-999);
-  background: var(--primary-100);
-  color: var(--ops-700);
-  font-size: var(--font-size-label);
-  font-weight: var(--font-weight-800);
-  white-space: nowrap;
-}
-
 .combo-wizard-close {
-  width: var(--size-38);
-  height: var(--size-38);
+  width: var(--control-height);
+  height: var(--control-height);
   display: grid;
   place-items: center;
   border: var(--stroke-1) solid var(--line);
@@ -419,7 +404,7 @@
 .combo-group-header {
   padding: var(--space-12) var(--space-14);
   display: grid;
-  grid-template-columns: minmax(var(--size-190), 1fr) auto var(--size-38);
+  grid-template-columns: minmax(0, 1fr) auto var(--control-height);
   align-items: center;
   gap: var(--space-12);
   border-bottom: var(--stroke-1) solid var(--palette-blue-76);
@@ -427,7 +412,7 @@
 }
 
 .combo-toggle {
-  min-height: var(--size-38);
+  min-height: var(--control-height);
   display: flex;
   align-items: center;
   gap: var(--space-8);
@@ -488,8 +473,8 @@
 }
 
 .combo-remove {
-  width: var(--size-36);
-  height: var(--size-36);
+  width: var(--control-height);
+  height: var(--control-height);
   display: grid;
   place-items: center;
   border: var(--stroke-1) solid var(--palette-red-12);
@@ -516,7 +501,7 @@
   min-height: var(--size-72);
   padding: var(--space-11) var(--space-12);
   display: grid;
-  grid-template-columns: minmax(var(--size-210), 1fr) var(--size-112) var(--size-160) var(--size-36);
+  grid-template-columns: minmax(0, 1fr) var(--size-112) var(--size-160) var(--control-height);
   align-items: center;
   gap: var(--space-12);
   grid-column: 1 / -1;
@@ -569,22 +554,9 @@
 
 .combo-add-option select {
   width: 100%;
-  height: var(--size-42);
-  padding: 0 var(--space-38) 0 var(--space-13);
-  border: var(--stroke-1) dashed var(--palette-blue-18);
-  border-radius: var(--radius-9);
-  background: var(--palette-blue-107);
-  color: var(--ops-700);
-  font-size: var(--font-size-label);
-  font-weight: var(--font-weight-800);
-  cursor: pointer;
-  transition: border-color var(--duration-150) ease, background var(--duration-150) ease;
 }
 
-.combo-add-option select:hover {
-  border-color: var(--primary-600);
-  background: var(--primary-100);
-}
+.combo-toggle:focus-within{outline:var(--stroke-2) solid var(--primary-600);outline-offset:var(--space-2);border-radius:var(--radius-control)}
 
 .combo-availability {
   align-content: start;
@@ -689,11 +661,6 @@
 
 .combo-wizard-footer .button {
   min-width: var(--size-118);
-}
-
-.combo-wizard-footer .button.primary {
-  min-height: var(--size-42);
-  border-radius: var(--radius-9);
 }
 
 .combo-wizard-footer-copy {
@@ -870,7 +837,7 @@
   .combo-wizard-header {
     min-height: var(--size-72);
     padding: var(--space-10) var(--space-12);
-    grid-template-columns: minmax(0, 1fr) var(--size-36);
+    grid-template-columns: minmax(0, 1fr) var(--control-height);
     gap: var(--space-8);
   }
 
@@ -886,15 +853,6 @@
 
   .combo-wizard-title p {
     display: none;
-  }
-
-  .combo-wizard-progress {
-    display: none;
-  }
-
-  .combo-wizard-close {
-    width: var(--size-36);
-    height: var(--size-36);
   }
 
   .combo-wizard-steps {

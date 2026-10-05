@@ -8,10 +8,10 @@
 .sidebar-user:hover>svg{color:var(--surface)}
 .admin-shell>main{min-height:100vh;margin-left:var(--space-250);container-type:inline-size;container-name:admin-main;transition:margin-left var(--duration-240) var(--ease-1)}
 .topbar{border-bottom:var(--stroke-1) solid var(--line);backdrop-filter:blur(var(--blur-12));z-index:10;background:var(--surface-a237);justify-content:space-between;align-items:center;gap:var(--space-12);height:var(--size-64);padding:0 var(--space-24);display:flex;position:sticky;top:0}
-.global-search{border:var(--stroke-1) solid transparent;width:min(var(--size-420),36vw);height:var(--control-height);color:var(--ink-500);background:var(--cloud-100);border-radius:var(--radius-10);align-items:center;gap:var(--space-9);padding:0 var(--space-12);display:flex;transition:background var(--duration-150),border-color var(--duration-150),box-shadow var(--duration-150)}
+.global-search{position:relative;border:var(--stroke-1) solid transparent;width:min(var(--size-420),36vw);height:var(--control-height);color:var(--ink-500);background:var(--cloud-100);border-radius:var(--radius-control);align-items:center;gap:var(--space-9);padding:0 var(--space-12);display:flex;transition:background var(--duration-150),border-color var(--duration-150),box-shadow var(--duration-150)}
 .global-search:hover{background:var(--palette-blue-89)}
 .global-search:focus-within{background:var(--surface);border-color:var(--ops-500);box-shadow:var(--shadow-23)}
-.global-search input{background:0 0;border:0;outline:0;width:100%;font-size:var(--font-size-12);color:var(--ink-950)}
+.global-search input{background:0 0;border:0;outline:0;width:100%;font-size:var(--font-size-control);color:var(--ink-950)}
 .global-search input::placeholder{color:var(--ink-500)}
 .mobile-nav{display:none}
 .platform-link{display:inline-flex;align-items:center;gap:var(--space-6);color:var(--surface);background:var(--primary-600);border:var(--stroke-1) solid transparent;border-radius:var(--radius-10);height:var(--control-height);padding:0 var(--space-14);font-size:var(--font-size-control);font-weight:var(--font-weight-800);transition:background var(--duration-150)}

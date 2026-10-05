@@ -1,4 +1,5 @@
 "use client";
+import {Dialog} from "@/design-system/dialog";
 import {useFieldArray,useForm,useWatch} from "react-hook-form";
 import {Button,FormField,Icon,Input,RowActionButton,Select,Textarea} from "@/design-system";
 import {useSession} from "@/providers/session-context";
@@ -39,7 +40,7 @@ export function InventoryTransferDialog({items,locations,currentLocationId,busy,
   }
 
   return <div className="modal-backdrop modal-overlay-in" role="presentation">
-    <section className="crud-modal inventory-transfer-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="inventory-transfer-title" aria-busy={busy}>
+    <Dialog className="crud-modal inventory-transfer-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="inventory-transfer-title" aria-busy={busy}>
       <div className="modal-accent"/>
       <header>
         <span className="modal-title-icon"><Icon name="truck" size={18}/></span>
@@ -93,6 +94,6 @@ export function InventoryTransferDialog({items,locations,currentLocationId,busy,
         <footer><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy||!destinations.length||!items.length}>{busy?"Guardando…":"Guardar"}</Button></footer>
       </form>
       {busy&&<div className="modal-busy" role="status"><i/><span>Guardando…</span></div>}
-    </section>
+    </Dialog>
   </div>;
 }

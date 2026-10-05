@@ -1,4 +1,5 @@
 "use client";
+import {Dialog} from "@/design-system/dialog";
 import "./payment-methods.css";
 import {useState} from "react";
 import {useForm} from "react-hook-form";
@@ -75,7 +76,7 @@ function PaymentMethodsLoading(){return <div className="table-skeleton" aria-lab
 function PaymentMethodDialog({value:initial,editing,busy,close,save}:{value:PaymentMethodDraft;editing:boolean;busy:boolean;close:()=>void;save:(value:PaymentMethodDraft)=>void}){
  const{register,handleSubmit,setValue,formState:{errors}}=useForm<PaymentMethodDraft>({defaultValues:initial,resolver:paymentMethodResolver,mode:"onSubmit",reValidateMode:"onChange"});
  const submit=handleSubmit(value=>save({...value,code:value.code.trim().toLowerCase(),name:value.name.trim(),description:value.description.trim(),sortOrder:Number(value.sortOrder)}));
- return <div className="payment-method-modal-overlay"><section className="payment-method-modal" role="dialog" aria-modal="true" aria-labelledby="payment-method-title">
+ return <div className="payment-method-modal-overlay"><Dialog className="payment-method-modal" role="dialog" aria-modal="true" aria-labelledby="payment-method-title">
   <header><span><Icon name="payment"/></span><div><small>{editing?"EDITAR MEDIO":"NUEVO MEDIO"}</small><h2 id="payment-method-title">Configuración del medio de pago</h2></div><button type="button" aria-label="Cerrar" onClick={close}><Icon name="close"/></button></header>
   <form className="payment-method-form" onSubmit={submit} noValidate>
    <div className="payment-method-grid">
@@ -92,5 +93,5 @@ function PaymentMethodDialog({value:initial,editing,busy,close,save}:{value:Paym
    {errors.salesEnabled?.message&&<div className="payment-method-warning" role="alert">{errors.salesEnabled.message}</div>}
    <footer><Button kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" icon="check" disabled={busy}>{busy?"Guardando…":"Guardar"}</Button></footer>
   </form>
- </section></div>
+ </Dialog></div>
 }

@@ -1,4 +1,5 @@
 "use client";
+import {Dialog} from "@/design-system/dialog";
 import dynamic from "next/dynamic";
 import "./inventory.css";
 import {useState} from "react";
@@ -121,11 +122,11 @@ export function InventoryPage(){
 }
 
 function InventoryAdjustmentLoadError({message,close,retry}:{message:string;close:()=>void;retry:()=>void}){
- return <div className="modal-backdrop modal-overlay-in"><section className="crud-modal inventory-adjustment-modal modal-panel-in" role="dialog" aria-modal="true">
+ return <div className="modal-backdrop modal-overlay-in"><Dialog className="crud-modal inventory-adjustment-modal modal-panel-in" role="dialog" aria-modal="true">
   <div className="modal-accent"/>
   <header><span className="modal-title-icon"><Icon name="alert" size={18}/></span><div><small>INVENTARIO</small><h2>No pudimos cargar los artículos</h2></div><button type="button" aria-label="Cerrar" onClick={close}><Icon name="close"/></button></header>
   <div className="inventory-state"><p>{message}</p><Button kind="secondary" icon="refresh" onClick={retry}>Reintentar</Button></div>
- </section></div>;
+ </Dialog></div>;
 }
 
 function InventorySkeleton(){

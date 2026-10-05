@@ -1,4 +1,5 @@
 "use client";
+import {Dialog} from "@/design-system/dialog";
 import "./recipes.css";
 import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
@@ -181,7 +182,7 @@ export function RecipesPage(){
   </section>
 
   {draft&&<div className="modal-backdrop modal-overlay-in" role="presentation">
-   <section className="crud-modal recipe-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="recipe-modal-title" aria-busy={save.isPending}>
+   <Dialog className="crud-modal recipe-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="recipe-modal-title" aria-busy={save.isPending}>
     <header className="recipe-modal-header">
      <span className="modal-title-icon"><Icon name="cookingPot" size={18}/></span>
      <div>
@@ -305,7 +306,7 @@ export function RecipesPage(){
       <Button type="submit" icon="check" disabled={save.isPending}>{save.isPending?"Guardando…":"Guardar"}</Button>
      </div>
     </form>
-   </section>
+   </Dialog>
   </div>}
 
   <ConfirmDialog

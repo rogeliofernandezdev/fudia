@@ -3,6 +3,16 @@
 TanStack Query administra estado remoto por organización/local. Presentación no
 contiene rutas HTTP ni DTO crudos. Toda dependencia muestra skeleton, error y vacío.
 
+Las transiciones de Cocina invalidan comandas, pedidos y el detalle afectado.
+La respuesta confirmada se refleja en el panel correspondiente sin modal de
+éxito; durante el envío se bloquea la acción y un fallo conserva el aviso de error.
+
+El wizard de Menús y combos valida cada paso antes de continuar y todos los pasos
+antes de guardar. Explica el primer error y enfoca el campo afectado. Retroceder
+no borra los datos ni guarda registros parciales. X/Cancelar solicitan confirmación
+cuando hay cambios sin guardar; la recarga utiliza el aviso nativo del navegador.
+No se repite «Paso X de Y» junto a la navegación de pasos.
+
 ## Autocompletes remotos
 
 Los autocompletes de catálogos grandes no cargan el catálogo completo. La apertura inicial usa una página pequeña de hasta 10 opciones. Las búsquedas no consultan con menos de 3 caracteres; desde 3 caracteres delegan el filtro al backend y recorren la paginación necesaria para reunir todas las coincidencias. Las opciones ya seleccionadas en formularios multirregistro se excluyen en cliente sin alterar el resultado remoto.

@@ -1,4 +1,5 @@
 "use client";
+import {Dialog} from "@/design-system/dialog";
 import "../../styles/orders.css";
 import "../../styles/salon.css";
 import Link from "next/link";
@@ -113,7 +114,7 @@ function OrderDetail({loading,order,error,channels,currencySymbol,canManage,busy
  const subject=order?(order.tableName||order.customerName||"Pedido"):"Pedido";
  const subtitle=order?.tableName&&order.customerName?order.customerName:undefined;
  return <div className="modal-backdrop modal-overlay-in">
-  <section className="crud-modal order-detail salon-order-detail modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="orders-preview-title" aria-busy={loading}>
+  <Dialog className="crud-modal order-detail salon-order-detail modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="orders-preview-title" aria-busy={loading}>
    <div className="salon-order-detail-accent"/>
    {loading?<OrderDetailSkeleton close={close}/>:<>
    <header className="salon-order-detail-head">
@@ -177,7 +178,7 @@ function OrderDetail({loading,order,error,channels,currencySymbol,canManage,busy
     </footer>}
    </>}
    </>}
-  </section>
+  </Dialog>
  </div>;
 }
 

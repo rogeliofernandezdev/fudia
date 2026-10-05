@@ -1,5 +1,6 @@
 "use client";
 /* eslint-disable @next/next/no-img-element -- Local blob previews must bypass Next image optimization. */
+import {Dialog} from "@/design-system/dialog";
 import {useDeferredValue,useRef,useState} from "react";
 import {useQuery} from "@tanstack/react-query";
 import {useForm,useWatch} from "react-hook-form";
@@ -106,7 +107,7 @@ export function PurchaseItemDialog({
   const existing=items.data?.items??[];
 
   return <div className="modal-backdrop modal-overlay-in" role="presentation">
-    <section className="crud-modal purchase-item-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="purchase-item-title" aria-busy={busy}>
+    <Dialog className="crud-modal purchase-item-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="purchase-item-title" aria-busy={busy}>
       <div className="modal-accent"/>
       <header>
         <span className="modal-title-icon"><Icon name="stock" size={18}/></span>
@@ -187,6 +188,6 @@ export function PurchaseItemDialog({
         <footer><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button>{mode!=="existing"&&<Button type="submit" disabled={busy||Boolean(imageError)}>{busy?"Guardando…":"Crear y agregar"}</Button>}</footer>
       </form>
       {busy&&<div className="modal-busy" role="status"><i/><span>Guardando…</span></div>}
-    </section>
+    </Dialog>
   </div>;
 }

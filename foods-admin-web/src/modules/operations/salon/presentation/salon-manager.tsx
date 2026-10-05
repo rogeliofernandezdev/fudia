@@ -1,5 +1,6 @@
 "use client";
 
+import {Dialog} from "@/design-system/dialog";
 import "../../styles/orders.css";
 import "../../styles/salon.css";
 import "../../styles/salon-comanda.css";
@@ -422,7 +423,7 @@ function ComandaView({initial,mode,allTables,busy,currencySymbol,close,save,noti
     save(v,sendToKitchen);
   };
   return(
-    <div className="salon-comanda-shell" role="dialog" aria-modal="true" aria-label={editing?"Editar comanda":"Nueva comanda"}>
+    <Dialog as="div" className="salon-comanda-shell" role="dialog" aria-modal="true" aria-label={editing?"Editar comanda":"Nueva comanda"}>
       <header className="salon-comanda-header">
         <div className="salon-comanda-header-main">
           <button type="button" className="salon-comanda-icon-button" aria-label="Volver al salón" onClick={close}>
@@ -588,7 +589,7 @@ function ComandaView({initial,mode,allTables,busy,currencySymbol,close,save,noti
           onConfirm={applyCombo}
         />
       )}
-    </div>
+    </Dialog>
   );
 }
 
@@ -608,7 +609,7 @@ function OrderDetail({loading,order,error,currencySymbol,canManage,busy,close,ad
   const itemCount=order?(order.items??[]).reduce((sum,it)=>sum+Number(it.qty||0),0):0;
   return(
     <div className="modal-backdrop modal-overlay-in">
-      <section className="crud-modal order-detail salon-order-detail modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="salon-order-detail-title" aria-busy={loading}>
+      <Dialog className="crud-modal order-detail salon-order-detail modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="salon-order-detail-title" aria-busy={loading}>
         <div className="salon-order-detail-accent"/>
         {loading?(
           <OrderDetailSkeleton close={close}/>
@@ -728,7 +729,7 @@ function OrderDetail({loading,order,error,currencySymbol,canManage,busy,close,ad
             )}
           </>
         )}
-      </section>
+      </Dialog>
     </div>
   );
 }

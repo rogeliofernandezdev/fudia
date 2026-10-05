@@ -91,11 +91,6 @@ export function KitchenBoard(){
       void qc.invalidateQueries({queryKey:["kitchen-tickets"]});
       void qc.invalidateQueries({queryKey:["orders"]});
       void qc.invalidateQueries({queryKey:["order",variables.ticket.orderId]});
-      notify({
-        tone:"success",
-        title:variables.status==="preparando"?"Preparación iniciada":"Comanda lista",
-        message:variables.status==="preparando"?`${variables.ticket.code} pasó a preparación.`:`${variables.ticket.code} está lista para entregar.`,
-      });
     },
     onError:error=>notify({tone:"danger",title:"No se pudo actualizar la comanda",message:error.message}),
   });

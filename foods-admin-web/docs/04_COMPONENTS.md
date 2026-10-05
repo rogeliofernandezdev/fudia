@@ -3,7 +3,7 @@
 Componentes pequeños y accesibles. Design system no conoce autenticación ni API.
 Formularios usan React Hook Form y Zod. Catálogos siempre llegan del API.
 
-Las tablas usan paginación, acciones textuales y scroll horizontal únicamente
+Las tablas usan paginación, acciones iconográficas y scroll horizontal únicamente
 cuando el contenido excede el ancho. La barra permanece oculta en reposo y se
 muestra al pasar el cursor o enfocar el contenedor. Formularios CRUD usan modal
 responsive, controles con la altura de `--control-height`, validación visible y
@@ -13,6 +13,17 @@ estados de envío.
 
 - `FeedbackProvider`: única salida para éxito, error e información después de una
   acción remota. Diálogo centrado, accesible, cerrable y con movimiento reducido.
+  Excepción: las transiciones Preparando/Listo de Cocina se confirman con el
+  cambio de panel, sin modal de éxito. Los errores sí muestran el diálogo.
+  Los avisos de éxito se cierran automáticamente (4,2 s por defecto) o mediante
+  Aceptar/X. Errores e información requieren cierre explícito. No se cierran al
+  pulsar el fondo ni con Escape.
+- `Dialog`: comportamiento común de todos los modales. Mantiene el foco dentro
+  de la ventana activa, soporta ventanas superpuestas y selectores con portal,
+  bloquea el scroll del fondo y devuelve el foco al control que abrió la ventana.
+  No agrega botones ni cierra con Escape; cada pantalla conserva su X/Cancelar.
+  `data-dialog-initial-focus` identifica la acción inicial; en confirmaciones
+  corresponde a Cancelar y en avisos a Aceptar.
 - `ConfirmDialog`: requerido antes de desactivar o ejecutar una acción sensible;
   muestra el registro afectado, acción segura y estado pendiente. Su presentación
   es compacta: icono y título en una misma fila, centrados verticalmente, seguidos
@@ -55,7 +66,7 @@ estados de envío.
   controles anterior/siguiente.
 - Todas las tablas, incluidos productos, categorías, mesas, zonas y plantillas
   de gestión, consumen la única primitiva `Pagination` exportada por
-  `src/components/ui.tsx`; no se permiten paginadores locales por pantalla.
+  `src/design-system/page-header.tsx`; no se permiten paginadores locales por pantalla.
 
 Estos contratos toman de Bodegas la interacción, densidad y jerarquía, pero sus
 colores siempre se resuelven con los tokens definidos en `02_DESIGN_SYSTEM.md`.

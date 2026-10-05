@@ -3,7 +3,7 @@
 ## Base disponible
 
 - Acceso administrativo responsive y estados de envío.
-- Shell con navegación agrupada, contexto de local y búsqueda global.
+- Shell con navegación agrupada, contexto de local y búsqueda de opciones autorizadas.
 - Dashboard con KPI, alertas, ventas horarias y productos destacados.
 - Vistas consistentes para menú, inventario, compras, ventas y configuración.
 - Sistema visual único para botones, campos, filtros, tablas y estados.

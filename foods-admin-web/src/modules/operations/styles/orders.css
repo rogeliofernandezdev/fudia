@@ -726,8 +726,8 @@
 .comanda-dish.picked .comanda-dish-name,
 .comanda-dish.picked .comanda-dish-price{color:var(--ops-700)}
 .comanda-dish-add{
-  width:var(--size-32);
-  height:var(--size-32);
+  width:var(--control-height);
+  height:var(--control-height);
   flex-shrink:0;
   display:grid;
   place-items:center;
@@ -739,7 +739,6 @@
 }
 .comanda-dish:hover .comanda-dish-add{
   background:var(--ops-700);
-  transform:scale(1.08);
 }
 .comanda-dish-step{
   flex-shrink:0;
@@ -753,8 +752,8 @@
   box-shadow:var(--shadow-37);
 }
 .comanda-dish-step button{
-  width:var(--size-26);
-  height:var(--size-26);
+  width:var(--control-height);
+  height:var(--control-height);
   display:grid;
   place-items:center;
   border-radius:var(--radius-999);
@@ -1548,8 +1547,8 @@
   .comanda-ticket-close{
     display:grid;
     place-items:center;
-    width:var(--size-32);
-    height:var(--size-32);
+    width:var(--control-height);
+    height:var(--control-height);
     border-radius:var(--radius-8);
     border:var(--stroke-1) solid var(--line);
     background:var(--surface);

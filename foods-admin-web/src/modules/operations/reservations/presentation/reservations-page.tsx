@@ -1,4 +1,5 @@
 "use client";
+import {Dialog} from "@/design-system/dialog";
 import "./reservations.css";
 import {useState} from "react";
 import {useForm,useWatch} from "react-hook-form";
@@ -60,7 +61,7 @@ function ReservationDialog({value:initial,tables,tablesLoading,tablesError,busy,
   const eligibleTables=tables.filter(table=>table.id===initial.tableId||(table.active&&table.seats>=guests));
 
   return <div className="modal-backdrop modal-overlay-in" role="presentation">
-    <section className="crud-modal reservation-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="reservation-title" aria-busy={busy}>
+    <Dialog className="crud-modal reservation-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="reservation-title" aria-busy={busy}>
       <div className="modal-accent"/>
       <header>
         <span className="modal-title-icon"><Icon name="clock" size={18}/></span>
@@ -119,6 +120,6 @@ function ReservationDialog({value:initial,tables,tablesLoading,tablesError,busy,
         </footer>
       </form>
       {busy&&<div className="modal-busy" role="status"><i/><span>Guardando…</span></div>}
-    </section>
+    </Dialog>
   </div>;
 }

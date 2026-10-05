@@ -1,4 +1,5 @@
 "use client";
+import {Dialog} from "@/design-system/dialog";
 import "../../styles/table-qr.css";
 import NextImage from "next/image";
 import {useState,useEffect,useMemo,useRef} from "react";import {useForm} from "react-hook-form";
@@ -149,7 +150,7 @@ function QrDialog({table,restaurantName,close}:{table:Table;restaurantName:strin
    },"image/png");
  }
 
- return <div className="modal-backdrop modal-overlay-in" role="presentation"><section className="crud-modal compact modal-panel-in qr-modal" role="dialog" aria-modal="true" aria-labelledby="qr-title">
+ return <div className="modal-backdrop modal-overlay-in" role="presentation"><Dialog className="crud-modal compact modal-panel-in qr-modal" role="dialog" aria-modal="true" aria-labelledby="qr-title">
  <header><span className="modal-title-icon"><Icon name="qr" size={18}/></span><div><small>CÓDIGO QR DE LA MESA</small><h2 id="qr-title">{table.name}</h2></div><button onClick={close} aria-label="Cerrar"><Icon name="close"/></button></header>
  <div className="qr-dialog-body">
    <div className="qr-hero">
@@ -167,15 +168,15 @@ function QrDialog({table,restaurantName,close}:{table:Table;restaurantName:strin
    <button type="button" className="button ghost" onClick={share}><Icon name="share" size={16}/>Compartir</button>
    <button type="button" className="button primary" onClick={download}><Icon name="download" size={16}/>Descargar</button>
  </footer>
- </section></div>;
+ </Dialog></div>;
 }
 
 function ZoneDialog({draft,busy,close,save}:{draft:ZoneDraft;busy:boolean;close:()=>void;save:(d:ZoneDraft)=>void}){
  const{register,handleSubmit,formState:{errors}}=useForm<ZoneDraft>({defaultValues:draft,resolver:zoneResolver,mode:"onSubmit",reValidateMode:"onChange"});
- return <div className="modal-backdrop modal-overlay-in" role="presentation"><section className="crud-modal compact modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="zone-title" aria-busy={busy}><div className="modal-accent"/><header><span className="modal-title-icon"><Icon name="store" size={18}/></span><div><small>{draft.id?"EDITAR ZONA":"NUEVA ZONA"}</small><h2 id="zone-title">Información de la zona</h2></div><button onClick={close} disabled={busy} aria-label="Cerrar"><Icon name="close"/></button></header><form onSubmit={handleSubmit(value=>save({...value,sortOrder:Number(value.sortOrder)}))} noValidate><div className="form-grid">
+ return <div className="modal-backdrop modal-overlay-in" role="presentation"><Dialog className="crud-modal compact modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="zone-title" aria-busy={busy}><div className="modal-accent"/><header><span className="modal-title-icon"><Icon name="store" size={18}/></span><div><small>{draft.id?"EDITAR ZONA":"NUEVA ZONA"}</small><h2 id="zone-title">Información de la zona</h2></div><button onClick={close} disabled={busy} aria-label="Cerrar"><Icon name="close"/></button></header><form onSubmit={handleSubmit(value=>save({...value,sortOrder:Number(value.sortOrder)}))} noValidate><div className="form-grid">
  <FormField className="span-2" label="Nombre de la zona" error={errors.name?.message}><Input autoFocus maxLength={60} {...register("name")} placeholder="Ej. Terraza"/></FormField>
  <FormField className="span-2" label="Orden" help="Menor número aparece primero." error={errors.sortOrder?.message}><Input type="number" min="0" inputMode="numeric" {...register("sortOrder")} placeholder="0"/></FormField>
- </div><footer><button type="button" className="button ghost" disabled={busy} onClick={close}>Cancelar</button><button type="submit" className="button primary" disabled={busy}>{busy?"Guardando…":"Guardar"}</button></footer></form></section></div>;
+ </div><footer><button type="button" className="button ghost" disabled={busy} onClick={close}>Cancelar</button><button type="submit" className="button primary" disabled={busy}>{busy?"Guardando…":"Guardar"}</button></footer></form></Dialog></div>;
 }
 
 function PrintQrDialog({tables,restaurantName,close}:{tables:Table[];restaurantName:string;close:()=>void}){
@@ -208,7 +209,7 @@ function PrintQrDialog({tables,restaurantName,close}:{tables:Table[];restaurantN
    window.onafterprint=()=>{document.body.classList.remove("printing-qrs");window.onafterprint=null};
  }
 
- return <div className="modal-backdrop modal-overlay-in" role="presentation"><section className="crud-modal qr-print-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="print-qr-title">
+ return <div className="modal-backdrop modal-overlay-in" role="presentation"><Dialog className="crud-modal qr-print-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="print-qr-title">
  <header><span className="modal-title-icon"><Icon name="qr" size={18}/></span><div><small>IMPRIMIR QRs</small><h2 id="print-qr-title">Códigos QR de las mesas</h2></div><button onClick={close} aria-label="Cerrar"><Icon name="close"/></button></header>
  <div className="qr-print-preview">
    {printable.length===0?<div className="qr-print-empty"><Icon name="qr" size={32}/><b>No hay mesas con QR activo</b><p>Crea mesas o activa sus QRs para imprimir.</p></div>:
@@ -223,5 +224,5 @@ function PrintQrDialog({tables,restaurantName,close}:{tables:Table[];restaurantN
    <button type="button" className="button ghost" onClick={close}>Cancelar</button>
    <button type="button" className="button primary" onClick={doPrint} disabled={!printable.length}><Icon name="download" size={16}/>Imprimir {printable.length} QRs</button>
  </footer>
- </section></div>;
+ </Dialog></div>;
 }

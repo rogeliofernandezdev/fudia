@@ -1,6 +1,7 @@
 "use client";
 /* eslint-disable @next/next/no-img-element -- Menu images come from tenant-configured product URLs. */
 
+import {Dialog} from "@/design-system/dialog";
 import {useEffect,useRef,useState} from "react";
 import {useQueries,useQuery} from "@tanstack/react-query";
 import {Button,Icon,Pagination} from "@/design-system";
@@ -214,14 +215,6 @@ export function ComboConfigurator({comboId,initialSelections=[],editing=false,cu
     initialMapped.current=true;
   },[data,initialSelections]);
 
-  useEffect(()=>{
-    const onKeyDown=(event:KeyboardEvent)=>{
-      if(event.key==="Escape")onClose();
-    };
-    window.addEventListener("keydown",onKeyDown);
-    return()=>window.removeEventListener("keydown",onKeyDown);
-  },[onClose]);
-
   const toggle=(group:ComboGroup,option:ComboOption)=>{
     setSelected(prev=>{
       const current=prev[group.id]??[];
@@ -250,8 +243,8 @@ export function ComboConfigurator({comboId,initialSelections=[],editing=false,cu
   const finalPrice=Number(data?.price??0)+selections.reduce((sum,sel)=>sum+sel.surcharge,0);
 
   return(
-    <div className="combo-config-backdrop" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)onClose()}}>
-      <section className="combo-config-modal" role="dialog" aria-modal="true" aria-labelledby="combo-config-title">
+    <div className="combo-config-backdrop" role="presentation">
+      <Dialog className="combo-config-modal" role="dialog" aria-modal="true" aria-labelledby="combo-config-title">
         <header className="combo-config-head">
           <div>
             <small>ELIGE LAS OPCIONES</small>
@@ -310,7 +303,7 @@ export function ComboConfigurator({comboId,initialSelections=[],editing=false,cu
             {editing?"Guardar":"Agregar menú"}
           </Button>
         </footer>
-      </section>
+      </Dialog>
     </div>
   );
 }

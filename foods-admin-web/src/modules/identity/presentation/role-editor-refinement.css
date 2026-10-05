@@ -32,14 +32,15 @@
 /* ── Accordion group ─────────────────────────────────── */
 .re-acc-group{border:var(--stroke-1) solid var(--line);border-radius:var(--radius-9);overflow:hidden;margin-bottom:var(--space-4);background:var(--surface);transition:border-color var(--duration-150)}
 .re-acc-group.open{border-color:color-mix(in srgb,var(--ops-500) 40%,var(--line))}
-.re-acc-header{display:flex;align-items:center;gap:var(--space-8);width:100%;padding:0 var(--space-10);height:var(--size-42);border:0;background:transparent;text-align:left;cursor:pointer;transition:background var(--duration-120)}
+.re-acc-header{display:flex;align-items:center;gap:var(--space-8);width:100%;padding:var(--space-4) var(--space-10);min-height:var(--control-height);background:transparent;transition:background var(--duration-120)}
+.re-acc-heading{display:flex;flex:1;min-width:0;align-items:center;gap:var(--space-8);min-height:var(--control-height);border:0;background:transparent;text-align:left;color:inherit}
 .re-acc-header:hover{background:var(--palette-blue-106)}
 .re-acc-group.open .re-acc-header{background:var(--ops-50)}
 .re-acc-chevron{width:var(--size-20);height:var(--size-20);display:grid;place-items:center;color:var(--ink-400);flex-shrink:0;transition:transform var(--duration-200) var(--ease-4)}
 .re-acc-group.open .re-acc-chevron{transform:rotate(90deg);color:var(--ops-600)}
 .re-acc-name{font-size:var(--font-size-label);font-weight:var(--font-weight-800);color:var(--ink-800);flex:1}
 .re-acc-badge{background:var(--ops-500);color:var(--surface);border-radius:var(--radius-999);min-width:var(--size-18);height:var(--size-18);padding:0 var(--space-5);font-size:var(--font-size-label);font-weight:var(--font-weight-850);display:grid;place-items:center}
-.re-acc-toggle{margin-left:auto;border:var(--stroke-1) solid var(--line);background:var(--surface);border-radius:var(--radius-control);height:var(--size-24);padding:0 var(--space-9);font-size:var(--font-size-label);font-weight:var(--font-weight-800);color:var(--ops-700);cursor:pointer;transition:background var(--duration-120),border-color var(--duration-120)}
+.re-acc-toggle{margin-left:auto;border:var(--stroke-1) solid var(--line);background:var(--surface);border-radius:var(--radius-control);height:var(--control-height);padding:0 var(--space-9);font-size:var(--font-size-label);font-weight:var(--font-weight-800);color:var(--ops-700);cursor:pointer;transition:background var(--duration-120),border-color var(--duration-120)}
 .re-acc-toggle:hover{background:var(--ops-100);border-color:var(--ops-300)}
 .re-acc-toggle.remove{color:var(--ink-500);border-color:var(--line)}
 .re-acc-toggle.remove:hover{background:var(--palette-blue-95)}

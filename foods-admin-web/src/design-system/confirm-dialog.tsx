@@ -1,5 +1,6 @@
 "use client";
 
+import {Dialog} from "./dialog";
 import {Children,useId,type ReactNode} from "react";
 import "./styles/confirm-dialog.css";
 import {Icon} from "@/design-system/icons";
@@ -25,7 +26,7 @@ export function ConfirmDialog({open,title,description,subject,children,note,tone
   const hasDescription=Boolean(subject||note)||hasMessage||Children.toArray(children).length>0;
 
   return <div className="confirm-overlay modal-overlay-in">
-    <section className="confirm-card" role="alertdialog" aria-modal="true" aria-labelledby={`${id}-title`} aria-describedby={hasDescription?`${id}-description`:undefined} aria-busy={pending}>
+    <Dialog className="confirm-card" role="alertdialog" aria-modal="true" aria-labelledby={`${id}-title`} aria-describedby={hasDescription?`${id}-description`:undefined} aria-busy={pending}>
       <header className="confirm-header">
         <span className={`confirm-icon ${tone}`}><Icon name={tone==="danger"?"alert":"check"} size={20}/></span>
         <h2 id={`${id}-title`}>{title}</h2>
@@ -37,9 +38,9 @@ export function ConfirmDialog({open,title,description,subject,children,note,tone
         {note&&<p className="confirm-note">{note}</p>}
       </div>}
       <footer className="confirm-actions">
-        <button type="button" className="button ghost" autoFocus disabled={pending} onClick={onCancel}>Cancelar</button>
+        <button type="button" className="button ghost" data-dialog-initial-focus autoFocus disabled={pending} onClick={onCancel}>Cancelar</button>
         <button type="button" className={`button ${tone}`} disabled={pending} onClick={onConfirm}>{pending?"Procesando…":confirmLabel}</button>
       </footer>
-    </section>
+    </Dialog>
   </div>;
 }

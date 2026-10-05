@@ -29,6 +29,7 @@ function mount({save=async()=>{},draft={...validDraft},busy=false}={}){
   if(name==="../domain/product-schema")return schema;
   if(name.endsWith(".css"))return {};
   if(name==="@/design-system")return {FormField:"FormField",Input:"input",Select:"select"};
+  if(name==="@/design-system/dialog")return {Dialog:"Dialog"};
   if(name==="@/design-system/icons")return {Icon:"Icon"};
   if(name==="@/design-system/rich-text-editor")return {RichTextEditor:"RichTextEditor"};
   if(name==="react-select/async")return {default:"AsyncSelect"};

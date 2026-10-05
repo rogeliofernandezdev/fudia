@@ -1,4 +1,5 @@
 "use client";
+import {Dialog} from "@/design-system/dialog";
 import {useMemo} from "react";
 import {useForm,useWatch} from "react-hook-form";
 import {Button,Icon,Input,Select,Textarea} from "@/design-system";
@@ -64,7 +65,7 @@ export function InventoryAdjustmentDialog({items,busy,close,save}:{items:Invento
   }
 
   return <div className="modal-backdrop modal-overlay-in" role="presentation">
-    <section className="crud-modal inventory-adjustment-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="inventory-adjustment-title" aria-busy={busy}>
+    <Dialog className="crud-modal inventory-adjustment-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="inventory-adjustment-title" aria-busy={busy}>
       <div className="modal-accent"/>
       <header>
         <span className="modal-title-icon"><Icon name="stock" size={18}/></span>
@@ -119,6 +120,6 @@ export function InventoryAdjustmentDialog({items,busy,close,save}:{items:Invento
         <footer><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy||items.length===0}>{busy?"Guardando…":"Guardar"}</Button></footer>
       </form>
       {busy&&<div className="modal-busy" role="status"><i/><span>Guardando…</span></div>}
-    </section>
+    </Dialog>
   </div>;
 }

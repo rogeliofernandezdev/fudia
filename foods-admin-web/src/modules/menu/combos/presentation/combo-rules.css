@@ -14,11 +14,11 @@
 
 .combo-rules .field {
   width: var(--size-64);
-  min-height: var(--size-38);
+  min-height: var(--control-height);
 }
 
 .combo-rules .combo-required {
-  min-height: var(--size-38);
+  min-height: var(--control-height);
 }
 
 @media (width <= 600px) {
