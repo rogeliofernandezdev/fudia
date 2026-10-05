@@ -142,6 +142,20 @@ func scanFiscalProfile(rows pgx.Rows, item *fiscalProfile) error {
 func (a *API) listFiscalProfiles(w http.ResponseWriter, r *http.Request) {
 	s := r.Context().Value(scopeKey{}).(scope)
 	page, size := pageParams(r)
+	countries, err := a.listPlatformCountries(r.Context())
+	if err != nil {
+		fail(w, 503, "profiles_unavailable", "No pudimos cargar el catálogo de países.")
+		return
+	}
+	currencies, err := a.listPlatformCurrencies(r.Context())
+	if err != nil {
+		fail(w, 503, "profiles_unavailable", "No pudimos cargar el catálogo de monedas.")
+		return
+	}
+	countryNames := make(map[string]string, len(countries))
+	for _, country := range countries {
+		countryNames[country.Code] = country.Name
+	}
 	rows, err := a.db.Query(r.Context(), `SELECT p.id,p.country_code,p.currency,p.currency_symbol,p.currency_position,p.currency_decimals,p.tax_name,p.tax_rate::text,p.tax_included,p.is_default,p.active,count(l.id) FROM organization_fiscal_profiles p LEFT JOIN locations l ON l.fiscal_profile_id=p.id AND l.organization_id=p.organization_id WHERE p.organization_id=$1 GROUP BY p.id ORDER BY p.is_default DESC,p.country_code LIMIT $2 OFFSET $3`, s.OrganizationID, size, (page-1)*size)
 	if err != nil {
 		fail(w, 503, "profiles_unavailable", "No pudimos cargar los perfiles fiscales.")
@@ -155,8 +169,8 @@ func (a *API) listFiscalProfiles(w http.ResponseWriter, r *http.Request) {
 			fail(w, 503, "profiles_unavailable", "No pudimos cargar los perfiles fiscales.")
 			return
 		}
-		if country, ok := countryByCode(item.Country); ok {
-			item.CountryName = country.Name
+		if name, ok := countryNames[item.Country]; ok {
+			item.CountryName = name
 		} else {
 			item.CountryName = item.Country
 		}
@@ -164,7 +178,7 @@ func (a *API) listFiscalProfiles(w http.ResponseWriter, r *http.Request) {
 	}
 	var total int
 	_ = a.db.QueryRow(r.Context(), `SELECT count(*) FROM organization_fiscal_profiles WHERE organization_id=$1`, s.OrganizationID).Scan(&total)
-	writeJSON(w, 200, map[string]any{"items": items, "total": total, "page": page, "pageSize": size, "countryOptions": supportedCountries, "currencyOptions": supportedCurrencies})
+	writeJSON(w, 200, map[string]any{"items": items, "total": total, "page": page, "pageSize": size, "countryOptions": countries, "currencyOptions": currencies})
 }
 
 func validateFiscalInput(in *fiscalProfileInput) (currencyOption, bool) {
@@ -185,7 +199,11 @@ func (a *API) saveFiscalProfile(w http.ResponseWriter, r *http.Request, create b
 		fail(w, 400, "invalid_request", "Revisa los datos enviados.")
 		return
 	}
-	currency, valid := validateFiscalInput(&in)
+	currency, valid, catalogErr := a.validatePlatformFiscalInput(r.Context(), &in, false)
+	if catalogErr != nil {
+		fail(w, 503, "catalogs_unavailable", "No pudimos validar los catálogos de país y moneda.")
+		return
+	}
 	if !valid {
 		fail(w, 400, "invalid_profile", "Revisa país, moneda e impuesto.")
 		return
@@ -347,6 +365,11 @@ func (a *API) deactivateLocation(w http.ResponseWriter, r *http.Request) {
 func (a *API) listExchangeRates(w http.ResponseWriter, r *http.Request) {
 	s := r.Context().Value(scopeKey{}).(scope)
 	page, size := pageParams(r)
+	currencies, err := a.listPlatformCurrencies(r.Context())
+	if err != nil {
+		fail(w, 503, "rates_unavailable", "No pudimos cargar el catálogo de monedas.")
+		return
+	}
 	rows, err := a.db.Query(r.Context(), `SELECT e.id,e.base_currency,e.quote_currency,e.rate::text,to_char(e.effective_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"'),e.source,e.provider_reference,u.full_name FROM organization_exchange_rates e LEFT JOIN users u ON u.id=e.created_by WHERE e.organization_id=$1 ORDER BY e.effective_at DESC LIMIT $2 OFFSET $3`, s.OrganizationID, size, (page-1)*size)
 	if err != nil {
 		fail(w, 503, "rates_unavailable", "No pudimos cargar los tipos de cambio.")
@@ -364,7 +387,7 @@ func (a *API) listExchangeRates(w http.ResponseWriter, r *http.Request) {
 	}
 	var total int
 	_ = a.db.QueryRow(r.Context(), `SELECT count(*) FROM organization_exchange_rates WHERE organization_id=$1`, s.OrganizationID).Scan(&total)
-	writeJSON(w, 200, map[string]any{"items": items, "total": total, "page": page, "pageSize": size, "currencyOptions": supportedCurrencies})
+	writeJSON(w, 200, map[string]any{"items": items, "total": total, "page": page, "pageSize": size, "currencyOptions": currencies})
 }
 
 func (a *API) createExchangeRate(w http.ResponseWriter, r *http.Request) {
@@ -377,8 +400,12 @@ func (a *API) createExchangeRate(w http.ResponseWriter, r *http.Request) {
 	in.BaseCurrency, in.QuoteCurrency, in.Rate, in.Source = strings.ToUpper(strings.TrimSpace(in.BaseCurrency)), strings.ToUpper(strings.TrimSpace(in.QuoteCurrency)), strings.TrimSpace(in.Rate), strings.TrimSpace(in.Source)
 	rate, rateOK := new(big.Rat).SetString(in.Rate)
 	effective, timeErr := time.Parse(time.RFC3339, in.EffectiveAt)
-	_, baseOK := currencyByCode(in.BaseCurrency)
-	_, quoteOK := currencyByCode(in.QuoteCurrency)
+	_, baseOK, baseErr := a.platformCurrencyByCode(r.Context(), in.BaseCurrency)
+	_, quoteOK, quoteErr := a.platformCurrencyByCode(r.Context(), in.QuoteCurrency)
+	if baseErr != nil || quoteErr != nil {
+		fail(w, 503, "rates_unavailable", "No pudimos validar el catálogo de monedas.")
+		return
+	}
 	if !baseOK || !quoteOK || in.BaseCurrency == in.QuoteCurrency || !rateOK || rate.Sign() <= 0 || timeErr != nil || (in.Source != "manual" && in.Source != "provider") {
 		fail(w, 400, "invalid_rate", "Revisa las monedas, la tasa, la fecha y la fuente.")
 		return
