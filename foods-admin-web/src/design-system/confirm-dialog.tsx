@@ -7,7 +7,7 @@ import {Icon} from "@/design-system/icons";
 type ConfirmDialogProps={
   open:boolean;
   title:string;
-  description?:string;
+  description?:ReactNode;
   subject?:{label?:string;name:string};
   children?:ReactNode;
   note?:string;
@@ -21,7 +21,8 @@ type ConfirmDialogProps={
 export function ConfirmDialog({open,title,description,subject,children,note,tone="danger",confirmLabel,pending=false,onCancel,onConfirm}:ConfirmDialogProps){
   const id=useId();
   if(!open)return null;
-  const hasDescription=Boolean(subject||description||note)||Children.toArray(children).length>0;
+  const hasMessage=Children.toArray(description).length>0;
+  const hasDescription=Boolean(subject||note)||hasMessage||Children.toArray(children).length>0;
 
   return <div className="confirm-overlay">
     <section className="confirm-card" role="alertdialog" aria-modal="true" aria-labelledby={`${id}-title`} aria-describedby={hasDescription?`${id}-description`:undefined} aria-busy={pending}>
@@ -30,8 +31,8 @@ export function ConfirmDialog({open,title,description,subject,children,note,tone
         <h2 id={`${id}-title`}>{title}</h2>
       </header>
       {hasDescription&&<div className="confirm-body" id={`${id}-description`}>
-        {subject&&<div className="confirm-subject">{subject.label&&<span>{subject.label}</span>}<strong>{subject.name}</strong></div>}
-        {description&&<p className="confirm-description">{description}</p>}
+        {subject&&<p className="confirm-description">{subject.label&&`${subject.label}: `}<strong>{subject.name}</strong></p>}
+        {hasMessage&&<p className="confirm-description">{description}</p>}
         {children}
         {note&&<p className="confirm-note">{note}</p>}
       </div>}

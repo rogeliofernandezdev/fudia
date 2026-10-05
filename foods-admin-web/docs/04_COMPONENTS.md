@@ -14,16 +14,17 @@ estados de envío.
 - `FeedbackProvider`: única salida para éxito, error e información después de una
   acción remota. Diálogo centrado, accesible, cerrable y con movimiento reducido.
 - `ConfirmDialog`: requerido antes de desactivar o ejecutar una acción sensible;
-  muestra el registro afectado, acción segura y estado pendiente. La cabecera alinea
-  icono y título; el cuerpo permite `subject` (nombre del registro y etiqueta opcional) y
-  `description` y `note` opcionales cuando aportan información a la decisión.
-  Productos y categorías solo muestran título, registro y acciones; no añaden
-  explicaciones genéricas de disponibilidad ni historial. `children` permite
-  contenido propio de cada flujo; los campos omitidos no dejan bloques vacíos.
-  Las notas no imponen un icono de historial. El pie tiene borde superior,
-  botones sin iconos redundantes y altura `--control-height`; en móvil ambos
-  ocupan el ancho disponible. Cancelar recibe el foco inicial. Título y descripción
-  tienen identificadores únicos vinculados al diálogo.
+  muestra el registro afectado, acción segura y estado pendiente. Su presentación
+  es compacta: icono, título, mensaje directo y acciones, sin recuadros internos
+  ni divisores. `description` admite texto o JSX para destacar únicamente el
+  nombre con `<strong>` dentro de una frase. Productos y categorías preguntan
+  «¿Deseas desactivar el producto/la categoría “nombre”?», sin explicaciones
+  genéricas de disponibilidad ni historial. `subject`, `note` y `children` son
+  opcionales; `subject` también se presenta como texto, con etiqueta opcional.
+  Los campos omitidos no dejan bloques vacíos y las notas no imponen un icono.
+  Los botones mantienen `--control-height`; en móvil comparten el ancho disponible.
+  Cancelar recibe el foco inicial. Título y descripción tienen identificadores
+  únicos vinculados al diálogo.
 - `NotificationPopover`: contador en campana, lista por prioridad, marca temporal
   y acceso al historial completo.
 - `DataTable`: cabecera oscura, filas alternas, estados con texto e icono, acciones
