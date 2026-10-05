@@ -58,8 +58,6 @@ func (a *API) listOnboardingCountries(ctx context.Context) ([]countryOption, err
 		      AND w.active
 		      AND w.phone_number_id IS NOT NULL
 		      AND NULLIF(BTRIM(w.phone_number_id),'') IS NOT NULL
-		      AND w.secret_ref IS NOT NULL
-		      AND NULLIF(BTRIM(w.secret_ref),'') IS NOT NULL
 		  )
 		ORDER BY c.name,c.code
 	`)
@@ -104,8 +102,6 @@ func (a *API) onboardingCountryByCode(ctx context.Context, code string) (country
 		      AND w.active
 		      AND w.phone_number_id IS NOT NULL
 		      AND NULLIF(BTRIM(w.phone_number_id),'') IS NOT NULL
-		      AND w.secret_ref IS NOT NULL
-		      AND NULLIF(BTRIM(w.secret_ref),'') IS NOT NULL
 		  )
 	`, code).Scan(&item.Code, &item.Name, &item.DefaultCurrency)
 	if err == nil {

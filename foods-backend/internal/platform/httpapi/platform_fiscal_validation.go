@@ -35,15 +35,19 @@ func (a *API) validatePlatformFiscalInput(ctx context.Context, in *fiscalProfile
 		return currencyOption{}, false, nil
 	}
 
+	var country countryOption
 	var countryOK bool
 	var err error
 	if requireOperationalWhatsApp {
-		_, countryOK, err = a.onboardingCountryByCode(ctx, in.Country)
+		country, countryOK, err = a.onboardingCountryByCode(ctx, in.Country)
 	} else {
-		_, countryOK, err = a.platformCountryByCode(ctx, in.Country)
+		country, countryOK, err = a.platformCountryByCode(ctx, in.Country)
 	}
 	if err != nil || !countryOK {
 		return currencyOption{}, false, err
+	}
+	if requireOperationalWhatsApp && in.Currency != country.DefaultCurrency {
+		return currencyOption{}, false, nil
 	}
 
 	currency, currencyOK, err := a.platformCurrencyByCode(ctx, in.Currency)

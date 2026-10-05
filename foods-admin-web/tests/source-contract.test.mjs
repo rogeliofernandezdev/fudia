@@ -715,6 +715,11 @@ test("países y WhatsApp tiene acceso completo para plataforma",()=>{
   assert.ok(page.includes("<th>Moneda</th>"),"El listado muestra la moneda predeterminada del país");
   assert.ok(page.includes("RowActionButton"),"La edición usa la acción de tabla homologada");
   assert.ok(page.includes('aria-label="Cerrar"'),"El formulario modal ofrece un cierre accesible");
+  assert.ok(page.includes("platform-channel-modal"),"El canal usa un modal de proporciones específicas");
+  assert.equal(page.includes("secretRef"),false,"El formulario no expone referencias de credenciales");
+  assert.equal(page.includes("META_WHATSAPP"),false,"El formulario no sugiere nombres de secretos");
+  assert.ok(page.includes('label="Moneda asociada"'),"El modal muestra la moneda derivada del país");
+  assert.ok(page.includes("readOnly tabIndex={-1}"),"La moneda asociada no se puede alterar manualmente");
 });
 
 

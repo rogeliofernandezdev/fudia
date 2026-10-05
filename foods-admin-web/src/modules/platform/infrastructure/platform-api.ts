@@ -93,4 +93,4 @@ export async function recordSubscriptionPayment(input:{amount:string;currency:st
 }
 
 export async function listPlatformWhatsAppChannels(){return platformFetch<{items:PlatformWhatsAppChannel[]}>("whatsapp-channels");}
-export async function savePlatformWhatsAppChannel(draft:PlatformWhatsAppChannelDraft,id?:string){return platformFetch<PlatformWhatsAppChannel>(id?`whatsapp-channels/${id}`:"whatsapp-channels",{method:id?"PATCH":"POST",body:JSON.stringify({...draft,phoneNumberId:draft.phoneNumberId||null,secretRef:draft.secretRef||null})});}
+export async function savePlatformWhatsAppChannel(draft:PlatformWhatsAppChannelDraft,id?:string){return platformFetch<PlatformWhatsAppChannel>(id?`whatsapp-channels/${id}`:"whatsapp-channels",{method:id?"PATCH":"POST",body:JSON.stringify({...draft,phoneNumberId:draft.phoneNumberId||null})});}

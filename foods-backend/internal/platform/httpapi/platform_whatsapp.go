@@ -18,7 +18,6 @@ type platformWhatsAppChannel struct {
 	PhoneNumber   string  `json:"phoneNumber"`
 	PhoneNumberID *string `json:"phoneNumberId,omitempty"`
 	DisplayName   string  `json:"displayName"`
-	SecretRef     *string `json:"secretRef,omitempty"`
 	Active        bool    `json:"active"`
 }
 
@@ -27,7 +26,6 @@ type platformWhatsAppChannelInput struct {
 	PhoneNumber   string  `json:"phoneNumber"`
 	PhoneNumberID *string `json:"phoneNumberId"`
 	DisplayName   string  `json:"displayName"`
-	SecretRef     *string `json:"secretRef"`
 	Active        bool    `json:"active"`
 }
 
@@ -44,7 +42,7 @@ func cleanOptional(value *string) *string {
 
 func (a *API) listPlatformWhatsAppChannels(w http.ResponseWriter, r *http.Request) {
 	rows, err := a.db.Query(r.Context(), `
-		SELECT w.id,c.code,c.name,w.phone_number,w.phone_number_id,COALESCE(w.display_name,''),w.secret_ref,w.active
+		SELECT w.id,c.code,c.name,w.phone_number,w.phone_number_id,COALESCE(w.display_name,''),w.active
 		FROM platform_whatsapp_channels w
 		JOIN platform_countries c ON c.code=w.country_code
 		ORDER BY c.name,w.created_at,w.id`)
@@ -56,7 +54,7 @@ func (a *API) listPlatformWhatsAppChannels(w http.ResponseWriter, r *http.Reques
 	items := []platformWhatsAppChannel{}
 	for rows.Next() {
 		var item platformWhatsAppChannel
-		if err := rows.Scan(&item.ID, &item.CountryCode, &item.CountryName, &item.PhoneNumber, &item.PhoneNumberID, &item.DisplayName, &item.SecretRef, &item.Active); err != nil {
+		if err := rows.Scan(&item.ID, &item.CountryCode, &item.CountryName, &item.PhoneNumber, &item.PhoneNumberID, &item.DisplayName, &item.Active); err != nil {
 			fail(w, 503, "channels_unavailable", "No pudimos cargar los canales de WhatsApp.")
 			return
 		}
@@ -74,15 +72,14 @@ func validatePlatformWhatsAppChannel(in *platformWhatsAppChannelInput) (string, 
 	in.PhoneNumber = strings.TrimSpace(in.PhoneNumber)
 	in.DisplayName = strings.TrimSpace(in.DisplayName)
 	in.PhoneNumberID = cleanOptional(in.PhoneNumberID)
-	in.SecretRef = cleanOptional(in.SecretRef)
 	if len(in.CountryCode) != 2 {
 		return "invalid_country", "Selecciona un país válido."
 	}
 	if in.PhoneNumber == "" || len(in.PhoneNumber) > 40 {
 		return "invalid_phone", "Ingresa un número de WhatsApp válido."
 	}
-	if in.Active && (in.PhoneNumberID == nil || in.SecretRef == nil) {
-		return "channel_incomplete", "Para activar el canal debes configurar phone_number_id y la referencia segura del token."
+	if in.Active && in.PhoneNumberID == nil {
+		return "channel_incomplete", "Para activar el canal debes configurar el phone_number_id."
 	}
 	return "", ""
 }
@@ -123,11 +120,11 @@ func (a *API) createPlatformWhatsAppChannel(w http.ResponseWriter, r *http.Reque
 	}
 	var item platformWhatsAppChannel
 	err = a.db.QueryRow(r.Context(), `
-		INSERT INTO platform_whatsapp_channels(country_code,phone_number,phone_number_id,display_name,secret_ref,active)
-		VALUES($1,$2,$3,$4,$5,$6)
-		RETURNING id,country_code,(SELECT name FROM platform_countries WHERE code=$1),phone_number,phone_number_id,COALESCE(display_name,''),secret_ref,active`,
-		in.CountryCode, in.PhoneNumber, in.PhoneNumberID, in.DisplayName, in.SecretRef, in.Active).
-		Scan(&item.ID, &item.CountryCode, &item.CountryName, &item.PhoneNumber, &item.PhoneNumberID, &item.DisplayName, &item.SecretRef, &item.Active)
+		INSERT INTO platform_whatsapp_channels(country_code,phone_number,phone_number_id,display_name,active)
+		VALUES($1,$2,$3,$4,$5)
+		RETURNING id,country_code,(SELECT name FROM platform_countries WHERE code=$1),phone_number,phone_number_id,COALESCE(display_name,''),active`,
+		in.CountryCode, in.PhoneNumber, in.PhoneNumberID, in.DisplayName, in.Active).
+		Scan(&item.ID, &item.CountryCode, &item.CountryName, &item.PhoneNumber, &item.PhoneNumberID, &item.DisplayName, &item.Active)
 	if err != nil {
 		platformChannelDBError(w, err)
 		return
@@ -157,11 +154,11 @@ func (a *API) updatePlatformWhatsAppChannel(w http.ResponseWriter, r *http.Reque
 	var item platformWhatsAppChannel
 	err = a.db.QueryRow(r.Context(), `
 		UPDATE platform_whatsapp_channels w SET
-		  country_code=$2,phone_number=$3,phone_number_id=$4,display_name=$5,secret_ref=$6,active=$7,updated_at=now()
+		  country_code=$2,phone_number=$3,phone_number_id=$4,display_name=$5,active=$6,updated_at=now()
 		WHERE w.id=$1
-		RETURNING w.id,w.country_code,(SELECT name FROM platform_countries WHERE code=w.country_code),w.phone_number,w.phone_number_id,COALESCE(w.display_name,''),w.secret_ref,w.active`,
-		r.PathValue("id"), in.CountryCode, in.PhoneNumber, in.PhoneNumberID, in.DisplayName, in.SecretRef, in.Active).
-		Scan(&item.ID, &item.CountryCode, &item.CountryName, &item.PhoneNumber, &item.PhoneNumberID, &item.DisplayName, &item.SecretRef, &item.Active)
+		RETURNING w.id,w.country_code,(SELECT name FROM platform_countries WHERE code=w.country_code),w.phone_number,w.phone_number_id,COALESCE(w.display_name,''),w.active`,
+		r.PathValue("id"), in.CountryCode, in.PhoneNumber, in.PhoneNumberID, in.DisplayName, in.Active).
+		Scan(&item.ID, &item.CountryCode, &item.CountryName, &item.PhoneNumber, &item.PhoneNumberID, &item.DisplayName, &item.Active)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			fail(w, 404, "channel_not_found", "El canal de WhatsApp no existe.")

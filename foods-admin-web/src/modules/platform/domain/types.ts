@@ -74,5 +74,5 @@ export type PlatformOnboardingDraft={
  adminName:string;adminEmail:string;adminPassword:string;
 };
 
-export type PlatformWhatsAppChannel={id:string;countryCode:string;countryName:string;phoneNumber:string;phoneNumberId?:string;displayName:string;secretRef?:string;active:boolean};
-export type PlatformWhatsAppChannelDraft={countryCode:string;phoneNumber:string;phoneNumberId:string;displayName:string;secretRef:string;active:boolean};
+export type PlatformWhatsAppChannel={id:string;countryCode:string;countryName:string;phoneNumber:string;phoneNumberId?:string;displayName:string;active:boolean};
+export type PlatformWhatsAppChannelDraft={countryCode:string;phoneNumber:string;phoneNumberId:string;displayName:string;active:boolean};

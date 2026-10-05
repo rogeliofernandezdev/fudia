@@ -222,7 +222,7 @@ func (a *API) onboardTenant(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !fiscalOK {
-		rejectOnboarding(w, r, "invalid_fiscal_profile", "El país o la moneda no están habilitados, o el país todavía no tiene un canal de WhatsApp operativo.")
+		rejectOnboarding(w, r, "invalid_fiscal_profile", "El país o su moneda predeterminada no están habilitados, o el país todavía no tiene un canal de WhatsApp operativo.")
 		return
 	}
 	if in.LocationName == "" || in.LocationCode == "" || len(in.LocationName) > 180 || len(in.LocationCode) > 80 {

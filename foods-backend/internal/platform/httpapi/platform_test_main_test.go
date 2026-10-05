@@ -28,11 +28,11 @@ func TestMain(m *testing.M) {
 	const phone = "+999000000001"
 	_, err = pool.Exec(context.Background(), `
 		INSERT INTO platform_whatsapp_channels(country_code,phone_number,phone_number_id,display_name,secret_ref,active)
-		VALUES('PE',$1,'test-platform-phone-id','Integration Test Global','TEST_PLATFORM_WHATSAPP_SECRET',true)
+		VALUES('PE',$1,'test-platform-phone-id','Integration Test Global',NULL,true)
 		ON CONFLICT(phone_number) DO UPDATE SET
 			country_code='PE',
 			phone_number_id='test-platform-phone-id',
-			secret_ref='TEST_PLATFORM_WHATSAPP_SECRET',
+			secret_ref=NULL,
 			active=true,
 			updated_at=now()
 	`, phone)
