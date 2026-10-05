@@ -383,7 +383,7 @@ export function PurchasesPage(){
               <td><Status active={supplier.active}>{supplier.active?"Activo":"Inactivo"}</Status></td>
               <td><div className="table-actions">{canManage&&<>
                 <RowActionButton action="edit" onClick={()=>setSupplierDraft({id:supplier.id,taxId:supplier.taxId,name:supplier.name,email:supplier.email,phone:supplier.phone})}/>
-                <RowActionButton action={supplier.active?"deactivate":"activate"} onClick={()=>setSupplierTarget(supplier)}/>
+                <RowActionButton action={supplier.active?"deactivate":"activate"} stateLabel={`Estado de ${supplier.name}`} onClick={()=>setSupplierTarget(supplier)}/>
               </>}</div></td>
             </tr>)}</tbody>
           </table></div>
@@ -391,7 +391,7 @@ export function PurchasesPage(){
           <div className="management-cards purchases-cards">{supplierItems.map(supplier=><article key={supplier.id}>
             <header><span className="row-icon r1"><Icon name="truck"/></span><div><b>{supplier.name}</b><small>{supplier.taxId||"Sin RUC"}</small></div><Status active={supplier.active}>{supplier.active?"Activo":"Inactivo"}</Status></header>
             <dl><div><dt>Teléfono</dt><dd>{supplier.phone||"—"}</dd></div><div><dt>Correo</dt><dd>{supplier.email||"—"}</dd></div></dl>
-            {canManage&&<footer><RowActionButton action="edit" onClick={()=>setSupplierDraft({id:supplier.id,taxId:supplier.taxId,name:supplier.name,email:supplier.email,phone:supplier.phone})}/><RowActionButton action={supplier.active?"deactivate":"activate"} onClick={()=>setSupplierTarget(supplier)}/></footer>}
+            {canManage&&<footer><RowActionButton action="edit" onClick={()=>setSupplierDraft({id:supplier.id,taxId:supplier.taxId,name:supplier.name,email:supplier.email,phone:supplier.phone})}/><RowActionButton action={supplier.active?"deactivate":"activate"} stateLabel={`Estado de ${supplier.name}`} onClick={()=>setSupplierTarget(supplier)}/></footer>}
           </article>)}</div>
         </>}
         {!suppliers.isLoading&&!suppliers.isError&&<Pagination page={page} size={size} total={suppliers.data?.total??0} onPage={setPage} onSize={value=>{setSize(value);setPage(1)}}/>}

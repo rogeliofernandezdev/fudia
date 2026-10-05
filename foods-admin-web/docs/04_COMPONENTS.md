@@ -20,17 +20,18 @@ estados de envío.
 - `DataTable`: cabecera oscura, filas alternas, estados con texto e icono, acciones
   homogéneas y representación responsive. Las acciones por fila son botones de
   icono con la altura de `--control-height`, nombre accesible y tooltip; editar
-  usa azul operativo y desactivar usa rojo semántico. No se presentan como
+  usa azul operativo; activar/desactivar usa el interruptor de estado.
+  Cancelar y quitar mantienen el rojo semántico. No se presentan como
   enlaces de texto. La columna
   de acciones centra el grupo completo, cada pictograma se centra ópticamente en
   su caja y los tooltips se anclan al centro del botón.
 - Toda columna de acciones usa exclusivamente `RowActionButton`, construido
-  sobre `IconButton`: SVG de 18 px,
+  sobre `IconButton`: SVG de 18 px (28 px para el interruptor de estado),
   contenedor cuadrado del tamaño de `--control-height`, alineación central,
   `aria-label` y tooltip descriptivo.
   No se permiten acciones textuales ni iconos generados de forma aislada por pantalla.
 - El mapeo semántico es único en toda la aplicación: ver = ojo azul, editar =
-  lápiz azul, activar = check dentro de un círculo azul, desactivar = círculo tachado rojo
+  lápiz azul, activar/desactivar = interruptor binario, cancelar = equis circular roja
   y quitar fila = equis roja. Las
   pantallas no pueden elegir localmente otro icono o color para estas acciones.
 - `Pagination`: rango/total, selector de filas, páginas numeradas con elipsis y
@@ -84,8 +85,24 @@ No se infiere el estado a partir del color ni del texto. Los otros estados
 conservan su representación por `tone`. Los SVG son decorativos y el texto
 visible comunica el estado a lectores de pantalla.
 
-Las acciones de fila indican qué ocurrirá al pulsar, mientras la columna Estado
-indica la situación actual. Activar y Desactivar usan siluetas distintas, con
-nombre accesible y tooltip también al enfocar mediante teclado. El azul se
-reserva para la acción Activar; el verde comunica el estado activo confirmado.
-Desactivar conserva el rojo semántico y su confirmación previa.
+Activar y Desactivar se presentan como un interruptor en la columna Acciones,
+con `role="switch"` y `aria-checked` derivado del estado confirmado: encendido
+(azul, perilla derecha) para un registro activo; apagado (neutro, perilla izquierda)
+para uno inactivo. El interruptor muestra el estado actual, nunca el estado que
+tendrá después de pulsarlo. El tooltip comunica la acción siguiente: Activar o
+Desactivar. `stateLabel` identifica el registro con un nombre accesible estable.
+
+La caja táctil conserva `--control-height`; el SVG mide 28 px, centrado y sin
+recuadro de color. Se opera con clic, toque, Espacio o Enter. No anticipa éxito:
+se actualiza tras la respuesta del backend y el refresco del listado. Desactivar
+conserva la confirmación existente. Durante una mutación se respetan `disabled`
+y `aria-busy`. Cancelar una reserva usa `action="cancel"`, nunca un interruptor.
+
+Referencias de interacción revisadas el 2026-10-05:
+- [Lightspeed Restaurant O-Series: habilitar productos por local](https://o-series-support.lightspeedhq.com/hc/en-us/articles/31329473238299-Setting-up-products-and-prices-for-different-sites): interruptor por producto.
+- [Lightspeed Restaurant K-Series: archivar y activar](https://k-series-support.lightspeedhq.com/hc/en-us/articles/1260804604870-Creating-and-editing-items): acciones textuales para retirar del catálogo.
+- [Toast: administrar artículos](https://doc.toasttab.com/doc/platformguide/platformMenuManagerWorkingWithMenuItems.html): archivar/restaurar se distingue de disponibilidad.
+- [WAI-ARIA: patrón switch](https://www.w3.org/WAI/ARIA/apg/patterns/switch/): estado binario y nombre estable.
+
+El interruptor es una adaptación al modelo activo/inactivo de Fudia; no implica
+que todos los proveedores usen el mismo control para retirar un producto.

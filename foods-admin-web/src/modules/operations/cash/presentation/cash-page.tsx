@@ -365,7 +365,7 @@ function CashRegisters({items,loading,error,canManage,money,dateTime,businessDat
             <Status tone={statusTone}>{statusLabel}</Status>
             {canManage&&<div className="cash-register-admin">
               <RowActionButton action="edit" label="Editar caja" onClick={()=>edit(item)}/>
-              <RowActionButton action={item.active?"deactivate":"activate"} label={item.active&&shift?"Cierra el turno antes de desactivar":undefined} disabled={Boolean(item.active&&shift)} onClick={()=>toggleStatus(item)}/>
+              <RowActionButton action={item.active?"deactivate":"activate"} stateLabel={`Estado de ${item.name}`} label={item.active&&shift?"Cierra el turno antes de desactivar":undefined} disabled={Boolean(item.active&&shift)} onClick={()=>toggleStatus(item)}/>
             </div>}
           </div>
         </header>

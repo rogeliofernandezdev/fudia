@@ -277,8 +277,11 @@ Usar superficies mayormente neutras, azul para navegación y acciones, verde par
 - Estados con texto e icono; nunca solo color. Activo/Activa usa un check
   circular verde; Inactivo/Inactiva usa un signo menos circular neutro. Se
   construyen con `Status active={...}` para compartir semántica y geometría.
-  Activar usa un check circular azul y Desactivar un círculo tachado rojo;
-  el icono de encendido no se reutiliza para ambas acciones.
+  Activar/Desactivar se maneja con un interruptor: azul y perilla derecha
+  cuando el registro está activo; neutro y perilla izquierda cuando está inactivo.
+  El tooltip indica la acción siguiente y el nombre accesible identifica el
+  registro sin cambiar al alternar el estado. La desactivación conserva su
+  confirmación. Check y símbolo de prohibición no se usan como estas acciones.
 - Contraste WCAG AA y foco visible con ops-500.
 - Alertas de éxito, error e información usan un diálogo global centrado, icono
   semántico, título, explicación breve y acción «Aceptar». El botón «Aceptar»

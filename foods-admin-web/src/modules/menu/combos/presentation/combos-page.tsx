@@ -90,7 +90,7 @@ export function CombosPage(){
             <td><b>{settings.currencyPosition==="before"?`${settings.currencySymbol} ${Number(item.price).toFixed(settings.currencyDecimals)}`:`${Number(item.price).toFixed(settings.currencyDecimals)} ${settings.currencySymbol}`}</b></td>
             <td>{item.groupCount} {item.groupCount===1?"parte":"partes"}</td>
             <td><Status active={item.active}>{item.active?"Activo":"Inactivo"}</Status></td>
-            <td><div className="standard-actions"><RowActionButton action="view" label={`Ver ${item.name}`} onClick={()=>setSelected(item.id)}/><RowActionButton action="edit" label={`Editar ${item.name}`} disabled={loadForEdit.isPending} onClick={()=>{cancelledEdit.current=null;setEditingId(item.id);loadForEdit.mutate(item.id)}}/><RowActionButton action={item.active?"deactivate":"activate"} label={`${item.active?"Desactivar":"Activar"} ${item.name}`} onClick={()=>setStatusTarget(item)}/></div></td>
+            <td><div className="standard-actions"><RowActionButton action="view" label={`Ver ${item.name}`} onClick={()=>setSelected(item.id)}/><RowActionButton action="edit" label={`Editar ${item.name}`} disabled={loadForEdit.isPending} onClick={()=>{cancelledEdit.current=null;setEditingId(item.id);loadForEdit.mutate(item.id)}}/><RowActionButton action={item.active?"deactivate":"activate"} stateLabel={`Estado de ${item.name}`} label={`${item.active?"Desactivar":"Activar"} ${item.name}`} onClick={()=>setStatusTarget(item)}/></div></td>
           </tr>)}
         </tbody></table></div>
       </>}
