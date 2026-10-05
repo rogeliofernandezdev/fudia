@@ -17,7 +17,7 @@ import {PlatformOnboardingSkeleton} from "./platform-skeletons";
 const blank:PlatformOnboardingDraft={
  legalName:"",tradeName:"",taxId:"",timezone:"America/Lima",
  planId:"",billingCycle:"monthly",termsAccepted:false,
- country:"PE",currency:"PEN",currencyPosition:"before",taxName:"IGV",taxRate:"18",taxIncluded:false,
+ country:"",currency:"",currencyPosition:"before",taxName:"IGV",taxRate:"18",taxIncluded:false,
  locationName:"",locationCode:"",address:"",locationPhone:"",locationHours:"",latitude:"",longitude:"",
  adminName:"",adminEmail:"",adminPassword:"",
 };
@@ -69,7 +69,15 @@ export function PlatformOnboardingPage(){
 
   const save=useMutation({
     mutationFn:(values:PlatformOnboardingDraft)=>createPlatformOrganization(values),
-    onSuccess:()=>{notify({tone:"success",title:"Empresa registrada",message:"La empresa, su suscripción, el local y el Administrador de empresa quedaron listos."});reset({...blank,planId:firstPlanId});setStep(0);setReached(0)},
+    onSuccess:()=>{
+      const country=ctx?.countryOptions[0];
+      const currency=country&&ctx?.currencyOptions.some(option=>option.code===country.defaultCurrency)
+        ?country.defaultCurrency
+        :ctx?.currencyOptions[0]?.code??"";
+      notify({tone:"success",title:"Empresa registrada",message:"La empresa, su suscripción, el local y el Administrador de empresa quedaron listos."});
+      reset({...blank,planId:firstPlanId,country:country?.code??"",currency});
+      setStep(0);setReached(0);
+    },
     onError:e=>{const message=e instanceof ApiClientError&&e.status>=500&&e.correlationId?`${e.message} Código de seguimiento: ${e.correlationId}`:e.message;notify({tone:"danger",title:"No se pudo registrar",message})},
   });
 
@@ -91,7 +99,7 @@ export function PlatformOnboardingPage(){
   {loadError?<div className="catalog-state error"><span><Icon name="alert"/></span><b>No pudimos cargar los catálogos</b><p>{loadError}</p><button className="button secondary" onClick={()=>void context.refetch()}>Reintentar</button></div>:
   context.isLoading?<PlatformOnboardingSkeleton stepCount={steps.length}/>:
   !ctx?.plans.length?<div className="catalog-state"><span><Icon name="settings"/></span><b>Primero crea un plan comercial</b><p>El alta de una empresa exige un plan activo con precio, límites, condiciones y módulos definidos.</p><Link className="button primary" href="/platform/plans"><Icon name="plus" size={16}/>Crear plan</Link></div>:
-  !ctx.countryOptions.length||!ctx.currencyOptions.length?<div className="catalog-state"><span><Icon name="settings"/></span><b>Configura un país con WhatsApp operativo</b><p>El onboarding necesita al menos un país activo, una moneda activa y un canal de WhatsApp con phone_number_id y token configurados.</p><Link className="button primary" href="/platform/configuracion-global"><Icon name="settings" size={16}/>Abrir Configuración Global</Link></div>:
+  !ctx.countryOptions.length||!ctx.currencyOptions.length?<div className="catalog-state"><span><Icon name="settings"/></span><b>Configura un país con WhatsApp operativo</b><p>El onboarding necesita al menos un país activo, una moneda activa y un canal de WhatsApp con phone_number_id y referencia de secreto configurados.</p><Link className="button primary" href="/platform/configuracion-global"><Icon name="settings" size={16}/>Abrir Configuración Global</Link></div>:
   <div className="onboarding-wizard">
     <nav className="wizard-steps" aria-label="Pasos del registro">
       {steps.map((s,i)=><button key={s.key} type="button" className={"wizard-step"+(i===step?" active":i<reached?" done":"")} onClick={()=>goTo(i)} disabled={i>reached||save.isPending} aria-current={i===step?"step":undefined}>
