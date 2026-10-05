@@ -8,6 +8,13 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+type platformCountryOption struct {
+	Code            string `json:"code"`
+	Name            string `json:"name"`
+	DefaultCurrency string `json:"defaultCurrency"`
+	CallingCode     string `json:"callingCode"`
+}
+
 func (a *API) listPlatformCurrencies(ctx context.Context) ([]currencyOption, error) {
 	rows, err := a.db.Query(ctx, `SELECT code,name,symbol,decimals FROM platform_currencies WHERE active ORDER BY name,code`)
 	if err != nil {
@@ -47,9 +54,31 @@ func (a *API) listPlatformCountries(ctx context.Context) ([]countryOption, error
 	return items, rows.Err()
 }
 
-func (a *API) listOnboardingCountries(ctx context.Context) ([]countryOption, error) {
+func (a *API) listPlatformGlobalCountries(ctx context.Context) ([]platformCountryOption, error) {
 	rows, err := a.db.Query(ctx, `
-		SELECT c.code,c.name,c.default_currency
+		SELECT c.code,c.name,c.default_currency,COALESCE(c.calling_code,'')
+		FROM platform_countries c
+		WHERE c.active
+		ORDER BY c.name,c.code
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []platformCountryOption{}
+	for rows.Next() {
+		var item platformCountryOption
+		if err := rows.Scan(&item.Code, &item.Name, &item.DefaultCurrency, &item.CallingCode); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
+}
+
+func (a *API) listOnboardingCountries(ctx context.Context) ([]platformCountryOption, error) {
+	rows, err := a.db.Query(ctx, `
+		SELECT c.code,c.name,c.default_currency,COALESCE(c.calling_code,'')
 		FROM platform_countries c
 		WHERE c.active
 		  AND EXISTS (
@@ -63,10 +92,10 @@ func (a *API) listOnboardingCountries(ctx context.Context) ([]countryOption, err
 		return nil, err
 	}
 	defer rows.Close()
-	items := []countryOption{}
+	items := []platformCountryOption{}
 	for rows.Next() {
-		var item countryOption
-		if err := rows.Scan(&item.Code, &item.Name, &item.DefaultCurrency); err != nil {
+		var item platformCountryOption
+		if err := rows.Scan(&item.Code, &item.Name, &item.DefaultCurrency, &item.CallingCode); err != nil {
 			return nil, err
 		}
 		items = append(items, item)
@@ -110,16 +139,21 @@ func (a *API) onboardingCountryByCode(ctx context.Context, code string) (country
 }
 
 func (a *API) getPlatformOnboardingCatalogs(w http.ResponseWriter, r *http.Request) {
-	var countries []countryOption
-	var err error
+	var countries any
 	if r.URL.Query().Get("scope") == "all" {
-		countries, err = a.listPlatformCountries(r.Context())
+		items, err := a.listPlatformGlobalCountries(r.Context())
+		if err != nil {
+			fail(w, 503, "catalogs_unavailable", "No pudimos cargar los países disponibles.")
+			return
+		}
+		countries = items
 	} else {
-		countries, err = a.listOnboardingCountries(r.Context())
-	}
-	if err != nil {
-		fail(w, 503, "catalogs_unavailable", "No pudimos cargar los países disponibles.")
-		return
+		items, err := a.listOnboardingCountries(r.Context())
+		if err != nil {
+			fail(w, 503, "catalogs_unavailable", "No pudimos cargar los países disponibles.")
+			return
+		}
+		countries = items
 	}
 	currencies, err := a.listPlatformCurrencies(r.Context())
 	if err != nil {
