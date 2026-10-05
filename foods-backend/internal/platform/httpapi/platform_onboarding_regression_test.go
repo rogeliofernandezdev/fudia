@@ -31,21 +31,20 @@ func seedOperationalWhatsAppChannel(t *testing.T, pool *pgxpool.Pool, country, s
 	}
 }
 
-func seedIncompleteWhatsAppChannel(t *testing.T, pool *pgxpool.Pool, country, suffix string) {
+func seedInactiveWhatsAppChannel(t *testing.T, pool *pgxpool.Pool, country, suffix string) {
 	t.Helper()
 	phone := "+998" + suffix
-	phoneNumberID := "test-incomplete-phone-id-" + country + "-" + suffix
 	if _, err := pool.Exec(context.Background(), `
 		INSERT INTO platform_whatsapp_channels(country_code,phone_number,phone_number_id,display_name,secret_ref,active)
-		VALUES($1,$2,$3,'Incomplete Integration Test',NULL,true)
+		VALUES($1,$2,NULL,'Inactive Integration Test',NULL,false)
 		ON CONFLICT(phone_number) DO UPDATE SET
 			country_code=EXCLUDED.country_code,
-			phone_number_id=EXCLUDED.phone_number_id,
+			phone_number_id=NULL,
 			secret_ref=NULL,
-			active=true,
+			active=false,
 			updated_at=now()
-	`, country, phone, phoneNumberID); err != nil {
-		t.Fatalf("seed incomplete WhatsApp channel for %s: %v", country, err)
+	`, country, phone); err != nil {
+		t.Fatalf("seed inactive WhatsApp channel for %s: %v", country, err)
 	}
 }
 
@@ -192,7 +191,7 @@ func TestPlatformOnboardingRejectsCountryWithoutOperationalWhatsApp(t *testing.T
 	`); err != nil {
 		t.Fatalf("seed incomplete country: %v", err)
 	}
-	seedIncompleteWhatsAppChannel(t, pool, "ZY", fmt.Sprint(nonce))
+	seedInactiveWhatsAppChannel(t, pool, "ZY", fmt.Sprint(nonce))
 
 	taxID := fmt.Sprintf("%011d", (nonce+12)%100000000000)
 	email := fmt.Sprintf("incomplete-channel-%d@example.test", nonce)
@@ -202,6 +201,6 @@ func TestPlatformOnboardingRejectsCountryWithoutOperationalWhatsApp(t *testing.T
 	rec := httptest.NewRecorder()
 	api.onboardTenant(rec, req)
 	if rec.Code != 400 || !strings.Contains(rec.Body.String(), "invalid_fiscal_profile") {
-		t.Fatalf("incomplete WhatsApp channel must be rejected: %d %s", rec.Code, rec.Body.String())
+		t.Fatalf("inactive WhatsApp channel must be rejected: %d %s", rec.Code, rec.Body.String())
 	}
 }
