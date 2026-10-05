@@ -12,7 +12,44 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func seededOnboardingBody(t *testing.T, pool *pgxpool.Pool, planCode, taxID, email string) []byte {
+func seedOperationalWhatsAppChannel(t *testing.T, pool *pgxpool.Pool, country, suffix string) {
+	t.Helper()
+	phone := "+999" + suffix
+	phoneNumberID := "test-phone-id-" + country + "-" + suffix
+	secretRef := "TEST_WHATSAPP_" + country + "_" + suffix
+	if _, err := pool.Exec(context.Background(), `
+		INSERT INTO platform_whatsapp_channels(country_code,phone_number,phone_number_id,display_name,secret_ref,active)
+		VALUES($1,$2,$3,'Integration Test',$4,true)
+		ON CONFLICT(phone_number) DO UPDATE SET
+			country_code=EXCLUDED.country_code,
+			phone_number_id=EXCLUDED.phone_number_id,
+			secret_ref=EXCLUDED.secret_ref,
+			active=true,
+			updated_at=now()
+	`, country, phone, phoneNumberID, secretRef); err != nil {
+		t.Fatalf("seed operational WhatsApp channel for %s: %v", country, err)
+	}
+}
+
+func seedIncompleteWhatsAppChannel(t *testing.T, pool *pgxpool.Pool, country, suffix string) {
+	t.Helper()
+	phone := "+998" + suffix
+	phoneNumberID := "test-incomplete-phone-id-" + country + "-" + suffix
+	if _, err := pool.Exec(context.Background(), `
+		INSERT INTO platform_whatsapp_channels(country_code,phone_number,phone_number_id,display_name,secret_ref,active)
+		VALUES($1,$2,$3,'Incomplete Integration Test',NULL,true)
+		ON CONFLICT(phone_number) DO UPDATE SET
+			country_code=EXCLUDED.country_code,
+			phone_number_id=EXCLUDED.phone_number_id,
+			secret_ref=NULL,
+			active=true,
+			updated_at=now()
+	`, country, phone, phoneNumberID); err != nil {
+		t.Fatalf("seed incomplete WhatsApp channel for %s: %v", country, err)
+	}
+}
+
+func seededOnboardingBodyForCatalog(t *testing.T, pool *pgxpool.Pool, planCode, taxID, email, country, currency string) []byte {
 	t.Helper()
 	var planID string
 	if err := pool.QueryRow(context.Background(), `
@@ -27,8 +64,8 @@ func seededOnboardingBody(t *testing.T, pool *pgxpool.Pool, planCode, taxID, ema
 		"tradeName":"Regression Restaurant",
 		"taxId":%q,
 		"timezone":"America/Lima",
-		"country":"PE",
-		"currency":"PEN",
+		"country":%q,
+		"currency":%q,
 		"currencyPosition":"before",
 		"taxName":"IGV",
 		"taxRate":"0.18",
@@ -42,7 +79,12 @@ func seededOnboardingBody(t *testing.T, pool *pgxpool.Pool, planCode, taxID, ema
 		"planId":%q,
 		"billingCycle":"monthly",
 		"termsAccepted":true
-	}`, taxID, email, planID))
+	}`, taxID, country, currency, email, planID))
+}
+
+func seededOnboardingBody(t *testing.T, pool *pgxpool.Pool, planCode, taxID, email string) []byte {
+	t.Helper()
+	return seededOnboardingBodyForCatalog(t, pool, planCode, taxID, email, "PE", "PEN")
 }
 
 func TestPlatformOnboardingWorksWithSeededCommercialPlans(t *testing.T) {
@@ -50,6 +92,7 @@ func TestPlatformOnboardingWorksWithSeededCommercialPlans(t *testing.T) {
 	actor := seedInventoryScope(t, pool)
 	api := New(pool)
 	nonce := time.Now().UnixNano()
+	seedOperationalWhatsAppChannel(t, pool, "PE", fmt.Sprint(nonce))
 
 	for i, planCode := range []string{"emprende", "impulso", "escala"} {
 		t.Run(planCode, func(t *testing.T) {
@@ -72,6 +115,7 @@ func TestPlatformOnboardingReportsDuplicateTaxID(t *testing.T) {
 	actor := seedInventoryScope(t, pool)
 	api := New(pool)
 	nonce := time.Now().UnixNano()
+	seedOperationalWhatsAppChannel(t, pool, "PE", fmt.Sprint(nonce))
 	taxID := fmt.Sprintf("%011d", nonce%100000000000)
 
 	create := func(email string) *httptest.ResponseRecorder {
@@ -91,5 +135,73 @@ func TestPlatformOnboardingReportsDuplicateTaxID(t *testing.T) {
 	second := create(fmt.Sprintf("duplicate-second-%d@example.test", nonce))
 	if second.Code != 409 || !strings.Contains(second.Body.String(), "tax_id_already_registered") {
 		t.Fatalf("duplicate tax id must be descriptive: %d %s", second.Code, second.Body.String())
+	}
+}
+
+func TestPlatformOnboardingAcceptsDatabaseOnlyCountryAndCurrency(t *testing.T) {
+	pool := integrationPool(t)
+	actor := seedInventoryScope(t, pool)
+	api := New(pool)
+	nonce := time.Now().UnixNano()
+
+	if _, err := pool.Exec(context.Background(), `
+		INSERT INTO platform_currencies(code,name,symbol,decimals,active)
+		VALUES('ZZZ','Moneda dinámica','Z$',2,true)
+		ON CONFLICT(code) DO UPDATE SET name=EXCLUDED.name,symbol=EXCLUDED.symbol,decimals=EXCLUDED.decimals,active=true,updated_at=now()
+	`); err != nil {
+		t.Fatalf("seed dynamic currency: %v", err)
+	}
+	if _, err := pool.Exec(context.Background(), `
+		INSERT INTO platform_countries(code,name,default_currency,active)
+		VALUES('ZZ','País dinámico','ZZZ',true)
+		ON CONFLICT(code) DO UPDATE SET name=EXCLUDED.name,default_currency=EXCLUDED.default_currency,active=true,updated_at=now()
+	`); err != nil {
+		t.Fatalf("seed dynamic country: %v", err)
+	}
+	seedOperationalWhatsAppChannel(t, pool, "ZZ", fmt.Sprint(nonce))
+
+	taxID := fmt.Sprintf("%011d", (nonce+11)%100000000000)
+	email := fmt.Sprintf("dynamic-catalog-%d@example.test", nonce)
+	body := seededOnboardingBodyForCatalog(t, pool, "emprende", taxID, email, "ZZ", "ZZZ")
+	req := httptest.NewRequest("POST", "/v1/platform/organizations", bytes.NewReader(body))
+	req = req.WithContext(context.WithValue(req.Context(), scopeKey{}, actor))
+	rec := httptest.NewRecorder()
+	api.onboardTenant(rec, req)
+	if rec.Code != 201 {
+		t.Fatalf("database-only catalog onboarding: %d %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestPlatformOnboardingRejectsCountryWithoutOperationalWhatsApp(t *testing.T) {
+	pool := integrationPool(t)
+	actor := seedInventoryScope(t, pool)
+	api := New(pool)
+	nonce := time.Now().UnixNano()
+
+	if _, err := pool.Exec(context.Background(), `
+		INSERT INTO platform_currencies(code,name,symbol,decimals,active)
+		VALUES('ZYY','Moneda sin canal','Y$',2,true)
+		ON CONFLICT(code) DO UPDATE SET name=EXCLUDED.name,symbol=EXCLUDED.symbol,decimals=EXCLUDED.decimals,active=true,updated_at=now()
+	`); err != nil {
+		t.Fatalf("seed incomplete currency: %v", err)
+	}
+	if _, err := pool.Exec(context.Background(), `
+		INSERT INTO platform_countries(code,name,default_currency,active)
+		VALUES('ZY','País sin canal operativo','ZYY',true)
+		ON CONFLICT(code) DO UPDATE SET name=EXCLUDED.name,default_currency=EXCLUDED.default_currency,active=true,updated_at=now()
+	`); err != nil {
+		t.Fatalf("seed incomplete country: %v", err)
+	}
+	seedIncompleteWhatsAppChannel(t, pool, "ZY", fmt.Sprint(nonce))
+
+	taxID := fmt.Sprintf("%011d", (nonce+12)%100000000000)
+	email := fmt.Sprintf("incomplete-channel-%d@example.test", nonce)
+	body := seededOnboardingBodyForCatalog(t, pool, "emprende", taxID, email, "ZY", "ZYY")
+	req := httptest.NewRequest("POST", "/v1/platform/organizations", bytes.NewReader(body))
+	req = req.WithContext(context.WithValue(req.Context(), scopeKey{}, actor))
+	rec := httptest.NewRecorder()
+	api.onboardTenant(rec, req)
+	if rec.Code != 400 || !strings.Contains(rec.Body.String(), "invalid_fiscal_profile") {
+		t.Fatalf("incomplete WhatsApp channel must be rejected: %d %s", rec.Code, rec.Body.String())
 	}
 }
