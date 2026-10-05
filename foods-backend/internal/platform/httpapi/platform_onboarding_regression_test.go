@@ -15,16 +15,14 @@ import (
 func seedOperationalWhatsAppChannel(t *testing.T, pool *pgxpool.Pool, country, suffix string) {
 	t.Helper()
 	phone := "+999" + suffix
-	phoneNumberID := "test-phone-id-" + country + "-" + suffix
 	if _, err := pool.Exec(context.Background(), `
-		INSERT INTO platform_whatsapp_channels(country_code,phone_number,phone_number_id,display_name,active)
-		VALUES($1,$2,$3,'Integration Test',true)
+		INSERT INTO platform_whatsapp_channels(country_code,phone_number,display_name,active)
+		VALUES($1,$2,'Integration Test',true)
 		ON CONFLICT(phone_number) DO UPDATE SET
 			country_code=EXCLUDED.country_code,
-			phone_number_id=EXCLUDED.phone_number_id,
 			active=true,
 			updated_at=now()
-	`, country, phone, phoneNumberID); err != nil {
+	`, country, phone); err != nil {
 		t.Fatalf("seed operational WhatsApp channel for %s: %v", country, err)
 	}
 }
@@ -33,11 +31,10 @@ func seedInactiveWhatsAppChannel(t *testing.T, pool *pgxpool.Pool, country, suff
 	t.Helper()
 	phone := "+998" + suffix
 	if _, err := pool.Exec(context.Background(), `
-		INSERT INTO platform_whatsapp_channels(country_code,phone_number,phone_number_id,display_name,active)
-		VALUES($1,$2,NULL,'Inactive Integration Test',false)
+		INSERT INTO platform_whatsapp_channels(country_code,phone_number,display_name,active)
+		VALUES($1,$2,'Inactive Integration Test',false)
 		ON CONFLICT(phone_number) DO UPDATE SET
 			country_code=EXCLUDED.country_code,
-			phone_number_id=NULL,
 			active=false,
 			updated_at=now()
 	`, country, phone); err != nil {

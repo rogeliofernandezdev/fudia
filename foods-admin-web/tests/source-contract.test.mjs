@@ -720,6 +720,11 @@ test("países y WhatsApp tiene acceso completo para plataforma",()=>{
   assert.equal(page.includes("META_WHATSAPP"),false,"El formulario no sugiere nombres de secretos");
   assert.ok(page.includes('label="Moneda asociada"'),"El modal muestra la moneda derivada del país");
   assert.ok(page.includes("readOnly tabIndex={-1}"),"La moneda asociada no se puede alterar manualmente");
+  assert.ok(page.includes('from "react-select"'),"El país usa un selector con autocompletado");
+  assert.ok(page.includes("isSearchable"),"El selector de país permite buscar");
+  assert.equal(page.includes("phoneNumberId"),false,"El formulario no administra el Phone Number ID del entorno");
+  assert.equal(page.includes("Phone Number ID"),false,"La pantalla no solicita configuración técnica de Meta");
+  assert.equal(page.includes('type="submit" icon="check"'),false,"Guardar no duplica el icono automático del modal");
 });
 
 
