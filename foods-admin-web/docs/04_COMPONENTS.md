@@ -25,7 +25,10 @@ estados de envío.
   Los campos omitidos no dejan bloques vacíos y las notas no imponen un icono.
   Los botones mantienen `--control-height`; en móvil comparten el ancho disponible.
   Cancelar recibe el foco inicial. Título y descripción tienen identificadores
-  únicos vinculados al diálogo.
+  únicos vinculados al diálogo. Al abrir reutiliza `modal-overlay-in` (200 ms)
+  y `modal-panel-in` (300 ms): aparición gradual, desplazamiento de 18 px y
+  escala inicial de 0.96. `prefers-reduced-motion` desactiva ambos efectos.
+  La animación ocurre al montar el modal y no se repite al actualizar su contenido.
 - `NotificationPopover`: contador en campana, lista por prioridad, marca temporal
   y acceso al historial completo.
 - `DataTable`: cabecera oscura, filas alternas, estados con texto e icono, acciones
