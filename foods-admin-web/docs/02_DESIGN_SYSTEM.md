@@ -274,7 +274,11 @@ Usar superficies mayormente neutras, azul para navegación y acciones, verde par
 - Skeleton con forma final: el de tablas reproduce cabecera y filas con
   celdas alineadas a las columnas reales (incluyendo icono, título y subtítulo
   en la primera celda), no barras o cuadrados planos.
-- Estados con texto e icono; nunca solo color.
+- Estados con texto e icono; nunca solo color. Activo/Activa usa un check
+  circular verde; Inactivo/Inactiva usa un signo menos circular neutro. Se
+  construyen con `Status active={...}` para compartir semántica y geometría.
+  Activar usa un check circular azul y Desactivar un círculo tachado rojo;
+  el icono de encendido no se reutiliza para ambas acciones.
 - Contraste WCAG AA y foco visible con ops-500.
 - Alertas de éxito, error e información usan un diálogo global centrado, icono
   semántico, título, explicación breve y acción «Aceptar». El botón «Aceptar»

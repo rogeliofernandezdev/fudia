@@ -88,7 +88,7 @@ export function PlatformGlobalSettingsPage(){
    (catalogs.isError||channels.isError)?<div className="panel catalog-state"><b>No pudimos cargar la configuración global.</b><Button kind="secondary" onClick={()=>{void catalogs.refetch();void channels.refetch()}}>Reintentar</Button></div>:
    <div className="panel">
     <div className="table-responsive"><table><thead><tr><th>País</th><th>Moneda</th><th>Nombre</th><th>Número</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>
-     {(channels.data?.items??[]).map(item=><tr key={item.id}><td>{item.countryName} ({item.countryCode})</td><td>{catalogs.data?.countryOptions.find(country=>country.code===item.countryCode)?.defaultCurrency??"—"}</td><td>{item.displayName}</td><td>{item.phoneNumber}</td><td><Status tone={item.active?"green":"gray"}>{item.active?"Activo":"Borrador"}</Status></td><td><div className="table-actions"><RowActionButton action="edit" label={`Editar canal ${item.displayName}`} onClick={()=>edit(item)}/></div></td></tr>)}
+     {(channels.data?.items??[]).map(item=><tr key={item.id}><td>{item.countryName} ({item.countryCode})</td><td>{catalogs.data?.countryOptions.find(country=>country.code===item.countryCode)?.defaultCurrency??"—"}</td><td>{item.displayName}</td><td>{item.phoneNumber}</td><td><Status active={item.active}>{item.active?"Activo":"Borrador"}</Status></td><td><div className="table-actions"><RowActionButton action="edit" label={`Editar canal ${item.displayName}`} onClick={()=>edit(item)}/></div></td></tr>)}
      {!(channels.data?.items??[]).length&&<tr><td colSpan={6}>Todavía no hay canales configurados.</td></tr>}
     </tbody></table></div>
    </div>}

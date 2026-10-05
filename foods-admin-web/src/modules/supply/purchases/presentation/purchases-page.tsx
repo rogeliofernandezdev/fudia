@@ -380,7 +380,7 @@ export function PurchasesPage(){
               <td><span className={"row-icon r"+index%3}><Icon name="truck" size={18}/></span><b>{supplier.name}</b></td>
               <td>{supplier.taxId||"—"}</td>
               <td>{supplier.phone||supplier.email||"Sin contacto"}{supplier.phone&&supplier.email&&<small>{supplier.email}</small>}</td>
-              <td><Status tone={supplier.active?"green":"gray"}>{supplier.active?"Activo":"Inactivo"}</Status></td>
+              <td><Status active={supplier.active}>{supplier.active?"Activo":"Inactivo"}</Status></td>
               <td><div className="table-actions">{canManage&&<>
                 <RowActionButton action="edit" onClick={()=>setSupplierDraft({id:supplier.id,taxId:supplier.taxId,name:supplier.name,email:supplier.email,phone:supplier.phone})}/>
                 <RowActionButton action={supplier.active?"deactivate":"activate"} onClick={()=>setSupplierTarget(supplier)}/>
@@ -389,7 +389,7 @@ export function PurchasesPage(){
           </table></div>
 
           <div className="management-cards purchases-cards">{supplierItems.map(supplier=><article key={supplier.id}>
-            <header><span className="row-icon r1"><Icon name="truck"/></span><div><b>{supplier.name}</b><small>{supplier.taxId||"Sin RUC"}</small></div><Status tone={supplier.active?"green":"gray"}>{supplier.active?"Activo":"Inactivo"}</Status></header>
+            <header><span className="row-icon r1"><Icon name="truck"/></span><div><b>{supplier.name}</b><small>{supplier.taxId||"Sin RUC"}</small></div><Status active={supplier.active}>{supplier.active?"Activo":"Inactivo"}</Status></header>
             <dl><div><dt>Teléfono</dt><dd>{supplier.phone||"—"}</dd></div><div><dt>Correo</dt><dd>{supplier.email||"—"}</dd></div></dl>
             {canManage&&<footer><RowActionButton action="edit" onClick={()=>setSupplierDraft({id:supplier.id,taxId:supplier.taxId,name:supplier.name,email:supplier.email,phone:supplier.phone})}/><RowActionButton action={supplier.active?"deactivate":"activate"} onClick={()=>setSupplierTarget(supplier)}/></footer>}
           </article>)}</div>

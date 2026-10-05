@@ -30,7 +30,8 @@ estados de envío.
   `aria-label` y tooltip descriptivo.
   No se permiten acciones textuales ni iconos generados de forma aislada por pantalla.
 - El mapeo semántico es único en toda la aplicación: ver = ojo azul, editar =
-  lápiz azul, desactivar = encendido rojo y quitar fila = equis roja. Las
+  lápiz azul, activar = check dentro de un círculo azul, desactivar = círculo tachado rojo
+  y quitar fila = equis roja. Las
   pantallas no pueden elegir localmente otro icono o color para estas acciones.
 - `Pagination`: rango/total, selector de filas, páginas numeradas con elipsis y
   controles anterior/siguiente.
@@ -74,3 +75,17 @@ Un restaurante en modo `simple` nunca ve insumos, recetas ni unidades.
   número suelto: disponible, cupo restante, agotado o sin control.
 - Marcar «agotado hoy» es una acción de operaciones, no del administrador, y se
   presenta como acción reversible del local, nunca como desactivación del catálogo.
+
+## Estado activo e inactivo
+
+`Status` recibe `active` para representar estados binarios con texto e icono:
+activo usa un check circular verde; inactivo, un signo menos circular neutro.
+No se infiere el estado a partir del color ni del texto. Los otros estados
+conservan su representación por `tone`. Los SVG son decorativos y el texto
+visible comunica el estado a lectores de pantalla.
+
+Las acciones de fila indican qué ocurrirá al pulsar, mientras la columna Estado
+indica la situación actual. Activar y Desactivar usan siluetas distintas, con
+nombre accesible y tooltip también al enfocar mediante teclado. El azul se
+reserva para la acción Activar; el verde comunica el estado activo confirmado.
+Desactivar conserva el rojo semántico y su confirmación previa.
