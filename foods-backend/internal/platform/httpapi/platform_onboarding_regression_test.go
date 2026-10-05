@@ -3,6 +3,7 @@ package httpapi
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http/httptest"
 	"strings"
@@ -232,5 +233,73 @@ func TestPlatformOnboardingRejectsCurrencyDifferentFromCountryDefault(t *testing
 	api.onboardTenant(rec, req)
 	if rec.Code != 400 || !strings.Contains(rec.Body.String(), "invalid_fiscal_profile") {
 		t.Fatalf("currency different from country default must be rejected: %d %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestPlatformCountryCatalogReturnsTimezoneSuggestion(t *testing.T) {
+	pool := integrationPool(t)
+	api := New(pool)
+	seedOperationalWhatsAppChannel(t, pool, "PE", fmt.Sprint(time.Now().UnixNano()))
+	for _, scope := range []string{"", "?scope=all"} {
+		rec := httptest.NewRecorder()
+		api.getPlatformOnboardingCatalogs(rec, httptest.NewRequest("GET", "/v1/platform/onboarding/catalogs"+scope, nil))
+		if rec.Code != 200 {
+			t.Fatalf("catalog %s: %d %s", scope, rec.Code, rec.Body.String())
+		}
+		var body struct {
+			CountryOptions []platformCountryOption `json:"countryOptions"`
+		}
+		if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+			t.Fatal(err)
+		}
+		found := false
+		for _, country := range body.CountryOptions {
+			if country.DefaultTimezone != "" {
+				if _, err := time.LoadLocation(country.DefaultTimezone); err != nil {
+					t.Errorf("%s: invalid suggestion %q: %v", country.Code, country.DefaultTimezone, err)
+				}
+			}
+			if country.Code == "PE" {
+				found = true
+				if country.DefaultTimezone != "America/Lima" {
+					t.Errorf("Peru suggestion: %q", country.DefaultTimezone)
+				}
+			}
+		}
+		if !found {
+			t.Fatal("Peru missing from catalog")
+		}
+	}
+}
+
+func TestPlatformOnboardingPersistsChosenLocalTimezone(t *testing.T) {
+	pool := integrationPool(t)
+	actor := seedInventoryScope(t, pool)
+	api := New(pool)
+	nonce := time.Now().UnixNano()
+	seedOperationalWhatsAppChannel(t, pool, "PE", fmt.Sprint(nonce))
+	body := seededOnboardingBody(t, pool, "emprende", fmt.Sprintf("%011d", nonce%100000000000), fmt.Sprintf("timezone-%d@example.test", nonce))
+	// A local may override the country's suggestion. The company initially shares it.
+	body = bytes.ReplaceAll(body, []byte("America/Lima"), []byte("America/New_York"))
+	req := httptest.NewRequest("POST", "/v1/platform/organizations", bytes.NewReader(body))
+	req = req.WithContext(context.WithValue(req.Context(), scopeKey{}, actor))
+	rec := httptest.NewRecorder()
+	api.onboardTenant(rec, req)
+	if rec.Code != 201 {
+		t.Fatalf("onboarding: %d %s", rec.Code, rec.Body.String())
+	}
+	var result struct {
+		OrganizationID string `json:"organizationId"`
+		LocationID     string `json:"locationId"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &result); err != nil {
+		t.Fatal(err)
+	}
+	var companyZone, localZone string
+	if err := pool.QueryRow(context.Background(), `SELECT o.timezone,l.timezone FROM organizations o JOIN locations l ON l.organization_id=o.id WHERE o.id=$1 AND l.id=$2`, result.OrganizationID, result.LocationID).Scan(&companyZone, &localZone); err != nil {
+		t.Fatal(err)
+	}
+	if companyZone != "America/New_York" || localZone != "America/New_York" {
+		t.Fatalf("unexpected persisted zones: %s / %s", companyZone, localZone)
 	}
 }

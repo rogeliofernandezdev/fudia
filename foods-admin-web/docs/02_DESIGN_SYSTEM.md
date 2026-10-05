@@ -260,8 +260,8 @@ Usar superficies mayormente neutras, azul para navegación y acciones, verde par
   selecciona un perfil existente. Los tipos de cambio se gestionan en una vista
   separada con moneda origen, moneda destino, vigencia, fuente e historial. No se
   mezclan estos conceptos en un único formulario ni se duplican valores por local.
-- El onboarding de plataforma se presenta como un wizard de cuatro pasos:
-  Empresa → Fiscal → Local → Administrador. La confirmación final crea el tenant
+- El onboarding de plataforma se presenta como un wizard de cinco pasos:
+  Empresa → Plan y contrato → Fiscal → Primer local → Administrador. La confirmación final crea el tenant
   completo de forma transaccional; avanzar entre pasos no persiste datos parciales.
 
 ## Componentes y estados
@@ -453,6 +453,12 @@ Existe un único onboarding de tenant en `/platform/onboarding`. La ruta
 histórica de Configuración redirige a ese flujo y no mantiene una segunda
 implementación. El alta se compone de Empresa → Plan y contrato → Fiscal →
 Primer local → Administrador.
+
+La zona horaria pertenece al paso Primer local y usa un autocomplete buscable por
+ciudad o identificador IANA. Se sugiere desde `defaultTimezone` del catálogo del
+país y permanece editable. Cambiar de país actualiza la sugerencia; retroceder o
+refrescar catálogos conserva la elección del usuario. La empresa se inicializa
+con esa misma zona y los demás locales conservan su configuración independiente.
 
 Mientras se carga el contexto de `/platform/onboarding`, el skeleton reproduce
 los cinco pasos, la cabecera, los campos del primer formulario y la acción

@@ -1,13 +1,15 @@
 "use client";
 import "./platform-onboarding.css";
 import Link from "next/link";
-import {useEffect,useMemo,useState} from "react";
-import {useForm,useWatch} from "react-hook-form";
+import {useEffect,useState} from "react";
+import {Controller,useForm,useWatch} from "react-hook-form";
 import {useMutation,useQuery} from "@tanstack/react-query";
 import {Icon,IconName} from "@/design-system/icons";
 import {LocationMap} from "@/design-system/location-map";
 import {ApiClientError} from "@/shared/api/client";
 import {FormField as Field,Input,PageHeader,Select} from "@/design-system";
+import {TimezoneSelect} from "@/design-system/timezone-select";
+import {countryLocationDefaults} from "../domain/onboarding-defaults";
 import {useFeedback} from "@/providers/feedback-provider";
 import type {PlatformOnboardingDraft} from "../domain/types";
 import {onboardingResolver,onboardingStepFields} from "../domain/onboarding-schemas";
@@ -15,7 +17,7 @@ import {createPlatformOrganization,getPlatformOnboardingContext} from "../infras
 import {PlatformOnboardingSkeleton} from "./platform-skeletons";
 
 const blank:PlatformOnboardingDraft={
- legalName:"",tradeName:"",taxId:"",timezone:"America/Lima",
+ legalName:"",tradeName:"",taxId:"",timezone:"",
  planId:"",billingCycle:"monthly",termsAccepted:false,
  country:"",currency:"",currencyPosition:"before",taxName:"IGV",taxRate:"18",taxIncluded:false,
  locationName:"",locationCode:"",address:"",locationPhone:"",locationHours:"",latitude:"",longitude:"",
@@ -31,12 +33,6 @@ const steps:Array<{key:string;title:string;icon:IconName;heading:string}>=[
 ];
 const lastStep=steps.length-1;
 
-function listTimezones(current:string){
-  let zones:string[]=[];
-  try{zones=Intl.supportedValuesOf("timeZone")}catch{zones=[]}
-  return zones.includes(current)?zones:[current,...zones];
-}
-
 export function PlatformOnboardingPage(){
   const{notify}=useFeedback();
   const[step,setStep]=useState(0);
@@ -49,9 +45,8 @@ export function PlatformOnboardingPage(){
   const{register,control,setValue,getValues,trigger,reset,handleSubmit,formState:{errors}}=useForm<PlatformOnboardingDraft>({
     defaultValues:blank,resolver:onboardingResolver,mode:"onSubmit",reValidateMode:"onChange",
   });
-  const[planId,billingCycle,timezone,address,latitude,longitude]=useWatch({control,name:["planId","billingCycle","timezone","address","latitude","longitude"]});
+  const[planId,billingCycle,address,latitude,longitude]=useWatch({control,name:["planId","billingCycle","address","latitude","longitude"]});
   const selectedPlan=ctx?.plans.find(plan=>plan.id===planId)??null;
-  const timezones=useMemo(()=>listTimezones(timezone),[timezone]);
 
   useEffect(()=>{if(firstPlanId&&!getValues("planId"))setValue("planId",firstPlanId)},[firstPlanId,getValues,setValue]);
   useEffect(()=>{
@@ -59,6 +54,8 @@ export function PlatformOnboardingPage(){
     const currentCountry=getValues("country");
     const selectedCountry=ctx.countryOptions.find(country=>country.code===currentCountry)??ctx.countryOptions[0];
     const countryChanged=currentCountry!==selectedCountry.code;
+    const defaults=countryLocationDefaults(selectedCountry,getValues());
+    setValue("timezone",defaults.timezone);
     if(countryChanged)setValue("country",selectedCountry.code);
     const currentCurrency=getValues("currency");
     const defaultCurrency=ctx.currencyOptions.some(currency=>currency.code===selectedCountry.defaultCurrency)
@@ -75,7 +72,7 @@ export function PlatformOnboardingPage(){
         ?country.defaultCurrency
         :ctx?.currencyOptions[0]?.code??"";
       notify({tone:"success",title:"Empresa registrada",message:"La empresa, su suscripción, el local y el Administrador de empresa quedaron listos."});
-      reset({...blank,planId:firstPlanId,country:country?.code??"",currency});
+      reset({...blank,planId:firstPlanId,country:country?.code??"",currency,timezone:country?.defaultTimezone??""});
       setStep(0);setReached(0);
     },
     onError:e=>{const message=e instanceof ApiClientError&&e.status>=500&&e.correlationId?`${e.message} Código de seguimiento: ${e.correlationId}`:e.message;notify({tone:"danger",title:"No se pudo registrar",message})},
@@ -92,7 +89,15 @@ export function PlatformOnboardingPage(){
     if(index>=0&&index!==step)setStep(index);
   });
   const err=(field:keyof PlatformOnboardingDraft)=>errors[field]?.message;
-  const countryField=register("country",{onChange:e=>{const c=ctx?.countryOptions.find(x=>x.code===e.target.value);if(c&&ctx?.currencyOptions.some(currency=>currency.code===c.defaultCurrency))setValue("currency",c.defaultCurrency)}});
+  const changeCountry=(code:string)=>{
+    const country=ctx?.countryOptions.find(option=>option.code===code);
+    if(!country)return;
+    const current=getValues();
+    const defaults=countryLocationDefaults(country,current);
+    setValue("country",code,{shouldDirty:true,shouldValidate:Boolean(errors.country)});
+    setValue("timezone",defaults.timezone,{shouldDirty:true,shouldValidate:Boolean(errors.timezone)});
+    if(ctx?.currencyOptions.some(currency=>currency.code===country.defaultCurrency))setValue("currency",country.defaultCurrency);
+  };
   const current=steps[step];
 
   return <><PageHeader eyebrow="PLATAFORMA" title="Registrar empresa" description="Alta única y transaccional: empresa, contrato, fiscalidad, primer local y Administrador de empresa."/>
@@ -116,7 +121,6 @@ export function PlatformOnboardingPage(){
           <Field className="span-2" label="Razón social" error={err("legalName")}><Input maxLength={180} {...register("legalName")} placeholder="Restaurante Perú SAC" autoComplete="organization"/></Field>
           <Field label="Nombre comercial" error={err("tradeName")}><Input maxLength={180} {...register("tradeName")} placeholder="Mi restaurante"/></Field>
           <Field label="Identificación fiscal" error={err("taxId")}><Input maxLength={32} inputMode="numeric" {...register("taxId")} placeholder="RUC 20512345678"/></Field>
-          <Field className="span-2" label="Zona horaria" error={err("timezone")}><Select {...register("timezone")}>{timezones.map(z=><option key={z} value={z}>{z.replaceAll("_"," ")}</option>)}</Select></Field>
         </div>}
 
         {step===1&&<>
@@ -139,7 +143,7 @@ export function PlatformOnboardingPage(){
         </>}
 
         {step===2&&<div className="form-grid">
-          <Field label="País" error={err("country")}><Select {...countryField}>{ctx.countryOptions.map(c=><option key={c.code} value={c.code}>{c.name+" ("+c.code+")"}</option>)}</Select></Field>
+          <Field label="País" error={err("country")}><Select {...register("country")} onChange={event=>changeCountry(event.target.value)}>{ctx.countryOptions.map(c=><option key={c.code} value={c.code}>{c.name+" ("+c.code+")"}</option>)}</Select></Field>
           <Field label="Moneda asociada" help="Se asigna automáticamente según el país." error={err("currency")}><Input readOnly tabIndex={-1} {...register("currency")}/></Field>
           <Field label="Nombre del impuesto" error={err("taxName")}><Input maxLength={30} {...register("taxName")} placeholder="IGV"/></Field>
           <Field label="Porcentaje %" error={err("taxRate")}><Input type="number" inputMode="decimal" min="0" max="100" step="0.0001" {...register("taxRate")} placeholder="18"/></Field>
@@ -148,6 +152,9 @@ export function PlatformOnboardingPage(){
         </div>}
 
         {step===3&&<div className="form-grid">
+          <Field as="div" className="span-2" label="Zona horaria" help="Sugerida según el país. Puedes cambiarla para este local." error={err("timezone")}>
+            <Controller name="timezone" control={control} render={({field})=><TimezoneSelect value={field.value} onChange={field.onChange} onBlur={field.onBlur} name={field.name} inputRef={field.ref} invalid={Boolean(errors.timezone)} disabled={save.isPending}/>}/>
+          </Field>
           <Field className="span-2" label="Nombre del local" error={err("locationName")}><Input {...register("locationName")} placeholder="Sede principal"/></Field>
           <Field label="Teléfono"><Input type="tel" {...register("locationPhone")} placeholder="+51 999 888 777"/></Field>
           <Field label="Horario de atención"><Input {...register("locationHours")} placeholder="Lun-Dom 12:00-23:00"/></Field>

@@ -278,3 +278,14 @@ misma transacción que crea el recurso. Un downgrade se rechaza si la empresa ya
 supera los límites del plan destino. Los módulos activos de
 `organization_modules` se sincronizan desde `subscription_plans.module_keys`;
 solo módulos marcados como disponibles por la plataforma pueden activarse.
+
+### Zona horaria sugerida en onboarding
+
+`platform_countries.default_timezone` contiene una sugerencia IANA editable en
+el formulario del primer local. La migración 000069 inicializa los países del
+catálogo a partir de IANA tzdb; una cadena vacía indica que no existe sugerencia.
+El catálogo de onboarding expone `defaultTimezone` junto a moneda y prefijo
+telefónico. La elección final se valida con `time.LoadLocation` y se persiste
+como zona del primer local y valor inicial de la empresa. No se restringe al país:
+los locales posteriores mantienen zonas independientes. La migración no modifica
+empresas ni locales existentes.

@@ -13,6 +13,7 @@ type platformCountryOption struct {
 	Name            string `json:"name"`
 	DefaultCurrency string `json:"defaultCurrency"`
 	CallingCode     string `json:"callingCode"`
+	DefaultTimezone string `json:"defaultTimezone"`
 }
 
 func (a *API) listPlatformCurrencies(ctx context.Context) ([]currencyOption, error) {
@@ -56,7 +57,7 @@ func (a *API) listPlatformCountries(ctx context.Context) ([]countryOption, error
 
 func (a *API) listPlatformGlobalCountries(ctx context.Context) ([]platformCountryOption, error) {
 	rows, err := a.db.Query(ctx, `
-		SELECT c.code,c.name,c.default_currency,COALESCE(c.calling_code,'')
+		SELECT c.code,c.name,c.default_currency,COALESCE(c.calling_code,''),c.default_timezone
 		FROM platform_countries c
 		WHERE c.active
 		ORDER BY c.name,c.code
@@ -68,7 +69,7 @@ func (a *API) listPlatformGlobalCountries(ctx context.Context) ([]platformCountr
 	items := []platformCountryOption{}
 	for rows.Next() {
 		var item platformCountryOption
-		if err := rows.Scan(&item.Code, &item.Name, &item.DefaultCurrency, &item.CallingCode); err != nil {
+		if err := rows.Scan(&item.Code, &item.Name, &item.DefaultCurrency, &item.CallingCode, &item.DefaultTimezone); err != nil {
 			return nil, err
 		}
 		items = append(items, item)
@@ -78,7 +79,7 @@ func (a *API) listPlatformGlobalCountries(ctx context.Context) ([]platformCountr
 
 func (a *API) listOnboardingCountries(ctx context.Context) ([]platformCountryOption, error) {
 	rows, err := a.db.Query(ctx, `
-		SELECT c.code,c.name,c.default_currency,COALESCE(c.calling_code,'')
+		SELECT c.code,c.name,c.default_currency,COALESCE(c.calling_code,''),c.default_timezone
 		FROM platform_countries c
 		WHERE c.active
 		  AND EXISTS (
@@ -95,7 +96,7 @@ func (a *API) listOnboardingCountries(ctx context.Context) ([]platformCountryOpt
 	items := []platformCountryOption{}
 	for rows.Next() {
 		var item platformCountryOption
-		if err := rows.Scan(&item.Code, &item.Name, &item.DefaultCurrency, &item.CallingCode); err != nil {
+		if err := rows.Scan(&item.Code, &item.Name, &item.DefaultCurrency, &item.CallingCode, &item.DefaultTimezone); err != nil {
 			return nil, err
 		}
 		items = append(items, item)
