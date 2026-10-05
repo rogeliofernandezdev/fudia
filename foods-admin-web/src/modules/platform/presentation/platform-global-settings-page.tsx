@@ -47,7 +47,30 @@ export function PlatformGlobalSettingsPage(){
   setEditingId(item.id);
   setDraft({countryCode:item.countryCode,phoneNumber:item.phoneNumber,displayName:item.displayName,active:item.active});
  };
- const start=()=>{setEditingId(undefined);setDraft({...blank,countryCode:catalogs.data?.countryOptions[0]?.code??"PE"});};
+ const start=()=>{
+  const country=catalogs.data?.countryOptions.find(item=>item.code==="PE")??catalogs.data?.countryOptions[0];
+  setEditingId(undefined);
+  setDraft(country?{...blank,countryCode:country.code,displayName:country.name,phoneNumber:country.callingCode}:{...blank});
+ };
+ const changeCountry=(countryCode:string)=>{
+  const nextCountry=catalogs.data?.countryOptions.find(country=>country.code===countryCode);
+  setDraft(current=>{
+   if(!current)return current;
+   const currentCountry=catalogs.data?.countryOptions.find(country=>country.code===current.countryCode);
+   let localNumber=current.phoneNumber;
+   if(currentCountry?.callingCode&&localNumber.startsWith(currentCountry.callingCode)){
+    localNumber=localNumber.slice(currentCountry.callingCode.length);
+   }else if(localNumber.startsWith("+")){
+    localNumber="";
+   }
+   return {
+    ...current,
+    countryCode,
+    displayName:nextCountry?.name??"",
+    phoneNumber:nextCountry?.callingCode?`${nextCountry.callingCode}${localNumber}`:localNumber,
+   };
+  });
+ };
  const submit=()=>{
   if(!draft)return;
   if(!draft.countryCode||!draft.phoneNumber.trim()||!draft.displayName.trim()){
@@ -73,10 +96,10 @@ export function PlatformGlobalSettingsPage(){
   {draft&&<div className="modal-backdrop modal-overlay-in"><section className="crud-modal platform-channel-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="global-channel-title" aria-busy={save.isPending}><div className="modal-accent"/><header><span className="modal-title-icon"><Icon name="chat" size={18}/></span><div><small>{editingId?"EDITAR CANAL":"NUEVO CANAL"}</small><h2 id="global-channel-title">Canal global de WhatsApp</h2></div><button type="button" aria-label="Cerrar" disabled={save.isPending} onClick={()=>{setDraft(null);setEditingId(undefined)}}><Icon name="close"/></button></header>
    <form onSubmit={event=>{event.preventDefault();submit()}}>
     <div className="form-grid platform-channel-fields">
-     <FormField as="div" label="País"><CountrySelect<CountryLookupOption,false> inputId="platform-channel-country" instanceId="platform-channel-country-autocomplete" aria-label="País" options={countryOptions} value={selectedCountryOption} onChange={option=>setDraft({...draft,countryCode:option?.value??""})} isSearchable placeholder="Buscar país..." noOptionsMessage={()=>"No hay coincidencias"} styles={countrySelectStyles} className="react-select-container platform-country-autocomplete" classNamePrefix="rs" menuPortalTarget={typeof document==="undefined"?undefined:document.body} menuPosition="fixed"/></FormField>
+     <FormField as="div" label="País"><CountrySelect<CountryLookupOption,false> inputId="platform-channel-country" instanceId="platform-channel-country-autocomplete" aria-label="País" options={countryOptions} value={selectedCountryOption} onChange={option=>changeCountry(option?.value??"")} isSearchable placeholder="Buscar país..." noOptionsMessage={()=>"No hay coincidencias"} styles={countrySelectStyles} className="react-select-container platform-country-autocomplete" classNamePrefix="rs" menuPortalTarget={typeof document==="undefined"?undefined:document.body} menuPosition="fixed"/></FormField>
      <FormField label="Moneda asociada" help="Se asigna automáticamente según el país."><Input value={selectedCountry?.defaultCurrency??""} readOnly tabIndex={-1}/></FormField>
-     <FormField className="span-2" label="Nombre visible"><Input value={draft.displayName} onChange={e=>setDraft({...draft,displayName:e.target.value})} placeholder={selectedCountry?`FudIA ${selectedCountry.name}`:"Nombre del canal"}/></FormField>
-     <FormField className="span-2" label="Número WhatsApp"><Input value={draft.phoneNumber} onChange={e=>setDraft({...draft,phoneNumber:e.target.value})} placeholder="+51914832364"/></FormField>
+     <FormField className="span-2" label="Nombre visible"><Input value={draft.displayName} onChange={e=>setDraft({...draft,displayName:e.target.value})}/></FormField>
+     <FormField className="span-2" label="Número WhatsApp"><Input value={draft.phoneNumber} onChange={e=>setDraft({...draft,phoneNumber:e.target.value})} placeholder="987654321"/></FormField>
      <label className="switch-row compact span-2"><input type="checkbox" checked={draft.active} onChange={e=>setDraft({...draft,active:e.target.checked})}/><span/><b>Canal activo y país disponible para onboarding</b></label>
     </div>
     <footer><Button type="button" kind="ghost" disabled={save.isPending} onClick={()=>{setDraft(null);setEditingId(undefined)}}>Cancelar</Button><Button type="submit" disabled={save.isPending}>{save.isPending?"Guardando…":"Guardar"}</Button></footer>
