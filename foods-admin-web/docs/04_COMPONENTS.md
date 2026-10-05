@@ -25,10 +25,13 @@ estados de envío.
   Los campos omitidos no dejan bloques vacíos y las notas no imponen un icono.
   Los botones mantienen `--control-height`; en móvil comparten el ancho disponible.
   Cancelar recibe el foco inicial. Título y descripción tienen identificadores
-  únicos vinculados al diálogo. Al abrir reutiliza `modal-overlay-in` (200 ms)
-  y `modal-panel-in` (300 ms): aparición gradual, desplazamiento de 18 px y
-  escala inicial de 0.96. `prefers-reduced-motion` desactiva ambos efectos.
-  La animación ocurre al montar el modal y no se repite al actualizar su contenido.
+  únicos vinculados al diálogo. Al abrir mantiene `modal-overlay-in` (200 ms)
+  para el fondo y usa `confirm-scale-punch` (520 ms) para el panel: escala desde
+  0.78 hasta 1.06, rebota a 0.98 y 1.012 y se asienta en 1 desde el centro.
+  El efecto elástico no desplaza el panel. Solo se activa con
+  `prefers-reduced-motion: no-preference`; movimiento reducido desactiva los
+  efectos. La animación ocurre al montar el modal y no se repite al actualizar
+  su contenido. El CSS pertenece al componente compartido.
 - `NotificationPopover`: contador en campana, lista por prioridad, marca temporal
   y acceso al historial completo.
 - `DataTable`: cabecera oscura, filas alternas, estados con texto e icono, acciones

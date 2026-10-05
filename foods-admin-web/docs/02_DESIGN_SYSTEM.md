@@ -296,9 +296,9 @@ Usar superficies mayormente neutras, azul para navegación y acciones, verde par
   muestran si aportan información necesaria para decidir; productos y categorías
   usan una pregunta breve sin explicaciones genéricas. Los botones no repiten
   el icono de advertencia; en móvil comparten el ancho y el área táctil estándar.
-  La apertura reutiliza las animaciones compartidas: fondo gradual de 200 ms y
-  panel de 300 ms con desplazamiento suave y escala leve. Se desactivan cuando
-  el usuario solicita movimiento reducido.
+  La apertura usa un fondo gradual de 200 ms y un Scale Punch elástico de
+  520 ms en el panel: crece desde el centro, supera levemente su tamaño final
+  y se asienta con rebotes decrecientes. Se desactiva con movimiento reducido.
 - En todo modal de registro o edición, el botón de guardado solo dice
   «Guardar» (sin sufijos como «producto», «categoría», «mesa» o «zona», y sin
   variantes como «Guardar cambios»). El estado ocupado dice «Guardando…».
