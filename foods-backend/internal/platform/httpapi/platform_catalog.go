@@ -54,7 +54,12 @@ func (a *API) listOnboardingCountries(ctx context.Context) ([]countryOption, err
 		WHERE c.active
 		  AND EXISTS (
 		    SELECT 1 FROM platform_whatsapp_channels w
-		    WHERE w.country_code=c.code AND w.active
+		    WHERE w.country_code=c.code
+		      AND w.active
+		      AND w.phone_number_id IS NOT NULL
+		      AND NULLIF(BTRIM(w.phone_number_id),'') IS NOT NULL
+		      AND w.secret_ref IS NOT NULL
+		      AND NULLIF(BTRIM(w.secret_ref),'') IS NOT NULL
 		  )
 		ORDER BY c.name,c.code
 	`)
@@ -93,7 +98,15 @@ func (a *API) onboardingCountryByCode(ctx context.Context, code string) (country
 		SELECT c.code,c.name,c.default_currency
 		FROM platform_countries c
 		WHERE c.code=$1 AND c.active
-		  AND EXISTS (SELECT 1 FROM platform_whatsapp_channels w WHERE w.country_code=c.code AND w.active)
+		  AND EXISTS (
+		    SELECT 1 FROM platform_whatsapp_channels w
+		    WHERE w.country_code=c.code
+		      AND w.active
+		      AND w.phone_number_id IS NOT NULL
+		      AND NULLIF(BTRIM(w.phone_number_id),'') IS NOT NULL
+		      AND w.secret_ref IS NOT NULL
+		      AND NULLIF(BTRIM(w.secret_ref),'') IS NOT NULL
+		  )
 	`, code).Scan(&item.Code, &item.Name, &item.DefaultCurrency)
 	if err == nil {
 		return item, true, nil
