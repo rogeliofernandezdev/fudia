@@ -194,14 +194,14 @@ func TestSalonKitchenPaymentDeliveryWorkflow(t *testing.T) {
 	var payment paymentView
 	if err:=json.Unmarshal(payRec.Body.Bytes(),&payment);err!=nil{t.Fatal(err)}
 
-	deliverReq:=httptest.NewRequest("PATCH","/v1/admin/orders/"+created.ID+"/status",bytes.NewReader([]byte(`{"status":"entregado"}`)))
-	deliverReq.SetPathValue("id",created.ID)
-	deliverReq=deliverReq.WithContext(context.WithValue(deliverReq.Context(),scopeKey{},s))
-	deliverRec:=httptest.NewRecorder()
-	api.updateOrderStatus(deliverRec,deliverReq)
-	if deliverRec.Code!=200{t.Fatalf("paid served table should close: %d %s",deliverRec.Code,deliverRec.Body.String())}
-	var closed order
-	if err:=json.Unmarshal(deliverRec.Body.Bytes(),&closed);err!=nil{t.Fatal(err)}
+	detailReq:=httptest.NewRequest("GET","/v1/admin/pos/orders/"+created.ID,nil)
+	detailReq.SetPathValue("id",created.ID)
+	detailReq=detailReq.WithContext(context.WithValue(detailReq.Context(),scopeKey{},s))
+	detailRec:=httptest.NewRecorder();api.getPOSOrder(detailRec,detailReq)
+	if detailRec.Code!=200{t.Fatalf("paid served table detail: %d %s",detailRec.Code,detailRec.Body.String())}
+	var detail posOrderDetail
+	if err:=json.Unmarshal(detailRec.Body.Bytes(),&detail);err!=nil{t.Fatal(err)}
+	closed:=detail.Order
 	if closed.CompletedAt==""||closed.Status!="entregado"{t.Fatalf("closure must retain delivery and record completion: %#v",closed)}
 
 	closedRefundReq:=httptest.NewRequest("POST","/v1/admin/payments/"+payment.ID+"/refund",bytes.NewReader([]byte(`{"amount":1,"reason":"Prueba posterior al cierre"}`)))

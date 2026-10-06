@@ -105,6 +105,7 @@ export function SalonManager(){
     queryKey:["order",detailId],
     queryFn:()=>getSalonOrder(detailId!),
     enabled:Boolean(detailId),
+    refetchInterval:query=>query.state.data?.completedAt?false:10000,
   });
 
   const invalidate=useCallback(()=>{
@@ -599,7 +600,7 @@ function ComandaView({initial,mode,allTables,busy,currencySymbol,close,save,noti
 function OrderDetail({loading,order,error,currencySymbol,canManage,busy,close,advance,edit,cancel}:{loading:boolean;order?:Order;error?:string;currencySymbol:string;canManage:boolean;busy:boolean;close:()=>void;advance:(st:string)=>void;edit:(o:Order)=>void;cancel:(o:Order)=>void}){
   const{location}=useSession();
   const baseMeta=order?statusMeta[order.status]??{label:order.status,tone:"gray" as const}:null;
-  const meta=baseMeta;
+  const meta=order?.status==="listo"&&baseMeta?{...baseMeta,label:"Listo para entregar"}:baseMeta;
   const action=order?nextOrderAction(order):null;
   const paid=Number(order?.paidAmount??0);
   const editable=Boolean(order&&editableOrderStatus(order.status)&&paid<=0.00001);
@@ -607,12 +608,13 @@ function OrderDetail({loading,order,error,currencySymbol,canManage,busy,close,ad
   const canCharge=Boolean(order&&(order.status==="listo"||order.status==="entregado")&&!order.completedAt&&remaining>0.00001);
   const hasPayments=paid>0.00001;
   const canCancel=Boolean(order&&(order.status==="nuevo"||order.status==="confirmado")&&!hasPayments);
-  const actionIcon=order?.status==="entregado"?"tables":action?.status==="entregado"?"availability":action?.status==="confirmado"?"chefHat":action?.icon;
+  const actionIcon=action?.status==="entregado"?"availability":action?.status==="confirmado"?"chefHat":action?.icon;
   const itemCount=order?(order.items??[]).reduce((sum,it)=>sum+Number(it.qty||0),0):0;
+  const tableLabel=order?.tableName?(/^mesa\b/i.test(order.tableName)?order.tableName:`Mesa ${order.tableName}`):"Mesa";
   return(
     <div className="modal-backdrop modal-overlay-in">
       <Dialog className="crud-modal order-detail salon-order-detail modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="salon-order-detail-title" aria-busy={loading}>
-        <div className="salon-order-detail-accent"/>
+        <div className="salon-order-detail-accent" aria-hidden="true"/>
         {loading?(
           <OrderDetailSkeleton close={close}/>
         ):(
@@ -621,14 +623,12 @@ function OrderDetail({loading,order,error,currencySymbol,canManage,busy,close,ad
               <div className="salon-order-detail-identity">
                 <span className="salon-order-detail-icon"><Icon name="utensils" size={20}/></span>
                 <div className="salon-order-detail-heading">
-                  <small>MESA ACTIVA</small>
-                  <h2 id="salon-order-detail-title">{order?.tableName||"Mesa"}</h2>
-                  {order?.customerName&&<p>{order.customerName}</p>}
+                  <h2 id="salon-order-detail-title">{tableLabel}</h2>
+                  {order&&<p>{order.customerName&&<><span>{order.customerName}</span><span aria-hidden="true"> · </span></>}<span className="salon-order-detail-opened"><Icon name="clock" size={14}/>{timeAgo(order.createdAt,location?.country,location?.timezone)}</span></p>}
                 </div>
               </div>
               <div className="salon-order-detail-status">
                 {order&&meta&&<Status tone={meta.tone}>{meta.label}</Status>}
-                {order&&(order.status==="listo"||order.status==="entregado")&&remaining>0.00001&&<Status tone="orange"><Icon name="clock" size={14}/>Pendiente de pago</Status>}
               </div>
               <button type="button" className="salon-order-detail-close" aria-label="Cerrar detalle" onClick={close}><Icon name="close" size={17}/></button>
             </header>
@@ -638,28 +638,13 @@ function OrderDetail({loading,order,error,currencySymbol,canManage,busy,close,ad
             ):order&&meta&&(
               <>
                 <div className="order-detail-body salon-order-detail-body">
-                  <section className="salon-order-detail-meta" aria-label="Datos del pedido">
-                    <div>
-                      <span className="salon-order-detail-meta-icon"><Icon name="receipt" size={15}/></span>
-                      <span><small>PEDIDO</small><b>{order.code}</b></span>
-                    </div>
-                    <div>
-                      <span className="salon-order-detail-meta-icon"><Icon name="clock" size={15}/></span>
-                      <span><small>ABIERTO</small><b>{timeAgo(order.createdAt,location?.country,location?.timezone)}</b></span>
-                    </div>
-                    <div>
-                      <span className="salon-order-detail-meta-icon"><Icon name="utensils" size={15}/></span>
-                      <span><small>CONSUMO</small><b>{itemCount} ítem{itemCount===1?"":"s"}</b></span>
-                    </div>
-                  </section>
-
-                  <section className="salon-order-detail-consumption">
+                  <div className="salon-order-detail-content">
+                  <section className="salon-order-detail-consumption" aria-labelledby="salon-order-products-title">
                     <header className="salon-order-detail-section-head">
                       <div>
-                        <small>DETALLE</small>
-                        <h3>Productos del pedido</h3>
+                        <h3 id="salon-order-products-title">Productos del pedido</h3>
                       </div>
-                      <span>{(order.items??[]).length} línea{(order.items??[]).length===1?"":"s"}</span>
+                      <span>{itemCount} unidad{itemCount===1?"":"es"}</span>
                     </header>
 
                     <div className="order-detail-items salon-order-detail-items">
@@ -694,9 +679,8 @@ function OrderDetail({loading,order,error,currencySymbol,canManage,busy,close,ad
                       </div>
                     )}
                   </section>
-                </div>
-
-                <section className="salon-order-detail-totals" aria-label="Totales del pedido">
+                <section className={`salon-order-detail-totals${remaining<=0.00001?" is-paid":""}`} aria-labelledby="salon-order-account-title">
+                  <h3 id="salon-order-account-title" className="sr-only">Resumen de cuenta</h3>
                   <div className="salon-order-detail-subtotal">
                     <span>Subtotal</span>
                     <b>{currencySymbol} {money(order.subtotal)}</b>
@@ -707,7 +691,7 @@ function OrderDetail({loading,order,error,currencySymbol,canManage,busy,close,ad
                       <b>{currencySymbol} {money(order.deliveryFee)}</b>
                     </div>
                   )}
-                  <div className="salon-order-detail-subtotal">
+                  <div className={`salon-order-detail-subtotal salon-order-detail-paid${hasPayments?" has-payment":""}`}>
                     <span>Pagado</span>
                     <b>{currencySymbol} {money(order.paidAmount??0)}</b>
                   </div>
@@ -716,10 +700,11 @@ function OrderDetail({loading,order,error,currencySymbol,canManage,busy,close,ad
                     <strong>{currencySymbol} {money(remaining>0.00001?remaining:order.total)}</strong>
                   </div>
                 </section>
+                  </div>
+                </div>
 
                 {canManage&&(
                   <footer className="order-detail-actions salon-order-detail-actions">
-                    {canCharge&&<p className="salon-order-detail-notice" role="note"><Icon name="info" size={18}/><span>{order.status==="listo"?"Marcar como entregado no libera la mesa. Completa el cobro para poder liberarla.":"El pedido ya está entregado. Cobra el saldo pendiente para poder liberar la mesa."}</span></p>}
                     {order.status==="entregado"&&!canCharge&&<p className="salon-order-detail-notice is-success" role="status"><Icon name="circleCheck" size={18}/><span>{order.completedAt?"Mesa liberada":"Pedido entregado"}</span></p>}
                     {(order.status==="nuevo"||order.status==="confirmado")&&hasPayments&&<p className="salon-order-detail-notice" role="note"><Icon name="info" size={18}/><span>Devuelve los pagos en POS antes de cancelar.</span></p>}
                     <div className="salon-order-detail-buttons" role="group" aria-label="Acciones de la mesa">
@@ -743,34 +728,24 @@ function OrderDetail({loading,order,error,currencySymbol,canManage,busy,close,ad
 
 function OrderDetailSkeleton({close}:{close:()=>void}){
   return <>
-    <header className="salon-order-detail-head salon-order-detail-skeleton-head" aria-hidden="true">
-      <div className="salon-order-detail-identity">
+    <header className="salon-order-detail-head salon-order-detail-skeleton-head">
+      <h2 id="salon-order-detail-title" className="sr-only">Cargando detalle de la mesa</h2>
+      <div className="salon-order-detail-identity" aria-hidden="true">
         <span className="salon-order-detail-skeleton-block salon-order-detail-skeleton-icon"/>
         <div className="salon-order-detail-skeleton-copy">
-          <span className="salon-order-detail-skeleton-block short"/>
           <span className="salon-order-detail-skeleton-block title"/>
           <span className="salon-order-detail-skeleton-block medium"/>
         </div>
       </div>
-      <span className="salon-order-detail-skeleton-block salon-order-detail-skeleton-status"/>
+      <span className="salon-order-detail-skeleton-block salon-order-detail-skeleton-status" aria-hidden="true"/>
       <button type="button" className="salon-order-detail-close" aria-label="Cerrar detalle" onClick={close}><Icon name="close" size={17}/></button>
     </header>
 
     <div className="order-detail-body salon-order-detail-body salon-order-detail-skeleton-body" aria-label="Cargando detalle de la mesa">
-      <section className="salon-order-detail-meta salon-order-detail-skeleton-meta">
-        {Array.from({length:3},(_,i)=><div key={i}>
-          <span className="salon-order-detail-skeleton-block salon-order-detail-skeleton-meta-icon"/>
-          <span className="salon-order-detail-skeleton-copy">
-            <span className="salon-order-detail-skeleton-block short"/>
-            <span className="salon-order-detail-skeleton-block medium"/>
-          </span>
-        </div>)}
-      </section>
-
+      <div className="salon-order-detail-content" aria-hidden="true">
       <section className="salon-order-detail-consumption salon-order-detail-skeleton-consumption">
         <div className="salon-order-detail-skeleton-section-head">
           <div>
-            <span className="salon-order-detail-skeleton-block short"/>
             <span className="salon-order-detail-skeleton-block heading"/>
           </div>
           <span className="salon-order-detail-skeleton-block tiny"/>
@@ -786,9 +761,11 @@ function OrderDetailSkeleton({close}:{close:()=>void}){
           </div>)}
         </div>
       </section>
-    </div>
-
     <section className="salon-order-detail-totals salon-order-detail-skeleton-totals" aria-hidden="true">
+      <div className="salon-order-detail-subtotal">
+        <span className="salon-order-detail-skeleton-block label"/>
+        <span className="salon-order-detail-skeleton-block amount"/>
+      </div>
       <div className="salon-order-detail-subtotal">
         <span className="salon-order-detail-skeleton-block label"/>
         <span className="salon-order-detail-skeleton-block amount"/>
@@ -798,11 +775,14 @@ function OrderDetailSkeleton({close}:{close:()=>void}){
         <span className="salon-order-detail-skeleton-block total-amount"/>
       </div>
     </section>
+      </div>
+    </div>
 
     <footer className="order-detail-actions salon-order-detail-actions salon-order-detail-skeleton-actions" aria-hidden="true">
-      <span className="salon-order-detail-skeleton-block action primary"/>
-      <span className="salon-order-detail-skeleton-block action secondary"/>
-      <span className="salon-order-detail-skeleton-block action tertiary"/>
+      <div className="salon-order-detail-buttons">
+        <span className="salon-order-detail-skeleton-block action secondary"/>
+        <span className="salon-order-detail-skeleton-block action primary"/>
+      </div>
     </footer>
   </>;
 }

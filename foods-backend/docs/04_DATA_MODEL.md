@@ -13,8 +13,14 @@ Puede registrarse desde `listo` antes del pago. `orders.completed_at` identifica
 el cierre de la cuenta; una mesa entregada sin ese valor sigue ocupada y aparece
 en pedidos abiertos, cobro y solicitudes de cuenta. El índice de mesa abierta
 también incluye estas cuentas para impedir otra comanda sobre la misma mesa.
-La liberación exige saldo cero y registra `completed_at`. Los pedidos entregados
-anteriores a esta separación conservan su cierre mediante la migración 70.
+La liberación es automática cuando el pedido está entregado y su pago neto
+cubre el total. El último cobro (individual o dividido) y la confirmación de
+entrega evalúan la misma regla y registran `completed_at` en su transacción,
+bajo bloqueo de la fila del pedido. Un pago parcial o una entrega pendiente
+no liberan la mesa. Los pedidos entregados anteriores a esta separación
+conservan su cierre mediante la migración 70; la migración 71 reconcilia solo
+las cuentas entregadas y completamente pagadas que aún estaban abiertas,
+descontando devoluciones. Su reversión no reabre cuentas históricas.
 
 Cada organización configura la moneda ISO 4217, posición del símbolo, precisión,
 nombre y tasa del impuesto general, y si el precio publicado ya lo incluye.

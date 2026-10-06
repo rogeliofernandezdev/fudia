@@ -47,8 +47,14 @@ La desactivación sigue bloqueada cuando hay productos activos asociados.
 
 ## Entrega en Salón
 
-Salón y Pedidos ofrecen «Marcar como entregado» cuando Cocina termina una
+Salón y Pedidos ofrecen «Confirmar entrega» cuando Cocina termina una
 comanda. El estado `entregado` conserva la mesa ocupada y el enlace a cobro
-mientras la cuenta está abierta (`completedAt` ausente). Tras pagar, «Liberar
-mesa» registra el cierre. Las mutaciones refrescan Salón, Pedidos y POS para
-mantener sincronizados entrega, saldo y ocupación.
+mientras la cuenta está abierta (`completedAt` ausente). La mesa se libera
+automáticamente al cumplir entrega y pago completo, independientemente del
+orden de estas acciones; no existe un botón adicional «Liberar mesa».
+Los pagos parciales y los pedidos aún no entregados conservan la ocupación.
+El backend registra el cierre en la misma transacción del último cobro o de
+la entrega. Las mutaciones refrescan Salón, Pedidos y POS para mantener
+sincronizados entrega, saldo y ocupación.
+Los detalles abiertos de Salón y Pedidos se refrescan cada 10 segundos hasta
+el cierre, para reflejar también los cobros registrados por otro usuario.

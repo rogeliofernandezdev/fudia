@@ -907,6 +907,7 @@ paths:
     post:
       operationId: createPayment
       summary: Registra un cobro contra un pedido usando el turno asignado del usuario
+      description: El último cobro libera automáticamente una mesa de Salón si el pedido ya está entregado. Pago y cierre se registran en la misma transacción; un pago parcial o una entrega pendiente mantienen la cuenta abierta.
       security: [{ sessionCookie: [] }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/PaymentInput" } } } }
       responses:
@@ -914,6 +915,60 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "409": { description: Sin turno activo, pedido no cobrable o monto superior al saldo }
         "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/operations/payments/batch:
+    post:
+      operationId: createPaymentBatch
+      summary: Registra un cobro dividido en varios medios de pago
+      description: Requiere cash.manage y turno asignado. Todos los pagos se registran atómicamente; si completan el saldo de una mesa entregada, se registra su cierre en la misma transacción.
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [orderId, payments]
+              properties:
+                orderId: { type: string, format: uuid }
+                payments:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    required: [method, amount]
+                    properties:
+                      method: { type: string, minLength: 1 }
+                      amount: { type: number, exclusiveMinimum: 0 }
+                      reference: { type: string, maxLength: 120 }
+      responses:
+        "201":
+          description: Cobro dividido registrado
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [paymentIds, paidNow, remainingAmount, paymentStatus]
+                properties:
+                  paymentIds: { type: array, items: { type: string, format: uuid } }
+                  paidNow: { type: string }
+                  remainingAmount: { type: string }
+                  paymentStatus: { type: string, enum: [pending, partial, paid] }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { description: Pedido no encontrado en el local activo }
+        "409": { description: Sin turno activo, pedido cerrado o cobro superior al saldo }
+  /v1/operations/pos/orders/{id}/complete:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    post:
+      operationId: completePaidOrder
+      summary: Finaliza un pedido completamente pagado
+      description: Requiere cash.manage. En Salón la entrega debe haberse confirmado antes; el flujo normal cierra automáticamente al completar pago y entrega. No sustituye la confirmación de entrega de una mesa.
+      security: [{ sessionCookie: [] }]
+      responses:
+        "204": { description: Cuenta finalizada }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { description: Pedido no encontrado en el local activo }
+        "409": { description: Pago incompleto, entrega pendiente o pedido no finalizable }
   /v1/admin/payments/{id}/refund:
     parameters: [{ $ref: "#/components/parameters/EntityId" }]
     post:
@@ -984,7 +1039,7 @@ paths:
     parameters: [{ $ref: "#/components/parameters/EntityId" }]
     patch:
       operationId: updateOperationalOrderStatus
-      description: En Salón la entrega puede registrarse antes del cobro. La mesa permanece ocupada hasta completar el pago y liberar la cuenta; completedAt identifica ese cierre.
+      description: En Salón la entrega puede registrarse antes del cobro. La mesa se libera automáticamente cuando la entrega y el pago están completos, sin importar su orden; completedAt identifica ese cierre.
       summary: Aplica una transición operativa permitida del pedido
       security: [{ sessionCookie: [] }]
       requestBody: { required: true, content: { application/json: { schema: { type: object, required: [status], properties: { status: { type: string, enum: [confirmado, en_camino, entregado, cancelado] } } } } } }

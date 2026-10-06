@@ -340,7 +340,10 @@ func (a *API) createPayment(w http.ResponseWriter,r *http.Request){
 			return
 		}
 	}
+	closed,err:=completeDeliveredSalonOrder(r.Context(),tx,s,in.OrderID)
+	if err!=nil{fail(w,503,"payments_unavailable","No pudimos finalizar la cuenta del pedido.");return}
 	if err:=tx.Commit(r.Context());err!=nil{fail(w,503,"payments_unavailable","No pudimos confirmar el cobro.");return}
+	if closed{a.audit(r,"order.completed","order",in.OrderID)}
 
 	item,err:=a.getPaymentByID(r,id)
 	if err!=nil{fail(w,503,"payments_unavailable","El cobro se registró, pero no pudimos cargar su detalle.");return}
@@ -530,7 +533,10 @@ func (a *API) createPaymentBatch(w http.ResponseWriter,r *http.Request){
 			}
 		}
 	}
+	closed,err:=completeDeliveredSalonOrder(r.Context(),tx,s,in.OrderID)
+	if err!=nil{fail(w,503,"payments_unavailable","No pudimos finalizar la cuenta del pedido.");return}
 	if err=tx.Commit(r.Context());err!=nil{fail(w,503,"payments_unavailable","No pudimos confirmar el cobro.");return}
+	if closed{a.audit(r,"order.completed","order",in.OrderID)}
 	writeJSON(w,201,map[string]any{
 		"paymentIds":ids,
 		"paidNow":strconv.FormatFloat(totalBatch,'f',2,64),
@@ -567,7 +573,10 @@ func (a *API) completePaidOrder(w http.ResponseWriter,r *http.Request){
 	}
 	if status=="cancelado"{fail(w,409,"order_not_completable","Un pedido cancelado no puede finalizarse.");return}
 	if paid+0.00001<total{fail(w,409,"payment_incomplete","El pedido todavía tiene saldo pendiente.");return}
-	if status!="listo"&&status!="en_camino"&&!(salon&&status=="entregado"){
+	if salon&&status!="entregado"{
+		fail(w,409,"delivery_required","Confirma la entrega antes de finalizar la cuenta.");return
+	}
+	if !salon&&status!="listo"&&status!="en_camino"{
 		fail(w,409,"order_not_ready","El pago está completo, pero la comanda todavía no está lista para entregarse.")
 		return
 	}

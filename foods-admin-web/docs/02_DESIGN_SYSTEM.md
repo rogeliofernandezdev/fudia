@@ -453,25 +453,64 @@ y detalle; no se limita a apilar columnas de escritorio.
 
 En el detalle de mesa de Salón, Cobrar es la acción dominante: azul
 `action-pay` con icono de tarjeta, y hover `action-pay-hover`, compartidos con
-el resto del sistema. Entregar usa superficie
-blanca, borde neutro e icono de plato/check verde. El estado del pedido y
-«Pendiente de pago» se muestran por separado. La instrucción para liberar la
-mesa es una nota de texto neutro con icono informativo encima de las acciones,
-sin fondo, borde ni aspecto de botón. En móvil, las acciones ocupan todo el ancho
+el resto del sistema. Confirmar entrega usa fondo blanco `surface`, borde
+azul visible `primary-600`, texto e icono azules. El verde se reserva para los
+estados confirmados, no para representar una acción pendiente. La cabecera presenta un único
+estado operativo: `listo` se expresa como «Listo para entregar». El pago se
+comunica en Pagado y Saldo pendiente, sin repetir una etiqueta de cobro junto
+al estado del pedido. La franja superior es decorativa, mide 4 px y usa un
+degradado de menta `brand-600` a azul índigo `primary-600`; no codifica estados.
+No se agrega una instrucción genérica para liberar la mesa: el estado, el saldo
+y las acciones disponibles ya expresan el avance. Quitar ese texto no modifica
+los requisitos de entrega y pago. En móvil, las acciones ocupan todo el ancho
 y los estados siguen visibles. Esta variante conserva los tokens compartidos
 de altura y radio de control.
 
 El pie del detalle de mesa presenta una sola acción sólida azul, al final del
 grupo: Cobrar si existe saldo cobrable; en otro caso, la siguiente acción real
-del pedido. Entregar y Editar comparten fondo blanco, borde neutro y geometría
-de control. Cancelar pedido es una acción terciaria de texto rojo sin relleno
-ni borde en reposo, y conserva su confirmación. Todos los iconos de acción son
+del pedido. Confirmar entrega y Editar comparten fondo blanco, borde azul visible
+y geometría de control. Cancelar pedido es una acción secundaria de contorno
+rojo, sin relleno rojo dominante, y conserva su confirmación. Todos los iconos de acción son
 outline de 18 px: tarjeta para Cobrar, plato/check para registrar la entrega,
-mesa para Liberar mesa y gorro de cocina para Enviar a cocina. Registrar la
-entrega y liberar la mesa no se presentan como acciones equivalentes. En
+gorro de cocina para Enviar a cocina. La mesa se libera automáticamente cuando
+la entrega y el pago están completos, sin botón ni confirmación adicional. En
 móvil se conserva el orden de lectura y de teclado, con botones de ancho
 completo y área táctil de 44 px. Guardar bloquea las acciones y la navegación
 a POS, sin cambiar la jerarquía de color.
+
+El pie prioriza el grupo de acciones alineado a la derecha, sin notas explicativas
+permanentes. Solo una restricción real, como devolver pagos antes de cancelar,
+justifica una nota contextual: se presenta como texto neutro, sin aspecto de
+botón, y en móvil va encima de las acciones. Los botones tienen ancho natural y la misma
+altura en escritorio; en móvil mantienen ancho completo. Todo botón conserva un contorno visible
+o relleno sólido, cursor interactivo, respuesta hover, foco y estado bloqueado.
+Los datos y notas no reciben el contorno de acción, cursor de mano ni respuesta hover.
+
+El detalle de mesa usa un modal compacto de hasta 680 px, sin altura mínima
+artificial. «Mesa 04» es el título; cliente y tiempo de apertura aparecen debajo.
+No muestra el código técnico del pedido ni un eyebrow «Mesa activa». El cuerpo
+reúne productos y «Resumen de cuenta» en una sola columna desplazable, tanto en
+escritorio como en móvil: evita una tarjeta lateral que deje vacío bajo los productos.
+Cantidad, producto e importe usan una rejilla común; los nombres largos se parten
+sin desplazar importes. La cantidad de cada línea usa un círculo de 32 px,
+fondo `primary-100`, texto `primary-700` y cifras tabulares, centrado con el
+nombre y el precio unitario. Es un dato de lectura, sin borde de botón ni
+respuesta hover. Su skeleton conserva el mismo círculo. La cantidad total de
+unidades aparece una sola vez junto al título de productos; no se duplica con
+un conteo de líneas ni con un eyebrow «Detalle». Cabecera y acciones permanecen
+visibles al desplazar pedidos largos. La cuenta es una franja compacta, sin
+tarjetas internas ni un título visual adicional: Subtotal, Pagado y Saldo
+comparten columnas con etiqueta arriba e importe debajo. Delivery añade una
+columna solo cuando existe. La última columna alinea el importe a la derecha y
+lo destaca con `primary-700`; un divisor vertical la separa de los importes
+secundarios, sin fondos tintados. En móvil, Subtotal, Delivery (si existe), Pagado
+y Saldo usan filas completas: etiqueta a la izquierda e importe a la derecha,
+con una única alineación vertical de importes. El saldo conserva su divisor y
+mayor jerarquía tipográfica; no se mezclan columnas verticales con filas horizontales.
+«Resumen de cuenta» conserva su encabezado accesible. Pagado en cero permanece neutro;
+los pagos positivos y el importe de una cuenta completamente pagada usan
+`brand-700`. Las notas generales no son advertencias:
+usan superficies neutras y conservan el texto completo.
 
 El botón primario usa `primary-600` (`#4654CD`), `--control-height`,
 `--font-size-control` y `--radius-control`, igual que los demás controles.

@@ -1228,11 +1228,15 @@ func (a *API) updateOrderStatus(w http.ResponseWriter, r *http.Request) {
 	tag, err := tx.Exec(r.Context(), `
 		UPDATE orders
 		SET status=$4,updated_at=now(),
-		    completed_at=CASE WHEN $4='entregado' AND ($5 OR channel<>'salon') THEN COALESCE(completed_at,now()) ELSE completed_at END
+		    completed_at=CASE WHEN $4='entregado' AND channel<>'salon' THEN COALESCE(completed_at,now()) ELSE completed_at END
 		WHERE id=$1 AND organization_id=$2 AND location_id=$3`,
-		r.PathValue("id"), s.OrganizationID, s.LocationID, in.Status, paid+0.00001 >= total)
+		r.PathValue("id"), s.OrganizationID, s.LocationID, in.Status)
 	if err != nil || tag.RowsAffected() == 0 {
 		fail(w, 404, "order_not_found", "El pedido no existe.")
+		return
+	}
+	if _, err = completeDeliveredSalonOrder(r.Context(), tx, s, r.PathValue("id")); err != nil {
+		fail(w, 503, "order_unavailable", "No pudimos finalizar la cuenta del pedido.")
 		return
 	}
 	o, err := scanOrder(tx.QueryRow(r.Context(), `SELECT `+orderColumns+` FROM orders WHERE id=$1 AND organization_id=$2 AND location_id=$3`, r.PathValue("id"), s.OrganizationID, s.LocationID))
