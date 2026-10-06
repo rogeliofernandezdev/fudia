@@ -616,7 +616,13 @@
   display:flex;
   align-items:center;
   justify-content:flex-end;
+  flex-wrap:wrap;
+  gap:var(--space-6);
   min-width:0;
+}
+
+.salon-order-detail-status .status:has(svg)>i{
+  display:none;
 }
 
 .salon-order-detail .salon-order-detail-close{
@@ -939,32 +945,90 @@
 .salon-order-detail .salon-order-detail-actions{
   padding:var(--space-14) var(--space-18) var(--space-16);
   display:flex;
-  align-items:center;
-  flex-wrap:nowrap;
+  flex-direction:column;
+  align-items:stretch;
   gap:var(--space-10);
   flex-shrink:0;
   border-top:var(--stroke-1) solid var(--line);
   background:var(--surface);
 }
 
+.salon-order-detail-notice{
+  display:flex;
+  align-items:flex-start;
+  gap:var(--space-8);
+  margin:0;
+  color:var(--ink-600);
+  font-size:var(--font-size-13);
+  line-height:var(--line-height-1-5);
+}
+
+.salon-order-detail-notice>svg{
+  flex-shrink:0;
+}
+
+.salon-order-detail-notice.is-success{
+  color:var(--brand-700);
+}
+
+.salon-order-detail-buttons{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  flex-wrap:wrap;
+  gap:var(--space-10);
+}
+
+.salon-order-detail-secondary-actions{
+  display:flex;
+  align-items:center;
+  flex:1 1 auto;
+  flex-wrap:wrap;
+  min-width:0;
+  gap:var(--space-10);
+}
+
 .salon-order-detail .salon-order-detail-actions .order-detail-primary,
 .salon-order-detail .salon-order-detail-actions .salon-order-detail-pay,
+.salon-order-detail .salon-order-detail-actions .salon-order-detail-deliver,
 .salon-order-detail .salon-order-detail-actions .salon-order-detail-edit{
-  min-height:var(--size-46);
-  height:var(--size-46);
+  min-height:var(--control-height);
+  height:var(--control-height);
   width:auto;
-  flex:1 1 0;
-  min-width:0;
-  border-radius:var(--radius-10);
+  flex:0 1 auto;
+  min-width:max-content;
+  border-radius:var(--radius-control);
   justify-content:center;
   gap:var(--space-7);
   line-height:var(--line-height-1);
+  font-weight:var(--font-weight-700);
+  white-space:nowrap;
+}
+
+.salon-order-detail .salon-order-detail-actions .salon-order-detail-deliver,
+.salon-order-detail .salon-order-detail-actions .salon-order-detail-edit{
+  border-color:var(--line);
+  background:var(--surface);
+  color:var(--ink-950);
+  box-shadow:none;
+}
+
+.salon-order-detail .salon-order-detail-actions .salon-order-detail-deliver>svg{
+  color:var(--brand-700);
+  flex-shrink:0;
+}
+
+.salon-order-detail .salon-order-detail-actions .salon-order-detail-deliver:hover:not(:disabled),
+.salon-order-detail .salon-order-detail-actions .salon-order-detail-edit:hover:not(:disabled){
+  background:var(--cloud-50);
+  border-color:var(--line-strong);
 }
 
 .salon-order-detail .salon-order-detail-actions .order-detail-primary{
   background:var(--primary-600);
   border-color:var(--primary-600);
   color:var(--surface);
+  box-shadow:none;
 }
 
 .salon-order-detail .salon-order-detail-actions .order-detail-primary:hover:not(:disabled){
@@ -978,79 +1042,56 @@
   border:var(--stroke-1) solid var(--action-pay);
   background:var(--action-pay);
   color:var(--surface);
-  font-weight:var(--font-weight-800);
   text-decoration:none;
+  box-shadow:none;
 }
 
-.salon-order-detail .salon-order-detail-actions .salon-order-detail-pay:hover{
+.salon-order-detail .salon-order-detail-actions .salon-order-detail-pay:hover:not([aria-disabled="true"]){
   border-color:var(--action-pay-hover);
   background:var(--action-pay-hover);
   color:var(--surface);
 }
 
-.salon-order-detail .salon-order-detail-actions .salon-order-detail-edit{
-  border-color:var(--action-edit);
-  background:var(--surface);
-  color:var(--action-edit);
+.salon-order-detail .salon-order-detail-actions .salon-order-detail-pay[aria-disabled="true"]{
+  opacity:.5;
+  cursor:wait;
 }
 
-.salon-order-detail .salon-order-detail-actions .salon-order-detail-edit:hover:not(:disabled){
-  border-color:var(--action-edit);
-  background:var(--action-edit-soft);
-  color:var(--action-edit-hover);
+.salon-order-detail .salon-order-detail-actions .salon-order-detail-edit>svg{
+  color:var(--ink-600);
 }
 
-.salon-order-detail .salon-order-detail-actions .order-detail-done{
-  min-height:var(--size-46);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  gap:var(--space-7);
-  padding:0 var(--space-12);
-  border:var(--stroke-1) solid var(--palette-green-08);
-  border-radius:var(--radius-10);
-  background:var(--palette-green-20);
-  color:var(--palette-green-01);
-  font-size:var(--font-size-12);
-  font-weight:var(--font-weight-800);
-  text-align:center;
-}
-
-.salon-order-detail .salon-order-detail-actions .order-detail-cancel{
-  flex:1 1 0;
-  min-width:0;
-  width:auto;
-}
-
-.salon-order-detail .salon-order-detail-actions .order-detail-primary>span,
-.salon-order-detail .salon-order-detail-actions .salon-order-detail-edit>span,
-.salon-order-detail .salon-order-detail-actions .order-detail-cancel>span{
+.salon-order-detail-buttons .button>span{
   display:inline-flex;
   align-items:center;
   line-height:var(--line-height-1);
 }
 
-.salon-order-detail .salon-order-detail-actions .order-detail-primary>svg,
-.salon-order-detail .salon-order-detail-actions .salon-order-detail-edit>svg,
-.salon-order-detail .salon-order-detail-actions .order-detail-cancel>svg{
+.salon-order-detail-buttons .button>svg{
   flex-shrink:0;
 }
 
 .salon-order-detail .salon-order-detail-actions .order-detail-cancel{
-  min-height:var(--size-44);
-  height:var(--size-44);
+  flex:0 1 auto;
+  min-width:0;
+  width:auto;
+  min-height:var(--control-height);
+  height:var(--control-height);
+  border-radius:var(--radius-control);
   justify-content:center;
   gap:var(--space-7);
   line-height:var(--line-height-1);
-  border-color:var(--action-cancel);
-  background:var(--action-cancel-soft);
+  border-color:transparent;
+  background:transparent;
   color:var(--action-cancel);
+  box-shadow:none;
+  font-weight:var(--font-weight-700);
 }
 
 .salon-order-detail .salon-order-detail-actions .order-detail-cancel:hover:not(:disabled){
-  border-color:var(--action-cancel);
-  background:var(--action-cancel);
-  color:var(--surface);
+  border-color:transparent;
+  background:var(--action-cancel-soft);
+  color:var(--action-cancel);
 }
 
 
@@ -1247,6 +1288,17 @@
   .salon-order-detail .salon-order-detail-head{
     min-height:var(--size-70);
     padding:var(--space-11) var(--space-12);
+    grid-template-columns:minmax(0,1fr) var(--control-height);
+  }
+
+  .salon-order-detail-status{
+    grid-column:1/-1;
+    grid-row:2;
+    justify-content:flex-start;
+  }
+
+  .salon-order-detail .salon-order-detail-close{
+    grid-column:2;
   }
 
   .salon-order-detail-icon{
@@ -1302,39 +1354,35 @@
     display:flex;
     align-items:stretch;
     gap:var(--space-7);
-    overflow-x:auto;
-    scrollbar-width:none;
   }
 
-  .salon-order-detail .salon-order-detail-actions::-webkit-scrollbar{
-    display:none;
+  .salon-order-detail-buttons{
+    flex-direction:column;
+    align-items:stretch;
+    gap:var(--space-8);
+  }
+
+  .salon-order-detail-secondary-actions{
+    flex-direction:column;
+    align-items:stretch;
+    flex:0 0 auto;
+    width:100%;
+    gap:var(--space-8);
   }
 
   .salon-order-detail .salon-order-detail-actions .order-detail-primary,
   .salon-order-detail .salon-order-detail-actions .salon-order-detail-pay,
+  .salon-order-detail .salon-order-detail-actions .salon-order-detail-deliver,
   .salon-order-detail .salon-order-detail-actions .salon-order-detail-edit,
-  .salon-order-detail .salon-order-detail-actions .order-detail-cancel,
-  .salon-order-detail .salon-order-detail-actions .order-detail-done{
-    width:auto;
-    min-width:max-content;
-    flex:1 0 auto;
+  .salon-order-detail .salon-order-detail-actions .order-detail-cancel{
+    width:100%;
+    min-width:0;
+    flex:0 0 auto;
     white-space:nowrap;
   }
 }
 
 @media(max-width:390px){
-  .salon-order-detail-status{
-    display:none;
-  }
-
-  .salon-order-detail .salon-order-detail-head{
-    grid-template-columns:minmax(0,1fr) var(--control-height);
-  }
-
-  .salon-order-detail .salon-order-detail-close{
-    grid-column:2;
-  }
-
   .salon-order-detail-meta{
     grid-template-columns:1fr;
   }

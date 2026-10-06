@@ -68,6 +68,15 @@ mínimo de texto resuelve las variables antes de revisar las medidas.
 Usar superficies mayormente neutras, azul para navegación y acciones, verde para
 éxito y violeta para canales digitales.
 
+La composición prioriza blanco y azul índigo, con verdes como acentos de
+identidad y estados positivos. Repetir pocos colores con funciones estables:
+una acción dominante de fondo sólido por contexto, acciones secundarias sobre
+blanco con borde neutro y fondos tintados suaves para selección o estado. El
+menta aporta frescura en detalles, no en grandes superficies que compitan con
+la acción principal. Ámbar y rojo se reservan para advertencias y errores;
+violeta para canales digitales, no para diferenciar acciones de cobro. Los
+avisos informativos usan texto neutro e icono, sin apariencia de botón.
+
 ## Identidad operativa
 
 `foods-admin-web` concentra la experiencia web operativa y administrativa. La navegación lateral usa azul oscuro `ops-800`, la selección azul operativo más luminoso, las acciones primarias y tablas usan `primary-600`, y los canales digitales usan violeta. El verde se reserva para éxito.
@@ -441,6 +450,28 @@ y detalle; no se limita a apilar columnas de escritorio.
 - Apertura y cierre duran entre 160 y 240 ms; movimiento reducido elimina la animación.
 
 ## Acción principal
+
+En el detalle de mesa de Salón, Cobrar es la acción dominante: azul
+`action-pay` con icono de tarjeta, y hover `action-pay-hover`, compartidos con
+el resto del sistema. Entregar usa superficie
+blanca, borde neutro e icono de plato/check verde. El estado del pedido y
+«Pendiente de pago» se muestran por separado. La instrucción para liberar la
+mesa es una nota de texto neutro con icono informativo encima de las acciones,
+sin fondo, borde ni aspecto de botón. En móvil, las acciones ocupan todo el ancho
+y los estados siguen visibles. Esta variante conserva los tokens compartidos
+de altura y radio de control.
+
+El pie del detalle de mesa presenta una sola acción sólida azul, al final del
+grupo: Cobrar si existe saldo cobrable; en otro caso, la siguiente acción real
+del pedido. Entregar y Editar comparten fondo blanco, borde neutro y geometría
+de control. Cancelar pedido es una acción terciaria de texto rojo sin relleno
+ni borde en reposo, y conserva su confirmación. Todos los iconos de acción son
+outline de 18 px: tarjeta para Cobrar, plato/check para registrar la entrega,
+mesa para Liberar mesa y gorro de cocina para Enviar a cocina. Registrar la
+entrega y liberar la mesa no se presentan como acciones equivalentes. En
+móvil se conserva el orden de lectura y de teclado, con botones de ancho
+completo y área táctil de 44 px. Guardar bloquea las acciones y la navegación
+a POS, sin cambiar la jerarquía de color.
 
 El botón primario usa `primary-600` (`#4654CD`), `--control-height`,
 `--font-size-control` y `--radius-control`, igual que los demás controles.

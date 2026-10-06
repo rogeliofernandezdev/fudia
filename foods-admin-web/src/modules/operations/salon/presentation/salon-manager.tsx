@@ -599,13 +599,15 @@ function ComandaView({initial,mode,allTables,busy,currencySymbol,close,save,noti
 function OrderDetail({loading,order,error,currencySymbol,canManage,busy,close,advance,edit,cancel}:{loading:boolean;order?:Order;error?:string;currencySymbol:string;canManage:boolean;busy:boolean;close:()=>void;advance:(st:string)=>void;edit:(o:Order)=>void;cancel:(o:Order)=>void}){
   const{location}=useSession();
   const baseMeta=order?statusMeta[order.status]??{label:order.status,tone:"gray" as const}:null;
-  const meta=order&&(order.status==="listo"||order.status==="entregado")&&order.paymentStatus!=="paid"?{label:`${baseMeta?.label} · por cobrar`,tone:"orange" as const}:baseMeta;
+  const meta=baseMeta;
   const action=order?nextOrderAction(order):null;
   const paid=Number(order?.paidAmount??0);
   const editable=Boolean(order&&editableOrderStatus(order.status)&&paid<=0.00001);
   const remaining=Number(order?.remainingAmount??order?.total??0);
   const canCharge=Boolean(order&&(order.status==="listo"||order.status==="entregado")&&!order.completedAt&&remaining>0.00001);
   const hasPayments=paid>0.00001;
+  const canCancel=Boolean(order&&(order.status==="nuevo"||order.status==="confirmado")&&!hasPayments);
+  const actionIcon=order?.status==="entregado"?"tables":action?.status==="entregado"?"availability":action?.status==="confirmado"?"chefHat":action?.icon;
   const itemCount=order?(order.items??[]).reduce((sum,it)=>sum+Number(it.qty||0),0):0;
   return(
     <div className="modal-backdrop modal-overlay-in">
@@ -626,6 +628,7 @@ function OrderDetail({loading,order,error,currencySymbol,canManage,busy,close,ad
               </div>
               <div className="salon-order-detail-status">
                 {order&&meta&&<Status tone={meta.tone}>{meta.label}</Status>}
+                {order&&(order.status==="listo"||order.status==="entregado")&&remaining>0.00001&&<Status tone="orange"><Icon name="clock" size={14}/>Pendiente de pago</Status>}
               </div>
               <button type="button" className="salon-order-detail-close" aria-label="Cerrar detalle" onClick={close}><Icon name="close" size={17}/></button>
             </header>
@@ -716,13 +719,17 @@ function OrderDetail({loading,order,error,currencySymbol,canManage,busy,close,ad
 
                 {canManage&&(
                   <footer className="order-detail-actions salon-order-detail-actions">
-                    {action&&<Button icon={action.icon} className="order-detail-primary" disabled={busy} onClick={()=>advance(action.status)}>{action.label}</Button>}
-                    {canCharge&&<Link href={`/pos?orderId=${order.id}`} className="button secondary salon-order-detail-pay"><Icon name="payment" size={16}/>Cobrar {currencySymbol} {money(remaining)}</Link>}
-                    {editable&&<Button icon="edit" kind="secondary" className="salon-order-detail-edit" disabled={busy} onClick={()=>edit(order)}>Editar comanda</Button>}
-                    {(order.status==="listo"||order.status==="entregado")&&remaining>0.00001&&<span className="order-detail-done"><Icon name="sales" size={15}/>Cobra el saldo antes de liberar la mesa</span>}
-                    {order.status==="entregado"&&<span className="order-detail-done"><Icon name="check" size={15}/>{order.completedAt?"Mesa liberada":"Pedido entregado"}</span>}
-                    {(order.status==="nuevo"||order.status==="confirmado")&&!hasPayments&&<Button icon="cancel" kind="ghost" className="order-detail-cancel" disabled={busy} onClick={()=>cancel(order)}>Cancelar pedido</Button>}
-                    {(order.status==="nuevo"||order.status==="confirmado")&&hasPayments&&<span className="order-detail-done"><Icon name="alert" size={15}/>Devuelve los pagos en POS antes de cancelar</span>}
+                    {canCharge&&<p className="salon-order-detail-notice" role="note"><Icon name="info" size={18}/><span>{order.status==="listo"?"Marcar como entregado no libera la mesa. Completa el cobro para poder liberarla.":"El pedido ya está entregado. Cobra el saldo pendiente para poder liberar la mesa."}</span></p>}
+                    {order.status==="entregado"&&!canCharge&&<p className="salon-order-detail-notice is-success" role="status"><Icon name="circleCheck" size={18}/><span>{order.completedAt?"Mesa liberada":"Pedido entregado"}</span></p>}
+                    {(order.status==="nuevo"||order.status==="confirmado")&&hasPayments&&<p className="salon-order-detail-notice" role="note"><Icon name="info" size={18}/><span>Devuelve los pagos en POS antes de cancelar.</span></p>}
+                    <div className="salon-order-detail-buttons" role="group" aria-label="Acciones de la mesa">
+                      {(editable||canCancel||(action&&canCharge))&&<div className="salon-order-detail-secondary-actions">
+                        {action&&canCharge&&<Button icon={actionIcon} kind="secondary" className="salon-order-detail-deliver" disabled={busy} aria-busy={busy} onClick={()=>advance(action.status)}>{action.label}</Button>}
+                        {editable&&<Button icon="edit" kind="secondary" className="salon-order-detail-edit" disabled={busy} onClick={()=>edit(order)}>Editar comanda</Button>}
+                        {canCancel&&<Button icon="cancel" kind="ghost" className="order-detail-cancel" disabled={busy} onClick={()=>cancel(order)}>Cancelar pedido</Button>}
+                      </div>}
+                      {canCharge?<Link href={`/pos?orderId=${order.id}`} className="button primary salon-order-detail-pay" aria-disabled={busy} aria-busy={busy} tabIndex={busy?-1:undefined} onClick={event=>{if(busy)event.preventDefault();}}><Icon name="payment" size={18}/><span>Cobrar {currencySymbol} {money(remaining)}</span></Link>:action&&<Button icon={actionIcon} className="order-detail-primary" disabled={busy} aria-busy={busy} onClick={()=>advance(action.status)}>{action.label}</Button>}
+                    </div>
                   </footer>
                 )}
               </>

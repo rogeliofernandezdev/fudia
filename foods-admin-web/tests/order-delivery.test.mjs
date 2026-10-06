@@ -56,8 +56,39 @@ function mount(section,changes={},canManage=true,busy=false){
  const nodes=[];
  function visit(node){if(!node||typeof node!=="object")return;if(Array.isArray(node)){node.forEach(visit);return}nodes.push(node);visit(node.props?.children)}
  visit(rendered);
- return{calls,buttons:nodes.filter(n=>n.type==="Button"),links:nodes.filter(n=>n.type==="Link")};
+ return{calls,nodes,buttons:nodes.filter(n=>n.type==="Button"),links:nodes.filter(n=>n.type==="Link")};
 }
+
+test("salon: cobrar es la única acción primaria cuando hay saldo",()=>{
+ const view=mount("salon");
+ const delivery=view.buttons.find(n=>n.props.children==="Marcar como entregado");
+ assert.equal(delivery.props.kind,"secondary");
+ assert.equal(delivery.props.icon,"availability");
+ assert.equal(view.buttons.some(n=>n.props.className==="order-detail-primary"),false);
+ assert.match(view.links[0].props.className,/\bprimary\b/);
+ assert.ok(view.nodes.some(n=>n.props.role==="group"&&n.props["aria-label"]==="Acciones de la mesa"));
+});
+
+test("salon: liberar usa icono de mesa y enviar a cocina conserva una sola acción primaria",()=>{
+ const paid=mount("salon",{status:"entregado",paymentStatus:"paid",paidAmount:"25.00",remainingAmount:"0"});
+ assert.equal(paid.buttons.find(n=>n.props.children==="Liberar mesa").props.icon,"tables");
+ const initial=mount("salon",{status:"nuevo"});
+ const primary=initial.buttons.filter(n=>n.props.className==="order-detail-primary");
+ assert.equal(primary.length,1);
+ assert.equal(primary[0].props.icon,"chefHat");
+ assert.equal(initial.buttons.find(n=>n.props.children==="Editar comanda").props.kind,"secondary");
+ assert.equal(initial.buttons.find(n=>n.props.children==="Cancelar pedido").props.kind,"ghost");
+});
+
+test("salon: el cobro queda bloqueado mientras se registra la entrega",()=>{
+ const link=mount("salon",{},true,true).links[0];
+ assert.equal(link.props["aria-disabled"],true);
+ assert.equal(link.props["aria-busy"],true);
+ assert.equal(link.props.tabIndex,-1);
+ let prevented=false;
+ link.props.onClick({preventDefault:()=>{prevented=true}});
+ assert.equal(prevented,true);
+});
 
 for(const section of ["salon","orders"]){
  test(`${section}: el detalle ofrece la acción real de entrega antes de cobrar`,()=>{
