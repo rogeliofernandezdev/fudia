@@ -56,6 +56,7 @@ function mount(section,changes={},canManage=true,busy=false){
   if(name==="@/design-system/icons")return{Icon:"Icon"};
   if(name==="@/providers/session-context")return{useSession:()=>({location:{country:"PE",timezone:"America/Lima"}})};
   if(name==="@/shared/i18n/regional-format")return{formatRegionalDateTime:()=>"Hace un momento"};
+  if(name==="@/shared/routing/page-routes")return{pageRoutes:{pos:"/pos"}};
   if(name.endsWith("/domain/order-actions"))return actions;
   if(name.startsWith("@/")||name.startsWith("../")||name.startsWith("./"))return{};
   return require(name);
@@ -66,6 +67,20 @@ function mount(section,changes={},canManage=true,busy=false){
  visit(rendered);
  return{calls,nodes,buttons:nodes.filter(n=>n.type==="Button"),links:nodes.filter(n=>n.type==="Link")};
 }
+
+test("salon: tarjetas y detalle comparten el estado operativo sin mezclar el cobro",()=>{
+ const source=readFileSync(new URL("salon/presentation/salon-manager.tsx",root),"utf8");
+ const {statusMeta}=compile("salon/presentation/salon-manager.tsx",()=>({}),"\nexport {statusMeta};\n");
+ assert.equal(statusMeta.listo.label,"Listo para entregar");
+ assert.equal(statusMeta.listo.tone,"green");
+ assert.equal(statusMeta.entregado.label,"Entregado");
+ assert.doesNotMatch(source,/por cobrar/i);
+ assert.match(source,/const meta=o\?statusMeta\[o\.status\]/);
+ for(const paymentStatus of ["pending","partial","paid"]){
+  const view=mount("salon",{paymentStatus});
+  assert.equal(view.nodes.find(n=>n.type==="Status").props.children,statusMeta.listo.label);
+ }
+});
 
 test("salon: la cabecera muestra un solo estado del pedido sin duplicar el pago",()=>{
  for(const changes of [{},{paymentStatus:"paid",paidAmount:"25.00",remainingAmount:"0"},{status:"entregado"}]){
@@ -127,11 +142,15 @@ test("salon: productos y cuenta comparten una columna sin código técnico ni ca
  assert.match(css,/\.salon-order-detail\{[^}]*max-width:var\(--size-680\)/);
 });
 
-test("salon: cuenta compacta sin tarjetas y pie alineado con acciones",()=>{
+test("salon: cuenta agrupada con importes legibles y saldo destacado sin apariencia de botón",()=>{
  const css=readFileSync(new URL("styles/salon.css",root),"utf8");
  const balance=css.match(/\.salon-order-detail-grand\{([^}]+)\}/)[1];
- assert.doesNotMatch(balance,/(?:background|border-radius):/);
- assert.match(balance,/border-left:var\(--stroke-1\) solid var\(--line\)/);
+ assert.match(balance,/background:var\(--primary-100\)/);
+ assert.doesNotMatch(balance,/(?:cursor|transform|box-shadow):/);
+ assert.match(css,/\.salon-order-detail-subtotal b\{[^}]*font-size:var\(--font-size-18\)/);
+ assert.match(css,/\.salon-order-detail-grand strong\{[^}]*font-size:var\(--font-size-24\)/);
+ assert.match(css,/\.salon-order-detail-totals\{[^}]*background:var\(--cloud-50\)/);
+ assert.match(css,/\.salon-order-detail-totals\.is-paid \.salon-order-detail-grand\{[^}]*background:var\(--brand-100\)/);
  const footer=css.match(/\.salon-order-detail \.salon-order-detail-actions\{([^}]+)\}/)[1];
  assert.doesNotMatch(footer,/flex-direction:column/);
  assert.match(footer,/align-items:center/);
@@ -168,6 +187,7 @@ test("salon: la cuenta móvil alinea subtotal, pagado y saldo en filas completas
  assert.equal(row["flex-direction"],"row");
  assert.equal(row["align-items"],"center");
  assert.equal(row["justify-content"],"space-between");
+ assert.equal(row.padding,"0 var(--space-12)");
  const balance=declarations(".salon-order-detail-grand");
  assert.equal(balance["flex-direction"],"row");
  assert.equal(balance["justify-content"],row["justify-content"]);
@@ -246,6 +266,31 @@ for(const section of ["salon","orders"]){
   assert.equal(mount(section,{},true,true).buttons.find(n=>n.props.children==="Confirmar entrega").props.disabled,true);
  });
 }
+
+test("orders: fecha en cabecera, unidades únicas y total dentro del cuerpo desplazable",()=>{
+ const view=mount("orders",{items:[{id:"item-1",name:"Ají de gallina",qty:"2",unitPrice:"12.50"}]});
+ assert.equal(view.nodes.some(n=>n.props.className?.includes("salon-order-detail-meta")),false);
+ assert.equal(view.nodes.some(n=>["DETALLE","REGISTRADO","CONSUMO"].includes(n.props.children)),false);
+ assert.ok(view.nodes.some(n=>n.props.className==="salon-order-detail-opened"));
+ const body=view.nodes.find(n=>n.props.className==="order-detail-body salon-order-detail-body");
+ assert.equal(body.props.children.props.className,"salon-order-detail-content");
+ assert.ok(body.props.children.props.children.some(n=>n?.props?.className==="salon-order-detail-totals"));
+ assert.equal(view.nodes.find(n=>n.props.className==="salon-order-detail-section-head").props.children[1].props.children.join(""),"2 unidades");
+ assert.ok(view.nodes.some(n=>n.type==="small"&&n.props.children?.join?.("")==="S/ 12.50 c/u"));
+ assert.ok(view.nodes.some(n=>n.props.role==="group"&&n.props["aria-label"]==="Acciones del pedido"));
+ assert.equal(view.buttons.find(n=>n.props.children==="Confirmar entrega").props.icon,"availability");
+ const css=readFileSync(new URL("styles/salon.css",root),"utf8");
+ assert.match(css,/\.salon-order-detail-grand:only-child\{[^}]*grid-column:1\/-1[^}]*justify-content:space-between/);
+});
+
+test("orders: textos españoles en UTF-8 estricto y NFC, sin tildes corruptas",()=>{
+ const bytes=readFileSync(new URL("orders/presentation/orders-manager.tsx",root));
+ const source=new TextDecoder("utf-8",{fatal:true}).decode(bytes);
+ assert.equal(source,source.normalize("NFC"));
+ assert.doesNotMatch(source,/Ã|Â|\uFFFD/);
+ for(const text of ["Dirección no registrada","Sin ítems cargados aún."])assert.ok(source.includes(text));
+ assert.ok(mount("orders",{customerName:"José Muñoz",tableName:"Mesa 05"}).nodes.some(n=>n.props.children==="José Muñoz"));
+});
 
 test("POS permite corregir pagos de una mesa entregada abierta y los bloquea tras el cierre",()=>{
  const {POSDetailDialog}=compile("pos/presentation/pos-page.tsx",name=>{

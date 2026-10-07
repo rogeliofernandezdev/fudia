@@ -902,8 +902,8 @@ func (a *API) createOrder(w http.ResponseWriter, r *http.Request) {
 		fail(w, 400, "invalid_order", "El canal y al menos un producto son obligatorios.")
 		return
 	}
-	if in.Channel == "delivery" && strings.TrimSpace(in.Address) == "" {
-		fail(w, 400, "invalid_order", "El pedido de delivery necesita una dirección.")
+	if message := validateDeliveryContact(in.Channel, in.CustomerName, in.CustomerPhone, in.Address, in.Reference); message != "" {
+		fail(w, 400, "invalid_order", message)
 		return
 	}
 	if in.Channel == "salon" && strings.TrimSpace(in.TableID) == "" {

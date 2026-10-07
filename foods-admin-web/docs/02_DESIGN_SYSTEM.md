@@ -104,6 +104,11 @@ avisos informativos usan texto neutro e icono, sin apariencia de botón.
   momentos de venta. Los iconos representan el dominio de cada opción y el
   icono de tres líneas se reserva para abrir o cerrar la navegación.
 - Topbar compacta; empresa, local y usuario aparecen una sola vez.
+- El selector de empresa/local usa un popover compacto con cabecera y cierre X,
+  campos `FormField`/`Select` y acción «Aplicar» azul `primary-600`; no emplea
+  un botón verde propio. Etiquetas en caja normal, espaciado de 16 px y altura
+  única de control. Su carga, error, vacío y adaptación móvil se especifican
+  en `03_LAYOUTS.md`.
 - Dashboard separa KPI ejecutivos de alertas operativas.
 - Una pantalla de gestión no repite el mismo dato en varios lugares. Si el total
   ya aparece en el tab y el rango en la paginación, no se añaden tarjetas de
@@ -371,6 +376,24 @@ avisos informativos usan texto neutro e icono, sin apariencia de botón.
 - El éxito de un registro se comunica mediante la alerta global después de que la
   API confirme la operación. Nunca se anticipa éxito ni se pierde el error remoto.
 
+### Registro de pedidos sin mesa
+
+Pedidos ofrece «Nuevo pedido» únicamente con `orders.manage`. El modal comparte
+cabecera compacta con icono, título y X, campos `FormField` y primitivas del design
+system. Contacto y entrega forman una rejilla uniforme; dirección ocupa dos columnas
+y referencia el ancho completo. La carta y el resumen se presentan en dos columnas
+en escritorio y en una sola desde móvil, sin un wizard artificial ni textos redundantes.
+La carta comparte catálogo, skeleton, error con Reintentar, vacío y paginación de Salón.
+Los estilos del catálogo admiten ambos contenedores desde una sola definición,
+sin copiar reglas ni aplicar el layout de pantalla completa de Salón al modal.
+El resumen permite cambiar cantidad, quitar productos, configurar menús y añadir notas;
+los importes se alinean en una franja neutra y el total usa azul primario.
+Cabecera y footer permanecen visibles; el cuerpo tiene scroll vertical acotado.
+En móvil el modal ocupa la pantalla, los controles conservan 44 px y las acciones
+usan ancho completo. El footer tiene Cancelar secundario y una única acción
+primaria con un icono: «Registrar y enviar a cocina». Durante el envío muestra
+«Enviando…» y bloquea edición.
+
 ## Tablas y paginación
 
 - Cabecera azul `primary-600`, texto blanco en mayúsculas, filas alternas sutiles y
@@ -458,7 +481,9 @@ azul visible `primary-600`, texto e icono azules. El verde se reserva para los
 estados confirmados, no para representar una acción pendiente. La cabecera presenta un único
 estado operativo: `listo` se expresa como «Listo para entregar». El pago se
 comunica en Pagado y Saldo pendiente, sin repetir una etiqueta de cobro junto
-al estado del pedido. La franja superior es decorativa, mide 4 px y usa un
+al estado del pedido. Las tarjetas de Salón reutilizan ese mismo estado y color,
+sin combinar «Listo» o «Entregado» con «por cobrar»; el saldo se consulta en el
+resumen de cuenta del detalle. La franja superior es decorativa, mide 4 px y usa un
 degradado de menta `brand-600` a azul índigo `primary-600`; no codifica estados.
 No se agrega una instrucción genérica para liberar la mesa: el estado, el saldo
 y las acciones disponibles ya expresan el avance. Quitar ese texto no modifica
@@ -498,19 +523,35 @@ nombre y el precio unitario. Es un dato de lectura, sin borde de botón ni
 respuesta hover. Su skeleton conserva el mismo círculo. La cantidad total de
 unidades aparece una sola vez junto al título de productos; no se duplica con
 un conteo de líneas ni con un eyebrow «Detalle». Cabecera y acciones permanecen
-visibles al desplazar pedidos largos. La cuenta es una franja compacta, sin
-tarjetas internas ni un título visual adicional: Subtotal, Pagado y Saldo
+visibles al desplazar pedidos largos. La cuenta es una franja compacta de fondo
+`cloud-50`, borde estándar y radio de panel, sin un título visual adicional:
+Subtotal, Pagado y Saldo
 comparten columnas con etiqueta arriba e importe debajo. Delivery añade una
 columna solo cuando existe. La última columna alinea el importe a la derecha y
-lo destaca con `primary-700`; un divisor vertical la separa de los importes
-secundarios, sin fondos tintados. En móvil, Subtotal, Delivery (si existe), Pagado
+lo destaca con `primary-700` sobre `primary-100`, sin apariencia interactiva.
+Las etiquetas usan 13 px y peso 600; los importes secundarios 18 px y el saldo
+24 px, todos con cifras tabulares. Subtotal y Pagado comparten el mismo eje de
+lectura, sin tarjetas independientes. En móvil, Subtotal, Delivery (si existe), Pagado
 y Saldo usan filas completas: etiqueta a la izquierda e importe a la derecha,
-con una única alineación vertical de importes. El saldo conserva su divisor y
+con una única alineación vertical de importes. El saldo conserva su fondo tintado y
 mayor jerarquía tipográfica; no se mezclan columnas verticales con filas horizontales.
 «Resumen de cuenta» conserva su encabezado accesible. Pagado en cero permanece neutro;
 los pagos positivos y el importe de una cuenta completamente pagada usan
-`brand-700`. Las notas generales no son advertencias:
+`brand-700`; la cuenta pagada cambia el fondo destacado a `brand-100`.
+El skeleton reproduce estas mismas superficies y tamaños de importes.
+Las notas generales no son advertencias:
 usan superficies neutras y conservan el texto completo.
+
+Pedidos reutiliza esta misma estructura del detalle de Salón: fecha bajo el
+título, un único conteo de unidades junto a Productos y cantidades circulares.
+No conserva bloques antiguos de «Registrado», «Consumo» o «Detalle» sin estilos.
+Los productos y el total pertenecen al cuerpo desplazable; cabecera y acciones
+permanecen visibles. Cuando solo se muestra Total del pedido, su fila ocupa
+todo el ancho, con etiqueta a la izquierda e importe a la derecha. Delivery
+añade Subtotal y Delivery únicamente si aplica. Las acciones tienen ancho
+natural en escritorio y ancho completo en móvil, dentro del grupo compartido.
+Los textos de interfaz se conservan en UTF-8 y Unicode NFC; no se reparan
+tildes mediante reemplazos indiscriminados sobre nombres recibidos del API.
 
 El botón primario usa `primary-600` (`#4654CD`), `--control-height`,
 `--font-size-control` y `--radius-control`, igual que los demás controles.
@@ -566,6 +607,17 @@ la identidad, textos, iconos y colores son exclusivamente Foods.
   duplicados y conserva visible el contexto de la pantalla.
 - Después de cargar se presenta contenido, vacío accionable o error recuperable.
 ## Directorios maestros
+
+Ventas incorpora la acción homologada de ojo con tooltip «Ver detalle de la
+venta» en cada fila y tarjeta móvil. El modal es de consulta, con X como único
+cierre y sin cobrar, editar ni devolver. Presenta cliente/mesa, canal, fecha,
+productos con cantidad circular, precio unitario y total por línea, composición
+y notas cuando existen, subtotal, delivery si aplica, total y pagos netos de
+devoluciones. Los medios de pago usan nombres recibidos de la API. Si la venta
+cambió después de abrir el historial, el detalle muestra su estado y saldo reales.
+La carga reproduce esta estructura con skeleton; error ofrece Reintentar y los
+productos/pagos vacíos tienen un mensaje explícito. El cuerpo tiene scroll y
+la cabecera permanece visible. Desde 390 px conserva todos los datos y acciones.
 
 Los módulos de directorio, como Clientes, usan la tabla estandarizada en escritorio y tarjetas equivalentes en móvil. Toda consulta remota debe incluir skeleton, error recuperable, vacío contextual y paginación compartida. Las acciones de fila son únicamente iconos homologados con tooltip; alta y edición usan las primitivas `Input`, `Select`, `Textarea`, `Button`, `Status` y `ConfirmDialog`. Los formularios extensos se agrupan por secciones visuales, sin añadir texto explicativo que no ayude a completar la tarea.
 
@@ -686,6 +738,18 @@ estado listo respetan los patrones visuales generales y el flujo funciona desde
   navegación previa del cliente ni de un `rewrite`.
 - Al renombrar una ruta se conserva temporalmente su alias en
   `legacyPageAliases`; no se duplican pantallas ni lógica de negocio.
+
+### Datos de entrega y comanda compartida
+
+Pedidos manuales separa datos de atención y selección de productos. El formulario
+inicial es compacto: tipo de atención, cliente, teléfono y datos de entrega si
+aplica. No incluye otra carta ni otro carrito. «Continuar» abre la misma comanda
+que Salón, con el contexto del canal en lugar de mesa. «Editar datos» conserva
+productos, cantidades, elecciones y notas; no repite indicadores de pasos.
+Delivery desglosa Subtotal y Envío antes del Total. Solo «Registrar y enviar a
+cocina» persiste el pedido. El cierre exige descarte cuando hay cambios y se
+bloquea durante la petición. El formulario usa una columna en móvil desde 390 px;
+la comanda conserva su resumen móvil y sus estilos compartidos.
 
 ### Atribución en Caja y turnos
 

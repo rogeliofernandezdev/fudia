@@ -45,6 +45,30 @@ orden, uso y asociaciones, y exige `menu.manage`. La activación refresca
 `categories`, `purchase-item-categories`, `order-categories` y `order-catalog`.
 La desactivación sigue bloqueada cuando hay productos activos asociados.
 
+## Alta manual desde Pedidos
+
+«Nuevo pedido» abre un formulario breve de datos, con Delivery inicialmente seleccionado.
+Los tipos seleccionables (Delivery, Recojo y Mostrador) toman sus etiquetas de
+`channelOptions` del API. Salón conserva su toma de comanda por mesa; WhatsApp
+conserva el ingreso por Concierge y no se ofrece como origen manual.
+Delivery exige cliente, teléfono válido y dirección; referencia, notas y costo
+de envío completan la entrega. «Continuar» valida estos datos y abre `ComandaView`,
+la misma toma de pedidos utilizada por Salón: carta, cantidades, elecciones,
+notas y resumen. Delivery muestra cliente/dirección en lugar de mesa e incluye
+el envío en el total. Recojo y Mostrador tampoco solicitan mesa. «Editar datos»
+vuelve al formulario conservando productos, elecciones y notas. Avanzar o volver
+no realiza peticiones de creación ni genera pedidos parciales. El catálogo
+operativo es paginado y presenta la disponibilidad real del local.
+
+La acción explícita «Registrar y enviar a cocina» hace POST al endpoint existente
+`/v1/admin/orders` con `sendToKitchen=true`; no guarda al pulsar Enter desde un
+campo. El servidor deriva empresa/local, recalcula precios y valida disponibilidad.
+La petición bloquea campos, cierre y repetición; un fallo conserva el borrador.
+X/Cancelar confirma el descarte si hubo cambios. El éxito cierra el formulario,
+selecciona el canal creado, limpia filtros e invalida Pedidos, Cocina, POS,
+Dashboard y disponibilidad. No se registran pagos desde este formulario: el cobro
+sigue en POS. Delivery continúa con Listo → En camino → Entregado.
+
 ## Entrega en Salón
 
 Salón y Pedidos ofrecen «Confirmar entrega» cuando Cocina termina una

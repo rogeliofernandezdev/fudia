@@ -135,7 +135,7 @@ esté terminado. Falta la parte de costeo y rentabilidad.
 
 | Módulo | Clave | Estado | Observación |
 | --- | --- | --- | --- |
-| Delivery propio | `delivery` | ⚪ Planificado | Pendiente. |
+| Delivery propio | `delivery` | 🟡 Parcial | Alta manual desde Pedidos (Delivery, Recojo y Mostrador): datos de atención → comanda compartida con Salón, sin mesa ficticia ni creación al avanzar; conserva ítems y notas al volver. Catálogo real y envío a Cocina implementados el 2026-10-07; reutiliza seguimiento y cobro existentes. Pendientes repartidores, zonas/tarifas y seguimiento logístico. No se cambia la disponibilidad comercial del módulo avanzado. |
 | Apps de delivery | `delivery_apps` | ⚪ Planificado | Pendiente. |
 | App repartidores | `repartidores` | ⚪ Planificado | Pendiente. |
 

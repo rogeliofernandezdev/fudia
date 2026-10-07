@@ -124,7 +124,7 @@ export function ComandaCatalog({qtyByProduct,onPick,onRemove,onConfigureCombo,cu
             booting?(
               <MenuRows n={8}/>
             ):comboCatalog.isError?(
-              <div className="catalog-state empty-catalog-card"><span><Icon name="alert"/></span><b>No pudimos cargar los menús</b><p>{comboCatalog.error.message}</p></div>
+              <div className="catalog-state empty-catalog-card"><span><Icon name="alert"/></span><b>No pudimos cargar los menús</b><p>{comboCatalog.error.message}</p><Button kind="secondary" icon="refresh" onClick={()=>comboCatalog.refetch()}>Reintentar</Button></div>
             ):comboItems.length?(
               <div className="comanda-dishes">
                 {comboItems.map(combo=>(
@@ -137,7 +137,7 @@ export function ComandaCatalog({qtyByProduct,onPick,onRemove,onConfigureCombo,cu
           ):booting?(
             <MenuRows n={8}/>
           ):salonCatalog.isError?(
-            <div className="catalog-state empty-catalog-card"><span><Icon name="alert"/></span><b>No pudimos cargar la carta</b><p>{salonCatalog.error.message}</p></div>
+            <div className="catalog-state empty-catalog-card"><span><Icon name="alert"/></span><b>No pudimos cargar la carta</b><p>{salonCatalog.error.message}</p><Button kind="secondary" icon="refresh" onClick={()=>salonCatalog.refetch()}>Reintentar</Button></div>
           ):salonItems.length?(
             <div className="comanda-dishes">
               {salonItems.map(p=>(

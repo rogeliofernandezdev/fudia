@@ -12,7 +12,9 @@ export function formatRegionalDateTime(
   context:RegionalFormatContext={},
   options:Intl.DateTimeFormatOptions={dateStyle:"short",timeStyle:"short"},
 ){
-  const date=new Date(value);
+  // PostgreSQL's OF format can return an hour-only UTC offset (e.g. +00).
+  const normalized=value.trim().replace(/(T\d{2}:\d{2}:\d{2}(?:\.\d+)?)([+-]\d{2})$/,"$1$2:00");
+  const date=new Date(normalized);
   if(Number.isNaN(date.getTime()))return "—";
   try{
     return new Intl.DateTimeFormat(localeForCountry(context.country),{

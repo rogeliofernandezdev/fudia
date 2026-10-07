@@ -854,7 +854,9 @@ test("Pedidos no expone el identificador técnico como información visual",()=>
   const orders=read("src/modules/operations/orders/presentation/orders-manager.tsx");
   assert.equal(orders.includes("o.code"),false,"La tabla no muestra el código técnico del pedido");
   assert.equal(orders.includes("order.code"),false,"El detalle no repite el código técnico del pedido");
-  assert.ok(orders.includes("orders-order-meta"),"El resumen se reorganiza al retirar ese dato");
+  assert.ok(orders.includes("salon-order-detail-content"),"El resumen y los productos comparten el cuerpo desplazable");
+  assert.ok(orders.includes("salon-order-detail-opened"),"La fecha está integrada en la cabecera");
+  assert.equal(orders.includes("orders-order-meta"),false,"No conserva el bloque de metadatos retirado");
 });
 
 

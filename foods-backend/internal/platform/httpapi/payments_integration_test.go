@@ -56,6 +56,8 @@ func TestPaymentAndRefundUpdateCashShiftAutomatically(t *testing.T) {
 	cardRec:=httptest.NewRecorder()
 	api.createPayment(cardRec,cardReq)
 	if cardRec.Code!=201{t.Fatalf("card payment: %d %s",cardRec.Code,cardRec.Body.String())}
+	var cardPayment paymentView
+	if err:=json.Unmarshal(cardRec.Body.Bytes(),&cardPayment);err!=nil{t.Fatal(err)}
 
 	var cashSales int
 	if err:=pool.QueryRow(ctx,`
@@ -117,6 +119,20 @@ func TestPaymentAndRefundUpdateCashShiftAutomatically(t *testing.T) {
 	if current.Shift==nil||current.Shift.ExpectedAmount!="130.00"{
 		t.Fatalf("expected cash 100 + sale 40 - refund 10 = 130, got %#v",current.Shift)
 	}
+
+	// Historical payments keep their company-specific labels even after deactivation.
+	if _,err:=pool.Exec(ctx,`UPDATE payment_methods SET name='Tarjeta empresa',active=false WHERE organization_id=$1 AND code='card'`,s.OrganizationID);err!=nil{t.Fatal(err)}
+	detailRec=httptest.NewRecorder()
+	api.getPOSOrder(detailRec,detailReq)
+	if detailRec.Code!=200{t.Fatalf("historical sale detail: %d %s",detailRec.Code,detailRec.Body.String())}
+	if err:=json.Unmarshal(detailRec.Body.Bytes(),&detail);err!=nil{t.Fatal(err)}
+	if len(detail.Payments)!=2{t.Fatalf("expected both historical payments, got %#v",detail.Payments)}
+	for _,payment:=range detail.Payments{
+		if payment.MethodName==""{t.Fatal("payment label must come from the company catalog")}
+		if payment.Method=="card"&&payment.MethodName!="Tarjeta empresa"{t.Fatalf("wrong company label: %#v",payment)}
+	}
+	readPayment,err:=api.getPaymentByID(detailReq,cardPayment.ID)
+	if err!=nil||readPayment.MethodName!="Tarjeta empresa"{t.Fatalf("individual payment label: %#v %v",readPayment,err)}
 }
 
 

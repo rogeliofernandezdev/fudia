@@ -3,11 +3,14 @@ import {Dialog} from "@/design-system/dialog";
 import "../../styles/orders.css";
 import "../../styles/salon.css";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import {useState,type KeyboardEvent} from "react";
 import {keepPreviousData,useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Button,ConfirmDialog,Icon,IconName,PageHeader,Pagination,RowActionButton,Status} from "@/design-system";
-import type {Option,Order} from "../domain/types";
-import {getOrder,listOrders,updateOrderStatus} from "../infrastructure/orders-api";
+import type {Order} from "../domain/types";
+import {createManualOrder,getOrder,listOrders,updateOrderStatus} from "../infrastructure/orders-api";
+import type {ManualOrderDraft} from "../domain/manual-order-schema";
+const ManualOrderDialog=dynamic(()=>import("./manual-order-dialog").then(module=>module.ManualOrderDialog),{ssr:false});
 import {useFeedback} from "@/providers/feedback-provider";
 import {useSettings} from "@/providers/settings-context";
 import {useDebouncedValue} from "@/shared/hooks/use-debounced-value";
@@ -44,9 +47,11 @@ export function OrdersManager(){
  const qc=useQueryClient();const{notify}=useFeedback();const settings=useSettings();const{can,location}=useSession();const canManage=can("orders.manage");
  const[q,setQ]=useState("");const debouncedQ=useDebouncedValue(q);const[channel,setChannel]=useState("");const[status,setStatus]=useState("abiertos");const[page,setPage]=useState(1);const[size,setSize]=useState(12);
  const[detailId,setDetailId]=useState<string|null>(null);const[cancelTarget,setCancelTarget]=useState<Order|null>(null);
+ const[creating,setCreating]=useState(false);
  const list=useQuery({queryKey:["orders",debouncedQ,channel,status,page,size],queryFn:()=>listOrders({q:debouncedQ,channel,status,page,pageSize:size}),placeholderData:keepPreviousData});
  const detail=useQuery({queryKey:["order",detailId],queryFn:()=>getOrder(detailId!),enabled:Boolean(detailId),refetchInterval:query=>query.state.data?.completedAt?false:10000});
- const invalidate=()=>{void qc.invalidateQueries({queryKey:["orders"]});for(const key of ["order","salon-floor","pos-orders","pos-order","dashboard"])void qc.invalidateQueries({queryKey:[key]})};
+ const invalidate=()=>{void qc.invalidateQueries({queryKey:["orders"]});for(const key of ["order","salon-floor","pos-orders","pos-order","dashboard","kitchen-tickets","order-catalog","order-combo","product-availability"])void qc.invalidateQueries({queryKey:[key]})};
+ const create=useMutation({mutationFn:(draft:ManualOrderDraft)=>createManualOrder(draft),onSuccess:order=>{setCreating(false);setChannel(order.channel);setStatus("abiertos");setQ("");setPage(1);invalidate();notify({tone:"success",title:"Pedido registrado",message:"El pedido fue enviado a Cocina. Puedes seguir su avance en Pedidos y registrar el cobro en Punto de venta."})},onError:error=>{void qc.invalidateQueries({queryKey:["order-catalog"]});void qc.invalidateQueries({queryKey:["order-combo"]});notify({tone:"danger",title:"No se pudo registrar el pedido",message:error.message})}});
  const advance=useMutation({mutationFn:(v:{id:string;status:string})=>updateOrderStatus(v.id,v.status),onSuccess:()=>{invalidate();notify({tone:"success",title:"Pedido actualizado",message:"El estado del pedido fue actualizado."})},onError:e=>notify({tone:"danger",title:"No se pudo actualizar",message:e.message})});
  const cancel=useMutation({mutationFn:(o:Order)=>updateOrderStatus(o.id,"cancelado"),onSuccess:()=>{setCancelTarget(null);invalidate();notify({tone:"success",title:"Pedido cancelado",message:"El pedido quedó marcado como cancelado."})},onError:e=>notify({tone:"danger",title:"No se pudo cancelar",message:e.message})});
  const items=list.data?.items??[];const counts=list.data?.channelCounts??{};const channelOptions=list.data?.channelOptions??[];
@@ -64,7 +69,7 @@ export function OrdersManager(){
  const hasActiveFilters=Boolean(q||channel||status!=="abiertos");
  const emptyTitle=hasActiveFilters?"Sin coincidencias":"Sin pedidos abiertos";
  const emptyText=hasActiveFilters?"Prueba con otro canal, estado o término de búsqueda.":"Los pedidos nuevos aparecerán aquí cuando ingresen.";
- return <div className="orders-page-shell"><PageHeader eyebrow="OPERACIÓN OMNICANAL" title="Pedidos" description="Revisa el origen, estado y avance de cada pedido sin perder el contexto operativo." action={canManage?<Link href={pageRoutes.diningRoom} className="orders-salon-link"><Icon name="utensils" size={16}/><span>Abrir salón</span></Link>:undefined}/>
+ return <div className="orders-page-shell"><PageHeader eyebrow="OPERACIÓN OMNICANAL" title="Pedidos" description="Revisa el origen, estado y avance de cada pedido sin perder el contexto operativo." action={canManage?<Button icon="plus" disabled={list.isPending||list.isError||!(list.data?.channelOptions.length)} onClick={()=>setCreating(true)}>Nuevo pedido</Button>:undefined}/>
  <div className="orders-tabs-row">
   {list.isPending?<div className="orders-tabs orders-tabs-skeleton" aria-hidden="true">{Array.from({length:4},(_,i)=><span className={"orders-tab"+(i===0?" active":"")} key={i}><i className="orders-tab-icon"/><span className="orders-tab-text"><i/><i/></span></span>)}</div>:
   <div className={"orders-tabs"+(showChannelCounts?"":" no-counts")} role="tablist" aria-label="Filtrar pedidos por canal">
@@ -101,13 +106,13 @@ export function OrdersManager(){
   </>}
   <Pagination page={page} size={size} total={list.data?.total??0} onPage={setPage} onSize={v=>{setSize(v);setPage(1)}}/>
  </section>
- {detailId&&<OrderDetail loading={detail.isLoading} order={detail.data} error={detail.error?.message} channels={channelOptions} currencySymbol={settings.currencySymbol} canManage={canManage} busy={advance.isPending} close={()=>setDetailId(null)} advance={st=>advance.mutate({id:detailId,status:st})} cancel={o=>setCancelTarget(o)}/>}
+ {creating&&canManage&&<ManualOrderDialog channels={channelOptions} currencySymbol={settings.currencySymbol} busy={create.isPending} onClose={()=>{if(!create.isPending)setCreating(false)}} onSave={async draft=>{try{await create.mutateAsync(draft)}catch{/* Feedback conserva el error y el formulario permanece abierto. */}}}/>}
+ {detailId&&<OrderDetail loading={detail.isLoading} order={detail.data} error={detail.error?.message} currencySymbol={settings.currencySymbol} canManage={canManage} busy={advance.isPending} close={()=>setDetailId(null)} advance={st=>advance.mutate({id:detailId,status:st})} cancel={o=>setCancelTarget(o)}/>}
  <ConfirmDialog open={Boolean(cancelTarget)} title="Cancelar pedido" description={`${cancelTarget?.tableName||cancelTarget?.customerName||"El pedido seleccionado"} quedará cancelado y no podrá reactivarse.`} tone="danger" confirmLabel="Cancelar pedido" pending={cancel.isPending} onCancel={()=>setCancelTarget(null)} onConfirm={()=>cancelTarget&&cancel.mutate(cancelTarget)}/></div>;
 }
 
-function OrderDetail({loading,order,error,channels,currencySymbol,canManage,busy,close,advance,cancel}:{loading:boolean;order?:Order;error?:string;channels:Option[];currencySymbol:string;canManage:boolean;busy:boolean;close:()=>void;advance:(st:string)=>void;cancel:(o:Order)=>void}){
+function OrderDetail({loading,order,error,currencySymbol,canManage,busy,close,advance,cancel}:{loading:boolean;order?:Order;error?:string;currencySymbol:string;canManage:boolean;busy:boolean;close:()=>void;advance:(st:string)=>void;cancel:(o:Order)=>void}){
  const{location}=useSession();
- const channelLabel=(value:string)=>channels.find(option=>option.value===value)?.label??value;
  const meta=order?statusMeta[order.status]??{label:order.status,tone:"gray" as const}:null;
  const action=order?nextOrderAction(order):null;
  const itemCount=order?(order.items??[]).reduce((sum,it)=>sum+Number(it.qty||0),0):0;
@@ -115,15 +120,14 @@ function OrderDetail({loading,order,error,channels,currencySymbol,canManage,busy
  const subtitle=order?.tableName&&order.customerName?order.customerName:undefined;
  return <div className="modal-backdrop modal-overlay-in">
   <Dialog className="crud-modal order-detail salon-order-detail modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="orders-preview-title" aria-busy={loading}>
-   <div className="salon-order-detail-accent"/>
+   <div className="salon-order-detail-accent" aria-hidden="true"/>
    {loading?<OrderDetailSkeleton close={close}/>:<>
    <header className="salon-order-detail-head">
     <div className="salon-order-detail-identity">
      <span className="salon-order-detail-icon"><Icon name={order?channelIcons[order.channel]??"receipt":"receipt"} size={20}/></span>
      <div className="salon-order-detail-heading">
-      <small>{order?channelLabel(order.channel).toUpperCase():"PEDIDO"}</small>
       <h2 id="orders-preview-title">{subject}</h2>
-      {subtitle&&<p>{subtitle}</p>}
+      {order&&<p>{subtitle&&<><span>{subtitle}</span><span aria-hidden="true"> · </span></>}<span className="salon-order-detail-opened"><Icon name="clock" size={14}/>{timeAgo(order.createdAt,location?.country,location?.timezone)}</span></p>}
      </div>
     </div>
     <div className="salon-order-detail-status">{order&&meta&&<Status tone={meta.tone}>{meta.label}</Status>}</div>
@@ -134,10 +138,7 @@ function OrderDetail({loading,order,error,channels,currencySymbol,canManage,busy
     <div className="order-detail-body"><div className="catalog-state error"><span><Icon name="alert" size={22}/></span><b>Error al cargar el pedido</b><p>{error}</p></div></div>
    ):order&&meta&&<>
     <div className="order-detail-body salon-order-detail-body">
-     <section className="salon-order-detail-meta orders-order-meta" aria-label="Datos del pedido">
-      <div><span className="salon-order-detail-meta-icon"><Icon name="clock" size={15}/></span><span><small>REGISTRADO</small><b>{timeAgo(order.createdAt,location?.country,location?.timezone)}</b></span></div>
-      <div><span className="salon-order-detail-meta-icon"><Icon name="utensils" size={15}/></span><span><small>CONSUMO</small><b>{itemCount} ítem{itemCount===1?"":"s"}</b></span></div>
-     </section>
+     <div className="salon-order-detail-content">
 
      {(order.customerPhone||order.address||order.reference)&&<section className="order-detail-context" aria-label="Contacto y entrega">
       {order.customerPhone&&<div><span><Icon name="users" size={15}/></span><p><small>CONTACTO</small><b>{order.customerPhone}</b></p></div>}
@@ -145,13 +146,13 @@ function OrderDetail({loading,order,error,channels,currencySymbol,canManage,busy
      </section>}
 
      <section className="salon-order-detail-consumption">
-      <header className="salon-order-detail-section-head"><div><small>DETALLE</small><h3>Productos del pedido</h3></div><span>{(order.items??[]).length} línea{(order.items??[]).length===1?"":"s"}</span></header>
+      <header className="salon-order-detail-section-head"><div><h3>Productos del pedido</h3></div><span>{itemCount} unidad{itemCount===1?"":"es"}</span></header>
       <div className="order-detail-items salon-order-detail-items">
        {(order.items??[]).map(it=><div className="order-detail-line salon-order-detail-line" key={it.id}>
         <b className="salon-order-detail-qty">{Number(it.qty)}×</b>
         <div className="order-detail-line-info">
          <span>{it.name}</span>
-         {Number(it.qty)>1&&<small>{currencySymbol} {money(it.unitPrice)} c/u</small>}
+         <small>{currencySymbol} {money(it.unitPrice)} c/u</small>
          {it.itemType==="combo"&&(it.selections??[]).length>0&&<div className="salon-order-detail-selections">{(it.selections??[]).map(sel=><small key={sel.groupId+sel.productId}><b>{sel.groupName}:</b> {sel.name}{Number(sel.surcharge)>0?` (+${currencySymbol} ${money(sel.surcharge)})`:""}</small>)}</div>}
          {it.note&&<em>{it.note}</em>}
         </div>
@@ -162,19 +163,21 @@ function OrderDetail({loading,order,error,channels,currencySymbol,canManage,busy
 
       {order.notes&&<div className="salon-order-detail-notes"><span><Icon name="edit" size={15}/></span><div><b>Notas generales</b><p>{order.notes}</p></div></div>}
      </section>
-    </div>
-
     <section className="salon-order-detail-totals" aria-label="Totales del pedido">
      {Number(order.deliveryFee)>0&&<div className="salon-order-detail-subtotal"><span>Subtotal</span><b>{currencySymbol} {money(order.subtotal)}</b></div>}
      {Number(order.deliveryFee)>0&&<div className="salon-order-detail-subtotal"><span>Delivery</span><b>{currencySymbol} {money(order.deliveryFee)}</b></div>}
      <div className="salon-order-detail-grand"><span>Total del pedido</span><strong>{currencySymbol} {money(order.total)}</strong></div>
     </section>
+     </div>
+    </div>
 
     {canManage&&<footer className="order-detail-actions salon-order-detail-actions">
-     {action&&<Button icon={action.icon} className="order-detail-primary" disabled={busy} onClick={()=>advance(action.status)}>{action.label}</Button>}
-     {order.channel==="salon"&&order.status==="entregado"&&!order.completedAt&&order.paymentStatus!=="paid"&&<Link href={`/pos?orderId=${order.id}`} className="button secondary salon-order-detail-pay"><Icon name="payment" size={16}/>Cobrar saldo</Link>}
      {order.status==="entregado"&&<span className="order-detail-done"><Icon name="check" size={15}/>{order.channel==="salon"&&!order.completedAt?"Pedido entregado · cuenta abierta":"Pedido completado"}</span>}
-     {cancellable(order)&&<Button icon="alert" kind="ghost" className="order-detail-cancel" disabled={busy} onClick={()=>cancel(order)}>Cancelar pedido</Button>}
+     <div className="salon-order-detail-buttons" role="group" aria-label="Acciones del pedido">
+      {cancellable(order)&&<Button icon="cancel" kind="ghost" className="order-detail-cancel" disabled={busy} onClick={()=>cancel(order)}>Cancelar pedido</Button>}
+      {action&&<Button icon={action.status==="entregado"?"availability":action.icon} className="order-detail-primary" disabled={busy} aria-busy={busy} onClick={()=>advance(action.status)}>{action.label}</Button>}
+      {order.channel==="salon"&&order.status==="entregado"&&!order.completedAt&&order.paymentStatus!=="paid"&&<Link href={`${pageRoutes.pos}?orderId=${order.id}`} className="button secondary salon-order-detail-pay" aria-disabled={busy} aria-busy={busy} tabIndex={busy?-1:undefined} onClick={event=>{if(busy)event.preventDefault();}}><Icon name="payment" size={18}/><span>Cobrar saldo</span></Link>}
+     </div>
     </footer>}
    </>}
    </>}
@@ -184,31 +187,23 @@ function OrderDetail({loading,order,error,channels,currencySymbol,canManage,busy
 
 function OrderDetailSkeleton({close}:{close:()=>void}){
  return <>
-  <header className="salon-order-detail-head salon-order-detail-skeleton-head" aria-hidden="true">
-   <div className="salon-order-detail-identity">
+  <header className="salon-order-detail-head salon-order-detail-skeleton-head">
+   <h2 id="orders-preview-title" className="sr-only">Cargando detalle del pedido</h2>
+   <div className="salon-order-detail-identity" aria-hidden="true">
     <span className="salon-order-detail-skeleton-block salon-order-detail-skeleton-icon"/>
     <div className="salon-order-detail-skeleton-copy">
-     <span className="salon-order-detail-skeleton-block short"/>
      <span className="salon-order-detail-skeleton-block title"/>
      <span className="salon-order-detail-skeleton-block medium"/>
     </div>
    </div>
-   <span className="salon-order-detail-skeleton-block salon-order-detail-skeleton-status"/>
+   <span className="salon-order-detail-skeleton-block salon-order-detail-skeleton-status" aria-hidden="true"/>
    <button type="button" className="salon-order-detail-close" aria-label="Cerrar detalle" onClick={close}><Icon name="close" size={17}/></button>
   </header>
   <div className="order-detail-body salon-order-detail-body salon-order-detail-skeleton-body" aria-label="Cargando detalle del pedido">
-   <section className="salon-order-detail-meta orders-order-meta salon-order-detail-skeleton-meta">
-    {Array.from({length:2},(_,i)=><div key={i}>
-     <span className="salon-order-detail-skeleton-block salon-order-detail-skeleton-meta-icon"/>
-     <span className="salon-order-detail-skeleton-copy">
-      <span className="salon-order-detail-skeleton-block short"/>
-      <span className="salon-order-detail-skeleton-block medium"/>
-     </span>
-    </div>)}
-   </section>
+   <div className="salon-order-detail-content" aria-hidden="true">
    <section className="salon-order-detail-consumption salon-order-detail-skeleton-consumption">
     <div className="salon-order-detail-skeleton-section-head">
-     <div><span className="salon-order-detail-skeleton-block short"/><span className="salon-order-detail-skeleton-block heading"/></div>
+     <div><span className="salon-order-detail-skeleton-block heading"/></div>
      <span className="salon-order-detail-skeleton-block tiny"/>
     </div>
     <div className="order-detail-items salon-order-detail-items salon-order-detail-skeleton-items">
@@ -219,15 +214,13 @@ function OrderDetailSkeleton({close}:{close:()=>void}){
      </div>)}
     </div>
    </section>
-  </div>
   <section className="salon-order-detail-totals salon-order-detail-skeleton-totals" aria-hidden="true">
-   <div className="salon-order-detail-subtotal"><span className="salon-order-detail-skeleton-block label"/><span className="salon-order-detail-skeleton-block amount"/></div>
    <div className="salon-order-detail-grand"><span className="salon-order-detail-skeleton-block total-label"/><span className="salon-order-detail-skeleton-block total-amount"/></div>
   </section>
+   </div>
+  </div>
   <footer className="order-detail-actions salon-order-detail-actions salon-order-detail-skeleton-actions" aria-hidden="true">
-   <span className="salon-order-detail-skeleton-block action primary"/>
-   <span className="salon-order-detail-skeleton-block action secondary"/>
-   <span className="salon-order-detail-skeleton-block action tertiary"/>
+   <div className="salon-order-detail-buttons"><span className="salon-order-detail-skeleton-block action primary"/></div>
   </footer>
  </>;
 }

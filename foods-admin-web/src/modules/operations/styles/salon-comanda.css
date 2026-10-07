@@ -172,6 +172,47 @@
   gap:var(--space-2);
 }
 
+.salon-comanda-context.salon-comanda-remote-context{
+  grid-template-columns:var(--size-40) minmax(0,1fr) auto;
+}
+
+.salon-comanda-contact{
+  color:var(--ink-600);
+  font-size:var(--font-size-label);
+  line-height:var(--line-height-1-5);
+  overflow-wrap:anywhere;
+}
+
+.salon-comanda-charges{
+  margin:0;
+  display:grid;
+  gap:var(--space-8);
+  color:var(--ink-600);
+  font-size:var(--font-size-control);
+}
+
+.salon-comanda-charges>div{
+  display:flex;
+  justify-content:space-between;
+  gap:var(--space-12);
+}
+
+.salon-comanda-charges dd{
+  margin:0;
+  font-weight:var(--font-weight-700);
+  font-variant-numeric:tabular-nums;
+}
+
+@media(max-width:600px){
+  .salon-comanda-context.salon-comanda-remote-context{
+    grid-template-columns:var(--size-40) minmax(0,1fr);
+  }
+  .salon-comanda-remote-context>.button{
+    grid-column:2;
+    justify-self:start;
+  }
+}
+
 .salon-comanda-context-copy>span{
   color:var(--ink-600);
   font-size:var(--font-size-label);

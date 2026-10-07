@@ -18,6 +18,7 @@ type paymentView struct {
 	ShiftID          string `json:"shiftId"`
 	CashRegisterName string `json:"cashRegisterName"`
 	Method           string `json:"method"`
+	MethodName       string `json:"methodName"`
 	Amount           string `json:"amount"`
 	RefundedAmount   string `json:"refundedAmount"`
 	NetAmount        string `json:"netAmount"`
@@ -172,7 +173,7 @@ func (a *API) listPOSOrders(w http.ResponseWriter, r *http.Request) {
 func (a *API) loadOrderPayments(r *http.Request, orderID string) ([]paymentView,error) {
 	s := r.Context().Value(scopeKey{}).(scope)
 	rows,err:=a.db.Query(r.Context(),`
-		SELECT p.id::text,p.order_id::text,o.code,p.shift_id::text,cr.name,p.method,p.amount::text,
+		SELECT p.id::text,p.order_id::text,o.code,p.shift_id::text,cr.name,p.method,pm.name,p.amount::text,
 		       COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id),0)::text,
 		       (p.amount-COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id),0))::text,
 		       p.reference,u.full_name,to_char(p.created_at,'YYYY-MM-DD"T"HH24:MI:SSOF')
@@ -181,6 +182,7 @@ func (a *API) loadOrderPayments(r *http.Request, orderID string) ([]paymentView,
 		JOIN cash_shifts cs ON cs.id=p.shift_id AND cs.organization_id=p.organization_id AND cs.location_id=p.location_id
 		JOIN cash_registers cr ON cr.id=cs.cash_register_id AND cr.organization_id=cs.organization_id AND cr.location_id=cs.location_id
 		JOIN users u ON u.id=p.created_by AND u.organization_id=p.organization_id
+		JOIN payment_methods pm ON pm.organization_id=p.organization_id AND pm.code=p.method
 		WHERE p.organization_id=$1 AND p.location_id=$2 AND p.order_id=$3
 		ORDER BY p.created_at DESC,p.id DESC
 	`,s.OrganizationID,s.LocationID,orderID)
@@ -189,7 +191,7 @@ func (a *API) loadOrderPayments(r *http.Request, orderID string) ([]paymentView,
 	items:=[]paymentView{}
 	for rows.Next(){
 		var item paymentView
-		if err:=rows.Scan(&item.ID,&item.OrderID,&item.OrderCode,&item.ShiftID,&item.CashRegisterName,&item.Method,&item.Amount,&item.RefundedAmount,&item.NetAmount,&item.Reference,&item.CreatedByName,&item.CreatedAt);err!=nil{return nil,err}
+		if err:=rows.Scan(&item.ID,&item.OrderID,&item.OrderCode,&item.ShiftID,&item.CashRegisterName,&item.Method,&item.MethodName,&item.Amount,&item.RefundedAmount,&item.NetAmount,&item.Reference,&item.CreatedByName,&item.CreatedAt);err!=nil{return nil,err}
 		items=append(items,item)
 	}
 	return items,rows.Err()
@@ -241,7 +243,7 @@ func (a *API) getPaymentByID(r *http.Request,id string)(paymentView,error){
 	s:=r.Context().Value(scopeKey{}).(scope)
 	var item paymentView
 	err:=a.db.QueryRow(r.Context(),`
-		SELECT p.id::text,p.order_id::text,o.code,p.shift_id::text,cr.name,p.method,p.amount::text,
+		SELECT p.id::text,p.order_id::text,o.code,p.shift_id::text,cr.name,p.method,pm.name,p.amount::text,
 		       COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id),0)::text,
 		       (p.amount-COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id),0))::text,
 		       p.reference,u.full_name,to_char(p.created_at,'YYYY-MM-DD"T"HH24:MI:SSOF')
@@ -250,9 +252,10 @@ func (a *API) getPaymentByID(r *http.Request,id string)(paymentView,error){
 		JOIN cash_shifts cs ON cs.id=p.shift_id AND cs.organization_id=p.organization_id AND cs.location_id=p.location_id
 		JOIN cash_registers cr ON cr.id=cs.cash_register_id AND cr.organization_id=cs.organization_id AND cr.location_id=cs.location_id
 		JOIN users u ON u.id=p.created_by AND u.organization_id=p.organization_id
+		JOIN payment_methods pm ON pm.organization_id=p.organization_id AND pm.code=p.method
 		WHERE p.id=$1 AND p.organization_id=$2 AND p.location_id=$3
 	`,id,s.OrganizationID,s.LocationID).Scan(
-		&item.ID,&item.OrderID,&item.OrderCode,&item.ShiftID,&item.CashRegisterName,&item.Method,&item.Amount,
+		&item.ID,&item.OrderID,&item.OrderCode,&item.ShiftID,&item.CashRegisterName,&item.Method,&item.MethodName,&item.Amount,
 		&item.RefundedAmount,&item.NetAmount,&item.Reference,&item.CreatedByName,&item.CreatedAt,
 	)
 	return item,err
