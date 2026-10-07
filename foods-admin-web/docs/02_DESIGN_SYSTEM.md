@@ -554,6 +554,10 @@ usan superficies neutras y conservan el texto completo.
 
 Pedidos reutiliza esta misma estructura del detalle de Salón: fecha bajo el
 título, un único conteo de unidades junto a Productos y cantidades circulares.
+«Registrado» muestra siempre la fecha y hora del registro en la zona del local,
+nunca un tiempo relativo como «Hace 17 h». La tabla y el detalle reutilizan el
+formateador regional compartido. En móvil, la fecha aparece bajo la identidad del
+pedido al ocultarse su columna, con salto de línea para no recortar el contenido.
 No conserva bloques antiguos de «Registrado», «Consumo» o «Detalle» sin estilos.
 Los productos y el total pertenecen al cuerpo desplazable; cabecera y acciones
 permanecen visibles. Cuando solo se muestra Total del pedido, su fila ocupa

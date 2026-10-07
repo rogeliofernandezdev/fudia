@@ -26,20 +26,8 @@ const statusMeta:Record<string,{label:string;tone:"green"|"blue"|"orange"|"gray"
 
 
 const cancellable=(o:Order)=>(o.status==="nuevo"||o.status==="confirmado")&&Number(o.paidAmount??0)<=0.00001;
-function parseIsoDate(iso:string):Date|null{
-  if(!iso)return null;
-  const normalized=iso.replace(/([+-]\d{2})$/,"$1:00");
-  const d=new Date(normalized);
-  if(!isNaN(d.getTime()))return d;
-  const d2=new Date(iso);
-  return isNaN(d2.getTime())?null:d2;
-}
-function timeAgo(iso:string,country?:string,timeZone?:string){
-  const d=parseIsoDate(iso);if(!d)return"—";
-  const m=Math.floor((Date.now()-d.getTime())/60000);
-  if(m<1)return"Justo ahora";if(m<60)return`Hace ${m} min`;
-  const h=Math.floor(m/60);if(h<24)return`Hace ${h} h`;
-  return formatRegionalDateTime(d.toISOString(),{country,timeZone},{dateStyle:"medium",timeStyle:"short"});
+function registeredAt(iso:string,country?:string,timeZone?:string){
+  return formatRegionalDateTime(iso,{country,timeZone},{dateStyle:"medium",timeStyle:"short"});
 }
 const money=(v:string|number)=>Number(v).toFixed(2);
 
@@ -94,10 +82,11 @@ export function OrdersManager(){
        <span className={"row-icon order-row-icon oc-"+o.channel}><Icon name={channelIcons[o.channel]??"receipt"} size={17}/></span>
        <b>{subject}</b>
        {secondary&&<small>{secondary}</small>}
+       <small className="order-mobile-registered"><time dateTime={o.createdAt}>{registeredAt(o.createdAt,location?.country,location?.timezone)}</time></small>
       </td>
       <td><span className="order-channel-cell"><Icon name={channelIcons[o.channel]??"receipt"} size={13}/>{channelLabel(o.channel)}</span></td>
       <td><Status tone={meta.tone}>{meta.label}</Status></td>
-      <td><span className="order-registered">{timeAgo(o.createdAt,location?.country,location?.timezone)}</span></td>
+      <td><time className="order-registered" dateTime={o.createdAt}>{registeredAt(o.createdAt,location?.country,location?.timezone)}</time></td>
       <td><b className="order-table-total">{settings.currencySymbol} {money(o.total)}</b></td>
       <td><div className="orders-table-actions"><RowActionButton action="view" onClick={()=>setDetailId(o.id)}/></div></td>
      </tr>})}</tbody>
@@ -127,7 +116,7 @@ function OrderDetail({loading,order,error,currencySymbol,canManage,busy,close,ad
      <span className="salon-order-detail-icon"><Icon name={order?channelIcons[order.channel]??"receipt":"receipt"} size={20}/></span>
      <div className="salon-order-detail-heading">
       <h2 id="orders-preview-title">{subject}</h2>
-      {order&&<p>{subtitle&&<><span>{subtitle}</span><span aria-hidden="true"> · </span></>}<span className="salon-order-detail-opened"><Icon name="clock" size={14}/>{timeAgo(order.createdAt,location?.country,location?.timezone)}</span></p>}
+      {order&&<p>{subtitle&&<><span>{subtitle}</span><span aria-hidden="true"> · </span></>}<span className="salon-order-detail-opened"><Icon name="clock" size={14}/><time dateTime={order.createdAt}>{registeredAt(order.createdAt,location?.country,location?.timezone)}</time></span></p>}
      </div>
     </div>
     <div className="salon-order-detail-status">{order&&meta&&<Status tone={meta.tone}>{meta.label}</Status>}</div>

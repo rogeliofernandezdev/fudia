@@ -296,6 +296,8 @@
   white-space:nowrap;
 }
 
+.orders-table td:first-child .order-mobile-registered{display:none}
+
 
 .orders-table td:nth-child(5){
   text-align:right;
@@ -1668,6 +1670,8 @@
   .orders-table td:first-child small{
     max-width:calc(100% - var(--size-42));
   }
+
+  .orders-table td:first-child .order-mobile-registered{display:block;max-width:none;white-space:normal;overflow-wrap:anywhere}
 
   .orders-loading{
     min-height:0;
