@@ -1293,6 +1293,12 @@
   background:var(--surface);
 }
 
+.order-attribution{display:flex;flex-wrap:wrap;gap:var(--space-12) var(--space-24);margin:0;padding-bottom:var(--space-16);border-bottom:var(--stroke-1) solid var(--line)}
+.order-attribution>div{flex:1;min-width:0}
+.order-attribution>div>span+span{margin-top:var(--space-6)}
+.orders-table td:first-child .order-staff{white-space:normal;max-width:none;overflow-wrap:anywhere}
+.order-attribution dt{display:flex;align-items:center;gap:var(--space-6);font-size:var(--font-size-label);color:var(--ink-600)}
+.order-attribution dd{margin:var(--space-4) 0 0;font-size:var(--font-size-control);font-weight:var(--font-weight-650);color:var(--ink-950);overflow-wrap:anywhere}
 .order-detail-context{
   display:grid;
   grid-template-columns:minmax(0,.8fr) minmax(0,1.6fr);

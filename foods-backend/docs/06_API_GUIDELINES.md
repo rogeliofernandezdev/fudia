@@ -35,6 +35,30 @@ excluye cobros totalmente devueltos y devuelve `[]` cuando no hay cobros vigente
 El agregado SQL respeta empresa/local y no exige consultas adicionales por fila;
 pagos divididos conservan todos sus medios en una única venta paginada.
 
+## Responsable de la atención en mesa
+
+Crear una comanda manual de Salón asigna `orders.waiter_id` al usuario autenticado de la empresa;
+el cliente no puede elegirlo ni sustituirlo en una edición. `Order` expone
+`waiterId`, `waiterName` y `collectedByNames` en Pedidos, Salón y detalle de POS.
+Los nombres de cobro proceden exclusivamente de `payments.created_by`; no se
+atribuyen al abridor de caja ni al mozo. Un pago dividido conserva todos sus autores.
+Las proyecciones SQL respetan empresa/local y no hacen peticiones por cada fila.
+
+Editar, cancelar, enviar a cocina o confirmar la entrega de una mesa asignada
+exige `orders.manage` y ser su mozo. Otro usuario recibe 403
+`order_assigned_to_another_waiter`, incluso con un permiso amplio. La propiedad
+se verifica bajo el mismo bloqueo de pedido que protege la mutación. La lectura
+sigue disponible con `orders.read`. Cocina conserva `kitchen.manage` para preparar
+y POS conserva `cash.manage` y la asignación de turno para cobrar: no cambian el mozo.
+Los pedidos sin asignación conservan sus permisos anteriores; no se asigna un mozo
+ficticio a WhatsApp. La asignación pertenece al pedido/servicio, no a la mesa permanente.
+
+Un administrador de plataforma que opera un tenant ajeno no se convierte en mozo
+de esa empresa: no se persiste una asignación que cruce la frontera del tenant.
+
+La migración 000072 agrega una FK por empresa y vincula las comandas históricas
+manuales de Salón a su autor original cuando pertenece a la misma empresa.
+
 ## Alta manual de delivery
 
 `POST /v1/admin/orders` conserva `orders.manage` y el alcance de empresa/local

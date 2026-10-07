@@ -54,7 +54,7 @@ function mount(section,changes={},canManage=true,busy=false){
   if(name==="next/link")return{default:"Link"};
   if(name==="@/design-system")return{Button:"Button",Status:"Status",Icon:"Icon"};
   if(name==="@/design-system/icons")return{Icon:"Icon"};
-  if(name==="@/providers/session-context")return{useSession:()=>({location:{country:"PE",timezone:"America/Lima"}})};
+  if(name==="@/providers/session-context")return{useSession:()=>({user:{id:"waiter"},can:()=>canManage,location:{country:"PE",timezone:"America/Lima"}})};
   if(name==="@/shared/i18n/regional-format")return{formatRegionalDateTime:()=>"Hace un momento"};
   if(name==="@/shared/routing/page-routes")return{pageRoutes:{pos:"/pos"}};
   if(name.endsWith("/domain/order-actions"))return actions;
@@ -131,7 +131,7 @@ test("salon: productos y cuenta comparten una columna sin código técnico ni ca
  const body=view.nodes.find(n=>n.props.className==="order-detail-body salon-order-detail-body");
  const content=body.props.children;
  assert.equal(content.props.className,"salon-order-detail-content");
- assert.ok(content.props.children.some(n=>n.props.className.startsWith("salon-order-detail-totals")));
+ assert.ok(content.props.children.some(n=>n.props.className?.startsWith("salon-order-detail-totals")));
  assert.equal(view.nodes.find(n=>n.props.id==="salon-order-account-title").props.children,"Resumen de cuenta");
  assert.equal(view.nodes.some(n=>n.props.children==="DETALLE"),false);
  const css=readFileSync(new URL("styles/salon.css",root),"utf8");

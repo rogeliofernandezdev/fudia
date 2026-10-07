@@ -19,7 +19,8 @@ import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
 import {pageRoutes} from "@/shared/routing/page-routes";
 
 
-import {nextOrderAction} from "../domain/order-actions";
+import {nextOrderAction,canManageOrderService} from "../domain/order-actions";
+import {OrderAttribution,OrderAttributionSkeleton} from "./order-attribution";
 
 const channelIcons:Record<string,IconName>={salon:"utensils",mostrador:"store",recojo:"box",delivery:"truck",whatsapp:"share"};
 const statusMeta:Record<string,{label:string;tone:"green"|"blue"|"orange"|"gray"}>={nuevo:{label:"Nuevo",tone:"blue"},confirmado:{label:"Confirmado",tone:"blue"},preparando:{label:"Preparando",tone:"orange"},listo:{label:"Listo",tone:"green"},en_camino:{label:"En camino",tone:"orange"},entregado:{label:"Entregado",tone:"gray"},cancelado:{label:"Cancelado",tone:"gray"}};
@@ -82,6 +83,8 @@ export function OrdersManager(){
        <span className={"row-icon order-row-icon oc-"+o.channel}><Icon name={channelIcons[o.channel]??"receipt"} size={17}/></span>
        <b>{subject}</b>
        {secondary&&<small>{secondary}</small>}
+       {o.channel==="salon"&&<small className="order-staff">Mozo: {o.waiterName||"Sin asignar"}</small>}
+       {Boolean(o.collectedByNames?.length)&&<small className="order-staff">Cobrado por: {o.collectedByNames!.join(" · ")}</small>}
        <small className="order-mobile-registered"><time dateTime={o.createdAt}>{registeredAt(o.createdAt,location?.country,location?.timezone)}</time></small>
       </td>
       <td><span className="order-channel-cell"><Icon name={channelIcons[o.channel]??"receipt"} size={13}/>{channelLabel(o.channel)}</span></td>
@@ -100,8 +103,10 @@ export function OrdersManager(){
  <ConfirmDialog open={Boolean(cancelTarget)} title="Cancelar pedido" description={`${cancelTarget?.tableName||cancelTarget?.customerName||"El pedido seleccionado"} quedará cancelado y no podrá reactivarse.`} tone="danger" confirmLabel="Cancelar pedido" pending={cancel.isPending} onCancel={()=>setCancelTarget(null)} onConfirm={()=>cancelTarget&&cancel.mutate(cancelTarget)}/></div>;
 }
 
-function OrderDetail({loading,order,error,currencySymbol,canManage,busy,close,advance,cancel}:{loading:boolean;order?:Order;error?:string;currencySymbol:string;canManage:boolean;busy:boolean;close:()=>void;advance:(st:string)=>void;cancel:(o:Order)=>void}){
- const{location}=useSession();
+function OrderDetail({loading,order,error,currencySymbol,canManage:hasPermission,busy,close,advance,cancel}:{loading:boolean;order?:Order;error?:string;currencySymbol:string;canManage:boolean;busy:boolean;close:()=>void;advance:(st:string)=>void;cancel:(o:Order)=>void}){
+ const{location,user,can}=useSession();
+ const canManage=Boolean(hasPermission&&order&&canManageOrderService(order,user?.id));
+ const canCharge=Boolean(can("cash.manage")&&order?.channel==="salon"&&order.status==="entregado"&&!order.completedAt&&order.paymentStatus!=="paid");
  const meta=order?statusMeta[order.status]??{label:order.status,tone:"gray" as const}:null;
  const action=order?nextOrderAction(order):null;
  const itemCount=order?(order.items??[]).reduce((sum,it)=>sum+Number(it.qty||0),0):0;
@@ -128,6 +133,8 @@ function OrderDetail({loading,order,error,currencySymbol,canManage,busy,close,ad
    ):order&&meta&&<>
     <div className="order-detail-body salon-order-detail-body">
      <div className="salon-order-detail-content">
+
+     <OrderAttribution channel={order.channel} waiterName={order.waiterName} collectedByNames={order.collectedByNames}/>
 
      {(order.customerPhone||order.address||order.reference)&&<section className="order-detail-context" aria-label="Contacto y entrega">
       {order.customerPhone&&<div><span><Icon name="users" size={15}/></span><p><small>CONTACTO</small><b>{order.customerPhone}</b></p></div>}
@@ -160,12 +167,12 @@ function OrderDetail({loading,order,error,currencySymbol,canManage,busy,close,ad
      </div>
     </div>
 
-    {canManage&&<footer className="order-detail-actions salon-order-detail-actions">
+    {(canManage||canCharge)&&<footer className="order-detail-actions salon-order-detail-actions">
      {order.status==="entregado"&&<span className="order-detail-done"><Icon name="check" size={15}/>{order.channel==="salon"&&!order.completedAt?"Pedido entregado · cuenta abierta":"Pedido completado"}</span>}
      <div className="salon-order-detail-buttons" role="group" aria-label="Acciones del pedido">
-      {cancellable(order)&&<Button icon="cancel" kind="ghost" className="order-detail-cancel" disabled={busy} onClick={()=>cancel(order)}>Cancelar pedido</Button>}
-      {action&&<Button icon={action.status==="entregado"?"availability":action.icon} className="order-detail-primary" disabled={busy} aria-busy={busy} onClick={()=>advance(action.status)}>{action.label}</Button>}
-      {order.channel==="salon"&&order.status==="entregado"&&!order.completedAt&&order.paymentStatus!=="paid"&&<Link href={`${pageRoutes.pos}?orderId=${order.id}`} className="button secondary salon-order-detail-pay" aria-disabled={busy} aria-busy={busy} tabIndex={busy?-1:undefined} onClick={event=>{if(busy)event.preventDefault();}}><Icon name="payment" size={18}/><span>Cobrar saldo</span></Link>}
+      {canManage&&cancellable(order)&&<Button icon="cancel" kind="ghost" className="order-detail-cancel" disabled={busy} onClick={()=>cancel(order)}>Cancelar pedido</Button>}
+      {canManage&&action&&<Button icon={action.status==="entregado"?"availability":action.icon} className="order-detail-primary" disabled={busy} aria-busy={busy} onClick={()=>advance(action.status)}>{action.label}</Button>}
+      {canCharge&&<Link href={`${pageRoutes.pos}?orderId=${order.id}`} className="button secondary salon-order-detail-pay" aria-disabled={busy} aria-busy={busy} tabIndex={busy?-1:undefined} onClick={event=>{if(busy)event.preventDefault();}}><Icon name="payment" size={18}/><span>Cobrar saldo</span></Link>}
      </div>
     </footer>}
    </>}
@@ -190,6 +197,7 @@ function OrderDetailSkeleton({close}:{close:()=>void}){
   </header>
   <div className="order-detail-body salon-order-detail-body salon-order-detail-skeleton-body" aria-label="Cargando detalle del pedido">
    <div className="salon-order-detail-content" aria-hidden="true">
+   <OrderAttributionSkeleton/>
    <section className="salon-order-detail-consumption salon-order-detail-skeleton-consumption">
     <div className="salon-order-detail-skeleton-section-head">
      <div><span className="salon-order-detail-skeleton-block heading"/></div>

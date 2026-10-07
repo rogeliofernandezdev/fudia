@@ -552,6 +552,13 @@ El skeleton reproduce estas mismas superficies y tamaños de importes.
 Las notas generales no son advertencias:
 usan superficies neutras y conservan el texto completo.
 
+La autoría se presenta como información de lectura, no como botones: «Mozo» y
+«Cobrado por», con etiquetas neutras, nombres completos que admiten salto de línea
+y un espaciado compartido. Salón y Pedidos usan la misma franja en sus detalles.
+Las tarjetas de mesa y las filas de Pedidos conservan estos nombres también en
+móvil. No se muestra un cobrador antes de registrar pagos. Las acciones de atención
+no aparecen para otro mozo; el acceso de cobro mantiene su permiso independiente.
+
 Pedidos reutiliza esta misma estructura del detalle de Salón: fecha bajo el
 título, un único conteo de unidades junto a Productos y cantidades circulares.
 «Registrado» muestra siempre la fecha y hora del registro en la zona del local,

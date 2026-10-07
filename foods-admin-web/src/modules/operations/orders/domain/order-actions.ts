@@ -1,6 +1,10 @@
 type OperationalOrder={channel:string;status:string;paymentStatus?:string;completedAt?:string};
 type OrderAction={status:string;label:string;icon:"receipt"|"truck"|"check"};
 
+export function canManageOrderService(order:{channel:string;waiterId?:string},userId?:string):boolean{
+  return order.channel!=="salon"||!order.waiterId||Boolean(userId&&order.waiterId===userId);
+}
+
 export function nextOrderAction(order:OperationalOrder):OrderAction|null{
   if(order.status==="nuevo")return{status:"confirmado",label:"Enviar a cocina",icon:"receipt"};
   if(order.status==="listo"){

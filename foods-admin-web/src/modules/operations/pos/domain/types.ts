@@ -27,6 +27,8 @@ export type POSOrderItem={
 };
 
 export type POSOrder={
+  waiterId?:string;
+  waiterName?:string;
   id:string;
   code:string;
   channel:string;

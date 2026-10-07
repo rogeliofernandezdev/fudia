@@ -20,6 +20,7 @@ export function SaleDetailDialog({loading,error,data,money,date,close,retry}:Pro
       <section className="sales-detail-context" aria-label="Datos de la venta"><dl>
         <div><dt>Cliente / mesa</dt><dd>{data.order.tableName||data.order.customerName||"Venta directa"}{data.order.tableName&&data.order.customerName&&<small>{data.order.customerName}</small>}</dd></div>
         <div><dt>Canal</dt><dd>{channels[data.order.channel]??data.order.channel}</dd></div>
+        {data.order.channel==="salon"&&<div><dt>Atendido por</dt><dd>{data.order.waiterName||"Sin asignar"}</dd></div>}
         <div><dt>Fecha del pedido</dt><dd>{date(data.order.createdAt)}</dd></div>
       </dl>{status&&<Status tone={status.tone}>{status.label}</Status>}</section>
       <section className="sales-detail-section" aria-labelledby="sales-detail-products"><h3 id="sales-detail-products">Productos</h3>
@@ -40,7 +41,7 @@ export function SaleDetailDialog({loading,error,data,money,date,close,retry}:Pro
       <section className="sales-detail-section" aria-labelledby="sales-detail-payments"><h3 id="sales-detail-payments">Pagos registrados</h3>
         {data.payments.length?<div className="sales-detail-payments">{data.payments.map(payment=><article key={payment.id}>
           <span className="sales-detail-payment-icon"><Icon name="payment" size={18}/></span><div><b>{payment.methodName||payment.method}</b><small>{date(payment.createdAt)}</small>
-          <small>{[payment.cashRegisterName,payment.createdByName].filter(Boolean).join(" · ")}</small>{payment.reference&&<p>{payment.reference}</p>}</div>
+          {payment.cashRegisterName&&<small>{payment.cashRegisterName}</small>}<small>Cobrado por: {payment.createdByName||"Sin información"}</small>{payment.reference&&<p>{payment.reference}</p>}</div>
           <div className="sales-detail-payment-value"><strong>{money(payment.netAmount)}</strong>{Number(payment.refundedAmount)>0&&<small>Cobrado {money(payment.amount)}<br/>Devuelto {money(payment.refundedAmount)}</small>}</div>
         </article>)}</div>:<p className="sales-detail-empty">No hay pagos registrados.</p>}
       </section>

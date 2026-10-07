@@ -6,6 +6,16 @@ las operaciones de local llevan también location_id.
 
 Fechas se guardan en UTC; importes monetarios usan numeric, nunca flotantes.
 
+## Responsabilidad de la atención
+
+`orders.waiter_id` identifica al usuario que tomó la comanda manual de la mesa.
+Se deriva de la sesión, está protegido por FK `(waiter_id, organization_id)` y
+permanece independiente de `created_by` y de los autores de pagos. Editar o cobrar
+no lo sustituye. La asignación termina con ese servicio; una nueva ocupación de
+la misma mesa pertenece a un pedido nuevo con su propio mozo. La migración 72
+vincula las comandas históricas manuales de Salón a su creador de la misma empresa;
+no inventa responsables de WhatsApp ni de registros sin autor.
+
 ## Entrega y cierre de pedidos de mesa
 
 En Salón, `status='entregado'` confirma que el mozo llevó el pedido a la mesa.

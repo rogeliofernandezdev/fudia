@@ -31,6 +31,9 @@ export type Order={
   reference:string;
   tableId:string;
   tableName:string;
+  waiterId?:string;
+  waiterName?:string;
+  collectedByNames?:string[];
   notes:string;
   subtotal:string;
   deliveryFee:string;

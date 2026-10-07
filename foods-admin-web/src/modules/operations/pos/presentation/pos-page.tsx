@@ -245,6 +245,7 @@ function POSDetailDialog({loading,error,data,canManage,hasShift,formatMoney,form
       </section>
 
       <section className="pos-detail-section">
+        {data.order.channel==="salon"&&<p>Mozo: <b>{data.order.waiterName||"Sin asignar"}</b></p>}
         <header><div><small>CONSUMO</small><h3>Productos del pedido</h3></div><span>{data.order.items?.length??0} líneas</span></header>
         <div className="pos-order-lines">{(data.order.items??[]).map(item=><div key={item.id}><b>{Number(item.qty)}×</b><span>{item.name}{item.note&&<small><Icon name="edit" size={11}/>{item.note}</small>}</span><strong>{formatMoney(Number(item.qty)*Number(item.unitPrice))}</strong></div>)}</div>
       </section>
@@ -253,7 +254,7 @@ function POSDetailDialog({loading,error,data,canManage,hasShift,formatMoney,form
         <header><div><small>PAGOS</small><h3>Historial del pedido</h3></div><span>{data.payments.length}</span></header>
         {data.payments.length?<div className="pos-payment-list">{data.payments.map(payment=>{
           const net=Number(payment.netAmount);
-          return <article key={payment.id}><span className={"pos-payment-method pm-"+payment.method}><Icon name={paymentMethodMeta[payment.method]?.icon??"wallet"} size={15}/></span><div><b>{paymentMethodMeta[payment.method]?.label??"Otro"}</b><small>{payment.cashRegisterName} · {formatDateTime(payment.createdAt)} · {payment.createdByName}</small>{payment.reference&&<em>{payment.reference}</em>}</div><span className="pos-payment-values"><b>{formatMoney(Number(payment.amount))}</b>{Number(payment.refundedAmount)>0&&<small>Devuelto {formatMoney(Number(payment.refundedAmount))}</small>}</span>{canManage&&net>0&&!closed&&<Button kind="ghost" className="pos-refund-action" icon="undo" disabled={!hasShift} onClick={()=>refund(payment)}>Devolver</Button>}</article>})}</div>
+          return <article key={payment.id}><span className={"pos-payment-method pm-"+payment.method}><Icon name={paymentMethodMeta[payment.method]?.icon??"wallet"} size={15}/></span><div><b>{paymentMethodMeta[payment.method]?.label??"Otro"}</b><small>{payment.cashRegisterName} · {formatDateTime(payment.createdAt)}</small><small>Cobrado por: {payment.createdByName||"Sin información"}</small>{payment.reference&&<em>{payment.reference}</em>}</div><span className="pos-payment-values"><b>{formatMoney(Number(payment.amount))}</b>{Number(payment.refundedAmount)>0&&<small>Devuelto {formatMoney(Number(payment.refundedAmount))}</small>}</span>{canManage&&net>0&&!closed&&<Button kind="ghost" className="pos-refund-action" icon="undo" disabled={!hasShift} onClick={()=>refund(payment)}>Devolver</Button>}</article>})}</div>
         :<div className="pos-payments-empty">Aún no se registraron pagos para este pedido.</div>}
       </section>
     </div>}

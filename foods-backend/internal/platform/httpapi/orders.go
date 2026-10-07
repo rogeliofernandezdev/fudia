@@ -32,29 +32,32 @@ type orderItem struct {
 	Modifiers  []orderItemModifier  `json:"modifiers,omitempty"`
 }
 type order struct {
-	ID            string      `json:"id"`
-	Code          string      `json:"code"`
-	Channel       string      `json:"channel"`
-	Status        string      `json:"status"`
-	CompletedAt   string      `json:"completedAt,omitempty"`
-	CustomerID    string      `json:"customerId"`
-	CustomerName  string      `json:"customerName"`
-	CustomerPhone string      `json:"customerPhone"`
-	Address       string      `json:"address"`
-	Reference     string      `json:"reference"`
-	TableID       string      `json:"tableId"`
-	TableName     string      `json:"tableName"`
-	Notes         string      `json:"notes"`
-	Subtotal      string      `json:"subtotal"`
-	DeliveryFee   string      `json:"deliveryFee"`
-	Total         string      `json:"total"`
-	CreatedAt     string      `json:"createdAt"`
-	UpdatedAt     string      `json:"updatedAt"`
-	ItemCount       int         `json:"itemCount"`
-	Items           []orderItem `json:"items,omitempty"`
-	PaidAmount      string      `json:"paidAmount,omitempty"`
-	RemainingAmount string      `json:"remainingAmount,omitempty"`
-	PaymentStatus   string      `json:"paymentStatus,omitempty"`
+	ID               string      `json:"id"`
+	Code             string      `json:"code"`
+	Channel          string      `json:"channel"`
+	Status           string      `json:"status"`
+	CompletedAt      string      `json:"completedAt,omitempty"`
+	CustomerID       string      `json:"customerId"`
+	CustomerName     string      `json:"customerName"`
+	CustomerPhone    string      `json:"customerPhone"`
+	Address          string      `json:"address"`
+	Reference        string      `json:"reference"`
+	TableID          string      `json:"tableId"`
+	TableName        string      `json:"tableName"`
+	WaiterID         string      `json:"waiterId"`
+	WaiterName       string      `json:"waiterName"`
+	CollectedByNames []string    `json:"collectedByNames"`
+	Notes            string      `json:"notes"`
+	Subtotal         string      `json:"subtotal"`
+	DeliveryFee      string      `json:"deliveryFee"`
+	Total            string      `json:"total"`
+	CreatedAt        string      `json:"createdAt"`
+	UpdatedAt        string      `json:"updatedAt"`
+	ItemCount        int         `json:"itemCount"`
+	Items            []orderItem `json:"items,omitempty"`
+	PaidAmount       string      `json:"paidAmount,omitempty"`
+	RemainingAmount  string      `json:"remainingAmount,omitempty"`
+	PaymentStatus    string      `json:"paymentStatus,omitempty"`
 }
 type orderItemSelectionInput struct {
 	GroupID   string `json:"groupId"`
@@ -121,7 +124,9 @@ type orderUpdateInput struct {
 	Items         []orderItemInput `json:"items"`
 }
 
-const orderColumns = `id,code,channel,status,COALESCE(customer_id::text,''),customer_name,customer_phone,address,reference,COALESCE(table_id::text,''),COALESCE((SELECT name FROM tables t WHERE t.id=orders.table_id),''),notes,subtotal::text,delivery_fee::text,total::text,to_char(created_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),to_char(updated_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),COALESCE(to_char(completed_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),'')`
+const orderColumns = `id,code,channel,status,COALESCE(customer_id::text,''),customer_name,customer_phone,address,reference,COALESCE(table_id::text,''),COALESCE((SELECT name FROM tables t WHERE t.id=orders.table_id),''),notes,subtotal::text,delivery_fee::text,total::text,to_char(created_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),to_char(updated_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),COALESCE(to_char(completed_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),''),
+COALESCE(waiter_id::text,''),COALESCE((SELECT u.full_name FROM users u WHERE u.id=orders.waiter_id AND u.organization_id=orders.organization_id),''),
+ARRAY(SELECT DISTINCT u.full_name FROM payments p JOIN users u ON u.id=p.created_by AND u.organization_id=p.organization_id WHERE p.order_id=orders.id AND p.organization_id=orders.organization_id AND p.location_id=orders.location_id ORDER BY u.full_name)`
 
 var orderChannels = []map[string]string{{"value": "salon", "label": "Salón"}, {"value": "mostrador", "label": "Mostrador"}, {"value": "recojo", "label": "Recojo"}, {"value": "delivery", "label": "Delivery"}, {"value": "whatsapp", "label": "WhatsApp"}}
 var orderStatuses = []map[string]string{{"value": "nuevo", "label": "Nuevo"}, {"value": "confirmado", "label": "Confirmado"}, {"value": "preparando", "label": "Preparando"}, {"value": "listo", "label": "Listo"}, {"value": "en_camino", "label": "En camino"}, {"value": "entregado", "label": "Entregado"}, {"value": "cancelado", "label": "Cancelado"}}
@@ -137,8 +142,22 @@ var orderTransitions = map[string][]string{
 
 func scanOrder(row pgx.Row) (order, error) {
 	var o order
-	err := row.Scan(&o.ID, &o.Code, &o.Channel, &o.Status, &o.CustomerID, &o.CustomerName, &o.CustomerPhone, &o.Address, &o.Reference, &o.TableID, &o.TableName, &o.Notes, &o.Subtotal, &o.DeliveryFee, &o.Total, &o.CreatedAt, &o.UpdatedAt, &o.CompletedAt)
+	err := row.Scan(&o.ID, &o.Code, &o.Channel, &o.Status, &o.CustomerID, &o.CustomerName, &o.CustomerPhone, &o.Address, &o.Reference, &o.TableID, &o.TableName, &o.Notes, &o.Subtotal, &o.DeliveryFee, &o.Total, &o.CreatedAt, &o.UpdatedAt, &o.CompletedAt, &o.WaiterID, &o.WaiterName, &o.CollectedByNames)
 	return o, err
+}
+
+// Ownership supplements permissions; it does not grant orders.manage.
+// Unassigned legacy/remote services retain their existing permission policy.
+func canManageOrderService(userID, channel, waiterID string) bool {
+	return channel != "salon" || waiterID == "" || (userID != "" && userID == waiterID)
+}
+
+func requireOrderWaiter(w http.ResponseWriter, s scope, channel, waiterID string) bool {
+	if canManageOrderService(s.UserID, channel, waiterID) {
+		return true
+	}
+	fail(w, http.StatusForbidden, "order_assigned_to_another_waiter", "Esta mesa está siendo atendida por otro mozo. Solo puedes consultar su detalle.")
+	return false
 }
 func validOrderChannel(ch string) bool {
 	return ch == "salon" || ch == "mostrador" || ch == "recojo" || ch == "delivery" || ch == "whatsapp"
@@ -334,11 +353,11 @@ func (a *API) prepareOrderItems(r *http.Request, tx pgx.Tx, s scope, existingOrd
 			}
 			item := preparedOrderItem{
 				ProductID: productID,
-				Name: productName,
-				Qty: in.Qty,
+				Name:      productName,
+				Qty:       in.Qty,
 				UnitPrice: productPrice + modifierSurcharge,
-				Note: strings.TrimSpace(in.Note),
-				ItemType: "product",
+				Note:      strings.TrimSpace(in.Note),
+				ItemType:  "product",
 				Modifiers: modifiers,
 			}
 			prepared = append(prepared, item)
@@ -399,12 +418,12 @@ func (a *API) prepareOrderItems(r *http.Request, tx pgx.Tx, s scope, existingOrd
 				}
 				if sameSelections {
 					item := preparedOrderItem{
-						ProductID: productID,
-						Name: existingName,
-						Qty: in.Qty,
-						UnitPrice: existingUnitPrice,
-						Note: strings.TrimSpace(in.Note),
-						ItemType: "combo",
+						ProductID:  productID,
+						Name:       existingName,
+						Qty:        in.Qty,
+						UnitPrice:  existingUnitPrice,
+						Note:       strings.TrimSpace(in.Note),
+						ItemType:   "combo",
 						Selections: existingSelections,
 					}
 					prepared = append(prepared, item)
@@ -448,17 +467,17 @@ func (a *API) prepareOrderItems(r *http.Request, tx pgx.Tx, s scope, existingOrd
 
 		type comboOption struct {
 			ProductID string
-			Name string
+			Name      string
 			Surcharge float64
 			Available bool
 		}
 		type comboGroup struct {
-			ID string
-			Name string
+			ID       string
+			Name     string
 			Required bool
-			Min int
-			Max int
-			Options map[string]comboOption
+			Min      int
+			Max      int
+			Options  map[string]comboOption
 		}
 		groups := map[string]*comboGroup{}
 		groupOrder := []string{}
@@ -563,10 +582,10 @@ func (a *API) prepareOrderItems(r *http.Request, tx pgx.Tx, s scope, existingOrd
 					return nil, 0, &orderPreparationError{Status: 409, Code: "combo_option_unavailable", Message: option.Name + " ya no está disponible."}
 				}
 				selections = append(selections, preparedOrderSelection{
-					GroupID: group.ID,
+					GroupID:   group.ID,
 					GroupName: group.Name,
 					ProductID: option.ProductID,
-					Name: option.Name,
+					Name:      option.Name,
 					Surcharge: option.Surcharge,
 				})
 				surchargeTotal += option.Surcharge
@@ -574,12 +593,12 @@ func (a *API) prepareOrderItems(r *http.Request, tx pgx.Tx, s scope, existingOrd
 		}
 
 		item := preparedOrderItem{
-			ProductID: productID,
-			Name: comboName,
-			Qty: in.Qty,
-			UnitPrice: basePrice + surchargeTotal,
-			Note: strings.TrimSpace(in.Note),
-			ItemType: "combo",
+			ProductID:  productID,
+			Name:       comboName,
+			Qty:        in.Qty,
+			UnitPrice:  basePrice + surchargeTotal,
+			Note:       strings.TrimSpace(in.Note),
+			ItemType:   "combo",
 			Selections: selections,
 		}
 		prepared = append(prepared, item)
@@ -675,8 +694,8 @@ func (a *API) prepareOrderItems(r *http.Request, tx pgx.Tx, s scope, existingOrd
 		}
 		if plannedOptionUsage[key] > allowedForOrder {
 			return nil, 0, &orderPreparationError{
-				Status: 409,
-				Code: "combo_option_quota_exceeded",
+				Status:  409,
+				Code:    "combo_option_quota_exceeded",
 				Message: optionName + " ya alcanzó el cupo reservado para este menú.",
 			}
 		}
@@ -790,21 +809,25 @@ func (a *API) getOrdersFloor(w http.ResponseWriter, r *http.Request) {
 	rows, err := a.db.Query(r.Context(), `
 		SELECT t.id,t.name,t.zone,t.seats,
 		  o.id,COALESCE(o.code,''),COALESCE(o.channel,''),COALESCE(o.status,''),COALESCE(o.customer_id::text,''),COALESCE(o.customer_name,''),COALESCE(o.customer_phone,''),COALESCE(o.address,''),COALESCE(o.reference,''),COALESCE(o.table_id::text,''),'',COALESCE(o.notes,''),COALESCE(o.subtotal::text,'0'),COALESCE(o.delivery_fee::text,'0'),COALESCE(o.total::text,'0'),COALESCE(to_char(o.created_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),''),COALESCE(to_char(o.updated_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),''),
-		  COALESCE(item_totals.item_count,0),COALESCE(payment_totals.paid,0)::text,COALESCE(to_char(o.completed_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),'')
+		  COALESCE(item_totals.item_count,0),COALESCE(payment_totals.paid,0)::text,COALESCE(to_char(o.completed_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),''),
+		  COALESCE(o.waiter_id::text,''),COALESCE(waiter.full_name,''),COALESCE(payment_totals.collectors,'{}'::text[])
 		FROM tables t
 		LEFT JOIN orders o
 		  ON o.table_id=t.id
 		 AND o.organization_id=t.organization_id
 		 AND o.location_id=t.location_id
 		 AND o.status<>'cancelado' AND (o.status<>'entregado' OR (o.channel='salon' AND o.completed_at IS NULL))
+		LEFT JOIN users waiter ON waiter.id=o.waiter_id AND waiter.organization_id=o.organization_id
 		LEFT JOIN LATERAL (
 		  SELECT COALESCE(sum(i.qty)::int,0) AS item_count
 		  FROM order_items i
 		  WHERE i.order_id=o.id AND i.organization_id=o.organization_id
 		) item_totals ON o.id IS NOT NULL
 		LEFT JOIN LATERAL (
-		  SELECT COALESCE(sum(p.amount-COALESCE(refunds.refunded,0)),0) AS paid
+		  SELECT COALESCE(sum(p.amount-COALESCE(refunds.refunded,0)),0) AS paid,
+		    array_agg(DISTINCT collector.full_name ORDER BY collector.full_name) FILTER (WHERE collector.id IS NOT NULL) AS collectors
 		  FROM payments p
+		  JOIN users collector ON collector.id=p.created_by AND collector.organization_id=p.organization_id
 		  LEFT JOIN LATERAL (
 		    SELECT COALESCE(sum(pr.amount),0) AS refunded
 		    FROM payment_refunds pr
@@ -834,7 +857,7 @@ func (a *API) getOrdersFloor(w http.ResponseWriter, r *http.Request) {
 			&ft.ID, &ft.Name, &ft.Zone, &ft.Seats,
 			&oid, &o.Code, &o.Channel, &o.Status, &o.CustomerID, &o.CustomerName, &o.CustomerPhone,
 			&o.Address, &o.Reference, &o.TableID, &o.TableName, &o.Notes, &o.Subtotal, &o.DeliveryFee,
-			&o.Total, &o.CreatedAt, &o.UpdatedAt, &o.ItemCount, &paidText, &o.CompletedAt,
+			&o.Total, &o.CreatedAt, &o.UpdatedAt, &o.ItemCount, &paidText, &o.CompletedAt, &o.WaiterID, &o.WaiterName, &o.CollectedByNames,
 		); err != nil {
 			fail(w, 503, "orders_unavailable", "No pudimos cargar el salón.")
 			return
@@ -968,8 +991,8 @@ func (a *API) createOrder(w http.ResponseWriter, r *http.Request) {
 
 	var o order
 	o, err = scanOrder(tx.QueryRow(r.Context(), `
-		INSERT INTO orders(organization_id,location_id,channel,customer_id,customer_name,customer_phone,address,reference,table_id,notes,subtotal,delivery_fee,total,status,created_by)
-		VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+		INSERT INTO orders(organization_id,location_id,channel,customer_id,customer_name,customer_phone,address,reference,table_id,notes,subtotal,delivery_fee,total,status,created_by,waiter_id)
+		VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,CASE WHEN $3='salon' AND $9::uuid IS NOT NULL AND EXISTS(SELECT 1 FROM users u WHERE u.id=$15::uuid AND u.organization_id=$1::uuid) THEN $15::uuid ELSE NULL END)
 		RETURNING `+orderColumns,
 		s.OrganizationID, s.LocationID, in.Channel, customerID, in.CustomerName,
 		strings.TrimSpace(in.CustomerPhone), strings.TrimSpace(in.Address), strings.TrimSpace(in.Reference),
@@ -1027,14 +1050,17 @@ func (a *API) updateOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback(r.Context())
 
-	var currentStatus, channel string
-	err = tx.QueryRow(r.Context(), `SELECT status,channel FROM orders WHERE id=$1 AND organization_id=$2 AND location_id=$3 FOR UPDATE`, r.PathValue("id"), s.OrganizationID, s.LocationID).Scan(&currentStatus, &channel)
+	var currentStatus, channel, waiterID string
+	err = tx.QueryRow(r.Context(), `SELECT status,channel,COALESCE(waiter_id::text,'') FROM orders WHERE id=$1 AND organization_id=$2 AND location_id=$3 FOR UPDATE`, r.PathValue("id"), s.OrganizationID, s.LocationID).Scan(&currentStatus, &channel, &waiterID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		fail(w, 404, "order_not_found", "El pedido no existe.")
 		return
 	}
 	if err != nil {
 		fail(w, 503, "order_unavailable", "No pudimos actualizar el pedido.")
+		return
+	}
+	if !requireOrderWaiter(w, s, channel, waiterID) {
 		return
 	}
 	if !editableOrderStatus(currentStatus) {
@@ -1153,20 +1179,23 @@ func (a *API) updateOrderStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback(r.Context())
 
-	var current, channel, tableID string
+	var current, channel, tableID, waiterID string
 	var completed bool
 	var total float64
 	err = tx.QueryRow(r.Context(), `
-		SELECT status,channel,COALESCE(table_id::text,''),total::float8,completed_at IS NOT NULL
+		SELECT status,channel,COALESCE(table_id::text,''),total::float8,completed_at IS NOT NULL,COALESCE(waiter_id::text,'')
 		FROM orders
 		WHERE id=$1 AND organization_id=$2 AND location_id=$3
-		FOR UPDATE`, r.PathValue("id"), s.OrganizationID, s.LocationID).Scan(&current, &channel, &tableID, &total, &completed)
+		FOR UPDATE`, r.PathValue("id"), s.OrganizationID, s.LocationID).Scan(&current, &channel, &tableID, &total, &completed, &waiterID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		fail(w, 404, "order_not_found", "El pedido no existe.")
 		return
 	}
 	if err != nil {
 		fail(w, 503, "order_unavailable", "No pudimos actualizar el pedido.")
+		return
+	}
+	if !requireOrderWaiter(w, s, channel, waiterID) {
 		return
 	}
 	if (current == "confirmado" && in.Status == "preparando") || (current == "preparando" && in.Status == "listo") {

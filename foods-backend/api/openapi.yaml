@@ -1042,7 +1042,7 @@ paths:
     parameters: [{ $ref: "#/components/parameters/EntityId" }]
     patch:
       operationId: updateOperationalOrderStatus
-      description: En Salón la entrega puede registrarse antes del cobro. La mesa se libera automáticamente cuando la entrega y el pago están completos, sin importar su orden; completedAt identifica ese cierre.
+      description: "Las mesas asignadas solo admiten acciones de atención de su mozo, además de orders.manage; otro usuario recibe 403 order_assigned_to_another_waiter. En Salón la entrega puede registrarse antes del cobro. La mesa se libera automáticamente cuando la entrega y el pago están completos, sin importar su orden; completedAt identifica ese cierre. Cocina y Caja conservan sus permisos independientes."
       summary: Aplica una transición operativa permitida del pedido
       security: [{ sessionCookie: [] }]
       requestBody: { required: true, content: { application/json: { schema: { type: object, required: [status], properties: { status: { type: string, enum: [confirmado, en_camino, entregado, cancelado] } } } } } }
@@ -1140,14 +1140,26 @@ paths:
       operationId: getOrder
       security: [{ sessionCookie: [] }]
       responses: { "200": { description: Pedido con líneas de detalle, content: { application/json: { schema: { $ref: "#/components/schemas/Order" } } } }, "404": { description: No encontrado } }
+    patch:
+      operationId: updateOrder
+      summary: Actualiza una comanda aún editable
+      description: "Exige orders.manage y, para una mesa asignada, ser su mozo. Cambiar waiterId en el cuerpo no transfiere la asignación. Pedidos preparados, con rondas o con pagos requieren sus flujos específicos."
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/OrderUpdateInput" } } } }
+      responses:
+        "200": { description: Comanda actualizada, content: { application/json: { schema: { $ref: "#/components/schemas/Order" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { description: Permiso insuficiente o mesa asignada a otro mozo, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "404": { description: Pedido no encontrado en la empresa y local }
+        "409": { description: Comanda no editable }
   /v1/admin/orders/{id}/status:
     parameters: [{ $ref: "#/components/parameters/EntityId" }]
     patch:
       operationId: updateOrderStatus
-      description: En Salón, entregado registra la entrega aunque haya saldo. completedAt identifica el cierre; repetir entregado permite liberar una mesa entregada solo cuando está pagada.
+      description: "Exige orders.manage y, para una mesa asignada, ser su mozo; otro usuario recibe 403 order_assigned_to_another_waiter. Entregado registra la entrega aunque haya saldo. La mesa se libera automáticamente al completar entrega y pago. Cocina y Caja mantienen sus permisos independientes."
       security: [{ sessionCookie: [] }]
       requestBody: { required: true, content: { application/json: { schema: { type: object, required: [status], properties: { status: { type: string, enum: [confirmado, preparando, listo, en_camino, entregado, cancelado] } } } } } }
-      responses: { "200": { description: Estado actualizado, content: { application/json: { schema: { $ref: "#/components/schemas/Order" } } } }, "404": { description: No encontrado }, "409": { description: Transición no permitida } }
+      responses: { "200": { description: Estado actualizado, content: { application/json: { schema: { $ref: "#/components/schemas/Order" } } } }, "404": { description: No encontrado }, "409": { description: Transición no permitida }, "403": { $ref: "#/components/responses/Forbidden" } }
   /v1/admin/kitchen/tickets:
     get:
       operationId: listKitchenTickets
@@ -1386,8 +1398,44 @@ components:
     ConciergeHandoff: { type: object, required: [id, tableId, tableName, conversationId, customerPhone, reason, status, requestedAt], properties: { id: { type: string, format: uuid }, tableId: { type: string, format: uuid }, tableName: { type: string }, conversationId: { type: string }, customerPhone: { type: string }, reason: { type: string }, status: { type: string, enum: [pending, resolved] }, requestedAt: { type: string, format: date-time }, resolvedAt: { type: [string, "null"], format: date-time }, resolvedByName: { type: [string, "null"] } } }
     OrderItemInput: { type: object, required: [productId, qty], properties: { productId: { type: string, format: uuid }, name: { type: string, maxLength: 160 }, qty: { type: number, exclusiveMinimum: 0 }, unitPrice: { type: number, minimum: 0, description: "Opcional por compatibilidad. En el alta el servidor obtiene el precio del catálogo; el cliente puede omitirlo." }, note: { type: string, maxLength: 240 }, selections: { type: array, items: { $ref: "#/components/schemas/OrderComboSelectionInput" } }, modifiers: { type: array, items: { $ref: "#/components/schemas/OrderModifierSelectionInput" } }, reprice: { type: boolean } } }
     OrderInput: { type: object, required: [channel, items], description: "Para delivery se requieren customerName, customerPhone válido (7 a 15 dígitos; admite prefijo + y separadores) y address. Solo salón admite tableId. El servidor recalcula precios y disponibilidad del catálogo en el alcance de la sesión. El alta manual desde Pedidos envía sendToKitchen=true.", properties: { channel: { type: string, enum: [salon, mostrador, recojo, delivery, whatsapp] }, customerId: { type: string, format: uuid }, customerName: { type: string, maxLength: 160 }, customerPhone: { type: string, maxLength: 30 }, address: { type: string, maxLength: 240 }, reference: { type: string, maxLength: 240 }, tableId: { type: string, format: uuid }, notes: { type: string, maxLength: 500 }, deliveryFee: { type: number, minimum: 0 }, sendToKitchen: { type: boolean, default: false, description: "true registra el pedido Confirmado y lo incorpora a Cocina; false guarda un pedido Nuevo pendiente de envío." }, items: { type: array, minItems: 1, items: { $ref: "#/components/schemas/OrderItemInput" } } } }
+    OrderUpdateInput:
+      type: object
+      required: [items]
+      properties:
+        customerName: { type: string }
+        customerPhone: { type: string }
+        address: { type: string }
+        reference: { type: string }
+        notes: { type: string }
+        deliveryFee: { type: number, minimum: 0 }
+        items: { type: array, minItems: 1, items: { allOf: [{ $ref: "#/components/schemas/OrderItemInput" }, { type: object, properties: { id: { type: string, format: uuid, description: Línea existente para conservar el precio registrado } } }] } }
     OrderItem: { allOf: [{ $ref: "#/components/schemas/OrderItemInput" }, { type: object, required: [id, unitPrice], properties: { id: { type: string, format: uuid }, modifiers: { type: array, items: { $ref: "#/components/schemas/OrderModifierSelection" } } } }] }
-    Order: { type: object, required: [id, code, channel, status, customerName, customerPhone, address, reference, tableId, tableName, notes, subtotal, deliveryFee, total, createdAt, updatedAt], properties: { id: { type: string, format: uuid }, code: { type: string }, channel: { type: string, enum: [salon, mostrador, recojo, delivery, whatsapp] }, status: { type: string, enum: [nuevo, confirmado, preparando, listo, en_camino, entregado, cancelado] }, customerId: { type: string }, customerName: { type: string }, customerPhone: { type: string }, address: { type: string }, reference: { type: string }, tableId: { type: string }, tableName: { type: string }, notes: { type: string }, subtotal: { type: string }, deliveryFee: { type: string }, total: { type: string }, createdAt: { type: string, format: date-time }, updatedAt: { type: string, format: date-time }, completedAt: { type: string, format: date-time, description: Fecha de cierre operativo; ausente mientras una mesa entregada conserva su cuenta abierta }, items: { type: array, items: { $ref: "#/components/schemas/OrderItem" } } } }
+    Order:
+      type: object
+      required: [id, code, channel, status, customerName, customerPhone, address, reference, tableId, tableName, waiterId, waiterName, collectedByNames, notes, subtotal, deliveryFee, total, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        channel: { type: string, enum: [salon, mostrador, recojo, delivery, whatsapp] }
+        status: { type: string, enum: [nuevo, confirmado, preparando, listo, en_camino, entregado, cancelado] }
+        customerId: { type: string }
+        customerName: { type: string }
+        customerPhone: { type: string }
+        address: { type: string }
+        reference: { type: string }
+        tableId: { type: string }
+        tableName: { type: string }
+        waiterId: { type: string, readOnly: true, description: "Usuario que tomó la comanda de Salón, derivado de la sesión al crearla. Vacío si no hay asignación. No se admite en altas ni ediciones." }
+        waiterName: { type: string, readOnly: true, description: Nombre del responsable de atención dentro de la empresa }
+        collectedByNames: { type: array, readOnly: true, uniqueItems: true, items: { type: string }, description: "Nombres de quienes registraron pagos de este pedido y local, ordenados y sin duplicados; [] si no existen cobros. Incluye pagos luego devueltos para conservar autoría. Cada pago del detalle conserva su propio createdByName." }
+        notes: { type: string }
+        subtotal: { type: string }
+        deliveryFee: { type: string }
+        total: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        completedAt: { type: string, format: date-time, description: Fecha de cierre operativo; ausente mientras una mesa entregada conserva su cuenta abierta }
+        items: { type: array, items: { $ref: "#/components/schemas/OrderItem" } }
     OperationalOrderList: { type: object, required: [items, total, page, pageSize, channelCounts, channelOptions, statusOptions, currencySymbol], properties: { items: { type: array, items: { $ref: "#/components/schemas/Order" } }, total: { type: integer }, page: { type: integer }, pageSize: { type: integer }, channelCounts: { type: object, additionalProperties: { type: integer } }, channelOptions: { type: array, items: { $ref: "#/components/schemas/Option" } }, statusOptions: { type: array, items: { $ref: "#/components/schemas/Option" } }, currencySymbol: { type: string } } }
     KitchenTicket: { type: object, required: [id, orderId, roundNumber, code, channel, status, customerName, tableName, notes, createdAt, updatedAt, items], properties: { id: { type: string, format: uuid }, orderId: { type: string, format: uuid }, roundNumber: { type: integer, minimum: 0 }, code: { type: string }, channel: { type: string, enum: [salon, mostrador, recojo, delivery, whatsapp] }, status: { type: string, enum: [confirmado, preparando, listo] }, customerName: { type: string }, tableName: { type: string }, notes: { type: string }, createdAt: { type: string, format: date-time }, updatedAt: { type: string, format: date-time }, targetMinutes: { type: [integer, "null"], minimum: 1 }, items: { type: array, items: { $ref: "#/components/schemas/OrderItem" } } } }
     UserAssignment: { type: object, required: [roleId, locationId], properties: { roleId: { type: string, format: uuid }, locationId: { type: string, format: uuid } } }

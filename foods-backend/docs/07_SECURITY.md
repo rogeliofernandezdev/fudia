@@ -12,3 +12,11 @@ Los roles mantienen dos dimensiones independientes:
 Ocultar una opción no sustituye la autorización de sus APIs. Toda operación
 continúa validando `permissions` en backend; los roles inactivos no conceden
 accesos ni permisos. El rol Administrador usa `*` en ambas dimensiones.
+
+## Propiedad de la atención en mesa
+
+`orders.manage` no permite operar una mesa asignada a otra persona. Edición y
+transiciones de atención validan `orders.waiter_id` bajo bloqueo de fila, junto
+al alcance de empresa/local. No existe una excepción silenciosa por permiso
+amplio. La lectura autorizada se conserva; Cocina y Caja tienen flujos separados
+con sus permisos y no transfieren la asignación al preparar o cobrar.

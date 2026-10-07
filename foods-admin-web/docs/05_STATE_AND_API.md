@@ -69,6 +69,21 @@ selecciona el canal creado, limpia filtros e invalida Pedidos, Cocina, POS,
 Dashboard y disponibilidad. No se registran pagos desde este formulario: el cobro
 sigue en POS. Delivery continúa con Listo → En camino → Entregado.
 
+## Responsable de mesa y autoría del cobro
+
+Al guardar la comanda de una mesa, la API asigna al usuario autenticado como mozo.
+Salón y Pedidos muestran «Mozo» y, cuando existen pagos, «Cobrado por», con los
+nombres reales del servidor. Sus detalles reutilizan una franja de datos de lectura;
+Ventas y POS identifican además al autor de cada pago. Nunca se toma al cajero
+del turno como autor de un cobro que realizó otro integrante.
+
+Las acciones de atención combinan `orders.manage` con `waiterId`: otra persona
+consulta el detalle sin editar, cancelar, enviar a cocina o confirmar la entrega.
+No se requiere un paso adicional de asignación. Cobrar sigue reservado a
+`cash.manage` y al turno vigente, independientemente de la responsabilidad del mozo.
+La API vuelve a validar la propiedad en cada mutación. No se transfiere la mesa
+por abrir su detalle ni al cobrarla. Cada nueva ocupación obtiene su propio responsable.
+
 ## Entrega en Salón
 
 Salón y Pedidos ofrecen «Confirmar entrega» cuando Cocina termina una
