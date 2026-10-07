@@ -16,9 +16,9 @@ type cashRowQuerier interface {
 }
 
 type cashShiftUserView struct {
-	UserID     string  `json:"userId"`
-	Name       string  `json:"name"`
-	AssignedAt string  `json:"assignedAt"`
+	UserID     string `json:"userId"`
+	Name       string `json:"name"`
+	AssignedAt string `json:"assignedAt"`
 }
 
 type cashUserOption struct {
@@ -401,12 +401,13 @@ func (a *API) canSeeCashExpected(r *http.Request, s scope) bool {
 		  WHERE ur.user_id=$1
 		    AND (ur.location_id IS NULL OR ur.location_id=$2)
 		    AND ro.active
+		    AND ro.organization_id=$3
 		    AND (
 		      ro.permissions @> ARRAY['*']::text[]
 		      OR ro.permissions @> ARRAY['cash.expected.read']::text[]
 		    )
 		)
-	`, s.UserID, s.LocationID).Scan(&allowed); err != nil {
+	`, s.UserID, s.LocationID, s.OrganizationID).Scan(&allowed); err != nil {
 		return false
 	}
 	return allowed

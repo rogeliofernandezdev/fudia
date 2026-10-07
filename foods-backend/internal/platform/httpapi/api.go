@@ -411,10 +411,17 @@ func (a *API) auth(next http.Handler) http.Handler {
 }
 func (a *API) dashboard(w http.ResponseWriter, r *http.Request) {
 	s := r.Context().Value(scopeKey{}).(scope)
+	canSeeExpected := a.canSeeCashExpected(r, s)
+	tx, err := a.db.BeginTx(r.Context(), pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly})
+	if err != nil {
+		fail(w, 503, "dashboard_unavailable", "No pudimos calcular el resumen operativo.")
+		return
+	}
+	defer tx.Rollback(r.Context())
 	var salesNet, averageTicket string
 	var paidOrders, openOrders, critical, purchases, reservationsToday, kitchenPending int
 
-	err := a.db.QueryRow(r.Context(), `
+	err = tx.QueryRow(r.Context(), `
 		WITH loc AS (
 		  SELECT timezone
 		  FROM locations
@@ -440,13 +447,16 @@ func (a *API) dashboard(w http.ResponseWriter, r *http.Request) {
 		    - COALESCE((SELECT sum(amount) FROM today_refunds),0) AS net
 		),
 		paid AS (
-		  SELECT count(DISTINCT order_id)::int AS orders
-		  FROM today_payments
+		  SELECT count(*)::int AS orders,COALESCE(sum(o.total),0) AS total
+		  FROM orders o
+		  WHERE o.organization_id=$1 AND o.location_id=$2 AND o.status<>'cancelado'
+		    AND (`+netPaidSQL+`) >= o.total
+		    AND EXISTS(SELECT 1 FROM today_payments p WHERE p.order_id=o.id)
 		)
 		SELECT
 		  sales.net::text,
 		  paid.orders,
-		  CASE WHEN paid.orders>0 THEN (sales.net/paid.orders)::text ELSE '0' END,
+		  CASE WHEN paid.orders>0 THEN (paid.total/paid.orders)::text ELSE '0' END,
 		  (SELECT count(*) FROM orders
 		   WHERE organization_id=$1 AND location_id=$2
 		     AND status<>'cancelado' AND (status<>'entregado' OR (channel='salon' AND completed_at IS NULL))),
@@ -479,7 +489,7 @@ func (a *API) dashboard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	hourly := []map[string]any{}
-	rows, err := a.db.Query(r.Context(), `
+	rows, err := tx.Query(r.Context(), `
 		SELECT hour,COALESCE(sum(value),0)::text
 		FROM (
 		  SELECT extract(hour FROM p.created_at AT TIME ZONE l.timezone)::int AS hour,p.amount AS value
@@ -494,19 +504,29 @@ func (a *API) dashboard(w http.ResponseWriter, r *http.Request) {
 		) movements
 		GROUP BY hour ORDER BY hour
 	`, s.OrganizationID, s.LocationID)
-	if err == nil {
-		defer rows.Close()
-		for rows.Next() {
-			var hour int
-			var total string
-			if rows.Scan(&hour, &total) == nil {
-				hourly = append(hourly, map[string]any{"hour": hour, "total": total})
-			}
+	if err != nil {
+		fail(w, 503, "dashboard_unavailable", "No pudimos cargar las ventas por hora.")
+		return
+	}
+	for rows.Next() {
+		var hour int
+		var total string
+		if err = rows.Scan(&hour, &total); err != nil {
+			break
 		}
+		hourly = append(hourly, map[string]any{"hour": hour, "total": total})
+	}
+	if err == nil {
+		err = rows.Err()
+	}
+	rows.Close()
+	if err != nil {
+		fail(w, 503, "dashboard_unavailable", "No pudimos cargar las ventas por hora.")
+		return
 	}
 
 	topProducts := []map[string]any{}
-	productRows, err := a.db.Query(r.Context(), `
+	productRows, err := tx.Query(r.Context(), `
 		SELECT oi.name,sum(oi.qty)::text,sum(oi.qty*oi.unit_price)::text
 		FROM order_items oi
 		JOIN orders o ON o.id=oi.order_id AND o.organization_id=oi.organization_id
@@ -520,19 +540,39 @@ func (a *API) dashboard(w http.ResponseWriter, r *http.Request) {
 		  )
 		GROUP BY oi.name ORDER BY sum(oi.qty) DESC,oi.name LIMIT 5
 	`, s.OrganizationID, s.LocationID)
-	if err == nil {
-		defer productRows.Close()
-		for productRows.Next() {
-			var name, qty, revenue string
-			if productRows.Scan(&name, &qty, &revenue) == nil {
-				topProducts = append(topProducts, map[string]any{"name": name, "qty": qty, "revenue": revenue})
-			}
+	if err != nil {
+		fail(w, 503, "dashboard_unavailable", "No pudimos cargar los productos vendidos.")
+		return
+	}
+	for productRows.Next() {
+		var name, qty, revenue string
+		if err = productRows.Scan(&name, &qty, &revenue); err != nil {
+			break
 		}
+		topProducts = append(topProducts, map[string]any{"name": name, "qty": qty, "revenue": revenue})
+	}
+	if err == nil {
+		err = productRows.Err()
+	}
+	productRows.Close()
+	if err != nil {
+		fail(w, 503, "dashboard_unavailable", "No pudimos cargar los productos vendidos.")
+		return
+	}
+	operations, businessDate, err := loadDashboardOperations(r.Context(), tx, s, canSeeExpected)
+	if err != nil {
+		fail(w, 503, "dashboard_unavailable", "No pudimos calcular el estado del restaurante.")
+		return
+	}
+	if err = tx.Commit(r.Context()); err != nil {
+		fail(w, 503, "dashboard_unavailable", "No pudimos completar el resumen operativo.")
+		return
 	}
 	writeJSON(w, 200, map[string]any{
 		"salesNet": salesNet, "paidOrders": paidOrders, "averageTicket": averageTicket, "openOrders": openOrders,
 		"criticalStock": critical, "purchasesToApprove": purchases, "reservationsToday": reservationsToday,
 		"kitchenPending": kitchenPending, "hourlySales": hourly, "topProducts": topProducts,
+		"operations": operations, "businessDate": businessDate,
 	})
 }
 

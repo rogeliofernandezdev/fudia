@@ -178,8 +178,8 @@ export function CashShiftDetailDialog({shift,formatMoney,formatDateTime,formatBu
         <div><small>CAJA</small><b>{shift.cashRegisterName}</b></div>
         <div><small>DÍA OPERATIVO</small><b>{formatBusinessDate(shift.businessDate)}</b></div>
         {shift.status==="open"&&<div><small>EQUIPO ACTUAL</small><b>{cashShiftTeamName(shift)}</b></div>}
-        <div><small>{shift.status==="open"?"CAJERO":"ABIERTO POR"}</small><b>{shift.openedByName}</b><span>{formatDateTime(shift.openedAt)}</span></div>
-        <div><small>CERRADO POR</small><b>{shift.status==="closed"?cashShiftAttribution(shift).name:"En curso"}</b>{shift.closedAt&&<span>{formatDateTime(shift.closedAt)}</span>}</div>
+        <div><small>{shift.status==="open"?"CAJERO":"ABIERTO POR"}</small><b>{shift.openedByName}</b><span>Apertura: <time dateTime={shift.openedAt}>{formatDateTime(shift.openedAt)}</time></span></div>
+        <div><small>CERRADO POR</small><b>{shift.status==="closed"?cashShiftAttribution(shift).name:"En curso"}</b>{shift.closedAt&&<span>Cierre: <time dateTime={shift.closedAt}>{formatDateTime(shift.closedAt)}</time></span>}</div>
         <Status tone={shift.status==="open"?"green":"gray"}>{shift.status==="open"?"Abierto":"Cerrado"}</Status>
       </section>
       <section className="cash-detail-totals">

@@ -8,18 +8,22 @@ import {useSession} from "@/providers/session-context";
 import {useSettings} from "@/providers/settings-context";
 import {formatRegionalNumber} from "@/shared/i18n/regional-format";
 import {pageRoutes} from "@/shared/routing/page-routes";
+import {canOpenNavigationItem,navigationItemForPath} from "@/shell/navigation";
 import {getDashboard} from "../infrastructure/dashboard-api";
 
-function greeting(){const h=new Date().getHours();if(h<12)return"Buenos días";if(h<19)return"Buenas tardes";return"Buenas noches"}
-function formatDate(){const d=new Date();const days=["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];const months=["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];return `${days[d.getDay()]}, ${d.getDate()} de ${months[d.getMonth()]}`}
+function formatDate(day:string){return new Intl.DateTimeFormat("es",{day:"numeric",month:"long",weekday:"long",timeZone:"UTC"}).format(new Date(day+"T12:00:00Z"))}
 
 type Kpi={label:string;value:string;note:string;icon:IconName;tone:"primary"|"blue"|"green"|"violet"};
 type AlertItem={count:number;title:string;detail:string;href:string;tone:"warning"|"info"|"ok";icon:IconName};
+type OperationPanel={title:string;icon:IconName;href:string;rows:{label:string;value:string;tone?:"primary"|"green"}[]};
 
 export function DashboardView(){
-  const{user,location}=useSession();
+  const session=useSession();
+  const{user,location,organization,modules}=session;
+  const enabled=(module:string)=>Boolean(user?.platformAdmin||modules?.[module]);
+  const canOpen=(href:string)=>{const item=navigationItemForPath(href);return Boolean(item&&user&&canOpenNavigationItem(item,{...session,user,modules:modules??{}}))};
   const settings=useSettings();
-  const query=useQuery({queryKey:["dashboard"],queryFn:getDashboard,refetchInterval:30000});
+  const query=useQuery({queryKey:["dashboard",organization?.id,location?.id],queryFn:getDashboard,refetchInterval:30000});
   const data=query.data;
   const money=(value:string|number)=>{
     const n=Number(value||0);
@@ -32,26 +36,46 @@ export function DashboardView(){
     return formatRegionalNumber(n,location?.country,{maximumFractionDigits:0});
   };
   const firstName=(user?.name??"Admin").split(" ")[0];
-  const header=<PageHeader eyebrow="CONTROL DEL NEGOCIO" title={`${greeting()}, ${firstName}`} description={`${formatDate()} · ${location?.name??"tu local"} · se actualiza cada 30 s`} action={<Link href={pageRoutes.sales} className="button secondary"><Icon name="sales" size={17}/><span>Ver ventas</span></Link>}/>;
+  const header=<PageHeader eyebrow="CONTROL DEL NEGOCIO" title={`Hola, ${firstName}`} description={`${data?.businessDate?formatDate(data.businessDate)+" · ":""}${location?.name??"tu local"} · se actualiza cada 30 s`} action={canOpen(pageRoutes.sales)?<Link href={pageRoutes.sales} className="button secondary"><Icon name="sales" size={17}/><span>Ver ventas</span></Link>:undefined}/>;
 
   if(query.isLoading)return <>{header}<DashboardSkeleton/></>;
   if(query.isError)return <><PageHeader eyebrow="CONTROL DEL NEGOCIO" title="No pudimos cargar el panel" description="Los datos no se reemplazan por valores simulados."/><section className="panel catalog-state error"><span><Icon name="alert"/></span><b>Error de lectura</b><p>{query.error.message}</p><button className="button secondary" onClick={()=>void query.refetch()}>Reintentar</button></section></>;
-  if(!data)return header;
+  if(!data?.operations)return <>{header}<section className="panel catalog-state error"><Icon name="alert"/><b>Resumen no disponible</b><p>No pudimos leer el estado del restaurante. Inténtalo nuevamente.</p><button className="button secondary" onClick={()=>void query.refetch()}>Reintentar</button></section></>;
+  const operations=data.operations;
 
   const kpis:Kpi[]=[
-    {label:"Ventas netas",value:money(data.salesNet),note:"Cobros netos de hoy",icon:"sales",tone:"primary"},
-    {label:"Pedidos cobrados",value:String(data.paidOrders),note:`Ticket promedio ${money(data.averageTicket)}`,icon:"orders",tone:"green"},
-    {label:"Pedidos abiertos",value:String(data.openOrders),note:data.kitchenPending?`${data.kitchenPending} en cola de cocina`:"Sin cola pendiente",icon:"kitchen",tone:"blue"},
-    {label:"Reservas de hoy",value:String(data.reservationsToday),note:"Pendientes o confirmadas",icon:"calendar",tone:"violet"},
+    {label:"Ventas del día",value:money(data.salesNet),note:"Cobrado hoy",icon:"sales",tone:"primary"},
+    {label:"Pedidos cobrados",value:String(data.paidOrders),note:`Promedio por pedido ${money(data.averageTicket)}`,icon:"orders",tone:"green"},
+    {label:"Saldo por cobrar",value:money(operations.pendingBalance),note:`${operations.unpaidOrders+operations.partialOrders} pedidos pendientes · ${operations.partialOrders} con pago parcial`,icon:"payment",tone:"violet"},
+    {label:"Pedidos en atención",value:String(data.openOrders),note:data.kitchenPending?`${data.kitchenPending} en cocina`:"Sin pedidos en cocina",icon:"orders",tone:"blue"},
   ];
+  const panels:OperationPanel[]=[];
+  if(enabled("pedidos")||enabled("mesas")||enabled("reservas"))panels.push({title:"Atención",icon:"tables",href:pageRoutes.diningRoom,rows:[
+    ...(enabled("mesas")?[{label:"Mesas ocupadas",value:`${operations.tablesOccupied} de ${operations.tablesTotal}`}]:[]),
+    ...(enabled("reservas")?[{label:"Reservas de hoy",value:String(data.reservationsToday)}]:[]),
+    {label:"Sin pagar",value:String(operations.unpaidOrders)},
+  ]});
+  if(enabled("cocina"))panels.push({title:"Cocina",icon:"kitchen",href:pageRoutes.kitchen,rows:[
+    {label:"Por preparar",value:String(operations.kitchenConfirmed)},
+    {label:"En preparación",value:String(operations.kitchenPreparing)},
+    {label:"Listos para entregar",value:String(operations.readyOrders),tone:"green"},
+  ]});
+  if(enabled("delivery"))panels.push({title:"Delivery",icon:"truck",href:pageRoutes.delivery,rows:[
+    {label:"Por despachar",value:String(operations.deliveryPending)},
+    {label:"En camino",value:String(operations.deliveryInTransit)},
+  ]});
+  if(enabled("caja"))panels.push({title:"Caja",icon:"cash",href:pageRoutes.cash,rows:[
+    {label:"Turnos abiertos",value:`${operations.openCashShifts} de ${operations.activeCashRegisters}`},
+    {label:"Efectivo en caja",value:operations.cashBalance===null?"Importe reservado":money(operations.cashBalance),tone:"primary"},
+  ]});
   const hourly=data.hourlySales.map(item=>({hour:item.hour,total:Number(item.total)||0}));
   const max=Math.max(1,...hourly.map(item=>item.total));
   const peak=hourly.reduce<{hour:number;total:number}|null>((best,item)=>!best||item.total>best.total?item:best,null);
   const alerts=([
     {count:data.criticalStock,title:"Stock crítico",detail:"Insumos en mínimo o agotados",href:pageRoutes.inventory,tone:"warning",icon:"stock"},
     {count:data.purchasesToApprove,title:"Compras por aprobar",detail:"Órdenes pendientes de aprobación",href:pageRoutes.purchases,tone:"info",icon:"cart"},
-    {count:data.kitchenPending,title:"Comandas activas",detail:"Confirmadas o en preparación",href:pageRoutes.kitchen,tone:"ok",icon:"kitchen"},
-  ] satisfies AlertItem[]).filter(item=>item.count>0);
+    {count:operations.soldOutProducts,title:"Productos agotados",detail:"Sin disponibilidad para vender hoy",href:pageRoutes.availability,tone:"warning",icon:"utensils"},
+  ] satisfies AlertItem[]).filter(item=>item.count>0&&enabled(navigationItemForPath(item.href)?.module??""));
   const topMax=Math.max(1,...data.topProducts.map(p=>Number(p.revenue)||0));
 
   return <>
@@ -62,6 +86,13 @@ export function DashboardView(){
         <div><small>{k.label}</small><strong>{k.value}</strong><em>{k.note}</em></div>
       </article>)}
     </section>
+
+    {panels.length>0&&<section className="dashboard-operations" aria-label="Estado actual del restaurante">
+      {panels.map(panel=><article className="panel dashboard-operation" key={panel.title}>
+        <header><span className="panel-icon"><Icon name={panel.icon} size={18}/></span><h2>{panel.title}</h2>{canOpen(panel.href)&&<Link href={panel.href} className="dashboard-operation-link" aria-label={`Ver ${panel.title.toLowerCase()}`} title={`Ver ${panel.title.toLowerCase()}`}><Icon name="chevron" size={18}/></Link>}</header>
+        <dl>{panel.rows.map(row=><div key={row.label}><dt>{row.label}</dt><dd className={row.tone??""}>{row.value}</dd></div>)}</dl>
+      </article>)}
+    </section>}
 
     <section className="dashboard-grid">
       <article className="panel chart-panel">
@@ -78,18 +109,16 @@ export function DashboardView(){
       </article>
 
       <article className="panel alerts">
-        <header><span className="panel-icon warning"><Icon name="alert" size={18}/></span><div><small>REQUIERE ATENCIÓN</small><h2>Alertas operativas</h2></div>{alerts.length>0&&<b>{alerts.length}</b>}</header>
-        {alerts.length?<div className="alert-list">{alerts.map(a=><Link className={"alert-row "+a.tone} key={a.title} href={a.href}>
-          <span className="alert-icon"><Icon name={a.icon} size={17}/></span>
-          <span className="alert-copy"><b>{a.title}</b><small>{a.detail}</small></span>
-          <span className="alert-count">{a.count}</span>
+        <header><span className="panel-icon warning"><Icon name="alert" size={18}/></span><div><small>REQUIERE ATENCIÓN</small><h2>Pendientes por revisar</h2></div>{alerts.length>0&&<b>{alerts.length}</b>}</header>
+        {alerts.length?<div className="alert-list">{alerts.map(a=>{const content=<><span className="alert-icon"><Icon name={a.icon} size={17}/></span><span className="alert-copy"><b>{a.title}</b><small>{a.detail}</small></span><span className="alert-count">{a.count}</span></>;return canOpen(a.href)?<Link className={"alert-row "+a.tone} key={a.title} href={a.href}>
+          {content}
           <Icon name="chevron" size={16}/>
-        </Link>)}</div>:<div className="dashboard-empty ok"><Icon name="check" size={20}/><b>Sin alertas pendientes</b><p>La operación no tiene incidencias activas.</p></div>}
+        </Link>:<div className={"alert-row "+a.tone} key={a.title}>{content}</div>})}</div>:<div className="dashboard-empty ok"><Icon name="check" size={20}/><b>Sin pendientes por revisar</b><p>Sin alertas de disponibilidad o abastecimiento.</p></div>}
       </article>
     </section>
 
     <section className="panel top-products">
-      <header><span className="panel-icon"><Icon name="utensils" size={18}/></span><div><small>DESEMPEÑO DEL MENÚ</small><h2>Productos cobrados hoy</h2></div><Link href={pageRoutes.products} className="panel-link">Ver carta<Icon name="chevron" size={14}/></Link></header>
+      <header><span className="panel-icon"><Icon name="utensils" size={18}/></span><div><small>CARTA DEL RESTAURANTE</small><h2>Productos vendidos hoy</h2></div>{canOpen(pageRoutes.products)&&<Link href={pageRoutes.products} className="panel-link">Ver carta<Icon name="chevron" size={14}/></Link>}</header>
       {data.topProducts.length?<ol className="top-list">{data.topProducts.map((p,i)=>{
         const revenue=Number(p.revenue)||0;
         return <li className="top-product" key={p.name}>
@@ -105,6 +134,9 @@ function DashboardSkeleton(){
   return <div className="dashboard-skeleton" aria-label="Cargando reportes" aria-busy="true">
     <section className="kpi-grid">
       {Array.from({length:4},(_,index)=><article className="kpi dashboard-skeleton-kpi" key={index}><i className="sk" style={{width:"var(--size-40)",height:"var(--size-40)",borderRadius:"var(--radius-12)"}}/><div><i className="sk" style={{width:"var(--size-90)",height:"var(--size-10)"}}/><i className="sk" style={{width:"55%",height:"var(--size-26)"}}/><i className="sk" style={{width:"70%",height:"var(--size-10)"}}/></div></article>)}
+    </section>
+    <section className="dashboard-operations">
+      {Array.from({length:4},(_,index)=><article className="panel dashboard-operation dashboard-skeleton-operation" key={index}><header><i className="sk" style={{width:"var(--size-32)",height:"var(--size-32)"}}/><i className="sk" style={{width:"var(--size-80)",height:"var(--size-14)"}}/></header><dl>{Array.from({length:3},(_,row)=><div key={row}><dt><i className="sk" style={{width:"var(--size-100)",height:"var(--size-11)"}}/></dt><dd><i className="sk" style={{width:"var(--size-32)",height:"var(--size-14)"}}/></dd></div>)}</dl></article>)}
     </section>
     <section className="dashboard-grid">
       <article className="panel chart-panel dashboard-skeleton-panel">

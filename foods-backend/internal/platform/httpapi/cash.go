@@ -50,8 +50,8 @@ type cashShiftView struct {
 }
 
 type cashRegisterView struct {
-	ID        string         `json:"id"`
-	Code      string         `json:"code"`
+	ID         string         `json:"id"`
+	Code       string         `json:"code"`
 	Name       string         `json:"name"`
 	Active     bool           `json:"active"`
 	BlindClose bool           `json:"blindClose"`
@@ -90,8 +90,8 @@ const cashShiftColumns = `
 	  ORDER BY su.assigned_at,u.full_name,su.user_id
 	),
 	cs.business_date::text,
-	to_char(cs.opened_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),
-	CASE WHEN cs.closed_at IS NULL THEN NULL ELSE to_char(cs.closed_at,'YYYY-MM-DD"T"HH24:MI:SSOF') END,
+	to_char(cs.opened_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"'),
+	CASE WHEN cs.closed_at IS NULL THEN NULL ELSE to_char(cs.closed_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') END,
 	(SELECT count(*) FROM cash_movements cm WHERE cm.shift_id=cs.id AND cm.organization_id=cs.organization_id)
 `
 
@@ -130,7 +130,7 @@ func (a *API) loadCashMovements(r *http.Request, shiftID string) ([]cashMovement
 		SELECT cm.id::text,cm.movement_type,cm.source_type,
 		       CASE WHEN cm.source_id IS NULL THEN NULL ELSE cm.source_id::text END,
 		       cm.amount::text,cm.reason,cm.note,u.full_name,
-		       to_char(cm.created_at,'YYYY-MM-DD"T"HH24:MI:SSOF')
+		       to_char(cm.created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"')
 		FROM cash_movements cm
 		JOIN users u ON u.id=cm.created_by AND u.organization_id=cm.organization_id
 		WHERE cm.shift_id=$1 AND cm.organization_id=$2 AND cm.location_id=$3
@@ -628,7 +628,7 @@ func (a *API) createCashMovement(w http.ResponseWriter, r *http.Request) {
 		          CASE WHEN source_id IS NULL THEN NULL ELSE source_id::text END,
 		          amount::text,reason,note,
 		          (SELECT full_name FROM users WHERE id=$8 AND organization_id=$1),
-		          to_char(created_at,'YYYY-MM-DD"T"HH24:MI:SSOF')
+		          to_char(created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"')
 	`, s.OrganizationID, s.LocationID, shiftID, in.MovementType, in.Amount, in.Reason, in.Note, s.UserID).
 		Scan(&item.ID, &item.MovementType, &item.SourceType, &item.SourceID, &item.Amount, &item.Reason, &item.Note, &item.CreatedByName, &item.CreatedAt)
 	if err != nil {

@@ -306,6 +306,16 @@ avisos informativos usan texto neutro e icono, sin apariencia de botón.
   desde la acción iconográfica de la tabla; la devolución permanece junto al
   pago concreto porque requiere ese contexto. Nunca se agrega un botón
   redundante «Cerrar» en el pie.
+- «Cobrar» en Salón y «Cobrar saldo» en Pedidos abren directamente el formulario
+  de pago del POS mediante `/pos?orderId=...`, no el detalle de consulta. La acción
+  de cobro de la tabla usa ese mismo formulario. Antes de habilitarlo se consulta
+  el saldo actual del pedido y se valida permiso, estado cobrable y turno asignado.
+  La espera reproduce saldo, métodos, monto y acciones con skeleton. Falta de
+  turno ofrece «Ir a Caja»; errores de pedido/caja ofrecen «Reintentar»; una cuenta
+  pagada o cerrada no permite otro cobro. El formulario conserva «Cancelar» y
+  «Registrar cobro», bloquea cierre/envíos mientras registra y guarda únicamente
+  tras la acción explícita del usuario. El ojo de la tabla sigue abriendo el
+  detalle sin añadir otro botón de cobro.
 - La configuración presenta la jerarquía Empresa → Perfiles por país → Locales.
   País, moneda e impuesto se editan en el perfil fiscal de la empresa; cada local
   selecciona un perfil existente. Los tipos de cambio se gestionan en una vista
@@ -608,9 +618,46 @@ la identidad, textos, iconos y colores son exclusivamente Foods.
 - Después de cargar se presenta contenido, vacío accionable o error recuperable.
 ## Directorios maestros
 
+El dashboard usa términos cotidianos del restaurante: «Ventas del día»,
+«Pedidos cobrados», «Promedio por pedido», «Pedidos en atención»,
+«Pendientes por revisar» y «Productos vendidos hoy». No muestra «Ventas netas»
+ni «Ticket promedio». La tarjeta de ventas usa la nota «Cobrado hoy», sin
+referencias a devoluciones ni cambiar el cálculo. Los nombres técnicos `salesNet` y
+`averageTicket` se conservan en el contrato de API.
+
+El resumen administrativo consolida datos reales de la empresa y local activos:
+cuatro indicadores económicos/operativos y paneles compactos de Atención, Cocina,
+Delivery y Caja. No duplica cada contador como una tarjeta independiente. Distingue
+«Pedidos cobrados» (pago completo con cobro hoy) de «Saldo por cobrar» (pedidos sin
+pagar o parcialmente pagados, incluso de días anteriores). El promedio corresponde
+al importe total de los pedidos completamente cobrados. «Ventas del día» refleja
+los movimientos de cobro de hoy, también pagos parciales.
+La fecha procede del backend en la zona del local. La consulta se actualiza cada
+30 segundos y su clave incluye empresa/local. Las secciones respetan los módulos
+contratados y los enlaces usan las mismas reglas de menú y permisos del shell.
+El efectivo de cajas ciegas no autorizado muestra «Importe reservado», nunca cero.
+Los pendientes de disponibilidad/abastecimiento no repiten las colas de cocina.
+La carga reproduce indicadores, paneles operativos, gráfico, pendientes y productos;
+el error es recuperable, no reemplaza datos por ceros. En 390 px los paneles se
+apilan, los importes permanecen alineados y los accesos tienen áreas de 44 px.
+
+Ventas ofrece búsqueda, «Fecha de inicio» y «Fecha de fin» mediante controles
+homologados, alineados en escritorio y apilados en móvil. El rango es opcional:
+admite una sola fecha e incluye todo el día final según la zona del local,
+filtrando la fecha de registro mostrada en la tabla. Cambiar un filtro reinicia
+la paginación. «Limpiar fechas» conserva la búsqueda. Un rango invertido muestra
+error junto al campo y no consulta el API; el vacío filtrado distingue que no
+hay coincidencias de que todavía no existen ventas.
+
 Ventas incorpora la acción homologada de ojo con tooltip «Ver detalle de la
-venta» en cada fila y tarjeta móvil. El modal es de consulta, con X como único
-cierre y sin cobrar, editar ni devolver. Presenta cliente/mesa, canal, fecha,
+venta». Su tabla incluye «Medio de pago», con nombres reales del catálogo recibidos
+en el listado; los pagos divididos muestran todos los medios, separados por « · »,
+sin repetirlos ni hacer consultas por fila. Móvil conserva este dato a ancho completo
+y el skeleton reproduce la misma columna y distribución. Sin cobros vigentes se
+muestra «—», nunca un medio supuesto. Los pagos totalmente devueltos no se cuentan.
+La acción homologada está disponible en cada fila y tarjeta móvil. El modal es
+de consulta, con X como único cierre y sin cobrar, editar ni devolver.
+Presenta cliente/mesa, canal, fecha,
 productos con cantidad circular, precio unitario y total por línea, composición
 y notas cuando existen, subtotal, delivery si aplica, total y pagos netos de
 devoluciones. Los medios de pago usan nombres recibidos de la API. Si la venta
@@ -763,3 +810,10 @@ cada movimiento permanece en su propia fila. Asignar o retirar usuarios refresca
 las cajas, el historial y el detalle inmediatamente. Punto de venta muestra al
 mismo cajero del turno activo. El cambio de responsable se realiza cerrando el
 turno y abriendo uno nuevo; no se infiere por la sesión que consulta la pantalla.
+
+«Apertura» muestra fecha y hora reales, formateadas con el país y la zona horaria
+del local; nunca se sustituye por el día operativo. El historial y el detalle
+conservan apertura y cierre, con sus etiquetas explícitas y elementos `time`.
+Mientras el turno está abierto no se inventa una fecha de cierre. La API entrega
+instantes RFC 3339 en UTC; el frontend admite también los offsets antiguos de
+PostgreSQL para mantener compatibilidad durante el despliegue.

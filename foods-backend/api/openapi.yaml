@@ -840,10 +840,13 @@ paths:
       parameters:
         - { in: query, name: q, schema: { type: string } }
         - { in: query, name: paymentStatus, schema: { type: string, enum: [unpaid, pending, partial, paid, all], default: unpaid } }
+        - { in: query, name: from, description: Fecha inicial inclusiva del registro del pedido en la zona horaria del local. Se admite sin to., schema: { type: string, format: date } }
+        - { in: query, name: to, description: Fecha final inclusiva del registro del pedido en la zona horaria del local. Se admite sin from y no puede ser anterior a from., schema: { type: string, format: date } }
         - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
         - { in: query, name: pageSize, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
       responses:
         "200": { description: Pedidos y saldo por cobrar, content: { application/json: { schema: { $ref: "#/components/schemas/POSOrderList" } } } }
+        "400": { description: Fecha o rango no válido }
         "403": { $ref: "#/components/responses/Forbidden" }
   /v1/admin/pos/orders/{id}:
     parameters: [{ $ref: "#/components/parameters/EntityId" }]
@@ -1248,18 +1251,38 @@ components:
         revenue: { type: string, description: Importe cobrado del producto }
     Dashboard:
       type: object
-      required: [salesNet, paidOrders, averageTicket, openOrders, criticalStock, purchasesToApprove, reservationsToday, kitchenPending, hourlySales, topProducts]
+      required: [salesNet, paidOrders, averageTicket, openOrders, criticalStock, purchasesToApprove, reservationsToday, kitchenPending, businessDate, operations, hourlySales, topProducts]
       properties:
         salesNet: { type: string, description: Cobros del día menos devoluciones del día }
-        paidOrders: { type: integer, minimum: 0 }
-        averageTicket: { type: string }
+        paidOrders: { type: integer, minimum: 0, description: Pedidos no cancelados completamente pagados con al menos un cobro hoy, sin contar pagos parciales }
+        averageTicket: { type: string, description: Promedio del importe total de los pedidos completamente cobrados hoy }
         openOrders: { type: integer, minimum: 0 }
         criticalStock: { type: integer, minimum: 0 }
         purchasesToApprove: { type: integer, minimum: 0 }
         reservationsToday: { type: integer, minimum: 0 }
         kitchenPending: { type: integer, minimum: 0 }
+        businessDate: { type: string, format: date, description: Fecha en la zona horaria del local seleccionado }
+        operations: { $ref: "#/components/schemas/DashboardOperations" }
         hourlySales: { type: array, items: { $ref: "#/components/schemas/DashboardHourlySale" } }
         topProducts: { type: array, maxItems: 5, items: { $ref: "#/components/schemas/DashboardTopProduct" } }
+    DashboardOperations:
+      type: object
+      required: [pendingBalance, unpaidOrders, partialOrders, tablesTotal, tablesOccupied, kitchenConfirmed, kitchenPreparing, readyOrders, deliveryPending, deliveryInTransit, activeCashRegisters, openCashShifts, cashBalance, soldOutProducts]
+      properties:
+        pendingBalance: { type: string, description: Suma del saldo pendiente de pedidos no cancelados ni finalizados, incluso de días anteriores }
+        unpaidOrders: { type: integer, minimum: 0 }
+        partialOrders: { type: integer, minimum: 0 }
+        tablesTotal: { type: integer, minimum: 0, description: Mesas activas del local }
+        tablesOccupied: { type: integer, minimum: 0, description: Mesas activas con un pedido de salón sin finalizar }
+        kitchenConfirmed: { type: integer, minimum: 0 }
+        kitchenPreparing: { type: integer, minimum: 0 }
+        readyOrders: { type: integer, minimum: 0, description: Pedidos listos aún sin entregar }
+        deliveryPending: { type: integer, minimum: 0, description: Pedidos delivery aún sin salir }
+        deliveryInTransit: { type: integer, minimum: 0 }
+        activeCashRegisters: { type: integer, minimum: 0 }
+        openCashShifts: { type: integer, minimum: 0 }
+        cashBalance: { type: [string, "null"], description: Efectivo esperado de turnos abiertos; null si una caja ciega impide consultar el importe }
+        soldOutProducts: { type: integer, minimum: 0, description: Productos activos agotados hoy por control manual, cupos, inventario o composición de menú; excluye productos fuera de horario }
     ContextLocation: { type: object, required: [id, name, country, timezone], properties: { id: { type: string, format: uuid }, name: { type: string }, country: { type: string, pattern: "^[A-Z]{2}$" }, timezone: { type: string } } }
     SessionContext: { type: object, required: [user, organization, location, modules, menuAccess, permissions, setupRequired], properties: { user: { type: object, required: [id, name, platformAdmin], properties: { id: { type: string, format: uuid }, name: { type: string }, platformAdmin: { type: boolean } } }, organization: { type: object, required: [id, name], properties: { id: { type: string, format: uuid }, name: { type: string } } }, location: { $ref: "#/components/schemas/ContextLocation" }, modules: { type: object, additionalProperties: { type: boolean } }, menuAccess: { type: array, items: { type: string } }, permissions: { type: array, items: { type: string } }, setupRequired: { type: boolean } } }
     RestaurantSetupInput: { type: object, required: [serviceMode], properties: { serviceMode: { type: string, enum: [counter, dine_in, mixed] } } }
@@ -1322,7 +1345,7 @@ components:
     CashUserOption: { type: object, required: [id, name], properties: { id: { type: string, format: uuid }, name: { type: string }, assignedShiftId: { type: [string, "null"], format: uuid } } }
     CashOperationInput: { type: object, required: [operationType, amount, reason], properties: { operationType: { type: string, enum: [cash_pull, deposit, transfer] }, targetShiftId: { type: string, format: uuid }, amount: { type: number, exclusiveMinimum: 0 }, reason: { type: string, minLength: 1, maxLength: 120 }, note: { type: string, maxLength: 240 } } }
     CashOperation: { type: object, required: [id, operationType, amount, reason, note, createdAt], properties: { id: { type: string, format: uuid }, operationType: { type: string, enum: [cash_pull, deposit, transfer] }, amount: { type: string }, reason: { type: string }, note: { type: string }, createdAt: { type: string, format: date-time } } }
-    POSOrderSummary: { type: object, required: [id, code, channel, status, customerName, tableName, total, paidAmount, remainingAmount, paymentStatus, createdAt], properties: { id: { type: string, format: uuid }, code: { type: string }, channel: { type: string }, status: { type: string }, customerName: { type: string }, tableName: { type: string }, total: { type: string }, paidAmount: { type: string }, remainingAmount: { type: string }, paymentStatus: { type: string, enum: [pending, partial, paid] }, createdAt: { type: string, format: date-time } } }
+    POSOrderSummary: { type: object, required: [id, code, channel, status, customerName, tableName, total, paidAmount, remainingAmount, paymentStatus, paymentMethods, createdAt], properties: { id: { type: string, format: uuid }, code: { type: string }, channel: { type: string }, status: { type: string }, customerName: { type: string }, tableName: { type: string }, total: { type: string }, paidAmount: { type: string }, remainingAmount: { type: string }, paymentStatus: { type: string, enum: [pending, partial, paid] }, paymentMethods: { type: array, uniqueItems: true, items: { type: string }, description: "Nombres del catálogo de la empresa usados en pagos con importe neto positivo; sin duplicados, ordenados por nombre. Incluye medios ahora inactivos y devuelve un arreglo vacío si no hay cobros vigentes." }, createdAt: { type: string, format: date-time } } }
     POSOrderList: { type: object, required: [items, total, page, pageSize], properties: { items: { type: array, items: { $ref: "#/components/schemas/POSOrderSummary" } }, total: { type: integer }, page: { type: integer }, pageSize: { type: integer } } }
     POSOrderDetail: { type: object, required: [order, paidAmount, remainingAmount, paymentStatus, payments], properties: { order: { $ref: "#/components/schemas/Order" }, paidAmount: { type: string }, remainingAmount: { type: string }, paymentStatus: { type: string, enum: [pending, partial, paid] }, payments: { type: array, items: { $ref: "#/components/schemas/Payment" } } } }
     PaymentMethodInput: { type: object, required: [name, salesEnabled, expensesEnabled, affectsCash, sortOrder], properties: { code: { type: string, pattern: "^[a-z0-9][a-z0-9_-]{0,39}$" }, name: { type: string, minLength: 1, maxLength: 80 }, description: { type: string, maxLength: 180 }, salesEnabled: { type: boolean }, expensesEnabled: { type: boolean }, affectsCash: { type: boolean }, sortOrder: { type: integer, minimum: 0, maximum: 9999 } } }

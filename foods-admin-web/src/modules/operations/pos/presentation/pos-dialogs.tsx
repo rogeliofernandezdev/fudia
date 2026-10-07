@@ -16,7 +16,7 @@ export function PaymentDialog({order,shiftName,busy,formatMoney,close,save}:{ord
   const method=useWatch({control,name:"method"});
   return <div className="modal-backdrop modal-overlay-in"><Dialog className="crud-modal pos-payment-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="pos-payment-title" aria-busy={busy}>
     <div className="modal-accent"/>
-    <header><span className="modal-title-icon"><Icon name="cash" size={18}/></span><div><small>COBRO</small><h2 id="pos-payment-title">{order.code}{order.tableName?` · ${order.tableName}`:order.customerName?` · ${order.customerName}`:""}</h2></div><button type="button" aria-label="Cerrar" onClick={close} disabled={busy}><Icon name="close"/></button></header>
+    <header><span className="modal-title-icon"><Icon name="cash" size={18}/></span><div><small>COBRO</small><h2 id="pos-payment-title">{order.tableName||order.customerName||"Registrar cobro"}</h2></div><button type="button" aria-label="Cerrar" onClick={close} disabled={busy}><Icon name="close"/></button></header>
     <form onSubmit={handleSubmit(save)} noValidate inert={busy}>
       <div className="pos-payment-body">
         <section className="pos-payment-overview">

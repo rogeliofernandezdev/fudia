@@ -13,7 +13,7 @@ import {useDebouncedValue} from "@/shared/hooks/use-debounced-value";
 import {pageRoutes} from "@/shared/routing/page-routes";
 import {cashShiftAttribution} from "../../cash/domain/shift-attribution";
 import {getCurrentCashShift} from "../../cash/infrastructure/cash-api";
-import type {Payment,POSOrderDetail,POSOrderSummary} from "../domain/types";
+import type {Payment,PaymentDraft,POSOrderDetail,POSOrderSummary} from "../domain/types";
 import {paymentMethodMeta} from "./pos-meta";
 import {createPayment,getPOSOrder,listPOSOrders,refundPayment} from "../infrastructure/pos-api";
 const PaymentDialog=dynamic(()=>import("./pos-dialogs").then(module=>module.PaymentDialog),{ssr:false});
@@ -38,8 +38,8 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
   const[paymentStatus,setPaymentStatus]=useState("unpaid");
   const[page,setPage]=useState(1);
   const[size,setSize]=useState(10);
-  const[paymentTarget,setPaymentTarget]=useState<POSOrderSummary|null>(null);
-  const[detailId,setDetailId]=useState<string|null>(initialOrderId||null);
+  const[paymentOrderId,setPaymentOrderId]=useState<string|null>(initialOrderId||null);
+  const[detailId,setDetailId]=useState<string|null>(null);
   const[refundTarget,setRefundTarget]=useState<Payment|null>(null);
 
   const current=useQuery({
@@ -57,6 +57,14 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
     queryFn:()=>getPOSOrder(detailId!),
     enabled:Boolean(detailId),
   });
+  const paymentOrder=useQuery({
+    queryKey:["pos-order",paymentOrderId],
+    queryFn:()=>getPOSOrder(paymentOrderId!),
+    enabled:Boolean(paymentOrderId)&&canManage,
+    staleTime:0,
+    refetchOnMount:"always",
+    refetchOnWindowFocus:false,
+  });
 
   function refresh(){
     void qc.invalidateQueries({queryKey:["pos-orders"]});
@@ -64,12 +72,15 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
     for(const key of ["salon-floor","orders","order"])void qc.invalidateQueries({queryKey:[key]});
     void qc.invalidateQueries({queryKey:["cash-registers"]});
     void qc.invalidateQueries({queryKey:["cash-shift"]});
+    void qc.invalidateQueries({queryKey:["sales"]});
+    void qc.invalidateQueries({queryKey:["sale-detail"]});
+    void qc.invalidateQueries({queryKey:["dashboard"]});
   }
 
   const pay=useMutation({
     mutationFn:({orderId,draft}:{orderId:string;draft:Parameters<typeof createPayment>[1]})=>createPayment(orderId,draft),
     onSuccess:(item)=>{
-      setPaymentTarget(null);
+      setPaymentOrderId(null);
       refresh();
       notify({tone:"success",title:"Cobro registrado",message:item.method==="cash"?"El pago quedó reflejado también en Caja.":"El pago quedó asociado al turno activo."});
     },
@@ -101,7 +112,7 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
   function actionsFor(item:POSOrderSummary){
     return <div className="pos-actions">
       <RowActionButton action="view" label={`Ver detalle de ${item.code}`} onClick={()=>setDetailId(item.id)}/>
-      {canManage&&item.paymentStatus!=="paid"&&<RowActionButton action="charge" label={shift?`Cobrar ${item.code}`:"Abre un turno para cobrar"} disabled={!shift} onClick={()=>setPaymentTarget(item)}/>} 
+      {canManage&&item.paymentStatus!=="paid"&&<RowActionButton action="charge" label={shift?`Cobrar ${item.code}`:"Abre un turno para cobrar"} disabled={!shift} onClick={()=>setPaymentOrderId(item.id)}/>}
     </div>;
   }
 
@@ -161,7 +172,21 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
       {!orders.isLoading&&!orders.isError&&<Pagination page={page} size={size} total={orders.data?.total??0} onPage={setPage} onSize={value=>{setSize(value);setPage(1)}}/>}
     </section>
 
-    {paymentTarget&&shift&&<PaymentDialog order={paymentTarget} shiftName={shift.cashRegisterName+" · "+shift.code} busy={pay.isPending} formatMoney={money} close={()=>setPaymentTarget(null)} save={draft=>pay.mutate({orderId:paymentTarget.id,draft})}/>}
+    {paymentOrderId&&<POSPaymentEntry
+      loading={paymentOrder.isPending||paymentOrder.isFetching}
+      error={paymentOrder.error?.message}
+      data={paymentOrder.data}
+      shiftLoading={current.isLoading}
+      shiftError={current.error?.message}
+      shiftName={shift?shift.cashRegisterName+" · "+shift.code:null}
+      canManage={canManage}
+      busy={pay.isPending}
+      formatMoney={money}
+      close={()=>{if(!pay.isPending)setPaymentOrderId(null)}}
+      retryOrder={()=>void paymentOrder.refetch()}
+      retryShift={()=>void current.refetch()}
+      save={draft=>{if(canManage&&shift&&!pay.isPending)pay.mutate({orderId:paymentOrderId,draft})}}
+    />}
     {refundTarget&&shift&&<RefundDialog payment={refundTarget} busy={refund.isPending} formatMoney={money} close={()=>setRefundTarget(null)} save={draft=>refund.mutate({paymentId:refundTarget.id,draft})}/>}
     {detailId&&<POSDetailDialog
       loading={detail.isLoading}
@@ -176,6 +201,33 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
     />}
   </div>;
 }
+
+function POSPaymentEntry({loading,error,data,shiftLoading,shiftError,shiftName,canManage,busy,formatMoney,close,retryOrder,retryShift,save}:{loading:boolean;error?:string;data?:POSOrderDetail;shiftLoading:boolean;shiftError?:string;shiftName:string|null;canManage:boolean;busy:boolean;formatMoney:(value:number)=>string;close:()=>void;retryOrder:()=>void;retryShift:()=>void;save:(draft:PaymentDraft)=>void}){
+  let state:{title:string;text:string;retry?:()=>void;cash?:boolean}|undefined;
+  if(!canManage)state={title:"No puedes registrar cobros",text:"Tu rol necesita permiso para administrar cobros."};
+  else if(error)state={title:"No pudimos cargar el pedido",text:error,retry:retryOrder};
+  else if(shiftError)state={title:"No pudimos validar tu caja",text:shiftError,retry:retryShift};
+  else if(!loading&&!shiftLoading){
+    if(!data)state={title:"Pedido no disponible",text:"No pudimos encontrar este pedido en el local activo.",retry:retryOrder};
+    else if(data.paymentStatus==="paid"||Number(data.remainingAmount)<=0)state={title:"El pedido ya está pagado",text:"No tiene saldo pendiente de cobro."};
+    else if(data.order.completedAt||data.order.status==="cancelado")state={title:"El pedido está cerrado",text:"No se pueden registrar nuevos cobros."};
+    else if(!["listo","en_camino"].includes(data.order.status)&&!(data.order.channel==="salon"&&data.order.status==="entregado"))state={title:"El pedido aún no está listo",text:"Podrás cobrar cuando esté listo para entregar."};
+    else if(!shiftName)state={title:"Necesitas un turno de caja",text:"Abre un turno o únete a una caja para registrar el cobro.",cash:true};
+    else return <PaymentDialog order={{...data.order,paidAmount:data.paidAmount,remainingAmount:data.remainingAmount,paymentStatus:data.paymentStatus}} shiftName={shiftName} busy={busy} formatMoney={formatMoney} close={close} save={save}/>;
+  }
+  return <div className="modal-backdrop modal-overlay-in"><Dialog className="crud-modal pos-payment-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="pos-payment-entry-title">
+    <div className="modal-accent"/>
+    <header><span className="modal-title-icon"><Icon name="cash" size={18}/></span><div><small>COBRO</small><h2 id="pos-payment-entry-title">{data?.order.tableName||data?.order.customerName||"Cobrar saldo"}</h2></div><button type="button" aria-label="Cerrar" onClick={close} disabled={busy}><Icon name="close"/></button></header>
+    {state?<div className="pos-state"><span><Icon name="alert" size={22}/></span><b>{state.title}</b><p>{state.text}</p>{state.retry&&<Button kind="secondary" icon="refresh" onClick={state.retry}>Reintentar</Button>}{state.cash&&<Link href={pageRoutes.cash} className="button secondary"><Icon name="register" size={18}/><span>Ir a Caja</span></Link>}</div>:<POSPaymentLoading/>}
+  </Dialog></div>;
+}
+
+function POSPaymentLoading(){return <div className="pos-payment-body pos-payment-loading" aria-label="Cargando formulario de cobro" aria-busy="true">
+  <div className="pos-payment-overview"><i/><i/></div><i/>
+  <div className="pos-payment-loading-methods">{Array.from({length:4},(_,index)=><i key={index}/>)}</div>
+  <div className="pos-payment-loading-field"><i/><b/></div>
+  <div className="pos-payment-loading-actions"><i/><i/></div>
+</div>}
 
 function POSDetailDialog({loading,error,data,canManage,hasShift,formatMoney,formatDateTime,close,refund}:{loading:boolean;error?:string;data?:POSOrderDetail;canManage:boolean;hasShift:boolean;formatMoney:(value:number)=>string;formatDateTime:(value:string)=>string;close:()=>void;refund:(payment:Payment)=>void}){
   const closed=Boolean(data&&(data.order.completedAt||data.order.status==="cancelado"||(data.order.status==="entregado"&&data.order.channel!=="salon")));

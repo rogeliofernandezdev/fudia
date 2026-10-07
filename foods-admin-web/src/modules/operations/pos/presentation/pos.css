@@ -58,8 +58,8 @@
 .pos-state>span{display:grid;place-items:center;width:var(--size-48);height:var(--size-48);border-radius:var(--radius-13);background:var(--primary-100);color:var(--primary-700)}
 .pos-state>b{font-size:var(--font-size-12);color:var(--ink-950)}
 .pos-state p{max-width:var(--size-380);margin:0 0 var(--space-7);font-size:var(--font-size-label);line-height:var(--line-height-1-5)}
-:is(.pos-shift-loading i,.pos-table-skeleton i,.pos-card-skeleton i,.pos-card-skeleton b,.pos-card-skeleton small,.pos-card-skeleton div,.pos-detail-loading i,.pos-detail-loading b,.pos-detail-loading small){position:relative;overflow:hidden;background:var(--cloud-100)}
-:is(.pos-shift-loading i,.pos-table-skeleton i,.pos-card-skeleton i,.pos-card-skeleton b,.pos-card-skeleton small,.pos-card-skeleton div,.pos-detail-loading i,.pos-detail-loading b,.pos-detail-loading small):after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,var(--surface-a184),transparent);transform:translateX(-100%);animation:pos-shimmer var(--duration-1150) ease-in-out infinite}
+:is(.pos-shift-loading i,.pos-table-skeleton i,.pos-card-skeleton i,.pos-card-skeleton b,.pos-card-skeleton small,.pos-card-skeleton div,.pos-detail-loading i,.pos-detail-loading b,.pos-detail-loading small,.pos-payment-loading i,.pos-payment-loading b){position:relative;overflow:hidden;background:var(--cloud-100)}
+:is(.pos-shift-loading i,.pos-table-skeleton i,.pos-card-skeleton i,.pos-card-skeleton b,.pos-card-skeleton small,.pos-card-skeleton div,.pos-detail-loading i,.pos-detail-loading b,.pos-detail-loading small,.pos-payment-loading i,.pos-payment-loading b):after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,var(--surface-a184),transparent);transform:translateX(-100%);animation:pos-shimmer var(--duration-1150) ease-in-out infinite}
 .pos-table-skeleton{pointer-events:none}
 .pos-sk-entity{display:flex;align-items:center;gap:var(--space-10)}
 .pos-sk-entity>i{width:var(--size-34);height:var(--size-34);flex:0 0 auto;border-radius:var(--radius-9)}
@@ -79,7 +79,7 @@
 @keyframes pos-shimmer{to{transform:translateX(100%)}}
 
 /* Modal de cobro y devolución */
-.pos-payment-modal{width:min(var(--size-640),calc(100vw - var(--size-32)));overflow:hidden}
+.pos-payment-modal{display:flex;flex-direction:column;width:min(var(--size-640),calc(100vw - var(--size-32)));overflow:hidden}
 .pos-payment-modal>form{display:flex;flex-direction:column;min-height:0;padding:0}
 .pos-payment-body{display:grid;gap:var(--space-14);padding:var(--space-18)}
 .pos-payment-overview{display:grid;grid-template-columns:1.25fr 1fr;overflow:hidden;border:var(--stroke-1) solid var(--line);border-radius:var(--radius-12);background:var(--surface)}
@@ -121,6 +121,18 @@
 .pos-payment-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-12)}
 .pos-payment-fields>.form-field:only-child,.pos-refund-note{grid-column:1/-1}
 .pos-payment-modal form>footer{display:flex;justify-content:flex-end;gap:var(--space-9);margin:0;padding:var(--space-12) var(--space-16);border-top:var(--stroke-1) solid var(--line);background:var(--surface)}
+
+/* El acceso directo a cobro espera pedido y caja sin mostrar datos antiguos. */
+.pos-payment-loading{flex:1;min-height:0}
+.pos-payment-loading i,.pos-payment-loading b{display:block;border-radius:var(--radius-control)}
+.pos-payment-loading .pos-payment-overview{gap:var(--space-12);padding:var(--space-14)}
+.pos-payment-loading .pos-payment-overview>i{height:var(--size-64)}
+.pos-payment-loading>i{height:var(--control-height)}
+.pos-payment-loading-methods{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--space-7)}
+.pos-payment-loading-methods>i,.pos-payment-loading-field>b,.pos-payment-loading-actions>i{height:var(--control-height)}
+.pos-payment-loading-field{display:grid;gap:var(--space-8)}
+.pos-payment-loading-field>i{height:var(--size-12);width:var(--size-80)}
+.pos-payment-loading-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-9);width:min(100%,var(--size-300));margin-left:auto;margin-top:auto}
 
 /* Modal de detalle */
 .pos-detail-modal{display:flex;flex-direction:column;width:min(var(--size-900),calc(100vw - var(--size-32)));max-height:min(var(--size-820),calc(100dvh - var(--size-32)));overflow:hidden}
@@ -198,6 +210,7 @@
  .pos-payment-overview{grid-template-columns:1fr}
  .pos-payment-overview dl{border-top:var(--stroke-1) solid var(--line)}
  .pos-methods{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:minmax(var(--size-126),1fr);padding-bottom:var(--space-4);overflow-x:auto;scrollbar-width:thin}
+ .pos-payment-loading-methods{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:minmax(var(--size-126),1fr);overflow:hidden}
  .pos-payment-fields,.refund-fields{grid-template-columns:1fr}
  .pos-refund-note{grid-column:auto}
  .pos-payment-modal form>footer{position:sticky;bottom:0;margin-top:auto}
@@ -217,5 +230,5 @@
  .pos-order-lines strong{grid-column:2}
 }
 @media(prefers-reduced-motion:reduce){
- :is(.pos-shift-loading i,.pos-table-skeleton i,.pos-card-skeleton i,.pos-card-skeleton b,.pos-card-skeleton small,.pos-card-skeleton div,.pos-detail-loading i,.pos-detail-loading b,.pos-detail-loading small):after{animation:none}
+ :is(.pos-shift-loading i,.pos-table-skeleton i,.pos-card-skeleton i,.pos-card-skeleton b,.pos-card-skeleton small,.pos-card-skeleton div,.pos-detail-loading i,.pos-detail-loading b,.pos-detail-loading small,.pos-payment-loading i,.pos-payment-loading b):after{animation:none}
 }

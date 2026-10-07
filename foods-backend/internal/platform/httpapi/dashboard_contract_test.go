@@ -19,13 +19,18 @@ func TestDashboardOpenAPIContractMatchesResponse(t *testing.T) {
 		t.Fatalf("read OpenAPI contract: %v", err)
 	}
 	contract := string(content)
-	required := "required: [salesNet, paidOrders, averageTicket, openOrders, criticalStock, purchasesToApprove, reservationsToday, kitchenPending, hourlySales, topProducts]"
+	required := "required: [salesNet, paidOrders, averageTicket, openOrders, criticalStock, purchasesToApprove, reservationsToday, kitchenPending, businessDate, operations, hourlySales, topProducts]"
 	if !strings.Contains(contract, required) {
 		t.Fatal("Dashboard OpenAPI schema does not require the complete handler response")
 	}
-	for _, schema := range []string{"DashboardHourlySale:", "DashboardTopProduct:"} {
+	for _, schema := range []string{"DashboardHourlySale:", "DashboardTopProduct:", "DashboardOperations:"} {
 		if !strings.Contains(contract, schema) {
 			t.Fatalf("Dashboard OpenAPI schema is missing %s", schema)
+		}
+	}
+	for _, field := range []string{"pendingBalance", "unpaidOrders", "partialOrders", "tablesTotal", "tablesOccupied", "kitchenConfirmed", "kitchenPreparing", "readyOrders", "deliveryPending", "deliveryInTransit", "activeCashRegisters", "openCashShifts", "cashBalance", "soldOutProducts"} {
+		if !strings.Contains(contract, field+":") {
+			t.Fatalf("missing operational field %s", field)
 		}
 	}
 	if strings.Contains(contract, "required: [products, criticalStock, purchasesToApprove, currency]") {

@@ -38,6 +38,7 @@ type posOrderSummary struct {
 	PaidAmount      string `json:"paidAmount"`
 	RemainingAmount string `json:"remainingAmount"`
 	PaymentStatus   string `json:"paymentStatus"`
+	PaymentMethods  []string `json:"paymentMethods"`
 	CreatedAt       string `json:"createdAt"`
 }
 
@@ -74,6 +75,16 @@ func (a *API) listPOSOrders(w http.ResponseWriter, r *http.Request) {
 	s := r.Context().Value(scopeKey{}).(scope)
 	page, size := pageParams(r)
 	q := strings.TrimSpace(r.URL.Query().Get("q"))
+	from := strings.TrimSpace(r.URL.Query().Get("from"))
+	to := strings.TrimSpace(r.URL.Query().Get("to"))
+	if !validDateFilters(from, to) || strings.HasPrefix(from, "0000-") || strings.HasPrefix(to, "0000-") {
+		fail(w, 400, "invalid_order_date_filter", "Ingresa fechas válidas con el formato AAAA-MM-DD.")
+		return
+	}
+	if from != "" && to != "" && from > to {
+		fail(w, 400, "invalid_order_date_filter", "La fecha final no puede ser anterior a la inicial.")
+		return
+	}
 	status := strings.TrimSpace(r.URL.Query().Get("paymentStatus"))
 	if status == "" {
 		status = "unpaid"
@@ -97,13 +108,19 @@ func (a *API) listPOSOrders(w http.ResponseWriter, r *http.Request) {
 
 	baseFrom := `
 		FROM orders o
+		JOIN locations loc ON loc.id=o.location_id AND loc.organization_id=o.organization_id
 		LEFT JOIN tables t
 		  ON t.id=o.table_id
 		 AND t.organization_id=o.organization_id
 		 AND t.location_id=o.location_id
 		LEFT JOIN LATERAL (
-		  SELECT COALESCE(sum(p.amount-COALESCE(refunds.refunded,0)),0) AS net_paid
+		  SELECT COALESCE(sum(p.amount-COALESCE(refunds.refunded,0)),0) AS net_paid,
+		         COALESCE(array_agg(DISTINCT pm.name ORDER BY pm.name)
+		           FILTER (WHERE p.amount-COALESCE(refunds.refunded,0)>0 AND pm.name IS NOT NULL),
+		           '{}'::text[]) AS payment_methods
 		  FROM payments p
+		  LEFT JOIN payment_methods pm
+		    ON pm.organization_id=p.organization_id AND pm.code=p.method
 		  LEFT JOIN LATERAL (
 		    SELECT COALESCE(sum(pr.amount),0) AS refunded
 		    FROM payment_refunds pr
@@ -120,10 +137,12 @@ func (a *API) listPOSOrders(w http.ResponseWriter, r *http.Request) {
 		o.organization_id=$1 AND o.location_id=$2 AND o.status<>'cancelado'
 		AND ($3='' OR o.code ILIKE '%'||$3||'%' OR o.customer_name ILIKE '%'||$3||'%'
 		  OR COALESCE(t.name,'') ILIKE '%'||$3||'%')
+		AND ($4='' OR o.created_at >= (NULLIF($4,'')::date::timestamp AT TIME ZONE loc.timezone))
+		AND ($5='' OR o.created_at < ((NULLIF($5,'')::date + interval '1 day') AT TIME ZONE loc.timezone))
 	` + filter
 
 	var totalCount int
-	if err := a.db.QueryRow(r.Context(), "SELECT count(*) "+baseFrom+" WHERE "+where, s.OrganizationID, s.LocationID, q).Scan(&totalCount); err != nil {
+	if err := a.db.QueryRow(r.Context(), "SELECT count(*) "+baseFrom+" WHERE "+where, s.OrganizationID, s.LocationID, q, from, to).Scan(&totalCount); err != nil {
 		fail(w, 503, "payments_unavailable", "No pudimos cargar los pedidos por cobrar.")
 		return
 	}
@@ -139,12 +158,13 @@ func (a *API) listPOSOrders(w http.ResponseWriter, r *http.Request) {
 		         WHEN payment_summary.net_paid >= o.total THEN 'paid'
 		         ELSE 'partial'
 		       END,
-		       to_char(o.created_at,'YYYY-MM-DD"T"HH24:MI:SSOF')
+		       to_char(o.created_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),
+		       payment_summary.payment_methods
 	`+baseFrom+`
 		WHERE `+where+`
 		ORDER BY o.created_at DESC,o.id DESC
-		LIMIT $4 OFFSET $5
-	`, s.OrganizationID, s.LocationID, q, size, (page-1)*size)
+		LIMIT $6 OFFSET $7
+	`, s.OrganizationID, s.LocationID, q, from, to, size, (page-1)*size)
 	if err != nil {
 		fail(w, 503, "payments_unavailable", "No pudimos cargar los pedidos por cobrar.")
 		return
@@ -157,6 +177,7 @@ func (a *API) listPOSOrders(w http.ResponseWriter, r *http.Request) {
 		if err := rows.Scan(
 			&item.ID,&item.Code,&item.Channel,&item.Status,&item.CustomerName,&item.TableName,
 			&item.Total,&item.PaidAmount,&item.RemainingAmount,&item.PaymentStatus,&item.CreatedAt,
+			&item.PaymentMethods,
 		); err != nil {
 			fail(w, 503, "payments_unavailable", "No pudimos leer los pedidos por cobrar.")
 			return

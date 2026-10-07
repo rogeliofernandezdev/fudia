@@ -526,7 +526,7 @@ test("reportes y ventas usan skeleton con forma final",()=>{
   assert.equal(dashboard.includes("Cargando datos reales…"),false,"Reportes no usa un estado de carga genérico");
 
   assert.ok(sales.includes("<SalesTableSkeleton/>"),"Ventas usa skeleton dedicado durante la carga");
-  assert.ok(sales.includes("<th>PEDIDO</th><th>CLIENTE / MESA</th><th>CANAL</th><th>FECHA</th><th>TOTAL</th><th>ESTADO</th>"),"Ventas conserva la cabecera final durante la carga");
+  assert.ok(sales.includes("<th>PEDIDO</th><th>CLIENTE / MESA</th><th>CANAL</th><th>MEDIO DE PAGO</th><th>FECHA</th><th>TOTAL</th><th>ESTADO</th>"),"Ventas conserva la cabecera final durante la carga");
   assert.ok(sales.includes("sales-skeleton-name")&&sales.includes("sales-skeleton-customer")&&sales.includes("sales-skeleton-status"),"Ventas reproduce la estructura de las filas reales");
   assert.ok(salesCss.includes("@keyframes sales-shimmer"),"Ventas define shimmer del skeleton");
   assert.equal(sales.includes("Cargando ventas…"),false,"Ventas no usa un estado de carga genérico");
@@ -840,7 +840,10 @@ test("el POS comparte patrones de tabla, móvil y modales",()=>{
 
   assert.ok(page.includes('className="management-cards pos-order-cards"'),"El POS conserva tarjetas equivalentes en móvil");
   assert.ok(page.includes('action="charge"'),"Cobrar usa la acción iconográfica homologada");
-  assert.equal(page.includes("Cobrar saldo"),false,"El detalle de consulta no duplica la acción de cobro");
+  const detail=page.slice(page.indexOf("function POSDetailDialog("),page.indexOf("function POSLoading("));
+  assert.ok(detail.includes("DETALLE DE COBRO"),"La comprobación se limita al modal de consulta");
+  assert.equal(detail.includes("Cobrar saldo"),false,"El detalle de consulta no duplica la acción de cobro");
+  assert.equal(detail.includes('type="submit"'),false,"El detalle de consulta no registra pagos");
   assert.ok(page.includes('className="table-wrap pos-table-wrap pos-table-skeleton"'),"El skeleton reproduce la tabla final");
   assert.ok(page.includes("<POSDetailLoading/>"),"El detalle remoto tiene skeleton propio");
   assert.ok(dialogs.includes("FormField"),"Cobro y devolución usan campos compartidos");

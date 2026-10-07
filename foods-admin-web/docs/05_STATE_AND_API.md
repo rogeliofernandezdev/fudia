@@ -82,3 +82,19 @@ la entrega. Las mutaciones refrescan Salón, Pedidos y POS para mantener
 sincronizados entrega, saldo y ocupación.
 Los detalles abiertos de Salón y Pedidos se refrescan cada 10 segundos hasta
 el cierre, para reflejar también los cobros registrados por otro usuario.
+
+## Acceso directo al cobro
+
+`/pos?orderId=...` representa una intención de cobrar desde Salón o Pedidos.
+El POS inicia la misma consulta de saldo usada por la acción Cobrar de su tabla
+y abre el formulario de pago, no el detalle de lectura. No depende de encontrar
+el pedido en la página visible ni del filtro activo. Cambiar el `orderId` remonta
+la composición para no conservar el pedido anterior.
+Mientras consulta pedido y turno muestra skeleton; un fallo conserva reintento
+explícito. El formulario requiere `cash.manage`, turno y pedido aún cobrable.
+El saldo se consulta nuevamente al abrir, incluso si estaba en caché; recuperar
+el foco no remonta el formulario ni borra el monto que el usuario está escribiendo.
+Registrar utiliza `POST /v1/admin/payments`; backend vuelve a validar permisos,
+empresa/local, estado, turno y saldo en transacción. El éxito cierra el formulario
+e invalida POS, Caja, Salón, Pedidos, Ventas y Dashboard. No registra pagos al
+abrir el enlace y no incorpora una acción de cobro al modal de consulta.

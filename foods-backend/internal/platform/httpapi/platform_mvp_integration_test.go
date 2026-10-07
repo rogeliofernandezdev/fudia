@@ -236,7 +236,7 @@ func TestDashboardReflectsRealPaymentsAndRefunds(t *testing.T){
 	refundRec:=httptest.NewRecorder();api.refundPayment(refundRec,refundReq)
 	if refundRec.Code!=204{t.Fatalf("dashboard refund: %d %s",refundRec.Code,refundRec.Body.String())}
 	sales,tickets=readDashboard()
-	if sales!="40.00"||tickets!=1{t.Fatalf("dashboard should net refunds by movement date, sales=%s tickets=%d",sales,tickets)}
+	if sales!="40.00"||tickets!=0{t.Fatalf("dashboard should net refunds and exclude partially paid orders, sales=%s orders=%d",sales,tickets)}
 }
 
 func TestPlatformAdministratorIsUnique(t *testing.T){

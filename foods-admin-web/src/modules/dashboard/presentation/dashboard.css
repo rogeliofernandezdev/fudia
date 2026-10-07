@@ -15,11 +15,25 @@
 .kpi.primary em{color:var(--surface-a204)}
 
 .dashboard-grid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(var(--size-300),.8fr);gap:var(--space-14);margin-top:var(--space-14);align-items:start}
-.dashboard-grid .panel>header,.top-products>header{display:flex;align-items:center;gap:var(--space-12);min-height:var(--size-58);padding:var(--space-14) var(--space-20);border-bottom:var(--stroke-1) solid var(--line)}
+.dashboard-grid .panel>header,.top-products>header,.dashboard-operation>header{display:flex;align-items:center;gap:var(--space-12);min-height:var(--size-58);padding:var(--space-14) var(--space-20);border-bottom:var(--stroke-1) solid var(--line)}
 .dashboard-grid .panel>header>div,.top-products>header>div{flex:1;min-width:0}
 .panel-icon{display:grid;place-items:center;flex-shrink:0;width:var(--size-32);height:var(--size-32);border-radius:var(--radius-10);color:var(--primary-600);background:var(--primary-100)}
 .panel-icon.warning{color:var(--warning);background:var(--warning-50)}
 .chart-peak{font-size:var(--font-size-control);font-weight:var(--font-weight-700);white-space:nowrap;color:var(--ink-600)}
+
+/* Estado actual: un panel por área, sin tarjetas por cada contador. */
+.dashboard-operations{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--space-14);margin-top:var(--space-14)}
+.dashboard-operation{min-width:0;overflow:hidden}
+.dashboard-operation h2{flex:1;font-size:var(--font-size-14);font-weight:var(--font-weight-750);color:var(--ink-950)}
+.dashboard-operation-link{display:grid;place-items:center;flex-shrink:0;min-width:var(--size-44);min-height:var(--size-44);border-radius:var(--radius-control);color:var(--primary-600);margin:calc(var(--space-7) * -1)}
+.dashboard-operation-link:hover{background:var(--primary-50)}
+.dashboard-operation-link:focus-visible{outline:var(--stroke-2) solid var(--primary-600);outline-offset:var(--space-2)}
+.dashboard-operation dl{display:grid;gap:var(--space-14);margin:0;padding:var(--space-20)}
+.dashboard-operation dl>div{display:flex;justify-content:space-between;align-items:baseline;gap:var(--space-12)}
+.dashboard-operation dt{font-size:var(--font-size-control);color:var(--ink-600)}
+.dashboard-operation dd{margin:0;font-size:var(--font-size-14);font-weight:var(--font-weight-750);font-variant-numeric:tabular-nums;text-align:right;color:var(--ink-950)}
+.dashboard-operation dd.primary{color:var(--primary-600)}
+.dashboard-operation dd.green{color:var(--brand-700)}
 
 /* Gráfico de barras */
 .chart{display:grid;grid-template-columns:auto minmax(0,1fr);gap:var(--space-10);padding:var(--space-20) var(--space-20) var(--space-14) var(--space-16)}
@@ -85,12 +99,14 @@
 @keyframes dashboard-shimmer{to{background-position:-200% 0}}
 @media(prefers-reduced-motion:reduce){.dashboard-skeleton .sk{animation:none}}
 
-@media(width<=1100px){.kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(width<=1100px){.kpi-grid,.dashboard-operations{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(width<=820px){.dashboard-grid{grid-template-columns:1fr}}
 @media(width<=600px){
-  .kpi-grid{grid-template-columns:1fr}
+  .kpi-grid,.dashboard-operations{grid-template-columns:1fr}
   .chart{padding:var(--space-16) var(--space-14) var(--space-12) var(--space-12)}
   .chart-y{display:none}
+  .chart-peak{display:none}
+  .alert-copy small{white-space:normal;overflow:visible}
   .x span:nth-child(even){visibility:hidden}
   .top-copy>div:first-child{flex-wrap:wrap;gap:var(--space-4) var(--space-10)}
   .top-copy strong{min-width:0}

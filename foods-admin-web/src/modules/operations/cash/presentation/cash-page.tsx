@@ -267,8 +267,8 @@ export function CashPage(){
                 <td><b>{item.cashRegisterName}</b></td>
                 <td>{businessDate(item.businessDate)}</td>
                 <td className="cash-attribution"><b>{attribution.name}</b><small>{attribution.label}</small></td>
-                <td>{dateTime(item.openedAt)}</td>
-                <td>{item.closedAt?dateTime(item.closedAt):"—"}</td>
+                <td><time dateTime={item.openedAt}>{dateTime(item.openedAt)}</time></td>
+                <td>{item.closedAt?<time dateTime={item.closedAt}>{dateTime(item.closedAt)}</time>:"—"}</td>
                 <td><b className={item.status==="open"?"cash-neutral":variance===0?"cash-balanced":variance>0?"cash-positive":"cash-negative"}>{item.status==="open"?"—":(variance>0?"+":"")+money(variance)}</b></td>
                 <td><Status tone={item.status==="open"?"green":"gray"}>{item.status==="open"?"Abierto":"Cerrado"}</Status></td>
                 <td><div className="table-actions"><RowActionButton action="view" onClick={()=>setDetailId(item.id)}/></div></td>
@@ -378,7 +378,7 @@ function CashRegisters({items,loading,error,canManage,money,dateTime,businessDat
               <b>{shift.code}</b>
               <p><Icon name="users" size={12}/>Cajero: {cashShiftAttribution(shift).name}</p>
               <p>Equipo actual: {cashShiftTeamName(shift)}</p>
-              <p><Icon name="clock" size={12}/>Apertura: {dateTime(shift.openedAt)}</p>
+              <p><Icon name="clock" size={12}/><time dateTime={shift.openedAt}>Apertura: {dateTime(shift.openedAt)}</time></p>
               <em>Día operativo {businessDate(shift.businessDate)}</em>
             </div>
             <div className="cash-register-balance"><small>{shift.expectedVisible?"SALDO ESPERADO":"CIERRE CIEGO"}</small><strong>{shift.expectedVisible?money(Number(shift.expectedAmount)):"Oculto"}</strong><span>{shift.movementCount} {shift.movementCount===1?"movimiento":"movimientos"}</span></div>

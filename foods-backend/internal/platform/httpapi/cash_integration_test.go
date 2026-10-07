@@ -46,6 +46,10 @@ func TestCashRegisterAndShiftLifecycleTracksExpectedAndVariance(t *testing.T) {
 	if opened.Status != "open" || opened.CashRegisterID != register.ID || opened.CashRegisterName != register.Name || opened.OpeningAmount != "100.00" || opened.ExpectedAmount != "100.00" || opened.BusinessDate == "" {
 		t.Fatalf("unexpected opened shift: %#v", opened)
 	}
+	openedAt, err := time.Parse(time.RFC3339Nano, opened.OpenedAt)
+	if err != nil || !strings.HasSuffix(opened.OpenedAt, "Z") || opened.ClosedAt != nil {
+		t.Fatalf("opening must expose a UTC RFC3339 instant without a closing date: %#v, err=%v", opened, err)
+	}
 
 	listReq := httptest.NewRequest("GET", "/v1/admin/cash-registers", nil)
 	listReq = listReq.WithContext(context.WithValue(listReq.Context(), scopeKey{}, s))
@@ -62,6 +66,9 @@ func TestCashRegisterAndShiftLifecycleTracksExpectedAndVariance(t *testing.T) {
 	}
 	if len(registers.Items) != 1 || registers.Items[0].OpenShift == nil || registers.Items[0].OpenShift.ID != opened.ID {
 		t.Fatalf("register must expose its open shift: %#v", registers.Items)
+	}
+	if registers.Items[0].OpenShift.OpenedAt != opened.OpenedAt {
+		t.Fatal("the open register card must expose the original opening timestamp")
 	}
 
 	duplicateReq := httptest.NewRequest("POST", "/v1/admin/cash-shifts", bytes.NewReader(openBody))
@@ -97,6 +104,9 @@ func TestCashRegisterAndShiftLifecycleTracksExpectedAndVariance(t *testing.T) {
 	if income.SourceType != "manual" || income.SourceID != nil {
 		t.Fatalf("manual movement must keep explicit source metadata: %#v", income)
 	}
+	if _, err := time.Parse(time.RFC3339Nano, income.CreatedAt); err != nil {
+		t.Fatalf("created movement timestamp must be RFC3339: %q, err=%v", income.CreatedAt, err)
+	}
 
 	expenseBody := []byte(`{"movementType":"expense","amount":20,"reason":"Compra menor","note":"Caja chica"}`)
 	expenseReq := httptest.NewRequest("POST", "/v1/admin/cash-shifts/"+opened.ID+"/movements", bytes.NewReader(expenseBody))
@@ -124,6 +134,14 @@ func TestCashRegisterAndShiftLifecycleTracksExpectedAndVariance(t *testing.T) {
 	if current.Shift == nil || current.Shift.IncomeAmount != "50.00" || current.Shift.ExpenseAmount != "20.00" || current.Shift.ExpectedAmount != "130.00" || len(current.Shift.Movements) != 2 {
 		t.Fatalf("unexpected current shift totals: %#v", current.Shift)
 	}
+	if current.Shift.OpenedAt != opened.OpenedAt {
+		t.Fatal("current shift must preserve its original opening timestamp")
+	}
+	for _, item := range current.Shift.Movements {
+		if _, err := time.Parse(time.RFC3339Nano, item.CreatedAt); err != nil {
+			t.Fatalf("movement timestamp must be RFC3339: %q, err=%v", item.CreatedAt, err)
+		}
+	}
 
 	closeBody := []byte(`{"countedAmount":128,"note":"Diferencia revisada"}`)
 	closeReq := httptest.NewRequest("POST", "/v1/admin/cash-shifts/"+opened.ID+"/close", bytes.NewReader(closeBody))
@@ -140,6 +158,13 @@ func TestCashRegisterAndShiftLifecycleTracksExpectedAndVariance(t *testing.T) {
 	}
 	if closed.Status != "closed" || closed.ClosingExpectedAmount == nil || *closed.ClosingExpectedAmount != "130.00" || closed.ClosingCountedAmount == nil || *closed.ClosingCountedAmount != "128.00" || closed.VarianceAmount == nil || *closed.VarianceAmount != "-2.00" {
 		t.Fatalf("unexpected closed shift: %#v", closed)
+	}
+	if closed.OpenedAt != opened.OpenedAt || closed.ClosedAt == nil {
+		t.Fatal("closing must retain the opening timestamp and expose its own timestamp")
+	}
+	closedAt, err := time.Parse(time.RFC3339Nano, *closed.ClosedAt)
+	if err != nil || !strings.HasSuffix(*closed.ClosedAt, "Z") || closedAt.Before(openedAt) {
+		t.Fatalf("closing must be a UTC RFC3339 instant after opening: %q, err=%v", *closed.ClosedAt, err)
 	}
 
 	renameReq := httptest.NewRequest("PATCH", "/v1/admin/cash-registers/"+register.ID, bytes.NewReader([]byte(`{"name":"Caja salón"}`)))
