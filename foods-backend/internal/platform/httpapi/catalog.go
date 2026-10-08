@@ -50,24 +50,31 @@ type product struct {
 	AvailableUntilTime *string  `json:"availableUntilTime"`
 }
 type productInput struct {
-	SKU                string   `json:"sku"`
-	Name               string   `json:"name"`
-	Description        string   `json:"description"`
-	CategoryID         *string  `json:"categoryId"`
-	Price              string   `json:"price"`
-	Active             *bool    `json:"active,omitempty"`
-	ServiceDestination string   `json:"serviceDestination"`
-	ProductType        string   `json:"productType"`
-	QuantityControl    string   `json:"quantityControl"`
-	ImageURL           *string  `json:"imageUrl"`
-	PrepMinutes        *int     `json:"prepMinutes"`
-	Allergens          []string `json:"allergens"`
-	Featured           *bool    `json:"featured,omitempty"`
-	CostPrice          *string  `json:"costPrice"`
-	AvailableFrom      *string  `json:"availableFrom"`
-	AvailableUntil     *string  `json:"availableUntil"`
-	AvailableDays      []int    `json:"availableDays"`
-	AvailableUntilTime *string  `json:"availableUntilTime"`
+	InitialPortionQuantity *int     `json:"initialPortionQuantity,omitempty"`
+	SKU                    string   `json:"sku"`
+	Name                   string   `json:"name"`
+	Description            string   `json:"description"`
+	CategoryID             *string  `json:"categoryId"`
+	Price                  string   `json:"price"`
+	Active                 *bool    `json:"active,omitempty"`
+	ServiceDestination     string   `json:"serviceDestination"`
+	ProductType            string   `json:"productType"`
+	QuantityControl        string   `json:"quantityControl"`
+	ImageURL               *string  `json:"imageUrl"`
+	PrepMinutes            *int     `json:"prepMinutes"`
+	Allergens              []string `json:"allergens"`
+	Featured               *bool    `json:"featured,omitempty"`
+	CostPrice              *string  `json:"costPrice"`
+	AvailableFrom          *string  `json:"availableFrom"`
+	AvailableUntil         *string  `json:"availableUntil"`
+	AvailableDays          []int    `json:"availableDays"`
+	AvailableUntilTime     *string  `json:"availableUntilTime"`
+}
+
+type productListItem struct {
+	product
+	AvailableQuantity *float64 `json:"availableQuantity"`
+	InventoryUnit     *string  `json:"inventoryUnit"`
 }
 
 func pageParams(r *http.Request) (int, int) {
@@ -302,22 +309,50 @@ func (a *API) listProducts(w http.ResponseWriter, r *http.Request) {
 		fail(w, 503, "products_unavailable", "No pudimos cargar los productos.")
 		return
 	}
-	rows, err := a.db.Query(r.Context(), `SELECT p.id,p.sku,p.name,p.description,p.category_id,c.name,p.price::text,p.active,p.product_type,p.quantity_control,p.image_url,p.prep_minutes,p.allergens,p.featured,p.cost_price::text,p.available_from::text,p.available_until::text,p.available_days,p.available_until_time::text,p.service_destination FROM products p LEFT JOIN menu_categories c ON c.id=p.category_id AND c.organization_id=p.organization_id WHERE p.organization_id=$1 AND (p.name ILIKE $2 OR p.sku ILIKE $2) AND ($3='' OR p.category_id::text=$3) AND ($4='' OR ($4='active' AND p.active) OR ($4='inactive' AND NOT p.active)) AND NOT EXISTS (SELECT 1 FROM menu_combos mc WHERE mc.product_id=p.id) ORDER BY p.updated_at DESC,p.name LIMIT $5 OFFSET $6`, s.OrganizationID, search, categoryID, status, size, (page-1)*size)
+	rows, err := a.db.Query(r.Context(), `
+		SELECT p.id,p.sku,p.name,p.description,p.category_id,c.name,p.price::text,p.active,p.product_type,p.quantity_control,p.image_url,p.prep_minutes,p.allergens,p.featured,p.cost_price::text,p.available_from::text,p.available_until::text,p.available_days,p.available_until_time::text,p.service_destination,
+		       CASE
+		         WHEN p.quantity_control='none' THEN NULL
+		         WHEN NOT p.active OR pa.manual_status='sold_out'
+		           OR (p.available_from IS NOT NULL AND now()<p.available_from)
+		           OR (p.available_until IS NOT NULL AND now()>p.available_until)
+		           OR (p.available_days IS NOT NULL AND NOT (extract(dow FROM now() AT TIME ZONE l.timezone)::integer=ANY(p.available_days)))
+		           OR (p.available_until_time IS NOT NULL AND (now() AT TIME ZONE l.timezone)::time>p.available_until_time) THEN 0
+		         WHEN p.quantity_control='portions' THEN GREATEST(COALESCE(pa.portion_quantity,0)-COALESCE(pa.sold_quantity,0),0)
+		         WHEN p.quantity_control='inventory' THEN GREATEST(COALESCE(sb.quantity,0),0)
+		       END::float8,
+		       CASE WHEN p.quantity_control='inventory' THEN ii.unit END
+		FROM products p
+		JOIN locations l ON l.id=$7 AND l.organization_id=p.organization_id AND l.active
+		LEFT JOIN menu_categories c ON c.id=p.category_id AND c.organization_id=p.organization_id
+		LEFT JOIN product_availability pa ON pa.organization_id=p.organization_id AND pa.location_id=l.id
+		  AND pa.product_id=p.id AND pa.business_date=(now() AT TIME ZONE l.timezone)::date
+		LEFT JOIN inventory_items ii ON ii.organization_id=p.organization_id AND ii.product_id=p.id AND ii.active
+		LEFT JOIN stock_balances sb ON sb.organization_id=p.organization_id AND sb.location_id=l.id AND sb.inventory_item_id=ii.id
+		WHERE p.organization_id=$1 AND (p.name ILIKE $2 OR p.sku ILIKE $2)
+		  AND ($3='' OR p.category_id::text=$3)
+		  AND ($4='' OR ($4='active' AND p.active) OR ($4='inactive' AND NOT p.active))
+		  AND NOT EXISTS (SELECT 1 FROM menu_combos mc WHERE mc.product_id=p.id)
+		ORDER BY p.updated_at DESC,p.name LIMIT $5 OFFSET $6`, s.OrganizationID, search, categoryID, status, size, (page-1)*size, s.LocationID)
 	if err != nil {
 		fail(w, 503, "products_unavailable", "No pudimos cargar los productos.")
 		return
 	}
 	defer rows.Close()
-	items := []product{}
+	items := []productListItem{}
 	for rows.Next() {
-		var p product
-		if err = rows.Scan(&p.ID, &p.SKU, &p.Name, &p.Description, &p.CategoryID, &p.CategoryName, &p.Price, &p.Active, &p.ProductType, &p.QuantityControl, &p.ImageURL, &p.PrepMinutes, &p.Allergens, &p.Featured, &p.CostPrice, &p.AvailableFrom, &p.AvailableUntil, &p.AvailableDays, &p.AvailableUntilTime, &p.ServiceDestination); err != nil {
+		var p productListItem
+		if err = rows.Scan(&p.ID, &p.SKU, &p.Name, &p.Description, &p.CategoryID, &p.CategoryName, &p.Price, &p.Active, &p.ProductType, &p.QuantityControl, &p.ImageURL, &p.PrepMinutes, &p.Allergens, &p.Featured, &p.CostPrice, &p.AvailableFrom, &p.AvailableUntil, &p.AvailableDays, &p.AvailableUntilTime, &p.ServiceDestination, &p.AvailableQuantity, &p.InventoryUnit); err != nil {
 			fail(w, 503, "products_unavailable", "No pudimos cargar los productos.")
 			return
 		}
 		items = append(items, p)
 	}
-	writeJSON(w, 200, map[string]any{"items": items, "total": total, "page": page, "pageSize": size,"serviceDestinationOptions":serviceDestinations})
+	if err := rows.Err(); err != nil {
+		fail(w, 503, "products_unavailable", "No pudimos cargar los productos.")
+		return
+	}
+	writeJSON(w, 200, map[string]any{"items": items, "total": total, "page": page, "pageSize": size, "serviceDestinationOptions": serviceDestinations})
 }
 func (a *API) getProduct(w http.ResponseWriter, r *http.Request) {
 	s := r.Context().Value(scopeKey{}).(scope)
@@ -376,6 +411,9 @@ func (a *API) createProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	in, invalid := normalizeProduct(in)
+	if invalid == "" {
+		invalid = validateInitialPortions(in)
+	}
 	if invalid != "" {
 		fail(w, 400, "invalid_product", invalid)
 		return
@@ -392,15 +430,54 @@ func (a *API) createProduct(w http.ResponseWriter, r *http.Request) {
 	if in.Featured != nil {
 		createFeatured = *in.Featured
 	}
+	tx, err := a.db.Begin(r.Context())
+	if err != nil {
+		fail(w, 503, "product_unavailable", "No pudimos iniciar el registro del producto.")
+		return
+	}
+	defer tx.Rollback(r.Context())
 	var p product
-	err := a.db.QueryRow(r.Context(), `INSERT INTO products(organization_id,category_id,sku,name,description,price,active,product_type,quantity_control,image_url,prep_minutes,allergens,featured,cost_price,available_from,available_until,available_days,available_until_time,service_destination) VALUES($1,$2,$3,$4,$5,$6,true,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18) RETURNING id,sku,name,description,category_id,price::text,active,product_type,quantity_control,image_url,prep_minutes,allergens,featured,cost_price::text,available_from::text,available_until::text,available_days,available_until_time::text,service_destination`, s.OrganizationID, in.CategoryID, strings.TrimSpace(in.SKU), strings.TrimSpace(in.Name), strings.TrimSpace(in.Description), in.Price, in.ProductType, in.QuantityControl, in.ImageURL, in.PrepMinutes, in.Allergens, createFeatured, in.CostPrice, in.AvailableFrom, in.AvailableUntil, in.AvailableDays, in.AvailableUntilTime, in.ServiceDestination).Scan(&p.ID, &p.SKU, &p.Name, &p.Description, &p.CategoryID, &p.Price, &p.Active, &p.ProductType, &p.QuantityControl, &p.ImageURL, &p.PrepMinutes, &p.Allergens, &p.Featured, &p.CostPrice, &p.AvailableFrom, &p.AvailableUntil, &p.AvailableDays, &p.AvailableUntilTime, &p.ServiceDestination)
+	err = tx.QueryRow(r.Context(), `INSERT INTO products(organization_id,category_id,sku,name,description,price,active,product_type,quantity_control,image_url,prep_minutes,allergens,featured,cost_price,available_from,available_until,available_days,available_until_time,service_destination) VALUES($1,$2,$3,$4,$5,$6,true,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18) RETURNING id,sku,name,description,category_id,price::text,active,product_type,quantity_control,image_url,prep_minutes,allergens,featured,cost_price::text,available_from::text,available_until::text,available_days,available_until_time::text,service_destination`, s.OrganizationID, in.CategoryID, strings.TrimSpace(in.SKU), strings.TrimSpace(in.Name), strings.TrimSpace(in.Description), in.Price, in.ProductType, in.QuantityControl, in.ImageURL, in.PrepMinutes, in.Allergens, createFeatured, in.CostPrice, in.AvailableFrom, in.AvailableUntil, in.AvailableDays, in.AvailableUntilTime, in.ServiceDestination).Scan(&p.ID, &p.SKU, &p.Name, &p.Description, &p.CategoryID, &p.Price, &p.Active, &p.ProductType, &p.QuantityControl, &p.ImageURL, &p.PrepMinutes, &p.Allergens, &p.Featured, &p.CostPrice, &p.AvailableFrom, &p.AvailableUntil, &p.AvailableDays, &p.AvailableUntilTime, &p.ServiceDestination)
 	if err != nil {
 		fail(w, 409, "product_conflict", "Revisa la categoría y el precio.")
 		return
 	}
-	a.audit(r, "product.created", "product", p.ID)
+	if in.InitialPortionQuantity != nil {
+		var createdID string
+		err = tx.QueryRow(r.Context(), `
+			INSERT INTO product_availability(organization_id,location_id,product_id,business_date,portion_quantity,manual_status,updated_by)
+			SELECT $1,l.id,$3,(now() AT TIME ZONE l.timezone)::date,$4,'available',$5
+			FROM locations l WHERE l.organization_id=$1 AND l.id=$2 AND l.active
+			RETURNING product_id`, s.OrganizationID, s.LocationID, p.ID, *in.InitialPortionQuantity, s.UserID).Scan(&createdID)
+		if err != nil {
+			fail(w, 503, "product_unavailable", "No pudimos registrar las porciones de hoy. El producto no se guardó.")
+			return
+		}
+	}
+	_, err = tx.Exec(r.Context(), `INSERT INTO audit_log(organization_id,location_id,user_id,action,entity_type,entity_id,metadata)
+		VALUES($1,$2,$3,'product.created','product',$4,jsonb_build_object('initialPortionQuantity',$5::integer))`, s.OrganizationID, s.LocationID, s.UserID, p.ID, in.InitialPortionQuantity)
+	if err != nil {
+		fail(w, 503, "product_unavailable", "No pudimos confirmar el registro del producto.")
+		return
+	}
+	if err = tx.Commit(r.Context()); err != nil {
+		fail(w, 503, "product_unavailable", "No pudimos confirmar el registro del producto.")
+		return
+	}
 	writeJSON(w, 201, p)
 }
+
+func validateInitialPortions(in productInput) string {
+	if in.QuantityControl == "portions" {
+		if in.InitialPortionQuantity == nil || *in.InitialPortionQuantity < 1 || *in.InitialPortionQuantity > 2147483647 {
+			return "Ingresa una cantidad disponible hoy entera entre 1 y 2147483647."
+		}
+	} else if in.InitialPortionQuantity != nil {
+		return "La cantidad disponible hoy solo corresponde a Porciones preparadas."
+	}
+	return ""
+}
+
 func (a *API) updateProduct(w http.ResponseWriter, r *http.Request) {
 	s := r.Context().Value(scopeKey{}).(scope)
 	var in productInput
@@ -409,6 +486,10 @@ func (a *API) updateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	destinationProvided := in.ServiceDestination != ""
+	if in.InitialPortionQuantity != nil {
+		fail(w, 400, "invalid_product", "Actualiza la cantidad de un producto existente desde Disponibilidad.")
+		return
+	}
 	productTypeProvided := strings.TrimSpace(in.ProductType) != ""
 	in, invalid := normalizeProduct(in)
 	if invalid != "" {

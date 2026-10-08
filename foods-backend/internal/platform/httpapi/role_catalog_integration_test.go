@@ -38,15 +38,17 @@ func TestEmprendeSubscriptionAndRoleCatalog(t *testing.T) {
 	})
 
 	modules := api.activeModules(s.OrganizationID)
-	if !modules["combos"] || modules["recetas"] || modules["inventario"] || modules["compras"] {
+	if !modules["combos"] || !modules["inventario"] || !modules["compras"] || modules["recetas"] || modules["kardex"] {
 		t.Fatalf("incorrect Emprende modules: %+v", modules)
 	}
 	catalog, err := api.loadRoleCatalog(ctx, s)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !slices.Contains(roleCatalogValues(catalog.Menus), "combos") {
-		t.Fatal("Emprende cannot configure menus/combos")
+	for _, menu := range []string{"combos", "inventario", "compras"} {
+		if !slices.Contains(roleCatalogValues(catalog.Menus), menu) {
+			t.Fatalf("Emprende cannot configure %s", menu)
+		}
 	}
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest("GET", "/v1/admin/roles", nil)
@@ -75,8 +77,15 @@ func TestEmprendeSubscriptionAndRoleCatalog(t *testing.T) {
 		}
 		if role.SystemKey != nil && *role.SystemKey == "administrator" {
 			foundAdmin = true
-			if !slices.Contains(role.MenuAccess, "combos") {
-				t.Fatal("company administrator missing combos")
+			for _, menu := range []string{"combos", "inventario", "compras"} {
+				if !slices.Contains(role.MenuAccess, menu) {
+					t.Fatalf("company administrator missing %s", menu)
+				}
+			}
+			for _, permission := range []string{"inventory.read", "inventory.manage", "purchases.read", "purchases.manage"} {
+				if !slices.Contains(role.Permissions, permission) {
+					t.Fatalf("company administrator missing %s", permission)
+				}
 			}
 		}
 	}
@@ -85,11 +94,11 @@ func TestEmprendeSubscriptionAndRoleCatalog(t *testing.T) {
 	}
 
 	// Even an old/manual active flag cannot expose a module outside the plan.
-	if _, err = api.db.Exec(ctx, `UPDATE organization_modules SET active=true WHERE organization_id=$1 AND module_key='compras'`, s.OrganizationID); err != nil {
+	if _, err = api.db.Exec(ctx, `UPDATE organization_modules SET active=true WHERE organization_id=$1 AND module_key='recetas'`, s.OrganizationID); err != nil {
 		t.Fatal(err)
 	}
-	if api.activeModules(s.OrganizationID)["compras"] {
-		t.Fatal("off-plan activation exposed purchases")
+	if api.activeModules(s.OrganizationID)["recetas"] {
+		t.Fatal("off-plan activation exposed recipes")
 	}
 
 	callSave := func(id, body string) *httptest.ResponseRecorder {
@@ -100,7 +109,7 @@ func TestEmprendeSubscriptionAndRoleCatalog(t *testing.T) {
 		api.saveRole(rec, req, id != "")
 		return rec
 	}
-	denied := callSave("", `{"name":"Fuera del plan","description":"Prueba","menuAccess":["compras"],"permissions":["purchases.read"]}`)
+	denied := callSave("", `{"name":"Fuera del plan","description":"Prueba","menuAccess":["recetas"],"permissions":["recipes.manage"]}`)
 	if denied.Code != 400 || !strings.Contains(denied.Body.String(), "role_outside_plan") {
 		t.Fatalf("off-plan assignment allowed: %d %s", denied.Code, denied.Body.String())
 	}
@@ -131,7 +140,7 @@ func TestEmprendeSubscriptionAndRoleCatalog(t *testing.T) {
 	req = httptest.NewRequest("GET", "/v1/admin/permission-catalog", nil).WithContext(context.WithValue(ctx, scopeKey{}, s))
 	rec = httptest.NewRecorder()
 	api.getPermissionCatalog(rec, req)
-	if rec.Code != 200 || strings.Contains(rec.Body.String(), "purchases.manage") || !strings.Contains(rec.Body.String(), "combos") {
+	if rec.Code != 200 || strings.Contains(rec.Body.String(), "recipes.manage") || !strings.Contains(rec.Body.String(), "combos") || !strings.Contains(rec.Body.String(), "inventory.manage") || !strings.Contains(rec.Body.String(), "purchases.manage") {
 		t.Fatalf("unscoped HTTP catalog: %d %s", rec.Code, rec.Body.String())
 	}
 	// The platform master retains the commercial catalog, not a tenant-restricted view.

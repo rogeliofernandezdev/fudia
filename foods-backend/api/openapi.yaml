@@ -2,6 +2,59 @@ openapi: 3.1.0
 info: { title: Foods API, version: 0.14.0, description: API operativa y administrativa multiempresa. }
 servers: [{ url: http://localhost:8080 }]
 paths:
+  /v1/admin/tables/batch:
+    post:
+      operationId: createTablesBatch
+      summary: Registra un lote de mesas con sus QR y auditoría en una operación atómica
+      description: "Exige tables.manage. Empresa y local se derivan de la sesión. Valida las zonas activas del local y no guarda registros parciales. La respuesta mantiene el orden del lote. Ante pérdida de respuesta, consultar el listado antes de repetir; no se reintenta automáticamente."
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [items]
+              properties:
+                items:
+                  type: array
+                  minItems: 1
+                  maxItems: 500
+                  items:
+                    type: object
+                    required: [name]
+                    properties:
+                      name: { type: string, description: Nombre único dentro del local; se recortan espacios }
+                      seats: { type: integer, default: 2, minimum: 1 }
+                      zone: { type: string, default: "", description: Nombre de una zona activa del local; vacío significa sin zona }
+                      qrEnabled: { type: boolean, default: true }
+      responses:
+        "201":
+          description: Mesas y auditoría confirmadas
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, name, seats, zone, active, qrToken, qrEnabled]
+                      properties:
+                        id: { type: string, format: uuid }
+                        name: { type: string }
+                        seats: { type: integer }
+                        zone: { type: string }
+                        active: { type: boolean }
+                        qrToken: { type: string }
+                        qrEnabled: { type: boolean }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { description: Sesión ausente o vencida }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: Nombre de mesa duplicado; ninguna mesa del lote se guarda }
+        "503": { description: No se pudo confirmar el resultado; revisar el listado antes de repetir }
   /health:
     get:
       operationId: getHealth
@@ -359,13 +412,14 @@ paths:
         - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
         - { in: query, name: pageSize, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
       responses:
-        "200": { description: Productos, content: { application/json: { schema: { type: object, required: [items, total], properties: { serviceDestinationOptions: { type: array, items: { $ref: "#/components/schemas/Option" } }, items: { type: array, items: { $ref: "#/components/schemas/Product" } }, total: { type: integer } } } } } }
+        "200": { description: Productos y cantidad disponible del local actual, content: { application/json: { schema: { type: object, required: [items, total], properties: { serviceDestinationOptions: { type: array, items: { $ref: "#/components/schemas/Option" } }, items: { type: array, items: { $ref: "#/components/schemas/ProductListItem" } }, total: { type: integer } } } } } }
         "401": { $ref: "#/components/responses/Unauthorized" }
     post:
       operationId: createProduct
+      summary: Registra el producto y sus porciones de hoy en una sola transacción
       security: [{ sessionCookie: [] }]
-      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ProductInput" } } } }
-      responses: { "201": { description: Creado, content: { application/json: { schema: { $ref: "#/components/schemas/Product" } } } }, "400": { $ref: "#/components/responses/BadRequest" }, "401": { $ref: "#/components/responses/Unauthorized" } }
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ProductCreateInput" } } } }
+      responses: { "201": { description: Producto y cantidad inicial confirmados, content: { application/json: { schema: { $ref: "#/components/schemas/Product" } } } }, "400": { $ref: "#/components/responses/BadRequest" }, "401": { $ref: "#/components/responses/Unauthorized" }, "403": { $ref: "#/components/responses/Forbidden" }, "409": { description: Conflicto en el catálogo }, "503": { description: No se pudo confirmar el registro } }
   /v1/admin/products/{id}:
     parameters: [{ $ref: "#/components/parameters/EntityId" }]
     get:
@@ -476,6 +530,42 @@ paths:
         - { in: query, name: pageSize, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
       responses:
         "200": { description: Artículos seleccionables paginados, content: { application/json: { schema: { type: object, required: [items, total, page, pageSize], properties: { items: { type: array, items: { $ref: "#/components/schemas/InventoryProductOption" } }, total: { type: integer, minimum: 0 }, page: { type: integer, minimum: 1 }, pageSize: { type: integer, minimum: 1 } } } } } }
+  /v1/admin/inventory/units:
+    get:
+      operationId: listInventoryUnits
+      summary: Unidades base de la empresa; requiere inventory.read
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Catálogo de unidades, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryUnitsResponse" } } } }
+        "403": { description: Sin permiso de lectura }
+    post:
+      operationId: createInventoryUnit
+      summary: Crea una unidad en la empresa; requiere inventory.manage
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryUnitInput" } } } }
+      responses:
+        "201": { description: Unidad creada, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryUnit" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { description: Sin permiso de gestión }
+        "409": { description: Código de unidad ya registrado }
+  /v1/admin/purchase-units:
+    get:
+      operationId: listPurchaseUnits
+      summary: Mismo catálogo de unidades de la empresa; requiere purchases.read
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Catálogo de unidades, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryUnitsResponse" } } } }
+        "403": { description: Sin permiso de lectura }
+    post:
+      operationId: createPurchaseUnit
+      summary: Crea una unidad en el catálogo compartido de la empresa; requiere purchases.manage
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryUnitInput" } } } }
+      responses:
+        "201": { description: Unidad creada, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryUnit" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { description: Sin permiso de gestión }
+        "409": { description: Código de unidad ya registrado }
   /v1/admin/inventory/entries:
     post:
       operationId: createInventoryEntry
@@ -558,6 +648,37 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "409": { description: Categoría, producto o artículo en conflicto }
         "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/purchase-combinations:
+    get:
+      operationId: listPurchaseCombinations
+      security: [{ sessionCookie: [] }]
+      parameters: [{ in: query, name: unit, schema: { type: string } }]
+      responses:
+        "200": { description: Combinaciones de la empresa (purchases.read), content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/InventoryCombination" } } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "503": { description: Catálogo no disponible }
+    post:
+      operationId: savePurchaseCombination
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryCombinationInput" } } } }
+      responses:
+        "201": { description: Combinación guardada sin alterar conversiones ni stock (purchases.manage), content: { application/json: { schema: { $ref: "#/components/schemas/InventoryCombination" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: Código pertenece a otra presentación }
+        "503": { description: No se guardó la combinación }
+  /v1/admin/purchase-inventory-items/{id}/presentations:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    post:
+      operationId: savePurchasePresentation
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryPresentationInput" } } } }
+      responses:
+        "201": { description: Presentación guardada sin alterar documentos históricos ni stock (purchases.manage), content: { application/json: { schema: { $ref: "#/components/schemas/InventoryPresentation" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { description: Artículo no encontrado }
+        "503": { description: No se guardó la presentación }
   /v1/admin/purchase-item-categories:
     get:
       operationId: listPurchaseItemCategories
@@ -617,6 +738,16 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "409": { description: La orden no es recibible o una cantidad supera lo pendiente }
         "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/purchase-receipts/{id}:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    get:
+      operationId: getPurchaseReceipt
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Recepción del local con nombres del catálogo y conversiones históricas, content: { application/json: { schema: { $ref: "#/components/schemas/PurchaseReceiptDetail" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { description: Recepción no encontrada en el local }
+        "503": { description: Recepción no disponible }
   /v1/admin/expenses:
     get:
       operationId: listExpenses
@@ -1264,6 +1395,9 @@ components:
     Unauthorized: { description: Sesión inválida, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
     Forbidden: { description: Permiso insuficiente, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
   schemas:
+    InventoryUnit: { type: object, required: [id, code, name], properties: { id: { type: string, format: uuid }, code: { type: string, description: Código estable de la unidad base }, name: { type: string } } }
+    InventoryUnitsResponse: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/InventoryUnit" } } } }
+    InventoryUnitInput: { type: object, required: [code, name], properties: { code: { type: string, maxLength: 32, pattern: "^[a-z][a-z0-9_-]{0,31}$" }, name: { type: string, minLength: 1, maxLength: 80 } } }
     Health: { type: object, required: [status, service, version], properties: { status: { type: string, const: ok }, service: { type: string }, version: { type: string } } }
     LoginRequest: { type: object, required: [email, password], properties: { email: { type: string, format: email }, password: { type: string, minLength: 8 } } }
     SubscriptionPlanInput: { type: object, required: [code, name, currency, monthlyPrice, annualPrice, trialDays, moduleKeys, termsVersion, active], properties: { code: { type: string, pattern: "^[a-z0-9][a-z0-9_-]{1,39}$" }, name: { type: string }, description: { type: string }, currency: { type: string, pattern: "^[A-Z]{3}$" }, monthlyPrice: { type: string }, annualPrice: { type: string }, trialDays: { type: integer, minimum: 0, maximum: 365 }, maxLocations: { type: [integer, "null"], minimum: 1 }, maxUsers: { type: [integer, "null"], minimum: 1 }, moduleKeys: { type: array, minItems: 1, uniqueItems: true, items: { type: string } }, termsVersion: { type: string }, active: { type: boolean } } }
@@ -1355,7 +1489,33 @@ components:
     CategoryInput: { type: object, required: [name, sortOrder], properties: { name: { type: string, maxLength: 120 }, sortOrder: { type: integer, minimum: 0 }, active: { type: boolean }, productScope: { type: string, enum: [prepared, retail, both], default: prepared, description: "Indica si la categoría puede clasificar productos preparados, mercadería vendible o ambos." } } }
     Category: { allOf: [{ $ref: "#/components/schemas/CategoryInput" }, { type: object, required: [id, active, productScope, productCount], properties: { id: { type: string, format: uuid }, active: { type: boolean }, productCount: { type: integer } } }] }
     ProductInput: { type: object, required: [name, price], properties: { sku: { type: string, maxLength: 40 }, name: { type: string, maxLength: 160 }, description: { type: string, maxLength: 1000 }, categoryId: { type: [string, "null"], format: uuid }, price: { type: string, pattern: "^[0-9]+(\\.[0-9]{1,2})?$" }, active: { type: boolean }, productType: { type: string, enum: [prepared, retail], default: prepared, description: "Clasificación operativa independiente de categoría y control de cantidad." }, serviceDestination: { type: string, enum: [kitchen, bar, direct], description: "Cocina por defecto para preparados, Entrega directa para mercadería al crear. Omisión en edición conserva destino anterior. Independiente de categoría e inventario." }, quantityControl: { type: string, enum: [none, portions, inventory], default: none } } }
+    ProductCreateInput:
+      allOf:
+        - $ref: "#/components/schemas/ProductInput"
+        - type: object
+          properties:
+            initialPortionQuantity:
+              type: integer
+              minimum: 1
+              maximum: 2147483647
+              description: Cantidad inicial solo para portions. Se registra en el local de la sesión y en su fecha actual, sin cupo predeterminado ni reposición automática diaria.
+          if:
+            required: [quantityControl]
+            properties: { quantityControl: { const: portions } }
+          then: { required: [initialPortionQuantity] }
+          else: { not: { required: [initialPortionQuantity] } }
     Product: { allOf: [{ $ref: "#/components/schemas/ProductInput" }, { type: object, required: [id, active, productType, quantityControl], properties: { id: { type: string, format: uuid }, categoryName: { type: [string, "null"] }, active: { type: boolean } } }] }
+    ProductListItem:
+      allOf:
+        - $ref: "#/components/schemas/Product"
+        - type: object
+          required: [availableQuantity, inventoryUnit]
+          properties:
+            availableQuantity:
+              type: [number, "null"]
+              minimum: 0
+              description: "Porciones restantes del día en la zona horaria del local de sesión o saldo de inventario de ese local. Cero si está agotado, inactivo o fuera de horario; null para productos sin control."
+            inventoryUnit: { type: [string, "null"], description: Unidad del inventario físico; null para otros controles }
     ProductModifierOptionInput: { type: object, required: [name, surcharge], properties: { name: { type: string, minLength: 1, maxLength: 80 }, surcharge: { type: string, description: "Recargo monetario no negativo; foods-backend es la fuente de verdad." } } }
     ProductModifierGroupInput: { type: object, required: [name, required, minSelections, maxSelections, options], properties: { name: { type: string, minLength: 1, maxLength: 80 }, required: { type: boolean }, minSelections: { type: integer, minimum: 0 }, maxSelections: { type: integer, minimum: 1 }, options: { type: array, items: { $ref: "#/components/schemas/ProductModifierOptionInput" } } } }
     ProductModifierConfigInput: { type: object, required: [groups], properties: { groups: { type: array, items: { $ref: "#/components/schemas/ProductModifierGroupInput" } } } }
@@ -1365,13 +1525,19 @@ components:
     ProductAvailabilityInput: { type: object, required: [status], properties: { status: { type: string, enum: [available, sold_out] }, portionQuantity: { type: [integer, "null"], minimum: 0, description: "Para control portions, no puede ser menor que soldQuantity; al marcar available debe ser al menos 1. null conserva el cupo diario existente cuando ya existe un registro." }, note: { type: string, maxLength: 240 } } }
     ProductAvailability: { type: object, required: [productId, name, quantityControl, status, source, manualStatus, soldQuantity, note, businessDate], properties: { productId: { type: string, format: uuid }, name: { type: string }, categoryName: { type: [string, "null"] }, imageUrl: { type: [string, "null"] }, quantityControl: { type: string, enum: [none, portions, inventory] }, status: { type: string, enum: [available, low, sold_out, unavailable] }, source: { type: string, enum: [always, portions, inventory, manual_override, schedule, combo_components] }, manualStatus: { type: string, enum: [available, sold_out] }, portionQuantity: { type: [integer, "null"] }, soldQuantity: { type: integer, minimum: 0 }, remaining: { type: [number, "null"], minimum: 0 }, inventoryUnit: { type: [string, "null"] }, note: { type: string }, businessDate: { type: string, format: date } } }
     InventoryItem: { type: object, required: [inventoryItemId, productId, sku, name, kind, active, unit, quantity, minimumStock, status, updatedAt], properties: { inventoryItemId: { type: string, format: uuid }, productId: { type: [string, "null"], format: uuid }, sku: { type: string }, name: { type: string }, kind: { type: string, enum: [product, ingredient] }, categoryName: { type: [string, "null"] }, active: { type: boolean }, unit: { type: string }, quantity: { type: string }, minimumStock: { type: string }, status: { type: string, enum: [ok, low, out] }, updatedAt: { type: string, format: date-time } } }
-    InventoryPresentation: { type: object, required: [id, presentationType, unitsPerPresentation], properties: { id: { type: string, format: uuid }, presentationType: { type: string, enum: [unit, package, box] }, unitsPerPresentation: { type: string } } }
+    InventoryPresentation: { type: object, required: [id, presentationType, unitsPerPresentation, name, isDefault], properties: { id: { type: string, format: uuid }, presentationType: { type: string, pattern: "^[a-z][a-z0-9_-]{0,31}$" }, unitsPerPresentation: { type: string }, name: { type: string }, isDefault: { type: boolean } } }
+    InventoryPresentationInput: { type: object, required: [presentationType, unitsPerPresentation], properties: { presentationType: { type: string, pattern: "^[a-z][a-z0-9_-]{0,31}$" }, unitsPerPresentation: { type: number, exclusiveMinimum: 0, exclusiveMaximum: 100000000000, multipleOf: 0.001, description: "Unidad base siempre 1. Conversión por artículo; admite fracciones." }, isDefault: { type: boolean, default: false } } }
+    InventoryCombination: { type: object, required: [code, name, unit, unitName, isDefault], properties: { code: { type: string }, name: { type: string }, unit: { type: string }, unitName: { type: string }, isDefault: { type: boolean } } }
+    InventoryCombinationInput: { type: object, required: [unit, code, name], properties: { unit: { type: string }, code: { type: string, pattern: "^[a-z][a-z0-9_-]{0,31}$" }, name: { type: string, minLength: 1, maxLength: 80 }, isDefault: { type: boolean, default: false } } }
+    PurchaseReceiptSummary: { type: object, required: [id, code, purchaseOrderId, number, supplierName, notes, createdByName, createdAt, itemCount], properties: { id: { type: string, format: uuid }, code: { type: string }, purchaseOrderId: { type: string, format: uuid }, number: { type: string }, supplierName: { type: string }, notes: { type: string }, createdByName: { type: string }, createdAt: { type: string, format: date-time }, itemCount: { type: integer } } }
+    PurchaseReceiptItem: { type: object, required: [id, purchaseOrderItemId, inventoryItemId, itemName, quantity, presentationType, presentationName, unitsPerPresentation, stockQuantity, unitCost, returnedQuantity, returnableQuantity], properties: { id: { type: string, format: uuid }, purchaseOrderItemId: { type: string, format: uuid }, inventoryItemId: { type: string, format: uuid }, itemName: { type: string }, quantity: { type: string }, presentationType: { type: string }, presentationName: { type: string }, unitsPerPresentation: { type: string }, stockQuantity: { type: string }, unitCost: { type: string }, returnedQuantity: { type: string }, returnableQuantity: { type: string } } }
+    PurchaseReceiptDetail: { allOf: [{ $ref: "#/components/schemas/PurchaseReceiptSummary" }, { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/PurchaseReceiptItem" } } } }] }
     InventoryProductOption: { type: object, required: [id, productId, sku, name, kind, quantityControl, unit, quantity, minimumStock, presentations], properties: { id: { type: string, format: uuid, description: InventoryItemId }, productId: { type: [string, "null"], format: uuid }, sku: { type: string }, name: { type: string }, kind: { type: string, enum: [product, ingredient] }, categoryName: { type: [string, "null"] }, quantityControl: { type: [string, "null"], enum: [inventory, null] }, unit: { type: string }, quantity: { type: string, description: Existencia actual en la unidad base del local activo }, minimumStock: { type: string }, presentations: { type: array, items: { $ref: "#/components/schemas/InventoryPresentation" } } } }
     InventoryNewProductInput: { type: object, required: [name, price, categoryId], description: "Mercadería vendible clasificada siempre como productType=retail y quantityControl=inventory.", properties: { sku: { type: string }, name: { type: string, maxLength: 160 }, description: { type: string, maxLength: 1000 }, categoryId: { type: string, format: uuid, description: "Debe ser una categoría activa compatible con retail." }, price: { type: string, pattern: "^[0-9]+(\\.[0-9]{1,2})?$" } } }
     InventoryNewIngredientInput: { type: object, required: [name], properties: { name: { type: string, maxLength: 160 } } }
-    InventoryEntryInput: { type: object, required: [quantity], properties: { inventoryItemId: { type: string, format: uuid }, productId: { type: string, format: uuid, description: Compatibilidad con clientes anteriores }, newProduct: { anyOf: [{ $ref: "#/components/schemas/InventoryNewProductInput" }, { type: "null" }] }, newIngredient: { anyOf: [{ $ref: "#/components/schemas/InventoryNewIngredientInput" }, { type: "null" }] }, quantity: { type: number, exclusiveMinimum: 0 }, unit: { type: string, default: und }, presentationType: { type: string, enum: [unit, package, box], default: unit }, unitsPerPresentation: { type: number, exclusiveMinimum: 0, default: 1 }, minimumStock: { type: number, minimum: 0, default: 0 }, note: { type: string, maxLength: 240 } } }
-    InventoryEntryResult: { type: object, required: [id, inventoryItemId, productId, sku, name, kind, quantity, presentationId, presentationType, unitsPerPresentation, stockQuantity, unit, balance, createdProduct, createdInventoryItem], properties: { id: { type: string, format: uuid }, inventoryItemId: { type: string, format: uuid }, productId: { type: [string, "null"], format: uuid }, sku: { type: string }, name: { type: string }, kind: { type: string, enum: [product, ingredient] }, quantity: { type: number }, presentationId: { type: string, format: uuid }, presentationType: { type: string, enum: [unit, package, box] }, unitsPerPresentation: { type: number }, stockQuantity: { type: number }, unit: { type: string }, balance: { type: number }, createdProduct: { type: boolean }, createdInventoryItem: { type: boolean } } }
-    PurchaseInventoryItemInput: { type: object, properties: { newProduct: { anyOf: [{ $ref: "#/components/schemas/InventoryNewProductInput" }, { type: "null" }] }, newIngredient: { anyOf: [{ $ref: "#/components/schemas/InventoryNewIngredientInput" }, { type: "null" }] }, unit: { type: string, default: und }, presentationType: { type: string, enum: [unit, package, box], default: unit }, unitsPerPresentation: { type: number, exclusiveMinimum: 0, default: 1 }, minimumStock: { type: number, minimum: 0, default: 0 } }, description: "Debe informar exactamente newProduct o newIngredient. El artículo se crea con stock 0 y sin movimiento de Kárdex." }
+    InventoryEntryInput: { type: object, required: [quantity], properties: { inventoryItemId: { type: string, format: uuid }, productId: { type: string, format: uuid, description: Compatibilidad con clientes anteriores }, newProduct: { anyOf: [{ $ref: "#/components/schemas/InventoryNewProductInput" }, { type: "null" }] }, newIngredient: { anyOf: [{ $ref: "#/components/schemas/InventoryNewIngredientInput" }, { type: "null" }] }, quantity: { type: number, exclusiveMinimum: 0 }, unit: { type: string, default: und }, presentationType: { type: string, pattern: "^[a-z][a-z0-9_-]{0,31}$", default: unit }, unitsPerPresentation: { type: number, exclusiveMinimum: 0, default: 1 }, minimumStock: { type: number, minimum: 0, default: 0 }, note: { type: string, maxLength: 240 } } }
+    InventoryEntryResult: { type: object, required: [id, inventoryItemId, productId, sku, name, kind, quantity, presentationId, presentationType, unitsPerPresentation, stockQuantity, unit, balance, createdProduct, createdInventoryItem], properties: { id: { type: string, format: uuid }, inventoryItemId: { type: string, format: uuid }, productId: { type: [string, "null"], format: uuid }, sku: { type: string }, name: { type: string }, kind: { type: string, enum: [product, ingredient] }, quantity: { type: number }, presentationId: { type: string, format: uuid }, presentationType: { type: string, pattern: "^[a-z][a-z0-9_-]{0,31}$" }, unitsPerPresentation: { type: number }, stockQuantity: { type: number }, unit: { type: string }, balance: { type: number }, createdProduct: { type: boolean }, createdInventoryItem: { type: boolean } } }
+    PurchaseInventoryItemInput: { type: object, properties: { newProduct: { anyOf: [{ $ref: "#/components/schemas/InventoryNewProductInput" }, { type: "null" }] }, newIngredient: { anyOf: [{ $ref: "#/components/schemas/InventoryNewIngredientInput" }, { type: "null" }] }, unit: { type: string, default: und }, presentationType: { type: string, pattern: "^[a-z][a-z0-9_-]{0,31}$", default: unit }, unitsPerPresentation: { type: number, exclusiveMinimum: 0, default: 1 }, presentations: { type: array, minItems: 1, maxItems: 50, items: { $ref: "#/components/schemas/InventoryPresentationInput" }, description: "Conversiones por artículo. Una sola predeterminada; si se omite, acepta los campos legados." }, minimumStock: { type: number, minimum: 0, default: 0 } }, description: "Debe informar exactamente newProduct o newIngredient. El artículo se crea con stock 0 y sin movimiento de Kárdex." }
     SupplierInput: { type: object, required: [name], properties: { taxId: { type: string, maxLength: 11 }, name: { type: string, maxLength: 180 }, email: { type: string, maxLength: 180 }, phone: { type: string, maxLength: 40 } } }
     Supplier: { allOf: [{ $ref: "#/components/schemas/SupplierInput" }, { type: object, required: [id, active], properties: { id: { type: string, format: uuid }, active: { type: boolean } } }] }
     PurchaseReceiptLineInput: { type: object, required: [purchaseOrderItemId, quantity], properties: { purchaseOrderItemId: { type: string, format: uuid }, quantity: { type: number, exclusiveMinimum: 0 } } }
@@ -1380,7 +1546,7 @@ components:
     PurchaseOrderItemInput: { type: object, required: [inventoryItemId, presentationId, quantity, unitCost], properties: { inventoryItemId: { type: string, format: uuid }, presentationId: { type: string, format: uuid }, quantity: { type: number, exclusiveMinimum: 0 }, unitCost: { type: string, pattern: "^[0-9]+(\\.[0-9]{1,4})?$" } } }
     PurchaseOrderInput: { type: object, required: [supplierId, items], properties: { supplierId: { type: string, format: uuid }, expectedAt: { type: string, format: date }, notes: { type: string, maxLength: 500 }, items: { type: array, minItems: 1, maxItems: 100, items: { $ref: "#/components/schemas/PurchaseOrderItemInput" } } } }
     PurchaseOrderSummary: { type: object, required: [id, number, supplierId, supplierName, status, total, notes, itemCount, createdAt, updatedAt], properties: { id: { type: string, format: uuid }, number: { type: string }, supplierId: { type: string, format: uuid }, supplierName: { type: string }, status: { type: string, enum: [draft, pending_approval, approved, received, cancelled] }, total: { type: string }, notes: { type: string }, expectedAt: { type: [string, "null"], format: date }, itemCount: { type: integer, minimum: 0 }, createdAt: { type: string, format: date-time }, updatedAt: { type: string, format: date-time }, approvedAt: { type: [string, "null"], format: date-time }, receivedAt: { type: [string, "null"], format: date-time }, cancelledAt: { type: [string, "null"], format: date-time } } }
-    PurchaseOrderItem: { type: object, required: [id, inventoryItemId, itemName, sku, unit, presentationId, presentationType, unitsPerPresentation, quantity, receivedQuantity, pendingQuantity, stockQuantity, unitCost, lineTotal], properties: { id: { type: string, format: uuid }, inventoryItemId: { type: string, format: uuid }, itemName: { type: string }, sku: { type: string }, unit: { type: string }, presentationId: { type: string, format: uuid }, presentationType: { type: string, enum: [unit, package, box] }, unitsPerPresentation: { type: string }, quantity: { type: string }, receivedQuantity: { type: string }, pendingQuantity: { type: string }, stockQuantity: { type: string }, unitCost: { type: string }, lineTotal: { type: string } } }
+    PurchaseOrderItem: { type: object, required: [id, inventoryItemId, itemName, sku, unit, presentationId, presentationType, unitsPerPresentation, quantity, receivedQuantity, pendingQuantity, stockQuantity, unitCost, lineTotal, presentationName], properties: { id: { type: string, format: uuid }, inventoryItemId: { type: string, format: uuid }, itemName: { type: string }, sku: { type: string }, unit: { type: string }, presentationId: { type: string, format: uuid }, presentationType: { type: string, pattern: "^[a-z][a-z0-9_-]{0,31}$" }, unitsPerPresentation: { type: string }, quantity: { type: string }, receivedQuantity: { type: string }, pendingQuantity: { type: string }, stockQuantity: { type: string }, unitCost: { type: string }, lineTotal: { type: string }, presentationName: { type: string } } }
     PurchaseOrder: { allOf: [{ $ref: "#/components/schemas/PurchaseOrderSummary" }, { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/PurchaseOrderItem" } } } }] }
     InventoryAdjustmentInput: { type: object, required: [inventoryItemId, movementType, reason, quantity], properties: { inventoryItemId: { type: string, format: uuid }, movementType: { type: string, enum: [entry, exit] }, reason: { type: string, enum: [surplus_adjustment, shortage_adjustment, waste, expiration, other_exit] }, quantity: { type: number, exclusiveMinimum: 0 }, observation: { type: string, maxLength: 240 } } }
     InventoryAdjustmentResult: { type: object, required: [id, inventoryItemId, name, unit, movementType, reason, quantity, stockBefore, stockAfter, observation, createdAt, createdByName], properties: { id: { type: string, format: uuid }, inventoryItemId: { type: string, format: uuid }, name: { type: string }, unit: { type: string }, movementType: { type: string, enum: [entry, exit] }, reason: { type: string, enum: [surplus_adjustment, shortage_adjustment, waste, expiration, other_exit] }, quantity: { type: number }, stockBefore: { type: number, minimum: 0 }, stockAfter: { type: number, minimum: 0 }, observation: { type: string }, createdAt: { type: string, format: date-time }, createdByName: { type: string } } }

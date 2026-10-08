@@ -14,21 +14,21 @@ import (
 )
 
 type inventoryItemView struct {
-	InventoryItemID string  `json:"inventoryItemId"`
-	ProductID       *string `json:"productId"`
-	SKU             string  `json:"sku"`
-	Name            string  `json:"name"`
-	Kind            string  `json:"kind"`
-	CategoryName    *string `json:"categoryName"`
-	Active          bool    `json:"active"`
-	Unit            string  `json:"unit"`
-	Quantity        string  `json:"quantity"`
-	MinimumStock    string  `json:"minimumStock"`
-	ReorderPoint    string  `json:"reorderPoint"`
-	OptimalStock    string  `json:"optimalStock"`
-	AverageUnitCost string  `json:"averageUnitCost"`
-	StockValue      string  `json:"stockValue"`
-	Status          string  `json:"status"`
+	InventoryItemID string    `json:"inventoryItemId"`
+	ProductID       *string   `json:"productId"`
+	SKU             string    `json:"sku"`
+	Name            string    `json:"name"`
+	Kind            string    `json:"kind"`
+	CategoryName    *string   `json:"categoryName"`
+	Active          bool      `json:"active"`
+	Unit            string    `json:"unit"`
+	Quantity        string    `json:"quantity"`
+	MinimumStock    string    `json:"minimumStock"`
+	ReorderPoint    string    `json:"reorderPoint"`
+	OptimalStock    string    `json:"optimalStock"`
+	AverageUnitCost string    `json:"averageUnitCost"`
+	StockValue      string    `json:"stockValue"`
+	Status          string    `json:"status"`
 	UpdatedAt       time.Time `json:"updatedAt"`
 }
 
@@ -36,6 +36,8 @@ type inventoryPresentationOption struct {
 	ID                   string `json:"id"`
 	PresentationType     string `json:"presentationType"`
 	UnitsPerPresentation string `json:"unitsPerPresentation"`
+	Name                 string `json:"name"`
+	IsDefault            bool   `json:"isDefault"`
 }
 
 type inventoryProductOption struct {
@@ -68,16 +70,16 @@ type inventoryNewIngredientInput struct {
 }
 
 type inventoryEntryInput struct {
-	InventoryItemID       string                       `json:"inventoryItemId"`
-	ProductID             string                       `json:"productId"`
-	NewProduct            *inventoryNewProductInput    `json:"newProduct"`
-	NewIngredient         *inventoryNewIngredientInput `json:"newIngredient"`
-	Quantity              float64                      `json:"quantity"`
-	Unit                  string                       `json:"unit"`
-	PresentationType      string                       `json:"presentationType"`
-	UnitsPerPresentation  float64                      `json:"unitsPerPresentation"`
-	MinimumStock          float64                      `json:"minimumStock"`
-	Note                  string                       `json:"note"`
+	InventoryItemID      string                       `json:"inventoryItemId"`
+	ProductID            string                       `json:"productId"`
+	NewProduct           *inventoryNewProductInput    `json:"newProduct"`
+	NewIngredient        *inventoryNewIngredientInput `json:"newIngredient"`
+	Quantity             float64                      `json:"quantity"`
+	Unit                 string                       `json:"unit"`
+	PresentationType     string                       `json:"presentationType"`
+	UnitsPerPresentation float64                      `json:"unitsPerPresentation"`
+	MinimumStock         float64                      `json:"minimumStock"`
+	Note                 string                       `json:"note"`
 }
 
 type inventoryCatalogCreateResult struct {
@@ -96,25 +98,25 @@ type inventoryCatalogCreateError struct {
 }
 
 type inventoryMovementView struct {
-	ID              string  `json:"id"`
-	InventoryItemID string  `json:"inventoryItemId"`
-	ProductID       *string `json:"productId"`
-	ItemName        string  `json:"itemName"`
-	MovementType    string  `json:"movementType"`
-	AdjustmentType  *string `json:"adjustmentType,omitempty"`
-	Reason          *string `json:"reason,omitempty"`
-	QuantityDelta   string  `json:"quantityDelta"`
-	BalanceBefore   string  `json:"balanceBefore"`
-	BalanceAfter    string  `json:"balanceAfter"`
-	UnitCost        string  `json:"unitCost"`
-	ValueDelta      string  `json:"valueDelta"`
-	BalanceValueAfter string `json:"balanceValueAfter"`
-	SourceType      string  `json:"sourceType"`
-	SourceID        string  `json:"sourceId"`
-	SourceReference string  `json:"sourceReference"`
-	Note            string  `json:"note"`
-	CreatedByName   string  `json:"createdByName"`
-	CreatedAt       time.Time `json:"createdAt"`
+	ID                string    `json:"id"`
+	InventoryItemID   string    `json:"inventoryItemId"`
+	ProductID         *string   `json:"productId"`
+	ItemName          string    `json:"itemName"`
+	MovementType      string    `json:"movementType"`
+	AdjustmentType    *string   `json:"adjustmentType,omitempty"`
+	Reason            *string   `json:"reason,omitempty"`
+	QuantityDelta     string    `json:"quantityDelta"`
+	BalanceBefore     string    `json:"balanceBefore"`
+	BalanceAfter      string    `json:"balanceAfter"`
+	UnitCost          string    `json:"unitCost"`
+	ValueDelta        string    `json:"valueDelta"`
+	BalanceValueAfter string    `json:"balanceValueAfter"`
+	SourceType        string    `json:"sourceType"`
+	SourceID          string    `json:"sourceId"`
+	SourceReference   string    `json:"sourceReference"`
+	Note              string    `json:"note"`
+	CreatedByName     string    `json:"createdByName"`
+	CreatedAt         time.Time `json:"createdAt"`
 }
 
 type inventoryAdjustmentInput struct {
@@ -154,7 +156,7 @@ func normalizeInventoryEntry(in inventoryEntryInput) (inventoryEntryInput, strin
 	in.Unit = strings.TrimSpace(in.Unit)
 	in.PresentationType = strings.ToLower(strings.TrimSpace(in.PresentationType))
 	in.Note = strings.TrimSpace(in.Note)
-	if in.Quantity <= 0 {
+	if math.IsNaN(in.Quantity) || math.IsInf(in.Quantity, 0) || in.Quantity <= 0 || in.Quantity >= 1e11 {
 		return in, "La cantidad de entrada debe ser mayor que cero."
 	}
 	in.Quantity = math.Round(in.Quantity*1000) / 1000
@@ -162,7 +164,7 @@ func normalizeInventoryEntry(in inventoryEntryInput) (inventoryEntryInput, strin
 	if in.Quantity <= 0 {
 		return in, "La cantidad de entrada debe ser al menos 0.001."
 	}
-	if in.MinimumStock < 0 {
+	if math.IsNaN(in.MinimumStock) || math.IsInf(in.MinimumStock, 0) || in.MinimumStock < 0 || in.MinimumStock >= 1e11 {
 		return in, "El stock mínimo no puede ser negativo."
 	}
 	if in.Unit == "" {
@@ -171,18 +173,15 @@ func normalizeInventoryEntry(in inventoryEntryInput) (inventoryEntryInput, strin
 	if in.PresentationType == "" {
 		in.PresentationType = "unit"
 	}
-	switch in.PresentationType {
-	case "unit":
+	if in.PresentationType == "unit" {
 		in.UnitsPerPresentation = 1
-	case "package", "box":
+	} else {
 		if math.Abs(in.Quantity-math.Round(in.Quantity)) > 0.000001 {
-			return in, "La cantidad de paquetes o cajas debe ser un número entero. Para fracciones, registra unidades sueltas."
+			return in, "La cantidad de presentaciones debe ser un número entero. Para fracciones, registra unidades base."
 		}
-		if in.UnitsPerPresentation <= 1 {
-			return in, "Indica cuántas unidades base contiene cada paquete o caja."
-		}
-	default:
-		return in, "La presentación de entrada no es válida."
+	}
+	if _, invalid := normalizeInventoryPresentation(inventoryPresentationInput{PresentationType: in.PresentationType, UnitsPerPresentation: in.UnitsPerPresentation}); invalid != "" {
+		return in, invalid
 	}
 
 	sourceCount := 0
@@ -227,6 +226,9 @@ func normalizeInventoryEntry(in inventoryEntryInput) (inventoryEntryInput, strin
 
 func createInventoryCatalogItem(ctx context.Context, tx pgx.Tx, organizationID string, in inventoryEntryInput) (inventoryCatalogCreateResult, *inventoryCatalogCreateError) {
 	result := inventoryCatalogCreateResult{Unit: in.Unit}
+	if invalid := validateInventoryUnit(ctx, tx, organizationID, in.Unit); invalid != nil {
+		return result, invalid
+	}
 	switch {
 	case in.NewProduct != nil:
 		productIn := productInput{
@@ -302,6 +304,9 @@ func createInventoryCatalogItem(ctx context.Context, tx pgx.Tx, organizationID s
 }
 
 func ensureInventoryPresentation(ctx context.Context, tx pgx.Tx, organizationID, inventoryItemID, presentationType string, unitsPerPresentation float64) (string, error) {
+	if err := validateInventoryCombination(ctx, tx, organizationID, inventoryItemID, presentationType); err != nil {
+		return "", err
+	}
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO inventory_presentations(
 			organization_id,inventory_item_id,presentation_type,units_per_presentation,active
@@ -419,13 +424,16 @@ func (a *API) listInventoryProducts(w http.ResponseWriter, r *http.Request) {
 		           jsonb_build_object(
 		             'id',ip.id,
 		             'presentationType',ip.presentation_type,
-		             'unitsPerPresentation',ip.units_per_presentation::text
+			             'unitsPerPresentation',ip.units_per_presentation::text,
+			             'name',pt.name,
+			             'isDefault',ip.is_default
 		           )
 		           ORDER BY
-		             CASE ip.presentation_type WHEN 'unit' THEN 0 WHEN 'package' THEN 1 ELSE 2 END,
+		             ip.is_default DESC,pt.sort_order,
 		             ip.units_per_presentation
 		         )
 		         FROM inventory_presentations ip
+			         JOIN inventory_presentation_types pt ON pt.organization_id=ip.organization_id AND pt.code=ip.presentation_type
 		         WHERE ip.organization_id=ii.organization_id
 		           AND ip.inventory_item_id=ii.id
 		           AND ip.active
@@ -561,6 +569,10 @@ func (a *API) createInventoryEntry(w http.ResponseWriter, r *http.Request) {
 			productID = linkedProductID
 		}
 	case in.ProductID != "":
+		if invalid := validateInventoryUnit(r.Context(), tx, s.OrganizationID, in.Unit); invalid != nil {
+			fail(w, invalid.Status, invalid.Code, invalid.Message)
+			return
+		}
 		var quantityControl string
 		var existingProductID string
 		err = tx.QueryRow(r.Context(), `
@@ -606,20 +618,28 @@ func (a *API) createInventoryEntry(w http.ResponseWriter, r *http.Request) {
 		fail(w, 409, "inventory_unit_conflict", "La unidad base de este artículo es "+inventoryUnit+". Registra la entrada usando esa misma unidad base.")
 		return
 	}
-	if _,err=tx.Exec(r.Context(),`
+	if _, err = tx.Exec(r.Context(), `
 		INSERT INTO inventory_location_settings(organization_id,location_id,inventory_item_id,minimum_stock,reorder_point,optimal_stock)
 		VALUES($1,$2,$3,$4,$4,$4)
 		ON CONFLICT(location_id,inventory_item_id) DO UPDATE SET minimum_stock=EXCLUDED.minimum_stock,
 		  reorder_point=GREATEST(inventory_location_settings.reorder_point,EXCLUDED.minimum_stock),
 		  optimal_stock=GREATEST(inventory_location_settings.optimal_stock,EXCLUDED.minimum_stock),updated_at=now()
-	`,s.OrganizationID,s.LocationID,inventoryItemID,in.MinimumStock);err!=nil{
-		fail(w,503,"inventory_unavailable","No pudimos actualizar el stock mínimo del local.")
+	`, s.OrganizationID, s.LocationID, inventoryItemID, in.MinimumStock); err != nil {
+		fail(w, 503, "inventory_unavailable", "No pudimos actualizar el stock mínimo del local.")
 		return
 	}
 
 	presentationID, err := ensureInventoryPresentation(
 		r.Context(), tx, s.OrganizationID, inventoryItemID, in.PresentationType, in.UnitsPerPresentation,
 	)
+	var invalidCombination *inventoryCombinationError
+	if errors.As(err, &invalidCombination) {
+		fail(w, 400, "invalid_inventory_combination", invalidCombination.Error())
+		return
+	}
+	if err == nil && createdInventoryItem {
+		err = setDefaultInventoryPresentation(r.Context(), tx, s.OrganizationID, inventoryItemID, presentationID)
+	}
 	if err != nil {
 		fail(w, 503, "inventory_unavailable", "No pudimos guardar la presentación de entrada.")
 		return
@@ -640,16 +660,16 @@ func (a *API) createInventoryEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var current,averageCost float64
+	var current, averageCost float64
 	if err = tx.QueryRow(r.Context(), `
 		SELECT quantity::float8,average_unit_cost::float8
 		FROM stock_balances
 		WHERE organization_id=$1 AND location_id=$2 AND inventory_item_id=$3
-		FOR UPDATE`, s.OrganizationID, s.LocationID, inventoryItemID).Scan(&current,&averageCost); err != nil {
+		FOR UPDATE`, s.OrganizationID, s.LocationID, inventoryItemID).Scan(&current, &averageCost); err != nil {
 		fail(w, 503, "inventory_unavailable", "No pudimos bloquear el saldo de inventario.")
 		return
 	}
-	balanceAfter := math.Round((current+stockQuantity)*1000)/1000
+	balanceAfter := math.Round((current+stockQuantity)*1000) / 1000
 	if _, err = tx.Exec(r.Context(), `
 		UPDATE stock_balances
 		SET quantity=$4,updated_at=now()
@@ -674,7 +694,7 @@ func (a *API) createInventoryEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err=insertValuedMovement(r.Context(),tx,s,productID,inventoryItemID,"entry",stockQuantity,balanceAfter,averageCost,"inventory_entry",entryID,in.Note);err!=nil{
+	if err = insertValuedMovement(r.Context(), tx, s, productID, inventoryItemID, "entry", stockQuantity, balanceAfter, averageCost, "inventory_entry", entryID, in.Note); err != nil {
 		fail(w, 503, "inventory_unavailable", "No pudimos registrar el movimiento de Kárdex.")
 		return
 	}
@@ -697,20 +717,20 @@ func (a *API) createInventoryEntry(w http.ResponseWriter, r *http.Request) {
 		kind = "product"
 	}
 	writeJSON(w, 201, map[string]any{
-		"id": entryID,
-		"inventoryItemId": inventoryItemID,
-		"productId": productID,
-		"sku": itemSKU,
-		"name": itemName,
-		"kind": kind,
-		"quantity": in.Quantity,
-		"presentationId": presentationID,
-		"presentationType": in.PresentationType,
+		"id":                   entryID,
+		"inventoryItemId":      inventoryItemID,
+		"productId":            productID,
+		"sku":                  itemSKU,
+		"name":                 itemName,
+		"kind":                 kind,
+		"quantity":             in.Quantity,
+		"presentationId":       presentationID,
+		"presentationType":     in.PresentationType,
 		"unitsPerPresentation": in.UnitsPerPresentation,
-		"stockQuantity": stockQuantity,
-		"unit": in.Unit,
-		"balance": balanceAfter,
-		"createdProduct": createdProduct,
+		"stockQuantity":        stockQuantity,
+		"unit":                 in.Unit,
+		"balance":              balanceAfter,
+		"createdProduct":       createdProduct,
 		"createdInventoryItem": createdInventoryItem,
 	})
 }
@@ -800,12 +820,12 @@ func (a *API) createInventoryAdjustment(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	var stockBefore,averageCost float64
+	var stockBefore, averageCost float64
 	if err = tx.QueryRow(r.Context(), `
 		SELECT quantity::float8,average_unit_cost::float8
 		FROM stock_balances
 		WHERE organization_id=$1 AND location_id=$2 AND inventory_item_id=$3
-		FOR UPDATE`, s.OrganizationID, s.LocationID, in.InventoryItemID).Scan(&stockBefore,&averageCost); err != nil {
+		FOR UPDATE`, s.OrganizationID, s.LocationID, in.InventoryItemID).Scan(&stockBefore, &averageCost); err != nil {
 		fail(w, 503, "inventory_unavailable", "No pudimos bloquear el saldo del artículo.")
 		return
 	}
@@ -823,12 +843,12 @@ func (a *API) createInventoryAdjustment(w http.ResponseWriter, r *http.Request) 
 		stockAfter = 0
 	}
 
-	newAverage:=averageCost
+	newAverage := averageCost
 	if _, err = tx.Exec(r.Context(), `
 		UPDATE stock_balances
 		SET quantity=$4,average_unit_cost=$5,updated_at=now()
 		WHERE organization_id=$1 AND location_id=$2 AND inventory_item_id=$3`,
-		s.OrganizationID, s.LocationID, in.InventoryItemID, stockAfter,newAverage); err != nil {
+		s.OrganizationID, s.LocationID, in.InventoryItemID, stockAfter, newAverage); err != nil {
 		fail(w, 503, "inventory_unavailable", "No pudimos actualizar el stock.")
 		return
 	}
@@ -849,7 +869,7 @@ func (a *API) createInventoryAdjustment(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if err=insertValuedMovement(r.Context(),tx,s,productID,in.InventoryItemID,"inventory_adjustment",delta,stockAfter,averageCost,"inventory_adjustment",adjustmentID,in.Observation);err!=nil{
+	if err = insertValuedMovement(r.Context(), tx, s, productID, in.InventoryItemID, "inventory_adjustment", delta, stockAfter, averageCost, "inventory_adjustment", adjustmentID, in.Observation); err != nil {
 		fail(w, 503, "inventory_unavailable", "No pudimos registrar el movimiento de Kárdex.")
 		return
 	}
@@ -861,32 +881,35 @@ func (a *API) createInventoryAdjustment(w http.ResponseWriter, r *http.Request) 
 
 	a.audit(r, "inventory.adjusted", "inventory_item", in.InventoryItemID)
 	writeJSON(w, 201, map[string]any{
-		"id": adjustmentID,
+		"id":              adjustmentID,
 		"inventoryItemId": in.InventoryItemID,
-		"name": itemName,
-		"unit": unit,
-		"movementType": in.MovementType,
-		"reason": in.Reason,
-		"quantity": in.Quantity,
-		"stockBefore": stockBefore,
-		"stockAfter": stockAfter,
-		"observation": in.Observation,
-		"createdAt": createdAt,
-		"createdByName": s.Name,
+		"name":            itemName,
+		"unit":            unit,
+		"movementType":    in.MovementType,
+		"reason":          in.Reason,
+		"quantity":        in.Quantity,
+		"stockBefore":     stockBefore,
+		"stockAfter":      stockAfter,
+		"observation":     in.Observation,
+		"createdAt":       createdAt,
+		"createdByName":   s.Name,
 	})
 }
 
 func (a *API) listInventoryMovements(w http.ResponseWriter, r *http.Request) {
 	s := r.Context().Value(scopeKey{}).(scope)
-	page,size:=pageParams(r)
+	page, size := pageParams(r)
 	inventoryItemID := strings.TrimSpace(r.URL.Query().Get("inventoryItemId"))
 	productID := strings.TrimSpace(r.URL.Query().Get("productId"))
-	movementType:=strings.TrimSpace(r.URL.Query().Get("movementType"))
-	sourceType:=strings.TrimSpace(r.URL.Query().Get("sourceType"))
-	from:=strings.TrimSpace(r.URL.Query().Get("from"))
-	to:=strings.TrimSpace(r.URL.Query().Get("to"))
-	if !validDateFilters(from,to){fail(w,400,"invalid_kardex_filter","Revisa el rango de fechas.");return}
-	where:=`sm.organization_id=$1 AND sm.location_id=$2
+	movementType := strings.TrimSpace(r.URL.Query().Get("movementType"))
+	sourceType := strings.TrimSpace(r.URL.Query().Get("sourceType"))
+	from := strings.TrimSpace(r.URL.Query().Get("from"))
+	to := strings.TrimSpace(r.URL.Query().Get("to"))
+	if !validDateFilters(from, to) {
+		fail(w, 400, "invalid_kardex_filter", "Revisa el rango de fechas.")
+		return
+	}
+	where := `sm.organization_id=$1 AND sm.location_id=$2
 	  AND ($3='' OR sm.inventory_item_id::text=$3)
 	  AND ($4='' OR sm.product_id::text=$4)
 	  AND ($5='' OR sm.movement_type=$5)
@@ -894,8 +917,9 @@ func (a *API) listInventoryMovements(w http.ResponseWriter, r *http.Request) {
 	  AND ($7='' OR sm.created_at >= ($7::date::timestamp AT TIME ZONE (SELECT timezone FROM locations WHERE id=$2 AND organization_id=$1)))
 	  AND ($8='' OR sm.created_at < (($8::date + interval '1 day')::timestamp AT TIME ZONE (SELECT timezone FROM locations WHERE id=$2 AND organization_id=$1)))`
 	var total int
-	if err:=a.db.QueryRow(r.Context(),"SELECT count(*) FROM stock_movements sm WHERE "+where,s.OrganizationID,s.LocationID,inventoryItemID,productID,movementType,sourceType,from,to).Scan(&total);err!=nil{
-		fail(w,503,"kardex_unavailable","No pudimos contar los movimientos del Kárdex.");return
+	if err := a.db.QueryRow(r.Context(), "SELECT count(*) FROM stock_movements sm WHERE "+where, s.OrganizationID, s.LocationID, inventoryItemID, productID, movementType, sourceType, from, to).Scan(&total); err != nil {
+		fail(w, 503, "kardex_unavailable", "No pudimos contar los movimientos del Kárdex.")
+		return
 	}
 	rows, err := a.db.Query(r.Context(), `
 		SELECT sm.id,sm.inventory_item_id,sm.product_id,COALESCE(p.name,ii.name),
@@ -927,16 +951,26 @@ func (a *API) listInventoryMovements(w http.ResponseWriter, r *http.Request) {
 		LEFT JOIN users u ON u.id=sm.created_by
 		WHERE `+where+`
 		ORDER BY sm.created_at DESC,sm.id DESC LIMIT $9 OFFSET $10`,
-		s.OrganizationID,s.LocationID,inventoryItemID,productID,movementType,sourceType,from,to,size,(page-1)*size)
-	if err != nil {fail(w,503,"kardex_unavailable","No pudimos cargar el Kárdex.");return}
+		s.OrganizationID, s.LocationID, inventoryItemID, productID, movementType, sourceType, from, to, size, (page-1)*size)
+	if err != nil {
+		fail(w, 503, "kardex_unavailable", "No pudimos cargar el Kárdex.")
+		return
+	}
 	defer rows.Close()
-	items:=[]inventoryMovementView{}
-	for rows.Next(){var item inventoryMovementView;if err:=rows.Scan(
-		&item.ID,&item.InventoryItemID,&item.ProductID,&item.ItemName,&item.MovementType,&item.AdjustmentType,&item.Reason,
-		&item.QuantityDelta,&item.BalanceBefore,&item.BalanceAfter,&item.UnitCost,&item.ValueDelta,&item.BalanceValueAfter,
-		&item.SourceType,&item.SourceID,&item.SourceReference,&item.Note,&item.CreatedByName,&item.CreatedAt,
-	);err!=nil{fail(w,503,"kardex_unavailable","No pudimos cargar el Kárdex.");return};items=append(items,item)}
-	writeJSON(w,200,map[string]any{"items":items,"total":total,"page":page,"pageSize":size})
+	items := []inventoryMovementView{}
+	for rows.Next() {
+		var item inventoryMovementView
+		if err := rows.Scan(
+			&item.ID, &item.InventoryItemID, &item.ProductID, &item.ItemName, &item.MovementType, &item.AdjustmentType, &item.Reason,
+			&item.QuantityDelta, &item.BalanceBefore, &item.BalanceAfter, &item.UnitCost, &item.ValueDelta, &item.BalanceValueAfter,
+			&item.SourceType, &item.SourceID, &item.SourceReference, &item.Note, &item.CreatedByName, &item.CreatedAt,
+		); err != nil {
+			fail(w, 503, "kardex_unavailable", "No pudimos cargar el Kárdex.")
+			return
+		}
+		items = append(items, item)
+	}
+	writeJSON(w, 200, map[string]any{"items": items, "total": total, "page": page, "pageSize": size})
 }
 
 func preparedQuantityUsage(items []preparedOrderItem) map[string]float64 {
@@ -957,8 +991,12 @@ func preparedQuantityUsage(items []preparedOrderItem) map[string]float64 {
 
 func quantityUsageDelta(previous, next map[string]float64) map[string]float64 {
 	ids := map[string]bool{}
-	for id := range previous { ids[id] = true }
-	for id := range next { ids[id] = true }
+	for id := range previous {
+		ids[id] = true
+	}
+	for id := range next {
+		ids[id] = true
+	}
 	delta := map[string]float64{}
 	for id := range ids {
 		change := next[id] - previous[id]
@@ -1010,7 +1048,9 @@ func (a *API) applyOrderQuantityDelta(ctx context.Context, tx pgx.Tx, s scope, o
 	}
 
 	productIDs := make([]string, 0, len(delta))
-	for id := range delta { productIDs = append(productIDs, id) }
+	for id := range delta {
+		productIDs = append(productIDs, id)
+	}
 	sort.Strings(productIDs)
 
 	for _, productID := range productIDs {
@@ -1083,12 +1123,12 @@ func (a *API) applyOrderQuantityDelta(ctx context.Context, tx pgx.Tx, s scope, o
 				s.OrganizationID, s.LocationID, inventoryItemID); err != nil {
 				return &orderPreparationError{Status: 503, Code: "quantity_unavailable", Message: "No pudimos preparar el saldo del producto."}
 			}
-			var balance,averageCost float64
+			var balance, averageCost float64
 			if err := tx.QueryRow(ctx, `
 				SELECT quantity::float8,average_unit_cost::float8
 				FROM stock_balances
 				WHERE organization_id=$1 AND location_id=$2 AND inventory_item_id=$3
-				FOR UPDATE`, s.OrganizationID, s.LocationID, inventoryItemID).Scan(&balance,&averageCost); err != nil {
+				FOR UPDATE`, s.OrganizationID, s.LocationID, inventoryItemID).Scan(&balance, &averageCost); err != nil {
 				return &orderPreparationError{Status: 503, Code: "quantity_unavailable", Message: "No pudimos bloquear el saldo del producto."}
 			}
 			balanceDelta := -change
@@ -1096,17 +1136,19 @@ func (a *API) applyOrderQuantityDelta(ctx context.Context, tx pgx.Tx, s scope, o
 			if nextBalance < -0.000001 {
 				return &orderPreparationError{Status: 409, Code: "insufficient_stock", Message: "No hay stock suficiente de " + name + "."}
 			}
-			if nextBalance < 0 { nextBalance = 0 }
-			nextAverage:=averageCost
+			if nextBalance < 0 {
+				nextBalance = 0
+			}
+			nextAverage := averageCost
 			if _, err := tx.Exec(ctx, `
 				UPDATE stock_balances
 				SET quantity=$4,average_unit_cost=$5,updated_at=now()
 				WHERE organization_id=$1 AND location_id=$2 AND inventory_item_id=$3`,
-				s.OrganizationID, s.LocationID, inventoryItemID, nextBalance,nextAverage); err != nil {
+				s.OrganizationID, s.LocationID, inventoryItemID, nextBalance, nextAverage); err != nil {
 				return &orderPreparationError{Status: 503, Code: "quantity_unavailable", Message: "No pudimos actualizar el stock del producto."}
 			}
 			if math.Abs(balanceDelta) > 0.000001 {
-				if err:=insertValuedMovement(ctx,tx,s,&productID,inventoryItemID,movementType,balanceDelta,nextBalance,averageCost,"order",orderID,"Pedido "+orderID);err!=nil{
+				if err := insertValuedMovement(ctx, tx, s, &productID, inventoryItemID, movementType, balanceDelta, nextBalance, averageCost, "order", orderID, "Pedido "+orderID); err != nil {
 					return &orderPreparationError{Status: 503, Code: "quantity_unavailable", Message: "No pudimos registrar el movimiento de Kárdex."}
 				}
 			}

@@ -18,6 +18,9 @@ import (
 
 var version = "dev"
 
+const requestTimeout = 30 * time.Second
+const responseTimeout = 35 * time.Second
+
 type healthResponse struct {
 	Status  string `json:"status"`
 	Service string `json:"service"`
@@ -41,7 +44,7 @@ func main() {
 	defer db.Close()
 	mux := httpapi.New(db).Routes()
 	mux.HandleFunc("GET /health", health)
-	server := &http.Server{Addr: envOrDefault("HTTP_ADDR", ":8080"), Handler: requestLogger(logger, mux), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 60 * time.Second}
+	server := newServer(requestLogger(logger, requestDeadline(requestTimeout, mux)))
 	logger.Info("api_started", "address", server.Addr, "version", version)
 	go func() {
 		<-ctx.Done()
@@ -53,6 +56,20 @@ func main() {
 		logger.Error("api_stopped", "error", err)
 		os.Exit(1)
 	}
+}
+
+func newServer(handler http.Handler) *http.Server {
+	return &http.Server{Addr: envOrDefault("HTTP_ADDR", ":8080"), Handler: handler, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: responseTimeout, IdleTimeout: 60 * time.Second}
+}
+
+// Cancel database work before the socket's write deadline, leaving time to send
+// the handler's explicit error response instead of dropping the connection.
+func requestDeadline(timeout time.Duration, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), timeout)
+		defer cancel()
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
 }
 
 func health(w http.ResponseWriter, _ *http.Request) {

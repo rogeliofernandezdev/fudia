@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestHealth(t *testing.T) {
@@ -18,6 +19,33 @@ func TestHealth(t *testing.T) {
 	}
 	if !strings.Contains(recorder.Body.String(), `"status":"ok"`) {
 		t.Fatalf("unexpected body: %s", recorder.Body.String())
+	}
+}
+
+func TestProcessingDeadlinePrecedesResponseTimeout(t *testing.T) {
+	server := newServer(nil)
+	if server.WriteTimeout != responseTimeout || server.WriteTimeout <= requestTimeout {
+		t.Fatalf("write timeout %s must exceed processing timeout %s", server.WriteTimeout, requestTimeout)
+	}
+	handler := requestDeadline(10*time.Millisecond, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if _, ok := r.Context().Deadline(); !ok {
+			t.Error("request must have a deadline")
+		}
+		<-r.Context().Done()
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusServiceUnavailable)
+		_, _ = io.WriteString(w, `{"code":"tables_unavailable"}`)
+	}))
+	api := httptest.NewServer(handler)
+	defer api.Close()
+	response, err := api.Client().Get(api.URL)
+	if err != nil {
+		t.Fatalf("deadline must return HTTP response, not drop connection: %v", err)
+	}
+	defer response.Body.Close()
+	body, _ := io.ReadAll(response.Body)
+	if response.StatusCode != 503 || !strings.Contains(string(body), "tables_unavailable") {
+		t.Fatalf("unexpected deadline response: %d %s", response.StatusCode, body)
 	}
 }
 

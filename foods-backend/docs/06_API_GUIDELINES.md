@@ -4,6 +4,23 @@ REST JSON descrito en api/openapi.yaml. Los errores usan código estable, mensaj
 seguro y correlationId. Paginación, filtros, idempotencia y concurrencia se
 definen en OpenAPI antes del frontend.
 
+## Registro por lote de mesas
+
+`POST /v1/admin/tables/batch` exige `tables.manage` y sesión de empresa/local.
+Acepta hasta 500 filas y conserva el orden de entrada en la respuesta. Valida
+zonas activas bajo bloqueo compartido, inserta todo el lote y registra una sola
+auditoría con los UUID creados en una única sentencia SQL transaccional. No hay
+consultas por fila ni auditoría después del guardado. Cualquier conflicto o fallo
+de auditoría revierte todo el lote. Los UUID y tokens QR se generan en PostgreSQL.
+No requiere migración ni cambia los permisos existentes.
+
+La API cancela el procesamiento a los 30 s y conserva 35 s para responder; el
+BFF espera hasta 40 s. La conexión PostgreSQL usa 5 s como límite por defecto
+si `connect_timeout` no está configurado. Estos límites no garantizan respuesta
+si se corta la red después del commit: el cliente no reintenta escrituras y
+presenta el resultado como no confirmado, conservando borrador y refrescando
+el listado antes de una posible repetición.
+
 ## Resumen administrativo del restaurante
 
 `GET /v1/admin/dashboard` exige `dashboard.read` y alcance de empresa/local de
@@ -73,6 +90,14 @@ de repartidores, zonas o seguimiento geográfico sigue fuera de este alcance.
 
 ## Lookups de catálogo
 
+`POST /v1/admin/products` exige `menu.manage` y `initialPortionQuantity` entera
+positiva cuando `quantityControl=portions`. Sin control e Inventario no aceptan
+ese campo. Producto, porciones de hoy del local de sesión y auditoría se confirman
+en una transacción; cualquier fallo revierte todos los registros. La fecha se
+deriva de la zona del local en PostgreSQL, nunca del navegador. PATCH comercial
+no admite cantidad inicial ni modifica la cantidad diaria; Disponibilidad conserva
+los ajustes y el control de Agotado/Reactivar. No requiere migración.
+
 Los endpoints usados por autocompletes exponen `q`, `page` y `pageSize` y devuelven `items`, `total`, `page` y `pageSize`. El backend nunca obliga al frontend a descargar el catálogo completo: la apertura puede pedir una página pequeña y las búsquedas posteriores recorren la paginación según necesidad.
 
 ## Filtros por fecha
@@ -102,6 +127,13 @@ cajas, turno actual, historial y detalle usan la misma proyección. No cambia
 el instante almacenado ni se necesita una migración.
 
 ## Cuenta de mesa y destinos de atención
+
+`GET /v1/admin/products` devuelve `ProductListItem`: añade `availableQuantity`
+e `inventoryUnit` a los datos comerciales. Se calcula en una consulta paginada,
+por empresa y local de sesión, con la fecha local para las porciones. No cuenta
+cupos de otros días ni existencias de otros locales. Sin control devuelve null;
+agotado, inactivo o fuera de horario devuelve cero para controles con cantidad.
+La descripción permanece en el contrato para editar sin perder información.
 
 - `GET /v1/admin/service-destinations` entrega el catálogo de destinos; Productos también devuelve `serviceDestinationOptions`.
 - `POST /v1/admin/orders/{id}/items` agrega solo consumo nuevo a cuenta Abierta con `requestKey`, cantidades y elecciones. Precios, cupos e inventario se validan en backend. Cuenta cerrada devuelve `409 order_bill_closed`; los reintentos de rondas ya confirmadas conservan idempotencia.

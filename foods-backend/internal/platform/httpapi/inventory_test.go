@@ -45,9 +45,9 @@ func TestNormalizeInventoryEntryValidatesPackageConversion(t *testing.T) {
 		t.Fatalf("unexpected package normalization: %#v", in)
 	}
 	if _, invalid := normalizeInventoryEntry(inventoryEntryInput{
-		ProductID: "product-1", Quantity: 5, PresentationType: "package", UnitsPerPresentation: 1,
+		ProductID: "product-1", Quantity: 5, PresentationType: "package", UnitsPerPresentation: 0,
 	}); invalid == "" {
-		t.Fatal("expected package factor <= 1 to be rejected")
+		t.Fatal("expected nonpositive conversion to be rejected")
 	}
 	if _, invalid := normalizeInventoryEntry(inventoryEntryInput{
 		ProductID: "product-1", Quantity: 1.5, PresentationType: "box", UnitsPerPresentation: 12,
@@ -55,9 +55,9 @@ func TestNormalizeInventoryEntryValidatesPackageConversion(t *testing.T) {
 		t.Fatal("expected fractional package quantity to be rejected")
 	}
 	if _, invalid := normalizeInventoryEntry(inventoryEntryInput{
-		ProductID: "product-1", Quantity: 5, PresentationType: "pallet", UnitsPerPresentation: 20,
+		ProductID: "product-1", Quantity: 5, PresentationType: "pallet invalid", UnitsPerPresentation: 20,
 	}); invalid == "" {
-		t.Fatal("expected unsupported presentation type to be rejected")
+		t.Fatal("expected malformed presentation code to be rejected")
 	}
 }
 
@@ -80,12 +80,11 @@ func TestQuantityUsageDeltaSupportsSaleAndReversal(t *testing.T) {
 	}
 }
 
-
 func TestNormalizeInventoryEntryRequiresRetailCategory(t *testing.T) {
 	input := inventoryEntryInput{
 		NewProduct: &inventoryNewProductInput{Name: "Agua", Price: "3.00"},
-		Quantity: 1,
-		Unit: "botella",
+		Quantity:   1,
+		Unit:       "botella",
 	}
 	if _, invalid := normalizeInventoryEntry(input); invalid == "" {
 		t.Fatal("expected category to be required for a new vendible product")
@@ -97,14 +96,13 @@ func TestNormalizeInventoryEntryRequiresRetailCategory(t *testing.T) {
 	}
 }
 
-
 func TestNormalizeInventoryAdjustmentValidatesTypeReasonAndQuantity(t *testing.T) {
 	validEntry := inventoryAdjustmentInput{
 		InventoryItemID: "item-1",
-		MovementType: "entry",
-		Reason: "surplus_adjustment",
-		Quantity: 2.3456,
-		Observation: "conteo físico",
+		MovementType:    "entry",
+		Reason:          "surplus_adjustment",
+		Quantity:        2.3456,
+		Observation:     "conteo físico",
 	}
 	normalized, invalid := normalizeInventoryAdjustment(validEntry)
 	if invalid != "" {
@@ -116,9 +114,9 @@ func TestNormalizeInventoryAdjustmentValidatesTypeReasonAndQuantity(t *testing.T
 
 	validExit := inventoryAdjustmentInput{
 		InventoryItemID: "item-1",
-		MovementType: "exit",
-		Reason: "waste",
-		Quantity: 1,
+		MovementType:    "exit",
+		Reason:          "waste",
+		Quantity:        1,
 	}
 	if _, invalid := normalizeInventoryAdjustment(validExit); invalid != "" {
 		t.Fatalf("expected valid exit adjustment, got %q", invalid)

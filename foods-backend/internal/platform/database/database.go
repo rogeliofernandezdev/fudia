@@ -30,6 +30,9 @@ func Open(ctx context.Context) (*pgxpool.Pool, error) {
 	config.MaxConnLifetime = 30 * time.Minute
 	config.MaxConnIdleTime = 5 * time.Minute
 	config.HealthCheckPeriod = 30 * time.Second
+	if config.ConnConfig.ConnectTimeout == 0 {
+		config.ConnConfig.ConnectTimeout = 5 * time.Second
+	}
 	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
 		return nil, fmt.Errorf("create database pool: %w", err)

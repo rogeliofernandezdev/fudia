@@ -49,9 +49,9 @@ type purchaseReceiptLineInput struct {
 }
 
 type purchaseReceiptInput struct {
-	Notes string                     `json:"notes"`
-	IdempotencyKey string            `json:"idempotencyKey"`
-	Items []purchaseReceiptLineInput `json:"items"`
+	Notes          string                     `json:"notes"`
+	IdempotencyKey string                     `json:"idempotencyKey"`
+	Items          []purchaseReceiptLineInput `json:"items"`
 }
 
 type purchaseInventoryItemInput struct {
@@ -61,6 +61,7 @@ type purchaseInventoryItemInput struct {
 	PresentationType     string                       `json:"presentationType"`
 	UnitsPerPresentation float64                      `json:"unitsPerPresentation"`
 	MinimumStock         float64                      `json:"minimumStock"`
+	Presentations        []inventoryPresentationInput `json:"presentations"`
 }
 
 type purchaseOrderSummary struct {
@@ -88,6 +89,7 @@ type purchaseOrderItemView struct {
 	Unit                 string `json:"unit"`
 	PresentationID       string `json:"presentationId"`
 	PresentationType     string `json:"presentationType"`
+	PresentationName     string `json:"presentationName"`
 	UnitsPerPresentation string `json:"unitsPerPresentation"`
 	Quantity             string `json:"quantity"`
 	ReceivedQuantity     string `json:"receivedQuantity"`
@@ -295,14 +297,22 @@ func (a *API) createPurchaseInventoryItem(w http.ResponseWriter, r *http.Request
 		fail(w, 400, "invalid_purchase_item", "Revisa los datos del artículo.")
 		return
 	}
+	legacyType, legacyFactor := input.PresentationType, input.UnitsPerPresentation
+	if input.Presentations != nil {
+		if len(input.Presentations) == 0 {
+			fail(w, 400, "invalid_inventory_presentation", "Agrega al menos una presentación.")
+			return
+		}
+		legacyType, legacyFactor = "unit", 1
+	}
 	normalized, invalid := normalizeInventoryEntry(inventoryEntryInput{
-		NewProduct: input.NewProduct,
-		NewIngredient: input.NewIngredient,
-		Quantity: 1,
-		Unit: input.Unit,
-		PresentationType: input.PresentationType,
-		UnitsPerPresentation: input.UnitsPerPresentation,
-		MinimumStock: input.MinimumStock,
+		NewProduct:           input.NewProduct,
+		NewIngredient:        input.NewIngredient,
+		Quantity:             1,
+		Unit:                 input.Unit,
+		PresentationType:     legacyType,
+		UnitsPerPresentation: legacyFactor,
+		MinimumStock:         input.MinimumStock,
 	})
 	if invalid != "" {
 		fail(w, 400, "invalid_purchase_item", invalid)
@@ -311,6 +321,36 @@ func (a *API) createPurchaseInventoryItem(w http.ResponseWriter, r *http.Request
 	if normalized.NewProduct == nil && normalized.NewIngredient == nil {
 		fail(w, 400, "invalid_purchase_item", "Selecciona Nuevo producto vendible o Nuevo insumo.")
 		return
+	}
+	presentations := input.Presentations
+	if len(presentations) == 0 {
+		presentations = []inventoryPresentationInput{{PresentationType: normalized.PresentationType, UnitsPerPresentation: normalized.UnitsPerPresentation, IsDefault: true}}
+	}
+	if len(presentations) > 50 {
+		fail(w, 400, "invalid_inventory_presentation", "Un artículo admite hasta 50 presentaciones.")
+		return
+	}
+	defaults := 0
+	seen := map[string]bool{}
+	for i, p := range presentations {
+		p, invalid = normalizeInventoryPresentation(p)
+		key := fmt.Sprintf("%s:%0.3f", p.PresentationType, p.UnitsPerPresentation)
+		if invalid != "" || seen[key] {
+			fail(w, 400, "invalid_inventory_presentation", "Revisa las conversiones; no repitas presentaciones.")
+			return
+		}
+		seen[key] = true
+		presentations[i] = p
+		if p.IsDefault {
+			defaults++
+		}
+	}
+	if defaults > 1 {
+		fail(w, 400, "invalid_inventory_presentation", "Selecciona una sola presentación predeterminada.")
+		return
+	}
+	if defaults == 0 {
+		presentations[0].IsDefault = true
 	}
 
 	tx, err := a.db.Begin(r.Context())
@@ -325,12 +365,21 @@ func (a *API) createPurchaseInventoryItem(w http.ResponseWriter, r *http.Request
 		fail(w, createErr.Status, createErr.Code, createErr.Message)
 		return
 	}
-	if _, err = ensureInventoryPresentation(
-		r.Context(), tx, s.OrganizationID, created.InventoryItemID,
-		normalized.PresentationType, normalized.UnitsPerPresentation,
-	); err != nil {
-		fail(w, 503, "inventory_unavailable", "No pudimos guardar la presentación del artículo.")
-		return
+	for _, p := range presentations {
+		var id string
+		id, err = ensureInventoryPresentation(r.Context(), tx, s.OrganizationID, created.InventoryItemID, p.PresentationType, p.UnitsPerPresentation)
+		var comboErr *inventoryCombinationError
+		if errors.As(err, &comboErr) {
+			fail(w, 400, "invalid_inventory_combination", comboErr.Error())
+			return
+		}
+		if err == nil && p.IsDefault {
+			err = setDefaultInventoryPresentation(r.Context(), tx, s.OrganizationID, created.InventoryItemID, id)
+		}
+		if err != nil {
+			fail(w, 503, "inventory_unavailable", "No pudimos guardar las presentaciones del artículo.")
+			return
+		}
 	}
 	if _, err = tx.Exec(r.Context(), `
 		INSERT INTO stock_balances(organization_id,location_id,inventory_item_id,quantity)
@@ -342,24 +391,24 @@ func (a *API) createPurchaseInventoryItem(w http.ResponseWriter, r *http.Request
 	}
 
 	rows, err := tx.Query(r.Context(), `
-		SELECT id,presentation_type,units_per_presentation::text
-		FROM inventory_presentations
-		WHERE organization_id=$1 AND inventory_item_id=$2 AND active
-		ORDER BY CASE presentation_type WHEN 'unit' THEN 0 WHEN 'package' THEN 1 ELSE 2 END,units_per_presentation`,
+		SELECT p.id,p.presentation_type,p.units_per_presentation::text,t.name,p.is_default
+		FROM inventory_presentations p JOIN inventory_presentation_types t ON t.organization_id=p.organization_id AND t.code=p.presentation_type
+		WHERE p.organization_id=$1 AND p.inventory_item_id=$2 AND p.active
+		ORDER BY p.is_default DESC,t.sort_order,p.units_per_presentation`,
 		s.OrganizationID, created.InventoryItemID)
 	if err != nil {
 		fail(w, 503, "inventory_unavailable", "No pudimos cargar las presentaciones del artículo.")
 		return
 	}
-	presentations := []inventoryPresentationOption{}
+	presentationOptions := []inventoryPresentationOption{}
 	for rows.Next() {
 		var p inventoryPresentationOption
-		if err := rows.Scan(&p.ID, &p.PresentationType, &p.UnitsPerPresentation); err != nil {
+		if err := rows.Scan(&p.ID, &p.PresentationType, &p.UnitsPerPresentation, &p.Name, &p.IsDefault); err != nil {
 			rows.Close()
 			fail(w, 503, "inventory_unavailable", "No pudimos cargar las presentaciones del artículo.")
 			return
 		}
-		presentations = append(presentations, p)
+		presentationOptions = append(presentationOptions, p)
 	}
 	if err := rows.Err(); err != nil {
 		rows.Close()
@@ -387,17 +436,17 @@ func (a *API) createPurchaseInventoryItem(w http.ResponseWriter, r *http.Request
 		minimumStock = "0"
 	}
 	writeJSON(w, 201, inventoryProductOption{
-		ID: created.InventoryItemID,
-		ProductID: created.ProductID,
-		SKU: created.SKU,
-		Name: created.Name,
-		Kind: created.Kind,
-		CategoryName: nil,
+		ID:              created.InventoryItemID,
+		ProductID:       created.ProductID,
+		SKU:             created.SKU,
+		Name:            created.Name,
+		Kind:            created.Kind,
+		CategoryName:    nil,
 		QuantityControl: quantityControl,
-		Unit: created.Unit,
-		Quantity: "0",
-		MinimumStock: minimumStock,
-		Presentations: presentations,
+		Unit:            created.Unit,
+		Quantity:        "0",
+		MinimumStock:    minimumStock,
+		Presentations:   presentationOptions,
 	})
 }
 
@@ -482,8 +531,9 @@ func (a *API) getPurchaseOrder(w http.ResponseWriter, r *http.Request) {
 		SELECT poi.id,poi.inventory_item_id,COALESCE(p.name,ii.name),COALESCE(p.sku,ii.sku),ii.unit,
 		       poi.presentation_id,poi.presentation_type,poi.units_per_presentation::text,
 		       poi.quantity::text,poi.received_quantity::text,(poi.quantity-poi.received_quantity)::text,
-		       poi.stock_quantity::text,poi.unit_cost::text,poi.line_total::text
+		       poi.stock_quantity::text,poi.unit_cost::text,poi.line_total::text,pt.name
 		FROM purchase_order_items poi
+		JOIN inventory_presentation_types pt ON pt.organization_id=poi.organization_id AND pt.code=poi.presentation_type
 		JOIN inventory_items ii ON ii.id=poi.inventory_item_id AND ii.organization_id=poi.organization_id
 		LEFT JOIN products p ON p.id=ii.product_id AND p.organization_id=ii.organization_id
 		WHERE poi.purchase_order_id=$1 AND poi.organization_id=$2
@@ -501,7 +551,7 @@ func (a *API) getPurchaseOrder(w http.ResponseWriter, r *http.Request) {
 			&line.ID, &line.InventoryItemID, &line.ItemName, &line.SKU, &line.Unit,
 			&line.PresentationID, &line.PresentationType, &line.UnitsPerPresentation,
 			&line.Quantity, &line.ReceivedQuantity, &line.PendingQuantity,
-			&line.StockQuantity, &line.UnitCost, &line.LineTotal,
+			&line.StockQuantity, &line.UnitCost, &line.LineTotal, &line.PresentationName,
 		); err != nil {
 			fail(w, 503, "purchase_unavailable", "No pudimos cargar el detalle de la orden.")
 			return
@@ -727,8 +777,8 @@ func (a *API) receivePurchaseOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	in.Notes = strings.TrimSpace(in.Notes)
 	in.IdempotencyKey = strings.TrimSpace(in.IdempotencyKey)
-	if len(in.IdempotencyKey)>120 {
-		fail(w,400,"invalid_purchase_receipt","La clave de idempotencia es demasiado larga.")
+	if len(in.IdempotencyKey) > 120 {
+		fail(w, 400, "invalid_purchase_receipt", "La clave de idempotencia es demasiado larga.")
 		return
 	}
 	if len(in.Notes) > 500 {
@@ -778,20 +828,23 @@ func (a *API) receivePurchaseOrder(w http.ResponseWriter, r *http.Request) {
 		fail(w, 503, "purchase_unavailable", "No pudimos validar la orden.")
 		return
 	}
-	if in.IdempotencyKey!=""{
-		var existingID,existingCode string
+	if in.IdempotencyKey != "" {
+		var existingID, existingCode string
 		var existingStatus string
-		err=tx.QueryRow(r.Context(),`
+		err = tx.QueryRow(r.Context(), `
 			SELECT pr.id,pr.code,po.status
 			FROM purchase_receipts pr
 			JOIN purchase_orders po ON po.id=pr.purchase_order_id AND po.organization_id=pr.organization_id AND po.location_id=pr.location_id
 			WHERE pr.organization_id=$1 AND pr.location_id=$2 AND pr.purchase_order_id=$3 AND pr.idempotency_key=$4
-		`,s.OrganizationID,s.LocationID,r.PathValue("id"),in.IdempotencyKey).Scan(&existingID,&existingCode,&existingStatus)
-		if err==nil{
-			writeJSON(w,200,map[string]any{"id":existingID,"code":existingCode,"purchaseOrderId":r.PathValue("id"),"number":number,"status":existingStatus,"idempotent":true})
+		`, s.OrganizationID, s.LocationID, r.PathValue("id"), in.IdempotencyKey).Scan(&existingID, &existingCode, &existingStatus)
+		if err == nil {
+			writeJSON(w, 200, map[string]any{"id": existingID, "code": existingCode, "purchaseOrderId": r.PathValue("id"), "number": number, "status": existingStatus, "idempotent": true})
 			return
 		}
-		if err!=nil&&!errors.Is(err,pgx.ErrNoRows){fail(w,503,"purchase_unavailable","No pudimos validar la recepción previa.");return}
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			fail(w, 503, "purchase_unavailable", "No pudimos validar la recepción previa.")
+			return
+		}
 	}
 	if status != "approved" && status != "partially_received" {
 		fail(w, 409, "purchase_not_receivable", "Solo una orden aprobada o parcialmente recibida puede recibir mercadería.")
@@ -872,7 +925,7 @@ func (a *API) receivePurchaseOrder(w http.ResponseWriter, r *http.Request) {
 			)
 			VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
 			s.OrganizationID, receiptID, line.ID, line.InventoryItemID,
-			line.PresentationID, line.ReceiveQuantity, line.PresentationType, line.UnitsPerPresentation,line.UnitCost,
+			line.PresentationID, line.ReceiveQuantity, line.PresentationType, line.UnitsPerPresentation, line.UnitCost,
 		); err != nil {
 			fail(w, 503, "purchase_unavailable", "No pudimos guardar el detalle de la recepción.")
 			return
@@ -885,25 +938,29 @@ func (a *API) receivePurchaseOrder(w http.ResponseWriter, r *http.Request) {
 			fail(w, 503, "inventory_unavailable", "No pudimos preparar el saldo de inventario.")
 			return
 		}
-		var current,currentAverage float64
+		var current, currentAverage float64
 		if err = tx.QueryRow(r.Context(), `
 			SELECT quantity::float8,average_unit_cost::float8
 			FROM stock_balances
 			WHERE organization_id=$1 AND location_id=$2 AND inventory_item_id=$3
-			FOR UPDATE`, s.OrganizationID, s.LocationID, line.InventoryItemID).Scan(&current,&currentAverage); err != nil {
+			FOR UPDATE`, s.OrganizationID, s.LocationID, line.InventoryItemID).Scan(&current, &currentAverage); err != nil {
 			fail(w, 503, "inventory_unavailable", "No pudimos bloquear el saldo de inventario.")
 			return
 		}
 		balanceAfter := math.Round((current+stockQuantity)*1000) / 1000
-		baseUnitCost:=0.0
-		if line.UnitsPerPresentation>0{baseUnitCost=line.UnitCost/line.UnitsPerPresentation}
-		averageAfter:=currentAverage
-		if balanceAfter>0{averageAfter=math.Round(((current*currentAverage)+(stockQuantity*baseUnitCost))/balanceAfter*10000)/10000}
+		baseUnitCost := 0.0
+		if line.UnitsPerPresentation > 0 {
+			baseUnitCost = line.UnitCost / line.UnitsPerPresentation
+		}
+		averageAfter := currentAverage
+		if balanceAfter > 0 {
+			averageAfter = math.Round(((current*currentAverage)+(stockQuantity*baseUnitCost))/balanceAfter*10000) / 10000
+		}
 		if _, err = tx.Exec(r.Context(), `
 			UPDATE stock_balances
 			SET quantity=$4,average_unit_cost=$5,updated_at=now()
 			WHERE organization_id=$1 AND location_id=$2 AND inventory_item_id=$3`,
-			s.OrganizationID, s.LocationID, line.InventoryItemID, balanceAfter,averageAfter); err != nil {
+			s.OrganizationID, s.LocationID, line.InventoryItemID, balanceAfter, averageAfter); err != nil {
 			fail(w, 503, "inventory_unavailable", "No pudimos actualizar el saldo de inventario.")
 			return
 		}
@@ -911,8 +968,8 @@ func (a *API) receivePurchaseOrder(w http.ResponseWriter, r *http.Request) {
 		if in.Notes != "" {
 			note += " · " + in.Notes
 		}
-		valueDelta:=math.Round(stockQuantity*baseUnitCost*10000)/10000
-		balanceValue:=math.Round(balanceAfter*averageAfter*10000)/10000
+		valueDelta := math.Round(stockQuantity*baseUnitCost*10000) / 10000
+		balanceValue := math.Round(balanceAfter*averageAfter*10000) / 10000
 		if _, err = tx.Exec(r.Context(), `
 			INSERT INTO stock_movements(
 				organization_id,location_id,product_id,inventory_item_id,
@@ -921,7 +978,7 @@ func (a *API) receivePurchaseOrder(w http.ResponseWriter, r *http.Request) {
 			)
 			VALUES($1,$2,$3,$4,'entry',$5,$6,'purchase_receipt',$7,$8,$9,$10,$11,$12)`,
 			s.OrganizationID, s.LocationID, line.ProductID, line.InventoryItemID,
-			stockQuantity, balanceAfter, receiptID, note, s.UserID,baseUnitCost,valueDelta,balanceValue); err != nil {
+			stockQuantity, balanceAfter, receiptID, note, s.UserID, baseUnitCost, valueDelta, balanceValue); err != nil {
 			fail(w, 503, "inventory_unavailable", "No pudimos registrar el movimiento de Kárdex.")
 			return
 		}
@@ -969,11 +1026,11 @@ func (a *API) receivePurchaseOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	a.audit(r, "purchase.receipt_created", "purchase_order", r.PathValue("id"))
 	writeJSON(w, 201, map[string]any{
-		"id": receiptID,
-		"code": receiptCode,
+		"id":              receiptID,
+		"code":            receiptCode,
 		"purchaseOrderId": r.PathValue("id"),
-		"number": number,
-		"status": nextStatus,
-		"receivedAt": receivedAt,
+		"number":          number,
+		"status":          nextStatus,
+		"receivedAt":      receivedAt,
 	})
 }

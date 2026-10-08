@@ -98,8 +98,12 @@ un plato preparado.
 | `portions` | Producto preparado por porciones, por ejemplo Ají de gallina. | `product_availability.portion_quantity - sold_quantity` por local y fecha |
 | `inventory` | Mercadería física, por ejemplo Coca-Cola o agua mineral. | `stock_balances` del local |
 
-Las porciones se cargan desde Disponibilidad de la carta. No existe un cupo
-predeterminado en `products`: cada día/local tiene su cantidad real. El cupo
+Las porciones iniciales se registran junto al alta del producto mediante
+`initialPortionQuantity`: producto, disponibilidad y auditoría son atómicos.
+La cantidad se guarda en `product_availability` para la fecha actual según la
+zona horaria del local de la sesión. Los ajustes posteriores, Agotado y Reactivar
+se gestionan desde Disponibilidad. No existe un cupo predeterminado en
+`products`: cada día/local tiene su cantidad real. El cupo
 `portion_quantity` nunca puede reducirse por debajo de `sold_quantity`; esta
 invariante se valida en backend bajo bloqueo transaccional para no competir con
 la creación, edición o reversa de pedidos.
@@ -116,6 +120,13 @@ de recibir esa mercadería: unidad base (factor 1), paquete o caja con un factor
 de conversión. Una entrada de 5 cajas x 12 de un producto cuya unidad base es
 botella aumenta el saldo y el Kárdex en 60 botellas. El documento de entrada
 conserva la cantidad recibida, la presentación y el factor utilizados.
+
+`inventory_units` es el catálogo de unidades base por empresa. La migración 76
+copia `inventory_unit_templates` para empresas existentes y un trigger inicializa
+las nuevas; incluye Paquete y Bolsa. Conserva todos los códigos históricos y no
+convierte existencias. La FK `(organization_id,unit)` de `inventory_items` impide
+usar unidades ajenas o inexistentes. Compras e Inventario comparten el catálogo;
+crear una unidad es auditable y no altera unidades de artículos anteriores.
 
 ### Flujo de Inventario
 
@@ -329,6 +340,13 @@ instantánea acotada de valores modificados para rollback sin sobreescribir
 ediciones posteriores. La lectura del contexto también cruza módulos con el
 plan: un indicador activo heredado no habilita funciones ajenas al contrato.
 
+La migración 000075 añade `inventario` y `compras` a Emprende y habilita ambos
+para sus empresas con suscripción no cancelada, incluidos módulos ausentes o
+inactivos. Nuevas altas los reciben desde el catálogo remoto habitual. Conserva
+los módulos previos, precios, límites, suscripciones y roles; no modifica otros
+planes. Su respaldo permite rollback sin eliminar habilitaciones preexistentes
+ni sobrescribir ediciones administrativas posteriores.
+
 ### Zona horaria sugerida en onboarding
 
 `platform_countries.default_timezone` contiene una sugerencia IANA editable en
@@ -339,6 +357,27 @@ telefónico. La elección final se valida con `time.LoadLocation` y se persiste
 como zona del primer local y valor inicial de la empresa. No se restringe al país:
 los locales posteriores mantienen zonas independientes. La migración no modifica
 empresas ni locales existentes.
+
+## Catálogo de combinaciones de inventario
+
+Migración 77: `inventory_presentation_types` y `inventory_unit_combinations`
+son catálogos por empresa. Plantillas en base de datos inicializan empresas
+existentes y nuevas, con Paquete–Botella/Lata, Saco–Kilogramo, Bolsa–Kilogramo,
+Bidón–Litro y otros pares. Conserva Caja/Paquete para las unidades de clientes
+anteriores y las combinaciones históricas personalizadas.
+
+El catálogo relaciona unidad base y tipo de presentación, sin factor universal.
+`inventory_presentations.units_per_presentation` mantiene la conversión propia
+del artículo; `is_default` tiene un índice único parcial por empresa/artículo.
+El tipo unidad mantiene factor 1. Otros tipos admiten contenidos positivos con
+tres decimales, incluso bolsa de 0.5 kg. La recepción multiplica cantidad por
+contenido; las ventas descuentan la unidad base. Las instantáneas de documentos
+no cambian al agregar una conversión o elegir otra predeterminada.
+
+Las nuevas combinaciones y preferencias se guardan bajo bloqueo y auditoría
+transaccional. No mueven stock. Los UUID los genera PostgreSQL. El rollback se
+rechaza si hay presentaciones custom o factores incompatibles con el modelo
+anterior; nunca los convierte ni descarta para forzar una reversión.
 
 ## Atribución de turnos de caja
 

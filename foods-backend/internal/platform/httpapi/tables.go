@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 type table struct {
@@ -137,32 +138,26 @@ func (a *API) createTable(w http.ResponseWriter, r *http.Request) {
 func (a *API) createTablesBatch(w http.ResponseWriter, r *http.Request) {
 	s := r.Context().Value(scopeKey{}).(scope)
 	var in tableBatchInput
-	if json.NewDecoder(r.Body).Decode(&in) != nil {
+	if json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&in) != nil {
 		fail(w, 400, "invalid_request", "Revisa los datos enviados.")
 		return
 	}
-	if len(in.Items) == 0 {
-		fail(w, 400, "invalid_request", "Agrega al menos una mesa.")
+	if len(in.Items) == 0 || len(in.Items) > 500 {
+		fail(w, 400, "invalid_request", "Agrega entre 1 y 500 mesas.")
 		return
 	}
-	tx, err := a.db.Begin(r.Context())
-	if err != nil {
-		fail(w, 503, "tables_unavailable", "No pudimos registrar las mesas.")
-		return
-	}
-	defer tx.Rollback(r.Context())
-	created := []table{}
+	items := make([]tableBatchItem, 0, len(in.Items))
+	names := make(map[string]bool, len(in.Items))
 	for _, item := range in.Items {
-		if strings.TrimSpace(item.Name) == "" {
+		name := strings.TrimSpace(item.Name)
+		if name == "" {
 			continue
 		}
-		if err = validateActiveTableZone(r.Context(), tx, s, item.Zone); errors.Is(err, pgx.ErrNoRows) {
-			fail(w, 400, "invalid_zone", "Una de las mesas usa una zona inexistente o inactiva.")
-			return
-		} else if err != nil {
-			fail(w, 503, "zones_unavailable", "No pudimos validar las zonas de las mesas.")
+		if names[name] {
+			fail(w, 409, "table_conflict", "No repitas el nombre de una mesa en el mismo lote.")
 			return
 		}
+		names[name] = true
 		seats := 2
 		if item.Seats != nil && *item.Seats > 0 {
 			seats = *item.Seats
@@ -171,29 +166,32 @@ func (a *API) createTablesBatch(w http.ResponseWriter, r *http.Request) {
 		if item.QrEnabled != nil {
 			qrEnabled = *item.QrEnabled
 		}
-		var t table
-		err := tx.QueryRow(r.Context(), `
-			INSERT INTO tables(organization_id,location_id,name,seats,zone,active,qr_token,qr_enabled)
-			VALUES($1,$2,$3,$4,$5,true,encode(gen_random_bytes(16),'hex'),$6)
-			RETURNING id,name,seats,zone,active,qr_token,qr_enabled
-		`, s.OrganizationID, s.LocationID, strings.TrimSpace(item.Name), seats, strings.TrimSpace(item.Zone), qrEnabled).
-			Scan(&t.ID, &t.Name, &t.Seats, &t.Zone, &t.Active, &t.QrToken, &t.QrEnabled)
-		if err != nil {
-			fail(w, 409, "table_conflict", "Ya existe una mesa llamada \""+strings.TrimSpace(item.Name)+"\".")
-			return
-		}
-		created = append(created, t)
+		items = append(items, tableBatchItem{Name: name, Seats: seats, Zone: strings.TrimSpace(item.Zone), QrEnabled: qrEnabled})
 	}
-	if len(created) == 0 {
+	if len(items) == 0 {
 		fail(w, 400, "invalid_request", "Agrega al menos una mesa con nombre.")
 		return
 	}
-	if err = tx.Commit(r.Context()); err != nil {
-		fail(w, 503, "tables_unavailable", "No pudimos registrar las mesas.")
+	payload, err := json.Marshal(items)
+	if err != nil {
+		fail(w, 400, "invalid_request", "Revisa los datos enviados.")
 		return
 	}
-	a.audit(r, "table.batch_created", "table", "")
-	writeJSON(w, 201, map[string]any{"items": created})
+	result, invalidZone, err := persistTableBatch(r.Context(), a.db, s, payload)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			fail(w, 409, "table_conflict", "Ya existe una mesa con uno de los nombres enviados.")
+		} else {
+			fail(w, 503, "tables_unavailable", "No pudimos confirmar el registro de las mesas. Actualiza la lista antes de intentarlo nuevamente.")
+		}
+		return
+	}
+	if invalidZone {
+		fail(w, 400, "invalid_zone", "Una de las mesas usa una zona inexistente o inactiva.")
+		return
+	}
+	writeJSON(w, 201, result)
 }
 
 func (a *API) updateTable(w http.ResponseWriter, r *http.Request) {
