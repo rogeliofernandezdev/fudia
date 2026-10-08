@@ -26,7 +26,7 @@ func TestProductUpdatePersistsCommercialDataAndDestination(t *testing.T) {
 			active, featured, minutes := false, true, 8
 			image, cost, from, until, cutoff := "/test-product.png", "2.50", "2026-01-01 00:00:00+00", "2030-12-31 00:00:00+00", "18:00:00"
 			input := productInput{
-				SKU: sku, Name: "Producto actualizado", Description: "Descripción actualizada", Price: "7.50",
+				SKU: fmt.Sprintf("EDIT-UPDATED-%d", i), Name: "Producto actualizado", Description: "Descripción actualizada", Price: "7.50",
 				Active: &active, Featured: &featured, ProductType: "prepared", QuantityControl: "none",
 				ServiceDestination: destination, ImageURL: &image, CostPrice: &cost, PrepMinutes: &minutes,
 				Allergens: []string{"leche"}, AvailableFrom: &from, AvailableUntil: &until,
@@ -48,7 +48,7 @@ func TestProductUpdatePersistsCommercialDataAndDestination(t *testing.T) {
 			if err = json.Unmarshal(rec.Body.Bytes(), &updated); err != nil {
 				t.Fatal(err)
 			}
-			if updated.ID != id || updated.Name != input.Name || updated.Price != "7.50" || updated.ServiceDestination != destination {
+			if updated.ID != id || updated.SKU != input.SKU || updated.Name != input.Name || updated.Price != "7.50" || updated.ServiceDestination != destination {
 				t.Fatalf("incorrect update response: %+v", updated)
 			}
 			// Check the committed values, not only the HTTP response.
@@ -82,6 +82,9 @@ func TestProductUpdatePreservesOmittedDestinationAndTenantBoundary(t *testing.T)
 	if err := pool.QueryRow(ctx, `INSERT INTO products(organization_id,sku,name,price,product_type,quantity_control,service_destination) VALUES($1,'EDIT-LEGACY','Original',5,'retail','none','direct') RETURNING id`, owner.OrganizationID).Scan(&id); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := pool.Exec(ctx, `INSERT INTO products(organization_id,sku,name,price) VALUES($1,'EDIT-TAKEN','Otro producto',4),($2,'EDIT-OTHER-TENANT','Producto de otra empresa',4)`, owner.OrganizationID, other.OrganizationID); err != nil {
+		t.Fatal(err)
+	}
 	update := func(s scope, body string) *httptest.ResponseRecorder {
 		req := httptest.NewRequest("PATCH", "/v1/admin/products/"+id, bytes.NewBufferString(body))
 		req.SetPathValue("id", id)
@@ -102,11 +105,38 @@ func TestProductUpdatePreservesOmittedDestinationAndTenantBoundary(t *testing.T)
 	if saved.Code != http.StatusOK {
 		t.Fatalf("update without destination: %d %s", saved.Code, saved.Body.String())
 	}
-	var name, destination, productType string
-	if err := pool.QueryRow(ctx, `SELECT name,service_destination,product_type FROM products WHERE id=$1`, id).Scan(&name, &destination, &productType); err != nil {
+	var updated product
+	if err := json.Unmarshal(saved.Body.Bytes(), &updated); err != nil {
 		t.Fatal(err)
 	}
-	if name != "Nombre actualizado" || destination != "direct" || productType != "retail" {
-		t.Fatalf("omitted fields were not preserved: %s %s %s", name, destination, productType)
+	var sku, name, destination, productType string
+	if err := pool.QueryRow(ctx, `SELECT sku,name,service_destination,product_type FROM products WHERE id=$1`, id).Scan(&sku, &name, &destination, &productType); err != nil {
+		t.Fatal(err)
+	}
+	if updated.SKU != "EDIT-LEGACY" || sku != "EDIT-LEGACY" || name != "Nombre actualizado" || destination != "direct" || productType != "retail" {
+		t.Fatalf("omitted fields were not preserved: response=%+v stored=%s %s %s %s", updated, sku, name, destination, productType)
+	}
+
+	duplicate := update(owner, `{"sku":"EDIT-TAKEN","name":"Nombre duplicado","price":"9.00","quantityControl":"none"}`)
+	if duplicate.Code != http.StatusConflict {
+		t.Fatalf("duplicate SKU update: %d %s", duplicate.Code, duplicate.Body.String())
+	}
+	if err := pool.QueryRow(ctx, `SELECT sku,name FROM products WHERE id=$1`, id).Scan(&sku, &name); err != nil {
+		t.Fatal(err)
+	}
+	if sku != "EDIT-LEGACY" || name != "Nombre actualizado" {
+		t.Fatalf("duplicate SKU changed the product: %s %s", sku, name)
+	}
+
+	// SKU uniqueness remains scoped to the organization.
+	crossTenantSKU := update(owner, `{"sku":"EDIT-OTHER-TENANT","name":"Nombre actualizado","price":"6.00","quantityControl":"none","allergens":[]}`)
+	if crossTenantSKU.Code != http.StatusOK {
+		t.Fatalf("SKU used by another tenant should be allowed: %d %s", crossTenantSKU.Code, crossTenantSKU.Body.String())
+	}
+	if err := pool.QueryRow(ctx, `SELECT sku FROM products WHERE id=$1`, id).Scan(&sku); err != nil {
+		t.Fatal(err)
+	}
+	if sku != "EDIT-OTHER-TENANT" {
+		t.Fatalf("valid explicit SKU was not persisted: %s", sku)
 	}
 }
