@@ -1,5 +1,11 @@
 # Seguridad
 
+El catálogo de permisos y las respuestas de roles para usuarios de empresa
+proyectan únicamente accesos/acciones de módulos incluidos, activos y
+disponibles en su suscripción. Crear o editar un rol no permite asignar valores
+fuera de ese alcance. Editar conserva asignaciones almacenadas pero ocultas de
+planes anteriores. El administrador de plataforma mantiene el catálogo total.
+
 El backend deriva usuario, organización, local y permisos de la sesión. Nunca
 confía en identificadores de alcance enviados por el cliente. Se auditan
 anulaciones, descuentos, ajustes, cierres y comprobantes.

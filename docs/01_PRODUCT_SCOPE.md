@@ -69,6 +69,6 @@ desplegar una nueva versión.
 | Escala | PEN 299 | PEN 2,990 | 10 | 60 | Operación multi-local y compras |
 
 Los tres incluyen 14 días de prueba. Emprende cubre POS, pedidos, cocina,
-mesas, caja, productos, clientes, reportes y administración base. Impulso añade
-reservas, combos, recetas, inventario y Kardex. Escala incorpora además compras
+mesas, caja, productos, menús y combos, clientes, reportes y administración base. Impulso añade
+reservas, recetas, inventario y Kardex. Escala incorpora además compras
 y completa todos los módulos actualmente disponibles del núcleo comercial.

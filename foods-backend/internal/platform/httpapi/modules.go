@@ -26,15 +26,15 @@ const (
 )
 
 var mvpModuleKeys = map[string]bool{
-	"reportes":true,"pos":true,"pedidos":true,"cocina":true,"mesas":true,"caja":true,"reservas":true,
-	"productos":true,"combos":true,"recetas":true,"inventario":true,"kardex":true,"compras":true,
-	"clientes":true,"locales":true,"fiscal":true,"usuarios":true,"costos":true,"whatsapp_bot":true,
+	"reportes": true, "pos": true, "pedidos": true, "cocina": true, "mesas": true, "caja": true, "reservas": true,
+	"productos": true, "combos": true, "recetas": true, "inventario": true, "kardex": true, "compras": true,
+	"clientes": true, "locales": true, "fiscal": true, "usuarios": true, "costos": true, "whatsapp_bot": true,
 }
 
 var developmentModuleKeys = map[string]bool{
-	"carta_qr":true,
-	"facturacion":true,
-	"integraciones":true,
+	"carta_qr":      true,
+	"facturacion":   true,
+	"integraciones": true,
 }
 
 func moduleAvailability(key string) string {
@@ -52,23 +52,29 @@ func moduleCanActivate(key string) bool {
 }
 
 func seedOrganizationModules(ctx context.Context, tx pgx.Tx, organizationID string) error {
-	keys:=make([]string,0,len(mvpModuleKeys))
-	for key:=range mvpModuleKeys { keys=append(keys,key) }
-	return syncOrganizationModulesForPlan(ctx,tx,organizationID,keys)
+	keys := make([]string, 0, len(mvpModuleKeys))
+	for key := range mvpModuleKeys {
+		keys = append(keys, key)
+	}
+	return syncOrganizationModulesForPlan(ctx, tx, organizationID, keys)
 }
 
 func syncOrganizationModulesForPlan(ctx context.Context, tx pgx.Tx, organizationID string, moduleKeys []string) error {
-	allowed:=map[string]bool{}
-	for _,key:=range moduleKeys { allowed[key]=true }
-	for _,module:=range moduleCatalog {
-		active:=allowed[module.Key]&&moduleCanActivate(module.Key)
-		_,err:=tx.Exec(ctx,`
+	allowed := map[string]bool{}
+	for _, key := range moduleKeys {
+		allowed[key] = true
+	}
+	for _, module := range moduleCatalog {
+		active := allowed[module.Key] && moduleCanActivate(module.Key)
+		_, err := tx.Exec(ctx, `
 			INSERT INTO organization_modules(organization_id,module_key,active)
 			VALUES($1,$2,$3)
 			ON CONFLICT(organization_id,module_key)
 			DO UPDATE SET active=EXCLUDED.active,updated_at=now()
-		`,organizationID,module.Key,active)
-		if err!=nil{return err}
+		`, organizationID, module.Key, active)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -199,19 +205,34 @@ func (a *API) toggleModule(w http.ResponseWriter, r *http.Request) {
 // activeModules devuelve el set de claves de módulos activos para una organización.
 // Se usa para filtrar el sidebar y las rutas disponibles.
 func (a *API) activeModules(orgID string) map[string]bool {
-	rows, err := a.db.Query(context.Background(), `SELECT module_key, active FROM organization_modules WHERE organization_id=$1`, orgID)
+	result, _ := a.readOrganizationModules(context.Background(), orgID)
+	return result
+}
+
+func (a *API) readOrganizationModules(ctx context.Context, orgID string) (map[string]bool, error) {
+	rows, err := a.db.Query(ctx, `
+		SELECT m.module_key,m.active AND (
+		  s.organization_id IS NULL OR (s.status<>'cancelled' AND m.module_key=ANY(p.module_keys))
+		)
+		FROM organization_modules m
+		LEFT JOIN organization_subscriptions s ON s.organization_id=m.organization_id
+		LEFT JOIN subscription_plans p ON p.id=s.plan_id
+		WHERE m.organization_id=$1
+	`, orgID)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	defer rows.Close()
 	result := map[string]bool{}
 	for rows.Next() {
 		var key string
 		var active bool
-		_ = rows.Scan(&key, &active)
+		if err = rows.Scan(&key, &active); err != nil {
+			return nil, err
+		}
 		result[key] = active && moduleCanActivate(key)
 	}
-	return result
+	return result, rows.Err()
 }
 
 // moduleCategories ordena las categorías del catálogo para presentación.

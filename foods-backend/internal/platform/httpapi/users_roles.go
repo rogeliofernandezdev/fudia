@@ -68,6 +68,11 @@ var menuAccessCatalog = []map[string]any{
 
 func (a *API) listRoles(w http.ResponseWriter, r *http.Request) {
 	s := r.Context().Value(scopeKey{}).(scope)
+	catalog, err := a.loadRoleCatalog(r.Context(), s)
+	if err != nil {
+		fail(w, 503, "role_catalog_unavailable", "No pudimos consultar los accesos del plan de la empresa.")
+		return
+	}
 	rows, err := a.db.Query(r.Context(), `SELECT r.id,r.name,r.system_key,r.description,r.menu_access,r.permissions,r.active,count(DISTINCT ur.user_id) FROM roles r LEFT JOIN user_roles ur ON ur.role_id=r.id WHERE r.organization_id=$1 GROUP BY r.id ORDER BY (r.system_key='administrator') DESC,r.name`, s.OrganizationID)
 	if err != nil {
 		fail(w, 503, "roles_unavailable", "No pudimos cargar los roles.")
@@ -81,12 +86,22 @@ func (a *API) listRoles(w http.ResponseWriter, r *http.Request) {
 			fail(w, 503, "roles_unavailable", "No pudimos cargar los roles.")
 			return
 		}
-		items = append(items, v)
+		items = append(items, catalog.project(v))
+	}
+	if rows.Err() != nil {
+		fail(w, 503, "roles_unavailable", "No pudimos cargar los roles.")
+		return
 	}
 	writeJSON(w, 200, map[string]any{"items": items, "total": len(items)})
 }
 func (a *API) getPermissionCatalog(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, 200, map[string]any{"groups": permissionCatalog, "menuGroups": menuAccessCatalog})
+	s := r.Context().Value(scopeKey{}).(scope)
+	catalog, err := a.loadRoleCatalog(r.Context(), s)
+	if err != nil {
+		fail(w, 503, "role_catalog_unavailable", "No pudimos consultar los accesos del plan de la empresa.")
+		return
+	}
+	writeJSON(w, 200, map[string]any{"groups": catalog.Permissions, "menuGroups": catalog.Menus})
 }
 func (a *API) createRole(w http.ResponseWriter, r *http.Request) { a.saveRole(w, r, false) }
 func (a *API) updateRole(w http.ResponseWriter, r *http.Request) { a.saveRole(w, r, true) }
@@ -107,6 +122,19 @@ func (a *API) saveRole(w http.ResponseWriter, r *http.Request, update bool) {
 	}
 	in.MenuAccess = menuAccess
 	in.Permissions = permissions
+	catalog, err := a.loadRoleCatalog(r.Context(), s)
+	if err != nil {
+		fail(w, 503, "role_catalog_unavailable", "No pudimos consultar los accesos del plan de la empresa.")
+		return
+	}
+	if _, ok := normalizeRoleCatalogValues(in.MenuAccess, catalog.Menus); !ok {
+		fail(w, 400, "role_outside_plan", "Selecciona únicamente opciones incluidas y activas en el plan de la empresa.")
+		return
+	}
+	if _, ok := normalizeRoleCatalogValues(in.Permissions, catalog.Permissions); !ok {
+		fail(w, 400, "role_outside_plan", "Selecciona únicamente acciones disponibles en el plan de la empresa.")
+		return
+	}
 
 	tx, err := a.db.Begin(r.Context())
 	if err != nil {
@@ -121,10 +149,11 @@ func (a *API) saveRole(w http.ResponseWriter, r *http.Request, update bool) {
 			UPDATE roles
 			SET name=CASE WHEN system_key IS NULL THEN $3 ELSE name END,
 			    description=CASE WHEN system_key IS NULL THEN $4 ELSE description END,
-			    menu_access=$5,permissions=$6,updated_at=now()
+			    menu_access=$5::text[] || ARRAY(SELECT v FROM unnest(menu_access) AS v WHERE v<>'*' AND NOT (v=ANY($7::text[]))),
+			    permissions=$6::text[] || ARRAY(SELECT v FROM unnest(permissions) AS v WHERE v<>'*' AND NOT (v=ANY($8::text[]))),updated_at=now()
 			WHERE id=$1 AND organization_id=$2 AND COALESCE(system_key,'')<>'administrator'
 			RETURNING id,name,system_key,description,menu_access,permissions,active,0
-		`, r.PathValue("id"), s.OrganizationID, in.Name, in.Description, in.MenuAccess, in.Permissions).
+		`, r.PathValue("id"), s.OrganizationID, in.Name, in.Description, in.MenuAccess, in.Permissions, roleCatalogValues(catalog.Menus), roleCatalogValues(catalog.Permissions)).
 			Scan(&v.ID, &v.Name, &v.SystemKey, &v.Description, &v.MenuAccess, &v.Permissions, &v.Active, &v.UserCount)
 	} else {
 		err = tx.QueryRow(r.Context(), `
@@ -158,7 +187,7 @@ func (a *API) saveRole(w http.ResponseWriter, r *http.Request, update bool) {
 		return
 	}
 	a.audit(r, map[bool]string{true: "role.updated", false: "role.created"}[update], "role", v.ID)
-	writeJSON(w, map[bool]int{true: 200, false: 201}[update], v)
+	writeJSON(w, map[bool]int{true: 200, false: 201}[update], catalog.project(v))
 }
 func (a *API) updateRoleStatus(w http.ResponseWriter, r *http.Request) {
 	s := r.Context().Value(scopeKey{}).(scope)

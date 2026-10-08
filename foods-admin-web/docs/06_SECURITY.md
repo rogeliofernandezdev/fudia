@@ -10,6 +10,12 @@ ejecutar dentro de ellas. El sidebar y la protección de rutas consumen
 validar cada petición. Conceder un permiso no concede automáticamente una opción
 del menú, ni conceder una opción autoriza sus acciones.
 
+Los catálogos y la vista de roles de empresa se limitan a módulos contratados,
+activos y disponibles. El backend valida ese límite al guardar. Los permisos
+almacenados de módulos fuera del plan se conservan sin mostrarse para que un
+cambio de plan no los borre. Roles y permisos se consultan con claves de caché
+que incluyen empresa y módulos efectivos. Plataforma conserva el catálogo total.
+
 ## Sesión en el navegador
 
 Cuando una sesión expira, la interfaz muestra una transición breve y vuelve al

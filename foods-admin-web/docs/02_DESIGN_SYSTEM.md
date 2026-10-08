@@ -417,6 +417,13 @@ primaria con un icono: «Registrar y enviar a cocina». Durante el envío muestr
 - Toda tabla de gestión incluye paginación, incluida la de categorías.
 - La paginación es una primitiva única y compartida. No se replica su cálculo,
   marcado ni estilos dentro de los módulos de negocio.
+- No conservar paginadores antiguos ni sus reglas (`catalog-pagination`, `pagination-meta`, estilos
+  genéricos de `.management footer` o flechas generadas con pseudo-elementos).
+  La geometría base de `Pagination` continúa en `globals.css`; los botones y sus
+  estados tienen un único dueño en `pagination.css`, compartido por todas las
+  tablas. No se corrigen conflictos con excepciones locales ni `!important`:
+  Anterior/Siguiente activos conservan fondo primario y texto blanco;
+  deshabilitados usan fondo y texto neutros, con radio y altura estándar.
 - El botón «Nuevo» va alineado a la derecha de los tabs de producto/categoría,
   no en el encabezado de página. En móvil se apila debajo de los tabs.
 - El scroll horizontal solo aparece si hay desborde y se revela al pasar el cursor
@@ -684,7 +691,8 @@ Los módulos de directorio, como Clientes, usan la tabla estandarizada en escrit
 - El catálogo distingue **Disponible**, **En desarrollo** y **Planificado**.
 - `active` representa únicamente si un módulo **Disponible** está habilitado para una empresa; no representa su estado de desarrollo.
 - El Administrador de plataforma ve todos los módulos en navegación y catálogo, incluso si están inactivos o no terminados.
-- Los usuarios de empresa solo ven módulos disponibles, activos para su organización y permitidos por su rol.
+- Los usuarios de empresa solo ven módulos disponibles, incluidos en su plan, activos para su organización y permitidos por su rol. Emprende incluye «Menús y combos».
+- Usuarios y roles muestra únicamente accesos y acciones de módulos efectivos del plan. Los contadores y la vista previa cuentan esos mismos elementos; se omiten grupos vacíos. La empresa no recibe el catálogo comercial completo de Plataforma.
 - Un módulo **En desarrollo** o **Planificado** nunca puede activarse para una empresa; el backend debe rechazar cualquier intento aunque el frontend falle.
 
 ## Onboarding comercial y suscripción

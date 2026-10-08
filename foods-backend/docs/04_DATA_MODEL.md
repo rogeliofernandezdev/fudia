@@ -322,6 +322,13 @@ supera los límites del plan destino. Los módulos activos de
 `organization_modules` se sincronizan desde `subscription_plans.module_keys`;
 solo módulos marcados como disponibles por la plataforma pueden activarse.
 
+La migración 000074 añade `combos` a Emprende sin reemplazar otros módulos,
+precios ni límites. Habilita el módulo para suscripciones existentes no
+canceladas; nuevas empresas lo reciben mediante el alta normal. Conserva una
+instantánea acotada de valores modificados para rollback sin sobreescribir
+ediciones posteriores. La lectura del contexto también cruza módulos con el
+plan: un indicador activo heredado no habilita funciones ajenas al contrato.
+
 ### Zona horaria sugerida en onboarding
 
 `platform_countries.default_timezone` contiene una sugerencia IANA editable en

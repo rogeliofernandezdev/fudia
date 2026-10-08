@@ -1216,24 +1216,28 @@ paths:
       requestBody: { required: true, content: { application/json: { schema: { type: object, required: [status], properties: { status: { type: string, enum: [preparando, listo] } } } } } }
       responses: { "204": { description: Estado de cocina actualizado }, "400": { $ref: "#/components/responses/BadRequest" }, "404": { description: Pedido no encontrado }, "409": { description: La comanda cambió de estado }, "403": { $ref: "#/components/responses/Forbidden" } }
   /v1/admin/roles:
-    get: { operationId: listRoles, security: [{ sessionCookie: [] }], responses: { "200": { description: Roles de la empresa } } }
+    get: { operationId: listRoles, security: [{ sessionCookie: [] }], responses: { "200": { description: Roles con accesos y permisos efectivos de los módulos contratados y activos. No modifica las asignaciones almacenadas. }, "503": { description: No se pudo consultar el alcance del plan } } }
     post:
       operationId: createRole
       security: [{ sessionCookie: [] }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/RoleInput" } } } }
-      responses: { "201": { description: Rol personalizado creado } }
+      responses: { "201": { description: Rol personalizado creado }, "400": { description: Accesos o permisos no disponibles para el plan de la empresa } }
   /v1/admin/roles/{id}:
     parameters: [{ $ref: "#/components/parameters/EntityId" }]
     patch:
       operationId: updateRole
       security: [{ sessionCookie: [] }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/RoleInput" } } } }
-      responses: { "200": { description: Rol actualizado }, "409": { description: Rol predeterminado protegido } }
+      responses: { "200": { description: Rol actualizado. Conserva las asignaciones no visibles del plan anterior. }, "400": { description: Accesos o permisos no disponibles para el plan de la empresa }, "409": { description: Rol predeterminado protegido } }
   /v1/admin/roles/{id}/status:
     parameters: [{ $ref: "#/components/parameters/EntityId" }]
     patch: { operationId: updateRoleStatus, security: [{ sessionCookie: [] }], responses: { "204": { description: Estado actualizado } } }
   /v1/admin/permission-catalog:
-    get: { operationId: getPermissionCatalog, security: [{ sessionCookie: [] }], responses: { "200": { description: Catálogo de permisos } } }
+    get:
+      operationId: getPermissionCatalog
+      description: "Empresa: devuelve únicamente accesos y acciones de módulos contratados, activos y disponibles; los grupos vacíos se omiten. Plataforma mantiene el catálogo completo. No concede permisos ni habilita módulos."
+      security: [{ sessionCookie: [] }]
+      responses: { "200": { description: Catálogo efectivo de accesos y permisos }, "503": { description: No se pudo consultar el alcance del plan } }
   /v1/admin/users:
     get: { operationId: listUsers, security: [{ sessionCookie: [] }], responses: { "200": { description: Usuarios paginados de la empresa } } }
     post:

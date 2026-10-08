@@ -1,7 +1,16 @@
 # Pruebas
 
+`plan-navigation.test.mjs` verifica Menús y combos en Emprende, ocultación de
+módulos no incluidos incluso con rol de acceso total, separación de acceso y
+lectura, catálogo de Plataforma y recarga de roles/permisos al cambiar el plan.
+
 Probar validaciones, permisos, filtros, errores y vacíos. Validar 390 px, escritorio
 y accesibilidad. Puertas: lint, typecheck, tests y build.
+
+`pagination.test.mjs` protege la primitiva global en variantes completa, simple
+y compacta: rango/total, límites de navegación, etiquetas e iconos, página activa
+y colores compartidos. Impide volver a introducir paginadores antiguos, estilos
+genéricos de pies de gestión o parches `!important` que sobrescriban la primitiva.
 
 `tests/ux-refinement.test.mjs` verifica validación y conservación del borrador de
 menús, cupos/recargos/fechas, catálogo paginado, transición directa de Cocina,
