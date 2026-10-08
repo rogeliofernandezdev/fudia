@@ -67,7 +67,8 @@ export function KitchenBoard(){
   const qc=useQueryClient();
   const{notify}=useFeedback();
   const{can,location}=useSession();
-  const canManage=can("kitchen.manage");
+  const[destination,setDestination]=useState(()=>can("kitchen.manage")?"kitchen":can("bar.manage")?"bar":"kitchen");
+  const canManage=can(destination==="bar"?"bar.manage":"kitchen.manage");
   const[channel,setChannel]=useState("");
   const[mobileLane,setMobileLane]=useState<KitchenStatus>("confirmado");
   const[clock,setClock]=useState(()=>Date.now());
@@ -78,8 +79,8 @@ export function KitchenBoard(){
   },[]);
 
   const tickets=useQuery({
-    queryKey:["kitchen-tickets",channel],
-    queryFn:()=>listKitchenTickets(channel),
+    queryKey:["kitchen-tickets",channel,destination],
+    queryFn:()=>listKitchenTickets(channel,destination),
     refetchInterval:10000,
     refetchIntervalInBackground:true,
     placeholderData:keepPreviousData,
@@ -89,7 +90,7 @@ export function KitchenBoard(){
     mutationFn:({ticket,status}:{ticket:KitchenTicket;status:Extract<KitchenStatus,"preparando"|"listo">})=>updateKitchenTicketStatus(ticket.id,status),
     onSuccess:(_,variables)=>{
       void qc.invalidateQueries({queryKey:["kitchen-tickets"]});
-      void qc.invalidateQueries({queryKey:["orders"]});
+      for(const key of ["orders","salon-floor","pos-orders","pos-order","dashboard"])void qc.invalidateQueries({queryKey:[key]});
       void qc.invalidateQueries({queryKey:["order",variables.ticket.orderId]});
     },
     onError:error=>notify({tone:"danger",title:"No se pudo actualizar la comanda",message:error.message}),
@@ -110,9 +111,10 @@ export function KitchenBoard(){
   return <div className="kitchen-page">
     <PageHeader
       eyebrow="OPERACIÓN EN COCINA"
-      title="Cocina"
+      title={destination==="bar"?"Barra":"Cocina"}
       description="Prepara y libera pedidos del local con una cola clara por estado."
       action={<div className="kitchen-header-tools">
+        <Select value={destination} onChange={event=>setDestination(event.target.value)} aria-label="Área de preparación">{(tickets.data?.destinationOptions??[]).map(option=><option value={option.value} key={option.value}>{option.label}</option>)}</Select>
         {attention>0&&<span className="kitchen-attention"><Icon name="alert" size={12}/>{attention} con demora</span>}
         <Select value={channel} onChange={event=>setChannel(event.target.value)} aria-label="Filtrar comandas por canal"><option value="">Todos los canales</option>{(tickets.data?.channelOptions??[]).map(option=><option value={option.value} key={option.value}>{option.label}</option>)}</Select>
       </div>}

@@ -39,15 +39,15 @@ type conciergeQRContext struct {
 }
 
 type conciergeMenuItem struct {
-	ProductID     string  `json:"productId"`
-	Name          string  `json:"name"`
-	Description   string  `json:"description"`
-	Price         string  `json:"price"`
-	CategoryName  *string `json:"categoryName"`
-	ImageURL      *string `json:"imageUrl"`
-	Status        string  `json:"status"`
-	IsCombo       bool    `json:"isCombo"`
-	HasModifiers  bool    `json:"hasModifiers"`
+	ProductID    string  `json:"productId"`
+	Name         string  `json:"name"`
+	Description  string  `json:"description"`
+	Price        string  `json:"price"`
+	CategoryName *string `json:"categoryName"`
+	ImageURL     *string `json:"imageUrl"`
+	Status       string  `json:"status"`
+	IsCombo      bool    `json:"isCombo"`
+	HasModifiers bool    `json:"hasModifiers"`
 }
 
 type conciergeOrderInput struct {
@@ -170,9 +170,9 @@ func (a *API) listConciergeMenu(w http.ResponseWriter, r *http.Request) {
 		var scheduleAvailable, isCombo bool
 		var inventoryQuantity, minimumStock float64
 		if err := rows.Scan(
-			&item.ProductID,&item.Name,&item.Description,&item.Price,&item.CategoryName,&item.ImageURL,
-			&quantityControl,&portionQuantity,&soldQuantity,&manualStatus,&scheduleAvailable,&isCombo,
-			&item.HasModifiers,&inventoryQuantity,&minimumStock,
+			&item.ProductID, &item.Name, &item.Description, &item.Price, &item.CategoryName, &item.ImageURL,
+			&quantityControl, &portionQuantity, &soldQuantity, &manualStatus, &scheduleAvailable, &isCombo,
+			&item.HasModifiers, &inventoryQuantity, &minimumStock,
 		); err != nil {
 			fail(w, 503, "concierge_unavailable", "No pudimos leer la carta.")
 			return
@@ -216,10 +216,8 @@ func (a *API) listConciergeMenu(w http.ResponseWriter, r *http.Request) {
 		fail(w, 503, "concierge_unavailable", "No pudimos completar la carta.")
 		return
 	}
-	writeJSON(w, 200, map[string]any{"items":items,"currencySymbol":ctx.CurrencySymbol})
+	writeJSON(w, 200, map[string]any{"items": items, "currencySymbol": ctx.CurrencySymbol})
 }
-
-
 
 func (a *API) getConciergeProductModifiers(w http.ResponseWriter, r *http.Request) {
 	qr, err := a.resolveConciergeQR(r.Context(), r.PathValue("token"))
@@ -268,27 +266,27 @@ func (a *API) getConciergeProductModifiers(w http.ResponseWriter, r *http.Reques
 
 type conciergeComboOption struct {
 	ProductID string `json:"productId"`
-	Name string `json:"name"`
+	Name      string `json:"name"`
 	Surcharge string `json:"surcharge"`
-	Available bool `json:"available"`
+	Available bool   `json:"available"`
 }
 
 type conciergeComboGroup struct {
-	ID string `json:"id"`
-	Name string `json:"name"`
-	Required bool `json:"required"`
-	MinSelections int `json:"minSelections"`
-	MaxSelections int `json:"maxSelections"`
-	Options []conciergeComboOption `json:"options"`
+	ID            string                 `json:"id"`
+	Name          string                 `json:"name"`
+	Required      bool                   `json:"required"`
+	MinSelections int                    `json:"minSelections"`
+	MaxSelections int                    `json:"maxSelections"`
+	Options       []conciergeComboOption `json:"options"`
 }
 
 type conciergeComboDetail struct {
-	ID string `json:"id"`
-	Name string `json:"name"`
-	Description string `json:"description"`
-	Price string `json:"price"`
-	ImageURL *string `json:"imageUrl"`
-	Groups []conciergeComboGroup `json:"groups"`
+	ID          string                `json:"id"`
+	Name        string                `json:"name"`
+	Description string                `json:"description"`
+	Price       string                `json:"price"`
+	ImageURL    *string               `json:"imageUrl"`
+	Groups      []conciergeComboGroup `json:"groups"`
 }
 
 func (a *API) getConciergeCombo(w http.ResponseWriter, r *http.Request) {
@@ -328,7 +326,7 @@ func (a *API) getConciergeCombo(w http.ResponseWriter, r *http.Request) {
 		 AND pa.product_id=p.id AND pa.business_date=$4
 		WHERE p.id::text=$1 AND p.organization_id=$2
 	`, id, qr.Scope.OrganizationID, qr.Scope.LocationID, day.Format("2006-01-02")).
-		Scan(&out.Name,&out.Description,&out.Price,&out.ImageURL,&available)
+		Scan(&out.Name, &out.Description, &out.Price, &out.ImageURL, &available)
 	if errors.Is(err, pgx.ErrNoRows) {
 		fail(w, 404, "combo_not_found", "El menú o combo no existe.")
 		return
@@ -367,7 +365,7 @@ func (a *API) getConciergeCombo(w http.ResponseWriter, r *http.Request) {
 	for groupRows.Next() {
 		var group conciergeComboGroup
 		if err := groupRows.Scan(
-			&group.ID,&group.Name,&group.Required,&group.MinSelections,&group.MaxSelections,
+			&group.ID, &group.Name, &group.Required, &group.MinSelections, &group.MaxSelections,
 		); err != nil {
 			fail(w, 503, "combo_unavailable", "No pudimos leer los grupos del menú.")
 			return
@@ -426,7 +424,7 @@ func (a *API) getConciergeCombo(w http.ResponseWriter, r *http.Request) {
 		group.Options = []conciergeComboOption{}
 		for rows.Next() {
 			var option conciergeComboOption
-			if scanErr := rows.Scan(&option.ProductID,&option.Name,&option.Surcharge,&option.Available); scanErr != nil {
+			if scanErr := rows.Scan(&option.ProductID, &option.Name, &option.Surcharge, &option.Available); scanErr != nil {
 				rows.Close()
 				fail(w, 503, "combo_unavailable", "No pudimos leer las opciones del menú.")
 				return
@@ -541,13 +539,14 @@ func (a *API) createConciergeOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var openOrderID,openStatus,openChannel string
+	var openOrderID, openStatus, openChannel string
 	var openCreatedBy *string
-	var openSubtotal,openDeliveryFee float64
+	var openSubtotal, openDeliveryFee float64
 	var conciergeOwned bool
+	var openBillClosed bool
 	err = tx.QueryRow(r.Context(), `
 		SELECT o.id::text,o.status,o.channel,o.subtotal::float8,o.delivery_fee::float8,
-		       o.created_by::text,
+		       o.created_by::text,o.bill_closed_at IS NOT NULL,
 		       EXISTS(
 		         SELECT 1 FROM audit_log a
 		         WHERE a.organization_id=o.organization_id
@@ -562,89 +561,98 @@ func (a *API) createConciergeOrder(w http.ResponseWriter, r *http.Request) {
 		LIMIT 1
 		FOR UPDATE
 	`, qr.Scope.OrganizationID, qr.Scope.LocationID, qr.TableID).Scan(
-		&openOrderID,&openStatus,&openChannel,&openSubtotal,&openDeliveryFee,&openCreatedBy,&conciergeOwned,
+		&openOrderID, &openStatus, &openChannel, &openSubtotal, &openDeliveryFee, &openCreatedBy, &openBillClosed, &conciergeOwned,
 	)
 	if err == nil {
-		if openChannel=="whatsapp" {
-			if openCreatedBy!=nil || !conciergeOwned {
+		if openChannel == "whatsapp" {
+			if openCreatedBy != nil || !conciergeOwned {
 				fail(w, 409, "table_occupied", "La mesa tiene una comanda abierta de WhatsApp que no pertenece a Fudia Concierge.")
 				return
 			}
-		} else if openChannel!="salon" {
+		} else if openChannel != "salon" {
 			fail(w, 409, "table_occupied", "La mesa tiene una comanda abierta gestionada por otro canal.")
 			return
 		}
-		if openStatus!="confirmado" && openStatus!="preparando" && openStatus!="listo" {
+		if openChannel == "salon" && openBillClosed {
+			fail(w, 409, "order_bill_closed", "La cuenta está por cobrar. No se pueden agregar productos después de cerrarla.")
+			return
+		}
+		if openStatus != "confirmado" && openStatus != "preparando" && openStatus != "listo" && openStatus != "entregado" {
 			fail(w, 409, "concierge_order_not_editable", "La comanda ya no admite nuevas rondas desde Concierge.")
 			return
 		}
-		paid,paidErr:=loadOrderNetPaid(r.Context(),tx,openOrderID,qr.Scope.OrganizationID,qr.Scope.LocationID)
-		if paidErr!=nil {
+		paid, paidErr := loadOrderNetPaid(r.Context(), tx, openOrderID, qr.Scope.OrganizationID, qr.Scope.LocationID)
+		if paidErr != nil {
 			fail(w, 503, "order_unavailable", "No pudimos validar los pagos de la comanda.")
 			return
 		}
-		if paid>0.00001 {
-			fail(w, 409, "paid_order_not_editable", "La comanda ya tiene pagos registrados y no puede ampliarse desde Concierge.")
+		var total float64
+		if err = tx.QueryRow(r.Context(), `SELECT total::float8 FROM orders WHERE id=$1 AND organization_id=$2 AND location_id=$3`, openOrderID, qr.Scope.OrganizationID, qr.Scope.LocationID).Scan(&total); err != nil {
+			fail(w, 503, "order_unavailable", "No pudimos validar el saldo de la comanda.")
+			return
+		}
+		if paid > 0.00001 && paid+0.00001 >= total {
+			fail(w, 409, "paid_order_not_editable", "La cuenta ya está pagada y no admite consumo adicional.")
 			return
 		}
 
-		if err=ensureKitchenRoundForOrder(r.Context(),tx,qr.Scope,openOrderID,openStatus);err!=nil {
-			fail(w,503,"order_unavailable","No pudimos preparar la trazabilidad de las rondas de cocina.")
+		if err = ensureKitchenRoundForOrder(r.Context(), tx, qr.Scope, openOrderID, openStatus); err != nil {
+			fail(w, 503, "order_unavailable", "No pudimos preparar la trazabilidad de las rondas de cocina.")
 			return
 		}
-		roundID,_,roundErr:=createKitchenRound(r.Context(),tx,qr.Scope,openOrderID,"confirmado","concierge")
-		if roundErr!=nil {
-			fail(w,503,"order_unavailable","No pudimos abrir la nueva ronda de cocina.")
+		roundID, _, roundErr := createKitchenRound(r.Context(), tx, qr.Scope, openOrderID, "confirmado", "concierge")
+		if roundErr != nil {
+			fail(w, 503, "order_unavailable", "No pudimos abrir la nueva ronda de cocina.")
 			return
 		}
-		prepared,addedSubtotal,preparationErr:=a.prepareOrderItems(r,tx,qr.Scope,"",in.Items)
-		if preparationErr!=nil {
-			fail(w,preparationErr.Status,preparationErr.Code,preparationErr.Message)
+		prepared, addedSubtotal, preparationErr := a.prepareOrderItems(r, tx, qr.Scope, "", in.Items)
+		if preparationErr != nil {
+			fail(w, preparationErr.Status, preparationErr.Code, preparationErr.Message)
 			return
 		}
-		if err=insertPreparedOrderItemsForRound(r.Context(),tx,qr.Scope.OrganizationID,openOrderID,roundID,prepared);err!=nil {
-			fail(w,503,"order_unavailable","No pudimos agregar los productos a la comanda.")
+		if err = insertPreparedOrderItemsForRound(r.Context(), tx, qr.Scope.OrganizationID, openOrderID, roundID, prepared); err != nil {
+			fail(w, 503, "order_unavailable", "No pudimos agregar los productos a la comanda.")
 			return
 		}
-		if quantityErr:=a.applyOrderQuantityDelta(
-			r.Context(),tx,qr.Scope,openOrderID,preparedQuantityUsage(prepared),"sale",
-		);quantityErr!=nil {
-			fail(w,quantityErr.Status,quantityErr.Code,quantityErr.Message)
+		if quantityErr := a.applyOrderQuantityDelta(
+			r.Context(), tx, qr.Scope, openOrderID, preparedQuantityUsage(prepared), "sale",
+		); quantityErr != nil {
+			fail(w, quantityErr.Status, quantityErr.Code, quantityErr.Message)
 			return
 		}
-		recipeUsage,recipeErr:=desiredRecipeInventoryUsage(r.Context(),tx,qr.Scope,prepared)
-		if recipeErr!=nil {
-			fail(w,503,"recipe_inventory_unavailable","No pudimos validar el consumo de recetas.")
+		recipeUsage, recipeErr := desiredRecipeInventoryUsage(r.Context(), tx, qr.Scope, prepared)
+		if recipeErr != nil {
+			fail(w, 503, "recipe_inventory_unavailable", "No pudimos validar el consumo de recetas.")
 			return
 		}
-		if quantityErr:=applyRecipeUsageDelta(r.Context(),tx,qr.Scope,openOrderID,recipeUsage);quantityErr!=nil {
-			fail(w,quantityErr.Status,quantityErr.Code,quantityErr.Message)
+		if quantityErr := applyRecipeUsageDelta(r.Context(), tx, qr.Scope, openOrderID, recipeUsage); quantityErr != nil {
+			fail(w, quantityErr.Status, quantityErr.Code, quantityErr.Message)
 			return
 		}
-		nextSubtotal:=openSubtotal+addedSubtotal
-		nextTotal:=nextSubtotal+openDeliveryFee
-		if _,err=tx.Exec(r.Context(),`
+		nextSubtotal := openSubtotal + addedSubtotal
+		nextTotal := nextSubtotal + openDeliveryFee
+		if _, err = tx.Exec(r.Context(), `
 			UPDATE orders
 			SET subtotal=$4,total=$5,updated_at=now()
 			WHERE id=$1 AND organization_id=$2 AND location_id=$3
-		`,openOrderID,qr.Scope.OrganizationID,qr.Scope.LocationID,nextSubtotal,nextTotal);err!=nil {
-			fail(w,503,"order_unavailable","No pudimos actualizar el total de la comanda.")
+		`, openOrderID, qr.Scope.OrganizationID, qr.Scope.LocationID, nextSubtotal, nextTotal); err != nil {
+			fail(w, 503, "order_unavailable", "No pudimos actualizar el total de la comanda.")
 			return
 		}
-		if err=syncOrderKitchenStatus(r.Context(),tx,qr.Scope,openOrderID);err!=nil {
-			fail(w,503,"order_unavailable","No pudimos actualizar el estado general de la comanda.")
+		if err = syncOrderKitchenStatus(r.Context(), tx, qr.Scope, openOrderID); err != nil {
+			fail(w, 503, "order_unavailable", "No pudimos actualizar el estado general de la comanda.")
 			return
 		}
-		if _,err=tx.Exec(r.Context(),`
+		if _, err = tx.Exec(r.Context(), `
 			INSERT INTO concierge_order_requests(
 			  organization_id,location_id,table_id,conversation_id,request_id,order_id
 			)
 			VALUES($1,$2,$3,$4,$5,$6)
-		`,qr.Scope.OrganizationID,qr.Scope.LocationID,qr.TableID,in.ConversationID,in.RequestID,openOrderID);err!=nil {
-			fail(w,503,"order_unavailable","No pudimos registrar la idempotencia del pedido.")
+		`, qr.Scope.OrganizationID, qr.Scope.LocationID, qr.TableID, in.ConversationID, in.RequestID, openOrderID); err != nil {
+			fail(w, 503, "order_unavailable", "No pudimos registrar la idempotencia del pedido.")
 			return
 		}
-		if _,err=tx.Exec(r.Context(),`
+		if _, err = tx.Exec(r.Context(), `
 			INSERT INTO audit_log(
 			  organization_id,location_id,user_id,action,entity_type,entity_id,metadata
 			)
@@ -656,41 +664,41 @@ func (a *API) createConciergeOrder(w http.ResponseWriter, r *http.Request) {
 			    'tableId',$6::text,
 			    'existingChannel',$7::text
 			  ))
-		`,qr.Scope.OrganizationID,qr.Scope.LocationID,openOrderID,in.ConversationID,in.RequestID,qr.TableID,openChannel);err!=nil {
-			fail(w,503,"order_unavailable","No pudimos registrar la trazabilidad del pedido.")
+		`, qr.Scope.OrganizationID, qr.Scope.LocationID, openOrderID, in.ConversationID, in.RequestID, qr.TableID, openChannel); err != nil {
+			fail(w, 503, "order_unavailable", "No pudimos registrar la trazabilidad del pedido.")
 			return
 		}
-		if err=tx.Commit(r.Context());err!=nil {
-			fail(w,503,"order_unavailable","No pudimos confirmar los productos adicionales.")
+		if err = tx.Commit(r.Context()); err != nil {
+			fail(w, 503, "order_unavailable", "No pudimos confirmar los productos adicionales.")
 			return
 		}
 
 		var out order
-		out,err=scanOrder(a.db.QueryRow(r.Context(),`
+		out, err = scanOrder(a.db.QueryRow(r.Context(), `
 			SELECT `+orderColumns+`
 			FROM orders
 			WHERE id=$1 AND organization_id=$2 AND location_id=$3
-		`,openOrderID,qr.Scope.OrganizationID,qr.Scope.LocationID))
-		if err!=nil {
-			fail(w,503,"order_unavailable","No pudimos recuperar la comanda actualizada.")
+		`, openOrderID, qr.Scope.OrganizationID, qr.Scope.LocationID))
+		if err != nil {
+			fail(w, 503, "order_unavailable", "No pudimos recuperar la comanda actualizada.")
 			return
 		}
-		out.Items,err=loadOrderItems(r.Context(),a.db,out.ID,qr.Scope.OrganizationID)
-		if err!=nil {
-			fail(w,503,"order_unavailable","No pudimos recuperar los productos actualizados.")
+		out.Items, err = loadOrderItems(r.Context(), a.db, out.ID, qr.Scope.OrganizationID)
+		if err != nil {
+			fail(w, 503, "order_unavailable", "No pudimos recuperar los productos actualizados.")
 			return
 		}
-		for _,item:=range out.Items {
-			if qty,parseErr:=strconv.ParseFloat(item.Qty,64);parseErr==nil {
-				out.ItemCount+=int(qty)
+		for _, item := range out.Items {
+			if qty, parseErr := strconv.ParseFloat(item.Qty, 64); parseErr == nil {
+				out.ItemCount += int(qty)
 			}
 		}
-		_ = applyOrderPaymentSummary(r.Context(),a.db,&out,qr.Scope.OrganizationID,qr.Scope.LocationID)
-		writeJSON(w,200,out)
+		_ = applyOrderPaymentSummary(r.Context(), a.db, &out, qr.Scope.OrganizationID, qr.Scope.LocationID)
+		writeJSON(w, 200, out)
 		return
 	}
-	if !errors.Is(err,pgx.ErrNoRows) {
-		fail(w,503,"order_unavailable","No pudimos validar las comandas abiertas de la mesa.")
+	if !errors.Is(err, pgx.ErrNoRows) {
+		fail(w, 503, "order_unavailable", "No pudimos validar las comandas abiertas de la mesa.")
 		return
 	}
 
@@ -708,8 +716,8 @@ func (a *API) createConciergeOrder(w http.ResponseWriter, r *http.Request) {
 		)
 		VALUES($1,$2,'whatsapp',$3,$4,'',$5,$6,$7,0,$7,'confirmado',NULL)
 		RETURNING `+orderColumns,
-		qr.Scope.OrganizationID,qr.Scope.LocationID,in.CustomerName,in.CustomerPhone,
-		qr.TableID,in.Notes,subtotal,
+		qr.Scope.OrganizationID, qr.Scope.LocationID, in.CustomerName, in.CustomerPhone,
+		qr.TableID, in.Notes, subtotal,
 	))
 	if err != nil {
 		fail(w, 503, "order_unavailable", "No pudimos guardar el pedido.")
@@ -772,7 +780,6 @@ func (a *API) createConciergeOrder(w http.ResponseWriter, r *http.Request) {
 	_ = applyOrderPaymentSummary(r.Context(), a.db, &out, qr.Scope.OrganizationID, qr.Scope.LocationID)
 	writeJSON(w, 201, out)
 }
-
 
 func (a *API) requestConciergeBill(w http.ResponseWriter, r *http.Request) {
 	qr, err := a.resolveConciergeQR(r.Context(), r.PathValue("token"))
@@ -840,15 +847,15 @@ func (a *API) requestConciergeBill(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, 200, conciergeBill{
-		OrderID: out.ID,
-		Code: out.Code,
-		TableName: qr.TableName,
-		Status: out.Status,
-		CurrencySymbol: qr.CurrencySymbol,
-		Items: out.Items,
-		Total: out.Total,
-		PaidAmount: out.PaidAmount,
+		OrderID:         out.ID,
+		Code:            out.Code,
+		TableName:       qr.TableName,
+		Status:          out.Status,
+		CurrencySymbol:  qr.CurrencySymbol,
+		Items:           out.Items,
+		Total:           out.Total,
+		PaidAmount:      out.PaidAmount,
 		RemainingAmount: out.RemainingAmount,
-		PaymentStatus: out.PaymentStatus,
+		PaymentStatus:   out.PaymentStatus,
 	})
 }

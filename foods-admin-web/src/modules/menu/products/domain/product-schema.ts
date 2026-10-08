@@ -11,6 +11,7 @@ export const productSchema=z.object({
   prepMinutes:z.string().trim().refine(value=>value===""||(/^\d+$/.test(value)&&Number(value)<=600),"Usa minutos enteros, hasta 600."),
   categoryId:z.string(),
   description:z.string(),
+  serviceDestination:z.enum(["kitchen","bar","direct"]).default("kitchen"),
   quantityControl:z.enum(["none","portions","inventory"]),
   allergens:z.array(z.string()),
   featured:z.boolean(),

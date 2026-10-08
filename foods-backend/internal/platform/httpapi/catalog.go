@@ -36,6 +36,7 @@ type product struct {
 	CategoryName       *string  `json:"categoryName"`
 	Price              string   `json:"price"`
 	Active             bool     `json:"active"`
+	ServiceDestination string   `json:"serviceDestination"`
 	ProductType        string   `json:"productType"`
 	QuantityControl    string   `json:"quantityControl"`
 	ImageURL           *string  `json:"imageUrl"`
@@ -55,6 +56,7 @@ type productInput struct {
 	CategoryID         *string  `json:"categoryId"`
 	Price              string   `json:"price"`
 	Active             *bool    `json:"active,omitempty"`
+	ServiceDestination string   `json:"serviceDestination"`
 	ProductType        string   `json:"productType"`
 	QuantityControl    string   `json:"quantityControl"`
 	ImageURL           *string  `json:"imageUrl"`
@@ -300,7 +302,7 @@ func (a *API) listProducts(w http.ResponseWriter, r *http.Request) {
 		fail(w, 503, "products_unavailable", "No pudimos cargar los productos.")
 		return
 	}
-	rows, err := a.db.Query(r.Context(), `SELECT p.id,p.sku,p.name,p.description,p.category_id,c.name,p.price::text,p.active,p.product_type,p.quantity_control,p.image_url,p.prep_minutes,p.allergens,p.featured,p.cost_price::text,p.available_from::text,p.available_until::text,p.available_days,p.available_until_time::text FROM products p LEFT JOIN menu_categories c ON c.id=p.category_id AND c.organization_id=p.organization_id WHERE p.organization_id=$1 AND (p.name ILIKE $2 OR p.sku ILIKE $2) AND ($3='' OR p.category_id::text=$3) AND ($4='' OR ($4='active' AND p.active) OR ($4='inactive' AND NOT p.active)) AND NOT EXISTS (SELECT 1 FROM menu_combos mc WHERE mc.product_id=p.id) ORDER BY p.updated_at DESC,p.name LIMIT $5 OFFSET $6`, s.OrganizationID, search, categoryID, status, size, (page-1)*size)
+	rows, err := a.db.Query(r.Context(), `SELECT p.id,p.sku,p.name,p.description,p.category_id,c.name,p.price::text,p.active,p.product_type,p.quantity_control,p.image_url,p.prep_minutes,p.allergens,p.featured,p.cost_price::text,p.available_from::text,p.available_until::text,p.available_days,p.available_until_time::text,p.service_destination FROM products p LEFT JOIN menu_categories c ON c.id=p.category_id AND c.organization_id=p.organization_id WHERE p.organization_id=$1 AND (p.name ILIKE $2 OR p.sku ILIKE $2) AND ($3='' OR p.category_id::text=$3) AND ($4='' OR ($4='active' AND p.active) OR ($4='inactive' AND NOT p.active)) AND NOT EXISTS (SELECT 1 FROM menu_combos mc WHERE mc.product_id=p.id) ORDER BY p.updated_at DESC,p.name LIMIT $5 OFFSET $6`, s.OrganizationID, search, categoryID, status, size, (page-1)*size)
 	if err != nil {
 		fail(w, 503, "products_unavailable", "No pudimos cargar los productos.")
 		return
@@ -309,18 +311,18 @@ func (a *API) listProducts(w http.ResponseWriter, r *http.Request) {
 	items := []product{}
 	for rows.Next() {
 		var p product
-		if err = rows.Scan(&p.ID, &p.SKU, &p.Name, &p.Description, &p.CategoryID, &p.CategoryName, &p.Price, &p.Active, &p.ProductType, &p.QuantityControl, &p.ImageURL, &p.PrepMinutes, &p.Allergens, &p.Featured, &p.CostPrice, &p.AvailableFrom, &p.AvailableUntil, &p.AvailableDays, &p.AvailableUntilTime); err != nil {
+		if err = rows.Scan(&p.ID, &p.SKU, &p.Name, &p.Description, &p.CategoryID, &p.CategoryName, &p.Price, &p.Active, &p.ProductType, &p.QuantityControl, &p.ImageURL, &p.PrepMinutes, &p.Allergens, &p.Featured, &p.CostPrice, &p.AvailableFrom, &p.AvailableUntil, &p.AvailableDays, &p.AvailableUntilTime, &p.ServiceDestination); err != nil {
 			fail(w, 503, "products_unavailable", "No pudimos cargar los productos.")
 			return
 		}
 		items = append(items, p)
 	}
-	writeJSON(w, 200, map[string]any{"items": items, "total": total, "page": page, "pageSize": size})
+	writeJSON(w, 200, map[string]any{"items": items, "total": total, "page": page, "pageSize": size,"serviceDestinationOptions":serviceDestinations})
 }
 func (a *API) getProduct(w http.ResponseWriter, r *http.Request) {
 	s := r.Context().Value(scopeKey{}).(scope)
 	var p product
-	err := a.db.QueryRow(r.Context(), `SELECT p.id,p.sku,p.name,p.description,p.category_id,c.name,p.price::text,p.active,p.product_type,p.quantity_control,p.image_url,p.prep_minutes,p.allergens,p.featured,p.cost_price::text,p.available_from::text,p.available_until::text,p.available_days,p.available_until_time::text FROM products p LEFT JOIN menu_categories c ON c.id=p.category_id AND c.organization_id=p.organization_id WHERE p.organization_id=$1 AND p.id=$2`, s.OrganizationID, r.PathValue("id")).Scan(&p.ID, &p.SKU, &p.Name, &p.Description, &p.CategoryID, &p.CategoryName, &p.Price, &p.Active, &p.ProductType, &p.QuantityControl, &p.ImageURL, &p.PrepMinutes, &p.Allergens, &p.Featured, &p.CostPrice, &p.AvailableFrom, &p.AvailableUntil, &p.AvailableDays, &p.AvailableUntilTime)
+	err := a.db.QueryRow(r.Context(), `SELECT p.id,p.sku,p.name,p.description,p.category_id,c.name,p.price::text,p.active,p.product_type,p.quantity_control,p.image_url,p.prep_minutes,p.allergens,p.featured,p.cost_price::text,p.available_from::text,p.available_until::text,p.available_days,p.available_until_time::text,p.service_destination FROM products p LEFT JOIN menu_categories c ON c.id=p.category_id AND c.organization_id=p.organization_id WHERE p.organization_id=$1 AND p.id=$2`, s.OrganizationID, r.PathValue("id")).Scan(&p.ID, &p.SKU, &p.Name, &p.Description, &p.CategoryID, &p.CategoryName, &p.Price, &p.Active, &p.ProductType, &p.QuantityControl, &p.ImageURL, &p.PrepMinutes, &p.Allergens, &p.Featured, &p.CostPrice, &p.AvailableFrom, &p.AvailableUntil, &p.AvailableDays, &p.AvailableUntilTime, &p.ServiceDestination)
 	if errors.Is(err, pgx.ErrNoRows) {
 		fail(w, 404, "product_not_found", "El producto no existe.")
 		return
@@ -346,6 +348,15 @@ func normalizeProduct(in productInput) (productInput, string) {
 	case "prepared", "retail":
 	default:
 		return in, "El tipo de producto no es válido."
+	}
+	if in.ServiceDestination == "" {
+		in.ServiceDestination = "kitchen"
+		if in.ProductType == "retail" {
+			in.ServiceDestination = "direct"
+		}
+	}
+	if in.ServiceDestination != "kitchen" && in.ServiceDestination != "bar" && in.ServiceDestination != "direct" {
+		return in, "Selecciona Cocina, Barra o Entrega directa."
 	}
 	if in.QuantityControl == "" {
 		in.QuantityControl = "none"
@@ -382,7 +393,7 @@ func (a *API) createProduct(w http.ResponseWriter, r *http.Request) {
 		createFeatured = *in.Featured
 	}
 	var p product
-	err := a.db.QueryRow(r.Context(), `INSERT INTO products(organization_id,category_id,sku,name,description,price,active,product_type,quantity_control,image_url,prep_minutes,allergens,featured,cost_price,available_from,available_until,available_days,available_until_time) VALUES($1,$2,$3,$4,$5,$6,true,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING id,sku,name,description,category_id,price::text,active,product_type,quantity_control,image_url,prep_minutes,allergens,featured,cost_price::text,available_from::text,available_until::text,available_days,available_until_time::text`, s.OrganizationID, in.CategoryID, strings.TrimSpace(in.SKU), strings.TrimSpace(in.Name), strings.TrimSpace(in.Description), in.Price, in.ProductType, in.QuantityControl, in.ImageURL, in.PrepMinutes, in.Allergens, createFeatured, in.CostPrice, in.AvailableFrom, in.AvailableUntil, in.AvailableDays, in.AvailableUntilTime).Scan(&p.ID, &p.SKU, &p.Name, &p.Description, &p.CategoryID, &p.Price, &p.Active, &p.ProductType, &p.QuantityControl, &p.ImageURL, &p.PrepMinutes, &p.Allergens, &p.Featured, &p.CostPrice, &p.AvailableFrom, &p.AvailableUntil, &p.AvailableDays, &p.AvailableUntilTime)
+	err := a.db.QueryRow(r.Context(), `INSERT INTO products(organization_id,category_id,sku,name,description,price,active,product_type,quantity_control,image_url,prep_minutes,allergens,featured,cost_price,available_from,available_until,available_days,available_until_time,service_destination) VALUES($1,$2,$3,$4,$5,$6,true,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18) RETURNING id,sku,name,description,category_id,price::text,active,product_type,quantity_control,image_url,prep_minutes,allergens,featured,cost_price::text,available_from::text,available_until::text,available_days,available_until_time::text,service_destination`, s.OrganizationID, in.CategoryID, strings.TrimSpace(in.SKU), strings.TrimSpace(in.Name), strings.TrimSpace(in.Description), in.Price, in.ProductType, in.QuantityControl, in.ImageURL, in.PrepMinutes, in.Allergens, createFeatured, in.CostPrice, in.AvailableFrom, in.AvailableUntil, in.AvailableDays, in.AvailableUntilTime, in.ServiceDestination).Scan(&p.ID, &p.SKU, &p.Name, &p.Description, &p.CategoryID, &p.Price, &p.Active, &p.ProductType, &p.QuantityControl, &p.ImageURL, &p.PrepMinutes, &p.Allergens, &p.Featured, &p.CostPrice, &p.AvailableFrom, &p.AvailableUntil, &p.AvailableDays, &p.AvailableUntilTime, &p.ServiceDestination)
 	if err != nil {
 		fail(w, 409, "product_conflict", "Revisa la categoría y el precio.")
 		return
@@ -397,6 +408,7 @@ func (a *API) updateProduct(w http.ResponseWriter, r *http.Request) {
 		fail(w, 400, "invalid_product", "Nombre y precio son obligatorios.")
 		return
 	}
+	destinationProvided := in.ServiceDestination != ""
 	productTypeProvided := strings.TrimSpace(in.ProductType) != ""
 	in, invalid := normalizeProduct(in)
 	if invalid != "" {
@@ -423,12 +435,12 @@ func (a *API) updateProduct(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback(r.Context())
 
-	var currentControl, currentProductType string
+	var currentControl, currentProductType, currentDestination string
 	err = tx.QueryRow(r.Context(), `
-		SELECT quantity_control,product_type
+		SELECT quantity_control,product_type,service_destination
 		FROM products
 		WHERE organization_id=$1 AND id=$2
-		FOR UPDATE`, s.OrganizationID, r.PathValue("id")).Scan(&currentControl, &currentProductType)
+		FOR UPDATE`, s.OrganizationID, r.PathValue("id")).Scan(&currentControl, &currentProductType, &currentDestination)
 	if errors.Is(err, pgx.ErrNoRows) {
 		fail(w, 404, "product_not_found", "El producto no existe.")
 		return
@@ -436,6 +448,9 @@ func (a *API) updateProduct(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fail(w, 503, "product_unavailable", "No pudimos validar el producto.")
 		return
+	}
+	if !destinationProvided {
+		in.ServiceDestination = currentDestination
 	}
 	if !productTypeProvided {
 		in.ProductType = currentProductType
@@ -478,7 +493,7 @@ func (a *API) updateProduct(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var p product
-	err = tx.QueryRow(r.Context(), `UPDATE products SET category_id=$3,sku=$4,name=$5,description=$6,price=$7,active=$8,product_type=$9,quantity_control=$10,image_url=$11,prep_minutes=$12,allergens=$13,featured=$14,cost_price=$15,available_from=$16,available_until=$17,available_days=$18,available_until_time=$19,updated_at=now() WHERE organization_id=$1 AND id=$2 RETURNING id,sku,name,description,category_id,price::text,active,product_type,quantity_control,image_url,prep_minutes,allergens,featured,cost_price::text,available_from::text,available_until::text,available_days,available_until_time::text`, s.OrganizationID, r.PathValue("id"), in.CategoryID, skuValue, strings.TrimSpace(in.Name), strings.TrimSpace(in.Description), in.Price, active, in.ProductType, in.QuantityControl, in.ImageURL, in.PrepMinutes, in.Allergens, featured, in.CostPrice, in.AvailableFrom, in.AvailableUntil, in.AvailableDays, in.AvailableUntilTime).Scan(&p.ID, &p.SKU, &p.Name, &p.Description, &p.CategoryID, &p.Price, &p.Active, &p.ProductType, &p.QuantityControl, &p.ImageURL, &p.PrepMinutes, &p.Allergens, &p.Featured, &p.CostPrice, &p.AvailableFrom, &p.AvailableUntil, &p.AvailableDays, &p.AvailableUntilTime)
+	err = tx.QueryRow(r.Context(), `UPDATE products SET category_id=$3,sku=$4,name=$5,description=$6,price=$7,active=$8,product_type=$9,quantity_control=$10,image_url=$11,prep_minutes=$12,allergens=$13,featured=$14,cost_price=$15,available_from=$16,available_until=$17,available_days=$18,available_until_time=$19,service_destination=$20,updated_at=now() WHERE organization_id=$1 AND id=$2 RETURNING id,sku,name,description,category_id,price::text,active,product_type,quantity_control,image_url,prep_minutes,allergens,featured,cost_price::text,available_from::text,available_until::text,available_days,available_until_time::text,service_destination`, s.OrganizationID, r.PathValue("id"), in.CategoryID, skuValue, strings.TrimSpace(in.Name), strings.TrimSpace(in.Description), in.Price, active, in.ProductType, in.QuantityControl, in.ImageURL, in.PrepMinutes, in.Allergens, featured, in.CostPrice, in.AvailableFrom, in.AvailableUntil, in.AvailableDays, in.AvailableUntilTime).Scan(&p.ID, &p.SKU, &p.Name, &p.Description, &p.CategoryID, &p.Price, &p.Active, &p.ProductType, &p.QuantityControl, &p.ImageURL, &p.PrepMinutes, &p.Allergens, &p.Featured, &p.CostPrice, &p.AvailableFrom, &p.AvailableUntil, &p.AvailableDays, &p.AvailableUntilTime, &p.ServiceDestination)
 	if err != nil {
 		fail(w, 409, "product_conflict", "No se pudo actualizar el producto.")
 		return

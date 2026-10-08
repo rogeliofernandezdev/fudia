@@ -28,18 +28,19 @@ type paymentView struct {
 }
 
 type posOrderSummary struct {
-	ID              string `json:"id"`
-	Code            string `json:"code"`
-	Channel         string `json:"channel"`
-	Status          string `json:"status"`
-	CustomerName    string `json:"customerName"`
-	TableName       string `json:"tableName"`
-	Total           string `json:"total"`
-	PaidAmount      string `json:"paidAmount"`
-	RemainingAmount string `json:"remainingAmount"`
-	PaymentStatus   string `json:"paymentStatus"`
+	BillClosed      bool     `json:"billClosed"`
+	ID              string   `json:"id"`
+	Code            string   `json:"code"`
+	Channel         string   `json:"channel"`
+	Status          string   `json:"status"`
+	CustomerName    string   `json:"customerName"`
+	TableName       string   `json:"tableName"`
+	Total           string   `json:"total"`
+	PaidAmount      string   `json:"paidAmount"`
+	RemainingAmount string   `json:"remainingAmount"`
+	PaymentStatus   string   `json:"paymentStatus"`
 	PaymentMethods  []string `json:"paymentMethods"`
-	CreatedAt       string `json:"createdAt"`
+	CreatedAt       string   `json:"createdAt"`
 }
 
 type posOrderDetail struct {
@@ -159,7 +160,7 @@ func (a *API) listPOSOrders(w http.ResponseWriter, r *http.Request) {
 		         ELSE 'partial'
 		       END,
 		       to_char(o.created_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),
-		       payment_summary.payment_methods
+		       payment_summary.payment_methods,o.bill_closed_at IS NOT NULL
 	`+baseFrom+`
 		WHERE `+where+`
 		ORDER BY o.created_at DESC,o.id DESC
@@ -175,25 +176,25 @@ func (a *API) listPOSOrders(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var item posOrderSummary
 		if err := rows.Scan(
-			&item.ID,&item.Code,&item.Channel,&item.Status,&item.CustomerName,&item.TableName,
-			&item.Total,&item.PaidAmount,&item.RemainingAmount,&item.PaymentStatus,&item.CreatedAt,
-			&item.PaymentMethods,
+			&item.ID, &item.Code, &item.Channel, &item.Status, &item.CustomerName, &item.TableName,
+			&item.Total, &item.PaidAmount, &item.RemainingAmount, &item.PaymentStatus, &item.CreatedAt,
+			&item.PaymentMethods, &item.BillClosed,
 		); err != nil {
 			fail(w, 503, "payments_unavailable", "No pudimos leer los pedidos por cobrar.")
 			return
 		}
-		items = append(items,item)
+		items = append(items, item)
 	}
 	if err := rows.Err(); err != nil {
 		fail(w, 503, "payments_unavailable", "No pudimos cargar los pedidos por cobrar.")
 		return
 	}
-	writeJSON(w,200,map[string]any{"items":items,"total":totalCount,"page":page,"pageSize":size})
+	writeJSON(w, 200, map[string]any{"items": items, "total": totalCount, "page": page, "pageSize": size})
 }
 
-func (a *API) loadOrderPayments(r *http.Request, orderID string) ([]paymentView,error) {
+func (a *API) loadOrderPayments(r *http.Request, orderID string) ([]paymentView, error) {
 	s := r.Context().Value(scopeKey{}).(scope)
-	rows,err:=a.db.Query(r.Context(),`
+	rows, err := a.db.Query(r.Context(), `
 		SELECT p.id::text,p.order_id::text,o.code,p.shift_id::text,cr.name,p.method,pm.name,p.amount::text,
 		       COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id),0)::text,
 		       (p.amount-COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id),0))::text,
@@ -206,64 +207,68 @@ func (a *API) loadOrderPayments(r *http.Request, orderID string) ([]paymentView,
 		JOIN payment_methods pm ON pm.organization_id=p.organization_id AND pm.code=p.method
 		WHERE p.organization_id=$1 AND p.location_id=$2 AND p.order_id=$3
 		ORDER BY p.created_at DESC,p.id DESC
-	`,s.OrganizationID,s.LocationID,orderID)
-	if err!=nil{return nil,err}
-	defer rows.Close()
-	items:=[]paymentView{}
-	for rows.Next(){
-		var item paymentView
-		if err:=rows.Scan(&item.ID,&item.OrderID,&item.OrderCode,&item.ShiftID,&item.CashRegisterName,&item.Method,&item.MethodName,&item.Amount,&item.RefundedAmount,&item.NetAmount,&item.Reference,&item.CreatedByName,&item.CreatedAt);err!=nil{return nil,err}
-		items=append(items,item)
+	`, s.OrganizationID, s.LocationID, orderID)
+	if err != nil {
+		return nil, err
 	}
-	return items,rows.Err()
+	defer rows.Close()
+	items := []paymentView{}
+	for rows.Next() {
+		var item paymentView
+		if err := rows.Scan(&item.ID, &item.OrderID, &item.OrderCode, &item.ShiftID, &item.CashRegisterName, &item.Method, &item.MethodName, &item.Amount, &item.RefundedAmount, &item.NetAmount, &item.Reference, &item.CreatedByName, &item.CreatedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
 }
 
-func (a *API) getPOSOrder(w http.ResponseWriter,r *http.Request){
-	s:=r.Context().Value(scopeKey{}).(scope)
-	o,err:=scanOrder(a.db.QueryRow(r.Context(),`
+func (a *API) getPOSOrder(w http.ResponseWriter, r *http.Request) {
+	s := r.Context().Value(scopeKey{}).(scope)
+	o, err := scanOrder(a.db.QueryRow(r.Context(), `
 		SELECT `+orderColumns+`
 		FROM orders
 		WHERE id=$1 AND organization_id=$2 AND location_id=$3
-	`,r.PathValue("id"),s.OrganizationID,s.LocationID))
-	if errors.Is(err,pgx.ErrNoRows){
-		fail(w,404,"order_not_found","El pedido no existe en este local.")
+	`, r.PathValue("id"), s.OrganizationID, s.LocationID))
+	if errors.Is(err, pgx.ErrNoRows) {
+		fail(w, 404, "order_not_found", "El pedido no existe en este local.")
 		return
 	}
-	if err!=nil{
-		fail(w,503,"payments_unavailable","No pudimos cargar el pedido.")
+	if err != nil {
+		fail(w, 503, "payments_unavailable", "No pudimos cargar el pedido.")
 		return
 	}
-	items,err:=loadOrderItems(r.Context(),a.db,o.ID,s.OrganizationID)
-	if err!=nil{
-		fail(w,503,"payments_unavailable","No pudimos cargar el detalle del pedido.")
+	items, err := loadOrderItems(r.Context(), a.db, o.ID, s.OrganizationID)
+	if err != nil {
+		fail(w, 503, "payments_unavailable", "No pudimos cargar el detalle del pedido.")
 		return
 	}
-	o.Items=items
-	payments,err:=a.loadOrderPayments(r,o.ID)
-	if err!=nil{
-		fail(w,503,"payments_unavailable","No pudimos cargar los pagos del pedido.")
+	o.Items = items
+	payments, err := a.loadOrderPayments(r, o.ID)
+	if err != nil {
+		fail(w, 503, "payments_unavailable", "No pudimos cargar los pagos del pedido.")
 		return
 	}
-	paid:=0.0
-	for _,p:=range payments{
-		value,_:=strconv.ParseFloat(p.NetAmount,64)
-		paid+=value
+	paid := 0.0
+	for _, p := range payments {
+		value, _ := strconv.ParseFloat(p.NetAmount, 64)
+		paid += value
 	}
-	total,_:=strconv.ParseFloat(o.Total,64)
-	remaining:=math.Max(0,total-paid)
-	writeJSON(w,200,posOrderDetail{
-		Order:o,
-		PaidAmount:strconv.FormatFloat(paid,'f',2,64),
-		RemainingAmount:strconv.FormatFloat(remaining,'f',2,64),
-		PaymentStatus:paymentStatus(total,paid),
-		Payments:payments,
+	total, _ := strconv.ParseFloat(o.Total, 64)
+	remaining := math.Max(0, total-paid)
+	writeJSON(w, 200, posOrderDetail{
+		Order:           o,
+		PaidAmount:      strconv.FormatFloat(paid, 'f', 2, 64),
+		RemainingAmount: strconv.FormatFloat(remaining, 'f', 2, 64),
+		PaymentStatus:   paymentStatus(total, paid),
+		Payments:        payments,
 	})
 }
 
-func (a *API) getPaymentByID(r *http.Request,id string)(paymentView,error){
-	s:=r.Context().Value(scopeKey{}).(scope)
+func (a *API) getPaymentByID(r *http.Request, id string) (paymentView, error) {
+	s := r.Context().Value(scopeKey{}).(scope)
 	var item paymentView
-	err:=a.db.QueryRow(r.Context(),`
+	err := a.db.QueryRow(r.Context(), `
 		SELECT p.id::text,p.order_id::text,o.code,p.shift_id::text,cr.name,p.method,pm.name,p.amount::text,
 		       COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id),0)::text,
 		       (p.amount-COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id),0))::text,
@@ -275,139 +280,183 @@ func (a *API) getPaymentByID(r *http.Request,id string)(paymentView,error){
 		JOIN users u ON u.id=p.created_by AND u.organization_id=p.organization_id
 		JOIN payment_methods pm ON pm.organization_id=p.organization_id AND pm.code=p.method
 		WHERE p.id=$1 AND p.organization_id=$2 AND p.location_id=$3
-	`,id,s.OrganizationID,s.LocationID).Scan(
-		&item.ID,&item.OrderID,&item.OrderCode,&item.ShiftID,&item.CashRegisterName,&item.Method,&item.MethodName,&item.Amount,
-		&item.RefundedAmount,&item.NetAmount,&item.Reference,&item.CreatedByName,&item.CreatedAt,
+	`, id, s.OrganizationID, s.LocationID).Scan(
+		&item.ID, &item.OrderID, &item.OrderCode, &item.ShiftID, &item.CashRegisterName, &item.Method, &item.MethodName, &item.Amount,
+		&item.RefundedAmount, &item.NetAmount, &item.Reference, &item.CreatedByName, &item.CreatedAt,
 	)
-	return item,err
+	return item, err
 }
 
-func (a *API) createPayment(w http.ResponseWriter,r *http.Request){
-	s:=r.Context().Value(scopeKey{}).(scope)
-	var in struct{
-		OrderID string `json:"orderId"`
-		Method string `json:"method"`
-		Amount float64 `json:"amount"`
-		Reference string `json:"reference"`
+func (a *API) createPayment(w http.ResponseWriter, r *http.Request) {
+	s := r.Context().Value(scopeKey{}).(scope)
+	var in struct {
+		OrderID   string  `json:"orderId"`
+		Method    string  `json:"method"`
+		Amount    float64 `json:"amount"`
+		Reference string  `json:"reference"`
 	}
-	if json.NewDecoder(r.Body).Decode(&in)!=nil||strings.TrimSpace(in.OrderID)==""||in.Amount<=0{
-		fail(w,400,"invalid_payment","Revisa los datos del cobro.")
+	if json.NewDecoder(r.Body).Decode(&in) != nil || strings.TrimSpace(in.OrderID) == "" || in.Amount <= 0 {
+		fail(w, 400, "invalid_payment", "Revisa los datos del cobro.")
 		return
 	}
-	in.OrderID=strings.TrimSpace(in.OrderID)
-	in.Reference=strings.TrimSpace(in.Reference)
-	if len(in.Reference)>120{
-		fail(w,400,"invalid_payment","La referencia no puede superar 120 caracteres.")
+	in.OrderID = strings.TrimSpace(in.OrderID)
+	in.Reference = strings.TrimSpace(in.Reference)
+	if len(in.Reference) > 120 {
+		fail(w, 400, "invalid_payment", "La referencia no puede superar 120 caracteres.")
 		return
 	}
 
-	tx,err:=a.db.Begin(r.Context())
-	if err!=nil{fail(w,503,"payments_unavailable","No pudimos iniciar el cobro.");return}
+	tx, err := a.db.Begin(r.Context())
+	if err != nil {
+		fail(w, 503, "payments_unavailable", "No pudimos iniciar el cobro.")
+		return
+	}
 	defer tx.Rollback(r.Context())
 
-	methodDef,err:=getPaymentMethod(r.Context(),tx,s.OrganizationID,in.Method,"sales")
-	if errors.Is(err,pgx.ErrNoRows){fail(w,400,"invalid_payment_method","Selecciona un medio de pago activo.");return}
-	if err!=nil{fail(w,503,"payment_methods_unavailable","No pudimos validar el medio de pago.");return}
-
-	shiftID,err:=currentCashShiftID(r.Context(),tx,s)
-	if errors.Is(err,pgx.ErrNoRows){
-		fail(w,409,"cash_shift_required","Debes estar asignado a un turno de caja abierto para cobrar.")
+	methodDef, err := getPaymentMethod(r.Context(), tx, s.OrganizationID, in.Method, "sales")
+	if errors.Is(err, pgx.ErrNoRows) {
+		fail(w, 400, "invalid_payment_method", "Selecciona un medio de pago activo.")
 		return
 	}
-	if err!=nil{fail(w,503,"payments_unavailable","No pudimos validar tu turno de caja.");return}
+	if err != nil {
+		fail(w, 503, "payment_methods_unavailable", "No pudimos validar el medio de pago.")
+		return
+	}
 
-	var orderCode,status string
-	var completed, salon bool
-	var total,paid float64
-	err=tx.QueryRow(r.Context(),`
-		SELECT o.code,o.status,o.total::float8,o.completed_at IS NOT NULL,o.channel='salon'
+	shiftID, err := currentCashShiftID(r.Context(), tx, s)
+	if errors.Is(err, pgx.ErrNoRows) {
+		fail(w, 409, "cash_shift_required", "Debes estar asignado a un turno de caja abierto para cobrar.")
+		return
+	}
+	if err != nil {
+		fail(w, 503, "payments_unavailable", "No pudimos validar tu turno de caja.")
+		return
+	}
+
+	var orderCode, status string
+	var completed, salon, billClosed bool
+	var total, paid float64
+	err = tx.QueryRow(r.Context(), `
+		SELECT o.code,o.status,o.total::float8,o.completed_at IS NOT NULL,o.channel='salon',o.bill_closed_at IS NOT NULL
 		FROM orders o
 		WHERE o.id=$1 AND o.organization_id=$2 AND o.location_id=$3
 		FOR UPDATE
-	`,in.OrderID,s.OrganizationID,s.LocationID).Scan(&orderCode,&status,&total,&completed,&salon)
-	if errors.Is(err,pgx.ErrNoRows){fail(w,404,"order_not_found","El pedido no existe en este local.");return}
-	if err!=nil{fail(w,503,"payments_unavailable","No pudimos validar el pedido.");return}
-	if err=tx.QueryRow(r.Context(),`
+	`, in.OrderID, s.OrganizationID, s.LocationID).Scan(&orderCode, &status, &total, &completed, &salon, &billClosed)
+	if errors.Is(err, pgx.ErrNoRows) {
+		fail(w, 404, "order_not_found", "El pedido no existe en este local.")
+		return
+	}
+	if err != nil {
+		fail(w, 503, "payments_unavailable", "No pudimos validar el pedido.")
+		return
+	}
+	if err = tx.QueryRow(r.Context(), `
 		SELECT COALESCE(sum(
 		  p.amount-COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id),0)
 		),0)::float8
 		FROM payments p
 		WHERE p.order_id=$1 AND p.organization_id=$2 AND p.location_id=$3
-	`,in.OrderID,s.OrganizationID,s.LocationID).Scan(&paid);err!=nil{
-		fail(w,503,"payments_unavailable","No pudimos validar el saldo pendiente.")
+	`, in.OrderID, s.OrganizationID, s.LocationID).Scan(&paid); err != nil {
+		fail(w, 503, "payments_unavailable", "No pudimos validar el saldo pendiente.")
 		return
 	}
-	if completed||(status!="listo"&&status!="en_camino"&&!(salon&&status=="entregado")){fail(w,409,"order_not_ready_for_payment","El pedido solo puede cobrarse cuando está listo o entregado y sigue abierto.");return}
-	remaining:=math.Max(0,total-paid)
-	if in.Amount>remaining+0.00001{
-		fail(w,409,"payment_exceeds_remaining","El cobro supera el saldo pendiente del pedido.")
+	if completed || status == "cancelado" || (salon && !billClosed) || (!salon && status != "listo" && status != "en_camino" && status != "entregado") {
+		fail(w, 409, "order_not_ready_for_payment", "Cierra la cuenta de la mesa antes de cobrar. El pedido debe seguir abierto.")
+		return
+	}
+	remaining := math.Max(0, total-paid)
+	if salon && !requireTableProductsDelivered(w, r, tx, s, in.OrderID, status) {
+		return
+	}
+	if in.Amount > remaining+0.00001 {
+		fail(w, 409, "payment_exceeds_remaining", "El cobro supera el saldo pendiente del pedido.")
 		return
 	}
 
 	var id string
-	err=tx.QueryRow(r.Context(),`
+	err = tx.QueryRow(r.Context(), `
 		INSERT INTO payments(organization_id,location_id,order_id,shift_id,method,amount,reference,created_by)
 		VALUES($1,$2,$3,$4,$5,$6,$7,$8)
 		RETURNING id::text
-	`,s.OrganizationID,s.LocationID,in.OrderID,shiftID,in.Method,in.Amount,in.Reference,s.UserID).Scan(&id)
-	if err!=nil{fail(w,503,"payments_unavailable","No pudimos registrar el cobro.");return}
+	`, s.OrganizationID, s.LocationID, in.OrderID, shiftID, in.Method, in.Amount, in.Reference, s.UserID).Scan(&id)
+	if err != nil {
+		fail(w, 503, "payments_unavailable", "No pudimos registrar el cobro.")
+		return
+	}
 
-	if methodDef.AffectsCash{
-		if _,err:=tx.Exec(r.Context(),`
+	if methodDef.AffectsCash {
+		if _, err := tx.Exec(r.Context(), `
 			INSERT INTO cash_movements(
 			  organization_id,location_id,shift_id,movement_type,source_type,source_id,
 			  amount,reason,note,created_by
 			)
 			VALUES($1,$2,$3,'income','cash_sale',$4::uuid,$5,$6,$7,$8)
-		`,s.OrganizationID,s.LocationID,shiftID,id,in.Amount,"Cobro "+orderCode,in.Reference,s.UserID);err!=nil{
-			fail(w,503,"payments_unavailable","No pudimos reflejar el cobro en caja.")
+		`, s.OrganizationID, s.LocationID, shiftID, id, in.Amount, "Cobro "+orderCode, in.Reference, s.UserID); err != nil {
+			fail(w, 503, "payments_unavailable", "No pudimos reflejar el cobro en caja.")
 			return
 		}
 	}
-	closed,err:=completeDeliveredSalonOrder(r.Context(),tx,s,in.OrderID)
-	if err!=nil{fail(w,503,"payments_unavailable","No pudimos finalizar la cuenta del pedido.");return}
-	if err:=tx.Commit(r.Context());err!=nil{fail(w,503,"payments_unavailable","No pudimos confirmar el cobro.");return}
-	if closed{a.audit(r,"order.completed","order",in.OrderID)}
+	closed, err := completeDeliveredSalonOrder(r.Context(), tx, s, in.OrderID)
+	if err != nil {
+		fail(w, 503, "payments_unavailable", "No pudimos finalizar la cuenta del pedido.")
+		return
+	}
+	if err := tx.Commit(r.Context()); err != nil {
+		fail(w, 503, "payments_unavailable", "No pudimos confirmar el cobro.")
+		return
+	}
+	if closed {
+		a.audit(r, "order.completed", "order", in.OrderID)
+	}
 
-	item,err:=a.getPaymentByID(r,id)
-	if err!=nil{fail(w,503,"payments_unavailable","El cobro se registró, pero no pudimos cargar su detalle.");return}
-	writeJSON(w,201,item)
+	item, err := a.getPaymentByID(r, id)
+	if err != nil {
+		fail(w, 503, "payments_unavailable", "El cobro se registró, pero no pudimos cargar su detalle.")
+		return
+	}
+	writeJSON(w, 201, item)
 }
 
-func (a *API) refundPayment(w http.ResponseWriter,r *http.Request){
-	s:=r.Context().Value(scopeKey{}).(scope)
-	var in struct{
+func (a *API) refundPayment(w http.ResponseWriter, r *http.Request) {
+	s := r.Context().Value(scopeKey{}).(scope)
+	var in struct {
 		Amount float64 `json:"amount"`
-		Reason string `json:"reason"`
-		Note string `json:"note"`
+		Reason string  `json:"reason"`
+		Note   string  `json:"note"`
 	}
-	if json.NewDecoder(r.Body).Decode(&in)!=nil||in.Amount<=0{
-		fail(w,400,"invalid_refund","Ingresa un monto válido para la devolución.")
+	if json.NewDecoder(r.Body).Decode(&in) != nil || in.Amount <= 0 {
+		fail(w, 400, "invalid_refund", "Ingresa un monto válido para la devolución.")
 		return
 	}
-	in.Reason=strings.TrimSpace(in.Reason)
-	in.Note=strings.TrimSpace(in.Note)
-	if in.Reason==""||len(in.Reason)>120||len(in.Note)>240{
-		fail(w,400,"invalid_refund","Indica el motivo de la devolución.")
+	in.Reason = strings.TrimSpace(in.Reason)
+	in.Note = strings.TrimSpace(in.Note)
+	if in.Reason == "" || len(in.Reason) > 120 || len(in.Note) > 240 {
+		fail(w, 400, "invalid_refund", "Indica el motivo de la devolución.")
 		return
 	}
 
-	tx,err:=a.db.Begin(r.Context())
-	if err!=nil{fail(w,503,"payments_unavailable","No pudimos iniciar la devolución.");return}
+	tx, err := a.db.Begin(r.Context())
+	if err != nil {
+		fail(w, 503, "payments_unavailable", "No pudimos iniciar la devolución.")
+		return
+	}
 	defer tx.Rollback(r.Context())
 
-	shiftID,err:=currentCashShiftID(r.Context(),tx,s)
-	if errors.Is(err,pgx.ErrNoRows){
-		fail(w,409,"cash_shift_required","Debes estar asignado a un turno de caja abierto para devolver un pago.")
+	shiftID, err := currentCashShiftID(r.Context(), tx, s)
+	if errors.Is(err, pgx.ErrNoRows) {
+		fail(w, 409, "cash_shift_required", "Debes estar asignado a un turno de caja abierto para devolver un pago.")
 		return
 	}
-	if err!=nil{fail(w,503,"payments_unavailable","No pudimos validar tu turno de caja.");return}
+	if err != nil {
+		fail(w, 503, "payments_unavailable", "No pudimos validar tu turno de caja.")
+		return
+	}
 
 	var affectsCash bool
-	var orderCode,orderStatus string
+	var orderCode, orderStatus string
 	var completed, salon bool
-	var amount,refunded float64
-	err=tx.QueryRow(r.Context(),`
+	var amount, refunded float64
+	err = tx.QueryRow(r.Context(), `
 		SELECT pm.affects_cash,o.code,o.status,p.amount::float8,o.completed_at IS NOT NULL,o.channel='salon',
 		       COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id),0)::float8
 		FROM payments p
@@ -415,204 +464,306 @@ func (a *API) refundPayment(w http.ResponseWriter,r *http.Request){
 		JOIN orders o ON o.id=p.order_id AND o.organization_id=p.organization_id AND o.location_id=p.location_id
 		WHERE p.id=$1 AND p.organization_id=$2 AND p.location_id=$3
 		FOR UPDATE
-	`,r.PathValue("id"),s.OrganizationID,s.LocationID).Scan(&affectsCash,&orderCode,&orderStatus,&amount,&completed,&salon,&refunded)
-	if errors.Is(err,pgx.ErrNoRows){fail(w,404,"payment_not_found","El pago no existe en este local.");return}
-	if err!=nil{fail(w,503,"payments_unavailable","No pudimos validar el pago.");return}
-	if completed||(orderStatus=="entregado"&&!salon)||orderStatus=="cancelado"{
-		fail(w,409,"closed_order_refund_requires_void","El pedido ya está cerrado. Usa un flujo de anulación o devolución posterior al cierre para no reabrir su saldo operativo.")
+	`, r.PathValue("id"), s.OrganizationID, s.LocationID).Scan(&affectsCash, &orderCode, &orderStatus, &amount, &completed, &salon, &refunded)
+	if errors.Is(err, pgx.ErrNoRows) {
+		fail(w, 404, "payment_not_found", "El pago no existe en este local.")
 		return
 	}
-	if in.Amount>amount-refunded+0.00001{
-		fail(w,409,"refund_exceeds_payment","La devolución supera el saldo disponible del pago.")
+	if err != nil {
+		fail(w, 503, "payments_unavailable", "No pudimos validar el pago.")
 		return
 	}
-	if affectsCash{
-		expected,err:=cashShiftExpected(r.Context(),tx,s,shiftID)
-		if err!=nil{fail(w,503,"payments_unavailable","No pudimos validar el efectivo disponible.");return}
-		if in.Amount>expected+0.00001{
-			fail(w,409,"refund_exceeds_expected","La devolución supera el efectivo esperado del turno.")
+	if completed || (orderStatus == "entregado" && !salon) || orderStatus == "cancelado" {
+		fail(w, 409, "closed_order_refund_requires_void", "El pedido ya está cerrado. Usa un flujo de anulación o devolución posterior al cierre para no reabrir su saldo operativo.")
+		return
+	}
+	if in.Amount > amount-refunded+0.00001 {
+		fail(w, 409, "refund_exceeds_payment", "La devolución supera el saldo disponible del pago.")
+		return
+	}
+	if affectsCash {
+		expected, err := cashShiftExpected(r.Context(), tx, s, shiftID)
+		if err != nil {
+			fail(w, 503, "payments_unavailable", "No pudimos validar el efectivo disponible.")
+			return
+		}
+		if in.Amount > expected+0.00001 {
+			fail(w, 409, "refund_exceeds_expected", "La devolución supera el efectivo esperado del turno.")
 			return
 		}
 	}
 
 	var refundID string
-	err=tx.QueryRow(r.Context(),`
+	err = tx.QueryRow(r.Context(), `
 		INSERT INTO payment_refunds(organization_id,location_id,payment_id,shift_id,amount,reason,note,created_by)
 		VALUES($1,$2,$3,$4,$5,$6,$7,$8)
 		RETURNING id::text
-	`,s.OrganizationID,s.LocationID,r.PathValue("id"),shiftID,in.Amount,in.Reason,in.Note,s.UserID).Scan(&refundID)
-	if err!=nil{fail(w,503,"payments_unavailable","No pudimos registrar la devolución.");return}
+	`, s.OrganizationID, s.LocationID, r.PathValue("id"), shiftID, in.Amount, in.Reason, in.Note, s.UserID).Scan(&refundID)
+	if err != nil {
+		fail(w, 503, "payments_unavailable", "No pudimos registrar la devolución.")
+		return
+	}
 
-	if affectsCash{
-		if _,err:=tx.Exec(r.Context(),`
+	if affectsCash {
+		if _, err := tx.Exec(r.Context(), `
 			INSERT INTO cash_movements(
 			  organization_id,location_id,shift_id,movement_type,source_type,source_id,
 			  amount,reason,note,created_by
 			)
 			VALUES($1,$2,$3,'expense','cash_refund',$4::uuid,$5,$6,$7,$8)
-		`,s.OrganizationID,s.LocationID,shiftID,refundID,in.Amount,"Devolución "+orderCode,in.Note,s.UserID);err!=nil{
-			fail(w,503,"payments_unavailable","No pudimos reflejar la devolución en caja.")
+		`, s.OrganizationID, s.LocationID, shiftID, refundID, in.Amount, "Devolución "+orderCode, in.Note, s.UserID); err != nil {
+			fail(w, 503, "payments_unavailable", "No pudimos reflejar la devolución en caja.")
 			return
 		}
 	}
-	if err:=tx.Commit(r.Context());err!=nil{fail(w,503,"payments_unavailable","No pudimos confirmar la devolución.");return}
+	if err := tx.Commit(r.Context()); err != nil {
+		fail(w, 503, "payments_unavailable", "No pudimos confirmar la devolución.")
+		return
+	}
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (a *API) createPaymentBatch(w http.ResponseWriter,r *http.Request){
-	s:=r.Context().Value(scopeKey{}).(scope)
-	var in struct{
-		OrderID string `json:"orderId"`
-		Payments []struct{
-			Method string `json:"method"`
-			Amount float64 `json:"amount"`
-			Reference string `json:"reference"`
+func (a *API) createPaymentBatch(w http.ResponseWriter, r *http.Request) {
+	s := r.Context().Value(scopeKey{}).(scope)
+	var in struct {
+		OrderID  string `json:"orderId"`
+		Payments []struct {
+			Method    string  `json:"method"`
+			Amount    float64 `json:"amount"`
+			Reference string  `json:"reference"`
 		} `json:"payments"`
 	}
-	if json.NewDecoder(r.Body).Decode(&in)!=nil||strings.TrimSpace(in.OrderID)==""||len(in.Payments)==0{
-		fail(w,400,"invalid_payment","Revisa los datos del cobro.")
+	if json.NewDecoder(r.Body).Decode(&in) != nil || strings.TrimSpace(in.OrderID) == "" || len(in.Payments) == 0 {
+		fail(w, 400, "invalid_payment", "Revisa los datos del cobro.")
 		return
 	}
-	in.OrderID=strings.TrimSpace(in.OrderID)
-	totalBatch:=0.0
-	for i:=range in.Payments{
-		p:=&in.Payments[i]
-		p.Method=strings.TrimSpace(p.Method)
-		p.Reference=strings.TrimSpace(p.Reference)
-		if p.Amount<=0||p.Method==""{
-			fail(w,400,"invalid_payment","Todos los medios de pago deben tener método y monto válidos.")
+	in.OrderID = strings.TrimSpace(in.OrderID)
+	totalBatch := 0.0
+	for i := range in.Payments {
+		p := &in.Payments[i]
+		p.Method = strings.TrimSpace(p.Method)
+		p.Reference = strings.TrimSpace(p.Reference)
+		if p.Amount <= 0 || p.Method == "" {
+			fail(w, 400, "invalid_payment", "Todos los medios de pago deben tener método y monto válidos.")
 			return
 		}
-		if len(p.Reference)>120{
-			fail(w,400,"invalid_payment","La referencia no puede superar 120 caracteres.")
+		if len(p.Reference) > 120 {
+			fail(w, 400, "invalid_payment", "La referencia no puede superar 120 caracteres.")
 			return
 		}
-		totalBatch+=p.Amount
+		totalBatch += p.Amount
 	}
-	tx,err:=a.db.Begin(r.Context())
-	if err!=nil{fail(w,503,"payments_unavailable","No pudimos iniciar el cobro.");return}
+	tx, err := a.db.Begin(r.Context())
+	if err != nil {
+		fail(w, 503, "payments_unavailable", "No pudimos iniciar el cobro.")
+		return
+	}
 	defer tx.Rollback(r.Context())
 
-	methodDefs:=map[string]paymentMethodView{}
-	for _,p:=range in.Payments{
-		if _,ok:=methodDefs[p.Method];ok{continue}
-		methodDef,lookupErr:=getPaymentMethod(r.Context(),tx,s.OrganizationID,p.Method,"sales")
-		if errors.Is(lookupErr,pgx.ErrNoRows){fail(w,400,"invalid_payment_method","Uno de los medios de pago no está activo para ventas.");return}
-		if lookupErr!=nil{fail(w,503,"payment_methods_unavailable","No pudimos validar los medios de pago.");return}
-		methodDefs[p.Method]=methodDef
+	methodDefs := map[string]paymentMethodView{}
+	for _, p := range in.Payments {
+		if _, ok := methodDefs[p.Method]; ok {
+			continue
+		}
+		methodDef, lookupErr := getPaymentMethod(r.Context(), tx, s.OrganizationID, p.Method, "sales")
+		if errors.Is(lookupErr, pgx.ErrNoRows) {
+			fail(w, 400, "invalid_payment_method", "Uno de los medios de pago no está activo para ventas.")
+			return
+		}
+		if lookupErr != nil {
+			fail(w, 503, "payment_methods_unavailable", "No pudimos validar los medios de pago.")
+			return
+		}
+		methodDefs[p.Method] = methodDef
 	}
 
-	shiftID,err:=currentCashShiftID(r.Context(),tx,s)
-	if errors.Is(err,pgx.ErrNoRows){fail(w,409,"cash_shift_required","Debes estar asignado a un turno de caja abierto para cobrar.");return}
-	if err!=nil{fail(w,503,"payments_unavailable","No pudimos validar tu turno de caja.");return}
+	shiftID, err := currentCashShiftID(r.Context(), tx, s)
+	if errors.Is(err, pgx.ErrNoRows) {
+		fail(w, 409, "cash_shift_required", "Debes estar asignado a un turno de caja abierto para cobrar.")
+		return
+	}
+	if err != nil {
+		fail(w, 503, "payments_unavailable", "No pudimos validar tu turno de caja.")
+		return
+	}
 
-	var orderCode,status string
-	var completed, salon bool
-	var orderTotal,paid float64
-	err=tx.QueryRow(r.Context(),`
-		SELECT o.code,o.status,o.total::float8,o.completed_at IS NOT NULL,o.channel='salon'
+	var orderCode, status string
+	var completed, salon, billClosed bool
+	var orderTotal, paid float64
+	err = tx.QueryRow(r.Context(), `
+		SELECT o.code,o.status,o.total::float8,o.completed_at IS NOT NULL,o.channel='salon',o.bill_closed_at IS NOT NULL
 		FROM orders o
 		WHERE o.id=$1 AND o.organization_id=$2 AND o.location_id=$3
 		FOR UPDATE
-	`,in.OrderID,s.OrganizationID,s.LocationID).Scan(&orderCode,&status,&orderTotal,&completed,&salon)
-	if errors.Is(err,pgx.ErrNoRows){fail(w,404,"order_not_found","El pedido no existe en este local.");return}
-	if err!=nil{fail(w,503,"payments_unavailable","No pudimos validar el pedido.");return}
-	if err=tx.QueryRow(r.Context(),`
+	`, in.OrderID, s.OrganizationID, s.LocationID).Scan(&orderCode, &status, &orderTotal, &completed, &salon, &billClosed)
+	if errors.Is(err, pgx.ErrNoRows) {
+		fail(w, 404, "order_not_found", "El pedido no existe en este local.")
+		return
+	}
+	if err != nil {
+		fail(w, 503, "payments_unavailable", "No pudimos validar el pedido.")
+		return
+	}
+	if err = tx.QueryRow(r.Context(), `
 		SELECT COALESCE(sum(
 		  p.amount-COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id),0)
 		),0)::float8
 		FROM payments p
 		WHERE p.order_id=$1 AND p.organization_id=$2 AND p.location_id=$3
-	`,in.OrderID,s.OrganizationID,s.LocationID).Scan(&paid);err!=nil{
-		fail(w,503,"payments_unavailable","No pudimos validar el saldo pendiente.")
+	`, in.OrderID, s.OrganizationID, s.LocationID).Scan(&paid); err != nil {
+		fail(w, 503, "payments_unavailable", "No pudimos validar el saldo pendiente.")
 		return
 	}
-	if completed||(status!="listo"&&status!="en_camino"&&!(salon&&status=="entregado")){fail(w,409,"order_not_ready_for_payment","El pedido solo puede cobrarse cuando está listo o entregado y sigue abierto.");return}
-	remaining:=math.Max(0,orderTotal-paid)
-	if totalBatch>remaining+0.00001{
-		fail(w,409,"payment_exceeds_remaining","El cobro supera el saldo pendiente del pedido.")
+	if completed || status == "cancelado" || (salon && !billClosed) || (!salon && status != "listo" && status != "en_camino" && status != "entregado") {
+		fail(w, 409, "order_not_ready_for_payment", "Cierra la cuenta de la mesa antes de cobrar. El pedido debe seguir abierto.")
+		return
+	}
+	remaining := math.Max(0, orderTotal-paid)
+	if salon && !requireTableProductsDelivered(w, r, tx, s, in.OrderID, status) {
+		return
+	}
+	if totalBatch > remaining+0.00001 {
+		fail(w, 409, "payment_exceeds_remaining", "El cobro supera el saldo pendiente del pedido.")
 		return
 	}
 
-	ids:=make([]string,0,len(in.Payments))
-	for _,p:=range in.Payments{
+	ids := make([]string, 0, len(in.Payments))
+	for _, p := range in.Payments {
 		var id string
-		err=tx.QueryRow(r.Context(),`
+		err = tx.QueryRow(r.Context(), `
 			INSERT INTO payments(organization_id,location_id,order_id,shift_id,method,amount,reference,created_by)
 			VALUES($1,$2,$3,$4,$5,$6,$7,$8)
 			RETURNING id::text
-		`,s.OrganizationID,s.LocationID,in.OrderID,shiftID,p.Method,p.Amount,p.Reference,s.UserID).Scan(&id)
-		if err!=nil{fail(w,503,"payments_unavailable","No pudimos registrar uno de los medios de pago.");return}
-		ids=append(ids,id)
-		if methodDefs[p.Method].AffectsCash{
-			if _,err=tx.Exec(r.Context(),`
+		`, s.OrganizationID, s.LocationID, in.OrderID, shiftID, p.Method, p.Amount, p.Reference, s.UserID).Scan(&id)
+		if err != nil {
+			fail(w, 503, "payments_unavailable", "No pudimos registrar uno de los medios de pago.")
+			return
+		}
+		ids = append(ids, id)
+		if methodDefs[p.Method].AffectsCash {
+			if _, err = tx.Exec(r.Context(), `
 				INSERT INTO cash_movements(
 				  organization_id,location_id,shift_id,movement_type,source_type,source_id,
 				  amount,reason,note,created_by
 				)
 				VALUES($1,$2,$3,'income','cash_sale',$4::uuid,$5,$6,$7,$8)
-			`,s.OrganizationID,s.LocationID,shiftID,id,p.Amount,"Cobro "+orderCode,p.Reference,s.UserID);err!=nil{
-				fail(w,503,"payments_unavailable","No pudimos reflejar el cobro en caja.")
+			`, s.OrganizationID, s.LocationID, shiftID, id, p.Amount, "Cobro "+orderCode, p.Reference, s.UserID); err != nil {
+				fail(w, 503, "payments_unavailable", "No pudimos reflejar el cobro en caja.")
 				return
 			}
 		}
 	}
-	closed,err:=completeDeliveredSalonOrder(r.Context(),tx,s,in.OrderID)
-	if err!=nil{fail(w,503,"payments_unavailable","No pudimos finalizar la cuenta del pedido.");return}
-	if err=tx.Commit(r.Context());err!=nil{fail(w,503,"payments_unavailable","No pudimos confirmar el cobro.");return}
-	if closed{a.audit(r,"order.completed","order",in.OrderID)}
-	writeJSON(w,201,map[string]any{
-		"paymentIds":ids,
-		"paidNow":strconv.FormatFloat(totalBatch,'f',2,64),
-		"remainingAmount":strconv.FormatFloat(math.Max(0,remaining-totalBatch),'f',2,64),
-		"paymentStatus":paymentStatus(orderTotal,paid+totalBatch),
+	closed, err := completeDeliveredSalonOrder(r.Context(), tx, s, in.OrderID)
+	if err != nil {
+		fail(w, 503, "payments_unavailable", "No pudimos finalizar la cuenta del pedido.")
+		return
+	}
+	if err = tx.Commit(r.Context()); err != nil {
+		fail(w, 503, "payments_unavailable", "No pudimos confirmar el cobro.")
+		return
+	}
+	if closed {
+		a.audit(r, "order.completed", "order", in.OrderID)
+	}
+	writeJSON(w, 201, map[string]any{
+		"paymentIds":      ids,
+		"paidNow":         strconv.FormatFloat(totalBatch, 'f', 2, 64),
+		"remainingAmount": strconv.FormatFloat(math.Max(0, remaining-totalBatch), 'f', 2, 64),
+		"paymentStatus":   paymentStatus(orderTotal, paid+totalBatch),
 	})
 }
 
-func (a *API) completePaidOrder(w http.ResponseWriter,r *http.Request){
-	s:=r.Context().Value(scopeKey{}).(scope)
-	tx,err:=a.db.Begin(r.Context())
-	if err!=nil{fail(w,503,"payments_unavailable","No pudimos finalizar el pedido.");return}
+func (a *API) completePaidOrder(w http.ResponseWriter, r *http.Request) {
+	s := r.Context().Value(scopeKey{}).(scope)
+	tx, err := a.db.Begin(r.Context())
+	if err != nil {
+		fail(w, 503, "payments_unavailable", "No pudimos finalizar el pedido.")
+		return
+	}
 	defer tx.Rollback(r.Context())
-	var total,paid float64
+	var total, paid float64
 	var status string
 	var salon bool
-	err=tx.QueryRow(r.Context(),`
+	err = tx.QueryRow(r.Context(), `
 		SELECT o.total::float8,o.status,o.channel='salon'
 		FROM orders o
 		WHERE o.id=$1 AND o.organization_id=$2 AND o.location_id=$3
 		FOR UPDATE
-	`,r.PathValue("id"),s.OrganizationID,s.LocationID).Scan(&total,&status,&salon)
-	if errors.Is(err,pgx.ErrNoRows){fail(w,404,"order_not_found","El pedido no existe en este local.");return}
-	if err!=nil{fail(w,503,"payments_unavailable","No pudimos validar el pedido.");return}
-	if err=tx.QueryRow(r.Context(),`
+	`, r.PathValue("id"), s.OrganizationID, s.LocationID).Scan(&total, &status, &salon)
+	if errors.Is(err, pgx.ErrNoRows) {
+		fail(w, 404, "order_not_found", "El pedido no existe en este local.")
+		return
+	}
+	if err != nil {
+		fail(w, 503, "payments_unavailable", "No pudimos validar el pedido.")
+		return
+	}
+	if err = tx.QueryRow(r.Context(), `
 		SELECT COALESCE(sum(
 		  p.amount-COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id),0)
 		),0)::float8
 		FROM payments p
 		WHERE p.order_id=$1 AND p.organization_id=$2 AND p.location_id=$3
-	`,r.PathValue("id"),s.OrganizationID,s.LocationID).Scan(&paid);err!=nil{
-		fail(w,503,"payments_unavailable","No pudimos validar el saldo del pedido.")
+	`, r.PathValue("id"), s.OrganizationID, s.LocationID).Scan(&paid); err != nil {
+		fail(w, 503, "payments_unavailable", "No pudimos validar el saldo del pedido.")
 		return
 	}
-	if status=="cancelado"{fail(w,409,"order_not_completable","Un pedido cancelado no puede finalizarse.");return}
-	if paid+0.00001<total{fail(w,409,"payment_incomplete","El pedido todavía tiene saldo pendiente.");return}
-	if salon&&status!="entregado"{
-		fail(w,409,"delivery_required","Confirma la entrega antes de finalizar la cuenta.");return
-	}
-	if !salon&&status!="listo"&&status!="en_camino"{
-		fail(w,409,"order_not_ready","El pago está completo, pero la comanda todavía no está lista para entregarse.")
+	if status == "cancelado" {
+		fail(w, 409, "order_not_completable", "Un pedido cancelado no puede finalizarse.")
 		return
 	}
-	if _,err=tx.Exec(r.Context(),`
+	if paid+0.00001 < total {
+		fail(w, 409, "payment_incomplete", "El pedido todavía tiene saldo pendiente.")
+		return
+	}
+	if salon {
+		var closed bool
+		closed, err = completeDeliveredSalonOrder(r.Context(), tx, s, r.PathValue("id"))
+		if err != nil {
+			fail(w, 503, "payments_unavailable", "No pudimos finalizar la cuenta.")
+			return
+		}
+		if !closed {
+			fail(w, 409, "delivery_required", "Cierra la cuenta y completa las entregas antes de finalizar.")
+			return
+		}
+		if err = tx.Commit(r.Context()); err != nil {
+			fail(w, 503, "payments_unavailable", "No pudimos finalizar.")
+			return
+		}
+		a.audit(r, "order.completed", "order", r.PathValue("id"))
+		w.WriteHeader(204)
+		return
+	}
+	if status != "listo" && status != "en_camino" {
+		fail(w, 409, "order_not_ready", "El pago está completo, pero la comanda todavía no está lista para entregarse.")
+		return
+	}
+	var pending bool
+	if err = tx.QueryRow(r.Context(), `SELECT EXISTS(SELECT 1 FROM order_service_items WHERE order_id=$1 AND organization_id=$2 AND status NOT IN ('listo','entregado'))`, r.PathValue("id"), s.OrganizationID).Scan(&pending); err != nil {
+		fail(w, 503, "payments_unavailable", "No pudimos validar la entrega.")
+		return
+	}
+	if pending {
+		fail(w, 409, "items_not_ready", "Todavía hay productos en preparación.")
+		return
+	}
+	if _, err = tx.Exec(r.Context(), `UPDATE order_service_items SET status='entregado',delivered_at=now(),delivered_by=(SELECT id FROM users WHERE id=$3 AND organization_id=$2),updated_at=now() WHERE order_id=$1 AND organization_id=$2 AND status='listo'`, r.PathValue("id"), s.OrganizationID, s.UserID); err != nil {
+		fail(w, 503, "payments_unavailable", "No pudimos registrar la entrega.")
+		return
+	}
+	if _, err = tx.Exec(r.Context(), `
 		UPDATE orders
 		SET status='entregado',updated_at=now(),completed_at=COALESCE(completed_at,now())
 		WHERE id=$1 AND organization_id=$2 AND location_id=$3
-	`,r.PathValue("id"),s.OrganizationID,s.LocationID);err!=nil{
-		fail(w,503,"payments_unavailable","No pudimos liberar la mesa.")
+	`, r.PathValue("id"), s.OrganizationID, s.LocationID); err != nil {
+		fail(w, 503, "payments_unavailable", "No pudimos liberar la mesa.")
 		return
 	}
-	if err=tx.Commit(r.Context());err!=nil{fail(w,503,"payments_unavailable","No pudimos finalizar el pedido.");return}
-	a.audit(r,"order.completed","order",r.PathValue("id"))
+	if err = tx.Commit(r.Context()); err != nil {
+		fail(w, 503, "payments_unavailable", "No pudimos finalizar el pedido.")
+		return
+	}
+	a.audit(r, "order.completed", "order", r.PathValue("id"))
 	w.WriteHeader(http.StatusNoContent)
 }

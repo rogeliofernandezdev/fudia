@@ -1,3 +1,4 @@
+import type {ServiceItem} from "../../orders/domain/service-flow";
 export type Option={value:string;label:string};
 
 export type OrderItemSelection={
@@ -23,7 +24,7 @@ export type Order={
   id:string;
   code:string;
   channel:string;
-  status:string;completedAt?:string;
+  status:string;completedAt?:string;billClosedAt?:string;accountState?:"open"|"awaiting_payment"|"paid";serviceItems?:ServiceItem[];
   customerId:string;
   customerName:string;
   customerPhone:string;

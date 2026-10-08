@@ -11,7 +11,7 @@ import (
 )
 
 func TestSalonAutomaticCompletion(t *testing.T) {
-	for _, scenario := range []string{"delivery_then_single", "delivery_then_batch", "single_then_delivery", "batch_then_delivery", "concurrent"} {
+	for _, scenario := range []string{"delivery_then_single", "delivery_then_batch", "premature_single", "premature_batch", "concurrent"} {
 		t.Run(scenario, func(t *testing.T) {
 			pool := integrationPool(t)
 			s := seedInventoryScope(t, pool)
@@ -39,6 +39,10 @@ func TestSalonAutomaticCompletion(t *testing.T) {
 			if err := pool.QueryRow(ctx, `INSERT INTO orders(organization_id,location_id,code,channel,status,total,table_id,created_by) VALUES($1,$2,'PED-AUTO','salon','listo',25,$3,$4) RETURNING id`, s.OrganizationID, s.LocationID, tableID, s.UserID).Scan(&orderID); err != nil {
 				t.Fatal(err)
 			}
+			closeBill := request(api.closeOrderBill, "POST", "/v1/admin/orders/"+orderID+"/bill/close", "", orderID)
+			if closeBill.Code != 409 || !strings.Contains(closeBill.Body.String(), "products_not_delivered") {
+				t.Fatalf("close bill: %d %s", closeBill.Code, closeBill.Body.String())
+			}
 			assertClosed := func(want bool) {
 				t.Helper()
 				var closed bool
@@ -64,34 +68,41 @@ func TestSalonAutomaticCompletion(t *testing.T) {
 					t.Fatalf("response: %d want %d, %s", w.Code, status, w.Body.String())
 				}
 			}
+			if strings.HasPrefix(scenario, "premature") {
+				// A historical prematurely closed bill still cannot be charged.
+				if _, err := pool.Exec(ctx, `UPDATE orders SET bill_closed_at=now() WHERE id=$1`, orderID); err != nil {
+					t.Fatal(err)
+				}
+				check(pay(25), 409)
+				assertClosed(false)
+				var payments int
+				if err := pool.QueryRow(ctx, `SELECT count(*) FROM payments WHERE order_id=$1`, orderID).Scan(&payments); err != nil || payments != 0 {
+					t.Fatalf("premature payment must not persist: %d %v", payments, err)
+				}
+				if _, err := pool.Exec(ctx, `UPDATE orders SET bill_closed_at=NULL WHERE id=$1`, orderID); err != nil {
+					t.Fatal(err)
+				}
+			}
+			check(deliver(), 200)
+			assertClosed(false)
 			if scenario == "concurrent" {
 				var responses [2]*httptest.ResponseRecorder
 				var wg sync.WaitGroup
 				wg.Add(2)
-				go func() { defer wg.Done(); responses[0] = deliver() }()
+				go func() { defer wg.Done(); responses[0] = request(api.closeOrderBill, "POST", "/", "", orderID) }()
 				go func() { defer wg.Done(); responses[1] = pay(25) }()
 				wg.Wait()
 				check(responses[0], 200)
-				check(responses[1], 201)
-			} else {
-				if strings.HasPrefix(scenario, "delivery_then") {
-					check(deliver(), 200)
-					assertClosed(false)
+				if responses[1].Code == 409 {
+					check(pay(25), 201) // payment ran before the close acquired its lock
+				} else {
+					check(responses[1], 201)
 				}
+			} else {
+				check(request(api.closeOrderBill, "POST", "/", "", orderID), 200)
 				check(pay(10), 201)
 				assertClosed(false)
 				check(pay(15), 201)
-				if strings.HasSuffix(scenario, "then_delivery") {
-					assertClosed(false)
-					// Explicit completion cannot skip delivery for a paid table.
-					check(request(api.completePaidOrder, "POST", "/v1/operations/pos/orders/"+orderID+"/complete", "", orderID), 409)
-					assertClosed(false)
-					w := deliver()
-					check(w, 200)
-					if !strings.Contains(w.Body.String(), `"completedAt":"2`) {
-						t.Fatalf("delivery response must include closure: %s", w.Body.String())
-					}
-				}
 			}
 			assertClosed(true)
 			var completedEvents int

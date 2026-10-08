@@ -50,7 +50,7 @@ type userInput struct {
 var permissionCatalog = []map[string]any{
 	{"group": "Administración", "items": []map[string]string{{"value": "dashboard.read", "label": "Ver resumen operativo"}, {"value": "users.read", "label": "Ver usuarios y roles"}, {"value": "users.manage", "label": "Administrar usuarios y roles"}, {"value": "organizations.read", "label": "Ver empresa y locales"}, {"value": "organizations.manage", "label": "Administrar empresa y locales"}, {"value": "fiscal.read", "label": "Ver información fiscal"}, {"value": "subscription.read", "label": "Ver plan y suscripción de la empresa"}}},
 	{"group": "Carta y clientes", "items": []map[string]string{{"value": "menu.read", "label": "Ver carta"}, {"value": "menu.manage", "label": "Administrar carta"}, {"value": "recipes.manage", "label": "Administrar recetas"}, {"value": "customers.read", "label": "Ver clientes"}, {"value": "customers.manage", "label": "Administrar clientes"}}},
-	{"group": "Operación", "items": []map[string]string{{"value": "orders.read", "label": "Ver pedidos y comandas"}, {"value": "orders.manage", "label": "Gestionar pedidos"}, {"value": "kitchen.manage", "label": "Actualizar comandas"}, {"value": "tables.read", "label": "Ver mesas"}, {"value": "tables.manage", "label": "Administrar mesas"}, {"value": "reservations.read", "label": "Ver reservas"}, {"value": "reservations.manage", "label": "Gestionar reservas"}, {"value": "cash.read", "label": "Ver caja"}, {"value": "cash.manage", "label": "Operar caja"}, {"value": "cash.expected.read", "label": "Ver saldo esperado en cierre ciego"}, {"value": "receipts.read", "label": "Ver comprobantes"}, {"value": "receipts.manage", "label": "Emitir comprobantes"}}},
+	{"group": "Operación", "items": []map[string]string{{"value": "orders.read", "label": "Ver pedidos y comandas"}, {"value": "orders.manage", "label": "Gestionar pedidos"}, {"value": "kitchen.manage", "label": "Preparar en Cocina"}, {"value": "bar.manage", "label": "Preparar en Barra"}, {"value": "tables.read", "label": "Ver mesas"}, {"value": "tables.manage", "label": "Administrar mesas"}, {"value": "reservations.read", "label": "Ver reservas"}, {"value": "reservations.manage", "label": "Gestionar reservas"}, {"value": "cash.read", "label": "Ver caja"}, {"value": "cash.manage", "label": "Operar caja"}, {"value": "cash.expected.read", "label": "Ver saldo esperado en cierre ciego"}, {"value": "receipts.read", "label": "Ver comprobantes"}, {"value": "receipts.manage", "label": "Emitir comprobantes"}}},
 	{"group": "Abastecimiento y análisis", "items": []map[string]string{{"value": "inventory.read", "label": "Ver inventario"}, {"value": "inventory.manage", "label": "Administrar inventario"}, {"value": "inventory.transfer", "label": "Transferir stock entre locales"}, {"value": "purchases.read", "label": "Ver compras"}, {"value": "purchases.manage", "label": "Crear y administrar compras"}, {"value": "purchases.approve", "label": "Aprobar órdenes de compra"}, {"value": "purchases.receive", "label": "Recibir compras"}, {"value": "expenses.read", "label": "Ver gastos"}, {"value": "expenses.manage", "label": "Registrar y administrar gastos"}, {"value": "expenses.void", "label": "Anular gastos"}, {"value": "reports.read", "label": "Ver reportes"}, {"value": "audit.read", "label": "Ver auditoría"}}},
 	{"group": "Delivery", "items": []map[string]string{{"value": "delivery.read", "label": "Ver entregas asignadas"}, {"value": "delivery.manage", "label": "Actualizar entregas"}}},
 }
@@ -316,11 +316,11 @@ func (a *API) saveUser(w http.ResponseWriter, r *http.Request, update bool) {
 	defer tx.Rollback(r.Context())
 
 	if !update {
-		if err=ensureSubscriptionCapacity(r.Context(),tx,s.OrganizationID,"users");errors.Is(err,errSubscriptionLimit){
-			fail(w,409,"plan_limit_reached","El plan contratado alcanzó el máximo de usuarios.")
+		if err = ensureSubscriptionCapacity(r.Context(), tx, s.OrganizationID, "users"); errors.Is(err, errSubscriptionLimit) {
+			fail(w, 409, "plan_limit_reached", "El plan contratado alcanzó el máximo de usuarios.")
 			return
-		}else if err!=nil{
-			fail(w,503,"subscription_unavailable","No pudimos validar los límites del plan.")
+		} else if err != nil {
+			fail(w, 503, "subscription_unavailable", "No pudimos validar los límites del plan.")
 			return
 		}
 	}

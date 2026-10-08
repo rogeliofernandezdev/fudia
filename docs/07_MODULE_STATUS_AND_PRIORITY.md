@@ -353,3 +353,15 @@ Cada vez que se cierre una prioridad:
 4. actualizar fecha, rama y commit base auditado;
 5. no borrar el historial conceptual: resumir qué quedó cerrado y qué dependencia
    habilitó la siguiente fase.
+
+## Atención de mesa: cuenta y destinos
+
+Secuencia obligatoria: Mesa Libre → primer pedido / Cuenta Abierta / Mesa Ocupada → preparación por Cocina o Barra (o Entrega directa) → mozo confirma entrega de todos los productos → puede agregar otra ronda solo mientras Abierta → Cerrar cuenta → Por cobrar / Mesa Ocupada → pago parcial mantiene Por cobrar → pago completo + todos entregados finaliza atención y libera mesa. Cierre y cobro anticipados se bloquean tanto en interfaz como en API. No se agregan productos ni se reabre después del cierre.
+
+La confirmación del mozo es un único botón «Confirmar entrega» en el pie del
+detalle de Salón/Pedidos. Requiere todos los productos pendientes Listos y confirma
+el conjunto en una transacción; las entregas anteriores no se repiten. No hay
+acciones individuales por producto en la interfaz. El destino y el estado por
+producto se conservan únicamente como información de seguimiento.
+
+Implementación: una cuenta por atención, mozo asignado, consumos adicionales idempotentes sin reenviar productos previos, destinos Cocina/Barra/Entrega directa, seguimiento por producto con confirmación global de entrega, cierre para cobro y liberación automática con cuenta cerrada + pago completo + consumo entregado. Rol Encargado de barra y permiso independiente `bar.manage`, añadido automáticamente solo al Administrador de empresa. La migración 73 se verifica en PostgreSQL temporal; debe aplicarse al entorno junto con el backend y frontend actualizados.

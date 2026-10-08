@@ -11,6 +11,7 @@ function compile(file,resolve=require,extra=""){
  vm.runInNewContext(ts.transpileModule(readFileSync(new URL(file,root),"utf8")+extra,{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText,{exports,require:resolve});
  return exports;
 }
+const serviceFlow=compile("modules/operations/orders/domain/service-flow.ts");
 const actions=compile("modules/operations/orders/domain/order-actions.ts");
 const attribution=compile("modules/operations/orders/presentation/order-attribution.tsx",name=>name==="@/design-system/icons"?{Icon:"Icon"}:require(name));
 const order={id:"order",tableName:"Mesa 04",channel:"salon",status:"nuevo",waiterId:"ana",waiterName:"Ana",collectedByNames:[],items:[],createdAt:"2026-10-07T14:00:00Z",total:"25",subtotal:"25",deliveryFee:"0"};
@@ -29,6 +30,8 @@ function resolve(name){
  if(name==="@/shared/routing/page-routes")return{pageRoutes:{pos:"/pos"}};
  if(name==="@/shared/i18n/regional-format")return{formatRegionalDateTime:value=>value};
  if(name.endsWith("order-actions"))return actions;
+ if(name.endsWith("service-flow"))return serviceFlow;
+ if(name.endsWith("order-service-controls"))return{accountLabel:()=>"Cuenta abierta",OrderAccountActions:"OrderAccountActions",OrderItemService:"OrderItemService"};
  if(name.endsWith("order-attribution"))return attribution;
  if(name.startsWith("@/")||name.startsWith("."))return{};
  return require(name);
@@ -57,13 +60,13 @@ test("otro mozo ve el detalle sin ninguna acción en Salón ni Pedidos",()=>{
 test("el mozo asignado conserva sus acciones; el permiso sigue siendo obligatorio",()=>{
  viewer="ana";cash=false;
  for(const component of [salon.OrderDetail,orders.OrderDetail]){
-  assert.ok(nodes(component(props)).some(node=>node.type==="Button"&&node.props.children==="Enviar a cocina"));
+  assert.ok(nodes(component(props)).some(node=>node.type==="Button"&&node.props.children==="Enviar comanda"));
   assert.equal(nodes(component({...props,canManage:false})).filter(node=>node.type==="Button"||node.type==="Link").length,0);
  }
 });
 test("el cajero puede cobrar, pero no editar ni confirmar la entrega del mozo",()=>{
  viewer="eva";cash=true;
- const tree=salon.OrderDetail({...props,canManage:false,order:{...order,status:"listo",remainingAmount:"25"}}),all=nodes(tree);
+ const tree=salon.OrderDetail({...props,canManage:false,order:{...order,status:"entregado",billClosedAt:"2026-10-07T14:00:00Z",remainingAmount:"25"}}),all=nodes(tree);
  assert.equal(all.filter(node=>node.type==="Button").length,0);
  assert.equal(all.filter(node=>node.type==="Link"&&node.props.href==="/pos?orderId=order").length,1);
 });

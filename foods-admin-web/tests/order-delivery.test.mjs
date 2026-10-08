@@ -15,7 +15,9 @@ function compile(path,resolve=require,extra=""){
  return exports;
 }
 const actions=compile("orders/domain/order-actions.ts");
-const order={id:"pedido-1",code:"PED-001",channel:"salon",status:"listo",paymentStatus:"pending",customerName:"",customerPhone:"",tableName:"Mesa 1",tableId:"mesa-1",total:"25.00",subtotal:"25.00",deliveryFee:"0",paidAmount:"0",remainingAmount:"25.00",createdAt:"2026-10-05T10:00:00Z",updatedAt:"2026-10-05T10:00:00Z",items:[]};
+const serviceFlow=compile("orders/domain/service-flow.ts");
+const accountLabel=o=>o.completedAt?"Finalizada":o.accountState==="paid"?"Pagada":o.billClosedAt?"Por cobrar":"Cuenta abierta";
+const order={id:"pedido-1",code:"PED-001",channel:"salon",status:"listo",billClosedAt:"2026-10-05T11:00:00Z",paymentStatus:"pending",customerName:"",customerPhone:"",tableName:"Mesa 1",tableId:"mesa-1",total:"25.00",subtotal:"25.00",deliveryFee:"0",paidAmount:"0",remainingAmount:"25.00",createdAt:"2026-10-05T10:00:00Z",updatedAt:"2026-10-05T10:00:00Z",items:[]};
 
 test("la entrega de mesa no depende de haber cobrado",()=>{
  for(const paymentStatus of ["pending","partial","paid"]){
@@ -47,23 +49,28 @@ test("Cocina conserva el control de preparación y delivery conserva su despacho
  assert.equal(actions.nextOrderAction({...order,channel:"delivery",status:"en_camino"}).status,"entregado");
 });
 
-function mount(section,changes={},canManage=true,busy=false){
+function mount(section,changes={},canManage=true,busy=false,fullControls=false){
  const calls=[];
  const file=section==="salon"?"salon/presentation/salon-manager.tsx":"orders/presentation/orders-manager.tsx";
- const {OrderDetail}=compile(file,name=>{
+ const resolve=name=>{
   if(name==="next/link")return{default:"Link"};
   if(name==="@/design-system")return{Button:"Button",Status:"Status",Icon:"Icon"};
   if(name==="@/design-system/icons")return{Icon:"Icon"};
   if(name==="@/providers/session-context")return{useSession:()=>({user:{id:"waiter"},can:()=>canManage,location:{country:"PE",timezone:"America/Lima"}})};
+  if(name==="@/providers")return{useSession:()=>({user:{id:"waiter"},can:()=>canManage}),useFeedback:()=>({notify:()=>{}})};
+  if(name==="@tanstack/react-query")return{useQueryClient:()=>({invalidateQueries:()=>{},setQueryData:()=>{}}),useMutation:()=>({isPending:false,mutate:()=>{}})};
   if(name==="@/shared/i18n/regional-format")return{formatRegionalDateTime:()=>"Hace un momento"};
   if(name==="@/shared/routing/page-routes")return{pageRoutes:{pos:"/pos"}};
   if(name.endsWith("/domain/order-actions"))return actions;
+  if(name.endsWith("/domain/service-flow"))return serviceFlow;
+  if(name.endsWith("order-service-controls"))return fullControls?compile("orders/presentation/order-service-controls.tsx",resolve):{accountLabel,OrderAccountActions:"OrderAccountActions",OrderItemService:"OrderItemService"};
   if(name.startsWith("@/")||name.startsWith("../")||name.startsWith("./"))return{};
   return require(name);
- },"\nexport {OrderDetail};\n");
+ };
+ const {OrderDetail}=compile(file,resolve,"\nexport {OrderDetail};\n");
  const rendered=OrderDetail({loading:false,order:{...order,...changes},currencySymbol:"S/",channels:[{value:"salon",label:"Salón"}],canManage,busy,close:()=>{},advance:status=>calls.push(status),edit:()=>{},cancel:()=>{}});
  const nodes=[];
- function visit(node){if(!node||typeof node!=="object")return;if(Array.isArray(node)){node.forEach(visit);return}nodes.push(node);visit(node.props?.children)}
+ function visit(node){if(!node||typeof node!=="object")return;if(Array.isArray(node)){node.forEach(visit);return}nodes.push(node);if(fullControls&&typeof node.type==="function")visit(node.type(node.props));else visit(node.props?.children)}
  visit(rendered);
  return{calls,nodes,buttons:nodes.filter(n=>n.type==="Button"),links:nodes.filter(n=>n.type==="Link")};
 }
@@ -82,16 +89,17 @@ test("salon: tarjetas y detalle comparten el estado operativo sin mezclar el cob
  }
 });
 
-test("salon: la cabecera muestra un solo estado del pedido sin duplicar el pago",()=>{
+test("salon: la cabecera distingue la preparación del estado de cuenta",()=>{
  for(const changes of [{},{paymentStatus:"paid",paidAmount:"25.00",remainingAmount:"0"},{status:"entregado"}]){
   const view=mount("salon",changes);
   const statuses=view.nodes.filter(n=>n.type==="Status");
-  assert.equal(statuses.length,1);
+  assert.equal(statuses.length,2);
+  assert.equal(statuses[1].props.children,"Por cobrar");
   assert.equal(statuses[0].props.children,changes.status==="entregado"?"Entregado":"Listo para entregar");
   assert.ok(view.nodes.some(n=>n.props.className==="salon-order-detail-subtotal"));
   assert.ok(view.nodes.some(n=>n.props.className==="salon-order-detail-grand"));
  }
- assert.ok(mount("salon").links.some(n=>n.props.href==="/pos?orderId=pedido-1"));
+ assert.ok(mount("salon",{status:"entregado"}).links.some(n=>n.props.href==="/pos?orderId=pedido-1"));
 });
 
 test("salon: la franja decorativa conserva el degradado de la paleta",()=>{
@@ -101,13 +109,14 @@ test("salon: la franja decorativa conserva el degradado de la paleta",()=>{
  assert.equal(accent.props["aria-hidden"],"true");
 });
 
-test("salon: cobrar es la única acción primaria cuando hay saldo",()=>{
+test("salon: entregar precede al cobro; cobrar es primario solo con cuenta entregada y cerrada",()=>{
  const view=mount("salon");
  const delivery=view.buttons.find(n=>n.props.children==="Confirmar entrega");
- assert.equal(delivery.props.kind,"secondary");
+ assert.equal(delivery.props.kind,undefined); // Button's default is primary
  assert.equal(delivery.props.icon,"availability");
- assert.equal(view.buttons.some(n=>n.props.className==="order-detail-primary"),false);
- assert.match(view.links[0].props.className,/\bprimary\b/);
+ assert.equal(view.buttons.some(n=>n.props.className==="order-detail-primary"),true);
+ assert.equal(view.links.length,0);
+ assert.match(mount("salon",{status:"entregado"}).links[0].props.className,/\bprimary\b/);
  assert.ok(view.nodes.some(n=>n.props.role==="group"&&n.props["aria-label"]==="Acciones de la mesa"));
 });
 
@@ -234,8 +243,8 @@ test("salon: la mesa pagada y entregada está liberada sin otro botón",()=>{
  assert.equal(initial.buttons.find(n=>n.props.children==="Cancelar pedido").props.kind,"ghost");
 });
 
-test("salon: el cobro queda bloqueado mientras se registra la entrega",()=>{
- const link=mount("salon",{},true,true).links[0];
+test("salon: el cobro queda bloqueado mientras se guarda otra acción",()=>{
+ const link=mount("salon",{status:"entregado"},true,true).links[0];
  assert.equal(link.props["aria-disabled"],true);
  assert.equal(link.props["aria-busy"],true);
  assert.equal(link.props.tabIndex,-1);
@@ -245,6 +254,83 @@ test("salon: el cobro queda bloqueado mientras se registra la entrega",()=>{
 });
 
 for(const section of ["salon","orders"]){
+ test(`${section}: entrega global usa una petición de estado, refresca vistas y no abre éxito`,async()=>{
+  const mutations=[],sent=[],invalidations=[],feedback=[];
+  let finishRefresh;
+  const refresh=new Promise(resolve=>{finishRefresh=resolve});
+  const delivered={...order,status:"entregado",billClosedAt:undefined};
+  const update=(id,status)=>{sent.push({id,status});return delivered};
+  const session=()=>({user:{id:"waiter"},can:()=>true,location:{country:"PE",timezone:"America/Lima"}});
+  const managerExports=compile(`${section}/presentation/${section==="salon"?"salon":"orders"}-manager.tsx`,name=>{
+   if(name==="next/dynamic")return{default:()=>"ManualOrderDialog"};
+   if(name==="next/link")return{default:"Link"};
+   if(name==="react")return{...require(name),useState:value=>[value,()=>{}],useCallback:fn=>fn};
+   if(name==="@tanstack/react-query")return{useQueryClient:()=>({invalidateQueries:q=>{invalidations.push(q.queryKey);return refresh}}),useMutation:config=>{mutations.push(config);return{}},useQuery:()=>({data:{items:[],channelCounts:{},channelOptions:[],statusOptions:[],total:0},isLoading:false,isError:false})};
+   if(name==="@/providers/session-context")return{useSession:session};
+   if(name==="@/providers/feedback-provider")return{useFeedback:()=>({notify:value=>feedback.push(value)})};
+   if(name==="@/providers/settings-context")return{useSettings:()=>({currencySymbol:"S/"})};
+   if(name==="@/shared/hooks/use-debounced-value")return{useDebouncedValue:value=>value};
+   if(name.endsWith("salon-api"))return{updateSalonOrderStatus:update};
+   if(name.endsWith("orders-api"))return{updateOrderStatus:update};
+   if(name.endsWith("order-actions"))return actions;
+   if(name.startsWith("@/")||name.startsWith("."))return{};
+   return require(name);
+  });
+  managerExports[section==="salon"?"SalonManager":"OrdersManager"]();
+  const config=mutations[section==="salon"?0:1];
+  const response=await config.mutationFn({id:"pedido-1",status:"entregado"});
+  const refreshed=config.onSuccess(response);
+  assert.equal(typeof refreshed.then,"function"); // Query keeps the action pending until refresh finishes
+  let completed=false;refreshed.then(()=>{completed=true});
+  await Promise.resolve();assert.equal(completed,false);
+  finishRefresh();await refreshed;assert.equal(completed,true);
+  assert.deepEqual(sent,[{id:"pedido-1",status:"entregado"}]);
+  assert.equal(feedback.length,0);
+  for(const key of ["order","orders","salon-floor","pos-orders","pos-order","kitchen-tickets","dashboard","sales"])assert.ok(invalidations.some(q=>q[0]===key),key);
+  config.onError(new Error("Todavía hay productos en preparación."));
+  assert.equal(feedback.at(-1).tone,"danger");
+  assert.equal(feedback.at(-1).message,"Todavía hay productos en preparación.");
+ });
+ test(`${section}: una sola entrega para Cocina, Barra y directos; sin botones por producto`,()=>{
+  const serviceItems=["kitchen","bar","direct"].map((destination,i)=>({id:`service-${i}`,orderItemId:"item",destination,destinationLabel:destination,status:"listo",statusLabel:"Listo",name:"Producto"}));
+  const ready={waiterId:"waiter",billClosedAt:undefined,items:[{id:"item",name:"Pedido",qty:"3",unitPrice:"10"}],serviceItems};
+  const view=mount(section,ready,true,false,true);
+  const delivery=view.buttons.filter(n=>n.props.children==="Confirmar entrega");
+  assert.equal(delivery.length,1);
+  assert.equal(delivery[0].props.className,"order-detail-primary");
+  assert.equal(view.buttons.some(n=>n.props.children==="Entregar"||n.props.children==="Cerrar cuenta"),false);
+  delivery[0].props.onClick();assert.deepEqual(view.calls,["entregado"]);
+  for(const destination of ["kitchen","bar","direct"])for(const status of ["nuevo","confirmado","preparando"]){
+   const pending={...ready,serviceItems:[...serviceItems,{id:"pending",orderItemId:"item",destination,status}]};
+   assert.equal(mount(section,pending,true,false,true).buttons.some(n=>n.props.children==="Confirmar entrega"),false);
+  }
+  for(const changes of [{waiterId:"other"},{completedAt:"date"}])assert.equal(mount(section,{...ready,...changes},true,false,true).buttons.some(n=>n.props.children==="Confirmar entrega"),false);
+  assert.equal(mount(section,ready,false,false,true).buttons.some(n=>n.props.children==="Confirmar entrega"),false);
+  assert.ok(mount(section,ready,true,true,true).buttons.every(n=>n.props.disabled));
+  const served={...ready,status:"entregado",serviceItems:serviceItems.map(item=>({...item,status:"entregado"}))};
+  const after=mount(section,served,true,false,true);
+  assert.equal(after.buttons.filter(n=>n.props.children==="Cerrar cuenta").length,1);
+  assert.equal(after.buttons.some(n=>n.props.children==="Confirmar entrega"||n.props.children==="Entregar"),false);
+  const additional={...served,status:"listo",serviceItems:[...served.serviceItems,{...serviceItems[0],id:"new"}]};
+  assert.equal(mount(section,additional,true,false,true).buttons.filter(n=>n.props.children==="Confirmar entrega").length,1);
+ });
+ test(`${section}: permite cancelar entregas directas sin servir y bloquea preparación, entrega o pagos`,()=>{
+  const direct={destination:"direct",status:"listo"};
+  const eligible={status:"listo",waiterId:"waiter",serviceItems:[direct]};
+  const hasCancel=changes=>mount(section,changes).buttons.some(n=>n.props.children==="Cancelar pedido");
+  assert.equal(hasCancel(eligible),true);
+  assert.equal(hasCancel({...eligible,status:"confirmado",serviceItems:[direct,{destination:"kitchen",status:"confirmado"}]}),true);
+  for(const patch of [
+   {paidAmount:"5"},{completedAt:"date"},{status:"en_camino"},{status:"entregado"},{status:"cancelado"},
+   {waiterId:"other"},{serviceItems:[{...direct,status:"entregado"}]},
+   {serviceItems:[direct,{destination:"kitchen",status:"preparando"}]},
+   {serviceItems:[direct,{destination:"bar",status:"listo"}]},
+   {serviceItems:[direct,{destination:"kitchen",status:"entregado"}]},
+  ])assert.equal(hasCancel({...eligible,...patch}),false,JSON.stringify(patch));
+  assert.equal(mount(section,eligible,false).buttons.some(n=>n.props.children==="Cancelar pedido"),false);
+  assert.equal(mount(section,eligible,true,true).buttons.find(n=>n.props.children==="Cancelar pedido").props.disabled,true);
+  assert.equal(hasCancel({status:"listo",serviceItems:[]}),false);
+ });
  test(`${section}: el detalle ofrece la acción real de entrega antes de cobrar`,()=>{
   const view=mount(section);
   const button=view.buttons.find(n=>n.props.children==="Confirmar entrega");
@@ -253,7 +339,8 @@ for(const section of ["salon","orders"]){
   button.props.onClick();
   assert.deepEqual(view.calls,["entregado"]);
  });
- test(`${section}: la entrega pendiente conserva el cobro y el cierre automático no ofrece acciones`,()=>{
+ test(`${section}: el cobro requiere entrega y cuenta cerrada; al finalizar no ofrece acciones`,()=>{
+  assert.equal(mount(section).links.some(n=>n.props.href==="/pos?orderId=pedido-1"),false);
   const pending=mount(section,{status:"entregado"});
   assert.equal(pending.buttons.some(n=>n.props.children==="Liberar mesa"),false);
   assert.ok(pending.links.some(n=>n.props.href==="/pos?orderId=pedido-1"));

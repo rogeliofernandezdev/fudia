@@ -35,7 +35,7 @@ function mount({save=async()=>{},draft={...validDraft},busy=false}={}){
   if(name==="react-select/async")return {default:"AsyncSelect"};
   return require(name);
  });
- const tree=ProductDialog({draft,categories:[],loadAllergens:async()=>[],currencySymbol:"S/",busy,close:()=>{},save});
+ const tree=ProductDialog({draft,categories:[],destinations:[{value:"kitchen",label:"Cocina"},{value:"bar",label:"Barra"},{value:"direct",label:"Entrega directa"}],loadAllergens:async()=>[],currencySymbol:"S/",busy,close:()=>{},save});
  const nodes=[];
  function visit(node){if(!node||typeof node!=="object")return;if(Array.isArray(node)){node.forEach(visit);return}nodes.push(node);visit(node.props?.children)}
  visit(tree);

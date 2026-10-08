@@ -484,31 +484,30 @@ y detalle; no se limita a apilar columnas de escritorio.
 
 ## Acción principal
 
-En el detalle de mesa de Salón, Cobrar es la acción dominante: azul
-`action-pay` con icono de tarjeta, y hover `action-pay-hover`, compartidos con
-el resto del sistema. Confirmar entrega usa fondo blanco `surface`, borde
-azul visible `primary-600`, texto e icono azules. El verde se reserva para los
-estados confirmados, no para representar una acción pendiente. La cabecera presenta un único
-estado operativo: `listo` se expresa como «Listo para entregar». El pago se
-comunica en Pagado y Saldo pendiente, sin repetir una etiqueta de cobro junto
-al estado del pedido. Las tarjetas de Salón reutilizan ese mismo estado y color,
+En el detalle de mesa de Salón, la siguiente acción del flujo es dominante:
+Confirmar entrega cuando todo está Listo, Cerrar cuenta cuando todo está Entregado
+y Cobrar cuando la cuenta está Por cobrar. Comparten azul primario; Cobrar usa
+`action-pay` con icono de tarjeta y hover `action-pay-hover`.
+La entrega se confirma una sola vez para todo el pedido desde el pie.
+El verde se reserva para los
+estados confirmados, no para representar una acción pendiente. La cabecera distingue preparación y cuenta: `listo` se expresa como «Listo para entregar»; la cuenta usa Abierta / Por cobrar / Pagada. Los importes se comunican en Pagado y Saldo pendiente. Las tarjetas de Salón reutilizan ese mismo estado y color,
 sin combinar «Listo» o «Entregado» con «por cobrar»; el saldo se consulta en el
 resumen de cuenta del detalle. La franja superior es decorativa, mide 4 px y usa un
 degradado de menta `brand-600` a azul índigo `primary-600`; no codifica estados.
 No se agrega una instrucción genérica para liberar la mesa: el estado, el saldo
 y las acciones disponibles ya expresan el avance. Quitar ese texto no modifica
-los requisitos de entrega y pago. En móvil, las acciones ocupan todo el ancho
+los requisitos de cierre de cuenta, entrega y pago. En móvil, las acciones ocupan todo el ancho
 y los estados siguen visibles. Esta variante conserva los tokens compartidos
 de altura y radio de control.
 
 El pie del detalle de mesa presenta una sola acción sólida azul, al final del
 grupo: Cobrar si existe saldo cobrable; en otro caso, la siguiente acción real
-del pedido. Confirmar entrega y Editar comparten fondo blanco, borde azul visible
-y geometría de control. Cancelar pedido es una acción secundaria de contorno
+del pedido. Editar es secundaria con fondo blanco y borde azul visible,
+manteniendo la misma geometría de control. Cancelar pedido es una acción secundaria de contorno
 rojo, sin relleno rojo dominante, y conserva su confirmación. Todos los iconos de acción son
 outline de 18 px: tarjeta para Cobrar, plato/check para registrar la entrega,
-gorro de cocina para Enviar a cocina. La mesa se libera automáticamente cuando
-la entrega y el pago están completos, sin botón ni confirmación adicional. En
+recibo para Enviar comanda. La mesa se libera automáticamente cuando
+la cuenta está cerrada, la entrega y el pago están completos, sin botón ni confirmación adicional. En
 móvil se conserva el orden de lectura y de teclado, con botones de ancho
 completo y área táctil de 44 px. Guardar bloquea las acciones y la navegación
 a POS, sin cambiar la jerarquía de color.
@@ -828,3 +827,11 @@ conservan apertura y cierre, con sus etiquetas explícitas y elementos `time`.
 Mientras el turno está abierto no se inventa una fecha de cierre. La API entrega
 instantes RFC 3339 en UTC; el frontend admite también los offsets antiguos de
 PostgreSQL para mantener compatibilidad durante el despliegue.
+
+## Entrega del pedido y cuenta de mesa
+
+- Salón/Pedidos distinguen preparación y cuenta sin códigos técnicos ni instrucciones redundantes. El destino y estado de cada producto se presentan en una fila compacta y alineada.
+- El pie muestra un único botón primario «Confirmar entrega» para todo el pedido cuando todos los productos pendientes están Listos. No se muestran botones de entrega individuales: destino y estado de cada producto son datos de lectura. Cocina/Barra preparan; el mozo confirma todo con una acción. Las rondas adicionales incluyen solo productos aún sin entregar y no repiten las entregas anteriores. No se muestran modales exitosos en estas transiciones operativas.
+- «Agregar productos» reutiliza la comanda con solo líneas nuevas y aparece únicamente con cuenta Abierta. «Cerrar cuenta» es primaria y aparece solo después de entregar todos los productos de todas las rondas. Después se muestra el enlace a cobro solo con entrega completa, permiso y saldo; no se ofrecen más consumos ni reapertura.
+- Cocina y Barra reutilizan el mismo KDS con selector de estación alimentado por backend, permisos independientes y las mismas primitivas visuales.
+- En móvil (390 px) las filas permiten wrap sin desbordar; la entrega global y las demás acciones del pie conservan 44 px y ancho disponible. No se duplican clases de los estilos base.

@@ -18,19 +18,36 @@ no inventa responsables de WhatsApp ni de registros sin autor.
 
 ## Entrega y cierre de pedidos de mesa
 
-En Salón, `status='entregado'` confirma que el mozo llevó el pedido a la mesa.
-Puede registrarse desde `listo` antes del pago. `orders.completed_at` identifica
-el cierre de la cuenta; una mesa entregada sin ese valor sigue ocupada y aparece
-en pedidos abiertos, cobro y solicitudes de cuenta. El índice de mesa abierta
-también incluye estas cuentas para impedir otra comanda sobre la misma mesa.
-La liberación es automática cuando el pedido está entregado y su pago neto
-cubre el total. El último cobro (individual o dividido) y la confirmación de
-entrega evalúan la misma regla y registran `completed_at` en su transacción,
-bajo bloqueo de la fila del pedido. Un pago parcial o una entrega pendiente
-no liberan la mesa. Los pedidos entregados anteriores a esta separación
-conservan su cierre mediante la migración 70; la migración 71 reconcilia solo
-las cuentas entregadas y completamente pagadas que aún estaban abiertas,
-descontando devoluciones. Su reversión no reabre cuentas históricas.
+La mesa solo tiene estados Libre/Ocupada. El primer pedido guardado crea una
+atención y asigna al mozo; abrir su formulario no ocupa la mesa.
+
+La cuenta es independiente de la preparación: Abierta → Por cobrar → Pagada.
+`bill_closed_at/by` registra «Cerrar cuenta». `completed_at` finaliza la atención
+y libera la mesa solo cuando cuenta cerrada, pago neto completo y todos los
+productos entregados coinciden. Cobro individual, dividido, cierre y entrega
+evalúan la misma regla bajo bloqueo del pedido. Cerrar cuenta y cobrar exigen
+estado Entregado y ausencia de productos pendientes en todas las rondas.
+No hay reapertura después del cierre ni botón adicional para liberar la mesa.
+
+`products.service_destination` configura Cocina, Barra o Entrega directa sin
+inferirlo de nombres/categorías ni del control de cantidad. Cada venta conserva
+una copia de destino, producto, cantidad y estado en `order_service_items`.
+Cocina y Barra avanzan Pendiente → Preparando → Listo → Entregado; Entrega directa
+entra en Pendiente de entrega y solo el responsable confirma Entregado.
+Los componentes de un combo conservan tareas separadas, pero una sola línea
+comercial y su precio.
+
+«Agregar productos» conserva la misma cuenta y agrega exclusivamente líneas
+nuevas y una ronda identificada por `request_key` para evitar duplicados.
+No modifica ni reenvía productos preparados/entregados. Solo una cuenta Abierta
+admite más consumo y recalcula el saldo. Por cobrar no admite nuevos productos,
+incluso con pagos parciales. No permite cancelación simple cuando existe preparación
+o entrega.
+
+La migración 73 conserva destinos anteriores (preparados a Cocina y mercadería
+a Entrega directa), conserva atenciones históricas y marca cuentas con pagos
+anteriores como cerradas para cobro. Las migraciones 70/71 preservan sus
+reconciliaciones históricas; no se reabren cuentas finalizadas.
 
 Cada organización configura la moneda ISO 4217, posición del símbolo, precisión,
 nombre y tasa del impuesto general, y si el precio publicado ya lo incluye.

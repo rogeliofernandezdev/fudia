@@ -1,0 +1,6 @@
+/* Owner: operations/orders — read-only product service states. */
+.order-service-lines{display:grid;gap:var(--space-8);margin-top:var(--space-8)}
+.order-service-line{display:flex;align-items:center;justify-content:space-between;gap:var(--space-12);flex-wrap:wrap}
+.order-service-line>div{display:flex;align-items:center;gap:var(--space-8);flex-wrap:wrap;min-width:0}
+.order-service-line small{color:var(--ink-600)}
+@media(max-width:600px){.order-service-line{align-items:flex-start}}

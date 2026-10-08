@@ -258,8 +258,8 @@ func createInventoryCatalogItem(ctx context.Context, tx pgx.Tx, organizationID s
 		}
 		var productID string
 		if err := tx.QueryRow(ctx, `
-			INSERT INTO products(organization_id,category_id,sku,name,description,price,active,product_type,quantity_control)
-			VALUES($1,$2,COALESCE(NULLIF($3,''),'PROD-'||upper(substr(replace(gen_random_uuid()::text,'-',''),1,8))),$4,$5,$6,true,'retail','inventory')
+			INSERT INTO products(organization_id,category_id,sku,name,description,price,active,product_type,quantity_control,service_destination)
+			VALUES($1,$2,COALESCE(NULLIF($3,''),'PROD-'||upper(substr(replace(gen_random_uuid()::text,'-',''),1,8))),$4,$5,$6,true,'retail','inventory','direct')
 			RETURNING id,sku,name`,
 			organizationID, in.NewProduct.CategoryID, in.NewProduct.SKU,
 			in.NewProduct.Name, in.NewProduct.Description, in.NewProduct.Price,

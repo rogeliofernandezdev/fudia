@@ -1,5 +1,7 @@
 export type CategoryProductScope="prepared"|"retail"|"both";
 export type Category={id:string;name:string;sortOrder:number;active:boolean;productScope:CategoryProductScope;productCount:number};
+export type ServiceDestination="kitchen"|"bar"|"direct";
+export type ServiceDestinationOption={value:ServiceDestination;label:string};
 export type ProductType="prepared"|"retail";
 export type QuantityControl="none"|"portions"|"inventory";
 export type Product={
@@ -12,6 +14,7 @@ export type Product={
   price:string;
   active:boolean;
   productType:ProductType;
+  serviceDestination?:ServiceDestination;
   quantityControl:QuantityControl;
   imageUrl:string|null;
   prepMinutes:number|null;
@@ -19,7 +22,7 @@ export type Product={
   featured:boolean;
   costPrice:string|null;
 };
-export type List<T>={items:T[];total:number;page?:number;pageSize?:number};
+export type List<T>={items:T[];total:number;page?:number;pageSize?:number;serviceDestinationOptions?:ServiceDestinationOption[]};
 export type ProductDraft={
   id?:string;
   name:string;
@@ -28,6 +31,7 @@ export type ProductDraft={
   price:string;
   active:boolean;
   productType:ProductType;
+  serviceDestination?:ServiceDestination;
   quantityControl:QuantityControl;
   imageUrl:string|null;
   prepMinutes:string;

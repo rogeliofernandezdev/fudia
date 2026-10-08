@@ -16,34 +16,35 @@ type organizationRoleSeed struct {
 }
 
 var companyAdministratorMenuAccess = []string{
-	"dashboard","pos","pedidos","cocina","mesas","caja","reservas","productos","disponibilidad","combos","recetas",
-	"inventario","kardex","compras","logistica","clientes","locales","fiscal","usuarios","call_center","carta_qr","kiosco",
-	"delivery","delivery_apps","repartidores","crm","puntos","ofertas","personal","costos","bi","app_manager","facturacion",
-	"integraciones","whatsapp_bot",
+	"dashboard", "pos", "pedidos", "cocina", "mesas", "caja", "reservas", "productos", "disponibilidad", "combos", "recetas",
+	"inventario", "kardex", "compras", "logistica", "clientes", "locales", "fiscal", "usuarios", "call_center", "carta_qr", "kiosco",
+	"delivery", "delivery_apps", "repartidores", "crm", "puntos", "ofertas", "personal", "costos", "bi", "app_manager", "facturacion",
+	"integraciones", "whatsapp_bot",
 }
 
 var companyAdministratorPermissions = []string{
-	"dashboard.read","users.read","users.manage","organizations.read","organizations.manage","fiscal.read","subscription.read",
-	"menu.read","menu.manage","recipes.manage","customers.read","customers.manage",
-	"orders.read","orders.manage","kitchen.manage","tables.read","tables.manage","reservations.read","reservations.manage",
-	"cash.read","cash.manage","cash.expected.read","receipts.read","receipts.manage",
-	"inventory.read","inventory.manage","inventory.transfer",
-	"purchases.read","purchases.manage","purchases.approve","purchases.receive","expenses.read","expenses.manage","expenses.void",
-	"reports.read","audit.read","delivery.read","delivery.manage",
+	"dashboard.read", "users.read", "users.manage", "organizations.read", "organizations.manage", "fiscal.read", "subscription.read",
+	"menu.read", "menu.manage", "recipes.manage", "customers.read", "customers.manage",
+	"orders.read", "orders.manage", "kitchen.manage", "bar.manage", "tables.read", "tables.manage", "reservations.read", "reservations.manage",
+	"cash.read", "cash.manage", "cash.expected.read", "receipts.read", "receipts.manage",
+	"inventory.read", "inventory.manage", "inventory.transfer",
+	"purchases.read", "purchases.manage", "purchases.approve", "purchases.receive", "expenses.read", "expenses.manage", "expenses.void",
+	"reports.read", "audit.read", "delivery.read", "delivery.manage",
 }
 
 var defaultOrganizationRoles = []organizationRoleSeed{
-	{Name:"Administrador de empresa",SystemKey:"administrator",Description:"Administra la empresa, sus locales, equipo y operación sin privilegios de plataforma",MenuAccess:companyAdministratorMenuAccess,Permissions:companyAdministratorPermissions},
-	{Name:"Gerente de local",SystemKey:"location_manager",Description:"Gestiona la operación completa de los locales asignados",MenuAccess:[]string{"dashboard","pos","pedidos","cocina","mesas","caja","reservas","productos","disponibilidad","combos","recetas","inventario","kardex","compras","clientes","locales","fiscal","usuarios","costos"},Permissions:[]string{"dashboard.read","organizations.read","organizations.manage","users.read","users.manage","menu.read","menu.manage","recipes.manage","customers.read","customers.manage","orders.read","orders.manage","kitchen.manage","tables.read","tables.manage","cash.read","cash.manage","cash.expected.read","reservations.read","reservations.manage","inventory.read","inventory.manage","inventory.transfer","purchases.read","purchases.manage","purchases.approve","purchases.receive","expenses.read","expenses.manage","expenses.void","reports.read"}},
-	{Name:"Supervisor de turno",SystemKey:"shift_supervisor",Description:"Supervisa atención, comandas, mesas, caja y reservas",MenuAccess:[]string{"dashboard","pos","pedidos","cocina","mesas","caja","reservas","productos","disponibilidad","combos","clientes"},Permissions:[]string{"dashboard.read","menu.read","customers.read","customers.manage","orders.read","orders.manage","kitchen.manage","tables.read","tables.manage","cash.read","cash.manage","cash.expected.read","reservations.read","reservations.manage"}},
-	{Name:"Cajero",SystemKey:"cashier",Description:"Opera caja, cobros y arqueos",MenuAccess:[]string{"pos","pedidos","mesas","caja","clientes"},Permissions:[]string{"menu.read","customers.read","customers.manage","orders.read","orders.manage","tables.read","cash.read","cash.manage"}},
-	{Name:"Mesero",SystemKey:"waiter",Description:"Gestiona mesas, clientes, pedidos y reservas",MenuAccess:[]string{"pedidos","mesas","reservas"},Permissions:[]string{"menu.read","customers.read","customers.manage","orders.read","orders.manage","tables.read","reservations.read","reservations.manage"}},
-	{Name:"Cocinero",SystemKey:"cook",Description:"Consulta y actualiza comandas de cocina",MenuAccess:[]string{"cocina","disponibilidad"},Permissions:[]string{"menu.read","orders.read","kitchen.manage"}},
-	{Name:"Jefe de cocina",SystemKey:"kitchen_manager",Description:"Gestiona comandas, disponibilidad, recetas y producción",MenuAccess:[]string{"cocina","productos","disponibilidad","recetas","inventario"},Permissions:[]string{"menu.read","menu.manage","orders.read","kitchen.manage","recipes.manage","inventory.read"}},
-	{Name:"Almacenero",SystemKey:"warehouse",Description:"Gestiona inventario, kardex y recepción",MenuAccess:[]string{"inventario","kardex","compras"},Permissions:[]string{"inventory.read","inventory.manage","inventory.transfer","purchases.read","purchases.receive"}},
-	{Name:"Compras",SystemKey:"buyer",Description:"Gestiona proveedores y órdenes de compra",MenuAccess:[]string{"inventario","kardex","compras"},Permissions:[]string{"inventory.read","purchases.read","purchases.manage","purchases.approve","purchases.receive"}},
-	{Name:"Contabilidad",SystemKey:"accounting",Description:"Consulta cierres, ventas, gastos e información fiscal",MenuAccess:[]string{"dashboard","caja","fiscal","costos"},Permissions:[]string{"dashboard.read","cash.read","cash.expected.read","expenses.read","expenses.manage","expenses.void","reports.read","fiscal.read","organizations.read"}},
-	{Name:"Auditor",SystemKey:"auditor",Description:"Acceso de solo lectura a operación e historial",MenuAccess:[]string{"dashboard","productos","clientes","inventario","kardex","compras","costos"},Permissions:[]string{"dashboard.read","menu.read","customers.read","orders.read","cash.read","inventory.read","purchases.read","expenses.read","reports.read","audit.read"}},
+	{Name: "Administrador de empresa", SystemKey: "administrator", Description: "Administra la empresa, sus locales, equipo y operación sin privilegios de plataforma", MenuAccess: companyAdministratorMenuAccess, Permissions: companyAdministratorPermissions},
+	{Name: "Gerente de local", SystemKey: "location_manager", Description: "Gestiona la operación completa de los locales asignados", MenuAccess: []string{"dashboard", "pos", "pedidos", "cocina", "mesas", "caja", "reservas", "productos", "disponibilidad", "combos", "recetas", "inventario", "kardex", "compras", "clientes", "locales", "fiscal", "usuarios", "costos"}, Permissions: []string{"dashboard.read", "organizations.read", "organizations.manage", "users.read", "users.manage", "menu.read", "menu.manage", "recipes.manage", "customers.read", "customers.manage", "orders.read", "orders.manage", "kitchen.manage", "tables.read", "tables.manage", "cash.read", "cash.manage", "cash.expected.read", "reservations.read", "reservations.manage", "inventory.read", "inventory.manage", "inventory.transfer", "purchases.read", "purchases.manage", "purchases.approve", "purchases.receive", "expenses.read", "expenses.manage", "expenses.void", "reports.read"}},
+	{Name: "Supervisor de turno", SystemKey: "shift_supervisor", Description: "Supervisa atención, comandas, mesas, caja y reservas", MenuAccess: []string{"dashboard", "pos", "pedidos", "cocina", "mesas", "caja", "reservas", "productos", "disponibilidad", "combos", "clientes"}, Permissions: []string{"dashboard.read", "menu.read", "customers.read", "customers.manage", "orders.read", "orders.manage", "kitchen.manage", "tables.read", "tables.manage", "cash.read", "cash.manage", "cash.expected.read", "reservations.read", "reservations.manage"}},
+	{Name: "Cajero", SystemKey: "cashier", Description: "Opera caja, cobros y arqueos", MenuAccess: []string{"pos", "pedidos", "mesas", "caja", "clientes"}, Permissions: []string{"menu.read", "customers.read", "customers.manage", "orders.read", "orders.manage", "tables.read", "cash.read", "cash.manage"}},
+	{Name: "Mesero", SystemKey: "waiter", Description: "Gestiona mesas, clientes, pedidos y reservas", MenuAccess: []string{"pedidos", "mesas", "reservas"}, Permissions: []string{"menu.read", "customers.read", "customers.manage", "orders.read", "orders.manage", "tables.read", "reservations.read", "reservations.manage"}},
+	{Name: "Encargado de barra", SystemKey: "bartender", Description: "Prepara las bebidas de Barra", MenuAccess: []string{"cocina"}, Permissions: []string{"menu.read", "orders.read", "bar.manage"}},
+	{Name: "Cocinero", SystemKey: "cook", Description: "Consulta y actualiza comandas de cocina", MenuAccess: []string{"cocina", "disponibilidad"}, Permissions: []string{"menu.read", "orders.read", "kitchen.manage"}},
+	{Name: "Jefe de cocina", SystemKey: "kitchen_manager", Description: "Gestiona comandas, disponibilidad, recetas y producción", MenuAccess: []string{"cocina", "productos", "disponibilidad", "recetas", "inventario"}, Permissions: []string{"menu.read", "menu.manage", "orders.read", "kitchen.manage", "recipes.manage", "inventory.read"}},
+	{Name: "Almacenero", SystemKey: "warehouse", Description: "Gestiona inventario, kardex y recepción", MenuAccess: []string{"inventario", "kardex", "compras"}, Permissions: []string{"inventory.read", "inventory.manage", "inventory.transfer", "purchases.read", "purchases.receive"}},
+	{Name: "Compras", SystemKey: "buyer", Description: "Gestiona proveedores y órdenes de compra", MenuAccess: []string{"inventario", "kardex", "compras"}, Permissions: []string{"inventory.read", "purchases.read", "purchases.manage", "purchases.approve", "purchases.receive"}},
+	{Name: "Contabilidad", SystemKey: "accounting", Description: "Consulta cierres, ventas, gastos e información fiscal", MenuAccess: []string{"dashboard", "caja", "fiscal", "costos"}, Permissions: []string{"dashboard.read", "cash.read", "cash.expected.read", "expenses.read", "expenses.manage", "expenses.void", "reports.read", "fiscal.read", "organizations.read"}},
+	{Name: "Auditor", SystemKey: "auditor", Description: "Acceso de solo lectura a operación e historial", MenuAccess: []string{"dashboard", "productos", "clientes", "inventario", "kardex", "compras", "costos"}, Permissions: []string{"dashboard.read", "menu.read", "customers.read", "orders.read", "cash.read", "inventory.read", "purchases.read", "expenses.read", "reports.read", "audit.read"}},
 }
 
 func seedOrganizationRoles(ctx context.Context, tx pgx.Tx, organizationID string) (string, error) {

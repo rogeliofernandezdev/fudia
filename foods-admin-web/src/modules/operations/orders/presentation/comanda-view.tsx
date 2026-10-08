@@ -7,8 +7,9 @@ import {CatalogProduct,ComboConfigurator,ComboSelection,ConfiguredCombo,ComandaC
 import type {Draft,FloorTable,LineDraft} from "../../salon/domain/types";
 const money=(value:number)=>value.toFixed(2);
 
-export function ComandaView({initial,mode,allTables,busy,currencySymbol,close,save,notify,channelLabel="Salón",onBack}:{initial:Draft;mode:"create"|"edit";allTables:FloorTable[];busy:boolean;currencySymbol:string;close:(draft:Draft)=>void;save:(v:Draft,sendToKitchen:boolean)=>void|Promise<void>;notify:(n:{tone:"danger"|"success";title:string;message:string})=>void;channelLabel?:string;onBack?:(draft:Draft)=>void}){
-  const editing=mode==="edit";
+export function ComandaView({initial,mode,allTables,busy,currencySymbol,close,save,notify,channelLabel="Salón",onBack}:{initial:Draft;mode:"create"|"edit"|"append";allTables:FloorTable[];busy:boolean;currencySymbol:string;close:(draft:Draft)=>void;save:(v:Draft,sendToKitchen:boolean)=>void|Promise<void>;notify:(n:{tone:"danger"|"success";title:string;message:string})=>void;channelLabel?:string;onBack?:(draft:Draft)=>void}){
+  const adding=mode==="append";
+  const editing=mode!=="create";
   const salon=initial.channel==="salon";
   const[v,setV]=useState(initial);
   const[ticketOpen,setTicketOpen]=useState(false);
@@ -76,17 +77,17 @@ export function ComandaView({initial,mode,allTables,busy,currencySymbol,close,sa
     if(!v.lines.length){notify({tone:"danger",title:"Comanda vacía",message:"Agrega al menos un producto."});return}
     if(salon&&!v.tableId){notify({tone:"danger",title:"Falta mesa",message:"Selecciona la mesa del pedido."});return}
     submitting.current=true;
-    try{await save(salon?v:{...v,tableId:""},salon?sendToKitchen:true)}finally{submitting.current=false}
+    try{await save(salon?v:{...v,tableId:""},salon?(adding||sendToKitchen):true)}finally{submitting.current=false}
   };
   return(
-    <Dialog as="div" className="salon-comanda-shell" role="dialog" aria-modal="true" aria-busy={busy} aria-label={editing?"Editar comanda":"Nueva comanda"}>
+    <Dialog as="div" className="salon-comanda-shell" role="dialog" aria-modal="true" aria-busy={busy} aria-label={adding?"Agregar productos":editing?"Editar comanda":"Nueva comanda"}>
       <header className="salon-comanda-header">
         <div className="salon-comanda-header-main">
           <button type="button" className="salon-comanda-icon-button" disabled={busy} aria-label={onBack?"Editar datos del pedido":"Volver al salón"} onClick={()=>{if(!busy&&!submitting.current)(onBack??close)(v)}}>
             <Icon name="chevronLeft" size={20}/>
           </button>
           <div className="salon-comanda-heading">
-            <h2>{editing?"Editar comanda":"Nueva comanda"}</h2>
+            <h2>{adding?"Agregar productos":editing?"Editar comanda":"Nueva comanda"}</h2>
           </div>
         </div>
         <div className="salon-comanda-header-actions">
@@ -216,7 +217,7 @@ export function ComandaView({initial,mode,allTables,busy,currencySymbol,close,sa
               {busy?"Guardando…":"Guardar borrador"}
             </Button>}
             <Button icon={editing?"check":"chefHat"} className="salon-comanda-submit" onClick={()=>submit(!editing)} disabled={busy||!v.lines.length}>
-              {busy?(editing?"Guardando…":"Enviando…"):(editing?"Guardar":"Registrar y enviar a cocina")}
+              {busy?(editing?"Guardando…":"Enviando…"):(adding?"Agregar y enviar":editing?"Guardar":"Registrar y enviar")}
             </Button>
           </footer>
         </aside>
@@ -232,7 +233,7 @@ export function ComandaView({initial,mode,allTables,busy,currencySymbol,close,sa
         </button>
         {v.lines.length>0&&(
           <button type="button" className="salon-comanda-mobile-submit" onClick={()=>submit(!editing)} disabled={busy}>
-            {busy?"…":<><Icon name={editing?"save":"receipt"} size={14}/><span>{editing?"Guardar":"Registrar"}</span></>}
+            {busy?"…":<><Icon name={editing?"save":"receipt"} size={14}/><span>{adding?"Agregar":editing?"Guardar":"Registrar"}</span></>}
           </button>
         )}
       </div>

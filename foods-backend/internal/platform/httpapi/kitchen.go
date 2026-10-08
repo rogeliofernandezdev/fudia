@@ -13,6 +13,7 @@ import (
 )
 
 type kitchenTicket struct {
+	Destination   string      `json:"destination"`
 	ID            string      `json:"id"`
 	OrderID       string      `json:"orderId"`
 	RoundNumber   int         `json:"roundNumber"`
@@ -89,6 +90,13 @@ func ensureKitchenRoundForOrder(ctx context.Context, tx pgx.Tx, s scope, orderID
 }
 
 func syncOrderKitchenStatus(ctx context.Context, tx pgx.Tx, s scope, orderID string) error {
+	var hasService bool
+	if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM order_service_items WHERE order_id=$1 AND organization_id=$2)`, orderID, s.OrganizationID).Scan(&hasService); err != nil {
+		return err
+	}
+	if hasService {
+		return syncOrderServiceStatus(ctx, tx, s, orderID)
+	}
 	var confirmed, preparing, ready int
 	if err := tx.QueryRow(ctx, `
 		SELECT
@@ -163,6 +171,11 @@ func (a *API) listKitchenTickets(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	destination := strings.TrimSpace(r.URL.Query().Get("destination"))
+	if destination != "" && destination != "kitchen" && destination != "bar" {
+		fail(w, 400, "invalid_destination", "Selecciona Cocina o Barra.")
+		return
+	}
 	tickets := []kitchenTicket{}
 	counts := map[string]int{"confirmado": 0, "preparando": 0, "listo": 0}
 
@@ -173,7 +186,9 @@ func (a *API) listKitchenTickets(w http.ResponseWriter, r *http.Request) {
 		  AND location_id=$2
 		  AND status IN ('confirmado','preparando','listo')
 		  AND ($3='' OR channel=$3)
-		  AND NOT EXISTS (
+ AND $4 <> 'bar'
+		  AND NOT EXISTS(SELECT 1 FROM order_service_items si WHERE si.order_id=orders.id AND si.organization_id=orders.organization_id)
+ AND NOT EXISTS (
 		    SELECT 1 FROM order_kitchen_rounds kr
 		    WHERE kr.order_id=orders.id
 		      AND kr.organization_id=orders.organization_id
@@ -182,7 +197,7 @@ func (a *API) listKitchenTickets(w http.ResponseWriter, r *http.Request) {
 		ORDER BY
 		  CASE status WHEN 'preparando' THEN 0 WHEN 'confirmado' THEN 1 ELSE 2 END,
 		  updated_at ASC,created_at ASC
-		LIMIT 150`, s.OrganizationID, s.LocationID, channel)
+		LIMIT 150`, s.OrganizationID, s.LocationID, channel, destination)
 	if err != nil {
 		fail(w, 503, "kitchen_unavailable", "No pudimos cargar las comandas de cocina.")
 		return
@@ -233,12 +248,14 @@ func (a *API) listKitchenTickets(w http.ResponseWriter, r *http.Request) {
 		WHERE kr.organization_id=$1 AND kr.location_id=$2
 		  AND kr.status IN ('confirmado','preparando','listo')
 		  AND o.status NOT IN ('entregado','cancelado')
+ AND NOT EXISTS(SELECT 1 FROM order_service_items si WHERE si.order_id=o.id AND si.organization_id=o.organization_id)
 		  AND ($3='' OR o.channel=$3)
+ AND $4 <> 'bar'
 		ORDER BY
 		  CASE kr.status WHEN 'preparando' THEN 0 WHEN 'confirmado' THEN 1 ELSE 2 END,
 		  kr.updated_at ASC,kr.created_at ASC
 		LIMIT 150
-	`, s.OrganizationID, s.LocationID, channel)
+	`, s.OrganizationID, s.LocationID, channel, destination)
 	if err != nil {
 		fail(w, 503, "kitchen_unavailable", "No pudimos cargar las rondas de cocina.")
 		return
@@ -278,11 +295,25 @@ func (a *API) listKitchenTickets(w http.ResponseWriter, r *http.Request) {
 	}
 	roundRows.Close()
 
+	if destination == "bar" {
+		tickets = []kitchenTicket{}
+		counts = map[string]int{"confirmado": 0, "preparando": 0, "listo": 0}
+	}
+	serviceTickets, serviceErr := a.serviceKitchenTickets(r, channel, destination)
+	if serviceErr != nil {
+		fail(w, 503, "kitchen_unavailable", "No pudimos cargar la preparación por área.")
+		return
+	}
+	for _, ticket := range serviceTickets {
+		tickets = append(tickets, ticket)
+		counts[ticket.Status]++
+	}
 	writeJSON(w, 200, map[string]any{
-		"items": tickets,
-		"counts": counts,
-		"channelOptions": orderChannels,
-		"serverTime": time.Now().UTC(),
+		"destinationOptions": serviceDestinations[:2],
+		"items":              tickets,
+		"counts":             counts,
+		"channelOptions":     orderChannels,
+		"serverTime":         time.Now().UTC(),
 	})
 }
 
@@ -301,6 +332,9 @@ func (a *API) updateKitchenTicketStatus(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	if a.updateServiceKitchenTicket(w, r, in.Status) {
+		return
+	}
 	tx, err := a.db.Begin(r.Context())
 	if err != nil {
 		fail(w, 503, "kitchen_unavailable", "No pudimos actualizar la comanda.")
@@ -315,9 +349,13 @@ func (a *API) updateKitchenTicketStatus(w http.ResponseWriter, r *http.Request) 
 		JOIN orders o ON o.id=kr.order_id AND o.organization_id=kr.organization_id
 		WHERE kr.id=$1 AND kr.organization_id=$2 AND kr.location_id=$3
 		  AND o.status NOT IN ('entregado','cancelado')
+		  AND o.completed_at IS NULL
 		FOR UPDATE OF kr,o
 	`, r.PathValue("id"), s.OrganizationID, s.LocationID).Scan(&roundCurrent, &roundOrderID)
 	if err == nil {
+		if !allowLegacyKitchenTicket(w, r, tx, s, roundOrderID) {
+			return
+		}
 		if !validKitchenTransition(roundCurrent, in.Status) {
 			fail(w, 409, "invalid_kitchen_transition", "La ronda cambió de estado. Actualiza la cola antes de continuar.")
 			return
@@ -356,6 +394,7 @@ func (a *API) updateKitchenTicketStatus(w http.ResponseWriter, r *http.Request) 
 		SELECT status
 		FROM orders
 		WHERE id=$1 AND organization_id=$2 AND location_id=$3
+		  AND completed_at IS NULL
 		FOR UPDATE
 	`, r.PathValue("id"), s.OrganizationID, s.LocationID).Scan(&current)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -364,6 +403,9 @@ func (a *API) updateKitchenTicketStatus(w http.ResponseWriter, r *http.Request) 
 	}
 	if err != nil {
 		fail(w, 503, "kitchen_unavailable", "No pudimos validar la comanda.")
+		return
+	}
+	if !allowLegacyKitchenTicket(w, r, tx, s, r.PathValue("id")) {
 		return
 	}
 	if !validKitchenTransition(current, in.Status) {
@@ -389,4 +431,21 @@ func (a *API) updateKitchenTicketStatus(w http.ResponseWriter, r *http.Request) 
 	}
 	a.audit(r, action, "order", r.PathValue("id"))
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// The caller holds the order lock. Check after locking so snapshots added by a
+// concurrent consumption cannot be mistaken for a historical kitchen ticket.
+func allowLegacyKitchenTicket(w http.ResponseWriter, r *http.Request, tx pgx.Tx, s scope, orderID string) bool {
+	var hasService bool
+	if err := tx.QueryRow(r.Context(), `SELECT EXISTS(
+		SELECT 1 FROM order_service_items WHERE order_id=$1 AND organization_id=$2
+	)`, orderID, s.OrganizationID).Scan(&hasService); err != nil {
+		fail(w, 503, "kitchen_unavailable", "No pudimos validar la comanda.")
+		return false
+	}
+	if hasService {
+		fail(w, 404, "kitchen_ticket_not_found", "La comanda no existe en esta estación.")
+		return false
+	}
+	return true
 }

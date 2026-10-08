@@ -1,4 +1,5 @@
 "use client";
+import {canChargeAccount} from "../../orders/domain/service-flow";
 import {Dialog} from "@/design-system/dialog";
 import "./pos.css";
 import Link from "next/link";
@@ -112,7 +113,7 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
   function actionsFor(item:POSOrderSummary){
     return <div className="pos-actions">
       <RowActionButton action="view" label={`Ver detalle de ${item.code}`} onClick={()=>setDetailId(item.id)}/>
-      {canManage&&item.paymentStatus!=="paid"&&<RowActionButton action="charge" label={shift?`Cobrar ${item.code}`:"Abre un turno para cobrar"} disabled={!shift} onClick={()=>setPaymentOrderId(item.id)}/>}
+      {canManage&&item.paymentStatus!=="paid"&&<RowActionButton action="charge" label={shift?`Cobrar ${item.code}`:"Abre un turno para cobrar"} disabled={!shift||!canChargeAccount({...item,billClosedAt:item.billClosed?"closed":undefined})} onClick={()=>setPaymentOrderId(item.id)}/>}
     </div>;
   }
 
@@ -211,7 +212,7 @@ function POSPaymentEntry({loading,error,data,shiftLoading,shiftError,shiftName,c
     if(!data)state={title:"Pedido no disponible",text:"No pudimos encontrar este pedido en el local activo.",retry:retryOrder};
     else if(data.paymentStatus==="paid"||Number(data.remainingAmount)<=0)state={title:"El pedido ya está pagado",text:"No tiene saldo pendiente de cobro."};
     else if(data.order.completedAt||data.order.status==="cancelado")state={title:"El pedido está cerrado",text:"No se pueden registrar nuevos cobros."};
-    else if(!["listo","en_camino"].includes(data.order.status)&&!(data.order.channel==="salon"&&data.order.status==="entregado"))state={title:"El pedido aún no está listo",text:"Podrás cobrar cuando esté listo para entregar."};
+    else if(!canChargeAccount(data.order))state=data.order.channel==="salon"?{title:"Cuenta no disponible para cobro",text:"El mozo debe entregar todos los productos y cerrar la cuenta antes de cobrar."}:{title:"Pedido no listo",text:"El pedido todavía no está listo para cobrar."};
     else if(!shiftName)state={title:"Necesitas un turno de caja",text:"Abre un turno o únete a una caja para registrar el cobro.",cash:true};
     else return <PaymentDialog order={{...data.order,paidAmount:data.paidAmount,remainingAmount:data.remainingAmount,paymentStatus:data.paymentStatus}} shiftName={shiftName} busy={busy} formatMoney={formatMoney} close={close} save={save}/>;
   }
@@ -230,7 +231,7 @@ function POSPaymentLoading(){return <div className="pos-payment-body pos-payment
 </div>}
 
 function POSDetailDialog({loading,error,data,canManage,hasShift,formatMoney,formatDateTime,close,refund}:{loading:boolean;error?:string;data?:POSOrderDetail;canManage:boolean;hasShift:boolean;formatMoney:(value:number)=>string;formatDateTime:(value:string)=>string;close:()=>void;refund:(payment:Payment)=>void}){
-  const closed=Boolean(data&&(data.order.completedAt||data.order.status==="cancelado"||(data.order.status==="entregado"&&data.order.channel!=="salon")));
+  const closed=Boolean(data&&(data.order.completedAt||data.order.status==="cancelado"));
   return <div className="modal-backdrop modal-overlay-in"><Dialog className="crud-modal pos-detail-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="pos-detail-title">
     <div className="modal-accent"/>
     <header><span className="modal-title-icon"><Icon name="receipt" size={18}/></span><div className="pos-modal-heading"><small>DETALLE DE COBRO</small><h2 id="pos-detail-title">{data?.order.code??"Pedido"}</h2>{data&&<p>{data.order.tableName||data.order.customerName||channelLabel[data.order.channel]||"Pedido del local"}</p>}</div><button type="button" aria-label="Cerrar" onClick={close}><Icon name="close"/></button></header>

@@ -22,6 +22,7 @@ export type KitchenItem={
 };
 
 export type KitchenTicket={
+ destination?:"kitchen"|"bar";
   id:string;
   orderId:string;
   roundNumber:number;
@@ -42,4 +43,5 @@ export type KitchenResponse={
   counts:Record<KitchenStatus,number>;
   channelOptions:KitchenOption[];
   serverTime:string;
+  destinationOptions?:KitchenOption[];
 };

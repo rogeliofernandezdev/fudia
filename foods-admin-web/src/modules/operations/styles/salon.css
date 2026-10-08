@@ -737,7 +737,7 @@
   min-width:0;
 }
 
-.salon-order-detail .order-detail-line-info span{
+.salon-order-detail .order-detail-line-info>span{
   color:var(--ink-950);
   font-size:var(--font-size-control);
   font-weight:var(--font-weight-700);

@@ -32,32 +32,35 @@ type orderItem struct {
 	Modifiers  []orderItemModifier  `json:"modifiers,omitempty"`
 }
 type order struct {
-	ID               string      `json:"id"`
-	Code             string      `json:"code"`
-	Channel          string      `json:"channel"`
-	Status           string      `json:"status"`
-	CompletedAt      string      `json:"completedAt,omitempty"`
-	CustomerID       string      `json:"customerId"`
-	CustomerName     string      `json:"customerName"`
-	CustomerPhone    string      `json:"customerPhone"`
-	Address          string      `json:"address"`
-	Reference        string      `json:"reference"`
-	TableID          string      `json:"tableId"`
-	TableName        string      `json:"tableName"`
-	WaiterID         string      `json:"waiterId"`
-	WaiterName       string      `json:"waiterName"`
-	CollectedByNames []string    `json:"collectedByNames"`
-	Notes            string      `json:"notes"`
-	Subtotal         string      `json:"subtotal"`
-	DeliveryFee      string      `json:"deliveryFee"`
-	Total            string      `json:"total"`
-	CreatedAt        string      `json:"createdAt"`
-	UpdatedAt        string      `json:"updatedAt"`
-	ItemCount        int         `json:"itemCount"`
-	Items            []orderItem `json:"items,omitempty"`
-	PaidAmount       string      `json:"paidAmount,omitempty"`
-	RemainingAmount  string      `json:"remainingAmount,omitempty"`
-	PaymentStatus    string      `json:"paymentStatus,omitempty"`
+	ID               string             `json:"id"`
+	Code             string             `json:"code"`
+	Channel          string             `json:"channel"`
+	Status           string             `json:"status"`
+	CompletedAt      string             `json:"completedAt,omitempty"`
+	BillClosedAt     string             `json:"billClosedAt,omitempty"`
+	AccountState     string             `json:"accountState"`
+	ServiceItems     []orderServiceItem `json:"serviceItems,omitempty"`
+	CustomerID       string             `json:"customerId"`
+	CustomerName     string             `json:"customerName"`
+	CustomerPhone    string             `json:"customerPhone"`
+	Address          string             `json:"address"`
+	Reference        string             `json:"reference"`
+	TableID          string             `json:"tableId"`
+	TableName        string             `json:"tableName"`
+	WaiterID         string             `json:"waiterId"`
+	WaiterName       string             `json:"waiterName"`
+	CollectedByNames []string           `json:"collectedByNames"`
+	Notes            string             `json:"notes"`
+	Subtotal         string             `json:"subtotal"`
+	DeliveryFee      string             `json:"deliveryFee"`
+	Total            string             `json:"total"`
+	CreatedAt        string             `json:"createdAt"`
+	UpdatedAt        string             `json:"updatedAt"`
+	ItemCount        int                `json:"itemCount"`
+	Items            []orderItem        `json:"items,omitempty"`
+	PaidAmount       string             `json:"paidAmount,omitempty"`
+	RemainingAmount  string             `json:"remainingAmount,omitempty"`
+	PaymentStatus    string             `json:"paymentStatus,omitempty"`
 }
 type orderItemSelectionInput struct {
 	GroupID   string `json:"groupId"`
@@ -126,7 +129,7 @@ type orderUpdateInput struct {
 
 const orderColumns = `id,code,channel,status,COALESCE(customer_id::text,''),customer_name,customer_phone,address,reference,COALESCE(table_id::text,''),COALESCE((SELECT name FROM tables t WHERE t.id=orders.table_id),''),notes,subtotal::text,delivery_fee::text,total::text,to_char(created_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),to_char(updated_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),COALESCE(to_char(completed_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),''),
 COALESCE(waiter_id::text,''),COALESCE((SELECT u.full_name FROM users u WHERE u.id=orders.waiter_id AND u.organization_id=orders.organization_id),''),
-ARRAY(SELECT DISTINCT u.full_name FROM payments p JOIN users u ON u.id=p.created_by AND u.organization_id=p.organization_id WHERE p.order_id=orders.id AND p.organization_id=orders.organization_id AND p.location_id=orders.location_id ORDER BY u.full_name)`
+ARRAY(SELECT DISTINCT u.full_name FROM payments p JOIN users u ON u.id=p.created_by AND u.organization_id=p.organization_id WHERE p.order_id=orders.id AND p.organization_id=orders.organization_id AND p.location_id=orders.location_id ORDER BY u.full_name),COALESCE(to_char(bill_closed_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),'')`
 
 var orderChannels = []map[string]string{{"value": "salon", "label": "Salón"}, {"value": "mostrador", "label": "Mostrador"}, {"value": "recojo", "label": "Recojo"}, {"value": "delivery", "label": "Delivery"}, {"value": "whatsapp", "label": "WhatsApp"}}
 var orderStatuses = []map[string]string{{"value": "nuevo", "label": "Nuevo"}, {"value": "confirmado", "label": "Confirmado"}, {"value": "preparando", "label": "Preparando"}, {"value": "listo", "label": "Listo"}, {"value": "en_camino", "label": "En camino"}, {"value": "entregado", "label": "Entregado"}, {"value": "cancelado", "label": "Cancelado"}}
@@ -142,7 +145,11 @@ var orderTransitions = map[string][]string{
 
 func scanOrder(row pgx.Row) (order, error) {
 	var o order
-	err := row.Scan(&o.ID, &o.Code, &o.Channel, &o.Status, &o.CustomerID, &o.CustomerName, &o.CustomerPhone, &o.Address, &o.Reference, &o.TableID, &o.TableName, &o.Notes, &o.Subtotal, &o.DeliveryFee, &o.Total, &o.CreatedAt, &o.UpdatedAt, &o.CompletedAt, &o.WaiterID, &o.WaiterName, &o.CollectedByNames)
+	err := row.Scan(&o.ID, &o.Code, &o.Channel, &o.Status, &o.CustomerID, &o.CustomerName, &o.CustomerPhone, &o.Address, &o.Reference, &o.TableID, &o.TableName, &o.Notes, &o.Subtotal, &o.DeliveryFee, &o.Total, &o.CreatedAt, &o.UpdatedAt, &o.CompletedAt, &o.WaiterID, &o.WaiterName, &o.CollectedByNames, &o.BillClosedAt)
+	o.AccountState = "open"
+	if o.BillClosedAt != "" {
+		o.AccountState = "awaiting_payment"
+	}
 	return o, err
 }
 
@@ -203,6 +210,9 @@ func applyOrderPaymentSummary(ctx context.Context, q orderRowQuerier, o *order, 
 	o.PaidAmount = strconv.FormatFloat(paid, 'f', 2, 64)
 	o.RemainingAmount = strconv.FormatFloat(remaining, 'f', 2, 64)
 	o.PaymentStatus = paymentStatus(total, paid)
+	if o.BillClosedAt != "" && paid >= total {
+		o.AccountState = "paid"
+	}
 	return nil
 }
 
@@ -724,6 +734,21 @@ func insertPreparedOrderItemsForRound(ctx context.Context, tx pgx.Tx, organizati
 				return err
 			}
 		}
+		if len(it.Selections) == 0 {
+			productID := ""
+			if it.ProductID != nil {
+				productID = *it.ProductID
+			}
+			if err := insertOrderServiceItem(ctx, tx, organizationID, orderID, itemID, productID, it.Name, it.Qty); err != nil {
+				return err
+			}
+		} else {
+			for _, sel := range it.Selections {
+				if err := insertOrderServiceItem(ctx, tx, organizationID, orderID, itemID, sel.ProductID, sel.Name, it.Qty); err != nil {
+					return err
+				}
+			}
+		}
 		for _, modifier := range it.Modifiers {
 			if _, err := tx.Exec(ctx, `
 				INSERT INTO order_item_modifier_selections(
@@ -810,7 +835,7 @@ func (a *API) getOrdersFloor(w http.ResponseWriter, r *http.Request) {
 		SELECT t.id,t.name,t.zone,t.seats,
 		  o.id,COALESCE(o.code,''),COALESCE(o.channel,''),COALESCE(o.status,''),COALESCE(o.customer_id::text,''),COALESCE(o.customer_name,''),COALESCE(o.customer_phone,''),COALESCE(o.address,''),COALESCE(o.reference,''),COALESCE(o.table_id::text,''),'',COALESCE(o.notes,''),COALESCE(o.subtotal::text,'0'),COALESCE(o.delivery_fee::text,'0'),COALESCE(o.total::text,'0'),COALESCE(to_char(o.created_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),''),COALESCE(to_char(o.updated_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),''),
 		  COALESCE(item_totals.item_count,0),COALESCE(payment_totals.paid,0)::text,COALESCE(to_char(o.completed_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),''),
-		  COALESCE(o.waiter_id::text,''),COALESCE(waiter.full_name,''),COALESCE(payment_totals.collectors,'{}'::text[])
+		  COALESCE(o.waiter_id::text,''),COALESCE(waiter.full_name,''),COALESCE(payment_totals.collectors,'{}'::text[]),COALESCE(to_char(o.bill_closed_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),'')
 		FROM tables t
 		LEFT JOIN orders o
 		  ON o.table_id=t.id
@@ -857,7 +882,7 @@ func (a *API) getOrdersFloor(w http.ResponseWriter, r *http.Request) {
 			&ft.ID, &ft.Name, &ft.Zone, &ft.Seats,
 			&oid, &o.Code, &o.Channel, &o.Status, &o.CustomerID, &o.CustomerName, &o.CustomerPhone,
 			&o.Address, &o.Reference, &o.TableID, &o.TableName, &o.Notes, &o.Subtotal, &o.DeliveryFee,
-			&o.Total, &o.CreatedAt, &o.UpdatedAt, &o.ItemCount, &paidText, &o.CompletedAt, &o.WaiterID, &o.WaiterName, &o.CollectedByNames,
+			&o.Total, &o.CreatedAt, &o.UpdatedAt, &o.ItemCount, &paidText, &o.CompletedAt, &o.WaiterID, &o.WaiterName, &o.CollectedByNames, &o.BillClosedAt,
 		); err != nil {
 			fail(w, 503, "orders_unavailable", "No pudimos cargar el salón.")
 			return
@@ -873,6 +898,13 @@ func (a *API) getOrdersFloor(w http.ResponseWriter, r *http.Request) {
 			o.PaidAmount = strconv.FormatFloat(paid, 'f', 2, 64)
 			o.RemainingAmount = strconv.FormatFloat(math.Max(0, total-paid), 'f', 2, 64)
 			o.PaymentStatus = paymentStatus(total, paid)
+			o.AccountState = "open"
+			if o.BillClosedAt != "" {
+				o.AccountState = "awaiting_payment"
+				if paid >= total {
+					o.AccountState = "paid"
+				}
+			}
 			ft.Order = &o
 		}
 		items = append(items, ft)
@@ -893,6 +925,11 @@ func (a *API) getOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	if err != nil {
 		fail(w, 503, "order_unavailable", "No pudimos cargar el pedido.")
+		return
+	}
+	o.ServiceItems, err = loadOrderServiceItems(r.Context(), a.db, s.OrganizationID, o.ID)
+	if err != nil {
+		fail(w, 503, "order_unavailable", "No pudimos consultar las entregas.")
 		return
 	}
 	o.Items, err = loadOrderItems(r.Context(), a.db, o.ID, s.OrganizationID)
@@ -1018,6 +1055,17 @@ func (a *API) createOrder(w http.ResponseWriter, r *http.Request) {
 		fail(w, quantityErr.Status, quantityErr.Code, quantityErr.Message)
 		return
 	}
+	if in.SendToKitchen {
+		if err = syncOrderServiceStatus(r.Context(), tx, s, o.ID); err != nil {
+			fail(w, 503, "order_unavailable", "No pudimos actualizar la preparación.")
+			return
+		}
+		o, err = scanOrder(tx.QueryRow(r.Context(), `SELECT `+orderColumns+` FROM orders WHERE id=$1 AND organization_id=$2 AND location_id=$3`, o.ID, s.OrganizationID, s.LocationID))
+		if err != nil {
+			fail(w, 503, "order_unavailable", "No pudimos leer el pedido.")
+			return
+		}
+	}
 	if err = tx.Commit(r.Context()); err != nil {
 		fail(w, 503, "order_unavailable", "No pudimos guardar el pedido.")
 		return
@@ -1066,6 +1114,17 @@ func (a *API) updateOrder(w http.ResponseWriter, r *http.Request) {
 	if !editableOrderStatus(currentStatus) {
 		fail(w, 409, "order_not_editable", "Solo se puede editar un pedido en estado Nuevo o Confirmado.")
 		return
+	}
+	if channel == "salon" && currentStatus != "nuevo" {
+		var sent bool
+		if err = tx.QueryRow(r.Context(), `SELECT EXISTS(SELECT 1 FROM order_service_items WHERE order_id=$1 AND organization_id=$2)`, r.PathValue("id"), s.OrganizationID).Scan(&sent); err != nil {
+			fail(w, 503, "order_unavailable", "No pudimos validar la comanda.")
+			return
+		}
+		if sent {
+			fail(w, 409, "sent_order_not_editable", "Agrega productos a la cuenta sin reemplazar la comanda enviada.")
+			return
+		}
 	}
 	var hasKitchenRounds bool
 	if err = tx.QueryRow(r.Context(), `SELECT EXISTS(SELECT 1 FROM order_kitchen_rounds WHERE order_id=$1 AND organization_id=$2 AND location_id=$3)`, r.PathValue("id"), s.OrganizationID, s.LocationID).Scan(&hasKitchenRounds); err != nil {
@@ -1202,9 +1261,20 @@ func (a *API) updateOrderStatus(w http.ResponseWriter, r *http.Request) {
 		fail(w, 409, "kitchen_transition_required", "Los estados de preparación solo se actualizan desde Cocina.")
 		return
 	}
-	if in.Status == "cancelado" && (current == "preparando" || current == "listo" || current == "en_camino") {
-		fail(w, 409, "cancellation_requires_void", "La preparación ya comenzó. Usa un flujo de anulación o merma; no se puede cancelar como si el producto no hubiera sido preparado.")
-		return
+	var hasService bool
+	if in.Status == "cancelado" {
+		var started bool
+		if err = tx.QueryRow(r.Context(), `SELECT count(*)>0,
+			COALESCE(bool_or(status='entregado' OR (destination<>'direct' AND status IN ('preparando','listo'))),false)
+			FROM order_service_items WHERE order_id=$1 AND organization_id=$2`,
+			r.PathValue("id"), s.OrganizationID).Scan(&hasService, &started); err != nil {
+			fail(w, 503, "order_unavailable", "No pudimos validar los productos.")
+			return
+		}
+		if started || (!hasService && (current == "preparando" || current == "listo" || current == "en_camino")) {
+			fail(w, 409, "cancellation_requires_void", "Ya hay productos preparados o entregados. Esta cuenta requiere un flujo de anulación.")
+			return
+		}
 	}
 	releasingTable := current == "entregado" && in.Status == "entregado" && channel == "salon" && tableID != "" && !completed
 	allowed := releasingTable
@@ -1213,6 +1283,14 @@ func (a *API) updateOrderStatus(w http.ResponseWriter, r *http.Request) {
 			allowed = true
 			break
 		}
+	}
+	if in.Status == "cancelado" {
+		if hasService {
+			// Direct delivery is ready immediately, not prepared. Its unserved
+			// quantities can still be reversed if no station has started work.
+			allowed = current == "nuevo" || current == "confirmado" || current == "preparando" || current == "listo"
+		}
+		allowed = allowed && !completed
 	}
 	if !allowed {
 		fail(w, 409, "invalid_transition", "No se puede pasar de "+current+" a "+in.Status+".")
@@ -1254,15 +1332,41 @@ func (a *API) updateOrderStatus(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if in.Status == "confirmado" {
+		if _, err = tx.Exec(r.Context(), `UPDATE order_service_items SET status=CASE WHEN destination='direct' THEN 'listo' ELSE 'confirmado' END,updated_at=now() WHERE order_id=$1 AND organization_id=$2 AND status='nuevo'`, r.PathValue("id"), s.OrganizationID); err != nil {
+			fail(w, 503, "order_unavailable", "No pudimos enviar los productos.")
+			return
+		}
+	}
+	if in.Status == "entregado" {
+		var pending bool
+		if err = tx.QueryRow(r.Context(), `SELECT EXISTS(SELECT 1 FROM order_service_items WHERE order_id=$1 AND organization_id=$2 AND status NOT IN ('listo','entregado'))`, r.PathValue("id"), s.OrganizationID).Scan(&pending); err != nil {
+			fail(w, 503, "order_unavailable", "No pudimos validar la entrega.")
+			return
+		}
+		if pending {
+			fail(w, 409, "items_not_ready", "Todavía hay productos en preparación.")
+			return
+		}
+		if _, err = tx.Exec(r.Context(), `UPDATE order_service_items SET status='entregado',delivered_at=now(),delivered_by=(SELECT id FROM users WHERE id=$3 AND organization_id=$2),updated_at=now() WHERE order_id=$1 AND organization_id=$2 AND status='listo'`, r.PathValue("id"), s.OrganizationID, s.UserID); err != nil {
+			fail(w, 503, "order_unavailable", "No pudimos registrar la entrega.")
+			return
+		}
+	}
 	tag, err := tx.Exec(r.Context(), `
 		UPDATE orders
-		SET status=$4,updated_at=now(),
-		    completed_at=CASE WHEN $4='entregado' AND channel<>'salon' THEN COALESCE(completed_at,now()) ELSE completed_at END
+		SET status=$4,updated_at=now()
 		WHERE id=$1 AND organization_id=$2 AND location_id=$3`,
 		r.PathValue("id"), s.OrganizationID, s.LocationID, in.Status)
 	if err != nil || tag.RowsAffected() == 0 {
 		fail(w, 404, "order_not_found", "El pedido no existe.")
 		return
+	}
+	if in.Status == "confirmado" {
+		if err = syncOrderServiceStatus(r.Context(), tx, s, r.PathValue("id")); err != nil {
+			fail(w, 503, "order_unavailable", "No pudimos actualizar la atención.")
+			return
+		}
 	}
 	if _, err = completeDeliveredSalonOrder(r.Context(), tx, s, r.PathValue("id")); err != nil {
 		fail(w, 503, "order_unavailable", "No pudimos finalizar la cuenta del pedido.")

@@ -100,3 +100,14 @@ de microsegundos, independientemente de la zona horaria de la sesión PostgreSQL
 fecha de operación distinta y no reemplaza apertura ni cierre. Las lecturas de
 cajas, turno actual, historial y detalle usan la misma proyección. No cambia
 el instante almacenado ni se necesita una migración.
+
+## Cuenta de mesa y destinos de atención
+
+- `GET /v1/admin/service-destinations` entrega el catálogo de destinos; Productos también devuelve `serviceDestinationOptions`.
+- `POST /v1/admin/orders/{id}/items` agrega solo consumo nuevo a cuenta Abierta con `requestKey`, cantidades y elecciones. Precios, cupos e inventario se validan en backend. Cuenta cerrada devuelve `409 order_bill_closed`; los reintentos de rondas ya confirmadas conservan idempotencia.
+- `POST /v1/admin/orders/{id}/bill/close` exige todos los productos entregados y pasa la cuenta a Por cobrar sin liberar la mesa. Productos pendientes o agregado distinto de Entregado devuelven `409 products_not_delivered`. Cobros individual y dividido de Salón exigen este cierre y verifican de nuevo cada producto bajo bloqueo del pedido.
+- `PATCH /v1/admin/orders/{id}/service-items/{itemId}/deliver` entrega una línea lista. Las tres mutaciones exigen `orders.manage`, tenant/local y mozo asignado.
+- KDS admite `destination=kitchen|bar`; no devuelve Entrega directa. El identificador de ticket es opaco y separa ronda/estación. Preparar Cocina exige `kitchen.manage`; Barra exige `bar.manage`.
+- «Encargado de barra» tiene `menu.read`, `orders.read`, `bar.manage` y acceso a Cocina/Barra. Solo Administrador de empresa incorpora automáticamente `bar.manage`; otros roles existentes conservan sus permisos. No se asigna el rol a usuarios automáticamente.
+- Pagos individual/dividido, cierre y entrega bloquean la misma fila. Liberación automática exige cierre + pago completo + todos entregados. Una cuenta pagada no se amplía ni reabre.
+- Concierge conserva idempotencia por solicitud/ronda y puede ampliar la cuenta de Salón solo mientras Abierta, sin reenviar consumos anteriores. Después del cierre devuelve `409 order_bill_closed`, igual que el flujo del mozo.

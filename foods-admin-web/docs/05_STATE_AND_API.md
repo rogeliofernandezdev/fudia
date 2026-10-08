@@ -84,19 +84,48 @@ No se requiere un paso adicional de asignación. Cobrar sigue reservado a
 La API vuelve a validar la propiedad en cada mutación. No se transfiere la mesa
 por abrir su detalle ni al cobrarla. Cada nueva ocupación obtiene su propio responsable.
 
-## Entrega en Salón
+## Cuenta y entrega en Salón
 
-Salón y Pedidos ofrecen «Confirmar entrega» cuando Cocina termina una
-comanda. El estado `entregado` conserva la mesa ocupada y el enlace a cobro
-mientras la cuenta está abierta (`completedAt` ausente). La mesa se libera
-automáticamente al cumplir entrega y pago completo, independientemente del
-orden de estas acciones; no existe un botón adicional «Liberar mesa».
-Los pagos parciales y los pedidos aún no entregados conservan la ocupación.
-El backend registra el cierre en la misma transacción del último cobro o de
-la entrega. Las mutaciones refrescan Salón, Pedidos y POS para mantener
-sincronizados entrega, saldo y ocupación.
-Los detalles abiertos de Salón y Pedidos se refrescan cada 10 segundos hasta
-el cierre, para reflejar también los cobros registrados por otro usuario.
+La mesa permanece Ocupada desde el primer pedido hasta finalizar la atención.
+El estado de cuenta (Abierta / Por cobrar / Pagada) se muestra separado del
+estado de preparación, sin fusionar etiquetas.
+
+Productos obtiene del backend Cocina, Barra y Entrega directa. Salón y Pedidos
+muestran destino y estado por producto solo como lectura, sin botones por fila.
+El pie presenta un único «Confirmar entrega» para todo el pedido cuando todos
+los productos pendientes están Listos. Usa `PATCH orders/{id}/status` con
+`status=entregado`: el backend confirma todas las líneas listas en una transacción,
+sin modificar las ya entregadas. No incorpora una alternativa de entrega individual.
+Cocina/Barra preparan de forma independiente; Entrega directa nunca ingresa a KDS.
+
+«Agregar productos» abre `ComandaView` en modo append sobre la misma mesa,
+vacío de líneas anteriores; utiliza `requestKey` estable durante el reintento.
+Solo la cuenta Abierta admite consumo adicional. «Cerrar cuenta» se habilita
+después de entregar todos los productos, incluidos los de cada ronda adicional;
+marca Por cobrar sin liberar la mesa. Una cuenta cerrada no admite más consumo
+ni reapertura, aunque tenga saldo pendiente o pagos parciales.
+
+Solo el mozo asignado con `orders.manage` puede agregar, cerrar o entregar;
+otros mozos consultan el detalle. Cajero o mozo con `cash.manage` y turno asignado
+registran pagos únicamente de cuentas cerradas con todos los productos entregados.
+El backend valida cada producto bajo bloqueo del pedido, incluso si el estado
+agregado o el cierre histórico dicen otra cosa. La liberación automática requiere
+cuenta cerrada, pago completo y todos los productos entregados.
+
+La confirmación global de entrega y el cierre actualizan directamente la vista,
+bloquean sus botones durante la petición y conservan el modal de error.
+La entrega global mantiene el bloqueo hasta finalizar el refresco de los datos,
+para no permitir una segunda confirmación sobre el estado anterior.
+Invalidan detalle, Pedidos, Salón, POS, Cocina/Barra, Ventas y Dashboard.
+Los detalles abiertos se refrescan cada 10 segundos hasta `completedAt`.
+
+Salón y Pedidos reutilizan `canCancelOrder`: una Entrega directa lista aún sin
+servir puede cancelarse si no hay pagos ni preparación iniciada o entrega de
+otros productos. El estado agregado Listo no significa que se haya preparado.
+Pedidos históricos sin detalle de servicio conservan cancelación solo desde
+Nuevo/Confirmado. Backend valida de nuevo bajo bloqueo y revierte cantidades
+una sola vez; la autorización del mozo y `orders.manage` no cambia.
+
 
 ## Acceso directo al cobro
 

@@ -30,6 +30,7 @@ const page=compile("modules/operations/orders/presentation/orders-manager.tsx",n
  if(name==="@/shared/hooks/use-debounced-value")return{useDebouncedValue:value=>value};
  if(name==="@/shared/i18n/regional-format")return regional;
  if(name.endsWith("order-actions"))return actions;
+ if(name.endsWith("order-service-controls"))return{accountLabel:()=>"Cuenta abierta"};
  if(name.startsWith("@/")||name.startsWith("."))return{};
  return require(name);
 },"\nexport {registeredAt,OrderDetail};\n");

@@ -1,9 +1,10 @@
+import type {ServiceItem} from "../../orders/domain/service-flow";
 import type {ComboSelection} from "./catalog-types";
 
 export type OrderItemSelection={groupId:string;groupName:string;productId:string;name:string;surcharge:string};
 export type OrderItem={id:string;productId:string;name:string;qty:string;unitPrice:string;note:string;itemType:"product"|"combo";selections?:OrderItemSelection[]};
 export type Order={
- id:string;code:string;channel:string;status:string;completedAt?:string;customerId:string;customerName:string;customerPhone:string;
+ id:string;code:string;channel:string;status:string;completedAt?:string;billClosedAt?:string;accountState?:"open"|"awaiting_payment"|"paid";serviceItems?:ServiceItem[];customerId:string;customerName:string;customerPhone:string;
  address:string;reference:string;tableId:string;tableName:string;notes:string;subtotal:string;deliveryFee:string;total:string;
  waiterId?:string;waiterName?:string;collectedByNames?:string[];
  createdAt:string;updatedAt:string;itemCount?:number;items?:OrderItem[];paidAmount?:string;remainingAmount?:string;paymentStatus?:"pending"|"partial"|"paid";

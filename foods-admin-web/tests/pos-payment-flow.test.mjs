@@ -7,7 +7,9 @@ import ts from "typescript";
 
 const require=createRequire(import.meta.url);
 const root=new URL("../src/modules/operations/pos/presentation/",import.meta.url);
-const detail={order:{id:"order-1",code:"PED-001",channel:"salon",status:"entregado",tableName:"Mesa 04",customerName:"",total:"40",createdAt:"2026-10-07T12:00:00Z",items:[]},paidAmount:"10",remainingAmount:"30",paymentStatus:"partial",payments:[]};
+const serviceFlowExports={};
+vm.runInNewContext(ts.transpileModule(readFileSync(new URL("../src/modules/operations/orders/domain/service-flow.ts",import.meta.url),"utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{exports:serviceFlowExports});
+const detail={order:{billClosedAt:"2026-10-07T13:00:00Z",id:"order-1",code:"PED-001",channel:"salon",status:"entregado",tableName:"Mesa 04",customerName:"",total:"40",createdAt:"2026-10-07T12:00:00Z",items:[]},paidAmount:"10",remainingAmount:"30",paymentStatus:"partial",payments:[]};
 const primitives=Object.fromEntries(["Button","FormField","Icon","Input","PageHeader","Pagination","RowActionButton","Select","Status","Textarea"].map(name=>[name,name]));
 function nodes(tree){const result=[];function visit(node){if(!node||typeof node!=="object")return;if(Array.isArray(node)){node.forEach(visit);return}result.push(node);visit(node.props?.children)}visit(tree);return result}
 function compile(file,resolve,extra=""){
@@ -34,6 +36,7 @@ function mountPage({canManage=true,shift=true,busy=false,initialOrderId="order-1
   if(name==="@/shared/i18n/regional-format")return{formatRegionalNumber:value=>String(value),formatRegionalDateTime:()=>"Hoy"};
   if(name==="@/shared/hooks/use-debounced-value")return{useDebouncedValue:value=>value};
   if(name==="@/shared/routing/page-routes")return{pageRoutes:{cash:"/cash"}};
+  if(name.endsWith("service-flow"))return serviceFlowExports;
   if(name.endsWith("shift-attribution"))return{cashShiftAttribution:()=>({name:"Ana"})};
   if(name.startsWith("@/")||name.startsWith("../")||name.startsWith("./"))return{};
   return require(name);
@@ -106,12 +109,13 @@ test("errores de pedido o caja tienen reintento y la caja ausente ofrece ir a Ca
  assert.equal(missing.some(node=>node.type==="PaymentDialog"),false);
 });
 
-test("el formulario no permite cobrar sin permiso, pedidos pagados, cerrados o aún en preparación",()=>{
+test("el formulario no permite cobrar sin permiso, pedidos pagados, cancelados o con cuenta abierta",()=>{
  const view=mountPage();
- for(const changes of [{canManage:false},{data:{...detail,paymentStatus:"paid",remainingAmount:"0"}},{data:{...detail,order:{...detail.order,completedAt:"2026-10-07T14:00:00Z"}}},{data:{...detail,order:{...detail.order,status:"cancelado"}}},{data:{...detail,order:{...detail.order,status:"preparando"}}},{data:{...detail,order:{...detail.order,channel:"delivery"}}}]){
+ for(const changes of [{canManage:false},{data:{...detail,paymentStatus:"paid",remainingAmount:"0"}},{data:{...detail,order:{...detail.order,completedAt:"2026-10-07T14:00:00Z"}}},{data:{...detail,order:{...detail.order,status:"cancelado"}}},{data:{...detail,order:{...detail.order,billClosedAt:undefined,status:"preparando"}}},{data:{...detail,order:{...detail.order,channel:"delivery",status:"preparando"}}},...["confirmado","preparando","listo"].map(status=>({data:{...detail,order:{...detail.order,status}}})),{data:{...detail,order:{...detail.order,serviceItems:[{status:"listo",destination:"bar"}]}}}]){
   assert.equal(nodes(view.POSPaymentEntry(entryProps(changes))).some(node=>node.type==="PaymentDialog"),false);
  }
- for(const status of ["listo","en_camino","entregado"])assert.equal(view.POSPaymentEntry(entryProps({data:{...detail,order:{...detail.order,status}}})).type,"PaymentDialog");
+ assert.equal(view.POSPaymentEntry(entryProps()).type,"PaymentDialog");
+ for(const status of ["listo","en_camino","entregado"])assert.equal(view.POSPaymentEntry(entryProps({data:{...detail,order:{...detail.order,channel:"delivery",status}}})).type,"PaymentDialog");
 });
 
 test("el envío se bloquea durante el cobro y conserva separados los detalles de consulta",()=>{

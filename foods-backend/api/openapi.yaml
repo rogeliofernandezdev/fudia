@@ -58,6 +58,7 @@ paths:
     post:
       operationId: createConciergeOrder
       summary: Crea un pedido WhatsApp de mesa; Fudia deriva tenencia y mesa del QR y recalcula precios y disponibilidad
+      description: "Las nuevas rondas de una cuenta existente de Salón requieren cuenta Abierta. Después de Cerrar cuenta devuelve 409 order_bill_closed; los reintentos de solicitudes ya confirmadas conservan idempotencia."
       security: [{ conciergeServiceKey: [] }]
       parameters:
         - { in: path, name: token, required: true, schema: { type: string, minLength: 32, maxLength: 32 } }
@@ -358,7 +359,7 @@ paths:
         - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
         - { in: query, name: pageSize, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
       responses:
-        "200": { description: Productos, content: { application/json: { schema: { type: object, required: [items, total], properties: { items: { type: array, items: { $ref: "#/components/schemas/Product" } }, total: { type: integer } } } } } }
+        "200": { description: Productos, content: { application/json: { schema: { type: object, required: [items, total], properties: { serviceDestinationOptions: { type: array, items: { $ref: "#/components/schemas/Option" } }, items: { type: array, items: { $ref: "#/components/schemas/Product" } }, total: { type: integer } } } } } }
         "401": { $ref: "#/components/responses/Unauthorized" }
     post:
       operationId: createProduct
@@ -910,7 +911,7 @@ paths:
     post:
       operationId: createPayment
       summary: Registra un cobro contra un pedido usando el turno asignado del usuario
-      description: El último cobro libera automáticamente una mesa de Salón si el pedido ya está entregado. Pago y cierre se registran en la misma transacción; un pago parcial o una entrega pendiente mantienen la cuenta abierta.
+      description: "Salón exige cuenta cerrada para cobro y todos los productos entregados; si hay productos pendientes devuelve 409 products_not_delivered, incluso con un cierre histórico. El último cobro libera automáticamente la mesa en la misma transacción; un pago parcial mantiene Por cobrar y Mesa Ocupada."
       security: [{ sessionCookie: [] }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/PaymentInput" } } } }
       responses:
@@ -922,7 +923,7 @@ paths:
     post:
       operationId: createPaymentBatch
       summary: Registra un cobro dividido en varios medios de pago
-      description: Requiere cash.manage y turno asignado. Todos los pagos se registran atómicamente; si completan el saldo de una mesa entregada, se registra su cierre en la misma transacción.
+      description: "Requiere cash.manage y turno asignado. Salón exige cuenta cerrada y todos los productos entregados; pendientes devuelven 409 products_not_delivered. Todos los pagos se registran atómicamente; al completar el saldo se finaliza la atención y libera la mesa en la misma transacción."
       security: [{ sessionCookie: [] }]
       requestBody:
         required: true
@@ -1042,7 +1043,7 @@ paths:
     parameters: [{ $ref: "#/components/parameters/EntityId" }]
     patch:
       operationId: updateOperationalOrderStatus
-      description: "Las mesas asignadas solo admiten acciones de atención de su mozo, además de orders.manage; otro usuario recibe 403 order_assigned_to_another_waiter. En Salón la entrega puede registrarse antes del cobro. La mesa se libera automáticamente cuando la entrega y el pago están completos, sin importar su orden; completedAt identifica ese cierre. Cocina y Caja conservan sus permisos independientes."
+      description: "Las mesas asignadas solo admiten acciones de atención de su mozo, además de orders.manage; otro usuario recibe 403 order_assigned_to_another_waiter. En Salón la entrega puede registrarse antes del cobro. La mesa se libera automáticamente con cuenta cerrada, entrega y pago completos; completedAt identifica ese cierre. Cancelar exige ausencia de pagos, preparación iniciada y productos entregados; Entrega directa lista sin servir sigue siendo cancelable. Pedidos históricos sin detalle de servicio solo se cancelan desde Nuevo/Confirmado. Cocina y Caja conservan sus permisos independientes."
       summary: Aplica una transición operativa permitida del pedido
       security: [{ sessionCookie: [] }]
       requestBody: { required: true, content: { application/json: { schema: { type: object, required: [status], properties: { status: { type: string, enum: [confirmado, en_camino, entregado, cancelado] } } } } } }
@@ -1152,29 +1153,65 @@ paths:
         "403": { description: Permiso insuficiente o mesa asignada a otro mozo, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
         "404": { description: Pedido no encontrado en la empresa y local }
         "409": { description: Comanda no editable }
+  /v1/admin/service-destinations:
+    get:
+      operationId: listServiceDestinations
+      summary: Destinos de preparación y entrega
+      security: [{ sessionCookie: [] }]
+      responses: { "200": { description: Catálogo operativo, content: { application/json: { schema: { type: object, properties: { items: { type: array, items: { $ref: "#/components/schemas/Option" } } } } } } } }
+  /v1/admin/orders/{id}/items:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    post:
+      operationId: appendOrderItems
+      summary: Agregar consumo a una cuenta de mesa
+      description: "orders.manage y mozo asignado. Solo cuenta Abierta y líneas nuevas sin reenviar consumo anterior. requestKey evita duplicación en reintentos. Cuenta cerrada devuelve 409 order_bill_closed, incluso con pago parcial; pagada o finalizada tampoco admite más consumo."
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [requestKey, items], properties: { requestKey: { type: string, minLength: 1, maxLength: 160 }, items: { type: array, minItems: 1, maxItems: 200, items: { $ref: "#/components/schemas/OrderItemInput" } } } } } } }
+      responses: { "200": { description: Cuenta actualizada, content: { application/json: { schema: { $ref: "#/components/schemas/Order" } } } }, "403": { $ref: "#/components/responses/Forbidden" }, "404": { description: Cuenta no encontrada }, "409": { description: Cuenta o producto no disponible para esta acción } }
+  /v1/admin/orders/{id}/bill/close:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    post:
+      operationId: closeOrderBill
+      summary: Cerrar cuenta para cobrar
+      description: "orders.manage y mozo asignado. Exige estado Entregado y todos los productos de todas las rondas entregados; pendientes devuelven 409 products_not_delivered. Marca Por cobrar sin liberar mesa. Desde el cierre no admite más consumo ni reapertura."
+      security: [{ sessionCookie: [] }]
+      responses: { "200": { description: Cuenta actualizada, content: { application/json: { schema: { $ref: "#/components/schemas/Order" } } } }, "403": { $ref: "#/components/responses/Forbidden" }, "404": { description: Cuenta no encontrada }, "409": { description: Cuenta o producto no disponible para esta acción } }
+  /v1/admin/orders/{id}/service-items/{itemId}/deliver:
+    parameters:
+      - { $ref: "#/components/parameters/EntityId" }
+      - { in: path, name: itemId, required: true, schema: { type: string, format: uuid } }
+    patch:
+      operationId: deliverOrderServiceItem
+      summary: Confirmar entrega de un producto listo
+      description: "orders.manage y mozo asignado. Confirma toda la cantidad de la línea de servicio. Solo libera si cuenta cerrada, pago completo y todos entregados."
+      security: [{ sessionCookie: [] }]
+      responses: { "200": { description: Cuenta actualizada, content: { application/json: { schema: { $ref: "#/components/schemas/Order" } } } }, "403": { $ref: "#/components/responses/Forbidden" }, "404": { description: Cuenta no encontrada }, "409": { description: Cuenta o producto no disponible para esta acción } }
   /v1/admin/orders/{id}/status:
     parameters: [{ $ref: "#/components/parameters/EntityId" }]
     patch:
       operationId: updateOrderStatus
-      description: "Exige orders.manage y, para una mesa asignada, ser su mozo; otro usuario recibe 403 order_assigned_to_another_waiter. Entregado registra la entrega aunque haya saldo. La mesa se libera automáticamente al completar entrega y pago. Cocina y Caja mantienen sus permisos independientes."
+      description: "Exige orders.manage y, para una mesa asignada, ser su mozo; otro usuario recibe 403 order_assigned_to_another_waiter. Entregado registra la entrega aunque haya saldo. La mesa se libera automáticamente con cuenta cerrada, entrega y pago completos. Cancelar revierte cantidades solo sin pagos, preparación iniciada ni productos entregados; una Entrega directa lista pero sin servir es cancelable. Pedidos históricos sin detalle de servicio conservan la restricción a Nuevo/Confirmado. Cocina y Caja mantienen sus permisos independientes."
       security: [{ sessionCookie: [] }]
       requestBody: { required: true, content: { application/json: { schema: { type: object, required: [status], properties: { status: { type: string, enum: [confirmado, preparando, listo, en_camino, entregado, cancelado] } } } } } }
       responses: { "200": { description: Estado actualizado, content: { application/json: { schema: { $ref: "#/components/schemas/Order" } } } }, "404": { description: No encontrado }, "409": { description: Transición no permitida }, "403": { $ref: "#/components/responses/Forbidden" } }
   /v1/admin/kitchen/tickets:
     get:
       operationId: listKitchenTickets
-      summary: Cola KDS del local activo con pedidos confirmados, en preparación y listos
+      description: "Excluye Entrega directa. destination filtra la estación; cada estación avanza independientemente."
+      summary: Comandas de Cocina y Barra del local activo
       security: [{ sessionCookie: [] }]
       parameters:
+        - { in: query, name: destination, schema: { type: string, enum: [kitchen, bar] } }
         - { in: query, name: channel, schema: { type: string, enum: [salon, mostrador, recojo, delivery, whatsapp] } }
       responses:
-        "200": { description: Comandas de cocina, content: { application/json: { schema: { type: object, required: [items, counts, channelOptions, serverTime], properties: { items: { type: array, items: { $ref: "#/components/schemas/KitchenTicket" } }, counts: { type: object, required: [confirmado, preparando, listo], properties: { confirmado: { type: integer }, preparando: { type: integer }, listo: { type: integer } } }, channelOptions: { type: array, items: { type: object, required: [value, label], properties: { value: { type: string }, label: { type: string } } } }, serverTime: { type: string, format: date-time } } } } } }
+        "200": { description: Comandas de cocina, content: { application/json: { schema: { type: object, required: [items, counts, channelOptions, serverTime], properties: { items: { type: array, items: { $ref: "#/components/schemas/KitchenTicket" } }, counts: { type: object, required: [confirmado, preparando, listo], properties: { confirmado: { type: integer }, preparando: { type: integer }, listo: { type: integer } } }, destinationOptions: { type: array, items: { $ref: "#/components/schemas/Option" } }, channelOptions: { type: array, items: { type: object, required: [value, label], properties: { value: { type: string }, label: { type: string } } } }, serverTime: { type: string, format: date-time } } } } } }
         "403": { $ref: "#/components/responses/Forbidden" }
   /v1/admin/kitchen/tickets/{id}/status:
-    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    parameters: [{ in: path, name: id, required: true, schema: { type: string }, description: Identificador opaco devuelto por KitchenTicket }]
     patch:
       operationId: updateKitchenTicketStatus
-      summary: Cocina inicia preparación o marca una comanda como lista
+      summary: Iniciar o completar preparación en su estación
+      description: "Exige kitchen.manage para Cocina o bar.manage para Barra. No confirma entregas. Una estación sin productos asociados devuelve 404; omitir el sufijo de Barra no habilita Cocina. La compatibilidad histórica aplica solo a pedidos sin ninguna instantánea de servicio, incluidas las entregadas."
       security: [{ sessionCookie: [] }]
       requestBody: { required: true, content: { application/json: { schema: { type: object, required: [status], properties: { status: { type: string, enum: [preparando, listo] } } } } } }
       responses: { "204": { description: Estado de cocina actualizado }, "400": { $ref: "#/components/responses/BadRequest" }, "404": { description: Pedido no encontrado }, "409": { description: La comanda cambió de estado }, "403": { $ref: "#/components/responses/Forbidden" } }
@@ -1313,7 +1350,7 @@ components:
     ExchangeRateInput: { type: object, required: [baseCurrency, quoteCurrency, rate, effectiveAt, source], properties: { baseCurrency: { type: string, pattern: "^[A-Z]{3}$" }, quoteCurrency: { type: string, pattern: "^[A-Z]{3}$" }, rate: { type: string, pattern: "^[0-9]+(\\.[0-9]+)?$" }, effectiveAt: { type: string, format: date-time }, source: { type: string, enum: [manual, provider] }, providerReference: { type: [string, "null"] } } }
     CategoryInput: { type: object, required: [name, sortOrder], properties: { name: { type: string, maxLength: 120 }, sortOrder: { type: integer, minimum: 0 }, active: { type: boolean }, productScope: { type: string, enum: [prepared, retail, both], default: prepared, description: "Indica si la categoría puede clasificar productos preparados, mercadería vendible o ambos." } } }
     Category: { allOf: [{ $ref: "#/components/schemas/CategoryInput" }, { type: object, required: [id, active, productScope, productCount], properties: { id: { type: string, format: uuid }, active: { type: boolean }, productCount: { type: integer } } }] }
-    ProductInput: { type: object, required: [name, price], properties: { sku: { type: string, maxLength: 40 }, name: { type: string, maxLength: 160 }, description: { type: string, maxLength: 1000 }, categoryId: { type: [string, "null"], format: uuid }, price: { type: string, pattern: "^[0-9]+(\\.[0-9]{1,2})?$" }, active: { type: boolean }, productType: { type: string, enum: [prepared, retail], default: prepared, description: "Clasificación operativa independiente de categoría y control de cantidad." }, quantityControl: { type: string, enum: [none, portions, inventory], default: none } } }
+    ProductInput: { type: object, required: [name, price], properties: { sku: { type: string, maxLength: 40 }, name: { type: string, maxLength: 160 }, description: { type: string, maxLength: 1000 }, categoryId: { type: [string, "null"], format: uuid }, price: { type: string, pattern: "^[0-9]+(\\.[0-9]{1,2})?$" }, active: { type: boolean }, productType: { type: string, enum: [prepared, retail], default: prepared, description: "Clasificación operativa independiente de categoría y control de cantidad." }, serviceDestination: { type: string, enum: [kitchen, bar, direct], description: "Cocina por defecto para preparados, Entrega directa para mercadería al crear. Omisión en edición conserva destino anterior. Independiente de categoría e inventario." }, quantityControl: { type: string, enum: [none, portions, inventory], default: none } } }
     Product: { allOf: [{ $ref: "#/components/schemas/ProductInput" }, { type: object, required: [id, active, productType, quantityControl], properties: { id: { type: string, format: uuid }, categoryName: { type: [string, "null"] }, active: { type: boolean } } }] }
     ProductModifierOptionInput: { type: object, required: [name, surcharge], properties: { name: { type: string, minLength: 1, maxLength: 80 }, surcharge: { type: string, description: "Recargo monetario no negativo; foods-backend es la fuente de verdad." } } }
     ProductModifierGroupInput: { type: object, required: [name, required, minSelections, maxSelections, options], properties: { name: { type: string, minLength: 1, maxLength: 80 }, required: { type: boolean }, minSelections: { type: integer, minimum: 0 }, maxSelections: { type: integer, minimum: 1 }, options: { type: array, items: { $ref: "#/components/schemas/ProductModifierOptionInput" } } } }
@@ -1357,7 +1394,7 @@ components:
     CashUserOption: { type: object, required: [id, name], properties: { id: { type: string, format: uuid }, name: { type: string }, assignedShiftId: { type: [string, "null"], format: uuid } } }
     CashOperationInput: { type: object, required: [operationType, amount, reason], properties: { operationType: { type: string, enum: [cash_pull, deposit, transfer] }, targetShiftId: { type: string, format: uuid }, amount: { type: number, exclusiveMinimum: 0 }, reason: { type: string, minLength: 1, maxLength: 120 }, note: { type: string, maxLength: 240 } } }
     CashOperation: { type: object, required: [id, operationType, amount, reason, note, createdAt], properties: { id: { type: string, format: uuid }, operationType: { type: string, enum: [cash_pull, deposit, transfer] }, amount: { type: string }, reason: { type: string }, note: { type: string }, createdAt: { type: string, format: date-time } } }
-    POSOrderSummary: { type: object, required: [id, code, channel, status, customerName, tableName, total, paidAmount, remainingAmount, paymentStatus, paymentMethods, createdAt], properties: { id: { type: string, format: uuid }, code: { type: string }, channel: { type: string }, status: { type: string }, customerName: { type: string }, tableName: { type: string }, total: { type: string }, paidAmount: { type: string }, remainingAmount: { type: string }, paymentStatus: { type: string, enum: [pending, partial, paid] }, paymentMethods: { type: array, uniqueItems: true, items: { type: string }, description: "Nombres del catálogo de la empresa usados en pagos con importe neto positivo; sin duplicados, ordenados por nombre. Incluye medios ahora inactivos y devuelve un arreglo vacío si no hay cobros vigentes." }, createdAt: { type: string, format: date-time } } }
+    POSOrderSummary: { type: object, required: [id, code, channel, status, customerName, tableName, total, paidAmount, remainingAmount, paymentStatus, paymentMethods, createdAt], properties: { billClosed: { type: boolean, description: La cuenta está cerrada para cobro }, id: { type: string, format: uuid }, code: { type: string }, channel: { type: string }, status: { type: string }, customerName: { type: string }, tableName: { type: string }, total: { type: string }, paidAmount: { type: string }, remainingAmount: { type: string }, paymentStatus: { type: string, enum: [pending, partial, paid] }, paymentMethods: { type: array, uniqueItems: true, items: { type: string }, description: "Nombres del catálogo de la empresa usados en pagos con importe neto positivo; sin duplicados, ordenados por nombre. Incluye medios ahora inactivos y devuelve un arreglo vacío si no hay cobros vigentes." }, createdAt: { type: string, format: date-time } } }
     POSOrderList: { type: object, required: [items, total, page, pageSize], properties: { items: { type: array, items: { $ref: "#/components/schemas/POSOrderSummary" } }, total: { type: integer }, page: { type: integer }, pageSize: { type: integer } } }
     POSOrderDetail: { type: object, required: [order, paidAmount, remainingAmount, paymentStatus, payments], properties: { order: { $ref: "#/components/schemas/Order" }, paidAmount: { type: string }, remainingAmount: { type: string }, paymentStatus: { type: string, enum: [pending, partial, paid] }, payments: { type: array, items: { $ref: "#/components/schemas/Payment" } } } }
     PaymentMethodInput: { type: object, required: [name, salesEnabled, expensesEnabled, affectsCash, sortOrder], properties: { code: { type: string, pattern: "^[a-z0-9][a-z0-9_-]{0,39}$" }, name: { type: string, minLength: 1, maxLength: 80 }, description: { type: string, maxLength: 180 }, salesEnabled: { type: boolean }, expensesEnabled: { type: boolean }, affectsCash: { type: boolean }, sortOrder: { type: integer, minimum: 0, maximum: 9999 } } }
@@ -1410,6 +1447,19 @@ components:
         deliveryFee: { type: number, minimum: 0 }
         items: { type: array, minItems: 1, items: { allOf: [{ $ref: "#/components/schemas/OrderItemInput" }, { type: object, properties: { id: { type: string, format: uuid, description: Línea existente para conservar el precio registrado } } }] } }
     OrderItem: { allOf: [{ $ref: "#/components/schemas/OrderItemInput" }, { type: object, required: [id, unitPrice], properties: { id: { type: string, format: uuid }, modifiers: { type: array, items: { $ref: "#/components/schemas/OrderModifierSelection" } } } }] }
+    OrderServiceItem:
+      type: object
+      required: [id, orderItemId, productId, name, qty, destination, status, destinationLabel, statusLabel]
+      properties:
+        id: { type: string, format: uuid }
+        orderItemId: { type: string, format: uuid }
+        productId: { type: string }
+        name: { type: string }
+        qty: { type: string }
+        destination: { type: string, enum: [kitchen, bar, direct] }
+        status: { type: string, enum: [nuevo, confirmado, preparando, listo, entregado] }
+        destinationLabel: { type: string }
+        statusLabel: { type: string }
     Order:
       type: object
       required: [id, code, channel, status, customerName, customerPhone, address, reference, tableId, tableName, waiterId, waiterName, collectedByNames, notes, subtotal, deliveryFee, total, createdAt, updatedAt]
@@ -1434,10 +1484,13 @@ components:
         total: { type: string }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
-        completedAt: { type: string, format: date-time, description: Fecha de cierre operativo; ausente mientras una mesa entregada conserva su cuenta abierta }
+        billClosedAt: { type: string, format: date-time, description: Cierre para cobro; no implica liberación }
+        accountState: { type: string, enum: [open, awaiting_payment, paid] }
+        serviceItems: { type: array, items: { $ref: "#/components/schemas/OrderServiceItem" } }
+        completedAt: { type: string, format: date-time, description: Finalización automática; exige cuenta cerrada y pagada con todos los productos entregados en Salón }
         items: { type: array, items: { $ref: "#/components/schemas/OrderItem" } }
     OperationalOrderList: { type: object, required: [items, total, page, pageSize, channelCounts, channelOptions, statusOptions, currencySymbol], properties: { items: { type: array, items: { $ref: "#/components/schemas/Order" } }, total: { type: integer }, page: { type: integer }, pageSize: { type: integer }, channelCounts: { type: object, additionalProperties: { type: integer } }, channelOptions: { type: array, items: { $ref: "#/components/schemas/Option" } }, statusOptions: { type: array, items: { $ref: "#/components/schemas/Option" } }, currencySymbol: { type: string } } }
-    KitchenTicket: { type: object, required: [id, orderId, roundNumber, code, channel, status, customerName, tableName, notes, createdAt, updatedAt, items], properties: { id: { type: string, format: uuid }, orderId: { type: string, format: uuid }, roundNumber: { type: integer, minimum: 0 }, code: { type: string }, channel: { type: string, enum: [salon, mostrador, recojo, delivery, whatsapp] }, status: { type: string, enum: [confirmado, preparando, listo] }, customerName: { type: string }, tableName: { type: string }, notes: { type: string }, createdAt: { type: string, format: date-time }, updatedAt: { type: string, format: date-time }, targetMinutes: { type: [integer, "null"], minimum: 1 }, items: { type: array, items: { $ref: "#/components/schemas/OrderItem" } } } }
+    KitchenTicket: { type: object, required: [id, orderId, roundNumber, code, channel, status, customerName, tableName, notes, createdAt, updatedAt, items], properties: { id: { type: string, description: Identificador opaco de ronda y estación }, destination: { type: string, enum: [kitchen, bar] }, orderId: { type: string, format: uuid }, roundNumber: { type: integer, minimum: 0 }, code: { type: string }, channel: { type: string, enum: [salon, mostrador, recojo, delivery, whatsapp] }, status: { type: string, enum: [confirmado, preparando, listo] }, customerName: { type: string }, tableName: { type: string }, notes: { type: string }, createdAt: { type: string, format: date-time }, updatedAt: { type: string, format: date-time }, targetMinutes: { type: [integer, "null"], minimum: 1 }, items: { type: array, items: { $ref: "#/components/schemas/OrderItem" } } } }
     UserAssignment: { type: object, required: [roleId, locationId], properties: { roleId: { type: string, format: uuid }, locationId: { type: string, format: uuid } } }
     UserInput: { type: object, required: [fullName, email, assignments], properties: { fullName: { type: string }, email: { type: string, format: email }, password: { type: string, minLength: 8, writeOnly: true }, assignments: { type: array, minItems: 1, items: { $ref: "#/components/schemas/UserAssignment" } } } }
     Error: { type: object, required: [code, message, correlationId], properties: { code: { type: string }, message: { type: string }, correlationId: { type: string, format: uuid } } }

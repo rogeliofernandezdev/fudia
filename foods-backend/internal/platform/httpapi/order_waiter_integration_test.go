@@ -102,6 +102,9 @@ func TestTableWaiterOwnershipAndIndependentPaymentAttribution(t *testing.T) {
 	call(other, "PATCH", created.ID, `{"status":"entregado"}`, api.updateOrderStatus, 403)
 	registerID := seedID(`INSERT INTO cash_registers(organization_id,location_id,name,created_by) VALUES($1,$2,'Caja',$3) RETURNING id`, owner.OrganizationID, owner.LocationID, cashier.UserID)
 	call(cashier, "POST", "", fmt.Sprintf(`{"cashRegisterId":%q,"openingAmount":0}`, registerID), api.openCashShift, 201)
+	call(owner, "POST", created.ID, "", api.closeOrderBill, 409)
+	call(owner, "PATCH", created.ID, `{"status":"entregado"}`, api.updateOrderStatus, 200)
+	call(owner, "POST", created.ID, "", api.closeOrderBill, 200)
 	for _, amount := range []int{10, 15} {
 		w = call(cashier, "POST", "", fmt.Sprintf(`{"orderId":%q,"method":"card","amount":%d,"createdByName":"Luis Mozo"}`, created.ID, amount), api.createPayment, 201)
 		var payment paymentView
@@ -111,14 +114,23 @@ func TestTableWaiterOwnershipAndIndependentPaymentAttribution(t *testing.T) {
 		if payment.CreatedByName != cashier.Name {
 			t.Fatalf("payment operator must derive from session: %#v", payment)
 		}
+		if amount == 10 {
+			floor := call(other, "GET", created.ID, "", api.getOrdersFloor, 200)
+			if !strings.Contains(floor.Body.String(), `"waiterName":"Ana Mozo"`) || !strings.Contains(floor.Body.String(), `"collectedByNames":["Eva Cajera"]`) {
+				t.Fatalf("occupied table must identify waiter and collector: %s", floor.Body.String())
+			}
+		}
 	}
-	for _, handler := range []http.HandlerFunc{api.getOrder, api.getPOSOrder, api.listOrders, api.getOrdersFloor} {
+	for _, handler := range []http.HandlerFunc{api.getOrder, api.getPOSOrder, api.listOrders} {
 		w = call(other, "GET", created.ID, "", handler, 200)
 		if !strings.Contains(w.Body.String(), `"waiterName":"Ana Mozo"`) || !strings.Contains(w.Body.String(), `"collectedByNames":["Eva Cajera"]`) {
 			t.Fatalf("list/detail must distinguish waiter and collector: %s", w.Body.String())
 		}
 	}
-	call(owner, "PATCH", created.ID, `{"status":"entregado"}`, api.updateOrderStatus, 200)
+	floor := call(other, "GET", created.ID, "", api.getOrdersFloor, 200)
+	if !strings.Contains(floor.Body.String(), `"order":null`) {
+		t.Fatalf("paid and delivered table must be free: %s", floor.Body.String())
+	}
 	// A new occupation assigns its own waiter rather than retaining the previous one.
 	w = call(other, "POST", "", createBody, api.createOrder, 201)
 	var next order

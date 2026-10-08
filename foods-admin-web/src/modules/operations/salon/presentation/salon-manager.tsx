@@ -16,8 +16,11 @@ import {useSession} from "@/providers/session-context";
 import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
 import {useSettings} from "@/providers/settings-context";
 
-import {nextOrderAction,canManageOrderService} from "../../orders/domain/order-actions";
+import {nextOrderAction,canManageOrderService,canCancelOrder} from "../../orders/domain/order-actions";
 import {OrderAttribution,OrderAttributionSkeleton} from "../../orders/presentation/order-attribution";
+import {addOrderConsumption} from "../../orders/infrastructure/service-api";
+import {canChargeAccount} from "../../orders/domain/service-flow";
+import {OrderAccountActions,OrderItemService,accountLabel} from "../../orders/presentation/order-service-controls";
 import {pageRoutes} from "@/shared/routing/page-routes";
 
 /* ── helpers ── */
@@ -95,6 +98,7 @@ export function SalonManager(){
   const[editingOrderId,setEditingOrderId]=useState<string|null>(null);
   const[cancelTarget,setCancelTarget]=useState<Order|null>(null);
   const[zone,setZone]=useState("");
+  const[additionKey,setAdditionKey]=useState<string|null>(null);
 
   const floor=useQuery({
     queryKey:["salon-floor"],
@@ -109,14 +113,11 @@ export function SalonManager(){
     refetchInterval:query=>query.state.data?.completedAt?false:10000,
   });
 
-  const invalidate=useCallback(()=>{
-    void qc.invalidateQueries({queryKey:["salon-floor"]});
-    for(const key of ["orders","order","pos-orders","pos-order","dashboard"])void qc.invalidateQueries({queryKey:[key]});
-  },[qc]);
+  const invalidate=useCallback(()=>Promise.all(["salon-floor","orders","order","pos-orders","pos-order","dashboard","kitchen-tickets","product-availability","sales"].map(key=>qc.invalidateQueries({queryKey:[key]}))),[qc]);
 
   const advance=useMutation({
     mutationFn:(v:{id:string;status:string})=>updateSalonOrderStatus(v.id,v.status),
-    onSuccess:(order)=>{invalidate();notify({tone:"success",title:order.status==="entregado"?(order.completedAt?"Mesa liberada":"Pedido entregado"):"Pedido actualizado",message:order.status==="entregado"&&!order.completedAt?"La entrega quedó registrada. La mesa conserva su cuenta abierta hasta finalizar el cobro.":"El estado fue actualizado correctamente."})},
+    onSuccess:(order)=>{const refresh=invalidate();if(order.status!=="entregado")notify({tone:"success",title:"Pedido actualizado",message:"El estado fue actualizado correctamente."});return refresh},
     onError:e=>notify({tone:"danger",title:"Error",message:e.message}),
   });
   const create=useMutation({
@@ -125,8 +126,8 @@ export function SalonManager(){
       setDraft(null);setEditingOrderId(null);setDetailId(null);invalidate();
       notify({
         tone:"success",
-        title:variables.sendToKitchen?"Comanda enviada a cocina":"Borrador guardado",
-        message:variables.sendToKitchen?`Pedido ${o.code} registrado y enviado a Cocina.`:`Pedido ${o.code} quedó pendiente de envío a Cocina.`,
+        title:variables.sendToKitchen?"Pedido registrado":"Borrador guardado",
+        message:variables.sendToKitchen?`Pedido ${o.code} registrado y enviado a su área de atención.`:`Pedido ${o.code} quedó guardado como borrador.`,
       });
     },
     onError:e=>{
@@ -137,11 +138,13 @@ export function SalonManager(){
     },
   });
   const update=useMutation({
-    mutationFn:({id,v}:{id:string;v:Draft})=>updateSalonOrder(id,v),
+    mutationFn:({id,v}:{id:string;v:Draft})=>additionKey?addOrderConsumption(id,v,additionKey):updateSalonOrder(id,v),
     onSuccess:o=>{
       setDraft(null);
       setEditingOrderId(null);
+      setAdditionKey(null);
       setDetailId(null);
+      invalidate();
       void qc.invalidateQueries({queryKey:["salon-floor"]});
       void qc.invalidateQueries({queryKey:["order",o.id]});
       notify({tone:"success",title:"Comanda actualizada",message:`Pedido ${o.code} guardado correctamente.`});
@@ -170,8 +173,9 @@ export function SalonManager(){
   });
   const occupiedCount=tables.filter(t=>t.order).length;
   const freeCount=tables.length-occupiedCount;
-  const closeDraft=()=>{setDraft(null);setEditingOrderId(null)};
-  const openNewDraft=(tableId:string)=>{setEditingOrderId(null);setDraft(emptyDraft(tableId))};
+  const closeDraft=()=>{setDraft(null);setEditingOrderId(null);setAdditionKey(null)};
+  const openNewDraft=(tableId:string)=>{setEditingOrderId(null);setAdditionKey(null);setDraft(emptyDraft(tableId))};
+  const addProducts=(o:Order)=>{setAdditionKey(crypto.randomUUID());setEditingOrderId(o.id);setDraft({...emptyDraft(o.tableId),customerName:o.customerName});setDetailId(null)};
   const editOrder=(o:Order)=>{
     if(!canManage||!canManageOrderService(o,user?.id))return;
     if(!editableOrderStatus(o.status)){
@@ -325,12 +329,12 @@ export function SalonManager(){
       {draft&&(
         <ComandaView
           initial={draft}
-          mode={editingOrderId?"edit":"create"}
+          mode={additionKey?"append":editingOrderId?"edit":"create"}
           allTables={tables}
           busy={editingOrderId?update.isPending:create.isPending}
           currencySymbol={settings.currencySymbol}
           close={closeDraft}
-          save={(v,sendToKitchen)=>editingOrderId?update.mutate({id:editingOrderId,v}):create.mutate({draft:v,sendToKitchen})}
+          save={async(v,sendToKitchen)=>{try{if(editingOrderId)await update.mutateAsync({id:editingOrderId,v});else await create.mutateAsync({draft:v,sendToKitchen})}catch{/* El error mantiene la comanda abierta para corregir o reintentar. */}}}
           notify={notify}
         />
       )}
@@ -347,6 +351,7 @@ export function SalonManager(){
           close={()=>setDetailId(null)}
           advance={st=>advance.mutate({id:detailId,status:st})}
           edit={editOrder}
+          add={addProducts}
           cancel={o=>setCancelTarget(o)}
         />
       )}
@@ -369,17 +374,17 @@ export function SalonManager(){
 /* ═══════════════════════════════════════════════════
    OrderDetail — detalle del pedido activo en mesa
 ═══════════════════════════════════════════════════ */
-function OrderDetail({loading,order,error,currencySymbol,canManage:hasPermission,busy,close,advance,edit,cancel}:{loading:boolean;order?:Order;error?:string;currencySymbol:string;canManage:boolean;busy:boolean;close:()=>void;advance:(st:string)=>void;edit:(o:Order)=>void;cancel:(o:Order)=>void}){
+function OrderDetail({loading,order,error,currencySymbol,canManage:hasPermission,busy,close,advance,edit,add,cancel}:{loading:boolean;order?:Order;error?:string;currencySymbol:string;canManage:boolean;busy:boolean;close:()=>void;advance:(st:string)=>void;edit:(o:Order)=>void;add:(o:Order)=>void;cancel:(o:Order)=>void}){
   const{location,user,can}=useSession();
   const canManage=Boolean(hasPermission&&order&&canManageOrderService(order,user?.id));
   const meta=order?statusMeta[order.status]??{label:order.status,tone:"gray" as const}:null;
   const action=order?nextOrderAction(order):null;
   const paid=Number(order?.paidAmount??0);
-  const editable=Boolean(order&&editableOrderStatus(order.status)&&paid<=0.00001);
+  const editable=Boolean(order&&editableOrderStatus(order.status)&&paid<=0.00001&&(!(order.serviceItems?.length)||order.status==="nuevo"));
   const remaining=Number(order?.remainingAmount??order?.total??0);
-  const canCharge=Boolean(can("cash.manage")&&order&&(order.status==="listo"||order.status==="entregado")&&!order.completedAt&&remaining>0.00001);
+  const canCharge=Boolean(can("cash.manage")&&order&&canChargeAccount(order)&&remaining>0.00001);
   const hasPayments=paid>0.00001;
-  const canCancel=Boolean(order&&(order.status==="nuevo"||order.status==="confirmado")&&!hasPayments);
+  const canCancel=Boolean(order&&canCancelOrder(order));
   const actionIcon=action?.status==="entregado"?"availability":action?.status==="confirmado"?"chefHat":action?.icon;
   const itemCount=order?(order.items??[]).reduce((sum,it)=>sum+Number(it.qty||0),0):0;
   const tableLabel=order?.tableName?(/^mesa\b/i.test(order.tableName)?order.tableName:`Mesa ${order.tableName}`):"Mesa";
@@ -400,7 +405,7 @@ function OrderDetail({loading,order,error,currencySymbol,canManage:hasPermission
                 </div>
               </div>
               <div className="salon-order-detail-status">
-                {order&&meta&&<Status tone={meta.tone}>{meta.label}</Status>}
+                {order&&meta&&<><Status tone={meta.tone}>{meta.label}</Status><Status tone="blue">{accountLabel(order)}</Status></>}
               </div>
               <button type="button" className="salon-order-detail-close" aria-label="Cerrar detalle" onClick={close}><Icon name="close" size={17}/></button>
             </header>
@@ -433,6 +438,7 @@ function OrderDetail({loading,order,error,currencySymbol,canManage:hasPermission
                               </div>
                             )}
                             {it.note&&<em>{it.note}</em>}
+                            <OrderItemService order={order} itemId={it.id}/>
                           </div>
                           <strong className="salon-order-detail-line-total">{currencySymbol} {money(Number(it.qty)*Number(it.unitPrice))}</strong>
                         </div>
@@ -481,6 +487,7 @@ function OrderDetail({loading,order,error,currencySymbol,canManage:hasPermission
                     {order.status==="entregado"&&!canCharge&&<p className="salon-order-detail-notice is-success" role="status"><Icon name="circleCheck" size={18}/><span>{order.completedAt?"Mesa liberada":"Pedido entregado"}</span></p>}
                     {(order.status==="nuevo"||order.status==="confirmado")&&hasPayments&&<p className="salon-order-detail-notice" role="note"><Icon name="info" size={18}/><span>Devuelve los pagos en POS antes de cancelar.</span></p>}
                     <div className="salon-order-detail-buttons" role="group" aria-label="Acciones de la mesa">
+                      <OrderAccountActions order={order} onAdd={()=>add(order)} busy={busy}/>
                       {canManage&&(editable||canCancel||(action&&canCharge))&&<div className="salon-order-detail-secondary-actions">
                         {action&&canCharge&&<Button icon={actionIcon} kind="secondary" className="salon-order-detail-deliver" disabled={busy} aria-busy={busy} onClick={()=>advance(action.status)}>{action.label}</Button>}
                         {editable&&<Button icon="edit" kind="secondary" className="salon-order-detail-edit" disabled={busy} onClick={()=>edit(order)}>Editar comanda</Button>}
