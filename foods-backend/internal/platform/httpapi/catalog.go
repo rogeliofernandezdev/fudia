@@ -424,9 +424,6 @@ func (a *API) updateProduct(w http.ResponseWriter, r *http.Request) {
 		featured = *in.Featured
 	}
 	skuValue := strings.TrimSpace(in.SKU)
-	if skuValue == "" {
-		skuValue = r.PathValue("id")
-	}
 
 	tx, err := a.db.Begin(r.Context())
 	if err != nil {
@@ -435,12 +432,12 @@ func (a *API) updateProduct(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback(r.Context())
 
-	var currentControl, currentProductType, currentDestination string
+	var currentSKU, currentControl, currentProductType, currentDestination string
 	err = tx.QueryRow(r.Context(), `
-		SELECT quantity_control,product_type,service_destination
+		SELECT sku,quantity_control,product_type,service_destination
 		FROM products
 		WHERE organization_id=$1 AND id=$2
-		FOR UPDATE`, s.OrganizationID, r.PathValue("id")).Scan(&currentControl, &currentProductType, &currentDestination)
+		FOR UPDATE`, s.OrganizationID, r.PathValue("id")).Scan(&currentSKU, &currentControl, &currentProductType, &currentDestination)
 	if errors.Is(err, pgx.ErrNoRows) {
 		fail(w, 404, "product_not_found", "El producto no existe.")
 		return
@@ -448,6 +445,9 @@ func (a *API) updateProduct(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fail(w, 503, "product_unavailable", "No pudimos validar el producto.")
 		return
+	}
+	if skuValue == "" {
+		skuValue = currentSKU
 	}
 	if !destinationProvided {
 		in.ServiceDestination = currentDestination
