@@ -28,9 +28,11 @@ export function PlatformSubscriptionPage(){
  return <><Header organization={organization?.name}/><SubscriptionWorkspace key={key} current={subscription.data} plans={plans.data?.items??[]} country={location?.country} timeZone={location?.timezone}/></>;
 }
 
-function SubscriptionWorkspace({current,plans,country,timeZone}:{current:OrganizationSubscription;plans:SubscriptionPlan[];country?:string;timeZone?:string}){
+/** Sin `organizationId` gestiona la empresa activa de la sesión; con él, la empresa indicada sin cambiar el contexto. */
+export function SubscriptionWorkspace({current,plans,country,timeZone,organizationId}:{current:OrganizationSubscription;plans:SubscriptionPlan[];country?:string;timeZone?:string;organizationId?:string}){
  const{notify}=useFeedback();
  const client=useQueryClient();
+ const subscriptionKey=organizationId?["organization-subscription",organizationId]:["organization-subscription"];
  const change=useForm<SubscriptionDraft>({defaultValues:{planId:current.plan.id,billingCycle:current.billingCycle,status:current.status,autoRenew:current.autoRenew,termsAccepted:false},resolver:zodResolver<SubscriptionDraft>(subscriptionChangeSchema),mode:"onSubmit",reValidateMode:"onChange"});
  const paymentForm=useForm<PaymentDraft>({defaultValues:{amount:current.priceAmount,currency:current.currency,status:"paid",provider:"manual",externalReference:"",paidAt:""},resolver:zodResolver<PaymentDraft>(subscriptionPaymentSchema),mode:"onSubmit",reValidateMode:"onChange"});
  const[planId,billingCycle]=useWatch({control:change.control,name:["planId","billingCycle"]});
@@ -43,21 +45,23 @@ function SubscriptionWorkspace({current,plans,country,timeZone}:{current:Organiz
  const needsAcceptance=planChanged||termsChanged;
 
  const save=useMutation({
-  mutationFn:(draft:SubscriptionDraft)=>changeOrganizationSubscription(draft),
+  mutationFn:(draft:SubscriptionDraft)=>changeOrganizationSubscription(draft,organizationId),
   onSuccess:data=>{
    change.reset({planId:data.plan.id,billingCycle:data.billingCycle,status:data.status,autoRenew:data.autoRenew,termsAccepted:false});
    paymentForm.setValue("amount",data.priceAmount);paymentForm.setValue("currency",data.currency);
-   client.setQueryData(["organization-subscription"],data);
+   client.setQueryData(subscriptionKey,data);
    void client.invalidateQueries({queryKey:["session-context"]});
+   void client.invalidateQueries({queryKey:["platform-organizations"]});
    notify({tone:"success",title:"Suscripción actualizada",message:"El plan, estado y módulos de la empresa quedaron sincronizados."});
   },
   onError:e=>notify({tone:"danger",title:"No se pudo actualizar",message:e.message}),
  });
  const pay=useMutation({
-  mutationFn:(payment:PaymentDraft)=>recordSubscriptionPayment({...payment,paidAt:payment.paidAt?new Date(payment.paidAt).toISOString():""}),
+  mutationFn:(payment:PaymentDraft)=>recordSubscriptionPayment({...payment,paidAt:payment.paidAt?new Date(payment.paidAt).toISOString():""},organizationId),
   onSuccess:(_,payment)=>{
    paymentForm.reset({amount:payment.amount,currency:payment.currency,status:"paid",provider:"manual",externalReference:"",paidAt:""});
-   void client.invalidateQueries({queryKey:["organization-subscription"]});
+   void client.invalidateQueries({queryKey:subscriptionKey});
+   void client.invalidateQueries({queryKey:["platform-organizations"]});
    notify({tone:"success",title:"Pago registrado",message:"El movimiento quedó asociado a la suscripción."});
   },
   onError:e=>notify({tone:"danger",title:"No se pudo registrar",message:e.message}),

@@ -625,6 +625,7 @@
   --font-size-28: 28px;
   --font-size-30: 30px;
   --font-size-36: 36px;
+  --font-size-48: 48px;
   --font-weight-400: 400;
   --font-weight-500: 500;
   --font-weight-550: 550;
@@ -862,6 +863,7 @@
   --icon-mask-close: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'%3E%3Cpath d='M6 6l12 12M18 6 6 18'/%3E%3C/svg%3E");
   --select-chevron-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23667085' stroke-width='1.7' stroke-linecap='round'%3E%3Cpath d='m6 8 4 4 4-4'/%3E%3C/svg%3E");
   --icon-mask-refresh: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'%3E%3Cpath d='M20 6v5h-5M4 18v-5h5M6.1 8A7 7 0 0 1 18 6l2 5M4 13l2 5a7 7 0 0 0 11.9-2'/%3E%3C/svg%3E");
+  --loader-wave-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 240' preserveAspectRatio='none'%3E%3Cpath d='M0 12 Q15 0 30 12 T60 12 T90 12 T120 12 V240 H0 Z'/%3E%3C/svg%3E");
 }
 
 /* next/font supplies its variables on body, so resolve font aliases here. */

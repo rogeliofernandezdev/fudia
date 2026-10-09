@@ -324,6 +324,29 @@ Cada plan define precio mensual/anual, moneda, prueba gratuita, límites de
 locales y usuarios, módulos habilitados y versión de condiciones. Los precios
 del catálogo no sustituyen el precio ya contratado por una empresa.
 
+`GET /v1/platform/organizations` (solo administrador de plataforma) lista todas
+las empresas con plan, suscripción, último pago `paid` y una situación de pago
+derivada en backend: `none` sin suscripción, `cancelled`, `overdue` para
+`past_due`, `trial`, `due_soon` si `renews_at` cae dentro de 7 días y
+`up_to_date` en otro caso. Antes de listar aplica el mismo criterio que la
+lectura de la suscripción: las suscripciones `trial`/`active` con `renews_at`
+vencido pasan a `past_due`. Incluye el resumen por situación sin filtros y los
+catálogos de filtro.
+
+`/v1/platform/organizations/{id}/subscription` (GET y PATCH) y
+`/v1/platform/organizations/{id}/subscription/payments` (POST) permiten a
+Plataforma leer, cambiar y registrar pagos de cualquier empresa sin cambiar el
+contexto de sesión. Reutilizan los mismos handlers y reglas que
+`/v1/platform/subscription`; sin `{id}` operan sobre la empresa de la sesión.
+`/v1/admin/subscription` no acepta `{id}`, por lo que un tenant solo lee la suya.
+La respuesta incluye `organization` con nombre comercial, razón social e
+identificación fiscal.
+
+`GET /v1/platform/organizations/{id}` devuelve la ficha de solo lectura de una
+empresa: datos generales y fiscales, situación de pago, uso frente a los límites
+del plan, resumen de la suscripción, pagos confirmados (cantidad, total y
+último), administradores (rol de sistema `administrator`) y locales.
+
 `organization_subscriptions` conserva una instantánea contractual por empresa:
 plan, ciclo, precio, moneda, estado, periodo vigente, renovación automática,
 prueba, cancelación y versión/fecha de aceptación de condiciones. Un cambio de

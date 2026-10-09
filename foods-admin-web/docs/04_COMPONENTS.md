@@ -153,3 +153,19 @@ Referencias de interacción revisadas el 2026-10-05:
 
 El interruptor es una adaptación al modelo activo/inactivo de Fudia; no implica
 que todos los proveedores usen el mismo control para retirar un producto.
+
+## Loader de pantalla completa
+
+`FullScreenLoader` cubre la pantalla durante la validación de sesión y las
+transiciones de ruta. Reutiliza el `Logo` oficial y lo anima como algo que hierve,
+en un ciclo de 4,8 s que nace desde abajo: el líquido (el logo a color con la
+máscara ondulada `--loader-wave-mask`) sube desde el fondo con curva suave, hierve
+a dos tercios de la altura con una oscilación senoidal leve y baja con calma para
+volver a nacer. Una segunda capa más clara ondula en sentido contrario. Las
+burbujas y el vapor se encienden solo cuando el líquido llega a su nivel y se
+apagan al bajar; suben despacio, con aceleración suave, y se desvanecen al final.
+No hay vibración ni cambios bruscos: las curvas se generan con 24 tramos por
+ciclo. Todo usa tokens del design system. Con `prefers-reduced-motion` muestra el
+logo completo, sin burbujas, vapor ni movimiento.
+El texto inferior describe la espera («Preparando tu espacio»,
+«Validando sesión») y el contenedor expone `role="status"` y `aria-busy`.

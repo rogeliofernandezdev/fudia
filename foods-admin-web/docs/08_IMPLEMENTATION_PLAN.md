@@ -4,7 +4,7 @@
 
 - Acceso administrativo responsive y estados de envío.
 - Shell con navegación agrupada, contexto de local y búsqueda de opciones autorizadas.
-- Dashboard con KPI, alertas, ventas horarias y productos destacados.
+- Dashboard analítico por periodo (Hoy / 7 / 30 días) con comparación, tendencia, desgloses por canal, medio de pago y categoría, productos destacados y operación en vivo.
 - Vistas consistentes para menú, inventario, compras, ventas y configuración.
 - Sistema visual único para botones, campos, filtros, tablas y estados.
 - Configuración monetaria y fiscal conectada, responsive y con vista previa.

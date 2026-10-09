@@ -1,13 +1,16 @@
 import {NextRequest,NextResponse} from "next/server";
 
-export async function POST(request:NextRequest){
+async function proxy(request:NextRequest){
   const api=process.env.FOODS_API_URL??"http://localhost:8080";
   const cookie=request.headers.get("cookie")??"";
+  const hasBody=request.method!=="GET";
+  const target=new URL(`${api}/v1/platform/organizations`);
+  request.nextUrl.searchParams.forEach((value,key)=>target.searchParams.append(key,value));
   try{
-    const response=await fetch(`${api}/v1/platform/organizations`,{
-      method:"POST",
-      headers:{"Content-Type":"application/json",cookie},
-      body:await request.text(),
+    const response=await fetch(target,{
+      method:request.method,
+      headers:hasBody?{"Content-Type":"application/json",cookie}:{Accept:"application/json",cookie},
+      body:hasBody?await request.text():undefined,
       cache:"no-store",
     });
     const text=await response.text();
@@ -18,9 +21,9 @@ export async function POST(request:NextRequest){
   }catch(error){
     const correlationId=globalThis.crypto.randomUUID();
     console.error(JSON.stringify({
-      event:"platform_onboarding_proxy_failed",
+      event:request.method==="GET"?"platform_organizations_proxy_failed":"platform_onboarding_proxy_failed",
       correlationId,
-      method:"POST",
+      method:request.method,
       path:"/v1/platform/organizations",
       error:error instanceof Error?error.message:"unknown_error",
     }));
@@ -30,3 +33,6 @@ export async function POST(request:NextRequest){
     );
   }
 }
+
+export const GET=proxy;
+export const POST=proxy;

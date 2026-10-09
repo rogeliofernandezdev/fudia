@@ -48,6 +48,7 @@ export type SubscriptionPayment={
 
 export type OrganizationSubscription={
  id:string;
+ organization:{id:string;tradeName:string;legalName:string;taxId:string;active:boolean};
  plan:SubscriptionPlan;
  billingCycle:"monthly"|"annual";
  priceAmount:string;
@@ -76,3 +77,74 @@ export type PlatformOnboardingDraft={
 
 export type PlatformWhatsAppChannel={id:string;countryCode:string;countryName:string;phoneNumber:string;displayName:string;active:boolean};
 export type PlatformWhatsAppChannelDraft={countryCode:string;phoneNumber:string;displayName:string;active:boolean};
+
+export type Option={value:string;label:string};
+export type PaymentStanding="up_to_date"|"due_soon"|"overdue"|"trial"|"cancelled"|"none";
+
+export type PlatformOrganization={
+ id:string;
+ legalName:string;
+ tradeName:string;
+ taxId:string;
+ active:boolean;
+ createdAt:string;
+ subscription:{
+  plan:{id:string;code:string;name:string};
+  billingCycle:"monthly"|"annual";
+  priceAmount:string;
+  currency:string;
+  status:OrganizationSubscription["status"];
+  renewsAt:string|null;
+  trialEndsAt:string|null;
+  autoRenew:boolean;
+ }|null;
+ lastPayment:{amount:string;currency:string;paidAt:string|null}|null;
+ paymentStanding:PaymentStanding;
+};
+
+export type PlatformOrganizationPage={
+ items:PlatformOrganization[];
+ total:number;
+ page:number;
+ pageSize:number;
+ summary:Record<"total"|PaymentStanding,number>;
+ dueSoonDays:number;
+ planOptions:Option[];
+ standingOptions:Option[];
+};
+
+export type PlatformOrganizationFilters={q:string;planId:string;standing:string;page:number;pageSize:number};
+
+export type PlatformOrganizationDetail={
+ id:string;
+ legalName:string;
+ tradeName:string;
+ taxId:string;
+ countryCode:string;
+ currency:string;
+ timezone:string;
+ taxName:string;
+ taxRate:string;
+ taxIncluded:boolean;
+ active:boolean;
+ createdAt:string;
+ paymentStanding:PaymentStanding;
+ usage:{locations:number;users:number;maxLocations:number|null;maxUsers:number|null};
+ subscription:{
+  planName:string;
+  billingCycle:"monthly"|"annual";
+  priceAmount:string;
+  currency:string;
+  status:OrganizationSubscription["status"];
+  startedAt:string;
+  renewsAt:string|null;
+  trialEndsAt:string|null;
+  autoRenew:boolean;
+  termsVersion:string|null;
+  termsAcceptedAt:string|null;
+  moduleCount:number;
+ }|null;
+ payments:{paidCount:number;totalPaid:string;lastPaidAt:string|null};
+ administrators:Array<{name:string;email:string;active:boolean}>;
+ locations:Array<{id:string;name:string;code:string;address:string;phone:string;active:boolean}>;
+};

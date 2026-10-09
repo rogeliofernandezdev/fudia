@@ -196,12 +196,51 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "503": { description: Catálogos temporalmente no disponibles, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
   /v1/platform/organizations:
+    get:
+      operationId: listPlatformOrganizations
+      summary: Lista todas las empresas con su plan, suscripción y situación de pago (solo administrador de plataforma)
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { name: q, in: query, schema: { type: string }, description: Busca por nombre comercial, razón social o identificación fiscal }
+        - { name: planId, in: query, schema: { type: string, format: uuid } }
+        - { name: standing, in: query, schema: { type: string, enum: [up_to_date, due_soon, overdue, trial, cancelled, none] } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: pageSize, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+      responses: { "200": { description: Empresas paginadas con resumen por situación de pago, content: { application/json: { schema: { $ref: "#/components/schemas/PlatformOrganizationPage" } } } }, "400": { $ref: "#/components/responses/BadRequest" }, "403": { $ref: "#/components/responses/Forbidden" }, "503": { description: Dependencia temporalmente no disponible, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } } }
     post:
       operationId: onboardOrganization
       summary: Crea transaccionalmente empresa, perfil fiscal, primer local y administrador
       security: [{ sessionCookie: [] }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/TenantOnboardingInput" } } } }
       responses: { "201": { description: Tenant creado }, "400": { $ref: "#/components/responses/BadRequest" }, "403": { $ref: "#/components/responses/Forbidden" }, "409": { description: Conflicto de datos del usuario, como identificación fiscal duplicada o plan no disponible, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }, "500": { description: Error interno de onboarding con correlationId para seguimiento, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }, "503": { description: Dependencia temporalmente no disponible con correlationId para seguimiento, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } } }
+  /v1/platform/organizations/{id}:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    get:
+      operationId: getPlatformOrganization
+      summary: Ficha completa de una empresa con configuración fiscal, uso, suscripción, pagos, administradores y locales (solo administrador de plataforma)
+      security: [{ sessionCookie: [] }]
+      responses: { "200": { description: Ficha de la empresa, content: { application/json: { schema: { $ref: "#/components/schemas/PlatformOrganizationDetail" } } } }, "403": { $ref: "#/components/responses/Forbidden" }, "404": { description: Empresa inexistente, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }, "503": { description: Dependencia temporalmente no disponible, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } } }
+  /v1/platform/organizations/{id}/subscription:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    get:
+      operationId: getPlatformOrganizationSubscription
+      summary: Lee la suscripción, uso y pagos de una empresa sin cambiar el contexto de sesión
+      security: [{ sessionCookie: [] }]
+      responses: { "200": { description: Suscripción de la empresa, content: { application/json: { schema: { $ref: "#/components/schemas/OrganizationSubscription" } } } }, "403": { $ref: "#/components/responses/Forbidden" }, "404": { description: Empresa o suscripción inexistente, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } } }
+    patch:
+      operationId: updatePlatformOrganizationSubscription
+      summary: Cambia plan, ciclo, estado o renovación de una empresa con las mismas reglas que la suscripción activa
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/SubscriptionUpdateInput" } } } }
+      responses: { "200": { description: Suscripción actualizada, content: { application/json: { schema: { $ref: "#/components/schemas/OrganizationSubscription" } } } }, "400": { $ref: "#/components/responses/BadRequest" }, "403": { $ref: "#/components/responses/Forbidden" }, "404": { description: Empresa, plan o suscripción inexistente, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }, "409": { description: Límites, prueba o condiciones no válidas, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } } }
+  /v1/platform/organizations/{id}/subscription/payments:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    post:
+      operationId: recordPlatformOrganizationSubscriptionPayment
+      summary: Registra un pago de suscripción de una empresa; un pago confirmado la reactiva y avanza el periodo
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/SubscriptionPaymentInput" } } } }
+      responses: { "201": { description: Pago registrado }, "400": { $ref: "#/components/responses/BadRequest" }, "403": { $ref: "#/components/responses/Forbidden" }, "404": { description: Empresa o suscripción inexistente, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }, "409": { description: Moneda distinta o referencia duplicada, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } } }
   /v1/platform/plans:
     get:
       operationId: listSubscriptionPlans
@@ -235,6 +274,7 @@ paths:
       responses: { "201": { description: Pago registrado }, "409": { description: Referencia duplicada o moneda incompatible } }
   /v1/admin/dashboard:
     get:
+      parameters: [{ name: period, in: query, required: false, schema: { type: string, enum: [today, 7d, 30d], default: today }, description: Ventana de ventas, pedidos, desgloses y productos; la operación en vivo siempre es actual }]
       operationId: getAdminDashboard
       security: [{ sessionCookie: [] }]
       responses: { "200": { description: Señales administrativas, content: { application/json: { schema: { $ref: "#/components/schemas/Dashboard" } } } }, "401": { $ref: "#/components/responses/Unauthorized" } }
@@ -1446,7 +1486,10 @@ components:
     SubscriptionPlan: { allOf: [{ $ref: "#/components/schemas/SubscriptionPlanInput" }, { type: object, required: [id], properties: { id: { type: string, format: uuid } } }] }
     SubscriptionUpdateInput: { type: object, required: [planId, billingCycle, status, autoRenew, termsAccepted], properties: { planId: { type: string, format: uuid }, billingCycle: { type: string, enum: [monthly, annual] }, status: { type: string, enum: [trial, active, past_due, cancelled] }, autoRenew: { type: boolean }, termsAccepted: { type: boolean } } }
     SubscriptionPaymentInput: { type: object, required: [amount, currency, status, provider], properties: { amount: { type: string }, currency: { type: string, pattern: "^[A-Z]{3}$" }, status: { type: string, enum: [pending, paid, failed, refunded] }, provider: { type: string }, externalReference: { type: string }, paidAt: { type: string, format: date-time } } }
-    OrganizationSubscription: { type: object, required: [id, plan, billingCycle, priceAmount, currency, status, autoRenew, usage, payments], properties: { id: { type: string, format: uuid }, plan: { $ref: "#/components/schemas/SubscriptionPlan" }, billingCycle: { type: string, enum: [monthly, annual] }, priceAmount: { type: string }, currency: { type: string }, status: { type: string, enum: [trial, active, past_due, cancelled] }, trialStartsAt: { type: [string, "null"], format: date-time }, trialEndsAt: { type: [string, "null"], format: date-time }, currentPeriodStartsAt: { type: [string, "null"], format: date-time }, currentPeriodEndsAt: { type: [string, "null"], format: date-time }, renewsAt: { type: [string, "null"], format: date-time }, autoRenew: { type: boolean }, termsVersion: { type: [string, "null"] }, termsAcceptedAt: { type: [string, "null"], format: date-time }, usage: { type: object, required: [locations, users], properties: { locations: { type: integer }, users: { type: integer } } }, payments: { type: array, items: { type: object } } } }
+    PlatformOrganization: { type: object, required: [id, legalName, tradeName, taxId, active, createdAt, subscription, lastPayment, paymentStanding], properties: { id: { type: string, format: uuid }, legalName: { type: string }, tradeName: { type: string }, taxId: { type: string }, active: { type: boolean }, createdAt: { type: string, format: date-time }, subscription: { oneOf: [{ type: "null" }, { type: object, required: [plan, billingCycle, priceAmount, currency, status, renewsAt, trialEndsAt, autoRenew], properties: { plan: { type: object, required: [id, code, name], properties: { id: { type: string, format: uuid }, code: { type: string }, name: { type: string } } }, billingCycle: { type: string, enum: [monthly, annual] }, priceAmount: { type: string }, currency: { type: string }, status: { type: string, enum: [trial, active, past_due, cancelled] }, renewsAt: { type: [string, "null"], format: date-time }, trialEndsAt: { type: [string, "null"], format: date-time }, autoRenew: { type: boolean } } }] }, lastPayment: { oneOf: [{ type: "null" }, { type: object, required: [amount, currency, paidAt], properties: { amount: { type: string }, currency: { type: string }, paidAt: { type: [string, "null"], format: date-time } } }] }, paymentStanding: { type: string, enum: [up_to_date, due_soon, overdue, trial, cancelled, none], description: "Al día, por vencer dentro de dueSoonDays, vencida (past_due), en prueba, cancelada o sin suscripción" } } }
+    PlatformOrganizationDetail: { type: object, required: [id, legalName, tradeName, taxId, countryCode, currency, timezone, taxName, taxRate, taxIncluded, active, createdAt, paymentStanding, usage, subscription, payments, administrators, locations], properties: { id: { type: string, format: uuid }, legalName: { type: string }, tradeName: { type: string }, taxId: { type: string }, countryCode: { type: string }, currency: { type: string }, timezone: { type: string }, taxName: { type: string }, taxRate: { type: string, description: Porcentaje con dos decimales }, taxIncluded: { type: boolean }, active: { type: boolean }, createdAt: { type: string, format: date-time }, paymentStanding: { type: string, enum: [up_to_date, due_soon, overdue, trial, cancelled, none] }, usage: { type: object, required: [locations, users, maxLocations, maxUsers], properties: { locations: { type: integer }, users: { type: integer }, maxLocations: { type: [integer, "null"] }, maxUsers: { type: [integer, "null"] } } }, subscription: { oneOf: [{ type: "null" }, { type: object, required: [planName, billingCycle, priceAmount, currency, status, startedAt, renewsAt, trialEndsAt, autoRenew, termsVersion, termsAcceptedAt, moduleCount], properties: { planName: { type: string }, billingCycle: { type: string, enum: [monthly, annual] }, priceAmount: { type: string }, currency: { type: string }, status: { type: string, enum: [trial, active, past_due, cancelled] }, startedAt: { type: string, format: date-time }, renewsAt: { type: [string, "null"], format: date-time }, trialEndsAt: { type: [string, "null"], format: date-time }, autoRenew: { type: boolean }, termsVersion: { type: [string, "null"] }, termsAcceptedAt: { type: [string, "null"], format: date-time }, moduleCount: { type: integer } } }] }, payments: { type: object, required: [paidCount, totalPaid, lastPaidAt], properties: { paidCount: { type: integer }, totalPaid: { type: string }, lastPaidAt: { type: [string, "null"], format: date-time } } }, administrators: { type: array, items: { type: object, required: [name, email, active], properties: { name: { type: string }, email: { type: string }, active: { type: boolean } } } }, locations: { type: array, items: { type: object, required: [id, name, code, address, phone, active], properties: { id: { type: string, format: uuid }, name: { type: string }, code: { type: string }, address: { type: string }, phone: { type: string }, active: { type: boolean } } } } } }
+    PlatformOrganizationPage: { type: object, required: [items, total, page, pageSize, summary, dueSoonDays, planOptions, standingOptions], properties: { items: { type: array, items: { $ref: "#/components/schemas/PlatformOrganization" } }, total: { type: integer }, page: { type: integer }, pageSize: { type: integer }, summary: { type: object, description: Conteo total y por situación de pago sin filtros, additionalProperties: { type: integer } }, dueSoonDays: { type: integer }, planOptions: { type: array, items: { $ref: "#/components/schemas/Option" } }, standingOptions: { type: array, items: { $ref: "#/components/schemas/Option" } } } }
+    OrganizationSubscription: { type: object, required: [id, organization, plan, billingCycle, priceAmount, currency, status, autoRenew, usage, payments], properties: { id: { type: string, format: uuid }, organization: { type: object, required: [id, tradeName, legalName, taxId, active], properties: { id: { type: string, format: uuid }, tradeName: { type: string }, legalName: { type: string }, taxId: { type: string }, active: { type: boolean } } }, plan: { $ref: "#/components/schemas/SubscriptionPlan" }, billingCycle: { type: string, enum: [monthly, annual] }, priceAmount: { type: string }, currency: { type: string }, status: { type: string, enum: [trial, active, past_due, cancelled] }, trialStartsAt: { type: [string, "null"], format: date-time }, trialEndsAt: { type: [string, "null"], format: date-time }, currentPeriodStartsAt: { type: [string, "null"], format: date-time }, currentPeriodEndsAt: { type: [string, "null"], format: date-time }, renewsAt: { type: [string, "null"], format: date-time }, autoRenew: { type: boolean }, termsVersion: { type: [string, "null"] }, termsAcceptedAt: { type: [string, "null"], format: date-time }, usage: { type: object, required: [locations, users], properties: { locations: { type: integer }, users: { type: integer } } }, payments: { type: array, items: { type: object } } } }
     PlatformCountryOption:
       allOf:
         - { $ref: "#/components/schemas/CountryOption" }
@@ -1478,11 +1521,58 @@ components:
         name: { type: string }
         qty: { type: string, description: Cantidad cobrada del producto }
         revenue: { type: string, description: Importe cobrado del producto }
+    DashboardPeriod:
+      type: object
+      required: [key, days, from, to]
+      properties:
+        key: { type: string, enum: [today, 7d, 30d] }
+        days: { type: integer, enum: [1, 7, 30] }
+        from: { type: string, format: date, description: Primer día de la ventana en la zona horaria del local }
+        to: { type: string, format: date, description: Día de negocio actual }
+    DashboardPrevious:
+      type: object
+      description: Ventana de comparación. Para today es el mismo día de la semana anterior; para 7d y 30d, la ventana inmediatamente anterior de igual duración.
+      required: [salesNet, paidOrders, averageTicket, from, to]
+      properties:
+        salesNet: { type: string }
+        paidOrders: { type: integer, minimum: 0 }
+        averageTicket: { type: string }
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+    DashboardTrendPoint:
+      type: object
+      required: [key, current, previous, orders]
+      properties:
+        key: { type: string, description: Hora de dos dígitos (granularity hour) o fecha YYYY-MM-DD de la ventana actual (granularity day) }
+        current: { type: string, description: Cobros menos devoluciones del tramo }
+        previous: { type: string, description: Mismo tramo de la ventana de comparación }
+        orders: { type: integer, minimum: 0, description: Pedidos con al menos un cobro en el tramo actual }
+    DashboardTrend:
+      type: object
+      required: [granularity, points]
+      properties:
+        granularity: { type: string, enum: [hour, day], description: hour para today (solo horas con movimientos), day para 7d y 30d (todos los días del periodo) }
+        points: { type: array, items: { $ref: "#/components/schemas/DashboardTrendPoint" } }
+    DashboardBreakdown:
+      type: object
+      required: [value, label, total, count]
+      properties:
+        value: { type: string, description: Código del canal o del medio de pago }
+        label: { type: string }
+        total: { type: string, description: Cobros del periodo menos devoluciones del periodo asignadas al canal o medio del cobro original }
+        count: { type: integer, minimum: 0, description: Cobros registrados en el periodo }
+    DashboardCategorySale:
+      type: object
+      required: [name, qty, revenue]
+      properties:
+        name: { type: string, description: Categoría de la carta o «Sin categoría» }
+        qty: { type: string }
+        revenue: { type: string, description: Importe de los pedidos pagados por completo con un cobro en el periodo }
     Dashboard:
       type: object
-      required: [salesNet, paidOrders, averageTicket, openOrders, criticalStock, purchasesToApprove, reservationsToday, kitchenPending, businessDate, operations, hourlySales, topProducts]
+      required: [salesNet, paidOrders, averageTicket, openOrders, criticalStock, purchasesToApprove, reservationsToday, kitchenPending, businessDate, operations, hourlySales, topProducts, period, previous, trend, salesByChannel, salesByPaymentMethod, salesByCategory]
       properties:
-        salesNet: { type: string, description: Cobros del día menos devoluciones del día }
+        salesNet: { type: string, description: Cobros del periodo menos devoluciones del periodo }
         paidOrders: { type: integer, minimum: 0, description: Pedidos no cancelados completamente pagados con al menos un cobro hoy, sin contar pagos parciales }
         averageTicket: { type: string, description: Promedio del importe total de los pedidos completamente cobrados hoy }
         openOrders: { type: integer, minimum: 0 }
@@ -1492,8 +1582,14 @@ components:
         kitchenPending: { type: integer, minimum: 0 }
         businessDate: { type: string, format: date, description: Fecha en la zona horaria del local seleccionado }
         operations: { $ref: "#/components/schemas/DashboardOperations" }
-        hourlySales: { type: array, items: { $ref: "#/components/schemas/DashboardHourlySale" } }
+        hourlySales: { type: array, description: Siempre del día actual, independiente del periodo, items: { $ref: "#/components/schemas/DashboardHourlySale" } }
         topProducts: { type: array, maxItems: 5, items: { $ref: "#/components/schemas/DashboardTopProduct" } }
+        period: { $ref: "#/components/schemas/DashboardPeriod" }
+        previous: { $ref: "#/components/schemas/DashboardPrevious" }
+        trend: { $ref: "#/components/schemas/DashboardTrend" }
+        salesByChannel: { type: array, items: { $ref: "#/components/schemas/DashboardBreakdown" } }
+        salesByPaymentMethod: { type: array, items: { $ref: "#/components/schemas/DashboardBreakdown" } }
+        salesByCategory: { type: array, items: { $ref: "#/components/schemas/DashboardCategorySale" } }
     DashboardOperations:
       type: object
       required: [pendingBalance, unpaidOrders, partialOrders, tablesTotal, tablesOccupied, kitchenConfirmed, kitchenPreparing, readyOrders, deliveryPending, deliveryInTransit, activeCashRegisters, openCashShifts, cashBalance, soldOutProducts]

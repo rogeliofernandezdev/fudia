@@ -39,6 +39,7 @@ export const pageRoutes={
   usersSettings:"/settings/users",
   billingSettings:"/settings/billing",
   modulesSettings:"/settings/modules",
+  companiesSettings:"/settings/companies",
   integrationsSettings:"/settings/integrations",
   operationsSettings:"/settings/operations",
   profileSettings:"/settings/profile",
@@ -98,6 +99,10 @@ export const legacyPageRedirects=[
   ...legacyPageAliases,
   {legacy:"/configuracion/onboarding",canonical:pageRoutes.platformOnboarding},
 ] as const;
+
+export function companySettingsPath(organizationId:string){
+  return `${pageRoutes.companiesSettings}/${encodeURIComponent(organizationId)}`;
+}
 
 export function publicConciergePath(qr:string){
   return pageRoutes.publicConcierge.replace(":qr",encodeURIComponent(qr));

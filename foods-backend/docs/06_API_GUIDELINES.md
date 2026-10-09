@@ -33,9 +33,20 @@ el listado antes de una posible repetición.
 la sesión. Los agregados se leen en una transacción de solo lectura con snapshot
 repetible: indicadores, gráfico, productos y `operations` describen la misma
 instantánea. Cualquier error de lectura responde 503, nunca listas vacías falsas.
-`businessDate` usa la zona horaria del local; cobros y reservas de hoy usan esa fecha.
+`businessDate` usa la zona horaria del local; las reservas de hoy usan esa fecha.
+`period` (`today` por defecto, `7d` o `30d`; otro valor responde 400) define la
+ventana de `salesNet`, `paidOrders`, `averageTicket`, `topProducts`, `trend` y los
+desgloses `salesByChannel`, `salesByPaymentMethod` y `salesByCategory`.
+`hourlySales`, reservas y `operations` siempre son del momento actual.
 `paidOrders` cuenta pedidos no cancelados totalmente pagados con al menos un pago
-hoy, no cada pedido con un abono. `averageTicket` promedia los totales de esos pedidos.
+en la ventana, no cada pedido con un abono. `averageTicket` promedia los totales
+de esos pedidos. `previous` repite ventas, pedidos y promedio para la ventana de
+comparación: el mismo día de la semana anterior para `today` y la ventana
+inmediatamente anterior de igual duración para 7 y 30 días. `trend` es por hora
+para `today` (solo horas con movimientos de hoy o de la comparación) y por día
+para 7 y 30 días (todos los días, con 0 cuando no hubo ventas). Canal y medio de
+pago restan las devoluciones en el canal y medio del cobro que revierten; las
+categorías usan la misma definición de pedido pagado que los productos.
 Se conserva la integridad de `salesNet` ante ajustes/devoluciones existentes.
 `operations` consolida saldos de pedidos no cancelados ni finalizados (también
 anteriores), pagos parciales, mesas activas ocupadas, colas de cocina y delivery,

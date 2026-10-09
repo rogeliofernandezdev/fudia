@@ -57,8 +57,17 @@ type subscriptionPaymentView struct {
 	CreatedAt         string  `json:"createdAt"`
 }
 
+type subscriptionOrganizationView struct {
+	ID        string `json:"id"`
+	TradeName string `json:"tradeName"`
+	LegalName string `json:"legalName"`
+	TaxID     string `json:"taxId"`
+	Active    bool   `json:"active"`
+}
+
 type organizationSubscriptionView struct {
 	ID                    string                    `json:"id"`
+	Organization          subscriptionOrganizationView `json:"organization"`
 	Plan                  subscriptionPlanView      `json:"plan"`
 	BillingCycle          string                    `json:"billingCycle"`
 	PriceAmount           string                    `json:"priceAmount"`
@@ -356,13 +365,33 @@ func createOrganizationSubscription(ctx context.Context, tx pgx.Tx, organization
 	return syncOrganizationModulesForPlan(ctx, tx, organizationID, plan.ModuleKeys)
 }
 
+var organizationIDPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
+
+// subscriptionOrganizationID resuelve la empresa de la suscripción: la indicada en la ruta de
+// Plataforma (/v1/platform/organizations/{id}/...) o, en su ausencia, la de la sesión.
+func (a *API) subscriptionOrganizationID(w http.ResponseWriter, r *http.Request) (string, bool) {
+	id := strings.TrimSpace(r.PathValue("id"))
+	if id == "" {
+		return r.Context().Value(scopeKey{}).(scope).OrganizationID, true
+	}
+	var exists bool
+	if !organizationIDPattern.MatchString(id) || a.db.QueryRow(r.Context(), `SELECT EXISTS(SELECT 1 FROM organizations WHERE id=$1)`, id).Scan(&exists) != nil || !exists {
+		fail(w, 404, "organization_not_found", "La empresa no existe.")
+		return "", false
+	}
+	return id, true
+}
+
 func (a *API) getOrganizationSubscription(w http.ResponseWriter, r *http.Request) {
-	s := r.Context().Value(scopeKey{}).(scope)
+	organizationID, ok := a.subscriptionOrganizationID(w, r)
+	if !ok {
+		return
+	}
 	_, _ = a.db.Exec(r.Context(), `
 		UPDATE organization_subscriptions
 		SET status='past_due',updated_at=now()
 		WHERE organization_id=$1 AND status IN ('trial','active') AND renews_at IS NOT NULL AND renews_at<now()
-	`, s.OrganizationID)
+	`, organizationID)
 
 	var out organizationSubscriptionView
 	var plan subscriptionPlanView
@@ -380,7 +409,7 @@ func (a *API) getOrganizationSubscription(w http.ResponseWriter, r *http.Request
 		FROM organization_subscriptions s
 		JOIN subscription_plans p ON p.id=s.plan_id
 		WHERE s.organization_id=$1
-	`, s.OrganizationID).Scan(
+	`, organizationID).Scan(
 		&out.ID,
 		&plan.ID,&plan.Code,&plan.Name,&plan.Description,&plan.Currency,&plan.MonthlyPrice,&plan.AnnualPrice,&plan.TrialDays,&plan.MaxLocations,&plan.MaxUsers,&plan.ModuleKeys,&plan.TermsVersion,&plan.Active,
 		&out.BillingCycle,&out.PriceAmount,&out.Currency,&out.Status,
@@ -396,8 +425,10 @@ func (a *API) getOrganizationSubscription(w http.ResponseWriter, r *http.Request
 		return
 	}
 	out.Plan = plan
-	_ = a.db.QueryRow(r.Context(), `SELECT count(*) FROM locations WHERE organization_id=$1 AND active`, s.OrganizationID).Scan(&out.Usage.Locations)
-	_ = a.db.QueryRow(r.Context(), `SELECT count(*) FROM users WHERE organization_id=$1 AND active AND NOT platform_admin`, s.OrganizationID).Scan(&out.Usage.Users)
+	out.Organization.ID = organizationID
+	_ = a.db.QueryRow(r.Context(), `SELECT trade_name,legal_name,COALESCE(tax_id,''),active FROM organizations WHERE id=$1`, organizationID).Scan(&out.Organization.TradeName, &out.Organization.LegalName, &out.Organization.TaxID, &out.Organization.Active)
+	_ = a.db.QueryRow(r.Context(), `SELECT count(*) FROM locations WHERE organization_id=$1 AND active`, organizationID).Scan(&out.Usage.Locations)
+	_ = a.db.QueryRow(r.Context(), `SELECT count(*) FROM users WHERE organization_id=$1 AND active AND NOT platform_admin`, organizationID).Scan(&out.Usage.Users)
 
 	out.Payments = []subscriptionPaymentView{}
 	rows, paymentErr := a.db.Query(r.Context(), `
@@ -408,7 +439,7 @@ func (a *API) getOrganizationSubscription(w http.ResponseWriter, r *http.Request
 		WHERE organization_id=$1
 		ORDER BY created_at DESC
 		LIMIT 10
-	`, s.OrganizationID)
+	`, organizationID)
 	if paymentErr == nil {
 		defer rows.Close()
 		for rows.Next() {
@@ -470,6 +501,10 @@ func ensureSubscriptionCapacity(ctx context.Context, tx pgx.Tx, organizationID, 
 
 func (a *API) updateOrganizationSubscription(w http.ResponseWriter, r *http.Request) {
 	s := r.Context().Value(scopeKey{}).(scope)
+	organizationID, ok := a.subscriptionOrganizationID(w, r)
+	if !ok {
+		return
+	}
 	var in subscriptionUpdateInput
 	if json.NewDecoder(r.Body).Decode(&in) != nil {
 		fail(w, 400, "invalid_subscription", "Revisa los datos de la suscripción.")
@@ -507,13 +542,13 @@ func (a *API) updateOrganizationSubscription(w http.ResponseWriter, r *http.Requ
 		FROM organization_subscriptions
 		WHERE organization_id=$1
 		FOR UPDATE
-	`, s.OrganizationID).Scan(&currentPlanID,&currentCycle,&currentStatus,&currentPrice,&currentTerms,&currentTrialStarts,&currentTrialEnds,&currentPeriodStarts,&currentPeriodEnds,&currentRenews,&currentCancelledAt); err != nil {
+	`, organizationID).Scan(&currentPlanID,&currentCycle,&currentStatus,&currentPrice,&currentTerms,&currentTrialStarts,&currentTrialEnds,&currentPeriodStarts,&currentPeriodEnds,&currentRenews,&currentCancelledAt); err != nil {
 		fail(w,404,"subscription_not_found","La empresa todavía no tiene una suscripción.")
 		return
 	}
 	var locationCount,userCount int
-	_ = tx.QueryRow(r.Context(), `SELECT count(*) FROM locations WHERE organization_id=$1 AND active`, s.OrganizationID).Scan(&locationCount)
-	_ = tx.QueryRow(r.Context(), `SELECT count(*) FROM users WHERE organization_id=$1 AND active AND NOT platform_admin`, s.OrganizationID).Scan(&userCount)
+	_ = tx.QueryRow(r.Context(), `SELECT count(*) FROM locations WHERE organization_id=$1 AND active`, organizationID).Scan(&locationCount)
+	_ = tx.QueryRow(r.Context(), `SELECT count(*) FROM users WHERE organization_id=$1 AND active AND NOT platform_admin`, organizationID).Scan(&userCount)
 	if (plan.MaxLocations!=nil && locationCount>*plan.MaxLocations) || (plan.MaxUsers!=nil && userCount>*plan.MaxUsers) {
 		fail(w,409,"plan_limit_conflict","La empresa supera los límites del plan seleccionado.")
 		return
@@ -570,14 +605,14 @@ func (a *API) updateOrganizationSubscription(w http.ResponseWriter, r *http.Requ
 		    terms_accepted_at=COALESCE($14,terms_accepted_at),terms_accepted_by=COALESCE($15,terms_accepted_by),
 		    cancelled_at=$16,updated_at=now()
 		WHERE organization_id=$1
-	`, s.OrganizationID,plan.ID,in.BillingCycle,price,plan.Currency,in.Status,trialStarts,trialEnds,periodStarts,periodEnds,renews,in.AutoRenew,termsVersion,termsAcceptedAt,termsAcceptedBy,cancelledAt)
+	`, organizationID,plan.ID,in.BillingCycle,price,plan.Currency,in.Status,trialStarts,trialEnds,periodStarts,periodEnds,renews,in.AutoRenew,termsVersion,termsAcceptedAt,termsAcceptedBy,cancelledAt)
 	if err != nil {
 		fail(w,503,"subscription_unavailable","No pudimos actualizar la suscripción.")
 		return
 	}
 	moduleKeys:=plan.ModuleKeys
 	if in.Status=="cancelled" { moduleKeys=[]string{} }
-	if err=syncOrganizationModulesForPlan(r.Context(),tx,s.OrganizationID,moduleKeys);err!=nil {
+	if err=syncOrganizationModulesForPlan(r.Context(),tx,organizationID,moduleKeys);err!=nil {
 		fail(w,503,"subscription_unavailable","No pudimos aplicar los módulos del plan.")
 		return
 	}
@@ -585,11 +620,15 @@ func (a *API) updateOrganizationSubscription(w http.ResponseWriter, r *http.Requ
 		fail(w,503,"subscription_unavailable","No pudimos confirmar el cambio de suscripción.")
 		return
 	}
-	a.audit(r,"subscription.updated","organization",s.OrganizationID)
+	a.audit(r,"subscription.updated","organization",organizationID)
 	a.getOrganizationSubscription(w,r)
 }
 func (a *API) recordSubscriptionPayment(w http.ResponseWriter, r *http.Request) {
 	s := r.Context().Value(scopeKey{}).(scope)
+	organizationID, ok := a.subscriptionOrganizationID(w, r)
+	if !ok {
+		return
+	}
 	var in subscriptionPaymentInput
 	if json.NewDecoder(r.Body).Decode(&in) != nil {
 		fail(w,400,"invalid_payment","Revisa los datos del pago.")
@@ -611,7 +650,7 @@ func (a *API) recordSubscriptionPayment(w http.ResponseWriter, r *http.Request) 
 	var subscriptionID,billingCycle,currency string
 	var moduleKeys []string
 	var currentPeriodEnd *time.Time
-	if err=tx.QueryRow(r.Context(),`SELECT s.id,s.billing_cycle,s.currency,p.module_keys,s.current_period_ends_at FROM organization_subscriptions s JOIN subscription_plans p ON p.id=s.plan_id WHERE s.organization_id=$1 FOR UPDATE OF s`,s.OrganizationID).Scan(&subscriptionID,&billingCycle,&currency,&moduleKeys,&currentPeriodEnd);err!=nil {
+	if err=tx.QueryRow(r.Context(),`SELECT s.id,s.billing_cycle,s.currency,p.module_keys,s.current_period_ends_at FROM organization_subscriptions s JOIN subscription_plans p ON p.id=s.plan_id WHERE s.organization_id=$1 FOR UPDATE OF s`,organizationID).Scan(&subscriptionID,&billingCycle,&currency,&moduleKeys,&currentPeriodEnd);err!=nil {
 		fail(w,404,"subscription_not_found","La empresa todavía no tiene una suscripción.");return
 	}
 	if in.Currency=="" { in.Currency=currency }
@@ -637,15 +676,15 @@ func (a *API) recordSubscriptionPayment(w http.ResponseWriter, r *http.Request) 
 		INSERT INTO subscription_payments(organization_id,subscription_id,amount,currency,status,provider,external_reference,period_starts_at,period_ends_at,paid_at,recorded_by)
 		VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
 		RETURNING id
-	`,s.OrganizationID,subscriptionID,in.Amount,in.Currency,in.Status,in.Provider,external,periodStart,periodEnd,paidAt,s.UserID).Scan(&id)
+	`,organizationID,subscriptionID,in.Amount,in.Currency,in.Status,in.Provider,external,periodStart,periodEnd,paidAt,s.UserID).Scan(&id)
 	if err!=nil { fail(w,409,"payment_conflict","La referencia del pago ya fue registrada.");return }
 	if in.Status=="paid" {
 		_,err=tx.Exec(r.Context(),`
 			UPDATE organization_subscriptions
 			SET status='active',current_period_starts_at=$2,current_period_ends_at=$3,renews_at=$3,cancelled_at=NULL,updated_at=now()
 			WHERE organization_id=$1
-		`,s.OrganizationID,periodStart,periodEnd)
-		if err==nil { err=syncOrganizationModulesForPlan(r.Context(),tx,s.OrganizationID,moduleKeys) }
+		`,organizationID,periodStart,periodEnd)
+		if err==nil { err=syncOrganizationModulesForPlan(r.Context(),tx,organizationID,moduleKeys) }
 	}
 	if err!=nil || tx.Commit(r.Context())!=nil { fail(w,503,"payment_unavailable","No pudimos confirmar el pago.");return }
 	a.audit(r,"subscription.payment_recorded","subscription_payment",id)

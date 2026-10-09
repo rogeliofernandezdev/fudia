@@ -30,6 +30,3 @@
   .platform-exit svg{margin:0}
   .platform-content{padding:var(--space-22) var(--space-14) var(--space-45)}
 }
-.platform-skeleton-block,.platform-skeleton-copy i{display:block;background:linear-gradient(90deg,var(--palette-blue-74) 20%,var(--palette-blue-104) 42%,var(--palette-blue-74) 64%);background-size:220% 100%;animation:platform-skeleton-shimmer var(--duration-1350) ease-in-out infinite}
-@keyframes platform-skeleton-shimmer{to{background-position:-220% 0}}
-@media(prefers-reduced-motion:reduce){.platform-skeleton-block,.platform-skeleton-copy i{animation:none}}

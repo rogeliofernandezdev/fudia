@@ -1,7 +1,9 @@
+export {PlatformCompaniesPage} from "./presentation/platform-companies-page";
+export {PlatformCompanyDetailPage} from "./presentation/platform-company-detail-page";
 export {PlatformOnboardingPage} from "./presentation/platform-onboarding-page";
 export {PlatformGlobalSettingsPage} from "./presentation/platform-global-settings-page";
 export {PlatformPlansPage} from "./presentation/platform-plans-page";
 export {PlatformSubscriptionPage} from "./presentation/platform-subscription-page";
 export {PlatformShell} from "./presentation/platform-shell";
 export {PlatformPlansSkeleton,PlatformSubscriptionSkeleton} from "./presentation/platform-skeletons";
-export type {OrganizationSubscription,SubscriptionPlan,SubscriptionPayment} from "./domain/types";
+export type {PlatformOrganization,PaymentStanding,OrganizationSubscription,SubscriptionPlan,SubscriptionPayment} from "./domain/types";

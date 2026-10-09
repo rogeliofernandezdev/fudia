@@ -35,7 +35,12 @@ func (a *API) Routes() *http.ServeMux {
 	m.Handle("GET /v1/platform/whatsapp-channels", a.auth(a.requirePlatformAdmin(http.HandlerFunc(a.listPlatformWhatsAppChannels))))
 	m.Handle("POST /v1/platform/whatsapp-channels", a.auth(a.requirePlatformAdmin(http.HandlerFunc(a.createPlatformWhatsAppChannel))))
 	m.Handle("PATCH /v1/platform/whatsapp-channels/{id}", a.auth(a.requirePlatformAdmin(http.HandlerFunc(a.updatePlatformWhatsAppChannel))))
+	m.Handle("GET /v1/platform/organizations", a.auth(a.requirePlatformAdmin(http.HandlerFunc(a.listPlatformOrganizations))))
 	m.Handle("POST /v1/platform/organizations", a.auth(a.requirePlatformAdmin(http.HandlerFunc(a.onboardTenant))))
+	m.Handle("GET /v1/platform/organizations/{id}", a.auth(a.requirePlatformAdmin(http.HandlerFunc(a.getPlatformOrganization))))
+	m.Handle("GET /v1/platform/organizations/{id}/subscription", a.auth(a.requirePlatformAdmin(http.HandlerFunc(a.getOrganizationSubscription))))
+	m.Handle("PATCH /v1/platform/organizations/{id}/subscription", a.auth(a.requirePlatformAdmin(http.HandlerFunc(a.updateOrganizationSubscription))))
+	m.Handle("POST /v1/platform/organizations/{id}/subscription/payments", a.auth(a.requirePlatformAdmin(http.HandlerFunc(a.recordSubscriptionPayment))))
 	m.Handle("GET /v1/platform/plans", a.auth(a.requirePlatformAdmin(http.HandlerFunc(a.listSubscriptionPlans))))
 	m.Handle("POST /v1/platform/plans", a.auth(a.requirePlatformAdmin(http.HandlerFunc(a.createSubscriptionPlan))))
 	m.Handle("PATCH /v1/platform/plans/{id}", a.auth(a.requirePlatformAdmin(http.HandlerFunc(a.updateSubscriptionPlan))))
@@ -425,6 +430,11 @@ func (a *API) auth(next http.Handler) http.Handler {
 }
 func (a *API) dashboard(w http.ResponseWriter, r *http.Request) {
 	s := r.Context().Value(scopeKey{}).(scope)
+	period, ok := dashboardPeriodByKey(r.URL.Query().Get("period"))
+	if !ok {
+		fail(w, 400, "invalid_period", "El periodo del resumen no es válido.")
+		return
+	}
 	canSeeExpected := a.canSeeCashExpected(r, s)
 	tx, err := a.db.BeginTx(r.Context(), pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly})
 	if err != nil {
@@ -446,14 +456,14 @@ func (a *API) dashboard(w http.ResponseWriter, r *http.Request) {
 		  FROM payments p
 		  CROSS JOIN loc
 		  WHERE p.organization_id=$1 AND p.location_id=$2
-		    AND (p.created_at AT TIME ZONE loc.timezone)::date=(now() AT TIME ZONE loc.timezone)::date
+		    AND (p.created_at AT TIME ZONE loc.timezone)::date BETWEEN (now() AT TIME ZONE loc.timezone)::date-($3::int-1) AND (now() AT TIME ZONE loc.timezone)::date
 		),
 		today_refunds AS (
 		  SELECT pr.amount
 		  FROM payment_refunds pr
 		  CROSS JOIN loc
 		  WHERE pr.organization_id=$1 AND pr.location_id=$2
-		    AND (pr.created_at AT TIME ZONE loc.timezone)::date=(now() AT TIME ZONE loc.timezone)::date
+		    AND (pr.created_at AT TIME ZONE loc.timezone)::date BETWEEN (now() AT TIME ZONE loc.timezone)::date-($3::int-1) AND (now() AT TIME ZONE loc.timezone)::date
 		),
 		sales AS (
 		  SELECT
@@ -494,7 +504,7 @@ func (a *API) dashboard(w http.ResponseWriter, r *http.Request) {
 		   WHERE organization_id=$1 AND location_id=$2
 		     AND status IN ('confirmado','preparando'))
 		FROM sales CROSS JOIN paid
-	`, s.OrganizationID, s.LocationID).Scan(
+	`, s.OrganizationID, s.LocationID, period.Days).Scan(
 		&salesNet, &paidOrders, &averageTicket, &openOrders, &critical, &purchases, &reservationsToday, &kitchenPending,
 	)
 	if err != nil {
@@ -550,10 +560,11 @@ func (a *API) dashboard(w http.ResponseWriter, r *http.Request) {
 		    SELECT 1 FROM payments today_payment
 		    JOIN locations l ON l.id=today_payment.location_id AND l.organization_id=today_payment.organization_id
 		    WHERE today_payment.order_id=o.id AND today_payment.organization_id=o.organization_id AND today_payment.location_id=o.location_id
-		      AND (today_payment.created_at AT TIME ZONE l.timezone)::date=(now() AT TIME ZONE l.timezone)::date
+		      AND (today_payment.created_at AT TIME ZONE l.timezone)::date
+		          BETWEEN (now() AT TIME ZONE l.timezone)::date-($3::int-1) AND (now() AT TIME ZONE l.timezone)::date
 		  )
 		GROUP BY oi.name ORDER BY sum(oi.qty) DESC,oi.name LIMIT 5
-	`, s.OrganizationID, s.LocationID)
+	`, s.OrganizationID, s.LocationID, period.Days)
 	if err != nil {
 		fail(w, 503, "dashboard_unavailable", "No pudimos cargar los productos vendidos.")
 		return
@@ -578,6 +589,11 @@ func (a *API) dashboard(w http.ResponseWriter, r *http.Request) {
 		fail(w, 503, "dashboard_unavailable", "No pudimos calcular el estado del restaurante.")
 		return
 	}
+	insights, err := loadDashboardInsights(r.Context(), tx, s, period)
+	if err != nil {
+		fail(w, 503, "dashboard_unavailable", "No pudimos calcular las tendencias de ventas.")
+		return
+	}
 	if err = tx.Commit(r.Context()); err != nil {
 		fail(w, 503, "dashboard_unavailable", "No pudimos completar el resumen operativo.")
 		return
@@ -587,6 +603,9 @@ func (a *API) dashboard(w http.ResponseWriter, r *http.Request) {
 		"criticalStock": critical, "purchasesToApprove": purchases, "reservationsToday": reservationsToday,
 		"kitchenPending": kitchenPending, "hourlySales": hourly, "topProducts": topProducts,
 		"operations": operations, "businessDate": businessDate,
+		"period": insights.Period, "previous": insights.Previous, "trend": insights.Trend,
+		"salesByChannel": insights.SalesByChannel, "salesByPaymentMethod": insights.SalesByPaymentMethod,
+		"salesByCategory": insights.SalesByCategory,
 	})
 }
 

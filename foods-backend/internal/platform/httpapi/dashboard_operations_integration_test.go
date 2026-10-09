@@ -19,11 +19,21 @@ type dashboardTestResponse struct {
 	Operations        dashboardOperations `json:"operations"`
 	HourlySales       []map[string]any    `json:"hourlySales"`
 	TopProducts       []map[string]any    `json:"topProducts"`
+	dashboardInsights
 }
 
 func readDashboardTest(t *testing.T, pool *pgxpool.Pool, s scope) dashboardTestResponse {
 	t.Helper()
-	req := httptest.NewRequest("GET", "/v1/admin/dashboard", nil)
+	return readDashboardPeriodTest(t, pool, s, "")
+}
+
+func readDashboardPeriodTest(t *testing.T, pool *pgxpool.Pool, s scope, period string) dashboardTestResponse {
+	t.Helper()
+	target := "/v1/admin/dashboard"
+	if period != "" {
+		target += "?period=" + period
+	}
+	req := httptest.NewRequest("GET", target, nil)
 	req = req.WithContext(context.WithValue(req.Context(), scopeKey{}, s))
 	rec := httptest.NewRecorder()
 	New(pool).dashboard(rec, req)
@@ -58,7 +68,7 @@ func TestDashboardConsolidatesRestaurantOperations(t *testing.T) {
 	}
 
 	empty := readDashboardTest(t, pool, s)
-	if empty.PaidOrders != 0 || empty.OpenOrders != 0 || empty.Operations.PendingBalance != "0" || empty.HourlySales == nil || empty.TopProducts == nil {
+	if empty.PaidOrders != 0 || empty.OpenOrders != 0 || empty.Operations.PendingBalance != "0" || empty.HourlySales == nil || empty.TopProducts == nil || empty.Trend.Points == nil || empty.Trend.Granularity != "hour" || empty.Period.Key != "today" || empty.Previous.SalesNet != "0" || empty.SalesByChannel == nil || empty.SalesByPaymentMethod == nil || empty.SalesByCategory == nil {
 		t.Fatalf("empty dashboard: %+v", empty)
 	}
 	register := id(`INSERT INTO cash_registers(organization_id,location_id,name,created_by) VALUES($1,$2,'Caja',$3) RETURNING id`, s.OrganizationID, s.LocationID, s.UserID)
@@ -101,6 +111,43 @@ func TestDashboardConsolidatesRestaurantOperations(t *testing.T) {
 	}
 	if len(result.TopProducts) != 1 || result.TopProducts[0]["name"] != "Almuerzo" {
 		t.Fatalf("paid products: %+v", result.TopProducts)
+	}
+	if len(result.Trend.Points) != 1 || result.Trend.Points[0].Current != "70.00" || result.Trend.Points[0].Previous != "0" || result.Trend.Points[0].Orders != 2 {
+		t.Fatalf("hourly trend must compare today with the same day last week: %+v", result.Trend)
+	}
+	if result.Period.From != result.BusinessDate || result.Period.To != result.BusinessDate || result.Previous.SalesNet != "0" || result.Previous.PaidOrders != 0 {
+		t.Fatalf("today period and previous window: %+v %+v", result.Period, result.Previous)
+	}
+	if len(result.SalesByChannel) != 1 || result.SalesByChannel[0].Value != "mostrador" || result.SalesByChannel[0].Label != "Mostrador" || result.SalesByChannel[0].Total != "70.00" || result.SalesByChannel[0].Count != 2 {
+		t.Fatalf("sales by channel: %+v", result.SalesByChannel)
+	}
+	if len(result.SalesByPaymentMethod) != 1 || result.SalesByPaymentMethod[0].Value != "card" || result.SalesByPaymentMethod[0].Total != "70.00" || result.SalesByPaymentMethod[0].Label == "" {
+		t.Fatalf("sales by payment method: %+v", result.SalesByPaymentMethod)
+	}
+	if len(result.SalesByCategory) != 1 || result.SalesByCategory[0].Name != "Sin categoría" || result.SalesByCategory[0].Revenue != "50.00" {
+		t.Fatalf("sales by category only counts fully paid orders: %+v", result.SalesByCategory)
+	}
+
+	// Un cobro de hace tres días entra en 7 días pero no en hoy.
+	older := order("salon", "entregado", 40, nil)
+	exec(`UPDATE orders SET completed_at=now() WHERE id=$1`, older)
+	exec(`INSERT INTO payments(organization_id,location_id,order_id,shift_id,method,amount,created_by,created_at) VALUES($1,$2,$3,$4,'card',40,$5,now()-interval '3 days')`, s.OrganizationID, s.LocationID, older, shift, s.UserID)
+	week := readDashboardPeriodTest(t, pool, s, "7d")
+	if week.Period.Key != "7d" || week.Period.Days != 7 || week.Trend.Granularity != "day" || len(week.Trend.Points) != 7 || week.SalesNet != "110.00" || week.PaidOrders != 2 {
+		t.Fatalf("7-day period: %+v", week)
+	}
+	if week.Trend.Points[6].Current != "70.00" || week.Trend.Points[6].Key != week.BusinessDate {
+		t.Fatalf("7-day trend must end today: %+v", week.Trend.Points)
+	}
+	if todayOnly := readDashboardTest(t, pool, s); todayOnly.SalesNet != "70.00" {
+		t.Fatalf("older payments must not leak into today: %s", todayOnly.SalesNet)
+	}
+	req := httptest.NewRequest("GET", "/v1/admin/dashboard?period=year", nil)
+	req = req.WithContext(context.WithValue(req.Context(), scopeKey{}, s))
+	rec := httptest.NewRecorder()
+	New(pool).dashboard(rec, req)
+	if rec.Code != 400 {
+		t.Fatalf("unknown period must be rejected, got %d", rec.Code)
 	}
 
 	exec(`UPDATE cash_registers SET blind_close=true WHERE id=$1`, register)

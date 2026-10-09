@@ -1,6 +1,6 @@
 import {ApiClientError,apiFetch} from "@/shared/api/client";
 import {expireBrowserSession} from "@/shared/session/expire-session";
-import type {Country,Currency,OrganizationSubscription,PlatformModule,PlatformOnboardingContext,PlatformOnboardingDraft,SubscriptionPlan,SubscriptionPlanDraft,PlatformWhatsAppChannel,PlatformWhatsAppChannelDraft} from "../domain/types";
+import type {Country,Currency,OrganizationSubscription,PlatformModule,PlatformOnboardingContext,PlatformOnboardingDraft,PlatformOrganizationDetail,PlatformOrganizationFilters,PlatformOrganizationPage,SubscriptionPlan,SubscriptionPlanDraft,PlatformWhatsAppChannel,PlatformWhatsAppChannelDraft} from "../domain/types";
 
 async function platformFetch<T>(path:string,init?:RequestInit):Promise<T>{
  const response=await fetch(`/api/platform/${path}`,{
@@ -80,16 +80,35 @@ export async function createPlatformOrganization(draft:PlatformOnboardingDraft){
  });
 }
 
+export async function listPlatformOrganizations(filters:PlatformOrganizationFilters):Promise<PlatformOrganizationPage>{
+ const params=new URLSearchParams({page:String(filters.page),pageSize:String(filters.pageSize)});
+ if(filters.q.trim())params.set("q",filters.q.trim());
+ if(filters.planId)params.set("planId",filters.planId);
+ if(filters.standing)params.set("standing",filters.standing);
+ return platformFetch<PlatformOrganizationPage>(`organizations?${params}`);
+}
+
+export async function getPlatformOrganization(organizationId:string):Promise<PlatformOrganizationDetail>{
+ return platformFetch<PlatformOrganizationDetail>(`organizations/${encodeURIComponent(organizationId)}`);
+}
+
 export async function getCurrentOrganizationSubscription(){
  return apiFetch<OrganizationSubscription>("subscription");
 }
 
-export async function changeOrganizationSubscription(input:{planId:string;billingCycle:"monthly"|"annual";status:OrganizationSubscription["status"];autoRenew:boolean;termsAccepted:boolean}){
- return platformFetch<OrganizationSubscription>("subscription",{method:"PATCH",body:JSON.stringify(input)});
+/** Sin `organizationId` opera sobre la empresa activa de la sesión. */
+const subscriptionPath=(organizationId?:string)=>organizationId?`organizations/${encodeURIComponent(organizationId)}/subscription`:"subscription";
+
+export async function getOrganizationSubscription(organizationId:string){
+ return platformFetch<OrganizationSubscription>(subscriptionPath(organizationId));
 }
 
-export async function recordSubscriptionPayment(input:{amount:string;currency:string;status:"pending"|"paid"|"failed"|"refunded";provider:string;externalReference:string;paidAt:string}){
- return platformFetch<{id:string}>("subscription/payments",{method:"POST",body:JSON.stringify(input)});
+export async function changeOrganizationSubscription(input:{planId:string;billingCycle:"monthly"|"annual";status:OrganizationSubscription["status"];autoRenew:boolean;termsAccepted:boolean},organizationId?:string){
+ return platformFetch<OrganizationSubscription>(subscriptionPath(organizationId),{method:"PATCH",body:JSON.stringify(input)});
+}
+
+export async function recordSubscriptionPayment(input:{amount:string;currency:string;status:"pending"|"paid"|"failed"|"refunded";provider:string;externalReference:string;paidAt:string},organizationId?:string){
+ return platformFetch<{id:string}>(`${subscriptionPath(organizationId)}/payments`,{method:"POST",body:JSON.stringify(input)});
 }
 
 export async function listPlatformWhatsAppChannels(){return platformFetch<{items:PlatformWhatsAppChannel[]}>("whatsapp-channels");}

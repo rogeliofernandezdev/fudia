@@ -8,7 +8,7 @@ Usuario validado en una sola fila, con cada icono junto a su texto sin saltos.
 Usa tipografía auxiliar y espaciado compacto desde 390 px, sin recortar mensajes.
 El login conserva una sola tarjeta centrada y el orden original en todos los
 anchos: logo, formulario y mensajes informativos. La cabecera de marca tiene una
-superficie índigo clara; los campos permanecen blancos con iconos contenidos,
+superficie casi blanca; los campos permanecen blancos con iconos contenidos,
 acción única «Ingresar» y copyright externo. En viewport bajo conserva scroll
 de página y acceso a la acción. No añade panel lateral, títulos decorativos,
 selección de empresa/local/rol ni indicadores operativos ficticios.

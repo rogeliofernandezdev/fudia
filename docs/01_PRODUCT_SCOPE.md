@@ -56,6 +56,10 @@ modelo es independiente del proveedor para permitir integrar posteriormente una
 pasarela sin acoplar el dominio. Los cambios de plan aplican los módulos del
 nuevo entitlement y no permiten bajar a límites inferiores al uso activo.
 
+Plataforma consulta la cartera completa de empresas con su plan y situación de
+pago (al día, por vencer, vencida, en prueba, cancelada o sin suscripción) y
+desde allí abre la gestión de suscripción y cobros de cada empresa.
+
 ### Catálogo comercial inicial
 
 FUDIA inicia con tres planes editables desde Plataforma. No son reglas

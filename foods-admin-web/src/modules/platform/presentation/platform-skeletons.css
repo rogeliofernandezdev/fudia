@@ -6,3 +6,8 @@
 .skeleton-field{display:flex;gap:var(--space-12);margin-top:var(--space-16)}.skeleton-field i{height:var(--size-42);width:var(--size-120)}.skeleton-field span{height:var(--size-42);flex:1}
 .skeleton-history{padding:var(--space-20);margin-top:var(--space-20)}
 @keyframes skeleton-pulse{50%{opacity:.55}}
+
+/* Bloque base compartido por los skeletons de Plataforma, dentro y fuera de su shell. */
+.platform-skeleton-block,.platform-skeleton-copy i{display:block;background:linear-gradient(90deg,var(--palette-blue-74) 20%,var(--palette-blue-104) 42%,var(--palette-blue-74) 64%);background-size:220% 100%;animation:platform-skeleton-shimmer var(--duration-1350) ease-in-out infinite}
+@keyframes platform-skeleton-shimmer{to{background-position:-220% 0}}
+@media(prefers-reduced-motion:reduce){.platform-skeleton-block,.platform-skeleton-copy i{animation:none}}

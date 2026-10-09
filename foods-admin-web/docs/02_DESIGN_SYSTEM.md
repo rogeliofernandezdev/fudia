@@ -147,7 +147,7 @@ avisos informativos usan texto neutro e icono, sin apariencia de botón.
   un botón verde propio. Etiquetas en caja normal, espaciado de 16 px y altura
   única de control. Su carga, error, vacío y adaptación móvil se especifican
   en `03_LAYOUTS.md`.
-- Dashboard separa KPI ejecutivos de alertas operativas.
+- Dashboard separa el análisis del periodo (Hoy / 7 / 30 días) de la operación en vivo y las alertas.
 - Una pantalla de gestión no repite el mismo dato en varios lugares. Si el total
   ya aparece en el tab y el rango en la paginación, no se añaden tarjetas de
   resumen que lo repitan.
@@ -667,9 +667,14 @@ contraste suficiente. El hover verde oscuro usa texto blanco.
 El login conserva la estructura original en móvil y escritorio: una tarjeta
 centrada de hasta 400 px, logo arriba, formulario debajo y mensajes al pie.
 No hay panel lateral, títulos visibles añadidos ni bloques de áreas del sistema.
-El refinamiento se percibe en la cabecera de marca con fondo índigo claro,
-acento menta–azul de 4 px, borde definido, sombra suave, espaciado uniforme e
-iconos de campos sobre pequeñas superficies índigo. El logo mide 180 px en
+El refinamiento se percibe en el fondo de página con halos índigo y menta
+sobre una trama de puntos discreta, la cabecera de marca casi blanca (el logo
+se funde sin recuadro visible), acento menta–azul de 4 px, borde definido,
+sombra índigo en capas, espaciado uniforme e iconos de campos sobre pequeñas
+superficies índigo que se rellenan con `primary-600` al enfocar y pasan a rojo
+suave con error. «Ingresar» usa `primary-600` sólido con sombra suave y
+pasa a `primary-700` al pasar el cursor, sin degradado ni destello. Los indicadores de confianza forman una franja `cloud-50`
+al pie de la tarjeta. El logo mide 180 px en
 escritorio y 160 px en móvil. «Iniciar sesión» sigue siendo el título accesible,
 oculto visualmente, sin añadir una bienvenida decorativa.
 Los campos usan las primitivas `FormField` e `Input` del design system,
@@ -733,28 +738,58 @@ la identidad, textos, iconos y colores son exclusivamente Foods.
 - Después de cargar se presenta contenido, vacío accionable o error recuperable.
 ## Directorios maestros
 
-El dashboard usa términos cotidianos del restaurante: «Ventas del día»,
+El dashboard usa términos cotidianos del restaurante: «Ventas · Hoy»,
 «Pedidos cobrados», «Promedio por pedido», «Pedidos en atención»,
-«Pendientes por revisar» y «Productos vendidos hoy». No muestra «Ventas netas»
-ni «Ticket promedio». La tarjeta de ventas usa la nota «Cobrado hoy», sin
-referencias a devoluciones ni cambiar el cálculo. Los nombres técnicos `salesNet` y
-`averageTicket` se conservan en el contrato de API.
+«Saldo por cobrar», «Pendientes por revisar» y «Productos más vendidos». No
+muestra «Ventas netas» ni «Ticket promedio», ni referencias a devoluciones. Los
+nombres técnicos `salesNet` y `averageTicket` se conservan en el contrato de API.
 
-El resumen administrativo consolida datos reales de la empresa y local activos:
-cuatro indicadores económicos/operativos y paneles compactos de Atención, Cocina,
-Delivery y Caja. No duplica cada contador como una tarjeta independiente. Distingue
-«Pedidos cobrados» (pago completo con cobro hoy) de «Saldo por cobrar» (pedidos sin
-pagar o parcialmente pagados, incluso de días anteriores). El promedio corresponde
-al importe total de los pedidos completamente cobrados. «Ventas del día» refleja
-los movimientos de cobro de hoy, también pagos parciales.
+La pantalla separa el análisis del periodo (columna principal) de la operación en
+vivo (columna lateral «Ahora mismo»). Un único selector Hoy / 7 días / 30 días,
+sobre todo el contenido, filtra ventas, indicadores, desgloses y productos; la
+operación en vivo y las alertas siempre son actuales.
+
+- **Cifra principal.** «Ventas · {periodo}» en 48 px (36 px en móvil) con la
+  variación frente a la comparación y el importe anterior. «Hoy» se compara con el
+  mismo día de la semana anterior; 7 y 30 días, con la ventana anterior de igual
+  duración. La variación lleva signo (+/−) además del color verde o rojo. Al lado,
+  la hora pico o el mejor día.
+- **Gráfico de ventas.** Una sola serie: las ventas del periodo como onda
+  índigo (`primary-600`) con curva suave monótona (sin picos ni valles inventados),
+  línea de 3 px con un brillo suave y degradado que se desvanece hacia la base. No
+  dibuja el periodo de comparación ni promedios: la comparación vive en la
+  variación junto a la cifra principal, para que el gráfico se lea sin
+  ambigüedad. El pico lleva su importe como etiqueta directa. Por horas para «Hoy»
+  y por días para 7 y 30 días; la onda se dibuja de izquierda a derecha al cargar
+  (sin animación con movimiento reducido). El cursor guía muestra importe y
+  pedidos con cobro del tramo; las flechas del teclado lo recorren y una tabla
+  oculta (dentro de un contenedor `sr-only`, nunca la tabla con esa clase) replica
+  los datos para lectores de pantalla.
+- **Indicadores.** Pedidos cobrados y Promedio por pedido con minigráfico del
+  periodo y su propia variación; Pedidos en atención con los pedidos en cocina.
+- **Desgloses.** Ventas por canal, Medios de pago y Ventas por categoría como
+  barras horizontales de una sola serie con importe, cantidad de cobros o unidades
+  y participación. Las categorías muestran cinco y agrupan el resto en «Otras».
+  Canales y medios usan las etiquetas que entrega el API.
+- **Ahora mismo.** Saldo por cobrar destacado y bloques de Atención, Cocina,
+  Delivery y Caja según los módulos contratados, seguidos de «Pendientes por
+  revisar». En escritorio la columna queda fija al desplazarse.
+
+Distingue «Pedidos cobrados» (pago completo con cobro en el periodo) de «Saldo por
+cobrar» (pedidos sin pagar o parcialmente pagados, incluso de días anteriores).
+El promedio corresponde al importe total de los pedidos completamente cobrados.
+Las ventas reflejan los movimientos de cobro del periodo, también pagos parciales.
 La fecha procede del backend en la zona del local. La consulta se actualiza cada
-30 segundos y su clave incluye empresa/local. Las secciones respetan los módulos
+30 segundos y su clave incluye empresa, local y periodo; al cambiar de periodo se
+conserva el render anterior atenuado hasta recibir los datos, y las etiquetas
+siguen al periodo de los datos mostrados. Las secciones respetan los módulos
 contratados y los enlaces usan las mismas reglas de menú y permisos del shell.
 El efectivo de cajas ciegas no autorizado muestra «Importe reservado», nunca cero.
 Los pendientes de disponibilidad/abastecimiento no repiten las colas de cocina.
-La carga reproduce indicadores, paneles operativos, gráfico, pendientes y productos;
-el error es recuperable, no reemplaza datos por ceros. En 390 px los paneles se
-apilan, los importes permanecen alineados y los accesos tienen áreas de 44 px.
+La carga reproduce la misma estructura con skeleton; el error es recuperable y no
+reemplaza datos por ceros. Bajo 1180 px la columna «Ahora mismo» pasa debajo del
+análisis; en 390 px todo se apila, el selector ocupa el ancho con botones de 44 px
+y el gráfico conserva el eje X sin desbordar.
 
 Ventas ofrece búsqueda, «Fecha de inicio» y «Fecha de fin» mediante controles
 homologados, alineados en escritorio y apilados en móvil. El rango es opcional:
@@ -794,6 +829,40 @@ Los módulos de directorio, como Clientes, usan la tabla estandarizada en escrit
 - Un módulo **En desarrollo** o **Planificado** nunca puede activarse para una empresa; el backend debe rechazar cualquier intento aunque el frontend falle.
 
 ## Onboarding comercial y suscripción
+
+### Empresas de la plataforma
+
+`/settings/companies` («Empresas y planes») es una página independiente del
+admin, con el menú lateral, ubicada en Configuración junto a «Módulos». Solo la
+ve el administrador de plataforma (`platformAdminOnly`); cualquier otro usuario
+recibe «Acceso restringido». No forma parte del panel de Plataforma.
+La página lista todas las empresas cliente (nombre comercial y RUC, sin datos
+accesorios como razón social o conteos de locales y usuarios) con plan, ciclo, precio
+contratado, próximo vencimiento, último pago confirmado y situación de pago.
+Cinco indicadores (Empresas, Al día, Por vencer, Vencidas, En prueba) resumen
+la cartera sin filtros y funcionan como filtro rápido. La barra permite buscar
+por nombre comercial, razón social o RUC y filtrar por plan y situación; ambos
+catálogos y sus etiquetas provienen del API. La situación usa insignias con
+punto: verde al día, ámbar por vencer, rojo vencida, violeta en prueba y gris
+cancelada o sin suscripción. El vencimiento muestra la fecha y los días
+restantes o transcurridos. La tabla conserva skeleton, error con reintento,
+vacío y sin coincidencias, scroll horizontal controlado y paginación; los
+indicadores pasan a tres y dos columnas en anchos menores.
+«Ver detalle» (icono de ojo) abre una ficha de solo lectura, con X como único
+cierre: resumen (situación, plan y ciclo, próximo vencimiento o fin de prueba,
+total pagado), datos generales y fiscales (razón social, RUC, país, moneda,
+impuesto, zona horaria, cliente desde, estado), suscripción y uso frente a los
+límites del plan, administradores con correo y locales con dirección y teléfono.
+Tiene skeleton, error con reintento y estados vacíos por sección; su pie ofrece
+«Gestionar suscripción». En móvil el resumen pasa a dos columnas y los datos a
+una.
+El nombre de la empresa y la acción «Gestionar suscripción» abren su formulario
+propio en `/settings/companies/{id}`, sin cambiar la empresa activa de la
+sesión. El encabezado muestra nombre comercial y RUC con retorno a
+«Empresas y planes»; el cuerpo reutiliza el mismo formulario de
+`/platform/subscription` (plan y ciclo, registrar pago e historial) apuntando a
+esa empresa. Carga con el skeleton de suscripción, error con reintento y estado
+«Sin suscripción». Guardar o registrar un pago actualiza también el listado.
 
 Existe un único onboarding de tenant en `/platform/onboarding`. La ruta
 histórica de Configuración redirige a ese flujo y no mantiene una segunda
