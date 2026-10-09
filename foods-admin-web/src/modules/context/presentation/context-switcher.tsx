@@ -81,10 +81,9 @@ export function ContextSwitcher(){
 
   return <div className="context-switcher" ref={ref}>
     <button ref={triggerRef} type="button" className="context-btn" data-open={open} onClick={()=>{if(!canSwitch||switchMut.isPending)return;if(open){closePanel();return}setOrgSel("");setLocSel("");focusOnOpen.current=true;setOpen(true)}} disabled={!canSwitch||switchMut.isPending} aria-label={user.platformAdmin?`Cambiar empresa y local: ${organization?.name??"sin empresa seleccionada"}`:`Cambiar local: ${location?.name??"sin local seleccionado"}`} aria-haspopup="dialog" aria-expanded={open} aria-controls={open?panelId:undefined}>
-      <Icon name={user.platformAdmin?"building":"store"} size={18}/>
+      <Icon name="store" size={18}/>
       <span>
-        {user?.platformAdmin&&organization&&<><small>EMPRESA</small><b>{organization.name}</b></>}
-        {!user?.platformAdmin&&location&&<><small>LOCAL ACTIVO</small><b>{location.name}</b></>}
+        <small>LOCAL ACTIVO</small><b>{location?.name??"Sin local seleccionado"}</b>
       </span>
       {canSwitch&&<Icon name="chevron" size={15}/>}
     </button>

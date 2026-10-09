@@ -1,5 +1,17 @@
 # Pruebas
 
+`login-layout.test.mjs` protege los tres mensajes informativos del acceso en
+una sola fila, icono/texto alineados y textos completos con tipografía auxiliar.
+Protege además la misma estructura centrada en móvil y escritorio, cabecera
+de marca destacada sin panel lateral ni títulos añadidos, campos neutros, geometría táctil, foco
+visible, scroll en viewport bajo y texto «Ingresar», conservando carga,
+validación y contexto posterior. Se revisa su geometría en escritorio y móvil
+desde 390 px, incluidos errores y la sesión activa, en navegador aislado.
+Comprueba que Recuperar contraseña muestra solo «Próximamente», sin consultas ni
+envíos, conservando foco y cierre compartido. Su hover no añade fondo, sombra ni
+subrayado; el icono de mostrar contraseña tampoco añade fondo ni sombra al pasar
+el cursor. Ambos mantienen foco visible con teclado. No añade recuperación por correo.
+
 `payment-ticket.test.mjs` verifica ancho real de 80 mm, PDF/impresión con la misma
 composición, negro/blanco, nombres y tildes, cantidades, pagos divididos y saldo
 parcial, continuación de tickets largos, escape de HTML y ausencia de datos
@@ -51,7 +63,7 @@ propagación de correlación sin exponer cookies en logs.
 
 `account-identity.test.mjs` protege los roles reales bajo el usuario, sus estados
 remotos y el aislamiento de caché por usuario/empresa/local. Contexto verifica
-que el selector conserve el local activo para usuarios de empresa; la empresa
+que el selector conserve el local activo para empresa y plataforma; la empresa
 se muestra por separado en la barra superior.
 
 `plan-navigation.test.mjs` verifica Menús y combos, Inventario y Compras en Emprende, ocultación de

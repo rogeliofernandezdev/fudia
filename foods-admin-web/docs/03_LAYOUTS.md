@@ -3,6 +3,18 @@
 Sidebar: Control, Operación, Carta y producción, Abastecimiento y Configuración. Topbar compacta.
 Gestión: título, acciones, filtros, listado, paginación y detalle.
 
+El pie informativo del acceso presenta Conexión segura, Acceso por empresa y
+Usuario validado en una sola fila, con cada icono junto a su texto sin saltos.
+Usa tipografía auxiliar y espaciado compacto desde 390 px, sin recortar mensajes.
+El login conserva una sola tarjeta centrada y el orden original en todos los
+anchos: logo, formulario y mensajes informativos. La cabecera de marca tiene una
+superficie índigo clara; los campos permanecen blancos con iconos contenidos,
+acción única «Ingresar» y copyright externo. En viewport bajo conserva scroll
+de página y acceso a la acción. No añade panel lateral, títulos decorativos,
+selección de empresa/local/rol ni indicadores operativos ficticios.
+«Recuperar contraseña» se muestra bajo el campo como acción secundaria de texto
+y abre únicamente el aviso «Próximamente», sin recuperación funcional ni solicitudes.
+
 El aviso de configuración inicial comparte los bordes laterales del título y
 del listado: el padding lo define únicamente el contenedor global `.content`.
 El aviso no agrega margen lateral ni superior y conserva 21 px de separación
@@ -31,9 +43,10 @@ La etiqueta es breve: «Administrador», «Cocinero», «Cajero», etc. Los sufi
 «de empresa» y «de plataforma» del administrador se omiten solo en esa etiqueta;
 no se cambian los roles almacenados ni sus permisos. Roles personalizados
 conservan su nombre y las asignaciones múltiples no repiten etiquetas iguales.
-El selector conserva el local activo para usuarios de empresa. El nombre de
+El selector conserva el local activo para todos los usuarios. El nombre de
 empresa permanece visible por separado en la barra superior, también en móvil;
-no reemplaza al rol ni al local. Plataforma conserva su selector de empresa.
+no reemplaza al rol ni al local. Plataforma conserva el cambio de empresa dentro
+del popover, pero el botón de contexto muestra únicamente el local activo.
 El nombre se alinea inmediatamente junto al icono del menú en un bloque izquierdo
 de identidad, con separación fija y mayor peso visual. El buscador y los controles
 de local/usuario permanecen fuera de ese bloque. En móvil el nombre ocupa el ancho

@@ -138,6 +138,10 @@ avisos informativos usan texto neutro e icono, sin apariencia de botón.
   momentos de venta. Los iconos representan el dominio de cada opción y el
   icono de tres líneas se reserva para abrir o cerrar la navegación.
 - Topbar compacta; empresa, local y usuario aparecen una sola vez.
+- La empresa activa se muestra junto al icono de navegación, sin depender del
+  rol. El botón de contexto muestra únicamente el local activo, también para
+  Plataforma; el rol permanece debajo del usuario. El administrador de
+  plataforma conserva la selección de empresa dentro del popover.
 - El selector de empresa/local usa un popover compacto con cabecera y cierre X,
   campos `FormField`/`Select` y acción «Aplicar» azul `primary-600`; no emplea
   un botón verde propio. Etiquetas en caja normal, espaciado de 16 px y altura
@@ -660,15 +664,37 @@ contraste suficiente. El hover verde oscuro usa texto blanco.
 
 ## Acceso administrativo
 
-El login usa una composición centrada y compacta: tarjeta única con línea de
-acento índigo, marca centrada dentro de la tarjeta como único encabezado (el
-`h1` existe solo para lectores de pantalla; no hay título ni texto de ayuda
-visibles), campos con las primitivas `FormField` e `Input` del design system,
-acción principal a todo el ancho con icono de candado e indicadores de
-confianza al pie. La página redefine `--control-height` a 44 px (48 px en
+El login conserva la estructura original en móvil y escritorio: una tarjeta
+centrada de hasta 400 px, logo arriba, formulario debajo y mensajes al pie.
+No hay panel lateral, títulos visibles añadidos ni bloques de áreas del sistema.
+El refinamiento se percibe en la cabecera de marca con fondo índigo claro,
+acento menta–azul de 4 px, borde definido, sombra suave, espaciado uniforme e
+iconos de campos sobre pequeñas superficies índigo. El logo mide 180 px en
+escritorio y 160 px en móvil. «Iniciar sesión» sigue siendo el título accesible,
+oculto visualmente, sin añadir una bienvenida decorativa.
+Los campos usan las primitivas `FormField` e `Input` del design system,
+fondo blanco también al autocompletar e iconos discretos que destacan al enfocar.
+El icono de mostrar contraseña conserva fondo transparente al pasar el cursor,
+sin sombra ni apariencia de botón resaltado; mantiene foco visible con teclado.
+La acción «Ingresar» conserva todo el ancho útil del formulario, con
+radio estándar e icono de candado. Comparte un grupo compacto con «Recuperar
+contraseña»: separación de 4 px entre sus áreas táctiles, sin margen adicional;
+los indicadores de confianza permanecen al pie, en una sola fila con cada icono
+junto a su texto completo.
+Estos mensajes usan tipografía auxiliar de 11 px (10 px en móvil) y no se apilan
+ni se recortan. La página redefine `--control-height` a 44 px (48 px en
 móvil) en lugar de fijar alturas literales; radio, tipografía y foco de los
-campos son los estándar. En móvil reduce únicamente el padding; no cambia el
-orden ni oculta información funcional. La referencia define la geometría, pero
+campos son los estándar. En móvil reduce el padding y la tipografía auxiliar; no cambia el
+orden ni oculta información funcional. En pantallas bajas el contenido se alinea
+arriba y permite scroll natural, sin altura fija ni recorte del botón. El copyright
+queda fuera de la tarjeta con menor jerarquía. «Recuperar contraseña» aparece
+debajo de la contraseña, alineado a la derecha, como acción secundaria de texto
+con área táctil, sin fondo, sombra ni subrayado al pasar el cursor y con foco
+visible al usar teclado. Abre únicamente el aviso «Próximamente» usando `Dialog`,
+con X como único cierre y restauración de foco. No solicita datos,
+no envía solicitudes y no simula una recuperación. No añade «Bienvenido» ni
+selectores de contexto. La recuperación por correo queda fuera de este refinamiento
+visual. La referencia define la geometría, pero
 la identidad, textos, iconos y colores son exclusivamente Foods.
 
 ## Integridad CSS

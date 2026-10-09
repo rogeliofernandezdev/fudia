@@ -103,12 +103,14 @@ test("contexto: cambiar empresa limpia el local y solo envía destinos válidos 
  assert.equal(JSON.stringify(tenant.calls),JSON.stringify([{organizationId:"org-a",locationId:"local-b"}]));
 });
 
-test("contexto: usuarios de empresa mantienen el local activo como contexto",()=>{
+test("contexto: el selector muestra solo el local para empresa y plataforma",()=>{
  for(const platformAdmin of [true,false]){
   const host=controller({platformAdmin});
   const view=host.render();
-  assert.ok(view.some(node=>node.type==="b"&&node.props.children===(platformAdmin?"Foods Restaurante":"Local principal")));
-  assert.ok(view.some(node=>node.type==="small"&&node.props.children===(platformAdmin?"EMPRESA":"LOCAL ACTIVO")));
+  assert.ok(view.some(node=>node.type==="b"&&node.props.children==="Local principal"));
+  assert.ok(view.some(node=>node.type==="small"&&node.props.children==="LOCAL ACTIVO"));
+  assert.equal(view.some(node=>node.props.children==="Foods Restaurante"||node.props.children==="EMPRESA"),false);
+  assert.ok(view.some(node=>node.type==="Icon"&&node.props.name==="store"));
  }
 });
 

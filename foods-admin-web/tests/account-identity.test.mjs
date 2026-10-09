@@ -66,7 +66,8 @@ test("el rol está debajo del usuario en cabecera y submenú, con reintento recu
   assert.equal((shell.match(/<AccountRole \{\.\.\.roleProps\}\/>/g)??[]).length,2);
   assert.doesNotMatch(shell,/platformAdmin\?"Administrador de plataforma":organization\?\.name/);
   assert.match(shell,/profile\.refetch\(\)/);
-  assert.match(shell,/!isPlatformAdmin&&organization&&<div className="topbar-company"/);
+  assert.match(shell,/\{organization&&<div className="topbar-company"/);
+  assert.doesNotMatch(shell,/!isPlatformAdmin&&organization&&<div className="topbar-company"/);
   const identity=read("src/modules/identity/presentation/users-roles-manager.tsx");
   assert.equal((identity.match(/invalidateQueries\(\{queryKey:\["my-profile"\]\}\)/g)??[]).length,4);
 });
