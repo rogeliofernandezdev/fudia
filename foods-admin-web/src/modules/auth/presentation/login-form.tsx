@@ -28,6 +28,8 @@ export function LoginForm() {
   const [activeSession,setActiveSession]=useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showRecoveryHelp, setShowRecoveryHelp] = useState(false);
+  // Tras un login correcto la pantalla pasa al loader hasta que la ruta destino reemplace al login.
+  const [redirecting,setRedirecting]=useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm<LoginDraft>({ defaultValues: { email: "", password: "" }, resolver: loginResolver, mode: "onSubmit", reValidateMode: "onChange" });
 
@@ -43,6 +45,17 @@ export function LoginForm() {
     return()=>{cancelled=true};
   },[queryClient,router]);
 
+  /** Entra a la primera ruta permitida por el rol sin volver a mostrar el formulario. */
+  async function enterWorkspace(){
+    setRedirecting(true);
+    const context=await loadSessionContext();
+    queryClient.setQueryData(["session-context"],context);
+    const route=firstAccessibleRoute(context);
+    router.prefetch(route);
+    router.replace(route);
+    router.refresh();
+  }
+
   async function authenticate(values:LoginDraft,replaceExisting=false){
     if (loading) return;
     setLoading(true);
@@ -55,16 +68,14 @@ export function LoginForm() {
       }
       await login(values);
       queryClient.clear();
-      const context=await loadSessionContext();
-      queryClient.setQueryData(["session-context"],context);
       broadcastSessionChange("signed-in");
-      router.replace(firstAccessibleRoute(context));
-      router.refresh();
+      // El botón queda bloqueado: la pantalla cambia al loader hasta que cargue el destino.
+      await enterWorkspace();
     } catch (reason) {
+      setRedirecting(false);
+      setLoading(false);
       if(reason instanceof ActiveSessionError)setActiveSession(reason.userName);
       else setError(reason instanceof Error ? reason.message : "No pudimos iniciar sesión.");
-    } finally {
-      setLoading(false);
     }
   }
 
@@ -75,18 +86,18 @@ export function LoginForm() {
     setLoading(true);
     setError("");
     try{
-      const context=await loadSessionContext();
       queryClient.clear();
-      queryClient.setQueryData(["session-context"],context);
-      router.replace(firstAccessibleRoute(context));
-      router.refresh();
+      await enterWorkspace();
     }catch{
+      setRedirecting(false);
+      setLoading(false);
       setActiveSession("");
       setError("La sesión anterior ya no está disponible. Ingresa nuevamente.");
-    }finally{setLoading(false)}
+    }
   }
 
   if(checkingSession)return <FullScreenLoader label="Validando sesión"/>;
+  if(redirecting)return <FullScreenLoader label="Ingresando a tu espacio"/>;
 
   return <main className="admin-auth-page">
     <section className="admin-auth-shell" aria-labelledby="login-title">

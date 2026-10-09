@@ -132,3 +132,12 @@ test("acceso: conserva una tarjeta y el orden original; destaca marca y campos s
  assert.match(form,/<div className="admin-auth-body">\s*<div className="admin-auth-brand">/);
  assert.doesNotMatch(form,/Gestión de restaurantes|Áreas del sistema|Bienvenido/);
 });
+
+test("acceso: al ingresar pasa al loader FUDIA y no vuelve a habilitar el botón antes de navegar",()=>{
+ const form=readFileSync(new URL("../src/modules/auth/presentation/login-form.tsx",import.meta.url),"utf8");
+ assert.match(form,/if\(redirecting\)return <FullScreenLoader label="Ingresando a tu espacio"\/>/);
+ assert.match(form,/await login\(values\);[\s\S]*await enterWorkspace\(\);/);
+ assert.match(form,/router\.prefetch\(route\);\s*router\.replace\(route\);/);
+ assert.doesNotMatch(form,/finally\s*\{\s*setLoading\(false\)/,"El botón solo se libera si el ingreso falla");
+ assert.match(form,/catch \(reason\) \{\s*setRedirecting\(false\);\s*setLoading\(false\);/);
+});
