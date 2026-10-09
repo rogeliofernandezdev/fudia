@@ -9,7 +9,7 @@ import type {CashOperationDraft,CashRegister,CashShift,CashShiftUser,CashUserOpt
 export function CashTeamDialog({shift,users,options,loading,busyUserId,close,assign,unassign}:{shift:CashShift;users:CashShiftUser[];options:CashUserOption[];loading:boolean;busyUserId:string|null;close:()=>void;assign:(userId:string)=>void;unassign:(userId:string)=>void}){
   const[selected,setSelected]=useState("");
   const available=useMemo(()=>options.filter(option=>!option.assignedShiftId&&!users.some(user=>user.userId===option.id)),[options,users]);
-  return <div className="modal-backdrop modal-overlay-in"><Dialog className="crud-modal cash-modal cash-team-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-team-title">
+  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal cash-modal cash-team-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-team-title">
     <div className="modal-accent"/>
     <header><span className="modal-title-icon"><Icon name="users" size={18}/></span><div><small>{shift.cashRegisterName.toUpperCase()}</small><h2 id="cash-team-title">Equipo del turno</h2></div><button type="button" aria-label="Cerrar" onClick={close}><Icon name="close"/></button></header>
     <div className="cash-team-body">
@@ -41,7 +41,7 @@ export function CashOperationDialog({shift,registers,busy,close,save}:{shift:Cas
   });
   const type=useWatch({control,name:"operationType"});
   const label=type==="deposit"?"Registrar depósito":type==="transfer"?"Transferir efectivo":"Registrar retiro";
-  return <div className="modal-backdrop modal-overlay-in"><Dialog className="crud-modal cash-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-operation-title" aria-busy={busy}>
+  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal cash-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-operation-title" aria-busy={busy}>
     <div className="modal-accent"/>
     <header><span className="modal-title-icon"><Icon name={type==="transfer"?"share":"stock"} size={18}/></span><div><small>{shift.cashRegisterName.toUpperCase()}</small><h2 id="cash-operation-title">Operación de caja</h2></div><button type="button" aria-label="Cerrar" onClick={close} disabled={busy}><Icon name="close"/></button></header>
     <form onSubmit={handleSubmit(save)} noValidate inert={busy}>

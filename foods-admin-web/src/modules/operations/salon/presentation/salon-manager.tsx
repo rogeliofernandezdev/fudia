@@ -113,7 +113,7 @@ export function SalonManager(){
     refetchInterval:query=>query.state.data?.completedAt?false:10000,
   });
 
-  const invalidate=useCallback(()=>Promise.all(["salon-floor","orders","order","pos-orders","pos-order","dashboard","kitchen-tickets","product-availability","sales"].map(key=>qc.invalidateQueries({queryKey:[key]}))),[qc]);
+  const invalidate=useCallback(()=>Promise.all(["salon-floor","orders","order","pos-orders","pos-order","dashboard","kitchen-tickets","product-availability","products","sales"].map(key=>qc.invalidateQueries({queryKey:[key]}))),[qc]);
 
   const advance=useMutation({
     mutationFn:(v:{id:string;status:string})=>updateSalonOrderStatus(v.id,v.status),
@@ -178,14 +178,7 @@ export function SalonManager(){
   const addProducts=(o:Order)=>{setAdditionKey(crypto.randomUUID());setEditingOrderId(o.id);setDraft({...emptyDraft(o.tableId),customerName:o.customerName});setDetailId(null)};
   const editOrder=(o:Order)=>{
     if(!canManage||!canManageOrderService(o,user?.id))return;
-    if(!editableOrderStatus(o.status)){
-      notify({tone:"danger",title:"Comanda no editable",message:"Solo se puede editar un pedido en estado Nuevo o Confirmado."});
-      return;
-    }
-    if(Number(o.paidAmount??0)>0.00001){
-      notify({tone:"danger",title:"Comanda con pagos",message:"Devuelve primero los pagos registrados antes de modificar la comanda."});
-      return;
-    }
+    if(!editableOrderStatus(o.status)||Number(o.paidAmount??0)>0.00001)return;
     setEditingOrderId(o.id);
     setDraft(draftFromOrder(o));
     setDetailId(null);
@@ -390,7 +383,7 @@ function OrderDetail({loading,order,error,currencySymbol,canManage:hasPermission
   const tableLabel=order?.tableName?(/^mesa\b/i.test(order.tableName)?order.tableName:`Mesa ${order.tableName}`):"Mesa";
   return(
     <div className="modal-backdrop modal-overlay-in">
-      <Dialog className="crud-modal order-detail salon-order-detail modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="salon-order-detail-title" aria-busy={loading}>
+      <Dialog onResponseClose={close} className="crud-modal order-detail salon-order-detail modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="salon-order-detail-title" aria-busy={loading}>
         <div className="salon-order-detail-accent" aria-hidden="true"/>
         {loading?(
           <OrderDetailSkeleton close={close}/>

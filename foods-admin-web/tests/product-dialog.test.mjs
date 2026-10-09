@@ -97,3 +97,61 @@ test("el estado ocupado bloquea Guardar también desde el handler",async()=>{
  button.props.onClick();await tick();
  assert.equal(saved,0);
 });
+
+test("crear con porciones muestra la cantidad a ancho completo y editar no la sobrescribe",()=>{
+ const created=mount({draft:{...validDraft,quantityControl:"portions"}});
+ const field=created.nodes.find(node=>node.type==="FormField"&&node.props.label==="Cantidad disponible hoy");
+ assert.ok(field);
+ assert.equal(field.props.className,"span-2");
+ const input=created.nodes.find(node=>node.type==="input"&&node.props.name==="initialPortionQuantity");
+ assert.equal(input.props.type,"number");
+ assert.equal(input.props.min,"1");
+ assert.equal(input.props.step,"1");
+ for(const draft of [{...validDraft},{...validDraft,id:"existing",quantityControl:"portions"}]){
+  assert.equal(mount({draft}).nodes.some(node=>node.props?.label==="Cantidad disponible hoy"),false);
+ }
+});
+
+test("las porciones requieren cantidad positiva y el mismo guardado incluye producto y cantidad",async()=>{
+ const saved=[];
+ const {button,control}=mount({draft:{...validDraft,quantityControl:"portions"},save:async value=>{saved.push(value)}});
+ for(const invalid of ["","0","-1","1.5","abc","2147483648"]){
+  control.setValue("initialPortionQuantity",invalid);
+  button.props.onClick();await tick();
+  assert.equal(saved.length,0,invalid);
+ }
+ control.setValue("initialPortionQuantity","15");
+ button.props.onClick();await tick();
+ assert.equal(saved.length,1);
+ assert.equal(saved[0].name,"Lomo saltado");
+ assert.equal(saved[0].initialPortionQuantity,"15");
+});
+
+test("cambiar a Sin control no exige una cantidad previa inválida; edición conserva el flujo comercial",async()=>{
+ let saved=0;
+ const {button,control}=mount({draft:{...validDraft,quantityControl:"portions",initialPortionQuantity:""},save:async()=>{saved++}});
+ control.setValue("quantityControl","none");
+ button.props.onClick();await tick();
+ assert.equal(saved,1);
+ const edited=mount({draft:{...validDraft,id:"existing",quantityControl:"portions"},save:async()=>{saved++}});
+ edited.button.props.onClick();await tick();
+ assert.equal(saved,2);
+});
+
+test("el API guarda las porciones en un único POST, nunca con un PATCH adicional de disponibilidad",async()=>{
+ const calls=[];
+ const {saveProduct}=compile("modules/menu/products/infrastructure/products-api.ts",name=>{
+  if(name==="@/shared/api/client")return {apiFetch:async(path,init)=>{calls.push({path,init});return {id:"created"}}};
+  if(name==="@/shared/api/product-image")return {};
+  return require(name);
+ });
+ await saveProduct({...validDraft,quantityControl:"portions",initialPortionQuantity:"15"},null);
+ assert.equal(calls.length,1);
+ assert.equal(calls[0].path,"products");
+ assert.equal(calls[0].init.method,"POST");
+ assert.equal(JSON.parse(calls[0].init.body).initialPortionQuantity,15);
+ for(const draft of [{...validDraft,initialPortionQuantity:"15"},{...validDraft,id:"existing",quantityControl:"portions",initialPortionQuantity:"15"}]){
+  await saveProduct(draft,null);
+  assert.equal(Object.hasOwn(JSON.parse(calls.at(-1).init.body),"initialPortionQuantity"),false);
+ }
+});

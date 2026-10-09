@@ -40,7 +40,7 @@ export function InventoryTransferDialog({items,locations,currentLocationId,busy,
   }
 
   return <div className="modal-backdrop modal-overlay-in" role="presentation">
-    <Dialog className="crud-modal inventory-transfer-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="inventory-transfer-title" aria-busy={busy}>
+    <Dialog onResponseClose={close} className="crud-modal inventory-transfer-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="inventory-transfer-title" aria-busy={busy}>
       <div className="modal-accent"/>
       <header>
         <span className="modal-title-icon"><Icon name="truck" size={18}/></span>

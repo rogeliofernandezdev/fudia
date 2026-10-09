@@ -2,7 +2,7 @@
 import {Dialog} from "@/design-system/dialog";
 import dynamic from "next/dynamic";
 import "./purchases.css";
-import {useState} from "react";
+import {useRef,useState} from "react";
 import {useFieldArray,useForm,useWatch} from "react-hook-form";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Button,ConfirmDialog,Icon,Input,PageHeader,Pagination,RemoteModalSkeleton,RowActionButton,Select,Status,Textarea} from "@/design-system";
@@ -14,6 +14,7 @@ import type {PurchaseInventoryOption,PurchaseOrder,PurchaseOrderDraft,PurchaseOr
 import {approvePurchaseOrder,createPurchaseInventoryItem,createPurchaseReturn,getPurchaseOrder,getPurchaseReceipt,listPurchaseInventory,listPurchaseOrders,listPurchaseReceipts,listSuppliers,receivePurchaseOrder,savePurchaseOrder,saveSupplier,setPurchaseOrderStatus,setSupplierActive} from "../infrastructure/purchases-api";
 
 const PurchaseItemDialog=dynamic(()=>import("./purchase-item-dialog").then(module=>module.PurchaseItemDialog),{ssr:false});
+const PurchasePresentationDialog=dynamic(()=>import("./purchase-presentation-dialog").then(module=>module.PurchasePresentationDialog),{ssr:false});
 const PurchaseReceiptDialog=dynamic(()=>import("./purchase-receipt-dialog").then(module=>module.PurchaseReceiptDialog),{ssr:false});
 const PurchaseReturnDialog=dynamic(()=>import("./purchase-return-dialog").then(module=>module.PurchaseReturnDialog),{ssr:false});
 
@@ -55,6 +56,7 @@ export function PurchasesPage(){
   const[receiptDetail,setReceiptDetail]=useState<PurchaseReceiptDetail|null>(null);
   const[receiptDetailLoading,setReceiptDetailLoading]=useState("");
   const[returnReceipt,setReturnReceipt]=useState<PurchaseReceiptDetail|null>(null);
+  const orderAction=useRef(false);
 
   const orders=useQuery({
     queryKey:["purchase-orders",debouncedQ,status,page,size],
@@ -110,21 +112,37 @@ export function PurchasesPage(){
   });
 
   const transition=useMutation({
+    retry:false,
     mutationFn:({id,next}:{id:string;next:"draft"|"pending_approval"|"cancelled"})=>setPurchaseOrderStatus(id,next),
-    onSuccess:(_,variables)=>{
-      void qc.invalidateQueries({queryKey:["purchase-orders"]});
-      void qc.invalidateQueries({queryKey:["purchase-order"]});
-      void qc.invalidateQueries({queryKey:["dashboard"]});
-      if(variables.next==="cancelled")setCancelTarget(null);
+    onSuccess:()=>{
+      setDetailId(null);
+      setCancelTarget(null);
       notify({tone:"success",title:"Estado actualizado",message:"La orden de compra quedó actualizada."});
     },
     onError:error=>notify({tone:"danger",title:"No se pudo actualizar la orden",message:error.message}),
+    onSettled:refreshOrderState,
   });
   const approve=useMutation({
+    retry:false,
     mutationFn:approvePurchaseOrder,
-    onSuccess:()=>{void qc.invalidateQueries({queryKey:["purchase-orders"]});void qc.invalidateQueries({queryKey:["purchase-order"]});void qc.invalidateQueries({queryKey:["dashboard"]});notify({tone:"success",title:"Orden aprobada",message:"La orden ya está disponible para recepción."})},
+    onSuccess:()=>{setDetailId(null);notify({tone:"success",title:"Orden aprobada",message:"La orden ya está disponible para recepción."})},
     onError:error=>notify({tone:"danger",title:"No se pudo aprobar",message:error.message}),
+    onSettled:refreshOrderState,
   });
+
+  function refreshOrderState(){
+    return Promise.all([
+      qc.invalidateQueries({queryKey:["purchase-orders"]}),
+      qc.invalidateQueries({queryKey:["purchase-order"]}),
+      qc.invalidateQueries({queryKey:["dashboard"]}),
+    ]);
+  }
+  async function runOrderAction(action:()=>Promise<unknown>){
+    if(orderAction.current)return;
+    orderAction.current=true;
+    try{await action()}catch{/* The mutation reports the API error through onError. */}
+    finally{orderAction.current=false}
+  }
 
   const receive=useMutation({
     mutationFn:receivePurchaseOrder,
@@ -424,8 +442,8 @@ export function PurchasesPage(){
           timezone={location?.timezone}
           close={()=>setDetailId(null)}
           edit={()=>{setDetailId(null);void editOrder(detail.data.id)}}
-          changeStatus={next=>transition.mutate({id:detail.data.id,next})}
-          approve={()=>approve.mutate(detail.data.id)}
+          changeStatus={next=>{void runOrderAction(()=>transition.mutateAsync({id:detail.data.id,next}))}}
+          approve={()=>{void runOrderAction(()=>approve.mutateAsync(detail.data.id))}}
           receive={()=>{setDetailId(null);changeTab("receipts")}}
           cancel={()=>setCancelTarget(detail.data)}
         />
@@ -456,7 +474,7 @@ export function PurchasesPage(){
       confirmLabel="Cancelar orden"
       pending={transition.isPending}
       onCancel={()=>setCancelTarget(null)}
-      onConfirm={()=>cancelTarget&&transition.mutate({id:cancelTarget.id,next:"cancelled"})}
+      onConfirm={()=>{if(cancelTarget)void runOrderAction(()=>transition.mutateAsync({id:cancelTarget.id,next:"cancelled"}))}}
     />
   </>;
 }
@@ -465,15 +483,17 @@ function PurchaseOrderDialog({initial,suppliers,inventory,currencySymbol,busy,cl
   const qc=useQueryClient();
   const{notify}=useFeedback();
   const[createdItems,setCreatedItems]=useState<PurchaseInventoryOption[]>([]);
+  const[presentationTarget,setPresentationTarget]=useState<{item:PurchaseInventoryOption;index:number}|null>(null);
   const[itemTarget,setItemTarget]=useState<number|"new"|null>(null);
   const{control,register,handleSubmit,setValue,formState:{errors,isSubmitted}}=useForm<PurchaseOrderDraft>({defaultValues:initial,resolver:purchaseOrderResolver,mode:"onSubmit",reValidateMode:"onChange"});
   const{fields,append,remove}=useFieldArray({control,name:"items"});
   const lines=useWatch({control,name:"items"})??[];
-  const catalog=[...inventory,...createdItems.filter(item=>!inventory.some(existing=>existing.id===item.id))];
+  const catalog=[...inventory.map(item=>createdItems.find(updated=>updated.id===item.id)??item),...createdItems.filter(item=>!inventory.some(existing=>existing.id===item.id))];
   const total=lines.reduce((sum,line)=>sum+(Number(line.quantity)||0)*(Number(line.unitCost)||0),0);
 
   function applyItem(target:number|"new",item:PurchaseInventoryOption,preferredPresentationId?:string){
     const presentation=item.presentations.find(option=>option.id===preferredPresentationId)
+      ??item.presentations.find(option=>option.isDefault)
       ??item.presentations.find(option=>option.presentationType==="unit")
       ??item.presentations[0];
     const next={inventoryItemId:item.id,presentationId:presentation?.id??"",quantity:"1",unitCost:""};
@@ -486,13 +506,11 @@ function PurchaseOrderDialog({initial,suppliers,inventory,currencySymbol,busy,cl
   }
 
   const createItem=useMutation({
+    retry:false,
     mutationFn:({draft,file}:{target:number|"new";draft:Parameters<typeof createPurchaseInventoryItem>[0];file:File|null})=>createPurchaseInventoryItem(draft,file),
     onSuccess:(item,variables)=>{
       setCreatedItems(current=>current.some(existing=>existing.id===item.id)?current:[...current,item]);
-      const factor=variables.draft.presentationType==="unit"?1:Number(variables.draft.unitsPerPresentation);
-      const presentation=item.presentations.find(option=>
-        option.presentationType===variables.draft.presentationType&&Number(option.unitsPerPresentation)===factor
-      );
+      const presentation=item.presentations.find(option=>option.isDefault);
       applyItem(variables.target,item,presentation?.id);
       void qc.invalidateQueries({queryKey:["purchase-inventory"]});
       void qc.invalidateQueries({queryKey:["inventory"]});
@@ -503,7 +521,7 @@ function PurchaseOrderDialog({initial,suppliers,inventory,currencySymbol,busy,cl
   });
 
   return <>
-    <div className="modal-backdrop modal-overlay-in"><Dialog className="crud-modal purchase-order-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="purchase-order-title" aria-busy={busy}><div className="modal-accent"/>
+    <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal purchase-order-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="purchase-order-title" aria-busy={busy}><div className="modal-accent"/>
       <header><span className="modal-title-icon"><Icon name="receipt" size={18}/></span><div><small>ORDEN DE COMPRA</small><h2 id="purchase-order-title">{initial.id?"Editar orden":"Nueva orden de compra"}</h2></div><button type="button" aria-label="Cerrar" onClick={close} disabled={busy}><Icon name="close"/></button></header>
       <form onSubmit={handleSubmit(save)} noValidate inert={busy}><div className="purchase-form-body">
         <section className="purchase-form-section purchase-order-header-section">
@@ -534,14 +552,14 @@ function PurchaseOrderDialog({initial,suppliers,inventory,currencySymbol,busy,cl
                 <span className="purchase-line-item-icon"><Icon name={selected?.kind==="ingredient"?"stock":"box"} size={16}/></span>
                 <div className="purchase-line-item-copy">
                   <b>{selected?.name??"Artículo no disponible"}</b>
-                  <small>{selected?(selected.kind==="ingredient"?"Insumo":"Producto vendible")+" · Unidad base: "+selected.unit:"Selecciona otro artículo"}</small>
+                  <small>{selected?(selected.kind==="ingredient"?"Insumo":"Producto vendible")+" · Unidad de inventario: "+selected.unit:"Selecciona otro artículo"}</small>
                 </div>
                 <div className="purchase-line-actions" aria-label="Acciones del artículo">
                   <button type="button" className="purchase-line-remove" onClick={()=>remove(index)} aria-label={"Quitar "+(selected?.name??"artículo")}><Icon name="trash" size={14}/><span>Quitar</span></button>
                 </div>
               </div>
               <div className="purchase-line-fields">
-                <label>Presentación<Select {...register(`items.${index}.presentationId`)} disabled={!selected} aria-invalid={Boolean(errors.items?.[index]?.presentationId)}><option value="">Selecciona...</option>{(selected?.presentations??[]).map(presentation=><option value={presentation.id} key={presentation.id}>{presentationName(presentation.presentationType,presentation.unitsPerPresentation,selected?.unit)}</option>)}</Select>{errors.items?.[index]?.presentationId?.message&&<small className="field-error">{errors.items[index]?.presentationId?.message}</small>}</label>
+                <label>Presentación de compra<div className="purchase-reference-controls"><Select {...register(`items.${index}.presentationId`)} disabled={!selected} aria-invalid={Boolean(errors.items?.[index]?.presentationId)}><option value="">Selecciona...</option>{(selected?.presentations??[]).map(presentation=><option value={presentation.id} key={presentation.id}>{presentationName(presentation.presentationType,presentation.unitsPerPresentation,selected?.unit,presentation.name)}</option>)}</Select>{selected&&<Button type="button" kind="secondary" icon="plus" aria-label={"Nueva presentación de "+selected.name} onClick={()=>setPresentationTarget({item:selected,index})}/>}</div>{errors.items?.[index]?.presentationId?.message&&<small className="field-error">{errors.items[index]?.presentationId?.message}</small>}</label>
                 <label>Cantidad<Input type="number" min="0.001" step="0.001" inputMode="decimal" {...register(`items.${index}.quantity`)} aria-invalid={Boolean(errors.items?.[index]?.quantity)}/>{errors.items?.[index]?.quantity?.message&&<small className="field-error">{errors.items[index]?.quantity?.message}</small>}</label>
                 <label>Costo unitario<div className="money-input"><span>{currencySymbol}</span><Input inputMode="decimal" {...register(`items.${index}.unitCost`)} placeholder="0.00" aria-invalid={Boolean(errors.items?.[index]?.unitCost)}/></div>{errors.items?.[index]?.unitCost?.message&&<small className="field-error">{errors.items[index]?.unitCost?.message}</small>}</label>
                 <div className="purchase-line-total"><small>SUBTOTAL</small><b>{currencySymbol} {formatRegionalNumber((Number(value?.quantity)||0)*(Number(value?.unitCost)||0),undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</b></div>
@@ -556,19 +574,30 @@ function PurchaseOrderDialog({initial,suppliers,inventory,currencySymbol,busy,cl
       {busy&&<div className="modal-busy" role="status"><i/><span>Guardando…</span></div>}
     </Dialog></div>
 
+    {presentationTarget&&<PurchasePresentationDialog item={presentationTarget.item} close={()=>setPresentationTarget(null)} save={presentation=>{
+      const item=presentationTarget.item;
+      const updated={...item,presentations:[...item.presentations.filter(row=>row.id!==presentation.id).map(row=>({...row,isDefault:presentation.isDefault?false:row.isDefault})),presentation]};
+      setCreatedItems(current=>[...current.filter(row=>row.id!==item.id),updated]);
+      setValue(`items.${presentationTarget.index}.presentationId`,presentation.id,{shouldDirty:true,shouldValidate:isSubmitted});
+      setPresentationTarget(null);
+      notify({tone:"success",title:"Presentación guardada",message:"La conversión quedó disponible para próximas compras."});
+    }}/>}
     {itemTarget!==null&&<PurchaseItemDialog
       currencySymbol={currencySymbol}
       busy={createItem.isPending}
       close={()=>setItemTarget(null)}
       choose={item=>applyItem(itemTarget,item)}
-      save={(draft,file)=>createItem.mutate({target:itemTarget,draft,file})}
+      save={async(draft,file)=>{
+        try{await createItem.mutateAsync({target:itemTarget,draft,file})}
+        catch{/* The mutation reports the API error and keeps the article draft open. */}
+      }}
     />}
   </>;
 }
 
 function SupplierDialog({initial,busy,close,save}:{initial:SupplierDraft;busy:boolean;close:()=>void;save:(draft:SupplierDraft)=>void}){
   const{register,handleSubmit,formState:{errors}}=useForm<SupplierDraft>({defaultValues:initial,resolver:supplierResolver,mode:"onSubmit",reValidateMode:"onChange"});
-  return <div className="modal-backdrop modal-overlay-in"><Dialog className="crud-modal supplier-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="supplier-title" aria-busy={busy}><div className="modal-accent"/><header><span className="modal-title-icon"><Icon name="truck" size={18}/></span><div><small>{initial.id?"EDITAR PROVEEDOR":"NUEVO PROVEEDOR"}</small><h2 id="supplier-title">Datos del proveedor</h2></div><button type="button" aria-label="Cerrar" onClick={close} disabled={busy}><Icon name="close"/></button></header><form onSubmit={handleSubmit(save)} noValidate><div className="supplier-form-body form-grid">
+  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal supplier-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="supplier-title" aria-busy={busy}><div className="modal-accent"/><header><span className="modal-title-icon"><Icon name="truck" size={18}/></span><div><small>{initial.id?"EDITAR PROVEEDOR":"NUEVO PROVEEDOR"}</small><h2 id="supplier-title">Datos del proveedor</h2></div><button type="button" aria-label="Cerrar" onClick={close} disabled={busy}><Icon name="close"/></button></header><form onSubmit={handleSubmit(save)} noValidate><div className="supplier-form-body form-grid">
     <label className="span-2">Nombre o razón social<Input autoFocus {...register("name")} aria-invalid={Boolean(errors.name)} placeholder="Ej. Distribuidora Andina"/>{errors.name?.message&&<small className="field-error">{errors.name.message}</small>}</label>
     <label>RUC<Input inputMode="numeric" maxLength={11} {...register("taxId")} aria-invalid={Boolean(errors.taxId)} placeholder="20123456789"/>{errors.taxId?.message&&<small className="field-error">{errors.taxId.message}</small>}</label>
     <label>Teléfono<Input {...register("phone")} placeholder="Ej. 987 654 321"/></label>
@@ -580,16 +609,16 @@ function PurchaseDetail({order,mode,canManage,canApprove,canReceive,busy,currenc
   const meta=statusMeta[order.status];
   const receivable=order.status==="approved"||order.status==="partially_received";
   const cancellable=order.status==="draft"||order.status==="pending_approval"||order.status==="approved";
-  return <div className="modal-backdrop modal-overlay-in"><Dialog className="crud-modal purchase-detail-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="purchase-detail-title" aria-busy={busy}><div className="modal-accent"/><header><span className="modal-title-icon"><Icon name="receipt" size={18}/></span><div><small>{mode==="view"?"DETALLE DE ORDEN":"REVISAR ORDEN"}</small><h2 id="purchase-detail-title">{order.number}</h2></div><button type="button" aria-label="Cerrar" onClick={close} disabled={busy}><Icon name="close"/></button></header><div className="purchase-detail-body">
+  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal purchase-detail-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="purchase-detail-title" aria-busy={busy}><div className="modal-accent"/><header><span className="modal-title-icon"><Icon name="receipt" size={18}/></span><div><small>{mode==="view"?"DETALLE DE ORDEN":"REVISAR ORDEN"}</small><h2 id="purchase-detail-title">{order.number}</h2></div><button type="button" aria-label="Cerrar" onClick={close} disabled={busy}><Icon name="close"/></button></header><div className="purchase-detail-body">
     <section className="purchase-detail-summary"><div><small>PROVEEDOR</small><b>{order.supplierName}</b></div><div><small>TOTAL</small><b>{currency}</b></div><div><small>ARTÍCULOS</small><b>{order.itemCount}</b></div><Status tone={meta.tone}>{meta.label}</Status></section>
     <section className="purchase-detail-meta"><div><small>CREADA</small><b>{formatRegionalDateTime(order.createdAt,{country,timeZone:timezone},{dateStyle:"medium",timeStyle:"short"})}</b></div><div><small>ENTREGA ESPERADA</small><b>{order.expectedAt?formatRegionalCalendarDate(order.expectedAt,country,{dateStyle:"medium"}):"Sin fecha"}</b></div><div><small>NOTAS</small><b>{order.notes||"Sin notas"}</b></div></section>
-    <section className="purchase-detail-lines"><header><div><small>DETALLE</small><h3>Artículos de la orden</h3></div></header><div className="table-wrap hover-scroll"><table className="purchase-receipt-progress-table"><thead><tr><th>ARTÍCULO</th><th>PRESENTACIÓN</th><th>SOLICITADO</th><th>RECIBIDO</th><th>PENDIENTE</th><th>COSTO</th><th>SUBTOTAL</th></tr></thead><tbody>{order.items.map((item,index)=><tr className={index%2?"alternate":""} key={item.id}><td><b>{item.itemName}</b><small>{item.sku||item.unit}</small></td><td>{presentationName(item.presentationType,item.unitsPerPresentation,item.unit)}</td><td>{formatRegionalNumber(Number(item.quantity),country,{maximumFractionDigits:3})}</td><td><b className="purchase-received-qty">{formatRegionalNumber(Number(item.receivedQuantity),country,{maximumFractionDigits:3})}</b></td><td><b className={Number(item.pendingQuantity)>0?"purchase-pending-qty":""}>{formatRegionalNumber(Number(item.pendingQuantity),country,{maximumFractionDigits:3})}</b></td><td>{formatRegionalNumber(Number(item.unitCost),country,{minimumFractionDigits:2,maximumFractionDigits:4})}</td><td><b>{formatRegionalNumber(Number(item.lineTotal),country,{minimumFractionDigits:2,maximumFractionDigits:2})}</b></td></tr>)}</tbody></table></div></section>
+    <section className="purchase-detail-lines"><header><div><small>DETALLE</small><h3>Artículos de la orden</h3></div></header><div className="table-wrap hover-scroll"><table className="purchase-receipt-progress-table"><thead><tr><th>ARTÍCULO</th><th>PRESENTACIÓN DE COMPRA</th><th>SOLICITADO</th><th>RECIBIDO</th><th>PENDIENTE</th><th>COSTO</th><th>SUBTOTAL</th></tr></thead><tbody>{order.items.map((item,index)=><tr className={index%2?"alternate":""} key={item.id}><td><b>{item.itemName}</b><small>{item.sku||item.unit}</small></td><td>{presentationName(item.presentationType,item.unitsPerPresentation,item.unit,item.presentationName)}</td><td>{formatRegionalNumber(Number(item.quantity),country,{maximumFractionDigits:3})}</td><td><b className="purchase-received-qty">{formatRegionalNumber(Number(item.receivedQuantity),country,{maximumFractionDigits:3})}</b></td><td><b className={Number(item.pendingQuantity)>0?"purchase-pending-qty":""}>{formatRegionalNumber(Number(item.pendingQuantity),country,{maximumFractionDigits:3})}</b></td><td>{formatRegionalNumber(Number(item.unitCost),country,{minimumFractionDigits:2,maximumFractionDigits:4})}</td><td><b>{formatRegionalNumber(Number(item.lineTotal),country,{minimumFractionDigits:2,maximumFractionDigits:2})}</b></td></tr>)}</tbody></table></div></section>
     {mode==="review"&&(canManage||canApprove||canReceive)&&order.status!=="received"&&order.status!=="cancelled"&&<section className="purchase-detail-actions"><div><small>SIGUIENTE PASO</small><b>{nextStepLabel(order.status)}</b></div><div>{canManage&&order.status==="draft"&&<><Button kind="secondary" icon="edit" onClick={edit} disabled={busy}>Editar</Button><Button icon="arrowRightCircle" onClick={()=>changeStatus("pending_approval")} disabled={busy}>Enviar a aprobación</Button></>}{order.status==="pending_approval"&&<>{canManage&&<Button kind="ghost" icon="chevronLeft" onClick={()=>changeStatus("draft")} disabled={busy}>Volver a borrador</Button>}{canApprove&&<Button icon="check" onClick={approve} disabled={busy}>Aprobar</Button>}</>}{canReceive&&receivable&&<Button kind="success" icon="stock" onClick={receive} disabled={busy}>{order.status==="partially_received"?"Continuar en Recepciones":"Ir a Recepciones"}</Button>}{canManage&&cancellable&&<Button kind="danger" icon="close" onClick={cancel} disabled={busy}>Cancelar orden</Button>}</div></section>}
   </div>{busy&&<div className="modal-busy" role="status"><i/><span>Procesando…</span></div>}</Dialog></div>;
 }
 function ReceiptHistoryDetail({receipt,canManage,close,startReturn}:{receipt:PurchaseReceiptDetail;canManage:boolean;close:()=>void;startReturn:()=>void}){
  const returnable=receipt.items.some(i=>Number(i.returnableQuantity)>0);
- return <div className="modal-backdrop modal-overlay-in"><Dialog className="crud-modal purchase-detail-modal modal-panel-in" role="dialog" aria-modal="true">
+ return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal purchase-detail-modal modal-panel-in" role="dialog" aria-modal="true">
   <header><span className="modal-title-icon"><Icon name="receipt" size={18}/></span><div><small>RECEPCIÓN HISTÓRICA</small><h2>{receipt.code}</h2></div><button onClick={close} aria-label="Cerrar"><Icon name="close"/></button></header>
   <div className="purchase-detail-body"><section className="purchase-detail-summary"><div><small>ORDEN</small><b>{receipt.number}</b></div><div><small>PROVEEDOR</small><b>{receipt.supplierName}</b></div><div><small>USUARIO</small><b>{receipt.createdByName}</b></div></section>
    <div className="table-wrap"><table><thead><tr><th>ARTÍCULO</th><th>RECIBIDO</th><th>DEVUELTO/CORREGIDO</th><th>DISPONIBLE</th><th>COSTO</th></tr></thead><tbody>{receipt.items.map(i=><tr key={i.id}><td><b>{i.itemName}</b></td><td>{i.quantity}</td><td>{i.returnedQuantity}</td><td>{i.returnableQuantity}</td><td>{i.unitCost}</td></tr>)}</tbody></table></div>
@@ -599,11 +628,11 @@ function ReceiptHistoryDetail({receipt,canManage,close,startReturn}:{receipt:Pur
  </Dialog></div>
 }
 
-function PurchaseDetailError({message,close}:{message:string;close:()=>void}){return <div className="modal-backdrop modal-overlay-in"><Dialog className="crud-modal purchase-detail-modal modal-panel-in" role="dialog" aria-modal="true"><div className="modal-accent"/><header><span className="modal-title-icon"><Icon name="alert"/></span><div><small>ORDEN DE COMPRA</small><h2>No pudimos cargar el detalle</h2></div><button aria-label="Cerrar" onClick={close}><Icon name="close"/></button></header><PurchaseState icon="alert" title="Detalle no disponible" text={message}/></Dialog></div>}
+function PurchaseDetailError({message,close}:{message:string;close:()=>void}){return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal purchase-detail-modal modal-panel-in" role="dialog" aria-modal="true"><div className="modal-accent"/><header><span className="modal-title-icon"><Icon name="alert"/></span><div><small>ORDEN DE COMPRA</small><h2>No pudimos cargar el detalle</h2></div><button aria-label="Cerrar" onClick={close}><Icon name="close"/></button></header><PurchaseState icon="alert" title="Detalle no disponible" text={message}/></Dialog></div>}
 
-function PurchaseEditorError({message,close,retry}:{message:string;close:()=>void;retry:()=>void}){return <div className="modal-backdrop modal-overlay-in"><Dialog className="crud-modal purchase-order-modal modal-panel-in" role="dialog" aria-modal="true"><div className="modal-accent"/><header><span className="modal-title-icon"><Icon name="alert"/></span><div><small>ORDEN DE COMPRA</small><h2>No pudimos preparar el formulario</h2></div><button aria-label="Cerrar" onClick={close}><Icon name="close"/></button></header><PurchaseState icon="alert" title="Catálogos no disponibles" text={message} action={retry}/></Dialog></div>}
+function PurchaseEditorError({message,close,retry}:{message:string;close:()=>void;retry:()=>void}){return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal purchase-order-modal modal-panel-in" role="dialog" aria-modal="true"><div className="modal-accent"/><header><span className="modal-title-icon"><Icon name="alert"/></span><div><small>ORDEN DE COMPRA</small><h2>No pudimos preparar el formulario</h2></div><button aria-label="Cerrar" onClick={close}><Icon name="close"/></button></header><PurchaseState icon="alert" title="Catálogos no disponibles" text={message} action={retry}/></Dialog></div>}
 
-function presentationName(type:string,factor:string,unit?:string){if(type==="unit")return `Unidad base · ${unit??"und"}`;return `${type==="box"?"Caja":"Paquete"} x ${formatRegionalNumber(Number(factor),undefined,{maximumFractionDigits:3})} ${unit??"und"}`}
+function presentationName(type:string,factor:string,unit?:string,name?:string){if(type==="unit")return unit??name??type;return `${name??type} × ${formatRegionalNumber(Number(factor),undefined,{maximumFractionDigits:3})} ${unit??""}`}
 function nextStepLabel(status:PurchaseStatus){if(status==="draft")return"Completa la orden y envíala para aprobación.";if(status==="pending_approval")return"Revisa el total y aprueba antes de recibir.";if(status==="approved")return"Registra lo que realmente llegó; la orden no movió stock.";if(status==="partially_received")return"Completa las cantidades que aún están pendientes.";return"Sin acciones pendientes."}
 function formatMoney(amount:number,settings:{currencySymbol:string;currencyPosition:"before"|"after";currencyDecimals:number},country?:string|null){const value=formatRegionalNumber(amount,country,{minimumFractionDigits:settings.currencyDecimals,maximumFractionDigits:settings.currencyDecimals});return settings.currencyPosition==="before"?`${settings.currencySymbol} ${value}`:`${value} ${settings.currencySymbol}`}
 

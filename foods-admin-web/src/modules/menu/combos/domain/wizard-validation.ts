@@ -1,4 +1,5 @@
 import type {Draft,Product} from "./types";
+import {isReservationValid} from "./option-quantity";
 
 export type WizardIssue={step:number;field:string;message:string};
 const amount=(value:string)=>/^\d+(\.\d{1,2})?$/.test(value);
@@ -21,7 +22,7 @@ export function validateComboStep(draft:Draft,products:Product[],step:number):Wi
         const product=products.find(item=>item.id===option.productId&&item.active);
         if(!product||selected.has(option.productId))return issue(`${prefix}-product`,`Revisa los productos de ${group.name}: deben estar activos y no repetirse.`);
         selected.add(option.productId);
-        if(option.quota&&(!/^\d+$/.test(option.quota)||(product.defaultDailyQuota!=null&&Number(option.quota)>product.defaultDailyQuota)))return issue(`${prefix}-quota-${position}`,`Revisa la cantidad reservada de ${product.name}. No puede superar su cupo disponible.`);
+        if(!isReservationValid(option.quota,product))return issue(`${prefix}-quota-${position}`,`Revisa la cantidad reservada de ${product.name}. Debe ser un entero y no superar la cantidad disponible.`);
         if(option.surcharge.trim()&&!amount(option.surcharge))return issue(`${prefix}-surcharge-${position}`,`Ingresa un recargo válido para ${product.name}.`);
       }
     }

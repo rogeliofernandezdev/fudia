@@ -231,11 +231,14 @@ avisos informativos usan texto neutro e icono, sin apariencia de botón.
   el botón de quitar. El formulario de Recetas no hereda padding ni iconos
   decorativos del footer CRUD genérico: su espaciado pertenece al módulo y cada
   acción muestra un único icono explícito.
-- El producto solicita explícitamente el control de disponibilidad mediante
-  tarjetas radio: «Siempre disponible» o «Cupo diario». «Siempre disponible»
-  no muestra un contador; «Cupo diario» revela y exige un entero mayor que cero
-  bajo la etiqueta «Cupo diario predeterminado». La interfaz nunca infiere esta
-  intención únicamente porque el usuario dejó una cantidad vacía.
+- El producto solicita el control mediante radios «Sin control» o «Porciones
+  preparadas». Al crear, «Porciones preparadas» revela y exige «Cantidad disponible
+  hoy», un entero positivo. Producto y cantidad inicial se guardan juntos para
+  el local activo y su fecha actual; no es un cupo predeterminado ni se repone
+  automáticamente. «Sin control» no muestra ni envía cantidad. La edición
+  comercial no modifica porciones: Disponibilidad permite ajustar su cantidad,
+  marcar Agotado o Reactivar. Se reutilizan FormField e Input, sin nuevas tarjetas,
+  títulos ni pasos; el campo ocupa el ancho del formulario también desde 390 px.
 - Los menús y combos usan un wizard independiente de cuatro pasos: información,
   composición, disponibilidad y revisión. La plantilla «Menú del día» prepara
   Entrada, Plato principal, Postre y Bebida, pero cada parte puede editarse. En la interfaz,
@@ -247,6 +250,10 @@ avisos informativos usan texto neutro e icono, sin apariencia de botón.
   entre productos existentes; no se duplican fichas ni controles de disponibilidad.
   En composición se muestra siempre obligatoriedad, mínimo/máximo y recargo por
   opción. La disponibilidad del menú se deriva de las partes obligatorias.
+- «Reservar» se precarga con la cantidad disponible del producto en el local,
+  tanto en la plantilla como al agregar una opción. Permite reducir el valor,
+  pero no superar el saldo ni introducir fracciones. Cero indica agotado; un
+  producto sin control conserva el campo vacío con «Sin límite», sin simular cero.
 - El wizard de menús y combos no solicita categoría de producto. Cada alternativa
   conserva su propia categoría; el producto técnico que representa al menú se
   registra sin `categoryId` para no mezclar clasificación de platos con composición.
@@ -347,6 +354,10 @@ avisos informativos usan texto neutro e icono, sin apariencia de botón.
   semántico, título, explicación breve y acción «Aceptar». El botón «Aceptar»
   usa `--control-height` como todos los demás botones. El comportamiento y
   jerarquía siguen el estándar de Bodegas, reinterpretado con tokens Foods.
+- Éxito/error sustituyen los diálogos de la acción: se cierran primero mediante
+  `Dialog.onResponseClose` y luego se muestra la respuesta real del API. No hay
+  formularios desenfocados detrás del aviso ni confirmación adicional de descarte.
+  La validación previa se muestra junto a los campos, sin modal de respuesta.
 - Excepción operativa: Cocina no muestra ese diálogo al pasar una comanda a
   Preparando/Listo; el cambio entre paneles confirma la operación. Los errores
   conservan el aviso. Éxito se cierra automáticamente o con Aceptar/X; errores e
@@ -457,6 +468,24 @@ primaria con un icono: «Registrar y enviar a cocina». Durante el envío muestr
 
 Toda pantalla se valida desde 390 px. En móvil se reorganizan filtros, acciones
 y detalle; no se limita a apilar columnas de escritorio.
+
+### Presentación del artículo en Compras
+
+El registro muestra «Unidad de inventario», «Presentación de compra» y su contenido, sin filas de
+«Otra presentación», radios de «Predeterminada» ni «Nueva combinación».
+Presentación y contenido comparten dos columnas en escritorio y se apilan en
+móvil; se evita una tarjeta adicional dentro de la sección existente. El +
+de Unidad de inventario y el de Presentación de compra reutilizan el mismo `IconButton`, contenedor
+y separación del selector; ambas filas comparten ancho y rejilla, sin márgenes
+adicionales. El + junto al selector de Presentación abre un diálogo
+breve con Nombre únicamente, X, Cancelar y Guardar. Códigos y preferencias
+globales no se solicitan al usuario. Las opciones provienen del backend; las
+combinaciones habituales ya se inicializan al crear la empresa. La conversión
+se completa por artículo y se explica con una equivalencia breve, sin adivinar
+cantidades ni modificar el historial de compras. La compra individual muestra
+el nombre remoto de la unidad (por ejemplo, Botella), nunca «Unidad base»;
+conserva el código técnico `unit` y contenido 1. Los mismos términos se utilizan
+en las órdenes y los ajustes de inventario, sin cambios del contrato ni de stock.
 
 ## Configuración financiera
 
@@ -691,7 +720,7 @@ Los módulos de directorio, como Clientes, usan la tabla estandarizada en escrit
 - El catálogo distingue **Disponible**, **En desarrollo** y **Planificado**.
 - `active` representa únicamente si un módulo **Disponible** está habilitado para una empresa; no representa su estado de desarrollo.
 - El Administrador de plataforma ve todos los módulos en navegación y catálogo, incluso si están inactivos o no terminados.
-- Los usuarios de empresa solo ven módulos disponibles, incluidos en su plan, activos para su organización y permitidos por su rol. Emprende incluye «Menús y combos».
+- Los usuarios de empresa solo ven módulos disponibles, incluidos en su plan, activos para su organización y permitidos por su rol. Emprende incluye «Menús y combos», «Inventario» y «Compras», sin nuevas pantallas ni controles específicos del plan.
 - Usuarios y roles muestra únicamente accesos y acciones de módulos efectivos del plan. Los contadores y la vista previa cuentan esos mismos elementos; se omiten grupos vacíos. La empresa no recibe el catálogo comercial completo de Plataforma.
 - Un módulo **En desarrollo** o **Planificado** nunca puede activarse para una empresa; el backend debe rechazar cualquier intento aunque el frontend falle.
 

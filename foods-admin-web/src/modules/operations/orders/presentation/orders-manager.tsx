@@ -44,7 +44,7 @@ export function OrdersManager(){
  const[adding,setAdding]=useState<{order:Order;draft:Draft;requestKey:string}|null>(null);
  const list=useQuery({queryKey:["orders",debouncedQ,channel,status,page,size],queryFn:()=>listOrders({q:debouncedQ,channel,status,page,pageSize:size}),placeholderData:keepPreviousData});
  const detail=useQuery({queryKey:["order",detailId],queryFn:()=>getOrder(detailId!),enabled:Boolean(detailId),refetchInterval:query=>query.state.data?.completedAt?false:10000});
- const invalidate=()=>Promise.all(["orders","order","salon-floor","pos-orders","pos-order","dashboard","kitchen-tickets","order-catalog","order-combo","product-availability","sales"].map(key=>qc.invalidateQueries({queryKey:[key]})));
+ const invalidate=()=>Promise.all(["orders","order","salon-floor","pos-orders","pos-order","dashboard","kitchen-tickets","order-catalog","order-combo","product-availability","products","sales"].map(key=>qc.invalidateQueries({queryKey:[key]})));
  const create=useMutation({mutationFn:(draft:ManualOrderDraft)=>createManualOrder(draft),onSuccess:order=>{setCreating(false);setChannel(order.channel);setStatus("abiertos");setQ("");setPage(1);invalidate();notify({tone:"success",title:"Pedido registrado",message:"El pedido fue enviado a Cocina. Puedes seguir su avance en Pedidos y registrar el cobro en Punto de venta."})},onError:error=>{void qc.invalidateQueries({queryKey:["order-catalog"]});void qc.invalidateQueries({queryKey:["order-combo"]});notify({tone:"danger",title:"No se pudo registrar el pedido",message:error.message})}});
  const advance=useMutation({mutationFn:(v:{id:string;status:string})=>updateOrderStatus(v.id,v.status),onSuccess:order=>{const refresh=invalidate();if(order.channel!=="salon"||order.status!=="entregado")notify({tone:"success",title:"Pedido actualizado",message:"El estado del pedido fue actualizado."});return refresh},onError:e=>notify({tone:"danger",title:"No se pudo actualizar",message:e.message})});
  const cancel=useMutation({mutationFn:(o:Order)=>updateOrderStatus(o.id,"cancelado"),onSuccess:()=>{setCancelTarget(null);invalidate();notify({tone:"success",title:"Pedido cancelado",message:"El pedido quedó marcado como cancelado."})},onError:e=>notify({tone:"danger",title:"No se pudo cancelar",message:e.message})});
@@ -121,7 +121,7 @@ function OrderDetail({loading,order,error,currencySymbol,canManage:hasPermission
  const subject=order?(order.tableName||order.customerName||"Pedido"):"Pedido";
  const subtitle=order?.tableName&&order.customerName?order.customerName:undefined;
  return <div className="modal-backdrop modal-overlay-in">
-  <Dialog className="crud-modal order-detail salon-order-detail modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="orders-preview-title" aria-busy={loading}>
+  <Dialog onResponseClose={close} className="crud-modal order-detail salon-order-detail modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="orders-preview-title" aria-busy={loading}>
    <div className="salon-order-detail-accent" aria-hidden="true"/>
    {loading?<OrderDetailSkeleton close={close}/>:<>
    <header className="salon-order-detail-head">

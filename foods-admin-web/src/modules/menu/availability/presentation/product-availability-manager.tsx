@@ -44,6 +44,7 @@ export function ProductAvailabilityManager(){
     setPortions(value=>{const next={...value};delete next[variables.item.productId];return next});
    }
    void client.invalidateQueries({queryKey:["product-availability"]});
+   void client.invalidateQueries({queryKey:["products"]});
    notify({
     tone:"success",
     title:variables.kind==="quota"?"Cupo actualizado":"Disponibilidad actualizada",
@@ -57,7 +58,6 @@ export function ProductAvailabilityManager(){
   const portionQuantity=Number(portions[item.productId]??item.portionQuantity??0);
   const minimum=Math.max(1,item.soldQuantity);
   if(!Number.isInteger(portionQuantity)||portionQuantity<minimum){
-   notify({tone:"danger",title:"Cupo no válido",message:`El cupo de hoy debe ser un entero de al menos ${minimum}, porque ya hay ${item.soldQuantity} vendidas.`});
    return;
   }
   update.mutate({item,status:item.manualStatus,portionQuantity,kind:"quota"});
@@ -124,6 +124,7 @@ export function ProductAvailabilityManager(){
         </>:<span className="availability-read-only">Solo lectura</span>}
        </div>
        {notice&&<p className="availability-derived"><Icon name="alert" size={14}/>{notice}</p>}
+       {portionChanged&&!portionValid&&<p className="field-error" role="alert">Ingresa un entero de al menos {portionMinimum}. Ya hay {item.soldQuantity} vendidas.</p>}
       </article>;
      })}
     </div>

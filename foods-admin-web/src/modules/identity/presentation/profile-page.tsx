@@ -9,11 +9,12 @@ import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
 import type {OrganizationSubscription} from "@/modules/platform";
 import type {MyProfile,MyProfileDraft} from "../domain/types";
 import {profileResolver} from "../domain/profile-schema";
-import {getMyProfile,getOrganizationSubscription,saveMyProfile} from "../infrastructure/identity-api";
+import {getOrganizationSubscription,saveMyProfile} from "../infrastructure/identity-api";
+import {useCurrentProfile} from "../application/use-current-profile";
 
 export function ProfilePage(){
   const{can,organization,location}=useSession();
-  const profile=useQuery({queryKey:["my-profile"],queryFn:getMyProfile});
+  const profile=useCurrentProfile();
   const canViewSubscription=can("subscription.read");
   const subscription=useQuery({queryKey:["organization-subscription"],queryFn:getOrganizationSubscription,enabled:canViewSubscription});
   if(profile.isLoading)return <><ProfileHeader/><ProfileSkeleton/>{canViewSubscription&&<SubscriptionSkeleton/>}</>;

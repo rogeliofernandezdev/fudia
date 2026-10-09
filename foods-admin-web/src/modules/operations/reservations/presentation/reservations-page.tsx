@@ -61,7 +61,7 @@ function ReservationDialog({value:initial,tables,tablesLoading,tablesError,busy,
   const eligibleTables=tables.filter(table=>table.id===initial.tableId||(table.active&&table.seats>=guests));
 
   return <div className="modal-backdrop modal-overlay-in" role="presentation">
-    <Dialog className="crud-modal reservation-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="reservation-title" aria-busy={busy}>
+    <Dialog onResponseClose={close} className="crud-modal reservation-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="reservation-title" aria-busy={busy}>
       <div className="modal-accent"/>
       <header>
         <span className="modal-title-icon"><Icon name="clock" size={18}/></span>

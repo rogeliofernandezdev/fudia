@@ -7,12 +7,13 @@ import {CatalogProduct,ComboConfigurator,ComboSelection,ConfiguredCombo,ComandaC
 import type {Draft,FloorTable,LineDraft} from "../../salon/domain/types";
 const money=(value:number)=>value.toFixed(2);
 
-export function ComandaView({initial,mode,allTables,busy,currencySymbol,close,save,notify,channelLabel="Salón",onBack}:{initial:Draft;mode:"create"|"edit"|"append";allTables:FloorTable[];busy:boolean;currencySymbol:string;close:(draft:Draft)=>void;save:(v:Draft,sendToKitchen:boolean)=>void|Promise<void>;notify:(n:{tone:"danger"|"success";title:string;message:string})=>void;channelLabel?:string;onBack?:(draft:Draft)=>void}){
+export function ComandaView({initial,mode,allTables,busy,currencySymbol,close,save,channelLabel="Salón",onBack,onResponseClose}:{initial:Draft;mode:"create"|"edit"|"append";allTables:FloorTable[];busy:boolean;currencySymbol:string;close:(draft:Draft)=>void;save:(v:Draft,sendToKitchen:boolean)=>void|Promise<void>;notify:(n:{tone:"danger"|"success";title:string;message:string})=>void;channelLabel?:string;onBack?:(draft:Draft)=>void;onResponseClose?:()=>void}){
   const adding=mode==="append";
   const editing=mode!=="create";
   const salon=initial.channel==="salon";
   const[v,setV]=useState(initial);
   const[ticketOpen,setTicketOpen]=useState(false);
+  const[validationError,setValidationError]=useState("");
   const[focusNoteKey,setFocusNoteKey]=useState<string|null>(null);
   const[comboEditor,setComboEditor]=useState<{comboId:string;lineKey?:string;initialSelections:ComboSelection[]}|null>(null);
   const noteRefs=useRef<Record<string,HTMLInputElement|null>>({});
@@ -74,13 +75,14 @@ export function ComandaView({initial,mode,allTables,busy,currencySymbol,close,sa
   const count=v.lines.reduce((a,l)=>a+l.qty,0);
   const submit=async(sendToKitchen:boolean)=>{
     if(busy||submitting.current)return;
-    if(!v.lines.length){notify({tone:"danger",title:"Comanda vacía",message:"Agrega al menos un producto."});return}
-    if(salon&&!v.tableId){notify({tone:"danger",title:"Falta mesa",message:"Selecciona la mesa del pedido."});return}
+    if(!v.lines.length){setValidationError("Agrega al menos un producto.");return}
+    if(salon&&!v.tableId){setValidationError("Selecciona la mesa del pedido.");return}
+    setValidationError("");
     submitting.current=true;
     try{await save(salon?v:{...v,tableId:""},salon?(adding||sendToKitchen):true)}finally{submitting.current=false}
   };
   return(
-    <Dialog as="div" className="salon-comanda-shell" role="dialog" aria-modal="true" aria-busy={busy} aria-label={adding?"Agregar productos":editing?"Editar comanda":"Nueva comanda"}>
+    <Dialog onResponseClose={onResponseClose??(()=>close(v))} as="div" className="salon-comanda-shell" role="dialog" aria-modal="true" aria-busy={busy} aria-label={adding?"Agregar productos":editing?"Editar comanda":"Nueva comanda"}>
       <header className="salon-comanda-header">
         <div className="salon-comanda-header-main">
           <button type="button" className="salon-comanda-icon-button" disabled={busy} aria-label={onBack?"Editar datos del pedido":"Volver al salón"} onClick={()=>{if(!busy&&!submitting.current)(onBack??close)(v)}}>
@@ -208,6 +210,7 @@ export function ComandaView({initial,mode,allTables,busy,currencySymbol,close,sa
           </div>
 
           <footer className="salon-comanda-summary-foot">
+            {validationError&&<p className="field-error" role="alert">{validationError}</p>}
             {v.channel==="delivery"&&<dl className="salon-comanda-charges"><div><dt>Subtotal</dt><dd>{currencySymbol} {money(subtotal)}</dd></div><div><dt>Envío</dt><dd>{currencySymbol} {money(deliveryFee)}</dd></div></dl>}
             <div className="salon-comanda-total">
               <div className="salon-comanda-total-copy"><span>{v.channel==="delivery"?"Total":"Subtotal"}</span></div>

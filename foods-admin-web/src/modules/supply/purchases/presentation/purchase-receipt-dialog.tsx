@@ -42,7 +42,7 @@ export function PurchaseReceiptDialog({order,busy,close,save}:{order:PurchaseOrd
   }
 
   return <div className="modal-backdrop modal-overlay-in" role="presentation">
-    <Dialog className="crud-modal purchase-receipt-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="purchase-receipt-title" aria-busy={busy}>
+    <Dialog onResponseClose={close} className="crud-modal purchase-receipt-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="purchase-receipt-title" aria-busy={busy}>
       <div className="modal-accent"/>
       <header>
         <span className="modal-title-icon"><Icon name="stock" size={18}/></span>
@@ -54,7 +54,7 @@ export function PurchaseReceiptDialog({order,busy,close,save}:{order:PurchaseOrd
           <div className="purchase-receipt-intro"><Icon name="truck" size={17}/><p><b>Registra únicamente lo que llegó.</b> Puedes recibir una parte ahora y completar lo pendiente en otra recepción.</p></div>
           <div className="purchase-receipt-lines">
             {order.items.map((item,index)=><article className="purchase-receipt-line" key={item.id}>
-              <div className="purchase-receipt-item"><b>{item.itemName}</b><small>{item.presentationType==="unit"?"Unidad base":item.presentationType==="box"?"Caja":"Paquete"} · {item.unit}</small></div>
+              <div className="purchase-receipt-item"><b>{item.itemName}</b><small>{item.presentationType==="unit"?item.unit:(item.presentationName??item.presentationType)+" · "+item.unit}</small></div>
               <div><small>SOLICITADO</small><b>{formatRegionalNumber(Number(item.quantity),location?.country,{maximumFractionDigits:3})}</b></div>
               <div><small>RECIBIDO</small><b>{formatRegionalNumber(Number(item.receivedQuantity),location?.country,{maximumFractionDigits:3})}</b></div>
               <div><small>PENDIENTE</small><b>{formatRegionalNumber(Number(item.pendingQuantity),location?.country,{maximumFractionDigits:3})}</b></div>

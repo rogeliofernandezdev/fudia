@@ -23,8 +23,10 @@ export type Product={
   costPrice:string|null;
 };
 export type List<T>={items:T[];total:number;page?:number;pageSize?:number;serviceDestinationOptions?:ServiceDestinationOption[]};
+export type ProductListItem=Product&{availableQuantity:number|null;inventoryUnit:string|null};
 export type ProductDraft={
   id?:string;
+  initialPortionQuantity?:string;
   name:string;
   description:string;
   categoryId:string;

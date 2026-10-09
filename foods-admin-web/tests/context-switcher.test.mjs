@@ -103,6 +103,15 @@ test("contexto: cambiar empresa limpia el local y solo envía destinos válidos 
  assert.equal(JSON.stringify(tenant.calls),JSON.stringify([{organizationId:"org-a",locationId:"local-b"}]));
 });
 
+test("contexto: usuarios de empresa mantienen el local activo como contexto",()=>{
+ for(const platformAdmin of [true,false]){
+  const host=controller({platformAdmin});
+  const view=host.render();
+  assert.ok(view.some(node=>node.type==="b"&&node.props.children===(platformAdmin?"Foods Restaurante":"Local principal")));
+  assert.ok(view.some(node=>node.type==="small"&&node.props.children===(platformAdmin?"EMPRESA":"LOCAL ACTIVO")));
+ }
+});
+
 test("contexto: CSS único, panel acotado y movimiento reducido",()=>{
  const css=postcss.parse(readFileSync(new URL("context-switcher.css",root),"utf8"));const seen=new Set();
  css.walkRules(rule=>{if(rule.parent.type==="atrule"&&rule.parent.name==="keyframes")return;for(const selector of rule.selectors){const key=(rule.parent.params??"root")+selector;assert.equal(seen.has(key),false,key);seen.add(key)}});

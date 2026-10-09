@@ -128,14 +128,15 @@ export function RecipesPage(){
   }
  }
 
- function closeRecipe(){
-  if(save.isPending)return;
+ function resetRecipe(){
   setDraft(null);
   setEditingProductId("");
   setProductOption(null);
   setIngredientOptions({});
   setAttempted(false);
  }
+
+ function closeRecipe(){if(!save.isPending)resetRecipe()}
 
  function addIngredient(){
   if(!draft||draft.items.some(item=>!item.inventoryItemId))return;
@@ -154,7 +155,6 @@ export function RecipesPage(){
    return !item.inventoryItemId||!Number.isFinite(quantity)||quantity<=0||!Number.isFinite(waste)||waste<0||waste>=100;
   });
   if(!draft.productId||!Number.isFinite(Number(draft.yieldQuantity))||Number(draft.yieldQuantity)<=0||!draft.items.length||invalidItems||duplicateIngredient){
-   notify({tone:"danger",title:"Receta incompleta",message:"Revisa producto, rendimiento e insumos antes de guardar."});
    return;
   }
   save.mutate(draft);
@@ -182,7 +182,7 @@ export function RecipesPage(){
   </section>
 
   {draft&&<div className="modal-backdrop modal-overlay-in" role="presentation">
-   <Dialog className="crud-modal recipe-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="recipe-modal-title" aria-busy={save.isPending}>
+   <Dialog onResponseClose={resetRecipe} className="crud-modal recipe-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="recipe-modal-title" aria-busy={save.isPending}>
     <header className="recipe-modal-header">
      <span className="modal-title-icon"><Icon name="cookingPot" size={18}/></span>
      <div>

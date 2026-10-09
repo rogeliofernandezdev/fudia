@@ -40,6 +40,7 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
       body.message ?? "No pudimos completar la operación.",
       body.code ?? "unknown_error",
       response.status,
+      typeof body.correlationId === "string" ? body.correlationId : undefined,
     );
   }
   return body as T;

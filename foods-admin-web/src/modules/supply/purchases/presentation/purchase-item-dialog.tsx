@@ -4,12 +4,15 @@ import {Dialog} from "@/design-system/dialog";
 import {useDeferredValue,useRef,useState} from "react";
 import {useQuery} from "@tanstack/react-query";
 import {useForm,useWatch} from "react-hook-form";
-import {Button,Icon,Input,Select,Textarea} from "@/design-system";
+import {Button,Icon,Input,Textarea} from "@/design-system";
 import {useSession} from "@/providers/session-context";
 import {formatRegionalNumber} from "@/shared/i18n/regional-format";
 import {purchaseInventoryItemResolver} from "../domain/purchase-schema";
-import type {PresentationType,PurchaseInventoryItemDraft,PurchaseInventoryOption} from "../domain/types";
-import {listPurchaseInventory,listPurchaseItemCategories} from "../infrastructure/purchases-api";
+import type {PurchaseInventoryItemDraft,PurchaseInventoryOption} from "../domain/types";
+import {listPurchaseInventory} from "../infrastructure/purchases-api";
+import {PurchaseUnitField} from "./purchase-unit-field";
+import {PurchaseCategoryField} from "./purchase-category-field";
+import {PurchasePresentationsField} from "./purchase-presentations-field";
 
 type ItemMode="existing"|"new_product"|"new_ingredient";
 
@@ -19,7 +22,7 @@ const defaults:PurchaseInventoryItemDraft={
   name:"",
   description:"",
   price:"",
-  unit:"und",
+  unit:"",
   presentationType:"unit",
   unitsPerPresentation:"1",
   minimumStock:"0",
@@ -32,38 +35,45 @@ export function PurchaseItemDialog({
   busy:boolean;
   close:()=>void;
   choose:(item:PurchaseInventoryOption)=>void;
-  save:(draft:PurchaseInventoryItemDraft,file:File|null)=>void;
+  save:(draft:PurchaseInventoryItemDraft,file:File|null)=>Promise<void>;
 }){
-  const{location}=useSession();
+  const{location,organization}=useSession();
   const[mode,setMode]=useState<ItemMode>("existing");
   const[search,setSearch]=useState("");
   const deferredSearch=useDeferredValue(search.trim());
   const[pendingFile,setPendingFile]=useState<File|null>(null);
   const[previewUrl,setPreviewUrl]=useState<string|null>(null);
   const[imageError,setImageError]=useState("");
+  const[catalogBusy,setCatalogBusy]=useState(false);
   const fileRef=useRef<HTMLInputElement>(null);
+  const submitting=useRef(false);
 
   const items=useQuery({
-    queryKey:["purchase-item-picker",deferredSearch],
+    queryKey:["purchase-item-picker",organization?.id,deferredSearch],
     queryFn:()=>listPurchaseInventory(deferredSearch),
     enabled:mode==="existing",
     staleTime:10000,
   });
-  const categories=useQuery({
-    queryKey:["purchase-item-categories"],
-    queryFn:listPurchaseItemCategories,
-    enabled:mode==="new_product",
-    staleTime:30000,
-  });
-
-  const{control,register,handleSubmit,setValue,formState:{errors,isSubmitted}}=useForm<PurchaseInventoryItemDraft>({
+  const{control,register,handleSubmit,setValue,formState:{errors,isSubmitted,isSubmitting}}=useForm<PurchaseInventoryItemDraft>({
     defaultValues:defaults,
     resolver:purchaseInventoryItemResolver,
     mode:"onSubmit",
     reValidateMode:"onChange",
   });
   const watchedName=useWatch({control,name:"name"});
-  const presentationType=useWatch({control,name:"presentationType"})??"unit";
+  const categoryId=useWatch({control,name:"categoryId"})??"";
+  const unit=useWatch({control,name:"unit"})??"";
+  const presentations=useWatch({control,name:"presentations"})??[];
+  const locked=busy||isSubmitting;
+  const validationMessage=Object.values(errors).find(error=>typeof error?.message==="string")?.message;
+
+  async function submit(){
+    if(mode==="existing"||busy||catalogBusy||submitting.current||imageError)return;
+    // Lock before asynchronous validation; await the request before allowing a retry.
+    submitting.current=true;
+    try{await handleSubmit(draft=>save(draft,pendingFile))()}
+    finally{submitting.current=false}
+  }
 
   function changeMode(next:ItemMode){
     setMode(next);
@@ -80,11 +90,6 @@ export function PurchaseItemDialog({
       setValue("price","",{shouldDirty:true});
       setValue("description","",{shouldDirty:true});
     }
-  }
-
-  function changePresentation(type:PresentationType){
-    setValue("presentationType",type,{shouldDirty:true,shouldValidate:isSubmitted});
-    setValue("unitsPerPresentation",type==="unit"?"1":"",{shouldDirty:true,shouldValidate:isSubmitted});
   }
 
   function selectFile(file:File){
@@ -107,16 +112,16 @@ export function PurchaseItemDialog({
   const existing=items.data?.items??[];
 
   return <div className="modal-backdrop modal-overlay-in" role="presentation">
-    <Dialog className="crud-modal purchase-item-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="purchase-item-title" aria-busy={busy}>
+    <Dialog onResponseClose={close} className="crud-modal purchase-item-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="purchase-item-title" aria-busy={locked}>
       <div className="modal-accent"/>
       <header>
         <span className="modal-title-icon"><Icon name="stock" size={18}/></span>
         <div><small>ORDEN DE COMPRA</small><h2 id="purchase-item-title">Agregar artículo</h2></div>
-        <button type="button" aria-label="Cerrar" onClick={close} disabled={busy}><Icon name="close"/></button>
+        <button type="button" aria-label="Cerrar" onClick={close} disabled={locked||catalogBusy}><Icon name="close"/></button>
       </header>
 
-      <form onSubmit={mode==="existing"?event=>event.preventDefault():handleSubmit(draft=>save(draft,pendingFile))} noValidate>
-        <div className="purchase-item-body">
+      <form onSubmit={event=>event.preventDefault()} noValidate>
+        <div className="purchase-item-body" inert={busy}>
           <section className="purchase-item-choice" aria-label="Cómo agregar el artículo">
             <button type="button" className={mode==="existing"?"active":""} onClick={()=>changeMode("existing")}>
               <span><Icon name="search" size={18}/></span>
@@ -142,7 +147,7 @@ export function PurchaseItemDialog({
             :existing.length?<div className="purchase-existing-list">
               {existing.map(item=><button type="button" key={item.id} onClick={()=>choose(item)}>
                 <span className="purchase-existing-icon"><Icon name={item.kind==="ingredient"?"stock":"box"} size={17}/></span>
-                <span className="purchase-existing-copy"><b>{item.name}</b><small>{item.kind==="ingredient"?"Insumo":"Producto vendible"} · Unidad base: {item.unit}</small></span>
+                <span className="purchase-existing-copy"><b>{item.name}</b><small>{item.kind==="ingredient"?"Insumo":"Producto vendible"} · Unidad de inventario: {item.unit}</small></span>
                 <span className="purchase-existing-stock"><small>STOCK</small><b>{formatRegionalNumber(Number(item.quantity??0),location?.country,{maximumFractionDigits:3})}</b></span>
                 <Icon name="chevron" size={15}/>
               </button>)}
@@ -158,7 +163,7 @@ export function PurchaseItemDialog({
               <div className="form-grid">
                 <label className="span-2">Nombre<Input autoFocus maxLength={160} {...register("name")} placeholder={mode==="new_product"?"Ej. Coca-Cola 500 ml":"Ej. Carne de res"} aria-invalid={Boolean(errors.name)}/>{errors.name?.message&&<small className="field-error">{errors.name.message}</small>}</label>
                 {mode==="new_product"&&<>
-                  <label>Categoría<Select {...register("categoryId")} disabled={categories.isLoading||categories.isError||!categories.data?.length} aria-invalid={Boolean(errors.categoryId)||categories.isError}><option value="">{categories.isLoading?"Cargando categorías...":categories.isError?"No pudimos cargar las categorías":categories.data?.length?"Selecciona una categoría":"No hay categorías para mercadería vendible"}</option>{categories.data?.map(category=><option value={category.id} key={category.id}>{category.name}</option>)}</Select>{categories.isError?<small className="field-error">{categories.error.message}</small>:errors.categoryId?.message&&<small className="field-error">{errors.categoryId.message}</small>}</label>
+                  <PurchaseCategoryField value={categoryId} onChange={value=>setValue("categoryId",value,{shouldDirty:true,shouldValidate:isSubmitted})} error={errors.categoryId?.message} disabled={busy} onBusyChange={setCatalogBusy}/>
                   <label>Precio de venta<div className="money-input"><span>{currencySymbol}</span><Input inputMode="decimal" {...register("price")} placeholder="0.00" aria-invalid={Boolean(errors.price)}/></div>{errors.price?.message&&<small className="field-error">{errors.price.message}</small>}</label>
                   <label className="span-2">Descripción opcional<Textarea maxLength={1000} rows={2} {...register("description")} placeholder="Presentación o detalle comercial"/></label>
                   <label className="purchase-item-image span-2">Imagen del producto (opcional)
@@ -175,17 +180,25 @@ export function PurchaseItemDialog({
             <section className="purchase-item-section">
               <div className="purchase-section-title"><span><Icon name="box" size={17}/></span><div><b>Unidad y presentación</b><small>Define cómo se almacenará y cómo se comprará este artículo.</small></div></div>
               <div className="form-grid">
-                <label>Unidad base<Select {...register("unit")} aria-invalid={Boolean(errors.unit)}><option value="und">Unidad</option><option value="botella">Botella</option><option value="lata">Lata</option><option value="caja">Caja</option><option value="kg">Kilogramo</option><option value="l">Litro</option></Select>{errors.unit?.message&&<small className="field-error">{errors.unit.message}</small>}</label>
-                <label>Presentación<Select value={presentationType} onChange={event=>changePresentation(event.target.value as PresentationType)} aria-invalid={Boolean(errors.presentationType)||Boolean(errors.unitsPerPresentation)}><option value="unit">Unidad base</option><option value="package">Paquete</option><option value="box">Caja</option></Select></label>
-                {presentationType!=="unit"&&<label>Unidades por {presentationType==="box"?"caja":"paquete"}<Input type="number" min="1.001" step="0.001" inputMode="decimal" {...register("unitsPerPresentation")} placeholder="Ej. 12" aria-invalid={Boolean(errors.unitsPerPresentation)}/>{errors.unitsPerPresentation?.message&&<small className="field-error">{errors.unitsPerPresentation.message}</small>}</label>}
+                <PurchaseUnitField value={unit} onChange={value=>{setValue("unit",value,{shouldDirty:true,shouldValidate:isSubmitted});setValue("presentations",[],{shouldDirty:true})}} error={errors.unit?.message} disabled={locked||catalogBusy} onBusyChange={setCatalogBusy}/>
                 <label>Stock mínimo<Input type="number" min="0" step="0.001" inputMode="decimal" {...register("minimumStock")} aria-invalid={Boolean(errors.minimumStock)}/>{errors.minimumStock?.message&&<small className="field-error">{errors.minimumStock.message}</small>}</label>
               </div>
+              <PurchasePresentationsField unit={unit} value={presentations} disabled={locked} onBusyChange={setCatalogBusy} error={errors.presentations?.message??errors.unitsPerPresentation?.message} onChange={rows=>{
+                setValue("presentations",rows,{shouldDirty:true,shouldValidate:isSubmitted});
+                const preferred=rows.find(row=>row.isDefault)??rows[0];
+                setValue("presentationType",preferred?.presentationType??"unit",{shouldDirty:true});
+                setValue("unitsPerPresentation",preferred?.unitsPerPresentation??"1",{shouldDirty:true});
+              }}/>
             </section>
 
             <div className="purchase-item-zero-note"><Icon name="lock" size={16}/><p><b>Stock inicial: 0</b>Crear el artículo y agregarlo a la orden no mueve existencias. El stock cambia únicamente al confirmar una recepción.</p></div>
           </>}
         </div>
-        <footer><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button>{mode!=="existing"&&<Button type="submit" disabled={busy||Boolean(imageError)}>{busy?"Guardando…":"Crear y agregar"}</Button>}</footer>
+        <footer>
+          {mode!=="existing"&&typeof validationMessage==="string"&&<div className="purchase-validation" role="alert"><Icon name="alert" size={15}/>{validationMessage}</div>}
+          <Button type="button" kind="ghost" onClick={close} disabled={locked||catalogBusy}>Cancelar</Button>
+          {mode!=="existing"&&<Button type="button" onClick={()=>void submit()} disabled={locked||catalogBusy}>{locked?"Guardando…":"Crear y agregar"}</Button>}
+        </footer>
       </form>
       {busy&&<div className="modal-busy" role="status"><i/><span>Guardando…</span></div>}
     </Dialog>

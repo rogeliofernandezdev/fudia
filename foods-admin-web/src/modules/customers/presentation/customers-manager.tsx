@@ -33,7 +33,7 @@ function CustomerDialog({initial,channels,busy,close,save}:{initial:CustomerDraf
  const add=()=>{setShowAddresses(true);addresses.append({label:"Principal",address:"",reference:"",district:"",city:"",countryCode:"PE",default:!addresses.fields.length})};
  const setDefault=(index:number)=>watched.forEach((_,n)=>setValue(`addresses.${n}.default`,n===index));
  const submit=handleSubmit(values=>{if(!showAddresses&&!values.addresses.length)values.addresses=[];save(values)},invalid=>{if(invalid.addresses)setShowAddresses(true)});
- return <div className="modal-backdrop modal-overlay-in"><Dialog className="crud-modal customer-modal modal-panel-in" role="dialog" aria-modal="true"><div className="modal-accent"/>
+ return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal customer-modal modal-panel-in" role="dialog" aria-modal="true"><div className="modal-accent"/>
   <header><span className="modal-title-icon"><Icon name="users"/></span><div><small>{initial.id?"EDITAR CLIENTE":"NUEVO CLIENTE"}</small><h2>Información del cliente</h2></div><button aria-label="Cerrar" onClick={close}><Icon name="close"/></button></header>
   <form onSubmit={submit} noValidate><div className="customer-form-body">
    <div className="form-grid customer-main-grid">
@@ -76,7 +76,7 @@ function CustomerDetail({customer,loading,error,channels,currencySymbol,close}:{
  const{location}=useSession();
  const channelLabel=(value:string)=>value==="none"?"Sin preferencia":channels.find(o=>o.value===value)?.label??value;
  const lastPurchase=customer?.lastPurchaseAt?formatRegionalDateTime(customer.lastPurchaseAt,{country:location?.country,timeZone:location?.timezone},{dateStyle:"medium"}):"—";
- return <div className="modal-backdrop modal-overlay-in"><Dialog className="crud-modal customer-detail modal-panel-in" role="dialog" aria-modal="true" aria-busy={loading}>
+ return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal customer-detail modal-panel-in" role="dialog" aria-modal="true" aria-busy={loading}>
   <div className="modal-accent"/>
   {loading?<CustomerDetailSkeleton close={close}/>:<>
    <header><span className="modal-title-icon"><Icon name="users"/></span><div><h2>{customer?.displayName??"Cliente"}</h2><small>DETALLE DEL CLIENTE</small></div><button aria-label="Cerrar" onClick={close}><Icon name="close"/></button></header>

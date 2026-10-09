@@ -1,4 +1,4 @@
-import {apiFetch} from "@/shared/api/client";
+import {apiFetch,ApiClientError} from "@/shared/api/client";
 import type {List,RowDraft,Table,Zone,ZoneDraft} from "../domain/types";
 
 export function listTables(input:{q:string;status:string;page:number;pageSize:number}){
@@ -11,8 +11,15 @@ export function listZones(page:number,pageSize:number){
 export function listActiveZones(){
  return apiFetch<List<Zone>>("zones?status=active&page=1&pageSize=100");
 }
-export function createTables(items:RowDraft[]){
- return apiFetch<{items:Table[]}>("tables/batch",{method:"POST",body:JSON.stringify({items:items.map(row=>({name:row.name,seats:Number(row.seats)||2,zone:row.zone}))})});
+export async function createTables(items:RowDraft[]){
+ try{
+  return await apiFetch<{items:Table[]}>("tables/batch",{method:"POST",body:JSON.stringify({items:items.map(row=>({name:row.name.trim(),seats:Number(row.seats)||2,zone:row.zone.trim()}))})});
+ }catch(error){
+  if(error instanceof TypeError||(error instanceof ApiClientError&&(error.status>=500||error.code==="invalid_server_response"))){
+   throw new ApiClientError("No pudimos confirmar el registro de las mesas. Actualiza la lista antes de intentarlo nuevamente.","table_batch_unconfirmed",503,error instanceof ApiClientError?error.correlationId:undefined);
+  }
+  throw error;
+ }
 }
 export function saveTable(draft:RowDraft){
  if(!draft.id)throw new Error("La mesa no tiene identificador.");

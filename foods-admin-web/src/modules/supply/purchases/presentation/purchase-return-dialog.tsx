@@ -15,7 +15,7 @@ export function PurchaseReturnDialog({receipt,busy,close,save}:{receipt:Purchase
   if(items.some(x=>{const item=receipt.items.find(i=>i.id===x.purchaseReceiptItemId);return item&&Number(x.quantity)>Number(item.returnableQuantity)+0.000001}))return;
   save({idempotencyKey,purchaseReceiptId:receipt.id,kind,reason,notes,items});
  }
- return <div className="modal-backdrop modal-overlay-in"><Dialog className="crud-modal modal-panel-in" role="dialog" aria-modal="true">
+ return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal modal-panel-in" role="dialog" aria-modal="true">
   <header><span className="modal-title-icon"><Icon name="truck" size={18}/></span><div><small>{receipt.code} · {receipt.number}</small><h2>Corregir o devolver recepción</h2></div><button onClick={close} aria-label="Cerrar"><Icon name="close"/></button></header>
   <div className="form-grid">
    <label className="span-2">Tipo<Select value={kind} onChange={e=>setKind(e.target.value as PurchaseReturnKind)}><option value="receipt_correction">Corrección de recepción · reabre pendiente en la OC</option><option value="supplier_return">Devolución a proveedor · mantiene la OC recibida</option></Select></label>

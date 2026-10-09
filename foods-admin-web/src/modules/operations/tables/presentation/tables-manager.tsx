@@ -11,6 +11,7 @@ import {Button,IconButton,PageHeader,Pagination,RowActionButton,Status} from "@/
 import {ConfirmDialog} from "@/design-system/confirm-dialog";
 import {useFeedback} from "@/providers/feedback-provider";
 import {useSession} from "@/providers/session-context";
+import {ApiClientError} from "@/shared/api/client";
 import {publicConciergePath} from "@/shared/routing/page-routes";
 import {zoneResolver} from "../domain/zone-schema";import type {RowDraft,Table,ZoneDraft} from "../domain/types";
 import {createTables,deactivateTableOrZone,listActiveZones,listTables,listZones,saveTable as persistTable,saveZone as persistZone} from "../infrastructure/tables-api";
@@ -41,7 +42,7 @@ export function TablesManager(){
  const tables=useQuery({queryKey:["tables",search,statusFilter,page,pageSize],queryFn:()=>listTables({q:search,status:statusFilter,page,pageSize})});
  const zones=useQuery({queryKey:["zones",zonePage,zonePageSize],queryFn:()=>listZones(zonePage,zonePageSize)});
  const zoneOptions=useQuery({queryKey:["zone-options"],queryFn:listActiveZones});
- const saveBatch=useMutation({mutationFn:(items:RowDraft[])=>createTables(items),onSuccess:()=>{setAdding(false);setNewRows([]);notify({tone:"success",title:"Mesas registradas",message:"Las mesas ya están disponibles en el POS con su QR generado."});void client.invalidateQueries({queryKey:["tables"]})},onError:e=>notify({tone:"danger",title:"No se pudieron registrar",message:e.message})});
+ const saveBatch=useMutation({mutationFn:(items:RowDraft[])=>createTables(items),retry:false,onSuccess:()=>{setAdding(false);setNewRows([]);notify({tone:"success",title:"Mesas registradas",message:"Las mesas ya están disponibles en el POS con su QR generado."});void client.invalidateQueries({queryKey:["tables"]})},onError:e=>{const unconfirmed=e instanceof ApiClientError&&e.code==="table_batch_unconfirmed";notify({tone:"danger",title:unconfirmed?"No pudimos confirmar el registro":"No se pudieron registrar",message:e.message});if(unconfirmed)void client.invalidateQueries({queryKey:["tables"]})}});
  const saveTable=useMutation({mutationFn:(draft:RowDraft)=>persistTable(draft),onSuccess:()=>{setTableDraft(null);notify({tone:"success",title:"Mesa actualizada",message:"Los cambios de la mesa quedaron guardados."});void client.invalidateQueries({queryKey:["tables"]})},onError:e=>notify({tone:"danger",title:"No se pudo actualizar la mesa",message:e.message})});
  const deactivate=useMutation({mutationFn:(vars:{kind:"tables"|"zones";id:string})=>deactivateTableOrZone(vars.kind,vars.id),onSuccess:()=>{setConfirm(null);notify({tone:"success",title:"Desactivado",message:"El registro dejó de estar disponible."});void client.invalidateQueries({queryKey:["tables"]});void client.invalidateQueries({queryKey:["zones"]})},onError:e=>notify({tone:"danger",title:"No se pudo desactivar",message:e.message})});
  const saveZone=useMutation({mutationFn:(d:ZoneDraft)=>persistZone(d),onSuccess:(_,d)=>{setZoneDraft(null);notify({tone:"success",title:d.id?"Zona actualizada":"Zona registrada",message:"La zona ya está disponible para asignar a las mesas."});void client.invalidateQueries({queryKey:["zones"]})},onError:e=>notify({tone:"danger",title:"No se pudo guardar la zona",message:e.message})});
@@ -53,8 +54,8 @@ export function TablesManager(){
  function addRow(){setNewRows([...newRows,{...emptyRow}])}
  function removeRow(idx:number){setNewRows(newRows.filter((_,i)=>i!==idx))}
  function updateRow(idx:number,patch:Partial<RowDraft>){setNewRows(newRows.map((r,i)=>i===idx?{...r,...patch}:r))}
- function saveAll(){if(!validNewRows.length){notify({tone:"danger",title:"Sin mesas para guardar",message:"Agrega al menos una mesa con nombre."});return}saveBatch.mutate(validNewRows)}
- function cancelAdd(){setAdding(false);setNewRows([])}
+ function saveAll(){if(saveBatch.isPending)return;if(!validNewRows.length)return;saveBatch.mutate(validNewRows)}
+ function cancelAdd(){if(saveBatch.isPending)return;setAdding(false);setNewRows([])}
 
  return <><PageHeader eyebrow="OPERACIÓN" title="Mesas y zonas" description="Registra las mesas y zonas del local. Cada mesa genera un QR para iniciar la atención por WhatsApp."/>
  <div className="catalog-tabs-row"><div className="catalog-tabs"><button className={tab==="tables"?"active":""} onClick={()=>setTab("tables")}><Icon name="grid" size={16}/>Mesas<b>{tables.data?.total??0}</b></button><button className={tab==="zones"?"active":""} onClick={()=>setTab("zones")}><Icon name="store" size={16}/>Zonas<b>{zones.data?.total??0}</b></button></div>{tab==="tables"&&!adding&&!tableDraft&&<div className="qr-batch-actions"><Button icon="qr" kind="secondary" onClick={()=>setPrintQr(true)}>Imprimir QRs</Button>{canManageTables&&<Button icon="plus" onClick={()=>{setAdding(true);addRow()}}>Nueva mesa</Button>}</div>}{tab==="zones"&&canManageZones&&<Button icon="plus" onClick={()=>setZoneDraft(emptyZone)}>Nueva zona</Button>}</div>
@@ -62,7 +63,7 @@ export function TablesManager(){
  {tab==="tables"?<section className="panel management catalog-panel"><div className="toolbar"><label><Icon name="search" size={18}/><input value={search} onChange={e=>{setSearch(e.target.value);setPage(1)}} placeholder="Buscar por nombre..."/></label><select aria-label="Filtrar por estado" value={statusFilter} onChange={e=>{setStatusFilter(e.target.value);setPage(1)}}><option value="">Todos los estados</option><option value="active">Activas</option><option value="inactive">Inactivas</option></select></div>
  {tables.isLoading?<TableSkeleton/>:tables.isError?<div className="catalog-state error"><span><Icon name="alert"/></span><b>No pudimos cargar las mesas</b><p>{tables.error.message}</p><Button onClick={()=>tables.refetch()}>Reintentar</Button></div>:!adding&&!data?.items.length?<div className="catalog-state"><span><Icon name="grid"/></span><b>No encontramos mesas</b><p>{search||statusFilter?"Ajusta los filtros para ver otros resultados.":"Crea la primera mesa para comenzar a operar."}</p>{canManageTables&&<Button icon="plus" onClick={()=>{setAdding(true);addRow()}}>Nueva mesa</Button>}</div>:<>
  <div className="table-wrap hover-scroll"><table><thead><tr><th>MESA</th><th>ZONA</th><th>ASIENTOS</th><th>ESTADO</th><th>QR</th><th>ACCIONES</th></tr></thead><tbody>
- {adding&&newRows.map((r,idx)=><tr className="editing-row" key={`new-${idx}`}><td><input className="ds-input" autoFocus={idx===0} value={r.name} onChange={e=>updateRow(idx,{name:e.target.value})} placeholder="Ej. Mesa 1"/></td><td><select className="ds-select" value={r.zone} onChange={e=>updateRow(idx,{zone:e.target.value})}><option value="">Sin zona</option>{activeZoneOptions.map(z=><option key={z.id} value={z.name}>{z.name}</option>)}</select></td><td><input className="ds-input seats-input" type="number" min="1" inputMode="numeric" value={r.seats} onChange={e=>updateRow(idx,{seats:e.target.value})}/></td><td>—</td><td><i className="table-muted">Se genera al guardar</i></td><td><div className="table-actions"><RowActionButton action="remove" onClick={()=>newRows.length>1?removeRow(idx):cancelAdd()}/></div></td></tr>)}
+ {adding&&newRows.map((r,idx)=><tr className="editing-row" key={`new-${idx}`}><td><input className="ds-input" disabled={saveBatch.isPending} autoFocus={idx===0} value={r.name} onChange={e=>updateRow(idx,{name:e.target.value})} placeholder="Ej. Mesa 1"/></td><td><select className="ds-select" disabled={saveBatch.isPending} value={r.zone} onChange={e=>updateRow(idx,{zone:e.target.value})}><option value="">Sin zona</option>{activeZoneOptions.map(z=><option key={z.id} value={z.name}>{z.name}</option>)}</select></td><td><input className="ds-input seats-input" disabled={saveBatch.isPending} type="number" min="1" inputMode="numeric" value={r.seats} onChange={e=>updateRow(idx,{seats:e.target.value})}/></td><td>—</td><td><i className="table-muted">Se genera al guardar</i></td><td><div className="table-actions"><RowActionButton action="remove" disabled={saveBatch.isPending} onClick={()=>newRows.length>1?removeRow(idx):cancelAdd()}/></div></td></tr>)}
  {data?.items.map((t,i)=>{
   const editing=tableDraft?.id===t.id;
   const validEdit=Boolean(tableDraft?.name.trim())&&Number(tableDraft?.seats)>0;
@@ -76,7 +77,7 @@ export function TablesManager(){
   </tr>;
  })}
  </tbody></table></div>
- {adding&&<div className="batch-actions"><div><Button icon="plus" kind="ghost" onClick={addRow}>Nueva fila</Button></div><div><button type="button" className="button ghost" onClick={cancelAdd}>Cancelar</button><button type="button" className="button primary" disabled={saveBatch.isPending||!validNewRows.length} onClick={saveAll}>{saveBatch.isPending?"Guardando...":`Guardar ${validNewRows.length||""} ${validNewRows.length===1?"mesa":"mesas"}`}</button></div></div>}
+ {adding&&<div className="batch-actions"><div><Button icon="plus" kind="ghost" disabled={saveBatch.isPending} onClick={addRow}>Nueva fila</Button></div><div><Button kind="ghost" disabled={saveBatch.isPending} onClick={cancelAdd}>Cancelar</Button><Button icon="check" disabled={saveBatch.isPending||!validNewRows.length} onClick={saveAll}>{saveBatch.isPending?"Guardando…":"Guardar"}</Button></div></div>}
  {!adding&&<Pagination page={page} size={pageSize} total={data?.total??0} onPage={setPage} onSize={value=>{setPageSize(value);setPage(1)}}/>}
  </>}</section>
 
@@ -150,7 +151,7 @@ function QrDialog({table,restaurantName,close}:{table:Table;restaurantName:strin
    },"image/png");
  }
 
- return <div className="modal-backdrop modal-overlay-in" role="presentation"><Dialog className="crud-modal compact modal-panel-in qr-modal" role="dialog" aria-modal="true" aria-labelledby="qr-title">
+ return <div className="modal-backdrop modal-overlay-in" role="presentation"><Dialog onResponseClose={close} className="crud-modal compact modal-panel-in qr-modal" role="dialog" aria-modal="true" aria-labelledby="qr-title">
  <header><span className="modal-title-icon"><Icon name="qr" size={18}/></span><div><small>CÓDIGO QR DE LA MESA</small><h2 id="qr-title">{table.name}</h2></div><button onClick={close} aria-label="Cerrar"><Icon name="close"/></button></header>
  <div className="qr-dialog-body">
    <div className="qr-hero">
@@ -173,7 +174,7 @@ function QrDialog({table,restaurantName,close}:{table:Table;restaurantName:strin
 
 function ZoneDialog({draft,busy,close,save}:{draft:ZoneDraft;busy:boolean;close:()=>void;save:(d:ZoneDraft)=>void}){
  const{register,handleSubmit,formState:{errors}}=useForm<ZoneDraft>({defaultValues:draft,resolver:zoneResolver,mode:"onSubmit",reValidateMode:"onChange"});
- return <div className="modal-backdrop modal-overlay-in" role="presentation"><Dialog className="crud-modal compact modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="zone-title" aria-busy={busy}><div className="modal-accent"/><header><span className="modal-title-icon"><Icon name="store" size={18}/></span><div><small>{draft.id?"EDITAR ZONA":"NUEVA ZONA"}</small><h2 id="zone-title">Información de la zona</h2></div><button onClick={close} disabled={busy} aria-label="Cerrar"><Icon name="close"/></button></header><form onSubmit={handleSubmit(value=>save({...value,sortOrder:Number(value.sortOrder)}))} noValidate><div className="form-grid">
+ return <div className="modal-backdrop modal-overlay-in" role="presentation"><Dialog onResponseClose={close} className="crud-modal compact modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="zone-title" aria-busy={busy}><div className="modal-accent"/><header><span className="modal-title-icon"><Icon name="store" size={18}/></span><div><small>{draft.id?"EDITAR ZONA":"NUEVA ZONA"}</small><h2 id="zone-title">Información de la zona</h2></div><button onClick={close} disabled={busy} aria-label="Cerrar"><Icon name="close"/></button></header><form onSubmit={handleSubmit(value=>save({...value,sortOrder:Number(value.sortOrder)}))} noValidate><div className="form-grid">
  <FormField className="span-2" label="Nombre de la zona" error={errors.name?.message}><Input autoFocus maxLength={60} {...register("name")} placeholder="Ej. Terraza"/></FormField>
  <FormField className="span-2" label="Orden" help="Menor número aparece primero." error={errors.sortOrder?.message}><Input type="number" min="0" inputMode="numeric" {...register("sortOrder")} placeholder="0"/></FormField>
  </div><footer><button type="button" className="button ghost" disabled={busy} onClick={close}>Cancelar</button><button type="submit" className="button primary" disabled={busy}>{busy?"Guardando…":"Guardar"}</button></footer></form></Dialog></div>;
@@ -209,7 +210,7 @@ function PrintQrDialog({tables,restaurantName,close}:{tables:Table[];restaurantN
    window.onafterprint=()=>{document.body.classList.remove("printing-qrs");window.onafterprint=null};
  }
 
- return <div className="modal-backdrop modal-overlay-in" role="presentation"><Dialog className="crud-modal qr-print-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="print-qr-title">
+ return <div className="modal-backdrop modal-overlay-in" role="presentation"><Dialog onResponseClose={close} className="crud-modal qr-print-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="print-qr-title">
  <header><span className="modal-title-icon"><Icon name="qr" size={18}/></span><div><small>IMPRIMIR QRs</small><h2 id="print-qr-title">Códigos QR de las mesas</h2></div><button onClick={close} aria-label="Cerrar"><Icon name="close"/></button></header>
  <div className="qr-print-preview">
    {printable.length===0?<div className="qr-print-empty"><Icon name="qr" size={32}/><b>No hay mesas con QR activo</b><p>Crea mesas o activa sus QRs para imprimir.</p></div>:

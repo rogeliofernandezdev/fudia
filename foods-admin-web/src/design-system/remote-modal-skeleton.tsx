@@ -5,7 +5,7 @@ import {Icon} from "./icons";
 
 export function RemoteModalSkeleton({close,className="",label="Cargando formulario",rows=6}:{close:()=>void;className?:string;label?:string;rows?:number}){
   return <div className="modal-backdrop modal-overlay-in">
-    <Dialog className={`crud-modal remote-modal-skeleton modal-panel-in ${className}`.trim()} role="dialog" aria-modal="true" aria-busy="true" aria-label={label}>
+    <Dialog onResponseClose={close} className={`crud-modal remote-modal-skeleton modal-panel-in ${className}`.trim()} role="dialog" aria-modal="true" aria-busy="true" aria-label={label}>
       <div className="modal-accent"/>
       <header className="remote-modal-skeleton-head" aria-hidden="true">
         <span className="remote-modal-skeleton-block remote-modal-skeleton-icon"/>

@@ -80,6 +80,14 @@ test("pedido manual: bloqueo y descarte explícito protegen datos e ítems",asyn
  let closed=0;const dirty=mount({onClose:()=>closed++});const order=await goToOrder(dirty);order.props.close({...order.props.initial,lines:[line]});assert.equal(closed,0);assert.equal(dirty.render().find(node=>node.type==="ConfirmDialog").props.open,true);
  dirty.render().find(node=>node.type==="ConfirmDialog").props.onConfirm();assert.equal(closed,1);
 });
+
+test("el cierre por respuesta del API no abre confirmación de descarte en el wizard",async()=>{
+ let closed=0;
+ const view=mount({onClose:()=>closed++});
+ const comanda=await goToOrder(view);
+ comanda.props.onResponseClose();
+ assert.equal(closed,1);assert.equal(view.state[2],false);
+});
 test("comanda compartida: delivery no pide mesa, incluye envío y se guarda una sola vez",async()=>{
  let calls=0,finish,saved;const view=mountComanda({save:(draft,send)=>{saved={draft,send};calls++;return new Promise(resolve=>{finish=resolve})}});
  let rendered=view.render();assert.equal(rendered.some(node=>node.type==="Select"),false);assert.equal(rendered.some(node=>node.props.children==="Personas"),false);assert.equal(rendered.some(node=>node.props.children==="Guardar borrador"),false);
@@ -94,7 +102,8 @@ test("comanda compartida: Salón mantiene mesa obligatoria y borrador; volver in
  const alerts=[];let saved=0,returned;
  const view=mountComanda({initial:{...fields,channel:"salon",tableId:"",lines:[line]},notify:value=>alerts.push(value),save:()=>saved++});
  let rendered=view.render();assert.ok(rendered.some(node=>node.type==="Select"));assert.ok(rendered.some(node=>node.props.children==="Guardar borrador"));
- await rendered.find(node=>node.type==="Button"&&node.props.className==="salon-comanda-submit").props.onClick();assert.equal(saved,0);assert.equal(alerts[0].title,"Falta mesa");
+ await rendered.find(node=>node.type==="Button"&&node.props.className==="salon-comanda-submit").props.onClick();assert.equal(saved,0);assert.equal(alerts.length,0);
+ assert.ok(view.render().some(node=>node.props.role==="alert"&&node.props.children==="Selecciona la mesa del pedido."));
  const delivery=mountComanda({onBack:draft=>{returned=draft}});
  rendered=delivery.render();rendered.find(node=>node.type==="ComandaCatalog").props.onConfigureCombo("combo-product");rendered=delivery.render();
  const choices=[{groupId:"group-1",groupName:"Segundo",productId:"option-1",name:"Lomo",surcharge:3}];

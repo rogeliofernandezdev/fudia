@@ -59,7 +59,8 @@ recetas, mesas o movimientos.
 Al primer ingreso, el Administrador de empresa recibe un asistente persistente
 de puesta en marcha. Este valida la operación real (tipo de atención, carta,
 caja y mesas cuando corresponda) y muestra pasos opcionales según los módulos
-contratados. El plan Emprende no presenta ni exige Recetas, Inventario o Compras.
+contratados. Emprende ofrece Inventario y Compras como pasos opcionales;
+no presenta ni exige Recetas.
 
 ### ✅ Medios de pago
 

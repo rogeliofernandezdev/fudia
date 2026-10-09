@@ -3,6 +3,11 @@
 Sidebar: Control, Operación, Carta y producción, Abastecimiento y Configuración. Topbar compacta.
 Gestión: título, acciones, filtros, listado, paginación y detalle.
 
+El aviso de configuración inicial comparte los bordes laterales del título y
+del listado: el padding lo define únicamente el contenedor global `.content`.
+El aviso no agrega margen lateral ni superior y conserva 21 px de separación
+inferior. En móvil el texto puede envolver sin comprimir los iconos.
+
 El selector de contexto se ancla al control de empresa/local en la barra
 superior. Tiene cabecera compacta con icono, título y X; usa `FormField`,
 `Select`, `IconButton` y `Button` del design system, sin controles locales.
@@ -21,6 +26,20 @@ al primer acceso permitido por el nuevo contexto.
 La cuenta del usuario vive en la barra superior. Las iniciales, nombre y rol
 abren un submenú con perfil, preferencias, seguridad y cierre de sesión. La
 salida no se ejecuta al tocar las iniciales ni se duplica en el sidebar.
+El rol real del local activo aparece debajo del nombre, también en el submenú.
+La etiqueta es breve: «Administrador», «Cocinero», «Cajero», etc. Los sufijos
+«de empresa» y «de plataforma» del administrador se omiten solo en esa etiqueta;
+no se cambian los roles almacenados ni sus permisos. Roles personalizados
+conservan su nombre y las asignaciones múltiples no repiten etiquetas iguales.
+El selector conserva el local activo para usuarios de empresa. El nombre de
+empresa permanece visible por separado en la barra superior, también en móvil;
+no reemplaza al rol ni al local. Plataforma conserva su selector de empresa.
+El nombre se alinea inmediatamente junto al icono del menú en un bloque izquierdo
+de identidad, con separación fija y mayor peso visual. El buscador y los controles
+de local/usuario permanecen fuera de ese bloque. En móvil el nombre ocupa el ancho
+restante y se trunca sin ocultarse ni desbordar.
+Mi perfil y la cabecera comparten una consulta
+con caché por usuario, empresa y local, skeleton y error con reintento.
 
 El buscador superior busca opciones de navegación autorizadas, no productos ni
 ventas. Su placeholder describe ese alcance y sus enlaces usan el mismo catálogo

@@ -11,6 +11,7 @@ import {useSession} from "@/providers/session-context";
 import {formatRegionalCalendarDate,formatRegionalDateTime} from "@/shared/i18n/regional-format";
 import {useDebouncedValue} from "@/shared/hooks/use-debounced-value";
 import type {Combo,ComboDetail,Draft,Group,Product} from "../domain/types";
+import {createComboOption,isReservationValid,reservationLimit} from "../domain/option-quantity";
 import {validateComboDraft,validateComboStep,type WizardIssue} from "../domain/wizard-validation";
 import {getCombo,listComboProducts,listCombos,saveCombo,setComboActive} from "../infrastructure/combos-api";
 
@@ -29,6 +30,7 @@ function belongsToGroup(product:Product,groupName:string){
 
 export function CombosPage(){
   const{notify}=useFeedback();
+  const{organization,location}=useSession();
   const settings=useSettings();
   const client=useQueryClient();
   const[draft,setDraft]=useState<Draft|null>(null);
@@ -43,7 +45,7 @@ export function CombosPage(){
   const[status,setStatus]=useState("");
   const debouncedSearch=useDebouncedValue(search);
   const combos=useQuery({queryKey:["combos",page,size,debouncedSearch,status],queryFn:()=>listCombos(page,size,debouncedSearch,status)});
-  const products=useQuery({queryKey:["products","combo-picker"],queryFn:listComboProducts});
+  const products=useQuery({queryKey:["products","combo-picker",organization?.id,location?.id],queryFn:listComboProducts,enabled:Boolean(draft&&location?.id),staleTime:0,refetchInterval:draft?10000:false});
   const detail=useQuery({queryKey:["combo-detail",selected],queryFn:()=>getCombo(selected!),enabled:Boolean(selected)});
   const save=useMutation({
     mutationFn:(value:Draft)=>saveCombo(value,editingId),
@@ -117,7 +119,7 @@ function ComboDetailDialog({query,currencySymbol,close}:{query:ReturnType<typeof
   const formatDate=(date:string|null|undefined)=>date?formatRegionalDateTime(date,{country:location?.country,timeZone:location?.timezone},{dateStyle:"medium",timeStyle:"short"}):"Sin límite";
   const formatCalendarDate=(date:string|null|undefined)=>date?formatRegionalCalendarDate(date,location?.country,{dateStyle:"long"}):"";
   return <div className="modal-backdrop modal-overlay-in" role="presentation">
-    <Dialog className="crud-modal combo-detail modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="combo-detail-title" aria-busy={query.isLoading}>
+    <Dialog onResponseClose={close} className="crud-modal combo-detail modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="combo-detail-title" aria-busy={query.isLoading}>
       <div className="modal-accent"/>
       {query.isLoading?<ComboDetailSkeleton close={close}/>:<>
         <header><span className="modal-title-icon"><Icon name="eye" size={18}/></span><div><h2 id="combo-detail-title">{value?.name??"Menú o combo"}</h2><small>DETALLE DEL MENÚ</small></div><button aria-label="Cerrar" onClick={close}><Icon name="close"/></button></header>
@@ -171,14 +173,14 @@ function ComboWizard({draft,setDraft,step,setStep,products,productsLoading,produ
   const requestClose=()=>{if(busy)return;if(dirty)setDiscardOpen(true);else close();};
   const showIssue=(value:WizardIssue)=>{setIssue(value);setStep(value.step);requestAnimationFrame(()=>document.getElementById(value.field)?.focus());};
   const navigate=(value:number)=>{setIssue(null);setStep(value);};
-  const quotaError=(groupIndex:number,optIndex:number)=>{const option=draft.groups[groupIndex]?.options[optIndex];if(!option?.quota)return false;const product=products.find(p=>p.id===option.productId);return product?.defaultDailyQuota!=null&&Number(option.quota)>product.defaultDailyQuota};
+  const quotaError=(groupIndex:number,optIndex:number)=>{const option=draft.groups[groupIndex]?.options[optIndex];if(!option)return false;const product=products.find(p=>p.id===option.productId);return Boolean(product&&!isReservationValid(option.quota,product))};
   function next(){const error=validateComboStep(draft,products,step);if(error){showIssue(error);return;}navigate(Math.min(4,step+1));}
   function submit(){if(busy)return;const error=validateComboDraft(draft,products);if(error){showIssue(error);return;}finish();}
-  function addTemplate(){setDraft({...draft,groups:templates.map(group=>({...group,options:products.filter(product=>belongsToGroup(product,group.name)).map(product=>({productId:product.id,surcharge:"",quota:product.defaultDailyQuota!=null?String(product.defaultDailyQuota):""}))}))})}
+  function addTemplate(){setDraft({...draft,groups:templates.map(group=>({...group,options:products.filter(product=>belongsToGroup(product,group.name)).map(createComboOption)}))})}
   function addGroup(){setDraft({...draft,groups:[...draft.groups,{name:"Nueva parte",required:true,minSelections:1,maxSelections:1,options:[]}]})}
   function groupAt(index:number,next:Group){setDraft({...draft,groups:draft.groups.map((group,position)=>position===index?next:group)})}
   return <><div className="modal-backdrop modal-overlay-in">
-    <Dialog className="crud-modal combo-wizard modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="combo-wizard-title" aria-busy={busy}>
+    <Dialog onResponseClose={close} className="crud-modal combo-wizard modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="combo-wizard-title" aria-busy={busy}>
       <header className="combo-wizard-header">
         <div className="combo-wizard-title">
           <span className="combo-wizard-title-icon"><Icon name="chefHat" size={21}/></span>
@@ -248,16 +250,18 @@ function CompositionStep({draft,setDraft,products,productsLoading,productsError,
           <button className="combo-remove" onClick={()=>setDraft({...draft,groups:draft.groups.filter((_,p)=>p!==index)})} aria-label="Quitar parte del menú"><Icon name="close" size={16}/></button>
         </div>
         <div className="combo-options">
-          {group.options.map((option,optIndex)=>
-            <div className="combo-option" key={optIndex}>
-              <span className="combo-option-name">{products.find(p=>p.id===option.productId)?.name??"Producto eliminado"}<small>{products.find(p=>p.id===option.productId)?.categoryName??"Sin categoría"}</small></span>
-              <label className="combo-mini">Reservar<Input id={`combo-group-${index}-quota-${optIndex}`} type="number" min="0" value={option.quota} onChange={e=>groupAt(index,{...group,options:group.options.map((o,p)=>p===optIndex?{...o,quota:e.target.value}:o)})} placeholder="0" aria-invalid={quotaError(index,optIndex)}/>{quotaError(index,optIndex)&&<small className="field-error">Supera el stock ({products.find(p=>p.id===option.productId)?.defaultDailyQuota})</small>}</label>
+          {group.options.map((option,optIndex)=>{
+            const product=products.find(p=>p.id===option.productId);
+            const limit=product?reservationLimit(product):null;
+            return <div className="combo-option" key={optIndex}>
+              <span className="combo-option-name">{product?.name??"Producto eliminado"}<small>{product?.categoryName??"Sin categoría"}</small></span>
+              <label className="combo-mini">Reservar<Input id={`combo-group-${index}-quota-${optIndex}`} type="number" min="0" step="1" max={limit??undefined} value={option.quota} onChange={e=>groupAt(index,{...group,options:group.options.map((o,p)=>p===optIndex?{...o,quota:e.target.value}:o)})} placeholder="Sin límite" aria-invalid={quotaError(index,optIndex)}/>{quotaError(index,optIndex)&&<small className="field-error">Ingresa un entero sin superar la cantidad disponible ({limit??"sin límite"}).</small>}</label>
               <label className="combo-mini">Recargo<div className="money-input"><span>{currencySymbol}</span><Input id={`combo-group-${index}-surcharge-${optIndex}`} inputMode="decimal" value={option.surcharge} onChange={e=>groupAt(index,{...group,options:group.options.map((o,p)=>p===optIndex?{...o,surcharge:e.target.value}:o)})} placeholder="0.00"/></div></label>
               <button className="combo-remove" onClick={()=>groupAt(index,{...group,options:group.options.filter((_,p)=>p!==optIndex)})} aria-label="Quitar opción"><Icon name="close" size={14}/></button>
-            </div>
-          )}
+            </div>;
+          })}
           <div className="combo-add-option">
-            <Select id={`combo-group-${index}-product`} aria-label={`Agregar producto a ${group.name}`} value="" onChange={e=>{const product=products.find(p=>p.id===e.target.value);if(product)groupAt(index,{...group,options:[...group.options,{productId:product.id,surcharge:"",quota:product.defaultDailyQuota!=null?String(product.defaultDailyQuota):""}]});e.target.value=""}}>
+            <Select id={`combo-group-${index}-product`} aria-label={`Agregar producto a ${group.name}`} value="" onChange={e=>{const product=products.find(p=>p.id===e.target.value);if(product)groupAt(index,{...group,options:[...group.options,createComboOption(product)]});e.target.value=""}}>
               <option value="">+ Agregar opción</option>
               {categories.map(category=><optgroup label={category} key={category}>{products.filter(product=>(product.categoryName??"Sin categoría")===category&&!group.options.some(option=>option.productId===product.id)).map(product=><option value={product.id} key={product.id}>{product.name}</option>)}</optgroup>)}
             </Select>

@@ -1,6 +1,8 @@
 export type PurchaseStatus="draft"|"pending_approval"|"approved"|"partially_received"|"received"|"cancelled";
 export type PurchaseTab="orders"|"receipts"|"suppliers";
-export type PresentationType="unit"|"package"|"box";
+export type PresentationType=string;
+export type PurchaseCombination={code:string;name:string;unit:string;unitName:string;isDefault:boolean};
+export type PurchasePresentationDraft={presentationType:string;unitsPerPresentation:string;isDefault:boolean};
 
 export type Supplier={
   id:string;
@@ -22,6 +24,8 @@ export type PurchasePresentation={
   id:string;
   presentationType:PresentationType;
   unitsPerPresentation:string;
+  name:string;
+  isDefault:boolean;
 };
 
 export type PurchaseInventoryOption={
@@ -68,6 +72,7 @@ export type PurchaseOrderItem={
   unit:string;
   presentationId:string;
   presentationType:PresentationType;
+  presentationName:string;
   unitsPerPresentation:string;
   quantity:string;
   receivedQuantity:string;
@@ -119,6 +124,7 @@ export type PurchaseInventoryItemDraft={
   presentationType:PresentationType;
   unitsPerPresentation:string;
   minimumStock:string;
+  presentations?:PurchasePresentationDraft[];
 };
 
 export type PurchaseReceiptLineDraft={
@@ -144,7 +150,7 @@ export type PurchaseReceiptResult={
 
 
 export type PurchaseReceiptSummary={id:string;code:string;purchaseOrderId:string;number:string;supplierName:string;notes:string;createdByName:string;createdAt:string;itemCount:number};
-export type PurchaseReceiptItem={id:string;purchaseOrderItemId:string;inventoryItemId:string;itemName:string;quantity:string;presentationType:PresentationType;unitsPerPresentation:string;stockQuantity:string;unitCost:string;returnedQuantity:string;returnableQuantity:string};
+export type PurchaseReceiptItem={id:string;purchaseOrderItemId:string;inventoryItemId:string;itemName:string;quantity:string;presentationType:PresentationType;presentationName:string;unitsPerPresentation:string;stockQuantity:string;unitCost:string;returnedQuantity:string;returnableQuantity:string};
 export type PurchaseReceiptDetail=PurchaseReceiptSummary&{items:PurchaseReceiptItem[]};
 export type PurchaseReturnKind="supplier_return"|"receipt_correction";
 export type PurchaseReturnDraft={idempotencyKey:string;purchaseReceiptId:string;kind:PurchaseReturnKind;reason:string;notes:string;items:Array<{purchaseReceiptItemId:string;quantity:string}>};

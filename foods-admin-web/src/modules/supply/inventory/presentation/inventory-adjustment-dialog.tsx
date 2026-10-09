@@ -65,7 +65,7 @@ export function InventoryAdjustmentDialog({items,busy,close,save}:{items:Invento
   }
 
   return <div className="modal-backdrop modal-overlay-in" role="presentation">
-    <Dialog className="crud-modal inventory-adjustment-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="inventory-adjustment-title" aria-busy={busy}>
+    <Dialog onResponseClose={close} className="crud-modal inventory-adjustment-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="inventory-adjustment-title" aria-busy={busy}>
       <div className="modal-accent"/>
       <header>
         <span className="modal-title-icon"><Icon name="stock" size={18}/></span>
@@ -84,7 +84,7 @@ export function InventoryAdjustmentDialog({items,busy,close,save}:{items:Invento
 
           {selected&&<section className="inventory-adjustment-balance" aria-label="Saldo actual">
             <div><small>STOCK ACTUAL</small><strong>{formatRegionalNumber(currentStock,location?.country,{maximumFractionDigits:3})} {selected.unit}</strong></div>
-            <div><small>UNIDAD BASE</small><strong>{selected.unit}</strong></div>
+            <div><small>UNIDAD DE INVENTARIO</small><strong>{selected.unit}</strong></div>
           </section>}
 
           <div className="inventory-adjustment-grid">

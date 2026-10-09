@@ -13,6 +13,11 @@ estados de envío.
 
 - `FeedbackProvider`: única salida para éxito, error e información después de una
   acción remota. Diálogo centrado, accesible, cerrable y con movimiento reducido.
+  Éxito/error se publican solo después de resolver la petición. Antes de mostrar
+  la respuesta, cierra la pila de diálogos de acción mediante el contrato
+  `onResponseClose` de `Dialog`, de hijo a padre; nunca queda un formulario detrás.
+  Los cierres de respuesta no disparan confirmaciones de descarte. Las validaciones
+  locales permanecen junto a los campos y no usan el diálogo de respuesta.
   Excepción: las transiciones Preparando/Listo de Cocina se confirman con el
   cambio de panel, sin modal de éxito. Los errores sí muestran el diálogo.
   Los avisos de éxito se cierran automáticamente (4,2 s por defecto) o mediante
@@ -22,6 +27,9 @@ estados de envío.
   de la ventana activa, soporta ventanas superpuestas y selectores con portal,
   bloquea el scroll del fondo y devuelve el foco al control que abrió la ventana.
   No agrega botones ni cierra con Escape; cada pantalla conserva su X/Cancelar.
+  Cada propietario registra `onResponseClose` para liberar su estado, incluso
+  mientras su mutación todavía está pendiente de refrescar datos. El propio
+  diálogo de feedback no registra ese cierre.
   `data-dialog-initial-focus` identifica la acción inicial; en confirmaciones
   corresponde a Cancelar y en avisos a Aceptar.
 - `ConfirmDialog`: requerido antes de desactivar o ejecutar una acción sensible;
@@ -97,13 +105,24 @@ Un restaurante en modo `simple` nunca ve insumos, recetas ni unidades.
 - Elegir un modo revela solo sus campos: el cupo muestra un número; el producto
   comprado muestra un selector de insumo; la receta muestra su lista de líneas.
   Nunca se muestran campos de un modo no elegido.
-- El producto no tiene un campo de cantidad editable. La disponibilidad se
-  presenta como dato derivado, de solo lectura, con su origen y el insumo que la
-  limita cuando corresponde.
-- La tabla muestra la disponibilidad como estado con texto e icono, no como
-  número suelto: disponible, cupo restante, agotado o sin control.
+- El alta con «Porciones preparadas» exige «Cantidad disponible hoy» y la guarda
+  junto al producto. La cantidad sigue perteneciendo al local/día, no al catálogo.
+  La edición comercial no modifica cantidades; los ajustes posteriores se hacen
+  desde Disponibilidad. Sin control e Inventario físico no muestran ese campo.
+- El listado de Productos muestra nombre sin descripción y una columna
+  Disponibles con el saldo real del local actual. Porciones usa el saldo del día;
+  Inventario físico incluye su unidad; Sin control muestra «—». El control de
+  cantidad y el estado activo del catálogo permanecen separados del saldo.
 - Marcar «agotado hoy» es una acción de operaciones, no del administrador, y se
   presenta como acción reversible del local, nunca como desactivación del catálogo.
+
+## Niveles de inventario
+
+El ajuste de niveles de Inventario usa el mismo `crud-modal compact`, `FormField`
+y formulario con footer interno que el resto de altas y ediciones. No añade CSS
+local: los márgenes, la separación de acciones y la columna única en móvil
+provienen del sistema compartido. Valida cantidades no negativas con RHF/Zod y
+bloquea campos y cierres manuales mientras espera la respuesta del guardado.
 
 ## Estado activo e inactivo
 

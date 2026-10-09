@@ -138,7 +138,7 @@ test("producto e inventario mantienen una sola fuente de verdad",()=>{
   assert.ok(dialog.includes("useForm<InventoryAdjustmentDraft>"),"El ajuste usa React Hook Form");
   assert.ok(dialog.includes("resolver:inventoryAdjustmentResolver"),"El ajuste delega validación al resolver Zod");
   assert.ok(dialog.includes("STOCK ACTUAL"),"El formulario muestra la existencia actual");
-  assert.ok(dialog.includes("UNIDAD BASE"),"El formulario muestra la unidad base");
+  assert.ok(dialog.includes("UNIDAD DE INVENTARIO"),"El formulario muestra la unidad de inventario");
   assert.ok(dialog.includes("Tipo de movimiento"),"El ajuste solicita entrada o salida");
   assert.ok(dialog.includes('value="entry"'),"El ajuste permite entrada");
   assert.ok(dialog.includes('value="exit"'),"El ajuste permite salida");

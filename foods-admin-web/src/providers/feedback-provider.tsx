@@ -1,5 +1,5 @@
 "use client";
-import {Dialog} from "@/design-system/dialog";
+import {closeDialogsForFeedback,Dialog} from "@/design-system/dialog";
 import "./styles/feedback.css";
 import {createContext,useCallback,useContext,useEffect,useMemo,useRef,useState} from "react";import {Icon} from "@/design-system/icons";
 type Tone="success"|"danger"|"info";type Input={tone:Tone;title:string;message:string;duration?:number};type Item=Input&{id:number};
@@ -17,6 +17,7 @@ export function FeedbackProvider({children}:{children:React.ReactNode}){
   },[]);
   const notify=useCallback((input:Input)=>{
     window.clearTimeout(exitTimer.current);
+    if(input.tone==="success"||input.tone==="danger")closeDialogsForFeedback();
     setClosing(false);
     setItem({...input,id:++sequence.current});
   },[]);

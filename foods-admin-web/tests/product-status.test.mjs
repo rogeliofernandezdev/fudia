@@ -24,6 +24,7 @@ function mount({kind="products",active=false,canManage=true,pending=false,activa
  for(const key of keys)client.setQueryData([key],[]);
  const {CatalogManager}=compile("modules/menu/products/presentation/catalog-manager.tsx",name=>{
   if(name==="next/dynamic")return {default:()=>"ProductDialog"};
+  if(name==="./category-dialog")return {CategoryDialog:"CategoryDialog"};
   if(name==="react")return {useState:value=>[value==="products"?kind:value,()=>{}],useEffect:()=>{}};
   if(name==="@tanstack/react-query")return {
    useQueryClient:()=>client,

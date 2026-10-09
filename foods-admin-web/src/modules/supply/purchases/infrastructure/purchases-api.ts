@@ -1,5 +1,16 @@
 import {apiFetch} from "@/shared/api/client";
 import {uploadProductImage} from "@/shared/api/product-image";
+import type {PurchaseCombination,PurchasePresentation,PurchasePresentationDraft} from "../domain/types";
+
+export function listPurchaseCombinations(unit=""){
+  return apiFetch<{items:PurchaseCombination[]}>("purchase-combinations?"+new URLSearchParams({unit}));
+}
+export function savePurchaseCombination(input:{unit:string;code:string;name:string;isDefault:boolean}){
+  return apiFetch<PurchaseCombination>("purchase-combinations",{method:"POST",body:JSON.stringify(input)});
+}
+export function savePurchasePresentation(id:string,draft:PurchasePresentationDraft){
+  return apiFetch<PurchasePresentation>(`purchase-inventory-items/${id}/presentations`,{method:"POST",body:JSON.stringify({...draft,unitsPerPresentation:Number(draft.unitsPerPresentation)})});
+}
 import type {PurchaseInventoryItemDraft,PurchaseInventoryOption,PurchaseItemCategory,PurchaseOrder,PurchaseOrderDraft,PurchaseOrdersResponse,PurchaseReceiptDetail,PurchaseReceiptDraft,PurchaseReceiptResult,PurchaseReceiptSummary,PurchaseReturnDraft,PurchaseStatus,Supplier,SupplierDraft,SuppliersResponse} from "../domain/types";
 
 export function listPurchaseOrders(input:{q:string;status:string;page:number;pageSize:number}){
@@ -99,6 +110,7 @@ export async function createPurchaseInventoryItem(draft:PurchaseInventoryItemDra
     presentationType:draft.presentationType,
     unitsPerPresentation:Number(draft.presentationType==="unit"?1:draft.unitsPerPresentation),
     minimumStock:Number(draft.minimumStock||0),
+    ...(draft.presentations?{presentations:draft.presentations.map(row=>({...row,unitsPerPresentation:Number(row.unitsPerPresentation)}))}:{}),
   };
   const payload=draft.mode==="new_ingredient"
     ?{...common,newIngredient:{name:draft.name.trim()}}

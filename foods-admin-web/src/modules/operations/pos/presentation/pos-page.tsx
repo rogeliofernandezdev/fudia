@@ -216,7 +216,7 @@ function POSPaymentEntry({loading,error,data,shiftLoading,shiftError,shiftName,c
     else if(!shiftName)state={title:"Necesitas un turno de caja",text:"Abre un turno o únete a una caja para registrar el cobro.",cash:true};
     else return <PaymentDialog order={{...data.order,paidAmount:data.paidAmount,remainingAmount:data.remainingAmount,paymentStatus:data.paymentStatus}} shiftName={shiftName} busy={busy} formatMoney={formatMoney} close={close} save={save}/>;
   }
-  return <div className="modal-backdrop modal-overlay-in"><Dialog className="crud-modal pos-payment-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="pos-payment-entry-title">
+  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal pos-payment-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="pos-payment-entry-title">
     <div className="modal-accent"/>
     <header><span className="modal-title-icon"><Icon name="cash" size={18}/></span><div><small>COBRO</small><h2 id="pos-payment-entry-title">{data?.order.tableName||data?.order.customerName||"Cobrar saldo"}</h2></div><button type="button" aria-label="Cerrar" onClick={close} disabled={busy}><Icon name="close"/></button></header>
     {state?<div className="pos-state"><span><Icon name="alert" size={22}/></span><b>{state.title}</b><p>{state.text}</p>{state.retry&&<Button kind="secondary" icon="refresh" onClick={state.retry}>Reintentar</Button>}{state.cash&&<Link href={pageRoutes.cash} className="button secondary"><Icon name="register" size={18}/><span>Ir a Caja</span></Link>}</div>:<POSPaymentLoading/>}
@@ -232,7 +232,7 @@ function POSPaymentLoading(){return <div className="pos-payment-body pos-payment
 
 function POSDetailDialog({loading,error,data,canManage,hasShift,formatMoney,formatDateTime,close,refund}:{loading:boolean;error?:string;data?:POSOrderDetail;canManage:boolean;hasShift:boolean;formatMoney:(value:number)=>string;formatDateTime:(value:string)=>string;close:()=>void;refund:(payment:Payment)=>void}){
   const closed=Boolean(data&&(data.order.completedAt||data.order.status==="cancelado"));
-  return <div className="modal-backdrop modal-overlay-in"><Dialog className="crud-modal pos-detail-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="pos-detail-title">
+  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal pos-detail-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="pos-detail-title">
     <div className="modal-accent"/>
     <header><span className="modal-title-icon"><Icon name="receipt" size={18}/></span><div className="pos-modal-heading"><small>DETALLE DE COBRO</small><h2 id="pos-detail-title">{data?.order.code??"Pedido"}</h2>{data&&<p>{data.order.tableName||data.order.customerName||channelLabel[data.order.channel]||"Pedido del local"}</p>}</div><button type="button" aria-label="Cerrar" onClick={close}><Icon name="close"/></button></header>
     {loading?<POSDetailLoading/>

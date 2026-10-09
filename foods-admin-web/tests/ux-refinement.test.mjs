@@ -15,8 +15,9 @@ function compile(file,globals={},resolve=require){
   vm.runInNewContext(ts.transpileModule(read(file),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText,{exports,require:resolve,...globals});
   return exports;
 }
-const validation=compile("src/modules/menu/combos/domain/wizard-validation.ts");
-const products=[{id:"lomo",name:"Lomo saltado",active:true,defaultDailyQuota:10}];
+const optionQuantity=compile("src/modules/menu/combos/domain/option-quantity.ts");
+const validation=compile("src/modules/menu/combos/domain/wizard-validation.ts",{},name=>name==="./option-quantity"?optionQuantity:require(name));
+const products=[{id:"lomo",name:"Lomo saltado",active:true,availableQuantity:10}];
 const draft=()=>({name:"Menú ejecutivo",description:"",price:"25.00",groups:[{name:"Segundo",required:true,minSelections:1,maxSelections:1,options:[{productId:"lomo",quota:"5",surcharge:""}]}],availableFrom:"",availableUntil:"",availableDays:[]});
 
 test("el wizard identifica y enfoca por id el primer dato inválido de cada paso",()=>{
@@ -91,11 +92,54 @@ function dialogHarness(){
     querySelector(){return this.children.find(child=>child.initial)??null;}
     querySelectorAll(selector){return selector==='[aria-controls]'?[]:this.children;}
   }
-  const {Dialog}=compile("src/design-system/dialog.tsx",{document,HTMLElement:Element,Node:Element},name=>name==="react"?{useRef:value=>({current:value}),useEffect:effect=>effects.push(effect)}:require(name));
-  function mount(panel){const tree=Dialog({children:[]});tree.props.ref(panel);return effects.shift()();}
+  const {Dialog,closeDialogsForFeedback}=compile("src/design-system/dialog.tsx",{document,HTMLElement:Element,Node:Element},name=>name==="react"?{useRef:value=>({current:value}),useEffect:effect=>effects.push(effect)}:require(name));
+  function mount(panel,props={}){const tree=Dialog({children:[],...props});tree.props.ref(panel);const cleanups=effects.splice(0).map(effect=>effect()).filter(Boolean);return()=>cleanups.forEach(cleanup=>cleanup());}
   function key(key,shiftKey=false){let prevented=false;for(const fn of listeners.get("keydown")??[])fn({key,shiftKey,defaultPrevented:false,preventDefault(){prevented=true;}});return prevented;}
-  return{document,Element,mount,key};
+  return{document,Element,mount,key,closeDialogsForFeedback};
 }
+
+test("una respuesta cierra todos los modales de acción de hijo a padre, sin cerrar el aviso",()=>{
+  const{Element,mount,closeDialogsForFeedback}=dialogHarness();
+  const closed=[];
+  const parent=mount(new Element(),{onResponseClose:()=>closed.push("formulario")});
+  const child=mount(new Element(),{onResponseClose:()=>closed.push("confirmación")});
+  const feedback=mount(new Element());
+  closeDialogsForFeedback();
+  assert.deepEqual(closed,["confirmación","formulario"]);
+  child();parent();closeDialogsForFeedback();
+  assert.equal(closed.length,2,"no quedan callbacks de modales desmontados");
+  feedback();
+});
+
+test("todos los modales de origen registran su cierre de respuesta en Dialog",()=>{
+  const files=dir=>readdirSync(new URL(dir+"/",root),{withFileTypes:true}).flatMap(entry=>entry.isDirectory()?files(`${dir}/${entry.name}`):entry.name.endsWith(".tsx")?[`${dir}/${entry.name}`]:[]);
+  for(const file of files("src")){
+    if(file==="src/providers/feedback-provider.tsx")continue;
+    const ast=ts.createSourceFile(file,read(file),ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
+    function visit(node){
+      if((ts.isJsxOpeningElement(node)||ts.isJsxSelfClosingElement(node))&&node.tagName.getText(ast)==="Dialog")assert.ok(node.attributes.properties.some(prop=>ts.isJsxAttribute(prop)&&prop.name.getText(ast)==="onResponseClose"),file);
+      ts.forEachChild(node,visit);
+    }
+    visit(ast);
+  }
+});
+
+test("Feedback cierra el origen antes de publicar éxito o error y conserva el mensaje remoto",()=>{
+  const events=[];
+  const{FeedbackProvider}=compile("src/providers/feedback-provider.tsx",{window:{clearTimeout(){}}},name=>{
+    if(name==="react")return{createContext:()=>({Provider:"Provider"}),useCallback:fn=>fn,useContext:()=>null,useEffect:()=>{},useMemo:fn=>fn(),useRef:value=>({current:value}),useState:initial=>[initial,value=>events.push(value)]};
+    if(name==="@/design-system/dialog")return{Dialog:"Dialog",closeDialogsForFeedback:()=>events.push("cerrado")};
+    if(name==="@/design-system/icons")return{Icon:"Icon"};
+    if(name.endsWith(".css"))return{};
+    return require(name);
+  });
+  const{notify}=FeedbackProvider({children:[]}).props.value;
+  for(const tone of ["success","danger"]){
+    events.length=0;notify({tone,title:"Respuesta",message:"Mensaje del API"});
+    assert.equal(events[0],"cerrado");
+    assert.equal(events.at(-1).tone,tone);assert.equal(events.at(-1).message,"Mensaje del API");
+  }
+});
 test("Dialog retiene Tab y devuelve el foco al abrirse desde un botón",()=>{
   const {document,Element,mount,key}=dialogHarness();
   const opener=new Element(),first=new Element(),last=new Element(),panel=new Element([first,last]);

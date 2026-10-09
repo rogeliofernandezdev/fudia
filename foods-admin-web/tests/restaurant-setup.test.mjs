@@ -28,9 +28,12 @@ test("mostrador no exige mesas; salón y operación mixta sí",()=>{
   }
 });
 
-test("la guía de un plan básico excluye módulos no contratados",()=>{
+test("la guía respeta módulos contratados; Emprende ofrece abastecimiento sin exigir recetas",()=>{
   assert.deepEqual(keys(empty),["operation","catalog","cash","team","review"]);
   assert.equal(keys({...empty,modules:{recetas:true}}).includes("recipes"),false);
+  const basic=buildSetupSteps({...empty,modules:{inventario:true,compras:true}});
+  assert.deepEqual(Array.from(basic,step=>step.key),["operation","catalog","cash","team","inventory","purchases","review"]);
+  assert.ok(basic.filter(step=>["inventory","purchases"].includes(step.key)).every(step=>!step.required));
   assert.deepEqual(keys({...empty,modules:{inventario:true,recetas:true,compras:true}}),["operation","catalog","cash","team","inventory","recipes","purchases","review"]);
 });
 

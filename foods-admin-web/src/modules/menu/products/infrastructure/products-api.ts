@@ -1,6 +1,6 @@
 import {apiFetch} from "@/shared/api/client";
 import {uploadProductImage} from "@/shared/api/product-image";
-import type {Category,CategoryDraft,List,Product,ProductDraft,ProductType} from "../domain/types";
+import type {Category,CategoryDraft,List,Product,ProductDraft,ProductListItem,ProductType} from "../domain/types";
 
 export type ProductQuery={
   search:string;
@@ -24,14 +24,16 @@ export function listProducts(query:ProductQuery){
     page:String(query.page),
     pageSize:String(query.pageSize),
   });
-  return apiFetch<List<Product>>(`products?${params.toString()}`);
+  return apiFetch<List<ProductListItem>>(`products?${params.toString()}`);
 }
 
 export async function saveProduct(draft:ProductDraft,file:File|null){
+  const {initialPortionQuantity,...commercialDraft}=draft;
   const product=await apiFetch<Product>(draft.id?`products/${draft.id}`:"products",{
     method:draft.id?"PATCH":"POST",
     body:JSON.stringify({
-      ...draft,
+      ...commercialDraft,
+      ...(!draft.id&&draft.quantityControl==="portions"?{initialPortionQuantity:Number(initialPortionQuantity)}:{}),
       categoryId:draft.categoryId||null,
       prepMinutes:draft.prepMinutes?Number(draft.prepMinutes):null,
       costPrice:draft.costPrice||null,

@@ -244,7 +244,7 @@ export function ComboConfigurator({comboId,initialSelections=[],editing=false,cu
 
   return(
     <div className="combo-config-backdrop" role="presentation">
-      <Dialog className="combo-config-modal" role="dialog" aria-modal="true" aria-labelledby="combo-config-title">
+      <Dialog onResponseClose={onClose} className="combo-config-modal" role="dialog" aria-modal="true" aria-labelledby="combo-config-title">
         <header className="combo-config-head">
           <div>
             <small>ELIGE LAS OPCIONES</small>

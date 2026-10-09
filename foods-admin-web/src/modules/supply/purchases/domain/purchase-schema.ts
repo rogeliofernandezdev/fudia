@@ -65,9 +65,10 @@ const purchaseInventoryCommon={
   name:z.string().trim().min(1,"Ingresa el nombre del artículo.").max(160),
   description:z.string().max(1000),
   price:z.string(),
-  unit:z.string().trim().min(1,"Selecciona una unidad base."),
-  presentationType:z.enum(["unit","package","box"]),
+  unit:z.string().trim().min(1,"Selecciona una unidad de inventario."),
+  presentationType:z.string().trim().regex(/^[a-z][a-z0-9_-]{0,31}$/,"Selecciona una presentación."),
   unitsPerPresentation:z.string(),
+  presentations:z.array(z.object({presentationType:z.string().regex(/^[a-z][a-z0-9_-]{0,31}$/),unitsPerPresentation:z.string(),isDefault:z.boolean()})).min(1,"Agrega una presentación.").max(50).optional(),
   minimumStock:z.string().trim().refine(value=>{
     const parsed=Number(value);
     return value!==""&&Number.isFinite(parsed)&&parsed>=0;
@@ -86,11 +87,16 @@ export const purchaseInventoryItemSchema=z.discriminatedUnion("mode",[
     ...purchaseInventoryCommon,
   }),
 ]).superRefine((value,ctx)=>{
-  if(value.presentationType==="unit")return;
-  const factor=Number(value.unitsPerPresentation);
-  if(value.unitsPerPresentation.trim()===""||!Number.isFinite(factor)||factor<=1){
-    ctx.addIssue({code:"custom",path:["unitsPerPresentation"],message:"Debe contener más de una unidad base."});
+  const rows=value.presentations??[{presentationType:value.presentationType,unitsPerPresentation:value.unitsPerPresentation,isDefault:true}];
+  const seen=new Set<string>();
+  for(const row of rows){
+    const factor=Number(row.unitsPerPresentation),key=row.presentationType+":"+factor;
+    if(row.unitsPerPresentation.trim()===""||!Number.isFinite(factor)||factor<=0||factor>=1e11||Math.abs(factor*1000-Math.round(factor*1000))>0.000001||(row.presentationType==="unit"&&factor!==1)){
+      ctx.addIssue({code:"custom",path:[value.presentations?"presentations":"unitsPerPresentation"],message:"Ingresa un contenido mayor que cero, con hasta tres decimales. La compra en la misma unidad de inventario equivale a 1."});
+    }else if(seen.has(key)){ctx.addIssue({code:"custom",path:["presentations"],message:"No repitas la misma presentación y conversión."})}
+    seen.add(key);
   }
+  if(rows.filter(row=>row.isDefault).length!==1)ctx.addIssue({code:"custom",path:["presentations"],message:"Elige una presentación predeterminada."});
 });
 
 export const purchaseReceiptSchema=z.object({

@@ -15,7 +15,7 @@ export function CashRegisterDialog({initial,busy,close,save}:{initial?:CashRegis
     mode:"onSubmit",
     reValidateMode:"onChange",
   });
-  return <div className="modal-backdrop modal-overlay-in"><Dialog className="crud-modal cash-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-register-title" aria-busy={busy}>
+  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal cash-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-register-title" aria-busy={busy}>
     <div className="modal-accent"/>
     <header><span className="modal-title-icon"><Icon name="sales" size={18}/></span><div><small>CAJAS</small><h2 id="cash-register-title">{editing?"Editar caja":"Registrar caja"}</h2></div><button type="button" aria-label="Cerrar" onClick={close} disabled={busy}><Icon name="close"/></button></header>
     <form onSubmit={handleSubmit(save)} noValidate inert={busy}>
@@ -44,7 +44,7 @@ export function OpenCashShiftDialog({cashRegister,busy,close,save}:{cashRegister
     mode:"onSubmit",
     reValidateMode:"onChange",
   });
-  return <div className="modal-backdrop modal-overlay-in"><Dialog className="crud-modal cash-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-open-title" aria-busy={busy}>
+  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal cash-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-open-title" aria-busy={busy}>
     <div className="modal-accent"/>
     <header><span className="modal-title-icon"><Icon name="clock" size={18}/></span><div><small>{cashRegister.name.toUpperCase()}</small><h2 id="cash-open-title">Iniciar turno</h2></div><button type="button" aria-label="Cerrar" onClick={close} disabled={busy}><Icon name="close"/></button></header>
     <form onSubmit={handleSubmit(save)} noValidate inert={busy}>
@@ -73,7 +73,7 @@ export function CashMovementDialog({type,busy,close,save}:{type:CashMovementType
     mode:"onSubmit",
     reValidateMode:"onChange",
   });
-  return <div className="modal-backdrop modal-overlay-in"><Dialog className="crud-modal cash-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-movement-title" aria-busy={busy}>
+  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal cash-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-movement-title" aria-busy={busy}>
     <div className="modal-accent"/>
     <header><span className="modal-title-icon"><Icon name={isIncome?"plus":"minus"} size={18}/></span><div><small>MOVIMIENTO DE CAJA</small><h2 id="cash-movement-title">{isIncome?"Registrar ingreso":"Registrar egreso"}</h2></div><button type="button" aria-label="Cerrar" onClick={close} disabled={busy}><Icon name="close"/></button></header>
     <form onSubmit={handleSubmit(save)} noValidate inert={busy}>
@@ -121,7 +121,7 @@ export function CloseCashShiftDialog({shift,busy,currency,formatMoney,close,save
   const difference=Number.isFinite(counted)?counted-expected:0;
   const differenceTone=Math.abs(difference)<.005?"balanced":difference>0?"positive":"negative";
 
-  return <div className="modal-backdrop modal-overlay-in"><Dialog className="crud-modal cash-modal cash-close-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-close-title" aria-busy={busy}>
+  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal cash-modal cash-close-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-close-title" aria-busy={busy}>
     <div className="modal-accent"/>
     <header><span className="modal-title-icon"><Icon name="lock" size={18}/></span><div><small>{shift.cashRegisterName.toUpperCase()}</small><h2 id="cash-close-title">Cerrar turno</h2></div><button type="button" aria-label="Cerrar" onClick={close} disabled={busy}><Icon name="close"/></button></header>
     <form onSubmit={handleSubmit(save)} noValidate inert={busy}>
@@ -170,7 +170,7 @@ export function CloseCashShiftDialog({shift,busy,currency,formatMoney,close,save
 
 export function CashShiftDetailDialog({shift,formatMoney,formatDateTime,formatBusinessDate,close}:{shift:CashShift;formatMoney:(value:number)=>string;formatDateTime:(value:string)=>string;formatBusinessDate:(value:string)=>string;close:()=>void}){
   const variance=Number(shift.varianceAmount??0);
-  return <div className="modal-backdrop modal-overlay-in"><Dialog className="crud-modal cash-detail-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-detail-title">
+  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal cash-detail-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-detail-title">
     <div className="modal-accent"/>
     <header><span className="modal-title-icon"><Icon name="sales" size={18}/></span><div><small>{shift.cashRegisterName.toUpperCase()}</small><h2 id="cash-detail-title">{shift.code}</h2></div><button type="button" aria-label="Cerrar" onClick={close}><Icon name="close"/></button></header>
     <div className="cash-detail-body">

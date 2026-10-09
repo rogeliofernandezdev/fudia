@@ -92,7 +92,7 @@ export function InventoryPage(){
        <td>{item.kind==="ingredient"?"Insumo":"Producto"}</td>
        <td>{item.unit}</td>
        <td><b className="inventory-quantity">{formatRegionalNumber(Number(item.quantity),location?.country,{maximumFractionDigits:3})}</b></td>
-       <td><b>{formatRegionalNumber(Number(item.minimumStock),location?.country,{maximumFractionDigits:3})}</b><small> / {formatRegionalNumber(Number(item.reorderPoint),location?.country,{maximumFractionDigits:3})}</small></td>
+       <td><b>{formatRegionalNumber(Number(item.minimumStock),location?.country,{maximumFractionDigits:3})} / {formatRegionalNumber(Number(item.reorderPoint),location?.country,{maximumFractionDigits:3})}</b></td>
        <td>{formatRegionalNumber(Number(item.averageUnitCost),location?.country,{minimumFractionDigits:2,maximumFractionDigits:4})}</td>
        <td><b>{formatRegionalNumber(Number(item.stockValue),location?.country,{minimumFractionDigits:2,maximumFractionDigits:2})}</b></td>
        <td><Status tone={meta.tone}>{meta.label}</Status></td>
@@ -104,7 +104,7 @@ export function InventoryPage(){
    {!inventory.isLoading&&!inventory.isError&&<Pagination page={page} size={size} total={inventory.data?.total??0} onPage={setPage} onSize={value=>{setSize(value);setPage(1)}}/>}
   </section>
 
-  {settingsItem&&<InventorySettingsDialog item={settingsItem} busy={settingsSave.isPending} close={()=>setSettingsItem(null)} save={draft=>settingsSave.mutate(draft)}/>}
+  {settingsItem&&<InventorySettingsDialog item={settingsItem} busy={settingsSave.isPending} close={()=>setSettingsItem(null)} save={async draft=>{try{await settingsSave.mutateAsync(draft);}catch{/* La mutación ya comunica el error mediante onError. */}}}/>}
   {transferOpen&&(products.isLoading||locations.isLoading?
    <RemoteModalSkeleton className="inventory-adjustment-modal" label="Cargando transferencia" rows={5} close={()=>setTransferOpen(false)}/>
    :products.isError||locations.isError?
@@ -122,7 +122,7 @@ export function InventoryPage(){
 }
 
 function InventoryAdjustmentLoadError({message,close,retry}:{message:string;close:()=>void;retry:()=>void}){
- return <div className="modal-backdrop modal-overlay-in"><Dialog className="crud-modal inventory-adjustment-modal modal-panel-in" role="dialog" aria-modal="true">
+ return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal inventory-adjustment-modal modal-panel-in" role="dialog" aria-modal="true">
   <div className="modal-accent"/>
   <header><span className="modal-title-icon"><Icon name="alert" size={18}/></span><div><small>INVENTARIO</small><h2>No pudimos cargar los artículos</h2></div><button type="button" aria-label="Cerrar" onClick={close}><Icon name="close"/></button></header>
   <div className="inventory-state"><p>{message}</p><Button kind="secondary" icon="refresh" onClick={retry}>Reintentar</Button></div>

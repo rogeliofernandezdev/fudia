@@ -10,7 +10,7 @@ const paymentStates={paid:{label:"Pagada",tone:"green" as const},partial:{label:
 
 export function SaleDetailDialog({loading,error,data,money,date,close,retry}:Props){
   const status=data?paymentStates[data.paymentStatus]:null;
-  return <div className="modal-backdrop modal-overlay-in"><Dialog className="crud-modal sales-detail-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="sales-detail-title" aria-busy={loading}>
+  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal sales-detail-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="sales-detail-title" aria-busy={loading}>
     <div className="modal-accent"/>
     <header><span className="modal-title-icon"><Icon name="receipt" size={18}/></span><div><h2 id="sales-detail-title">Detalle de venta</h2>{data&&!loading&&!error&&<small>{data.order.code}</small>}</div><button type="button" aria-label="Cerrar" onClick={close}><Icon name="close"/></button></header>
     {loading?<SaleDetailSkeleton/>
