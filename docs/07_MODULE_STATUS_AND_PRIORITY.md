@@ -6,6 +6,10 @@
 
 ## Última revisión
 
+Ticket operativo de pago (2026-10-08): PDF de 80 mm con preview y acción explícita
+de impresión después del cobro, copias desde POS/Ventas y contexto real del local.
+No es facturación electrónica; la emisión fiscal permanece en P0. Cierre A4 intacto.
+
 - Fecha: **2026-09-24**
 - Rama revisada: `feat/redesign-nueva-comanda`
 - Commit de implementación/hardening verificado: `27db62e5d770b9fb7ebf35a95475bb0117a5b112`

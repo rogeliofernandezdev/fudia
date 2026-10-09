@@ -62,6 +62,7 @@ func seedInventoryScope(t *testing.T, pool *pgxpool.Pool) scope {
 	}
 	s := scope{OrganizationID: organizationID, LocationID: locationID, UserID: userID, Name: "Inventory Test"}
 	t.Cleanup(func() {
+		_, _ = pool.Exec(context.Background(), `DELETE FROM cash_shift_reports WHERE organization_id=$1`, organizationID)
 		_, _ = pool.Exec(context.Background(), `DELETE FROM payment_refunds WHERE organization_id=$1`, organizationID)
 		_, _ = pool.Exec(context.Background(), `DELETE FROM payments WHERE organization_id=$1`, organizationID)
 		_, _ = pool.Exec(context.Background(), `DELETE FROM cash_operations WHERE organization_id=$1`, organizationID)
@@ -640,7 +641,6 @@ func TestConcurrentInventorySalesCannotGoNegative(t *testing.T) {
 	}
 }
 
-
 func TestInventoryAdjustmentTracksBalancesAndRejectsNegativeStock(t *testing.T) {
 	pool := integrationPool(t)
 	s := seedInventoryScope(t, pool)
@@ -673,9 +673,9 @@ func TestInventoryAdjustmentTracksBalancesAndRejectsNegativeStock(t *testing.T) 
 	}
 
 	var result struct {
-		StockBefore float64 `json:"stockBefore"`
-		StockAfter float64 `json:"stockAfter"`
-		CreatedByName string `json:"createdByName"`
+		StockBefore   float64 `json:"stockBefore"`
+		StockAfter    float64 `json:"stockAfter"`
+		CreatedByName string  `json:"createdByName"`
 	}
 	if err := json.Unmarshal(rec.Body.Bytes(), &result); err != nil {
 		t.Fatal(err)
@@ -744,7 +744,6 @@ func TestInventoryAdjustmentTracksBalancesAndRejectsNegativeStock(t *testing.T) 
 		t.Fatalf("failed adjustment must preserve balance 6, got %v", balance)
 	}
 }
-
 
 func TestListInventoryProductsSupportsPaginationForRecipeLookup(t *testing.T) {
 	pool := integrationPool(t)

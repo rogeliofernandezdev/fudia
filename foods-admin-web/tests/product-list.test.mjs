@@ -15,14 +15,15 @@ function compile(path,resolve){
 const regional=compile("shared/i18n/regional-format.ts",require);
 function nodes(tree,result=[]){if(Array.isArray(tree)){tree.forEach(node=>nodes(node,result));return result}if(tree&&typeof tree==="object"){result.push(tree);nodes(tree.props?.children,result)}return result}
 const base={id:"p1",sku:"P1",name:"Ají de gallina",description:"Descripción que no debe mostrarse",categoryName:"Segundos",price:"15",active:true,quantityControl:"portions",availableQuantity:12,inventoryUnit:null};
-function mount({items=[base],loading=false,locationId="local-a"}={}){
+function mount({items=[base],loading=false,locationId="local-a",canManage=true,tab="products",categories=[],states={}}={}){
  const queries=[];
+ let stateIndex=0;
  const {CatalogManager}=compile("modules/menu/products/presentation/catalog-manager.tsx",name=>{
-  if(name==="react")return{useState:value=>[value,()=>{}]};
+  if(name==="react")return{useState:value=>{const index=stateIndex++;return[index===0?tab:states[index]??value,()=>{}]}};
   if(name==="next/dynamic")return{default:()=>"ProductDialog"};
   if(name==="./category-dialog")return{CategoryDialog:"CategoryDialog"};
-  if(name==="@tanstack/react-query")return{useQueryClient:()=>({}),useMutation:()=>({}),useQuery:options=>{queries.push(options);return{data:{items:options.queryKey[0]==="products"?items:[],total:items.length},isLoading:options.queryKey[0]==="products"&&loading,isError:false}}};
-  if(name==="@/providers/session-context")return{useSession:()=>({can:()=>true,location:{id:locationId,country:"PE"}})};
+  if(name==="@tanstack/react-query")return{useQueryClient:()=>({}),useMutation:()=>({}),useQuery:options=>{queries.push(options);return{data:{items:options.queryKey[0]==="products"?items:categories,total:items.length},isLoading:options.queryKey[0]==="products"&&loading,isError:false}}};
+  if(name==="@/providers/session-context")return{useSession:()=>({can:permission=>permission==="menu.manage"?canManage:true,canAccess:()=>true,location:{id:locationId,country:"PE"}})};
   if(name==="@/providers/settings-context")return{useSettings:()=>({currencyPosition:"before",currencySymbol:"S/",currencyDecimals:2})};
   if(name==="@/providers/feedback-provider")return{useFeedback:()=>({notify:()=>{}})};
   if(name==="@/shared/hooks/use-debounced-value")return{useDebouncedValue:value=>value};
@@ -69,4 +70,42 @@ test("productos: skeleton alineado a siete columnas sin segunda línea de descri
  const skeleton=nodes(loading.type(loading.props));
  assert.equal(skeleton.find(node=>node.props.className==="sk-head").props.children.length,7);
  assert.equal(skeleton.some(node=>node.type==="small"),false);
+});
+
+const category={id:"category",name:"Segundos",sortOrder:1,active:true,productCount:1,productScope:"prepared"};
+test("acceso al menú sin permiso de gestión: productos y categorías no ofrecen acciones",()=>{
+ for(const tab of ["products","categories"]){
+  const {view}=mount({canManage:false,tab,items:[base,{...base,id:"inactive",active:false}],categories:[category,{...category,id:"inactive-category",active:false}]});
+  assert.equal(view.filter(node=>node.type==="RowActionButton"||node.type==="Button").length,0,tab);
+  assert.equal(view.some(node=>node.type==="th"&&node.props.children==="ACCIONES"),false);
+  assert.equal(view.filter(node=>node.type==="th").length,tab==="products"?6:5);
+  assert.equal(view.filter(node=>node.type==="Pagination").length,1);
+  assert.ok(view.some(node=>node.type==="b"&&node.props.children===(tab==="products"?base.name:category.name)));
+ }
+});
+
+test("Administrar carta y productos habilita alta, edición y estado en ambos tabs",()=>{
+ for(const tab of ["products","categories"]){
+  const {view}=mount({tab,items:[base,{...base,id:"inactive",active:false}],categories:[category,{...category,id:"inactive-category",active:false}]});
+  assert.equal(view.filter(node=>node.type==="Button"&&node.props.icon==="plus").length,1);
+  assert.deepEqual(view.filter(node=>node.type==="RowActionButton").map(node=>node.props.action),["edit","deactivate","edit","activate"]);
+  assert.equal(view.find(node=>node.type==="PageHeader").props.title,"Carta y productos");
+ }
+});
+
+test("solo lectura: estados vacíos y skeleton no ofrecen crear ni columna de acciones",()=>{
+ for(const tab of ["products","categories"]){
+  const {view}=mount({canManage:false,tab,items:[]});
+  const empty=view.find(node=>typeof node.type==="function"&&node.props.title);
+  assert.ok(empty);assert.equal(empty.props.action,undefined);
+  assert.equal(nodes(empty.type(empty.props)).some(node=>node.type==="button"),false);
+ }
+ const {view}=mount({canManage:false,loading:true});
+ assert.ok(view.find(node=>typeof node.type==="function"&&node.props.columns===6));
+});
+
+test("al perder gestión no permanecen formularios ni confirmaciones editables",()=>{
+ const {view}=mount({canManage:false,states:{8:base,9:category,10:{kind:"products",id:base.id,name:base.name}}});
+ assert.equal(view.some(node=>node.type==="ProductDialog"||node.type==="CategoryDialog"),false);
+ assert.equal(view.find(node=>node.type==="ConfirmDialog").props.open,false);
 });

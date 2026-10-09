@@ -1,0 +1,11 @@
+.payment-ticket-modal{width:min(var(--size-480),100%);display:flex;flex-direction:column;overflow:hidden}
+.payment-ticket-body{min-height:0;overflow:auto;padding:var(--space-16);display:grid;gap:var(--space-16);background:var(--cloud-50)}
+.payment-ticket-body>p{margin:0;font-size:var(--font-size-control);color:var(--ink-600)}
+.payment-ticket-body iframe:not(.payment-ticket-print-frame){width:100%;height:55vh;min-height:var(--size-220);border:var(--stroke-1) solid var(--line);background:var(--surface)}
+.payment-ticket-print-frame{position:fixed;left:0;top:0;width:var(--stroke-1);height:var(--stroke-1);opacity:0;pointer-events:none;border:0}
+.payment-ticket-modal footer{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:var(--space-8);padding:var(--space-16);border-top:var(--stroke-1) solid var(--line)}
+.payment-ticket-error{display:grid;gap:var(--space-12);overflow-wrap:anywhere}
+.payment-ticket-error p{margin:0;color:var(--ink-600)}
+.payment-ticket-skeleton{display:grid;gap:var(--space-16);padding:var(--space-24);background:var(--surface);min-height:var(--size-220)}
+.payment-ticket-skeleton i{height:var(--space-12)}
+@media(max-width:600px){.payment-ticket-modal footer .button{width:100%}}

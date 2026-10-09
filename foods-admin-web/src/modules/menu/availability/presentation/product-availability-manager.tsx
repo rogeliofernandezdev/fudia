@@ -3,12 +3,14 @@
 import "./product-availability.css";
 import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,Icon,Input,PageHeader,Pagination,Select,Status} from "@/design-system";
+import {Button,Icon,Input,PageHeader,Pagination,RowActionButton,Select,Status} from "@/design-system";
 import {useFeedback} from "@/providers";
 import {useSession} from "@/providers/session-context";
 import {formatRegionalCalendarDate,formatRegionalNumber} from "@/shared/i18n/regional-format";
-import type {AvailabilityItem,AvailabilityStatus} from "../domain/types";
+import type {AvailabilityChange,AvailabilityItem,AvailabilityStatus} from "../domain/types";
 import {listAvailability,listAvailabilityCategories,updateAvailability} from "../infrastructure/availability-api";
+import {AvailabilityReasonDialog} from "./availability-reason-dialog";
+import {AvailabilityHistoryDialog} from "./availability-history-dialog";
 
 const labels:Record<AvailabilityStatus,string>={available:"Disponible",low:"Pocas unidades",sold_out:"Agotado",unavailable:"Fuera de horario"};
 const tones:Record<AvailabilityStatus,"green"|"orange"|"gray">={available:"green",low:"orange",sold_out:"gray",unavailable:"gray"};
@@ -21,30 +23,38 @@ const controlLabels:Record<AvailabilityItem["quantityControl"],string>={
 export function ProductAvailabilityManager(){
  const client=useQueryClient();
  const{notify}=useFeedback();
- const{location,can,isLoading:sessionLoading}=useSession();
+ const{organization,location,can,isLoading:sessionLoading}=useSession();
  const[search,setSearch]=useState("");
  const[categoryId,setCategoryId]=useState("");
  const[page,setPage]=useState(1);
  const[size,setSize]=useState(10);
  const[portions,setPortions]=useState<Record<string,string>>({});
+ const[change,setChange]=useState<AvailabilityChange|null>(null);
+ const[history,setHistory]=useState<AvailabilityItem|null>(null);
  const canRead=can("menu.read");
  const canManage=can("menu.manage");
 
  const query=useQuery({
-  queryKey:["product-availability",location?.id,search,categoryId,page,size],
+  queryKey:["product-availability",organization?.id,location?.id,search,categoryId,page,size],
   queryFn:()=>listAvailability({search,categoryId,page,pageSize:size}),
   enabled:!!location?.id&&canRead,
  });
- const categories=useQuery({queryKey:["categories","availability-filter"],queryFn:listAvailabilityCategories,enabled:canRead});
+ const categories=useQuery({queryKey:["categories","availability-filter",organization?.id],queryFn:listAvailabilityCategories,enabled:canRead});
  const update=useMutation({
-  mutationFn:({item,status,portionQuantity}:{item:AvailabilityItem;status:"available"|"sold_out";portionQuantity:number|null;kind:"quota"|"status"})=>
-   updateAvailability(item.productId,{status,portionQuantity,note:item.note}),
+  mutationFn:({item,status,portionQuantity,reason}:AvailabilityChange&{reason:string})=>
+   updateAvailability(item.productId,{status,portionQuantity,note:item.note,reason}),
+  retry:false,
   onSuccess:(_,variables)=>{
+   setChange(null);
    if(variables.kind==="quota"){
     setPortions(value=>{const next={...value};delete next[variables.item.productId];return next});
    }
    void client.invalidateQueries({queryKey:["product-availability"]});
    void client.invalidateQueries({queryKey:["products"]});
+   void client.invalidateQueries({queryKey:["availability-history"]});
+   void client.invalidateQueries({queryKey:["order-catalog"]});
+   void client.invalidateQueries({queryKey:["dashboard"]});
+   void client.invalidateQueries({queryKey:["combos"]});
    notify({
     tone:"success",
     title:variables.kind==="quota"?"Cupo actualizado":"Disponibilidad actualizada",
@@ -57,14 +67,14 @@ export function ProductAvailabilityManager(){
  function saveQuota(item:AvailabilityItem){
   const portionQuantity=Number(portions[item.productId]??item.portionQuantity??0);
   const minimum=Math.max(1,item.soldQuantity);
-  if(!Number.isInteger(portionQuantity)||portionQuantity<minimum){
+  if(!canManage||update.isPending||!Number.isInteger(portionQuantity)||portionQuantity<minimum){
    return;
   }
-  update.mutate({item,status:item.manualStatus,portionQuantity,kind:"quota"});
+  setChange({item,status:item.manualStatus,portionQuantity,kind:"quota"});
  }
 
  function setManualStatus(item:AvailabilityItem,status:"available"|"sold_out"){
-  update.mutate({item,status,portionQuantity:null,kind:"status"});
+  if(canManage&&!update.isPending)setChange({item,status,portionQuantity:null,kind:"status"});
  }
 
  const items=query.data?.items??[];
@@ -122,6 +132,7 @@ export function ProductAvailabilityManager(){
          {item.quantityControl==="portions"&&<Button kind={portionChanged&&portionValid?"primary":"secondary"} icon="check" disabled={derived||update.isPending||!portionChanged||!portionValid} onClick={()=>saveQuota(item)} aria-label={`Guardar cupo de ${item.name}`}>{pending?"Guardando…":"Guardar"}</Button>}
          <Button kind="secondary" className={manuallySoldOut?"availability-available-action":"availability-soldout-action"} icon="power" aria-label={manuallySoldOut?`Marcar ${item.name} como disponible`:`Marcar ${item.name} como agotado`} disabled={derived||update.isPending||(!manuallySoldOut&&quantityExhausted)} onClick={()=>setManualStatus(item,manuallySoldOut?"available":"sold_out")}>{pending?"Guardando…":manuallySoldOut?"Reactivar":"Agotar hoy"}</Button>
         </>:<span className="availability-read-only">Solo lectura</span>}
+        <RowActionButton action="view" label={`Ver historial de ${item.name}`} disabled={update.isPending} onClick={()=>setHistory(item)}/>
        </div>
        {notice&&<p className="availability-derived"><Icon name="alert" size={14}/>{notice}</p>}
        {portionChanged&&!portionValid&&<p className="field-error" role="alert">Ingresa un entero de al menos {portionMinimum}. Ya hay {item.soldQuantity} vendidas.</p>}
@@ -131,6 +142,8 @@ export function ProductAvailabilityManager(){
    </div>}
    {!sessionLoading&&canRead&&!query.isLoading&&!query.isError&&<Pagination page={page} size={size} total={query.data?.total??items.length} onPage={setPage} onSize={value=>{setSize(value);setPage(1)}}/>}
   </section>
+  {change&&<AvailabilityReasonDialog change={change} busy={update.isPending} close={()=>setChange(null)} save={async reason=>{if(canManage&&!update.isPending){try{await update.mutateAsync({...change,reason});}catch{/* onError comunica la respuesta del API. */}}}}/>}
+  {history&&<AvailabilityHistoryDialog item={history} close={()=>setHistory(null)}/>}
  </>;
 }
 

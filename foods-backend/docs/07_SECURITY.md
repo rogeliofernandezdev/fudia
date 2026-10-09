@@ -15,6 +15,10 @@ Los roles mantienen dos dimensiones independientes:
 - `menu_access`: opciones y rutas administrativas que el usuario puede abrir.
 - `permissions`: acciones de lectura o modificación autorizadas dentro de esas rutas.
 
+El catálogo presenta `menu.read` como «Ver carta y productos» y `menu.manage`
+como «Administrar carta y productos», coherentes con el módulo. El cambio de
+etiquetas no modifica códigos, asignaciones ni validaciones de autorización.
+
 Ocultar una opción no sustituye la autorización de sus APIs. Toda operación
 continúa validando `permissions` en backend; los roles inactivos no conceden
 accesos ni permisos. El rol Administrador usa `*` en ambas dimensiones.

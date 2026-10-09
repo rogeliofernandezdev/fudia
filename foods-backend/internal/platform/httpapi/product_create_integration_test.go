@@ -46,7 +46,7 @@ func TestCreateProductWithInitialPortionsAndLaterAvailability(t *testing.T) {
 			t.Fatalf("missing created product: %d %s", result.Code, result.Body.String())
 		}
 	}
-	for _, body := range []string{`{"status":"available","portionQuantity":20}`, `{"status":"sold_out","portionQuantity":null}`, `{"status":"available","portionQuantity":null}`} {
+	for _, body := range []string{`{"status":"available","portionQuantity":20,"reason":"Nueva producción"}`, `{"status":"sold_out","portionQuantity":null,"reason":"Pausa de producción"}`, `{"status":"available","portionQuantity":null,"reason":"Producción disponible"}`} {
 		if result := updateAvailabilityRequest(t, api, s, created.ID, body); result.Code != 204 {
 			t.Fatalf("later availability: %d %s", result.Code, result.Body.String())
 		}

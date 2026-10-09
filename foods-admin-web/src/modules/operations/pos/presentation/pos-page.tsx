@@ -19,6 +19,7 @@ import {paymentMethodMeta} from "./pos-meta";
 import {createPayment,getPOSOrder,listPOSOrders,refundPayment} from "../infrastructure/pos-api";
 const PaymentDialog=dynamic(()=>import("./pos-dialogs").then(module=>module.PaymentDialog),{ssr:false});
 const RefundDialog=dynamic(()=>import("./pos-dialogs").then(module=>module.RefundDialog),{ssr:false});
+const PaymentTicketDialog=dynamic(()=>import("@/modules/sales").then(module=>module.PaymentTicketDialog),{ssr:false});
 
 const paymentMeta={
   pending:{label:"Sin pagos",tone:"gray" as const},
@@ -42,6 +43,7 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
   const[paymentOrderId,setPaymentOrderId]=useState<string|null>(initialOrderId||null);
   const[detailId,setDetailId]=useState<string|null>(null);
   const[refundTarget,setRefundTarget]=useState<Payment|null>(null);
+  const[ticketTarget,setTicketTarget]=useState<{orderId:string;paymentId?:string}|null>(null);
 
   const current=useQuery({
     queryKey:["cash-shift","current"],
@@ -79,11 +81,12 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
   }
 
   const pay=useMutation({
+    retry:false,
     mutationFn:({orderId,draft}:{orderId:string;draft:Parameters<typeof createPayment>[1]})=>createPayment(orderId,draft),
-    onSuccess:(item)=>{
+    onSuccess:(item,variables)=>{
       setPaymentOrderId(null);
       refresh();
-      notify({tone:"success",title:"Cobro registrado",message:item.method==="cash"?"El pago quedó reflejado también en Caja.":"El pago quedó asociado al turno activo."});
+      notify({tone:"success",title:"Cobro registrado",message:"El pago quedó asociado al turno activo.",onClose:()=>setTicketTarget({orderId:variables.orderId,paymentId:item.id})});
     },
     onError:error=>notify({tone:"danger",title:"No se pudo registrar el cobro",message:error.message}),
   });
@@ -199,7 +202,9 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
       formatDateTime={dateTime}
       close={()=>setDetailId(null)}
       refund={setRefundTarget}
+      ticket={()=>{setDetailId(null);setTicketTarget({orderId:detailId})}}
     />}
+    {ticketTarget&&<PaymentTicketDialog {...ticketTarget} close={()=>setTicketTarget(null)}/>}
   </div>;
 }
 
@@ -230,7 +235,7 @@ function POSPaymentLoading(){return <div className="pos-payment-body pos-payment
   <div className="pos-payment-loading-actions"><i/><i/></div>
 </div>}
 
-function POSDetailDialog({loading,error,data,canManage,hasShift,formatMoney,formatDateTime,close,refund}:{loading:boolean;error?:string;data?:POSOrderDetail;canManage:boolean;hasShift:boolean;formatMoney:(value:number)=>string;formatDateTime:(value:string)=>string;close:()=>void;refund:(payment:Payment)=>void}){
+function POSDetailDialog({loading,error,data,canManage,hasShift,formatMoney,formatDateTime,close,refund,ticket}:{loading:boolean;error?:string;data?:POSOrderDetail;canManage:boolean;hasShift:boolean;formatMoney:(value:number)=>string;formatDateTime:(value:string)=>string;close:()=>void;refund:(payment:Payment)=>void;ticket?:()=>void}){
   const closed=Boolean(data&&(data.order.completedAt||data.order.status==="cancelado"));
   return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal pos-detail-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="pos-detail-title">
     <div className="modal-accent"/>
@@ -259,6 +264,7 @@ function POSDetailDialog({loading,error,data,canManage,hasShift,formatMoney,form
         :<div className="pos-payments-empty">Aún no se registraron pagos para este pedido.</div>}
       </section>
     </div>}
+    {!loading&&!error&&data&&Number(data.paidAmount)>0&&ticket&&<footer><Button kind="secondary" icon="receipt" onClick={ticket}>Ver ticket de pago</Button></footer>}
   </Dialog></div>;
 }
 

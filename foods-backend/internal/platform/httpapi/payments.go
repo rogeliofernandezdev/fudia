@@ -44,11 +44,28 @@ type posOrderSummary struct {
 }
 
 type posOrderDetail struct {
-	Order           order         `json:"order"`
-	PaidAmount      string        `json:"paidAmount"`
-	RemainingAmount string        `json:"remainingAmount"`
-	PaymentStatus   string        `json:"paymentStatus"`
-	Payments        []paymentView `json:"payments"`
+	ReceiptContext  paymentReceiptContext `json:"receiptContext"`
+	Order           order                 `json:"order"`
+	PaidAmount      string                `json:"paidAmount"`
+	RemainingAmount string                `json:"remainingAmount"`
+	PaymentStatus   string                `json:"paymentStatus"`
+	Payments        []paymentView         `json:"payments"`
+}
+
+// Current merchant identity for an operational payment ticket, not a fiscal document.
+type paymentReceiptContext struct {
+	OrganizationName string `json:"organizationName"`
+	LegalName        string `json:"legalName"`
+	TaxID            string `json:"taxId"`
+	LocationName     string `json:"locationName"`
+	Address          string `json:"address"`
+	Phone            string `json:"phone"`
+	Country          string `json:"country"`
+	Timezone         string `json:"timezone"`
+	Currency         string `json:"currency"`
+	CurrencySymbol   string `json:"currencySymbol"`
+	CurrencyPosition string `json:"currencyPosition"`
+	CurrencyDecimals int    `json:"currencyDecimals"`
 }
 
 const netPaidSQL = `
@@ -256,7 +273,20 @@ func (a *API) getPOSOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	total, _ := strconv.ParseFloat(o.Total, 64)
 	remaining := math.Max(0, total-paid)
+	var identity paymentReceiptContext
+	err = a.db.QueryRow(r.Context(), `SELECT COALESCE(NULLIF(org.trade_name,''),org.legal_name),org.legal_name,org.tax_id,
+ loc.name,loc.address,loc.phone,fp.country_code,loc.timezone,fp.currency,fp.currency_symbol,fp.currency_position,fp.currency_decimals
+ FROM locations loc JOIN organizations org ON org.id=loc.organization_id
+ JOIN organization_fiscal_profiles fp ON fp.id=loc.fiscal_profile_id AND fp.organization_id=loc.organization_id
+ WHERE loc.id=$1 AND loc.organization_id=$2`, s.LocationID, s.OrganizationID).Scan(
+		&identity.OrganizationName, &identity.LegalName, &identity.TaxID, &identity.LocationName, &identity.Address, &identity.Phone,
+		&identity.Country, &identity.Timezone, &identity.Currency, &identity.CurrencySymbol, &identity.CurrencyPosition, &identity.CurrencyDecimals)
+	if err != nil {
+		fail(w, 503, "payments_unavailable", "No pudimos cargar los datos del restaurante.")
+		return
+	}
 	writeJSON(w, 200, posOrderDetail{
+		ReceiptContext:  identity,
 		Order:           o,
 		PaidAmount:      strconv.FormatFloat(paid, 'f', 2, 64),
 		RemainingAmount: strconv.FormatFloat(remaining, 'f', 2, 64),

@@ -1,5 +1,5 @@
 import {apiFetch} from "@/shared/api/client";
-import type {CashMovement,CashMovementDraft,CashOperation,CashOperationDraft,CashRegister,CashRegisterDraft,CashShift,CashShiftList,CashShiftUser,CashUserOption,CloseCashShiftDraft,OpenCashShiftDraft} from "../domain/types";
+import type {CashMovement,CashMovementDraft,CashOperation,CashOperationDraft,CashRegister,CashRegisterDraft,CashShift,CashShiftList,CashShiftReport,CashShiftUser,CashUserOption,CloseCashShiftDraft,OpenCashShiftDraft} from "../domain/types";
 
 export function getCurrentCashShift(){
   return apiFetch<{shift:CashShift|null}>("cash-shifts/current");
@@ -40,6 +40,10 @@ export function listCashShifts(input:{q:string;status:string;page:number;pageSiz
 
 export function getCashShift(id:string){
   return apiFetch<CashShift>(`cash-shifts/${id}`);
+}
+
+export function getCashShiftReport(id:string){
+  return apiFetch<CashShiftReport>(`cash-shifts/${id}/report`);
 }
 
 export function openCashShift(cashRegisterId:string,draft:OpenCashShiftDraft){

@@ -1,11 +1,12 @@
 "use client";
 import {Dialog} from "@/design-system/dialog";
 import {cashShiftAttribution,cashShiftTeamName} from "../domain/shift-attribution";
-import {useState} from "react";
+import {useRef,useState} from "react";
+import {CashReportContent} from "./cash-report-content";
 import {useForm,useWatch} from "react-hook-form";
 import {Button,Icon,Input,Status,Textarea} from "@/design-system";
 import {cashMovementResolver,cashRegisterResolver,closeCashShiftResolver,openCashShiftResolver} from "../domain/cash-schema";
-import type {CashMovementDraft,CashMovementType,CashRegister,CashRegisterDraft,CashShift,CloseCashShiftDraft,OpenCashShiftDraft} from "../domain/types";
+import type {CashMovementDraft,CashMovementType,CashRegister,CashRegisterDraft,CashShift,CashShiftReport,CloseCashShiftDraft,OpenCashShiftDraft} from "../domain/types";
 
 export function CashRegisterDialog({initial,busy,close,save}:{initial?:CashRegister|null;busy:boolean;close:()=>void;save:(draft:CashRegisterDraft)=>void}){
   const editing=Boolean(initial);
@@ -99,12 +100,13 @@ export function CashMovementDialog({type,busy,close,save}:{type:CashMovementType
   </Dialog></div>;
 }
 
-export function CloseCashShiftDialog({shift,busy,currency,formatMoney,close,save}:{shift:CashShift;busy:boolean;currency:string;formatMoney:(value:number)=>string;close:()=>void;save:(draft:CloseCashShiftDraft)=>void}){
+export function CloseCashShiftDialog({shift,report,busy,currency,formatMoney,close,save}:{shift:CashShift;report?:CashShiftReport;busy:boolean;currency:string;formatMoney:(value:number)=>string;close:()=>void;save:(draft:CloseCashShiftDraft)=>void|Promise<void>}){
   const blind=shift.blindClose&&!shift.expectedVisible;
   const expected=Number(shift.expectedAmount||0);
   const denominations=denominationsForCurrency(currency);
   const[byDenomination,setByDenomination]=useState(false);
-  const{control,register,handleSubmit,formState:{errors}}=useForm<CloseCashShiftDraft>({
+  const sending=useRef(false);
+  const{control,register,handleSubmit,setValue,formState:{errors}}=useForm<CloseCashShiftDraft>({
     defaultValues:{
       countedAmount:shift.expectedVisible&&Number.isFinite(expected)?expected.toFixed(2):"",
       note:"",
@@ -124,11 +126,12 @@ export function CloseCashShiftDialog({shift,busy,currency,formatMoney,close,save
   return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal cash-modal cash-close-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-close-title" aria-busy={busy}>
     <div className="modal-accent"/>
     <header><span className="modal-title-icon"><Icon name="lock" size={18}/></span><div><small>{shift.cashRegisterName.toUpperCase()}</small><h2 id="cash-close-title">Cerrar turno</h2></div><button type="button" aria-label="Cerrar" onClick={close} disabled={busy}><Icon name="close"/></button></header>
-    <form onSubmit={handleSubmit(save)} noValidate inert={busy}>
+    <form onSubmit={event=>event.preventDefault()} onKeyDown={event=>{if(event.key==="Enter"&&(event.target as HTMLElement).tagName==="INPUT")event.preventDefault();}} noValidate inert={busy}>
       <div className="cash-dialog-body">
+        {report&&<CashReportContent report={report}/>}
         {blind
           ?<div className="cash-blind-close-note"><Icon name="lock" size={15}/><span><b>Cierre ciego activo</b><small>Cuenta el efectivo sin consultar el saldo esperado. La diferencia se calculará al confirmar.</small></span></div>
-          :<section className="cash-close-summary">
+          :!report&&<section className="cash-close-summary">
             <div><small>FONDO INICIAL</small><b>{formatMoney(Number(shift.openingAmount))}</b></div>
             <div><small>INGRESOS</small><b>{formatMoney(Number(shift.incomeAmount))}</b></div>
             <div><small>EGRESOS</small><b>{formatMoney(Number(shift.expenseAmount))}</b></div>
@@ -162,18 +165,19 @@ export function CloseCashShiftDialog({shift,busy,currency,formatMoney,close,save
         </label>
         <p className="cash-close-warning"><Icon name="alert" size={14}/>Al cerrar el turno ya no se podrán registrar nuevos movimientos.</p>
       </div>
-      <footer><Button type="button" kind="ghost" onClick={close} disabled={busy}>Volver</Button><Button type="submit" kind="danger" disabled={busy}>{busy?"Cerrando…":"Cerrar turno"}</Button></footer>
+      <footer><Button type="button" kind="ghost" onClick={close} disabled={busy}>Volver</Button><Button type="button" icon="lock" disabled={busy} onClick={()=>{if(busy||sending.current)return;sending.current=true;if(byDenomination)setValue("countedAmount",denominationTotal.toFixed(2));else setValue("counts",denominations.map(value=>({denomination:String(value),quantity:""})));void handleSubmit(async draft=>{try{await save({...draft,counts:byDenomination?draft.counts:[]});}finally{sending.current=false;}},()=>{sending.current=false;})().catch(()=>{sending.current=false;});}}>{busy?"Cerrando…":"Cerrar turno"}</Button></footer>
     </form>
     {busy&&<div className="modal-busy" role="status"><i/><span>Cerrando turno…</span></div>}
   </Dialog></div>;
 }
 
-export function CashShiftDetailDialog({shift,formatMoney,formatDateTime,formatBusinessDate,close}:{shift:CashShift;formatMoney:(value:number)=>string;formatDateTime:(value:string)=>string;formatBusinessDate:(value:string)=>string;close:()=>void}){
+export function CashShiftDetailDialog({shift,formatMoney,formatDateTime,formatBusinessDate,close,viewReport}:{shift:CashShift;formatMoney:(value:number)=>string;formatDateTime:(value:string)=>string;formatBusinessDate:(value:string)=>string;close:()=>void;viewReport?:()=>void}){
   const variance=Number(shift.varianceAmount??0);
   return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal cash-detail-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-detail-title">
     <div className="modal-accent"/>
     <header><span className="modal-title-icon"><Icon name="sales" size={18}/></span><div><small>{shift.cashRegisterName.toUpperCase()}</small><h2 id="cash-detail-title">{shift.code}</h2></div><button type="button" aria-label="Cerrar" onClick={close}><Icon name="close"/></button></header>
     <div className="cash-detail-body">
+      {viewReport&&(shift.status==="closed"||shift.expectedVisible)&&<Button icon="receipt" onClick={viewReport}>Ver informe detallado y PDF</Button>}
       <section className="cash-detail-head">
         <div><small>CAJA</small><b>{shift.cashRegisterName}</b></div>
         <div><small>DÍA OPERATIVO</small><b>{formatBusinessDate(shift.businessDate)}</b></div>

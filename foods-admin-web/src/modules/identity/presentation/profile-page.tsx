@@ -2,21 +2,22 @@
 import "./profile-page.css";
 
 import {useForm} from "react-hook-form";
-import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
+import {useMutation,useQueryClient} from "@tanstack/react-query";
 import {Button,FormField,Icon,Input,PageHeader} from "@/design-system";
 import {useFeedback,useSession} from "@/providers";
 import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
 import type {OrganizationSubscription} from "@/modules/platform";
 import type {MyProfile,MyProfileDraft} from "../domain/types";
 import {profileResolver} from "../domain/profile-schema";
-import {getOrganizationSubscription,saveMyProfile} from "../infrastructure/identity-api";
+import {saveMyProfile} from "../infrastructure/identity-api";
 import {useCurrentProfile} from "../application/use-current-profile";
+import {useOrganizationSubscription} from "../application/use-organization-subscription";
 
 export function ProfilePage(){
   const{can,organization,location}=useSession();
   const profile=useCurrentProfile();
   const canViewSubscription=can("subscription.read");
-  const subscription=useQuery({queryKey:["organization-subscription"],queryFn:getOrganizationSubscription,enabled:canViewSubscription});
+  const subscription=useOrganizationSubscription();
   if(profile.isLoading)return <><ProfileHeader/><ProfileSkeleton/>{canViewSubscription&&<SubscriptionSkeleton/>}</>;
   if(profile.isError)return <><ProfileHeader/><section className="profile-card profile-state"><p>{profile.error.message}</p><Button kind="secondary" onClick={()=>profile.refetch()}>Reintentar</Button></section></>;
   if(!profile.data)return <><ProfileHeader/><section className="profile-card profile-state"><p>No pudimos cargar tu perfil.</p></section></>;

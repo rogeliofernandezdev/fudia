@@ -73,7 +73,7 @@ func TestUpdateProductAvailabilityRejectsQuotaBelowSold(t *testing.T) {
 	api := New(pool)
 	productID := seedPortionAvailability(t, pool, s, 10, 5)
 
-	rec := updateAvailabilityRequest(t, api, s, productID, `{"status":"available","portionQuantity":4,"note":""}`)
+	rec := updateAvailabilityRequest(t, api, s, productID, `{"status":"available","portionQuantity":4,"note":"","reason":"Corrección de conteo"}`)
 	if rec.Code != 409 {
 		t.Fatalf("expected 409, got %d body=%s", rec.Code, rec.Body.String())
 	}
@@ -89,7 +89,7 @@ func TestUpdateProductAvailabilityStatusOnlyPreservesQuota(t *testing.T) {
 	api := New(pool)
 	productID := seedPortionAvailability(t, pool, s, 10, 5)
 
-	rec := updateAvailabilityRequest(t, api, s, productID, `{"status":"sold_out","portionQuantity":null,"note":""}`)
+	rec := updateAvailabilityRequest(t, api, s, productID, `{"status":"sold_out","portionQuantity":null,"note":"","reason":"No queda producción disponible"}`)
 	if rec.Code != 204 {
 		t.Fatalf("expected sold_out 204, got %d body=%s", rec.Code, rec.Body.String())
 	}
@@ -98,7 +98,7 @@ func TestUpdateProductAvailabilityStatusOnlyPreservesQuota(t *testing.T) {
 		t.Fatalf("status update modified quota unexpectedly: quota=%d sold=%d status=%q", quota, sold, status)
 	}
 
-	rec = updateAvailabilityRequest(t, api, s, productID, `{"status":"available","portionQuantity":null,"note":""}`)
+	rec = updateAvailabilityRequest(t, api, s, productID, `{"status":"available","portionQuantity":null,"note":"","reason":"Producción disponible nuevamente"}`)
 	if rec.Code != 204 {
 		t.Fatalf("expected reactivate 204, got %d body=%s", rec.Code, rec.Body.String())
 	}
@@ -114,7 +114,7 @@ func TestUpdateProductAvailabilityAcceptsQuotaAtOrAboveSold(t *testing.T) {
 	api := New(pool)
 	productID := seedPortionAvailability(t, pool, s, 10, 5)
 
-	rec := updateAvailabilityRequest(t, api, s, productID, `{"status":"available","portionQuantity":7,"note":"Cupo ajustado"}`)
+	rec := updateAvailabilityRequest(t, api, s, productID, `{"status":"available","portionQuantity":7,"note":"Cupo ajustado","reason":"Corrección de conteo"}`)
 	if rec.Code != 204 {
 		t.Fatalf("expected 204, got %d body=%s", rec.Code, rec.Body.String())
 	}

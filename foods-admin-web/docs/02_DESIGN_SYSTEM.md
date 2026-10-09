@@ -2,6 +2,40 @@
 
 ## Propósito
 
+### Ticket de pago para el comensal
+
+Tras confirmar el cobro y cerrar el aviso global se abre el PDF real del ticket.
+Formato de rollo de 80 mm, área útil de 70 mm, negro sobre blanco, nombre del
+restaurante, datos del local, fecha del cobro, mesa/cliente, consumo con cantidad,
+precio e importe, total y medios de pago reales. Los pagos parciales muestran
+saldo y nunca se presentan como cuenta pagada. Se identifica como no fiscal;
+no inventa serie, impuesto, QR tributario ni aprobación SUNAT. La impresión es
+explícita desde «Imprimir ticket»; el documento aislado comparte las líneas
+medidas del PDF y no incluye la interfaz. La vista previa conserva descarga,
+reintento, skeleton, X y controles de 44 px en móvil. El cierre de caja A4 no cambia.
+
+### Resumen de cierre e informe de caja
+
+El cierre presenta identidad del turno y tres importes destacados, seguido de
+secciones desplegables para productos, cobros, egresos, otros ingresos y arqueo.
+Cada línea conserva fecha, cantidad, precio y responsable; no se resume perdiendo
+filas. Se reutilizan Dialog, botones, tabla y tokens globales. A 390 px los datos
+de identidad/importes se apilan y las tablas tienen scroll horizontal controlado;
+las acciones mantienen 44 px. El cierre ciego conserva el conteo sin revelar
+importes y presenta el informe después de confirmar.
+
+El modal de cierre limita su altura al viewport dinámico, incluidos los márgenes
+del fondo. Cabecera y pie con «Cerrar turno» siempre permanecen visibles;
+solo el contenido se desplaza, con barra visible cuando hay desborde. No envía
+al pulsar Enter desde los campos de conteo; la observación conserva saltos de
+línea y la acción requiere activar explícitamente su botón.
+
+El informe PDF usa el logo propio de Fudia, los colores del sistema y A4
+horizontal con márgenes, texto seleccionable, cabeceras repetidas y numeración.
+Los nombres largos se envuelven sin recortar filas.
+La vista previa permite descargar o ver el detalle HTML si el navegador móvil
+no integra un visor PDF.
+
 Este documento es la autoridad visual de foods-admin-web y no depende de
 documentos externos. La administración conserva la identidad Foods con mayor
 densidad para tablas, formularios y análisis.
@@ -465,6 +499,15 @@ primaria con un icono: «Registrar y enviar a cocina». Durante el envío muestr
   omiten bordes. El foco se aplica al contenedor con `:focus-within`.
 
 ## Responsive
+
+Disponibilidad conserva la retícula operativa y agrega la acción compartida de
+ojo «Ver historial». Guardar cupo, Agotar y Reactivar abren un formulario CRUD
+compacto con Motivo del cambio obligatorio; ajustar cupo muestra anterior/nuevo
+como lectura. No añade confirmaciones sucesivas ni catálogos locales de motivos.
+El historial reutiliza tabla, fecha regional y paginación del sistema: Fecha y
+hora, Cambio, Motivo y Usuario, con X como único cierre. Los valores históricos
+desconocidos se explican sin mostrar ceros ficticios. En móvil, motivo ocupa el
+ancho completo y el historial usa scroll horizontal controlado dentro del modal.
 
 Toda pantalla se valida desde 390 px. En móvil se reorganizan filtros, acciones
 y detalle; no se limita a apilar columnas de escritorio.

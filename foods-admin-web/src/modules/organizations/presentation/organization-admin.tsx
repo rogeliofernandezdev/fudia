@@ -8,6 +8,7 @@ import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {ConfirmDialog} from "@/design-system/confirm-dialog";
 import {useFeedback} from "@/providers/feedback-provider";
 import {useSession} from "@/providers/session-context";
+import {useSubscriptionCapacity} from "@/modules/identity";
 import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
 import {Icon} from "@/design-system/icons";
 import {LocationMap} from "@/design-system/location-map";
@@ -20,7 +21,7 @@ import {createRate as persistRate,deactivateLocation,deactivateProfile as remove
 function Back(){return null}
 function LoadingTable(){return <div className="table-skeleton" aria-label="Cargando datos"><div className="sk-head"><i/><i/><i/><i/><i/></div>{Array.from({length:5},(_,i)=><div className="sk-row" key={i}><i className="sk-name"><span/><b/><small/></i><i/><i/><i/><i/></div>)}</div>}
 function LoadError({message,retry}:{message:string;retry:()=>void}){return <div className="catalog-state error"><span><Icon name="alert"/></span><b>No pudimos cargar la información</b><p>{message}</p><Button kind="secondary" icon="refresh" onClick={retry}>Reintentar</Button></div>}
-function Empty({title,text,action,label}:{title:string;text:string;action:()=>void;label:string}){return <div className="catalog-state"><span><Icon name="store"/></span><b>{title}</b><p>{text}</p><Button onClick={action}>{label}</Button></div>}
+function Empty({title,text,action,label,disabled=false}:{title:string;text:string;action:()=>void;label:string;disabled?:boolean}){return <div className="catalog-state"><span><Icon name="store"/></span><b>{title}</b><p>{text}</p><Button onClick={action} disabled={disabled}>{label}</Button></div>}
 
 export function CompanySettings(){
  const{notify}=useFeedback();
@@ -71,7 +72,53 @@ export function CompanySettings(){
 }
 
 const blankLocation:LocationDraft={name:"",code:"",address:"",phone:"",openingHours:"",latitude:null,longitude:null,timezone:"America/Lima",fiscalProfileId:"",active:true};
-export function LocationsManager(){const{notify}=useFeedback();const client=useQueryClient();const[page,setPage]=useState(1);const[size,setSize]=useState(10);const[draft,setDraft]=useState<LocationDraft|null>(null);const[remove,setRemove]=useState<Location|null>(null);const locations=useQuery({queryKey:["locations",page,size],queryFn:()=>listLocations(page,size)});const profiles=useQuery({queryKey:["fiscal-profiles-options"],queryFn:()=>listProfiles(1,100)});const save=useMutation({mutationFn:(v:LocationDraft)=>saveLocation(v),onSuccess:()=>{setDraft(null);void client.invalidateQueries({queryKey:["locations"]});void client.invalidateQueries({queryKey:["fiscal-profiles"]});notify({tone:"success",title:"Local guardado",message:"El local y su perfil fiscal quedaron asociados correctamente."})},onError:e=>notify({tone:"danger",title:"No se pudo guardar",message:e.message})});const deactivate=useMutation({mutationFn:(id:string)=>deactivateLocation(id),onSuccess:()=>{setRemove(null);void client.invalidateQueries({queryKey:["locations"]});notify({tone:"success",title:"Local desactivado",message:"El local conserva su historial y ya no admite nuevas operaciones."})},onError:e=>{setRemove(null);notify({tone:"danger",title:"No se pudo desactivar",message:e.message})}});const list=locations.data;const create=()=>setDraft({...blankLocation,fiscalProfileId:profiles.data?.items.find(x=>x.default)?.id??""});return <><PageHeader eyebrow="NEGOCIO" title="Locales" description="Administra sedes y asigna a cada una su jurisdicción fiscal." action={<Button onClick={create}>Nuevo local</Button>}/><Back/><section className="panel management catalog-panel">{locations.isLoading?<LoadingTable/>:locations.isError?<LoadError message={locations.error.message} retry={()=>locations.refetch()}/>:!list?.items.length?<Empty title="Aún no hay locales" text="Registra el primer local para iniciar la operación." label="Nuevo local" action={create}/>:<div className="table-wrap hover-scroll"><table><thead><tr><th>LOCAL</th><th>CONTACTO</th><th>PAÍS / MONEDA</th><th>HORARIO</th><th>ESTADO</th><th>ACCIONES</th></tr></thead><tbody>{list.items.map((item,i)=><tr className={i%2?"alternate":""} key={item.id}><td><span className={`row-icon r${i%3}`}><Icon name="store" size={18}/></span><b>{item.name}</b><small>{item.address||"Sin dirección"}</small></td><td>{item.phone||"—"}<small>{item.openingHours||""}</small></td><td><b>{item.country} / {item.currency}</b></td><td>{item.timezone}</td><td><Status active={item.active}>{item.active?"Activo":"Inactivo"}</Status></td><td><div className="table-actions"><RowActionButton action="edit" onClick={()=>setDraft({...item})}/>{item.active&&<RowActionButton action="deactivate" stateLabel={`Estado de ${item.name}`} onClick={()=>setRemove(item)}/>}</div></td></tr>)}</tbody></table></div>}<Pagination page={page} size={size} total={list?.total??0} onPage={setPage} onSize={v=>{setSize(v);setPage(1)}}/></section>{draft&&(profiles.isLoading?<RemoteModalSkeleton className="compact" label="Cargando datos del local" close={()=>setDraft(null)}/>:<LocationDialog value={draft} profiles={profiles.data?.items.filter(x=>x.active)??[]} busy={save.isPending} close={()=>setDraft(null)} save={v=>save.mutate(v)}/>)}<ConfirmDialog open={Boolean(remove)} title="Desactivar local" description={`El local “${remove?.name??""}” dejará de admitir nuevas operaciones, pero conservará su historial.`} confirmLabel="Desactivar" pending={deactivate.isPending} onCancel={()=>setRemove(null)} onConfirm={()=>remove&&deactivate.mutate(remove.id)}/></>}
+export function LocationsManager(){
+ const{notify}=useFeedback();
+ const{can,organization}=useSession();
+ const client=useQueryClient();
+ const capacity=useSubscriptionCapacity("locations");
+ const{subscription,reason}=capacity;
+ const canManage=can("organizations.manage");
+ const canReadPlan=capacity.canRead;
+ const[page,setPage]=useState(1);
+ const[size,setSize]=useState(10);
+ const[draft,setDraft]=useState<LocationDraft|null>(null);
+ const[remove,setRemove]=useState<Location|null>(null);
+ const locations=useQuery({queryKey:["locations",organization?.id,page,size],queryFn:()=>listLocations(page,size)});
+ const profiles=useQuery({queryKey:["fiscal-profiles-options",organization?.id],queryFn:()=>listProfiles(1,100)});
+ const save=useMutation({
+  mutationFn:(v:LocationDraft)=>saveLocation(v),
+  onSuccess:async()=>{
+   setDraft(null);
+   void client.invalidateQueries({queryKey:["locations"]});
+   void client.invalidateQueries({queryKey:["fiscal-profiles"]});
+   await client.invalidateQueries({queryKey:["organization-subscription"]});
+   notify({tone:"success",title:"Local guardado",message:"El local y su perfil fiscal quedaron asociados correctamente."});
+  },
+  onError:e=>{void client.invalidateQueries({queryKey:["organization-subscription"]});notify({tone:"danger",title:"No se pudo guardar",message:e.message});},
+ });
+ const deactivate=useMutation({
+  mutationFn:(id:string)=>deactivateLocation(id),
+  onSuccess:async()=>{
+   setRemove(null);
+   void client.invalidateQueries({queryKey:["locations"]});
+   await client.invalidateQueries({queryKey:["organization-subscription"]});
+   notify({tone:"success",title:"Local desactivado",message:"El local conserva su historial y ya no admite nuevas operaciones."});
+  },
+  onError:e=>{setRemove(null);notify({tone:"danger",title:"No se pudo desactivar",message:e.message});},
+ });
+ const list=locations.data;
+ const createDisabled=!canManage||capacity.blocked||save.isPending||deactivate.isPending;
+ function create(){if(!createDisabled)setDraft({...blankLocation,fiscalProfileId:profiles.data?.items.find(x=>x.default)?.id??""});}
+ return <><PageHeader eyebrow="NEGOCIO" title="Locales" description={reason||"Administra sedes y asigna a cada una su jurisdicción fiscal."} action={canManage?<><Button onClick={create} disabled={createDisabled} title={reason||undefined}>Nuevo local</Button>{canReadPlan&&subscription.isError&&<Button kind="secondary" icon="refresh" onClick={()=>subscription.refetch()}>Reintentar</Button>}</>:undefined}/><Back/>
+  <section className="panel management catalog-panel">
+   {locations.isLoading||canReadPlan&&subscription.isLoading?<LoadingTable/>:locations.isError?<LoadError message={locations.error.message} retry={()=>locations.refetch()}/>:!list?.items.length?<Empty title="Aún no hay locales" text="Registra el primer local para iniciar la operación." label="Nuevo local" action={create} disabled={createDisabled}/>:<div className="table-wrap hover-scroll"><table><thead><tr><th>LOCAL</th><th>CONTACTO</th><th>PAÍS / MONEDA</th><th>HORARIO</th><th>ESTADO</th><th>ACCIONES</th></tr></thead><tbody>{list.items.map((item,i)=><tr className={i%2?"alternate":""} key={item.id}><td><span className={`row-icon r${i%3}`}><Icon name="store"/></span><b>{item.name}</b><small>{item.address||"Sin dirección"}</small></td><td>{item.phone||"—"}<small>{item.openingHours||""}</small></td><td><b>{item.country} / {item.currency}</b></td><td>{item.timezone}</td><td><Status active={item.active}>{item.active?"Activo":"Inactivo"}</Status></td><td>{canManage&&<div className="table-actions"><RowActionButton action="edit" onClick={()=>setDraft({...item})}/>{item.active&&<RowActionButton action="deactivate" stateLabel={`Estado de ${item.name}`} onClick={()=>setRemove(item)}/>}</div>}</td></tr>)}</tbody></table></div>}
+   <Pagination page={page} size={size} total={list?.total??0} onPage={setPage} onSize={v=>{setSize(v);setPage(1)}}/>
+  </section>
+  {draft&&(profiles.isLoading?<RemoteModalSkeleton className="compact" label="Cargando datos del local" close={()=>setDraft(null)}/>:<LocationDialog value={draft} profiles={profiles.data?.items.filter(x=>x.active)??[]} busy={save.isPending} close={()=>setDraft(null)} save={v=>save.mutate(v)}/>)}
+  <ConfirmDialog open={Boolean(remove)} title="Desactivar local" description={`El local “${remove?.name??""}” dejará de admitir nuevas operaciones, pero conservará su historial.`} confirmLabel="Desactivar" pending={deactivate.isPending} onCancel={()=>setRemove(null)} onConfirm={()=>remove&&deactivate.mutate(remove.id)}/>
+ </>;
+}
 function LocationDialog({value:initial,profiles,busy,close,save}:{value:(typeof blankLocation)&{id?:string};profiles:Profile[];busy:boolean;close:()=>void;save:(v:typeof initial)=>void}){const{register,control,setValue,handleSubmit,formState:{errors}}=useForm<typeof initial>({defaultValues:initial,resolver:locationResolver,mode:"onSubmit",reValidateMode:"onChange"});const[address,latitude,longitude]=useWatch({control,name:["address","latitude","longitude"]});return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal compact modal-panel-in" role="dialog" aria-modal="true"><div className="modal-accent"/><header><span className="modal-title-icon"><Icon name="store"/></span><div><small>{initial.id?"EDITAR LOCAL":"NUEVO LOCAL"}</small><h2>Datos del local</h2></div><button aria-label="Cerrar" onClick={close}><Icon name="close"/></button></header><form onSubmit={handleSubmit(v=>save(v))} noValidate><div className="form-grid"><FormField className="span-2" label="Nombre" error={errors.name?.message}><Input autoFocus maxLength={120} {...register("name")} placeholder="Sede Miraflores"/></FormField><FormField label="Teléfono" optional error={errors.phone?.message}><Input type="tel" inputMode="tel" {...register("phone")} placeholder="+51 999 888 777"/></FormField><FormField label="Horario de atención" optional error={errors.openingHours?.message}><Input {...register("openingHours")} placeholder="Lun-Dom 12:00-23:00"/></FormField><FormField as="div" className="span-2" label="Dirección y ubicación" error={errors.address?.message}><LocationMap latitude={latitude} longitude={longitude} address={address} onAddressChange={a=>setValue("address",a,{shouldValidate:Boolean(errors.address)})} onChange={c=>{setValue("latitude",c.lat);setValue("longitude",c.lng)}}/></FormField><FormField className="span-2" label="Zona horaria" error={errors.timezone?.message}><Input {...register("timezone")}/></FormField><FormField className="span-2" label="Perfil fiscal" error={errors.fiscalProfileId?.message}><Select {...register("fiscalProfileId")}><option value="">Seleccionar perfil</option>{profiles.map(p=><option key={p.id} value={p.id}>{p.countryName} · {p.currency} · {p.taxName} {Number(p.taxRate)*100}%</option>)}</Select></FormField></div><footer><Button kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy}>{busy?"Guardando…":"Guardar"}</Button></footer></form></Dialog></div>}
 
 const blankProfile:ProfileDraft={country:"PE",currency:"PEN",currencyPosition:"before",taxName:"IGV",taxPercent:"18",taxIncluded:false,default:false};const blankRate:RateDraft={baseCurrency:"PEN",quoteCurrency:"USD",rate:"",effectiveAt:"",source:"manual",providerReference:""};

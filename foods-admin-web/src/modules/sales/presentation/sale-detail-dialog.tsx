@@ -4,11 +4,11 @@ import {Dialog} from "@/design-system/dialog";
 import type {SaleDetail} from "../domain/types";
 import "./sales.css";
 
-type Props={loading:boolean;error?:string;data?:SaleDetail;money:(value:string|number)=>string;date:(value:string)=>string;close:()=>void;retry:()=>void};
+type Props={loading:boolean;error?:string;data?:SaleDetail;money:(value:string|number)=>string;date:(value:string)=>string;close:()=>void;retry:()=>void;ticket?:()=>void};
 const channels:Record<string,string>={salon:"Salón",mostrador:"Mostrador",recojo:"Recojo",delivery:"Delivery",whatsapp:"WhatsApp"};
 const paymentStates={paid:{label:"Pagada",tone:"green" as const},partial:{label:"Pago parcial",tone:"orange" as const},pending:{label:"Sin pagos",tone:"gray" as const}};
 
-export function SaleDetailDialog({loading,error,data,money,date,close,retry}:Props){
+export function SaleDetailDialog({loading,error,data,money,date,close,retry,ticket}:Props){
   const status=data?paymentStates[data.paymentStatus]:null;
   return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal sales-detail-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="sales-detail-title" aria-busy={loading}>
     <div className="modal-accent"/>
@@ -47,6 +47,7 @@ export function SaleDetailDialog({loading,error,data,money,date,close,retry}:Pro
       </section>
       {data.order.notes&&<section className="sales-detail-section"><h3>Notas</h3><p className="sales-detail-notes">{data.order.notes}</p></section>}
     </div>}
+    {!loading&&!error&&data&&Number(data.paidAmount)>0&&ticket&&<footer><Button kind="secondary" icon="receipt" onClick={ticket}>Ver ticket de pago</Button></footer>}
   </Dialog></div>;
 }
 

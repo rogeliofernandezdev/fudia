@@ -122,7 +122,7 @@
 .cash-blind-close-note small{color:var(--ink-600);font-size:var(--font-size-label);line-height:var(--line-height-1-45)}
 
 .cash-count-mode{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4);padding:var(--space-4);border-radius:var(--radius-9);background:var(--cloud-50)}
-.cash-count-mode button{height:var(--size-34);border:0;border-radius:var(--radius-7);background:transparent;color:var(--ink-500);font-size:var(--font-size-label);font-weight:var(--font-weight-800)}
+.cash-count-mode button{height:var(--control-height);border:0;border-radius:var(--radius-7);background:transparent;color:var(--ink-500);font-size:var(--font-size-label);font-weight:var(--font-weight-800)}
 .cash-count-mode button.active{background:var(--surface);color:var(--ops-700);box-shadow:var(--shadow-26)}
 .cash-denomination-count{overflow:hidden;border:var(--stroke-1) solid var(--line);border-radius:var(--radius-10)}
 .cash-denomination-count>header{display:flex;align-items:center;justify-content:space-between;gap:var(--space-12);padding:var(--space-10) var(--space-12);background:var(--cloud-50)}
@@ -135,7 +135,7 @@
 .cash-denomination-count label:nth-child(odd){border-right:var(--stroke-1) solid var(--line)}
 .cash-denomination-count label:nth-child(n+3){border-top:var(--stroke-1) solid var(--line)}
 .cash-denomination-count label>span{font-weight:var(--font-weight-800)}
-.cash-denomination-count label>.ds-input{height:var(--size-34);min-height:var(--size-34)}
+.cash-denomination-count label>.ds-input{height:var(--control-height);min-height:var(--control-height)}
 .cash-denomination-count label>b{text-align:right;color:var(--ink-950);font-variant-numeric:tabular-nums}
 
 .cash-team-modal{width:min(var(--size-580),calc(100vw - var(--size-32)))}
@@ -156,7 +156,14 @@
 .cash-team-loading{display:grid;gap:var(--space-1);background:var(--line)}
 .cash-team-loading i{display:block;height:var(--size-48);background:var(--cloud-50)}
 
-.cash-close-modal{width:min(var(--size-580),calc(100vw - var(--size-32)))}
+.cash-close-modal{width:min(var(--size-960),100%);max-height:calc(100dvh - var(--size-48));display:flex;flex-direction:column;overflow:hidden}
+.cash-close-modal>header{flex-shrink:0}
+.cash-close-modal>form{display:flex;flex-direction:column;min-height:0;flex:1;overflow:hidden}
+.cash-close-modal .cash-dialog-body{min-height:0;overflow:auto;grid-auto-rows:max-content;align-content:start;padding-right:var(--space-8);scrollbar-gutter:stable;scrollbar-width:thin;scrollbar-color:var(--ink-400) var(--cloud-50);overscroll-behavior:contain}
+.cash-close-modal .cash-dialog-body::-webkit-scrollbar{width:var(--size-6)}
+.cash-close-modal .cash-dialog-body::-webkit-scrollbar-thumb{background:var(--ink-400);border-radius:var(--radius-control)}
+.cash-close-modal .cash-dialog-body::-webkit-scrollbar-track{background:var(--cloud-50)}
+.cash-close-modal form>footer{flex-shrink:0;background:var(--surface)}
 .cash-close-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-radius:var(--radius-10);background:var(--cloud-50);overflow:hidden}
 .cash-close-summary>div{display:grid;gap:var(--space-4);padding:var(--space-11) var(--space-12)}
 .cash-close-summary>div+div{border-left:var(--stroke-1) solid var(--line)}
@@ -233,7 +240,7 @@
  .cash-register-idle .button{width:100%}
  .cash-history-toolbar{grid-template-columns:1fr;padding:var(--space-10)}
  .cash-history-toolbar>p{grid-column:auto}
- .cash-modal,.cash-close-modal,.cash-detail-modal{width:100vw;height:100dvh;max-height:none;border-radius:0}
+ .cash-modal:not(.cash-close-modal),.cash-detail-modal{width:100vw;height:100dvh;max-height:none;border-radius:0}
  .cash-modal>.modal-busy{border-radius:0}
  .cash-close-summary{grid-template-columns:1fr}
  .cash-denomination-count>div{grid-template-columns:1fr}
@@ -246,6 +253,11 @@
  .cash-detail-head{grid-template-columns:1fr 1fr}
  .cash-detail-totals{grid-template-columns:1fr 1fr}
  .cash-detail-notes{grid-template-columns:1fr}
+}
+@media(max-width:600px){
+ .cash-close-modal{max-height:calc(100dvh - var(--size-20))}
+ .cash-close-modal form>footer{flex-direction:column}
+ .cash-close-modal form>footer .button{flex:none;width:100%}
 }
 @media(max-width:520px){
  .cash-register-header-actions{align-items:flex-end;flex-direction:column}

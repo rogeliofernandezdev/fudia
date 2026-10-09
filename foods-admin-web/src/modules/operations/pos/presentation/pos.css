@@ -136,6 +136,7 @@
 
 /* Modal de detalle */
 .pos-detail-modal{display:flex;flex-direction:column;width:min(var(--size-900),calc(100vw - var(--size-32)));max-height:min(var(--size-820),calc(100dvh - var(--size-32)));overflow:hidden}
+.pos-detail-modal>footer{display:flex;justify-content:flex-end;flex-shrink:0;padding:var(--space-16);border-top:var(--stroke-1) solid var(--line)}
 .pos-modal-heading{display:grid;gap:var(--space-1)}
 .pos-modal-heading p{margin:0;color:var(--ink-500);font-size:var(--font-size-label);font-weight:var(--font-weight-600)}
 .pos-detail-body{display:grid;gap:var(--space-14);padding:var(--space-18);overflow-y:auto;background:var(--cloud-50)}

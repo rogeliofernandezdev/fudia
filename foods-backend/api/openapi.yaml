@@ -507,6 +507,34 @@ paths:
       security: [{ sessionCookie: [] }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ProductAvailabilityInput" } } } }
       responses: { "204": { description: Disponibilidad actualizada }, "400": { $ref: "#/components/responses/BadRequest" }, "404": { description: Producto no encontrado }, "409": { description: El cupo solicitado es menor que las porciones ya vendidas }, "403": { $ref: "#/components/responses/Forbidden" } }
+  /v1/admin/product-availability/{productId}/history:
+    parameters: [{ in: path, name: productId, required: true, schema: { type: string, format: uuid } }]
+    get:
+      operationId: listProductAvailabilityHistory
+      summary: Historial de cambios manuales del producto en el local activo, de todos los días
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
+        - { in: query, name: pageSize, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+      responses:
+        "200": { description: Historial auditable con motivo y valores anteriores y nuevos; registros antiguos conservan null si no había detalle, content: { application/json: { schema: { $ref: "#/components/schemas/AvailabilityHistoryResponse" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { description: Producto no encontrado }
+        "503": { description: Historial no disponible }
+  /v1/operations/product-availability/{productId}/history:
+    parameters: [{ in: path, name: productId, required: true, schema: { type: string, format: uuid } }]
+    get:
+      operationId: listOperationsProductAvailabilityHistory
+      summary: Historial de cambios manuales del producto en el local activo
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
+        - { in: query, name: pageSize, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+      responses:
+        "200": { description: Historial auditable, content: { application/json: { schema: { $ref: "#/components/schemas/AvailabilityHistoryResponse" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { description: Producto no encontrado }
+        "503": { description: Historial no disponible }
   /v1/admin/inventory:
     get:
       operationId: listInventory
@@ -890,6 +918,20 @@ paths:
         "200": { description: Turno con movimientos, content: { application/json: { schema: { $ref: "#/components/schemas/CashShift" } } } }
         "404": { description: Turno no encontrado en el local activo }
         "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/cash-shifts/{id}/report:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      operationId: getCashShiftReport
+      tags: [Cash]
+      summary: Informe detallado del turno y copia persistida del cierre
+      description: "Requiere cash.read y alcance de empresa/local. El turno abierto devuelve un snapshot. Los cierres nuevos devuelven una copia persistida; los anteriores se reconstruyen (persisted=false). Cierre ciego sin cash.expected.read impide este detalle mientras siga abierto. Cada línea comercial aparece una vez para pedidos con pagos en el turno; el valor de productos no sustituye ni prorratea lo cobrado en pagos parciales."
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Informe, content: { application/json: { schema: { $ref: "#/components/schemas/CashShiftReport" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { description: Turno inexistente en el local }
+        "503": { description: No se pudo obtener el detalle completo }
   /v1/admin/cash-shifts/{id}/movements:
     parameters: [{ $ref: "#/components/parameters/EntityId" }]
     post:
@@ -1385,7 +1427,7 @@ paths:
       responses: { "200": { description: Usuario actualizado } }
   /v1/admin/users/{id}/status:
     parameters: [{ $ref: "#/components/parameters/EntityId" }]
-    patch: { operationId: updateUserStatus, security: [{ sessionCookie: [] }], responses: { "204": { description: Estado actualizado }, "409": { description: No puede desactivarse a sí mismo } } }
+    patch: { operationId: updateUserStatus, security: [{ sessionCookie: [] }], responses: { "204": { description: Estado actualizado }, "409": { description: Conflicto por auto-desactivación o último administrador; plan_limit_reached si reactivar supera el máximo de usuarios activos, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }, "503": { description: No se pudo validar el usuario o la capacidad de la suscripción } } }
 components:
   securitySchemes: { sessionCookie: { type: apiKey, in: cookie, name: foods_session }, conciergeServiceKey: { type: apiKey, in: header, name: X-Fudia-Concierge-Key } }
   parameters:
@@ -1522,7 +1564,30 @@ components:
     ProductModifierOption: { allOf: [{ $ref: "#/components/schemas/ProductModifierOptionInput" }, { type: object, required: [id], properties: { id: { type: string, format: uuid } } }] }
     ProductModifierGroup: { type: object, required: [id, name, required, minSelections, maxSelections, options], properties: { id: { type: string, format: uuid }, name: { type: string }, required: { type: boolean }, minSelections: { type: integer }, maxSelections: { type: integer }, options: { type: array, items: { $ref: "#/components/schemas/ProductModifierOption" } } } }
     ProductModifierConfig: { type: object, required: [productId, groups], properties: { productId: { type: string, format: uuid }, groups: { type: array, items: { $ref: "#/components/schemas/ProductModifierGroup" } } } }
-    ProductAvailabilityInput: { type: object, required: [status], properties: { status: { type: string, enum: [available, sold_out] }, portionQuantity: { type: [integer, "null"], minimum: 0, description: "Para control portions, no puede ser menor que soldQuantity; al marcar available debe ser al menos 1. null conserva el cupo diario existente cuando ya existe un registro." }, note: { type: string, maxLength: 240 } } }
+    ProductAvailabilityInput: { type: object, required: [status, reason], properties: { reason: { type: string, minLength: 1, maxLength: 240, description: Motivo obligatorio del cambio manual; no admite solo espacios }, status: { type: string, enum: [available, sold_out] }, portionQuantity: { type: [integer, "null"], minimum: 0, description: "Para control portions, no puede ser menor que soldQuantity; al marcar available debe ser al menos 1. null conserva el cupo diario existente cuando ya existe un registro." }, note: { type: string, maxLength: 240 } } }
+    AvailabilityHistoryItem:
+      type: object
+      required: [id, createdAt, businessDate, userId, userName, reason, previousPortionQuantity, portionQuantity, soldQuantity, previousManualStatus, manualStatus]
+      properties:
+        id: { type: string, format: uuid }
+        createdAt: { type: string, format: date-time }
+        businessDate: { type: [string, "null"], format: date }
+        userId: { type: [string, "null"], format: uuid }
+        userName: { type: string }
+        reason: { type: [string, "null"] }
+        previousPortionQuantity: { type: [integer, "null"] }
+        portionQuantity: { type: [integer, "null"] }
+        soldQuantity: { type: [integer, "null"] }
+        previousManualStatus: { type: [string, "null"], enum: [available, sold_out, null] }
+        manualStatus: { type: [string, "null"], enum: [available, sold_out, null] }
+    AvailabilityHistoryResponse:
+      type: object
+      required: [items, total, page, pageSize]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/AvailabilityHistoryItem" } }
+        total: { type: integer, minimum: 0 }
+        page: { type: integer, minimum: 1 }
+        pageSize: { type: integer, minimum: 1 }
     ProductAvailability: { type: object, required: [productId, name, quantityControl, status, source, manualStatus, soldQuantity, note, businessDate], properties: { productId: { type: string, format: uuid }, name: { type: string }, categoryName: { type: [string, "null"] }, imageUrl: { type: [string, "null"] }, quantityControl: { type: string, enum: [none, portions, inventory] }, status: { type: string, enum: [available, low, sold_out, unavailable] }, source: { type: string, enum: [always, portions, inventory, manual_override, schedule, combo_components] }, manualStatus: { type: string, enum: [available, sold_out] }, portionQuantity: { type: [integer, "null"] }, soldQuantity: { type: integer, minimum: 0 }, remaining: { type: [number, "null"], minimum: 0 }, inventoryUnit: { type: [string, "null"] }, note: { type: string }, businessDate: { type: string, format: date } } }
     InventoryItem: { type: object, required: [inventoryItemId, productId, sku, name, kind, active, unit, quantity, minimumStock, status, updatedAt], properties: { inventoryItemId: { type: string, format: uuid }, productId: { type: [string, "null"], format: uuid }, sku: { type: string }, name: { type: string }, kind: { type: string, enum: [product, ingredient] }, categoryName: { type: [string, "null"] }, active: { type: boolean }, unit: { type: string }, quantity: { type: string }, minimumStock: { type: string }, status: { type: string, enum: [ok, low, out] }, updatedAt: { type: string, format: date-time } } }
     InventoryPresentation: { type: object, required: [id, presentationType, unitsPerPresentation, name, isDefault], properties: { id: { type: string, format: uuid }, presentationType: { type: string, pattern: "^[a-z][a-z0-9_-]{0,31}$" }, unitsPerPresentation: { type: string }, name: { type: string }, isDefault: { type: boolean } } }
@@ -1552,6 +1617,70 @@ components:
     InventoryAdjustmentResult: { type: object, required: [id, inventoryItemId, name, unit, movementType, reason, quantity, stockBefore, stockAfter, observation, createdAt, createdByName], properties: { id: { type: string, format: uuid }, inventoryItemId: { type: string, format: uuid }, name: { type: string }, unit: { type: string }, movementType: { type: string, enum: [entry, exit] }, reason: { type: string, enum: [surplus_adjustment, shortage_adjustment, waste, expiration, other_exit] }, quantity: { type: number }, stockBefore: { type: number, minimum: 0 }, stockAfter: { type: number, minimum: 0 }, observation: { type: string }, createdAt: { type: string, format: date-time }, createdByName: { type: string } } }
     StockMovement: { type: object, required: [id, inventoryItemId, productId, itemName, movementType, quantityDelta, balanceBefore, balanceAfter, sourceType, sourceId, sourceReference, note, createdByName, createdAt], properties: { id: { type: string, format: uuid }, inventoryItemId: { type: string, format: uuid }, productId: { type: [string, "null"], format: uuid }, itemName: { type: string }, movementType: { type: string, enum: [entry, sale, sale_reversal, sale_adjustment, inventory_adjustment] }, adjustmentType: { type: [string, "null"], enum: [entry, exit, null] }, reason: { type: [string, "null"], enum: [surplus_adjustment, shortage_adjustment, waste, expiration, other_exit, null] }, quantityDelta: { type: string }, balanceBefore: { type: string }, balanceAfter: { type: string }, sourceType: { type: string, enum: [inventory_entry, order, inventory_adjustment, purchase_receipt] }, sourceId: { type: string, format: uuid }, sourceReference: { type: string }, note: { type: string }, createdByName: { type: string }, createdAt: { type: string, format: date-time } } }
     CashRegisterInput: { type: object, required: [name], properties: { name: { type: string, minLength: 1, maxLength: 80 }, blindClose: { type: boolean, default: false } } }
+    CashReportSale:
+      type: object
+      required: [id, orderCode, customer, name, details, quantity, unitPrice, total, createdAt, waiterName]
+      properties:
+        id: { type: string, format: uuid }
+        orderCode: { type: string }
+        customer: { type: string }
+        name: { type: string }
+        details: { type: string }
+        quantity: { type: string }
+        unitPrice: { type: string }
+        total: { type: string }
+        createdAt: { type: string, format: date-time }
+        waiterName: { type: string }
+    CashReportPayment:
+      type: object
+      required: [id, orderCode, methodName, amount, reference, createdByName, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        orderCode: { type: string }
+        methodName: { type: string }
+        amount: { type: string }
+        reference: { type: string }
+        createdByName: { type: string }
+        createdAt: { type: string, format: date-time }
+    CashShiftReport:
+      type: object
+      required: [version, persisted, generatedAt, organizationName, locationName, timezone, country, currency, currencySymbol, currencyPosition, currencyDecimals, shift, sales, payments, refunds, methods, counts, collectedAmount, refundedAmount, netCollectedAmount]
+      properties:
+        version: { type: integer, const: 1 }
+        persisted: { type: boolean }
+        generatedAt: { type: string, format: date-time }
+        organizationName: { type: string }
+        locationName: { type: string }
+        timezone: { type: string }
+        country: { type: string }
+        currency: { type: string }
+        currencySymbol: { type: string }
+        currencyPosition: { type: string, enum: [before, after] }
+        currencyDecimals: { type: integer }
+        shift: { $ref: "#/components/schemas/CashShift" }
+        sales: { type: array, items: { $ref: "#/components/schemas/CashReportSale" } }
+        payments: { type: array, items: { $ref: "#/components/schemas/CashReportPayment" } }
+        refunds: { type: array, items: { $ref: "#/components/schemas/CashReportPayment" } }
+        methods:
+          type: array
+          items:
+            type: object
+            required: [name, amount]
+            properties:
+              name: { type: string }
+              amount: { type: string }
+        counts:
+          type: array
+          items:
+            type: object
+            required: [denomination, quantity, total]
+            properties:
+              denomination: { type: string }
+              quantity: { type: integer }
+              total: { type: string }
+        collectedAmount: { type: string }
+        refundedAmount: { type: string }
+        netCollectedAmount: { type: string }
     CashRegister: { type: object, required: [id, code, name, active, blindClose, openShift], properties: { id: { type: string, format: uuid }, code: { type: string }, name: { type: string }, active: { type: boolean }, blindClose: { type: boolean }, openShift: { anyOf: [{ $ref: "#/components/schemas/CashShift" }, { type: "null" }] } } }
     CashShiftOpenInput: { type: object, required: [cashRegisterId, openingAmount], properties: { cashRegisterId: { type: string, format: uuid }, openingAmount: { type: number, minimum: 0 }, note: { type: string, maxLength: 240 } } }
     CashMovementInput: { type: object, required: [movementType, amount, reason], properties: { movementType: { type: string, enum: [income, expense] }, amount: { type: number, exclusiveMinimum: 0 }, reason: { type: string, minLength: 1, maxLength: 120 }, note: { type: string, maxLength: 240 } } }
@@ -1566,7 +1695,24 @@ components:
     CashOperation: { type: object, required: [id, operationType, amount, reason, note, createdAt], properties: { id: { type: string, format: uuid }, operationType: { type: string, enum: [cash_pull, deposit, transfer] }, amount: { type: string }, reason: { type: string }, note: { type: string }, createdAt: { type: string, format: date-time } } }
     POSOrderSummary: { type: object, required: [id, code, channel, status, customerName, tableName, total, paidAmount, remainingAmount, paymentStatus, paymentMethods, createdAt], properties: { billClosed: { type: boolean, description: La cuenta está cerrada para cobro }, id: { type: string, format: uuid }, code: { type: string }, channel: { type: string }, status: { type: string }, customerName: { type: string }, tableName: { type: string }, total: { type: string }, paidAmount: { type: string }, remainingAmount: { type: string }, paymentStatus: { type: string, enum: [pending, partial, paid] }, paymentMethods: { type: array, uniqueItems: true, items: { type: string }, description: "Nombres del catálogo de la empresa usados en pagos con importe neto positivo; sin duplicados, ordenados por nombre. Incluye medios ahora inactivos y devuelve un arreglo vacío si no hay cobros vigentes." }, createdAt: { type: string, format: date-time } } }
     POSOrderList: { type: object, required: [items, total, page, pageSize], properties: { items: { type: array, items: { $ref: "#/components/schemas/POSOrderSummary" } }, total: { type: integer }, page: { type: integer }, pageSize: { type: integer } } }
-    POSOrderDetail: { type: object, required: [order, paidAmount, remainingAmount, paymentStatus, payments], properties: { order: { $ref: "#/components/schemas/Order" }, paidAmount: { type: string }, remainingAmount: { type: string }, paymentStatus: { type: string, enum: [pending, partial, paid] }, payments: { type: array, items: { $ref: "#/components/schemas/Payment" } } } }
+    POSOrderDetail: { type: object, required: [order, paidAmount, remainingAmount, paymentStatus, payments, receiptContext], properties: { receiptContext: { $ref: "#/components/schemas/PaymentReceiptContext" }, order: { $ref: "#/components/schemas/Order" }, paidAmount: { type: string }, remainingAmount: { type: string }, paymentStatus: { type: string, enum: [pending, partial, paid] }, payments: { type: array, items: { $ref: "#/components/schemas/Payment" } } } }
+    PaymentReceiptContext:
+      type: object
+      description: Identidad actual del restaurante/local y formato monetario para ticket operativo no fiscal. No emite boleta, factura, serie fiscal ni aceptación SUNAT.
+      required: [organizationName, legalName, taxId, locationName, address, phone, country, timezone, currency, currencySymbol, currencyPosition, currencyDecimals]
+      properties:
+        organizationName: { type: string }
+        legalName: { type: string }
+        taxId: { type: string }
+        locationName: { type: string }
+        address: { type: string }
+        phone: { type: string }
+        country: { type: string }
+        timezone: { type: string }
+        currency: { type: string }
+        currencySymbol: { type: string }
+        currencyPosition: { type: string, enum: [before, after] }
+        currencyDecimals: { type: integer }
     PaymentMethodInput: { type: object, required: [name, salesEnabled, expensesEnabled, affectsCash, sortOrder], properties: { code: { type: string, pattern: "^[a-z0-9][a-z0-9_-]{0,39}$" }, name: { type: string, minLength: 1, maxLength: 80 }, description: { type: string, maxLength: 180 }, salesEnabled: { type: boolean }, expensesEnabled: { type: boolean }, affectsCash: { type: boolean }, sortOrder: { type: integer, minimum: 0, maximum: 9999 } } }
     PaymentMethod: { type: object, required: [code, name, description, active, salesEnabled, expensesEnabled, affectsCash, sortOrder], properties: { code: { type: string }, name: { type: string }, description: { type: string }, active: { type: boolean }, salesEnabled: { type: boolean }, expensesEnabled: { type: boolean }, affectsCash: { type: boolean }, sortOrder: { type: integer } } }
     PaymentInput: { type: object, required: [orderId, method, amount], properties: { orderId: { type: string, format: uuid }, method: { type: string }, amount: { type: number, exclusiveMinimum: 0 }, reference: { type: string, maxLength: 120 } } }

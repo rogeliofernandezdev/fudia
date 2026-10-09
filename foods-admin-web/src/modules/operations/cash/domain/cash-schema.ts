@@ -59,6 +59,9 @@ const closeSchema=z.object({
     quantity:z.string(),
   })),
 }).superRefine((value,ctx)=>{
+  if(value.counts.some(line=>line.quantity!==""&&(!Number.isInteger(Number(line.quantity))||Number(line.quantity)<0))){
+    ctx.addIssue({code:"custom",path:["countedAmount"],message:"Las cantidades de billetes y monedas deben ser enteros no negativos."});
+  }
   const validCounts=value.counts.filter(line=>Number(line.denomination)>0&&Number(line.quantity)>0);
   const counted=Number(value.countedAmount);
   if(!validCounts.length&&!(value.countedAmount!==""&&Number.isFinite(counted)&&counted>=0)){

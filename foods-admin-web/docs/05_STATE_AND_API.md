@@ -1,5 +1,35 @@
 # Estado e integración
 
+## Ticket de pago de 80 mm
+
+POS abre la vista previa únicamente en el callback `onClose` del aviso de éxito,
+después de la respuesta de `POST payments`. Consulta nuevamente el detalle y
+verifica que el pago confirmado esté presente; imprimir, descargar y reintentar
+son de solo lectura y nunca repiten cobros. POS y Ventas reutilizan el mismo
+diálogo para copias. La caché incluye empresa/local/pedido, sin catálogos locales.
+`receiptContext` viene del backend y describe identidad actual y moneda del local,
+no una instantánea fiscal histórica. No se recalculan impuestos desde preferencias.
+El PDF tiene ancho 80 mm y altura adaptable; los documentos largos continúan sin
+omitir líneas. El visor muestra el Blob real y libera su URL al cerrar. Imprimir
+usa un documento aislado con la misma composición y abre el diálogo del navegador;
+no requiere un puente ESC/POS ni configura la impresora automáticamente.
+
+## Cierre de caja con informe
+
+`useCashReport` consulta el informe por empresa/local/turno y presenta skeleton,
+error con reintento y vacíos explícitos. El cierre carga un resumen fresco antes
+del arqueo, sin reconsultar al recuperar foco ni borrar el conteo. `Cerrar turno`
+exige clic, bloquea doble envío y espera el API; no tiene reintento
+automático de escritura. El aviso exitoso se muestra tras confirmar y su callback
+global `onClose` abre la vista previa después de retirar el aviso, sin apilarla
+con el formulario anterior. Se invalidan Caja, informe y Dashboard.
+
+La generación PDF se carga bajo demanda y utiliza moneda/zona/nombres del
+snapshot, no la configuración actual. Un fallo de lectura/logo/PDF permite
+reintentar solo el informe: nunca repite el cierre. El Blob se libera al cerrar
+la vista. Turnos conserva un acceso de lectura al detalle y PDF; los cierres
+anteriores sin snapshot se identifican como reconstruidos.
+
 TanStack Query administra estado remoto por organización/local. Presentación no
 contiene rutas HTTP ni DTO crudos. Toda dependencia muestra skeleton, error y vacío.
 
@@ -49,6 +79,20 @@ Los autocompletes de catálogos grandes no cargan el catálogo completo. La aper
 
 ## Performance de consultas en cliente
 
+Locales y Mi perfil comparten la lectura de suscripción, con caché por empresa
+y usuario y refresco al recuperar foco. «Nuevo local» consulta `maxLocations`
+y el uso activo devueltos por el API; no deduce capacidad por nombre de plan,
+filas de una página o total de locales inactivos. Carga/error/refresco bloquean
+el alta y el error ofrece reintento. Crear, editar y desactivar invalidan el uso.
+El backend conserva la validación transaccional definitiva del límite.
+
+Usuarios reutiliza `useSubscriptionCapacity`, igual que Locales: máximo y uso
+activo proceden de la suscripción, no de la tabla filtrada. El cupo bloquea
+«Nuevo usuario» y reactivar inactivos; editar, desactivar y crear roles permanecen
+independientes. Alta, edición y cambios de estado refrescan el cupo. La confirmación
+compartida admite `confirmDisabled` separado de `pending`: si cambia la capacidad
+mientras está abierta, deshabilita Activar y explica el motivo sin impedir Cancelar.
+
 Las búsquedas de listados no disparan una petición por pulsación. Deben reutilizar
 `useDebouncedValue` con una ventana aproximada de 300 ms y mantener el texto
 visible separado del valor consultado.
@@ -80,6 +124,17 @@ silencioso. Guardar conserva el contrato existente `quota` y no realiza un
 movimiento de stock.
 
 ## Estado de productos
+
+Disponibilidad solicita un motivo nuevo antes de guardar un cupo, Agotar o
+Reactivar. No usa la nota anterior como motivo ni envía al abrir el diálogo.
+Reutiliza RHF/Zod, formulario CRUD, validación en línea, guardado explícito por
+botón y bloqueo síncrono de duplicados. Éxito/error solo aparecen tras la
+respuesta y cierran el diálogo mediante `onResponseClose` compartido.
+La acción de ojo abre historial remoto por producto, empresa y local, con
+paginación compartida, fecha/hora regional, valores anteriores/nuevos, motivo
+y autor. Conserva los eventos antiguos sin detalle con un texto explícito.
+Lectura no exige `menu.manage`. Guardar invalida historial, disponibilidad,
+productos, catálogo operativo, combos y dashboard.
 
 El listado de Productos recibe `availableQuantity` e `inventoryUnit` del backend,
 sin calcular existencias en el cliente ni cargar Disponibilidad por cada fila.

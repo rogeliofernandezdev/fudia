@@ -1,6 +1,7 @@
 "use client";
 import "./sales.css";
 import {useState} from "react";
+import dynamic from "next/dynamic";
 import {useQuery} from "@tanstack/react-query";
 import {Button,FormField,Icon,Input,PageHeader,Pagination,RowActionButton,Status} from "@/design-system";
 import {useSession} from "@/providers";
@@ -10,6 +11,7 @@ import {useDebouncedValue} from "@/shared/hooks/use-debounced-value";
 import {getSaleDetail,listSales} from "../infrastructure/sales-api";
 import type {Sale} from "../domain/types";
 import {SaleDetailDialog} from "./sale-detail-dialog";
+const PaymentTicketDialog=dynamic(()=>import("./payment-ticket-dialog").then(module=>module.PaymentTicketDialog),{ssr:false});
 
 const channelLabel:Record<string,string>={salon:"Salón",mostrador:"Mostrador",recojo:"Recojo",delivery:"Delivery",whatsapp:"WhatsApp"};
 const paymentMethodsLabel=(sale:Sale)=>(sale.paymentMethods??[]).join(" · ")||"—";
@@ -24,6 +26,7 @@ export function SalesPage(){
   const[detailId,setDetailId]=useState<string|null>(null);
   const[from,setFrom]=useState("");
   const[to,setTo]=useState("");
+  const[ticketId,setTicketId]=useState<string|null>(null);
   const invalidRange=Boolean(from&&to&&from>to);
   const hasFilters=Boolean(q||from||to);
   const sales=useQuery({queryKey:["sales",debouncedQ,from,to,page,size],queryFn:()=>listSales({q:debouncedQ,page,pageSize:size,from,to}),enabled:!invalidRange,refetchInterval:30000});
@@ -44,7 +47,8 @@ export function SalesPage(){
       :<SalesResults items={sales.data.items} money={money} date={date} view={setDetailId}/>}
       {!invalidRange&&!sales.isLoading&&!sales.isError&&<Pagination page={page} size={size} total={sales.data?.total??0} onPage={setPage} onSize={v=>{setSize(v);setPage(1)}}/>}
     </section>
-    {detailId&&<SaleDetailDialog loading={detail.isLoading} error={detail.error?.message} data={detail.data} money={money} date={date} close={()=>setDetailId(null)} retry={()=>void detail.refetch()}/>}
+    {detailId&&<SaleDetailDialog loading={detail.isLoading} error={detail.error?.message} data={detail.data} money={money} date={date} close={()=>setDetailId(null)} retry={()=>void detail.refetch()} ticket={()=>{setDetailId(null);setTicketId(detailId)}}/>}
+    {ticketId&&<PaymentTicketDialog orderId={ticketId} close={()=>setTicketId(null)}/>}
   </>;
 }
 

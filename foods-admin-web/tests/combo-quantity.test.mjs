@@ -18,7 +18,7 @@ const validation=compile("domain/wizard-validation.ts",name=>name==="./option-qu
 const base={id:"lomo",name:"Lomo saltado",categoryName:"Segundos",price:"20",active:true,availableQuantity:15};
 const cause={...base,id:"causa",name:"Causa rellena",categoryName:"Entradas",availableQuantity:12};
 function nodes(tree,result=[]){if(Array.isArray(tree))tree.forEach(node=>nodes(node,result));else if(tree&&typeof tree==="object"){result.push(tree);nodes(tree.props?.children,result)}return result}
-function mount({products=[base,cause],locationId="local-a",organizationId="org-a"}={}){
+function mount({products=[base,cause],locationId="local-a",organizationId="org-a",canManage=true,combos=[],autoOpen=true}={}){
  const frames=new Map(),queries=[];let active,mutations=[];
  const {CombosPage}=compile("presentation/combos-page.tsx",name=>{
   if(name==="react")return{
@@ -28,11 +28,11 @@ function mount({products=[base,cause],locationId="local-a",organizationId="org-a
   };
   if(name==="@tanstack/react-query")return{
    useQueryClient:()=>({invalidateQueries:async()=>{}}),
-   useQuery:options=>{queries.push(options);return{data:{items:options.queryKey.includes("combo-picker")?products:[],total:products.length},isLoading:false,isError:false}},
+   useQuery:options=>{queries.push(options);return{data:{items:options.queryKey.includes("combo-picker")?products:combos,total:products.length},isLoading:false,isError:false}},
    useMutation:options=>{mutations.push(options);return{isPending:false,mutate:()=>{}}},
   };
   if(name==="@/providers")return{useFeedback:()=>({notify:()=>{}})};
-  if(name==="@/providers/session-context")return{useSession:()=>({organization:{id:organizationId},location:{id:locationId,country:"PE"}})};
+  if(name==="@/providers/session-context")return{useSession:()=>({organization:{id:organizationId},location:{id:locationId,country:"PE"},can:permission=>permission==="menu.manage"?canManage:true})};
   if(name==="@/providers/settings-context")return{useSettings:()=>({currencySymbol:"S/"})};
   if(name==="@/shared/hooks/use-debounced-value")return{useDebouncedValue:value=>value};
   if(name.startsWith("@/design-system"))return Object.fromEntries(["Dialog","Button","ConfirmDialog","Icon","Input","PageHeader","Pagination","RemoteModalSkeleton","RowActionButton","Select","Status","Textarea"].map(key=>[key,key]));
@@ -48,11 +48,33 @@ function mount({products=[base,cause],locationId="local-a",organizationId="org-a
  function page(){mutations=[];return render(CombosPage,{},"page")}
  function wizard(){const node=page().find(node=>node.type?.name==="ComboWizard");return{node,view:render(node.type,node.props,"wizard")}}
  function composition(){const node=wizard().view.find(node=>node.type?.name==="CompositionStep");return render(node.type,node.props,"composition")}
- page().find(node=>node.type==="PageHeader").props.action.props.onClick();
- wizard().node.props.setStep(2);
- return{page,wizard,composition,queries,setProducts:value=>{products=value},edit:value=>{page();mutations[1].onSuccess(value);wizard().node.props.setStep(2)}};
+ if(autoOpen){page().find(node=>node.type==="PageHeader").props.action.props.onClick();wizard().node.props.setStep(2)}
+ return{page,wizard,composition,queries,setCanManage:value=>{canManage=value},setProducts:value=>{products=value},edit:value=>{page();mutations[1].onSuccess(value);wizard().node.props.setStep(2)}};
 }
 const quotaInput=view=>view.find(node=>node.type==="Input"&&node.props.id?.includes("-quota-"));
+
+test("menús y combos: lectura no habilita crear, editar ni cambiar estado",()=>{
+ const combos=[{id:"combo",name:"Menú del día",price:"25",groupCount:2,active:true},{id:"inactive",name:"Menú inactivo",price:"20",groupCount:1,active:false}];
+ const ui=mount({canManage:false,autoOpen:false,combos});
+ const view=ui.page();
+ assert.equal(view.find(node=>node.type==="PageHeader").props.action,undefined);
+ assert.deepEqual(view.filter(node=>node.type==="RowActionButton").map(node=>node.props.action),["view","view"]);
+ assert.equal(view.some(node=>node.type?.name==="ComboWizard"),false);
+ assert.ok(view.some(node=>node.type==="Pagination"));
+ assert.equal(mount({canManage:false,autoOpen:false}).page().some(node=>node.type==="Button"&&node.props.icon==="plus"),false);
+});
+
+test("menús y combos: las acciones siguen el permiso asignado, también al revocarlo",()=>{
+ const ui=mount({combos:[{id:"combo",name:"Menú",price:"25",groupCount:2,active:true}]});
+ assert.deepEqual(ui.page().filter(node=>node.type==="RowActionButton").map(node=>node.props.action),["view","edit","deactivate"]);
+ ui.page().find(node=>node.type==="RowActionButton"&&node.props.action==="deactivate").props.onClick();
+ ui.setCanManage(false);
+ const view=ui.page();
+ assert.equal(view.some(node=>node.type?.name==="ComboWizard"),false);
+ assert.equal(view.find(node=>node.type==="ConfirmDialog").props.open,false);
+ assert.deepEqual(view.filter(node=>node.type==="RowActionButton").map(node=>node.props.action),["view"]);
+ assert.equal(ui.queries.filter(query=>query.queryKey.includes("combo-picker")).at(-1).enabled,false);
+});
 
 test("Reservar parte del saldo disponible del API, incluidos cero y stock fraccionario",()=>{
  for(const [availableQuantity,expected] of [[15,"15"],[12,"12"],[0,"0"],[2.75,"2"],[null,""]]){

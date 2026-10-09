@@ -19,9 +19,9 @@ function compile(file,resolve,extra=""){
  return exports;
 }
 function mountPage({canManage=true,shift=true,busy=false,initialOrderId="order-1",listed=[]}={}){
- const queries=[],mutations=[],changes=[],sent=[],invalidations=[];let stateIndex=0,dynamicIndex=0;
+ const queries=[],mutations=[],changes=[],sent=[],invalidations=[],notices=[];let stateIndex=0,dynamicIndex=0;
  const resolve=name=>{
-  if(name==="next/dynamic")return{default:()=>["PaymentDialog","RefundDialog"][dynamicIndex++]};
+  if(name==="next/dynamic")return{default:()=>["PaymentDialog","RefundDialog","PaymentTicketDialog"][dynamicIndex++]};
   if(name==="next/link")return{default:"Link"};
   if(name==="react")return{...require(name),useState:value=>{const index=stateIndex++;return[value,next=>changes.push({index,next})]}};
   if(name==="@tanstack/react-query")return{
@@ -31,7 +31,7 @@ function mountPage({canManage=true,shift=true,busy=false,initialOrderId="order-1
   };
   if(name==="@/design-system")return primitives;
   if(name==="@/design-system/dialog")return{Dialog:"Dialog"};
-  if(name==="@/providers")return{useFeedback:()=>({notify:()=>{}}),useSession:()=>({can:()=>canManage,location:{country:"PE",timezone:"America/Lima"}})};
+  if(name==="@/providers")return{useFeedback:()=>({notify:value=>notices.push(value)}),useSession:()=>({can:()=>canManage,location:{country:"PE",timezone:"America/Lima"}})};
   if(name==="@/providers/settings-context")return{useSettings:()=>({currencySymbol:"S/",currencyDecimals:2,currencyPosition:"before"})};
   if(name==="@/shared/i18n/regional-format")return{formatRegionalNumber:value=>String(value),formatRegionalDateTime:()=>"Hoy"};
   if(name==="@/shared/hooks/use-debounced-value")return{useDebouncedValue:value=>value};
@@ -44,7 +44,7 @@ function mountPage({canManage=true,shift=true,busy=false,initialOrderId="order-1
  const compiled=compile("pos-page.tsx",resolve,"\nexport {POSPaymentEntry,POSPaymentLoading,POSDetailDialog};\n");
  const tree=compiled.POSPage({initialOrderId});
  const entry=nodes(tree).find(node=>node.type===compiled.POSPaymentEntry);
- return{...compiled,entry,queries,mutations,changes,sent,invalidations,tree};
+ return{...compiled,entry,queries,mutations,changes,sent,invalidations,notices,tree};
 }
 function entryProps(changes={}){return{loading:false,data:detail,shiftLoading:false,shiftName:"Caja principal",canManage:true,busy:false,formatMoney:value=>`S/ ${value}`,close:()=>{},retryOrder:()=>{},retryShift:()=>{},save:()=>{},...changes}}
 
@@ -68,9 +68,17 @@ test("Cobrar saldo abre el formulario real, no el detalle, sin registrar pagos a
  assert.equal(view.sent.length,1);
  assert.equal(view.sent[0].orderId,"order-1");
  assert.equal(view.sent[0].draft,draft);
- view.mutations[0].onSuccess({method:"cash"});
+ view.mutations[0].onSuccess({method:"cash",id:"payment-1"},{orderId:"order-1"});
  assert.ok(view.changes.some(change=>change.next===null));
  for(const key of ["pos-orders","pos-order","orders","salon-floor","cash-shift","sales","dashboard"])assert.ok(view.invalidations.some(queryKey=>queryKey[0]===key));
+});
+
+test("el ticket abre después del aviso y de la respuesta de pago, nunca en error ni al enviar",()=>{
+ const view=mountPage();assert.equal(view.notices.length,0);assert.equal(view.mutations[0].retry,false);
+ view.mutations[0].onSuccess({id:"payment-1"},{orderId:"order-1"});
+ assert.equal(view.changes.some(change=>change.next?.paymentId),false);
+ view.notices[0].onClose();assert.ok(view.changes.some(change=>change.next?.paymentId==="payment-1"&&change.next.orderId==="order-1"));
+ const failed=mountPage();failed.mutations[0].onError(new Error("Rechazado"));assert.equal(failed.notices[0].onClose,undefined);assert.equal(failed.changes.length,0);
 });
 
 test("Cobrar y Ver detalle de la tabla abren destinos independientes",()=>{

@@ -313,7 +313,8 @@ test("caja separa cajas fisicas de sus turnos",()=>{
   assert.ok(page.includes("cashRegisterName"),"El historial identifica la caja de cada turno");
   assert.ok(page.includes('movement(shift,"income")'),"Un turno abierto permite ingresos manuales");
   assert.ok(page.includes('movement(shift,"expense")'),"Un turno abierto permite egresos manuales");
-  assert.ok(page.includes("CloseCashShiftDialog"),"El cierre se realiza mediante arqueo");
+  assert.ok(page.includes("CashClosingDialog"),"El cierre carga el resumen antes del arqueo");
+  assert.ok(read("src/modules/operations/cash/presentation/cash-closing-dialog.tsx").includes("CloseCashShiftDialog"),"El resumen conserva el arqueo compartido");
   assert.ok(page.includes('RowActionButton action="view"'),"El historial abre detalle solo lectura");
 
   assert.ok(dialogs.includes("CashRegisterDialog"),"Registrar caja tiene un formulario propio");

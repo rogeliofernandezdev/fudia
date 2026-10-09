@@ -15,11 +15,12 @@ type ConfirmDialogProps={
   tone?:"danger"|"success";
   confirmLabel:string;
   pending?:boolean;
+  confirmDisabled?:boolean;
   onCancel:()=>void;
   onConfirm:()=>void;
 };
 
-export function ConfirmDialog({open,title,description,subject,children,note,tone="danger",confirmLabel,pending=false,onCancel,onConfirm}:ConfirmDialogProps){
+export function ConfirmDialog({open,title,description,subject,children,note,tone="danger",confirmLabel,pending=false,confirmDisabled=false,onCancel,onConfirm}:ConfirmDialogProps){
   const id=useId();
   if(!open)return null;
   const hasMessage=Children.toArray(description).length>0;
@@ -39,7 +40,7 @@ export function ConfirmDialog({open,title,description,subject,children,note,tone
       </div>}
       <footer className="confirm-actions">
         <button type="button" className="button ghost" data-dialog-initial-focus autoFocus disabled={pending} onClick={onCancel}>Cancelar</button>
-        <button type="button" className={`button ${tone}`} disabled={pending} onClick={onConfirm}>{pending?"Procesando…":confirmLabel}</button>
+        <button type="button" className={`button ${tone}`} disabled={pending||confirmDisabled} onClick={onConfirm}>{pending?"Procesando…":confirmLabel}</button>
       </footer>
     </Dialog>
   </div>;

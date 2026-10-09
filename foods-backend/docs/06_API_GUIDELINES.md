@@ -1,5 +1,11 @@
 # API
 
+`POSOrderDetail.receiptContext` expone identidad actual de empresa/local,
+dirección/teléfono y moneda/zona del perfil fiscal del local, con el mismo permiso
+`orders.read` y alcance de sesión. Permite un ticket operativo de pago de 80 mm;
+no emite un comprobante fiscal ni genera series/SUNAT. Leer el detalle no registra
+pagos. No requiere migración ni amplía permisos.
+
 REST JSON descrito en api/openapi.yaml. Los errores usan código estable, mensaje
 seguro y correlationId. Paginación, filtros, idempotencia y concurrencia se
 definen en OpenAPI antes del frontend.
@@ -90,6 +96,21 @@ de repartidores, zonas o seguimiento geográfico sigue fuera de este alcance.
 
 ## Lookups de catálogo
 
+`PATCH /v1/admin/product-availability/{productId}` (y su alias de Operación)
+exige `menu.manage` y `reason` no vacío de hasta 240 caracteres para cambios
+manuales de cupo o Agotado/Reactivar. Estado y cantidad conservan sus invariantes;
+el motivo no sustituye `note`. Guarda valores anteriores/nuevos, porciones
+vendidas al cambiar, fecha operativa, autor y motivo en `audit_log` dentro de
+la misma transacción: si falla auditoría no cambia disponibilidad. Un reintento
+con el mismo estado/cupo/nota no crea otro cambio. La hora usa `clock_timestamp()`
+después de bloquear el producto para ordenar cambios concurrentes correctamente.
+
+`GET /v1/admin/product-availability/{productId}/history` y el alias de Operación
+exigen `menu.read`, filtran empresa/local de sesión y producto y paginan todos
+los días en orden descendente estable. Conteo y filas comparten snapshot.
+Los eventos antiguos sin metadata devuelven null, sin inventar valores/motivos.
+La migración 78 añade solo un índice parcial de lectura; no altera cantidades.
+
 `POST /v1/admin/products` exige `menu.manage` y `initialPortionQuantity` entera
 positiva cuando `quantityControl=portions`. Sin control e Inventario no aceptan
 ese campo. Producto, porciones de hoy del local de sesión y auditoría se confirman
@@ -117,6 +138,22 @@ Los endpoints usados por autocompletes exponen `q`, `page` y `pageSize` y devuel
   directamente.
 
 ## Fechas auditables de Caja
+
+`GET /v1/admin/cash-shifts/{id}/report` requiere `cash.read` y alcance de empresa
+y local. Devuelve identidad, turno, productos de pedidos con cobros, cada pago
+con medio/autor/referencia, movimientos con motivo/autor, denominaciones y
+totales monetarios decimales. `EXISTS` evita duplicar productos por pagos
+divididos. Los valores de productos son del pedido completo: no se prorratean
+como cobros del turno. Reversos se atribuyen al turno donde se registraron.
+Los turnos abiertos se leen en una instantánea consistente; los cerrados nuevos
+devuelven la copia persistida. Los cierres antiguos se reconstruyen y se
+identifican mediante `persisted=false`, sin inventar una instantánea histórica.
+En cierre ciego, sin `cash.expected.read`, el informe abierto responde 403 y
+solo queda disponible después del cierre. Ninguna consulta registra movimientos.
+El cierre conserva su respuesta `CashShift`, pero guarda el informe antes de
+confirmar la transacción. Fallar en el informe revierte también el cierre.
+Despliegue: aplicar migración 79 y actualizar/recrear el backend; ejecutar solo
+migraciones no incorpora rutas nuevas a una imagen antigua.
 
 Los timestamps `CashShift.openedAt`, `CashShift.closedAt` y
 `CashMovement.createdAt` se serializan en RFC 3339 UTC con sufijo `Z` y precisión

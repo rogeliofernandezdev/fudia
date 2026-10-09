@@ -27,6 +27,7 @@
 /* Owner: Sales — detalle de consulta, sin acciones de cobro o edición. */
 .sales-detail-modal{width:min(var(--size-700),100%);max-height:calc(100dvh - var(--size-48));display:flex;flex-direction:column;overflow:hidden}
 .sales-detail-modal>header{flex:0 0 auto}
+.sales-detail-modal>footer{display:flex;justify-content:flex-end;flex-shrink:0;padding:var(--space-16);border-top:var(--stroke-1) solid var(--line)}
 .sales-detail-body{min-height:0;overflow-y:auto;display:grid;gap:var(--space-20);padding:var(--space-20);color:var(--ink-950)}
 .sales-detail-context{display:flex;align-items:flex-start;gap:var(--space-12);padding-bottom:var(--space-16);border-bottom:var(--stroke-1) solid var(--line)}
 .sales-detail-context dl{flex:1;display:grid;grid-template-columns:1.25fr 1fr;gap:var(--space-12);margin:0;min-width:0}

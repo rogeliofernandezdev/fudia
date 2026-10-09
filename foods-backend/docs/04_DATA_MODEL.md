@@ -61,6 +61,14 @@ mantienen subconjuntos manuales en los frontends.
 
 ## Disponibilidad de productos
 
+Los cambios manuales posteriores se conservan en `audit_log` con
+`action='product.availability_updated'`, empresa, local, producto, motivo y autor.
+La metadata registra fecha operativa, cupo anterior/nuevo, vendidos y estado
+manual anterior/nuevo, además del nombre del autor como instantánea. El guardado
+es atómico con disponibilidad. No se sobrescribe ni reconstruye el historial
+anterior; los registros sin detalle permanecen identificados como históricos.
+La migración 78 añade un índice parcial por alcance, producto y fecha/UUID.
+
 `products` es el catálogo único de todo lo que se vende. Platos, bebidas,
 mercadería física, menús y opciones de combo se identifican por `ProductId`.
 Pedido y detalle de pedido conservan siempre esa referencia; no existe un segundo
@@ -328,7 +336,10 @@ fin del periodo vigente cuando corresponde y vuelve a aplicar los módulos del
 plan.
 
 Los límites `max_locations` y `max_users` se validan en backend dentro de la
-misma transacción que crea el recurso. Un downgrade se rechaza si la empresa ya
+misma transacción que crea el recurso. Reactivar un usuario inactivo también
+valida `max_users` bajo el mismo bloqueo de suscripción: el cupo cuenta usuarios
+activos de la empresa, excluyendo cuentas de Plataforma. Editar o desactivar no
+consume cupo; confirmar un estado Activo ya vigente es idempotente. Un downgrade se rechaza si la empresa ya
 supera los límites del plan destino. Los módulos activos de
 `organization_modules` se sincronizan desde `subscription_plans.module_keys`;
 solo módulos marcados como disponibles por la plataforma pueden activarse.
@@ -380,6 +391,13 @@ rechaza si hay presentaciones custom o factores incompatibles con el modelo
 anterior; nunca los convierte ni descarta para forzar una reversión.
 
 ## Atribución de turnos de caja
+
+La migración 79 incorpora `cash_shift_reports`: una instantánea JSON versionada
+por empresa, local y turno, con UUID generado por PostgreSQL. Cierre, conteo,
+salida del equipo, informe y auditoría se confirman en una sola transacción.
+Nombres, fechas, moneda, zona horaria y líneas quedan conservados aunque
+posteriormente se renombren usuarios o catálogos. El rollback de la migración
+rechaza eliminar informes emitidos.
 
 `cash_shifts.opened_by` conserva quién abrió el turno y `closed_by` registra al
 usuario autenticado que lo cerró. Retirar a alguien del equipo no modifica esos

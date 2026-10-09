@@ -77,6 +77,7 @@ func TestPaymentAndRefundUpdateCashShiftAutomatically(t *testing.T) {
 	if detail.PaymentStatus!="paid"||detail.PaidAmount!="60.00"||detail.RemainingAmount!="0.00"{
 		t.Fatalf("unexpected payment summary: %#v",detail)
 	}
+	if detail.ReceiptContext.OrganizationName==""||detail.ReceiptContext.Currency!="PEN"||len(detail.Payments)!=2||detail.Payments[0].MethodName==""{t.Fatalf("ticket lacks merchant or real payment methods: %#v",detail)}
 
 	overBody:=[]byte(fmt.Sprintf(`{"orderId":%q,"method":"cash","amount":1}`,orderID))
 	overReq:=httptest.NewRequest("POST","/v1/admin/payments",bytes.NewReader(overBody))

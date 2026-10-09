@@ -33,6 +33,7 @@ type availabilityInput struct {
 	Status          string `json:"status"`
 	PortionQuantity *int   `json:"portionQuantity"`
 	Note            string `json:"note"`
+	Reason          string `json:"reason"`
 }
 
 func (a *API) businessDate(r *http.Request, s scope) (time.Time, error) {
@@ -226,6 +227,11 @@ func (a *API) updateProductAvailability(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	in.Note = strings.TrimSpace(in.Note)
+	in.Reason = strings.TrimSpace(in.Reason)
+	if in.Reason == "" || len([]rune(in.Reason)) > 240 {
+		fail(w, 400, "availability_reason_required", "Indica el motivo del cambio, de hasta 240 caracteres.")
+		return
+	}
 	if len([]rune(in.Note)) > 240 {
 		fail(w, 400, "invalid_availability", "La nota no puede superar 240 caracteres.")
 		return
@@ -257,12 +263,14 @@ func (a *API) updateProductAvailability(w http.ResponseWriter, r *http.Request) 
 
 	var currentPortionQuantity *int
 	var soldQuantity int
+	currentStatus := "available"
+	currentNote := ""
 	err = tx.QueryRow(r.Context(), `
-		SELECT portion_quantity,sold_quantity
+		SELECT portion_quantity,sold_quantity,manual_status,note
 		FROM product_availability
 		WHERE organization_id=$1 AND location_id=$2 AND product_id=$3 AND business_date=$4::date
 		FOR UPDATE`,
-		s.OrganizationID, s.LocationID, productID, day.Format("2006-01-02")).Scan(&currentPortionQuantity, &soldQuantity)
+		s.OrganizationID, s.LocationID, productID, day.Format("2006-01-02")).Scan(&currentPortionQuantity, &soldQuantity, &currentStatus, &currentNote)
 	hasDailyAvailability := true
 	if errors.Is(err, pgx.ErrNoRows) {
 		hasDailyAvailability = false
@@ -289,6 +297,17 @@ func (a *API) updateProductAvailability(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 	}
+	if currentStatus == "low" {
+		currentStatus = "available"
+	}
+	quantityChanged := (currentPortionQuantity == nil) != (in.PortionQuantity == nil)
+	if currentPortionQuantity != nil && in.PortionQuantity != nil {
+		quantityChanged = *currentPortionQuantity != *in.PortionQuantity
+	}
+	if hasDailyAvailability && !quantityChanged && currentStatus == in.Status && currentNote == in.Note {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
 
 	_, err = tx.Exec(r.Context(), `
 		INSERT INTO product_availability(organization_id,location_id,product_id,business_date,portion_quantity,manual_status,note,updated_by)
@@ -300,10 +319,21 @@ func (a *API) updateProductAvailability(w http.ResponseWriter, r *http.Request) 
 		fail(w, 503, "availability_unavailable", "No pudimos actualizar la disponibilidad.")
 		return
 	}
+	_, err = tx.Exec(r.Context(), `
+		INSERT INTO audit_log(organization_id,location_id,user_id,action,entity_type,entity_id,reason,created_at,metadata)
+		VALUES($1,$2,$3,'product.availability_updated','product',$4,$5,clock_timestamp(),
+		 jsonb_build_object('businessDate',$6::text,'previousPortionQuantity',$7::integer,
+		 'portionQuantity',$8::integer,'soldQuantity',$9::integer,'previousManualStatus',$10::text,
+		 'manualStatus',$11::text,'actorName',(SELECT full_name FROM users WHERE id=$3)))`,
+		s.OrganizationID, s.LocationID, s.UserID, productID, in.Reason, day.Format("2006-01-02"),
+		currentPortionQuantity, in.PortionQuantity, soldQuantity, currentStatus, in.Status)
+	if err != nil {
+		fail(w, 503, "availability_unavailable", "No pudimos guardar el historial del cambio. La disponibilidad no se modificó.")
+		return
+	}
 	if err = tx.Commit(r.Context()); err != nil {
 		fail(w, 503, "availability_unavailable", "No pudimos confirmar la actualización de disponibilidad.")
 		return
 	}
-	a.audit(r, "product.availability_updated", "product", productID)
 	w.WriteHeader(http.StatusNoContent)
 }

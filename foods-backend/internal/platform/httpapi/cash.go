@@ -753,15 +753,28 @@ func (a *API) closeCashShift(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	report, err := loadCashShiftReport(r.Context(), tx, s, shiftID)
+	if err != nil {
+		fail(w, 503, "cash_report_unavailable", "No pudimos preparar el detalle del cierre. El turno sigue abierto.")
+		return
+	}
+	report.Persisted = true
+	data, err := json.Marshal(report)
+	if err != nil {
+		fail(w, 503, "cash_report_unavailable", "No pudimos preparar el informe de cierre.")
+		return
+	}
+	if _, err = tx.Exec(r.Context(), `INSERT INTO cash_shift_reports(organization_id,location_id,shift_id,report) VALUES($1,$2,$3,$4)`, s.OrganizationID, s.LocationID, shiftID, data); err != nil {
+		fail(w, 503, "cash_report_unavailable", "No pudimos guardar el informe. El turno sigue abierto.")
+		return
+	}
+	if _, err = tx.Exec(r.Context(), `INSERT INTO audit_log(organization_id,location_id,user_id,action,entity_type,entity_id,metadata) VALUES($1,$2,$3,'cash.shift_closed','cash_shift',$4,jsonb_build_object('reportVersion',1))`, s.OrganizationID, s.LocationID, s.UserID, shiftID); err != nil {
+		fail(w, 503, "cash_unavailable", "No pudimos registrar la trazabilidad del cierre.")
+		return
+	}
 	if err := tx.Commit(r.Context()); err != nil {
 		fail(w, 503, "cash_unavailable", "No pudimos confirmar el cierre de caja.")
 		return
 	}
-
-	shift, err := a.getCashShiftByID(r, shiftID)
-	if err != nil {
-		fail(w, 503, "cash_unavailable", "El turno se cerró, pero no pudimos cargar su detalle.")
-		return
-	}
-	writeJSON(w, 200, shift)
+	writeJSON(w, 200, report.Shift)
 }

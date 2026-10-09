@@ -10,6 +10,20 @@ ejecutar dentro de ellas. El sidebar y la protección de rutas consumen
 validar cada petición. Conceder un permiso no concede automáticamente una opción
 del menú, ni conceder una opción autoriza sus acciones.
 
+Carta y productos usa las etiquetas «Ver carta y productos» y «Administrar carta
+y productos» del catálogo remoto. Sin `menu.manage`, Productos y Categorías
+conservan lectura, filtros y paginación, pero no muestran altas, edición,
+activación/desactivación ni columna de acciones. Los vacíos tampoco ofrecen
+crear. Si el permiso se retira con un formulario abierto, deja de renderizarse.
+No se conceden permisos automáticamente al habilitar el acceso del menú.
+
+Esta regla aplica a todos los roles, incluidos los personalizados: se consulta
+el permiso efectivo de la sesión, nunca el nombre del rol. Menús y combos
+requiere `menu.manage` para altas, edición y estado; conserva detalle y
+paginación para lectura. Mesas requiere `tables.manage` y Zonas `menu.manage`,
+igual que el API. Los formularios y confirmaciones de esos módulos no se
+renderizan si el permiso efectivo se retira.
+
 Los catálogos y la vista de roles de empresa se limitan a módulos contratados,
 activos y disponibles. El backend valida ese límite al guardar. Los permisos
 almacenados de módulos fuera del plan se conservan sin mostrarse para que un

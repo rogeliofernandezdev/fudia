@@ -13,7 +13,9 @@ export type SalePayment={
   reference:string;cashRegisterName:string;createdByName:string;createdAt:string;
 };
 export type SaleDetail={
+  receiptContext?:PaymentReceiptContext;
   order:Pick<Sale,"id"|"code"|"channel"|"status"|"customerName"|"tableName"|"total"|"createdAt">&{waiterName?:string;subtotal:string;deliveryFee:string;notes:string;items?:SaleItem[]};
   paidAmount:string;remainingAmount:string;paymentStatus:"pending"|"partial"|"paid";
   payments:SalePayment[];
 };
+export type PaymentReceiptContext={organizationName:string;legalName:string;taxId:string;locationName:string;address:string;phone:string;country:string;timezone:string;currency:string;currencySymbol:string;currencyPosition:"before"|"after";currencyDecimals:number};

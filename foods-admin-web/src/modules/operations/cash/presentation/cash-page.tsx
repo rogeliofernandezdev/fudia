@@ -10,7 +10,9 @@ import {formatRegionalCalendarDate,formatRegionalDateTime,formatRegionalNumber} 
 import {cashShiftAttribution,cashShiftTeamName} from "../domain/shift-attribution";
 import type {CashMovementType,CashRegister,CashRegisterDraft,CashShift} from "../domain/types";
 import {assignCashShiftUser,closeCashShift,createCashMovement,createCashOperation,createCashRegister,getCashShift,listCashRegisters,listCashShifts,listCashShiftUsers,listCashUserOptions,openCashShift,setCashRegisterActive,unassignCashShiftUser,updateCashRegister} from "../infrastructure/cash-api";
-import {CashMovementDialog,CashRegisterDialog,CashShiftDetailDialog,CloseCashShiftDialog,OpenCashShiftDialog} from "./cash-dialogs";
+import {CashMovementDialog,CashRegisterDialog,CashShiftDetailDialog,OpenCashShiftDialog} from "./cash-dialogs";
+import {CashClosingDialog} from "./cash-closing-dialog";
+import {CashReportDialog} from "./cash-report-dialog";
 import {CashOperationDialog,CashTeamDialog} from "./cash-advanced-dialogs";
 
 type CashTab="registers"|"history";
@@ -35,6 +37,7 @@ export function CashPage(){
   const[teamTarget,setTeamTarget]=useState<CashShift|null>(null);
   const[operationTarget,setOperationTarget]=useState<CashShift|null>(null);
   const[detailId,setDetailId]=useState<string|null>(null);
+  const[reportId,setReportId]=useState<string|null>(null);
 
   const registers=useQuery({
     queryKey:["cash-registers"],
@@ -66,6 +69,9 @@ export function CashPage(){
     void qc.invalidateQueries({queryKey:["cash-registers"]});
     void qc.invalidateQueries({queryKey:["cash-shifts"]});
     void qc.invalidateQueries({queryKey:["cash-shift"]});
+    void qc.invalidateQueries({queryKey:["cash-report"]});
+    void qc.invalidateQueries({queryKey:["cash-shift-current"]});
+    void qc.invalidateQueries({queryKey:["dashboard"]});
   }
 
   function openNewRegister(){
@@ -161,6 +167,7 @@ export function CashPage(){
   });
 
   const closeShiftMutation=useMutation({
+    retry:false,
     mutationFn:({shiftId,draft}:{shiftId:string;draft:Parameters<typeof closeCashShift>[1]})=>closeCashShift(shiftId,draft),
     onSuccess:shift=>{
       setCloseTarget(null);
@@ -169,6 +176,7 @@ export function CashPage(){
         tone:"success",
         title:"Turno cerrado",
         message:Number(shift.varianceAmount??0)===0?"El arqueo quedó cuadrado.":"El cierre quedó guardado con su diferencia de caja.",
+        onClose:()=>setReportId(shift.id),
       });
     },
     onError:error=>notify({tone:"danger",title:"No se pudo cerrar el turno",message:error.message}),
@@ -284,7 +292,8 @@ export function CashPage(){
     {registerDialog&&<CashRegisterDialog initial={registerEditTarget} busy={saveRegister.isPending} close={()=>{setRegisterDialog(false);setRegisterEditTarget(null)}} save={draft=>saveRegister.mutate({target:registerEditTarget,draft})}/>} 
     {shiftTarget&&<OpenCashShiftDialog cashRegister={shiftTarget} busy={startShift.isPending} close={()=>setShiftTarget(null)} save={draft=>startShift.mutate({cashRegisterId:shiftTarget.id,draft})}/>}
     {movementTarget&&<CashMovementDialog type={movementTarget.type} busy={movement.isPending} close={()=>setMovementTarget(null)} save={draft=>movement.mutate({shiftId:movementTarget.shift.id,draft})}/>}
-    {closeTarget&&<CloseCashShiftDialog shift={closeTarget} busy={closeShiftMutation.isPending} currency={settings.currency} formatMoney={money} close={()=>setCloseTarget(null)} save={draft=>closeShiftMutation.mutate({shiftId:closeTarget.id,draft})}/>}
+    {closeTarget&&<CashClosingDialog shift={closeTarget} busy={closeShiftMutation.isPending} currency={settings.currency} formatMoney={money} close={()=>setCloseTarget(null)} save={async draft=>{try{await closeShiftMutation.mutateAsync({shiftId:closeTarget.id,draft});}catch{/* onError reports the API response. */}}}/>}
+    {reportId&&<CashReportDialog shiftId={reportId} close={()=>setReportId(null)}/>}
     {teamTarget&&<CashTeamDialog
       shift={teamTarget}
       users={teamUsers.data?.items??[]}
@@ -306,7 +315,7 @@ export function CashPage(){
       ?<RemoteModalSkeleton className="cash-detail-modal" label="Cargando turno de caja" rows={6} close={()=>setDetailId(null)}/>
       :detail.isError
         ?<CashDetailError message={detail.error.message} close={()=>setDetailId(null)}/>
-        :detail.data&&<CashShiftDetailDialog shift={detail.data} formatMoney={money} formatDateTime={dateTime} formatBusinessDate={businessDate} close={()=>setDetailId(null)}/>)}
+        :detail.data&&<CashShiftDetailDialog shift={detail.data} formatMoney={money} formatDateTime={dateTime} formatBusinessDate={businessDate} close={()=>setDetailId(null)} viewReport={()=>{setDetailId(null);setReportId(detailId);}}/>)}
 
     <ConfirmDialog
       open={Boolean(registerStatusTarget)}

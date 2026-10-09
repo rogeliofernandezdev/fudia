@@ -106,11 +106,11 @@ func TestProductListAvailableQuantityUsesLocalDayAndOrderConsumption(t *testing.
 	assertQuantity(list(s.LocationID, ""), portions, 15)
 	assertQuantity(list(otherLocation, ""), portions, 90)
 	assertQuantity(list(otherLocation, ""), inventory, 99)
-	if rec := updateAvailabilityRequest(t, api, s, portions, `{"status":"sold_out"}`); rec.Code != 204 {
+	if rec := updateAvailabilityRequest(t, api, s, portions, `{"status":"sold_out","reason":"Agotado en cocina"}`); rec.Code != 204 {
 		t.Fatalf("mark exhausted: %d %s", rec.Code, rec.Body.String())
 	}
 	assertQuantity(list(s.LocationID, ""), portions, 0)
-	if rec := updateAvailabilityRequest(t, api, s, portions, `{"status":"available"}`); rec.Code != 204 {
+	if rec := updateAvailabilityRequest(t, api, s, portions, `{"status":"available","reason":"Producción repuesta"}`); rec.Code != 204 {
 		t.Fatalf("reactivate: %d %s", rec.Code, rec.Body.String())
 	}
 	assertQuantity(list(s.LocationID, ""), portions, 15)

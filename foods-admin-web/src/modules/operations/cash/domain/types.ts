@@ -1,4 +1,13 @@
 export type CashShiftStatus="open"|"closed";
+export type CashReportSale={id:string;orderCode:string;customer:string;name:string;details:string;quantity:string;unitPrice:string;total:string;createdAt:string;waiterName:string};
+export type CashReportPayment={id:string;orderCode:string;methodName:string;amount:string;reference:string;createdByName:string;createdAt:string};
+export type CashShiftReport={
+ version:1;persisted:boolean;generatedAt:string;organizationName:string;locationName:string;
+ timezone:string;country:string;currency:string;currencySymbol:string;currencyPosition:"before"|"after";currencyDecimals:number;
+ shift:CashShift;sales:CashReportSale[];payments:CashReportPayment[];refunds:CashReportPayment[];
+ methods:{name:string;amount:string}[];counts:{denomination:string;quantity:number;total:string}[];
+ collectedAmount:string;refundedAmount:string;netCollectedAmount:string;
+};
 export type CashMovementType="income"|"expense";
 
 export type CashMovement={

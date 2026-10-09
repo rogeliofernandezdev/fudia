@@ -30,7 +30,8 @@ function belongsToGroup(product:Product,groupName:string){
 
 export function CombosPage(){
   const{notify}=useFeedback();
-  const{organization,location}=useSession();
+  const{organization,location,can}=useSession();
+  const canManage=can("menu.manage");
   const settings=useSettings();
   const client=useQueryClient();
   const[draft,setDraft]=useState<Draft|null>(null);
@@ -45,7 +46,7 @@ export function CombosPage(){
   const[status,setStatus]=useState("");
   const debouncedSearch=useDebouncedValue(search);
   const combos=useQuery({queryKey:["combos",page,size,debouncedSearch,status],queryFn:()=>listCombos(page,size,debouncedSearch,status)});
-  const products=useQuery({queryKey:["products","combo-picker",organization?.id,location?.id],queryFn:listComboProducts,enabled:Boolean(draft&&location?.id),staleTime:0,refetchInterval:draft?10000:false});
+  const products=useQuery({queryKey:["products","combo-picker",organization?.id,location?.id],queryFn:listComboProducts,enabled:Boolean(canManage&&draft&&location?.id),staleTime:0,refetchInterval:draft?10000:false});
   const detail=useQuery({queryKey:["combo-detail",selected],queryFn:()=>getCombo(selected!),enabled:Boolean(selected)});
   const save=useMutation({
     mutationFn:(value:Draft)=>saveCombo(value,editingId),
@@ -76,10 +77,10 @@ export function CombosPage(){
       notify({tone:"danger",title:"No se pudo cambiar el estado",message:error.message});
     }
   });
-  const open=()=>{setEditingId(null);setDraft(blank);setStep(1)};
+  const open=()=>{if(!canManage)return;setEditingId(null);setDraft(blank);setStep(1)};
   const closeWizard=()=>{setDraft(null);setEditingId(null);setStep(1)};
   return <>
-    <PageHeader eyebrow="CARTA Y PRODUCCIÓN" title="Menús y combos" description="Define las partes del menú y qué opciones puede elegir el cliente en cada una." action={<Button icon="plus" onClick={open}>Nuevo menú o combo</Button>}/>
+    <PageHeader eyebrow="CARTA Y PRODUCCIÓN" title="Menús y combos" description="Define las partes del menú y qué opciones puede elegir el cliente en cada una." action={canManage?<Button icon="plus" onClick={open}>Nuevo menú o combo</Button>:undefined}/>
     <section className="panel management catalog-panel standardized-management combo-list">
       <div className="toolbar">
         <label><Icon name="search" size={17}/><input value={search} onChange={event=>{setSearch(event.target.value);setPage(1)}} placeholder="Buscar menú o combo..." aria-label="Buscar menú o combo"/></label>
@@ -88,7 +89,7 @@ export function CombosPage(){
       {combos.isLoading?<ComboSkeleton/>
       :combos.isError?<div className="combo-empty"><Icon name="alert" size={26}/><b>No pudimos cargar los menús y combos</b><p>{combos.error.message}</p><Button kind="secondary" icon="refresh" onClick={()=>combos.refetch()}>Reintentar</Button></div>
       :!combos.data?.items.length?
-        <div className="combo-empty"><Icon name="menu" size={26}/><b>{search||status?"No encontramos resultados":"Aún no hay menús compuestos"}</b><p>{search||status?"Prueba con otro nombre o cambia el filtro de estado.":"Usa la plantilla Menú del día para comenzar rápidamente."}</p>{!search&&!status&&<Button icon="plus" onClick={open}>Crear menú</Button>}</div>
+        <div className="combo-empty"><Icon name="menu" size={26}/><b>{search||status?"No encontramos resultados":"Aún no hay menús compuestos"}</b><p>{search||status?"Prueba con otro nombre o cambia el filtro de estado.":canManage?"Usa la plantilla Menú del día para comenzar rápidamente.":"Los menús registrados aparecerán aquí."}</p>{canManage&&!search&&!status&&<Button icon="plus" onClick={open}>Crear menú</Button>}</div>
       :<>
         <div className="table-wrap hover-scroll"><table><thead><tr><th>MENÚ O COMBO</th><th>PRECIO</th><th title="Entrada, plato principal, bebida o postre">PARTES DEL MENÚ</th><th>ESTADO</th><th>ACCIONES</th></tr></thead><tbody>
           {combos.data.items.map((item,index)=><tr className={index%2?"alternate":""} key={item.id}>
@@ -96,16 +97,16 @@ export function CombosPage(){
             <td><b>{settings.currencyPosition==="before"?`${settings.currencySymbol} ${Number(item.price).toFixed(settings.currencyDecimals)}`:`${Number(item.price).toFixed(settings.currencyDecimals)} ${settings.currencySymbol}`}</b></td>
             <td>{item.groupCount} {item.groupCount===1?"parte":"partes"}</td>
             <td><Status active={item.active}>{item.active?"Activo":"Inactivo"}</Status></td>
-            <td><div className="standard-actions"><RowActionButton action="view" label={`Ver ${item.name}`} onClick={()=>setSelected(item.id)}/><RowActionButton action="edit" label={`Editar ${item.name}`} disabled={loadForEdit.isPending} onClick={()=>{cancelledEdit.current=null;setEditingId(item.id);loadForEdit.mutate(item.id)}}/><RowActionButton action={item.active?"deactivate":"activate"} stateLabel={`Estado de ${item.name}`} label={`${item.active?"Desactivar":"Activar"} ${item.name}`} onClick={()=>setStatusTarget(item)}/></div></td>
+            <td><div className="standard-actions"><RowActionButton action="view" label={`Ver ${item.name}`} onClick={()=>setSelected(item.id)}/>{canManage&&<><RowActionButton action="edit" label={`Editar ${item.name}`} disabled={loadForEdit.isPending} onClick={()=>{cancelledEdit.current=null;setEditingId(item.id);loadForEdit.mutate(item.id)}}/><RowActionButton action={item.active?"deactivate":"activate"} stateLabel={`Estado de ${item.name}`} label={`${item.active?"Desactivar":"Activar"} ${item.name}`} onClick={()=>setStatusTarget(item)}/></>}</div></td>
           </tr>)}
         </tbody></table></div>
       </>}
       {!combos.isLoading&&!combos.isError&&<Pagination page={page} size={size} total={combos.data?.total??0} onPage={setPage} onSize={value=>{setSize(value);setPage(1)}}/>}
     </section>
     {selected&&<ComboDetailDialog query={detail} currencySymbol={settings.currencySymbol} close={()=>setSelected(null)}/>}
-    <ConfirmDialog open={Boolean(statusTarget)} title={`${statusTarget?.active?"Desactivar":"Activar"} menú`} description={statusTarget?.active?`“${statusTarget.name}” dejará de estar disponible para nuevas ventas, pero conservará su historial.`:`“${statusTarget?.name??""}” volverá a estar disponible para la operación.`} confirmLabel={statusTarget?.active?"Desactivar":"Activar"} pending={changeStatus.isPending} onCancel={()=>setStatusTarget(null)} onConfirm={()=>statusTarget&&changeStatus.mutate(statusTarget)}/>
-    {!draft&&editingId&&loadForEdit.isPending&&<RemoteModalSkeleton className="combo-wizard" label="Cargando menú o combo" rows={8} close={()=>{cancelledEdit.current=editingId;setEditingId(null)}}/>}
-    {draft&&<ComboWizard draft={draft} setDraft={setDraft} step={step} setStep={setStep} products={products.data?.items??[]} productsLoading={products.isLoading} productsError={products.isError} retryProducts={()=>products.refetch()} currencySymbol={settings.currencySymbol} busy={save.isPending} editing={Boolean(editingId)} close={closeWizard} finish={()=>save.mutate(draft)}/>}
+    <ConfirmDialog open={canManage&&Boolean(statusTarget)} title={`${statusTarget?.active?"Desactivar":"Activar"} menú`} description={statusTarget?.active?`“${statusTarget.name}” dejará de estar disponible para nuevas ventas, pero conservará su historial.`:`“${statusTarget?.name??""}” volverá a estar disponible para la operación.`} confirmLabel={statusTarget?.active?"Desactivar":"Activar"} pending={changeStatus.isPending} onCancel={()=>setStatusTarget(null)} onConfirm={()=>canManage&&statusTarget&&changeStatus.mutate(statusTarget)}/>
+    {canManage&&!draft&&editingId&&loadForEdit.isPending&&<RemoteModalSkeleton className="combo-wizard" label="Cargando menú o combo" rows={8} close={()=>{cancelledEdit.current=editingId;setEditingId(null)}}/>}
+    {canManage&&draft&&<ComboWizard draft={draft} setDraft={setDraft} step={step} setStep={setStep} products={products.data?.items??[]} productsLoading={products.isLoading} productsError={products.isError} retryProducts={()=>products.refetch()} currencySymbol={settings.currencySymbol} busy={save.isPending} editing={Boolean(editingId)} close={closeWizard} finish={()=>{if(canManage)save.mutate(draft)}}/>}
   </>
 }
 

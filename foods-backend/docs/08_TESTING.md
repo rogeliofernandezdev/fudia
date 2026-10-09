@@ -1,5 +1,24 @@
 # Pruebas
 
+`payment_ticket_integration_test.go` comprueba identidad real del restaurante,
+perfil del local, aislamiento empresa/local y consulta sin escrituras. La prueba
+de pagos verifica identidad y nombres remotos después del pago dividido confirmado.
+
+`cash_report_integration_test.go` verifica productos sin duplicación por cobros
+parciales/divididos, cantidades/precios, movimientos, autores, medios de pago,
+fechas UTC, instantánea persistida, conteo y cierre repetido. Simula fallo al
+persistir el informe para comprobar rollback del cierre y del conteo. Cambiar
+nombres después de cerrar no modifica el documento emitido. Cubre aislamiento
+empresa/local, permisos reales, sesión anónima y cierre ciego antes/después del
+cierre. La migración 79 y la suite se ejecutan en PostgreSQL temporal.
+
+`product_availability_history_test.go` verifica motivo obligatorio y longitud,
+snapshot anterior/nuevo, autor persistido, hora UTC, no-op sin duplicar historial,
+rollback ante fallo de auditoría, cadena completa con cambios concurrentes,
+paginación de días anteriores, legado sin datos inventados, aislamiento por
+empresa/local y permisos de lectura/escritura para Admin y Operación.
+La migración 78 de índice se comprueba arriba/abajo en PostgreSQL temporal.
+
 Las pruebas de alta de producto verifican cantidad inicial positiva, 15 porciones
 en el local/día correcto, listados reales, ajustes y Agotado/Reactivar posteriores,
 edición comercial sin sobrescribir cantidades, permisos y aislamiento. PostgreSQL
@@ -7,6 +26,12 @@ temporal comprueba rollback completo si fallan disponibilidad o auditoría.
 
 Probar invariantes, casos de uso, contrato HTTP y persistencia. Puertas: go test,
 go vet, validación OpenAPI y build.
+
+`user_capacity_integration_test.go` verifica rechazo de altas/reactivaciones al
+alcanzar `max_users`, conservación del estado tras rechazo, edición y
+desactivación permitidas, cupo liberado, idempotencia, aislamiento, plan ilimitado
+y suscripción ausente. Dos reactivaciones o alta/reactivación concurrentes
+comparten el último cupo sin superar el límite. Ejecutar en PostgreSQL temporal.
 
 `inventory_units_integration_test.go` verifica catálogo inicial para nuevas
 empresas, Bolsa/Paquete, alta y duplicados, aislamiento, FK y validación de
