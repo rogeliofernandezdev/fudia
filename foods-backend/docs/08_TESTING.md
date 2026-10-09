@@ -1,5 +1,10 @@
 # Pruebas
 
+El dashboard verifica ventas por categoría con dos decimales y solo pedidos
+totalmente pagados. La regresión de cantidades fraccionarias comprueba el
+redondeo después de sumar, en hoy/7/30 días, sin modificar cantidades ni precios
+persistidos. Ejecutar con PostgreSQL temporal para no omitir la integración.
+
 `payment_ticket_integration_test.go` comprueba identidad real del restaurante,
 perfil del local, aislamiento empresa/local y consulta sin escrituras. La prueba
 de pagos verifica identidad y nombres remotos después del pago dividido confirmado.

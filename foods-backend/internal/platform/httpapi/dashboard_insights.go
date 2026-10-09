@@ -256,8 +256,9 @@ func loadDashboardInsights(ctx context.Context, tx pgx.Tx, s scope, period dashb
 	}
 
 	// Misma definición que los productos vendidos: pedidos pagados por completo con un cobro en el periodo.
+	// Redondear solo el agregado de salida: la multiplicación conserva su precisión hasta sumar.
 	rows, err = tx.Query(ctx, `
-		SELECT COALESCE(mc.name,'Sin categoría'),sum(oi.qty)::text,sum(oi.qty*oi.unit_price)::text
+		SELECT COALESCE(mc.name,'Sin categoría'),sum(oi.qty)::text,round(sum(oi.qty*oi.unit_price),2)::text
 		FROM order_items oi
 		JOIN (`+dashboardPaidOrdersSQL+`) paid ON paid.id=oi.order_id
 		LEFT JOIN products pr ON pr.id=oi.product_id AND pr.organization_id=oi.organization_id

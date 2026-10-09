@@ -1567,7 +1567,7 @@ components:
       properties:
         name: { type: string, description: Categoría de la carta o «Sin categoría» }
         qty: { type: string }
-        revenue: { type: string, description: Importe de los pedidos pagados por completo con un cobro en el periodo }
+        revenue: { type: string, description: Importe de los pedidos pagados por completo con un cobro en el periodo. Cadena decimal con dos decimales; se redondea después de sumar las líneas, example: "50.00" }
     Dashboard:
       type: object
       required: [salesNet, paidOrders, averageTicket, openOrders, criticalStock, purchasesToApprove, reservationsToday, kitchenPending, businessDate, operations, hourlySales, topProducts, period, previous, trend, salesByChannel, salesByPaymentMethod, salesByCategory]

@@ -170,6 +170,48 @@ func TestDashboardConsolidatesRestaurantOperations(t *testing.T) {
 	}
 }
 
+func TestDashboardCategoryRevenueRoundsOnlyAfterAggregation(t *testing.T) {
+	pool := integrationPool(t)
+	s := seedInventoryScope(t, pool)
+	ctx := context.Background()
+	id := func(query string, args ...any) string {
+		t.Helper()
+		var result string
+		if err := pool.QueryRow(ctx, query, args...).Scan(&result); err != nil {
+			t.Fatal(err)
+		}
+		return result
+	}
+	exec := func(query string, args ...any) {
+		t.Helper()
+		if _, err := pool.Exec(ctx, query, args...); err != nil {
+			t.Fatal(err)
+		}
+	}
+	register := id(`INSERT INTO cash_registers(organization_id,location_id,name,created_by) VALUES($1,$2,'Caja',$3) RETURNING id`, s.OrganizationID, s.LocationID, s.UserID)
+	shift := id(`INSERT INTO cash_shifts(organization_id,location_id,cash_register_id,opened_by,opening_amount,business_date) SELECT $1,$2,$3,$4,0,(now() AT TIME ZONE timezone)::date FROM locations WHERE id=$2 RETURNING id`, s.OrganizationID, s.LocationID, register, s.UserID)
+	order := id(`INSERT INTO orders(organization_id,location_id,channel,status,total,created_by) VALUES($1,$2,'mostrador','entregado',0.05,$3) RETURNING id`, s.OrganizationID, s.LocationID, s.UserID)
+	exec(`INSERT INTO payments(organization_id,location_id,order_id,shift_id,method,amount,created_by) VALUES($1,$2,$3,$4,'card',0.05,$5)`, s.OrganizationID, s.LocationID, order, shift, s.UserID)
+	product := id(`INSERT INTO products(organization_id,sku,name,price) VALUES($1,'FRAC','Porción',0.01) RETURNING id`, s.OrganizationID)
+	exec(`INSERT INTO order_items(organization_id,order_id,product_id,name,qty,unit_price) SELECT $1,$2,$3,'Porción',1.50,0.01 FROM generate_series(1,3)`, s.OrganizationID, order, product)
+
+	for _, period := range []string{"today", "7d", "30d"} {
+		t.Run(period, func(t *testing.T) {
+			result := readDashboardPeriodTest(t, pool, s, period)
+			if len(result.SalesByCategory) != 1 || result.SalesByCategory[0].Name != "Sin categoría" || result.SalesByCategory[0].Qty != "4.50" || result.SalesByCategory[0].Revenue != "0.05" {
+				t.Fatalf("category must round the exact sum 0.0450 once, not each line: %+v", result.SalesByCategory)
+			}
+		})
+	}
+	var storedRevenue string
+	if err := pool.QueryRow(ctx, `SELECT sum(qty*unit_price)::text FROM order_items WHERE organization_id=$1 AND order_id=$2`, s.OrganizationID, order).Scan(&storedRevenue); err != nil {
+		t.Fatal(err)
+	}
+	if storedRevenue != "0.0450" {
+		t.Fatalf("dashboard must not change stored quantities or prices: %s", storedRevenue)
+	}
+}
+
 func TestDashboardAvailabilityMatchesProductControlsAndCombos(t *testing.T) {
 	pool := integrationPool(t)
 	s := seedInventoryScope(t, pool)

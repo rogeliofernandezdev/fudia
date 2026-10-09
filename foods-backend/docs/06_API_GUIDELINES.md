@@ -47,6 +47,8 @@ para `today` (solo horas con movimientos de hoy o de la comparación) y por día
 para 7 y 30 días (todos los días, con 0 cuando no hubo ventas). Canal y medio de
 pago restan las devoluciones en el canal y medio del cobro que revierten; las
 categorías usan la misma definición de pedido pagado que los productos.
+`salesByCategory[].revenue` se serializa como decimal con dos decimales: el
+redondeo se aplica al agregado final, no a cada línea ni a los valores almacenados.
 Se conserva la integridad de `salesNet` ante ajustes/devoluciones existentes.
 `operations` consolida saldos de pedidos no cancelados ni finalizados (también
 anteriores), pagos parciales, mesas activas ocupadas, colas de cocina y delivery,
