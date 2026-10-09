@@ -1,0 +1,13 @@
+.skeleton-card{overflow:hidden}
+.skeleton-line,.skeleton-price,.skeleton-feature i,.skeleton-feature span,.skeleton-field i,.skeleton-field span,.skeleton-row i{display:block;background:var(--surface-200);border-radius:var(--radius-8);animation:skeleton-pulse var(--duration-1400) ease-in-out infinite}
+.skeleton-line{height:var(--size-14);width:60%;margin-bottom:var(--space-14)}.skeleton-line.wide{width:80%}.skeleton-line.title{height:var(--size-24);width:45%}
+.skeleton-price{height:var(--size-72);margin:var(--space-20) 0}.skeleton-row{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-12)}.skeleton-row i{height:var(--size-56)}
+.skeleton-feature{display:flex;gap:var(--space-10);margin-top:var(--space-14)}.skeleton-feature i{width:var(--size-24);height:var(--size-24)}.skeleton-feature span{height:var(--size-24);flex:1}
+.skeleton-field{display:flex;gap:var(--space-12);margin-top:var(--space-16)}.skeleton-field i{height:var(--size-42);width:var(--size-120)}.skeleton-field span{height:var(--size-42);flex:1}
+.skeleton-history{padding:var(--space-20);margin-top:var(--space-20)}
+@keyframes skeleton-pulse{50%{opacity:.55}}
+
+/* Bloque base compartido por los skeletons de Plataforma, dentro y fuera de su shell. */
+.platform-skeleton-block,.platform-skeleton-copy i{display:block;background:linear-gradient(90deg,var(--palette-blue-74) 20%,var(--palette-blue-104) 42%,var(--palette-blue-74) 64%);background-size:220% 100%;animation:platform-skeleton-shimmer var(--duration-1350) ease-in-out infinite}
+@keyframes platform-skeleton-shimmer{to{background-position:-220% 0}}
+@media(prefers-reduced-motion:reduce){.platform-skeleton-block,.platform-skeleton-copy i{animation:none}}

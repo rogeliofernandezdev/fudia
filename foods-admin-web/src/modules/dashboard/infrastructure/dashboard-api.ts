@@ -1,6 +1,6 @@
 import {apiFetch} from "@/shared/api/client";
-import type {DashboardData} from "../domain/types";
+import type {DashboardData,DashboardPeriodKey} from "../domain/types";
 
-export function getDashboard(): Promise<DashboardData> {
-  return apiFetch<DashboardData>("dashboard");
+export function getDashboard(period:DashboardPeriodKey="today"): Promise<DashboardData> {
+  return apiFetch<DashboardData>(`dashboard?period=${period}`);
 }

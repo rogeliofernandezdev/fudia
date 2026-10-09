@@ -1,0 +1,53 @@
+/* Owner: Context — selector de empresa y local. */
+.context-switcher{position:relative;min-width:0}
+.context-btn{border:var(--stroke-1) solid transparent;background:transparent;border-radius:var(--radius-control);align-items:center;gap:var(--space-8);height:var(--control-height);max-width:var(--size-260);padding:0 var(--space-8);display:flex;cursor:pointer;transition:background var(--duration-160),border-color var(--duration-160)}
+.context-btn:hover:not(:disabled),.context-btn:focus-visible,.context-btn[data-open=true]{background:var(--primary-100);border-color:var(--line)}
+.context-btn:disabled{cursor:default;opacity:.85}
+.context-btn>svg:first-child{width:var(--size-28);height:var(--size-28);padding:var(--space-5);border-radius:var(--radius-control);color:var(--primary-600);background:var(--primary-100);flex-shrink:0}
+.context-btn>svg:last-child{color:var(--ink-500);flex-shrink:0;transform:rotate(90deg);transition:transform var(--duration-160)}
+.context-btn[data-open=true]>svg:last-child{transform:rotate(-90deg)}
+.context-btn>span{min-width:0;overflow:hidden;text-align:left;display:grid;gap:var(--space-2);line-height:var(--line-height-1-15)}
+.context-btn span small{color:var(--ink-500);letter-spacing:var(--tracking-0-04-em);font-size:var(--font-size-10);font-weight:var(--font-weight-700);text-transform:uppercase}
+.context-btn span b{overflow:hidden;max-width:100%;font-size:var(--font-size-label);font-weight:var(--font-weight-750);color:var(--ink-950);text-overflow:ellipsis;white-space:nowrap}
+.context-popover{border:var(--stroke-1) solid var(--line);z-index:30;background:var(--surface);border-radius:var(--radius-card);width:min(var(--size-320),calc(100vw - var(--size-24)));max-height:calc(100dvh - var(--size-96));position:absolute;top:calc(100% + var(--space-12));right:0;overflow:auto;overscroll-behavior:contain;box-shadow:var(--shadow-09);animation:var(--duration-220) var(--ease-3) modal-panel-in}
+.context-popover-head{display:flex;align-items:center;gap:var(--space-10);padding:var(--space-12) var(--space-16);border-bottom:var(--stroke-1) solid var(--line)}
+.context-popover-head h2{flex:1;min-width:0;margin:0;color:var(--ink-950);font-size:var(--font-size-14);font-weight:var(--font-weight-750)}
+.context-close[data-tooltip]:after{left:auto;right:0;bottom:auto;top:calc(100% + var(--space-8));transform:translateY(var(--size-4))}
+.context-close[data-tooltip]:hover:after,.context-close[data-tooltip]:focus-visible:after{transform:translateY(0)}
+.context-popover-icon{width:var(--size-32);height:var(--size-32);display:grid;place-items:center;flex-shrink:0;border-radius:var(--radius-control);background:var(--primary-100);color:var(--primary-700)}
+.context-fields{display:grid;gap:var(--space-16);padding:var(--space-16)}
+.context-popover-actions{padding:var(--space-12) var(--space-16);border-top:var(--stroke-1) solid var(--line);background:var(--cloud-50)}
+.context-popover-actions .context-apply{width:100%}
+.context-apply[aria-busy=true]>svg{animation:context-turn var(--duration-1150) linear infinite}
+.context-state{display:grid;justify-items:center;gap:var(--space-10);padding:var(--space-20);color:var(--ink-600);text-align:center;font-size:var(--font-size-control)}
+.context-state>svg{color:var(--primary-700)}
+.context-state b{color:var(--ink-950)}
+.context-state p{margin:0;line-height:var(--line-height-1-5);overflow-wrap:anywhere}
+.context-empty{margin:0;line-height:var(--line-height-1-5);overflow-wrap:anywhere;color:var(--ink-500);font-size:var(--font-size-control)}
+.context-loading>div{display:grid;gap:var(--space-5)}
+.context-skeleton-bar{display:block;background:var(--cloud-100);border-radius:var(--radius-control);animation:context-pulse var(--duration-1150) ease-in-out infinite}
+.context-loading i{width:var(--size-64);height:var(--size-12)}
+.context-loading span,.context-loading>b{height:var(--control-height)}
+@keyframes context-turn{to{transform:rotate(360deg)}}
+@keyframes context-pulse{50%{opacity:.5}}
+@container admin-main (width<=1040px){
+  .context-switcher{min-width:var(--size-44)}
+  .context-btn{width:var(--size-44);min-width:var(--size-44);padding:0;justify-content:center}
+  .context-btn>span,.context-btn>svg:last-child{display:none}
+}
+@media(max-width:600px){
+  .context-switcher{min-width:0;width:clamp(var(--size-150),36vw,var(--size-190));max-width:var(--size-190);flex:0 1 var(--size-190)}
+  .context-btn{width:100%;min-width:0;padding:0 var(--space-8);justify-content:flex-start;gap:var(--space-7);overflow:hidden}
+  .context-btn>span{display:grid;flex:1;min-width:0}
+  .context-btn>svg:last-child{display:none}
+  .context-popover{position:fixed;top:var(--size-70);left:var(--space-12);right:var(--space-12);width:auto;max-width:none}
+}
+@media(max-width:430px){
+  .context-switcher{width:var(--size-44);min-width:var(--size-44);max-width:var(--size-44);flex:0 0 var(--size-44)}
+  .context-btn{width:var(--size-44);min-width:var(--size-44);padding:0;justify-content:center}
+  .context-btn>span{display:none}
+}
+@media(prefers-reduced-motion:reduce){
+  .context-popover,.context-skeleton-bar,.context-apply[aria-busy=true]>svg{animation:none}
+  .context-btn,.context-btn>svg:last-child{transition:none}
+}

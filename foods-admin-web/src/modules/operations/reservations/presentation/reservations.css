@@ -1,0 +1,11 @@
+.reservation-form-grid{grid-template-columns:minmax(0,1.35fr) minmax(var(--size-170),.65fr);align-items:start}
+.reservation-form-grid label{min-width:0}
+.reservation-notes{grid-column:1/-1}
+.reservation-label{align-items:center;gap:var(--space-6);display:flex}
+.reservation-label small{color:var(--ink-400);font-size:var(--font-size-label);font-weight:var(--font-weight-600)}
+.reservation-table-state{color:var(--ink-400);margin-top:calc(var(--space-1) * -1);font-size:var(--font-size-label);font-weight:var(--font-weight-600);line-height:var(--line-height-1-4)}
+.reservation-table-state.error{color:var(--danger)}
+@media (width<=600px){
+  .reservation-form-grid{grid-template-columns:1fr}
+  .reservation-notes{grid-column:auto}
+}

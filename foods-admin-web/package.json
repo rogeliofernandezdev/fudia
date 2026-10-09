@@ -22,6 +22,8 @@
     "@tiptap/react": "^3.31.3",
     "@tiptap/starter-kit": "^3.31.3",
     "@types/qrcode": "^1.5.6",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.8",
     "mapbox-gl": "^3.30.0",
     "next": "16.3.0",
     "qrcode": "^1.5.4",

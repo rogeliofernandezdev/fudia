@@ -1,9 +1,57 @@
 package httpapi
 
 import (
+	"context"
+	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
+
+func TestProductStatusRequiresExplicitBoolean(t *testing.T) {
+	for _, body := range []string{`{}`, `{"active":null}`, `{"active":"true"}`, `not-json`} {
+		t.Run(body, func(t *testing.T) {
+			req := httptest.NewRequest("PATCH", "/v1/admin/products/product/status", strings.NewReader(body))
+			req = req.WithContext(context.WithValue(req.Context(), scopeKey{}, scope{}))
+			rec := httptest.NewRecorder()
+			New(nil).updateProductStatus(rec, req)
+			if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "invalid_status") {
+				t.Fatalf("expected invalid_status without accessing the database, got %d %s", rec.Code, rec.Body.String())
+			}
+		})
+	}
+}
+
+func TestProductStatusRouteRequiresSession(t *testing.T) {
+	req := httptest.NewRequest("PATCH", "/v1/admin/products/product/status", strings.NewReader(`{"active":true}`))
+	rec := httptest.NewRecorder()
+	New(nil).Routes().ServeHTTP(rec, req)
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected authenticated product status route, got %d %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestCategoryStatusRequiresExplicitBoolean(t *testing.T) {
+	for _, body := range []string{`{}`, `{"active":null}`, `{"active":"true"}`, `not-json`} {
+		t.Run(body, func(t *testing.T) {
+			req := httptest.NewRequest("PATCH", "/v1/admin/categories/category/status", strings.NewReader(body))
+			rec := httptest.NewRecorder()
+			New(nil).updateCategoryStatus(rec, req)
+			if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "invalid_status") {
+				t.Fatalf("expected invalid_status without accessing the database, got %d %s", rec.Code, rec.Body.String())
+			}
+		})
+	}
+}
+
+func TestCategoryStatusRouteRequiresSession(t *testing.T) {
+	req := httptest.NewRequest("PATCH", "/v1/admin/categories/category/status", strings.NewReader(`{"active":true}`))
+	rec := httptest.NewRecorder()
+	New(nil).Routes().ServeHTTP(rec, req)
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected authenticated category status route, got %d %s", rec.Code, rec.Body.String())
+	}
+}
 
 func TestPageParamsBounds(t *testing.T) {
 	r := httptest.NewRequest("GET", "/v1/admin/products?page=2&pageSize=500", nil)
@@ -22,53 +70,67 @@ func TestNormalizeProductRequiresIdentity(t *testing.T) {
 	}
 }
 
-func TestNormalizeProductDefaultsToNone(t *testing.T) {
+func TestNormalizeProductDefaultsPreparedAndNone(t *testing.T) {
 	in, invalid := normalizeProduct(productInput{Name: "Ceviche", Price: "45.00"})
 	if invalid != "" {
 		t.Fatalf("unexpected error %q", invalid)
 	}
-	if in.StockMode != "none" {
-		t.Fatalf("expected none, got %q", in.StockMode)
+	if in.ProductType != "prepared" {
+		t.Fatalf("expected prepared, got %q", in.ProductType)
+	}
+	if in.QuantityControl != "none" {
+		t.Fatalf("expected none, got %q", in.QuantityControl)
 	}
 }
 
-func TestNormalizeProductClearsQuotaWhenUnlimited(t *testing.T) {
-	quota := 15
-	in, invalid := normalizeProduct(productInput{Name: "Ceviche", Price: "45.00", StockMode: "none", DefaultDailyQuota: &quota})
-	if invalid != "" {
-		t.Fatalf("unexpected error %q", invalid)
-	}
-	if in.DefaultDailyQuota != nil {
-		t.Fatal("expected quota cleared when product is always available")
-	}
-}
-
-func TestNormalizeProductManualRequiresQuota(t *testing.T) {
-	if _, invalid := normalizeProduct(productInput{Name: "Ceviche", Price: "45.00", StockMode: "manual"}); invalid == "" {
-		t.Fatal("expected manual mode to require a quota")
-	}
-	negative := -1
-	if _, invalid := normalizeProduct(productInput{Name: "Ceviche", Price: "45.00", StockMode: "manual", DefaultDailyQuota: &negative}); invalid == "" {
-		t.Fatal("expected negative quota to be rejected")
-	}
-	zero := 0
-	if _, invalid := normalizeProduct(productInput{Name: "Ceviche", Price: "45.00", StockMode: "manual", DefaultDailyQuota: &zero}); invalid == "" {
-		t.Fatal("expected zero quota to be rejected")
-	}
-	quota := 15
-	in, invalid := normalizeProduct(productInput{Name: "Ceviche", Price: "45.00", StockMode: "manual", DefaultDailyQuota: &quota})
-	if invalid != "" {
-		t.Fatalf("unexpected error %q", invalid)
-	}
-	if in.DefaultDailyQuota == nil || *in.DefaultDailyQuota != 15 {
-		t.Fatal("expected quota preserved")
-	}
-}
-
-func TestNormalizeProductRejectsInventoryModesAndUnknown(t *testing.T) {
-	for _, mode := range []string{"linked", "recipe", "whatever"} {
-		if _, invalid := normalizeProduct(productInput{Name: "Ceviche", Price: "45.00", StockMode: mode}); invalid == "" {
-			t.Fatalf("expected %q to be rejected", mode)
+func TestNormalizeProductAcceptsProductTypes(t *testing.T) {
+	for _, productType := range []string{"prepared", "retail"} {
+		in, invalid := normalizeProduct(productInput{Name: "Producto", Price: "10.00", ProductType: productType})
+		if invalid != "" {
+			t.Fatalf("expected %q to be valid, got %q", productType, invalid)
 		}
+		if in.ProductType != productType {
+			t.Fatalf("expected %q, got %q", productType, in.ProductType)
+		}
+	}
+}
+
+func TestNormalizeProductRejectsUnknownProductType(t *testing.T) {
+	if _, invalid := normalizeProduct(productInput{Name: "Producto", Price: "10.00", ProductType: "ingredient"}); invalid == "" {
+		t.Fatal("expected unknown product type to be rejected")
+	}
+}
+
+func TestNormalizeProductAcceptsQuantityControls(t *testing.T) {
+	for _, control := range []string{"none", "portions", "inventory"} {
+		in, invalid := normalizeProduct(productInput{Name: "Producto", Price: "10.00", QuantityControl: control})
+		if invalid != "" {
+			t.Fatalf("expected %q to be valid, got %q", control, invalid)
+		}
+		if in.QuantityControl != control {
+			t.Fatalf("expected %q, got %q", control, in.QuantityControl)
+		}
+	}
+}
+
+func TestNormalizeProductRejectsUnknownQuantityControl(t *testing.T) {
+	if _, invalid := normalizeProduct(productInput{Name: "Producto", Price: "10.00", QuantityControl: "manual"}); invalid == "" {
+		t.Fatal("expected legacy manual control to be rejected")
+	}
+}
+
+func TestNormalizeCategoryProductScope(t *testing.T) {
+	scope, invalid := normalizeCategoryProductScope("", "prepared")
+	if invalid != "" || scope != "prepared" {
+		t.Fatalf("expected prepared fallback, got scope=%q invalid=%q", scope, invalid)
+	}
+	for _, value := range []string{"prepared", "retail", "both"} {
+		scope, invalid = normalizeCategoryProductScope(value, "prepared")
+		if invalid != "" || scope != value {
+			t.Fatalf("expected %q, got scope=%q invalid=%q", value, scope, invalid)
+		}
+	}
+	if _, invalid = normalizeCategoryProductScope("other", "prepared"); invalid == "" {
+		t.Fatal("expected invalid category product scope")
 	}
 }

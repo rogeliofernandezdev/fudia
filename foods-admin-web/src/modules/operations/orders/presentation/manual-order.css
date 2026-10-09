@@ -1,0 +1,17 @@
+/* Owner: Orders — datos de atención previos a la comanda compartida. */
+.manual-order-modal{display:flex;flex-direction:column;width:min(var(--size-580),calc(100vw - var(--size-32)));max-height:calc(100dvh - var(--size-40));background:var(--surface);border-radius:var(--radius-card);box-shadow:var(--shadow-09);overflow:hidden;color:var(--ink-950)}
+.manual-order-head{display:flex;align-items:center;gap:var(--space-10);padding:var(--space-16) var(--space-20);border-bottom:var(--stroke-1) solid var(--line);flex-shrink:0}
+.manual-order-head h2{flex:1;margin:0;font-size:var(--font-size-18);font-weight:var(--font-weight-750)}
+.manual-order-icon{width:var(--size-40);height:var(--size-40);display:grid;place-items:center;background:var(--primary-100);color:var(--primary-600);border-radius:var(--radius-control)}
+.manual-order-form{display:flex;flex-direction:column;min-height:0}
+.manual-order-body{overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;min-height:0;padding:var(--space-20)}
+.manual-order-fields{min-width:0;margin:0;padding:0;border:0;display:grid;gap:var(--space-16);grid-template-columns:repeat(2,minmax(0,1fr))}
+.manual-order-wide{grid-column:1/-1}
+.manual-order-actions{display:flex;justify-content:flex-end;gap:var(--space-12);padding:var(--space-16) var(--space-20);border-top:var(--stroke-1) solid var(--line);flex-shrink:0;background:var(--surface)}
+@media(max-width:600px){
+ .manual-order-backdrop{padding:var(--space-12)}
+ .manual-order-modal{width:100%;max-height:calc(100dvh - var(--size-24))}
+ .manual-order-head,.manual-order-body,.manual-order-actions{padding:var(--space-16)}
+ .manual-order-fields{grid-template-columns:minmax(0,1fr)}
+ .manual-order-actions>.button{flex:1}
+}

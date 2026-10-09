@@ -1,0 +1,84 @@
+/* Empresas — cartera SaaS con plan y situación de pago */
+.platform-companies-summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:var(--space-12);margin-bottom:var(--space-16)}
+.platform-companies-kpi{display:flex;align-items:center;gap:var(--space-12);min-height:var(--size-72);padding:var(--space-14) var(--space-16);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-card);background:var(--surface);box-shadow:var(--shadow-47);color:var(--ink-950);font:inherit;text-align:left;cursor:pointer;transition:border-color var(--duration-160) ease,box-shadow var(--duration-160) ease}
+.platform-companies-kpi:hover{border-color:var(--palette-blue-18)}
+.platform-companies-kpi:focus-visible{outline:var(--stroke-2) solid var(--ops-500);outline-offset:var(--space-2)}
+.platform-companies-kpi.selected{border-color:var(--primary-600);box-shadow:var(--shadow-88)}
+.platform-companies-kpi>span:last-child{display:grid;gap:var(--space-2);min-width:0}
+.platform-companies-kpi b{font-size:var(--font-size-22);font-weight:var(--font-weight-800);line-height:var(--line-height-1-1);font-variant-numeric:tabular-nums}
+.platform-companies-kpi small{font-size:var(--font-size-label);font-weight:var(--font-weight-650);color:var(--ink-600);white-space:nowrap}
+.platform-companies-kpi .kpi-icon{display:grid;place-items:center;flex:0 0 auto;width:var(--size-38);height:var(--size-38);border-radius:var(--radius-10);color:var(--ops-700);background:var(--primary-100)}
+.platform-companies-kpi.up_to_date .kpi-icon{color:var(--brand-700);background:var(--brand-100)}
+.platform-companies-kpi.due_soon .kpi-icon{color:var(--warning);background:var(--warning-50)}
+.platform-companies-kpi.overdue .kpi-icon{color:var(--danger);background:var(--danger-50)}
+.platform-companies-kpi.trial .kpi-icon{color:var(--digital-700);background:var(--digital-100)}
+.platform-companies-kpi>div{display:grid;gap:var(--space-6);flex:1}
+.platform-companies-kpi i.kpi-icon{border-radius:var(--radius-10)}
+.platform-companies-kpi .kpi-value{width:var(--size-40);height:var(--size-20);border-radius:var(--radius-control)}
+.platform-companies-kpi .kpi-label{width:70%;height:var(--size-10);border-radius:var(--radius-control)}
+
+.platform-companies-panel{overflow:hidden}
+.platform-companies-table{min-width:var(--size-1020)}
+.platform-companies-table td{vertical-align:middle}
+.platform-companies-table tr.inactive td{color:var(--ink-500)}
+.platform-companies-table .table-line{width:80%;height:var(--size-12);border-radius:var(--radius-control)}
+.platform-company-name{display:flex;align-items:center;gap:var(--space-10);min-width:var(--size-220)}
+.platform-company-name>div,.platform-company-cell{display:grid;gap:var(--space-2);min-width:0}
+.platform-company-name a{font-size:var(--font-size-13);font-weight:var(--font-weight-750);color:var(--ink-950);text-decoration:none}
+.platform-company-name a:hover{color:var(--ops-700);text-decoration:underline}
+.platform-company-name a:focus-visible{outline:var(--stroke-2) solid var(--ops-500);outline-offset:var(--space-2);border-radius:var(--radius-2)}
+.platform-company-name b,.platform-company-cell b{font-size:var(--font-size-13);font-weight:var(--font-weight-750);color:var(--ink-950)}
+.platform-company-name small,.platform-company-cell small{font-size:var(--font-size-11);font-weight:var(--font-weight-600);color:var(--ink-500)}
+.platform-company-cell small.overdue{color:var(--danger)}
+.platform-company-cell small.due_soon{color:var(--warning)}
+.platform-company-amount{font-variant-numeric:tabular-nums;white-space:nowrap}
+.platform-company-muted{font-size:var(--font-size-12);color:var(--ink-400)}
+
+.platform-standing{display:inline-flex;align-items:center;gap:var(--space-6);height:var(--size-24);padding:0 var(--space-10);border-radius:var(--radius-99);font-size:var(--font-size-label);font-weight:var(--font-weight-750);white-space:nowrap;color:var(--ink-600);background:var(--cloud-100)}
+.platform-standing>i{width:var(--size-6);height:var(--size-6);border-radius:50%;background:currentColor}
+.platform-standing.up_to_date{color:var(--brand-700);background:var(--brand-100)}
+.platform-standing.due_soon{color:var(--warning);background:var(--warning-50)}
+.platform-standing.overdue{color:var(--danger);background:var(--danger-50)}
+.platform-standing.trial{color:var(--digital-700);background:var(--digital-100)}
+.platform-standing.cancelled{color:var(--ink-500);background:var(--cloud-100)}
+
+@media(max-width:1100px){.platform-companies-summary{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(prefers-reduced-motion:reduce){.platform-companies-kpi{transition:none}}
+
+/* Detalle de empresa — modal de solo lectura */
+.platform-company-actions{display:flex;align-items:center;gap:var(--space-6)}
+.company-detail{display:flex;flex-direction:column;width:min(var(--size-760),calc(100vw - var(--size-32)));max-height:min(var(--size-840),calc(100dvh - var(--size-32)));overflow:hidden}
+.company-detail>header>div{display:grid;gap:var(--space-3)}
+.company-detail>header small{order:2}
+.company-detail-body{flex:1 1 auto;min-height:0;display:grid;grid-auto-rows:max-content;gap:var(--space-16);padding:var(--space-20);overflow-y:auto;align-content:start;background:var(--cloud-50)}
+.company-detail-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--space-12);padding:var(--space-16);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-12);background:var(--surface)}
+.company-detail-summary>div{display:grid;align-content:start;justify-items:start;gap:var(--space-6);min-width:0}
+.company-detail-summary small,.company-detail-section>header small{color:var(--ink-400);font-size:var(--font-size-label);font-weight:var(--font-weight-850);letter-spacing:var(--tracking-0-08-em)}
+.company-detail-summary b{font-size:var(--font-size-13);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.company-detail-summary em{font-style:normal;font-size:var(--font-size-11);font-weight:var(--font-weight-600);color:var(--ink-500)}
+.company-detail-section{overflow:hidden;border:var(--stroke-1) solid var(--line);border-radius:var(--radius-12);background:var(--surface)}
+.company-detail-section>header{display:grid;gap:var(--space-3);padding:var(--space-14) var(--space-16);border-bottom:var(--stroke-1) solid var(--line)}
+.company-detail-section h3{margin:0;font-size:var(--font-size-13);font-weight:var(--font-weight-800);color:var(--ink-950)}
+.company-detail-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));margin:0}
+.company-detail-fields>div{display:grid;align-content:start;gap:var(--space-4);min-width:0;padding:var(--space-12) var(--space-16);border-bottom:var(--stroke-1) solid var(--palette-blue-82)}
+.company-detail-fields>div:nth-child(odd){border-right:var(--stroke-1) solid var(--palette-blue-82)}
+.company-detail-fields>div:nth-last-child(-n+2){border-bottom:0}
+.company-detail-fields dt{font-size:var(--font-size-11);font-weight:var(--font-weight-700);color:var(--ink-500)}
+.company-detail-fields dd{margin:0;font-size:var(--font-size-label);font-weight:var(--font-weight-700);color:var(--ink-950);overflow-wrap:anywhere}
+.company-detail-list{display:grid;margin:0;padding:0;list-style:none}
+.company-detail-list>li{display:grid;gap:var(--space-4);padding:var(--space-12) var(--space-16);border-bottom:var(--stroke-1) solid var(--palette-blue-82)}
+.company-detail-list>li:last-child{border-bottom:0}
+.company-detail-list>li>div{display:flex;align-items:center;flex-wrap:wrap;gap:var(--space-8)}
+.company-detail-list b{font-size:var(--font-size-label)}
+.company-detail-list small{font-size:var(--font-size-11);font-weight:var(--font-weight-700);color:var(--ink-400)}
+.company-detail-list span{padding:var(--space-2) var(--space-6);border-radius:var(--radius-5);font-size:var(--font-size-label);font-weight:var(--font-weight-800);color:var(--ink-500);background:var(--cloud-100)}
+.company-detail-list p{margin:0;font-size:var(--font-size-label);color:var(--ink-600)}
+.company-detail-list a{justify-self:start;font-size:var(--font-size-label);font-weight:var(--font-weight-650);color:var(--ops-700);overflow-wrap:anywhere}
+.company-detail-list a:focus-visible{outline:var(--stroke-2) solid var(--ops-500);outline-offset:var(--space-2);border-radius:var(--radius-2)}
+.company-detail-empty{margin:0;padding:var(--space-14) var(--space-16);font-size:var(--font-size-label);color:var(--ink-400)}
+.company-detail-footer{flex:0 0 auto;display:flex;justify-content:flex-end;padding:var(--space-14) var(--space-20);border-top:var(--stroke-1) solid var(--line);background:var(--surface)}
+.company-detail-footer .button{gap:var(--space-8)}
+.company-detail-skeleton-label{width:40%;height:var(--size-10);border-radius:var(--radius-control)}
+.company-detail-skeleton-value{width:70%;height:var(--size-14);border-radius:var(--radius-control)}
+.company-detail-skeleton-title{width:55%;height:var(--size-14);border-radius:var(--radius-control)}
+@media(max-width:640px){.platform-companies-summary{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-8)}.platform-companies-kpi{min-height:var(--size-64);padding:var(--space-12)}.platform-companies-kpi b{font-size:var(--font-size-18)}.company-detail-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.company-detail-fields{grid-template-columns:1fr}.company-detail-fields>div:nth-child(odd){border-right:0}.company-detail-fields>div:nth-last-child(-n+2){border-bottom:var(--stroke-1) solid var(--palette-blue-82)}.company-detail-fields>div:last-child{border-bottom:0}.company-detail-body{padding:var(--space-14)}.company-detail-footer{padding:var(--space-12) var(--space-14)}.company-detail-footer .button{flex:1;justify-content:center;min-height:var(--size-44)}}

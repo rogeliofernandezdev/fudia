@@ -54,8 +54,16 @@ func (a *API) getOrgSettings(w http.ResponseWriter, r *http.Request) {
 		fail(w, 503, "settings_unavailable", "No pudimos cargar la configuración financiera.")
 		return
 	}
-	out.CurrencyOptions = supportedCurrencies
-	out.CountryOptions = supportedCountries
+	out.CurrencyOptions, err = a.listPlatformCurrencies(r.Context())
+	if err != nil {
+		fail(w, 503, "settings_unavailable", "No pudimos cargar las monedas configuradas en la plataforma.")
+		return
+	}
+	out.CountryOptions, err = a.listPlatformCountries(r.Context())
+	if err != nil {
+		fail(w, 503, "settings_unavailable", "No pudimos cargar los países configurados en la plataforma.")
+		return
+	}
 	writeJSON(w, 200, out)
 }
 func (a *API) updateOrgSettings(w http.ResponseWriter, r *http.Request) {
@@ -69,8 +77,12 @@ func (a *API) updateOrgSettings(w http.ResponseWriter, r *http.Request) {
 	in.Country = strings.ToUpper(strings.TrimSpace(in.Country))
 	in.CurrencyPosition = strings.TrimSpace(in.CurrencyPosition)
 	in.TaxName = strings.TrimSpace(in.TaxName)
-	currency, validCurrency := currencyByCode(in.Currency)
-	_, validCountry := countryByCode(in.Country)
+	currency, validCurrency, currencyErr := a.platformCurrencyByCode(r.Context(), in.Currency)
+	_, validCountry, countryErr := a.platformCountryByCode(r.Context(), in.Country)
+	if currencyErr != nil || countryErr != nil {
+		fail(w, 503, "settings_unavailable", "No pudimos validar los catálogos de país y moneda.")
+		return
+	}
 	if !validCountry || !validCurrency || (in.CurrencyPosition != "before" && in.CurrencyPosition != "after") || in.TaxName == "" || len(in.TaxName) > 30 || in.TaxRate < 0 || in.TaxRate > 1 {
 		fail(w, 400, "invalid_settings", "Revisa la moneda y el porcentaje de impuesto.")
 		return

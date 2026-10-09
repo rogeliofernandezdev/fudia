@@ -41,3 +41,40 @@ inventario trazable y emitir comprobantes electrónicos para Perú.
 - Flota logística avanzada.
 - Contabilidad general completa.
 - Motor propio de homologación SUNAT.
+
+## Suscripción SaaS
+
+El alta comercial de una empresa se realiza desde Plataforma y exige un plan
+activo. El plan define moneda, precio mensual y anual, días de prueba, límites
+de locales y usuarios, versión de condiciones y módulos incluidos. La
+suscripción de cada empresa conserva el precio contratado, ciclo, estado
+(`trial`, `active`, `past_due` o `cancelled`), periodo vigente, fecha de
+renovación y aceptación de condiciones.
+
+Los pagos de suscripción se registran separados de los pagos de pedidos. El
+modelo es independiente del proveedor para permitir integrar posteriormente una
+pasarela sin acoplar el dominio. Los cambios de plan aplican los módulos del
+nuevo entitlement y no permiten bajar a límites inferiores al uso activo.
+
+Plataforma consulta la cartera completa de empresas con su plan y situación de
+pago (al día, por vencer, vencida, en prueba, cancelada o sin suscripción) y
+desde allí abre la gestión de suscripción y cobros de cada empresa.
+
+### Catálogo comercial inicial
+
+FUDIA inicia con tres planes editables desde Plataforma. No son reglas
+hardcodeadas del frontend: viven en `subscription_plans` y pueden cambiar sin
+desplegar una nueva versión.
+
+| Plan | Precio mensual | Precio anual | Locales | Usuarios | Enfoque |
+| --- | ---: | ---: | ---: | ---: | --- |
+| Emprende | PEN 89 | PEN 890 | 1 | 6 | Operación esencial de un restaurante |
+| Impulso | PEN 169 | PEN 1,690 | 3 | 20 | Crecimiento con recetas, inventario y reservas |
+| Escala | PEN 299 | PEN 2,990 | 10 | 60 | Operación multi-local y compras |
+
+Los tres incluyen 14 días de prueba. Emprende cubre POS, pedidos, cocina,
+mesas, caja, productos, menús y combos, inventario, compras, clientes, reportes
+y administración base. Impulso conserva su paquete con reservas, recetas,
+inventario y Kardex. Escala cubre todos los módulos actualmente disponibles del
+núcleo comercial. La ampliación de Emprende no modifica los otros planes,
+precios ni límites.
