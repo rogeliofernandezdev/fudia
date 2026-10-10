@@ -29,7 +29,7 @@ export function ProfilePage(){
 }
 
 function ProfileHeader(){
-  return <PageHeader eyebrow="CUENTA" title="Mi perfil y seguridad" description="Tus datos personales, tu contraseña y la suscripción de tu empresa."/>;
+  return <PageHeader title="Mi perfil y seguridad" description="Tus datos personales, tu contraseña y la suscripción de tu empresa."/>;
 }
 
 function initials(value:string){
@@ -120,7 +120,7 @@ function SubscriptionPanel({subscription,loading,error,retry,country,timeZone}:{
       <Status tone={subscriptionStatusTone(subscription.status)}>{subscriptionStatusLabel(subscription.status)}</Status>
     </header>
 
-    {legacy&&<div className="profile-note"><Icon name="alert" size={15}/><span>Plan anterior al catálogo comercial. FUDIA migrará precio, renovación y condiciones desde Plataforma.</span></div>}
+    {legacy&&<div className="profile-note"><Icon name="alert" size={16}/><span>Plan anterior al catálogo comercial. FUDIA migrará precio, renovación y condiciones desde Plataforma.</span></div>}
 
     <dl className="profile-facts">
       <div><dt>{nextLabel}</dt><dd>{dateLabel(nextDate,country,timeZone)}</dd></div>
@@ -134,7 +134,7 @@ function SubscriptionPanel({subscription,loading,error,retry,country,timeZone}:{
       <UsageRow label="Usuarios" value={subscription.usage.users} max={subscription.plan.maxUsers}/>
     </div>
 
-    <footer className="profile-subscription-foot"><Icon name="lock" size={13}/><span>Plan, estado y pagos se administran desde Plataforma.</span></footer>
+    <footer className="profile-subscription-foot"><Icon name="lock" size={14}/><span>Plan, estado y pagos se administran desde Plataforma.</span></footer>
   </section>;
 }
 
@@ -152,14 +152,14 @@ function ProfileSkeleton(){
     <header className="profile-account-head"><Skeleton className="profile-sk-avatar"/><div className="profile-account-copy"><Skeleton width="40%" height="var(--size-16)"/><Skeleton width="60%" height="var(--size-11)"/></div></header>
     <div className="profile-fields">{[0,1].map(i=><div className="form-field" key={i}><Skeleton width="var(--size-100)" height="var(--size-11)"/><Skeleton className="profile-sk-control"/></div>)}</div>
     <section className="profile-password"><Skeleton width="var(--size-140)" height="var(--size-13)"/><div className="profile-fields">{[0,1].map(i=><div className="form-field" key={i}><Skeleton width="var(--size-110)" height="var(--size-11)"/><Skeleton className="profile-sk-control"/></div>)}</div></section>
-    <footer className="profile-actions"><Skeleton width="var(--size-120)" height="var(--control-height)" radius="var(--radius-10)"/></footer>
+    <footer className="profile-actions"><Skeleton width="var(--size-120)" height="var(--control-height)" radius="var(--radius-tile)"/></footer>
   </section>;
 }
 
 function SubscriptionSkeleton(){
   return <section className="profile-card profile-subscription profile-skeleton" aria-label="Cargando suscripción" aria-busy="true">
-    <header className="profile-subscription-head"><div><Skeleton width="var(--size-150)" height="var(--size-10)"/><Skeleton width="var(--size-120)" height="var(--size-20)"/><Skeleton width="var(--size-180)" height="var(--size-11)"/></div><Skeleton width="var(--size-70)" height="var(--size-22)" radius="var(--radius-99)"/></header>
+    <header className="profile-subscription-head"><div><Skeleton width="var(--size-150)" height="var(--size-10)"/><Skeleton width="var(--size-120)" height="var(--size-20)"/><Skeleton width="var(--size-180)" height="var(--size-11)"/></div><Skeleton width="var(--size-70)" height="var(--size-22)" radius="var(--radius-pill)"/></header>
     <dl className="profile-facts">{[0,1,2,3].map(i=><div key={i}><Skeleton width="var(--size-90)" height="var(--size-10)"/><Skeleton width="var(--size-70)" height="var(--size-14)"/></div>)}</dl>
-    <div className="profile-usage">{[0,1].map(i=><div className="profile-usage-row" key={i}><Skeleton width="50%" height="var(--size-11)"/><Skeleton width="100%" height="var(--size-6)" radius="var(--radius-99)"/></div>)}</div>
+    <div className="profile-usage">{[0,1].map(i=><div className="profile-usage-row" key={i}><Skeleton width="50%" height="var(--size-11)"/><Skeleton width="100%" height="var(--size-6)" radius="var(--radius-pill)"/></div>)}</div>
   </section>;
 }

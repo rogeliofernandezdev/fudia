@@ -12,7 +12,7 @@ const features:Record<ConfigurationComingSoonFeature,{icon:IconName;title:string
 /** Configuración aún no disponible: misma cabecera y estado «Próximamente» en todas las secciones. */
 export function ConfigurationComingSoon({feature}:{feature:ConfigurationComingSoonFeature}){
  const{icon,title,description,subject}=features[feature];
- return <><PageHeader eyebrow="CONFIGURACIÓN" title={title} description={description}/>
+ return <><PageHeader title={title} description={description}/>
   <section className="panel management"><EmptyState icon={icon} title="Próximamente" text={`Estamos preparando la configuración de ${subject}.`}/></section>
  </>;
 }

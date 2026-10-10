@@ -1,4 +1,4 @@
 /* Bloque base compartido por los skeletons de Plataforma, dentro y fuera de su shell. */
-.platform-skeleton-block,.platform-skeleton-copy i{display:block;background:linear-gradient(90deg,var(--palette-blue-74) 20%,var(--palette-blue-104) 42%,var(--palette-blue-74) 64%);background-size:220% 100%;animation:platform-skeleton-shimmer var(--duration-1350) ease-in-out infinite}
+.platform-skeleton-block,.platform-skeleton-copy i{display:block;background:linear-gradient(90deg,var(--cloud-150) 20%,var(--cloud-50) 42%,var(--cloud-150) 64%);background-size:220% 100%;animation:platform-skeleton-shimmer var(--duration-ambient-long) ease-in-out infinite}
 @keyframes platform-skeleton-shimmer{to{background-position:-220% 0}}
 @media(prefers-reduced-motion:reduce){.platform-skeleton-block,.platform-skeleton-copy i{animation:none}}

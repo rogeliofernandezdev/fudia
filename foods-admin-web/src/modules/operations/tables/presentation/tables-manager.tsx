@@ -57,7 +57,7 @@ export function TablesManager(){
  function saveAll(){if(saveBatch.isPending)return;if(!canManageTables)return;if(!validNewRows.length)return;saveBatch.mutate(validNewRows)}
  function cancelAdd(){if(saveBatch.isPending)return;setAdding(false);setNewRows([])}
 
- return <><PageHeader eyebrow="OPERACIÓN" title="Mesas y zonas" description="Registra las mesas y zonas del local. Cada mesa genera un QR para iniciar la atención por WhatsApp."/>
+ return <><PageHeader title="Mesas y zonas" description="Registra las mesas y zonas del local. Cada mesa genera un QR para iniciar la atención por WhatsApp."/>
  <div className="catalog-tabs-row"><div className="catalog-tabs"><button className={tab==="tables"?"active":""} onClick={()=>setTab("tables")}><Icon name="grid" size={16}/>Mesas<b>{tables.data?.total??0}</b></button><button className={tab==="zones"?"active":""} onClick={()=>setTab("zones")}><Icon name="store" size={16}/>Zonas<b>{zones.data?.total??0}</b></button></div>{tab==="tables"&&!(canManageTables&&(adding||tableDraft))&&<div className="qr-batch-actions"><Button icon="qr" kind="secondary" onClick={()=>setPrintQr(true)}>Imprimir QRs</Button>{canManageTables&&<Button icon="plus" onClick={()=>{setAdding(true);addRow()}}>Nueva mesa</Button>}</div>}{tab==="zones"&&canManageZones&&<Button icon="plus" onClick={()=>setZoneDraft(emptyZone)}>Nueva zona</Button>}</div>
 
  {tab==="tables"?<section className="panel management catalog-panel"><div className="toolbar"><label><Icon name="search" size={18}/><input value={search} onChange={e=>{setSearch(e.target.value);setPage(1)}} placeholder="Buscar por nombre..."/></label><select aria-label="Filtrar por estado" value={statusFilter} onChange={e=>{setStatusFilter(e.target.value);setPage(1)}}><option value="">Todos los estados</option><option value="active">Activas</option><option value="inactive">Inactivas</option></select></div>
@@ -124,7 +124,7 @@ function QrDialog({table,restaurantName,close}:{table:Table;restaurantName:strin
    const logo=new Image();logo.crossOrigin="anonymous";
    logo.onload=()=>{
      ctx.save();ctx.beginPath();ctx.roundRect(130,40,80,80,12);ctx.clip();ctx.drawImage(logo,130,40,80,80);ctx.restore();
-     ctx.fillStyle=readCssToken("--primary-700");ctx.font=`${readCssToken("--font-weight-800")} ${readCssToken("--font-size-20")} ${readCssToken("--font-sans")}`;ctx.textAlign="center";ctx.fillText(restaurantName,170,148);
+     ctx.fillStyle=readCssToken("--primary-700");ctx.font=`${readCssToken("--weight-bold")} ${readCssToken("--font-size-xl")} ${readCssToken("--font-sans")}`;ctx.textAlign="center";ctx.fillText(restaurantName,170,148);
      const qrImg=new Image();qrImg.onload=()=>{
        ctx.drawImage(qrImg,50,170,240,240);
        ctx.fillStyle=readCssToken("--ink-400");ctx.font=`${readCssToken("--font-size-label")} ${readCssToken("--font-sans")}`;
@@ -218,7 +218,7 @@ function PrintQrDialog({tables,restaurantName,close}:{tables:Table[];restaurantN
      <div className="qr-print-card-accent"/>
      <div className="qr-print-card-brand"><span className="qr-print-card-logo"><NextImage src="/assets/images/logo.png" alt="fudIA" width={28} height={28}/></span><b>{restaurantName}</b></div>
      <canvas ref={el=>{canvasRefs.current[t.id]=el}}/>
-     <div className="qr-print-card-footer"><Icon name="qr" size={12}/><span>Escanea para pedir por WhatsApp</span></div>
+     <div className="qr-print-card-footer"><Icon name="qr" size={14}/><span>Escanea para pedir por WhatsApp</span></div>
    </div>)}</div>}
  </div>
  <footer className="qr-footer">

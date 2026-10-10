@@ -31,7 +31,7 @@ export function SalesPage(){
   const detail=useQuery({queryKey:["sale-detail",detailId],queryFn:()=>getSaleDetail(detailId!),enabled:Boolean(detailId)});
   const money=useMoney();
   const date=(value:string)=>formatRegionalDateTime(value,{country:location?.country,timeZone:location?.timezone},{dateStyle:"medium",timeStyle:"short"});
-  return <><PageHeader eyebrow="CONTROL" title="Ventas" description="Historial real de pedidos completamente cobrados del local."/>
+  return <><PageHeader title="Ventas" description="Historial real de pedidos completamente cobrados del local."/>
     <section className="panel management standardized-management">
       <SalesFilters q={q} from={from} to={to} invalidRange={invalidRange} search={value=>{setQ(value);setPage(1)}} start={value=>{setFrom(value);setPage(1)}} end={value=>{setTo(value);setPage(1)}} clear={()=>{setFrom("");setTo("");setPage(1)}}/>
       {invalidRange?null:sales.isLoading?<SalesTableSkeleton/>

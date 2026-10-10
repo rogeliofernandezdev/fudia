@@ -22,7 +22,7 @@ test("acceso: los tres mensajes y sus iconos comparten una sola fila",()=>{
 });
 
 test("acceso: tipografía auxiliar legible en móvil sin volver a apilar mensajes",()=>{
- assert.equal(values(".admin-auth-trust li")["font-size"],"11px");
+ assert.equal(values(".admin-auth-trust li")["font-size"],"12px");
  const mobile=ast.nodes.find(node=>node.type==="atrule"&&node.params==="(max-width:480px)");
  assert.equal(mobile.nodes.find(node=>node.selector===".admin-auth-trust li").nodes.find(node=>node.prop==="font-size").value,"10px");
  ast.walkRules(rule=>{if(rule.selector===".admin-auth-trust"||rule.selector===".admin-auth-trust li"){
@@ -44,7 +44,7 @@ test("acceso: tarjeta móvil compacta, campos neutros y acción con geometría c
  assert.equal(values(".admin-auth-submit")["border-radius"],"6px");
  assert.equal(values(".admin-auth-field button").height,"var(--control-height)");
  assert.equal(values(".admin-auth-field button").width,"var(--control-height)");
- assert.equal(values(".admin-auth-footer")["font-size"],"11px");
+ assert.equal(values(".admin-auth-footer")["font-size"],"12px");
 });
 
 test("acceso: vista baja conserva desplazamiento natural y foco visible",()=>{
@@ -54,8 +54,8 @@ test("acceso: vista baja conserva desplazamiento natural y foco visible",()=>{
  assert.equal(values(".admin-auth-page")["min-height"],"100dvh");
  assert.equal(values(".admin-auth-page").height,undefined);
  assert.equal(values(".admin-auth-page").overflow,undefined);
- assert.ok(values(".admin-auth-field button:focus-visible").outline.includes("var(--ops-500)"));
- assert.ok(values(".admin-auth-submit:focus-visible").outline.includes("var(--ops-500)"));
+ assert.ok(values(".admin-auth-field button:focus-visible").outline.includes("var(--primary-600)"));
+ assert.ok(values(".admin-auth-submit:focus-visible").outline.includes("var(--primary-600)"));
 });
 
 test("acceso: Ingresar conserva estados y no incorpora selectores ni enlaces sin destino",()=>{
@@ -112,7 +112,7 @@ test("acceso: recuperar conserva texto plano al pasar el cursor y foco visible c
  assert.equal(values(".admin-auth-recovery").background,"transparent");
  assert.equal(values(".admin-auth-recovery")["box-shadow"],undefined);
  assert.equal(values(".admin-auth-recovery")["text-decoration"],undefined);
- assert.ok(values(".admin-auth-recovery:focus-visible").outline.includes("var(--ops-500)"));
+ assert.ok(values(".admin-auth-recovery:focus-visible").outline.includes("var(--primary-600)"));
  assert.equal(ast.nodes.some(node=>node.selector===".admin-auth-field button:hover"),false);
  assert.equal(values(".admin-auth-field button").background,"transparent");
  assert.equal(values(".admin-auth-field button")["box-shadow"],undefined);

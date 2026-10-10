@@ -20,7 +20,7 @@ function ModulesSkeleton() {
       <header><Skeleton width="var(--size-120)" height="var(--size-14)"/></header>
       <div className="module-list">
         {Array.from({length: 3}, (_, row) => <div key={row} className="module-item">
-          <Skeleton className="module-skeleton-fixed" width="var(--size-40)" height="var(--size-40)" radius="var(--radius-10)"/>
+          <Skeleton className="module-skeleton-fixed" width="var(--size-40)" height="var(--size-40)" radius="var(--radius-tile)"/>
           <div className="module-skeleton-info"><Skeleton width="var(--size-140)"/><Skeleton width="80%" height="var(--size-9)"/><Skeleton width="60%" height="var(--size-9)"/></div>
           <Skeleton className="module-skeleton-fixed" width="var(--control-height)" height="var(--control-height)"/>
         </div>)}
@@ -64,7 +64,7 @@ export function ModulesView() {
   if (!user?.platformAdmin) {
     return (
       <>
-        <PageHeader eyebrow="CONFIGURACIÓN" title="Módulos" description="Consulta la disponibilidad de módulos de la plataforma." />
+        <PageHeader title="Módulos" description="Consulta la disponibilidad de módulos de la plataforma." />
         <div className="panel management">
           <EmptyState icon="lock" title="Acceso restringido" text="Solo el administrador de plataforma puede gestionar los módulos."/>
         </div>
@@ -74,7 +74,7 @@ export function ModulesView() {
 
   return (
     <>
-      <PageHeader eyebrow="CONFIGURACIÓN" title="Módulos" description="Catálogo completo de FUDIA. Solo los módulos disponibles pueden habilitarse para una empresa." />
+      <PageHeader title="Módulos" description="Catálogo completo de FUDIA. Solo los módulos disponibles pueden habilitarse para una empresa." />
       {organization && <div className="modules-org-banner"><Icon name="store" size={16} /><span>Gestionando módulos de <b>{organization.name}</b> — los cambios aplican a todos sus locales y usuarios.</span></div>}
       {modules.isLoading ? <ModulesSkeleton/> : modules.isError ? (
         <div className="panel management"><ErrorState title="No pudimos cargar los módulos" text={modules.error.message} onRetry={() => void modules.refetch()} retrying={modules.isFetching}/></div>

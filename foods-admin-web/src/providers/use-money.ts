@@ -12,6 +12,12 @@ export function formatCurrency(amount:number,settings:Pick<OrgSettings,"currency
   return settings.currencyPosition==="before"?`${sign}${settings.currencySymbol} ${value}`:`${sign}${value} ${settings.currencySymbol}`;
 }
 
+/** Símbolo, posición y decimales de la moneda de la empresa, para `MoneyInput` y prefijos de importe. */
+export function useCurrency(){
+  const settings=useSettings();
+  return {symbol:settings.currencySymbol,position:settings.currencyPosition==="before"?"before" as const:"after" as const,decimals:settings.currencyDecimals};
+}
+
 /** Formateador de dinero homologado para toda la interfaz (nunca `toFixed` + símbolo a mano). */
 export function useMoney(){
   const settings=useSettings();

@@ -156,8 +156,8 @@ test("salon: cuenta agrupada con importes legibles y saldo destacado sin aparien
  const balance=css.match(/\.salon-order-detail-grand\{([^}]+)\}/)[1];
  assert.match(balance,/background:var\(--primary-100\)/);
  assert.doesNotMatch(balance,/(?:cursor|transform|box-shadow):/);
- assert.match(css,/\.salon-order-detail-subtotal b\{[^}]*font-size:var\(--font-size-18\)/);
- assert.match(css,/\.salon-order-detail-grand strong\{[^}]*font-size:var\(--font-size-24\)/);
+ assert.match(css,/\.salon-order-detail-subtotal b\{[^}]*font-size:var\(--font-size-lg\)/);
+ assert.match(css,/\.salon-order-detail-grand strong\{[^}]*font-size:var\(--font-size-xl\)/);
  assert.match(css,/\.salon-order-detail-totals\{[^}]*background:var\(--cloud-50\)/);
  assert.match(css,/\.salon-order-detail-totals\.is-paid \.salon-order-detail-grand\{[^}]*background:var\(--brand-100\)/);
  const footer=css.match(/\.salon-order-detail \.salon-order-detail-actions\{([^}]+)\}/)[1];
@@ -180,9 +180,9 @@ test("salon: cantidad circular y pie sin instrucciones redundantes de entrega o 
  const qty=css.match(/\.salon-order-detail-qty\{([^}]+)\}/)[1];
  assert.match(qty,/width:var\(--size-32\)/);
  assert.match(qty,/height:var\(--size-32\)/);
- assert.match(qty,/border-radius:var\(--radius-999\)/);
+ assert.match(qty,/border-radius:var\(--radius-pill\)/);
  assert.match(qty,/align-self:center/);
- assert.match(css,/\.salon-order-detail-skeleton-qty\{[^}]*height:var\(--size-32\)[^}]*border-radius:var\(--radius-999\)/);
+ assert.match(css,/\.salon-order-detail-skeleton-qty\{[^}]*height:var\(--size-32\)[^}]*border-radius:var\(--radius-pill\)/);
  const restricted=mount("salon",{status:"nuevo",paidAmount:"5",remainingAmount:"20"});
  assert.ok(restricted.nodes.some(n=>n.props.className==="salon-order-detail-notice"));
 });
@@ -196,7 +196,7 @@ test("salon: la cuenta móvil alinea subtotal, pagado y saldo en filas completas
  assert.equal(row["flex-direction"],"row");
  assert.equal(row["align-items"],"center");
  assert.equal(row["justify-content"],"space-between");
- assert.equal(row.padding,"0 var(--space-12)");
+ assert.equal(row.padding,"0 var(--space-3)");
  const balance=declarations(".salon-order-detail-grand");
  assert.equal(balance["flex-direction"],"row");
  assert.equal(balance["justify-content"],row["justify-content"]);

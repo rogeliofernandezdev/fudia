@@ -6,8 +6,8 @@ type Props={channel:string;waiterName?:string;collectedByNames?:string[]};
 export function OrderAttribution({channel,waiterName,collectedByNames=[]}:Props){
   if(channel!=="salon"&&!collectedByNames.length)return null;
   return <dl className="order-attribution" aria-label="Responsables de la atención y del cobro">
-    {channel==="salon"&&<div><dt><Icon name="users" size={15}/>Mozo</dt><dd>{waiterName||"Sin asignar"}</dd></div>}
-    {collectedByNames.length>0&&<div><dt><Icon name="payment" size={15}/>Cobrado por</dt><dd>{collectedByNames.join(" · ")}</dd></div>}
+    {channel==="salon"&&<div><dt><Icon name="users" size={16}/>Mozo</dt><dd>{waiterName||"Sin asignar"}</dd></div>}
+    {collectedByNames.length>0&&<div><dt><Icon name="payment" size={16}/>Cobrado por</dt><dd>{collectedByNames.join(" · ")}</dd></div>}
   </dl>;
 }
 

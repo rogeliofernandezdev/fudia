@@ -146,10 +146,10 @@ export function PurchaseItemDialog({
             :items.isError?<ErrorState title="No pudimos cargar los artículos" text={items.error.message} onRetry={()=>void items.refetch()}/>
             :existing.length?<div className="purchase-existing-list">
               {existing.map(item=><button type="button" key={item.id} onClick={()=>choose(item)}>
-                <span className="purchase-existing-icon"><Icon name={item.kind==="ingredient"?"stock":"box"} size={17}/></span>
+                <span className="purchase-existing-icon"><Icon name={item.kind==="ingredient"?"stock":"box"} size={18}/></span>
                 <span className="purchase-existing-copy"><b>{item.name}</b><small>{item.kind==="ingredient"?"Insumo":"Producto vendible"} · Unidad de inventario: {item.unit}</small></span>
                 <span className="purchase-existing-stock"><small>STOCK</small><b>{formatRegionalNumber(Number(item.quantity??0),location?.country,{maximumFractionDigits:3})}</b></span>
-                <Icon name="chevron" size={15}/>
+                <Icon name="chevron" size={16}/>
               </button>)}
             </div>
             :<EmptyState
@@ -160,7 +160,7 @@ export function PurchaseItemDialog({
             />}
           </section>:<>
             <section className="purchase-item-section">
-              <div className="purchase-section-title"><span><Icon name={mode==="new_product"?"plus":"stock"} size={17}/></span><div><b>{mode==="new_product"?"Nuevo producto vendible":"Nuevo insumo"}</b><small>{mode==="new_product"?"Se crea como mercadería vendible con Inventario físico.":"Se crea solo como inventario interno; no tendrá precio de venta."}</small></div></div>
+              <div className="purchase-section-title"><span><Icon name={mode==="new_product"?"plus":"stock"} size={18}/></span><div><b>{mode==="new_product"?"Nuevo producto vendible":"Nuevo insumo"}</b><small>{mode==="new_product"?"Se crea como mercadería vendible con Inventario físico.":"Se crea solo como inventario interno; no tendrá precio de venta."}</small></div></div>
               <div className="form-grid">
                 <label className="span-2">Nombre<Input autoFocus maxLength={160} {...register("name")} placeholder={mode==="new_product"?"Ej. Coca-Cola 500 ml":"Ej. Carne de res"} aria-invalid={Boolean(errors.name)}/>{errors.name?.message&&<small className="field-error">{errors.name.message}</small>}</label>
                 {mode==="new_product"&&<>
@@ -170,7 +170,7 @@ export function PurchaseItemDialog({
                   <label className="purchase-item-image span-2">Imagen del producto (opcional)
                     <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={event=>{const file=event.target.files?.[0];if(file)selectFile(file)}}/>
                     <div className="purchase-image-drop" role="button" tabIndex={0} onClick={()=>fileRef.current?.click()} onKeyDown={event=>{if(event.key==="Enter"||event.key===" ")fileRef.current?.click()}}>
-                      {previewUrl?<><img src={previewUrl} alt={watchedName||"Vista previa del producto"}/><button type="button" className="purchase-image-clear" onClick={event=>{event.stopPropagation();clearImage()}} aria-label="Quitar imagen"><Icon name="close" size={15}/></button></>:<div><Icon name="box" size={23}/><b>Seleccionar imagen</b><small>PNG, JPEG o WebP · máximo 5 MB</small></div>}
+                      {previewUrl?<><img src={previewUrl} alt={watchedName||"Vista previa del producto"}/><button type="button" className="purchase-image-clear" onClick={event=>{event.stopPropagation();clearImage()}} aria-label="Quitar imagen"><Icon name="close" size={16}/></button></>:<div><Icon name="box" size={24}/><b>Seleccionar imagen</b><small>PNG, JPEG o WebP · máximo 5 MB</small></div>}
                     </div>
                     {imageError&&<small className="field-error">{imageError}</small>}
                   </label>
@@ -179,7 +179,7 @@ export function PurchaseItemDialog({
             </section>
 
             <section className="purchase-item-section">
-              <div className="purchase-section-title"><span><Icon name="box" size={17}/></span><div><b>Unidad y presentación</b><small>Define cómo se almacenará y cómo se comprará este artículo.</small></div></div>
+              <div className="purchase-section-title"><span><Icon name="box" size={18}/></span><div><b>Unidad y presentación</b><small>Define cómo se almacenará y cómo se comprará este artículo.</small></div></div>
               <div className="form-grid">
                 <PurchaseUnitField value={unit} onChange={value=>{setValue("unit",value,{shouldDirty:true,shouldValidate:isSubmitted});setValue("presentations",[],{shouldDirty:true})}} error={errors.unit?.message} disabled={locked||catalogBusy} onBusyChange={setCatalogBusy}/>
                 <label>Stock mínimo<Input type="number" min="0" step="0.001" inputMode="decimal" {...register("minimumStock")} aria-invalid={Boolean(errors.minimumStock)}/>{errors.minimumStock?.message&&<small className="field-error">{errors.minimumStock.message}</small>}</label>
@@ -196,7 +196,7 @@ export function PurchaseItemDialog({
           </>}
         </div>
         <footer>
-          {mode!=="existing"&&typeof validationMessage==="string"&&<div className="purchase-validation" role="alert"><Icon name="alert" size={15}/>{validationMessage}</div>}
+          {mode!=="existing"&&typeof validationMessage==="string"&&<div className="purchase-validation" role="alert"><Icon name="alert" size={16}/>{validationMessage}</div>}
           <Button type="button" kind="ghost" onClick={close} disabled={locked||catalogBusy}>Cancelar</Button>
           {mode!=="existing"&&<Button type="button" onClick={()=>void submit()} disabled={locked||catalogBusy}>{locked?"Guardando…":"Crear y agregar"}</Button>}
         </footer>

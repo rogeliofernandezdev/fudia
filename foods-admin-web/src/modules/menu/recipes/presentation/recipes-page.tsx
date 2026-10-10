@@ -21,8 +21,8 @@ const empty=(productId=""):RecipeDraft=>({productId,yieldQuantity:"1",notes:"",a
 
 type RecipeLookupOption={label:string;value:string;unit?:string};
 const recipeLookupSelectStyles=createLookupSelectStyles<RecipeLookupOption>({
- dropdownIndicator:base=>({...base,color:"var(--ink-500)",padding:"0 var(--space-9)","&:hover":{color:"var(--ops-700)"}}),
- clearIndicator:base=>({...base,color:"var(--ink-400)",padding:"0 var(--space-6)","&:hover":{color:"var(--danger-600)"}}),
+ dropdownIndicator:base=>({...base,color:"var(--ink-500)",padding:"0 var(--space-2)","&:hover":{color:"var(--primary-700)"}}),
+ clearIndicator:base=>({...base,color:"var(--ink-400)",padding:"0 var(--space-1-5)","&:hover":{color:"var(--danger-600)"}}),
  loadingMessage:base=>({...base,color:"var(--ink-500)",fontSize:"var(--font-size-label)"}),
 });
 async function loadRecipeProductOptions(q:string):Promise<RecipeLookupOption[]>{
@@ -164,7 +164,6 @@ export function RecipesPage(){
 
  return <>
   <PageHeader
-   eyebrow="CARTA Y PRODUCCIÓN"
    title="Recetas"
    description="Define el consumo de insumos de los productos preparados. Inventario y Kárdex continúan operando aunque una receta esté desactivada."
    action={canManage?<Button icon="plus" onClick={openNew}>Nueva receta</Button>:undefined}
@@ -172,7 +171,7 @@ export function RecipesPage(){
 
   <section className="panel standardized-management">
    <div className="toolbar">
-    <label className="ds-input-shell"><Icon name="search" size={17}/><Input value={q} onChange={e=>setQ(e.target.value)} placeholder="Buscar producto con receta..."/></label>
+    <label className="ds-input-shell"><Icon name="search" size={18}/><Input value={q} onChange={e=>setQ(e.target.value)} placeholder="Buscar producto con receta..."/></label>
    </div>
    {recipes.isLoading?<RecipeListSkeleton/>:recipes.isError?
     <div className="catalog-state error"><Icon name="alert" size={24}/><b>No pudimos cargar las recetas</b><p>{recipes.error.message}</p><Button kind="secondary" icon="refresh" onClick={()=>recipes.refetch()}>Reintentar</Button></div>
@@ -238,14 +237,14 @@ export function RecipesPage(){
       <section className="recipe-ingredients">
        <header className="recipe-ingredients-toolbar">
         <div>
-         <span className="recipe-section-icon"><Icon name="stock" size={17}/></span>
+         <span className="recipe-section-icon"><Icon name="stock" size={18}/></span>
          <span><b>Insumos de la receta</b><small>Indica la cantidad consumida para el rendimiento definido arriba.</small></span>
         </div>
         <Button type="button" kind="secondary" icon="plus" disabled={save.isPending||draft.items.some(item=>!item.inventoryItemId)} onClick={addIngredient}>Agregar insumo</Button>
        </header>
 
        {ingredientDefaults.isError&&draft.items.length===0?<div className="recipe-inline-state error"><Icon name="alert" size={18}/><span><b>No pudimos cargar los insumos</b><small>Reintenta la carga o busca un insumo cuando agregues una fila.</small></span><Button kind="secondary" icon="refresh" onClick={()=>ingredientDefaults.refetch()}>Reintentar</Button></div>
-       :draft.items.length===0?<div className={attempted?"recipe-inline-state warning":"recipe-inline-state"}><Icon name="stock" size={19}/><span><b>Agrega al menos un insumo</b><small>La receta necesita un insumo con cantidad válida para poder guardarse.</small></span></div>
+       :draft.items.length===0?<div className={attempted?"recipe-inline-state warning":"recipe-inline-state"}><Icon name="stock" size={20}/><span><b>Agrega al menos un insumo</b><small>La receta necesita un insumo con cantidad válida para poder guardarse.</small></span></div>
        :<div className="recipe-ingredients-grid">
         <div className="recipe-ingredients-head" aria-hidden="true"><span>INSUMO</span><span>CANTIDAD</span><span>MERMA %</span><span>ACCIÓN</span></div>
         {draft.items.map((item,index)=>{

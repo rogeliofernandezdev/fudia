@@ -35,7 +35,7 @@ export function ExpensesPage(){
  const expenseFiltered=Boolean(q||categoryId||status||from||to);const categoryFiltered=Boolean(q||status);const newExpense=()=>setDraft(emptyDraft(paymentOptions[0]?.value??""));const newCategory=()=>setCategoryDraft({id:"",name:"",active:true});
  const headerAction=tab==="expenses"?(canManage?<Button icon="plus" onClick={newExpense}>Nuevo gasto</Button>:undefined):(canManage?<Button icon="plus" onClick={newCategory}>Nueva categoría</Button>:undefined);
  return <>
-  <PageHeader eyebrow="INTELIGENCIA" title="Costos y gastos" description="Centraliza el control económico del local. Esta sección gestiona los gastos operativos y sus categorías." action={headerAction}/>
+  <PageHeader title="Costos y gastos" description="Centraliza el control económico del local. Esta sección gestiona los gastos operativos y sus categorías." action={headerAction}/>
   <div className="catalog-tabs-row"><Tabs label="Costos y gastos" items={tabs} value={tab} onChange={changeTab}/></div>
   <section className="panel standardized-management expenses-panel">
    {tab==="expenses"?<>

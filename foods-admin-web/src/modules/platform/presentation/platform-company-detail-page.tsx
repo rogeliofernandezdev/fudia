@@ -25,7 +25,6 @@ function CompanySubscription({organizationId}:{organizationId:string}){
 
  const back=<Link href={pageRoutes.companiesSettings} className="button secondary"><Icon name="chevronLeft" size={16}/>Empresas y planes</Link>;
  const header=<PageHeader
-  eyebrow="CONFIGURACIÓN · EMPRESAS Y PLANES"
   title={company?.tradeName??"Suscripción de empresa"}
   description={company?[company.taxId?"RUC "+company.taxId:"",company.active?"":"Empresa inactiva"].filter(Boolean).join(" · ")||"Contrato, plan y cobros de la empresa.":"Contrato, plan y cobros de la empresa."}
   action={back}

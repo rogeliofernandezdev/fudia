@@ -209,7 +209,6 @@ export function CashPage(){
 
   return <div className="cash-page">
     <PageHeader
-      eyebrow="OPERACIÓN"
       title="Caja y turnos"
       description="Controla las cajas del local, sus turnos y el efectivo esperado en tiempo real."
       action={headerAction}
@@ -261,7 +260,7 @@ export function CashPage(){
               const variance=Number(item.varianceAmount??0);
               const attribution=cashShiftAttribution(item);
               return <tr className={index%2?"alternate":""} key={item.id}>
-                <td><span className="row-icon"><Icon name="clock" size={17}/></span><b>{item.code}</b><small>{item.movementCount} {item.movementCount===1?"movimiento":"movimientos"}</small></td>
+                <td><span className="row-icon"><Icon name="clock" size={18}/></span><b>{item.code}</b><small>{item.movementCount} {item.movementCount===1?"movimiento":"movimientos"}</small></td>
                 <td><b>{item.cashRegisterName}</b></td>
                 <td>{businessDate(item.businessDate)}</td>
                 <td className="cash-attribution"><b>{attribution.name}</b><small>{attribution.label}</small></td>
@@ -375,9 +374,9 @@ function CashRegisters({items,loading,error,canManage,money,dateTime,businessDat
             <div className="cash-register-live-copy">
               <small>TURNO EN CURSO</small>
               <b>{shift.code}</b>
-              <p><Icon name="users" size={12}/>Cajero: {cashShiftAttribution(shift).name}</p>
+              <p><Icon name="users" size={14}/>Cajero: {cashShiftAttribution(shift).name}</p>
               <p>Equipo actual: {cashShiftTeamName(shift)}</p>
-              <p><Icon name="clock" size={12}/><time dateTime={shift.openedAt}>Apertura: {dateTime(shift.openedAt)}</time></p>
+              <p><Icon name="clock" size={14}/><time dateTime={shift.openedAt}>Apertura: {dateTime(shift.openedAt)}</time></p>
               <em>Día operativo {businessDate(shift.businessDate)}</em>
             </div>
             <div className="cash-register-balance"><small>{shift.expectedVisible?"SALDO ESPERADO":"CIERRE CIEGO"}</small><strong>{shift.expectedVisible?money(Number(shift.expectedAmount)):"Oculto"}</strong><span>{shift.movementCount} {shift.movementCount===1?"movimiento":"movimientos"}</span></div>

@@ -89,7 +89,7 @@ export function InventoryTransferDialog({items,locations,currentLocationId,busy,
             <Textarea rows={2} maxLength={500} placeholder="Motivo o referencia del traslado" {...register("notes")}/>
           </FormField>
 
-          {isSubmitted&&hasErrors&&<div className="inventory-validation" role="alert"><Icon name="alert" size={15}/><span>Revisa los campos marcados antes de guardar.</span></div>}
+          {isSubmitted&&hasErrors&&<div className="inventory-validation" role="alert"><Icon name="alert" size={16}/><span>Revisa los campos marcados antes de guardar.</span></div>}
         </div>
         <footer><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy||!destinations.length||!items.length}>{busy?"Guardando…":"Guardar"}</Button></footer>
       </form>

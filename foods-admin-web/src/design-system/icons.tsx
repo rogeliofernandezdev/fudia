@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
-export type IconName = "info"|"grid"|"sales"|"receipt"|"menu"|"utensils"|"chefHat"|"cookingPot"|"kitchen"|"combo"|"stock"|"truck"|"users"|"store"|"settings"|"search"|"bell"|"plus"|"minus"|"chevron"|"chevronLeft"|"filter"|"download"|"alert"|"check"|"clock"|"box"|"logout"|"eye"|"lock"|"mail"|"edit"|"power"|"toggleOn"|"toggleOff"|"circleCheck"|"circleMinus"|"circleSlash"|"save"|"refresh"|"close"|"panelCollapse"|"panelExpand"|"qr"|"share"|"trash"|"arrowRightCircle"|"payment"|"cancel"|"availability"|"ledger"|"building"|"contract"|"mapPin"|"userCheck"|"register"|"orders"|"tables"|"layout"|"cash"|"calendar"|"phone"|"kiosk"|"gauge"|"cart"|"route"|"link"|"bike"|"user"|"heart"|"star"|"badge"|"tag"|"wallet"|"pie"|"phoneApp"|"percent"|"layers"|"plug"|"chat"|"login"|"key"|"lightbulb"|"undo"|"transfer";
+export type IconName = "info"|"grid"|"sales"|"receipt"|"menu"|"utensils"|"chefHat"|"cookingPot"|"kitchen"|"combo"|"stock"|"truck"|"users"|"store"|"settings"|"search"|"bell"|"plus"|"minus"|"chevron"|"chevronLeft"|"filter"|"download"|"alert"|"check"|"clock"|"box"|"logout"|"eye"|"lock"|"mail"|"edit"|"power"|"toggleOn"|"toggleOff"|"circleCheck"|"circleMinus"|"circleSlash"|"save"|"refresh"|"close"|"panelCollapse"|"panelExpand"|"qr"|"share"|"trash"|"arrowRightCircle"|"payment"|"cancel"|"availability"|"ledger"|"building"|"contract"|"mapPin"|"userCheck"|"register"|"orders"|"tables"|"layout"|"cash"|"calendar"|"phone"|"kiosk"|"gauge"|"cart"|"route"|"link"|"bike"|"user"|"heart"|"star"|"badge"|"tag"|"wallet"|"pie"|"phoneApp"|"percent"|"layers"|"plug"|"chat"|"login"|"key"|"lightbulb"|"undo"|"transfer"|"invoice"|"dish"|"note";
+/** Tamaños homologados: 14 junto a texto de 12–13 px, 16 en chips y pestañas, 18 en acciones, 20 en navegación, 24 en estados vacíos. */
+export type IconSize=14|16|18|20|24|28|32|36|40|48;
 const paths: Record<IconName, ReactNode> = {
   info:<><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/></>,
   toggleOn:<><rect x="2" y="6" width="20" height="12" rx="6" fill="currentColor"/><circle cx="16" cy="12" r="4" fill="var(--surface)" stroke="none"/></>,
@@ -59,5 +61,8 @@ const paths: Record<IconName, ReactNode> = {
   lightbulb:<><path d="M9 18h6M10 22h4"/><path d="M8.5 15.5A7 7 0 1 1 15.5 15.5c-.9.7-1.5 1.5-1.5 2.5h-4c0-1-.6-1.8-1.5-2.5z"/></>,
   undo:<><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></>,
   transfer:<><path d="M4 8h13m0 0-3-3m3 3-3 3M20 16H7m0 0 3-3m-3 3 3 3"/></>,
+  invoice:<><path d="M7 3h7l4 4v14H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v4h4M9.5 12h5M9.5 15.5h5M9.5 8.5h2"/></>,
+  dish:<><path d="M4 16h16M5 16a7 7 0 0 1 14 0M12 7.5V6M10.5 6h3M3 19h18"/></>,
+  note:<><path d="M5 4h14v11l-5 5H5z"/><path d="M14 20v-5h5M8.5 9h7M8.5 12.5h4"/></>,
 };
-export function Icon({name,size=20,className}:{name:IconName,size?:number;className?:string}) { return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={className}>{paths[name]}</svg> }
+export function Icon({name,size=20,className}:{name:IconName,size?:IconSize;className?:string}) { return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={className}>{paths[name]}</svg> }

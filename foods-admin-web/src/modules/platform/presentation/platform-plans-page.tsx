@@ -41,7 +41,7 @@ export function PlatformPlansPage(){
  });
 
  return <>
-  <PageHeader eyebrow="PLATAFORMA" title="Planes SaaS" description="Define la oferta comercial de FUDIA: precio, prueba, límites y módulos de cada nivel." action={<Button icon="plus" onClick={()=>setDraft({...blank})}>Nuevo plan</Button>}/>
+  <PageHeader title="Planes SaaS" description="Define la oferta comercial de FUDIA: precio, prueba, límites y módulos de cada nivel." action={<Button icon="plus" onClick={()=>setDraft({...blank})}>Nuevo plan</Button>}/>
   <div className="plan-toolbar">
     <b>Catálogo comercial</b>
     <Tabs items={billingTabs} value={billing} onChange={setBilling} label="Ciclo de facturación"/>
@@ -74,7 +74,7 @@ export function PlatformPlansPage(){
        </dl>
        <section className="plan-includes">
          <header><h3>Incluye {included.length} módulos</h3></header>
-         <ul className="plan-feature-list">{included.map(module=><li key={module.key} title={module.description}><Icon name="check" size={12}/>{module.name}</li>)}</ul>
+         <ul className="plan-feature-list">{included.map(module=><li key={module.key} title={module.description}><Icon name="check" size={14}/>{module.name}</li>)}</ul>
        </section>
        <footer>
          <div><small>Condiciones</small><b>{plan.termsVersion}</b></div>
@@ -107,7 +107,7 @@ function PlanDialog({value:initial,modules,currencies,busy,close,save}:{value:Su
     </div>
     <Controller control={control} name="moduleKeys" render={({field})=>{
      const selected=field.value;const toggle=(key:string)=>field.onChange(selected.includes(key)?selected.filter(item=>item!==key):[...selected,key]);
-     return <section className={"plan-modules"+(errors.moduleKeys?" has-error":"")}><header><div><small>LÍMITES Y MÓDULOS</small><h3>Módulos incluidos</h3>{errors.moduleKeys?.message&&<small className="field-error" role="alert">{errors.moduleKeys.message}</small>}</div><b>{selected.length}</b></header>{groups.map(group=><div className="plan-module-group" key={group}><strong>{group}</strong><div>{modules.filter(module=>module.category===group).map(module=><label key={module.key} className={selected.includes(module.key)?"selected":""}><input type="checkbox" checked={selected.includes(module.key)} onChange={()=>toggle(module.key)}/><span><Icon name="check" size={12}/></span><div><b>{module.name}</b><small>{module.description}</small></div></label>)}</div></div>)}</section>;
+     return <section className={"plan-modules"+(errors.moduleKeys?" has-error":"")}><header><div><small>LÍMITES Y MÓDULOS</small><h3>Módulos incluidos</h3>{errors.moduleKeys?.message&&<small className="field-error" role="alert">{errors.moduleKeys.message}</small>}</div><b>{selected.length}</b></header>{groups.map(group=><div className="plan-module-group" key={group}><strong>{group}</strong><div>{modules.filter(module=>module.category===group).map(module=><label key={module.key} className={selected.includes(module.key)?"selected":""}><input type="checkbox" checked={selected.includes(module.key)} onChange={()=>toggle(module.key)}/><span><Icon name="check" size={14}/></span><div><b>{module.name}</b><small>{module.description}</small></div></label>)}</div></div>)}</section>;
     }}/>
    </div>
    <footer><Button kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" icon="check" disabled={busy}>{busy?"Guardando…":"Guardar"}</Button></footer>

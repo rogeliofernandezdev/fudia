@@ -83,7 +83,7 @@ export function ProductAvailabilityManager(){
   :"Cargando fecha…";
 
  return <>
-  <PageHeader eyebrow="CARTA Y PRODUCCIÓN" title="Disponibilidad" description="Administra el cupo diario y consulta la disponibilidad real de cada producto en el local activo." action={<span className="availability-date"><Icon name="clock" size={16}/>{businessDate}</span>}/>
+  <PageHeader title="Disponibilidad" description="Administra el cupo diario y consulta la disponibilidad real de cada producto en el local activo." action={<span className="availability-date"><Icon name="clock" size={16}/>{businessDate}</span>}/>
   <section className="panel availability-panel">
    <header className="availability-toolbar">
     <label className="availability-search"><Icon name="search" size={18}/><Input value={search} onChange={event=>{setSearch(event.target.value);setPage(1)}} placeholder="Buscar plato o producto..."/></label>

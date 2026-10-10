@@ -114,10 +114,10 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
   }
 
   return <div className="pos-page">
-    <PageHeader eyebrow="OPERACIÓN" title="Punto de venta" description="Cobra pedidos existentes y mantiene Caja sincronizada con pagos y devoluciones."/>
+    <PageHeader title="Punto de venta" description="Cobra pedidos existentes y mantiene Caja sincronizada con pagos y devoluciones."/>
 
     <section className={"pos-shift-banner "+(shift?"active":"missing")}>
-      <span className="pos-shift-icon"><Icon name={shift?"register":"alert"} size={19}/></span>
+      <span className="pos-shift-icon"><Icon name={shift?"register":"alert"} size={20}/></span>
       {current.isLoading?<div className="pos-shift-loading" aria-label="Cargando turno" aria-busy="true"><i/><i/></div>
       :shift?<><div className="pos-shift-copy"><small>TURNO ACTIVO</small><b>{shift.cashRegisterName}<span>· {shift.code}</span></b><p>Cajero: {cashShiftAttribution(shift).name}</p></div><Status tone="green">Listo para cobrar</Status></>
       :<><div><small>TURNO REQUERIDO</small><b>No estás asignado a una caja abierta</b><p>Inicia o únete a un turno antes de registrar cobros o devoluciones.</p></div>{cashLink()}</>}
@@ -144,8 +144,8 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
           const meta=paymentMeta[item.paymentStatus];
           const subject=item.tableName||item.customerName||item.code;
           return <tr className={index%2?"alternate":""} key={item.id}>
-            <td><span className="row-icon pos-row-icon"><Icon name="receipt" size={17}/></span><b>{subject}</b></td>
-            <td><span className="pos-channel-cell"><Icon name={channelIcons[item.channel]??"receipt"} size={13}/>{channelLabel[item.channel]??item.channel}</span></td>
+            <td><span className="row-icon pos-row-icon"><Icon name="receipt" size={18}/></span><b>{subject}</b></td>
+            <td><span className="pos-channel-cell"><Icon name={channelIcons[item.channel]??"receipt"} size={14}/>{channelLabel[item.channel]??item.channel}</span></td>
             <td className="pos-money"><b>{money(Number(item.total))}</b></td>
             <td className="pos-money">{money(Number(item.paidAmount))}</td>
             <td className="pos-money"><strong className="pos-balance">{money(Number(item.remainingAmount))}</strong></td>
@@ -159,7 +159,7 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
         const meta=paymentMeta[item.paymentStatus];
         const subject=item.tableName||item.customerName||item.code;
         return <article key={item.id}>
-          <header><span className="row-icon pos-row-icon"><Icon name="receipt" size={17}/></span><div><b>{subject}</b></div><Status tone={meta.tone}>{meta.label}</Status></header>
+          <header><span className="row-icon pos-row-icon"><Icon name="receipt" size={18}/></span><div><b>{subject}</b></div><Status tone={meta.tone}>{meta.label}</Status></header>
           <div className="pos-card-channel"><Icon name={channelIcons[item.channel]??"receipt"} size={14}/><span>{channelLabel[item.channel]??item.channel}</span></div>
           <dl><div><dt>Total</dt><dd>{money(Number(item.total))}</dd></div><div><dt>Pagado</dt><dd>{money(Number(item.paidAmount))}</dd></div><div className="remaining"><dt>Saldo</dt><dd>{money(Number(item.remainingAmount))}</dd></div></dl>
           <footer>{actionsFor(item)}</footer>
@@ -247,14 +247,14 @@ function POSDetailDialog({loading,error,data,canManage,hasShift,formatMoney,form
       <section className="pos-detail-section">
         {data.order.channel==="salon"&&<p>Mozo: <b>{data.order.waiterName||"Sin asignar"}</b></p>}
         <header><div><small>CONSUMO</small><h3>Productos del pedido</h3></div><span>{data.order.items?.length??0} líneas</span></header>
-        <div className="pos-order-lines">{(data.order.items??[]).map(item=><div key={item.id}><b>{Number(item.qty)}×</b><span>{item.name}{item.note&&<small><Icon name="edit" size={11}/>{item.note}</small>}</span><strong>{formatMoney(Number(item.qty)*Number(item.unitPrice))}</strong></div>)}</div>
+        <div className="pos-order-lines">{(data.order.items??[]).map(item=><div key={item.id}><b>{Number(item.qty)}×</b><span>{item.name}{item.note&&<small><Icon name="edit" size={14}/>{item.note}</small>}</span><strong>{formatMoney(Number(item.qty)*Number(item.unitPrice))}</strong></div>)}</div>
       </section>
 
       <section className="pos-detail-section">
         <header><div><small>PAGOS</small><h3>Historial del pedido</h3></div><span>{data.payments.length}</span></header>
         {data.payments.length?<div className="pos-payment-list">{data.payments.map(payment=>{
           const net=Number(payment.netAmount);
-          return <article key={payment.id}><span className={"pos-payment-method pm-"+payment.method}><Icon name={paymentMethodMeta[payment.method]?.icon??"wallet"} size={15}/></span><div><b>{paymentMethodMeta[payment.method]?.label??"Otro"}</b><small>{payment.cashRegisterName} · {formatDateTime(payment.createdAt)}</small><small>Cobrado por: {payment.createdByName||"Sin información"}</small>{payment.reference&&<em>{payment.reference}</em>}</div><span className="pos-payment-values"><b>{formatMoney(Number(payment.amount))}</b>{Number(payment.refundedAmount)>0&&<small>Devuelto {formatMoney(Number(payment.refundedAmount))}</small>}</span>{canManage&&net>0&&!closed&&<Button kind="ghost" className="pos-refund-action" icon="undo" disabled={!hasShift} onClick={()=>refund(payment)}>Devolver</Button>}</article>})}</div>
+          return <article key={payment.id}><span className={"pos-payment-method pm-"+payment.method}><Icon name={paymentMethodMeta[payment.method]?.icon??"wallet"} size={16}/></span><div><b>{paymentMethodMeta[payment.method]?.label??"Otro"}</b><small>{payment.cashRegisterName} · {formatDateTime(payment.createdAt)}</small><small>Cobrado por: {payment.createdByName||"Sin información"}</small>{payment.reference&&<em>{payment.reference}</em>}</div><span className="pos-payment-values"><b>{formatMoney(Number(payment.amount))}</b>{Number(payment.refundedAmount)>0&&<small>Devuelto {formatMoney(Number(payment.refundedAmount))}</small>}</span>{canManage&&net>0&&!closed&&<Button kind="ghost" className="pos-refund-action" icon="undo" disabled={!hasShift} onClick={()=>refund(payment)}>Devolver</Button>}</article>})}</div>
         :<EmptyState className="pos-section-empty" icon="wallet" title="Sin pagos registrados" text="Aún no se registraron pagos para este pedido."/>}
       </section>
     </div>}

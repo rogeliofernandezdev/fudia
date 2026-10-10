@@ -42,7 +42,7 @@ export function RestaurantSetupTour(){
   return <aside className="setup-tour" aria-label="Recorrido guiado del restaurante">
     <div className="setup-tour-card">
       <header>
-        <span><Icon name="arrowRightCircle" size={15}/>RECORRIDO DEL RESTAURANTE</span>
+        <span><Icon name="arrowRightCircle" size={16}/>RECORRIDO DEL RESTAURANTE</span>
         <button type="button" onClick={()=>setClosed(true)} aria-label="Cerrar recorrido">
           <Icon name="close" size={16}/>
         </button>

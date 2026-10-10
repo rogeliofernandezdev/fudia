@@ -46,9 +46,9 @@ export function OrdersManager(){
  const clearFilters=()=>{setQ("");setChannel("");setStatus("abiertos");setPage(1)};
  const loading=detail.isLoading;
  const closeDetail=()=>setDetailId(null);
- return <div className="orders-page-shell"><PageHeader eyebrow="OPERACIÓN OMNICANAL" title="Pedidos" description="Revisa el origen, estado y avance de cada pedido sin perder el contexto operativo." action={canManage?<Button icon="plus" disabled={list.isPending||list.isError||!(list.data?.channelOptions.length)} onClick={()=>setCreating(true)}>Nuevo pedido</Button>:undefined}/>
+ return <div className="orders-page-shell"><PageHeader title="Pedidos" description="Revisa el origen, estado y avance de cada pedido sin perder el contexto operativo." action={canManage?<Button icon="plus" disabled={list.isPending||list.isError||!(list.data?.channelOptions.length)} onClick={()=>setCreating(true)}>Nuevo pedido</Button>:undefined}/>
  <div className="orders-tabs-row">
-  {list.isPending?<div className="orders-tabs-skeleton" role="status" aria-label="Cargando canales">{Array.from({length:4},(_,index)=><Skeleton key={index} width="var(--size-112)" height="calc(var(--control-height) - var(--size-8))" radius="var(--radius-7)"/>)}</div>
+  {list.isPending?<div className="orders-tabs-skeleton" role="status" aria-label="Cargando canales">{Array.from({length:4},(_,index)=><Skeleton key={index} width="var(--size-112)" height="calc(var(--control-height) - var(--size-8))" radius="var(--radius-control)"/>)}</div>
   :<Tabs items={tabs} value={channel} onChange={pickChannel} label="Filtrar pedidos por canal"/>}
  </div>
  <section className="panel management standardized-management orders-panel" aria-busy={list.isFetching&&list.isPlaceholderData}>
@@ -65,14 +65,14 @@ export function OrdersManager(){
      <thead><tr>{columns.map(column=><th key={column}>{column}</th>)}</tr></thead>
      <tbody>{items.map((o,index)=>{const meta=orderStatus(o.status);const subject=o.tableName||o.customerName||"Pedido";const secondary=o.tableName&&o.customerName?o.customerName:undefined;return <tr className={index%2?"alternate":""} key={o.id}>
       <td>
-       <span className={"row-icon order-row-icon oc-"+o.channel}><Icon name={channelIcons[o.channel]??"receipt"} size={17}/></span>
+       <span className={"row-icon order-row-icon oc-"+o.channel}><Icon name={channelIcons[o.channel]??"receipt"} size={18}/></span>
        <b>{subject}</b>
        {secondary&&<small>{secondary}</small>}
        {o.channel==="salon"&&<small className="order-staff">Mozo: {o.waiterName||"Sin asignar"}</small>}
        {Boolean(o.collectedByNames?.length)&&<small className="order-staff">Cobrado por: {o.collectedByNames!.join(" · ")}</small>}
        <small className="order-mobile-registered"><time dateTime={o.createdAt}>{registeredAt(o.createdAt,location?.country,location?.timezone)}</time></small>
       </td>
-      <td><span className="order-channel-cell"><Icon name={channelIcons[o.channel]??"receipt"} size={13}/>{channelLabel(o.channel)}</span></td>
+      <td><span className="order-channel-cell"><Icon name={channelIcons[o.channel]??"receipt"} size={14}/>{channelLabel(o.channel)}</span></td>
       <td><Status tone={meta.tone}>{meta.label}</Status></td>
       <td><time className="order-registered" dateTime={o.createdAt}>{registeredAt(o.createdAt,location?.country,location?.timezone)}</time></td>
       <td><b className="order-table-total">{money(o.total)}</b></td>

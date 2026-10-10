@@ -1,8 +1,8 @@
 .combo-list { overflow: hidden; container-type: inline-size; container-name: combo-list; }
-.combo-empty { display: grid; place-content: center; justify-items: center; gap: var(--space-10); min-height: var(--size-320); padding: var(--space-32); color: var(--ink-500); text-align: center; }
-.combo-empty b { color: var(--ink-950); font-size: var(--font-size-13); }
-.combo-empty p { margin: 0 0 var(--space-6); font-size: var(--font-size-label); }
-.combo-empty.compact { min-height: var(--size-180); border: var(--stroke-1) dashed var(--line-strong); border-radius: var(--radius-12); }
+.combo-empty { display: grid; place-content: center; justify-items: center; gap: var(--space-2-5); min-height: var(--size-320); padding: var(--space-8); color: var(--ink-500); text-align: center; }
+.combo-empty b { color: var(--ink-950); font-size: var(--font-size-sm); }
+.combo-empty p { margin: 0 0 var(--space-1-5); font-size: var(--font-size-label); }
+.combo-empty.compact { min-height: var(--size-180); border: var(--stroke-1) dashed var(--line-strong); border-radius: var(--radius-card); }
 .combo-wizard {
   display: flex;
   flex-direction: column;
@@ -10,18 +10,18 @@
   max-height: min(var(--size-840), calc(100dvh - var(--size-32)));
   overflow: hidden;
   border: var(--stroke-1) solid var(--line);
-  border-radius: var(--radius-16);
+  border-radius: var(--radius-card);
   background: var(--surface);
-  box-shadow: var(--shadow-11);
+  box-shadow: var(--elevation-4);
 }
 
 .combo-wizard-header {
   min-height: var(--size-82);
-  padding: var(--space-14) var(--space-18);
+  padding: var(--space-3-5) var(--space-5);
   display: grid;
   grid-template-columns: minmax(0, 1fr) var(--control-height);
   align-items: center;
-  gap: var(--space-14);
+  gap: var(--space-3-5);
   flex: 0 0 auto;
   border-bottom: var(--stroke-1) solid var(--line);
   background: var(--surface);
@@ -31,7 +31,7 @@
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: var(--space-12);
+  gap: var(--space-3);
 }
 
 .combo-wizard-title-icon {
@@ -40,39 +40,39 @@
   display: grid;
   place-items: center;
   flex: 0 0 auto;
-  border-radius: var(--radius-11);
+  border-radius: var(--radius-tile);
   background: var(--primary-600);
   color: var(--surface);
-  box-shadow: var(--shadow-12);
+  box-shadow: var(--elevation-primary);
 }
 
 .combo-wizard-title > div {
   min-width: 0;
   display: grid;
-  gap: var(--space-2);
+  gap: var(--space-0-5);
 }
 
 .combo-wizard-title small {
   color: var(--primary-600);
   font-size: var(--font-size-label);
-  font-weight: var(--font-weight-850);
-  letter-spacing: var(--tracking-0-1-em);
+  font-weight: var(--weight-heavy);
+  letter-spacing: var(--letter-spacing-caps);
 }
 
 .combo-wizard-title h2 {
   margin: 0;
   color: var(--ink-950);
-  font-size: var(--font-size-17);
-  font-weight: var(--font-weight-850);
-  letter-spacing: calc(var(--tracking-0-025-em) * -1);
-  line-height: var(--line-height-1-2);
+  font-size: var(--font-size-md);
+  font-weight: var(--weight-heavy);
+  letter-spacing: var(--letter-spacing-snug);
+  line-height: var(--line-height-tight);
 }
 
 .combo-wizard-title p {
   margin: 0;
   color: var(--ink-600);
   font-size: var(--font-size-label);
-  line-height: var(--line-height-1-35);
+  line-height: var(--line-height-snug);
 }
 
 .combo-wizard-close {
@@ -81,46 +81,46 @@
   display: grid;
   place-items: center;
   border: var(--stroke-1) solid var(--line);
-  border-radius: var(--radius-9);
+  border-radius: var(--radius-tile);
   background: var(--surface);
   color: var(--ink-600);
   cursor: pointer;
-  transition: background var(--duration-150) ease, border-color var(--duration-150) ease, color var(--duration-150) ease;
+  transition: background var(--duration-fast) ease, border-color var(--duration-fast) ease, color var(--duration-fast) ease;
 }
 
 .combo-wizard-close:hover {
-  border-color: var(--palette-blue-26);
-  background: var(--palette-blue-95);
+  border-color: var(--line-strong);
+  background: var(--cloud-100);
   color: var(--ink-950);
 }
 
 .combo-wizard-steps {
-  padding: var(--space-10) var(--space-18);
+  padding: var(--space-2-5) var(--space-5);
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--space-8);
+  gap: var(--space-2);
   flex: 0 0 auto;
   border-bottom: var(--stroke-1) solid var(--line);
-  background: var(--palette-blue-104);
+  background: var(--cloud-50);
 }
 
 .combo-wizard-steps button {
   position: relative;
   min-width: 0;
   min-height: var(--size-56);
-  padding: var(--space-8) var(--space-10);
+  padding: var(--space-2) var(--space-2-5);
   display: grid;
   grid-template-columns: var(--size-32) minmax(0, 1fr);
   align-items: center;
-  gap: var(--space-9);
-  border: var(--stroke-1) solid var(--palette-blue-60);
-  border-radius: var(--radius-10);
+  gap: var(--space-2);
+  border: var(--stroke-1) solid var(--line);
+  border-radius: var(--radius-tile);
   background: var(--surface);
   color: var(--ink-500);
   text-align: left;
   cursor: default;
-  box-shadow: var(--shadow-13);
-  transition: border-color var(--duration-150) ease, background var(--duration-150) ease, box-shadow var(--duration-150) ease, transform var(--duration-150) ease;
+  box-shadow: var(--elevation-1);
+  transition: border-color var(--duration-fast) ease, background var(--duration-fast) ease, box-shadow var(--duration-fast) ease, transform var(--duration-fast) ease;
 }
 
 .combo-wizard-steps button:not(:disabled) {
@@ -128,21 +128,21 @@
 }
 
 .combo-wizard-steps button:not(:disabled):hover {
-  border-color: var(--palette-blue-40);
-  background: var(--palette-blue-111);
-  box-shadow: var(--shadow-14);
+  border-color: var(--line-strong);
+  background: var(--primary-25);
+  box-shadow: var(--elevation-primary);
   transform: translateY(calc(var(--size-1) * -1));
 }
 
 .combo-wizard-steps button.active {
-  border-color: var(--palette-blue-18);
-  background: linear-gradient(180deg, var(--palette-blue-108) 0%, var(--primary-100) 100%);
-  color: var(--ops-700);
-  box-shadow: var(--shadow-15);
+  border-color: var(--primary-300);
+  background: linear-gradient(180deg, var(--primary-25) 0%, var(--primary-100) 100%);
+  color: var(--primary-700);
+  box-shadow: var(--elevation-selected);
 }
 
 .combo-wizard-steps button.complete {
-  border-color: var(--palette-blue-48);
+  border-color: var(--primary-200);
   background: var(--surface);
   color: var(--ink-700);
 }
@@ -156,11 +156,11 @@
   height: var(--size-32);
   display: grid;
   place-items: center;
-  border: var(--stroke-1) solid var(--palette-blue-26);
-  border-radius: var(--radius-9);
+  border: var(--stroke-1) solid var(--line-strong);
+  border-radius: var(--radius-tile);
   background: var(--surface);
   color: var(--ink-500);
-  transition: border-color var(--duration-150) ease, background var(--duration-150) ease, color var(--duration-150) ease, transform var(--duration-150) ease;
+  transition: border-color var(--duration-fast) ease, background var(--duration-fast) ease, color var(--duration-fast) ease, transform var(--duration-fast) ease;
 }
 
 .combo-step-marker svg {
@@ -173,27 +173,27 @@
   border-color: var(--primary-600);
   background: var(--primary-600);
   color: var(--surface);
-  box-shadow: var(--shadow-16);
+  box-shadow: var(--elevation-primary);
 }
 
 .combo-wizard-steps button.complete .combo-step-marker {
-  border-color: var(--palette-blue-28);
+  border-color: var(--primary-300);
   background: var(--primary-100);
-  color: var(--ops-700);
+  color: var(--primary-700);
 }
 
 .combo-step-copy {
   min-width: 0;
   display: grid;
-  gap: var(--space-2);
+  gap: var(--space-0-5);
 }
 
 .combo-step-copy b {
   overflow: hidden;
   color: var(--ink-950);
   font-size: var(--font-size-label);
-  font-weight: var(--font-weight-850);
-  line-height: var(--line-height-1-2);
+  font-weight: var(--weight-heavy);
+  line-height: var(--line-height-tight);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -202,20 +202,20 @@
   overflow: hidden;
   color: var(--ink-500);
   font-size: var(--font-size-label);
-  font-weight: var(--font-weight-600);
-  line-height: var(--line-height-1-25);
+  font-weight: var(--weight-semibold);
+  line-height: var(--line-height-tight);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .combo-wizard-steps button.active .combo-step-copy b,
 .combo-wizard-steps button.active .combo-step-copy small {
-  color: var(--ops-700);
+  color: var(--primary-700);
 }
 
 .combo-wizard-steps button:focus-visible {
   outline: var(--stroke-2) solid var(--primary-600);
-  outline-offset: var(--space-2);
+  outline-offset: var(--space-0-5);
 }
 
 .combo-wizard-stage {
@@ -228,7 +228,7 @@
 
 .combo-wizard-body {
   min-height: 0;
-  padding: var(--space-22);
+  padding: var(--space-6);
   flex: 1 1 auto;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -239,15 +239,15 @@
   display: grid;
   grid-template-columns: var(--size-38) minmax(0,1fr);
   align-items: center;
-  gap: var(--space-10);
-  padding-bottom: var(--space-13);
+  gap: var(--space-2-5);
+  padding-bottom: var(--space-3);
   border-bottom: var(--stroke-1) solid var(--line);
 }
 
 .combo-section-heading > div {
   min-width: 0;
   display: grid;
-  gap: var(--space-4);
+  gap: var(--space-1);
 }
 
 .combo-section-heading-icon {
@@ -256,9 +256,9 @@
   display: grid;
   place-items: center;
   flex: 0 0 auto;
-  border-radius: var(--radius-10);
+  border-radius: var(--radius-tile);
   background: var(--primary-100);
-  color: var(--ops-700);
+  color: var(--primary-700);
 }
 
 .combo-section-heading-icon svg {
@@ -269,37 +269,37 @@
 .combo-section-heading h3 {
   margin: 0;
   color: var(--ink-950);
-  font-size: var(--font-size-14);
-  font-weight: var(--font-weight-850);
-  letter-spacing: calc(var(--tracking-0-02-em) * -1);
+  font-size: var(--font-size-base);
+  font-weight: var(--weight-heavy);
+  letter-spacing: var(--letter-spacing-snug);
 }
 
 .combo-section-heading p {
   margin: 0;
   color: var(--ink-600);
   font-size: var(--font-size-label);
-  line-height: var(--line-height-1-5);
+  line-height: var(--line-height-normal);
 }
 
 .combo-wizard .form-grid {
-  padding: var(--space-18);
+  padding: var(--space-5);
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(var(--size-210), .42fr);
   align-content: start;
-  gap: var(--space-18) var(--space-20);
+  gap: var(--space-5) var(--space-5);
   border: var(--stroke-1) solid var(--line);
   border-radius: var(--radius-card);
   background: var(--surface);
-  box-shadow: var(--shadow-17);
+  box-shadow: var(--elevation-2);
 }
 
 .combo-wizard .form-grid > label {
   display: grid;
   align-content: start;
-  gap: var(--space-7);
+  gap: var(--space-2);
   color: var(--ink-700);
   font-size: var(--font-size-label);
-  font-weight: var(--font-weight-750);
+  font-weight: var(--weight-bold);
 }
 
 .combo-wizard .form-grid .span-2 {
@@ -316,17 +316,17 @@
 
 .combo-composition {
   display: grid;
-  gap: var(--space-14);
+  gap: var(--space-3-5);
 }
 
 .combo-composition-toolbar {
-  padding: var(--space-14) var(--space-16);
+  padding: var(--space-3-5) var(--space-4);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-18);
+  gap: var(--space-5);
   border: var(--stroke-1) solid var(--line);
-  border-radius: var(--radius-12);
+  border-radius: var(--radius-card);
   background: var(--surface);
 }
 
@@ -337,40 +337,40 @@
 .combo-composition-copy {
   display: flex;
   align-items: center;
-  gap: var(--space-10);
+  gap: var(--space-2-5);
 }
 
 .combo-composition-copy > div {
   min-width: 0;
   display: grid;
-  gap: var(--space-4);
+  gap: var(--space-1);
 }
 
 .combo-composition-copy b {
   color: var(--ink-950);
   font-size: var(--font-size-control);
-  font-weight: var(--font-weight-850);
+  font-weight: var(--weight-heavy);
 }
 
 .combo-composition-copy small {
   color: var(--ink-600);
   font-size: var(--font-size-label);
-  line-height: var(--line-height-1-45);
+  line-height: var(--line-height-normal);
 }
 
 .combo-composition-toolbar > div:last-child {
   display: flex;
   flex-shrink: 0;
-  gap: var(--space-8);
+  gap: var(--space-2);
 }
 
 .combo-empty-groups {
   min-height: var(--size-240);
-  padding: var(--space-24);
+  padding: var(--space-6);
   display: grid;
   place-items: center;
-  gap: var(--space-8);
-  border: var(--stroke-1) dashed var(--palette-blue-30);
+  gap: var(--space-2);
+  border: var(--stroke-1) dashed var(--line-strong);
   border-radius: var(--radius-card);
   background: var(--surface);
   color: var(--ink-600);
@@ -379,7 +379,7 @@
 
 .combo-empty-groups b {
   color: var(--ink-950);
-  font-size: var(--font-size-12);
+  font-size: var(--font-size-xs);
 }
 
 .combo-empty-groups p {
@@ -389,33 +389,33 @@
 
 .combo-group {
   overflow: hidden;
-  border: var(--stroke-1) solid var(--palette-blue-49);
-  border-radius: var(--radius-13);
+  border: var(--stroke-1) solid var(--line);
+  border-radius: var(--radius-card);
   background: var(--surface);
-  box-shadow: var(--shadow-17);
-  transition: border-color var(--duration-150) ease, box-shadow var(--duration-150) ease;
+  box-shadow: var(--elevation-2);
+  transition: border-color var(--duration-fast) ease, box-shadow var(--duration-fast) ease;
 }
 
 .combo-group:focus-within {
-  border-color: var(--palette-blue-24);
-  box-shadow: var(--shadow-18);
+  border-color: var(--primary-300);
+  box-shadow: var(--elevation-selected);
 }
 
 .combo-group-header {
-  padding: var(--space-12) var(--space-14);
+  padding: var(--space-3) var(--space-3-5);
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto var(--control-height);
   align-items: center;
-  gap: var(--space-12);
-  border-bottom: var(--stroke-1) solid var(--palette-blue-76);
-  background: var(--palette-blue-110);
+  gap: var(--space-3);
+  border-bottom: var(--stroke-1) solid var(--cloud-150);
+  background: var(--primary-25);
 }
 
 .combo-toggle {
   min-height: var(--control-height);
   display: flex;
   align-items: center;
-  gap: var(--space-8);
+  gap: var(--space-2);
   color: var(--ink-700);
   font-size: var(--font-size-label);
 }
@@ -429,10 +429,10 @@
 .combo-toggle > span {
   width: var(--size-34);
   height: var(--size-20);
-  padding: var(--space-3);
-  border-radius: var(--radius-999);
-  background: var(--palette-blue-26);
-  transition: background var(--duration-150) ease;
+  padding: var(--space-1);
+  border-radius: var(--radius-pill);
+  background: var(--line-strong);
+  transition: background var(--duration-fast) ease;
 }
 
 .combo-toggle > span::after {
@@ -442,8 +442,8 @@
   height: var(--size-14);
   border-radius: 50%;
   background: var(--surface);
-  box-shadow: var(--shadow-19);
-  transition: transform var(--duration-150) ease;
+  box-shadow: var(--elevation-1);
+  transition: transform var(--duration-fast) ease;
 }
 
 .combo-toggle > input:checked + span {
@@ -456,15 +456,15 @@
 
 .combo-toggle b {
   font-size: var(--font-size-label);
-  font-weight: var(--font-weight-800);
+  font-weight: var(--weight-bold);
 }
 
 .combo-mini {
   display: grid;
-  gap: var(--space-5);
+  gap: var(--space-1-5);
   color: var(--ink-600);
   font-size: var(--font-size-label);
-  font-weight: var(--font-weight-750);
+  font-weight: var(--weight-bold);
 }
 
 .combo-mini .ds-input {
@@ -477,43 +477,43 @@
   height: var(--control-height);
   display: grid;
   place-items: center;
-  border: var(--stroke-1) solid var(--palette-red-12);
-  border-radius: var(--radius-8);
-  background: var(--palette-red-21);
+  border: var(--stroke-1) solid var(--danger-100);
+  border-radius: var(--radius-tile);
+  background: var(--danger-50);
   color: var(--danger);
   cursor: pointer;
 }
 
 .combo-remove:hover {
-  border-color: var(--palette-red-04);
-  background: var(--palette-red-16);
+  border-color: var(--danger-200);
+  background: var(--danger-50);
 }
 
 .combo-options {
-  padding: var(--space-12) var(--space-14) var(--space-14);
+  padding: var(--space-3) var(--space-3-5) var(--space-3-5);
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-9);
+  gap: var(--space-2);
   background: var(--surface);
 }
 
 .combo-option {
   min-height: var(--size-72);
-  padding: var(--space-11) var(--space-12);
+  padding: var(--space-3) var(--space-3);
   display: grid;
   grid-template-columns: minmax(0, 1fr) var(--size-112) var(--size-160) var(--control-height);
   align-items: center;
-  gap: var(--space-12);
+  gap: var(--space-3);
   grid-column: 1 / -1;
   border: var(--stroke-1) solid var(--line);
-  border-radius: var(--radius-10);
+  border-radius: var(--radius-tile);
   background: var(--surface);
-  transition: border-color var(--duration-150) ease, background var(--duration-150) ease;
+  transition: border-color var(--duration-fast) ease, background var(--duration-fast) ease;
 }
 
 .combo-option:hover {
-  border-color: var(--palette-blue-42);
-  background: var(--palette-neutral-07);
+  border-color: var(--line-strong);
+  background: var(--cloud-25);
 }
 
 .combo-option > .combo-mini {
@@ -536,16 +536,16 @@
   overflow: hidden;
   color: var(--ink-950);
   font-size: var(--font-size-label);
-  font-weight: var(--font-weight-800);
+  font-weight: var(--weight-bold);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .combo-option-name small {
-  margin-top: var(--space-3);
+  margin-top: var(--space-1);
   color: var(--ink-500);
   font-size: var(--font-size-label);
-  font-weight: var(--font-weight-600);
+  font-weight: var(--weight-semibold);
 }
 
 .combo-add-option {
@@ -556,7 +556,7 @@
   width: 100%;
 }
 
-.combo-toggle:focus-within{outline:var(--stroke-2) solid var(--primary-600);outline-offset:var(--space-2);border-radius:var(--radius-control)}
+.combo-toggle:focus-within{outline:var(--stroke-2) solid var(--primary-600);outline-offset:var(--space-0-5);border-radius:var(--radius-control)}
 
 .combo-availability {
   align-content: start;
@@ -565,24 +565,24 @@
 .days-chips {
   display: grid;
   grid-template-columns: repeat(8, minmax(0, 1fr));
-  gap: var(--space-7);
+  gap: var(--space-2);
 }
 
 .day-chip {
   min-height: var(--control-height);
-  border: var(--stroke-1) solid var(--palette-blue-49);
-  border-radius: var(--radius-8);
+  border: var(--stroke-1) solid var(--line);
+  border-radius: var(--radius-tile);
   background: var(--surface);
   color: var(--ink-600);
   font-size: var(--font-size-label);
-  font-weight: var(--font-weight-750);
+  font-weight: var(--weight-bold);
   cursor: pointer;
 }
 
 .day-chip:hover {
-  border-color: var(--palette-blue-35);
-  background: var(--palette-blue-110);
-  color: var(--ops-700);
+  border-color: var(--line-strong);
+  background: var(--primary-25);
+  color: var(--primary-700);
 }
 
 .day-chip.active {
@@ -593,11 +593,11 @@
 
 .combo-review {
   display: grid;
-  gap: var(--space-12);
+  gap: var(--space-3);
 }
 
 .combo-review > .combo-section-heading {
-  padding: 0 0 var(--space-13);
+  padding: 0 0 var(--space-3);
   border: 0;
   border-bottom: var(--stroke-1) solid var(--line);
   border-radius: 0;
@@ -605,18 +605,18 @@
 }
 
 .combo-review-section {
-  padding: var(--space-15) var(--space-16);
+  padding: var(--space-4) var(--space-4);
   border: var(--stroke-1) solid var(--line);
-  border-radius: var(--radius-12);
+  border-radius: var(--radius-card);
   background: var(--surface);
 }
 
 .combo-review-section > b {
   display: block;
-  margin-bottom: var(--space-10);
+  margin-bottom: var(--space-2-5);
   color: var(--ink-950);
-  font-size: var(--font-size-10-5);
-  font-weight: var(--font-weight-850);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--weight-heavy);
 }
 
 .combo-review-section dl {
@@ -627,17 +627,17 @@
 
 .combo-review-section dl > div,
 .combo-review-group {
-  padding: var(--space-8) 0;
+  padding: var(--space-2) 0;
   display: grid;
   grid-template-columns: var(--size-132) minmax(0, 1fr);
-  gap: var(--space-12);
-  border-top: var(--stroke-1) solid var(--palette-blue-82);
+  gap: var(--space-3);
+  border-top: var(--stroke-1) solid var(--cloud-100);
 }
 
 .combo-review-section dt {
   color: var(--ink-600);
   font-size: var(--font-size-label);
-  font-weight: var(--font-weight-700);
+  font-weight: var(--weight-semibold);
 }
 
 .combo-review-section dd {
@@ -648,15 +648,15 @@
 
 .combo-wizard-footer {
   min-height: var(--size-64);
-  padding: var(--space-10) var(--space-16);
+  padding: var(--space-2-5) var(--space-4);
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: var(--space-12);
+  gap: var(--space-3);
   flex: 0 0 auto;
   border-top: var(--stroke-1) solid var(--line);
   background: var(--surface);
-  box-shadow: var(--shadow-20);
+  box-shadow: var(--elevation-up);
 }
 
 .combo-wizard-footer .button {
@@ -671,37 +671,37 @@
 .combo-wizard-footer-copy small {
   color: var(--ink-500);
   font-size: var(--font-size-label);
-  line-height: var(--line-height-1-3);
+  line-height: var(--line-height-snug);
 }
 
 .combo-detail { display: flex; flex-direction: column; width: min(var(--size-760), calc(100vw - var(--size-32))); max-height: min(var(--size-760), calc(100dvh - var(--size-32))); overflow: hidden; }
-.combo-detail-body { display: grid; gap: var(--space-16); padding: var(--space-22); overflow-y: auto; background: var(--cloud-50); }
-.combo-detail-summary { display: grid; grid-template-columns: repeat(2, 1fr) auto; align-items: center; gap: var(--space-12); padding: var(--space-16); border: var(--stroke-1) solid var(--line); border-radius: var(--radius-12); background: var(--surface); }
-.combo-detail > header > div { display: grid; gap: var(--space-3); }
+.combo-detail-body { display: grid; gap: var(--space-4); padding: var(--space-6); overflow-y: auto; background: var(--cloud-50); }
+.combo-detail-summary { display: grid; grid-template-columns: repeat(2, 1fr) auto; align-items: center; gap: var(--space-3); padding: var(--space-4); border: var(--stroke-1) solid var(--line); border-radius: var(--radius-card); background: var(--surface); }
+.combo-detail > header > div { display: grid; gap: var(--space-1); }
 .combo-detail > header h2 { margin: 0; }
 .combo-detail > header small { order: 2; }
-.combo-detail-summary > div { display: grid; gap: var(--space-5); }
-.combo-detail-summary small, .combo-detail-description small, .combo-detail-availability small { color: var(--ink-400); font-size: var(--font-size-label); font-weight: var(--font-weight-850); letter-spacing: var(--tracking-0-08-em); }
-.combo-detail-summary b { font-size: var(--font-size-13); }
-.combo-detail-description { padding: var(--space-14) var(--space-16); border: var(--stroke-1) solid var(--line); border-radius: var(--radius-12); background: var(--surface); }
-.combo-detail-description p { margin: var(--space-7) 0 0; color: var(--ink-600); font-size: var(--font-size-label); line-height: var(--line-height-1-55); }
-.combo-detail-section { overflow: hidden; border: var(--stroke-1) solid var(--line); border-radius: var(--radius-12); background: var(--surface); }
-.combo-detail-section > header { padding: var(--space-14) var(--space-16); border-bottom: var(--stroke-1) solid var(--line); }
-.combo-detail-section h3 { margin: var(--space-3) 0 0; font-size: var(--font-size-13); }
-.combo-detail-group { display: grid; grid-template-columns: minmax(var(--size-150), .45fr) 1fr; gap: var(--space-18); padding: var(--space-14) var(--space-16); border-bottom: var(--stroke-1) solid var(--palette-blue-82); }
+.combo-detail-summary > div { display: grid; gap: var(--space-1-5); }
+.combo-detail-summary small, .combo-detail-description small, .combo-detail-availability small { color: var(--ink-400); font-size: var(--font-size-label); font-weight: var(--weight-heavy); letter-spacing: var(--letter-spacing-caps); }
+.combo-detail-summary b { font-size: var(--font-size-sm); }
+.combo-detail-description { padding: var(--space-3-5) var(--space-4); border: var(--stroke-1) solid var(--line); border-radius: var(--radius-card); background: var(--surface); }
+.combo-detail-description p { margin: var(--space-2) 0 0; color: var(--ink-600); font-size: var(--font-size-label); line-height: var(--line-height-normal); }
+.combo-detail-section { overflow: hidden; border: var(--stroke-1) solid var(--line); border-radius: var(--radius-card); background: var(--surface); }
+.combo-detail-section > header { padding: var(--space-3-5) var(--space-4); border-bottom: var(--stroke-1) solid var(--line); }
+.combo-detail-section h3 { margin: var(--space-1) 0 0; font-size: var(--font-size-sm); }
+.combo-detail-group { display: grid; grid-template-columns: minmax(var(--size-150), .45fr) 1fr; gap: var(--space-5); padding: var(--space-3-5) var(--space-4); border-bottom: var(--stroke-1) solid var(--cloud-100); }
 .combo-detail-group:last-child { border-bottom: 0; }
-.combo-detail-group > div { display: grid; align-content: start; gap: var(--space-4); }
+.combo-detail-group > div { display: grid; align-content: start; gap: var(--space-1); }
 .combo-detail-group b { font-size: var(--font-size-label); }
 .combo-detail-group small { color: var(--ink-400); font-size: var(--font-size-label); }
-.combo-detail-group ul { display: flex; flex-wrap: wrap; gap: var(--space-7); margin: 0; padding: 0; list-style: none; }
-.combo-detail-group li { display: inline-flex; align-items: center; gap: var(--space-5); min-height: var(--size-28); padding: var(--space-5) var(--space-9); border: var(--stroke-1) solid var(--line); border-radius: var(--radius-7); background: var(--palette-neutral-05); font-size: var(--font-size-label); font-weight: var(--font-weight-700); }
-.combo-detail-availability { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-12); }
+.combo-detail-group ul { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.combo-detail-group li { display: inline-flex; align-items: center; gap: var(--space-1-5); min-height: var(--size-28); padding: var(--space-1-5) var(--space-2); border: var(--stroke-1) solid var(--line); border-radius: var(--radius-control); background: var(--cloud-25); font-size: var(--font-size-label); font-weight: var(--weight-semibold); }
+.combo-detail-availability { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-3); }
 .combo-detail-availability.single { grid-template-columns: 1fr; }
-.combo-detail-availability > div { display: grid; gap: var(--space-6); padding: var(--space-14) var(--space-16); border: var(--stroke-1) solid var(--line); border-radius: var(--radius-12); background: var(--surface); }
+.combo-detail-availability > div { display: grid; gap: var(--space-1-5); padding: var(--space-3-5) var(--space-4); border: var(--stroke-1) solid var(--line); border-radius: var(--radius-card); background: var(--surface); }
 .combo-detail-availability b { font-size: var(--font-size-label); }
-.combo-detail-footer { display: flex; justify-content: flex-end; padding: var(--space-13) var(--space-20); border-top: var(--stroke-1) solid var(--line); background: var(--surface); }
-.combo-detail-state { display: grid; place-items: center; gap: var(--space-8); min-height: var(--size-280); color: var(--ink-500); text-align: center; }
-.combo-detail-state p { margin: 0 0 var(--space-6); font-size: var(--font-size-label); }
+.combo-detail-footer { display: flex; justify-content: flex-end; padding: var(--space-3) var(--space-5); border-top: var(--stroke-1) solid var(--line); background: var(--surface); }
+.combo-detail-state { display: grid; place-items: center; gap: var(--space-2); min-height: var(--size-280); color: var(--ink-500); text-align: center; }
+.combo-detail-state p { margin: 0 0 var(--space-1-5); font-size: var(--font-size-label); }
 .combo-detail-skeleton-head .combo-detail-skeleton-block,
 .combo-detail-skeleton-body span,
 .combo-detail-skeleton-body b,
@@ -710,7 +710,7 @@
   display: block;
   overflow: hidden;
   border-radius: var(--radius-control);
-  background: var(--palette-blue-78);
+  background: var(--cloud-150);
 }
 .combo-detail-skeleton-head .combo-detail-skeleton-block::after,
 .combo-detail-skeleton-body span::after,
@@ -719,50 +719,50 @@
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg,transparent,var(--surface-opacity-72),transparent);
+  background: linear-gradient(90deg,transparent,var(--surface-alpha-64),transparent);
   transform: translateX(-100%);
-  animation: combo-detail-shimmer var(--duration-1150) ease-in-out infinite;
+  animation: combo-detail-shimmer var(--duration-ambient) ease-in-out infinite;
 }
 .combo-detail-skeleton-head {
   min-height: var(--size-68);
-  padding: var(--space-12) var(--space-16);
+  padding: var(--space-3) var(--space-4);
   display: grid;
   grid-template-columns: var(--size-40) minmax(0,1fr) var(--size-36);
   align-items: center;
-  gap: var(--space-11);
+  gap: var(--space-3);
   border-bottom: var(--stroke-1) solid var(--line);
   background: var(--surface);
 }
-.combo-detail-skeleton-icon { width:var(--size-40); height:var(--size-40); border-radius:var(--radius-10); }
-.combo-detail-skeleton-copy { display:grid; gap:var(--space-6); }
+.combo-detail-skeleton-icon { width:var(--size-40); height:var(--size-40); border-radius:var(--radius-tile); }
+.combo-detail-skeleton-copy { display:grid; gap:var(--space-1-5); }
 .combo-detail-skeleton-copy span { width:var(--size-72); height:var(--size-7); }
 .combo-detail-skeleton-copy b { width:var(--size-168); height:var(--size-16); }
-.combo-detail-skeleton-summary>div { display:grid; gap:var(--space-6); }
+.combo-detail-skeleton-summary>div { display:grid; gap:var(--space-1-5); }
 .combo-detail-skeleton-summary span { width:var(--size-62); height:var(--size-7); }
 .combo-detail-skeleton-summary b { width:var(--size-84); height:var(--size-14); }
-.combo-detail-skeleton-status { width:var(--size-66); height:var(--size-24); border-radius:var(--radius-999); }
-.combo-detail-skeleton-description { display:grid; gap:var(--space-8); }
+.combo-detail-skeleton-status { width:var(--size-66); height:var(--size-24); border-radius:var(--radius-pill); }
+.combo-detail-skeleton-description { display:grid; gap:var(--space-2); }
 .combo-detail-skeleton-description span { width:var(--size-72); height:var(--size-7); }
 .combo-detail-skeleton-description b:nth-of-type(1) { width:88%; height:var(--size-10); }
 .combo-detail-skeleton-description b:nth-of-type(2) { width:64%; height:var(--size-10); }
-.combo-detail-skeleton-section>header>div { display:grid; gap:var(--space-6); }
+.combo-detail-skeleton-section>header>div { display:grid; gap:var(--space-1-5); }
 .combo-detail-skeleton-section>header span { width:var(--size-62); height:var(--size-7); }
 .combo-detail-skeleton-section>header b { width:var(--size-174); height:var(--size-13); }
 .combo-detail-skeleton-group {
   min-height:var(--size-62);
-  padding:var(--space-14) var(--space-16);
+  padding:var(--space-3-5) var(--space-4);
   display:grid;
   grid-template-columns:minmax(var(--size-150),.45fr) 1fr;
   align-items:center;
-  gap:var(--space-18);
-  border-bottom:var(--stroke-1) solid var(--palette-blue-82);
+  gap:var(--space-5);
+  border-bottom:var(--stroke-1) solid var(--cloud-100);
 }
 .combo-detail-skeleton-group:last-child { border-bottom:0; }
-.combo-detail-skeleton-group>div:first-child { display:grid; gap:var(--space-6); }
+.combo-detail-skeleton-group>div:first-child { display:grid; gap:var(--space-1-5); }
 .combo-detail-skeleton-group>div:first-child b { width:var(--size-86); height:var(--size-10); }
 .combo-detail-skeleton-group>div:first-child span { width:var(--size-118); height:var(--size-8); }
-.combo-detail-skeleton-group>div:last-child { display:flex; gap:var(--space-7); flex-wrap:wrap; }
-.combo-detail-skeleton-group>div:last-child i { width:var(--size-76); height:var(--size-28); border-radius:var(--radius-7); }
+.combo-detail-skeleton-group>div:last-child { display:flex; gap:var(--space-2); flex-wrap:wrap; }
+.combo-detail-skeleton-group>div:last-child i { width:var(--size-76); height:var(--size-28); border-radius:var(--radius-control); }
 .combo-detail-skeleton-availability span { width:var(--size-68); height:var(--size-7); }
 .combo-detail-skeleton-availability b { width:var(--size-92); height:var(--size-10); }
 @keyframes combo-detail-shimmer { to { transform:translateX(100%); } }
@@ -788,12 +788,12 @@
 
   .combo-list th,
   .combo-list td {
-    padding-inline: var(--space-12);
+    padding-inline: var(--space-3);
   }
 
   .combo-list .standard-pagination {
     min-width: 0;
-    gap: var(--space-10);
+    gap: var(--space-2-5);
     flex-wrap: wrap;
   }
 
@@ -836,19 +836,19 @@
 
   .combo-wizard-header {
     min-height: var(--size-72);
-    padding: var(--space-10) var(--space-12);
+    padding: var(--space-2-5) var(--space-3);
     grid-template-columns: minmax(0, 1fr) var(--control-height);
-    gap: var(--space-8);
+    gap: var(--space-2);
   }
 
   .combo-wizard-title-icon {
     width: var(--size-36);
     height: var(--size-36);
-    border-radius: var(--radius-9);
+    border-radius: var(--radius-tile);
   }
 
   .combo-wizard-title h2 {
-    font-size: var(--font-size-14);
+    font-size: var(--font-size-base);
   }
 
   .combo-wizard-title p {
@@ -856,22 +856,22 @@
   }
 
   .combo-wizard-steps {
-    padding: var(--space-8) var(--space-10);
-    gap: var(--space-5);
+    padding: var(--space-2) var(--space-2-5);
+    gap: var(--space-1-5);
   }
 
   .combo-wizard-steps button {
     min-height: var(--size-48);
-    padding: var(--space-6);
+    padding: var(--space-1-5);
     grid-template-columns: var(--size-27) minmax(0, 1fr);
-    gap: var(--space-6);
-    border-radius: var(--radius-8);
+    gap: var(--space-1-5);
+    border-radius: var(--radius-tile);
   }
 
   .combo-step-marker {
     width: var(--size-27);
     height: var(--size-27);
-    border-radius: var(--radius-8);
+    border-radius: var(--radius-tile);
   }
 
   .combo-step-copy b {
@@ -883,13 +883,13 @@
   }
 
   .combo-wizard-body {
-    padding: var(--space-14);
+    padding: var(--space-3-5);
   }
 
   .combo-wizard .form-grid {
-    padding: var(--space-14);
+    padding: var(--space-3-5);
     grid-template-columns: 1fr;
-    gap: var(--space-14);
+    gap: var(--space-3-5);
   }
 
   .combo-wizard .form-grid .span-2 {
@@ -908,7 +908,7 @@
 
   .combo-group-header {
     grid-template-columns: minmax(0, 1fr) var(--size-36);
-    gap: var(--space-9);
+    gap: var(--space-2);
   }
 
   .combo-group-header > .combo-toggle {
@@ -923,12 +923,12 @@
 
   .combo-options {
     grid-template-columns: 1fr;
-    padding: var(--space-10);
+    padding: var(--space-2-5);
   }
 
   .combo-option {
     grid-template-columns: minmax(0, 1fr) var(--size-36);
-    gap: var(--space-10);
+    gap: var(--space-2-5);
   }
 
   .combo-option > .combo-mini {
@@ -950,7 +950,7 @@
   }
 
   .combo-wizard-footer {
-    padding: var(--space-10) var(--space-12) max(var(--space-10), env(safe-area-inset-bottom));
+    padding: var(--space-2-5) var(--space-3) max(var(--space-2-5), env(safe-area-inset-bottom));
     grid-template-columns: 1fr 1fr;
   }
 
@@ -964,9 +964,9 @@
   }
 
   .combo-detail { width: 100vw; height: 100dvh; max-height: none; border-radius: 0; }
-  .combo-detail-body { padding: var(--space-16); }
+  .combo-detail-body { padding: var(--space-4); }
   .combo-detail-summary { grid-template-columns: repeat(2, 1fr); }
-  .combo-detail-group { grid-template-columns: 1fr; gap: var(--space-10); }
+  .combo-detail-group { grid-template-columns: 1fr; gap: var(--space-2-5); }
   .combo-detail-availability { grid-template-columns: 1fr; }
 
 }
@@ -976,17 +976,17 @@
   }
 
   .combo-wizard-steps {
-    padding-inline: var(--space-8);
-    gap: var(--space-4);
+    padding-inline: var(--space-2);
+    gap: var(--space-1);
   }
 
   .combo-wizard-steps button {
     min-height: var(--size-52);
-    padding: var(--space-5) var(--space-3);
+    padding: var(--space-1-5) var(--space-1);
     grid-template-columns: 1fr;
     grid-template-rows: var(--size-24) auto;
     justify-items: center;
-    gap: var(--space-3);
+    gap: var(--space-1);
     text-align: center;
   }
 
@@ -1002,7 +1002,7 @@
   .combo-step-copy b {
     overflow: visible;
     font-size: var(--font-size-label);
-    line-height: var(--line-height-1-1);
+    line-height: var(--line-height-tight);
     text-overflow: clip;
     white-space: normal;
   }

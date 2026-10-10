@@ -101,7 +101,7 @@ export function PlatformOnboardingPage(){
   };
   const current=steps[step];
 
-  return <><PageHeader eyebrow="PLATAFORMA" title="Registrar empresa" description="Alta única y transaccional: empresa, contrato, fiscalidad, primer local y Administrador de empresa."/>
+  return <><PageHeader title="Registrar empresa" description="Alta única y transaccional: empresa, contrato, fiscalidad, primer local y Administrador de empresa."/>
   {loadError?<ErrorState title="No pudimos cargar los catálogos" text={loadError} retrying={context.isFetching} onRetry={()=>void context.refetch()}/>:
   context.isLoading?<PlatformOnboardingSkeleton stepCount={steps.length}/>:
   !ctx?.plans.length?<EmptyState icon="settings" title="Primero crea un plan comercial" text="El alta de una empresa exige un plan activo con precio, límites, condiciones y módulos definidos." action={<Link className="button primary" href={pageRoutes.platformPlans}><Icon name="plus" size={18}/><span>Crear plan</span></Link>}/>:
@@ -138,7 +138,7 @@ export function PlatformOnboardingPage(){
             <div><dt>Condiciones</dt><dd>{selectedPlan.termsVersion}</dd></div>
           </dl>}
           <label className={"onboarding-terms"+(errors.termsAccepted?" has-error":"")}>
-            <input type="checkbox" {...register("termsAccepted")}/><span aria-hidden="true"><Icon name="check" size={13}/></span>
+            <input type="checkbox" {...register("termsAccepted")}/><span aria-hidden="true"><Icon name="check" size={14}/></span>
             <div><b>Condiciones aceptadas por el cliente</b>{err("termsAccepted")&&<small className="field-error" role="alert">{err("termsAccepted")}</small>}</div>
           </label>
         </>}

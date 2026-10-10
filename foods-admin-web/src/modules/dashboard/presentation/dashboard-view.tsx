@@ -46,7 +46,7 @@ export function DashboardView(){
   const compact=(value:string|number)=>formatRegionalNumber(Number(value||0),location?.country,{maximumFractionDigits:0});
   const firstName=(user?.name??"Admin").split(" ")[0];
   const selected=periods.find(item=>item.key===period)??periods[0];
-  const header=<PageHeader eyebrow="CONTROL DEL NEGOCIO" title={`Hola, ${firstName}`} description={`${location?.name??"Tu local"}${data?.businessDate?" · "+capitalize(formatDate(data.businessDate)):""}`} action={canOpen(pageRoutes.sales)?<Link href={pageRoutes.sales} className="button secondary"><Icon name="sales" size={17}/><span>Ver ventas</span></Link>:undefined}/>;
+  const header=<PageHeader title={`Hola, ${firstName}`} description={`${location?.name??"Tu local"}${data?.businessDate?" · "+capitalize(formatDate(data.businessDate)):""}`} action={canOpen(pageRoutes.sales)?<Link href={pageRoutes.sales} className="button secondary"><Icon name="sales" size={18}/><span>Ver ventas</span></Link>:undefined}/>;
   const toolbar=<div className="dash-toolbar">
     <div className="dash-periods" role="radiogroup" aria-label="Periodo del resumen">
       {periods.map(item=><button key={item.key} type="button" role="radio" aria-checked={period===item.key} className={period===item.key?"active":""} onClick={()=>setPeriod(item.key)}>{item.label}</button>)}
@@ -55,7 +55,7 @@ export function DashboardView(){
   </div>;
 
   if(query.isLoading)return <>{header}{toolbar}<DashboardSkeleton/></>;
-  if(query.isError)return <><PageHeader eyebrow="CONTROL DEL NEGOCIO" title="No pudimos cargar el panel" description="Los datos no se reemplazan por valores simulados."/><section className="panel catalog-state error"><span><Icon name="alert"/></span><b>Error de lectura</b><p>{query.error.message}</p><button className="button secondary" onClick={()=>void query.refetch()}>Reintentar</button></section></>;
+  if(query.isError)return <><PageHeader title="No pudimos cargar el panel" description="Los datos no se reemplazan por valores simulados."/><section className="panel catalog-state error"><span><Icon name="alert"/></span><b>Error de lectura</b><p>{query.error.message}</p><button className="button secondary" onClick={()=>void query.refetch()}>Reintentar</button></section></>;
   if(!data?.operations)return <>{header}<section className="panel catalog-state error"><Icon name="alert"/><b>Resumen no disponible</b><p>No pudimos leer el estado del restaurante. Inténtalo nuevamente.</p><button className="button secondary" onClick={()=>void query.refetch()}>Reintentar</button></section></>;
   const operations=data.operations;
   // Las etiquetas siguen al periodo de los datos mostrados, también mientras llega el siguiente.
@@ -208,7 +208,7 @@ export function DashboardView(){
 
         <section className="panel alerts">
           <header><span className="panel-icon warning"><Icon name="alert" size={18}/></span><div><small>REQUIERE ATENCIÓN</small><h2>Pendientes por revisar</h2></div>{alerts.length>0&&<b>{alerts.length}</b>}</header>
-          {alerts.length?<div className="alert-list">{alerts.map(alert=>{const content=<><span className="alert-icon"><Icon name={alert.icon} size={17}/></span><span className="alert-copy"><b>{alert.title}</b><small>{alert.detail}</small></span><span className="alert-count">{alert.count}</span></>;return canOpen(alert.href)?<Link className={"alert-row "+alert.tone} key={alert.title} href={alert.href}>
+          {alerts.length?<div className="alert-list">{alerts.map(alert=>{const content=<><span className="alert-icon"><Icon name={alert.icon} size={18}/></span><span className="alert-copy"><b>{alert.title}</b><small>{alert.detail}</small></span><span className="alert-count">{alert.count}</span></>;return canOpen(alert.href)?<Link className={"alert-row "+alert.tone} key={alert.title} href={alert.href}>
             {content}
             <Icon name="chevron" size={16}/>
           </Link>:<div className={"alert-row "+alert.tone} key={alert.title}>{content}</div>})}</div>:<div className="dashboard-empty ok compact"><Icon name="check" size={20}/><b>Sin pendientes por revisar</b><p>Sin alertas de disponibilidad o abastecimiento.</p></div>}
@@ -219,7 +219,7 @@ export function DashboardView(){
 }
 
 function DashboardSkeleton(){
-  const head=<header><i className="sk" style={{width:"var(--size-32)",height:"var(--size-32)",borderRadius:"var(--radius-10)"}}/><div><i className="sk" style={{width:"var(--size-80)",height:"var(--size-9)"}}/><i className="sk" style={{width:"var(--size-150)",height:"var(--size-14)"}}/></div></header>;
+  const head=<header><i className="sk" style={{width:"var(--size-32)",height:"var(--size-32)",borderRadius:"var(--radius-tile)"}}/><div><i className="sk" style={{width:"var(--size-80)",height:"var(--size-9)"}}/><i className="sk" style={{width:"var(--size-150)",height:"var(--size-14)"}}/></div></header>;
   return <div className="dash-layout dashboard-skeleton" aria-label="Cargando reportes" aria-busy="true">
     <div className="dash-main">
       <section className="panel dash-hero dashboard-skeleton-kpi">
@@ -227,8 +227,8 @@ function DashboardSkeleton(){
         <div className="dashboard-skeleton-chart">{[30,42,36,55,48,64,52,70,58,76,62,84].map((height,index)=><span className="sk" key={index} style={{height:height+"%"}}/>)}</div>
       </section>
       <section className="dash-stats">{Array.from({length:3},(_,index)=><article className="panel dash-stat dashboard-skeleton-kpi" key={index}><div><i className="sk" style={{width:"var(--size-100)",height:"var(--size-11)"}}/><i className="sk" style={{width:"var(--size-80)",height:"var(--size-26)"}}/><i className="sk" style={{width:"var(--size-140)",height:"var(--size-10)"}}/></div></article>)}</section>
-      <section className="dash-breakdowns">{Array.from({length:3},(_,index)=><article className="panel dash-card" key={index}>{head}<ul className="dash-bars">{Array.from({length:3},(_,row)=><li key={row}><div className="dash-bar-copy"><i className="sk" style={{width:"var(--size-100)",height:"var(--size-11)"}}/><i className="sk" style={{width:"var(--size-60)",height:"var(--size-11)"}}/></div><i className="sk" style={{width:"100%",height:"var(--size-8)",borderRadius:"var(--radius-99)"}}/></li>)}</ul></article>)}</section>
-      <section className="panel dash-card top-products">{head}<ol className="top-list">{Array.from({length:4},(_,index)=><li className="top-product dashboard-skeleton-product" key={index}><i className="sk" style={{width:"var(--size-26)",height:"var(--size-26)",borderRadius:"var(--radius-8)"}}/><div className="top-copy"><div><i className="sk" style={{width:"var(--size-150)",height:"var(--size-11)"}}/><i className="sk" style={{width:"var(--size-70)",height:"var(--size-11)",marginLeft:"auto"}}/></div><i className="sk" style={{width:"100%",height:"var(--size-4)",borderRadius:"var(--radius-99)"}}/></div></li>)}</ol></section>
+      <section className="dash-breakdowns">{Array.from({length:3},(_,index)=><article className="panel dash-card" key={index}>{head}<ul className="dash-bars">{Array.from({length:3},(_,row)=><li key={row}><div className="dash-bar-copy"><i className="sk" style={{width:"var(--size-100)",height:"var(--size-11)"}}/><i className="sk" style={{width:"var(--size-60)",height:"var(--size-11)"}}/></div><i className="sk" style={{width:"100%",height:"var(--size-8)",borderRadius:"var(--radius-pill)"}}/></li>)}</ul></article>)}</section>
+      <section className="panel dash-card top-products">{head}<ol className="top-list">{Array.from({length:4},(_,index)=><li className="top-product dashboard-skeleton-product" key={index}><i className="sk" style={{width:"var(--size-26)",height:"var(--size-26)",borderRadius:"var(--radius-tile)"}}/><div className="top-copy"><div><i className="sk" style={{width:"var(--size-150)",height:"var(--size-11)"}}/><i className="sk" style={{width:"var(--size-70)",height:"var(--size-11)",marginLeft:"auto"}}/></div><i className="sk" style={{width:"100%",height:"var(--size-4)",borderRadius:"var(--radius-pill)"}}/></div></li>)}</ol></section>
     </div>
     <aside className="dash-aside">
       <section className="panel dash-now">
@@ -236,7 +236,7 @@ function DashboardSkeleton(){
         <div className="dash-now-figure"><i className="sk" style={{width:"var(--size-100)",height:"var(--size-11)"}}/><i className="sk" style={{width:"var(--size-150)",height:"var(--size-24)"}}/></div>
         {Array.from({length:4},(_,index)=><div className="dash-area dashboard-skeleton-operation" key={index}><i className="sk" style={{width:"var(--size-80)",height:"var(--size-12)"}}/><i className="sk" style={{width:"100%",height:"var(--size-10)"}}/><i className="sk" style={{width:"70%",height:"var(--size-10)"}}/></div>)}
       </section>
-      <section className="panel alerts">{head}<div className="alert-list">{Array.from({length:3},(_,index)=><div className="alert-row dashboard-skeleton-alert" key={index}><i className="sk" style={{width:"var(--size-36)",height:"var(--size-36)",borderRadius:"var(--radius-10)"}}/><span className="alert-copy"><i className="sk" style={{width:"var(--size-110)",height:"var(--size-11)"}}/><i className="sk" style={{width:"var(--size-150)",height:"var(--size-9)"}}/></span></div>)}</div></section>
+      <section className="panel alerts">{head}<div className="alert-list">{Array.from({length:3},(_,index)=><div className="alert-row dashboard-skeleton-alert" key={index}><i className="sk" style={{width:"var(--size-36)",height:"var(--size-36)",borderRadius:"var(--radius-tile)"}}/><span className="alert-copy"><i className="sk" style={{width:"var(--size-110)",height:"var(--size-11)"}}/><i className="sk" style={{width:"var(--size-150)",height:"var(--size-9)"}}/></span></div>)}</div></section>
     </aside>
   </div>;
 }

@@ -7,11 +7,11 @@ import {getConciergeSettings} from "../infrastructure/concierge-settings-api";
 export function ConciergeSettingsPage(){
  const query=useQuery({queryKey:["concierge-settings"],queryFn:getConciergeSettings});
  const data=query.data;
- return <><PageHeader eyebrow="CONFIGURACIÓN" title="Fudia Concierge" description="Consulta el estado del módulo de pedidos por WhatsApp con IA para esta empresa."/>
+ return <><PageHeader title="Fudia Concierge" description="Consulta el estado del módulo de pedidos por WhatsApp con IA para esta empresa."/>
   <div className="concierge-settings">
    {query.isLoading?<ConciergeSettingsSkeleton/>:query.isError?<section className="panel"><ErrorState title="No pudimos cargar Fudia Concierge" text={query.error.message} onRetry={()=>void query.refetch()} retrying={query.isFetching}/></section>:data&&<>
     <section className="panel concierge-overview">
-     <div><span><Icon name="chat" size={22}/></span><section><h2>{data.organizationName}</h2><p>{data.locationName} · El módulo se administra desde la plataforma global de Fudia.</p></section></div>
+     <div><span><Icon name="chat" size={24}/></span><section><h2>{data.organizationName}</h2><p>{data.locationName} · El módulo se administra desde la plataforma global de Fudia.</p></section></div>
      <Status tone={data.active?"green":"gray"}>{data.active?"Habilitado":"No habilitado"}</Status>
     </section>
 
@@ -56,18 +56,18 @@ export function ConciergeSettingsPage(){
 function ConciergeSettingsSkeleton(){
  return <div className="concierge-skeleton" role="status" aria-busy="true" aria-label="Cargando estado de Fudia Concierge">
   <section className="panel concierge-overview" aria-hidden="true">
-   <div><Skeleton width="var(--size-44)" height="var(--size-44)" radius="var(--radius-12)"/><section className="concierge-skeleton-lines"><Skeleton width="var(--size-240)" height="var(--size-14)"/><Skeleton width="var(--size-330)" height="var(--size-12)"/></section></div>
-   <Skeleton width="var(--size-120)" height="var(--size-28)" radius="var(--radius-20)"/>
+   <div><Skeleton width="var(--size-44)" height="var(--size-44)" radius="var(--radius-card)"/><section className="concierge-skeleton-lines"><Skeleton width="var(--size-240)" height="var(--size-14)"/><Skeleton width="var(--size-330)" height="var(--size-12)"/></section></div>
+   <Skeleton width="var(--size-120)" height="var(--size-28)" radius="var(--radius-sheet)"/>
   </section>
   <div className="concierge-config" aria-hidden="true">
    <section className="panel concierge-form">
     <div className="concierge-skeleton-lines"><Skeleton width="var(--size-180)" height="var(--size-14)"/><Skeleton height="var(--size-12)"/><Skeleton width="72%" height="var(--size-12)"/></div>
-    {Array.from({length:2},(_,i)=><Skeleton key={i} height="var(--size-84)" radius="var(--radius-12)"/>)}
-    <Skeleton height="var(--size-48)" radius="var(--radius-9)"/>
+    {Array.from({length:2},(_,i)=><Skeleton key={i} height="var(--size-84)" radius="var(--radius-card)"/>)}
+    <Skeleton height="var(--size-48)" radius="var(--radius-tile)"/>
    </section>
    <section className="panel concierge-preview">
     <div className="concierge-skeleton-lines"><Skeleton width="var(--size-160)" height="var(--size-14)"/><Skeleton height="var(--size-12)"/></div>
-    <div className="concierge-flow">{Array.from({length:5},(_,i)=><Skeleton key={i} height="var(--size-48)" radius="var(--radius-10)"/>)}</div>
+    <div className="concierge-flow">{Array.from({length:5},(_,i)=><Skeleton key={i} height="var(--size-48)" radius="var(--radius-tile)"/>)}</div>
    </section>
   </div>
  </div>;

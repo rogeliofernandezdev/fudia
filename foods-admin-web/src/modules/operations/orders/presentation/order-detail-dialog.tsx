@@ -74,8 +74,8 @@ export function OrderDetailContent<T extends Order>({variant,order,error,retryin
           <OrderAttribution channel={order.channel} waiterName={order.waiterName} collectedByNames={order.collectedByNames}/>
 
           {(order.customerPhone||order.address||order.reference)&&<section className="order-detail-context" aria-label="Contacto y entrega">
-            {order.customerPhone&&<div><span><Icon name="users" size={15}/></span><p><small>CONTACTO</small><b>{order.customerPhone}</b></p></div>}
-            {(order.address||order.reference)&&<div><span><Icon name="truck" size={15}/></span><p><small>ENTREGA</small><b>{order.address||"Dirección no registrada"}</b>{order.reference&&<em>{order.reference}</em>}</p></div>}
+            {order.customerPhone&&<div><span><Icon name="users" size={16}/></span><p><small>CONTACTO</small><b>{order.customerPhone}</b></p></div>}
+            {(order.address||order.reference)&&<div><span><Icon name="truck" size={16}/></span><p><small>ENTREGA</small><b>{order.address||"Dirección no registrada"}</b>{order.reference&&<em>{order.reference}</em>}</p></div>}
           </section>}
 
           <section className="order-detail-consumption" aria-labelledby="order-detail-products-title">
@@ -94,7 +94,7 @@ export function OrderDetailContent<T extends Order>({variant,order,error,retryin
               </div>)}
               {!items.length&&<div className="order-detail-empty"><Icon name="receipt" size={20}/><span>Sin ítems cargados aún.</span></div>}
             </div>
-            {order.notes&&<div className="order-detail-notes"><span><Icon name="edit" size={15}/></span><div><b>Notas generales</b><p>{order.notes}</p></div></div>}
+            {order.notes&&<div className="order-detail-notes"><span><Icon name="edit" size={16}/></span><div><b>Notas generales</b><p>{order.notes}</p></div></div>}
           </section>
 
           <section className={`order-detail-totals${remaining<=0.00001?" is-paid":""}`} aria-labelledby="order-detail-account-title">
@@ -130,13 +130,13 @@ export function OrderDetailSkeleton({variant,close}:{variant:OrderDetailVariant;
   return <>
     <div className="modal-accent" aria-hidden="true"/>
     <header>
-      <Skeleton width="var(--size-32)" height="var(--size-32)" radius="var(--radius-8)" className="order-detail-skeleton-icon"/>
+      <Skeleton width="var(--size-32)" height="var(--size-32)" radius="var(--radius-tile)" className="order-detail-skeleton-icon"/>
       <div className="order-detail-heading">
         <h2 id={orderDetailTitleId} className="sr-only">{variant==="table"?"Cargando detalle de la mesa":"Cargando detalle del pedido"}</h2>
         <span className="order-detail-skeleton-copy" aria-hidden="true">
           <Skeleton width="var(--size-92)" height="var(--size-9)"/>
           <Skeleton width="var(--size-138)" height="var(--size-16)"/>
-          <Skeleton width="var(--size-150)" height="var(--size-24)" radius="var(--radius-999)"/>
+          <Skeleton width="var(--size-150)" height="var(--size-24)" radius="var(--radius-pill)"/>
         </span>
       </div>
       <button type="button" aria-label="Cerrar detalle" onClick={close}><Icon name="close"/></button>
@@ -148,7 +148,7 @@ export function OrderDetailSkeleton({variant,close}:{variant:OrderDetailVariant;
           <div className="order-detail-section-head"><Skeleton width="var(--size-156)" height="var(--size-13)"/><Skeleton width="var(--size-48)" height="var(--size-9)"/></div>
           <div className="order-detail-items">
             {Array.from({length:3},(_,index)=><div className="order-detail-line" key={index}>
-              <Skeleton width="var(--size-32)" height="var(--size-32)" radius="var(--radius-999)" className="order-detail-skeleton-qty"/>
+              <Skeleton width="var(--size-32)" height="var(--size-32)" radius="var(--radius-pill)" className="order-detail-skeleton-qty"/>
               <span className="order-detail-skeleton-copy"><Skeleton width="min(var(--size-220),72%)" height="var(--size-11)"/><Skeleton width="var(--size-92)" height="var(--size-9)"/></span>
               <Skeleton width="var(--size-66)" height="var(--size-10)"/>
             </div>)}

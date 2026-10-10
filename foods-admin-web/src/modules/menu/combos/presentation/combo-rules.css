@@ -1,15 +1,15 @@
 .combo-rules {
   display: flex;
   align-items: end;
-  gap: var(--space-8);
+  gap: var(--space-2);
 }
 
 .combo-rules > label:not(.combo-required) {
   display: grid;
-  gap: var(--space-3);
+  gap: var(--space-1);
   color: var(--ink-500);
   font-size: var(--font-size-label);
-  font-weight: var(--font-weight-700);
+  font-weight: var(--weight-semibold);
 }
 
 .combo-rules .field {

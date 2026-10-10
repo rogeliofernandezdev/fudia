@@ -77,10 +77,10 @@ test("empresa: identidad junto al icono del menú, separada del buscador y del l
   assert.match(shell,/<header className="topbar"><div className="topbar-identity"><button className="mobile-nav"/);
   assert.match(shell,/\{organization\.name\}<\/div>\}<\/div><NavigationSearch/);
   const css=read("src/shell/styles/shell.css");
-  assert.match(css,/\.topbar-identity\{[^}]*display:flex[^}]*align-items:center[^}]*gap:var\(--space-12\)/);
-  assert.match(css,/\.topbar-company\{[^}]*font-size:var\(--font-size-16\)[^}]*text-overflow:ellipsis/);
+  assert.match(css,/\.topbar-identity\{[^}]*display:flex[^}]*align-items:center[^}]*gap:var\(--space-3\)/);
+  assert.match(css,/\.topbar-company\{[^}]*font-size:var\(--font-size-md\)[^}]*text-overflow:ellipsis/);
   assert.doesNotMatch(css,/\.topbar-company\{[^}]*flex:1/);
-  assert.match(css,/@media \(width<=600px\)[\s\S]*\.topbar-identity\{flex:1;max-width:none;gap:var\(--space-8\)/);
+  assert.match(css,/@media \(width<=600px\)[\s\S]*\.topbar-identity\{flex:1;max-width:none;gap:var\(--space-2\)/);
 });
 
 test("el aviso inicial comparte la alineación global del título y listado",()=>{
@@ -88,7 +88,7 @@ test("el aviso inicial comparte la alineación global del título y listado",()=
   assert.match(shell,/<div className="content">\{setupRequired[\s\S]*className="setup-reminder"/);
   const css=read("src/shell/styles/shell.css");
   assert.equal((css.match(/\.setup-reminder\{/g)??[]).length,1);
-  assert.match(css,/\.setup-reminder\{[^}]*margin:0 0 var\(--space-21\)/);
+  assert.match(css,/\.setup-reminder\{[^}]*margin:0 0 var\(--space-5\)/);
   assert.match(css,/\.setup-reminder>span\{[^}]*min-width:0/);
   assert.match(css,/\.setup-reminder>svg\{flex-shrink:0\}/);
 });

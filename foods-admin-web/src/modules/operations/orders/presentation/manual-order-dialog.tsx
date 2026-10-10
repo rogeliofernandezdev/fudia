@@ -61,7 +61,7 @@ export function ManualOrderDialog({channels,currencySymbol,busy,onClose,onSave}:
      <footer className="manual-order-actions"><Button kind="secondary" disabled={locked} onClick={()=>close()}>Cancelar</Button><Button type="submit" icon="chevron" disabled={locked||!channelOptions.length}>Continuar</Button></footer>
     </form>
    </Dialog>
-  </div>:<ComandaView initial={draft} mode="create" allTables={[]} busy={locked} currencySymbol={currencySymbol} channelLabel={channelOptions.find(option=>option.value===draft.channel)?.label??""} notify={notify} close={close} onResponseClose={onClose} save={save} onBack={current=>{if(locked||submission.current)return;setDraft(current);setPhase("details")}}/>}
+  </div>:<ComandaView initial={draft} mode="create" allTables={[]} busy={locked} channelLabel={channelOptions.find(option=>option.value===draft.channel)?.label??""} notify={notify} close={close} onResponseClose={onClose} save={save} onBack={current=>{if(locked||submission.current)return;setDraft(current);setPhase("details")}}/>}
   <ConfirmDialog open={discard} title="Descartar pedido" description="Los cambios del pedido no se han guardado." confirmLabel="Descartar" onCancel={()=>setDiscard(false)} onConfirm={()=>{if(!locked&&!submission.current)onClose()}}/>
  </>;
 }

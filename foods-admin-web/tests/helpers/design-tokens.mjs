@@ -31,6 +31,6 @@ export function resolveTokens(value,definitions=tokens,stack=[],preserveUnknown=
 
 // Existing layout contracts inspect geometry, while keeping semantic colors as vars.
 export function resolveDesignScales(source){
-  const scales=new Map([...tokens].filter(([name])=>/^--(?:size|space|radius|stroke|blur|font-size|font-weight|line-height|tracking|duration)-/.test(name)));
+  const scales=new Map([...tokens].filter(([name])=>/^--(?:size|space|radius|stroke|blur|font-size|weight|line-height|letter-spacing|duration)-/.test(name)));
   return resolveTokens(source,scales,[],true).replace(/calc\((\d+(?:\.\d+)?px) \* -1\)/g,"-$1");
 }

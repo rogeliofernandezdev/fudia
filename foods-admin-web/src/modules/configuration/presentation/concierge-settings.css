@@ -1,33 +1,33 @@
-.concierge-settings{display:grid;gap:var(--space-14)}
-.concierge-overview{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--space-16);align-items:center;padding:var(--space-18)}
-.concierge-overview>div{display:flex;gap:var(--space-12);align-items:center;min-width:0}
-.concierge-overview>div>span{width:var(--size-44);height:var(--size-44);border-radius:var(--radius-12);display:grid;place-items:center;background:var(--digital-100);color:var(--digital-700);flex:0 0 auto}
-.concierge-overview h2{font-size:var(--font-size-14);margin:0}
-.concierge-overview p{margin:var(--space-4) 0 0;color:var(--ink-400);font-size:var(--font-size-label)}
-.concierge-config{display:grid;grid-template-columns:minmax(0,1fr) minmax(var(--size-260),.7fr);gap:var(--space-14)}
-.concierge-form,.concierge-preview{padding:var(--space-18)}
-.concierge-form{display:grid;gap:var(--space-16)}
-.concierge-form>header h2,.concierge-preview>header h2{font-size:var(--font-size-13);margin:0}
-.concierge-form>header p,.concierge-preview>header p{font-size:var(--font-size-label);line-height:var(--line-height-1-5);color:var(--ink-400);margin:var(--space-4) 0 0}
-.concierge-preview{display:grid;gap:var(--space-16);align-content:start}
-.concierge-flow{display:grid;gap:var(--space-8)}
-.concierge-flow span{display:grid;grid-template-columns:var(--size-30) 1fr;gap:var(--space-9);align-items:center;border:var(--stroke-1) solid var(--line);border-radius:var(--radius-10);padding:var(--space-9);background:var(--surface)}
-.concierge-flow i{width:var(--size-28);height:var(--size-28);border-radius:var(--radius-8);display:grid;place-items:center;background:var(--ops-100);color:var(--ops-700);font-style:normal;font-size:var(--font-size-label);font-weight:var(--font-weight-850)}
+.concierge-settings{display:grid;gap:var(--space-3-5)}
+.concierge-overview{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--space-4);align-items:center;padding:var(--space-5)}
+.concierge-overview>div{display:flex;gap:var(--space-3);align-items:center;min-width:0}
+.concierge-overview>div>span{width:var(--size-44);height:var(--size-44);border-radius:var(--radius-card);display:grid;place-items:center;background:var(--digital-100);color:var(--digital-700);flex:0 0 auto}
+.concierge-overview h2{font-size:var(--font-size-base);margin:0}
+.concierge-overview p{margin:var(--space-1) 0 0;color:var(--ink-400);font-size:var(--font-size-label)}
+.concierge-config{display:grid;grid-template-columns:minmax(0,1fr) minmax(var(--size-260),.7fr);gap:var(--space-3-5)}
+.concierge-form,.concierge-preview{padding:var(--space-5)}
+.concierge-form{display:grid;gap:var(--space-4)}
+.concierge-form>header h2,.concierge-preview>header h2{font-size:var(--font-size-sm);margin:0}
+.concierge-form>header p,.concierge-preview>header p{font-size:var(--font-size-label);line-height:var(--line-height-normal);color:var(--ink-400);margin:var(--space-1) 0 0}
+.concierge-preview{display:grid;gap:var(--space-4);align-content:start}
+.concierge-flow{display:grid;gap:var(--space-2)}
+.concierge-flow span{display:grid;grid-template-columns:var(--size-30) 1fr;gap:var(--space-2);align-items:center;border:var(--stroke-1) solid var(--line);border-radius:var(--radius-tile);padding:var(--space-2);background:var(--surface)}
+.concierge-flow i{width:var(--size-28);height:var(--size-28);border-radius:var(--radius-tile);display:grid;place-items:center;background:var(--primary-100);color:var(--primary-700);font-style:normal;font-size:var(--font-size-label);font-weight:var(--weight-heavy)}
 .concierge-flow b{font-size:var(--font-size-label)}
-.concierge-flow small{display:block;color:var(--ink-400);font-size:var(--font-size-label);margin-top:var(--space-2)}
-.concierge-note{padding:var(--space-10);border-radius:var(--radius-9);background:var(--cloud-50);font-size:var(--font-size-label);line-height:var(--line-height-1-55);color:var(--ink-500)}
+.concierge-flow small{display:block;color:var(--ink-400);font-size:var(--font-size-label);margin-top:var(--space-0-5)}
+.concierge-note{padding:var(--space-2-5);border-radius:var(--radius-tile);background:var(--cloud-50);font-size:var(--font-size-label);line-height:var(--line-height-normal);color:var(--ink-500)}
 @media(width<=820px){.concierge-config{grid-template-columns:1fr}.concierge-overview{grid-template-columns:1fr}.concierge-overview>.status{justify-self:start}}
 
-.concierge-status-card{border:var(--stroke-1) solid var(--line);border-radius:var(--radius-12);padding:var(--space-13);display:grid;grid-template-columns:var(--size-34) 1fr;gap:var(--space-10);align-items:start}
-.concierge-status-card>span{width:var(--size-32);height:var(--size-32);border-radius:var(--radius-9);display:grid;place-items:center;background:var(--cloud-50)}
+.concierge-status-card{border:var(--stroke-1) solid var(--line);border-radius:var(--radius-card);padding:var(--space-3);display:grid;grid-template-columns:var(--size-34) 1fr;gap:var(--space-2-5);align-items:start}
+.concierge-status-card>span{width:var(--size-32);height:var(--size-32);border-radius:var(--radius-tile);display:grid;place-items:center;background:var(--cloud-50)}
 .concierge-status-card b{font-size:var(--font-size-label)}
-.concierge-status-card small{display:block;color:var(--ink-400);font-size:var(--font-size-label);line-height:var(--line-height-1-5);margin-top:var(--space-3)}
-.concierge-status-card.ready{border-color:var(--palette-green-07);background:var(--palette-green-22)}.concierge-status-card.ready>span{color:var(--brand-700);background:var(--palette-green-17)}
-.concierge-status-card.locked{background:var(--palette-neutral-04)}.concierge-status-card.locked>span{color:var(--ink-500)}
-.concierge-readonly-field{border:var(--stroke-1) solid var(--line);border-radius:var(--radius-12);padding:var(--space-13);display:grid;gap:var(--space-4)}
-.concierge-readonly-field small{font-size:var(--font-size-label);color:var(--ink-400);font-weight:var(--font-weight-850);letter-spacing:var(--tracking-0-08-em)}
-.concierge-readonly-field b{font-size:var(--font-size-13)}
-.concierge-readonly-field p{font-size:var(--font-size-label);line-height:var(--line-height-1-45);color:var(--ink-400);margin:0}
-.concierge-skeleton{display:grid;gap:var(--space-14)}
+.concierge-status-card small{display:block;color:var(--ink-400);font-size:var(--font-size-label);line-height:var(--line-height-normal);margin-top:var(--space-1)}
+.concierge-status-card.ready{border-color:var(--brand-300);background:var(--brand-50)}.concierge-status-card.ready>span{color:var(--brand-700);background:var(--brand-100)}
+.concierge-status-card.locked{background:var(--cloud-25)}.concierge-status-card.locked>span{color:var(--ink-500)}
+.concierge-readonly-field{border:var(--stroke-1) solid var(--line);border-radius:var(--radius-card);padding:var(--space-3);display:grid;gap:var(--space-1)}
+.concierge-readonly-field small{font-size:var(--font-size-label);color:var(--ink-400);font-weight:var(--weight-heavy);letter-spacing:var(--letter-spacing-caps)}
+.concierge-readonly-field b{font-size:var(--font-size-sm)}
+.concierge-readonly-field p{font-size:var(--font-size-label);line-height:var(--line-height-normal);color:var(--ink-400);margin:0}
+.concierge-skeleton{display:grid;gap:var(--space-3-5)}
 .concierge-skeleton .ds-skeleton{max-width:100%}
-.concierge-skeleton-lines{display:grid;gap:var(--space-8);min-width:0;flex:1}
+.concierge-skeleton-lines{display:grid;gap:var(--space-2);min-width:0;flex:1}

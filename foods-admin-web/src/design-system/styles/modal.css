@@ -1,0 +1,77 @@
+/* Modal — único dueño de fondo, panel, cabecera, cuerpo y pie de los diálogos.
+ * Cabecera y pie fijos; solo el cuerpo se desplaza. En móvil el panel es una hoja inferior.
+ * Escape y el fondo nunca cierran: la X y Cancelar son los únicos cierres. */
+.modal-backdrop{position:fixed;inset:0;z-index:var(--z-modal);display:grid;place-items:center;padding:var(--space-6);background:var(--ink-950-alpha-56);backdrop-filter:blur(var(--blur-4));overscroll-behavior:contain}
+.crud-modal{position:relative;display:flex;flex-direction:column;width:min(var(--size-640),100%);max-height:calc(100dvh - var(--space-12));overflow:hidden;background:var(--surface);border-radius:var(--radius-card);box-shadow:var(--elevation-4);outline:0;animation:modal-panel-in var(--duration-slow) var(--easing-out) both}
+.crud-modal.compact,.crud-modal.size-sm{width:min(var(--size-480),100%)}
+.crud-modal.size-md{width:min(var(--size-640),100%)}
+.crud-modal.size-lg{width:min(var(--size-880),100%)}
+.crud-modal.size-xl{width:min(var(--size-1040),100%)}
+.modal-accent{flex:none;height:var(--size-3);background:linear-gradient(90deg,var(--brand-600),var(--primary-600) 55%,var(--digital-500))}
+
+.crud-modal>header{flex:none;position:relative;display:flex;align-items:center;gap:var(--space-3);min-height:var(--size-64);padding:var(--space-3) var(--space-3) var(--space-3) var(--space-5);border-bottom:var(--stroke-1) solid var(--line);background:var(--surface)}
+.crud-modal>header>div{display:grid;flex:1;gap:var(--space-0-5);min-width:0}
+.crud-modal h2{margin:0;color:var(--ink-950);font-size:var(--font-size-md);font-weight:var(--weight-bold);letter-spacing:var(--letter-spacing-snug);line-height:var(--line-height-tight);text-wrap:balance;overflow-wrap:anywhere}
+.crud-modal>header small{order:2;color:var(--ink-500);font-size:var(--font-size-xs);font-weight:var(--weight-medium);letter-spacing:var(--letter-spacing-none);text-transform:lowercase}
+.crud-modal>header small::first-letter{text-transform:uppercase}
+.crud-modal>header>div>p{order:2;margin:0;color:var(--ink-500);font-size:var(--font-size-xs);font-weight:var(--weight-medium);line-height:var(--line-height-snug)}
+.crud-modal>header>button,.modal-close{display:grid;flex:none;place-items:center;width:var(--size-36);height:var(--size-36);padding:0;border:var(--stroke-1) solid transparent;border-radius:var(--radius-control);background:transparent;color:var(--ink-500);transition:background var(--duration-fast),color var(--duration-fast),transform var(--duration-press) var(--easing-out)}
+.crud-modal>header>button:active:not(:disabled),.modal-close:active:not(:disabled){transform:scale(.94)}
+.crud-modal>header>button:disabled,.modal-close:disabled{cursor:not-allowed;opacity:.4}
+.modal-title-icon{display:grid;flex:none;place-items:center;width:var(--size-36);height:var(--size-36);border-radius:var(--radius-tile);color:var(--primary-700);background:var(--primary-100);box-shadow:var(--ring-selected-soft)}
+.modal-title-icon.danger{color:var(--danger-600);background:var(--danger-50);box-shadow:none}
+.modal-title-icon.success{color:var(--brand-700);background:var(--brand-100);box-shadow:none}
+.modal-title-icon.digital{color:var(--digital-700);background:var(--digital-100);box-shadow:none}
+
+/* Cuerpo desplazable: tanto el patrón nuevo (.modal-body) como los formularios heredados. */
+.crud-modal>:is(form,.modal-form){display:flex;flex:1 1 auto;flex-direction:column;min-height:0}
+.modal-body{flex:1 1 auto;min-height:0;padding:var(--space-5);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--ink-400-alpha-40) transparent}
+.crud-modal>form:not(.modal-form){padding:var(--space-5) var(--space-5) 0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--ink-400-alpha-40) transparent}
+.crud-modal>:is(div,section,article):not(.modal-accent,.modal-busy,.modal-body){flex:1 1 auto;min-height:0;overflow-y:auto}
+
+.modal-footer,.crud-modal>footer,.crud-modal>form>footer{flex:none;display:flex;justify-content:flex-end;align-items:center;gap:var(--space-2-5);padding:var(--space-3) var(--space-5) calc(var(--space-3) + var(--safe-area-bottom));border-top:var(--stroke-1) solid var(--line);background:var(--cloud-25)}
+.crud-modal>form:not(.modal-form)>footer{position:sticky;bottom:0;z-index:var(--z-raised);margin:var(--space-5) calc(var(--space-5) * -1) 0}
+:is(.modal-footer,.crud-modal>form>footer) .button:is(.primary,.ghost):not(:has(svg))::before{content:"";display:block;flex:0 0 var(--size-14);width:var(--size-14);height:var(--size-14);background:currentColor;-webkit-mask:var(--icon-mask-check) center/contain no-repeat;mask:var(--icon-mask-check) center/contain no-repeat}
+:is(.modal-footer,.crud-modal>form>footer) .button.ghost:not(:has(svg))::before{-webkit-mask-image:var(--icon-mask-close);mask-image:var(--icon-mask-close)}
+.modal-footer>.modal-footer-note{margin-right:auto;color:var(--ink-500);font-size:var(--font-size-xs)}
+.modal-footer .button,.crud-modal>form>footer .button{min-width:var(--size-104)}
+
+.modal-loading{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;gap:var(--space-4)}
+.modal-loading.detail{grid-template-columns:1fr}
+.modal-loading-row{display:grid;gap:var(--space-2)}
+.modal-loading-label{width:40%;height:var(--size-10)}
+.modal-loading-control{height:var(--control-height)}
+.modal-loading-value{width:72%;height:var(--size-14)}
+
+.modal-busy{position:absolute;inset:var(--size-64) 0 var(--size-64);z-index:var(--z-sticky);display:grid;place-content:center;justify-items:center;gap:var(--space-2-5);color:var(--brand-700);background:var(--brand-50-alpha-88);backdrop-filter:blur(var(--blur-1))}
+.modal-busy i{width:var(--size-40);height:var(--size-40);border:var(--stroke-3) solid var(--brand-200);border-top-color:var(--brand-700);border-radius:var(--radius-pill);animation:spin var(--duration-ambient-short) linear infinite}
+.modal-busy span{font-size:var(--font-size-xs);font-weight:var(--weight-semibold)}
+
+.modal-overlay-in{animation:modal-overlay-in var(--duration-base) var(--easing-out) both}
+.modal-panel-in{animation:modal-panel-in var(--duration-slow) var(--easing-out) both}
+@keyframes modal-overlay-in{from{opacity:0}to{opacity:1}}
+@keyframes modal-panel-in{from{opacity:0;transform:translateY(var(--size-12)) scale(.98)}to{opacity:1;transform:none}}
+@keyframes modal-sheet-in{from{transform:translateY(100%)}to{transform:none}}
+@keyframes alert-panel-in{0%{opacity:0;transform:scale(.88) translateY(var(--size-12))}55%{opacity:1;transform:scale(1.02)}to{opacity:1;transform:none}}
+@keyframes alert-panel-out{to{opacity:0;transform:scale(.96) translateY(var(--size-6))}}
+@keyframes alert-success-circle-in{0%{opacity:0;transform:scale(.4)}48%{opacity:1;transform:scale(1.1);box-shadow:var(--ring-pulse-success)}80%{transform:scale(1.02);box-shadow:var(--ring-pulse-end)}to{opacity:1;transform:none}}
+@keyframes alert-success-check-in{0%{opacity:0;stroke-dashoffset:var(--size-80);transform:scale(.6)}60%{opacity:1;transform:scale(1.08)}to{opacity:1;stroke-dashoffset:0;transform:none}}
+@keyframes alert-symbol-in{0%{opacity:0;transform:scale(.6)}60%{opacity:1;transform:scale(1.08)}to{opacity:1;transform:none}}
+
+@media (hover:hover) and (pointer:fine){
+  .crud-modal>header>button:hover:not(:disabled),.modal-close:hover:not(:disabled){color:var(--ink-950);background:var(--cloud-100)}
+}
+@media (width<=600px){
+  .modal-backdrop{align-items:end;padding:var(--space-2) 0 0}
+  .crud-modal,.crud-modal.compact,.crud-modal.size-sm,.crud-modal.size-md{width:100%;max-height:calc(100dvh - var(--space-6));border-radius:var(--radius-sheet) var(--radius-sheet) 0 0;animation:modal-sheet-in var(--duration-slow) var(--easing-drawer) both}
+  .crud-modal.size-lg,.crud-modal.size-xl{width:100%;height:100dvh;max-height:100dvh;border-radius:0;animation:modal-sheet-in var(--duration-slow) var(--easing-drawer) both}
+  .crud-modal>header{padding-left:var(--space-4)}
+  .modal-body,.crud-modal>form:not(.modal-form){padding-inline:var(--space-4)}
+  .crud-modal>form:not(.modal-form)>footer{margin-inline:calc(var(--space-4) * -1)}
+  .modal-footer,.crud-modal>footer,.crud-modal>form>footer{padding-inline:var(--space-4)}
+  .modal-footer .button,.crud-modal>form>footer .button{flex:1;min-width:0}
+  .modal-loading{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){
+  .modal-overlay-in,.modal-panel-in,.crud-modal{animation:modal-overlay-in var(--duration-fast) linear both}
+}

@@ -121,7 +121,7 @@ export function CloseCashShiftDialog({shift,report,busy,currency,formatMoney,clo
       <div className="cash-dialog-body">
         {report&&<CashReportContent report={report}/>}
         {blind
-          ?<div className="cash-blind-close-note"><Icon name="lock" size={15}/><span><b>Cierre ciego activo</b><small>Cuenta el efectivo sin consultar el saldo esperado. La diferencia se calculará al confirmar.</small></span></div>
+          ?<div className="cash-blind-close-note"><Icon name="lock" size={16}/><span><b>Cierre ciego activo</b><small>Cuenta el efectivo sin consultar el saldo esperado. La diferencia se calculará al confirmar.</small></span></div>
           :!report&&<section className="cash-close-summary">
             <div><small>FONDO INICIAL</small><b>{formatMoney(Number(shift.openingAmount))}</b></div>
             <div><small>INGRESOS</small><b>{formatMoney(Number(shift.incomeAmount))}</b></div>
@@ -181,7 +181,7 @@ export function CashShiftDetailDialog({shift,formatMoney,formatDateTime,formatBu
       {(shift.openingNote||shift.closingNote)&&<section className="cash-detail-notes">{shift.openingNote&&<div><small>APERTURA</small><p>{shift.openingNote}</p></div>}{shift.closingNote&&<div><small>CIERRE</small><p>{shift.closingNote}</p></div>}</section>}
       <section className="cash-detail-movements">
         <header><div><small>MOVIMIENTOS</small><h3>{shift.movementCount} {shift.movementCount===1?"movimiento":"movimientos"}</h3></div></header>
-        {shift.movements?.length?<div className="table-wrap hover-scroll"><table><thead><tr><th>FECHA</th><th>TIPO</th><th>ORIGEN</th><th>MOTIVO</th><th>USUARIO</th><th>MONTO</th></tr></thead><tbody>{shift.movements.map(item=><tr key={item.id}><td>{formatDateTime(item.createdAt)}</td><td><span className={"cash-movement-kind "+item.movementType}><Icon name={item.movementType==="income"?"plus":"minus"} size={12}/>{item.movementType==="income"?"Ingreso":"Egreso"}</span></td><td><span className="cash-movement-source">{cashMovementSourceLabel(item.sourceType)}</span></td><td><b>{item.reason}</b>{item.note&&<small>{item.note}</small>}</td><td>{item.createdByName}</td><td><b className={item.movementType}>{item.movementType==="income"?"+":"-"}{formatMoney(Number(item.amount))}</b></td></tr>)}</tbody></table></div>:<EmptyState className="cash-state-compact" icon="receipt" title="Sin movimientos" text="Este turno no registró movimientos."/>}
+        {shift.movements?.length?<div className="table-wrap hover-scroll"><table><thead><tr><th>FECHA</th><th>TIPO</th><th>ORIGEN</th><th>MOTIVO</th><th>USUARIO</th><th>MONTO</th></tr></thead><tbody>{shift.movements.map(item=><tr key={item.id}><td>{formatDateTime(item.createdAt)}</td><td><span className={"cash-movement-kind "+item.movementType}><Icon name={item.movementType==="income"?"plus":"minus"} size={14}/>{item.movementType==="income"?"Ingreso":"Egreso"}</span></td><td><span className="cash-movement-source">{cashMovementSourceLabel(item.sourceType)}</span></td><td><b>{item.reason}</b>{item.note&&<small>{item.note}</small>}</td><td>{item.createdByName}</td><td><b className={item.movementType}>{item.movementType==="income"?"+":"-"}{formatMoney(Number(item.amount))}</b></td></tr>)}</tbody></table></div>:<EmptyState className="cash-state-compact" icon="receipt" title="Sin movimientos" text="Este turno no registró movimientos."/>}
       </section>
     </div>
   </Dialog></div>;

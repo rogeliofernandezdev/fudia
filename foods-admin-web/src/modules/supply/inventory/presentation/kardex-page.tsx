@@ -33,7 +33,7 @@ export function KardexPage(){
  function resetFilters(){setInventoryItemId("");setMovementType("");setSourceType("");setFrom("");setTo("");setPage(1)}
 
  return <>
-  <PageHeader eyebrow="ABASTECIMIENTO" title="Kárdex" description="Trazabilidad física y valorizada de cada movimiento de inventario del local."/>
+  <PageHeader title="Kárdex" description="Trazabilidad física y valorizada de cada movimiento de inventario del local."/>
   <section className="panel standardized-management inventory-panel">
    <div className="inventory-toolbar kardex-toolbar">
     <div className="kardex-filters">
@@ -41,7 +41,7 @@ export function KardexPage(){
      <Select value={movementType} onChange={event=>{setMovementType(event.target.value);setPage(1)}} aria-label="Filtrar por tipo de movimiento"><option value="">Todos los movimientos</option>{Object.entries(movementLabels).map(([value,label])=><option key={value} value={value}>{label}</option>)}</Select>
      <Select value={sourceType} onChange={event=>{setSourceType(event.target.value);setPage(1)}} aria-label="Filtrar por origen"><option value="">Todos los orígenes</option><option value="purchase_receipt">Recepción de compra</option><option value="purchase_return">Devolución/corrección</option><option value="inventory_transfer">Transferencia</option><option value="order">Pedido / receta</option><option value="inventory_adjustment">Ajuste</option><option value="inventory_entry">Entrada manual</option></Select>
      <div className="kardex-range" role="group" aria-label="Periodo">
-      <Icon name="calendar" size={15}/>
+      <Icon name="calendar" size={16}/>
       <Input type="date" value={from} max={to||undefined} onChange={event=>{setFrom(event.target.value);setPage(1)}} aria-label="Fecha desde"/>
       <span aria-hidden="true">–</span>
       <Input type="date" value={to} min={from||undefined} onChange={event=>{setTo(event.target.value);setPage(1)}} aria-label="Fecha hasta"/>

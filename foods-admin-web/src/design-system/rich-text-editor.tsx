@@ -50,7 +50,7 @@ export function RichTextEditor({value,onChange,placeholder="Escribe aquí..."}:R
       </div>
       <div className="rte-divider"/>
       <div className="rte-group">
-        {btn(()=>editor.chain().focus().toggleHeading({level:3}).run(),editor.isActive("heading",{level:3}),"Título",<span style={{fontWeight:"var(--font-weight-800)"}}>H</span>)}
+        {btn(()=>editor.chain().focus().toggleHeading({level:3}).run(),editor.isActive("heading",{level:3}),"Título",<span style={{fontWeight:"var(--weight-bold)"}}>H</span>)}
         {btn(()=>editor.chain().focus().setParagraph().run(),editor.isActive("paragraph"),"Párrafo",<span>¶</span>)}
       </div>
       <div className="rte-divider"/>
@@ -60,12 +60,12 @@ export function RichTextEditor({value,onChange,placeholder="Escribe aquí..."}:R
       </div>
       <div className="rte-divider"/>
       <div className="rte-group">
-        {btn(()=>editor.chain().focus().setTextAlign("left").run(),editor.isActive({textAlign:"left"}),"Alinear izquierda",<span style={{fontFamily:"var(--font-monospace-fallback)"}}>≡</span>)}
-        {btn(()=>editor.chain().focus().setTextAlign("center").run(),editor.isActive({textAlign:"center"}),"Centrar",<span style={{fontFamily:"var(--font-monospace-fallback)"}}>≡</span>)}
+        {btn(()=>editor.chain().focus().setTextAlign("left").run(),editor.isActive({textAlign:"left"}),"Alinear izquierda",<span style={{fontFamily:"var(--font-mono)"}}>≡</span>)}
+        {btn(()=>editor.chain().focus().setTextAlign("center").run(),editor.isActive({textAlign:"center"}),"Centrar",<span style={{fontFamily:"var(--font-mono)"}}>≡</span>)}
       </div>
       <div className="rte-divider"/>
       <div className="rte-group">
-        {btn(()=>editor.chain().focus().toggleHighlight().run(),editor.isActive("highlight"),"Resaltar",<span style={{background:"var(--palette-amber-10)",padding:"0 var(--space-2)"}}>A</span>)}
+        {btn(()=>editor.chain().focus().toggleHighlight().run(),editor.isActive("highlight"),"Resaltar",<span style={{background:"var(--note-100)",padding:"0 var(--space-0-5)"}}>A</span>)}
       </div>
     </div>
     <EditorContent editor={editor}/>

@@ -70,11 +70,13 @@ test("los estados de navegación comparten colores y geometría, sin parches por
     return Object.fromEntries(rule.nodes.filter(node=>node.type==="decl").map(node=>[node.prop,node.value]));
   };
   const normal=declarations(".pagination-nav");
-  assert.equal(normal.background,"var(--primary-600)");
-  assert.equal(normal.color,"var(--surface)");
+  assert.equal(normal.background,"var(--surface)","Anterior/Siguiente son secundarios; la página activa es la única marca sólida");
+  assert.equal(normal.color,"var(--primary-700)");
   assert.equal(normal.height,"var(--control-height)");
   assert.equal(normal["border-radius"],"var(--radius-control)");
-  assert.equal(declarations(".pagination-nav:hover:not(:disabled)").background,"var(--primary-700)");
+  assert.equal(declarations(".pagination-page.active").background,"var(--primary-600)");
+  const hover=ast.nodes.find(node=>node.type==="atrule"&&node.params==="(hover:hover) and (pointer:fine)");
+  assert.ok(hover?.nodes.some(rule=>rule.selector===".pagination-nav:hover:not(:disabled)"),"el hover solo aplica con puntero fino");
   assert.equal(declarations(".pagination-nav:disabled").color,"var(--ink-400)");
-  assert.equal(declarations(".pagination-nav:disabled").background,"var(--palette-blue-95)");
+  assert.equal(declarations(".pagination-nav:disabled").background,"var(--cloud-100)");
 });

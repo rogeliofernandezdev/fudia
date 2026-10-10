@@ -24,7 +24,7 @@ export function ConfigurationHomePage(){
     if(section.access&&!user?.platformAdmin&&!canAccess(section.access))return false;
     return section.permission?can(section.permission):true;
   });
-  return <><PageHeader eyebrow="CONFIGURACIÓN" title="Configuración" description="Administra la estructura y los accesos necesarios para operar el restaurante."/>
+  return <><PageHeader title="Configuración" description="Administra la estructura y los accesos necesarios para operar el restaurante."/>
     <section className="settings-grid">
       {visible.map(section=><Link key={section.title} href={section.href}><span><Icon name={section.icon}/></span><b>{section.title}<small>{section.description}</small></b><Icon name="chevron"/></Link>)}
     </section>

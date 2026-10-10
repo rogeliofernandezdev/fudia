@@ -111,11 +111,11 @@ export function InventoryAdjustmentDialog({items,busy,close,save}:{items:Invento
           </div>
 
           {selected&&Number.isFinite(quantity)&&quantity>0&&<div className={"inventory-adjustment-preview "+movementType}>
-            <Icon name={movementType==="entry"?"plus":"minus"} size={15}/>
+            <Icon name={movementType==="entry"?"plus":"minus"} size={16}/>
             <span><b>Stock resultante: {formatRegionalNumber(Math.max(0,projected),location?.country,{maximumFractionDigits:3})} {selected.unit}</b><small>Actual {formatRegionalNumber(currentStock,location?.country,{maximumFractionDigits:3})} {selected.unit} · {movementType==="entry"?"+":"-"}{formatRegionalNumber(quantity,location?.country,{maximumFractionDigits:3})} {selected.unit}</small></span>
           </div>}
 
-          {isSubmitted&&hasErrors&&<div className="inventory-validation" role="alert"><Icon name="alert" size={15}/><span>Revisa los campos marcados antes de guardar.</span></div>}
+          {isSubmitted&&hasErrors&&<div className="inventory-validation" role="alert"><Icon name="alert" size={16}/><span>Revisa los campos marcados antes de guardar.</span></div>}
         </div>
         <footer><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy||items.length===0}>{busy?"Guardando…":"Guardar"}</Button></footer>
       </form>

@@ -1,12 +1,12 @@
 /* Skeleton — un único brillo para toda la aplicación */
-.ds-skeleton{display:block;width:100%;height:var(--size-12);border-radius:var(--radius-control);background:linear-gradient(90deg,var(--palette-blue-90) 20%,var(--palette-blue-105) 42%,var(--palette-blue-90) 64%);background-size:220% 100%;animation:ds-skeleton-shimmer var(--duration-1400) ease-in-out infinite}
+.ds-skeleton{display:block;width:100%;height:var(--size-12);border-radius:var(--radius-control);background:linear-gradient(90deg,var(--cloud-100) 20%,var(--primary-25) 42%,var(--cloud-100) 64%);background-size:220% 100%;animation:ds-skeleton-shimmer var(--duration-ambient-long) ease-in-out infinite}
 .ds-table-skeleton td{vertical-align:middle}
-.ds-skeleton-lead{display:flex;align-items:center;gap:var(--space-10);min-width:var(--size-180)}
-.ds-skeleton-lead>span{display:grid;flex:1;gap:var(--space-6)}
-.ds-skeleton-icon{flex:none;width:var(--size-34);height:var(--size-34);border-radius:var(--radius-9)}
+.ds-skeleton-lead{display:flex;align-items:center;gap:var(--space-2-5);min-width:var(--size-180)}
+.ds-skeleton-lead>span{display:grid;flex:1;gap:var(--space-1-5)}
+.ds-skeleton-icon{flex:none;width:var(--size-34);height:var(--size-34);border-radius:var(--radius-tile)}
 .ds-skeleton-line{width:72%;height:var(--size-11)}
 .ds-skeleton-line.short{width:46%;height:var(--size-9)}
-.ds-skeleton-actions{display:flex;justify-content:flex-end;gap:var(--space-6)}
+.ds-skeleton-actions{display:flex;justify-content:flex-end;gap:var(--space-1-5)}
 .ds-skeleton-action{width:var(--size-32);height:var(--size-32);border-radius:var(--radius-control)}
 @keyframes ds-skeleton-shimmer{to{background-position:-220% 0}}
 @media(prefers-reduced-motion:reduce){.ds-skeleton{animation:none}}

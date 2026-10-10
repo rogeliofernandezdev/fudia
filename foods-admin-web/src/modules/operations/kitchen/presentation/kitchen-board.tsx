@@ -110,12 +110,11 @@ export function KitchenBoard(){
 
   return <div className="kitchen-page">
     <PageHeader
-      eyebrow="OPERACIÓN EN COCINA"
       title={destination==="bar"?"Barra":"Cocina"}
       description="Prepara y libera pedidos del local con una cola clara por estado."
       action={<div className="kitchen-header-tools">
         <Select value={destination} onChange={event=>setDestination(event.target.value)} aria-label="Área de preparación">{(tickets.data?.destinationOptions??[]).map(option=><option value={option.value} key={option.value}>{option.label}</option>)}</Select>
-        {attention>0&&<span className="kitchen-attention"><Icon name="alert" size={12}/>{attention} con demora</span>}
+        {attention>0&&<span className="kitchen-attention"><Icon name="alert" size={14}/>{attention} con demora</span>}
         <Select value={channel} onChange={event=>setChannel(event.target.value)} aria-label="Filtrar comandas por canal"><option value="">Todos los canales</option>{(tickets.data?.channelOptions??[]).map(option=><option value={option.value} key={option.value}>{option.label}</option>)}</Select>
       </div>}
     />
@@ -128,7 +127,7 @@ export function KitchenBoard(){
           .filter(ticket=>ticket.status===lane.status)
           .sort((left,right)=>priority(right,now)-priority(left,now));
         return <section className="kitchen-lane" data-status={lane.status} data-mobile-active={mobileLane===lane.status} key={lane.status}>
-          <header><span className="kitchen-lane-icon"><Icon name={lane.icon} size={15}/></span><span className="kitchen-lane-copy"><h2>{lane.label}</h2><small>{lane.description}</small></span><b>{laneItems.length}</b></header>
+          <header><span className="kitchen-lane-icon"><Icon name={lane.icon} size={16}/></span><span className="kitchen-lane-copy"><h2>{lane.label}</h2><small>{lane.description}</small></span><b>{laneItems.length}</b></header>
           <div className="kitchen-lane-list">
             {laneItems.map(ticket=>{
               const tone=urgency(ticket,now);
@@ -143,7 +142,7 @@ export function KitchenBoard(){
                     <b>{subject}</b>
                     <small>{ticket.code}{ticket.targetMinutes&&ticket.status!=="listo"?` · Objetivo ${ticket.targetMinutes} min`:""}</small>
                   </div>
-                  <span className={`kitchen-ticket-time ${tone}`}><Icon name={urgencyMeta.icon} size={12}/><strong>{elapsedText}</strong>{urgencyMeta.label&&<span>· {urgencyMeta.label}</span>}</span>
+                  <span className={`kitchen-ticket-time ${tone}`}><Icon name={urgencyMeta.icon} size={14}/><strong>{elapsedText}</strong>{urgencyMeta.label&&<span>· {urgencyMeta.label}</span>}</span>
                 </div>
 
                 <div className="kitchen-ticket-items">
@@ -152,14 +151,14 @@ export function KitchenBoard(){
                     <div>
                       <span>{item.name}</span>
                       {(item.selections??[]).map(selection=><small key={selection.groupId+selection.productId}>{selection.groupName}: {selection.name}</small>)}
-                      {item.note&&<em><Icon name="edit" size={11}/>{item.note}</em>}
+                      {item.note&&<em><Icon name="edit" size={14}/>{item.note}</em>}
                     </div>
                   </div>)}
                 </div>
 
-                {ticket.notes&&<p className="kitchen-ticket-note"><Icon name="edit" size={12}/><span><b>Nota del pedido:</b> {ticket.notes}</span></p>}
+                {ticket.notes&&<p className="kitchen-ticket-note"><Icon name="edit" size={14}/><span><b>Nota del pedido:</b> {ticket.notes}</span></p>}
 
-                {canManage&&next?<Button className="kitchen-ticket-action" kind="primary" icon={next==="listo"?"check":"cookingPot"} disabled={advance.isPending} onClick={()=>advance.mutate({ticket,status:next})}>{busyId===ticket.id?"Actualizando…":next==="preparando"?"Iniciar":"Marcar listo"}</Button>:ticket.status==="listo"?<span className="kitchen-ready-label"><Icon name="check" size={12}/>Listo para entregar</span>:null}
+                {canManage&&next?<Button className="kitchen-ticket-action" kind="primary" icon={next==="listo"?"check":"cookingPot"} disabled={advance.isPending} onClick={()=>advance.mutate({ticket,status:next})}>{busyId===ticket.id?"Actualizando…":next==="preparando"?"Iniciar":"Marcar listo"}</Button>:ticket.status==="listo"?<span className="kitchen-ready-label"><Icon name="check" size={14}/>Listo para entregar</span>:null}
               </article>;
             })}
             {!laneItems.length&&<p className="kitchen-lane-empty">{lane.status==="confirmado"?"Sin pedidos por preparar.":lane.status==="preparando"?"Nada en preparación.":"Nada esperando entrega."}</p>}
@@ -170,4 +169,4 @@ export function KitchenBoard(){
   </div>;
 }
 
-function KitchenLoading(){return <div className="kitchen-board kitchen-loading" aria-label="Cargando comandas" aria-busy="true">{lanes.map(lane=><section className="kitchen-lane" data-status={lane.status} key={lane.status}><header><span className="kitchen-lane-icon"><Icon name={lane.icon} size={15}/></span><span className="kitchen-lane-copy"><h2>{lane.label}</h2><small>{lane.description}</small></span><b>—</b></header><div className="kitchen-lane-list">{Array.from({length:2},(_,index)=><article className="kitchen-ticket kitchen-ticket-skeleton" key={index}><div className="kitchen-skeleton-head"><span><i/><small/></span><i/></div><div className="kitchen-skeleton-items"><i/><i/><i/></div><i className="kitchen-skeleton-action"/></article>)}</div></section>)}</div>}
+function KitchenLoading(){return <div className="kitchen-board kitchen-loading" aria-label="Cargando comandas" aria-busy="true">{lanes.map(lane=><section className="kitchen-lane" data-status={lane.status} key={lane.status}><header><span className="kitchen-lane-icon"><Icon name={lane.icon} size={16}/></span><span className="kitchen-lane-copy"><h2>{lane.label}</h2><small>{lane.description}</small></span><b>—</b></header><div className="kitchen-lane-list">{Array.from({length:2},(_,index)=><article className="kitchen-ticket kitchen-ticket-skeleton" key={index}><div className="kitchen-skeleton-head"><span><i/><small/></span><i/></div><div className="kitchen-skeleton-items"><i/><i/><i/></div><i className="kitchen-skeleton-action"/></article>)}</div></section>)}</div>}

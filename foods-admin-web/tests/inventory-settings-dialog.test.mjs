@@ -52,18 +52,20 @@ test("niveles de inventario usa cuerpo y footer del modal compartido",()=>{
 });
 
 test("la estructura activa márgenes, acciones separadas y una columna a 390 px sin CSS local",()=>{
- const css=postcss.parse(readFileSync(new URL("styles/globals.css",root),"utf8"));
- const rules=[];css.walkRules(rule=>rules.push(rule));
+ const parse=file=>{const rules=[];postcss.parse(readFileSync(new URL(file,root),"utf8")).walkRules(rule=>rules.push(rule));return rules;};
+ const rules=parse("styles/globals.css"),modal=parse("design-system/styles/modal.css");
  const value=(rule,prop)=>rule.nodes.find(node=>node.prop===prop)?.value;
- const desktop=selector=>rules.find(rule=>rule.selector===selector&&rule.parent.type==="root");
- assert.equal(value(desktop(".crud-modal form"),"padding"),"var(--space-20)");
- assert.equal(value(desktop(".crud-modal form>footer"),"justify-content"),"flex-end");
- assert.equal(value(desktop(".crud-modal form>footer"),"gap"),"var(--space-9)");
+ const desktop=(list,selector)=>list.find(rule=>rule.selector===selector&&rule.parent.type==="root");
+ assert.equal(value(desktop(modal,".crud-modal>form:not(.modal-form)"),"padding"),"var(--space-5) var(--space-5) 0");
+ const footer=desktop(modal,".modal-footer,.crud-modal>footer,.crud-modal>form>footer");
+ assert.equal(value(footer,"justify-content"),"flex-end");
+ assert.equal(value(footer,"gap"),"var(--space-2-5)");
+ assert.equal(value(desktop(modal,".crud-modal>form:not(.modal-form)>footer"),"position"),"sticky","el pie queda visible mientras el cuerpo se desplaza");
  const mobile=rules.find(rule=>rule.selector===".form-grid"&&rule.parent.type==="atrule");
  const breakpoint=Number(mobile.parent.params.match(/width\s*<=\s*(\d+)px/)[1]);
  assert.ok(breakpoint>=390);
  assert.equal(value(mobile,"grid-template-columns"),"1fr");
- assert.ok(rules.some(rule=>rule.parent===mobile.parent&&rule.selector===".crud-modal form>footer .button"&&value(rule,"flex")==="1"));
+ assert.ok(modal.some(rule=>rule.parent.type==="atrule"&&rule.selector===".modal-footer .button,.crud-modal>form>footer .button"&&value(rule,"flex")==="1"));
  const source=readFileSync(new URL("modules/supply/inventory/presentation/inventory-settings-dialog.tsx",root),"utf8");
  assert.doesNotMatch(source,/\.css["']/);
 });

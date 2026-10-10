@@ -1,6 +1,7 @@
 "use client";
 
 import {useEffect,useRef,type HTMLAttributes} from "react";
+import "./styles/modal.css";
 
 const stack:HTMLElement[]=[];
 const responseClosers=new Map<HTMLElement,()=>void>();

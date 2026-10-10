@@ -5,23 +5,23 @@
 
 /* ── Resumen y controles del salón ── */
 .salon-overview-stats{
-  margin-bottom:var(--space-14);
+  margin-bottom:var(--space-3-5);
   display:grid;
   grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:var(--space-8);
+  gap:var(--space-2);
 }
 
 .salon-overview-stat{
   min-width:0;
   min-height:var(--size-58);
-  padding:var(--space-9) var(--space-11);
+  padding:var(--space-2) var(--space-3);
   display:flex;
   align-items:center;
-  gap:var(--space-9);
+  gap:var(--space-2);
   border:var(--stroke-1) solid var(--line);
-  border-radius:var(--radius-12);
+  border-radius:var(--radius-card);
   background:var(--surface);
-  box-shadow:var(--shadow-44);
+  box-shadow:var(--elevation-1);
 }
 
 .salon-overview-stat-icon{
@@ -30,59 +30,59 @@
   display:grid;
   place-items:center;
   flex-shrink:0;
-  border-radius:var(--radius-9);
+  border-radius:var(--radius-tile);
   background:var(--primary-100);
   color:var(--primary-600);
 }
 
 .salon-overview-stat.free .salon-overview-stat-icon{
-  background:var(--palette-green-18);
+  background:var(--brand-100);
   color:var(--brand-700);
 }
 
 .salon-overview-stat.occupied .salon-overview-stat-icon{
   background:var(--primary-100);
-  color:var(--ops-700);
+  color:var(--primary-700);
 }
 
 .salon-overview-stat>span:last-child{
   min-width:0;
   display:grid;
-  gap:var(--space-1);
+  gap:var(--space-px);
 }
 
 .salon-overview-stat small{
   color:var(--ink-600);
   font-size:var(--font-size-label);
-  font-weight:var(--font-weight-800);
-  letter-spacing:var(--tracking-0-07-em);
+  font-weight:var(--weight-bold);
+  letter-spacing:var(--letter-spacing-caps);
   text-transform:uppercase;
 }
 
 .salon-overview-stat b{
   min-height:var(--size-18);
   color:var(--ink-950);
-  font-size:var(--font-size-18);
-  font-weight:var(--font-weight-850);
+  font-size:var(--font-size-lg);
+  font-weight:var(--weight-heavy);
   font-variant-numeric:tabular-nums;
-  line-height:var(--line-height-1-1);
+  line-height:var(--line-height-tight);
 }
 
 .salon-controls{
-  margin-bottom:var(--space-18);
-  padding:var(--space-10);
+  margin-bottom:var(--space-5);
+  padding:var(--space-2-5);
   display:grid;
-  gap:var(--space-9);
+  gap:var(--space-2);
   border:var(--stroke-1) solid var(--line);
   border-radius:var(--radius-card);
   background:var(--surface);
-  box-shadow:var(--shadow-44);
+  box-shadow:var(--elevation-1);
 }
 
 .salon-toolbar{
   display:flex;
   align-items:center;
-  gap:var(--space-8);
+  gap:var(--space-2);
 }
 
 .salon-search{
@@ -99,7 +99,7 @@
 }
 
 /* ── Floor grid ── */
-.salon-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--size-212),1fr));gap:var(--space-16);align-items:start}
+.salon-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--size-212),1fr));gap:var(--space-4);align-items:start}
 
 /* ════════════════
    TABLE CARD
@@ -109,69 +109,69 @@
   display:flex;
   flex-direction:column;
   min-height:var(--size-208);
-  border-radius:var(--radius-20);
-  border:var(--stroke-1) solid var(--palette-blue-81);
+  border-radius:var(--radius-sheet);
+  border:var(--stroke-1) solid var(--cloud-150);
   background:var(--surface);
   text-align:left;
   cursor:pointer;
   overflow:hidden;
-  transition:border-color var(--duration-160),box-shadow var(--duration-200),transform var(--duration-140);
-  box-shadow:var(--shadow-69);
+  transition:border-color var(--duration-fast),box-shadow var(--duration-base),transform var(--duration-press);
+  box-shadow:var(--elevation-3);
 }
-.salon-table:hover{border-color:var(--palette-blue-38);background:var(--surface);box-shadow:var(--shadow-70);transform:translateY(calc(var(--size-2) * -1))}
-.salon-table:focus-visible{outline:var(--stroke-3) solid var(--ops-400);outline-offset:var(--space-2)}
+.salon-table:hover{border-color:var(--line-strong);background:var(--surface);box-shadow:var(--elevation-3);transform:translateY(calc(var(--size-2) * -1))}
+.salon-table:focus-visible{outline:var(--stroke-3) solid var(--primary-400);outline-offset:var(--space-0-5)}
 .salon-table:disabled{cursor:default;opacity:.68}
-.salon-table:disabled:hover{transform:none;border-color:var(--palette-blue-81);box-shadow:var(--shadow-69)}
+.salon-table:disabled:hover{transform:none;border-color:var(--cloud-150);box-shadow:var(--elevation-3)}
 
 /* State borders */
-.salon-table.free{border-color:var(--palette-green-13)}
-.salon-table.occupied{border-color:var(--palette-blue-61)}
+.salon-table.free{border-color:var(--brand-200)}
+.salon-table.occupied{border-color:var(--primary-200)}
 
 /* Inner content */
-.salon-table-inner{display:flex;flex-direction:column;gap:var(--space-10);flex:1;padding:var(--space-15) var(--space-18) var(--space-16)}
+.salon-table-inner{display:flex;flex-direction:column;gap:var(--space-2-5);flex:1;padding:var(--space-4) var(--space-5) var(--space-4)}
 
 /* Top row — estado + tiempo */
-.salon-table-top{display:flex;align-items:center;justify-content:space-between;gap:var(--space-6);min-height:var(--size-24)}
-.salon-table-elapsed{display:inline-flex;align-items:center;gap:var(--space-4);padding:var(--space-5) var(--space-9);border-radius:var(--radius-8);background:var(--ops-700);color:var(--surface);font-size:var(--font-size-label);font-weight:var(--font-weight-850);letter-spacing:var(--tracking-0-04-em);flex-shrink:0}
+.salon-table-top{display:flex;align-items:center;justify-content:space-between;gap:var(--space-1-5);min-height:var(--size-24)}
+.salon-table-elapsed{display:inline-flex;align-items:center;gap:var(--space-1);padding:var(--space-1-5) var(--space-2);border-radius:var(--radius-tile);background:var(--primary-700);color:var(--surface);font-size:var(--font-size-label);font-weight:var(--weight-heavy);letter-spacing:var(--letter-spacing-wide);flex-shrink:0}
 
 /* Mesa identifier — centrado */
-.salon-table-name-row{display:flex;flex-direction:column;align-items:center;gap:var(--space-5);margin-top:var(--space-4);text-align:center}
-.salon-table-icon{display:grid;place-items:center;width:var(--size-36);height:var(--size-36);border-radius:50%;background:var(--palette-blue-97);color:var(--ink-400);margin-bottom:var(--space-1)}
-.salon-table.free .salon-table-icon{background:var(--palette-green-16);color:var(--brand-700)}
-.salon-table.occupied .salon-table-icon{background:var(--ops-100);color:var(--ops-700)}
-.salon-table-name{font-size:var(--font-size-23);font-weight:var(--font-weight-850);letter-spacing:calc(var(--tracking-0-02-em) * -1);color:var(--ink-950);line-height:var(--line-height-1);text-transform:uppercase}
-.salon-table-seats{color:var(--ink-400);font-size:var(--font-size-control);font-weight:var(--font-weight-650)}
-.salon-table-family{font-size:var(--font-size-12);font-weight:var(--font-weight-750);color:var(--ops-700);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-.salon-table-staff{font-size:var(--font-size-12);color:var(--ink-600);max-width:100%;overflow-wrap:anywhere}
+.salon-table-name-row{display:flex;flex-direction:column;align-items:center;gap:var(--space-1-5);margin-top:var(--space-1);text-align:center}
+.salon-table-icon{display:grid;place-items:center;width:var(--size-36);height:var(--size-36);border-radius:50%;background:var(--cloud-100);color:var(--ink-400);margin-bottom:var(--space-px)}
+.salon-table.free .salon-table-icon{background:var(--brand-100);color:var(--brand-700)}
+.salon-table.occupied .salon-table-icon{background:var(--primary-100);color:var(--primary-700)}
+.salon-table-name{font-size:var(--font-size-xl);font-weight:var(--weight-heavy);letter-spacing:var(--letter-spacing-snug);color:var(--ink-950);line-height:var(--line-height-none);text-transform:uppercase}
+.salon-table-seats{color:var(--ink-400);font-size:var(--font-size-control);font-weight:var(--weight-semibold)}
+.salon-table-family{font-size:var(--font-size-xs);font-weight:var(--weight-bold);color:var(--primary-700);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.salon-table-staff{font-size:var(--font-size-xs);color:var(--ink-600);max-width:100%;overflow-wrap:anywhere}
 
 /* Order info — occupied: total centrado */
-.salon-table-order{display:flex;align-items:center;justify-content:center;gap:var(--space-8);margin-top:auto;padding:var(--space-11) var(--space-14);border-radius:var(--radius-12);background:var(--primary-600);color:var(--surface)}
+.salon-table-order{display:flex;align-items:center;justify-content:center;gap:var(--space-2);margin-top:auto;padding:var(--space-3) var(--space-3-5);border-radius:var(--radius-card);background:var(--primary-600);color:var(--surface)}
 .salon-table-order svg{width:var(--size-20);height:var(--size-20);flex-shrink:0}
-.salon-table-total{font-size:var(--font-size-16);font-weight:var(--font-weight-850);font-variant-numeric:tabular-nums;letter-spacing:calc(var(--tracking-0-01-em) * -1);line-height:var(--line-height-1)}
+.salon-table-total{font-size:var(--font-size-md);font-weight:var(--weight-heavy);font-variant-numeric:tabular-nums;letter-spacing:var(--letter-spacing-snug);line-height:var(--line-height-none)}
 .salon-table:hover .salon-table-order{background:var(--primary-700)}
 
 /* CTA for free tables */
 .salon-table-cta{
   display:inline-flex;
   align-items:center;
-  gap:var(--space-7);
+  gap:var(--space-2);
   margin-top:auto;
-  padding:var(--space-11) var(--space-16);
-  border-radius:var(--radius-12);
-  border:var(--stroke-1-5) solid var(--palette-green-12);
-  background:var(--palette-green-21);
+  padding:var(--space-3) var(--space-4);
+  border-radius:var(--radius-card);
+  border:var(--stroke-1-5) solid var(--brand-200);
+  background:var(--brand-50);
   color:var(--brand-700);
-  font-size:var(--font-size-12);
-  font-weight:var(--font-weight-800);
+  font-size:var(--font-size-xs);
+  font-weight:var(--weight-bold);
   width:100%;
   justify-content:center;
-  transition:all var(--duration-150) ease;
-  box-shadow:var(--shadow-71);
+  transition:all var(--duration-fast) ease;
+  box-shadow:var(--elevation-1);
 }
 .salon-table:hover .salon-table-cta{
-  background:var(--palette-green-15);
-  border-color:var(--palette-green-06);
-  box-shadow:var(--shadow-72);
+  background:var(--brand-100);
+  border-color:var(--brand-300);
+  box-shadow:var(--elevation-2);
   transform:translateY(calc(var(--size-1) * -1));
 }
 
@@ -190,20 +190,20 @@
 
 /* ── Responsive ── */
 @media(max-width:960px){
-  .salon-grid{grid-template-columns:repeat(auto-fill,minmax(var(--size-180),1fr));gap:var(--space-12)}
+  .salon-grid{grid-template-columns:repeat(auto-fill,minmax(var(--size-180),1fr));gap:var(--space-3)}
   .salon-table{min-height:var(--size-184)}
-  .salon-table-name{font-size:var(--font-size-20)}
+  .salon-table-name{font-size:var(--font-size-xl)}
 }
 @media(max-width:600px){
   .salon-overview-stats{
-    margin-bottom:var(--space-10);
-    gap:var(--space-6);
+    margin-bottom:var(--space-2-5);
+    gap:var(--space-1-5);
   }
 
   .salon-overview-stat{
     min-height:var(--size-52);
-    padding:var(--space-8);
-    gap:var(--space-6);
+    padding:var(--space-2);
+    gap:var(--space-1-5);
   }
 
   .salon-overview-stat-icon{
@@ -212,16 +212,16 @@
   }
 
   .salon-overview-stat b{
-    font-size:var(--font-size-16);
+    font-size:var(--font-size-md);
   }
 
   .salon-controls{
-    margin-bottom:var(--space-14);
-    padding:var(--space-8);
+    margin-bottom:var(--space-3-5);
+    padding:var(--space-2);
   }
 
   .salon-toolbar{
-    gap:var(--space-7);
+    gap:var(--space-2);
   }
 
   .salon-refresh{
@@ -233,10 +233,10 @@
     display:none;
   }
 
-  .salon-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-10)}
+  .salon-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-2-5)}
   .salon-table{min-height:var(--size-168)}
-  .salon-table-name{font-size:var(--font-size-18)}
-  .salon-table-inner{padding:var(--space-13) var(--space-14) var(--space-14)}
+  .salon-table-name{font-size:var(--font-size-lg)}
+  .salon-table-inner{padding:var(--space-3) var(--space-3-5) var(--space-3-5)}
 }
 @media(max-width:390px){
   .salon-overview-stat{
@@ -251,7 +251,7 @@
     justify-items:center;
   }
 
-  .salon-grid{gap:var(--space-8)}
+  .salon-grid{gap:var(--space-2)}
   .salon-table{min-height:var(--size-156)}
-  .salon-table-name{font-size:var(--font-size-16)}
+  .salon-table-name{font-size:var(--font-size-md)}
 }

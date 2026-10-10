@@ -48,12 +48,12 @@ test("todos los tokens usados existen y sus dependencias no forman ciclos",()=>{
 
 test("editar los tokens base actualiza acciones, alias y transparencias compartidas",()=>{
   const changed=new Map(tokens);
-  changed.set("--primary-600","#123456");changed.set("--brand-700","#234567");changed.set("--danger-600","#345678");changed.set("--space-12","18px");
+  changed.set("--primary-600","#123456");changed.set("--brand-700","#234567");changed.set("--danger-600","#345678");changed.set("--space-3","18px");
   assert.equal(resolveTokens("var(--action-pay)",changed),"#123456");
-  assert.equal(resolveTokens("var(--ops-500)",changed),"#123456");
-  assert.equal(resolveTokens("var(--success-600)",changed),"#234567");
-  assert.equal(resolveTokens("var(--action-cancel)",changed),"#345678");
-  assert.match(resolveTokens("var(--primary-600-a46)",changed),/#123456/);
+  assert.equal(resolveTokens("var(--primary-600)",changed),"#123456");
+  assert.equal(resolveTokens("var(--brand-700)",changed),"#234567");
+  assert.equal(resolveTokens("var(--danger)",changed),"#345678");
+  assert.match(resolveTokens("var(--primary-600-alpha-16)",changed),/#123456/);
   const dialog=postcss.parse(read("src/design-system/styles/confirm-dialog.css"));
   let headerGap;dialog.walkDecls("gap",d=>{if(d.parent.selector===".confirm-header")headerGap=d.value;});
   assert.equal(resolveTokens(headerGap,changed),"18px");
@@ -66,7 +66,7 @@ test("los controles conservan la altura táctil y el modal conserva Scale Punch 
   const control=mobileRoot.nodes.find(n=>n.selectors?.includes(":root")).nodes.find(n=>n.prop==="--control-height");
   assert.equal(resolveTokens(control.value),"44px");
   assert.equal(resolveTokens("var(--motion-dialog-duration)"),"520ms");
-  assert.equal(resolveTokens("var(--motion-dialog-easing)"),"cubic-bezier(.22,1,.36,1)");
+  assert.equal(resolveTokens("var(--motion-dialog-easing)"),"cubic-bezier(.23,1,.32,1)");
   const css=read("src/design-system/styles/confirm-dialog.css");
   assert.match(css,/@media\(prefers-reduced-motion:no-preference\)/);
   assert.match(css,/42%\{opacity:1;transform:scale\(1\.06\)\}/);

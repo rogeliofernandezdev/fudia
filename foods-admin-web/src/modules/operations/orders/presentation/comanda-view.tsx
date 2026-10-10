@@ -148,7 +148,7 @@ export function ComandaView({initial,mode,allTables,busy,close,save,channelLabel
 
           {salon&&!v.tableId&&(
             <div className="salon-comanda-table-card">
-              <span className="salon-comanda-table-icon"><Icon name="utensils" size={17}/></span>
+              <span className="salon-comanda-table-icon"><Icon name="utensils" size={18}/></span>
               <Select disabled={busy} className="salon-comanda-table-select" value={v.tableId} onChange={e=>setV({...v,tableId:e.target.value})} aria-label="Mesa">
                 <option value="">Selecciona una mesa</option>
                 {freeTables.map(t=><option key={t.id} value={t.id}>{t.zone?t.zone+" · ":""}{t.name}</option>)}
@@ -159,7 +159,7 @@ export function ComandaView({initial,mode,allTables,busy,close,save,channelLabel
           <div className="salon-comanda-summary-scroll">
             {!v.lines.length?(
               <div className="salon-comanda-empty">
-                <span className="salon-comanda-empty-icon"><Icon name="receipt" size={21}/></span>
+                <span className="salon-comanda-empty-icon"><Icon name="receipt" size={24}/></span>
                 <strong>La comanda está vacía</strong>
                 <p>Selecciona platos, menús o combos. Aquí aparecerán cantidades, opciones, notas y el total.</p>
               </div>
@@ -190,14 +190,14 @@ export function ComandaView({initial,mode,allTables,busy,close,save,channelLabel
                       </div>
                       {l.itemType==="combo"&&(
                         <button type="button" disabled={busy} className="salon-comanda-change-combo" onClick={()=>editCombo(l)}>
-                          <Icon name="edit" size={13}/><span>Cambiar elección</span>
+                          <Icon name="edit" size={14}/><span>Cambiar elección</span>
                         </button>
                       )}
                       <div className="salon-comanda-line-controls">
                         <div className="salon-comanda-stepper">
-                          <button type="button" disabled={busy} onClick={()=>step(i,-1)} aria-label={"Quitar un "+l.name}><Icon name="minus" size={12}/></button>
+                          <button type="button" disabled={busy} onClick={()=>step(i,-1)} aria-label={"Quitar un "+l.name}><Icon name="minus" size={14}/></button>
                           <b>{l.qty}</b>
-                          <button type="button" disabled={busy} onClick={()=>step(i,1)} aria-label={"Agregar un "+l.name}><Icon name="plus" size={12}/></button>
+                          <button type="button" disabled={busy} onClick={()=>step(i,1)} aria-label={"Agregar un "+l.name}><Icon name="plus" size={14}/></button>
                         </div>
                         <Input disabled={busy} maxLength={240} ref={node=>{noteRefs.current[l.lineKey]=node}} className="salon-comanda-line-note" value={l.note} onChange={e=>patchLine(i,{note:e.target.value})} placeholder="Nota del ítem, ej. sin cebolla" aria-label={"Nota para "+l.name}/>
                       </div>
@@ -233,9 +233,9 @@ export function ComandaView({initial,mode,allTables,busy,close,save,channelLabel
 
       <div className="salon-comanda-mobile-bar">
         <button type="button" className="salon-comanda-mobile-summary" onClick={()=>setTicketOpen(true)} aria-expanded={ticketOpen}>
-          <Icon name="receipt" size={17}/>
+          <Icon name="receipt" size={18}/>
           <span><small>Comanda · {count} ítem{count===1?"":"s"}</small><b>{money(total)}</b></span>
-          <Icon name="chevron" size={15}/>
+          <Icon name="chevron" size={16}/>
         </button>
         {v.lines.length>0&&(
           <button type="button" className="salon-comanda-mobile-submit" onClick={()=>submit(!editing)} disabled={busy}>

@@ -4,6 +4,7 @@ import {Dialog} from "./dialog";
 import {Children,useId,type ReactNode} from "react";
 import "./styles/confirm-dialog.css";
 import {Icon} from "@/design-system/icons";
+import {Button} from "./page-header";
 
 type ConfirmDialogProps={
   open:boolean;
@@ -39,8 +40,8 @@ export function ConfirmDialog({open,title,description,subject,children,note,tone
         {note&&<p className="confirm-note">{note}</p>}
       </div>}
       <footer className="confirm-actions">
-        <button type="button" className="button ghost" data-dialog-initial-focus autoFocus disabled={pending} onClick={onCancel}>Cancelar</button>
-        <button type="button" className={`button ${tone}`} disabled={pending||confirmDisabled} onClick={onConfirm}>{pending?"Procesando…":confirmLabel}</button>
+        <Button kind="ghost" data-dialog-initial-focus autoFocus disabled={pending} onClick={onCancel}>Cancelar</Button>
+        <Button kind={tone==="danger"?"danger":"primary"} disabled={pending||confirmDisabled} aria-busy={pending||undefined} onClick={onConfirm}>{pending?"Procesando…":confirmLabel}</Button>
       </footer>
     </Dialog>
   </div>;

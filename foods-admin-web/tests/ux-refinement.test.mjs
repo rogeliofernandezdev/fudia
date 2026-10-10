@@ -92,7 +92,7 @@ function dialogHarness(){
     querySelector(){return this.children.find(child=>child.initial)??null;}
     querySelectorAll(selector){return selector==='[aria-controls]'?[]:this.children;}
   }
-  const {Dialog,closeDialogsForFeedback}=compile("src/design-system/dialog.tsx",{document,HTMLElement:Element,Node:Element},name=>name==="react"?{useRef:value=>({current:value}),useEffect:effect=>effects.push(effect)}:require(name));
+  const {Dialog,closeDialogsForFeedback}=compile("src/design-system/dialog.tsx",{document,HTMLElement:Element,Node:Element},name=>name==="react"?{useRef:value=>({current:value}),useEffect:effect=>effects.push(effect)}:name.endsWith(".css")?{}:require(name));
   function mount(panel,props={}){const tree=Dialog({children:[],...props});tree.props.ref(panel);const cleanups=effects.splice(0).map(effect=>effect()).filter(Boolean);return()=>cleanups.forEach(cleanup=>cleanup());}
   function key(key,shiftKey=false){let prevented=false;for(const fn of listeners.get("keydown")??[])fn({key,shiftKey,defaultPrevented:false,preventDefault(){prevented=true;}});return prevented;}
   return{document,Element,mount,key,closeDialogsForFeedback};

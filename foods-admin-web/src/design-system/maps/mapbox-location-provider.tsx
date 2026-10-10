@@ -83,7 +83,7 @@ export function MapboxLocationMap({
       });
       localMap.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");
       localMap.once("load", () => { if (active) setMapLoading(false); });
-      localMarker = new mapboxgl.Marker({ color: readCssToken("--map-marker"), draggable: true })
+      localMarker = new mapboxgl.Marker({ color: readCssToken("--primary-600"), draggable: true })
         .setLngLat(initial)
         .addTo(localMap);
       localMarker.on("dragend", () => {

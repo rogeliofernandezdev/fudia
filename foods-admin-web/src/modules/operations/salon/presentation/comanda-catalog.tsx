@@ -71,18 +71,18 @@ export function ComandaCatalog({qtyByProduct,onPick,onConfigureCombo}:{
 
         <div className="comanda-source-tabs" role="tablist" aria-label="Tipo de producto">
           <button type="button" role="tab" aria-selected={catalogKind==="products"} className={catalogKind==="products"?"active":""} onClick={()=>switchKind("products")}>
-            <span className="comanda-source-icon"><Icon name="utensils" size={17}/></span>
+            <span className="comanda-source-icon"><Icon name="utensils" size={18}/></span>
             <span className="comanda-source-copy"><b>Platos</b><small>Productos de la carta</small></span>
           </button>
           <button type="button" role="tab" aria-selected={combos} className={combos?"active":""} onClick={()=>switchKind("combos")}>
-            <span className="comanda-source-icon"><Icon name="combo" size={17}/></span>
+            <span className="comanda-source-icon"><Icon name="combo" size={18}/></span>
             <span className="comanda-source-copy"><b>Menús y combos</b><small>Opciones configurables</small></span>
           </button>
         </div>
 
         <div className="comanda-search-bar">
           <label className="comanda-search"><Icon name="search" size={18}/><input value={pq} onChange={e=>{setPq(e.target.value);setPage(1)}} placeholder={combos?"Buscar menú o combo...":"Buscar en la carta..."} aria-label={combos?"Buscar menú o combo":"Buscar en la carta"}/></label>
-          {pq&&<button type="button" className="comanda-clear-search" onClick={()=>{setPq("");setPage(1)}} aria-label="Limpiar búsqueda"><Icon name="close" size={15}/></button>}
+          {pq&&<button type="button" className="comanda-clear-search" onClick={()=>{setPq("");setPage(1)}} aria-label="Limpiar búsqueda"><Icon name="close" size={16}/></button>}
         </div>
 
         {!combos&&(
@@ -202,7 +202,7 @@ export function ComboConfigurator({comboId,initialSelections=[],editing=false,on
             <h3 id="combo-config-title">{data?.name??"Elegir opciones"}</h3>
             {data?.description&&<p>{data.description}</p>}
           </div>
-          <button type="button" aria-label="Cerrar selección de opciones" onClick={onClose}><Icon name="close" size={17}/></button>
+          <button type="button" aria-label="Cerrar selección de opciones" onClick={onClose}><Icon name="close" size={18}/></button>
         </header>
 
         <div className="combo-config-body">
@@ -222,14 +222,14 @@ export function ComboConfigurator({comboId,initialSelections=[],editing=false,on
                       <h4>{group.name}</h4>
                       <small>{minimum>0?`Elige ${minimum}${group.maxSelections>minimum?` a ${group.maxSelections}`:""} de ${group.options.length}`:`${group.options.length} opciones · elección opcional`}</small>
                     </div>
-                    <span className={ready?"ready":"pending"}>{minimum===0&&selectedIds.length===0?"Opcional":ready?<><Icon name="check" size={12}/>Listo</>:<>{selectedIds.length}/{minimum}</>}</span>
+                    <span className={ready?"ready":"pending"}>{minimum===0&&selectedIds.length===0?"Opcional":ready?<><Icon name="check" size={14}/>Listo</>:<>{selectedIds.length}/{minimum}</>}</span>
                   </header>
                   <div className="combo-config-options">
                     {group.options.map(option=>{
                       const active=selectedIds.includes(option.productId);
                       return(
                         <button type="button" key={option.productId} className={active?"active":""} aria-pressed={active} disabled={!option.available&&!active} onClick={()=>toggle(group,option)}>
-                          <span className="combo-option-check">{active?<Icon name="check" size={13}/>:null}</span>
+                          <span className="combo-option-check">{active?<Icon name="check" size={14}/>:null}</span>
                           <span className="combo-option-copy"><b>{option.name}</b>{!option.available&&<small>Agotado</small>}</span>
                           <span className="combo-option-price">{Number(option.surcharge)>0?`+${money(option.surcharge)}`:"Incluido"}</span>
                         </button>
@@ -246,7 +246,7 @@ export function ComboConfigurator({comboId,initialSelections=[],editing=false,on
           <div className="combo-config-total"><small>Total del menú</small><strong>{combo.isLoading?<Skeleton width="var(--size-72)" height="var(--size-18)"/>:money(finalPrice)}</strong></div>
           {!editing&&(
             <div className="combo-config-multiple">
-              <Icon name="users" size={15}/>
+              <Icon name="users" size={16}/>
               <span><b>¿Más de un menú?</b><small>Mismas opciones: aumenta la cantidad en la comanda. Opciones distintas: agrega otro menú por separado.</small></span>
             </div>
           )}
@@ -335,7 +335,7 @@ function ComboConfiguratorSkeleton(){
         <section className="combo-config-group" key={group} aria-hidden="true">
           <header>
             <div><Skeleton width="var(--size-138)" height="var(--size-14)"/><Skeleton width="var(--size-92)" height="var(--size-10)"/></div>
-            <Skeleton width="var(--size-48)" height="var(--size-22)" radius="var(--radius-999)"/>
+            <Skeleton width="var(--size-48)" height="var(--size-22)" radius="var(--radius-pill)"/>
           </header>
           <div className="combo-config-options">
             {Array.from({length:3},(_,option)=><Skeleton key={option} height="var(--control-height)" radius="var(--radius-control)"/>)}

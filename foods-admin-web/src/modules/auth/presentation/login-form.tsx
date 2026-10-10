@@ -109,7 +109,7 @@ export function LoginForm() {
           </div>
           <h1 className="sr-only" id="login-title">Iniciar sesión</h1>
           <form className="admin-auth-form" onSubmit={submit} aria-busy={loading} noValidate>
-            {error && <div className="admin-auth-error" role="alert"><Icon name="alert" size={17}/><span>{error}</span></div>}
+            {error && <div className="admin-auth-error" role="alert"><Icon name="alert" size={18}/><span>{error}</span></div>}
             {activeSession ? <section className="admin-auth-session-conflict" role="alert">
               <header><Icon name="users" size={20}/><div><b>Sesión activa</b><span>Ya ingresaste como {activeSession} en este navegador.</span></div></header>
               <div>
@@ -119,21 +119,21 @@ export function LoginForm() {
             </section> : <>
               <FormField label="Correo electrónico" error={errors.email?.message}>
                 <div className={"admin-auth-field"+(errors.email?" has-error":"")}>
-                  <Icon name="mail" size={17}/>
+                  <Icon name="mail" size={18}/>
                   <Input className="admin-auth-input" id="admin-email" type="email" inputMode="email" autoComplete="username" placeholder="nombre@restaurante.com" aria-invalid={Boolean(errors.email)} disabled={loading} {...register("email")} />
                 </div>
               </FormField>
               <FormField label="Contraseña" error={errors.password?.message}>
                 <div className={"admin-auth-field"+(errors.password?" has-error":"")}>
-                  <Icon name="lock" size={17}/>
+                  <Icon name="lock" size={18}/>
                   <Input className="admin-auth-input admin-auth-input-password" id="admin-password" type={showPassword ? "text" : "password"} autoComplete="current-password" placeholder="Tu contraseña" aria-invalid={Boolean(errors.password)} disabled={loading} {...register("password")}/>
-                  <button type="button" disabled={loading} onClick={() => setShowPassword(value => !value)} aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"} aria-pressed={showPassword}><Icon name="eye" size={17}/></button>
+                  <button type="button" disabled={loading} onClick={() => setShowPassword(value => !value)} aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"} aria-pressed={showPassword}><Icon name="eye" size={18}/></button>
                 </div>
               </FormField>
               <div className="admin-auth-actions">
                 <button className="admin-auth-recovery" type="button" disabled={loading} onClick={() => setShowRecoveryHelp(true)}>Recuperar contraseña</button>
                 <button className="admin-auth-submit" type="submit" disabled={loading} aria-live="polite">
-                  {loading ? <><i aria-hidden="true"/>Verificando acceso…</> : <>Ingresar<Icon name="lock" size={17}/></>}
+                  {loading ? <><i aria-hidden="true"/>Verificando acceso…</> : <>Ingresar<Icon name="lock" size={18}/></>}
                 </button>
               </div>
             </>}

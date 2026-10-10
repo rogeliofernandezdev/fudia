@@ -14,7 +14,7 @@ type AdminSessionErrorProps={
 
 export function AdminSessionError({icon,eyebrow,title,description,fullPage=false,children}:AdminSessionErrorProps){
   const content=<section className="admin-session-error" role="alert">
-    <span className="admin-session-error-icon"><Icon name={icon} size={25}/></span>
+    <span className="admin-session-error-icon"><Icon name={icon} size={24}/></span>
     {eyebrow&&<span className="admin-session-error-eyebrow">{eyebrow}</span>}
     <h1>{title}</h1>
     <p>{description}</p>

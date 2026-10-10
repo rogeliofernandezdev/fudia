@@ -400,7 +400,7 @@ test("combos conserva la misma tabla en movil y el shell no desborda",()=>{
   assert.ok(account.includes(".account-trigger-copy,.account-trigger>svg{display:none!important}"));
   assert.ok(account.includes(".account-menu{width:44px;min-width:44px;max-width:44px"));
   const globals=readCss("src/styles/globals.css");
-  assert.ok(globals.includes(".page-header>.button{flex:0 0 auto;white-space:nowrap}"));
+  assert.ok(globals.includes(".page-header-actions .button{white-space:nowrap}"));
   const nav=readCss("src/shell/styles/navigation-state.css");
   assert.ok(nav.includes(".admin-shell[data-sidebar=collapsed] .sidebar{width:min(320px,86vw)"));
 });
@@ -565,7 +565,7 @@ test("no se versionan secretos locales ni artefactos temporales en la raiz admin
 
 test("se preservan contratos visuales base",()=>{
   const css=read("src/styles/variables.css").replace(/\s+/g,"");
-  for(const token of ["--brand-700","--ops-700","--digital-700","--primary-600","--control-height"])assert.ok(css.includes(token),token);
+  for(const token of ["--brand-700","--primary-700","--digital-700","--primary-600","--control-height"])assert.ok(css.includes(token),token);
   const navigation=read("src/shell/navigation.ts");
   for(const label of ["Dashboard","Punto de venta","Carta y productos","Inventario","Compras","CONFIGURACIÓN"])assert.ok(navigation.includes(label),label);
 });

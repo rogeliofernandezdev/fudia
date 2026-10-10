@@ -1,11 +1,18 @@
 import "./styles/table-actions.css";
 import "./styles/pagination.css";
-import {ButtonHTMLAttributes,forwardRef,InputHTMLAttributes,SelectHTMLAttributes,TextareaHTMLAttributes} from "react";
-import {Icon,IconName} from "@/design-system/icons";
+import Link from "next/link";
+import {ButtonHTMLAttributes,forwardRef,InputHTMLAttributes,SelectHTMLAttributes,TextareaHTMLAttributes,type ReactNode} from "react";
+import {Icon,type IconName,type IconSize} from "@/design-system/icons";
 
-type ButtonProps=ButtonHTMLAttributes<HTMLButtonElement>&{icon?:IconName;kind?:"primary"|"secondary"|"ghost"|"danger"|"success"};
-export function Button({children,icon,kind="primary",type="button",className="",...props}:ButtonProps){return <button type={type} className={`button ${kind} ${className}`.trim()} {...props}>{icon&&<Icon name={icon} size={18}/>}<span>{children}</span></button>}
-export function IconButton({icon,label,accessibleLabel,iconSize=18,className="",type="button",...props}:{icon:IconName;label:string;accessibleLabel?:string;iconSize?:number}&Omit<ButtonHTMLAttributes<HTMLButtonElement>,"aria-label">){return <button type={type} className={`ds-icon-button ${className}`.trim()} aria-label={accessibleLabel??label} data-tooltip={label} {...props}><Icon name={icon} size={iconSize}/></button>}
+/**
+ * primary: una sola acción dominante por superficie · secondary: alternativa, Reintentar, Limpiar filtros ·
+ * ghost: Cancelar y Anterior · danger: confirmar dentro de ConfirmDialog · danger-outline: disparadores destructivos
+ * (Cancelar pedido, Anular, Cerrar turno). El verde no es un botón: se reserva para estados confirmados.
+ */
+export type ButtonKind="primary"|"secondary"|"ghost"|"danger"|"danger-outline";
+type ButtonProps=ButtonHTMLAttributes<HTMLButtonElement>&{icon?:IconName;kind?:ButtonKind;/** Bloquea y anuncia la petición en curso; el texto debe cambiar al gerundio del mismo verbo. */loading?:boolean};
+export function Button({children,icon,kind="primary",type="button",className="",loading=false,disabled,...props}:ButtonProps){return <button type={type} className={`button ${kind} ${className}`.trim()} disabled={disabled||loading} aria-busy={loading||undefined} {...props}>{icon&&<Icon name={icon} size={18}/>}<span>{children}</span></button>}
+export function IconButton({icon,label,accessibleLabel,iconSize=18,className="",type="button",...props}:{icon:IconName;label:string;accessibleLabel?:string;iconSize?:IconSize}&Omit<ButtonHTMLAttributes<HTMLButtonElement>,"aria-label">){return <button type={type} className={`ds-icon-button ${className}`.trim()} aria-label={accessibleLabel??label} data-tooltip={label} {...props}><Icon name={icon} size={iconSize}/></button>}
 type RowAction="view"|"review"|"charge"|"edit"|"activate"|"deactivate"|"cancel"|"remove";
 const rowActions:Record<RowAction,{icon:IconName;label:string;tone:"default"|"danger"}>={view:{icon:"eye",label:"Ver detalle",tone:"default"},review:{icon:"check",label:"Revisar orden",tone:"default"},charge:{icon:"cash",label:"Cobrar pedido",tone:"default"},edit:{icon:"edit",label:"Editar",tone:"default"},activate:{icon:"toggleOff",label:"Activar",tone:"default"},deactivate:{icon:"toggleOn",label:"Desactivar",tone:"default"},cancel:{icon:"cancel",label:"Cancelar",tone:"danger"},remove:{icon:"close",label:"Quitar fila",tone:"danger"}};
 export function RowActionButton({action,label,stateLabel="Estado activo",className="",...props}:{action:RowAction;label?:string;stateLabel?:string}&Omit<ButtonHTMLAttributes<HTMLButtonElement>,"aria-label">){
@@ -17,7 +24,21 @@ export function FieldLabel({children,hint}:{children:React.ReactNode;hint:string
 export const Input=forwardRef<HTMLInputElement,InputHTMLAttributes<HTMLInputElement>>(function Input({className="",...props},ref){return <input ref={ref} className={`ds-input ${className}`.trim()} {...props}/>});
 export const Select=forwardRef<HTMLSelectElement,SelectHTMLAttributes<HTMLSelectElement>>(function Select({className="",children,...props},ref){return <select ref={ref} className={`ds-select ${className}`.trim()} {...props}>{children}</select>});
 export const Textarea=forwardRef<HTMLTextAreaElement,TextareaHTMLAttributes<HTMLTextAreaElement>>(function Textarea({className="",...props},ref){return <textarea ref={ref} className={`ds-textarea ${className}`.trim()} {...props}/>});
-export function PageHeader({eyebrow,title,description,action}:{eyebrow:string;title:string;description:string;action?:React.ReactNode}){return <header className="page-header"><div><small>{eyebrow}</small><h1>{title}</h1><p>{description}</p></div>{action}</header>}
+/**
+ * Encabezado de página: el título repite el nombre de la navegación; sin eyebrow (el menú ya indica el grupo).
+ * `back` enlaza a la ruta padre, `meta` muestra un estado junto al título y `action` admite una acción
+ * primaria y, como máximo, una secundaria. Los filtros nunca van en el encabezado.
+ */
+export function PageHeader({title,description,action,back,meta}:{title:string;description?:ReactNode;action?:ReactNode;back?:{href:string;label:string};meta?:ReactNode}){
+ return <header className="page-header">
+  <div className="page-header-copy">
+   {back&&<Link className="page-header-back" href={back.href}><Icon name="chevronLeft" size={16}/>{back.label}</Link>}
+   <div className="page-header-title"><h1>{title}</h1>{meta}</div>
+   {description&&<p>{description}</p>}
+  </div>
+  {action&&<div className="page-header-actions">{action}</div>}
+ </header>;
+}
 /** Tonos: green éxito/activo, blue en curso, orange advertencia, red error/vencido, violet canal digital, gray neutro. */
 export function Status({tone="green",active,children}:{tone?:"green"|"blue"|"orange"|"red"|"violet"|"gray";active?:boolean;children:React.ReactNode}){
  const binary=active!==undefined;

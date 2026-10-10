@@ -81,7 +81,7 @@ export function SubscriptionWorkspace({current,plans,country,timeZone,organizati
       <label className="switch-row compact"><input type="checkbox" {...change.register("autoRenew")}/><span/><b>Renovación automática</b></label>
      </div>
      {selectedPlan&&<dl className="subscription-plan-preview"><div><dt>Prueba</dt><dd>{selectedPlan.trialDays?selectedPlan.trialDays+" días":"No"}</dd></div><div><dt>Locales</dt><dd>{selectedPlan.maxLocations??"Sin límite"}<small>En uso: {current.usage.locations}</small></dd></div><div><dt>Usuarios</dt><dd>{selectedPlan.maxUsers??"Sin límite"}<small>En uso: {current.usage.users}</small></dd></div><div><dt>Módulos</dt><dd>{selectedPlan.moduleKeys.length}</dd></div><div><dt>Condiciones</dt><dd>{selectedPlan.termsVersion}</dd></div></dl>}
-     {needsAcceptance&&<label className={"subscription-accept"+(change.formState.errors.termsAccepted?" has-error":"")}><input type="checkbox" {...change.register("termsAccepted")}/><span><Icon name="check" size={13}/></span><div><b>El cliente aceptó las nuevas condiciones</b><small>Se registrará la aceptación de la versión {selectedPlan?.termsVersion} al aplicar el cambio de plan.</small>{change.formState.errors.termsAccepted?.message&&<small className="field-error" role="alert">{change.formState.errors.termsAccepted.message}</small>}</div></label>}
+     {needsAcceptance&&<label className={"subscription-accept"+(change.formState.errors.termsAccepted?" has-error":"")}><input type="checkbox" {...change.register("termsAccepted")}/><span><Icon name="check" size={14}/></span><div><b>El cliente aceptó las nuevas condiciones</b><small>Se registrará la aceptación de la versión {selectedPlan?.termsVersion} al aplicar el cambio de plan.</small>{change.formState.errors.termsAccepted?.message&&<small className="field-error" role="alert">{change.formState.errors.termsAccepted.message}</small>}</div></label>}
      <footer><Button type="submit" icon="check" disabled={save.isPending}>{save.isPending?"Guardando…":"Aplicar cambio"}</Button></footer>
     </form>
    </section>
@@ -109,5 +109,5 @@ export function SubscriptionWorkspace({current,plans,country,timeZone,organizati
  </>;
 }
 
-function Header({organization}:{organization?:string}){return <PageHeader eyebrow="PLATAFORMA" title="Suscripción de empresa" description={organization?"Gestiona contrato, plan y cobros de "+organization+".":"Gestiona el contrato y cobros de la empresa activa."}/>;}
+function Header({organization}:{organization?:string}){return <PageHeader title="Suscripción de empresa" description={organization?"Gestiona contrato, plan y cobros de "+organization+".":"Gestiona el contrato y cobros de la empresa activa."}/>;}
 function dateLabel(value:string,country?:string,timeZone?:string){return formatRegionalDateTime(value,{country,timeZone},{dateStyle:"medium"})}

@@ -33,7 +33,7 @@ export function PlatformCompaniesPage(){
 
 export function RestrictedCompanies(){
  return <>
-  <PageHeader eyebrow="CONFIGURACIÓN" title="Empresas y planes" description="Plan contratado y situación de pago de cada empresa cliente."/>
+  <PageHeader title="Empresas y planes" description="Plan contratado y situación de pago de cada empresa cliente."/>
   <div className="panel management"><EmptyState icon="lock" title="Acceso restringido" text="Solo el administrador de plataforma puede consultar las empresas y sus suscripciones."/></div>
  </>;
 }
@@ -55,7 +55,7 @@ function CompaniesDirectory(){
  const pickStanding=(value:string)=>{setStanding(value);setPage(1)};
 
  return <>
-  <PageHeader eyebrow="CONFIGURACIÓN" title="Empresas y planes" description="Plan contratado, vencimientos y situación de pago de cada empresa cliente."/>
+  <PageHeader title="Empresas y planes" description="Plan contratado, vencimientos y situación de pago de cada empresa cliente."/>
   <CompaniesSummary data={data} loading={list.isLoading} active={standing} onPick={pickStanding}/>
   <section className="panel management standardized-management platform-companies-panel">
    <div className="toolbar">
@@ -114,7 +114,7 @@ function CompaniesTable({data,busy}:{data:PlatformOrganizationPage;busy:boolean}
   <table className="platform-companies-table">
    <thead><tr>{columns.map(column=><th key={column}>{column}</th>)}</tr></thead>
    <tbody>{data.items.map(company=><tr key={company.id} className={company.active?"":"inactive"}>
-    <td><div className="platform-company-name"><span className="row-icon"><Icon name="building" size={17}/></span><div><Link className="platform-company-link" href={companySettingsPath(company.id)}>{company.tradeName}</Link><small>{companyNote(company)}</small></div></div></td>
+    <td><div className="platform-company-name"><span className="row-icon"><Icon name="building" size={18}/></span><div><Link className="platform-company-link" href={companySettingsPath(company.id)}>{company.tradeName}</Link><small>{companyNote(company)}</small></div></div></td>
     <td>{plan(company)}</td>
     <td>{price(company)}</td>
     <td>{dueDate(company)}</td>

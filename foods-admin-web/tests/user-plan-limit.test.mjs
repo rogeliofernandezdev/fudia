@@ -111,6 +111,7 @@ test("confirmación compartida deshabilita solo confirmar si el cupo cambia, sin
   if(name.endsWith(".css"))return {};
   if(name==="./dialog")return {Dialog:"Dialog"};
   if(name==="@/design-system/icons")return {Icon:"Icon"};
+  if(name==="./page-header")return {Button:"button"};
   return require(name);
  });
  const view=nodes(ConfirmDialog({open:true,title:"Activar usuario",confirmLabel:"Activar",confirmDisabled:true,onCancel:()=>{cancelled++},onConfirm:()=>{}}));

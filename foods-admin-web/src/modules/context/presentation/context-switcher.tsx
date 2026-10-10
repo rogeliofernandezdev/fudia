@@ -85,7 +85,7 @@ export function ContextSwitcher(){
       <span>
         <small>LOCAL ACTIVO</small><b>{location?.name??"Sin local seleccionado"}</b>
       </span>
-      {canSwitch&&<Icon name="chevron" size={15}/>}
+      {canSwitch&&<Icon name="chevron" size={16}/>}
     </button>
     {open&&<ContextSwitcherPanel panelRef={panelRef} id={panelId} platformAdmin={user.platformAdmin} organizationId={orgId} locationId={locId} organizations={orgs.data?.items??[]} locations={locOptions} loading={loading} error={error?.message} busy={switchMut.isPending} canApply={canApply} onOrganizationChange={id=>{setOrgSel(id);setLocSel("")}} onLocationChange={setLocSel} onApply={doSwitch} onClose={closePanel} onRetry={()=>{if(user.platformAdmin){void orgs.refetch();if(orgId)void orgLocations.refetch()}else void myLocations.refetch()}}/>}
   </div>;

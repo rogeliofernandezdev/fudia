@@ -93,7 +93,7 @@ export function PlatformGlobalSettingsPage(){
  const actions=(item:PlatformWhatsAppChannel)=><><RowActionButton action="edit" label={`Editar canal ${item.displayName}`} onClick={()=>edit(item)}/><RowActionButton action={item.active?"deactivate":"activate"} stateLabel={`Estado del canal ${item.displayName}`} onClick={()=>setTarget(item)}/></>;
 
  return <>
-  <PageHeader eyebrow="PLATAFORMA" title="Países y WhatsApp" description="Administra el número visible de WhatsApp de cada país y consulta su moneda predeterminada. Toda la configuración técnica de Meta se mantiene únicamente en variables de entorno." action={<Button icon="plus" onClick={start}>Nuevo canal</Button>}/>
+  <PageHeader title="Países y WhatsApp" description="Administra el número visible de WhatsApp de cada país y consulta su moneda predeterminada. Toda la configuración técnica de Meta se mantiene únicamente en variables de entorno." action={<Button icon="plus" onClick={start}>Nuevo canal</Button>}/>
   <section className="panel management standardized-management platform-channels-panel">
    {(catalogs.isLoading||channels.isLoading)?<TableSkeleton columns={columns} rows={4} label="Cargando canales de WhatsApp"/>:
     (catalogs.isError||channels.isError)?<ErrorState title="No pudimos cargar la configuración global" text={(catalogs.error??channels.error)?.message} retrying={catalogs.isFetching||channels.isFetching} onRetry={()=>{void catalogs.refetch();void channels.refetch()}}/>:

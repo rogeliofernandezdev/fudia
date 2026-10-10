@@ -48,7 +48,7 @@ test("status y dinero: tonos rojo/violeta y formato regional con signo",()=>{
 
 test("fundamentos: foco visible y una sola animación spin",()=>{
  const globals=read("src/styles/globals.css");
- assert.match(globals,/button:focus-visible,a:focus-visible,\[role=tab\]:focus-visible\{outline-offset:var\(--space-2\);outline:var\(--stroke-2\) solid var\(--ops-500\)\}/);
+ assert.ok(globals.includes(":where(button,a,summary,[role=tab],[role=button],[role=switch],[tabindex]):focus-visible{outline:var(--stroke-2) solid var(--primary-600);outline-offset:var(--space-0-5)}"),"Un solo foco visible para todo control interactivo");
  assert.equal((globals.match(/@keyframes spin\{/g)??[]).length,1);
  assert.match(read("src/shell/admin-shell.tsx"),/currentItem\?\.href===item\.href\?"active":""/,"Una sola opción activa en el menú");
 });

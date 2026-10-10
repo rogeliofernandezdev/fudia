@@ -80,16 +80,16 @@ export function CombosPage(){
   const open=()=>{if(!canManage)return;setEditingId(null);setDraft(blank);setStep(1)};
   const closeWizard=()=>{setDraft(null);setEditingId(null);setStep(1)};
   return <>
-    <PageHeader eyebrow="CARTA Y PRODUCCIÓN" title="Menús y combos" description="Define las partes del menú y qué opciones puede elegir el cliente en cada una." action={canManage?<Button icon="plus" onClick={open}>Nuevo menú o combo</Button>:undefined}/>
+    <PageHeader title="Menús y combos" description="Define las partes del menú y qué opciones puede elegir el cliente en cada una." action={canManage?<Button icon="plus" onClick={open}>Nuevo menú o combo</Button>:undefined}/>
     <section className="panel management catalog-panel standardized-management combo-list">
       <div className="toolbar">
-        <label><Icon name="search" size={17}/><input value={search} onChange={event=>{setSearch(event.target.value);setPage(1)}} placeholder="Buscar menú o combo..." aria-label="Buscar menú o combo"/></label>
+        <label><Icon name="search" size={18}/><input value={search} onChange={event=>{setSearch(event.target.value);setPage(1)}} placeholder="Buscar menú o combo..." aria-label="Buscar menú o combo"/></label>
         <Select value={status} onChange={event=>{setStatus(event.target.value);setPage(1)}} aria-label="Filtrar por estado"><option value="">Todos los estados</option><option value="active">Activos</option><option value="inactive">Inactivos</option></Select>
       </div>
       {combos.isLoading?<ComboSkeleton/>
-      :combos.isError?<div className="combo-empty"><Icon name="alert" size={26}/><b>No pudimos cargar los menús y combos</b><p>{combos.error.message}</p><Button kind="secondary" icon="refresh" onClick={()=>combos.refetch()}>Reintentar</Button></div>
+      :combos.isError?<div className="combo-empty"><Icon name="alert" size={24}/><b>No pudimos cargar los menús y combos</b><p>{combos.error.message}</p><Button kind="secondary" icon="refresh" onClick={()=>combos.refetch()}>Reintentar</Button></div>
       :!combos.data?.items.length?
-        <div className="combo-empty"><Icon name="menu" size={26}/><b>{search||status?"No encontramos resultados":"Aún no hay menús compuestos"}</b><p>{search||status?"Prueba con otro nombre o cambia el filtro de estado.":canManage?"Usa la plantilla Menú del día para comenzar rápidamente.":"Los menús registrados aparecerán aquí."}</p>{canManage&&!search&&!status&&<Button icon="plus" onClick={open}>Crear menú</Button>}</div>
+        <div className="combo-empty"><Icon name="menu" size={24}/><b>{search||status?"No encontramos resultados":"Aún no hay menús compuestos"}</b><p>{search||status?"Prueba con otro nombre o cambia el filtro de estado.":canManage?"Usa la plantilla Menú del día para comenzar rápidamente.":"Los menús registrados aparecerán aquí."}</p>{canManage&&!search&&!status&&<Button icon="plus" onClick={open}>Crear menú</Button>}</div>
       :<>
         <div className="table-wrap hover-scroll"><table><thead><tr><th>MENÚ O COMBO</th><th>PRECIO</th><th title="Entrada, plato principal, bebida o postre">PARTES DEL MENÚ</th><th>ESTADO</th><th>ACCIONES</th></tr></thead><tbody>
           {combos.data.items.map((item,index)=><tr className={index%2?"alternate":""} key={item.id}>
@@ -184,7 +184,7 @@ function ComboWizard({draft,setDraft,step,setStep,products,productsLoading,produ
     <Dialog onResponseClose={close} className="crud-modal combo-wizard modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="combo-wizard-title" aria-busy={busy}>
       <header className="combo-wizard-header">
         <div className="combo-wizard-title">
-          <span className="combo-wizard-title-icon"><Icon name="chefHat" size={21}/></span>
+          <span className="combo-wizard-title-icon"><Icon name="chefHat" size={24}/></span>
           <div>
             <small>{editing?"EDITAR MENÚ O COMBO":"NUEVO MENÚ O COMBO"}</small>
             <h2 id="combo-wizard-title">{editing?"Actualiza tu menú o combo":"Arma tu menú o combo"}</h2>

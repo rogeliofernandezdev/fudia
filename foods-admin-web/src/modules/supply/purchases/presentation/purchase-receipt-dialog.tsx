@@ -51,7 +51,7 @@ export function PurchaseReceiptDialog({order,busy,close,save}:{order:PurchaseOrd
       </header>
       <form onSubmit={handleSubmit(submit)} noValidate>
         <div className="purchase-receipt-body">
-          <div className="purchase-receipt-intro"><Icon name="truck" size={17}/><p><b>Registra únicamente lo que llegó.</b> Puedes recibir una parte ahora y completar lo pendiente en otra recepción.</p></div>
+          <div className="purchase-receipt-intro"><Icon name="truck" size={18}/><p><b>Registra únicamente lo que llegó.</b> Puedes recibir una parte ahora y completar lo pendiente en otra recepción.</p></div>
           <div className="purchase-receipt-lines">
             {order.items.map((item,index)=><article className="purchase-receipt-line" key={item.id}>
               <div className="purchase-receipt-item"><b>{item.itemName}</b><small>{item.presentationType==="unit"?item.unit:(item.presentationName??item.presentationType)+" · "+item.unit}</small></div>
@@ -62,10 +62,10 @@ export function PurchaseReceiptDialog({order,busy,close,save}:{order:PurchaseOrd
               <input type="hidden" {...register(`items.${index}.purchaseOrderItemId`)}/>
             </article>)}
           </div>
-          {typeof errors.items?.message==="string"&&<div className="purchase-validation" role="alert"><Icon name="alert" size={15}/>{errors.items.message}</div>}
+          {typeof errors.items?.message==="string"&&<div className="purchase-validation" role="alert"><Icon name="alert" size={16}/>{errors.items.message}</div>}
           <FormField className="purchase-receipt-notes" label="Observación" optional error={errors.notes?.message}><Textarea rows={3} maxLength={500} {...register("notes")} placeholder="Documento, lote, incidencia o referencia de esta recepción"/></FormField>
         </div>
-        <footer><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" kind="success" disabled={busy}>{busy?"Confirmando…":"Confirmar recepción"}</Button></footer>
+        <footer><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" kind="primary" disabled={busy}>{busy?"Confirmando…":"Confirmar recepción"}</Button></footer>
       </form>
       {busy&&<div className="modal-busy" role="status"><i/><span>Confirmando recepción…</span></div>}
     </Dialog>

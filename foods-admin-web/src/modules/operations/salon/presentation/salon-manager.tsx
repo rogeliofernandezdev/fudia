@@ -161,19 +161,19 @@ export function SalonManager(){
 
   return(
     <>
-      <PageHeader eyebrow="OPERACIÓN" title="Salón" description="Consulta el estado de las mesas y gestiona las comandas activas desde un solo lugar."/>
+      <PageHeader title="Salón" description="Consulta el estado de las mesas y gestiona las comandas activas desde un solo lugar."/>
 
       <section className="salon-overview-stats" aria-label="Resumen del salón">
         <div className="salon-overview-stat">
-          <span className="salon-overview-stat-icon"><Icon name="grid" size={17}/></span>
+          <span className="salon-overview-stat-icon"><Icon name="grid" size={18}/></span>
           <span><small>Mesas</small><b>{floor.isLoading?countSkeleton:tables.length}</b></span>
         </div>
         <div className="salon-overview-stat free">
-          <span className="salon-overview-stat-icon"><Icon name="check" size={17}/></span>
+          <span className="salon-overview-stat-icon"><Icon name="check" size={18}/></span>
           <span><small>Libres</small><b>{floor.isLoading?countSkeleton:freeCount}</b></span>
         </div>
         <div className="salon-overview-stat occupied">
-          <span className="salon-overview-stat-icon"><Icon name="receipt" size={17}/></span>
+          <span className="salon-overview-stat-icon"><Icon name="receipt" size={18}/></span>
           <span><small>Ocupadas</small><b>{floor.isLoading?countSkeleton:occupiedCount}</b></span>
         </div>
       </section>
@@ -215,12 +215,12 @@ export function SalonManager(){
                 <div className="salon-table-inner">
                   <div className="salon-table-top">
                     {o&&meta?<Status tone={meta.tone}>{meta.label}</Status>:<Status tone="green">Libre</Status>}
-                    {o&&<span className="salon-table-elapsed"><Icon name="clock" size={10}/>{occupiedFor(o.createdAt)}</span>}
+                    {o&&<span className="salon-table-elapsed"><Icon name="clock" size={14}/>{occupiedFor(o.createdAt)}</span>}
                   </div>
 
                   <div className="salon-table-name-row">
                     <span className="salon-table-icon">
-                      <Icon name="utensils" size={17}/>
+                      <Icon name="utensils" size={18}/>
                     </span>
                     <strong className="salon-table-name">{t.name}</strong>
                     <small className="salon-table-seats">{t.seats} personas{zones.length>1&&t.zone?` · ${t.zone}`:""}</small>
@@ -305,15 +305,15 @@ function SalonTableSkeleton(){
     <div className="salon-table salon-table-skeleton" aria-hidden="true">
       <div className="salon-table-inner">
         <div className="salon-table-top">
-          <Skeleton width="var(--size-72)" height="var(--size-20)" radius="var(--radius-999)"/>
-          <Skeleton width="var(--size-48)" height="var(--size-20)" radius="var(--radius-8)"/>
+          <Skeleton width="var(--size-72)" height="var(--size-20)" radius="var(--radius-pill)"/>
+          <Skeleton width="var(--size-48)" height="var(--size-20)" radius="var(--radius-tile)"/>
         </div>
         <div className="salon-table-name-row">
-          <Skeleton width="var(--size-36)" height="var(--size-36)" radius="var(--radius-999)"/>
+          <Skeleton width="var(--size-36)" height="var(--size-36)" radius="var(--radius-pill)"/>
           <Skeleton width="var(--size-92)" height="var(--size-20)"/>
           <Skeleton width="var(--size-72)" height="var(--size-12)"/>
         </div>
-        <Skeleton className="salon-table-skeleton-action" height="var(--size-40)" radius="var(--radius-12)"/>
+        <Skeleton className="salon-table-skeleton-action" height="var(--size-40)" radius="var(--radius-card)"/>
       </div>
     </div>
   );

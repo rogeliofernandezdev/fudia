@@ -50,7 +50,7 @@ export function PurchaseReturnDialog({receipt,busy,close,save}:{receipt:Purchase
      <td><b>{quantity(i.returnableQuantity)}</b></td>
      <td><Input type="number" min="0" max={i.returnableQuantity} step={i.presentationType==="unit"?"0.001":"1"} inputMode="decimal" aria-label={`Cantidad a corregir de ${i.itemName}`} aria-invalid={Boolean(errors.lines[i.id])} value={quantities[i.id]??""} onChange={e=>setQuantities({...quantities,[i.id]:e.target.value})}/>{errors.lines[i.id]&&<small className="field-error" role="alert">{errors.lines[i.id]}</small>}</td>
     </tr>)}</tbody></table></div>
-    {errors.items&&<div className="purchase-validation" role="alert"><Icon name="alert" size={15}/>{errors.items}</div>}
+    {errors.items&&<div className="purchase-validation" role="alert"><Icon name="alert" size={16}/>{errors.items}</div>}
     <FormField label="Notas" optional><Textarea rows={2} maxLength={500} value={notes} onChange={e=>setNotes(e.target.value)}/></FormField>
    </div>
    <footer><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy}>{busy?"Procesando…":kind==="receipt_correction"?"Registrar corrección":"Registrar devolución"}</Button></footer>
