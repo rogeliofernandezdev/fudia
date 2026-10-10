@@ -10,8 +10,8 @@ const root=new URL("../src/modules/operations/pos/presentation/",import.meta.url
 const serviceFlowExports={};
 vm.runInNewContext(ts.transpileModule(readFileSync(new URL("../src/modules/operations/orders/domain/service-flow.ts",import.meta.url),"utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{exports:serviceFlowExports});
 const detail={order:{billClosedAt:"2026-10-07T13:00:00Z",id:"order-1",code:"PED-001",channel:"salon",status:"entregado",tableName:"Mesa 04",customerName:"",total:"40",createdAt:"2026-10-07T12:00:00Z",items:[]},paidAmount:"10",remainingAmount:"30",paymentStatus:"partial",payments:[]};
-const primitives=Object.fromEntries(["Button","EmptyState","ErrorState","FormField","Icon","Input","PageHeader","Pagination","RowActionButton","SearchField","Select","Status","Textarea"].map(name=>[name,name]));
-function nodes(tree){const result=[];function visit(node){if(!node||typeof node!=="object")return;if(Array.isArray(node)){node.forEach(visit);return}result.push(node);visit(node.props?.children);visit(node.props?.action)}visit(tree);return result}
+const primitives=Object.fromEntries(["Button","EmptyState","ErrorState","FormField","Icon","Input","PageHeader","Pagination","RowActionButton","SearchField","Select","Status","Textarea","ModalHeader","ModalFooter","ModalWorkspace","ModalItemList"].map(name=>[name,name]));
+function nodes(tree){const result=[];function visit(node){if(!node||typeof node!=="object")return;if(Array.isArray(node)){node.forEach(visit);return}result.push(node);visit(node.props?.children);visit(node.props?.action);visit(node.props?.summary)}visit(tree);return result}
 function compile(file,resolve,extra=""){
  const exports={};
  const source=readFileSync(new URL(file,root),"utf8")+extra;
@@ -38,6 +38,7 @@ function mountPage({canManage=true,shift=true,busy=false,initialOrderId="order-1
   if(name==="@/shared/routing/page-routes")return{pageRoutes:{cash:"/cash"}};
   if(name.endsWith("service-flow"))return serviceFlowExports;
   if(name.endsWith("shift-attribution"))return{cashShiftAttribution:()=>({name:"Ana"})};
+  if(name==="./pos-meta")return compile("pos-meta.ts",require);
   if(name.startsWith("@/")||name.startsWith("../")||name.startsWith("./"))return{};
   return require(name);
  };
@@ -159,5 +160,75 @@ test("el formulario de pago tiene Registrar cobro y envía solo al confirmar",()
   assert.equal(defaults.amount,"30.00");
   assert.equal(saved,0);
   if(!busy){form.props.onSubmit();assert.equal(saved,1)}
+ }
+});
+
+test("detalle de cobro respeta cabecera simple, datos alineados y resumen inferior compartido",()=>{
+ const {POSDetailDialog}=mountPage();
+ const view=nodes(POSDetailDialog({loading:false,data:{...detail,order:{...detail.order,waiterName:"Daniel Machaca Rojasa",items:[{id:"line-1",name:"Puca picante con chicharrón",qty:"1",unitPrice:"40",note:"Sin sal"}]}},canManage:false,hasShift:false,formatMoney:String,formatDateTime:()=>"7 oct. 2026",close:()=>{},refund:()=>{}}));
+ const header=view.find(node=>node.type==="ModalHeader");assert.equal(header.props.title,"Detalle de cobro");assert.equal(header.props.subtitle,undefined);
+ assert.deepEqual(view.filter(node=>node.type==="dt").map(node=>node.props.children),["Mesa","Canal","Atendido por","Fecha del pedido"]);
+ const workspace=view.find(node=>node.type==="ModalWorkspace");assert.equal(workspace.props.summary.props.className,"modal-summary");
+ assert.ok(nodes(workspace.props.summary).some(node=>node.props.children==="Pagado neto"));
+ assert.ok(nodes(workspace.props.summary).some(node=>node.type==="Status"&&node.props.tone==="orange"));
+ assert.equal(view.filter(node=>node.type==="ModalItemList").length,1);
+ assert.ok(view.some(node=>node.props.className==="modal-item-quantity"));
+ assert.ok(view.some(node=>node.props.children==="Sin pagos registrados."));
+ assert.equal(view.some(node=>node.props.children==="CONSUMO"||node.props.children==="PAGOS"),false);
+ assert.equal(view.some(node=>node.props.className==="pos-detail-summary"),false);
+ const css=readFileSync(new URL("pos.css",root),"utf8");
+ assert.match(css,/\.pos-detail-section\+\.pos-detail-section\{[^}]*border-top:var\(--stroke-1\) solid var\(--line\)/);
+});
+
+test("detalle de cobro conserva permisos de devolución, turno y cierre",()=>{
+ const {POSDetailDialog}=mountPage();let refunded=0;
+ const payment={id:"p1",method:"cash",amount:"10",netAmount:"8",refundedAmount:"2",createdAt:detail.order.createdAt,cashRegisterName:"Caja principal",createdByName:"Ana"};
+ const render=changes=>nodes(POSDetailDialog({loading:false,data:{...detail,payments:[payment]},canManage:true,hasShift:true,formatMoney:String,formatDateTime:String,close:()=>{},refund:()=>refunded++,...changes}));
+ const action=render().find(node=>node.type==="Button"&&node.props.children==="Devolver");action.props.onClick();assert.equal(refunded,1);
+ assert.equal(render({canManage:false}).some(node=>node.props.children==="Devolver"),false);
+ assert.equal(render({hasShift:false}).find(node=>node.props.children==="Devolver").props.disabled,true);
+ for(const order of [{...detail.order,completedAt:"2026-10-10T15:00:00Z"},{...detail.order,status:"cancelado"}])assert.equal(render({data:{...detail,order,payments:[payment]}}).some(node=>node.props.children==="Devolver"),false);
+});
+
+test("detalle de cobro no muestra importes anteriores en carga, error o ausencia de datos",()=>{
+ const {POSDetailDialog}=mountPage();const props={loading:false,data:detail,canManage:false,hasShift:false,formatMoney:String,formatDateTime:String,close:()=>{},refund:()=>{}};
+ for(const changes of [{loading:true},{error:"Sin conexión"},{data:undefined}]){
+  const tree=POSDetailDialog({...props,...changes}),view=nodes(tree);
+  assert.equal(view.some(node=>node.props["aria-labelledby"]==="pos-detail-summary-title"),false);
+  assert.equal(view.find(node=>node.type==="ModalHeader").props.details,undefined);
+  if(changes.loading)assert.equal(view.find(node=>node.type==="Dialog").props["aria-busy"],true);
+  if(changes.error)assert.equal(view.find(node=>node.type==="ErrorState").props.text,"Sin conexión");
+ }
+});
+
+test("POS móvil no combina pantalla completa con márgenes del backdrop",()=>{
+ const css=readFileSync(new URL("pos.css",root),"utf8");
+ assert.match(css,/\.pos-detail-modal\{[^}]*width:min\(var\(--size-900\),100%\)/);
+ assert.match(css,/\.pos-detail-modal\{[^}]*max-height:min\(var\(--size-820\),calc\(100dvh - var\(--space-12\)\)\)/);
+ assert.match(css,/@media\(max-width:600px\)\{\s*\.crud-modal\.pos-payment-modal,\.crud-modal\.pos-detail-modal\{width:100%;height:100dvh;max-height:100dvh/);
+ assert.equal(css.includes("width:100vw"),false);
+ assert.equal(css.includes(".pos-order-lines strong{grid-column:2}"),false);
+ assert.match(css,/\.pos-detail-context dl>div:nth-child\(n\+3\)\{grid-column:1\/-1/);
+});
+
+test("datos de cobro diferencian etiquetas y valores y alinean el canal al extremo móvil",()=>{
+ const css=readFileSync(new URL("pos.css",root),"utf8");
+ assert.doesNotMatch(css,/\.pos-detail-context (?:dt|dd)\{[^}]*font-weight:/,"la jerarquía pertenece al modal compartido");
+ assert.match(css,/\.pos-order-lines>div>span\{[^}]*font-weight:var\(--weight-semibold\)/);
+ assert.match(css,/\.pos-detail-context dl>div:nth-child\(2\)\{text-align:right\}/);
+ assert.match(css,/\.pos-detail-context dl>div:nth-child\(n\+3\)\{[^}]*grid-template-columns:var\(--size-104\) minmax\(0,1fr\)/);
+});
+
+test("el contexto etiqueta el dato real sin mezclar cliente y mesa",()=>{
+ const {POSDetailDialog}=mountPage();
+ for(const [order,label,value] of [
+  [{...detail.order,tableName:"10",customerName:"Ana"},"Mesa","10"],
+  [{...detail.order,channel:"delivery",tableName:"",customerName:"Ana"},"Cliente","Ana"],
+  [{...detail.order,channel:"pickup",tableName:"",customerName:""},"Venta","Venta directa"],
+ ]){
+  const view=nodes(POSDetailDialog({loading:false,data:{...detail,order},canManage:false,hasShift:false,formatMoney:String,formatDateTime:()=>"Hoy",close:()=>{},refund:()=>{}}));
+  assert.equal(view.find(node=>node.type==="dt").props.children,label);
+  assert.equal(view.find(node=>node.type==="dd").props.children[0],value);
+  assert.equal(view.some(node=>node.props?.children==="Cliente / mesa"),false);
  }
 });

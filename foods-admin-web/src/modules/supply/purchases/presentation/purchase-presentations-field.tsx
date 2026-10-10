@@ -2,7 +2,7 @@
 import {useEffect,useRef,useState} from "react";
 import {createPortal} from "react-dom";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,FormField,Icon,IconButton,Input,Select,Skeleton} from "@/design-system";
+import {Button,FormField,IconButton,Input,Select,Skeleton,ModalHeader,ModalFooter} from "@/design-system";
 import {Dialog} from "@/design-system/dialog";
 import {useSession} from "@/providers/session-context";
 import type {PurchaseCombination,PurchasePresentationDraft} from "../domain/types";
@@ -89,13 +89,13 @@ export function PurchaseCombinationDialog({unit,unitName,close,save}:{unit:strin
   setValidation("");saving.current=true;mutation.mutate({unit,code,name:existing?.name??normalizedName,isDefault:false});
  }
  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal supplier-modal modal-panel-in" aria-labelledby="purchase-combination-title" aria-busy={mutation.isPending}>
-  <div className="modal-accent"/>
-  <header><span className="modal-title-icon"><Icon name="box" size={18}/></span><div><small>{unitName}</small><h2 id="purchase-combination-title">Nueva presentación</h2></div><button type="button" aria-label="Cerrar" disabled={mutation.isPending} onClick={close}><Icon name="close"/></button></header>
+
+  <ModalHeader title="Nueva presentación" titleId="purchase-combination-title" icon="box" subtitle={unitName} onClose={close} busy={mutation.isPending} closeLabel="Cerrar"/>
   <form onSubmit={event=>{event.preventDefault();event.stopPropagation()}} noValidate><div className="form-grid">
    <FormField label="Nombre" className="span-2"><Input data-dialog-initial-focus maxLength={80} value={name} disabled={mutation.isPending} onChange={event=>{setName(event.target.value);setValidation("")}}/></FormField>
    {catalog.isLoading&&<div className="purchase-reference-loading span-2" role="status" aria-label="Cargando catálogo"><Skeleton width="70%"/></div>}
    {catalog.isError&&<div className="span-2"><Button type="button" kind="secondary" icon="refresh" disabled={catalog.isFetching} onClick={()=>void catalog.refetch()}>Reintentar</Button></div>}
    {(validation||mutation.isError||catalog.isError)&&<p className="field-error span-2" role="alert">{validation||mutation.error?.message||catalog.error?.message}</p>}
-  </div><footer><Button type="button" kind="ghost" disabled={mutation.isPending} onClick={close}>Cancelar</Button><Button type="button" icon="check" disabled={mutation.isPending||catalog.isLoading||catalog.isError} onClick={submit}>{mutation.isPending?"Guardando…":"Guardar"}</Button></footer></form>
+  </div><ModalFooter><Button type="button" kind="ghost" disabled={mutation.isPending} onClick={close}>Cancelar</Button><Button type="button" icon="check" disabled={mutation.isPending||catalog.isLoading||catalog.isError} onClick={submit}>{mutation.isPending?"Guardando…":"Guardar"}</Button></ModalFooter></form>
  </Dialog></div>;
 }

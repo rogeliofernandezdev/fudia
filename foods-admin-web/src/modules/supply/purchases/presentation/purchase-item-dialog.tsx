@@ -4,7 +4,7 @@ import {Dialog} from "@/design-system/dialog";
 import {useDeferredValue,useRef,useState} from "react";
 import {useQuery} from "@tanstack/react-query";
 import {useForm,useWatch} from "react-hook-form";
-import {Button,EmptyState,ErrorState,Icon,Input,Skeleton,Textarea} from "@/design-system";
+import {Button,EmptyState,ErrorState,Icon,Input,Skeleton,Textarea,ModalHeader,ModalFooter} from "@/design-system";
 import {useSession} from "@/providers/session-context";
 import {formatRegionalNumber} from "@/shared/i18n/regional-format";
 import {purchaseInventoryItemResolver} from "../domain/purchase-schema";
@@ -113,12 +113,8 @@ export function PurchaseItemDialog({
 
   return <div className="modal-backdrop modal-overlay-in" role="presentation">
     <Dialog onResponseClose={close} className="crud-modal purchase-item-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="purchase-item-title" aria-busy={locked}>
-      <div className="modal-accent"/>
-      <header>
-        <span className="modal-title-icon"><Icon name="stock" size={18}/></span>
-        <div><small>ORDEN DE COMPRA</small><h2 id="purchase-item-title">Agregar artículo</h2></div>
-        <button type="button" aria-label="Cerrar" onClick={close} disabled={locked||catalogBusy}><Icon name="close"/></button>
-      </header>
+
+      <ModalHeader title="Agregar artículo" titleId="purchase-item-title" icon="stock" subtitle="ORDEN DE COMPRA" onClose={close} busy={locked||catalogBusy} closeLabel="Cerrar"/>
 
       <form onSubmit={event=>event.preventDefault()} noValidate>
         <div className="purchase-item-body" inert={busy}>
@@ -195,11 +191,11 @@ export function PurchaseItemDialog({
             <div className="purchase-item-zero-note"><Icon name="lock" size={16}/><p><b>Stock inicial: 0</b>Crear el artículo y agregarlo a la orden no mueve existencias. El stock cambia únicamente al confirmar una recepción.</p></div>
           </>}
         </div>
-        <footer>
+        <ModalFooter>
           {mode!=="existing"&&typeof validationMessage==="string"&&<div className="purchase-validation" role="alert"><Icon name="alert" size={16}/>{validationMessage}</div>}
           <Button type="button" kind="ghost" onClick={close} disabled={locked||catalogBusy}>Cancelar</Button>
           {mode!=="existing"&&<Button type="button" onClick={()=>void submit()} disabled={locked||catalogBusy}>{locked?"Guardando…":"Crear y agregar"}</Button>}
-        </footer>
+        </ModalFooter>
       </form>
       {busy&&<div className="modal-busy" role="status"><i/><span>Guardando…</span></div>}
     </Dialog>

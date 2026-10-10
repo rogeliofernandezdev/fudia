@@ -2,7 +2,7 @@
 import {useRef,useState} from "react";
 import {createPortal} from "react-dom";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,FormField,Icon,IconButton,Input,Select,Skeleton} from "@/design-system";
+import {Button,FormField,IconButton,Input,Select,Skeleton,ModalHeader,ModalFooter} from "@/design-system";
 import {Dialog} from "@/design-system/dialog";
 import {useSession} from "@/providers/session-context";
 import {createInventoryUnit,listInventoryUnits} from "../infrastructure/inventory-units-api";
@@ -44,13 +44,13 @@ export function InventoryUnitDialog({close,save}:{close:()=>void;save:(unit:Inve
   setValidation("");saving.current=true;mutation.mutate({code,name});
  }
  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal supplier-modal modal-panel-in" aria-labelledby="inventory-unit-title" aria-busy={mutation.isPending}>
-  <div className="modal-accent"/>
-  <header><span className="modal-title-icon"><Icon name="box" size={18}/></span><div><small>NUEVA UNIDAD</small><h2 id="inventory-unit-title">Unidad de inventario</h2></div><button type="button" aria-label="Cerrar" disabled={mutation.isPending} onClick={close}><Icon name="close"/></button></header>
+
+  <ModalHeader title="Unidad de inventario" titleId="inventory-unit-title" icon="box" subtitle="NUEVA UNIDAD" onClose={close} busy={mutation.isPending} closeLabel="Cerrar"/>
   <form onSubmit={event=>{event.preventDefault();event.stopPropagation()}} noValidate><div className="form-grid">
    <FormField label="Nombre"><Input data-dialog-initial-focus value={draft.name} maxLength={80} disabled={mutation.isPending} onChange={event=>setDraft({...draft,name:event.target.value})}/></FormField>
    <FormField label="Código"><Input value={draft.code} maxLength={32} disabled={mutation.isPending} onChange={event=>setDraft({...draft,code:event.target.value})}/></FormField>
    {(validation||mutation.isError)&&<p className="field-error span-2" role="alert">{validation||mutation.error?.message}</p>}
   </div>
-  <footer><Button type="button" kind="ghost" disabled={mutation.isPending} onClick={close}>Cancelar</Button><Button type="button" disabled={mutation.isPending} onClick={submit}>{mutation.isPending?"Guardando…":"Guardar"}</Button></footer></form>
+  <ModalFooter><Button type="button" kind="ghost" disabled={mutation.isPending} onClick={close}>Cancelar</Button><Button type="button" disabled={mutation.isPending} onClick={submit}>{mutation.isPending?"Guardando…":"Guardar"}</Button></ModalFooter></form>
  </Dialog></div>;
 }

@@ -3,7 +3,7 @@ import {Dialog} from "@/design-system/dialog";
 import "./cash.css";
 import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,ConfirmDialog,EmptyState,ErrorState,Icon,IconButton,PageHeader,Pagination,RemoteModalSkeleton,RowActionButton,SearchField,Select,Skeleton,Status,TableSkeleton,Tabs} from "@/design-system";
+import {Button,ConfirmDialog,EmptyState,ErrorState,Icon,IconButton,PageHeader,Pagination,RemoteModalSkeleton,RowActionButton,SearchField,Select,Skeleton,Status,TableSkeleton,Tabs,ModalHeader} from "@/design-system";
 import {useFeedback,useMoney,useSession} from "@/providers";
 import {useSettings} from "@/providers/settings-context";
 import {formatRegionalCalendarDate,formatRegionalDateTime} from "@/shared/i18n/regional-format";
@@ -418,4 +418,4 @@ function CashRegistersSkeleton(){return <div className="cash-registers-workspace
   </article>)}</div>
 </div>}
 
-function CashDetailError({message,retrying,retry,close}:{message:string;retrying:boolean;retry:()=>void;close:()=>void}){return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal cash-detail-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-detail-error-title"><div className="modal-accent"/><header><span className="modal-title-icon"><Icon name="alert" size={18}/></span><div><small>TURNO DE CAJA</small><h2 id="cash-detail-error-title">Detalle no disponible</h2></div><button type="button" aria-label="Cerrar" onClick={close}><Icon name="close"/></button></header><ErrorState title="No pudimos cargar el detalle" text={message} retrying={retrying} onRetry={retry}/></Dialog></div>}
+function CashDetailError({message,retrying,retry,close}:{message:string;retrying:boolean;retry:()=>void;close:()=>void}){return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal cash-detail-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-detail-error-title"><ModalHeader title="Detalle no disponible" titleId="cash-detail-error-title" icon="alert" subtitle="TURNO DE CAJA" onClose={close} closeLabel="Cerrar"/><ErrorState title="No pudimos cargar el detalle" text={message} retrying={retrying} onRetry={retry}/></Dialog></div>}

@@ -35,7 +35,6 @@
 /* Transferencia entre locales */
 .inventory-transfer-modal{width:min(var(--size-680),calc(100vw - var(--size-28)));overflow:hidden}
 .inventory-transfer-modal form{padding:0}
-.inventory-transfer-modal form>footer{margin:0;padding:var(--space-4) var(--space-5)}
 .inventory-transfer-body{max-height:min(68vh,var(--size-640));padding:var(--space-5) var(--space-5);overflow:auto;display:grid;gap:var(--space-4);background:var(--surface)}
 .inventory-transfer-route{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:end;gap:var(--space-3)}
 .inventory-transfer-origin{display:grid;gap:var(--space-1-5);min-width:0}

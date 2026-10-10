@@ -37,7 +37,8 @@ test("pestañas: tablist accesible con foco itinerante y teclado",()=>{
 
 test("status y dinero: tonos rojo/violeta y formato regional con signo",()=>{
  const header=read("src/design-system/page-header.tsx");
- assert.match(header,/"green"\|"blue"\|"orange"\|"red"\|"violet"\|"gray"/);
+ const tones=header.match(/tone\?:([^;]+);/)?.[1]??"";
+ for(const tone of ["green","blue","sky","orange","red","violet","gray","teal"])assert.ok(tones.includes(`"${tone}"`),tone);
  const globals=read("src/styles/globals.css");
  assert.match(globals,/\.status\.red\{/);
  assert.match(globals,/\.status\.violet\{/);

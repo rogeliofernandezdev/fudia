@@ -2,7 +2,7 @@
 import {Dialog} from "@/design-system/dialog";
 import {useMemo,useState} from "react";
 import {useForm,useWatch} from "react-hook-form";
-import {Button,EmptyState,FormField,Icon,Input,Select,Skeleton,Textarea} from "@/design-system";
+import {Button,EmptyState,FormField,Icon,Input,Select,Skeleton,Textarea,ModalHeader,ModalFooter} from "@/design-system";
 import {cashOperationResolver} from "../domain/cash-schema";
 import type {CashOperationDraft,CashRegister,CashShift,CashShiftUser,CashUserOption} from "../domain/types";
 
@@ -10,8 +10,8 @@ export function CashTeamDialog({shift,users,options,loading,busyUserId,close,ass
   const[selected,setSelected]=useState("");
   const available=useMemo(()=>options.filter(option=>!option.assignedShiftId&&!users.some(user=>user.userId===option.id)),[options,users]);
   return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal cash-modal cash-team-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-team-title">
-    <div className="modal-accent"/>
-    <header><span className="modal-title-icon"><Icon name="users" size={18}/></span><div><small>{shift.cashRegisterName.toUpperCase()}</small><h2 id="cash-team-title">Equipo del turno</h2></div><button type="button" aria-label="Cerrar" onClick={close}><Icon name="close"/></button></header>
+
+    <ModalHeader title="Equipo del turno" titleId="cash-team-title" icon="users" subtitle={shift.cashRegisterName.toUpperCase()} onClose={close} closeLabel="Cerrar"/>
     <div className="cash-team-body">
       <p className="cash-dialog-intro">Las personas asignadas pueden registrar movimientos y cobrar desde POS usando este turno.</p>
       <div className="cash-team-add">
@@ -44,8 +44,8 @@ export function CashOperationDialog({shift,registers,busy,close,save}:{shift:Cas
   const type=useWatch({control,name:"operationType"});
   const label=type==="deposit"?"Registrar depósito":type==="transfer"?"Transferir efectivo":"Registrar retiro";
   return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal cash-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-operation-title" aria-busy={busy}>
-    <div className="modal-accent"/>
-    <header><span className="modal-title-icon"><Icon name={type==="transfer"?"share":"stock"} size={18}/></span><div><small>{shift.cashRegisterName.toUpperCase()}</small><h2 id="cash-operation-title">Operación de caja</h2></div><button type="button" aria-label="Cerrar" onClick={close} disabled={busy}><Icon name="close"/></button></header>
+
+    <ModalHeader title="Operación de caja" titleId="cash-operation-title" icon={type==="transfer"?"share":"stock"} subtitle={shift.cashRegisterName.toUpperCase()} onClose={close} busy={busy} closeLabel="Cerrar"/>
     <form onSubmit={handleSubmit(save)} noValidate inert={busy}>
       <div className="cash-dialog-body">
         <FormField label="Operación">
@@ -72,7 +72,7 @@ export function CashOperationDialog({shift,registers,busy,close,save}:{shift:Cas
         </FormField>
         <p className="cash-close-warning"><Icon name="alert" size={14}/>{type==="transfer"?"La salida y entrada se registrarán juntas en ambas cajas.":"La operación reducirá el efectivo esperado del turno."}</p>
       </div>
-      <footer><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy||type==="transfer"&&!targets.length}>{busy?"Procesando…":label}</Button></footer>
+      <ModalFooter><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy||type==="transfer"&&!targets.length}>{busy?"Procesando…":label}</Button></ModalFooter>
     </form>
   </Dialog></div>;
 }

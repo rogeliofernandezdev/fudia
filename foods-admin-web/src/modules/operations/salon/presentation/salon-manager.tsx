@@ -96,8 +96,8 @@ export function SalonManager(){
       setDraft(null);setEditingOrderId(null);setDetailId(null);invalidate();
       notify({
         tone:"success",
-        title:variables.sendToKitchen?"Pedido registrado":"Borrador guardado",
-        message:variables.sendToKitchen?`Pedido ${o.code} registrado y enviado a su área de atención.`:`Pedido ${o.code} quedó guardado como borrador.`,
+        title:variables.sendToKitchen?"Comanda enviada":"Comanda guardada",
+        message:variables.sendToKitchen?`Pedido ${o.code} registrado y enviado a su área de atención.`:`Pedido ${o.code} guardado, sin enviar a cocina.`,
       });
     },
     onError:e=>{

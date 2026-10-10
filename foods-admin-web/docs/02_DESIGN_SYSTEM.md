@@ -1,6 +1,424 @@
 # Sistema de diseño administrativo
 
-## Propósito
+Este documento es la autoridad visual de `foods-admin-web` y no depende de
+documentos externos. La primera parte fija los fundamentos (tokens, tipografía,
+color, forma, movimiento y plataforma) que toda pantalla consume; la segunda
+recoge las especificaciones de cada pantalla. Cuando una especificación de
+pantalla contradiga un fundamento, prevalece el fundamento y la especificación
+se corrige.
+
+## Dirección
+
+fudIA es una herramienta de operación para restaurantes peruanos: el mozo con
+el celular en plena hora punta, el cajero en escritorio, el administrador
+revisando el cierre. La interfaz se juzga por lo rápido que se completa la
+tarea, no por la decoración.
+
+- **Modo Operar.** Familiaridad, densidad útil, una acción dominante por
+  superficie y estados siempre visibles. La identidad vive en los detalles
+  precisos (color, forma, movimiento), no en adornos.
+- **Identidad cromática propia.** Azul operativo índigo para acción y
+  selección, navegación índigo profundo, verde restaurante para éxito
+  confirmado y la franja de marca, violeta para canales digitales. Neutros
+  fríos teñidos de índigo en todo el sistema, nunca grises puros.
+- **Firma de marca.** La franja existente se conserva en el acceso.
+  Los modales no tienen franja ni degradado: la cabecera índigo
+  ocupa el ancho completo y llega al borde superior del panel.
+- **Sin elementos de plantilla.** Prohibido: eyebrows en mayúsculas sobre los
+  títulos, numeración decorativa de secciones, barras laterales de color en
+  tarjetas o avisos, texto con degradado, sombras de halo sin desplazamiento,
+  tarjetas dentro de tarjetas y monoespaciada como disfraz de dato técnico.
+
+## Tokens
+
+`src/styles/variables.css` es la única fuente de valores y `globals.css` la
+importa una vez, después de Tailwind. Los nombres describen un rol o un paso de
+escala, nunca un valor en píxeles. Las hojas de componentes y módulos consumen
+`var(...)`; `tests/design-tokens.test.mjs` impide valores literales (`px`,
+hexadecimales, pesos numéricos), redefinir tokens fuera de la hoja, colores
+duplicados, referencias inexistentes y ciclos.
+
+Tailwind se mantiene. El bloque `@theme inline` de `variables.css` hace que sus
+utilidades resuelvan a los mismos tokens: `bg-primary-600`, `text-ink-500`,
+`p-4` (16 px), `gap-3`, `rounded-lg` (tarjeta), `rounded-sm` (control),
+`shadow-sm`, `text-sm`, `font-semibold`, `tracking-tight`, `ease-out`. Usar
+utilidades para composición y espaciado puntual; el CSS del módulo queda para la
+personalización que una utilidad no expresa con claridad. No se escriben
+valores arbitrarios (`p-[13px]`).
+
+## Color
+
+| Rol | Tokens | Uso |
+| --- | --- | --- |
+| Superficie | `surface`, `cloud-25`, `cloud-50`, `cloud-100`, `cloud-150` | Paneles en blanco; fondo de página `cloud-50`; superficies hundidas y filas alternas en `cloud-25`/`primary-25` |
+| Líneas | `line`, `line-strong` | Bordes de 1 px; `line-strong` en hover de campos |
+| Texto e iconos | `ink-950`, `ink-800`, `ink-700`, `ink-600`, `ink-500`, `ink-400`, `ink-300` | `ink-950` títulos y datos; `ink-600` texto secundario; `ink-500` metadatos; `ink-400` es el mínimo legible (4.5:1 sobre blanco); `ink-300` solo para iconos deshabilitados |
+| Azul operativo | `primary-25` … `primary-800` | `primary-600` acción primaria, selección, foco y cabecera de tabla; `primary-700` hover y texto de acción; `primary-100`/`primary-50` fondos de selección |
+| Navegación | `navigation-900`, `navigation-950`, `navigation-text` | Sidebar, cabecera de pantallas completas y backdrop |
+| Verde restaurante | `brand-50` … `brand-800` | Éxito confirmado, activo, pagado; `brand-600` (menta) solo en la franja de marca y el carril «Listo» |
+| Violeta digital | `digital-50` … `digital-700` | WhatsApp, integraciones, «En preparación» |
+| Entrega completada | `teal-100`, `teal-700` | Azul petróleo para Entregado; Finalizada usa gris neutro para distinguirla de Pagada |
+| Cuenta abierta | `sky-100`, `sky-800` | Celeste tenue, distinto del índigo de Confirmado |
+| Advertencia | `warning-50` … `warning-800`, `note-100`, `note-ink` | Advertencias operativas; notas de cocina |
+| Error | `danger-50` … `danger-700` | Errores y acciones destructivas |
+
+Reglas:
+
+- Una sola acción sólida azul por superficie. Las secundarias van sobre blanco.
+- El verde nunca es una acción pendiente: se reserva para estados confirmados.
+  No existe botón verde.
+- Rojo y ámbar solo comunican error o advertencia; nunca decoran.
+- Los estados combinan color, texto e icono; nunca dependen solo del color.
+- Transparencias por paso (`ink-950-alpha-8`, `primary-600-alpha-24`…), no
+  porcentajes sueltos.
+
+## Tipografía
+
+Una sola familia, Manrope, con escala fija por rol. No hay segunda familia: los
+importes, cantidades y porcentajes usan Manrope con cifras tabulares
+(`font-variant-numeric: tabular-nums`, clase `.tabular`), nunca monoespaciada.
+
+| Token | Tamaño | Rol |
+| --- | --- | --- |
+| `--font-size-2xs` | 10 px | Cabeceras de tabla y etiquetas en mayúsculas espaciadas |
+| `--font-size-xs` (`--font-size-label`) | 12 px | Labels, metadatos, estados |
+| `--font-size-sm` (`--font-size-control`) | 13 px | Controles, celdas, descripción de página (16 px en táctil) |
+| `--font-size-base` | 14 px | Cuerpo |
+| `--font-size-md` | 16 px | Títulos de panel y estado vacío |
+| `--font-size-lg` | 18 px | Títulos de modal, importes secundarios y subtítulos de sección |
+| `--font-size-xl` | 22 px | Título de página en móvil, KPI |
+| `--font-size-2xl` | 28 px | Título de página |
+| `--font-size-3xl` / `--font-size-4xl` | 36 / 48 px | Solo cifra principal del dashboard |
+
+- Pesos: `--weight-regular` 400, `--weight-medium` 500, `--weight-semibold`
+  600, `--weight-bold` 700, `--weight-heavy` 800. Manrope no tiene pesos
+  superiores a 800. Jerarquía habitual: título 800, encabezado de sección 700,
+  botones y labels 600, cuerpo 400–500.
+- Interlineado: `none` 1, `tight` 1.2, `snug` 1.35, `normal` 1.5, `relaxed` 1.65.
+- Tracking: `--letter-spacing-tight` (−0.02 em) en títulos de 22 px o más,
+  `snug` (−0.01 em) en títulos de 16–18 px, `caps` (0.08 em) solo en texto en
+  mayúsculas de 10 px. El texto en mayúsculas se escribe en caja normal en el
+  JSX y se transforma con CSS.
+- Tamaño mínimo 10 px (`tests/type-scale.test.mjs`). Títulos con
+  `text-wrap: balance`; párrafos con medida máxima de 72 caracteres.
+- Sin medios píxeles ni tamaños fuera de la escala.
+
+## Espaciado y dimensiones
+
+Base de 4 px con medios pasos hasta 14 px: `--space-px` (1), `--space-0-5`
+(2), `--space-1` (4), `--space-1-5` (6), `--space-2` (8), `--space-2-5` (10),
+`--space-3` (12), `--space-3-5` (14), `--space-4` (16), `--space-5` (20),
+`--space-6` (24), `--space-7` (28), `--space-8` (32), `--space-10` (40),
+`--space-11` (44), `--space-12` (48), `--space-16` (64), `--space-20` (80).
+El índice equivale al de Tailwind (`p-4` = `--space-4`).
+
+- Ritmo: grupos relacionados con 6–12 px, secciones separadas con 20–32 px;
+  más espacio encima de un encabezado que debajo.
+- `--size-*` se reserva para dimensiones de layout (anchos de columna, alturas
+  fijas, iconos), no para padding ni gap.
+- `--control-height`: 38 px con puntero fino, 44 px en móvil (≤600 px) y en
+  cualquier puntero táctil. Todo control interactivo de una barra o formulario
+  usa esa altura.
+
+## Forma
+
+| Token | Valor | Uso |
+| --- | --- | --- |
+| `--radius-chip` | 4 px | Marcas pequeñas, barras de skeleton |
+| `--radius-control` | 6 px | Botones, campos, controles segmentados |
+| `--radius-tile` | 10 px | Iconos contenidos, ítems internos, avisos |
+| `--radius-card` | 14 px | Paneles, tarjetas, modales |
+| `--radius-sheet` | 20 px | Hojas inferiores en móvil |
+| `--radius-pill` | 999 px | Estados, contadores, interruptores |
+
+Una superficie se separa con borde **o** con elevación, no con ambos a la vez
+salvo `--elevation-1`, que es un apoyo mínimo del panel.
+
+## Elevación y anillos
+
+Una sola fuente de luz superior y sombras teñidas de índigo:
+
+- `--elevation-1`: panel en reposo.
+- `--elevation-2`: tarjeta interactiva, marca, logo.
+- `--elevation-3`: popover, menú, tooltip, barra fija.
+- `--elevation-4`: modal y drawer.
+- `--elevation-up`: barras fijas inferiores; `--elevation-side`/`-side-end`:
+  paneles laterales.
+- `--elevation-primary`: realce teñido de la acción primaria y la página activa.
+- `--elevation-selected`: tarjeta seleccionada (contorno azul + realce).
+- Anillos: `--ring-focus` (foco de campos), `--ring-danger` (foco con error),
+  `--ring-selected`/`--ring-selected-soft` (selección), `--ring-line`
+  (contorno interior), `--ring-success`.
+
+El foco de teclado es único: contorno de 2 px `primary-600` con 2 px de
+separación en todo control (`:focus-visible`); los campos usan además
+`--ring-focus`.
+
+## Movimiento
+
+El movimiento comunica un cambio de estado, nunca adorna.
+
+| Token | Valor | Uso |
+| --- | --- | --- |
+| `--duration-press` | 120 ms | Respuesta al presionar |
+| `--duration-fast` | 160 ms | Hover, color, borde |
+| `--duration-base` | 200 ms | Popovers, pestañas, interruptores |
+| `--duration-slow` | 280 ms | Modales, hojas, drawers |
+| `--duration-dialog` | 520 ms | Scale Punch de confirmaciones |
+| `--duration-ambient*` | 750–1600 ms | Skeleton y loader |
+
+- Curvas: `--easing-out` (`cubic-bezier(.23,1,.32,1)`) para entradas y
+  respuestas; `--easing-in-out` para movimiento en pantalla; `--easing-drawer`
+  para hojas y drawers; `--easing-spring` solo para realces puntuales. Nunca
+  `ease-in` en interfaz.
+- Todo botón, botón de icono y paso de cantidad responde al presionar
+  con `transform: scale(.97)` (`.94` en controles de icono).
+- Las pestañas de operación responden con cambio de superficie, sin escalado:
+  se usan repetidamente y la selección por teclado debe ser inmediata.
+- Los modales entran desde `scale(.98)` y 12 px abajo; en móvil la hoja sube
+  desde el borde inferior. Nada aparece desde `scale(0)`.
+- Solo se animan `transform`, `opacity`, color y sombra; nunca alto, ancho o
+  márgenes. No se usa `transition: all`.
+- Las acciones repetidas cientos de veces (teclado, agregar a la comanda,
+  pasar de página) no se animan.
+- `prefers-reduced-motion: reduce` reduce todo a un fundido instantáneo.
+
+## Capas
+
+`--z-raised` 1, `--z-sticky` 10, `--z-header` 20, `--z-popover` 30,
+`--z-tour` 60, `--z-drawer` 90, `--z-task` 100 (pantalla completa como la
+comanda), `--z-modal` 110, `--z-sheet` 120, `--z-confirm` 130,
+`--z-feedback` 140, `--z-loader` 200. No se escriben números sueltos.
+
+## Iconos
+
+Un único set propio en `design-system/icons.tsx`: 24 × 24, trazo 1.8,
+extremos redondeados. `IconSize` limita los tamaños: 14 junto a texto de
+12–13 px, 16 en chips, pestañas y pasos de cantidad, 18 en acciones y botones
+(por defecto en `Button` e `IconButton`), 20 en navegación, 24 en estados
+vacíos, 28 en el interruptor de estado.
+
+Un icono tiene un solo significado en toda la aplicación: `receipt` para
+comprobantes y ventas, `invoice` para documentos (orden de compra, contrato,
+recepción), `dish` para platos y productos de la carta, `tables` para mesas,
+`note` para avisos informativos, `alert` solo para advertencias y errores. No
+se usan emojis ni glifos Unicode como iconos.
+
+## Plataforma móvil
+
+Mobile-first desde 390 px, validado en hardware real cuando el cambio afecta
+gestos, teclado o áreas seguras.
+
+- `viewport-fit=cover` y `themeColor` índigo; barras fijas y hojas suman
+  `--safe-area-top` y `--safe-area-bottom`.
+- Sin destello de toque (`-webkit-tap-highlight-color: transparent`),
+  `touch-action: manipulation` en controles y sin selección de texto al
+  mantener presionado un botón.
+- Todo `:hover` vive en `@media (hover:hover) and (pointer:fine)`: en táctil
+  el hover no queda pegado. La respuesta táctil es `:active`.
+- Áreas táctiles de 44 × 44 px. Los campos usan 16 px en táctil para que iOS
+  no haga zoom.
+- Alturas de pantalla con `dvh`, nunca `vh`. Contenedores con scroll propio
+  usan `overscroll-behavior: contain`.
+- Teclado correcto: `inputMode="decimal"` en importes, `numeric` en códigos,
+  `type="tel"` y `type="email"` en sus campos, y sin `autoFocus` que abra el
+  teclado al entrar a una pantalla táctil.
+- Superficies del navegador con la paleta: selección `primary-200`, cursor de
+  texto `primary-600` y scrollbars finas `ink-400-alpha-40`. La Comanda es una
+  excepción aprobada: carta, categorías y resumen usan desplazamiento nativo sin
+  barra visible, con acceso explícito a todas las categorías y acciones persistentes.
+
+## Componentes base
+
+Los contratos de cada componente viven en `04_COMPONENTS.md` y las plantillas
+de página en `03_LAYOUTS.md`. Resumen:
+
+- **Botones**: `primary`, `secondary`, `ghost`, `danger` (solo confirmar en
+  `ConfirmDialog`) y `danger-outline` (disparadores destructivos). Altura de
+  control, radio de control, texto 600, icono de 18 px a la izquierda.
+- **Encabezado de página**: título igual al nombre de la navegación,
+  descripción de una línea, retorno opcional y como máximo una acción primaria y
+  una secundaria. Sin eyebrow.
+- **Modales**: `Modal` con tamaños `sm` 480, `md` 640, `lg` 880 y `xl` 1040.
+  Cabecera índigo `primary-700`, título blanco de 18 px e icono blanco de 20 px
+  centrado en un espacio de 44 px, sin recuadro. Altura mínima 64 px y padding vertical de 8 px;
+  puede crecer si el título necesita varias líneas. La X blanca mide 20 px,
+  dentro de un cuadro visible de 32 px con solo contorno blanco de 1 px y fondo
+  transparente, sin sombra. El área de clic conserva 44 px también en escritorio.
+  No cambia de color con hover; conserva foco blanco visible para teclado.
+  El título nombra la acción. La cabecera solo contiene icono, título y X:
+  nunca subtítulos, fechas, responsables ni estados debajo del título.
+  `subtitle`, `meta` y `details`, si existen, se presentan fuera de la cabecera. Cuerpo
+  desplazable; pie fijo. En móvil, hoja inferior (`sm`/`md`) o pantalla
+  completa (`lg`/`xl`). Escape y el fondo nunca cierran un modal; con cambios
+  sin guardar, cerrar pide confirmar el descarte. Todo modal de contenido usa
+  `ModalHeader` y `ModalFooter`; se exceptúan respuestas success/error y
+  confirmaciones warning (`ConfirmDialog`/`FeedbackProvider`). El pie usa
+  `cloud-50`; acciones contiguas a la derecha con separación `space-2-5`
+  (10 px), Cancelar antes de Guardar. Nunca empujar Cancelar al extremo izquierdo.
+  En móvil ambas acciones comparten fila cuando caben. El estado real del registro,
+  si existe, se presenta con `Status` en el resumen o pie; los formularios
+  sin estado no inventan uno.
+  `ModalWorkspace` añade resumen persistente solo cuando el detalle lo necesita:
+  inferior a ancho completo en todos los tamaños. Los formularios
+  sin resumen mantienen su cuerpo normal; no se les impone una columna vacía.
+- **Jerarquía de datos en todos los modales de contenido**: etiqueta 600
+  (seminegrita, `ink-700`, tamaño auxiliar), valor 400 (regular, `ink-950`, tamaño
+  de control) y título de sección 700. La etiqueta identifica el concepto;
+  el valor es su contenido, nunca al revés. `modal.css` es el dueño de los roles
+  `dt`/`dd` y `modal-data-label`/`modal-data-value`, con
+  `--modal-label-weight` y `--modal-value-weight`. Los estilos locales solo
+  organizan el bloque. Los controles del formulario heredan el peso regular
+  mediante `--control-value-weight`, sin cambiar la tipografía fuera del modal.
+  Totales principales, nombres de productos, cantidades, estados y acciones
+  conservan su énfasis explícito; no aplicar la regla a toda negrita indiscriminadamente.
+  En detalles de pedidos y ventas, mostrar «Mesa» si hay mesa, «Cliente» si solo
+  hay nombre y «Venta» en venta directa; nunca el rótulo combinado «Cliente / Mesa».
+  Se exceptúan confirmaciones, feedback y contenido de PDF/tickets.
+- **Tablas**: cabecera `primary-600` con texto blanco de 10 px en mayúsculas,
+  filas de 56 px, cifras tabulares, hover `primary-25` y tarjetas equivalentes
+  en móvil.
+- **Estados**: `Status` en píldora con icono o punto semántico y texto.
+
+### Colores de operación: pedido, preparación y cuenta
+
+Estándar aprobado y obligatorio para todas las pantallas, listados y modales que
+presenten estos estados. La semántica de Pedidos y Salón se centraliza en
+`orderStatus` de `order-meta.ts`; Cocina/Barra usa `serviceStatusTone` y la cuenta
+usa `accountTone` de `order-service-controls.tsx`, sin reinterpretar etiquetas del API.
+
+Reglas de aplicación:
+
+- Reutilizar `Status` y los tokens de `src/styles/variables.css`; no crear badges
+  propios, colores hexadecimales locales ni mapeos distintos por pantalla.
+- Siempre fondo tenue y texto/icono oscuro, con contraste mínimo 4.5:1.
+  No usar relleno sólido con texto blanco, sombras ni hover en estados de lectura.
+- `emphasis` refuerza icono y peso del texto, sin convertir el estado en botón
+  ni alterar su familia de color. La variante gris enfatizada se especifica abajo.
+- Cuenta abierta es celeste y Confirmado índigo. Pagada es verde y Finalizada
+  gris: estas parejas deben seguir siendo visualmente distintas.
+- Mostrar siempre la etiqueta y su contexto (pedido, preparación o cuenta):
+  el color nunca es la única información del estado.
+- Cambiar esta semántica requiere aprobación explícita y actualizar juntos esta
+  matriz, tokens, mapeos y pruebas. No modificar estados ni flujos de negocio
+  para adaptar el diseño.
+
+Paleta exacta de `Status` (fondo / texto e icono):
+
+| Tono | Fondo tenue | Texto e icono |
+| --- | --- | --- |
+| `gray` | `cloud-100` · `#F0F2F8` | `ink-500` · `#59617C` |
+| `blue` — índigo | `primary-100` · `#EEF0FF` | `primary-700` · `#3946B8` |
+| `sky` — celeste | `sky-100` · `#E0F2FE` | `sky-800` · `#075985` |
+| `violet` | `digital-100` · `#F2ECFF` | `digital-700` · `#5421A8` |
+| `green` | `brand-100` · `#E8F7F1` | `brand-800` · `#0E6646` |
+| `orange` — ámbar | `warning-100` · `#FFE8CF` | `warning-800` · `#7A3B0D` |
+| `teal` — azul petróleo | `teal-100` · `#E6F5F7` | `teal-700` · `#0B6B78` |
+| `red` | `danger-50` · `#FFF1EF` | `danger-700` · `#A5281E` |
+| `gray emphasis` | `cloud-150` · `#E9ECF4` | `ink-800` · `#222842` |
+
+Matriz semántica completa:
+
+| Flujo | Estado | Tono de `Status` | Significado |
+| --- | --- | --- | --- |
+| Pedido | Nuevo | `gray` — gris | Registrado, aún sin confirmar |
+| Pedido | Confirmado | `blue` — índigo | Comanda enviada |
+| Pedido / preparación | Preparando | `violet` — violeta | En elaboración; coincide con el panel de Cocina |
+| Pedido / preparación | Listo para entregar / Listo | `green` — verde | Preparación terminada, falta servir |
+| Pedido | En camino | `orange` — ámbar | Delivery en traslado |
+| Pedido / preparación | Entregado | `teal` — azul petróleo | Servido; distinto de Listo y de Pagada |
+| Pedido / preparación | Cancelado | `red` — rojo | Cancelación |
+| Preparación | Pendiente | `orange` — ámbar | Aún sin preparar; distinto del celeste de Cuenta abierta |
+| Entrega directa | Pendiente de entrega (`listo`) | `green` — verde | Disponible para servir; el API conserva esa etiqueta |
+| Cuenta | Cuenta abierta | `sky` — celeste tenue | Sigue admitiendo consumo; distinto de Confirmado |
+| Cuenta | Por cobrar | `orange` — ámbar | Espera el pago |
+| Cuenta | Pagada | `green` — verde | Pago completo |
+| Cuenta | Finalizada | `gray` — gris neutro | Atención terminada; visualmente distinta del verde de Pagada |
+
+El color representa un significado compartido, no un identificador universal:
+verde es un hito cumplido, ámbar una resolución pendiente y azul petróleo una
+entrega completada. La cuenta finalizada usa gris neutro. El nombre y la región distinguen los flujos.
+El pedido tiene siete tonos distintos. Preparación y cuenta conservan su ubicación
+separada. Preparación y cuenta usan las mismas píldoras suaves del componente
+`Status`, sin borde exterior. Dos productos con el mismo estado mantienen el
+mismo color; no se colorean por producto. `teal-100` / `teal-700` son tokens compartidos,
+también accesibles en Tailwind.
+
+## Especificaciones por pantalla
+
+### Comanda de Salón, Pedidos y pedido manual
+
+La tarea a pantalla completa conserva la cabecera índigo homologada, con icono,
+título y X. El catálogo presenta buscador, categorías del API y acceso explícito
+a «Menús y combos». Las categorías usan una sola fila deslizable con el dedo,
+sin barra visible; se conserva el desplazamiento nativo y el foco de teclado.
+«Todo» y «Menús y combos» preceden a las categorías del API. El
+botón persistente «Categorías» abre la lista completa (incluidos menús y combos),
+sin depender de descubrir el gesto de deslizar. Elegir una opción cierra esa
+lista, limpia la búsqueda y muestra la categoría seleccionada en la tira.
+En móvil los controles tienen áreas táctiles de 44 px; la lista conserva espacio
+de lectura también en altura reducida, donde se omite su encabezado auxiliar.
+
+Productos y combos muestran foto propia de 64 px si existe e icono del sistema como
+alternativa, sin imágenes inventadas. Nombre y precio tienen jerarquía clara;
+el nombre usa seminegrita y el precio negrita oscura, juntos junto a la foto.
+Las filas usan separadores suaves, sin tarjetas ni fondos de selección.
+El + agrega una unidad; al seleccionar un producto aparece `NumberStepper appearance="soft"`
+con disminuir, cantidad y aumentar. En una unidad, disminuir pasa a Quitar.
+Un producto agotado impide agregar pero permite reducir lo ya seleccionado.
+Los combos conservan su configuración de opciones, sin restar elecciones
+distintas como si fueran un producto simple. Los estados de disponibilidad no cambian.
+La composición conserva blanco (`surface`) para lectura, cápsulas gris frío
+(`cloud-100`) para cantidades e índigo tenue (`primary-50`) en el pie y la barra
+de subtotal. El importe y el + usan índigo; los iconos alternativos usan
+`primary-100`/`primary-700` para productos y `digital-100`/`digital-700` para combos.
+Las categorías tienen cuatro acentos de navegación de la paleta: índigo
+(`primary-100`/`primary-700`), celeste (`sky-100`/`sky-800`), violeta
+(`digital-100`/`digital-700`) y petróleo (`teal-100`/`teal-700`). Se asignan
+establemente por ID, no por nombre ni orden del API; las familias pueden repetirse.
+«Todo» usa índigo y «Menús y combos» violeta. La opción seleccionada invierte
+a fondo intenso de su familia, texto blanco y check, además de `aria-pressed`;
+la lista completa repite el acento mediante un punto y la selección con check.
+Estos colores identifican navegación, no estados del negocio. Todos los pares
+de texto/fondo cumplen contraste AA de 4.5:1. Las cantidades
+usan cápsulas gris tenue sin borde ni separadores interiores y mantienen 44 px
+por botón. No se cambia la matriz de colores semánticos de disponibilidad.
+Carga, error recuperable y vacío permanecen explícitos.
+Escritorio conserva catálogo y resumen lateral; móvil mantiene el catálogo
+completo, barra inferior con importe y «Ver comanda», y resumen en hoja.
+«Ver comanda» usa `radius-pill` en móvil, icono lineal `shoppingBag` y altura mínima de 48 px,
+conservando importe y contador visibles; no cambia su acción de abrir el resumen.
+La hoja móvil se pliega mediante el chevron hacia abajo de 24 px dentro de un
+control circular de 44 px, fondo `primary-100`, sin borde y color `primary-700`,
+sin sombra
+ni cambio de color al hover. Su nombre accesible es «Volver a la carta»;
+no guarda, descarta ni cierra la comanda y conserva productos y notas.
+La cabecera índigo queda por encima del scrim móvil: conserva título, icono y X
+blancos, sin oscurecerse al abrir la hoja. El scrim atenúa únicamente el fondo
+operativo y mantiene el cierre de la hoja al tocar fuera de ella.
+El resumen conserva la misma composición: foto, nombre/precio juntos y cantidad
+a la derecha; en el panel lateral estrecho la cantidad baja sin comprimir el dato.
+Las imágenes del borrador son solo presentación y no se envían al API. Las
+líneas históricas sin imagen muestran el icono de su tipo; no se consultan fotos por línea.
+Carta y resumen se desplazan sin barras visibles. Esta excepción local no oculta
+las barras de otros módulos ni de la lista completa de categorías.
+La revisión precede al guardado/envío desde la hoja; la barra no envía directamente.
+«Guardar comanda» crea un pedido en estado Nuevo sin activar la preparación;
+«Enviar a cocina» lo confirma y activa su atención. Ambos persisten
+el pedido y cierran la comanda al completarse; guardar no es almacenamiento
+local: también reserva las cantidades de inventario según el flujo vigente.
+Guardar usa el portapapeles `orders`, fondo `primary-200`, texto `primary-700` y borde
+`primary-600`, distinguible del footer `primary-50` sin sombras; enviar conserva
+el índigo sólido y el avión de envío `send`. En móvil, ambas acciones usan
+`radius-pill`, con altura táctil mínima de 44 px; escritorio conserva su geometría.
+Al guardar una comanda solo ese botón
+muestra «Guardando…», sin presentar «Enviando…» en la otra acción. Ambas acciones
+se bloquean durante la petición. Los avisos dicen «Comanda guardada» (sin enviar
+a cocina) o «Comanda enviada», según la acción, sin cambiar los estados del API.
+En móvil los botones del resumen ocupan filas completas cuando sus etiquetas no
+caben juntas; no se recortan los verbos ni se oculta el envío detrás del contenido.
+No se abren resumen ni teclado al agregar un producto. No se cambian precios,
+permisos ni el contrato de envío a cocina.
 
 ### Ticket de pago para el comensal
 
@@ -19,7 +437,7 @@ reintento, skeleton, X y controles de 44 px en móvil. El cierre de caja A4 no c
 El cierre presenta identidad del turno y tres importes destacados, seguido de
 secciones desplegables para productos, cobros, egresos, otros ingresos y arqueo.
 Cada línea conserva fecha, cantidad, precio y responsable; no se resume perdiendo
-filas. Se reutilizan Dialog, botones, tabla y tokens globales. A 390 px los datos
+filas. Se reutilizan Modal, botones, tabla y tokens globales. A 390 px los datos
 de identidad/importes se apilan y las tablas tienen scroll horizontal controlado;
 las acciones mantienen 44 px. El cierre ciego conserva el conteo sin revelar
 importes y presenta el informe después de confirmar.
@@ -36,100 +454,7 @@ Los nombres largos se envuelven sin recortar filas.
 La vista previa permite descargar o ver el detalle HTML si el navegador móvil
 no integra un visor PDF.
 
-Este documento es la autoridad visual de foods-admin-web y no depende de
-documentos externos. La administración conserva la identidad Foods con mayor
-densidad para tablas, formularios y análisis.
-
-## Paleta
-
-La autoridad de valores está en `src/styles/variables.css`. `globals.css` la
-importa una sola vez, después de Tailwind, y el layout raíz carga esa base para
-todas las rutas. Las hojas de componentes y módulos consumen `var(...)` y
-conservan la propiedad de sus selectores.
-
-La hoja se organiza en paleta, matices, transparencias, alias semánticos,
-espaciado, dimensiones, tipografía, radios, bordes, sombras y movimiento.
-`--space-12` representa el paso actual de 12 px; modificarlo actualiza todos
-sus usos. Espaciado, dimensiones y tipografía tienen escalas independientes
-para poder ajustar la densidad sin alterar el tamaño del texto o los iconos.
-Los matices secundarios conservan los colores existentes; los nombres
-semánticos (`primary`, `brand`, `danger`, etc.) son la API recomendada.
-Las transparencias derivan de su color base y los alias apuntan al token
-canónico: no se vuelve a escribir el mismo hexadecimal.
-
-Los contratos compartidos incluyen `--radius-control`, `--radius-card`,
-`--font-size-label`, `--font-size-control`, `--control-height` y los tokens
-de animación del modal. Los valores particulares por contexto y la altura
-táctil móvil también se declaran en esa hoja. Las condiciones de media queries
-y container queries conservan sus medidas literales, porque CSS no admite
-custom properties en esas condiciones.
-
-Los selectores de búsqueda de Recetas y Países reutilizan
-`createLookupSelectStyles`, con extensiones explícitas cuando corresponde.
-Canvas y Mapbox obtienen los colores mediante `readCssToken`, porque esas
-APIs necesitan un valor resuelto. Las fuentes se resuelven en `body`, donde
-Next proporciona sus variables de fuente.
-
-`tests/design-tokens.test.mjs` impide redefinir tokens fuera de esta hoja,
-duplicar colores, introducir valores de diseño literales en las hojas de
-componentes o usar referencias inexistentes o circulares. La prueba de tamaño
-mínimo de texto resuelve las variables antes de revisar las medidas.
-
-| Token | Valor | Uso |
-| --- | --- | --- |
-| primary-600 | #4654CD | botones primarios y encabezados de tabla |
-| primary-700 | #3946B8 | hover de acción primaria |
-| primary-100 | #EEF0FF | selección y fondos interactivos suaves |
-| navigation-900 | #1A2151 | navegación lateral |
-| navigation-text | #C9D0F2 | texto secundario de navegación |
-| brand-700 | #16875F | texto y estado exitoso |
-| brand-600 | #63DCAE | confirmación y estado exitoso |
-| brand-100 | #E8F7F1 | fondos positivos |
-| ops-800 | #1A2151 | alias de navegación lateral |
-| ops-700 | #3946B8 | enlaces y hover operativo |
-| ops-500 | #4654CD | foco y estado activo |
-| digital-700 | #5421A8 | WhatsApp e integraciones |
-| digital-500 | #7C3AED | acento digital |
-| digital-100 | #F2ECFF | fondo violeta suave para estados operativos |
-| ink-950 | #101828 | texto principal |
-| ink-600 | #475467 | texto secundario |
-| cloud-50 | #F7F8FC | fondo |
-| surface | #FFFFFF | paneles |
-| warning | #B54708 | alertas y texto/borde de acciones de advertencia |
-| warning-50 | #FFF3E8 | fondo suave y hover de acciones de advertencia |
-| danger | #C9362B | errores y acciones destructivas |
-
-Usar superficies mayormente neutras, azul para navegación y acciones, verde para
-éxito y violeta para canales digitales.
-
-La composición prioriza blanco y azul índigo, con verdes como acentos de
-identidad y estados positivos. Repetir pocos colores con funciones estables:
-una acción dominante de fondo sólido por contexto, acciones secundarias sobre
-blanco con borde neutro y fondos tintados suaves para selección o estado. El
-menta aporta frescura en detalles, no en grandes superficies que compitan con
-la acción principal. Ámbar y rojo se reservan para advertencias y errores;
-violeta para canales digitales, no para diferenciar acciones de cobro. Los
-avisos informativos usan texto neutro e icono, sin apariencia de botón.
-
-## Identidad operativa
-
-`foods-admin-web` concentra la experiencia web operativa y administrativa. La navegación lateral usa azul oscuro `ops-800`, la selección azul operativo más luminoso, las acciones primarias y tablas usan `primary-600`, y los canales digitales usan violeta. El verde se reserva para éxito.
-
-## Tipografía y forma
-
-- Manrope; Geist Mono para códigos y montos técnicos.
-- Radio de 14 px en tarjetas y 6 px en controles.
-- Bordes #E4E7EC y sombras discretas.
-- Cifras tabulares para KPI, montos y porcentajes.
-- Tamaño mínimo de texto en toda la aplicación (módulos, `globals.css` y
-  design system): 10 px. Los eyebrows y etiquetas auxiliares usan 10 px;
-  campos y botones usan 13 px en escritorio; labels 12 px; cuerpo 14 px.
-  Los controles usan 16 px en móvil para mejorar lectura y evitar zoom al enfocar.
-  La prueba
-  `tests/type-scale.test.mjs` bloquea cualquier `font-size` menor.
-- Inputs, tablas, botones y estados provienen del design system.
-
-## Layout
+### Layout general
 
 - Sidebar: Control, Operación, Carta y producción, Abastecimiento y Configuración.
 - El catálogo general se denomina «Carta y productos» y usa el icono de
@@ -237,8 +562,8 @@ avisos informativos usan texto neutro e icono, sin apariencia de botón.
   secundario. El skeleton reproduce cabecera, identidad, líneas de productos y
   acción de cada tarjeta, no bloques rectangulares genéricos.
 - El formulario de Recetas usa un modal de edición compacto y estructurado en dos
-  zonas: datos de la receta e insumos. La cabecera sigue el patrón estándar de
-  58 px mínimo, icono de 32 px, título de 15 px y cierre con
+  zonas: datos de la receta e insumos. La cabecera sigue el patrón compartido:
+  título de 18 px, icono de 18 px en superficie de 44 px y cierre con
   `--control-height`. El producto y el rendimiento son los datos principales;
   «Producto preparado» usa el autocomplete asíncrono compartido basado en
   `react-select/async`, con selección única, `cacheOptions` y el mismo patrón visual
@@ -351,6 +676,33 @@ avisos informativos usan texto neutro e icono, sin apariencia de botón.
   desde la acción iconográfica de la tabla; la devolución permanece junto al
   pago concreto porque requiere ese contexto. Nunca se agrega un botón
   redundante «Cerrar» en el pie.
+- El detalle de cobro reutiliza `ModalWorkspace`, `ModalItemList` y
+  `modal-summary`: una columna de contenido y resumen inferior fijo, nunca
+  tres tarjetas de importes encima de los productos. La cabecera muestra
+  «Detalle de cobro», icono y X; el código va fuera de ella. Mesa y canal
+  comparten la primera fila de datos; atendido por y fecha, la segunda para
+  Salón. En móvil, mesa y canal siguen juntos; encargado y fecha ocupan
+  filas completas con etiqueta junto al valor y ajuste de texto sin recortes.
+  Canal se alinea al extremo derecho, frente a mesa. La etiqueta indica el dato
+  real: «Mesa» si hay mesa, «Cliente» si solo hay cliente y «Venta» en venta directa;
+  nunca «Cliente / mesa». Las etiquetas usan tamaño auxiliar, seminegrita e
+  `ink-700`; los valores, tamaño de control, peso regular e `ink-950`.
+  Los encabezados de sección usan negrita para conservar un nivel superior.
+  Encargado y fecha comparten la misma columna de
+  valores para evitar saltos de alineación. No se añade un color de estado al canal.
+  El importe de cada producto conserva su posición derecha. El modo de pantalla
+  completa empieza a 600 px, coincidiendo con el backdrop sin padding; por encima
+  el panel usa el ancho disponible y descuenta los márgenes en su altura máxima.
+  Nunca combina `100vw` con un backdrop con padding ni deja el resumen fuera
+  del viewport, también con zoom. Productos y pagos tienen
+  un único título, sin «CONSUMO», subtítulos redundantes ni contadores de líneas.
+  Las cantidades conservan su círculo. Sin pagos, un mensaje breve sustituye
+  el panel vacío grande. Una línea neutra y espacio antes del título separan
+  los productos de los pagos, incluso cuando no hay pagos registrados.
+  Total, pagado neto, saldo y estado real quedan juntos
+  en el resumen; el ticket permanece en el pie y las devoluciones en su pago,
+  respetando permiso, turno y estado. Loading reproduce cuerpo y resumen;
+  errores y ausencia de detalle no muestran importes o estados anteriores.
 - «Cobrar» en Salón y «Cobrar saldo» en Pedidos abren directamente el formulario
   de pago del POS mediante `/pos?orderId=...`, no el detalle de consulta. La acción
   de cobro de la tabla usa ese mismo formulario. Antes de habilitarlo se consulta
@@ -387,7 +739,7 @@ avisos informativos usan texto neutro e icono, sin apariencia de botón.
   El tooltip indica la acción siguiente y el nombre accesible identifica el
   registro sin cambiar al alternar el estado. La desactivación conserva su
   confirmación. Check y símbolo de prohibición no se usan como estas acciones.
-- Contraste WCAG AA y foco visible con ops-500.
+- Contraste WCAG AA y foco visible con `primary-600`.
 - Alertas de éxito, error e información usan un diálogo global centrado, icono
   semántico, título, explicación breve y acción «Aceptar». El botón «Aceptar»
   usa `--control-height` como todos los demás botones. El comportamiento y
@@ -418,14 +770,16 @@ avisos informativos usan texto neutro e icono, sin apariencia de botón.
   variantes como «Guardar cambios»). El estado ocupado dice «Guardando…».
   Esta regla aplica a productos, categorías, zonas y cualquier otro registro.
   Excepción: cuando el botón fija un estado del flujo distinto de la acción
-  principal («Guardar borrador» frente a «Registrar y enviar a cocina» o a la
-  aprobación de una orden de compra), el sufijo se conserva porque comunica
-  que aún no hay efecto operativo.
+  principal («Guardar comanda» frente a «Enviar a cocina», o «Guardar borrador»
+  frente a aprobar una orden de compra), el sufijo distingue la intención.
+  Guardar comanda sí persiste un pedido; no activa todavía la preparación.
 - Los botones «Guardar» y «Cancelar» de un mismo footer tienen idéntica altura
   (`--control-height`). El ícono de «Guardar» es un check (✓), no un disquete.
-- La cabecera de los modales de registro es compacta: padding 11×16 px,
-  altura mínima 58 px, título h2 a 15 px, ícono de título 32×32 px y botón
-  cerrar 36×36 px. No usar cabeceras altas ni íconos grandes en formularios.
+- La cabecera de los modales de registro usa el patrón compartido: padding
+  horizontal de 24 px en escritorio y 16 px en móvil, título h2 de 18 px e
+  icono blanco de 20 px sin recuadro, en un espacio de 44×44 px. La X tiene
+  contorno blanco de 32×32 px y área táctil de 44×44 px; no se fijan dimensiones
+  locales para reducir la cabecera.
 - **No duplicar controles de estado dentro del modal de edición.** La
   activación y desactivación de cualquier registro (producto, categoría, etc.)
   se maneja exclusivamente desde el botón de acción de la tabla. Los
@@ -450,7 +804,7 @@ los importes se alinean en una franja neutra y el total usa azul primario.
 Cabecera y footer permanecen visibles; el cuerpo tiene scroll vertical acotado.
 En móvil el modal ocupa la pantalla, los controles conservan 44 px y las acciones
 usan ancho completo. El footer tiene Cancelar secundario y una única acción
-primaria con un icono: «Registrar y enviar a cocina». Durante el envío muestra
+primaria con el icono `send`: «Enviar a cocina». Durante el envío muestra
 «Enviando…» y bloquea edición.
 
 ## Tablas y paginación
@@ -552,7 +906,7 @@ en las órdenes y los ajustes de inventario, sin cambios del contrato ni de stoc
 
 ## Menú
 
-- Fondo `ops-800`, opción activa `ops-500` e iconos contenidos en una caja estable.
+- Fondo `navigation-900`, opción activa con el azul operativo vigente e iconos contenidos en una caja estable.
 - Los iconos describen la función, no el rol de la persona: «Recetas»
   usa `cookingPot` por preparación/producción; «Disponibilidad» usa
   `availability`, un plato con confirmación de disponibilidad. No se usa un check
@@ -573,10 +927,10 @@ y Cobrar cuando la cuenta está Por cobrar. Comparten azul primario; Cobrar usa
 `action-pay` con icono de tarjeta y hover `action-pay-hover`.
 La entrega se confirma una sola vez para todo el pedido desde el pie.
 El verde se reserva para los
-estados confirmados, no para representar una acción pendiente. La cabecera distingue preparación y cuenta: `listo` se expresa como «Listo para entregar»; la cuenta usa Abierta / Por cobrar / Pagada. Los importes se comunican en Pagado y Saldo pendiente. Las tarjetas de Salón reutilizan ese mismo estado y color,
+estados confirmados, no para representar una acción pendiente. Preparación y cuenta se presentan en regiones distintas: `listo` se expresa como «Listo para entregar»; la cuenta usa Cuenta abierta / Por cobrar / Pagada. Los importes se comunican en Pagado y Saldo pendiente. Las tarjetas de Salón reutilizan ese mismo estado y color,
 sin combinar «Listo» o «Entregado» con «por cobrar»; el saldo se consulta en el
-resumen de cuenta del detalle. La franja superior es decorativa, mide 4 px y usa un
-degradado de menta `brand-600` a azul índigo `primary-600`; no codifica estados.
+resumen de cuenta del detalle. Los modales no tienen franja superior decorativa:
+la cabecera índigo sólida llega al borde superior y ocupa todo el ancho.
 No se agrega una instrucción genérica para liberar la mesa: el estado, el saldo
 y las acciones disponibles ya expresan el avance. Quitar ese texto no modifica
 los requisitos de cierre de cuenta, entrega y pago. En móvil, las acciones ocupan todo el ancho
@@ -586,53 +940,75 @@ de altura y radio de control.
 El pie del detalle de mesa presenta una sola acción sólida azul, al final del
 grupo: Cobrar si existe saldo cobrable; en otro caso, la siguiente acción real
 del pedido. Editar es secundaria con fondo blanco y borde azul visible,
-manteniendo la misma geometría de control. Cancelar pedido es una acción secundaria de contorno
-rojo, sin relleno rojo dominante, y conserva su confirmación. Todos los iconos de acción son
+manteniendo la misma geometría de control. Cancelar pedido es una acción secundaria de texto
+rojo, sin relleno dominante, y conserva su confirmación. Todos los iconos de acción son
 outline de 18 px: tarjeta para Cobrar, plato/check para registrar la entrega,
 recibo para Enviar comanda. La mesa se libera automáticamente cuando
 la cuenta está cerrada, la entrega y el pago están completos, sin botón ni confirmación adicional. En
-móvil se conserva el orden de lectura y de teclado, con botones de ancho
-completo y área táctil de 44 px. Guardar bloquea las acciones y la navegación
+móvil se conserva el orden de lectura y de teclado, con secundarias en una rejilla
+de dos columnas, principal a ancho completo y área táctil de 44 px. Guardar bloquea las acciones y la navegación
 a POS, sin cambiar la jerarquía de color.
 
 El pie prioriza el grupo de acciones alineado a la derecha, sin notas explicativas
 permanentes. Solo una restricción real, como devolver pagos antes de cancelar,
 justifica una nota contextual: se presenta como texto neutro, sin aspecto de
 botón, y en móvil va encima de las acciones. Los botones tienen ancho natural y la misma
-altura en escritorio; en móvil mantienen ancho completo. Todo botón conserva un contorno visible
-o relleno sólido, cursor interactivo, respuesta hover, foco y estado bloqueado.
+altura en escritorio; en móvil ocupan el ancho disponible de su rejilla. Toda acción conserva
+texto inequívoco, cursor interactivo, respuesta hover, foco y estado bloqueado.
 Los datos y notas no reciben el contorno de acción, cursor de mano ni respuesta hover.
 
-El detalle de mesa usa un modal compacto de hasta 680 px, sin altura mínima
-artificial. «Mesa 04» es el título; cliente y tiempo de apertura aparecen debajo.
-No muestra el código técnico del pedido ni un eyebrow «Mesa activa». El cuerpo
-reúne productos y «Resumen de cuenta» en una sola columna desplazable, tanto en
-escritorio como en móvil: evita una tarjeta lateral que deje vacío bajo los productos.
-Cantidad, producto e importe usan una rejilla común; los nombres largos se parten
-sin desplazar importes. La cantidad de cada línea usa un círculo de 32 px,
-fondo `primary-100`, texto `primary-700` y cifras tabulares, centrado con el
-nombre y el precio unitario. Es un dato de lectura, sin borde de botón ni
-respuesta hover. Su skeleton conserva el mismo círculo. La cantidad total de
-unidades aparece una sola vez junto al título de productos; no se duplica con
-un conteo de líneas ni con un eyebrow «Detalle». Cabecera y acciones permanecen
-visibles al desplazar pedidos largos. La cuenta es una franja compacta de fondo
-`cloud-50`, borde estándar y radio de panel, sin un título visual adicional:
-Subtotal, Pagado y Saldo
-comparten columnas con etiqueta arriba e importe debajo. Delivery añade una
-columna solo cuando existe. La última columna alinea el importe a la derecha y
-lo destaca con `primary-700` sobre `primary-100`, sin apariencia interactiva.
-Las etiquetas usan 13 px y peso 600; los importes secundarios 18 px y el saldo
-24 px, todos con cifras tabulares. Subtotal y Pagado comparten el mismo eje de
-lectura, sin tarjetas independientes. En móvil, Subtotal, Delivery (si existe), Pagado
-y Saldo usan filas completas: etiqueta a la izquierda e importe a la derecha,
-con una única alineación vertical de importes. El saldo conserva su fondo tintado y
-mayor jerarquía tipográfica; no se mezclan columnas verticales con filas horizontales.
-«Resumen de cuenta» conserva su encabezado accesible. Pagado en cero permanece neutro;
-los pagos positivos y el importe de una cuenta completamente pagada usan
-`brand-700`; la cuenta pagada cambia el fondo destacado a `brand-100`.
-El skeleton reproduce estas mismas superficies y tamaños de importes.
-Las notas generales no son advertencias:
-usan superficies neutras y conservan el texto completo.
+El detalle compartido de Pedidos y Salón usa un modal de hasta 760 px, sin altura
+mínima artificial. `ModalHeader` contiene únicamente icono, título («Mesa 04»)
+y X, alineados en una fila. Responsables primero (Mozo/Cobrado por), luego fecha
+y cliente pertenecen al contexto
+del cuerpo, antes de Productos. No se cargan estados ni responsables en la cabecera.
+`ModalWorkspace` organiza una sola columna: cuerpo desplazable con productos y notas,
+seguido de «Resumen de cuenta» inferior persistente a ancho completo.
+No se usa una columna lateral de cuenta, ni se declara como estándar: fue rechazada.
+El resumen de cuenta usa fondo neutro muy claro `cloud-50` en toda su superficie
+y una línea superior neutra de 1 px (`line`),
+sin tarjeta anidada ni altura artificial. Las notas usan `cloud-50`,
+pero se agrupan en un bloque compacto dentro del cuerpo, no en el resumen.
+La franja de acciones del detalle comparte `cloud-50`, cuando existe.
+Los importes pagados usan `brand-800` para conservar contraste legible sobre ese fondo.
+El estado de cuenta va junto a «Resumen de cuenta», con icono `receipt` y la
+variante `Status emphasis`: Cuenta abierta usa fondo tenue `sky-100`
+con texto e icono `sky-800`, sin borde, sombra ni hover. Todos los estados
+usan fondos tenues, nunca etiquetas sólidas. El resumen conserva su
+fondo neutro `cloud-50`. Una línea neutra separa la identidad de
+los importes. Subtotal y Pagado ocupan columnas equilibradas; el saldo tiene
+su espacio separado por una línea vertical discreta. A 390 px Subtotal, Pagado
+y Saldo pendiente permanecen en una misma fila, con cifras de 18 px. Nunca se
+agregan botones a usuarios sin permisos para hacer más visible el pie.
+
+Cantidad, producto e importe permanecen en una rejilla común, también a 390 px.
+El nombre admite varias líneas sin mandar el importe a una fila aparte.
+`ModalItemList` presenta una lista simple, sin encabezados Cant. / Producto / Importe
+ni borde exterior. Las líneas se separan únicamente con `line`. Cantidades en círculos de 32 px, con cifras
+tabulares, fondo `primary-100` y texto `primary-700` de la paleta existente;
+son lectura, nunca botón ni indicador de estado. No se repite un conteo agregado de
+unidades en el encabezado de productos. Responsables se presentan
+en el contexto del cuerpo, antes de la fecha. Etiqueta y nombre comparten tamaño e interlineado; la
+retícula mantiene la primera línea alineada incluso con nombres largos.
+Productos y Resumen de cuenta ocupan el mismo ancho. Los datos de contacto y
+entrega permanecen desplazables, antes de las líneas y después del encabezado.
+
+Subtotal, Delivery (solo si existe) y Pagado se agrupan en el resumen inferior;
+el saldo queda a la derecha en escritorio y usa `primary-700`, 28 px y
+cifras tabulares. A 700 px o menos Subtotal, Pagado y saldo comparten una fila, con cifras de 18 px;
+las cifras permiten wrap. El estado de la cuenta se muestra únicamente
+en el resumen: abierta `sky`, por cobrar `orange`, pagada `green`, finalizada `gray`.
+El texto identifica cada estado, no solo el color. Cabecera, cuenta y pie permanecen visibles al recorrer
+productos largos. Los valores admiten wrap en cantidades extremas.
+
+«Resumen de cuenta» conserva encabezado accesible y visible en todos los tamaños.
+Pagado cero es neutro; pagos positivos y cuenta pagada usan `brand-800`, sin
+simular una acción. Skeleton reproduce cabecera breve, contexto, cuerpo, resumen inferior y pie.
+Notas generales van fuera de la lista de productos, en una sección propia con
+encabezado y fondo suave `cloud-50` (`modal-detail-notes`); conservan
+texto completo, sin borde ni aspecto de advertencia. Esta distribución recupera la referencia
+seleccionada por el usuario: no volver al formato de tabla. El resto de los modales comparte cabecera,
+márgenes de 24/16 px y pie; `ModalWorkspace` es opcional, no una plantilla forzada.
 
 La autoría se presenta como información de lectura, no como botones: «Mozo» y
 «Cobrado por», con etiquetas neutras, nombres completos que admiten salto de línea
@@ -641,18 +1017,19 @@ Las tarjetas de mesa y las filas de Pedidos conservan estos nombres también en
 móvil. No se muestra un cobrador antes de registrar pagos. Las acciones de atención
 no aparecen para otro mozo; el acceso de cobro mantiene su permiso independiente.
 
-Pedidos reutiliza esta misma estructura del detalle de Salón: fecha bajo el
-título, un único conteo de unidades junto a Productos y cantidades circulares.
+Pedidos reutiliza esta misma estructura del detalle de Salón: fecha en el contexto
+del cuerpo y cantidades circulares por producto, sin conteo agregado de unidades.
 «Registrado» muestra siempre la fecha y hora del registro en la zona del local,
 nunca un tiempo relativo como «Hace 17 h». La tabla y el detalle reutilizan el
 formateador regional compartido. En móvil, la fecha aparece bajo la identidad del
 pedido al ocultarse su columna, con salto de línea para no recortar el contenido.
 No conserva bloques antiguos de «Registrado», «Consumo» o «Detalle» sin estilos.
-Los productos y el total pertenecen al cuerpo desplazable; cabecera y acciones
-permanecen visibles. Cuando solo se muestra Total del pedido, su fila ocupa
-todo el ancho, con etiqueta a la izquierda e importe a la derecha. Delivery
-añade Subtotal y Delivery únicamente si aplica. Las acciones tienen ancho
-natural en escritorio y ancho completo en móvil, dentro del grupo compartido.
+Los productos pertenecen al cuerpo desplazable; cabecera, resumen de cuenta y
+acciones permanecen visibles. Subtotal y Pagado aparecen siempre en el resumen;
+Delivery añade su fila únicamente si aplica. Saldo pendiente o Total pagado se
+destaca por separado, según la cuenta. Las acciones tienen ancho natural en
+escritorio; en móvil las secundarias usan dos columnas y la principal ocupa
+todo el ancho, dentro del grupo compartido.
 Los textos de interfaz se conservan en UTF-8 y Unicode NFC; no se reparan
 tildes mediante reemplazos indiscriminados sobre nombres recibidos del API.
 
@@ -807,7 +1184,16 @@ y el skeleton reproduce la misma columna y distribución. Sin cobros vigentes se
 muestra «—», nunca un medio supuesto. Los pagos totalmente devueltos no se cuentan.
 La acción homologada está disponible en cada fila y tarjeta móvil. El modal es
 de consulta, con X como único cierre y sin cobrar, editar ni devolver.
-Presenta cliente/mesa, canal, fecha,
+Los datos de identidad usan una rejilla compacta: mesa (o cliente) y canal en la
+primera fila; atendido por y fecha del pedido en la segunda cuando es Salón.
+Las columnas tienen el mismo ancho y sus etiquetas y valores se alinean;
+no se fuerza la fecha a otra fila ni se deja un espacio vacío junto al mozo.
+En móvil, mesa y canal comparten fila; canal se alinea al extremo derecho.
+Atendido por y fecha ocupan filas completas con etiqueta junto al valor,
+sin recortar los nombres largos, igual que Detalle de cobro.
+El cuerpo comparte los márgenes de la cabecera y el pie, sin añadir paneles
+laterales ni trasladar información adicional al header.
+Presenta mesa o cliente con su etiqueta específica, canal, fecha,
 productos con cantidad circular, precio unitario y total por línea, composición
 y notas cuando existen, subtotal, delivery si aplica, total y pagos netos de
 devoluciones. Los medios de pago usan nombres recibidos de la API. Si la venta
@@ -815,6 +1201,14 @@ cambió después de abrir el historial, el detalle muestra su estado y saldo rea
 La carga reproduce esta estructura con skeleton; error ofrece Reintentar y los
 productos/pagos vacíos tienen un mensaje explícito. El cuerpo tiene scroll y
 la cabecera permanece visible. Desde 390 px conserva todos los datos y acciones.
+Reutiliza `ModalWorkspace` y `ModalItemList`: productos y pagos son listas con
+separadores, sin tarjetas con borde exterior. Los pagos tienen una separación
+visible respecto a los productos; las notas usan `modal-detail-notes`.
+El resumen inferior fijo `modal-summary` muestra «Resumen de venta», estado
+real con énfasis, subtotal y pagado neto, y Total como importe principal.
+Delivery y saldo pendiente se añaden solo cuando aplican. El total no se
+duplica dentro del cuerpo desplazable. El pie de acciones solo existe si se
+puede «Ver ticket de pago»; no repite estado ni añade otro cierre.
 
 Los módulos de directorio, como Clientes, usan la tabla estandarizada en escritorio y tarjetas equivalentes en móvil. Toda consulta remota debe incluir skeleton, error recuperable, vacío contextual y paginación compartida. Las acciones de fila son únicamente iconos homologados con tooltip; alta y edición usan las primitivas `Input`, `Select`, `Textarea`, `Button`, `Status` y `ConfirmDialog`. Los formularios extensos se agrupan por secciones visuales, sin añadir texto explicativo que no ayude a completar la tarea.
 
@@ -978,8 +1372,9 @@ inicial es compacto: tipo de atención, cliente, teléfono y datos de entrega si
 aplica. No incluye otra carta ni otro carrito. «Continuar» abre la misma comanda
 que Salón, con el contexto del canal en lugar de mesa. «Editar datos» conserva
 productos, cantidades, elecciones y notas; no repite indicadores de pasos.
-Delivery desglosa Subtotal y Envío antes del Total. Solo «Registrar y enviar a
-cocina» persiste el pedido. El cierre exige descarte cuando hay cambios y se
+Delivery desglosa Subtotal y Envío antes del Total. En pedidos manuales, solo
+«Enviar a cocina» persiste el pedido; «Guardar comanda» es una acción de Salón.
+El cierre exige descarte cuando hay cambios y se
 bloquea durante la petición. El formulario usa una columna en móvil desde 390 px;
 la comanda conserva su resumen móvil y sus estilos compartidos.
 

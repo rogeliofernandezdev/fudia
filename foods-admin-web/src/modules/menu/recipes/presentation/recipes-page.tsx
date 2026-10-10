@@ -5,7 +5,7 @@ import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import AsyncSelect from "react-select/async";
 import {createLookupSelectStyles} from "@/design-system/search-select-styles";
-import {Button,ConfirmDialog,FieldLabel,Icon,Input,PageHeader,RowActionButton,Status,Textarea} from "@/design-system";
+import {Button,ConfirmDialog,FieldLabel,Icon,Input,PageHeader,RowActionButton,Status,Textarea,ModalHeader,ModalFooter} from "@/design-system";
 import {useFeedback,useSession} from "@/providers";
 import {
  getRecipe,
@@ -182,15 +182,7 @@ export function RecipesPage(){
 
   {draft&&<div className="modal-backdrop modal-overlay-in" role="presentation">
    <Dialog onResponseClose={resetRecipe} className="crud-modal recipe-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="recipe-modal-title" aria-busy={save.isPending}>
-    <header className="recipe-modal-header">
-     <span className="modal-title-icon"><Icon name="cookingPot" size={18}/></span>
-     <div>
-      <small>{editingProductId?"EDITAR RECETA":"NUEVA RECETA"}</small>
-      <h2 id="recipe-modal-title">{editingProductId?"Editar receta":"Configurar receta"}</h2>
-      <p>Define cuánto produce la receta y qué insumos consume.</p>
-     </div>
-     <button className="recipe-modal-close" onClick={closeRecipe} disabled={save.isPending} aria-label="Cerrar"><Icon name="close" size={18}/></button>
-    </header>
+    <ModalHeader title={editingProductId?"Editar receta":"Configurar receta"} titleId="recipe-modal-title" icon="cookingPot" subtitle={editingProductId?"EDITAR RECETA":"NUEVA RECETA"} onClose={closeRecipe} busy={save.isPending} closeLabel="Cerrar" details={<><p>Define cuánto produce la receta y qué insumos consume.</p></>}/>
 
     <form className="recipe-form" onSubmit={submit} noValidate>
      <div className="recipe-form-body">
@@ -300,10 +292,10 @@ export function RecipesPage(){
       </section>
      </div>
 
-     <div className="recipe-form-footer">
+     <ModalFooter className="recipe-form-footer">
       <Button kind="ghost" icon="close" disabled={save.isPending} onClick={closeRecipe}>Cancelar</Button>
       <Button type="submit" icon="check" disabled={save.isPending}>{save.isPending?"Guardando…":"Guardar"}</Button>
-     </div>
+     </ModalFooter>
     </form>
    </Dialog>
   </div>}

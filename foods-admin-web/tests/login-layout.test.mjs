@@ -81,7 +81,7 @@ test("acceso: Recuperar contraseña muestra solo Próximamente sin solicitudes n
   "next/navigation":{useRouter:()=>({})},"next/image":{default:"img"},
   "@tanstack/react-query":{useQueryClient:()=>({})},
   "@/design-system/icons":{Icon:"svg"},
-  "@/design-system":{Button:"Button",Dialog:"Dialog",FormField:"FormField",Input:"input"},
+  "@/design-system":{Button:"Button",Dialog:"Dialog",ModalHeader:"ModalHeader",FormField:"FormField",Input:"input"},
   "../infrastructure/auth-api":{login:()=>calls++,logout:()=>calls++},
   "../domain/login-schema":{},
   "@/shared/session/session-api":{loadSessionContext:()=>calls++},
@@ -97,14 +97,14 @@ test("acceso: Recuperar contraseña muestra solo Próximamente sin solicitudes n
  assert.ok(dialog);assert.equal(dialog.props["aria-labelledby"],"login-recovery-title");
  assert.ok(dialog.props.onResponseClose);
  assert.equal(find(dialog,node=>node.type==="form"),null);
- const title=find(dialog,node=>node.type==="h2");
- assert.equal(title.props.children,"Próximamente");
+ const title=find(dialog,node=>node.type==="ModalHeader");
+ assert.equal(title.props.title,"Próximamente");
  assert.equal(find(dialog,node=>node.type==="p"||node.type==="small"),null);
  const textContent=node=>typeof node==="string"?node:Array.isArray(node)?node.map(textContent).join(""):node&&typeof node==="object"?textContent(node.props?.children):"";
- assert.equal(textContent(dialog),"Próximamente");
+ assert.equal(textContent(dialog),"");
  assert.equal(calls,0,"La ayuda no consulta identidad ni envía correos");
- const close=find(dialog,node=>node.props?.["aria-label"]==="Cerrar ayuda");
- close.props.onClick();assert.equal(find(render(),node=>node.type==="Dialog"),null);
+ assert.equal(title.props.closeLabel,"Cerrar ayuda");
+ title.props.onClose();assert.equal(find(render(),node=>node.type==="Dialog"),null);
 });
 
 test("acceso: recuperar conserva texto plano al pasar el cursor y foco visible con teclado",()=>{

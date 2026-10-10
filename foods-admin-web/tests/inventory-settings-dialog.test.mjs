@@ -26,7 +26,7 @@ function mount({busy=false,save=async()=>{},close=()=>{}}={}){
    control??=createFormControl(options);
    return {...control,formState:control.control._formState};
   }};
-  if(name.startsWith("@/design-system"))return {Dialog:"Dialog",Button:"Button",FormField:"FormField",Input:"Input",Icon:"Icon"};
+  if(name.startsWith("@/design-system"))return {Dialog:"Dialog",ModalHeader:"ModalHeader",ModalFooter:"ModalFooter",Button:"Button",FormField:"FormField",Input:"Input",Icon:"Icon"};
   if(name==="../domain/inventory-settings-schema")return schema;
   return require(name);
  });
@@ -43,20 +43,20 @@ test("niveles de inventario usa cuerpo y footer del modal compartido",()=>{
  const {dialog,form,nodes}=mount().render();
  assert.ok(dialog.props.children.includes(form));
  assert.equal(form.props.children[0].props.className,"form-grid");
- assert.equal(form.props.children[1].type,"footer");
+ assert.equal(form.props.children[1].type,"ModalFooter");
  assert.equal(form.props.children[1].props.children.length,2);
  assert.equal(nodes.find(node=>node.type==="FormField"&&node.props.label==="Stock óptimo").props.className,"span-2");
- assert.equal(dialog.props["aria-labelledby"],nodes.find(node=>node.type==="h2").props.id);
+ assert.equal(dialog.props["aria-labelledby"],nodes.find(node=>node.type==="ModalHeader").props.titleId);
  assert.equal(dialog.props.className,"crud-modal compact modal-panel-in");
- assert.ok(nodes.some(node=>node.props.className==="modal-accent"));
+ assert.ok(!nodes.some(node=>node.props.className==="modal-accent"));
 });
 
-test("la estructura activa márgenes, acciones separadas y una columna a 390 px sin CSS local",()=>{
+test("la estructura activa márgenes, acciones contiguas y una columna a 390 px sin CSS local",()=>{
  const parse=file=>{const rules=[];postcss.parse(readFileSync(new URL(file,root),"utf8")).walkRules(rule=>rules.push(rule));return rules;};
  const rules=parse("styles/globals.css"),modal=parse("design-system/styles/modal.css");
  const value=(rule,prop)=>rule.nodes.find(node=>node.prop===prop)?.value;
  const desktop=(list,selector)=>list.find(rule=>rule.selector===selector&&rule.parent.type==="root");
- assert.equal(value(desktop(modal,".crud-modal>form:not(.modal-form)"),"padding"),"var(--space-5) var(--space-5) 0");
+ assert.equal(value(desktop(modal,".crud-modal>form:not(.modal-form)"),"padding"),"var(--space-6) var(--space-6) 0");
  const footer=desktop(modal,".modal-footer,.crud-modal>footer,.crud-modal>form>footer");
  assert.equal(value(footer,"justify-content"),"flex-end");
  assert.equal(value(footer,"gap"),"var(--space-2-5)");
@@ -65,7 +65,7 @@ test("la estructura activa márgenes, acciones separadas y una columna a 390 px 
  const breakpoint=Number(mobile.parent.params.match(/width\s*<=\s*(\d+)px/)[1]);
  assert.ok(breakpoint>=390);
  assert.equal(value(mobile,"grid-template-columns"),"1fr");
- assert.ok(modal.some(rule=>rule.parent.type==="atrule"&&rule.selector===".modal-footer .button,.crud-modal>form>footer .button"&&value(rule,"flex")==="1"));
+ assert.ok(modal.some(rule=>rule.parent.type==="atrule"&&rule.selector===".modal-footer .button,.crud-modal>footer .button,.crud-modal>form>footer .button"&&value(rule,"flex")==="1"));
  const source=readFileSync(new URL("modules/supply/inventory/presentation/inventory-settings-dialog.tsx",root),"utf8");
  assert.doesNotMatch(source,/\.css["']/);
 });

@@ -22,46 +22,37 @@
 .sales-cards header>div{min-width:0;overflow-wrap:anywhere}
 
 /* Owner: Sales — detalle de consulta, sin acciones de cobro o edición. */
-.sales-detail-modal{width:min(var(--size-700),100%);max-height:calc(100dvh - var(--size-48));display:flex;flex-direction:column;overflow:hidden}
-.sales-detail-modal>header{flex:0 0 auto}
-.sales-detail-modal>footer{display:flex;justify-content:flex-end;flex-shrink:0;padding:var(--space-4);border-top:var(--stroke-1) solid var(--line)}
-.sales-detail-body{min-height:0;overflow-y:auto;display:grid;gap:var(--space-5);padding:var(--space-5);color:var(--ink-950)}
-.sales-detail-context{display:flex;align-items:flex-start;gap:var(--space-3);padding-bottom:var(--space-4);border-bottom:var(--stroke-1) solid var(--line)}
-.sales-detail-context dl{flex:1;display:grid;grid-template-columns:1.25fr 1fr;gap:var(--space-3);margin:0;min-width:0}
-.sales-detail-context dl>div:last-child{grid-column:1/-1}
-.sales-detail-context dt,.sales-detail-totals dt{font-size:var(--font-size-control);color:var(--ink-500)}
-.sales-detail-context dd{margin:var(--space-1) 0 0;font-size:var(--font-size-control);font-weight:var(--weight-semibold);overflow-wrap:anywhere}
-.sales-detail-context dd small{display:block;color:var(--ink-500);font-weight:var(--weight-medium);margin-top:var(--space-1)}
+.crud-modal.sales-detail-modal{width:min(var(--size-760),100%)}
+.sales-detail-body{display:grid;align-content:start;gap:var(--space-5)}
+.sales-detail-context{min-width:0;padding-bottom:var(--space-4);border-bottom:var(--stroke-1) solid var(--line)}
+.sales-detail-context dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:var(--space-3) var(--space-6);margin:0;min-width:0}
+.sales-detail-context dl>div{min-width:0}
+.sales-detail-context dd{margin:var(--space-1) 0 0}
+.sales-detail-context dd small{display:block;margin-top:var(--space-1)}
 .sales-detail-section{min-width:0}
+.sales-detail-section+.sales-detail-section{padding-top:var(--space-5);border-top:var(--stroke-1) solid var(--line)}
 .sales-detail-section h3{font-size:var(--font-size-base);font-weight:var(--weight-bold);margin:0 0 var(--space-3)}
-.sales-detail-lines,.sales-detail-payments{border:var(--stroke-1) solid var(--line);border-radius:var(--radius-tile);overflow:hidden}
-.sales-detail-lines>article,.sales-detail-payments>article{display:grid;grid-template-columns:var(--size-32) minmax(0,1fr) auto;gap:var(--space-3);align-items:start;padding:var(--space-3-5)}
-.sales-detail-lines>article+article,.sales-detail-payments>article+article{border-top:var(--stroke-1) solid var(--line)}
-.sales-detail-qty,.sales-detail-payment-icon{width:var(--size-32);height:var(--size-32);display:grid;place-items:center;border-radius:var(--radius-pill);background:var(--primary-100);color:var(--primary-700);font-size:var(--font-size-control);font-weight:var(--weight-semibold);font-variant-numeric:tabular-nums}
-.sales-detail-lines article>div,.sales-detail-payments article>div{min-width:0;overflow-wrap:anywhere}
-.sales-detail-lines b,.sales-detail-payments b{font-size:var(--font-size-control);font-weight:var(--weight-semibold)}
+.sales-detail-payment-icon{width:var(--size-32);height:var(--size-32);display:grid;place-items:center;border-radius:var(--radius-pill);background:var(--primary-100);color:var(--primary-700)}
+.sales-detail-lines .modal-item-row>div,.sales-detail-payments .modal-item-row>div{min-width:0;overflow-wrap:anywhere}
+.sales-detail-lines .modal-item-row>div>b,.sales-detail-payments .modal-item-row>div>b{font-size:var(--font-size-control);font-weight:var(--weight-semibold)}
 .sales-detail-lines small,.sales-detail-payments small{display:block;margin-top:var(--space-1);font-size:var(--font-size-label);color:var(--ink-500);line-height:var(--line-height-normal)}
 .sales-detail-lines strong,.sales-detail-payments strong{font-size:var(--font-size-control);font-weight:var(--weight-bold);font-variant-numeric:tabular-nums;white-space:nowrap}
 .sales-detail-lines p,.sales-detail-payments p{margin:var(--space-1-5) 0 0;font-size:var(--font-size-control);line-height:var(--line-height-normal);color:var(--ink-600);white-space:pre-wrap}
-.sales-detail-totals{display:grid;gap:var(--space-2-5);padding:var(--space-3-5);margin:0;border-radius:var(--radius-tile);background:var(--cloud-50);border:var(--stroke-1) solid var(--line)}
-.sales-detail-totals>div{display:flex;justify-content:space-between;align-items:center;gap:var(--space-3)}
-.sales-detail-totals dd{margin:0;font-size:var(--font-size-base);font-weight:var(--weight-semibold);font-variant-numeric:tabular-nums;white-space:nowrap}
-.sales-detail-totals .sales-detail-total{padding-top:var(--space-2-5);border-top:var(--stroke-1) solid var(--line)}
-.sales-detail-total dt{color:var(--ink-950);font-weight:var(--weight-bold)}
-.sales-detail-total dd{color:var(--primary-700);font-size:var(--font-size-xl);font-weight:var(--weight-bold)}
 .sales-detail-payment-value{text-align:right}
-.sales-detail-empty,.sales-detail-notes{font-size:var(--font-size-control);line-height:var(--line-height-normal);margin:0;color:var(--ink-500);white-space:pre-wrap;overflow-wrap:anywhere}
+.sales-detail-empty,.sales-detail-notes p{font-size:var(--font-size-control);line-height:var(--line-height-normal);margin:0;color:var(--ink-500);white-space:pre-wrap;overflow-wrap:anywhere}
+.sales-detail-notes>svg{flex:none;margin-top:var(--space-0-5);color:var(--ink-700)}
+.sales-detail-notes h3{font-size:var(--font-size-control);margin:0 0 var(--space-1)}
 .sales-detail-loading :is(i,b,small,strong){display:block;position:relative;overflow:hidden;background:var(--cloud-100);background-size:200% 100%;border-radius:var(--radius-control);height:var(--size-12)}
 .sales-detail-loading :is(i,b,small,strong):after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,var(--surface-alpha-80),transparent);transform:translateX(-100%);animation:sales-detail-shimmer var(--duration-ambient) infinite}
-.sales-detail-loading .sales-detail-qty{height:var(--size-32);border-radius:var(--radius-pill)}
+.sales-detail-loading .modal-item-quantity{height:var(--size-32);border-radius:var(--radius-pill)}
 .sales-detail-loading .sales-detail-lines b{width:75%;margin-bottom:var(--space-1-5)}
 .sales-detail-loading .sales-detail-lines small{width:50%}
 .sales-detail-loading .sales-detail-lines strong{width:var(--size-64)}
 .sales-detail-loading .sales-detail-context i{width:var(--size-72);margin-bottom:var(--space-1-5)}
 .sales-detail-loading .sales-detail-context b{width:75%}
 .sales-detail-loading .sales-detail-section h3>i{width:var(--size-120)}
-.sales-detail-loading .sales-detail-totals{margin-top:var(--space-5)}
-.sales-detail-loading .sales-detail-totals :is(i,b){width:var(--size-72)}
+.sales-detail-loading .modal-summary-line :is(i,b),.sales-detail-loading .modal-summary-total :is(i,b){width:var(--size-72)}
+.sales-detail-loading .modal-summary-heading b{width:var(--size-120)}
 @keyframes sales-detail-shimmer{to{transform:translateX(100%)}}
 @media(max-width:900px){
  .sales-filters{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -70,12 +61,15 @@
 }
 @media(max-width:600px){
  .sales-filters{grid-template-columns:minmax(0,1fr);padding:var(--space-3)}
- .sales-detail-modal{max-height:calc(100dvh - var(--size-20))}
- .sales-detail-body{padding:var(--space-4);gap:var(--space-4)}
- .sales-detail-context{display:grid;grid-template-columns:minmax(0,1fr) auto}
- .sales-detail-context dl{grid-template-columns:minmax(0,1fr)}
- .sales-detail-lines>article,.sales-detail-payments>article{grid-template-columns:var(--size-32) minmax(0,1fr);gap:var(--space-2);padding:var(--space-3)}
- .sales-detail-lines article>strong,.sales-detail-payments .sales-detail-payment-value{grid-column:2;text-align:right}
+ .crud-modal.sales-detail-modal{width:100%;height:100dvh;max-height:100dvh;border-radius:0}
+ .sales-detail-body{gap:var(--space-4)}
+}
+@media(max-width:620px){
+ .sales-detail-context dl{gap:var(--space-3) var(--space-4)}
+ .sales-detail-context dl>div:nth-child(2){text-align:right}
+ .sales-detail-context dl>div:nth-child(n+3){grid-column:1/-1;display:grid;grid-template-columns:var(--size-104) minmax(0,1fr);align-items:baseline;gap:var(--space-2)}
+ .sales-detail-context dl>div:nth-child(n+3) dd{min-width:0;margin:0}
+ .sales-detail-loading .sales-detail-context dl>div:nth-child(2) :is(i,b){margin-left:auto}
 }
 @keyframes sales-shimmer{to{background-position:-200% 0}}
 @media(prefers-reduced-motion:reduce){.sales-skeleton i,.sales-skeleton b,.sales-skeleton span,.sales-detail-loading :is(i,b,small,strong):after{animation:none}}

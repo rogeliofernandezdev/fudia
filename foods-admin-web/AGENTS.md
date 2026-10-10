@@ -25,12 +25,30 @@ La autoridad visual exclusiva de este proyecto es
 - Separar KPI ejecutivos de señales operativas accionables.
 - La presentación no construye URLs ni interpreta DTO crudos.
 - Inputs y tablas provienen del design system.
+- Los estados usan `Status` y la matriz obligatoria «Colores de operación:
+  pedido, preparación y cuenta» de `docs/02_DESIGN_SYSTEM.md`. Fondos tenues,
+  texto oscuro y contraste mínimo 4.5:1; sin colores locales ni variantes sólidas.
+  Cuenta abierta (`sky`) no comparte tono con Confirmado (`blue`), ni Pagada
+  (`green`) con Finalizada (`gray`). Reutilizar `orderStatus`, `serviceStatusTone`
+  y `accountTone`; cualquier cambio semántico requiere aprobación y actualizar
+  juntos documentación, tokens, mapeos y pruebas.
 - Todo catálogo de negocio se obtiene del API.
 - Cada selector CSS se declara una sola vez por contexto. No reescribir una
   clase en bloques posteriores ni depender de la cascada para corregirla;
   estados y breakpoints deben usar variantes explícitas.
+- Modales de contenido: `ModalHeader` y `ModalFooter` compartidos; header solo
+  con icono, título y X, nunca información adicional debajo del título. Acciones
+  contiguas a la derecha, Cancelar antes de Guardar, separación de 10 px; sin
+  márgenes automáticos que las distribuyan entre extremos. Estados reales en el
+  resumen o footer, sin inventar estados para formularios. Se exceptúan
+  `ConfirmDialog` y respuestas success/error/warning de `FeedbackProvider`.
 - Los modales de solo lectura (detalle, vista previa) no llevan botón
   "Cerrar" en el footer: el botón X del header es el único cierre.
+- Jerarquía obligatoria de modales: etiquetas de datos 600, valores 400 y
+  títulos de sección 700. Usar los roles de `modal.css`; no invertir pesos
+  por pantalla. Totales principales, estados, productos y acciones conservan
+  su énfasis semántico. La etiqueta identifica el dato: «Mesa», «Cliente» o
+  «Venta», nunca «Cliente / Mesa» en un detalle. No afecta los avisos ni el PDF.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

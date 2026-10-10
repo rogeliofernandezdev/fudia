@@ -13,6 +13,8 @@ export type FloorTable={id:string;name:string;zone:string;seats:number;order:Ord
 export type LineDraft={
  lineKey:string;sourceItemId?:string;repriceCombo?:boolean;itemType:"product"|"combo";productId:string;name:string;
  qty:number;unitPrice:number;note:string;selections:ComboSelection[];
+ /** Imagen de presentación del catálogo; no forma parte del payload del pedido. */
+ imageUrl?:string|null;
 };
 export type Draft={
  channel:string;customerName:string;customerPhone:string;address:string;reference:string;tableId:string;notes:string;

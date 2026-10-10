@@ -1,6 +1,6 @@
 "use client";
 import {useEffect,useState} from "react";
-import {Button,ErrorState,Icon,RemoteModalSkeleton} from "@/design-system";
+import {Button,ErrorState,RemoteModalSkeleton,ModalHeader,ModalFooter} from "@/design-system";
 import {Dialog} from "@/design-system/dialog";
 import {readCssToken} from "@/design-system/theme";
 import {useCashReport} from "../application/use-cash-report";
@@ -30,7 +30,7 @@ export function CashReportDialog({shiftId,close}:{shiftId:string;close:()=>void}
  if(report.isLoading)return <RemoteModalSkeleton className="cash-report-preview" label="Cargando informe de caja" rows={6} close={close}/>;
  const failure=report.isError?report.error.message:error;
  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal cash-report-preview modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-report-title">
-  <div className="modal-accent"/><header><span className="modal-title-icon"><Icon name="receipt" size={18}/></span><div><small>INFORME DE CAJA</small><h2 id="cash-report-title">{report.data?.shift.code??"Vista previa del cierre"}</h2></div><button type="button" aria-label="Cerrar informe" onClick={close}><Icon name="close"/></button></header>
+  <ModalHeader title={report.data?.shift.code??"Vista previa del cierre"} titleId="cash-report-title" icon="receipt" subtitle="INFORME DE CAJA" onClose={close} closeLabel="Cerrar informe"/>
   <div className="cash-report-preview-body">
    {failure?<ErrorState title={report.isError?"No pudimos cargar el informe":report.data?.shift.status==="closed"?"El cierre está guardado, pero no pudimos generar el PDF":"No pudimos generar el PDF del turno"} text={failure} onRetry={()=>{setError(null);if(report.isError)void report.refetch();else setAttempt(value=>value+1);}}/>
    :report.data&&<>
@@ -39,6 +39,6 @@ export function CashReportDialog({shiftId,close}:{shiftId:string;close:()=>void}
     <p>Si tu navegador no muestra el PDF, usa «Descargar PDF» o consulta «Ver detalle».</p>
    </>}
   </div>
-  {report.data&&!report.isError&&<footer><Button kind="ghost" onClick={()=>setDetail(value=>!value)}>{detail?"Ver PDF":"Ver detalle"}</Button><Button icon="download" disabled={!pdf||Boolean(failure)} onClick={()=>{if(!pdf)return;const anchor=document.createElement("a");anchor.href=pdf.url;anchor.download=pdf.filename;anchor.click();}}>Descargar PDF</Button></footer>}
+  {report.data&&!report.isError&&<ModalFooter><Button kind="ghost" onClick={()=>setDetail(value=>!value)}>{detail?"Ver PDF":"Ver detalle"}</Button><Button icon="download" disabled={!pdf||Boolean(failure)} onClick={()=>{if(!pdf)return;const anchor=document.createElement("a");anchor.href=pdf.url;anchor.download=pdf.filename;anchor.click();}}>Descargar PDF</Button></ModalFooter>}
  </Dialog></div>;
 }

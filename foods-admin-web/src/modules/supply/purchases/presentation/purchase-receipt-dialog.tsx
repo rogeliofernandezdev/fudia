@@ -1,7 +1,7 @@
 "use client";
 import {Dialog} from "@/design-system/dialog";
 import {useForm} from "react-hook-form";
-import {Button,FormField,Icon,Input,Textarea} from "@/design-system";
+import {Button,FormField,Icon,Input,Textarea,ModalHeader,ModalFooter} from "@/design-system";
 import {useSession} from "@/providers/session-context";
 import {formatRegionalNumber} from "@/shared/i18n/regional-format";
 import {purchaseReceiptResolver} from "../domain/purchase-schema";
@@ -43,12 +43,8 @@ export function PurchaseReceiptDialog({order,busy,close,save}:{order:PurchaseOrd
 
   return <div className="modal-backdrop modal-overlay-in" role="presentation">
     <Dialog onResponseClose={close} className="crud-modal purchase-receipt-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="purchase-receipt-title" aria-busy={busy}>
-      <div className="modal-accent"/>
-      <header>
-        <span className="modal-title-icon"><Icon name="stock" size={18}/></span>
-        <div><small>PASO 2 · RECEPCIÓN</small><h2 id="purchase-receipt-title">Recibir {order.number}</h2></div>
-        <button type="button" aria-label="Cerrar" onClick={close} disabled={busy}><Icon name="close"/></button>
-      </header>
+
+      <ModalHeader title={<>Recibir {order.number}</>} titleId="purchase-receipt-title" icon="stock" subtitle="PASO 2 · RECEPCIÓN" onClose={close} busy={busy} closeLabel="Cerrar"/>
       <form onSubmit={handleSubmit(submit)} noValidate>
         <div className="purchase-receipt-body">
           <div className="purchase-receipt-intro"><Icon name="truck" size={18}/><p><b>Registra únicamente lo que llegó.</b> Puedes recibir una parte ahora y completar lo pendiente en otra recepción.</p></div>
@@ -65,7 +61,7 @@ export function PurchaseReceiptDialog({order,busy,close,save}:{order:PurchaseOrd
           {typeof errors.items?.message==="string"&&<div className="purchase-validation" role="alert"><Icon name="alert" size={16}/>{errors.items.message}</div>}
           <FormField className="purchase-receipt-notes" label="Observación" optional error={errors.notes?.message}><Textarea rows={3} maxLength={500} {...register("notes")} placeholder="Documento, lote, incidencia o referencia de esta recepción"/></FormField>
         </div>
-        <footer><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" kind="primary" disabled={busy}>{busy?"Confirmando…":"Confirmar recepción"}</Button></footer>
+        <ModalFooter><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" kind="primary" disabled={busy}>{busy?"Confirmando…":"Confirmar recepción"}</Button></ModalFooter>
       </form>
       {busy&&<div className="modal-busy" role="status"><i/><span>Confirmando recepción…</span></div>}
     </Dialog>

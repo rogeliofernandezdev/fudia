@@ -3,7 +3,7 @@ import {Dialog} from "@/design-system/dialog";
 import "./customers.css";
 import {useRef,useState} from "react";import {useFieldArray,useForm} from "react-hook-form";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,ConfirmDialog,EmptyState,ErrorState,FormField,Icon,Input,PageHeader,Pagination,RemoteModalSkeleton,RowActionButton,SearchField,Select,Status,TableSkeleton,Textarea} from "@/design-system";
+import {Button,ConfirmDialog,EmptyState,ErrorState,FormField,Icon,Input,PageHeader,Pagination,RemoteModalSkeleton,RowActionButton,SearchField,Select,Status,TableSkeleton,Textarea,ModalHeader,ModalFooter} from "@/design-system";
 import {customerResolver} from "../domain/customer-schema";import type {Customer,CustomerDraft,Option} from "../domain/types";
 import {getCustomer,listCustomers,saveCustomer,setCustomerActive} from "../infrastructure/customers-api";
 import {useFeedback} from "@/providers/feedback-provider";
@@ -34,8 +34,8 @@ function CustomerDialog({initial,channels,busy,close,save}:{initial:CustomerDraf
  const add=()=>{setShowAddresses(true);addresses.append({label:"Principal",address:"",reference:"",district:"",city:"",countryCode:"PE",default:!addresses.fields.length})};
  const setDefault=(index:number)=>watched.forEach((_,n)=>setValue(`addresses.${n}.default`,n===index));
  const submit=handleSubmit(values=>{if(!showAddresses&&!values.addresses.length)values.addresses=[];save(values)},invalid=>{if(invalid.addresses)setShowAddresses(true)});
- return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal customer-modal modal-panel-in" role="dialog" aria-modal="true"><div className="modal-accent"/>
-  <header><span className="modal-title-icon"><Icon name="users"/></span><div><small>{initial.id?"EDITAR CLIENTE":"NUEVO CLIENTE"}</small><h2>Información del cliente</h2></div><button aria-label="Cerrar" onClick={close}><Icon name="close"/></button></header>
+ return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal customer-modal modal-panel-in" role="dialog" aria-modal="true">
+  <ModalHeader title="Información del cliente" icon="users" subtitle={initial.id?"EDITAR CLIENTE":"NUEVO CLIENTE"} onClose={close} closeLabel="Cerrar"/>
   <form onSubmit={submit} noValidate><div className="customer-form-body">
    <div className="form-grid customer-main-grid">
     <FormField label="Tipo"><Select {...register("customerType")}><option value="person">Persona</option><option value="company">Empresa</option></Select></FormField>
@@ -71,23 +71,23 @@ function CustomerDialog({initial,channels,busy,close,save}:{initial:CustomerDraf
     <label className="switch-row compact"><input type="checkbox" {...register("marketingConsent")}/><span/><b>Acepta comunicaciones</b></label>
     <label className="switch-row compact"><input type="checkbox" {...register("vipOverride")}/><span/><b>Marcar como VIP</b></label>
    </div>}
-  </div><footer><Button kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" icon="check" disabled={busy}>{busy?"Guardando…":"Guardar"}</Button></footer></form></Dialog></div>
+  </div><ModalFooter><Button kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" icon="check" disabled={busy}>{busy?"Guardando…":"Guardar"}</Button></ModalFooter></form></Dialog></div>
 }
 function CustomerDetail({customer,loading,error,retry,retrying,channels,close}:{customer?:Customer;loading:boolean;error?:string;retry:()=>void;retrying:boolean;channels:Option[];close:()=>void}){
  const{location}=useSession();const money=useMoney();
  const channelLabel=(value:string)=>value==="none"?"Sin preferencia":channels.find(o=>o.value===value)?.label??value;
  const lastPurchase=customer?.lastPurchaseAt?formatRegionalDateTime(customer.lastPurchaseAt,{country:location?.country,timeZone:location?.timezone},{dateStyle:"medium"}):"—";
  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal customer-detail modal-panel-in" role="dialog" aria-modal="true" aria-busy={loading}>
-  <div className="modal-accent"/>
+
   {loading?<CustomerDetailSkeleton close={close}/>:<>
-   <header><span className="modal-title-icon"><Icon name="users"/></span><div><h2>{customer?.displayName??"Cliente"}</h2><small>DETALLE DEL CLIENTE</small></div><button aria-label="Cerrar" onClick={close}><Icon name="close"/></button></header>
+   <ModalHeader title={customer?.displayName??"Cliente"} icon="users" subtitle="DETALLE DEL CLIENTE" onClose={close} closeLabel="Cerrar"/>
    {error?<div className="customer-detail-body"><ErrorState title="No pudimos cargar el detalle" text={error} onRetry={retry} retrying={retrying}/></div>:customer&&<div className="customer-detail-body">
     <section className="customer-detail-summary">
      <div><small>SEGMENTO</small><b>{segmentLabels[customer.segment]}</b></div>
      <div><small>VISITAS</small><b>{customer.visitCount}</b></div>
      <div><small>ACUMULADO</small><b>{money(customer.totalSpent)}</b></div>
      <div><small>ÚLTIMA COMPRA</small><b>{lastPurchase}</b></div>
-     <Status active={customer.active}>{customer.active?"Activo":"Inactivo"}</Status>
+
     </section>
     <section className="customer-detail-fields">
      <div><small>DOCUMENTO</small><b>{customer.documentNumber?`${customer.documentType} ${customer.documentNumber}`:"No registrado"}</b></div>
@@ -107,16 +107,12 @@ function CustomerDetail({customer,loading,error,retry,retrying,channels,close}:{
     </section>
    </div>}
   </>}
- </Dialog></div>
+ {!loading&&!error&&customer&&<ModalFooter status={<Status active={customer.active}>{customer.active?"Activo":"Inactivo"}</Status>} statusLabel="Estado del cliente"></ModalFooter>}</Dialog></div>
 }
 
 function CustomerDetailSkeleton({close}:{close:()=>void}){
  return <>
-  <header className="customer-detail-skeleton-head" aria-hidden="true">
-   <span className="customer-detail-skeleton-block customer-detail-skeleton-icon"/>
-   <div className="customer-detail-skeleton-copy"><i/><b/></div>
-   <button aria-label="Cerrar" onClick={close}><Icon name="close"/></button>
-  </header>
+  <ModalHeader title={<span className="customer-detail-skeleton-copy" aria-hidden="true"><b/></span>} icon="users" onClose={close} initialFocusClose/>
   <div className="customer-detail-body customer-detail-skeleton-body" aria-label="Cargando detalle del cliente">
    <section className="customer-detail-summary customer-detail-skeleton-summary">
     {Array.from({length:4},(_,i)=><div key={i}><i/><b/></div>)}
@@ -132,4 +128,3 @@ function CustomerDetailSkeleton({close}:{close:()=>void}){
   </div>
  </>;
 }
-

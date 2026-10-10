@@ -4,7 +4,7 @@ import "./combo-wizard.css";
 import "./combo-rules.css";
 import {useEffect,useRef,useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,ConfirmDialog,Icon,Input,PageHeader,Pagination,RemoteModalSkeleton,RowActionButton,Select,Status,Textarea} from "@/design-system";
+import {Button,ConfirmDialog,Icon,Input,PageHeader,Pagination,RemoteModalSkeleton,RowActionButton,Select,Status,Textarea,ModalHeader,ModalFooter} from "@/design-system";
 import {useFeedback} from "@/providers";
 import {useSettings} from "@/providers/settings-context";
 import {useSession} from "@/providers/session-context";
@@ -121,29 +121,25 @@ function ComboDetailDialog({query,currencySymbol,close}:{query:ReturnType<typeof
   const formatCalendarDate=(date:string|null|undefined)=>date?formatRegionalCalendarDate(date,location?.country,{dateStyle:"long"}):"";
   return <div className="modal-backdrop modal-overlay-in" role="presentation">
     <Dialog onResponseClose={close} className="crud-modal combo-detail modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="combo-detail-title" aria-busy={query.isLoading}>
-      <div className="modal-accent"/>
+
       {query.isLoading?<ComboDetailSkeleton close={close}/>:<>
-        <header><span className="modal-title-icon"><Icon name="eye" size={18}/></span><div><h2 id="combo-detail-title">{value?.name??"Menú o combo"}</h2><small>DETALLE DEL MENÚ</small></div><button aria-label="Cerrar" onClick={close}><Icon name="close"/></button></header>
+        <ModalHeader title={value?.name??"Menú o combo"} titleId="combo-detail-title" icon="eye" subtitle="DETALLE DEL MENÚ" onClose={close} closeLabel="Cerrar"/>
         <div className="combo-detail-body">
           {query.isError?<div className="combo-detail-state"><Icon name="alert" size={24}/><b>No pudimos cargar el menú</b><p>{query.error.message}</p><Button kind="secondary" icon="refresh" onClick={()=>query.refetch()}>Reintentar</Button></div>:value&&<>
-            <section className="combo-detail-summary"><div><small>PRECIO</small><b>{currencySymbol} {Number(value.price).toFixed(2)}</b></div><div><small>PARTES DEL MENÚ</small><b>{value.groups.length} {value.groups.length===1?"parte":"partes"}</b></div><Status active={value.active}>{value.active?"Activo":"Inactivo"}</Status></section>
+            <section className="combo-detail-summary"><div><small>PRECIO</small><b>{currencySymbol} {Number(value.price).toFixed(2)}</b></div><div><small>PARTES DEL MENÚ</small><b>{value.groups.length} {value.groups.length===1?"parte":"partes"}</b></div></section>
             {value.description&&<section className="combo-detail-description"><small>DESCRIPCIÓN</small><p>{value.description}</p></section>}
             <section className="combo-detail-section"><header><div><small>QUÉ INCLUYE</small><h3>Platos y opciones del menú</h3></div></header>{value.groups.map(group=><article className="combo-detail-group" key={group.id}><div><b>{group.name}</b><small>{group.required?"Obligatorio":"Opcional"} · El cliente elige {group.minSelections}–{group.maxSelections}</small></div><ul>{group.options.map(option=><li key={option.productId}><span>{option.name}</span>{Number(option.surcharge)>0&&<small>+ {currencySymbol} {Number(option.surcharge).toFixed(2)}</small>}</li>)}</ul></article>)}</section>
             <section className={`combo-detail-availability${singleDay?" single":""}`}>{singleDay?<div><small>CUÁNDO SE VENDE</small><b>Solo hoy · {formatCalendarDate(value.availableFrom)}</b></div>:<><div><small>DÍAS DE VENTA</small><b>{days}</b></div><div><small>DESDE</small><b>{formatDate(value.availableFrom)}</b></div><div><small>HASTA</small><b>{formatDate(value.availableUntil)}</b></div></>}</section>
           </>}
         </div>
       </>}
-    </Dialog>
+    {!query.isLoading&&!query.isError&&value&&<ModalFooter status={<Status active={value.active}>{value.active?"Activo":"Inactivo"}</Status>} statusLabel="Estado del menú"></ModalFooter>}</Dialog>
   </div>
 }
 
 function ComboDetailSkeleton({close}:{close:()=>void}){
  return <>
-  <header className="combo-detail-skeleton-head" aria-hidden="true">
-   <span className="combo-detail-skeleton-block combo-detail-skeleton-icon"/>
-   <div className="combo-detail-skeleton-copy"><span/><b/></div>
-   <button aria-label="Cerrar" onClick={close}><Icon name="close"/></button>
-  </header>
+  <ModalHeader title={<span className="combo-detail-skeleton-copy" aria-hidden="true"><b/></span>} titleId="combo-detail-title" icon="combo" onClose={close} initialFocusClose/>
   <div className="combo-detail-body combo-detail-skeleton-body" aria-label="Cargando detalle del menú">
    <section className="combo-detail-summary combo-detail-skeleton-summary">
     <div><span/><b/></div><div><span/><b/></div><i className="combo-detail-skeleton-status"/>
@@ -182,17 +178,7 @@ function ComboWizard({draft,setDraft,step,setStep,products,productsLoading,produ
   function groupAt(index:number,next:Group){setDraft({...draft,groups:draft.groups.map((group,position)=>position===index?next:group)})}
   return <><div className="modal-backdrop modal-overlay-in">
     <Dialog onResponseClose={close} className="crud-modal combo-wizard modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="combo-wizard-title" aria-busy={busy}>
-      <header className="combo-wizard-header">
-        <div className="combo-wizard-title">
-          <span className="combo-wizard-title-icon"><Icon name="chefHat" size={24}/></span>
-          <div>
-            <small>{editing?"EDITAR MENÚ O COMBO":"NUEVO MENÚ O COMBO"}</small>
-            <h2 id="combo-wizard-title">{editing?"Actualiza tu menú o combo":"Arma tu menú o combo"}</h2>
-            <p>{STEP_LABELS[step-1]} · {STEP_HINTS[step-1]}</p>
-          </div>
-        </div>
-        <button className="combo-wizard-close" aria-label="Cerrar" onClick={requestClose} disabled={busy}><Icon name="close" size={18}/></button>
-      </header>
+      <ModalHeader title={editing?"Actualiza tu menú o combo":"Arma tu menú o combo"} titleId="combo-wizard-title" icon="chefHat" subtitle={editing?"EDITAR MENÚ O COMBO":"NUEVO MENÚ O COMBO"} onClose={requestClose} busy={busy} closeLabel="Cerrar"/>
 
       <nav className="combo-wizard-steps" aria-label="Pasos para crear el menú">
         {STEP_LABELS.map((label,index)=><button type="button" key={label} className={step===index+1?"active":step>index+1?"complete":""} aria-current={step===index+1?"step":undefined} disabled={busy||index+1>step} onClick={()=>navigate(index+1)}>
@@ -210,13 +196,10 @@ function ComboWizard({draft,setDraft,step,setStep,products,productsLoading,produ
           {step===4&&<ReviewStep draft={draft} products={products} currencySymbol={currencySymbol}/>}
         </div>
 
-        <footer className="combo-wizard-footer">
+        <ModalFooter className="combo-wizard-footer" note={step<4?"Puedes volver a modificar pasos anteriores.":"Revisa los datos antes de guardar."}>
           <button type="button" className="button ghost" onClick={step===1?requestClose:()=>navigate(step-1)} disabled={busy}>{step===1?<><Icon name="close" size={16}/>Cancelar</>:<><Icon name="chevronLeft" size={16}/>Anterior</>}</button>
-          <div className="combo-wizard-footer-copy">
-            <small>{step<4?"Puedes volver a modificar pasos anteriores.":"Revisa los datos antes de guardar."}</small>
-          </div>
           {step<4?<button type="button" className="button primary" onClick={next} disabled={busy||(step===2&&(productsLoading||productsError||!products.length))}>Continuar<Icon name="chevron" size={16}/></button>:<button type="button" className="button primary" onClick={submit} disabled={busy}><Icon name="check" size={16}/>{busy?"Guardando…":"Guardar"}</button>}
-        </footer>
+        </ModalFooter>
       </main>
     </Dialog>
   </div><ConfirmDialog open={discardOpen} title="¿Descartar los cambios?" description="Los cambios del menú o combo no se han guardado." confirmLabel="Descartar" onCancel={()=>setDiscardOpen(false)} onConfirm={close}/></>

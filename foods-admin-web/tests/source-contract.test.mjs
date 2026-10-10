@@ -717,7 +717,7 @@ test("países y WhatsApp tiene acceso completo para plataforma",()=>{
   assert.ok(page.includes('title="Países y WhatsApp"'),"La pantalla conserva el nombre del menú");
   assert.ok(page.includes("<th>Moneda</th>"),"El listado muestra la moneda predeterminada del país");
   assert.ok(page.includes("RowActionButton"),"La edición usa la acción de tabla homologada");
-  assert.ok(page.includes('aria-label="Cerrar"'),"El formulario modal ofrece un cierre accesible");
+  assert.ok(page.includes('closeLabel="Cerrar"')&&page.includes("<ModalHeader"),"La cabecera compartida ofrece un cierre accesible");
   assert.ok(page.includes("platform-channel-modal"),"El canal usa un modal de proporciones específicas");
   assert.equal(page.includes("secretRef"),false,"El formulario no expone referencias de credenciales");
   assert.equal(page.includes("META_WHATSAPP"),false,"El formulario no sugiere nombres de secretos");
@@ -842,7 +842,7 @@ test("el POS comparte patrones de tabla, móvil y modales",()=>{
   assert.ok(page.includes('className="management-cards pos-order-cards"'),"El POS conserva tarjetas equivalentes en móvil");
   assert.ok(page.includes('action="charge"'),"Cobrar usa la acción iconográfica homologada");
   const detail=page.slice(page.indexOf("function POSDetailDialog("),page.indexOf("function POSLoading("));
-  assert.ok(detail.includes("DETALLE DE COBRO"),"La comprobación se limita al modal de consulta");
+  assert.ok(detail.includes('title="Detalle de cobro"'),"La comprobación se limita al modal de consulta");
   assert.equal(detail.includes("Cobrar saldo"),false,"El detalle de consulta no duplica la acción de cobro");
   assert.equal(detail.includes('type="submit"'),false,"El detalle de consulta no registra pagos");
   assert.ok(page.includes('className="table-wrap pos-table-wrap pos-table-skeleton"'),"El skeleton reproduce la tabla final");

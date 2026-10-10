@@ -57,7 +57,7 @@ test("empresas: ver detalle abre la ficha de solo lectura con X como único cier
  const dialog=read("src/modules/platform/presentation/platform-company-detail-dialog.tsx");
  assert.match(page,/<RowActionButton action="view" label="Ver detalle" onClick=\{\(\)=>setDetailId\(company\.id\)\}\/>/);
  assert.match(dialog,/getPlatformOrganization\(organizationId\)/);
- assert.match(dialog,/aria-label="Cerrar detalle"/);
+ assert.match(dialog,/<ModalHeader[^>]*closeLabel="Cerrar detalle"/);
  assert.doesNotMatch(dialog,/>Cerrar</,"El detalle no agrega botón Cerrar en el pie");
  assert.match(dialog,/CompanyDetailSkeleton/);
  assert.match(dialog,/No pudimos cargar el detalle/);

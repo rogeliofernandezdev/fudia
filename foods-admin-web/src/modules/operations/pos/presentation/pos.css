@@ -71,7 +71,7 @@
 @keyframes pos-shimmer{to{transform:translateX(100%)}}
 
 /* Modal de cobro y devolución */
-.pos-payment-modal{display:flex;flex-direction:column;width:min(var(--size-640),calc(100vw - var(--size-32)));overflow:hidden}
+.pos-payment-modal{display:flex;flex-direction:column;width:min(var(--size-640),100%);overflow:hidden}
 .pos-payment-modal>form{display:flex;flex-direction:column;min-height:0;padding:0}
 .pos-payment-body{display:grid;gap:var(--space-3-5);padding:var(--space-5)}
 .pos-payment-overview{display:grid;grid-template-columns:1.25fr 1fr;overflow:hidden;border:var(--stroke-1) solid var(--line);border-radius:var(--radius-card);background:var(--surface)}
@@ -112,7 +112,6 @@
 .pos-refund-source span{color:var(--ink-500);font-size:var(--font-size-label)}
 .pos-payment-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-3)}
 .pos-payment-fields>.form-field:only-child,.pos-refund-note{grid-column:1/-1}
-.pos-payment-modal form>footer{display:flex;justify-content:flex-end;gap:var(--space-2);margin:0;padding:var(--space-3) var(--space-4);border-top:var(--stroke-1) solid var(--line);background:var(--surface)}
 
 /* El acceso directo a cobro espera pedido y caja sin mostrar datos antiguos. */
 .pos-payment-loading{flex:1;min-height:0}
@@ -127,39 +126,29 @@
 .pos-payment-loading-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-2);width:min(100%,var(--size-300));margin-left:auto;margin-top:auto}
 
 /* Modal de detalle */
-.pos-detail-modal{display:flex;flex-direction:column;width:min(var(--size-900),calc(100vw - var(--size-32)));max-height:min(var(--size-820),calc(100dvh - var(--size-32)));overflow:hidden}
-.pos-detail-modal>footer{display:flex;justify-content:flex-end;flex-shrink:0;padding:var(--space-4);border-top:var(--stroke-1) solid var(--line)}
-.pos-modal-heading{display:grid;gap:var(--space-px)}
-.pos-modal-heading p{margin:0;color:var(--ink-500);font-size:var(--font-size-label);font-weight:var(--weight-semibold)}
-.pos-detail-body{display:grid;gap:var(--space-3-5);padding:var(--space-5);overflow-y:auto;background:var(--cloud-50)}
-.pos-detail-summary{display:grid;grid-template-columns:1fr 1fr 1.3fr auto;align-items:center;gap:var(--space-px);border-radius:var(--radius-tile);overflow:hidden;background:var(--line)}
-.pos-detail-summary>div{display:grid;gap:var(--space-1);padding:var(--space-3) var(--space-3-5);background:var(--surface)}
-.pos-detail-summary small{color:var(--ink-500);font-size:var(--font-size-label);font-weight:var(--weight-heavy);letter-spacing:var(--letter-spacing-caps)}
-.pos-detail-summary b{font-size:var(--font-size-sm);font-variant-numeric:tabular-nums}
-.pos-detail-summary .remaining{background:var(--primary-100)}
-.pos-detail-summary .remaining strong{font-size:var(--font-size-lg);color:var(--primary-700);font-variant-numeric:tabular-nums}
-.pos-detail-summary>.status{margin:0 var(--space-3)}
-.pos-detail-section{overflow:hidden;border:var(--stroke-1) solid var(--line);border-radius:var(--radius-tile);background:var(--surface)}
-.pos-detail-section>header{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);padding:var(--space-3) var(--space-3-5);border-bottom:var(--stroke-1) solid var(--line)}
-.pos-detail-section>header>div{display:grid;gap:var(--space-0-5)}
-.pos-detail-section>header small{color:var(--ink-500);font-size:var(--font-size-label);font-weight:var(--weight-heavy);letter-spacing:var(--letter-spacing-caps)}
-.pos-detail-section h3{margin:0;font-size:var(--font-size-control)}
-.pos-detail-section>header>span{color:var(--ink-500);font-size:var(--font-size-label);font-weight:var(--weight-semibold)}
-.pos-order-lines{display:grid}
-.pos-order-lines>div{display:grid;grid-template-columns:var(--size-32) 1fr auto;align-items:center;gap:var(--space-2-5);padding:var(--space-2-5) var(--space-3-5)}
-.pos-order-lines>div+div{border-top:var(--stroke-1) solid var(--line)}
-.pos-order-lines>div>b{display:grid;place-items:center;width:var(--size-28);height:var(--size-28);border-radius:50%;background:var(--primary-100);color:var(--primary-700);font-size:var(--font-size-label);font-weight:var(--weight-heavy);font-variant-numeric:tabular-nums}
-.pos-order-lines>div>span{display:grid;gap:var(--space-1);font-size:var(--font-size-control);font-weight:var(--weight-bold)}
-.pos-order-lines small{display:inline-flex;align-items:center;gap:var(--space-1);width:fit-content;padding:var(--space-0-5) var(--space-2);border-radius:var(--radius-control);background:var(--note-100);color:var(--note-ink);font-size:var(--font-size-label);font-weight:var(--weight-semibold)}
-.pos-order-lines strong{font-size:var(--font-size-control);font-variant-numeric:tabular-nums}
+.pos-detail-modal{display:flex;flex-direction:column;width:min(var(--size-900),100%);max-height:min(var(--size-820),calc(100dvh - var(--space-12)));overflow:hidden}
+.pos-detail-modal>footer{flex-shrink:0}
+.pos-detail-body{display:grid;align-content:start;gap:var(--space-5);background:var(--surface)}
+.pos-detail-context{min-width:0;padding-bottom:var(--space-4);border-bottom:var(--stroke-1) solid var(--line)}
+.pos-detail-context dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:var(--space-3) var(--space-6);margin:0}
+.pos-detail-context dl>div{min-width:0}
+.pos-detail-context dd{margin:var(--space-1) 0 0}
+.pos-detail-context dd small{display:block;margin-top:var(--space-1)}
+.pos-detail-section{min-width:0}
+.pos-detail-section+.pos-detail-section{padding-top:var(--space-4);border-top:var(--stroke-1) solid var(--line)}
+.pos-detail-section h3{margin:0 0 var(--space-3);font-size:var(--font-size-base);font-weight:var(--weight-bold)}
+.pos-order-lines>div>span{display:grid;min-width:0;gap:var(--space-1);font-size:var(--font-size-control);font-weight:var(--weight-semibold);overflow-wrap:anywhere}
+.pos-order-lines :is(small,em){color:var(--ink-500);font-size:var(--font-size-label);font-weight:var(--weight-medium);font-style:normal;white-space:pre-wrap}
+.pos-order-lines strong{font-size:var(--font-size-control);font-variant-numeric:tabular-nums;white-space:nowrap}
+.pos-detail-empty{margin:0;font-size:var(--font-size-control);line-height:var(--line-height-normal);color:var(--ink-500)}
 .pos-payment-list{display:grid}
-.pos-payment-list article{display:grid;grid-template-columns:var(--size-34) minmax(0,1fr) auto auto;align-items:center;gap:var(--space-2-5);padding:var(--space-3) var(--space-3-5)}
+.pos-payment-list article{display:grid;grid-template-columns:var(--size-34) minmax(0,1fr) auto auto;align-items:start;gap:var(--space-2-5);padding-block:var(--space-3)}
 .pos-payment-list article+article{border-top:var(--stroke-1) solid var(--line)}
 .pos-payment-method{display:grid;place-items:center;width:var(--size-32);height:var(--size-32);border-radius:var(--radius-tile);background:var(--primary-100);color:var(--primary-700);flex:0 0 auto}
 .pos-payment-method.pm-cash{background:var(--brand-100);color:var(--brand-700)}
 .pos-payment-method.pm-transfer{background:var(--digital-100);color:var(--digital-700)}
 .pos-payment-method.pm-other{background:var(--cloud-100);color:var(--ink-600)}
-.pos-payment-list article>div{display:grid;gap:var(--space-0-5);min-width:0}
+.pos-payment-list article>div{display:grid;gap:var(--space-0-5);min-width:0;overflow-wrap:anywhere}
 .pos-payment-list article>div b{font-size:var(--font-size-control)}
 .pos-payment-list article>div small{color:var(--ink-500);font-size:var(--font-size-label)}
 .pos-payment-list article>div em{color:var(--ink-600);font-size:var(--font-size-label);font-style:normal}
@@ -167,15 +156,13 @@
 .pos-payment-values b{font-size:var(--font-size-xs);font-variant-numeric:tabular-nums}
 .pos-payment-values small{color:var(--danger);font-size:var(--font-size-label);font-weight:var(--weight-semibold)}
 .pos-refund-action{height:var(--control-height);min-height:var(--control-height);padding:0 var(--space-2-5);font-size:var(--font-size-label)}
-.catalog-state.pos-section-empty{min-height:var(--size-120);padding:var(--space-5)}
 
 /* Skeleton del detalle */
-.pos-detail-summary-skeleton{grid-template-columns:repeat(4,1fr);padding:var(--space-3);gap:var(--space-2-5);background:var(--surface);border:var(--stroke-1) solid var(--line)}
-.pos-detail-summary-skeleton>i{height:var(--size-38);border-radius:var(--radius-control)}
-.pos-detail-section-skeleton>header>span{display:grid;gap:var(--space-1-5);width:var(--size-180)}
-.pos-detail-section-skeleton>header span i{width:var(--size-56);height:var(--size-8);border-radius:var(--radius-chip)}
-.pos-detail-section-skeleton>header span b{width:var(--size-150);height:var(--size-11);border-radius:var(--radius-chip)}
-.pos-detail-section-skeleton>header>i{width:var(--size-40);height:var(--size-10);border-radius:var(--radius-chip)}
+.pos-detail-loading :is(i,b,small){display:block;height:var(--size-12);border-radius:var(--radius-control)}
+.pos-detail-loading .pos-detail-context i{width:var(--size-72);margin-bottom:var(--space-1-5)}
+.pos-detail-loading .pos-detail-context b{width:75%}
+.pos-detail-loading .modal-summary-heading b,.pos-detail-section-skeleton>h3>b{width:var(--size-150)}
+.pos-detail-loading .modal-summary-line :is(i,b),.pos-detail-loading .modal-summary-total :is(i,b){width:var(--size-72)}
 .pos-detail-section-skeleton>div{display:grid;grid-template-columns:var(--size-28) 1fr var(--size-86);align-items:center;gap:var(--space-2-5);padding:var(--space-3) var(--space-3-5)}
 .pos-detail-section-skeleton>div+div{border-top:var(--stroke-1) solid var(--line)}
 .pos-detail-section-skeleton>div>i{height:var(--size-28);border-radius:50%}
@@ -184,10 +171,6 @@
 .pos-detail-section-skeleton>div span small{width:64%;height:var(--size-8);border-radius:var(--radius-chip)}
 .pos-detail-section-skeleton>div>i:last-child{width:var(--size-86);height:var(--size-10);border-radius:var(--radius-chip)}
 
-@media(max-width:860px){
- .pos-detail-summary{grid-template-columns:1fr 1fr}
- .pos-detail-summary>.status{margin:var(--space-3)}
-}
 @media(max-width:700px){
  .pos-toolbar{grid-template-columns:1fr;padding:var(--space-2-5)}
  .pos-toolbar .ds-select{width:100%}
@@ -197,7 +180,6 @@
  .pos-shift-banner>.button{width:100%}
  .pos-shift-banner>.button,.pos-shift-banner>.status{grid-column:1/-1;width:100%;margin:var(--space-0-5) 0 0;justify-content:center}
  .pos-shift-copy>b{align-items:flex-start;flex-direction:column;gap:var(--space-px)}
- .pos-payment-modal,.pos-detail-modal{width:100vw;height:100dvh;max-height:none;border-radius:0}
  .pos-payment-modal>form{min-height:0;flex:1}
  .pos-payment-body{padding:var(--space-3-5);overflow-y:auto}
  .pos-payment-overview{grid-template-columns:1fr}
@@ -206,21 +188,23 @@
  .pos-payment-loading-methods{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:minmax(var(--size-126),1fr);overflow:hidden}
  .pos-payment-fields,.refund-fields{grid-template-columns:1fr}
  .pos-refund-note{grid-column:auto}
- .pos-payment-modal form>footer{position:sticky;bottom:0;margin-top:auto}
+ .pos-payment-modal form>footer{position:sticky;bottom:0}
  .pos-payment-modal form>footer .button{flex:1}
- .pos-detail-body{padding:var(--space-3)}
- .pos-detail-summary,.pos-detail-summary-skeleton{grid-template-columns:1fr 1fr}
- .pos-detail-summary>.status{margin:var(--space-2-5)}
+ .pos-detail-context dl{gap:var(--space-3) var(--space-4)}
+ .pos-detail-context dl>div:nth-child(2){text-align:right}
+ .pos-detail-context dl>div:nth-child(n+3){grid-column:1/-1;display:grid;grid-template-columns:var(--size-104) minmax(0,1fr);align-items:baseline;gap:var(--space-2)}
+ .pos-detail-context dl>div:nth-child(n+3) dd{min-width:0;margin:0}
+ .pos-detail-loading .pos-detail-context dl>div:nth-child(2) :is(i,b){margin-left:auto}
  .pos-payment-list article{grid-template-columns:var(--size-34) 1fr}
  .pos-payment-values{grid-column:2;justify-items:start}
  .pos-refund-action{grid-column:1/-1;width:100%}
 }
+@media(max-width:600px){
+ .crud-modal.pos-payment-modal,.crud-modal.pos-detail-modal{width:100%;height:100dvh;max-height:100dvh;border-radius:0}
+}
 @media(max-width:430px){
  .pos-order-cards dl{grid-template-columns:1fr 1fr}
  .pos-order-cards dl .remaining{grid-column:1/-1}
- .pos-detail-summary,.pos-detail-summary-skeleton{grid-template-columns:1fr}
- .pos-order-lines>div{grid-template-columns:var(--size-30) minmax(0,1fr)}
- .pos-order-lines strong{grid-column:2}
 }
 @media(prefers-reduced-motion:reduce){
  :is(.pos-shift-loading i,.pos-table-skeleton i,.pos-card-skeleton i,.pos-card-skeleton b,.pos-card-skeleton small,.pos-card-skeleton div,.pos-detail-loading i,.pos-detail-loading b,.pos-detail-loading small,.pos-payment-loading i,.pos-payment-loading b):after{animation:none}

@@ -4,17 +4,22 @@ import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
 /** Owner: operations/orders — presentación compartida por Pedidos y Salón. */
 export const channelIcons:Record<string,IconName>={salon:"utensils",mostrador:"store",recojo:"box",delivery:"truck",whatsapp:"share"};
 
-export type OrderStatusTone="green"|"blue"|"orange"|"gray";
+export type OrderStatusTone="green"|"blue"|"orange"|"gray"|"violet"|"teal"|"red";
 export const statusMeta:Record<string,{label:string;tone:OrderStatusTone}>={
-  nuevo:{label:"Nuevo",tone:"blue"},
+  nuevo:{label:"Nuevo",tone:"gray"},
   confirmado:{label:"Confirmado",tone:"blue"},
-  preparando:{label:"Preparando",tone:"orange"},
+  preparando:{label:"Preparando",tone:"violet"},
   listo:{label:"Listo para entregar",tone:"green"},
   en_camino:{label:"En camino",tone:"orange"},
-  entregado:{label:"Entregado",tone:"gray"},
-  cancelado:{label:"Cancelado",tone:"gray"},
+  entregado:{label:"Entregado",tone:"teal"},
+  cancelado:{label:"Cancelado",tone:"red"},
 };
 export const orderStatus=(status:string)=>statusMeta[status]??{label:status,tone:"gray" as const};
+
+/** Los nombres de preparación siguen viniendo del API; solo se centraliza su tono. */
+export function serviceStatusTone(status:string):OrderStatusTone{
+  return status==="preparando"?"violet":status==="listo"?"green":status==="entregado"?"teal":status==="cancelado"?"red":["pendiente","nuevo","confirmado"].includes(status)?"orange":"gray";
+}
 
 /** Fecha y hora del registro en la zona del local; nunca un tiempo relativo. */
 export function registeredAt(iso:string,country?:string,timeZone?:string){

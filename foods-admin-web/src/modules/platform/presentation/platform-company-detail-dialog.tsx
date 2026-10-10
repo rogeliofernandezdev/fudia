@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import {useQuery} from "@tanstack/react-query";
-import {ErrorState,Status} from "@/design-system";
+import {ErrorState,Status,ModalHeader,ModalFooter} from "@/design-system";
 import {Dialog} from "@/design-system/dialog";
 import {Icon} from "@/design-system/icons";
 import {useSession} from "@/providers";
@@ -16,12 +16,8 @@ export function CompanyDetailDialog({organizationId,standingOptions,close}:{orga
  const company=detail.data;
  return <div className="modal-backdrop modal-overlay-in">
   <Dialog onResponseClose={close} className="crud-modal company-detail modal-panel-in" role="dialog" aria-modal="true" aria-busy={detail.isLoading} aria-labelledby="company-detail-title">
-   <div className="modal-accent"/>
-   <header>
-    <span className="modal-title-icon"><Icon name="building"/></span>
-    <div><h2 id="company-detail-title">{company?.tradeName??(detail.isLoading?"Cargando empresa…":"Empresa")}</h2><small>DETALLE DE LA EMPRESA</small></div>
-    <button type="button" aria-label="Cerrar detalle" onClick={close}><Icon name="close"/></button>
-   </header>
+
+   <ModalHeader title={company?.tradeName??(detail.isLoading?"Cargando empresa…":"Empresa")} titleId="company-detail-title" icon="building" subtitle="DETALLE DE LA EMPRESA" onClose={close} closeLabel="Cerrar detalle"/>
    {detail.isLoading?<CompanyDetailSkeleton/>
     :detail.isError||!company?<div className="company-detail-body"><ErrorState title="No pudimos cargar el detalle" text={detail.error?.message} retrying={detail.isFetching} onRetry={()=>void detail.refetch()}/></div>
     :<CompanyDetailContent company={company} standingOptions={standingOptions}/>}
@@ -90,9 +86,9 @@ function CompanyDetailContent({company,standingOptions}:{company:PlatformOrganiz
     </li>)}</ul>:<p className="company-detail-empty">La empresa no tiene locales registrados.</p>}
    </section>
   </div>
-  <footer className="company-detail-footer">
+  <ModalFooter className="company-detail-footer">
    <Link href={companySettingsPath(company.id)} className="button primary"><Icon name="receipt" size={16}/>Gestionar suscripción</Link>
-  </footer>
+  </ModalFooter>
  </>;
 }
 

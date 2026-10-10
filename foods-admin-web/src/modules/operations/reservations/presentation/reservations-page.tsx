@@ -4,7 +4,7 @@ import "./reservations.css";
 import {useState} from "react";
 import {useForm,useWatch} from "react-hook-form";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,ConfirmDialog,FieldLabel,Icon,Input,PageHeader,Pagination,RowActionButton,Select,Status,Textarea} from "@/design-system";
+import {Button,ConfirmDialog,FieldLabel,Icon,Input,PageHeader,Pagination,RowActionButton,Select,Status,Textarea,ModalHeader,ModalFooter} from "@/design-system";
 import {useFeedback,useSession} from "@/providers";
 import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
 import {listTables} from "../../tables/infrastructure/tables-api";
@@ -62,12 +62,8 @@ function ReservationDialog({value:initial,tables,tablesLoading,tablesError,busy,
 
   return <div className="modal-backdrop modal-overlay-in" role="presentation">
     <Dialog onResponseClose={close} className="crud-modal reservation-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="reservation-title" aria-busy={busy}>
-      <div className="modal-accent"/>
-      <header>
-        <span className="modal-title-icon"><Icon name="clock" size={18}/></span>
-        <div><small>{initial.id?"EDITAR RESERVA":"NUEVA RESERVA"}</small><h2 id="reservation-title">Datos de la reserva</h2></div>
-        <button type="button" aria-label="Cerrar" disabled={busy} onClick={close}><Icon name="close"/></button>
-      </header>
+
+      <ModalHeader title="Datos de la reserva" titleId="reservation-title" icon="clock" subtitle={initial.id?"EDITAR RESERVA":"NUEVA RESERVA"} onClose={close} busy={busy} closeLabel="Cerrar"/>
       <form onSubmit={handleSubmit(save)} noValidate>
         <div className="form-grid reservation-form-grid">
           <label>
@@ -114,10 +110,10 @@ function ReservationDialog({value:initial,tables,tablesLoading,tablesError,busy,
             {errors.notes?.message&&<small className="field-error">{errors.notes.message}</small>}
           </label>
         </div>
-        <footer>
+        <ModalFooter>
           <Button kind="ghost" onClick={close} disabled={busy}>Cancelar</Button>
           <Button type="submit" disabled={busy}>{busy?"Guardando…":"Guardar"}</Button>
-        </footer>
+        </ModalFooter>
       </form>
       {busy&&<div className="modal-busy" role="status"><i/><span>Guardando…</span></div>}
     </Dialog>

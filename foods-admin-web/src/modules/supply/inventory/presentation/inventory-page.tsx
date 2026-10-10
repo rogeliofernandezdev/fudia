@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import "./inventory.css";
 import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,EmptyState,ErrorState,Icon,PageHeader,Pagination,RemoteModalSkeleton,RowActionButton,SearchField,Status,TableSkeleton} from "@/design-system";
+import {Button,EmptyState,ErrorState,Icon,PageHeader,Pagination,RemoteModalSkeleton,RowActionButton,SearchField,Status,TableSkeleton,ModalHeader} from "@/design-system";
 import {useFeedback} from "@/providers";
 import {useSession} from "@/providers/session-context";
 import {formatRegionalNumber} from "@/shared/i18n/regional-format";
@@ -123,8 +123,8 @@ export function InventoryPage(){
 
 function InventoryAdjustmentLoadError({message,close,retry}:{message:string;close:()=>void;retry:()=>void}){
  return <div className="modal-backdrop modal-overlay-in" role="presentation"><Dialog onResponseClose={close} className="crud-modal inventory-adjustment-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="inventory-load-error-title">
-  <div className="modal-accent"/>
-  <header><span className="modal-title-icon"><Icon name="alert" size={18}/></span><div><small>INVENTARIO</small><h2 id="inventory-load-error-title">No pudimos cargar los artículos</h2></div><button type="button" aria-label="Cerrar" onClick={close}><Icon name="close"/></button></header>
+
+  <ModalHeader title="No pudimos cargar los artículos" titleId="inventory-load-error-title" icon="alert" subtitle="INVENTARIO" onClose={close} closeLabel="Cerrar"/>
   <ErrorState title="Artículos no disponibles" text={message} onRetry={retry}/>
  </Dialog></div>;
 }

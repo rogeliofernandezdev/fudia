@@ -4,7 +4,7 @@ import "./payment-methods.css";
 import {useState} from "react";
 import {useForm} from "react-hook-form";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,EmptyState,ErrorState,FormField,Input,PageHeader,Pagination,RowActionButton,SearchField,Select,Status,TableSkeleton,Textarea} from "@/design-system";
+import {Button,EmptyState,ErrorState,FormField,Input,PageHeader,Pagination,RowActionButton,SearchField,Select,Status,TableSkeleton,Textarea,ModalHeader,ModalFooter} from "@/design-system";
 import {ConfirmDialog} from "@/design-system/confirm-dialog";
 import {Icon} from "@/design-system/icons";
 import {useFeedback} from "@/providers/feedback-provider";
@@ -79,8 +79,8 @@ function CashImpact({on}:{on:boolean}){return <Status tone={on?"blue":"gray"}>{o
 function PaymentMethodDialog({value:initial,editing,busy,close,save}:{value:PaymentMethodDraft;editing:boolean;busy:boolean;close:()=>void;save:(value:PaymentMethodDraft)=>void}){
  const{register,handleSubmit,setValue,formState:{errors}}=useForm<PaymentMethodDraft>({defaultValues:initial,resolver:paymentMethodResolver,mode:"onSubmit",reValidateMode:"onChange"});
  const submit=handleSubmit(value=>save({...value,code:value.code.trim().toLowerCase(),name:value.name.trim(),description:value.description.trim(),sortOrder:Number(value.sortOrder)}));
- return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal payment-method-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="payment-method-title"><div className="modal-accent"/>
-  <header><span className="modal-title-icon"><Icon name="payment"/></span><div><small>{editing?"EDITAR MEDIO":"NUEVO MEDIO"}</small><h2 id="payment-method-title">Configuración del medio de pago</h2></div><button type="button" aria-label="Cerrar" onClick={close}><Icon name="close"/></button></header>
+ return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal payment-method-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="payment-method-title">
+  <ModalHeader title="Configuración del medio de pago" titleId="payment-method-title" icon="payment" subtitle={editing?"EDITAR MEDIO":"NUEVO MEDIO"} onClose={close} closeLabel="Cerrar"/>
   <form onSubmit={submit} noValidate><div className="payment-method-form-body">
    <div className="form-grid">
     <FormField label="Código interno" help={editing?"El código no se puede cambiar.":"Minúsculas, números, guion o guion bajo."} error={errors.code?.message}><Input readOnly={editing} maxLength={40} {...register("code",{onChange:e=>setValue("code",e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g,""))})} placeholder="ej. voucher"/></FormField>
@@ -94,6 +94,6 @@ function PaymentMethodDialog({value:initial,editing,busy,close,save}:{value:Paym
     <label className="payment-method-toggle"><input type="checkbox" {...register("affectsCash")}/><span><b>Impacta Caja</b><small>Se considera movimiento físico de efectivo en cobros y devoluciones.</small></span></label>
    </div>
    {errors.salesEnabled?.message&&<div className="payment-method-warning" role="alert">{errors.salesEnabled.message}</div>}
-  </div><footer><Button kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" icon="check" disabled={busy}>{busy?"Guardando…":"Guardar"}</Button></footer></form>
+  </div><ModalFooter><Button kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" icon="check" disabled={busy}>{busy?"Guardando…":"Guardar"}</Button></ModalFooter></form>
  </Dialog></div>
 }

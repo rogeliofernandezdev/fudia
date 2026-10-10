@@ -34,13 +34,14 @@ test("pedido manual: integración usa el endpoint existente con POST y respuesta
  const result=await api.createManualOrder({...fields,lines:[line]});assert.equal(result.id,"server-uuid");assert.equal(sent.path,"orders");assert.equal(sent.options.method,"POST");assert.equal(JSON.parse(sent.options.body).sendToKitchen,true);
 });
 function nodes(tree,result=[]){if(Array.isArray(tree)){tree.forEach(node=>nodes(node,result));return result}if(tree&&typeof tree==="object"){result.push(tree);nodes(tree.props?.children,result)}return result}
-const ds=Object.fromEntries(["Button","ConfirmDialog","Dialog","FormField","Icon","IconButton","Input","Select","Textarea"].map(name=>[name,name]));
+const ds=Object.fromEntries(["Button","ConfirmDialog","Dialog","ModalHeader","ModalFooter","FormField","Icon","IconButton","Input","NumberStepper","Select","Textarea"].map(name=>[name,name]));
 function hooksMount(file,props,overrides={}){
  const state=[],refs=[];let cursor=0,refCursor=0;
  const compiled=compile(file,name=>{
   if(name.endsWith(".css"))return{};
   if(name==="react")return{...require("react"),useEffect:()=>{},useRef:value=>{const index=refCursor++;return refs[index]??(refs[index]={current:value})},useState:value=>{const index=cursor++;if(state[index]===undefined)state[index]=value;return[state[index],next=>{state[index]=typeof next==="function"?next(state[index]):next}]}};
   if(name==="@/design-system")return ds;
+  if(name==="@/providers")return{useMoney:()=>value=>`S/ ${Number(value).toFixed(2)}`};
   if(name==="@/providers/feedback-provider")return{useFeedback:()=>({notify:()=>{}})};
   if(name==="react-hook-form")return{useWatch:({name})=>fields[name],useForm:()=>({register:name=>({name}),control:{},formState:{errors:{},isDirty:false,isSubmitting:false},handleSubmit:callback=>async()=>{const result=schema.manualOrderSchema.safeParse(fields);if(result.success)return callback(result.data)}})};
   if(name.endsWith("manual-order-schema"))return schema;
@@ -74,7 +75,7 @@ test("pedido manual: datos inválidos impiden continuar y un fallo conserva la c
  assert.equal(view.state[0],"order");assert.equal(view.state[1].lines.length,1);
 });
 test("pedido manual: bloqueo y descarte explícito protegen datos e ítems",async()=>{
- const busy=mount({busy:true});const rendered=busy.render();assert.equal(rendered.find(node=>node.type==="IconButton").props.disabled,true);assert.equal(rendered.find(node=>node.type==="fieldset").props.disabled,true);
+ const busy=mount({busy:true});const rendered=busy.render();assert.equal(rendered.find(node=>node.type==="ModalHeader").props.busy,true);assert.equal(rendered.find(node=>node.type==="fieldset").props.disabled,true);
  let calls=0,finish;const view=mount({onSave:()=>{calls++;return new Promise(resolve=>{finish=resolve})}});const comanda=await goToOrder(view);
  const pending=comanda.props.save({...comanda.props.initial,lines:[line]});await comanda.props.save({...comanda.props.initial,lines:[line]});assert.equal(calls,1);finish();await pending;
  let closed=0;const dirty=mount({onClose:()=>closed++});const order=await goToOrder(dirty);order.props.close({...order.props.initial,lines:[line]});assert.equal(closed,0);assert.equal(dirty.render().find(node=>node.type==="ConfirmDialog").props.open,true);
@@ -90,7 +91,7 @@ test("el cierre por respuesta del API no abre confirmación de descarte en el wi
 });
 test("comanda compartida: delivery no pide mesa, incluye envío y se guarda una sola vez",async()=>{
  let calls=0,finish,saved;const view=mountComanda({save:(draft,send)=>{saved={draft,send};calls++;return new Promise(resolve=>{finish=resolve})}});
- let rendered=view.render();assert.equal(rendered.some(node=>node.type==="Select"),false);assert.equal(rendered.some(node=>node.props.children==="Personas"),false);assert.equal(rendered.some(node=>node.props.children==="Guardar borrador"),false);
+ let rendered=view.render();assert.equal(rendered.some(node=>node.type==="Select"),false);assert.equal(rendered.some(node=>node.props.children==="Personas"),false);assert.equal(rendered.some(node=>node.props.children==="Guardar comanda"),false);
  rendered.find(node=>node.type==="ComandaCatalog").props.onPick({id:"product-1",name:"Plato",price:"25"});rendered=view.render();
  assert.ok(rendered.some(node=>node.type==="strong"&&JSON.stringify(node.props.children).includes("30.00")));
  const submit=rendered.find(node=>node.type==="Button"&&node.props.className==="salon-comanda-submit");
@@ -101,15 +102,75 @@ test("comanda compartida: delivery no pide mesa, incluye envío y se guarda una 
 test("comanda compartida: Salón mantiene mesa obligatoria y borrador; volver incluye elecciones",async()=>{
  const alerts=[];let saved=0,returned;
  const view=mountComanda({initial:{...fields,channel:"salon",tableId:"",lines:[line]},notify:value=>alerts.push(value),save:()=>saved++});
- let rendered=view.render();assert.ok(rendered.some(node=>node.type==="Select"));assert.ok(rendered.some(node=>node.props.children==="Guardar borrador"));
+ let rendered=view.render();assert.ok(rendered.some(node=>node.type==="Select"));assert.ok(rendered.some(node=>node.props.children==="Guardar comanda"));
  await rendered.find(node=>node.type==="Button"&&node.props.className==="salon-comanda-submit").props.onClick();assert.equal(saved,0);assert.equal(alerts.length,0);
  assert.ok(view.render().some(node=>node.props.role==="alert"&&node.props.children==="Selecciona la mesa del pedido."));
  const delivery=mountComanda({onBack:draft=>{returned=draft}});
  rendered=delivery.render();rendered.find(node=>node.type==="ComandaCatalog").props.onConfigureCombo("combo-product");rendered=delivery.render();
  const choices=[{groupId:"group-1",groupName:"Segundo",productId:"option-1",name:"Lomo",surcharge:3}];
  rendered.find(node=>node.type==="ComboConfigurator").props.onConfirm({productId:"combo-product",name:"Menú del día",unitPrice:23,selections:choices});
- rendered=delivery.render();rendered.find(node=>node.props["aria-label"]==="Editar datos del pedido").props.onClick();
+ rendered=delivery.render();nodes(rendered.find(node=>node.type==="ModalHeader").props.details).find(node=>node.type==="Button"&&node.props.children==="Editar datos del pedido").props.onClick();
  assert.equal(returned.lines[0].itemType,"combo");assert.equal(returned.lines[0].selections,choices);
+});
+test("comanda: disminuir conserva notas y combos; el pie abre revisión sin enviar",()=>{
+ let saves=0;const initial={...fields,tableId:"",lines:[{...line,lineKey:"first",productId:"p",itemType:"product",qty:2,note:"Primera nota"},{...line,lineKey:"second",productId:"p",itemType:"product",qty:1,note:"Segunda nota"},{...line,lineKey:"combo",productId:"combo",itemType:"combo",qty:2}]};
+ const view=mountComanda({initial,save:()=>saves++});
+ view.render().find(node=>node.type==="ComandaCatalog").props.onDecrease("p");assert.equal(view.state[0].lines.length,2);assert.equal(view.state[0].lines[0].note,"Primera nota");assert.equal(view.state[0].lines[1].qty,2);
+ view.render().find(node=>node.type==="ComandaCatalog").props.onDecrease("p");assert.equal(view.state[0].lines[0].qty,1);
+ const reviewButton=view.render().find(node=>node.type==="Button"&&node.props.className==="cmd-bar-submit");assert.equal(reviewButton.props.icon,"shoppingBag");reviewButton.props.onClick();assert.equal(view.state[1],true);assert.equal(saves,0);
+ const busy=mountComanda({initial,busy:true});busy.render().find(node=>node.type==="ComandaCatalog").props.onDecrease("p");assert.equal(busy.state[0].lines.length,3);
+});
+test("comanda: conserva la foto real en el resumen con cantidades suaves y fallback sin imagen",()=>{
+ const view=mountComanda();view.render().find(node=>node.type==="ComandaCatalog").props.onPick({id:"p",name:"Plato",price:"18",imageUrl:"/foto-del-plato.jpg"});
+ const rendered=view.render();assert.equal(view.state[0].lines[0].imageUrl,"/foto-del-plato.jpg");
+ const image=rendered.find(node=>node.type==="img");assert.equal(image.props.src,"/foto-del-plato.jpg");assert.equal(image.props.alt,"");
+ const target={hidden:false};image.props.onError({currentTarget:target});assert.equal(target.hidden,true);
+ assert.ok(rendered.some(node=>node.type==="NumberStepper"&&node.props.appearance==="soft"));
+ const historic=mountComanda({initial:{...fields,tableId:"",lines:[line]}}).render();assert.equal(historic.some(node=>node.type==="img"),false);assert.ok(historic.some(node=>node.props.className==="cmd-line-visual"));
+ const payload=schema.manualOrderPayload({...fields,lines:view.state[0].lines});assert.equal("imageUrl" in payload.items[0],false);
+});
+test("comanda: borrador y envío conservan su intención y el progreso corresponde a la acción elegida",async()=>{
+ for(const sendToKitchen of [false,true]){
+  const calls=[];let finish;
+  const view=mountComanda({initial:{...fields,channel:"salon",tableId:"table-1",lines:[line]},save:(draft,send)=>{calls.push({draft,send});return new Promise(resolve=>{finish=resolve})}});
+  const buttonClass=sendToKitchen?"salon-comanda-submit":"salon-comanda-draft";
+  const initialButton=view.render().find(node=>node.props.className===buttonClass);
+  assert.equal(initialButton.props.icon,sendToKitchen?"send":"orders");assert.equal(initialButton.props.children,sendToKitchen?"Enviar a cocina":"Guardar comanda");
+  const pending=initialButton.props.onClick();assert.equal(calls.length,1);assert.equal(calls[0].send,sendToKitchen);
+  const rendered=view.render();const draft=rendered.find(node=>node.props.className==="salon-comanda-draft"),send=rendered.find(node=>node.props.className==="salon-comanda-submit");
+  assert.equal(draft.props.disabled,true);assert.equal(send.props.disabled,true);
+  if(!sendToKitchen){assert.equal(draft.props.children,"Guardando…");assert.equal(draft.props.loading,true);assert.equal(send.props.children,"Enviar a cocina");assert.equal(send.props.loading,false);}
+  else{assert.equal(send.props.children,"Enviando…");assert.equal(send.props.loading,true);assert.equal(draft.props.children,"Guardar comanda");assert.equal(draft.props.loading,false);}
+  send.props.onClick();draft.props.onClick();assert.equal(calls.length,1);
+  finish();await pending;assert.equal(view.render().find(node=>node.props.className===buttonClass).props.disabled,false);
+ }
+ let finishEdit;const edit=mountComanda({mode:"edit",initial:{...fields,channel:"salon",tableId:"table-1",lines:[line]},save:()=>new Promise(resolve=>{finishEdit=resolve})});
+ const editPending=edit.render().find(node=>node.props.className==="salon-comanda-submit").props.onClick();
+ const editButton=edit.render().find(node=>node.props.className==="salon-comanda-submit");assert.equal(editButton.props.children,"Guardando…");assert.equal(editButton.props.loading,true);assert.equal(edit.render().some(node=>node.props.className==="salon-comanda-draft"),false);finishEdit();await editPending;
+ const source=readFileSync(new URL("salon/presentation/salon-manager.tsx",root),"utf8");assert.match(source,/title:variables.sendToKitchen\?"Comanda enviada":"Comanda guardada"/);assert.ok(source.includes("guardado, sin enviar a cocina"));
+});
+test("comanda: plegar la hoja vuelve a la carta sin guardar, cerrar ni perder productos y notas",()=>{
+ let saves=0,closes=0;const initial={...fields,tableId:"",lines:[line],notes:"Servir juntos"};
+ const view=mountComanda({initial,save:()=>saves++,close:()=>closes++});
+ view.render().find(node=>node.props.className==="cmd-bar-submit").props.onClick();assert.equal(view.state[1],true);
+ const control=view.render().find(node=>node.props.className==="cmd-sheet-close");
+ assert.equal(control.props["aria-label"],"Volver a la carta");assert.equal(control.props.title,"Volver a la carta");
+ assert.equal(control.props.children.props.name,"chevron");assert.equal(control.props.children.props.size,24);
+ control.props.onClick();assert.equal(view.state[1],false);assert.equal(view.state[0],initial);assert.equal(saves,0);assert.equal(closes,0);
+ const css=postcss.parse(readFileSync(new URL("styles/salon-comanda.css",root),"utf8"));
+ const rule=css.nodes.find(node=>node.type==="atrule"&&node.params==="(width<=900px)").nodes.find(node=>node.selector===".cmd-sheet-close");
+ const declarations=Object.fromEntries(rule.nodes.filter(node=>node.type==="decl").map(node=>[node.prop,node.value]));
+ assert.equal(declarations.width,"var(--size-44)");assert.equal(declarations.height,"var(--size-44)");assert.equal(declarations.background,"var(--primary-100)");assert.equal(declarations.border,"0");assert.equal(declarations.color,"var(--primary-700)");assert.equal(declarations["border-radius"],"var(--radius-pill)");assert.equal(declarations["touch-action"],"manipulation");
+});
+test("comanda móvil: el scrim no cubre la cabecera y las acciones tienen radio completo",()=>{
+ const css=postcss.parse(readFileSync(new URL("styles/salon-comanda.css",root),"utf8"));
+ const mobile=css.nodes.find(node=>node.type==="atrule"&&node.params==="(width<=900px)");
+ const declarations=selector=>Object.fromEntries(mobile.nodes.find(node=>node.selector===selector).nodes.filter(node=>node.type==="decl").map(node=>[node.prop,node.value]));
+ const header=declarations(".cmd-shell>.modal-header"),scrim=declarations(".cmd-scrim");
+ assert.equal(header.position,"relative");assert.equal(header["z-index"],"var(--z-header)");assert.equal(scrim["z-index"],"var(--z-sticky)");
+ assert.equal(declarations(".cmd-summary-foot .cmd-actions>.button")["border-radius"],"var(--radius-pill)");
+ assert.equal(declarations(".cmd-bar>.cmd-bar-submit.button")["border-radius"],"var(--radius-pill)");assert.equal(declarations(".cmd-bar>.cmd-bar-submit.button")["min-height"],"var(--size-48)");
+ assert.equal(declarations(".cmd-sheet-close>svg").transform,"rotate(90deg)");
 });
 test("pedido manual: CSS único, responsive, estados remotos y actualización del flujo",()=>{
  const source=readFileSync(new URL("orders/presentation/orders-manager.tsx",root),"utf8");assert.match(source,/canManage\?<Button icon="plus"/);assert.ok(source.includes("createManualOrder"));assert.ok(source.includes('"kitchen-tickets"'));assert.ok(source.includes('setChannel(order.channel)'));assert.ok(source.includes('setStatus("abiertos")'));

@@ -1,7 +1,7 @@
 "use client";
 import {Dialog} from "@/design-system/dialog";
 import {useFieldArray,useForm,useWatch} from "react-hook-form";
-import {Button,FormField,Icon,Input,RowActionButton,Select,Textarea} from "@/design-system";
+import {Button,FormField,Icon,Input,RowActionButton,Select,Textarea,ModalHeader,ModalFooter} from "@/design-system";
 import {useSession} from "@/providers/session-context";
 import {formatRegionalNumber} from "@/shared/i18n/regional-format";
 import {inventoryTransferResolver} from "../domain/inventory-transfer-schema";
@@ -41,12 +41,8 @@ export function InventoryTransferDialog({items,locations,currentLocationId,busy,
 
   return <div className="modal-backdrop modal-overlay-in" role="presentation">
     <Dialog onResponseClose={close} className="crud-modal inventory-transfer-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="inventory-transfer-title" aria-busy={busy}>
-      <div className="modal-accent"/>
-      <header>
-        <span className="modal-title-icon"><Icon name="truck" size={18}/></span>
-        <div><small>INVENTARIO</small><h2 id="inventory-transfer-title">Transferir a otro local</h2></div>
-        <button type="button" aria-label="Cerrar" onClick={close} disabled={busy}><Icon name="close"/></button>
-      </header>
+
+      <ModalHeader title="Transferir a otro local" titleId="inventory-transfer-title" icon="truck" subtitle="INVENTARIO" onClose={close} busy={busy} closeLabel="Cerrar"/>
       <form onSubmit={handleSubmit(submit)} noValidate>
         <div className="inventory-transfer-body">
           <div className="inventory-transfer-route">
@@ -91,7 +87,7 @@ export function InventoryTransferDialog({items,locations,currentLocationId,busy,
 
           {isSubmitted&&hasErrors&&<div className="inventory-validation" role="alert"><Icon name="alert" size={16}/><span>Revisa los campos marcados antes de guardar.</span></div>}
         </div>
-        <footer><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy||!destinations.length||!items.length}>{busy?"Guardando…":"Guardar"}</Button></footer>
+        <ModalFooter><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy||!destinations.length||!items.length}>{busy?"Guardando…":"Guardar"}</Button></ModalFooter>
       </form>
       {busy&&<div className="modal-busy" role="status"><i/><span>Guardando…</span></div>}
     </Dialog>

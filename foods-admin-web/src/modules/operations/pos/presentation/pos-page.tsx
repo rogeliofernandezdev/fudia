@@ -6,7 +6,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,EmptyState,ErrorState,Icon,IconName,PageHeader,Pagination,RowActionButton,SearchField,Select,Status} from "@/design-system";
+import {Button,EmptyState,ErrorState,Icon,IconName,PageHeader,Pagination,RowActionButton,SearchField,Select,Status,ModalHeader,ModalFooter,ModalWorkspace,ModalItemList} from "@/design-system";
 import {useFeedback,useMoney,useSession} from "@/providers";
 import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
 import {useDebouncedValue} from "@/shared/hooks/use-debounced-value";
@@ -216,8 +216,8 @@ function POSPaymentEntry({loading,error,data,shiftLoading,shiftError,shiftName,c
     else return <PaymentDialog order={{...data.order,paidAmount:data.paidAmount,remainingAmount:data.remainingAmount,paymentStatus:data.paymentStatus}} shiftName={shiftName} busy={busy} formatMoney={formatMoney} close={close} save={save}/>;
   }
   return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal pos-payment-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="pos-payment-entry-title">
-    <div className="modal-accent"/>
-    <header><span className="modal-title-icon"><Icon name="cash" size={18}/></span><div><small>COBRO</small><h2 id="pos-payment-entry-title">{data?.order.tableName||data?.order.customerName||"Cobrar saldo"}</h2></div><button type="button" aria-label="Cerrar" onClick={close} disabled={busy}><Icon name="close"/></button></header>
+
+    <ModalHeader title={data?.order.tableName||data?.order.customerName||"Cobrar saldo"} titleId="pos-payment-entry-title" icon="cash" subtitle="COBRO" onClose={close} busy={busy} closeLabel="Cerrar"/>
     {state?state.retry?<ErrorState title={state.title} text={state.text} onRetry={state.retry}/>:<EmptyState icon={state.icon} title={state.title} text={state.text} action={state.cash?cashLink():undefined}/>:<POSPaymentLoading/>}
   </Dialog></div>;
 }
@@ -229,36 +229,43 @@ function POSPaymentLoading(){return <div className="pos-payment-body pos-payment
   <div className="pos-payment-loading-actions"><i/><i/></div>
 </div>}
 
-function POSDetailDialog({loading,error,data,canManage,hasShift,formatMoney,formatDateTime,retry,close,refund,ticket}:{loading:boolean;error?:string;data?:POSOrderDetail;canManage:boolean;hasShift:boolean;formatMoney:(value:number)=>string;formatDateTime:(value:string)=>string;retry?:()=>void;close:()=>void;refund:(payment:Payment)=>void;ticket?:()=>void}){
+export function POSDetailDialog({loading,error,data,canManage,hasShift,formatMoney,formatDateTime,retry,close,refund,ticket}:{loading:boolean;error?:string;data?:POSOrderDetail;canManage:boolean;hasShift:boolean;formatMoney:(value:number)=>string;formatDateTime:(value:string)=>string;retry?:()=>void;close:()=>void;refund:(payment:Payment)=>void;ticket?:()=>void}){
   const closed=Boolean(data&&(data.order.completedAt||data.order.status==="cancelado"));
-  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal pos-detail-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="pos-detail-title">
-    <div className="modal-accent"/>
-    <header><span className="modal-title-icon"><Icon name="receipt" size={18}/></span><div className="pos-modal-heading"><small>DETALLE DE COBRO</small><h2 id="pos-detail-title">{data?.order.code??"Pedido"}</h2>{data&&<p>{data.order.tableName||data.order.customerName||channelLabel[data.order.channel]||"Pedido del local"}</p>}</div><button type="button" aria-label="Cerrar" onClick={close}><Icon name="close"/></button></header>
+  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal pos-detail-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="pos-detail-title" aria-busy={loading}>
+
+    <ModalHeader title="Detalle de cobro" titleId="pos-detail-title" icon="receipt" onClose={close} closeLabel="Cerrar" details={data&&!loading&&!error?<small>{data.order.code}</small>:undefined}/>
     {loading?<POSDetailLoading/>
-    :error?<ErrorState title="No pudimos cargar el cobro" text={error} onRetry={retry}/>
-    :data&&<div className="pos-detail-body">
-      <section className="pos-detail-summary">
-        <div><small>TOTAL</small><b>{formatMoney(Number(data.order.total))}</b></div>
-        <div><small>PAGADO NETO</small><b>{formatMoney(Number(data.paidAmount))}</b></div>
-        <div className="remaining"><small>SALDO</small><strong>{formatMoney(Number(data.remainingAmount))}</strong></div>
-        <Status tone={paymentMeta[data.paymentStatus].tone}>{paymentMeta[data.paymentStatus].label}</Status>
+    :error?<div className="modal-body"><ErrorState title="No pudimos cargar el cobro" text={error} onRetry={retry}/></div>
+    :!data?<div className="modal-body"><EmptyState icon="receipt" title="No hay detalle disponible"/></div>
+    :<ModalWorkspace summary={<section className="modal-summary" aria-labelledby="pos-detail-summary-title">
+      <div className="modal-summary-heading"><h3 id="pos-detail-summary-title">Resumen de cobro</h3><Status tone={paymentMeta[data.paymentStatus].tone} emphasis>{paymentMeta[data.paymentStatus].label}</Status></div>
+      <div className="modal-summary-lines">
+        <div className="modal-summary-line"><span>Total del pedido</span><b>{formatMoney(Number(data.order.total))}</b></div>
+        <div className="modal-summary-line"><span>Pagado neto</span><b>{formatMoney(Number(data.paidAmount))}</b></div>
+      </div>
+      <div className="modal-summary-total"><span>Saldo pendiente</span><strong>{formatMoney(Number(data.remainingAmount))}</strong></div>
+    </section>}>
+    <div className="modal-body pos-detail-body hover-scroll" tabIndex={0} aria-label="Datos, productos y pagos del pedido">
+      <section className="pos-detail-context" aria-label="Datos del pedido"><dl>
+        <div><dt>{data.order.tableName?"Mesa":data.order.customerName?"Cliente":"Venta"}</dt><dd>{data.order.tableName||data.order.customerName||"Venta directa"}{data.order.tableName&&data.order.customerName&&<small>{data.order.customerName}</small>}</dd></div>
+        <div><dt>Canal</dt><dd>{channelLabel[data.order.channel]??data.order.channel}</dd></div>
+        {data.order.channel==="salon"&&<div><dt>Atendido por</dt><dd>{data.order.waiterName||"Sin asignar"}</dd></div>}
+        <div><dt>Fecha del pedido</dt><dd>{formatDateTime(data.order.createdAt)}</dd></div>
+      </dl></section>
+      <section className="pos-detail-section" aria-labelledby="pos-detail-products-title">
+        <h3 id="pos-detail-products-title">Productos del pedido</h3>
+        {data.order.items?.length?<ModalItemList className="pos-order-lines">{data.order.items.map(item=><div className="modal-item-row" role="listitem" key={item.id}><b className="modal-item-quantity">{Number(item.qty)}×</b><span>{item.name}<small>{formatMoney(Number(item.unitPrice))} c/u</small>{item.note&&<em>{item.note}</em>}</span><strong>{formatMoney(Number(item.qty)*Number(item.unitPrice))}</strong></div>)}</ModalItemList>:<p className="pos-detail-empty">No hay productos registrados.</p>}
       </section>
 
-      <section className="pos-detail-section">
-        {data.order.channel==="salon"&&<p>Mozo: <b>{data.order.waiterName||"Sin asignar"}</b></p>}
-        <header><div><small>CONSUMO</small><h3>Productos del pedido</h3></div><span>{data.order.items?.length??0} líneas</span></header>
-        <div className="pos-order-lines">{(data.order.items??[]).map(item=><div key={item.id}><b>{Number(item.qty)}×</b><span>{item.name}{item.note&&<small><Icon name="edit" size={14}/>{item.note}</small>}</span><strong>{formatMoney(Number(item.qty)*Number(item.unitPrice))}</strong></div>)}</div>
-      </section>
-
-      <section className="pos-detail-section">
-        <header><div><small>PAGOS</small><h3>Historial del pedido</h3></div><span>{data.payments.length}</span></header>
+      <section className="pos-detail-section" aria-labelledby="pos-detail-payments-title">
+        <h3 id="pos-detail-payments-title">Pagos registrados</h3>
         {data.payments.length?<div className="pos-payment-list">{data.payments.map(payment=>{
           const net=Number(payment.netAmount);
           return <article key={payment.id}><span className={"pos-payment-method pm-"+payment.method}><Icon name={paymentMethodMeta[payment.method]?.icon??"wallet"} size={16}/></span><div><b>{paymentMethodMeta[payment.method]?.label??"Otro"}</b><small>{payment.cashRegisterName} · {formatDateTime(payment.createdAt)}</small><small>Cobrado por: {payment.createdByName||"Sin información"}</small>{payment.reference&&<em>{payment.reference}</em>}</div><span className="pos-payment-values"><b>{formatMoney(Number(payment.amount))}</b>{Number(payment.refundedAmount)>0&&<small>Devuelto {formatMoney(Number(payment.refundedAmount))}</small>}</span>{canManage&&net>0&&!closed&&<Button kind="ghost" className="pos-refund-action" icon="undo" disabled={!hasShift} onClick={()=>refund(payment)}>Devolver</Button>}</article>})}</div>
-        :<EmptyState className="pos-section-empty" icon="wallet" title="Sin pagos registrados" text="Aún no se registraron pagos para este pedido."/>}
+        :<p className="pos-detail-empty">Sin pagos registrados.</p>}
       </section>
-    </div>}
-    {!loading&&!error&&data&&Number(data.paidAmount)>0&&ticket&&<footer><Button kind="secondary" icon="receipt" onClick={ticket}>Ver ticket de pago</Button></footer>}
+    </div></ModalWorkspace>}
+    {!loading&&!error&&data&&Number(data.paidAmount)>0&&ticket&&<ModalFooter><Button kind="secondary" icon="receipt" onClick={ticket}>Ver ticket de pago</Button></ModalFooter>}
   </Dialog></div>;
 }
 
@@ -267,10 +274,12 @@ function POSLoading(){return <>
   <div className="management-cards pos-order-cards pos-card-skeleton" aria-hidden="true">{Array.from({length:4},(_,index)=><article key={index}><header><i/><span><b/></span><i/></header><i/><div/><footer><i/><i/></footer></article>)}</div>
 </>}
 
-function POSDetailLoading(){return <div className="pos-detail-body pos-detail-loading" aria-label="Cargando detalle del pedido" aria-busy="true">
-  <section className="pos-detail-summary pos-detail-summary-skeleton">{Array.from({length:4},(_,index)=><i key={index}/>)}</section>
-  {Array.from({length:2},(_,section)=><section className="pos-detail-section pos-detail-section-skeleton" key={section}><header><span><i/><b/></span><i/></header>{Array.from({length:3},(_,row)=><div key={row}><i/><span><b/><small/></span><i/></div>)}</section>)}
-</div>}
+function POSDetailLoading(){return <ModalWorkspace summary={<section className="modal-summary pos-detail-loading" aria-hidden="true"><div className="modal-summary-heading"><b/></div><div className="modal-summary-lines">{Array.from({length:2},(_,index)=><div className="modal-summary-line" key={index}><i/><b/></div>)}</div><div className="modal-summary-total"><i/><b/></div></section>}>
+  <div className="modal-body pos-detail-body pos-detail-loading" aria-label="Cargando detalle del pedido" aria-busy="true">
+    <div className="pos-detail-context" aria-hidden="true"><dl>{Array.from({length:4},(_,index)=><div key={index}><i/><b/></div>)}</dl></div>
+    {Array.from({length:2},(_,section)=><section className="pos-detail-section pos-detail-section-skeleton" aria-hidden="true" key={section}><h3><b/></h3>{Array.from({length:3},(_,row)=><div key={row}><i/><span><b/><small/></span><i/></div>)}</section>)}
+  </div>
+</ModalWorkspace>}
 
 /** Acceso a Caja cuando falta turno: enlace con apariencia de botón secundario. */
 function cashLink(){return <Link href={pageRoutes.cash} className="button secondary"><Icon name="register" size={18}/><span>Ir a Caja</span></Link>}

@@ -8,10 +8,12 @@ import ts from "typescript";
 const require=createRequire(import.meta.url),root=new URL("../src/modules/operations/orders/",import.meta.url);
 function compile(file,resolve=require){const exports={};vm.runInNewContext(ts.transpileModule(readFileSync(new URL(file,root),"utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText,{exports,require:resolve});return exports}
 const flow=compile("domain/service-flow.ts"),actions=compile("domain/order-actions.ts");
+const metadata=compile("presentation/order-meta.ts",name=>name==="@/shared/i18n/regional-format"?{formatRegionalDateTime:()=>{throw new Error("La prueba de cuenta no debe formatear fechas");}}:require(name));
 let userId="waiter",manage=true;const mutations=[],feedback=[],invalidations=[];
 const controls=compile("presentation/order-service-controls.tsx",name=>{
  if(name.endsWith("service-flow"))return flow;
  if(name.endsWith("order-actions"))return actions;
+ if(name.endsWith("order-meta"))return metadata;
  if(name==="@/design-system")return{Button:"Button",Status:"Status"};
  if(name==="@/providers")return{useSession:()=>({user:{id:userId},can:()=>manage}),useFeedback:()=>({notify:v=>feedback.push(v)})};
  if(name==="@tanstack/react-query")return{useQueryClient:()=>({setQueryData:()=>{},invalidateQueries:q=>invalidations.push(q.queryKey)}),useMutation:config=>{mutations.push(config);return{isPending:false,mutate:v=>mutations.push(v)}}};

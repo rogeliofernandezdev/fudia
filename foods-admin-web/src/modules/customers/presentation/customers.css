@@ -19,11 +19,11 @@
 .customer-detail-body{display:grid;gap:var(--space-4);padding:var(--space-6);overflow-y:auto;align-content:start;background:var(--cloud-50)}
 .customer-detail-summary{display:grid;grid-template-columns:repeat(4,1fr) auto;align-items:center;gap:var(--space-3);padding:var(--space-4);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-card);background:var(--surface)}
 .customer-detail-summary>div{display:grid;gap:var(--space-1-5)}
-.customer-detail-summary small,.customer-detail-fields small{color:var(--ink-400);font-size:var(--font-size-label);font-weight:var(--weight-heavy);letter-spacing:var(--letter-spacing-caps)}
-.customer-detail-summary b{font-size:var(--font-size-sm)}
+.customer-detail-summary small,.customer-detail-fields small{color:var(--ink-700);font-size:var(--font-size-label);font-weight:var(--modal-label-weight);letter-spacing:var(--letter-spacing-caps)}
+.customer-detail-summary b{font-size:var(--font-size-control);font-weight:var(--modal-value-weight)}
 .customer-detail-fields{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-3)}
 .customer-detail-fields>div{display:grid;align-content:start;gap:var(--space-1-5);min-width:0;padding:var(--space-3-5) var(--space-4);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-card);background:var(--surface)}
-.customer-detail-fields b{font-size:var(--font-size-label);overflow-wrap:anywhere}
+.customer-detail-fields b{font-size:var(--font-size-control);font-weight:var(--modal-value-weight);overflow-wrap:anywhere}
 .customer-detail-section{overflow:hidden;border:var(--stroke-1) solid var(--line);border-radius:var(--radius-card);background:var(--surface)}
 .customer-detail-section>header{padding:var(--space-3-5) var(--space-4);border-bottom:var(--stroke-1) solid var(--line)}
 .customer-detail-section h3{margin:var(--space-1) 0 0;font-size:var(--font-size-sm)}
@@ -31,7 +31,7 @@
 .customer-detail-address{display:grid;gap:var(--space-1);padding:var(--space-3) var(--space-4);border-bottom:var(--stroke-1) solid var(--cloud-100)}
 .customer-detail-address:last-child{border-bottom:0}
 .customer-detail-address>div{display:flex;align-items:center;gap:var(--space-2)}
-.customer-detail-address>div b{font-size:var(--font-size-label)}
+.customer-detail-address>div b{font-size:var(--font-size-label);font-weight:var(--modal-label-weight)}
 .customer-detail-address>div span{color:var(--primary-700);background:var(--primary-100);border-radius:var(--radius-control);padding:var(--space-0-5) var(--space-1-5);font-size:var(--font-size-label);font-weight:var(--weight-bold);letter-spacing:var(--letter-spacing-wide)}
 .customer-detail-address p{margin:0;color:var(--ink-600);font-size:var(--font-size-label)}
 .customer-detail-address small{color:var(--ink-400);font-size:var(--font-size-label)}
@@ -41,7 +41,6 @@
 .customer-detail-notes p:last-child{margin-bottom:0}
 .customer-detail-empty{margin:0;padding:var(--space-3-5) var(--space-4);color:var(--ink-400);font-size:var(--font-size-label)}
 
-.customer-detail-skeleton-head .customer-detail-skeleton-block,
 .customer-detail-skeleton-body i,
 .customer-detail-skeleton-body b{
   position:relative;
@@ -50,7 +49,6 @@
   border-radius:var(--radius-control);
   background:var(--cloud-150);
 }
-.customer-detail-skeleton-head .customer-detail-skeleton-block::after,
 .customer-detail-skeleton-body i::after,
 .customer-detail-skeleton-body b::after{
   content:"";
@@ -60,17 +58,6 @@
   transform:translateX(-100%);
   animation:customer-detail-shimmer var(--duration-ambient) ease-in-out infinite;
 }
-.customer-detail-skeleton-head{
-  min-height:var(--size-68);
-  display:grid;
-  grid-template-columns:var(--size-40) minmax(0,1fr) var(--size-36);
-  align-items:center;
-  gap:var(--space-3);
-  padding:var(--space-3) var(--space-4);
-  border-bottom:var(--stroke-1) solid var(--line);
-  background:var(--surface);
-}
-.customer-detail-skeleton-icon{width:var(--size-40);height:var(--size-40);border-radius:var(--radius-tile)}
 .customer-detail-skeleton-copy{display:grid;gap:var(--space-1-5)}
 .customer-detail-skeleton-copy i{width:var(--size-64);height:var(--size-7)}
 .customer-detail-skeleton-copy b{width:var(--size-154);height:var(--size-16)}
@@ -91,7 +78,6 @@
 .customer-detail-skeleton-lines i:nth-child(3){width:58%}
 @keyframes customer-detail-shimmer{to{transform:translateX(100%)}}
 @media(prefers-reduced-motion:reduce){
- .customer-detail-skeleton-head .customer-detail-skeleton-block::after,
  .customer-detail-skeleton-body i::after,
  .customer-detail-skeleton-body b::after{animation:none}
 }

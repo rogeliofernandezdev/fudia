@@ -19,6 +19,7 @@ Construir una plataforma SaaS multiempresa para restaurantes peruanos.
 11. No copiar marcas, logotipos ni piezas publicitarias de las referencias.
 12. Ejecutar lint, typecheck, tests y build antes de cerrar una implementación.
 13. Evitar información visual redundante en wizards y formularios: si el progreso ya está representado por pasos visibles, no repetir indicadores como "Paso X de Y".
+14. Respetar la matriz de estados aprobada en el sistema visual de cada frontend: fondos tenues, texto legible y etiqueta explícita. Reutilizar sus componentes, tokens y mapeos centrales; no recolorear estados por pantalla ni introducir variantes sólidas sin aprobación.
 
 ## Identidad
 

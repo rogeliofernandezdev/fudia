@@ -1,7 +1,7 @@
 "use client";
 import {Dialog} from "@/design-system/dialog";
 import {useState,type FormEvent} from "react";
-import {Button,FormField,Icon,Input,Select,Textarea} from "@/design-system";
+import {Button,FormField,Icon,Input,Select,Textarea,ModalHeader,ModalFooter} from "@/design-system";
 import {useSession} from "@/providers/session-context";
 import {formatRegionalNumber} from "@/shared/i18n/regional-format";
 import type {PurchaseReceiptDetail,PurchaseReturnDraft,PurchaseReturnKind} from "../domain/types";
@@ -35,8 +35,8 @@ export function PurchaseReturnDialog({receipt,busy,close,save}:{receipt:Purchase
  }
 
  return <div className="modal-backdrop modal-overlay-in" role="presentation"><Dialog onResponseClose={close} className="crud-modal purchase-return-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="purchase-return-title" aria-busy={busy}>
-  <div className="modal-accent"/>
-  <header><span className="modal-title-icon"><Icon name="undo" size={18}/></span><div><small>{receipt.code} · {receipt.number}</small><h2 id="purchase-return-title">Corregir o devolver recepción</h2></div><button type="button" aria-label="Cerrar" onClick={close} disabled={busy}><Icon name="close"/></button></header>
+
+  <ModalHeader title="Corregir o devolver recepción" titleId="purchase-return-title" icon="undo" subtitle={<>{receipt.code}· {receipt.number}</>} onClose={close} busy={busy} closeLabel="Cerrar"/>
   <form onSubmit={submit} noValidate>
    <div className="purchase-return-body" inert={busy}>
     <div className="form-grid">
@@ -53,7 +53,7 @@ export function PurchaseReturnDialog({receipt,busy,close,save}:{receipt:Purchase
     {errors.items&&<div className="purchase-validation" role="alert"><Icon name="alert" size={16}/>{errors.items}</div>}
     <FormField label="Notas" optional><Textarea rows={2} maxLength={500} value={notes} onChange={e=>setNotes(e.target.value)}/></FormField>
    </div>
-   <footer><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy}>{busy?"Procesando…":kind==="receipt_correction"?"Registrar corrección":"Registrar devolución"}</Button></footer>
+   <ModalFooter><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy}>{busy?"Procesando…":kind==="receipt_correction"?"Registrar corrección":"Registrar devolución"}</Button></ModalFooter>
   </form>
   {busy&&<div className="modal-busy" role="status"><i/><span>Procesando…</span></div>}
  </Dialog></div>;

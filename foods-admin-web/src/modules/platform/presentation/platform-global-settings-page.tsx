@@ -6,7 +6,7 @@ import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import CountrySelect from "react-select";
 import {createLookupSelectStyles} from "@/design-system/search-select-styles";
-import {Button,ConfirmDialog,EmptyState,ErrorState,FormField,Icon,Input,PageHeader,RowActionButton,Status,TableSkeleton} from "@/design-system";
+import {Button,ConfirmDialog,EmptyState,ErrorState,FormField,Icon,Input,PageHeader,RowActionButton,Status,TableSkeleton,ModalHeader,ModalFooter} from "@/design-system";
 import {useFeedback} from "@/providers";
 import type {PlatformWhatsAppChannel,PlatformWhatsAppChannelDraft} from "../domain/types";
 import {getPlatformGlobalCatalogs,listPlatformWhatsAppChannels,savePlatformWhatsAppChannel} from "../infrastructure/platform-api";
@@ -104,7 +104,7 @@ export function PlatformGlobalSettingsPage(){
     <div className="management-cards">{items.map(item=><article key={item.id}><header><span className="row-icon r0"><Icon name="chat"/></span><div><b>{item.countryName}</b><small>{item.countryCode}</small></div>{status(item)}</header><dl><div><dt>Nombre</dt><dd>{item.displayName}</dd></div><div><dt>Número</dt><dd>{item.phoneNumber}</dd></div><div><dt>Moneda</dt><dd>{currencyOf(item.countryCode)}</dd></div></dl><footer>{actions(item)}</footer></article>)}</div></>}
   </section>
 
-  {draft&&<div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={()=>{setDraft(null);setEditingId(undefined)}} className="crud-modal platform-channel-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="global-channel-title" aria-busy={save.isPending}><div className="modal-accent"/><header><span className="modal-title-icon"><Icon name="chat" size={18}/></span><div><small>{editingId?"EDITAR CANAL":"NUEVO CANAL"}</small><h2 id="global-channel-title">Canal global de WhatsApp</h2></div><button type="button" aria-label="Cerrar" disabled={save.isPending} onClick={()=>{setDraft(null);setEditingId(undefined)}}><Icon name="close"/></button></header>
+  {draft&&<div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={()=>{setDraft(null);setEditingId(undefined)}} className="crud-modal platform-channel-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="global-channel-title" aria-busy={save.isPending}><ModalHeader title="Canal global de WhatsApp" titleId="global-channel-title" icon="chat" subtitle={editingId?"EDITAR CANAL":"NUEVO CANAL"} onClose={()=>{setDraft(null);setEditingId(undefined)}} busy={save.isPending} closeLabel="Cerrar"/>
    <form onSubmit={event=>{event.preventDefault();submit()}}>
     <div className="form-grid platform-channel-fields">
      {validationError&&<p className="field-error span-2" role="alert">{validationError}</p>}
@@ -113,7 +113,7 @@ export function PlatformGlobalSettingsPage(){
      <FormField className="span-2" label="Nombre visible"><Input value={draft.displayName} onChange={e=>setDraft({...draft,displayName:e.target.value})}/></FormField>
      <FormField className="span-2" label="Número WhatsApp"><Input value={draft.phoneNumber} onChange={e=>setDraft({...draft,phoneNumber:e.target.value})} placeholder="987654321"/></FormField>
     </div>
-    <footer><Button type="button" kind="ghost" disabled={save.isPending} onClick={()=>{setDraft(null);setEditingId(undefined)}}>Cancelar</Button><Button type="submit" disabled={save.isPending}>{save.isPending?"Guardando…":"Guardar"}</Button></footer>
+    <ModalFooter><Button type="button" kind="ghost" disabled={save.isPending} onClick={()=>{setDraft(null);setEditingId(undefined)}}>Cancelar</Button><Button type="submit" disabled={save.isPending}>{save.isPending?"Guardando…":"Guardar"}</Button></ModalFooter>
    </form>
   </Dialog></div>}
   <ConfirmDialog open={Boolean(target)} title={target?.active?"Desactivar canal":"Activar canal"} subject={target?{label:"Canal",name:`${target.displayName} · ${target.phoneNumber}`}:undefined} description={target?.active?"El país dejará de estar disponible para registrar empresas nuevas.":"El país quedará disponible para registrar empresas nuevas."} tone={target?.active?"danger":"success"} confirmLabel={target?.active?"Desactivar":"Activar"} pending={toggle.isPending} onCancel={()=>setTarget(null)} onConfirm={()=>target&&toggle.mutate(target)}/>

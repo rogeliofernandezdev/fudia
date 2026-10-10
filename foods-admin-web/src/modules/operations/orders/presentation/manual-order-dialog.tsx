@@ -2,7 +2,7 @@
 import "./manual-order.css";
 import {useEffect,useRef,useState,type FormEvent} from "react";
 import {useForm,useWatch} from "react-hook-form";
-import {Button,ConfirmDialog,Dialog,FormField,Icon,IconButton,Input,Select} from "@/design-system";
+import {Button,ConfirmDialog,Dialog,FormField,Input,Select,ModalHeader,ModalFooter} from "@/design-system";
 import {useFeedback} from "@/providers/feedback-provider";
 import type {Draft} from "../../salon/domain/types";
 import {ComandaView} from "./comanda-view";
@@ -43,9 +43,9 @@ export function ManualOrderDialog({channels,currencySymbol,busy,onClose,onSave}:
  };
  return <>
   {phase==="details"?<div className="modal-backdrop modal-overlay-in manual-order-backdrop">
-   <Dialog onResponseClose={onClose} className="manual-order-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="manual-order-title" aria-busy={locked}>
-    <header className="manual-order-head"><span className="manual-order-icon"><Icon name="truck" size={18}/></span><h2 id="manual-order-title">Datos del pedido</h2><IconButton icon="close" label="Cerrar" disabled={locked} onClick={()=>close()}/></header>
-    <form className="manual-order-form" onSubmit={continueOrder}>
+   <Dialog onResponseClose={onClose} className="crud-modal manual-order-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="manual-order-title" aria-busy={locked}>
+    <ModalHeader title="Datos del pedido" titleId="manual-order-title" icon="truck" onClose={()=>close()} busy={locked}/>
+    <form className="modal-form manual-order-form" onSubmit={continueOrder}>
      <div className="manual-order-body">
       <fieldset className="manual-order-fields" disabled={locked}>
        <FormField className="manual-order-wide" label="Tipo de atención" error={errors.channel?.message}><Select {...register("channel")} data-dialog-initial-focus>{channelOptions.map(option=><option value={option.value} key={option.value}>{option.label}</option>)}</Select></FormField>
@@ -58,7 +58,7 @@ export function ManualOrderDialog({channels,currencySymbol,busy,onClose,onSave}:
        </>}
       </fieldset>
      </div>
-     <footer className="manual-order-actions"><Button kind="secondary" disabled={locked} onClick={()=>close()}>Cancelar</Button><Button type="submit" icon="chevron" disabled={locked||!channelOptions.length}>Continuar</Button></footer>
+     <ModalFooter className="manual-order-actions"><Button kind="secondary" disabled={locked} onClick={()=>close()}>Cancelar</Button><Button type="submit" icon="chevron" disabled={locked||!channelOptions.length}>Continuar</Button></ModalFooter>
     </form>
    </Dialog>
   </div>:<ComandaView initial={draft} mode="create" allTables={[]} busy={locked} channelLabel={channelOptions.find(option=>option.value===draft.channel)?.label??""} notify={notify} close={close} onResponseClose={onClose} save={save} onBack={current=>{if(locked||submission.current)return;setDraft(current);setPhase("details")}}/>}

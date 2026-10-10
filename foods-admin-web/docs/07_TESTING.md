@@ -1,5 +1,72 @@
 # Pruebas
 
+`comanda-catalog-layout.test.mjs` protege categorías del API, acceso persistente a
+Menús y combos, selección única, recuperación de categorías, precios y bloqueo
+de productos no disponibles. Verifica el fallback de fotos, controles de cantidad,
+desplazamiento nativo sin barra visible y acceso a la lista completa. Verifica
+acentos de categoría estables por ID (índigo, celeste, violeta y petróleo),
+marca de selección independiente del color y contraste AA en cada familia,
+cápsulas de cantidad compartidas y fotos de 64 px con fallback del sistema.
+Tras build, `comanda-preview.mjs` renderiza la
+comanda real con datos ilustrativos y comprueba 390 px, escritorio, tablet,
+altura reducida, categorías extensas, menús, selección, skeleton, error y vacío.
+La última categoría sigue accesible mediante scroll horizontal y la lista completa
+incluye todas las categorías y menús; su acceso no se desplaza con la tira.
+La barra inferior abre la revisión, sin guardar ni enviar. Las pruebas del borrador
+comprueban que el control circular para plegar la hoja conserva productos y
+notas, vuelve a la carta sin guardar ni cerrar la comanda y presenta un icono
+chevron de 24 px, fondo índigo tenue sin borde y un área táctil de 44 px. También
+comprueban disminuir/quitar sin afectar combos ni notas de otras líneas.
+Protegen «Guardar comanda» con `sendToKitchen=false`, «Enviar a cocina» con `true`,
+bloqueo de clics repetidos, progreso en la acción elegida y aviso «sin enviar a cocina».
+El botón secundario tiene fondo `primary-200`, borde `primary-600` y texto
+`primary-700`; el hover usa `primary-300`/`primary-800` para conservar contraste AA.
+Comprueba los iconos de portapapeles/envío, radios completos en las acciones
+móviles y cabecera blanca sobre índigo sin quedar cubierta por el scrim abierto.
+Incluye resumen móvil abierto, notas, opciones de combos, nombres largos y
+ausencia de imagen; comprueba cantidades de 44 px, foco sin recortar y pie visible.
+La foto del catálogo acompaña al borrador sin formar parte del payload del pedido.
+No registra pedidos ni consume el API. La emulación
+comprueba geometría; tacto, teclado y chrome del navegador requieren teléfono real.
+
+`modal-standard.test.mjs` protege la cabecera solo con icono, título y X,
+contexto fuera del header, estado opcional real y acciones contiguas a la
+derecha con 10 px. Audita que los Dialog de contenido no dupliquen la cabecera
+ni el footer del formulario. Confirmaciones y respuestas quedan exceptuadas.
+`shared-ui-preview.mjs` comprueba esa geometría en escritorio, 390 px y altura
+reducida, incluyendo el pie visible al desplazar el cuerpo.
+
+`sales-detail.test.mjs` protege el orden mesa (o cliente), canal, atendido por y
+fecha del pedido, con dos filas alineadas en escritorio; en móvil mesa/canal
+comparten fila y encargado/fecha ocupan filas completas con etiqueta junto al valor;
+el skeleton reproduce los cuatro datos y otros canales no inventan un mozo.
+Tras el build, `node tests/helpers/sale-detail-preview.mjs .next/sale-detail-preview`
+renderiza el modal real con datos ilustrativos, sin API ni escrituras.
+Comprueba escritorio, 390 px, altura reducida, nombres largos, Delivery y carga:
+sin recortes ni desbordes, header sin información adicional y resumen fijo visible.
+Ventas también comprueba pagos reales, devoluciones, pagos vacíos y múltiples
+pagos; listas sin tarjetas, resumen fuera del cuerpo y ticket visible al desplazarlo.
+El test de estructura exige `ModalWorkspace`, `ModalItemList`, cantidades circulares,
+separador de pagos y estado único en el resumen, sin un pie de acciones vacío.
+Con un tercer argumento `pos`, el mismo preview revisa el detalle de cobro:
+resumen inferior fijo, pagos parciales y acciones ocultas en solo lectura.
+Incluye anchos de 600, 610, 620 y 630 px para evitar recortes al pasar entre
+backdrop con márgenes y pantalla completa. En móvil valida mesa/canal juntos,
+encargado/fecha a ancho completo y el resumen dentro de la pantalla.
+Verifica además el canal alineado al extremo derecho, valores de encargado y
+fecha en la misma columna y jerarquía real de tamaño y color entre etiquetas
+y datos: etiquetas en seminegrita, valores regulares y títulos de sección en
+negrita, tanto en móvil como en escritorio. La etiqueta contextual muestra
+«Mesa», «Cliente» o «Venta» según el dato real, nunca la combinación ambigua.
+`pos-payment-flow.test.mjs` protege esta organización y conserva los permisos
+de devolución, turno requerido, cierre y separación del formulario de cobro.
+
+`modal-typography.test.mjs` protege los roles compartidos de etiquetas 600,
+valores 400 y secciones 700, la adopción en los detalles y asistentes, y la
+ausencia de pesos invertidos en estilos locales. Los resúmenes monetarios y
+estados conservan su énfasis. Protege también la ausencia de «Cliente / Mesa»
+en modales; POS y Ventas prueban mesa, cliente y venta directa por separado.
+
 `login-layout.test.mjs` protege los tres mensajes informativos del acceso en
 una sola fila, icono/texto alineados y textos completos con tipografía auxiliar.
 Protege además la misma estructura centrada en móvil y escritorio, cabecera
@@ -164,3 +231,63 @@ explícito y protección frente a doble POST. Incluye contenidos fraccionarios,
 validación de conversiones históricas y transporte persistente
 sin stock al crear. `purchase-item-dialog.test.mjs` comprueba la integración
 del selector compartido y conservación del borrador si falla el API.
+
+`shared-ui-layout.test.mjs` protege la eliminación de pestañas antiguas,
+selección suave y contador contrastado, navegación por teclado y foco itinerante,
+márgenes comunes de modal, área táctil de cierre y geometría móvil sin recorte.
+Protege la cabecera índigo `primary-700`, título/cierre blancos, padding vertical
+de 8 px y altura mínima de 64 px. Los helpers comprueban contraste AA y permiten
+que los encabezados largos crezcan sin recortar texto.
+La cabecera llega al borde superior y ocupa todo el ancho del modal, sin franja
+degradada ni elementos decorativos anteriores.
+
+La comprobación visual aislada `tests/helpers/shared-ui-preview.mjs` renderiza las
+primitivas React reales con sus CSS y Manrope del build, usando datos ilustrativos.
+No consulta ni modifica datos de restaurantes. Con Playwright disponible y, si
+hace falta, `FOODS_PLAYWRIGHT_PATH`/`FOODS_BROWSER_PATH` apuntando a sus instalaciones
+locales, ejecutar `node tests/helpers/shared-ui-preview.mjs .next/shared-ui-preview`.
+Guarda capturas y geometría para escritorio, tablet, 390 px y viewport bajo;
+comprueba desborde, cierre táctil, márgenes y pie visible después del scroll.
+El navegador y el servidor temporal se cierran al terminar. No sustituye la prueba
+con teléfono físico de teclado, áreas seguras y comportamiento de toque.
+
+`modal-redesign.test.mjs` renderiza el detalle real de Pedidos/Salón mediante
+`tests/helpers/order-detail-fixture.mjs`, con TanStack Query y un contexto de
+sesión ilustrativo. Protege `ModalHeader` y `ModalWorkspace` compartidos, estados
+de preparación/cuenta separados, resumen fuera del cuerpo desplazable y acciones
+según mozo, entrega completa y permiso de cobro. Incluye carga, error recuperable,
+productos vacíos y cuenta pagada; no consulta el API ni permite escrituras reales.
+También protege `ModalItemList`: cantidades circulares con tokens azules existentes,
+producto/importe alineados sin encabezados de tabla ni borde exterior,
+notas fuera del listado sobre fondo suave y resumen inferior con separador fino. «Pendiente» usa
+ámbar tintado; «Cuenta abierta» usa celeste tenue con icono y texto oscuros, sin borde, sin distinguir
+artificialmente productos que comparten el mismo estado.
+Subtotal, Pagado y Saldo pendiente se verifican en la misma fila a 390 px.
+El fondo completo del resumen usa `cloud-50`; el estado abierto destaca
+con fondo `sky-100` y texto `sky-800`, distinto del índigo de Confirmado. Pagada conserva verde y Finalizada usa gris neutro; los cuatro
+estados de cuenta tienen tonos distintos. No se repite el conteo agregado de unidades en el encabezado.
+Ejecutar desde `foods-admin-web`: `node --test tests/modal-redesign.test.mjs`.
+`tests/operational-status-standard.test.mjs` protege los pares exactos de tokens,
+su contraste mínimo 4.5:1 y su correspondencia con la
+[matriz obligatoria](02_DESIGN_SYSTEM.md#colores-de-operación-pedido-preparación-y-cuenta).
+
+Después de `npm run build`, ejecutar
+`node tests/helpers/order-modal-preview.mjs .next/order-modal-preview` para
+generar capturas y `geometry.json` del componente real con datos ilustrativos,
+Manrope del build y CSS fuente de los mismos componentes. Para comprobar también
+interacciones con los estilos compilados, definir `FOODS_PREVIEW_COMPILED_CSS=1`:
+ambos helpers cargarán conjuntamente los CSS del build. Es una comprobación aislada
+de composición, no una captura de una ruta autenticada ni garantía del orden de navegación.
+Usa Playwright y las mismas variables opcionales de ruta descritas arriba.
+Comprueba escritorio 1440×900, ventanas 1192×712 y 967×835, móvil 390×844,
+viewport bajo 390×480, tablet táctil 768×1024, Delivery en escritorio/móvil,
+skeleton y error. Mide el eje central de título/X, la primera línea de
+etiqueta/nombre del mozo y el resumen inferior al mismo ancho del cuerpo. Exige que
+el mozo preceda a la fecha en el DOM y comprueba los siete estados del pedido,
+con contraste de texto de las píldoras de al menos 4.5:1. Verifica ausencia de desborde,
+panel dentro del viewport, cuenta y acciones visibles, cierre táctil de 44 px y
+scroll de 20 productos conservando la posición del resumen. El formulario global
+se revisa con `shared-ui-preview.mjs` en tamaños `md` y `lg`, incluido pie visible
+tras recorrer campos largos. Ambos helpers cierran navegador y servidor temporal
+al terminar. Estas comprobaciones aisladas no prueban la aplicación con sesión
+autenticada ni sustituyen una revisión en teléfono físico.

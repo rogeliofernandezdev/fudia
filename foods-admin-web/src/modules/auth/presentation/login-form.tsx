@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useQueryClient } from "@tanstack/react-query";
 import { Icon, type IconName } from "@/design-system/icons";
-import { Button, Dialog, FormField, FullScreenLoader, Input } from "@/design-system";
+import { Button, Dialog, FormField, FullScreenLoader, Input ,ModalHeader} from "@/design-system";
 import { ActiveSessionError, login, logout } from "../infrastructure/auth-api";
 import { loginResolver, type LoginDraft } from "../domain/login-schema";
 import {loadSessionContext} from "@/shared/session/session-api";
@@ -145,12 +145,8 @@ export function LoginForm() {
     </section>
     {showRecoveryHelp && <div className="modal-backdrop modal-overlay-in">
       <Dialog className="crud-modal compact modal-panel-in" aria-labelledby="login-recovery-title" onResponseClose={() => setShowRecoveryHelp(false)}>
-        <div className="modal-accent"/>
-        <header>
-          <span className="modal-title-icon"><Icon name="key"/></span>
-          <div><h2 id="login-recovery-title">Próximamente</h2></div>
-          <button type="button" aria-label="Cerrar ayuda" onClick={() => setShowRecoveryHelp(false)}><Icon name="close"/></button>
-        </header>
+
+        <ModalHeader title="Próximamente" titleId="login-recovery-title" icon="key" onClose={() => setShowRecoveryHelp(false)} closeLabel="Cerrar ayuda"/>
       </Dialog>
     </div>}
   </main>;

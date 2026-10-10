@@ -5,6 +5,7 @@ import {useSession,useFeedback} from "@/providers";
 import {canManageOrderService} from "../domain/order-actions";
 import {canAddConsumption,canCloseAccount,type TableAccount} from "../domain/service-flow";
 import {closeOrderAccount} from "../infrastructure/service-api";
+import {serviceStatusTone} from "./order-meta";
 import "./order-service.css";
 
 function useServiceMutation(){
@@ -19,7 +20,7 @@ export function OrderItemService({order,itemId}:{order:TableAccount;itemId:strin
  const items=(order.serviceItems??[]).filter(item=>item.orderItemId===itemId);
  if(!items.length)return null;
  return <div className="order-service-lines">{items.map(item=><div className="order-service-line" key={item.id}>
-  <div>{items.length>1&&<span>{item.name}</span>}<small>{item.destinationLabel}</small><Status tone={item.status==="entregado"?"gray":item.status==="listo"?"green":item.status==="preparando"?"orange":"blue"}>{item.statusLabel}</Status></div>
+  <div>{items.length>1&&<span>{item.name}</span>}<small>{item.destinationLabel}</small><Status tone={serviceStatusTone(item.status)}>{item.statusLabel}</Status></div>
  </div>)}</div>;
 }
 
@@ -34,3 +35,4 @@ export function OrderAccountActions({order,onAdd,busy=false}:{order:TableAccount
 }
 
 export function accountLabel(order:TableAccount){return order.completedAt?"Finalizada":order.accountState==="paid"?"Pagada":order.billClosedAt?"Por cobrar":"Cuenta abierta"}
+export function accountTone(order:TableAccount):"sky"|"green"|"orange"|"gray"{return order.completedAt?"gray":order.accountState==="paid"?"green":order.billClosedAt?"orange":"sky"}

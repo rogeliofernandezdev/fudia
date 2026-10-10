@@ -1,7 +1,7 @@
 "use client";
 import {useEffect,useRef,useState} from "react";
 import {useQuery} from "@tanstack/react-query";
-import {Button,ErrorState,Icon} from "@/design-system";
+import {Button,ErrorState,ModalHeader,ModalFooter} from "@/design-system";
 import {Dialog} from "@/design-system/dialog";
 import {useSession} from "@/providers";
 import {getSaleDetail} from "../infrastructure/sales-api";
@@ -28,13 +28,13 @@ export function PaymentTicketDialog({orderId,paymentId,close}:{orderId:string;pa
  function download(){if(!prepared)return;const anchor=document.createElement("a");anchor.href=prepared.url;anchor.download=prepared.filename;anchor.click();}
  function print(){try{if(!ready||!frame.current?.contentWindow)return;frame.current.contentWindow.focus();frame.current.contentWindow.print();}catch{setError("No pudimos abrir la impresión. Descarga el PDF para imprimirlo.");}}
  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal payment-ticket-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="payment-ticket-title">
-  <div className="modal-accent"/><header><span className="modal-title-icon"><Icon name="receipt" size={18}/></span><div><small>TICKET · 80 MM</small><h2 id="payment-ticket-title">Ticket de pago</h2></div><button type="button" aria-label="Cerrar ticket" onClick={close}><Icon name="close"/></button></header>
+  <ModalHeader title="Ticket de pago" titleId="payment-ticket-title" icon="receipt" subtitle="TICKET · 80 MM" onClose={close} closeLabel="Cerrar ticket"/>
   <div className="payment-ticket-body">
    <p>Imprime al 100 %, con papel de 80 mm y sin cabeceras ni pies del navegador. Este ticket no reemplaza una boleta o factura.</p>
    {failure?<ErrorState title="No pudimos preparar el ticket" text={failure} onRetry={()=>{setError(null);setPrepared(null);setReady(false);if(detail.isError)void detail.refetch();else setAttempt(value=>value+1);}}/>
    :loading?<div className="payment-ticket-skeleton" aria-busy="true" aria-label="Preparando ticket">{Array.from({length:8},(_,index)=><i className="remote-modal-skeleton-block" key={index}/>)}</div>
    :<><iframe title="Vista previa PDF del ticket de pago de 80 mm" src={prepared!.url}/><iframe className="payment-ticket-print-frame" ref={frame} title="Documento de impresión del ticket" aria-hidden="true" tabIndex={-1} srcDoc={prepared!.html} onLoad={()=>setReady(true)}/></>}
   </div>
-  <footer><Button kind="secondary" icon="download" disabled={!prepared||loading} onClick={download}>Descargar PDF</Button><Button icon="receipt" disabled={!ready||loading||Boolean(failure)} onClick={print}>Imprimir ticket</Button></footer>
+  <ModalFooter><Button kind="secondary" icon="download" disabled={!prepared||loading} onClick={download}>Descargar PDF</Button><Button icon="receipt" disabled={!ready||loading||Boolean(failure)} onClick={print}>Imprimir ticket</Button></ModalFooter>
  </Dialog></div>;
 }

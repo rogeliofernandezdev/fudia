@@ -4,7 +4,7 @@ import "./platform-plans.css";
 import {useMemo,useState} from "react";
 import {Controller,useForm} from "react-hook-form";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,EmptyState,ErrorState,FormField,Input,PageHeader,Select,Status,Tabs,Textarea} from "@/design-system";
+import {Button,EmptyState,ErrorState,FormField,Input,PageHeader,Select,Status,Tabs,Textarea,ModalHeader,ModalFooter} from "@/design-system";
 import {Icon} from "@/design-system/icons";
 import {useFeedback} from "@/providers";
 import type {PlatformModule,SubscriptionPlan,SubscriptionPlanDraft} from "../domain/types";
@@ -89,7 +89,7 @@ export function PlatformPlansPage(){
 function PlanDialog({value:initial,modules,currencies,busy,close,save}:{value:SubscriptionPlanDraft;modules:PlatformModule[];currencies:{code:string;name:string}[];busy:boolean;close:()=>void;save:(value:SubscriptionPlanDraft)=>void}){
  const{register,control,handleSubmit,setValue,formState:{errors}}=useForm<SubscriptionPlanDraft>({defaultValues:initial,resolver:planResolver,mode:"onSubmit",reValidateMode:"onChange"});
  const groups=useMemo(()=>Array.from(new Set(modules.map(module=>module.category))),[modules]);
- return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal plan-dialog modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="plan-dialog-title"><div className="modal-accent"/><header><span className="modal-title-icon"><Icon name="payment"/></span><div><small>{initial.id?"EDITAR PLAN":"NUEVO PLAN"}</small><h2 id="plan-dialog-title">Configuración comercial</h2></div><button type="button" aria-label="Cerrar" disabled={busy} onClick={close}><Icon name="close"/></button></header>
+ return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal plan-dialog modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="plan-dialog-title"><ModalHeader title="Configuración comercial" titleId="plan-dialog-title" icon="payment" subtitle={initial.id?"EDITAR PLAN":"NUEVO PLAN"} onClose={close} busy={busy} closeLabel="Cerrar"/>
   <form onSubmit={handleSubmit(value=>save({...value,trialDays:Number(value.trialDays)}))} noValidate>
    <div className="plan-form">
     <div className="form-grid">
@@ -110,7 +110,7 @@ function PlanDialog({value:initial,modules,currencies,busy,close,save}:{value:Su
      return <section className={"plan-modules"+(errors.moduleKeys?" has-error":"")}><header><div><small>LÍMITES Y MÓDULOS</small><h3>Módulos incluidos</h3>{errors.moduleKeys?.message&&<small className="field-error" role="alert">{errors.moduleKeys.message}</small>}</div><b>{selected.length}</b></header>{groups.map(group=><div className="plan-module-group" key={group}><strong>{group}</strong><div>{modules.filter(module=>module.category===group).map(module=><label key={module.key} className={selected.includes(module.key)?"selected":""}><input type="checkbox" checked={selected.includes(module.key)} onChange={()=>toggle(module.key)}/><span><Icon name="check" size={14}/></span><div><b>{module.name}</b><small>{module.description}</small></div></label>)}</div></div>)}</section>;
     }}/>
    </div>
-   <footer><Button kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" icon="check" disabled={busy}>{busy?"Guardando…":"Guardar"}</Button></footer>
+   <ModalFooter><Button kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" icon="check" disabled={busy}>{busy?"Guardando…":"Guardar"}</Button></ModalFooter>
   </form>
  </Dialog></div>;
 }

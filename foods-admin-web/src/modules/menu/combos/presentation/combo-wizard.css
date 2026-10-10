@@ -15,85 +15,6 @@
   box-shadow: var(--elevation-4);
 }
 
-.combo-wizard-header {
-  min-height: var(--size-82);
-  padding: var(--space-3-5) var(--space-5);
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) var(--control-height);
-  align-items: center;
-  gap: var(--space-3-5);
-  flex: 0 0 auto;
-  border-bottom: var(--stroke-1) solid var(--line);
-  background: var(--surface);
-}
-
-.combo-wizard-title {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-.combo-wizard-title-icon {
-  width: var(--size-42);
-  height: var(--size-42);
-  display: grid;
-  place-items: center;
-  flex: 0 0 auto;
-  border-radius: var(--radius-tile);
-  background: var(--primary-600);
-  color: var(--surface);
-  box-shadow: var(--elevation-primary);
-}
-
-.combo-wizard-title > div {
-  min-width: 0;
-  display: grid;
-  gap: var(--space-0-5);
-}
-
-.combo-wizard-title small {
-  color: var(--primary-600);
-  font-size: var(--font-size-label);
-  font-weight: var(--weight-heavy);
-  letter-spacing: var(--letter-spacing-caps);
-}
-
-.combo-wizard-title h2 {
-  margin: 0;
-  color: var(--ink-950);
-  font-size: var(--font-size-md);
-  font-weight: var(--weight-heavy);
-  letter-spacing: var(--letter-spacing-snug);
-  line-height: var(--line-height-tight);
-}
-
-.combo-wizard-title p {
-  margin: 0;
-  color: var(--ink-600);
-  font-size: var(--font-size-label);
-  line-height: var(--line-height-snug);
-}
-
-.combo-wizard-close {
-  width: var(--control-height);
-  height: var(--control-height);
-  display: grid;
-  place-items: center;
-  border: var(--stroke-1) solid var(--line);
-  border-radius: var(--radius-tile);
-  background: var(--surface);
-  color: var(--ink-600);
-  cursor: pointer;
-  transition: background var(--duration-fast) ease, border-color var(--duration-fast) ease, color var(--duration-fast) ease;
-}
-
-.combo-wizard-close:hover {
-  border-color: var(--line-strong);
-  background: var(--cloud-100);
-  color: var(--ink-950);
-}
-
 .combo-wizard-steps {
   padding: var(--space-2-5) var(--space-5);
   display: grid;
@@ -634,55 +555,24 @@
   border-top: var(--stroke-1) solid var(--cloud-100);
 }
 
-.combo-review-section dt {
-  color: var(--ink-600);
-  font-size: var(--font-size-label);
-  font-weight: var(--weight-semibold);
-}
-
 .combo-review-section dd {
   margin: 0;
-  color: var(--ink-950);
-  font-size: var(--font-size-label);
 }
 
 .combo-wizard-footer {
-  min-height: var(--size-64);
-  padding: var(--space-2-5) var(--space-4);
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: var(--space-3);
   flex: 0 0 auto;
-  border-top: var(--stroke-1) solid var(--line);
-  background: var(--surface);
-  box-shadow: var(--elevation-up);
 }
 
 .combo-wizard-footer .button {
   min-width: var(--size-118);
 }
 
-.combo-wizard-footer-copy {
-  min-width: 0;
-  text-align: center;
-}
-
-.combo-wizard-footer-copy small {
-  color: var(--ink-500);
-  font-size: var(--font-size-label);
-  line-height: var(--line-height-snug);
-}
-
 .combo-detail { display: flex; flex-direction: column; width: min(var(--size-760), calc(100vw - var(--size-32))); max-height: min(var(--size-760), calc(100dvh - var(--size-32))); overflow: hidden; }
 .combo-detail-body { display: grid; gap: var(--space-4); padding: var(--space-6); overflow-y: auto; background: var(--cloud-50); }
 .combo-detail-summary { display: grid; grid-template-columns: repeat(2, 1fr) auto; align-items: center; gap: var(--space-3); padding: var(--space-4); border: var(--stroke-1) solid var(--line); border-radius: var(--radius-card); background: var(--surface); }
-.combo-detail > header > div { display: grid; gap: var(--space-1); }
-.combo-detail > header h2 { margin: 0; }
-.combo-detail > header small { order: 2; }
 .combo-detail-summary > div { display: grid; gap: var(--space-1-5); }
-.combo-detail-summary small, .combo-detail-description small, .combo-detail-availability small { color: var(--ink-400); font-size: var(--font-size-label); font-weight: var(--weight-heavy); letter-spacing: var(--letter-spacing-caps); }
-.combo-detail-summary b { font-size: var(--font-size-sm); }
+.combo-detail-summary small, .combo-detail-description small, .combo-detail-availability small { color: var(--ink-700); font-size: var(--font-size-label); font-weight: var(--modal-label-weight); letter-spacing: var(--letter-spacing-caps); }
+.combo-detail-summary b { font-size: var(--font-size-control); font-weight: var(--modal-value-weight); }
 .combo-detail-description { padding: var(--space-3-5) var(--space-4); border: var(--stroke-1) solid var(--line); border-radius: var(--radius-card); background: var(--surface); }
 .combo-detail-description p { margin: var(--space-2) 0 0; color: var(--ink-600); font-size: var(--font-size-label); line-height: var(--line-height-normal); }
 .combo-detail-section { overflow: hidden; border: var(--stroke-1) solid var(--line); border-radius: var(--radius-card); background: var(--surface); }
@@ -698,11 +588,9 @@
 .combo-detail-availability { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-3); }
 .combo-detail-availability.single { grid-template-columns: 1fr; }
 .combo-detail-availability > div { display: grid; gap: var(--space-1-5); padding: var(--space-3-5) var(--space-4); border: var(--stroke-1) solid var(--line); border-radius: var(--radius-card); background: var(--surface); }
-.combo-detail-availability b { font-size: var(--font-size-label); }
-.combo-detail-footer { display: flex; justify-content: flex-end; padding: var(--space-3) var(--space-5); border-top: var(--stroke-1) solid var(--line); background: var(--surface); }
+.combo-detail-availability b { font-size: var(--font-size-control); font-weight: var(--modal-value-weight); }
 .combo-detail-state { display: grid; place-items: center; gap: var(--space-2); min-height: var(--size-280); color: var(--ink-500); text-align: center; }
 .combo-detail-state p { margin: 0 0 var(--space-1-5); font-size: var(--font-size-label); }
-.combo-detail-skeleton-head .combo-detail-skeleton-block,
 .combo-detail-skeleton-body span,
 .combo-detail-skeleton-body b,
 .combo-detail-skeleton-body i {
@@ -712,7 +600,6 @@
   border-radius: var(--radius-control);
   background: var(--cloud-150);
 }
-.combo-detail-skeleton-head .combo-detail-skeleton-block::after,
 .combo-detail-skeleton-body span::after,
 .combo-detail-skeleton-body b::after,
 .combo-detail-skeleton-body i::after {
@@ -723,17 +610,6 @@
   transform: translateX(-100%);
   animation: combo-detail-shimmer var(--duration-ambient) ease-in-out infinite;
 }
-.combo-detail-skeleton-head {
-  min-height: var(--size-68);
-  padding: var(--space-3) var(--space-4);
-  display: grid;
-  grid-template-columns: var(--size-40) minmax(0,1fr) var(--size-36);
-  align-items: center;
-  gap: var(--space-3);
-  border-bottom: var(--stroke-1) solid var(--line);
-  background: var(--surface);
-}
-.combo-detail-skeleton-icon { width:var(--size-40); height:var(--size-40); border-radius:var(--radius-tile); }
 .combo-detail-skeleton-copy { display:grid; gap:var(--space-1-5); }
 .combo-detail-skeleton-copy span { width:var(--size-72); height:var(--size-7); }
 .combo-detail-skeleton-copy b { width:var(--size-168); height:var(--size-16); }
@@ -820,7 +696,6 @@
 }
 
 @media(prefers-reduced-motion:reduce) {
-  .combo-detail-skeleton-head .combo-detail-skeleton-block::after,
   .combo-detail-skeleton-body span::after,
   .combo-detail-skeleton-body b::after,
   .combo-detail-skeleton-body i::after { animation:none; }
@@ -832,27 +707,6 @@
     max-height: none;
     border: 0;
     border-radius: 0;
-  }
-
-  .combo-wizard-header {
-    min-height: var(--size-72);
-    padding: var(--space-2-5) var(--space-3);
-    grid-template-columns: minmax(0, 1fr) var(--control-height);
-    gap: var(--space-2);
-  }
-
-  .combo-wizard-title-icon {
-    width: var(--size-36);
-    height: var(--size-36);
-    border-radius: var(--radius-tile);
-  }
-
-  .combo-wizard-title h2 {
-    font-size: var(--font-size-base);
-  }
-
-  .combo-wizard-title p {
-    display: none;
   }
 
   .combo-wizard-steps {
@@ -949,15 +803,6 @@
     grid-template-columns: var(--size-108) minmax(0, 1fr);
   }
 
-  .combo-wizard-footer {
-    padding: var(--space-2-5) var(--space-3) max(var(--space-2-5), env(safe-area-inset-bottom));
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .combo-wizard-footer-copy {
-    display: none;
-  }
-
   .combo-wizard-footer .button {
     width: 100%;
     min-width: 0;
@@ -971,9 +816,6 @@
 
 }
 @media (width <= 430px) {
-  .combo-wizard-title small {
-    font-size: var(--font-size-label);
-  }
 
   .combo-wizard-steps {
     padding-inline: var(--space-2);

@@ -1,8 +1,7 @@
 .cash-report-content{display:grid;gap:var(--space-4);min-width:0}
 .cash-report-identity{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-3);margin:0}
 .cash-report-identity>div{min-width:0;display:grid;gap:var(--space-1)}
-.cash-report-identity dt,.cash-report-amounts dt{color:var(--ink-600);font-size:var(--font-size-label)}
-.cash-report-identity dd{margin:0;font-weight:var(--weight-semibold);overflow-wrap:anywhere}
+.cash-report-identity dd{margin:0}
 .cash-report-amounts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-3);padding:var(--space-4);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-card);background:var(--primary-100);margin:0}
 .cash-report-amounts dd{margin:var(--space-1) 0 0;font-size:var(--font-size-lg);font-weight:var(--weight-bold);color:var(--primary-700);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
 .cash-report-section{border:var(--stroke-1) solid var(--line);border-radius:var(--radius-control);min-width:0;overflow:hidden}
@@ -20,5 +19,5 @@
 .cash-report-preview-body{display:grid;overflow:auto;min-height:var(--size-220);flex:1;padding:var(--space-4);gap:var(--space-3)}
 .cash-report-preview-body iframe{width:100%;height:65vh;min-height:var(--size-220);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-control)}
 .cash-report-preview-body>p{margin:0;color:var(--ink-600);overflow-wrap:anywhere}
-.cash-report-preview footer{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:var(--space-2);padding:var(--space-4);border-top:var(--stroke-1) solid var(--line)}
-@media(max-width:600px){.cash-report-identity{grid-template-columns:minmax(0,1fr)}.cash-report-amounts{grid-template-columns:minmax(0,1fr)}.cash-report-amounts>div{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3)}.cash-report-preview footer .button{width:100%}.cash-report-preview-body iframe{height:55vh}}
+.cash-report-preview footer{flex-wrap:wrap}
+@media(max-width:600px){.cash-report-identity{grid-template-columns:minmax(0,1fr)}.cash-report-amounts{grid-template-columns:minmax(0,1fr)}.cash-report-amounts>div{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3)}.cash-report-preview-body iframe{height:55vh}}

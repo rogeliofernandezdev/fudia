@@ -1,6 +1,6 @@
 /* Design tokens of foods-admin-web. Single source, imported once by globals.css.
  * Names describe a role or a scale step, never a pixel value.
- * Colors: cool neutrals tinted toward the operational indigo, plus four semantic ramps.
+ * Colors: cool neutrals tinted toward the operational indigo, plus semantic ramps.
  * Tailwind utilities read these same tokens through the @theme inline block at the end.
  * Component selectors stay in their owning sheets. */
 :root {
@@ -55,6 +55,14 @@
   --digital-200: #ddcffd;
   --digital-500: #7c3aed;
   --digital-700: #5421a8;
+
+  /* Entrega completada: azul petróleo, distinto de Listo y de Pagada. */
+  --teal-100: #e6f5f7;
+  --teal-700: #0b6b78;
+
+  /* Cuenta abierta: celeste, distinto del índigo de Confirmado. */
+  --sky-100: #e0f2fe;
+  --sky-800: #075985;
 
   /* Advertencia y notas */
   --warning-50: #fff6ec;
@@ -406,6 +414,8 @@
   --control-height: var(--size-38);
   --font-size-control: var(--font-size-sm);
   --font-size-label: var(--font-size-xs);
+  --modal-label-weight: var(--weight-semibold);
+  --modal-value-weight: var(--weight-regular);
   --motion-dialog-duration: var(--duration-dialog);
   --motion-dialog-easing: var(--easing-out);
 
@@ -424,6 +434,10 @@ body {
 }
 
 /* Context-specific values retain each component's existing geometry. */
+.crud-modal {
+  --control-value-weight: var(--modal-value-weight);
+}
+
 .admin-auth-page,
 .admin-session-error-page {
   --control-height: var(--size-44);
@@ -501,6 +515,10 @@ body {
   --color-digital-100: var(--digital-100);
   --color-digital-500: var(--digital-500);
   --color-digital-700: var(--digital-700);
+  --color-teal-100: var(--teal-100);
+  --color-teal-700: var(--teal-700);
+  --color-sky-100: var(--sky-100);
+  --color-sky-800: var(--sky-800);
   --color-warning-50: var(--warning-50);
   --color-warning-600: var(--warning-600);
   --color-danger-50: var(--danger-50);

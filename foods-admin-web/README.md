@@ -24,6 +24,13 @@ No agregar features de negocio a una carpeta genérica `src/components` ni CSS d
 `.env.local` es local y no se versiona. El navegador nunca recibe credenciales de PostgreSQL;
 la sesión se intercambia con el backend mediante cookie `HttpOnly`.
 
+## Estándar visual obligatorio
+
+La [matriz de estados aprobada](docs/02_DESIGN_SYSTEM.md#colores-de-operación-pedido-preparación-y-cuenta)
+es la única referencia para pedido, preparación y cuenta en pantallas nuevas y existentes.
+Usar `Status`, tokens compartidos y mapeos centrales: fondos tenues y texto oscuro,
+sin reinterpretar colores por pantalla. Las reglas están en `AGENTS.md`.
+
 ## Verificación
 
 Ejecutar `npm run lint`, `npm run typecheck`, `npm test` y `npm run build`.

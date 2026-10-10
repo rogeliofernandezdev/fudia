@@ -30,15 +30,17 @@ type NumberStepperProps={
   max?:number;
   step?:number;
   disabled?:boolean;
+  /** Cápsula suave para cantidades en cartas y comandas; no cambia el comportamiento. */
+  appearance?:"outlined"|"soft";
   /** En el mínimo, el botón izquierdo pasa a «Quitar» con papelera en vez de restar. */
   onRemove?:()=>void;
 };
 
 /** Cantidad con botones de 44 px en táctil, valor tabular y quitar explícito en el mínimo. */
-export function NumberStepper({value,onChange,label,min=0,max,step=1,disabled=false,onRemove}:NumberStepperProps){
+export function NumberStepper({value,onChange,label,min=0,max,step=1,disabled=false,appearance="outlined",onRemove}:NumberStepperProps){
   const atMin=value<=min,atMax=max!==undefined&&value>=max;
   const removing=atMin&&Boolean(onRemove);
-  return <div className="ds-stepper" role="group" aria-label={label}>
+  return <div className={"ds-stepper"+(appearance==="soft"?" ds-stepper-soft":"")} role="group" aria-label={label}>
     <button type="button" className={`ds-stepper-button${removing?" danger":""}`} aria-label={removing?`Quitar ${label}`:`Disminuir ${label}`} disabled={disabled||(atMin&&!onRemove)} onClick={()=>removing?onRemove?.():onChange(Math.max(min,value-step))}><Icon name={removing?"trash":"minus"} size={16}/></button>
     <output className="ds-stepper-value" aria-live="polite">{value}</output>
     <button type="button" className="ds-stepper-button" aria-label={`Aumentar ${label}`} disabled={disabled||atMax} onClick={()=>onChange(max===undefined?value+step:Math.min(max,value+step))}><Icon name="plus" size={16}/></button>

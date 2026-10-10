@@ -151,7 +151,7 @@
 .cash-close-modal .cash-dialog-body::-webkit-scrollbar{width:var(--size-6)}
 .cash-close-modal .cash-dialog-body::-webkit-scrollbar-thumb{background:var(--ink-400);border-radius:var(--radius-control)}
 .cash-close-modal .cash-dialog-body::-webkit-scrollbar-track{background:var(--cloud-50)}
-.cash-close-modal form>footer{flex-shrink:0;background:var(--surface)}
+.cash-close-modal form>footer{flex-shrink:0}
 .cash-close-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-radius:var(--radius-tile);background:var(--cloud-50);overflow:hidden}
 .cash-close-summary>div{display:grid;gap:var(--space-1);padding:var(--space-3) var(--space-3)}
 .cash-close-summary>div+div{border-left:var(--stroke-1) solid var(--line)}
@@ -241,8 +241,6 @@
 }
 @media(max-width:600px){
  .cash-close-modal{max-height:calc(100dvh - var(--size-20))}
- .cash-close-modal form>footer{flex-direction:column}
- .cash-close-modal form>footer .button{flex:none;width:100%}
 }
 @media(max-width:520px){
  .cash-register-header-actions{align-items:flex-end;flex-direction:column}

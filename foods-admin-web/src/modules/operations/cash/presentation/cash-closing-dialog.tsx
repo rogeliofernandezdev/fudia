@@ -1,5 +1,5 @@
 "use client";
-import {EmptyState,ErrorState,Icon,RemoteModalSkeleton} from "@/design-system";
+import {EmptyState,ErrorState,RemoteModalSkeleton,ModalHeader} from "@/design-system";
 import {Dialog} from "@/design-system/dialog";
 import {useCashReport} from "../application/use-cash-report";
 import type {CashShift,CloseCashShiftDraft} from "../domain/types";
@@ -11,8 +11,8 @@ export function CashClosingDialog({shift,busy,currency,formatMoney,close,save}:{
  const report=useCashReport(shift.id,!blind);
  if(!blind&&report.isLoading)return <RemoteModalSkeleton className="cash-close-modal" label="Cargando resumen para cerrar caja" rows={6} close={close}/>;
  if(!blind&&(report.isError||report.data?.shift.status==="closed"))return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal cash-close-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-close-error-title">
-  <div className="modal-accent"/>
-  <header><span className="modal-title-icon"><Icon name={report.isError?"alert":"lock"} size={18}/></span><div><small>{shift.cashRegisterName.toUpperCase()}</small><h2 id="cash-close-error-title">Cerrar turno</h2></div><button type="button" aria-label="Cerrar" onClick={close}><Icon name="close"/></button></header>
+
+  <ModalHeader title="Cerrar turno" titleId="cash-close-error-title" icon={report.isError?"alert":"lock"} subtitle={shift.cashRegisterName.toUpperCase()} onClose={close} closeLabel="Cerrar"/>
   {report.isError
    ?<ErrorState title="No pudimos cargar el resumen" text={report.error.message} retrying={report.isFetching} onRetry={()=>void report.refetch()}/>
    :<EmptyState icon="lock" title="Este turno ya está cerrado" text="Consulta su informe desde Turnos. No vuelvas a registrar el cierre."/>}
