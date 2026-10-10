@@ -81,7 +81,7 @@ test("acceso: Recuperar contraseña muestra solo Próximamente sin solicitudes n
   "next/navigation":{useRouter:()=>({})},"next/image":{default:"img"},
   "@tanstack/react-query":{useQueryClient:()=>({})},
   "@/design-system/icons":{Icon:"svg"},
-  "@/design-system":{Dialog:"Dialog",FormField:"FormField",Input:"input"},
+  "@/design-system":{Button:"Button",Dialog:"Dialog",FormField:"FormField",Input:"input"},
   "../infrastructure/auth-api":{login:()=>calls++,logout:()=>calls++},
   "../domain/login-schema":{},
   "@/shared/session/session-api":{loadSessionContext:()=>calls++},

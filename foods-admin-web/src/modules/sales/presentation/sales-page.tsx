@@ -3,10 +3,9 @@ import "./sales.css";
 import {useState} from "react";
 import dynamic from "next/dynamic";
 import {useQuery} from "@tanstack/react-query";
-import {Button,FormField,Icon,Input,PageHeader,Pagination,RowActionButton,Status} from "@/design-system";
-import {useSession} from "@/providers";
-import {useSettings} from "@/providers/settings-context";
-import {formatRegionalDateTime,formatRegionalNumber} from "@/shared/i18n/regional-format";
+import {Button,EmptyState,ErrorState,FormField,Icon,Input,PageHeader,Pagination,RowActionButton,SearchField,Status} from "@/design-system";
+import {useMoney,useSession} from "@/providers";
+import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
 import {useDebouncedValue} from "@/shared/hooks/use-debounced-value";
 import {getSaleDetail,listSales} from "../infrastructure/sales-api";
 import type {Sale} from "../domain/types";
@@ -18,7 +17,6 @@ const paymentMethodsLabel=(sale:Sale)=>(sale.paymentMethods??[]).join(" · ")||"
 
 export function SalesPage(){
   const{location}=useSession();
-  const settings=useSettings();
   const[q,setQ]=useState("");
   const debouncedQ=useDebouncedValue(q);
   const[page,setPage]=useState(1);
@@ -31,19 +29,14 @@ export function SalesPage(){
   const hasFilters=Boolean(q||from||to);
   const sales=useQuery({queryKey:["sales",debouncedQ,from,to,page,size],queryFn:()=>listSales({q:debouncedQ,page,pageSize:size,from,to}),enabled:!invalidRange,refetchInterval:30000});
   const detail=useQuery({queryKey:["sale-detail",detailId],queryFn:()=>getSaleDetail(detailId!),enabled:Boolean(detailId)});
-  const money=(value:string|number)=>{
-    const n=Number(value||0);
-    const formatted=formatRegionalNumber(Math.abs(n),location?.country,{minimumFractionDigits:settings.currencyDecimals,maximumFractionDigits:settings.currencyDecimals});
-    const sign=n<0?"-":"";
-    return settings.currencyPosition==="before"?sign+settings.currencySymbol+" "+formatted:sign+formatted+" "+settings.currencySymbol;
-  };
+  const money=useMoney();
   const date=(value:string)=>formatRegionalDateTime(value,{country:location?.country,timeZone:location?.timezone},{dateStyle:"medium",timeStyle:"short"});
   return <><PageHeader eyebrow="CONTROL" title="Ventas" description="Historial real de pedidos completamente cobrados del local."/>
     <section className="panel management standardized-management">
       <SalesFilters q={q} from={from} to={to} invalidRange={invalidRange} search={value=>{setQ(value);setPage(1)}} start={value=>{setFrom(value);setPage(1)}} end={value=>{setTo(value);setPage(1)}} clear={()=>{setFrom("");setTo("");setPage(1)}}/>
       {invalidRange?null:sales.isLoading?<SalesTableSkeleton/>
-      :sales.isError?<div className="catalog-state error"><span><Icon name="alert"/></span><b>No pudimos cargar las ventas</b><p>{sales.error.message}</p><Button kind="secondary" icon="refresh" onClick={()=>void sales.refetch()}>Reintentar</Button></div>
-      :!sales.data?.items.length?<div className="catalog-state"><span><Icon name="receipt"/></span><b>{hasFilters?"No hay ventas para estos filtros":"Aún no hay ventas cobradas"}</b><p>{hasFilters?"Prueba otra búsqueda o cambia el periodo.":"Las ventas aparecerán aquí cuando un pedido quede totalmente pagado."}</p></div>
+      :sales.isError?<ErrorState title="No pudimos cargar las ventas" text={sales.error.message} onRetry={()=>void sales.refetch()} retrying={sales.isFetching}/>
+      :!sales.data?.items.length?(hasFilters?<EmptyState icon="search" title="Sin coincidencias" text="No hay ventas para estos filtros. Prueba otra búsqueda o cambia el periodo."/>:<EmptyState icon="receipt" title="Aún no hay ventas cobradas" text="Las ventas aparecerán aquí cuando un pedido quede totalmente pagado."/>)
       :<SalesResults items={sales.data.items} money={money} date={date} view={setDetailId}/>}
       {!invalidRange&&!sales.isLoading&&!sales.isError&&<Pagination page={page} size={size} total={sales.data?.total??0} onPage={setPage} onSize={v=>{setSize(v);setPage(1)}}/>}
     </section>
@@ -54,7 +47,7 @@ export function SalesPage(){
 
 function SalesFilters({q,from,to,invalidRange,search,start,end,clear}:{q:string;from:string;to:string;invalidRange:boolean;search:(value:string)=>void;start:(value:string)=>void;end:(value:string)=>void;clear:()=>void}){
   return <div className="sales-filters">
-    <FormField label="Buscar" className="sales-search"><div className="sales-search-control"><Icon name="search" size={18}/><Input value={q} onChange={event=>search(event.target.value)} placeholder="Pedido, cliente o mesa..." aria-label="Buscar pedido, cliente o mesa"/></div></FormField>
+    <FormField as="div" label="Buscar" className="sales-search"><SearchField value={q} onChange={event=>search(event.target.value)} placeholder="Pedido, cliente o mesa…" label="Buscar pedido, cliente o mesa"/></FormField>
     <FormField label="Fecha de inicio"><Input type="date" value={from} min="0001-01-01" max={to||"9999-12-31"} onChange={event=>start(event.target.value)}/></FormField>
     <FormField label="Fecha de fin" error={invalidRange?"La fecha final no puede ser anterior a la inicial.":undefined}><Input type="date" value={to} min={from||"0001-01-01"} max="9999-12-31" onChange={event=>end(event.target.value)}/></FormField>
     {(from||to)&&<Button kind="ghost" icon="refresh" onClick={clear}>Limpiar fechas</Button>}

@@ -7,7 +7,8 @@ import {useMutation,useQuery} from "@tanstack/react-query";
 import {Icon,IconName} from "@/design-system/icons";
 import {LocationMap} from "@/design-system/location-map";
 import {ApiClientError} from "@/shared/api/client";
-import {FormField as Field,Input,PageHeader,Select} from "@/design-system";
+import {Button,EmptyState,ErrorState,FormField as Field,Input,PageHeader,Select} from "@/design-system";
+import {pageRoutes} from "@/shared/routing/page-routes";
 import {TimezoneSelect} from "@/design-system/timezone-select";
 import {countryLocationDefaults} from "../domain/onboarding-defaults";
 import {useFeedback} from "@/providers/feedback-provider";
@@ -101,10 +102,10 @@ export function PlatformOnboardingPage(){
   const current=steps[step];
 
   return <><PageHeader eyebrow="PLATAFORMA" title="Registrar empresa" description="Alta única y transaccional: empresa, contrato, fiscalidad, primer local y Administrador de empresa."/>
-  {loadError?<div className="catalog-state error"><span><Icon name="alert"/></span><b>No pudimos cargar los catálogos</b><p>{loadError}</p><button className="button secondary" onClick={()=>void context.refetch()}>Reintentar</button></div>:
+  {loadError?<ErrorState title="No pudimos cargar los catálogos" text={loadError} retrying={context.isFetching} onRetry={()=>void context.refetch()}/>:
   context.isLoading?<PlatformOnboardingSkeleton stepCount={steps.length}/>:
-  !ctx?.plans.length?<div className="catalog-state"><span><Icon name="settings"/></span><b>Primero crea un plan comercial</b><p>El alta de una empresa exige un plan activo con precio, límites, condiciones y módulos definidos.</p><Link className="button primary" href="/platform/plans"><Icon name="plus" size={16}/>Crear plan</Link></div>:
-  !ctx.countryOptions.length||!ctx.currencyOptions.length?<div className="catalog-state"><span><Icon name="settings"/></span><b>Configura un país con WhatsApp activo</b><p>El onboarding necesita al menos un país activo, su moneda predeterminada activa y un canal de WhatsApp habilitado.</p><Link className="button primary" href="/platform/configuracion-global"><Icon name="settings" size={16}/>Abrir Países y WhatsApp</Link></div>:
+  !ctx?.plans.length?<EmptyState icon="settings" title="Primero crea un plan comercial" text="El alta de una empresa exige un plan activo con precio, límites, condiciones y módulos definidos." action={<Link className="button primary" href={pageRoutes.platformPlans}><Icon name="plus" size={18}/><span>Crear plan</span></Link>}/>:
+  !ctx.countryOptions.length||!ctx.currencyOptions.length?<EmptyState icon="settings" title="Configura un país con WhatsApp activo" text="El onboarding necesita al menos un país activo, su moneda predeterminada activa y un canal de WhatsApp habilitado." action={<Link className="button primary" href={pageRoutes.platformGlobalSettings}><Icon name="settings" size={18}/><span>Abrir Países y WhatsApp</span></Link>}/>:
   <div className="onboarding-wizard">
     <nav className="wizard-steps" aria-label="Pasos del registro">
       {steps.map((s,i)=><button key={s.key} type="button" className={"wizard-step"+(i===step?" active":i<reached?" done":"")} onClick={()=>goTo(i)} disabled={i>reached||save.isPending} aria-current={i===step?"step":undefined}>
@@ -172,10 +173,10 @@ export function PlatformOnboardingPage(){
       </section>
 
       <div className="wizard-footer">
-        <div>{step>0&&<button type="button" className="button ghost" onClick={()=>setStep(s=>s-1)} disabled={save.isPending}><Icon name="chevronLeft" size={16}/>Atrás</button>}</div>
+        <div>{step>0&&<Button kind="ghost" icon="chevronLeft" onClick={()=>setStep(s=>s-1)} disabled={save.isPending}>Atrás</Button>}</div>
         <div>{step<lastStep
-          ?<button className="button primary" type="submit">Siguiente<Icon name="chevron" size={16}/></button>
-          :<button className="button primary" type="submit" disabled={save.isPending}><Icon name="check" size={16}/>{save.isPending?"Guardando…":"Guardar"}</button>}</div>
+          ?<Button type="submit">Siguiente<Icon name="chevron" size={16}/></Button>
+          :<Button type="submit" icon="check" disabled={save.isPending}>{save.isPending?"Guardando…":"Guardar"}</Button>}</div>
       </div>
     </form>
   </div>}

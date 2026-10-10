@@ -28,7 +28,7 @@ function mount({max=1,usage=1,items=[local],pending=false,error=false,fetching=f
   if(name==="@/modules/identity")return capacity;
   if(name==="@/providers/session-context")return {useSession:()=>({organization:{id:"panchita"},can:permission=>permission==="organizations.manage"?manage:readPlan})};
   if(name==="@/providers/feedback-provider")return {useFeedback:()=>({notify:()=>{}})};
-  if(name.startsWith("@/design-system"))return Object.fromEntries(["Dialog","ConfirmDialog","RemoteModalSkeleton","Icon","LocationMap","Button","FormField","Input","PageHeader","Pagination","RowActionButton","Select","Status"].map(key=>[key,key]));
+  if(name.startsWith("@/design-system"))return Object.fromEntries(["Dialog","ConfirmDialog","RemoteModalSkeleton","Icon","LocationMap","Button","EmptyState","ErrorState","FormField","Input","PageHeader","Pagination","RowActionButton","Select","Skeleton","Status","TableSkeleton","Tabs","TimezoneSelect"].map(key=>[key,key]));
   if(name==="react-hook-form"||name.startsWith("../")||name.endsWith(".css")||name==="@/shared/i18n/regional-format")return {};
   return require(name);
  });
@@ -60,10 +60,10 @@ test("el límite usa el total activo del API, no filas de la página ni locales 
  assert.equal(mount({max:3,usage:3,items:[local]}).render().button.props.disabled,true);
  assert.equal(mount({usage:0,items:[{...local,active:false}]}).render().button.props.disabled,false);
  const ui=mount({usage:1,items:[]}),view=ui.render();
- const empty=view.view.find(node=>node.type?.name==="Empty");
- assert.equal(empty.props.disabled,true);
- assert.equal(nodes(empty.type(empty.props)).find(node=>node.type==="Button").props.disabled,true);
- empty.props.action();assert.equal(ui.render().view.some(node=>node.type?.name==="LocationDialog"),false);
+ const empty=view.view.find(node=>node.type==="EmptyState");
+ assert.equal(empty.props.action.type,"Button");
+ assert.equal(empty.props.action.props.disabled,true);
+ empty.props.action.props.onClick();assert.equal(ui.render().view.some(node=>node.type?.name==="LocationDialog"),false);
 });
 
 test("carga, refresco, error y falta de permiso no habilitan creación sin validar capacidad",()=>{
@@ -76,7 +76,7 @@ test("carga, refresco, error y falta de permiso no habilitan creación sin valid
  assert.match(view.header.props.description,/No pudimos comprobar/);
  view.view.find(node=>node.type==="Button"&&node.props.children==="Reintentar").props.onClick();assert.equal(ui.retries,1);
  assert.equal(mount({manage:false}).render().button,undefined);
- assert.ok(mount({pending:true,hasData:false}).render().view.some(node=>node.type?.name==="LoadingTable"));
+ assert.ok(mount({pending:true,hasData:false}).render().view.some(node=>node.type==="TableSkeleton"));
 });
 
 test("crear, editar, rechazar por límite y desactivar refrescan el uso del plan",async()=>{

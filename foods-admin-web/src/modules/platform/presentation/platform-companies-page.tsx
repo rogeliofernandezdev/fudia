@@ -4,7 +4,7 @@ import "./platform-skeletons.css";
 import {useState} from "react";
 import Link from "next/link";
 import {useQuery} from "@tanstack/react-query";
-import {Button,PageHeader,Pagination,RowActionButton} from "@/design-system";
+import {EmptyState,ErrorState,PageHeader,Pagination,RowActionButton,SearchField,Select,Status,TableSkeleton} from "@/design-system";
 import {Icon,type IconName} from "@/design-system/icons";
 import {useSession} from "@/providers";
 import {useDebouncedValue} from "@/shared/hooks/use-debounced-value";
@@ -12,9 +12,11 @@ import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
 import {companySettingsPath} from "@/shared/routing/page-routes";
 import {listPlatformOrganizations} from "../infrastructure/platform-api";
 import {CompanyDetailDialog} from "./platform-company-detail-dialog";
-import type {PaymentStanding,PlatformOrganizationPage} from "../domain/types";
+import {paymentStandingTone} from "../domain/subscription-status";
+import type {PaymentStanding,PlatformOrganization,PlatformOrganizationPage} from "../domain/types";
 
 const DAY=86_400_000;
+const columns=["EMPRESA","PLAN","PRECIO","PRÓXIMO VENCIMIENTO","ÚLTIMO PAGO","SITUACIÓN","ACCIONES"];
 const summaryCards:Array<{key:"total"|PaymentStanding;label:string;icon:IconName}>=[
  {key:"total",label:"Empresas",icon:"building"},
  {key:"up_to_date",label:"Al día",icon:"circleCheck"},
@@ -32,7 +34,7 @@ export function PlatformCompaniesPage(){
 export function RestrictedCompanies(){
  return <>
   <PageHeader eyebrow="CONFIGURACIÓN" title="Empresas y planes" description="Plan contratado y situación de pago de cada empresa cliente."/>
-  <div className="panel management"><div className="catalog-state"><span><Icon name="lock" size={24}/></span><b>Acceso restringido</b><p>Solo el administrador de plataforma puede consultar las empresas y sus suscripciones.</p></div></div>
+  <div className="panel management"><EmptyState icon="lock" title="Acceso restringido" text="Solo el administrador de plataforma puede consultar las empresas y sus suscripciones."/></div>
  </>;
 }
 
@@ -57,19 +59,19 @@ function CompaniesDirectory(){
   <CompaniesSummary data={data} loading={list.isLoading} active={standing} onPick={pickStanding}/>
   <section className="panel management standardized-management platform-companies-panel">
    <div className="toolbar">
-    <label><Icon name="search" size={18}/><input value={q} onChange={event=>{setQ(event.target.value);setPage(1)}} placeholder="Buscar por nombre, razón social o RUC..." aria-label="Buscar empresas"/></label>
-    <select aria-label="Filtrar por plan" value={planId} onChange={event=>{setPlanId(event.target.value);setPage(1)}} disabled={!data}>
+    <SearchField value={q} onChange={event=>{setQ(event.target.value);setPage(1)}} placeholder="Buscar por nombre, razón social o RUC..." label="Buscar empresas"/>
+    <Select aria-label="Filtrar por plan" value={planId} onChange={event=>{setPlanId(event.target.value);setPage(1)}} disabled={!data}>
      <option value="">Todos los planes</option>
      {data?.planOptions.map(option=><option key={option.value} value={option.value}>{option.label}</option>)}
-    </select>
-    <select aria-label="Filtrar por situación de pago" value={standing} onChange={event=>pickStanding(event.target.value)} disabled={!data}>
+    </Select>
+    <Select aria-label="Filtrar por situación de pago" value={standing} onChange={event=>pickStanding(event.target.value)} disabled={!data}>
      <option value="">Toda situación de pago</option>
      {data?.standingOptions.map(option=><option key={option.value} value={option.value}>{option.label}</option>)}
-    </select>
+    </Select>
    </div>
    {list.isLoading?<CompaniesTableSkeleton/>
-    :list.isError?<div className="catalog-state error"><span><Icon name="alert"/></span><b>No pudimos cargar las empresas</b><p>{list.error.message}</p><Button kind="ghost" onClick={()=>void list.refetch()}>Reintentar</Button></div>
-    :!data?.items.length?<div className="catalog-state"><span><Icon name="building"/></span><b>{filtered?"Sin coincidencias":"Aún no hay empresas"}</b><p>{filtered?"Ninguna empresa coincide con la búsqueda o los filtros aplicados.":"Las empresas registradas desde «Registrar empresa» aparecerán aquí con su plan."}</p></div>
+    :list.isError?<ErrorState title="No pudimos cargar las empresas" text={list.error.message} retrying={list.isFetching} onRetry={()=>void list.refetch()}/>
+    :!data?.items.length?<EmptyState icon="building" title={filtered?"Sin coincidencias":"Aún no hay empresas"} text={filtered?"Ninguna empresa coincide con la búsqueda o los filtros aplicados.":"Las empresas registradas desde «Registrar empresa» aparecerán aquí con su plan."}/>
     :<CompaniesTable data={data} busy={list.isFetching}/>}
    {data&&data.total>0&&<Pagination page={page} size={pageSize} total={data.total} onPage={setPage} onSize={value=>{setPageSize(value);setPage(1)}}/>}
   </section>
@@ -96,25 +98,37 @@ function CompaniesTable({data,busy}:{data:PlatformOrganizationPage;busy:boolean}
  const[detailId,setDetailId]=useState<string|null>(null);
  const standingLabel=(value:PaymentStanding)=>data.standingOptions.find(option=>option.value===value)?.label??value;
  const date=(value:string)=>formatRegionalDateTime(value,{country:location?.country,timeZone:location?.timezone},{dateStyle:"medium"});
+ const standing=(company:PlatformOrganization)=><Status tone={paymentStandingTone(company.paymentStanding)}>{standingLabel(company.paymentStanding)}</Status>;
+ const companyNote=(company:PlatformOrganization)=>[company.taxId?"RUC "+company.taxId:"",company.active?"":"Inactiva"].filter(Boolean).join(" · ")||"Sin RUC";
+ const price=(company:PlatformOrganization)=>company.subscription?<b className="platform-company-amount">{company.subscription.currency} {Number(company.subscription.priceAmount).toFixed(2)}</b>:"—";
+ const dueDate=(company:PlatformOrganization)=>{
+  const subscription=company.subscription;
+  const due=subscription?.status==="trial"?subscription.trialEndsAt??subscription.renewsAt:subscription?.renewsAt??null;
+  return due&&subscription?.status!=="cancelled"?<div className="platform-company-cell"><b>{date(due)}</b><small className={company.paymentStanding}>{relativeDays(due,now,subscription?.status==="trial")}</small></div>:<span className="platform-company-muted">—</span>;
+ };
+ const lastPayment=(company:PlatformOrganization)=>company.lastPayment?<div className="platform-company-cell"><b className="platform-company-amount">{company.lastPayment.currency} {Number(company.lastPayment.amount).toFixed(2)}</b><small>{company.lastPayment.paidAt?date(company.lastPayment.paidAt):"Sin fecha"}</small></div>:<span className="platform-company-muted">Sin pagos</span>;
+ const plan=(company:PlatformOrganization)=>company.subscription?<div className="platform-company-cell"><b>{company.subscription.plan.name}</b><small>{company.subscription.billingCycle==="annual"?"Anual":"Mensual"}{company.subscription.autoRenew?" · Renovación automática":""}</small></div>:<span className="platform-company-muted">Sin plan</span>;
+ const actions=(company:PlatformOrganization)=><><RowActionButton action="view" label="Ver detalle" onClick={()=>setDetailId(company.id)}/><Link href={companySettingsPath(company.id)} className="ds-icon-button" aria-label={"Gestionar suscripción de "+company.tradeName} data-tooltip="Gestionar suscripción"><Icon name="receipt" size={18}/></Link></>;
 
  return <><div className="table-wrap hover-scroll" aria-busy={busy}>
   <table className="platform-companies-table">
-   <thead><tr><th>EMPRESA</th><th>PLAN</th><th>PRECIO</th><th>PRÓXIMO VENCIMIENTO</th><th>ÚLTIMO PAGO</th><th>SITUACIÓN</th><th>ACCIONES</th></tr></thead>
-   <tbody>{data.items.map(company=>{
-    const subscription=company.subscription;
-    const due=subscription?.status==="trial"?subscription.trialEndsAt??subscription.renewsAt:subscription?.renewsAt??null;
-    return <tr key={company.id} className={company.active?"":"inactive"}>
-     <td><div className="platform-company-name"><span className="row-icon"><Icon name="building" size={17}/></span><div><Link href={companySettingsPath(company.id)}>{company.tradeName}</Link><small>{[company.taxId?"RUC "+company.taxId:"",company.active?"":"Inactiva"].filter(Boolean).join(" · ")||"Sin RUC"}</small></div></div></td>
-     <td>{subscription?<div className="platform-company-cell"><b>{subscription.plan.name}</b><small>{subscription.billingCycle==="annual"?"Anual":"Mensual"}{subscription.autoRenew?" · Renovación automática":""}</small></div>:<span className="platform-company-muted">Sin plan</span>}</td>
-     <td>{subscription?<b className="platform-company-amount">{subscription.currency} {Number(subscription.priceAmount).toFixed(2)}</b>:"—"}</td>
-     <td>{due&&subscription?.status!=="cancelled"?<div className="platform-company-cell"><b>{date(due)}</b><small className={company.paymentStanding}>{relativeDays(due,now,subscription?.status==="trial")}</small></div>:<span className="platform-company-muted">—</span>}</td>
-     <td>{company.lastPayment?<div className="platform-company-cell"><b className="platform-company-amount">{company.lastPayment.currency} {Number(company.lastPayment.amount).toFixed(2)}</b><small>{company.lastPayment.paidAt?date(company.lastPayment.paidAt):"Sin fecha"}</small></div>:<span className="platform-company-muted">Sin pagos</span>}</td>
-     <td><span className={"platform-standing "+company.paymentStanding}><i aria-hidden="true"/>{standingLabel(company.paymentStanding)}</span></td>
-     <td><div className="platform-company-actions"><RowActionButton action="view" label="Ver detalle" onClick={()=>setDetailId(company.id)}/><Link href={companySettingsPath(company.id)} className="ds-icon-button" aria-label={"Gestionar suscripción de "+company.tradeName} data-tooltip="Gestionar suscripción"><Icon name="receipt" size={18}/></Link></div></td>
-    </tr>;
-   })}</tbody>
+   <thead><tr>{columns.map(column=><th key={column}>{column}</th>)}</tr></thead>
+   <tbody>{data.items.map(company=><tr key={company.id} className={company.active?"":"inactive"}>
+    <td><div className="platform-company-name"><span className="row-icon"><Icon name="building" size={17}/></span><div><Link className="platform-company-link" href={companySettingsPath(company.id)}>{company.tradeName}</Link><small>{companyNote(company)}</small></div></div></td>
+    <td>{plan(company)}</td>
+    <td>{price(company)}</td>
+    <td>{dueDate(company)}</td>
+    <td>{lastPayment(company)}</td>
+    <td>{standing(company)}</td>
+    <td><div className="table-actions">{actions(company)}</div></td>
+   </tr>)}</tbody>
   </table>
  </div>
+ <div className="management-cards" aria-busy={busy}>{data.items.map(company=><article key={company.id}>
+  <header><span className="row-icon r0"><Icon name="building"/></span><div><Link className="platform-company-link" href={companySettingsPath(company.id)}>{company.tradeName}</Link><small>{companyNote(company)}</small></div>{standing(company)}</header>
+  <dl><div><dt>Plan</dt><dd>{plan(company)}</dd></div><div><dt>Precio</dt><dd>{price(company)}</dd></div><div><dt>Próximo vencimiento</dt><dd>{dueDate(company)}</dd></div><div><dt>Último pago</dt><dd>{lastPayment(company)}</dd></div></dl>
+  <footer>{actions(company)}</footer>
+ </article>)}</div>
  {detailId&&<CompanyDetailDialog organizationId={detailId} standingOptions={data.standingOptions} close={()=>setDetailId(null)}/>}
  </>;
 }
@@ -127,9 +141,5 @@ function relativeDays(value:string,now:number,trial:boolean){
 }
 
 function CompaniesTableSkeleton(){
- return <div className="table-wrap" aria-label="Cargando empresas" aria-busy="true">
-  <table className="platform-companies-table"><thead><tr><th>EMPRESA</th><th>PLAN</th><th>PRECIO</th><th>PRÓXIMO VENCIMIENTO</th><th>ÚLTIMO PAGO</th><th>SITUACIÓN</th><th>ACCIONES</th></tr></thead>
-   <tbody>{Array.from({length:5},(_,row)=><tr key={row}>{Array.from({length:7},(_,cell)=><td key={cell}><i className="platform-skeleton-block table-line"/></td>)}</tr>)}</tbody>
-  </table>
- </div>;
+ return <TableSkeleton columns={columns} rows={5} label="Cargando empresas"/>;
 }

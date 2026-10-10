@@ -25,10 +25,6 @@
 /* Panel y barra de filtros */
 .pos-panel{overflow:hidden}
 .pos-toolbar{display:grid;grid-template-columns:minmax(var(--size-260),1fr) var(--size-190);gap:var(--space-10);align-items:center;padding:var(--space-12) var(--space-14);border-bottom:var(--stroke-1) solid var(--line);background:var(--cloud-50)}
-.pos-search{display:flex;align-items:center;height:var(--control-height);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-control);background:var(--surface);color:var(--ink-400);transition:border-color var(--duration-150) ease,box-shadow var(--duration-150) ease}
-.pos-search:focus-within{border-color:var(--ops-500);box-shadow:var(--shadow-05)}
-.pos-search>svg{margin-left:var(--space-10);flex:0 0 auto}
-.pos-search .ds-input{border:0;box-shadow:none!important;background:transparent}
 
 /* Tabla */
 .pos-table-wrap table{min-width:var(--size-860)}
@@ -54,10 +50,6 @@
 .pos-order-cards article>footer{justify-content:flex-end}
 
 /* Estados */
-.pos-state{display:grid;place-content:center;justify-items:center;gap:var(--space-7);min-height:var(--size-300);padding:var(--space-34);text-align:center;color:var(--ink-500)}
-.pos-state>span{display:grid;place-items:center;width:var(--size-48);height:var(--size-48);border-radius:var(--radius-13);background:var(--primary-100);color:var(--primary-700)}
-.pos-state>b{font-size:var(--font-size-12);color:var(--ink-950)}
-.pos-state p{max-width:var(--size-380);margin:0 0 var(--space-7);font-size:var(--font-size-label);line-height:var(--line-height-1-5)}
 :is(.pos-shift-loading i,.pos-table-skeleton i,.pos-card-skeleton i,.pos-card-skeleton b,.pos-card-skeleton small,.pos-card-skeleton div,.pos-detail-loading i,.pos-detail-loading b,.pos-detail-loading small,.pos-payment-loading i,.pos-payment-loading b){position:relative;overflow:hidden;background:var(--cloud-100)}
 :is(.pos-shift-loading i,.pos-table-skeleton i,.pos-card-skeleton i,.pos-card-skeleton b,.pos-card-skeleton small,.pos-card-skeleton div,.pos-detail-loading i,.pos-detail-loading b,.pos-detail-loading small,.pos-payment-loading i,.pos-payment-loading b):after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,var(--surface-a184),transparent);transform:translateX(-100%);animation:pos-shimmer var(--duration-1150) ease-in-out infinite}
 .pos-table-skeleton{pointer-events:none}
@@ -175,7 +167,7 @@
 .pos-payment-values b{font-size:var(--font-size-12);font-variant-numeric:tabular-nums}
 .pos-payment-values small{color:var(--danger);font-size:var(--font-size-label);font-weight:var(--font-weight-700)}
 .pos-refund-action{height:var(--control-height);min-height:var(--control-height);padding:0 var(--space-10);font-size:var(--font-size-label)}
-.pos-payments-empty{padding:var(--space-28);text-align:center;color:var(--ink-500);font-size:var(--font-size-label)}
+.catalog-state.pos-section-empty{min-height:var(--size-120);padding:var(--space-20)}
 
 /* Skeleton del detalle */
 .pos-detail-summary-skeleton{grid-template-columns:repeat(4,1fr);padding:var(--space-12);gap:var(--space-10);background:var(--surface);border:var(--stroke-1) solid var(--line)}

@@ -14,7 +14,7 @@
 .account-popover>header{min-height:var(--size-62);padding:var(--space-7) var(--space-8) var(--space-12);display:flex;align-items:center;gap:var(--space-10);border-bottom:var(--stroke-1) solid var(--palette-blue-75)}
 .account-popover>header>span:last-child{min-width:0;overflow:hidden;display:grid;gap:var(--space-3)}
 .account-popover>header b{overflow:hidden;font-size:var(--font-size-control);text-overflow:ellipsis;white-space:nowrap}
-.account-popover>header small{overflow:hidden;max-width:100%;color:var(--ink-500);font-size:var(--font-size-9);text-overflow:ellipsis;white-space:nowrap}
+.account-popover>header small{overflow:hidden;max-width:100%;color:var(--ink-500);font-size:var(--font-size-10);text-overflow:ellipsis;white-space:nowrap}
 .account-popover nav{margin:var(--space-6) 0;display:grid}
 .account-role-retry{display:flex;align-items:center;gap:var(--space-6);width:100%;min-height:var(--control-height);padding:0 var(--space-8);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-control);background:var(--surface);color:var(--primary-700);font-size:var(--font-size-control)}
 .account-popover nav a{min-height:var(--size-52);padding:var(--space-7) var(--space-8);display:grid;grid-template-columns:var(--size-30) minmax(0,1fr) var(--size-16);align-items:center;gap:var(--space-8);border-radius:var(--radius-8);color:var(--ink-600)}
@@ -23,7 +23,7 @@
 .account-popover nav a>svg:last-child{color:var(--ink-400)}
 .account-popover nav span{min-width:0;display:grid;gap:var(--space-3)}
 .account-popover nav b{font-size:var(--font-size-label)}
-.account-popover nav small{overflow:hidden;color:var(--ink-500);font-size:var(--font-size-8);text-overflow:ellipsis;white-space:nowrap}
+.account-popover nav small{overflow:hidden;color:var(--ink-500);font-size:var(--font-size-10);text-overflow:ellipsis;white-space:nowrap}
 .account-logout{width:100%;min-height:var(--size-44);padding:0 var(--space-9);display:grid;grid-template-columns:var(--size-30) 1fr var(--size-18);align-items:center;gap:var(--space-8);border:0;border-top:var(--stroke-1) solid var(--palette-blue-75);border-radius:0 0 var(--radius-8) var(--radius-8);color:var(--danger-600);background:var(--surface);text-align:left;font-size:var(--font-size-label);font-weight:var(--font-weight-750)}
 .account-logout:hover,.account-logout:focus-visible{background:var(--danger-50);outline:0}
 .account-logout:disabled{cursor:wait;opacity:.7}

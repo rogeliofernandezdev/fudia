@@ -1,6 +1,6 @@
 "use client";
 import {useEffect,useState} from "react";
-import {Button,Icon,RemoteModalSkeleton} from "@/design-system";
+import {Button,ErrorState,Icon,RemoteModalSkeleton} from "@/design-system";
 import {Dialog} from "@/design-system/dialog";
 import {readCssToken} from "@/design-system/theme";
 import {useCashReport} from "../application/use-cash-report";
@@ -32,7 +32,7 @@ export function CashReportDialog({shiftId,close}:{shiftId:string;close:()=>void}
  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal cash-report-preview modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-report-title">
   <div className="modal-accent"/><header><span className="modal-title-icon"><Icon name="receipt" size={18}/></span><div><small>INFORME DE CAJA</small><h2 id="cash-report-title">{report.data?.shift.code??"Vista previa del cierre"}</h2></div><button type="button" aria-label="Cerrar informe" onClick={close}><Icon name="close"/></button></header>
   <div className="cash-report-preview-body">
-   {failure?<div className="cash-report-error" role="alert"><b>{report.isError?"No pudimos cargar el informe":report.data?.shift.status==="closed"?"El cierre está guardado, pero no pudimos generar el PDF":"No pudimos generar el PDF del turno"}</b><p>{failure}</p><Button icon="refresh" onClick={()=>{setError(null);if(report.isError)void report.refetch();else setAttempt(value=>value+1);}}>Reintentar</Button></div>
+   {failure?<ErrorState title={report.isError?"No pudimos cargar el informe":report.data?.shift.status==="closed"?"El cierre está guardado, pero no pudimos generar el PDF":"No pudimos generar el PDF del turno"} text={failure} onRetry={()=>{setError(null);if(report.isError)void report.refetch();else setAttempt(value=>value+1);}}/>
    :report.data&&<>
     {!report.data.persisted&&<p>Este turno {report.data.shift.status==="open"?"sigue abierto; sus datos pueden cambiar":"es anterior al informe persistido; el detalle se reconstruyó con los registros disponibles"}.</p>}
     {detail?<CashReportContent report={report.data}/>:pdf?<iframe key={pdf.url} src={pdf.url} title="Vista previa del PDF de cierre de caja"/>:<div role="status" aria-label="Generando PDF" aria-busy="true" className="cash-report-pdf-skeleton"><div className="remote-modal-skeleton-grid" aria-hidden="true">{Array.from({length:6},(_,index)=><div key={index} className="remote-modal-skeleton-field"><i/><b/></div>)}</div><div className="remote-modal-skeleton-section" aria-hidden="true"><span/><i/><i/></div></div>}

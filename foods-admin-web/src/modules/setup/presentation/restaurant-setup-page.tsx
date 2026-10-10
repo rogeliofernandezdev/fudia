@@ -4,7 +4,7 @@ import "./restaurant-setup.css";
 import Link from "next/link";
 import {useRouter,useSearchParams} from "next/navigation";
 import {useMutation,useQueryClient} from "@tanstack/react-query";
-import {Button,Icon,PageHeader,Status} from "@/design-system";
+import {Button,EmptyState,ErrorState,Icon,PageHeader,Skeleton,Status} from "@/design-system";
 import {useFeedback} from "@/providers/feedback-provider";
 import {firstAccessibleRoute} from "@/shell/navigation";
 import {pageRoutes} from "@/shared/routing/page-routes";
@@ -48,8 +48,8 @@ export function RestaurantSetupPage(){
   });
 
   if(query.isLoading||session.isLoading)return <SetupSkeleton/>;
-  if(query.isError)return <div className="restaurant-setup"><SetupHeader/><section className="setup-state" role="alert"><Icon name="alert" size={28}/><h2>No pudimos cargar tu avance</h2><p>{query.error.message}</p><Button kind="secondary" icon="refresh" onClick={()=>void query.refetch()}>Reintentar</Button></section></div>;
-  if(!setup||!active)return <div className="restaurant-setup"><SetupHeader/><section className="setup-state"><Icon name="store" size={28}/><h2>Selecciona un local</h2><p>Elige la empresa y el local que quieres preparar.</p></section></div>;
+  if(query.isError)return <div className="restaurant-setup"><SetupHeader/><section className="panel"><ErrorState title="No pudimos cargar tu avance" text={query.error.message} onRetry={()=>void query.refetch()} retrying={query.isFetching}/></section></div>;
+  if(!setup||!active)return <div className="restaurant-setup"><SetupHeader/><section className="panel"><EmptyState icon="store" title="Selecciona un local" text="Elige la empresa y el local que quieres preparar."/></section></div>;
 
   function selectStep(key:string){router.replace(setupOverviewHref(key),{scroll:false})}
 
@@ -105,4 +105,4 @@ function SetupReview({steps,setup,canVisit,selectStep}:{steps:SetupStep[];setup:
   return <div className="setup-review"><div className={`setup-review-message${setup.coreReady?" is-ready":""}`}><Icon name={setup.coreReady?"check":"clock"} size={22}/><div><h3>{configured?"Tu restaurante está preparado":setup.coreReady?"Ya tienes lo esencial para comenzar":"Completa los pasos esenciales"}</h3><p>{setup.coreReady?"Las opciones restantes se pueden completar cuando las necesites.":"Revisa los requisitos pendientes. Los pasos opcionales no impiden que comiences a atender."}</p></div></div><ul>{steps.filter(step=>step.key!=="review").map(step=><li key={step.key}><Icon name={step.complete?"check":"clock"} size={16}/><div><b>{step.title}</b><small>{step.required?"Esencial":"Opcional"}</small></div><span>{step.complete?"Listo":"Pendiente"}</span><Button kind="ghost" disabled={!canVisit(step.href)} aria-label={`Revisar ${step.title}`} onClick={()=>selectStep(step.key)}>Revisar</Button></li>)}</ul></div>;
 }
 
-function SetupSkeleton(){return <div className="restaurant-setup setup-loading" role="status" aria-label="Cargando puesta en marcha"><div className="setup-loading-title"><i/><i/></div><div className="setup-loading-welcome"><div><i/><i/><i/></div><i/></div><div className="setup-loading-workspace"><aside>{Array.from({length:6},(_,index)=><div key={index}><i/><span><i/><i/></span></div>)}</aside><section><i/><i/><div><i/><i/><i/></div><i/><i/></section></div></div>}
+function SetupSkeleton(){return <div className="restaurant-setup setup-loading" role="status" aria-busy="true" aria-label="Cargando puesta en marcha"><div className="setup-loading-title"><Skeleton/><Skeleton/></div><div className="setup-loading-welcome"><div><Skeleton/><Skeleton/><Skeleton/></div><Skeleton/></div><div className="setup-loading-workspace"><aside>{Array.from({length:6},(_,index)=><div key={index}><Skeleton/><span><Skeleton/><Skeleton/></span></div>)}</aside><section><Skeleton/><Skeleton/><div><Skeleton/><Skeleton/><Skeleton/></div><Skeleton/><Skeleton/></section></div></div>}

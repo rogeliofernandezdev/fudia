@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import "./inventory.css";
 import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,Icon,Input,PageHeader,Pagination,RemoteModalSkeleton,RowActionButton,Status} from "@/design-system";
+import {Button,EmptyState,ErrorState,Icon,PageHeader,Pagination,RemoteModalSkeleton,RowActionButton,SearchField,Status,TableSkeleton} from "@/design-system";
 import {useFeedback} from "@/providers";
 import {useSession} from "@/providers/session-context";
 import {formatRegionalNumber} from "@/shared/i18n/regional-format";
@@ -16,6 +16,7 @@ const InventoryAdjustmentDialog=dynamic(()=>import("./inventory-adjustment-dialo
 const InventorySettingsDialog=dynamic(()=>import("./inventory-settings-dialog").then(module=>module.InventorySettingsDialog),{ssr:false});
 const InventoryTransferDialog=dynamic(()=>import("./inventory-transfer-dialog").then(module=>module.InventoryTransferDialog),{ssr:false});
 
+const inventoryColumns=["ARTÍCULO","TIPO","UNIDAD","EXISTENCIA","MÍNIMO / REORDEN","COSTO PROM.","VALOR","ESTADO","ACCIONES"];
 const statusMeta={
  ok:{label:"Saludable",tone:"green" as const},
  low:{label:"Stock bajo",tone:"orange" as const},
@@ -72,19 +73,19 @@ export function InventoryPage(){
    eyebrow="ABASTECIMIENTO"
    title="Inventario"
    description="Consulta existencias del local y registra ajustes manuales con trazabilidad."
-   action={(can("inventory.manage")||can("inventory.transfer"))?<div style={{display:"flex",gap:"var(--space-8)"}}>{can("inventory.transfer")&&<Button kind="secondary" icon="truck" disabled={noInventory} onClick={()=>setTransferOpen(true)}>Transferir</Button>}{can("inventory.manage")&&<Button icon="edit" disabled={noInventory} onClick={()=>setAdjustmentOpen(true)}>Registrar ajuste</Button>}</div>:undefined}
+   action={(can("inventory.manage")||can("inventory.transfer"))?<div className="inventory-header-actions">{can("inventory.transfer")&&<Button kind="secondary" icon="truck" disabled={noInventory} onClick={()=>setTransferOpen(true)}>Transferir</Button>}{can("inventory.manage")&&<Button icon="edit" disabled={noInventory} onClick={()=>setAdjustmentOpen(true)}>Registrar ajuste</Button>}</div>:undefined}
   />
   <section className="panel standardized-management inventory-panel">
    <div className="inventory-toolbar">
-    <label className="ds-input-shell"><Icon name="search" size={18}/><Input value={search} onChange={event=>{setSearch(event.target.value);setPage(1)}} placeholder="Buscar artículo..."/></label>
+    <SearchField value={search} onChange={event=>{setSearch(event.target.value);setPage(1)}} placeholder="Buscar artículo..."/>
    </div>
-   {inventory.isLoading?<InventorySkeleton/>:inventory.isError?
-    <div className="inventory-state"><Icon name="alert" size={24}/><b>No pudimos cargar el inventario</b><p>{inventory.error.message}</p><Button kind="secondary" icon="refresh" onClick={()=>inventory.refetch()}>Reintentar</Button></div>
+   {inventory.isLoading?<TableSkeleton columns={inventoryColumns} label="Cargando inventario"/>:inventory.isError?
+    <ErrorState title="No pudimos cargar el inventario" text={inventory.error.message} onRetry={()=>void inventory.refetch()}/>
    :!items.length?
-    <div className="inventory-state"><Icon name="stock" size={24}/><b>{search?"Sin coincidencias":"No hay artículos de inventario"}</b><p>{search?"Prueba con otro nombre.":"Inventario solo permite consultar y ajustar artículos existentes."}</p></div>
+    <EmptyState icon="stock" title={search?"Sin coincidencias":"No hay artículos de inventario"} text={search?"Prueba con otro nombre.":"Inventario solo permite consultar y ajustar artículos existentes."}/>
    :<div className="table-wrap hover-scroll inventory-table-wrap">
     <table>
-     <thead><tr><th>ARTÍCULO</th><th>TIPO</th><th>UNIDAD</th><th>EXISTENCIA</th><th>MÍNIMO / REORDEN</th><th>COSTO PROM.</th><th>VALOR</th><th>ESTADO</th><th>ACCIÓN</th></tr></thead>
+     <thead><tr>{inventoryColumns.map(column=><th key={column}>{column}</th>)}</tr></thead>
      <tbody>{items.map((item,index)=>{
       const meta=statusMeta[item.status];
       return <tr className={index%2?"alternate":""} key={item.inventoryItemId}>
@@ -122,13 +123,10 @@ export function InventoryPage(){
 }
 
 function InventoryAdjustmentLoadError({message,close,retry}:{message:string;close:()=>void;retry:()=>void}){
- return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal inventory-adjustment-modal modal-panel-in" role="dialog" aria-modal="true">
+ return <div className="modal-backdrop modal-overlay-in" role="presentation"><Dialog onResponseClose={close} className="crud-modal inventory-adjustment-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="inventory-load-error-title">
   <div className="modal-accent"/>
-  <header><span className="modal-title-icon"><Icon name="alert" size={18}/></span><div><small>INVENTARIO</small><h2>No pudimos cargar los artículos</h2></div><button type="button" aria-label="Cerrar" onClick={close}><Icon name="close"/></button></header>
-  <div className="inventory-state"><p>{message}</p><Button kind="secondary" icon="refresh" onClick={retry}>Reintentar</Button></div>
+  <header><span className="modal-title-icon"><Icon name="alert" size={18}/></span><div><small>INVENTARIO</small><h2 id="inventory-load-error-title">No pudimos cargar los artículos</h2></div><button type="button" aria-label="Cerrar" onClick={close}><Icon name="close"/></button></header>
+  <ErrorState title="Artículos no disponibles" text={message} onRetry={retry}/>
  </Dialog></div>;
 }
 
-function InventorySkeleton(){
- return <div className="inventory-table-wrap"><table aria-label="Cargando inventario"><thead><tr><th>ARTÍCULO</th><th>TIPO</th><th>UNIDAD</th><th>EXISTENCIA</th><th>MÍNIMO / REORDEN</th><th>COSTO PROM.</th><th>VALOR</th><th>ESTADO</th><th>ACCIÓN</th></tr></thead><tbody>{Array.from({length:6},(_,index)=><tr className="inventory-skeleton" key={index}>{Array.from({length:9},(_,cell)=><td key={cell}><i/></td>)}</tr>)}</tbody></table></div>;
-}

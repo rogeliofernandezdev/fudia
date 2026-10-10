@@ -3,7 +3,7 @@ import "./platform-subscription.css";
 import {useMemo} from "react";
 import {useForm,useWatch} from "react-hook-form";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,FormField,Input,PageHeader,Select} from "@/design-system";
+import {Button,EmptyState,ErrorState,FormField,Input,PageHeader,Select,Status} from "@/design-system";
 import {Icon} from "@/design-system/icons";
 import {useFeedback,useSession} from "@/providers";
 import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
@@ -12,6 +12,7 @@ import type {OrganizationSubscription,SubscriptionPlan} from "../domain/types";
 import {subscriptionChangeSchema,subscriptionPaymentSchema} from "../domain/plan-schema";
 import {zodResolver} from "@/shared/forms/zod-resolver";
 import {PlatformSubscriptionSkeleton} from "./platform-skeletons";
+import {paymentStatusLabel,paymentStatusLabels,paymentStatusTone,subscriptionStatusLabel,subscriptionStatusLabels,subscriptionStatusTone} from "../domain/subscription-status";
 
 type SubscriptionDraft={planId:string;billingCycle:"monthly"|"annual";status:OrganizationSubscription["status"];autoRenew:boolean;termsAccepted:boolean};
 type PaymentDraft={amount:string;currency:string;status:"pending"|"paid"|"failed"|"refunded";provider:string;externalReference:string;paidAt:string};
@@ -22,7 +23,7 @@ export function PlatformSubscriptionPage(){
  const plans=useQuery({queryKey:["platform-plans"],queryFn:listSubscriptionPlans});
 
  if(subscription.isLoading||plans.isLoading)return <><Header organization={organization?.name}/><PlatformSubscriptionSkeleton/></>;
- if(subscription.isError||plans.isError||!subscription.data)return <><Header organization={organization?.name}/><div className="panel subscription-state error"><b>No pudimos cargar la suscripción.</b><Button kind="secondary" onClick={()=>{void subscription.refetch();void plans.refetch()}}>Reintentar</Button></div></>;
+ if(subscription.isError||plans.isError||!subscription.data)return <><Header organization={organization?.name}/><div className="panel subscription-state"><ErrorState title="No pudimos cargar la suscripción" text={subscription.error?.message??plans.error?.message} retrying={subscription.isFetching||plans.isFetching} onRetry={()=>{void subscription.refetch();void plans.refetch()}}/></div></>;
 
  const key=[subscription.data.id,subscription.data.plan.id,subscription.data.billingCycle,subscription.data.status,subscription.data.autoRenew,subscription.data.renewsAt].join(":");
  return <><Header organization={organization?.name}/><SubscriptionWorkspace key={key} current={subscription.data} plans={plans.data?.items??[]} country={location?.country} timeZone={location?.timezone}/></>;
@@ -70,12 +71,12 @@ export function SubscriptionWorkspace({current,plans,country,timeZone,organizati
  return <>
   <div className="platform-subscription-grid">
    <section className="panel subscription-editor">
-    <header><div><small>Contrato</small><h2>Plan y ciclo</h2></div><span className={"subscription-state-badge "+current.status}>{statusLabel(current.status)}</span></header>
+    <header><div><small>Contrato</small><h2>Plan y ciclo</h2></div><Status tone={subscriptionStatusTone(current.status)}>{subscriptionStatusLabel(current.status)}</Status></header>
     <form onSubmit={change.handleSubmit(values=>{if(needsAcceptance&&!values.termsAccepted){change.setError("termsAccepted",{type:"custom",message:"Registra la aceptación de las nuevas condiciones."});return}save.mutate(values)})} noValidate>
      <div className="form-grid">
       <FormField className="span-2" label="Plan" error={change.formState.errors.planId?.message}><Select {...change.register("planId",{onChange:()=>change.setValue("termsAccepted",false)})}>{availablePlans.map(plan=><option value={plan.id} key={plan.id}>{plan.name}</option>)}</Select></FormField>
       <FormField label="Ciclo"><Select {...change.register("billingCycle")}><option value="monthly">Mensual</option><option value="annual">Anual</option></Select></FormField>
-      <FormField label="Estado"><Select {...change.register("status")}><option value="trial">Prueba</option><option value="active">Activa</option><option value="past_due">Pago pendiente</option><option value="cancelled">Cancelada</option></Select></FormField>
+      <FormField label="Estado"><Select {...change.register("status")}>{Object.entries(subscriptionStatusLabels).map(([value,label])=><option key={value} value={value}>{label}</option>)}</Select></FormField>
       <FormField label="Precio del plan"><Input readOnly tabIndex={-1} value={selectedPlan?(selectedPlan.currency+" "+Number(billingCycle==="annual"?selectedPlan.annualPrice:selectedPlan.monthlyPrice).toFixed(2)):""}/></FormField>
       <label className="switch-row compact"><input type="checkbox" {...change.register("autoRenew")}/><span/><b>Renovación automática</b></label>
      </div>
@@ -91,7 +92,7 @@ export function SubscriptionWorkspace({current,plans,country,timeZone,organizati
      <div className="form-grid">
       <FormField label="Monto" error={paymentForm.formState.errors.amount?.message}><Input type="number" inputMode="decimal" min="0" step="0.01" {...paymentForm.register("amount")}/></FormField>
       <FormField label="Moneda"><Input readOnly tabIndex={-1} {...paymentForm.register("currency")}/></FormField>
-      <FormField label="Estado"><Select {...paymentForm.register("status")}><option value="paid">Pagado</option><option value="pending">Pendiente</option><option value="failed">Fallido</option><option value="refunded">Reembolsado</option></Select></FormField>
+      <FormField label="Estado"><Select {...paymentForm.register("status")}>{Object.entries(paymentStatusLabels).map(([value,label])=><option key={value} value={value}>{label}</option>)}</Select></FormField>
       <FormField label="Proveedor" help="Pasarela o canal por el que se cobró." error={paymentForm.formState.errors.provider?.message}><Input {...paymentForm.register("provider")} placeholder="manual"/></FormField>
       <FormField label="Referencia externa" optional error={paymentForm.formState.errors.externalReference?.message}><Input {...paymentForm.register("externalReference")} placeholder="ID del procesador o recibo"/></FormField>
       <FormField label="Fecha del pago" optional={paymentStatusValue!=="paid"} error={paymentForm.formState.errors.paidAt?.message}><Input type="datetime-local" {...paymentForm.register("paidAt")}/></FormField>
@@ -103,12 +104,10 @@ export function SubscriptionWorkspace({current,plans,country,timeZone,organizati
 
   <section className="panel subscription-history">
    <header><div><small>Historial</small><h2>Pagos de suscripción</h2></div><b>{current.payments.length}</b></header>
-   {current.payments.length?<div className="table-wrap"><table><thead><tr><th>FECHA</th><th>MONTO</th><th>ESTADO</th><th>PROVEEDOR</th><th>REFERENCIA</th></tr></thead><tbody>{current.payments.map(item=><tr key={item.id}><td>{dateLabel(item.paidAt??item.createdAt,country,timeZone)}</td><td><b>{item.currency+" "+Number(item.amount).toFixed(2)}</b></td><td><span className={"subscription-pay-status "+item.status}>{paymentStatus(item.status)}</span></td><td>{item.provider}</td><td>{item.externalReference??"—"}</td></tr>)}</tbody></table></div>:<div className="subscription-empty">Todavía no hay pagos registrados para esta empresa.</div>}
+   {current.payments.length?<div className="table-wrap"><table><thead><tr><th>FECHA</th><th>MONTO</th><th>ESTADO</th><th>PROVEEDOR</th><th>REFERENCIA</th></tr></thead><tbody>{current.payments.map(item=><tr key={item.id}><td>{dateLabel(item.paidAt??item.createdAt,country,timeZone)}</td><td><b>{item.currency+" "+Number(item.amount).toFixed(2)}</b></td><td><Status tone={paymentStatusTone(item.status)}>{paymentStatusLabel(item.status)}</Status></td><td>{item.provider}</td><td>{item.externalReference??"—"}</td></tr>)}</tbody></table></div>:<EmptyState icon="receipt" title="Aún no hay pagos" text="Los pagos registrados para esta empresa aparecerán aquí."/>}
   </section>
  </>;
 }
 
 function Header({organization}:{organization?:string}){return <PageHeader eyebrow="PLATAFORMA" title="Suscripción de empresa" description={organization?"Gestiona contrato, plan y cobros de "+organization+".":"Gestiona el contrato y cobros de la empresa activa."}/>;}
-function statusLabel(status:OrganizationSubscription["status"]){return status==="trial"?"Prueba":status==="active"?"Activa":status==="past_due"?"Pago pendiente":"Cancelada";}
-function paymentStatus(status:string){return status==="paid"?"Pagado":status==="pending"?"Pendiente":status==="failed"?"Fallido":"Reembolsado";}
 function dateLabel(value:string,country?:string,timeZone?:string){return formatRegionalDateTime(value,{country,timeZone},{dateStyle:"medium"})}

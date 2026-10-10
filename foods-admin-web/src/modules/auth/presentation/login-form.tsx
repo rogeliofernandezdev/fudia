@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useQueryClient } from "@tanstack/react-query";
 import { Icon, type IconName } from "@/design-system/icons";
-import { Dialog, FormField, FullScreenLoader, Input } from "@/design-system";
+import { Button, Dialog, FormField, FullScreenLoader, Input } from "@/design-system";
 import { ActiveSessionError, login, logout } from "../infrastructure/auth-api";
 import { loginResolver, type LoginDraft } from "../domain/login-schema";
 import {loadSessionContext} from "@/shared/session/session-api";
@@ -113,8 +113,8 @@ export function LoginForm() {
             {activeSession ? <section className="admin-auth-session-conflict" role="alert">
               <header><Icon name="users" size={20}/><div><b>Sesión activa</b><span>Ya ingresaste como {activeSession} en este navegador.</span></div></header>
               <div>
-                <button type="button" className="admin-auth-session-secondary" disabled={loading} onClick={()=>void continueSession()}>Continuar sesión</button>
-                <button type="button" className="admin-auth-session-primary" disabled={loading} onClick={()=>void switchAccount()}>Cerrar sesión y cambiar de cuenta</button>
+                <Button kind="secondary" disabled={loading} onClick={()=>void continueSession()}>Continuar sesión</Button>
+                <Button disabled={loading} onClick={()=>void switchAccount()}>Cerrar sesión y cambiar de cuenta</Button>
               </div>
             </section> : <>
               <FormField label="Correo electrónico" error={errors.email?.message}>

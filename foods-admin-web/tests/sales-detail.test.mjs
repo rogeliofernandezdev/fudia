@@ -14,7 +14,7 @@ function compile(file,resolve,extra=""){
  return exports;
 }
 const regional=compile("src/shared/i18n/regional-format.ts",require);
-const resolve=name=>name==="@/design-system"?{Icon:"Icon",Button:"Button",Input:"Input",FormField:"FormField",Status:"Status",RowActionButton:"RowActionButton"}:name==="@/design-system/dialog"?{Dialog:"Dialog"}:name.startsWith("@/")||name.startsWith(".")?{}:require(name);
+const resolve=name=>name==="@/design-system"?{Icon:"Icon",Button:"Button",Input:"Input",FormField:"FormField",Status:"Status",RowActionButton:"RowActionButton",SearchField:"SearchField",EmptyState:"EmptyState",ErrorState:"ErrorState"}:name==="@/design-system/dialog"?{Dialog:"Dialog"}:name.startsWith("@/")||name.startsWith(".")?{}:require(name);
 const {SaleDetailDialog}=compile("src/modules/sales/presentation/sale-detail-dialog.tsx",resolve);
 const data={order:{id:"sale-1",code:"PED-TEST",channel:"salon",status:"entregado",customerName:"Familia Pérez",tableName:"Mesa 5",subtotal:"50",deliveryFee:"5",total:"55",createdAt:"2026-10-06T14:30:00+00",notes:"Sin sal",items:[{id:"item-1",name:"Menú criollo",qty:"2",unitPrice:"25",note:"Sin hielo",selections:[{groupName:"Segundo",name:"Lomo saltado"}],modifiers:[{groupName:"Extras",name:"Ensalada"}]}]},paidAmount:"55",remainingAmount:"0",paymentStatus:"paid",payments:[{id:"pay-1",method:"custom",methodName:"Convenio empresa",amount:"65",refundedAmount:"10",netAmount:"55",reference:"REF-1",cashRegisterName:"Caja principal",createdByName:"Ana",createdAt:"2026-10-06T15:00:00+00"}]};
 const money=value=>`MON ${Number(value).toFixed(2)}`;
@@ -100,9 +100,10 @@ test("filtros de Ventas usan controles homologados y límites visibles",()=>{
  const changes=[];const callbacks={search:value=>changes.push(["q",value]),start:value=>changes.push(["from",value]),end:value=>changes.push(["to",value]),clear:()=>changes.push(["clear"])};
  const view=nodes(SalesFilters({q:"Mesa",from:"2026-10-01",to:"2026-10-07",invalidRange:false,...callbacks}));
  assert.deepEqual(view.filter(node=>node.type==="FormField").map(node=>node.props.label),["Buscar","Fecha de inicio","Fecha de fin"]);
- const inputs=view.filter(node=>node.type==="Input");
- assert.equal(inputs[1].props.type,"date");assert.equal(inputs[1].props.max,"2026-10-07");assert.equal(inputs[2].props.min,"2026-10-01");
- inputs[0].props.onChange({target:{value:"Ana"}});inputs[1].props.onChange({target:{value:"2026-10-02"}});inputs[2].props.onChange({target:{value:"2026-10-06"}});
+ const inputs=view.filter(node=>node.type==="Input");const searchField=view.find(node=>node.type==="SearchField");
+ assert.equal(searchField.props.value,"Mesa");
+ assert.equal(inputs[0].props.type,"date");assert.equal(inputs[0].props.max,"2026-10-07");assert.equal(inputs[1].props.min,"2026-10-01");
+ searchField.props.onChange({target:{value:"Ana"}});inputs[0].props.onChange({target:{value:"2026-10-02"}});inputs[1].props.onChange({target:{value:"2026-10-06"}});
  view.find(node=>node.type==="Button").props.onClick();
  assert.deepEqual(changes,[["q","Ana"],["from","2026-10-02"],["to","2026-10-06"],["clear"]]);
  const invalid=nodes(SalesFilters({q:"",from:"2026-10-07",to:"2026-10-01",invalidRange:true,...callbacks}));
@@ -110,7 +111,7 @@ test("filtros de Ventas usan controles homologados y límites visibles",()=>{
  const empty=nodes(SalesFilters({q:"Mesa",from:"",to:"",invalidRange:false,...callbacks}));
  assert.equal(empty.some(node=>node.type==="Button"),false);
  const css=read("src/modules/sales/presentation/sales.css");
- assert.match(css,/\.sales-search-control>\.ds-input\{/);
+ assert.equal(css.includes(".sales-search-control"),false,"el buscador usa SearchField homologado");
  assert.match(css,/@media\(max-width:600px\)\{\s*\.sales-filters\{grid-template-columns:minmax\(0,1fr\)/);
 });
 
@@ -121,7 +122,7 @@ test("cambiar fechas reinicia la página, limpiar conserva búsqueda y un rango 
   const {SalesPage}=compile("src/modules/sales/presentation/sales-page.tsx",name=>{
    if(name==="react")return {...require("react"),useState:()=>{const slot=index++;return [state[slot],value=>changes.push([slot,value])]} };
    if(name==="@tanstack/react-query")return {useQuery:options=>{queries.push(options);return {isLoading:false,isError:false,data:{items:[],total:0}}}};
-   if(name==="@/providers")return {useSession:()=>({location:{country:"PE",timezone:"America/Lima"}})};
+   if(name==="@/providers")return {useSession:()=>({location:{country:"PE",timezone:"America/Lima"}}),useMoney:()=>money};
    if(name==="@/providers/settings-context")return {useSettings:()=>({})};
    if(name==="@/shared/hooks/use-debounced-value")return {useDebouncedValue:value=>value};
    if(name==="../infrastructure/sales-api")return {listSales:async input=>requests.push(input)};
@@ -138,7 +139,7 @@ test("cambiar fechas reinicia la página, limpiar conserva búsqueda y un rango 
  assert.deepEqual(valid.changes,[[4,""],[5,""],[1,1]]);
  const invalid=render("2026-10-07","2026-10-01");assert.equal(invalid.queries[0].enabled,false);assert.equal(invalid.requests.length,0);
  assert.equal(invalid.view.some(node=>node.type==="Pagination"),false);
- assert.ok(valid.view.some(node=>node.props.children==="No hay ventas para estos filtros"));
+ assert.ok(valid.view.some(node=>node.type==="EmptyState"&&node.props.title==="Sin coincidencias"));
 });
 
 test("detalle de venta muestra productos, composición, cuenta y pagos sin mutaciones",()=>{
@@ -155,7 +156,7 @@ test("detalle de venta muestra productos, composición, cuenta y pagos sin mutac
 test("detalle de venta mantiene cierre explícito, reintento, skeleton y vacíos",()=>{
  let closed=0,retried=0;
  const view=mount({error:"Sin conexión",close:()=>closed++,retry:()=>retried++});
- view.find(node=>node.type==="button").props.onClick();view.find(node=>node.type==="Button").props.onClick();
+ view.find(node=>node.type==="button").props.onClick();view.find(node=>node.type==="ErrorState").props.onRetry();
  assert.equal(closed,1);assert.equal(retried,1);
  assert.equal(view.some(node=>node.props.className==="sales-detail-body hover-scroll"),false);
  const loading=mount({loading:true});assert.equal(loading.find(node=>node.type==="Dialog").props["aria-busy"],true);

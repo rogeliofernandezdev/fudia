@@ -21,7 +21,7 @@ async function files(dir){
 
 test(`ninguna hoja de estilos declara texto menor a ${MIN_PX}px`,async()=>{
   const offenders=[];
-  const sheets=[...await files("src/modules"),...await files("src/styles"),...await files("src/design-system")];
+  const sheets=[...await files("src/modules"),...await files("src/styles"),...await files("src/design-system"),...await files("src/shell"),...await files("src/providers")];
   for(const sheet of sheets){
     const source=resolveDesignScales(await readFile(new URL(sheet,root),"utf8"));
     for(const match of source.matchAll(/font-size:\s*([0-9.]+)px/g)){

@@ -2,7 +2,7 @@
 import "./kitchen.css";
 import {useEffect,useState} from "react";
 import {keepPreviousData,useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,Icon,IconName,PageHeader,Select} from "@/design-system";
+import {Button,ErrorState,Icon,IconName,PageHeader,Select,Tabs} from "@/design-system";
 import {useFeedback,useSession} from "@/providers";
 import {formatRegionalNumber} from "@/shared/i18n/regional-format";
 import type {KitchenStatus,KitchenTicket} from "../domain/types";
@@ -120,11 +120,9 @@ export function KitchenBoard(){
       </div>}
     />
 
-    <nav className="kitchen-mobile-tabs" aria-label="Estado de las comandas">
-      {lanes.map(lane=><button type="button" aria-pressed={mobileLane===lane.status} className={mobileLane===lane.status?"active":""} onClick={()=>setMobileLane(lane.status)} key={lane.status}><Icon name={lane.icon} size={15}/><span>{lane.shortLabel}</span><b>{counts[lane.status]}</b></button>)}
-    </nav>
+    <Tabs className="kitchen-mobile-tabs" label="Estado de las comandas" value={mobileLane} onChange={setMobileLane} items={lanes.map(lane=>({value:lane.status,label:lane.shortLabel,icon:lane.icon,count:counts[lane.status]}))}/>
 
-    {tickets.isPending?<KitchenLoading/>:tickets.isError?<KitchenError message={tickets.error.message} retry={()=>tickets.refetch()}/>:<div className="kitchen-board">
+    {tickets.isPending?<KitchenLoading/>:tickets.isError?<ErrorState className="kitchen-state" title="No pudimos cargar la cola de cocina" text={tickets.error.message} onRetry={()=>void tickets.refetch()}/>:<div className="kitchen-board">
       {lanes.map(lane=>{
         const laneItems=items
           .filter(ticket=>ticket.status===lane.status)
@@ -173,5 +171,3 @@ export function KitchenBoard(){
 }
 
 function KitchenLoading(){return <div className="kitchen-board kitchen-loading" aria-label="Cargando comandas" aria-busy="true">{lanes.map(lane=><section className="kitchen-lane" data-status={lane.status} key={lane.status}><header><span className="kitchen-lane-icon"><Icon name={lane.icon} size={15}/></span><span className="kitchen-lane-copy"><h2>{lane.label}</h2><small>{lane.description}</small></span><b>—</b></header><div className="kitchen-lane-list">{Array.from({length:2},(_,index)=><article className="kitchen-ticket kitchen-ticket-skeleton" key={index}><div className="kitchen-skeleton-head"><span><i/><small/></span><i/></div><div className="kitchen-skeleton-items"><i/><i/><i/></div><i className="kitchen-skeleton-action"/></article>)}</div></section>)}</div>}
-
-function KitchenError({message,retry}:{message:string;retry:()=>void}){return <div className="kitchen-error"><span><Icon name="alert" size={24}/></span><b>No pudimos cargar la cola de cocina</b><p>{message}</p><Button kind="secondary" icon="refresh" onClick={retry}>Reintentar</Button></div>}

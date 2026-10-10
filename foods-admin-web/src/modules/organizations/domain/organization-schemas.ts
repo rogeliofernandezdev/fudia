@@ -1,6 +1,6 @@
 import {z} from "zod";
 import {zodResolver} from "@/shared/forms/zod-resolver";
-import type {LocationDraft,ProfileDraft,RateDraft} from "./types";
+import type {LocationDraft,Organization,ProfileDraft,RateDraft} from "./types";
 
 export const locationSchema=z.object({
  name:z.string().trim().min(1,"Ingresa el nombre del local.").max(120,"El nombre no puede superar 120 caracteres."),
@@ -35,3 +35,18 @@ export const rateSchema=z.object({
  if(value.source==="provider"&&!value.providerReference)ctx.addIssue({code:"custom",path:["providerReference"],message:"Indica la referencia del proveedor."});
 });
 export const rateResolver=zodResolver<RateDraft>(rateSchema);
+
+export const organizationSchema=z.object({
+ legalName:z.string().trim().min(1,"Ingresa la razón social.").max(180,"La razón social no puede superar 180 caracteres."),
+ tradeName:z.string().trim().min(1,"Ingresa el nombre comercial.").max(180,"El nombre comercial no puede superar 180 caracteres."),
+ taxId:z.string().trim().min(6,"La identificación fiscal debe tener al menos 6 caracteres.").max(32,"La identificación fiscal no puede superar 32 caracteres."),
+ timezone:z.string().trim().min(3,"Selecciona la zona horaria."),
+});
+export type OrganizationErrors=Partial<Record<keyof z.infer<typeof organizationSchema>,string>>;
+export function organizationErrors(value:Organization):OrganizationErrors{
+ const result=organizationSchema.safeParse(value);
+ if(result.success)return {};
+ const errors:OrganizationErrors={};
+ for(const issue of result.error.issues){const key=issue.path[0] as keyof OrganizationErrors;errors[key]??=issue.message}
+ return errors;
+}

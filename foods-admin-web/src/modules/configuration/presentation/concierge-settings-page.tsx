@@ -1,8 +1,7 @@
 "use client";
 import "./concierge-settings.css";
 import {useQuery} from "@tanstack/react-query";
-import {Button,PageHeader} from "@/design-system/page-header";
-import {Icon} from "@/design-system/icons";
+import {ErrorState,Icon,PageHeader,Skeleton,Status} from "@/design-system";
 import {getConciergeSettings} from "../infrastructure/concierge-settings-api";
 
 export function ConciergeSettingsPage(){
@@ -10,10 +9,10 @@ export function ConciergeSettingsPage(){
  const data=query.data;
  return <><PageHeader eyebrow="CONFIGURACIÓN" title="Fudia Concierge" description="Consulta el estado del módulo de pedidos por WhatsApp con IA para esta empresa."/>
   <div className="concierge-settings">
-   {query.isLoading?<section className="panel concierge-loading">Cargando estado de Fudia Concierge…</section>:query.isError?<section className="panel concierge-error"><Icon name="alert" size={26}/><b>No pudimos cargar Fudia Concierge</b><p>{query.error.message}</p><Button kind="secondary" icon="refresh" onClick={()=>query.refetch()}>Reintentar</Button></section>:data&&<>
+   {query.isLoading?<ConciergeSettingsSkeleton/>:query.isError?<section className="panel"><ErrorState title="No pudimos cargar Fudia Concierge" text={query.error.message} onRetry={()=>void query.refetch()} retrying={query.isFetching}/></section>:data&&<>
     <section className="panel concierge-overview">
-     <div><span><Icon name="mail" size={22}/></span><section><h2>{data.organizationName}</h2><p>{data.locationName} · El módulo se administra desde la plataforma global de Fudia.</p></section></div>
-     <span className={`concierge-state ${data.active?"active":""}`}><i/>{data.active?"Habilitado":"No habilitado"}</span>
+     <div><span><Icon name="chat" size={22}/></span><section><h2>{data.organizationName}</h2><p>{data.locationName} · El módulo se administra desde la plataforma global de Fudia.</p></section></div>
+     <Status tone={data.active?"green":"gray"}>{data.active?"Habilitado":"No habilitado"}</Status>
     </section>
 
     <div className="concierge-config">
@@ -52,4 +51,24 @@ export function ConciergeSettingsPage(){
    </>}
   </div>
  </>;
+}
+
+function ConciergeSettingsSkeleton(){
+ return <div className="concierge-skeleton" role="status" aria-busy="true" aria-label="Cargando estado de Fudia Concierge">
+  <section className="panel concierge-overview" aria-hidden="true">
+   <div><Skeleton width="var(--size-44)" height="var(--size-44)" radius="var(--radius-12)"/><section className="concierge-skeleton-lines"><Skeleton width="var(--size-240)" height="var(--size-14)"/><Skeleton width="var(--size-330)" height="var(--size-12)"/></section></div>
+   <Skeleton width="var(--size-120)" height="var(--size-28)" radius="var(--radius-20)"/>
+  </section>
+  <div className="concierge-config" aria-hidden="true">
+   <section className="panel concierge-form">
+    <div className="concierge-skeleton-lines"><Skeleton width="var(--size-180)" height="var(--size-14)"/><Skeleton height="var(--size-12)"/><Skeleton width="72%" height="var(--size-12)"/></div>
+    {Array.from({length:2},(_,i)=><Skeleton key={i} height="var(--size-84)" radius="var(--radius-12)"/>)}
+    <Skeleton height="var(--size-48)" radius="var(--radius-9)"/>
+   </section>
+   <section className="panel concierge-preview">
+    <div className="concierge-skeleton-lines"><Skeleton width="var(--size-160)" height="var(--size-14)"/><Skeleton height="var(--size-12)"/></div>
+    <div className="concierge-flow">{Array.from({length:5},(_,i)=><Skeleton key={i} height="var(--size-48)" radius="var(--radius-10)"/>)}</div>
+   </section>
+  </div>
+ </div>;
 }

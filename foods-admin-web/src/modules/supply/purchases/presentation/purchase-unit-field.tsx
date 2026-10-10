@@ -2,7 +2,7 @@
 import {useRef,useState} from "react";
 import {createPortal} from "react-dom";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,FormField,Icon,IconButton,Input,Select} from "@/design-system";
+import {Button,FormField,Icon,IconButton,Input,Select,Skeleton} from "@/design-system";
 import {Dialog} from "@/design-system/dialog";
 import {useSession} from "@/providers/session-context";
 import {createInventoryUnit,listInventoryUnits} from "../infrastructure/inventory-units-api";
@@ -20,7 +20,7 @@ export function PurchaseUnitField({value,onChange,error,disabled,onBusyChange}:{
  function close(){setCreating(false);onBusyChange(false)}
  return <>
   <FormField label="Unidad de inventario" as="div" error={query.isError?query.error.message:error}>
-   {query.isLoading?<div className="purchase-reference-loading" role="status" aria-label="Cargando unidades"><i/></div>:<div className="purchase-reference-controls">
+   {query.isLoading?<div className="purchase-reference-loading" role="status" aria-label="Cargando unidades"><Skeleton width="70%"/></div>:<div className="purchase-reference-controls">
     <Select aria-label="Unidad de inventario" value={value} disabled={disabled||creating||query.isError||options.length===0} aria-invalid={Boolean(error)||query.isError} onChange={event=>onChange(event.target.value)}>
      <option value="">{query.isError?"No pudimos cargar las unidades":options.length?"Selecciona una unidad":"No hay unidades registradas"}</option>
      {options.map(unit=><option key={unit.id} value={unit.code}>{unit.name}</option>)}

@@ -96,8 +96,6 @@
  .customer-detail-skeleton-body b::after{animation:none}
 }
 
-.customers-loading{display:grid;gap:var(--space-10);padding:var(--space-24)}
-.customers-loading i{display:block;height:var(--size-58);border-radius:var(--radius-10);background:linear-gradient(90deg,var(--palette-blue-93),var(--palette-blue-109),var(--palette-blue-93));background-size:200% 100%;animation:skeleton var(--duration-1200) infinite}
 @media(max-width:760px){
  .customers-panel .toolbar{grid-template-columns:1fr}
  .customer-modal{width:calc(100vw - var(--size-16));max-height:calc(100dvh - var(--size-16))}
@@ -113,4 +111,3 @@
  .customer-detail-fields{grid-template-columns:repeat(2,1fr)}
 }
 
-.customer-modal footer .button.primary > svg{display:none}

@@ -2,7 +2,7 @@
 import {useEffect,useRef,useState} from "react";
 import {createPortal} from "react-dom";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,FormField,Icon,IconButton,Input,Select} from "@/design-system";
+import {Button,FormField,Icon,IconButton,Input,Select,Skeleton} from "@/design-system";
 import {Dialog} from "@/design-system/dialog";
 import {useSession} from "@/providers/session-context";
 import type {PurchaseCombination,PurchasePresentationDraft} from "../domain/types";
@@ -43,8 +43,8 @@ export function PurchasePresentationsField({unit,value,onChange,error,disabled,o
  function close(){setCreating(false);onBusyChange(false)}
  function update(next:PurchasePresentationDraft){onChange([{...next,isDefault:true}])}
  return <div className="purchase-presentations">
-  {!unit?<p className="muted">Selecciona una unidad de inventario para ver sus presentaciones de compra.</p>
-   :query.isLoading?<div className="purchase-reference-loading" role="status" aria-label="Cargando presentaciones"><i/></div>
+  {!unit?<p className="field-help">Selecciona una unidad de inventario para ver sus presentaciones de compra.</p>
+   :query.isLoading?<div className="purchase-reference-loading" role="status" aria-label="Cargando presentaciones"><Skeleton width="70%"/></div>
    :query.isError?<div className="purchase-validation" role="alert">{query.error.message}<Button type="button" kind="secondary" icon="refresh" disabled={disabled||query.isFetching} onClick={()=>void query.refetch()}>Reintentar</Button></div>
    :<div className="purchase-presentation-row">
      <FormField label="Presentación de compra" as="div"><div className="purchase-reference-controls">
@@ -93,7 +93,7 @@ export function PurchaseCombinationDialog({unit,unitName,close,save}:{unit:strin
   <header><span className="modal-title-icon"><Icon name="box" size={18}/></span><div><small>{unitName}</small><h2 id="purchase-combination-title">Nueva presentación</h2></div><button type="button" aria-label="Cerrar" disabled={mutation.isPending} onClick={close}><Icon name="close"/></button></header>
   <form onSubmit={event=>{event.preventDefault();event.stopPropagation()}} noValidate><div className="form-grid">
    <FormField label="Nombre" className="span-2"><Input data-dialog-initial-focus maxLength={80} value={name} disabled={mutation.isPending} onChange={event=>{setName(event.target.value);setValidation("")}}/></FormField>
-   {catalog.isLoading&&<div className="purchase-reference-loading span-2" role="status" aria-label="Cargando catálogo"><i/></div>}
+   {catalog.isLoading&&<div className="purchase-reference-loading span-2" role="status" aria-label="Cargando catálogo"><Skeleton width="70%"/></div>}
    {catalog.isError&&<div className="span-2"><Button type="button" kind="secondary" icon="refresh" disabled={catalog.isFetching} onClick={()=>void catalog.refetch()}>Reintentar</Button></div>}
    {(validation||mutation.isError||catalog.isError)&&<p className="field-error span-2" role="alert">{validation||mutation.error?.message||catalog.error?.message}</p>}
   </div><footer><Button type="button" kind="ghost" disabled={mutation.isPending} onClick={close}>Cancelar</Button><Button type="button" icon="check" disabled={mutation.isPending||catalog.isLoading||catalog.isError} onClick={submit}>{mutation.isPending?"Guardando…":"Guardar"}</Button></footer></form>

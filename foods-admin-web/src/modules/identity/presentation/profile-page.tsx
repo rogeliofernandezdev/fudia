@@ -3,10 +3,10 @@ import "./profile-page.css";
 
 import {useForm} from "react-hook-form";
 import {useMutation,useQueryClient} from "@tanstack/react-query";
-import {Button,FormField,Icon,Input,PageHeader} from "@/design-system";
+import {Button,EmptyState,ErrorState,FormField,Icon,Input,PageHeader,Skeleton,Status} from "@/design-system";
 import {useFeedback,useSession} from "@/providers";
 import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
-import type {OrganizationSubscription} from "@/modules/platform";
+import {subscriptionStatusLabel,subscriptionStatusTone,type OrganizationSubscription} from "@/modules/platform";
 import type {MyProfile,MyProfileDraft} from "../domain/types";
 import {profileResolver} from "../domain/profile-schema";
 import {saveMyProfile} from "../infrastructure/identity-api";
@@ -19,8 +19,7 @@ export function ProfilePage(){
   const canViewSubscription=can("subscription.read");
   const subscription=useOrganizationSubscription();
   if(profile.isLoading)return <><ProfileHeader/><ProfileSkeleton/>{canViewSubscription&&<SubscriptionSkeleton/>}</>;
-  if(profile.isError)return <><ProfileHeader/><section className="profile-card profile-state"><p>{profile.error.message}</p><Button kind="secondary" onClick={()=>profile.refetch()}>Reintentar</Button></section></>;
-  if(!profile.data)return <><ProfileHeader/><section className="profile-card profile-state"><p>No pudimos cargar tu perfil.</p></section></>;
+  if(profile.isError||!profile.data)return <><ProfileHeader/><section className="profile-card"><ErrorState title="No pudimos cargar tu perfil" text={profile.error?.message} onRetry={()=>void profile.refetch()}/></section></>;
   return <><ProfileHeader/>
     <div className="profile-layout">
       <ProfileForm profile={profile.data} organizationName={organization?.name} locationName={location?.name}/>
@@ -95,7 +94,6 @@ function ProfileForm({profile,organizationName,locationName}:{profile:MyProfile;
   </form>;
 }
 
-const statusLabel:Record<OrganizationSubscription["status"],string>={trial:"Prueba",active:"Activa",past_due:"Pago pendiente",cancelled:"Cancelada"};
 function dateLabel(value:string|null,country?:string,timeZone?:string){
   if(!value)return "—";
   return formatRegionalDateTime(value,{country,timeZone},{dateStyle:"medium"});
@@ -103,7 +101,8 @@ function dateLabel(value:string|null,country?:string,timeZone?:string){
 
 function SubscriptionPanel({subscription,loading,error,retry,country,timeZone}:{subscription:OrganizationSubscription|null;loading:boolean;error:string;retry:()=>void;country?:string;timeZone?:string}){
   if(loading)return <SubscriptionSkeleton/>;
-  if(error||!subscription)return <section className="profile-card profile-state"><p>{error||"No hay una suscripción registrada para esta empresa."}</p><Button kind="secondary" onClick={retry}>Reintentar</Button></section>;
+  if(error)return <section className="profile-card"><ErrorState title="No pudimos cargar la suscripción" text={error} onRetry={retry}/></section>;
+  if(!subscription)return <section className="profile-card"><EmptyState icon="contract" title="Sin suscripción" text="No hay una suscripción registrada para esta empresa."/></section>;
 
   const payment=subscription.payments.find(item=>item.status==="paid")??subscription.payments[0];
   const legacy=subscription.plan.code==="legacy";
@@ -118,7 +117,7 @@ function SubscriptionPanel({subscription,loading,error,retry,country,timeZone}:{
         <h2>{subscription.plan.name}</h2>
         <p>{price}{!legacy&&(subscription.autoRenew?" · Renovación automática":" · Renovación manual")}</p>
       </div>
-      <span className={"profile-status "+subscription.status}>{statusLabel[subscription.status]}</span>
+      <Status tone={subscriptionStatusTone(subscription.status)}>{subscriptionStatusLabel(subscription.status)}</Status>
     </header>
 
     {legacy&&<div className="profile-note"><Icon name="alert" size={15}/><span>Plan anterior al catálogo comercial. FUDIA migrará precio, renovación y condiciones desde Plataforma.</span></div>}
@@ -150,17 +149,17 @@ function UsageRow({label,value,max}:{label:string;value:number;max:number|null})
 
 function ProfileSkeleton(){
   return <section className="profile-card profile-account profile-skeleton" aria-label="Cargando perfil" aria-busy="true">
-    <header className="profile-account-head"><i className="profile-sk profile-sk-avatar"/><div className="profile-account-copy"><i className="profile-sk" style={{width:"40%",height:"var(--size-16)"}}/><i className="profile-sk" style={{width:"60%",height:"var(--size-11)"}}/></div></header>
-    <div className="profile-fields">{[0,1].map(i=><div className="form-field" key={i}><i className="profile-sk" style={{width:"var(--size-100)",height:"var(--size-11)"}}/><i className="profile-sk profile-sk-control"/></div>)}</div>
-    <section className="profile-password"><i className="profile-sk" style={{width:"var(--size-140)",height:"var(--size-13)"}}/><div className="profile-fields">{[0,1].map(i=><div className="form-field" key={i}><i className="profile-sk" style={{width:"var(--size-110)",height:"var(--size-11)"}}/><i className="profile-sk profile-sk-control"/></div>)}</div></section>
-    <footer className="profile-actions"><i className="profile-sk" style={{width:"var(--size-120)",height:"var(--control-height)",borderRadius:"var(--radius-10)"}}/></footer>
+    <header className="profile-account-head"><Skeleton className="profile-sk-avatar"/><div className="profile-account-copy"><Skeleton width="40%" height="var(--size-16)"/><Skeleton width="60%" height="var(--size-11)"/></div></header>
+    <div className="profile-fields">{[0,1].map(i=><div className="form-field" key={i}><Skeleton width="var(--size-100)" height="var(--size-11)"/><Skeleton className="profile-sk-control"/></div>)}</div>
+    <section className="profile-password"><Skeleton width="var(--size-140)" height="var(--size-13)"/><div className="profile-fields">{[0,1].map(i=><div className="form-field" key={i}><Skeleton width="var(--size-110)" height="var(--size-11)"/><Skeleton className="profile-sk-control"/></div>)}</div></section>
+    <footer className="profile-actions"><Skeleton width="var(--size-120)" height="var(--control-height)" radius="var(--radius-10)"/></footer>
   </section>;
 }
 
 function SubscriptionSkeleton(){
   return <section className="profile-card profile-subscription profile-skeleton" aria-label="Cargando suscripción" aria-busy="true">
-    <header className="profile-subscription-head"><div><i className="profile-sk" style={{width:"var(--size-150)",height:"var(--size-10)"}}/><i className="profile-sk" style={{width:"var(--size-120)",height:"var(--size-20)"}}/><i className="profile-sk" style={{width:"var(--size-180)",height:"var(--size-11)"}}/></div><i className="profile-sk" style={{width:"var(--size-70)",height:"var(--size-22)",borderRadius:"var(--radius-99)"}}/></header>
-    <dl className="profile-facts">{[0,1,2,3].map(i=><div key={i}><i className="profile-sk" style={{width:"var(--size-90)",height:"var(--size-10)"}}/><i className="profile-sk" style={{width:"var(--size-70)",height:"var(--size-14)"}}/></div>)}</dl>
-    <div className="profile-usage">{[0,1].map(i=><div className="profile-usage-row" key={i}><i className="profile-sk" style={{width:"50%",height:"var(--size-11)"}}/><i className="profile-sk" style={{width:"100%",height:"var(--size-6)",borderRadius:"var(--radius-99)"}}/></div>)}</div>
+    <header className="profile-subscription-head"><div><Skeleton width="var(--size-150)" height="var(--size-10)"/><Skeleton width="var(--size-120)" height="var(--size-20)"/><Skeleton width="var(--size-180)" height="var(--size-11)"/></div><Skeleton width="var(--size-70)" height="var(--size-22)" radius="var(--radius-99)"/></header>
+    <dl className="profile-facts">{[0,1,2,3].map(i=><div key={i}><Skeleton width="var(--size-90)" height="var(--size-10)"/><Skeleton width="var(--size-70)" height="var(--size-14)"/></div>)}</dl>
+    <div className="profile-usage">{[0,1].map(i=><div className="profile-usage-row" key={i}><Skeleton width="50%" height="var(--size-11)"/><Skeleton width="100%" height="var(--size-6)" radius="var(--radius-99)"/></div>)}</div>
   </section>;
 }

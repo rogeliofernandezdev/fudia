@@ -3,25 +3,22 @@
 
 import {Dialog} from "@/design-system/dialog";
 import {useEffect,useRef,useState} from "react";
-import {useQueries,useQuery} from "@tanstack/react-query";
-import {Button,Icon,Pagination} from "@/design-system";
-import type {CatalogProduct,ComboGroup,ComboOption,ComboSelection,ComboSummary,ConfiguredCombo,ProductList} from "../domain/catalog-types";
-import {getOrderCombo,listAllProducts,listOrderCategories,listOrderCombos,listProductsByCategory,listSalonProducts,searchProducts} from "../infrastructure/catalog-api";
+import {useQuery} from "@tanstack/react-query";
+import {Button,EmptyState,ErrorState,Icon,Pagination,Skeleton} from "@/design-system";
+import {useMoney} from "@/providers";
+import type {CatalogProduct,ComboGroup,ComboOption,ComboSelection,ComboSummary,ConfiguredCombo} from "../domain/catalog-types";
+import {getOrderCombo,listOrderCategories,listOrderCombos,listSalonProducts} from "../infrastructure/catalog-api";
 
 export type {CatalogProduct,ComboSelection,ConfiguredCombo} from "../domain/catalog-types";
 
-type CatalogQuery={data?:ProductList;isLoading:boolean;error?:{message:string}|null};
-type Section={id:string;title:string;items:CatalogProduct[];loading:boolean;error?:{message:string}|null};
-const money=(v:string|number)=>Number(v).toFixed(2);
+type Money=(value:string|number)=>string;
 
-export function ComandaCatalog({qtyByProduct,onPick,onRemove,onConfigureCombo,currencySymbol,variant="default"}:{
+export function ComandaCatalog({qtyByProduct,onPick,onConfigureCombo}:{
   qtyByProduct:Record<string,number>;
   onPick:(p:CatalogProduct)=>void;
-  onRemove:(p:CatalogProduct)=>void;
   onConfigureCombo?:(comboId:string)=>void;
-  currencySymbol:string;
-  variant?:"default"|"salon";
 }){
+  const money=useMoney();
   const[pq,setPq]=useState("");
   const[cat,setCat]=useState("");
   const[page,setPage]=useState(1);
@@ -30,46 +27,28 @@ export function ComandaCatalog({qtyByProduct,onPick,onRemove,onConfigureCombo,cu
   const scrollRef=useRef<HTMLDivElement>(null);
   const categories=useQuery({queryKey:["order-categories"],queryFn:listOrderCategories,staleTime:60000});
   const cats=categories.data?.items??[];
-  const catIndex=cats.findIndex(c=>c.id===cat);
-  const perCat=useQueries({queries:variant==="default"?cats.map(c=>({queryKey:["order-catalog",c.id],queryFn:()=>listProductsByCategory(c.id),staleTime:60000})):[]});
-  const todos=useQuery({queryKey:["order-catalog","todos"],queryFn:listAllProducts,enabled:variant==="default",staleTime:60000});
   const searching=pq.trim().length>0;
-  const search=useQuery({queryKey:["order-catalog","search",pq],queryFn:()=>searchProducts(pq),enabled:variant==="default"&&searching,staleTime:60000});
   const salonCatalog=useQuery({
     queryKey:["order-catalog","salon",cat,pq.trim(),page,pageSize],
     queryFn:()=>listSalonProducts({categoryId:cat,q:pq,page,pageSize}),
-    enabled:variant==="salon"&&catalogKind==="products",
+    enabled:catalogKind==="products",
     staleTime:60000,
   });
   const comboCatalog=useQuery({
     queryKey:["order-catalog","combos",pq.trim(),page,pageSize],
     queryFn:()=>listOrderCombos({q:pq,page,pageSize}),
-    enabled:variant==="salon"&&catalogKind==="combos",
+    enabled:catalogKind==="combos",
     staleTime:30000,
   });
 
-  const norm=(q:CatalogQuery|undefined)=>({items:q?.data?.items??[],loading:q?q.isLoading:true,error:q?.error});
-  const orphans=(todos.data?.items??[]).filter(p=>!p.categoryId||!cats.some(c=>c.id===p.categoryId));
-  const sections:Section[]=searching
-    ?[{id:"search",title:"Resultados",...norm(search)}]
-    :cat
-      ?[{id:cat,title:cats[catIndex]?.name??"Categoría",...norm(perCat[catIndex])}]
-      :[
-          ...cats.map((c,i)=>({id:c.id,title:c.name,...norm(perCat[i])})),
-          ...(orphans.length||todos.isLoading?[{id:"otros",title:"Otros",items:orphans,loading:todos.isLoading,error:todos.error}]:[]),
-        ];
-  const single=searching||Boolean(cat);
-  const visible=sections.filter(s=>single||s.loading||s.error||s.items.length>0);
-  const totalItems=sections.reduce((a,s)=>a+s.items.length,0);
   const salonItems=salonCatalog.data?.items??[];
   const salonTotal=salonCatalog.data?.total??0;
   const comboItems=comboCatalog.data?.items??[];
   const comboTotal=comboCatalog.data?.total??0;
-  const displayCount=variant==="salon"?(catalogKind==="combos"?comboTotal:salonTotal):totalItems;
-  const countLabel=variant==="salon"&&catalogKind==="combos"?"menús y combos":"platos";
-  const booting=variant==="salon"
-    ?(catalogKind==="combos"?comboCatalog.isLoading:salonCatalog.isLoading)
-    :(!searching&&(categories.isLoading||(cats.length>0&&perCat.every(q=>q.isLoading))));
+  const combos=catalogKind==="combos";
+  const displayCount=combos?comboTotal:salonTotal;
+  const countLabel=combos?"menús y combos":"platos";
+  const booting=combos?comboCatalog.isLoading:salonCatalog.isLoading;
   const goToPage=(next:number)=>{
     setPage(next);
     scrollRef.current?.scrollTo({top:0,behavior:"smooth"});
@@ -83,32 +62,30 @@ export function ComandaCatalog({qtyByProduct,onPick,onRemove,onConfigureCombo,cu
   };
 
   return(
-    <div className={"comanda-menu comanda-menu-paged"+(variant==="salon"?" comanda-menu-salon":"")}>
+    <div className="comanda-menu comanda-menu-paged comanda-menu-salon">
       <div className="comanda-menu-hero">
         <div className="comanda-menu-hero-row">
           <h3>La carta</h3>
           <span className="comanda-menu-count">{displayCount} {countLabel}</span>
         </div>
 
-        {variant==="salon"&&(
-          <div className="comanda-source-tabs" role="tablist" aria-label="Tipo de producto">
-            <button type="button" role="tab" aria-selected={catalogKind==="products"} className={catalogKind==="products"?"active":""} onClick={()=>switchKind("products")}>
-              <span className="comanda-source-icon"><Icon name="utensils" size={17}/></span>
-              <span className="comanda-source-copy"><b>Platos</b><small>Productos de la carta</small></span>
-            </button>
-            <button type="button" role="tab" aria-selected={catalogKind==="combos"} className={catalogKind==="combos"?"active":""} onClick={()=>switchKind("combos")}>
-              <span className="comanda-source-icon"><Icon name="combo" size={17}/></span>
-              <span className="comanda-source-copy"><b>Menús y combos</b><small>Opciones configurables</small></span>
-            </button>
-          </div>
-        )}
+        <div className="comanda-source-tabs" role="tablist" aria-label="Tipo de producto">
+          <button type="button" role="tab" aria-selected={catalogKind==="products"} className={catalogKind==="products"?"active":""} onClick={()=>switchKind("products")}>
+            <span className="comanda-source-icon"><Icon name="utensils" size={17}/></span>
+            <span className="comanda-source-copy"><b>Platos</b><small>Productos de la carta</small></span>
+          </button>
+          <button type="button" role="tab" aria-selected={combos} className={combos?"active":""} onClick={()=>switchKind("combos")}>
+            <span className="comanda-source-icon"><Icon name="combo" size={17}/></span>
+            <span className="comanda-source-copy"><b>Menús y combos</b><small>Opciones configurables</small></span>
+          </button>
+        </div>
 
         <div className="comanda-search-bar">
-          <label className="comanda-search"><Icon name="search" size={18}/><input value={pq} onChange={e=>{setPq(e.target.value);setPage(1)}} placeholder={catalogKind==="combos"?"Buscar menú o combo...":"Buscar en la carta..."}/></label>
+          <label className="comanda-search"><Icon name="search" size={18}/><input value={pq} onChange={e=>{setPq(e.target.value);setPage(1)}} placeholder={combos?"Buscar menú o combo...":"Buscar en la carta..."} aria-label={combos?"Buscar menú o combo":"Buscar en la carta"}/></label>
           {pq&&<button type="button" className="comanda-clear-search" onClick={()=>{setPq("");setPage(1)}} aria-label="Limpiar búsqueda"><Icon name="close" size={15}/></button>}
         </div>
 
-        {(variant!=="salon"||catalogKind==="products")&&(
+        {!combos&&(
           <div className="comanda-seg" role="tablist" aria-label="Categorías de la carta">
             <button type="button" role="tab" aria-selected={cat===""&&!searching} className={cat===""&&!searching?"active":""} onClick={()=>{setCat("");setPq("");setPage(1)}}>Todos</button>
             {cats.map(c=>(
@@ -119,73 +96,46 @@ export function ComandaCatalog({qtyByProduct,onPick,onRemove,onConfigureCombo,cu
       </div>
 
       <div className="comanda-scroll" ref={scrollRef}>
-        {variant==="salon"?(
-          catalogKind==="combos"?(
-            booting?(
-              <MenuRows n={8}/>
-            ):comboCatalog.isError?(
-              <div className="catalog-state empty-catalog-card"><span><Icon name="alert"/></span><b>No pudimos cargar los menús</b><p>{comboCatalog.error.message}</p><Button kind="secondary" icon="refresh" onClick={()=>comboCatalog.refetch()}>Reintentar</Button></div>
-            ):comboItems.length?(
-              <div className="comanda-dishes">
-                {comboItems.map(combo=>(
-                  <ComboItem key={combo.id} combo={combo} qty={qtyByProduct[combo.id]??0} currencySymbol={currencySymbol} onConfigure={()=>onConfigureCombo?.(combo.id)}/>
-                ))}
-              </div>
-            ):(
-              <div className="catalog-state empty-catalog-card"><span><Icon name="menu"/></span><b>Sin menús ni combos</b><p>{searching?"Ningún menú coincide con la búsqueda.":"No hay menús o combos disponibles en este momento."}</p></div>
-            )
-          ):booting?(
-            <MenuRows n={8}/>
-          ):salonCatalog.isError?(
-            <div className="catalog-state empty-catalog-card"><span><Icon name="alert"/></span><b>No pudimos cargar la carta</b><p>{salonCatalog.error.message}</p><Button kind="secondary" icon="refresh" onClick={()=>salonCatalog.refetch()}>Reintentar</Button></div>
-          ):salonItems.length?(
+        {booting?(
+          <MenuRows n={8}/>
+        ):combos?(
+          comboCatalog.isError?(
+            <ErrorState className="empty-catalog-card" title="No pudimos cargar los menús" text={comboCatalog.error.message} onRetry={()=>comboCatalog.refetch()} retrying={comboCatalog.isFetching}/>
+          ):comboItems.length?(
             <div className="comanda-dishes">
-              {salonItems.map(p=>(
-                <MenuItem key={p.id} p={p} qty={qtyByProduct[p.id]??0} currencySymbol={currencySymbol} onPick={onPick} onRemove={onRemove} variant={variant}/>
+              {comboItems.map(combo=>(
+                <ComboItem key={combo.id} combo={combo} qty={qtyByProduct[combo.id]??0} money={money} onConfigure={()=>onConfigureCombo?.(combo.id)}/>
               ))}
             </div>
           ):(
-            <div className="catalog-state empty-catalog-card"><span><Icon name="search"/></span><b>Sin platos</b><p>{searching?"Ningún producto coincide con la búsqueda.":"No hay productos activos para mostrar."}</p></div>
+            <EmptyState className="empty-catalog-card" icon="menu" title={searching?"Sin coincidencias":"Sin menús ni combos"} text={searching?"Ningún menú coincide con la búsqueda.":"No hay menús o combos disponibles en este momento."}/>
           )
-        ):booting?(
-          <MenuSkeleton sections={4}/>
-        ):visible.map(sec=>(
-          <section className="comanda-menusec" key={sec.id}>
-            <header className="comanda-menusec-head"><span>{sec.title}</span><i aria-hidden="true"/><small>{sec.loading?"…":sec.items.length}</small></header>
-            {sec.loading?(
-              <MenuRows n={3}/>
-            ):sec.error?(
-              <div className="catalog-state empty-catalog-card"><span><Icon name="alert"/></span><b>No pudimos cargar la carta</b><p>{sec.error.message}</p></div>
-            ):sec.items.length?(
-              <div className="comanda-dishes">
-                {sec.items.map(p=>(
-                  <MenuItem key={p.id} p={p} qty={qtyByProduct[p.id]??0} currencySymbol={currencySymbol} onPick={onPick} onRemove={onRemove} variant={variant}/>
-                ))}
-              </div>
-            ):(
-              <div className="catalog-state empty-catalog-card"><span><Icon name="search"/></span><b>Sin platos</b><p>{searching?"Ningún producto coincide con la búsqueda.":"Esta categoría aún no tiene productos activos."}</p></div>
-            )}
-          </section>
-        ))}
-        {variant!=="salon"&&!booting&&!visible.length&&(
-          <div className="catalog-state empty-catalog-card"><span><Icon name="search"/></span><b>Sin platos</b><p>La carta aún no tiene productos activos.</p></div>
+        ):salonCatalog.isError?(
+          <ErrorState className="empty-catalog-card" title="No pudimos cargar la carta" text={salonCatalog.error.message} onRetry={()=>salonCatalog.refetch()} retrying={salonCatalog.isFetching}/>
+        ):salonItems.length?(
+          <div className="comanda-dishes">
+            {salonItems.map(p=>(
+              <MenuItem key={p.id} p={p} qty={qtyByProduct[p.id]??0} money={money} onPick={onPick}/>
+            ))}
+          </div>
+        ):(
+          <EmptyState className="empty-catalog-card" icon="search" title={searching?"Sin coincidencias":"Sin platos"} text={searching?"Ningún producto coincide con la búsqueda.":"No hay productos activos para mostrar."}/>
         )}
       </div>
 
-      {variant==="salon"&&((catalogKind==="products"&&salonItems.length>0)||(catalogKind==="combos"&&comboItems.length>0))&&(
+      {((!combos&&salonItems.length>0)||(combos&&comboItems.length>0))&&(
         <div className="salon-comanda-pagination-shell">
-          <Pagination page={page} size={pageSize} total={catalogKind==="combos"?comboTotal:salonTotal} onPage={goToPage} onSize={()=>{}} mode="compact"/>
+          <Pagination page={page} size={pageSize} total={displayCount} onPage={goToPage} onSize={()=>{}} mode="compact"/>
         </div>
       )}
     </div>
   );
 }
 
-export function ComboConfigurator({comboId,initialSelections=[],editing=false,currencySymbol,onClose,onConfirm}:{
+export function ComboConfigurator({comboId,initialSelections=[],editing=false,onClose,onConfirm}:{
   comboId:string;
   initialSelections?:ComboSelection[];
   editing?:boolean;
-  currencySymbol:string;
   onClose:()=>void;
   onConfirm:(combo:ConfiguredCombo)=>void;
 }){
@@ -194,6 +144,7 @@ export function ComboConfigurator({comboId,initialSelections=[],editing=false,cu
     for(const sel of initialSelections)result[sel.groupId]=[...(result[sel.groupId]??[]),sel.productId];
     return result;
   });
+  const money=useMoney();
   const combo=useQuery({
     queryKey:["order-combo",comboId],
     queryFn:()=>getOrderCombo(comboId),
@@ -256,9 +207,9 @@ export function ComboConfigurator({comboId,initialSelections=[],editing=false,cu
 
         <div className="combo-config-body">
           {combo.isLoading?(
-            <div className="combo-config-state"><span className="combo-config-spinner"/><b>Cargando opciones…</b></div>
+            <ComboConfiguratorSkeleton/>
           ):combo.isError?(
-            <div className="combo-config-state error"><Icon name="alert" size={20}/><b>No pudimos cargar este menú</b><p>{combo.error.message}</p></div>
+            <ErrorState title="No pudimos cargar este menú" text={combo.error.message} onRetry={()=>combo.refetch()} retrying={combo.isFetching}/>
           ):data?(
             data.groups.map(group=>{
               const selectedIds=selected[group.id]??[];
@@ -280,7 +231,7 @@ export function ComboConfigurator({comboId,initialSelections=[],editing=false,cu
                         <button type="button" key={option.productId} className={active?"active":""} aria-pressed={active} disabled={!option.available&&!active} onClick={()=>toggle(group,option)}>
                           <span className="combo-option-check">{active?<Icon name="check" size={13}/>:null}</span>
                           <span className="combo-option-copy"><b>{option.name}</b>{!option.available&&<small>Agotado</small>}</span>
-                          <span className="combo-option-price">{Number(option.surcharge)>0?`+${currencySymbol} ${money(option.surcharge)}`:"Incluido"}</span>
+                          <span className="combo-option-price">{Number(option.surcharge)>0?`+${money(option.surcharge)}`:"Incluido"}</span>
                         </button>
                       );
                     })}
@@ -292,7 +243,7 @@ export function ComboConfigurator({comboId,initialSelections=[],editing=false,cu
         </div>
 
         <footer className="combo-config-foot">
-          <div className="combo-config-total"><small>Total del menú</small><strong>{currencySymbol} {money(finalPrice)}</strong></div>
+          <div className="combo-config-total"><small>Total del menú</small><strong>{combo.isLoading?<Skeleton width="var(--size-72)" height="var(--size-18)"/>:money(finalPrice)}</strong></div>
           {!editing&&(
             <div className="combo-config-multiple">
               <Icon name="users" size={15}/>
@@ -308,7 +259,7 @@ export function ComboConfigurator({comboId,initialSelections=[],editing=false,cu
   );
 }
 
-function ComboItem({combo,qty,currencySymbol,onConfigure}:{combo:ComboSummary;qty:number;currencySymbol:string;onConfigure:()=>void}){
+function ComboItem({combo,qty,money,onConfigure}:{combo:ComboSummary;qty:number;money:Money;onConfigure:()=>void}){
   return(
     <article className={"comanda-dish comanda-dish-modern comanda-combo-card"+(qty>0?" picked":"")} aria-label={combo.name}>
       <span className={"comanda-dish-thumb comanda-dish-modern-media"+(combo.imageUrl?" has-image":"")}>
@@ -323,7 +274,7 @@ function ComboItem({combo,qty,currencySymbol,onConfigure}:{combo:ComboSummary;qt
           <em>{combo.groupCount} grupo{combo.groupCount===1?"":"s"} de elección</em>
         </div>
         <div className="comanda-dish-modern-footer">
-          <b className="comanda-dish-price">Desde {currencySymbol} {money(combo.price)}</b>
+          <b className="comanda-dish-price">Desde {money(combo.price)}</b>
           <button type="button" className="comanda-dish-add-button" onClick={onConfigure} aria-label={`Elegir opciones de ${combo.name}`}>
             <Icon name="combo" size={14}/><span>Elegir opciones</span>
           </button>
@@ -333,51 +284,29 @@ function ComboItem({combo,qty,currencySymbol,onConfigure}:{combo:ComboSummary;qt
   );
 }
 
-function MenuItem({p,qty,currencySymbol,onPick,onRemove,variant}:{p:CatalogProduct;qty:number;currencySymbol:string;onPick:(p:CatalogProduct)=>void;onRemove:(p:CatalogProduct)=>void;variant:"default"|"salon"}){
+function MenuItem({p,qty,money,onPick}:{p:CatalogProduct;qty:number;money:Money;onPick:(p:CatalogProduct)=>void}){
   const availability=p.availabilityStatus??"available";
   const unavailable=availability==="sold_out"||availability==="unavailable";
-  if(variant==="salon"){
-    return(
-      <article className={"comanda-dish comanda-dish-modern"+(qty>0?" picked":"")+(unavailable?" unavailable":"")+(availability==="low"?" low":"")} aria-label={p.name}>
-        <span className={"comanda-dish-thumb comanda-dish-modern-media"+(p.imageUrl?" has-image":"")}>
-          <span className="comanda-dish-image-fallback"><Icon name="utensils" size={24}/><small>Sin imagen</small></span>
-          {p.imageUrl&&<img src={p.imageUrl} alt={p.name} loading="lazy" onError={e=>{e.currentTarget.hidden=true}}/>}
-          {qty>0&&<b className="comanda-dish-selected-qty">{qty}×</b>}
-          {availability==="low"&&<small className="comanda-dish-availability low">{p.remaining!==null&&p.remaining!==undefined?`Quedan ${p.remaining}`:"Pocas unidades"}</small>}
-          {availability==="sold_out"&&<small className="comanda-dish-availability blocked">Agotado</small>}
-          {availability==="unavailable"&&<small className="comanda-dish-availability blocked">Fuera de horario</small>}
-        </span>
-        <div className="comanda-dish-modern-content">
-          <strong className="comanda-dish-name" title={p.name}>{p.name}</strong>
-          <div className="comanda-dish-modern-footer">
-            <b className="comanda-dish-price">{currencySymbol} {money(p.price)}</b>
-            <button type="button" className="comanda-dish-add-button" disabled={unavailable} onClick={()=>!unavailable&&onPick(p)} aria-label={unavailable?`${p.name} no disponible`:qty>0?`Agregar otro ${p.name}`:`Agregar ${p.name} a la comanda`}>
-              <Icon name={unavailable?"close":"plus"} size={14}/>
-              <span>{unavailable?"No disponible":"Agregar"}</span>
-            </button>
-          </div>
-        </div>
-      </article>
-    );
-  }
-
   return(
-    <article className={"comanda-dish"+(qty>0?" picked":"")} onClick={()=>onPick(p)} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==="Enter"||e.key===" ")onPick(p)}} aria-label={p.name}>
-      <span className="comanda-dish-thumb">
-        {p.imageUrl?<img src={p.imageUrl} alt={p.name}/>:<Icon name="utensils" size={20}/>}
+    <article className={"comanda-dish comanda-dish-modern"+(qty>0?" picked":"")+(unavailable?" unavailable":"")+(availability==="low"?" low":"")} aria-label={p.name}>
+      <span className={"comanda-dish-thumb comanda-dish-modern-media"+(p.imageUrl?" has-image":"")}>
+        <span className="comanda-dish-image-fallback"><Icon name="utensils" size={24}/><small>Sin imagen</small></span>
+        {p.imageUrl&&<img src={p.imageUrl} alt={p.name} loading="lazy" onError={e=>{e.currentTarget.hidden=true}}/>}
+        {qty>0&&<b className="comanda-dish-selected-qty">{qty}×</b>}
+        {availability==="low"&&<small className="comanda-dish-availability low">{p.remaining!==null&&p.remaining!==undefined?`Quedan ${p.remaining}`:"Pocas unidades"}</small>}
+        {availability==="sold_out"&&<small className="comanda-dish-availability blocked">Agotado</small>}
+        {availability==="unavailable"&&<small className="comanda-dish-availability blocked">Fuera de horario</small>}
       </span>
-      <strong className="comanda-dish-name" title={p.name}>{p.name}</strong>
-      <i className="comanda-dish-dots" aria-hidden="true"/>
-      <b className="comanda-dish-price">{currencySymbol} {money(p.price)}</b>
-      {qty>0?(
-        <span className="comanda-dish-step" onClick={e=>e.stopPropagation()} onKeyDown={e=>e.stopPropagation()}>
-          <button type="button" onClick={()=>onRemove(p)} aria-label={`Quitar un ${p.name}`}><Icon name="minus" size={12}/></button>
-          <b>{qty}</b>
-          <button type="button" onClick={()=>onPick(p)} aria-label={`Agregar un ${p.name}`}><Icon name="plus" size={12}/></button>
-        </span>
-      ):(
-        <span className="comanda-dish-add" aria-hidden="true"><Icon name="plus" size={14}/></span>
-      )}
+      <div className="comanda-dish-modern-content">
+        <strong className="comanda-dish-name" title={p.name}>{p.name}</strong>
+        <div className="comanda-dish-modern-footer">
+          <b className="comanda-dish-price">{money(p.price)}</b>
+          <button type="button" className="comanda-dish-add-button" disabled={unavailable} onClick={()=>!unavailable&&onPick(p)} aria-label={unavailable?`${p.name} no disponible`:qty>0?`Agregar otro ${p.name}`:`Agregar ${p.name} a la comanda`}>
+            <Icon name={unavailable?"close":"plus"} size={14}/>
+            <span>{unavailable?"No disponible":"Agregar"}</span>
+          </button>
+        </div>
+      </div>
     </article>
   );
 }
@@ -398,15 +327,21 @@ function MenuRows({n}:{n:number}){
   );
 }
 
-function MenuSkeleton({sections}:{sections:number}){
+/** Opciones del menú en carga: grupos con encabezado y opciones seleccionables. */
+function ComboConfiguratorSkeleton(){
   return(
-    <>
-      {Array.from({length:sections},(_,i)=>(
-        <section className="comanda-menusec" key={i}>
-          <header className="comanda-menusec-head"><span className="comanda-skel-sect"/><i aria-hidden="true"/><small/></header>
-          <MenuRows n={3}/>
+    <div className="combo-config-skeleton" role="status" aria-label="Cargando opciones del menú">
+      {Array.from({length:2},(_,group)=>(
+        <section className="combo-config-group" key={group} aria-hidden="true">
+          <header>
+            <div><Skeleton width="var(--size-138)" height="var(--size-14)"/><Skeleton width="var(--size-92)" height="var(--size-10)"/></div>
+            <Skeleton width="var(--size-48)" height="var(--size-22)" radius="var(--radius-999)"/>
+          </header>
+          <div className="combo-config-options">
+            {Array.from({length:3},(_,option)=><Skeleton key={option} height="var(--control-height)" radius="var(--radius-control)"/>)}
+          </div>
         </section>
       ))}
-    </>
+    </div>
   );
 }

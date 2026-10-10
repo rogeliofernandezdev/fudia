@@ -29,7 +29,7 @@ function mount({max=6,usage=6,items=[active,inactive],pending=false,error=false,
   if(name==="../application/use-subscription-capacity")return capacity;
   if(name==="@/providers/session-context")return {useSession:()=>session};
   if(name==="@/providers/feedback-provider")return {useFeedback:()=>({notify:()=>{}})};
-  if(name==="@/design-system")return Object.fromEntries(["Dialog","ConfirmDialog","RemoteModalSkeleton","Icon","Button","FormField","Input","PageHeader","Pagination","RowActionButton","Select","Status","Textarea"].map(key=>[key,key]));
+  if(name==="@/design-system")return Object.fromEntries(["Dialog","ConfirmDialog","EmptyState","ErrorState","RemoteModalSkeleton","Icon","IconButton","Button","FormField","Input","PageHeader","Pagination","RowActionButton","SearchField","Select","Status","TableSkeleton","Tabs","Textarea"].map(key=>[key,key]));
   if(name==="@/design-system/dialog")return {Dialog:"Dialog"};
   if(name==="react-hook-form"||name.startsWith("../")||name.endsWith(".css"))return {};
   return require(name);
@@ -76,11 +76,11 @@ test("carga, error, refresco y falta de acceso bloquean el alta; el error ofrece
  const ui=mount({error:true}),first=ui.render();assert.match(first.header.props.description,/No pudimos comprobar el límite de usuarios/);
  first.view.find(node=>node.type==="Button"&&node.props.children==="Reintentar").props.onClick();assert.equal(ui.retries,1);
  assert.equal(mount({manage:false}).render().button,undefined);
- assert.ok(mount({pending:true,hasData:false}).render().view.some(node=>node.type?.name==="Skeleton"));
+ assert.ok(mount({pending:true,hasData:false}).render().view.some(node=>node.type==="TableSkeleton"));
 });
 
 test("Nuevo rol permanece habilitado al llegar al límite de usuarios",()=>{
- const ui=mount();ui.render().view.find(node=>node.type==="button"&&node.props.children[0]==="Roles ").props.onClick();
+ const ui=mount();ui.render().view.find(node=>node.type==="Tabs").props.onChange("roles");
  const roles=ui.render();assert.equal(roles.button.props.children,"Nuevo rol");assert.equal(roles.button.props.disabled,false);
  roles.button.props.onClick();assert.ok(ui.render().view.some(node=>node.type?.name==="RoleDialog"));
 });

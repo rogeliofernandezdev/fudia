@@ -169,3 +169,31 @@ ciclo. Todo usa tokens del design system. Con `prefers-reduced-motion` muestra e
 logo completo, sin burbujas, vapor ni movimiento.
 El texto inferior describe la espera («Preparando tu espacio»,
 «Validando sesión») y el contenedor expone `role="status"` y `aria-busy`.
+
+## Primitivas homologadas (usar siempre antes que soluciones locales)
+
+Todas se exportan desde `@/design-system` (salvo `useMoney`, desde `@/providers`).
+Un módulo no debe definir su propio estado vacío, skeleton, buscador, pestañas,
+pastilla de estado ni formateador de dinero.
+
+- `EmptyState({icon,title,text,action})`: vacío accionable sobre `.catalog-state`.
+  El texto distingue «Aún no hay …» de «Sin coincidencias» cuando hay filtros. La
+  acción, si existe, es un `Button` con etiqueta específica («Nuevo producto»),
+  nunca «Crear registro».
+- `ErrorState({title,text,onRetry})`: error recuperable sobre
+  `.catalog-state.error`; «Reintentar» es siempre `Button kind="secondary"` con
+  icono `refresh`. No reemplaza datos por ceros.
+- `Skeleton` y `TableSkeleton({columns,rows})`: un único brillo
+  (`ds-skeleton-shimmer`). `TableSkeleton` recibe los mismos encabezados que la
+  tabla real; la primera celda reproduce icono + nombre + detalle y la última,
+  las acciones. Prohibido el texto «Cargando…» y las barras genéricas.
+- `SearchField({placeholder,label})`: buscador de barra de filtros con lupa, a
+  `--control-height`. Reemplaza `<input>` crudos dentro de `.toolbar`.
+- `Tabs({items,value,onChange,label})`: control segmentado con `role="tablist"`,
+  foco itinerante y flechas/Inicio/Fin; contador opcional por pestaña; 44 px en
+  móvil. Reemplaza `.catalog-tabs` y variantes por módulo.
+- `Status({tone})`: tonos `green` (activo/éxito), `blue` (en curso), `orange`
+  (advertencia), `red` (error/vencido/anulado), `violet` (canal digital) y `gray`
+  (neutro/inactivo). Reemplaza pastillas propias de cada módulo.
+- `useMoney()`: importe con símbolo, posición y decimales de la empresa y
+  separadores del país del local; conserva el signo. Nunca `toFixed` + símbolo.

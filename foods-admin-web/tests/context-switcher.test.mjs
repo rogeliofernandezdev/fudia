@@ -16,7 +16,7 @@ function compile(file,resolve){
  return exports;
 }
 function nodes(tree,result=[]){if(Array.isArray(tree)){tree.forEach(node=>nodes(node,result));return result}if(tree&&typeof tree==="object"){result.push(tree);nodes(tree.props?.children,result)}return result}
-const {ContextSwitcherPanel}=compile("context-switcher-panel.tsx",name=>name==="@/design-system"?Object.fromEntries(["Button","Select","FormField","Icon","IconButton"].map(key=>[key,key])):require(name));
+const {ContextSwitcherPanel}=compile("context-switcher-panel.tsx",name=>name==="@/design-system"?Object.fromEntries(["Button","EmptyState","ErrorState","Select","Skeleton","FormField","Icon","IconButton"].map(key=>[key,key])):require(name));
 const props={id:"context-panel",platformAdmin:true,organizationId:"org-a",locationId:"local-b",organizations,locations,loading:false,busy:false,canApply:true,onOrganizationChange:()=>{},onLocationChange:()=>{},onApply:()=>{},onClose:()=>{},onRetry:()=>{}};
 
 test("contexto: campos y acciones usan primitivas homologadas con nombre accesible",()=>{
@@ -57,9 +57,10 @@ test("contexto: skeleton, error recuperable y vacíos no dejan acciones habilita
  assert.equal(loading.some(node=>node.type==="Select"||node.type==="Button"),false);
  let retries=0;
  const failed=nodes(ContextSwitcherPanel({...props,error:"Sin conexión",onRetry:()=>retries++}));
- assert.ok(failed.some(node=>node.props.role==="alert"));
- failed.find(node=>node.type==="Button").props.onClick();assert.equal(retries,1);
- assert.ok(nodes(ContextSwitcherPanel({...props,organizations:[]})).some(node=>node.props.children==="No hay empresas disponibles."));
+ const errorState=failed.find(node=>node.type==="ErrorState");
+ assert.equal(errorState.props.text,"Sin conexión");assert.equal(failed.some(node=>node.type==="Button"||node.type==="Select"),false);
+ errorState.props.onRetry();assert.equal(retries,1);
+ assert.ok(nodes(ContextSwitcherPanel({...props,organizations:[]})).some(node=>node.type==="EmptyState"&&node.props.title==="No hay empresas disponibles."));
  const empty=nodes(ContextSwitcherPanel({...props,locations:[],canApply:false}));
  assert.ok(empty.some(node=>node.props.children==="No hay locales disponibles."));
  assert.equal(empty.find(node=>node.type==="FormField"&&node.props.label==="Local").props.children.props.disabled,true);

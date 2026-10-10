@@ -28,7 +28,7 @@ export function PurchasePresentationDialog({item,close,save}:{item:PurchaseInven
   <header><span className="modal-title-icon"><Icon name="box" size={18}/></span><div><small>PRESENTACIÓN DE COMPRA</small><h2 id="purchase-presentation-title">{item.name}</h2></div><button type="button" aria-label="Cerrar" disabled={mutation.isPending||catalogBusy} onClick={close}><Icon name="close"/></button></header>
   <form onSubmit={event=>{event.preventDefault();event.stopPropagation()}} noValidate><div className="purchase-item-section">
    <PurchasePresentationsField unit={item.unit} value={rows} onChange={setRows} disabled={mutation.isPending} onBusyChange={setCatalogBusy}/>
-   <p className="muted">Las compras anteriores y el stock no se modifican.</p>
+   <p className="field-help">Las compras anteriores y el stock no se modifican.</p>
    {(validation||mutation.isError)&&<p className="field-error" role="alert">{validation||mutation.error?.message}</p>}
   </div><footer><Button type="button" kind="ghost" disabled={mutation.isPending||catalogBusy} onClick={close}>Cancelar</Button><Button type="button" disabled={mutation.isPending||catalogBusy} onClick={submit}>{mutation.isPending?"Guardando…":"Guardar"}</Button></footer></form>
  </Dialog></div>;

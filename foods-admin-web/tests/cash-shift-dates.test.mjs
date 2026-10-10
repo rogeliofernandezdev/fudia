@@ -23,7 +23,7 @@ function mountPage(value=shift,tab="registers"){
   if(name==="@tanstack/react-query")return{useQueryClient:()=>({invalidateQueries:()=>{}}),useMutation:()=>({}),useQuery:options=>({data:options.queryKey[0]==="cash-registers"?{items:[{id:"register-1",code:"CAJ",name:"Caja principal",active:true,openShift:value}]}:options.queryKey[0]==="cash-shifts"?{items:[value],total:1}:{},isLoading:false,isError:false})};
   if(name==="@/design-system")return new Proxy({},{get:(_,key)=>String(key)});
   if(name==="@/design-system/dialog")return{Dialog:"Dialog"};
-  if(name==="@/providers")return{useSession:()=>({can:()=>true,location:{country,timezone}}),useFeedback:()=>({notify:()=>{}})};
+  if(name==="@/providers")return{useSession:()=>({can:()=>true,location:{country,timezone}}),useFeedback:()=>({notify:()=>{}}),useMoney:()=>value=>"S/ "+value};
   if(name==="@/providers/settings-context")return{useSettings:()=>({currencySymbol:"S/",currencyPosition:"before",currencyDecimals:2})};
   if(name==="@/shared/i18n/regional-format")return regional;
   if(name.endsWith("shift-attribution"))return attribution;

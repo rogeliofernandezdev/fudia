@@ -1,12 +1,5 @@
 /* Suscripción de empresa — Plataforma */
 
-/* Estado del contrato */
-.subscription-state-badge{display:inline-flex;align-items:center;height:var(--size-22);padding:0 var(--space-9);border-radius:var(--radius-99);font-size:var(--font-size-label);font-weight:var(--font-weight-750);white-space:nowrap;color:var(--ink-600);background:var(--cloud-100)}
-.subscription-state-badge.active{color:var(--brand-700);background:var(--brand-100)}
-.subscription-state-badge.trial{color:var(--ops-700);background:var(--ops-100)}
-.subscription-state-badge.past_due{color:var(--warning);background:var(--warning-50)}
-.subscription-state-badge.cancelled{color:var(--danger);background:var(--danger-50)}
-
 /* Paneles de edición */
 .platform-subscription-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:var(--space-16);margin-top:var(--space-20);align-items:start}
 .subscription-editor,.subscription-history{overflow:hidden;border:var(--stroke-1) solid var(--line);border-radius:var(--radius-card);background:var(--surface);box-shadow:var(--shadow)}
@@ -37,13 +30,7 @@
 .subscription-history{margin-top:var(--space-16)}
 .subscription-history>header>b{display:grid;place-items:center;min-width:var(--size-28);height:var(--size-28);margin-left:auto;border-radius:var(--radius-8);font-size:var(--font-size-control);color:var(--ops-700);background:var(--ops-100)}
 .subscription-history td{height:var(--size-52)}
-.subscription-pay-status{display:inline-flex;align-items:center;height:var(--size-22);padding:0 var(--space-9);border-radius:var(--radius-99);font-size:var(--font-size-label);font-weight:var(--font-weight-750);color:var(--ink-600);background:var(--cloud-100)}
-.subscription-pay-status.paid{color:var(--brand-700);background:var(--brand-100)}
-.subscription-pay-status.pending{color:var(--warning);background:var(--warning-50)}
-.subscription-pay-status.failed,.subscription-pay-status.refunded{color:var(--danger);background:var(--danger-50)}
-.subscription-empty,.subscription-state{padding:var(--space-32);text-align:center;font-size:var(--font-size-12);color:var(--ink-600)}
-.subscription-state{margin-top:var(--space-20);display:grid;justify-items:center;gap:var(--space-10)}
-.subscription-state.error{color:var(--danger)}
+.subscription-state{margin-top:var(--space-20)}
 
 /* Skeleton */
 .platform-subscription-card-skeleton,.platform-subscription-history-skeleton{pointer-events:none}

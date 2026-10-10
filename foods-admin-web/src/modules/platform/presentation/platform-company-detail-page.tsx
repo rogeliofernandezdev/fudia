@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import {useQuery} from "@tanstack/react-query";
-import {Button,PageHeader} from "@/design-system";
+import {EmptyState,ErrorState,PageHeader} from "@/design-system";
 import {Icon} from "@/design-system/icons";
 import {useSession} from "@/providers";
 import {ApiClientError} from "@/shared/api/client";
@@ -32,8 +32,8 @@ function CompanySubscription({organizationId}:{organizationId:string}){
  />;
 
  if(subscription.isLoading||plans.isLoading)return <>{header}<PlatformSubscriptionSkeleton/></>;
- if(subscription.error instanceof ApiClientError&&subscription.error.status===404)return <>{header}<div className="panel catalog-state"><span><Icon name="building"/></span><b>Sin suscripción</b><p>{subscription.error.message}</p></div></>;
- if(subscription.isError||plans.isError||!subscription.data)return <>{header}<div className="panel catalog-state error"><span><Icon name="alert"/></span><b>No pudimos cargar la suscripción.</b><p>{subscription.error?.message??plans.error?.message}</p><Button kind="ghost" onClick={()=>{void subscription.refetch();void plans.refetch()}}>Reintentar</Button></div></>;
+ if(subscription.error instanceof ApiClientError&&subscription.error.status===404)return <>{header}<div className="panel"><EmptyState icon="building" title="Sin suscripción" text={subscription.error.message}/></div></>;
+ if(subscription.isError||plans.isError||!subscription.data)return <>{header}<div className="panel"><ErrorState title="No pudimos cargar la suscripción" text={subscription.error?.message??plans.error?.message} retrying={subscription.isFetching||plans.isFetching} onRetry={()=>{void subscription.refetch();void plans.refetch()}}/></div></>;
 
  const data=subscription.data;
  const key=[data.id,data.plan.id,data.billingCycle,data.status,data.autoRenew,data.renewsAt].join(":");

@@ -7,13 +7,13 @@ import {useSession} from "@/providers";
 import {pageRoutes} from "@/shared/routing/page-routes";
 
 const sections:Array<{icon:IconName;title:string;description:string;href:string;permission?:string;platformAdminOnly?:boolean;module?:string;access?:string}>=[
-  {icon:"store",title:"Empresa",description:"Razón social, nombre comercial e identidad general",href:pageRoutes.organizationSettings,permission:"organizations.manage"},
-  {icon:"receipt",title:"País y configuración fiscal",description:"Perfiles, monedas, impuestos y tasas",href:pageRoutes.taxSettings,permission:"organizations.read"},
+  {icon:"building",title:"Empresa",description:"Razón social, nombre comercial e identidad general",href:pageRoutes.organizationSettings,permission:"organizations.manage"},
+  {icon:"percent",title:"Fiscal y moneda",description:"Perfiles, monedas, impuestos y tasas",href:pageRoutes.taxSettings,permission:"organizations.read"},
   {icon:"payment",title:"Medios de pago",description:"Catálogo único para ventas, caja y gastos",href:pageRoutes.paymentMethods,permission:"organizations.read"},
-  {icon:"users",title:"Usuarios y permisos",description:"Equipo, roles y accesos por local",href:pageRoutes.usersSettings,permission:"users.read"},
-  {icon:"settings",title:"Módulos",description:"Control de módulos contratado por empresa",href:pageRoutes.modulesSettings,platformAdminOnly:true},
+  {icon:"users",title:"Usuarios y roles",description:"Equipo, roles y accesos por local",href:pageRoutes.usersSettings,permission:"users.read"},
+  {icon:"layers",title:"Módulos",description:"Control de módulos contratado por empresa",href:pageRoutes.modulesSettings,platformAdminOnly:true},
   {icon:"contract",title:"Empresas y planes",description:"Plan contratado y situación de pago de cada empresa cliente",href:pageRoutes.companiesSettings,platformAdminOnly:true},
-  {icon:"mail",title:"Fudia Concierge",description:"Pedidos conversacionales por WhatsApp desde el QR",href:pageRoutes.concierge,permission:"organizations.read",module:"whatsapp_bot"},
+  {icon:"chat",title:"Fudia Concierge",description:"Pedidos conversacionales por WhatsApp desde el QR",href:pageRoutes.concierge,permission:"organizations.read",module:"whatsapp_bot"},
 ];
 
 export function ConfigurationHomePage(){

@@ -10,8 +10,8 @@ const root=new URL("../src/modules/operations/pos/presentation/",import.meta.url
 const serviceFlowExports={};
 vm.runInNewContext(ts.transpileModule(readFileSync(new URL("../src/modules/operations/orders/domain/service-flow.ts",import.meta.url),"utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{exports:serviceFlowExports});
 const detail={order:{billClosedAt:"2026-10-07T13:00:00Z",id:"order-1",code:"PED-001",channel:"salon",status:"entregado",tableName:"Mesa 04",customerName:"",total:"40",createdAt:"2026-10-07T12:00:00Z",items:[]},paidAmount:"10",remainingAmount:"30",paymentStatus:"partial",payments:[]};
-const primitives=Object.fromEntries(["Button","FormField","Icon","Input","PageHeader","Pagination","RowActionButton","Select","Status","Textarea"].map(name=>[name,name]));
-function nodes(tree){const result=[];function visit(node){if(!node||typeof node!=="object")return;if(Array.isArray(node)){node.forEach(visit);return}result.push(node);visit(node.props?.children)}visit(tree);return result}
+const primitives=Object.fromEntries(["Button","EmptyState","ErrorState","FormField","Icon","Input","PageHeader","Pagination","RowActionButton","SearchField","Select","Status","Textarea"].map(name=>[name,name]));
+function nodes(tree){const result=[];function visit(node){if(!node||typeof node!=="object")return;if(Array.isArray(node)){node.forEach(visit);return}result.push(node);visit(node.props?.children);visit(node.props?.action)}visit(tree);return result}
 function compile(file,resolve,extra=""){
  const exports={};
  const source=readFileSync(new URL(file,root),"utf8")+extra;
@@ -31,7 +31,7 @@ function mountPage({canManage=true,shift=true,busy=false,initialOrderId="order-1
   };
   if(name==="@/design-system")return primitives;
   if(name==="@/design-system/dialog")return{Dialog:"Dialog"};
-  if(name==="@/providers")return{useFeedback:()=>({notify:value=>notices.push(value)}),useSession:()=>({can:()=>canManage,location:{country:"PE",timezone:"America/Lima"}})};
+  if(name==="@/providers")return{useFeedback:()=>({notify:value=>notices.push(value)}),useMoney:()=>value=>`S/ ${value}`,useSession:()=>({can:()=>canManage,location:{country:"PE",timezone:"America/Lima"}})};
   if(name==="@/providers/settings-context")return{useSettings:()=>({currencySymbol:"S/",currencyDecimals:2,currencyPosition:"before"})};
   if(name==="@/shared/i18n/regional-format")return{formatRegionalNumber:value=>String(value),formatRegionalDateTime:()=>"Hoy"};
   if(name==="@/shared/hooks/use-debounced-value")return{useDebouncedValue:value=>value};
@@ -107,8 +107,8 @@ test("errores de pedido o caja tienen reintento y la caja ausente ofrece ir a Ca
  const view=mountPage();let retries=0;
  for(const changes of [{error:"Pedido inaccesible",retryOrder:()=>retries++},{shiftError:"Caja inaccesible",retryShift:()=>retries++}]){
   const tree=view.POSPaymentEntry(entryProps(changes));
-  const retry=nodes(tree).find(node=>node.type==="Button"&&node.props.children==="Reintentar");
-  assert.ok(retry);retry.props.onClick();
+  const retry=nodes(tree).find(node=>node.type==="ErrorState"&&node.props.onRetry);
+  assert.ok(retry);retry.props.onRetry();
   assert.equal(nodes(tree).some(node=>node.type==="PaymentDialog"),false);
  }
  assert.equal(retries,2);

@@ -11,8 +11,8 @@
 .kitchen-header-tools select{min-width:var(--size-190)}
 .kitchen-attention{display:inline-flex;align-items:center;gap:var(--space-5);color:var(--warning-600);font-size:var(--font-size-label);font-weight:var(--font-weight-850);white-space:nowrap}
 
-/* Tabs móviles */
-.kitchen-mobile-tabs{display:none}
+/* Pestañas (Tabs del design system) solo cuando los carriles no caben */
+.ds-tabs.kitchen-mobile-tabs{display:none}
 
 /* Tablero */
 .kitchen-board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-12);align-items:start}
@@ -70,10 +70,7 @@
 
 /* Vacío, error y skeleton */
 .kitchen-lane-empty{margin:0;padding:var(--space-28) var(--space-12);color:var(--ink-500);font-size:var(--font-size-control);text-align:center}
-.kitchen-error{display:grid;justify-items:center;gap:var(--space-8);min-height:var(--size-280);padding:var(--space-30);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-card);background:var(--surface);text-align:center}
-.kitchen-error>span{display:grid;place-items:center;width:var(--size-40);height:var(--size-40);border-radius:var(--radius-10);background:var(--danger-50);color:var(--danger-600)}
-.kitchen-error b{font-size:var(--font-size-12)}
-.kitchen-error p{max-width:var(--size-420);margin:0;color:var(--ink-600);font-size:var(--font-size-label)}
+.catalog-state.kitchen-state{border:var(--stroke-1) solid var(--line);border-radius:var(--radius-card);background:var(--surface)}
 .kitchen-ticket-skeleton{pointer-events:none}
 .kitchen-skeleton-head{display:grid;grid-template-columns:minmax(0,1fr) var(--size-72);align-items:start;gap:var(--space-12);margin:calc(var(--space-14) * -1) calc(var(--space-14) * -1) 0;padding:var(--space-11) var(--space-14);border-radius:var(--radius-13) var(--radius-13) 0 0;border-bottom:var(--stroke-1) solid var(--line)}
 .kitchen-lane[data-status="confirmado"] .kitchen-skeleton-head{background:var(--primary-50)}
@@ -92,28 +89,23 @@
 .kitchen-ticket-skeleton i,.kitchen-ticket-skeleton small{display:block;border-radius:var(--radius-5);background:linear-gradient(90deg,var(--cloud-100),var(--surface),var(--cloud-100));background-size:200% 100%;animation:kitchen-skeleton var(--duration-1200) ease-in-out infinite}
 @keyframes kitchen-skeleton{to{background-position:-200% 0}}
 
-@media(max-width:1120px){
- .kitchen-board{grid-template-columns:repeat(3,minmax(var(--size-260),1fr));gap:var(--space-10);overflow-x:auto;padding-bottom:var(--space-4)}
+/* Tres carriles requieren ~900 px de área útil. Por debajo, el tablero pasa a
+   pestañas con un solo carril visible: nunca hay desplazamiento horizontal. */
+@container admin-main (width<=900px){
+ .ds-tabs.kitchen-mobile-tabs{display:flex;width:100%}
+ .ds-tabs.kitchen-mobile-tabs button{flex:1 1 0;min-width:0;min-height:var(--size-44)}
+ .kitchen-board{display:block}
+ .kitchen-lane{display:none}
+ .kitchen-lane[data-mobile-active=true]{display:block}
 }
 @media(max-width:760px){
  .kitchen-page{gap:var(--space-10)}
  .kitchen-header-tools{width:100%;grid-column:1/-1}
  .kitchen-header-tools select{flex:1;min-width:0}
- .kitchen-mobile-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-6)}
- .kitchen-mobile-tabs button{display:flex;align-items:center;justify-content:center;gap:var(--space-6);height:var(--control-height);padding:0 var(--space-8);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-control);background:var(--surface);color:var(--ink-600);font-size:var(--font-size-label);font-weight:var(--font-weight-850)}
- .kitchen-mobile-tabs button b{display:grid;place-items:center;min-width:var(--size-20);height:var(--size-20);padding:0 var(--space-5);border-radius:var(--radius-999);background:var(--cloud-100);color:var(--ink-700);font-size:var(--font-size-label);font-variant-numeric:tabular-nums}
- .kitchen-mobile-tabs button:nth-child(1).active{border-color:var(--kds-pending);background:var(--kds-pending);color:var(--surface)}
- .kitchen-mobile-tabs button:nth-child(2).active{border-color:var(--kds-cooking);background:var(--kds-cooking);color:var(--surface)}
- .kitchen-mobile-tabs button:nth-child(3).active{border-color:var(--kds-ready);background:var(--kds-ready);color:var(--ink-950)}
- .kitchen-mobile-tabs button:nth-child(1).active b{background:var(--surface);color:var(--kds-pending-dark)}
- .kitchen-mobile-tabs button:nth-child(2).active b{background:var(--surface);color:var(--kds-cooking-dark)}
- .kitchen-mobile-tabs button:nth-child(3).active b{background:var(--surface);color:var(--kds-ready-dark)}
- .kitchen-board{display:block;overflow:visible;padding:0}
- .kitchen-lane{display:none}
- .kitchen-lane[data-mobile-active=true]{display:block}
 }
 @media(max-width:460px){
- .kitchen-mobile-tabs button span{display:none}
+ .ds-tabs.kitchen-mobile-tabs button{gap:var(--space-6);padding:0 var(--space-6);font-size:var(--font-size-label)}
+ .ds-tabs.kitchen-mobile-tabs button svg{display:none}
  .kitchen-ticket-head{flex-direction:column;gap:var(--space-6)}
  .kitchen-ticket-time{width:fit-content}
 }

@@ -4,7 +4,7 @@ import "./platform-plans.css";
 import {useMemo,useState} from "react";
 import {Controller,useForm} from "react-hook-form";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,FormField,Input,PageHeader,Select,Textarea} from "@/design-system";
+import {Button,EmptyState,ErrorState,FormField,Input,PageHeader,Select,Status,Tabs,Textarea} from "@/design-system";
 import {Icon} from "@/design-system/icons";
 import {useFeedback} from "@/providers";
 import type {PlatformModule,SubscriptionPlan,SubscriptionPlanDraft} from "../domain/types";
@@ -12,6 +12,7 @@ import {planResolver} from "../domain/plan-schema";
 import {getPlatformOnboardingContext,listReadyModules,listSubscriptionPlans,saveSubscriptionPlan} from "../infrastructure/platform-api";
 import {PlatformPlansSkeleton} from "./platform-skeletons";
 
+const billingTabs:Array<{value:"monthly"|"annual";label:string}>=[{value:"monthly",label:"Mensual"},{value:"annual",label:"Anual"}];
 const blank:SubscriptionPlanDraft={
  code:"",name:"",description:"",currency:"PEN",monthlyPrice:"",annualPrice:"",trialDays:0,
  maxLocations:"",maxUsers:"",moduleKeys:[],termsVersion:"",active:true,
@@ -43,14 +44,12 @@ export function PlatformPlansPage(){
   <PageHeader eyebrow="PLATAFORMA" title="Planes SaaS" description="Define la oferta comercial de FUDIA: precio, prueba, límites y módulos de cada nivel." action={<Button icon="plus" onClick={()=>setDraft({...blank})}>Nuevo plan</Button>}/>
   <div className="plan-toolbar">
     <b>Catálogo comercial</b>
-    <div className="plan-cycle" role="group" aria-label="Ciclo de facturación">
-      <button type="button" className={billing==="monthly"?"active":""} onClick={()=>setBilling("monthly")}>Mensual</button>
-      <button type="button" className={billing==="annual"?"active":""} onClick={()=>setBilling("annual")}>Anual<span>ahorra ~2 meses</span></button>
-    </div>
+    <Tabs items={billingTabs} value={billing} onChange={setBilling} label="Ciclo de facturación"/>
   </div>
   {(plans.isLoading||modules.isLoading||catalogs.isLoading)?<PlatformPlansSkeleton/>:
-   (plans.isError||modules.isError||catalogs.isError)?<div className="panel plan-state error"><b>No pudimos cargar la configuración de planes.</b><Button kind="secondary" onClick={()=>{void plans.refetch();void modules.refetch();void catalogs.refetch()}}>Reintentar</Button></div>:
-   <div className="plan-grid">{visible.length?visible.map(plan=>{
+   (plans.isError||modules.isError||catalogs.isError)?<div className="panel plan-state"><ErrorState title="No pudimos cargar la configuración de planes" text={(plans.error??modules.error??catalogs.error)?.message} retrying={plans.isFetching||modules.isFetching||catalogs.isFetching} onRetry={()=>{void plans.refetch();void modules.refetch();void catalogs.refetch()}}/></div>:
+   !visible.length?<div className="panel plan-state"><EmptyState icon="payment" title="Aún no hay planes comerciales" text="Crea el primer plan antes de registrar una empresa nueva." action={<Button icon="plus" onClick={()=>setDraft({...blank})}>Nuevo plan</Button>}/></div>:
+   <div className="plan-grid">{visible.map(plan=>{
      const recommended=plan.code==="impulso";
      const price=billing==="annual"?Number(plan.annualPrice):Number(plan.monthlyPrice);
      const equivalent=billing==="annual"?price/12:price;
@@ -62,7 +61,7 @@ export function PlatformPlansPage(){
            <span className="plan-icon"><Icon name={plan.code==="emprende"?"store":plan.code==="escala"?"grid":"sales"} size={20}/></span>
            <div>{recommended&&<small>Recomendado</small>}<h2>{plan.name}</h2></div>
          </div>
-         <span className={plan.active?"plan-status active":"plan-status"}>{plan.active?"Disponible":"Inactivo"}</span>
+         <Status active={plan.active}>{plan.active?"Disponible":"Inactivo"}</Status>
        </header>
        <div className="plan-price">
          <div><span>{plan.currency}</span><b>{price.toFixed(2)}</b><em>{billing==="annual"?"/ año":"/ mes"}</em></div>
@@ -82,7 +81,7 @@ export function PlatformPlansPage(){
          <Button kind={recommended?"primary":"secondary"} icon="edit" onClick={()=>edit(plan)}>Editar plan</Button>
        </footer>
      </article>;
-   }):<div className="panel plan-state"><b>No hay planes comerciales.</b><p>Crea el primer plan antes de registrar una empresa nueva.</p><Button icon="plus" onClick={()=>setDraft({...blank})}>Nuevo plan</Button></div>}</div>}
+   })}</div>}
   {draft&&<PlanDialog value={draft} modules={modules.data??[]} currencies={catalogs.data?.currencyOptions??[]} busy={save.isPending} close={()=>setDraft(null)} save={value=>save.mutate(value)}/>}
  </>;
 }
@@ -90,7 +89,7 @@ export function PlatformPlansPage(){
 function PlanDialog({value:initial,modules,currencies,busy,close,save}:{value:SubscriptionPlanDraft;modules:PlatformModule[];currencies:{code:string;name:string}[];busy:boolean;close:()=>void;save:(value:SubscriptionPlanDraft)=>void}){
  const{register,control,handleSubmit,setValue,formState:{errors}}=useForm<SubscriptionPlanDraft>({defaultValues:initial,resolver:planResolver,mode:"onSubmit",reValidateMode:"onChange"});
  const groups=useMemo(()=>Array.from(new Set(modules.map(module=>module.category))),[modules]);
- return <div className="modal-backdrop"><Dialog onResponseClose={close} className="crud-modal plan-dialog" role="dialog" aria-modal="true" aria-labelledby="plan-dialog-title"><div className="modal-accent"/><header><span className="modal-title-icon"><Icon name="payment"/></span><div><small>{initial.id?"EDITAR PLAN":"NUEVO PLAN"}</small><h2 id="plan-dialog-title">Configuración comercial</h2></div><button aria-label="Cerrar" disabled={busy} onClick={close}><Icon name="close"/></button></header>
+ return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal plan-dialog modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="plan-dialog-title"><div className="modal-accent"/><header><span className="modal-title-icon"><Icon name="payment"/></span><div><small>{initial.id?"EDITAR PLAN":"NUEVO PLAN"}</small><h2 id="plan-dialog-title">Configuración comercial</h2></div><button type="button" aria-label="Cerrar" disabled={busy} onClick={close}><Icon name="close"/></button></header>
   <form onSubmit={handleSubmit(value=>save({...value,trialDays:Number(value.trialDays)}))} noValidate>
    <div className="plan-form">
     <div className="form-grid">
@@ -108,7 +107,7 @@ function PlanDialog({value:initial,modules,currencies,busy,close,save}:{value:Su
     </div>
     <Controller control={control} name="moduleKeys" render={({field})=>{
      const selected=field.value;const toggle=(key:string)=>field.onChange(selected.includes(key)?selected.filter(item=>item!==key):[...selected,key]);
-     return <section className={"plan-modules"+(errors.moduleKeys?" has-error":"")}><header><div><small>ENTITLEMENTS</small><h3>Módulos incluidos</h3>{errors.moduleKeys?.message&&<small className="field-error" role="alert">{errors.moduleKeys.message}</small>}</div><b>{selected.length}</b></header>{groups.map(group=><div className="plan-module-group" key={group}><strong>{group}</strong><div>{modules.filter(module=>module.category===group).map(module=><label key={module.key} className={selected.includes(module.key)?"selected":""}><input type="checkbox" checked={selected.includes(module.key)} onChange={()=>toggle(module.key)}/><span><Icon name="check" size={12}/></span><div><b>{module.name}</b><small>{module.description}</small></div></label>)}</div></div>)}</section>;
+     return <section className={"plan-modules"+(errors.moduleKeys?" has-error":"")}><header><div><small>LÍMITES Y MÓDULOS</small><h3>Módulos incluidos</h3>{errors.moduleKeys?.message&&<small className="field-error" role="alert">{errors.moduleKeys.message}</small>}</div><b>{selected.length}</b></header>{groups.map(group=><div className="plan-module-group" key={group}><strong>{group}</strong><div>{modules.filter(module=>module.category===group).map(module=><label key={module.key} className={selected.includes(module.key)?"selected":""}><input type="checkbox" checked={selected.includes(module.key)} onChange={()=>toggle(module.key)}/><span><Icon name="check" size={12}/></span><div><b>{module.name}</b><small>{module.description}</small></div></label>)}</div></div>)}</section>;
     }}/>
    </div>
    <footer><Button kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" icon="check" disabled={busy}>{busy?"Guardando…":"Guardar"}</Button></footer>

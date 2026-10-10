@@ -10,7 +10,7 @@ export function RemoteModalSkeleton({close,className="",label="Cargando formular
       <header className="remote-modal-skeleton-head" aria-hidden="true">
         <span className="remote-modal-skeleton-block remote-modal-skeleton-icon"/>
         <div className="remote-modal-skeleton-copy"><span/><b/></div>
-        <button aria-label="Cerrar" onClick={close}><Icon name="close"/></button>
+        <button type="button" aria-label="Cerrar" onClick={close}><Icon name="close"/></button>
       </header>
       <div className="remote-modal-skeleton-body" aria-hidden="true">
         <div className="remote-modal-skeleton-grid">

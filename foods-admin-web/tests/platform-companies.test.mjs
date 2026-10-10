@@ -17,7 +17,7 @@ test("empresas: datos remotos presentan skeleton, error con reintento y vacío",
  assert.match(page,/CompaniesTableSkeleton/);
  assert.match(page,/aria-busy="true"/);
  assert.match(page,/No pudimos cargar las empresas/);
- assert.match(page,/Reintentar/);
+ assert.match(page,/<ErrorState title="No pudimos cargar las empresas"[^>]*onRetry=/);
  assert.match(page,/Aún no hay empresas/);
  assert.match(page,/Sin coincidencias/);
 });
@@ -29,7 +29,7 @@ test("empresas: cada empresa abre su propio formulario sin cambiar la sesión",(
  assert.match(detail,/getOrganizationSubscription\(organizationId\)/);
  assert.match(detail,/<SubscriptionWorkspace[^>]*organizationId=\{organizationId\}/);
  assert.match(detail,/PlatformSubscriptionSkeleton/);
- assert.match(detail,/Reintentar/);
+ assert.match(detail,/<ErrorState[^>]*onRetry=/);
  assert.match(detail,/Sin suscripción/);
  const api=read("src/modules/platform/infrastructure/platform-api.ts");
  assert.match(api,/organizations\/\$\{encodeURIComponent\(organizationId\)\}\/subscription/);

@@ -4,7 +4,7 @@ import {Dialog} from "@/design-system/dialog";
 import {useDeferredValue,useRef,useState} from "react";
 import {useQuery} from "@tanstack/react-query";
 import {useForm,useWatch} from "react-hook-form";
-import {Button,Icon,Input,Textarea} from "@/design-system";
+import {Button,EmptyState,ErrorState,Icon,Input,Skeleton,Textarea} from "@/design-system";
 import {useSession} from "@/providers/session-context";
 import {formatRegionalNumber} from "@/shared/i18n/regional-format";
 import {purchaseInventoryItemResolver} from "../domain/purchase-schema";
@@ -142,8 +142,8 @@ export function PurchaseItemDialog({
               <span className="ds-input-shell purchase-existing-search-control"><Icon name="search" size={16}/><Input autoFocus value={search} onChange={event=>setSearch(event.target.value)} placeholder="Escribe el nombre del producto o insumo"/></span>
             </label>
 
-            {items.isLoading?<div className="purchase-item-results-loading">{Array.from({length:4},(_,index)=><i key={index}/>)}</div>
-            :items.isError?<div className="purchase-item-results-state"><Icon name="alert" size={20}/><b>No pudimos cargar los artículos</b><small>{items.error.message}</small><Button type="button" kind="secondary" icon="refresh" onClick={()=>items.refetch()}>Reintentar</Button></div>
+            {items.isLoading?<div className="purchase-item-results" role="status" aria-busy="true" aria-label="Cargando artículos">{Array.from({length:4},(_,index)=><Skeleton key={index}/>)}</div>
+            :items.isError?<ErrorState title="No pudimos cargar los artículos" text={items.error.message} onRetry={()=>void items.refetch()}/>
             :existing.length?<div className="purchase-existing-list">
               {existing.map(item=><button type="button" key={item.id} onClick={()=>choose(item)}>
                 <span className="purchase-existing-icon"><Icon name={item.kind==="ingredient"?"stock":"box"} size={17}/></span>
@@ -152,11 +152,12 @@ export function PurchaseItemDialog({
                 <Icon name="chevron" size={15}/>
               </button>)}
             </div>
-            :<div className="purchase-item-results-state purchase-item-not-found">
-              <Icon name="search" size={21}/><b>{deferredSearch?"No encontramos ese artículo":"No hay artículos disponibles"}</b>
-              <small>{deferredSearch?"Puedes crearlo ahora y quedará seleccionado en la orden.":"Crea el primer artículo para abastecimiento."}</small>
-              <div><Button type="button" kind="secondary" icon="plus" onClick={()=>changeMode("new_product")}>Nuevo producto vendible</Button><Button type="button" kind="secondary" icon="stock" onClick={()=>changeMode("new_ingredient")}>Nuevo insumo</Button></div>
-            </div>}
+            :<EmptyState
+              icon="search"
+              title={deferredSearch?"No encontramos ese artículo":"No hay artículos disponibles"}
+              text={deferredSearch?"Puedes crearlo ahora y quedará seleccionado en la orden.":"Crea el primer artículo para abastecimiento."}
+              action={<div className="purchase-item-empty-actions"><Button type="button" kind="secondary" icon="plus" onClick={()=>changeMode("new_product")}>Nuevo producto vendible</Button><Button type="button" kind="secondary" icon="stock" onClick={()=>changeMode("new_ingredient")}>Nuevo insumo</Button></div>}
+            />}
           </section>:<>
             <section className="purchase-item-section">
               <div className="purchase-section-title"><span><Icon name={mode==="new_product"?"plus":"stock"} size={17}/></span><div><b>{mode==="new_product"?"Nuevo producto vendible":"Nuevo insumo"}</b><small>{mode==="new_product"?"Se crea como mercadería vendible con Inventario físico.":"Se crea solo como inventario interno; no tendrá precio de venta."}</small></div></div>

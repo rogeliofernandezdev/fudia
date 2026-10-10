@@ -6,10 +6,9 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,Icon,IconName,Input,PageHeader,Pagination,RowActionButton,Select,Status} from "@/design-system";
-import {useFeedback,useSession} from "@/providers";
-import {useSettings} from "@/providers/settings-context";
-import {formatRegionalDateTime,formatRegionalNumber} from "@/shared/i18n/regional-format";
+import {Button,EmptyState,ErrorState,Icon,IconName,PageHeader,Pagination,RowActionButton,SearchField,Select,Status} from "@/design-system";
+import {useFeedback,useMoney,useSession} from "@/providers";
+import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
 import {useDebouncedValue} from "@/shared/hooks/use-debounced-value";
 import {pageRoutes} from "@/shared/routing/page-routes";
 import {cashShiftAttribution} from "../../cash/domain/shift-attribution";
@@ -33,7 +32,7 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
   const qc=useQueryClient();
   const{notify}=useFeedback();
   const{can,location}=useSession();
-  const settings=useSettings();
+  const money=useMoney();
   const canManage=can("cash.manage");
   const[q,setQ]=useState("");
   const debouncedQ=useDebouncedValue(q);
@@ -104,12 +103,6 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
   const shift=current.data?.shift??null;
   const items=orders.data?.items??[];
 
-  function money(value:number){
-    if(!Number.isFinite(value))return"—";
-    const formatted=formatRegionalNumber(Math.abs(value),location?.country,{minimumFractionDigits:settings.currencyDecimals,maximumFractionDigits:settings.currencyDecimals});
-    const sign=value<0?"-":"";
-    return settings.currencyPosition==="before"?sign+settings.currencySymbol+" "+formatted:sign+formatted+" "+settings.currencySymbol;
-  }
   function dateTime(value:string){
     return formatRegionalDateTime(value,{country:location?.country,timeZone:location?.timezone},{dateStyle:"medium",timeStyle:"short"});
   }
@@ -127,12 +120,12 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
       <span className="pos-shift-icon"><Icon name={shift?"register":"alert"} size={19}/></span>
       {current.isLoading?<div className="pos-shift-loading" aria-label="Cargando turno" aria-busy="true"><i/><i/></div>
       :shift?<><div className="pos-shift-copy"><small>TURNO ACTIVO</small><b>{shift.cashRegisterName}<span>· {shift.code}</span></b><p>Cajero: {cashShiftAttribution(shift).name}</p></div><Status tone="green">Listo para cobrar</Status></>
-      :<><div><small>TURNO REQUERIDO</small><b>No estás asignado a una caja abierta</b><p>Inicia o únete a un turno antes de registrar cobros o devoluciones.</p></div><Link href={pageRoutes.cash} className="button secondary"><Icon name="register" size={16}/><span>Ir a Caja</span></Link></>}
+      :<><div><small>TURNO REQUERIDO</small><b>No estás asignado a una caja abierta</b><p>Inicia o únete a un turno antes de registrar cobros o devoluciones.</p></div>{cashLink()}</>}
     </section>
 
     <section className="panel standardized-management pos-panel">
       <div className="pos-toolbar">
-        <label className="pos-search"><Icon name="search" size={17}/><Input value={q} onChange={event=>{setQ(event.target.value);setPage(1)}} placeholder="Buscar pedido, cliente o mesa..."/></label>
+        <SearchField value={q} onChange={event=>{setQ(event.target.value);setPage(1)}} placeholder="Buscar pedido, cliente o mesa…" label="Buscar pedidos por cliente o mesa"/>
         <Select aria-label="Filtrar por estado de cobro" value={paymentStatus} onChange={event=>{setPaymentStatus(event.target.value);setPage(1)}}>
           <option value="unpaid">Por cobrar</option>
           <option value="pending">Sin pagos</option>
@@ -143,8 +136,8 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
       </div>
 
       {orders.isLoading?<POSLoading/>
-      :orders.isError?<POSState icon="alert" title="No pudimos cargar los pedidos" text={orders.error.message} retry={()=>orders.refetch()}/>
-      :!items.length?<POSState icon="receipt" title={q?"Sin coincidencias":paymentStatus==="paid"?"Aún no hay pedidos pagados":"No hay pedidos pendientes de cobro"} text={q?"Prueba con otro término de búsqueda.":"Los pedidos aparecerán aquí según su estado de cobro."}/>
+      :orders.isError?<ErrorState title="No pudimos cargar los pedidos" text={orders.error.message} onRetry={()=>void orders.refetch()}/>
+      :!items.length?<EmptyState icon="receipt" title={q?"Sin coincidencias":paymentStatus==="paid"?"Aún no hay pedidos pagados":"No hay pedidos pendientes de cobro"} text={q?"Prueba con otro término de búsqueda.":"Los pedidos aparecerán aquí según su estado de cobro."}/>
       :<div className="table-wrap hover-scroll pos-table-wrap"><table className="pos-table">
         <thead><tr><th>PEDIDO</th><th>CANAL</th><th className="pos-money">TOTAL</th><th className="pos-money">PAGADO</th><th className="pos-money">SALDO</th><th>COBRO</th><th className="pos-th-actions">ACCIONES</th></tr></thead>
         <tbody>{items.map((item,index)=>{
@@ -200,6 +193,7 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
       hasShift={Boolean(shift)}
       formatMoney={money}
       formatDateTime={dateTime}
+      retry={()=>void detail.refetch()}
       close={()=>setDetailId(null)}
       refund={setRefundTarget}
       ticket={()=>{setDetailId(null);setTicketTarget({orderId:detailId})}}
@@ -209,22 +203,22 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
 }
 
 function POSPaymentEntry({loading,error,data,shiftLoading,shiftError,shiftName,canManage,busy,formatMoney,close,retryOrder,retryShift,save}:{loading:boolean;error?:string;data?:POSOrderDetail;shiftLoading:boolean;shiftError?:string;shiftName:string|null;canManage:boolean;busy:boolean;formatMoney:(value:number)=>string;close:()=>void;retryOrder:()=>void;retryShift:()=>void;save:(draft:PaymentDraft)=>void}){
-  let state:{title:string;text:string;retry?:()=>void;cash?:boolean}|undefined;
-  if(!canManage)state={title:"No puedes registrar cobros",text:"Tu rol necesita permiso para administrar cobros."};
+  let state:{title:string;text:string;icon?:IconName;retry?:()=>void;cash?:boolean}|undefined;
+  if(!canManage)state={title:"No puedes registrar cobros",text:"Tu rol necesita permiso para administrar cobros.",icon:"lock"};
   else if(error)state={title:"No pudimos cargar el pedido",text:error,retry:retryOrder};
   else if(shiftError)state={title:"No pudimos validar tu caja",text:shiftError,retry:retryShift};
   else if(!loading&&!shiftLoading){
     if(!data)state={title:"Pedido no disponible",text:"No pudimos encontrar este pedido en el local activo.",retry:retryOrder};
-    else if(data.paymentStatus==="paid"||Number(data.remainingAmount)<=0)state={title:"El pedido ya está pagado",text:"No tiene saldo pendiente de cobro."};
-    else if(data.order.completedAt||data.order.status==="cancelado")state={title:"El pedido está cerrado",text:"No se pueden registrar nuevos cobros."};
-    else if(!canChargeAccount(data.order))state=data.order.channel==="salon"?{title:"Cuenta no disponible para cobro",text:"El mozo debe entregar todos los productos y cerrar la cuenta antes de cobrar."}:{title:"Pedido no listo",text:"El pedido todavía no está listo para cobrar."};
-    else if(!shiftName)state={title:"Necesitas un turno de caja",text:"Abre un turno o únete a una caja para registrar el cobro.",cash:true};
+    else if(data.paymentStatus==="paid"||Number(data.remainingAmount)<=0)state={title:"El pedido ya está pagado",text:"No tiene saldo pendiente de cobro.",icon:"circleCheck"};
+    else if(data.order.completedAt||data.order.status==="cancelado")state={title:"El pedido está cerrado",text:"No se pueden registrar nuevos cobros.",icon:"lock"};
+    else if(!canChargeAccount(data.order))state=data.order.channel==="salon"?{title:"Cuenta no disponible para cobro",text:"El mozo debe entregar todos los productos y cerrar la cuenta antes de cobrar.",icon:"clock"}:{title:"Pedido no listo",text:"El pedido todavía no está listo para cobrar.",icon:"clock"};
+    else if(!shiftName)state={title:"Necesitas un turno de caja",text:"Abre un turno o únete a una caja para registrar el cobro.",icon:"register",cash:true};
     else return <PaymentDialog order={{...data.order,paidAmount:data.paidAmount,remainingAmount:data.remainingAmount,paymentStatus:data.paymentStatus}} shiftName={shiftName} busy={busy} formatMoney={formatMoney} close={close} save={save}/>;
   }
   return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal pos-payment-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="pos-payment-entry-title">
     <div className="modal-accent"/>
     <header><span className="modal-title-icon"><Icon name="cash" size={18}/></span><div><small>COBRO</small><h2 id="pos-payment-entry-title">{data?.order.tableName||data?.order.customerName||"Cobrar saldo"}</h2></div><button type="button" aria-label="Cerrar" onClick={close} disabled={busy}><Icon name="close"/></button></header>
-    {state?<div className="pos-state"><span><Icon name="alert" size={22}/></span><b>{state.title}</b><p>{state.text}</p>{state.retry&&<Button kind="secondary" icon="refresh" onClick={state.retry}>Reintentar</Button>}{state.cash&&<Link href={pageRoutes.cash} className="button secondary"><Icon name="register" size={18}/><span>Ir a Caja</span></Link>}</div>:<POSPaymentLoading/>}
+    {state?state.retry?<ErrorState title={state.title} text={state.text} onRetry={state.retry}/>:<EmptyState icon={state.icon} title={state.title} text={state.text} action={state.cash?cashLink():undefined}/>:<POSPaymentLoading/>}
   </Dialog></div>;
 }
 
@@ -235,13 +229,13 @@ function POSPaymentLoading(){return <div className="pos-payment-body pos-payment
   <div className="pos-payment-loading-actions"><i/><i/></div>
 </div>}
 
-function POSDetailDialog({loading,error,data,canManage,hasShift,formatMoney,formatDateTime,close,refund,ticket}:{loading:boolean;error?:string;data?:POSOrderDetail;canManage:boolean;hasShift:boolean;formatMoney:(value:number)=>string;formatDateTime:(value:string)=>string;close:()=>void;refund:(payment:Payment)=>void;ticket?:()=>void}){
+function POSDetailDialog({loading,error,data,canManage,hasShift,formatMoney,formatDateTime,retry,close,refund,ticket}:{loading:boolean;error?:string;data?:POSOrderDetail;canManage:boolean;hasShift:boolean;formatMoney:(value:number)=>string;formatDateTime:(value:string)=>string;retry?:()=>void;close:()=>void;refund:(payment:Payment)=>void;ticket?:()=>void}){
   const closed=Boolean(data&&(data.order.completedAt||data.order.status==="cancelado"));
   return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal pos-detail-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="pos-detail-title">
     <div className="modal-accent"/>
     <header><span className="modal-title-icon"><Icon name="receipt" size={18}/></span><div className="pos-modal-heading"><small>DETALLE DE COBRO</small><h2 id="pos-detail-title">{data?.order.code??"Pedido"}</h2>{data&&<p>{data.order.tableName||data.order.customerName||channelLabel[data.order.channel]||"Pedido del local"}</p>}</div><button type="button" aria-label="Cerrar" onClick={close}><Icon name="close"/></button></header>
     {loading?<POSDetailLoading/>
-    :error?<POSState icon="alert" title="No pudimos cargar el cobro" text={error}/>
+    :error?<ErrorState title="No pudimos cargar el cobro" text={error} onRetry={retry}/>
     :data&&<div className="pos-detail-body">
       <section className="pos-detail-summary">
         <div><small>TOTAL</small><b>{formatMoney(Number(data.order.total))}</b></div>
@@ -261,7 +255,7 @@ function POSDetailDialog({loading,error,data,canManage,hasShift,formatMoney,form
         {data.payments.length?<div className="pos-payment-list">{data.payments.map(payment=>{
           const net=Number(payment.netAmount);
           return <article key={payment.id}><span className={"pos-payment-method pm-"+payment.method}><Icon name={paymentMethodMeta[payment.method]?.icon??"wallet"} size={15}/></span><div><b>{paymentMethodMeta[payment.method]?.label??"Otro"}</b><small>{payment.cashRegisterName} · {formatDateTime(payment.createdAt)}</small><small>Cobrado por: {payment.createdByName||"Sin información"}</small>{payment.reference&&<em>{payment.reference}</em>}</div><span className="pos-payment-values"><b>{formatMoney(Number(payment.amount))}</b>{Number(payment.refundedAmount)>0&&<small>Devuelto {formatMoney(Number(payment.refundedAmount))}</small>}</span>{canManage&&net>0&&!closed&&<Button kind="ghost" className="pos-refund-action" icon="undo" disabled={!hasShift} onClick={()=>refund(payment)}>Devolver</Button>}</article>})}</div>
-        :<div className="pos-payments-empty">Aún no se registraron pagos para este pedido.</div>}
+        :<EmptyState className="pos-section-empty" icon="wallet" title="Sin pagos registrados" text="Aún no se registraron pagos para este pedido."/>}
       </section>
     </div>}
     {!loading&&!error&&data&&Number(data.paidAmount)>0&&ticket&&<footer><Button kind="secondary" icon="receipt" onClick={ticket}>Ver ticket de pago</Button></footer>}
@@ -278,4 +272,5 @@ function POSDetailLoading(){return <div className="pos-detail-body pos-detail-lo
   {Array.from({length:2},(_,section)=><section className="pos-detail-section pos-detail-section-skeleton" key={section}><header><span><i/><b/></span><i/></header>{Array.from({length:3},(_,row)=><div key={row}><i/><span><b/><small/></span><i/></div>)}</section>)}
 </div>}
 
-function POSState({icon,title,text,retry}:{icon:"alert"|"receipt";title:string;text:string;retry?:()=>void}){return <div className="pos-state"><span><Icon name={icon} size={22}/></span><b>{title}</b><p>{text}</p>{retry&&<Button kind="secondary" icon="refresh" onClick={retry}>Reintentar</Button>}</div>}
+/** Acceso a Caja cuando falta turno: enlace con apariencia de botón secundario. */
+function cashLink(){return <Link href={pageRoutes.cash} className="button secondary"><Icon name="register" size={18}/><span>Ir a Caja</span></Link>}

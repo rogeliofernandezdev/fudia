@@ -19,17 +19,11 @@
 .context-popover-actions{padding:var(--space-12) var(--space-16);border-top:var(--stroke-1) solid var(--line);background:var(--cloud-50)}
 .context-popover-actions .context-apply{width:100%}
 .context-apply[aria-busy=true]>svg{animation:context-turn var(--duration-1150) linear infinite}
-.context-state{display:grid;justify-items:center;gap:var(--space-10);padding:var(--space-20);color:var(--ink-600);text-align:center;font-size:var(--font-size-control)}
-.context-state>svg{color:var(--primary-700)}
-.context-state b{color:var(--ink-950)}
-.context-state p{margin:0;line-height:var(--line-height-1-5);overflow-wrap:anywhere}
+.catalog-state.context-state{min-height:0;padding:var(--space-20) var(--space-16)}
+.catalog-state.context-state p{overflow-wrap:anywhere}
 .context-empty{margin:0;line-height:var(--line-height-1-5);overflow-wrap:anywhere;color:var(--ink-500);font-size:var(--font-size-control)}
 .context-loading>div{display:grid;gap:var(--space-5)}
-.context-skeleton-bar{display:block;background:var(--cloud-100);border-radius:var(--radius-control);animation:context-pulse var(--duration-1150) ease-in-out infinite}
-.context-loading i{width:var(--size-64);height:var(--size-12)}
-.context-loading span,.context-loading>b{height:var(--control-height)}
 @keyframes context-turn{to{transform:rotate(360deg)}}
-@keyframes context-pulse{50%{opacity:.5}}
 @container admin-main (width<=1040px){
   .context-switcher{min-width:var(--size-44)}
   .context-btn{width:var(--size-44);min-width:var(--size-44);padding:0;justify-content:center}
@@ -48,6 +42,6 @@
   .context-btn>span{display:none}
 }
 @media(prefers-reduced-motion:reduce){
-  .context-popover,.context-skeleton-bar,.context-apply[aria-busy=true]>svg{animation:none}
+  .context-popover,.context-apply[aria-busy=true]>svg{animation:none}
   .context-btn,.context-btn>svg:last-child{transition:none}
 }

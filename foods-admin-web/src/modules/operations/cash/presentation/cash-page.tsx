@@ -3,10 +3,10 @@ import {Dialog} from "@/design-system/dialog";
 import "./cash.css";
 import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,ConfirmDialog,Icon,IconButton,Input,PageHeader,Pagination,RemoteModalSkeleton,RowActionButton,Select,Status} from "@/design-system";
-import {useFeedback,useSession} from "@/providers";
+import {Button,ConfirmDialog,EmptyState,ErrorState,Icon,IconButton,PageHeader,Pagination,RemoteModalSkeleton,RowActionButton,SearchField,Select,Skeleton,Status,TableSkeleton,Tabs} from "@/design-system";
+import {useFeedback,useMoney,useSession} from "@/providers";
 import {useSettings} from "@/providers/settings-context";
-import {formatRegionalCalendarDate,formatRegionalDateTime,formatRegionalNumber} from "@/shared/i18n/regional-format";
+import {formatRegionalCalendarDate,formatRegionalDateTime} from "@/shared/i18n/regional-format";
 import {cashShiftAttribution,cashShiftTeamName} from "../domain/shift-attribution";
 import type {CashMovementType,CashRegister,CashRegisterDraft,CashShift} from "../domain/types";
 import {assignCashShiftUser,closeCashShift,createCashMovement,createCashOperation,createCashRegister,getCashShift,listCashRegisters,listCashShifts,listCashShiftUsers,listCashUserOptions,openCashShift,setCashRegisterActive,unassignCashShiftUser,updateCashRegister} from "../infrastructure/cash-api";
@@ -16,12 +16,14 @@ import {CashReportDialog} from "./cash-report-dialog";
 import {CashOperationDialog,CashTeamDialog} from "./cash-advanced-dialogs";
 
 type CashTab="registers"|"history";
+const historyColumns=["TURNO","CAJA","DÍA OPERATIVO","CAJERO / CIERRE","APERTURA","CIERRE","DIFERENCIA","ESTADO","ACCIONES"];
 
 export function CashPage(){
   const qc=useQueryClient();
   const{notify}=useFeedback();
   const{can,location}=useSession();
   const settings=useSettings();
+  const money=useMoney();
   const canManage=can("cash.manage");
   const[tab,setTab]=useState<CashTab>("registers");
   const[q,setQ]=useState("");
@@ -185,18 +187,6 @@ export function CashPage(){
   const registerItems=registers.data?.items??[];
   const historyItems=history.data?.items??[];
 
-  function money(value:number){
-    if(!Number.isFinite(value))return "—";
-    const sign=value<0?"-":"";
-    const formatted=formatRegionalNumber(Math.abs(value),location?.country,{
-      minimumFractionDigits:settings.currencyDecimals,
-      maximumFractionDigits:settings.currencyDecimals,
-    });
-    return settings.currencyPosition==="before"
-      ?`${sign}${settings.currencySymbol} ${formatted}`
-      :`${sign}${formatted} ${settings.currencySymbol}`;
-  }
-
   function dateTime(value:string){
     return formatRegionalDateTime(value,{country:location?.country,timeZone:location?.timezone},{dateStyle:"medium",timeStyle:"short"});
   }
@@ -226,13 +216,12 @@ export function CashPage(){
     />
 
     <section className="panel standardized-management cash-panel">
-      <nav className="cash-tabs" aria-label="Caja y turnos">
-        <button type="button" className={tab==="registers"?"active":""} aria-pressed={tab==="registers"} onClick={()=>changeTab("registers")}><Icon name="sales" size={17}/><span>Cajas</span>{registerItems.length>0&&<b>{registerItems.length}</b>}</button>
-        <button type="button" className={tab==="history"?"active":""} aria-pressed={tab==="history"} onClick={()=>changeTab("history")}><Icon name="clock" size={17}/><span>Turnos</span></button>
-      </nav>
+      <div className="cash-tabs-bar">
+        <Tabs label="Caja y turnos" value={tab} onChange={changeTab} items={[{value:"registers",label:"Cajas",icon:"sales",...(registerItems.length?{count:registerItems.length}:{})},{value:"history",label:"Turnos",icon:"clock"}]}/>
+      </div>
 
       {tab==="registers"
-        ?<CashRegisters
+        ?<><h2 className="sr-only">Cajas</h2><CashRegisters
           items={registerItems}
           loading={registers.isLoading}
           error={registers.isError?registers.error.message:null}
@@ -250,10 +239,11 @@ export function CashPage(){
           team={setTeamTarget}
           operation={setOperationTarget}
           close={setCloseTarget}
-        />
+        /></>
         :<section className="cash-history">
+          <h2 className="sr-only">Turnos</h2>
           <div className="cash-history-toolbar">
-            <label className="cash-history-search"><Icon name="search" size={17}/><Input value={q} onChange={event=>{setQ(event.target.value);setPage(1)}} placeholder="Buscar por turno, caja o persona..."/></label>
+            <SearchField value={q} onChange={event=>{setQ(event.target.value);setPage(1)}} placeholder="Buscar por turno, caja o persona…" label="Buscar turnos por código, caja o persona"/>
             <Select aria-label="Filtrar turnos" value={status} onChange={event=>{setStatus(event.target.value);setPage(1)}}>
               <option value="">Todos los turnos</option>
               <option value="open">Abiertos</option>
@@ -262,11 +252,11 @@ export function CashPage(){
             <p><Icon name="lock" size={14}/>Los turnos cerrados conservan su arqueo y trazabilidad.</p>
           </div>
 
-          {history.isLoading?<CashHistorySkeleton/>
-          :history.isError?<CashError title="No pudimos cargar los turnos" message={history.error.message} retry={()=>history.refetch()}/>
-          :!historyItems.length?<div className="cash-history-empty"><span><Icon name="clock" size={21}/></span><b>{q||status?"Sin coincidencias":"Aún no hay turnos registrados"}</b><p>{q||status?"Ajusta la búsqueda o el filtro.":"Cuando una caja cierre su primer turno aparecerá aquí para consulta."}</p></div>
+          {history.isLoading?<TableSkeleton columns={historyColumns} rows={6} label="Cargando turnos"/>
+          :history.isError?<ErrorState title="No pudimos cargar los turnos" text={history.error.message} onRetry={()=>void history.refetch()}/>
+          :!historyItems.length?<EmptyState icon="clock" title={q||status?"Sin coincidencias":"Aún no hay turnos registrados"} text={q||status?"Ajusta la búsqueda o el filtro.":"Cuando una caja cierre su primer turno aparecerá aquí para consulta."}/>
           :<div className="table-wrap hover-scroll cash-history-table"><table>
-            <thead><tr><th>TURNO</th><th>CAJA</th><th>DÍA OPERATIVO</th><th>CAJERO / CIERRE</th><th>APERTURA</th><th>CIERRE</th><th>DIFERENCIA</th><th>ESTADO</th><th>ACCIONES</th></tr></thead>
+            <thead><tr>{historyColumns.map(column=><th key={column}>{column}</th>)}</tr></thead>
             <tbody>{historyItems.map((item,index)=>{
               const variance=Number(item.varianceAmount??0);
               const attribution=cashShiftAttribution(item);
@@ -279,7 +269,7 @@ export function CashPage(){
                 <td>{item.closedAt?<time dateTime={item.closedAt}>{dateTime(item.closedAt)}</time>:"—"}</td>
                 <td><b className={item.status==="open"?"cash-neutral":variance===0?"cash-balanced":variance>0?"cash-positive":"cash-negative"}>{item.status==="open"?"—":(variance>0?"+":"")+money(variance)}</b></td>
                 <td><Status tone={item.status==="open"?"green":"gray"}>{item.status==="open"?"Abierto":"Cerrado"}</Status></td>
-                <td><div className="table-actions"><RowActionButton action="view" onClick={()=>setDetailId(item.id)}/></div></td>
+                <td><div className="table-actions"><RowActionButton action="view" label={`Ver turno ${item.code}`} onClick={()=>setDetailId(item.id)}/></div></td>
               </tr>;
             })}</tbody>
           </table></div>}
@@ -314,7 +304,7 @@ export function CashPage(){
     {detailId&&(detail.isLoading
       ?<RemoteModalSkeleton className="cash-detail-modal" label="Cargando turno de caja" rows={6} close={()=>setDetailId(null)}/>
       :detail.isError
-        ?<CashDetailError message={detail.error.message} close={()=>setDetailId(null)}/>
+        ?<CashDetailError message={detail.error.message} retrying={detail.isFetching} retry={()=>void detail.refetch()} close={()=>setDetailId(null)}/>
         :detail.data&&<CashShiftDetailDialog shift={detail.data} formatMoney={money} formatDateTime={dateTime} formatBusinessDate={businessDate} close={()=>setDetailId(null)} viewReport={()=>{setDetailId(null);setReportId(detailId);}}/>)}
 
     <ConfirmDialog
@@ -334,13 +324,13 @@ export function CashPage(){
 
 function CashRegisters({items,loading,error,canManage,money,dateTime,businessDate,retry,create,edit,toggleStatus,start,view,movement,team,operation,close}:{items:CashRegister[];loading:boolean;error:string|null;canManage:boolean;money:(value:number)=>string;dateTime:(value:string)=>string;businessDate:(value:string)=>string;retry:()=>void;create:()=>void;edit:(item:CashRegister)=>void;toggleStatus:(item:CashRegister)=>void;start:(item:CashRegister)=>void;view:(shift:CashShift)=>void;movement:(shift:CashShift,type:CashMovementType)=>void;team:(shift:CashShift)=>void;operation:(shift:CashShift)=>void;close:(shift:CashShift)=>void}){
   if(loading)return <CashRegistersSkeleton/>;
-  if(error)return <CashError title="No pudimos cargar las cajas" message={error} retry={retry}/>;
-  if(!items.length)return <div className="cash-no-registers">
-    <span><Icon name="sales" size={24}/></span>
-    <b>Aún no hay cajas registradas</b>
-    <p>Registra la primera caja del local. Luego podrás iniciar turnos, controlar el efectivo y cerrar con arqueo.</p>
-    {canManage&&<Button icon="plus" onClick={create}>Registrar caja</Button>}
-  </div>;
+  if(error)return <ErrorState title="No pudimos cargar las cajas" text={error} onRetry={retry}/>;
+  if(!items.length)return <EmptyState
+    icon="sales"
+    title="Aún no hay cajas registradas"
+    text="Registra la primera caja del local. Luego podrás iniciar turnos, controlar el efectivo y cerrar con arqueo."
+    action={canManage?<Button icon="plus" onClick={create}>Registrar caja</Button>:undefined}
+  />;
 
   const active=items.filter(item=>item.active);
   const open=active.filter(item=>item.openShift);
@@ -374,7 +364,7 @@ function CashRegisters({items,loading,error,canManage,money,dateTime,businessDat
           <div className="cash-register-header-actions">
             <Status tone={statusTone}>{statusLabel}</Status>
             {canManage&&<div className="cash-register-admin">
-              <RowActionButton action="edit" label="Editar caja" onClick={()=>edit(item)}/>
+              <RowActionButton action="edit" label={`Editar caja ${item.name}`} onClick={()=>edit(item)}/>
               <RowActionButton action={item.active?"deactivate":"activate"} stateLabel={`Estado de ${item.name}`} label={item.active&&shift?"Cierra el turno antes de desactivar":undefined} disabled={Boolean(item.active&&shift)} onClick={()=>toggleStatus(item)}/>
             </div>}
           </div>
@@ -398,7 +388,7 @@ function CashRegisters({items,loading,error,canManage,money,dateTime,businessDat
             <div className="expense"><small>EGRESOS</small><b>-{money(Number(shift.expenseAmount))}</b></div>
           </section>:<div className="cash-register-blind"><Icon name="lock" size={14}/><span>El detalle de efectivo está oculto hasta cerrar el turno.</span></div>}
           <footer>
-            <RowActionButton action="view" label="Ver turno" onClick={()=>view(shift)}/>
+            <RowActionButton action="view" label={`Ver turno ${shift.code}`} onClick={()=>view(shift)}/>
             {canManage&&<>
               <IconButton icon="users" label="Equipo del turno" onClick={()=>team(shift)}/>
               <IconButton icon="share" label="Operaciones de caja" onClick={()=>operation(shift)}/>
@@ -417,10 +407,16 @@ function CashRegisters({items,loading,error,canManage,money,dateTime,businessDat
   </div>;
 }
 
-function CashRegistersSkeleton(){return <div className="cash-registers-workspace"><div className="cash-overview cash-overview-skeleton"/><div className="cash-registers-grid cash-registers-loading">{Array.from({length:4},(_,index)=><i key={index}/>)}</div></div>}
+/** Skeleton con la forma final: resumen operativo y tarjetas de caja con identidad, estado y acción. */
+function CashRegistersSkeleton(){return <div className="cash-registers-workspace" role="status" aria-busy="true" aria-label="Cargando cajas">
+  <div className="cash-overview cash-overview-skeleton" aria-hidden="true">
+    <div className="cash-overview-copy"><Skeleton className="cash-sk-icon"/><span className="cash-sk-lines"><Skeleton className="cash-sk-line short"/><Skeleton className="cash-sk-line"/></span></div>
+    <div className="cash-overview-metrics">{Array.from({length:3},(_,index)=><div key={index}><Skeleton className="cash-sk-line short"/><Skeleton className="cash-sk-value"/></div>)}</div>
+  </div>
+  <div className="cash-registers-grid" aria-hidden="true">{Array.from({length:4},(_,index)=><article className="cash-register-card" key={index}>
+    <header><div className="cash-register-name"><Skeleton className="cash-sk-icon"/><span className="cash-sk-lines"><Skeleton className="cash-sk-line short"/><Skeleton className="cash-sk-line"/></span></div><Skeleton className="cash-sk-pill"/></header>
+    <div className="cash-register-idle"><Skeleton className="cash-sk-icon"/><span className="cash-sk-lines"><Skeleton className="cash-sk-line short"/><Skeleton className="cash-sk-line"/><Skeleton className="cash-sk-line"/></span><Skeleton className="cash-sk-action"/></div>
+  </article>)}</div>
+</div>}
 
-function CashHistorySkeleton(){return <div className="cash-history-loading">{Array.from({length:6},(_,index)=><i key={index}/>)}</div>}
-
-function CashError({title,message,retry}:{title:string;message:string;retry:()=>void}){return <div className="cash-state-error"><span><Icon name="alert" size={22}/></span><b>{title}</b><p>{message}</p><Button kind="secondary" icon="refresh" onClick={retry}>Reintentar</Button></div>}
-
-function CashDetailError({message,close}:{message:string;close:()=>void}){return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal cash-detail-modal modal-panel-in" role="dialog" aria-modal="true"><div className="modal-accent"/><header><span className="modal-title-icon"><Icon name="alert"/></span><div><small>TURNO DE CAJA</small><h2>No pudimos cargar el detalle</h2></div><button type="button" aria-label="Cerrar" onClick={close}><Icon name="close"/></button></header><div className="cash-state-error"><span><Icon name="alert" size={22}/></span><b>Detalle no disponible</b><p>{message}</p></div></Dialog></div>}
+function CashDetailError({message,retrying,retry,close}:{message:string;retrying:boolean;retry:()=>void;close:()=>void}){return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal cash-detail-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-detail-error-title"><div className="modal-accent"/><header><span className="modal-title-icon"><Icon name="alert" size={18}/></span><div><small>TURNO DE CAJA</small><h2 id="cash-detail-error-title">Detalle no disponible</h2></div><button type="button" aria-label="Cerrar" onClick={close}><Icon name="close"/></button></header><ErrorState title="No pudimos cargar el detalle" text={message} retrying={retrying} onRetry={retry}/></Dialog></div>}

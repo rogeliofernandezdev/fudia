@@ -61,7 +61,7 @@ test("el botón de impresión llama solo al documento aislado, tras estar prepar
    if(name==="react")return{useEffect:()=>{},useState:()=>[values[state++],()=>{}],useRef:()=>({current:{contentWindow:{focus:()=>focus++,print:()=>prints++}}})};
    if(name==="@tanstack/react-query")return{useQuery:()=>({data:fixture(),isFetching:false,isPending:false,isError:false})};
    if(name==="@/providers")return{useSession:()=>({organization:{id:"org"},location:{id:"loc"}})};
-   if(name==="@/design-system")return{Button:"Button",Icon:"Icon"};if(name==="@/design-system/dialog")return{Dialog:"Dialog"};
+   if(name==="@/design-system")return{Button:"Button",ErrorState:"ErrorState",Icon:"Icon"};if(name==="@/design-system/dialog")return{Dialog:"Dialog"};
    if(name.startsWith("../")||name.endsWith(".css"))return{};return require(name);
   });
   const tree=ui.PaymentTicketDialog({orderId:"order-1",paymentId:"pay-2",close:()=>{}}),nodes=[];

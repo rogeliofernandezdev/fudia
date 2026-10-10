@@ -9,3 +9,6 @@
  .platform-channel-fields{padding:var(--space-16)}
  .platform-channel-modal form>footer{padding:var(--space-12) var(--space-16)}
 }
+
+/* Canales — encabezados en mayúsculas como el resto de listados */
+.platform-channels-panel th{text-transform:uppercase}

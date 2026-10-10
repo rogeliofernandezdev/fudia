@@ -1,4 +1,5 @@
 import {Icon} from "@/design-system/icons";
+import {Skeleton} from "@/design-system/skeleton";
 
 type Props={channel:string;waiterName?:string;collectedByNames?:string[]};
 
@@ -12,6 +13,6 @@ export function OrderAttribution({channel,waiterName,collectedByNames=[]}:Props)
 
 export function OrderAttributionSkeleton(){
   return <div className="order-attribution" aria-hidden="true">
-    {Array.from({length:2},(_,index)=><div key={index}><span className="salon-order-detail-skeleton-block tiny"/><span className="salon-order-detail-skeleton-block medium"/></div>)}
+    {Array.from({length:2},(_,index)=><div key={index}><Skeleton width="var(--size-48)" height="var(--size-9)"/><Skeleton width="var(--size-92)" height="var(--size-12)"/></div>)}
   </div>;
 }

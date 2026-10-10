@@ -1,7 +1,7 @@
 "use client";
 import {Dialog} from "@/design-system/dialog";
 import {useForm} from "react-hook-form";
-import {Button,Icon,Input,Textarea} from "@/design-system";
+import {Button,FormField,Icon,Input,Textarea} from "@/design-system";
 import {useSession} from "@/providers/session-context";
 import {formatRegionalNumber} from "@/shared/i18n/regional-format";
 import {purchaseReceiptResolver} from "../domain/purchase-schema";
@@ -63,7 +63,7 @@ export function PurchaseReceiptDialog({order,busy,close,save}:{order:PurchaseOrd
             </article>)}
           </div>
           {typeof errors.items?.message==="string"&&<div className="purchase-validation" role="alert"><Icon name="alert" size={15}/>{errors.items.message}</div>}
-          <label className="purchase-receipt-notes">Observación opcional<Textarea rows={3} maxLength={500} {...register("notes")} placeholder="Documento, lote, incidencia o referencia de esta recepción"/>{errors.notes?.message&&<small className="field-error">{errors.notes.message}</small>}</label>
+          <FormField className="purchase-receipt-notes" label="Observación" optional error={errors.notes?.message}><Textarea rows={3} maxLength={500} {...register("notes")} placeholder="Documento, lote, incidencia o referencia de esta recepción"/></FormField>
         </div>
         <footer><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" kind="success" disabled={busy}>{busy?"Confirmando…":"Confirmar recepción"}</Button></footer>
       </form>

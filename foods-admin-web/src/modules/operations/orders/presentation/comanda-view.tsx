@@ -1,13 +1,14 @@
 "use client";
-import "../../styles/salon.css";
+import "../../styles/orders.css";
 import "../../styles/salon-comanda.css";
 import {useState,useEffect,useRef} from "react";
 import {Button,Dialog,Input,Select,Textarea,Icon} from "@/design-system";
+import {useMoney} from "@/providers";
 import {CatalogProduct,ComboConfigurator,ComboSelection,ConfiguredCombo,ComandaCatalog} from "../../salon/presentation/comanda-catalog";
 import type {Draft,FloorTable,LineDraft} from "../../salon/domain/types";
-const money=(value:number)=>value.toFixed(2);
 
-export function ComandaView({initial,mode,allTables,busy,currencySymbol,close,save,channelLabel="Salón",onBack,onResponseClose}:{initial:Draft;mode:"create"|"edit"|"append";allTables:FloorTable[];busy:boolean;currencySymbol:string;close:(draft:Draft)=>void;save:(v:Draft,sendToKitchen:boolean)=>void|Promise<void>;notify:(n:{tone:"danger"|"success";title:string;message:string})=>void;channelLabel?:string;onBack?:(draft:Draft)=>void;onResponseClose?:()=>void}){
+export function ComandaView({initial,mode,allTables,busy,close,save,channelLabel="Salón",onBack,onResponseClose}:{initial:Draft;mode:"create"|"edit"|"append";allTables:FloorTable[];busy:boolean;close:(draft:Draft)=>void;save:(v:Draft,sendToKitchen:boolean)=>void|Promise<void>;notify:(n:{tone:"danger"|"success";title:string;message:string})=>void;channelLabel?:string;onBack?:(draft:Draft)=>void;onResponseClose?:()=>void}){
+  const money=useMoney();
   const adding=mode==="append";
   const editing=mode!=="create";
   const salon=initial.channel==="salon";
@@ -50,7 +51,6 @@ export function ComandaView({initial,mode,allTables,busy,currencySymbol,close,sa
     const prevent=(event:BeforeUnloadEvent)=>{event.preventDefault();event.returnValue=""};
     window.addEventListener("beforeunload",prevent);return()=>window.removeEventListener("beforeunload",prevent);
   },[salon,v.lines.length,v.notes]);
-  const untap=(p:CatalogProduct)=>{if(busy||submitting.current)return;setV(prev=>({...prev,lines:prev.lines.map(l=>l.itemType==="product"&&l.productId===p.id?{...l,qty:l.qty-1}:l).filter(l=>l.qty>0)}))};
   const step=(i:number,d:number)=>{if(busy||submitting.current)return;setV(prev=>({...prev,lines:prev.lines.map((l,n)=>n===i?{...l,qty:l.qty+d}:l).filter(l=>l.qty>0)}))};
   const configureCombo=(comboId:string)=>{if(!busy&&!submitting.current)setComboEditor({comboId,initialSelections:[]})};
   const editCombo=(line:LineDraft)=>{if(!busy&&!submitting.current)setComboEditor({comboId:line.productId,lineKey:line.lineKey,initialSelections:line.selections})};
@@ -73,6 +73,9 @@ export function ComandaView({initial,mode,allTables,busy,currencySymbol,close,sa
   const deliveryFee=v.channel==="delivery"?Number(v.deliveryFee)||0:0;
   const total=subtotal+deliveryFee;
   const count=v.lines.reduce((a,l)=>a+l.qty,0);
+  const editingOnly=editing&&!adding;
+  const submitIcon=editingOnly?"check":"chefHat";
+  const busyLabel=editingOnly?"Guardando…":"Enviando…";
   const submit=async(sendToKitchen:boolean)=>{
     if(busy||submitting.current)return;
     if(!v.lines.length){setValidationError("Agrega al menos un producto.");return}
@@ -127,7 +130,7 @@ export function ComandaView({initial,mode,allTables,busy,currencySymbol,close,sa
               </span>
             </div></>:onBack&&<Button kind="ghost" icon="edit" disabled={busy} onClick={()=>{if(!busy&&!submitting.current)onBack(v)}}>Editar datos</Button>}
           </div>
-          <ComandaCatalog qtyByProduct={qtyByProduct} onPick={tap} onRemove={untap} onConfigureCombo={configureCombo} currencySymbol={currencySymbol} variant="salon"/>
+          <ComandaCatalog qtyByProduct={qtyByProduct} onPick={tap} onConfigureCombo={configureCombo}/>
         </section>
 
         <aside className={"salon-comanda-summary"+(ticketOpen?" open":"")} aria-label="Resumen de la comanda">
@@ -171,19 +174,19 @@ export function ComandaView({initial,mode,allTables,busy,currencySymbol,close,sa
                             <span className="salon-comanda-line-inline-qty">{l.qty}×</span>
                             <strong>{l.name}</strong>
                           </div>
-                          {l.qty>1&&<small>{currencySymbol} {money(l.unitPrice)} c/u</small>}
+                          {l.qty>1&&<small>{money(l.unitPrice)} c/u</small>}
                           {l.itemType==="combo"&&(
                             <div className="salon-comanda-line-selections">
                               {l.selections.map(sel=>
                                 <span className="salon-comanda-line-selection" key={sel.groupId+sel.productId}>
                                   <b>{sel.groupName}</b>
-                                  <span>{sel.name}{sel.surcharge>0?` (+${currencySymbol} ${money(sel.surcharge)})`:""}</span>
+                                  <span>{sel.name}{sel.surcharge>0?` (+${money(sel.surcharge)})`:""}</span>
                                 </span>
                               )}
                             </div>
                           )}
                         </div>
-                        <em className="salon-comanda-line-total">{currencySymbol} {money(l.qty*l.unitPrice)}</em>
+                        <em className="salon-comanda-line-total">{money(l.qty*l.unitPrice)}</em>
                       </div>
                       {l.itemType==="combo"&&(
                         <button type="button" disabled={busy} className="salon-comanda-change-combo" onClick={()=>editCombo(l)}>
@@ -211,16 +214,16 @@ export function ComandaView({initial,mode,allTables,busy,currencySymbol,close,sa
 
           <footer className="salon-comanda-summary-foot">
             {validationError&&<p className="field-error" role="alert">{validationError}</p>}
-            {v.channel==="delivery"&&<dl className="salon-comanda-charges"><div><dt>Subtotal</dt><dd>{currencySymbol} {money(subtotal)}</dd></div><div><dt>Envío</dt><dd>{currencySymbol} {money(deliveryFee)}</dd></div></dl>}
+            {v.channel==="delivery"&&<dl className="salon-comanda-charges"><div><dt>Subtotal</dt><dd>{money(subtotal)}</dd></div><div><dt>Envío</dt><dd>{money(deliveryFee)}</dd></div></dl>}
             <div className="salon-comanda-total">
               <div className="salon-comanda-total-copy"><span>{v.channel==="delivery"?"Total":"Subtotal"}</span></div>
-              <strong>{currencySymbol} {money(total)}</strong>
+              <strong>{money(total)}</strong>
             </div>
             {salon&&!editing&&<Button icon="check" kind="secondary" className="salon-comanda-draft" onClick={()=>submit(false)} disabled={busy||!v.lines.length}>
               {busy?"Guardando…":"Guardar borrador"}
             </Button>}
-            <Button icon={editing?"check":"chefHat"} className="salon-comanda-submit" onClick={()=>submit(!editing)} disabled={busy||!v.lines.length}>
-              {busy?(editing?"Guardando…":"Enviando…"):(adding?"Agregar y enviar":editing?"Guardar":"Registrar y enviar")}
+            <Button icon={submitIcon} className="salon-comanda-submit" onClick={()=>submit(!editing)} disabled={busy||!v.lines.length}>
+              {busy?busyLabel:adding?"Agregar y enviar a cocina":editing?"Guardar":"Registrar y enviar a cocina"}
             </Button>
           </footer>
         </aside>
@@ -231,12 +234,12 @@ export function ComandaView({initial,mode,allTables,busy,currencySymbol,close,sa
       <div className="salon-comanda-mobile-bar">
         <button type="button" className="salon-comanda-mobile-summary" onClick={()=>setTicketOpen(true)} aria-expanded={ticketOpen}>
           <Icon name="receipt" size={17}/>
-          <span><small>Comanda · {count} ítem{count===1?"":"s"}</small><b>{currencySymbol} {money(total)}</b></span>
+          <span><small>Comanda · {count} ítem{count===1?"":"s"}</small><b>{money(total)}</b></span>
           <Icon name="chevron" size={15}/>
         </button>
         {v.lines.length>0&&(
           <button type="button" className="salon-comanda-mobile-submit" onClick={()=>submit(!editing)} disabled={busy}>
-            {busy?"…":<><Icon name={editing?"save":"receipt"} size={14}/><span>{adding?"Agregar":editing?"Guardar":"Registrar"}</span></>}
+            <Icon name={submitIcon} size={14}/><span>{busy?busyLabel:adding?"Agregar y enviar":editing?"Guardar":"Enviar a cocina"}</span>
           </button>
         )}
       </div>
@@ -247,7 +250,6 @@ export function ComandaView({initial,mode,allTables,busy,currencySymbol,close,sa
           comboId={comboEditor.comboId}
           initialSelections={comboEditor.initialSelections}
           editing={Boolean(comboEditor.lineKey)}
-          currencySymbol={currencySymbol}
           onClose={()=>setComboEditor(null)}
           onConfirm={applyCombo}
         />

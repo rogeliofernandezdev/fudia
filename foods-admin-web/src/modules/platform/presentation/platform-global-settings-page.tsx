@@ -6,7 +6,7 @@ import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import CountrySelect from "react-select";
 import {createLookupSelectStyles} from "@/design-system/search-select-styles";
-import {Button,FormField,Icon,Input,PageHeader,RowActionButton,Status} from "@/design-system";
+import {Button,ConfirmDialog,EmptyState,ErrorState,FormField,Icon,Input,PageHeader,RowActionButton,Status,TableSkeleton} from "@/design-system";
 import {useFeedback} from "@/providers";
 import type {PlatformWhatsAppChannel,PlatformWhatsAppChannelDraft} from "../domain/types";
 import {getPlatformGlobalCatalogs,listPlatformWhatsAppChannels,savePlatformWhatsAppChannel} from "../infrastructure/platform-api";
@@ -14,6 +14,8 @@ import {getPlatformGlobalCatalogs,listPlatformWhatsAppChannels,savePlatformWhats
 type CountryLookupOption={label:string;value:string};
 const countrySelectStyles=createLookupSelectStyles<CountryLookupOption>();
 const blank:PlatformWhatsAppChannelDraft={countryCode:"PE",phoneNumber:"",displayName:"",active:false};
+const columns=["País","Moneda","Nombre","Número","Estado","Acciones"];
+const toDraft=(item:PlatformWhatsAppChannel):PlatformWhatsAppChannelDraft=>({countryCode:item.countryCode,phoneNumber:item.phoneNumber,displayName:item.displayName,active:item.active});
 
 export function PlatformGlobalSettingsPage(){
  const{notify}=useFeedback();
@@ -23,6 +25,7 @@ export function PlatformGlobalSettingsPage(){
  const[draft,setDraft]=useState<PlatformWhatsAppChannelDraft|null>(null);
  const[editingId,setEditingId]=useState<string|undefined>();
  const[validationError,setValidationError]=useState("");
+ const[target,setTarget]=useState<PlatformWhatsAppChannel|null>(null);
  const save=useMutation({
   mutationFn:({value,id}:{value:PlatformWhatsAppChannelDraft;id?:string})=>savePlatformWhatsAppChannel(value,id),
   onSuccess:()=>{
@@ -33,10 +36,20 @@ export function PlatformGlobalSettingsPage(){
   },
   onError:e=>notify({tone:"danger",title:"No se pudo guardar",message:e.message}),
  });
+ const toggle=useMutation({
+  mutationFn:(item:PlatformWhatsAppChannel)=>savePlatformWhatsAppChannel({...toDraft(item),active:!item.active},item.id),
+  onSuccess:(_,item)=>{
+   setTarget(null);
+   void client.invalidateQueries({queryKey:["platform-whatsapp-channels"]});
+   void client.invalidateQueries({queryKey:["platform-onboarding-context"]});
+   notify({tone:"success",title:item.active?"Canal desactivado":"Canal activado",message:item.active?"El país dejó de estar disponible para registrar empresas.":"El país quedó disponible para registrar empresas."});
+  },
+  onError:e=>notify({tone:"danger",title:"No se pudo actualizar",message:e.message}),
+ });
  const edit=(item:PlatformWhatsAppChannel)=>{
   setValidationError("");
   setEditingId(item.id);
-  setDraft({countryCode:item.countryCode,phoneNumber:item.phoneNumber,displayName:item.displayName,active:item.active});
+  setDraft(toDraft(item));
  };
  const start=()=>{
   setValidationError("");
@@ -74,17 +87,22 @@ export function PlatformGlobalSettingsPage(){
  const selectedCountry=catalogs.data?.countryOptions.find(country=>country.code===draft?.countryCode);
  const countryOptions=(catalogs.data?.countryOptions??[]).map(country=>({value:country.code,label:`${country.name} (${country.code})`}));
  const selectedCountryOption=countryOptions.find(country=>country.value===draft?.countryCode)??null;
+ const items=channels.data?.items??[];
+ const currencyOf=(code:string)=>catalogs.data?.countryOptions.find(country=>country.code===code)?.defaultCurrency??"—";
+ const status=(item:PlatformWhatsAppChannel)=><Status active={item.active}>{item.active?"Activo":"Inactivo"}</Status>;
+ const actions=(item:PlatformWhatsAppChannel)=><><RowActionButton action="edit" label={`Editar canal ${item.displayName}`} onClick={()=>edit(item)}/><RowActionButton action={item.active?"deactivate":"activate"} stateLabel={`Estado del canal ${item.displayName}`} onClick={()=>setTarget(item)}/></>;
 
  return <>
   <PageHeader eyebrow="PLATAFORMA" title="Países y WhatsApp" description="Administra el número visible de WhatsApp de cada país y consulta su moneda predeterminada. Toda la configuración técnica de Meta se mantiene únicamente en variables de entorno." action={<Button icon="plus" onClick={start}>Nuevo canal</Button>}/>
-  {(catalogs.isLoading||channels.isLoading)?<div className="panel catalog-state"><b>Cargando configuración global…</b></div>:
-   (catalogs.isError||channels.isError)?<div className="panel catalog-state"><b>No pudimos cargar la configuración global.</b><Button kind="secondary" onClick={()=>{void catalogs.refetch();void channels.refetch()}}>Reintentar</Button></div>:
-   <div className="panel">
-    <div className="table-responsive"><table><thead><tr><th>País</th><th>Moneda</th><th>Nombre</th><th>Número</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>
-     {(channels.data?.items??[]).map(item=><tr key={item.id}><td>{item.countryName} ({item.countryCode})</td><td>{catalogs.data?.countryOptions.find(country=>country.code===item.countryCode)?.defaultCurrency??"—"}</td><td>{item.displayName}</td><td>{item.phoneNumber}</td><td><Status active={item.active}>{item.active?"Activo":"Borrador"}</Status></td><td><div className="table-actions"><RowActionButton action="edit" label={`Editar canal ${item.displayName}`} onClick={()=>edit(item)}/></div></td></tr>)}
-     {!(channels.data?.items??[]).length&&<tr><td colSpan={6}>Todavía no hay canales configurados.</td></tr>}
+  <section className="panel management standardized-management platform-channels-panel">
+   {(catalogs.isLoading||channels.isLoading)?<TableSkeleton columns={columns} rows={4} label="Cargando canales de WhatsApp"/>:
+    (catalogs.isError||channels.isError)?<ErrorState title="No pudimos cargar la configuración global" text={(catalogs.error??channels.error)?.message} retrying={catalogs.isFetching||channels.isFetching} onRetry={()=>{void catalogs.refetch();void channels.refetch()}}/>:
+    !items.length?<EmptyState icon="chat" title="Aún no hay canales" text="Registra el número de WhatsApp de un país para habilitarlo en el registro de empresas." action={<Button icon="plus" onClick={start}>Nuevo canal</Button>}/>:
+    <><div className="table-wrap hover-scroll"><table><thead><tr><th>País</th><th>Moneda</th><th>Nombre</th><th>Número</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>
+     {items.map((item,index)=><tr className={index%2?"alternate":""} key={item.id}><td><span className={`row-icon r${index%3}`}><Icon name="chat" size={18}/></span><b>{item.countryName}</b><small>{item.countryCode}</small></td><td>{currencyOf(item.countryCode)}</td><td>{item.displayName}</td><td>{item.phoneNumber}</td><td>{status(item)}</td><td><div className="table-actions">{actions(item)}</div></td></tr>)}
     </tbody></table></div>
-   </div>}
+    <div className="management-cards">{items.map(item=><article key={item.id}><header><span className="row-icon r0"><Icon name="chat"/></span><div><b>{item.countryName}</b><small>{item.countryCode}</small></div>{status(item)}</header><dl><div><dt>Nombre</dt><dd>{item.displayName}</dd></div><div><dt>Número</dt><dd>{item.phoneNumber}</dd></div><div><dt>Moneda</dt><dd>{currencyOf(item.countryCode)}</dd></div></dl><footer>{actions(item)}</footer></article>)}</div></>}
+  </section>
 
   {draft&&<div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={()=>{setDraft(null);setEditingId(undefined)}} className="crud-modal platform-channel-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="global-channel-title" aria-busy={save.isPending}><div className="modal-accent"/><header><span className="modal-title-icon"><Icon name="chat" size={18}/></span><div><small>{editingId?"EDITAR CANAL":"NUEVO CANAL"}</small><h2 id="global-channel-title">Canal global de WhatsApp</h2></div><button type="button" aria-label="Cerrar" disabled={save.isPending} onClick={()=>{setDraft(null);setEditingId(undefined)}}><Icon name="close"/></button></header>
    <form onSubmit={event=>{event.preventDefault();submit()}}>
@@ -94,10 +112,10 @@ export function PlatformGlobalSettingsPage(){
      <FormField label="Moneda asociada" help="Se asigna automáticamente según el país."><Input value={selectedCountry?.defaultCurrency??""} readOnly tabIndex={-1}/></FormField>
      <FormField className="span-2" label="Nombre visible"><Input value={draft.displayName} onChange={e=>setDraft({...draft,displayName:e.target.value})}/></FormField>
      <FormField className="span-2" label="Número WhatsApp"><Input value={draft.phoneNumber} onChange={e=>setDraft({...draft,phoneNumber:e.target.value})} placeholder="987654321"/></FormField>
-     <label className="switch-row compact span-2"><input type="checkbox" checked={draft.active} onChange={e=>setDraft({...draft,active:e.target.checked})}/><span/><b>Canal activo y país disponible para onboarding</b></label>
     </div>
     <footer><Button type="button" kind="ghost" disabled={save.isPending} onClick={()=>{setDraft(null);setEditingId(undefined)}}>Cancelar</Button><Button type="submit" disabled={save.isPending}>{save.isPending?"Guardando…":"Guardar"}</Button></footer>
    </form>
   </Dialog></div>}
+  <ConfirmDialog open={Boolean(target)} title={target?.active?"Desactivar canal":"Activar canal"} subject={target?{label:"Canal",name:`${target.displayName} · ${target.phoneNumber}`}:undefined} description={target?.active?"El país dejará de estar disponible para registrar empresas nuevas.":"El país quedará disponible para registrar empresas nuevas."} tone={target?.active?"danger":"success"} confirmLabel={target?.active?"Desactivar":"Activar"} pending={toggle.isPending} onCancel={()=>setTarget(null)} onConfirm={()=>target&&toggle.mutate(target)}/>
  </>;
 }

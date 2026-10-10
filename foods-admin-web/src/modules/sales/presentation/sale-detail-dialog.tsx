@@ -1,5 +1,5 @@
 "use client";
-import {Button,Icon,Status} from "@/design-system";
+import {Button,EmptyState,ErrorState,Icon,Status} from "@/design-system";
 import {Dialog} from "@/design-system/dialog";
 import type {SaleDetail} from "../domain/types";
 import "./sales.css";
@@ -14,8 +14,8 @@ export function SaleDetailDialog({loading,error,data,money,date,close,retry,tick
     <div className="modal-accent"/>
     <header><span className="modal-title-icon"><Icon name="receipt" size={18}/></span><div><h2 id="sales-detail-title">Detalle de venta</h2>{data&&!loading&&!error&&<small>{data.order.code}</small>}</div><button type="button" aria-label="Cerrar" onClick={close}><Icon name="close"/></button></header>
     {loading?<SaleDetailSkeleton/>
-    :error?<div className="sales-detail-state" role="alert"><Icon name="alert" size={24}/><b>No pudimos cargar la venta</b><p>{error}</p><Button kind="secondary" icon="refresh" onClick={retry}>Reintentar</Button></div>
-    :!data?<div className="sales-detail-state"><Icon name="receipt" size={24}/><b>No hay detalle disponible</b></div>
+    :error?<ErrorState title="No pudimos cargar la venta" text={error} onRetry={retry}/>
+    :!data?<EmptyState icon="receipt" title="No hay detalle disponible"/>
     :<div className="sales-detail-body hover-scroll">
       <section className="sales-detail-context" aria-label="Datos de la venta"><dl>
         <div><dt>Cliente / mesa</dt><dd>{data.order.tableName||data.order.customerName||"Venta directa"}{data.order.tableName&&data.order.customerName&&<small>{data.order.customerName}</small>}</dd></div>

@@ -1,5 +1,5 @@
 import type {Ref} from "react";
-import {Button,FormField,Icon,IconButton,Select} from "@/design-system";
+import {Button,EmptyState,ErrorState,FormField,Icon,IconButton,Select,Skeleton} from "@/design-system";
 import type {LocationSummary,OrgSummary} from "../domain/types";
 
 type Props={
@@ -16,9 +16,9 @@ export function ContextSwitcherPanel({panelRef,id,platformAdmin,organizationId,l
       <h2 id={`${id}-title`}>{platformAdmin?"Empresa y local":"Cambiar local"}</h2>
       <IconButton icon="close" label="Cerrar selector" className="context-close" disabled={busy} onClick={onClose}/>
     </header>
-    {loading?<div className="context-fields context-loading" aria-label="Cargando opciones" aria-busy="true">{Array.from({length:platformAdmin?2:1},(_,index)=><div aria-hidden="true" key={index}><i className="context-skeleton-bar"/><span className="context-skeleton-bar"/></div>)}<b className="context-skeleton-bar" aria-hidden="true"/></div>
-    :error?<div className="context-state" role="alert"><Icon name="alert" size={22}/><b>No pudimos cargar las opciones</b><p>{error}</p><Button kind="secondary" icon="refresh" onClick={onRetry}>Reintentar</Button></div>
-    :noOrganizations?<div className="context-state"><Icon name="building" size={22}/><p>No hay empresas disponibles.</p></div>
+    {loading?<div className="context-fields context-loading" role="status" aria-label="Cargando opciones" aria-busy="true">{Array.from({length:platformAdmin?2:1},(_,index)=><div key={index}><Skeleton width="var(--size-64)"/><Skeleton height="var(--control-height)"/></div>)}<Skeleton height="var(--control-height)"/></div>
+    :error?<ErrorState className="context-state" title="No pudimos cargar las opciones" text={error} onRetry={onRetry}/>
+    :noOrganizations?<EmptyState className="context-state" icon="building" title="No hay empresas disponibles."/>
     :<form onSubmit={event=>{event.preventDefault();if(canApply&&!busy)onApply()}}>
       <div className="context-fields">
         {platformAdmin&&<FormField label="Empresa"><Select value={organizationId} disabled={busy} onChange={event=>onOrganizationChange(event.target.value)}><option value="">Selecciona una empresa</option>{organizations.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</Select></FormField>}
