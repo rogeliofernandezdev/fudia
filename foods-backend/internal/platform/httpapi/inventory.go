@@ -7,6 +7,7 @@ import (
 	"math"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -1090,8 +1091,15 @@ func (a *API) applyOrderQuantityDelta(ctx context.Context, tx pgx.Tx, s scope, o
 			}
 			step := int(math.Round(change))
 			nextSold := soldQuantity + step
-			if step > 0 && (manualStatus == "sold_out" || portionQuantity == nil || nextSold > *portionQuantity) {
-				return &orderPreparationError{Status: 409, Code: "insufficient_portions", Message: "No quedan suficientes porciones de " + name + "."}
+			if step > 0 && manualStatus == "sold_out" {
+				return &orderPreparationError{Status: 409, Code: "insufficient_portions", Message: name + " está agotado por hoy."}
+			}
+			if step > 0 && (portionQuantity == nil || nextSold > *portionQuantity) {
+				left := 0
+				if portionQuantity != nil && *portionQuantity > soldQuantity {
+					left = *portionQuantity - soldQuantity
+				}
+				return &orderPreparationError{Status: 409, Code: "insufficient_portions", Message: "La cantidad excede las existencias: solo quedan " + strconv.Itoa(left) + " porciones de " + name + "."}
 			}
 			if nextSold < 0 {
 				return &orderPreparationError{Status: 503, Code: "quantity_inconsistent", Message: "No pudimos reconciliar las porciones del pedido."}
@@ -1134,7 +1142,8 @@ func (a *API) applyOrderQuantityDelta(ctx context.Context, tx pgx.Tx, s scope, o
 			balanceDelta := -change
 			nextBalance := balance + balanceDelta
 			if nextBalance < -0.000001 {
-				return &orderPreparationError{Status: 409, Code: "insufficient_stock", Message: "No hay stock suficiente de " + name + "."}
+				left := strconv.FormatFloat(math.Max(0, balance), 'f', -1, 64)
+				return &orderPreparationError{Status: 409, Code: "insufficient_stock", Message: "La cantidad excede las existencias: solo quedan " + left + " unidades de " + name + "."}
 			}
 			if nextBalance < 0 {
 				nextBalance = 0
