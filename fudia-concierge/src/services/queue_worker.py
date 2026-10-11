@@ -5,7 +5,6 @@ import logging
 import time
 from typing import Protocol
 
-from src.services.ports import InboundQueue, QueueDelivery
 from src.metrics import QUEUE_DELIVERIES, QUEUE_DURATION, QUEUE_IN_FLIGHT
 from src.observability import (
     begin_trace,
@@ -13,6 +12,7 @@ from src.observability import (
     fingerprint,
     log_event,
 )
+from src.services.ports import InboundQueue, QueueDelivery
 
 logger = logging.getLogger(__name__)
 

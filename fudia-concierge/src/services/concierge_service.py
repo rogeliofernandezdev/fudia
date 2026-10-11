@@ -10,6 +10,7 @@ from src.ai.contracts import ConciergeRouter, ConversationAgent
 from src.domain.intents import AgentIntent, ConciergeRoute
 from src.domain.models import ChatMessage, ConversationSession
 from src.graph.app import build_graph
+from src.metrics import RATE_LIMITED, SCOPE_DECISIONS
 from src.services.ports import (
     AllowAllRateLimiter,
     ConversationLock,
@@ -20,7 +21,6 @@ from src.services.ports import (
     RateLimiter,
     conversation_identity,
 )
-from src.metrics import RATE_LIMITED, SCOPE_DECISIONS
 from src.services.tool_registry import ToolRegistry
 
 QR_PATTERN = re.compile(r"(?i)\bFUDIA:([a-f0-9]{32})\b")

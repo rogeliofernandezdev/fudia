@@ -1,12 +1,22 @@
 """Application ports: the chatbot owns interfaces, not adapter implementations."""
+
 from __future__ import annotations
+
 import asyncio
 import hashlib
 from dataclasses import dataclass
 from typing import Any, Protocol
+
 from src.domain.models import (
-    BillSummary, ComboDetail, ConversationSession, InboundMessage,
-    MenuItem, MenuResponse, ModifierConfig, OrderResult, TableContext,
+    BillSummary,
+    ComboDetail,
+    ConversationSession,
+    InboundMessage,
+    MenuItem,
+    MenuResponse,
+    ModifierConfig,
+    OrderResult,
+    TableContext,
 )
 
 

@@ -5,6 +5,7 @@ import hashlib
 from uuid import uuid4
 
 import redis.asyncio as redis
+
 from src.services.ports import ConversationLock as ConversationLock
 
 
