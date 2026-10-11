@@ -336,8 +336,11 @@ icono tiene un solo significado en toda la aplicación (ver
   su contenido. El CSS pertenece al componente compartido.
 - `NotificationPopover`: contador en campana, lista por prioridad, marca temporal
   y acceso al historial completo.
-- `DataTable`: cabecera oscura, filas alternas, estados con texto e icono, acciones
-  homogéneas y representación responsive. Las acciones por fila son botones de
+- `DataTable`: componente compartido (`src/design-system/data-table.tsx`), con
+  composición Tailwind y estilos propios en `styles/data-table.css`; conserva
+  la tabla nativa, el scroll horizontal y la navegación accesible en móvil.
+  Cabecera oscura, filas alternas, estados con texto e icono y acciones
+  homogéneas. Las acciones por fila son botones de
   icono con la altura de `--control-height`, nombre accesible y tooltip; editar
   usa azul operativo; activar/desactivar usa el interruptor de estado.
   Cancelar y quitar mantienen el rojo semántico. No se presentan como
@@ -375,8 +378,9 @@ Todas las rutas administrativas usan las mismas primitivas `Button`,
 `IconButton`, `RowActionButton`, `Input`, `Select`, `Textarea`, `Status`, toolbar, tabla responsive
 y paginación. Las acciones
 principales combinan icono y texto; las acciones por registro son iconográficas,
-con tooltip y nombre accesible. En pantallas estrechas, la tabla se convierte en
-tarjetas estructuradas sin perder acciones, estado ni información clave.
+con tooltip y nombre accesible. Las tablas informativas mantienen sus columnas
+con desplazamiento horizontal accesible en pantallas estrechas; no se convierten
+automáticamente en tarjetas.
 
 No se permiten páginas que reutilicen por exportación otra ruta de negocio ni
 variantes locales de controles, tablas o paginación. La referencia funcional es
