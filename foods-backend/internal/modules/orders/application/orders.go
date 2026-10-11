@@ -29,6 +29,11 @@ func orderFailure(kind apperror.Kind, code, message string) error {
 }
 
 type OrderRepository interface {
+	LockPaidCompletion(ctx context.Context, s scope, id string) (float64, string, bool, error)
+	CompletionPaid(ctx context.Context, s scope, id string) (float64, error)
+	CompletionPending(ctx context.Context, s scope, id string) (bool, error)
+	DeliverPaidItems(ctx context.Context, s scope, id string) (int64, error)
+	CompletePaidOrder(ctx context.Context, s scope, id string) (int64, error)
 	LegacyKitchenOrders(context.Context, scope, string, string) ([]domain.Order, error)
 	KitchenRounds(context.Context, scope, string, string) ([]domain.KitchenTicket, error)
 	ServiceTickets(context.Context, scope, string, string) ([]domain.KitchenTicket, error)

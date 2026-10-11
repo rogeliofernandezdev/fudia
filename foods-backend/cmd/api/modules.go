@@ -42,8 +42,11 @@ import (
 )
 
 func newAPI(db *pgxpool.Pool) *legacy.API {
+	orders := orderapp.New(orderpg.New(db), database.NewUnitOfWork(db), auditpg.New(db), inventoryapp.NewStock(inventorypg.NewStock(db), database.NewUnitOfWork(db), auditpg.New(db)))
 	return legacy.NewWithHandlers(db, legacy.Handlers{
 		MenuCatalog:            menuhttp.NewCatalog(menuapp.NewCatalog(menupg.NewCatalog(db), database.NewUnitOfWork(db), auditpg.New(db), menufiles.Images{Directory: "./uploads/products"})),
+		Payments:               billinghttp.NewPayments(billingapp.NewPayments(billingpg.NewPayments(db), database.NewUnitOfWork(db), auditpg.New(db), billingapp.NewMethods(billingpg.NewMethods(db), database.NewUnitOfWork(db)), orders)),
+		Cash:                   billinghttp.NewCash(billingapp.NewCash(billingpg.NewPayments(db), database.NewUnitOfWork(db))),
 		PaymentMethods:         billinghttp.NewMethods(billingapp.NewMethods(billingpg.NewMethods(db), database.NewUnitOfWork(db))),
 		Floor:                  servicehttp.NewFloor(serviceapp.NewFloor(servicepg.NewFloor(db), database.NewUnitOfWork(db), auditpg.New(db))),
 		Reservations:           servicehttp.NewReservations(serviceapp.NewReservations(servicepg.NewReservations(db), database.NewUnitOfWork(db), auditpg.New(db))),
@@ -55,7 +58,7 @@ func newAPI(db *pgxpool.Pool) *legacy.API {
 		Customers:              customerhttp.New(customerapp.New(customerpg.New(db))),
 		InventoryStock:         inventoryhttp.NewStock(inventoryapp.NewStock(inventorypg.NewStock(db), database.NewUnitOfWork(db), auditpg.New(db))),
 		Purchasing:             purchasehttp.New(purchaseapp.New(purchasepg.New(db), database.NewUnitOfWork(db), auditpg.New(db), inventorypg.NewStock(db))),
-		Orders:                 orderhttp.New(orderapp.New(orderpg.New(db), database.NewUnitOfWork(db), auditpg.New(db), inventoryapp.NewStock(inventorypg.NewStock(db), database.NewUnitOfWork(db), auditpg.New(db)))),
+		Orders:                 orderhttp.New(orders),
 		InventoryUnits:         inventoryhttp.NewUnits(inventoryapp.NewUnits(inventorypg.NewUnits(db))),
 	})
 }

@@ -4,6 +4,8 @@ import "net/http"
 
 // Handlers injects the extracted verticals. Only cmd/api composes production adapters.
 type Handlers struct {
+	Cash                   CashHandler
+	Payments               PaymentsHandler
 	Orders                 OrdersHandler
 	Purchasing             PurchasingHandler
 	InventoryStock         InventoryStockHandler
@@ -94,6 +96,7 @@ type PurchasingHandler interface {
 }
 
 type OrdersHandler interface {
+	CompletePaidOrder(http.ResponseWriter, *http.Request)
 	ListKitchenTickets(http.ResponseWriter, *http.Request)
 	UpdateKitchenTicketStatus(http.ResponseWriter, *http.Request)
 	ListOrders(http.ResponseWriter, *http.Request)
@@ -105,4 +108,31 @@ type OrdersHandler interface {
 	UpdateOrder(http.ResponseWriter, *http.Request)
 	UpdateOrderStatus(http.ResponseWriter, *http.Request)
 	AppendOrderItems(http.ResponseWriter, *http.Request)
+}
+
+type PaymentsHandler interface {
+	CreatePayment(http.ResponseWriter, *http.Request)
+	RefundPayment(http.ResponseWriter, *http.Request)
+	CreatePaymentBatch(http.ResponseWriter, *http.Request)
+	ListPOSOrders(http.ResponseWriter, *http.Request)
+	GetPOSOrder(http.ResponseWriter, *http.Request)
+}
+
+type CashHandler interface {
+	CreateCashRegister(http.ResponseWriter, *http.Request)
+	UpdateCashRegister(http.ResponseWriter, *http.Request)
+	UpdateCashRegisterStatus(http.ResponseWriter, *http.Request)
+	OpenCashShift(http.ResponseWriter, *http.Request)
+	CreateCashMovement(http.ResponseWriter, *http.Request)
+	CloseCashShift(http.ResponseWriter, *http.Request)
+	AssignCashShiftUser(http.ResponseWriter, *http.Request)
+	CreateCashOperation(http.ResponseWriter, *http.Request)
+	ListCashRegisters(http.ResponseWriter, *http.Request)
+	GetCurrentCashShift(http.ResponseWriter, *http.Request)
+	ListCashShifts(http.ResponseWriter, *http.Request)
+	GetCashShift(http.ResponseWriter, *http.Request)
+	GetCashShiftReport(http.ResponseWriter, *http.Request)
+	ListCashUserOptions(http.ResponseWriter, *http.Request)
+	ListCashShiftUsers(http.ResponseWriter, *http.Request)
+	UnassignCashShiftUser(http.ResponseWriter, *http.Request)
 }

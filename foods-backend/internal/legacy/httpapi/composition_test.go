@@ -36,13 +36,17 @@ import (
 	subscriptionhttp "github.com/foods-platform/foods-backend/internal/modules/subscriptions/transport/http"
 	"github.com/foods-platform/foods-backend/internal/platform/database"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"net/http"
 	"os"
 )
 
 // The integration suite exercises exactly the adapters composed by cmd/api.
 func New(db *pgxpool.Pool) *API {
+	orders := orderapp.New(orderpg.New(db), database.NewUnitOfWork(db), auditpg.New(db), inventoryapp.NewStock(inventorypg.NewStock(db), database.NewUnitOfWork(db), auditpg.New(db)))
 	return NewWithHandlers(db, Handlers{
 		MenuCatalog:            menuhttp.NewCatalog(menuapp.NewCatalog(menupg.NewCatalog(db), database.NewUnitOfWork(db), auditpg.New(db), menufiles.Images{Directory: "./uploads/products"})),
+		Payments:               billinghttp.NewPayments(billingapp.NewPayments(billingpg.NewPayments(db), database.NewUnitOfWork(db), auditpg.New(db), billingapp.NewMethods(billingpg.NewMethods(db), database.NewUnitOfWork(db)), orders)),
+		Cash:                   billinghttp.NewCash(billingapp.NewCash(billingpg.NewPayments(db), database.NewUnitOfWork(db))),
 		PaymentMethods:         billinghttp.NewMethods(billingapp.NewMethods(billingpg.NewMethods(db), database.NewUnitOfWork(db))),
 		Floor:                  servicehttp.NewFloor(serviceapp.NewFloor(servicepg.NewFloor(db), database.NewUnitOfWork(db), auditpg.New(db))),
 		Reservations:           servicehttp.NewReservations(serviceapp.NewReservations(servicepg.NewReservations(db), database.NewUnitOfWork(db), auditpg.New(db))),
@@ -54,7 +58,13 @@ func New(db *pgxpool.Pool) *API {
 		Customers:              customerhttp.New(customerapp.New(customerpg.New(db))),
 		InventoryStock:         inventoryhttp.NewStock(inventoryapp.NewStock(inventorypg.NewStock(db), database.NewUnitOfWork(db), auditpg.New(db))),
 		Purchasing:             purchasehttp.New(purchaseapp.New(purchasepg.New(db), database.NewUnitOfWork(db), auditpg.New(db), inventorypg.NewStock(db))),
-		Orders:                 orderhttp.New(orderapp.New(orderpg.New(db), database.NewUnitOfWork(db), auditpg.New(db), inventoryapp.NewStock(inventorypg.NewStock(db), database.NewUnitOfWork(db), auditpg.New(db)))),
+		Orders:                 orderhttp.New(orders),
 		InventoryUnits:         inventoryhttp.NewUnits(inventoryapp.NewUnits(inventorypg.NewUnits(db))),
 	})
+}
+
+// Adapter probe used by the historical-label integration regression.
+func (a *API) getPaymentByID(r *http.Request, id string) (paymentView, error) {
+	s := r.Context().Value(scopeKey{}).(scope)
+	return billingpg.NewPayments(a.db).Payment(r.Context(), s, id)
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/foods-platform/foods-backend/internal/modules/billing/domain"
 	"github.com/foods-platform/foods-backend/internal/platform/database"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"strings"
 )
@@ -19,6 +20,10 @@ var _ application.MethodRepository = (*Methods)(nil)
 
 func (r *Methods) db(ctx context.Context) database.Executor { return database.ExecutorFor(ctx, r.pool) }
 func billingError(err error) error {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+		return application.ErrConflict
+	}
 	if errors.Is(err, pgx.ErrNoRows) {
 		return application.ErrNotFound
 	}

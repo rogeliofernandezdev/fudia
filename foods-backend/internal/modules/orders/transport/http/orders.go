@@ -96,3 +96,8 @@ func (h *Handler) UpdateKitchenTicketStatus(w http.ResponseWriter, r *http.Reque
 	err := h.service.UpdateKitchen(r.Context(), scopeFor(r), r.PathValue("id"), in)
 	respond(w, 204, nil, err)
 }
+
+func (h *Handler) CompletePaidOrder(w http.ResponseWriter, r *http.Request) {
+	err := h.service.CompletePaid(r.Context(), scopeFor(r), r.PathValue("id"))
+	respond(w, 204, nil, err)
+}
