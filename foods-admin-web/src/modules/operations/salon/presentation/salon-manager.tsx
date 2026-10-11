@@ -228,7 +228,6 @@ export function SalonManager(){
                       <Icon name="utensils" size={18}/>
                     </span>
                     <strong className="salon-table-name">{t.name}</strong>
-                    {o&&<span className="salon-table-occupancy">Ocupada</span>}
                     <small className="salon-table-seats">Capacidad: {t.seats} {t.seats===1?"persona":"personas"}{zones.length>1&&t.zone?` · ${t.zone}`:""}</small>
                     {o?.customerName&&<span className="salon-table-family">{o.customerName}</span>}
                     {o&&<span className="salon-table-staff">Mozo: {o.waiterName||"Sin asignar"}</span>}
