@@ -8,4 +8,4 @@
 .standard-pagination.compact nav{justify-content:center;flex-wrap:wrap}
 .seats-input{width:var(--size-80)!important}
 @media (hover:hover) and (pointer:fine){.pagination-page:not(.active):hover{color:var(--primary-700);background:var(--primary-100);border-color:var(--primary-300)}.pagination-nav:hover:not(:disabled){background:var(--primary-50);border-color:var(--primary-300)}}
-@media (width<=600px){.pagination-page{min-width:var(--control-height)}.pagination-nav{padding:0 var(--space-2-5)}}
+@media (width<=600px){.pagination-page{min-width:var(--control-height)}.pagination-nav{padding:0 var(--space-2-5)}.standard-pagination:not(.compact) .pagination-page:not(.active),.standard-pagination:not(.compact) .pagination-ellipsis{display:none}.standard-pagination:not(.compact) nav{gap:var(--space-2)}.standard-pagination:not(.compact) .pagination-nav{flex:1;min-width:0}.standard-pagination:not(.compact) .pagination-page.active{flex:none}.standard-pagination:not(.compact) .pagination-current{flex:none}}
