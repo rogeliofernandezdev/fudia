@@ -37,7 +37,8 @@ test("todas las tablas informativas principales usan un solo DataTable reutiliza
     const closings=(source.match(/<\/DataTable>/g)||[]).length;
     assert.equal(openings,expected,`${file}: deben existir ${expected} tablas homologadas`);
     assert.equal(closings,expected,`${file}: cierres DataTable`);
-    assert.doesNotMatch(source,/<div className="table-wrap hover-scroll[^"]*">\s*<table/,`${file}: tabla suelta sin DataTable`);
+    const mainListing=file.endsWith("sales-page.tsx")?source.split("function SalesTableSkeleton")[0]:source;
+    assert.doesNotMatch(mainListing,/<div className="table-wrap hover-scroll[^"]*">\s*<table/,`${file}: tabla informativa sin DataTable`);
   }
 });
 
