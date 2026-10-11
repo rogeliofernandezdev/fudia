@@ -1,6 +1,6 @@
 /* ════════════════════════════════════════════════════════
    salon.css — Plano de mesas
-   Bordes suaves indican ocupacion; estado de atencion usa tonos semanticos;
+   La ocupacion se reconoce por superficie, icono y texto; la atencion conserva sus tonos;
    indigo del Design System para la accion primaria.
 ════════════════════════════════════════════════════════ */
 
@@ -117,23 +117,22 @@
   text-align:left;
   cursor:pointer;
   overflow:hidden;
-  transition:border-color var(--duration-fast),box-shadow var(--duration-base),transform var(--duration-press);
-  box-shadow:var(--elevation-3);
+  transition:background-color var(--duration-fast),border-color var(--duration-fast),box-shadow var(--duration-base),transform var(--duration-press);
+  box-shadow:var(--elevation-2);
 }
-.salon-table:hover{border-color:var(--line-strong);background:var(--surface);box-shadow:var(--elevation-3);transform:translateY(calc(var(--size-2) * -1))}
+.salon-table:hover{border-color:var(--line-strong);box-shadow:var(--elevation-3);transform:translateY(calc(var(--size-2) * -1))}
 .salon-table:focus-visible{outline:var(--stroke-3) solid var(--primary-400);outline-offset:var(--space-0-5)}
 .salon-table:disabled{cursor:default;opacity:.68}
-.salon-table:disabled:hover{transform:none;border-color:var(--cloud-150);box-shadow:var(--elevation-3)}
+.salon-table:disabled:hover{transform:none;box-shadow:var(--elevation-2)}
 
-/* State borders */
+/* Occupancy is a card-wide surface cue; order status remains an independent badge. */
 .salon-table.free{border-color:var(--brand-200)}
 .salon-table.occupied{
-  /* Ocupacion sugerida por el borde, sin competir con el estado del pedido. */
   border-color:var(--danger-200);
-  background:var(--surface);
+  background:var(--danger-50);
 }
 .salon-table.occupied:hover{
-  background:var(--surface);
+  background:var(--danger-100);
   border-color:var(--danger-200);
 }
 
@@ -143,23 +142,26 @@
 /* Top row — estado + tiempo */
 .salon-table-top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-1-5);min-height:var(--size-24)}
 .salon-table-elapsed{display:inline-flex;align-items:center;gap:var(--space-1);padding:var(--space-1-5) var(--space-2);border-radius:var(--radius-tile);background:var(--cloud-100);color:var(--ink-600);font-size:var(--font-size-label);font-weight:var(--weight-heavy);letter-spacing:var(--letter-spacing-wide);flex-shrink:0}
+.salon-table.occupied .salon-table-elapsed:not(.is-stale){background:var(--surface)}
 .salon-table-elapsed.is-stale{background:var(--warning-100);color:var(--warning-800)}
 
 /* Mesa identifier — centrado */
 .salon-table-name-row{display:flex;flex-direction:column;align-items:center;gap:var(--space-1-5);margin-top:var(--space-1);text-align:center}
 .salon-table-icon{display:grid;place-items:center;width:var(--size-36);height:var(--size-36);border-radius:50%;background:var(--cloud-100);color:var(--ink-400);margin-bottom:var(--space-px)}
 .salon-table.free .salon-table-icon{background:var(--brand-100);color:var(--brand-700)}
-.salon-table.occupied .salon-table-icon{background:var(--primary-100);color:var(--primary-700)}
+.salon-table.occupied .salon-table-icon{background:var(--danger-100);color:var(--danger-700)}
 .salon-table-name{font-size:var(--font-size-xl);font-weight:var(--weight-heavy);letter-spacing:var(--letter-spacing-snug);color:var(--ink-950);line-height:var(--line-height-none);text-transform:uppercase}
+.salon-table-occupancy{display:inline-flex;align-items:center;gap:var(--space-1-5);color:var(--danger-700);font-size:var(--font-size-xs);font-weight:var(--weight-bold)}
+.salon-table-occupancy::before{content:"";display:block;width:var(--size-6);height:var(--size-6);border-radius:var(--radius-pill);background:var(--danger-600)}
 .salon-table-seats{color:var(--ink-400);font-size:var(--font-size-control);font-weight:var(--weight-semibold)}
 .salon-table-family{font-size:var(--font-size-xs);font-weight:var(--weight-bold);color:var(--primary-700);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .salon-table-staff{font-size:var(--font-size-xs);color:var(--ink-600);max-width:100%;overflow-wrap:anywhere}
 
 /* Order info — occupied: total centrado */
-.salon-table-order{display:flex;align-items:center;justify-content:center;gap:var(--space-2);margin-top:auto;padding:var(--space-3) var(--space-3-5);border-radius:var(--radius-card);background:var(--primary-600);color:var(--surface)}
-.salon-table-order svg{width:var(--size-20);height:var(--size-20);flex-shrink:0}
+.salon-table-order{display:flex;align-items:center;justify-content:center;gap:var(--space-2);margin-top:auto;padding:var(--space-3) var(--space-3-5);border-radius:var(--radius-card);border:var(--stroke-1) solid var(--danger-200);background:var(--surface);color:var(--ink-950)}
+.salon-table-order svg{width:var(--size-20);height:var(--size-20);flex-shrink:0;color:var(--primary-700)}
 .salon-table-total{font-size:var(--font-size-md);font-weight:var(--weight-heavy);font-variant-numeric:tabular-nums;letter-spacing:var(--letter-spacing-snug);line-height:var(--line-height-none)}
-.salon-table:hover .salon-table-order{background:var(--primary-700)}
+.salon-table:hover .salon-table-order{background:var(--primary-50);border-color:var(--primary-200)}
 
 /* CTA for free tables */
 .salon-table-cta{
