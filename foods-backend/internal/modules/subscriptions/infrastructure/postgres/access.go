@@ -32,15 +32,9 @@ func (r *AccessRepository) ActiveModules(ctx context.Context, org string) (map[s
 		if err = rows.Scan(&key, &active); err != nil {
 			return nil, err
 		}
-		result[key] = active && readyModules[key]
+		result[key] = active
 	}
 	return result, rows.Err()
-}
-
-var readyModules = map[string]bool{
-	"reportes": true, "pos": true, "pedidos": true, "cocina": true, "mesas": true, "caja": true, "reservas": true,
-	"productos": true, "combos": true, "recetas": true, "inventario": true, "kardex": true, "compras": true,
-	"clientes": true, "locales": true, "fiscal": true, "usuarios": true, "costos": true, "whatsapp_bot": true,
 }
 
 func (r *AccessRepository) LockCapacity(ctx context.Context, org, resource string) (application.Capacity, error) {

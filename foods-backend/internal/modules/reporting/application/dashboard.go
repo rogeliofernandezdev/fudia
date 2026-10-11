@@ -49,7 +49,10 @@ func (s *Service) Dashboard(ctx context.Context, scope requestscope.Scope, key s
 	if !ok {
 		return out, apperror.New(apperror.Invalid, "invalid_period", "El periodo del resumen no es válido.")
 	}
-	visible, _ := s.authorizer.CashExpectedVisible(ctx, scope)
+	visible, permissionErr := s.authorizer.CashExpectedVisible(ctx, scope)
+	if permissionErr != nil {
+		visible = false
+	}
 	tx, err := s.work.Begin(ctx, unitofwork.Options{ReadOnly: true, RepeatableRead: true})
 	if err != nil {
 		return out, apperror.New(apperror.Unavailable, "dashboard_unavailable", "No pudimos calcular el resumen operativo.")

@@ -122,3 +122,11 @@ existentes se conservan hasta migrar todos sus consumidores.
 La primera ejecución PostgreSQL de esta etapa detectó un cambio accidental de
 la etiqueta JSON `zone` en modelos de mesas. Se restauró el contrato y se agregó
 una regresión de serialización; no se modificaron las pruebas que detectaron el fallo.
+
+- **Subscriptions / módulos**: listado, activación y catálogo de disponibilidad
+  extraídos; existe una sola definición de disponibilidad en dominio, usada por
+  aplicación y los puentes de onboarding. Administración de planes, cambios de
+  suscripción y registro de pagos de suscripción aún requieren extracción.
+
+Validación confirmada del commit `bf4ce2e`: workflow `38120803034` en verde,
+con migraciones, PostgreSQL, suite completa, vet y build; despliegue omitido.

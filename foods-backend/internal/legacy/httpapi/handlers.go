@@ -4,6 +4,7 @@ import "net/http"
 
 // Handlers injects the extracted verticals. Only cmd/api composes production adapters.
 type Handlers struct {
+	Modules                ModulesHandler
 	Expenses               ExpensesHandler
 	Reporting              ReportingHandler
 	Reservations           ReservationsHandler
