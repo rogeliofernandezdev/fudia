@@ -125,7 +125,10 @@
 .salon-table:disabled{cursor:default;opacity:.68}
 .salon-table:disabled:hover{transform:none;box-shadow:var(--elevation-1)}
 
-/* Ambas tarjetas comparten una superficie neutra. El acento aparece en el icono y la acción inferior; el estado del pedido queda independiente. */
+/* Superficies de identidad: ocupación y disponibilidad, distintas del estado del pedido.
+   Mantener la cabecera de estados en blanco evita mezclar el color del pedido con el de la mesa. */
+.salon-table.occupied .salon-table-name-row{background:var(--salon-occupied-surface)}
+.salon-table.free .salon-table-name-row{background:var(--salon-free-surface)}
 
 /* Inner content */
 .salon-table-inner{display:flex;flex-direction:column;gap:var(--space-2-5);flex:1;padding:var(--space-4) var(--space-5) var(--space-4)}
@@ -136,7 +139,7 @@
 .salon-table-elapsed.is-stale{background:var(--warning-100);color:var(--warning-800)}
 
 /* Mesa identifier — centrado */
-.salon-table-name-row{display:flex;flex-direction:column;align-items:center;gap:var(--space-1-5);margin-top:var(--space-1);text-align:center}
+.salon-table-name-row{display:flex;flex:1;flex-direction:column;align-items:center;justify-content:center;gap:var(--space-1-5);margin:calc(var(--space-2-5) * -1) calc(var(--space-5) * -1);padding:var(--space-3) var(--space-3);text-align:center}
 .salon-table-icon{display:grid;place-items:center;width:var(--size-36);height:var(--size-36);border-radius:50%;background:var(--cloud-100);color:var(--ink-400);margin-bottom:var(--space-px)}
 .salon-table.free .salon-table-icon{background:var(--brand-100);color:var(--brand-700)}
 .salon-table.occupied .salon-table-icon{background:var(--danger-100);color:var(--danger-700)}
@@ -146,10 +149,10 @@
 .salon-table-staff{font-size:var(--font-size-xs);color:var(--ink-600);max-width:100%;overflow-wrap:anywhere}
 
 /* Order info — occupied: total centrado */
-.salon-table-order{display:flex;align-items:center;justify-content:center;gap:var(--space-2);margin-top:auto;padding:var(--space-3) var(--space-3-5);border-radius:var(--radius-card);background:var(--danger-50);color:var(--ink-950)}
+.salon-table-order{display:flex;align-items:center;justify-content:center;gap:var(--space-2);margin-top:auto;padding:var(--space-3) var(--space-3-5);border-radius:var(--radius-card);background:var(--primary-50);color:var(--ink-950)}
 .salon-table-order svg{width:var(--size-20);height:var(--size-20);flex-shrink:0;color:var(--primary-700)}
 .salon-table-total{font-size:var(--font-size-md);font-weight:var(--weight-heavy);font-variant-numeric:tabular-nums;letter-spacing:var(--letter-spacing-snug);line-height:var(--line-height-none)}
-.salon-table:hover .salon-table-order{background:var(--danger-100)}
+.salon-table:hover .salon-table-order{background:var(--primary-100)}
 
 /* CTA for free tables */
 .salon-table-cta{
@@ -159,8 +162,8 @@
   margin-top:auto;
   padding:var(--space-3) var(--space-4);
   border-radius:var(--radius-card);
-  background:var(--brand-50);
-  color:var(--brand-800);
+  background:var(--primary-50);
+  color:var(--primary-700);
   font-size:var(--font-size-xs);
   font-weight:var(--weight-bold);
   width:100%;
@@ -168,7 +171,7 @@
   transition:background-color var(--duration-fast);
 }
 .salon-table:hover .salon-table-cta{
-  background:var(--brand-100);
+  background:var(--primary-100);
 }
 
 .salon-grid-empty{
@@ -245,6 +248,7 @@
   .salon-table{min-height:var(--size-168)}
   .salon-table-name{font-size:var(--font-size-lg)}
   .salon-table-inner{padding:var(--space-3) var(--space-3-5) var(--space-3-5)}
+  .salon-table-name-row{margin-inline:calc(var(--space-3-5) * -1);padding-inline:var(--space-2)}
 }
 @media(max-width:480px){
   .salon-overview-stat{
