@@ -1,6 +1,7 @@
 /* ════════════════════════════════════════════════════════
    salon.css — Plano de mesas
-   Verde=mesa libre, rojo tenue=ocupacion; índigo=interaccion.
+   Bordes suaves indican ocupacion; estado de atencion usa tonos semanticos;
+   indigo del Design System para la accion primaria.
 ════════════════════════════════════════════════════════ */
 
 /* ── Resumen y controles del salón ── */
@@ -127,12 +128,12 @@
 /* State borders */
 .salon-table.free{border-color:var(--brand-200)}
 .salon-table.occupied{
+  /* Ocupacion sugerida por el borde, sin competir con el estado del pedido. */
   border-color:var(--danger-200);
-  /* Blanco predominante: el rojo identifica ocupacion sin teñir toda la UI. */
-  background:color-mix(in srgb,var(--danger-50) 45%,var(--surface));
+  background:var(--surface);
 }
 .salon-table.occupied:hover{
-  background:color-mix(in srgb,var(--danger-50) 65%,var(--surface));
+  background:var(--surface);
   border-color:var(--danger-200);
 }
 
@@ -153,14 +154,12 @@
 .salon-table-seats{color:var(--ink-400);font-size:var(--font-size-control);font-weight:var(--weight-semibold)}
 .salon-table-family{font-size:var(--font-size-xs);font-weight:var(--weight-bold);color:var(--primary-700);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .salon-table-staff{font-size:var(--font-size-xs);color:var(--ink-600);max-width:100%;overflow-wrap:anywhere}
-.salon-table-order-status{font-size:var(--font-size-xs);font-weight:var(--weight-semibold);color:var(--ink-600)}
-.salon-table.free .salon-table-order-status{display:none}
 
 /* Order info — occupied: total centrado */
-.salon-table-order{display:flex;align-items:center;justify-content:center;gap:var(--space-2);margin-top:auto;padding:var(--space-3) var(--space-3-5);border-radius:var(--radius-card);background:var(--primary-100);color:var(--primary-700);border:var(--stroke-1) solid var(--primary-200)}
+.salon-table-order{display:flex;align-items:center;justify-content:center;gap:var(--space-2);margin-top:auto;padding:var(--space-3) var(--space-3-5);border-radius:var(--radius-card);background:var(--primary-600);color:var(--surface)}
 .salon-table-order svg{width:var(--size-20);height:var(--size-20);flex-shrink:0}
 .salon-table-total{font-size:var(--font-size-md);font-weight:var(--weight-heavy);font-variant-numeric:tabular-nums;letter-spacing:var(--letter-spacing-snug);line-height:var(--line-height-none)}
-.salon-table:hover .salon-table-order{background:var(--primary-200)}
+.salon-table:hover .salon-table-order{background:var(--primary-700)}
 
 /* CTA for free tables */
 .salon-table-cta{

@@ -219,7 +219,7 @@ export function SalonManager(){
               >
                 <div className="salon-table-inner">
                   <div className="salon-table-top">
-                    {o?<Status tone="red">Ocupada</Status>:<Status tone="green">Libre</Status>}
+                    {o&&meta?<Status tone={meta.tone}>{meta.label}</Status>:<Status tone="green">Libre</Status>}
                     {o&&elapsed&&<span className={`salon-table-elapsed${elapsed.needsReview?" is-stale":""}`} title={elapsed.description} aria-label={elapsed.description}><Icon name="clock" size={14}/>{elapsed.label}</span>}
                   </div>
 
@@ -229,7 +229,6 @@ export function SalonManager(){
                     </span>
                     <strong className="salon-table-name">{t.name}</strong>
                     <small className="salon-table-seats">Capacidad: {t.seats} {t.seats===1?"persona":"personas"}{zones.length>1&&t.zone?` · ${t.zone}`:""}</small>
-                    {o&&meta&&<span className="salon-table-order-status">Pedido: {meta.label}</span>}
                     {o?.customerName&&<span className="salon-table-family">{o.customerName}</span>}
                     {o&&<span className="salon-table-staff">Mozo: {o.waiterName||"Sin asignar"}</span>}
                     {Boolean(o?.collectedByNames?.length)&&<span className="salon-table-staff">Cobrado por: {o!.collectedByNames!.join(" · ")}</span>}
