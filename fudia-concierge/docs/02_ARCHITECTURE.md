@@ -120,3 +120,66 @@ Se exponen métricas Prometheus de baja cardinalidad para:
 - envíos a WhatsApp.
 
 Los logs no copian conversaciones, QR, credenciales ni teléfonos en claro.
+
+## Independencia de despliegue y extracción futura
+
+Concierge **ya es un servicio independiente del ejecutable Go**: el chatbot no
+importa paquetes de `foods-backend` ni accede directamente a PostgreSQL.
+Intercambia datos a través de contratos HTTP versionables y
+`X-Fudia-Concierge-Key`. El dominio, los servicios y la orquestación no
+pueden importar adaptadores concretos; este límite está protegido por
+`tests/test_architecture_guards.py` y `src/services/ports.py`.
+
+La independencia significa **autonomía de código, contenedor, ciclo de despliegue
+y escalado**; no significa operar sin dependencias externas. El bot necesita
+Meta WhatsApp Business Cloud API para recibir/enviar, Redis para estados/cola,
+un proveedor LLM para clasificación, y la API FUDIA para catálogo/pedidos.
+Un fallo externo sigue afectando la experiencia; los reintentos, timeouts y
+DLQ limitan efectos, pero no garantizan disponibilidad completa.
+
+### Dos roles de un mismo código y Docker
+
+- **HTTP ingress:** establecer `WORKER_ENABLED=false`, iniciar
+  `uvicorn src.main:app --host 0.0.0.0 --port 8010`. Atiende únicamente
+  `/start/{qr}`, `/webhook`, salud y métricas. Tras autenticar la firma
+  de Meta, registra el mensaje en Redis y responde sin ejecutar IA.
+- **Worker:** ejecutar `python -m src.worker` con credenciales, Redis y
+  `QUEUE_WORKER_CONCURRENCY`. Consume Streams, controla concurrencia,
+  locks distribuidos y resultados de Meta. Puede tener réplicas independientes
+  del servicio HTTP; todas deben compartir el mismo Redis y grupo de consumo.
+
+Por retrocompatibilidad, `WORKER_ENABLED=true` continúa siendo el modo
+**combinado** en desarrollo y Docker actual. Para Cloud Run con asignación de
+CPU solo durante solicitudes HTTP, **no iniciar workers de larga vida en el
+servidor webhook**: usar un worker pool o infraestructura que garantice CPU
+y procesos activos permanentemente. Verificar esa modalidad y el costo antes
+de activar producción. No presupone autoscaling ya configurado.
+
+### Limitaciones de consistencia que exigen diseño adicional
+
+- Streams procesan **al menos una vez**. El `requestId` de las rondas
+  evita duplicación de escrituras en FUDIA; el envío WhatsApp no ofrece aquí
+  un mecanismo de exactamente una vez y un timeout después de una aceptación
+  por Meta puede originar respuestas repetidas. Se requiere estrategia de
+  idempotencia/reconciliación de mensajes salientes antes de prometer
+  exactamente una vez.
+- Las métricas Prometheus se exponen por **instancia**; con réplicas se
+  necesita colector central y panel agregado, más alertas de pendiente de
+  Stream, dead-letter, latencia Meta/LLM y consumo Redis.
+- El código no demuestra aún throughput de negocio real, tiempo p95/p99
+  bajo carga sostenida, cumplimiento de rate limits de Meta, ni resistencia
+  de múltiples réplicas con caídas simultáneas. Estas pruebas precisan Redis
+  real, un simulador de proveedores y después validación externa autorizada.
+- `/ready` comprueba Redis y exige HTTP 200 de `foods-backend/health`.
+  El webhook de Meta también verifica HMAC SHA-256 de bytes originales,
+  limita el tamaño de solicitudes y acepta texto, botones y listas interactivos.
+- En `ENV=production` los secretos Meta, Redis, OpenAI y FUDIA son
+  obligatorios. Publicar Redis solo en red privada y gestionar secretos en
+  Secret Manager o equivalente.
+
+### Pruebas de activación externa
+
+No afirmar disponibilidad productiva ni comunicación real de WhatsApp sin
+validar firmas y desafíos desde Meta, webhook HTTPS público, permisos del
+número oficial, templates aprobados cuando apliquen, ventanas de mensajería,
+rotación de tokens y prueba punta a punta con una empresa/mesa de prueba.
