@@ -1,4 +1,5 @@
 "use client";
+import {DataTable} from "@/design-system/data-table";
 import {Dialog} from "@/design-system/dialog";
 import dynamic from "next/dynamic";
 import "./purchases.css";
@@ -324,7 +325,7 @@ export function PurchasesPage(){
           text={q||status?"Ajusta la búsqueda o los filtros.":canManage?"Crea una orden y agrega los artículos que necesitas abastecer.":"No hay órdenes registradas para este local."}
           action={canManage&&!q&&!status?<Button icon="plus" onClick={()=>setOrderDraft({...emptyOrder})}>Nueva orden</Button>:undefined}
         />:<>
-          <div className="table-wrap hover-scroll purchases-table-wrap"><table>
+          <DataTable label="Órdenes de compra" containerClassName="hover-scroll purchases-table-wrap">
             <thead><tr>{orderColumns.map(column=><th key={column}>{column}</th>)}</tr></thead>
             <tbody>{orderItems.map((order,index)=>{const meta=statusMeta[order.status];return <tr className={index%2?"alternate":""} key={order.id}>
               <td><span className={"row-icon r"+index%3}><Icon name="receipt" size={18}/></span><b>{order.number}</b><small>{order.itemCount} {order.itemCount===1?"artículo":"artículos"}</small></td>
@@ -337,7 +338,7 @@ export function PurchasesPage(){
                 {(canManage||canApprove||canReceive)&&["draft","pending_approval","approved","partially_received"].includes(order.status)&&<RowActionButton action="review" onClick={()=>openDetail(order.id,"review")}/>} 
               </div></td>
             </tr>})}</tbody>
-          </table></div>
+          </DataTable>
 
           <div className="management-cards purchases-cards">{orderItems.map(order=>{const meta=statusMeta[order.status];return <article key={order.id}>
             <header><span className="row-icon r0"><Icon name="receipt"/></span><div><b>{order.number}</b><small>{order.supplierName}</small></div><Status tone={meta.tone}>{meta.label}</Status></header>
@@ -352,7 +353,7 @@ export function PurchasesPage(){
           :receiptHistory.isError?<ErrorState title="No pudimos cargar el historial" text={receiptHistory.error.message} onRetry={()=>void receiptHistory.refetch()}/>
           :!receiptHistoryItems.length?<EmptyState icon="receipt" title={q?"Sin coincidencias":"Sin recepciones registradas"} text={q?"Ajusta la búsqueda.":"Las recepciones confirmadas aparecerán aquí."}/>
           :<>
-            <div className="table-wrap hover-scroll purchases-table-wrap"><table><thead><tr>{receiptHistoryColumns.map(column=><th key={column}>{column}</th>)}</tr></thead><tbody>{receiptHistoryItems.map((r,index)=><tr className={index%2?"alternate":""} key={r.id}><td><span className={"row-icon r"+index%3}><Icon name="receipt" size={18}/></span><b>{r.code}</b></td><td>{r.number}</td><td>{r.supplierName}</td><td>{formatRegionalDateTime(r.createdAt,{country:location?.country,timeZone:location?.timezone},{dateStyle:"medium",timeStyle:"short"})}</td><td>{r.itemCount}</td><td>{r.createdByName}</td><td><div className="table-actions"><RowActionButton action="view" label={receiptDetailLoading===r.id?"Cargando recepción":"Ver "+r.code} disabled={receiptDetailLoading===r.id} aria-busy={receiptDetailLoading===r.id} onClick={()=>void openReceiptDetail(r.id)}/></div></td></tr>)}</tbody></table></div>
+            <DataTable label="Historial de recepciones" containerClassName="hover-scroll purchases-table-wrap"><thead><tr>{receiptHistoryColumns.map(column=><th key={column}>{column}</th>)}</tr></thead><tbody>{receiptHistoryItems.map((r,index)=><tr className={index%2?"alternate":""} key={r.id}><td><span className={"row-icon r"+index%3}><Icon name="receipt" size={18}/></span><b>{r.code}</b></td><td>{r.number}</td><td>{r.supplierName}</td><td>{formatRegionalDateTime(r.createdAt,{country:location?.country,timeZone:location?.timezone},{dateStyle:"medium",timeStyle:"short"})}</td><td>{r.itemCount}</td><td>{r.createdByName}</td><td><div className="table-actions"><RowActionButton action="view" label={receiptDetailLoading===r.id?"Cargando recepción":"Ver "+r.code} disabled={receiptDetailLoading===r.id} aria-busy={receiptDetailLoading===r.id} onClick={()=>void openReceiptDetail(r.id)}/></div></td></tr>)}</tbody></DataTable>
             <div className="management-cards purchases-cards">{receiptHistoryItems.map(r=><article key={r.id}>
               <header><span className="row-icon r0"><Icon name="receipt"/></span><div><b>{r.code}</b><small>{r.number} · {r.supplierName}</small></div></header>
               <dl><div><dt>Fecha</dt><dd>{formatRegionalDateTime(r.createdAt,{country:location?.country,timeZone:location?.timezone},{dateStyle:"short",timeStyle:"short"})}</dd></div><div><dt>Artículos</dt><dd>{r.itemCount}</dd></div></dl>
@@ -368,7 +369,7 @@ export function PurchasesPage(){
           title={q||status?"Sin coincidencias":"No hay mercadería pendiente de recibir"}
           text={q||status?"Ajusta la búsqueda o el filtro.":"Solo aparecen órdenes aprobadas con cantidades pendientes."}
         />:<>
-          <div className="table-wrap hover-scroll purchases-table-wrap purchase-receipts-table"><table>
+          <DataTable label="Recepciones de compra" containerClassName="hover-scroll purchases-table-wrap purchase-receipts-table">
             <thead><tr>{receiptColumns.map(column=><th key={column}>{column}</th>)}</tr></thead>
             <tbody>{receiptItems.map((order,index)=>{const meta=statusMeta[order.status];const loading=receiptLoadingId===order.id;return <tr className={index%2?"alternate":""} key={order.id}>
               <td><span className={"row-icon r"+index%3}><Icon name="stock" size={18}/></span><b>{order.number}</b><small>Aprobada para recepción</small></td>
@@ -381,7 +382,7 @@ export function PurchasesPage(){
                 {canReceive&&<Button kind="primary" icon="stock" disabled={loading} onClick={()=>void openReceipt(order.id)}>{loading?"Cargando…":order.status==="partially_received"?"Continuar":"Recibir"}</Button>}
               </div></td>
             </tr>})}</tbody>
-          </table></div>
+          </DataTable>
 
           <div className="management-cards purchases-cards purchase-receipt-cards">{receiptItems.map(order=>{const meta=statusMeta[order.status];const loading=receiptLoadingId===order.id;return <article key={order.id}>
             <header><span className="row-icon r2"><Icon name="stock"/></span><div><b>{order.number}</b><small>{order.supplierName}</small></div><Status tone={meta.tone}>{meta.label}</Status></header>
@@ -400,7 +401,7 @@ export function PurchasesPage(){
           text={q||status?"Ajusta la búsqueda o los filtros.":canManage?"Registra el primer proveedor para empezar a crear órdenes.":"No hay proveedores registrados."}
           action={canManage&&!q&&!status?<Button icon="plus" onClick={()=>setSupplierDraft({...emptySupplier})}>Nuevo proveedor</Button>:undefined}
         />:<>
-          <div className="table-wrap hover-scroll purchases-table-wrap"><table>
+          <DataTable label="Proveedores" containerClassName="hover-scroll purchases-table-wrap">
             <thead><tr>{supplierColumns.map(column=><th key={column}>{column}</th>)}</tr></thead>
             <tbody>{supplierItems.map((supplier,index)=><tr className={index%2?"alternate":""} key={supplier.id}>
               <td><span className={"row-icon r"+index%3}><Icon name="truck" size={18}/></span><b>{supplier.name}</b></td>
@@ -412,7 +413,7 @@ export function PurchasesPage(){
                 <RowActionButton action={supplier.active?"deactivate":"activate"} stateLabel={`Estado de ${supplier.name}`} onClick={()=>setSupplierTarget(supplier)}/>
               </>}</div></td>
             </tr>)}</tbody>
-          </table></div>
+          </DataTable>
 
           <div className="management-cards purchases-cards">{supplierItems.map(supplier=><article key={supplier.id}>
             <header><span className="row-icon r1"><Icon name="truck"/></span><div><b>{supplier.name}</b><small>{supplier.taxId||"Sin RUC"}</small></div><Status active={supplier.active}>{supplier.active?"Activo":"Inactivo"}</Status></header>
@@ -621,7 +622,7 @@ function PurchaseDetail({order,mode,canManage,canApprove,canReceive,busy,currenc
   return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal purchase-detail-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="purchase-detail-title" aria-busy={busy}><ModalHeader title={order.number} titleId="purchase-detail-title" icon="receipt" subtitle={mode==="view"?"DETALLE DE ORDEN":"REVISAR ORDEN"} onClose={close} busy={busy} closeLabel="Cerrar"/><div className="purchase-detail-body">
     <section className="purchase-detail-summary"><div><small>PROVEEDOR</small><b>{order.supplierName}</b></div><div><small>TOTAL</small><b>{currency}</b></div><div><small>ARTÍCULOS</small><b>{order.itemCount}</b></div></section>
     <section className="purchase-detail-meta"><div><small>CREADA</small><b>{formatRegionalDateTime(order.createdAt,{country,timeZone:timezone},{dateStyle:"medium",timeStyle:"short"})}</b></div><div><small>ENTREGA ESPERADA</small><b>{order.expectedAt?formatRegionalCalendarDate(order.expectedAt,country,{dateStyle:"medium"}):"Sin fecha"}</b></div><div><small>NOTAS</small><b>{order.notes||"Sin notas"}</b></div></section>
-    <section className="purchase-detail-lines"><header><div><small>DETALLE</small><h3>Artículos de la orden</h3></div></header><div className="table-wrap hover-scroll"><table className="purchase-receipt-progress-table"><thead><tr><th>ARTÍCULO</th><th>PRESENTACIÓN DE COMPRA</th><th>SOLICITADO</th><th>RECIBIDO</th><th>PENDIENTE</th><th>COSTO</th><th>SUBTOTAL</th></tr></thead><tbody>{order.items.map((item,index)=><tr className={index%2?"alternate":""} key={item.id}><td><b>{item.itemName}</b><small>{item.sku||item.unit}</small></td><td>{presentationName(item.presentationType,item.unitsPerPresentation,item.unit,item.presentationName)}</td><td>{formatRegionalNumber(Number(item.quantity),country,{maximumFractionDigits:3})}</td><td><b className="purchase-received-qty">{formatRegionalNumber(Number(item.receivedQuantity),country,{maximumFractionDigits:3})}</b></td><td><b className={Number(item.pendingQuantity)>0?"purchase-pending-qty":""}>{formatRegionalNumber(Number(item.pendingQuantity),country,{maximumFractionDigits:3})}</b></td><td>{formatRegionalNumber(Number(item.unitCost),country,{minimumFractionDigits:2,maximumFractionDigits:4})}</td><td><b>{money(item.lineTotal)}</b></td></tr>)}</tbody></table></div></section>
+    <section className="purchase-detail-lines"><header><div><small>DETALLE</small><h3>Artículos de la orden</h3></div></header><DataTable label="Estado de recepción por artículo" containerClassName="hover-scroll" className="purchase-receipt-progress-table"><thead><tr><th>ARTÍCULO</th><th>PRESENTACIÓN DE COMPRA</th><th>SOLICITADO</th><th>RECIBIDO</th><th>PENDIENTE</th><th>COSTO</th><th>SUBTOTAL</th></tr></thead><tbody>{order.items.map((item,index)=><tr className={index%2?"alternate":""} key={item.id}><td><b>{item.itemName}</b><small>{item.sku||item.unit}</small></td><td>{presentationName(item.presentationType,item.unitsPerPresentation,item.unit,item.presentationName)}</td><td>{formatRegionalNumber(Number(item.quantity),country,{maximumFractionDigits:3})}</td><td><b className="purchase-received-qty">{formatRegionalNumber(Number(item.receivedQuantity),country,{maximumFractionDigits:3})}</b></td><td><b className={Number(item.pendingQuantity)>0?"purchase-pending-qty":""}>{formatRegionalNumber(Number(item.pendingQuantity),country,{maximumFractionDigits:3})}</b></td><td>{formatRegionalNumber(Number(item.unitCost),country,{minimumFractionDigits:2,maximumFractionDigits:4})}</td><td><b>{money(item.lineTotal)}</b></td></tr>)}</tbody></DataTable></section>
   </div>{busy&&<div className="modal-busy" role="status"><i/><span>Procesando…</span></div>}<ModalFooter status={<Status tone={meta.tone}>{meta.label}</Status>} statusLabel="Estado de la orden">{mode==="review"&&(canManage||canApprove||canReceive)&&order.status!=="received"&&order.status!=="cancelled"&&<section className="purchase-detail-actions"><div><small>SIGUIENTE PASO</small><b>{nextStepLabel(order.status)}</b></div><div>{canManage&&order.status==="draft"&&<><Button kind="secondary" icon="edit" onClick={edit} disabled={busy}>Editar</Button><Button icon="arrowRightCircle" onClick={()=>changeStatus("pending_approval")} disabled={busy}>Enviar a aprobación</Button></>}{order.status==="pending_approval"&&<>{canManage&&<Button kind="ghost" icon="chevronLeft" onClick={()=>changeStatus("draft")} disabled={busy}>Volver a borrador</Button>}{canApprove&&<Button icon="check" onClick={approve} disabled={busy}>Aprobar</Button>}</>}{canReceive&&receivable&&<Button kind="primary" icon="stock" onClick={receive} disabled={busy}>{order.status==="partially_received"?"Continuar en Recepciones":"Ir a Recepciones"}</Button>}{canManage&&cancellable&&<Button action="cancel-record" onClick={cancel} disabled={busy}>Cancelar orden</Button>}</div></section>}</ModalFooter></Dialog></div>;
 }
 function ReceiptHistoryDetail({receipt,canManage,close,startReturn}:{receipt:PurchaseReceiptDetail;canManage:boolean;close:()=>void;startReturn:()=>void}){
@@ -633,7 +634,7 @@ function ReceiptHistoryDetail({receipt,canManage,close,startReturn}:{receipt:Pur
 
   <ModalHeader title={receipt.code} titleId="receipt-history-title" icon="receipt" subtitle="RECEPCIÓN HISTÓRICA" onClose={close} closeLabel="Cerrar"/>
   <div className="purchase-detail-body"><section className="purchase-detail-summary"><div><small>ORDEN</small><b>{receipt.number}</b></div><div><small>PROVEEDOR</small><b>{receipt.supplierName}</b></div><div><small>USUARIO</small><b>{receipt.createdByName}</b></div></section>
-   <section className="purchase-detail-lines"><header><div><small>DETALLE</small><h3>Artículos recibidos</h3></div></header><div className="table-wrap hover-scroll" tabIndex={0}><table><thead><tr><th>ARTÍCULO</th><th>RECIBIDO</th><th>DEVUELTO/CORREGIDO</th><th>DISPONIBLE</th><th>COSTO</th></tr></thead><tbody>{receipt.items.map((i,index)=><tr className={index%2?"alternate":""} key={i.id}><td><b>{i.itemName}</b></td><td>{quantity(i.quantity)}</td><td>{quantity(i.returnedQuantity)}</td><td><b>{quantity(i.returnableQuantity)}</b></td><td>{money(i.unitCost)}</td></tr>)}</tbody></table></div></section>
+   <section className="purchase-detail-lines"><header><div><small>DETALLE</small><h3>Artículos recibidos</h3></div></header><DataTable label="Artículos de la recepción" containerClassName="hover-scroll"><thead><tr><th>ARTÍCULO</th><th>RECIBIDO</th><th>DEVUELTO/CORREGIDO</th><th>DISPONIBLE</th><th>COSTO</th></tr></thead><tbody>{receipt.items.map((i,index)=><tr className={index%2?"alternate":""} key={i.id}><td><b>{i.itemName}</b></td><td>{quantity(i.quantity)}</td><td>{quantity(i.returnedQuantity)}</td><td><b>{quantity(i.returnableQuantity)}</b></td><td>{money(i.unitCost)}</td></tr>)}</tbody></DataTable></section>
    {receipt.notes&&<section className="purchase-detail-meta purchase-receipt-history-notes"><div><small>NOTAS</small><b>{receipt.notes}</b></div></section>}
    {canManage&&returnable&&<section className="purchase-detail-actions"><div><small>CORRECCIONES</small><b>Corrige lo recibido o registra una devolución al proveedor.</b></div><div><Button kind="danger" icon="undo" onClick={startReturn}>Corregir / devolver</Button></div></section>}
   </div>
