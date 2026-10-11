@@ -1,3 +1,4 @@
+import {DataTable} from "@/design-system/data-table";
 import {cashReportFormat,cashMovementSource} from "../domain/report-format";
 import type {CashShiftReport} from "../domain/types";
 
@@ -21,5 +22,5 @@ export function CashReportContent({report}:{report:CashShiftReport}){
 }
 
 function ReportTable({headers,children,empty}:{headers:string[];children:React.ReactNode[];empty:string}){
- return children.length?<div className="table-wrap hover-scroll cash-report-table"><table><thead><tr>{headers.map(item=><th key={item}>{item}</th>)}</tr></thead><tbody>{children}</tbody></table></div>:<p className="cash-report-empty">{empty}</p>;
+ return children.length?<DataTable label="Movimientos del reporte de caja" containerClassName="hover-scroll cash-report-table"><thead><tr>{headers.map(item=><th key={item}>{item}</th>)}</tr></thead><tbody>{children}</tbody></DataTable>:<p className="cash-report-empty">{empty}</p>;
 }
