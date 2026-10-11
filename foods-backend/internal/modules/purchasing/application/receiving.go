@@ -112,44 +112,21 @@ func (a *Purchasing) Receive(ctx context.Context, s scope, id string, in domain.
 	}
 
 	for _, line := range lines {
-		stockQuantity := math.Round(line.ReceiveQuantity*line.UnitsPerPresentation*1000) / 1000
 		if _, err = a.repo.CreateReceiptItem(tx.Context(), s, receiptID, line); err != nil {
 			return result, purchaseFailure(apperror.Unavailable, "purchase_unavailable", "No pudimos guardar el detalle de la recepción.")
-		}
-		if _, err = a.stock.EnsureEntryBalance(tx.Context(), s, line.InventoryItemID); err != nil {
-			return result, purchaseFailure(apperror.Unavailable, "inventory_unavailable", "No pudimos preparar el saldo de inventario.")
-		}
-		var current, currentAverage float64
-		if err = func() error {
-			var err error
-			current, currentAverage, err = a.stock.LockEntryBalance(tx.Context(), s, line.InventoryItemID)
-			return err
-		}(); err != nil {
-			return result, purchaseFailure(apperror.Unavailable, "inventory_unavailable", "No pudimos bloquear el saldo de inventario.")
-		}
-		balanceAfter := math.Round((current+stockQuantity)*1000) / 1000
-		baseUnitCost := 0.0
-		if line.UnitsPerPresentation > 0 {
-			baseUnitCost = line.UnitCost / line.UnitsPerPresentation
-		}
-		averageAfter := currentAverage
-		if balanceAfter > 0 {
-			averageAfter = math.Round(((current*currentAverage)+(stockQuantity*baseUnitCost))/balanceAfter*10000) / 10000
-		}
-		if _, err = a.stock.SaveBalance(tx.Context(), s, line.InventoryItemID, balanceAfter, averageAfter); err != nil {
-			return result, purchaseFailure(apperror.Unavailable, "inventory_unavailable", "No pudimos actualizar el saldo de inventario.")
 		}
 		note := "Recepción " + receiptCode + " de " + number
 		if in.Notes != "" {
 			note += " · " + in.Notes
 		}
-		valueDelta := math.Round(stockQuantity*baseUnitCost*10000) / 10000
-		balanceValue := math.Round(balanceAfter*averageAfter*10000) / 10000
-		if _, err = func() (int64, error) {
-			err := a.stock.SaveMovement(tx.Context(), s, inventorycontracts.Movement{ProductID: line.ProductID, ItemID: line.InventoryItemID, Type: "entry", Delta: stockQuantity, Balance: balanceAfter, UnitCost: baseUnitCost, SourceType: "purchase_receipt", SourceID: receiptID, Note: note, ValueDelta: valueDelta, BalanceValue: balanceValue})
-			return 0, err
-		}(); err != nil {
-			return result, purchaseFailure(apperror.Unavailable, "inventory_unavailable", "No pudimos registrar el movimiento de Kárdex.")
+		// Inventory owns weighted-average costing, stock locks and Kárdex writes.
+		// The existing Purchasing UoW context keeps all writes atomic.
+		if err = a.stock.ReceivePurchase(tx.Context(), s, inventorycontracts.PurchaseReceipt{
+			ItemID: line.InventoryItemID, ProductID: line.ProductID,
+			Quantity: line.ReceiveQuantity, UnitsPerPresentation: line.UnitsPerPresentation,
+			UnitCost: line.UnitCost, ReceiptID: receiptID, Note: note,
+		}); err != nil {
+			return result, purchaseFailure(apperror.Unavailable, "inventory_unavailable", "No pudimos registrar el ingreso de mercadería en inventario.")
 		}
 		if _, err = a.repo.ReceiveOrderLine(tx.Context(), s, id, line); err != nil {
 			return result, purchaseFailure(apperror.Unavailable, "purchase_unavailable", "No pudimos actualizar lo recibido de la orden.")
@@ -186,10 +163,9 @@ func (a *Purchasing) Receive(ctx context.Context, s scope, id string, in domain.
 
 }
 
+// InventoryLedger is a consumer-owned intent port. Purchasing never mutates
+// inventory balances or calculates their average unit cost.
 type InventoryLedger interface {
-	LockBalance(context.Context, scope, string) (inventorycontracts.Balance, error)
-	EnsureEntryBalance(context.Context, scope, string) (int64, error)
-	LockEntryBalance(context.Context, scope, string) (float64, float64, error)
-	SaveBalance(context.Context, scope, string, float64, float64) (int64, error)
-	SaveMovement(context.Context, scope, inventorycontracts.Movement) error
+	ReceivePurchase(context.Context, scope, inventorycontracts.PurchaseReceipt) error
+	ReturnPurchase(context.Context, scope, inventorycontracts.PurchaseReturn) error
 }

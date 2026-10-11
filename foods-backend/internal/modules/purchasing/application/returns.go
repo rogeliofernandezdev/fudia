@@ -92,22 +92,13 @@ func (a *Purchasing) Return(ctx context.Context, s scope, id string, in domain.P
 		if presentationType != "unit" && math.Abs(requested.Quantity-math.Round(requested.Quantity)) > 0.000001 {
 			return result, purchaseFailure(apperror.Invalid, "invalid_purchase_return_quantity", "Paquetes y cajas deben devolverse en cantidades enteras.")
 		}
-		stockQty := math.Round(requested.Quantity*units*1000) / 1000
-		bal, err := a.stock.LockBalance(tx.Context(), s, itemID)
-		if err != nil {
-			return result, purchaseFailure(apperror.Unavailable, "inventory_unavailable", "No pudimos bloquear el stock.")
-		}
-		if stockQty > bal.Quantity+0.000001 {
+		if err = a.stock.ReturnPurchase(tx.Context(), s, inventorycontracts.PurchaseReturn{
+			ItemID: itemID, Quantity: requested.Quantity, UnitsPerPresentation: units,
+			Kind: in.Kind, ReturnID: returnID, Note: code + " · " + in.Reason,
+		}); errors.Is(err, inventorycontracts.ErrInsufficientStock) {
 			return result, purchaseFailure(apperror.Conflict, "insufficient_stock", "No hay stock suficiente para registrar la devolución.")
-		}
-		after := math.Round((bal.Quantity-stockQty)*1000) / 1000
-		avg := bal.AverageUnitCost
-		if _, err = a.stock.SaveBalance(tx.Context(), s, itemID, after, avg); err != nil {
-			return result, purchaseFailure(apperror.Unavailable, "inventory_unavailable", "No pudimos actualizar el stock.")
-		}
-		movement := map[bool]string{true: "receipt_correction", false: "supplier_return"}[in.Kind == "receipt_correction"]
-		if err = a.stock.SaveMovement(tx.Context(), s, inventorycontracts.Movement{ProductID: bal.ProductID, ItemID: itemID, Type: movement, Delta: -stockQty, Balance: after, UnitCost: bal.AverageUnitCost, SourceType: "purchase_return", SourceID: returnID, Note: code + " · " + in.Reason, ValueDelta: math.Round(-stockQty*bal.AverageUnitCost*10000) / 10000, BalanceValue: math.Round(after*bal.AverageUnitCost*10000) / 10000}); err != nil {
-			return result, purchaseFailure(apperror.Unavailable, "inventory_unavailable", "No pudimos registrar el Kárdex.")
+		} else if err != nil {
+			return result, purchaseFailure(apperror.Unavailable, "inventory_unavailable", "No pudimos registrar la devolución en inventario.")
 		}
 		if _, err = a.repo.CreateReturnItem(tx.Context(), s, returnID, receiptItemID, orderItemID, itemID, requested, presentationType, units, unitCost); err != nil {
 			return result, purchaseFailure(apperror.Unavailable, "purchase_return_unavailable", "No pudimos guardar el detalle de devolución.")
