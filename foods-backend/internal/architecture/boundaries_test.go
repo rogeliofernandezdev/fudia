@@ -50,6 +50,10 @@ func TestModuleBoundaries(t *testing.T) {
 			if transport && (strings.Contains(target, "/infrastructure/") || strings.HasPrefix(target, "github.com/jackc/") || target == "database/sql") {
 				violation = true
 			}
+			// Application and HTTP layers must reach persistence only through their ports.
+			if (application || transport || strings.Contains(rel, "/platform/httpapi/")) && strings.HasPrefix(target, prefix+"platform/database") {
+				violation = true
+			}
 			if infrastructure && (strings.Contains(target, "/transport/") || target == "net/http" || strings.HasSuffix(target, "/platform/httpapi")) {
 				violation = true
 			}
@@ -57,7 +61,7 @@ func TestModuleBoundaries(t *testing.T) {
 				t.Errorf("%s imports forbidden dependency %s", rel, target)
 			}
 		}
-		if domain || application || transport {
+		if domain || application || transport || strings.Contains(rel, "/platform/httpapi/") {
 			ast.Inspect(f, func(n ast.Node) bool {
 				lit, ok := n.(*ast.BasicLit)
 				if !ok || lit.Kind != token.STRING {
