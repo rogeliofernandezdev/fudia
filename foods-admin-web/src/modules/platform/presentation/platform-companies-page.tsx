@@ -1,4 +1,5 @@
 "use client";
+import {DataTable} from "@/design-system/data-table";
 import "./platform-companies.css";
 import "./platform-skeletons.css";
 import {useState} from "react";
@@ -110,8 +111,7 @@ function CompaniesTable({data,busy}:{data:PlatformOrganizationPage;busy:boolean}
  const plan=(company:PlatformOrganization)=>company.subscription?<div className="platform-company-cell"><b>{company.subscription.plan.name}</b><small>{company.subscription.billingCycle==="annual"?"Anual":"Mensual"}{company.subscription.autoRenew?" · Renovación automática":""}</small></div>:<span className="platform-company-muted">Sin plan</span>;
  const actions=(company:PlatformOrganization)=><><RowActionButton action="view" label="Ver detalle" onClick={()=>setDetailId(company.id)}/><Link href={companySettingsPath(company.id)} className="ds-icon-button" aria-label={"Gestionar suscripción de "+company.tradeName} data-tooltip="Gestionar suscripción"><Icon name="receipt" size={18}/></Link></>;
 
- return <><div className="table-wrap hover-scroll" aria-busy={busy}>
-  <table className="platform-companies-table">
+ return <><DataTable label="Empresas registradas" containerClassName="hover-scroll" className="platform-companies-table" aria-busy={busy}>
    <thead><tr>{columns.map(column=><th key={column}>{column}</th>)}</tr></thead>
    <tbody>{data.items.map(company=><tr key={company.id} className={company.active?"":"inactive"}>
     <td><div className="platform-company-name"><span className="row-icon"><Icon name="building" size={18}/></span><div><Link className="platform-company-link" href={companySettingsPath(company.id)}>{company.tradeName}</Link><small>{companyNote(company)}</small></div></div></td>
@@ -122,8 +122,7 @@ function CompaniesTable({data,busy}:{data:PlatformOrganizationPage;busy:boolean}
     <td>{standing(company)}</td>
     <td><div className="table-actions">{actions(company)}</div></td>
    </tr>)}</tbody>
-  </table>
- </div>
+  </DataTable>
  <div className="management-cards" aria-busy={busy}>{data.items.map(company=><article key={company.id}>
   <header><span className="row-icon r0"><Icon name="building"/></span><div><Link className="platform-company-link" href={companySettingsPath(company.id)}>{company.tradeName}</Link><small>{companyNote(company)}</small></div>{standing(company)}</header>
   <dl><div><dt>Plan</dt><dd>{plan(company)}</dd></div><div><dt>Precio</dt><dd>{price(company)}</dd></div><div><dt>Próximo vencimiento</dt><dd>{dueDate(company)}</dd></div><div><dt>Último pago</dt><dd>{lastPayment(company)}</dd></div></dl>
