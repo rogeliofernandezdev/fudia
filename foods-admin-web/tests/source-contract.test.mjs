@@ -374,7 +374,7 @@ test("pos cobra pedidos y sincroniza efectivo con caja",()=>{
 
 test("combos conserva la misma tabla en movil y el shell no desborda",()=>{
   const combos=read("src/modules/menu/combos/presentation/combos-page.tsx");
-  assert.ok(combos.includes('className="table-wrap hover-scroll"'));
+  assert.ok(combos.includes('<DataTable label="Listado de menús y combos"'),"Combos reutiliza la tabla informativa responsive");
   assert.equal(combos.includes("combo-mobile-cards"),false);
   assert.equal(combos.includes("\\n    {draft&&<ComboWizard"),false);
   const comboCss=readCss("src/modules/menu/combos/presentation/combo-wizard.css");
