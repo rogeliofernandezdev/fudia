@@ -20,6 +20,9 @@ class Settings(BaseSettings):
     queue_stream: str = "fudia:concierge:inbound"
     queue_group: str = "fudia-concierge"
     queue_consumer: str = ""
+    # Split HTTP ingress and queue processing into independently scalable roles.
+    # True preserves the existing single-container development deployment.
+    worker_enabled: bool = True
     queue_max_attempts: int = 5
     queue_visibility_timeout_ms: int = 30_000
     queue_worker_concurrency: int = Field(
