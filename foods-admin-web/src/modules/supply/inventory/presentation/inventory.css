@@ -105,7 +105,7 @@
 .kardex-cards article>footer>span{min-width:0;display:grid;gap:var(--space-0-5)}
 .kardex-cards article>footer b{font-size:var(--font-size-label)}
 .kardex-cards article>footer small{color:var(--ink-400);font-size:var(--font-size-label)}
-.kardex-skeleton-cards{display:none}
+
 .kardex-skeleton-cards article header>i{width:var(--size-38);height:var(--size-38);border-radius:var(--radius-tile);background:var(--cloud-100)}
 .kardex-skeleton-cards article header div{display:grid;gap:var(--space-1-5)}
 .kardex-skeleton-cards article header span{width:var(--size-110);height:var(--size-10);border-radius:var(--radius-control);background:var(--cloud-100)}
@@ -117,8 +117,7 @@
  .kardex-toolbar .button{align-self:flex-start}
 }
 @media(max-width:700px){
- .kardex-skeleton-table{display:none}
- .kardex-skeleton-cards{display:grid}
+
 }
 @media(max-width:520px){
  .kardex-filters{grid-template-columns:1fr}
