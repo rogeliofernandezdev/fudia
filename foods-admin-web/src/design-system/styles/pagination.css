@@ -1,3 +1,9 @@
+/* Paginación compartida */
+.standard-pagination{display:flex;justify-content:flex-end;align-items:center;gap:var(--space-4);min-height:var(--size-56);padding:var(--space-2) var(--space-4);border-top:var(--stroke-1) solid var(--line);color:var(--ink-500);font-size:var(--font-size-control);font-variant-numeric:tabular-nums}
+.standard-pagination>span{margin-right:auto}
+.standard-pagination>label{display:flex;align-items:center;gap:var(--space-2);font-weight:var(--weight-semibold)}
+.standard-pagination nav{display:flex;align-items:center;gap:var(--space-1-5)}
+.standard-pagination .ds-select{width:auto;padding:0 var(--space-8) 0 var(--space-2-5)}
 .pagination-page{width:var(--control-height);height:var(--control-height);border:var(--stroke-1) solid var(--line);color:var(--ink-600);background:var(--surface);border-radius:var(--radius-control);place-items:center;padding:0;font-size:var(--font-size-control);font-weight:var(--weight-bold);display:grid;transition:border-color var(--duration-fast) ease,background var(--duration-fast) ease,color var(--duration-fast) ease}
 .pagination-page.active{color:var(--surface);border-color:var(--primary-600);background:var(--primary-600);box-shadow:var(--elevation-primary)}
 .pagination-ellipsis{text-align:center;width:var(--size-24);color:var(--ink-400)}
@@ -9,3 +15,10 @@
 .seats-input{width:var(--size-80)!important}
 @media (hover:hover) and (pointer:fine){.pagination-page:not(.active):hover{color:var(--primary-700);background:var(--primary-100);border-color:var(--primary-300)}.pagination-nav:hover:not(:disabled){background:var(--primary-50);border-color:var(--primary-300)}}
 @media (width<=600px){.pagination-page{min-width:var(--control-height)}.pagination-nav{padding:0 var(--space-2-5)}.standard-pagination:not(.compact) .pagination-page:not(.active),.standard-pagination:not(.compact) .pagination-ellipsis{display:none}.standard-pagination:not(.compact) nav{gap:var(--space-2)}.standard-pagination:not(.compact) .pagination-nav{flex:1;min-width:0}.standard-pagination:not(.compact) .pagination-page.active{flex:none}.standard-pagination:not(.compact) .pagination-current{flex:none}}
+
+@media (width<=700px){
+  .standard-pagination{flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-2-5)}
+  .standard-pagination>span{flex:1 1 auto;min-width:0;margin:0}
+  .standard-pagination>label{margin:0}
+  .standard-pagination nav{order:2;width:100%;justify-content:space-between}
+}
