@@ -245,7 +245,7 @@ test("compras concentra orden recepcion y altas de abastecimiento",()=>{
   assert.ok(purchases.includes('queryKey:["purchase-orders","receivable-summary"]'),"El contador de Recepciones se consulta aunque la pestaña no esté activa");
   assert.ok(purchases.includes('status:"receivable",page:1,pageSize:1'),"El contador usa la cola de órdenes recibibles");
   assert.ok(purchases.includes('invalidateQueries({queryKey:["purchase-orders","receipts"]})'),"Entrar a Recepciones refresca su listado");
-  assert.ok(purchases.includes("<span>Recepciones</span>"),"La navegación expone Recepciones como workspace propio");
+  assert.ok(purchases.includes('label:"Recepciones"'),"La navegación expone Recepciones como workspace propio");
   assert.ok(purchases.includes('"receivable"'),"La cola de Recepciones consulta solo órdenes recibibles");
   assert.ok(purchases.includes("No hay mercadería pendiente de recibir"),"Recepciones tiene estado vacío propio");
   assert.ok(purchases.includes("Solo aparecen órdenes aprobadas con cantidades pendientes."),"Recepciones explica su responsabilidad");
@@ -859,8 +859,11 @@ test("Pedidos no expone el identificador técnico como información visual",()=>
   const orders=read("src/modules/operations/orders/presentation/orders-manager.tsx");
   assert.equal(orders.includes("o.code"),false,"La tabla no muestra el código técnico del pedido");
   assert.equal(orders.includes("order.code"),false,"El detalle no repite el código técnico del pedido");
-  assert.ok(orders.includes("salon-order-detail-content"),"El resumen y los productos comparten el cuerpo desplazable");
-  assert.ok(orders.includes("salon-order-detail-opened"),"La fecha está integrada en la cabecera");
+  const detail=read("src/modules/operations/orders/presentation/order-detail-dialog.tsx");
+  assert.ok(orders.includes("<OrderDetailContent"),"Pedidos utiliza el detalle compartido");
+  assert.ok(detail.includes("<ModalWorkspace summary="),"El resumen y los productos utilizan el mismo workspace");
+  assert.ok(detail.includes('className="modal-body order-detail-body"'),"Productos en cuerpo desplazable");
+  assert.ok(detail.includes("<time dateTime={order.createdAt}>"),"La fecha está dentro del detalle");
   assert.equal(orders.includes("orders-order-meta"),false,"No conserva el bloque de metadatos retirado");
 });
 

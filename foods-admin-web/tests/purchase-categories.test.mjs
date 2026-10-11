@@ -19,7 +19,7 @@ function mount({items=[],manage=true,loading=false,error=false,pending=false}={}
   if(name==="react-dom")return {createPortal:tree=>tree};
   if(name==="@/providers/session-context")return {useSession:()=>({organization:{id:"company-a"},can:()=>manage})};
   if(name==="@/modules/menu")return {CategoryDialog:"CategoryDialog",saveCategory:()=>{}};
-  if(name==="@/design-system")return {Button:"Button",FormField:"FormField",Select:"Select"};
+  if(name==="@/design-system")return {Button:"Button",FormField:"FormField",Select:"Select",IconButton:"IconButton"};
   if(name==="../infrastructure/purchases-api")return {listPurchaseItemCategories:()=>{}};
   if(name==="@tanstack/react-query")return {
    useQuery:options=>{queries.push(options);return {data:items,isLoading:loading,isError:error,error:error?new Error("Sin conexión"):null,isFetching:false,refetch:()=>writes.push("retry")}},
@@ -35,7 +35,7 @@ test("sin categorías compatibles hay una salida visible y la creación conserva
  const ui=mount(),tree=ui.render();
  assert.equal(tree.find(node=>node.type==="Select").props.disabled,true);
  assert.match(tree.find(node=>node.type==="FormField").props.help,/Crea una categoría/);
- tree.find(node=>node.props["aria-label"]==="Nueva categoría").props.onClick();
+ tree.find(node=>node.type==="IconButton"&&node.props.label==="Nueva categoría").props.onClick();
  const dialog=ui.render().find(node=>node.type==="CategoryDialog");
  assert.equal(dialog.props.retailOnly,true);assert.equal(dialog.props.draft.productScope,"retail");
  await dialog.props.save({name:"Bebidas",productScope:"retail",sortOrder:0,active:true});
@@ -44,7 +44,7 @@ test("sin categorías compatibles hay una salida visible y la creación conserva
  assert.ok(ui.writes.some(value=>Array.isArray(value)&&value[0].id==="database-uuid"));
  assert.equal(ui.queries[0].queryKey[1],"company-a");
  const readOnly=mount({manage:false}).render();
- assert.equal(readOnly.some(node=>node.props["aria-label"]==="Nueva categoría"),false);
+ assert.equal(readOnly.some(node=>node.type==="IconButton"&&node.props.label==="Nueva categoría"),false);
  assert.match(readOnly.find(node=>node.type==="FormField").props.help,/administrador/);
 });
 test("categorías remotas muestran skeleton, error recuperable y selección",()=>{

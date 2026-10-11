@@ -33,6 +33,7 @@ function mount({status="draft",api,refresh=Promise.resolve()}={}){
   if(name==="@/providers")return{
    useSession:()=>({can:()=>true,location:{country:"PE",timezone:"America/Lima"}}),
    useSettings:()=>({currencySymbol:"S/"}),
+   useMoney:()=>amount=>`S/ ${Number(amount).toFixed(2)}`,
    useFeedback:()=>({notify:value=>{responseClose();events.push(value)}}),
   };
   if(name.startsWith("@/design-system"))return Object.fromEntries(["Dialog","Button","ConfirmDialog","Icon","Input","PageHeader","Pagination","RemoteModalSkeleton","RowActionButton","Select","Status","Textarea"].map(key=>[key,key]));
