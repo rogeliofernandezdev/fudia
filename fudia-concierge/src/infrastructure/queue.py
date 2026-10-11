@@ -2,33 +2,13 @@ from __future__ import annotations
 
 import hashlib
 import socket
-from dataclasses import dataclass
-from typing import Any, Protocol
+from typing import Any
 
 import redis.asyncio as redis
 from redis.exceptions import ResponseError
 
 from src.domain.models import InboundMessage
-
-
-@dataclass
-class QueueDelivery:
-    entry_id: str
-    message: InboundMessage
-    attempt: int
-
-
-class InboundQueue(Protocol):
-    async def start(self) -> None: ...
-    async def enqueue(self, message: InboundMessage) -> bool: ...
-    async def read(
-        self,
-        limit: int = 10,
-    ) -> list[QueueDelivery]: ...
-    async def ack(self, delivery: QueueDelivery) -> None: ...
-    async def touch(self, delivery: QueueDelivery) -> bool: ...
-    async def retry(self, delivery: QueueDelivery) -> bool: ...
-    async def ping(self) -> bool: ...
+from src.services.ports import QueueDelivery as QueueDelivery
 
 
 class RedisInboundQueue:

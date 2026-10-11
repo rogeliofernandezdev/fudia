@@ -1,16 +1,9 @@
 from __future__ import annotations
 
 import time
-from typing import Protocol
 
 import redis.asyncio as redis
-
-
-class RateLimiter(Protocol):
-    async def allow(
-        self,
-        identity: str,
-    ) -> bool: ...
+from src.services.ports import RateLimiter as RateLimiter
 
 
 class RedisRateLimiter:

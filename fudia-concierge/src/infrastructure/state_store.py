@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import hashlib
-from typing import Protocol
 
 import redis.asyncio as redis
 
 from src.domain.models import ConversationSession
+from src.services.ports import ConversationStore as ConversationStore
 
 
 def _session_identity(
@@ -16,21 +16,6 @@ def _session_identity(
     return hashlib.sha256(
         raw.encode("utf-8")
     ).hexdigest()
-
-
-class ConversationStore(Protocol):
-    async def get(
-        self,
-        phone: str,
-        channel_key: str = "default",
-    ) -> ConversationSession | None: ...
-
-    async def save(
-        self,
-        session: ConversationSession,
-    ) -> None: ...
-
-    async def ping(self) -> bool: ...
 
 
 class RedisConversationStore:

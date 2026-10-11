@@ -18,19 +18,7 @@ from src.domain.models import (
 )
 from src.metrics import BACKEND_DURATION, BACKEND_REQUESTS
 from src.observability import current_trace_id
-
-
-class FudiaError(RuntimeError):
-    def __init__(
-        self,
-        status_code: int,
-        code: str,
-        message: str,
-    ) -> None:
-        super().__init__(message)
-        self.status_code = status_code
-        self.code = code
-        self.message = message
+from src.services.ports import FudiaError as FudiaError
 
 
 def _endpoint_label(path: str) -> str:

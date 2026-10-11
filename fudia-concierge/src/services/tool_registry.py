@@ -4,7 +4,7 @@ from typing import Any
 
 from src.domain.intents import AgentIntent
 from src.domain.models import ConversationSession
-from src.infrastructure.fudia_client import FudiaClient, FudiaError
+from src.services.ports import FudiaBackend, FudiaError
 from src.metrics import BUSINESS_ACTIONS, TOOL_CALLS
 from src.services.menu_tools import MenuTools
 from src.services.order_tools import OrderTools
@@ -46,7 +46,7 @@ TOOLS_BY_INTENT: dict[AgentIntent, frozenset[str]] = {
 class ToolRegistry:
     def __init__(
         self,
-        fudia: FudiaClient,
+        fudia: FudiaBackend,
         session: ConversationSession,
         user_message: str,
     ) -> None:

@@ -4,7 +4,7 @@ import httpx
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import RedirectResponse
 
-from src.infrastructure.fudia_client import FudiaError
+from src.services.ports import FudiaError
 
 router = APIRouter(tags=["whatsapp"])
 

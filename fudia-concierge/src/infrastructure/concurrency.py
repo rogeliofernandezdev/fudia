@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
-from typing import Protocol
 from uuid import uuid4
 
 import redis.asyncio as redis
+from src.services.ports import ConversationLock as ConversationLock
 
 
 def conversation_identity(
@@ -20,25 +20,6 @@ def conversation_identity(
 
 class ConversationBusyError(RuntimeError):
     pass
-
-
-class ConversationLock(Protocol):
-    async def acquire(
-        self,
-        identity: str,
-    ) -> str: ...
-
-    async def refresh(
-        self,
-        identity: str,
-        token: str,
-    ) -> bool: ...
-
-    async def release(
-        self,
-        identity: str,
-        token: str,
-    ) -> None: ...
 
 
 class RedisConversationLock:

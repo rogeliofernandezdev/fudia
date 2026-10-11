@@ -10,14 +10,16 @@ from src.ai.contracts import ConciergeRouter, ConversationAgent
 from src.domain.intents import AgentIntent, ConciergeRoute
 from src.domain.models import ChatMessage, ConversationSession
 from src.graph.app import build_graph
-from src.infrastructure.concurrency import (
+from src.services.ports import (
+    AllowAllRateLimiter,
     ConversationLock,
-    MemoryConversationLock,
+    ConversationStore,
+    FudiaBackend,
+    FudiaError,
+    LocalConversationLock,
+    RateLimiter,
     conversation_identity,
 )
-from src.infrastructure.fudia_client import FudiaClient, FudiaError
-from src.infrastructure.rate_limit import AllowAllRateLimiter, RateLimiter
-from src.infrastructure.state_store import ConversationStore
 from src.metrics import RATE_LIMITED, SCOPE_DECISIONS
 from src.services.tool_registry import ToolRegistry
 
@@ -73,7 +75,7 @@ class ConciergeService:
     def __init__(
         self,
         store: ConversationStore,
-        fudia: FudiaClient,
+        fudia: FudiaBackend,
         router: ConciergeRouter | ConversationAgent,
         agents: dict[AgentIntent, ConversationAgent] | None = None,
         conversation_lock: ConversationLock | None = None,
@@ -84,7 +86,7 @@ class ConciergeService:
         self.store = store
         self.fudia = fudia
         self.conversation_lock = (
-            conversation_lock or MemoryConversationLock()
+            conversation_lock or LocalConversationLock()
         )
         self.rate_limiter = rate_limiter or AllowAllRateLimiter()
         self.max_message_chars = max_message_chars

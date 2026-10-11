@@ -5,7 +5,7 @@ import logging
 import time
 from typing import Protocol
 
-from src.infrastructure.queue import InboundQueue, QueueDelivery
+from src.services.ports import InboundQueue, QueueDelivery
 from src.metrics import QUEUE_DELIVERIES, QUEUE_DURATION, QUEUE_IN_FLIGHT
 from src.observability import (
     begin_trace,
