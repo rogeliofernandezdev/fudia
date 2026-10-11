@@ -1,0 +1,33 @@
+/* Data tables: semantic reading and responsive scrolling.
+ * Tailwind utilities handle component composition; visual values come only from shared tokens.
+ * Legacy native tables inherit the same treatment during gradual adoption of DataTable. */
+/* Tablas: cabecera azul operativa, filas de 56 px y cifras tabulares */
+table{width:100%;border-collapse:collapse;white-space:nowrap;font-variant-numeric:tabular-nums}
+table thead,.catalog-panel thead,.standardized-management thead{color:var(--surface);background:var(--primary-600)}
+th{height:var(--size-40);padding:0 var(--space-4);color:var(--surface);background:transparent;text-align:left;font-size:var(--font-size-2xs);font-weight:var(--weight-bold);letter-spacing:var(--letter-spacing-caps);text-transform:uppercase}
+td{height:var(--size-56);padding:0 var(--space-4);border-top:var(--stroke-1) solid var(--cloud-100);color:var(--ink-600);font-size:var(--font-size-control)}
+td:first-child{color:var(--ink-950);font-weight:var(--weight-semibold)}
+td small{display:block;margin-top:var(--space-0-5);color:var(--ink-400);font-size:var(--font-size-label);font-weight:var(--weight-medium)}
+tbody tr{transition:background var(--duration-fast)}
+td .food,.row-icon{display:inline-grid;place-items:center;width:var(--size-34);height:var(--size-34);margin-right:var(--space-2-5);overflow:hidden;vertical-align:middle;border-radius:var(--radius-tile);color:var(--primary-700);background:var(--primary-100)}
+.row-icon-img{width:100%;height:100%;object-fit:cover;border-radius:inherit}
+td .f1,.row-icon.r1{color:var(--brand-700);background:var(--brand-100)}
+td .f2,.row-icon.r2{color:var(--digital-700);background:var(--digital-100)}
+.management td:first-child{min-width:var(--size-260)}
+.management td:first-child small{margin-left:var(--space-11)}
+.catalog-panel tr.alternate,.standardized-management tr.alternate{background:var(--primary-25)}
+.catalog-panel th:last-child,.catalog-panel td:last-child,.standardized-management th:last-child,.standardized-management td:last-child{text-align:center}
+.table-wrap{width:100%;max-width:100%;overflow-x:auto;overflow-y:auto;overscroll-behavior-x:contain;scrollbar-width:thin;scrollbar-color:var(--ink-400-alpha-40) var(--cloud-50)}
+.table-wrap::-webkit-scrollbar{height:var(--size-6);width:var(--size-6)}
+.table-wrap::-webkit-scrollbar-thumb{border-radius:var(--radius-pill);background:var(--ink-400-alpha-40)}
+.row-action{width:var(--control-height);height:var(--control-height);border:0;border-radius:var(--radius-control);background:transparent;color:var(--ink-400)}
+.editing-row{background:var(--primary-50)}
+.editing-row input{width:100%}
+.table-wrap.hover-scroll{scrollbar-width:thin;scrollbar-color:var(--ink-400-alpha-40) var(--cloud-50)}
+.table-wrap.hover-scroll::-webkit-scrollbar{height:var(--size-6);width:var(--size-6)}
+@media (hover:hover) and (pointer:fine){
+  tbody tr:hover{background:var(--primary-25)}
+}
+@media (width<=600px){
+  .table-wrap table{width:max-content;min-width:100%}
+}
