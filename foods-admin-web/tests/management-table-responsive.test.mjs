@@ -36,6 +36,16 @@ test("el componente compartido oculta tarjetas duplicadas y mantiene el scroll",
   });
   assert.ok(hidden,"Los registros antiguos no deben duplicarse en tarjetas");
   assert.ok(scroll,"Las columnas desbordadas siguen accesibles mediante scroll");
+  let frozenLegacy=false;
+  css.walkAtRules("media",atRule=>{
+    if(atRule.params!=="(width<=700px)")return;
+    atRule.walkRules(rule=>{
+      if(rule.selector===".standardized-management .table-wrap:not(.data-table-viewport)>table :is(th,td):first-child"){
+        frozenLegacy=rule.nodes.some(node=>node.prop==="position"&&node.value==="sticky");
+      }
+    });
+  });
+  assert.ok(frozenLegacy,"Las tablas anteriores mantienen la columna identificadora visible al desplazarse");
 });
 
 test("Gastos Compras y Kardex conservan sus tablas en móvil",()=>{
