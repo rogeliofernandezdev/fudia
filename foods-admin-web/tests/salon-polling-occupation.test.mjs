@@ -27,7 +27,7 @@ test("no se inventa una antigüedad sin una hora válida",()=>{
   assert.equal(formatTableOccupation(opened,Date.parse("2026-10-11T10:00:00Z")).label,"—");
  }
 });
-test("la pantalla conserva el centrado, el polling parcial y los estados semánticos",()=>{
+test("la pantalla conserva el centrado, el polling parcial y estados semánticos",()=>{
  const page=readFileSync(new URL("../src/modules/operations/salon/presentation/salon-manager.tsx",import.meta.url),"utf8");
  const css=readFileSync(new URL("../src/modules/operations/styles/salon.css",import.meta.url),"utf8");
  assert.match(page,/refetchInterval:10000/);
@@ -37,29 +37,18 @@ test("la pantalla conserva el centrado, el polling parcial y los estados semánt
  assert.match(page,/floor\.isError&&!floor\.data/);
  assert.match(page,/<Status tone=\{meta\.tone\}>\{meta\.label\}<\/Status>/);
  assert.doesNotMatch(page,/<Status tone="red">Ocupada<\/Status>/);
- assert.doesNotMatch(page,/className="salon-table-occupancy"/);
  assert.doesNotMatch(page,/className="salon-table-order-status"/);
  assert.match(css,/\.salon-table-name-row\{[^\n]*align-items:center/);
- assert.match(css,/\.salon-table\{[\s\S]*?background:var\(--surface\)/);
+ assert.match(css,/\.salon-table\.occupied\{[\s\S]*?border-color:var\(--danger-200\);[\s\S]*?background:var\(--surface\)/);
 });
 
-test("paleta del salón: estados separados de ocupación, acciones índigo para todas las mesas",()=>{
+test("paleta de salon: rojo solo para ocupacion, reloj neutro e interaccion indigo",()=>{
  const css=readFileSync(new URL("../src/modules/operations/styles/salon.css",import.meta.url),"utf8");
- const tokens=readFileSync(new URL("../src/styles/variables.css",import.meta.url),"utf8");
- assert.match(css,/\.salon-table\{[\s\S]*?border:var\(--stroke-1\) solid var\(--line\);[\s\S]*?background:var\(--surface\)/);
- assert.match(tokens,/--salon-occupied-surface: color-mix\(in srgb, var\(--danger-50\) 52%, var\(--cloud-25\)\)/);
- assert.match(tokens,/--salon-free-surface: color-mix\(in srgb, var\(--brand-50\) 65%, var\(--cloud-25\)\)/);
- assert.match(css,/\.salon-table\.occupied \.salon-table-name-row\{background:var\(--salon-occupied-surface\)\}/);
- assert.match(css,/\.salon-table\.free \.salon-table-name-row\{background:var\(--salon-free-surface\)\}/);
- assert.doesNotMatch(css,/\.salon-table\.occupied\{[^}]*background:/);
- assert.match(css,/\.salon-table\.occupied \.salon-table-icon\{background:var\(--danger-100\);color:var\(--danger-700\)\}/);
- assert.match(css,/\.salon-table\.free \.salon-table-icon\{background:var\(--brand-100\);color:var\(--brand-700\)\}/);
+ assert.match(css,/\.salon-table\.occupied\{[\s\S]*?background:var\(--surface\)/);
+ assert.match(css,/\.salon-table\.occupied \.salon-table-icon\{background:var\(--primary-100\);color:var\(--primary-700\)\}/);
  assert.match(css,/\.salon-table-elapsed\{[^\n]*background:var\(--cloud-100\);color:var\(--ink-600\)/);
  assert.match(css,/\.salon-table-elapsed\.is-stale\{background:var\(--warning-100\);color:var\(--warning-800\)\}/);
- assert.match(css,/\.salon-table-order\{[^\n]*background:var\(--primary-50\);color:var\(--ink-950\)/);
- assert.match(css,/\.salon-table-cta\{[\s\S]*?background:var\(--primary-50\);[\s\S]*?color:var\(--primary-700\)/);
- assert.match(css,/\.salon-table:hover \.salon-table-order\{background:var\(--primary-100\)\}/);
- assert.match(css,/\.salon-table:hover \.salon-table-cta\{[\s\S]*?background:var\(--primary-100\)/);
- assert.match(css,/@media\(max-width:600px\)\{[\s\S]*?\.salon-table-name-row\{margin-inline:calc\(var\(--space-3-5\) \* -1\);padding-inline:var\(--space-2\)\}/);
- assert.doesNotMatch(css,/\.salon-table-occupancy/);
+ assert.match(css,/\.salon-table-order\{[^\n]*background:var\(--primary-600\);color:var\(--surface\)/);
+ assert.match(css,/\.salon-table:hover \.salon-table-order\{background:var\(--primary-700\)\}/);
+ assert.match(css,/\.salon-table\.free\{border-color:var\(--brand-200\)\}/);
 });
