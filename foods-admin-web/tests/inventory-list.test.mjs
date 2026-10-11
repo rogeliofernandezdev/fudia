@@ -48,10 +48,10 @@ test("inventario muestra mínimo y reorden juntos, con cero y cantidades fraccio
  assert.equal(view.filter(node=>node.type==="Pagination").length,1);
 });
 
-test("la tabla conserva el nowrap global y desplazamiento horizontal en móvil sin sobrescribir textos secundarios",()=>{
- const globals=postcss.parse(readFileSync(new URL("styles/globals.css",root),"utf8"));
+test("la tabla conserva el nowrap compartido y desplazamiento horizontal en móvil sin sobrescribir textos secundarios",()=>{
+ const sharedTable=postcss.parse(readFileSync(new URL("design-system/styles/data-table.css",root),"utf8"));
  const inventory=postcss.parse(readFileSync(new URL("modules/supply/inventory/presentation/inventory.css",root),"utf8"));
- const rules=[];globals.walkRules(rule=>rules.push(rule));inventory.walkRules(rule=>rules.push(rule));
+ const rules=[];sharedTable.walkRules(rule=>rules.push(rule));inventory.walkRules(rule=>rules.push(rule));
  const value=(selector,prop)=>rules.find(rule=>rule.selector===selector&&rule.parent.type==="root")?.nodes.find(node=>node.prop===prop)?.value;
  assert.equal(value("table","white-space"),"nowrap");
  assert.equal(value("td small","display"),"block");
