@@ -6,6 +6,10 @@ import (
 	billingapp "github.com/foods-platform/foods-backend/internal/modules/billing/application"
 	billingpg "github.com/foods-platform/foods-backend/internal/modules/billing/infrastructure/postgres"
 	billinghttp "github.com/foods-platform/foods-backend/internal/modules/billing/transport/http"
+	menuapp "github.com/foods-platform/foods-backend/internal/modules/menu/application"
+	menufiles "github.com/foods-platform/foods-backend/internal/modules/menu/infrastructure/files"
+	menupg "github.com/foods-platform/foods-backend/internal/modules/menu/infrastructure/postgres"
+	menuhttp "github.com/foods-platform/foods-backend/internal/modules/menu/transport/http"
 	reportapp "github.com/foods-platform/foods-backend/internal/modules/reporting/application"
 	reportpg "github.com/foods-platform/foods-backend/internal/modules/reporting/infrastructure/postgres"
 	reporthttp "github.com/foods-platform/foods-backend/internal/modules/reporting/transport/http"
@@ -33,6 +37,7 @@ import (
 
 func newAPI(db *pgxpool.Pool) *legacy.API {
 	return legacy.NewWithHandlers(db, legacy.Handlers{
+		MenuCatalog:            menuhttp.NewCatalog(menuapp.NewCatalog(menupg.NewCatalog(db), database.NewUnitOfWork(db), auditpg.New(db), menufiles.Images{Directory: "./uploads/products"})),
 		PaymentMethods:         billinghttp.NewMethods(billingapp.NewMethods(billingpg.NewMethods(db), database.NewUnitOfWork(db))),
 		Floor:                  servicehttp.NewFloor(serviceapp.NewFloor(servicepg.NewFloor(db), database.NewUnitOfWork(db), auditpg.New(db))),
 		Reservations:           servicehttp.NewReservations(serviceapp.NewReservations(servicepg.NewReservations(db), database.NewUnitOfWork(db), auditpg.New(db))),
