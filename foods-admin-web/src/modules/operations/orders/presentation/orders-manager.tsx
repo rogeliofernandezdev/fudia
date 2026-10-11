@@ -4,7 +4,7 @@ import "../../styles/orders.css";
 import dynamic from "next/dynamic";
 import {useState} from "react";
 import {keepPreviousData,useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,ConfirmDialog,EmptyState,ErrorState,Icon,PageHeader,Pagination,RowActionButton,SearchField,Select,Skeleton,Status,TableSkeleton,Tabs,TabsBar} from "@/design-system";
+import {Button,ConfirmDialog,DataTable,EmptyState,ErrorState,Icon,PageHeader,Pagination,RowActionButton,SearchField,Select,Skeleton,Status,TableSkeleton,Tabs,TabsBar} from "@/design-system";
 import type {Order} from "../domain/types";
 import {createManualOrder,getOrder,listOrders,updateOrderStatus} from "../infrastructure/orders-api";
 import type {ManualOrderDraft} from "../domain/manual-order-schema";
@@ -60,8 +60,7 @@ export function OrdersManager(){
   {list.isPending?<TableSkeleton columns={columns} label="Cargando pedidos"/>
   :list.isError?<ErrorState title="No pudimos cargar los pedidos" text={list.error.message} onRetry={()=>list.refetch()} retrying={list.isFetching}/>
   :!items.length?<EmptyState icon="receipt" title={hasActiveFilters?"Sin coincidencias":"Aún no hay pedidos abiertos"} text={hasActiveFilters?"Prueba con otro canal, estado o término de búsqueda.":"Los pedidos nuevos aparecerán aquí cuando ingresen."} action={hasActiveFilters?<Button kind="secondary" icon="close" onClick={clearFilters}>Limpiar filtros</Button>:undefined}/>
-  :<div className="table-wrap hover-scroll">
-    <table className="orders-table">
+  :<DataTable label="Listado de pedidos" containerClassName="hover-scroll" className="orders-table">
      <thead><tr>{columns.map(column=><th key={column}>{column}</th>)}</tr></thead>
      <tbody>{items.map((o,index)=>{const meta=orderStatus(o.status);const subject=o.tableName||o.customerName||"Pedido";const secondary=o.tableName&&o.customerName?o.customerName:undefined;return <tr className={index%2?"alternate":""} key={o.id}>
       <td>
@@ -78,8 +77,7 @@ export function OrdersManager(){
       <td><b className="order-table-total">{money(o.total)}</b></td>
       <td><div className="orders-table-actions"><RowActionButton action="view" label={`Ver detalle de ${subject}`} onClick={()=>setDetailId(o.id)}/></div></td>
      </tr>})}</tbody>
-    </table>
-   </div>}
+   </DataTable>}
   <Pagination page={page} size={size} total={list.data?.total??0} onPage={setPage} onSize={v=>{setSize(v);setPage(1)}}/>
  </section>
  {creating&&canManage&&<ManualOrderDialog channels={channelOptions} currencySymbol={settings.currencySymbol} busy={create.isPending} onClose={()=>{if(!create.isPending)setCreating(false)}} onSave={async draft=>{try{await create.mutateAsync(draft)}catch{/* Feedback conserva el error y el formulario permanece abierto. */}}}/>}
