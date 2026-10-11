@@ -60,5 +60,5 @@ export function renderDetail({order=exampleOrder,skeleton=false,error,variant="o
  const noop=()=>{};
  return renderToStaticMarkup(h(QueryClientProvider,{client:new QueryClient()},
   h("div",{className:"modal-backdrop"},h("section",{className:"crud-modal order-detail",role:"dialog","aria-modal":true,"aria-labelledby":"order-detail-title"},
-   skeleton?h(OrderDetailSkeleton,{variant,close:noop}):h(OrderDetailContent,{variant,order,error,canManage:true,busy,close:noop,retry:noop,advance:noop,add:noop,cancel:noop,edit:editable?noop:undefined})))));
+   skeleton?h(OrderDetailSkeleton,{variant,close:noop}):h(OrderDetailContent,{variant,order,error,canManage:permissions?.includes("orders.manage")??true,busy,close:noop,retry:noop,advance:noop,add:noop,cancel:noop,edit:editable?noop:undefined})))));
 }
