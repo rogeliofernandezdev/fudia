@@ -54,7 +54,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: foods-backend-capacity
-          path: foods-backend/capacity-report.json
+          path: foods-backend/internal/transport/httpapi/capacity-report.json
           if-no-files-found: warn
   deploy:
     needs: verify
