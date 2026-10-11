@@ -42,13 +42,14 @@ td .f2,.row-icon.r2{color:var(--digital-700);background:var(--digital-100)}
 .data-table-hint{display:none}
 
 @media (width<=700px){
-  /* Legacy management tables receive the same scroll/frozen-identity behavior. */
-  .standardized-management .table-wrap:not(.data-table-viewport){overflow-x:auto;overflow-y:hidden}
-  .standardized-management .table-wrap:not(.data-table-viewport)>table{width:max-content;min-width:100%}
-  .standardized-management .table-wrap:not(.data-table-viewport)>table :is(th,td):first-child{position:sticky;inset-inline-start:0;z-index:var(--z-raised);border-inline-end:var(--stroke-1) solid var(--line)}
-  .standardized-management .table-wrap:not(.data-table-viewport)>table thead th:first-child{z-index:calc(var(--z-raised) + 1);background:var(--primary-600)}
-  .standardized-management .table-wrap:not(.data-table-viewport)>table tbody td:first-child{background:var(--surface)}
-  .standardized-management .table-wrap:not(.data-table-viewport)>table tr.alternate td:first-child{background:var(--primary-25)}
+  /* Compatibilidad: todas las tablas informativas en paneles comparten el mismo
+     viewport horizontal y la columna identificadora, aun antes de migrar su JSX. */
+  .panel .table-wrap:not(.data-table-viewport){width:100%;max-width:100%;overflow-x:auto;overflow-y:auto;overscroll-behavior-x:contain}
+  .panel .table-wrap:not(.data-table-viewport)>table{width:max-content;min-width:100%}
+  .panel .table-wrap:not(.data-table-viewport)>table :is(th,td):first-child{position:sticky;inset-inline-start:0;z-index:var(--z-raised);border-inline-end:var(--stroke-1) solid var(--line)}
+  .panel .table-wrap:not(.data-table-viewport)>table thead th:first-child{z-index:calc(var(--z-raised) + 1);background:var(--primary-600)}
+  .panel .table-wrap:not(.data-table-viewport)>table tbody td:first-child{background:var(--surface)}
+  .panel .table-wrap:not(.data-table-viewport)>table tr.alternate td:first-child{background:var(--primary-25)}
   .data-table{width:max-content;min-width:100%}
   .data-table :is(th,td){padding-inline:var(--space-3)}
   .data-table :is(th,td):first-child{position:sticky;inset-inline-start:0;z-index:var(--z-raised);border-inline-end:var(--stroke-1) solid var(--line)}
