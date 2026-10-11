@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/foods-platform/foods-backend/internal/modules/platformadmin/application"
-	subscriptionapp "github.com/foods-platform/foods-backend/internal/modules/subscriptions/application"
+	subscriptioncontracts "github.com/foods-platform/foods-backend/internal/modules/subscriptions/contracts"
 	"github.com/foods-platform/foods-backend/internal/platform/observability"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -16,7 +16,7 @@ import (
 type Diagnostics struct{}
 
 func (Diagnostics) Classify(err error) application.FailureCategory {
-	if errors.Is(err, pgx.ErrNoRows) || errors.Is(err, subscriptionapp.ErrNotFound) {
+	if errors.Is(err, pgx.ErrNoRows) || errors.Is(err, subscriptioncontracts.ErrNotFound) {
 		return application.FailureMissing
 	}
 	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {

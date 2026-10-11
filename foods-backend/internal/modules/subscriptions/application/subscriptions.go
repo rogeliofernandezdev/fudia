@@ -6,6 +6,7 @@ import (
 	audit "github.com/foods-platform/foods-backend/internal/modules/audit/application"
 	orgcontracts "github.com/foods-platform/foods-backend/internal/modules/organizations/contracts"
 	"github.com/foods-platform/foods-backend/internal/modules/subscriptions/domain"
+	subscriptioncontracts "github.com/foods-platform/foods-backend/internal/modules/subscriptions/contracts"
 	"github.com/foods-platform/foods-backend/internal/platform/apperror"
 	"github.com/foods-platform/foods-backend/internal/platform/requestscope"
 	"github.com/foods-platform/foods-backend/internal/platform/unitofwork"
@@ -15,7 +16,8 @@ import (
 	"time"
 )
 
-var ErrNotFound = errors.New("subscription record not found")
+// Alias preserves error identity for callers and PostgreSQL adapters.
+var ErrNotFound = subscriptioncontracts.ErrNotFound
 
 type scope = requestscope.Scope
 type Subscriptions struct {
