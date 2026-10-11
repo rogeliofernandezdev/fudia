@@ -11,7 +11,7 @@ function compile(path,resolve){
  vm.runInNewContext(ts.transpileModule(readFileSync(new URL(path,root),"utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText,{exports,require:resolve});
  return exports;
 }
-function nodes(tree,result=[]){if(Array.isArray(tree)){tree.forEach(node=>nodes(node,result));return result}if(tree&&typeof tree==="object"){result.push(tree);nodes(tree.props?.children,result)}return result}
+function nodes(tree,result=[]){if(Array.isArray(tree)){tree.forEach(node=>nodes(node,result));return result}if(tree&&typeof tree==="object"){result.push(tree);nodes(tree.props?.children,result);nodes(tree.props?.action,result)}return result}
 const active={id:"admin",fullName:"Panchita",email:"owner@example.test",active:true,platformAdmin:false,assignments:[]};
 const inactive={...active,id:"waiter",active:false,fullName:"Mozo"};
 function mount({max=6,usage=6,items=[active,inactive],pending=false,error=false,fetching=false,readPlan=true,manage=true,hasData=true}={}){
@@ -29,7 +29,7 @@ function mount({max=6,usage=6,items=[active,inactive],pending=false,error=false,
   if(name==="../application/use-subscription-capacity")return capacity;
   if(name==="@/providers/session-context")return {useSession:()=>session};
   if(name==="@/providers/feedback-provider")return {useFeedback:()=>({notify:()=>{}})};
-  if(name==="@/design-system")return Object.fromEntries(["Dialog","ConfirmDialog","EmptyState","ErrorState","RemoteModalSkeleton","Icon","IconButton","Button","FormField","Input","PageHeader","Pagination","RowActionButton","SearchField","Select","Status","TableSkeleton","Tabs","Textarea"].map(key=>[key,key]));
+  if(name==="@/design-system")return Object.fromEntries(["Dialog","ConfirmDialog","EmptyState","ErrorState","RemoteModalSkeleton","Icon","IconButton","Button","FormField","Input","PageHeader","Pagination","RowActionButton","SearchField","Select","Status","TableSkeleton","Tabs","TabsBar","Textarea"].map(key=>[key,key]));
   if(name==="@/design-system/dialog")return {Dialog:"Dialog"};
   if(name==="react-hook-form"||name.startsWith("../")||name.endsWith(".css"))return {};
   return require(name);

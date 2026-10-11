@@ -4,7 +4,7 @@ import "../../styles/orders.css";
 import dynamic from "next/dynamic";
 import {useState} from "react";
 import {keepPreviousData,useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,ConfirmDialog,EmptyState,ErrorState,Icon,PageHeader,Pagination,RowActionButton,SearchField,Select,Skeleton,Status,TableSkeleton,Tabs} from "@/design-system";
+import {Button,ConfirmDialog,EmptyState,ErrorState,Icon,PageHeader,Pagination,RowActionButton,SearchField,Select,Skeleton,Status,TableSkeleton,Tabs,TabsBar} from "@/design-system";
 import type {Order} from "../domain/types";
 import {createManualOrder,getOrder,listOrders,updateOrderStatus} from "../infrastructure/orders-api";
 import type {ManualOrderDraft} from "../domain/manual-order-schema";
@@ -46,11 +46,11 @@ export function OrdersManager(){
  const clearFilters=()=>{setQ("");setChannel("");setStatus("abiertos");setPage(1)};
  const loading=detail.isLoading;
  const closeDetail=()=>setDetailId(null);
- return <div className="orders-page-shell"><PageHeader title="Pedidos" description="Revisa el origen, estado y avance de cada pedido sin perder el contexto operativo." action={canManage?<Button icon="plus" disabled={list.isPending||list.isError||!(list.data?.channelOptions.length)} onClick={()=>setCreating(true)}>Nuevo pedido</Button>:undefined}/>
- <div className="orders-tabs-row">
+ return <div className="orders-page-shell"><PageHeader title="Pedidos" description="Revisa el origen, estado y avance de cada pedido sin perder el contexto operativo." />
+ <TabsBar action={canManage?<Button icon="plus" disabled={list.isPending||list.isError||!(list.data?.channelOptions.length)} onClick={()=>setCreating(true)}>Nuevo pedido</Button>:undefined}>
   {list.isPending?<div className="orders-tabs-skeleton" role="status" aria-label="Cargando canales">{Array.from({length:4},(_,index)=><Skeleton key={index} width="var(--size-112)" height="calc(var(--control-height) - var(--size-8))" radius="var(--radius-control)"/>)}</div>
   :<Tabs items={tabs} value={channel} onChange={pickChannel} label="Filtrar pedidos por canal"/>}
- </div>
+ </TabsBar>
  <section className="panel management standardized-management orders-panel" aria-busy={list.isFetching&&list.isPlaceholderData}>
   <div className="toolbar">
    <SearchField label="Buscar pedidos" value={q} onChange={e=>{setQ(e.target.value);setPage(1)}} placeholder="Buscar cliente, mesa o teléfono"/>

@@ -24,12 +24,13 @@ const server=createServer((req,res)=>{
  if(stage)order={...order,status:stage,serviceItems:order.serviceItems.map(item=>({...item,status:stage,statusLabel:{nuevo:"Pendiente",preparando:"Preparando",listo:"Listo",entregado:"Entregado",cancelado:"Cancelado"}[stage]??item.statusLabel}))};
  if(stage==="en_camino")order={...order,channel:"delivery",tableName:undefined,customerName:"Rosa Quispe"};
  if(stage==="cancelado")order={...order,channel:"mostrador",tableName:undefined,customerName:"Rosa Quispe"};
+ if(url.searchParams.has("unassigned"))order={...order,waiterId:undefined,waiterName:undefined};
  const account=url.searchParams.get("account");
  if(account==="paid"||account==="completed")order={...order,status:"entregado",accountState:"paid",paidAmount:"30",remainingAmount:"0",serviceItems:order.serviceItems.map(item=>({...item,status:"entregado",statusLabel:"Entregado"}))};
  if(account==="completed")order={...order,completedAt:"2026-10-10T13:00:00-05:00"};
  if(account==="awaiting")order={...order,billClosedAt:"2026-10-10T13:00:00-05:00",accountState:"awaiting_payment"};
  res.setHeader("content-type","text/html; charset=utf-8");
- res.end(`<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><style>@font-face{font-family:Manrope;font-weight:200 800;src:url(/font.woff2)}:root{--font-manrope:Manrope}${css}</style></head><body><main style="padding:24px"><h1>Pedidos</h1><p>Vista de comprobación; datos ilustrativos, sin operaciones reales.</p></main>${renderDetail({order,userId:url.searchParams.has("readonly")?"another-waiter":undefined,skeleton:url.searchParams.has("skeleton"),error:url.searchParams.has("error")?"Error de prueba":undefined})}</body></html>`);
+ res.end(`<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><style>@font-face{font-family:Manrope;font-weight:200 800;src:url(/font.woff2)}:root{--font-manrope:Manrope}${css}</style></head><body><main style="padding:24px"><h1>Pedidos</h1><p>Vista de comprobación; datos ilustrativos, sin operaciones reales.</p></main>${renderDetail({order,userId:url.searchParams.has("readonly")?"another-waiter":undefined,skeleton:url.searchParams.has("skeleton"),editable:url.searchParams.has("editable"),error:url.searchParams.has("error")?"Error de prueba":undefined})}</body></html>`);
 });
 await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
 const {chromium}=require(process.env.FOODS_PLAYWRIGHT_PATH??"playwright");
@@ -37,7 +38,7 @@ let browser;
 try{
  browser=await chromium.launch({executablePath:process.env.FOODS_BROWSER_PATH,headless:true});
  const results=[];
- for(const [name,width,height,touch,query] of [["desktop",1440,900,false,""],["user-1192",1192,712,false,""],["user-967",967,835,false,""],["mobile",390,844,true,""],["mobile-short",390,480,true,"?long"],["tablet",768,1024,true,"?long"],["delivery",967,835,false,"?delivery"],["delivery-mobile",390,844,true,"?delivery"],["skeleton",967,835,false,"?skeleton"],["error",390,844,true,"?error"],["readonly",967,835,false,"?readonly"],["readonly-mobile",390,844,true,"?readonly"],["account-paid",390,844,true,"?readonly&account=paid"],["account-completed",390,844,true,"?readonly&account=completed"],["account-awaiting",967,835,false,"?readonly&account=awaiting"],...["nuevo","preparando","listo","en_camino","entregado","cancelado"].map(stage=>[`state-${stage}`,1192,835,false,`?stage=${stage}`])]){
+ for(const [name,width,height,touch,query] of [["desktop",1440,900,false,""],["user-1192",1192,712,false,""],["user-967",967,835,false,""],["mobile",390,844,true,""],["new-unassigned-mobile",390,844,true,"?stage=nuevo&unassigned"],["two-secondary-mobile",390,844,true,"?stage=nuevo&unassigned&editable"],["mobile-short",390,480,true,"?long"],["tablet",768,1024,true,"?long"],["delivery",967,835,false,"?delivery"],["delivery-mobile",390,844,true,"?delivery"],["skeleton",967,835,false,"?skeleton"],["skeleton-mobile",390,844,true,"?skeleton"],["error",390,844,true,"?error"],["readonly",967,835,false,"?readonly"],["readonly-mobile",390,844,true,"?readonly"],["account-paid",390,844,true,"?readonly&account=paid"],["account-completed",390,844,true,"?readonly&account=completed"],["account-awaiting",967,835,false,"?readonly&account=awaiting"],...["nuevo","preparando","listo","en_camino","entregado","cancelado"].map(stage=>[`state-${stage}`,1192,835,false,`?stage=${stage}`])]){
   const context=await browser.newContext({viewport:{width,height},hasTouch:touch,reducedMotion:"reduce"});
   const page=await context.newPage();await page.goto(`http://127.0.0.1:${server.address().port}/${query}`);await page.evaluate(()=>document.fonts.ready);
   await page.evaluate(()=>Promise.all(document.getAnimations().filter(animation=>animation.effect?.getTiming().iterations!==Infinity).map(animation=>animation.finished.catch(()=>{}))));
@@ -67,6 +68,12 @@ try{
    const info=document.querySelector(".order-detail-information");
    if(info?.querySelector("time")&&info.querySelector(".order-attribution")){
     if(!(info.querySelector(".order-attribution").compareDocumentPosition(info.querySelector("time"))&Node.DOCUMENT_POSITION_FOLLOWING))throw new Error("El mozo debe preceder a la fecha");
+    const date=info.querySelector(".modal-inline-date").getBoundingClientRect();
+    if(Math.abs(date.right-info.getBoundingClientRect().right)>1)throw new Error("La fecha debe estar al extremo derecho");
+    for(const row of info.querySelectorAll("dl>div")){
+     const label=getComputedStyle(row.querySelector("dt")),value=getComputedStyle(row.querySelector("dd"));
+     if(label.fontSize!==value.fontSize||label.fontSize!=="14px"||label.lineHeight!==value.lineHeight)throw new Error("Etiqueta y nombre deben compartir 14 px e interlineado");
+    }
    }
    const list=document.querySelector(".modal-item-list"),notes=document.querySelector(".modal-detail-notes"),summary=document.querySelector(".modal-summary");
    if(list){
@@ -81,7 +88,7 @@ try{
      if((Math.max(foreground,background)+.05)/(Math.min(foreground,background)+.05)<4.5)throw new Error(`Contraste insuficiente en resumen: ${figure.textContent}`);
     }
    }
-   if(summary&&innerWidth<=700&&summary.querySelector(".modal-summary-lines")?.children.length===2){
+   if(summary?.querySelector(".modal-summary-line b")&&innerWidth<=700&&summary.querySelector(".modal-summary-lines")?.children.length===2){
     const figures=[...summary.querySelectorAll(".modal-summary-line b,.modal-summary-total strong")].map(el=>el.getBoundingClientRect());
     if(figures.length!==3||Math.max(...figures.map(r=>r.y))-Math.min(...figures.map(r=>r.y))>1)throw new Error("Subtotal, Pagado y total deben compartir fila en móvil");
    }
@@ -98,7 +105,7 @@ try{
     const label=accountStatus.textContent.trim();
     if(label==="Pagada"&&!accountStatus.classList.contains("green"))throw new Error("Pagada debe conservar verde");
     if(label==="Finalizada"&&!accountStatus.classList.contains("gray"))throw new Error("Finalizada debe usar gris neutro, no un tono verdoso");
-    if(Math.abs(badge.y+badge.height/2-title.y-title.height/2)<1&&badge.x-title.right>16)throw new Error("Estado de cuenta separado de su título");
+    if(Math.abs(badge.y+badge.height/2-title.y-title.height/2)<1&&Math.abs(badge.right-summary.getBoundingClientRect().right+parseFloat(getComputedStyle(summary).paddingRight))>1)throw new Error("Estado de cuenta fuera del borde derecho del resumen");
    }
    const rect=el=>{if(!el)return null;const r=el.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height,right:r.right,bottom:r.bottom};};
    const body=document.querySelector(".order-detail-body");
@@ -120,6 +127,17 @@ try{
   assert.ok(geometry.modal.bottom<=height,`${name}: panel dentro del viewport`);
   if(geometry.summary)assert.ok(geometry.summary.bottom<=height,`${name}: resumen visible`);
   if(geometry.footer)assert.ok(geometry.footer.bottom<=height,`${name}: acciones visibles`);
+  if(width<=600&&geometry.buttons.length){
+   const rows=new Map();
+   for(const button of geometry.buttons){const key=Math.round(button.y);rows.set(key,[...(rows.get(key)??[]),button]);}
+   const bounds=await page.locator(".modal-action-layout").boundingBox();
+   for(const buttons of rows.values()){
+    assert.ok(Math.abs(buttons[0].x-bounds.x)<1&&Math.abs(buttons.at(-1).right-bounds.x-bounds.width)<1,`${name}: toda fila de acciones llena el ancho útil`);
+    if(buttons.length===2)assert.ok(Math.abs(buttons[0].width-buttons[1].width)<1,`${name}: dos botones comparten ancho por igual`);
+   }
+   if(name==="new-unassigned-mobile"){assert.equal(geometry.buttons.length,2);assert.equal(rows.size,2);}
+   if(name==="two-secondary-mobile"){assert.equal(geometry.buttons.length,3);assert.equal(rows.size,2);assert.equal([...rows.values()][0].length,2);}
+  }
   if(touch)assert.ok(geometry.close.width>=44&&geometry.close.height>=44,`${name}: cierre táctil`);
   assert.equal(geometry.meta,null,`${name}: sin estados junto al cierre`);
   assert.ok(Math.abs(geometry.heading.y+geometry.heading.height/2-geometry.close.y-geometry.close.height/2)<0.5,`${name}: título y cierre alineados`);

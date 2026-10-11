@@ -170,7 +170,7 @@ test("detalle de venta mantiene cierre explícito, reintento, skeleton y vacíos
  assert.ok(mount({data:{...data,paymentStatus:"partial",remainingAmount:"5"}}).some(node=>node.props.children==="Saldo pendiente"));
 });
 
-test("datos de la venta alinean mesa/canal y mozo/fecha sin una tercera fila forzada",()=>{
+test("datos de la venta usan parejas en escritorio y filas compactas compartidas en móvil",()=>{
  const view=mount({data:{...data,order:{...data.order,waiterName:"Daniel Machaca Rojasa"}}});
  const context=view.find(node=>node.props.className==="sales-detail-context");
  assert.deepEqual(nodes(context).filter(node=>node.type==="dt").map(node=>node.props.children),["Mesa","Canal","Atendido por","Fecha del pedido"]);
@@ -179,15 +179,18 @@ test("datos de la venta alinean mesa/canal y mozo/fecha sin una tercera fila for
  assert.equal(direct.some(node=>node.type==="dt"&&node.props.children==="Atendido por"),false);
  const loading=mount({loading:true}).find(node=>node.props.className==="sales-detail-context");
  assert.equal(nodes(loading).filter(node=>node.type==="i").length,4);
- const css=postcss.parse(read("src/modules/sales/presentation/sales.css"));
- const desktop=css.nodes.find(node=>node.type==="rule"&&node.selector===".sales-detail-context dl");
+ assert.ok(nodes(context).some(node=>node.type==="dl"&&node.props.className==="modal-record-data"));
+ assert.ok(nodes(loading).some(node=>node.type==="dl"&&node.props.className==="modal-record-data"));
+ const css=postcss.parse(read("src/design-system/styles/modal.css"));
+ const desktop=css.nodes.find(node=>node.type==="rule"&&node.selector===".modal-record-data");
  assert.ok(desktop.nodes.some(node=>node.prop==="grid-template-columns"&&node.value==="repeat(2,minmax(0,1fr))"));
- assert.equal(css.nodes.some(node=>node.selector===".sales-detail-context dl>div:last-child"),false);
- const mobile=css.nodes.find(node=>node.type==="atrule"&&node.params==="(max-width:620px)");
- const mobileGrid=mobile.nodes.find(node=>node.selector===".sales-detail-context dl");
- assert.equal(mobileGrid.nodes.some(node=>node.prop==="grid-template-columns"),false,"mesa y canal conservan dos columnas");
- assert.ok(mobile.nodes.some(node=>node.selector===".sales-detail-context dl>div:nth-child(2)"&&node.nodes.some(decl=>decl.prop==="text-align"&&decl.value==="right")));
- assert.ok(mobile.nodes.some(node=>node.selector===".sales-detail-context dl>div:nth-child(n+3)"&&node.nodes.some(decl=>decl.prop==="grid-column"&&decl.value==="1/-1")));
+ const mobile=css.nodes.find(node=>node.type==="atrule"&&node.params==="(width<=620px)");
+ const mobileGrid=mobile.nodes.find(node=>node.selector===".modal-record-data");
+ assert.ok(mobileGrid.nodes.some(node=>node.prop==="grid-template-columns"&&node.value==="minmax(0,1fr)"));
+ const row=mobile.nodes.find(node=>node.selector===".modal-record-data>div");
+ assert.ok(row.nodes.some(node=>node.prop==="grid-template-columns"&&node.value==="var(--size-120) minmax(0,1fr)"));
+ assert.ok(row.nodes.some(node=>node.prop==="align-items"&&node.value==="baseline"));
+ assert.doesNotMatch(read("src/modules/sales/presentation/sales.css"),/\.sales-detail-context dl/);
 });
 
 test("CSS de ventas tiene dueño único por contexto y reorganiza el detalle móvil",()=>{
@@ -211,7 +214,7 @@ test("venta usa listas y resumen compartidos, separa pagos y conserva la única 
  const summary=nodes(workspace.props.summary);
  assert.ok(summary.some(node=>node.props.className==="modal-summary-total"));
  assert.ok(summary.some(node=>node.type==="strong"&&node.props.children==="MON 55.00"));
- const button=view.find(node=>node.type==="Button");assert.equal(view.filter(node=>node.type==="Button").length,1);button.props.onClick();assert.equal(opened,1);
+ const button=view.find(node=>node.type==="Button");assert.equal(view.filter(node=>node.type==="Button").length,1);assert.equal(button.props.children,"Ver resumen de pago");assert.equal(button.props.kind,"secondary");assert.equal(button.props.icon,"eye");button.props.onClick();assert.equal(opened,1);
  assert.equal(view.filter(node=>node.type==="Status").length,1,"el estado no se duplica en el footer de acciones");
  assert.ok(view.some(node=>node.props.className==="modal-detail-notes sales-detail-notes"));
  assert.match(read("src/modules/sales/presentation/sales.css"),/\.sales-detail-section\+\.sales-detail-section\{[^}]*border-top:var\(--stroke-1\) solid var\(--line\)/);

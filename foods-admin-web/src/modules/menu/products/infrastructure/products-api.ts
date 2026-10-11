@@ -16,6 +16,20 @@ export function listCategories(page:number,pageSize:number,productType?:ProductT
   return apiFetch<List<Category>>(`categories?${params.toString()}`);
 }
 
+/** Los filtros locales y los selectores necesitan todas las categorías del API. */
+export async function listAllCategories():Promise<List<Category>>{
+ const first=await listCategories(1,100);
+ const items=[...first.items];
+ const pageSize=first.pageSize??first.items.length;
+ if(!pageSize&&first.total)throw new Error("No pudimos cargar todas las categorías.");
+ for(let page=2;items.length<first.total;page++){
+  const next=await listCategories(page,pageSize);
+  if(!next.items.length)throw new Error("No pudimos cargar todas las categorías.");
+  items.push(...next.items);
+ }
+ return {...first,items};
+}
+
 export function listProducts(query:ProductQuery){
   const params=new URLSearchParams({
     q:query.search,

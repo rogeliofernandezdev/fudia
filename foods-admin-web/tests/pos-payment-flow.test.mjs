@@ -190,6 +190,14 @@ test("detalle de cobro conserva permisos de devolución, turno y cierre",()=>{
  for(const order of [{...detail.order,completedAt:"2026-10-10T15:00:00Z"},{...detail.order,status:"cancelado"}])assert.equal(render({data:{...detail,order,payments:[payment]}}).some(node=>node.props.children==="Devolver"),false);
 });
 
+test("consultar el resumen de pago es secundario y no repite el cobro",()=>{
+ const {POSDetailDialog}=mountPage();let opened=0;
+ const props={loading:false,data:detail,canManage:false,hasShift:false,formatMoney:String,formatDateTime:String,close:()=>{},refund:()=>{},ticket:()=>opened++};
+ const button=nodes(POSDetailDialog(props)).find(node=>node.type==="Button"&&node.props.children==="Ver resumen de pago");
+ assert.equal(button.props.kind,"secondary");assert.equal(button.props.icon,"eye");button.props.onClick();assert.equal(opened,1);
+ for(const changes of [{loading:true},{error:"Sin conexión"},{data:undefined},{data:{...detail,paidAmount:"0"}}])assert.equal(nodes(POSDetailDialog({...props,...changes})).some(node=>node.props.children==="Ver resumen de pago"),false);
+});
+
 test("detalle de cobro no muestra importes anteriores en carga, error o ausencia de datos",()=>{
  const {POSDetailDialog}=mountPage();const props={loading:false,data:detail,canManage:false,hasShift:false,formatMoney:String,formatDateTime:String,close:()=>{},refund:()=>{}};
  for(const changes of [{loading:true},{error:"Sin conexión"},{data:undefined}]){
@@ -208,15 +216,17 @@ test("POS móvil no combina pantalla completa con márgenes del backdrop",()=>{
  assert.match(css,/@media\(max-width:600px\)\{\s*\.crud-modal\.pos-payment-modal,\.crud-modal\.pos-detail-modal\{width:100%;height:100dvh;max-height:100dvh/);
  assert.equal(css.includes("width:100vw"),false);
  assert.equal(css.includes(".pos-order-lines strong{grid-column:2}"),false);
- assert.match(css,/\.pos-detail-context dl>div:nth-child\(n\+3\)\{grid-column:1\/-1/);
+ assert.doesNotMatch(css,/\.pos-detail-context dl/);
 });
 
-test("datos de cobro diferencian etiquetas y valores y alinean el canal al extremo móvil",()=>{
+test("datos de cobro diferencian etiquetas y valores y comparten filas compactas en móvil",()=>{
  const css=readFileSync(new URL("pos.css",root),"utf8");
  assert.doesNotMatch(css,/\.pos-detail-context (?:dt|dd)\{[^}]*font-weight:/,"la jerarquía pertenece al modal compartido");
  assert.match(css,/\.pos-order-lines>div>span\{[^}]*font-weight:var\(--weight-semibold\)/);
- assert.match(css,/\.pos-detail-context dl>div:nth-child\(2\)\{text-align:right\}/);
- assert.match(css,/\.pos-detail-context dl>div:nth-child\(n\+3\)\{[^}]*grid-template-columns:var\(--size-104\) minmax\(0,1fr\)/);
+ assert.match(readFileSync(new URL("pos-page.tsx",root),"utf8"),/className="pos-detail-context"[^>]*><dl className="modal-record-data">/);
+ const shared=readFileSync(new URL("../src/design-system/styles/modal.css",import.meta.url),"utf8");
+ assert.match(shared,/@media\(width<=620px\)\{\s*\.modal-record-data\{grid-template-columns:minmax\(0,1fr\)/);
+ assert.match(shared,/\.modal-record-data>div\{[^}]*grid-template-columns:var\(--size-120\) minmax\(0,1fr\)/);
 });
 
 test("el contexto etiqueta el dato real sin mezclar cliente y mesa",()=>{

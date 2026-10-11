@@ -3,7 +3,7 @@ import {Dialog} from "@/design-system/dialog";
 import "./cash.css";
 import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,ConfirmDialog,EmptyState,ErrorState,Icon,IconButton,PageHeader,Pagination,RemoteModalSkeleton,RowActionButton,SearchField,Select,Skeleton,Status,TableSkeleton,Tabs,ModalHeader} from "@/design-system";
+import {Button,ConfirmDialog,EmptyState,ErrorState,Icon,IconButton,PageHeader,Pagination,RemoteModalSkeleton,RowActionButton,SearchField,Select,Skeleton,Status,TableSkeleton,Tabs,TabsBar,ModalHeader} from "@/design-system";
 import {useFeedback,useMoney,useSession} from "@/providers";
 import {useSettings} from "@/providers/settings-context";
 import {formatRegionalCalendarDate,formatRegionalDateTime} from "@/shared/i18n/regional-format";
@@ -211,13 +211,12 @@ export function CashPage(){
     <PageHeader
       title="Caja y turnos"
       description="Controla las cajas del local, sus turnos y el efectivo esperado en tiempo real."
-      action={headerAction}
     />
 
     <section className="panel standardized-management cash-panel">
-      <div className="cash-tabs-bar">
+      <TabsBar action={headerAction}>
         <Tabs label="Caja y turnos" value={tab} onChange={changeTab} items={[{value:"registers",label:"Cajas",icon:"sales",...(registerItems.length?{count:registerItems.length}:{})},{value:"history",label:"Turnos",icon:"clock"}]}/>
-      </div>
+      </TabsBar>
 
       {tab==="registers"
         ?<><h2 className="sr-only">Cajas</h2><CashRegisters

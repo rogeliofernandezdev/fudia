@@ -30,6 +30,33 @@ Aplica a Ventas, Punto de venta, Pedidos, Carta y productos, Mesas, Menús y
 combos, Recetas, Inventario, Kárdex, Compras, Clientes, Gastos, Reservas,
 Locales, Usuarios y roles, Medios de pago y Empresas.
 
+### Listado operativo de Disponibilidad
+
+`PageHeader` presenta Disponibilidad y la fecha operativa con calendario. Un
+único panel contiene búsqueda, categoría remota, filas y `Pagination` del API.
+La cabecera y las filas comparten cinco columnas: Producto, Disponibilidad,
+Cupo de hoy, Unidades de hoy y Acciones. Producto reúne foto/icono, nombre,
+categoría y control; el balance reúne vendidas y restantes. Sin control
+reemplaza cupo y balance por una explicación que abarca ambos espacios.
+Inventario explica su origen junto al balance y conserva la unidad real.
+
+El cambio responsive depende del ancho del panel: hasta 1020 px, tarjetas con
+identidad/estado arriba, cupo/balance debajo y acciones al pie; hasta 520 px,
+identidad y estado se apilan y vendidas/restantes usan parejas etiqueta/valor.
+Las acciones estrechas tienen dos columnas del mismo ancho o una acción a ancho
+completo; Historial incorpora su etiqueta visible. El listado no requiere
+scroll horizontal en estos tamaños. Los controles usan el token central de
+44 px en escritorio/tablet y 48 px en móvil, con tipografía editable de 16 px
+en táctil. Skeleton reproduce la composición; error con Reintentar y vacío
+ocupan el panel sin conservar cifras anteriores. El historial sigue siendo
+un modal de consulta separado con su scroll horizontal controlado.
+
+Esta plantilla usa las primitivas compartidas con acciones operativas explícitas:
+Guardar junto al cupo editado, Agotar/Reactivar secundarios e Historial con reloj.
+Los avisos permanecen compactos junto al estado. La especificación visual y las
+restricciones de cantidad, motivo y permisos viven en `02_DESIGN_SYSTEM.md`;
+esta composición no sustituye la plantilla de gestión de otros módulos.
+
 ### Configuración y detalle
 
 `PageHeader` con `back` hacia la ruta padre y `meta` para el estado. El cuerpo se
@@ -90,8 +117,10 @@ El aviso no agrega margen lateral ni superior y conserva 21 px de separación
 inferior. En móvil el texto puede envolver sin comprimir los iconos.
 
 El selector de contexto se ancla al control de empresa/local en la barra
-superior. Tiene cabecera compacta con icono, título y X; usa `FormField`,
-`Select`, `IconButton` y `Button` del design system, sin controles locales.
+superior. Tiene cabecera compacta con icono duotono en contenedor `primary-100`,
+título y X; usa `FormField`, `Select`, `IconButton` y `Button` del design system,
+sin controles locales. La X es un `IconButton` neutro y redondo (sin borde ni fondo,
+icono `ink-500`; en hover `cloud-100`) para no competir con el título ni con «Aplicar».
 Empresa precede a Local; cambiar de empresa limpia el local seleccionado.
 «Aplicar» usa azul primario, se habilita únicamente para un destino válido y
 distinto del actual y muestra «Cambiando…» durante la petición. Los campos y
@@ -100,7 +129,10 @@ seleccionar una opción: la aplicación requiere una acción explícita.
 La carga conserva la geometría de campos y acción mediante skeleton; un error
 ofrece Reintentar y los catálogos vacíos se indican explícitamente. En móvil
 el panel ocupa el ancho útil bajo la barra, con altura acotada, scroll cuando
-excede el espacio y controles táctiles de 44 px. Las animaciones respetan
+excede el espacio y controles táctiles de 44 px; usa esquinas de hoja
+(`radius-sheet`), más aire entre campos y «Aplicar» como píldora de 48 px, igual que
+las demás acciones móviles. No se presenta como hoja inferior: vive dentro de la
+barra superior, cuyo `backdrop-filter` impide anclarlo al borde inferior sin portal. Las animaciones respetan
 movimiento reducido. El cambio conserva la limpieza de caché y la navegación
 al primer acceso permitido por el nuevo contexto.
 
@@ -139,8 +171,30 @@ de cuenta. Esto no impide rejillas de campos dentro de un formulario.
 Usar `ModalHeader` y `ModalFooter` en modales de contenido. Cabecera solo con
 icono, título y X, sin información debajo del título. Botones contiguos a la
 derecha, Cancelar antes de Guardar, separación de 10 px. En móvil comparten
-fila cuando caben. Estados reales en resumen o pie, sin estados inventados.
+fila cuando caben, repartiendo el ancho por igual. Si queda un botón solo en
+su fila, llena todo el ancho útil; si se apilan, cada acción llena su fila.
+No dejar medias columnas vacías. Los grupos anidados usan `modal-action-layout`
+y `modal-action-subgroup`; la principal puede reservar fila con `modal-action-main`.
+Estados reales en resumen o pie, sin estados inventados.
 `ConfirmDialog` y respuestas de `FeedbackProvider` quedan exceptuados.
 Etiquetas en seminegrita, valores regulares y títulos de sección en negrita;
 la jerarquía pertenece al sistema compartido, no a cada pantalla. Los detalles
 usan «Mesa», «Cliente» o «Venta» según el dato, sin rótulos combinados.
+
+Las franjas en línea como Mozo + nombre + fecha usan `modal-inline-metadata`:
+etiqueta y valor de 14 px, pesos 600/400 y mismo interlineado. Responsable a la
+izquierda; fecha al extremo derecho con `modal-inline-date`. Si falta espacio,
+la fecha baja sin perder la alineación derecha. No cambia las filas de
+consulta `modal-record-data`, ni etiquetas de campos editables.
+
+En móvil los botones de texto son píldoras (`radius-pill`), también los
+secundarios. La variante depende de la intención: primario para completar la
+tarea, secundario para consultar o una alternativa, neutro para salir sin guardar/Anterior.
+No se fuerza una primaria en un detalle de lectura; «Ver resumen de pago» es
+secundario con icono `eye`. X y campos no heredan este cambio de forma.
+
+Cancelar un registro persistido usa rojo tenue y abre confirmación; confirmar
+su anulación usa rojo sólido. La salida segura Cancelar de esa confirmación
+sigue neutra. Reutilizar `Button action="cancel"`, `"cancel-record"`, `"back"`
+y `"continue"`; Continuar coloca la flecha a la derecha. No añadir colores
+locales. Autoridad: `docs/02_DESIGN_SYSTEM.md` › Colores e intención de Cancelar.

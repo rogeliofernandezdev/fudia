@@ -94,7 +94,7 @@ export function ModalBody({children,className=""}:{children:ReactNode;className?
 /** Pie fijo: acciones contiguas a la derecha, principal al final; estado opcional a la izquierda. */
 export function ModalFooter({children,note,status,statusLabel="Estado",className=""}:{children?:ReactNode;note?:ReactNode;status?:ReactNode;statusLabel?:string;className?:string}){return <footer className={`modal-footer ${className}`.trim()}>{status&&<div className="modal-footer-status"><span>{statusLabel}</span>{status}</div>}{note&&<p className="modal-footer-note">{note}</p>}{children}</footer>}
 /** «Cancelar» homologado: usa el cierre del modal, que confirma el descarte si hay cambios. */
-export function ModalCancel({label="Cancelar"}:{label?:string}){const {requestClose,busy}=useModal();return <Button kind="ghost" onClick={requestClose} disabled={busy}>{label}</Button>}
+export function ModalCancel({label="Cancelar"}:{label?:string}){const {requestClose,busy}=useModal();return <Button action="cancel" onClick={requestClose} disabled={busy}>{label}</Button>}
 
 /** Carga remota dentro del modal: conserva cabecera y X operables; el cuerpo reproduce campos o datos. */
 export function ModalLoading({kind="form",rows=6,label="Cargando"}:{kind?:"form"|"detail";rows?:number;label?:string}){

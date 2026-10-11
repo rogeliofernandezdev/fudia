@@ -1,27 +1,44 @@
 /* Owned styles extracted from the former global stylesheet. */
 .feedback-overlay{backdrop-filter:blur(var(--blur-2));z-index:140;background:var(--ink-950-alpha-40);place-items:center;padding:var(--space-4);display:grid;position:fixed;inset:0}
 .feedback-card{border:var(--stroke-1) solid var(--line);text-align:center;background:var(--surface);border-radius:var(--radius-card);width:min(var(--size-390),100%);padding:var(--space-7) var(--space-6) var(--space-6);position:relative;overflow:hidden;box-shadow:var(--elevation-4)}
+.feedback-card.success{padding-top:var(--space-16);padding-bottom:var(--space-8)}
 .feedback-close{border:var(--stroke-1) solid var(--line);width:var(--control-height);height:var(--control-height);color:var(--ink-500);background:0 0;border-radius:var(--radius-control);place-items:center;transition:border-color var(--duration-fast),background var(--duration-fast),color var(--duration-fast);display:grid;position:absolute;top:var(--space-3);right:var(--space-3)}
 .feedback-close:hover{color:var(--ink-950);background:var(--cloud-100);border-color:var(--line-strong)}
 .feedback-icon{border:var(--stroke-3) solid;border-radius:50%;place-items:center;width:var(--size-76);height:var(--size-76);margin:auto;display:grid}
-.feedback-icon.danger{color:var(--danger);background:var(--danger-50);border-color:var(--danger-200)}
-.feedback-icon.info{color:var(--primary-600);background:var(--primary-100);border-color:var(--line-strong)}
+.feedback-icon.danger{color:var(--danger);background:var(--danger-50);border-color:var(--danger-200);animation:var(--duration-dialog) var(--easing-out) var(--duration-press) both alert-symbol-in}
+.feedback-icon.info{color:var(--primary-600);background:var(--primary-100);border-color:var(--line-strong);animation:var(--duration-dialog) var(--easing-out) var(--duration-press) both alert-symbol-in}
 .feedback-card h2{letter-spacing:var(--letter-spacing-snug);margin:var(--space-5) 0 0;font-size:var(--font-size-lg)}
-.feedback-card.success h2{color:var(--brand-700)}
+.feedback-card.success h2{color:var(--ink-950);font-weight:var(--weight-bold);line-height:var(--line-height-snug)}
 .feedback-card.danger h2{color:var(--danger)}
 .feedback-card.info h2{color:var(--primary-700)}
 .feedback-card p{max-width:var(--size-310);color:var(--ink-600);margin:var(--space-2) auto 0;font-size:var(--font-size-control);line-height:var(--line-height-relaxed)}
+.feedback-card.success p{font-size:var(--font-size-base)}
 .feedback-card.danger .feedback-accept{color:var(--surface);background:var(--danger)}
 .feedback-card.info .feedback-accept{color:var(--surface);background:var(--primary-600)}
 .feedback-overlay.in{animation:var(--duration-base) ease-out both modal-overlay-in}
 .feedback-card.in{animation:var(--duration-dialog) var(--easing-out) both alert-panel-in}
+.feedback-card.success.in{animation:var(--duration-slow) var(--easing-out) both feedback-success-fade}
 .feedback-overlay.out{animation:var(--duration-fast) ease-in both modal-overlay-out}
 .feedback-card.out{animation:var(--duration-fast) ease-in both alert-panel-out}
-.feedback-icon.success{background:var(--brand-100);color:var(--brand-600);border-color:var(--brand-300);animation:var(--duration-ambient-short) var(--easing-spring) var(--duration-press) both alert-success-circle-in}
-.feedback-icon.success svg{stroke-dasharray:80;animation:var(--duration-dialog) var(--easing-out) var(--duration-slow) both alert-success-check-in}
-.feedback-icon.danger,.feedback-icon.info{animation:var(--duration-dialog) var(--easing-out) var(--duration-press) both alert-symbol-in}
-@media (prefers-reduced-motion:reduce){.feedback-overlay,.feedback-card,.feedback-icon,.feedback-icon svg{animation:none!important}}
+.feedback-card.success.out{animation:var(--duration-fast) var(--easing-out) reverse both feedback-success-fade}
+.feedback-icon.success{border:0;color:var(--surface);position:relative;isolation:isolate}
+.feedback-icon.success:before{content:"";position:absolute;inset:0;background:var(--brand-700);border-radius:50%;animation:var(--duration-dialog) var(--easing-spring) both feedback-success-settle}
+.feedback-icon.success svg{position:relative;z-index:1;stroke-width:var(--stroke-3);animation:feedback-success-fade var(--duration-base) var(--easing-out) var(--duration-slow) both}
+@media (prefers-reduced-motion:reduce){.feedback-overlay,.feedback-card,.feedback-icon,.feedback-icon:before,.feedback-icon svg{animation:none!important}}
+@keyframes feedback-success-settle{
+ from{transform:scale(1.3)}
+ to{transform:scale(1)}
+}
+@keyframes feedback-success-fade{from{opacity:0}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){
+ .feedback-card.success.in{animation:feedback-success-fade var(--duration-fast) var(--easing-out) both!important}
+ .feedback-card.success.out{animation:feedback-success-fade var(--duration-fast) var(--easing-out) reverse both!important}
+}
 .feedback-accept:before{content:"";background:currentColor;flex:0 0 var(--size-14);align-self:center;width:var(--size-14);height:var(--size-14);margin:0;display:block;-webkit-mask-image:var(--icon-mask-check);mask-image:var(--icon-mask-check);-webkit-mask-position:50%;mask-position:50%;-webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
 .feedback-accept{min-width:var(--size-112);height:var(--control-height);min-height:var(--control-height);color:var(--ink-950);background:var(--brand-600);border:0;border-radius:var(--radius-control);justify-content:center;align-items:center;gap:var(--space-2);margin-top:var(--space-6);padding:0 var(--space-4);font-size:var(--font-size-control);font-weight:var(--weight-bold);line-height:var(--line-height-none);display:inline-flex}
+.feedback-card.success .feedback-accept{background:var(--surface);color:var(--ink-950);border:var(--stroke-1) solid var(--line-strong);padding-inline:var(--space-8);transition:background var(--duration-fast) var(--easing-out),border-color var(--duration-fast) var(--easing-out)}
+.feedback-card.success .feedback-accept:before{display:none}
 .feedback-accept:hover{color:var(--surface);background:var(--brand-700)}
 .feedback-accept svg{color:currentColor}
+@media (hover:hover) and (pointer:fine){.feedback-card.success .feedback-accept:hover{background:var(--cloud-50);border-color:var(--ink-400)}}
+@media (max-width:600px){.feedback-card.success .feedback-accept{border-radius:var(--radius-pill)}}

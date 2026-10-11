@@ -17,7 +17,7 @@
 .crud-modal>header>button::before,.modal-close::before{content:"";position:absolute;inset:50% auto auto 50%;width:var(--size-32);height:var(--size-32);box-sizing:border-box;transform:translate(-50%,-50%);border:var(--stroke-1) solid var(--surface);border-radius:var(--radius-control);pointer-events:none}
 .crud-modal>header>button:focus-visible,.modal-close:focus-visible{outline:var(--stroke-2) solid var(--surface);outline-offset:var(--space-0-5)}
 .crud-modal>header>button:active:not(:disabled),.modal-close:active:not(:disabled){transform:scale(.94)}
-.crud-modal>header>button:disabled,.modal-close:disabled{cursor:not-allowed;opacity:.4}
+.crud-modal>header>button:disabled,.modal-close:disabled{cursor:not-allowed;opacity:1}
 .modal-title-icon{display:grid;flex:none;place-items:center;width:var(--size-44);height:var(--size-44);border-radius:var(--radius-control);color:var(--surface);background:transparent}
 .crud-modal>header .modal-title-icon>svg,.crud-modal>header>button>svg,.modal-header .modal-title-icon>svg,.modal-header>.modal-close>svg{width:var(--size-20);height:var(--size-20);flex:none}
 .crud-modal>header .modal-heading,.modal-header .modal-heading{display:grid;flex:1 1 0;min-width:0}
@@ -30,9 +30,29 @@
 /* Jerarquía de datos compartida: concepto 600, contenido 400; importes y estados
  * destacados conservan sus roles explícitos. No afecta confirmaciones ni feedback. */
 .crud-modal :where(dt,.modal-data-label){font-size:var(--font-size-label);font-weight:var(--modal-label-weight);color:var(--ink-700)}
-.crud-modal :where(dd,.modal-data-value){font-size:var(--font-size-control);font-weight:var(--modal-value-weight);color:var(--ink-950);overflow-wrap:anywhere}
+.crud-modal :where(dd,.modal-data-value){font-size:var(--font-size-base);font-weight:var(--modal-value-weight);color:var(--ink-950);overflow-wrap:anywhere}
 .crud-modal dd small{font-size:var(--font-size-label);font-weight:var(--modal-value-weight);color:var(--ink-500)}
-.crud-modal h3{font-weight:var(--weight-bold)}
+.crud-modal h3{font-size:var(--font-size-md);font-weight:var(--weight-bold)}
+
+/* Franja de lectura: responsable primero, fecha al borde opuesto; misma escala. */
+.modal-inline-metadata{display:flex;flex-wrap:wrap;align-items:baseline;gap:var(--space-2) var(--space-4);min-width:0}
+.modal-inline-metadata>dl{flex:1 1 var(--size-170);min-width:0}
+.modal-inline-metadata :is(dt,dd){font-size:var(--font-size-base);line-height:var(--line-height-normal)}
+.modal-inline-date{display:inline-flex;align-items:center;justify-content:flex-end;gap:var(--space-1-5);margin-inline-start:auto;max-width:100%;text-align:right;font-size:var(--font-size-label)}
+.modal-inline-date svg{flex:none}
+.modal-inline-date time{min-width:0;overflow-wrap:anywhere}
+.modal-inline-description{flex-basis:100%;min-width:0;overflow-wrap:anywhere}
+
+/* Datos de consulta: parejas en escritorio, filas etiqueta/valor en móvil. */
+.modal-record-data{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:var(--space-3) var(--space-6);margin:0;min-width:0}
+.modal-record-data>div{min-width:0}
+.modal-record-data dd{margin:var(--space-1) 0 0}
+.modal-record-data dd small{display:block;margin-top:var(--space-1)}
+@media(width<=620px){
+  .modal-record-data{grid-template-columns:minmax(0,1fr);gap:var(--space-2-5)}
+  .modal-record-data>div{display:grid;grid-template-columns:var(--size-120) minmax(0,1fr);align-items:baseline;gap:var(--space-3)}
+  .modal-record-data dd{min-width:0;margin:0}
+}
 
 /* Patrón de detalle: no se usa en formularios sin un resumen real. */
 .crud-modal>.modal-workspace{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;overflow:hidden}
@@ -44,10 +64,11 @@
 .modal-item-row:last-child{padding-bottom:var(--space-1);border-bottom:0}
 .modal-item-quantity{display:grid;place-items:center;min-width:0;min-height:var(--size-32);border-radius:var(--radius-pill);background:var(--primary-100);color:var(--primary-700);font-size:var(--font-size-control);font-weight:var(--weight-bold);font-variant-numeric:tabular-nums;line-height:var(--line-height-none);overflow-wrap:anywhere}
 .modal-detail-notes{display:flex;align-items:flex-start;gap:var(--space-2);padding:var(--space-3);border-radius:var(--radius-control);background:var(--cloud-50)}
-.modal-summary-heading{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2) var(--space-3);padding-bottom:var(--space-3);border-bottom:var(--stroke-1) solid var(--line)}
-.modal-summary h3{margin:0;color:var(--ink-950);font-size:var(--font-size-base);font-weight:var(--weight-bold);line-height:var(--line-height-snug)}
+.modal-summary-heading{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-2) var(--space-3);padding-bottom:var(--space-3);border-bottom:var(--stroke-1) solid var(--line)}
+.modal-summary h3{margin:0;color:var(--ink-950);font-size:var(--font-size-md);font-weight:var(--weight-bold);line-height:var(--line-height-snug)}
 .modal-summary-lines{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;gap:var(--space-3) var(--space-6)}
 .modal-summary-line{min-width:0;display:flex;flex-direction:column;gap:var(--space-1);color:var(--ink-700);font-size:var(--font-size-label);font-weight:var(--modal-label-weight)}
+.modal-summary-line:nth-child(even){padding-left:var(--space-6);border-left:var(--stroke-1) solid var(--line)}
 .modal-summary-line b{color:var(--ink-950);font-size:var(--font-size-lg);font-weight:var(--modal-value-weight);font-variant-numeric:tabular-nums;overflow-wrap:anywhere;line-height:var(--line-height-tight)}
 .modal-summary-total{min-width:0;display:flex;flex-direction:column;align-items:flex-end;text-align:right;gap:var(--space-1);padding-left:var(--space-6);border-left:var(--stroke-1) solid var(--line)}
 .modal-summary-total span{color:var(--primary-700);font-size:var(--font-size-label);font-weight:var(--weight-semibold)}
@@ -68,6 +89,7 @@
 :is(.modal-footer,.crud-modal>form>footer) .button.ghost:not(:has(svg))::before{-webkit-mask-image:var(--icon-mask-close);mask-image:var(--icon-mask-close)}
 .modal-footer>.modal-footer-note{flex-basis:100%;margin:0;color:var(--ink-500);font-size:var(--font-size-xs);line-height:var(--line-height-normal)}
 .modal-footer .button,.crud-modal>footer .button,.crud-modal>form>footer .button{min-width:var(--size-104)}
+.modal-action-layout{min-width:0;display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:var(--space-2-5)}
 
 .modal-loading{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;gap:var(--space-4)}
 .modal-loading.detail{grid-template-columns:1fr}
@@ -87,8 +109,6 @@
 @keyframes modal-sheet-in{from{transform:translateY(100%)}to{transform:none}}
 @keyframes alert-panel-in{0%{opacity:0;transform:scale(.88) translateY(var(--size-12))}55%{opacity:1;transform:scale(1.02)}to{opacity:1;transform:none}}
 @keyframes alert-panel-out{to{opacity:0;transform:scale(.96) translateY(var(--size-6))}}
-@keyframes alert-success-circle-in{0%{opacity:0;transform:scale(.4)}48%{opacity:1;transform:scale(1.1);box-shadow:var(--ring-pulse-success)}80%{transform:scale(1.02);box-shadow:var(--ring-pulse-end)}to{opacity:1;transform:none}}
-@keyframes alert-success-check-in{0%{opacity:0;stroke-dashoffset:var(--size-80);transform:scale(.6)}60%{opacity:1;transform:scale(1.08)}to{opacity:1;stroke-dashoffset:0;transform:none}}
 @keyframes alert-symbol-in{0%{opacity:0;transform:scale(.6)}60%{opacity:1;transform:scale(1.08)}to{opacity:1;transform:none}}
 
 @media (width<=700px){
@@ -96,6 +116,7 @@
   .modal-summary-heading{padding-bottom:var(--space-2)}
   .modal-summary-lines{gap:var(--space-2)}
   .modal-summary-total{padding-left:var(--space-2)}
+  .modal-summary-line:nth-child(even){padding-left:var(--space-2)}
   .modal-summary-total strong{font-size:var(--font-size-lg)}
 }
 @media (width<=600px){
@@ -118,6 +139,12 @@
   .modal-footer,.crud-modal>footer,.crud-modal>form>footer{padding-inline:var(--space-4)}
   .modal-footer-status{flex-basis:100%}
   .modal-footer .button,.crud-modal>footer .button,.crud-modal>form>footer .button{flex:1;min-width:0}
+  .modal-action-layout{width:100%}
+  .modal-action-layout>.modal-action-subgroup{display:contents}
+  .modal-footer .modal-action-layout .button{flex:1 1 var(--size-150);width:auto;min-width:0;height:auto;min-height:var(--size-48);padding:0 var(--space-3);white-space:normal;line-height:var(--line-height-tight)}
+  .modal-footer .modal-action-layout .modal-action-main{flex-basis:100%}
+  .modal-action-layout>.ds-skeleton{flex:1 1 var(--size-150);min-width:0;max-width:100%}
+  .modal-action-layout>.ds-skeleton.modal-action-main{flex-basis:100%}
   .modal-loading{grid-template-columns:1fr}
 }
 @media (prefers-reduced-motion:reduce){

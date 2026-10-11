@@ -1,4 +1,5 @@
 "use client";
+import type {ReactNode} from "react";
 import {useMutation,useQueryClient} from "@tanstack/react-query";
 import {Button,Status} from "@/design-system";
 import {useSession,useFeedback} from "@/providers";
@@ -16,12 +17,17 @@ function useServiceMutation(){
  },onError:error=>notify({tone:"danger",title:"No se pudo actualizar",message:error.message})});
 }
 
-export function OrderItemService({order,itemId}:{order:TableAccount;itemId:string}){
+/** Destino y estado por producto. `lead` (precio unitario) comparte la fila con el destino; el estado queda alineado a la derecha y se omite con `hideStatus` cuando todas las preparaciones comparten estado y el estado del pedido ya lo expresa. */
+export function OrderItemService({order,itemId,lead,hideStatus=false}:{order:TableAccount;itemId:string;lead?:ReactNode;hideStatus?:boolean}){
  const items=(order.serviceItems??[]).filter(item=>item.orderItemId===itemId);
- if(!items.length)return null;
- return <div className="order-service-lines">{items.map(item=><div className="order-service-line" key={item.id}>
-  <div>{items.length>1&&<span>{item.name}</span>}<small>{item.destinationLabel}</small><Status tone={serviceStatusTone(item.status)}>{item.statusLabel}</Status></div>
- </div>)}</div>;
+ if(!items.length)return lead?<div className="order-service-lines"><div className="order-service-line"><div>{lead}</div></div></div>:null;
+ const single=items.length===1;
+ return <div className="order-service-lines">
+  {!single&&lead&&<div className="order-service-line"><div>{lead}</div></div>}
+  {items.map(item=><div className="order-service-line" key={item.id}>
+   <div>{single&&lead}{!single&&<span>{item.name}</span>}<small>{item.destinationLabel}</small></div>{!hideStatus&&<Status tone={serviceStatusTone(item.status)}>{item.statusLabel}</Status>}
+  </div>)}
+ </div>;
 }
 
 export function OrderAccountActions({order,onAdd,busy=false}:{order:TableAccount;onAdd?:()=>void;busy?:boolean}){

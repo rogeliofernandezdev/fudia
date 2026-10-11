@@ -59,10 +59,13 @@
   /* Entrega completada: azul petróleo, distinto de Listo y de Pagada. */
   --teal-100: #e6f5f7;
   --teal-700: #0b6b78;
+  --teal-200: #cce4e8;
 
   /* Cuenta abierta: celeste, distinto del índigo de Confirmado. */
   --sky-100: #e0f2fe;
   --sky-800: #075985;
+  /* Tinte de selección de chips: un paso sobre el fondo tenue de su familia */
+  --sky-200: #c2dded;
 
   /* Advertencia y notas */
   --warning-50: #fff6ec;
@@ -365,7 +368,7 @@
   --elevation-side-end: -12px 0 32px -14px var(--navigation-900-alpha-16);
   --elevation-primary: 0 1px 2px var(--primary-600-alpha-24), 0 6px 14px -6px var(--primary-600-alpha-48);
   --elevation-selected: 0 0 0 1px var(--primary-600), 0 8px 18px -8px var(--primary-600-alpha-32);
-  --ring-focus: 0 0 0 3px var(--primary-600-alpha-24);
+  --ring-focus: 0 0 0 3px var(--primary-600-alpha-10);
   --ring-focus-soft: 0 0 0 3px var(--primary-100);
   --ring-danger: 0 0 0 3px var(--danger-600-alpha-16);
   --ring-selected: inset 0 0 0 1px var(--primary-600);
@@ -419,11 +422,22 @@
   --motion-dialog-duration: var(--duration-dialog);
   --motion-dialog-easing: var(--easing-out);
 
+  /* Iconografía duotono: trazo neutro, detalle índigo y tinte del estado activo */
+  --icon-line: var(--ink-800);
+  --icon-accent: var(--primary-600);
+  --icon-accent-inverse: var(--primary-400);
+  /* Acento derivado del color del icono: más claro y, si el color es neutro, índigo.
+     Tinta → índigo; índigo → índigo claro; blanco → blanco; rojo/verde/ámbar conservan su tono. */
+  --icon-accent-lift: .15;
+  --icon-accent-chroma: .17;
+  --icon-accent-auto: oklch(from currentColor min(calc(l + var(--icon-accent-lift)), 1) max(c, calc(var(--icon-accent-chroma) * clamp(0, (.9 - l) * 4, 1))) h);
+  --icon-fill-active: color-mix(in srgb, currentColor 16%, transparent);
+
   /* Iconos embebidos */
-  --icon-mask-check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5L20 7'/%3E%3C/svg%3E");
-  --icon-mask-close: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'%3E%3Cpath d='M6 6l12 12M18 6 6 18'/%3E%3C/svg%3E");
+  --icon-mask-check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5L20 7'/%3E%3C/svg%3E");
+  --icon-mask-close: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round'%3E%3Cpath d='M6 6l12 12M18 6 6 18'/%3E%3C/svg%3E");
   --select-chevron-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%2359617c' stroke-width='1.7' stroke-linecap='round'%3E%3Cpath d='m6 8 4 4 4-4'/%3E%3C/svg%3E");
-  --icon-mask-refresh: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'%3E%3Cpath d='M20 6v5h-5M4 18v-5h5M6.1 8A7 7 0 0 1 18 6l2 5M4 13l2 5a7 7 0 0 0 11.9-2'/%3E%3C/svg%3E");
+  --icon-mask-refresh: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round'%3E%3Cpath d='M20 6v5h-5M4 18v-5h5M6.1 8A7 7 0 0 1 18 6l2 5M4 13l2 5a7 7 0 0 0 11.9-2'/%3E%3C/svg%3E");
   --loader-wave-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 240' preserveAspectRatio='none'%3E%3Cpath d='M0 12 Q15 0 30 12 T60 12 T90 12 T120 12 V240 H0 Z'/%3E%3C/svg%3E");
 }
 
@@ -443,9 +457,13 @@ body {
   --control-height: var(--size-44);
 }
 
+.availability-panel {
+  --control-height: var(--size-44);
+}
+
 .availability-table-wrap {
-  --availability-columns: minmax(var(--size-240), 1.3fr) var(--size-168) var(--size-150) var(--size-116) var(--size-96) var(--size-120) minmax(var(--size-280), .95fr);
-  --availability-min-width: calc(var(--size-240) + var(--size-168) + var(--size-150) + var(--size-116) + var(--size-96) + var(--size-120) + var(--size-280));
+  --availability-columns: minmax(var(--size-260), 1.5fr) minmax(var(--size-168), 1fr) var(--size-176) var(--size-176) var(--size-208);
+  --availability-min-width: calc(var(--size-260) + var(--size-168) + var(--size-176) + var(--size-176) + var(--size-208));
 }
 
 .kitchen-page {
@@ -467,6 +485,10 @@ body {
 }
 
 @media (width<=600px) {
+  .availability-panel {
+    --control-height: var(--size-48);
+  }
+
   :root,
   .setup-tour,
   .restaurant-setup {

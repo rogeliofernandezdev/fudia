@@ -1,6 +1,7 @@
 /* Planes SaaS — catálogo comercial de Plataforma */
 .plan-toolbar{display:flex;align-items:center;justify-content:space-between;gap:var(--space-4);min-height:var(--size-64);padding:var(--space-3) var(--space-4) var(--space-3) var(--space-5);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-card);background:var(--surface);box-shadow:var(--elevation-1)}
 .plan-toolbar>b{font-size:var(--font-size-sm);color:var(--ink-950)}
+.plan-toolbar .ds-tabs-bar{margin-bottom:0}
 
 .plan-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-4);margin-top:var(--space-4);align-items:stretch}
 .plan-card{position:relative;display:flex;flex-direction:column;padding:0;overflow:hidden;border:var(--stroke-1) solid var(--line);border-radius:var(--radius-card);background:var(--surface);box-shadow:var(--elevation-1)}

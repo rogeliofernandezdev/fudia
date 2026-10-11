@@ -44,11 +44,37 @@ La autoridad visual exclusiva de este proyecto es
   `ConfirmDialog` y respuestas success/error/warning de `FeedbackProvider`.
 - Los modales de solo lectura (detalle, vista previa) no llevan botón
   "Cerrar" en el footer: el botón X del header es el único cierre.
-- Jerarquía obligatoria de modales: etiquetas de datos 600, valores 400 y
-  títulos de sección 700. Usar los roles de `modal.css`; no invertir pesos
+- Botones: como máximo una acción primaria por superficie para completar la
+  tarea; consultar es secundario aunque sea la única acción (por ejemplo,
+  «Ver resumen de pago», icono `eye`). Salir sin guardar y Anterior son neutros. Todos los
+  botones de texto usan `radius-pill` en móvil (≤600 px) desde el estilo
+  compartido; no cambia la geometría de campos ni la X. Autoridad y ejemplos:
+  `docs/02_DESIGN_SYSTEM.md` › Jerarquía de acciones y botones móviles.
+- Colores por intención, nunca por pantalla: Cancelar para salir sin guardar
+  usa `Button action="cancel"` (neutro); cancelar un pedido/orden persistido
+  usa `action="cancel-record"` (rojo tenue) y pide confirmación. La confirmación
+  destructiva usa rojo sólido; su botón seguro Cancelar sigue neutro. Anterior
+  usa `action="back"`; Continuar usa `action="continue"` (índigo, flecha a la
+  derecha del texto). No recolorear estas acciones en CSS de módulos ni inferir
+  intención desde la etiqueta. Variantes y hover pertenecen a `globals.css`.
+- Distribución móvil del pie: dos acciones de la misma fila comparten el ancho
+  por igual si caben; un botón solo en su fila ocupa todo el ancho útil, también
+  Cancelar. Si las acciones se apilan, cada una ocupa el 100 %, sin huecos de
+  media columna. Reutilizar `modal-action-layout` para grupos anidados;
+  `modal-action-main` permite la acción principal en una fila propia. No aplica
+  a iconos, confirmaciones ni feedback.
+- Jerarquía obligatoria de modales: etiquetas de datos 12 px / 600, valores 14 px / 400 y
+  títulos de sección 16 px / 700, también en móvil. Reservar el tamaño móvil
+  de control (16 px) para campos editables, no para datos informativos.
+  Usar los roles de `modal.css`; no invertir pesos
   por pantalla. Totales principales, estados, productos y acciones conservan
   su énfasis semántico. La etiqueta identifica el dato: «Mesa», «Cliente» o
   «Venta», nunca «Cliente / Mesa» en un detalle. No afecta los avisos ni el PDF.
+- Excepción explícita para franjas de lectura en línea: `modal-inline-metadata`
+  usa etiqueta y valor de 14 px con el mismo interlineado (etiqueta 600, valor
+  400). Responsable a la izquierda y `modal-inline-date` al extremo derecho;
+  si falta espacio, la fecha baja a otra fila conservando la alineación derecha.
+  No cambiar la escala de formularios ni de `modal-record-data`.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

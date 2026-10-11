@@ -58,7 +58,7 @@ export function ManualOrderDialog({channels,currencySymbol,busy,onClose,onSave}:
        </>}
       </fieldset>
      </div>
-     <ModalFooter className="manual-order-actions"><Button kind="secondary" disabled={locked} onClick={()=>close()}>Cancelar</Button><Button type="submit" icon="chevron" disabled={locked||!channelOptions.length}>Continuar</Button></ModalFooter>
+     <ModalFooter className="manual-order-actions"><Button action="cancel" disabled={locked} onClick={()=>close()}>Cancelar</Button><Button type="submit" action="continue" disabled={locked||!channelOptions.length}>Continuar</Button></ModalFooter>
     </form>
    </Dialog>
   </div>:<ComandaView initial={draft} mode="create" allTables={[]} busy={locked} channelLabel={channelOptions.find(option=>option.value===draft.channel)?.label??""} notify={notify} close={close} onResponseClose={onClose} save={save} onBack={current=>{if(locked||submission.current)return;setDraft(current);setPhase("details")}}/>}

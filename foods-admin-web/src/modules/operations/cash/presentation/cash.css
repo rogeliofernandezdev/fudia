@@ -1,6 +1,5 @@
 .cash-page{display:grid}
 .cash-panel{overflow:hidden}
-.cash-tabs-bar{padding:var(--space-2-5) var(--space-3-5);border-bottom:var(--stroke-1) solid var(--line);background:var(--surface)}
 
 .cash-registers-workspace{display:grid;gap:0;background:var(--cloud-50)}
 .cash-overview{display:flex;align-items:stretch;justify-content:space-between;gap:var(--space-6);margin:var(--space-4) var(--space-4) 0;padding:var(--space-4) var(--space-5);border-radius:var(--radius-card);background:var(--ink-950);color:var(--surface)}
@@ -114,7 +113,7 @@
 .cash-blind-close-note small{color:var(--ink-600);font-size:var(--font-size-label);line-height:var(--line-height-normal)}
 
 .ds-tabs.cash-count-mode{display:flex;width:100%}
-.ds-tabs.cash-count-mode button{flex:1 1 0;min-width:0}
+.ds-tabs.cash-count-mode button{flex:1 0 0}
 .cash-denomination-count{overflow:hidden;border:var(--stroke-1) solid var(--line);border-radius:var(--radius-tile)}
 .cash-denomination-count>header{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);padding:var(--space-2-5) var(--space-3);background:var(--cloud-50)}
 .cash-denomination-count>header>div{display:grid;gap:var(--space-0-5)}
@@ -207,7 +206,6 @@
  .cash-detail-head>.status{justify-self:start}
 }
 @media(max-width:760px){
- .cash-tabs-bar{padding:var(--space-2)}
  .cash-overview{margin:var(--space-2-5) var(--space-2-5) 0;padding:var(--space-3-5)}
  .cash-overview-metrics{display:grid;grid-template-columns:1fr 1fr}
  .cash-overview-metrics .money{grid-column:1/-1;min-width:0}

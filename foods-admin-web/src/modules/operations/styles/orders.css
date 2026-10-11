@@ -42,11 +42,6 @@
   color:var(--navigation-900);
 }
 
-.orders-tabs-row{
-  min-width:0;
-  margin-bottom:var(--space-3);
-}
-
 .orders-tabs-skeleton{
   max-width:100%;
   display:inline-flex;
@@ -214,7 +209,7 @@
   place-items:center;
   border-radius:var(--radius-card);
   background:var(--primary-100);
-  color:var(--primary-600);
+  color:var(--icon-line);
   margin-bottom:var(--space-3);
 }
 .orders-panel .catalog-state>b{
@@ -682,7 +677,7 @@
   place-items:center;
   border-radius:var(--radius-card);
   background:var(--primary-100);
-  color:var(--primary-600);
+  color:var(--icon-line);
   margin-bottom:var(--space-2-5);
 }
 .comanda-scroll .catalog-state>b{

@@ -62,18 +62,27 @@ try{
   assert.ok(geometry.panel.bottom<=height+1,`${name}: modal fits viewport`);
   assert.ok(geometry.panel.x>=0&&geometry.panel.right<=width+1,`${name}: panel is not clipped horizontally`);
   if(geometry.footer)assert.ok(geometry.footer.bottom<=height+1,`${name}: footer remains visible`);
+  if(width<=600&&geometry.footer){
+   const actions=await page.locator("footer .button").evaluateAll(buttons=>buttons.map(button=>({radius:parseFloat(getComputedStyle(button).borderRadius),height:button.getBoundingClientRect().height,clipped:button.scrollWidth>button.clientWidth+1,text:button.textContent,secondary:button.classList.contains("secondary")})));
+   actions.forEach(action=>{assert.ok(action.radius>=action.height/2,`${name}: mobile actions are pills`);assert.ok(action.height>=44,`${name}: touch target`);assert.equal(action.clipped,false,`${name}: action label is not clipped`);});
+   const viewPayment=actions.find(action=>action.text==="Ver resumen de pago");assert.ok(viewPayment?.secondary,`${name}: viewing payment is secondary`);
+  }
   assert.ok(geometry.summary.bottom<=height+1,`${name}: summary stays visible`);
   if(pos&&query.includes("readonly"))assert.equal(geometry.refunds,0,`${name}: no unauthorized actions`);
-  geometry.metadata.forEach(field=>{assert.ok(field.labelSize<field.valueSize,`${name}: labels and values use distinct sizes`);assert.equal(field.labelWeight,600,`${name}: labels are semibold`);assert.equal(field.valueWeight,400,`${name}: values are regular`);assert.notEqual(field.labelColor,field.valueColor,`${name}: hierarchy uses different palette roles`);});
+  geometry.metadata.forEach(field=>{assert.equal(field.labelSize,12,`${name}: informational labels stay compact`);assert.equal(field.valueSize,14,`${name}: informational data does not inherit input zoom sizing`);assert.equal(field.labelWeight,600,`${name}: labels are semibold`);assert.equal(field.valueWeight,400,`${name}: values are regular`);assert.notEqual(field.labelColor,field.valueColor,`${name}: hierarchy uses different palette roles`);});
+  const sectionSizes=await page.locator('.sales-detail-section h3,.pos-detail-section h3,.modal-summary h3').evaluateAll(headings=>headings.map(heading=>parseFloat(getComputedStyle(heading).fontSize)));
+  sectionSizes.forEach(size=>assert.equal(size,16,`${name}: section headings lead the informative data`));
+  const noteSizes=await page.locator('.sales-detail-lines p,.sales-detail-payments p').evaluateAll(notes=>notes.map(note=>parseFloat(getComputedStyle(note).fontSize)));
+  noteSizes.forEach(size=>assert.equal(size,12,`${name}: product notes stay below names and section headings`));
   if(width>620&&!query.includes("delivery")){
    const [a,b,c,d]=geometry.fields;assert.ok(Math.abs(a.y-b.y)<1&&Math.abs(c.y-d.y)<1,`${name}: two paired rows`);
    assert.ok(Math.abs(a.x-c.x)<1&&Math.abs(b.x-d.x)<1,`${name}: equal aligned columns`);
   }else if(width<=620){
-   const [a,b,...rest]=geometry.fields;assert.ok(Math.abs(a.y-b.y)<1,`${name}: mesa and canal stay together`);
-   rest.forEach(field=>assert.equal(field.x,a.x,`${name}: attribution spans full width`));
+   const [first]=geometry.fields;
+   geometry.fields.forEach((field,index)=>{assert.equal(field.x,first.x,`${name}: a single aligned metadata list`);if(index)assert.ok(field.y>=geometry.fields[index-1].bottom+9,`${name}: compact rows are separated`);});
    if(geometry.metadata.length){
-    assert.ok(Math.abs(geometry.metadata[1].labelRect.right-geometry.context.right)<1,`${name}: canal aligns to the right edge`);
-    if(geometry.metadata.length===4)assert.ok(Math.abs(geometry.metadata[2].valueRect.x-geometry.metadata[3].valueRect.x)<1,`${name}: waiter and date values align`);
+    geometry.metadata.forEach(field=>{assert.ok(Math.abs(field.labelRect.x-geometry.metadata[0].labelRect.x)<1,`${name}: label column stays aligned`);assert.ok(Math.abs(field.valueRect.x-geometry.metadata[0].valueRect.x)<1,`${name}: value column stays aligned`);assert.ok(Math.abs(field.valueRect.y-field.labelRect.y)<5,`${name}: labels align with the first value line`);});
+    if(!query.includes("long"))assert.ok(geometry.context.height<=140,`${name}: four fields stay compact`);
    }
   }
   if(!pos&&!query.includes("loading")){
@@ -87,6 +96,7 @@ try{
    }
   }
   await page.screenshot({path:resolve(out,`${name}.png`),fullPage:true});
+  if(name==="mobile")await page.locator(pos?".pos-detail-context":".sales-detail-context").screenshot({path:resolve(out,"mobile-context.png")});
   results.push({name,...geometry});console.log(`${name}: aligned, no clipping, viewport safe`);await page.close();
  }
  writeFileSync(resolve(out,"geometry.json"),JSON.stringify(results,null,2));

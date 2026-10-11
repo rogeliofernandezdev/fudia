@@ -12,7 +12,7 @@ function compile(file,resolve){
  vm.runInNewContext(ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText,{exports,require:resolve});
  return exports;
 }
-function nodes(tree,result=[]){if(Array.isArray(tree))tree.forEach(node=>nodes(node,result));else if(tree&&typeof tree==="object"){result.push(tree);nodes(tree.props?.children,result)}return result}
+function nodes(tree,result=[]){if(Array.isArray(tree))tree.forEach(node=>nodes(node,result));else if(tree&&typeof tree==="object"){result.push(tree);nodes(tree.props?.children,result);nodes(tree.props?.action,result)}return result}
 
 test("la sesión separa menú de acciones para cualquier rol y no autoriza por nombre",()=>{
  for(const role of ["Administrador","Cocinero","Mozo","Rol personalizado"]){
@@ -45,7 +45,7 @@ function tablesUI({permissions=[],tab="zones",zones=[{id:"zone",name:"Salón",so
   if(name==="@tanstack/react-query")return{useQueryClient:()=>({}),useMutation:()=>({mutate:()=>calls.push("write")}),useQuery:options=>({data:{items:options.queryKey[0]==="tables"?[{id:"table",name:"Mesa 1",seats:2,active:true}]:zones,total:1},isLoading:false,isError:false})};
   if(name==="@/providers/session-context")return{useSession:()=>({can:permission=>permissions.includes(permission)})};
   if(name==="@/providers/feedback-provider")return{useFeedback:()=>({notify(){}})};
-  if(name.startsWith("@/design-system"))return Object.fromEntries(["Button","IconButton","PageHeader","Pagination","RowActionButton","Status","Icon","Dialog","ConfirmDialog"].map(key=>[key,key]));
+  if(name.startsWith("@/design-system"))return Object.fromEntries(["Button","IconButton","PageHeader","Pagination","RowActionButton","Status","Icon","Dialog","ConfirmDialog","Tabs","TabsBar"].map(key=>[key,key]));
   if(name.endsWith(".css")||name.startsWith("../")||name.startsWith("@/")||["next/image","react-hook-form","qrcode"].includes(name))return{};
   return require(name);
  });

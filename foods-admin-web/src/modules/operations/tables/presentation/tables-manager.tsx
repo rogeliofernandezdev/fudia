@@ -1,6 +1,6 @@
 "use client";
 import {Dialog} from "@/design-system/dialog";
-import {Tabs} from "@/design-system/tabs";
+import {Tabs,TabsBar} from "@/design-system/tabs";
 import "../../styles/table-qr.css";
 import NextImage from "next/image";
 import {useState,useEffect,useMemo,useRef} from "react";import {useForm} from "react-hook-form";
@@ -59,7 +59,7 @@ export function TablesManager(){
  function cancelAdd(){if(saveBatch.isPending)return;setAdding(false);setNewRows([])}
 
  return <><PageHeader title="Mesas y zonas" description="Registra las mesas y zonas del local. Cada mesa genera un QR para iniciar la atención por WhatsApp."/>
- <div className="catalog-tabs-row"><Tabs label="Mesas y zonas" value={tab} onChange={setTab} items={[{value:"tables",label:"Mesas",icon:"grid",count:tables.data?.total??0},{value:"zones",label:"Zonas",icon:"store",count:zones.data?.total??0}]}/>{tab==="tables"&&!(canManageTables&&(adding||tableDraft))&&<div className="qr-batch-actions"><Button icon="qr" kind="secondary" onClick={()=>setPrintQr(true)}>Imprimir QRs</Button>{canManageTables&&<Button icon="plus" onClick={()=>{setAdding(true);addRow()}}>Nueva mesa</Button>}</div>}{tab==="zones"&&canManageZones&&<Button icon="plus" onClick={()=>setZoneDraft(emptyZone)}>Nueva zona</Button>}</div>
+ <TabsBar action={<>{tab==="tables"&&!(canManageTables&&(adding||tableDraft))&&<div className="qr-batch-actions"><Button icon="qr" kind="secondary" onClick={()=>setPrintQr(true)}>Imprimir QRs</Button>{canManageTables&&<Button icon="plus" onClick={()=>{setAdding(true);addRow()}}>Nueva mesa</Button>}</div>}{tab==="zones"&&canManageZones&&<Button icon="plus" onClick={()=>setZoneDraft(emptyZone)}>Nueva zona</Button>}</>}><Tabs label="Mesas y zonas" value={tab} onChange={setTab} items={[{value:"tables",label:"Mesas",icon:"grid",count:tables.data?.total??0},{value:"zones",label:"Zonas",icon:"store",count:zones.data?.total??0}]}/></TabsBar>
 
  {tab==="tables"?<section className="panel management catalog-panel"><div className="toolbar"><label><Icon name="search" size={18}/><input value={search} onChange={e=>{setSearch(e.target.value);setPage(1)}} placeholder="Buscar por nombre..."/></label><select aria-label="Filtrar por estado" value={statusFilter} onChange={e=>{setStatusFilter(e.target.value);setPage(1)}}><option value="">Todos los estados</option><option value="active">Activas</option><option value="inactive">Inactivas</option></select></div>
  {tables.isLoading?<TableSkeleton columns={canManageTables?6:5}/>:tables.isError?<div className="catalog-state error"><span><Icon name="alert"/></span><b>No pudimos cargar las mesas</b><p>{tables.error.message}</p><Button onClick={()=>tables.refetch()}>Reintentar</Button></div>:!(canManageTables&&adding)&&!data?.items.length?<div className="catalog-state"><span><Icon name="grid"/></span><b>No encontramos mesas</b><p>{search||statusFilter?"Ajusta los filtros para ver otros resultados.":canManageTables?"Crea la primera mesa para comenzar a operar.":"Las mesas registradas aparecerán aquí."}</p>{canManageTables&&<Button icon="plus" onClick={()=>{setAdding(true);addRow()}}>Nueva mesa</Button>}</div>:<>

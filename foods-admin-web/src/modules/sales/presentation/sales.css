@@ -25,21 +25,17 @@
 .crud-modal.sales-detail-modal{width:min(var(--size-760),100%)}
 .sales-detail-body{display:grid;align-content:start;gap:var(--space-5)}
 .sales-detail-context{min-width:0;padding-bottom:var(--space-4);border-bottom:var(--stroke-1) solid var(--line)}
-.sales-detail-context dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:var(--space-3) var(--space-6);margin:0;min-width:0}
-.sales-detail-context dl>div{min-width:0}
-.sales-detail-context dd{margin:var(--space-1) 0 0}
-.sales-detail-context dd small{display:block;margin-top:var(--space-1)}
 .sales-detail-section{min-width:0}
 .sales-detail-section+.sales-detail-section{padding-top:var(--space-5);border-top:var(--stroke-1) solid var(--line)}
-.sales-detail-section h3{font-size:var(--font-size-base);font-weight:var(--weight-bold);margin:0 0 var(--space-3)}
+.sales-detail-section h3{font-size:var(--font-size-md);font-weight:var(--weight-bold);margin:0 0 var(--space-3)}
 .sales-detail-payment-icon{width:var(--size-32);height:var(--size-32);display:grid;place-items:center;border-radius:var(--radius-pill);background:var(--primary-100);color:var(--primary-700)}
 .sales-detail-lines .modal-item-row>div,.sales-detail-payments .modal-item-row>div{min-width:0;overflow-wrap:anywhere}
-.sales-detail-lines .modal-item-row>div>b,.sales-detail-payments .modal-item-row>div>b{font-size:var(--font-size-control);font-weight:var(--weight-semibold)}
+.sales-detail-lines .modal-item-row>div>b,.sales-detail-payments .modal-item-row>div>b{font-size:var(--font-size-base);font-weight:var(--weight-semibold)}
 .sales-detail-lines small,.sales-detail-payments small{display:block;margin-top:var(--space-1);font-size:var(--font-size-label);color:var(--ink-500);line-height:var(--line-height-normal)}
-.sales-detail-lines strong,.sales-detail-payments strong{font-size:var(--font-size-control);font-weight:var(--weight-bold);font-variant-numeric:tabular-nums;white-space:nowrap}
-.sales-detail-lines p,.sales-detail-payments p{margin:var(--space-1-5) 0 0;font-size:var(--font-size-control);line-height:var(--line-height-normal);color:var(--ink-600);white-space:pre-wrap}
+.sales-detail-lines strong,.sales-detail-payments strong{font-size:var(--font-size-base);font-weight:var(--weight-bold);font-variant-numeric:tabular-nums;white-space:nowrap}
+.sales-detail-lines p,.sales-detail-payments p{margin:var(--space-1-5) 0 0;font-size:var(--font-size-label);line-height:var(--line-height-normal);color:var(--ink-600);white-space:pre-wrap}
 .sales-detail-payment-value{text-align:right}
-.sales-detail-empty,.sales-detail-notes p{font-size:var(--font-size-control);line-height:var(--line-height-normal);margin:0;color:var(--ink-500);white-space:pre-wrap;overflow-wrap:anywhere}
+.sales-detail-empty,.sales-detail-notes p{font-size:var(--font-size-base);line-height:var(--line-height-normal);margin:0;color:var(--ink-500);white-space:pre-wrap;overflow-wrap:anywhere}
 .sales-detail-notes>svg{flex:none;margin-top:var(--space-0-5);color:var(--ink-700)}
 .sales-detail-notes h3{font-size:var(--font-size-control);margin:0 0 var(--space-1)}
 .sales-detail-loading :is(i,b,small,strong){display:block;position:relative;overflow:hidden;background:var(--cloud-100);background-size:200% 100%;border-radius:var(--radius-control);height:var(--size-12)}
@@ -63,13 +59,6 @@
  .sales-filters{grid-template-columns:minmax(0,1fr);padding:var(--space-3)}
  .crud-modal.sales-detail-modal{width:100%;height:100dvh;max-height:100dvh;border-radius:0}
  .sales-detail-body{gap:var(--space-4)}
-}
-@media(max-width:620px){
- .sales-detail-context dl{gap:var(--space-3) var(--space-4)}
- .sales-detail-context dl>div:nth-child(2){text-align:right}
- .sales-detail-context dl>div:nth-child(n+3){grid-column:1/-1;display:grid;grid-template-columns:var(--size-104) minmax(0,1fr);align-items:baseline;gap:var(--space-2)}
- .sales-detail-context dl>div:nth-child(n+3) dd{min-width:0;margin:0}
- .sales-detail-loading .sales-detail-context dl>div:nth-child(2) :is(i,b){margin-left:auto}
 }
 @keyframes sales-shimmer{to{background-position:-200% 0}}
 @media(prefers-reduced-motion:reduce){.sales-skeleton i,.sales-skeleton b,.sales-skeleton span,.sales-detail-loading :is(i,b,small,strong):after{animation:none}}

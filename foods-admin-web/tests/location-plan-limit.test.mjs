@@ -28,7 +28,7 @@ function mount({max=1,usage=1,items=[local],pending=false,error=false,fetching=f
   if(name==="@/modules/identity")return capacity;
   if(name==="@/providers/session-context")return {useSession:()=>({organization:{id:"panchita"},can:permission=>permission==="organizations.manage"?manage:readPlan})};
   if(name==="@/providers/feedback-provider")return {useFeedback:()=>({notify:()=>{}})};
-  if(name.startsWith("@/design-system"))return Object.fromEntries(["Dialog","ConfirmDialog","RemoteModalSkeleton","Icon","LocationMap","Button","EmptyState","ErrorState","FormField","Input","PageHeader","Pagination","RowActionButton","Select","Skeleton","Status","TableSkeleton","Tabs","TimezoneSelect"].map(key=>[key,key]));
+  if(name.startsWith("@/design-system"))return Object.fromEntries(["Dialog","ConfirmDialog","RemoteModalSkeleton","Icon","LocationMap","Button","EmptyState","ErrorState","FormField","Input","PageHeader","Pagination","RowActionButton","Select","Skeleton","Status","TableSkeleton","Tabs","TabsBar","TimezoneSelect"].map(key=>[key,key]));
   if(name==="react-hook-form"||name.startsWith("../")||name.endsWith(".css")||name==="@/shared/i18n/regional-format")return {};
   return require(name);
  });

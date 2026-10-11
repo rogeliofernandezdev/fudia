@@ -28,7 +28,7 @@ function mount({save=async()=>{},draft={...validDraft},busy=false}={}){
   }};
   if(name==="../domain/product-schema")return schema;
   if(name.endsWith(".css"))return {};
-  if(name==="@/design-system")return {FormField:"FormField",Input:"input",Select:"select"};
+  if(name==="@/design-system")return {FormField:"FormField",Input:"input",Select:"select",ModalHeader:"ModalHeader",ModalForm:"form",ModalBody:"ModalBody",ModalFooter:"ModalFooter"};
   if(name==="@/design-system/dialog")return {Dialog:"Dialog"};
   if(name==="@/design-system/icons")return {Icon:"Icon"};
   if(name==="@/design-system/rich-text-editor")return {RichTextEditor:"RichTextEditor"};
@@ -41,6 +41,16 @@ function mount({save=async()=>{},draft={...validDraft},busy=false}={}){
  visit(tree);
  return {form:nodes.find(node=>node.type==="form"),button:nodes.find(node=>node.type==="button"&&node.props.className==="button primary"),nodes,control:formControl};
 }
+
+test("producto mantiene cuerpo y pie separados con primitivas compartidas al guardar",()=>{
+ for(const busy of [false,true]){
+  const {form,nodes}=mount({busy});
+  assert.deepEqual(Array.from(form.props.children,node=>node.type),["ModalBody","ModalFooter"]);
+  assert.equal(nodes.find(node=>node.type==="ModalHeader").props.busy,busy);
+  assert.ok(nodes.find(node=>node.type==="ModalBody").props.className.includes("product-form-body"));
+  assert.equal(nodes.find(node=>node.type==="button"&&node.props.children==="Cancelar").props.disabled,busy);
+ }
+});
 
 test("Enter implícito repetido no guarda el producto",async()=>{
  let saved=0,prevented=0;

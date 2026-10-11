@@ -2,7 +2,7 @@
 .restaurant-setup .page-header{margin-bottom:var(--space-6)}
 .restaurant-setup .page-header h1{font-size:var(--font-size-2xl);letter-spacing:var(--letter-spacing-tight)}
 .restaurant-setup .page-header p{font-size:var(--font-size-sm);line-height:var(--line-height-relaxed)}
-.restaurant-setup .button{border-radius:var(--radius-control);height:var(--control-height);font-size:var(--font-size-xs)}
+.restaurant-setup .button{height:var(--control-height);font-size:var(--font-size-xs)}
 .restaurant-setup .status{font-size:var(--font-size-label);padding:var(--space-1-5) var(--space-2);white-space:nowrap}
 .setup-welcome{display:grid;grid-template-columns:minmax(0,1fr) var(--size-260);gap:var(--space-8);align-items:center;padding:var(--space-7) var(--space-8);border:var(--stroke-1) solid var(--primary-200);border-radius:var(--radius-card);background:linear-gradient(110deg,var(--surface) 40%,var(--primary-50));margin-bottom:var(--space-6)}
 .setup-eyebrow{display:flex;align-items:center;gap:var(--space-2);font-size:var(--font-size-label);font-weight:var(--weight-bold);letter-spacing:var(--letter-spacing-caps);color:var(--primary-700)}

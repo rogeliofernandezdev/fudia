@@ -50,6 +50,10 @@ export function OrderDetailContent<T extends Order>({variant,order,error,retryin
   const editable=Boolean(edit&&order&&isEditableOrder(order)&&(!(order.serviceItems?.length)||order.status==="nuevo"));
   const actionIcon=action?.status==="entregado"?"availability":action?.status==="confirmado"?"chefHat":action?.icon;
   const items=order?.items??[];
+  // Si todas las preparaciones repiten el estado del pedido (Nuevo/Sin enviar, Preparando, Listo, Entregado), no se muestran por línea.
+  // Confirmado se conserva: «Pendiente» indica que la comanda enviada aún no empieza a prepararse.
+  const services=order?.serviceItems??[];
+  const sharedService=Boolean(order&&order.status!=="confirmado"&&services.length>0&&services.every(service=>service.status===order.status));
   const title=table||order?.channel==="salon"?tableTitle(order?.tableName):order?(order.tableName||order.customerName||"Pedido"):"Pedido";
   const subtitle=order?(table?order.customerName:order.tableName&&order.customerName?order.customerName:""):"";
   const opened=order?(table?openedAgo(order.createdAt,location?.country,location?.timezone):registeredAt(order.createdAt,location?.country,location?.timezone)):"";
@@ -73,10 +77,10 @@ export function OrderDetailContent<T extends Order>({variant,order,error,retryin
       }>
       <div className="modal-body order-detail-body" tabIndex={0} aria-label="Productos y datos del pedido">
         <div className="order-detail-content">
-          <div className="order-detail-information" aria-label="Datos del pedido">
+          <div className="order-detail-information modal-inline-metadata" aria-label="Datos del pedido">
             <OrderAttribution channel={order.channel} waiterName={order.waiterName} collectedByNames={order.collectedByNames}/>
-            <span className="order-detail-opened"><Icon name="clock" size={14}/><time dateTime={order.createdAt}>{opened}</time></span>
-            {subtitle&&<span>{subtitle}</span>}
+            <span className="order-detail-opened modal-inline-date"><Icon name="clock" size={14}/><time dateTime={order.createdAt}>{opened}</time></span>
+            {subtitle&&<span className="modal-inline-description">{subtitle}</span>}
           </div>
           <header className="order-detail-section-head"><h3 id="order-detail-products-title">Productos del pedido</h3><div className="order-detail-status" aria-label="Estado del pedido"><Status tone={meta.tone}>{meta.label}</Status></div></header>
           {(order.customerPhone||order.address||order.reference)&&<section className="order-detail-context" aria-label="Contacto y entrega">
@@ -90,10 +94,9 @@ export function OrderDetailContent<T extends Order>({variant,order,error,retryin
                 <b className="modal-item-quantity order-detail-qty">{Number(item.qty)}×</b>
                 <div className="order-detail-line-info">
                   <span>{item.name}</span>
-                  <small>{money(item.unitPrice)} c/u</small>
                   {item.itemType==="combo"&&(item.selections??[]).length>0&&<div className="order-detail-selections">{(item.selections??[]).map(selection=><small key={selection.groupId+selection.productId}><b>{selection.groupName}:</b> {selection.name}{Number(selection.surcharge)>0?` (+${money(selection.surcharge)})`:""}</small>)}</div>}
                   {item.note&&<em>{item.note}</em>}
-                  <OrderItemService order={order} itemId={item.id}/>
+                  <OrderItemService order={order} itemId={item.id} lead={<small>{money(item.unitPrice)} c/u</small>} hideStatus={sharedService}/>
                 </div>
                 <strong className="order-detail-line-total">{money(Number(item.qty)*Number(item.unitPrice))}</strong>
               </div>)}
@@ -109,15 +112,15 @@ export function OrderDetailContent<T extends Order>({variant,order,error,retryin
       {(canManage||canCharge)&&<ModalFooter className="order-detail-actions">
         {order.status==="entregado"&&!canCharge&&<p className="order-detail-notice is-success" role="status"><Icon name="circleCheck" size={18}/><span>{order.completedAt?(order.channel==="salon"?"Mesa liberada":"Pedido completado"):"Pedido entregado"}</span></p>}
         {(order.status==="nuevo"||order.status==="confirmado")&&hasPayments&&<p className="order-detail-notice" role="note"><Icon name="info" size={18}/><span>Devuelve los pagos en POS antes de cancelar.</span></p>}
-        <div className="order-detail-buttons" role="group" aria-label={table?"Acciones de la mesa":"Acciones del pedido"}>
+        <div className="order-detail-buttons modal-action-layout" role="group" aria-label={table?"Acciones de la mesa":"Acciones del pedido"}>
           <OrderAccountActions order={order} onAdd={()=>add(order)} busy={busy}/>
-          {canManage&&(editable||canCancel||(action&&canCharge))&&<div className="order-detail-secondary-actions">
+          {canManage&&(editable||canCancel||(action&&canCharge))&&<div className="order-detail-secondary-actions modal-action-subgroup">
             {action&&canCharge&&<Button icon={actionIcon} kind="secondary" className="order-detail-outline" disabled={busy} aria-busy={busy} onClick={()=>advance(action.status)}>{action.label}</Button>}
             {editable&&edit&&<Button icon="edit" kind="secondary" className="order-detail-outline" disabled={busy} onClick={()=>edit(order)}>Editar comanda</Button>}
-            {canCancel&&<Button icon="cancel" kind="ghost" className="order-detail-cancel" disabled={busy} onClick={()=>cancel(order)}>Cancelar pedido</Button>}
+            {canCancel&&<Button action="cancel-record" className="order-detail-cancel" aria-label="Cancelar pedido" disabled={busy} onClick={()=>cancel(order)}>Cancelar</Button>}
           </div>}
-          {canCharge?<Link href={`${pageRoutes.pos}?orderId=${order.id}`} className="button primary order-detail-pay" aria-disabled={busy} aria-busy={busy} tabIndex={busy?-1:undefined} onClick={event=>{if(busy)event.preventDefault();}}><Icon name="payment" size={18}/><span>Cobrar saldo</span></Link>
-          :canManage&&action&&<Button icon={actionIcon} className="order-detail-primary" disabled={busy} aria-busy={busy} onClick={()=>advance(action.status)}>{action.label}</Button>}
+          {canCharge?<Link href={`${pageRoutes.pos}?orderId=${order.id}`} className="button primary order-detail-pay modal-action-main" aria-disabled={busy} aria-busy={busy} tabIndex={busy?-1:undefined} onClick={event=>{if(busy)event.preventDefault();}}><Icon name="payment" size={18}/><span>Cobrar saldo</span></Link>
+          :canManage&&action&&<Button icon={actionIcon} className="order-detail-primary modal-action-main" disabled={busy} aria-busy={busy} onClick={()=>advance(action.status)}>{action.label}</Button>}
         </div>
       </ModalFooter>}
     </>}
@@ -141,7 +144,7 @@ export function OrderDetailSkeleton({variant,close}:{variant:OrderDetailVariant;
     }>
     <div className="modal-body order-detail-body">
       <div className="order-detail-content" aria-hidden="true">
-        <div className="order-detail-information"><OrderAttributionSkeleton/><Skeleton width="var(--size-150)" height="var(--size-9)"/></div>
+        <div className="order-detail-information modal-inline-metadata"><OrderAttributionSkeleton/><span className="modal-inline-date"><Skeleton width="var(--size-150)" height="var(--size-9)"/></span></div>
         <section className="order-detail-consumption">
           <div className="order-detail-section-head"><Skeleton width="var(--size-156)" height="var(--size-13)"/><Skeleton width="var(--size-48)" height="var(--size-9)"/></div>
           <ModalItemList className="order-detail-items">
@@ -156,7 +159,7 @@ export function OrderDetailSkeleton({variant,close}:{variant:OrderDetailVariant;
     </div>
     </ModalWorkspace>
     <ModalFooter className="order-detail-actions order-detail-skeleton-actions">
-      <div className="order-detail-buttons" aria-hidden="true"><Skeleton className="secondary"/><Skeleton className="primary"/></div>
+      <div className="order-detail-buttons modal-action-layout" aria-hidden="true"><Skeleton className="secondary"/><Skeleton className="primary modal-action-main"/></div>
     </ModalFooter>
   </>;
 }

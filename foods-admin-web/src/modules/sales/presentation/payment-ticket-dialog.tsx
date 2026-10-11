@@ -30,7 +30,7 @@ export function PaymentTicketDialog({orderId,paymentId,close}:{orderId:string;pa
  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal payment-ticket-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="payment-ticket-title">
   <ModalHeader title="Ticket de pago" titleId="payment-ticket-title" icon="receipt" subtitle="TICKET · 80 MM" onClose={close} closeLabel="Cerrar ticket"/>
   <div className="payment-ticket-body">
-   <p>Imprime al 100 %, con papel de 80 mm y sin cabeceras ni pies del navegador. Este ticket no reemplaza una boleta o factura.</p>
+   <p>Este ticket no reemplaza una boleta o factura.</p>
    {failure?<ErrorState title="No pudimos preparar el ticket" text={failure} onRetry={()=>{setError(null);setPrepared(null);setReady(false);if(detail.isError)void detail.refetch();else setAttempt(value=>value+1);}}/>
    :loading?<div className="payment-ticket-skeleton" aria-busy="true" aria-label="Preparando ticket">{Array.from({length:8},(_,index)=><i className="remote-modal-skeleton-block" key={index}/>)}</div>
    :<><iframe title="Vista previa PDF del ticket de pago de 80 mm" src={prepared!.url}/><iframe className="payment-ticket-print-frame" ref={frame} title="Documento de impresión del ticket" aria-hidden="true" tabIndex={-1} srcDoc={prepared!.html} onLoad={()=>setReady(true)}/></>}

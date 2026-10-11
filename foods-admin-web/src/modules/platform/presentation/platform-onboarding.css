@@ -59,8 +59,7 @@
 .wizard-footer>div{display:flex;gap:var(--space-2)}
 .wizard-footer .button{height:var(--control-height)}
 .wizard-footer .button.primary{min-width:var(--size-140);justify-content:center}
-.wizard-footer .button.ghost{border-color:transparent;background:transparent;color:var(--ink-600);padding-left:var(--space-2)}
-.wizard-footer .button.ghost:hover{background:var(--cloud-100);color:var(--ink-950)}
+.wizard-footer .button.ghost{padding-left:var(--space-2)}
 
 /* Skeleton */
 .platform-onboarding-skeleton .wizard-step{cursor:default}

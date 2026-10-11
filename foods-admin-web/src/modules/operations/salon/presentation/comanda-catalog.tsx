@@ -29,8 +29,10 @@ function categoryTone(id:string){
  * Las páginas del API se cargan al llegar al final de la lista.
  * Enter en el buscador agrega el primer plato disponible.
  */
-export function ComandaCatalog({qtyByProduct,onPick,onDecrease,onConfigureCombo,disabled=false}:{
+export function ComandaCatalog({qtyByProduct,onAvailability,onPick,onDecrease,onConfigureCombo,disabled=false}:{
   qtyByProduct:Record<string,number>;
+  /** Informa las existencias cargadas para acotar también las líneas del resumen. */
+  onAvailability?:(items:CatalogProduct[])=>void;
   onPick:(p:CatalogProduct)=>void;
   onDecrease:(productId:string)=>void;
   onConfigureCombo?:(comboId:string)=>void;
@@ -66,6 +68,11 @@ export function ComandaCatalog({qtyByProduct,onPick,onDecrease,onConfigureCombo,
   });
   const active=combos?comboCatalog:salonCatalog;
   const salonItems=salonCatalog.data?.pages.flatMap(page=>page.items)??[];
+  const loadedPages=salonCatalog.data?.pages;
+  // Solo las páginas cargadas disparan el aviso; el callback más reciente se lee desde un ref.
+  const availabilityRef=useRef(onAvailability);
+  useEffect(()=>{availabilityRef.current=onAvailability});
+  useEffect(()=>{if(loadedPages)availabilityRef.current?.(loadedPages.flatMap(page=>page.items))},[loadedPages]);
   const comboItems=comboCatalog.data?.pages.flatMap(page=>page.items)??[];
 
   useEffect(()=>{
@@ -134,9 +141,9 @@ export function ComandaCatalog({qtyByProduct,onPick,onDecrease,onConfigureCombo,
 function CategoryFilters({categories,category,loading,error,retrying,onRetry,onChange,trackRef,expanded=false,onExpand,onDismiss}:{categories:{id:string;name:string}[];category:string;loading:boolean;error:boolean;retrying:boolean;onRetry:()=>void;onChange:(id:string)=>void;trackRef?:RefObject<HTMLDivElement|null>;expanded?:boolean;onExpand?:()=>void;onDismiss?:()=>void}){
   return <><nav className="cmd-category-nav" aria-label="Filtrar la carta">
     <div className="cmd-chips" ref={trackRef} role="group" aria-label="Categorías de productos">
-      <button type="button" className="cmd-chip cmd-tone-indigo" aria-pressed={category===""} onClick={()=>onChange("")}>{category===""&&<Icon name="check" size={14}/>}Todo</button>
-      <button type="button" className="cmd-chip cmd-chip-combos cmd-tone-violet" aria-pressed={category===COMBOS} onClick={()=>onChange(COMBOS)}><Icon name={category===COMBOS?"check":"combo"} size={18}/>Menús y combos</button>
-      {loading?<span className="cmd-category-loading" role="status" aria-label="Cargando categorías"><Skeleton width="var(--size-88)" height="var(--control-height)"/><Skeleton width="var(--size-88)" height="var(--control-height)"/></span>:categories.map(item=><button type="button" key={item.id} className={"cmd-chip cmd-tone-"+categoryTone(item.id)} aria-pressed={category===item.id} onClick={()=>onChange(item.id)}>{category===item.id&&<Icon name="check" size={14}/>} {item.name}</button>)}
+      <button type="button" className="cmd-chip cmd-tone-indigo" aria-pressed={category===""} onClick={()=>onChange("")}>{category===""&&<span className="cmd-chip-check" aria-hidden="true"><Icon name="check" size={14}/></span>}Todo</button>
+      <button type="button" className="cmd-chip cmd-chip-combos cmd-tone-violet" aria-pressed={category===COMBOS} onClick={()=>onChange(COMBOS)}>{category===COMBOS?<span className="cmd-chip-check" aria-hidden="true"><Icon name="check" size={14}/></span>:<Icon name="combo" size={18}/>}Menús y combos</button>
+      {loading?<span className="cmd-category-loading" role="status" aria-label="Cargando categorías"><Skeleton width="var(--size-88)" height="var(--control-height)"/><Skeleton width="var(--size-88)" height="var(--control-height)"/></span>:categories.map(item=><button type="button" key={item.id} className={"cmd-chip cmd-tone-"+categoryTone(item.id)} aria-pressed={category===item.id} onClick={()=>onChange(item.id)}>{category===item.id&&<span className="cmd-chip-check" aria-hidden="true"><Icon name="check" size={14}/></span>} {item.name}</button>)}
     </div>
     <Button kind="secondary" className="cmd-category-all" icon="menu" aria-label="Ver todas las categorías" aria-haspopup="dialog" aria-expanded={expanded} onClick={onExpand}><span>Categorías</span></Button>
     {error&&<div className="cmd-category-error" role="alert"><span>No pudimos cargar las categorías.</span><Button kind="ghost" onClick={onRetry} loading={retrying}>Reintentar</Button></div>}

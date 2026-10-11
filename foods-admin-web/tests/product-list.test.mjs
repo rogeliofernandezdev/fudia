@@ -13,13 +13,14 @@ function compile(path,resolve){
  return exports;
 }
 const regional=compile("shared/i18n/regional-format.ts",require);
-function nodes(tree,result=[]){if(Array.isArray(tree)){tree.forEach(node=>nodes(node,result));return result}if(tree&&typeof tree==="object"){result.push(tree);nodes(tree.props?.children,result)}return result}
+const categoryFilters=compile("modules/menu/products/domain/category-filters.ts",require);
+function nodes(tree,result=[]){if(Array.isArray(tree)){tree.forEach(node=>nodes(node,result));return result}if(tree&&typeof tree==="object"){result.push(tree);nodes(tree.props?.children,result);nodes(tree.props?.action,result)}return result}
 const base={id:"p1",sku:"P1",name:"Ají de gallina",description:"Descripción que no debe mostrarse",categoryName:"Segundos",price:"15",active:true,quantityControl:"portions",availableQuantity:12,inventoryUnit:null};
 function mount({items=[base],loading=false,locationId="local-a",canManage=true,tab="products",categories=[],states={}}={}){
- const queries=[];
+ const queries=[],updates=[];
  let stateIndex=0;
  const {CatalogManager}=compile("modules/menu/products/presentation/catalog-manager.tsx",name=>{
-  if(name==="react")return{useState:value=>{const index=stateIndex++;return[index===0?tab:states[index]??value,()=>{}]}};
+  if(name==="react")return{useState:value=>{const index=stateIndex++;return[index===0?tab:states[index]??value,next=>updates.push([index,next])]}};
   if(name==="next/dynamic")return{default:()=>"ProductDialog"};
   if(name==="./category-dialog")return{CategoryDialog:"CategoryDialog"};
   if(name==="@tanstack/react-query")return{useQueryClient:()=>({}),useMutation:()=>({}),useQuery:options=>{queries.push(options);return{data:{items:options.queryKey[0]==="products"?items:categories,total:items.length},isLoading:options.queryKey[0]==="products"&&loading,isError:false}}};
@@ -28,11 +29,12 @@ function mount({items=[base],loading=false,locationId="local-a",canManage=true,t
   if(name==="@/providers/feedback-provider")return{useFeedback:()=>({notify:()=>{}})};
   if(name==="@/shared/hooks/use-debounced-value")return{useDebouncedValue:value=>value};
   if(name==="@/shared/i18n/regional-format")return regional;
-  if(name.startsWith("@/design-system"))return Object.fromEntries(["Button","FormField","Input","PageHeader","Pagination","RowActionButton","Select","Status","Icon","Dialog","ConfirmDialog","RemoteModalSkeleton"].map(key=>[key,key]));
+  if(name==="../domain/category-filters")return categoryFilters;
+  if(name.startsWith("@/design-system"))return Object.fromEntries(["Button","FormField","Input","PageHeader","Pagination","RowActionButton","SearchField","Select","Status","Icon","Dialog","ConfirmDialog","RemoteModalSkeleton","Tabs","TabsBar"].map(key=>[key,key]));
   if(name.startsWith("../"))return{};
   return require(name);
  });
- return{view:nodes(CatalogManager()),queries};
+ return{view:nodes(CatalogManager()),queries,updates};
 }
 
 test("productos: nombre sin descripción, disponibles del backend y paginación global",()=>{
@@ -108,4 +110,30 @@ test("al perder gestión no permanecen formularios ni confirmaciones editables",
  const {view}=mount({canManage:false,states:{8:base,9:category,10:{kind:"products",id:base.id,name:base.name}}});
  assert.equal(view.some(node=>node.type==="ProductDialog"||node.type==="CategoryDialog"),false);
  assert.equal(view.find(node=>node.type==="ConfirmDialog").props.open,false);
+});
+
+test("categorías: buscador, uso y estado sustituyen el título redundante y reinician la página",()=>{
+ const {view,updates}=mount({tab:"categories",categories:[category]});
+ assert.equal(view.some(node=>node.props.className==="toolbar-title"),false);
+ const search=view.find(node=>node.type==="SearchField");
+ const selects=view.filter(node=>node.type==="Select");
+ assert.equal(search.props.label,"Buscar categorías por nombre");
+ assert.deepEqual(selects.map(node=>node.props["aria-label"]),["Filtrar categorías por uso","Filtrar categorías por estado"]);
+ for(const field of [search,...selects])field.props.onChange({target:{value:"active"}});
+ assert.equal(updates.filter(([index,value])=>index===6&&value===1).length,3);
+});
+
+test("categorías: los filtros combinados se aplican antes de paginar y conservan el catálogo del selector",()=>{
+ const categories=Array.from({length:25},(_,index)=>({...category,id:String(index),name:index===24?"Bebídas especiales":`Categoría ${index}`,productScope:index===24?"retail":"prepared",active:index===24}));
+ const {view,queries}=mount({tab:"categories",categories,states:{11:" bebidas ",12:"retail",13:"active"}});
+ assert.deepEqual(view.filter(node=>node.type==="tr"&&node.props.className!==undefined).map(node=>node.key),["24"]);
+ assert.equal(view.find(node=>node.type==="Pagination").props.total,1);
+ assert.deepEqual(Array.from(queries.find(query=>query.queryKey[0]==="categories").queryKey),["categories","catalog"]);
+});
+
+test("categorías: sin coincidencias ofrece ajustar filtros, no afirma que el catálogo esté vacío",()=>{
+ const {view}=mount({tab:"categories",categories:[category],states:{11:"no existe"}});
+ const empty=view.find(node=>typeof node.type==="function"&&node.props.title);
+ assert.equal(empty.props.title,"No encontramos categorías");
+ assert.equal(empty.props.text,"Ajusta los filtros para ver otros resultados.");
 });

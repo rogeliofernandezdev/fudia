@@ -13,7 +13,7 @@ function compile(path,resolve=require){
 }
 function nodes(tree){const out=[];function visit(node){if(Array.isArray(node)){node.forEach(visit);return}if(node&&typeof node==="object"){out.push(node);visit(node.props?.children)}}visit(tree);return out;}
 function words(tree){if(Array.isArray(tree))return tree.map(words).join("");if(tree&&typeof tree==="object")return words(tree.props?.children);return String(tree??"");}
-const ds=Object.fromEntries(["Button","Dialog","FormField","Icon","Input","Textarea","PageHeader","Pagination","RowActionButton","Select","Status"].map(name=>[name,name]));
+const ds=Object.fromEntries(["Button","Dialog","FormField","Icon","IconButton","Input","Textarea","PageHeader","Pagination","SearchField","Select","Status","Modal","ModalBody"].map(name=>[name,name]));
 const resolver=compile("shared/forms/zod-resolver.ts");
 const schema=compile("modules/menu/availability/domain/availability-reason-schema.ts",name=>name==="@/shared/forms/zod-resolver"?resolver:require(name));
 const regional=compile("shared/i18n/regional-format.ts");
@@ -57,7 +57,7 @@ test("el motivo espera una sola respuesta y bloquea campos y cierres",async()=>{
  assert.equal(words(ui.render().save),"Guardando…");finish();await first;
 });
 
-function managerUI(manage=true){
+function managerUI(manage=true,{items=[item],result,pending=false}={}){
  const state=[];let cursor=0,mutation,apiCalls=[],feedback=[],invalidations=[];
  const {ProductAvailabilityManager}=compile("modules/menu/availability/presentation/product-availability-manager.tsx",name=>{
   if(name.endsWith(".css"))return {};
@@ -65,9 +65,9 @@ function managerUI(manage=true){
   if(name==="@/providers/session-context")return {useSession:()=>({organization:{id:"org"},location:{id:"local",country:"PE",timezone:"America/Lima"},can:p=>p==="menu.read"||manage,isLoading:false})};
   if(name==="@/providers")return {useFeedback:()=>({notify:value=>feedback.push(value)})};
   if(name==="@tanstack/react-query")return {
-   useQuery:options=>options.queryKey[0]==="product-availability"?{data:{items:[item],total:1,businessDate:item.businessDate}}:{data:{items:[]}},
+   useQuery:options=>options.queryKey[0]==="product-availability"?(result??{data:{items,total:items.length,businessDate:item.businessDate}}):{data:{items:[]}},
    useQueryClient:()=>({invalidateQueries:value=>invalidations.push(value.queryKey)}),
-   useMutation:options=>{mutation=options;return {isPending:false,mutateAsync:async value=>{try{const result=await options.mutationFn(value);options.onSuccess(result,value);return result}catch(error){options.onError(error);throw error}}};},
+   useMutation:options=>{mutation=options;return {isPending:pending,mutateAsync:async value=>{try{const result=await options.mutationFn(value);options.onSuccess(result,value);return result}catch(error){options.onError(error);throw error}}};},
   };
   if(name==="@/design-system")return ds;
   if(name==="@/shared/i18n/regional-format")return regional;
@@ -82,7 +82,7 @@ function managerUI(manage=true){
 
 test("Guardar cupo pide motivo antes del API; Agotar conserva el cupo sin guardar",async()=>{
  const ui=managerUI();let all=ui.render();all.find(n=>n.type==="Input"&&n.props.type==="number").props.onChange({target:{value:"20"}});
- all=ui.render();const save=all.find(n=>n.type==="Button"&&n.props["aria-label"]==="Guardar cupo de Ají de gallina");assert.equal(save.props.disabled,false);save.props.onClick();
+ all=ui.render();const save=all.find(n=>n.type==="IconButton"&&n.props.label==="Guardar cupo de Ají de gallina");assert.equal(save.props.disabled,false);save.props.onClick();
  assert.equal(ui.apiCalls.length,0);assert.equal(ui.feedback.length,0);
  all=ui.render();const dialog=all.find(n=>n.type==="Reason");assert.equal(dialog.props.change.portionQuantity,20);
  await dialog.props.save("Producción adicional");assert.equal(ui.apiCalls.length,1);
@@ -96,10 +96,51 @@ test("Guardar cupo pide motivo antes del API; Agotar conserva el cupo sin guarda
 test("solo lectura permite historial pero no editar; su caché y paginación están aisladas",()=>{
  const ui=managerUI(false),all=ui.render();assert.equal(all.find(n=>n.type==="Input"&&n.props.type==="number").props.disabled,true);
  assert.equal(all.some(n=>n.type==="Button"&&n.props.children==="Guardar"),false);
- all.find(n=>n.type==="RowActionButton"&&n.props.label==="Ver historial de Ají de gallina").props.onClick();assert.ok(ui.render().some(n=>n.type==="History"));
+ all.find(n=>n.type==="Button"&&n.props["aria-label"]==="Ver historial de Ají de gallina").props.onClick();assert.ok(ui.render().some(n=>n.type==="History"));
  const source=readFileSync(new URL("modules/menu/availability/presentation/availability-history-dialog.tsx",root),"utf8");
  assert.match(source,/\["availability-history",organization\?\.id,location\?\.id,item\.productId,page,size\]/);
  assert.match(source,/<Pagination/);assert.doesNotMatch(source,/>Cerrar<|onKeyDown|Escape/);
+});
+
+test("listado agrupa cinco columnas, usa iconos semánticos y muestra Guardar solo al editar",()=>{
+ const ui=managerUI(),all=ui.render();
+ const headings=all.find(n=>n.props.className==="availability-list-head").props.children;
+ assert.equal(headings.length,5);
+ assert.equal(all.some(n=>n.type==="IconButton"&&n.props.label?.startsWith("Guardar cupo")),false);
+ assert.ok(all.some(n=>n.type==="Button"&&n.props.icon==="clock"));
+ assert.ok(all.some(n=>n.type==="Icon"&&n.props.name==="dish"));
+ assert.ok(all.some(n=>n.type==="SearchField"));
+ all.find(n=>n.type==="Input"&&n.props.type==="number").props.onChange({target:{value:"4"}});
+ const invalid=ui.render(),field=invalid.find(n=>n.type==="Input"&&n.props.type==="number");
+ assert.equal(field.props["aria-invalid"],true);
+ assert.equal(field.props["aria-describedby"],"quota-error-aji");
+ assert.ok(invalid.find(n=>n.props.id==="quota-error-aji"&&n.props.role==="alert"));
+ assert.equal(invalid.find(n=>n.type==="IconButton"&&n.props.label?.startsWith("Guardar cupo")).props.disabled,true);
+ assert.equal(ui.apiCalls.length,0);
+});
+
+test("sin control no muestra cantidades ficticias; inventario conserva unidad y ausencia de dato",()=>{
+ const manual={...item,quantityControl:"none",source:"manual",portionQuantity:null,remaining:null};
+ const all=managerUI(true,{items:[manual]}).render();
+ assert.equal(all.some(n=>n.type==="Input"&&n.props.type==="number"),false);
+ assert.ok(all.some(n=>n.props.className?.includes("availability-unlimited")&&words(n).includes("Sin límite de cantidad")));
+ const inventory={...item,quantityControl:"inventory",source:"inventory",portionQuantity:null,remaining:3.125,inventoryUnit:"kg"};
+ const balance=managerUI(true,{items:[inventory]}).render().find(n=>n.props.className==="availability-cell availability-balance");
+ assert.match(words(balance),/3[.,]125kg/);
+ const missing=managerUI(true,{items:[{...inventory,remaining:null}]}).render().find(n=>n.props.className==="availability-cell availability-balance");
+ assert.match(words(missing),/Sin dato/);
+});
+
+test("estados derivados y cupo agotado no ofrecen acciones manuales imposibles",()=>{
+ for(const source of ["schedule","combo_components","portions"]){
+  const all=managerUI(true,{items:[{...item,status:"sold_out",source,remaining:0,portionQuantity:0}]}).render();
+  assert.equal(all.some(n=>n.type==="Button"&&n.props.children==="Agotar hoy"),false);
+  assert.ok(all.some(n=>n.props.className==="availability-notice"));
+  assert.ok(all.some(n=>n.type==="Button"&&n.props.icon==="clock"));
+  assert.equal(all.some(n=>n.props.className==="availability-derived"),false);
+ }
+ const pending=managerUI(true,{pending:true}).render();
+ assert.ok(pending.filter(n=>["Input","IconButton","Button"].includes(n.type)).every(n=>n.props.disabled));
 });
 
 test("historial muestra skeleton, error con reintento, vacío y valores reales sin inventar históricos",()=>{
@@ -120,8 +161,26 @@ test("historial muestra skeleton, error con reintento, vacío y valores reales s
  const entry={id:"event",createdAt:"2026-10-09T01:00:00Z",businessDate:"2026-10-08",reason:"Nueva producción",userName:"Daniel",previousPortionQuantity:15,portionQuantity:20,soldQuantity:5,previousManualStatus:"available",manualStatus:"available"};
  result={data:{items:[entry],total:1}};const all=render();assert.ok(all.some(n=>n.type==="Pagination"&&n.props.total===1));assert.ok(all.some(n=>n.type==="time"&&/8:00|20:00/.test(words(n))));
  assert.deepEqual(JSON.parse(JSON.stringify(keys[0])),["availability-history","org","local","aji",1,10]);
- assert.match(words(historyModule.HistoryChange({entry,country:"PE"})),/Cupo: 15 → 20/);
- assert.match(words(historyModule.HistoryChange({entry:{...entry,businessDate:null,reason:null},country:"PE"})),/Cambio anterior sin detalle registrado/);
+ assert.deepEqual(all.filter(n=>n.type==="th").map(n=>n.props.children),["FECHA Y HORA","CAMBIO","CANTIDAD","MOTIVO","USUARIO"]);
+ assert.equal(all.find(n=>n.type==="Modal").props.size,"xl");
+ assert.equal(all.find(n=>n.type==="Modal").props.title,"Historial de disponibilidad");
+ assert.equal(all.find(n=>n.type==="Modal").props.subtitle,item.name);
+ assert.equal(all.find(n=>n.type==="time").props.dateTime,entry.createdAt);
+ assert.equal(all.some(n=>n.props.className==="availability-history-day"),false,"No duplica la fecha cuando el día operativo coincide");
+ result={data:{items:[{...entry,businessDate:"2026-10-07"}],total:1}};
+ assert.ok(render().some(n=>n.props.className==="availability-history-day"),"Conserva un día operativo diferente");
+ assert.match(words(historyModule.HistoryChange({entry})),/Cupo actualizado/);
+ assert.doesNotMatch(words(historyModule.HistoryChange({entry})),/15|20|vendidas/);
+ assert.match(words(historyModule.HistoryQuantity({entry,country:"PE",control:"portions"})),/15 → 20/);
+ assert.match(words(historyModule.HistoryQuantity({entry,country:"PE",control:"portions"})),/5 vendidas al cambiar/);
+ assert.match(words(historyModule.HistoryChange({entry:{...entry,businessDate:null,reason:null}})),/Cambio anterior sin detalle/);
+ const legacy={...entry,businessDate:null,previousPortionQuantity:null,portionQuantity:null,soldQuantity:null};
+ assert.equal(words(historyModule.HistoryQuantity({entry:legacy,country:"PE",control:"portions"})),"Sin registrar");
+ assert.equal(words(historyModule.HistoryQuantity({entry:legacy,country:"PE",control:"inventory"})),"Sin registrar");
+ assert.equal(words(historyModule.HistoryQuantity({entry:legacy,country:"PE",control:"none"})),"Sin registrar");
+ assert.equal(words(historyModule.HistoryQuantity({entry:{...legacy,businessDate:entry.businessDate},country:"PE",control:"none"})),"No aplica");
+ assert.match(words(historyModule.HistoryQuantity({entry:{...entry,previousPortionQuantity:0,portionQuantity:0,soldQuantity:0},control:"portions"})),/^00 vendidas al cambiar$/);
+ assert.match(nodes(historyModule.HistoryQuantity({entry:{...entry,previousPortionQuantity:null},control:"portions"})).find(n=>n.props["aria-label"]).props["aria-label"],/anterior: sin registrar/);
 });
 
 test("transporte conserva el motivo y el historial consulta solo una página",async()=>{
@@ -134,7 +193,8 @@ test("transporte conserva el motivo y el historial consulta solo una página",as
 test("a 390 px el motivo usa la rejilla compartida y el historial conserva scroll controlado",()=>{
  const css=postcss.parse(readFileSync(new URL("styles/globals.css",root),"utf8"));const rules=[];css.walkRules(rule=>rules.push(rule));
  assert.ok(rules.some(rule=>rule.selector===".form-grid"&&rule.parent.type==="atrule"&&Number(rule.parent.params.match(/width\s*<=\s*(\d+)px/)?.[1])>=390&&rule.nodes.some(n=>n.prop==="grid-template-columns"&&n.value==="1fr")));
- const history=readFileSync(new URL("modules/menu/availability/presentation/product-availability.css",root),"utf8");assert.match(history,/\.availability-history-modal\{width:min\(var\(--size-960\),100%\)\}/);
- assert.match(history,/\.availability-history-table\{min-width:var\(--size-610\)\}/);
- assert.match(history,/\.availability-history-body \.sk-head,\.availability-history-body \.sk-row\{grid-template-columns:1\.2fr 1\.3fr 1\.6fr 1fr\}/);
+ const history=readFileSync(new URL("modules/menu/availability/presentation/product-availability.css",root),"utf8");assert.doesNotMatch(history,/\.availability-history-modal\{width:/);
+ assert.match(history,/\.availability-history-table\{width:100%;min-width:var\(--size-880\);table-layout:fixed\}/);
+ assert.match(history,/\.availability-history-body \.sk-head,\.availability-history-body \.sk-row\{grid-template-columns:16fr 19fr 18fr 29fr 18fr\}/);
+ assert.match(history,/\.availability-history-table time\{[^}]*white-space:nowrap/);
 });

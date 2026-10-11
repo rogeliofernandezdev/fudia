@@ -38,6 +38,7 @@ function mount({kind="products",active=false,canManage=true,pending=false,activa
   if(name==="@/providers/session-context")return {useSession:()=>({can:()=>canManage})};
   if(name==="@/providers/settings-context")return {useSettings:()=>({currencyDecimals:2,currencySymbol:"S/",currencyPosition:"before"})};
   if(name==="@/shared/hooks/use-debounced-value")return {useDebouncedValue:value=>value};
+  if(name==="../domain/category-filters")return compile("modules/menu/products/domain/category-filters.ts",require);
   if(name==="../infrastructure/products-api")return {setProductActive:activate,setCategoryActive:activate};
   if(name==="@/design-system")return {RowActionButton:"RowActionButton"};
   if(name.startsWith("@/")||name.startsWith("../"))return {};

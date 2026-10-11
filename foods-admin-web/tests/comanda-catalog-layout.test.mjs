@@ -70,7 +70,7 @@ test("categorías y carta se deslizan sin barras visibles ni reglas duplicadas",
  assert.equal(declarations["flex-wrap"],undefined);assert.equal(declarations["overflow-y"],"hidden");assert.equal(declarations["scrollbar-width"],"none");assert.equal(declarations["overflow-x"],"auto");
  assert.ok(css.nodes.some(node=>node.selectors?.includes(".cmd-chips::-webkit-scrollbar")));
  for(const selector of [".cmd-list-scroll",".cmd-summary-scroll"]){const rule=css.nodes.find(node=>node.selector===selector);assert.equal(rule.nodes.find(node=>node.prop==="scrollbar-width").value,"none");assert.equal(rule.nodes.find(node=>node.prop==="overflow-y").value,"auto");}
- const selected=css.nodes.find(node=>node.selector===".cmd-chip[aria-pressed=true]");assert.equal(selected.nodes.find(node=>node.prop==="background").value,"var(--primary-700)");
+ const selected=css.nodes.find(node=>node.selector===".cmd-chip[aria-pressed=true]");assert.equal(selected.nodes.find(node=>node.prop==="background").value,"var(--primary-200)");
  assert.match(source,/queryFn:listOrderCategories/);
 });
 

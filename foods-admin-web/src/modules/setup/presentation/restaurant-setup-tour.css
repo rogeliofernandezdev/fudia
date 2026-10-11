@@ -18,7 +18,7 @@
 .setup-tour-track>span{flex:1;height:var(--size-3);border-radius:var(--radius-chip);background:var(--line)}
 .setup-tour-track>span.is-visited{background:var(--primary-600)}
 .setup-tour-card>footer{display:flex;align-items:center;justify-content:space-between;gap:var(--space-2-5);padding:var(--space-4) var(--space-5) var(--space-2-5)}
-.setup-tour .button{height:var(--control-height);border-radius:var(--radius-control);font-size:var(--font-size-control)}
+.setup-tour .button{height:var(--control-height);font-size:var(--font-size-control)}
 .setup-tour-exit{display:flex;align-items:center;min-height:var(--control-height);font-size:var(--font-size-control);color:var(--ink-500)}
 .setup-tour-summary{display:flex;align-items:center;justify-content:center;min-height:var(--control-height);font-size:var(--font-size-label);color:var(--ink-500);margin:0 var(--space-5) var(--space-2);text-decoration:underline;text-underline-offset:var(--size-3)}
 .setup-tour.is-collapsed{width:auto}

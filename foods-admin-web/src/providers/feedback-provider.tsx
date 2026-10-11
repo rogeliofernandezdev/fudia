@@ -35,7 +35,7 @@ export function FeedbackProvider({children}:{children:React.ReactNode}){
   return <Context.Provider value={value}>{children}{item&&<div className={`feedback-overlay ${closing?"out":"in"}`}>
     <Dialog className={`feedback-card ${item.tone} ${closing?"out":"in"}`} role={item.tone==="danger"?"alertdialog":"dialog"} aria-modal="true" aria-labelledby={`feedback-title-${item.id}`} aria-describedby={`feedback-message-${item.id}`}>
       <button type="button" className="feedback-close" onClick={close} aria-label="Cerrar notificación"><Icon name="close"/></button>
-      <span className={`feedback-icon ${item.tone}`}><Icon name={item.tone==="success"?"check":"alert"} size={36}/></span>
+      <span key={item.id} className={`feedback-icon ${item.tone}`}><Icon name={item.tone==="success"?"check":"alert"} size={36}/></span>
       <h2 id={`feedback-title-${item.id}`}>{item.title}</h2><p id={`feedback-message-${item.id}`}>{item.message}</p>
       <button type="button" ref={button} data-dialog-initial-focus className="feedback-accept" onClick={close}>Aceptar</button>
     </Dialog>

@@ -4,8 +4,10 @@ import "../../styles/salon-comanda.css";
 import {useState,useEffect,useRef} from "react";
 import {Button,ConfirmDialog,Dialog,FormField,Icon,Input,NumberStepper,Select,Textarea,ModalHeader,ModalFooter} from "@/design-system";
 import {useMoney} from "@/providers";
+import {useFeedback} from "@/providers/feedback-provider";
 import {CatalogProduct,ComboConfigurator,ComboSelection,ConfiguredCombo,ComandaCatalog} from "../../salon/presentation/comanda-catalog";
 import type {Draft,FloorTable,LineDraft} from "../../salon/domain/types";
+import type {IconName} from "@/design-system/icons";
 
 const tableTitle=(name:string)=>/^mesa\b/i.test(name.trim())?name.trim():`Mesa ${name.trim()}`;
 const uniqueKey=()=>typeof crypto!=="undefined"&&typeof crypto.randomUUID==="function"?crypto.randomUUID():`${Date.now()}-${Math.random()}`;
@@ -35,6 +37,22 @@ export function ComandaView({initial,mode,allTables,busy,close,save,channelLabel
   const freeTables=allTables.filter(t=>!t.order||t.id===v.tableId);
   const selTable=allTables.find(t=>t.id===v.tableId);
   const qtyByProduct=v.lines.reduce<Record<string,number>>((acc,line)=>{acc[line.productId]=(acc[line.productId]??0)+line.qty;return acc},{});
+  // Tope por existencias: lo que la carta informa como disponible más lo ya reservado por este pedido guardado.
+  // Productos sin control (remaining null) no tienen tope; el backend valida de nuevo al guardar.
+  const[stock,setStock]=useState<Record<string,number>>({});
+  const reserved=initial.lines.reduce<Record<string,number>>((acc,line)=>{if(line.itemType==="product"&&line.sourceItemId)acc[line.productId]=(acc[line.productId]??0)+line.qty;return acc},{});
+  const recordAvailability=(items:CatalogProduct[])=>setStock(prev=>{
+    const next={...prev};let changed=false;
+    for(const item of items)if(typeof item.remaining==="number"&&next[item.id]!==item.remaining){next[item.id]=item.remaining;changed=true}
+    return changed?next:prev;
+  });
+  const limitFor=(productId:string,remaining?:number|null)=>{const known=typeof remaining==="number"?remaining:stock[productId];return typeof known==="number"?known+(reserved[productId]??0):undefined};
+  const {notify:feedback}=useFeedback();
+  // Superar las existencias abre el aviso de validación (tono info: no cierra la comanda) y no cambia la cantidad.
+  const warnStock=(name:string,limit:number)=>{
+    setAnnouncement(`${name}: solo hay ${limit} disponibles.`);
+    feedback({tone:"info",title:"Cantidad no disponible",message:`La cantidad excede las existencias: solo quedan ${limit} ${limit===1?"unidad":"unidades"} de ${name}.`});
+  };
   const count=v.lines.reduce((a,l)=>a+l.qty,0);
   const subtotal=v.lines.reduce((a,l)=>a+l.qty*l.unitPrice,0);
   const deliveryFee=v.channel==="delivery"?Number(v.deliveryFee)||0:0;
@@ -44,6 +62,9 @@ export function ComandaView({initial,mode,allTables,busy,close,save,channelLabel
   const patchLine=(i:number,p:Partial<LineDraft>)=>{if(!locked())setV(prev=>({...prev,lines:prev.lines.map((l,n)=>n===i?{...l,...p}:l)}))};
   const tap=(p:CatalogProduct)=>{
     if(locked())return;
+    if(typeof p.remaining==="number"&&stock[p.id]!==p.remaining)setStock(prev=>({...prev,[p.id]:p.remaining as number}));
+    const limit=limitFor(p.id,p.remaining);
+    if(limit!==undefined&&(qtyByProduct[p.id]??0)>=limit){warnStock(p.name,limit);return}
     const existing=v.lines.find(l=>l.itemType==="product"&&l.productId===p.id);
     setV(prev=>{
       const i=prev.lines.findIndex(l=>l.itemType==="product"&&l.productId===p.id);
@@ -108,17 +129,18 @@ export function ComandaView({initial,mode,allTables,busy,close,save,channelLabel
   const title=salon
     ?(selTable?`${verb}${tableTitle(selTable.name)}`:adding?"Agregar productos":editing?"Editar comanda":"Nueva comanda")
     :`${verb}${channelLabel}${v.customerName?` · ${v.customerName.trim()}`:""}`;
-  const context=salon
-    ?(selTable?[selTable.zone,selTable.seats?`${selTable.seats} ${selTable.seats===1?"persona":"personas"}`:"",v.customerName.trim()]:["Selecciona la mesa en el resumen"])
-    :[v.customerPhone,v.channel==="delivery"?v.address:"",v.channel==="delivery"?v.reference:""];
+  const context:{icon:IconName;text:string}[]=(salon
+    ?(selTable?[{icon:"mapPin",text:selTable.zone},{icon:"users",text:selTable.seats?`${selTable.seats} ${selTable.seats===1?"persona":"personas"}`:""},{icon:"user",text:v.customerName.trim()}]:[{icon:"tables",text:"Selecciona la mesa en el resumen"}])
+    :[{icon:"phone",text:v.customerPhone},{icon:"mapPin",text:v.channel==="delivery"?v.address:""},{icon:"note",text:v.channel==="delivery"?v.reference:""}]
+  ).filter((item):item is {icon:IconName;text:string}=>Boolean(item.text?.trim()));
 
   return(
     <Dialog onResponseClose={onResponseClose??(()=>close(v))} as="div" className="cmd-shell" role="dialog" aria-modal="true" aria-busy={busy} aria-labelledby="cmd-title">
-      <ModalHeader title={title} titleId="cmd-title" icon="dish" onClose={requestClose} busy={busy} closeLabel={salon?"Cerrar comanda y volver al salón":"Cerrar comanda"} details={<>{onBack&&<Button kind="ghost" icon="chevronLeft" disabled={busy} onClick={()=>{if(!locked())onBack(v)}}>Editar datos del pedido</Button>}<span>{context.filter(Boolean).join(" · ")||channelLabel}</span></>}/>
+      <ModalHeader title={title} titleId="cmd-title" icon="dish" onClose={requestClose} busy={busy} closeLabel={salon?"Cerrar comanda y volver al salón":"Cerrar comanda"} details={<>{onBack&&<Button kind="ghost" icon="chevronLeft" disabled={busy} onClick={()=>{if(!locked())onBack(v)}}>Editar datos del pedido</Button>}{context.length?<ul className="cmd-context">{context.map(item=><li key={item.icon+item.text}><Icon name={item.icon} size={14}/><span>{item.text}</span></li>)}</ul>:<span>{channelLabel}</span>}</>}/>
 
       <div className="cmd-body">
         <section className="cmd-pane" aria-label="Carta del restaurante">
-          <ComandaCatalog qtyByProduct={qtyByProduct} onPick={tap} onDecrease={decreaseProduct} onConfigureCombo={configureCombo} disabled={busy}/>
+          <ComandaCatalog qtyByProduct={qtyByProduct} onAvailability={recordAvailability} onPick={tap} onDecrease={decreaseProduct} onConfigureCombo={configureCombo} disabled={busy}/>
         </section>
 
         <aside className={"cmd-summary"+(sheetOpen?" open":"")} aria-label="Resumen de la comanda">
@@ -152,6 +174,8 @@ export function ComandaView({initial,mode,allTables,busy,close,save,channelLabel
               <ul className="cmd-lines">
                 {v.lines.map((l,i)=>{
                   const noteOpen=Boolean(l.note)||openNotes.includes(l.lineKey);
+                  const limit=l.itemType==="product"?limitFor(l.productId):undefined;
+                  const lineMax=limit===undefined?undefined:Math.max(l.qty,limit-((qtyByProduct[l.productId]??0)-l.qty));
                   return(
                     <li className={"cmd-line"+(l.itemType==="combo"?" combo":"")} key={l.lineKey}>
                       <span className="cmd-line-visual" aria-hidden="true"><Icon name={l.itemType==="combo"?"combo":"dish"} size={24}/>{l.imageUrl&&<img className="cmd-item-thumb" src={l.imageUrl} alt="" loading="lazy" onError={event=>{event.currentTarget.hidden=true}}/>}</span>
@@ -159,8 +183,9 @@ export function ComandaView({initial,mode,allTables,busy,close,save,channelLabel
                         <strong>{l.name}</strong>
                         <em>{money(l.qty*l.unitPrice)}</em>
                         {l.qty>1&&<small className="cmd-line-unit">{money(l.unitPrice)} c/u</small>}
+                        {lineMax!==undefined&&l.qty>=lineMax&&<small className="cmd-line-limit">Máximo disponible: {limit}</small>}
                       </div>
-                      <NumberStepper appearance="soft" value={l.qty} min={1} label={l.name} disabled={busy} onChange={qty=>setQty(i,qty)} onRemove={()=>removeLine(i)}/>
+                      <NumberStepper appearance="soft" value={l.qty} min={1} label={l.name} disabled={busy} onChange={qty=>{if(lineMax!==undefined&&limit!==undefined&&qty>lineMax){warnStock(l.name,limit);return}setQty(i,qty)}} onRemove={()=>removeLine(i)}/>
                       {l.itemType==="combo"&&<ul className="cmd-line-selections" aria-label="Elecciones del menú">
                         {l.selections.map(sel=><li key={sel.groupId+sel.productId}><b>{sel.groupName}</b> {sel.name}{sel.surcharge>0?` (+ ${money(sel.surcharge)})`:""}</li>)}
                       </ul>}

@@ -9,7 +9,7 @@
 .admin-auth-form{margin:0;padding:var(--space-7) var(--space-8) var(--space-7);display:grid;gap:var(--space-5)}
 .admin-auth-form>.form-field{gap:var(--space-2);color:var(--ink-700)}
 .admin-auth-field{position:relative;color:var(--ink-400)}
-.admin-auth-field>svg{position:absolute;left:var(--space-2);top:50%;transform:translateY(-50%);width:var(--size-26);height:var(--size-26);padding:var(--space-1-5);border-radius:var(--radius-control);color:var(--primary-700);background:var(--primary-100);pointer-events:none;transition:color var(--duration-fast) ease,background var(--duration-fast) ease}
+.admin-auth-field>svg{position:absolute;left:var(--space-2);top:50%;transform:translateY(-50%);width:var(--size-26);height:var(--size-26);padding:var(--space-1-5);border-radius:var(--radius-control);color:var(--icon-line);background:var(--primary-100);pointer-events:none;transition:color var(--duration-fast) ease,background var(--duration-fast) ease}
 .admin-auth-field .admin-auth-input{padding-left:var(--space-11);background:var(--surface);border-color:var(--line-strong);color:var(--ink-950);box-shadow:var(--elevation-1);transition:border-color var(--duration-fast) ease,box-shadow var(--duration-fast) ease}
 .admin-auth-field .admin-auth-input:hover:not(:disabled):not(:focus){border-color:var(--primary-300)}
 .admin-auth-field .admin-auth-input::placeholder{color:var(--ink-400)}

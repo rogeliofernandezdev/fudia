@@ -23,21 +23,41 @@ dentro de un módulo.
 | Variante | Uso | Apariencia |
 | --- | --- | --- |
 | `primary` | La única acción dominante de la superficie | Sólido `primary-600`, realce teñido |
-| `secondary` | Alternativas, «Reintentar», «Limpiar filtros», «Editar» | Blanco, texto `primary-700`, borde `primary-200` |
-| `ghost` | «Cancelar», «Anterior», acciones neutras | Blanco, texto `ink-700`, borde `line` |
+| `secondary` | Consultas como «Ver resumen de pago», alternativas, «Reintentar», «Limpiar filtros», «Editar» | Blanco, texto `primary-700`, borde `primary-200` |
+| `ghost` | Salir sin guardar («Cancelar»), «Anterior», acciones neutras | Blanco, texto `ink-700`, borde `line` |
 | `danger` | Solo el botón que confirma dentro de `ConfirmDialog` | Sólido `danger` |
-| `danger-outline` | Disparadores destructivos: Cancelar pedido u orden, Anular, Cerrar turno, Quitar acceso | Blanco, texto `danger`, borde `danger-200` |
+| `danger-outline` | Disparadores destructivos: Cancelar pedido u orden, Anular, Cerrar turno, Quitar acceso | Fondo `danger-50`, texto `danger`, borde `danger-200`; hover `danger-100` / `danger` / `danger-600` |
 
 - No existe botón verde: el verde comunica un estado ya confirmado.
-- Altura `--control-height`, radio de control, texto 600 de
+- `Button action` centraliza acciones repetidas: `cancel` → neutro con X;
+  `cancel-record` → rojo tenue con icono cancelar; `back` → neutro con flecha
+  izquierda; `continue` → primario con flecha al final, a la derecha del texto.
+  La intención fija variante e icono, sin interpretar la etiqueta visible.
+  `ModalCancel` consume `action="cancel"`; no añadir colores locales.
+- Cancelar una salida de formulario no anula datos persistidos: neutro. Anular
+  pedido/orden: rojo tenue y `ConfirmDialog` posterior. Confirmar la anulación:
+  rojo sólido. Cancelar dentro de esa confirmación es la salida segura y
+  permanece neutro. Descartar cambios se confirma con una acción explícita
+  «Descartar», no recoloreando el Cancelar del formulario.
+- La intención decide la variante: una consulta sigue siendo secundaria aunque
+  sea la única acción del footer. Guardar, registrar, enviar o confirmar el avance
+  del flujo son primarias; salir sin guardar/Anterior son neutras. Máximo una primaria por
+  superficie, sin inventarla en un detalle de lectura. «Ver resumen de pago» usa
+  `eye` y abre el documento no fiscal existente, sin registrar otro cobro.
+- Altura `--control-height`, radio de control en escritorio y `radius-pill` en
+  móvil (≤600 px), texto 600 de
   `--font-size-control`, icono de 18 px a la izquierda. La flecha final solo en
   «Continuar».
+- La forma móvil pertenece a `.button` en `globals.css`, no a los módulos.
+  Campos y X conservan su geometría; todas las variantes tienen al menos 44 px
+  de área táctil y mantienen el mismo orden de teclado.
 - `loading` deshabilita, anuncia `aria-busy` y la etiqueta pasa al gerundio del
   mismo verbo («Guardar» → «Guardando…»).
 - Orden: acción segura a la izquierda, principal a la derecha. En móvil los
   botones de un pie ocupan el ancho disponible.
 - Acciones por fila: solo `RowActionButton` (ver, editar, interruptor de
-  estado, cancelar, quitar) con tooltip y nombre accesible.
+  estado, cancelar, quitar) con tooltip y nombre accesible. La composición
+  operativa de Disponibilidad usa el contrato específico descrito abajo.
 
 ### Modales
 
@@ -81,7 +101,8 @@ mínima de 64 px, no altura fija: los textos largos conservan su información.
 Icono primario blanco de 20 px, centrado en un espacio de 44 px sin recuadro.
 La X blanca de 20 px se centra en un cuadro visible de 32 px con contorno blanco
 de 1 px, fondo transparente y sin sombra, dentro de un área de clic de 44 px;
-no cambia de color con hover y mantiene foco blanco visible para teclado.
+no cambia de color con hover ni al guardar y mantiene foco blanco visible para teclado.
+Con `busy`, queda deshabilitada sin reducir su opacidad: icono y contorno siguen blancos.
 Todos los iconos de cabecera son blancos, también en altas, ediciones y errores
 de carga. Las respuestas success/error y confirmaciones warning conservan su
 componente independiente y su semántica.
@@ -89,9 +110,30 @@ componente independiente y su semántica.
 `ModalFooter({children,note,status,statusLabel})` agrupa los botones contiguos
 a la derecha, con 10 px de separación y la acción principal al final. No usar
 `margin-right:auto` en Cancelar ni `space-between` entre las acciones. En móvil
-las acciones adyacentes se reparten la fila; los estados y notas usan otra fila
+las acciones adyacentes se reparten la fila por igual si caben. Un botón solo
+en su fila, incluido Cancelar, ocupa el 100 % del ancho útil; apilados, todos
+llenan su fila. Nunca reservar una media columna vacía. Los estados y notas usan otra fila
 si hace falta. `status` contiene el `Status` real del registro, opcional; no
 añadir estado ni resumen ficticio a formularios simples.
+
+`modal-action-layout` homologa pies con grupos anidados: ancho natural y
+acciones contiguas en escritorio; flex-wrap con reparto igual y crecimiento
+de una acción solitaria en móvil (≤600 px). `modal-action-subgroup` permite
+que las secundarias participen de esas filas y `modal-action-main` asigna
+fila completa a la principal cuando corresponde. No deducir la distribución
+solo del número total de botones: Cancelar + Enviar comanda ya apilados deben
+llenar dos filas completas. Botones directos de `ModalFooter` se reparten
+el ancho mediante el estilo compartido existente. No aplica a confirmaciones,
+feedback ni botones solo de icono.
+
+`modal-inline-metadata` agrupa responsable y fecha fuera del header. En esta
+franja etiqueta y valor tienen 14 px y mismo interlineado, con pesos 600/400;
+el tamaño común no elimina la jerarquía de peso y color. `modal-inline-date`
+alinea fecha/icono al extremo derecho, también si pasan a otra fila por falta
+de espacio; `modal-inline-description` ocupa una fila completa para contexto
+adicional. Reutilizado en Pedidos/Salón y cualquier modal con esa distribución.
+Es una excepción explícita a las etiquetas de 12 px, no un cambio de campos
+ni de `modal-record-data`. Su único dueño es `modal.css`.
 
 `ModalWorkspace({children,summary})` es el patrón opcional para un detalle con
 resumen real. Usa una sola columna: contenido desplazable y región `.modal-summary`
@@ -100,6 +142,13 @@ inferior a ancho completo, persistente en todos los tamaños. No usa panel later
 estilos únicos, no duplicados por módulo. El detalle Pedidos/Salón lo usa en un
 panel de hasta 760 px; los formularios sin resumen continúan con `ModalBody`.
 Todo el fondo del resumen usa gris muy claro `cloud-50`; el estado abierto usa azul tenue.
+
+`dl.modal-record-data` organiza los datos de consulta de Ventas y Cobros.
+En escritorio conserva dos parejas por fila. En ≤620 px usa una lista de filas
+etiqueta/valor: columna de etiqueta de 120 px, valor flexible, 12 px entre
+columnas y 10 px entre filas, alineados a la primera línea del texto.
+Los nombres largos envuelven; no se truncan ni se añade un panel decorativo.
+La carga usa la misma retícula. El único dueño de este layout es `modal.css`.
 En el detalle de pedidos, las acciones inferiores comparten el mismo fondo.
 La cabecera del resumen agrupa título y estado, con separador inferior. Los
 importes secundarios se distribuyen en columnas equilibradas y el saldo en una
@@ -126,8 +175,9 @@ en el design system, no se duplican por módulo.
 
 Reglas:
 
-- Datos: `dt` y `modal-data-label` usan 600; `dd` y `modal-data-value`, 400.
-  Títulos de sección 700. Los tokens se definen en `variables.css` y los roles
+- Datos: `dt` y `modal-data-label` usan 12 px / 600; `dd` y `modal-data-value`, 14 px / 400.
+  Títulos de sección 16 px / 700. Los datos informativos no heredan el aumento
+  móvil a 16 px reservado a controles editables. Los tokens se definen en `variables.css` y los roles
   se aplican una sola vez en `modal.css`;
   no invertir etiqueta y valor en estilos locales. Los bloques heredados sin
   `dl` consumen `--modal-label-weight` y `--modal-value-weight`.
@@ -141,7 +191,10 @@ Reglas:
   primer control); en confirmaciones, «Cancelar».
 - `dirty`: X y «Cancelar» abren «¿Descartar los cambios?». Obligatorio en
   formularios de más de 3 campos y en la comanda.
-- `busy`: bloquea X, «Cancelar» y campos mientras dura la petición.
+- `busy`: bloquea X, «Cancelar» y campos mientras dura la petición; la X conserva color y opacidad.
+- Producto reutiliza `ModalForm`, `ModalBody` y `ModalFooter`: cuerpo y pie son hermanos.
+  El módulo no redefine padding del formulario/cuerpo ni márgenes o altura de los botones;
+  así el pie conserva 24/16 px horizontales y 10 px entre acciones, también al guardar.
 - Carga remota: `ModalLoading` dentro del `Modal` (conserva título y X); el
   error: `ModalError` con «Reintentar». `RemoteModalSkeleton` queda para
   cargas en las que aún no se conoce el título.
@@ -234,6 +287,25 @@ icono tiene un solo significado en toda la aplicación (ver
   Los avisos de éxito se cierran automáticamente (4,2 s por defecto) o mediante
   Aceptar/X. Errores e información requieren cierre explícito. No se cierran al
   pulsar el fondo ni con Escape.
+  La respuesta `success` presenta círculo verde restaurante `brand-700` y check
+  blanco `surface` centrado (76/36 px). El panel reserva 64 px sobre el símbolo
+  para separarlo de la X y 32 px al pie; título `ink-950` de 18 px / 700,
+  explicación `ink-600` de 14 px. «Aceptar» es secundario neutro sobre blanco,
+  con borde `line-strong`, sin check duplicado y con `radius-pill` en móvil.
+  Se reutiliza la paleta Foods; las referencias externas solo orientan el
+  movimiento y no autorizan colores nuevos. El panel se funde en 280 ms y
+  permanece inmóvil. `feedback-icon.success:before` contiene la forma verde:
+  círculo perfecto con `border-radius: 50%`, que empieza en `scale(1.3)`
+  y se contrae hasta `scale(1)` con un rebote leve. Solo anima escala uniforme
+  durante 520 ms (`duration-dialog`, `easing-spring`), sin desplazarlo ni
+  deformarlo; no añade dependencias ni bucles. El SVG blanco es una capa independiente,
+  centrada y sin estirar, que se funde en 200 ms desde los 280 ms.
+  El símbolo se monta con la identidad de cada respuesta para reiniciar su
+  entrada; los textos no tienen esperas propias.
+  Movimiento reducido mantiene un fundido de 160 ms,
+  con check y texto visibles sin esperas ni expansión. No simular una carga.
+  Tokens y animaciones son propiedad de `providers/styles/feedback.css`;
+  no cambian el autocierre, foco ni el callback posterior al cierre.
 - `Dialog`: comportamiento común de todos los modales. Mantiene el foco dentro
   de la ventana activa, soporta ventanas superpuestas y selectores con portal,
   bloquea el scroll del fondo y devuelve el foco al control que abrió la ventana.
@@ -272,7 +344,14 @@ icono tiene un solo significado en toda la aplicación (ver
   enlaces de texto. La columna
   de acciones centra el grupo completo, cada pictograma se centra ópticamente en
   su caja y los tooltips se anclan al centro del botón.
-- Toda columna de acciones usa exclusivamente `RowActionButton`, construido
+- El historial de disponibilidad reutiliza `Modal size="xl"` y `ModalBody`: título
+  de la consulta en cabecera, producto en el contexto y tabla de cinco columnas
+  (fecha/hora, cambio, cantidad, motivo, usuario). Fecha y hora en líneas estables;
+  el día operativo solo se muestra si difiere de la fecha local del evento.
+  cupo anterior → nuevo y vendidas en su columna propia, sin repetir cifras en
+  «Cambio». Solo el cuerpo y la tabla se desplazan; la X es el único cierre.
+- Toda columna de acciones de gestión, salvo el listado operativo de
+  Disponibilidad especificado abajo, usa exclusivamente `RowActionButton`, construido
   sobre `IconButton`: SVG de 18 px (28 px para el interruptor de estado),
   contenedor cuadrado del tamaño de `--control-height`, alineación central,
   `aria-label` y tooltip descriptivo.
@@ -326,6 +405,41 @@ Un restaurante en modo `simple` nunca ve insumos, recetas ni unidades.
   cantidad y el estado activo del catálogo permanecen separados del saldo.
 - Marcar «agotado hoy» es una acción de operaciones, no del administrador, y se
   presenta como acción reversible del local, nunca como desactivación del catálogo.
+
+### Listado operativo de Disponibilidad
+
+Reutiliza `PageHeader`, `SearchField`, `Select`, `Input`, `IconButton`, `Button`,
+`Status` y `Pagination`; su composición pertenece al módulo de disponibilidad.
+Foto/icono, nombre, categoría y control forman una identidad; vendidas y
+restantes forman un balance. Nombre y restantes usan 16 px/700; categoría
+13 px/400, vendidas 14 px/400 y control/etiquetas 12 px/400. Los iconos son del
+set compartido: plato, preparación, inventario, balance, calendario e historial.
+Los estados mantienen los tonos establecidos en `02_DESIGN_SYSTEM.md`.
+
+Guardar es un `IconButton` primario junto al `Input` de cupo y aparece solo
+cuando cambia el valor, con tooltip/nombre accesible que identifica el producto
+y el texto «Cambio sin guardar». El error se vincula al campo mediante
+`aria-invalid`/`aria-describedby`; el mínimo es el mayor entre 1 y vendidas,
+solo admite enteros. Guardar inválido o durante una mutación queda bloqueado.
+Los cambios válidos abren el formulario de motivo existente antes del API.
+
+Agotar hoy usa `Button kind="secondary"`, icono `circleMinus`, texto/borde
+`warning` y hover `warning-50`; Reactivar usa `secondary`, `refresh` e índigo.
+El agotado manual es reversible y no usa el estilo destructivo del catálogo.
+Historial usa `Button secondary` con `clock`, tooltip y nombre accesible
+descriptivo: icono en escritorio, icono y texto en contenedor ≤1020 px.
+En esa composición, dos acciones comparten el ancho y una sola lo llena.
+La altura contextual se define en `variables.css`: 44 px en escritorio/tablet,
+48 px en móvil. No crear una variante global de estado o botón por esta pantalla.
+
+Sin control muestra la explicación «Sin límite de cantidad» en el espacio de
+cupo y balance; los estados derivados identifican su cálculo automático.
+Inventario muestra el origen de actualización y el saldo con unidad; null usa
+«Sin dato». Los avisos contextuales son compactos al lado del estado, fondo
+`warning-50` sin franja lateral ni fila adicional completa. Carga, error,
+vacío, lectura, paginación y acciones derivadas respetan el contrato existente.
+El modal de historial conserva la tabla de cinco columnas descrita arriba;
+esta composición no añade cambios a su layout.
 
 ## Niveles de inventario
 
@@ -400,8 +514,12 @@ pastilla de estado ni formateador de dinero.
   las acciones. Prohibido el texto «Cargando…» y las barras genéricas.
 - `SearchField({placeholder,label})`: buscador de barra de filtros con lupa, a
   `--control-height`. Reemplaza `<input>` crudos dentro de `.toolbar`.
+  En Carta y productos / Categorías, la barra contiene búsqueda por nombre,
+  uso y estado; no repite el título y la descripción de la pestaña. Filtra el
+  catálogo completo obtenido del API antes de paginar, reinicia a la primera
+  página al cambiar filtros y distingue catálogo vacío de falta de coincidencias.
 - `Tabs({items,value,onChange,label})`: control segmentado con `role="tablist"`,
-  foco itinerante y flechas/Inicio/Fin; contador opcional por pestaña; 44 px en
+  foco itinerante y flechas/Inicio/Fin; icono obligatorio y contador opcional por pestaña; 44 px en
   móvil. Reemplaza `.catalog-tabs` y variantes por módulo.
 - `Status({tone})`: píldora suave tintada, sin borde, para preparación/pedido y cuenta.
   Tonos `green` (listo/activo/éxito), `blue` (confirmado), `sky` (cuenta abierta), `orange`
@@ -415,11 +533,35 @@ pastilla de estado ni formateador de dinero.
 ## Refinamiento de pestañas y modales compartidos
 
 `Tabs` es también la única implementación de Productos/Categorías y Mesas/Zonas;
-se retiró el marcado y CSS de `catalog-tabs`. La pista neutra no lleva una segunda
-sombra o marco. Cada opción conserva `--control-height`, selección índigo suave,
-texto azul y contador contrastado. Así la navegación no compite con «Nuevo …».
-Las flechas, Inicio/Fin y foco itinerante permanecen; en móvil las opciones tienen
-44 px y el desborde horizontal se desplaza sin envolver las etiquetas.
+se retiró el marcado y CSS de `catalog-tabs`. Usar este componente para cualquier
+navegación entre vistas equivalentes, sin recrear estilos por módulo. La pista
+`cloud-150` tiene 4 px de margen interior y radio de cápsula, sin sombra ni marco.
+Cada opción conserva `--control-height`; la seleccionada usa superficie blanca,
+borde `primary-300` y texto `primary-700`. Los contadores usan fondo índigo
+`primary-600` y número blanco `surface` en todas las pestañas, incluido cero;
+su tamaño de 12 px mantiene la etiqueta como contenido principal. El contador
+es circular con una cifra y se amplía a cápsula cuando tiene varias cifras.
+Cada `TabItem` exige `icon: IconName`: glifo semántico del set compartido de 16 px
+antes del texto, sin recuadro propio ni colores locales. Nunca ocultarlo en móvil.
+Productos usa `utensils`, Categorías `layers`, Usuarios `users`, Roles `lock`,
+Menú de permisos `layout`, Acciones `key`; las demás vistas conservan su icono
+semántico de operación. Esta regla aplica también a pestañas sin contador.
+Las flechas, Inicio/Fin y foco itinerante permanecen. En móvil las opciones tienen
+44 px y se presentan de dos en dos al mismo ancho; si hay más opciones, la pista
+se desplaza horizontalmente con gesto o teclado, sin barra visible. `scroll-snap`
+ajusta el inicio de cada par: no mostrar fragmentos de las pestañas vecinas al
+terminar el desplazamiento. El último grupo impar contiene una pestaña y espacio
+neutro, sin traer restos del grupo anterior. Una única pestaña ocupa todo el ancho.
+Las etiquetas largas envuelven sin truncarse ni empujar los iconos o contadores.
+`TabsBar({children,action})` alinea los tabs a la izquierda y las acciones de esa
+vista a la derecha, centrados sobre el mismo eje en escritorio. En móvil, el
+listado de tabs ocupa una fila completa y se desplaza si falta espacio, sin que
+el botón le quite ancho. Las acciones ocupan la fila siguiente: una llena el
+ancho; dos se reparten en columnas iguales y pueden envolver su texto. No poner «Nuevo …» en
+`PageHeader` cuando la pantalla tiene tabs: esa acción pertenece a `TabsBar`.
+Las acciones conservan su permiso, bloqueo, evento e icono originales. Si hay
+varias, su grupo puede repartirse en filas en móvil, sin colocar las acciones
+encima de la navegación.
 
 Los modales alinean cabecera, cuerpo y pie sobre un margen común de 24 px en
 escritorio y 16 px en móvil. La X y el icono primario comparten una caja de 44 px

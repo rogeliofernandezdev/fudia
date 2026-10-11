@@ -114,7 +114,7 @@ test("la validación compartida rechaza excedentes, negativos y fracciones antes
  const ui=mount();ui.composition().find(node=>node.type==="Button"&&node.props.children==="Plantilla Menú del día").props.onClick();
  quotaInput(ui.composition()).props.onChange({target:{value:"13"}});
  assert.equal(quotaInput(ui.composition()).props["aria-invalid"],true);
- ui.wizard().view.find(node=>node.type==="button"&&node.props.className==="button primary").props.onClick();
+ ui.wizard().view.find(node=>node.type==="Button"&&node.props.action==="continue").props.onClick();
  const wizard=ui.wizard();assert.equal(wizard.node.props.step,2);assert.ok(wizard.view.some(node=>node.props.role==="alert"));
 });
 

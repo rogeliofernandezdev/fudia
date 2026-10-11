@@ -1,12 +1,28 @@
-/* Pestañas — control segmentado con la altura de los controles */
-.ds-tabs{display:inline-flex;min-width:0;max-width:100%;gap:var(--space-1);overflow-x:auto;border-radius:var(--radius-control);background:var(--cloud-100);scroll-padding-inline:var(--space-1);overscroll-behavior-x:contain;scrollbar-width:thin;scrollbar-color:var(--ink-400-alpha-40) transparent}
-.ds-tabs button{display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;gap:var(--space-2);min-height:var(--control-height);padding:0 var(--space-4);border:var(--stroke-1) solid transparent;border-radius:var(--radius-control);background:transparent;color:var(--ink-500);font:inherit;font-size:var(--font-size-control);font-weight:var(--weight-semibold);white-space:nowrap;cursor:pointer;transition:background var(--duration-fast),color var(--duration-fast),border-color var(--duration-fast)}
+/* Pestañas compartidas: pista contrastada, selección blanca y contadores índigo. */
+.ds-tabs-bar{display:flex;align-items:center;gap:var(--space-3);width:100%;min-width:0;margin-bottom:var(--space-4)}
+.ds-tabs-bar>:first-child{flex:0 1 auto;min-width:0;max-width:100%}
+.ds-tabs-actions{display:flex;flex:0 0 auto;align-items:center;justify-content:flex-end;gap:var(--space-2);margin-left:auto}
+.ds-tabs-actions>div{display:contents}
+.ds-tabs{display:inline-flex;min-width:0;max-width:100%;gap:var(--space-1);padding:var(--space-1);overflow-x:auto;border-radius:var(--radius-pill);background:var(--cloud-150);scroll-padding-inline:var(--space-1);overscroll-behavior-x:contain;scrollbar-width:none}
+.ds-tabs::-webkit-scrollbar{display:none}
+.ds-tabs button{display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;gap:var(--space-2);min-width:max-content;min-height:var(--control-height);padding:0 var(--space-4);border:var(--stroke-1) solid transparent;border-radius:var(--radius-pill);background:transparent;color:var(--ink-600);font:inherit;font-size:var(--font-size-control);font-weight:var(--weight-semibold);white-space:nowrap;cursor:pointer;transition:background var(--duration-fast),color var(--duration-fast),border-color var(--duration-fast)}
 .ds-tabs button:active{background:var(--primary-200)}
-.ds-tabs button.active{color:var(--primary-700);border-color:var(--primary-200);background:var(--primary-100)}
+.ds-tabs button.active{color:var(--primary-700);border-color:var(--primary-300);background:var(--surface)}
 .ds-tabs button:focus-visible{outline:var(--stroke-2) solid var(--primary-600);outline-offset:calc(var(--space-0-5) * -1)}
 .ds-tabs button svg{display:block;flex:none}
-.ds-tabs b{display:grid;flex:none;place-items:center;min-width:var(--size-20);height:var(--size-20);padding:0 var(--space-1-5);border-radius:var(--radius-pill);font-size:var(--font-size-xs);font-weight:var(--weight-semibold);font-variant-numeric:tabular-nums;line-height:var(--line-height-none);color:var(--ink-500);background:var(--surface)}
-.ds-tabs button.active b{color:var(--surface);background:var(--primary-600)}
-@media(hover:hover) and (pointer:fine){.ds-tabs button:not(.active):hover{color:var(--ink-950);background:var(--cloud-150)}}
-@media(width<=600px){.ds-tabs{display:flex;width:100%}.ds-tabs button{flex:1 0 auto;min-height:var(--size-44)}}
+.ds-tabs b{display:grid;flex:none;place-items:center;min-width:var(--size-20);height:var(--size-20);padding:0 var(--space-1);border-radius:var(--radius-pill);font-size:var(--font-size-xs);font-weight:var(--weight-semibold);font-variant-numeric:tabular-nums;line-height:var(--line-height-none);color:var(--surface);background:var(--primary-600)}
+@media(hover:hover) and (pointer:fine){.ds-tabs button:not(.active):hover{color:var(--primary-700);background:var(--primary-200)}}
+@media(width<=600px){
+ .ds-tabs{display:flex;width:100%;scroll-snap-type:x mandatory}
+ .ds-tabs button{flex:0 0 calc((100% - var(--space-1)) / 2);min-width:0;min-height:var(--size-44);gap:var(--space-1-5);padding:var(--space-1) var(--space-2);white-space:normal}
+ .ds-tabs button>span{min-width:0;overflow-wrap:anywhere}
+ .ds-tabs button:nth-child(odd){scroll-snap-align:start;scroll-snap-stop:always}
+ .ds-tabs button:only-child{flex-basis:100%}
+ /* Completa el último par sin mostrar restos del grupo anterior. */
+ .ds-tabs:has(>button:last-child:nth-child(odd):not(:only-child))::after{content:"";flex:0 0 calc((100% - var(--space-1)) / 2)}
+ .ds-tabs-bar{flex-direction:column;align-items:stretch}
+ .ds-tabs-bar>:first-child{flex:none;width:100%}
+ .ds-tabs-actions{flex-wrap:wrap;width:100%;margin-left:0}
+ .ds-tabs-actions .button{flex:1 1 var(--size-150);min-width:0;padding-inline:var(--space-3);white-space:normal}
+}
 @media(prefers-reduced-motion:reduce){.ds-tabs button{transition:none}}

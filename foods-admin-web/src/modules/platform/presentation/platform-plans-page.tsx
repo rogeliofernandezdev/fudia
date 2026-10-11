@@ -4,7 +4,7 @@ import "./platform-plans.css";
 import {useMemo,useState} from "react";
 import {Controller,useForm} from "react-hook-form";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,EmptyState,ErrorState,FormField,Input,PageHeader,Select,Status,Tabs,Textarea,ModalHeader,ModalFooter} from "@/design-system";
+import {Button,EmptyState,ErrorState,FormField,Input,PageHeader,Select,Status,Tabs,TabsBar,Textarea,ModalHeader,ModalFooter} from "@/design-system";
 import {Icon} from "@/design-system/icons";
 import {useFeedback} from "@/providers";
 import type {PlatformModule,SubscriptionPlan,SubscriptionPlanDraft} from "../domain/types";
@@ -12,7 +12,7 @@ import {planResolver} from "../domain/plan-schema";
 import {getPlatformOnboardingContext,listReadyModules,listSubscriptionPlans,saveSubscriptionPlan} from "../infrastructure/platform-api";
 import {PlatformPlansSkeleton} from "./platform-skeletons";
 
-const billingTabs:Array<{value:"monthly"|"annual";label:string}>=[{value:"monthly",label:"Mensual"},{value:"annual",label:"Anual"}];
+const billingTabs:Array<{value:"monthly"|"annual";label:string;icon:"calendar"|"refresh"}>=[{value:"monthly",label:"Mensual",icon:"calendar"},{value:"annual",label:"Anual",icon:"refresh"}];
 const blank:SubscriptionPlanDraft={
  code:"",name:"",description:"",currency:"PEN",monthlyPrice:"",annualPrice:"",trialDays:0,
  maxLocations:"",maxUsers:"",moduleKeys:[],termsVersion:"",active:true,
@@ -41,10 +41,10 @@ export function PlatformPlansPage(){
  });
 
  return <>
-  <PageHeader title="Planes SaaS" description="Define la oferta comercial de FUDIA: precio, prueba, límites y módulos de cada nivel." action={<Button icon="plus" onClick={()=>setDraft({...blank})}>Nuevo plan</Button>}/>
+  <PageHeader title="Planes SaaS" description="Define la oferta comercial de FUDIA: precio, prueba, límites y módulos de cada nivel." />
   <div className="plan-toolbar">
     <b>Catálogo comercial</b>
-    <Tabs items={billingTabs} value={billing} onChange={setBilling} label="Ciclo de facturación"/>
+    <TabsBar action={<Button icon="plus" onClick={()=>setDraft({...blank})}>Nuevo plan</Button>}><Tabs items={billingTabs} value={billing} onChange={setBilling} label="Ciclo de facturación"/></TabsBar>
   </div>
   {(plans.isLoading||modules.isLoading||catalogs.isLoading)?<PlatformPlansSkeleton/>:
    (plans.isError||modules.isError||catalogs.isError)?<div className="panel plan-state"><ErrorState title="No pudimos cargar la configuración de planes" text={(plans.error??modules.error??catalogs.error)?.message} retrying={plans.isFetching||modules.isFetching||catalogs.isFetching} onRetry={()=>{void plans.refetch();void modules.refetch();void catalogs.refetch()}}/></div>:

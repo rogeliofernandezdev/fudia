@@ -240,7 +240,7 @@ test("salon: la mesa pagada y entregada está liberada sin otro botón",()=>{
  assert.equal(primary.length,1);
  assert.equal(primary[0].props.icon,"chefHat");
  assert.equal(initial.buttons.find(n=>n.props.children==="Editar comanda").props.kind,"secondary");
- assert.equal(initial.buttons.find(n=>n.props.children==="Cancelar pedido").props.kind,"ghost");
+ assert.equal(initial.buttons.find(n=>n.props.children==="Cancelar"&&n.props["aria-label"]==="Cancelar pedido").props.kind,"ghost");
 });
 
 test("salon: el cobro queda bloqueado mientras se guarda otra acción",()=>{
@@ -317,7 +317,7 @@ for(const section of ["salon","orders"]){
  test(`${section}: permite cancelar entregas directas sin servir y bloquea preparación, entrega o pagos`,()=>{
   const direct={destination:"direct",status:"listo"};
   const eligible={status:"listo",waiterId:"waiter",serviceItems:[direct]};
-  const hasCancel=changes=>mount(section,changes).buttons.some(n=>n.props.children==="Cancelar pedido");
+  const hasCancel=changes=>mount(section,changes).buttons.some(n=>n.props.children==="Cancelar"&&n.props["aria-label"]==="Cancelar pedido");
   assert.equal(hasCancel(eligible),true);
   assert.equal(hasCancel({...eligible,status:"confirmado",serviceItems:[direct,{destination:"kitchen",status:"confirmado"}]}),true);
   for(const patch of [
@@ -327,8 +327,8 @@ for(const section of ["salon","orders"]){
    {serviceItems:[direct,{destination:"bar",status:"listo"}]},
    {serviceItems:[direct,{destination:"kitchen",status:"entregado"}]},
   ])assert.equal(hasCancel({...eligible,...patch}),false,JSON.stringify(patch));
-  assert.equal(mount(section,eligible,false).buttons.some(n=>n.props.children==="Cancelar pedido"),false);
-  assert.equal(mount(section,eligible,true,true).buttons.find(n=>n.props.children==="Cancelar pedido").props.disabled,true);
+  assert.equal(mount(section,eligible,false).buttons.some(n=>n.props.children==="Cancelar"&&n.props["aria-label"]==="Cancelar pedido"),false);
+  assert.equal(mount(section,eligible,true,true).buttons.find(n=>n.props.children==="Cancelar"&&n.props["aria-label"]==="Cancelar pedido").props.disabled,true);
   assert.equal(hasCancel({status:"listo",serviceItems:[]}),false);
  });
  test(`${section}: el detalle ofrece la acción real de entrega antes de cobrar`,()=>{

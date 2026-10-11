@@ -93,19 +93,22 @@
    pestañas con un solo carril visible: nunca hay desplazamiento horizontal. */
 @container admin-main (width<=900px){
  .ds-tabs.kitchen-mobile-tabs{display:flex;width:100%}
- .ds-tabs.kitchen-mobile-tabs button{flex:1 1 0;min-width:0;min-height:var(--size-44)}
+ .ds-tabs.kitchen-mobile-tabs button{min-height:var(--size-44)}
  .kitchen-board{display:block}
  .kitchen-lane{display:none}
  .kitchen-lane[data-mobile-active=true]{display:block}
 }
 @media(max-width:760px){
  .kitchen-page{gap:var(--space-2-5)}
- .kitchen-header-tools{width:100%;grid-column:1/-1}
- .kitchen-header-tools select{flex:1;min-width:0}
+ /* Móvil: título y descripción a todo el ancho; área y canal debajo en dos columnas iguales. */
+ .kitchen-page .page-header{grid-template-columns:minmax(0,1fr);margin-bottom:var(--space-1)}
+ .kitchen-page .page-header-actions{width:100%}
+ .kitchen-header-tools{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-2)}
+ .kitchen-header-tools select{min-width:0}
+ .kitchen-attention{grid-column:1/-1;grid-row:2}
 }
 @media(max-width:460px){
  .ds-tabs.kitchen-mobile-tabs button{gap:var(--space-1-5);padding:0 var(--space-1-5);font-size:var(--font-size-label)}
- .ds-tabs.kitchen-mobile-tabs button svg{display:none}
  .kitchen-ticket-head{flex-direction:column;gap:var(--space-1-5)}
  .kitchen-ticket-time{width:fit-content}
 }

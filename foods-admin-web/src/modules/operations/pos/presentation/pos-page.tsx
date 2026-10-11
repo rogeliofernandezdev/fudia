@@ -246,7 +246,7 @@ export function POSDetailDialog({loading,error,data,canManage,hasShift,formatMon
       <div className="modal-summary-total"><span>Saldo pendiente</span><strong>{formatMoney(Number(data.remainingAmount))}</strong></div>
     </section>}>
     <div className="modal-body pos-detail-body hover-scroll" tabIndex={0} aria-label="Datos, productos y pagos del pedido">
-      <section className="pos-detail-context" aria-label="Datos del pedido"><dl>
+      <section className="pos-detail-context" aria-label="Datos del pedido"><dl className="modal-record-data">
         <div><dt>{data.order.tableName?"Mesa":data.order.customerName?"Cliente":"Venta"}</dt><dd>{data.order.tableName||data.order.customerName||"Venta directa"}{data.order.tableName&&data.order.customerName&&<small>{data.order.customerName}</small>}</dd></div>
         <div><dt>Canal</dt><dd>{channelLabel[data.order.channel]??data.order.channel}</dd></div>
         {data.order.channel==="salon"&&<div><dt>Atendido por</dt><dd>{data.order.waiterName||"Sin asignar"}</dd></div>}
@@ -265,7 +265,7 @@ export function POSDetailDialog({loading,error,data,canManage,hasShift,formatMon
         :<p className="pos-detail-empty">Sin pagos registrados.</p>}
       </section>
     </div></ModalWorkspace>}
-    {!loading&&!error&&data&&Number(data.paidAmount)>0&&ticket&&<ModalFooter><Button kind="secondary" icon="receipt" onClick={ticket}>Ver ticket de pago</Button></ModalFooter>}
+    {!loading&&!error&&data&&Number(data.paidAmount)>0&&ticket&&<ModalFooter><Button kind="secondary" icon="eye" onClick={ticket}>Ver resumen de pago</Button></ModalFooter>}
   </Dialog></div>;
 }
 
@@ -276,7 +276,7 @@ function POSLoading(){return <>
 
 function POSDetailLoading(){return <ModalWorkspace summary={<section className="modal-summary pos-detail-loading" aria-hidden="true"><div className="modal-summary-heading"><b/></div><div className="modal-summary-lines">{Array.from({length:2},(_,index)=><div className="modal-summary-line" key={index}><i/><b/></div>)}</div><div className="modal-summary-total"><i/><b/></div></section>}>
   <div className="modal-body pos-detail-body pos-detail-loading" aria-label="Cargando detalle del pedido" aria-busy="true">
-    <div className="pos-detail-context" aria-hidden="true"><dl>{Array.from({length:4},(_,index)=><div key={index}><i/><b/></div>)}</dl></div>
+    <div className="pos-detail-context" aria-hidden="true"><dl className="modal-record-data">{Array.from({length:4},(_,index)=><div key={index}><i/><b/></div>)}</dl></div>
     {Array.from({length:2},(_,section)=><section className="pos-detail-section pos-detail-section-skeleton" aria-hidden="true" key={section}><h3><b/></h3>{Array.from({length:3},(_,row)=><div key={row}><i/><span><b/><small/></span><i/></div>)}</section>)}
   </div>
 </ModalWorkspace>}

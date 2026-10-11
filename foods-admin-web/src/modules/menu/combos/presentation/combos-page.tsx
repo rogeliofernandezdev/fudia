@@ -197,8 +197,8 @@ function ComboWizard({draft,setDraft,step,setStep,products,productsLoading,produ
         </div>
 
         <ModalFooter className="combo-wizard-footer" note={step<4?"Puedes volver a modificar pasos anteriores.":"Revisa los datos antes de guardar."}>
-          <button type="button" className="button ghost" onClick={step===1?requestClose:()=>navigate(step-1)} disabled={busy}>{step===1?<><Icon name="close" size={16}/>Cancelar</>:<><Icon name="chevronLeft" size={16}/>Anterior</>}</button>
-          {step<4?<button type="button" className="button primary" onClick={next} disabled={busy||(step===2&&(productsLoading||productsError||!products.length))}>Continuar<Icon name="chevron" size={16}/></button>:<button type="button" className="button primary" onClick={submit} disabled={busy}><Icon name="check" size={16}/>{busy?"Guardando…":"Guardar"}</button>}
+          <Button action={step===1?"cancel":"back"} onClick={step===1?requestClose:()=>navigate(step-1)} disabled={busy}>{step===1?"Cancelar":"Anterior"}</Button>
+          {step<4?<Button action="continue" onClick={next} disabled={busy||(step===2&&(productsLoading||productsError||!products.length))}>Continuar</Button>:<Button onClick={submit} icon="check" disabled={busy}>{busy?"Guardando…":"Guardar"}</Button>}
         </ModalFooter>
       </main>
     </Dialog>

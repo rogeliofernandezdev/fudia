@@ -6,12 +6,24 @@ import {Icon,type IconName,type IconSize} from "@/design-system/icons";
 
 /**
  * primary: una sola acción dominante por superficie · secondary: alternativa, Reintentar, Limpiar filtros ·
- * ghost: Cancelar y Anterior · danger: confirmar dentro de ConfirmDialog · danger-outline: disparadores destructivos
+ * ghost: salir sin guardar y Anterior · danger: confirmar dentro de ConfirmDialog · danger-outline: disparadores destructivos
  * (Cancelar pedido, Anular, Cerrar turno). El verde no es un botón: se reserva para estados confirmados.
  */
 export type ButtonKind="primary"|"secondary"|"ghost"|"danger"|"danger-outline";
-type ButtonProps=ButtonHTMLAttributes<HTMLButtonElement>&{icon?:IconName;kind?:ButtonKind;/** Bloquea y anuncia la petición en curso; el texto debe cambiar al gerundio del mismo verbo. */loading?:boolean};
-export function Button({children,icon,kind="primary",type="button",className="",loading=false,disabled,...props}:ButtonProps){return <button type={type} className={`button ${kind} ${className}`.trim()} disabled={disabled||loading} aria-busy={loading||undefined} {...props}>{icon&&<Icon name={icon} size={18}/>}<span>{children}</span></button>}
+export type ButtonAction="cancel"|"cancel-record"|"continue"|"back";
+/** La intención fija variante e icono; no inferirla de la etiqueta visible. */
+const buttonActions:Record<ButtonAction,{kind:ButtonKind;icon:IconName;iconPosition:"start"|"end"}>={
+ cancel:{kind:"ghost",icon:"close",iconPosition:"start"},
+ "cancel-record":{kind:"danger-outline",icon:"cancel",iconPosition:"start"},
+ continue:{kind:"primary",icon:"chevron",iconPosition:"end"},
+ back:{kind:"ghost",icon:"chevronLeft",iconPosition:"start"},
+};
+type ButtonProps=ButtonHTMLAttributes<HTMLButtonElement>&{icon?:IconName;kind?:ButtonKind;action?:ButtonAction;/** Bloquea y anuncia la petición en curso; el texto debe cambiar al gerundio del mismo verbo. */loading?:boolean};
+export function Button({children,icon,kind="primary",action,type="button",className="",loading=false,disabled,...props}:ButtonProps){
+ const definition=action?buttonActions[action]:undefined;
+ const variant=definition?.kind??kind,glyph=definition?.icon??icon,trailing=definition?.iconPosition==="end";
+ return <button type={type} className={`button ${variant} ${className}`.trim()} disabled={disabled||loading} aria-busy={loading||undefined} {...props}>{glyph&&!trailing&&<Icon name={glyph} size={18}/>}<span>{children}</span>{glyph&&trailing&&<Icon name={glyph} size={18}/>}</button>;
+}
 export function IconButton({icon,label,accessibleLabel,iconSize=18,className="",type="button",...props}:{icon:IconName;label:string;accessibleLabel?:string;iconSize?:IconSize}&Omit<ButtonHTMLAttributes<HTMLButtonElement>,"aria-label">){return <button type={type} className={`ds-icon-button ${className}`.trim()} aria-label={accessibleLabel??label} data-tooltip={label} {...props}><Icon name={icon} size={iconSize}/></button>}
 type RowAction="view"|"review"|"charge"|"edit"|"activate"|"deactivate"|"cancel"|"remove";
 const rowActions:Record<RowAction,{icon:IconName;label:string;tone:"default"|"danger"}>={view:{icon:"eye",label:"Ver detalle",tone:"default"},review:{icon:"check",label:"Revisar orden",tone:"default"},charge:{icon:"cash",label:"Cobrar pedido",tone:"default"},edit:{icon:"edit",label:"Editar",tone:"default"},activate:{icon:"toggleOff",label:"Activar",tone:"default"},deactivate:{icon:"toggleOn",label:"Desactivar",tone:"default"},cancel:{icon:"cancel",label:"Cancelar",tone:"danger"},remove:{icon:"close",label:"Quitar fila",tone:"danger"}};

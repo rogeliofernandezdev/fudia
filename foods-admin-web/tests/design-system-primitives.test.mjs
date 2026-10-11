@@ -6,7 +6,7 @@ const read=file=>readFileSync(new URL(`../${file}`,import.meta.url),"utf8");
 
 test("primitivas homologadas: se exportan desde el design system y providers",()=>{
  const index=read("src/design-system/index.ts");
- for(const name of ["EmptyState","ErrorState","Skeleton","TableSkeleton","SearchField","Tabs"])assert.match(index,new RegExp(`\\b${name}\\b`),name);
+ for(const name of ["EmptyState","ErrorState","Skeleton","TableSkeleton","SearchField","Tabs","TabsBar"])assert.match(index,new RegExp(`\\b${name}\\b`),name);
  assert.doesNotMatch(index,/\bToolbar\b/,"El Toolbar sin comportamiento fue retirado");
  assert.match(read("src/providers/index.ts"),/useMoney/);
 });

@@ -17,13 +17,18 @@ test("un único dueño define etiquetas 600, valores 400 y secciones 700 en moda
  assert.equal(panel["--control-value-weight"],"var(--modal-value-weight)");
  for(const [selector,weight,size] of [
   [".crud-modal :where(dt,.modal-data-label)","var(--modal-label-weight)","var(--font-size-label)"],
-  [".crud-modal :where(dd,.modal-data-value)","var(--modal-value-weight)","var(--font-size-control)"],
+  [".crud-modal :where(dd,.modal-data-value)","var(--modal-value-weight)","var(--font-size-base)"],
  ]){
   const matches=shared.filter(rule=>rule.selector===selector);assert.equal(matches.length,1);
   assert.equal(declarations(matches[0])["font-weight"],weight);
   assert.equal(declarations(matches[0])["font-size"],size);
  }
  assert.equal(declarations(shared.find(rule=>rule.selector===".crud-modal h3"))["font-weight"],"var(--weight-bold)");
+ assert.equal(declarations(shared.find(rule=>rule.selector===".crud-modal h3"))["font-size"],"var(--font-size-md)");
+ for(const [file,selector] of [["modules/operations/orders/presentation/order-detail.css",".order-detail-section-head h3"],["modules/sales/presentation/sales.css",".sales-detail-section h3"],["modules/operations/pos/presentation/pos.css",".pos-detail-section h3"]]){
+  assert.equal(declarations(rules(file).find(rule=>rule.selector===selector))["font-size"],"var(--font-size-md)",`${file}: sección por encima de los datos`);
+ }
+ assert.equal(declarations(rules("modules/sales/presentation/sales.css").find(rule=>rule.selector===".sales-detail-lines p,.sales-detail-payments p"))["font-size"],"var(--font-size-label)");
 });
 
 test("los módulos no reescriben los pesos de datos informativos semánticos",()=>{

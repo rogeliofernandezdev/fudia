@@ -130,9 +130,14 @@ Reactivar. No usa la nota anterior como motivo ni envía al abrir el diálogo.
 Reutiliza RHF/Zod, formulario CRUD, validación en línea, guardado explícito por
 botón y bloqueo síncrono de duplicados. Éxito/error solo aparecen tras la
 respuesta y cierran el diálogo mediante `onResponseClose` compartido.
-La acción de ojo abre historial remoto por producto, empresa y local, con
+La acción Historial con reloj abre historial remoto por producto, empresa y local, con
 paginación compartida, fecha/hora regional, valores anteriores/nuevos, motivo
 y autor. Conserva los eventos antiguos sin detalle con un texto explícito.
+El historial separa «Cambio» de «Cantidad»: cupo anterior → nuevo y unidades
+vendidas al cambiar, exclusivamente desde el evento. Los valores nulos son «Sin
+registrar», nunca cero ni el saldo actual del producto. Un registro moderno sin
+control de cantidad puede indicar «No aplica». Los registros de inventario no
+inventan existencias históricas: el contrato no incluye snapshots de stock físico.
 Lectura no exige `menu.manage`. Guardar invalida historial, disponibilidad,
 productos, catálogo operativo, combos y dashboard.
 
@@ -201,6 +206,8 @@ sigue en POS. Delivery continúa con Listo → En camino → Entregado.
 Al guardar la comanda de una mesa, la API asigna al usuario autenticado como mozo.
 Salón y Pedidos muestran «Mozo» y, cuando existen pagos, «Cobrado por», con los
 nombres reales del servidor. Sus detalles reutilizan una franja de datos de lectura;
+`modal-inline-metadata` presenta etiqueta y nombre a 14 px, con fecha al extremo
+derecho y wrap sin truncar cuando falta espacio. No modifica la autoría ni el dato remoto.
 Ventas y POS identifican además al autor de cada pago. Nunca se toma al cajero
 del turno como autor de un cobro que realizó otro integrante.
 

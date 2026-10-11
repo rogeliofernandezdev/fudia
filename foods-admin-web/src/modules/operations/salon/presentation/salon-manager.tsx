@@ -1,10 +1,11 @@
 "use client";
 
 import {Dialog} from "@/design-system/dialog";
+import "../../styles/salon-comanda.css";
 import "../../styles/salon.css";
 import {useState,useCallback} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,ConfirmDialog,EmptyState,ErrorState,Icon,PageHeader,SearchField,Skeleton,Status,Tabs} from "@/design-system";
+import {Button,ConfirmDialog,EmptyState,ErrorState,Icon,PageHeader,SearchField,Skeleton,Status} from "@/design-system";
 import {ComandaView} from "../../orders/presentation/comanda-view";
 import type {Draft,Order} from "../domain/types";
 import {createSalonOrder,getSalonFloor,getSalonOrder,updateSalonOrder,updateSalonOrderStatus} from "../infrastructure/salon-api";
@@ -185,7 +186,7 @@ export function SalonManager(){
             {floor.isFetching?"Actualizando…":"Actualizar"}
           </Button>
         </div>
-        {zones.length>1&&<Tabs className="salon-zones" items={zoneTabs} value={zone} onChange={setZone} label="Filtrar por zona"/>}
+        {zones.length>1&&<div className="cmd-chips salon-zones" role="group" aria-label="Filtrar por zona">{zoneTabs.map(item=><button type="button" key={item.value} className="cmd-chip" aria-pressed={zone===item.value} onClick={()=>setZone(item.value)}>{zone===item.value&&<span className="cmd-chip-check" aria-hidden="true"><Icon name="check" size={14}/></span>}{item.label}</button>)}</div>}
       </section>
 
       {/* Floor plan */}

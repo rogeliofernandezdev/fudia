@@ -7,6 +7,10 @@
 .cmd-shell>.modal-header{padding-top:calc(var(--space-2) + var(--safe-area-top));border-bottom-color:var(--primary-800);background:var(--primary-700)}
 .cmd-shell>.modal-context{padding-block:var(--space-2);background:var(--surface)}
 .cmd-shell .modal-header-details{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-1) var(--space-3);color:var(--ink-600);font-size:var(--font-size-sm);line-height:var(--line-height-snug)}
+.cmd-context{min-width:0;display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-1) var(--space-4);margin:0;padding:0;list-style:none}
+.cmd-context li{min-width:0;display:inline-flex;align-items:center;gap:var(--space-1-5);color:var(--ink-700);font-weight:var(--weight-semibold)}
+.cmd-context li>svg{flex:none;color:var(--icon-line)}
+.cmd-context li>span{min-width:0;overflow-wrap:anywhere}
 .cmd-body{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) var(--size-420)}
 
 /* Carta */
@@ -22,11 +26,16 @@
 .cmd-chip.cmd-tone-sky{background:var(--sky-100);color:var(--sky-800)}
 .cmd-chip.cmd-tone-violet{background:var(--digital-100);color:var(--digital-700)}
 .cmd-chip.cmd-tone-teal{background:var(--teal-100);color:var(--teal-700)}
-.cmd-chip[aria-pressed=true]{background:var(--primary-700);color:var(--surface)}
-.cmd-chip.cmd-tone-sky[aria-pressed=true]{background:var(--sky-800);color:var(--surface)}
-.cmd-chip.cmd-tone-violet[aria-pressed=true]{background:var(--digital-700);color:var(--surface)}
-.cmd-chip.cmd-tone-teal[aria-pressed=true]{background:var(--teal-700);color:var(--surface)}
+.cmd-chip[aria-pressed=true]{background:var(--primary-200);color:var(--primary-800)}
+.cmd-chip.cmd-tone-sky[aria-pressed=true]{background:var(--sky-200);color:var(--sky-800)}
+.cmd-chip.cmd-tone-violet[aria-pressed=true]{background:var(--digital-200);color:var(--digital-700)}
+.cmd-chip.cmd-tone-teal[aria-pressed=true]{background:var(--teal-200);color:var(--teal-700)}
 .cmd-chip>svg{flex:none}
+.cmd-chip-check{display:grid;place-items:center;flex:none;width:var(--size-18);height:var(--size-18);border-radius:var(--radius-pill);background:var(--primary-800);color:var(--surface)}
+.cmd-chip-check>svg{stroke-width:2.4}
+.cmd-chip.cmd-tone-sky .cmd-chip-check{background:var(--sky-800)}
+.cmd-chip.cmd-tone-violet .cmd-chip-check{background:var(--digital-700)}
+.cmd-chip.cmd-tone-teal .cmd-chip-check{background:var(--teal-700)}
 .cmd-chip:active{transform:translateY(var(--space-px))}
 .cmd-category-loading{display:flex;gap:var(--space-2)}
 .cmd-category-all.button.secondary{flex:none;min-height:var(--size-44);border-color:transparent;border-radius:var(--radius-pill);background:var(--cloud-50)}
@@ -85,6 +94,7 @@
 .cmd-line-head{min-width:0;display:grid;gap:var(--space-1)}
 .cmd-line-head>strong{min-width:0;font-size:var(--font-size-base);font-weight:var(--weight-semibold);line-height:var(--line-height-snug);overflow-wrap:anywhere}
 .cmd-line-head>em{font-size:var(--font-size-base);font-style:normal;font-weight:var(--weight-bold);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.cmd-line-limit{color:var(--warning-800);font-size:var(--font-size-xs);font-weight:var(--weight-semibold)}
 .cmd-line-unit{color:var(--ink-500);font-size:var(--font-size-xs);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
 .cmd-line-selections{grid-column:2/-1;display:grid;gap:var(--space-1);margin:0;padding:var(--space-2) var(--space-3);border-radius:var(--radius-control);background:var(--cloud-50);list-style:none;color:var(--ink-800);font-size:var(--font-size-xs);line-height:var(--line-height-snug);overflow-wrap:anywhere}
 .cmd-line-selections b{color:var(--ink-600);font-weight:var(--weight-semibold)}
@@ -188,6 +198,9 @@
 @media (width<=600px){
   .cmd-shell>.modal-context{padding-inline:var(--space-4)}
   .cmd-summary-foot .cmd-actions>.button{flex-basis:100%}
+  /* Móvil: la zona queda a la izquierda y el resto del contexto (personas, cliente) a la derecha. */
+  .cmd-shell .modal-header-details,.cmd-context{flex:1 1 100%}
+  .cmd-context li:nth-child(2){margin-left:auto}
 }
 
 @media (width<=900px) and (height<=600px){

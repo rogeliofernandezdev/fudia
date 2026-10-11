@@ -94,12 +94,13 @@
   flex-shrink:0;
 }
 
+/* Zonas: misma tira deslizable de chips que las categorías de la comanda (salon-comanda.css). */
 .salon-zones{
-  justify-self:start;
+  min-width:0;
 }
 
 /* ── Floor grid ── */
-.salon-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--size-212),1fr));gap:var(--space-4);align-items:start}
+.salon-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--size-212),1fr));grid-auto-rows:1fr;gap:var(--space-4);align-items:stretch}
 
 /* ════════════════
    TABLE CARD
@@ -131,7 +132,7 @@
 .salon-table-inner{display:flex;flex-direction:column;gap:var(--space-2-5);flex:1;padding:var(--space-4) var(--space-5) var(--space-4)}
 
 /* Top row — estado + tiempo */
-.salon-table-top{display:flex;align-items:center;justify-content:space-between;gap:var(--space-1-5);min-height:var(--size-24)}
+.salon-table-top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-1-5);min-height:var(--size-24)}
 .salon-table-elapsed{display:inline-flex;align-items:center;gap:var(--space-1);padding:var(--space-1-5) var(--space-2);border-radius:var(--radius-tile);background:var(--primary-700);color:var(--surface);font-size:var(--font-size-label);font-weight:var(--weight-heavy);letter-spacing:var(--letter-spacing-wide);flex-shrink:0}
 
 /* Mesa identifier — centrado */
@@ -215,13 +216,25 @@
     font-size:var(--font-size-md);
   }
 
+  /* Móvil: la búsqueda se desplaza con la página y las zonas quedan fijas bajo la barra superior. */
   .salon-controls{
-    margin-bottom:var(--space-3-5);
-    padding:var(--space-2);
+    display:contents;
   }
 
   .salon-toolbar{
     gap:var(--space-2);
+    margin-bottom:var(--space-2);
+  }
+
+  .salon-controls .salon-zones{
+    position:sticky;
+    top:var(--size-64);
+    /* Sobre las tarjetas, pero debajo de la barra superior y su selector de empresa/local. */
+    z-index:var(--z-raised);
+    margin:0 calc(var(--space-4) * -1) var(--space-2);
+    padding:var(--space-2) var(--space-4);
+    scroll-padding-inline:var(--space-4);
+    background:var(--cloud-50);
   }
 
   .salon-refresh{
@@ -238,7 +251,7 @@
   .salon-table-name{font-size:var(--font-size-lg)}
   .salon-table-inner{padding:var(--space-3) var(--space-3-5) var(--space-3-5)}
 }
-@media(max-width:390px){
+@media(max-width:480px){
   .salon-overview-stat{
     justify-content:center;
   }

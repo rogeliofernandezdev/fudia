@@ -55,10 +55,10 @@ export function detailComponents({userId="preview-waiter",permissions=["orders.m
  }
  return {...load("modules/operations/orders/presentation/order-detail-dialog.tsx"),...load("design-system/modal.tsx"),...load("modules/operations/orders/presentation/order-meta.ts"),...load("modules/operations/orders/presentation/order-service-controls.tsx"),...load("modules/sales/presentation/sale-detail-dialog.tsx"),...(includePOS?load("modules/operations/pos/presentation/pos-page.tsx"):{}),...(includeComanda?load("modules/operations/orders/presentation/comanda-view.tsx"):{})};
 }
-export function renderDetail({order=exampleOrder,skeleton=false,error,variant="order",permissions,userId,busy=false}={}){
+export function renderDetail({order=exampleOrder,skeleton=false,error,variant="order",permissions,userId,busy=false,editable=false}={}){
  const {OrderDetailContent,OrderDetailSkeleton}=detailComponents({permissions,userId});
  const noop=()=>{};
  return renderToStaticMarkup(h(QueryClientProvider,{client:new QueryClient()},
   h("div",{className:"modal-backdrop"},h("section",{className:"crud-modal order-detail",role:"dialog","aria-modal":true,"aria-labelledby":"order-detail-title"},
-   skeleton?h(OrderDetailSkeleton,{variant,close:noop}):h(OrderDetailContent,{variant,order,error,canManage:true,busy,close:noop,retry:noop,advance:noop,add:noop,cancel:noop})))));
+   skeleton?h(OrderDetailSkeleton,{variant,close:noop}):h(OrderDetailContent,{variant,order,error,canManage:true,busy,close:noop,retry:noop,advance:noop,add:noop,cancel:noop,edit:editable?noop:undefined})))));
 }

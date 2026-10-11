@@ -129,7 +129,7 @@ export function CloseCashShiftDialog({shift,report,busy,currency,formatMoney,clo
             <div className="expected"><small>EFECTIVO ESPERADO</small><strong>{formatMoney(expected)}</strong></div>
           </section>}
 
-        <Tabs className="cash-count-mode" label="Modo de conteo" value={byDenomination?"denominations":"total"} onChange={value=>setByDenomination(value==="denominations")} items={[{value:"total",label:"Monto total"},{value:"denominations",label:"Por denominaciones"}]}/>
+        <Tabs className="cash-count-mode" label="Modo de conteo" value={byDenomination?"denominations":"total"} onChange={value=>setByDenomination(value==="denominations")} items={[{value:"total",label:"Monto total",icon:"cash"},{value:"denominations",label:"Por denominaciones",icon:"wallet"}]}/>
 
         {!byDenomination?<FormField label="Efectivo contado" error={errors.countedAmount?.message}>
           <Input autoFocus type="number" min="0" step="0.01" inputMode="decimal" {...register("countedAmount")} placeholder="0.00"/>

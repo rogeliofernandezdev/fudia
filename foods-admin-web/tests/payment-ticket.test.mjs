@@ -50,6 +50,8 @@ test("PDF real mide 80 mm y conserva todas las líneas en tickets grandes",async
 
 test("preview es el PDF real y la impresión solo sucede al activar su botón",()=>{
  const source=read("modules/sales/presentation/payment-ticket-dialog.tsx");
+ assert.doesNotMatch(source,/Imprime al/);
+ assert.match(source,/Este ticket no reemplaza una boleta o factura\./);
  assert.match(source,/src=\{prepared!\.url\}/);assert.match(source,/URL.revokeObjectURL\(url\)/);assert.match(source,/cancelled=true/);assert.match(source,/contentWindow\.print\(\)/);assert.match(source,/onClick=\{print\}/);assert.match(source,/onClick=\{download\}/);assert.match(source,/disabled=\{!ready/);assert.ok(!source.includes("createPayment"));assert.match(source,/organization\?\.id,location\?\.id,orderId/);
  const css=read("modules/sales/presentation/payment-ticket.css");assert.match(css,/overflow:auto/);
  assert.match(source,/<ModalFooter/);assert.match(read("design-system/styles/modal.css"),/@media \(width<=600px\)/);

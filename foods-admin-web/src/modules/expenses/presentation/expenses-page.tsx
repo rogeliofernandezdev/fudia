@@ -4,7 +4,7 @@ import "./expenses.css";
 import {useState} from "react";
 import {useForm} from "react-hook-form";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,ConfirmDialog,EmptyState,ErrorState,FormField,Icon,Input,PageHeader,Pagination,RowActionButton,SearchField,Select,Status,TableSkeleton,Tabs,Textarea,ModalHeader,ModalFooter} from "@/design-system";
+import {Button,ConfirmDialog,EmptyState,ErrorState,FormField,Icon,Input,PageHeader,Pagination,RowActionButton,SearchField,Select,Status,TableSkeleton,Tabs,TabsBar,Textarea,ModalHeader,ModalFooter} from "@/design-system";
 import {useFeedback,useMoney,useSession,useSettings} from "@/providers";
 import {useDebouncedValue} from "@/shared/hooks/use-debounced-value";
 import {formatRegionalCalendarDate,formatRegionalDateTime} from "@/shared/i18n/regional-format";
@@ -16,7 +16,7 @@ function todayLocal(){const now=new Date();return new Date(now.getTime()-now.get
 const emptyDraft=(paymentMethod=""):ExpenseDraft=>({categoryId:"",description:"",amount:"",paymentMethod,businessDate:todayLocal(),reference:"",notes:""});
 const expenseColumns=["FECHA","GASTO","CATEGORÍA","MEDIO","IMPORTE","ESTADO","ACCIONES"];
 const categoryColumns=["CATEGORÍA","ESTADO","ACCIONES"];
-const tabs:Array<{value:ExpenseTab;label:string;icon:"receipt"|"stock"}>=[{value:"expenses",label:"Gastos",icon:"receipt"},{value:"categories",label:"Categorías",icon:"stock"}];
+const tabs:Array<{value:ExpenseTab;label:string;icon:"receipt"|"layers"}>=[{value:"expenses",label:"Gastos",icon:"receipt"},{value:"categories",label:"Categorías",icon:"layers"}];
 
 export function ExpensesPage(){
  const qc=useQueryClient();const{notify}=useFeedback();const{can,location}=useSession();const settings=useSettings();const money=useMoney();
@@ -35,8 +35,8 @@ export function ExpensesPage(){
  const expenseFiltered=Boolean(q||categoryId||status||from||to);const categoryFiltered=Boolean(q||status);const newExpense=()=>setDraft(emptyDraft(paymentOptions[0]?.value??""));const newCategory=()=>setCategoryDraft({id:"",name:"",active:true});
  const headerAction=tab==="expenses"?(canManage?<Button icon="plus" onClick={newExpense}>Nuevo gasto</Button>:undefined):(canManage?<Button icon="plus" onClick={newCategory}>Nueva categoría</Button>:undefined);
  return <>
-  <PageHeader title="Costos y gastos" description="Centraliza el control económico del local. Esta sección gestiona los gastos operativos y sus categorías." action={headerAction}/>
-  <div className="catalog-tabs-row"><Tabs label="Costos y gastos" items={tabs} value={tab} onChange={changeTab}/></div>
+  <PageHeader title="Costos y gastos" description="Centraliza el control económico del local. Esta sección gestiona los gastos operativos y sus categorías." />
+  <TabsBar action={headerAction}><Tabs label="Costos y gastos" items={tabs} value={tab} onChange={changeTab}/></TabsBar>
   <section className="panel standardized-management expenses-panel">
    {tab==="expenses"?<>
     <div className="toolbar expenses-toolbar">

@@ -184,7 +184,8 @@ test("producto e inventario mantienen una sola fuente de verdad",()=>{
   const availability=read("src/modules/menu/availability/presentation/product-availability-manager.tsx");
   assert.ok(availability.includes('quantityControl==="portions"'));
   assert.ok(availability.includes('quantityControl==="inventory"'));
-  assert.ok(availability.includes("La existencia se actualiza desde Inventario y con las ventas."));
+  assert.ok(availability.includes("Desde Inventario"));
+  assert.ok(availability.includes("Se actualiza con las entradas y ventas."),"La aclaración de inventario sigue visible en la celda de cupo");
   assert.ok(availability.includes('can("menu.read")'),"Disponibilidad respeta permiso de lectura");
   assert.ok(availability.includes('can("menu.manage")'),"Disponibilidad separa permiso de escritura");
   assert.ok(availability.includes("function saveQuota"),"Guardar cupo tiene un flujo explícito");
