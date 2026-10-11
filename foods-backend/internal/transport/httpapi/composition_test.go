@@ -71,7 +71,7 @@ func New(db *pgxpool.Pool) *integrationAPI {
 		Identity:               identityhttp.New(identityapp.New(identitypg.New(db), credentials.Credentials{}), os.Getenv("FOODS_COOKIE_SECURE") == "true"),
 		Customers:              customerhttp.New(customerapp.New(customerpg.New(db))),
 		InventoryStock:         inventoryhttp.NewStock(inventoryapp.NewStock(inventorypg.NewStock(db), database.NewUnitOfWork(db), auditpg.New(db))),
-		Purchasing:             purchasehttp.New(purchaseapp.New(purchasepg.New(db), database.NewUnitOfWork(db), auditpg.New(db), inventorypg.NewStock(db))),
+		Purchasing:             purchasehttp.New(purchaseapp.New(purchasepg.New(db), database.NewUnitOfWork(db), auditpg.New(db), inventoryapp.NewPurchaseLedger(inventorypg.NewStock(db)))),
 		Orders:                 orderhttp.New(orders),
 		InventoryUnits:         inventoryhttp.NewUnits(inventoryapp.NewUnits(inventorypg.NewUnits(db))),
 	})}
