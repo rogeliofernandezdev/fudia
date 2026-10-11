@@ -4,6 +4,8 @@ import "net/http"
 
 // Handlers injects the extracted verticals. Only cmd/api composes production adapters.
 type Handlers struct {
+	Purchasing             PurchasingHandler
+	InventoryStock         InventoryStockHandler
 	MenuCatalog            MenuCatalogHandler
 	Modules                ModulesHandler
 	Expenses               ExpensesHandler
@@ -56,4 +58,36 @@ func (a *API) listInventoryUnits(w http.ResponseWriter, r *http.Request) {
 }
 func (a *API) createInventoryUnit(w http.ResponseWriter, r *http.Request) {
 	a.handlers.InventoryUnits.Create(w, r)
+}
+
+type InventoryStockHandler interface {
+	CreateInventoryTransfer(http.ResponseWriter, *http.Request)
+	ListInventoryTransfers(http.ResponseWriter, *http.Request)
+	CreatePurchaseInventoryItem(http.ResponseWriter, *http.Request)
+	ListInventory(http.ResponseWriter, *http.Request)
+	ListInventoryProducts(http.ResponseWriter, *http.Request)
+	ListInventoryMovements(http.ResponseWriter, *http.Request)
+	CreateInventoryEntry(http.ResponseWriter, *http.Request)
+	CreateInventoryAdjustment(http.ResponseWriter, *http.Request)
+	CreateInventoryCombination(http.ResponseWriter, *http.Request)
+	SavePurchasePresentation(http.ResponseWriter, *http.Request)
+	UpdateInventoryLocationSettings(http.ResponseWriter, *http.Request)
+	ListInventoryCombinations(http.ResponseWriter, *http.Request)
+}
+
+type PurchasingHandler interface {
+	ListSuppliers(http.ResponseWriter, *http.Request)
+	ListPurchaseOrders(http.ResponseWriter, *http.Request)
+	ListPurchaseReceipts(http.ResponseWriter, *http.Request)
+	GetPurchaseOrder(http.ResponseWriter, *http.Request)
+	GetPurchaseReceipt(http.ResponseWriter, *http.Request)
+	CreateSupplier(http.ResponseWriter, *http.Request)
+	UpdateSupplier(http.ResponseWriter, *http.Request)
+	CreatePurchaseOrder(http.ResponseWriter, *http.Request)
+	UpdatePurchaseOrder(http.ResponseWriter, *http.Request)
+	ReceivePurchaseOrder(http.ResponseWriter, *http.Request)
+	CreatePurchaseReturn(http.ResponseWriter, *http.Request)
+	UpdateSupplierStatus(http.ResponseWriter, *http.Request)
+	UpdatePurchaseOrderStatus(http.ResponseWriter, *http.Request)
+	ApprovePurchaseOrder(http.ResponseWriter, *http.Request)
 }

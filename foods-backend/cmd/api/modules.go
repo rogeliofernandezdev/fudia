@@ -10,6 +10,9 @@ import (
 	menufiles "github.com/foods-platform/foods-backend/internal/modules/menu/infrastructure/files"
 	menupg "github.com/foods-platform/foods-backend/internal/modules/menu/infrastructure/postgres"
 	menuhttp "github.com/foods-platform/foods-backend/internal/modules/menu/transport/http"
+	purchaseapp "github.com/foods-platform/foods-backend/internal/modules/purchasing/application"
+	purchasepg "github.com/foods-platform/foods-backend/internal/modules/purchasing/infrastructure/postgres"
+	purchasehttp "github.com/foods-platform/foods-backend/internal/modules/purchasing/transport/http"
 	reportapp "github.com/foods-platform/foods-backend/internal/modules/reporting/application"
 	reportpg "github.com/foods-platform/foods-backend/internal/modules/reporting/infrastructure/postgres"
 	reporthttp "github.com/foods-platform/foods-backend/internal/modules/reporting/transport/http"
@@ -47,6 +50,8 @@ func newAPI(db *pgxpool.Pool) *legacy.API {
 		IdentityAdministration: identityhttp.NewAdministration(identityapp.NewAdministration(identitypg.NewAdministration(db), database.NewUnitOfWork(db), credentials.Credentials{}, subscriptionapp.NewAccess(subscriptionpg.NewAccess(db)), auditpg.New(db))),
 		Identity:               identityhttp.New(identityapp.New(identitypg.New(db), credentials.Credentials{}), os.Getenv("FOODS_COOKIE_SECURE") == "true"),
 		Customers:              customerhttp.New(customerapp.New(customerpg.New(db))),
+		InventoryStock:         inventoryhttp.NewStock(inventoryapp.NewStock(inventorypg.NewStock(db), database.NewUnitOfWork(db), auditpg.New(db))),
+		Purchasing:             purchasehttp.New(purchaseapp.New(purchasepg.New(db), database.NewUnitOfWork(db), auditpg.New(db), inventorypg.NewStock(db))),
 		InventoryUnits:         inventoryhttp.NewUnits(inventoryapp.NewUnits(inventorypg.NewUnits(db))),
 	})
 }
