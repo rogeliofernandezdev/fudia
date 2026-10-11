@@ -32,7 +32,8 @@ test("la pantalla conserva el centrado, el polling parcial y estados semánticos
  const css=readFileSync(new URL("../src/modules/operations/styles/salon.css",import.meta.url),"utf8");
  assert.match(page,/refetchInterval:10000/);
  assert.match(page,/refetchIntervalInBackground:false/);
- assert.match(page,/formatTableOccupation\(t\.occupiedSince,Date\.now\(\)\)/);
+ assert.match(page,/formatTableOccupation\(t\.occupiedSince,clock\)/);
+ assert.match(page,/setInterval\(\(\)=>setClock\(Date\.now\(\)\),30000\)/);
  assert.match(page,/floor\.isError&&!floor\.data/);
  assert.match(page,/<Status tone="red">Ocupada<\/Status>/);
  assert.match(css,/\.salon-table-name-row\{[^\n]*align-items:center/);
