@@ -41,6 +41,7 @@ class Settings(BaseSettings):
     rate_limit_messages: int = 30
     rate_limit_window_seconds: int = 60
     max_message_chars: int = 2_000
+    webhook_max_payload_bytes: int = Field(default=262_144, ge=1024, le=1_048_576)
 
     openai_api_key: str = ""
     openai_model: str = "gpt-5.6-luna"
