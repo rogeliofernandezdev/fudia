@@ -1,4 +1,6 @@
 /* Table CSS owned by the design system; all values use shared tokens. */
+/* Hide legacy duplicate cards until all modules have adopted DataTable. */
+.management-cards{display:none}
 /* Tablas: cabecera azul operativa, filas de 56 px y cifras tabulares */
 table{width:100%;border-collapse:collapse;white-space:nowrap;font-variant-numeric:tabular-nums}
 table thead,.catalog-panel thead,.standardized-management thead{color:var(--surface);background:var(--primary-600)}
