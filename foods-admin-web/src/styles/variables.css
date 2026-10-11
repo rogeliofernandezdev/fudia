@@ -127,6 +127,11 @@
   --danger: var(--danger-600);
   --warning: var(--warning-600);
 
+  /* Superficies de lectura del Salon: mezcla tenue de colores existentes.
+     El color identifica ocupacion, no altera los estados de pedido ni la accion. */
+  --salon-occupied-surface: color-mix(in srgb, var(--danger-50) 52%, var(--cloud-25));
+  --salon-free-surface: color-mix(in srgb, var(--brand-50) 65%, var(--cloud-25));
+
   /* Espaciado: base de 4 px con medios pasos hasta 14 px */
   --space-px: 1px;
   --space-0-5: 2px;
