@@ -5,7 +5,7 @@ import (
 	"errors"
 	"github.com/foods-platform/foods-backend/internal/modules/concierge/application"
 	"github.com/foods-platform/foods-backend/internal/modules/concierge/domain"
-	orderdomain "github.com/foods-platform/foods-backend/internal/modules/orders/domain"
+	ordercontracts "github.com/foods-platform/foods-backend/internal/modules/orders/contracts"
 	"github.com/foods-platform/foods-backend/internal/platform/database"
 	"github.com/foods-platform/foods-backend/internal/platform/requestscope"
 	"github.com/jackc/pgx/v5"
@@ -60,7 +60,7 @@ func (r *Concierge) ResolveQR(ctx context.Context, token string) (application.QR
 	out.Scope.Name = "Fudia Concierge"
 	return out, nil
 }
-func (r *Concierge) RecordBillRequest(ctx context.Context, s scope, qr application.QRContext, out orderdomain.Order, in domain.BillRequestInput) (int64, error) {
+func (r *Concierge) RecordBillRequest(ctx context.Context, s scope, qr application.QRContext, out ordercontracts.Order, in domain.BillRequestInput) (int64, error) {
 	tag, err := r.db(ctx).Exec(ctx, `
 		INSERT INTO audit_log(
 		  organization_id,location_id,user_id,action,entity_type,entity_id,metadata

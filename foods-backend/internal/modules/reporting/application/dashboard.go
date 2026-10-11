@@ -3,7 +3,7 @@ package application
 import (
 	"context"
 	"errors"
-	orderdomain "github.com/foods-platform/foods-backend/internal/modules/orders/domain"
+	ordercontracts "github.com/foods-platform/foods-backend/internal/modules/orders/contracts"
 	"github.com/foods-platform/foods-backend/internal/modules/reporting/domain"
 	"github.com/foods-platform/foods-backend/internal/platform/apperror"
 	"github.com/foods-platform/foods-backend/internal/platform/requestscope"
@@ -59,7 +59,7 @@ func (s *Service) Dashboard(ctx context.Context, scope requestscope.Scope, key s
 	}
 	defer tx.Rollback(ctx)
 	labels := map[string]string{}
-	for _, v := range orderdomain.Channels {
+	for _, v := range ordercontracts.Channels {
 		labels[v["value"]] = v["label"]
 	}
 	out, err = s.repo.Dashboard(tx.Context(), scope, period, visible, labels)

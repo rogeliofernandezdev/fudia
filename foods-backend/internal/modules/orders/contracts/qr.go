@@ -17,3 +17,9 @@ type TableSubmission struct {
 	Order   domain.Order
 	Created bool
 }
+
+ // Read-side projections published by Orders. Aliases keep existing JSON and
+ // transaction contracts stable while consumers stop importing domain directly.
+type Order = domain.Order
+type OrderItem = domain.OrderItem
+var Channels = domain.Channels

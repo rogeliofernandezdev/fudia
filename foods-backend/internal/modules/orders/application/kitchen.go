@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	menudomain "github.com/foods-platform/foods-backend/internal/modules/menu/domain"
+	menucontracts "github.com/foods-platform/foods-backend/internal/modules/menu/contracts"
 	"github.com/foods-platform/foods-backend/internal/modules/orders/domain"
 	"github.com/foods-platform/foods-backend/internal/platform/apperror"
 	"github.com/foods-platform/foods-backend/internal/platform/unitofwork"
@@ -21,7 +21,7 @@ type KitchenPage struct {
 }
 
 func (a *Orders) Kitchen(ctx context.Context, s scope, channel, destination string) (KitchenPage, error) {
-	out := KitchenPage{Items: []domain.KitchenTicket{}, Counts: map[string]int{"confirmado": 0, "preparando": 0, "listo": 0}, DestinationOptions: menudomain.ServiceDestinations[:2], ChannelOptions: domain.Channels}
+	out := KitchenPage{Items: []domain.KitchenTicket{}, Counts: map[string]int{"confirmado": 0, "preparando": 0, "listo": 0}, DestinationOptions: menucontracts.ServiceDestinations[:2], ChannelOptions: domain.Channels}
 	channel = strings.TrimSpace(channel)
 	destination = strings.TrimSpace(destination)
 	if channel != "" && !domain.ValidOrderChannel(channel) {

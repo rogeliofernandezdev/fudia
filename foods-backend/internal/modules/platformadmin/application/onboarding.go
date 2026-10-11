@@ -3,8 +3,8 @@ package application
 import (
 	"context"
 	"errors"
-	identitydomain "github.com/foods-platform/foods-backend/internal/modules/identity/domain"
-	orgdomain "github.com/foods-platform/foods-backend/internal/modules/organizations/domain"
+	identitycontracts "github.com/foods-platform/foods-backend/internal/modules/identity/contracts"
+	orgcontracts "github.com/foods-platform/foods-backend/internal/modules/organizations/contracts"
 	"github.com/foods-platform/foods-backend/internal/modules/platformadmin/domain"
 	"github.com/foods-platform/foods-backend/internal/platform/apperror"
 	"github.com/foods-platform/foods-backend/internal/platform/unitofwork"
@@ -12,7 +12,7 @@ import (
 )
 
 type FiscalCatalog interface {
-	ValidateFiscal(context.Context, *orgdomain.FiscalProfileInput, bool) (orgdomain.CurrencyOption, bool, error)
+	ValidateFiscal(context.Context, *orgcontracts.FiscalProfileInput, bool) (orgcontracts.CurrencyOption, bool, error)
 }
 type SubscriptionCreator interface {
 	Create(context.Context, string, string, string, string, bool) error
@@ -114,7 +114,7 @@ func (a *Platform) Onboard(ctx context.Context, s scope, in domain.TenantOnboard
 		return result, a.reject(ctx, "invalid_timezone", "La zona horaria seleccionada no es válida.")
 	}
 
-	currency, fiscalOK, catalogErr := a.catalogs.ValidateFiscal(ctx, &orgdomain.FiscalProfileInput{
+	currency, fiscalOK, catalogErr := a.catalogs.ValidateFiscal(ctx, &orgcontracts.FiscalProfileInput{
 		Country: in.Country, Currency: in.Currency, CurrencyPosition: in.CurrencyPosition,
 		TaxName: in.TaxName, TaxRate: in.TaxRate, TaxIncluded: in.TaxIncluded, Default: true,
 	}, true)
@@ -263,7 +263,7 @@ func (a *Platform) Onboard(ctx context.Context, s scope, in domain.TenantOnboard
 }
 func (a *Platform) seedRoles(ctx context.Context, org string) (string, error) {
 	admin := ""
-	for _, seed := range identitydomain.DefaultOrganizationRoles {
+	for _, seed := range identitycontracts.DefaultOrganizationRoles {
 		id, err := a.repo.SeedRole(ctx, org, seed)
 		if err != nil {
 			return "", err

@@ -3,8 +3,8 @@ package application
 import (
 	"context"
 	"errors"
-	identitydomain "github.com/foods-platform/foods-backend/internal/modules/identity/domain"
-	orgdomain "github.com/foods-platform/foods-backend/internal/modules/organizations/domain"
+	identitycontracts "github.com/foods-platform/foods-backend/internal/modules/identity/contracts"
+	orgcontracts "github.com/foods-platform/foods-backend/internal/modules/organizations/contracts"
 	"github.com/foods-platform/foods-backend/internal/modules/platformadmin/domain"
 	"github.com/foods-platform/foods-backend/internal/platform/apperror"
 	"github.com/foods-platform/foods-backend/internal/platform/requestscope"
@@ -48,13 +48,13 @@ func platformFailure(k apperror.Kind, c, m string) error { return apperror.New(k
 
 type Repository interface {
 	CreateOrganization(ctx context.Context, s scope, in domain.TenantOnboardingInput) (string, error)
-	ConfigureFiscal(ctx context.Context, s scope, organizationID string, in domain.TenantOnboardingInput, currency orgdomain.CurrencyOption) (string, error)
+	ConfigureFiscal(ctx context.Context, s scope, organizationID string, in domain.TenantOnboardingInput, currency orgcontracts.CurrencyOption) (string, error)
 	CreateLocation(ctx context.Context, s scope, organizationID string, profileID string, in domain.TenantOnboardingInput) (string, error)
 	CreateAdministrator(ctx context.Context, s scope, organizationID string, in domain.TenantOnboardingInput, hash string) (string, error)
 	CreateOperationalSetup(ctx context.Context, s scope, organizationID string) (int64, error)
 	AssignAdministrator(ctx context.Context, s scope, userID string, roleID string, locationID string) (int64, error)
 	AuditOnboarded(ctx context.Context, s scope, organizationID string, locationID string, userID string) (int64, error)
-	SeedRole(context.Context, string, identitydomain.OrganizationRoleSeed) (string, error)
+	SeedRole(context.Context, string, identitycontracts.OrganizationRoleSeed) (string, error)
 	SeedPaymentMethods(ctx context.Context, organizationID string) error
 	SeedOperationalDefaults(ctx context.Context, organizationID string, locationID string, userID string) error
 	MarkPastDue(ctx context.Context, s scope) (int64, error)

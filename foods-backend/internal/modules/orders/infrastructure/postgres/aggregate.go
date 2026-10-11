@@ -2,7 +2,7 @@ package postgres
 
 import (
 	"context"
-	menudomain "github.com/foods-platform/foods-backend/internal/modules/menu/domain"
+	menucontracts "github.com/foods-platform/foods-backend/internal/modules/menu/contracts"
 	"github.com/foods-platform/foods-backend/internal/modules/orders/domain"
 	"github.com/jackc/pgx/v5"
 )
@@ -120,7 +120,7 @@ func (r *Orders) ServiceItems(ctx context.Context, s scope, orderID string) ([]d
 		if err = rows.Scan(&item.ID, &item.OrderItemID, &item.ProductID, &item.Name, &item.Qty, &item.Destination, &item.Status); err != nil {
 			return nil, err
 		}
-		for _, destination := range menudomain.ServiceDestinations {
+		for _, destination := range menucontracts.ServiceDestinations {
 			if destination["value"] == item.Destination {
 				item.DestinationLabel = destination["label"]
 			}

@@ -6,7 +6,7 @@ import (
 	audit "github.com/foods-platform/foods-backend/internal/modules/audit/application"
 	"github.com/foods-platform/foods-backend/internal/modules/inventory/domain"
 	inventorycontracts "github.com/foods-platform/foods-backend/internal/modules/inventory/contracts"
-	menudomain "github.com/foods-platform/foods-backend/internal/modules/menu/domain"
+	menucontracts "github.com/foods-platform/foods-backend/internal/modules/menu/contracts"
 	"github.com/foods-platform/foods-backend/internal/platform/apperror"
 	"github.com/foods-platform/foods-backend/internal/platform/requestscope"
 	"github.com/foods-platform/foods-backend/internal/platform/unitofwork"
@@ -140,7 +140,7 @@ func (a *Stock) CreateCatalogItem(ctx context.Context, s scope, in domain.Invent
 	}
 	switch {
 	case in.NewProduct != nil:
-		productIn := menudomain.ProductInput{
+		productIn := menucontracts.ProductInput{
 			SKU:             in.NewProduct.SKU,
 			Name:            in.NewProduct.Name,
 			Description:     in.NewProduct.Description,
@@ -149,7 +149,7 @@ func (a *Stock) CreateCatalogItem(ctx context.Context, s scope, in domain.Invent
 			ProductType:     "retail",
 			QuantityControl: "inventory",
 		}
-		if _, invalidProduct := menudomain.NormalizeProduct(productIn); invalidProduct != "" {
+		if _, invalidProduct := menucontracts.NormalizeProduct(productIn); invalidProduct != "" {
 			return result, stockFailure(apperror.Invalid, "invalid_product", invalidProduct)
 		}
 		var categoryAllowed bool

@@ -3,7 +3,7 @@ package application
 import (
 	"context"
 	"errors"
-	deliverydomain "github.com/foods-platform/foods-backend/internal/modules/delivery/domain"
+	deliverycontracts "github.com/foods-platform/foods-backend/internal/modules/delivery/contracts"
 	"github.com/foods-platform/foods-backend/internal/modules/orders/domain"
 	"github.com/foods-platform/foods-backend/internal/platform/apperror"
 	"github.com/foods-platform/foods-backend/internal/platform/unitofwork"
@@ -18,7 +18,7 @@ func (a *Orders) Create(ctx context.Context, s scope, in domain.OrderInput) (dom
 	if !domain.ValidOrderChannel(in.Channel) || len(in.Items) == 0 || in.DeliveryFee < 0 {
 		return result, orderFailure(apperror.Invalid, "invalid_order", "El canal y al menos un producto son obligatorios.")
 	}
-	if message := deliverydomain.ValidateContact(in.Channel, in.CustomerName, in.CustomerPhone, in.Address, in.Reference); message != "" {
+	if message := deliverycontracts.ValidateContact(in.Channel, in.CustomerName, in.CustomerPhone, in.Address, in.Reference); message != "" {
 		return result, orderFailure(apperror.Invalid, "invalid_order", message)
 	}
 	if in.Channel == "salon" && strings.TrimSpace(in.TableID) == "" {

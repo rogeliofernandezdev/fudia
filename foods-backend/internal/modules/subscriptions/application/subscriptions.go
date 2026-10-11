@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	audit "github.com/foods-platform/foods-backend/internal/modules/audit/application"
-	orgdomain "github.com/foods-platform/foods-backend/internal/modules/organizations/domain"
+	orgcontracts "github.com/foods-platform/foods-backend/internal/modules/organizations/contracts"
 	"github.com/foods-platform/foods-backend/internal/modules/subscriptions/domain"
 	"github.com/foods-platform/foods-backend/internal/platform/apperror"
 	"github.com/foods-platform/foods-backend/internal/platform/requestscope"
@@ -64,7 +64,7 @@ func NormalizePlanInput(in *domain.SubscriptionPlanInput) bool {
 	if !planCodePattern.MatchString(in.Code) || in.Name == "" || len(in.Name) > 120 || len(in.Description) > 500 || in.TermsVersion == "" || len(in.TermsVersion) > 80 {
 		return false
 	}
-	if _, ok := orgdomain.CurrencyByCode(in.Currency); !ok {
+	if _, ok := orgcontracts.CurrencyByCode(in.Currency); !ok {
 		return false
 	}
 	monthly, monthlyOK := new(big.Rat).SetString(in.MonthlyPrice)

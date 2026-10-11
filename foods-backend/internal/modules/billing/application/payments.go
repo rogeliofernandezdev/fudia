@@ -5,7 +5,7 @@ import (
 	"errors"
 	audit "github.com/foods-platform/foods-backend/internal/modules/audit/application"
 	"github.com/foods-platform/foods-backend/internal/modules/billing/domain"
-	orderdomain "github.com/foods-platform/foods-backend/internal/modules/orders/domain"
+	ordercontracts "github.com/foods-platform/foods-backend/internal/modules/orders/contracts"
 	"github.com/foods-platform/foods-backend/internal/platform/apperror"
 	"github.com/foods-platform/foods-backend/internal/platform/requestscope"
 	"github.com/foods-platform/foods-backend/internal/platform/unitofwork"
@@ -28,7 +28,7 @@ type POSPage struct {
 }
 type POSOrderDetail struct {
 	ReceiptContext  domain.PaymentReceiptContext `json:"receiptContext"`
-	Order           orderdomain.Order            `json:"order"`
+	Order           ordercontracts.Order            `json:"order"`
 	PaidAmount      string                       `json:"paidAmount"`
 	RemainingAmount string                       `json:"remainingAmount"`
 	PaymentStatus   string                       `json:"paymentStatus"`
@@ -37,7 +37,7 @@ type POSOrderDetail struct {
 type PaymentOrders interface {
 	RequireDelivered(context.Context, scope, string, string) error
 	CompleteDeliveredAccount(context.Context, scope, string) (bool, error)
-	PaymentOrder(context.Context, scope, string) (orderdomain.Order, error)
+	PaymentOrder(context.Context, scope, string) (ordercontracts.Order, error)
 }
 type Payments struct {
 	repo    PaymentRepository
