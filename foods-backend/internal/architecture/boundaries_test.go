@@ -31,6 +31,7 @@ func TestModuleBoundaries(t *testing.T) {
 		if err != nil {
 			return err
 		}
+		contracts := strings.Contains(rel, "/contracts/")
 		domain := strings.Contains(rel, "/domain/")
 		application := strings.Contains(rel, "/application/")
 		transport := strings.Contains(rel, "/transport/")
@@ -42,6 +43,13 @@ func TestModuleBoundaries(t *testing.T) {
 				violation = true
 			}
 			if domain && (strings.Contains(target, ".") || target == "net/http" || target == "database/sql" || strings.HasPrefix(target, prefix)) {
+				violation = true
+			}
+			// Published contracts may reference their own domain but never a
+			// concrete adapter, HTTP transport, use-case implementation or SQL driver.
+			if contracts && (strings.Contains(target, "/application") || strings.Contains(target, "/infrastructure") ||
+				strings.Contains(target, "/transport") || target == "net/http" || target == "database/sql" ||
+				strings.HasPrefix(target, "github.com/jackc/") || strings.HasPrefix(target, prefix+"platform/database")) {
 				violation = true
 			}
 			if application && (strings.Contains(target, "/infrastructure/") || strings.Contains(target, "/transport/") || target == "net/http" || target == "database/sql" || strings.HasPrefix(target, "github.com/jackc/") || strings.HasSuffix(target, "/platform/httpapi")) {
@@ -61,7 +69,7 @@ func TestModuleBoundaries(t *testing.T) {
 				t.Errorf("%s imports forbidden dependency %s", rel, target)
 			}
 		}
-		if domain || application || transport || strings.Contains(rel, "/platform/httpapi/") {
+		if domain || contracts || application || transport || strings.Contains(rel, "/platform/httpapi/") {
 			ast.Inspect(f, func(n ast.Node) bool {
 				lit, ok := n.(*ast.BasicLit)
 				if !ok || lit.Kind != token.STRING {
