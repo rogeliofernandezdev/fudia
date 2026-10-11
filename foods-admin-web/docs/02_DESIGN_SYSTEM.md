@@ -1018,8 +1018,8 @@ primaria con el icono `send`: «Enviar a cocina». Durante el envío muestra
 
 - Cabecera azul `primary-600`, texto blanco en mayúsculas, filas alternas sutiles y
   acciones iconográficas consistentes; el color semántico se reserva para estados.
-- Escala tipográfica única para todas las tablas, definida en `globals.css` y
-  nunca sobrescrita por módulo: cabecera y líneas secundarias usan
+- Escala tipográfica única para todas las tablas, definida en
+  `src/design-system/styles/data-table.css` y los tokens, nunca sobrescrita por módulo: cabecera y líneas secundarias usan
   `--font-size-label` (12 px); celdas, paginación y controles usan
   `--font-size-control` (13 px en escritorio). La cabecera conserva peso 800.
 - La paginación informa el rango visible y total, permite 10, 20 o 50 filas y
@@ -1029,15 +1029,19 @@ primaria con el icono `send`: «Enviar a cocina». Durante el envío muestra
   marcado ni estilos dentro de los módulos de negocio.
 - No conservar paginadores antiguos ni sus reglas (`catalog-pagination`, `pagination-meta`, estilos
   genéricos de `.management footer` o flechas generadas con pseudo-elementos).
-  La geometría base de `Pagination` continúa en `globals.css`; los botones y sus
-  estados tienen un único dueño en `pagination.css`, compartido por todas las
-  tablas. No se corrigen conflictos con excepciones locales ni `!important`:
+  La geometría base, los controles y la adaptación móvil de `Pagination` pertenecen
+  exclusivamente a `src/design-system/styles/pagination.css`, compartido por todas
+  las tablas. No se corrigen conflictos con excepciones locales ni `!important`:
   Anterior/Siguiente activos conservan fondo primario y texto blanco;
   deshabilitados usan fondo y texto neutros, con radio y altura estándar.
 - El botón «Nuevo» va alineado a la derecha de los tabs de producto/categoría,
   no en el encabezado de página. En móvil se apila debajo de los tabs.
-- El scroll horizontal solo aparece si hay desborde y se revela al pasar el cursor
-  o enfocar el contenedor. En móvil se prioriza tarjeta o scroll controlado.
+- Las tablas informativas conservan filas y columnas en móvil, con desplazamiento
+  horizontal accesible por toque y teclado, sin ocultar la barra de desplazamiento.
+  `DataTable` ofrece el contenedor con nombre accesible; su CSS reside en
+  `src/design-system/styles/data-table.css`, y Tailwind compone el wrapper.
+  El CSS compartido se registra una vez desde el layout para mantener las tablas
+  heredadas durante la migración. La paginación móvil es compacta.
 - Todos los formularios usan los mismos labels, inputs, selects, áreas de texto,
   foco azul operativo y estados ocupado/deshabilitado.
 - **Altura única de control.** Todo control interactivo de una misma barra o
@@ -1313,7 +1317,10 @@ la identidad, textos, iconos y colores son exclusivamente Foods.
 - Un selector tampoco se repite entre hojas importadas por el mismo contexto:
   cada clase tiene un único dueño. La prueba detecta duplicados tanto dentro
   de `globals.css` como entre `globals.css`, `navigation-state.css`,
-  `loading.css` y `table-actions.css`.
+  `loading.css`, `data-table.css`, `pagination.css` y `table-actions.css`.
+- `data-table.css` es el dueño de filas, columnas, cabeceras y desplazamiento
+  horizontal de tablas informativas; no duplicar estos estilos en `globals.css`.
+- `pagination.css` es el dueño de todos los estilos de paginación.
 - `table-actions.css` es el único dueño de los estilos de acciones
   iconográficas de tablas y tarjetas: `.table-actions`, `.table-actions button`,
   `.table-actions button.danger`, `.ds-icon-button`, `.ds-icon-button:hover`
