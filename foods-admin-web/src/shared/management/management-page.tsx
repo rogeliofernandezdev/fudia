@@ -3,6 +3,7 @@
 import {useMemo,useState} from "react";
 import {Button,Input,PageHeader,Pagination,RowActionButton,Select,Status} from "@/design-system/page-header";
 import {Icon,IconName} from "@/design-system/icons";
+import {DataTable} from "@/design-system/data-table";
 
 type Tone="green"|"blue"|"orange"|"gray";
 type Row={name:string;detail:string;category:string;value:string;state:string;tone?:Tone};
@@ -15,7 +16,7 @@ export function ManagementPage({eyebrow,title,description,action,actionIcon="plu
  return <><PageHeader title={title} description={description} action={<Button icon={actionIcon}>{action}</Button>}/>
  <section className="mini-kpis"><article><small>TOTAL REGISTRADOS</small><strong>{rows.length}</strong><em>En todos los locales</em></article><article><small>OPERATIVOS</small><strong>{rows.filter(r=>r.tone!=="orange"&&r.tone!=="gray").length}</strong><em>Disponibles actualmente</em></article><article><small>REQUIEREN ATENCIÓN</small><strong className="warning">{rows.filter(r=>r.tone==="orange").length}</strong><em>Revisar hoy</em></article></section>
  <section className="panel management standardized-management"><div className="toolbar"><label className="ds-input-shell"><Icon name="search" size={18}/><Input value={search} onChange={e=>{setSearch(e.target.value);setPage(1)}} placeholder={`Buscar en ${title.toLowerCase()}...`}/></label><Select aria-label="Filtrar por estado" value={status} onChange={e=>{setStatus(e.target.value);setPage(1)}}><option value="">Todos los estados</option>{states.map(value=><option key={value}>{value}</option>)}</Select><button><Icon name="filter" size={18}/>Filtros</button><button><Icon name="download" size={18}/>Exportar</button></div>
- {visible.length?<><div className="table-wrap hover-scroll"><table><thead><tr><th>{columns[0]}</th><th>{columns[1]}</th><th>{columns[2]}</th><th>ESTADO</th><th>ACCIONES</th></tr></thead><tbody>{visible.map((row,index)=><tr className={index%2?"alternate":""} key={row.name}><td><span className={`row-icon r${index%3}`}><Icon name="box" size={18}/></span><b>{row.name}</b><small>{row.detail}</small></td><td>{row.category}</td><td><b>{row.value}</b></td><td><Status tone={row.tone}>{row.state}</Status></td><td><div className="standard-actions"><RowActionButton action="view"/><RowActionButton action="edit"/></div></td></tr>)}</tbody></table></div>
+ {visible.length?<><DataTable label={`Registros de ${title}`} containerClassName="hover-scroll"><thead><tr><th>{columns[0]}</th><th>{columns[1]}</th><th>{columns[2]}</th><th>ESTADO</th><th>ACCIONES</th></tr></thead><tbody>{visible.map((row,index)=><tr className={index%2?"alternate":""} key={row.name}><td><span className={`row-icon r${index%3}`}><Icon name="box" size={18}/></span><b>{row.name}</b><small>{row.detail}</small></td><td>{row.category}</td><td><b>{row.value}</b></td><td><Status tone={row.tone}>{row.state}</Status></td><td><div className="standard-actions"><RowActionButton action="view"/><RowActionButton action="edit"/></div></td></tr>)}</tbody></DataTable>
 </>:<div className="catalog-state"><span><Icon name="search"/></span><b>No encontramos resultados</b><p>Ajusta la búsqueda o el estado para consultar otros registros.</p></div>}
  <Pagination page={safePage} size={size} total={filtered.length} onPage={setPage} onSize={value=>{setSize(value);setPage(1)}}/></section></>;
 }
