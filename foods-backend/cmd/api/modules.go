@@ -52,26 +52,46 @@ import (
 )
 
 func newAPI(db *pgxpool.Pool) *httpapi.API {
-	orders := orderapp.New(orderpg.New(db), database.NewUnitOfWork(db), auditpg.New(db), inventoryapp.NewStock(inventorypg.NewStock(db), database.NewUnitOfWork(db), auditpg.New(db)))
+	// Composition is the only layer that knows concrete PostgreSQL adapters.
+	// A single unit of work and shared stateless adapters preserve transactions
+	// across Orders, Inventory, Billing and tenant onboarding.
+	work := database.NewUnitOfWork(db)
+	audit := auditpg.New(db)
+	inventoryRepo := inventorypg.NewStock(db)
+	stock := inventoryapp.NewStock(inventoryRepo, work, audit)
+	menu := menuapp.NewCatalog(menupg.NewCatalog(db), work, audit, menufiles.Images{Directory: "./uploads/products"})
+	orders := orderapp.New(orderpg.New(db), work, audit, stock)
+
+	accessRepo := subscriptionpg.NewAccess(db)
+	access := subscriptionapp.NewAccess(accessRepo)
+	subscriptions := subscriptionapp.New(subscriptionpg.New(db), work, audit)
+	organizations := orgapp.New(orgpg.New(db), work, access, audit)
+	platform := platformapp.New(platformpg.New(db), work, organizations, subscriptions,
+		credentials.Credentials{}, platformdiag.Diagnostics{}, platformdiag.Diagnostics{})
+
+	paymentsRepo := billingpg.NewPayments(db)
+	methods := billingapp.NewMethods(billingpg.NewMethods(db), work)
+	identityAdminRepo := identitypg.NewAdministration(db)
+
 	return httpapi.NewWithHandlers(httpapi.Handlers{
-		Organizations:          orghttp.New(orgapp.New(orgpg.New(db), database.NewUnitOfWork(db), subscriptionapp.NewAccess(subscriptionpg.NewAccess(db)), auditpg.New(db))),
-		Subscriptions:          subscriptionhttp.New(subscriptionapp.New(subscriptionpg.New(db), database.NewUnitOfWork(db), auditpg.New(db))),
-		Platform:               platformhttp.New(platformapp.New(platformpg.New(db), database.NewUnitOfWork(db), orgapp.New(orgpg.New(db), database.NewUnitOfWork(db), subscriptionapp.NewAccess(subscriptionpg.NewAccess(db)), auditpg.New(db)), subscriptionapp.New(subscriptionpg.New(db), database.NewUnitOfWork(db), auditpg.New(db)), credentials.Credentials{}, platformdiag.Diagnostics{}, platformdiag.Diagnostics{})),
-		Concierge:              conciergehttp.New(conciergeapp.New(conciergepg.New(db), menuapp.NewCatalog(menupg.NewCatalog(db), database.NewUnitOfWork(db), auditpg.New(db), menufiles.Images{Directory: "./uploads/products"}), orders, auditpg.New(db)), func() string { return os.Getenv("FUDIA_CONCIERGE_API_KEY") }),
-		MenuCatalog:            menuhttp.NewCatalog(menuapp.NewCatalog(menupg.NewCatalog(db), database.NewUnitOfWork(db), auditpg.New(db), menufiles.Images{Directory: "./uploads/products"})),
-		Payments:               billinghttp.NewPayments(billingapp.NewPayments(billingpg.NewPayments(db), database.NewUnitOfWork(db), auditpg.New(db), billingapp.NewMethods(billingpg.NewMethods(db), database.NewUnitOfWork(db)), orders)),
-		Cash:                   billinghttp.NewCash(billingapp.NewCash(billingpg.NewPayments(db), database.NewUnitOfWork(db))),
-		PaymentMethods:         billinghttp.NewMethods(billingapp.NewMethods(billingpg.NewMethods(db), database.NewUnitOfWork(db))),
-		Floor:                  servicehttp.NewFloor(serviceapp.NewFloor(servicepg.NewFloor(db), database.NewUnitOfWork(db), auditpg.New(db))),
-		Reservations:           servicehttp.NewReservations(serviceapp.NewReservations(servicepg.NewReservations(db), database.NewUnitOfWork(db), auditpg.New(db))),
-		Reporting:              reporthttp.New(reportapp.New(reportpg.New(db), database.NewUnitOfWork(db), identitypg.NewAdministration(db))),
-		Expenses:               billinghttp.NewExpenses(billingapp.NewExpenses(billingpg.NewExpenses(db), billingapp.NewMethods(billingpg.NewMethods(db), database.NewUnitOfWork(db)), auditpg.New(db))),
-		Modules:                subscriptionhttp.NewModules(subscriptionapp.NewModules(subscriptionpg.NewAccess(db), subscriptionapp.NewAccess(subscriptionpg.NewAccess(db)), auditpg.New(db))),
-		IdentityAdministration: identityhttp.NewAdministration(identityapp.NewAdministration(identitypg.NewAdministration(db), database.NewUnitOfWork(db), credentials.Credentials{}, subscriptionapp.NewAccess(subscriptionpg.NewAccess(db)), auditpg.New(db))),
+		Organizations:          orghttp.New(organizations),
+		Subscriptions:          subscriptionhttp.New(subscriptions),
+		Platform:               platformhttp.New(platform),
+		Concierge:              conciergehttp.New(conciergeapp.New(conciergepg.New(db), menu, orders, audit), func() string { return os.Getenv("FUDIA_CONCIERGE_API_KEY") }),
+		MenuCatalog:            menuhttp.NewCatalog(menu),
+		Payments:               billinghttp.NewPayments(billingapp.NewPayments(paymentsRepo, work, audit, methods, orders)),
+		Cash:                   billinghttp.NewCash(billingapp.NewCash(paymentsRepo, work)),
+		PaymentMethods:         billinghttp.NewMethods(methods),
+		Floor:                  servicehttp.NewFloor(serviceapp.NewFloor(servicepg.NewFloor(db), work, audit)),
+		Reservations:           servicehttp.NewReservations(serviceapp.NewReservations(servicepg.NewReservations(db), work, audit)),
+		Reporting:              reporthttp.New(reportapp.New(reportpg.New(db), work, identityAdminRepo)),
+		Expenses:               billinghttp.NewExpenses(billingapp.NewExpenses(billingpg.NewExpenses(db), methods, audit)),
+		Modules:                subscriptionhttp.NewModules(subscriptionapp.NewModules(accessRepo, access, audit)),
+		IdentityAdministration: identityhttp.NewAdministration(identityapp.NewAdministration(identityAdminRepo, work, credentials.Credentials{}, access, audit)),
 		Identity:               identityhttp.New(identityapp.New(identitypg.New(db), credentials.Credentials{}), os.Getenv("FOODS_COOKIE_SECURE") == "true"),
 		Customers:              customerhttp.New(customerapp.New(customerpg.New(db))),
-		InventoryStock:         inventoryhttp.NewStock(inventoryapp.NewStock(inventorypg.NewStock(db), database.NewUnitOfWork(db), auditpg.New(db))),
-		Purchasing:             purchasehttp.New(purchaseapp.New(purchasepg.New(db), database.NewUnitOfWork(db), auditpg.New(db), inventorypg.NewStock(db))),
+		InventoryStock:         inventoryhttp.NewStock(stock),
+		Purchasing:             purchasehttp.New(purchaseapp.New(purchasepg.New(db), work, audit, inventoryRepo)),
 		Orders:                 orderhttp.New(orders),
 		InventoryUnits:         inventoryhttp.NewUnits(inventoryapp.NewUnits(inventorypg.NewUnits(db))),
 	})
