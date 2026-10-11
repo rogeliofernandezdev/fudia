@@ -1,4 +1,5 @@
 "use client";
+import {DataTable} from "@/design-system/data-table";
 import "./inventory.css";
 import {useState} from "react";
 import {useQuery} from "@tanstack/react-query";
@@ -54,8 +55,7 @@ export function KardexPage(){
     <div className="inventory-state"><Icon name="alert" size={24}/><b>No pudimos cargar el Kárdex</b><p>{movements.error.message}</p><Button kind="secondary" icon="refresh" onClick={()=>movements.refetch()}>Reintentar</Button></div>
    :!items.length?<div className="inventory-state"><Icon name="ledger" size={24}/><b>Sin movimientos</b><p>{activeFilters?"No encontramos movimientos que coincidan con los filtros seleccionados.":"Aún no hay movimientos registrados en este local."}</p>{activeFilters>0&&<Button kind="secondary" icon="refresh" onClick={resetFilters}>Ver todos</Button>}</div>
    :<>
-    <div className="table-wrap hover-scroll inventory-table-wrap">
-     <table className="kardex-table">
+    <DataTable label="Movimientos del Kárdex" containerClassName="hover-scroll inventory-table-wrap" className="kardex-table">
       <thead><tr><th>ARTÍCULO</th><th>FECHA</th><th>TIPO</th><th>MOTIVO</th><th>CANTIDAD</th><th>STOCK ANTERIOR</th><th>STOCK RESULTANTE</th><th>COSTO U.</th><th>VALOR MOV.</th><th>VALOR SALDO</th><th>USUARIO</th></tr></thead>
       <tbody>{items.map((item,index)=>{const delta=Number(item.quantityDelta);return <tr className={index%2?"alternate":""} key={item.id}>
        <td className="inventory-product-cell"><span className={"row-icon r"+index%3}><Icon name="stock" size={18}/></span><b>{item.itemName}</b></td>
@@ -70,8 +70,7 @@ export function KardexPage(){
        <td><b>{formatRegionalNumber(Number(item.balanceValueAfter),location?.country,{minimumFractionDigits:2,maximumFractionDigits:2})}</b></td>
        <td>{item.createdByName||"Usuario no disponible"}</td>
       </tr>})}</tbody>
-     </table>
-    </div>
+     </DataTable>
     <div className="management-cards kardex-cards">
      {items.map((item,index)=>{const delta=Number(item.quantityDelta);return <article key={item.id}>
       <header><span className={"row-icon r"+index%3}><Icon name="stock" size={18}/></span><div><b>{item.itemName}</b><small>{formatRegionalDateTime(item.createdAt,{country:location?.country,timeZone:location?.timezone})}</small></div><Status tone={delta<0?"orange":"green"}>{movementLabel(item)}</Status></header>
