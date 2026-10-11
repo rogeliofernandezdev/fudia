@@ -1,7 +1,7 @@
 from typing import Any
 
 from src.domain.models import ConversationSession
-from src.infrastructure.fudia_client import FudiaClient
+from src.services.ports import FudiaBackend
 from src.services.confirmation import explicit_confirmation
 from src.services.tool_registry import ToolRegistry
 
@@ -13,7 +13,7 @@ class ConciergeTools:
 
     def __init__(
         self,
-        fudia: FudiaClient,
+        fudia: FudiaBackend,
         session: ConversationSession,
         user_message: str,
     ) -> None:
