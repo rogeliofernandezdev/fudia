@@ -1,4 +1,5 @@
 "use client";
+import {DataTable} from "@/design-system/data-table";
 
 import {Dialog} from "@/design-system/dialog";
 import "./platform-global-settings.css";
@@ -98,9 +99,9 @@ export function PlatformGlobalSettingsPage(){
    {(catalogs.isLoading||channels.isLoading)?<TableSkeleton columns={columns} rows={4} label="Cargando canales de WhatsApp"/>:
     (catalogs.isError||channels.isError)?<ErrorState title="No pudimos cargar la configuración global" text={(catalogs.error??channels.error)?.message} retrying={catalogs.isFetching||channels.isFetching} onRetry={()=>{void catalogs.refetch();void channels.refetch()}}/>:
     !items.length?<EmptyState icon="chat" title="Aún no hay canales" text="Registra el número de WhatsApp de un país para habilitarlo en el registro de empresas." action={<Button icon="plus" onClick={start}>Nuevo canal</Button>}/>:
-    <><div className="table-wrap hover-scroll"><table><thead><tr><th>País</th><th>Moneda</th><th>Nombre</th><th>Número</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>
+    <><DataTable label="Canales globales de pago" containerClassName="hover-scroll"><thead><tr><th>País</th><th>Moneda</th><th>Nombre</th><th>Número</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>
      {items.map((item,index)=><tr className={index%2?"alternate":""} key={item.id}><td><span className={`row-icon r${index%3}`}><Icon name="chat" size={18}/></span><b>{item.countryName}</b><small>{item.countryCode}</small></td><td>{currencyOf(item.countryCode)}</td><td>{item.displayName}</td><td>{item.phoneNumber}</td><td>{status(item)}</td><td><div className="table-actions">{actions(item)}</div></td></tr>)}
-    </tbody></table></div>
+    </tbody></DataTable>
     <div className="management-cards">{items.map(item=><article key={item.id}><header><span className="row-icon r0"><Icon name="chat"/></span><div><b>{item.countryName}</b><small>{item.countryCode}</small></div>{status(item)}</header><dl><div><dt>Nombre</dt><dd>{item.displayName}</dd></div><div><dt>Número</dt><dd>{item.phoneNumber}</dd></div><div><dt>Moneda</dt><dd>{currencyOf(item.countryCode)}</dd></div></dl><footer>{actions(item)}</footer></article>)}</div></>}
   </section>
 
