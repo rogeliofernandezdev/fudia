@@ -32,14 +32,12 @@ y el onboarding exige esa asociación.
 
 ## Responsabilidades y Repository
 
-La extracción modular comienza en `internal/modules`: `identity` (sesiones y
-permisos de rutas), `customers` (clientes y direcciones) e `inventory` (unidades).
-Cada vertical contiene `domain`, `application`, `infrastructure/postgres` y
-`transport/http`. Los casos de uso declaran interfaces Repository; únicamente
-sus implementaciones PostgreSQL contienen SQL. `cmd/api/modules.go` conecta
-los adaptadores de producción.
+La implementación usa repositorios específicos en `internal/modules`. Cada caso de
+uso depende de contratos tipados; los adaptadores PostgreSQL contienen las consultas
+y el mapeo de filas. `cmd/api/modules.go` conecta todas las dependencias de producción.
 
-`internal/platform` contiene mecanismos compartidos. `internal/legacy/httpapi`
-conserva las verticales aún acopladas y sus pruebas de regresión. Mover ese código
-identifica la deuda; **no equivale a haberlo refactorizado**. La migración completa,
-las garantías y los pendientes están en [docs/10_BACKEND_REFACTOR.md](docs/10_BACKEND_REFACTOR.md).
+`internal/transport/httpapi` registra las rutas y aplica autorización, sin SQL ni
+conexiones a la base de datos. `internal/platform` contiene mecanismos compartidos.
+El paquete anterior `internal/legacy` fue retirado. Las responsabilidades, la unidad
+transaccional y las verificaciones están en
+[docs/10_BACKEND_REFACTOR.md](docs/10_BACKEND_REFACTOR.md).

@@ -19,13 +19,14 @@ de `docs/` antes de implementar cambios relevantes.
 - Toda consulta operativa aplica alcance de organización y local.
 - Stock, caja, pagos y estados de pedido cambian mediante documentos o transiciones auditables.
 
-## Dependencias durante la extracción modular
+## Dependencias modulares
 
 - Los casos de uso declaran interfaces Repository específicas; no importan pgx,
   HTTP ni adaptadores concretos.
 - `transport/http` no ejecuta SQL ni construye repositorios.
 - `internal/platform` no importa módulos de negocio ni `internal/legacy`.
-- `internal/legacy/httpapi` es deuda pendiente, no una ubicación para nuevas
-  verticales. Consultar `docs/10_BACKEND_REFACTOR.md` antes de migrar una.
+- `internal/transport/httpapi` compone rutas y autorización; no accede a PostgreSQL.
+- El paquete `internal/legacy` fue retirado y no debe reintroducirse.
+  Consultar `docs/10_BACKEND_REFACTOR.md` para las responsabilidades de cada módulo.
 - Conservar los límites transaccionales entre pedidos, stock y pagos; ejecutar
   `go test ./internal/architecture` junto con las puertas generales.

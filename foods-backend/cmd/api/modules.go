@@ -1,7 +1,6 @@
 package main
 
 import (
-	legacy "github.com/foods-platform/foods-backend/internal/legacy/httpapi"
 	auditpg "github.com/foods-platform/foods-backend/internal/modules/audit/infrastructure/postgres"
 	billingapp "github.com/foods-platform/foods-backend/internal/modules/billing/application"
 	billingpg "github.com/foods-platform/foods-backend/internal/modules/billing/infrastructure/postgres"
@@ -36,6 +35,7 @@ import (
 	subscriptionpg "github.com/foods-platform/foods-backend/internal/modules/subscriptions/infrastructure/postgres"
 	subscriptionhttp "github.com/foods-platform/foods-backend/internal/modules/subscriptions/transport/http"
 	"github.com/foods-platform/foods-backend/internal/platform/database"
+	httpapi "github.com/foods-platform/foods-backend/internal/transport/httpapi"
 
 	customerapp "github.com/foods-platform/foods-backend/internal/modules/customers/application"
 	customerpg "github.com/foods-platform/foods-backend/internal/modules/customers/infrastructure/postgres"
@@ -51,9 +51,9 @@ import (
 	"os"
 )
 
-func newAPI(db *pgxpool.Pool) *legacy.API {
+func newAPI(db *pgxpool.Pool) *httpapi.API {
 	orders := orderapp.New(orderpg.New(db), database.NewUnitOfWork(db), auditpg.New(db), inventoryapp.NewStock(inventorypg.NewStock(db), database.NewUnitOfWork(db), auditpg.New(db)))
-	return legacy.NewWithHandlers(db, legacy.Handlers{
+	return httpapi.NewWithHandlers(httpapi.Handlers{
 		Organizations:          orghttp.New(orgapp.New(orgpg.New(db), database.NewUnitOfWork(db), subscriptionapp.NewAccess(subscriptionpg.NewAccess(db)), auditpg.New(db))),
 		Subscriptions:          subscriptionhttp.New(subscriptionapp.New(subscriptionpg.New(db), database.NewUnitOfWork(db), auditpg.New(db))),
 		Platform:               platformhttp.New(platformapp.New(platformpg.New(db), database.NewUnitOfWork(db), orgapp.New(orgpg.New(db), database.NewUnitOfWork(db), subscriptionapp.NewAccess(subscriptionpg.NewAccess(db)), auditpg.New(db)), subscriptionapp.New(subscriptionpg.New(db), database.NewUnitOfWork(db), auditpg.New(db)), credentials.Credentials{}, platformdiag.Diagnostics{}, platformdiag.Diagnostics{})),

@@ -27,5 +27,8 @@ func (a *Orders) PaymentOrder(ctx context.Context, s scope, id string) (domain.O
 		return o, orderFailure(apperror.Unavailable, "payments_unavailable", "No pudimos cargar el pedido.")
 	}
 	o.Items, err = a.repo.Items(ctx, s, id, "")
-	return o, err
+	if err != nil {
+		return o, orderFailure(apperror.Unavailable, "payments_unavailable", "No pudimos cargar el detalle del pedido.")
+	}
+	return o, nil
 }

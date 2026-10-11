@@ -5,7 +5,7 @@ import "context"
 
 type Scope struct{ UserID, OrganizationID, LocationID, Name string }
 
-// Key is exported only for the legacy adapter and its existing fixtures.
+// Key allows the HTTP composition layer and its fixtures to carry authenticated scope.
 // New adapters should use With and From.
 type Key struct{}
 

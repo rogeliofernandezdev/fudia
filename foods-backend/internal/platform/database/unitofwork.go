@@ -28,6 +28,13 @@ func ExecutorFor(ctx context.Context, pool *pgxpool.Pool) Executor {
 	return pool
 }
 
+// WithTransaction binds an externally owned transaction to adapters using pool.
+// Only infrastructure and integration fixtures should use this bridge; application
+// use cases acquire transactions through unitofwork.Manager.
+func WithTransaction(ctx context.Context, pool *pgxpool.Pool, tx pgx.Tx) context.Context {
+	return context.WithValue(ctx, transactionKey{}, binding{pool, tx})
+}
+
 type UnitOfWork struct{ pool *pgxpool.Pool }
 
 func NewUnitOfWork(pool *pgxpool.Pool) *UnitOfWork { return &UnitOfWork{pool} }
@@ -55,5 +62,5 @@ func (u *UnitOfWork) Begin(ctx context.Context, o unitofwork.Options) (unitofwor
 	if err != nil {
 		return nil, err
 	}
-	return &transaction{context.WithValue(ctx, transactionKey{}, binding{u.pool, tx}), tx}, nil
+	return &transaction{WithTransaction(ctx, u.pool, tx), tx}, nil
 }

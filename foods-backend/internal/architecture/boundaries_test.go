@@ -5,6 +5,7 @@ import (
 	"go/parser"
 	"go/token"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -13,8 +14,7 @@ import (
 
 const prefix = "github.com/foods-platform/foods-backend/internal/"
 
-// Enforce real dependencies, not directory naming conventions. Legacy is isolated
-// explicitly and cannot leak into the extracted modules or platform primitives.
+// Enforce dependencies across every module, shared primitive and HTTP router.
 func TestModuleBoundaries(t *testing.T) {
 	err := filepath.WalkDir("..", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -24,7 +24,7 @@ func TestModuleBoundaries(t *testing.T) {
 			return nil
 		}
 		rel := filepath.ToSlash(path)
-		if !strings.Contains(rel, "/modules/") && !strings.Contains(rel, "/platform/") {
+		if !strings.Contains(rel, "/modules/") && !strings.Contains(rel, "/platform/") && !strings.Contains(rel, "/transport/") {
 			return nil
 		}
 		f, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
@@ -80,5 +80,11 @@ func TestModuleBoundaries(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestLegacyPackageRetired(t *testing.T) {
+	if _, err := os.Stat("../legacy"); !os.IsNotExist(err) {
+		t.Fatalf("legacy must not be reintroduced: %v", err)
 	}
 }
