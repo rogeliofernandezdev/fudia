@@ -7,9 +7,9 @@ const require=createRequire(import.meta.url);
 const ts=require("typescript");
 const source=readFileSync(new URL("../src/modules/operations/salon/domain/occupation-time.ts",import.meta.url),"utf8");
 const compiled=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
-const module={exports:{}};
-runInNewContext(compiled,{module,exports:module.exports,Date,Number,Math});
-const {formatTableOccupation}=module.exports;
+const sandboxModule={exports:{}};
+runInNewContext(compiled,{module:sandboxModule,exports:sandboxModule.exports,Date,Number,Math});
+const {formatTableOccupation}=sandboxModule.exports;
 
 test("el tiempo parte de la apertura activa, no de la última edición del pedido",()=>{
  const opened="2026-10-11T10:00:00Z";
