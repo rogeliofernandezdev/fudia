@@ -19,6 +19,9 @@ import (
 	menufiles "github.com/foods-platform/foods-backend/internal/modules/menu/infrastructure/files"
 	menupg "github.com/foods-platform/foods-backend/internal/modules/menu/infrastructure/postgres"
 	menuhttp "github.com/foods-platform/foods-backend/internal/modules/menu/transport/http"
+	orderapp "github.com/foods-platform/foods-backend/internal/modules/orders/application"
+	orderpg "github.com/foods-platform/foods-backend/internal/modules/orders/infrastructure/postgres"
+	orderhttp "github.com/foods-platform/foods-backend/internal/modules/orders/transport/http"
 	purchaseapp "github.com/foods-platform/foods-backend/internal/modules/purchasing/application"
 	purchasepg "github.com/foods-platform/foods-backend/internal/modules/purchasing/infrastructure/postgres"
 	purchasehttp "github.com/foods-platform/foods-backend/internal/modules/purchasing/transport/http"
@@ -51,6 +54,7 @@ func New(db *pgxpool.Pool) *API {
 		Customers:              customerhttp.New(customerapp.New(customerpg.New(db))),
 		InventoryStock:         inventoryhttp.NewStock(inventoryapp.NewStock(inventorypg.NewStock(db), database.NewUnitOfWork(db), auditpg.New(db))),
 		Purchasing:             purchasehttp.New(purchaseapp.New(purchasepg.New(db), database.NewUnitOfWork(db), auditpg.New(db), inventorypg.NewStock(db))),
+		Orders:                 orderhttp.New(orderapp.New(orderpg.New(db), database.NewUnitOfWork(db), auditpg.New(db), inventoryapp.NewStock(inventorypg.NewStock(db), database.NewUnitOfWork(db), auditpg.New(db)))),
 		InventoryUnits:         inventoryhttp.NewUnits(inventoryapp.NewUnits(inventorypg.NewUnits(db))),
 	})
 }

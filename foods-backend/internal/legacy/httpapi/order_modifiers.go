@@ -2,31 +2,17 @@ package httpapi
 
 import (
 	"context"
+	orderdomain "github.com/foods-platform/foods-backend/internal/modules/orders/domain"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
 )
 
-type orderItemModifierInput struct {
-	GroupID  string `json:"groupId"`
-	OptionID string `json:"optionId"`
-}
+type orderItemModifierInput = orderdomain.OrderItemModifierInput
 
-type orderItemModifier struct {
-	GroupID   string `json:"groupId"`
-	GroupName string `json:"groupName"`
-	OptionID  string `json:"optionId"`
-	Name      string `json:"name"`
-	Surcharge string `json:"surcharge"`
-}
+type orderItemModifier = orderdomain.OrderItemModifier
 
-type preparedOrderModifier struct {
-	GroupID   string
-	GroupName string
-	OptionID  string
-	Name      string
-	Surcharge float64
-}
+type preparedOrderModifier = orderdomain.PreparedOrderModifier
 
 func prepareProductModifiers(
 	ctx context.Context,

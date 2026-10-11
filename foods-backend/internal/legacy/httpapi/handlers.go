@@ -4,6 +4,7 @@ import "net/http"
 
 // Handlers injects the extracted verticals. Only cmd/api composes production adapters.
 type Handlers struct {
+	Orders                 OrdersHandler
 	Purchasing             PurchasingHandler
 	InventoryStock         InventoryStockHandler
 	MenuCatalog            MenuCatalogHandler
@@ -90,4 +91,18 @@ type PurchasingHandler interface {
 	UpdateSupplierStatus(http.ResponseWriter, *http.Request)
 	UpdatePurchaseOrderStatus(http.ResponseWriter, *http.Request)
 	ApprovePurchaseOrder(http.ResponseWriter, *http.Request)
+}
+
+type OrdersHandler interface {
+	ListKitchenTickets(http.ResponseWriter, *http.Request)
+	UpdateKitchenTicketStatus(http.ResponseWriter, *http.Request)
+	ListOrders(http.ResponseWriter, *http.Request)
+	GetOrdersFloor(http.ResponseWriter, *http.Request)
+	GetOrder(http.ResponseWriter, *http.Request)
+	CloseOrderBill(http.ResponseWriter, *http.Request)
+	DeliverOrderServiceItem(http.ResponseWriter, *http.Request)
+	CreateOrder(http.ResponseWriter, *http.Request)
+	UpdateOrder(http.ResponseWriter, *http.Request)
+	UpdateOrderStatus(http.ResponseWriter, *http.Request)
+	AppendOrderItems(http.ResponseWriter, *http.Request)
 }

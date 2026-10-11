@@ -2,25 +2,14 @@ package httpapi
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
+	orderdomain "github.com/foods-platform/foods-backend/internal/modules/orders/domain"
 	"net/http"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 )
 
-type orderServiceItem struct {
-	DestinationLabel string `json:"destinationLabel"`
-	StatusLabel      string `json:"statusLabel"`
-	ID               string `json:"id"`
-	OrderItemID      string `json:"orderItemId"`
-	ProductID        string `json:"productId"`
-	Name             string `json:"name"`
-	Qty              string `json:"qty"`
-	Destination      string `json:"destination"`
-	Status           string `json:"status"`
-}
+type orderServiceItem = orderdomain.OrderServiceItem
 
 var serviceDestinations = []map[string]string{{"value": "kitchen", "label": "Cocina"}, {"value": "bar", "label": "Barra"}, {"value": "direct", "label": "Entrega directa"}}
 
@@ -104,193 +93,15 @@ func lockServiceOrder(w http.ResponseWriter, r *http.Request, tx pgx.Tx, s scope
 }
 
 func (a *API) closeOrderBill(w http.ResponseWriter, r *http.Request) {
-	s := r.Context().Value(scopeKey{}).(scope)
-	tx, err := a.db.Begin(r.Context())
-	if err != nil {
-		fail(w, 503, "order_unavailable", "No pudimos cerrar la cuenta.")
-		return
-	}
-	defer tx.Rollback(r.Context())
-	o, ok := lockServiceOrder(w, r, tx, s)
-	if !ok {
-		return
-	}
-	if o.Channel != "salon" {
-		fail(w, 409, "table_account_required", "Esta acción corresponde a una cuenta de Salón.")
-		return
-	}
-	if o.Status == "nuevo" {
-		fail(w, 409, "order_not_submitted", "Registra el pedido antes de cerrar la cuenta.")
-		return
-	}
-	if !requireTableProductsDelivered(w, r, tx, s, o.ID, o.Status) {
-		return
-	}
-	_, err = tx.Exec(r.Context(), `UPDATE orders SET bill_closed_at=COALESCE(bill_closed_at,now()),bill_closed_by=COALESCE(bill_closed_by,CASE WHEN EXISTS(SELECT 1 FROM users WHERE id=$4 AND organization_id=$2) THEN $4::uuid END),updated_at=now() WHERE id=$1 AND organization_id=$2 AND location_id=$3`, o.ID, s.OrganizationID, s.LocationID, s.UserID)
-	closed := false
-	if err == nil {
-		closed, err = completeDeliveredSalonOrder(r.Context(), tx, s, o.ID)
-	}
-	if err == nil {
-		err = tx.Commit(r.Context())
-	}
-	if err != nil {
-		fail(w, 503, "order_unavailable", "No pudimos cerrar la cuenta.")
-		return
-	}
-	a.audit(r, "order.bill.closed", "order", o.ID)
-	if closed {
-		a.audit(r, "order.completed", "order", o.ID)
-	}
-	a.serviceOrderResponse(w, r, o.ID)
+	a.handlers.Orders.CloseOrderBill(w, r)
 }
 
 func (a *API) deliverOrderServiceItem(w http.ResponseWriter, r *http.Request) {
-	s := r.Context().Value(scopeKey{}).(scope)
-	tx, err := a.db.Begin(r.Context())
-	if err != nil {
-		fail(w, 503, "order_unavailable", "No pudimos confirmar la entrega.")
-		return
-	}
-	defer tx.Rollback(r.Context())
-	o, ok := lockServiceOrder(w, r, tx, s)
-	if !ok {
-		return
-	}
-	if o.Channel != "salon" {
-		fail(w, 409, "table_account_required", "La entrega por producto corresponde a la atención de Salón.")
-		return
-	}
-	tag, err := tx.Exec(r.Context(), `UPDATE order_service_items SET status='entregado',delivered_at=now(),delivered_by=CASE WHEN EXISTS(SELECT 1 FROM users WHERE id=$4 AND organization_id=$2) THEN $4::uuid END,updated_at=now() WHERE order_id=$1 AND organization_id=$2 AND id=$3 AND status='listo'`, o.ID, s.OrganizationID, r.PathValue("itemId"), s.UserID)
-	if err != nil {
-		fail(w, 503, "order_unavailable", "No pudimos confirmar la entrega.")
-		return
-	}
-	if tag.RowsAffected() == 0 {
-		fail(w, 409, "item_not_ready", "El producto no existe en esta cuenta o todavía no está listo para entregar.")
-		return
-	}
-	closed := false
-	if err = syncOrderServiceStatus(r.Context(), tx, s, o.ID); err == nil {
-		closed, err = completeDeliveredSalonOrder(r.Context(), tx, s, o.ID)
-	}
-	if err == nil {
-		err = tx.Commit(r.Context())
-	}
-	if err != nil {
-		fail(w, 503, "order_unavailable", "No pudimos confirmar la entrega.")
-		return
-	}
-	a.audit(r, "order.item.delivered", "order", o.ID)
-	if closed {
-		a.audit(r, "order.completed", "order", o.ID)
-	}
-	a.serviceOrderResponse(w, r, o.ID)
+	a.handlers.Orders.DeliverOrderServiceItem(w, r)
 }
 
 func (a *API) appendOrderItems(w http.ResponseWriter, r *http.Request) {
-	s := r.Context().Value(scopeKey{}).(scope)
-	var in struct {
-		Items      []orderItemInput `json:"items"`
-		RequestKey string           `json:"requestKey"`
-	}
-	if json.NewDecoder(r.Body).Decode(&in) != nil || len(in.Items) == 0 || len(in.Items) > 200 || len(strings.TrimSpace(in.RequestKey)) < 1 || len(in.RequestKey) > 160 {
-		fail(w, 400, "invalid_order", "Agrega productos y un identificador de envío válido.")
-		return
-	}
-	tx, err := a.db.Begin(r.Context())
-	if err != nil {
-		fail(w, 503, "order_unavailable", "No pudimos agregar productos.")
-		return
-	}
-	defer tx.Rollback(r.Context())
-	o, ok := lockServiceOrder(w, r, tx, s)
-	if !ok {
-		return
-	}
-	if o.Channel != "salon" || o.Status == "nuevo" {
-		fail(w, 409, "order_not_appendable", "Registra primero el pedido de mesa.")
-		return
-	}
-	var exists bool
-	if err = tx.QueryRow(r.Context(), `SELECT EXISTS(SELECT 1 FROM order_kitchen_rounds WHERE organization_id=$1 AND order_id=$2 AND request_key=$3)`, s.OrganizationID, o.ID, in.RequestKey).Scan(&exists); err != nil {
-		fail(w, 503, "order_unavailable", "No pudimos validar el envío.")
-		return
-	}
-	if exists {
-		if err = tx.Commit(r.Context()); err != nil {
-			fail(w, 503, "order_unavailable", "No pudimos consultar el envío.")
-			return
-		}
-		a.serviceOrderResponse(w, r, o.ID)
-		return
-	}
-	if o.BillClosedAt != "" {
-		fail(w, 409, "order_bill_closed", "La cuenta está por cobrar. No se pueden agregar productos después de cerrarla.")
-		return
-	}
-	var paid bool
-	if err = tx.QueryRow(r.Context(), `SELECT `+netPaidSQL+` >= o.total AND (o.bill_closed_at IS NOT NULL OR `+netPaidSQL+` > 0) FROM orders o WHERE o.id=$1 AND o.organization_id=$2 AND o.location_id=$3`, o.ID, s.OrganizationID, s.LocationID).Scan(&paid); err != nil {
-		fail(w, 503, "order_unavailable", "No pudimos validar el saldo.")
-		return
-	}
-	if paid {
-		fail(w, 409, "paid_order_not_editable", "La cuenta ya está pagada. El nuevo consumo necesita una nueva atención.")
-		return
-	}
-	if err = ensureKitchenRoundForOrder(r.Context(), tx, s, o.ID, o.Status); err != nil {
-		fail(w, 503, "order_unavailable", "No pudimos conservar las comandas anteriores.")
-		return
-	}
-	roundID, _, err := createKitchenRound(r.Context(), tx, s, o.ID, "confirmado", "order")
-	if err != nil {
-		fail(w, 503, "order_unavailable", "No pudimos registrar la nueva comanda.")
-		return
-	}
-	if _, err = tx.Exec(r.Context(), `UPDATE order_kitchen_rounds SET request_key=$2 WHERE id=$1`, roundID, in.RequestKey); err != nil {
-		fail(w, 503, "order_unavailable", "No pudimos identificar el envío.")
-		return
-	}
-	items, added, prepErr := a.prepareOrderItems(r, tx, s, "", in.Items)
-	if prepErr != nil {
-		fail(w, prepErr.Status, prepErr.Code, prepErr.Message)
-		return
-	}
-	// New lines must enter Pending even when the previous order was Delivered.
-	if _, err = tx.Exec(r.Context(), `UPDATE orders SET status='confirmado' WHERE id=$1 AND organization_id=$2`, o.ID, s.OrganizationID); err != nil {
-		fail(w, 503, "order_unavailable", "No pudimos abrir la comanda.")
-		return
-	}
-	if err = insertPreparedOrderItemsForRound(r.Context(), tx, s.OrganizationID, o.ID, roundID, items); err != nil {
-		fail(w, 503, "order_unavailable", "No pudimos agregar los productos.")
-		return
-	}
-	if quantityErr := a.applyOrderQuantityDelta(r.Context(), tx, s, o.ID, preparedQuantityUsage(items), "sale"); quantityErr != nil {
-		fail(w, quantityErr.Status, quantityErr.Code, quantityErr.Message)
-		return
-	}
-	recipeUsage, recipeErr := desiredRecipeInventoryUsage(r.Context(), tx, s, items)
-	if recipeErr != nil {
-		fail(w, 503, "recipe_inventory_unavailable", "No pudimos validar los insumos.")
-		return
-	}
-	if quantityErr := applyRecipeUsageDelta(r.Context(), tx, s, o.ID, recipeUsage); quantityErr != nil {
-		fail(w, quantityErr.Status, quantityErr.Code, quantityErr.Message)
-		return
-	}
-	_, err = tx.Exec(r.Context(), `UPDATE orders SET subtotal=subtotal+$4,total=total+$4,updated_at=now() WHERE id=$1 AND organization_id=$2 AND location_id=$3`, o.ID, s.OrganizationID, s.LocationID, added)
-	if err == nil {
-		err = syncOrderServiceStatus(r.Context(), tx, s, o.ID)
-	}
-	if err == nil {
-		err = tx.Commit(r.Context())
-	}
-	if err != nil {
-		fail(w, 503, "order_unavailable", "No pudimos confirmar los productos adicionales.")
-		return
-	}
-	a.audit(r, "order.items.added", "order", o.ID)
-	a.serviceOrderResponse(w, r, o.ID)
+	a.handlers.Orders.AppendOrderItems(w, r)
 }
 
 // The caller holds the order lock shared by append, preparation and delivery.

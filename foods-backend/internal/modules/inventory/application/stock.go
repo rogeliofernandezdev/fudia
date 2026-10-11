@@ -36,6 +36,16 @@ func stockFailure(kind apperror.Kind, code, message string) error {
 }
 
 type StockRepository interface {
+	OrderBusinessDate(ctx context.Context, s scope, orderID string) (string, error)
+	LockQuantityProduct(ctx context.Context, s scope, productID string) (string, string, error)
+	LockPortions(ctx context.Context, s scope, productID string, businessDate string) (*int, int, string, error)
+	UpdateSoldPortions(ctx context.Context, s scope, productID string, businessDate string, nextSold int) (int64, error)
+	LockProductInventory(ctx context.Context, s scope, productID string) (string, error)
+	RecipeModules(context.Context, scope) (bool, bool, error)
+	ActiveRecipe(context.Context, scope, string) (string, float64, error)
+	RecipeIngredients(context.Context, scope, string) ([]domain.RecipeIngredient, error)
+	NetRecipeUsage(context.Context, scope, string) (map[string]float64, error)
+	SaveBalance(context.Context, scope, string, float64, float64) (int64, error)
 	TransferDestination(ctx context.Context, s scope, in domain.TransferInput) (string, error)
 	ExistingTransfer(ctx context.Context, s scope, in domain.TransferInput) (string, string, string, error)
 	CreateTransfer(ctx context.Context, s scope, in domain.TransferInput) (string, string, error)
