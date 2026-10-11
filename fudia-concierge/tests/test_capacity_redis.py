@@ -60,8 +60,11 @@ async def test_redis_stream_workers_under_concurrent_load() -> None:
             started = time.perf_counter()
             task = asyncio.create_task(worker.run())
             try:
-                async def completed() -> None:
-                    while sender.sent < count:
+                async def completed(
+                    active_sender: FastFakeSender = sender,
+                    expected: int = count,
+                ) -> None:
+                    while active_sender.sent < expected:
                         await asyncio.sleep(0.01)
 
                 await asyncio.wait_for(completed(), timeout=30)
