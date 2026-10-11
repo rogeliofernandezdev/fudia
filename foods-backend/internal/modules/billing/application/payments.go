@@ -161,16 +161,17 @@ func (a *Payments) Create(ctx context.Context, s scope, in domain.PaymentInput) 
 	if err != nil {
 		return result, paymentFailure(apperror.Unavailable, "payments_unavailable", "No pudimos finalizar la cuenta del pedido.")
 	}
+	// Read the result before committing so a failed projection cannot leave a
+	// persisted charge behind while the client receives a retryable error.
+	item, err := a.repo.Payment(tx.Context(), s, id)
+	if err != nil {
+		return result, paymentFailure(apperror.Unavailable, "payments_unavailable", "No pudimos verificar el detalle del cobro.")
+	}
 	if err := tx.Commit(ctx); err != nil {
 		return result, paymentFailure(apperror.Unavailable, "payments_unavailable", "No pudimos confirmar el cobro.")
 	}
 	if closed {
 		_ = a.audit.Record(ctx, s, "order.completed", "order", in.OrderID)
-	}
-
-	item, err := a.repo.Payment(ctx, s, id)
-	if err != nil {
-		return result, paymentFailure(apperror.Unavailable, "payments_unavailable", "El cobro se registró, pero no pudimos cargar su detalle.")
 	}
 	return item, nil
 
