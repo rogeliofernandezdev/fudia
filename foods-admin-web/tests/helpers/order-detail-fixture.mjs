@@ -53,7 +53,7 @@ export function detailComponents({userId="preview-waiter",permissions=["orders.m
   }});
   return exports;
  }
- return {...load("modules/operations/orders/presentation/order-detail-dialog.tsx"),...load("design-system/modal.tsx"),...load("modules/operations/orders/presentation/order-meta.ts"),...load("modules/operations/orders/presentation/order-service-controls.tsx"),...load("modules/sales/presentation/sale-detail-dialog.tsx"),...(includePOS?load("modules/operations/pos/presentation/pos-page.tsx"):{}),...(includeComanda?load("modules/operations/orders/presentation/comanda-view.tsx"):{})};
+ return {...load("modules/operations/orders/domain/order-actions.ts"),...load("modules/operations/orders/domain/service-flow.ts"),...load("modules/operations/orders/presentation/order-detail-dialog.tsx"),...load("design-system/modal.tsx"),...load("modules/operations/orders/presentation/order-meta.ts"),...load("modules/operations/orders/presentation/order-service-controls.tsx"),...load("modules/sales/presentation/sale-detail-dialog.tsx"),...(includePOS?load("modules/operations/pos/presentation/pos-page.tsx"):{}),...(includeComanda?load("modules/operations/orders/presentation/comanda-view.tsx"):{})};
 }
 export function renderDetail({order=exampleOrder,skeleton=false,error,variant="order",permissions,userId,busy=false,editable=false}={}){
  const {OrderDetailContent,OrderDetailSkeleton}=detailComponents({permissions,userId});
