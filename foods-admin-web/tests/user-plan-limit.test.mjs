@@ -30,6 +30,7 @@ function mount({max=6,usage=6,items=[active,inactive],pending=false,error=false,
   if(name==="@/providers/session-context")return {useSession:()=>session};
   if(name==="@/providers/feedback-provider")return {useFeedback:()=>({notify:()=>{}})};
   if(name==="@/design-system")return Object.fromEntries(["Dialog","ConfirmDialog","EmptyState","ErrorState","RemoteModalSkeleton","Icon","IconButton","Button","FormField","Input","PageHeader","Pagination","RowActionButton","SearchField","Select","Status","TableSkeleton","Tabs","TabsBar","Textarea"].map(key=>[key,key]));
+  if(name==="@/design-system/data-table")return {DataTable:"DataTable"};
   if(name==="@/design-system/dialog")return {Dialog:"Dialog"};
   if(name==="react-hook-form"||name.startsWith("../")||name.endsWith(".css"))return {};
   return require(name);
