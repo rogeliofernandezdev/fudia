@@ -3,7 +3,7 @@
 import {Dialog} from "@/design-system/dialog";
 import "../../styles/salon-comanda.css";
 import "../../styles/salon.css";
-import {useState,useCallback} from "react";
+import {useState,useCallback,useEffect} from "react";
 import {formatTableOccupation} from "../domain/occupation-time";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Button,ConfirmDialog,EmptyState,ErrorState,Icon,PageHeader,SearchField,Skeleton,Status} from "@/design-system";
@@ -66,6 +66,12 @@ export function SalonManager(){
   const[cancelTarget,setCancelTarget]=useState<Order|null>(null);
   const[zone,setZone]=useState("");
   const[additionKey,setAdditionKey]=useState<string|null>(null);
+  const[clock,setClock]=useState(()=>Date.now());
+  // Advance timers locally even if a background request is delayed; no page reload.
+  useEffect(()=>{
+    const timer=window.setInterval(()=>setClock(Date.now()),30000);
+    return()=>window.clearInterval(timer);
+  },[]);
 
   const floor=useQuery({
     queryKey:["salon-floor"],
@@ -200,7 +206,7 @@ export function SalonManager(){
           {visible.map(t=>{
             const o=t.order;
             const meta=o?statusMeta[o.status]??{label:o.status,tone:"gray" as const}:null;
-            const elapsed=o?formatTableOccupation(t.occupiedSince,Date.now()):null;
+            const elapsed=o?formatTableOccupation(t.occupiedSince,clock):null;
             const tableState=o?"occupied":"free";
             return(
               <button
