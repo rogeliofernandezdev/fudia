@@ -26,6 +26,15 @@ de `docs/` antes de implementar cambios relevantes.
 - `transport/http` no ejecuta SQL ni construye repositorios.
 - `internal/platform` no importa módulos de negocio ni `internal/legacy`.
 - `internal/transport/httpapi` compone rutas y autorización; no accede a PostgreSQL.
+- Toda colaboración entre módulos debe importar únicamente el `contracts` publicado
+  por el módulo propietario (se exceptúa `audit/application` por contener solo
+  un puerto). No importar domain, application, infrastructure ni transport de otros módulos.
+- Los contratos públicos no importan SQL, HTTP ni implementaciones, y CI protege
+  este límite en `internal/architecture/intermodule_test.go`.
+- Los movimientos por recepciones y devoluciones se aplican exclusivamente a través
+  de `inventory/application.PurchaseLedger`; Purchasing no calcula costos promedio ni
+  actualiza saldos directamente.
+
 - El paquete `internal/legacy` fue retirado y no debe reintroducirse.
   Consultar `docs/10_BACKEND_REFACTOR.md` para las responsabilidades de cada módulo.
 - Conservar los límites transaccionales entre pedidos, stock y pagos; ejecutar
