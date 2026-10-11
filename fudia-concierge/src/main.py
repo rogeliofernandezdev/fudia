@@ -156,9 +156,10 @@ def create_app(
     @app.on_event("startup")
     async def startup() -> None:
         await inbound_queue.start()
-        app.state.queue_worker_task = (
-            asyncio.create_task(worker.run())
-        )
+        if cfg.worker_enabled:
+            app.state.queue_worker_task = (
+                asyncio.create_task(worker.run())
+            )
 
     @app.on_event("shutdown")
     async def shutdown() -> None:
