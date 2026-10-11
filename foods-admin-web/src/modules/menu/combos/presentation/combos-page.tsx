@@ -1,4 +1,5 @@
 "use client";
+import {DataTable} from "@/design-system/data-table";
 import {Dialog} from "@/design-system/dialog";
 import "./combo-wizard.css";
 import "./combo-rules.css";
@@ -91,7 +92,7 @@ export function CombosPage(){
       :!combos.data?.items.length?
         <div className="combo-empty"><Icon name="menu" size={24}/><b>{search||status?"No encontramos resultados":"Aún no hay menús compuestos"}</b><p>{search||status?"Prueba con otro nombre o cambia el filtro de estado.":canManage?"Usa la plantilla Menú del día para comenzar rápidamente.":"Los menús registrados aparecerán aquí."}</p>{canManage&&!search&&!status&&<Button icon="plus" onClick={open}>Crear menú</Button>}</div>
       :<>
-        <div className="table-wrap hover-scroll"><table><thead><tr><th>MENÚ O COMBO</th><th>PRECIO</th><th title="Entrada, plato principal, bebida o postre">PARTES DEL MENÚ</th><th>ESTADO</th><th>ACCIONES</th></tr></thead><tbody>
+        <DataTable label="Listado de menús y combos" containerClassName="hover-scroll"><thead><tr><th>MENÚ O COMBO</th><th>PRECIO</th><th title="Entrada, plato principal, bebida o postre">PARTES DEL MENÚ</th><th>ESTADO</th><th>ACCIONES</th></tr></thead><tbody>
           {combos.data.items.map((item,index)=><tr className={index%2?"alternate":""} key={item.id}>
             <td><span className={`row-icon r${index%3}`}><Icon name="menu" size={18}/></span><b>{item.name}</b><small>{item.description||"Sin descripción"}</small></td>
             <td><b>{settings.currencyPosition==="before"?`${settings.currencySymbol} ${Number(item.price).toFixed(settings.currencyDecimals)}`:`${Number(item.price).toFixed(settings.currencyDecimals)} ${settings.currencySymbol}`}</b></td>
@@ -99,7 +100,7 @@ export function CombosPage(){
             <td><Status active={item.active}>{item.active?"Activo":"Inactivo"}</Status></td>
             <td><div className="standard-actions"><RowActionButton action="view" label={`Ver ${item.name}`} onClick={()=>setSelected(item.id)}/>{canManage&&<><RowActionButton action="edit" label={`Editar ${item.name}`} disabled={loadForEdit.isPending} onClick={()=>{cancelledEdit.current=null;setEditingId(item.id);loadForEdit.mutate(item.id)}}/><RowActionButton action={item.active?"deactivate":"activate"} stateLabel={`Estado de ${item.name}`} label={`${item.active?"Desactivar":"Activar"} ${item.name}`} onClick={()=>setStatusTarget(item)}/></>}</div></td>
           </tr>)}
-        </tbody></table></div>
+        </tbody></DataTable>
       </>}
       {!combos.isLoading&&!combos.isError&&<Pagination page={page} size={size} total={combos.data?.total??0} onPage={setPage} onSize={value=>{setSize(value);setPage(1)}}/>}
     </section>
