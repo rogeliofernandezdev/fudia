@@ -1,7 +1,7 @@
-import type {ComponentPropsWithoutRef} from "react";
+import type {ComponentPropsWithoutRef,ReactNode} from "react";
 
 type DataTableProps = Omit<ComponentPropsWithoutRef<"table">,"children"> & {
-  children: React.ReactNode;
+  children: ReactNode;
   label: string;
   containerClassName?: string;
 };
