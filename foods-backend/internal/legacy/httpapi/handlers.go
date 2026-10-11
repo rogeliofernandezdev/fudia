@@ -1,9 +1,13 @@
 package httpapi
 
-import "net/http"
+import (
+	"context"
+	"net/http"
+)
 
 // Handlers injects the extracted verticals. Only cmd/api composes production adapters.
 type Handlers struct {
+	Platform               PlatformHandler
 	Subscriptions          SubscriptionsHandler
 	Organizations          OrganizationsHandler
 	Cash                   CashHandler
@@ -169,4 +173,14 @@ type SubscriptionsHandler interface {
 	ListSubscriptionPlans(http.ResponseWriter, *http.Request)
 	ListAvailableSubscriptionPlans(http.ResponseWriter, *http.Request)
 	GetOrganizationSubscription(http.ResponseWriter, *http.Request)
+}
+
+type PlatformHandler interface {
+	Authorize(context.Context, string) error
+	OnboardTenant(http.ResponseWriter, *http.Request)
+	ListPlatformOrganizations(http.ResponseWriter, *http.Request)
+	GetPlatformOrganization(http.ResponseWriter, *http.Request)
+	ListPlatformWhatsAppChannels(http.ResponseWriter, *http.Request)
+	CreatePlatformWhatsAppChannel(http.ResponseWriter, *http.Request)
+	UpdatePlatformWhatsAppChannel(http.ResponseWriter, *http.Request)
 }
