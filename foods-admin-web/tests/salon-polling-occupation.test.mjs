@@ -39,16 +39,18 @@ test("la pantalla conserva el centrado, el polling parcial y estados semánticos
  assert.doesNotMatch(page,/<Status tone="red">Ocupada<\/Status>/);
  assert.doesNotMatch(page,/className="salon-table-order-status"/);
  assert.match(css,/\.salon-table-name-row\{[^\n]*align-items:center/);
- assert.match(css,/\.salon-table\.occupied\{[\s\S]*?border-color:var\(--danger-200\);[\s\S]*?background:var\(--surface\)/);
+ assert.match(css,/\.salon-table\.occupied\{[\s\S]*?border-color:var\(--danger-200\);[\s\S]*?background:var\(--danger-50\)/);
+ assert.match(page,/className="salon-table-occupancy">Ocupada<\/span>/);
 });
 
-test("paleta de salon: rojo solo para ocupacion, reloj neutro e interaccion indigo",()=>{
+test("paleta de salon: ocupacion en rojo tenue, reloj neutro y accion con acento indigo",()=>{
  const css=readFileSync(new URL("../src/modules/operations/styles/salon.css",import.meta.url),"utf8");
- assert.match(css,/\.salon-table\.occupied\{[\s\S]*?background:var\(--surface\)/);
- assert.match(css,/\.salon-table\.occupied \.salon-table-icon\{background:var\(--primary-100\);color:var\(--primary-700\)\}/);
+ assert.match(css,/\.salon-table\.occupied\{[\s\S]*?background:var\(--danger-50\)/);
+ assert.match(css,/\.salon-table\.occupied:hover\{[\s\S]*?background:var\(--danger-100\)/);
+ assert.match(css,/\.salon-table\.occupied \.salon-table-icon\{background:var\(--danger-100\);color:var\(--danger-700\)\}/);
  assert.match(css,/\.salon-table-elapsed\{[^\n]*background:var\(--cloud-100\);color:var\(--ink-600\)/);
  assert.match(css,/\.salon-table-elapsed\.is-stale\{background:var\(--warning-100\);color:var\(--warning-800\)\}/);
- assert.match(css,/\.salon-table-order\{[^\n]*background:var\(--primary-600\);color:var\(--surface\)/);
- assert.match(css,/\.salon-table:hover \.salon-table-order\{background:var\(--primary-700\)\}/);
+ assert.match(css,/\.salon-table-order\{[^\n]*background:var\(--surface\);color:var\(--ink-950\)/);
+ assert.match(css,/\.salon-table:hover \.salon-table-order\{background:var\(--primary-50\);border-color:var\(--primary-200\)\}/);
  assert.match(css,/\.salon-table\.free\{border-color:var\(--brand-200\)\}/);
 });
