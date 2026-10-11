@@ -6,3 +6,13 @@
 .table-editing-row .ds-input,.table-editing-row .ds-select{height:var(--control-height);min-height:var(--control-height)}
 .table-editing-row .seats-input{min-width:var(--size-74);text-align:center}
 .table-editing-row .table-actions{white-space:nowrap}
+
+/* Tablas administrativas de Mesas y Zonas: dimensiones propias, tokens compartidos. */
+.tables-management-table{min-width:var(--size-760)}
+.zones-management-table{min-width:var(--size-540)}
+@media (width<=700px){
+  .tables-management-table :is(th,td):first-child,
+  .zones-management-table :is(th,td):first-child{min-width:var(--size-190)}
+  .tables-management-table .ds-input,
+  .tables-management-table .ds-select{min-width:var(--size-100)}
+}
