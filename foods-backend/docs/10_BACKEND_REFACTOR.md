@@ -95,3 +95,33 @@ exclusivo de tests; la API de producción recibe solamente handlers.
 La suite comprueba aislamiento entre empresas/locales, precios autoritativos,
 idempotencia, inventario y recetas, recepciones/devoluciones, permisos, flujo de
 salón, cierre/cobro concurrentes, caja y alta/suscripciones/Concierge.
+
+## Contratos intermodulares y propiedad del dominio
+
+Cada módulo publica su superficie de integración en `internal/modules/<owner>/contracts`.
+Otros módulos no pueden importar su `application`, `domain`, `infrastructure` ni
+`transport`. La interfaz de auditoría (`audit/application`) es la única excepción
+compartida, porque solo expone un puerto. `internal/architecture/intermodule_test.go`
+recorre los imports de producción y hace fallar CI ante nuevas dependencias no publicadas.
+`boundaries_test.go` protege también los paquetes `contracts` frente a SQL, drivers,
+HTTP y referencias a adaptadores.
+
+Los contratos de Orders, Menu, Identity y Organizations mantienen alias de tipos de
+dominio durante la transición para conservar la compatibilidad de Go y OpenAPI;
+estos alias **no equivalen a contratos de datos versionados e independientes**. Para
+desplegar módulos por separado habría que publicar DTO independientes, adaptadores
+de traducción y versiones explícitas de integración. El objetivo operativo actual
+es **monolito modular desacoplado**, no microservicios ni bases de datos aisladas.
+
+**Inventario es dueño de la valorización de compras.** El caso de uso
+`inventory/application.PurchaseLedger` controla saldos, costo medio ponderado,
+movimientos de Kárdex y rechazo por stock insuficiente. Purchasing invoca
+`ReceivePurchase` o `ReturnPurchase` por un puerto de intención, en la misma
+transacción suministrada por el caso de uso de Compras; no ejecuta SQL ni calcula
+el costo promedio de los saldos. `cmd/api/modules.go` inyecta la implementación
+y comparte UnitOfWork y adaptadores entre funcionalidades.
+
+Las pruebas `go test ./internal/architecture`, `go test ./...` con PostgreSQL,
+`go vet ./...` y `go build ./cmd/api` deben pasar en el commit final. Las pruebas
+de integración de compras cubren recepciones, conversiones, devoluciones,
+idempotencia y rollback, además de las pruebas unitarias del Kárdex.
