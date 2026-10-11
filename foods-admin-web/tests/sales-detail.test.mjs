@@ -14,7 +14,7 @@ function compile(file,resolve,extra=""){
  return exports;
 }
 const regional=compile("src/shared/i18n/regional-format.ts",require);
-const resolve=name=>name==="@/design-system"?{ModalHeader:"ModalHeader",ModalFooter:"ModalFooter",ModalWorkspace:"ModalWorkspace",ModalItemList:"ModalItemList",Icon:"Icon",Button:"Button",Input:"Input",FormField:"FormField",Status:"Status",RowActionButton:"RowActionButton",SearchField:"SearchField",EmptyState:"EmptyState",ErrorState:"ErrorState"}:name==="@/design-system/dialog"?{Dialog:"Dialog"}:name.startsWith("@/")||name.startsWith(".")?{}:require(name);
+const resolve=name=>name==="@/design-system"?{ModalHeader:"ModalHeader",ModalFooter:"ModalFooter",ModalWorkspace:"ModalWorkspace",ModalItemList:"ModalItemList",Icon:"Icon",Button:"Button",Input:"Input",FormField:"FormField",Status:"Status",RowActionButton:"RowActionButton",SearchField:"SearchField",EmptyState:"EmptyState",ErrorState:"ErrorState",DataTable:"DataTable"}:name==="@/design-system/dialog"?{Dialog:"Dialog"}:name.startsWith("@/")||name.startsWith(".")?{}:require(name);
 const {SaleDetailDialog}=compile("src/modules/sales/presentation/sale-detail-dialog.tsx",resolve);
 const data={order:{id:"sale-1",code:"PED-TEST",channel:"salon",status:"entregado",customerName:"Familia Pérez",tableName:"Mesa 5",subtotal:"50",deliveryFee:"5",total:"55",createdAt:"2026-10-06T14:30:00+00",notes:"Sin sal",items:[{id:"item-1",name:"Menú criollo",qty:"2",unitPrice:"25",note:"Sin hielo",selections:[{groupName:"Segundo",name:"Lomo saltado"}],modifiers:[{groupName:"Extras",name:"Ensalada"}]}]},paidAmount:"55",remainingAmount:"0",paymentStatus:"paid",payments:[{id:"pay-1",method:"custom",methodName:"Convenio empresa",amount:"65",refundedAmount:"10",netAmount:"55",reference:"REF-1",cashRegisterName:"Caja principal",createdByName:"Ana",createdAt:"2026-10-06T15:00:00+00"}]};
 const money=value=>`MON ${Number(value).toFixed(2)}`;
@@ -40,37 +40,38 @@ test("Ventas consulta el detalle real por id y conserva errores del API",async()
  await assert.rejects(failing.getSaleDetail("other-id"),error=>error===failure);
 });
 
-test("tabla y tarjetas ofrecen el mismo ojo y abren la venta seleccionada",()=>{
+test("una sola tabla permite abrir cada venta sin duplicar acciones",()=>{
  const {SalesResults}=compile("src/modules/sales/presentation/sales-page.tsx",resolve,"\nexport {SalesResults};\n");
  const selected=[];
  const rendered=nodes(SalesResults({items:[{...data.order,paidAmount:"55"}],money,date,view:id=>selected.push(id)}));
  const actions=rendered.filter(node=>node.type==="RowActionButton");
- assert.equal(actions.length,2);
+ assert.equal(actions.length,1);
  for(const action of actions){assert.equal(action.props.action,"view");assert.match(action.props.label,/Ver detalle de la venta/);action.props.onClick()}
- assert.deepEqual(selected,["sale-1","sale-1"]);
+ assert.deepEqual(selected,["sale-1"]);
  assert.ok(rendered.some(node=>node.type==="th"&&node.props.children==="ACCIONES"));
- assert.ok(rendered.some(node=>node.props.className==="management-cards sales-cards"));
+ assert.ok(rendered.some(node=>node.type==="DataTable"));
+ assert.equal(rendered.some(node=>node.props.className==="management-cards sales-cards"),false);
 });
 
-test("Ventas muestra medios reales y pagos divididos en tabla y móvil",()=>{
+test("Ventas muestra medios reales y pagos divididos una vez por fila",()=>{
  const {SalesResults,SalesTableSkeleton}=compile("src/modules/sales/presentation/sales-page.tsx",resolve,"\nexport {SalesResults,SalesTableSkeleton};\n");
  const sale={...data.order,paymentMethods:["Efectivo","Convenio empresa"]};
  const view=nodes(SalesResults({items:[sale],money,date,view:()=>{}}));
  const headers=view.filter(node=>node.type==="th").map(node=>node.props.children);
  assert.ok(headers.includes("MEDIO DE PAGO"));assert.equal(headers.length,8);
  assert.equal(view.filter(node=>node.type==="td").length,8);
- assert.equal(view.filter(node=>node.props.children==="Efectivo · Convenio empresa").length,2);
- assert.ok(view.some(node=>node.type==="dt"&&node.props.children==="Medio de pago"));
+ assert.equal(view.filter(node=>node.props.children==="Efectivo · Convenio empresa").length,1);
+ assert.equal(view.some(node=>node.type==="dt"&&node.props.children==="Medio de pago"),false);
  const single=nodes(SalesResults({items:[{...sale,paymentMethods:["Convenio empresa"]}],money,date,view:()=>{}}));
- assert.equal(single.filter(node=>node.props.children==="Convenio empresa").length,2);
+ assert.equal(single.filter(node=>node.props.children==="Convenio empresa").length,1);
  for(const paymentMethods of [[],undefined]){
   const empty=nodes(SalesResults({items:[{...sale,paymentMethods}],money,date,view:()=>{}}));
-  assert.equal(empty.filter(node=>node.props.children==="—").length,2);
+  assert.equal(empty.filter(node=>node.props.children==="—").length,1);
  }
  const skeleton=nodes(SalesTableSkeleton());
  assert.deepEqual(skeleton.filter(node=>node.type==="th").map(node=>node.props.children),headers);
  assert.equal(skeleton.filter(node=>node.type==="td").length,6*8);
- assert.equal(skeleton.filter(node=>node.props.className==="sales-card-methods").length,3);
+ assert.equal(skeleton.filter(node=>node.props.className==="sales-card-methods").length,0);
 });
 
 test("el listado paginado recibe los medios sin consultas adicionales por venta",async()=>{
@@ -112,7 +113,7 @@ test("filtros de Ventas usan controles homologados y límites visibles",()=>{
  assert.equal(empty.some(node=>node.type==="Button"),false);
  const css=read("src/modules/sales/presentation/sales.css");
  assert.equal(css.includes(".sales-search-control"),false,"el buscador usa SearchField homologado");
- assert.match(css,/@media\(max-width:600px\)\{\s*\.sales-filters\{grid-template-columns:minmax\(0,1fr\)/);
+ assert.match(css,/@media\(max-width:600px\)\{[\s\S]*?\.sales-filters\{grid-template-columns:minmax\(0,1fr\)/);
 });
 
 test("cambiar fechas reinicia la página, limpiar conserva búsqueda y un rango invertido no consulta",async()=>{
