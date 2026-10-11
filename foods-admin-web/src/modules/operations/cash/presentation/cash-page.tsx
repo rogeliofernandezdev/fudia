@@ -1,4 +1,5 @@
 "use client";
+import {DataTable} from "@/design-system/data-table";
 import {Dialog} from "@/design-system/dialog";
 import "./cash.css";
 import {useState} from "react";
@@ -253,7 +254,7 @@ export function CashPage(){
           {history.isLoading?<TableSkeleton columns={historyColumns} rows={6} label="Cargando turnos"/>
           :history.isError?<ErrorState title="No pudimos cargar los turnos" text={history.error.message} onRetry={()=>void history.refetch()}/>
           :!historyItems.length?<EmptyState icon="clock" title={q||status?"Sin coincidencias":"Aún no hay turnos registrados"} text={q||status?"Ajusta la búsqueda o el filtro.":"Cuando una caja cierre su primer turno aparecerá aquí para consulta."}/>
-          :<div className="table-wrap hover-scroll cash-history-table"><table>
+          :<DataTable label="Historial de turnos de caja" containerClassName="hover-scroll cash-history-table">
             <thead><tr>{historyColumns.map(column=><th key={column}>{column}</th>)}</tr></thead>
             <tbody>{historyItems.map((item,index)=>{
               const variance=Number(item.varianceAmount??0);
@@ -270,7 +271,7 @@ export function CashPage(){
                 <td><div className="table-actions"><RowActionButton action="view" label={`Ver turno ${item.code}`} onClick={()=>setDetailId(item.id)}/></div></td>
               </tr>;
             })}</tbody>
-          </table></div>}
+          </DataTable>}
 
           {!history.isLoading&&!history.isError&&<Pagination page={page} size={size} total={history.data?.total??0} onPage={setPage} onSize={value=>{setSize(value);setPage(1)}}/>}
         </section>
