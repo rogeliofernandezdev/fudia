@@ -248,3 +248,18 @@ func (catalog EffectiveRoleCatalog) Project(role RoleView) RoleView {
 	}
 	return role
 }
+
+type ContextRecord struct {
+	OrganizationName, LocationName, Country, Timezone string
+	PlatformAdmin                                     bool
+	Permissions, MenuAccess                           []string
+}
+type WorkContext struct {
+	User          map[string]any    `json:"user"`
+	Organization  map[string]string `json:"organization"`
+	Location      map[string]string `json:"location"`
+	Modules       map[string]bool   `json:"modules"`
+	MenuAccess    []string          `json:"menuAccess"`
+	Permissions   []string          `json:"permissions"`
+	SetupRequired bool              `json:"setupRequired"`
+}

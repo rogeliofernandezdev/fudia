@@ -150,3 +150,7 @@ func (h *Administration) SwitchContext(w http.ResponseWriter, r *http.Request) {
 	out, err := h.service.SwitchContext(r.Context(), adminScope(r), in, adminToken(r))
 	adminResponse(w, 200, out, err)
 }
+func (h *Administration) GetContext(w http.ResponseWriter, r *http.Request) {
+	out, err := h.service.Context(r.Context(), adminScope(r))
+	adminResponse(w, 200, out, err)
+}

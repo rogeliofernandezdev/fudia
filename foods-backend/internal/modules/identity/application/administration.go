@@ -30,6 +30,9 @@ type ContextResult struct {
 	Location     map[string]string `json:"location"`
 }
 type AdministrationRepository interface {
+	CurrentContext(context.Context, requestscope.Scope) (domain.ContextRecord, error)
+	SetupRequired(context.Context, string) (bool, error)
+
 	Roles(context.Context, string) ([]domain.RoleView, error)
 	SaveRole(context.Context, string, string, domain.RoleInput, []string, []string) (domain.RoleView, error)
 	SetRoleActive(context.Context, string, string, bool) (bool, error)
@@ -449,4 +452,26 @@ func (a *Administration) SwitchContext(ctx context.Context, s requestscope.Scope
 	}
 	_ = a.audit.Record(ctx, s, "context.switched", "organization", in.OrganizationID)
 	return ContextResult{map[string]string{"id": in.OrganizationID, "name": target.OrganizationName}, map[string]string{"id": in.LocationID, "name": target.LocationName, "country": target.Country, "timezone": target.Timezone}}, nil
+}
+
+func (a *Administration) Context(ctx context.Context, s requestscope.Scope) (domain.WorkContext, error) {
+	var out domain.WorkContext
+	record, err := a.repo.CurrentContext(ctx, s)
+	if err != nil {
+		return out, failure(apperror.Unavailable, "context_unavailable", "No pudimos cargar el contexto de trabajo.")
+	}
+	modules, err := a.organizations.ActiveModules(ctx, s.OrganizationID)
+	if err != nil || modules == nil {
+		return out, failure(apperror.Unavailable, "modules_unavailable", "No pudimos cargar los módulos de la empresa.")
+	}
+	required := false
+	if !record.PlatformAdmin {
+		required, err = a.repo.SetupRequired(ctx, s.OrganizationID)
+		if errors.Is(err, ErrNotFound) {
+			required = true
+		} else if err != nil {
+			return out, failure(apperror.Unavailable, "context_unavailable", "No pudimos cargar el estado inicial de la empresa.")
+		}
+	}
+	return domain.WorkContext{User: map[string]any{"id": s.UserID, "name": s.Name, "platformAdmin": record.PlatformAdmin}, Organization: map[string]string{"id": s.OrganizationID, "name": record.OrganizationName}, Location: map[string]string{"id": s.LocationID, "name": record.LocationName, "country": record.Country, "timezone": record.Timezone}, Modules: modules, MenuAccess: record.MenuAccess, Permissions: record.Permissions, SetupRequired: required}, nil
 }

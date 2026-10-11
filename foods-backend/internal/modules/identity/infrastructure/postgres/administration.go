@@ -378,3 +378,64 @@ func (r *AdministrationRepository) SwitchSessionContext(ctx context.Context, has
 		UPDATE sessions SET organization_id=$1, location_id=$2 WHERE token_hash=$3 AND revoked_at IS NULL`, in.OrganizationID, in.LocationID, hash)
 	return err
 }
+
+func (r *AdministrationRepository) CurrentContext(ctx context.Context, s requestscope.Scope) (domain.ContextRecord, error) {
+	var v domain.ContextRecord
+	err := r.db(ctx).QueryRow(ctx, `
+		SELECT o.trade_name,l.name,p.country_code,l.timezone,u.platform_admin,
+		       CASE WHEN u.platform_admin THEN ARRAY['*']::text[] ELSE COALESCE((
+		         SELECT array_agg(DISTINCT permission ORDER BY permission)
+		         FROM user_roles ur
+		         JOIN roles ro ON ro.id=ur.role_id AND ro.organization_id=$1 AND ro.active
+		         CROSS JOIN LATERAL unnest(ro.permissions) permission
+		         WHERE ur.user_id=$3 AND ur.location_id=$2
+		       ),ARRAY[]::text[]) END,
+		       CASE WHEN u.platform_admin THEN ARRAY['*']::text[] ELSE COALESCE((
+		         SELECT array_agg(DISTINCT access_key ORDER BY access_key)
+		         FROM user_roles ur
+		         JOIN roles ro ON ro.id=ur.role_id AND ro.organization_id=$1 AND ro.active
+		         CROSS JOIN LATERAL unnest(ro.menu_access) access_key
+		         WHERE ur.user_id=$3 AND ur.location_id=$2
+		       ),ARRAY[]::text[]) END
+		FROM organizations o
+		JOIN locations l ON l.organization_id=o.id
+		JOIN organization_fiscal_profiles p ON p.id=l.fiscal_profile_id AND p.organization_id=l.organization_id AND p.active
+		JOIN users u ON u.id=$3 AND u.active AND (u.platform_admin OR u.organization_id=o.id)
+		WHERE o.id=$1 AND l.id=$2 AND o.active AND l.active
+	`, s.OrganizationID, s.LocationID, s.UserID).Scan(&v.OrganizationName, &v.LocationName, &v.Country, &v.Timezone, &v.PlatformAdmin, &v.Permissions, &v.MenuAccess)
+	return v, administrationError(err)
+}
+func (r *AdministrationRepository) SetupRequired(ctx context.Context, org string) (bool, error) {
+	var required bool
+	err := r.db(ctx).QueryRow(ctx, `
+			SELECT completed_at IS NULL
+			FROM organization_operational_setup
+			WHERE organization_id=$1
+		`, org).Scan(&required)
+	return required, administrationError(err)
+}
+
+// Cash reporting retains its existing wildcard and organization-wide-role policy.
+func (r *AdministrationRepository) CashExpectedVisible(ctx context.Context, s requestscope.Scope) (bool, error) {
+	var platform bool
+	if err := r.db(ctx).QueryRow(ctx, `SELECT platform_admin FROM users WHERE id=$1 AND active`, s.UserID).Scan(&platform); err == nil && platform {
+		return true, nil
+	}
+	var allowed bool
+	err := r.db(ctx).QueryRow(ctx, `
+		SELECT EXISTS(
+		  SELECT 1
+		  FROM user_roles ur
+		  JOIN roles ro ON ro.id=ur.role_id
+		  WHERE ur.user_id=$1
+		    AND (ur.location_id IS NULL OR ur.location_id=$2)
+		    AND ro.active
+		    AND ro.organization_id=$3
+		    AND (
+		      ro.permissions @> ARRAY['*']::text[]
+		      OR ro.permissions @> ARRAY['cash.expected.read']::text[]
+		    )
+		)
+	`, s.UserID, s.LocationID, s.OrganizationID).Scan(&allowed)
+	return allowed, err
+}

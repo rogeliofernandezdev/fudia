@@ -15,7 +15,7 @@ type Table struct {
 	ID        string `json:"id"`
 	Name      string `json:"name"`
 	Seats     int    `json:"seats"`
-	Zone      string `json:"Zone"`
+	Zone      string `json:"zone"`
 	Active    bool   `json:"active"`
 	QrToken   string `json:"qrToken"`
 	QrEnabled bool   `json:"qrEnabled"`
@@ -23,7 +23,7 @@ type Table struct {
 type TableInput struct {
 	Name      string `json:"name"`
 	Seats     *int   `json:"seats"`
-	Zone      string `json:"Zone"`
+	Zone      string `json:"zone"`
 	Active    *bool  `json:"active"`
 	QrEnabled *bool  `json:"qrEnabled"`
 }
@@ -33,7 +33,7 @@ type TableBatchInput struct {
 type TableBatchItem struct {
 	Name      string `json:"name"`
 	Seats     int    `json:"seats"`
-	Zone      string `json:"Zone"`
+	Zone      string `json:"zone"`
 	QrEnabled bool   `json:"qrEnabled"`
 }
 type TableQR struct {

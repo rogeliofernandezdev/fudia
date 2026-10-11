@@ -7,6 +7,7 @@ import (
 )
 
 type IdentityAdministrationHandler interface {
+	GetContext(http.ResponseWriter, *http.Request)
 	ListRoles(http.ResponseWriter, *http.Request)
 	GetPermissionCatalog(http.ResponseWriter, *http.Request)
 	CreateRole(http.ResponseWriter, *http.Request)
@@ -74,4 +75,14 @@ func (a *API) loadRoleCatalog(ctx context.Context, s scope) (effectiveRoleCatalo
 	return a.handlers.IdentityAdministration.Catalog(ctx, s)
 }
 
-func(a *API)saveRole(w http.ResponseWriter,r *http.Request,update bool){if update{a.updateRole(w,r)}else{a.createRole(w,r)}}
+func (a *API) saveRole(w http.ResponseWriter, r *http.Request, update bool) {
+	if update {
+		a.updateRole(w, r)
+	} else {
+		a.createRole(w, r)
+	}
+}
+
+func (a *API) getContext(w http.ResponseWriter, r *http.Request) {
+	a.handlers.IdentityAdministration.GetContext(w, r)
+}

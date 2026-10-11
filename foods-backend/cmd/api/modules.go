@@ -6,6 +6,9 @@ import (
 	billingapp "github.com/foods-platform/foods-backend/internal/modules/billing/application"
 	billingpg "github.com/foods-platform/foods-backend/internal/modules/billing/infrastructure/postgres"
 	billinghttp "github.com/foods-platform/foods-backend/internal/modules/billing/transport/http"
+	reportapp "github.com/foods-platform/foods-backend/internal/modules/reporting/application"
+	reportpg "github.com/foods-platform/foods-backend/internal/modules/reporting/infrastructure/postgres"
+	reporthttp "github.com/foods-platform/foods-backend/internal/modules/reporting/transport/http"
 	serviceapp "github.com/foods-platform/foods-backend/internal/modules/service/application"
 	servicepg "github.com/foods-platform/foods-backend/internal/modules/service/infrastructure/postgres"
 	servicehttp "github.com/foods-platform/foods-backend/internal/modules/service/transport/http"
@@ -32,6 +35,8 @@ func newAPI(db *pgxpool.Pool) *legacy.API {
 		PaymentMethods:         billinghttp.NewMethods(billingapp.NewMethods(billingpg.NewMethods(db), database.NewUnitOfWork(db))),
 		Floor:                  servicehttp.NewFloor(serviceapp.NewFloor(servicepg.NewFloor(db), database.NewUnitOfWork(db), auditpg.New(db))),
 		Reservations:           servicehttp.NewReservations(serviceapp.NewReservations(servicepg.NewReservations(db), database.NewUnitOfWork(db), auditpg.New(db))),
+		Reporting:              reporthttp.New(reportapp.New(reportpg.New(db), database.NewUnitOfWork(db), identitypg.NewAdministration(db))),
+		Expenses:               billinghttp.NewExpenses(billingapp.NewExpenses(billingpg.NewExpenses(db), billingapp.NewMethods(billingpg.NewMethods(db), database.NewUnitOfWork(db)), auditpg.New(db))),
 		IdentityAdministration: identityhttp.NewAdministration(identityapp.NewAdministration(identitypg.NewAdministration(db), database.NewUnitOfWork(db), credentials.Credentials{}, subscriptionapp.NewAccess(subscriptionpg.NewAccess(db)), auditpg.New(db))),
 		Identity:               identityhttp.New(identityapp.New(identitypg.New(db), credentials.Credentials{}), os.Getenv("FOODS_COOKIE_SECURE") == "true"),
 		Customers:              customerhttp.New(customerapp.New(customerpg.New(db))),

@@ -108,5 +108,17 @@ exponen pgx al caso de uso no se considera separación terminada.
 
 Esta etapa aún no completa la migración total. Permanecen en legacy los flujos
 principales de organizaciones y plataforma, menú/recetas/combos, inventario/compras,
-pedidos/cocina, caja/pagos/gastos, reportes, suscripciones y Concierge. Los puentes
+pedidos/cocina, caja/pagos, suscripciones y Concierge. Los puentes
 existentes se conservan hasta migrar todos sus consumidores.
+
+- **Reporting / dashboard**: repositorio de proyecciones, periodos en dominio y caso
+  de uso con snapshot de solo lectura/repeatable-read. La política de saldo de
+  caja mantiene comodines y roles de organización.
+- **Billing / gastos**: categorías, listados, registro y anulación extraídos;
+  validación de importes/fechas y medio de pago permanece en aplicación/dominio.
+- **Identity / contexto actual**: proyección tipada y composición de módulos y
+  estado de configuración sin SQL ni HTTP en el caso de uso.
+
+La primera ejecución PostgreSQL de esta etapa detectó un cambio accidental de
+la etiqueta JSON `zone` en modelos de mesas. Se restauró el contrato y se agregó
+una regresión de serialización; no se modificaron las pruebas que detectaron el fallo.

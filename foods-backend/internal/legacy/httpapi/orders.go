@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	orderdomain "github.com/foods-platform/foods-backend/internal/modules/orders/domain"
 	"math"
 	"net/http"
 	"sort"
@@ -131,7 +132,7 @@ const orderColumns = `id,code,channel,status,COALESCE(customer_id::text,''),cust
 COALESCE(waiter_id::text,''),COALESCE((SELECT u.full_name FROM users u WHERE u.id=orders.waiter_id AND u.organization_id=orders.organization_id),''),
 ARRAY(SELECT DISTINCT u.full_name FROM payments p JOIN users u ON u.id=p.created_by AND u.organization_id=p.organization_id WHERE p.order_id=orders.id AND p.organization_id=orders.organization_id AND p.location_id=orders.location_id ORDER BY u.full_name),COALESCE(to_char(bill_closed_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),'')`
 
-var orderChannels = []map[string]string{{"value": "salon", "label": "Salón"}, {"value": "mostrador", "label": "Mostrador"}, {"value": "recojo", "label": "Recojo"}, {"value": "delivery", "label": "Delivery"}, {"value": "whatsapp", "label": "WhatsApp"}}
+var orderChannels = orderdomain.Channels
 var orderStatuses = []map[string]string{{"value": "nuevo", "label": "Nuevo"}, {"value": "confirmado", "label": "Confirmado"}, {"value": "preparando", "label": "Preparando"}, {"value": "listo", "label": "Listo"}, {"value": "en_camino", "label": "En camino"}, {"value": "entregado", "label": "Entregado"}, {"value": "cancelado", "label": "Cancelado"}}
 var orderTransitions = map[string][]string{
 	"nuevo":      {"confirmado", "cancelado"},
