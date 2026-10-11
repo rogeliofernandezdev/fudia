@@ -155,3 +155,35 @@ def test_whatsapp_number_is_resolved_from_meta_not_app_config() -> None:
     assert "FUDIA_WHATSAPP_PHONE" not in env_example
     assert "WHATSAPP_PHONE_ID" in env_example
     assert "display_phone_number" in adapter
+
+
+def test_application_layers_do_not_import_concrete_adapters() -> None:
+    """Enforce the dependency rule in CI, not merely in documentation."""
+    import ast
+
+    protected = ("domain", "services", "graph", "ai")
+    forbidden = ("src.infrastructure", "src.api", "src.main", "config.settings")
+    for layer in protected:
+        for path in (ROOT / "src" / layer).rglob("*.py"):
+            tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+            imported: list[str] = []
+            for node in ast.walk(tree):
+                if isinstance(node, ast.ImportFrom) and node.module:
+                    imported.append(node.module)
+                elif isinstance(node, ast.Import):
+                    imported.extend(alias.name for alias in node.names)
+            for module in imported:
+                assert not any(
+                    module == prefix or module.startswith(prefix + ".")
+                    for prefix in forbidden
+                ), f"{path.relative_to(ROOT)} imports concrete infrastructure: {module}"
+
+
+def test_concierge_has_explicit_independent_roles() -> None:
+    from config.settings import Settings
+
+    webhook = Settings(_env_file=None, worker_enabled=False)
+    worker = Settings(_env_file=None, worker_enabled=True)
+    assert webhook.worker_enabled is False
+    assert worker.worker_enabled is True
+    assert (ROOT / "src" / "worker.py").exists()
