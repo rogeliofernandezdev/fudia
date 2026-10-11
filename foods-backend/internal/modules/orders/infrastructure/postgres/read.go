@@ -113,6 +113,9 @@ func (r *Orders) Floor(ctx context.Context, s scope) ([]domain.FloorTable, error
 		}
 		if oid != nil {
 			o.ID = *oid
+			// A table becomes occupied when its active salon order is opened.
+			// Keep this timestamp stable across edits, kitchen rounds and payments.
+			ft.OccupiedSince = o.CreatedAt
 			ft.PaidText = paidText
 			ft.Order = &o
 		}

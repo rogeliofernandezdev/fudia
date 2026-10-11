@@ -233,6 +233,7 @@ type ModifierGroup struct {
 }
 
 type FloorTable struct {
+	OccupiedSince string `json:"occupiedSince,omitempty"`
 	ID       string `json:"id"`
 	Name     string `json:"name"`
 	Zone     string `json:"zone"`

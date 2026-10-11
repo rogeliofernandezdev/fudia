@@ -4,6 +4,7 @@ import {Dialog} from "@/design-system/dialog";
 import "../../styles/salon-comanda.css";
 import "../../styles/salon.css";
 import {useState,useCallback} from "react";
+import {formatTableOccupation} from "../domain/occupation-time";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Button,ConfirmDialog,EmptyState,ErrorState,Icon,PageHeader,SearchField,Skeleton,Status} from "@/design-system";
 import {ComandaView} from "../../orders/presentation/comanda-view";
@@ -19,11 +20,6 @@ import {OrderDetailContent,OrderDetailSkeleton,orderDetailTitleId} from "../../o
 import {isEditableOrder,parseIsoDate,statusMeta} from "../../orders/presentation/order-meta";
 
 /* ── helpers ── */
-function occupiedFor(iso:string){
-  const d=parseIsoDate(iso);if(!d)return"—";
-  const m=Math.max(0,Math.floor((Date.now()-d.getTime())/60000));
-  if(m<60)return`${m} min`;return`${Math.floor(m/60)}h ${m%60}min`;
-}
 const emptyDraft=(tableId=""):Draft=>({channel:"salon",customerName:"",customerPhone:"",address:"",reference:"",tableId,notes:"",deliveryFee:"0",lines:[]});
 const draftFromOrder=(o:Order):Draft=>({
   channel:o.channel||"salon",
@@ -74,8 +70,9 @@ export function SalonManager(){
   const floor=useQuery({
     queryKey:["salon-floor"],
     queryFn:getSalonFloor,
+    // React Query refreshes only this cached resource, never the entire page.
     refetchInterval:10000,
-    refetchIntervalInBackground:true,
+    refetchIntervalInBackground:false,
   });
   const detail=useQuery({
     queryKey:["order",detailId],
@@ -194,7 +191,7 @@ export function SalonManager(){
         <div className="salon-grid" role="status" aria-busy="true" aria-label="Cargando mesas">
           {Array.from({length:8},(_,i)=><SalonTableSkeleton key={i}/>)}
         </div>
-      ):floor.isError?(
+      ):floor.isError&&!floor.data?(
         <ErrorState title="No pudimos cargar el salón" text={floor.error.message} onRetry={()=>floor.refetch()} retrying={floor.isFetching}/>
       ):!tables.length?(
         <EmptyState icon="utensils" title="Aún no hay mesas configuradas" text={<>Registra las mesas del restaurante en <strong>Mesas y zonas</strong> para empezar a tomar pedidos.</>}/>
@@ -203,6 +200,7 @@ export function SalonManager(){
           {visible.map(t=>{
             const o=t.order;
             const meta=o?statusMeta[o.status]??{label:o.status,tone:"gray" as const}:null;
+            const elapsed=o?formatTableOccupation(t.occupiedSince,Date.now()):null;
             const tableState=o?"occupied":"free";
             return(
               <button
@@ -215,8 +213,8 @@ export function SalonManager(){
               >
                 <div className="salon-table-inner">
                   <div className="salon-table-top">
-                    {o&&meta?<Status tone={meta.tone}>{meta.label}</Status>:<Status tone="green">Libre</Status>}
-                    {o&&<span className="salon-table-elapsed"><Icon name="clock" size={14}/>{occupiedFor(o.createdAt)}</span>}
+                    {o?<Status tone="red">Ocupada</Status>:<Status tone="green">Libre</Status>}
+                    {o&&elapsed&&<span className={`salon-table-elapsed${elapsed.needsReview?" is-stale":""}`} title={elapsed.description} aria-label={elapsed.description}><Icon name="clock" size={14}/>{elapsed.label}</span>}
                   </div>
 
                   <div className="salon-table-name-row">
@@ -224,7 +222,8 @@ export function SalonManager(){
                       <Icon name="utensils" size={18}/>
                     </span>
                     <strong className="salon-table-name">{t.name}</strong>
-                    <small className="salon-table-seats">{t.seats} personas{zones.length>1&&t.zone?` · ${t.zone}`:""}</small>
+                    <small className="salon-table-seats">Capacidad: {t.seats} {t.seats===1?"persona":"personas"}{zones.length>1&&t.zone?` · ${t.zone}`:""}</small>
+                    {o&&meta&&<span className="salon-table-order-status">Pedido: {meta.label}</span>}
                     {o?.customerName&&<span className="salon-table-family">{o.customerName}</span>}
                     {o&&<span className="salon-table-staff">Mozo: {o.waiterName||"Sin asignar"}</span>}
                     {Boolean(o?.collectedByNames?.length)&&<span className="salon-table-staff">Cobrado por: {o!.collectedByNames!.join(" · ")}</span>}

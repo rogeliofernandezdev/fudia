@@ -9,7 +9,7 @@ export type Order={
  waiterId?:string;waiterName?:string;collectedByNames?:string[];
  createdAt:string;updatedAt:string;itemCount?:number;items?:OrderItem[];paidAmount?:string;remainingAmount?:string;paymentStatus?:"pending"|"partial"|"paid";
 };
-export type FloorTable={id:string;name:string;zone:string;seats:number;order:Order|null};
+export type FloorTable={id:string;name:string;zone:string;seats:number;occupiedSince?:string;order:Order|null};
 export type LineDraft={
  lineKey:string;sourceItemId?:string;repriceCombo?:boolean;itemType:"product"|"combo";productId:string;name:string;
  qty:number;unitPrice:number;note:string;selections:ComboSelection[];

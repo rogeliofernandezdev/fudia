@@ -159,7 +159,7 @@ func TestSalonKitchenPaymentDeliveryWorkflow(t *testing.T) {
 		req = req.WithContext(context.WithValue(req.Context(), scopeKey{}, s))
 		rec := httptest.NewRecorder()
 		api.getOrdersFloor(rec, req)
-		if rec.Code != 200 || !strings.Contains(rec.Body.String(), `"status":"entregado"`) {
+		if rec.Code != 200 || !strings.Contains(rec.Body.String(), `"status":"entregado"`) || !strings.Contains(rec.Body.String(), `"occupiedSince":`) {
 			t.Fatalf("served table must remain occupied: %d %s", rec.Code, rec.Body.String())
 		}
 	}
