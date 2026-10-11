@@ -3,7 +3,7 @@ import "./sales.css";
 import {useState} from "react";
 import dynamic from "next/dynamic";
 import {useQuery} from "@tanstack/react-query";
-import {Button,EmptyState,ErrorState,FormField,Icon,Input,PageHeader,Pagination,RowActionButton,SearchField,Status} from "@/design-system";
+import {Button,DataTable,EmptyState,ErrorState,FormField,Icon,Input,PageHeader,Pagination,RowActionButton,SearchField,Status} from "@/design-system";
 import {useMoney,useSession} from "@/providers";
 import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
 import {useDebouncedValue} from "@/shared/hooks/use-debounced-value";
@@ -57,12 +57,7 @@ function SalesFilters({q,from,to,invalidRange,search,start,end,clear}:{q:string;
 function SalesResults({items,money,date,view}:{items:Sale[];money:(value:string|number)=>string;date:(value:string)=>string;view:(id:string)=>void}){
   const action=(sale:Sale)=><div className="standard-actions"><RowActionButton action="view" label={`Ver detalle de la venta ${sale.code}`} onClick={()=>view(sale.id)}/></div>;
   return <>
-    <div className="table-wrap hover-scroll sales-table-wrap"><table><thead><tr><th>PEDIDO</th><th>CLIENTE / MESA</th><th>CANAL</th><th>MEDIO DE PAGO</th><th>FECHA</th><th>TOTAL</th><th>ESTADO</th><th>ACCIONES</th></tr></thead><tbody>{items.map((sale,i)=><tr className={i%2?"alternate":""} key={sale.id}><td><span className="row-icon"><Icon name="receipt"/></span><b>{sale.code}</b></td><td><b>{sale.tableName||sale.customerName||"Venta directa"}</b>{sale.customerName&&sale.tableName?<small>{sale.customerName}</small>:null}</td><td>{channelLabel[sale.channel]??sale.channel}</td><td><span className="sales-payment-methods">{paymentMethodsLabel(sale)}</span></td><td>{date(sale.createdAt)}</td><td><b>{money(sale.total)}</b></td><td><Status tone="green">Pagada</Status></td><td>{action(sale)}</td></tr>)}</tbody></table></div>
-    <div className="management-cards sales-cards">{items.map(sale=><article key={sale.id}>
-      <header><span className="row-icon"><Icon name="receipt"/></span><div><b>{sale.code}</b><small>{sale.tableName||sale.customerName||"Venta directa"}</small></div><Status tone="green">Pagada</Status></header>
-      <dl><div><dt>Canal</dt><dd>{channelLabel[sale.channel]??sale.channel}</dd></div><div><dt>Total</dt><dd>{money(sale.total)}</dd></div><div className="sales-card-methods"><dt>Medio de pago</dt><dd>{paymentMethodsLabel(sale)}</dd></div><div className="sales-card-date"><dt>Fecha</dt><dd>{date(sale.createdAt)}</dd></div></dl>
-      {sale.customerName&&sale.tableName&&<p>{sale.customerName}</p>}<footer>{action(sale)}</footer>
-    </article>)}</div>
+    <DataTable label="Historial de ventas" className="sales-table" containerClassName="hover-scroll sales-table-wrap"><thead><tr><th>PEDIDO</th><th>CLIENTE / MESA</th><th>CANAL</th><th>MEDIO DE PAGO</th><th>FECHA</th><th>TOTAL</th><th>ESTADO</th><th>ACCIONES</th></tr></thead><tbody>{items.map((sale,i)=><tr className={i%2?"alternate":""} key={sale.id}><td><span className="row-icon"><Icon name="receipt"/></span><b>{sale.code}</b></td><td><b>{sale.tableName||sale.customerName||"Venta directa"}</b>{sale.customerName&&sale.tableName?<small>{sale.customerName}</small>:null}</td><td>{channelLabel[sale.channel]??sale.channel}</td><td><span className="sales-payment-methods">{paymentMethodsLabel(sale)}</span></td><td>{date(sale.createdAt)}</td><td><b>{money(sale.total)}</b></td><td><Status tone="green">Pagada</Status></td><td>{action(sale)}</td></tr>)}</tbody></DataTable>
   </>;
 }
 
@@ -81,5 +76,5 @@ function SalesTableSkeleton(){
         <td><span className="sales-skeleton-action"/></td>
       </tr>)}</tbody>
     </table>
-  </div><div className="management-cards sales-cards" aria-hidden="true">{Array.from({length:3},(_,index)=><article className="sales-skeleton" key={index}><header><span className="sales-skeleton-status"/><div className="sales-skeleton-customer"><b/><i/></div><span className="sales-skeleton-status"/></header><dl>{Array.from({length:4},(_,cell)=><div className={cell===2?"sales-card-methods":cell===3?"sales-card-date":undefined} key={cell}><i className="sales-skeleton-status"/></div>)}</dl><footer><span className="sales-skeleton-action"/></footer></article>)}</div></div>;
+  </div></div>;
 }
