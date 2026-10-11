@@ -7,7 +7,6 @@ import (
 	"github.com/foods-platform/foods-backend/internal/modules/concierge/domain"
 	menucontracts "github.com/foods-platform/foods-backend/internal/modules/menu/contracts"
 	ordercontracts "github.com/foods-platform/foods-backend/internal/modules/orders/contracts"
-	ordercontracts "github.com/foods-platform/foods-backend/internal/modules/orders/contracts"
 	"github.com/foods-platform/foods-backend/internal/platform/apperror"
 	"github.com/foods-platform/foods-backend/internal/platform/requestscope"
 	"strings"
