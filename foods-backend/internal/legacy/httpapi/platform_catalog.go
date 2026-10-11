@@ -140,26 +140,5 @@ func (a *API) onboardingCountryByCode(ctx context.Context, code string) (country
 }
 
 func (a *API) getPlatformOnboardingCatalogs(w http.ResponseWriter, r *http.Request) {
-	var countries any
-	if r.URL.Query().Get("scope") == "all" {
-		items, err := a.listPlatformGlobalCountries(r.Context())
-		if err != nil {
-			fail(w, 503, "catalogs_unavailable", "No pudimos cargar los países disponibles.")
-			return
-		}
-		countries = items
-	} else {
-		items, err := a.listOnboardingCountries(r.Context())
-		if err != nil {
-			fail(w, 503, "catalogs_unavailable", "No pudimos cargar los países disponibles.")
-			return
-		}
-		countries = items
-	}
-	currencies, err := a.listPlatformCurrencies(r.Context())
-	if err != nil {
-		fail(w, 503, "catalogs_unavailable", "No pudimos cargar las monedas disponibles.")
-		return
-	}
-	writeJSON(w, 200, map[string]any{"countryOptions": countries, "currencyOptions": currencies})
+	a.handlers.Organizations.GetPlatformOnboardingCatalogs(w, r)
 }

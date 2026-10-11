@@ -4,6 +4,8 @@ import "net/http"
 
 // Handlers injects the extracted verticals. Only cmd/api composes production adapters.
 type Handlers struct {
+	Subscriptions          SubscriptionsHandler
+	Organizations          OrganizationsHandler
 	Cash                   CashHandler
 	Payments               PaymentsHandler
 	Orders                 OrdersHandler
@@ -135,4 +137,36 @@ type CashHandler interface {
 	ListCashUserOptions(http.ResponseWriter, *http.Request)
 	ListCashShiftUsers(http.ResponseWriter, *http.Request)
 	UnassignCashShiftUser(http.ResponseWriter, *http.Request)
+}
+
+type OrganizationsHandler interface {
+	UpdateOrganization(http.ResponseWriter, *http.Request)
+	CreateLocation(http.ResponseWriter, *http.Request)
+	UpdateLocation(http.ResponseWriter, *http.Request)
+	CreateExchangeRate(http.ResponseWriter, *http.Request)
+	UpdateOrgSettings(http.ResponseWriter, *http.Request)
+	UpdateRestaurantSetup(http.ResponseWriter, *http.Request)
+	CreateFiscalProfile(http.ResponseWriter, *http.Request)
+	UpdateFiscalProfile(http.ResponseWriter, *http.Request)
+	GetOrganization(http.ResponseWriter, *http.Request)
+	GetOrgSettings(http.ResponseWriter, *http.Request)
+	GetRestaurantSetup(http.ResponseWriter, *http.Request)
+	CompleteRestaurantSetup(http.ResponseWriter, *http.Request)
+	DeactivateLocation(http.ResponseWriter, *http.Request)
+	DeactivateFiscalProfile(http.ResponseWriter, *http.Request)
+	DeleteExchangeRate(http.ResponseWriter, *http.Request)
+	GetPlatformOnboardingCatalogs(http.ResponseWriter, *http.Request)
+	ListLocations(http.ResponseWriter, *http.Request)
+	ListFiscalProfiles(http.ResponseWriter, *http.Request)
+	ListExchangeRates(http.ResponseWriter, *http.Request)
+}
+
+type SubscriptionsHandler interface {
+	CreateSubscriptionPlan(http.ResponseWriter, *http.Request)
+	UpdateSubscriptionPlan(http.ResponseWriter, *http.Request)
+	UpdateOrganizationSubscription(http.ResponseWriter, *http.Request)
+	RecordSubscriptionPayment(http.ResponseWriter, *http.Request)
+	ListSubscriptionPlans(http.ResponseWriter, *http.Request)
+	ListAvailableSubscriptionPlans(http.ResponseWriter, *http.Request)
+	GetOrganizationSubscription(http.ResponseWriter, *http.Request)
 }

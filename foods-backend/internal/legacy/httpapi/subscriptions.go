@@ -2,8 +2,8 @@ package httpapi
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
+	subscriptiondomain "github.com/foods-platform/foods-backend/internal/modules/subscriptions/domain"
 	"math/big"
 	"net/http"
 	"regexp"
@@ -15,97 +15,21 @@ import (
 
 var errSubscriptionLimit = errors.New("subscription limit reached")
 
-type subscriptionPlanView struct {
-	ID           string   `json:"id"`
-	Code         string   `json:"code"`
-	Name         string   `json:"name"`
-	Description  string   `json:"description"`
-	Currency     string   `json:"currency"`
-	MonthlyPrice string   `json:"monthlyPrice"`
-	AnnualPrice  string   `json:"annualPrice"`
-	TrialDays    int      `json:"trialDays"`
-	MaxLocations *int     `json:"maxLocations"`
-	MaxUsers     *int     `json:"maxUsers"`
-	ModuleKeys   []string `json:"moduleKeys"`
-	TermsVersion string   `json:"termsVersion"`
-	Active       bool     `json:"active"`
-}
+type subscriptionPlanView = subscriptiondomain.SubscriptionPlanView
 
-type subscriptionPlanInput struct {
-	Code         string   `json:"code"`
-	Name         string   `json:"name"`
-	Description  string   `json:"description"`
-	Currency     string   `json:"currency"`
-	MonthlyPrice string   `json:"monthlyPrice"`
-	AnnualPrice  string   `json:"annualPrice"`
-	TrialDays    int      `json:"trialDays"`
-	MaxLocations *int     `json:"maxLocations"`
-	MaxUsers     *int     `json:"maxUsers"`
-	ModuleKeys   []string `json:"moduleKeys"`
-	TermsVersion string   `json:"termsVersion"`
-	Active       bool     `json:"active"`
-}
+type subscriptionPlanInput = subscriptiondomain.SubscriptionPlanInput
 
-type subscriptionPaymentView struct {
-	ID                string  `json:"id"`
-	Amount            string  `json:"amount"`
-	Currency          string  `json:"currency"`
-	Status            string  `json:"status"`
-	Provider          string  `json:"provider"`
-	ExternalReference *string `json:"externalReference"`
-	PaidAt            *string `json:"paidAt"`
-	CreatedAt         string  `json:"createdAt"`
-}
+type subscriptionPaymentView = subscriptiondomain.SubscriptionPaymentView
 
-type subscriptionOrganizationView struct {
-	ID        string `json:"id"`
-	TradeName string `json:"tradeName"`
-	LegalName string `json:"legalName"`
-	TaxID     string `json:"taxId"`
-	Active    bool   `json:"active"`
-}
+type subscriptionOrganizationView = subscriptiondomain.SubscriptionOrganizationView
 
-type organizationSubscriptionView struct {
-	ID                    string                    `json:"id"`
-	Organization          subscriptionOrganizationView `json:"organization"`
-	Plan                  subscriptionPlanView      `json:"plan"`
-	BillingCycle          string                    `json:"billingCycle"`
-	PriceAmount           string                    `json:"priceAmount"`
-	Currency              string                    `json:"currency"`
-	Status                string                    `json:"status"`
-	TrialStartsAt         *string                   `json:"trialStartsAt"`
-	TrialEndsAt           *string                   `json:"trialEndsAt"`
-	CurrentPeriodStartsAt *string                   `json:"currentPeriodStartsAt"`
-	CurrentPeriodEndsAt   *string                   `json:"currentPeriodEndsAt"`
-	RenewsAt              *string                   `json:"renewsAt"`
-	AutoRenew             bool                      `json:"autoRenew"`
-	TermsVersion          *string                   `json:"termsVersion"`
-	TermsAcceptedAt       *string                   `json:"termsAcceptedAt"`
-	Usage                 subscriptionUsage         `json:"usage"`
-	Payments              []subscriptionPaymentView `json:"payments"`
-}
+type organizationSubscriptionView = subscriptiondomain.OrganizationSubscriptionView
 
-type subscriptionUsage struct {
-	Locations int `json:"locations"`
-	Users     int `json:"users"`
-}
+type subscriptionUsage = subscriptiondomain.SubscriptionUsage
 
-type subscriptionUpdateInput struct {
-	PlanID        string `json:"planId"`
-	BillingCycle string `json:"billingCycle"`
-	Status       string `json:"status"`
-	AutoRenew    bool   `json:"autoRenew"`
-	TermsAccepted bool  `json:"termsAccepted"`
-}
+type subscriptionUpdateInput = subscriptiondomain.SubscriptionUpdateInput
 
-type subscriptionPaymentInput struct {
-	Amount            string `json:"amount"`
-	Currency          string `json:"currency"`
-	Status            string `json:"status"`
-	Provider          string `json:"provider"`
-	ExternalReference string `json:"externalReference"`
-	PaidAt            string `json:"paidAt"`
-}
+type subscriptionPaymentInput = subscriptiondomain.SubscriptionPaymentInput
 
 var planCodePattern = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{1,39}$`)
 
@@ -170,160 +94,26 @@ func readSubscriptionPlan(ctx context.Context, q interface {
 }
 
 func (a *API) listSubscriptionPlans(w http.ResponseWriter, r *http.Request) {
-	rows, err := a.db.Query(r.Context(), `
-		SELECT id,code,name,description,currency,monthly_price::text,annual_price::text,
-		       trial_days,max_locations,max_users,module_keys,terms_version,active
-		FROM subscription_plans
-		ORDER BY active DESC,
-		         CASE code WHEN 'emprende' THEN 1 WHEN 'impulso' THEN 2 WHEN 'escala' THEN 3 ELSE 4 END,
-		         name
-	`)
-	if err != nil {
-		fail(w, 503, "plans_unavailable", "No pudimos cargar los planes.")
-		return
-	}
-	defer rows.Close()
-	items := []subscriptionPlanView{}
-	for rows.Next() {
-		var item subscriptionPlanView
-		if err = rows.Scan(&item.ID,&item.Code,&item.Name,&item.Description,&item.Currency,&item.MonthlyPrice,&item.AnnualPrice,&item.TrialDays,&item.MaxLocations,&item.MaxUsers,&item.ModuleKeys,&item.TermsVersion,&item.Active); err != nil {
-			fail(w, 503, "plans_unavailable", "No pudimos cargar los planes.")
-			return
-		}
-		items = append(items, item)
-	}
-	writeJSON(w, 200, map[string]any{"items": items})
+	a.handlers.Subscriptions.ListSubscriptionPlans(w, r)
 }
 
 func (a *API) listAvailableSubscriptionPlans(w http.ResponseWriter, r *http.Request) {
-	rows, err := a.db.Query(r.Context(), `
-		SELECT id,code,name,description,currency,monthly_price::text,annual_price::text,
-		       trial_days,max_locations,max_users,module_keys,terms_version,active
-		FROM subscription_plans
-		WHERE active AND code<>'legacy'
-		ORDER BY CASE code WHEN 'emprende' THEN 1 WHEN 'impulso' THEN 2 WHEN 'escala' THEN 3 ELSE 4 END,name
-	`)
-	if err != nil {
-		fail(w, 503, "plans_unavailable", "No pudimos cargar los planes disponibles.")
-		return
-	}
-	defer rows.Close()
-	items := []subscriptionPlanView{}
-	for rows.Next() {
-		var item subscriptionPlanView
-		if err = rows.Scan(&item.ID,&item.Code,&item.Name,&item.Description,&item.Currency,&item.MonthlyPrice,&item.AnnualPrice,&item.TrialDays,&item.MaxLocations,&item.MaxUsers,&item.ModuleKeys,&item.TermsVersion,&item.Active); err != nil {
-			fail(w, 503, "plans_unavailable", "No pudimos cargar los planes disponibles.")
-			return
-		}
-		items = append(items,item)
-	}
-	writeJSON(w,200,map[string]any{"items":items})
+	a.handlers.Subscriptions.ListAvailableSubscriptionPlans(w, r)
 }
 
 func (a *API) createSubscriptionPlan(w http.ResponseWriter, r *http.Request) {
-	a.saveSubscriptionPlan(w, r, true)
+	a.handlers.Subscriptions.CreateSubscriptionPlan(w, r)
 }
 
 func (a *API) updateSubscriptionPlan(w http.ResponseWriter, r *http.Request) {
-	a.saveSubscriptionPlan(w, r, false)
-}
-
-func (a *API) saveSubscriptionPlan(w http.ResponseWriter, r *http.Request, create bool) {
-	var in subscriptionPlanInput
-	if json.NewDecoder(r.Body).Decode(&in) != nil || !normalizePlanInput(&in) {
-		fail(w, 400, "invalid_plan", "Revisa código, precios, límites, módulos y versión de condiciones.")
-		return
-	}
-	tx, err := a.db.Begin(r.Context())
-	if err != nil {
-		fail(w, 503, "plans_unavailable", "No pudimos guardar el plan.")
-		return
-	}
-	defer tx.Rollback(r.Context())
-
-	var id string
-	if create {
-		err = tx.QueryRow(r.Context(), `
-			INSERT INTO subscription_plans(code,name,description,currency,monthly_price,annual_price,trial_days,max_locations,max_users,module_keys,terms_version,active)
-			VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
-			RETURNING id
-		`, in.Code,in.Name,in.Description,in.Currency,in.MonthlyPrice,in.AnnualPrice,in.TrialDays,in.MaxLocations,in.MaxUsers,in.ModuleKeys,in.TermsVersion,in.Active).Scan(&id)
-	} else {
-		id = r.PathValue("id")
-		var exceeds bool
-		err = tx.QueryRow(r.Context(), `
-			SELECT EXISTS(
-			  SELECT 1
-			  FROM organization_subscriptions s
-			  WHERE s.plan_id=$1
-			    AND (
-			      ($2::integer IS NOT NULL AND (SELECT count(*) FROM locations l WHERE l.organization_id=s.organization_id AND l.active)>$2)
-			      OR
-			      ($3::integer IS NOT NULL AND (SELECT count(*) FROM users u WHERE u.organization_id=s.organization_id AND u.active AND NOT u.platform_admin)>$3)
-			    )
-			)
-		`, id,in.MaxLocations,in.MaxUsers).Scan(&exceeds)
-		if err == nil && exceeds {
-			fail(w, 409, "plan_limit_conflict", "El nuevo límite es menor que el uso actual de una empresa suscrita.")
-			return
-		}
-		if err == nil {
-			tag, updateErr := tx.Exec(r.Context(), `
-				UPDATE subscription_plans
-				SET code=$2,name=$3,description=$4,currency=$5,monthly_price=$6,annual_price=$7,
-				    trial_days=$8,max_locations=$9,max_users=$10,module_keys=$11,terms_version=$12,active=$13,updated_at=now()
-				WHERE id=$1 AND code<>'legacy'
-			`, id,in.Code,in.Name,in.Description,in.Currency,in.MonthlyPrice,in.AnnualPrice,in.TrialDays,in.MaxLocations,in.MaxUsers,in.ModuleKeys,in.TermsVersion,in.Active)
-			err = updateErr
-			if err == nil && tag.RowsAffected() == 0 {
-				err = pgx.ErrNoRows
-			}
-		}
-	}
-	if err != nil {
-		fail(w, 409, "plan_conflict", "El código ya existe o el plan no puede modificarse.")
-		return
-	}
-
-	if !create {
-		rows, queryErr := tx.Query(r.Context(), `SELECT organization_id FROM organization_subscriptions WHERE plan_id=$1 AND status<>'cancelled'`, id)
-		if queryErr != nil {
-			fail(w, 503, "plans_unavailable", "No pudimos sincronizar el plan.")
-			return
-		}
-		orgIDs := []string{}
-		for rows.Next() {
-			var orgID string
-			if rows.Scan(&orgID) == nil {
-				orgIDs = append(orgIDs, orgID)
-			}
-		}
-		rows.Close()
-		for _, orgID := range orgIDs {
-			if err = syncOrganizationModulesForPlan(r.Context(), tx, orgID, in.ModuleKeys); err != nil {
-				fail(w, 503, "plans_unavailable", "No pudimos sincronizar los módulos del plan.")
-				return
-			}
-		}
-	}
-	if err = tx.Commit(r.Context()); err != nil {
-		fail(w, 503, "plans_unavailable", "No pudimos guardar el plan.")
-		return
-	}
-	a.audit(r, map[bool]string{true:"subscription_plan.created",false:"subscription_plan.updated"}[create], "subscription_plan", id)
-	plan, err := readSubscriptionPlan(r.Context(), a.db, id, false)
-	if err != nil {
-		fail(w, 503, "plans_unavailable", "El plan se guardó pero no pudimos volver a cargarlo.")
-		return
-	}
-	writeJSON(w, map[bool]int{true:201,false:200}[create], plan)
+	a.handlers.Subscriptions.UpdateSubscriptionPlan(w, r)
 }
 
 func subscriptionPeriodEnd(start time.Time, cycle string) time.Time {
 	if cycle == "annual" {
-		return start.AddDate(1,0,0)
+		return start.AddDate(1, 0, 0)
 	}
-	return start.AddDate(0,1,0)
+	return start.AddDate(0, 1, 0)
 }
 
 func createOrganizationSubscription(ctx context.Context, tx pgx.Tx, organizationID, administratorID, planID, billingCycle string, termsAccepted bool) error {
@@ -348,7 +138,7 @@ func createOrganizationSubscription(ctx context.Context, tx pgx.Tx, organization
 	if plan.TrialDays > 0 {
 		status = "trial"
 		start := now
-		end := now.AddDate(0,0,plan.TrialDays)
+		end := now.AddDate(0, 0, plan.TrialDays)
 		trialStarts, trialEnds = &start, &end
 		periodEnd = end
 	}
@@ -358,7 +148,7 @@ func createOrganizationSubscription(ctx context.Context, tx pgx.Tx, organization
 		  trial_starts_at,trial_ends_at,current_period_starts_at,current_period_ends_at,renews_at,
 		  auto_renew,terms_version,terms_accepted_at,terms_accepted_by
 		) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$10,true,$11,$9,$12)
-	`, organizationID,plan.ID,billingCycle,price,plan.Currency,status,trialStarts,trialEnds,now,periodEnd,plan.TermsVersion,administratorID)
+	`, organizationID, plan.ID, billingCycle, price, plan.Currency, status, trialStarts, trialEnds, now, periodEnd, plan.TermsVersion, administratorID)
 	if err != nil {
 		return err
 	}
@@ -369,87 +159,9 @@ var organizationIDPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[
 
 // subscriptionOrganizationID resuelve la empresa de la suscripción: la indicada en la ruta de
 // Plataforma (/v1/platform/organizations/{id}/...) o, en su ausencia, la de la sesión.
-func (a *API) subscriptionOrganizationID(w http.ResponseWriter, r *http.Request) (string, bool) {
-	id := strings.TrimSpace(r.PathValue("id"))
-	if id == "" {
-		return r.Context().Value(scopeKey{}).(scope).OrganizationID, true
-	}
-	var exists bool
-	if !organizationIDPattern.MatchString(id) || a.db.QueryRow(r.Context(), `SELECT EXISTS(SELECT 1 FROM organizations WHERE id=$1)`, id).Scan(&exists) != nil || !exists {
-		fail(w, 404, "organization_not_found", "La empresa no existe.")
-		return "", false
-	}
-	return id, true
-}
 
 func (a *API) getOrganizationSubscription(w http.ResponseWriter, r *http.Request) {
-	organizationID, ok := a.subscriptionOrganizationID(w, r)
-	if !ok {
-		return
-	}
-	_, _ = a.db.Exec(r.Context(), `
-		UPDATE organization_subscriptions
-		SET status='past_due',updated_at=now()
-		WHERE organization_id=$1 AND status IN ('trial','active') AND renews_at IS NOT NULL AND renews_at<now()
-	`, organizationID)
-
-	var out organizationSubscriptionView
-	var plan subscriptionPlanView
-	err := a.db.QueryRow(r.Context(), `
-		SELECT s.id,
-		       p.id,p.code,p.name,p.description,p.currency,p.monthly_price::text,p.annual_price::text,p.trial_days,p.max_locations,p.max_users,p.module_keys,p.terms_version,p.active,
-		       s.billing_cycle,s.price_amount::text,s.currency,s.status,
-		       CASE WHEN s.trial_starts_at IS NULL THEN NULL ELSE to_char(s.trial_starts_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') END,
-		       CASE WHEN s.trial_ends_at IS NULL THEN NULL ELSE to_char(s.trial_ends_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') END,
-		       CASE WHEN s.current_period_starts_at IS NULL THEN NULL ELSE to_char(s.current_period_starts_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') END,
-		       CASE WHEN s.current_period_ends_at IS NULL THEN NULL ELSE to_char(s.current_period_ends_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') END,
-		       CASE WHEN s.renews_at IS NULL THEN NULL ELSE to_char(s.renews_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') END,
-		       s.auto_renew,s.terms_version,
-		       CASE WHEN s.terms_accepted_at IS NULL THEN NULL ELSE to_char(s.terms_accepted_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') END
-		FROM organization_subscriptions s
-		JOIN subscription_plans p ON p.id=s.plan_id
-		WHERE s.organization_id=$1
-	`, organizationID).Scan(
-		&out.ID,
-		&plan.ID,&plan.Code,&plan.Name,&plan.Description,&plan.Currency,&plan.MonthlyPrice,&plan.AnnualPrice,&plan.TrialDays,&plan.MaxLocations,&plan.MaxUsers,&plan.ModuleKeys,&plan.TermsVersion,&plan.Active,
-		&out.BillingCycle,&out.PriceAmount,&out.Currency,&out.Status,
-		&out.TrialStartsAt,&out.TrialEndsAt,&out.CurrentPeriodStartsAt,&out.CurrentPeriodEndsAt,&out.RenewsAt,
-		&out.AutoRenew,&out.TermsVersion,&out.TermsAcceptedAt,
-	)
-	if errors.Is(err, pgx.ErrNoRows) {
-		fail(w, 404, "subscription_not_found", "La empresa todavía no tiene una suscripción registrada.")
-		return
-	}
-	if err != nil {
-		fail(w, 503, "subscription_unavailable", "No pudimos cargar la suscripción.")
-		return
-	}
-	out.Plan = plan
-	out.Organization.ID = organizationID
-	_ = a.db.QueryRow(r.Context(), `SELECT trade_name,legal_name,COALESCE(tax_id,''),active FROM organizations WHERE id=$1`, organizationID).Scan(&out.Organization.TradeName, &out.Organization.LegalName, &out.Organization.TaxID, &out.Organization.Active)
-	_ = a.db.QueryRow(r.Context(), `SELECT count(*) FROM locations WHERE organization_id=$1 AND active`, organizationID).Scan(&out.Usage.Locations)
-	_ = a.db.QueryRow(r.Context(), `SELECT count(*) FROM users WHERE organization_id=$1 AND active AND NOT platform_admin`, organizationID).Scan(&out.Usage.Users)
-
-	out.Payments = []subscriptionPaymentView{}
-	rows, paymentErr := a.db.Query(r.Context(), `
-		SELECT id,amount::text,currency,status,provider,external_reference,
-		       CASE WHEN paid_at IS NULL THEN NULL ELSE to_char(paid_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') END,
-		       to_char(created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"')
-		FROM subscription_payments
-		WHERE organization_id=$1
-		ORDER BY created_at DESC
-		LIMIT 10
-	`, organizationID)
-	if paymentErr == nil {
-		defer rows.Close()
-		for rows.Next() {
-			var item subscriptionPaymentView
-			if rows.Scan(&item.ID,&item.Amount,&item.Currency,&item.Status,&item.Provider,&item.ExternalReference,&item.PaidAt,&item.CreatedAt) == nil {
-				out.Payments = append(out.Payments, item)
-			}
-		}
-	}
-	writeJSON(w, 200, out)
+	a.handlers.Subscriptions.GetOrganizationSubscription(w, r)
 }
 
 func ensureSubscriptionCapacity(ctx context.Context, tx pgx.Tx, organizationID, resource string) error {
@@ -500,193 +212,8 @@ func ensureSubscriptionCapacity(ctx context.Context, tx pgx.Tx, organizationID, 
 }
 
 func (a *API) updateOrganizationSubscription(w http.ResponseWriter, r *http.Request) {
-	s := r.Context().Value(scopeKey{}).(scope)
-	organizationID, ok := a.subscriptionOrganizationID(w, r)
-	if !ok {
-		return
-	}
-	var in subscriptionUpdateInput
-	if json.NewDecoder(r.Body).Decode(&in) != nil {
-		fail(w, 400, "invalid_subscription", "Revisa los datos de la suscripción.")
-		return
-	}
-	in.PlanID = strings.TrimSpace(in.PlanID)
-	in.BillingCycle = strings.TrimSpace(in.BillingCycle)
-	in.Status = strings.TrimSpace(in.Status)
-	if in.PlanID == "" || (in.BillingCycle!="monthly" && in.BillingCycle!="annual") || (in.Status!="trial" && in.Status!="active" && in.Status!="past_due" && in.Status!="cancelled") {
-		fail(w, 400, "invalid_subscription", "Plan, ciclo y estado son obligatorios.")
-		return
-	}
-	tx, err := a.db.Begin(r.Context())
-	if err != nil {
-		fail(w,503,"subscription_unavailable","No pudimos actualizar la suscripción.")
-		return
-	}
-	defer tx.Rollback(r.Context())
-
-	plan, err := readSubscriptionPlan(r.Context(), tx, in.PlanID, true)
-	if err != nil {
-		fail(w,404,"plan_not_found","El plan seleccionado no está disponible.")
-		return
-	}
-	if in.Status=="trial" && plan.TrialDays==0 {
-		fail(w,409,"trial_unavailable","El plan seleccionado no incluye prueba gratuita.")
-		return
-	}
-	var currentPlanID,currentCycle,currentStatus,currentPrice string
-	var currentTerms *string
-	var currentTrialStarts,currentTrialEnds,currentPeriodStarts,currentPeriodEnds,currentRenews,currentCancelledAt *time.Time
-	if err = tx.QueryRow(r.Context(), `
-		SELECT plan_id,billing_cycle,status,price_amount::text,terms_version,
-		       trial_starts_at,trial_ends_at,current_period_starts_at,current_period_ends_at,renews_at,cancelled_at
-		FROM organization_subscriptions
-		WHERE organization_id=$1
-		FOR UPDATE
-	`, organizationID).Scan(&currentPlanID,&currentCycle,&currentStatus,&currentPrice,&currentTerms,&currentTrialStarts,&currentTrialEnds,&currentPeriodStarts,&currentPeriodEnds,&currentRenews,&currentCancelledAt); err != nil {
-		fail(w,404,"subscription_not_found","La empresa todavía no tiene una suscripción.")
-		return
-	}
-	var locationCount,userCount int
-	_ = tx.QueryRow(r.Context(), `SELECT count(*) FROM locations WHERE organization_id=$1 AND active`, organizationID).Scan(&locationCount)
-	_ = tx.QueryRow(r.Context(), `SELECT count(*) FROM users WHERE organization_id=$1 AND active AND NOT platform_admin`, organizationID).Scan(&userCount)
-	if (plan.MaxLocations!=nil && locationCount>*plan.MaxLocations) || (plan.MaxUsers!=nil && userCount>*plan.MaxUsers) {
-		fail(w,409,"plan_limit_conflict","La empresa supera los límites del plan seleccionado.")
-		return
-	}
-	planChanged:=currentPlanID!=plan.ID
-	cycleChanged:=currentCycle!=in.BillingCycle
-	needsTerms := planChanged || currentTerms==nil || *currentTerms!=plan.TermsVersion
-	if needsTerms && !in.TermsAccepted {
-		fail(w,409,"terms_required","La versión vigente de condiciones debe aceptarse antes de aplicar el cambio.")
-		return
-	}
-
-	now := time.Now().UTC()
-	price:=currentPrice
-	if planChanged||cycleChanged {
-		price=plan.MonthlyPrice
-		if in.BillingCycle=="annual" { price=plan.AnnualPrice }
-	}
-	trialStarts,trialEnds:=currentTrialStarts,currentTrialEnds
-	periodStarts,periodEnds,renews:=currentPeriodStarts,currentPeriodEnds,currentRenews
-	cancelledAt:=currentCancelledAt
-	contractChanged:=planChanged||cycleChanged||currentStatus!=in.Status
-	if contractChanged {
-		switch in.Status {
-		case "trial":
-			start:=now
-			end:=now.AddDate(0,0,plan.TrialDays)
-			trialStarts=&start;trialEnds=&end;periodStarts=&start;periodEnds=&end;renews=&end
-		case "active":
-			end:=subscriptionPeriodEnd(now,in.BillingCycle)
-			trialStarts=nil;trialEnds=nil;periodStarts=&now;periodEnds=&end;renews=&end;cancelledAt=nil
-		case "past_due":
-			cancelledAt=nil
-			if periodStarts==nil { periodStarts=&now }
-			if periodEnds==nil { end:=subscriptionPeriodEnd(now,in.BillingCycle);periodEnds=&end;renews=&end }
-		case "cancelled":
-			renews=nil
-			if currentStatus!="cancelled" { cancelledAt=&now }
-		}
-	}
-	termsVersion:=currentTerms
-	var termsAcceptedAt any = nil
-	var termsAcceptedBy any = nil
-	if in.TermsAccepted {
-		termsVersion=&plan.TermsVersion
-		termsAcceptedAt=now
-		termsAcceptedBy=s.UserID
-	}
-	_, err = tx.Exec(r.Context(), `
-		UPDATE organization_subscriptions
-		SET plan_id=$2,billing_cycle=$3,price_amount=$4,currency=$5,status=$6,
-		    trial_starts_at=$7,trial_ends_at=$8,current_period_starts_at=$9,current_period_ends_at=$10,renews_at=$11,
-		    auto_renew=$12,terms_version=COALESCE($13,terms_version),
-		    terms_accepted_at=COALESCE($14,terms_accepted_at),terms_accepted_by=COALESCE($15,terms_accepted_by),
-		    cancelled_at=$16,updated_at=now()
-		WHERE organization_id=$1
-	`, organizationID,plan.ID,in.BillingCycle,price,plan.Currency,in.Status,trialStarts,trialEnds,periodStarts,periodEnds,renews,in.AutoRenew,termsVersion,termsAcceptedAt,termsAcceptedBy,cancelledAt)
-	if err != nil {
-		fail(w,503,"subscription_unavailable","No pudimos actualizar la suscripción.")
-		return
-	}
-	moduleKeys:=plan.ModuleKeys
-	if in.Status=="cancelled" { moduleKeys=[]string{} }
-	if err=syncOrganizationModulesForPlan(r.Context(),tx,organizationID,moduleKeys);err!=nil {
-		fail(w,503,"subscription_unavailable","No pudimos aplicar los módulos del plan.")
-		return
-	}
-	if err=tx.Commit(r.Context());err!=nil {
-		fail(w,503,"subscription_unavailable","No pudimos confirmar el cambio de suscripción.")
-		return
-	}
-	a.audit(r,"subscription.updated","organization",organizationID)
-	a.getOrganizationSubscription(w,r)
+	a.handlers.Subscriptions.UpdateOrganizationSubscription(w, r)
 }
 func (a *API) recordSubscriptionPayment(w http.ResponseWriter, r *http.Request) {
-	s := r.Context().Value(scopeKey{}).(scope)
-	organizationID, ok := a.subscriptionOrganizationID(w, r)
-	if !ok {
-		return
-	}
-	var in subscriptionPaymentInput
-	if json.NewDecoder(r.Body).Decode(&in) != nil {
-		fail(w,400,"invalid_payment","Revisa los datos del pago.")
-		return
-	}
-	in.Amount=strings.TrimSpace(in.Amount)
-	in.Currency=strings.ToUpper(strings.TrimSpace(in.Currency))
-	in.Status=strings.TrimSpace(in.Status)
-	in.Provider=strings.TrimSpace(in.Provider)
-	in.ExternalReference=strings.TrimSpace(in.ExternalReference)
-	amount,amountOK:=new(big.Rat).SetString(in.Amount)
-	if !amountOK || amount.Sign()<0 || (in.Status!="pending"&&in.Status!="paid"&&in.Status!="failed"&&in.Status!="refunded") || in.Provider=="" {
-		fail(w,400,"invalid_payment","Monto, estado y proveedor son obligatorios.")
-		return
-	}
-	tx,err:=a.db.Begin(r.Context())
-	if err!=nil { fail(w,503,"payment_unavailable","No pudimos registrar el pago.");return }
-	defer tx.Rollback(r.Context())
-	var subscriptionID,billingCycle,currency string
-	var moduleKeys []string
-	var currentPeriodEnd *time.Time
-	if err=tx.QueryRow(r.Context(),`SELECT s.id,s.billing_cycle,s.currency,p.module_keys,s.current_period_ends_at FROM organization_subscriptions s JOIN subscription_plans p ON p.id=s.plan_id WHERE s.organization_id=$1 FOR UPDATE OF s`,organizationID).Scan(&subscriptionID,&billingCycle,&currency,&moduleKeys,&currentPeriodEnd);err!=nil {
-		fail(w,404,"subscription_not_found","La empresa todavía no tiene una suscripción.");return
-	}
-	if in.Currency=="" { in.Currency=currency }
-	if in.Currency!=currency {
-		fail(w,409,"payment_currency_mismatch","El pago debe registrarse en la moneda de la suscripción.");return
-	}
-	var paidAt *time.Time
-	if in.PaidAt!="" {
-		parsed,parseErr:=time.Parse(time.RFC3339,in.PaidAt)
-		if parseErr!=nil { fail(w,400,"invalid_payment","La fecha de pago no es válida.");return }
-		paidAt=&parsed
-	} else if in.Status=="paid" {
-		now:=time.Now().UTC();paidAt=&now
-	}
-	now:=time.Now().UTC()
-	periodStart:=now
-	if currentPeriodEnd!=nil && currentPeriodEnd.After(now) { periodStart=*currentPeriodEnd }
-	periodEnd:=subscriptionPeriodEnd(periodStart,billingCycle)
-	var external any=nil
-	if in.ExternalReference!="" { external=in.ExternalReference }
-	var id string
-	err=tx.QueryRow(r.Context(),`
-		INSERT INTO subscription_payments(organization_id,subscription_id,amount,currency,status,provider,external_reference,period_starts_at,period_ends_at,paid_at,recorded_by)
-		VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-		RETURNING id
-	`,organizationID,subscriptionID,in.Amount,in.Currency,in.Status,in.Provider,external,periodStart,periodEnd,paidAt,s.UserID).Scan(&id)
-	if err!=nil { fail(w,409,"payment_conflict","La referencia del pago ya fue registrada.");return }
-	if in.Status=="paid" {
-		_,err=tx.Exec(r.Context(),`
-			UPDATE organization_subscriptions
-			SET status='active',current_period_starts_at=$2,current_period_ends_at=$3,renews_at=$3,cancelled_at=NULL,updated_at=now()
-			WHERE organization_id=$1
-		`,organizationID,periodStart,periodEnd)
-		if err==nil { err=syncOrganizationModulesForPlan(r.Context(),tx,organizationID,moduleKeys) }
-	}
-	if err!=nil || tx.Commit(r.Context())!=nil { fail(w,503,"payment_unavailable","No pudimos confirmar el pago.");return }
-	a.audit(r,"subscription.payment_recorded","subscription_payment",id)
-	writeJSON(w,201,map[string]string{"id":id})
+	a.handlers.Subscriptions.RecordSubscriptionPayment(w, r)
 }
