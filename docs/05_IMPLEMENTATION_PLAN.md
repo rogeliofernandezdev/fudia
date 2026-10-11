@@ -29,6 +29,18 @@
 - Clientes, promociones y fidelización básica.
 - Operación offline acotada y reconciliación.
 
+## Fase 4 — Hospitality / Hoteles (evolución futura)
+
+Esta fase se activa después de posicionar y consolidar FudIA como plataforma para restaurantes. La expansión a hotelería debe reutilizar la base multiempresa/multilocal y mantener separados los contextos de restaurante y hotel.
+
+- Integración inicial con PMS existentes antes de construir un PMS completo propio.
+- Propiedades, habitaciones, huéspedes y estadías.
+- Room service conectado al motor actual de pedidos del restaurante.
+- Cuenta de habitación / folio y cargos asociados a la estadía, sin tratarlos como método de pago.
+- Solicitudes de servicio, housekeeping y estados de habitación.
+- Integración de restaurante, bar y otros puntos de consumo dentro de una propiedad hotelera.
+- Evolución posterior hacia un PMS ligero nativo solo si la demanda y el posicionamiento del producto lo justifican.
+
 ## Puertas de calidad
 
 Cada fase exige contrato actualizado, migraciones reversibles, pruebas unitarias
