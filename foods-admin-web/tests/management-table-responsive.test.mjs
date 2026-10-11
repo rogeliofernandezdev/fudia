@@ -40,7 +40,7 @@ test("el componente compartido oculta tarjetas duplicadas y mantiene el scroll",
   css.walkAtRules("media",atRule=>{
     if(atRule.params!=="(width<=700px)")return;
     atRule.walkRules(rule=>{
-      if(rule.selector===".standardized-management .table-wrap:not(.data-table-viewport)>table :is(th,td):first-child"){
+      if(rule.selector===".panel .table-wrap:not(.data-table-viewport)>table :is(th,td):first-child"){
         frozenLegacy=rule.nodes.some(node=>node.prop==="position"&&node.value==="sticky");
       }
     });
@@ -58,4 +58,16 @@ test("Gastos Compras y Kardex conservan sus tablas en móvil",()=>{
   assert.doesNotMatch(purchases,/\.purchases-cards\{display:grid\}/);
   assert.doesNotMatch(inventory,/\.kardex-skeleton-table\{display:none\}/);
   assert.doesNotMatch(inventory,/\.kardex-skeleton-cards\{display:grid\}/);
+});
+
+test("Mesas y Zonas comparten DataTable y sus dimensiones responsive tokenizadas",()=>{
+  const src=read("src/modules/operations/tables/presentation/tables-manager.tsx");
+  const css=read("src/modules/operations/styles/table-qr.css");
+  assert.match(src,/<DataTable label="Mesas del local" containerClassName="hover-scroll" className="tables-management-table">/);
+  assert.match(src,/<DataTable label="Zonas del local" containerClassName="hover-scroll" className="zones-management-table">/);
+  assert.equal((src.match(/<DataTable /g)||[]).length,2);
+  assert.equal((src.match(/<\/DataTable>/g)||[]).length,2);
+  assert.doesNotMatch(src,/className="table-wrap hover-scroll"/);
+  assert.match(css,/\.tables-management-table\{min-width:var\(--size-760\)\}/);
+  assert.match(css,/\.zones-management-table\{min-width:var\(--size-540\)\}/);
 });
