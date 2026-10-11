@@ -18,7 +18,7 @@ test("el informe usa moneda y fecha del snapshot, no la configuración actual",(
  const other=format.cashReportFormat({...cashReportFixture(),currencySymbol:"€",currencyPosition:"after",currencyDecimals:3});assert.equal(other.money("2"),"2.000 €");
 });
 test("el resumen conserva cada producto, cantidades, precio, autor y egreso",()=>{
- const component=compile("modules/operations/cash/presentation/cash-report-content.tsx",name=>name.endsWith("report-format")?format:require(name));const fixture=cashReportFixture(4),all=nodes(component.CashReportContent({report:fixture}));
+ const component=compile("modules/operations/cash/presentation/cash-report-content.tsx",name=>name.endsWith("report-format")?format:name==="@/design-system/data-table"?{DataTable:"DataTable"}:require(name));const fixture=cashReportFixture(4),all=nodes(component.CashReportContent({report:fixture}));
  const tables=all.filter(item=>typeof item.type==="function"&&item.props.headers);assert.equal(tables[0].props.children.length,4);assert.deepEqual(Array.from(tables[0].props.headers),["Fecha y hora","Pedido / mesa","Producto","Cantidad","Precio unitario","Importe"]);assert.equal(tables[2].props.children.length,1);assert.equal(all.filter(item=>item.type==="details").length,5);
 });
 test("PDF real incluye logo y continúa las filas en múltiples páginas",async()=>{
