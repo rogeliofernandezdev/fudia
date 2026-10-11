@@ -7,6 +7,7 @@ import (
 
 // Handlers injects the extracted verticals. Only cmd/api composes production adapters.
 type Handlers struct {
+	Concierge              ConciergeHandler
 	Platform               PlatformHandler
 	Subscriptions          SubscriptionsHandler
 	Organizations          OrganizationsHandler
@@ -183,4 +184,18 @@ type PlatformHandler interface {
 	ListPlatformWhatsAppChannels(http.ResponseWriter, *http.Request)
 	CreatePlatformWhatsAppChannel(http.ResponseWriter, *http.Request)
 	UpdatePlatformWhatsAppChannel(http.ResponseWriter, *http.Request)
+}
+
+type ConciergeHandler interface {
+	ServiceAuth(http.Handler) http.Handler
+	CreateConciergeOrder(http.ResponseWriter, *http.Request)
+	RequestConciergeBill(http.ResponseWriter, *http.Request)
+	RequestConciergeHandoff(http.ResponseWriter, *http.Request)
+	GetConciergeHandoffStatus(http.ResponseWriter, *http.Request)
+	ListOperationalConciergeHandoffs(http.ResponseWriter, *http.Request)
+	ResolveOperationalConciergeHandoff(http.ResponseWriter, *http.Request)
+	GetConciergeSettings(http.ResponseWriter, *http.Request)
+	ListConciergeMenu(http.ResponseWriter, *http.Request)
+	GetConciergeCombo(http.ResponseWriter, *http.Request)
+	GetConciergeProductModifiers(http.ResponseWriter, *http.Request)
 }

@@ -29,6 +29,17 @@ func orderFailure(kind apperror.Kind, code, message string) error {
 }
 
 type OrderRepository interface {
+	CreateQROrder(ctx context.Context, s scope, tableID string, in QROrderInput, subtotal float64) (domain.Order, error)
+	LockQRTable(ctx context.Context, s scope, tableID string, token string) (string, error)
+	QRRequestOrder(ctx context.Context, s scope, tableID string, in QROrderInput) (string, error)
+	LockQRTableOrder(ctx context.Context, s scope, tableID string) (string, string, string, float64, float64, *string, bool, bool, error)
+	QROrderTotal(ctx context.Context, s scope, openOrderID string) (float64, error)
+	UpdateQRSubtotal(ctx context.Context, s scope, openOrderID string, nextSubtotal float64, nextTotal float64) (int64, error)
+	SaveQRAppendRequest(ctx context.Context, s scope, tableID string, in QROrderInput, openOrderID string) (int64, error)
+	AuditQRAppend(ctx context.Context, s scope, tableID string, in QROrderInput, openOrderID string, openChannel string) (int64, error)
+	SaveQRCreateRequest(ctx context.Context, s scope, tableID string, in QROrderInput, out domain.Order) (int64, error)
+	AuditQRCreated(ctx context.Context, s scope, tableID string, in QROrderInput, out domain.Order) (int64, error)
+	OpenTableOrder(context.Context, scope, string) (domain.Order, error)
 	LockPaidCompletion(ctx context.Context, s scope, id string) (float64, string, bool, error)
 	CompletionPaid(ctx context.Context, s scope, id string) (float64, error)
 	CompletionPending(ctx context.Context, s scope, id string) (bool, error)

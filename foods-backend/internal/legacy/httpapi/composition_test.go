@@ -5,6 +5,9 @@ import (
 	billingapp "github.com/foods-platform/foods-backend/internal/modules/billing/application"
 	billingpg "github.com/foods-platform/foods-backend/internal/modules/billing/infrastructure/postgres"
 	billinghttp "github.com/foods-platform/foods-backend/internal/modules/billing/transport/http"
+	conciergeapp "github.com/foods-platform/foods-backend/internal/modules/concierge/application"
+	conciergepg "github.com/foods-platform/foods-backend/internal/modules/concierge/infrastructure/postgres"
+	conciergehttp "github.com/foods-platform/foods-backend/internal/modules/concierge/transport/http"
 	customerapp "github.com/foods-platform/foods-backend/internal/modules/customers/application"
 	customerpg "github.com/foods-platform/foods-backend/internal/modules/customers/infrastructure/postgres"
 	customerhttp "github.com/foods-platform/foods-backend/internal/modules/customers/transport/http"
@@ -54,6 +57,7 @@ func New(db *pgxpool.Pool) *API {
 		Organizations:          orghttp.New(orgapp.New(orgpg.New(db), database.NewUnitOfWork(db), subscriptionapp.NewAccess(subscriptionpg.NewAccess(db)), auditpg.New(db))),
 		Subscriptions:          subscriptionhttp.New(subscriptionapp.New(subscriptionpg.New(db), database.NewUnitOfWork(db), auditpg.New(db))),
 		Platform:               platformhttp.New(platformapp.New(platformpg.New(db), database.NewUnitOfWork(db), orgapp.New(orgpg.New(db), database.NewUnitOfWork(db), subscriptionapp.NewAccess(subscriptionpg.NewAccess(db)), auditpg.New(db)), subscriptionapp.New(subscriptionpg.New(db), database.NewUnitOfWork(db), auditpg.New(db)), credentials.Credentials{}, platformdiag.Diagnostics{}, platformdiag.Diagnostics{})),
+		Concierge:              conciergehttp.New(conciergeapp.New(conciergepg.New(db), menuapp.NewCatalog(menupg.NewCatalog(db), database.NewUnitOfWork(db), auditpg.New(db), menufiles.Images{Directory: "./uploads/products"}), orders, auditpg.New(db)), func() string { return os.Getenv("FUDIA_CONCIERGE_API_KEY") }),
 		MenuCatalog:            menuhttp.NewCatalog(menuapp.NewCatalog(menupg.NewCatalog(db), database.NewUnitOfWork(db), auditpg.New(db), menufiles.Images{Directory: "./uploads/products"})),
 		Payments:               billinghttp.NewPayments(billingapp.NewPayments(billingpg.NewPayments(db), database.NewUnitOfWork(db), auditpg.New(db), billingapp.NewMethods(billingpg.NewMethods(db), database.NewUnitOfWork(db)), orders)),
 		Cash:                   billinghttp.NewCash(billingapp.NewCash(billingpg.NewPayments(db), database.NewUnitOfWork(db))),
