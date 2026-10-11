@@ -1,4 +1,5 @@
 "use client";
+import {DataTable} from "@/design-system/data-table";
 import {canChargeAccount} from "../../orders/domain/service-flow";
 import {Dialog} from "@/design-system/dialog";
 import "./pos.css";
@@ -138,7 +139,7 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
       {orders.isLoading?<POSLoading/>
       :orders.isError?<ErrorState title="No pudimos cargar los pedidos" text={orders.error.message} onRetry={()=>void orders.refetch()}/>
       :!items.length?<EmptyState icon="receipt" title={q?"Sin coincidencias":paymentStatus==="paid"?"Aún no hay pedidos pagados":"No hay pedidos pendientes de cobro"} text={q?"Prueba con otro término de búsqueda.":"Los pedidos aparecerán aquí según su estado de cobro."}/>
-      :<div className="table-wrap hover-scroll pos-table-wrap"><table className="pos-table">
+      :<DataTable label="Pedidos para cobrar" containerClassName="hover-scroll pos-table-wrap" className="pos-table">
         <thead><tr><th>PEDIDO</th><th>CANAL</th><th className="pos-money">TOTAL</th><th className="pos-money">PAGADO</th><th className="pos-money">SALDO</th><th>COBRO</th><th className="pos-th-actions">ACCIONES</th></tr></thead>
         <tbody>{items.map((item,index)=>{
           const meta=paymentMeta[item.paymentStatus];
@@ -153,7 +154,7 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
             <td>{actionsFor(item)}</td>
           </tr>;
         })}</tbody>
-      </table></div>}
+      </DataTable>}
 
       {!orders.isLoading&&!orders.isError&&items.length>0&&<div className="management-cards pos-order-cards">{items.map(item=>{
         const meta=paymentMeta[item.paymentStatus];
