@@ -1,4 +1,5 @@
 "use client";
+import {DataTable} from "@/design-system/data-table";
 import {Dialog} from "@/design-system/dialog";
 import dynamic from "next/dynamic";
 import "./inventory.css";
@@ -82,8 +83,7 @@ export function InventoryPage(){
     <ErrorState title="No pudimos cargar el inventario" text={inventory.error.message} onRetry={()=>void inventory.refetch()}/>
    :!items.length?
     <EmptyState icon="stock" title={search?"Sin coincidencias":"No hay artículos de inventario"} text={search?"Prueba con otro nombre.":"Inventario solo permite consultar y ajustar artículos existentes."}/>
-   :<div className="table-wrap hover-scroll inventory-table-wrap">
-    <table>
+   :<DataTable label="Inventario del local" containerClassName="hover-scroll inventory-table-wrap">
      <thead><tr>{inventoryColumns.map(column=><th key={column}>{column}</th>)}</tr></thead>
      <tbody>{items.map((item,index)=>{
       const meta=statusMeta[item.status];
@@ -99,8 +99,7 @@ export function InventoryPage(){
        <td>{can("inventory.manage")?<RowActionButton action="edit" onClick={()=>setSettingsItem(item)}/>:null}</td>
       </tr>;
      })}</tbody>
-    </table>
-   </div>}
+    </DataTable>}
    {!inventory.isLoading&&!inventory.isError&&<Pagination page={page} size={size} total={inventory.data?.total??0} onPage={setPage} onSize={value=>{setSize(value);setPage(1)}}/>}
   </section>
 
