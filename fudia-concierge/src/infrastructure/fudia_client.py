@@ -201,13 +201,14 @@ class FudiaClient:
         return body
 
     async def ready(self) -> bool:
+        """Only a healthy backend is ready, not a reachable 404/500 page."""
         try:
-            await self._http().get(
-                self.base_url + "/",
+            response = await self._http().get(
+                self.base_url + "/health",
                 timeout=2.0,
             )
-            return True
-        except httpx.TransportError:
+            return response.status_code == 200
+        except httpx.HTTPError:
             return False
 
     async def resolve_table(
