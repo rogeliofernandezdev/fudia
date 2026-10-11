@@ -1,396 +1,48 @@
 package httpapi
 
 import (
-	"context"
-	"encoding/json"
-	"errors"
+	servicedomain "github.com/foods-platform/foods-backend/internal/modules/service/domain"
 	"net/http"
-	"strconv"
-	"strings"
-
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 )
 
-type table struct {
-	ID        string `json:"id"`
-	Name      string `json:"name"`
-	Seats     int    `json:"seats"`
-	Zone      string `json:"zone"`
-	Active    bool   `json:"active"`
-	QrToken   string `json:"qrToken"`
-	QrEnabled bool   `json:"qrEnabled"`
+type zone = servicedomain.Zone
+type zoneInput = servicedomain.ZoneInput
+type table = servicedomain.Table
+type tableInput = servicedomain.TableInput
+type tableBatchInput = servicedomain.TableBatchInput
+type tableBatchItem = servicedomain.TableBatchItem
+type FloorHandler interface {
+	ListZones(http.ResponseWriter, *http.Request)
+	ListTables(http.ResponseWriter, *http.Request)
+	GetTableByQR(http.ResponseWriter, *http.Request)
+	RegenerateTableQR(http.ResponseWriter, *http.Request)
+	CreateTablesBatch(http.ResponseWriter, *http.Request)
+	CreateZone(http.ResponseWriter, *http.Request)
+	UpdateZone(http.ResponseWriter, *http.Request)
+	DeactivateZone(http.ResponseWriter, *http.Request)
+	CreateTable(http.ResponseWriter, *http.Request)
+	UpdateTable(http.ResponseWriter, *http.Request)
+	DeactivateTable(http.ResponseWriter, *http.Request)
 }
 
-type tableInput struct {
-	Name      string `json:"name"`
-	Seats     *int   `json:"seats"`
-	Zone      string `json:"zone"`
-	Active    *bool  `json:"active"`
-	QrEnabled *bool  `json:"qrEnabled"`
-}
-
-type tableBatchInput struct {
-	Items []tableInput `json:"items"`
-}
-
-type tableRowQuerier interface {
-	QueryRow(context.Context, string, ...any) pgx.Row
-}
-
-func validateActiveTableZone(ctx context.Context, q tableRowQuerier, s scope, name string) error {
-	name = strings.TrimSpace(name)
-	if name == "" {
-		return nil
-	}
-	var id string
-	return q.QueryRow(ctx, `
-		SELECT id
-		FROM zones
-		WHERE organization_id=$1 AND location_id=$2 AND name=$3 AND active
-		FOR SHARE
-	`, s.OrganizationID, s.LocationID, name).Scan(&id)
-}
-
-func (a *API) listTables(w http.ResponseWriter, r *http.Request) {
-	s := r.Context().Value(scopeKey{}).(scope)
-	q := "%" + strings.TrimSpace(r.URL.Query().Get("q")) + "%"
-	status := r.URL.Query().Get("status")
-	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
-	if page < 1 {
-		page = 1
-	}
-	size, _ := strconv.Atoi(r.URL.Query().Get("pageSize"))
-	if size < 1 {
-		size = 10
-	}
-	rows, err := a.db.Query(r.Context(), `SELECT id,name,seats,zone,active,qr_token,qr_enabled FROM tables WHERE organization_id=$1 AND location_id=$2 AND name ILIKE $3 AND ($4='' OR active=($4='active')) ORDER BY name LIMIT $5 OFFSET $6`, s.OrganizationID, s.LocationID, q, status, size, (page-1)*size)
-	if err != nil {
-		fail(w, 503, "tables_unavailable", "No pudimos cargar las mesas.")
-		return
-	}
-	defer rows.Close()
-	items := []table{}
-	for rows.Next() {
-		var t table
-		if err = rows.Scan(&t.ID, &t.Name, &t.Seats, &t.Zone, &t.Active, &t.QrToken, &t.QrEnabled); err != nil {
-			fail(w, 503, "tables_unavailable", "No pudimos cargar las mesas.")
-			return
-		}
-		items = append(items, t)
-	}
-	var total int
-	_ = a.db.QueryRow(r.Context(), `SELECT count(*) FROM tables WHERE organization_id=$1 AND location_id=$2 AND name ILIKE $3 AND ($4='' OR active=($4='active'))`, s.OrganizationID, s.LocationID, q, status).Scan(&total)
-	writeJSON(w, 200, map[string]any{"items": items, "total": total, "page": page, "pageSize": size})
-}
-
-func (a *API) createTable(w http.ResponseWriter, r *http.Request) {
-	s := r.Context().Value(scopeKey{}).(scope)
-	var in tableInput
-	if json.NewDecoder(r.Body).Decode(&in) != nil {
-		fail(w, 400, "invalid_request", "Revisa los datos enviados.")
-		return
-	}
-	if strings.TrimSpace(in.Name) == "" {
-		fail(w, 400, "invalid_request", "El nombre de la mesa es obligatorio.")
-		return
-	}
-	seats := 2
-	if in.Seats != nil && *in.Seats > 0 {
-		seats = *in.Seats
-	}
-	qrEnabled := true
-	if in.QrEnabled != nil {
-		qrEnabled = *in.QrEnabled
-	}
-	tx, err := a.db.Begin(r.Context())
-	if err != nil {
-		fail(w, 503, "tables_unavailable", "No pudimos registrar la mesa.")
-		return
-	}
-	defer tx.Rollback(r.Context())
-	if err = validateActiveTableZone(r.Context(), tx, s, in.Zone); errors.Is(err, pgx.ErrNoRows) {
-		fail(w, 400, "invalid_zone", "La zona seleccionada no existe o está inactiva en este local.")
-		return
-	} else if err != nil {
-		fail(w, 503, "zones_unavailable", "No pudimos validar la zona de la mesa.")
-		return
-	}
-	var t table
-	err = tx.QueryRow(r.Context(), `
-		INSERT INTO tables(organization_id,location_id,name,seats,zone,active,qr_token,qr_enabled)
-		VALUES($1,$2,$3,$4,$5,true,encode(gen_random_bytes(16),'hex'),$6)
-		RETURNING id,name,seats,zone,active,qr_token,qr_enabled
-	`, s.OrganizationID, s.LocationID, strings.TrimSpace(in.Name), seats, strings.TrimSpace(in.Zone), qrEnabled).
-		Scan(&t.ID, &t.Name, &t.Seats, &t.Zone, &t.Active, &t.QrToken, &t.QrEnabled)
-	if err != nil {
-		fail(w, 409, "table_conflict", "Ya existe una mesa con ese nombre.")
-		return
-	}
-	if err = tx.Commit(r.Context()); err != nil {
-		fail(w, 503, "tables_unavailable", "No pudimos confirmar la mesa.")
-		return
-	}
-	a.audit(r, "table.created", "table", t.ID)
-	writeJSON(w, 201, t)
-}
-
-func (a *API) createTablesBatch(w http.ResponseWriter, r *http.Request) {
-	s := r.Context().Value(scopeKey{}).(scope)
-	var in tableBatchInput
-	if json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&in) != nil {
-		fail(w, 400, "invalid_request", "Revisa los datos enviados.")
-		return
-	}
-	if len(in.Items) == 0 || len(in.Items) > 500 {
-		fail(w, 400, "invalid_request", "Agrega entre 1 y 500 mesas.")
-		return
-	}
-	items := make([]tableBatchItem, 0, len(in.Items))
-	names := make(map[string]bool, len(in.Items))
-	for _, item := range in.Items {
-		name := strings.TrimSpace(item.Name)
-		if name == "" {
-			continue
-		}
-		if names[name] {
-			fail(w, 409, "table_conflict", "No repitas el nombre de una mesa en el mismo lote.")
-			return
-		}
-		names[name] = true
-		seats := 2
-		if item.Seats != nil && *item.Seats > 0 {
-			seats = *item.Seats
-		}
-		qrEnabled := true
-		if item.QrEnabled != nil {
-			qrEnabled = *item.QrEnabled
-		}
-		items = append(items, tableBatchItem{Name: name, Seats: seats, Zone: strings.TrimSpace(item.Zone), QrEnabled: qrEnabled})
-	}
-	if len(items) == 0 {
-		fail(w, 400, "invalid_request", "Agrega al menos una mesa con nombre.")
-		return
-	}
-	payload, err := json.Marshal(items)
-	if err != nil {
-		fail(w, 400, "invalid_request", "Revisa los datos enviados.")
-		return
-	}
-	result, invalidZone, err := persistTableBatch(r.Context(), a.db, s, payload)
-	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-			fail(w, 409, "table_conflict", "Ya existe una mesa con uno de los nombres enviados.")
-		} else {
-			fail(w, 503, "tables_unavailable", "No pudimos confirmar el registro de las mesas. Actualiza la lista antes de intentarlo nuevamente.")
-		}
-		return
-	}
-	if invalidZone {
-		fail(w, 400, "invalid_zone", "Una de las mesas usa una zona inexistente o inactiva.")
-		return
-	}
-	writeJSON(w, 201, result)
-}
-
-func (a *API) updateTable(w http.ResponseWriter, r *http.Request) {
-	s := r.Context().Value(scopeKey{}).(scope)
-	var in tableInput
-	if json.NewDecoder(r.Body).Decode(&in) != nil {
-		fail(w, 400, "invalid_request", "Revisa los datos enviados.")
-		return
-	}
-	if strings.TrimSpace(in.Name) == "" {
-		fail(w, 400, "invalid_request", "El nombre de la mesa es obligatorio.")
-		return
-	}
-	seats := 2
-	if in.Seats != nil && *in.Seats > 0 {
-		seats = *in.Seats
-	}
-	active := true
-	if in.Active != nil {
-		active = *in.Active
-	}
-	qrEnabled := true
-	if in.QrEnabled != nil {
-		qrEnabled = *in.QrEnabled
-	}
-	tx, err := a.db.Begin(r.Context())
-	if err != nil {
-		fail(w, 503, "table_unavailable", "No pudimos actualizar la mesa.")
-		return
-	}
-	defer tx.Rollback(r.Context())
-
-	var currentActive bool
-	err = tx.QueryRow(r.Context(), `
-		SELECT active
-		FROM tables
-		WHERE id=$1 AND organization_id=$2 AND location_id=$3
-		FOR UPDATE
-	`, r.PathValue("id"), s.OrganizationID, s.LocationID).Scan(&currentActive)
-	if errors.Is(err, pgx.ErrNoRows) {
-		fail(w, 404, "table_not_found", "La mesa no existe.")
-		return
-	}
-	if err != nil {
-		fail(w, 503, "table_unavailable", "No pudimos bloquear la mesa.")
-		return
-	}
-	if err = validateActiveTableZone(r.Context(), tx, s, in.Zone); errors.Is(err, pgx.ErrNoRows) {
-		fail(w, 400, "invalid_zone", "La zona seleccionada no existe o está inactiva en este local.")
-		return
-	} else if err != nil {
-		fail(w, 503, "zones_unavailable", "No pudimos validar la zona de la mesa.")
-		return
-	}
-	if currentActive && !active {
-		var occupied bool
-		if err = tx.QueryRow(r.Context(), `
-			SELECT EXISTS(
-				SELECT 1 FROM orders
-				WHERE organization_id=$1 AND location_id=$2 AND table_id=$3
-				  AND status<>'cancelado' AND (status<>'entregado' OR (channel='salon' AND completed_at IS NULL))
-			)
-		`, s.OrganizationID, s.LocationID, r.PathValue("id")).Scan(&occupied); err != nil {
-			fail(w, 503, "table_unavailable", "No pudimos validar el estado de la mesa.")
-			return
-		}
-		if occupied {
-			fail(w, 409, "table_in_use", "No puedes desactivar una mesa con un pedido abierto.")
-			return
-		}
-	}
-
-	var t table
-	err = tx.QueryRow(r.Context(), `
-		UPDATE tables
-		SET name=$4,seats=$5,zone=$6,active=$7,qr_enabled=$8,updated_at=now()
-		WHERE id=$1 AND organization_id=$2 AND location_id=$3
-		RETURNING id,name,seats,zone,active,qr_token,qr_enabled
-	`, r.PathValue("id"), s.OrganizationID, s.LocationID, strings.TrimSpace(in.Name), seats, strings.TrimSpace(in.Zone), active, qrEnabled).
-		Scan(&t.ID, &t.Name, &t.Seats, &t.Zone, &t.Active, &t.QrToken, &t.QrEnabled)
-	if err != nil {
-		fail(w, 409, "table_conflict", "Ya existe una mesa con ese nombre.")
-		return
-	}
-	if err = tx.Commit(r.Context()); err != nil {
-		fail(w, 503, "table_unavailable", "No pudimos confirmar la actualización.")
-		return
-	}
-	a.audit(r, "table.updated", "table", t.ID)
-	writeJSON(w, 200, t)
-}
-
-func (a *API) regenerateTableQR(w http.ResponseWriter, r *http.Request) {
-	s := r.Context().Value(scopeKey{}).(scope)
-	var t table
-	err := a.db.QueryRow(r.Context(), `UPDATE tables SET qr_token=encode(gen_random_bytes(16),'hex'),updated_at=now() WHERE id=$1 AND organization_id=$2 AND location_id=$3 RETURNING id,name,seats,zone,active,qr_token,qr_enabled`, r.PathValue("id"), s.OrganizationID, s.LocationID).Scan(&t.ID, &t.Name, &t.Seats, &t.Zone, &t.Active, &t.QrToken, &t.QrEnabled)
-	if err == pgx.ErrNoRows {
-		fail(w, 404, "table_not_found", "La mesa no existe.")
-		return
-	} else if err != nil {
-		fail(w, 503, "table_unavailable", "No pudimos regenerar el QR.")
-		return
-	}
-	a.audit(r, "table.qr_regenerated", "table", t.ID)
-	writeJSON(w, 200, t)
-}
-
-func (a *API) deactivateTable(w http.ResponseWriter, r *http.Request) {
-	s := r.Context().Value(scopeKey{}).(scope)
-	tx, err := a.db.Begin(r.Context())
-	if err != nil {
-		fail(w, 503, "table_unavailable", "No pudimos desactivar la mesa.")
-		return
-	}
-	defer tx.Rollback(r.Context())
-	var active bool
-	err = tx.QueryRow(r.Context(), `
-		SELECT active
-		FROM tables
-		WHERE id=$1 AND organization_id=$2 AND location_id=$3
-		FOR UPDATE
-	`, r.PathValue("id"), s.OrganizationID, s.LocationID).Scan(&active)
-	if errors.Is(err, pgx.ErrNoRows) || !active {
-		fail(w, 404, "table_not_found", "La mesa no existe o ya está inactiva.")
-		return
-	}
-	if err != nil {
-		fail(w, 503, "table_unavailable", "No pudimos validar la mesa.")
-		return
-	}
-	var occupied bool
-	if err = tx.QueryRow(r.Context(), `
-		SELECT EXISTS(
-			SELECT 1 FROM orders
-			WHERE organization_id=$1 AND location_id=$2 AND table_id=$3
-			  AND status<>'cancelado' AND (status<>'entregado' OR (channel='salon' AND completed_at IS NULL))
-		)
-	`, s.OrganizationID, s.LocationID, r.PathValue("id")).Scan(&occupied); err != nil {
-		fail(w, 503, "table_unavailable", "No pudimos validar el estado de la mesa.")
-		return
-	}
-	if occupied {
-		fail(w, 409, "table_in_use", "No puedes desactivar una mesa con un pedido abierto.")
-		return
-	}
-	if _, err = tx.Exec(r.Context(), `
-		UPDATE tables SET active=false,updated_at=now()
-		WHERE id=$1 AND organization_id=$2 AND location_id=$3
-	`, r.PathValue("id"), s.OrganizationID, s.LocationID); err != nil {
-		fail(w, 503, "table_unavailable", "No pudimos desactivar la mesa.")
-		return
-	}
-	if err = tx.Commit(r.Context()); err != nil {
-		fail(w, 503, "table_unavailable", "No pudimos confirmar la desactivación.")
-		return
-	}
-	a.audit(r, "table.deactivated", "table", r.PathValue("id"))
-	w.WriteHeader(204)
-}
-
+func (a *API) listZones(w http.ResponseWriter, r *http.Request)  { a.handlers.Floor.ListZones(w, r) }
+func (a *API) listTables(w http.ResponseWriter, r *http.Request) { a.handlers.Floor.ListTables(w, r) }
 func (a *API) getTableByQR(w http.ResponseWriter, r *http.Request) {
-	token := r.PathValue("token")
-	if token == "" {
-		fail(w, 400, "invalid_request", "Token QR requerido.")
-		return
-	}
-	var t struct {
-		Name             string `json:"name"`
-		Seats            int    `json:"seats"`
-		Zone             string `json:"zone"`
-		OrgName          string `json:"organizationName"`
-		LocName          string `json:"locationName"`
-		ConciergeEnabled bool   `json:"conciergeEnabled"`
-	}
-	err := a.db.QueryRow(r.Context(), `
-		SELECT t.name,t.seats,t.zone,o.trade_name,l.name,
-		       COALESCE(om.active,false)
-		FROM tables t
-		JOIN organizations o ON o.id=t.organization_id AND o.active
-		JOIN locations l
-		  ON l.id=t.location_id
-		 AND l.organization_id=t.organization_id
-		 AND l.active
-		LEFT JOIN organization_modules om
-		  ON om.organization_id=t.organization_id
-		 AND om.module_key='whatsapp_bot'
-		WHERE t.qr_token=$1 AND t.active=true AND t.qr_enabled=true
-		LIMIT 1
-	`, token).Scan(
-		&t.Name,
-		&t.Seats,
-		&t.Zone,
-		&t.OrgName,
-		&t.LocName,
-		&t.ConciergeEnabled,
-	)
-	if err != nil {
-		fail(w, 404, "table_not_found", "La mesa no existe o el QR no está activo.")
-		return
-	}
-	writeJSON(w, 200, t)
+	a.handlers.Floor.GetTableByQR(w, r)
+}
+func (a *API) regenerateTableQR(w http.ResponseWriter, r *http.Request) {
+	a.handlers.Floor.RegenerateTableQR(w, r)
+}
+func (a *API) createTablesBatch(w http.ResponseWriter, r *http.Request) {
+	a.handlers.Floor.CreateTablesBatch(w, r)
+}
+func (a *API) createZone(w http.ResponseWriter, r *http.Request) { a.handlers.Floor.CreateZone(w, r) }
+func (a *API) updateZone(w http.ResponseWriter, r *http.Request) { a.handlers.Floor.UpdateZone(w, r) }
+func (a *API) deactivateZone(w http.ResponseWriter, r *http.Request) {
+	a.handlers.Floor.DeactivateZone(w, r)
+}
+func (a *API) createTable(w http.ResponseWriter, r *http.Request) { a.handlers.Floor.CreateTable(w, r) }
+func (a *API) updateTable(w http.ResponseWriter, r *http.Request) { a.handlers.Floor.UpdateTable(w, r) }
+func (a *API) deactivateTable(w http.ResponseWriter, r *http.Request) {
+	a.handlers.Floor.DeactivateTable(w, r)
 }

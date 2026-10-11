@@ -4,9 +4,13 @@ import "net/http"
 
 // Handlers injects the extracted verticals. Only cmd/api composes production adapters.
 type Handlers struct {
-	Identity       IdentityHandler
-	Customers      CustomerHandler
-	InventoryUnits UnitHandler
+	Reservations           ReservationsHandler
+	Floor                  FloorHandler
+	PaymentMethods         PaymentMethodsHandler
+	IdentityAdministration IdentityAdministrationHandler
+	Identity               IdentityHandler
+	Customers              CustomerHandler
+	InventoryUnits         UnitHandler
 }
 type IdentityHandler interface {
 	Login(http.ResponseWriter, *http.Request)

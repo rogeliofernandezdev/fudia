@@ -1,4 +1,4 @@
-# Separación de responsabilidades — etapa 1
+# Separación de responsabilidades — migración en curso
 
 ## Alcance y estado real
 
@@ -29,7 +29,7 @@ intermedia que solo renombra llamadas a pgx.
   `SessionRepository` resuelve candidatos, acceso a locales y sesiones; el adaptador
   de credenciales encapsula bcrypt y generación de tokens. La cookie pertenece a
   HTTP; el caso de uso nunca recibe `http.Request` ni `http.ResponseWriter`.
-  Usuarios, roles, perfil y cambio de contexto todavía están en el legado.
+  Usuarios, roles, perfil y cambio de contexto están extraídos en la segunda etapa.
 - **Customers:** repositorio del agregado cliente/direcciones, casos de uso de
   listado, consulta, alta, edición y estado. La sustitución de direcciones y la
   modificación del cliente se confirman juntas o se revierten juntas.
@@ -73,7 +73,7 @@ relativa de sus accesos a `migrations` y `api/openapi.yaml`.
 
 ## Siguiente extracción
 
-1. Completar Identity: usuarios, roles, perfiles y cambio de contexto.
+1. Retirar los puentes de siembra y las consultas compartidas de Identity cuando migren sus consumidores.
 2. Extraer catálogos de Menu y configuración de Organizations, incluyendo sus
    reglas de suscripción y puertos de colaboración explícitos.
 3. Extraer Inventory/Purchasing, manteniendo una unidad transaccional que incluya
@@ -88,3 +88,25 @@ relativa de sus accesos a `migrations` y `api/openapi.yaml`.
 Cada extracción debe reducir el legado y pasar los controles. Añadir carpetas
 vacías, mover handlers mezclados a carpetas de módulo o crear interfaces que
 exponen pgx al caso de uso no se considera separación terminada.
+
+## Segunda etapa: progreso
+
+- **Identity / administración**: repositorio tipado para usuarios, asignaciones,
+  roles, perfiles y contexto. La aplicación conserva validaciones, protección
+  del último administrador y revocación de sesiones; bcrypt queda en infraestructura.
+- **Billing / medios de pago**: catálogo operativo, administración y estado.
+  La continuidad de medios de pago se comprueba dentro de la transacción.
+- **Service / mesas, zonas y reservas**: HTTP decodifica entradas; los casos de uso
+  comprueban capacidad, transiciones y ocupación; PostgreSQL bloquea, consulta y
+  persiste. Crear un lote de mesas conserva una única consulta con auditoría atómica.
+- **UnitOfWork**: contrato sin pgx y adaptador PostgreSQL. El contexto vincula
+  repositorios del mismo pool a la misma transacción. Las transacciones anidadas
+  se rechazan explícitamente. La prueba de integración verifica lectura interna,
+  aislamiento externo y commit/rollback conjunto de perfil y auditoría.
+- **Subscriptions / acceso**: colaboración tipada para módulos activos y capacidad
+  del plan; las consultas de capacidad participan en la transacción de usuarios.
+
+Esta etapa aún no completa la migración total. Permanecen en legacy los flujos
+principales de organizaciones y plataforma, menú/recetas/combos, inventario/compras,
+pedidos/cocina, caja/pagos/gastos, reportes, suscripciones y Concierge. Los puentes
+existentes se conservan hasta migrar todos sus consumidores.

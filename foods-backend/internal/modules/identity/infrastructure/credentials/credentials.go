@@ -18,3 +18,8 @@ func (Credentials) Token() (string, error) {
 	}
 	return base64.RawURLEncoding.EncodeToString(value), nil
 }
+
+func (Credentials) Hash(password string) (string, error) {
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	return string(hash), err
+}

@@ -42,19 +42,19 @@ func TestRoleCatalogFiltersContractedModulesAndDependencies(t *testing.T) {
 func TestRoleCatalogProjectionMatchesVisibleCounts(t *testing.T) {
 	catalog := roleCatalogForModules(map[string]bool{"usuarios": true, "combos": true})
 	role := roleView{MenuAccess: []string{"usuarios", "combos", "compras"}, Permissions: []string{"users.read", "menu.manage", "purchases.read"}}
-	projected := catalog.project(role)
+	projected := catalog.Project(role)
 	if len(projected.MenuAccess) != 2 || len(projected.Permissions) != 2 {
 		t.Fatalf("misleading counts: %+v", projected)
 	}
 	if len(role.MenuAccess) != 3 || len(role.Permissions) != 3 {
 		t.Fatal("projection modified stored assignment")
 	}
-	wildcard := catalog.project(roleView{MenuAccess: []string{"*"}, Permissions: []string{"*"}})
+	wildcard := catalog.Project(roleView{MenuAccess: []string{"*"}, Permissions: []string{"*"}})
 	if !slices.Equal(wildcard.MenuAccess, roleCatalogValues(catalog.Menus)) || !slices.Equal(wildcard.Permissions, roleCatalogValues(catalog.Permissions)) {
 		t.Fatal("wildcard leaked outside effective catalog")
 	}
 	master := effectiveRoleCatalog{Menus: menuAccessCatalog, Permissions: permissionCatalog, Unrestricted: true}
-	if len(master.project(role).MenuAccess) != 3 {
+	if len(master.Project(role).MenuAccess) != 3 {
 		t.Fatal("platform catalog unexpectedly filtered")
 	}
 	// Filtering must not mutate the shared source catalogs.
