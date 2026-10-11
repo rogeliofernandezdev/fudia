@@ -3,7 +3,7 @@ package application
 import (
 	"context"
 	"errors"
-	inventoryapp "github.com/foods-platform/foods-backend/internal/modules/inventory/application"
+	inventorycontracts "github.com/foods-platform/foods-backend/internal/modules/inventory/contracts"
 	"github.com/foods-platform/foods-backend/internal/modules/purchasing/domain"
 	"github.com/foods-platform/foods-backend/internal/platform/apperror"
 	"github.com/foods-platform/foods-backend/internal/platform/unitofwork"
@@ -106,7 +106,7 @@ func (a *Purchasing) Return(ctx context.Context, s scope, id string, in domain.P
 			return result, purchaseFailure(apperror.Unavailable, "inventory_unavailable", "No pudimos actualizar el stock.")
 		}
 		movement := map[bool]string{true: "receipt_correction", false: "supplier_return"}[in.Kind == "receipt_correction"]
-		if err = a.stock.SaveMovement(tx.Context(), s, inventoryapp.Movement{ProductID: bal.ProductID, ItemID: itemID, Type: movement, Delta: -stockQty, Balance: after, UnitCost: bal.AverageUnitCost, SourceType: "purchase_return", SourceID: returnID, Note: code + " · " + in.Reason, ValueDelta: math.Round(-stockQty*bal.AverageUnitCost*10000) / 10000, BalanceValue: math.Round(after*bal.AverageUnitCost*10000) / 10000}); err != nil {
+		if err = a.stock.SaveMovement(tx.Context(), s, inventorycontracts.Movement{ProductID: bal.ProductID, ItemID: itemID, Type: movement, Delta: -stockQty, Balance: after, UnitCost: bal.AverageUnitCost, SourceType: "purchase_return", SourceID: returnID, Note: code + " · " + in.Reason, ValueDelta: math.Round(-stockQty*bal.AverageUnitCost*10000) / 10000, BalanceValue: math.Round(after*bal.AverageUnitCost*10000) / 10000}); err != nil {
 			return result, purchaseFailure(apperror.Unavailable, "inventory_unavailable", "No pudimos registrar el Kárdex.")
 		}
 		if _, err = a.repo.CreateReturnItem(tx.Context(), s, returnID, receiptItemID, orderItemID, itemID, requested, presentationType, units, unitCost); err != nil {

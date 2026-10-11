@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	audit "github.com/foods-platform/foods-backend/internal/modules/audit/application"
-	inventorydomain "github.com/foods-platform/foods-backend/internal/modules/inventory/domain"
 	"github.com/foods-platform/foods-backend/internal/modules/purchasing/domain"
 	"github.com/foods-platform/foods-backend/internal/platform/apperror"
 	"github.com/foods-platform/foods-backend/internal/platform/requestscope"
@@ -279,7 +278,7 @@ type ReceiptsPage struct {
 }
 
 func (a *Purchasing) Receipts(ctx context.Context, s scope, f Filter) (ReceiptsPage, error) {
-	if !inventorydomain.ValidDateFilters(strings.TrimSpace(f.From), strings.TrimSpace(f.To)) {
+	if !domain.ValidReceiptDateFilters(strings.TrimSpace(f.From), strings.TrimSpace(f.To)) {
 		return ReceiptsPage{}, purchaseFailure(apperror.Invalid, "invalid_receipt_filter", "Revisa el rango de fechas.")
 	}
 	out, err := a.repo.Receipts(ctx, s, f)

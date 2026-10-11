@@ -6,7 +6,7 @@ import (
 	audit "github.com/foods-platform/foods-backend/internal/modules/audit/application"
 	"github.com/foods-platform/foods-backend/internal/modules/concierge/domain"
 	menudomain "github.com/foods-platform/foods-backend/internal/modules/menu/domain"
-	orderapp "github.com/foods-platform/foods-backend/internal/modules/orders/application"
+	ordercontracts "github.com/foods-platform/foods-backend/internal/modules/orders/contracts"
 	orderdomain "github.com/foods-platform/foods-backend/internal/modules/orders/domain"
 	"github.com/foods-platform/foods-backend/internal/platform/apperror"
 	"github.com/foods-platform/foods-backend/internal/platform/requestscope"
@@ -30,7 +30,7 @@ type Menu interface {
 	PublicModifiers(context.Context, scope, string) (menudomain.ModifierConfigView, error)
 }
 type Orders interface {
-	SubmitTable(context.Context, scope, string, string, orderapp.QROrderInput) (orderapp.TableSubmission, error)
+	SubmitTable(context.Context, scope, string, string, ordercontracts.QROrderInput) (ordercontracts.TableSubmission, error)
 	TableBill(context.Context, scope, string) (orderdomain.Order, error)
 }
 type Concierge struct {
@@ -102,10 +102,10 @@ func (a *Concierge) Modifiers(ctx context.Context, token, id string) (menudomain
 	}
 	return a.menu.PublicModifiers(ctx, qr.Scope, id)
 }
-func (a *Concierge) Submit(ctx context.Context, token string, in orderapp.QROrderInput) (orderapp.TableSubmission, error) {
+func (a *Concierge) Submit(ctx context.Context, token string, in ordercontracts.QROrderInput) (ordercontracts.TableSubmission, error) {
 	qr, err := a.resolve(ctx, token)
 	if err != nil {
-		return orderapp.TableSubmission{}, err
+		return ordercontracts.TableSubmission{}, err
 	}
 	return a.orders.SubmitTable(ctx, qr.Scope, qr.TableID, token, in)
 }

@@ -5,6 +5,7 @@ import (
 	"errors"
 	audit "github.com/foods-platform/foods-backend/internal/modules/audit/application"
 	"github.com/foods-platform/foods-backend/internal/modules/inventory/domain"
+	inventorycontracts "github.com/foods-platform/foods-backend/internal/modules/inventory/contracts"
 	menudomain "github.com/foods-platform/foods-backend/internal/modules/menu/domain"
 	"github.com/foods-platform/foods-backend/internal/platform/apperror"
 	"github.com/foods-platform/foods-backend/internal/platform/requestscope"
@@ -125,11 +126,8 @@ func (*inventoryCombinationError) Error() string {
 	return "La presentación no está configurada para la unidad base de este artículo."
 }
 
-type Movement struct {
-	ProductID                                          *string
-	ItemID, Type, SourceType, SourceID, Note           string
-	Delta, Balance, UnitCost, ValueDelta, BalanceValue float64
-}
+// Movement remains an alias for existing callers; published ledger DTO lives in contracts.
+type Movement = inventorycontracts.Movement
 
 func (a *Stock) movement(ctx context.Context, s scope, productID *string, item, kind string, delta, balance, cost float64, source, sourceID, note string) error {
 	return a.repo.SaveMovement(ctx, s, Movement{ProductID: productID, ItemID: item, Type: kind, Delta: delta, Balance: balance, UnitCost: cost, ValueDelta: math.Round(delta*cost*10000) / 10000, BalanceValue: math.Round(balance*cost*10000) / 10000, SourceType: source, SourceID: sourceID, Note: note})

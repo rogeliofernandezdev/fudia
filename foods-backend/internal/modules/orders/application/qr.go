@@ -4,24 +4,16 @@ import (
 	"context"
 	"errors"
 	"github.com/foods-platform/foods-backend/internal/modules/orders/domain"
+	"github.com/foods-platform/foods-backend/internal/modules/orders/contracts"
 	"github.com/foods-platform/foods-backend/internal/platform/apperror"
 	"github.com/foods-platform/foods-backend/internal/platform/unitofwork"
 	"strconv"
 	"strings"
 )
 
-type QROrderInput struct {
-	CustomerName   string                  `json:"customerName"`
-	CustomerPhone  string                  `json:"customerPhone"`
-	ConversationID string                  `json:"conversationId"`
-	RequestID      string                  `json:"requestId"`
-	Notes          string                  `json:"notes"`
-	Items          []domain.OrderItemInput `json:"items"`
-}
-type TableSubmission struct {
-	Order   domain.Order
-	Created bool
-}
+// Backwards-compatible aliases: the integration surface is owned by Orders.
+type QROrderInput = contracts.QROrderInput
+type TableSubmission = contracts.TableSubmission
 
 func (a *Orders) SubmitTable(ctx context.Context, s scope, tableID string, token string, in QROrderInput) (TableSubmission, error) {
 	var result TableSubmission

@@ -3,8 +3,7 @@ package application
 import (
 	"context"
 	"errors"
-	inventoryapp "github.com/foods-platform/foods-backend/internal/modules/inventory/application"
-	inventorydomain "github.com/foods-platform/foods-backend/internal/modules/inventory/domain"
+	inventorycontracts "github.com/foods-platform/foods-backend/internal/modules/inventory/contracts"
 	"github.com/foods-platform/foods-backend/internal/modules/purchasing/domain"
 	"github.com/foods-platform/foods-backend/internal/platform/apperror"
 	"github.com/foods-platform/foods-backend/internal/platform/unitofwork"
@@ -147,7 +146,7 @@ func (a *Purchasing) Receive(ctx context.Context, s scope, id string, in domain.
 		valueDelta := math.Round(stockQuantity*baseUnitCost*10000) / 10000
 		balanceValue := math.Round(balanceAfter*averageAfter*10000) / 10000
 		if _, err = func() (int64, error) {
-			err := a.stock.SaveMovement(tx.Context(), s, inventoryapp.Movement{ProductID: line.ProductID, ItemID: line.InventoryItemID, Type: "entry", Delta: stockQuantity, Balance: balanceAfter, UnitCost: baseUnitCost, SourceType: "purchase_receipt", SourceID: receiptID, Note: note, ValueDelta: valueDelta, BalanceValue: balanceValue})
+			err := a.stock.SaveMovement(tx.Context(), s, inventorycontracts.Movement{ProductID: line.ProductID, ItemID: line.InventoryItemID, Type: "entry", Delta: stockQuantity, Balance: balanceAfter, UnitCost: baseUnitCost, SourceType: "purchase_receipt", SourceID: receiptID, Note: note, ValueDelta: valueDelta, BalanceValue: balanceValue})
 			return 0, err
 		}(); err != nil {
 			return result, purchaseFailure(apperror.Unavailable, "inventory_unavailable", "No pudimos registrar el movimiento de Kárdex.")
@@ -188,9 +187,9 @@ func (a *Purchasing) Receive(ctx context.Context, s scope, id string, in domain.
 }
 
 type InventoryLedger interface {
-	LockBalance(context.Context, scope, string) (inventorydomain.InventoryBalanceLock, error)
+	LockBalance(context.Context, scope, string) (inventorycontracts.Balance, error)
 	EnsureEntryBalance(context.Context, scope, string) (int64, error)
 	LockEntryBalance(context.Context, scope, string) (float64, float64, error)
 	SaveBalance(context.Context, scope, string, float64, float64) (int64, error)
-	SaveMovement(context.Context, scope, inventoryapp.Movement) error
+	SaveMovement(context.Context, scope, inventorycontracts.Movement) error
 }

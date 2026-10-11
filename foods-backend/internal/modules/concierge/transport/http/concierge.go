@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"github.com/foods-platform/foods-backend/internal/modules/concierge/application"
 	"github.com/foods-platform/foods-backend/internal/modules/concierge/domain"
-	orderapp "github.com/foods-platform/foods-backend/internal/modules/orders/application"
+	ordercontracts "github.com/foods-platform/foods-backend/internal/modules/orders/contracts"
 	shared "github.com/foods-platform/foods-backend/internal/platform/httpapi"
 	"github.com/foods-platform/foods-backend/internal/platform/requestscope"
 	"net/http"
@@ -49,7 +49,7 @@ func (h *Handler) ServiceAuth(next http.Handler) http.Handler {
 	})
 }
 func (h *Handler) CreateConciergeOrder(w http.ResponseWriter, r *http.Request) {
-	var in orderapp.QROrderInput
+	var in ordercontracts.QROrderInput
 	if json.NewDecoder(r.Body).Decode(&in) != nil {
 		shared.Fail(w, 400, "invalid_order", "Revisa los datos enviados.")
 		return
