@@ -129,7 +129,7 @@ func (a *API) createInventoryCombination(w http.ResponseWriter, r *http.Request)
 
 func normalizeInventoryPresentation(in inventoryPresentationInput) (inventoryPresentationInput, string) {
 	in.PresentationType = strings.ToLower(strings.TrimSpace(in.PresentationType))
-	if !inventoryUnitCode.MatchString(in.PresentationType) {
+	if !validInventoryUnitCode(in.PresentationType) {
 		return in, "Selecciona una presentación válida."
 	}
 	if math.IsNaN(in.UnitsPerPresentation) || math.IsInf(in.UnitsPerPresentation, 0) || in.UnitsPerPresentation <= 0 || in.UnitsPerPresentation >= 1e11 {

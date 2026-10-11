@@ -42,7 +42,7 @@ func main() {
 		os.Exit(1)
 	}
 	defer db.Close()
-	mux := httpapi.New(db).Routes()
+	mux := newAPI(db).Routes()
 	mux.HandleFunc("GET /health", health)
 	server := newServer(requestLogger(logger, requestDeadline(requestTimeout, mux)))
 	logger.Info("api_started", "address", server.Addr, "version", version)

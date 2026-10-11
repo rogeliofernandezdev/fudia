@@ -1,28 +1,13 @@
 package httpapi
 
 import (
-	"crypto/rand"
-	"crypto/sha256"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
-	"os"
-	"time"
 
 	"github.com/jackc/pgx/v5/pgconn"
 )
-
-func NewCorrelationID() string {
-	var value [16]byte
-	if _, err := rand.Read(value[:]); err != nil {
-		fallback := sha256.Sum256([]byte(fmt.Sprintf("%d:%d", time.Now().UnixNano(), os.Getpid())))
-		copy(value[:], fallback[:16])
-	}
-	value[6] = (value[6] & 0x0f) | 0x40
-	value[8] = (value[8] & 0x3f) | 0x80
-	return fmt.Sprintf("%x-%x-%x-%x-%x", value[0:4], value[4:6], value[6:8], value[8:10], value[10:16])
-}
 
 func ensureCorrelationID(w http.ResponseWriter) string {
 	if value := w.Header().Get("X-Request-ID"); value != "" {

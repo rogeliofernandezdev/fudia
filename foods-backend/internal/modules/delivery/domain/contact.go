@@ -1,11 +1,11 @@
-package httpapi
+package domain
 
 import (
 	"strings"
 	"unicode/utf8"
 )
 
-func validateDeliveryContact(channel, name, phone, address, reference string) string {
+func ValidateContact(channel, name, phone, address, reference string) string {
 	if channel != "delivery" {
 		return ""
 	}

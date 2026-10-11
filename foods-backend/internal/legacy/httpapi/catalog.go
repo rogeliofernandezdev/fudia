@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -77,20 +76,6 @@ type productListItem struct {
 	InventoryUnit     *string  `json:"inventoryUnit"`
 }
 
-func pageParams(r *http.Request) (int, int) {
-	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
-	size, _ := strconv.Atoi(r.URL.Query().Get("pageSize"))
-	if page < 1 {
-		page = 1
-	}
-	if size < 1 {
-		size = 20
-	}
-	if size > 100 {
-		size = 100
-	}
-	return page, size
-}
 func (a *API) audit(r *http.Request, action, entityType, entityID string) {
 	s := r.Context().Value(scopeKey{}).(scope)
 	_, _ = a.db.Exec(r.Context(), `INSERT INTO audit_log(organization_id,location_id,user_id,action,entity_type,entity_id) VALUES($1,$2,$3,$4,$5,$6)`, s.OrganizationID, s.LocationID, s.UserID, action, entityType, entityID)

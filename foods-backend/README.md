@@ -29,3 +29,17 @@ configuración administrativa. Cada país define también su moneda predetermina
 y el onboarding exige esa asociación.
 
 `FUDIA_CONCIERGE_API_KEY` autentica las llamadas internas desde el servicio Concierge. El acceso de una organización se controla mediante `organization_modules.whatsapp_bot`, administrado únicamente desde la plataforma global.
+
+## Responsabilidades y Repository
+
+La extracción modular comienza en `internal/modules`: `identity` (sesiones y
+permisos de rutas), `customers` (clientes y direcciones) e `inventory` (unidades).
+Cada vertical contiene `domain`, `application`, `infrastructure/postgres` y
+`transport/http`. Los casos de uso declaran interfaces Repository; únicamente
+sus implementaciones PostgreSQL contienen SQL. `cmd/api/modules.go` conecta
+los adaptadores de producción.
+
+`internal/platform` contiene mecanismos compartidos. `internal/legacy/httpapi`
+conserva las verticales aún acopladas y sus pruebas de regresión. Mover ese código
+identifica la deuda; **no equivale a haberlo refactorizado**. La migración completa,
+las garantías y los pendientes están en [docs/10_BACKEND_REFACTOR.md](docs/10_BACKEND_REFACTOR.md).
