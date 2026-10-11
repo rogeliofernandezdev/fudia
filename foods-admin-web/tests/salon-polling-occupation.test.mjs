@@ -37,5 +37,16 @@ test("la pantalla conserva el centrado, el polling parcial y estados semánticos
  assert.match(page,/floor\.isError&&!floor\.data/);
  assert.match(page,/<Status tone="red">Ocupada<\/Status>/);
  assert.match(css,/\.salon-table-name-row\{[^\n]*align-items:center/);
- assert.match(css,/\.salon-table\.occupied\{border-color:var\(--danger-200\);background:var\(--danger-50\)/);
+ assert.match(css,/\.salon-table\.occupied\{[\s\S]*?border-color:var\(--danger-200\);[\s\S]*?background:color-mix\(in srgb,var\(--danger-50\) 45%,var\(--surface\)\)/);
+});
+
+test("paleta de salon: rojo solo para ocupacion, reloj neutro e interaccion indigo",()=>{
+ const css=readFileSync(new URL("../src/modules/operations/styles/salon.css",import.meta.url),"utf8");
+ assert.match(css,/\.salon-table\.occupied\{[\s\S]*?background:color-mix\(in srgb,var\(--danger-50\) 45%,var\(--surface\)\)/);
+ assert.match(css,/\.salon-table\.occupied \.salon-table-icon\{background:var\(--primary-100\);color:var\(--primary-700\)\}/);
+ assert.match(css,/\.salon-table-order-status\{[^\n]*color:var\(--ink-600\)/);
+ assert.match(css,/\.salon-table-elapsed\{[^\n]*background:var\(--cloud-100\);color:var\(--ink-600\)/);
+ assert.match(css,/\.salon-table-elapsed\.is-stale\{background:var\(--warning-100\);color:var\(--warning-800\)\}/);
+ assert.match(css,/\.salon-table-order\{[^\n]*background:var\(--primary-100\);color:var\(--primary-700\);border:var\(--stroke-1\) solid var\(--primary-200\)/);
+ assert.match(css,/\.salon-table\.free\{border-color:var\(--brand-200\)\}/);
 });
