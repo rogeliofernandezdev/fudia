@@ -1,6 +1,4 @@
-/* Data tables: semantic reading and responsive scrolling.
- * Tailwind utilities handle component composition; visual values come only from shared tokens.
- * Legacy native tables inherit the same treatment during gradual adoption of DataTable. */
+/* Table CSS owned by the design system; all values use shared tokens. */
 /* Tablas: cabecera azul operativa, filas de 56 px y cifras tabulares */
 table{width:100%;border-collapse:collapse;white-space:nowrap;font-variant-numeric:tabular-nums}
 table thead,.catalog-panel thead,.standardized-management thead{color:var(--surface);background:var(--primary-600)}
@@ -30,4 +28,31 @@ td .f2,.row-icon.r2{color:var(--digital-700);background:var(--digital-100)}
 }
 @media (width<=600px){
   .table-wrap table{width:max-content;min-width:100%}
+}
+
+/* DataTable: new shared primitive. Legacy element selectors above stay only until
+ * the remaining native tables are migrated; responsive behavior is component-scoped. */
+.data-table-shell{width:100%;max-width:100%;min-width:0}
+.data-table-viewport{min-width:0;max-width:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}
+.data-table-viewport:focus-visible{outline:var(--stroke-2) solid var(--primary-600);outline-offset:calc(var(--space-0-5) * -1)}
+.data-table{width:100%;min-width:100%;border-collapse:separate;border-spacing:0;font-variant-numeric:tabular-nums}
+.data-table :is(th,td){vertical-align:middle}
+.data-table-hint{display:none}
+
+@media (width<=700px){
+  .data-table{width:max-content;min-width:100%}
+  .data-table :is(th,td){padding-inline:var(--space-3)}
+  .data-table :is(th,td):first-child{position:sticky;inset-inline-start:0;z-index:var(--z-raised);border-inline-end:var(--stroke-1) solid var(--line)}
+  .data-table thead th:first-child{z-index:calc(var(--z-raised) + 1);background:var(--primary-600)}
+  .data-table tbody td:first-child{background:var(--surface)}
+  .standardized-management .data-table tr.alternate td:first-child,.catalog-panel .data-table tr.alternate td:first-child{background:var(--primary-25)}
+  .management .data-table td:first-child{min-width:var(--size-190);max-width:var(--size-220)}
+  .data-table td:first-child b{display:inline-block;vertical-align:middle;max-width:var(--size-120);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .data-table td:first-child small{max-width:var(--size-150);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .data-table th:last-child,.data-table td:last-child{min-width:var(--size-116)}
+  .data-table-hint{display:flex;align-items:center;gap:var(--space-2);margin:0;padding:var(--space-2) var(--space-3);background:var(--primary-50);color:var(--ink-600);font-size:var(--font-size-label);font-weight:var(--weight-medium)}
+  .data-table-hint>span:first-child{flex:none;color:var(--primary-700);font-size:var(--font-size-md);font-weight:var(--weight-bold)}
+}
+@media (width<=700px) and (hover:hover) and (pointer:fine){
+  .data-table tbody tr:hover td:first-child{background:var(--primary-25)}
 }
