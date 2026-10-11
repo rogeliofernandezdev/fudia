@@ -68,10 +68,12 @@ async def test_redis_stream_workers_under_concurrent_load() -> None:
                         await asyncio.sleep(0.01)
 
                 await asyncio.wait_for(completed(), timeout=30)
+                # Do not include the one-second Redis blocking-read shutdown
+                # in throughput, since it is not message-processing time.
+                elapsed = time.perf_counter() - started
             finally:
                 await worker.stop()
                 await asyncio.wait_for(task, timeout=5)
-            elapsed = time.perf_counter() - started
             pending = await queue.client.xpending(stream, queue.group)
             assert sender.sent == count
             assert pending["pending"] == 0
