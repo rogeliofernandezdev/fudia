@@ -438,10 +438,10 @@ test("cocina mantiene jerarquia KDS y semantica de color",()=>{
   assert.equal(css.includes("rgba("),false,"Cocina no introduce colores rgba directos");
 });
 
-test("el root layout carga solo la base global",()=>{
+test("el root layout carga la base y los estilos compartidos de tablas, sin estilos de features",()=>{
   const c=read("src/app/layout.tsx");
   const cssImports=[...c.matchAll(/import ["']([^"']+\.css)["']/g)].map(m=>m[1]);
-  assert.deepEqual(cssImports,["@/styles/globals.css"]);
+  assert.deepEqual(cssImports,["@/styles/globals.css","@/design-system/styles/data-table.css"]);
 });
 
 test("las rutas principales componen modulos",()=>{
