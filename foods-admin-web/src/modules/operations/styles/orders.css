@@ -1179,16 +1179,19 @@
     grid-column:1/-1;
   }
 
-  /* Tabla compacta: sigue siendo tabla; se ocultan Canal y Registrado.
-     El canal ya se lee en el icono de la fila. */
-  .orders-panel.standardized-management .table-wrap{
-    display:block;
-    overflow:visible;
+  /* Pedidos conserva 4 columnas operativas visibles por desplazamiento:
+     Canal se identifica con su icono y Registrado se muestra en Pedido.
+     Nunca se comprime la tabla para encajar todas las celdas. */
+  .orders-panel .table-wrap{
+    max-width:100%;
+    overflow-x:auto;
+    overflow-y:hidden;
   }
 
-  .orders-panel .table-wrap .orders-table{
-    min-width:0;
+  .orders-panel .orders-table{
     width:100%;
+    min-width:var(--size-500);
+    table-layout:fixed;
   }
 
   .orders-table th:nth-child(2),
@@ -1198,10 +1201,10 @@
     display:none;
   }
 
-  .orders-table th:nth-child(1){width:auto}
-  .orders-table th:nth-child(3){width:var(--size-92)}
-  .orders-table th:nth-child(5){width:var(--size-96)}
-  .orders-table th:nth-child(6){width:var(--size-48)}
+  .orders-panel .orders-table th:nth-child(1){width:var(--size-208)}
+  .orders-panel .orders-table th:nth-child(3){width:var(--size-106)}
+  .orders-panel .orders-table th:nth-child(5){width:var(--size-100)}
+  .orders-panel .orders-table th:nth-child(6){width:var(--size-86)}
 
   .orders-table th,
   .orders-table td{
@@ -1217,7 +1220,8 @@
     max-width:calc(100% - var(--size-42));
   }
 
-  .orders-table td:first-child .order-mobile-registered{display:block;max-width:none;white-space:normal;overflow-wrap:anywhere}
+  .orders-table td:first-child .order-mobile-registered{display:block;max-width:none;white-space:normal;overflow-wrap:normal;word-break:normal}
+  .orders-table .order-mobile-registered time{display:block;white-space:normal;overflow-wrap:normal;word-break:normal;line-height:var(--line-height-snug)}
 
   .orders-loading{
     min-height:0;
