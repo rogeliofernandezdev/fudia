@@ -37,7 +37,7 @@ test("acceso: tarjeta móvil compacta, campos neutros y acción con geometría c
  assert.equal(values(".admin-auth-brand img").width,"160px");
  assert.equal(values(".admin-auth-card").background,"var(--surface)");
  assert.equal(values(".admin-auth-field .admin-auth-input").background,"var(--surface)");
- assert.equal(values(".admin-auth-submit")["min-height"],"calc(var(--control-height) + var(--space-1))");
+ assert.equal(values(".admin-auth-submit")["min-height"],"calc(var(--control-height) + 4px)");
  assert.equal(values(".admin-auth-submit").width,"100%");
  assert.equal(values(".admin-auth-submit")["max-width"],undefined);
  assert.equal(values(".admin-auth-actions").gap,"8px");
