@@ -129,7 +129,7 @@ export function LoginForm() {
               <div className="admin-auth-actions">
                 <button className="admin-auth-recovery" type="button" disabled={loading} onClick={() => setShowRecoveryHelp(true)}>Recuperar contraseña</button>
                 <button className="admin-auth-submit" type="submit" disabled={loading} aria-live="polite">
-                  {loading ? <><i aria-hidden="true"/>Verificando acceso…</> : <>Ingresar<Icon name="signIn" size={18}/></>}
+                  {loading ? <><i aria-hidden="true"/>Verificando acceso…</> : <>Ingresar<Icon name="key" size={18}/></>}
                 </button>
               </div>
             </>}
