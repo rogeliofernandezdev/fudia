@@ -117,7 +117,7 @@ test("acceso: conserva una tarjeta y el orden original; destaca marca y campos s
  assert.equal(values(".admin-auth-card")["grid-template-columns"],undefined);
  assert.ok(values(".admin-auth-brand").background.includes("linear-gradient"));
  assert.equal(values(".admin-auth-heading h1")["font-size"],"18px");
- assert.equal(values(".admin-auth-heading h1")["font-weight"],"var(--weight-bold)");
+ assert.equal(values(".admin-auth-heading h1")["font-weight"],"700");
  assert.equal(values(".admin-auth-heading")["text-align"],"center");
  assert.equal(values(".admin-auth-help").color,"var(--ink-600)");
  assert.equal(values(".admin-auth-help")["font-weight"],"var(--weight-medium)");
