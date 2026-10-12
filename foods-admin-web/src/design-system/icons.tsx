@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-export type IconName = "info"|"grid"|"sales"|"receipt"|"menu"|"utensils"|"chefHat"|"cookingPot"|"kitchen"|"combo"|"stock"|"truck"|"users"|"store"|"settings"|"search"|"bell"|"plus"|"minus"|"chevron"|"chevronLeft"|"filter"|"download"|"alert"|"check"|"clock"|"box"|"logout"|"eye"|"lock"|"mail"|"edit"|"power"|"toggleOn"|"toggleOff"|"circleCheck"|"circleMinus"|"circleSlash"|"save"|"refresh"|"close"|"panelCollapse"|"panelExpand"|"qr"|"share"|"trash"|"arrowRightCircle"|"payment"|"cancel"|"availability"|"ledger"|"building"|"contract"|"mapPin"|"userCheck"|"register"|"orders"|"tables"|"layout"|"cash"|"calendar"|"phone"|"kiosk"|"gauge"|"cart"|"route"|"link"|"bike"|"user"|"heart"|"star"|"badge"|"tag"|"wallet"|"pie"|"phoneApp"|"percent"|"layers"|"plug"|"chat"|"login"|"signIn"|"key"|"lightbulb"|"undo"|"transfer"|"invoice"|"dish"|"note"|"send"|"shoppingBag";
+export type IconName = "info"|"grid"|"sales"|"receipt"|"menu"|"utensils"|"chefHat"|"cookingPot"|"kitchen"|"combo"|"stock"|"truck"|"users"|"store"|"settings"|"search"|"bell"|"plus"|"minus"|"chevron"|"chevronLeft"|"filter"|"download"|"alert"|"check"|"clock"|"box"|"logout"|"eye"|"lock"|"mail"|"edit"|"power"|"toggleOn"|"toggleOff"|"circleCheck"|"circleMinus"|"circleSlash"|"save"|"refresh"|"close"|"panelCollapse"|"panelExpand"|"qr"|"share"|"trash"|"arrowRightCircle"|"payment"|"cancel"|"availability"|"ledger"|"building"|"contract"|"mapPin"|"userCheck"|"register"|"orders"|"tables"|"layout"|"cash"|"calendar"|"phone"|"kiosk"|"gauge"|"cart"|"route"|"link"|"bike"|"user"|"heart"|"star"|"badge"|"tag"|"wallet"|"pie"|"phoneApp"|"percent"|"layers"|"plug"|"chat"|"login"|"key"|"lightbulb"|"undo"|"transfer"|"invoice"|"dish"|"note"|"send"|"shoppingBag";
 /** Tamaños homologados: 14 junto a texto de 12–13 px, 16 en chips y pestañas, 18 en acciones, 20 en navegación, 24 en estados vacíos. */
 export type IconSize=14|16|18|20|24|28|32|36|40|48;
 
@@ -99,7 +99,6 @@ const paths: Record<IconName, ReactNode> = {
   plug:<><path {...B} d="M6 8h12v3a6 6 0 0 1-12 0z"/><path d="M9 2v6M15 2v6"/><path {...A} d="M12 17v5"/></>,
   chat:<><path {...B} d="M21 12a8 8 0 0 1-11.6 7.1L4 21l1.9-5.4A8 8 0 1 1 21 12z"/><path {...A} d="M8.5 12h.01M12 12h.01M15.5 12h.01"/></>,
   login:<><path d="M14 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5"/><path {...A} d="m9 17 5-5-5-5M14 12H3"/></>,
-  signIn:<><circle cx="8" cy="7.5" r="3"/><path d="M3 19.5v-1a5 5 0 0 1 9-3"/><path {...A} d="M13.5 14h7m-3-3 3 3-3 3"/></>,
   key:<><path d="m10.8 12.2 9.7-9.7M14 8l3 3M17.5 4.5 20 7"/><circle {...A} cx="7.5" cy="15.5" r="4.5"/></>,
   lightbulb:<><path {...B} d="M8.5 15.5A7 7 0 1 1 15.5 15.5c-.9.7-1.5 1.5-1.5 2.5h-4c0-1-.6-1.8-1.5-2.5z"/><path {...A} d="M10 22h4"/></>,
   undo:<><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></>,
