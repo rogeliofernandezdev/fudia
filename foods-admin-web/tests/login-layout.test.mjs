@@ -11,12 +11,12 @@ const source=readFileSync(new URL("../src/modules/auth/presentation/login.css",i
 const ast=postcss.parse(resolveDesignScales(source));
 const values=selector=>Object.fromEntries(ast.nodes.find(node=>node.selector===selector).nodes.filter(node=>node.type==="decl").map(node=>[node.prop,node.value]));
 
-test("acceso: muestra orientación para solicitar cuenta sin eslóganes",()=>{
+test("acceso: comunica funciones reales del restaurante sin mensajes redundantes",()=>{
  const form=readFileSync(new URL("../src/modules/auth/presentation/login-form.tsx",import.meta.url),"utf8");
  assert.match(form,/<h1 id="login-title">Iniciar sesión<\/h1>/);
- assert.doesNotMatch(form,/Acceso reservado al personal autorizado|Conexión segura|Usuario validado|Bienvenido|admin-auth-trust/);
+ assert.doesNotMatch(form,/Acceso reservado al personal autorizado|Conexión segura|Usuario validado|Bienvenido|admin-auth-trust|¿No tienes cuenta/);
  assert.doesNotMatch(source,/admin-auth-trust/);
- assert.match(form,/<p className="admin-auth-help"><Icon name="info" size=\{16\}\/><span>¿No tienes cuenta\? Solicita acceso al administrador de tu local\.<\/span><\/p>/);
+ assert.match(form,/<p className="admin-auth-help"><Icon name="utensils" size=\{16\}\/><span>Mesas, pedidos y cocina en un solo lugar\.<\/span><\/p>/);
  assert.match(source,/\.admin-auth-help\{[^}]*border-top:var\(--stroke-1\) solid var\(--line\)/);
  assert.equal(source.includes("text-overflow"),false);
  assert.equal(source.includes("overflow:hidden"),true,"la tarjeta conserva sus bordes");
