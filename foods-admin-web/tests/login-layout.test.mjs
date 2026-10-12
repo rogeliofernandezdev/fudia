@@ -30,7 +30,8 @@ test("acceso: tarjeta móvil compacta, campos neutros y acción con geometría c
  assert.equal(values(".admin-auth-submit")["min-height"],"calc(var(--control-height) + 4px)");
  assert.equal(values(".admin-auth-submit").width,"100%");
  assert.equal(values(".admin-auth-submit")["max-width"],undefined);
- assert.equal(values(".admin-auth-actions").gap,"8px");
+ assert.equal(values(".admin-auth-actions").gap,"4px");
+ assert.equal(values(".admin-auth-actions")["margin-top"],"0");
  assert.equal(values(".admin-auth-submit")["margin-top"],undefined);
  assert.equal(values(".admin-auth-submit")["border-radius"],"6px");
  assert.equal(values(".admin-auth-field button").height,"var(--control-height)");
@@ -51,7 +52,7 @@ test("acceso: vista baja conserva desplazamiento natural y foco visible",()=>{
 
 test("acceso: Ingresar conserva estados y no incorpora selectores ni enlaces sin destino",()=>{
  const form=readFileSync(new URL("../src/modules/auth/presentation/login-form.tsx",import.meta.url),"utf8");
- assert.match(form,/>Ingresar<Icon/);
+ assert.match(form,/>Ingresar<Icon name="arrowRightCircle" size=\{18\}\/>/);
  assert.match(form,/aria-busy=\{loading\}/);
  assert.match(form,/Verificando acceso…/);
  assert.match(form,/aria-pressed=\{showPassword\}/);
@@ -115,8 +116,12 @@ test("acceso: conserva una tarjeta y el orden original; destaca marca y campos s
  assert.equal(values(".admin-auth-shell")["max-width"],"360px");
  assert.equal(values(".admin-auth-card")["grid-template-columns"],undefined);
  assert.ok(values(".admin-auth-brand").background.includes("linear-gradient"));
- assert.equal(values(".admin-auth-heading h1")["font-size"],"22px");
+ assert.equal(values(".admin-auth-heading h1")["font-size"],"18px");
+ assert.equal(values(".admin-auth-heading h1")["font-weight"],"var(--weight-bold)");
+ assert.equal(values(".admin-auth-heading")["text-align"],"center");
  assert.equal(values(".admin-auth-help").color,"var(--ink-600)");
+ assert.equal(values(".admin-auth-help")["font-weight"],"var(--weight-medium)");
+ assert.equal(values(".admin-auth-footer")["min-height"],undefined);
  assert.equal(values(".admin-auth-form").gap,"12px");
  assert.equal(values(".admin-auth-form").padding,"20px 24px");
  assert.equal(values(".admin-auth-field:focus-within .admin-auth-input:not([aria-invalid=\"true\"])")["box-shadow"],"var(--ring-focus)");
