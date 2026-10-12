@@ -44,12 +44,9 @@
 .admin-auth-session-conflict b{font-size:var(--font-size-sm);color:var(--ink-950)}
 .admin-auth-session-conflict>header span{font-size:var(--font-size-control);line-height:var(--line-height-normal);color:var(--ink-600)}
 .admin-auth-session-conflict>div{display:grid;gap:var(--space-2)}
-.admin-auth-trust{margin:0;padding:var(--space-3) var(--space-5);display:flex;align-items:center;justify-content:center;gap:var(--space-2);list-style:none;border-top:var(--stroke-1) solid var(--line);background:var(--cloud-50)}
-.admin-auth-trust li{display:flex;align-items:center;justify-content:center;gap:var(--space-2);min-width:0;font-size:var(--font-size-xs);font-weight:var(--weight-medium);line-height:var(--line-height-snug);color:var(--ink-600);text-align:center}
-.admin-auth-trust svg{flex-shrink:0;width:var(--size-14);height:var(--size-14);color:var(--brand-700)}
 .admin-auth-footer{min-height:var(--size-44);margin-top:var(--space-3);display:flex;align-items:center;justify-content:center;font-size:var(--font-size-xs);line-height:var(--line-height-normal);text-align:center;color:var(--ink-500)}
 @keyframes admin-auth-spin{to{transform:rotate(360deg)}}
-@media(max-width:480px){.admin-auth-page{padding:var(--space-6) var(--space-4)}.admin-auth-form{padding:var(--space-6) var(--space-5)}.admin-auth-brand{padding:var(--space-5) var(--space-4) var(--space-4)}.admin-auth-brand img{width:var(--size-140)}.admin-auth-trust{padding-inline:var(--space-4)}}
-@media(max-width:390px){.admin-auth-page{padding-inline:var(--space-3)}.admin-auth-form{padding-inline:var(--space-4)}.admin-auth-trust{padding-inline:var(--space-3)}}
+@media(max-width:480px){.admin-auth-page{padding:var(--space-6) var(--space-4)}.admin-auth-form{padding:var(--space-6) var(--space-5)}.admin-auth-brand{padding:var(--space-5) var(--space-4) var(--space-4)}.admin-auth-brand img{width:var(--size-140)}}
+@media(max-width:390px){.admin-auth-page{padding-inline:var(--space-3)}.admin-auth-form{padding-inline:var(--space-4)}}
 @media(max-height:540px){.admin-auth-page{padding-block:var(--space-4);align-items:start}}
 @media(prefers-reduced-motion:reduce){.admin-auth-submit,.admin-auth-field>svg,.admin-auth-field .admin-auth-input{transition:none}.admin-auth-submit>i{animation:none}}
