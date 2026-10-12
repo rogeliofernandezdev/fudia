@@ -11,18 +11,20 @@ const source=readFileSync(new URL("../src/modules/auth/presentation/login.css",i
 const ast=postcss.parse(resolveDesignScales(source));
 const values=selector=>Object.fromEntries(ast.nodes.find(node=>node.selector===selector).nodes.filter(node=>node.type==="decl").map(node=>[node.prop,node.value]));
 
-test("acceso: presenta la tarea sin mensajes redundantes ni afirmaciones de seguridad",()=>{
+test("acceso: muestra orientación para solicitar cuenta sin eslóganes",()=>{
  const form=readFileSync(new URL("../src/modules/auth/presentation/login-form.tsx",import.meta.url),"utf8");
  assert.match(form,/<h1 id="login-title">Iniciar sesión<\/h1>/);
  assert.doesNotMatch(form,/Acceso reservado al personal autorizado|Conexión segura|Usuario validado|Bienvenido|admin-auth-trust/);
  assert.doesNotMatch(source,/admin-auth-trust/);
+ assert.match(form,/<p className="admin-auth-help"><Icon name="info" size=\{16\}\/><span>¿No tienes cuenta\? Solicita acceso al administrador de tu local\.<\/span><\/p>/);
+ assert.match(source,/\.admin-auth-help\{[^}]*border-top:var\(--stroke-1\) solid var\(--line\)/);
  assert.equal(source.includes("text-overflow"),false);
  assert.equal(source.includes("overflow:hidden"),true,"la tarjeta conserva sus bordes");
 });
 
 test("acceso: tarjeta móvil compacta, campos neutros y acción con geometría compartida",()=>{
- assert.equal(values(".admin-auth-shell")["max-width"],"420px");
- assert.equal(values(".admin-auth-brand img").width,"160px");
+ assert.equal(values(".admin-auth-shell")["max-width"],"360px");
+ assert.equal(values(".admin-auth-brand img").width,"120px");
  assert.equal(values(".admin-auth-card").background,"var(--surface)");
  assert.equal(values(".admin-auth-field .admin-auth-input").background,"var(--surface)");
  assert.equal(values(".admin-auth-submit")["min-height"],"calc(var(--control-height) + 4px)");
@@ -56,7 +58,7 @@ test("acceso: Ingresar conserva estados y no incorpora selectores ni enlaces sin
  assert.match(form,/autoComplete="username"/);
  assert.match(form,/autoComplete="current-password"/);
  assert.match(form,/<h1 id="login-title">Iniciar sesión<\/h1>/);
- assert.match(form,/<p>Ingresa con la cuenta asignada a tu local\.<\/p>/);
+ assert.doesNotMatch(form,/Ingresa con la cuenta asignada a tu local/);
  assert.doesNotMatch(form,/Bienvenido|<Select|href="#"/);
  assert.match(form,/firstAccessibleRoute\(context\)/);
 });
@@ -110,11 +112,13 @@ test("acceso: recuperar conserva texto plano al pasar el cursor y foco visible c
 });
 
 test("acceso: conserva una tarjeta y el orden original; destaca marca y campos sin panel lateral",()=>{
- assert.equal(values(".admin-auth-shell")["max-width"],"420px");
+ assert.equal(values(".admin-auth-shell")["max-width"],"360px");
  assert.equal(values(".admin-auth-card")["grid-template-columns"],undefined);
  assert.ok(values(".admin-auth-brand").background.includes("linear-gradient"));
  assert.equal(values(".admin-auth-heading h1")["font-size"],"22px");
- assert.equal(values(".admin-auth-heading p").color,"var(--ink-600)");
+ assert.equal(values(".admin-auth-help").color,"var(--ink-600)");
+ assert.equal(values(".admin-auth-form").gap,"12px");
+ assert.equal(values(".admin-auth-form").padding,"20px 24px");
  assert.equal(values(".admin-auth-field:focus-within .admin-auth-input:not([aria-invalid=\"true\"])")["box-shadow"],"var(--ring-focus)");
  assert.equal(values(".admin-auth-field>svg").background,"var(--primary-100)");
  assert.equal(values(".admin-auth-field>svg").width,"26px");
