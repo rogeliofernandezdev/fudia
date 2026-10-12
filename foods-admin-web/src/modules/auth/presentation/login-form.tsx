@@ -134,7 +134,7 @@ export function LoginForm() {
               </div>
             </>}
           </form>
-          <p className="admin-auth-help"><Icon name="info" size={16}/><span>¿No tienes cuenta? Solicita acceso al administrador de tu local.</span></p>
+          <p className="admin-auth-help"><Icon name="utensils" size={16}/><span>Mesas, pedidos y cocina en un solo lugar.</span></p>
         </div>
       </div>
       <footer className="admin-auth-footer">© 2026 fudIA · Todos los derechos reservados</footer>
