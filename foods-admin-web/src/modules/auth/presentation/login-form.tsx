@@ -99,12 +99,11 @@ export function LoginForm() {
         <div className="admin-auth-accent" aria-hidden="true" />
         <div className="admin-auth-body">
           <div className="admin-auth-brand">
-            <Image src="/assets/images/login.png" alt="fudIA" width={1536} height={1024} sizes="(max-width: 480px) 160px, 180px" priority />
+            <Image src="/assets/images/login.png" alt="fudIA" width={1536} height={1024} sizes="120px" priority />
           </div>
           <form className="admin-auth-form" onSubmit={submit} aria-busy={loading} noValidate>
             <header className="admin-auth-heading">
               <h1 id="login-title">Iniciar sesión</h1>
-              <p>Ingresa con la cuenta asignada a tu local.</p>
             </header>
             {error && <div className="admin-auth-error" role="alert"><Icon name="alert" size={18}/><span>{error}</span></div>}
             {activeSession ? <section className="admin-auth-session-conflict" role="alert">
@@ -135,6 +134,7 @@ export function LoginForm() {
               </div>
             </>}
           </form>
+          <p className="admin-auth-help"><Icon name="info" size={16}/><span>¿No tienes cuenta? Solicita acceso al administrador de tu local.</span></p>
         </div>
       </div>
       <footer className="admin-auth-footer">© 2026 fudIA · Todos los derechos reservados</footer>
