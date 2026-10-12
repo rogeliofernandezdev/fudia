@@ -1273,43 +1273,28 @@ No se utiliza `brand-600` como botón ni blanco sobre menta.
 
 ## Acceso administrativo
 
-El login conserva la estructura original en móvil y escritorio: una tarjeta
-centrada de hasta 400 px, logo arriba, formulario debajo y mensajes al pie.
-No hay panel lateral, títulos visibles añadidos ni bloques de áreas del sistema.
-El refinamiento se percibe en el fondo de página con halos índigo y menta
-sobre una trama de puntos discreta, la cabecera de marca casi blanca (el logo
-se funde sin recuadro visible), acento menta–azul de 4 px, borde definido,
-sombra índigo en capas, espaciado uniforme e iconos de campos sobre pequeñas
-superficies índigo que se rellenan con `primary-600` al enfocar y pasan a rojo
-suave con error. «Ingresar» usa `primary-600` sólido con sombra suave y
-pasa a `primary-700` al pasar el cursor, sin degradado ni destello. Los indicadores de confianza forman una franja `cloud-50`
-al pie de la tarjeta. El logo mide 180 px en
-escritorio y 160 px en móvil. «Iniciar sesión» sigue siendo el título accesible,
-oculto visualmente, sin añadir una bienvenida decorativa.
-Los campos usan las primitivas `FormField` e `Input` del design system,
-fondo blanco también al autocompletar e iconos discretos que destacan al enfocar.
-El icono de mostrar contraseña conserva fondo transparente al pasar el cursor,
-sin sombra ni apariencia de botón resaltado; mantiene foco visible con teclado.
-La acción «Ingresar» conserva todo el ancho útil del formulario, con
-radio estándar e icono de candado. Comparte un grupo compacto con «Recuperar
-contraseña»: separación de 4 px entre sus áreas táctiles, sin margen adicional;
-los indicadores de confianza permanecen al pie, en una sola fila con cada icono
-junto a su texto completo.
-Estos mensajes usan tipografía auxiliar de 11 px (10 px en móvil) y no se apilan
-ni se recortan. La página redefine `--control-height` a 44 px (48 px en
-móvil) en lugar de fijar alturas literales; radio, tipografía y foco de los
-campos son los estándar. En móvil reduce el padding y la tipografía auxiliar; no cambia el
-orden ni oculta información funcional. En pantallas bajas el contenido se alinea
-arriba y permite scroll natural, sin altura fija ni recorte del botón. El copyright
-queda fuera de la tarjeta con menor jerarquía. «Recuperar contraseña» aparece
-debajo de la contraseña, alineado a la derecha, como acción secundaria de texto
-con área táctil, sin fondo, sombra ni subrayado al pasar el cursor y con foco
-visible al usar teclado. Abre únicamente el aviso «Próximamente» usando `Dialog`,
-con X como único cierre y restauración de foco. No solicita datos,
-no envía solicitudes y no simula una recuperación. No añade «Bienvenido» ni
-selectores de contexto. La recuperación por correo queda fuera de este refinamiento
-visual. La referencia define la geometría, pero
-la identidad, textos, iconos y colores son exclusivamente Foods.
+La pantalla conserva una única tarjeta centrada de ancho máximo
+`var(--size-360)`, sin panel lateral. El logotipo mide
+`var(--size-120)` y permanece arriba, seguido del título visible
+«Iniciar sesión» alineado ópticamente con la marca. Los campos de correo y
+contraseña conservan `FormField` e `Input`, sus etiquetas persistentes,
+iconos, autocompletado y estados de validación.
+
+El formulario utiliza exclusivamente tokens globales de `variables.css`.
+El fondo mantiene halos suaves índigo y menta; la cabecera conserva el
+degradado blanco/índigo y la franja superior de marca. La acción primaria
+«Ingresar» ocupa todo el ancho del formulario, conserva el tono
+`primary-600` y usa la flecha de avance. La recuperación de contraseña
+permanece como acción secundaria de texto y muestra únicamente el diálogo
+«Próximamente»; no debe insinuar que ya envía solicitudes.
+
+La franja informativa de la tarjeta dice «Mesas, pedidos y cocina en un solo
+lugar.», con icono de cubiertos. No añadir «Bienvenido», frases genéricas de
+seguridad, promesas comerciales o avisos de autorización redundantes.
+El copyright está fuera de la tarjeta, con peso secundario y sin altura
+vacía obligatoria. En móvil se ajustan los paddings, sin reordenar los
+campos ni recortar el botón; las pantallas bajas mantienen el desplazamiento
+natural. Respetar contraste, foco de teclado, estados de carga y sesión activa.
 
 ## Integridad CSS
 
