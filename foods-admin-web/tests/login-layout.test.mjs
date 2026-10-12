@@ -52,7 +52,7 @@ test("acceso: vista baja conserva desplazamiento natural y foco visible",()=>{
 
 test("acceso: Ingresar conserva estados y no incorpora selectores ni enlaces sin destino",()=>{
  const form=readFileSync(new URL("../src/modules/auth/presentation/login-form.tsx",import.meta.url),"utf8");
- assert.match(form,/>Ingresar<Icon name="arrowRightCircle" size=\{18\}\/>/);
+ assert.match(form,/>Ingresar<Icon name="login" size=\{18\}\/>/);
  assert.match(form,/aria-busy=\{loading\}/);
  assert.match(form,/Verificando acceso…/);
  assert.match(form,/aria-pressed=\{showPassword\}/);
