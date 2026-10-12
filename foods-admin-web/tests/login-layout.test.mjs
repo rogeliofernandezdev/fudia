@@ -11,20 +11,21 @@ const source=readFileSync(new URL("../src/modules/auth/presentation/login.css",i
 const ast=postcss.parse(resolveDesignScales(source));
 const values=selector=>Object.fromEntries(ast.nodes.find(node=>node.selector===selector).nodes.filter(node=>node.type==="decl").map(node=>[node.prop,node.value]));
 
-test("acceso: los tres mensajes y sus iconos comparten una sola fila",()=>{
+test("acceso: una sola indicación de acceso autorizado y legible",()=>{
  const row=values(".admin-auth-trust"),item=values(".admin-auth-trust li"),icon=values(".admin-auth-trust svg");
- assert.equal(row.display,"flex");assert.equal(row["align-items"],"center");assert.equal(row["justify-content"],"space-between");
- assert.equal(item.display,"flex");assert.equal(item["align-items"],"center");assert.equal(item["white-space"],"nowrap");
+ assert.equal(row.display,"flex");assert.equal(row["align-items"],"center");assert.equal(row["justify-content"],"center");
+ assert.equal(item.display,"flex");assert.equal(item["align-items"],"center");assert.equal(item["white-space"],undefined);
  assert.equal(icon["flex-shrink"],"0");
  assert.equal(source.includes("text-overflow"),false);assert.equal(source.includes("overflow:hidden"),true,"solo la tarjeta conserva su borde");
  const form=readFileSync(new URL("../src/modules/auth/presentation/login-form.tsx",import.meta.url),"utf8");
- for(const label of ["Conexión segura","Acceso por empresa","Usuario validado"])assert.ok(form.includes(label));
+ assert.ok(form.includes("Acceso reservado al personal autorizado"));
+ assert.doesNotMatch(form,/Conexión segura|Usuario validado|Bienvenido/);
 });
 
-test("acceso: tipografía auxiliar legible en móvil sin volver a apilar mensajes",()=>{
+test("acceso: nota de seguridad legible en móvil sin apilarse",()=>{
  assert.equal(values(".admin-auth-trust li")["font-size"],"12px");
  const mobile=ast.nodes.find(node=>node.type==="atrule"&&node.params==="(max-width:480px)");
- assert.equal(mobile.nodes.find(node=>node.selector===".admin-auth-trust li").nodes.find(node=>node.prop==="font-size").value,"10px");
+ assert.equal(mobile.nodes.find(node=>node.selector===".admin-auth-trust").nodes.find(node=>node.prop==="padding-inline").value,"16px");
  ast.walkRules(rule=>{if(rule.selector===".admin-auth-trust"||rule.selector===".admin-auth-trust li"){
   assert.equal(rule.nodes.some(node=>node.prop==="flex-direction"&&node.value==="column"),false);
   assert.equal(rule.nodes.some(node=>node.prop==="flex-wrap"&&node.value==="wrap"),false);
@@ -32,14 +33,14 @@ test("acceso: tipografía auxiliar legible en móvil sin volver a apilar mensaje
 });
 
 test("acceso: tarjeta móvil compacta, campos neutros y acción con geometría compartida",()=>{
- assert.equal(values(".admin-auth-shell")["max-width"],"400px");
- assert.equal(values(".admin-auth-brand img").width,"180px");
+ assert.equal(values(".admin-auth-shell")["max-width"],"420px");
+ assert.equal(values(".admin-auth-brand img").width,"160px");
  assert.equal(values(".admin-auth-card").background,"var(--surface)");
  assert.equal(values(".admin-auth-field .admin-auth-input").background,"var(--surface)");
- assert.equal(values(".admin-auth-submit").height,"var(--control-height)");
+ assert.equal(values(".admin-auth-submit")["min-height"],"calc(var(--control-height) + var(--space-1))");
  assert.equal(values(".admin-auth-submit").width,"100%");
  assert.equal(values(".admin-auth-submit")["max-width"],undefined);
- assert.equal(values(".admin-auth-actions").gap,"4px");
+ assert.equal(values(".admin-auth-actions").gap,"8px");
  assert.equal(values(".admin-auth-submit")["margin-top"],undefined);
  assert.equal(values(".admin-auth-submit")["border-radius"],"6px");
  assert.equal(values(".admin-auth-field button").height,"var(--control-height)");
@@ -66,7 +67,8 @@ test("acceso: Ingresar conserva estados y no incorpora selectores ni enlaces sin
  assert.match(form,/aria-pressed=\{showPassword\}/);
  assert.match(form,/autoComplete="username"/);
  assert.match(form,/autoComplete="current-password"/);
- assert.match(form,/<h1 className="sr-only" id="login-title">Iniciar sesión<\/h1>/);
+ assert.match(form,/<h1 id="login-title">Iniciar sesión<\/h1>/);
+ assert.match(form,/<p>Ingresa con la cuenta asignada a tu local\.<\/p>/);
  assert.doesNotMatch(form,/Bienvenido|<Select|href="#"/);
  assert.match(form,/firstAccessibleRoute\(context\)/);
 });
@@ -120,9 +122,12 @@ test("acceso: recuperar conserva texto plano al pasar el cursor y foco visible c
 });
 
 test("acceso: conserva una tarjeta y el orden original; destaca marca y campos sin panel lateral",()=>{
- assert.equal(values(".admin-auth-shell")["max-width"],"400px");
+ assert.equal(values(".admin-auth-shell")["max-width"],"420px");
  assert.equal(values(".admin-auth-card")["grid-template-columns"],undefined);
  assert.ok(values(".admin-auth-brand").background.includes("linear-gradient"));
+ assert.equal(values(".admin-auth-heading h1")["font-size"],"22px");
+ assert.equal(values(".admin-auth-heading p").color,"var(--ink-600)");
+ assert.equal(values(".admin-auth-field:focus-within .admin-auth-input:not([aria-invalid=\"true\"])")["box-shadow"],"var(--ring-focus)");
  assert.equal(values(".admin-auth-field>svg").background,"var(--primary-100)");
  assert.equal(values(".admin-auth-field>svg").width,"26px");
  assert.equal(values(".admin-auth-accent").height,"4px");
@@ -130,6 +135,7 @@ test("acceso: conserva una tarjeta y el orden original; destaca marca y campos s
  assert.equal(source.includes("admin-auth-brand-copy"),false);
  const form=readFileSync(new URL("../src/modules/auth/presentation/login-form.tsx",import.meta.url),"utf8");
  assert.match(form,/<div className="admin-auth-body">\s*<div className="admin-auth-brand">/);
+ assert.match(form,/<form className="admin-auth-form"[\s\S]*?<header className="admin-auth-heading">/);
  assert.doesNotMatch(form,/Gestión de restaurantes|Áreas del sistema|Bienvenido/);
 });
 
