@@ -11,25 +11,13 @@ const source=readFileSync(new URL("../src/modules/auth/presentation/login.css",i
 const ast=postcss.parse(resolveDesignScales(source));
 const values=selector=>Object.fromEntries(ast.nodes.find(node=>node.selector===selector).nodes.filter(node=>node.type==="decl").map(node=>[node.prop,node.value]));
 
-test("acceso: una sola indicación de acceso autorizado y legible",()=>{
- const row=values(".admin-auth-trust"),item=values(".admin-auth-trust li"),icon=values(".admin-auth-trust svg");
- assert.equal(row.display,"flex");assert.equal(row["align-items"],"center");assert.equal(row["justify-content"],"center");
- assert.equal(item.display,"flex");assert.equal(item["align-items"],"center");assert.equal(item["white-space"],undefined);
- assert.equal(icon["flex-shrink"],"0");
- assert.equal(source.includes("text-overflow"),false);assert.equal(source.includes("overflow:hidden"),true,"solo la tarjeta conserva su borde");
+test("acceso: presenta la tarea sin mensajes redundantes ni afirmaciones de seguridad",()=>{
  const form=readFileSync(new URL("../src/modules/auth/presentation/login-form.tsx",import.meta.url),"utf8");
- assert.ok(form.includes("Acceso reservado al personal autorizado"));
- assert.doesNotMatch(form,/Conexión segura|Usuario validado|Bienvenido/);
-});
-
-test("acceso: nota de seguridad legible en móvil sin apilarse",()=>{
- assert.equal(values(".admin-auth-trust li")["font-size"],"12px");
- const mobile=ast.nodes.find(node=>node.type==="atrule"&&node.params==="(max-width:480px)");
- assert.equal(mobile.nodes.find(node=>node.selector===".admin-auth-trust").nodes.find(node=>node.prop==="padding-inline").value,"16px");
- ast.walkRules(rule=>{if(rule.selector===".admin-auth-trust"||rule.selector===".admin-auth-trust li"){
-  assert.equal(rule.nodes.some(node=>node.prop==="flex-direction"&&node.value==="column"),false);
-  assert.equal(rule.nodes.some(node=>node.prop==="flex-wrap"&&node.value==="wrap"),false);
- }});
+ assert.match(form,/<h1 id="login-title">Iniciar sesión<\/h1>/);
+ assert.doesNotMatch(form,/Acceso reservado al personal autorizado|Conexión segura|Usuario validado|Bienvenido|admin-auth-trust/);
+ assert.doesNotMatch(source,/admin-auth-trust/);
+ assert.equal(source.includes("text-overflow"),false);
+ assert.equal(source.includes("overflow:hidden"),true,"la tarjeta conserva sus bordes");
 });
 
 test("acceso: tarjeta móvil compacta, campos neutros y acción con geometría compartida",()=>{
