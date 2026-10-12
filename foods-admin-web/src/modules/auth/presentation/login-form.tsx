@@ -14,9 +14,7 @@ import {firstAccessibleRoute} from "@/shell/navigation";
 import {broadcastSessionChange} from "@/shared/session/session-events";
 
 const trustItems: Array<{ icon: IconName; label: string }> = [
-  { icon: "lock", label: "Conexión segura" },
-  { icon: "store", label: "Acceso por empresa" },
-  { icon: "check", label: "Usuario validado" },
+  { icon: "lock", label: "Acceso reservado al personal autorizado" },
 ];
 
 export function LoginForm() {
@@ -107,8 +105,11 @@ export function LoginForm() {
           <div className="admin-auth-brand">
             <Image src="/assets/images/login.png" alt="fudIA" width={1536} height={1024} sizes="(max-width: 480px) 160px, 180px" priority />
           </div>
-          <h1 className="sr-only" id="login-title">Iniciar sesión</h1>
           <form className="admin-auth-form" onSubmit={submit} aria-busy={loading} noValidate>
+            <header className="admin-auth-heading">
+              <h1 id="login-title">Iniciar sesión</h1>
+              <p>Ingresa con la cuenta asignada a tu local.</p>
+            </header>
             {error && <div className="admin-auth-error" role="alert"><Icon name="alert" size={18}/><span>{error}</span></div>}
             {activeSession ? <section className="admin-auth-session-conflict" role="alert">
               <header><Icon name="users" size={20}/><div><b>Sesión activa</b><span>Ya ingresaste como {activeSession} en este navegador.</span></div></header>
