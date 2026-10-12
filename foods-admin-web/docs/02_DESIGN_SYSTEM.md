@@ -1284,8 +1284,9 @@ El formulario utiliza exclusivamente tokens globales de `variables.css`.
 El fondo mantiene halos suaves índigo y menta; la cabecera conserva el
 degradado blanco/índigo y la franja superior de marca. La acción primaria
 «Ingresar» ocupa todo el ancho del formulario, conserva el tono
-`primary-600` y usa el icono `login` del design system, que representa
-la entrada al sistema. La recuperación de contraseña
+`primary-600` y usa el icono `signIn` del design system: una silueta
+minimalista de usuario con flecha de entrada, exclusiva del acceso y coherente
+con el grosor de trazo de la familia de iconos. La recuperación de contraseña
 permanece como acción secundaria de texto y muestra únicamente el diálogo
 «Próximamente»; no debe insinuar que ya envía solicitudes.
 
