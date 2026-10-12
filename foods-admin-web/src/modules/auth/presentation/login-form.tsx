@@ -5,17 +5,13 @@ import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useQueryClient } from "@tanstack/react-query";
-import { Icon, type IconName } from "@/design-system/icons";
+import { Icon } from "@/design-system/icons";
 import { Button, Dialog, FormField, FullScreenLoader, Input ,ModalHeader} from "@/design-system";
 import { ActiveSessionError, login, logout } from "../infrastructure/auth-api";
 import { loginResolver, type LoginDraft } from "../domain/login-schema";
 import {loadSessionContext} from "@/shared/session/session-api";
 import {firstAccessibleRoute} from "@/shell/navigation";
 import {broadcastSessionChange} from "@/shared/session/session-events";
-
-const trustItems: Array<{ icon: IconName; label: string }> = [
-  { icon: "lock", label: "Acceso reservado al personal autorizado" },
-];
 
 export function LoginForm() {
   const router = useRouter();
@@ -139,7 +135,6 @@ export function LoginForm() {
               </div>
             </>}
           </form>
-          <ul className="admin-auth-trust">{trustItems.map(item => <li key={item.label}><Icon name={item.icon} size={14}/><span>{item.label}</span></li>)}</ul>
         </div>
       </div>
       <footer className="admin-auth-footer">© 2026 fudIA · Todos los derechos reservados</footer>
