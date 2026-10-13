@@ -67,6 +67,79 @@ func TestProductModifierConfigurationLifecycle(t *testing.T) {
 		t.Fatalf("unexpected saved modifier config: %#v", saved)
 	}
 
+	// A second identical save must preserve every group and option identifier.
+	identicalBody, err := json.Marshal(saved)
+	if err != nil {
+		t.Fatal(err)
+	}
+	identicalReq := httptest.NewRequest("PUT", "/v1/admin/products/"+productID+"/modifiers", bytes.NewReader(identicalBody))
+	identicalReq.SetPathValue("id", productID)
+	identicalReq = identicalReq.WithContext(context.WithValue(identicalReq.Context(), scopeKey{}, s))
+	identicalRec := httptest.NewRecorder()
+	api.saveProductModifiers(identicalRec, identicalReq)
+	if identicalRec.Code != 200 {
+		t.Fatalf("save identical modifiers: %d %s", identicalRec.Code, identicalRec.Body.String())
+	}
+	var identical modifierConfigView
+	if err := json.Unmarshal(identicalRec.Body.Bytes(), &identical); err != nil {
+		t.Fatal(err)
+	}
+	if identical.Groups[0].ID != saved.Groups[0].ID ||
+		identical.Groups[0].Options[0].ID != saved.Groups[0].Options[0].ID ||
+		identical.Groups[1].ID != saved.Groups[1].ID ||
+		identical.Groups[1].Options[0].ID != saved.Groups[1].Options[0].ID {
+		t.Fatalf("identical save changed modifier IDs: before=%#v after=%#v", saved, identical)
+	}
+
+	// Rename, reprice, reorder, add, and remove options by carrying their IDs.
+	edited := identical
+	edited.Groups[1].Options = []modifierOptionView{
+		{ID: identical.Groups[1].Options[1].ID, Name: "Tocino", Surcharge: "4.50"},
+		{ID: identical.Groups[1].Options[0].ID, Name: "Queso premium", Surcharge: "3.75"},
+		{Name: "Palta", Surcharge: "2.00"},
+	}
+	editedBody, err := json.Marshal(edited)
+	if err != nil {
+		t.Fatal(err)
+	}
+	editedReq := httptest.NewRequest("PUT", "/v1/admin/products/"+productID+"/modifiers", bytes.NewReader(editedBody))
+	editedReq.SetPathValue("id", productID)
+	editedReq = editedReq.WithContext(context.WithValue(editedReq.Context(), scopeKey{}, s))
+	editedRec := httptest.NewRecorder()
+	api.saveProductModifiers(editedRec, editedReq)
+	if editedRec.Code != 200 {
+		t.Fatalf("save partially edited modifiers: %d %s", editedRec.Code, editedRec.Body.String())
+	}
+	var partiallyEdited modifierConfigView
+	if err := json.Unmarshal(editedRec.Body.Bytes(), &partiallyEdited); err != nil {
+		t.Fatal(err)
+	}
+	if partiallyEdited.Groups[1].ID != identical.Groups[1].ID ||
+		partiallyEdited.Groups[1].Options[0].ID != identical.Groups[1].Options[1].ID ||
+		partiallyEdited.Groups[1].Options[1].ID != identical.Groups[1].Options[0].ID ||
+		partiallyEdited.Groups[1].Options[1].Name != "Queso premium" ||
+		partiallyEdited.Groups[1].Options[1].Surcharge != "3.75" ||
+		partiallyEdited.Groups[1].Options[2].ID == "" ||
+		partiallyEdited.Groups[1].Options[2].ID == identical.Groups[1].Options[0].ID ||
+		len(partiallyEdited.Groups[1].Options) != 3 {
+		t.Fatalf("partial edit did not preserve/add the expected modifier identities: %#v", partiallyEdited)
+	}
+
+	// The retained IDs from the open form remain valid for a new order.
+	orderGroupID := partiallyEdited.Groups[1].ID
+	orderOptionID := partiallyEdited.Groups[1].Options[1].ID
+	orderReq := httptest.NewRequest("POST", "/v1/admin/orders", bytes.NewReader([]byte(`{
+	  "channel":"mostrador",
+	  "items":[{"productId":"`+productID+`","qty":1,"unitPrice":0,"selections":[],
+	    "modifiers":[{"groupId":"`+orderGroupID+`","optionId":"`+orderOptionID+`"}]}]
+	}`)))
+	orderReq = orderReq.WithContext(context.WithValue(orderReq.Context(), scopeKey{}, s))
+	orderRec := httptest.NewRecorder()
+	api.createOrder(orderRec, orderReq)
+	if orderRec.Code != 201 {
+		t.Fatalf("create order using retained modifier IDs: %d %s", orderRec.Code, orderRec.Body.String())
+	}
+
 	getReq := httptest.NewRequest("GET", "/v1/admin/products/"+productID+"/modifiers", nil)
 	getReq.SetPathValue("id", productID)
 	getReq = getReq.WithContext(context.WithValue(getReq.Context(), scopeKey{}, s))
