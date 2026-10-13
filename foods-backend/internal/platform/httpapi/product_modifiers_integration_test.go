@@ -67,6 +67,64 @@ func TestProductModifierConfigurationLifecycle(t *testing.T) {
 		t.Fatalf("unexpected saved modifier config: %#v", saved)
 	}
 
+	// IDs from another organization cannot be attached to this product.
+	otherScope := seedInventoryScope(t, pool)
+	var otherProductID string
+	if err := pool.QueryRow(ctx, `
+		INSERT INTO products(
+		  organization_id,sku,name,description,price,active,product_type,quantity_control
+		) VALUES($1,'MOD-OTHER-ORG','Producto aislado','',10,true,'prepared','none')
+		RETURNING id
+	`, otherScope.OrganizationID).Scan(&otherProductID); err != nil {
+		t.Fatal(err)
+	}
+	otherReq := httptest.NewRequest("PUT", "/v1/admin/products/"+otherProductID+"/modifiers", bytes.NewReader([]byte(`{
+	  "groups":[{"name":"Otro grupo","required":false,"minSelections":0,"maxSelections":1,
+	    "options":[{"name":"Otra opción","surcharge":"0"}]}]
+	}`)))
+	otherReq.SetPathValue("id", otherProductID)
+	otherReq = otherReq.WithContext(context.WithValue(otherReq.Context(), scopeKey{}, otherScope))
+	otherRec := httptest.NewRecorder()
+	api.saveProductModifiers(otherRec, otherReq)
+	if otherRec.Code != 200 {
+		t.Fatalf("save second organization's modifiers: %d %s", otherRec.Code, otherRec.Body.String())
+	}
+	var otherConfig modifierConfigView
+	if err := json.Unmarshal(otherRec.Body.Bytes(), &otherConfig); err != nil {
+		t.Fatal(err)
+	}
+	foreignGroup := saved
+	foreignGroup.Groups = append([]modifierGroupView(nil), saved.Groups...)
+	foreignGroup.Groups[0].ID = otherConfig.Groups[0].ID
+	foreignBody, err := json.Marshal(foreignGroup)
+	if err != nil {
+		t.Fatal(err)
+	}
+	foreignReq := httptest.NewRequest("PUT", "/v1/admin/products/"+productID+"/modifiers", bytes.NewReader(foreignBody))
+	foreignReq.SetPathValue("id", productID)
+	foreignReq = foreignReq.WithContext(context.WithValue(foreignReq.Context(), scopeKey{}, s))
+	foreignRec := httptest.NewRecorder()
+	api.saveProductModifiers(foreignRec, foreignReq)
+	if foreignRec.Code != 400 {
+		t.Fatalf("foreign organization group ID should be rejected: %d %s", foreignRec.Code, foreignRec.Body.String())
+	}
+	foreignOption := saved
+	foreignOption.Groups = append([]modifierGroupView(nil), saved.Groups...)
+	foreignOption.Groups[0].Options = append([]modifierOptionView(nil), saved.Groups[0].Options...)
+	foreignOption.Groups[0].Options[0].ID = otherConfig.Groups[0].Options[0].ID
+	foreignOptionBody, err := json.Marshal(foreignOption)
+	if err != nil {
+		t.Fatal(err)
+	}
+	foreignOptionReq := httptest.NewRequest("PUT", "/v1/admin/products/"+productID+"/modifiers", bytes.NewReader(foreignOptionBody))
+	foreignOptionReq.SetPathValue("id", productID)
+	foreignOptionReq = foreignOptionReq.WithContext(context.WithValue(foreignOptionReq.Context(), scopeKey{}, s))
+	foreignOptionRec := httptest.NewRecorder()
+	api.saveProductModifiers(foreignOptionRec, foreignOptionReq)
+	if foreignOptionRec.Code != 400 {
+		t.Fatalf("foreign organization option ID should be rejected: %d %s", foreignOptionRec.Code, foreignOptionRec.Body.String())
+	}
+
 	// A second identical save must preserve every group and option identifier.
 	identicalBody, err := json.Marshal(saved)
 	if err != nil {
