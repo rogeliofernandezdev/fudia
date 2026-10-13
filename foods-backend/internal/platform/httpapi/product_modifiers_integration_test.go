@@ -183,9 +183,38 @@ func TestProductModifierConfigurationLifecycle(t *testing.T) {
 		t.Fatalf("partial edit did not preserve/add the expected modifier identities: %#v", partiallyEdited)
 	}
 
+	// Remove one option and reorder the remaining ones without changing IDs.
+	partiallyEdited.Groups[1].Options = []modifierOptionView{
+		partiallyEdited.Groups[1].Options[2],
+		partiallyEdited.Groups[1].Options[1],
+	}
+	removalBody, err := json.Marshal(partiallyEdited)
+	if err != nil {
+		t.Fatal(err)
+	}
+	removalReq := httptest.NewRequest("PUT", "/v1/admin/products/"+productID+"/modifiers", bytes.NewReader(removalBody))
+	removalReq.SetPathValue("id", productID)
+	removalReq = removalReq.WithContext(context.WithValue(removalReq.Context(), scopeKey{}, s))
+	removalRec := httptest.NewRecorder()
+	api.saveProductModifiers(removalRec, removalReq)
+	if removalRec.Code != 200 {
+		t.Fatalf("remove and reorder modifier options: %d %s", removalRec.Code, removalRec.Body.String())
+	}
+	var reordered modifierConfigView
+	if err := json.Unmarshal(removalRec.Body.Bytes(), &reordered); err != nil {
+		t.Fatal(err)
+	}
+	if len(reordered.Groups[1].Options) != 2 ||
+		reordered.Groups[1].Options[0].ID != partiallyEdited.Groups[1].Options[0].ID ||
+		reordered.Groups[1].Options[1].ID != partiallyEdited.Groups[1].Options[1].ID ||
+		reordered.Groups[1].Options[0].Name != "Palta" ||
+		reordered.Groups[1].Options[1].Name != "Queso premium" {
+		t.Fatalf("removal/reorder changed retained option identities: %#v", reordered.Groups[1].Options)
+	}
+
 	// The retained IDs from the open form remain valid for a new order.
-	orderGroupID := partiallyEdited.Groups[1].ID
-	orderOptionID := partiallyEdited.Groups[1].Options[1].ID
+	orderGroupID := reordered.Groups[1].ID
+	orderOptionID := reordered.Groups[1].Options[1].ID
 	orderReq := httptest.NewRequest("POST", "/v1/admin/orders", bytes.NewReader([]byte(`{
 	  "channel":"mostrador",
 	  "items":[{"productId":"`+productID+`","qty":1,"unitPrice":0,"selections":[],
