@@ -269,6 +269,22 @@ func TestOrderModifiersAreValidatedPricedAndSnapshotted(t *testing.T) {
 		t.Fatalf("backend must price base + modifier surcharge for every unit, got %s", created.Total)
 	}
 
+	// Updating the live name/price must not rewrite the historical order snapshot.
+	config.Groups[0].Options[0].Name = "Grande actualizado"
+	config.Groups[0].Options[0].Surcharge = "7.00"
+	historyBody, err := json.Marshal(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	historyReq := httptest.NewRequest("PUT", "/v1/admin/products/"+productID+"/modifiers", bytes.NewReader(historyBody))
+	historyReq.SetPathValue("id", productID)
+	historyReq = historyReq.WithContext(context.WithValue(historyReq.Context(), scopeKey{}, s))
+	historyRec := httptest.NewRecorder()
+	api.saveProductModifiers(historyRec, historyReq)
+	if historyRec.Code != 200 {
+		t.Fatalf("update live modifier after order: %d %s", historyRec.Code, historyRec.Body.String())
+	}
+
 	getReq := httptest.NewRequest("GET", "/v1/admin/orders/"+created.ID, nil)
 	getReq.SetPathValue("id", created.ID)
 	getReq = getReq.WithContext(context.WithValue(getReq.Context(), scopeKey{}, s))
