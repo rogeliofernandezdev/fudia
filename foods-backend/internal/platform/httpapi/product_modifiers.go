@@ -12,11 +12,13 @@ import (
 )
 
 type modifierOptionInput struct {
+	ID        string `json:"id"`
 	Name      string `json:"name"`
 	Surcharge string `json:"surcharge"`
 }
 
 type modifierGroupInput struct {
+	ID            string                `json:"id"`
 	Name          string                `json:"name"`
 	Required      bool                  `json:"required"`
 	MinSelections int                   `json:"minSelections"`
@@ -237,40 +239,143 @@ func (a *API) saveProductModifiers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, err = tx.Exec(r.Context(), `
-		DELETE FROM product_modifier_groups
-		WHERE organization_id=$1 AND product_id=$2
-	`, s.OrganizationID, productID); err != nil {
-		fail(w, 503, "modifiers_unavailable", "No pudimos reemplazar los modificadores.")
+	// Serialize configuration writes for this product. Under READ COMMITTED, a
+	// waiter sees the previous save before it computes the differential update.
+	var lockedProductID string
+	if err = tx.QueryRow(r.Context(), `
+		SELECT id::text FROM products
+		WHERE id=$1 AND organization_id=$2
+		FOR UPDATE
+	`, productID, s.OrganizationID).Scan(&lockedProductID); err != nil {
+		fail(w, 503, "modifiers_unavailable", "No pudimos bloquear el producto para actualizar sus modificadores.")
 		return
 	}
 
+	current, err := loadProductModifiers(r.Context(), tx, s.OrganizationID, productID)
+	if err != nil {
+		fail(w, 503, "modifiers_unavailable", "No pudimos cargar la configuración actual.")
+		return
+	}
+	currentGroups := make(map[string]modifierGroupView, len(current.Groups))
+	groupsByName := make(map[string]string, len(current.Groups))
+	for _, group := range current.Groups {
+		currentGroups[group.ID] = group
+		groupsByName[strings.ToLower(strings.TrimSpace(group.Name))] = group.ID
+	}
+
+	groupIDs := make([]string, len(in.Groups))
+	optionIDs := make([][]string, len(in.Groups))
+	keptGroups := map[string]bool{}
 	for groupIndex, group := range in.Groups {
-		var groupID string
-		err = tx.QueryRow(r.Context(), `
-			INSERT INTO product_modifier_groups(
-			  organization_id,product_id,name,required,min_selections,max_selections,sort_order
-			)
-			VALUES($1,$2,$3,$4,$5,$6,$7)
-			RETURNING id
-		`, s.OrganizationID, productID, strings.TrimSpace(group.Name),
-			group.Required, group.MinSelections, group.MaxSelections, groupIndex).Scan(&groupID)
+		groupID := strings.TrimSpace(group.ID)
+		if groupID == "" {
+			// Backward-compatible matching for clients that do not yet echo IDs.
+			groupID = groupsByName[strings.ToLower(strings.TrimSpace(group.Name))]
+		}
+		if groupID != "" {
+			if _, exists := currentGroups[groupID]; !exists || keptGroups[groupID] {
+				fail(w, 400, "invalid_modifiers", "Un grupo no pertenece a este producto o está repetido.")
+				return
+			}
+			keptGroups[groupID] = true
+		}
+		groupIDs[groupIndex] = groupID
+		optionIDs[groupIndex] = make([]string, len(group.Options))
+	}
+
+	// Remove groups omitted from the submitted configuration before renames so
+	// their unique names cannot block a retained group's attribute update.
+	for groupID := range currentGroups {
+		if keptGroups[groupID] {
+			continue
+		}
+		if _, err = tx.Exec(r.Context(), `
+			DELETE FROM product_modifier_groups
+			WHERE id=$1 AND organization_id=$2 AND product_id=$3
+		`, groupID, s.OrganizationID, productID); err != nil {
+			fail(w, 503, "modifiers_unavailable", "No pudimos eliminar los grupos retirados.")
+			return
+		}
+	}
+
+	for groupIndex, group := range in.Groups {
+		groupID := groupIDs[groupIndex]
+		if groupID == "" {
+			err = tx.QueryRow(r.Context(), `
+				INSERT INTO product_modifier_groups(
+				  organization_id,product_id,name,required,min_selections,max_selections,sort_order
+				) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id::text
+			`, s.OrganizationID, productID, strings.TrimSpace(group.Name),
+				group.Required, group.MinSelections, group.MaxSelections, groupIndex).Scan(&groupID)
+		} else {
+			_, err = tx.Exec(r.Context(), `
+				UPDATE product_modifier_groups
+				SET name=$3,required=$4,min_selections=$5,max_selections=$6,sort_order=$7,updated_at=now()
+				WHERE id=$1 AND organization_id=$2 AND product_id=$8
+			`, groupID, s.OrganizationID, strings.TrimSpace(group.Name),
+				group.Required, group.MinSelections, group.MaxSelections, groupIndex, productID)
+		}
 		if err != nil {
 			fail(w, 409, "modifier_group_conflict", "No pudimos guardar un grupo de modificadores.")
 			return
+		}
+
+		currentGroup, existed := currentGroups[groupID]
+		optionsByID := map[string]modifierOptionView{}
+		optionsByName := map[string]string{}
+		if existed {
+			for _, option := range currentGroup.Options {
+				optionsByID[option.ID] = option
+				optionsByName[strings.ToLower(strings.TrimSpace(option.Name))] = option.ID
+			}
+		}
+		keptOptions := map[string]bool{}
+		for optionIndex, option := range group.Options {
+			optionID := strings.TrimSpace(option.ID)
+			if optionID == "" {
+				optionID = optionsByName[strings.ToLower(strings.TrimSpace(option.Name))]
+			}
+			if optionID != "" {
+				if _, exists := optionsByID[optionID]; !exists || keptOptions[optionID] {
+					fail(w, 400, "invalid_modifiers", "Una opción no pertenece al grupo o está repetida.")
+					return
+				}
+				keptOptions[optionID] = true
+			}
+			optionIDs[groupIndex][optionIndex] = optionID
+		}
+		for optionID := range optionsByID {
+			if keptOptions[optionID] {
+				continue
+			}
+			if _, err = tx.Exec(r.Context(), `
+				DELETE FROM product_modifier_options
+				WHERE id=$1 AND organization_id=$2 AND group_id=$3
+			`, optionID, s.OrganizationID, groupID); err != nil {
+				fail(w, 503, "modifiers_unavailable", "No pudimos eliminar las opciones retiradas.")
+				return
+			}
 		}
 		for optionIndex, option := range group.Options {
 			surcharge := strings.TrimSpace(option.Surcharge)
 			if surcharge == "" {
 				surcharge = "0"
 			}
-			if _, err = tx.Exec(r.Context(), `
-				INSERT INTO product_modifier_options(
-				  organization_id,group_id,name,surcharge,sort_order
-				)
-				VALUES($1,$2,$3,$4,$5)
-			`, s.OrganizationID, groupID, strings.TrimSpace(option.Name),
-				surcharge, optionIndex); err != nil {
+			optionID := optionIDs[groupIndex][optionIndex]
+			if optionID == "" {
+				_, err = tx.Exec(r.Context(), `
+					INSERT INTO product_modifier_options(
+					  organization_id,group_id,name,surcharge,sort_order
+					) VALUES($1,$2,$3,$4,$5)
+				`, s.OrganizationID, groupID, strings.TrimSpace(option.Name), surcharge, optionIndex)
+			} else {
+				_, err = tx.Exec(r.Context(), `
+					UPDATE product_modifier_options
+					SET name=$4,surcharge=$5,sort_order=$6,updated_at=now()
+					WHERE id=$1 AND organization_id=$2 AND group_id=$3
+				`, optionID, s.OrganizationID, groupID, strings.TrimSpace(option.Name), surcharge, optionIndex)
+			}
+			if err != nil {
 				fail(w, 409, "modifier_option_conflict", "No pudimos guardar una opción de modificador.")
 				return
 			}
