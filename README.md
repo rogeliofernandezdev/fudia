@@ -8,6 +8,7 @@ celular, tablet y PC.
 | Proyecto | Responsabilidad |
 | --- | --- |
 | `foods-backend` | API, dominio, persistencia, integraciones y procesos asíncronos |
+| `fudia-image-processor` | Procesamiento asíncrono e independiente de imágenes subidas directamente a Storage |
 | `foods-admin-web` | Aplicación web única para POS, mesas, pedidos, cocina, caja, administración, catálogo, inventario, compras, reportes y configuración |
 | `fudia-concierge` | Asistente conversacional multicanal; inicia con pedidos por WhatsApp desde QR |
 | `foods-infrastructure` | Infraestructura como código, despliegue y observabilidad |
@@ -16,7 +17,7 @@ Cada proyecto contiene su propio `AGENTS.md`, `README.md` y carpeta `docs/`.
 Las reglas específicas deben leerse completas antes de modificar ese proyecto;
 los documentos de la raíz conservan únicamente decisiones transversales.
 
-La solución se organiza en cuatro proyectos desplegables. Fudia Concierge orquesta la
+La solución se organiza en cinco proyectos. Fudia Concierge orquesta la
 conversación con el comensal y consume foods-backend como fuente de verdad. SUNAT,
 impresión y pagos continúan encapsulados como integraciones del backend. No se crea una aplicación móvil nativa en la fase
 inicial: `foods-admin-web` concentra la experiencia web operativa y administrativa y debe ser adaptable desde 390 px.

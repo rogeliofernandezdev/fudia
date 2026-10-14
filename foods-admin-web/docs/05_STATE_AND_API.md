@@ -1,5 +1,32 @@
 # Estado e integración
 
+## Fotografías de producto en GCP
+
+Preview blob inmediato, validación JPEG/PNG/WebP, 5 MiB y 4000×4000 px antes de
+autorizar. JSON por BFF; bytes directamente a Storage con política POST firmada.
+Confirmar upload y guardar producto con imageId; no esperar conversión.
+imageKey/imageStatus/imageExpiresAt/URLs son datos de lectura, nunca se reenvían
+como referencia persistente. Guardado fallido reutiliza la subida confirmada.
+
+PROCESSING usa preview local por empresa/local mientras exista, u original
+temporal al reabrir. Detalle consulta cada 2 s mientras PROCESSING; READY usa
+medium WebP hasta 600 px. Listados/comanda usan thumbnail hasta 200 px; no se
+genera ni descarga versión 1200 px. FAILED conserva fallback y ofrece otra foto.
+Estados/error y reintento usan componentes existentes; sin recolorear la paleta.
+URLs se renuevan al recuperar foco y antes de expirar; el navegador no hace una
+petición para firmar cada foto. No almacenar URLs firmadas ni previews en localStorage.
+La sesión HttpOnly/token opaco y el control de permisos permanecen intactos.
+Contrato y recursos en ../../foods-infrastructure/docs/10_PRODUCT_IMAGES.md.
+
+## Fotografías en despliegues sin proxy externo
+
+Las URLs persistidas `/uploads/products/{uuid}.{png|jpg|jpeg|webp}` se conservan.
+Un Route Handler GET/HEAD usa `FOODS_API_URL` de runtime para transmitir bytes del
+backend; no devuelve redirects, HTML ni cookies. Rechaza nombres fuera del patrón,
+limita el timeout y no fija una foto mutable en caché. Cloud Run monta Cloud
+Storage en el backend; el frontend no obtiene credenciales de bucket ni SQL.
+La ruta es infraestructura BFF y no modifica el contrato de subida ni el catálogo.
+
 ## Ticket de pago de 80 mm
 
 POS abre la vista previa únicamente en el callback `onClose` del aviso de éxito,

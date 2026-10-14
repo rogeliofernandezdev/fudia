@@ -46,6 +46,10 @@ func (h *Catalog) ListAllergens(w http.ResponseWriter, r *http.Request) {
 	respond(w, 200, map[string]any{"items": out}, err)
 }
 func (h *Catalog) UploadProductImage(w http.ResponseWriter, r *http.Request) {
+	if h.service.DirectImagesEnabled() {
+		shared.Fail(w, 400, "direct_upload_required", "La imagen debe subirse directamente a Storage.")
+		return
+	}
 	r.Body = http.MaxBytesReader(w, r.Body, 5<<20)
 	if err := r.ParseMultipartForm(5 << 20); err != nil {
 		shared.Fail(w, 400, "image_too_large", "La imagen no puede pesar más de 5 MB.")
@@ -59,6 +63,38 @@ func (h *Catalog) UploadProductImage(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 	out, err := h.service.UploadImage(r.Context(), menuScope(r), r.PathValue("id"), header.Header.Get("Content-Type"), file)
+	respond(w, 200, out, err)
+}
+func (h *Catalog) AuthorizeProductImage(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 2048)
+	var in domain.ImageUploadInput
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&in); err != nil {
+		shared.Fail(w, 400, "invalid_image", "Los datos de la imagen no son válidos.")
+		return
+	}
+	out, err := h.service.AuthorizeImage(r.Context(), menuScope(r), in)
+	respond(w, 201, out, err)
+}
+func (h *Catalog) CompleteProductImage(w http.ResponseWriter, r *http.Request) {
+	out, err := h.service.CompleteImage(r.Context(), menuScope(r), r.PathValue("imageId"))
+	respond(w, 200, out, err)
+}
+func (h *Catalog) GetProductImage(w http.ResponseWriter, r *http.Request) {
+	out, err := h.service.GetImage(r.Context(), menuScope(r), r.PathValue("imageId"))
+	respond(w, 200, out, err)
+}
+func (h *Catalog) AttachProductImage(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 1024)
+	var in struct {
+		ImageID string `json:"imageId"`
+	}
+	if json.NewDecoder(r.Body).Decode(&in) != nil || in.ImageID == "" {
+		shared.Fail(w, 400, "invalid_image", "Selecciona una imagen subida.")
+		return
+	}
+	out, err := h.service.AttachImage(r.Context(), menuScope(r), r.PathValue("id"), in.ImageID)
 	respond(w, 200, out, err)
 }
 func (h *Catalog) CreateCategory(w http.ResponseWriter, r *http.Request) {

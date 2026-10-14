@@ -45,6 +45,10 @@ func (a *API) updateProductStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 type MenuCatalogHandler interface {
+	AuthorizeProductImage(http.ResponseWriter, *http.Request)
+	CompleteProductImage(http.ResponseWriter, *http.Request)
+	GetProductImage(http.ResponseWriter, *http.Request)
+	AttachProductImage(http.ResponseWriter, *http.Request)
 	ListRecipes(http.ResponseWriter, *http.Request)
 	GetRecipe(http.ResponseWriter, *http.Request)
 	SaveRecipe(http.ResponseWriter, *http.Request)

@@ -282,7 +282,7 @@ test("compras concentra orden recepcion y altas de abastecimiento",()=>{
   assert.ok(api.includes("purchase-orders/"),"Recepción permanece vinculada a la orden existente");
   assert.ok(api.includes("purchaseOrderItemId"),"La recepción identifica cada línea de la orden");
   assert.ok(api.includes("uploadProductImage"),"Compras reutiliza la carga compartida de imagen");
-  assert.ok(productApi.includes("uploadProductImage"),"Productos usa la misma carga compartida de imagen");
+  assert.ok(productApi.includes("prepareProductImage"),"Productos usa la misma carga directa compartida antes de guardar");
   assert.ok(productImageApi.includes("/api/admin/products/"),"La carga de imagen mantiene un solo endpoint compartido");
   assert.equal(api.includes('"inventory/entries"'),false,"Compras no usa la antigua entrada manual de Inventario");
 

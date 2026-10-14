@@ -17,6 +17,7 @@ type CategoryInput struct {
 	ProductScope string `json:"productScope"`
 }
 type Product struct {
+	ImageView
 	ID                 string   `json:"id"`
 	SKU                string   `json:"sku"`
 	Name               string   `json:"name"`
@@ -39,6 +40,8 @@ type Product struct {
 	AvailableUntilTime *string  `json:"availableUntilTime"`
 }
 type ProductInput struct {
+	ImageID                *string  `json:"imageId,omitempty"`
+	RemoveImage            bool     `json:"removeImage,omitempty"`
 	InitialPortionQuantity *int     `json:"initialPortionQuantity,omitempty"`
 	SKU                    string   `json:"sku"`
 	Name                   string   `json:"name"`

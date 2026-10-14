@@ -58,3 +58,17 @@ Los módulos no acceden a tablas de otros módulos mediante repositorios ajenos.
 La coordinación síncrona ocurre mediante servicios de aplicación explícitos;
 las integraciones externas se encapsulan detrás de puertos. Fudia Concierge no
 accede directamente a PostgreSQL de Fudia ni replica el dominio de pedidos.
+
+## FudIA Image Processor
+
+Capacidad técnica independiente, no un módulo comercial: consume eventos de
+fotografías, valida contenido, publica WebP 200/600 y registra PROCESSING/READY/
+FAILED mediante el contrato de imágenes. No recibe uploads del navegador ni
+autoriza usuarios. No modifica precio, inventario, pagos o identidad.
+La autorización y el vínculo al producto siguen en Menu del backend.
+
+El procesador tiene una excepción SQL explícita y versionada: `product_images`
+y columnas de referencia/estado de `products`, con usuario exclusivo y grants
+por columna. No generalizar esa excepción a otros módulos o servicios.
+
+Reglas: [arquitectura del procesador](../fudia-image-processor/docs/01_ARCHITECTURE.md).

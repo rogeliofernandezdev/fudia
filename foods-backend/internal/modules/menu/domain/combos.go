@@ -67,6 +67,7 @@ type ComboSummary struct {
 	OptionCount int    `json:"optionCount"`
 }
 type OrderComboSummary struct {
+	ImageView
 	ID          string  `json:"id"`
 	Name        string  `json:"name"`
 	Description string  `json:"description"`
@@ -115,6 +116,7 @@ type Combo struct {
 	Groups         []ComboGroup `json:"groups"`
 }
 type OrderCombo struct {
+	ImageView
 	ID          string            `json:"id"`
 	Name        string            `json:"name"`
 	Description string            `json:"description"`

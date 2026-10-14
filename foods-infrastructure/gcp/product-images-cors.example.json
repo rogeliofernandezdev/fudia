@@ -1,0 +1,8 @@
+[
+  {
+    "origin": ["https://TU_FRONTEND.run.app", "https://TU_DOMINIO"],
+    "method": ["POST", "GET", "HEAD"],
+    "responseHeader": ["Content-Type", "ETag", "x-goog-generation"],
+    "maxAgeSeconds": 3600
+  }
+]

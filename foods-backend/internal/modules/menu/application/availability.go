@@ -34,6 +34,20 @@ func (a *Catalog) Availability(ctx context.Context, s scope, f CatalogFilter, ex
 		}
 		out.Items = append(out.Items, item)
 	}
+	ids := make([]string, 0, len(out.Items))
+	for _, p := range out.Items {
+		ids = append(ids, p.ProductID)
+	}
+	views, err := a.productImageViews(ctx, s, ids, "thumbnail", false)
+	if err != nil {
+		return out, err
+	}
+	for i := range out.Items {
+		if v, ok := views[out.Items[i].ProductID]; ok {
+			out.Items[i].ImageView = v.ImageView
+			out.Items[i].ImageURL = v.ImageURL
+		}
+	}
 	return out, nil
 }
 func (a *Catalog) UpdateAvailability(ctx context.Context, s scope, productID string, in domain.AvailabilityInput) error {

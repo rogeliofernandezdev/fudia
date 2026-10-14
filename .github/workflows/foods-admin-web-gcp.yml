@@ -1,0 +1,91 @@
+name: foods-admin-web-gcp
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Entorno GCP (desplegar backend primero)
+        type: choice
+        required: true
+        default: gcp-dev
+        options: [gcp-dev, gcp-staging, gcp-production]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: foods-admin-web/package-lock.json
+      - run: node --test foods-infrastructure/tests/*.test.mjs
+      - run: npm ci
+        working-directory: foods-admin-web
+      - run: npm run lint
+        working-directory: foods-admin-web
+      - run: npm run typecheck
+        working-directory: foods-admin-web
+      - run: npm test
+        working-directory: foods-admin-web
+      - run: npm run build
+        working-directory: foods-admin-web
+        env:
+          FOODS_API_URL: http://localhost:8080
+
+  deploy:
+    needs: verify
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+      id-token: write
+    concurrency:
+      group: foods-${{ inputs.environment }}-frontend-deploy
+      cancel-in-progress: false
+    env:
+      GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+      GCP_REGION: ${{ vars.GCP_REGION }}
+      GCP_ARTIFACT_REPOSITORY: ${{ vars.GCP_ARTIFACT_REPOSITORY }}
+      GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+      GCP_DEPLOY_SERVICE_ACCOUNT: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+      GCP_BACKEND_SERVICE: ${{ vars.GCP_BACKEND_SERVICE }}
+      GCP_FRONTEND_SERVICE: ${{ vars.GCP_FRONTEND_SERVICE }}
+      GCP_FRONTEND_SERVICE_ACCOUNT: ${{ vars.GCP_FRONTEND_SERVICE_ACCOUNT }}
+      GCP_FRONTEND_SECRETS: ${{ vars.GCP_FRONTEND_SECRETS }}
+      GCP_FRONTEND_MAX_INSTANCES: ${{ vars.GCP_FRONTEND_MAX_INSTANCES }}
+      GCP_FRONTEND_CONCURRENCY: ${{ vars.GCP_FRONTEND_CONCURRENCY }}
+      FOODS_API_URL: ${{ vars.FOODS_API_URL }}
+      FUDIA_CONCIERGE_URL: ${{ vars.FUDIA_CONCIERGE_URL }}
+      NEXT_PUBLIC_MAP_PROVIDER: ${{ vars.NEXT_PUBLIC_MAP_PROVIDER }}
+      NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN: ${{ secrets.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+      - name: Validate deployment configuration
+        run: node foods-infrastructure/gcp/deploy.mjs frontend validate
+      - name: Build image before requesting short-lived credentials
+        run: node foods-infrastructure/gcp/deploy.mjs frontend build
+      - id: auth
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_lifetime: 3600s
+          create_credentials_file: false
+      - uses: google-github-actions/setup-gcloud@v3
+        env:
+          CLOUDSDK_AUTH_ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
+      - name: Publish, deploy candidate and promote
+        env:
+          CLOUDSDK_AUTH_ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
+          GCP_IMAGE_BUILT: "true"
+        run: node foods-infrastructure/gcp/deploy.mjs frontend

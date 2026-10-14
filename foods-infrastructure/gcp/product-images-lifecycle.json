@@ -1,0 +1,8 @@
+{
+  "rule": [
+    {
+      "action": {"type": "Delete"},
+      "condition": {"daysSinceCustomTime": 2, "matchesPrefix": ["restaurants/"], "isLive": true}
+    }
+  ]
+}

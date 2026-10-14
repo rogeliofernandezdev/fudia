@@ -1,6 +1,7 @@
 package domain
 
 type PublicMenuItem struct {
+	ImageView
 	ProductID    string  `json:"productId"`
 	Name         string  `json:"name"`
 	Description  string  `json:"description"`
@@ -26,6 +27,7 @@ type PublicComboGroup struct {
 	Options       []PublicComboOption `json:"options"`
 }
 type PublicComboDetail struct {
+	ImageView
 	ID          string             `json:"id"`
 	Name        string             `json:"name"`
 	Description string             `json:"description"`

@@ -124,7 +124,9 @@ test("acceso: conserva una tarjeta y el orden original; destaca marca y campos s
  assert.equal(values(".admin-auth-heading h1")["font-weight"],"700");
  assert.equal(values(".admin-auth-heading")["text-align"],"center");
  assert.equal(values(".admin-auth-help").color,"var(--ink-600)");
- assert.equal(values(".admin-auth-help")["font-weight"],"var(--weight-medium)");
+ assert.equal(values(".admin-auth-help")["font-weight"],"500");
+ const help=postcss.parse(source).nodes.find(node=>node.selector===".admin-auth-help");
+ assert.equal(help.nodes.find(node=>node.prop==="font-weight").value,"var(--weight-medium)","El peso sigue usando el token compartido; values ya resuelve su valor");
  assert.equal(values(".admin-auth-footer")["min-height"],undefined);
  assert.equal(values(".admin-auth-form").gap,"12px");
  assert.equal(values(".admin-auth-form").padding,"20px 24px");

@@ -50,11 +50,14 @@ type Catalog struct {
 	work   unitofwork.Manager
 	audit  audit.Repository
 	images ImageStore
+	direct *ProductImages
 }
 
 func NewCatalog(repo CatalogRepository, work unitofwork.Manager, audit audit.Repository, images ImageStore) *Catalog {
-	return &Catalog{repo, work, audit, images}
+	return &Catalog{repo: repo, work: work, audit: audit, images: images}
 }
+func (a *Catalog) WithProductImages(images *ProductImages) *Catalog { a.direct = images; return a }
+func (a *Catalog) DirectImagesEnabled() bool                        { return a.direct != nil }
 func menuFailure(kind apperror.Kind, code, message string) error {
 	return apperror.New(kind, code, message)
 }
@@ -226,11 +229,17 @@ func (a *Catalog) Product(ctx context.Context, s scope, id string) (domain.Produ
 	if err != nil {
 		return result, menuFailure(apperror.Unavailable, "product_unavailable", "No pudimos cargar el producto.")
 	}
-	return p, nil
+	return a.hydrateProduct(ctx, s, p, true)
 
 }
 func (a *Catalog) CreateProduct(ctx context.Context, s scope, in domain.ProductInput) (domain.Product, error) {
 	var result domain.Product
+	if in.ImageURL != nil && strings.Contains(strings.ToLower(*in.ImageURL), "x-goog-signature=") {
+		return result, menuFailure(apperror.Invalid, "invalid_image_reference", "Guarda el identificador de imagen, no una URL temporal.")
+	}
+	if in.ImageID != nil || in.RemoveImage {
+		in.ImageURL = nil
+	}
 	in, invalid := normalizeProduct(in)
 	if invalid == "" {
 		invalid = validateInitialPortions(in)
@@ -278,14 +287,23 @@ func (a *Catalog) CreateProduct(ctx context.Context, s scope, in domain.ProductI
 	if err != nil {
 		return result, menuFailure(apperror.Unavailable, "product_unavailable", "No pudimos confirmar el registro del producto.")
 	}
+	if err = a.attachProductImage(tx.Context(), s, p.ID, in); err != nil {
+		return result, err
+	}
 	if err = tx.Commit(ctx); err != nil {
 		return result, menuFailure(apperror.Unavailable, "product_unavailable", "No pudimos confirmar el registro del producto.")
 	}
-	return p, nil
+	return a.hydratedWrite(ctx, s, p)
 
 }
 func (a *Catalog) UpdateProduct(ctx context.Context, s scope, id string, in domain.ProductInput) (domain.Product, error) {
 	var result domain.Product
+	if in.ImageURL != nil && strings.Contains(strings.ToLower(*in.ImageURL), "x-goog-signature=") {
+		return result, menuFailure(apperror.Invalid, "invalid_image_reference", "Guarda el identificador de imagen, no una URL temporal.")
+	}
+	if in.ImageID != nil || in.RemoveImage {
+		in.ImageURL = nil
+	}
 	destinationProvided := in.ServiceDestination != ""
 	if in.InitialPortionQuantity != nil {
 		return result, menuFailure(apperror.Invalid, "invalid_product", "Actualiza la cantidad de un producto existente desde Disponibilidad.")
@@ -366,11 +384,14 @@ func (a *Catalog) UpdateProduct(ctx context.Context, s scope, id string, in doma
 	if err != nil {
 		return result, menuFailure(apperror.Conflict, "product_conflict", "No se pudo actualizar el producto.")
 	}
+	if err = a.attachProductImage(tx.Context(), s, p.ID, in); err != nil {
+		return result, err
+	}
 	if err = tx.Commit(ctx); err != nil {
 		return result, menuFailure(apperror.Unavailable, "product_unavailable", "No pudimos actualizar el producto.")
 	}
 	_ = a.audit.Record(ctx, s, "product.updated", "product", p.ID)
-	return p, nil
+	return a.hydratedWrite(ctx, s, p)
 
 }
 func (a *Catalog) SetProductActive(ctx context.Context, s scope, id string, active bool) error {
@@ -415,6 +436,20 @@ func (a *Catalog) Products(ctx context.Context, s scope, f CatalogFilter) (Produ
 		return out, menuFailure(apperror.Unavailable, "products_unavailable", "No pudimos cargar los productos.")
 	}
 	out.ServiceDestinationOptions = domain.ServiceDestinations
+	ids := make([]string, 0, len(out.Items))
+	for _, p := range out.Items {
+		ids = append(ids, p.ID)
+	}
+	views, err := a.productImageViews(ctx, s, ids, "thumbnail", false)
+	if err != nil {
+		return out, err
+	}
+	for i := range out.Items {
+		if v, ok := views[out.Items[i].ID]; ok {
+			out.Items[i].ImageView = v.ImageView
+			out.Items[i].ImageURL = v.ImageURL
+		}
+	}
 	return out, nil
 }
 func (a *Catalog) nextSKU(ctx context.Context, s scope) (string, error) {
@@ -429,6 +464,13 @@ func (a *Catalog) Allergens(ctx context.Context, query string) ([]string, error)
 	return out, nil
 }
 func (a *Catalog) UploadImage(ctx context.Context, s scope, id, contentType string, content io.Reader) (map[string]string, error) {
+	if a.direct != nil {
+		return nil, menuFailure(apperror.Invalid, "direct_upload_required", "Sube la imagen directamente a Storage con una autorización temporal.")
+	}
+	exists, err := a.repo.ProductExists(ctx, s, id)
+	if err != nil || !exists {
+		return nil, menuFailure(apperror.NotFound, "product_not_found", "El producto no existe.")
+	}
 	ext := ""
 	switch contentType {
 	case "image/png":

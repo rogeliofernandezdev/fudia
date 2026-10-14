@@ -27,6 +27,7 @@ function mount({save=async()=>{},draft={...validDraft},busy=false}={}){
    return {...formControl,watch:()=>draft,formState:{errors:{}}};
   }};
   if(name==="../domain/product-schema")return schema;
+  if(name==="./product-image-field")return {ProductImageField:"ProductImageField"};
   if(name.endsWith(".css"))return {};
   if(name==="@/design-system")return {FormField:"FormField",Input:"input",Select:"select",ModalHeader:"ModalHeader",ModalForm:"form",ModalBody:"ModalBody",ModalFooter:"ModalFooter"};
   if(name==="@/design-system/dialog")return {Dialog:"Dialog"};
@@ -153,6 +154,7 @@ test("el API guarda las porciones en un único POST, nunca con un PATCH adiciona
  const {saveProduct}=compile("modules/menu/products/infrastructure/products-api.ts",name=>{
   if(name==="@/shared/api/client")return {apiFetch:async(path,init)=>{calls.push({path,init});return {id:"created"}}};
   if(name==="@/shared/api/product-image")return {};
+  if(name==="@/shared/api/image-upload")return {};
   return require(name);
  });
  await saveProduct({...validDraft,quantityControl:"portions",initialPortionQuantity:"15"},null);

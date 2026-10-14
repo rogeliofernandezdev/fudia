@@ -3,8 +3,14 @@
 **Decisión:** mantener ahora el backend Go como monolito modular hexagonal. Un módulo
 no requiere Docker propio. Un servicio se extrae solo cuando existen motivos
 operativos medibles (carga, disponibilidad, seguridad o autonomía de equipo).
-Los proyectos foods-backend, foods-admin-web y fudia-concierge sí mantienen
+Los proyectos foods-backend, foods-admin-web, fudia-concierge y fudia-image-processor mantienen
 Dockerfiles y workflows propios.
+
+El procesador de imágenes es una separación técnica especializada, no una
+extracción completa de Menu. Conserva un contrato SQL compartido y acotado con
+usuario/grants exclusivos. Esa excepción no satisface independencia total de
+datos ni habilita acceso a tablas ajenas para otros servicios. Sus límites están
+en [su arquitectura](../fudia-image-processor/docs/01_ARCHITECTURE.md).
 
 ## Condiciones para extraer un módulo a Cloud Run
 
@@ -24,7 +30,9 @@ Dockerfiles y workflows propios.
    puertos de infraestructura (HTTP/gRPC/eventos, repositorio, identidad) en
    la raíz de composición del nuevo servicio. Versionar OpenAPI/contratos.
 5. **Cloud Run.** Los contenedores deben ser stateless. Antes del escalado,
-   migrar imágenes de productos desde `./uploads/products` a Cloud Storage;
+   trasladar la carga de nuevas imágenes a Cloud Storage. Para el corte GCP
+   acordado, las fotos empiezan desde cero: no se migran los archivos históricos
+   de `./uploads/products`, pero sí se conservan los datos de PostgreSQL;
    migraciones PostgreSQL en un proceso o Job independiente, no por réplica.
    Configurar instancias máximas, concurrencia y pool Cloud SQL conjuntamente:
    conexiones potenciales = instancias * DATABASE_MAX_CONNS. Exigir readiness

@@ -1,6 +1,7 @@
 package domain
 
 type AvailabilityItem struct {
+	ImageView
 	ProductID       string   `json:"productId"`
 	Name            string   `json:"name"`
 	Price           string   `json:"price"`

@@ -4,6 +4,10 @@ API oficial en Go. Antes de implementar, leer AGENTS.md y todos los documentos d
 
 Verificación: go test ./..., go vet ./... y go build ./cmd/api.
 
+Imágenes GCP: carga directa firmada, sin bytes en el API; el proyecto independiente
+`../fudia-image-processor` genera WebP de 200/600 px. Contrato y configuración en
+[docs/11_PRODUCT_IMAGES.md](docs/11_PRODUCT_IMAGES.md).
+
 ## Base de datos local
 
 El proceso exige `DATABASE_URL` con `sslmode=require`. Copiar `.env.example` a un

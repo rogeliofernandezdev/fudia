@@ -42,7 +42,13 @@ func main() {
 		os.Exit(1)
 	}
 	defer db.Close()
-	mux := newAPI(db).Routes()
+	images, closeImages, err := configureProductImages(ctx, db)
+	if err != nil {
+		logger.Error("image_configuration_unavailable", "error", err)
+		os.Exit(1)
+	}
+	defer closeImages()
+	mux := newAPI(db, images).Routes()
 	mux.HandleFunc("GET /health", health)
 	server := newServer(requestLogger(logger, requestDeadline(requestTimeout, mux)))
 	logger.Info("api_started", "address", server.Addr, "version", version)

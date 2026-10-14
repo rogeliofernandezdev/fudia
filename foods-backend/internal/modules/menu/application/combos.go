@@ -105,6 +105,20 @@ func (a *Catalog) OrderCombos(ctx context.Context, s scope, f CatalogFilter) (Or
 	if err != nil {
 		return out, menuFailure(apperror.Unavailable, "combos_unavailable", "No pudimos cargar los menús y combos.")
 	}
+	ids := make([]string, 0, len(out.Items))
+	for _, p := range out.Items {
+		ids = append(ids, p.ID)
+	}
+	views, err := a.productImageViews(ctx, s, ids, "thumbnail", false)
+	if err != nil {
+		return out, err
+	}
+	for i := range out.Items {
+		if v, ok := views[out.Items[i].ID]; ok {
+			out.Items[i].ImageView = v.ImageView
+			out.Items[i].ImageURL = v.ImageURL
+		}
+	}
 	return out, nil
 }
 func (a *Catalog) Combo(ctx context.Context, s scope, id string) (domain.Combo, error) {
@@ -133,6 +147,14 @@ func (a *Catalog) OrderCombo(ctx context.Context, s scope, id string) (domain.Or
 	}
 	if !available {
 		return out, menuFailure(apperror.Conflict, "combo_unavailable", "Este menú o combo no está disponible en este momento.")
+	}
+	views, err := a.productImageViews(ctx, s, []string{id}, "medium", false)
+	if err != nil {
+		return out, err
+	}
+	if v, ok := views[id]; ok {
+		out.ImageView = v.ImageView
+		out.ImageURL = v.ImageURL
 	}
 	return out, nil
 }

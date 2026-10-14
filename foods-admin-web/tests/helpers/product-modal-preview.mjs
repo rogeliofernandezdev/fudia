@@ -12,6 +12,7 @@ import {renderToStaticMarkup} from "react-dom/server";
 import assert from "node:assert/strict";
 
 const require=createRequire(import.meta.url),root=resolve(dirname(fileURLToPath(import.meta.url)),"../.."),cache=new Map();
+const {QueryClient,QueryClientProvider}=require("@tanstack/react-query");
 function load(path){
  const base=resolve(root,"src",path),file=[base,`${base}.tsx`,`${base}.ts`].find(candidate=>existsSync(candidate)&&/\.tsx?$/.test(candidate));
  assert.ok(file,path);if(cache.has(file))return cache.get(file);
@@ -34,7 +35,7 @@ const output=resolve(process.argv[2]??resolve(root,".next/product-modal-preview"
 const server=createServer((req,res)=>{
  if(req.url==="/font.woff2"){res.setHeader("content-type","font/woff2");res.end(readFileSync(resolve(root,".next/static/media",font)));return;}
  const busy=new URL(req.url,"http://localhost").searchParams.has("busy");
- const markup=renderToStaticMarkup(React.createElement(ProductDialog,{draft,categories:[{id:"preview",name:"Segundos",active:true,productScope:"both"}],destinations:[{value:"kitchen",label:"Cocina"}],loadAllergens:async()=>[],currencySymbol:"S/",busy,close:()=>{},save:async()=>{}}));
+ const markup=renderToStaticMarkup(React.createElement(QueryClientProvider,{client:new QueryClient({defaultOptions:{queries:{retry:false}}})},React.createElement(ProductDialog,{draft,categories:[{id:"preview",name:"Segundos",active:true,productScope:"both"}],destinations:[{value:"kitchen",label:"Cocina"}],loadAllergens:async()=>[],currencySymbol:"S/",busy,close:()=>{},save:async()=>{}})));
  res.setHeader("content-type","text/html; charset=utf-8");
  res.end(`<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>@font-face{font-family:Manrope;font-weight:200 800;src:url(/font.woff2)}:root{--font-manrope:Manrope}${css}</style></head><body><main>Prueba visual: datos ilustrativos, sin guardar.</main>${markup}</body></html>`);
 });

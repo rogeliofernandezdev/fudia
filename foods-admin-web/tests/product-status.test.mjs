@@ -96,6 +96,7 @@ test("el API de estado no reenvía ni sobrescribe la ficha comercial",async()=>{
  const {setProductActive}=compile("modules/menu/products/infrastructure/products-api.ts",name=>{
   if(name==="@/shared/api/client")return {apiFetch:async(path,init)=>{requests.push({path,init})}};
   if(name==="@/shared/api/product-image")return {};
+  if(name==="@/shared/api/image-upload")return {};
   return require(name);
  });
  await setProductActive(product.id,true);
@@ -149,6 +150,7 @@ test("el API de estado de categoría envía únicamente active",async()=>{
  const {setCategoryActive}=compile("modules/menu/products/infrastructure/products-api.ts",name=>{
   if(name==="@/shared/api/client")return {apiFetch:async(path,init)=>requests.push({path,init})};
   if(name==="@/shared/api/product-image")return {};
+  if(name==="@/shared/api/image-upload")return {};
   return require(name);
  });
  await setCategoryActive("bebidas",true);

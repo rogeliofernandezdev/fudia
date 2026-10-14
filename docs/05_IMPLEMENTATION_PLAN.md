@@ -3,7 +3,7 @@
 ## Fase 0 — Fundaciones
 
 - ADR, modelo de tenencia, autenticación, permisos y auditoría.
-- Esqueleto de los cuatro proyectos y CI.
+- Esqueleto de los proyectos definidos en el ADR y CI.
 - OpenAPI inicial y design tokens compartidos.
 - Entornos, secretos, logs, métricas y trazas.
 

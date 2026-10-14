@@ -32,6 +32,20 @@ func (a *Catalog) PublicMenu(ctx context.Context, s scope, q, productID string) 
 		}
 		items = append(items, item)
 	}
+	ids := make([]string, 0, len(items))
+	for _, p := range items {
+		ids = append(ids, p.ProductID)
+	}
+	views, err := a.productImageViews(ctx, s, ids, "medium", false)
+	if err != nil {
+		return nil, err
+	}
+	for i := range items {
+		if v, ok := views[items[i].ProductID]; ok {
+			items[i].ImageView = v.ImageView
+			items[i].ImageURL = v.ImageURL
+		}
+	}
 	return items, nil
 }
 func (a *Catalog) PublicCombo(ctx context.Context, s scope, id string) (domain.PublicComboDetail, error) {
@@ -65,6 +79,14 @@ func (a *Catalog) PublicCombo(ctx context.Context, s scope, id string) (domain.P
 	out.Groups, err = a.repo.PublicComboGroups(ctx, s, id, day)
 	if err != nil {
 		return result, menuFailure(apperror.Unavailable, "combo_unavailable", "No pudimos cargar los grupos del menú.")
+	}
+	views, err := a.productImageViews(ctx, s, []string{id}, "medium", false)
+	if err != nil {
+		return out, err
+	}
+	if v, ok := views[id]; ok {
+		out.ImageView = v.ImageView
+		out.ImageURL = v.ImageURL
 	}
 	return out, nil
 }

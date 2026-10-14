@@ -4,7 +4,8 @@ export type ServiceDestination="kitchen"|"bar"|"direct";
 export type ServiceDestinationOption={value:ServiceDestination;label:string};
 export type ProductType="prepared"|"retail";
 export type QuantityControl="none"|"portions"|"inventory";
-export type Product={
+export type ProductImageFields={imageId?:string;imageKey?:string;imageStatus?:"PROCESSING"|"READY"|"FAILED";imageExpiresAt?:string;imageVariants?:{thumbnail?:string;medium?:string}};
+export type Product=ProductImageFields&{
   id:string;
   sku:string;
   name:string;
@@ -24,7 +25,8 @@ export type Product={
 };
 export type List<T>={items:T[];total:number;page?:number;pageSize?:number;serviceDestinationOptions?:ServiceDestinationOption[]};
 export type ProductListItem=Product&{availableQuantity:number|null;inventoryUnit:string|null};
-export type ProductDraft={
+export type ProductDraft=ProductImageFields&{
+  removeImage?:boolean;
   id?:string;
   initialPortionQuantity?:string;
   name:string;

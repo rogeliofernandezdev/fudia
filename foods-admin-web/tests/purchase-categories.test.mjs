@@ -61,7 +61,7 @@ test("el API consulta categorías de mercadería y usa el POST existente con UUI
  const api=compile("modules/supply/purchases/infrastructure/purchases-api.ts",name=>name==="@/shared/api/client"?{apiFetch:async(path,options)=>{calls.push({path,options});return {items:[{id:"remote",name:"Bebidas"}],total:1}}}:name==="@/shared/api/product-image"?{}:require(name),{URLSearchParams});
  assert.equal((await api.listPurchaseItemCategories())[0].id,"remote");
  assert.match(calls[0].path,/productType=retail/);
- const catalog=compile("modules/menu/products/infrastructure/products-api.ts",name=>name==="@/shared/api/client"?{apiFetch:async(path,options)=>{calls.push({path,options});return {id:"db-uuid"}}}:name==="@/shared/api/product-image"?{}:require(name));
+ const catalog=compile("modules/menu/products/infrastructure/products-api.ts",name=>name==="@/shared/api/client"?{apiFetch:async(path,options)=>{calls.push({path,options});return {id:"db-uuid"}}}:(name==="@/shared/api/product-image"||name==="@/shared/api/image-upload")?{}:require(name));
  await catalog.saveCategory({name:"Bebidas",productScope:"retail",sortOrder:0,active:true});
  const call=calls.at(-1);assert.equal(call.path,"categories");assert.equal(call.options.method,"POST");
  const body=JSON.parse(call.options.body);assert.equal(body.productScope,"retail");assert.equal(Object.hasOwn(body,"id"),false);

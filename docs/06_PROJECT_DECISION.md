@@ -2,20 +2,33 @@
 
 ## Estado
 
-Aceptado y actualizado tras la consolidación de frontends.
+Aceptado y actualizado tras la consolidación de frontends y la separación del
+procesamiento de fotografías (2026-10-12).
 
 ## Decisión
 
-Mantener cuatro proyectos desplegables dentro de este workspace.
+Mantener cinco proyectos dentro de este workspace, con despliegue/configuración
+propios según su responsabilidad.
 
 1. `foods-backend`.
 2. `foods-admin-web`.
 3. `fudia-concierge`.
 4. `foods-infrastructure`.
+5. `fudia-image-processor`.
 
 `foods-admin-web` concentra POS, mesas, pedidos, comandas, caja y las funciones
 administrativas. Las rutas y permisos por rol separan cada modo de trabajo sin
 duplicar autenticación, contratos, componentes ni sistema visual.
+
+`fudia-image-processor` se separa por la carga especializada de conversión y
+el aislamiento de permisos. Solo consume eventos Storage, transforma fotografías
+y actualiza el contrato SQL limitado de imágenes. No extrae el catálogo ni cambia
+la autenticación de usuarios. Tiene Go module, Dockerfile y workflow propios;
+las migraciones siguen siendo del backend. Comparte base mediante una excepción
+explícita de permisos por columna, no mediante acceso general a sus tablas.
+
+Las reglas obligatorias están en su
+[documento de arquitectura](../fudia-image-processor/docs/01_ARCHITECTURE.md).
 
 ## Alternativas descartadas
 

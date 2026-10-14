@@ -1,5 +1,21 @@
 # Pruebas
 
+## Subida directa de imágenes
+
+image-upload.test.mjs verifica validación antes de autorización, bytes solo a
+Storage sin cookies, file al final, rechazo de host ajeno y de archivos >5 MiB,
+confirmación antes de POST/PATCH y guardado PROCESSING sin esperar READY. También
+reutilización tras fallo del producto y exclusión de metadatos/URLs temporales
+de los DTO de escritura. ProductDialog conserva su pie, permisos y validación.
+Validar campo de imagen a 390 px/escritorio, PROCESSING/FAILED, selección inválida
+y reintento. CORS/IAM/eventos y límite Storage necesitan prueba real en GCP;
+los mocks locales no certifican esa configuración.
+
+`uploads-route.test.mjs` protege GET/HEAD de fotos en el mismo origen, bytes y MIME
+permitidos, UUID/nombre válido, timeouts/errores y ausencia de cookies, redirects
+o contenido HTML del upstream. Usa el handler real con fetch aislado; no acredita
+conectividad GCP ni sustituye subir/ver una foto tras cambiar revisión.
+
 `feedback-success.test.mjs` protege el círculo verde con check blanco, entrada
 circular desde escala grande hasta normal con rebote leve, en una capa verde
 independiente del check, botón secundario neutro, separación de la X,

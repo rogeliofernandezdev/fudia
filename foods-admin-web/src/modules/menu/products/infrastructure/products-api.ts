@@ -1,5 +1,6 @@
 import {apiFetch} from "@/shared/api/client";
-import {uploadProductImage} from "@/shared/api/product-image";
+import {uploadLegacyProductImage} from "@/shared/api/product-image";
+import {prepareProductImage} from "@/shared/api/image-upload";
 import type {Category,CategoryDraft,List,Product,ProductDraft,ProductListItem,ProductType} from "../domain/types";
 
 export type ProductQuery={
@@ -41,21 +42,27 @@ export function listProducts(query:ProductQuery){
   return apiFetch<List<ProductListItem>>(`products?${params.toString()}`);
 }
 
-export async function saveProduct(draft:ProductDraft,file:File|null){
-  const {initialPortionQuantity,...commercialDraft}=draft;
+export async function saveProduct(draft:ProductDraft,file:File|null,scopeKey=""){
+  const image=file?await prepareProductImage(file,draft.id,scopeKey):null;
+  const {initialPortionQuantity,imageId,imageKey,imageStatus,imageExpiresAt,imageVariants,...commercialDraft}=draft;
+  // Read URLs expire and must never be persisted back as imageUrl.
+  void imageKey;void imageStatus;void imageExpiresAt;void imageVariants;
   const product=await apiFetch<Product>(draft.id?`products/${draft.id}`:"products",{
     method:draft.id?"PATCH":"POST",
     body:JSON.stringify({
       ...commercialDraft,
+      imageUrl:imageId?null:draft.imageUrl,
+      ...(image?{imageId:image.imageId,removeImage:false}:{}),
       ...(!draft.id&&draft.quantityControl==="portions"?{initialPortionQuantity:Number(initialPortionQuantity)}:{}),
       categoryId:draft.categoryId||null,
       prepMinutes:draft.prepMinutes?Number(draft.prepMinutes):null,
       costPrice:draft.costPrice||null,
     }),
   });
-  if(file&&product.id)await uploadProductImage(product.id,file);
+  if(file&&!image&&product.id)await uploadLegacyProductImage(product.id,file);
   return product;
 }
+export function getProduct(id:string){return apiFetch<Product>(`products/${id}`)}
 
 export function saveCategory(draft:CategoryDraft){
   return apiFetch<Category>(draft.id?`categories/${draft.id}`:"categories",{

@@ -10,6 +10,7 @@ import (
 	conciergehttp "github.com/foods-platform/foods-backend/internal/modules/concierge/transport/http"
 	menuapp "github.com/foods-platform/foods-backend/internal/modules/menu/application"
 	menufiles "github.com/foods-platform/foods-backend/internal/modules/menu/infrastructure/files"
+	menugcs "github.com/foods-platform/foods-backend/internal/modules/menu/infrastructure/gcs"
 	menupg "github.com/foods-platform/foods-backend/internal/modules/menu/infrastructure/postgres"
 	menuhttp "github.com/foods-platform/foods-backend/internal/modules/menu/transport/http"
 	orderapp "github.com/foods-platform/foods-backend/internal/modules/orders/application"
@@ -37,6 +38,8 @@ import (
 	"github.com/foods-platform/foods-backend/internal/platform/database"
 	httpapi "github.com/foods-platform/foods-backend/internal/transport/httpapi"
 
+	"context"
+	"fmt"
 	customerapp "github.com/foods-platform/foods-backend/internal/modules/customers/application"
 	customerpg "github.com/foods-platform/foods-backend/internal/modules/customers/infrastructure/postgres"
 	customerhttp "github.com/foods-platform/foods-backend/internal/modules/customers/transport/http"
@@ -51,7 +54,7 @@ import (
 	"os"
 )
 
-func newAPI(db *pgxpool.Pool) *httpapi.API {
+func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages) *httpapi.API {
 	// Composition is the only layer that knows concrete PostgreSQL adapters.
 	// A single unit of work and shared stateless adapters preserve transactions
 	// across Orders, Inventory, Billing and tenant onboarding.
@@ -59,7 +62,7 @@ func newAPI(db *pgxpool.Pool) *httpapi.API {
 	audit := auditpg.New(db)
 	inventoryRepo := inventorypg.NewStock(db)
 	stock := inventoryapp.NewStock(inventoryRepo, work, audit)
-	menu := menuapp.NewCatalog(menupg.NewCatalog(db), work, audit, menufiles.Images{Directory: "./uploads/products"})
+	menu := menuapp.NewCatalog(menupg.NewCatalog(db), work, audit, menufiles.Images{Directory: "./uploads/products"}).WithProductImages(images)
 	orders := orderapp.New(orderpg.New(db), work, audit, stock)
 
 	accessRepo := subscriptionpg.NewAccess(db)
@@ -95,4 +98,18 @@ func newAPI(db *pgxpool.Pool) *httpapi.API {
 		Orders:                 orderhttp.New(orders),
 		InventoryUnits:         inventoryhttp.NewUnits(inventoryapp.NewUnits(inventorypg.NewUnits(db))),
 	})
+}
+func configureProductImages(ctx context.Context, db *pgxpool.Pool) (*menuapp.ProductImages, func(), error) {
+	provider := os.Getenv("PRODUCT_IMAGE_STORAGE")
+	if provider == "" || provider == "local" {
+		return nil, func() {}, nil
+	}
+	if provider != "gcs" || os.Getenv("PRODUCT_IMAGES_SIGNER") == "" {
+		return nil, nil, fmt.Errorf("configure PRODUCT_IMAGE_STORAGE=gcs and PRODUCT_IMAGES_SIGNER")
+	}
+	store, err := menugcs.New(ctx, os.Getenv("PRODUCT_IMAGES_BUCKET"), os.Getenv("PRODUCT_IMAGES_SIGNER"))
+	if err != nil {
+		return nil, nil, err
+	}
+	return menuapp.NewProductImages(menupg.NewImages(db), store), store.Close, nil
 }

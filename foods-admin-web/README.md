@@ -46,3 +46,11 @@ es índigo con flecha al final. Referencia: `docs/02_DESIGN_SYSTEM.md`.
 ## Verificación
 
 Ejecutar `npm run lint`, `npm run typecheck`, `npm test` y `npm run build`.
+
+## Cloud Run
+
+El Dockerfile standalone también funciona en Cloud Run con su `PORT` inyectado.
+`FOODS_API_URL` sigue siendo configuración de servidor, no `NEXT_PUBLIC_*`.
+GET/HEAD de `/uploads/products/{uuid}.{ext}` sirve fotos del backend por el mismo
+origen, sin depender del proxy EC2. Configuración y migración sin retirar AWS:
+[runbook GCP](../foods-infrastructure/docs/09_GCP_CLOUD_RUN.md).

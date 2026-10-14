@@ -2,6 +2,85 @@ openapi: 3.1.0
 info: { title: Foods API, version: 0.14.0, description: API operativa y administrativa multiempresa. }
 servers: [{ url: http://localhost:8080 }]
 paths:
+  /v1/admin/product-images/uploads:
+    post:
+      operationId: authorizeProductImageUpload
+      summary: Autoriza una subida directa a Storage, sin recibir el archivo en el API
+      description: "Exige sesión vigente y menu.manage en empresa/local. Valida metadatos y producto existente si se indica; PostgreSQL genera imageId. Política POST V4 válida por 10 minutos, key y Content-Type exactos, content-length-range de 1 a 5242880 bytes. La validación real del contenido se realiza después en el procesador."
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProductImageUploadInput" }
+      responses:
+        "201":
+          description: Formulario firmado para subir directamente a Cloud Storage
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProductImageUploadAuthorization" }
+        "400": { description: Formato, tamaño o resolución inválidos }
+        "401": { description: Sesión no válida }
+        "403": { description: Sin permiso menu.manage }
+        "404": { description: Producto no pertenece al restaurante }
+        "409": { description: Límite de autorizaciones alcanzado }
+        "503": { description: Storage no configurado o autorización no disponible }
+  /v1/admin/product-images/{imageId}/complete:
+    post:
+      operationId: completeProductImageUpload
+      summary: Confirma los metadatos del objeto subido sin esperar su procesamiento
+      description: "Exige menu.manage y la misma identidad/local que autorizó la subida. Consulta metadatos en Storage, vincula su generación inmutable y confirma idempotentemente. Luego guardar el producto con imageId en POST/PATCH; si el procesador ya terminó se conserva READY."
+      security: [{ sessionCookie: [] }]
+      parameters: [{ name: imageId, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200":
+          description: Estado actual y URL temporal de lectura
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProductImage" }
+        "400": { description: Metadatos diferentes de los autorizados }
+        "401": { description: Sesión no válida }
+        "403": { description: Sin permiso }
+        "404": { description: Autorización no pertenece a la identidad/empresa/local }
+        "409": { description: Subida incompleta o generación diferente }
+  /v1/admin/product-images/{imageId}:
+    get:
+      operationId: getProductImage
+      summary: Consulta PROCESSING, READY o FAILED y renueva URLs de lectura
+      security: [{ sessionCookie: [] }]
+      parameters: [{ name: imageId, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200":
+          description: Original temporal o variantes optimizadas de 200 y 600 px
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProductImage" }
+        "401": { description: Sesión no válida }
+        "403": { description: Sin menu.read }
+        "404": { description: Imagen no pertenece a la empresa }
+        "503": { description: No se pudo generar la URL de lectura }
+  /v1/admin/products/{id}/image/attach:
+    post:
+      operationId: attachProductImage
+      summary: Vincula una imagen confirmada a un producto existente
+      description: "Exige menu.manage. Usado también por productos comerciales creados desde compras. La referencia y el estado se actualizan en una transacción; no recibe bytes ni espera la conversión."
+      security: [{ sessionCookie: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [imageId], properties: { imageId: { type: string, format: uuid } } }
+      responses:
+        "200":
+          description: Producto actualizado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Product" }
+        "401": { description: Sesión no válida }
+        "403": { description: Sin permiso }
+        "404": { description: Producto no pertenece a la empresa }
+        "409": { description: Imagen no confirmada o de otro producto/empresa/local }
   /v1/admin/tables/batch:
     post:
       operationId: createTablesBatch
@@ -1626,7 +1705,41 @@ components:
     ExchangeRateInput: { type: object, required: [baseCurrency, quoteCurrency, rate, effectiveAt, source], properties: { baseCurrency: { type: string, pattern: "^[A-Z]{3}$" }, quoteCurrency: { type: string, pattern: "^[A-Z]{3}$" }, rate: { type: string, pattern: "^[0-9]+(\\.[0-9]+)?$" }, effectiveAt: { type: string, format: date-time }, source: { type: string, enum: [manual, provider] }, providerReference: { type: [string, "null"] } } }
     CategoryInput: { type: object, required: [name, sortOrder], properties: { name: { type: string, maxLength: 120 }, sortOrder: { type: integer, minimum: 0 }, active: { type: boolean }, productScope: { type: string, enum: [prepared, retail, both], default: prepared, description: "Indica si la categoría puede clasificar productos preparados, mercadería vendible o ambos." } } }
     Category: { allOf: [{ $ref: "#/components/schemas/CategoryInput" }, { type: object, required: [id, active, productScope, productCount], properties: { id: { type: string, format: uuid }, active: { type: boolean }, productCount: { type: integer } } }] }
-    ProductInput: { type: object, required: [name, price], properties: { sku: { type: string, maxLength: 40 }, name: { type: string, maxLength: 160 }, description: { type: string, maxLength: 1000 }, categoryId: { type: [string, "null"], format: uuid }, price: { type: string, pattern: "^[0-9]+(\\.[0-9]{1,2})?$" }, active: { type: boolean }, productType: { type: string, enum: [prepared, retail], default: prepared, description: "Clasificación operativa independiente de categoría y control de cantidad." }, serviceDestination: { type: string, enum: [kitchen, bar, direct], description: "Cocina por defecto para preparados, Entrega directa para mercadería al crear. Omisión en edición conserva destino anterior. Independiente de categoría e inventario." }, quantityControl: { type: string, enum: [none, portions, inventory], default: none } } }
+    ProductInput: { type: object, required: [name, price], properties: { imageId: { type: string, format: uuid, description: "Identificador de una subida directa confirmada; se vincula sin esperar el procesamiento." }, removeImage: { type: boolean, default: false }, sku: { type: string, maxLength: 40 }, name: { type: string, maxLength: 160 }, description: { type: string, maxLength: 1000 }, categoryId: { type: [string, "null"], format: uuid }, price: { type: string, pattern: "^[0-9]+(\\.[0-9]{1,2})?$" }, active: { type: boolean }, productType: { type: string, enum: [prepared, retail], default: prepared, description: "Clasificación operativa independiente de categoría y control de cantidad." }, serviceDestination: { type: string, enum: [kitchen, bar, direct], description: "Cocina por defecto para preparados, Entrega directa para mercadería al crear. Omisión en edición conserva destino anterior. Independiente de categoría e inventario." }, quantityControl: { type: string, enum: [none, portions, inventory], default: none } } }
+    ProductImageUploadInput:
+      type: object
+      additionalProperties: false
+      required: [contentType, sizeBytes, width, height]
+      properties:
+        productId: { type: string, format: uuid, description: Omitir para un producto nuevo }
+        contentType: { type: string, enum: [image/jpeg, image/png, image/webp] }
+        sizeBytes: { type: integer, minimum: 1, maximum: 5242880 }
+        width: { type: integer, minimum: 1, maximum: 4000 }
+        height: { type: integer, minimum: 1, maximum: 4000 }
+    ProductImageUploadAuthorization:
+      type: object
+      required: [imageId, objectKey, uploadUrl, method, fields, expiresAt]
+      properties:
+        imageId: { type: string, format: uuid }
+        objectKey: { type: string }
+        uploadUrl: { type: string, format: uri }
+        method: { type: string, const: POST }
+        fields: { type: object, additionalProperties: { type: string }, description: Campos firmados; file debe ser el último campo del FormData }
+        expiresAt: { type: string, format: date-time }
+    ProductImage:
+      type: object
+      properties:
+        imageId: { type: string, format: uuid }
+        imageKey: { type: string, readOnly: true, description: Referencia persistente relativa al bucket; no es una URL }
+        imageStatus: { type: string, enum: [PROCESSING, READY, FAILED], readOnly: true }
+        imageUrl: { type: [string, "null"], readOnly: true, description: URL temporal de lectura; no guardar en la base. Original en PROCESSING/FAILED, thumbnail en listado y medium en detalle }
+        imageExpiresAt: { type: string, format: date-time, readOnly: true }
+        imageVariants:
+          type: object
+          readOnly: true
+          properties:
+            thumbnail: { type: string, format: uri, description: WebP de hasta 200 px, sin ampliar }
+            medium: { type: string, format: uri, description: WebP de hasta 600 px, sin ampliar }
     ProductCreateInput:
       allOf:
         - $ref: "#/components/schemas/ProductInput"
@@ -1642,7 +1755,7 @@ components:
             properties: { quantityControl: { const: portions } }
           then: { required: [initialPortionQuantity] }
           else: { not: { required: [initialPortionQuantity] } }
-    Product: { allOf: [{ $ref: "#/components/schemas/ProductInput" }, { type: object, required: [id, active, productType, quantityControl], properties: { id: { type: string, format: uuid }, categoryName: { type: [string, "null"] }, active: { type: boolean } } }] }
+    Product: { allOf: [{ $ref: "#/components/schemas/ProductInput" }, { $ref: "#/components/schemas/ProductImage" }, { type: object, required: [id, active, productType, quantityControl], properties: { id: { type: string, format: uuid }, categoryName: { type: [string, "null"] }, active: { type: boolean } } }] }
     ProductListItem:
       allOf:
         - $ref: "#/components/schemas/Product"
@@ -1684,7 +1797,7 @@ components:
         total: { type: integer, minimum: 0 }
         page: { type: integer, minimum: 1 }
         pageSize: { type: integer, minimum: 1 }
-    ProductAvailability: { type: object, required: [productId, name, quantityControl, status, source, manualStatus, soldQuantity, note, businessDate], properties: { productId: { type: string, format: uuid }, name: { type: string }, categoryName: { type: [string, "null"] }, imageUrl: { type: [string, "null"] }, quantityControl: { type: string, enum: [none, portions, inventory] }, status: { type: string, enum: [available, low, sold_out, unavailable] }, source: { type: string, enum: [always, portions, inventory, manual_override, schedule, combo_components] }, manualStatus: { type: string, enum: [available, sold_out] }, portionQuantity: { type: [integer, "null"] }, soldQuantity: { type: integer, minimum: 0 }, remaining: { type: [number, "null"], minimum: 0 }, inventoryUnit: { type: [string, "null"] }, note: { type: string }, businessDate: { type: string, format: date } } }
+    ProductAvailability: { allOf: [{ $ref: "#/components/schemas/ProductImage" }, { type: object, required: [productId, name, quantityControl, status, source, manualStatus, soldQuantity, note, businessDate], properties: { productId: { type: string, format: uuid }, name: { type: string }, categoryName: { type: [string, "null"] }, imageUrl: { type: [string, "null"] }, quantityControl: { type: string, enum: [none, portions, inventory] }, status: { type: string, enum: [available, low, sold_out, unavailable] }, source: { type: string, enum: [always, portions, inventory, manual_override, schedule, combo_components] }, manualStatus: { type: string, enum: [available, sold_out] }, portionQuantity: { type: [integer, "null"] }, soldQuantity: { type: integer, minimum: 0 }, remaining: { type: [number, "null"], minimum: 0 }, inventoryUnit: { type: [string, "null"] }, note: { type: string }, businessDate: { type: string, format: date } } } ] }
     InventoryItem: { type: object, required: [inventoryItemId, productId, sku, name, kind, active, unit, quantity, minimumStock, status, updatedAt], properties: { inventoryItemId: { type: string, format: uuid }, productId: { type: [string, "null"], format: uuid }, sku: { type: string }, name: { type: string }, kind: { type: string, enum: [product, ingredient] }, categoryName: { type: [string, "null"] }, active: { type: boolean }, unit: { type: string }, quantity: { type: string }, minimumStock: { type: string }, status: { type: string, enum: [ok, low, out] }, updatedAt: { type: string, format: date-time } } }
     InventoryPresentation: { type: object, required: [id, presentationType, unitsPerPresentation, name, isDefault], properties: { id: { type: string, format: uuid }, presentationType: { type: string, pattern: "^[a-z][a-z0-9_-]{0,31}$" }, unitsPerPresentation: { type: string }, name: { type: string }, isDefault: { type: boolean } } }
     InventoryPresentationInput: { type: object, required: [presentationType, unitsPerPresentation], properties: { presentationType: { type: string, pattern: "^[a-z][a-z0-9_-]{0,31}$" }, unitsPerPresentation: { type: number, exclusiveMinimum: 0, exclusiveMaximum: 100000000000, multipleOf: 0.001, description: "Unidad base siempre 1. Conversión por artículo; admite fracciones." }, isDefault: { type: boolean, default: false } } }
@@ -1831,11 +1944,11 @@ components:
     ConciergeSettingsInput: { type: object, required: [active, whatsappPhone], properties: { active: { type: boolean }, whatsappPhone: { type: string, pattern: "^\\+[1-9][0-9]{7,14}$", description: "Número internacional E.164. Puede estar vacío solo si active=false." } } }
     ConciergeSettings: { allOf: [{ $ref: "#/components/schemas/ConciergeSettingsInput" }, { type: object, required: [organizationName, locationName], properties: { organizationName: { type: string }, locationName: { type: string } } }] }
     PublicTableContext: { type: object, required: [name, seats, zone, organizationName, locationName, conciergeEnabled, whatsappPhone], properties: { name: { type: string }, seats: { type: integer, minimum: 1 }, zone: { type: string }, organizationName: { type: string }, locationName: { type: string }, conciergeEnabled: { type: boolean }, whatsappPhone: { type: string, description: "Número E.164 del local; vacío cuando Concierge no está configurado." } } }
-    ConciergeMenuItem: { type: object, required: [productId, name, description, price, status, isCombo, hasModifiers], properties: { productId: { type: string, format: uuid }, name: { type: string }, description: { type: string }, price: { type: string }, categoryName: { type: [string, "null"] }, imageUrl: { type: [string, "null"] }, status: { type: string, enum: [available, low, sold_out, unavailable] }, isCombo: { type: boolean }, hasModifiers: { type: boolean } } }
+    ConciergeMenuItem: { allOf: [{ $ref: "#/components/schemas/ProductImage" }, { type: object, required: [productId, name, description, price, status, isCombo, hasModifiers], properties: { productId: { type: string, format: uuid }, name: { type: string }, description: { type: string }, price: { type: string }, categoryName: { type: [string, "null"] }, imageUrl: { type: [string, "null"] }, status: { type: string, enum: [available, low, sold_out, unavailable] }, isCombo: { type: boolean }, hasModifiers: { type: boolean } } } ] }
     ConciergeMenuResponse: { type: object, required: [items, currencySymbol], properties: { items: { type: array, items: { $ref: "#/components/schemas/ConciergeMenuItem" } }, currencySymbol: { type: string } } }
     ConciergeComboOption: { type: object, required: [productId, name, surcharge, available], properties: { productId: { type: string, format: uuid }, name: { type: string }, surcharge: { type: string }, available: { type: boolean } } }
     ConciergeComboGroup: { type: object, required: [id, name, required, minSelections, maxSelections, options], properties: { id: { type: string, format: uuid }, name: { type: string }, required: { type: boolean }, minSelections: { type: integer, minimum: 0 }, maxSelections: { type: integer, minimum: 1 }, options: { type: array, items: { $ref: "#/components/schemas/ConciergeComboOption" } } } }
-    ConciergeComboDetail: { type: object, required: [id, name, description, price, groups], properties: { id: { type: string, format: uuid }, name: { type: string }, description: { type: string }, price: { type: string }, imageUrl: { type: [string, "null"] }, groups: { type: array, items: { $ref: "#/components/schemas/ConciergeComboGroup" } } } }
+    ConciergeComboDetail: { allOf: [{ $ref: "#/components/schemas/ProductImage" }, { type: object, required: [id, name, description, price, groups], properties: { id: { type: string, format: uuid }, name: { type: string }, description: { type: string }, price: { type: string }, imageUrl: { type: [string, "null"] }, groups: { type: array, items: { $ref: "#/components/schemas/ConciergeComboGroup" } } } } ] }
     OrderComboSelectionInput: { type: object, required: [groupId, productId], properties: { groupId: { type: string, format: uuid }, productId: { type: string, format: uuid } } }
     OrderModifierSelectionInput: { type: object, required: [groupId, optionId], properties: { groupId: { type: string, format: uuid }, optionId: { type: string, format: uuid } } }
     OrderModifierSelection: { type: object, required: [groupId, groupName, optionId, name, surcharge], properties: { groupId: { type: string, format: uuid }, groupName: { type: string }, optionId: { type: string, format: uuid }, name: { type: string }, surcharge: { type: string } } }
