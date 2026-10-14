@@ -31,6 +31,54 @@ test("a failed invocation permission stops trigger creation",async()=>{
  }),/permission denied/);
  assert.ok(!calls.some(call=>call[1]==="eventarc"&&call[3]==="create"));
 });
+
+function existingTriggerRunner(eventFilters){
+ const calls=[];
+ return {calls,run:(binary,args)=>{
+  calls.push([binary,...args]);
+  if(binary==="docker"&&args[0]==="image")return args[2].split(":")[0]+"@sha256:"+"b".repeat(64);
+  if(args.slice(0,3).join(" ")==="eventarc triggers describe")return JSON.stringify({eventFilters});
+  return "";
+ }};
+}
+
+test("redeployment reads the actual unordered Eventarc filter array and updates the same trigger",async()=>{
+ const mock=existingTriggerRunner([
+  {attribute:"bucket",value:env.GCP_UPLOADS_BUCKET},
+  {attribute:"type",value:"google.cloud.storage.object.v1.finalized"},
+ ]);
+ await deployProcessor(processorConfiguration(env),{GCP_IMAGE_BUILT:"true"},mock.run);
+ const updates=mock.calls.filter(call=>call.slice(0,4).join(" ")==="gcloud eventarc triggers update");
+ assert.equal(updates.length,1);
+ assert.ok(updates[0].includes(env.GCP_IMAGE_TRIGGER));
+ assert.ok(updates[0].includes(env.GCP_EVENTARC_SERVICE_ACCOUNT));
+ assert.ok(!updates[0].includes("--event-filters"));
+ assert.ok(!mock.calls.some(call=>call[1]==="eventarc"&&["create","delete"].includes(call[3])));
+});
+
+test("redeployment still supports map-shaped filters without replacing their source",async()=>{
+ const mock=existingTriggerRunner({type:"google.cloud.storage.object.v1.finalized",bucket:env.GCP_UPLOADS_BUCKET});
+ await deployProcessor(processorConfiguration(env),{GCP_IMAGE_BUILT:"true"},mock.run);
+ assert.ok(mock.calls.some(call=>call.slice(0,4).join(" ")==="gcloud eventarc triggers update"));
+});
+
+test("wrong, missing, duplicate or pattern source filters block trigger updates and deletion",async()=>{
+ const type={attribute:"type",value:"google.cloud.storage.object.v1.finalized"};
+ const bucket={attribute:"bucket",value:env.GCP_UPLOADS_BUCKET};
+ for(const filters of [
+  [type,{...bucket,value:"other-bucket"}],
+  [{...type,value:"google.cloud.storage.object.v1.deleted"},bucket],
+  [type],[],undefined,[null,type],
+  [type,bucket,bucket],
+  [type,bucket,{...bucket,value:"other-bucket"}],
+  [type,{...bucket,operator:"match-path-pattern"}],
+  {type:type.value,bucket:"other-bucket"},
+ ]){
+  const mock=existingTriggerRunner(filters);
+  await assert.rejects(deployProcessor(processorConfiguration(env),{GCP_IMAGE_BUILT:"true"},mock.run),/otro origen/);
+  assert.ok(!mock.calls.some(call=>call[1]==="eventarc"&&["update","create","delete"].includes(call[3])));
+ }
+});
 test("processor workflow keeps short-lived OIDC and serializes schema changes with API",()=>{
  const source=readFileSync(new URL("../../.github/workflows/foods-image-processor-gcp.yml",import.meta.url),"utf8");
  assert.ok(!source.includes("push:"));assert.ok(source.includes("workflow_dispatch:"));assert.ok(source.includes("workflow_call:"));assert.ok(!source.includes("credentials_json"));assert.ok(source.includes("create_credentials_file: false"));assert.ok(source.includes("-gcp-schema-deploy"));

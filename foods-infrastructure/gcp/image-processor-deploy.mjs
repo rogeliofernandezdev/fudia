@@ -4,6 +4,15 @@ import {resolve} from "node:path";
 import {buildImage,configuration,databaseArgs,runMigrations,secretReferences} from "./deploy.mjs";
 
 function required(env,name,pattern){const value=env[name]??"";if(!pattern.test(value))throw new Error(`Configura ${name}.`);return value}
+function triggerMatchesSource(filters,bucket){
+ // Eventarc returns an unordered array of {attribute,value,operator}, not a map.
+ // Keep map compatibility while requiring unique, exact type/bucket filters.
+ const entries=Array.isArray(filters)?filters:Object.entries(filters??{}).map(([attribute,value])=>({attribute,value}));
+ return Object.entries({type:"google.cloud.storage.object.v1.finalized",bucket}).every(([attribute,value])=>{
+  const matches=entries.filter(entry=>entry?.attribute===attribute);
+  return matches.length===1&&matches[0].value===value&&!matches[0].operator;
+ });
+}
 export function processorConfiguration(env){
  const base=configuration("backend",env);
  const account=new RegExp(`^[a-z][a-z0-9-]+@${base.project}\\.iam\\.gserviceaccount\\.com$`);
@@ -46,8 +55,8 @@ export async function deployProcessor(config,env,command=run){
  const existing=command("gcloud",["eventarc","triggers","describe",config.trigger,"--format=json",...triggerScope],true,true);
  const filters=["type=google.cloud.storage.object.v1.finalized",`bucket=${config.bucket}`];
  if(existing){
-  const actual=JSON.parse(existing).eventFilters??{};
-  if(actual.type!=="google.cloud.storage.object.v1.finalized"||actual.bucket!==config.bucket)throw new Error("El trigger existente usa otro origen; no se reemplazará.");
+  const actual=JSON.parse(existing).eventFilters;
+  if(!triggerMatchesSource(actual,config.bucket))throw new Error("El trigger existente usa otro origen; no se reemplazará.");
  }
  const triggerArgs=["eventarc","triggers",existing?"update":"create",config.trigger,"--destination-run-service",config.service,"--destination-run-region",config.region,"--destination-run-path","/","--service-account",config.eventIdentity];
  if(!existing)for(const filter of filters)triggerArgs.push("--event-filters",filter);
