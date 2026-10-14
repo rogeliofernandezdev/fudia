@@ -8,7 +8,7 @@ export {Tabs, TabsBar, type TabItem} from "./tabs";
 export {TimezoneSelect} from "./timezone-select";
 export {ConfirmDialog} from "./confirm-dialog";
 export {Dialog} from "./dialog";
-export {Modal, ModalHeader, ModalWorkspace, ModalItemList, ModalForm, ModalBody, ModalFooter, ModalCancel, ModalLoading, ModalError, useModal, type ModalSize} from "./modal";
+export {Modal, ModalHeader, ModalWorkspace, ModalItemList, ModalItemNote, ModalItemComponents, type ModalItemComponent, ModalForm, ModalBody, ModalFooter, ModalCancel, ModalLoading, ModalError, useModal, type ModalSize} from "./modal";
 export {MoneyInput, NumberStepper, InlineNotice} from "./form-controls";
 export {FormField} from "./form-field";
 export {LocationMap, type Coordinates} from "./location-map";

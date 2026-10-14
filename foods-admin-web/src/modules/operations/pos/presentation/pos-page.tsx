@@ -7,7 +7,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,EmptyState,ErrorState,Icon,IconName,PageHeader,Pagination,RowActionButton,SearchField,Select,Status,ModalHeader,ModalFooter,ModalWorkspace,ModalItemList} from "@/design-system";
+import {Button,EmptyState,ErrorState,Icon,IconName,PageHeader,Pagination,RowActionButton,SearchField,Select,Status,ModalHeader,ModalFooter,ModalWorkspace,ModalItemList,ModalItemNote,ModalItemComponents} from "@/design-system";
 import {useFeedback,useMoney,useSession} from "@/providers";
 import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
 import {useDebouncedValue} from "@/shared/hooks/use-debounced-value";
@@ -255,7 +255,7 @@ export function POSDetailDialog({loading,error,data,canManage,hasShift,formatMon
       </dl></section>
       <section className="pos-detail-section" aria-labelledby="pos-detail-products-title">
         <h3 id="pos-detail-products-title">Productos del pedido</h3>
-        {data.order.items?.length?<ModalItemList className="pos-order-lines">{data.order.items.map(item=><div className="modal-item-row" role="listitem" key={item.id}><b className="modal-item-quantity">{Number(item.qty)}×</b><span>{item.name}<small>{formatMoney(Number(item.unitPrice))} c/u</small>{item.note&&<em>{item.note}</em>}</span><strong>{formatMoney(Number(item.qty)*Number(item.unitPrice))}</strong></div>)}</ModalItemList>:<p className="pos-detail-empty">No hay productos registrados.</p>}
+        {data.order.items?.length?<ModalItemList className="pos-order-lines">{data.order.items.map(item=><div className="modal-item-row" role="listitem" key={item.id}><b className="modal-item-quantity">{Number(item.qty)}×</b><div className="modal-item-info"><span className="modal-item-name">{item.name}</span>{item.note&&<ModalItemNote>{item.note}</ModalItemNote>}<span className="modal-item-meta"><span>{formatMoney(Number(item.unitPrice))} c/u</span></span><ModalItemComponents label={`Detalle de ${item.name}`} items={[...(item.selections??[]).map((selection,index)=>({key:`selection-${index}`,group:selection.groupName,name:selection.name,extra:Number(selection.surcharge)>0&&<small>+{formatMoney(Number(selection.surcharge))}</small>})),...(item.modifiers??[]).map((modifier,index)=>({key:`modifier-${index}`,group:modifier.groupName,name:modifier.name}))]}/></div><strong className="modal-item-total">{formatMoney(Number(item.qty)*Number(item.unitPrice))}</strong></div>)}</ModalItemList>:<p className="pos-detail-empty">No hay productos registrados.</p>}
       </section>
 
       <section className="pos-detail-section" aria-labelledby="pos-detail-payments-title">

@@ -222,9 +222,10 @@ test("POS móvil no combina pantalla completa con márgenes del backdrop",()=>{
 test("datos de cobro diferencian etiquetas y valores y comparten filas compactas en móvil",()=>{
  const css=readFileSync(new URL("pos.css",root),"utf8");
  assert.doesNotMatch(css,/\.pos-detail-context (?:dt|dd)\{[^}]*font-weight:/,"la jerarquía pertenece al modal compartido");
- assert.match(css,/\.pos-order-lines>div>span\{[^}]*font-weight:var\(--weight-semibold\)/);
+ assert.doesNotMatch(css,/\.pos-order-lines/,"las líneas de producto usan la línea compartida del modal");
  assert.match(readFileSync(new URL("pos-page.tsx",root),"utf8"),/className="pos-detail-context"[^>]*><dl className="modal-record-data">/);
  const shared=readFileSync(new URL("../src/design-system/styles/modal.css",import.meta.url),"utf8");
+ assert.match(shared,/\.modal-item-name\{[^}]*font-weight:var\(--weight-semibold\)/);
  assert.match(shared,/@media\(width<=620px\)\{\s*\.modal-record-data\{grid-template-columns:minmax\(0,1fr\)/);
  assert.match(shared,/\.modal-record-data>div\{[^}]*grid-template-columns:var\(--size-120\) minmax\(0,1fr\)/);
 });

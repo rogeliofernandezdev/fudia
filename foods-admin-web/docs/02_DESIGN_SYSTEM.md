@@ -1215,8 +1215,30 @@ entrega permanecen desplazables, antes de las líneas y después del encabezado.
 
 Cada producto ocupa dos filas: cantidad, nombre e importe en la primera; en la
 segunda, a todo el ancho, «precio c/u · destino» y el estado de preparación
-alineado a la derecha, bajo el importe. Los combos con varias preparaciones listan
-cada componente con su destino y estado. El estado de preparación por línea se
+alineado a la derecha, bajo el importe. Todos los productos (simples, menús y
+combos) siguen el mismo patrón: cantidad índigo, nombre, nota, «precio c/u ·
+destino» y estado. La información secundaria es siempre neutra: fondo `cloud-50`,
+borde `line`, iconos de 14 px en `ink-500` y texto 12 px `ink-700`; no hay
+colores propios por tipo de producto. El mismo patrón se aplica en los detalles de
+Pedidos/Salón, Ventas y POS mediante la línea compartida de `modal.css`
+(`modal-item-info`, `ModalItemNote`, `ModalItemComponents`; ver
+`04_COMPONENTS.md`). En Ventas y POS la carta incluye también los modificadores
+(«TÉRMINO | Medio»).
+La nota («Sin miel», «Helada al polo») va bajo el nombre como cápsula ajustada a
+su contenido con icono `note`.
+En menús y combos, bajo «precio c/u», un bloque `cloud-50` sin borde
+(`radius-md`) se lee como una carta: grupo en versalitas 12 px / 600 `ink-500`,
+un filete vertical continuo `line` y el plato 14 px `ink-950` (recargo 12 px
+`ink-600`), con el estado a la derecha. Sin iconos repetidos por fila. El destino
+(Cocina, Barra, Entrega directa) se indica una sola vez tras el precio
+(«S/ 15.00 c/u · Cocina») cuando todos los componentes lo comparten; si difieren,
+cada fila lo muestra en texto 12 px `ink-600`. Cada plato aparece una sola vez y
+las columnas se alinean con subgrid. En móvil (≤600 px) el filete vertical se
+reemplaza por separadores horizontales `line`: grupo y destino comparten la primera
+fila, el plato ocupa todo el ancho debajo y el estado, si se muestra, baja a una
+tercera fila. El orden de los componentes es el que entrega el
+API. El área desplazable de productos conserva el foco por teclado, pero sin
+contorno azul visible. El estado de preparación por línea se
 omite cuando todas las preparaciones repiten el estado del pedido (Nuevo/Sin enviar,
 Preparando, Listo, Entregado), porque el estado del pedido ya lo expresa; se muestra
 por línea cuando difieren entre sí o del pedido. Confirmado conserva «Pendiente» por

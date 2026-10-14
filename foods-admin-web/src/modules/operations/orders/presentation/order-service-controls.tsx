@@ -17,9 +17,9 @@ function useServiceMutation(){
  },onError:error=>notify({tone:"danger",title:"No se pudo actualizar",message:error.message})});
 }
 
-/** Destino y estado por producto. `lead` (precio unitario) comparte la fila con el destino; el estado queda alineado a la derecha y se omite con `hideStatus` cuando todas las preparaciones comparten estado y el estado del pedido ya lo expresa. */
-export function OrderItemService({order,itemId,lead,hideStatus=false}:{order:TableAccount;itemId:string;lead?:ReactNode;hideStatus?:boolean}){
- const items=(order.serviceItems??[]).filter(item=>item.orderItemId===itemId);
+/** Destino y estado por producto. `lead` (precio unitario) comparte la fila con el destino; el estado queda alineado a la derecha y se omite con `hideStatus` cuando todas las preparaciones comparten estado y el estado del pedido ya lo expresa. `exclude` omite preparaciones ya presentadas en la línea de componentes del combo. */
+export function OrderItemService({order,itemId,lead,hideStatus=false,exclude}:{order:TableAccount;itemId:string;lead?:ReactNode;hideStatus?:boolean;exclude?:ReadonlySet<string>}){
+ const items=(order.serviceItems??[]).filter(item=>item.orderItemId===itemId&&!exclude?.has(item.id));
  if(!items.length)return lead?<div className="order-service-lines"><div className="order-service-line"><div>{lead}</div></div></div>:null;
  const single=items.length===1;
  return <div className="order-service-lines">

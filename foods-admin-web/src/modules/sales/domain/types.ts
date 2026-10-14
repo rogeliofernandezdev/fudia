@@ -5,7 +5,7 @@ export type Sale={
 export type SalesResponse={items:Sale[];total:number;page:number;pageSize:number};
 export type SaleItem={
   id:string;name:string;qty:string;unitPrice:string;note:string;
-  selections?:{groupName:string;name:string}[];
+  selections?:{groupName:string;name:string;surcharge?:string}[];
   modifiers?:{groupName:string;name:string}[];
 };
 export type SalePayment={

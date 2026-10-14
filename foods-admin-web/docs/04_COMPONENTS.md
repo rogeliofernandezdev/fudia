@@ -170,6 +170,21 @@ no tiene interacción ni representa un estado. No se repite un conteo de unidade
 en el encabezado de productos. Los separadores entre líneas son
 `line`. Las notas usan `modal-detail-notes` fuera de esa
 lista, con encabezado propio, padding compacto y fondo `cloud-50`, sin borde.
+
+Línea de producto compartida (`modal.css`), obligatoria en los detalles de
+Pedidos/Salón, Ventas y POS para que se vean iguales:
+
+| Pieza | Uso |
+|---|---|
+| `modal-item-info` | Contenedor que se disuelve en la retícula de `modal-item-row`: nombre e importe en la primera fila, el resto a todo el ancho debajo |
+| `modal-item-name` / `modal-item-total` | Nombre 14 px / 600 `ink-950` e importe 14 px / 700 tabular, alineados a la cantidad de 32 px |
+| `modal-item-meta` | «precio c/u · destino» en 12 px `ink-600`, separados con «·» |
+| `ModalItemNote` | Nota del producto como cápsula `cloud-50` con borde `line` e icono `note` |
+| `ModalItemComponents` | Elecciones de menús/combos y modificadores como carta: grupo en versalitas, filete vertical `line`, valor y `side` (destino si difiere, estado). En ≤600 px el filete pasa a separadores horizontales |
+
+Los módulos no redefinen estas piezas; solo añaden su propio contexto (por ejemplo
+el destino compartido o el estado de preparación en Pedidos/Salón). Los cuerpos
+desplazables con `tabIndex` no muestran contorno azul al recibir foco.
 El resumen inferior usa `cloud-50` y un límite superior neutro de 1 px. Estos estilos tienen un solo dueño
 en el design system, no se duplican por módulo.
 

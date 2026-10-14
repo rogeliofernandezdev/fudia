@@ -87,6 +87,26 @@ export function ModalItemList({children,className=""}:{children:ReactNode;classN
   </div>;
 }
 
+/** Nota de un producto («Sin miel», «Helada al polo») como cápsula neutra con icono, ajustada a su contenido. */
+export function ModalItemNote({children}:{children:ReactNode}){
+  return <em className="modal-item-note"><Icon name="note" size={14}/>{children}</em>;
+}
+
+export type ModalItemComponent={key:string;group:string;name:string;extra?:ReactNode;side?:ReactNode};
+
+/**
+ * Elecciones de un menú/combo o modificadores de un producto, leídos como una carta: grupo en versalitas,
+ * filete vertical continuo y valor; `extra` (p. ej. recargo) junto al valor y `side` (destino, estado) a la derecha.
+ */
+export function ModalItemComponents({label,items}:{label:string;items:ModalItemComponent[]}){
+  if(!items.length)return null;
+  return <ol className="modal-item-components" aria-label={label}>{items.map(item=><li key={item.key}>
+    <span className="modal-item-component-group">{item.group}</span>
+    <span className="modal-item-component-name">{item.name}{item.extra}</span>
+    <span className="modal-item-component-side">{item.side}</span>
+  </li>)}</ol>;
+}
+
 /** Formulario del modal: ocupa el panel para que cuerpo y pie se repartan el alto. */
 export function ModalForm({className="",...props}:FormHTMLAttributes<HTMLFormElement>){return <form className={`modal-form ${className}`.trim()} {...props}/>}
 /** Cuerpo desplazable del modal. */

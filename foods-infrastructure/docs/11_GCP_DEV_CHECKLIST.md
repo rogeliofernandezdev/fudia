@@ -4,6 +4,7 @@ Configuración acordada con el operador el 2026-10-13. No es evidencia de un
 despliegue ni de una auditoría remota de IAM. AWS no cambia. Actualización:
 `foods-gcp` coordina el deploy por push a `feat/ui-standard`, solo en
 `gcp-dev`: processor → backend → frontend, cada uno con pruebas → deploy.
+Solo se ejecutan componentes modificados; las etapas no afectadas se omiten.
 
 ## Datos confirmados por el operador
 
@@ -115,8 +116,9 @@ revisar sus triggers; mantener intactos los archivos no evita ese comportamiento
 2. Hacer commit y push a `feat/ui-standard`. Cambios en los proyectos,
    infraestructura o workflows GCP activan **foods-gcp**.
 3. GitHub → Actions → **foods-gcp** → ejecución del commit. Deben terminar
-   correctamente processor (verify/deploy), backend (verify/deploy) y frontend
-   (verify/deploy), en ese orden. Si una etapa falla, no se ejecuta la siguiente.
+   correctamente los componentes seleccionados (verify/deploy), en orden
+   processor → backend → frontend. Los no modificados aparecen `skipped`.
+   Si una etapa seleccionada falla, no se ejecuta una etapa dependiente.
    Las migraciones de processor/API conservan exclusión mutua. No se generan
    despliegues duplicados: los tres componentes se invocan mediante workflow_call.
 4. Abrir la URL frontend del resumen de su deploy. El BFF recibe
@@ -126,8 +128,12 @@ No se requiere copiar workflows a `master` para este trigger. El pipeline usa
 el código del mismo push y las variables/secrets existentes de `gcp-dev`, sin
 variables nuevas. Las migraciones pendientes quedan habilitadas para desarrollo:
 esto no restaura datos ni comprueba automáticamente su integridad/backups.
-La concurrencia no cancela despliegues/migraciones activos; puede reemplazar una
-ejecución pendiente. No usar estos recursos para producción.
+Un cambio solo de frontend no ejecuta builds/tests/deploy de backend o processor
+ni migraciones SQL. Lo mismo aplica a cada proyecto. Cambios compartidos en
+foods-infrastructure/coordinador, o el primer push de una rama, seleccionan todos.
+Se compara el rango completo del push, incluyendo archivos eliminados/renombrados.
+La concurrencia no cancela despliegues/migraciones activos; encola hasta 100
+ejecuciones pendientes sin reemplazarlas. No usar estos recursos para producción.
 
 ### Alternativa manual
 

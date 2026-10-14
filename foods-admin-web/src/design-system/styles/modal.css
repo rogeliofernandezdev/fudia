@@ -63,6 +63,32 @@
 .modal-item-row:first-child{padding-top:var(--space-1)}
 .modal-item-row:last-child{padding-bottom:var(--space-1);border-bottom:0}
 .modal-item-quantity{display:grid;place-items:center;min-width:0;min-height:var(--size-32);border-radius:var(--radius-pill);background:var(--primary-100);color:var(--primary-700);font-size:var(--font-size-control);font-weight:var(--weight-bold);font-variant-numeric:tabular-nums;line-height:var(--line-height-none);overflow-wrap:anywhere}
+/* Línea de producto compartida por los detalles de Pedidos/Salón, Ventas y POS: nombre, nota, «precio c/u · destino»,
+   carta de componentes/modificadores e importe. Información secundaria siempre neutra (`cloud-50`, `line`, `ink-*`). */
+/* `modal-item-info` se disuelve en la retícula de la fila: nombre e importe comparten la primera fila y el resto ocupa
+   todo el ancho bajo ellos, igual que en Pedidos/Salón. */
+.modal-item-row:has(>.modal-item-info){row-gap:var(--space-1-5)}
+.modal-item-info{display:contents}
+.modal-item-info>*{grid-column:2/-1;justify-self:start;min-width:0;max-width:100%}
+.modal-item-info>.modal-item-name{grid-column:2;grid-row:1}
+.modal-item-row>.modal-item-total{grid-column:3;grid-row:1}
+.modal-item-name{display:flex;align-items:center;min-height:var(--size-32);color:var(--ink-950);font-size:var(--font-size-base);font-weight:var(--weight-semibold);line-height:var(--line-height-snug);overflow-wrap:anywhere}
+.modal-item-meta{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-1-5);color:var(--ink-600);font-size:var(--font-size-label);line-height:var(--line-height-normal)}
+.modal-item-meta>*+*::before{content:"·";margin-inline-end:var(--space-1-5);color:var(--ink-400)}
+.modal-item-total{display:flex;align-items:center;min-height:var(--size-32);color:var(--ink-950);font-size:var(--font-size-base);font-weight:var(--weight-bold);font-variant-numeric:tabular-nums;white-space:nowrap;line-height:var(--line-height-snug)}
+.modal-item-note{justify-self:start;display:inline-flex;align-items:center;gap:var(--space-1-5);max-width:100%;padding:var(--space-1) var(--space-2-5);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-pill);background:var(--cloud-50);color:var(--ink-700);font-size:var(--font-size-label);font-style:normal;line-height:var(--line-height-snug);overflow-wrap:anywhere;white-space:pre-wrap}
+.modal-item-note svg{flex:none;color:var(--ink-500)}
+/* Carta: el relleno vertical vive en las celdas para que el filete no se corte entre filas; columnas con subgrid. */
+.modal-item-components{justify-self:stretch;margin:var(--space-1) 0 0;padding:var(--space-2) var(--space-4);list-style:none;display:grid;grid-template-columns:auto minmax(0,1fr) auto;border-radius:var(--radius-md);background:var(--cloud-50)}
+.modal-item-components li{grid-column:1/-1;display:grid;grid-template-columns:subgrid;align-items:stretch;line-height:var(--line-height-snug)}
+.modal-item-components li>*{display:flex;align-items:center;padding-block:var(--space-1-5)}
+.modal-item-component-group{padding-inline-end:var(--space-3);border-inline-end:var(--stroke-1) solid var(--line);color:var(--ink-500);font-size:var(--font-size-label);font-weight:var(--weight-semibold);letter-spacing:var(--letter-spacing-caps);text-transform:uppercase;white-space:nowrap}
+.modal-item-component-name{min-width:0;flex-wrap:wrap;column-gap:var(--space-1-5);padding-inline-start:var(--space-3);color:var(--ink-950);font-size:var(--font-size-base);font-weight:var(--weight-regular);overflow-wrap:anywhere}
+.modal-item-component-name small{color:var(--ink-600);font-size:var(--font-size-label);font-variant-numeric:tabular-nums;white-space:nowrap}
+.modal-item-component-side{justify-content:flex-end;flex-wrap:wrap;gap:var(--space-2);padding-inline-start:var(--space-3);color:var(--ink-600);font-size:var(--font-size-label);white-space:nowrap}
+.modal-item-component-side:empty{padding-inline-start:0}
+/* Cuerpos desplazables enfocables por teclado (tabIndex) sin contorno azul visible. */
+.modal-body[tabindex]:focus-visible{outline:none}
 .modal-detail-notes{display:flex;align-items:flex-start;gap:var(--space-2);padding:var(--space-3);border-radius:var(--radius-control);background:var(--cloud-50)}
 .modal-summary-heading{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-2) var(--space-3);padding-bottom:var(--space-3);border-bottom:var(--stroke-1) solid var(--line)}
 .modal-summary h3{margin:0;color:var(--ink-950);font-size:var(--font-size-md);font-weight:var(--weight-bold);line-height:var(--line-height-snug)}
@@ -133,6 +159,11 @@
   .modal-context{padding-inline:var(--space-4)}
   .modal-summary{padding-inline:var(--space-4)}
   .modal-item-row{gap:var(--space-2)}
+  .modal-item-components{grid-template-columns:minmax(0,1fr) auto;padding-inline:var(--space-3)}
+  .modal-item-components li+li{border-top:var(--stroke-1) solid var(--line)}
+  .modal-item-components .modal-item-component-group{grid-column:1;grid-row:1;padding:var(--space-2) 0 var(--space-0-5);border-inline-end:0}
+  .modal-item-components .modal-item-component-name{grid-column:1/-1;grid-row:2;padding:0 0 var(--space-2)}
+  .modal-item-components .modal-item-component-side{grid-column:2;grid-row:1;padding:var(--space-2) 0 var(--space-0-5)}
   .crud-modal.size-lg>header,.crud-modal.size-xl>header{padding-top:calc(var(--space-2) + var(--safe-area-top))}
   .modal-body,.crud-modal>form:not(.modal-form){padding-inline:var(--space-4)}
   .crud-modal>form:not(.modal-form)>footer{margin-inline:calc(var(--space-4) * -1)}

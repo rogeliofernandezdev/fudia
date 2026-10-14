@@ -26,6 +26,8 @@ export type POSOrderItem={
   unitPrice:string;
   note:string;
   itemType?:"product"|"combo";
+  selections?:{groupName:string;name:string;surcharge?:string}[];
+  modifiers?:{groupName:string;name:string}[];
 };
 
 export type POSOrder={

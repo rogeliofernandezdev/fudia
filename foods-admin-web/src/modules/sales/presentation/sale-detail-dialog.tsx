@@ -1,5 +1,5 @@
 "use client";
-import {Button,EmptyState,ErrorState,Icon,Status,ModalHeader,ModalFooter,ModalWorkspace,ModalItemList} from "@/design-system";
+import {Button,EmptyState,ErrorState,Icon,Status,ModalHeader,ModalFooter,ModalWorkspace,ModalItemList,ModalItemNote,ModalItemComponents} from "@/design-system";
 import {Dialog} from "@/design-system/dialog";
 import type {SaleDetail} from "../domain/types";
 import "./sales.css";
@@ -35,10 +35,13 @@ export function SaleDetailDialog({loading,error,data,money,date,close,retry,tick
       </dl></section>
       <section className="sales-detail-section" aria-labelledby="sales-detail-products"><h3 id="sales-detail-products">Productos del pedido</h3>
         {data.order.items?.length?<ModalItemList className="sales-detail-lines">{data.order.items.map(item=><div className="modal-item-row" role="listitem" key={item.id}>
-          <b className="modal-item-quantity">{Number(item.qty)}×</b><div><b>{item.name}</b><small>{money(item.unitPrice)} c/u</small>
-          {item.selections?.map((selection,index)=><small key={`selection-${index}`}>{selection.groupName}: {selection.name}</small>)}
-          {item.modifiers?.map((modifier,index)=><small key={`modifier-${index}`}>{modifier.groupName}: {modifier.name}</small>)}
-          {item.note&&<p>{item.note}</p>}</div><strong>{money(Number(item.qty)*Number(item.unitPrice))}</strong>
+          <b className="modal-item-quantity">{Number(item.qty)}×</b><div className="modal-item-info"><span className="modal-item-name">{item.name}</span>
+          {item.note&&<ModalItemNote>{item.note}</ModalItemNote>}
+          <span className="modal-item-meta"><span>{money(item.unitPrice)} c/u</span></span>
+          <ModalItemComponents label={`Detalle de ${item.name}`} items={[
+            ...(item.selections??[]).map((selection,index)=>({key:`selection-${index}`,group:selection.groupName,name:selection.name,extra:Number(selection.surcharge)>0&&<small>+{money(selection.surcharge??0)}</small>})),
+            ...(item.modifiers??[]).map((modifier,index)=>({key:`modifier-${index}`,group:modifier.groupName,name:modifier.name})),
+          ]}/></div><strong className="modal-item-total">{money(Number(item.qty)*Number(item.unitPrice))}</strong>
         </div>)}</ModalItemList>:<p className="sales-detail-empty">No hay productos registrados.</p>}
       </section>
       <section className="sales-detail-section" aria-labelledby="sales-detail-payments"><h3 id="sales-detail-payments">Pagos registrados</h3>

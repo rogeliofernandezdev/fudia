@@ -28,7 +28,9 @@ test("un único dueño define etiquetas 600, valores 400 y secciones 700 en moda
  for(const [file,selector] of [["modules/operations/orders/presentation/order-detail.css",".order-detail-section-head h3"],["modules/sales/presentation/sales.css",".sales-detail-section h3"],["modules/operations/pos/presentation/pos.css",".pos-detail-section h3"]]){
   assert.equal(declarations(rules(file).find(rule=>rule.selector===selector))["font-size"],"var(--font-size-md)",`${file}: sección por encima de los datos`);
  }
- assert.equal(declarations(rules("modules/sales/presentation/sales.css").find(rule=>rule.selector===".sales-detail-lines p,.sales-detail-payments p"))["font-size"],"var(--font-size-label)");
+ assert.equal(declarations(rules("modules/sales/presentation/sales.css").find(rule=>rule.selector===".sales-detail-payments p"))["font-size"],"var(--font-size-label)");
+ // Las notas de producto pertenecen a la línea compartida de modal.css.
+ assert.equal(declarations(shared.find(rule=>rule.selector===".modal-item-note"))["font-size"],"var(--font-size-label)");
 });
 
 test("los módulos no reescriben los pesos de datos informativos semánticos",()=>{

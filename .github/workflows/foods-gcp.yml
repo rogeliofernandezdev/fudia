@@ -18,10 +18,35 @@ permissions:
 # Serialize full releases without interrupting a running migration.
 concurrency:
   group: foods-gcp-dev-push-deploy
+  queue: max
   cancel-in-progress: false
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      processor: ${{ steps.detect.outputs.processor }}
+      backend: ${{ steps.detect.outputs.backend }}
+      frontend: ${{ steps.detect.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+      - id: detect
+        name: Detect changed components across the whole push
+        env:
+          BASE_SHA: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        run: node foods-infrastructure/gcp/changed-components.mjs
+
   processor:
+    needs: changes
+    if: ${{ needs.changes.outputs.processor == 'true' }}
     uses: ./.github/workflows/foods-image-processor-gcp.yml
     with:
       environment: gcp-dev
@@ -30,7 +55,11 @@ jobs:
     secrets: inherit
 
   backend:
-    needs: processor
+    needs: [changes, processor]
+    if: >-
+      ${{ !cancelled() && needs.changes.result == 'success' &&
+          needs.changes.outputs.backend == 'true' &&
+          (needs.processor.result == 'success' || needs.processor.result == 'skipped') }}
     uses: ./.github/workflows/foods-backend-gcp.yml
     with:
       environment: gcp-dev
@@ -38,7 +67,12 @@ jobs:
     secrets: inherit
 
   frontend:
-    needs: backend
+    needs: [changes, processor, backend]
+    if: >-
+      ${{ !cancelled() && needs.changes.result == 'success' &&
+          needs.changes.outputs.frontend == 'true' &&
+          (needs.processor.result == 'success' || needs.processor.result == 'skipped') &&
+          (needs.backend.result == 'success' || needs.backend.result == 'skipped') }}
     uses: ./.github/workflows/foods-admin-web-gcp.yml
     with:
       environment: gcp-dev

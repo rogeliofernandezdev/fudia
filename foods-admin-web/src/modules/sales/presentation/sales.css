@@ -26,11 +26,12 @@
 .sales-detail-section+.sales-detail-section{padding-top:var(--space-5);border-top:var(--stroke-1) solid var(--line)}
 .sales-detail-section h3{font-size:var(--font-size-md);font-weight:var(--weight-bold);margin:0 0 var(--space-3)}
 .sales-detail-payment-icon{width:var(--size-32);height:var(--size-32);display:grid;place-items:center;border-radius:var(--radius-pill);background:var(--primary-100);color:var(--primary-700)}
+/* Las líneas de productos usan la línea compartida de `modal.css` (`modal-item-info`, nota y carta); aquí solo pagos. */
 .sales-detail-lines .modal-item-row>div,.sales-detail-payments .modal-item-row>div{min-width:0;overflow-wrap:anywhere}
-.sales-detail-lines .modal-item-row>div>b,.sales-detail-payments .modal-item-row>div>b{font-size:var(--font-size-base);font-weight:var(--weight-semibold)}
-.sales-detail-lines small,.sales-detail-payments small{display:block;margin-top:var(--space-1);font-size:var(--font-size-label);color:var(--ink-500);line-height:var(--line-height-normal)}
-.sales-detail-lines strong,.sales-detail-payments strong{font-size:var(--font-size-base);font-weight:var(--weight-bold);font-variant-numeric:tabular-nums;white-space:nowrap}
-.sales-detail-lines p,.sales-detail-payments p{margin:var(--space-1-5) 0 0;font-size:var(--font-size-label);line-height:var(--line-height-normal);color:var(--ink-600);white-space:pre-wrap}
+.sales-detail-payments .modal-item-row>div>b{font-size:var(--font-size-base);font-weight:var(--weight-semibold)}
+.sales-detail-payments small{display:block;margin-top:var(--space-1);font-size:var(--font-size-label);color:var(--ink-500);line-height:var(--line-height-normal)}
+.sales-detail-payments strong{font-size:var(--font-size-base);font-weight:var(--weight-bold);font-variant-numeric:tabular-nums;white-space:nowrap}
+.sales-detail-payments p{margin:var(--space-1-5) 0 0;font-size:var(--font-size-label);line-height:var(--line-height-normal);color:var(--ink-600);white-space:pre-wrap}
 .sales-detail-payment-value{text-align:right}
 .sales-detail-empty,.sales-detail-notes p{font-size:var(--font-size-base);line-height:var(--line-height-normal);margin:0;color:var(--ink-500);white-space:pre-wrap;overflow-wrap:anywhere}
 .sales-detail-notes>svg{flex:none;margin-top:var(--space-0-5);color:var(--ink-700)}

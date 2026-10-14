@@ -2,14 +2,15 @@
 import "./order-detail.css";
 import Link from "next/link";
 import {Button,ErrorState,Icon,Skeleton,Status} from "@/design-system";
-import {ModalHeader,ModalFooter,ModalWorkspace,ModalItemList} from "@/design-system/modal";
+import {ModalHeader,ModalFooter,ModalWorkspace,ModalItemList,ModalItemNote,ModalItemComponents} from "@/design-system/modal";
 import {useMoney,useSession} from "@/providers";
 import {pageRoutes} from "@/shared/routing/page-routes";
 import {canCancelOrder,canManageOrderService,nextOrderAction} from "../domain/order-actions";
 import {canChargeAccount} from "../domain/service-flow";
-import type {Order} from "../domain/types";
+import type {Order,OrderItem,OrderItemSelection} from "../domain/types";
+import type {ServiceItem} from "../domain/service-flow";
 import {OrderAttribution,OrderAttributionSkeleton} from "./order-attribution";
-import {channelIcons,isEditableOrder,openedAgo,orderStatus,registeredAt,tableTitle} from "./order-meta";
+import {channelIcons,isEditableOrder,openedAgo,orderStatus,registeredAt,serviceStatusTone,tableTitle} from "./order-meta";
 import {OrderAccountActions,OrderItemService,accountLabel,accountTone} from "./order-service-controls";
 
 /**
@@ -90,16 +91,7 @@ export function OrderDetailContent<T extends Order>({variant,order,error,retryin
 
           <section className="order-detail-consumption" aria-labelledby="order-detail-products-title">
             <ModalItemList className="order-detail-items">
-              {items.map(item=><div className="modal-item-row order-detail-line" role="listitem" key={item.id}>
-                <b className="modal-item-quantity order-detail-qty">{Number(item.qty)}×</b>
-                <div className="order-detail-line-info">
-                  <span>{item.name}</span>
-                  {item.itemType==="combo"&&(item.selections??[]).length>0&&<div className="order-detail-selections">{(item.selections??[]).map(selection=><small key={selection.groupId+selection.productId}><b>{selection.groupName}:</b> {selection.name}{Number(selection.surcharge)>0?` (+${money(selection.surcharge)})`:""}</small>)}</div>}
-                  {item.note&&<em>{item.note}</em>}
-                  <OrderItemService order={order} itemId={item.id} lead={<small>{money(item.unitPrice)} c/u</small>} hideStatus={sharedService}/>
-                </div>
-                <strong className="order-detail-line-total">{money(Number(item.qty)*Number(item.unitPrice))}</strong>
-              </div>)}
+              {items.map(item=><OrderDetailLine key={item.id} order={order} item={item} hideStatus={sharedService}/>)}
               {!items.length&&<div className="order-detail-empty" role="listitem"><Icon name="receipt" size={20}/><span>Sin ítems cargados aún.</span></div>}
             </ModalItemList>
           </section>
@@ -125,6 +117,43 @@ export function OrderDetailContent<T extends Order>({variant,order,error,retryin
       </ModalFooter>}
     </>}
   </>;
+}
+
+/** Empareja cada selección del combo con su preparación (mismo producto) para presentarlas juntas en el bloque de componentes. */
+function comboComponents(item:OrderItem,services:ServiceItem[]){
+  const used=new Set<string>();
+  return (item.selections??[]).map(selection=>{
+    const service=services.find(candidate=>candidate.orderItemId===item.id&&candidate.productId===selection.productId&&!used.has(candidate.id));
+    if(service)used.add(service.id);
+    return {selection,service} as {selection:OrderItemSelection;service?:ServiceItem};
+  });
+}
+
+/** Fila de producto: cantidad, nombre e importe; debajo precio c/u y, en combos, el bloque neutro de componentes a modo de carta (grupo | plato, destino si difiere y estado). */
+function OrderDetailLine({order,item,hideStatus}:{order:Order;item:OrderItem;hideStatus:boolean}){
+  const money=useMoney();
+  const components=item.itemType==="combo"?comboComponents(item,order.serviceItems??[]):[];
+  const shown=new Set(components.flatMap(component=>component.service?[component.service.id]:[]));
+  const combo=components.length>0;
+  // Si todos los componentes van al mismo destino, se indica una sola vez junto al precio en lugar de repetirlo por fila.
+  const destinations=new Set(components.map(component=>component.service?.destinationLabel));
+  const sharedDestination=combo&&destinations.size===1&&!destinations.has(undefined)?components[0].service?.destinationLabel:undefined;
+  return <div className="modal-item-row order-detail-line" role="listitem">
+    <b className="modal-item-quantity order-detail-qty">{Number(item.qty)}×</b>
+    <div className="order-detail-line-info">
+      <span>{item.name}</span>
+      {item.note&&<ModalItemNote>{item.note}</ModalItemNote>}
+      <OrderItemService order={order} itemId={item.id} lead={<><small>{money(item.unitPrice)} c/u</small>{sharedDestination&&<small>{sharedDestination}</small>}</>} hideStatus={hideStatus} exclude={shown}/>
+      <ModalItemComponents label={`Componentes de ${item.name}`} items={components.map(({selection,service})=>({
+        key:selection.groupId+selection.productId,
+        group:selection.groupName,
+        name:selection.name,
+        extra:Number(selection.surcharge)>0&&<small>+{money(selection.surcharge)}</small>,
+        side:<>{service&&!sharedDestination&&<span>{service.destinationLabel}</span>}{service&&!hideStatus&&<Status tone={serviceStatusTone(service.status)}>{service.statusLabel}</Status>}</>,
+      }))}/>
+    </div>
+    <strong className="order-detail-line-total">{money(Number(item.qty)*Number(item.unitPrice))}</strong>
+  </div>;
 }
 
 /** Skeleton con la geometría final: cabecera, atribución, productos, cuenta y acciones. */

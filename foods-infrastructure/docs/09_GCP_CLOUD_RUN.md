@@ -8,6 +8,12 @@ según los paths de los proyectos/infraestructura/workflows, usando `gcp-dev`.
 Cada etapa exige pruebas → deploy exitosos antes de la siguiente. Reutiliza los
 tres workflows del mismo commit con `workflow_call`; conservan `workflow_dispatch`
 para operación manual, sin triggers push duplicados.
+El job `changes` compara todos los commits del push (before → SHA) y omite los
+componentes no modificados. Solo frontend no ejecuta backend, processor ni Job
+SQL; solo backend no despliega frontend/processor; solo processor no despliega
+los otros servicios. Cambios de infraestructura compartida/coordinador o primer
+push de una rama ejecutan todos. Si falla la detección, no se despliega a ciegas.
+Las condiciones permiten dependencias omitidas, pero bloquean fallos/cancelaciones.
 No modifican los workflows de AWS, sus triggers ni el environment `dev`.
 Primero se ejecuta processor/migración, después backend y finalmente frontend. Fudia Concierge/Redis no se
 migran en este alcance: conservar un `FUDIA_CONCIERGE_URL` HTTPS alcanzable si
@@ -300,7 +306,9 @@ sin escrituras. Volver DNS a AWS no reconcilia datos nuevos de Cloud SQL.
 2. Commit/push a `feat/ui-standard` activa `foods-gcp` sin registrar archivos en
    la rama por defecto. Revisar Actions → `foods-gcp`: processor → backend → frontend.
    La secuencia completa se serializa sin cancelar migraciones en curso. Cada
-   etapa exige `verify` y `deploy` exitosos para habilitar la siguiente.
+   etapa seleccionada exige `verify` y `deploy` exitosos para habilitar la siguiente.
+   Las no modificadas aparecen `skipped`. Se encolan hasta 100 pushes pendientes
+   (`queue: max`) para no reemplazar un push con cambios de otro componente.
    Los triggers de AWS siguen vigentes: un push en su rama de despliegue puede
    desplegar allí. Sus archivos y variables no se modifican.
 3. El push habilita migraciones pendientes solo para `gcp-dev`, tomando como

@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
+import {changedComponents} from "../gcp/changed-components.mjs";
 
 const workflow = name => readFileSync(new URL(`../../.github/workflows/${name}.yml`, import.meta.url), "utf8");
 const source = workflow("foods-gcp");
@@ -14,13 +15,21 @@ test("GCP coordinator deploys pushes only from the agreed branch into developmen
   assert.ok(!source.includes("gcp-production"));
   assert.ok(!source.includes("AWS_"));
   assert.ok(!source.includes("workflow_run:"));
-  assert.match(source, /concurrency:\s+group: foods-gcp-dev-push-deploy\s+cancel-in-progress: false/);
+  assert.match(source, /concurrency:\s+group: foods-gcp-dev-push-deploy\s+queue: max\s+cancel-in-progress: false/);
 });
 
-test("coordinator awaits processor and backend success before frontend using the same commit", () => {
-  assert.match(source, /processor:\s+uses: \.\/\.github\/workflows\/foods-image-processor-gcp.yml/);
-  assert.match(source, /backend:\s+needs: processor\s+uses: \.\/\.github\/workflows\/foods-backend-gcp.yml/);
-  assert.match(source, /frontend:\s+needs: backend\s+uses: \.\/\.github\/workflows\/foods-admin-web-gcp.yml/);
+test("coordinator selects changed components and accepts skipped dependencies but not failures", () => {
+  assert.match(source, /processor:\s+needs: changes\s+if: \$\{\{ needs.changes.outputs.processor == 'true' \}\}/);
+  assert.match(source, /backend:\s+needs: \[changes, processor\]/);
+  assert.match(source, /frontend:\s+needs: \[changes, processor, backend\]/);
+  for (const name of ["processor", "backend", "frontend"]) assert.ok(source.includes(`needs.changes.outputs.${name} == 'true'`));
+  assert.equal((source.match(/needs.processor.result == 'success' \|\| needs.processor.result == 'skipped'/g) ?? []).length, 2);
+  assert.ok(source.includes("needs.backend.result == 'success' || needs.backend.result == 'skipped'"));
+  assert.equal((source.match(/!cancelled\(\) && needs.changes.result == 'success'/g) ?? []).length, 2);
+  assert.ok(source.includes("fetch-depth: 0"));
+  assert.ok(source.includes("BASE_SHA: ${{ github.event.before }}"));
+  assert.ok(source.includes("HEAD_SHA: ${{ github.sha }}"));
+  assert.ok(source.includes("run: node foods-infrastructure/gcp/changed-components.mjs"));
   assert.equal((source.match(/database_ready: true/g) ?? []).length, 2);
   assert.equal((source.match(/secrets: inherit/g) ?? []).length, 3);
   assert.match(source, /permissions:\s+contents: read\s+id-token: write/);
@@ -45,4 +54,45 @@ test("component workflows preserve tests, environment credentials and manual con
   const deploy = readFileSync(new URL("../gcp/deploy.mjs", import.meta.url), "utf8");
   assert.ok(deploy.includes('config.target === "frontend" && !config.apiURL'));
   assert.ok(deploy.includes("config.apiURL = httpsURL(JSON.parse(backend).status.url"));
+});
+
+// These workflow conditions use the common JS/GitHub expression subset.
+// Read the actual conditions instead of testing a separately reimplemented policy.
+function condition(job, needs, cancelled = false) {
+  const expression = new RegExp(`\\n  ${job}:\\n[\\s\\S]*?\\n    if: (?:>-\\n\\s*)?\\$\\{\\{([\\s\\S]*?)\\}\\}`).exec(source)?.[1];
+  assert.ok(expression, `Missing condition for ${job}`);
+  return new Function("needs", "cancelled", `return (${expression});`)(needs, () => cancelled);
+}
+
+test("all combinations run only selected jobs even when earlier jobs are skipped", () => {
+  for (let mask = 0; mask < 8; mask++) {
+    const paths = [];
+    if (mask & 1) paths.push("fudia-image-processor/main.go");
+    if (mask & 2) paths.push("foods-backend/main.go");
+    if (mask & 4) paths.push("foods-admin-web/page.tsx");
+    const selected = changedComponents(paths);
+    const needs = {
+      changes: {result: "success", outputs: Object.fromEntries(Object.entries(selected).map(([key, value]) => [key, String(value)]))},
+      processor: {result: selected.processor ? "success" : "skipped"},
+      backend: {result: selected.backend ? "success" : "skipped"},
+    };
+    for (const job of ["processor", "backend", "frontend"]) assert.equal(condition(job, needs), selected[job], `${job}, mask=${mask}`);
+  }
+});
+
+test("failed detection, failed selected dependencies and cancellation block downstream deployments", () => {
+  const needs = {
+    changes: {result: "success", outputs: {processor: "true", backend: "true", frontend: "true"}},
+    processor: {result: "success"}, backend: {result: "success"},
+  };
+  for (const result of ["failure", "cancelled"]) {
+    const failedProcessor = {...needs, processor: {result}, backend: {result: "skipped"}};
+    assert.equal(condition("backend", failedProcessor), false);
+    assert.equal(condition("frontend", failedProcessor), false);
+    assert.equal(condition("frontend", {...needs, backend: {result}}), false);
+  }
+  for (const job of ["backend", "frontend"]) {
+    assert.equal(condition(job, {...needs, changes: {...needs.changes, result: "failure"}}), false);
+    assert.equal(condition(job, needs, true), false);
+  }
 });
