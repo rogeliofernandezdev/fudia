@@ -2,7 +2,7 @@ name: fudia-concierge
 
 on:
   push:
-    branches: [aws-deploy]
+    branches: [aws-deploy1]
     paths:
       - "fudia-concierge/**"
       - ".github/workflows/fudia-concierge.yml"
