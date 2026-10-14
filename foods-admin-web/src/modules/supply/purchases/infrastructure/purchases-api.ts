@@ -11,7 +11,7 @@ export function savePurchaseCombination(input:{unit:string;code:string;name:stri
 export function savePurchasePresentation(id:string,draft:PurchasePresentationDraft){
   return apiFetch<PurchasePresentation>(`purchase-inventory-items/${id}/presentations`,{method:"POST",body:JSON.stringify({...draft,unitsPerPresentation:Number(draft.unitsPerPresentation)})});
 }
-import type {PurchaseInventoryItemDraft,PurchaseInventoryOption,PurchaseItemCategory,PurchaseOrder,PurchaseOrderDraft,PurchaseOrdersResponse,PurchaseReceiptDetail,PurchaseReceiptDraft,PurchaseReceiptResult,PurchaseReceiptSummary,PurchaseReturnDraft,PurchaseStatus,Supplier,SupplierDraft,SuppliersResponse} from "../domain/types";
+import type {PurchaseInventoryItemDraft,PurchaseInventoryOption,PurchaseItemCategory,PurchaseOrder,PurchaseOrderDraft,PurchaseOrdersResponse,PurchaseReceiptDetail,PurchaseReceiptDraft,PurchaseReceiptResult,PurchaseReturnDraft,PurchaseStatus,Supplier,SupplierDraft,SuppliersResponse} from "../domain/types";
 
 export function listPurchaseOrders(input:{q:string;status:string;page:number;pageSize:number}){
   const params=new URLSearchParams({q:input.q,status:input.status,page:String(input.page),pageSize:String(input.pageSize)});
@@ -127,10 +127,6 @@ export async function createPurchaseInventoryItem(draft:PurchaseInventoryItemDra
 }
 
 
-export function listPurchaseReceipts(input:{q?:string;from?:string;to?:string;page?:number;pageSize?:number}={}){
- const params=new URLSearchParams({q:input.q??"",from:input.from??"",to:input.to??"",page:String(input.page??1),pageSize:String(input.pageSize??20)});
- return apiFetch<{items:PurchaseReceiptSummary[];total:number;page:number;pageSize:number}>(`purchase-receipts?${params.toString()}`);
-}
 export function getPurchaseReceipt(id:string){return apiFetch<PurchaseReceiptDetail>(`purchase-receipts/${id}`)}
 export function createPurchaseReturn(draft:PurchaseReturnDraft){
  return apiFetch<{id:string;code:string;kind:string;purchaseOrderId:string;number:string}>(`purchase-receipts/${draft.purchaseReceiptId}/returns`,{method:"POST",body:JSON.stringify({

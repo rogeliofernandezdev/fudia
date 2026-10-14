@@ -342,7 +342,45 @@ func (r *Purchasing) Order(ctx context.Context, s scope, id string) (domain.Purc
 		}
 		item.Items = append(item.Items, line)
 	}
-	return item, rows.Err()
+	if err := rows.Err(); err != nil {
+		return item, purchaseError(err)
+	}
+	item.History, err = r.orderHistory(ctx, s, item.ID)
+	return item, err
+}
+
+// orderHistory lists the receipts of an order and the corrections/returns made
+// against them, in the order they happened.
+func (r *Purchasing) orderHistory(ctx context.Context, s scope, orderID string) ([]domain.PurchaseOrderEvent, error) {
+	rows, err := r.db(ctx).Query(ctx, `
+		SELECT id,kind,code,receipt_id,reason,notes,created_by_name,created_at,item_count FROM (
+		  SELECT pr.id,'receipt' AS kind,pr.code,pr.id AS receipt_id,'' AS reason,pr.notes,
+		         COALESCE(u.full_name,'Usuario no disponible') AS created_by_name,pr.created_at,
+		         (SELECT count(*) FROM purchase_receipt_items pri WHERE pri.purchase_receipt_id=pr.id AND pri.organization_id=pr.organization_id)::int AS item_count
+		  FROM purchase_receipts pr
+		  LEFT JOIN users u ON u.id=pr.created_by
+		  WHERE pr.purchase_order_id=$1 AND pr.organization_id=$2 AND pr.location_id=$3
+		  UNION ALL
+		  SELECT rt.id,rt.kind,rt.code,rt.purchase_receipt_id,rt.reason,rt.notes,
+		         COALESCE(u.full_name,'Usuario no disponible'),rt.created_at,
+		         (SELECT count(*) FROM purchase_return_items ri WHERE ri.purchase_return_id=rt.id AND ri.organization_id=rt.organization_id)::int
+		  FROM purchase_returns rt
+		  LEFT JOIN users u ON u.id=rt.created_by
+		  WHERE rt.purchase_order_id=$1 AND rt.organization_id=$2 AND rt.location_id=$3
+		) history ORDER BY created_at,kind<>'receipt'`, orderID, s.OrganizationID, s.LocationID)
+	if err != nil {
+		return nil, purchaseError(err)
+	}
+	defer rows.Close()
+	events := []domain.PurchaseOrderEvent{}
+	for rows.Next() {
+		var e domain.PurchaseOrderEvent
+		if err := rows.Scan(&e.ID, &e.Kind, &e.Code, &e.ReceiptID, &e.Reason, &e.Notes, &e.CreatedByName, &e.CreatedAt, &e.ItemCount); err != nil {
+			return nil, purchaseError(err)
+		}
+		events = append(events, e)
+	}
+	return events, rows.Err()
 }
 func (r *Purchasing) Receipt(ctx context.Context, s scope, id string) (domain.PurchaseReceiptDetail, error) {
 	var out domain.PurchaseReceiptDetail

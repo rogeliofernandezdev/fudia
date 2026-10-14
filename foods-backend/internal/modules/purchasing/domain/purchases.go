@@ -77,7 +77,22 @@ type PurchaseOrderItemView struct {
 }
 type PurchaseOrderDetail struct {
 	PurchaseOrderSummary
-	Items []PurchaseOrderItemView `json:"items"`
+	Items   []PurchaseOrderItemView `json:"items"`
+	History []PurchaseOrderEvent    `json:"history"`
+}
+
+// PurchaseOrderEvent is one reception-flow document of an order, oldest first:
+// a receipt (kind "receipt") or a correction/return made against one of its receipts.
+type PurchaseOrderEvent struct {
+	ID            string    `json:"id"`
+	Kind          string    `json:"kind"`
+	Code          string    `json:"code"`
+	ReceiptID     string    `json:"receiptId"`
+	Reason        string    `json:"reason"`
+	Notes         string    `json:"notes"`
+	CreatedByName string    `json:"createdByName"`
+	CreatedAt     time.Time `json:"createdAt"`
+	ItemCount     int       `json:"itemCount"`
 }
 type PurchaseReceiptSummary struct {
 	ID              string    `json:"id"`

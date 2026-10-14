@@ -22,7 +22,7 @@ const listings={
   "src/modules/menu/recipes/presentation/recipes-page.tsx":1,
   "src/modules/supply/inventory/presentation/kardex-page.tsx":1,
   "src/modules/operations/pos/presentation/pos-page.tsx":1,
-  "src/modules/supply/purchases/presentation/purchases-page.tsx":6,
+  "src/modules/supply/purchases/presentation/purchases-page.tsx":5,
   "src/modules/operations/cash/presentation/cash-report-content.tsx":1,
   "src/modules/platform/presentation/platform-global-settings-page.tsx":1,
   "src/modules/platform/presentation/platform-subscription-page.tsx":1,

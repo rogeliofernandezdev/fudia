@@ -11,8 +11,8 @@ import {useFeedback,useMoney,useSession,useSettings} from "@/providers";
 import {formatRegionalCalendarDate,formatRegionalDateTime,formatRegionalNumber} from "@/shared/i18n/regional-format";
 import {useDebouncedValue} from "@/shared/hooks/use-debounced-value";
 import {purchaseOrderResolver,supplierResolver} from "../domain/purchase-schema";
-import type {PurchaseInventoryOption,PurchaseOrder,PurchaseOrderDraft,PurchaseOrderSummary,PurchaseReceiptDetail,PurchaseStatus,PurchaseTab,Supplier,SupplierDraft} from "../domain/types";
-import {approvePurchaseOrder,createPurchaseInventoryItem,createPurchaseReturn,getPurchaseOrder,getPurchaseReceipt,listPurchaseInventory,listPurchaseOrders,listPurchaseReceipts,listSuppliers,receivePurchaseOrder,savePurchaseOrder,saveSupplier,setPurchaseOrderStatus,setSupplierActive} from "../infrastructure/purchases-api";
+import type {PurchaseInventoryOption,PurchaseOrder,PurchaseOrderDraft,PurchaseOrderEvent,PurchaseOrderSummary,PurchaseReceiptDetail,PurchaseStatus,PurchaseTab,Supplier,SupplierDraft} from "../domain/types";
+import {approvePurchaseOrder,createPurchaseInventoryItem,createPurchaseReturn,getPurchaseOrder,getPurchaseReceipt,listPurchaseInventory,listPurchaseOrders,listSuppliers,receivePurchaseOrder,savePurchaseOrder,saveSupplier,setPurchaseOrderStatus,setSupplierActive} from "../infrastructure/purchases-api";
 
 const PurchaseItemDialog=dynamic(()=>import("./purchase-item-dialog").then(module=>module.PurchaseItemDialog),{ssr:false});
 const PurchasePresentationDialog=dynamic(()=>import("./purchase-presentation-dialog").then(module=>module.PurchasePresentationDialog),{ssr:false});
@@ -31,7 +31,6 @@ const emptyOrder:PurchaseOrderDraft={id:"",supplierId:"",expectedAt:"",notes:"",
 const emptySupplier:SupplierDraft={id:"",taxId:"",name:"",email:"",phone:""};
 const orderColumns=["ORDEN","PROVEEDOR","FECHA","TOTAL","ESTADO","ACCIONES"];
 const receiptColumns=["ORDEN","PROVEEDOR","ENTREGA ESPERADA","ARTÍCULOS","ESTADO","ACCIONES"];
-const receiptHistoryColumns=["RECEPCIÓN","OC","PROVEEDOR","FECHA","ARTÍCULOS","USUARIO","ACCIONES"];
 const supplierColumns=["PROVEEDOR","RUC","CONTACTO","ESTADO","ACCIONES"];
 
 
@@ -59,7 +58,6 @@ export function PurchasesPage(){
   const[cancelTarget,setCancelTarget]=useState<PurchaseOrderSummary|PurchaseOrder|null>(null);
   const[receiptOrder,setReceiptOrder]=useState<PurchaseOrder|null>(null);
   const[receiptLoadingId,setReceiptLoadingId]=useState<string|null>(null);
-  const[receiptView,setReceiptView]=useState<"pending"|"history">("pending");
   const[receiptDetail,setReceiptDetail]=useState<PurchaseReceiptDetail|null>(null);
   const[receiptDetailLoading,setReceiptDetailLoading]=useState("");
   const[returnReceipt,setReturnReceipt]=useState<PurchaseReceiptDetail|null>(null);
@@ -78,11 +76,6 @@ export function PurchasesPage(){
   const receivableSummary=useQuery({
     queryKey:["purchase-orders","receivable-summary"],
     queryFn:()=>listPurchaseOrders({q:"",status:"receivable",page:1,pageSize:1}),
-  });
-  const receiptHistory=useQuery({
-    queryKey:["purchase-receipts",debouncedQ,page,size],
-    queryFn:()=>listPurchaseReceipts({q:debouncedQ,page,pageSize:size}),
-    enabled:tab==="receipts"&&receiptView==="history",
   });
   const suppliers=useQuery({
     queryKey:["suppliers",debouncedQ,status,page,size],
@@ -174,7 +167,7 @@ export function PurchasesPage(){
 
   const returnPurchase=useMutation({
     mutationFn:createPurchaseReturn,
-    onSuccess:result=>{setReturnReceipt(null);setReceiptDetail(null);void qc.invalidateQueries({queryKey:["purchase-receipts"]});void qc.invalidateQueries({queryKey:["purchase-orders"]});void qc.invalidateQueries({queryKey:["inventory"]});void qc.invalidateQueries({queryKey:["inventory-products"]});void qc.invalidateQueries({queryKey:["inventory-movements"]});notify({tone:"success",title:result.kind==="receipt_correction"?"Recepción corregida":"Devolución registrada",message:result.code+" actualizó Inventario y Kárdex."})},
+    onSuccess:result=>{setReturnReceipt(null);setReceiptDetail(null);void qc.invalidateQueries({queryKey:["purchase-order"]});void qc.invalidateQueries({queryKey:["purchase-orders"]});void qc.invalidateQueries({queryKey:["inventory"]});void qc.invalidateQueries({queryKey:["inventory-products"]});void qc.invalidateQueries({queryKey:["inventory-movements"]});notify({tone:"success",title:result.kind==="receipt_correction"?"Recepción corregida":"Devolución registrada",message:result.code+" actualizó Inventario y Kárdex."})},
     onError:error=>notify({tone:"danger",title:"No se pudo procesar",message:error.message}),
   });
 
@@ -256,7 +249,6 @@ export function PurchasesPage(){
 
   const orderItems=orders.data?.items??[];
   const receiptItems=receipts.data?.items??[];
-  const receiptHistoryItems=receiptHistory.data?.items??[];
   const supplierItems=suppliers.data?.items??[];
   const headerAction=tab==="orders"
     ?canManage?<Button icon="plus" onClick={()=>setOrderDraft({...emptyOrder})}>Nueva orden</Button>:undefined
@@ -279,28 +271,22 @@ export function PurchasesPage(){
     </TabsBar>
 
     <section className="panel standardized-management purchases-panel">
-      {tab==="receipts"&&<div className="purchase-receipt-views">
-        <Tabs<"pending"|"history"> label="Vista de recepciones" value={receiptView} onChange={value=>{setReceiptView(value);setPage(1);setStatus("")}} items={[
-          {value:"pending",label:"Pendientes",icon:"stock",count:receivableSummary.data?.total??0},
-          {value:"history",label:"Historial",icon:"receipt"},
-        ]}/>
-      </div>}
 
       <div className="purchases-toolbar">
         <SearchField
           value={q}
           onChange={event=>{setQ(event.target.value);setPage(1)}}
-          placeholder={tab==="suppliers"?"Buscar proveedor o RUC...":tab==="receipts"?(receiptView==="history"?"Buscar REC, OC o proveedor...":"Buscar orden pendiente de recepción..."):"Buscar por orden o proveedor..."}
+          placeholder={tab==="suppliers"?"Buscar proveedor o RUC...":tab==="receipts"?"Buscar orden pendiente de recepción...":"Buscar por orden o proveedor..."}
         />
 
         {tab==="orders"?<Select aria-label="Filtrar órdenes por estado" value={status} onChange={event=>{setStatus(event.target.value);setPage(1)}}>
           <option value="">Todos los estados</option>
           {Object.entries(statusMeta).map(([value,meta])=><option value={value} key={value}>{meta.label}</option>)}
-        </Select>:tab==="receipts"?(receiptView==="pending"?<Select aria-label="Filtrar recepciones" value={status} onChange={event=>{setStatus(event.target.value);setPage(1)}}>
+        </Select>:tab==="receipts"?<Select aria-label="Filtrar recepciones" value={status} onChange={event=>{setStatus(event.target.value);setPage(1)}}>
           <option value="">Todas pendientes</option>
           <option value="approved">Sin recibir</option>
           <option value="partially_received">Recepción parcial</option>
-        </Select>:<span/>):<Select aria-label="Filtrar proveedores por estado" value={status} onChange={event=>{setStatus(event.target.value);setPage(1)}}>
+        </Select>:<Select aria-label="Filtrar proveedores por estado" value={status} onChange={event=>{setStatus(event.target.value);setPage(1)}}>
           <option value="">Todos los estados</option>
           <option value="active">Activos</option>
           <option value="inactive">Inactivos</option>
@@ -311,7 +297,7 @@ export function PurchasesPage(){
           {tab==="orders"
             ?"La orden registra lo solicitado y no modifica el stock."
             :tab==="receipts"
-              ?(receiptView==="pending"?"Órdenes aprobadas con cantidades pendientes.":"Historial documental de recepciones, correcciones y devoluciones.")
+              ?"Órdenes aprobadas con cantidades pendientes. El historial de cada orden está en su detalle."
               :"Proveedores compartidos por la empresa para abastecer cualquiera de sus locales."}
         </p>
       </div>
@@ -348,20 +334,6 @@ export function PurchasesPage(){
         </>}
         {!orders.isLoading&&!orders.isError&&<Pagination page={page} size={size} total={orders.data?.total??0} onPage={setPage} onSize={value=>{setSize(value);setPage(1)}}/>}
       </>:tab==="receipts"?<>
-        {receiptView==="history"?<>
-          {receiptHistory.isLoading?<TableSkeleton columns={receiptHistoryColumns} label="Cargando historial de recepciones"/>
-          :receiptHistory.isError?<ErrorState title="No pudimos cargar el historial" text={receiptHistory.error.message} onRetry={()=>void receiptHistory.refetch()}/>
-          :!receiptHistoryItems.length?<EmptyState icon="receipt" title={q?"Sin coincidencias":"Sin recepciones registradas"} text={q?"Ajusta la búsqueda.":"Las recepciones confirmadas aparecerán aquí."}/>
-          :<>
-            <DataTable label="Historial de recepciones" containerClassName="hover-scroll purchases-table-wrap"><thead><tr>{receiptHistoryColumns.map(column=><th key={column}>{column}</th>)}</tr></thead><tbody>{receiptHistoryItems.map((r,index)=><tr className={index%2?"alternate":""} key={r.id}><td><span className={"row-icon r"+index%3}><Icon name="receipt" size={18}/></span><b>{r.code}</b></td><td>{r.number}</td><td>{r.supplierName}</td><td>{formatRegionalDateTime(r.createdAt,{country:location?.country,timeZone:location?.timezone},{dateStyle:"medium",timeStyle:"short"})}</td><td>{r.itemCount}</td><td>{r.createdByName}</td><td><div className="table-actions"><RowActionButton action="view" label={receiptDetailLoading===r.id?"Cargando recepción":"Ver "+r.code} disabled={receiptDetailLoading===r.id} aria-busy={receiptDetailLoading===r.id} onClick={()=>void openReceiptDetail(r.id)}/></div></td></tr>)}</tbody></DataTable>
-            <div className="management-cards purchases-cards">{receiptHistoryItems.map(r=><article key={r.id}>
-              <header><span className="row-icon r0"><Icon name="receipt"/></span><div><b>{r.code}</b><small>{r.number} · {r.supplierName}</small></div></header>
-              <dl><div><dt>Fecha</dt><dd>{formatRegionalDateTime(r.createdAt,{country:location?.country,timeZone:location?.timezone},{dateStyle:"short",timeStyle:"short"})}</dd></div><div><dt>Artículos</dt><dd>{r.itemCount}</dd></div></dl>
-              <footer><RowActionButton action="view" label={receiptDetailLoading===r.id?"Cargando recepción":"Ver "+r.code} disabled={receiptDetailLoading===r.id} aria-busy={receiptDetailLoading===r.id} onClick={()=>void openReceiptDetail(r.id)}/></footer>
-            </article>)}</div>
-          </>}
-          {!receiptHistory.isLoading&&!receiptHistory.isError&&<Pagination page={page} size={size} total={receiptHistory.data?.total??0} onPage={setPage} onSize={value=>{setSize(value);setPage(1)}}/>}
-        </>:<>
         {receipts.isLoading?<TableSkeleton columns={receiptColumns} label="Cargando recepciones pendientes"/>
         :receipts.isError?<ErrorState title="No pudimos cargar las recepciones pendientes" text={receipts.error.message} onRetry={()=>void receipts.refetch()}/>
         :!receiptItems.length?<EmptyState
@@ -372,7 +344,7 @@ export function PurchasesPage(){
           <DataTable label="Recepciones de compra" containerClassName="hover-scroll purchases-table-wrap purchase-receipts-table">
             <thead><tr>{receiptColumns.map(column=><th key={column}>{column}</th>)}</tr></thead>
             <tbody>{receiptItems.map((order,index)=>{const meta=statusMeta[order.status];const loading=receiptLoadingId===order.id;return <tr className={index%2?"alternate":""} key={order.id}>
-              <td><span className={"row-icon r"+index%3}><Icon name="stock" size={18}/></span><b>{order.number}</b><small>Aprobada para recepción</small></td>
+              <td><span className={"row-icon r"+index%3}><Icon name="stock" size={18}/></span><b>{order.number}</b></td>
               <td><b>{order.supplierName}</b></td>
               <td>{order.expectedAt?formatRegionalCalendarDate(order.expectedAt,location?.country,{dateStyle:"medium"}):"Sin fecha"}</td>
               <td>{order.itemCount}</td>
@@ -391,7 +363,6 @@ export function PurchasesPage(){
           </article>})}</div>
         </>}
         {!receipts.isLoading&&!receipts.isError&&<Pagination page={page} size={size} total={receipts.data?.total??0} onPage={setPage} onSize={value=>{setSize(value);setPage(1)}}/>}
-        </>}
       </>:<>
         {suppliers.isLoading?<TableSkeleton columns={supplierColumns} label="Cargando proveedores"/>
         :suppliers.isError?<ErrorState title="No pudimos cargar los proveedores" text={suppliers.error.message} onRetry={()=>void suppliers.refetch()}/>
@@ -454,6 +425,8 @@ export function PurchasesPage(){
           approve={()=>{void runOrderAction(()=>approve.mutateAsync(detail.data.id))}}
           receive={()=>{setDetailId(null);changeTab("receipts")}}
           cancel={()=>setCancelTarget(detail.data)}
+          viewReceipt={id=>void openReceiptDetail(id)}
+          viewingReceiptId={receiptDetailLoading}
         />
     )}
 
@@ -614,17 +587,30 @@ function SupplierDialog({initial,busy,close,save}:{initial:SupplierDraft;busy:bo
   </div><ModalFooter><Button kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy}>{busy?"Guardando…":"Guardar"}</Button></ModalFooter></form>{busy&&<div className="modal-busy" role="status"><i/><span>Guardando…</span></div>}</Dialog></div>;
 }
 
-function PurchaseDetail({order,mode,canManage,canApprove,canReceive,busy,currency,country,timezone,close,edit,changeStatus,approve,receive,cancel}:{order:PurchaseOrder;mode:"view"|"review";canManage:boolean;canApprove:boolean;canReceive:boolean;busy:boolean;currency:string;country?:string|null;timezone?:string|null;close:()=>void;edit:()=>void;changeStatus:(next:"draft"|"pending_approval"|"cancelled")=>void;approve:()=>void;receive:()=>void;cancel:()=>void}){
+function PurchaseDetail({order,mode,canManage,canApprove,canReceive,busy,currency,country,timezone,close,edit,changeStatus,approve,receive,cancel,viewReceipt,viewingReceiptId}:{order:PurchaseOrder;mode:"view"|"review";canManage:boolean;canApprove:boolean;canReceive:boolean;busy:boolean;currency:string;country?:string|null;timezone?:string|null;close:()=>void;edit:()=>void;changeStatus:(next:"draft"|"pending_approval"|"cancelled")=>void;approve:()=>void;receive:()=>void;cancel:()=>void;viewReceipt:(id:string)=>void;viewingReceiptId:string}){
   const money=useMoney();
   const meta=statusMeta[order.status];
   const receivable=order.status==="approved"||order.status==="partially_received";
   const cancellable=order.status==="draft"||order.status==="pending_approval"||order.status==="approved";
+  const history=order.history??[];
   return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal purchase-detail-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="purchase-detail-title" aria-busy={busy}><ModalHeader title={order.number} titleId="purchase-detail-title" icon="receipt" subtitle={mode==="view"?"DETALLE DE ORDEN":"REVISAR ORDEN"} onClose={close} busy={busy} closeLabel="Cerrar"/><div className="purchase-detail-body">
     <section className="purchase-detail-summary"><div><small>PROVEEDOR</small><b>{order.supplierName}</b></div><div><small>TOTAL</small><b>{currency}</b></div><div><small>ARTÍCULOS</small><b>{order.itemCount}</b></div></section>
     <section className="purchase-detail-meta"><div><small>CREADA</small><b>{formatRegionalDateTime(order.createdAt,{country,timeZone:timezone},{dateStyle:"medium",timeStyle:"short"})}</b></div><div><small>ENTREGA ESPERADA</small><b>{order.expectedAt?formatRegionalCalendarDate(order.expectedAt,country,{dateStyle:"medium"}):"Sin fecha"}</b></div><div><small>NOTAS</small><b>{order.notes||"Sin notas"}</b></div></section>
     <section className="purchase-detail-lines"><header><div><small>DETALLE</small><h3>Artículos de la orden</h3></div></header><DataTable label="Estado de recepción por artículo" containerClassName="hover-scroll" className="purchase-receipt-progress-table"><thead><tr><th>ARTÍCULO</th><th>PRESENTACIÓN DE COMPRA</th><th>SOLICITADO</th><th>RECIBIDO</th><th>PENDIENTE</th><th>COSTO</th><th>SUBTOTAL</th></tr></thead><tbody>{order.items.map((item,index)=><tr className={index%2?"alternate":""} key={item.id}><td><b>{item.itemName}</b><small>{item.sku||item.unit}</small></td><td>{presentationName(item.presentationType,item.unitsPerPresentation,item.unit,item.presentationName)}</td><td>{formatRegionalNumber(Number(item.quantity),country,{maximumFractionDigits:3})}</td><td><b className="purchase-received-qty">{formatRegionalNumber(Number(item.receivedQuantity),country,{maximumFractionDigits:3})}</b></td><td><b className={Number(item.pendingQuantity)>0?"purchase-pending-qty":""}>{formatRegionalNumber(Number(item.pendingQuantity),country,{maximumFractionDigits:3})}</b></td><td>{formatRegionalNumber(Number(item.unitCost),country,{minimumFractionDigits:2,maximumFractionDigits:4})}</td><td><b>{money(item.lineTotal)}</b></td></tr>)}</tbody></DataTable></section>
+    {(history.length>0||receivable)&&<section className="purchase-detail-lines purchase-order-history" aria-labelledby="purchase-history-title"><header><div><small>HISTORIAL</small><h3 id="purchase-history-title">Recepciones y correcciones</h3></div>{history.length>0&&<span>{history.length} {history.length===1?"documento":"documentos"}</span>}</header>
+      {history.length?<ol className="purchase-history-list">{history.map(event=>{const meta=historyMeta[event.kind];return <li className={"purchase-history-event "+event.kind} key={event.id}>
+        <span className="purchase-history-icon" aria-hidden="true"><Icon name={meta.icon} size={16}/></span>
+        <div><b>{meta.label}</b><small>{event.code} · <time dateTime={event.createdAt}>{formatRegionalDateTime(event.createdAt,{country,timeZone:timezone},{dateStyle:"medium",timeStyle:"short"})}</time> · {event.createdByName} · {event.itemCount} {event.itemCount===1?"artículo":"artículos"}</small>{event.reason&&<p>{event.reason}</p>}{event.notes&&<p>{event.notes}</p>}</div>
+        {event.kind==="receipt"&&<RowActionButton action="view" label={viewingReceiptId===event.id?"Cargando recepción":`Ver recepción ${event.code}`} disabled={viewingReceiptId===event.id} aria-busy={viewingReceiptId===event.id} onClick={()=>viewReceipt(event.id)}/>}
+      </li>})}</ol>:<p className="purchase-history-empty">Todavía no se recibió mercadería de esta orden.</p>}
+    </section>}
   </div>{busy&&<div className="modal-busy" role="status"><i/><span>Procesando…</span></div>}<ModalFooter status={<Status tone={meta.tone}>{meta.label}</Status>} statusLabel="Estado de la orden">{mode==="review"&&(canManage||canApprove||canReceive)&&order.status!=="received"&&order.status!=="cancelled"&&<section className="purchase-detail-actions"><div><small>SIGUIENTE PASO</small><b>{nextStepLabel(order.status)}</b></div><div>{canManage&&order.status==="draft"&&<><Button kind="secondary" icon="edit" onClick={edit} disabled={busy}>Editar</Button><Button icon="arrowRightCircle" onClick={()=>changeStatus("pending_approval")} disabled={busy}>Enviar a aprobación</Button></>}{order.status==="pending_approval"&&<>{canManage&&<Button kind="ghost" icon="chevronLeft" onClick={()=>changeStatus("draft")} disabled={busy}>Volver a borrador</Button>}{canApprove&&<Button icon="check" onClick={approve} disabled={busy}>Aprobar</Button>}</>}{canReceive&&receivable&&<Button kind="primary" icon="stock" onClick={receive} disabled={busy}>{order.status==="partially_received"?"Continuar en Recepciones":"Ir a Recepciones"}</Button>}{canManage&&cancellable&&<Button action="cancel-record" onClick={cancel} disabled={busy}>Cancelar orden</Button>}</div></section>}</ModalFooter></Dialog></div>;
 }
+const historyMeta:Record<PurchaseOrderEvent["kind"],{label:string;icon:"stock"|"undo"|"truck"}>={
+  receipt:{label:"Recepción",icon:"stock"},
+  receipt_correction:{label:"Corrección de recepción",icon:"undo"},
+  supplier_return:{label:"Devolución al proveedor",icon:"truck"},
+};
 function ReceiptHistoryDetail({receipt,canManage,close,startReturn}:{receipt:PurchaseReceiptDetail;canManage:boolean;close:()=>void;startReturn:()=>void}){
  const{location}=useSession();
  const money=useMoney();
@@ -632,7 +618,7 @@ function ReceiptHistoryDetail({receipt,canManage,close,startReturn}:{receipt:Pur
  const quantity=(value:string)=>formatRegionalNumber(Number(value),location?.country,{maximumFractionDigits:3});
  return <div className="modal-backdrop modal-overlay-in" role="presentation"><Dialog onResponseClose={close} className="crud-modal purchase-detail-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="receipt-history-title">
 
-  <ModalHeader title={receipt.code} titleId="receipt-history-title" icon="receipt" subtitle="RECEPCIÓN HISTÓRICA" onClose={close} closeLabel="Cerrar"/>
+  <ModalHeader title={receipt.code} titleId="receipt-history-title" icon="receipt" subtitle="DETALLE DE RECEPCIÓN" onClose={close} closeLabel="Cerrar"/>
   <div className="purchase-detail-body"><section className="purchase-detail-summary"><div><small>ORDEN</small><b>{receipt.number}</b></div><div><small>PROVEEDOR</small><b>{receipt.supplierName}</b></div><div><small>USUARIO</small><b>{receipt.createdByName}</b></div></section>
    <section className="purchase-detail-lines"><header><div><small>DETALLE</small><h3>Artículos recibidos</h3></div></header><DataTable label="Artículos de la recepción" containerClassName="hover-scroll"><thead><tr><th>ARTÍCULO</th><th>RECIBIDO</th><th>DEVUELTO/CORREGIDO</th><th>DISPONIBLE</th><th>COSTO</th></tr></thead><tbody>{receipt.items.map((i,index)=><tr className={index%2?"alternate":""} key={i.id}><td><b>{i.itemName}</b></td><td>{quantity(i.quantity)}</td><td>{quantity(i.returnedQuantity)}</td><td><b>{quantity(i.returnableQuantity)}</b></td><td>{money(i.unitCost)}</td></tr>)}</tbody></DataTable></section>
    {receipt.notes&&<section className="purchase-detail-meta purchase-receipt-history-notes"><div><small>NOTAS</small><b>{receipt.notes}</b></div></section>}

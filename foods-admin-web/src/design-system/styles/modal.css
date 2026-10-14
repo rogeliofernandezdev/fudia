@@ -109,8 +109,11 @@
 /* Cuerpo desplazable: tanto el patrón nuevo (.modal-body) como los formularios heredados. */
 .crud-modal>:is(form,.modal-form){display:flex;flex:1 1 auto;flex-direction:column;min-height:0}
 /* Modales: barra fina siempre visible cuando hay más contenido; no usar hover-scroll en el cuerpo (oculta la barra hasta el hover). */
-.modal-body{flex:1 1 auto;min-height:0;padding:var(--space-6);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--ink-400-alpha-40) transparent}
-.crud-modal>form:not(.modal-form){padding:var(--space-6) var(--space-6) 0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--ink-400-alpha-40) transparent}
+.modal-body{flex:1 1 auto;min-height:0;padding:var(--space-6);overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--ink-400-alpha-40) transparent}
+/* Ayudas de campo dentro del modal: el tooltip crece hacia la izquierda del icono para no salirse del cuerpo ni crear desplazamiento horizontal. */
+.modal-body .field-hint[data-tooltip]:after{left:auto;right:calc(var(--size-8) * -1);transform:translateY(var(--size-4))}
+.modal-body .field-hint[data-tooltip]:is(:hover,:focus-visible):after{transform:translateY(0)}
+.crud-modal>form:not(.modal-form){padding:var(--space-6) var(--space-6) 0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--ink-400-alpha-40) transparent}
 .crud-modal>:is(div,section,article):not(.modal-busy,.modal-body,.modal-context,.modal-workspace){flex:1 1 auto;min-height:0;overflow-y:auto}
 
 .modal-footer,.crud-modal>footer,.crud-modal>form>footer{flex:none;display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:var(--space-2-5);padding:var(--space-4) var(--space-6) calc(var(--space-4) + var(--safe-area-bottom));border-top:var(--stroke-1) solid var(--line);background:var(--cloud-50)}

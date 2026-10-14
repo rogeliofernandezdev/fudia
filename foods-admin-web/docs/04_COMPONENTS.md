@@ -144,7 +144,11 @@ panel de hasta 760 px; los formularios sin resumen continúan con `ModalBody`.
 Todo el fondo del resumen usa gris muy claro `cloud-50`; el estado abierto usa azul tenue.
 
 `.modal-body` es el único scroll del modal y su barra fina está siempre visible
-cuando hay desbordamiento; no combinarlo con `hover-scroll`.
+cuando hay desbordamiento; no combinarlo con `hover-scroll`. El cuerpo nunca desplaza en
+horizontal (`overflow-x: hidden`): los tooltips ocultos de `FieldLabel`
+(`field-hint`) se anclan al borde derecho del icono y crecen hacia la izquierda.
+Los formularios usan `ModalForm` + `ModalBody` + `ModalFooter`; el `<form>`
+directo con pie de márgenes negativos es heredado y no se usa en modales nuevos.
 
 `dl.modal-record-data` organiza los datos de consulta de Ventas y Cobros.
 En escritorio es una franja de una fila: fondo `primary-50`, borde `primary-100`,

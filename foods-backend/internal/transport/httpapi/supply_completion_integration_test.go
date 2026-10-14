@@ -97,6 +97,20 @@ func TestSupplyCompletionReceiptIdempotencyValuationAndReturns(t *testing.T){
 	if qty!=12{t.Fatalf("stock after supplier return=%v",qty)}
 	if err:=pool.QueryRow(ctx,`SELECT received_quantity::float8 FROM purchase_order_items WHERE id=$1`,lineID).Scan(&received);err!=nil{t.Fatal(err)}
 	if received!=3{t.Fatalf("supplier return must not reopen PO received qty, got %v",received)}
+
+	// The order detail carries its reception history: receipt, then correction, then supplier return.
+	detailReq:=httptest.NewRequest("GET","/v1/admin/purchase-orders/"+orderID,nil)
+	detailReq.SetPathValue("id",orderID);detailReq=detailReq.WithContext(context.WithValue(detailReq.Context(),scopeKey{},s))
+	detailRec:=httptest.NewRecorder();api.getPurchaseOrder(detailRec,detailReq)
+	var detail struct{History []struct{Kind string `json:"kind"`;ReceiptID string `json:"receiptId"`;Reason string `json:"reason"`;ItemCount int `json:"itemCount"`;CreatedByName string `json:"createdByName"`} `json:"history"`}
+	if detailRec.Code!=200||json.Unmarshal(detailRec.Body.Bytes(),&detail)!=nil{t.Fatalf("order detail: %d %s",detailRec.Code,detailRec.Body.String())}
+	kinds:=[]string{}
+	for _,event:=range detail.History{
+		kinds=append(kinds,event.Kind)
+		if event.ReceiptID!=receiptResult.ID||event.ItemCount!=1||event.CreatedByName==""{t.Fatalf("history event incomplete: %+v",event)}
+	}
+	if strings.Join(kinds,",")!="receipt,receipt_correction,supplier_return"{t.Fatalf("order history order=%v",kinds)}
+	if detail.History[1].Reason!="cantidad ingresada por error"{t.Fatalf("correction reason=%q",detail.History[1].Reason)}
 }
 
 func TestSupplyCompletionTransferIdempotencyAndLocalSettings(t *testing.T){

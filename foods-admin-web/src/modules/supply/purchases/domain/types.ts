@@ -82,7 +82,9 @@ export type PurchaseOrderItem={
   lineTotal:string;
 };
 
-export type PurchaseOrder=PurchaseOrderSummary&{items:PurchaseOrderItem[]};
+/** Documento del flujo de recepción de una orden, del más antiguo al más reciente. */
+export type PurchaseOrderEvent={id:string;kind:"receipt"|"receipt_correction"|"supplier_return";code:string;receiptId:string;reason:string;notes:string;createdByName:string;createdAt:string;itemCount:number};
+export type PurchaseOrder=PurchaseOrderSummary&{items:PurchaseOrderItem[];history:PurchaseOrderEvent[]};
 
 export type PurchaseOrdersResponse={
   items:PurchaseOrderSummary[];

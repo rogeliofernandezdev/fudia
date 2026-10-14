@@ -235,6 +235,18 @@ datos que impide valores negativos.
   actual; nunca los de otra empresa. Dos empresas pueden registrar el mismo
   nombre propio. `products.allergens` sigue guardando los nombres (`text[]`).
 
+## Historial de recepción de una orden de compra
+
+`GET /v1/admin/purchase-orders/{id}` devuelve `history`: las recepciones
+(`purchase_receipts`, `kind=receipt`) de la orden y las correcciones o
+devoluciones (`purchase_returns`, `kind=receipt_correction|supplier_return`)
+hechas sobre ellas, de la más antigua a la más reciente, siempre con alcance de
+empresa y local. Cada evento trae código, recepción de origen (`receiptId`),
+motivo, notas, usuario, fecha y cantidad de artículos. El frontend ya no lista
+recepciones de forma global: la bandeja de Recepciones muestra órdenes
+recibibles y el historial vive en el detalle de cada orden. `GET
+/v1/admin/purchase-receipts` se conserva por compatibilidad.
+
 ## Configuración inicial de una empresa
 
 El onboarding de una organización crea en una sola transacción la empresa, su perfil fiscal por defecto, el local principal, el administrador, los roles predefinidos, la suscripción y los módulos permitidos por el plan. Además copia desde plantillas persistidas en base de datos los medios de pago, categorías iniciales de gasto, una zona `Principal` y una `Caja principal` para el primer local.

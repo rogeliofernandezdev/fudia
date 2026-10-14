@@ -249,6 +249,9 @@ test("compras concentra orden recepcion y altas de abastecimiento",()=>{
   assert.ok(purchases.includes('"receivable"'),"La cola de Recepciones consulta solo órdenes recibibles");
   assert.ok(purchases.includes("No hay mercadería pendiente de recibir"),"Recepciones tiene estado vacío propio");
   assert.ok(purchases.includes("Solo aparecen órdenes aprobadas con cantidades pendientes."),"Recepciones explica su responsabilidad");
+  assert.equal(purchases.includes("listPurchaseReceipts"),false,"Recepciones es la bandeja de pendientes; no duplica un historial global de recepciones");
+  assert.ok(purchases.includes("Recepciones y correcciones")&&purchases.includes("order.history"),"El historial de recepción vive en el detalle de la orden");
+  assert.ok(purchases.includes("viewReceipt={id=>void openReceiptDetail(id)}"),"Cada recepción del historial abre su detalle para corregir o devolver");
   assert.equal(purchases.includes("PurchaseFlowSteps"),false,"La navegación por pestañas evita repetir un stepper dentro del módulo");
   assert.equal(receiptDialog.includes("PurchaseFlowSteps"),false,"El modal de recepción no repite el flujo completo");
   assert.ok(purchases.includes("partially_received"),"Compras representa una recepción parcial sin cerrar la orden");
@@ -542,6 +545,10 @@ test("reservas respeta el contrato de formularios y jerarquia del modal",()=>{
   assert.ok(page.includes("resolver:reservationResolver"),"Reservas delega validacion a Zod");
   assert.ok(schema.includes("reservationSchema=z.object"),"Reservas define esquema Zod");
   assert.ok(page.includes('className="form-grid reservation-form-grid"'),"El modal usa una reticula propia sobre el formulario estandar");
+  assert.ok(page.includes("<ModalForm")&&page.includes("<ModalBody>"),"La reserva usa cuerpo desplazable y pie fijo estándar, sin márgenes negativos");
+  const sharedModal=read("src/design-system/styles/modal.css");
+  assert.match(sharedModal,/\.modal-body\{[^}]*overflow-x:hidden/,"El cuerpo del modal nunca crea desplazamiento horizontal por tooltips ocultos");
+  assert.match(sharedModal,/\.modal-body \.field-hint\[data-tooltip\]:after\{[^}]*right:/,"Las ayudas de campo abren hacia dentro del modal");
   assert.ok(css.includes("grid-template-columns:minmax(0,1.35fr) minmax(170px,.65fr)"),"La columna principal conserva mayor jerarquia");
   const modalStart=page.indexOf("function ReservationDialog");
   const modal=page.slice(modalStart);

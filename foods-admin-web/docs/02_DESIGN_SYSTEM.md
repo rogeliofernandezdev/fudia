@@ -1693,6 +1693,26 @@ El cierre exige descarte cuando hay cambios y se
 bloquea durante la petición. El formulario usa una columna en móvil desde 390 px;
 la comanda conserva su resumen móvil y sus estilos compartidos.
 
+### Compras: recepciones e historial de la orden
+
+La recepción es una etapa de la orden de compra, no un objeto aparte.
+«Recepciones» es la bandeja de trabajo: solo órdenes aprobadas o con recepción
+parcial (filtro «Todas pendientes · Sin recibir · Recepción parcial»), con
+Recibir o Continuar. No tiene sub-pestañas ni un historial global; una orden
+recibida por completo sale de la bandeja y se consulta en «Órdenes de compra»
+con su estado «Recibida». La fila no repite el estado en un subtítulo.
+
+El detalle de la orden incluye la sección «Historial · Recepciones y
+correcciones», en orden cronológico: Recepción (icono `stock`, verde tenue),
+Corrección de recepción (`undo`) y Devolución al proveedor (`truck`), ambas en
+rojo tenue porque restan stock. Cada fila muestra código, fecha, usuario y
+artículos; las correcciones y devoluciones añaden su motivo. Cada recepción tiene
+la acción «Ver» que abre su detalle («DETALLE DE RECEPCIÓN») encima de la orden,
+con «Corregir / devolver». Al guardar, la orden y su historial se refrescan. Si
+la orden puede recibirse y aún no tiene recepciones, la sección dice «Todavía no
+se recibió mercadería de esta orden.». El cuerpo del detalle usa
+`grid-auto-rows: max-content` para que ninguna sección se comprima en móvil.
+
 ### Composición de Caja y turnos
 
 Igual que Compras, Gastos y Pedidos, la `TabsBar` (Cajas · Turnos y «Registrar
