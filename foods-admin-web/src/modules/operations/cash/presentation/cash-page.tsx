@@ -17,7 +17,7 @@ import {CashReportDialog} from "./cash-report-dialog";
 import {CashOperationDialog,CashTeamDialog} from "./cash-advanced-dialogs";
 
 type CashTab="registers"|"history";
-const historyColumns=["TURNO","CAJA","DÍA OPERATIVO","CAJERO / CIERRE","APERTURA","CIERRE","DIFERENCIA","ESTADO","ACCIONES"];
+const historyColumns=["CAJA","DÍA OPERATIVO","CAJERO / CIERRE","APERTURA","CIERRE","DIFERENCIA","ESTADO","ACCIONES"];
 
 export function CashPage(){
   const qc=useQueryClient();
@@ -117,7 +117,7 @@ export function CashPage(){
     onSuccess:shift=>{
       setShiftTarget(null);
       refreshCash();
-      notify({tone:"success",title:"Turno iniciado",message:`${shift.cashRegisterName} quedó operativa con el turno ${shift.code}.`});
+      notify({tone:"success",title:"Turno iniciado",message:`${shift.cashRegisterName} quedó operativa con un turno nuevo.`});
     },
     onError:error=>notify({tone:"danger",title:"No se pudo iniciar el turno",message:error.message}),
   });
@@ -214,10 +214,11 @@ export function CashPage(){
       description="Controla las cajas del local, sus turnos y el efectivo esperado en tiempo real."
     />
 
+    <TabsBar action={headerAction}>
+      <Tabs label="Caja y turnos" value={tab} onChange={changeTab} items={[{value:"registers",label:"Cajas",icon:"sales",...(registerItems.length?{count:registerItems.length}:{})},{value:"history",label:"Turnos",icon:"clock"}]}/>
+    </TabsBar>
+
     <section className="panel standardized-management cash-panel">
-      <TabsBar action={headerAction}>
-        <Tabs label="Caja y turnos" value={tab} onChange={changeTab} items={[{value:"registers",label:"Cajas",icon:"sales",...(registerItems.length?{count:registerItems.length}:{})},{value:"history",label:"Turnos",icon:"clock"}]}/>
-      </TabsBar>
 
       {tab==="registers"
         ?<><h2 className="sr-only">Cajas</h2><CashRegisters
@@ -242,7 +243,7 @@ export function CashPage(){
         :<section className="cash-history">
           <h2 className="sr-only">Turnos</h2>
           <div className="cash-history-toolbar">
-            <SearchField value={q} onChange={event=>{setQ(event.target.value);setPage(1)}} placeholder="Buscar por turno, caja o persona…" label="Buscar turnos por código, caja o persona"/>
+            <SearchField value={q} onChange={event=>{setQ(event.target.value);setPage(1)}} placeholder="Buscar por caja o persona…" label="Buscar turnos por caja o persona"/>
             <Select aria-label="Filtrar turnos" value={status} onChange={event=>{setStatus(event.target.value);setPage(1)}}>
               <option value="">Todos los turnos</option>
               <option value="open">Abiertos</option>
@@ -260,15 +261,14 @@ export function CashPage(){
               const variance=Number(item.varianceAmount??0);
               const attribution=cashShiftAttribution(item);
               return <tr className={index%2?"alternate":""} key={item.id}>
-                <td><span className="row-icon"><Icon name="clock" size={18}/></span><b>{item.code}</b><small>{item.movementCount} {item.movementCount===1?"movimiento":"movimientos"}</small></td>
-                <td><b>{item.cashRegisterName}</b></td>
+                <td>{item.cashRegisterName}<small>{item.movementCount} {item.movementCount===1?"movimiento":"movimientos"}</small></td>
                 <td>{businessDate(item.businessDate)}</td>
-                <td className="cash-attribution"><b>{attribution.name}</b><small>{attribution.label}</small></td>
+                <td className="cash-attribution"><span>{attribution.name}</span><small>{attribution.label}</small></td>
                 <td><time dateTime={item.openedAt}>{dateTime(item.openedAt)}</time></td>
                 <td>{item.closedAt?<time dateTime={item.closedAt}>{dateTime(item.closedAt)}</time>:"—"}</td>
-                <td><b className={item.status==="open"?"cash-neutral":variance===0?"cash-balanced":variance>0?"cash-positive":"cash-negative"}>{item.status==="open"?"—":(variance>0?"+":"")+money(variance)}</b></td>
+                <td><span className={item.status==="open"?"cash-neutral":variance===0?"cash-balanced":variance>0?"cash-positive":"cash-negative"}>{item.status==="open"?"—":(variance>0?"+":"")+money(variance)}</span></td>
                 <td><Status tone={item.status==="open"?"green":"gray"}>{item.status==="open"?"Abierto":"Cerrado"}</Status></td>
-                <td><div className="table-actions"><RowActionButton action="view" label={`Ver turno ${item.code}`} onClick={()=>setDetailId(item.id)}/></div></td>
+                <td><div className="table-actions"><RowActionButton action="view" label={`Ver turno de ${item.cashRegisterName} del ${businessDate(item.businessDate)}`} onClick={()=>setDetailId(item.id)}/></div></td>
               </tr>;
             })}</tbody>
           </DataTable>}
@@ -350,7 +350,7 @@ function CashRegisters({items,loading,error,canManage,money,dateTime,businessDat
       </div>
     </section>
 
-    <div className="cash-registers-heading"><div><small>CAJAS DEL LOCAL</small><h2>Operación por caja</h2></div><span>Actualización automática</span></div>
+    <div className="cash-registers-heading"><h2>Cajas del local</h2><span>Actualización automática</span></div>
 
     <div className="cash-registers-grid">{items.map(item=>{
       const shift=item.openShift;
@@ -373,7 +373,6 @@ function CashRegisters({items,loading,error,canManage,money,dateTime,businessDat
           <section className="cash-register-live">
             <div className="cash-register-live-copy">
               <small>TURNO EN CURSO</small>
-              <b>{shift.code}</b>
               <p><Icon name="users" size={14}/>Cajero: {cashShiftAttribution(shift).name}</p>
               <p>Equipo actual: {cashShiftTeamName(shift)}</p>
               <p><Icon name="clock" size={14}/><time dateTime={shift.openedAt}>Apertura: {dateTime(shift.openedAt)}</time></p>
@@ -387,7 +386,7 @@ function CashRegisters({items,loading,error,canManage,money,dateTime,businessDat
             <div className="expense"><small>EGRESOS</small><b>-{money(Number(shift.expenseAmount))}</b></div>
           </section>:<div className="cash-register-blind"><Icon name="lock" size={14}/><span>El detalle de efectivo está oculto hasta cerrar el turno.</span></div>}
           <footer>
-            <RowActionButton action="view" label={`Ver turno ${shift.code}`} onClick={()=>view(shift)}/>
+            <RowActionButton action="view" label={`Ver turno de ${item.name}`} onClick={()=>view(shift)}/>
             {canManage&&<>
               <IconButton icon="users" label="Equipo del turno" onClick={()=>team(shift)}/>
               <IconButton icon="share" label="Operaciones de caja" onClick={()=>operation(shift)}/>

@@ -21,10 +21,10 @@
 /* Owner: Sales — detalle de consulta, sin acciones de cobro o edición. */
 .crud-modal.sales-detail-modal{width:min(var(--size-760),100%)}
 .sales-detail-body{display:grid;align-content:start;gap:var(--space-5)}
-.sales-detail-context{min-width:0;padding-bottom:var(--space-4);border-bottom:var(--stroke-1) solid var(--line)}
+.sales-detail-context{min-width:0}
 .sales-detail-section{min-width:0}
-.sales-detail-section+.sales-detail-section{padding-top:var(--space-5);border-top:var(--stroke-1) solid var(--line)}
-.sales-detail-section h3{font-size:var(--font-size-md);font-weight:var(--weight-bold);margin:0 0 var(--space-3)}
+.sales-detail-section+.sales-detail-section{padding-top:var(--space-3)}
+.sales-detail-section>h3.modal-section-title{margin:0 0 var(--space-3)}
 .sales-detail-payment-icon{width:var(--size-32);height:var(--size-32);display:grid;place-items:center;border-radius:var(--radius-pill);background:var(--primary-100);color:var(--primary-700)}
 /* Las líneas de productos usan la línea compartida de `modal.css` (`modal-item-info`, nota y carta); aquí solo pagos. */
 .sales-detail-lines .modal-item-row>div,.sales-detail-payments .modal-item-row>div{min-width:0;overflow-wrap:anywhere}

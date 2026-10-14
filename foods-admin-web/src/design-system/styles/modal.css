@@ -33,6 +33,9 @@
 .crud-modal :where(dd,.modal-data-value){font-size:var(--font-size-base);font-weight:var(--modal-value-weight);color:var(--ink-950);overflow-wrap:anywhere}
 .crud-modal dd small{font-size:var(--font-size-label);font-weight:var(--modal-value-weight);color:var(--ink-500)}
 .crud-modal h3{font-size:var(--font-size-md);font-weight:var(--weight-bold)}
+/* Títulos de sección del cuerpo en detalles de pedido, venta y cobro: mayúsculas en tinta neutra con regla índigo tenue. El texto del DOM queda en minúsculas para lectores de pantalla. */
+.crud-modal .modal-section-title{margin:0;color:var(--ink-800);font-size:var(--font-size-sm);font-weight:var(--weight-bold);letter-spacing:var(--letter-spacing-caps);line-height:var(--line-height-tight);text-transform:uppercase}
+.modal-section-rule{padding-bottom:var(--space-2-5);border-bottom:var(--stroke-2) solid var(--primary-200)}
 
 /* Franja de lectura: responsable primero, fecha al borde opuesto; misma escala. */
 .modal-inline-metadata{display:flex;flex-wrap:wrap;align-items:baseline;gap:var(--space-2) var(--space-4);min-width:0}
@@ -43,14 +46,18 @@
 .modal-inline-date time{min-width:0;overflow-wrap:anywhere}
 .modal-inline-description{flex-basis:100%;min-width:0;overflow-wrap:anywhere}
 
-/* Datos de consulta: parejas en escritorio, filas etiqueta/valor en móvil. */
-.modal-record-data{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:var(--space-3) var(--space-6);margin:0;min-width:0}
-.modal-record-data>div{min-width:0}
-.modal-record-data dd{margin:var(--space-1) 0 0}
+/* Datos de consulta: una franja de columnas en escritorio, filas etiqueta/valor en móvil. */
+.modal-record-data{display:grid;grid-auto-flow:column;grid-auto-columns:auto;align-items:stretch;margin:0;min-width:0;padding:var(--space-3) 0;border:var(--stroke-1) solid var(--primary-100);border-radius:var(--radius-tile);background:var(--primary-50)}
+.modal-record-data>div{min-width:0;padding:0 var(--space-4)}
+.modal-record-data>div+div{border-left:var(--stroke-1) solid var(--primary-200)}
+.modal-record-data dd{margin:var(--space-1) 0 0;overflow-wrap:anywhere}
 .modal-record-data dd small{display:block;margin-top:var(--space-1)}
+/* La identidad (mesa, cliente o venta) es el dato protagonista de la franja; el detalle en small conserva su escala. */
+.modal-record-data>div:first-child>dd{color:var(--primary-700);font-size:var(--font-size-md);font-weight:var(--weight-bold);line-height:var(--line-height-tight)}
 @media(width<=620px){
-  .modal-record-data{grid-template-columns:minmax(0,1fr);gap:var(--space-2-5)}
-  .modal-record-data>div{display:grid;grid-template-columns:var(--size-120) minmax(0,1fr);align-items:baseline;gap:var(--space-3)}
+  .modal-record-data{grid-auto-flow:row;grid-template-columns:minmax(0,1fr);gap:var(--space-2-5);padding:var(--space-3) var(--space-3-5)}
+  .modal-record-data>div{display:grid;grid-template-columns:var(--size-120) minmax(0,1fr);align-items:baseline;gap:var(--space-3);padding:0}
+  .modal-record-data>div+div{border-left:0}
   .modal-record-data dd{min-width:0;margin:0}
 }
 
@@ -90,8 +97,7 @@
 /* Cuerpos desplazables enfocables por teclado (tabIndex) sin contorno azul visible. */
 .modal-body[tabindex]:focus-visible{outline:none}
 .modal-detail-notes{display:flex;align-items:flex-start;gap:var(--space-2);padding:var(--space-3);border-radius:var(--radius-control);background:var(--cloud-50)}
-.modal-summary-heading{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-2) var(--space-3);padding-bottom:var(--space-3);border-bottom:var(--stroke-1) solid var(--line)}
-.modal-summary h3{margin:0;color:var(--ink-950);font-size:var(--font-size-md);font-weight:var(--weight-bold);line-height:var(--line-height-snug)}
+.modal-summary-heading{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-2) var(--space-3);padding-bottom:var(--space-2-5);border-bottom:var(--stroke-2) solid var(--primary-200)}
 .modal-summary-lines{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;gap:var(--space-3) var(--space-6)}
 .modal-summary-line{min-width:0;display:flex;flex-direction:column;gap:var(--space-1);color:var(--ink-700);font-size:var(--font-size-label);font-weight:var(--modal-label-weight)}
 .modal-summary-line:nth-child(even){padding-left:var(--space-6);border-left:var(--stroke-1) solid var(--line)}
@@ -102,6 +108,7 @@
 
 /* Cuerpo desplazable: tanto el patrón nuevo (.modal-body) como los formularios heredados. */
 .crud-modal>:is(form,.modal-form){display:flex;flex:1 1 auto;flex-direction:column;min-height:0}
+/* Modales: barra fina siempre visible cuando hay más contenido; no usar hover-scroll en el cuerpo (oculta la barra hasta el hover). */
 .modal-body{flex:1 1 auto;min-height:0;padding:var(--space-6);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--ink-400-alpha-40) transparent}
 .crud-modal>form:not(.modal-form){padding:var(--space-6) var(--space-6) 0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--ink-400-alpha-40) transparent}
 .crud-modal>:is(div,section,article):not(.modal-busy,.modal-body,.modal-context,.modal-workspace){flex:1 1 auto;min-height:0;overflow-y:auto}
@@ -139,7 +146,6 @@
 
 @media (width<=700px){
   .modal-summary{grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:var(--space-3) var(--space-2);padding-block:var(--space-3)}
-  .modal-summary-heading{padding-bottom:var(--space-2)}
   .modal-summary-lines{gap:var(--space-2)}
   .modal-summary-total{padding-left:var(--space-2)}
   .modal-summary-line:nth-child(even){padding-left:var(--space-2)}

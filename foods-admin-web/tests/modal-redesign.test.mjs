@@ -99,7 +99,7 @@ test("resumen agrupado y estado de cuenta destacado sin recolorear los demás es
  const css=read("design-system/styles/modal.css"),global=read("styles/globals.css"),html=renderDetail();
  const heading=html.slice(html.indexOf('class="modal-summary-heading"'),html.indexOf('class="modal-summary-lines"'));
  assert.match(heading,/Resumen de cuenta[\s\S]*Cuenta abierta/);
- assert.match(css,/\.modal-summary-heading\{[^}]*flex-wrap:wrap[^}]*border-bottom:var\(--stroke-1\) solid var\(--line\)/);
+ assert.match(css,/\.modal-summary-heading\{[^}]*flex-wrap:wrap[^}]*border-bottom:var\(--stroke-2\) solid var\(--primary-200\)/,'el resumen abre con la misma regla que las secciones');
  assert.match(css,/\.modal-summary-lines\{[^}]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
  assert.match(global,/\.status.blue\{color:var\(--primary-700\);background:var\(--primary-100\)/);
  assert.match(global,/\.status.sky\{color:var\(--sky-800\);background:var\(--sky-100\)/);

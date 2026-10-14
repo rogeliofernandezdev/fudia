@@ -162,7 +162,7 @@ test("detalle de venta mantiene cierre explícito, reintento, skeleton y vacíos
  const view=mount({error:"Sin conexión",close:()=>closed++,retry:()=>retried++});
  view.find(node=>node.type==="ModalHeader").props.onClose();view.find(node=>node.type==="ErrorState").props.onRetry();
  assert.equal(closed,1);assert.equal(retried,1);
- assert.equal(view.some(node=>node.props.className==="modal-body sales-detail-body hover-scroll"),false);
+ assert.equal(view.some(node=>node.props.className==="modal-body sales-detail-body"),false);
  const loading=mount({loading:true});assert.equal(loading.find(node=>node.type==="Dialog").props["aria-busy"],true);
  assert.ok(loading.some(node=>node.props["aria-label"]==="Cargando detalle de venta"));
  const empty=mount({data:{...data,order:{...data.order,items:[]},payments:[]}});
@@ -184,10 +184,14 @@ test("datos de la venta usan parejas en escritorio y filas compactas compartidas
  assert.ok(nodes(loading).some(node=>node.type==="dl"&&node.props.className==="modal-record-data"));
  const css=postcss.parse(read("src/design-system/styles/modal.css"));
  const desktop=css.nodes.find(node=>node.type==="rule"&&node.selector===".modal-record-data");
- assert.ok(desktop.nodes.some(node=>node.prop==="grid-template-columns"&&node.value==="repeat(2,minmax(0,1fr))"));
+ assert.ok(desktop.nodes.some(node=>node.prop==="grid-auto-flow"&&node.value==="column"),"escritorio: una franja de columnas");
+ const identity=css.nodes.find(node=>node.type==="rule"&&node.selector===".modal-record-data>div:first-child>dd");
+ assert.ok(identity.nodes.some(node=>node.prop==="font-size"&&node.value==="var(--font-size-md)"),"la identidad es el dato protagonista");
+ assert.ok(desktop.nodes.some(node=>node.prop==="grid-auto-columns"&&node.value==="auto"),"columnas según su contenido");
  const mobile=css.nodes.find(node=>node.type==="atrule"&&node.params==="(width<=620px)");
  const mobileGrid=mobile.nodes.find(node=>node.selector===".modal-record-data");
  assert.ok(mobileGrid.nodes.some(node=>node.prop==="grid-template-columns"&&node.value==="minmax(0,1fr)"));
+ assert.ok(mobileGrid.nodes.some(node=>node.prop==="grid-auto-flow"&&node.value==="row"),"móvil vuelve a filas");
  const row=mobile.nodes.find(node=>node.selector===".modal-record-data>div");
  assert.ok(row.nodes.some(node=>node.prop==="grid-template-columns"&&node.value==="var(--size-120) minmax(0,1fr)"));
  assert.ok(row.nodes.some(node=>node.prop==="align-items"&&node.value==="baseline"));
@@ -199,7 +203,7 @@ test("CSS de ventas tiene dueño único por contexto y reorganiza el detalle mó
  css.walkRules(rule=>{for(const selector of rule.selectors){const key=(rule.parent.type==="atrule"?rule.parent.params:"root")+"|"+selector;assert.equal(seen.has(key),false,key);seen.add(key)}});
  const mobile=css.nodes.find(node=>node.type==="atrule"&&node.params==="(max-width:600px)");
  assert.ok(mobile.nodes.some(node=>node.selector===".crud-modal.sales-detail-modal"&&node.nodes.some(decl=>decl.prop==="height"&&decl.value==="100dvh")));
- assert.ok(mount().some(node=>node.props.className==="modal-body sales-detail-body hover-scroll"),"el cuerpo compartido es el único scroll");
+ assert.ok(mount().some(node=>node.props.className==="modal-body sales-detail-body"),"el cuerpo compartido es el único scroll, con barra siempre visible");
  for(const rule of css.nodes.filter(node=>node.type==="rule"&&[".sales-detail-lines",".sales-detail-payments",".sales-detail-lines,.sales-detail-payments"].includes(node.selector))){assert.equal(rule.nodes.some(decl=>["border","border-radius"].includes(decl.prop)),false,"listas sin tarjeta local");}
 });
 
@@ -218,7 +222,8 @@ test("venta usa listas y resumen compartidos, separa pagos y conserva la única 
  const button=view.find(node=>node.type==="Button");assert.equal(view.filter(node=>node.type==="Button").length,1);assert.equal(button.props.children,"Ver resumen de pago");assert.equal(button.props.kind,"secondary");assert.equal(button.props.icon,"eye");button.props.onClick();assert.equal(opened,1);
  assert.equal(view.filter(node=>node.type==="Status").length,1,"el estado no se duplica en el footer de acciones");
  assert.ok(view.some(node=>node.props.className==="modal-detail-notes sales-detail-notes"));
- assert.match(read("src/modules/sales/presentation/sales.css"),/\.sales-detail-section\+\.sales-detail-section\{[^}]*border-top:var\(--stroke-1\) solid var\(--line\)/);
+ assert.doesNotMatch(read("src/modules/sales/presentation/sales.css"),/\.sales-detail-section\+\.sales-detail-section\{[^}]*border-top/,"la división no repite la línea de los productos");
+ assert.match(read("src/modules/sales/presentation/sale-detail-dialog.tsx"),/<h3 id="sales-detail-payments" className="modal-section-title modal-section-rule">/,"cada sección abre con su título subrayado");
  for(const [paymentStatus,label] of [["paid","Pagada"],["partial","Pago parcial"],["pending","Sin pagos"]]){
   const state=mount({data:{...data,paymentStatus}}).find(node=>node.type==="Status");assert.equal(state.props.children,label);
  }

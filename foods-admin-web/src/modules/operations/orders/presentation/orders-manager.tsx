@@ -71,7 +71,7 @@ export function OrdersManager(){
        {Boolean(o.collectedByNames?.length)&&<small className="order-staff">Cobrado por: {o.collectedByNames!.join(" · ")}</small>}
        <small className="order-mobile-registered"><time dateTime={o.createdAt}>{registeredAt(o.createdAt,location?.country,location?.timezone)}</time></small>
       </td>
-      <td><span className="order-channel-cell"><Icon name={channelIcons[o.channel]??"receipt"} size={14}/>{channelLabel(o.channel)}</span></td>
+      <td><span className="order-channel-cell">{channelLabel(o.channel)}</span></td>
       <td><Status tone={meta.tone}>{meta.label}</Status></td>
       <td><time className="order-registered" dateTime={o.createdAt}>{registeredAt(o.createdAt,location?.country,location?.timezone)}</time></td>
       <td><b className="order-table-total">{money(o.total)}</b></td>

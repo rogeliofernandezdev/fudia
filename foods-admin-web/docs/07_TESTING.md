@@ -73,7 +73,9 @@ de 10 px, pie fijo sin recortes, acciones móviles iguales y cierre bloqueado
 sin cambios de color/opacidad. No consulta el API ni guarda productos.
 
 `sales-detail.test.mjs` protege el orden mesa (o cliente), canal, atendido por y
-fecha del pedido, con dos filas alineadas en escritorio; en móvil los cuatro
+fecha del pedido, en una franja de una fila en escritorio (`grid-auto-flow: column`);
+cada sección abre con su título subrayado (2 px `primary-200`) y no repite la
+línea superior de los productos; en móvil los cuatro
 datos usan filas compactas etiqueta/valor con la retícula compartida `modal-record-data`;
 el skeleton reproduce los cuatro datos y otros canales no inventan un mozo.
 Tras el build, `node tests/helpers/sale-detail-preview.mjs .next/sale-detail-preview`
@@ -102,7 +104,9 @@ negrita, tanto en móvil como en escritorio. La etiqueta contextual muestra
 de devolución, turno requerido, cierre y separación del formulario de cobro.
 
 `modal-typography.test.mjs` protege los roles compartidos de etiquetas 12 px / 600,
-valores 14 px / 400 y secciones 16 px / 700, la adopción en los detalles y asistentes, y la
+valores 14 px / 400 y secciones 16 px / 700, el título de sección compartido
+`.crud-modal .modal-section-title` (mayúsculas, `ink-800`) y que pedido, venta
+y cobro no redefinan la tipografía de sus `h3`, la adopción en los detalles y asistentes, y la
 ausencia de pesos invertidos en estilos locales.
 La excepción `modal-inline-metadata` comprueba etiqueta/valor a 14 px y mismo
 interlineado, manteniendo 600/400 y fecha al extremo derecho sin recortes.

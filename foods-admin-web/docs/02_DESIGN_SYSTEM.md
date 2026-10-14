@@ -306,6 +306,21 @@ de página en `03_LAYOUTS.md`. Resumen:
 - **Jerarquía de datos en todos los modales de contenido**: etiqueta 12 px / 600
   (seminegrita, `ink-700`, `font-size-label`), valor 14 px / 400 (regular,
   `ink-950`, `font-size-base`) y título de sección 16 px / 700 (`font-size-md`).
+- **Desplazamiento en modales**: el cuerpo (`modal-body`) muestra siempre su barra
+  fina (`scrollbar-width: thin`, `ink-400-alpha-40`) cuando hay más contenido; no
+  espera al hover. Los cuerpos de modal no usan `hover-scroll`, que oculta la barra
+  hasta pasar el puntero y queda reservado para vistas como el menú lateral y
+  listados. Sin sombras ni degradados de borde como indicador.
+  Excepción aprobada: en Detalle de pedido, venta y cobro, los títulos de sección
+  del cuerpo («Productos del pedido», «Pagos registrados») usan
+  `modal-section-title`: 13 px / 700, mayúsculas por CSS (`text-transform`; el
+  DOM conserva el texto normal para lectores de pantalla), `letter-spacing-caps`
+  y `ink-800` (tinta neutra: el índigo queda para la mesa y el total). Abren la sección con `modal-section-rule` (2 px `primary-200`,
+  10 px bajo el texto). En Detalle de pedido la regla va en la cabecera completa,
+  junto al estado. El título del pie («Resumen de cobro», «Resumen de venta»,
+  «Resumen de cuenta») usa el mismo `modal-section-title`, y `modal-summary-heading`
+  dibuja la misma regla de 2 px `primary-200`, para que cuerpo y resumen armonicen.
+  Las notas generales conservan su tarjeta.
   Esta escala informativa no crece en móvil: solo los campos editables usan
   16 px para evitar el zoom del navegador. El título del modal conserva 18 px
   y el importe principal su rol destacado. La etiqueta identifica el concepto;
@@ -883,9 +898,24 @@ no integra un visor PDF.
 - El detalle de cobro reutiliza `ModalWorkspace`, `ModalItemList` y
   `modal-summary`: una columna de contenido y resumen inferior fijo, nunca
   tres tarjetas de importes encima de los productos. La cabecera muestra
-  «Detalle de cobro», icono y X; el código va fuera de ella. Mesa y canal
-  comparten la primera fila de datos; atendido por y fecha, la segunda para
-  Salón. En móvil (≤620 px), `modal-record-data` presenta una lista compacta:
+  «Detalle de cobro», icono y X; el código va fuera de ella. En escritorio,
+  Mesa, Canal, Atendido por (solo Salón) y Fecha del pedido van en una sola fila.
+  `modal-record-data` es una franja: fondo `primary-50` (índigo tenue de marca,
+  no el violeta `digital-*`, reservado a canales digitales y «En preparación»),
+  borde `primary-100`, radio de tile y las parejas en columnas separadas por
+  líneas `primary-200`. Cada columna mide según su contenido (`grid-auto-columns:
+  auto`) y el espacio sobrante se reparte, para que la fecha quepa en una línea.
+  Sin línea divisoria debajo: el espaciado del cuerpo separa la franja de los productos.
+  La identidad (mesa, cliente o venta, primera columna) es el dato protagonista:
+  16 px, bold, `primary-700`, también en móvil. Es una excepción aprobada a la
+  escala 14 px / 400 de valores; el cliente debajo en `small` conserva 12 px y
+  `ink-500`, y el resto de valores sigue en 14 px / 400.
+  Cada sección del cuerpo («Productos del pedido», «Pagos registrados») abre con
+  su título `modal-section-title` (mayúsculas en `ink-800`) y la regla `modal-section-rule`
+  de 2 px `primary-200` (10 px bajo el texto).
+  Entre secciones no hay línea superior: la separación son 32 px de aire más esa
+  regla, para no confundirse con las líneas de 1 px `--line` entre productos.
+  En móvil (≤620 px), `modal-record-data` presenta una lista compacta:
   Mesa, Canal, Atendido por y Fecha del pedido, una pareja etiqueta/valor por fila.
   La columna de etiquetas mide 120 px; los valores comparten el mismo inicio,
   con 12 px entre columnas y 10 px entre filas. No anclar Canal al extremo derecho
@@ -1301,6 +1331,10 @@ Las tarjetas de mesa y las filas de Pedidos conservan estos nombres también en
 móvil. No se muestra un cobrador antes de registrar pagos. Las acciones de atención
 no aparecen para otro mozo; el acceso de cobro mantiene su permiso independiente.
 
+En el listado de Pedidos el canal se representa una sola vez con icono: el avatar
+de la columna Pedido (`order-row-icon`, tono por canal). La columna Canal muestra
+solo el texto, sin repetir el icono.
+
 Pedidos reutiliza esta misma estructura del detalle de Salón: fecha en el contexto
 del cuerpo y cantidades circulares por producto, sin conteo agregado de unidades.
 «Registrado» muestra siempre la fecha y hora del registro en la zona del local,
@@ -1460,15 +1494,15 @@ y el skeleton reproduce la misma columna y distribución. Sin cobros vigentes se
 muestra «—», nunca un medio supuesto. Los pagos totalmente devueltos no se cuentan.
 La acción homologada está disponible en cada fila y tarjeta móvil. El modal es
 de consulta, con X como único cierre y sin cobrar, editar ni devolver.
-Los datos de identidad usan una rejilla compacta: mesa (o cliente) y canal en la
-primera fila; atendido por y fecha del pedido en la segunda cuando es Salón.
-Las columnas tienen el mismo ancho y sus etiquetas y valores se alinean;
-no se fuerza la fecha a otra fila ni se deja un espacio vacío junto al mozo.
+Los datos de identidad usan la misma franja `modal-record-data` que Detalle de
+cobro: mesa (o cliente), canal, atendido por (solo Salón) y fecha del pedido en
+una sola fila de columnas ajustadas al contenido, sobre `primary-50`.
 En móvil (≤620 px), `modal-record-data` convierte las parejas en una lista
 compacta de cuatro filas: Mesa, Canal, Atendido por y Fecha del pedido.
 Cada etiqueta va junto al valor; etiquetas de 120 px, separación horizontal
 de 12 px y vertical de 10 px. Todos los valores comienzan en la misma columna,
-sin anclar Canal al extremo derecho ni apilar rótulos sobre sus valores.
+sin anclar Canal al extremo derecho ni apilar rótulos sobre sus valores. En
+móvil la lista conserva el fondo `primary-50` de la franja, sin separadores verticales.
 Los nombres largos envuelven sin recortarse, igual que Detalle de cobro.
 El cuerpo comparte los márgenes de la cabecera y el pie, sin añadir paneles
 laterales ni trasladar información adicional al header.
@@ -1658,6 +1692,26 @@ Delivery desglosa Subtotal y Envío antes del Total. En pedidos manuales, solo
 El cierre exige descarte cuando hay cambios y se
 bloquea durante la petición. El formulario usa una columna en móvil desde 390 px;
 la comanda conserva su resumen móvil y sus estilos compartidos.
+
+### Composición de Caja y turnos
+
+Igual que Compras, Gastos y Pedidos, la `TabsBar` (Cajas · Turnos y «Registrar
+caja») va entre el `PageHeader` y el panel, nunca dentro de él: así hereda el
+aire de la página y no toca los bordes del panel. Dentro del panel, el resumen
+operativo, el encabezado y la grilla comparten un solo margen interno: 20 px en
+escritorio y 12 px en móvil (≤760 px). El encabezado de la grilla es un `h2`
+«Cajas del local» de 16 px / 700 con «Actualización automática» a la derecha; no
+lleva etiqueta en mayúsculas encima. Cada tarjeta usa 16 px de margen interno.
+El nombre de la caja, «Sin turno activo» y los importes del flujo usan 14 px,
+por encima de sus etiquetas y metadatos de 12 px. La pantalla no muestra el
+código técnico del turno (`CAJ-…`): el turno se identifica por su caja, cajero y
+apertura, también en el aviso «Turno iniciado» y en los nombres accesibles.
+
+El historial de Turnos tiene ocho columnas, con Caja primero y sus movimientos
+en `small`; no hay columna de código de turno y la búsqueda se presenta «por caja
+o persona». Peso visual ligero: sin icono repetido en cada fila (el estado ya
+distingue abierto y cerrado), Caja y responsable en peso regular con su rol en `small`. La diferencia cero se muestra en `ink-700` regular; solo un sobrante
+(`primary-700`) o un faltante (`danger`) llevan color y seminegrita.
 
 ### Atribución en Caja y turnos
 

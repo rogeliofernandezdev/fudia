@@ -4,7 +4,7 @@ import {cashShiftAttribution,cashShiftTeamName} from "../domain/shift-attributio
 import {useRef,useState} from "react";
 import {CashReportContent} from "./cash-report-content";
 import {useForm,useWatch} from "react-hook-form";
-import {Button,EmptyState,FormField,Icon,Input,Status,Tabs,Textarea,ModalHeader,ModalFooter} from "@/design-system";
+import {Button,FormField,Icon,Input,Status,Tabs,Textarea,ModalHeader,ModalFooter,ModalItemList,ModalWorkspace} from "@/design-system";
 import {cashMovementResolver,cashRegisterResolver,closeCashShiftResolver,openCashShiftResolver} from "../domain/cash-schema";
 import type {CashMovementDraft,CashMovementType,CashRegister,CashRegisterDraft,CashShift,CashShiftReport,CloseCashShiftDraft,OpenCashShiftDraft} from "../domain/types";
 
@@ -157,34 +157,43 @@ export function CloseCashShiftDialog({shift,report,busy,currency,formatMoney,clo
 }
 
 export function CashShiftDetailDialog({shift,formatMoney,formatDateTime,formatBusinessDate,close,viewReport}:{shift:CashShift;formatMoney:(value:number)=>string;formatDateTime:(value:string)=>string;formatBusinessDate:(value:string)=>string;close:()=>void;viewReport?:()=>void}){
+  const closed=shift.status==="closed";
   const variance=Number(shift.varianceAmount??0);
+  const movements=shift.movements??[];
   return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal cash-detail-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-detail-title">
-
-    <ModalHeader title={shift.code} titleId="cash-detail-title" icon="sales" subtitle={shift.cashRegisterName.toUpperCase()} onClose={close} closeLabel="Cerrar"/>
-    <div className="cash-detail-body">
-      {viewReport&&(shift.status==="closed"||shift.expectedVisible)&&<Button icon="receipt" onClick={viewReport}>Ver informe detallado y PDF</Button>}
-      <section className="cash-detail-head">
-        <div><small>CAJA</small><b>{shift.cashRegisterName}</b></div>
-        <div><small>DÍA OPERATIVO</small><b>{formatBusinessDate(shift.businessDate)}</b></div>
-        {shift.status==="open"&&<div><small>EQUIPO ACTUAL</small><b>{cashShiftTeamName(shift)}</b></div>}
-        <div><small>{shift.status==="open"?"CAJERO":"ABIERTO POR"}</small><b>{shift.openedByName}</b><span>Apertura: <time dateTime={shift.openedAt}>{formatDateTime(shift.openedAt)}</time></span></div>
-        <div><small>CERRADO POR</small><b>{shift.status==="closed"?cashShiftAttribution(shift).name:"En curso"}</b>{shift.closedAt&&<span>Cierre: <time dateTime={shift.closedAt}>{formatDateTime(shift.closedAt)}</time></span>}</div>
-
+    <ModalHeader title="Detalle del turno" titleId="cash-detail-title" icon="sales" onClose={close} closeLabel="Cerrar"/>
+    <ModalWorkspace summary={<section className="modal-summary" aria-labelledby="cash-detail-summary-title">
+      <div className="modal-summary-heading"><h3 id="cash-detail-summary-title" className="modal-section-title">Resumen de caja</h3><Status tone={closed?"gray":"green"} emphasis>{closed?"Cerrado":"Abierto"}</Status></div>
+      <div className="modal-summary-lines">
+        <div className="modal-summary-line"><span>Fondo inicial</span><b>{formatMoney(Number(shift.openingAmount))}</b></div>
+        <div className="modal-summary-line"><span>Ingresos</span><b>{formatMoney(Number(shift.incomeAmount))}</b></div>
+        <div className="modal-summary-line"><span>Egresos</span><b>{formatMoney(Number(shift.expenseAmount))}</b></div>
+        {closed&&<div className="modal-summary-line"><span>Contado</span><b>{formatMoney(Number(shift.closingCountedAmount??0))}</b></div>}
+        {closed&&<div className={"modal-summary-line cash-detail-variance "+(variance===0?"balanced":variance>0?"positive":"negative")}><span>Diferencia</span><b>{variance>0?"+":""}{formatMoney(variance)}</b></div>}
+      </div>
+      <div className="modal-summary-total"><span>Esperado</span><strong>{formatMoney(Number(shift.closingExpectedAmount??shift.expectedAmount))}</strong></div>
+    </section>}>
+    <div className="modal-body cash-detail-body" tabIndex={0} aria-label="Datos y movimientos del turno">
+      <section aria-label="Datos del turno"><dl className="modal-record-data">
+        <div><dt>Caja</dt><dd>{shift.cashRegisterName}</dd></div>
+        <div><dt>Día operativo</dt><dd>{formatBusinessDate(shift.businessDate)}</dd></div>
+        <div><dt>{closed?"Abierto por":"Cajero"}</dt><dd>{shift.openedByName||"Sin responsable registrado"}<small>Apertura: <time dateTime={shift.openedAt}>{formatDateTime(shift.openedAt)}</time></small></dd></div>
+        {closed
+          ?<div><dt>Cerrado por</dt><dd>{cashShiftAttribution(shift).name}{shift.closedAt&&<small>Cierre: <time dateTime={shift.closedAt}>{formatDateTime(shift.closedAt)}</time></small>}</dd></div>
+          :<div><dt>Equipo actual</dt><dd>{cashShiftTeamName(shift)}</dd></div>}
+      </dl></section>
+      {(shift.openingNote||shift.closingNote)&&<section className="modal-detail-notes cash-detail-notes"><Icon name="edit" size={16}/><div><h3>Notas del turno</h3>{shift.openingNote&&<p><b>Apertura:</b> {shift.openingNote}</p>}{shift.closingNote&&<p><b>Cierre:</b> {shift.closingNote}</p>}</div></section>}
+      <section className="cash-detail-section" aria-labelledby="cash-detail-movements-title">
+        <header className="cash-detail-section-head modal-section-rule"><h3 id="cash-detail-movements-title" className="modal-section-title">Movimientos</h3><span>{shift.movementCount} {shift.movementCount===1?"movimiento":"movimientos"}</span></header>
+        {movements.length?<ModalItemList className="cash-detail-movements">{movements.map(item=><div className="modal-item-row" role="listitem" key={item.id}>
+          <span className={"cash-detail-movement-icon "+item.movementType} aria-hidden="true"><Icon name={item.movementType==="income"?"plus":"minus"} size={16}/></span>
+          <div><b>{item.reason}</b><small>{item.movementType==="income"?"Ingreso":"Egreso"} · {cashMovementSourceLabel(item.sourceType)} · {item.createdByName}</small><small><time dateTime={item.createdAt}>{formatDateTime(item.createdAt)}</time></small>{item.note&&<p>{item.note}</p>}</div>
+          <strong className={"cash-detail-movement-amount "+item.movementType}>{item.movementType==="income"?"+":"-"}{formatMoney(Number(item.amount))}</strong>
+        </div>)}</ModalItemList>:<p className="cash-detail-empty">Este turno no registró movimientos.</p>}
       </section>
-      <section className="cash-detail-totals">
-        <div><small>Fondo inicial</small><b>{formatMoney(Number(shift.openingAmount))}</b></div>
-        <div><small>Ingresos</small><b>{formatMoney(Number(shift.incomeAmount))}</b></div>
-        <div><small>Egresos</small><b>{formatMoney(Number(shift.expenseAmount))}</b></div>
-        <div><small>Esperado</small><b>{formatMoney(Number(shift.closingExpectedAmount??shift.expectedAmount))}</b></div>
-        {shift.status==="closed"&&<><div><small>Contado</small><b>{formatMoney(Number(shift.closingCountedAmount??0))}</b></div><div className={variance===0?"balanced":variance>0?"positive":"negative"}><small>Diferencia</small><b>{variance>0?"+":""}{formatMoney(variance)}</b></div></>}
-      </section>
-      {(shift.openingNote||shift.closingNote)&&<section className="cash-detail-notes">{shift.openingNote&&<div><small>APERTURA</small><p>{shift.openingNote}</p></div>}{shift.closingNote&&<div><small>CIERRE</small><p>{shift.closingNote}</p></div>}</section>}
-      <section className="cash-detail-movements">
-        <header><div><small>MOVIMIENTOS</small><h3>{shift.movementCount} {shift.movementCount===1?"movimiento":"movimientos"}</h3></div></header>
-        {shift.movements?.length?<div className="table-wrap hover-scroll"><table><thead><tr><th>FECHA</th><th>TIPO</th><th>ORIGEN</th><th>MOTIVO</th><th>USUARIO</th><th>MONTO</th></tr></thead><tbody>{shift.movements.map(item=><tr key={item.id}><td>{formatDateTime(item.createdAt)}</td><td><span className={"cash-movement-kind "+item.movementType}><Icon name={item.movementType==="income"?"plus":"minus"} size={14}/>{item.movementType==="income"?"Ingreso":"Egreso"}</span></td><td><span className="cash-movement-source">{cashMovementSourceLabel(item.sourceType)}</span></td><td><b>{item.reason}</b>{item.note&&<small>{item.note}</small>}</td><td>{item.createdByName}</td><td><b className={item.movementType}>{item.movementType==="income"?"+":"-"}{formatMoney(Number(item.amount))}</b></td></tr>)}</tbody></table></div>:<EmptyState className="cash-state-compact" icon="receipt" title="Sin movimientos" text="Este turno no registró movimientos."/>}
-      </section>
-    </div>
-  <ModalFooter status={<Status tone={shift.status==="open"?"green":"gray"}>{shift.status==="open"?"Abierto":"Cerrado"}</Status>} statusLabel="Estado del turno"></ModalFooter></Dialog></div>;
+    </div></ModalWorkspace>
+    {viewReport&&(closed||shift.expectedVisible)&&<ModalFooter><Button kind="secondary" icon="eye" onClick={viewReport}>Ver informe y PDF</Button></ModalFooter>}
+  </Dialog></div>;
 }
 
 function cashMovementSourceLabel(source:string){

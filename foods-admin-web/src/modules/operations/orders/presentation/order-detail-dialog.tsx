@@ -67,7 +67,7 @@ export function OrderDetailContent<T extends Order>({variant,order,error,retryin
     ):order&&meta&&<>
       <ModalWorkspace summary={
         <section className={`modal-summary order-detail-totals${remaining<=0.00001?" is-paid":""}`} aria-labelledby="order-detail-account-title">
-          <div className="modal-summary-heading"><h3 id="order-detail-account-title">Resumen de cuenta</h3>{order.channel==="salon"&&<Status tone={accountTone(order)} icon="receipt" emphasis>{accountLabel(order)}</Status>}</div>
+          <div className="modal-summary-heading"><h3 id="order-detail-account-title" className="modal-section-title">Resumen de cuenta</h3>{order.channel==="salon"&&<Status tone={accountTone(order)} icon="receipt" emphasis>{accountLabel(order)}</Status>}</div>
           <div className="modal-summary-lines">
             <div className="modal-summary-line"><span>Subtotal</span><b>{money(order.subtotal)}</b></div>
             {Number(order.deliveryFee)>0&&<div className="modal-summary-line"><span>Delivery</span><b>{money(order.deliveryFee)}</b></div>}
@@ -83,7 +83,7 @@ export function OrderDetailContent<T extends Order>({variant,order,error,retryin
             <span className="order-detail-opened modal-inline-date"><Icon name="clock" size={14}/><time dateTime={order.createdAt}>{opened}</time></span>
             {subtitle&&<span className="modal-inline-description">{subtitle}</span>}
           </div>
-          <header className="order-detail-section-head"><h3 id="order-detail-products-title">Productos del pedido</h3><div className="order-detail-status" aria-label="Estado del pedido"><Status tone={meta.tone}>{meta.label}</Status></div></header>
+          <header className="order-detail-section-head modal-section-rule"><h3 id="order-detail-products-title" className="modal-section-title">Productos del pedido</h3><div className="order-detail-status" aria-label="Estado del pedido"><Status tone={meta.tone}>{meta.label}</Status></div></header>
           {(order.customerPhone||order.address||order.reference)&&<section className="order-detail-context" aria-label="Contacto y entrega">
             {order.customerPhone&&<div><span><Icon name="users" size={16}/></span><p><small>CONTACTO</small><b>{order.customerPhone}</b></p></div>}
             {(order.address||order.reference)&&<div><span><Icon name="truck" size={16}/></span><p><small>ENTREGA</small><b>{order.address||"Dirección no registrada"}</b>{order.reference&&<em>{order.reference}</em>}</p></div>}
@@ -175,7 +175,7 @@ export function OrderDetailSkeleton({variant,close}:{variant:OrderDetailVariant;
       <div className="order-detail-content" aria-hidden="true">
         <div className="order-detail-information modal-inline-metadata"><OrderAttributionSkeleton/><span className="modal-inline-date"><Skeleton width="var(--size-150)" height="var(--size-9)"/></span></div>
         <section className="order-detail-consumption">
-          <div className="order-detail-section-head"><Skeleton width="var(--size-156)" height="var(--size-13)"/><Skeleton width="var(--size-48)" height="var(--size-9)"/></div>
+          <div className="order-detail-section-head modal-section-rule"><Skeleton width="var(--size-156)" height="var(--size-13)"/><Skeleton width="var(--size-48)" height="var(--size-9)"/></div>
           <ModalItemList className="order-detail-items">
             {Array.from({length:3},(_,index)=><div className="modal-item-row order-detail-line" role="listitem" key={index}>
               <Skeleton width="var(--size-32)" height="var(--size-32)" radius="var(--radius-pill)" className="order-detail-skeleton-qty"/>

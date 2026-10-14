@@ -177,7 +177,8 @@ test("detalle de cobro respeta cabecera simple, datos alineados y resumen inferi
  assert.equal(view.some(node=>node.props.children==="CONSUMO"||node.props.children==="PAGOS"),false);
  assert.equal(view.some(node=>node.props.className==="pos-detail-summary"),false);
  const css=readFileSync(new URL("pos.css",root),"utf8");
- assert.match(css,/\.pos-detail-section\+\.pos-detail-section\{[^}]*border-top:var\(--stroke-1\) solid var\(--line\)/);
+ assert.doesNotMatch(css,/\.pos-detail-section\+\.pos-detail-section\{[^}]*border-top/,"la división no repite la línea de los productos");
+ assert.match(readFileSync(new URL("pos-page.tsx",root),"utf8"),/<h3 id="pos-detail-payments-title" className="modal-section-title modal-section-rule">/,"cada sección abre con su título subrayado");
 });
 
 test("detalle de cobro conserva permisos de devolución, turno y cierre",()=>{
@@ -226,7 +227,10 @@ test("datos de cobro diferencian etiquetas y valores y comparten filas compactas
  assert.match(readFileSync(new URL("pos-page.tsx",root),"utf8"),/className="pos-detail-context"[^>]*><dl className="modal-record-data">/);
  const shared=readFileSync(new URL("../src/design-system/styles/modal.css",import.meta.url),"utf8");
  assert.match(shared,/\.modal-item-name\{[^}]*font-weight:var\(--weight-semibold\)/);
- assert.match(shared,/@media\(width<=620px\)\{\s*\.modal-record-data\{grid-template-columns:minmax\(0,1fr\)/);
+ // Los modales muestran la barra siempre que hay más contenido; hover-scroll (oculta hasta el hover) queda para vistas como el menú.
+ assert.match(shared,/\.modal-body\{[^}]*overflow-y:auto[^}]*scrollbar-width:thin/);
+ for(const file of ["pos-page.tsx","../../../sales/presentation/sale-detail-dialog.tsx"])assert.doesNotMatch(readFileSync(new URL(file,root),"utf8"),/modal-body[^"]*hover-scroll/,`${file}: el cuerpo del modal no oculta su barra`);
+ assert.match(shared,/@media\(width<=620px\)\{\s*\.modal-record-data\{grid-auto-flow:row;grid-template-columns:minmax\(0,1fr\)/);
  assert.match(shared,/\.modal-record-data>div\{[^}]*grid-template-columns:var\(--size-120\) minmax\(0,1fr\)/);
 });
 

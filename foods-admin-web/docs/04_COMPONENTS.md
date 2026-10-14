@@ -143,11 +143,17 @@ estilos únicos, no duplicados por módulo. El detalle Pedidos/Salón lo usa en 
 panel de hasta 760 px; los formularios sin resumen continúan con `ModalBody`.
 Todo el fondo del resumen usa gris muy claro `cloud-50`; el estado abierto usa azul tenue.
 
+`.modal-body` es el único scroll del modal y su barra fina está siempre visible
+cuando hay desbordamiento; no combinarlo con `hover-scroll`.
+
 `dl.modal-record-data` organiza los datos de consulta de Ventas y Cobros.
-En escritorio conserva dos parejas por fila. En ≤620 px usa una lista de filas
+En escritorio es una franja de una fila: fondo `primary-50`, borde `primary-100`,
+columnas ajustadas al contenido (`grid-auto-flow: column`, `grid-auto-columns:
+auto`) separadas por líneas `primary-200`. El valor de la primera pareja
+(identidad) va en 16 px bold `primary-700`; su `small` y los demás valores no cambian. En ≤620 px usa una lista de filas
 etiqueta/valor: columna de etiqueta de 120 px, valor flexible, 12 px entre
 columnas y 10 px entre filas, alineados a la primera línea del texto.
-Los nombres largos envuelven; no se truncan ni se añade un panel decorativo.
+Los nombres largos envuelven; no se truncan. La lista móvil conserva el fondo de la franja.
 La carga usa la misma retícula. El único dueño de este layout es `modal.css`.
 En el detalle de pedidos, las acciones inferiores comparten el mismo fondo.
 La cabecera del resumen agrupa título y estado, con separador inferior. Los
@@ -191,7 +197,10 @@ en el design system, no se duplican por módulo.
 Reglas:
 
 - Datos: `dt` y `modal-data-label` usan 12 px / 600; `dd` y `modal-data-value`, 14 px / 400.
-  Títulos de sección 16 px / 700. Los datos informativos no heredan el aumento
+  Títulos de sección 16 px / 700, salvo `modal-section-title` + `modal-section-rule`
+  en el cuerpo de Detalle de pedido, venta y cobro (13 px / 700, mayúsculas,
+  `ink-800`, regla de 2 px `primary-200`), definidos solo en `modal.css`; el
+  título de `modal-summary-heading` usa el mismo estilo y regla. Los datos informativos no heredan el aumento
   móvil a 16 px reservado a controles editables. Los tokens se definen en `variables.css` y los roles
   se aplican una sola vez en `modal.css`;
   no invertir etiqueta y valor en estilos locales. Los bloques heredados sin

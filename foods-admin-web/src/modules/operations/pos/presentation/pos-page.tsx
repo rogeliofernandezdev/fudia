@@ -239,14 +239,14 @@ export function POSDetailDialog({loading,error,data,canManage,hasShift,formatMon
     :error?<div className="modal-body"><ErrorState title="No pudimos cargar el cobro" text={error} onRetry={retry}/></div>
     :!data?<div className="modal-body"><EmptyState icon="receipt" title="No hay detalle disponible"/></div>
     :<ModalWorkspace summary={<section className="modal-summary" aria-labelledby="pos-detail-summary-title">
-      <div className="modal-summary-heading"><h3 id="pos-detail-summary-title">Resumen de cobro</h3><Status tone={paymentMeta[data.paymentStatus].tone} emphasis>{paymentMeta[data.paymentStatus].label}</Status></div>
+      <div className="modal-summary-heading"><h3 id="pos-detail-summary-title" className="modal-section-title">Resumen de cobro</h3><Status tone={paymentMeta[data.paymentStatus].tone} emphasis>{paymentMeta[data.paymentStatus].label}</Status></div>
       <div className="modal-summary-lines">
         <div className="modal-summary-line"><span>Total del pedido</span><b>{formatMoney(Number(data.order.total))}</b></div>
         <div className="modal-summary-line"><span>Pagado neto</span><b>{formatMoney(Number(data.paidAmount))}</b></div>
       </div>
       <div className="modal-summary-total"><span>Saldo pendiente</span><strong>{formatMoney(Number(data.remainingAmount))}</strong></div>
     </section>}>
-    <div className="modal-body pos-detail-body hover-scroll" tabIndex={0} aria-label="Datos, productos y pagos del pedido">
+    <div className="modal-body pos-detail-body" tabIndex={0} aria-label="Datos, productos y pagos del pedido">
       <section className="pos-detail-context" aria-label="Datos del pedido"><dl className="modal-record-data">
         <div><dt>{data.order.tableName?"Mesa":data.order.customerName?"Cliente":"Venta"}</dt><dd>{data.order.tableName||data.order.customerName||"Venta directa"}{data.order.tableName&&data.order.customerName&&<small>{data.order.customerName}</small>}</dd></div>
         <div><dt>Canal</dt><dd>{channelLabel[data.order.channel]??data.order.channel}</dd></div>
@@ -254,12 +254,12 @@ export function POSDetailDialog({loading,error,data,canManage,hasShift,formatMon
         <div><dt>Fecha del pedido</dt><dd>{formatDateTime(data.order.createdAt)}</dd></div>
       </dl></section>
       <section className="pos-detail-section" aria-labelledby="pos-detail-products-title">
-        <h3 id="pos-detail-products-title">Productos del pedido</h3>
+        <h3 id="pos-detail-products-title" className="modal-section-title modal-section-rule">Productos del pedido</h3>
         {data.order.items?.length?<ModalItemList className="pos-order-lines">{data.order.items.map(item=><div className="modal-item-row" role="listitem" key={item.id}><b className="modal-item-quantity">{Number(item.qty)}×</b><div className="modal-item-info"><span className="modal-item-name">{item.name}</span>{item.note&&<ModalItemNote>{item.note}</ModalItemNote>}<span className="modal-item-meta"><span>{formatMoney(Number(item.unitPrice))} c/u</span></span><ModalItemComponents label={`Detalle de ${item.name}`} items={[...(item.selections??[]).map((selection,index)=>({key:`selection-${index}`,group:selection.groupName,name:selection.name,extra:Number(selection.surcharge)>0&&<small>+{formatMoney(Number(selection.surcharge))}</small>})),...(item.modifiers??[]).map((modifier,index)=>({key:`modifier-${index}`,group:modifier.groupName,name:modifier.name}))]}/></div><strong className="modal-item-total">{formatMoney(Number(item.qty)*Number(item.unitPrice))}</strong></div>)}</ModalItemList>:<p className="pos-detail-empty">No hay productos registrados.</p>}
       </section>
 
       <section className="pos-detail-section" aria-labelledby="pos-detail-payments-title">
-        <h3 id="pos-detail-payments-title">Pagos registrados</h3>
+        <h3 id="pos-detail-payments-title" className="modal-section-title modal-section-rule">Pagos registrados</h3>
         {data.payments.length?<div className="pos-payment-list">{data.payments.map(payment=>{
           const net=Number(payment.netAmount);
           return <article key={payment.id}><span className={"pos-payment-method pm-"+payment.method}><Icon name={paymentMethodMeta[payment.method]?.icon??"wallet"} size={16}/></span><div><b>{paymentMethodMeta[payment.method]?.label??"Otro"}</b><small>{payment.cashRegisterName} · {formatDateTime(payment.createdAt)}</small><small>Cobrado por: {payment.createdByName||"Sin información"}</small>{payment.reference&&<em>{payment.reference}</em>}</div><span className="pos-payment-values"><b>{formatMoney(Number(payment.amount))}</b>{Number(payment.refundedAmount)>0&&<small>Devuelto {formatMoney(Number(payment.refundedAmount))}</small>}</span>{canManage&&net>0&&!closed&&<Button kind="ghost" className="pos-refund-action" icon="undo" disabled={!hasShift} onClick={()=>refund(payment)}>Devolver</Button>}</article>})}</div>
@@ -278,7 +278,7 @@ function POSLoading(){return <>
 function POSDetailLoading(){return <ModalWorkspace summary={<section className="modal-summary pos-detail-loading" aria-hidden="true"><div className="modal-summary-heading"><b/></div><div className="modal-summary-lines">{Array.from({length:2},(_,index)=><div className="modal-summary-line" key={index}><i/><b/></div>)}</div><div className="modal-summary-total"><i/><b/></div></section>}>
   <div className="modal-body pos-detail-body pos-detail-loading" aria-label="Cargando detalle del pedido" aria-busy="true">
     <div className="pos-detail-context" aria-hidden="true"><dl className="modal-record-data">{Array.from({length:4},(_,index)=><div key={index}><i/><b/></div>)}</dl></div>
-    {Array.from({length:2},(_,section)=><section className="pos-detail-section pos-detail-section-skeleton" aria-hidden="true" key={section}><h3><b/></h3>{Array.from({length:3},(_,row)=><div key={row}><i/><span><b/><small/></span><i/></div>)}</section>)}
+    {Array.from({length:2},(_,section)=><section className="pos-detail-section pos-detail-section-skeleton" aria-hidden="true" key={section}><h3 className="modal-section-title modal-section-rule"><b/></h3>{Array.from({length:3},(_,row)=><div key={row}><i/><span><b/><small/></span><i/></div>)}</section>)}
   </div>
 </ModalWorkspace>}
 
