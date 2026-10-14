@@ -117,7 +117,7 @@ test("producto e inventario mantienen una sola fuente de verdad",()=>{
   for(const legacy of ["stockMode","defaultDailyQuota","dailyQuota"])assert.equal(productTypes.includes(legacy),false,legacy);
 
   const productDialog=read("src/modules/menu/products/presentation/product-dialog.tsx");
-  for(const label of ["Sin control","Porciones preparadas","Inventario físico"])assert.ok(productDialog.includes(label),label);
+  for(const label of ["Sin control","Cupo del día","Inventario físico"])assert.ok(productDialog.includes(label),label);
   assert.equal(productDialog.includes("Cupo diario predeterminado"),false);
 
   assert.equal(existsSync(join(root,"src/modules/supply/presentation/inventory-page.tsx")),false);

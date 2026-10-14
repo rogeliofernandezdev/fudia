@@ -641,6 +641,21 @@ no integra un visor PDF.
   etc.). La imagen se sube después de crear el producto; al editar, se puede
   cambiar o quitar. Acepta PNG, JPEG y WebP hasta 5 MB. Se almacena en
   `/uploads/products/{id}.{ext}` y se sirve desde el backend.
+- La imagen abre el formulario de producto junto a la identidad comercial: un
+  cuadro 1:1 de 176 px a la izquierda y, a su derecha, Nombre, Precio,
+  Categoría y Destino de atención. En el DOM los campos van primero (el nombre
+  conserva el foco inicial); el cuadro se ubica a la izquierda por grid.
+  El cuadro siempre conserva el borde punteado (`--line-strong`) para indicar
+  que acepta arrastrar un archivo. Sin imagen, fondo `cloud-25`, icono `upload`
+  en círculo `primary-100`, «Arrastra tu foto aquí», «o haz clic para elegirla»
+  y «JPEG, PNG o WebP · 5 MB»; en táctil (`hover: none`) dice «Toca para elegir
+  una foto». Con imagen, fondo `surface`, 6 px de margen interno y la foto con
+  `object-fit: cover` dentro del marco punteado. Debajo van «Cambiar» (secondary, ancho flexible)
+  y un IconButton «Quitar imagen» de 44 px; no se superpone una X sobre la foto.
+  Todo el cuadro abre el selector y también acepta arrastrar y soltar un
+  archivo (con la misma validación). Mientras se arrastra, el borde pasa a
+  `primary-600` punteado sobre `primary-50`. En móvil (≤600 px) el cuadro de 176 px se
+  centra arriba del formulario y los campos ocupan el ancho completo debajo.
 - El formulario de producto incluye campos opcionales: tiempo de
   preparación (minutos), alérgenos (tags seleccionables), plato destacado
   (switch) y precio de costo. Ninguno es obligatorio; el operador puede
@@ -765,9 +780,12 @@ no integra un visor PDF.
   el botón de quitar. El formulario de Recetas no hereda padding ni iconos
   decorativos del footer CRUD genérico: su espaciado pertenece al módulo y cada
   acción muestra un único icono explícito.
-- El producto solicita el control mediante radios «Sin control» o «Porciones
-  preparadas». Al crear, «Porciones preparadas» revela y exige «Cantidad disponible
-  hoy», un entero positivo. Producto y cantidad inicial se guardan juntos para
+- El producto solicita el control mediante radios «Sin control» («Se vende sin
+  contar unidades») o «Cupo del día» («Platos o bebidas con cantidad limitada,
+  sin usar Inventario»). El nombre no habla de porciones porque también sirve
+  para una gaseosa o un producto de reventa en planes sin Inventario. El valor
+  técnico sigue siendo `portions`. Al crear, «Cupo del día» revela y exige
+  «Cantidad disponible hoy», un entero positivo. Producto y cantidad inicial se guardan juntos para
   el local activo y su fecha actual; no es un cupo predeterminado ni se repone
   automáticamente. «Sin control» no muestra ni envía cantidad. La edición
   comercial no modifica porciones: Disponibilidad permite ajustar su cantidad,

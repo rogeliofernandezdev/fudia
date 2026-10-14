@@ -414,12 +414,12 @@ Un restaurante en modo `simple` nunca ve insumos, recetas ni unidades.
 - Elegir un modo revela solo sus campos: el cupo muestra un número; el producto
   comprado muestra un selector de insumo; la receta muestra su lista de líneas.
   Nunca se muestran campos de un modo no elegido.
-- El alta con «Porciones preparadas» exige «Cantidad disponible hoy» y la guarda
+- El alta con «Cupo del día» (valor técnico `portions`) exige «Cantidad disponible hoy» y la guarda
   junto al producto. La cantidad sigue perteneciendo al local/día, no al catálogo.
   La edición comercial no modifica cantidades; los ajustes posteriores se hacen
   desde Disponibilidad. Sin control e Inventario físico no muestran ese campo.
 - El listado de Productos muestra nombre sin descripción y una columna
-  Disponibles con el saldo real del local actual. Porciones usa el saldo del día;
+  Disponibles con el saldo real del local actual. Cupo del día usa el saldo del día;
   Inventario físico incluye su unidad; Sin control muestra «—». El control de
   cantidad y el estado activo del catálogo permanecen separados del saldo.
 - Marcar «agotado hoy» es una acción de operaciones, no del administrador, y se
