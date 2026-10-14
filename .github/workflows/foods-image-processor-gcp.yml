@@ -118,6 +118,9 @@ jobs:
         run: node foods-infrastructure/gcp/image-processor-deploy.mjs validate
       - name: Build image before requesting short-lived credentials
         run: node foods-infrastructure/gcp/image-processor-deploy.mjs build
+      # Temporary: inspect only non-secret identity claims to diagnose WIF conditions.
+      - name: Diagnose OIDC identity (no token output)
+        run: node foods-infrastructure/gcp/oidc-diagnostics.mjs
       - id: auth
         uses: google-github-actions/auth@v3
         with:
