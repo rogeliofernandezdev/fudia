@@ -1,6 +1,15 @@
 name: foods-image-processor-gcp
 
 on:
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        required: true
+      database_ready:
+        type: boolean
+        required: true
+        default: false
   workflow_dispatch:
     inputs:
       environment:

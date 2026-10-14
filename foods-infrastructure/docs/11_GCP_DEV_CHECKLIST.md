@@ -1,8 +1,9 @@
 # gcp-dev: checklist para ejecutar los pipelines
 
 Configuración acordada con el operador el 2026-10-13. No es evidencia de un
-despliegue ni de una auditoría remota de IAM. AWS no cambia y no se despliega
-automáticamente en GCP al hacer push.
+despliegue ni de una auditoría remota de IAM. AWS no cambia. Actualización:
+`foods-gcp` coordina el deploy por push a `feat/ui-standard`, solo en
+`gcp-dev`: processor → backend → frontend, cada uno con pruebas → deploy.
 
 ## Datos confirmados por el operador
 
@@ -104,9 +105,35 @@ Eventarc solo sobre `fudia-processor-dev`, antes de crear el trigger.
 ## 4. Ejecutar en orden, solo cuando el código esté publicado
 
 No se ha hecho commit/push ni se han ejecutado estos workflows desde esta tarea.
-Publicar todos los archivos necesarios de la implementación GCP/imágenes en la
-rama elegida. Un push a la rama AWS puede activar su workflow existente:
+Publicar todos los archivos necesarios de la implementación GCP/imágenes en
+`feat/ui-standard`. Un push a la rama AWS puede activar su workflow existente:
 revisar sus triggers; mantener intactos los archivos no evita ese comportamiento.
+
+### Despliegue automático por push
+
+1. Verificar datos restaurados, backup, secretos/variables y permisos anteriores.
+2. Hacer commit y push a `feat/ui-standard`. Cambios en los proyectos,
+   infraestructura o workflows GCP activan **foods-gcp**.
+3. GitHub → Actions → **foods-gcp** → ejecución del commit. Deben terminar
+   correctamente processor (verify/deploy), backend (verify/deploy) y frontend
+   (verify/deploy), en ese orden. Si una etapa falla, no se ejecuta la siguiente.
+   Las migraciones de processor/API conservan exclusión mutua. No se generan
+   despliegues duplicados: los tres componentes se invocan mediante workflow_call.
+4. Abrir la URL frontend del resumen de su deploy. El BFF recibe
+   automáticamente la URL del API GCP, salvo override HTTPS explícito.
+
+No se requiere copiar workflows a `master` para este trigger. El pipeline usa
+el código del mismo push y las variables/secrets existentes de `gcp-dev`, sin
+variables nuevas. Las migraciones pendientes quedan habilitadas para desarrollo:
+esto no restaura datos ni comprueba automáticamente su integridad/backups.
+La concurrencia no cancela despliegues/migraciones activos; puede reemplazar una
+ejecución pendiente. No usar estos recursos para producción.
+
+### Alternativa manual
+
+Se conservan los triggers manuales de cada componente. Para mostrar el botón
+`Run workflow`, sus archivos deben existir en la rama predeterminada de GitHub;
+esa condición no aplica al despliegue automático anterior.
 
 1. Actions → **foods-image-processor-gcp** → Run workflow → `gcp-dev`.
    Marcar `database_ready` únicamente tras confirmar restore/datos y backup.

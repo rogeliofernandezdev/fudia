@@ -2,6 +2,7 @@ name: foods-admin-web
 
 on:
   push:
+    branches: [aws-deploy]
     paths:
       - "foods-admin-web/**"
       - ".github/workflows/foods-admin-web.yml"

@@ -3,7 +3,11 @@
 ## Alcance y estado
 
 Preparación de despliegue, no evidencia de un despliegue real. Los workflows
-`foods-backend-gcp.yml` y `foods-admin-web-gcp.yml` son independientes y manuales.
+`foods-gcp.yml` coordina processor → API → frontend por push a `feat/ui-standard`,
+según los paths de los proyectos/infraestructura/workflows, usando `gcp-dev`.
+Cada etapa exige pruebas → deploy exitosos antes de la siguiente. Reutiliza los
+tres workflows del mismo commit con `workflow_call`; conservan `workflow_dispatch`
+para operación manual, sin triggers push duplicados.
 No modifican los workflows de AWS, sus triggers ni el environment `dev`.
 Primero se ejecuta processor/migración, después backend y finalmente frontend. Fudia Concierge/Redis no se
 migran en este alcance: conservar un `FUDIA_CONCIERGE_URL` HTTPS alcanzable si
@@ -293,14 +297,19 @@ sin escrituras. Volver DNS a AWS no reconcilia datos nuevos de Cloud SQL.
    fotos vacío. Ensayar backup/restore de los datos actuales a Cloud SQL; verificar
    UUID, usuarios, migraciones aplicadas, recuentos y backups antes de deploy.
    No se ha realizado la copia: requiere IDs de recursos y acceso autorizado.
-2. Commit/push de estos cambios. GitHub puede requerir el workflow en la rama
-   por defecto para mostrar `Run workflow`; respetar la rama autorizada en WIF.
+2. Commit/push a `feat/ui-standard` activa `foods-gcp` sin registrar archivos en
+   la rama por defecto. Revisar Actions → `foods-gcp`: processor → backend → frontend.
+   La secuencia completa se serializa sin cancelar migraciones en curso. Cada
+   etapa exige `verify` y `deploy` exitosos para habilitar la siguiente.
    Los triggers de AWS siguen vigentes: un push en su rama de despliegue puede
-   desplegar allí. GCP solo se ejecuta manualmente en esta versión.
-3. Actions → `foods-image-processor-gcp`, después `foods-backend-gcp` → Run workflow → rama y `gcp-dev`. Marcar
-   `database_ready` solo después de verificar restore/datos y backup. Por defecto
-   es false y el deploy falla antes de invocar GCP. Es confirmación del operador,
-   no una comprobación automática de integridad ni una variable permanente.
+   desplegar allí. Sus archivos y variables no se modifican.
+3. El push habilita migraciones pendientes solo para `gcp-dev`, tomando como
+   precondición la base restaurada por el operador y backups verificados antes
+   del primer push. No realiza ni certifica restore/backup; no ejecutarlo contra
+   una base vacía o productiva. No se añaden variables ni credenciales nuevas.
+   La alternativa manual conserva `database_ready=false` por defecto y exige
+   confirmación. Para mostrar `Run workflow`, GitHub exige el archivo en la rama
+   por defecto; esa condición no aplica al trigger por push.
 4. CI verifica Go y PostgreSQL temporal. Construye Docker linux/amd64, publica
    tag SHA+run+attempt y despliega por **digest**. Crea/actualiza Job y espera su
    terminación. En socket, `jobs deploy` monta Cloud SQL y `jobs update` retira
@@ -310,7 +319,7 @@ sin escrituras. Volver DNS a AWS no reconcilia datos nuevos de Cloud SQL.
    normal hasta pasar `/health` con la versión esperada; entonces se promueve
    esa revisión específica al 100 %. En la primera creación Cloud Run sirve
    su primera revisión antes de la prueba post-deploy: aún no cambiar DNS.
-6. Actions → `foods-admin-web-gcp` → mismo entorno. CI ejecuta lint, typecheck,
+6. Después del backend, el workflow frontend ejecuta lint, typecheck,
    suite y build; si falla, no despliega. Descubre API o usa override, verifica
    `/login` candidata y promueve. La URL/revisión/digest quedan en job summary.
 7. Validar flujos autenticados y red/bucket, actualizar restricciones Mapbox,

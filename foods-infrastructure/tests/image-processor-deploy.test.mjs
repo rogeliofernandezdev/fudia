@@ -33,7 +33,8 @@ test("a failed invocation permission stops trigger creation",async()=>{
 });
 test("processor workflow keeps short-lived OIDC and serializes schema changes with API",()=>{
  const source=readFileSync(new URL("../../.github/workflows/foods-image-processor-gcp.yml",import.meta.url),"utf8");
- assert.ok(source.includes("workflow_dispatch:"));assert.ok(!source.includes("push:"));assert.ok(!source.includes("credentials_json"));assert.ok(source.includes("create_credentials_file: false"));assert.ok(source.includes("-gcp-schema-deploy"));
+ assert.ok(!source.includes("push:"));assert.ok(source.includes("workflow_dispatch:"));assert.ok(source.includes("workflow_call:"));assert.ok(!source.includes("credentials_json"));assert.ok(source.includes("create_credentials_file: false"));assert.ok(source.includes("-gcp-schema-deploy"));
+ assert.ok(source.includes("environment: ${{ inputs.environment }}"));assert.ok(source.includes("needs: verify"));assert.ok(source.includes("GCP_DATABASE_READY: ${{ inputs.database_ready }}"));
  const api=readFileSync(new URL("../../.github/workflows/foods-backend-gcp.yml",import.meta.url),"utf8");assert.ok(api.includes("-gcp-schema-deploy"));
 });
 test("lifecycle only deletes objects explicitly scheduled after READY",()=>{

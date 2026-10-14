@@ -142,6 +142,8 @@ mantenimiento separado; no se eliminan automáticamente en este cambio.
    despliega worker privado, concede run.invoker a Eventarc solo sobre ese servicio
    y configura el trigger. API/worker comparten concurrency
    de esquema para no migrar juntos. Worker image no incluye API ni migraciones.
+   El coordinador `foods-gcp` lo ejecuta primero por push a `feat/ui-standard`
+   en `gcp-dev`; backend y frontend esperan el éxito de sus dependencias.
 3. Completar grants después de migración 000080 antes de subir fotos. /health no
    certifica esos permisos. Confirmar trigger activo y ajustar ack deadline de
    su suscripción Pub/Sub a 600 s. Revisar reintentos y retención.

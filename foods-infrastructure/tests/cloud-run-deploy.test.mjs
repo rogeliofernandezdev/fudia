@@ -203,10 +203,10 @@ test("image can be built before OIDC; authenticated deploy does not rebuild", as
   assert.equal(mock.calls.filter(args => args[0] === "docker" && args[1] === "build").length, 1);
 });
 
-test("GCP workflows are manual, isolated, gated and keyless; AWS pipelines remain separate", () => {
+test("GCP component workflows are reusable, gated and keyless without changing AWS", () => {
   for (const file of ["foods-backend-gcp.yml", "foods-admin-web-gcp.yml"]) {
     const source = readFileSync(new URL(`../../.github/workflows/${file}`, import.meta.url), "utf8");
-    for (const value of ["workflow_dispatch:", "needs: verify", "gcp-production", "google-github-actions/auth@v3", "id-token: write", "cancel-in-progress: false", "node --test foods-infrastructure/tests/*.test.mjs"]) assert.ok(source.includes(value));
+    for (const value of ["workflow_call:", "workflow_dispatch:", "needs: verify", "environment: ${{ inputs.environment }}", "gcp-production", "google-github-actions/auth@v3", "id-token: write", "cancel-in-progress: false", "node --test foods-infrastructure/tests/*.test.mjs"]) assert.ok(source.includes(value));
     assert.ok(!source.includes("push:")); assert.ok(!source.includes("credentials_json")); assert.ok(!source.includes("AWS_"));
     assert.ok(source.indexOf("before requesting short-lived credentials") < source.indexOf("uses: google-github-actions/auth"));
     assert.ok(source.includes("access_token_lifetime: 3600s"));
@@ -221,5 +221,7 @@ test("only GCP database workflows require Cloud SQL configuration and verify Pos
     const source = readFileSync(new URL(`../../.github/workflows/${file}`, import.meta.url), "utf8");
     assert.ok(source.includes("image: postgres:18"));
     assert.ok(source.includes("GCP_CLOUD_SQL_INSTANCE: ${{ vars.GCP_CLOUD_SQL_INSTANCE }}"));
+    assert.ok(source.includes("GCP_DATABASE_READY: ${{ inputs.database_ready }}"));
+    assert.ok(source.includes("default: false")); // Manual execution still requires confirmation.
   }
 });

@@ -2,6 +2,7 @@ name: foods-backend
 
 on:
   push:
+    branches: [aws-deploy]
     paths:
       - "foods-backend/**"
       - ".github/workflows/foods-backend.yml"

@@ -1,0 +1,45 @@
+name: foods-gcp
+
+on:
+  push:
+    branches: [feat/ui-standard]
+    paths:
+      - "foods-backend/**"
+      - "foods-admin-web/**"
+      - "fudia-image-processor/**"
+      - "foods-infrastructure/**"
+      - ".github/workflows/foods-*-gcp.yml"
+      - ".github/workflows/foods-gcp.yml"
+
+permissions:
+  contents: read
+  id-token: write
+
+# Serialize full releases without interrupting a running migration.
+concurrency:
+  group: foods-gcp-dev-push-deploy
+  cancel-in-progress: false
+
+jobs:
+  processor:
+    uses: ./.github/workflows/foods-image-processor-gcp.yml
+    with:
+      environment: gcp-dev
+      # Development database already restored by the operator; no restore is run here.
+      database_ready: true
+    secrets: inherit
+
+  backend:
+    needs: processor
+    uses: ./.github/workflows/foods-backend-gcp.yml
+    with:
+      environment: gcp-dev
+      database_ready: true
+    secrets: inherit
+
+  frontend:
+    needs: backend
+    uses: ./.github/workflows/foods-admin-web-gcp.yml
+    with:
+      environment: gcp-dev
+    secrets: inherit
