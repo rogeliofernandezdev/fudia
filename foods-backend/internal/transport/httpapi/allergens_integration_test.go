@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 )
@@ -27,7 +28,7 @@ func TestAllergenCreationRejectsDuplicatesAndStaysInOrganization(t *testing.T) {
 	list := func(s scope, q string) []string {
 		t.Helper()
 		rec := httptest.NewRecorder()
-		api.listAllergens(rec, allergenRequest(s, "GET", "/v1/admin/allergens?q="+q, ""))
+		api.listAllergens(rec, allergenRequest(s, "GET", "/v1/admin/allergens?q="+url.QueryEscape(q), ""))
 		var out struct{ Items []string }
 		if rec.Code != http.StatusOK || json.Unmarshal(rec.Body.Bytes(), &out) != nil {
 			t.Fatalf("list allergens: %d %s", rec.Code, rec.Body.String())
