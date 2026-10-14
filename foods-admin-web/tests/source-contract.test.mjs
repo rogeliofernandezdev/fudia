@@ -324,7 +324,7 @@ test("caja separa cajas fisicas de sus turnos",()=>{
   assert.ok(dialogs.includes("EFECTIVO ESPERADO"),"El arqueo muestra el esperado antes de cerrar");
   assert.ok(dialogs.includes("Efectivo contado"),"El arqueo solicita el efectivo contado");
   assert.ok(dialogs.includes("DIFERENCIA"),"El cierre calcula sobrante o faltante");
-  assert.ok(dialogs.includes("ORIGEN"),"El detalle de turno muestra el origen de cada movimiento");
+  assert.ok(dialogs.includes("cashMovementSourceLabel(item.sourceType)"),"El detalle de turno muestra el origen de cada movimiento");
   assert.ok(dialogs.includes("Cierre ciego activo"),"El arqueo soporta cierre ciego real");
   assert.ok(dialogs.includes("Por denominaciones"),"El arqueo permite conteo por denominaciones");
   assert.ok(dialogs.includes("denominationsForCurrency"),"Las denominaciones se adaptan a la moneda configurada");

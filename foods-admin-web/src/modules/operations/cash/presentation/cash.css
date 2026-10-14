@@ -178,6 +178,7 @@
 .cash-detail-movement-amount.income{color:var(--brand-700)}
 .cash-detail-movement-amount.expense{color:var(--danger)}
 .cash-detail-empty{margin:0;color:var(--ink-500);font-size:var(--font-size-base)}
+.cash-detail-modal .modal-summary-lines{grid-template-columns:repeat(3,minmax(0,1fr))}
 .cash-detail-variance.positive b{color:var(--primary-700)}
 .cash-detail-variance.negative b{color:var(--danger)}
 
@@ -208,7 +209,8 @@
  .cash-register-idle .button{width:100%}
  .cash-history-toolbar{grid-template-columns:1fr;padding:var(--space-2-5)}
  .cash-history-toolbar>p{grid-column:auto}
- .cash-modal:not(.cash-close-modal),.cash-detail-modal{width:100vw;height:100dvh;max-height:none;border-radius:0}
+ .cash-modal:not(.cash-close-modal),.crud-modal.cash-detail-modal{width:100vw;height:100dvh;max-height:100dvh;border-radius:0}
+ .cash-detail-modal .modal-summary-lines{grid-template-columns:repeat(2,minmax(0,1fr))}
  .cash-close-summary{grid-template-columns:1fr}
  .cash-denomination-count>div{grid-template-columns:1fr}
  .cash-denomination-count label:nth-child(odd){border-right:0}

@@ -1713,6 +1713,25 @@ o persona». Peso visual ligero: sin icono repetido en cada fila (el estado ya
 distingue abierto y cerrado), Caja y responsable en peso regular con su rol en `small`. La diferencia cero se muestra en `ink-700` regular; solo un sobrante
 (`primary-700`) o un faltante (`danger`) llevan color y seminegrita.
 
+### Detalle del turno
+
+Sigue el mismo patrón que Detalle de cobro y de venta. Cabecera «Detalle del
+turno» con icono y X, sin el código técnico del turno. El cuerpo (`modal-body`,
+barra siempre visible) abre con la franja `modal-record-data`: Caja como dato
+protagonista, Día operativo, Cajero (o «Abierto por» si está cerrado) con
+«Apertura» en `small`, y Equipo actual en un turno abierto o «Cerrado por» con
+«Cierre» en uno cerrado; nunca un «En curso» inventado. Las notas de apertura y
+cierre usan la tarjeta `modal-detail-notes`. «Movimientos» es una sección con
+`modal-section-title` + `modal-section-rule` y el conteo a la derecha; cada
+movimiento es una fila de `ModalItemList` (icono + o − en tono verde o rojo
+tenue, motivo, «Ingreso · Origen · Usuario», fecha y nota; importe a la derecha
+en verde o rojo), no una tabla. El pie fijo `modal-summary` («Resumen de caja» y
+estado Abierto/Cerrado) muestra Fondo inicial, Ingresos, Egresos y, al cerrar,
+Contado y Diferencia (color solo si hay sobrante o faltante) en tres columnas
+(dos en móvil); «Esperado» es el total índigo. «Ver informe y PDF» es una acción
+de consulta: botón `secondary` con icono `eye` en `ModalFooter`. En móvil el
+modal ocupa toda la pantalla.
+
 ### Atribución en Caja y turnos
 
 En un turno abierto, «Cajero» identifica a quien abrió ese turno y quedó a cargo.
