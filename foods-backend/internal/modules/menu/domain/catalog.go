@@ -10,6 +10,16 @@ type Category struct {
 	ProductScope string `json:"productScope"`
 	ProductCount int    `json:"productCount"`
 }
+// AllergenInput registers an organization allergen; duplicates are checked
+// against the shared catalog and the organization's own entries.
+type AllergenInput struct {
+	Name string `json:"name"`
+}
+type Allergen struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
 type CategoryInput struct {
 	Name         string `json:"name"`
 	SortOrder    int    `json:"sortOrder"`

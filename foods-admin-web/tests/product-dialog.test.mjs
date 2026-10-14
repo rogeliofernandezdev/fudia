@@ -33,7 +33,7 @@ function mount({save=async()=>{},draft={...validDraft},busy=false}={}){
   if(name==="@/design-system/dialog")return {Dialog:"Dialog"};
   if(name==="@/design-system/icons")return {Icon:"Icon"};
   if(name==="@/design-system/rich-text-editor")return {RichTextEditor:"RichTextEditor"};
-  if(name==="react-select/async")return {default:"AsyncSelect"};
+  if(name==="./allergen-field")return {AllergenField:"AllergenField"};
   return require(name);
  });
  const tree=ProductDialog({draft,categories:[],destinations:[{value:"kitchen",label:"Cocina"},{value:"bar",label:"Barra"},{value:"direct",label:"Entrega directa"}],loadAllergens:async()=>[],currencySymbol:"S/",busy,close:()=>{},save});

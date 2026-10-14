@@ -810,9 +810,19 @@ no integra un visor PDF.
   conserva su propia categoría; el producto técnico que representa al menú se
   registra sin `categoryId` para no mezclar clasificación de platos con composición.
 - Los alérgenos provienen del backend (`GET /v1/admin/allergens`) y se
-  seleccionan mediante un control `react-select` asíncrono (AsyncSelect) con
-  multi-select. El filtrado lo hace el backend con `?q=`, no el frontend. No
-  se hardcodean alérgenos en el código.
+  seleccionan mediante `AllergenField` (`react-select` AsyncCreatable,
+  multi-select). El filtrado lo hace el backend con `?q=`, sin distinguir
+  mayúsculas ni tildes. No se hardcodean alérgenos en el código.
+- Si la búsqueda no encuentra un nombre equivalente, la última opción del
+  desplegable es «Agregar «{nombre}»» (`POST /v1/admin/allergens`, solo con
+  `menu.manage`). No se ofrece si el texto tiene menos de 2 o más de 60
+  caracteres, ni si coincide con una opción visible o un alérgeno ya
+  seleccionado; la comparación ignora mayúsculas, tildes y espacios repetidos y
+  distingue la ñ. Ante un duplicado el desplegable dice «Ya está seleccionado».
+  El backend vuelve a validar; un 409 muestra «Ya existe un alérgeno con ese
+  nombre.» como error del campo. Al crear, el alérgeno queda seleccionado y el
+  control se bloquea mientras guarda. Los alérgenos nuevos pertenecen a la
+  empresa; el catálogo base sigue compartido.
 - El control de alérgenos respeta el mismo diseño que los demás inputs:
   `--control-height` de altura, borde `#e4e7ec`, radio de 6 px, fuente de
   `--font-size-control`, anillo de foco azul compartido y placeholder alineado a

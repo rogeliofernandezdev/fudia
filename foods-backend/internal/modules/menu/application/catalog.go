@@ -12,9 +12,11 @@ import (
 	"io"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 var ErrNotFound = errors.New("menu record not found")
+var ErrAllergenConflict = errors.New("allergen already exists")
 
 type scope = requestscope.Scope
 type category = domain.Category
@@ -120,7 +122,8 @@ type CatalogRepository interface {
 	Products(context.Context, scope, CatalogFilter) (ProductPage, error)
 	ProductCount(context.Context, scope) (int, error)
 	HasCancellableOrderUsage(context.Context, scope, string) (bool, error)
-	Allergens(context.Context, string) ([]string, error)
+	Allergens(context.Context, scope, string) ([]string, error)
+	CreateAllergen(context.Context, scope, string) (domain.Allergen, error)
 	SetImage(context.Context, scope, string, string) error
 }
 
@@ -456,11 +459,26 @@ func (a *Catalog) nextSKU(ctx context.Context, s scope) (string, error) {
 	count, err := a.repo.ProductCount(ctx, s)
 	return fmt.Sprintf("PROD-%04d", count+1), err
 }
-func (a *Catalog) Allergens(ctx context.Context, query string) ([]string, error) {
-	out, err := a.repo.Allergens(ctx, query)
+func (a *Catalog) Allergens(ctx context.Context, s scope, query string) ([]string, error) {
+	out, err := a.repo.Allergens(ctx, s, query)
 	if err != nil {
 		return nil, menuFailure(apperror.Unavailable, "allergens_unavailable", "No pudimos cargar los alérgenos.")
 	}
+	return out, nil
+}
+func (a *Catalog) CreateAllergen(ctx context.Context, s scope, in domain.AllergenInput) (domain.Allergen, error) {
+	name := strings.Join(strings.Fields(in.Name), " ")
+	if length := utf8.RuneCountInString(name); length < 2 || length > 60 {
+		return domain.Allergen{}, menuFailure(apperror.Invalid, "invalid_allergen", "El nombre del alérgeno debe tener entre 2 y 60 caracteres.")
+	}
+	out, err := a.repo.CreateAllergen(ctx, s, name)
+	if errors.Is(err, ErrAllergenConflict) {
+		return out, menuFailure(apperror.Conflict, "allergen_conflict", "Ya existe un alérgeno con ese nombre.")
+	}
+	if err != nil {
+		return out, menuFailure(apperror.Unavailable, "allergen_unavailable", "No pudimos registrar el alérgeno.")
+	}
+	_ = a.audit.Record(ctx, s, "allergen.created", "allergen", out.ID)
 	return out, nil
 }
 func (a *Catalog) UploadImage(ctx context.Context, s scope, id, contentType string, content io.Reader) (map[string]string, error) {

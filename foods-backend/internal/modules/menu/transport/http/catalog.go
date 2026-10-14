@@ -42,8 +42,17 @@ func (h *Catalog) GetProduct(w http.ResponseWriter, r *http.Request) {
 	respond(w, 200, out, err)
 }
 func (h *Catalog) ListAllergens(w http.ResponseWriter, r *http.Request) {
-	out, err := h.service.Allergens(r.Context(), r.URL.Query().Get("q"))
+	out, err := h.service.Allergens(r.Context(), menuScope(r), r.URL.Query().Get("q"))
 	respond(w, 200, map[string]any{"items": out}, err)
+}
+func (h *Catalog) CreateAllergen(w http.ResponseWriter, r *http.Request) {
+	var in domain.AllergenInput
+	if json.NewDecoder(r.Body).Decode(&in) != nil {
+		shared.Fail(w, 400, "invalid_allergen", "El nombre del alérgeno debe tener entre 2 y 60 caracteres.")
+		return
+	}
+	out, err := h.service.CreateAllergen(r.Context(), menuScope(r), in)
+	respond(w, 201, out, err)
 }
 func (h *Catalog) UploadProductImage(w http.ResponseWriter, r *http.Request) {
 	if h.service.DirectImagesEnabled() {

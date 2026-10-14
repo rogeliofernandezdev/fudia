@@ -8,6 +8,7 @@ import (
 	"github.com/foods-platform/foods-backend/internal/platform/database"
 	"github.com/foods-platform/foods-backend/internal/platform/requestscope"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"strings"
 )
@@ -261,8 +262,16 @@ func (r *Catalog) HasCancellableOrderUsage(ctx context.Context, s scope, id stri
 		)`, s.OrganizationID, id).Scan(&used)
 	return used, err
 }
-func (r *Catalog) Allergens(ctx context.Context, query string) ([]string, error) {
-	rows, err := r.db(ctx).Query(ctx, `SELECT name FROM allergens WHERE name ILIKE $1 ORDER BY name LIMIT 20`, "%"+strings.TrimSpace(query)+"%")
+var likeEscaper = strings.NewReplacer(`\`, `\\`, "%", `\%`, "_", `\_`)
+
+// Allergens lists the shared catalog plus the organization's own entries,
+// matching without case or accents.
+func (r *Catalog) Allergens(ctx context.Context, s scope, query string) ([]string, error) {
+	rows, err := r.db(ctx).Query(ctx, `
+		SELECT name FROM allergens
+		WHERE (organization_id IS NULL OR organization_id=$1)
+		  AND normalized_name LIKE '%' || normalize_allergen_name($2) || '%' ESCAPE '\'
+		ORDER BY normalized_name LIMIT 20`, s.OrganizationID, likeEscaper.Replace(query))
 	if err != nil {
 		return nil, err
 	}
@@ -276,6 +285,25 @@ func (r *Catalog) Allergens(ctx context.Context, query string) ([]string, error)
 		items = append(items, name)
 	}
 	return items, rows.Err()
+}
+// CreateAllergen inserts only when no shared or own allergen has the same
+// normalized name; the partial unique index covers concurrent inserts.
+func (r *Catalog) CreateAllergen(ctx context.Context, s scope, name string) (domain.Allergen, error) {
+	var out domain.Allergen
+	err := r.db(ctx).QueryRow(ctx, `
+		INSERT INTO allergens(organization_id,name)
+		SELECT $1,$2
+		WHERE NOT EXISTS (
+			SELECT 1 FROM allergens
+			WHERE (organization_id IS NULL OR organization_id=$1)
+			  AND normalized_name=normalize_allergen_name($2)
+		)
+		RETURNING id,name`, s.OrganizationID, name).Scan(&out.ID, &out.Name)
+	var pgErr *pgconn.PgError
+	if errors.Is(err, pgx.ErrNoRows) || errors.As(err, &pgErr) && pgErr.Code == "23505" {
+		return out, application.ErrAllergenConflict
+	}
+	return out, err
 }
 func (r *Catalog) SetImage(ctx context.Context, s scope, id, url string) error {
 	_, err := r.db(ctx).Exec(ctx, `UPDATE products SET image_url=$3,updated_at=now() WHERE organization_id=$1 AND id=$2`, s.OrganizationID, id, url)

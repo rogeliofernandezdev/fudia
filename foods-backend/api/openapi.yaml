@@ -487,6 +487,20 @@ paths:
       operationId: deleteExchangeRate
       security: [{ sessionCookie: [] }]
       responses: { "204": { description: Tipo de cambio eliminado }, "404": { description: No encontrado } }
+  /v1/admin/allergens:
+    get:
+      operationId: listAllergens
+      summary: Busca alérgenos del catálogo compartido y de la organización actual, sin distinguir mayúsculas ni tildes
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: query, name: q, schema: { type: string } }
+      responses: { "200": { description: Hasta 20 nombres de alérgenos, content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { type: string } } } } } } }, "401": { $ref: "#/components/responses/Unauthorized" }, "403": { $ref: "#/components/responses/Forbidden" }, "503": { description: No se pudieron cargar los alérgenos } }
+    post:
+      operationId: createAllergen
+      summary: Registra un alérgeno propio de la organización si no existe otro equivalente (sin distinguir mayúsculas, tildes ni espacios) en el catálogo compartido o en la organización
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AllergenInput" } } } }
+      responses: { "201": { description: Alérgeno creado, content: { application/json: { schema: { $ref: "#/components/schemas/Allergen" } } } }, "400": { $ref: "#/components/responses/BadRequest" }, "401": { $ref: "#/components/responses/Unauthorized" }, "403": { $ref: "#/components/responses/Forbidden" }, "409": { description: Ya existe un alérgeno con ese nombre (allergen_conflict) }, "503": { description: No se pudo registrar el alérgeno } }
   /v1/admin/categories:
     get:
       operationId: listCategories
@@ -2018,4 +2032,6 @@ components:
     KitchenTicket: { type: object, required: [id, orderId, roundNumber, code, channel, status, customerName, tableName, notes, createdAt, updatedAt, items], properties: { id: { type: string, description: Identificador opaco de ronda y estación }, destination: { type: string, enum: [kitchen, bar] }, orderId: { type: string, format: uuid }, roundNumber: { type: integer, minimum: 0 }, code: { type: string }, channel: { type: string, enum: [salon, mostrador, recojo, delivery, whatsapp] }, status: { type: string, enum: [confirmado, preparando, listo] }, customerName: { type: string }, tableName: { type: string }, notes: { type: string }, createdAt: { type: string, format: date-time }, updatedAt: { type: string, format: date-time }, targetMinutes: { type: [integer, "null"], minimum: 1 }, items: { type: array, items: { $ref: "#/components/schemas/OrderItem" } } } }
     UserAssignment: { type: object, required: [roleId, locationId], properties: { roleId: { type: string, format: uuid }, locationId: { type: string, format: uuid } } }
     UserInput: { type: object, required: [fullName, email, assignments], properties: { fullName: { type: string }, email: { type: string, format: email }, password: { type: string, minLength: 8, writeOnly: true }, assignments: { type: array, minItems: 1, items: { $ref: "#/components/schemas/UserAssignment" } } } }
+    AllergenInput: { type: object, required: [name], properties: { name: { type: string, minLength: 2, maxLength: 60, description: Se recortan y colapsan los espacios } } }
+    Allergen: { type: object, required: [id, name], properties: { id: { type: string, format: uuid }, name: { type: string } } }
     Error: { type: object, required: [code, message, correlationId], properties: { code: { type: string }, message: { type: string }, correlationId: { type: string, format: uuid } } }

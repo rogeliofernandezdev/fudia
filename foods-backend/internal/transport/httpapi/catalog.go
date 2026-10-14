@@ -16,6 +16,9 @@ func (a *API) getProduct(w http.ResponseWriter, r *http.Request) {
 func (a *API) listAllergens(w http.ResponseWriter, r *http.Request) {
 	a.handlers.MenuCatalog.ListAllergens(w, r)
 }
+func (a *API) createAllergen(w http.ResponseWriter, r *http.Request) {
+	a.handlers.MenuCatalog.CreateAllergen(w, r)
+}
 func (a *API) uploadProductImage(w http.ResponseWriter, r *http.Request) {
 	a.handlers.MenuCatalog.UploadProductImage(w, r)
 }
@@ -67,6 +70,7 @@ type MenuCatalogHandler interface {
 	ListProducts(http.ResponseWriter, *http.Request)
 	GetProduct(http.ResponseWriter, *http.Request)
 	ListAllergens(http.ResponseWriter, *http.Request)
+	CreateAllergen(http.ResponseWriter, *http.Request)
 	UploadProductImage(http.ResponseWriter, *http.Request)
 	CreateCategory(http.ResponseWriter, *http.Request)
 	UpdateCategory(http.ResponseWriter, *http.Request)

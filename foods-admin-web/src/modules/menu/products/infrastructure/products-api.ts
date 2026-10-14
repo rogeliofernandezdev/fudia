@@ -88,3 +88,9 @@ export async function listAllergens(q:string){
   const response=await apiFetch<{items:string[]}>(`allergens?${params.toString()}`);
   return response.items;
 }
+
+/** Registers an organization allergen; the backend rejects names equivalent to an existing one (409 allergen_conflict). */
+export async function createAllergen(name:string){
+  const created=await apiFetch<{id:string;name:string}>("allergens",{method:"POST",body:JSON.stringify({name})});
+  return created.name;
+}

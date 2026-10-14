@@ -219,6 +219,22 @@ por su cuenta.
 `stock_movements` correspondiente. El saldo tiene una restricción de base de
 datos que impide valores negativos.
 
+## Alérgenos
+
+- `allergens` combina el catálogo base compartido (`organization_id` NULL,
+  sembrado en `000005`) con alérgenos propios de cada empresa
+  (`organization_id` con FK a `organizations`).
+- `normalize_allergen_name(text)` es la única definición de «mismo nombre»:
+  recorta, colapsa espacios, pasa a minúsculas y quita tildes y diéresis
+  (la ñ se conserva). `normalized_name` es una columna generada con esa función.
+- Índices únicos parciales: `normalized_name` entre los compartidos y
+  `(organization_id, normalized_name)` entre los propios. El alta inserta solo si
+  no existe un equivalente compartido ni propio; cualquier carrera termina en
+  `409 allergen_conflict`.
+- `GET /v1/admin/allergens` devuelve compartidos y propios de la empresa
+  actual; nunca los de otra empresa. Dos empresas pueden registrar el mismo
+  nombre propio. `products.allergens` sigue guardando los nombres (`text[]`).
+
 ## Configuración inicial de una empresa
 
 El onboarding de una organización crea en una sola transacción la empresa, su perfil fiscal por defecto, el local principal, el administrador, los roles predefinidos, la suscripción y los módulos permitidos por el plan. Además copia desde plantillas persistidas en base de datos los medios de pago, categorías iniciales de gasto, una zona `Principal` y una `Caja principal` para el primer local.

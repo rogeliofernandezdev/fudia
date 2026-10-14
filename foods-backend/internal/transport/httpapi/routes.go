@@ -51,6 +51,7 @@ func (a *API) Routes() *http.ServeMux {
 	m.Handle("POST /v1/admin/exchange-rates", a.auth(a.requirePermission("organizations.manage", http.HandlerFunc(a.createExchangeRate))))
 	m.Handle("DELETE /v1/admin/exchange-rates/{id}", a.auth(a.requirePermission("organizations.manage", http.HandlerFunc(a.deleteExchangeRate))))
 	m.Handle("GET /v1/admin/allergens", a.auth(a.requirePermission("menu.read", http.HandlerFunc(a.listAllergens))))
+	m.Handle("POST /v1/admin/allergens", a.auth(a.requirePermission("menu.manage", http.HandlerFunc(a.createAllergen))))
 	m.Handle("GET /v1/admin/categories", a.auth(a.requirePermission("menu.read", http.HandlerFunc(a.listCategories))))
 	m.Handle("POST /v1/admin/categories", a.auth(a.requirePermission("menu.manage", http.HandlerFunc(a.createCategory))))
 	m.Handle("PATCH /v1/admin/categories/{id}", a.auth(a.requirePermission("menu.manage", http.HandlerFunc(a.updateCategory))))
