@@ -13,6 +13,8 @@ function load(){
   if(name==="react")return {useState:value=>[value,()=>{}]};
   if(name==="react-select/async-creatable")return {default:"CreatableSelect"};
   if(name==="@/design-system")return {FormField:"FormField"};
+  if(name==="@/design-system/icons")return {Icon:"Icon"};
+  if(name.endsWith(".css"))return {};
   return require(name);
  };
  vm.runInNewContext(ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText,{exports,require:resolve});
@@ -36,6 +38,9 @@ test("Agregar solo aparece si el nombre no existe entre opciones ni seleccionado
  assert.equal(props.isValidNewOption("Kiwi",[],options),true);
  assert.equal(props.formatCreateLabel("  Kiwi  verde "),"Agregar «Kiwi verde»");
  assert.equal(props.noOptionsMessage({inputValue:"aji amarillo"}),"Ya está seleccionado");
+ const created=props.formatOptionLabel({label:"Agregar «Kiwi»",value:" Kiwi ",__isNew__:true},{context:"menu"});
+ assert.equal(created.props.className,"allergen-create-option","la opción Agregar tiene diseño propio en el menú");
+ assert.equal(props.formatOptionLabel({label:"Gluten",value:"Gluten"},{context:"menu"}),"Gluten");
 });
 
 test("sin permiso de creación no se ofrece Agregar",()=>{

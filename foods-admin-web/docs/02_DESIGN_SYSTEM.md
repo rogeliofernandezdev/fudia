@@ -819,6 +819,11 @@ no integra un visor PDF.
   caracteres, ni si coincide con una opción visible o un alérgeno ya
   seleccionado; la comparación ignora mayúsculas, tildes y espacios repetidos y
   distingue la ñ. Ante un duplicado el desplegable dice «Ya está seleccionado».
+  La opción se dibuja como acción, no como un resultado más: icono `plus` de
+  14 px en un círculo de 24 px (`primary-100`, que pasa a `surface` cuando la
+  opción está enfocada), «Agregar» en `primary-700` bold y el nombre entre
+  comillas en `ink-950`. Si hay coincidencias encima, la separa una línea
+  `cloud-100`. El lector de pantalla recibe el texto plano «Agregar «{nombre}»».
   El backend vuelve a validar; un 409 muestra «Ya existe un alérgeno con ese
   nombre.» como error del campo. Al crear, el alérgeno queda seleccionado y el
   control se bloquea mientras guarda. Los alérgenos nuevos pertenecen a la
