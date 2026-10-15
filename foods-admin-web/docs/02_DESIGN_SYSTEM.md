@@ -553,8 +553,11 @@ El resumen conserva la misma composición: foto, nombre/precio juntos y cantidad
 a la derecha; en el panel lateral estrecho la cantidad baja sin comprimir el dato.
 Las imágenes del borrador son solo presentación y no se envían al API. Las
 líneas históricas sin imagen muestran el icono de su tipo; no se consultan fotos por línea.
-Carta y resumen se desplazan sin barras visibles. Esta excepción local no oculta
-las barras de otros módulos ni de la lista completa de categorías.
+La carta se desplaza sin barra visible. En desktop (>900 px) el resumen lateral
+muestra su barra fina (`scrollbar-width: thin`, `ink-400-alpha-40`) cuando hay
+más líneas de las que caben, para indicar que hay más productos; en la hoja
+móvil (≤900 px) el resumen se desplaza sin barra visible. Esta excepción local no
+oculta las barras de otros módulos ni de la lista completa de categorías.
 La revisión precede al guardado/envío desde la hoja; la barra no envía directamente.
 «Guardar comanda» crea un pedido en estado Nuevo sin activar la preparación;
 «Enviar a cocina» lo confirma y activa su atención. Ambos persisten

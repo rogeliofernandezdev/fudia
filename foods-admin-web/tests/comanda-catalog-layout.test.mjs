@@ -63,13 +63,14 @@ test("productos conservan precio, controles de cantidad y bloqueo; foto rota dej
  }
  let configured=0;const combo=nodes(exports.ComboItem({combo:{id:"combo",name:"Menú",price:"25",groupCount:2},qty:0,money,onConfigure:()=>configured++}));combo.find(node=>node.type==="button").props.onClick();assert.equal(configured,1);
 });
-test("categorías y carta se deslizan sin barras visibles ni reglas duplicadas",()=>{
+test("categorías y carta se deslizan sin barras visibles; el resumen muestra barra fina solo en desktop",()=>{
  const css=postcss.parse(read("src/modules/operations/styles/salon-comanda.css"));const seen=new Set();
  css.walkRules(rule=>{for(const selector of rule.selectors){const key=`${rule.parent.type==="atrule"?rule.parent.params:"root"}|${selector}`;assert.equal(seen.has(key),false,key);seen.add(key);}});
  const chips=css.nodes.find(node=>node.type==="rule"&&node.selector===".cmd-chips");const declarations=Object.fromEntries(chips.nodes.filter(node=>node.type==="decl").map(node=>[node.prop,node.value]));
  assert.equal(declarations["flex-wrap"],undefined);assert.equal(declarations["overflow-y"],"hidden");assert.equal(declarations["scrollbar-width"],"none");assert.equal(declarations["overflow-x"],"auto");
  assert.ok(css.nodes.some(node=>node.selectors?.includes(".cmd-chips::-webkit-scrollbar")));
  for(const selector of [".cmd-list-scroll",".cmd-summary-scroll"]){const rule=css.nodes.find(node=>node.selector===selector);assert.equal(rule.nodes.find(node=>node.prop==="scrollbar-width").value,"none");assert.equal(rule.nodes.find(node=>node.prop==="overflow-y").value,"auto");}
+ const desktop=css.nodes.find(node=>node.type==="atrule"&&node.params==="(width>900px)");const summaryDesktop=desktop.nodes.find(node=>node.selector===".cmd-summary-scroll");assert.equal(summaryDesktop.nodes.find(node=>node.prop==="scrollbar-width").value,"thin");assert.equal(desktop.nodes.some(node=>node.selector===".cmd-list-scroll"),false);
  const selected=css.nodes.find(node=>node.selector===".cmd-chip[aria-pressed=true]");assert.equal(selected.nodes.find(node=>node.prop==="background").value,"var(--primary-200)");
  assert.match(source,/queryFn:listOrderCategories/);
 });

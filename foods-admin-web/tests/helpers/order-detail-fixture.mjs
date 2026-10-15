@@ -41,6 +41,7 @@ export function detailComponents({userId="preview-waiter",permissions=["orders.m
    }
    if(name==="next/link")return {__esModule:true,default:({children,...props})=>h("a",props,children)};
    if(name==="@/providers")return {useSession:()=>({user:{id:userId},location:{country:"PE",timezone:"America/Lima"},can:value=>permissions.includes(value)}),useMoney:()=>value=>`S/ ${Number(value).toFixed(2)}`,useFeedback:()=>({notify:()=>{}})};
+   if(name==="@/providers/feedback-provider")return {useFeedback:()=>({notify:()=>{}})};
    if(name==="@/design-system")return {...load("design-system/page-header.tsx"),...load("design-system/icons.tsx"),...load("design-system/skeleton.tsx"),...load("design-system/states.tsx"),...load("design-system/modal.tsx"),...(includeComanda?{...load("design-system/dialog.tsx"),...load("design-system/confirm-dialog.tsx"),...load("design-system/form-field.tsx"),...load("design-system/form-controls.tsx"),...load("design-system/search-field.tsx")}:{})};
    if(name==="../infrastructure/service-api")return {closeOrderAccount:()=>{throw new Error("API writes are disabled in visual fixtures");}};
    if(name.startsWith(".")||name.startsWith("@/")){

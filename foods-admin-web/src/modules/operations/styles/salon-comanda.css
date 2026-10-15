@@ -157,6 +157,13 @@
   .cmd-combo-option:hover:not(:disabled,[aria-pressed=true]){border-color:var(--line-strong);background:var(--cloud-25)}
 }
 
+/* Desktop: el resumen muestra su barra fina cuando hay más líneas; en la hoja móvil sigue oculta. */
+@media (width>900px){
+  .cmd-summary-scroll{scrollbar-width:thin;scrollbar-color:var(--ink-400-alpha-40) transparent}
+  .cmd-summary-scroll::-webkit-scrollbar{display:block;width:var(--size-6)}
+  .cmd-summary-scroll::-webkit-scrollbar-thumb{border-radius:var(--radius-pill);background:var(--ink-400-alpha-40)}
+}
+
 @media (width<=1100px){
   .cmd-body{grid-template-columns:minmax(0,1fr) var(--size-360)}
   .cmd-line{grid-template-columns:var(--size-64) minmax(0,1fr)}
