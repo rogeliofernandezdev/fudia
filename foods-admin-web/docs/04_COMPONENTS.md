@@ -116,6 +116,16 @@ llenan su fila. Nunca reservar una media columna vacía. Los estados y notas usa
 si hace falta. `status` contiene el `Status` real del registro, opcional; no
 añadir estado ni resumen ficticio a formularios simples.
 
+En móvil (≤600 px, viewport de referencia 427 × 933) las hojas ocupan el
+ancho completo y se anclan abajo: los módulos usan `width:100%` o
+`min(…,100%)`, nunca `calc(100vw - N)`, que deja tarjetas flotantes con
+márgenes de 8–14 px y descuadra el margen de 16 px. En pantalla completa el pie
+queda fijo abajo sin huecos: con `ModalForm`/`ModalBody` el cuerpo crece; un
+`form` heredado sin `modal-form` recibe `margin-bottom:auto` en el bloque previo
+al pie desde `modal.css`. Un `form` con `padding:0` propio debe usar `ModalForm`:
+el form heredado compensa su padding con márgenes negativos en el pie y lo saca
+16 px del modal.
+
 `modal-action-layout` homologa pies con grupos anidados: ancho natural y
 acciones contiguas en escritorio; flex-wrap con reparto igual y crecimiento
 de una acción solitaria en móvil (≤600 px). `modal-action-subgroup` permite
@@ -201,7 +211,7 @@ Pedidos/Salón, Ventas y POS para que se vean iguales:
 | `ModalItemComponents` | Elecciones de menús/combos y modificadores como carta: grupo en versalitas, filete vertical `line`, valor y `side` (destino si difiere, estado). En ≤600 px el filete pasa a separadores horizontales. `name` acepta nodos: el detalle de Menús y combos lista cada parte con sus opciones separadas por «·» y recargos en `small` |
 
 Detalle de Menús y combos: `Dialog` `size-md` con `ModalHeader` (icono `combo`, título = nombre del menú, sin franja ni subtítulo), un solo `modal-body` blanco, `modal-record-data` con Precio y venta («Se vende: Solo hoy» o Días/Desde/Hasta), «Descripción» si existe y «Platos y opciones» como `h3` de 16 px con `ModalItemComponents`, y el `Status` real en `ModalFooter`. No repite el conteo de partes ni las reglas de elección («Obligatorio · elige 1»), que pertenecen al asistente. Error con `ModalError`. No usa tarjetas propias: con ellas el cuerpo en `grid` encogía la sección y ocultaba partes.
-El asistente «Arma tu menú o combo» tampoco lleva subtítulo («NUEVO MENÚ O COMBO») ni borde propio en el panel: el borde dejaba un filo claro alrededor de la cabecera índigo.
+El asistente «Arma tu menú o combo» tampoco lleva subtítulo («NUEVO MENÚ O COMBO») ni borde propio en el panel: el borde dejaba un filo claro alrededor de la cabecera índigo. En móvil (pantalla completa, validado a 427 × 933) `combo-wizard-stage` crece hasta el alto del panel para que el pie quede fijo abajo, sin un bloque vacío debajo.
 
 Los módulos no redefinen estas piezas; solo añaden su propio contexto (por ejemplo
 el destino compartido o el estado de preparación en Pedidos/Salón). Los cuerpos

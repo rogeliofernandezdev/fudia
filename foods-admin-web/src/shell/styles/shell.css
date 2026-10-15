@@ -54,7 +54,7 @@
 @media (width<=820px){.sidebar{z-index:80;width:min(var(--size-320),86vw);height:100vh;height:100dvh;max-height:100dvh;padding:max(var(--space-3-5),env(safe-area-inset-top)) var(--space-3-5) max(var(--space-3-5),env(safe-area-inset-bottom));display:flex;transform:translate(-105%)}
 .sidebar.open{z-index:90;transform:translate(0);pointer-events:auto}
 .sidebar-scrim{backdrop-filter:blur(var(--blur-2));z-index:80;background:var(--ink-950-alpha-40);border:0;animation:var(--duration-base) ease-out menu-fade-in;display:block;position:fixed;inset:0;pointer-events:auto}
-.sidebar-close{color:var(--surface);background:var(--surface-alpha-8);border:var(--stroke-1) solid var(--surface-alpha-8);border-radius:var(--radius-tile);place-items:center;width:var(--size-40);height:var(--size-40);display:grid}
+.sidebar-close{color:var(--surface);background:var(--surface-alpha-8);border:var(--stroke-1) solid var(--surface-alpha-8);border-radius:var(--radius-tile);place-items:center;width:var(--size-44);height:var(--size-44);display:grid}
 .sidebar nav a{min-height:var(--size-50)}
 .mobile-nav[aria-expanded=true]{color:var(--primary-700);background:var(--primary-100);border-radius:var(--radius-tile)}}
 @media (prefers-reduced-motion:reduce){.sidebar,.sidebar nav a,.nav-icon,.sidebar-scrim{transition:none!important;animation:none!important}}

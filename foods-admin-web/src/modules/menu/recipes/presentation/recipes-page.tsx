@@ -6,7 +6,7 @@ import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import AsyncSelect from "react-select/async";
 import {createLookupSelectStyles} from "@/design-system/search-select-styles";
-import {Button,ConfirmDialog,FieldLabel,Icon,Input,PageHeader,RowActionButton,Status,Textarea,ModalHeader,ModalFooter} from "@/design-system";
+import {Button,ConfirmDialog,FieldLabel,Icon,Input,PageHeader,RowActionButton,Status,Textarea,ModalHeader,ModalFooter,ModalForm} from "@/design-system";
 import {useFeedback,useSession} from "@/providers";
 import {
  getRecipe,
@@ -185,7 +185,7 @@ export function RecipesPage(){
    <Dialog onResponseClose={resetRecipe} className="crud-modal recipe-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="recipe-modal-title" aria-busy={save.isPending}>
     <ModalHeader title={editingProductId?"Editar receta":"Configurar receta"} titleId="recipe-modal-title" icon="cookingPot" subtitle={editingProductId?"EDITAR RECETA":"NUEVA RECETA"} onClose={closeRecipe} busy={save.isPending} closeLabel="Cerrar" details={<><p>Define cuánto produce la receta y qué insumos consume.</p></>}/>
 
-    <form className="recipe-form" onSubmit={submit} noValidate>
+    <ModalForm className="recipe-form" onSubmit={submit} noValidate>
      <div className="recipe-form-body">
       <section className="recipe-main-fields" aria-label="Datos de la receta">
        <label className="recipe-product-field">
@@ -297,7 +297,7 @@ export function RecipesPage(){
       <Button kind="ghost" icon="close" disabled={save.isPending} onClick={closeRecipe}>Cancelar</Button>
       <Button type="submit" icon="check" disabled={save.isPending}>{save.isPending?"Guardando…":"Guardar"}</Button>
      </ModalFooter>
-    </form>
+    </ModalForm>
    </Dialog>
   </div>}
 

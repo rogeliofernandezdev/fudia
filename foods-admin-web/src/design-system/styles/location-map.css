@@ -36,3 +36,5 @@
 .location-map-setup-icon{color:var(--primary-600);display:grid;place-items:center;margin:0 auto}
 .location-map-setup-title{margin-top:var(--space-2);font-size:var(--font-size-label);font-weight:var(--weight-bold)}
 .location-map-setup-desc{margin-top:var(--space-1);font-size:var(--font-size-label);color:var(--ink-400)}
+/* Táctil y móvil: zoom del mapa y sugerencias conservan el área táctil de 44 px. */
+@media (width<=600px),(any-pointer:coarse){.location-map-canvas .mapboxgl-ctrl-group button{width:var(--size-44);height:var(--size-44)}.location-map-suggestion{min-height:var(--size-44)}}

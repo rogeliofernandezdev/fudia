@@ -1415,6 +1415,10 @@ natural. Respetar contraste, foco de teclado, estados de carga y sesión activa.
   estilos anteriores.
 - Las diferencias de estado, tamaño o dispositivo usan clases modificadoras,
   atributos o `@media` explícitos.
+- Un bloque `@media` va después de las reglas base que modifica: una regla base
+  posterior con la misma propiedad lo anula en silencio (Compras perdía en móvil
+  la pantalla completa, la columna única y el padding). Lo protege
+  `tests/mobile-reference-device.test.mjs`.
 - La prueba `tests/css-duplicates.test.mjs` protege esta regla.
 - Las dimensiones de control no se escriben en píxeles literales. Cualquier
   `height` o `min-height` de un input, select, botón o control de paginación usa

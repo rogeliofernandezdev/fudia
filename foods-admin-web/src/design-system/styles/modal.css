@@ -121,6 +121,9 @@
 .modal-footer-status .status{max-width:100%;white-space:normal}
 .modal-footer-status>span{color:var(--ink-600);font-size:var(--font-size-label);font-weight:var(--weight-semibold)}
 .crud-modal>form:not(.modal-form)>footer{position:sticky;bottom:0;z-index:var(--z-raised);margin:var(--space-6) calc(var(--space-6) * -1) 0}
+/* Pantalla completa con form heredado: el bloque previo al pie absorbe el alto libre y el pie queda abajo, sin hueco debajo.
+   Sin alto libre (hoja o escritorio) el margen automático vale 0 y se conserva la separación del pie. */
+.crud-modal>form:not(.modal-form)>:has(+footer){margin-bottom:auto}
 :is(.modal-footer,.crud-modal>form>footer) .button:is(.primary,.ghost):not(:has(svg))::before{content:"";display:block;flex:0 0 var(--size-14);width:var(--size-14);height:var(--size-14);background:currentColor;-webkit-mask:var(--icon-mask-check) center/contain no-repeat;mask:var(--icon-mask-check) center/contain no-repeat}
 :is(.modal-footer,.crud-modal>form>footer) .button.ghost:not(:has(svg))::before{-webkit-mask-image:var(--icon-mask-close);mask-image:var(--icon-mask-close)}
 .modal-footer>.modal-footer-note{flex-basis:100%;margin:0;color:var(--ink-500);font-size:var(--font-size-xs);line-height:var(--line-height-normal)}

@@ -6,8 +6,7 @@
 .manual-order-wide{grid-column:1/-1}
 .manual-order-actions{flex-shrink:0}
 @media(max-width:600px){
- .manual-order-backdrop{padding:var(--space-3)}
- .manual-order-modal{width:100%;max-height:calc(100dvh - var(--size-24))}
+ .manual-order-modal{width:100%;max-height:calc(100dvh - var(--space-4) - var(--safe-area-top));border-radius:var(--radius-sheet) var(--radius-sheet) 0 0}
  .manual-order-body{padding:var(--space-4)}
  .manual-order-fields{grid-template-columns:minmax(0,1fr)}
  .manual-order-actions>.button{flex:1}

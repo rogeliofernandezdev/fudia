@@ -1,6 +1,6 @@
 .recipe-modal{width:min(var(--size-780),calc(100vw - var(--size-32)));max-height:min(var(--size-760),calc(100dvh - var(--size-32)));background:var(--surface);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-card);box-shadow:var(--elevation-1);overflow:hidden;display:flex;flex-direction:column}
 .recipe-modal form.recipe-form{min-height:0;flex:1;padding:0;display:flex;flex-direction:column}
-.recipe-form-body{min-height:0;padding:var(--space-3-5) var(--space-4);overflow:auto}
+.recipe-form-body{flex:1 1 auto;min-height:0;padding:var(--space-3-5) var(--space-4);overflow:auto}
 .recipe-main-fields{grid-template-columns:minmax(0,1.65fr) minmax(var(--size-180),.7fr);gap:var(--space-3) var(--space-4);display:grid}
 .recipe-main-fields>label{min-width:0;color:var(--ink-700);gap:var(--space-2);font-size:var(--font-size-label);font-weight:var(--weight-bold);display:grid}
 .recipe-main-fields>label>span:first-child{align-items:center;gap:var(--space-1-5);display:flex}
@@ -64,7 +64,7 @@
 @keyframes recipe-skeleton-shimmer{0%,100%{opacity:.55}50%{opacity:1}}
 @media(width<=600px){
  .recipe-modal{width:100vw;height:100dvh;max-height:none;border:0;border-radius:0}
- .recipe-form-body{padding:var(--space-3) var(--space-3-5)}
+ .recipe-form-body{padding:var(--space-3) var(--space-4)}
  .recipe-main-fields{grid-template-columns:1fr}
  .recipe-product-field,.recipe-yield-field,.recipe-notes-field{grid-column:auto}
  .recipe-notes-field .ds-textarea{min-height:var(--size-76)}

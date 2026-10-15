@@ -392,3 +392,29 @@ se revisa con `shared-ui-preview.mjs` en tamaños `md` y `lg`, incluido pie visi
 tras recorrer campos largos. Ambos helpers cierran navegador y servidor temporal
 al terminar. Estas comprobaciones aisladas no prueban la aplicación con sesión
 autenticada ni sustituyen una revisión en teléfono físico.
+
+## Dispositivo móvil de referencia
+
+`mobile-reference-device.test.mjs` protege los defectos encontrados al recorrer
+el catálogo de `page-routes.ts` y sus modales en el viewport de referencia (427 × 933,
+también 390 px): pie fijo abajo en Receta y en los `form` heredados de pantalla
+completa (Caja), hojas a ancho completo sin `calc(100vw - N)` (Nuevo pedido,
+Nuevo cliente, gastos, usuario, roles, proveedor y canal de WhatsApp), 44 px
+táctiles en QR, editor de texto, mapa, cierre del menú lateral y retorno de
+`PageHeader`, márgenes de 16 px y Continuar compartido en Plataforma, retorno
+y `EmptyState` en Próximamente, texto sin recortar en Mi perfil y estados
+compartidos de carga, error con Reintentar y vacío en Reservas. En Compras la
+variante de 760 px vuelve a aplicarse (orden, artículo y recepción a pantalla
+completa, «Proveedor» en una columna, cuerpos a 16 px). Una guarda general
+falla si una regla base posterior anula un `@media` del mismo archivo; `.sidebar`
+de `shell.css` es la única excepción registrada y queda pendiente.
+
+La revisión manual se hace con sesión real: un iframe del mismo origen de
+427 × 933 dentro de una pestaña (comparte la cookie), animaciones desactivadas
+y barras de desplazamiento superpuestas como en Android. Para carga y error se
+intercepta `fetch` del iframe en las lecturas `GET /api/admin|platform/*` antes
+de hidratar, sin tocar mutaciones. Mide ancho del documento, elementos fuera del
+viewport, controles < 44 px (un `label` de 44 px que envuelve el input cuenta
+como área táctil), textos recortados, padding de `.content` y, en modales,
+rectángulo, márgenes del cuerpo y distancia del pie al borde inferior.
+No sustituye una prueba en el teléfono físico.

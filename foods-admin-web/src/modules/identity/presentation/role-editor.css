@@ -50,7 +50,7 @@
 
 /* ── Responsive ──────────────────────────────────────── */
 @media(max-width:760px){
-  .role-editor-modal{width:calc(100vw - var(--size-16));max-height:calc(100dvh - var(--size-16))}
+  .role-editor-modal{width:100%;max-height:calc(100dvh - var(--size-16))}
   .role-editor-body{padding:var(--space-3-5) var(--space-3-5) 0}
   .role-editor-information .form-grid{grid-template-columns:1fr}
   .re-acc-items{grid-template-columns:1fr}

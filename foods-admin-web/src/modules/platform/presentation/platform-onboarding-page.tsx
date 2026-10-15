@@ -173,9 +173,9 @@ export function PlatformOnboardingPage(){
       </section>
 
       <div className="wizard-footer">
-        <div>{step>0&&<Button kind="ghost" icon="chevronLeft" onClick={()=>setStep(s=>s-1)} disabled={save.isPending}>Atrás</Button>}</div>
+        <div>{step>0&&<Button action="back" onClick={()=>setStep(s=>s-1)} disabled={save.isPending}>Atrás</Button>}</div>
         <div>{step<lastStep
-          ?<Button type="submit">Siguiente<Icon name="chevron" size={16}/></Button>
+          ?<Button type="submit" action="continue">Siguiente</Button>
           :<Button type="submit" icon="check" disabled={save.isPending}>{save.isPending?"Guardando…":"Guardar"}</Button>}</div>
       </div>
     </form>

@@ -72,48 +72,6 @@
  .purchase-line-fields{grid-template-columns:minmax(var(--size-180),1.2fr) minmax(var(--size-90),.55fr) minmax(var(--size-130),.8fr)}
  .purchase-line-total{grid-column:3;justify-items:end}
 }
-@media(max-width:760px){
- .purchases-toolbar{grid-template-columns:1fr;padding:var(--space-2-5)}
-
- .purchases-toolbar>p{grid-column:auto}
-
- .purchase-order-modal,.purchase-detail-modal,.purchase-item-modal,.purchase-receipt-modal{width:100vw;height:100dvh;max-height:none;border-radius:0}
- .purchase-order-modal>.modal-busy{border-radius:0}
- .purchase-form-body,.purchase-detail-body{padding:var(--space-3)}
- .purchase-form-section{padding:var(--space-3)}
- .purchase-lines-title{align-items:flex-start;flex-wrap:wrap}
- .purchase-lines-title .button{width:100%;margin-left:0}
- .purchase-line{padding:var(--space-3)}
- .purchase-line-head{display:grid;grid-template-columns:var(--size-24) var(--size-30) minmax(0,1fr);gap:var(--space-2)}
- .purchase-line-item-copy{grid-column:3}
- .purchase-line-actions{grid-column:2/4;display:flex;justify-content:flex-end;width:100%;padding-top:var(--space-0-5)}
- .purchase-line-fields{grid-template-columns:1fr}
- .purchase-line-total{grid-column:auto;justify-items:start;min-height:auto;padding-top:var(--space-0-5)}
- .purchase-line-item-copy small{white-space:normal}
- .purchase-total strong{font-size:var(--font-size-md)}
- .purchase-item-body,.purchase-receipt-body{max-height:none;flex:1;padding:var(--space-3)}
- .purchase-image-drop{min-height:var(--size-140)}
- .purchase-image-drop img{height:var(--size-165)}
- .purchase-item-modal form,.purchase-receipt-modal form{min-height:0;flex:1;display:flex;flex-direction:column}
- .purchase-item-choice{grid-template-columns:1fr}
- .purchase-item-section .form-grid,.purchase-order-meta-grid{grid-template-columns:1fr}
- .purchase-lines-empty{align-items:stretch;flex-direction:column}
- .purchase-lines-empty .button{width:100%}
- .purchase-existing-list>button{grid-template-columns:var(--size-34) minmax(0,1fr) var(--size-16)}
- .purchase-existing-stock{display:none}
- .purchase-order-meta-grid .span-2,.purchase-item-section .span-2{grid-column:auto}
- .purchase-receipt-line{grid-template-columns:1fr 1fr}
- .purchase-receipt-item{grid-column:1/-1}
- .purchase-receipt-line>label{grid-column:1/-1}
- .supplier-modal{width:calc(100vw - var(--size-16))}
- .supplier-form-body{padding:var(--space-4)}
- .purchase-detail-summary{grid-template-columns:1fr 1fr}
- .purchase-detail-summary>.status{justify-self:start}
- .purchase-detail-meta{grid-template-columns:1fr}
- .purchase-detail-actions{align-items:stretch;flex-direction:column}
- .purchase-detail-actions>div:last-child{display:grid;grid-template-columns:1fr}
- .purchase-detail-actions .button{width:100%}
-}
 
 .purchase-item-picker .ds-input{margin-bottom:var(--space-0-5)}
 .purchase-item-modal{width:min(var(--size-860),calc(100vw - var(--size-32)));max-height:min(var(--size-860),calc(100dvh - var(--size-32)));overflow:hidden}
@@ -190,6 +148,49 @@
 .purchase-presentations{display:grid;gap:var(--space-3);min-width:0}
 .purchase-presentation-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-3) var(--space-3-5);min-width:0}
 .purchase-presentation-equivalence{grid-column:1/-1;color:var(--ink-500);overflow-wrap:anywhere}
+@media(max-width:760px){
+ .purchases-toolbar{grid-template-columns:1fr;padding:var(--space-2-5)}
+
+ .purchases-toolbar>p{grid-column:auto}
+
+ .purchase-order-modal,.purchase-detail-modal,.purchase-item-modal,.purchase-receipt-modal{width:100vw;height:100dvh;max-height:none;border-radius:0}
+ .purchase-order-modal>.modal-busy{border-radius:0}
+ .purchase-form-body{padding:var(--space-3) 0}
+ .purchase-detail-body{padding:var(--space-3) var(--space-4)}
+ .purchase-form-section{padding:var(--space-3)}
+ .purchase-lines-title{align-items:flex-start;flex-wrap:wrap}
+ .purchase-lines-title .button{width:100%;margin-left:0}
+ .purchase-line{padding:var(--space-3)}
+ .purchase-line-head{display:grid;grid-template-columns:var(--size-24) var(--size-30) minmax(0,1fr);gap:var(--space-2)}
+ .purchase-line-item-copy{grid-column:3}
+ .purchase-line-actions{grid-column:2/4;display:flex;justify-content:flex-end;width:100%;padding-top:var(--space-0-5)}
+ .purchase-line-fields{grid-template-columns:1fr}
+ .purchase-line-total{grid-column:auto;justify-items:start;min-height:auto;padding-top:var(--space-0-5)}
+ .purchase-line-item-copy small{white-space:normal}
+ .purchase-total strong{font-size:var(--font-size-md)}
+ .purchase-item-body,.purchase-receipt-body{max-height:none;flex:1;padding:var(--space-3) 0}
+ .purchase-image-drop{min-height:var(--size-140)}
+ .purchase-image-drop img{height:var(--size-165)}
+ .purchase-item-modal form,.purchase-receipt-modal form{min-height:0;flex:1;display:flex;flex-direction:column}
+ .purchase-item-choice{grid-template-columns:1fr}
+ .purchase-item-section .form-grid,.purchase-order-meta-grid{grid-template-columns:1fr}
+ .purchase-lines-empty{align-items:stretch;flex-direction:column}
+ .purchase-lines-empty .button{width:100%}
+ .purchase-existing-list>button{grid-template-columns:var(--size-34) minmax(0,1fr) var(--size-16)}
+ .purchase-existing-stock{display:none}
+ .purchase-order-meta-grid .span-2,.purchase-item-section .span-2{grid-column:auto}
+ .purchase-receipt-line{grid-template-columns:1fr 1fr}
+ .purchase-receipt-item{grid-column:1/-1}
+ .purchase-receipt-line>label{grid-column:1/-1}
+ .supplier-modal{width:100%}
+ .supplier-form-body{padding:var(--space-4)}
+ .purchase-detail-summary{grid-template-columns:1fr 1fr}
+ .purchase-detail-summary>.status{justify-self:start}
+ .purchase-detail-meta{grid-template-columns:1fr}
+ .purchase-detail-actions{align-items:stretch;flex-direction:column}
+ .purchase-detail-actions>div:last-child{display:grid;grid-template-columns:1fr}
+ .purchase-detail-actions .button{width:100%}
+}
 @media(max-width:600px){.purchase-presentation-row{grid-template-columns:minmax(0,1fr)}}
 .purchase-presentations>.field-help,.purchase-item-section>.field-help{margin:0}
 /* Historial de recepción dentro del detalle de la orden: recepciones (+) y correcciones o devoluciones (−) en orden cronológico. */

@@ -1,6 +1,6 @@
 .customers-panel .toolbar label,.customers-panel .toolbar select{flex:1;min-width:0}
 .customers-panel .doc-beside,.customers-panel td:first-child .doc-beside{display:inline;margin:0 0 0 var(--space-2);color:var(--ink-400);font-size:var(--font-size-label);font-weight:var(--weight-semibold)}
-.customer-modal{width:min(var(--size-720),calc(100vw - var(--size-32)));max-height:min(var(--size-760),calc(100vh - var(--size-32)))}
+.customer-modal{width:min(var(--size-720),calc(100vw - var(--size-32)));max-height:min(var(--size-760),calc(100dvh - var(--size-32)))}
 .customer-form-body{padding:var(--space-6) var(--space-6);overflow:auto;display:grid;gap:var(--space-4);align-content:start}
 .customer-main-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-content:start;gap:var(--space-4)}
 .customer-main-grid>label{display:grid;align-content:start;gap:var(--space-2)}
@@ -84,7 +84,7 @@
 
 @media(max-width:760px){
  .customers-panel .toolbar{grid-template-columns:1fr}
- .customer-modal{width:calc(100vw - var(--size-16));max-height:calc(100dvh - var(--size-16))}
+ .customer-modal{width:100%;max-height:calc(100dvh - var(--space-4) - var(--safe-area-top))}
  .customer-form-body{padding:var(--space-4)}
  .customer-main-grid{grid-template-columns:1fr}
  .customer-main-grid .span-2{grid-column:auto}

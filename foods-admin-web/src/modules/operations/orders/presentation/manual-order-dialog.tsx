@@ -42,7 +42,7 @@ export function ManualOrderDialog({channels,currencySymbol,busy,onClose,onSave}:
   try{await onSave({...current,lines:current.lines})}finally{submission.current=false}
  };
  return <>
-  {phase==="details"?<div className="modal-backdrop modal-overlay-in manual-order-backdrop">
+  {phase==="details"?<div className="modal-backdrop modal-overlay-in">
    <Dialog onResponseClose={onClose} className="crud-modal manual-order-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="manual-order-title" aria-busy={locked}>
     <ModalHeader title="Datos del pedido" titleId="manual-order-title" icon="truck" onClose={()=>close()} busy={locked}/>
     <form className="modal-form manual-order-form" onSubmit={continueOrder}>

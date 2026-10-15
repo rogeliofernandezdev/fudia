@@ -4,7 +4,7 @@
 .platform-channel-fields .ds-input[readonly]{color:var(--ink-600);background:var(--cloud-100);cursor:default}
 
 @media(max-width:600px){
- .platform-channel-modal{width:calc(100vw - var(--size-16));max-height:calc(100dvh - var(--size-16))}
+ .platform-channel-modal{width:100%;max-height:calc(100dvh - var(--space-4) - var(--safe-area-top))}
  .platform-channel-fields{padding:var(--space-4)}
 }
 

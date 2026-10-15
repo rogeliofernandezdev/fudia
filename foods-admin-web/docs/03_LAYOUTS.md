@@ -3,6 +3,26 @@
 Sidebar: Control, Operación, Carta y producción, Abastecimiento y Configuración. Topbar compacta.
 Gestión: título, acciones, filtros, listado, paginación y detalle.
 
+## Dispositivo móvil de referencia
+
+Toda interfaz se diseña y valida en una pantalla de 6,7" y 1280 × 2800 px a
+460 ppp, con DPR 3 y viewport CSS ≈ **427 × 933 px**. Con la
+barra de Chrome y la de navegación visibles, el alto útil queda en ≈ 840 px. El
+panel es curvo en sus cuatro lados, así que contenido y acciones conservan el
+margen lateral de 16 px y nada interactivo queda pegado al borde. Se valida a
+427 × 933 y a 427 × 840 sin desplazamiento horizontal, con el pie de los modales
+de pantalla completa fijo abajo, sin huecos debajo, y con áreas táctiles de 44 px.
+El mínimo de 390 px de la regla global sigue vigente: una pantalla correcta a
+427 px también debe funcionar a 390 px.
+
+Los controles compactos de escritorio (botón «Escanear» de QR, formatos del
+editor de texto, zoom del mapa, retorno de `PageHeader`) pasan a 44 px con
+`(width<=600px),(any-pointer:coarse)`; las barras propias, como la de Plataforma,
+usan el mismo margen de 16 px y `min-width:var(--control-height)` en sus iconos.
+Las hojas y modales móviles siguen `04_COMPONENTS.md` › Modales. Revisión
+completa y pendientes: `tests/mobile-reference-device.test.mjs` y
+`07_TESTING.md` › Dispositivo móvil de referencia.
+
 ## Plantillas de página
 
 Toda ruta usa una de estas plantillas. El contenedor `.content` define el
@@ -89,7 +109,8 @@ repetir el estado de cada paso con texto si ya lo comunica el estilo. Pie con
 ### Próximamente
 
 Un único componente con `EmptyState`, título de la opción y retorno mediante
-`pageRoutes`, nunca un enlace literal al Dashboard.
+`pageRoutes`, nunca un enlace literal al Dashboard. El retorno es el `back` de
+`PageHeader` («Volver al inicio»), no un enlace suelto sin estilo.
 
 ### Tarea a pantalla completa
 

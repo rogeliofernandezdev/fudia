@@ -16,3 +16,7 @@
   .tables-management-table .ds-input,
   .tables-management-table .ds-select{min-width:var(--size-100)}
 }
+/* Táctil y móvil: «Escanear» conserva el área táctil de 44 px del sistema. */
+@media (width<=600px),(any-pointer:coarse){
+  .qr-cell-btn{height:var(--control-height)}
+}

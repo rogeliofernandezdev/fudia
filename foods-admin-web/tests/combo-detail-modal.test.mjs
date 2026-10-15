@@ -48,3 +48,10 @@ test("el asistente de menú no añade borde ni franja bajo la cabecera",()=>{
  assert.ok(panels.length>0);
  for(const panel of panels)assert.equal(panel.border,undefined,"un borde propio deja un filo claro alrededor de la cabecera índigo");
 });
+
+test("en pantalla completa el asistente llena el alto y fija el pie abajo",()=>{
+ const stages=[];
+ postcss.parse(read("modules/menu/combos/presentation/combo-wizard.css")).walkRules(rule=>{if(rule.selector===".combo-wizard-stage")stages.push(declarations(rule))});
+ assert.equal(stages.length,1);
+ assert.equal(stages[0].flex,"1 1 auto","sin crecer, el pie queda a media pantalla a 427 × 933");
+});

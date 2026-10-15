@@ -52,6 +52,7 @@
 @media(max-width:600px){
   .profile-fields{grid-template-columns:1fr;padding:var(--space-4) var(--space-3-5)}
   .profile-account-head,.profile-subscription-head{padding:var(--space-4) var(--space-3-5)}
+  .profile-account-copy :is(h2,p){white-space:normal;overflow-wrap:anywhere}
   .profile-password{padding:0 var(--space-3-5) var(--space-4)}
   .profile-access-warning,.profile-note{margin-inline:var(--space-3-5)}
   .profile-actions,.profile-subscription-foot{padding-inline:var(--space-3-5)}
