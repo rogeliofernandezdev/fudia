@@ -161,6 +161,14 @@ adicional y prueba de conexión. No usar `sslmode=disable` con una IP TCP remota
 | Eventarc | `roles/eventarc.eventReceiver` en proyecto; `roles/run.invoker` solo en processor (el pipeline añade este binding antes del trigger) |
 | Agente administrado de Cloud Run | Mantener `roles/run.serviceAgent`; permiso de conector solo en opción privada. Shared VPC/cross-project queda fuera de este runbook |
 
+Cuando Fudia Concierge se despliegue en GCP (hoy fuera de alcance) necesitará
+su propia cuenta de servicio, sin claves JSON: `roles/aiplatform.user` en el
+proyecto con Vertex AI habilitado (`aiplatform.googleapis.com`), porque invoca
+Gemini Flash-Lite/Flash con Application Default Credentials, y
+`roles/secretmanager.secretAccessor` solo en sus secretos (Meta, Redis,
+`FUDIA_CONCIERGE_API_KEY`). Requisitos y variables en
+`fudia-concierge/docs/07_MODEL_PROVIDERS.md`.
+
 No otorgar Owner/Editor al pipeline ni usar la cuenta Compute predeterminada.
 La conexión socket usa credenciales PostgreSQL, sin claves JSON; el proxy
 administrado autentica mediante IAM y cifra la red. No requiere VPC. La opción

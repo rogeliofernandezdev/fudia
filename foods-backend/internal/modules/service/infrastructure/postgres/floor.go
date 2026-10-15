@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/foods-platform/foods-backend/internal/modules/service/application"
 	"github.com/foods-platform/foods-backend/internal/modules/service/domain"
 	"github.com/foods-platform/foods-backend/internal/platform/database"
@@ -31,6 +32,12 @@ func serviceError(err error) error {
 	}
 	return err
 }
+
+// qrTokenSQL builds a 32-character hex QR token with the core CSPRNG behind
+// gen_random_uuid(). It avoids pgcrypto.gen_random_bytes, which is not
+// resolvable when a restored database keeps pgcrypto outside the search_path.
+const qrTokenSQL = `replace(gen_random_uuid()::text,'-','')`
+
 func scanZone(row pgx.Row) (domain.Zone, error) {
 	var v domain.Zone
 	err := row.Scan(&v.ID, &v.Name, &v.SortOrder, &v.Active)
@@ -164,7 +171,7 @@ func (r *Floor) TableOccupied(ctx context.Context, s scope, id string) (bool, er
 func (r *Floor) CreateTable(ctx context.Context, s scope, name string, seats int, zone string, qr bool) (domain.Table, error) {
 	return scanTable(r.db(ctx).QueryRow(ctx, `
 		INSERT INTO tables(organization_id,location_id,name,seats,zone,active,qr_token,qr_enabled)
-		VALUES($1,$2,$3,$4,$5,true,encode(gen_random_bytes(16),'hex'),$6)
+		VALUES($1,$2,$3,$4,$5,true,`+qrTokenSQL+`,$6)
 		RETURNING id,name,seats,zone,active,qr_token,qr_enabled
 	`, s.OrganizationID, s.LocationID, name, seats, zone, qr))
 }
@@ -184,7 +191,7 @@ func (r *Floor) DeactivateTable(ctx context.Context, s scope, id string) (int64,
 	return tag.RowsAffected(), err
 }
 func (r *Floor) RegenerateQR(ctx context.Context, s scope, id string) (domain.Table, error) {
-	return scanTable(r.db(ctx).QueryRow(ctx, `UPDATE tables SET qr_token=encode(gen_random_bytes(16),'hex'),updated_at=now() WHERE id=$1 AND organization_id=$2 AND location_id=$3 RETURNING id,name,seats,zone,active,qr_token,qr_enabled`, id, s.OrganizationID, s.LocationID))
+	return scanTable(r.db(ctx).QueryRow(ctx, `UPDATE tables SET qr_token=`+qrTokenSQL+`,updated_at=now() WHERE id=$1 AND organization_id=$2 AND location_id=$3 RETURNING id,name,seats,zone,active,qr_token,qr_enabled`, id, s.OrganizationID, s.LocationID))
 }
 func (r *Floor) TableQR(ctx context.Context, token string) (domain.TableQR, error) {
 	var v domain.TableQR
@@ -222,7 +229,7 @@ const tableBatchSQL = `
 		WHERE zone<>'' AND NOT EXISTS (SELECT 1 FROM locked_zones WHERE name=input.zone)
 	), created AS (
 		INSERT INTO tables(organization_id,location_id,name,seats,zone,active,qr_token,qr_enabled)
-		SELECT $1,$2,name,seats,zone,true,encode(gen_random_bytes(16),'hex'),qr_enabled
+		SELECT $1,$2,name,seats,zone,true,` + qrTokenSQL + `,qr_enabled
 		FROM input WHERE NOT EXISTS (SELECT 1 FROM invalid_zones)
 		ORDER BY name
 		RETURNING id,name,seats,zone,active,qr_token,qr_enabled
@@ -243,6 +250,17 @@ const tableBatchSQL = `
 	       ),'[]'::jsonb))
 `
 
+// batchError separates a statement PostgreSQL rejected, which rolled back the
+// whole batch, from failures where the commit outcome is unknown.
+func batchError(err error) error {
+	err = serviceError(err)
+	var pg *pgconn.PgError
+	if errors.As(err, &pg) {
+		return fmt.Errorf("%w: %w", application.ErrNotSaved, err)
+	}
+	return err
+}
+
 type tableRowQuerier interface {
 	QueryRow(context.Context, string, ...any) pgx.Row
 }
@@ -261,7 +279,7 @@ func (r *Floor) Batch(ctx context.Context, s scope, items []domain.TableBatchIte
 	}
 	raw, invalid, err := persistTableBatch(ctx, r.db(ctx), s, payload)
 	if err != nil || invalid {
-		return out, invalid, serviceError(err)
+		return out, invalid, batchError(err)
 	}
 	err = json.Unmarshal(raw, &out)
 	return out, false, err

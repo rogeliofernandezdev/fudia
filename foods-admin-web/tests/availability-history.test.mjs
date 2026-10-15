@@ -82,7 +82,7 @@ function managerUI(manage=true,{items=[item],result,pending=false}={}){
 
 test("Guardar cupo pide motivo antes del API; Agotar conserva el cupo sin guardar",async()=>{
  const ui=managerUI();let all=ui.render();all.find(n=>n.type==="Input"&&n.props.type==="number").props.onChange({target:{value:"20"}});
- all=ui.render();const save=all.find(n=>n.type==="IconButton"&&n.props.label==="Guardar cupo de Ají de gallina");assert.equal(save.props.disabled,false);save.props.onClick();
+ all=ui.render();const save=all.find(n=>n.type==="Button"&&n.props["aria-label"]==="Guardar cupo de Ají de gallina"&&n.props.children==="Guardar");assert.equal(save.props.disabled,false);save.props.onClick();
  assert.equal(ui.apiCalls.length,0);assert.equal(ui.feedback.length,0);
  all=ui.render();const dialog=all.find(n=>n.type==="Reason");assert.equal(dialog.props.change.portionQuantity,20);
  await dialog.props.save("Producción adicional");assert.equal(ui.apiCalls.length,1);
@@ -106,16 +106,17 @@ test("listado agrupa cinco columnas, usa iconos semánticos y muestra Guardar so
  const ui=managerUI(),all=ui.render();
  const headings=all.find(n=>n.props.className==="availability-list-head").props.children;
  assert.equal(headings.length,5);
- assert.equal(all.some(n=>n.type==="IconButton"&&n.props.label?.startsWith("Guardar cupo")),false);
+ assert.equal(all.some(n=>n.type==="Button"&&n.props["aria-label"]?.startsWith("Guardar cupo")),false);
  assert.ok(all.some(n=>n.type==="Button"&&n.props.icon==="clock"));
  assert.ok(all.some(n=>n.type==="Icon"&&n.props.name==="dish"));
  assert.ok(all.some(n=>n.type==="SearchField"));
+ assert.equal(all.some(n=>n.props.className==="availability-quota-hint"),false,"El cupo no lleva texto auxiliar");
  all.find(n=>n.type==="Input"&&n.props.type==="number").props.onChange({target:{value:"4"}});
  const invalid=ui.render(),field=invalid.find(n=>n.type==="Input"&&n.props.type==="number");
  assert.equal(field.props["aria-invalid"],true);
  assert.equal(field.props["aria-describedby"],"quota-error-aji");
  assert.ok(invalid.find(n=>n.props.id==="quota-error-aji"&&n.props.role==="alert"));
- assert.equal(invalid.find(n=>n.type==="IconButton"&&n.props.label?.startsWith("Guardar cupo")).props.disabled,true);
+ assert.equal(invalid.find(n=>n.type==="Button"&&n.props["aria-label"]?.startsWith("Guardar cupo")).props.disabled,true);
  assert.equal(ui.apiCalls.length,0);
 });
 

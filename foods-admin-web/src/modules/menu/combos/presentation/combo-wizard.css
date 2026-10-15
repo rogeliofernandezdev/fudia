@@ -9,7 +9,6 @@
   width: min(var(--size-1040), calc(100vw - var(--size-32)));
   max-height: min(var(--size-840), calc(100dvh - var(--size-32)));
   overflow: hidden;
-  border: var(--stroke-1) solid var(--line);
   border-radius: var(--radius-card);
   background: var(--surface);
   box-shadow: var(--elevation-4);
@@ -567,80 +566,23 @@
   min-width: var(--size-118);
 }
 
-.combo-detail { display: flex; flex-direction: column; width: min(var(--size-760), calc(100vw - var(--size-32))); max-height: min(var(--size-760), calc(100dvh - var(--size-32))); overflow: hidden; }
-.combo-detail-body { display: grid; gap: var(--space-4); padding: var(--space-6); overflow-y: auto; background: var(--cloud-50); }
-.combo-detail-summary { display: grid; grid-template-columns: repeat(2, 1fr) auto; align-items: center; gap: var(--space-3); padding: var(--space-4); border: var(--stroke-1) solid var(--line); border-radius: var(--radius-card); background: var(--surface); }
-.combo-detail-summary > div { display: grid; gap: var(--space-1-5); }
-.combo-detail-summary small, .combo-detail-description small, .combo-detail-availability small { color: var(--ink-700); font-size: var(--font-size-label); font-weight: var(--modal-label-weight); letter-spacing: var(--letter-spacing-caps); }
-.combo-detail-summary b { font-size: var(--font-size-control); font-weight: var(--modal-value-weight); }
-.combo-detail-description { padding: var(--space-3-5) var(--space-4); border: var(--stroke-1) solid var(--line); border-radius: var(--radius-card); background: var(--surface); }
-.combo-detail-description p { margin: var(--space-2) 0 0; color: var(--ink-600); font-size: var(--font-size-label); line-height: var(--line-height-normal); }
-.combo-detail-section { overflow: hidden; border: var(--stroke-1) solid var(--line); border-radius: var(--radius-card); background: var(--surface); }
-.combo-detail-section > header { padding: var(--space-3-5) var(--space-4); border-bottom: var(--stroke-1) solid var(--line); }
-.combo-detail-section h3 { margin: var(--space-1) 0 0; font-size: var(--font-size-sm); }
-.combo-detail-group { display: grid; grid-template-columns: minmax(var(--size-150), .45fr) 1fr; gap: var(--space-5); padding: var(--space-3-5) var(--space-4); border-bottom: var(--stroke-1) solid var(--cloud-100); }
-.combo-detail-group:last-child { border-bottom: 0; }
-.combo-detail-group > div { display: grid; align-content: start; gap: var(--space-1); }
-.combo-detail-group b { font-size: var(--font-size-label); }
-.combo-detail-group small { color: var(--ink-400); font-size: var(--font-size-label); }
-.combo-detail-group ul { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
-.combo-detail-group li { display: inline-flex; align-items: center; gap: var(--space-1-5); min-height: var(--size-28); padding: var(--space-1-5) var(--space-2); border: var(--stroke-1) solid var(--line); border-radius: var(--radius-control); background: var(--cloud-25); font-size: var(--font-size-label); font-weight: var(--weight-semibold); }
-.combo-detail-availability { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-3); }
-.combo-detail-availability.single { grid-template-columns: 1fr; }
-.combo-detail-availability > div { display: grid; gap: var(--space-1-5); padding: var(--space-3-5) var(--space-4); border: var(--stroke-1) solid var(--line); border-radius: var(--radius-card); background: var(--surface); }
-.combo-detail-availability b { font-size: var(--font-size-control); font-weight: var(--modal-value-weight); }
-.combo-detail-state { display: grid; place-items: center; gap: var(--space-2); min-height: var(--size-280); color: var(--ink-500); text-align: center; }
-.combo-detail-state p { margin: 0 0 var(--space-1-5); font-size: var(--font-size-label); }
-.combo-detail-skeleton-body span,
-.combo-detail-skeleton-body b,
-.combo-detail-skeleton-body i {
-  position: relative;
-  display: block;
-  overflow: hidden;
-  border-radius: var(--radius-control);
-  background: var(--cloud-150);
-}
-.combo-detail-skeleton-body span::after,
-.combo-detail-skeleton-body b::after,
-.combo-detail-skeleton-body i::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg,transparent,var(--surface-alpha-64),transparent);
-  transform: translateX(-100%);
-  animation: combo-detail-shimmer var(--duration-ambient) ease-in-out infinite;
-}
+/* Detalle de menú: cuerpo, datos, secciones y carta vienen de modal.css; aquí solo el espaciado y las opciones. */
+.combo-detail-body { display: grid; align-content: start; gap: var(--space-5); }
+.combo-detail-context, .combo-detail-section { min-width: 0; }
+.combo-detail-section > h3 { margin: 0 0 var(--space-3); }
+.combo-detail-description { margin: 0; color: var(--ink-600); font-size: var(--font-size-base); line-height: var(--line-height-normal); overflow-wrap: anywhere; }
+.combo-detail-option { display: inline-flex; align-items: baseline; gap: var(--space-1-5); }
+.combo-detail-option > span { color: var(--ink-400); }
+.combo-detail-empty { margin: 0; color: var(--ink-600); font-size: var(--font-size-base); }
+.combo-detail-loading :is(i, b) { position: relative; display: block; overflow: hidden; height: var(--size-12); border-radius: var(--radius-control); background: var(--cloud-150); }
+.combo-detail-loading :is(i, b)::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, var(--surface-alpha-64), transparent); transform: translateX(-100%); animation: combo-detail-shimmer var(--duration-ambient) ease-in-out infinite; }
+.combo-detail-loading dl i { width: var(--size-62); margin-bottom: var(--space-1-5); }
+.combo-detail-loading dl b { width: var(--size-92); }
+.combo-detail-loading h3 > i { width: var(--size-120); height: var(--size-16); }
+.combo-detail-loading .modal-item-component-group i { width: var(--size-62); }
+.combo-detail-loading .modal-item-component-name b { width: 75%; }
 .combo-detail-skeleton-copy { display:grid; gap:var(--space-1-5); }
-.combo-detail-skeleton-copy span { width:var(--size-72); height:var(--size-7); }
 .combo-detail-skeleton-copy b { width:var(--size-168); height:var(--size-16); }
-.combo-detail-skeleton-summary>div { display:grid; gap:var(--space-1-5); }
-.combo-detail-skeleton-summary span { width:var(--size-62); height:var(--size-7); }
-.combo-detail-skeleton-summary b { width:var(--size-84); height:var(--size-14); }
-.combo-detail-skeleton-status { width:var(--size-66); height:var(--size-24); border-radius:var(--radius-pill); }
-.combo-detail-skeleton-description { display:grid; gap:var(--space-2); }
-.combo-detail-skeleton-description span { width:var(--size-72); height:var(--size-7); }
-.combo-detail-skeleton-description b:nth-of-type(1) { width:88%; height:var(--size-10); }
-.combo-detail-skeleton-description b:nth-of-type(2) { width:64%; height:var(--size-10); }
-.combo-detail-skeleton-section>header>div { display:grid; gap:var(--space-1-5); }
-.combo-detail-skeleton-section>header span { width:var(--size-62); height:var(--size-7); }
-.combo-detail-skeleton-section>header b { width:var(--size-174); height:var(--size-13); }
-.combo-detail-skeleton-group {
-  min-height:var(--size-62);
-  padding:var(--space-3-5) var(--space-4);
-  display:grid;
-  grid-template-columns:minmax(var(--size-150),.45fr) 1fr;
-  align-items:center;
-  gap:var(--space-5);
-  border-bottom:var(--stroke-1) solid var(--cloud-100);
-}
-.combo-detail-skeleton-group:last-child { border-bottom:0; }
-.combo-detail-skeleton-group>div:first-child { display:grid; gap:var(--space-1-5); }
-.combo-detail-skeleton-group>div:first-child b { width:var(--size-86); height:var(--size-10); }
-.combo-detail-skeleton-group>div:first-child span { width:var(--size-118); height:var(--size-8); }
-.combo-detail-skeleton-group>div:last-child { display:flex; gap:var(--space-2); flex-wrap:wrap; }
-.combo-detail-skeleton-group>div:last-child i { width:var(--size-76); height:var(--size-28); border-radius:var(--radius-control); }
-.combo-detail-skeleton-availability span { width:var(--size-68); height:var(--size-7); }
-.combo-detail-skeleton-availability b { width:var(--size-92); height:var(--size-10); }
 @keyframes combo-detail-shimmer { to { transform:translateX(100%); } }
 @container combo-list (width <= 820px) {
   .standardized-management.combo-list .table-wrap {
@@ -696,16 +638,13 @@
 }
 
 @media(prefers-reduced-motion:reduce) {
-  .combo-detail-skeleton-body span::after,
-  .combo-detail-skeleton-body b::after,
-  .combo-detail-skeleton-body i::after { animation:none; }
+  .combo-detail-loading :is(i, b)::after { animation:none; }
 }
 @media (width <= 720px) {
   .combo-wizard {
     width: 100vw;
     height: 100dvh;
     max-height: none;
-    border: 0;
     border-radius: 0;
   }
 
@@ -808,11 +747,6 @@
     min-width: 0;
   }
 
-  .combo-detail { width: 100vw; height: 100dvh; max-height: none; border-radius: 0; }
-  .combo-detail-body { padding: var(--space-4); }
-  .combo-detail-summary { grid-template-columns: repeat(2, 1fr); }
-  .combo-detail-group { grid-template-columns: 1fr; gap: var(--space-2-5); }
-  .combo-detail-availability { grid-template-columns: 1fr; }
 
 }
 @media (width <= 430px) {

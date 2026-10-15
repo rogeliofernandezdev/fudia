@@ -14,6 +14,9 @@ import (
 var ErrNotFound = errors.New("service record not found")
 var ErrConflict = errors.New("service record conflict")
 
+// ErrNotSaved marks a write PostgreSQL rejected and rolled back completely.
+var ErrNotSaved = errors.New("service write rejected")
+
 type scope = requestscope.Scope
 type zone = domain.Zone
 type table = domain.Table
@@ -228,11 +231,14 @@ func (a *Floor) CreateTable(ctx context.Context, s scope, in domain.TableInput) 
 		t = v
 		return e
 	}()
-	if err != nil {
+	if errors.Is(err, ErrConflict) {
 		return result, serviceFailure(apperror.Conflict, "table_conflict", "Ya existe una mesa con ese nombre.")
 	}
+	if err != nil {
+		return result, apperror.Wrap(apperror.Unavailable, "tables_unavailable", "No pudimos registrar la mesa.", err)
+	}
 	if err = tx.Commit(ctx); err != nil {
-		return result, serviceFailure(apperror.Unavailable, "tables_unavailable", "No pudimos confirmar la mesa.")
+		return result, apperror.Wrap(apperror.Unavailable, "tables_unavailable", "No pudimos confirmar la mesa.", err)
 	}
 	_ = a.audit.Record(ctx, s, "table.created", "table", t.ID)
 	return t, nil
@@ -338,7 +344,7 @@ func (a *Floor) RegenerateTableQR(ctx context.Context, s scope, id string) (doma
 	if err == ErrNotFound {
 		return result, serviceFailure(apperror.NotFound, "table_not_found", "La mesa no existe.")
 	} else if err != nil {
-		return result, serviceFailure(apperror.Unavailable, "table_unavailable", "No pudimos regenerar el QR.")
+		return result, apperror.Wrap(apperror.Unavailable, "table_unavailable", "No pudimos regenerar el QR.", err)
 	}
 	_ = a.audit.Record(ctx, s, "table.qr_regenerated", "table", t.ID)
 	return t, nil
@@ -388,8 +394,11 @@ func (a *Floor) Batch(ctx context.Context, s scope, input []domain.TableInput) (
 	if errors.Is(err, ErrConflict) {
 		return out, serviceFailure(apperror.Conflict, "table_conflict", "Ya existe una mesa con uno de los nombres enviados.")
 	}
+	if errors.Is(err, ErrNotSaved) {
+		return out, apperror.Wrap(apperror.Unavailable, "tables_not_saved", "No se registraron las mesas y no se guardó ningún cambio. Intenta nuevamente; si el problema continúa, comparte el código de seguimiento con soporte.", err)
+	}
 	if err != nil {
-		return out, serviceFailure(apperror.Unavailable, "tables_unavailable", "No pudimos confirmar el registro de las mesas. Actualiza la lista antes de intentarlo nuevamente.")
+		return out, apperror.Wrap(apperror.Unavailable, "tables_unavailable", "No pudimos confirmar el registro de las mesas. Actualiza la lista antes de intentarlo nuevamente.", err)
 	}
 	if invalid {
 		return out, serviceFailure(apperror.Invalid, "invalid_zone", "Una de las mesas usa una zona inexistente o inactiva.")

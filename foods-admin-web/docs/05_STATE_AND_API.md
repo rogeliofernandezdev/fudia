@@ -80,7 +80,11 @@ la confirmación del API. Si se pierde la respuesta o falla el servicio, conserv
 el borrador y avisa «No pudimos confirmar el registro», refrescando las mesas para
 comprobar si se guardaron antes de repetir. No presenta como rechazado un resultado
 incierto. El BFF conserva el identificador de correlación y usa un límite de 40 s,
-posterior a los límites de procesamiento y respuesta del backend.
+posterior a los límites de procesamiento y respuesta del backend. Si el backend
+responde `tables_not_saved` (PostgreSQL rechazó el lote y no guardó nada), se
+muestra ese error específico como «No se pudieron registrar», sin tratarlo como
+incierto. Todo error 5xx del lote agrega «Código de seguimiento» con el
+`correlationId`, que coincide con el evento `api_error` del log del backend.
 
 Las transiciones de Cocina invalidan comandas, pedidos y el detalle afectado.
 La respuesta confirmada se refleja en el panel correspondiente sin modal de

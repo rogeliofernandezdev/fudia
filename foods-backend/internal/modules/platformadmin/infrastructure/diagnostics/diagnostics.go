@@ -3,7 +3,6 @@ package diagnostics
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/foods-platform/foods-backend/internal/modules/platformadmin/application"
 	subscriptioncontracts "github.com/foods-platform/foods-backend/internal/modules/subscriptions/contracts"
 	"github.com/foods-platform/foods-backend/internal/platform/observability"
@@ -59,24 +58,4 @@ func (Diagnostics) Log(ctx context.Context, event, step string, err error, extra
 		slog.Info(event, attrs...)
 	}
 }
-func SafeErrorLogAttrs(err error) []any {
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) {
-		return []any{
-			"error_type", "postgres",
-			"sql_state", pgErr.Code,
-			"severity", pgErr.Severity,
-			"constraint", pgErr.ConstraintName,
-			"table", pgErr.TableName,
-			"column", pgErr.ColumnName,
-			"database_message", pgErr.Message,
-		}
-	}
-	if err == nil {
-		return []any{"error_type", "unknown"}
-	}
-	return []any{
-		"error_type", fmt.Sprintf("%T", err),
-		"error", err.Error(),
-	}
-}
+func SafeErrorLogAttrs(err error) []any { return observability.ErrorAttrs(err) }

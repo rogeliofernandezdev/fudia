@@ -16,7 +16,17 @@ const (
 type Error struct {
 	Kind          Kind
 	Code, Message string
+	// Cause keeps the technical failure for server logs; it is never serialized.
+	Cause error
 }
 
-func (e *Error) Error() string                   { return e.Code + ": " + e.Message }
-func New(kind Kind, code, message string) *Error { return &Error{kind, code, message} }
+func (e *Error) Error() string { return e.Code + ": " + e.Message }
+func (e *Error) Unwrap() error { return e.Cause }
+func New(kind Kind, code, message string) *Error {
+	return &Error{Kind: kind, Code: code, Message: message}
+}
+
+// Wrap returns a safe failure that preserves its technical cause for diagnostics.
+func Wrap(kind Kind, code, message string, cause error) *Error {
+	return &Error{Kind: kind, Code: code, Message: message, Cause: cause}
+}

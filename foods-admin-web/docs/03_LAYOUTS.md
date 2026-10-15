@@ -35,8 +35,8 @@ Locales, Usuarios y roles, Medios de pago y Empresas.
 `PageHeader` presenta Disponibilidad y la fecha operativa con calendario. Un
 único panel contiene búsqueda, categoría remota, filas y `Pagination` del API.
 La cabecera y las filas comparten cinco columnas: Producto, Disponibilidad,
-Cupo de hoy, Unidades de hoy y Acciones. Producto reúne foto/icono, nombre,
-categoría y control; el balance reúne vendidas y restantes. Sin control
+Cupo de hoy, Unidades de hoy y Acciones. Producto reúne solo foto/icono y
+nombre, sin categoría ni control repetidos; el balance reúne vendidas y restantes. Sin control
 reemplaza cupo y balance por una explicación que abarca ambos espacios.
 Inventario explica su origen junto al balance y conserva la unidad real.
 

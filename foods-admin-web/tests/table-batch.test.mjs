@@ -47,6 +47,21 @@ test("validación y permisos conservan el error específico",async()=>{
  }
 });
 
+test("un rechazo definitivo del backend conserva su error específico y no se presenta como no confirmado",async()=>{
+ const failure=new ApiClientError("No se registraron las mesas y no se guardó ningún cambio.","tables_not_saved",503,"backend-request");
+ let calls=0;
+ const {createTables}=compile("src/modules/operations/tables/infrastructure/tables-api.ts",{"@/shared/api/client":{ApiClientError,apiFetch:async()=>{calls++;throw failure}}});
+ await assert.rejects(createTables([{name:"Mesa 1",seats:"2",zone:""}]),error=>error===failure&&error.correlationId==="backend-request");
+ assert.equal(calls,1);
+});
+
+test("el aviso de error 5xx muestra el código de seguimiento para soporte",()=>{
+ const source=read("src/modules/operations/tables/presentation/tables-manager.tsx");
+ const onError=source.slice(source.indexOf("const saveBatch="),source.indexOf("const saveTable="));
+ assert.match(onError,/e\.status>=500&&e\.correlationId\?`\$\{e\.message\} Código de seguimiento: \$\{e\.correlationId\}`/);
+ assert.match(onError,/title:unconfirmed\?"No pudimos confirmar el registro":"No se pudieron registrar",message\}/);
+});
+
 test("el cliente compartido conserva la correlación del error",async()=>{
  const {apiFetch}=compile("src/shared/api/client.ts",{"@/shared/session/expire-session":{expireBrowserSession(){}}},{fetch:async()=>new Response(JSON.stringify({code:"tables_unavailable",message:"No confirmado",correlationId:"backend-request"}),{status:503})});
  await assert.rejects(apiFetch("tables/batch"),error=>error.correlationId==="backend-request");

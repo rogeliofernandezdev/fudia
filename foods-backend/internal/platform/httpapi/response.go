@@ -8,7 +8,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/foods-platform/foods-backend/internal/platform/apperror"
+	"github.com/foods-platform/foods-backend/internal/platform/observability"
 	"github.com/foods-platform/foods-backend/internal/platform/requestscope"
+	"log/slog"
 	"net/http"
 	"os"
 	"strconv"
@@ -56,6 +58,11 @@ func WriteError(w http.ResponseWriter, err error) {
 		status = 503
 	}
 	Fail(w, status, failure.Code, failure.Message)
+	if status >= 500 && failure.Cause != nil {
+		// The response stays generic; the log keeps the cause under the same correlationId.
+		attrs := append([]any{"correlation_id", w.Header().Get("X-Request-ID"), "code", failure.Code, "status", status}, observability.ErrorAttrs(failure.Cause)...)
+		slog.Error("api_error", attrs...)
+	}
 }
 func Scope(w http.ResponseWriter, r *http.Request) (requestscope.Scope, bool) {
 	s, ok := requestscope.From(r.Context())

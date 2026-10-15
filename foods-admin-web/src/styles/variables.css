@@ -462,8 +462,8 @@ body {
 }
 
 .availability-table-wrap {
-  --availability-columns: minmax(var(--size-260), 1.5fr) minmax(var(--size-168), 1fr) var(--size-176) var(--size-176) var(--size-208);
-  --availability-min-width: calc(var(--size-260) + var(--size-168) + var(--size-176) + var(--size-176) + var(--size-208));
+  --availability-columns: minmax(var(--size-200), 1fr) minmax(var(--size-260), 1.3fr) var(--size-176) var(--size-176) var(--size-200);
+  --availability-min-width: calc(var(--size-200) + var(--size-260) + var(--size-176) + var(--size-176) + var(--size-200));
 }
 
 .kitchen-page {

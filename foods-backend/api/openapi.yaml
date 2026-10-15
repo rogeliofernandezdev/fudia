@@ -133,7 +133,7 @@ paths:
         "401": { description: Sesión ausente o vencida }
         "403": { $ref: "#/components/responses/Forbidden" }
         "409": { description: Nombre de mesa duplicado; ninguna mesa del lote se guarda }
-        "503": { description: No se pudo confirmar el resultado; revisar el listado antes de repetir }
+        "503": { description: "`tables_not_saved`: PostgreSQL rechazó la sentencia y no se guardó ninguna mesa; se puede reintentar. `tables_unavailable`: resultado no confirmado (corte, cancelación o conexión); revisar el listado antes de repetir. Ambos incluyen correlationId y la causa técnica solo queda en el log del servidor." }
   /health:
     get:
       operationId: getHealth

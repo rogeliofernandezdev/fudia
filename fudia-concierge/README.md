@@ -50,7 +50,8 @@ Cada especialista recibe únicamente sus schemas de tools y `ToolRegistry` vuelv
 - Python 3.12
 - FastAPI
 - LangGraph
-- OpenAI Responses API con function tools
+- Gemini en Vertex AI (`google-genai`) con function calling manual; Flash-Lite y Flash por dificultad
+- OpenAI Responses API como proveedor alternativo (`LLM_PROVIDER=openai`)
 - WhatsApp Business Cloud API
 - Redis para sesión, locks, rate limiting y cola durable
 - Prometheus client
@@ -69,14 +70,14 @@ Las reglas de negocio críticas no viven en prompts: se validan en services/tool
 ## Desarrollo local
 
 1. Copiar `.env.example` a `.env`.
-2. Configurar OpenAI, Redis y credenciales de Meta/WhatsApp. `WHATSAPP_PHONE_ID` es el identificador técnico del activo en Meta, no el número telefónico. El número visible se obtiene desde Meta y no se configura en Fudia.
+2. Configurar Vertex AI (`GOOGLE_CLOUD_PROJECT` y `gcloud auth application-default login`), Redis y credenciales de Meta/WhatsApp. Ver `docs/07_MODEL_PROVIDERS.md`. `WHATSAPP_PHONE_ID` es el identificador técnico del activo en Meta, no el número telefónico. El número visible se obtiene desde Meta y no se configura en Fudia.
 3. Instalar de forma reproducible: `python -m pip install -c constraints.txt -e ".[dev]"`.
 4. Ejecutar: `uvicorn src.main:app --reload --port 8010`.
 5. Verificar: `ruff check . ; mypy src config ; pytest -q ; python -m build`.
-6. Evals live, cuando exista `OPENAI_API_KEY`: `python scripts/run_evals.py`.
+6. Evals live del router en Lite y Flash, con credenciales del proveedor configurado: `python scripts/run_evals.py`.
 
 ## Estado
 
 El alcance de código definido para Concierge está cerrado: QR por mesa y habilitación global por módulo, carta real, carrito, combos, modificadores, confirmación protegida, rondas independientes sobre una misma comanda, KDS, solicitud de cuenta con total real, handoff humano, multiagente, aislamiento multi-tenant, cola durable, concurrencia acotada con backpressure, retries, rate limiting, readiness, métricas, trazabilidad, evals y contenedor no-root.
 
-El repositorio y CI pueden declararse cerrados para este alcance. La validación con credenciales reales de Meta/OpenAI/Redis y una prueba de humo en el entorno desplegado son un **gate de activación externa**, no trabajo de código pendiente, y no se consideran ejecutados mientras no se proporcionen esas credenciales y entorno.
+El repositorio y CI pueden declararse cerrados para este alcance. La validación con credenciales reales de Meta/Vertex AI/Redis y una prueba de humo en el entorno desplegado son un **gate de activación externa**, no trabajo de código pendiente, y no se consideran ejecutados mientras no se proporcionen esas credenciales y entorno.

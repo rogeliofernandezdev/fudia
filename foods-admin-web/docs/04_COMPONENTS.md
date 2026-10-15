@@ -150,7 +150,15 @@ horizontal (`overflow-x: hidden`): los tooltips ocultos de `FieldLabel`
 Los formularios usan `ModalForm` + `ModalBody` + `ModalFooter`; el `<form>`
 directo con pie de márgenes negativos es heredado y no se usa en modales nuevos.
 
-`dl.modal-record-data` organiza los datos de consulta de Ventas y Cobros.
+Checks propios dentro de modales (por ejemplo, permisos del editor de roles,
+`.re-acc-item`): el `<input type="checkbox">` nativo se oculta con
+`opacity:0` y 1 × 1 px, pero su etiqueta declara `position:relative` para ser
+su bloque contenedor. Si el input absoluto quedara referido a `.crud-modal`, el
+foco al marcar o desmarcar desplazaría el panel (con `overflow:hidden`) y el
+modal se vería en blanco. Al marcar, el modal conserva contenido y posición de
+scroll en escritorio y a 390 px; lo cubre `tests/role-editor-scroll.test.mjs`.
+
+`dl.modal-record-data` organiza los datos de consulta de Ventas, Cobros y el detalle de Menús y combos.
 En escritorio es una franja de una fila: fondo `primary-50`, borde `primary-100`,
 columnas ajustadas al contenido (`grid-auto-flow: column`, `grid-auto-columns:
 auto`) separadas por líneas `primary-200`. El valor de la primera pareja
@@ -190,7 +198,10 @@ Pedidos/Salón, Ventas y POS para que se vean iguales:
 | `modal-item-name` / `modal-item-total` | Nombre 14 px / 600 `ink-950` e importe 14 px / 700 tabular, alineados a la cantidad de 32 px |
 | `modal-item-meta` | «precio c/u · destino» en 12 px `ink-600`, separados con «·» |
 | `ModalItemNote` | Nota del producto como cápsula `cloud-50` con borde `line` e icono `note` |
-| `ModalItemComponents` | Elecciones de menús/combos y modificadores como carta: grupo en versalitas, filete vertical `line`, valor y `side` (destino si difiere, estado). En ≤600 px el filete pasa a separadores horizontales |
+| `ModalItemComponents` | Elecciones de menús/combos y modificadores como carta: grupo en versalitas, filete vertical `line`, valor y `side` (destino si difiere, estado). En ≤600 px el filete pasa a separadores horizontales. `name` acepta nodos: el detalle de Menús y combos lista cada parte con sus opciones separadas por «·» y recargos en `small` |
+
+Detalle de Menús y combos: `Dialog` `size-md` con `ModalHeader` (icono `combo`, título = nombre del menú, sin franja ni subtítulo), un solo `modal-body` blanco, `modal-record-data` con Precio y venta («Se vende: Solo hoy» o Días/Desde/Hasta), «Descripción» si existe y «Platos y opciones» como `h3` de 16 px con `ModalItemComponents`, y el `Status` real en `ModalFooter`. No repite el conteo de partes ni las reglas de elección («Obligatorio · elige 1»), que pertenecen al asistente. Error con `ModalError`. No usa tarjetas propias: con ellas el cuerpo en `grid` encogía la sección y ocultaba partes.
+El asistente «Arma tu menú o combo» tampoco lleva subtítulo («NUEVO MENÚ O COMBO») ni borde propio en el panel: el borde dejaba un filo claro alrededor de la cabecera índigo.
 
 Los módulos no redefinen estas piezas; solo añaden su propio contexto (por ejemplo
 el destino compartido o el estado de preparación en Pedidos/Salón). Los cuerpos
@@ -442,15 +453,17 @@ Un restaurante en modo `simple` nunca ve insumos, recetas ni unidades.
 
 Reutiliza `PageHeader`, `SearchField`, `Select`, `Input`, `IconButton`, `Button`,
 `Status` y `Pagination`; su composición pertenece al módulo de disponibilidad.
-Foto/icono, nombre, categoría y control forman una identidad; vendidas y
-restantes forman un balance. Nombre y restantes usan 16 px/700; categoría
-13 px/400, vendidas 14 px/400 y control/etiquetas 12 px/400. Los iconos son del
+Foto/icono y nombre forman la identidad, sin líneas de categoría ni control
+(redundantes con el filtro y con Cupo de hoy); vendidas y restantes forman un
+balance. Nombre y restantes usan 16 px/700; vendidas 14 px/400 y etiquetas
+12 px/400. Los iconos son del
 set compartido: plato, preparación, inventario, balance, calendario e historial.
 Los estados mantienen los tonos establecidos en `02_DESIGN_SYSTEM.md`.
 
-Guardar es un `IconButton` primario junto al `Input` de cupo y aparece solo
-cuando cambia el valor, con tooltip/nombre accesible que identifica el producto
-y el texto «Cambio sin guardar». El error se vincula al campo mediante
+Guardar es un `Button` primario («Guardar», icono `save`) bajo el `Input` de
+cupo, a su mismo ancho, y aparece solo cuando cambia el valor; su nombre
+accesible identifica el producto. El campo conserva su ancho y oculta las
+flechas nativas. El error se vincula al campo mediante
 `aria-invalid`/`aria-describedby`; el mínimo es el mayor entre 1 y vendidas,
 solo admite enteros. Guardar inválido o durante una mutación queda bloqueado.
 Los cambios válidos abren el formulario de motivo existente antes del API.
@@ -467,8 +480,9 @@ La altura contextual se define en `variables.css`: 44 px en escritorio/tablet,
 Sin control muestra la explicación «Sin límite de cantidad» en el espacio de
 cupo y balance; los estados derivados identifican su cálculo automático.
 Inventario muestra el origen de actualización y el saldo con unidad; null usa
-«Sin dato». Los avisos contextuales son compactos al lado del estado, fondo
-`warning-50` sin franja lateral ni fila adicional completa. Carga, error,
+«Sin dato». Los avisos contextuales son una píldora `warning-50` de 2–4 palabras en
+la misma línea del estado y con su altura; las aclaraciones bajan a otra línea. El cupo no muestra texto
+auxiliar; el botón Guardar visible ya indica el cambio pendiente. Carga, error,
 vacío, lectura, paginación y acciones derivadas respetan el contrato existente.
 El modal de historial conserva la tabla de cinco columnas descrita arriba;
 esta composición no añade cambios a su layout.

@@ -27,9 +27,11 @@ Concierge emite logs JSON para:
 - retry/dead-letter;
 - agente completado;
 - límite de tool calls;
+- fallo del nivel Lite y si Flash tomó el turno (`concierge.agent.primary_failed`, `concierge.router.primary_failed`);
+- aviso al cliente tras dead-letter, o su fallo (`concierge.queue.failure_notice_failed`);
 - errores operativos.
 
-Para llamadas LLM se registran modelo, latencia, número de tools e input/output tokens, pero no prompt ni respuesta.
+Para llamadas LLM se registran modelo, nivel (`lite`/`flash`), latencia, número de tools e input/output tokens (incluidos los de razonamiento), pero no prompt ni respuesta.
 
 ## Métricas Prometheus
 
@@ -47,7 +49,10 @@ Para llamadas LLM se registran modelo, latencia, número de tools e input/output
 - `fudia_concierge_backend_requests_total`;
 - `fudia_concierge_backend_duration_seconds`;
 - `fudia_concierge_whatsapp_outbound_total`;
-- `fudia_concierge_rate_limited_total`.
+- `fudia_concierge_rate_limited_total`;
+- `fudia_concierge_model_requests_total` (`role`, `tier`, `result`);
+- `fudia_concierge_model_tokens_total` (`role`, `tier`, `direction`);
+- `fudia_concierge_model_escalations_total` (`agent`, `result`).
 
 No se usan teléfonos, mesa, organización, local, QR, conversationId o messageId como labels.
 
@@ -70,6 +75,8 @@ El repositorio deja las señales listas; la plataforma de observabilidad del ent
 - fallos de WhatsApp;
 - readiness en 503;
 - p95/p99 de latencia;
-- incremento anómalo de rate limiting.
+- incremento anómalo de rate limiting;
+- errores de modelo y escalados Lite → Flash por encima de lo habitual (cuotas o degradación de Vertex);
+- consumo de tokens por nivel, para seguir el costo.
 
 La definición del canal de alerta y su destino pertenece a infraestructura/despliegue y no se hardcodea en Concierge.

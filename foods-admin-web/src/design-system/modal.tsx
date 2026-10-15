@@ -92,7 +92,7 @@ export function ModalItemNote({children}:{children:ReactNode}){
   return <em className="modal-item-note"><Icon name="note" size={14}/>{children}</em>;
 }
 
-export type ModalItemComponent={key:string;group:string;name:string;extra?:ReactNode;side?:ReactNode};
+export type ModalItemComponent={key:string;group:string;name:ReactNode;extra?:ReactNode;side?:ReactNode};
 
 /**
  * Elecciones de un menú/combo o modificadores de un producto, leídos como una carta: grupo en versalitas,

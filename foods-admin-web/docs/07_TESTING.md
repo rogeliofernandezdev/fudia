@@ -185,6 +185,11 @@ en opciones de unidades completas, reserva reducida, edición sin reemplazo,
 caché por empresa/local, refresco sin sobrescribir valores y transporte de
 `quota`. Protege la eliminación de `defaultDailyQuota` en Menús y combos.
 
+`combo-detail-modal.test.mjs` fija el detalle de Menús y combos a la anatomía
+compartida (`size-md`, cabecera sin subtítulo, `modal-body`, `modal-record-data`,
+`ModalItemComponents`, `ModalError`, estado en el pie), impide que el módulo
+redefina cuerpo, tamaño o pesos y que vuelva a mostrar reglas de elección.
+
 `purchase-response.test.mjs` utiliza las mutaciones reales de TanStack para
 probar respuestas demoradas, clics repetidos, bloqueo compartido entre acciones,
 ausencia de reintento automático y refresco pendiente tras éxito/error. El aviso
@@ -200,7 +205,9 @@ en Sin control/PATCH. Conserva guardado explícito, bloqueo y reintento manual.
 `table-batch.test.mjs` prueba una sola escritura, errores de resultado incierto
 sin reintento automático, conservación del borrador, refresco de mesas y bloqueo
 durante envío. También prueba el BFF con respuestas confirmadas/cortadas y la
-propagación de correlación sin exponer cookies en logs.
+propagación de correlación sin exponer cookies en logs. Verifica que
+`tables_not_saved` conserve su mensaje específico y que el aviso 5xx muestre el
+código de seguimiento.
 
 `account-identity.test.mjs` protege los roles reales bajo el usuario, sus estados
 remotos y el aislamiento de caché por usuario/empresa/local. Contexto verifica

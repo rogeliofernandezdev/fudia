@@ -23,3 +23,13 @@ estable.
 
 Las consultas identificadas como lentas deben revisarse con `EXPLAIN (ANALYZE,
 BUFFERS)` sobre un volumen representativo antes de introducir índices adicionales.
+
+## Extensiones
+
+Las migraciones crean `pgcrypto` y `pg_trgm`, pero el código de ejecución no
+debe depender de funciones de `pgcrypto` sin calificar: tras restaurar un volcado,
+la extensión puede quedar en un esquema fuera del `search_path` y la función deja
+de resolverse solo en el entorno restaurado. Para valores aleatorios usar
+`gen_random_uuid()`, nativo desde PostgreSQL 13. La prueba de integración
+`TestTableWritesWorkWhenPgcryptoIsOutsideSearchPath` reproduce ese escenario
+dentro de una transacción revertida.

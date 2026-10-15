@@ -6,7 +6,9 @@
 - [x] FastAPI, liveness y readiness.
 - [x] Webhook WhatsApp con firma.
 - [x] Adaptador WhatsApp.
-- [x] OpenAI Responses API con tools.
+- [x] OpenAI Responses API con tools (proveedor alternativo).
+- [x] Gemini en Vertex AI como proveedor por defecto, con Flash-Lite (router, carta, servicio) y Flash (pedido) y escalado seguro.
+- [x] Timeouts, reintentos y topes del modelo; instrucciones reenviadas en cada vuelta de tools; aviso al cliente en dead-letter.
 - [x] LangGraph.
 - [x] Redis para sesión/carrito.
 - [x] Cliente Fudia.
@@ -80,6 +82,6 @@ No quedan ❌ ni ⚠️ de implementación conocidos en este alcance después de
 
 ## Gate externo de activación
 
-Antes de un go-live real se debe ejecutar, en el entorno autorizado, la validación con credenciales reales de Meta/OpenAI/Redis/Fudia y una prueba de humo QR -> WhatsApp -> múltiples rondas -> KDS -> cuenta.
+Antes de un go-live real se debe ejecutar, en el entorno autorizado, la validación con credenciales reales de Meta/Vertex AI/Redis/Fudia y una prueba de humo QR -> WhatsApp -> múltiples rondas -> KDS -> cuenta.
 
 Ese gate requiere infraestructura y secretos externos. No se marca como ejecutado desde el repositorio y no representa código pendiente.

@@ -697,10 +697,9 @@ no integra un visor PDF.
   productos, menús y combos del local activo. La disponibilidad cotidiana no
   se modifica dentro del wizard. Su composición operativa usa cinco columnas
   compartidas por cabecera y filas: Producto, Disponibilidad, Cupo de hoy,
-  Unidades de hoy y Acciones. Categoría y control pertenecen a la identidad
-  del producto, no a columnas separadas. El nombre usa 16 px/700, categoría
-  13 px/400 y control 12 px/400; la foto propia o el icono alternativo ocupa
-  48 px. La cabecera índigo `primary-600` usa etiquetas de 14 px/600 en caja
+  Unidades de hoy y Acciones. La identidad del producto muestra solo foto o
+  icono (48 px) y nombre (16 px/700): la categoría ya se filtra en la barra y
+  el control se lee en Cupo de hoy, así que no se repiten bajo el nombre. La cabecera índigo `primary-600` usa etiquetas de 14 px/600 en caja
   normal e iconos semánticos. Esta escala es propia del listado operativo,
   no redefine las tablas de gestión. `dish`, `cookingPot`, `stock`, `gauge`,
   `calendar` y `clock` proceden del set compartido.
@@ -715,12 +714,21 @@ no integra un visor PDF.
   verde, Pocas unidades ámbar, Agotado y Fuera de horario gris, siempre tenues.
   Las aclaraciones «Agotado manualmente» y «Calculado automáticamente» solo
   aparecen cuando aportan contexto. Los avisos de horario, componentes, cupo
-  o stock agotado son compactos junto al estado, con `warning-50`, icono y
-  texto `warning`; no ocupan una franja de fila completa ni llevan acento lateral.
+  o stock agotado son una píldora en la misma línea del `Status`, con su
+  misma altura y radio: `warning-50`, icono `info` y texto `warning` 12 px/600,
+  sin salto de línea. El texto es una acción corta de 2–4 palabras («Sube el
+  cupo», «Registra una entrada», «Revisa el horario», «Falta un componente»)
+  para que estado y aviso formen un par simétrico. Conservan color aunque se
+  repitan porque indican cómo volver a vender. Las aclaraciones van debajo.
   La barra contiene búsqueda y categoría remota; en solo lectura añade el
   indicador con candado. La fecha operativa usa `calendar` en el encabezado.
-  Guardar cupo es un `IconButton` primario junto al campo: aparece únicamente
-  tras editar, tiene nombre accesible completo y acompaña «Cambio sin guardar».
+  Guardar cupo es un `Button` primario con icono `save` y texto «Guardar»,
+  bajo el campo y a su mismo ancho: aparece únicamente tras editar, no encoge
+  el campo y tiene nombre accesible completo («Guardar cupo de …»). El campo
+  numérico no muestra flechas nativas ni texto auxiliar (la cabecera ya dice
+  Cupo de hoy). Columnas: Producto `minmax(200px,1fr)`, Disponibilidad
+  `minmax(260px,1.3fr)` para que el aviso quepa en una línea, Cupo y Unidades
+  176 px, Acciones 200 px; filas de 88 px mínimo con relleno vertical de 12 px.
   La validación en línea identifica el mínimo y bloquea Guardar si el valor
   no es entero o es menor al mayor entre 1 y las porciones ya vendidas.
   «Agotar hoy» y «Reactivar» son alternativas secundarias: la primera usa

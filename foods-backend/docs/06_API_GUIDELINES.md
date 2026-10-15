@@ -20,6 +20,22 @@ consultas por fila ni auditoría después del guardado. Cualquier conflicto o fa
 de auditoría revierte todo el lote. Los UUID y tokens QR se generan en PostgreSQL.
 No requiere migración ni cambia los permisos existentes.
 
+El token QR (32 caracteres hexadecimales) se deriva de `gen_random_uuid()`, que
+es nativo de PostgreSQL y usa su generador criptográfico, en el alta individual,
+el lote y la regeneración. No se usa `pgcrypto.gen_random_bytes`: una base
+restaurada desde un volcado puede dejar `pgcrypto` en un esquema fuera del
+`search_path` (por ejemplo `extensions`), y entonces todo registro de mesas
+fallaba con 503 aunque el resto de la aplicación funcionara.
+
+Errores 503 del lote: `tables_not_saved` indica que PostgreSQL rechazó la
+sentencia y no se guardó nada, por lo que se puede reintentar; `tables_unavailable`
+queda para resultados no confirmados (cancelación, corte o conexión). Los 409
+siguen siendo `table_conflict` y el alta individual ya no presenta un error
+técnico como nombre duplicado. Toda respuesta 5xx construida con
+`apperror.Wrap` registra `api_error` con el mismo `correlation_id` de la
+respuesta, `sql_state` y el mensaje de PostgreSQL; el cliente solo recibe el
+mensaje seguro.
+
 La API cancela el procesamiento a los 30 s y conserva 35 s para responder; el
 BFF espera hasta 40 s. La conexión PostgreSQL usa 5 s como límite por defecto
 si `connect_timeout` no está configurado. Estos límites no garantizan respuesta

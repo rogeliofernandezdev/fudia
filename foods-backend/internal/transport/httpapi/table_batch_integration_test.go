@@ -115,7 +115,8 @@ func TestTableBatchAuditFailureRollsBackTables(t *testing.T) {
 		_, _ = pool.Exec(ctx, fmt.Sprintf("DROP TRIGGER IF EXISTS %s ON audit_log; DROP FUNCTION IF EXISTS %s()", function, function))
 	})
 	rec := postTableBatch(New(pool), s, `{"items":[{"name":"Rollback 1"},{"name":"Rollback 2"}]}`)
-	if rec.Code != 503 || !strings.Contains(rec.Body.String(), "tables_unavailable") {
+	// PostgreSQL rejected the statement, so the whole batch is known to be rolled back.
+	if rec.Code != 503 || !strings.Contains(rec.Body.String(), "tables_not_saved") {
 		t.Fatalf("audit failure: %d %s", rec.Code, rec.Body.String())
 	}
 	var count int

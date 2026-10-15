@@ -59,7 +59,6 @@ test("datos heredados sin dl consumen los mismos roles en todos los detalles",()
   ["modules/customers/presentation/customers.css",".customer-detail-fields small",".customer-detail-fields b"],
   ["modules/supply/purchases/presentation/purchases.css",".purchase-detail-meta small",".purchase-detail-meta b"],
   ["modules/platform/presentation/platform-companies.css",".company-detail-summary small",".company-detail-summary b"],
-  ["modules/menu/combos/presentation/combo-wizard.css",".combo-detail-availability small",".combo-detail-availability b"],
   ["modules/operations/orders/presentation/order-detail.css",".order-detail-context small",".order-detail-context b"],
  ]){
   const local=rules(file);

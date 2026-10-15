@@ -5,7 +5,7 @@ import "./combo-wizard.css";
 import "./combo-rules.css";
 import {useEffect,useRef,useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,ConfirmDialog,Icon,Input,PageHeader,Pagination,RemoteModalSkeleton,RowActionButton,Select,Status,Textarea,ModalHeader,ModalFooter} from "@/design-system";
+import {Button,ConfirmDialog,Icon,Input,PageHeader,Pagination,RemoteModalSkeleton,RowActionButton,Select,Status,Textarea,ModalHeader,ModalFooter,ModalError,ModalItemComponents} from "@/design-system";
 import {useFeedback} from "@/providers";
 import {useSettings} from "@/providers/settings-context";
 import {useSession} from "@/providers/session-context";
@@ -117,22 +117,29 @@ function ComboDetailDialog({query,currencySymbol,close}:{query:ReturnType<typeof
   const from=value?.availableFrom?new Date(value.availableFrom):null;
   const until=value?.availableUntil?new Date(value.availableUntil):null;
   const singleDay=Boolean(from&&until&&until.getTime()>from.getTime()&&until.getTime()-from.getTime()<=24*60*60*1000);
-  const days=singleDay?"Solo hoy":value?.availableDays?.length?value.availableDays.map(day=>DAYS.find(item=>item.d===day)?.n).filter(Boolean).join(", "):"Todos los días";
+  const days=value?.availableDays?.length?value.availableDays.map(day=>DAYS.find(item=>item.d===day)?.n).filter(Boolean).join(", "):"Todos los días";
+  const money=(amount:string|number)=>`${currencySymbol} ${Number(amount).toFixed(2)}`;
   const formatDate=(date:string|null|undefined)=>date?formatRegionalDateTime(date,{country:location?.country,timeZone:location?.timezone},{dateStyle:"medium",timeStyle:"short"}):"Sin límite";
   const formatCalendarDate=(date:string|null|undefined)=>date?formatRegionalCalendarDate(date,location?.country,{dateStyle:"long"}):"";
   return <div className="modal-backdrop modal-overlay-in" role="presentation">
-    <Dialog onResponseClose={close} className="crud-modal combo-detail modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="combo-detail-title" aria-busy={query.isLoading}>
+    <Dialog onResponseClose={close} className="crud-modal size-md combo-detail modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="combo-detail-title" aria-busy={query.isLoading}>
 
       {query.isLoading?<ComboDetailSkeleton close={close}/>:<>
-        <ModalHeader title={value?.name??"Menú o combo"} titleId="combo-detail-title" icon="eye" subtitle="DETALLE DEL MENÚ" onClose={close} closeLabel="Cerrar"/>
-        <div className="combo-detail-body">
-          {query.isError?<div className="combo-detail-state"><Icon name="alert" size={24}/><b>No pudimos cargar el menú</b><p>{query.error.message}</p><Button kind="secondary" icon="refresh" onClick={()=>query.refetch()}>Reintentar</Button></div>:value&&<>
-            <section className="combo-detail-summary"><div><small>PRECIO</small><b>{currencySymbol} {Number(value.price).toFixed(2)}</b></div><div><small>PARTES DEL MENÚ</small><b>{value.groups.length} {value.groups.length===1?"parte":"partes"}</b></div></section>
-            {value.description&&<section className="combo-detail-description"><small>DESCRIPCIÓN</small><p>{value.description}</p></section>}
-            <section className="combo-detail-section"><header><div><small>QUÉ INCLUYE</small><h3>Platos y opciones del menú</h3></div></header>{value.groups.map(group=><article className="combo-detail-group" key={group.id}><div><b>{group.name}</b><small>{group.required?"Obligatorio":"Opcional"} · El cliente elige {group.minSelections}–{group.maxSelections}</small></div><ul>{group.options.map(option=><li key={option.productId}><span>{option.name}</span>{Number(option.surcharge)>0&&<small>+ {currencySymbol} {Number(option.surcharge).toFixed(2)}</small>}</li>)}</ul></article>)}</section>
-            <section className={`combo-detail-availability${singleDay?" single":""}`}>{singleDay?<div><small>CUÁNDO SE VENDE</small><b>Solo hoy · {formatCalendarDate(value.availableFrom)}</b></div>:<><div><small>DÍAS DE VENTA</small><b>{days}</b></div><div><small>DESDE</small><b>{formatDate(value.availableFrom)}</b></div><div><small>HASTA</small><b>{formatDate(value.availableUntil)}</b></div></>}</section>
-          </>}
-        </div>
+        <ModalHeader title={value?.name??"Menú o combo"} titleId="combo-detail-title" icon="combo" onClose={close} closeLabel="Cerrar"/>
+        {query.isError?<ModalError title="No pudimos cargar el menú" text={query.error.message} onRetry={()=>query.refetch()} retrying={query.isFetching}/>:value&&<div className="modal-body combo-detail-body" tabIndex={0} aria-label="Precio, horario y platos del menú">
+          <section className="combo-detail-context" aria-label="Datos del menú"><dl className="modal-record-data">
+            <div><dt>Precio</dt><dd>{money(value.price)}</dd></div>
+            {singleDay?<div><dt>Se vende</dt><dd>Solo hoy<small>{formatCalendarDate(value.availableFrom)}</small></dd></div>:<>
+              <div><dt>Días de venta</dt><dd>{days}</dd></div>
+              <div><dt>Desde</dt><dd>{formatDate(value.availableFrom)}</dd></div>
+              <div><dt>Hasta</dt><dd>{formatDate(value.availableUntil)}</dd></div>
+            </>}
+          </dl></section>
+          {value.description&&<section className="combo-detail-section" aria-labelledby="combo-detail-description"><h3 id="combo-detail-description">Descripción</h3><p className="combo-detail-description">{value.description}</p></section>}
+          <section className="combo-detail-section" aria-labelledby="combo-detail-groups"><h3 id="combo-detail-groups">Platos y opciones</h3>
+            {value.groups.length?<ModalItemComponents label="Platos y opciones del menú" items={value.groups.map(group=>({key:group.id,group:group.name,name:group.options.map((option,index)=><span className="combo-detail-option" key={option.productId}>{index>0&&<span aria-hidden="true">·</span>}{option.name}{Number(option.surcharge)>0&&<small>+ {money(option.surcharge)}</small>}</span>)}))}/>:<p className="combo-detail-empty">Este menú aún no tiene platos.</p>}
+          </section>
+        </div>}
       </>}
     {!query.isLoading&&!query.isError&&value&&<ModalFooter status={<Status active={value.active}>{value.active?"Activo":"Inactivo"}</Status>} statusLabel="Estado del menú"></ModalFooter>}</Dialog>
   </div>
@@ -141,17 +148,10 @@ function ComboDetailDialog({query,currencySymbol,close}:{query:ReturnType<typeof
 function ComboDetailSkeleton({close}:{close:()=>void}){
  return <>
   <ModalHeader title={<span className="combo-detail-skeleton-copy" aria-hidden="true"><b/></span>} titleId="combo-detail-title" icon="combo" onClose={close} initialFocusClose/>
-  <div className="combo-detail-body combo-detail-skeleton-body" aria-label="Cargando detalle del menú">
-   <section className="combo-detail-summary combo-detail-skeleton-summary">
-    <div><span/><b/></div><div><span/><b/></div><i className="combo-detail-skeleton-status"/>
-   </section>
-   <section className="combo-detail-description combo-detail-skeleton-description"><span/><b/><b/></section>
-   <section className="combo-detail-section combo-detail-skeleton-section">
-    <header><div><span/><b/></div></header>
-    {Array.from({length:3},(_,i)=><div className="combo-detail-skeleton-group" key={i}><div><b/><span/></div><div><i/><i/><i/></div></div>)}
-   </section>
-   <section className="combo-detail-availability combo-detail-skeleton-availability">
-    {Array.from({length:3},(_,i)=><div key={i}><span/><b/></div>)}
+  <div className="modal-body combo-detail-body combo-detail-loading" role="status" aria-label="Cargando detalle del menú">
+   <div className="combo-detail-context" aria-hidden="true"><dl className="modal-record-data">{Array.from({length:2},(_,index)=><div key={index}><i/><b/></div>)}</dl></div>
+   <section className="combo-detail-section" aria-hidden="true"><h3><i/></h3>
+    <ol className="modal-item-components">{Array.from({length:3},(_,index)=><li key={index}><span className="modal-item-component-group"><i/></span><span className="modal-item-component-name"><b/></span><span className="modal-item-component-side"/></li>)}</ol>
    </section>
   </div>
  </>;
@@ -179,7 +179,7 @@ function ComboWizard({draft,setDraft,step,setStep,products,productsLoading,produ
   function groupAt(index:number,next:Group){setDraft({...draft,groups:draft.groups.map((group,position)=>position===index?next:group)})}
   return <><div className="modal-backdrop modal-overlay-in">
     <Dialog onResponseClose={close} className="crud-modal combo-wizard modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="combo-wizard-title" aria-busy={busy}>
-      <ModalHeader title={editing?"Actualiza tu menú o combo":"Arma tu menú o combo"} titleId="combo-wizard-title" icon="chefHat" subtitle={editing?"EDITAR MENÚ O COMBO":"NUEVO MENÚ O COMBO"} onClose={requestClose} busy={busy} closeLabel="Cerrar"/>
+      <ModalHeader title={editing?"Actualiza tu menú o combo":"Arma tu menú o combo"} titleId="combo-wizard-title" icon="chefHat" onClose={requestClose} busy={busy} closeLabel="Cerrar"/>
 
       <nav className="combo-wizard-steps" aria-label="Pasos para crear el menú">
         {STEP_LABELS.map((label,index)=><button type="button" key={label} className={step===index+1?"active":step>index+1?"complete":""} aria-current={step===index+1?"step":undefined} disabled={busy||index+1>step} onClick={()=>navigate(index+1)}>

@@ -458,3 +458,53 @@ async def test_queue_worker_acks_only_after_reply_is_sent() -> None:
         )
     ]
     assert queue.status["wamid.2"] == "completed"
+
+
+class FailingService:
+    async def handle_message(
+        self,
+        phone: str,
+        text: str,
+        channel_id: str = "",
+    ) -> str:
+        raise RuntimeError("model unavailable")
+
+
+@pytest.mark.asyncio
+async def test_worker_tells_the_diner_when_a_message_is_dead_lettered() -> None:
+    from src.services.queue_worker import FAILURE_REPLY
+
+    queue = MemoryInboundQueue(max_attempts=1)
+    whatsapp = FakeWhatsApp()
+    worker = QueueWorker(queue, FailingService(), whatsapp)
+    await queue.enqueue(
+        InboundMessage(
+            message_id="wamid.fail",
+            phone="51999999999",
+            text="quiero una bebida",
+            sender_phone_id="meta-phone",
+        )
+    )
+
+    await worker.process((await queue.read())[0])
+
+    assert whatsapp.sent == [("51999999999", FAILURE_REPLY)]
+
+
+@pytest.mark.asyncio
+async def test_worker_stays_silent_while_a_retry_is_pending() -> None:
+    queue = MemoryInboundQueue(max_attempts=3)
+    whatsapp = FakeWhatsApp()
+    worker = QueueWorker(queue, FailingService(), whatsapp)
+    await queue.enqueue(
+        InboundMessage(
+            message_id="wamid.retry",
+            phone="51999999999",
+            text="hola",
+            sender_phone_id="meta-phone",
+        )
+    )
+
+    await worker.process((await queue.read())[0])
+
+    assert whatsapp.sent == []

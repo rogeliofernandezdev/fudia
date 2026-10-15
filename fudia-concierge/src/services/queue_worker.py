@@ -16,6 +16,13 @@ from src.services.ports import InboundQueue, QueueDelivery
 
 logger = logging.getLogger(__name__)
 
+# Sent once, best-effort, when a message exhausts its retries, so the diner is
+# never left without an answer while the delivery moves to the dead letter.
+FAILURE_REPLY = (
+    "Tuvimos un problema para atender tu mensaje. Inténtalo nuevamente en unos "
+    "minutos o pide ayuda al personal de tu mesa."
+)
+
 
 class MessageService(Protocol):
     async def handle_message(
@@ -198,6 +205,8 @@ class QueueWorker:
                 "No se pudo procesar mensaje %s",
                 fingerprint(message.message_id),
             )
+            if not will_retry:
+                await self._notify_failure(message.phone, message.message_id)
         finally:
             visibility_heartbeat.cancel()
             try:
@@ -206,6 +215,22 @@ class QueueWorker:
                 pass
             QUEUE_IN_FLIGHT.dec()
             end_trace(trace_token)
+
+    async def _notify_failure(self, phone: str, message_id: str) -> None:
+        try:
+            await self.whatsapp.send_text(phone, FAILURE_REPLY)
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            log_event(
+                logger,
+                "concierge.queue.failure_notice_failed",
+                message=fingerprint(message_id),
+                phone=fingerprint(phone),
+                errorType=type(exc).__name__,
+            )
+        else:
+            QUEUE_DELIVERIES.labels(result="failure_notice").inc()
 
     async def _keep_delivery_visible(
         self,

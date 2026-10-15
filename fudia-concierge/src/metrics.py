@@ -25,6 +25,21 @@ AGENT_DURATION = Histogram(
     "Specialist agent processing latency.",
     ["agent"],
 )
+MODEL_REQUESTS = Counter(
+    "fudia_concierge_model_requests_total",
+    "Model calls by role, model tier and outcome.",
+    ["role", "tier", "result"],
+)
+MODEL_TOKENS = Counter(
+    "fudia_concierge_model_tokens_total",
+    "Model tokens consumed by role, tier and direction.",
+    ["role", "tier", "direction"],
+)
+MODEL_ESCALATIONS = Counter(
+    "fudia_concierge_model_escalations_total",
+    "Light-model failures and whether the stronger model took over.",
+    ["agent", "result"],
+)
 TOOL_CALLS = Counter(
     "fudia_concierge_tool_calls_total",
     "Tool executions by specialist.",

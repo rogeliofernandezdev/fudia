@@ -15,7 +15,8 @@ export async function createTables(items:RowDraft[]){
  try{
   return await apiFetch<{items:Table[]}>("tables/batch",{method:"POST",body:JSON.stringify({items:items.map(row=>({name:row.name.trim(),seats:Number(row.seats)||2,zone:row.zone.trim()}))})});
  }catch(error){
-  if(error instanceof TypeError||(error instanceof ApiClientError&&(error.status>=500||error.code==="invalid_server_response"))){
+  // tables_not_saved: PostgreSQL rejected the batch, so nothing was saved and the specific error is kept.
+  if(error instanceof TypeError||(error instanceof ApiClientError&&error.code!=="tables_not_saved"&&(error.status>=500||error.code==="invalid_server_response"))){
    throw new ApiClientError("No pudimos confirmar el registro de las mesas. Actualiza la lista antes de intentarlo nuevamente.","table_batch_unconfirmed",503,error instanceof ApiClientError?error.correlationId:undefined);
   }
   throw error;

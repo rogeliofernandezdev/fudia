@@ -6,26 +6,17 @@ import logging
 from pathlib import Path
 
 from fastapi import FastAPI
-from openai import AsyncOpenAI
 
 from config.settings import Settings, settings
 from src.api.health import router as health_router
 from src.api.start import router as start_router
 from src.api.webhook import router as webhook_router
+from src.infrastructure.ai_factory import build_ai
 from src.infrastructure.concurrency import RedisConversationLock
 from src.infrastructure.fudia_client import FudiaClient
-from src.infrastructure.openai_adapter import (
-    OpenAIConciergeRouter,
-    OpenAIToolAgent,
-)
 from src.infrastructure.queue import RedisInboundQueue
 from src.infrastructure.rate_limit import RedisRateLimiter
 from src.infrastructure.state_store import RedisConversationStore
-from src.infrastructure.tool_schemas import (
-    MENU_TOOL_SCHEMAS,
-    ORDER_TOOL_SCHEMAS,
-    SERVICE_TOOL_SCHEMAS,
-)
 from src.infrastructure.whatsapp_adapter import MetaWhatsAppAdapter
 from src.services.concierge_service import ConciergeService
 from src.services.queue_worker import QueueWorker
@@ -51,9 +42,7 @@ def create_app(
         Path(__file__).resolve().parents[1]
         / "prompts"
     )
-    openai_client = AsyncOpenAI(
-        api_key=cfg.openai_api_key
-    )
+    ai = build_ai(cfg, prompts)
     fudia = FudiaClient(
         cfg.fudia_api_url,
         cfg.fudia_concierge_api_key,
@@ -88,43 +77,11 @@ def create_app(
         cfg.whatsapp_graph_version,
     )
 
-    router = OpenAIConciergeRouter(
-        openai_client,
-        cfg.openai_model,
-        prompts / "concierge_router.md",
-    )
-    agents = {
-        "menu": OpenAIToolAgent(
-            openai_client,
-            cfg.openai_model,
-            prompts / "system.md",
-            prompts / "menu_agent.md",
-            MENU_TOOL_SCHEMAS,
-            "menu",
-        ),
-        "order": OpenAIToolAgent(
-            openai_client,
-            cfg.openai_model,
-            prompts / "system.md",
-            prompts / "order_agent.md",
-            ORDER_TOOL_SCHEMAS,
-            "order",
-        ),
-        "service": OpenAIToolAgent(
-            openai_client,
-            cfg.openai_model,
-            prompts / "system.md",
-            prompts / "service_agent.md",
-            SERVICE_TOOL_SCHEMAS,
-            "service",
-        ),
-    }
-
     service = ConciergeService(
         store,
         fudia,
-        router,
-        agents,  # type: ignore[arg-type]
+        ai.router,
+        ai.agents,
         conversation_lock=conversation_lock,
         rate_limiter=rate_limiter,
         max_message_chars=cfg.max_message_chars,
@@ -141,6 +98,8 @@ def create_app(
     )
 
     app.state.settings = cfg
+    app.state.ai_provider = ai.provider
+    app.state.ai_models = ai.models
     app.state.concierge_service = service
     app.state.whatsapp = whatsapp
     app.state.inbound_queue = inbound_queue
@@ -184,7 +143,7 @@ def create_app(
         await fudia.close()
         await store.close()
         await whatsapp.close()
-        await openai_client.close()
+        await ai.close()
 
     return app
 

@@ -87,6 +87,10 @@ El router no responde al cliente y cualquier salida inválida se trata como `out
 
 Los servicios de tools se separan en `MenuTools`, `OrderTools` y `ServiceTools`; `ConciergeTools` queda únicamente como fachada de compatibilidad.
 
+### Modelos por dificultad
+
+El proveedor por defecto es Gemini en Vertex AI. El router, `menu` y `service` usan Flash-Lite; `order` usa Flash. Si un turno Flash-Lite falla antes de ejecutar una tool con efectos, Flash lo repite una vez; el router Lite también cae a Flash ante errores. Detalle, configuración y requisitos de GCP en `docs/07_MODEL_PROVIDERS.md`.
+
 ## Resiliencia de dependencias
 
 - timeouts explícitos para HTTP;
@@ -94,6 +98,9 @@ Los servicios de tools se separan en `MenuTools`, `OrderTools` y `ServiceTools`;
 - retries automáticos en GET;
 - retry de creación de ronda únicamente porque `requestId` vuelve la operación idempotente;
 - retries de envío WhatsApp;
+- timeout por llamada al modelo, reintentos del SDK ante 408/429/5xx y topes de salida y de vueltas de tools;
+- escalado Flash-Lite → Flash sin repetir acciones con efectos;
+- aviso al cliente cuando su mensaje agota los reintentos y pasa a dead-letter;
 - rate limiting por conversación;
 - máximo de caracteres por mensaje;
 - `/live` para proceso vivo;
@@ -117,7 +124,8 @@ Se exponen métricas Prometheus de baja cardinalidad para:
 - confirmación de pedido, cuenta y handoff;
 - cola, retries y dead-letter;
 - llamadas a foods-backend;
-- envíos a WhatsApp.
+- envíos a WhatsApp;
+- llamadas, tokens y escalados de modelo por rol y nivel (`fudia_concierge_model_*`).
 
 Los logs no copian conversaciones, QR, credenciales ni teléfonos en claro.
 
@@ -173,8 +181,8 @@ de activar producción. No presupone autoscaling ya configurado.
 - `/ready` comprueba Redis y exige HTTP 200 de `foods-backend/health`.
   El webhook de Meta también verifica HMAC SHA-256 de bytes originales,
   limita el tamaño de solicitudes y acepta texto, botones y listas interactivos.
-- En `ENV=production` los secretos Meta, Redis, OpenAI y FUDIA son
-  obligatorios. Publicar Redis solo en red privada y gestionar secretos en
+- En `ENV=production` los secretos Meta, Redis y FUDIA son obligatorios,
+  junto con `GOOGLE_CLOUD_PROJECT` (Vertex) u `OPENAI_API_KEY` (OpenAI). Publicar Redis solo en red privada y gestionar secretos en
   Secret Manager o equivalente.
 
 ### Pruebas de activación externa

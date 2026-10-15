@@ -37,10 +37,11 @@
 
 /* ── Accordion items grid ────────────────────────────── */
 .re-acc-items{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-1);padding:var(--space-1-5)}
-.re-acc-item{display:flex;align-items:center;min-height:var(--control-height);gap:var(--space-2);padding:var(--space-2) var(--space-2);border-radius:var(--radius-control);font-size:var(--font-size-label);color:var(--ink-600);cursor:pointer;transition:background var(--duration-press)}
+.re-acc-item{position:relative;display:flex;align-items:center;min-height:var(--control-height);gap:var(--space-2);padding:var(--space-2) var(--space-2);border-radius:var(--radius-control);font-size:var(--font-size-label);color:var(--ink-600);cursor:pointer;transition:background var(--duration-press)}
 .re-acc-item:hover,.re-acc-item.checked{background:var(--primary-25)}
 .re-acc-item.checked{color:var(--ink-950)}
-.re-acc-item input{position:absolute;opacity:0;pointer-events:none}
+/* El checkbox nativo queda dentro de la etiqueta (position:relative): si su bloque contenedor fuera .crud-modal, el foco al marcarlo desplazaría el modal y lo dejaría en blanco. */
+.re-acc-item input{position:absolute;inset-block-start:50%;inset-inline-start:var(--space-2);width:var(--size-1);height:var(--size-1);margin:0;opacity:0;pointer-events:none}
 .re-acc-item i{width:var(--size-17);height:var(--size-17);display:grid;place-items:center;border:var(--stroke-1-5) solid var(--line-strong);border-radius:var(--radius-control);background:var(--surface);color:transparent;flex-shrink:0;transition:border-color var(--duration-press),background var(--duration-press)}
 .re-acc-item.checked i{border-color:var(--primary-600);background:var(--primary-600);color:var(--surface)}
 

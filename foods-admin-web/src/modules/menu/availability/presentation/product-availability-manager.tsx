@@ -3,7 +3,7 @@
 import "./product-availability.css";
 import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,Icon,IconButton,Input,PageHeader,Pagination,SearchField,Select,Status} from "@/design-system";
+import {Button,Icon,Input,PageHeader,Pagination,SearchField,Select,Status} from "@/design-system";
 import {useFeedback} from "@/providers";
 import {useSession} from "@/providers/session-context";
 import {formatRegionalCalendarDate,formatRegionalNumber} from "@/shared/i18n/regional-format";
@@ -14,11 +14,6 @@ import {AvailabilityHistoryDialog} from "./availability-history-dialog";
 
 const labels:Record<AvailabilityStatus,string>={available:"Disponible",low:"Pocas unidades",sold_out:"Agotado",unavailable:"Fuera de horario"};
 const tones:Record<AvailabilityStatus,"green"|"orange"|"gray">={available:"green",low:"orange",sold_out:"gray",unavailable:"gray"};
-const controlLabels:Record<AvailabilityItem["quantityControl"],string>={
-  none:"Sin control",
-  portions:"Cupo del día",
-  inventory:"Inventario físico",
-};
 
 export function ProductAvailabilityManager(){
  const client=useQueryClient();
@@ -115,18 +110,18 @@ export function ProductAvailabilityManager(){
       const quantityExhausted=(item.source==="portions"||item.source==="inventory")&&item.status==="sold_out";
       const remainingAmount=item.remaining===null?null:formatRegionalNumber(Number(item.remaining),location?.country,{maximumFractionDigits:item.quantityControl==="inventory"?3:0});
       const statusCaption=derived?"Calculado automáticamente":manuallySoldOut?"Agotado manualmente":"";
-      const notice=derived?(item.source==="schedule"?"Revisa el horario de la ficha.":"Faltan opciones en un componente obligatorio.")
-       :item.quantityControl==="portions"&&item.source==="portions"&&item.status==="sold_out"?"Aumenta y guarda el cupo para vender."
-       :item.quantityControl==="inventory"&&item.source==="inventory"&&item.status==="sold_out"?"Registra una entrada en Inventario.":"";
+      const notice=derived?(item.source==="schedule"?"Revisa el horario":"Falta un componente")
+       :item.quantityControl==="portions"&&item.source==="portions"&&item.status==="sold_out"?"Sube el cupo"
+       :item.quantityControl==="inventory"&&item.source==="inventory"&&item.status==="sold_out"?"Registra una entrada":"";
       const quotaError=portionChanged&&!portionValid?`Ingresa un entero de al menos ${portionMinimum}. Ya hay ${item.soldQuantity} vendidas.`:undefined;
       return <article className={`availability-card status-${item.status}`} aria-label={item.name} key={item.productId}>
        <div className="availability-product">
         <span className="availability-image">{item.imageUrl?<img src={item.imageUrl} alt="" loading="lazy"/>:<Icon name={item.quantityControl==="inventory"?"stock":"dish"} size={24}/>}</span>
-        <div><b>{item.name}</b><small>{item.categoryName??"Sin categoría"}</small><span className="availability-control"><Icon name={item.quantityControl==="inventory"?"stock":item.quantityControl==="portions"?"cookingPot":"availability"} size={14}/>{controlLabels[item.quantityControl]}</span></div>
+        <b>{item.name}</b>
        </div>
-       <div className="availability-cell availability-status-cell" data-label="Disponibilidad"><Status tone={tones[item.status]}>{labels[item.status]}</Status>{statusCaption&&<small>{statusCaption}</small>}{notice&&<p className="availability-notice"><Icon name="info" size={14}/>{notice}</p>}</div>
+       <div className="availability-cell availability-status-cell" data-label="Disponibilidad"><Status tone={tones[item.status]}>{labels[item.status]}</Status>{notice&&<p className="availability-notice"><Icon name="info" size={14}/>{notice}</p>}{statusCaption&&<small>{statusCaption}</small>}</div>
        {item.quantityControl!=="none"&&<div className="availability-cell availability-quota-cell" data-label="Cupo de hoy">
-        {item.quantityControl==="portions"?<><div className="availability-quota-editor"><Input aria-label={`Cupo de hoy para ${item.name}. Mínimo ${portionMinimum}`} aria-invalid={!!quotaError} aria-describedby={quotaError?`quota-error-${item.productId}`:undefined} type="number" min={portionMinimum} step="1" inputMode="numeric" disabled={!canManage||derived||update.isPending} value={portionValue} onChange={event=>setPortions(value=>({...value,[item.productId]:event.target.value}))}/>{canManage&&portionChanged&&<IconButton icon="save" label={`Guardar cupo de ${item.name}`} disabled={derived||update.isPending||!portionValid} onClick={()=>saveQuota(item)}/>}</div><small className="availability-quota-hint">{portionChanged?"Cambio sin guardar":"Unidades del día"}</small>{quotaError&&<p className="field-error" id={`quota-error-${item.productId}`} role="alert">{quotaError}</p>}</>:<span className="availability-inventory-source"><Icon name="stock" size={18}/><span>Desde Inventario<small>Se actualiza con las entradas y ventas.</small></span></span>}
+        {item.quantityControl==="portions"?<><div className="availability-quota-editor"><Input aria-label={`Cupo de hoy para ${item.name}. Mínimo ${portionMinimum}`} aria-invalid={!!quotaError} aria-describedby={quotaError?`quota-error-${item.productId}`:undefined} type="number" min={portionMinimum} step="1" inputMode="numeric" disabled={!canManage||derived||update.isPending} value={portionValue} onChange={event=>setPortions(value=>({...value,[item.productId]:event.target.value}))}/>{canManage&&portionChanged&&<Button className="availability-quota-save" icon="save" aria-label={`Guardar cupo de ${item.name}`} disabled={derived||update.isPending||!portionValid} onClick={()=>saveQuota(item)}>Guardar</Button>}</div>{quotaError&&<p className="field-error" id={`quota-error-${item.productId}`} role="alert">{quotaError}</p>}</>:<span className="availability-inventory-source"><Icon name="stock" size={18}/><span>Desde Inventario<small>Se actualiza con las entradas y ventas.</small></span></span>}
        </div>}
        <div className={`availability-cell availability-balance${item.quantityControl==="none"?" availability-unlimited":""}`}>
         {item.quantityControl==="none"?<><Icon name={derived?"info":"availability"} size={20}/><span>{derived?"Disponibilidad automática":"Sin límite de cantidad"}<small>{derived?"Según la ficha y sus componentes":"Control manual de disponibilidad"}</small></span></>:<><div><small>Vendidas</small><span>{formatRegionalNumber(item.soldQuantity,location?.country)}</span></div><div><small>Restantes</small><strong>{remainingAmount??"Sin dato"}{remainingAmount!==null&&item.quantityControl==="inventory"&&<small>{item.inventoryUnit??"und"}</small>}</strong></div></>}
@@ -151,7 +146,7 @@ function AvailabilitySkeleton(){
   <div className="availability-list-head availability-skeleton-head" aria-hidden="true">{Array.from({length:5},(_,index)=><span key={index}><i/></span>)}</div>
   <div className="availability-grid" aria-label="Cargando disponibilidad">
    {Array.from({length:6},(_,index)=><article className="availability-card availability-skeleton" key={index}>
-    <div className="availability-product"><i className="availability-skeleton-image"/><div><span/><em/></div></div>
+    <div className="availability-product"><i className="availability-skeleton-image"/><span/></div>
     <div className="availability-cell availability-status-cell"><i className="availability-skeleton-status"/></div>
     <div className="availability-cell availability-quota-cell"><i className="availability-skeleton-control"/></div>
     <div className="availability-cell availability-balance"><i className="availability-skeleton-text"/><i className="availability-skeleton-text"/></div>

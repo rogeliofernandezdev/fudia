@@ -185,6 +185,9 @@ test("producto e inventario mantienen una sola fuente de verdad",()=>{
   assert.ok(availability.includes('quantityControl==="portions"'));
   assert.ok(availability.includes('quantityControl==="inventory"'));
   assert.ok(availability.includes("Desde Inventario"));
+  assert.equal(availability.includes("availability-control"),false,"La identidad no repite el control bajo el nombre");
+  assert.equal(availability.includes("item.categoryName"),false,"La identidad no repite la categoría filtrada");
+  for(const notice of ["Sube el cupo","Registra una entrada","Revisa el horario","Falta un componente"])assert.ok(availability.includes(`"${notice}"`),`Aviso corto: ${notice}`);
   assert.ok(availability.includes("Se actualiza con las entradas y ventas."),"La aclaración de inventario sigue visible en la celda de cupo");
   assert.ok(availability.includes('can("menu.read")'),"Disponibilidad respeta permiso de lectura");
   assert.ok(availability.includes('can("menu.manage")'),"Disponibilidad separa permiso de escritura");
