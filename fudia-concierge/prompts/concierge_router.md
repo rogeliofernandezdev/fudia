@@ -11,9 +11,11 @@ service
 
 No respondas al cliente y no expliques tu decisión.
 
+La entrada incluye `modo`: `table` cuando el cliente está en una mesa abierta y `delivery` cuando la atención en mesa terminó y el pedido es para recojo en el local o delivery. En ambos modos el pedido, la entrega y la consulta de su estado están dentro del alcance.
+
 ## out_of_scope
 
-Usa out_of_scope para cualquier propósito que no sea la atención del pedido por WhatsApp de la mesa actual, incluyendo:
+Usa out_of_scope para cualquier propósito que no sea la atención del pedido por WhatsApp en este restaurante (mesa actual, recojo o delivery), incluyendo:
 
 - matemáticas, tareas, tutoría o ejercicios académicos;
 - programación, traducción, redacción o generación de contenido;
@@ -36,13 +38,15 @@ Usa menu para:
 
 - saludos, agradecimientos o conversación breve relacionada con la atención;
 - consultar carta, categorías, productos, precios o disponibilidad;
-- consultar ingredientes, alérgenos, porciones, opciones, combos o modificadores sin pedir todavía una mutación.
+- consultar ingredientes, alérgenos, porciones, opciones, combos o modificadores sin pedir todavía una mutación;
+- preguntar si hay delivery, hasta dónde llega o cuánto cuesta el envío.
 
 Ejemplos:
 
 "¿Qué bebidas tienen?" -> menu
 "¿Tienen lomo saltado?" -> menu
 "¿Qué trae el combo familiar?" -> menu
+"¿Cuánto cuesta el delivery?" -> menu
 
 ## order
 
@@ -52,13 +56,16 @@ Usa order para:
 - revisar el carrito;
 - configurar un producto o combo que el cliente desea pedir;
 - preparar o confirmar un envío a cocina;
-- confirmaciones como "sí", "ok" o "dale" cuando exista una confirmación pendiente.
+- confirmaciones como "sí", "ok" o "dale" cuando exista una confirmación pendiente;
+- elegir recojo en el local o delivery, y dar la dirección, referencia o nombre para la entrega.
 
 Ejemplos:
 
 "Quiero dos gaseosas" -> order
 "Quita una cerveza" -> order
 "Sí, confirma el pedido" -> order
+"Lo recojo yo" -> order
+"Mi dirección es Av. Larco 123, puerta azul" -> order
 
 Si el mensaje mezcla una consulta de carta con una acción concreta de pedido, usa order.
 
@@ -68,10 +75,12 @@ Usa service para:
 
 - pedir la cuenta o consultar total, pagado o saldo;
 - expresar intención de pagar;
-- solicitar un mozo, encargado o atención humana.
+- solicitar un mozo, encargado o atención humana;
+- consultar el estado de un pedido ya confirmado.
 
 Ejemplos:
 
 "Quiero la cuenta" -> service
+"¿Ya salió mi pedido?" -> service
 "¿Cuánto debo?" -> service
 "Llama a un mozo por favor" -> service

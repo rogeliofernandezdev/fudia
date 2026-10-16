@@ -253,6 +253,71 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { description: Credencial de Fudia Concierge inválida }
         "404": { description: QR inexistente, inactivo o deshabilitado }
+  /v1/integrations/concierge/{token}/orders/{orderId}:
+    get:
+      operationId: getConciergeOrderStatus
+      summary: Consulta un pedido de la conversación e indica si su atención sigue activa
+      description: "active=false cuando la cuenta de mesa terminó (pagada y entregada) o el delivery/recojo se entregó o canceló. Concierge lo usa para pasar a modo delivery/recojo."
+      security: [{ conciergeServiceKey: [] }]
+      parameters:
+        - { in: path, name: token, required: true, schema: { type: string, minLength: 32, maxLength: 32 } }
+        - { in: path, name: orderId, required: true, schema: { type: string, format: uuid } }
+        - { in: query, name: conversationId, required: true, schema: { type: string, maxLength: 160 } }
+      responses:
+        "200": { description: Estado del pedido, content: { application/json: { schema: { $ref: "#/components/schemas/ConciergeOrderStatus" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { description: Credencial de Fudia Concierge inválida }
+        "404": { description: QR inválido o el pedido no pertenece a la conversación }
+  /v1/integrations/concierge/{token}/delivery-options:
+    get:
+      operationId: getConciergeDeliveryOptions
+      summary: Opciones de recojo y delivery del local derivado del QR, con sus rangos de tarifa por distancia
+      security: [{ conciergeServiceKey: [] }]
+      parameters:
+        - { in: path, name: token, required: true, schema: { type: string, minLength: 32, maxLength: 32 } }
+      responses:
+        "200": { description: Opciones de entrega, content: { application/json: { schema: { $ref: "#/components/schemas/ConciergeDeliveryOptions" } } } }
+        "401": { description: Credencial de Fudia Concierge inválida }
+        "404": { description: QR inexistente, inactivo o deshabilitado }
+  /v1/integrations/concierge/{token}/delivery-quote:
+    post:
+      operationId: quoteConciergeDelivery
+      summary: Cotiza el delivery según la distancia en línea recta entre el local y la ubicación del cliente
+      description: "La ubicación viaja en el cuerpo, nunca en la URL. covered=false cuando supera el mayor rango configurado."
+      security: [{ conciergeServiceKey: [] }]
+      parameters:
+        - { in: path, name: token, required: true, schema: { type: string, minLength: 32, maxLength: 32 } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ConciergeDeliveryQuoteInput" }
+      responses:
+        "200": { description: Cotización, content: { application/json: { schema: { $ref: "#/components/schemas/ConciergeDeliveryQuote" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { description: Credencial de Fudia Concierge inválida }
+        "404": { description: QR inexistente, inactivo o deshabilitado }
+        "409": { description: "delivery_unavailable: el local no tiene ubicación o rangos de tarifa" }
+  /v1/integrations/concierge/{token}/delivery-orders:
+    post:
+      operationId: createConciergeDeliveryOrder
+      summary: Crea un pedido de delivery o recojo sin mesa, confirmado y enviado a cocina
+      description: "foods-backend recalcula precios, distancia y tarifa. quotedFee es la tarifa que aceptó el cliente: si cambió devuelve 409 delivery_fee_changed. requestId es idempotente: un reintento devuelve el mismo pedido aunque las tarifas hayan cambiado."
+      security: [{ conciergeServiceKey: [] }]
+      parameters:
+        - { in: path, name: token, required: true, schema: { type: string, minLength: 32, maxLength: 32 } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ConciergeDeliveryOrderInput" }
+      responses:
+        "200": { description: Reintento idempotente; devuelve el pedido ya creado para requestId, content: { application/json: { schema: { $ref: "#/components/schemas/Order" } } } }
+        "201": { description: Pedido de delivery o recojo creado, content: { application/json: { schema: { $ref: "#/components/schemas/Order" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { description: Credencial de Fudia Concierge inválida }
+        "404": { description: QR inexistente, inactivo o deshabilitado }
+        "409": { description: "delivery_unavailable, delivery_out_of_range, delivery_fee_changed o producto/stock no disponible" }
   /v1/auth/login:
     post:
       operationId: login
@@ -407,6 +472,24 @@ paths:
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ConciergeSettingsInput" } } } }
       responses:
         "200": { description: Configuración actualizada, content: { application/json: { schema: { $ref: "#/components/schemas/ConciergeSettings" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/concierge-settings/delivery-fees:
+    get:
+      operationId: getConciergeDeliveryFees
+      summary: Rangos de tarifa de delivery por distancia del local activo para Fudia Concierge
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Tarifas del local, content: { application/json: { schema: { $ref: "#/components/schemas/ConciergeDeliveryFees" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    put:
+      operationId: saveConciergeDeliveryFees
+      summary: Reemplaza los rangos de tarifa de delivery del local activo
+      description: "Hasta 10 rangos con límites distintos entre 0.01 y 50 km y costos de 0 a 999, con dos decimales. Una lista vacía deja solo recojo."
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ConciergeDeliveryFeesInput" } } } }
+      responses:
+        "200": { description: Tarifas guardadas, content: { application/json: { schema: { $ref: "#/components/schemas/ConciergeDeliveryFees" } } } }
         "400": { $ref: "#/components/responses/BadRequest" }
         "403": { $ref: "#/components/responses/Forbidden" }
   /v1/admin/settings:
@@ -1971,6 +2054,14 @@ components:
     ConciergeOrderInput: { type: object, required: [customerPhone, conversationId, items], description: "organizationId, locationId, tableId y unitPrice se derivan o recalculan en foods-backend. requestId identifica de forma idempotente cada ronda; si se omite por compatibilidad, se usa conversationId.", properties: { customerName: { type: string, maxLength: 160 }, customerPhone: { type: string, maxLength: 32 }, conversationId: { type: string, maxLength: 160 }, requestId: { type: string, maxLength: 160 }, notes: { type: string, maxLength: 240 }, items: { type: array, minItems: 1, maxItems: 50, items: { $ref: "#/components/schemas/ConciergeOrderItemInput" } } } }
     ConciergeBillRequest: { type: object, required: [conversationId, customerPhone], description: "requestId identifica de forma idempotente cada solicitud de cuenta: repetirlo devuelve la cuenta vigente sin registrar otra solicitud. Si se omite por compatibilidad, cada llamada se registra.", properties: { conversationId: { type: string, minLength: 1, maxLength: 160 }, customerPhone: { type: string, maxLength: 32 }, requestId: { type: string, maxLength: 160 } } }
     ConciergeBill: { type: object, required: [orderId, code, tableName, status, currencySymbol, items, total, paidAmount, remainingAmount, paymentStatus], properties: { orderId: { type: string, format: uuid }, code: { type: string }, tableName: { type: string }, status: { type: string }, currencySymbol: { type: string }, items: { type: array, items: { $ref: "#/components/schemas/OrderItem" } }, total: { type: string }, paidAmount: { type: string }, remainingAmount: { type: string }, paymentStatus: { type: string } } }
+    ConciergeFeeTier: { type: object, required: [maxDistanceKm, fee], properties: { maxDistanceKm: { type: string, description: "Límite del rango en km" }, fee: { type: string } } }
+    ConciergeDeliveryOptions: { type: object, required: [locationName, locationAddress, locationPhone, currencySymbol, pickupAvailable, deliveryAvailable, maxDistanceKm, tiers], properties: { locationName: { type: string }, locationAddress: { type: string }, locationPhone: { type: string }, currencySymbol: { type: string }, pickupAvailable: { type: boolean }, deliveryAvailable: { type: boolean }, maxDistanceKm: { type: string }, tiers: { type: array, items: { $ref: "#/components/schemas/ConciergeFeeTier" } } } }
+    ConciergeDeliveryQuoteInput: { type: object, required: [latitude, longitude], properties: { latitude: { type: number, minimum: -90, maximum: 90 }, longitude: { type: number, minimum: -180, maximum: 180 } } }
+    ConciergeDeliveryQuote: { type: object, required: [covered, distanceKm, fee, maxDistanceKm, currencySymbol], properties: { covered: { type: boolean }, distanceKm: { type: string, description: "Distancia en línea recta redondeada a 0.01 km" }, fee: { type: string }, maxDistanceKm: { type: string }, currencySymbol: { type: string } } }
+    ConciergeDeliveryOrderInput: { type: object, required: [fulfillment, customerName, customerPhone, conversationId, requestId, items], description: "delivery exige address, latitude, longitude y quotedFee; pickup ignora dirección, ubicación y tarifa.", properties: { fulfillment: { type: string, enum: [delivery, pickup] }, customerName: { type: string, maxLength: 160 }, customerPhone: { type: string, maxLength: 32 }, conversationId: { type: string, maxLength: 160 }, requestId: { type: string, maxLength: 160 }, address: { type: string, maxLength: 240 }, reference: { type: string, maxLength: 240 }, notes: { type: string, maxLength: 240 }, latitude: { type: number }, longitude: { type: number }, quotedFee: { type: string }, items: { type: array, minItems: 1, maxItems: 50, items: { $ref: "#/components/schemas/ConciergeOrderItemInput" } } } }
+    ConciergeOrderStatus: { type: object, required: [orderId, code, channel, status, subtotal, deliveryFee, total, paymentStatus, active], properties: { orderId: { type: string, format: uuid }, code: { type: string }, channel: { type: string }, status: { type: string }, subtotal: { type: string }, deliveryFee: { type: string }, total: { type: string }, paymentStatus: { type: string }, active: { type: boolean } } }
+    ConciergeDeliveryFees: { type: object, required: [locationName, hasCoordinates, currencySymbol, tiers], properties: { locationName: { type: string }, hasCoordinates: { type: boolean }, currencySymbol: { type: string }, tiers: { type: array, items: { $ref: "#/components/schemas/ConciergeFeeTier" } } } }
+    ConciergeDeliveryFeesInput: { type: object, required: [tiers], properties: { tiers: { type: array, maxItems: 10, items: { type: object, required: [maxDistanceKm, fee], properties: { maxDistanceKm: { type: number, exclusiveMinimum: 0, maximum: 50 }, fee: { type: number, minimum: 0, maximum: 999 } } } } } }
     ConciergeHandoffInput: { type: object, required: [conversationId, customerPhone, reason], properties: { conversationId: { type: string, minLength: 1, maxLength: 160 }, customerPhone: { type: string, maxLength: 32 }, reason: { type: string, maxLength: 240 } } }
     ConciergeHandoff: { type: object, required: [id, tableId, tableName, conversationId, customerPhone, reason, status, requestedAt], properties: { id: { type: string, format: uuid }, tableId: { type: string, format: uuid }, tableName: { type: string }, conversationId: { type: string }, customerPhone: { type: string }, reason: { type: string }, status: { type: string, enum: [pending, resolved] }, requestedAt: { type: string, format: date-time }, resolvedAt: { type: [string, "null"], format: date-time }, resolvedByName: { type: [string, "null"] } } }
     OrderItemInput: { type: object, required: [productId, qty], properties: { productId: { type: string, format: uuid }, name: { type: string, maxLength: 160 }, qty: { type: number, exclusiveMinimum: 0 }, unitPrice: { type: number, minimum: 0, description: "Opcional por compatibilidad. En el alta el servidor obtiene el precio del catálogo; el cliente puede omitirlo." }, note: { type: string, maxLength: 240 }, selections: { type: array, items: { $ref: "#/components/schemas/OrderComboSelectionInput" } }, modifiers: { type: array, items: { $ref: "#/components/schemas/OrderModifierSelectionInput" } }, reprice: { type: boolean } } }

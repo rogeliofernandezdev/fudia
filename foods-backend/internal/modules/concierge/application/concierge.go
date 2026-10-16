@@ -5,6 +5,7 @@ import (
 	"errors"
 	audit "github.com/foods-platform/foods-backend/internal/modules/audit/application"
 	"github.com/foods-platform/foods-backend/internal/modules/concierge/domain"
+	deliverycontracts "github.com/foods-platform/foods-backend/internal/modules/delivery/contracts"
 	menucontracts "github.com/foods-platform/foods-backend/internal/modules/menu/contracts"
 	ordercontracts "github.com/foods-platform/foods-backend/internal/modules/orders/contracts"
 	"github.com/foods-platform/foods-backend/internal/platform/apperror"
@@ -31,6 +32,9 @@ type Menu interface {
 type Orders interface {
 	SubmitTable(context.Context, scope, string, string, ordercontracts.QROrderInput) (ordercontracts.TableSubmission, error)
 	TableBill(context.Context, scope, string) (ordercontracts.Order, error)
+	ConciergeDeliveryReplay(ctx context.Context, s scope, requestID string) (ordercontracts.Order, bool, error)
+	SubmitConciergeDelivery(ctx context.Context, s scope, in ordercontracts.ConciergeDeliveryInput) (ordercontracts.TableSubmission, error)
+	ConciergeOrder(ctx context.Context, s scope, conversationID, orderID string) (ordercontracts.ConciergeOrderState, error)
 }
 type Concierge struct {
 	repo   Repository
@@ -65,6 +69,9 @@ type Repository interface {
 	RequestHandoff(ctx context.Context, s scope, qr QRContext, in domain.HandoffInput) (string, error)
 	Handoffs(context.Context, scope, string) ([]domain.HandoffView, error)
 	ResolveHandoff(ctx context.Context, s scope, id string) (string, error)
+	DeliverySetup(ctx context.Context, s scope) (DeliverySetup, error)
+	DeliveryFees(ctx context.Context, s scope) (domain.DeliveryFeesView, []deliverycontracts.FeeTier, error)
+	ReplaceDeliveryFees(ctx context.Context, s scope, tiers []deliverycontracts.FeeTier) error
 }
 
 func (a *Concierge) resolve(ctx context.Context, token string) (QRContext, error) {

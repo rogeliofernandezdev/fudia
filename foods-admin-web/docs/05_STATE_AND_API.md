@@ -337,3 +337,14 @@ Registrar utiliza `POST /v1/admin/payments`; backend vuelve a validar permisos,
 empresa/local, estado, turno y saldo en transacción. El éxito cierra el formulario
 e invalida POS, Caja, Salón, Pedidos, Ventas y Dashboard. No registra pagos al
 abrir el enlace y no incorpora una acción de cobro al modal de consulta.
+
+## Tarifas de delivery de Concierge
+
+`DeliveryFeesPanel` (módulo `configuration`) usa la clave
+`["concierge-delivery-fees"]` con `GET concierge-settings/delivery-fees` y guarda
+con `PUT concierge-settings/delivery-fees` (el proxy `/api/admin` reenvía `PUT`).
+El borrador de filas es estado local; `deliveryFeeErrors` valida límites
+(0.01–50 km, costo 0–999, dos decimales, sin límites repetidos) y
+`deliveryFeesPayload` envía `{tiers:[{maxDistanceKm,fee}]}` numérico y ordenado.
+El backend vuelve a validar y es la autoridad. Al guardar se reemplaza la caché
+con la respuesta, sin otra consulta. Las tarifas aplican al local activo.

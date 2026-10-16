@@ -37,3 +37,21 @@ func (a *API) getConciergeCombo(w http.ResponseWriter, r *http.Request) {
 func (a *API) getConciergeProductModifiers(w http.ResponseWriter, r *http.Request) {
 	a.handlers.Concierge.GetConciergeProductModifiers(w, r)
 }
+func (a *API) getConciergeDeliveryOptions(w http.ResponseWriter, r *http.Request) {
+	a.handlers.Concierge.GetConciergeDeliveryOptions(w, r)
+}
+func (a *API) quoteConciergeDelivery(w http.ResponseWriter, r *http.Request) {
+	a.handlers.Concierge.QuoteConciergeDelivery(w, r)
+}
+func (a *API) createConciergeDeliveryOrder(w http.ResponseWriter, r *http.Request) {
+	a.handlers.Concierge.CreateConciergeDeliveryOrder(w, r)
+}
+func (a *API) getConciergeOrderStatus(w http.ResponseWriter, r *http.Request) {
+	a.handlers.Concierge.GetConciergeOrderStatus(w, r)
+}
+func (a *API) getConciergeDeliveryFees(w http.ResponseWriter, r *http.Request) {
+	a.handlers.Concierge.GetConciergeDeliveryFees(w, r)
+}
+func (a *API) saveConciergeDeliveryFees(w http.ResponseWriter, r *http.Request) {
+	a.handlers.Concierge.SaveConciergeDeliveryFees(w, r)
+}

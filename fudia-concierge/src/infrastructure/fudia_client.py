@@ -10,10 +10,13 @@ import httpx
 from src.domain.models import (
     BillSummary,
     ComboDetail,
+    DeliveryOptions,
+    DeliveryQuote,
     MenuItem,
     MenuResponse,
     ModifierConfig,
     OrderResult,
+    OrderStatus,
     TableContext,
 )
 from src.metrics import BACKEND_DURATION, BACKEND_REQUESTS
@@ -380,3 +383,66 @@ class FudiaClient:
             json=payload,
         )
         return BillSummary.model_validate(body)
+
+    async def get_order_status(
+        self,
+        token: str,
+        order_id: str,
+        conversation_id: str,
+    ) -> OrderStatus:
+        body = await self._json(
+            "GET",
+            (
+                "/v1/integrations/concierge/"
+                f"{quote(token, safe='')}"
+                "/orders/"
+                f"{quote(order_id, safe='')}"
+            ),
+            params={"conversationId": conversation_id},
+        )
+        return OrderStatus.model_validate(body)
+
+    async def get_delivery_options(self, token: str) -> DeliveryOptions:
+        body = await self._json(
+            "GET",
+            (
+                "/v1/integrations/concierge/"
+                f"{quote(token, safe='')}/delivery-options"
+            ),
+        )
+        return DeliveryOptions.model_validate(body)
+
+    async def quote_delivery(
+        self,
+        token: str,
+        latitude: float,
+        longitude: float,
+    ) -> DeliveryQuote:
+        # The diner's location travels in the body, never in the URL.
+        body = await self._json(
+            "POST",
+            (
+                "/v1/integrations/concierge/"
+                f"{quote(token, safe='')}/delivery-quote"
+            ),
+            retryable=True,
+            json={"latitude": latitude, "longitude": longitude},
+        )
+        return DeliveryQuote.model_validate(body)
+
+    async def create_delivery_order(
+        self,
+        token: str,
+        order: dict[str, Any],
+    ) -> OrderResult:
+        # `order` carries its requestId: a retry returns the same order.
+        body = await self._json(
+            "POST",
+            (
+                "/v1/integrations/concierge/"
+                f"{quote(token, safe='')}/delivery-orders"
+            ),
+            retryable=True,
+            json=order,
+        )
+        return OrderResult.model_validate(body)

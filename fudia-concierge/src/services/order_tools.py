@@ -6,6 +6,12 @@ from uuid import uuid4
 
 from src.domain.models import CartLine, CartModifier, CartSelection
 from src.services.confirmation import explicit_confirmation
+from src.services.delivery_tools import (
+    DeliveryTools,
+    apply_quote,
+    delivery_order,
+    delivery_summary,
+)
 from src.services.menu_tools import MenuTools
 from src.services.ports import FudiaError
 from src.services.tooling import ToolContext
@@ -15,6 +21,7 @@ class OrderTools:
     def __init__(self, context: ToolContext) -> None:
         self.context = context
         self.menu = MenuTools(context)
+        self.delivery = DeliveryTools(context)
 
     async def execute(
         self,
@@ -115,21 +122,39 @@ class OrderTools:
                 "cart": self.context.cart_payload(),
             }
 
+        if name in {
+            "get_delivery_options",
+            "set_fulfillment",
+            "set_delivery_details",
+        }:
+            return await self.delivery.execute(name, args)
+
         if name == "prepare_confirmation":
-            if not self.context.session.cart:
+            session = self.context.session
+            if not session.cart:
                 return {"ok": False, "code": "empty_cart"}
-            self.context.session.awaiting_confirmation = True
-            if not self.context.session.pending_order_request_id:
-                self.context.session.pending_order_request_id = uuid4().hex
+            delivery: dict[str, Any] | None = None
+            if session.mode == "delivery":
+                delivery = delivery_summary(session)
+                if delivery["missing"]:
+                    return {
+                        "ok": False,
+                        "code": "delivery_details_required",
+                        "missing": delivery["missing"],
+                        "delivery": delivery,
+                    }
+            session.awaiting_confirmation = True
+            if not session.pending_order_request_id:
+                session.pending_order_request_id = uuid4().hex
             cart = self.context.cart_payload()
-            await self.context.journal.local_effect(
-                "confirmation",
-                {"cart": cart},
-            )
+            result: dict[str, Any] = {"cart": cart}
+            if delivery is not None:
+                result["delivery"] = delivery
+            await self.context.journal.local_effect("confirmation", result)
             return {
                 "ok": True,
                 "requiresExplicitConfirmation": True,
-                "cart": cart,
+                **result,
             }
 
         if name == "confirm_order":
@@ -389,6 +414,8 @@ class OrderTools:
             session.pending_order_request_id = uuid4().hex
         request_id = session.pending_order_request_id
         lines = order_lines(session.cart)
+        if session.mode == "delivery":
+            return await self._confirm_delivery_order(request_id, lines)
         await self.context.journal.before_effect(
             "create_order",
             request_id,
@@ -423,6 +450,80 @@ class OrderTools:
         }
         await self.context.journal.after_effect({"order": order})
         return {"ok": True, "order": order}
+
+    async def _confirm_delivery_order(
+        self,
+        request_id: str,
+        lines: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        session = self.context.session
+        summary = delivery_summary(session)
+        if summary["missing"]:
+            self.context.invalidate_confirmation()
+            return {
+                "ok": False,
+                "code": "delivery_details_required",
+                "missing": summary["missing"],
+            }
+        order = delivery_order(session, request_id, lines)
+        await self.context.journal.before_effect(
+            "create_order",
+            request_id,
+            {
+                "token": self.context.token(),
+                "phone": session.phone,
+                "conversationId": session.conversation_id,
+                "mode": "delivery",
+                "order": order,
+            },
+        )
+        try:
+            result = await self.context.fudia.create_delivery_order(
+                self.context.token(),
+                order,
+            )
+        except FudiaError as exc:
+            definitive = 400 <= exc.status_code < 500
+            await self.context.journal.effect_failed(exc.code, definitive)
+            if exc.code == "delivery_fee_changed":
+                await self._requote()
+            raise
+        session.cart = []
+        session.awaiting_confirmation = False
+        session.pending_order_request_id = None
+        session.last_order_id = result.id
+        confirmed = {
+            "id": result.id,
+            "code": result.code,
+            "status": result.status,
+            "total": str(result.total),
+            "fulfillment": summary["fulfillment"],
+            "deliveryFee": summary["deliveryFee"],
+        }
+        await self.context.journal.after_effect({"order": confirmed})
+        return {
+            "ok": True,
+            "order": confirmed,
+            "payment": summary["payment"],
+        }
+
+    async def _requote(self) -> None:
+        """The fee changed after the diner accepted it: refresh it so the
+        next confirmation shows the current one."""
+        session = self.context.session
+        self.context.invalidate_confirmation()
+        point = session.delivery.location
+        if point is None:
+            return
+        try:
+            quote = await self.context.fudia.quote_delivery(
+                self.context.token(),
+                point.latitude,
+                point.longitude,
+            )
+        except FudiaError:
+            return
+        apply_quote(session, point, quote)
 
 
 def order_lines(cart: list[CartLine]) -> list[dict[str, Any]]:

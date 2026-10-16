@@ -1708,6 +1708,29 @@ El cierre exige descarte cuando hay cambios y se
 bloquea durante la petición. El formulario usa una columna en móvil desde 390 px;
 la comanda conserva su resumen móvil y sus estilos compartidos.
 
+### Tarifas de delivery de Fudia Concierge
+
+La pantalla Fudia Concierge agrega un panel «Delivery y recojo por WhatsApp»
+debajo del estado y del flujo del comensal (paso 6, «Después de la mesa»). Vive
+aquí y no en «Delivery propio» porque ese módulo sigue planificado y bloqueado;
+el panel depende de `whatsapp_bot`.
+
+- Tabla compacta de filas editables (máximo 480 px): «HASTA (KM)» con `Input`
+  decimal y «COSTO DE ENVÍO» con `MoneyInput` y el símbolo devuelto por el API;
+  cifras tabulares y quitar fila con `RowActionButton action="remove"`. Sin
+  etiqueta de rango por fila: el límite y la ayuda «Cada rango empieza donde
+  termina el anterior» ya lo explican.
+- Pie de acciones a la derecha: «Agregar rango» (secundario, hasta 10),
+  «Descartar cambios» (ghost, solo con cambios) y «Guardar tarifas» (primario,
+  deshabilitado sin cambios). En móvil (≤600 px) cada botón ocupa una fila y el
+  panel usa 16 px de relleno; inputs y botones mantienen 44 px.
+- Errores por campo bajo el input en `danger-700` tras intentar guardar.
+- Sin ubicación del local: `InlineNotice` warning «Falta la ubicación del local»
+  con acción «Ir a Locales». Sin rangos: nota neutra `cloud-50` «Sin rangos
+  configurados: Concierge solo ofrecerá recojo en el local».
+- Carga con skeleton de filas y error con `ErrorState` y reintento. Sin
+  `organizations.manage` los controles quedan de solo lectura y no hay pie.
+
 ### Compras: recepciones e historial de la orden
 
 La recepción es una etapa de la orden de compra, no un objeto aparte.

@@ -193,6 +193,80 @@ TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
         },
         "strict": True,
     },
+    "get_delivery_options": {
+        "type": "function",
+        "name": "get_delivery_options",
+        "description": (
+            "Consulta si el local ofrece recojo y delivery, la dirección del "
+            "local y los rangos de costo de envío por distancia."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {},
+            "additionalProperties": False,
+        },
+        "strict": True,
+    },
+    "set_fulfillment": {
+        "type": "function",
+        "name": "set_fulfillment",
+        "description": (
+            "Registra si el cliente recogerá el pedido en el local (pickup) "
+            "o si se le enviará con el delivery del local (delivery)."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "enum": ["pickup", "delivery"],
+                    "description": "pickup = recojo en local; delivery = envío.",
+                }
+            },
+            "required": ["type"],
+            "additionalProperties": False,
+        },
+        "strict": True,
+    },
+    "set_delivery_details": {
+        "type": "function",
+        "name": "set_delivery_details",
+        "description": (
+            "Guarda el nombre del cliente y, para delivery, la dirección "
+            "escrita y la referencia. Usa texto vacío para no cambiar un dato."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "customerName": {
+                    "type": "string",
+                    "description": "Nombre de quien recibe o recoge.",
+                },
+                "address": {
+                    "type": "string",
+                    "description": "Dirección exacta escrita por el cliente.",
+                },
+                "reference": {
+                    "type": "string",
+                    "description": "Referencia para el repartidor.",
+                },
+            },
+            "required": ["customerName", "address", "reference"],
+            "additionalProperties": False,
+        },
+        "strict": True,
+    },
+    "check_order_status": {
+        "type": "function",
+        "name": "check_order_status",
+        "description": "Consulta el estado real del último pedido confirmado.",
+        "parameters": {
+            "type": "object",
+            "properties": {},
+            "additionalProperties": False,
+        },
+        "strict": True,
+    },
 }
 
 MENU_TOOL_SCHEMAS = [
@@ -201,6 +275,7 @@ MENU_TOOL_SCHEMAS = [
         "search_menu",
         "get_modifier_options",
         "get_combo_options",
+        "get_delivery_options",
     )
 ]
 ORDER_TOOL_SCHEMAS = [
@@ -216,6 +291,9 @@ ORDER_TOOL_SCHEMAS = [
         "view_cart",
         "prepare_confirmation",
         "confirm_order",
+        "get_delivery_options",
+        "set_fulfillment",
+        "set_delivery_details",
     )
 ]
 SERVICE_TOOL_SCHEMAS = [
@@ -223,5 +301,6 @@ SERVICE_TOOL_SCHEMAS = [
     for name in (
         "request_bill",
         "request_human",
+        "check_order_status",
     )
 ]

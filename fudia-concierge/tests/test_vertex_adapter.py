@@ -240,5 +240,6 @@ def test_function_declarations_reuse_shared_json_schema() -> None:
         "search_menu",
         "get_modifier_options",
         "get_combo_options",
+        "get_delivery_options",
     ]
     assert declarations[0].parameters_json_schema == MENU_TOOL_SCHEMAS[0]["parameters"]

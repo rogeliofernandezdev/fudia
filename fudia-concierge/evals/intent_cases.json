@@ -35,5 +35,49 @@
   {
     "input": "Llama a un mozo por favor",
     "expected": "service"
+  },
+  {
+    "input": "Quiero pedir para llevar",
+    "expected": "order",
+    "mode": "delivery"
+  },
+  {
+    "input": "Mándenmelo a mi casa por favor",
+    "expected": "order",
+    "mode": "delivery"
+  },
+  {
+    "input": "Lo recojo yo en el local",
+    "expected": "order",
+    "mode": "delivery"
+  },
+  {
+    "input": "Mi dirección es Av. Larco 123, Miraflores, puerta azul",
+    "expected": "order",
+    "mode": "delivery"
+  },
+  {
+    "input": "A nombre de Ana",
+    "expected": "order",
+    "mode": "delivery"
+  },
+  {
+    "input": "¿Cuánto cuesta el delivery?",
+    "expected": "menu",
+    "mode": "delivery"
+  },
+  {
+    "input": "¿Hasta dónde hacen delivery?",
+    "expected": "menu",
+    "mode": "delivery"
+  },
+  {
+    "input": "¿Ya salió mi pedido?",
+    "expected": "service",
+    "mode": "delivery"
+  },
+  {
+    "input": "¿En qué estado está mi pedido?",
+    "expected": "service"
   }
 ]

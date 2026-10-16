@@ -5,6 +5,7 @@ from typing import Any
 from src.domain.intents import AgentIntent
 from src.domain.models import ConversationSession
 from src.metrics import BUSINESS_ACTIONS, TOOL_CALLS
+from src.services.delivery_tools import DeliveryTools
 from src.services.menu_tools import MenuTools
 from src.services.order_tools import OrderTools
 from src.services.ports import FudiaBackend, FudiaError
@@ -16,6 +17,7 @@ MENU_TOOLS = frozenset(
         "search_menu",
         "get_modifier_options",
         "get_combo_options",
+        "get_delivery_options",
     }
 )
 ORDER_TOOLS = frozenset(
@@ -28,12 +30,22 @@ ORDER_TOOLS = frozenset(
         "view_cart",
         "prepare_confirmation",
         "confirm_order",
+        "set_fulfillment",
+        "set_delivery_details",
     }
 )
 SERVICE_TOOLS = frozenset(
     {
         "request_bill",
         "request_human",
+        "check_order_status",
+    }
+)
+DELIVERY_TOOLS = frozenset(
+    {
+        "get_delivery_options",
+        "set_fulfillment",
+        "set_delivery_details",
     }
 )
 TOOLS_BY_INTENT: dict[AgentIntent, frozenset[str]] = {
@@ -56,6 +68,7 @@ class ToolRegistry:
         self.menu = MenuTools(context)
         self.order = OrderTools(context)
         self.service = ServiceTools(context)
+        self.delivery = DeliveryTools(context)
 
     async def execute_for(
         self,
@@ -76,7 +89,9 @@ class ToolRegistry:
         # A worker that lost the conversation lease must not start new tools.
         self.journal.ensure_active()
         try:
-            if intent == "menu":
+            if name in DELIVERY_TOOLS:
+                result = await self.delivery.execute(name, args)
+            elif intent == "menu":
                 result = await self.menu.execute(
                     name,
                     args,
@@ -131,7 +146,9 @@ class ToolRegistry:
     ) -> dict[str, Any]:
         self.journal.ensure_active()
         try:
-            if name in ORDER_TOOLS:
+            if name in DELIVERY_TOOLS:
+                result = await self.delivery.execute(name, args)
+            elif name in ORDER_TOOLS:
                 result = await self.order.execute(
                     name,
                     args,

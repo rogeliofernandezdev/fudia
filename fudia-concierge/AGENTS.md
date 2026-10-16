@@ -3,7 +3,9 @@
 ## Objetivo
 
 Implementar la experiencia conversacional del comensal para Fudia. El canal
-del alcance actual es WhatsApp iniciado desde el QR de una mesa.
+del alcance actual es WhatsApp iniciado desde el QR de una mesa; al terminar la
+atención en mesa, el mismo chat toma pedidos de recojo o delivery del último
+local visitado por QR.
 
 ## Reglas
 

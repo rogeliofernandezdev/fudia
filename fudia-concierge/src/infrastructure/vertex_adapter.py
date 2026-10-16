@@ -155,7 +155,8 @@ class GeminiConciergeRouter:
             f"{context or '(sin contexto)'}\n\n"
             "Mensaje actual del cliente:\n"
             f"{user_message}\n\n"
-            f"awaiting_confirmation={session.awaiting_confirmation}"
+            f"awaiting_confirmation={session.awaiting_confirmation}\n"
+            f"modo={session.mode}"
         )
         try:
             response = await self.client.aio.models.generate_content(

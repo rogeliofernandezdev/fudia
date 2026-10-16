@@ -8,8 +8,9 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import PlainTextResponse
+from pydantic import ValidationError
 
-from src.domain.models import InboundMessage
+from src.domain.models import GeoPoint, InboundMessage
 from src.metrics import INBOUND_MESSAGES
 
 # Our own `message_ref` (SHA-256 hex) echoed back by Meta status webhooks.
@@ -149,6 +150,54 @@ def _incoming_text_messages(
                 ))
     return result
 
+
+LOCATION_TEXT = "📍 Compartí mi ubicación."
+
+
+def _incoming_locations(
+    data: dict[str, Any],
+) -> list[tuple[str, str, GeoPoint, str]]:
+    """WhatsApp location pins: the delivery point used to quote the fee."""
+    result: list[tuple[str, str, GeoPoint, str]] = []
+    entries = data.get("entry", [])
+    if not isinstance(entries, list):
+        return result
+    for entry in entries:
+        changes = entry.get("changes", []) if isinstance(entry, dict) else []
+        for change in changes if isinstance(changes, list) else []:
+            value = change.get("value", {}) if isinstance(change, dict) else {}
+            if not isinstance(value, dict):
+                continue
+            metadata = value.get("metadata", {})
+            sender_phone_id = (
+                str(metadata.get("phone_number_id", ""))
+                if isinstance(metadata, dict)
+                else ""
+            )
+            messages = value.get("messages", [])
+            for message in messages if isinstance(messages, list) else []:
+                if not isinstance(message, dict) or message.get("type") != "location":
+                    continue
+                content = message.get("location", {})
+                if not isinstance(content, dict):
+                    continue
+                try:
+                    point = GeoPoint(
+                        latitude=float(content.get("latitude", "")),
+                        longitude=float(content.get("longitude", "")),
+                        name=str(content.get("name", ""))[:160],
+                        address=str(content.get("address", ""))[:240],
+                    )
+                except (TypeError, ValueError, ValidationError):
+                    continue
+                result.append((
+                    str(message.get("id", "")),
+                    str(message.get("from", "")),
+                    point,
+                    sender_phone_id,
+                ))
+    return result
+
 def _outbound_statuses(
     data: dict[str, Any],
     configured_phone_id: str,
@@ -237,12 +286,23 @@ async def receive_webhook(
 
     accepted = 0
     queue = request.app.state.inbound_queue
+    incoming: list[tuple[str, str, str, str, GeoPoint | None]] = [
+        (message_id, phone, text, sender_phone_id, None)
+        for message_id, phone, text, sender_phone_id
+        in _incoming_text_messages(data)
+    ]
+    incoming.extend(
+        (message_id, phone, LOCATION_TEXT, sender_phone_id, point)
+        for message_id, phone, point, sender_phone_id
+        in _incoming_locations(data)
+    )
     for (
         message_id,
         phone,
         text,
         sender_phone_id,
-    ) in _incoming_text_messages(data):
+        location,
+    ) in incoming:
         if not message_id or not phone or not text:
             continue
         configured_phone_id = (
@@ -263,6 +323,7 @@ async def receive_webhook(
                 phone=phone,
                 text=text,
                 sender_phone_id=sender_phone_id,
+                location=location,
             )
         )
         if queued:

@@ -54,6 +54,7 @@ def create_app(
         pending_record_ttl_seconds=(
             cfg.processing_pending_record_ttl_seconds
         ),
+        memory_ttl_seconds=cfg.customer_memory_ttl_seconds,
     )
     conversation_lock = RedisConversationLock(
         cfg.redis_url,
@@ -100,6 +101,7 @@ def create_app(
             cfg.conversation_lock_ttl_seconds / 6.0,
         ),
         lock_ttl_seconds=cfg.conversation_lock_ttl_seconds,
+        table_idle_seconds=cfg.table_idle_seconds,
     )
     worker = QueueWorker(
         inbound_queue,

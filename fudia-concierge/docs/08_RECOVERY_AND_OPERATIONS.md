@@ -70,7 +70,7 @@ antes verifica el lock (`RedisConversationStore.commit`):
 
 1. inicio del intento (`processing`, sin sesión);
 2. contexto QR validado (junto con la respuesta de bienvenida);
-3. cada cambio del carrito (`cart`) y la confirmación preparada (`confirmation`);
+3. cada cambio del carrito (`cart`), de los datos de entrega (`delivery`) y la confirmación preparada (`confirmation`);
 4. antes de crear una ronda, solicitar handoff o pedir la cuenta (`effect_pending` con clave y datos de reintento);
 5. resultado de esa operación (`effects_applied`);
 6. respuesta lista para enviar (`reply_ready`).
@@ -82,6 +82,7 @@ antes verifica el lock (`RedisConversationStore.commit`):
 | Agregar/quitar productos | El registro impide volver a ejecutar el turno; el carrito se guarda con el efecto. |
 | Preparar confirmación | `requestId` se crea y persiste en la sesión al preparar. |
 | Crear ronda | Se reutiliza `pending_order_request_id`; si no existía, se crea y persiste antes de llamar. foods-backend devuelve la misma ronda ante el mismo `requestId`. |
+| Crear pedido delivery/recojo | Igual que una ronda: `requestId` persistido antes de llamar y cuerpo completo guardado como datos de reintento (`mode=delivery`). foods-backend devuelve el mismo pedido ante el mismo `requestId` aunque la tarifa haya cambiado; `delivery_fee_changed` (4xx) marca el efecto `failed`, recotiza e invalida la confirmación. |
 | Handoff | foods-backend mantiene un único handoff pendiente por conversación (índice único). |
 | Cuenta | `requestId` nuevo por solicitud, persistido antes de llamar. foods-backend registra cada `requestId` una sola vez (índice único `audit_log_concierge_bill_request_uq`) y devuelve la cuenta vigente al repetirlo; por eso la llamada también se reintenta ante 5xx. |
 
@@ -185,6 +186,7 @@ nodos, revisar esta decisión.
 | Registros recuperables (cualquier otra etapa) | `PROCESSING_PENDING_RECORD_TTL_SECONDS` (14 d) | Debe cubrir la retención del dead-letter (validado al arrancar). |
 | Secuencias por conversación | `QUEUE_ORDER_TTL_SECONDS` (7 d) | Debe superar el TTL de sesión (validado al arrancar). |
 | Sesión/carrito | `SESSION_TTL_SECONDS` (12 h) | |
+| Memoria del cliente (último local por QR y nombre) | `CUSTOMER_MEMORY_TTL_SECONDS` (90 d) | Clave `fudia:concierge:customer:{identity}`, escrita en el mismo commit con fencing que la sesión. Permite pedidos de recojo/delivery cuando la sesión expiró. |
 | Estados de Meta | 24 h | |
 
 Confirmar (`XACK`) no borra la entrada: solo la retención lo hace. La tarea de

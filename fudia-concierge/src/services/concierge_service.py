@@ -5,6 +5,7 @@ import logging
 import re
 import time
 from collections.abc import Awaitable, Callable, Coroutine
+from decimal import Decimal
 from typing import Any, Literal, cast
 from uuid import uuid4
 
@@ -13,9 +14,12 @@ from src.domain.intents import AgentIntent, ConciergeRoute
 from src.domain.models import (
     ChatMessage,
     ConversationSession,
+    DeliveryDetails,
     EffectRecord,
+    GeoPoint,
     InboundMessage,
     ProcessingRecord,
+    VenueContext,
 )
 from src.graph.app import build_graph
 from src.metrics import (
@@ -26,6 +30,7 @@ from src.metrics import (
     SCOPE_DECISIONS,
 )
 from src.observability import fingerprint, log_event
+from src.services.delivery_tools import apply_quote, delivery_summary
 from src.services.ports import (
     AllowAllRateLimiter,
     ConversationLease,
@@ -53,9 +58,13 @@ MATH_TOPIC_PATTERN = re.compile(
     r"(?i)\b(fracciones?|ecuaciones?|ra[ií]z cuadrada|derivadas?|integrales?)\b"
 )
 OFF_SCOPE_REPLY = (
-    "Puedo ayudarte únicamente con el pedido de esta mesa: consultar la carta, "
-    "agregar o retirar productos, confirmar pedidos, pedir la cuenta o solicitar "
-    "atención del personal."
+    "Puedo ayudarte únicamente con el pedido en este restaurante: consultar la "
+    "carta, agregar o retirar productos, confirmar pedidos, delivery o recojo, "
+    "pedir la cuenta o solicitar atención del personal."
+)
+SCAN_QR_REPLY = (
+    "Para comenzar, escanea el QR de tu mesa y abre WhatsApp "
+    "desde ese enlace."
 )
 TOO_LONG_REPLY = (
     "Tu mensaje es demasiado largo. "
@@ -95,6 +104,49 @@ def obviously_out_of_scope(text: str) -> bool:
     )
 
 
+def agent_message(session: ConversationSession, user_message: str) -> str:
+    """Table turns go to the agent unchanged; delivery turns carry the
+    current delivery state so the agent knows what is still missing."""
+    if session.mode != "delivery":
+        return user_message
+    summary = delivery_summary(session)
+    venue = session.venue
+    fulfillment = {
+        "delivery": "delivery",
+        "pickup": "recojo en el local",
+    }.get(str(summary["fulfillment"]), "pendiente de elegir")
+    location = "no compartida"
+    if summary.get("locationShared"):
+        location = (
+            f"compartida, a {summary['distanceKm']} km; envío "
+            f"{summary['currencySymbol']} {summary['deliveryFee']}"
+            if summary.get("covered")
+            else (
+                f"fuera de cobertura ({summary['distanceKm']} km; máximo "
+                f"{summary['maxDistanceKm']} km)"
+            )
+        )
+    lines = [
+        "[Estado de la atención (no lo copies textual)]",
+        "Modo: pedido sin mesa (la atención en mesa terminó) en "
+        f"{venue.organizationName} - {venue.locationName}."
+        if venue
+        else "Modo: pedido sin mesa (la atención en mesa terminó).",
+        f"Tipo de entrega: {fulfillment}.",
+        f"Nombre del cliente: {summary['customerName'] or 'pendiente'}.",
+    ]
+    if summary["fulfillment"] == "delivery":
+        lines += [
+            f"Ubicación: {location}.",
+            f"Dirección escrita: {summary.get('address') or 'pendiente'}.",
+            f"Referencia: {summary.get('reference') or 'sin referencia'}.",
+        ]
+    if summary["missing"]:
+        lines.append("Falta: " + ", ".join(summary["missing"]) + ".")
+    lines += ["", "Mensaje del cliente:", user_message]
+    return "\n".join(lines)
+
+
 class ConciergeService:
     """Processing phase of an inbound message.
 
@@ -116,8 +168,10 @@ class ConciergeService:
         lock_heartbeat_seconds: float = 5.0,
         lock_ttl_seconds: float = 30.0,
         clock: Callable[[], float] = time.time,
+        table_idle_seconds: float = 10_800.0,
     ) -> None:
         self.store = store
+        self.table_idle_seconds = table_idle_seconds
         self.fudia = fudia
         self.conversation_lock = (
             conversation_lock or LocalConversationLock()
@@ -197,9 +251,11 @@ class ConciergeService:
                     args,
                 )
 
+            # Tools keep the diner's literal words (explicit confirmation);
+            # only the agent also reads the current delivery state.
             return await self.agents[intent].reply(
                 session,
-                user_message,
+                agent_message(session, user_message),
                 execute,
             )
 
@@ -445,6 +501,16 @@ class ConciergeService:
             session.conversation_id = uuid4().hex
             session.context_sequence = message.sequence
             session.table = table
+            session.mode = "table"
+            session.venue = VenueContext(
+                organizationName=table.organizationName,
+                locationName=table.locationName,
+            )
+            session.delivery = DeliveryDetails(
+                customer_name=session.delivery.customer_name
+            )
+            session.last_order_id = None
+            session.last_activity_at = self.clock()
             session.cart = []
             session.awaiting_confirmation = False
             session.pending_order_request_id = None
@@ -462,13 +528,51 @@ class ConciergeService:
             ]
             return reply, "session"
 
-        if not session.qr_token or session.table is None:
-            return (
-                "Para comenzar, escanea el QR de tu mesa y abre WhatsApp "
-                "desde ese enlace.",
-                "none",
+        notice = ""
+        if not session.qr_token:
+            # No live session: the venue of the last QR still takes delivery
+            # or pickup orders; without one the diner must scan a QR.
+            memory = await self.store.get_memory(
+                message.phone, session.channel_key
             )
-        if session.handoff_pending:
+            if memory is None:
+                return SCAN_QR_REPLY, "none"
+            session.qr_token = memory.qr_token
+            self._open_delivery(
+                session, message, memory.venue, memory.customer_name
+            )
+            notice = (
+                f"Hola de nuevo. Puedo tomar tu pedido de "
+                f"{memory.venue.organizationName} para recojo en el local "
+                "o delivery."
+            )
+        elif session.mode == "table":
+            if session.table is None:
+                return SCAN_QR_REPLY, "none"
+            if await self._table_service_ended(session):
+                venue = session.venue or VenueContext(
+                    organizationName=session.table.organizationName,
+                    locationName=session.table.locationName,
+                )
+                self._open_delivery(
+                    session, message, venue, session.delivery.customer_name
+                )
+                notice = (
+                    "Tu atención en mesa ya terminó. Ahora puedo tomar tu "
+                    f"pedido de {venue.organizationName} para recojo en el "
+                    "local o delivery."
+                )
+        session.last_activity_at = self.clock()
+
+        if message.location is not None:
+            reply, change = await self._location_reply(
+                session, message.location
+            )
+            if notice:
+                return f"{notice}\n\n{reply}", "transcript"
+            return reply, change
+
+        if session.mode == "table" and session.handoff_pending:
             try:
                 handoff = await self.fudia.get_handoff_status(
                     session.qr_token,
@@ -493,6 +597,8 @@ class ConciergeService:
             SCOPE_DECISIONS.labels(
                 decision="out_of_scope"
             ).inc()
+            if notice:
+                return f"{notice}\n\n{OFF_SCOPE_REPLY}", "transcript"
             return OFF_SCOPE_REPLY, "none"
 
         result = await self.graph.ainvoke(
@@ -504,7 +610,114 @@ class ConciergeService:
                 "journal": journal,
             }
         )
-        return str(result["reply"]), "transcript"
+        reply = str(result["reply"])
+        return (f"{notice}\n\n{reply}" if notice else reply), "transcript"
+
+    async def _table_service_ended(
+        self,
+        session: ConversationSession,
+    ) -> bool:
+        """The QR is permanent per table: once the diner's account ended the
+        next diner may already be seated, so this conversation must stop
+        adding rounds to that table."""
+        if session.handoff_pending:
+            return False
+        if session.last_order_id and session.qr_token:
+            try:
+                status = await self.fudia.get_order_status(
+                    session.qr_token,
+                    session.last_order_id,
+                    session.conversation_id,
+                )
+            except FudiaError as exc:
+                return exc.code == "order_not_found"
+            return not status.active
+        return bool(
+            session.last_activity_at
+            and self.clock() - session.last_activity_at
+            > self.table_idle_seconds
+        )
+
+    def _open_delivery(
+        self,
+        session: ConversationSession,
+        message: InboundMessage,
+        venue: VenueContext,
+        customer_name: str,
+    ) -> None:
+        """New context without a table: nothing from the table carries over
+        (cart, confirmation, handoff or transcript)."""
+        session.conversation_id = uuid4().hex
+        session.context_sequence = message.sequence
+        session.mode = "delivery"
+        session.table = None
+        session.venue = venue
+        session.delivery = DeliveryDetails(customer_name=customer_name)
+        session.cart = []
+        session.awaiting_confirmation = False
+        session.pending_order_request_id = None
+        session.last_order_id = None
+        session.handoff_pending = False
+        session.messages = []
+
+    async def _location_reply(
+        self,
+        session: ConversationSession,
+        point: GeoPoint,
+    ) -> tuple[str, SessionChange]:
+        """A shared pin is quoted by foods-backend without the model."""
+        if session.mode != "delivery" or not session.qr_token:
+            return (
+                "Recibí tu ubicación. Mientras tu atención en mesa siga "
+                "abierta, tu pedido se atiende en la mesa.",
+                "none",
+            )
+        try:
+            quote = await self.fudia.quote_delivery(
+                session.qr_token, point.latitude, point.longitude
+            )
+        except FudiaError as exc:
+            if exc.code == "delivery_unavailable":
+                return (
+                    "Por ahora este local no tiene delivery. Puedes pedir "
+                    "para recoger en el local.",
+                    "transcript",
+                )
+            return (
+                "No pude calcular el costo de envío en este momento. "
+                "Vuelve a compartir tu ubicación en unos minutos.",
+                "none",
+            )
+        apply_quote(session, point, quote)
+        # A new delivery point may change the fee: confirm again.
+        session.awaiting_confirmation = False
+        session.pending_order_request_id = None
+        symbol = quote.currencySymbol
+        distance = quote.distanceKm.quantize(Decimal("0.01"))
+        if not quote.covered:
+            limit = quote.maxDistanceKm.quantize(Decimal("0.01"))
+            return (
+                f"Tu ubicación está a {distance} km del local y nuestro "
+                f"delivery llega hasta {limit} km. Puedes compartir otra "
+                "ubicación o recoger tu pedido en el local.",
+                "transcript",
+            )
+        lines = [
+            f"Tu ubicación está a {distance} km del local. El delivery "
+            f"cuesta {symbol} {quote.fee.quantize(Decimal('0.01'))}.".replace(
+                "  ", " "
+            )
+        ]
+        if not session.delivery.address:
+            lines.append(
+                "Escríbeme la dirección exacta y una referencia para el "
+                "repartidor."
+            )
+        if not session.delivery.customer_name:
+            lines.append("¿A nombre de quién va el pedido?")
+        if not session.cart:
+            lines.append("¿Qué te gustaría pedir?")
+        return " ".join(lines), "transcript"
 
     async def _recover(
         self,
@@ -557,13 +770,18 @@ class ConciergeService:
         await journal.lease.verify()
         try:
             if effect.kind == "create_order":
-                order = await self.fudia.create_order(
-                    token,
-                    phone,
-                    list(payload.get("lines", [])),
-                    conversation_id=conversation_id,
-                    request_id=effect.request_id,
-                )
+                if payload.get("mode") == "delivery":
+                    order = await self.fudia.create_delivery_order(
+                        token, dict(payload.get("order", {}))
+                    )
+                else:
+                    order = await self.fudia.create_order(
+                        token,
+                        phone,
+                        list(payload.get("lines", [])),
+                        conversation_id=conversation_id,
+                        request_id=effect.request_id,
+                    )
                 if (
                     same_context
                     and session.pending_order_request_id == effect.request_id

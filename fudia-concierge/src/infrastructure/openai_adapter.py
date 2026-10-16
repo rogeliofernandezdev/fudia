@@ -92,7 +92,8 @@ class OpenAIConciergeRouter:
             f"{context or '(sin contexto)'}\n\n"
             "Mensaje actual del cliente:\n"
             f"{user_message}\n\n"
-            f"awaiting_confirmation={session.awaiting_confirmation}"
+            f"awaiting_confirmation={session.awaiting_confirmation}\n"
+            f"modo={session.mode}"
         )
         options: dict[str, Any] = {}
         if self.max_output_tokens:

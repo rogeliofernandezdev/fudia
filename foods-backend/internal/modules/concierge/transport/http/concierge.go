@@ -112,3 +112,48 @@ func (h *Handler) GetConciergeProductModifiers(w http.ResponseWriter, r *http.Re
 	out, err := h.service.Modifiers(r.Context(), r.PathValue("token"), r.PathValue("id"))
 	respond(w, 200, out, err)
 }
+func (h *Handler) GetConciergeDeliveryOptions(w http.ResponseWriter, r *http.Request) {
+	out, err := h.service.DeliveryOptions(r.Context(), r.PathValue("token"))
+	respond(w, 200, out, err)
+}
+
+// QuoteConciergeDelivery recibe la ubicación del cliente en el cuerpo, nunca en la URL.
+func (h *Handler) QuoteConciergeDelivery(w http.ResponseWriter, r *http.Request) {
+	var in domain.DeliveryQuoteInput
+	if json.NewDecoder(r.Body).Decode(&in) != nil {
+		shared.Fail(w, 400, "invalid_location", "Comparte una ubicación válida para calcular el delivery.")
+		return
+	}
+	out, err := h.service.QuoteDelivery(r.Context(), r.PathValue("token"), in)
+	respond(w, 200, out, err)
+}
+func (h *Handler) CreateConciergeDeliveryOrder(w http.ResponseWriter, r *http.Request) {
+	var in application.DeliveryOrderInput
+	if json.NewDecoder(r.Body).Decode(&in) != nil {
+		shared.Fail(w, 400, "invalid_order", "Revisa los datos enviados.")
+		return
+	}
+	out, err := h.service.SubmitDelivery(r.Context(), r.PathValue("token"), in)
+	status := 200
+	if out.Created {
+		status = 201
+	}
+	respond(w, status, out.Order, err)
+}
+func (h *Handler) GetConciergeOrderStatus(w http.ResponseWriter, r *http.Request) {
+	out, err := h.service.OrderStatus(r.Context(), r.PathValue("token"), r.PathValue("orderId"), r.URL.Query().Get("conversationId"))
+	respond(w, 200, out, err)
+}
+func (h *Handler) GetConciergeDeliveryFees(w http.ResponseWriter, r *http.Request) {
+	out, err := h.service.DeliveryFees(r.Context(), conciergeScope(r))
+	respond(w, 200, out, err)
+}
+func (h *Handler) SaveConciergeDeliveryFees(w http.ResponseWriter, r *http.Request) {
+	var in domain.DeliveryFeesInput
+	if json.NewDecoder(r.Body).Decode(&in) != nil {
+		shared.Fail(w, 400, "invalid_delivery_fees", "Revisa los rangos de distancia y costos.")
+		return
+	}
+	out, err := h.service.SaveDeliveryFees(r.Context(), conciergeScope(r), in)
+	respond(w, 200, out, err)
+}

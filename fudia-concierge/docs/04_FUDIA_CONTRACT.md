@@ -16,6 +16,26 @@ foods-backend deriva organización, local y mesa desde el QR y recalcula precios
 
 La primera ronda abre la comanda. Las posteriores se agregan al mismo consumo y crean tickets KDS independientes.
 
+## Estado del pedido
+
+GET /v1/integrations/concierge/{token}/orders/{orderId}?conversationId=...
+
+Devuelve código, canal, estado, totales, estado de pago y `active`. Solo responde para pedidos creados por esa conversación (404 en otro caso). `active=false` significa que la atención terminó: cuenta de mesa pagada y entregada, o delivery/recojo entregado o cancelado.
+
+## Delivery y recojo
+
+GET /v1/integrations/concierge/{token}/delivery-options
+
+Recojo siempre disponible; `deliveryAvailable` exige ubicación del local y al menos un rango. Incluye dirección y teléfono del local, alcance máximo y rangos `{maxDistanceKm, fee}`.
+
+POST /v1/integrations/concierge/{token}/delivery-quote
+
+Cuerpo `{latitude, longitude}` (la ubicación nunca viaja en la URL). Devuelve `covered`, `distanceKm` (línea recta, 0.01 km), `fee`, `maxDistanceKm`. `409 delivery_unavailable` si el local no tiene delivery.
+
+POST /v1/integrations/concierge/{token}/delivery-orders
+
+Cuerpo `{fulfillment: delivery|pickup, customerName, customerPhone, conversationId, requestId, items, address?, reference?, latitude?, longitude?, quotedFee?}`. foods-backend recalcula precios, distancia y tarifa: `409 delivery_out_of_range` o `409 delivery_fee_changed` si la tarifa aceptada ya no es la vigente. `requestId` es idempotente: repetirlo devuelve el mismo pedido aunque las tarifas hayan cambiado. Crea un pedido `delivery` o `recojo` sin mesa, confirmado y enviado a cocina.
+
 ## Cuenta
 
 POST /v1/integrations/concierge/{token}/bill

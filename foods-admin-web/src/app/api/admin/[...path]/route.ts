@@ -24,4 +24,4 @@ async function proxy(request:NextRequest,{params}:{params:Promise<{path:string[]
   return NextResponse.json({code:"api_unavailable",message:hasBody?"No pudimos confirmar la operación. Revisa los registros antes de intentarlo nuevamente.":"El servicio no está disponible. Intenta nuevamente.",correlationId},{status:503,headers:{"X-Request-ID":correlationId}});
  }
 }
-export const GET=proxy;export const POST=proxy;export const PATCH=proxy;export const DELETE=proxy;
+export const GET=proxy;export const POST=proxy;export const PUT=proxy;export const PATCH=proxy;export const DELETE=proxy;

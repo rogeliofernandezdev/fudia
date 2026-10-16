@@ -148,6 +148,17 @@ def recovery_reply(
         )
     if effect.kind == "create_order":
         order = effect.result.get("order", {})
+        fulfillment = effect.payload.get("order", {}).get("fulfillment")
+        if effect.payload.get("mode") == "delivery":
+            how = (
+                "Te lo enviaremos con nuestro delivery y pagas al recibirlo."
+                if fulfillment == "delivery"
+                else "Puedes recogerlo en el local y pagas al recogerlo."
+            )
+            return (
+                f"Tu pedido {order.get('code', '')} fue registrado. "
+                f"Total: {_money('', order.get('total', '0'))}. {how}"
+            )
         return (
             f"Tu pedido {order.get('code', '')} fue registrado. "
             f"Total de esta ronda: {_money('', order.get('total', '0'))}."
@@ -166,6 +177,11 @@ def recovery_reply(
             "saldo pendiente "
             f"{_money(symbol, effect.result.get('remainingAmount'))}. "
             "El pago se realiza con el personal del local."
+        )
+    if effect.kind == "delivery":
+        return (
+            "Actualicé los datos de entrega de tu pedido. "
+            "¿Deseas algo más o confirmamos?"
         )
     cart = effect.result.get("cart", {})
     if effect.kind == "confirmation" and session.awaiting_confirmation:

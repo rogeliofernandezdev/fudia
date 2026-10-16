@@ -32,6 +32,8 @@ READ_ONLY_TOOLS = frozenset(
         "get_modifier_options",
         "get_combo_options",
         "view_cart",
+        "get_delivery_options",
+        "check_order_status",
     }
 )
 

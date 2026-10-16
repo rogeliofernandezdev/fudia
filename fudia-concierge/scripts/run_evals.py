@@ -91,6 +91,7 @@ async def evaluate(router: Any, tier: str) -> list[str]:
                     False,
                 )
             ),
+            mode=str(case.get("mode", "table")),  # type: ignore[arg-type]
         )
         actual = await router.route(
             session,

@@ -10,6 +10,13 @@ Ticket operativo de pago (2026-10-08): PDF de 80 mm con preview y acción explí
 de impresión después del cobro, copias desde POS/Ventas y contexto real del local.
 No es facturación electrónica; la emisión fiscal permanece en P0. Cierre A4 intacto.
 
+Concierge: delivery y recojo tras la mesa (2026-10-16). Al terminar la atención en
+mesa (o tras 3 h sin pedidos, o con la sesión expirada) el bot toma pedidos del
+mismo local para recojo o delivery propio; la tarifa se calcula por distancia en
+línea recta con rangos por local configurados en Admin › Fudia Concierge.
+Migración 000083. Pendiente: correr la integración en PostgreSQL efímero (CI) y
+los evals reales del router con Vertex.
+
 - Fecha: **2026-09-24**
 - Rama revisada: `feat/redesign-nueva-comanda`
 - Commit de implementación/hardening verificado: `27db62e5d770b9fb7ebf35a95475bb0117a5b112`
@@ -140,7 +147,7 @@ esté terminado. Falta la parte de costeo y rentabilidad.
 
 | Módulo | Clave | Estado | Observación |
 | --- | --- | --- | --- |
-| Delivery propio | `delivery` | 🟡 Parcial | Alta manual desde Pedidos (Delivery, Recojo y Mostrador): datos de atención → comanda compartida con Salón, sin mesa ficticia ni creación al avanzar; conserva ítems y notas al volver. Catálogo real y envío a Cocina implementados el 2026-10-07; reutiliza seguimiento y cobro existentes. Pendientes repartidores, zonas/tarifas y seguimiento logístico. No se cambia la disponibilidad comercial del módulo avanzado. |
+| Delivery propio | `delivery` | 🟡 Parcial | Alta manual desde Pedidos (Delivery, Recojo y Mostrador): datos de atención → comanda compartida con Salón, sin mesa ficticia ni creación al avanzar; conserva ítems y notas al volver. Catálogo real y envío a Cocina implementados el 2026-10-07; reutiliza seguimiento y cobro existentes. Tarifas por distancia en línea recta (rangos por local) ya existen para pedidos de Concierge (2026-10-16); pendientes repartidores, zonas por polígono, tarifas en pedidos manuales y seguimiento logístico. No se cambia la disponibilidad comercial del módulo avanzado. |
 | Apps de delivery | `delivery_apps` | ⚪ Planificado | Pendiente. |
 | App repartidores | `repartidores` | ⚪ Planificado | Pendiente. |
 
@@ -171,7 +178,7 @@ esté terminado. Falta la parte de costeo y rentabilidad.
 | Usuarios y roles | `usuarios` | 🟢 Ready / activable | Roles/permisos forman parte del onboarding. Auditoría de cierre pendiente. |
 | Facturación | `facturacion` | 🔵 En desarrollo | Pantallas actuales no constituyen facturación electrónica real. **Siguiente prioridad.** |
 | Integraciones | `integraciones` | 🔵 En desarrollo | Pendiente completar adaptadores operativos. |
-| Fudia Concierge | `whatsapp_bot` | ✅ **100% cerrado** | QR/WhatsApp, menú real, pedidos/KDS, combos, modificadores, rondas, cuenta, handoff, multiagente, cola durable, aislamiento multicanal, resiliencia, observabilidad, evals y CI/Docker están cerrados. La activación comercial sigue dependiendo del plan/entitlement; el go-live requiere credenciales externas. |
+| Fudia Concierge | `whatsapp_bot` | ✅ **100% cerrado** | QR/WhatsApp, menú real, pedidos/KDS, combos, modificadores, rondas, cuenta, handoff, multiagente, cola durable, aislamiento multicanal, resiliencia, observabilidad, evals y CI/Docker están cerrados. La activación comercial sigue dependiendo del plan/entitlement; el go-live requiere credenciales externas. Ampliación 2026-10-16: delivery/recojo tras la mesa con tarifas por distancia (pendiente CI con PostgreSQL y evals reales). |
 
 ---
 

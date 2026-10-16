@@ -19,6 +19,12 @@ class Settings(BaseSettings):
 
     redis_url: str = "redis://localhost:6379/0"
     session_ttl_seconds: int = 43_200
+    # Last venue visited by QR: lets a diner whose table service ended order
+    # delivery or pickup from that venue (90 days by default).
+    customer_memory_ttl_seconds: int = Field(default=7_776_000, ge=86_400)
+    # A table context with no concierge order ends after this idle time; an
+    # order ends it when foods-backend reports the account finished.
+    table_idle_seconds: int = Field(default=10_800, ge=600)
     queue_stream: str = "fudia:concierge:inbound"
     queue_group: str = "fudia-concierge"
     queue_consumer: str = ""

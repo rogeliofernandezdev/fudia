@@ -96,3 +96,17 @@ desactualizados.
 reversión, saldo separado por local y día en zona horaria distinta de UTC,
 inventario fraccionario con unidad, Sin control null, agotado manual, inactividad,
 horario y ausencia de cupo del día. Conserva la descripción para editar.
+
+## Delivery y recojo de Concierge
+
+`delivery/domain/fees_test.go` prueba la distancia en línea recta redondeada a
+0.01 km, la elección del primer rango que cubre la distancia, la ausencia de
+cobertura sin rangos o más allá del mayor límite y la validación de rangos
+(límites, decimales, duplicados y máximo de 10).
+`concierge_delivery_integration_test.go` cubre: sin ubicación ni rangos solo hay
+recojo; opciones y cotización dentro y fuera de cobertura; tarifa aceptada
+desactualizada rechazada con `delivery_fee_changed`; pedido delivery sin mesa con
+precios del catálogo, envío y distancia guardados; reintento idempotente con el
+mismo pedido aunque cambien las tarifas; pedido de recojo sin dirección ni envío;
+estado visible solo para la conversación dueña y `active=false` al cancelar. Se
+ejecuta con `DATABASE_URL` de una base efímera (CI), nunca con datos del negocio.

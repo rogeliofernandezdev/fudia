@@ -11,6 +11,16 @@ from src.services.tooling import ToolContext
 
 T = TypeVar("T")
 
+ORDER_STATUS_LABELS = {
+    "nuevo": "recibido",
+    "confirmado": "confirmado",
+    "preparando": "en preparación",
+    "listo": "listo",
+    "en_camino": "en camino",
+    "entregado": "entregado",
+    "cancelado": "cancelado",
+}
+
 
 class ServiceTools:
     def __init__(self, context: ToolContext) -> None:
@@ -21,6 +31,15 @@ class ServiceTools:
         name: str,
         args: dict[str, Any],
     ) -> dict[str, Any]:
+        if name == "check_order_status":
+            return await self._order_status()
+
+        if self.context.session.mode == "delivery" and name in {
+            "request_bill",
+            "request_human",
+        }:
+            return await self._not_at_table(name)
+
         if name == "request_human":
             reason = str(args.get("reason", "")).strip()
             if len(reason) > 240:
@@ -125,6 +144,53 @@ class ServiceTools:
             }
 
         return {"ok": False, "code": "unknown_service_tool"}
+
+    async def _order_status(self) -> dict[str, Any]:
+        session = self.context.session
+        if not session.last_order_id:
+            return {"ok": False, "code": "no_confirmed_order"}
+        status = await self.context.fudia.get_order_status(
+            self.context.token(),
+            session.last_order_id,
+            session.conversation_id,
+        )
+        return {
+            "ok": True,
+            "order": {
+                "code": status.code,
+                "channel": status.channel,
+                "status": status.status,
+                "statusLabel": ORDER_STATUS_LABELS.get(
+                    status.status, status.status
+                ),
+                "total": str(status.total),
+                "deliveryFee": str(status.deliveryFee),
+                "paymentStatus": status.paymentStatus,
+                "active": status.active,
+            },
+        }
+
+    async def _not_at_table(self, name: str) -> dict[str, Any]:
+        # Without a table there is no bill to request nor staff to send.
+        options = await self.context.fudia.get_delivery_options(
+            self.context.token()
+        )
+        return {
+            "ok": False,
+            "code": (
+                "bill_not_available_for_delivery"
+                if name == "request_bill"
+                else "handoff_not_available_for_delivery"
+            ),
+            "message": (
+                "El pago de delivery o recojo se hace al recibir o recoger "
+                "el pedido."
+                if name == "request_bill"
+                else "Para ayuda con tu pedido comunícate con el local."
+            ),
+            "locationName": options.locationName,
+            "locationPhone": options.locationPhone,
+        }
 
     async def _effect(self, operation: Awaitable[T]) -> T:
         try:

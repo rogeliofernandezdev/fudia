@@ -4,7 +4,11 @@ import time
 
 import redis.asyncio as redis
 
-from src.domain.models import ConversationSession, ProcessingRecord
+from src.domain.models import (
+    ConversationSession,
+    CustomerMemory,
+    ProcessingRecord,
+)
 from src.infrastructure.concurrency import lock_key
 from src.services.ports import ConversationLease, LockLostError, message_ref
 from src.services.ports import ConversationStore as ConversationStore
@@ -23,6 +27,10 @@ def record_key(message_id: str) -> str:
 
 def outbound_key(ref: str) -> str:
     return f"fudia:concierge:outbound:{ref}"
+
+
+def memory_key(identity: str) -> str:
+    return f"fudia:concierge:customer:{identity}"
 
 
 def _stamp(record: ProcessingRecord) -> ProcessingRecord:
@@ -47,6 +55,9 @@ class RedisConversationStore:
     if ARGV[4] ~= '' then
       redis.call('SET', KEYS[3], ARGV[4], 'EX', ARGV[5])
     end
+    if ARGV[6] ~= '' then
+      redis.call('SET', KEYS[4], ARGV[6], 'EX', ARGV[7])
+    end
     return 1
     """
 
@@ -57,6 +68,7 @@ class RedisConversationStore:
         record_ttl_seconds: int = 259_200,
         pending_record_ttl_seconds: int = 1_209_600,
         outbound_status_ttl_seconds: int = 86_400,
+        memory_ttl_seconds: int = 7_776_000,
     ) -> None:
         self.client = redis.from_url(
             redis_url,
@@ -66,6 +78,7 @@ class RedisConversationStore:
         self.record_ttl_seconds = record_ttl_seconds
         self.pending_record_ttl_seconds = pending_record_ttl_seconds
         self.outbound_status_ttl_seconds = outbound_status_ttl_seconds
+        self.memory_ttl_seconds = memory_ttl_seconds
 
     def _key(
         self,
@@ -95,6 +108,18 @@ class RedisConversationStore:
             return None
         return ConversationSession.model_validate_json(raw)
 
+    async def get_memory(
+        self,
+        phone: str,
+        channel_key: str = "default",
+    ) -> CustomerMemory | None:
+        raw = await self.client.get(
+            memory_key(_session_identity(phone, channel_key))
+        )
+        if not raw:
+            return None
+        return CustomerMemory.model_validate_json(raw)
+
     async def save(
         self,
         session: ConversationSession,
@@ -117,9 +142,11 @@ class RedisConversationStore:
         lease.ensure()
         if record is not None:
             _stamp(record)
+        # The venue memory changes with the session, under the same fence.
+        memory = session.memory() if session is not None else None
         committed = await self.client.eval(
             self._COMMIT_SCRIPT,
-            3,
+            4,
             lock_key(lease.identity),
             session_key(lease.identity),
             (
@@ -127,11 +154,14 @@ class RedisConversationStore:
                 if record is not None
                 else session_key(lease.identity)
             ),
+            memory_key(lease.identity),
             lease.token,
             session.model_dump_json() if session is not None else "",
             self.ttl_seconds,
             record.model_dump_json() if record is not None else "",
             self._record_ttl(record) if record is not None else 0,
+            memory.model_dump_json() if memory is not None else "",
+            self.memory_ttl_seconds,
         )
         if not committed:
             lease.mark_lost()
@@ -188,6 +218,7 @@ class MemoryConversationStore:
         ] = {}
         self.records: dict[str, ProcessingRecord] = {}
         self.outbound: dict[str, str] = {}
+        self.memories: dict[str, CustomerMemory] = {}
 
     def _key(
         self,
@@ -210,6 +241,14 @@ class MemoryConversationStore:
         if value is None:
             return None
         return value.model_copy(deep=True)
+
+    async def get_memory(
+        self,
+        phone: str,
+        channel_key: str = "default",
+    ) -> CustomerMemory | None:
+        value = self.memories.get(self._key(phone, channel_key))
+        return value.model_copy(deep=True) if value else None
 
     async def save(
         self,
@@ -236,6 +275,9 @@ class MemoryConversationStore:
             raise LockLostError("La conversación pasó a otro proceso.")
         if session is not None:
             self.items[lease.identity] = session.model_copy(deep=True)
+            memory = session.memory()
+            if memory is not None:
+                self.memories[lease.identity] = memory
         if record is not None:
             self.records[message_ref(record.message_id)] = (
                 _stamp(record).model_copy(deep=True)

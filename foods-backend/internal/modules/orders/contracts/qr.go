@@ -22,4 +22,31 @@ type TableSubmission struct {
  // transaction contracts stable while consumers stop importing domain directly.
 type Order = domain.Order
 type OrderItem = domain.OrderItem
+type OrderItemInput = domain.OrderItemInput
 var Channels = domain.Channels
+
+// ConciergeDeliveryInput crea un pedido de delivery o recojo sin mesa.
+// Concierge calcula DeliveryFee y DistanceKm con las tarifas del local antes
+// de enviarlo; Orders no recibe precios de productos desde el cliente.
+type ConciergeDeliveryInput struct {
+	Channel        string                  `json:"channel"`
+	CustomerName   string                  `json:"customerName"`
+	CustomerPhone  string                  `json:"customerPhone"`
+	ConversationID string                  `json:"conversationId"`
+	RequestID      string                  `json:"requestId"`
+	Address        string                  `json:"address"`
+	Reference      string                  `json:"reference"`
+	Notes          string                  `json:"notes"`
+	Latitude       *float64                `json:"latitude"`
+	Longitude      *float64                `json:"longitude"`
+	DistanceKm     *float64                `json:"distanceKm"`
+	DeliveryFee    float64                 `json:"deliveryFee"`
+	Items          []domain.OrderItemInput `json:"items"`
+}
+
+// ConciergeOrderState indica si el pedido de una conversación sigue en
+// atención (mesa abierta o delivery/recojo no entregado ni cancelado).
+type ConciergeOrderState struct {
+	Order  domain.Order
+	Active bool
+}

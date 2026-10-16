@@ -110,17 +110,115 @@ class CartLine(BaseModel):
     modifiers: list[CartModifier] = Field(default_factory=list)
 
 
+class GeoPoint(BaseModel):
+    """Ubicación compartida por WhatsApp (pin)."""
+
+    latitude: float = Field(ge=-90, le=90)
+    longitude: float = Field(ge=-180, le=180)
+    name: str = ""
+    address: str = ""
+
+
+Fulfillment = Literal["delivery", "pickup"]
+SessionMode = Literal["table", "delivery"]
+
+
+class DeliveryDetails(BaseModel):
+    """Datos de entrega de un pedido sin mesa.
+
+    `fee`/`distance_km` vienen de la cotización de foods-backend para el pin
+    compartido; nunca del texto del cliente ni del modelo.
+    """
+
+    fulfillment: Fulfillment | None = None
+    customer_name: str = ""
+    address: str = ""
+    reference: str = ""
+    location: GeoPoint | None = None
+    covered: bool = False
+    distance_km: Decimal | None = None
+    fee: Decimal | None = None
+    max_distance_km: Decimal | None = None
+    currency_symbol: str = ""
+
+
+class VenueContext(BaseModel):
+    organizationName: str
+    locationName: str
+
+
+class CustomerMemory(BaseModel):
+    """Último local que el cliente visitó por QR. Sobrevive a la sesión para
+    tomar pedidos de delivery/recojo de ese local cuando ya no está en mesa."""
+
+    qr_token: str
+    venue: VenueContext
+    customer_name: str = ""
+
+
+class DeliveryTier(BaseModel):
+    maxDistanceKm: Decimal
+    fee: Decimal
+
+
+class DeliveryOptions(BaseModel):
+    locationName: str
+    locationAddress: str = ""
+    locationPhone: str = ""
+    currencySymbol: str = ""
+    pickupAvailable: bool = True
+    deliveryAvailable: bool = False
+    maxDistanceKm: Decimal = Decimal("0")
+    tiers: list[DeliveryTier] = Field(default_factory=list)
+
+
+class DeliveryQuote(BaseModel):
+    covered: bool
+    distanceKm: Decimal
+    fee: Decimal
+    maxDistanceKm: Decimal
+    currencySymbol: str = ""
+
+
+class OrderStatus(BaseModel):
+    orderId: str
+    code: str
+    channel: str
+    status: str
+    subtotal: Decimal = Decimal("0")
+    deliveryFee: Decimal = Decimal("0")
+    total: Decimal
+    paymentStatus: str = ""
+    active: bool
+
+
 class ConversationSession(BaseModel):
     phone: str
     channel_key: str = "default"
     conversation_id: str = Field(default_factory=lambda: uuid4().hex)
     qr_token: str | None = None
     table: TableContext | None = None
+    # "table": atención en mesa abierta por QR. "delivery": la atención en
+    # mesa terminó y el bot toma pedidos de delivery o recojo del mismo local.
+    mode: SessionMode = "table"
+    venue: VenueContext | None = None
+    delivery: DeliveryDetails = Field(default_factory=DeliveryDetails)
+    last_activity_at: float = 0.0
     cart: list[CartLine] = Field(default_factory=list)
     awaiting_confirmation: bool = False
     pending_order_request_id: str | None = None
     last_order_id: str | None = None
     handoff_pending: bool = False
+    def memory(self) -> CustomerMemory | None:
+        """What outlives the session: the venue of the last QR context."""
+        if not self.qr_token or self.venue is None:
+            return None
+        return CustomerMemory(
+            qr_token=self.qr_token,
+            venue=self.venue,
+            customer_name=self.delivery.customer_name,
+        )
+
     # Queue sequence of the QR message that opened the current context.
     # Messages enqueued before it never apply to this table.
     context_sequence: int = 0
@@ -162,6 +260,8 @@ class InboundMessage(BaseModel):
     phone: str
     text: str
     sender_phone_id: str = ""
+    # Pin de WhatsApp; `text` lleva entonces una descripción para el historial.
+    location: GeoPoint | None = None
     # Set once when the message enters the queue; survives retries and the
     # dead letter.
     received_at: float = 0.0
@@ -173,6 +273,7 @@ class InboundMessage(BaseModel):
 EffectKind = Literal[
     "cart",
     "confirmation",
+    "delivery",
     "create_order",
     "request_handoff",
     "request_bill",

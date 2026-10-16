@@ -12,11 +12,15 @@ from src.domain.models import (
     BillSummary,
     ComboDetail,
     ConversationSession,
+    CustomerMemory,
+    DeliveryOptions,
+    DeliveryQuote,
     InboundMessage,
     MenuItem,
     MenuResponse,
     ModifierConfig,
     OrderResult,
+    OrderStatus,
     ProcessingRecord,
     TableContext,
 )
@@ -51,6 +55,16 @@ class FudiaBackend(Protocol):
     async def request_bill(
         self, token: str, phone: str, conversation_id: str, request_id: str = ""
     ) -> BillSummary: ...
+    async def get_order_status(
+        self, token: str, order_id: str, conversation_id: str
+    ) -> OrderStatus: ...
+    async def get_delivery_options(self, token: str) -> DeliveryOptions: ...
+    async def quote_delivery(
+        self, token: str, latitude: float, longitude: float
+    ) -> DeliveryQuote: ...
+    async def create_delivery_order(
+        self, token: str, order: dict[str, Any]
+    ) -> OrderResult: ...
 
 
 class LockLostError(RuntimeError):
@@ -123,6 +137,9 @@ class ProcessingRecords(Protocol):
     async def get(
         self, phone: str, channel_key: str = "default"
     ) -> ConversationSession | None: ...
+    async def get_memory(
+        self, phone: str, channel_key: str = "default"
+    ) -> CustomerMemory | None: ...
     async def get_record(self, message_id: str) -> ProcessingRecord | None: ...
     async def put_record(self, record: ProcessingRecord) -> None: ...
     async def outbound_status(self, ref: str) -> str: ...
@@ -250,6 +267,11 @@ class LocalProcessingRecords:
     async def get(
         self, phone: str, channel_key: str = "default"
     ) -> ConversationSession | None:
+        return None
+
+    async def get_memory(
+        self, phone: str, channel_key: str = "default"
+    ) -> CustomerMemory | None:
         return None
 
     async def get_record(self, message_id: str) -> ProcessingRecord | None:

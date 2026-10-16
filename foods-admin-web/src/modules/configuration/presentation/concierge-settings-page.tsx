@@ -3,6 +3,7 @@ import "./concierge-settings.css";
 import {useQuery} from "@tanstack/react-query";
 import {ErrorState,Icon,PageHeader,Skeleton,Status} from "@/design-system";
 import {getConciergeSettings} from "../infrastructure/concierge-settings-api";
+import {DeliveryFeesPanel} from "./delivery-fees-panel";
 
 export function ConciergeSettingsPage(){
  const query=useQuery({queryKey:["concierge-settings"],queryFn:getConciergeSettings});
@@ -44,10 +45,13 @@ export function ConciergeSettingsPage(){
        <span><i>3</i><b>Conversa con Concierge<small>La IA consulta únicamente la carta real de la empresa identificada por el QR.</small></b></span>
        <span><i>4</i><b>Confirma el pedido<small>foods-backend revalida precios, disponibilidad y mesa.</small></b></span>
        <span><i>5</i><b>Pedido a Cocina<small>La ronda confirmada aparece en KDS con canal WhatsApp.</small></b></span>
+       <span><i>6</i><b>Después de la mesa<small>Al terminar la atención, el mismo chat toma pedidos para recojo o delivery del local.</small></b></span>
       </div>
       <div className="concierge-note">Si el módulo <code>whatsapp_bot</code> no está activo para la empresa, el QR no ofrece pedidos por WhatsApp y el backend de Concierge rechaza el acceso.</div>
      </section>
     </div>
+
+    <DeliveryFeesPanel/>
    </>}
   </div>
  </>;
@@ -67,7 +71,7 @@ function ConciergeSettingsSkeleton(){
    </section>
    <section className="panel concierge-preview">
     <div className="concierge-skeleton-lines"><Skeleton width="var(--size-160)" height="var(--size-14)"/><Skeleton height="var(--size-12)"/></div>
-    <div className="concierge-flow">{Array.from({length:5},(_,i)=><Skeleton key={i} height="var(--size-48)" radius="var(--radius-tile)"/>)}</div>
+    <div className="concierge-flow">{Array.from({length:6},(_,i)=><Skeleton key={i} height="var(--size-48)" radius="var(--radius-tile)"/>)}</div>
    </section>
   </div>
  </div>;
