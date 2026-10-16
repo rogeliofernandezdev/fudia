@@ -13,11 +13,12 @@ import {loadSessionContext} from "@/shared/session/session-api";
 import {firstAccessibleRoute} from "@/shell/navigation";
 import {broadcastSessionChange} from "@/shared/session/session-events";
 
-export function LoginForm() {
+/** `hasSession` lo resuelve el servidor desde la cookie; solo entonces se valida la sesión. */
+export function LoginForm({hasSession=false}:{hasSession?:boolean}={}) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
-  const [checkingSession,setCheckingSession]=useState(true);
+  const [checkingSession,setCheckingSession]=useState(hasSession);
   const [error, setError] = useState("");
   const [activeSession,setActiveSession]=useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -28,6 +29,7 @@ export function LoginForm() {
   const { register, handleSubmit, formState: { errors } } = useForm<LoginDraft>({ defaultValues: { email: "", password: "" }, resolver: loginResolver, mode: "onSubmit", reValidateMode: "onChange" });
 
   useEffect(()=>{
+    if(!hasSession)return;
     let cancelled=false;
     void loadSessionContext().then(context=>{
       if(cancelled)return;
@@ -37,7 +39,7 @@ export function LoginForm() {
       router.refresh();
     }).catch(()=>{if(!cancelled)setCheckingSession(false)});
     return()=>{cancelled=true};
-  },[queryClient,router]);
+  },[hasSession,queryClient,router]);
 
   /** Entra a la primera ruta permitida por el rol sin volver a mostrar el formulario. */
   async function enterWorkspace(){

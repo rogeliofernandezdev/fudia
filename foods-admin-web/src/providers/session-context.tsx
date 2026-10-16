@@ -10,9 +10,12 @@ export type SessionContext={user:SessionUser|null;organization:{id:string;name:s
 
 const Context=createContext<SessionContext>({user:null,organization:null,location:null,modules:null,menuAccess:[],permissions:[],setupRequired:false,canAccess:()=>false,can:()=>false,isLoading:true,isError:false,isUnauthorized:false});
 
+const isUnauthorizedError=(error:unknown)=>String(error).includes("context_401");
+
 export function SessionProvider({children}:{children:React.ReactNode}){
-  const query=useQuery({queryKey:["session-context"],queryFn:loadSessionContext,staleTime:300000,refetchOnWindowFocus:"always",retry:1});
-  const isUnauthorized=query.isError&&String(query.error).includes("context_401");
+  // Un 401 es definitivo: reintentarlo solo retrasa la salida al login.
+  const query=useQuery({queryKey:["session-context"],queryFn:loadSessionContext,staleTime:300000,refetchOnWindowFocus:"always",retry:(failures,error)=>!isUnauthorizedError(error)&&failures<1});
+  const isUnauthorized=query.isError&&isUnauthorizedError(query.error);
   useEffect(()=>{if(isUnauthorized)expireBrowserSession()},[isUnauthorized]);
   const permissions=query.data?.permissions??[];
   const menuAccess=query.data?.menuAccess??[];

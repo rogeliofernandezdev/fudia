@@ -35,7 +35,12 @@ que incluyen empresa y módulos efectivos. Plataforma conserva el catálogo tota
 Cuando una sesión expira, la interfaz muestra una transición breve y vuelve al
 inicio de sesión. Cualquier respuesta `401` de contexto, consultas, mutaciones,
 carga de imágenes o administración de plataforma elimina la cookie, descarta el
-estado del usuario y comunica el cierre a las demás pestañas. Si la validación
+estado del usuario y comunica el cierre a las demás pestañas. Un `401` es
+definitivo: el contexto no se reintenta y la expiración solo borra la cookie en
+el BFF (`DELETE /api/session?scope=local`), sin llamar al logout del backend.
+El login lee la cookie en el servidor: sin cookie muestra el formulario de
+inmediato; con cookie valida una sola vez («Validando sesión») y, si sigue
+vigente, entra al primer acceso permitido. Si la validación
 falla temporalmente por red o por una
 indisponibilidad del backend, conserva el sistema visual y ofrece acciones para
 reintentar o volver al inicio de sesión; nunca presenta contenido sin estilos.

@@ -791,6 +791,12 @@ test("una sesión activa no se reemplaza silenciosamente",()=>{
   assert.ok(imageApi.includes("expireBrowserSession"),"La carga de archivos también reacciona al 401");
   assert.ok(expiration.includes('broadcastSessionChange("signed-out")'),"La expiración se comunica entre pestañas");
   assert.ok(expiration.includes('window.location.replace("/login")'),"La expiración siempre termina en el login");
+  assert.ok(expiration.includes('fetch("/api/session?scope=local"'),"La expiración solo borra la cookie, sin logout remoto");
+  assert.ok(route.includes('searchParams.get("scope")==="local"')&&route.includes("if(!localOnly&&cookie)"),"El BFF omite el logout del backend si la sesión ya venció o no hay cookie");
+  assert.ok(session.includes("retry:(failures,error)=>!isUnauthorizedError(error)"),"Un 401 del contexto no se reintenta");
+  const loginPage=read("src/app/login/page.tsx");
+  assert.ok(loginPage.includes('(await cookies()).get("foods_session")')&&loginPage.includes("hasSession={hasSession}"),"El login sabe en el servidor si existe una cookie de sesión");
+  assert.ok(login.includes("useState(hasSession)")&&login.includes("if(!hasSession)return;"),"Sin cookie el login no muestra «Validando sesión» ni consulta el contexto");
 });
 
 test("la puesta en marcha guía según los módulos contratados",()=>{
