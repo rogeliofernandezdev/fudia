@@ -1,6 +1,10 @@
 name: foods-admin-web
 
 on:
+  pull_request:
+    paths:
+      - "foods-admin-web/**"
+      - ".github/workflows/foods-admin-web.yml"
   push:
     paths:
       - "foods-admin-web/**"
@@ -35,9 +39,7 @@ jobs:
 
   deploy:
     needs: verify
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'push' && github.ref == 'refs/heads/feat/redesign-nueva-comanda')
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     environment: dev
     permissions:
