@@ -338,6 +338,19 @@ empresa/local, estado, turno y saldo en transacción. El éxito cierra el formul
 e invalida POS, Caja, Salón, Pedidos, Ventas y Dashboard. No registra pagos al
 abrir el enlace y no incorpora una acción de cobro al modal de consulta.
 
+## Punto de entrega en el detalle de pedido
+
+`Order` incluye `deliveryLatitude`, `deliveryLongitude` y `deliveryDistanceKm`
+(números o `null`, solo lectura). Concierge los guarda al crear pedidos delivery
+con el pin de WhatsApp; los pedidos manuales y de Salón los devuelven en `null`.
+No se envían en altas ni ediciones. `deliveryPoint` (dominio de
+`operations/orders`) es el único que interpreta esos campos y construye la URL
+`https://www.google.com/maps/search/?api=1&query=lat,lng`: devuelve `null` si el
+canal no es `delivery` o falta alguna coordenada válida, y descarta distancias
+no numéricas. La presentación solo formatea la distancia con
+`formatRegionalNumber`. Usa la misma consulta del detalle (`getOrder`), sin
+peticiones adicionales ni geocodificación en el cliente.
+
 ## Tarifas de delivery de Concierge
 
 `DeliveryFeesPanel` (módulo `configuration`) usa la clave

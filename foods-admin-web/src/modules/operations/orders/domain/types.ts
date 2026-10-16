@@ -30,6 +30,9 @@ export type Order={
   customerPhone:string;
   address:string;
   reference:string;
+  deliveryLatitude?:number|null;
+  deliveryLongitude?:number|null;
+  deliveryDistanceKm?:number|null;
   tableId:string;
   tableName:string;
   waiterId?:string;

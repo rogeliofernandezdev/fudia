@@ -7,6 +7,8 @@ import {useMoney,useSession} from "@/providers";
 import {pageRoutes} from "@/shared/routing/page-routes";
 import {canCancelOrder,canManageOrderService,nextOrderAction} from "../domain/order-actions";
 import {canChargeAccount} from "../domain/service-flow";
+import {deliveryPoint} from "../domain/delivery-point";
+import {formatRegionalNumber} from "@/shared/i18n/regional-format";
 import type {Order,OrderItem,OrderItemSelection} from "../domain/types";
 import type {ServiceItem} from "../domain/service-flow";
 import {OrderAttribution,OrderAttributionSkeleton} from "./order-attribution";
@@ -51,6 +53,7 @@ export function OrderDetailContent<T extends Order>({variant,order,error,retryin
   const editable=Boolean(edit&&order&&isEditableOrder(order)&&(!(order.serviceItems?.length)||order.status==="nuevo"));
   const actionIcon=action?.status==="entregado"?"availability":action?.status==="confirmado"?"chefHat":action?.icon;
   const items=order?.items??[];
+  const point=order?deliveryPoint(order):null;
   // Si todas las preparaciones repiten el estado del pedido (Nuevo/Sin enviar, Preparando, Listo, Entregado), no se muestran por línea.
   // Confirmado se conserva: «Pendiente» indica que la comanda enviada aún no empieza a prepararse.
   const services=order?.serviceItems??[];
@@ -84,9 +87,14 @@ export function OrderDetailContent<T extends Order>({variant,order,error,retryin
             {subtitle&&<span className="modal-inline-description">{subtitle}</span>}
           </div>
           <header className="order-detail-section-head modal-section-rule"><h3 id="order-detail-products-title" className="modal-section-title">Productos del pedido</h3><div className="order-detail-status" aria-label="Estado del pedido"><Status tone={meta.tone}>{meta.label}</Status></div></header>
-          {(order.customerPhone||order.address||order.reference)&&<section className="order-detail-context" aria-label="Contacto y entrega">
+          {(order.customerPhone||order.address||order.reference||point)&&<section className="order-detail-context" aria-label="Contacto y entrega">
             {order.customerPhone&&<div><span><Icon name="users" size={16}/></span><p><small>CONTACTO</small><b>{order.customerPhone}</b></p></div>}
-            {(order.address||order.reference)&&<div><span><Icon name="truck" size={16}/></span><p><small>ENTREGA</small><b>{order.address||"Dirección no registrada"}</b>{order.reference&&<em>{order.reference}</em>}</p></div>}
+            {(order.address||order.reference||point)&&<div><span><Icon name="truck" size={16}/></span><p><small>ENTREGA</small><b>{order.address||"Dirección no registrada"}</b>{order.reference&&<em>{order.reference}</em>}
+              {point&&<span className="order-detail-map">
+                <a className="order-detail-map-link" href={point.mapUrl} target="_blank" rel="noopener noreferrer" aria-label="Ver ubicación de entrega en Google Maps (se abre en otra pestaña)">Ver ubicación</a>
+                {point.distanceKm!==null&&<span className="order-detail-map-distance">{formatRegionalNumber(point.distanceKm,location?.country,{maximumFractionDigits:1})} km</span>}
+              </span>}
+            </p></div>}
           </section>}
 
           <section className="order-detail-consumption" aria-labelledby="order-detail-products-title">

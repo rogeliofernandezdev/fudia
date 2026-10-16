@@ -19,35 +19,39 @@ type OrderItem struct {
 	Modifiers  []OrderItemModifier  `json:"modifiers,omitempty"`
 }
 type Order struct {
-	ID               string             `json:"id"`
-	Code             string             `json:"code"`
-	Channel          string             `json:"channel"`
-	Status           string             `json:"status"`
-	CompletedAt      string             `json:"completedAt,omitempty"`
-	BillClosedAt     string             `json:"billClosedAt,omitempty"`
-	AccountState     string             `json:"accountState"`
-	ServiceItems     []OrderServiceItem `json:"serviceItems,omitempty"`
-	CustomerID       string             `json:"customerId"`
-	CustomerName     string             `json:"customerName"`
-	CustomerPhone    string             `json:"customerPhone"`
-	Address          string             `json:"address"`
-	Reference        string             `json:"reference"`
-	TableID          string             `json:"tableId"`
-	TableName        string             `json:"tableName"`
-	WaiterID         string             `json:"waiterId"`
-	WaiterName       string             `json:"waiterName"`
-	CollectedByNames []string           `json:"collectedByNames"`
-	Notes            string             `json:"notes"`
-	Subtotal         string             `json:"subtotal"`
-	DeliveryFee      string             `json:"deliveryFee"`
-	Total            string             `json:"total"`
-	CreatedAt        string             `json:"createdAt"`
-	UpdatedAt        string             `json:"updatedAt"`
-	ItemCount        int                `json:"itemCount"`
-	Items            []OrderItem        `json:"items,omitempty"`
-	PaidAmount       string             `json:"paidAmount,omitempty"`
-	RemainingAmount  string             `json:"remainingAmount,omitempty"`
-	PaymentStatus    string             `json:"paymentStatus,omitempty"`
+	ID            string             `json:"id"`
+	Code          string             `json:"code"`
+	Channel       string             `json:"channel"`
+	Status        string             `json:"status"`
+	CompletedAt   string             `json:"completedAt,omitempty"`
+	BillClosedAt  string             `json:"billClosedAt,omitempty"`
+	AccountState  string             `json:"accountState"`
+	ServiceItems  []OrderServiceItem `json:"serviceItems,omitempty"`
+	CustomerID    string             `json:"customerId"`
+	CustomerName  string             `json:"customerName"`
+	CustomerPhone string             `json:"customerPhone"`
+	Address       string             `json:"address"`
+	Reference     string             `json:"reference"`
+	// Punto de entrega fijado por WhatsApp (Concierge); nil si no hay pin.
+	DeliveryLatitude   *float64    `json:"deliveryLatitude"`
+	DeliveryLongitude  *float64    `json:"deliveryLongitude"`
+	DeliveryDistanceKm *float64    `json:"deliveryDistanceKm"`
+	TableID            string      `json:"tableId"`
+	TableName          string      `json:"tableName"`
+	WaiterID           string      `json:"waiterId"`
+	WaiterName         string      `json:"waiterName"`
+	CollectedByNames   []string    `json:"collectedByNames"`
+	Notes              string      `json:"notes"`
+	Subtotal           string      `json:"subtotal"`
+	DeliveryFee        string      `json:"deliveryFee"`
+	Total              string      `json:"total"`
+	CreatedAt          string      `json:"createdAt"`
+	UpdatedAt          string      `json:"updatedAt"`
+	ItemCount          int         `json:"itemCount"`
+	Items              []OrderItem `json:"items,omitempty"`
+	PaidAmount         string      `json:"paidAmount,omitempty"`
+	RemainingAmount    string      `json:"remainingAmount,omitempty"`
+	PaymentStatus      string      `json:"paymentStatus,omitempty"`
 }
 type OrderItemSelectionInput struct {
 	GroupID   string `json:"groupId"`
@@ -234,10 +238,10 @@ type ModifierGroup struct {
 
 type FloorTable struct {
 	OccupiedSince string `json:"occupiedSince,omitempty"`
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	Zone     string `json:"zone"`
-	Seats    int    `json:"seats"`
-	Order    *Order `json:"order"`
-	PaidText string `json:"-"`
+	ID            string `json:"id"`
+	Name          string `json:"name"`
+	Zone          string `json:"zone"`
+	Seats         int    `json:"seats"`
+	Order         *Order `json:"order"`
+	PaidText      string `json:"-"`
 }

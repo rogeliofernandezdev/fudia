@@ -1286,6 +1286,14 @@ Etiqueta y nombre comparten 14 px e interlineado mediante `modal-inline-metadata
 retícula mantiene la primera línea alineada incluso con nombres largos.
 Productos y Resumen de cuenta ocupan el mismo ancho. Los datos de contacto y
 entrega permanecen desplazables, antes de las líneas y después del encabezado.
+En pedidos `delivery` con punto fijado por WhatsApp (Concierge), bajo la
+dirección y la referencia aparece el enlace «Ver ubicación» (`order-detail-map-link`),
+que abre Google Maps en otra pestaña o en la app del móvil. Es solo tipográfico:
+14 px seminegrita `ink-950` subrayado, sin icono, chip, fondo ni color propio, con
+área táctil de 44 px y foco `ring-focus`. A su derecha, la distancia cotizada en
+12 px `ink-600` con cifras tabulares («2.4 km», un decimal, formato regional); si no hay
+distancia se muestra solo el enlace y, sin coordenadas, no se muestra nada. Desde
+390 px enlace y distancia comparten fila y hacen wrap sin desbordar.
 
 Cada producto ocupa dos filas: cantidad, nombre e importe en la primera; en la
 segunda, a todo el ancho, «precio c/u · destino» y el estado de preparación

@@ -2104,6 +2104,9 @@ components:
         customerPhone: { type: string }
         address: { type: string }
         reference: { type: string }
+        deliveryLatitude: { type: [number, "null"], minimum: -90, maximum: 90, readOnly: true, description: "Latitud del punto de entrega fijado por WhatsApp en pedidos de Concierge; null si no hay ubicación." }
+        deliveryLongitude: { type: [number, "null"], minimum: -180, maximum: 180, readOnly: true, description: "Longitud del punto de entrega; null cuando deliveryLatitude es null." }
+        deliveryDistanceKm: { type: [number, "null"], minimum: 0, readOnly: true, description: "Distancia en línea recta desde el local usada para cotizar el delivery; null si no se cotizó." }
         tableId: { type: string }
         tableName: { type: string }
         waiterId: { type: string, readOnly: true, description: "Usuario que tomó la comanda de Salón, derivado de la sesión al crearla. Vacío si no hay asignación. No se admite en altas ni ediciones." }
