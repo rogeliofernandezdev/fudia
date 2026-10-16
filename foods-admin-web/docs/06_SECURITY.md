@@ -9,3 +9,45 @@ ejecutar dentro de ellas. El sidebar y la protección de rutas consumen
 `menuAccess`; los botones consumen permisos específicos y el backend vuelve a
 validar cada petición. Conceder un permiso no concede automáticamente una opción
 del menú, ni conceder una opción autoriza sus acciones.
+
+Carta y productos usa las etiquetas «Ver carta y productos» y «Administrar carta
+y productos» del catálogo remoto. Sin `menu.manage`, Productos y Categorías
+conservan lectura, filtros y paginación, pero no muestran altas, edición,
+activación/desactivación ni columna de acciones. Los vacíos tampoco ofrecen
+crear. Si el permiso se retira con un formulario abierto, deja de renderizarse.
+No se conceden permisos automáticamente al habilitar el acceso del menú.
+
+Esta regla aplica a todos los roles, incluidos los personalizados: se consulta
+el permiso efectivo de la sesión, nunca el nombre del rol. Menús y combos
+requiere `menu.manage` para altas, edición y estado; conserva detalle y
+paginación para lectura. Mesas requiere `tables.manage` y Zonas `menu.manage`,
+igual que el API. Los formularios y confirmaciones de esos módulos no se
+renderizan si el permiso efectivo se retira.
+
+Los catálogos y la vista de roles de empresa se limitan a módulos contratados,
+activos y disponibles. El backend valida ese límite al guardar. Los permisos
+almacenados de módulos fuera del plan se conservan sin mostrarse para que un
+cambio de plan no los borre. Roles y permisos se consultan con claves de caché
+que incluyen empresa y módulos efectivos. Plataforma conserva el catálogo total.
+
+## Sesión en el navegador
+
+Cuando una sesión expira, la interfaz muestra una transición breve y vuelve al
+inicio de sesión. Cualquier respuesta `401` de contexto, consultas, mutaciones,
+carga de imágenes o administración de plataforma elimina la cookie, descarta el
+estado del usuario y comunica el cierre a las demás pestañas. Si la validación
+falla temporalmente por red o por una
+indisponibilidad del backend, conserva el sistema visual y ofrece acciones para
+reintentar o volver al inicio de sesión; nunca presenta contenido sin estilos.
+
+Una cookie `HttpOnly` representa una sola identidad por perfil y origen del
+navegador. Un segundo inicio de sesión nunca reemplaza silenciosamente una
+sesión válida: la interfaz exige continuar con la identidad actual o cerrar la
+sesión antes de cambiar de cuenta. Login y logout se comunican entre pestañas
+mediante `BroadcastChannel`, sin transmitir tokens ni información sensible, y
+el contexto se vuelve a consultar al recuperar el foco. Si una pestaña detecta
+que la identidad cambió, descarta el estado anterior y navega al primer acceso
+válido de la identidad nueva; nunca conserva una ruta que pertenecía al usuario
+anterior. Las pruebas simultáneas de roles distintos requieren perfiles o
+contextos de navegador aislados. Varias ventanas incógnitas del mismo perfil no
+son contextos aislados: comparten una sola cookie mientras permanezcan abiertas.

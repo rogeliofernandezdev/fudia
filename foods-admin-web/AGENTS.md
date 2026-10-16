@@ -1,4 +1,4 @@
-s# AGENTS — Administración web
+# AGENTS — Administración web
 
 Frontend administrativo oficial. Aplicar el `AGENTS.md` raíz.
 
@@ -15,6 +15,11 @@ La autoridad visual exclusiva de este proyecto es
 - Monolito modular por vertical slices.
 
 ## Reglas
+
+- `src/app` se limita a routing, layouts y BFF; no aloja features ni CSS de negocio.
+- Toda vertical nueva vive en `src/modules/<vertical>` y expone una API pública desde `index.ts`.
+- `src/components` no se usa como contenedor genérico de features.
+- CSS global/base vive en `src/styles`; CSS de negocio pertenece al módulo que lo consume.
 
 - Navegación: Control, Venta, Cocina, Abastecimiento y Configuración.
 - Separar KPI ejecutivos de señales operativas accionables.

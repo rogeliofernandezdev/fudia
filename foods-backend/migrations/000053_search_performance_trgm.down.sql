@@ -1,0 +1,17 @@
+DROP INDEX IF EXISTS reservations_customer_phone_trgm_idx;
+DROP INDEX IF EXISTS reservations_customer_name_trgm_idx;
+DROP INDEX IF EXISTS suppliers_name_trgm_idx;
+DROP INDEX IF EXISTS orders_customer_phone_trgm_idx;
+DROP INDEX IF EXISTS orders_customer_name_trgm_idx;
+DROP INDEX IF EXISTS orders_code_trgm_idx;
+DROP INDEX IF EXISTS customers_document_trgm_idx;
+DROP INDEX IF EXISTS customers_email_trgm_idx;
+DROP INDEX IF EXISTS customers_phone_trgm_idx;
+DROP INDEX IF EXISTS customers_code_trgm_idx;
+DROP INDEX IF EXISTS customers_name_trgm_idx;
+DROP INDEX IF EXISTS inventory_items_sku_trgm_idx;
+DROP INDEX IF EXISTS inventory_items_name_trgm_idx;
+DROP INDEX IF EXISTS products_sku_trgm_idx;
+DROP INDEX IF EXISTS products_name_trgm_idx;
+DROP INDEX IF EXISTS users_name_trgm_idx;
+DROP INDEX IF EXISTS users_email_trgm_idx;

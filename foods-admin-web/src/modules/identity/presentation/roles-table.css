@@ -1,0 +1,30 @@
+.access-panel:has(>.roles-grid){display:none}
+.roles-table-panel td:first-child{max-width:var(--size-360)}
+.roles-table-panel td:first-child small{white-space:normal}
+.role-detail-modal{width:min(var(--size-760),calc(100vw - var(--size-32)));max-height:min(var(--size-820),calc(100dvh - var(--size-32)))}
+.role-detail-body{padding:var(--space-22) var(--space-26) var(--space-26);display:grid;gap:var(--space-18);overflow:auto}
+.role-detail-intro{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--space-20)}
+.role-detail-intro>div{display:grid;gap:var(--space-5)}
+.role-detail-intro>div>b{font-size:var(--font-size-13);color:var(--ink-950)}
+.role-detail-intro p{margin:0;color:var(--ink-600);font-size:var(--font-size-control);line-height:var(--line-height-1-6)}
+.role-detail-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-10)}
+.role-detail-summary article{display:flex;align-items:center;gap:var(--space-10);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-10);padding:var(--space-12);background:var(--palette-blue-110)}
+.role-detail-summary article>span{width:var(--size-34);height:var(--size-34);display:grid;place-items:center;border-radius:var(--radius-8);color:var(--primary-600);background:var(--primary-100)}
+.role-detail-summary article>div{display:grid;gap:var(--space-2)}
+.role-detail-summary small,.permission-preview-heading small{color:var(--ink-600);font-size:var(--font-size-label);font-weight:var(--font-weight-850);letter-spacing:var(--tracking-0-08-em)}
+.role-detail-summary article b{font-size:var(--font-size-15);color:var(--ink-950)}
+.full-access{display:flex;align-items:center;gap:var(--space-12);border:var(--stroke-1) solid var(--palette-green-10);background:var(--brand-100);border-radius:var(--radius-10);padding:var(--space-14);color:var(--brand-700)}
+.full-access>span{width:var(--size-34);height:var(--size-34);border-radius:50%;display:grid;place-items:center;background:var(--surface)}
+.full-access div{display:grid;gap:var(--space-3)}.full-access p{margin:0;color:var(--ink-600);font-size:var(--font-size-label)}
+.permission-preview-heading{display:flex;align-items:end;justify-content:space-between;gap:var(--space-16);padding-top:var(--space-2)}
+.permission-preview-heading>div{display:grid;gap:var(--space-3)}.permission-preview-heading h3{margin:0;font-size:var(--font-size-14)}
+.permission-preview-heading>span{color:var(--primary-700);background:var(--primary-100);border-radius:var(--radius-999);padding:var(--space-5) var(--space-9);font-size:var(--font-size-label);font-weight:var(--font-weight-800)}
+.permission-preview{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-12)}
+.permission-preview>section{border:var(--stroke-1) solid var(--line);border-radius:var(--radius-10);background:var(--surface);overflow:hidden}
+.permission-preview>section>header{min-height:var(--size-42);padding:0 var(--space-13);display:flex;align-items:center;justify-content:space-between;border-bottom:var(--stroke-1) solid var(--line);background:var(--palette-blue-106)}
+.permission-preview>section>header h3{margin:0;font-size:var(--font-size-label);text-transform:uppercase;letter-spacing:var(--tracking-0-05-em)}
+.permission-preview>section>header b{min-width:var(--size-22);height:var(--size-22);display:grid;place-items:center;border-radius:var(--radius-control);background:var(--primary-100);color:var(--primary-700);font-size:var(--font-size-label)}
+.permission-preview>section>div{padding:var(--space-11) var(--space-13);display:grid;gap:var(--space-9)}
+.permission-preview>section>div>span{display:flex;align-items:center;gap:var(--space-8);color:var(--ink-600);font-size:var(--font-size-label)}
+.permission-preview>section>div>span>i{width:var(--size-20);height:var(--size-20);display:grid;place-items:center;border-radius:var(--radius-control);background:var(--brand-100);color:var(--brand-700)}
+@media(max-width:620px){.role-detail-modal{width:calc(100vw - var(--size-16));max-height:calc(100dvh - var(--size-16))}.role-detail-body{padding:var(--space-18)}.role-detail-intro{flex-direction:column}.role-detail-summary{grid-template-columns:1fr}.permission-preview{grid-template-columns:1fr}.permission-preview-heading{align-items:flex-start;flex-direction:column}}

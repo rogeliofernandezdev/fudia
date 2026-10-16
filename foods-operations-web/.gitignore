@@ -1,7 +1,0 @@
-node_modules/
-.next/
-.next-dev/
-.env*
-!.env.example
-*.log
-artifacts/

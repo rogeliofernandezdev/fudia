@@ -87,7 +87,7 @@ func (a *API) listOrgLocations(w http.ResponseWriter, r *http.Request) {
 
 // switchContext cambia la empresa/local activo de la sesión.
 // platformAdmin puede ir a cualquier empresa/local; los demás solo a locales
-// de su empresa donde tengan un rol asignado (o cualquiera con rol a nivel empresa).
+// de su empresa donde tengan un rol activo asignado.
 func (a *API) switchContext(w http.ResponseWriter, r *http.Request) {
 	s := r.Context().Value(scopeKey{}).(scope)
 	var in switchContextInput
@@ -100,12 +100,13 @@ func (a *API) switchContext(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Validar que la empresa y local existen y están activos
-	var orgName, locName string
+	var orgName, locName, locCountry, locTimezone string
 	err := a.db.QueryRow(r.Context(), `
-		SELECT o.trade_name, l.name
+		SELECT o.trade_name, l.name, p.country_code, l.timezone
 		FROM organizations o
 		JOIN locations l ON l.organization_id=o.id AND l.active
-		WHERE o.id=$1 AND l.id=$2 AND o.active`, in.OrganizationID, in.LocationID).Scan(&orgName, &locName)
+		JOIN organization_fiscal_profiles p ON p.id=l.fiscal_profile_id AND p.organization_id=l.organization_id AND p.active
+		WHERE o.id=$1 AND l.id=$2 AND o.active`, in.OrganizationID, in.LocationID).Scan(&orgName, &locName, &locCountry, &locTimezone)
 	if err != nil {
 		fail(w, 404, "context_not_found", "La empresa o local no existe o está inactivo.")
 		return
@@ -121,7 +122,7 @@ func (a *API) switchContext(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		var allowed bool
-		if err = a.db.QueryRow(r.Context(), `SELECT EXISTS(SELECT 1 FROM user_roles ur JOIN roles ro ON ro.id=ur.role_id WHERE ur.user_id=$1 AND (ur.location_id IS NULL OR ur.location_id=$2) AND ro.active)`, s.UserID, in.LocationID).Scan(&allowed); err != nil {
+		if err = a.db.QueryRow(r.Context(), `SELECT EXISTS(SELECT 1 FROM user_roles ur JOIN roles ro ON ro.id=ur.role_id WHERE ur.user_id=$1 AND ur.location_id=$2 AND ro.active)`, s.UserID, in.LocationID).Scan(&allowed); err != nil {
 			fail(w, 503, "session_error", "No pudimos cambiar el contexto.")
 			return
 		}
@@ -147,13 +148,13 @@ func (a *API) switchContext(w http.ResponseWriter, r *http.Request) {
 	a.audit(r, "context.switched", "organization", in.OrganizationID)
 	writeJSON(w, 200, map[string]any{
 		"organization": map[string]string{"id": in.OrganizationID, "name": orgName},
-		"location":     map[string]string{"id": in.LocationID, "name": locName},
+		"location":     map[string]string{"id": in.LocationID, "name": locName, "country": locCountry, "timezone": locTimezone},
 	})
 }
 
 // listAvailableLocations lista los locales donde el usuario puede operar.
-// platformAdmin y usuarios con rol a nivel empresa ven todos los locales activos;
-// los demás solo los locales donde tienen un rol asignado.
+// platformAdmin ve todos los locales activos de la empresa seleccionada;
+// los demás solo los locales donde tienen un rol activo asignado.
 func (a *API) listAvailableLocations(w http.ResponseWriter, r *http.Request) {
 	s := r.Context().Value(scopeKey{}).(scope)
 	rows, err := a.db.Query(r.Context(), `
@@ -162,8 +163,6 @@ func (a *API) listAvailableLocations(w http.ResponseWriter, r *http.Request) {
 		WHERE l.organization_id=$1 AND l.active
 		  AND (
 		    EXISTS(SELECT 1 FROM users u WHERE u.id=$2 AND u.platform_admin)
-		    OR EXISTS(SELECT 1 FROM user_roles ur JOIN roles ro ON ro.id=ur.role_id
-		              WHERE ur.user_id=$2 AND ur.location_id IS NULL AND ro.active)
 		    OR EXISTS(SELECT 1 FROM user_roles ur JOIN roles ro ON ro.id=ur.role_id
 		              WHERE ur.user_id=$2 AND ur.location_id=l.id AND ro.active)
 		  )

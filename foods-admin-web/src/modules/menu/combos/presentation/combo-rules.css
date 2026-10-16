@@ -1,0 +1,29 @@
+.combo-rules {
+  display: flex;
+  align-items: end;
+  gap: var(--space-8);
+}
+
+.combo-rules > label:not(.combo-required) {
+  display: grid;
+  gap: var(--space-3);
+  color: var(--ink-500);
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-700);
+}
+
+.combo-rules .field {
+  width: var(--size-64);
+  min-height: var(--control-height);
+}
+
+.combo-rules .combo-required {
+  min-height: var(--control-height);
+}
+
+@media (width <= 600px) {
+  .combo-rules {
+    grid-column: 1 / -1;
+    flex-wrap: wrap;
+  }
+}

@@ -41,8 +41,20 @@
 - Onboarding protegido de plataforma: empresa, perfil fiscal, primer local y administrador en una sola transacción.
 - Integraciones y reportes.
 
+
+## Fudia Concierge
+
+- Recepción de mensajes de WhatsApp y validación del webhook de Meta.
+- Resolución del contexto iniciado por QR.
+- Interpretación conversacional mediante LLM y herramientas deterministas.
+- Carrito efímero y confirmación explícita.
+- Consulta server-to-server del menú operativo en foods-backend.
+- Registro idempotente del pedido real en foods-backend.
+- Entrega del pedido confirmado al flujo existente de Pedidos/KDS.
+
 ## Límites
 
 Los módulos no acceden a tablas de otros módulos mediante repositorios ajenos.
 La coordinación síncrona ocurre mediante servicios de aplicación explícitos;
-las integraciones externas se encapsulan detrás de puertos.
+las integraciones externas se encapsulan detrás de puertos. Fudia Concierge no
+accede directamente a PostgreSQL de Fudia ni replica el dominio de pedidos.
