@@ -319,11 +319,24 @@ func (a *API) saveSubscriptionPlan(w http.ResponseWriter, r *http.Request, creat
 	writeJSON(w, map[bool]int{true:201,false:200}[create], plan)
 }
 
-func subscriptionPeriodEnd(start time.Time, cycle string) time.Time {
+// subscriptionPeriodEnd clamps the contract's anchor day to the last valid day
+// in the target month. Keeping anchorDay across renewals prevents a short month
+// (for example February) from shifting later monthly periods.
+func subscriptionPeriodEnd(start time.Time, cycle string, anchorDays ...int) time.Time {
+	months := 1
 	if cycle == "annual" {
-		return start.AddDate(1,0,0)
+		months = 12
 	}
-	return start.AddDate(0,1,0)
+	anchorDay := start.Day()
+	if len(anchorDays) > 0 && anchorDays[0] >= 1 && anchorDays[0] <= 31 {
+		anchorDay = anchorDays[0]
+	}
+	targetMonth := time.Date(start.Year(), start.Month()+time.Month(months), 1, start.Hour(), start.Minute(), start.Second(), start.Nanosecond(), start.Location())
+	lastDay := time.Date(targetMonth.Year(), targetMonth.Month()+1, 0, start.Hour(), start.Minute(), start.Second(), start.Nanosecond(), start.Location()).Day()
+	if anchorDay > lastDay {
+		anchorDay = lastDay
+	}
+	return time.Date(targetMonth.Year(), targetMonth.Month(), anchorDay, start.Hour(), start.Minute(), start.Second(), start.Nanosecond(), start.Location())
 }
 
 func createOrganizationSubscription(ctx context.Context, tx pgx.Tx, organizationID, administratorID, planID, billingCycle string, termsAccepted bool) error {
@@ -341,7 +354,8 @@ func createOrganizationSubscription(ctx context.Context, tx pgx.Tx, organization
 	status := "active"
 	price := plan.MonthlyPrice
 	var trialStarts, trialEnds *time.Time
-	periodEnd := subscriptionPeriodEnd(now, billingCycle)
+	anchorDay := now.Day()
+	periodEnd := subscriptionPeriodEnd(now, billingCycle, anchorDay)
 	if billingCycle == "annual" {
 		price = plan.AnnualPrice
 	}
@@ -356,9 +370,9 @@ func createOrganizationSubscription(ctx context.Context, tx pgx.Tx, organization
 		INSERT INTO organization_subscriptions(
 		  organization_id,plan_id,billing_cycle,price_amount,currency,status,
 		  trial_starts_at,trial_ends_at,current_period_starts_at,current_period_ends_at,renews_at,
-		  auto_renew,terms_version,terms_accepted_at,terms_accepted_by
-		) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$10,true,$11,$9,$12)
-	`, organizationID,plan.ID,billingCycle,price,plan.Currency,status,trialStarts,trialEnds,now,periodEnd,plan.TermsVersion,administratorID)
+		  auto_renew,terms_version,terms_accepted_at,terms_accepted_by,billing_anchor_day
+		) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$10,true,$11,$9,$12,$13)
+	`, organizationID,plan.ID,billingCycle,price,plan.Currency,status,trialStarts,trialEnds,now,periodEnd,plan.TermsVersion,administratorID,anchorDay)
 	if err != nil {
 		return err
 	}
@@ -534,15 +548,16 @@ func (a *API) updateOrganizationSubscription(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	var currentPlanID,currentCycle,currentStatus,currentPrice string
+	var currentAnchorDay *int
 	var currentTerms *string
 	var currentTrialStarts,currentTrialEnds,currentPeriodStarts,currentPeriodEnds,currentRenews,currentCancelledAt *time.Time
 	if err = tx.QueryRow(r.Context(), `
-		SELECT plan_id,billing_cycle,status,price_amount::text,terms_version,
+		SELECT plan_id,billing_cycle,status,price_amount::text,terms_version,billing_anchor_day,
 		       trial_starts_at,trial_ends_at,current_period_starts_at,current_period_ends_at,renews_at,cancelled_at
 		FROM organization_subscriptions
 		WHERE organization_id=$1
 		FOR UPDATE
-	`, organizationID).Scan(&currentPlanID,&currentCycle,&currentStatus,&currentPrice,&currentTerms,&currentTrialStarts,&currentTrialEnds,&currentPeriodStarts,&currentPeriodEnds,&currentRenews,&currentCancelledAt); err != nil {
+	`, organizationID).Scan(&currentPlanID,&currentCycle,&currentStatus,&currentPrice,&currentTerms,&currentAnchorDay,&currentTrialStarts,&currentTrialEnds,&currentPeriodStarts,&currentPeriodEnds,&currentRenews,&currentCancelledAt); err != nil {
 		fail(w,404,"subscription_not_found","La empresa todavía no tiene una suscripción.")
 		return
 	}
@@ -569,6 +584,7 @@ func (a *API) updateOrganizationSubscription(w http.ResponseWriter, r *http.Requ
 	}
 	trialStarts,trialEnds:=currentTrialStarts,currentTrialEnds
 	periodStarts,periodEnds,renews:=currentPeriodStarts,currentPeriodEnds,currentRenews
+	anchorDay:=currentAnchorDay
 	cancelledAt:=currentCancelledAt
 	contractChanged:=planChanged||cycleChanged||currentStatus!=in.Status
 	if contractChanged {
@@ -576,14 +592,24 @@ func (a *API) updateOrganizationSubscription(w http.ResponseWriter, r *http.Requ
 		case "trial":
 			start:=now
 			end:=now.AddDate(0,0,plan.TrialDays)
+			newAnchorDay:=start.Day()
+			anchorDay=&newAnchorDay
 			trialStarts=&start;trialEnds=&end;periodStarts=&start;periodEnds=&end;renews=&end
 		case "active":
-			end:=subscriptionPeriodEnd(now,in.BillingCycle)
+			newAnchorDay:=now.Day()
+			anchorDay=&newAnchorDay
+			end:=subscriptionPeriodEnd(now,in.BillingCycle,newAnchorDay)
 			trialStarts=nil;trialEnds=nil;periodStarts=&now;periodEnds=&end;renews=&end;cancelledAt=nil
 		case "past_due":
 			cancelledAt=nil
 			if periodStarts==nil { periodStarts=&now }
-			if periodEnds==nil { end:=subscriptionPeriodEnd(now,in.BillingCycle);periodEnds=&end;renews=&end }
+			if periodEnds==nil {
+				start:=now
+				if periodStarts!=nil { start=*periodStarts } else { periodStarts=&start }
+				newAnchorDay:=start.Day()
+				if anchorDay!=nil { newAnchorDay=*anchorDay } else { anchorDay=&newAnchorDay }
+				end:=subscriptionPeriodEnd(start,in.BillingCycle,newAnchorDay);periodEnds=&end;renews=&end
+			}
 		case "cancelled":
 			renews=nil
 			if currentStatus!="cancelled" { cancelledAt=&now }
@@ -601,11 +627,11 @@ func (a *API) updateOrganizationSubscription(w http.ResponseWriter, r *http.Requ
 		UPDATE organization_subscriptions
 		SET plan_id=$2,billing_cycle=$3,price_amount=$4,currency=$5,status=$6,
 		    trial_starts_at=$7,trial_ends_at=$8,current_period_starts_at=$9,current_period_ends_at=$10,renews_at=$11,
-		    auto_renew=$12,terms_version=COALESCE($13,terms_version),
+		    auto_renew=$12,terms_version=COALESCE($13,terms_version),billing_anchor_day=COALESCE($17,billing_anchor_day),
 		    terms_accepted_at=COALESCE($14,terms_accepted_at),terms_accepted_by=COALESCE($15,terms_accepted_by),
 		    cancelled_at=$16,updated_at=now()
 		WHERE organization_id=$1
-	`, organizationID,plan.ID,in.BillingCycle,price,plan.Currency,in.Status,trialStarts,trialEnds,periodStarts,periodEnds,renews,in.AutoRenew,termsVersion,termsAcceptedAt,termsAcceptedBy,cancelledAt)
+	`, organizationID,plan.ID,in.BillingCycle,price,plan.Currency,in.Status,trialStarts,trialEnds,periodStarts,periodEnds,renews,in.AutoRenew,termsVersion,termsAcceptedAt,termsAcceptedBy,cancelledAt,anchorDay)
 	if err != nil {
 		fail(w,503,"subscription_unavailable","No pudimos actualizar la suscripción.")
 		return
@@ -649,8 +675,9 @@ func (a *API) recordSubscriptionPayment(w http.ResponseWriter, r *http.Request) 
 	defer tx.Rollback(r.Context())
 	var subscriptionID,billingCycle,currency string
 	var moduleKeys []string
-	var currentPeriodEnd *time.Time
-	if err=tx.QueryRow(r.Context(),`SELECT s.id,s.billing_cycle,s.currency,p.module_keys,s.current_period_ends_at FROM organization_subscriptions s JOIN subscription_plans p ON p.id=s.plan_id WHERE s.organization_id=$1 FOR UPDATE OF s`,organizationID).Scan(&subscriptionID,&billingCycle,&currency,&moduleKeys,&currentPeriodEnd);err!=nil {
+	var currentPeriodStart,currentPeriodEnd *time.Time
+	var anchorDay *int
+	if err=tx.QueryRow(r.Context(),`SELECT s.id,s.billing_cycle,s.currency,p.module_keys,s.current_period_starts_at,s.current_period_ends_at,s.billing_anchor_day FROM organization_subscriptions s JOIN subscription_plans p ON p.id=s.plan_id WHERE s.organization_id=$1 FOR UPDATE OF s`,organizationID).Scan(&subscriptionID,&billingCycle,&currency,&moduleKeys,&currentPeriodStart,&currentPeriodEnd,&anchorDay);err!=nil {
 		fail(w,404,"subscription_not_found","La empresa todavía no tiene una suscripción.");return
 	}
 	if in.Currency=="" { in.Currency=currency }
@@ -668,7 +695,12 @@ func (a *API) recordSubscriptionPayment(w http.ResponseWriter, r *http.Request) 
 	now:=time.Now().UTC()
 	periodStart:=now
 	if currentPeriodEnd!=nil && currentPeriodEnd.After(now) { periodStart=*currentPeriodEnd }
-	periodEnd:=subscriptionPeriodEnd(periodStart,billingCycle)
+	if anchorDay==nil {
+		anchor:=periodStart.Day()
+		if currentPeriodStart!=nil { anchor=currentPeriodStart.Day() }
+		anchorDay=&anchor
+	}
+	periodEnd:=subscriptionPeriodEnd(periodStart,billingCycle,*anchorDay)
 	var external any=nil
 	if in.ExternalReference!="" { external=in.ExternalReference }
 	var id string
@@ -681,9 +713,9 @@ func (a *API) recordSubscriptionPayment(w http.ResponseWriter, r *http.Request) 
 	if in.Status=="paid" {
 		_,err=tx.Exec(r.Context(),`
 			UPDATE organization_subscriptions
-			SET status='active',current_period_starts_at=$2,current_period_ends_at=$3,renews_at=$3,cancelled_at=NULL,updated_at=now()
+			SET status='active',current_period_starts_at=$2,current_period_ends_at=$3,renews_at=$3,cancelled_at=NULL,billing_anchor_day=COALESCE(billing_anchor_day,$4),updated_at=now()
 			WHERE organization_id=$1
-		`,organizationID,periodStart,periodEnd)
+		`,organizationID,periodStart,periodEnd,*anchorDay)
 		if err==nil { err=syncOrganizationModulesForPlan(r.Context(),tx,organizationID,moduleKeys) }
 	}
 	if err!=nil || tx.Commit(r.Context())!=nil { fail(w,503,"payment_unavailable","No pudimos confirmar el pago.");return }

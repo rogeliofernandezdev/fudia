@@ -353,6 +353,14 @@ prueba, cancelación y versión/fecha de aceptación de condiciones. Un cambio d
 plan o ciclo toma el precio vigente del plan; cambios administrativos que no
 alteran plan ni ciclo conservan el precio y las fechas del periodo existente.
 
+Los nuevos periodos mensuales y anuales usan el día de anclaje del contrato.
+Si ese día no existe en el mes de destino, el vencimiento se ajusta al último
+día de ese mes; el día de anclaje se conserva para las renovaciones posteriores
+(por ejemplo, un contrato iniciado el 30 de enero vence el 28/29 de febrero y
+vuelve a vencer el 30 de marzo). Los contratos anteriores a esta regla no se
+recalculan: cuando `billing_anchor_day` aún es nulo, se infiere del inicio del
+periodo vigente y se persiste al confirmar el primer pago.
+
 `subscription_payments` registra cobros SaaS independientemente del proveedor
 de pago. Un pago confirmado reactiva la suscripción, avanza el periodo desde el
 fin del periodo vigente cuando corresponde y vuelve a aplicar los módulos del
