@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from decimal import Decimal
+from typing import Any, Literal
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
@@ -120,6 +121,9 @@ class ConversationSession(BaseModel):
     pending_order_request_id: str | None = None
     last_order_id: str | None = None
     handoff_pending: bool = False
+    # Queue sequence of the QR message that opened the current context.
+    # Messages enqueued before it never apply to this table.
+    context_sequence: int = 0
     messages: list[ChatMessage] = Field(default_factory=list)
 
 
@@ -158,3 +162,92 @@ class InboundMessage(BaseModel):
     phone: str
     text: str
     sender_phone_id: str = ""
+    # Set once when the message enters the queue; survives retries and the
+    # dead letter.
+    received_at: float = 0.0
+    # Per-conversation order assigned atomically by Redis at enqueue; filled
+    # in on delivery (0 for direct, unqueued calls).
+    sequence: int = 0
+
+
+EffectKind = Literal[
+    "cart",
+    "confirmation",
+    "create_order",
+    "request_handoff",
+    "request_bill",
+]
+EffectStatus = Literal["pending", "done", "failed", "unknown"]
+ProcessingStage = Literal[
+    "processing",
+    "effects_applied",
+    "effect_pending",
+    "reply_ready",
+    "sending",
+    "uncertain",
+    "sent",
+    "failed",
+    "superseded",
+]
+# Stages after which the model never runs again for the same message.
+PREPARED_STAGES: frozenset[str] = frozenset(
+    {
+        "reply_ready",
+        "sending",
+        "uncertain",
+        "sent",
+        "failed",
+        "superseded",
+    }
+)
+TERMINAL_STAGES: frozenset[str] = frozenset(
+    {"sent", "failed", "superseded"}
+)
+
+
+class EffectRecord(BaseModel):
+    """One state change performed while processing a message.
+
+    `payload` keeps what is needed to replay a remote operation with the same
+    idempotency key; `result` keeps only what a recovery reply needs.
+    """
+
+    kind: EffectKind
+    status: EffectStatus = "done"
+    request_id: str = ""
+    payload: dict[str, Any] = Field(default_factory=dict)
+    result: dict[str, Any] = Field(default_factory=dict)
+    error_code: str = ""
+
+
+class ProcessingRecord(BaseModel):
+    """Recovery log of one inbound message, keyed by its Meta message id."""
+
+    message_id: str
+    conversation: str = ""
+    # Context (QR) the prepared reply belongs to.
+    conversation_id: str = ""
+    stage: ProcessingStage = "processing"
+    attempts: int = 0
+    effects: list[EffectRecord] = Field(default_factory=list)
+    reply: str = ""
+    send_attempts: int = 0
+    resends: int = 0
+    last_send_at: float = 0.0
+    created_at: float = 0.0
+    updated_at: float = 0.0
+    last_error: str = ""
+
+    @property
+    def prepared(self) -> bool:
+        return self.stage in PREPARED_STAGES
+
+    @property
+    def terminal(self) -> bool:
+        return self.stage in TERMINAL_STAGES
+
+    def pending_effect(self) -> EffectRecord | None:
+        for effect in reversed(self.effects):
+            if effect.status == "pending":
+                return effect
+        return None

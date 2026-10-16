@@ -148,12 +148,14 @@ class FakeFudia:
         token: str,
         phone: str,
         conversation_id: str,
+        request_id: str = "",
     ) -> BillSummary:
         self.bill_calls.append(
             {
                 "token": token,
                 "phone": phone,
                 "conversation_id": conversation_id,
+                "request_id": request_id,
             }
         )
         return BillSummary(

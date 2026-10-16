@@ -20,4 +20,4 @@ La primera ronda abre la comanda. Las posteriores se agregan al mismo consumo y 
 
 POST /v1/integrations/concierge/{token}/bill
 
-Devuelve el consumo acumulado real, moneda, productos, total, pagos registrados, saldo pendiente y estado de pago. Registra la solicitud de cuenta, pero no registra un pago.
+Devuelve el consumo acumulado real, moneda, productos, total, pagos registrados, saldo pendiente y estado de pago. Registra la solicitud de cuenta, pero no registra un pago. requestId identifica idempotentemente cada solicitud: repetirlo devuelve la cuenta vigente sin registrar otra solicitud; si se omite, cada llamada se registra.

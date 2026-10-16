@@ -1,26 +1,18 @@
 from __future__ import annotations
 
 import asyncio
-import hashlib
 from uuid import uuid4
 
 import redis.asyncio as redis
 
+from src.services.ports import ConversationBusyError as ConversationBusyError
 from src.services.ports import ConversationLock as ConversationLock
+from src.services.ports import LocalConversationLock
+from src.services.ports import conversation_identity as conversation_identity
 
 
-def conversation_identity(
-    phone: str,
-    channel_key: str,
-) -> str:
-    raw = f"{channel_key or 'default'}|{phone}"
-    return hashlib.sha256(
-        raw.encode("utf-8")
-    ).hexdigest()
-
-
-class ConversationBusyError(RuntimeError):
-    pass
+def lock_key(identity: str) -> str:
+    return f"fudia:concierge:lock:{identity}"
 
 
 class RedisConversationLock:
@@ -55,7 +47,7 @@ class RedisConversationLock:
         self,
         identity: str,
     ) -> str:
-        key = f"fudia:concierge:lock:{identity}"
+        key = lock_key(identity)
         token = uuid4().hex
         deadline = (
             asyncio.get_running_loop().time()
@@ -84,26 +76,34 @@ class RedisConversationLock:
         identity: str,
         token: str,
     ) -> bool:
-        key = f"fudia:concierge:lock:{identity}"
         result = await self.client.eval(
             self._REFRESH_SCRIPT,
             1,
-            key,
+            lock_key(identity),
             token,
             self.ttl_ms,
         )
         return bool(result)
+
+    async def owns(
+        self,
+        identity: str,
+        token: str,
+    ) -> bool:
+        return bool(
+            await self.client.get(lock_key(identity))
+            == token
+        )
 
     async def release(
         self,
         identity: str,
         token: str,
     ) -> None:
-        key = f"fudia:concierge:lock:{identity}"
         await self.client.eval(
             self._RELEASE_SCRIPT,
             1,
-            key,
+            lock_key(identity),
             token,
         )
 
@@ -111,37 +111,5 @@ class RedisConversationLock:
         await self.client.aclose()
 
 
-class MemoryConversationLock:
-    def __init__(self) -> None:
-        self._locks: dict[str, asyncio.Lock] = {}
-
-    async def acquire(
-        self,
-        identity: str,
-    ) -> str:
-        lock = self._locks.setdefault(
-            identity,
-            asyncio.Lock(),
-        )
-        await lock.acquire()
-        return identity
-
-    async def refresh(
-        self,
-        identity: str,
-        token: str,
-    ) -> bool:
-        lock = self._locks.get(identity)
-        return bool(lock and lock.locked())
-
-    async def release(
-        self,
-        identity: str,
-        token: str,
-    ) -> None:
-        lock = self._locks.get(identity)
-        if lock is not None and lock.locked():
-            lock.release()
-
-    async def close(self) -> None:
-        return None
+class MemoryConversationLock(LocalConversationLock):
+    """In-process lock for tests and single-process development."""

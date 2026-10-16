@@ -117,7 +117,8 @@ func (a *Concierge) Bill(ctx context.Context, token string, in domain.BillReques
 	s := qr.Scope
 	in.ConversationID = strings.TrimSpace(in.ConversationID)
 	in.CustomerPhone = strings.TrimSpace(in.CustomerPhone)
-	if in.ConversationID == "" || len(in.ConversationID) > 160 || len(in.CustomerPhone) > 32 {
+	in.RequestID = strings.TrimSpace(in.RequestID)
+	if in.ConversationID == "" || len(in.ConversationID) > 160 || len(in.CustomerPhone) > 32 || len(in.RequestID) > 160 {
 		return result, conciergeFailure(apperror.Invalid, "invalid_bill_request", "Revisa los datos de la solicitud de cuenta.")
 	}
 

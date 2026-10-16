@@ -82,3 +82,43 @@ WHATSAPP_OUTBOUND = Counter(
     "Outbound WhatsApp send outcomes.",
     ["result"],
 )
+LOCK_LOST = Counter(
+    "fudia_concierge_lock_lost_total",
+    "Messages interrupted because the conversation lease was lost.",
+)
+PROCESSING_RECOVERIES = Counter(
+    "fudia_concierge_processing_recoveries_total",
+    "Messages answered from persisted effects instead of re-running the model.",
+    ["effect", "result"],
+)
+MESSAGES_SUPERSEDED = Counter(
+    "fudia_concierge_messages_superseded_total",
+    "Messages or replies dropped because a newer QR context replaced them.",
+    ["phase"],
+)
+OUTBOUND_REPLIES = Counter(
+    "fudia_concierge_outbound_replies_total",
+    "Prepared reply transitions in the outbound phase.",
+    ["state"],
+)
+QUEUE_ORDER_GAPS = Counter(
+    "fudia_concierge_queue_order_gaps_total",
+    "Messages processed without their predecessor after the order wait limit.",
+)
+QUEUE_PENDING = Gauge(
+    "fudia_concierge_queue_pending",
+    "Delivered but unacknowledged stream entries (same value on every replica).",
+)
+QUEUE_DEAD_LETTER = Gauge(
+    "fudia_concierge_queue_dead_letter",
+    "Entries in the dead-letter stream (same value on every replica).",
+)
+QUEUE_STREAM_LENGTH = Gauge(
+    "fudia_concierge_queue_stream_length",
+    "Entries retained in the inbound stream (same value on every replica).",
+)
+QUEUE_TRIMMED = Counter(
+    "fudia_concierge_queue_trimmed_total",
+    "Stream entries removed by the retention policy.",
+    ["stream"],
+)

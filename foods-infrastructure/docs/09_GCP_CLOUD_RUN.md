@@ -167,7 +167,9 @@ proyecto con Vertex AI habilitado (`aiplatform.googleapis.com`), porque invoca
 Gemini Flash-Lite/Flash con Application Default Credentials, y
 `roles/secretmanager.secretAccessor` solo en sus secretos (Meta, Redis,
 `FUDIA_CONCIERGE_API_KEY`). Requisitos y variables en
-`fudia-concierge/docs/07_MODEL_PROVIDERS.md`.
+`fudia-concierge/docs/07_MODEL_PROVIDERS.md`. Roles ingress/worker, Redis
+privado con `noeviction` y sin cluster, apagado con drenaje y alertas en
+`fudia-concierge/docs/08_RECOVERY_AND_OPERATIONS.md`.
 
 No otorgar Owner/Editor al pipeline ni usar la cuenta Compute predeterminada.
 La conexión socket usa credenciales PostgreSQL, sin claves JSON; el proxy

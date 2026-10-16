@@ -32,11 +32,36 @@ class Settings(BaseSettings):
         ge=1,
         le=100,
     )
+    # Cloud Run sends SIGKILL ~10 s after SIGTERM: drain within that window.
     queue_shutdown_grace_seconds: float = Field(
-        default=15.0,
+        default=8.0,
         gt=0,
         le=120,
     )
+    # Per-conversation order: how long a delivery waits for its predecessor
+    # before it is deferred, and after how long a missing predecessor is
+    # skipped so it cannot block the conversation forever.
+    queue_turn_wait_seconds: float = Field(default=8.0, gt=0, le=60)
+    queue_order_max_wait_seconds: float = Field(default=120.0, gt=0, le=3_600)
+    queue_order_ttl_seconds: int = Field(default=604_800, ge=3_600)
+    # Retention: acknowledged stream entries and dead letters. Pending or
+    # undelivered entries are never trimmed.
+    queue_retention_seconds: int = Field(default=86_400, ge=3_600)
+    queue_dead_letter_retention_seconds: int = Field(default=1_209_600, ge=86_400)
+    queue_maintenance_interval_seconds: float = Field(default=300.0, ge=10)
+    # Processing records: finished ones, and ones that may still be needed to
+    # recover an operation (must outlive the dead-letter retention).
+    processing_record_ttl_seconds: int = Field(default=259_200, ge=3_600)
+    processing_pending_record_ttl_seconds: int = Field(
+        default=1_209_600, ge=86_400
+    )
+    # Window to wait for a Meta status receipt before resending an uncertain
+    # reply once.
+    outbound_reconcile_seconds: float = Field(default=30.0, gt=0, le=600)
+    # Resends of a reply whose delivery stayed unconfirmed after the window.
+    # 1 favours an answer (the text may arrive twice); 0 never duplicates it
+    # (the diner may get no answer). Meta offers no idempotent send.
+    outbound_max_resends: int = Field(default=1, ge=0, le=3)
 
     conversation_lock_ttl_seconds: int = 30
     conversation_lock_wait_seconds: float = 8.0
@@ -72,6 +97,24 @@ class Settings(BaseSettings):
     whatsapp_verify_token: str = ""
     whatsapp_app_secret: str = ""
     whatsapp_graph_version: str = ""
+
+    @model_validator(mode="after")
+    def validate_recovery_windows(self) -> "Settings":
+        if self.queue_order_ttl_seconds <= self.session_ttl_seconds:
+            raise ValueError(
+                "QUEUE_ORDER_TTL_SECONDS must exceed SESSION_TTL_SECONDS: the "
+                "QR context compares against per-conversation sequences."
+            )
+        if (
+            self.processing_pending_record_ttl_seconds
+            < self.queue_dead_letter_retention_seconds
+        ):
+            raise ValueError(
+                "PROCESSING_PENDING_RECORD_TTL_SECONDS must cover "
+                "QUEUE_DEAD_LETTER_RETENTION_SECONDS so a requeued dead "
+                "letter never repeats its effects."
+            )
+        return self
 
     @model_validator(mode="after")
     def validate_production_secrets(self) -> "Settings":

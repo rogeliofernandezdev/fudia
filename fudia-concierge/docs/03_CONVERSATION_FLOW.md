@@ -29,6 +29,9 @@ El QR inicia WhatsApp con un token opaco de mesa. El token se resuelve antes del
 ## Invariantes
 
 - conversationId identifica la conversación; requestId identifica una ronda idempotente.
+- requestId se persiste antes de llamar al backend y se reutiliza en cualquier reintento de esa ronda.
+- Un mismo mensaje del cliente nunca ejecuta dos veces el modelo después de haber cambiado el carrito o el pedido.
+- Mensajes y respuestas de un QR anterior no se aplican ni se envían en el contexto nuevo.
 - Una nueva ronda no depende de que las anteriores sigan en estado confirmado.
 - La cuenta y el saldo siempre se leen desde foods-backend.
 - El modelo nunca inventa IDs, precios ni disponibilidad.

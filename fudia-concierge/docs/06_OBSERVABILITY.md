@@ -29,6 +29,13 @@ Concierge emite logs JSON para:
 - límite de tool calls;
 - fallo del nivel Lite y si Flash tomó el turno (`concierge.agent.primary_failed`, `concierge.router.primary_failed`);
 - aviso al cliente tras dead-letter, o su fallo (`concierge.queue.failure_notice_failed`);
+- entrega aplazada sin consumir intento (`concierge.queue.deferred`: turno, lock o reconciliación);
+- pérdida del lock o fallo al renovarlo (`concierge.lock.lost`, `concierge.lock.refresh_failed`);
+- mensaje recuperado desde efectos persistidos (`concierge.processing.recovered`);
+- mensaje o respuesta de un QR anterior (`concierge.message.superseded`, `concierge.outbound.superseded`);
+- envío incierto o fallido (`concierge.outbound.uncertain`, `concierge.outbound.failed`);
+- predecesor ausente al ordenar (`concierge.queue.order_gap`);
+- fallo de mantenimiento de cola (`concierge.queue.maintenance_failed`);
 - errores operativos.
 
 Para llamadas LLM se registran modelo, nivel (`lite`/`flash`), latencia, número de tools e input/output tokens (incluidos los de razonamiento), pero no prompt ni respuesta.
@@ -52,7 +59,14 @@ Para llamadas LLM se registran modelo, nivel (`lite`/`flash`), latencia, número
 - `fudia_concierge_rate_limited_total`;
 - `fudia_concierge_model_requests_total` (`role`, `tier`, `result`);
 - `fudia_concierge_model_tokens_total` (`role`, `tier`, `direction`);
-- `fudia_concierge_model_escalations_total` (`agent`, `result`).
+- `fudia_concierge_model_escalations_total` (`agent`, `result`);
+- `fudia_concierge_lock_lost_total`;
+- `fudia_concierge_processing_recoveries_total` (`effect`, `result`);
+- `fudia_concierge_messages_superseded_total` (`phase`);
+- `fudia_concierge_outbound_replies_total` (`state`);
+- `fudia_concierge_queue_order_gaps_total`;
+- `fudia_concierge_queue_trimmed_total` (`stream`);
+- `fudia_concierge_queue_pending`, `fudia_concierge_queue_dead_letter`, `fudia_concierge_queue_stream_length` (estado compartido de Redis: agregar con `max`).
 
 No se usan teléfonos, mesa, organización, local, QR, conversationId o messageId como labels.
 
@@ -70,7 +84,8 @@ foods-backend conserva la fuente auditable de acciones de negocio:
 
 El repositorio deja las señales listas; la plataforma de observabilidad del entorno debe materializar alertas sobre:
 
-- crecimiento de dead-letter;
+- crecimiento de dead-letter y de entradas pendientes;
+- respuestas `uncertain`/`failed`, pérdidas de lock y huecos de orden (umbrales en `docs/08_RECOVERY_AND_OPERATIONS.md`);
 - aumento de errores de foods-backend;
 - fallos de WhatsApp;
 - readiness en 503;

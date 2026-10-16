@@ -10,21 +10,23 @@ from uuid import uuid4
 
 import pytest
 
-from src.domain.models import InboundMessage
+from src.domain.models import InboundMessage, ProcessingRecord
 from src.infrastructure.queue import RedisInboundQueue
 from src.services.queue_worker import QueueWorker
 
 
 class FastFakeService:
-    async def handle_message(self, phone: str, text: str, channel_id: str = "") -> str:
-        return "respuesta de prueba"
+    async def process_inbound(self, message: InboundMessage) -> ProcessingRecord:
+        return ProcessingRecord(
+            message_id=message.message_id, stage="reply_ready", reply="respuesta de prueba"
+        )
 
 
 class FastFakeSender:
     def __init__(self) -> None:
         self.sent = 0
 
-    async def send_text(self, phone: str, message: str) -> None:
+    async def send_text(self, phone: str, message: str, callback_ref: str = "") -> None:
         self.sent += 1
 
 

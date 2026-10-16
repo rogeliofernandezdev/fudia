@@ -20,3 +20,4 @@ del alcance actual es WhatsApp iniciado desde el QR de una mesa.
 11. No copiar lógica contable, OCR ni SUNAT desde tuconta-assistant.
 12. WhatsApp es un canal global de Fudia: un solo bot. El número oficial es propiedad de la configuración de Meta / WhatsApp Business y no debe duplicarse como configuración de Fudia. El uso de Concierge depende de `whatsapp_bot`, activable únicamente desde plataforma.
 13. Ejecutar ruff, mypy, pytest y build antes de cerrar cambios.
+14. Toda tool con efectos registra su punto de recuperación mediante el `EffectJournal` (`docs/08_RECOVERY_AND_OPERATIONS.md`): un efecto local con `local_effect`; una operación del backend con `before_effect` (clave idempotente y datos de reintento) y `after_effect`/`effect_failed`. Nunca escribir sesión o registro fuera de `ConversationStore.commit`.

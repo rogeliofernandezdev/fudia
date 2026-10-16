@@ -7,6 +7,7 @@ from uuid import uuid4
 from src.domain.models import CartLine, CartModifier, CartSelection
 from src.services.confirmation import explicit_confirmation
 from src.services.menu_tools import MenuTools
+from src.services.ports import FudiaError
 from src.services.tooling import ToolContext
 
 
@@ -85,11 +86,7 @@ class OrderTools:
                         note=note,
                     )
                 )
-            self.context.invalidate_confirmation()
-            return {
-                "ok": True,
-                "cart": self.context.cart_payload(),
-            }
+            return await self._cart_changed()
 
         if name == "add_modified_item":
             return await self._add_modified_item(args)
@@ -105,11 +102,12 @@ class OrderTools:
                 for line in self.context.session.cart
                 if line.product_id != product_id
             ]
-            self.context.invalidate_confirmation()
-            return {
-                "ok": len(self.context.session.cart) != before,
-                "cart": self.context.cart_payload(),
-            }
+            if len(self.context.session.cart) == before:
+                return {
+                    "ok": False,
+                    "cart": self.context.cart_payload(),
+                }
+            return await self._cart_changed()
 
         if name == "view_cart":
             return {
@@ -123,10 +121,15 @@ class OrderTools:
             self.context.session.awaiting_confirmation = True
             if not self.context.session.pending_order_request_id:
                 self.context.session.pending_order_request_id = uuid4().hex
+            cart = self.context.cart_payload()
+            await self.context.journal.local_effect(
+                "confirmation",
+                {"cart": cart},
+            )
             return {
                 "ok": True,
                 "requiresExplicitConfirmation": True,
-                "cart": self.context.cart_payload(),
+                "cart": cart,
             }
 
         if name == "confirm_order":
@@ -251,11 +254,7 @@ class OrderTools:
                 modifiers=selected_modifiers,
             )
         )
-        self.context.invalidate_confirmation()
-        return {
-            "ok": True,
-            "cart": self.context.cart_payload(),
-        }
+        return await self._cart_changed()
 
     async def _add_combo_item(
         self,
@@ -361,11 +360,13 @@ class OrderTools:
                 selections=selections,
             )
         )
+        return await self._cart_changed()
+
+    async def _cart_changed(self) -> dict[str, Any]:
         self.context.invalidate_confirmation()
-        return {
-            "ok": True,
-            "cart": self.context.cart_payload(),
-        }
+        cart = self.context.cart_payload()
+        await self.context.journal.local_effect("cart", {"cart": cart})
+        return {"ok": True, "cart": cart}
 
     async def _confirm_order(self) -> dict[str, Any]:
         session = self.context.session
@@ -381,47 +382,69 @@ class OrderTools:
                 "requiresExplicitConfirmation": True,
             }
 
-        result = await self.context.fudia.create_order(
-            self.context.token(),
-            session.phone,
-            [
-                {
-                    "productId": line.product_id,
-                    "qty": line.quantity,
-                    "note": line.note,
-                    "selections": [
-                        {
-                            "groupId": selection.group_id,
-                            "productId": selection.product_id,
-                        }
-                        for selection in line.selections
-                    ],
-                    "modifiers": [
-                        {
-                            "groupId": modifier.group_id,
-                            "optionId": modifier.option_id,
-                        }
-                        for modifier in line.modifiers
-                    ],
-                }
-                for line in session.cart
-            ],
-            conversation_id=session.conversation_id,
-            request_id=(
-                session.pending_order_request_id
-                or uuid4().hex
-            ),
+        # The idempotency key lives in the session before the backend sees
+        # it: a retry after a crash, a lost lease or a network error reuses
+        # it and recovers the same round instead of creating another one.
+        if not session.pending_order_request_id:
+            session.pending_order_request_id = uuid4().hex
+        request_id = session.pending_order_request_id
+        lines = order_lines(session.cart)
+        await self.context.journal.before_effect(
+            "create_order",
+            request_id,
+            {
+                "token": self.context.token(),
+                "phone": session.phone,
+                "conversationId": session.conversation_id,
+                "lines": lines,
+            },
         )
+        try:
+            result = await self.context.fudia.create_order(
+                self.context.token(),
+                session.phone,
+                lines,
+                conversation_id=session.conversation_id,
+                request_id=request_id,
+            )
+        except FudiaError as exc:
+            definitive = 400 <= exc.status_code < 500
+            await self.context.journal.effect_failed(exc.code, definitive)
+            raise
         session.cart = []
         session.awaiting_confirmation = False
         session.pending_order_request_id = None
         session.last_order_id = result.id
-        return {
-            "ok": True,
-            "order": {
-                "id": result.id,
-                "code": result.code,
-                "status": result.status,
-                "total": str(result.total),
-            },
+        order = {
+            "id": result.id,
+            "code": result.code,
+            "status": result.status,
+            "total": str(result.total),
         }
+        await self.context.journal.after_effect({"order": order})
+        return {"ok": True, "order": order}
+
+
+def order_lines(cart: list[CartLine]) -> list[dict[str, Any]]:
+    return [
+        {
+            "productId": line.product_id,
+            "qty": line.quantity,
+            "note": line.note,
+            "selections": [
+                {
+                    "groupId": selection.group_id,
+                    "productId": selection.product_id,
+                }
+                for selection in line.selections
+            ],
+            "modifiers": [
+                {
+                    "groupId": modifier.group_id,
+                    "optionId": modifier.option_id,
+                }
+                for modifier in line.modifiers
+            ],
+        }
+        for line in cart
+    ]

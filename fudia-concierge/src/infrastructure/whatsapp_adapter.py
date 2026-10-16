@@ -9,6 +9,14 @@ from urllib.parse import quote
 import httpx
 
 from src.metrics import WHATSAPP_OUTBOUND
+from src.services.ports import WhatsAppDeliveryUncertain
+
+# The request never reached Meta, so sending it again cannot duplicate it.
+NOT_SENT_ERRORS = (
+    httpx.ConnectError,
+    httpx.ConnectTimeout,
+    httpx.PoolTimeout,
+)
 
 
 class WhatsAppAdapter(Protocol):
@@ -16,6 +24,7 @@ class WhatsAppAdapter(Protocol):
         self,
         phone: str,
         message: str,
+        callback_ref: str = "",
     ) -> None: ...
 
 
@@ -157,13 +166,31 @@ class MetaWhatsAppAdapter:
         self,
         phone: str,
         message: str,
+        callback_ref: str = "",
     ) -> None:
+        """Send a text message.
+
+        Retries only when Meta certainly did not accept the request
+        (connection never established, 429 or 5xx answer). A timeout or a
+        broken connection after the request was written raises
+        `WhatsAppDeliveryUncertain`: the text may already be delivered.
+        `callback_ref` travels as `biz_opaque_callback_data` and comes back
+        in Meta status webhooks for reconciliation.
+        """
         self._ensure_configured()
         url = (
             "https://graph.facebook.com/"
             f"{self.graph_version}/"
             f"{self.phone_id}/messages"
         )
+        payload: dict[str, object] = {
+            "messaging_product": "whatsapp",
+            "to": phone,
+            "type": "text",
+            "text": {"body": message},
+        }
+        if callback_ref:
+            payload["biz_opaque_callback_data"] = callback_ref
         response: httpx.Response | None = None
         for attempt in range(3):
             try:
@@ -174,14 +201,9 @@ class MetaWhatsAppAdapter:
                             f"Bearer {self.token}"
                         )
                     },
-                    json={
-                        "messaging_product": "whatsapp",
-                        "to": phone,
-                        "type": "text",
-                        "text": {"body": message},
-                    },
+                    json=payload,
                 )
-            except httpx.TransportError:
+            except NOT_SENT_ERRORS:
                 if attempt == 2:
                     WHATSAPP_OUTBOUND.labels(
                         result="transport_error"
@@ -191,6 +213,13 @@ class MetaWhatsAppAdapter:
                     0.2 * (2**attempt)
                 )
                 continue
+            except httpx.TransportError as exc:
+                WHATSAPP_OUTBOUND.labels(
+                    result="uncertain"
+                ).inc()
+                raise WhatsAppDeliveryUncertain(
+                    "Meta no respondió después de recibir el envío."
+                ) from exc
 
             should_retry = (
                 response.status_code == 429

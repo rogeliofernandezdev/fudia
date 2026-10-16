@@ -9,7 +9,7 @@ from src.services.menu_tools import MenuTools
 from src.services.order_tools import OrderTools
 from src.services.ports import FudiaBackend, FudiaError
 from src.services.service_tools import ServiceTools
-from src.services.tooling import ToolContext
+from src.services.tooling import EffectJournal, ToolContext
 
 MENU_TOOLS = frozenset(
     {
@@ -49,8 +49,10 @@ class ToolRegistry:
         fudia: FudiaBackend,
         session: ConversationSession,
         user_message: str,
+        journal: EffectJournal | None = None,
     ) -> None:
-        context = ToolContext(fudia, session, user_message)
+        context = ToolContext(fudia, session, user_message, journal)
+        self.journal = context.journal
         self.menu = MenuTools(context)
         self.order = OrderTools(context)
         self.service = ServiceTools(context)
@@ -71,6 +73,8 @@ class ToolRegistry:
                 "ok": False,
                 "code": "tool_not_allowed_for_agent",
             }
+        # A worker that lost the conversation lease must not start new tools.
+        self.journal.ensure_active()
         try:
             if intent == "menu":
                 result = await self.menu.execute(
@@ -125,6 +129,7 @@ class ToolRegistry:
         name: str,
         args: dict[str, Any],
     ) -> dict[str, Any]:
+        self.journal.ensure_active()
         try:
             if name in ORDER_TOOLS:
                 result = await self.order.execute(

@@ -14,7 +14,7 @@ Router = Callable[
     Awaitable[ConciergeRoute],
 ]
 Processor = Callable[
-    [ConversationSession, str],
+    [ConversationSession, str, Any],
     Awaitable[str],
 ]
 
@@ -47,6 +47,7 @@ def build_graph(
             reply = await processors[intent](
                 state["session"],
                 state["user_message"],
+                state.get("journal"),
             )
             return {"reply": reply}
 

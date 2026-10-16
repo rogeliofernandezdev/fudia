@@ -50,6 +50,10 @@ def create_app(
     store = RedisConversationStore(
         cfg.redis_url,
         cfg.session_ttl_seconds,
+        record_ttl_seconds=cfg.processing_record_ttl_seconds,
+        pending_record_ttl_seconds=(
+            cfg.processing_pending_record_ttl_seconds
+        ),
     )
     conversation_lock = RedisConversationLock(
         cfg.redis_url,
@@ -70,6 +74,12 @@ def create_app(
         visibility_timeout_ms=(
             cfg.queue_visibility_timeout_ms
         ),
+        order_ttl_seconds=cfg.queue_order_ttl_seconds,
+        order_max_wait_seconds=cfg.queue_order_max_wait_seconds,
+        retention_seconds=cfg.queue_retention_seconds,
+        dead_letter_retention_seconds=(
+            cfg.queue_dead_letter_retention_seconds
+        ),
     )
     whatsapp = MetaWhatsAppAdapter(
         cfg.whatsapp_token,
@@ -85,6 +95,11 @@ def create_app(
         conversation_lock=conversation_lock,
         rate_limiter=rate_limiter,
         max_message_chars=cfg.max_message_chars,
+        lock_heartbeat_seconds=max(
+            0.1,
+            cfg.conversation_lock_ttl_seconds / 6.0,
+        ),
+        lock_ttl_seconds=cfg.conversation_lock_ttl_seconds,
     )
     worker = QueueWorker(
         inbound_queue,
@@ -94,6 +109,13 @@ def create_app(
         visibility_heartbeat_seconds=max(
             0.1,
             cfg.queue_visibility_timeout_ms / 3000.0,
+        ),
+        records=store,
+        turn_wait_seconds=cfg.queue_turn_wait_seconds,
+        reconcile_seconds=cfg.outbound_reconcile_seconds,
+        max_resends=cfg.outbound_max_resends,
+        maintenance_interval_seconds=(
+            cfg.queue_maintenance_interval_seconds
         ),
     )
 

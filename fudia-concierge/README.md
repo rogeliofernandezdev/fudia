@@ -24,12 +24,15 @@ Cada especialista recibe únicamente sus schemas de tools y `ToolRegistry` vuelv
 
 - Redis Streams para entrega durable del webhook.
 - Concurrencia acotada por worker con backpressure antes de reclamar mensajes.
-- Heartbeat de visibilidad para entregas activas, evitando reclamaciones prematuras mientras esperan un lock de conversación.
-- Procesamiento paralelo de conversaciones distintas y serialización por conversación.
+- Heartbeat de visibilidad solo mientras el consumidor sigue siendo dueño de la entrega.
+- Procesamiento paralelo de conversaciones distintas y orden por conversación mediante secuencia asignada al encolar.
 - Deduplicación atómica por `message_id`.
-- ACK únicamente después de procesar y enviar la respuesta.
-- Reintentos y dead-letter al agotar intentos.
-- Lock distribuido renovable por conversación.
+- Registro de procesamiento por mensaje: un reintento no vuelve a ejecutar el modelo tras persistir efectos o respuesta.
+- Dos fases: procesar y persistir; después enviar la respuesta guardada. ACK solo al cerrar el envío.
+- Envíos inciertos a WhatsApp reconciliados con estados de Meta (`biz_opaque_callback_data`).
+- Reintentos, dead-letter y recuperación con `scripts/dlq.py`.
+- Lock distribuido renovable con fencing: perder el lease cancela el trabajo y bloquea escrituras.
+- Retención explícita de Stream, dead-letter y registros sin borrar pendientes.
 - Sesiones aisladas por `phone_number_id` de Meta + cliente.
 - Rate limiting por conversación.
 - Límite de tamaño de mensaje.
@@ -74,10 +77,11 @@ Las reglas de negocio críticas no viven en prompts: se validan en services/tool
 3. Instalar de forma reproducible: `python -m pip install -c constraints.txt -e ".[dev]"`.
 4. Ejecutar: `uvicorn src.main:app --reload --port 8010`.
 5. Verificar: `ruff check . ; mypy src config ; pytest -q ; python -m build`.
+   Integración con Redis real: `FUDIA_REDIS_INTEGRATION=1 REDIS_URL=redis://... pytest -q tests/test_redis_integration.py`.
 6. Evals live del router en Lite y Flash, con credenciales del proveedor configurado: `python scripts/run_evals.py`.
 
 ## Estado
 
 El alcance de código definido para Concierge está cerrado: QR por mesa y habilitación global por módulo, carta real, carrito, combos, modificadores, confirmación protegida, rondas independientes sobre una misma comanda, KDS, solicitud de cuenta con total real, handoff humano, multiagente, aislamiento multi-tenant, cola durable, concurrencia acotada con backpressure, retries, rate limiting, readiness, métricas, trazabilidad, evals y contenedor no-root.
 
-El repositorio y CI pueden declararse cerrados para este alcance. La validación con credenciales reales de Meta/Vertex AI/Redis y una prueba de humo en el entorno desplegado son un **gate de activación externa**, no trabajo de código pendiente, y no se consideran ejecutados mientras no se proporcionen esas credenciales y entorno.
+La recuperación por etapas, el envío separado, el lock con fencing, el orden por conversación y la retención están implementados y cubiertos por pruebas con dobles y con un emulador de Redis (`docs/08_RECOVERY_AND_OPERATIONS.md`). Esas pruebas no sustituyen la validación real: siguen pendientes la integración contra Redis real (CI o staging), la confirmación de que Meta devuelve `biz_opaque_callback_data` en los estados y el **gate de activación externa** con credenciales reales de Meta/Vertex AI/Redis y una prueba de humo en el entorno desplegado. Ninguno se considera ejecutado mientras no se proporcionen esas credenciales y entorno.

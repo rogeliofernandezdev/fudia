@@ -2,7 +2,7 @@ import asyncio
 
 import pytest
 
-from src.domain.models import ConversationSession, InboundMessage
+from src.domain.models import ConversationSession, InboundMessage, ProcessingRecord
 from src.infrastructure.concurrency import (
     MemoryConversationLock,
     conversation_identity,
@@ -86,18 +86,21 @@ async def test_queue_deduplicates_retries_and_allows_failed_redelivery() -> None
     assert await queue.enqueue(message) is True
 
 
+def prepared(message: InboundMessage, reply: str = "respuesta") -> ProcessingRecord:
+    return ProcessingRecord(
+        message_id=message.message_id,
+        stage="reply_ready",
+        reply=reply,
+    )
+
+
 class FakeService:
     def __init__(self) -> None:
         self.calls = 0
 
-    async def handle_message(
-        self,
-        phone: str,
-        text: str,
-        channel_id: str = "",
-    ) -> str:
+    async def process_inbound(self, message: InboundMessage) -> ProcessingRecord:
         self.calls += 1
-        return "respuesta"
+        return prepared(message)
 
 
 class FakeWhatsApp:
@@ -108,6 +111,7 @@ class FakeWhatsApp:
         self,
         phone: str,
         message: str,
+        callback_ref: str = "",
     ) -> None:
         self.sent.append(
             (phone, message)
@@ -121,19 +125,14 @@ class BlockingService:
         self.two_active = asyncio.Event()
         self.release = asyncio.Event()
 
-    async def handle_message(
-        self,
-        phone: str,
-        text: str,
-        channel_id: str = "",
-    ) -> str:
+    async def process_inbound(self, message: InboundMessage) -> ProcessingRecord:
         self.active += 1
         self.peak = max(self.peak, self.active)
         if self.active >= 2:
             self.two_active.set()
         try:
             await self.release.wait()
-            return "respuesta"
+            return prepared(message)
         finally:
             self.active -= 1
 
@@ -161,15 +160,10 @@ class LockingService:
         self.two_active = asyncio.Event()
         self.release = asyncio.Event()
 
-    async def handle_message(
-        self,
-        phone: str,
-        text: str,
-        channel_id: str = "",
-    ) -> str:
+    async def process_inbound(self, message: InboundMessage) -> ProcessingRecord:
         identity = conversation_identity(
-            phone,
-            channel_id or "default",
+            message.phone,
+            message.sender_phone_id or "default",
         )
         token = await self.lock.acquire(identity)
         self.active_total += 1
@@ -189,7 +183,7 @@ class LockingService:
             self.two_active.set()
         try:
             await self.release.wait()
-            return "respuesta"
+            return prepared(message)
         finally:
             self.active_total -= 1
             self.active_by_identity[identity] -= 1
@@ -461,12 +455,7 @@ async def test_queue_worker_acks_only_after_reply_is_sent() -> None:
 
 
 class FailingService:
-    async def handle_message(
-        self,
-        phone: str,
-        text: str,
-        channel_id: str = "",
-    ) -> str:
+    async def process_inbound(self, message: InboundMessage) -> ProcessingRecord:
         raise RuntimeError("model unavailable")
 
 

@@ -19,6 +19,7 @@ from src.domain.intents import AgentIntent, ConciergeRoute
 from src.domain.models import ConversationSession
 from src.metrics import MODEL_ESCALATIONS
 from src.observability import fingerprint, log_event
+from src.services.ports import LockLostError
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +81,8 @@ class TieredAgent:
                 user_message,
                 tracking_handler,
             )
-        except asyncio.CancelledError:
+        except (asyncio.CancelledError, LockLostError):
+            # A lost lease is not a model failure: never retry the turn.
             raise
         except Exception as exc:
             mutated = [

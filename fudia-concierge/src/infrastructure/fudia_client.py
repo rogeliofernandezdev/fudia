@@ -360,16 +360,23 @@ class FudiaClient:
         token: str,
         phone: str,
         conversation_id: str,
+        request_id: str = "",
     ) -> BillSummary:
+        payload = {
+            "customerPhone": phone,
+            "conversationId": conversation_id,
+        }
+        if request_id:
+            payload["requestId"] = request_id
         body = await self._json(
             "POST",
             (
                 "/v1/integrations/concierge/"
                 f"{quote(token, safe='')}/bill"
             ),
-            json={
-                "customerPhone": phone,
-                "conversationId": conversation_id,
-            },
+            # With a requestId foods-backend records the request once, so a
+            # retry after a network error cannot duplicate it.
+            retryable=bool(request_id),
+            json=payload,
         )
         return BillSummary.model_validate(body)

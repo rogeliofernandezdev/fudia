@@ -5,14 +5,30 @@ import logging
 import time
 from typing import Protocol
 
-from src.metrics import QUEUE_DELIVERIES, QUEUE_DURATION, QUEUE_IN_FLIGHT
+from src.domain.models import InboundMessage, ProcessingRecord
+from src.metrics import (
+    QUEUE_DEAD_LETTER,
+    QUEUE_DELIVERIES,
+    QUEUE_DURATION,
+    QUEUE_IN_FLIGHT,
+    QUEUE_PENDING,
+    QUEUE_STREAM_LENGTH,
+)
 from src.observability import (
     begin_trace,
     end_trace,
     fingerprint,
     log_event,
 )
-from src.services.ports import InboundQueue, QueueDelivery
+from src.services.outbox import DeliveryOutcome, ReplyDispatcher, WhatsAppSender
+from src.services.ports import (
+    ConversationBusyError,
+    InboundQueue,
+    LocalProcessingRecords,
+    LockLostError,
+    ProcessingRecords,
+    QueueDelivery,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -23,25 +39,23 @@ FAILURE_REPLY = (
     "minutos o pide ayuda al personal de tu mesa."
 )
 
+# Conditions that are not failures of the message itself: the entry stays
+# pending (same id, attempt and order) and is picked up again later.
+DEFERRABLE_ERRORS = (LockLostError, ConversationBusyError)
+
 
 class MessageService(Protocol):
-    async def handle_message(
+    async def process_inbound(
         self,
-        phone: str,
-        text: str,
-        channel_id: str = "",
-    ) -> str: ...
-
-
-class WhatsAppSender(Protocol):
-    async def send_text(
-        self,
-        phone: str,
-        message: str,
-    ) -> None: ...
+        message: InboundMessage,
+    ) -> ProcessingRecord: ...
 
 
 class QueueWorker:
+    """Two recoverable phases per delivery: process and persist the reply,
+    then send that same reply. The entry is acknowledged only after the
+    reply reached a final outbound state."""
+
     def __init__(
         self,
         queue: InboundQueue,
@@ -49,6 +63,11 @@ class QueueWorker:
         whatsapp: WhatsAppSender,
         max_concurrency: int = 8,
         visibility_heartbeat_seconds: float = 10.0,
+        records: ProcessingRecords | None = None,
+        turn_wait_seconds: float = 8.0,
+        reconcile_seconds: float = 30.0,
+        maintenance_interval_seconds: float = 300.0,
+        max_resends: int = 1,
     ) -> None:
         if max_concurrency < 1:
             raise ValueError(
@@ -61,10 +80,18 @@ class QueueWorker:
         self.queue = queue
         self.service = service
         self.whatsapp = whatsapp
+        self.dispatcher = ReplyDispatcher(
+            records or LocalProcessingRecords(),
+            whatsapp,
+            reconcile_seconds=reconcile_seconds,
+            max_resends=max_resends,
+        )
         self.max_concurrency = max_concurrency
         self.visibility_heartbeat_seconds = (
             visibility_heartbeat_seconds
         )
+        self.turn_wait_seconds = turn_wait_seconds
+        self.maintenance_interval_seconds = maintenance_interval_seconds
         self._stop = asyncio.Event()
         self._in_flight: set[
             asyncio.Future[None]
@@ -72,6 +99,7 @@ class QueueWorker:
 
     async def run(self) -> None:
         await self.queue.start()
+        maintenance = asyncio.create_task(self._maintain())
         try:
             while not self._stop.is_set():
                 capacity = (
@@ -95,6 +123,11 @@ class QueueWorker:
             await self._cancel_in_flight()
             raise
         finally:
+            maintenance.cancel()
+            try:
+                await maintenance
+            except asyncio.CancelledError:
+                pass
             await self._drain()
 
     def _start_delivery(
@@ -149,15 +182,18 @@ class QueueWorker:
         )
         QUEUE_IN_FLIGHT.inc()
         try:
-            reply = await self.service.handle_message(
-                message.phone,
-                message.text,
-                message.sender_phone_id,
-            )
-            await self.whatsapp.send_text(
-                message.phone,
-                reply,
-            )
+            # Messages of one conversation run in arrival order: a later one
+            # waits until the earlier ones were answered or dead-lettered.
+            if not await self.queue.wait_turn(
+                delivery, self.turn_wait_seconds
+            ):
+                await self._defer(delivery, "waiting_turn")
+                return
+            record = await self.service.process_inbound(message)
+            outcome = await self.dispatcher.deliver(message, record)
+            if outcome is DeliveryOutcome.DEFERRED:
+                await self._defer(delivery, "reconciling_reply")
+                return
             await self.queue.ack(delivery)
             duration = time.perf_counter() - started
             QUEUE_DELIVERIES.labels(
@@ -172,6 +208,7 @@ class QueueWorker:
                 ),
                 phone=fingerprint(message.phone),
                 attempt=delivery.attempt,
+                outcome=outcome.value,
                 durationMs=round(
                     duration * 1000,
                     1,
@@ -179,9 +216,12 @@ class QueueWorker:
             )
         except asyncio.CancelledError:
             raise
+        except DEFERRABLE_ERRORS as exc:
+            await self._defer(delivery, type(exc).__name__)
         except Exception as exc:
             will_retry = await self.queue.retry(
-                delivery
+                delivery,
+                type(exc).__name__,
             )
             QUEUE_DELIVERIES.labels(
                 result=(
@@ -215,6 +255,21 @@ class QueueWorker:
                 pass
             QUEUE_IN_FLIGHT.dec()
             end_trace(trace_token)
+
+    async def _defer(
+        self,
+        delivery: QueueDelivery,
+        reason: str,
+    ) -> None:
+        await self.queue.defer(delivery)
+        QUEUE_DELIVERIES.labels(result="deferred").inc()
+        log_event(
+            logger,
+            "concierge.queue.deferred",
+            message=fingerprint(delivery.message.message_id),
+            attempt=delivery.attempt,
+            reason=reason,
+        )
 
     async def _notify_failure(self, phone: str, message_id: str) -> None:
         try:
@@ -254,12 +309,27 @@ class QueueWorker:
                 ),
                 errorType=type(exc).__name__,
             )
-            logger.exception(
-                "No se pudo renovar la visibilidad del mensaje %s",
-                fingerprint(
-                    delivery.message.message_id
-                ),
-            )
+
+    async def _maintain(self) -> None:
+        """Retention and queue gauges. Every replica runs it; trimming is
+        idempotent and gauges report the shared Redis state (aggregate with
+        max, not sum)."""
+        while True:
+            try:
+                await self.queue.trim()
+                stats = await self.queue.stats()
+                QUEUE_PENDING.set(stats.pending)
+                QUEUE_DEAD_LETTER.set(stats.dead_letter)
+                QUEUE_STREAM_LENGTH.set(stats.stream_length)
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:
+                log_event(
+                    logger,
+                    "concierge.queue.maintenance_failed",
+                    errorType=type(exc).__name__,
+                )
+            await asyncio.sleep(self.maintenance_interval_seconds)
 
     async def stop(self) -> None:
         self._stop.set()

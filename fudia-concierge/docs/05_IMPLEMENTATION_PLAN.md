@@ -74,11 +74,25 @@
 - [x] Contenedor no-root con healthcheck.
 - [x] CI valida lint, tipos, tests, build Python y build Docker.
 
+## Bloque 6 — Recuperación y consistencia operativa
+
+- [x] Lock con fencing: la pérdida del lease cancela el trabajo y bloquea escrituras.
+- [x] Registro de procesamiento por mensaje con puntos de recuperación.
+- [x] Procesamiento y envío separados; un fallo de envío no repite tools.
+- [x] `requestId` persistido antes de crear la ronda y reutilizado al recuperar.
+- [x] Orden por conversación con secuencia asignada al encolar.
+- [x] Cambio de QR: mensajes y respuestas del contexto anterior no se aplican ni se envían.
+- [x] Envío incierto a WhatsApp reconciliado con estados de Meta.
+- [x] Retención explícita y procedimiento de dead-letter (`scripts/dlq.py`).
+- [x] Pruebas de regresión de los 10 criterios y de integración con Redis.
+
 ## Estado de cierre
 
-**Implementación de repositorio: 100% para el alcance definido de Fudia Concierge.**
-
-No quedan ❌ ni ⚠️ de implementación conocidos en este alcance después de la puerta de CI.
+Las pruebas con dobles verifican la lógica, no el servicio real. Antes de
+declarar el alcance operativo cerrado faltan: la integración Redis en un Redis
+real (CI o staging), la validación de estados de Meta con
+`biz_opaque_callback_data` y el gate externo. Las limitaciones restantes están
+en `docs/08_RECOVERY_AND_OPERATIONS.md`.
 
 ## Gate externo de activación
 

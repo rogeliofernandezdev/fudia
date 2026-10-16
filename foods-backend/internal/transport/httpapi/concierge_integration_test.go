@@ -315,12 +315,38 @@ func TestConciergeQRCodeMenuOrderAndKitchenWorkflow(t *testing.T) {
 		t.Fatalf("expected two independent kitchen rounds, got %d", processedRounds)
 	}
 
-	billReq := httptest.NewRequest("POST", "/v1/integrations/concierge/"+qrToken+"/bill", bytes.NewReader([]byte(fmt.Sprintf(`{"conversationId":"conv-session-%d","customerPhone":"51999999999"}`, nonce))))
-	billReq.Header.Set("X-Fudia-Concierge-Key", "concierge-test-key")
-	billRec := httptest.NewRecorder()
-	api.Routes().ServeHTTP(billRec, billReq)
-	if billRec.Code != 200 || !strings.Contains(billRec.Body.String(), `"total":"105.50"`) {
-		t.Fatalf("bill must return backend total: %d %s", billRec.Code, billRec.Body.String())
+	requestBill := func(requestID string) {
+		t.Helper()
+		billReq := httptest.NewRequest("POST", "/v1/integrations/concierge/"+qrToken+"/bill", bytes.NewReader([]byte(fmt.Sprintf(`{"conversationId":"conv-session-%d","customerPhone":"51999999999","requestId":%q}`, nonce, requestID))))
+		billReq.Header.Set("X-Fudia-Concierge-Key", "concierge-test-key")
+		billRec := httptest.NewRecorder()
+		api.Routes().ServeHTTP(billRec, billReq)
+		if billRec.Code != 200 || !strings.Contains(billRec.Body.String(), `"total":"105.50"`) {
+			t.Fatalf("bill must return backend total: %d %s", billRec.Code, billRec.Body.String())
+		}
+	}
+	billRequests := func() int {
+		t.Helper()
+		var count int
+		if err := pool.QueryRow(ctx, `
+			SELECT count(*) FROM audit_log
+			WHERE organization_id=$1 AND action='concierge.bill.requested'
+			  AND metadata->>'conversationId'=$2
+		`, s.OrganizationID, fmt.Sprintf("conv-session-%d", nonce)).Scan(&count); err != nil {
+			t.Fatalf("count bill requests: %v", err)
+		}
+		return count
+	}
+	// A repeated requestId (Concierge recovering after a crash) returns the
+	// bill again without recording a second request; a new one is recorded.
+	requestBill(fmt.Sprintf("bill-%d-1", nonce))
+	requestBill(fmt.Sprintf("bill-%d-1", nonce))
+	if got := billRequests(); got != 1 {
+		t.Fatalf("repeated bill requestId must be recorded once, got %d", got)
+	}
+	requestBill(fmt.Sprintf("bill-%d-2", nonce))
+	if got := billRequests(); got != 2 {
+		t.Fatalf("a new bill requestId must be recorded, got %d", got)
 	}
 
 	deliverReq := httptest.NewRequest("PATCH", "/v1/admin/orders/"+created.ID+"/status", bytes.NewReader([]byte(`{"status":"entregado"}`)))

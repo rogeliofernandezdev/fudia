@@ -60,6 +60,10 @@ func (r *Concierge) ResolveQR(ctx context.Context, token string) (application.QR
 	out.Scope.Name = "Fudia Concierge"
 	return out, nil
 }
+
+// RecordBillRequest registra una vez cada requestId: el índice único
+// audit_log_concierge_bill_request_uq convierte un reintento en no-op. Sin
+// requestId (clientes anteriores) cada llamada se registra como antes.
 func (r *Concierge) RecordBillRequest(ctx context.Context, s scope, qr application.QRContext, out ordercontracts.Order, in domain.BillRequestInput) (int64, error) {
 	tag, err := r.db(ctx).Exec(ctx, `
 		INSERT INTO audit_log(
@@ -71,8 +75,9 @@ func (r *Concierge) RecordBillRequest(ctx context.Context, s scope, qr applicati
 		    'conversationId',$4::text,
 		    'tableId',$5::text,
 		    'customerPhonePresent',($6::text<>'')
-		  ))
-	`, qr.Scope.OrganizationID, qr.Scope.LocationID, out.ID, in.ConversationID, qr.TableID, in.CustomerPhone)
+		  ) || CASE WHEN $7::text<>'' THEN jsonb_build_object('requestId',$7::text) ELSE '{}'::jsonb END)
+		ON CONFLICT DO NOTHING
+	`, qr.Scope.OrganizationID, qr.Scope.LocationID, out.ID, in.ConversationID, qr.TableID, in.CustomerPhone, in.RequestID)
 	return tag.RowsAffected(), conciergeError(err)
 }
 func (r *Concierge) Settings(ctx context.Context, s scope) (domain.SettingsView, error) {

@@ -12,10 +12,10 @@ FastAPI webhook
 Redis Stream durable
     |
     v
-QueueWorker
+QueueWorker (turno por conversación)
     |
     v
-ConciergeService
+ConciergeService (fase 1: procesar y persistir)
     |
     +--> LangGraph unified router
            |
@@ -23,6 +23,9 @@ ConciergeService
            +--> menu agent ----+
            +--> order agent ---+--> ToolRegistry --> foods-backend
            +--> service agent -+
+    |
+    v
+ReplyDispatcher (fase 2: enviar la respuesta persistida)
     |
     v
 WhatsApp outbound
@@ -54,7 +57,7 @@ La identidad de sesión se deriva de:
 
 Esa identidad se hashea antes de formar la clave Redis. El tenant no se deriva del número de WhatsApp: siempre lo determina el QR activo de la conversación.
 
-Cada conversación se serializa mediante un lock Redis renovable. Si otra entrega de la misma conversación llega mientras la primera sigue procesándose, espera el lock o se reintenta desde la cola. La sesión y el carrito se persisten únicamente bajo esa identidad compuesta.
+Cada conversación se serializa mediante un lock Redis renovable con fencing: si el lease se pierde, el worker cancela el trabajo protegido y toda escritura de sesión o registro se rechaza porque se valida contra el token del lock dentro de un script Lua. El orden lo garantiza además una secuencia por conversación asignada al encolar. La sesión y el carrito se persisten únicamente bajo esa identidad compuesta. Detalle en `docs/08_RECOVERY_AND_OPERATIONS.md`.
 
 ## Cola durable
 
@@ -63,17 +66,21 @@ El webhook valida la firma de Meta y encola cada mensaje en Redis Streams. No ej
 La cola aplica:
 
 - deduplicación atómica por `message_id`;
+- secuencia por conversación asignada en el mismo `XADD`;
 - consumer group;
 - recuperación de mensajes pendientes mediante `XAUTOCLAIM`;
+- renovación de visibilidad solo mientras el consumidor sigue siendo dueño;
 - ACK después de procesamiento y envío;
-- reintentos;
-- dead-letter al agotar intentos.
+- reintentos que conservan `message_id` y secuencia;
+- aplazamiento sin copia cuando falta el turno, el lock o la confirmación de Meta;
+- dead-letter al agotar intentos, con procedimiento de recuperación (`scripts/dlq.py`);
+- retención que nunca recorta entradas pendientes ni no leídas.
 
 Cada worker limita sus mensajes en vuelo con `QUEUE_WORKER_CONCURRENCY`. La capacidad libre se pasa a Redis como límite de lectura, por lo que el proceso no reclama más entregas de las que puede ejecutar. Mientras una entrega permanece activa —incluido el tiempo esperando el lock de conversación— el worker renueva periódicamente su idle time en Redis para que `XAUTOCLAIM` no la recupere prematuramente. Conversaciones distintas pueden avanzar en paralelo; los mensajes de una misma conversación siguen serializados por el lock distribuido renovable.
 
 Durante el apagado, el worker deja de iterar trabajo nuevo y drena las entregas en vuelo dentro de `QUEUE_SHUTDOWN_GRACE_SECONDS`. Si se excede esa ventana, la tarea se cancela y Redis puede recuperar posteriormente cualquier entrega no confirmada.
 
-El modelo de entrega es al menos una vez; las mutaciones de negocio críticas usan idempotencia en foods-backend.
+El modelo de entrega es al menos una vez. Cada mensaje tiene un registro de procesamiento en Redis: una vez persistido un efecto o una respuesta, un reintento no vuelve a ejecutar el modelo; responde desde lo guardado, repite la operación pendiente con su misma clave idempotente o solo reenvía la respuesta. Ver `docs/08_RECOVERY_AND_OPERATIONS.md`.
 
 ## Orquestación multiagente
 
@@ -165,15 +172,13 @@ de activar producción. No presupone autoscaling ya configurado.
 
 ### Limitaciones de consistencia que exigen diseño adicional
 
-- Streams procesan **al menos una vez**. El `requestId` de las rondas
-  evita duplicación de escrituras en FUDIA; el envío WhatsApp no ofrece aquí
-  un mecanismo de exactamente una vez y un timeout después de una aceptación
-  por Meta puede originar respuestas repetidas. Se requiere estrategia de
-  idempotencia/reconciliación de mensajes salientes antes de prometer
-  exactamente una vez.
+- Streams procesan **al menos una vez**. Las acciones comerciales no se
+  repiten (registro de procesamiento + `requestId`), pero el envío WhatsApp
+  sigue siendo al menos una vez: un envío incierto se reconcilia con los
+  estados de Meta y, sin confirmación, se reenvía según `OUTBOUND_MAX_RESENDS`.
 - Las métricas Prometheus se exponen por **instancia**; con réplicas se
-  necesita colector central y panel agregado, más alertas de pendiente de
-  Stream, dead-letter, latencia Meta/LLM y consumo Redis.
+  necesita colector central. Los gauges de cola reflejan Redis compartido y
+  se agregan con `max`. Alertas en `docs/08_RECOVERY_AND_OPERATIONS.md`.
 - El código no demuestra aún throughput de negocio real, tiempo p95/p99
   bajo carga sostenida, cumplimiento de rate limits de Meta, ni resistencia
   de múltiples réplicas con caídas simultáneas. Estas pruebas precisan Redis
