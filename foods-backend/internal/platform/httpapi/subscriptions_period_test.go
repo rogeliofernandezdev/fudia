@@ -29,7 +29,7 @@ func TestSubscriptionPeriodEndClampsToTargetMonthAndKeepsAnchor(t *testing.T) {
 		{"December 30 to January", "2026-12-30T10:15:30Z", "monthly", 30, "2027-01-30T10:15:30Z"},
 		{"December 31 to January", "2026-12-31T10:15:30Z", "monthly", 31, "2027-01-31T10:15:30Z"},
 		{"leap annual Feb 29", "2028-02-29T10:15:30Z", "annual", 29, "2029-02-28T10:15:30Z"},
-		{"annual Feb 29 through leap year", "2029-02-28T10:15:30Z", "annual", 29, "2030-02-28T10:15:30Z"},
+		{"annual Feb 29 through leap year", "2029-02-28T10:15:30Z", "annual", 29, "2030-02-29T10:15:30Z"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
