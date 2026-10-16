@@ -88,7 +88,7 @@ importes, cantidades y porcentajes usan Manrope con cifras tabulares
 | `--font-size-lg` | 18 px | Títulos de modal, importes secundarios y subtítulos de sección |
 | `--font-size-xl` | 22 px | Título de página en móvil, KPI |
 | `--font-size-2xl` | 28 px | Título de página |
-| `--font-size-3xl` / `--font-size-4xl` | 36 / 48 px | Solo cifra principal del dashboard |
+| `--font-size-3xl` / `--font-size-4xl` | 36 / 48 px | Solo cifras protagonistas (Ventas del dashboard: 36 px) |
 
 - Pesos: `--weight-regular` 400, `--weight-medium` 500, `--weight-semibold`
   600, `--weight-bold` 700, `--weight-heavy` 800. Manrope no tiene pesos
@@ -1454,36 +1454,87 @@ El dashboard usa términos cotidianos del restaurante: «Ventas · Hoy»,
 muestra «Ventas netas» ni «Ticket promedio», ni referencias a devoluciones. Los
 nombres técnicos `salesNet` y `averageTicket` se conservan en el contrato de API.
 
-La pantalla separa el análisis del periodo (columna principal) de la operación en
+La pantalla es un mosaico: una fila de cuatro indicadores sobre todo el ancho y,
+debajo, el análisis del periodo (columna principal) separado de la operación en
 vivo (columna lateral «Ahora mismo»). Un único selector Hoy / 7 días / 30 días,
 sobre todo el contenido, filtra ventas, indicadores, desgloses y productos; la
 operación en vivo y las alertas siempre son actuales.
 
-- **Cifra principal.** «Ventas · {periodo}» en 48 px (36 px en móvil) con la
-  variación frente a la comparación y el importe anterior. «Hoy» se compara con el
-  mismo día de la semana anterior; 7 y 30 días, con la ventana anterior de igual
-  duración. La variación lleva signo (+/−) además del color verde o rojo. Al lado,
-  la hora pico o el mejor día.
-- **Gráfico de ventas.** Una sola serie: las ventas del periodo como onda
+- **Mosaico de indicadores.** Cuatro tarjetas con icono duotono de 18 px en
+  cuadro tenue, etiqueta de 13 px y cifra con números tabulares: «Ventas ·
+  {periodo}», «Pedidos cobrados», «Promedio por pedido» y «Pedidos en atención».
+  Ventas es la protagonista por tamaño: columna 1.4 veces más ancha y cifra de
+  36 px (28 px en móvil); las demás usan 28 px (22 px en móvil).
+- **Tono por indicador.** Para distinguirlos de un vistazo, cada indicador lleva
+  un tono de la identidad, siempre tenue: Ventas en verde restaurante (`brand`),
+  Pedidos cobrados en azul operativo (`primary`), Promedio por pedido en violeta
+  digital (`digital`) y Pedidos en atención en ámbar (`warning`). El tono solo
+  colorea el cuadro del icono (fondo 100, icono 700/800), un tinte de esquina
+  (tono 50 que se funde con la superficie al 62 %), el borde (tono 100), el
+  minigráfico y la barra de cocina. Las cifras siguen en `ink-950` y la variación
+  conserva su verde o rojo propio; no es un estado ni se reutiliza fuera del
+  mosaico.
+- **Variación.** Ventas, Pedidos cobrados y Promedio por pedido llevan su
+  variación y un minigráfico del periodo (curva suave con área tenue en el tono
+  del indicador y el último valor resaltado); Ventas añade el importe anterior.
+  Pedidos en atención muestra los pedidos en cocina y una barra con su
+  proporción. La variación es una pastilla con el porcentaje y signo (+/−) en
+  verde o rojo tenue, seguida de la comparación en texto `ink-500` («vs. el
+  viernes pasado»). «Hoy» se compara con el mismo día de la semana anterior; 7 y
+  30 días, con la ventana anterior de igual duración. Si el periodo de
+  comparación no tuvo ventas no hay porcentaje posible: se omiten la variación y
+  el importe anterior (sin textos del tipo «Sin ventas para comparar»); los demás
+  indicadores conservan su descripción.
+  En 1180 px el mosaico pasa a 2 × 2; en ≤600 px Ventas y Pedidos en atención
+  ocupan su fila y las otras dos comparten la suya, con etiquetas que envuelven
+  en lugar de truncarse.
+- **Evolución de ventas.** Tarjeta a ancho completo de la columna principal con
+  la hora pico o el mejor día en la cabecera (en móvil, en una franja bajo el
+  título). Una sola serie: las ventas del periodo como onda
   índigo (`primary-600`) con curva suave monótona (sin picos ni valles inventados),
   línea de 3 px con un brillo suave y degradado que se desvanece hacia la base. No
   dibuja el periodo de comparación ni promedios: la comparación vive en la
-  variación junto a la cifra principal, para que el gráfico se lea sin
+  variación del indicador de Ventas, para que el gráfico se lea sin
   ambigüedad. El pico lleva su importe como etiqueta directa. Por horas para «Hoy»
-  y por días para 7 y 30 días; la onda se dibuja de izquierda a derecha al cargar
-  (sin animación con movimiento reducido). El cursor guía muestra importe y
+  y por días para 7 y 30 días. En «Hoy» la hora en curso lleva un punto que late
+  (pulso de 1600 ms). El cursor guía muestra importe y
   pedidos con cobro del tramo; las flechas del teclado lo recorren y una tabla
   oculta (dentro de un contenedor `sr-only`, nunca la tabla con esa clase) replica
   los datos para lectores de pantalla.
-- **Indicadores.** Pedidos cobrados y Promedio por pedido con minigráfico del
-  periodo y su propia variación; Pedidos en atención con los pedidos en cocina.
-- **Desgloses.** Ventas por canal, Medios de pago y Ventas por categoría como
-  barras horizontales de una sola serie con importe, cantidad de cobros o unidades
-  y participación. Las categorías muestran cinco y agrupan el resto en «Otras».
-  Canales y medios usan las etiquetas que entrega el API.
+- **Desgloses.** Ventas por canal y Ventas por categoría como barras horizontales
+  de una sola serie con importe, cantidad de cobros o unidades y participación.
+  Las categorías muestran cinco y agrupan el resto en «Otras». Medios de pago es un
+  anillo de participación de 150 px con el total al centro y una leyenda (muestra,
+  medio, cobros, importe y porcentaje) que es su lectura accesible; el anillo es
+  decorativo. Usa la rampa índigo de mayor a menor tono (`primary-700`, `-500`,
+  `-300`, `-200` e `ink-300`), nunca colores categóricos nuevos; desde el sexto
+  medio agrupa el resto en «Otros N». Canales y medios usan las etiquetas que
+  entrega el API.
 - **Ahora mismo.** Saldo por cobrar destacado y bloques de Atención, Cocina,
   Delivery y Caja según los módulos contratados, seguidos de «Pendientes por
-  revisar». En escritorio la columna queda fija al desplazarse.
+  revisar». En escritorio la columna queda fija al desplazarse. El punto «En vivo»
+  emite un pulso continuo (anillo que se expande y se desvanece en 1600 ms).
+- **Movimiento.** Cada animación comunica que el dato apareció o cambió:
+  - Entrada única al montar: cada tarjeta sube 8 px y se funde en 280 ms
+    (`easing-out`), escalonada 50 ms en orden de lectura (indicadores, tendencia,
+    desgloses, ranking; la columna en vivo acompaña a la tendencia).
+  - Cifras de indicadores y Saldo por cobrar cuentan en 650 ms (desaceleración
+    cúbica) desde 0 al aparecer y desde el valor anterior al actualizarse. El
+    lector de pantalla recibe solo el valor final.
+  - Las barras (desgloses, ranking y proporción en cocina) ocupan toda la pista y
+    se desplazan con `transform`, nunca con `width`: crecen desde la izquierda al
+    aparecer, escalonadas 60 ms por fila, y transicionan 280 ms al cambiar de valor.
+  - Líneas dinámicas: la onda y los minigráficos crecen desde la base al aparecer
+    y, cuando llegan datos nuevos (otro periodo o el refresco de 30 s), se
+    transforman en 750 ms desde la serie que estaba en pantalla en lugar de
+    redibujarse; si cambia la cantidad de tramos (horas ↔ días), la serie anterior
+    se reparte por interpolación. El eje usa el máximo final. El pico y el punto
+    en vivo se ocultan mientras la línea se mueve y se funden al asentarse; con el
+    cursor activo solo se ocultan.
+  - El anillo de medios de pago entra con un giro corto y fundido al aparecer y al
+    cambiar de periodo.
+  - Con `prefers-reduced-motion: reduce` no hay entradas, conteos, crecimientos,
+    transformaciones ni pulsos: los valores finales aparecen directamente.
 
 Distingue «Pedidos cobrados» (pago completo con cobro en el periodo) de «Saldo por
 cobrar» (pedidos sin pagar o parcialmente pagados, incluso de días anteriores).
@@ -1497,8 +1548,8 @@ contratados y los enlaces usan las mismas reglas de menú y permisos del shell.
 El efectivo de cajas ciegas no autorizado muestra «Importe reservado», nunca cero.
 Los pendientes de disponibilidad/abastecimiento no repiten las colas de cocina.
 La carga reproduce la misma estructura con skeleton; el error es recuperable y no
-reemplaza datos por ceros. Bajo 1180 px la columna «Ahora mismo» pasa debajo del
-análisis; en 390 px todo se apila, el selector ocupa el ancho con botones de 44 px
+reemplaza datos por ceros; el skeleton reproduce el mosaico de cuatro indicadores.
+Bajo 1180 px la columna «Ahora mismo» pasa debajo del análisis; en 390 px todo se apila, el selector ocupa el ancho con botones de 44 px
 y el gráfico conserva el eje X sin desbordar.
 
 Ventas ofrece búsqueda, «Fecha de inicio» y «Fecha de fin» mediante controles

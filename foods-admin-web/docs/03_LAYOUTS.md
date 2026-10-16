@@ -96,8 +96,11 @@ encabezado.
 ### Dashboard
 
 Encabezado estable incluso en error, `Tabs` para el periodo (Hoy, 7 días,
-30 días), KPI separados de «Ahora mismo», skeleton con la misma estructura y
-error recuperable sin reemplazar datos por ceros.
+30 días), mosaico de cuatro KPI a todo el ancho y, debajo, análisis del periodo
+separado de «Ahora mismo». Skeleton con la misma estructura y error recuperable
+sin reemplazar datos por ceros. Rejilla del mosaico: 4 columnas (Ventas 1.4×),
+2 × 2 bajo 1180 px y, en ≤600 px, Ventas y Pedidos en atención a ancho completo
+con las otras dos en media columna; sin desborde horizontal a 390 y 427 px.
 
 ### Asistente
 

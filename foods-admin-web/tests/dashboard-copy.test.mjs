@@ -28,7 +28,7 @@ function render(data,sessionOverrides={},queryOverrides={}){
   if(name==="@/providers/session-context")return {useSession:()=>({user:{name:"Ana",platformAdmin:false},location:{id:"local",name:"Principal"},organization:{id:"company"},modules,menuAccess:["*"],permissions:["*"],setupRequired:false,...sessionOverrides})};
   if(name==="@/providers/settings-context")return {useSettings:()=>({currencyDecimals:2,currencySymbol:"S/",currencyPosition:"before"})};
   if(name==="@/shared/i18n/regional-format")return {formatRegionalNumber:value=>value.toFixed(2)};
-  if(name==="./dashboard-charts")return {BarList:"BarList",Sparkline:"Sparkline",TrendChart:"TrendChart"};
+  if(name==="./dashboard-charts")return {BarList:"BarList",CountUp:"CountUp",DonutChart:"DonutChart",RankTrack:"RankTrack",Sparkline:"Sparkline",TrendChart:"TrendChart"};
   if(name==="@/shared/routing/page-routes"||name==="@/shell/navigation"){
    const file=name==="@/shell/navigation"?"shell/navigation.ts":"shared/routing/page-routes.ts";
    const result={};vm.runInNewContext(ts.transpileModule(readFileSync(new URL("../src/"+file,import.meta.url),"utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{exports:result,require:resolve});return result;
@@ -74,7 +74,8 @@ test("dashboard ofrece periodos Hoy, 7 y 30 días como filtro único",()=>{
 test("dashboard conserva importes negativos y estados vacíos específicos",()=>{
  const view=render({...base,salesNet:"-10",averageTicket:"-2.50",criticalStock:0,kitchenPending:0,previous:{...base.previous,salesNet:"0"},trend:{granularity:"hour",points:[]},operations:{...base.operations,soldOutProducts:0}});
  assert.ok(view.some(node=>node.type==="strong"&&text(node.props.children)==="-S/ 10.00"));
- for(const label of ["Sin pedidos en cocina","Sin pendientes por revisar","Aún no hay ventas cobradas hoy","Sin ventas para comparar con el miércoles pasado","Sin productos vendidos todavía"])assert.ok(has(view,label),label);
+ for(const label of ["Sin pedidos en cocina","Sin pendientes por revisar","Aún no hay ventas cobradas hoy","Sin productos vendidos todavía"])assert.ok(has(view,label),label);
+ assert.equal(view.some(node=>/para comparar|Antes:/.test(text(node.props?.children))),false,"Sin base de comparación no se muestra variación ni importe anterior");
  assert.equal(view.some(node=>node.type==="TrendChart"),false);
 });
 
@@ -113,4 +114,27 @@ test("dashboard conserva un error explícito y reintento si falla la petición",
  assert.ok(has(nodes,"Sin conexión"));
  assert.ok(nodes.some(node=>node.type==="button"&&node.props?.children==="Reintentar"));
  assert.equal(nodes.some(node=>node.type==="strong"),false);
+});
+
+test("dashboard organiza un mosaico de cuatro indicadores con Ventas como protagonista",()=>{
+ const view=render(base);
+ const kpis=view.filter(node=>node.type==="article"&&node.props?.className?.includes("dash-kpi"));
+ assert.equal(kpis.length,4);
+ assert.ok(kpis[0].props.className.includes("lead"),"Ventas abre el mosaico como única protagonista");
+ assert.equal(kpis.filter(node=>node.props.className.includes("lead")).length,1);
+ const counters=view.filter(node=>node.type==="CountUp");
+ assert.deepEqual(counters.map(node=>node.props.children),["S/ 140.00","4","S/ 35.00","3","S/ 80.00"],"Las cifras cuentan hacia el valor final que reciben los lectores de pantalla");
+ assert.deepEqual(counters.map(node=>node.props.value),[140,4,35,3,80]);
+ const change=view.find(node=>node.type==="p"&&node.props?.className==="dash-change up");
+ assert.equal(text(change.props.children[0]),"+40%","El porcentaje va en su propia pastilla");
+ assert.ok(view.some(node=>node.type==="DonutChart"&&node.props.label==="Cobros por medio de pago"),"Medios de pago se muestra como anillo");
+ assert.equal(view.filter(node=>node.type==="BarList").length,2,"Canal y categoría conservan barras");
+ assert.ok(view.some(node=>node.type==="RankTrack"),"Pedidos en atención muestra la proporción en cocina");
+ const delays=view.filter(node=>node.props?.className?.includes("dash-enter")).map(node=>node.props.style.animationDelay);
+ assert.deepEqual(delays.slice(0,5),["0ms","50ms","100ms","150ms","200ms"],"La entrada se escalona en orden de lectura");
+});
+
+test("el skeleton del dashboard reproduce el mosaico de indicadores",()=>{
+ const nodes=render(undefined,{}, {isLoading:true});
+ assert.equal(nodes.filter(node=>node.props?.className?.includes("dash-kpi dashboard-skeleton-kpi")).length,4);
 });
