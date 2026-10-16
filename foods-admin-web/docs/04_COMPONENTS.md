@@ -168,6 +168,17 @@ foco al marcar o desmarcar desplazaría el panel (con `overflow:hidden`) y el
 modal se vería en blanco. Al marcar, el modal conserva contenido y posición de
 scroll en escritorio y a 390 px; lo cubre `tests/role-editor-scroll.test.mjs`.
 
+En móvil (≤600 px) el editor de roles se comporta como la Comanda: tarea a
+pantalla completa (100dvh, sin radio) con un solo desplazamiento, el del form.
+El cuerpo y el acordeón no tienen scroll propio; el panel usa `overflow:clip`
+(conserva el radio sin romper `sticky`). Pestañas Menú/Acciones y búsqueda
+quedan fijas arriba al recorrer la lista (`top` compensa el padding del form) y
+las pestañas ocultan sus contadores: el conteo por grupo y los checks ya dicen
+qué está asignado. Escritorio y tablet conservan modal, contadores y lista con
+scroll interno. Validado a 390 × 844, 427 × 840 y 427 × 933 sin scroll horizontal.
+Iconos de las pestañas (todos los anchos): Menú `layout`, Acciones `circleCheck`
+(acciones permitidas; reemplaza la llave `key`).
+
 `dl.modal-record-data` organiza los datos de consulta de Ventas, Cobros y el detalle de Menús y combos.
 En escritorio es una franja de una fila: fondo `primary-50`, borde `primary-100`,
 columnas ajustadas al contenido (`grid-auto-flow: column`, `grid-auto-columns:

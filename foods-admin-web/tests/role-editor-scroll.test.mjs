@@ -21,3 +21,14 @@ test("los checks del editor de roles no desplazan ni vacían el modal al marcars
  assert.match(input,/height:var\(--size-1\)/);
  assert.match(input,/margin:0/);
 });
+
+test("en móvil el editor de roles es pantalla completa con un solo scroll y pestañas fijas",()=>{
+ const mobile=css.slice(css.indexOf("@media(max-width:600px){"));
+ assert.match(mobile,/\.role-editor-modal\{width:100%;height:100dvh;max-height:100dvh;border-radius:0\}/,"pantalla completa como la Comanda");
+ assert.match(mobile,/\.role-editor-body\{[^}]*overflow:visible/,"sin scroll anidado: desplaza el form");
+ assert.match(mobile,/\.role-editor-perms-panel\{[^}]*overflow:clip/,"clip conserva el radio sin romper sticky");
+ assert.match(mobile,/\.re-perm-tabs\{position:sticky;top:calc\(var\(--space-4\) \* -1\)/,"pestañas y búsqueda fijas arriba");
+ assert.match(mobile,/\.re-perm-tabs \.ds-tabs b\{display:none\}/,"sin contadores en las pestañas móviles");
+ assert.match(mobile,/\.re-perm-accordion\{overflow:visible\}/);
+ assert.doesNotMatch(css.slice(0,css.indexOf("@media")),/\.re-perm-tabs \.ds-tabs b/,"escritorio conserva los contadores");
+});
