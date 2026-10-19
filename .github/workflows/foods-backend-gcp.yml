@@ -9,7 +9,6 @@ on:
       database_ready:
         type: boolean
         required: true
-        default: false
   workflow_dispatch:
     inputs:
       environment:

@@ -11,7 +11,7 @@ test("GCP coordinator deploys pushes only from the agreed branch into developmen
   for (const path of ["foods-backend/**", "foods-admin-web/**", "fudia-image-processor/**", "foods-infrastructure/**", ".github/workflows/foods-*-gcp.yml", ".github/workflows/foods-gcp.yml"]) {
     assert.ok(source.includes(`- "${path}"`));
   }
-  assert.equal((source.match(/environment: gcp-dev/g) ?? []).length, 3);
+  assert.equal((source.match(/environment: gcp-dev/g) ?? []).length, 4);
   assert.ok(!source.includes("gcp-production"));
   assert.ok(!source.includes("AWS_"));
   assert.ok(!source.includes("workflow_run:"));
@@ -27,8 +27,17 @@ test("coordinator selects changed components and accepts skipped dependencies bu
   assert.ok(source.includes("needs.backend.result == 'success' || needs.backend.result == 'skipped'"));
   assert.equal((source.match(/!cancelled\(\) && needs.changes.result == 'success'/g) ?? []).length, 2);
   assert.ok(source.includes("fetch-depth: 0"));
-  assert.ok(source.includes("BASE_SHA: ${{ github.event.before }}"));
+  assert.ok(!source.includes("BASE_SHA:"));
   assert.ok(source.includes("HEAD_SHA: ${{ github.sha }}"));
+  const detection = source.slice(source.indexOf("  changes:"), source.indexOf("\n  processor:"));
+  for (const key of ["GCP_PROJECT_ID", "GCP_REGION", "GCP_IMAGE_PROCESSOR_SERVICE", "GCP_BACKEND_SERVICE", "GCP_FRONTEND_SERVICE"]) {
+    assert.ok(detection.includes(key + ': ${{ vars.' + key + ' }}'));
+  }
+  assert.ok(detection.includes("environment: gcp-dev")); // Required by the existing WIF subject.
+  assert.ok(detection.includes("id-token: write"));
+  assert.ok(detection.includes("create_credentials_file: false"));
+  assert.ok(detection.indexOf("uses: google-github-actions/auth") < detection.indexOf("- id: detect"));
+  assert.ok(detection.includes("CLOUDSDK_AUTH_ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}"));
   assert.ok(source.includes("run: node foods-infrastructure/gcp/changed-components.mjs"));
   assert.equal((source.match(/database_ready: true/g) ?? []).length, 2);
   assert.equal((source.match(/secrets: inherit/g) ?? []).length, 3);
@@ -47,7 +56,8 @@ test("component workflows preserve tests, environment credentials and manual con
     assert.match(child, /deploy:\s+needs: verify/);
     assert.ok(child.includes("environment: ${{ inputs.environment }}"));
     if (name !== "foods-admin-web-gcp") {
-      assert.equal((child.match(/default: false/g) ?? []).length, 2);
+      assert.equal((child.match(/default: false/g) ?? []).length, 1); // Manual confirmation remains false by default.
+      assert.match(child, /workflow_call:[\s\S]*?database_ready:\s+type: boolean\s+required: true\s+workflow_dispatch:/);
       assert.ok(child.includes("GCP_DATABASE_READY: ${{ inputs.database_ready }}"));
     }
   }

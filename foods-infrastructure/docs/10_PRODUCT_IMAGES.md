@@ -144,6 +144,9 @@ mantenimiento separado; no se eliminan automáticamente en este cambio.
    de esquema para no migrar juntos. Worker image no incluye API ni migraciones.
    El coordinador `foods-gcp` lo ejecuta primero por push a `feat/ui-standard`
    en `gcp-dev`; backend y frontend esperan el éxito de sus dependencias.
+   En servicios existentes la revisión processor queda como candidata sin tráfico
+   hasta configurar IAM y trigger. Solo entonces se promueve y mueve el tag
+   `deployed`; un fallo conserva el componente pendiente para el próximo push.
 3. Completar grants después de migración 000080 antes de subir fotos. /health no
    certifica esos permisos. Confirmar trigger activo y ajustar ack deadline de
    su suscripción Pub/Sub a 600 s. Revisar reintentos y retención.

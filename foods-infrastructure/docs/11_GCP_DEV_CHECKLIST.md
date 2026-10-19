@@ -4,7 +4,9 @@ Configuración acordada con el operador el 2026-10-13. No es evidencia de un
 despliegue ni de una auditoría remota de IAM. AWS no cambia. Actualización:
 `foods-gcp` coordina el deploy por push a `feat/ui-standard`, solo en
 `gcp-dev`: processor → backend → frontend, cada uno con pruebas → deploy.
-Solo se ejecutan componentes modificados; las etapas no afectadas se omiten.
+Solo se ejecutan componentes con cambios pendientes desde su revisión activa
+completada. Una etapa bloqueada por un fallo anterior se recupera en el siguiente
+push aunque ese push solo modifique otro componente.
 
 ## Datos confirmados por el operador
 
@@ -117,7 +119,7 @@ revisar sus triggers; mantener intactos los archivos no evita ese comportamiento
    infraestructura o workflows GCP activan **foods-gcp**.
 3. GitHub → Actions → **foods-gcp** → ejecución del commit. Deben terminar
    correctamente los componentes seleccionados (verify/deploy), en orden
-   processor → backend → frontend. Los no modificados aparecen `skipped`.
+   processor → backend → frontend. Los que no tienen cambios pendientes aparecen `skipped`.
    Si una etapa seleccionada falla, no se ejecuta una etapa dependiente.
    Las migraciones de processor/API conservan exclusión mutua. No se generan
    despliegues duplicados: los tres componentes se invocan mediante workflow_call.
@@ -129,9 +131,14 @@ el código del mismo push y las variables/secrets existentes de `gcp-dev`, sin
 variables nuevas. Las migraciones pendientes quedan habilitadas para desarrollo:
 esto no restaura datos ni comprueba automáticamente su integridad/backups.
 Un cambio solo de frontend no ejecuta builds/tests/deploy de backend o processor
-ni migraciones SQL. Lo mismo aplica a cada proyecto. Cambios compartidos en
-foods-infrastructure/coordinador, o el primer push de una rama, seleccionan todos.
-Se compara el rango completo del push, incluyendo archivos eliminados/renombrados.
+ni migraciones SQL si esos componentes no tenían cambios pendientes. Lo mismo
+aplica a cada proyecto. Se compara el SHA de la revisión con tag `deployed` y
+100 % de tráfico contra HEAD, incluyendo archivos eliminados/renombrados. Los
+cambios compartidos se evalúan desde la base propia de cada componente.
+El job `changes` usa las mismas variables/WIF de `gcp-dev`, solo con lecturas
+Cloud Run. En el primer push de esta corrección, revisiones antiguas sin
+etiquetas/marca se despliegan una vez para inicializarlas. Un error de permisos,
+red o historial bloquea el flujo; no se interpreta como componente sin cambios.
 La concurrencia no cancela despliegues/migraciones activos; encola hasta 100
 ejecuciones pendientes sin reemplazarlas. No usar estos recursos para producción.
 

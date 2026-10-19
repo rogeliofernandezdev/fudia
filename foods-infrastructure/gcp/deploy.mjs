@@ -2,6 +2,7 @@ import {spawnSync} from "node:child_process";
 import {appendFileSync} from "node:fs";
 import {fileURLToPath} from "node:url";
 import {resolve} from "node:path";
+import {candidateRevision, promotionArgs, releaseLabels} from "./release-state.mjs";
 
 const resourceName = /^[a-z][a-z0-9-]{0,61}[a-z0-9]$/;
 const secretEntry = /^([A-Z][A-Z0-9_]*)=([a-zA-Z0-9_-]+):([1-9][0-9]*)$/;
@@ -140,6 +141,7 @@ export function serviceArgs(config, digest, exists, uid = "100", gid = "101") {
     "--execution-environment", "gen2", "--port", "8080", "--cpu", "1", "--memory", "1Gi",
     "--min-instances", "0", "--max-instances", config.maxInstances, "--concurrency", config.concurrency,
     "--timeout", "60s", "--ingress", "all", "--no-invoker-iam-check", "--tag", "candidate",
+    "--update-labels", releaseLabels(config.sha, config.target),
     "--startup-probe", `httpGet.path=${config.target === "backend" ? "/health" : "/login"},httpGet.port=8080,periodSeconds=10,timeoutSeconds=3,failureThreshold=24`];
   if (exists) args.push("--no-traffic");
   const references = [...config.secrets].map(([key, ref]) => `${key}=${ref}`).join(",");
@@ -212,12 +214,12 @@ export async function deploy(config, env, run = command, check = smoke) {
   }
   gcloud(deploymentArgs);
   const current = JSON.parse(describe(config.service));
-  const candidate = current.status.traffic.find(traffic => traffic.tag === "candidate");
-  if (!candidate?.url || !candidate.revisionName || candidate.revisionName !== current.status.latestReadyRevisionName) {
+  const candidate = candidateRevision(current);
+  if (!candidate.url) {
     throw new Error("No se pudo verificar la revisión candidata; no se promueve tráfico.");
   }
   await check(httpsURL(candidate.url, "URL candidata"), config.target, config.sha.slice(0, 8));
-  gcloud(["run", "services", "update-traffic", config.service, "--to-revisions", `${candidate.revisionName}=100`]);
+  gcloud(promotionArgs(config.service, candidate.revisionName));
   if (env.GITHUB_STEP_SUMMARY) appendFileSync(env.GITHUB_STEP_SUMMARY,
     `\n### Cloud Run · ${config.target}\n\nServicio: ${current.status.url}\n\nRevisión: \`${candidate.revisionName}\`\n\nImagen: \`${digest}\`\n`);
 }

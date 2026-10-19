@@ -6,8 +6,10 @@ documentos de docs/.
 ## Despliegue GCP sin retirar AWS
 
 Workflow `foods-gcp` por push a `feat/ui-standard`: processor → API → frontend
-en `gcp-dev`, ejecutando solo componentes modificados. Cambios compartidos de
-infraestructura/coordinador ejecutan los tres. Pruebas → deploy en cada etapa.
+en `gcp-dev`, ejecutando componentes con cambios pendientes desde su revisión
+activa y completada en Cloud Run, no solo desde el último push. Cambios compartidos
+se evalúan desde la base propia de cada componente. Pruebas → deploy en cada
+etapa; un fallo no hace olvidar los componentes bloqueados.
 Reutiliza los tres workflows
 GCP, que conservan ejecución manual. OIDC/WIF, Artifact
 Registry, Job de migración, Cloud SQL por socket administrado (sin VPC en el MVP), fotos persistentes y secretos

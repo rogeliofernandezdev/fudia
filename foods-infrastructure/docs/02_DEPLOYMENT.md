@@ -5,8 +5,11 @@ inmutables, health checks y rollback. Migraciones son un paso controlado.
 
 GCP usa el coordinador `foods-gcp` por push a `feat/ui-standard`, solo para
 `gcp-dev`: processor → API → frontend. Cada etapa ejecuta pruebas y después
-deploy solo si su componente cambió; si falla, no se ejecuta una etapa dependiente.
-Cambios de infraestructura compartida ejecutan todos. Se conserva ejecución manual de
+deploy si hay diferencias frente a la revisión activa completada del componente;
+si falla, no se ejecuta una etapa dependiente. El siguiente push recupera las
+etapas pendientes aunque solo cambie otro componente. El SHA se lee de la revisión
+con tráfico y tag `deployed`, no de la última candidata. Cambios compartidos se
+evalúan desde la base propia de cada componente. Se conserva ejecución manual de
 los componentes. AWS no cambia.
 Las migraciones se ejecutan
 en un Cloud Run Job antes del API; servicios existentes prueban una candidata

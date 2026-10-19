@@ -24,8 +24,10 @@ concurrency:
 jobs:
   changes:
     runs-on: ubuntu-latest
+    environment: gcp-dev
     permissions:
       contents: read
+      id-token: write
     outputs:
       processor: ${{ steps.detect.outputs.processor }}
       backend: ${{ steps.detect.outputs.backend }}
@@ -37,10 +39,27 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: "22"
-      - id: detect
-        name: Detect changed components across the whole push
+      - id: auth
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_lifetime: 3600s
+          create_credentials_file: false
+      - uses: google-github-actions/setup-gcloud@v3
         env:
-          BASE_SHA: ${{ github.event.before }}
+          CLOUDSDK_AUTH_ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
+      - id: detect
+        name: Detect pending components against active Cloud Run releases
+        env:
+          CLOUDSDK_AUTH_ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
+          GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+          GCP_REGION: ${{ vars.GCP_REGION }}
+          GCP_IMAGE_PROCESSOR_SERVICE: ${{ vars.GCP_IMAGE_PROCESSOR_SERVICE }}
+          GCP_BACKEND_SERVICE: ${{ vars.GCP_BACKEND_SERVICE }}
+          GCP_FRONTEND_SERVICE: ${{ vars.GCP_FRONTEND_SERVICE }}
           HEAD_SHA: ${{ github.sha }}
         run: node foods-infrastructure/gcp/changed-components.mjs
 

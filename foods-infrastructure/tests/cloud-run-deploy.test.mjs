@@ -150,6 +150,8 @@ test("deploy uses digest, awaits migrations, checks candidate then promotes exac
   assert.ok(migration < deployment && deployment < smoke && smoke < promotion);
   assert.ok(mock.calls[deployment].includes(mock.digest));
   assert.ok(mock.calls[promotion].includes("ready-002=100"));
+  assert.ok(mock.calls[promotion].includes("deployed=ready-002"));
+  assert.ok(mock.calls[deployment].includes(`fudia-commit=${config.sha},fudia-component=backend`));
 });
 
 test("migration and smoke failures do not promote a revision", async () => {
@@ -160,6 +162,9 @@ test("migration and smoke failures do not promote a revision", async () => {
   const failedSmoke = runner(config);
   await assert.rejects(deploy(config, {}, failedSmoke.run, async () => {throw new Error("smoke failed");}));
   assert.ok(!failedSmoke.calls.some(args => args.includes("update-traffic")));
+  const firstSmoke = runner(config, {missingService: true});
+  await assert.rejects(deploy(config, {}, firstSmoke.run, async () => {throw new Error("first smoke failed");}));
+  assert.ok(!firstSmoke.calls.some(args => args.includes("update-traffic"))); // No completed marker even on first auto-live revision.
 });
 
 test("frontend discovers backend URL at runtime, injects no DB and supports separate public/private Mapbox tokens", async () => {
@@ -168,6 +173,7 @@ test("frontend discovers backend URL at runtime, injects no DB and supports sepa
   await deploy(config, {}, mock.run, async () => {});
   const service = mock.calls.find(args => args.slice(0, 3).join(" ") === "gcloud run deploy");
   assert.ok(service.includes("FOODS_API_URL=https://api.example.com"));
+  assert.ok(service.includes(`fudia-commit=${config.sha},fudia-component=frontend`));
   assert.ok(service.includes("MAPBOX_ACCESS_TOKEN=mapbox-server:1"));
   assert.ok(!service.join(" ").includes("DATABASE_URL"));
   assert.ok(!mock.calls.some(args => args.includes("jobs")));

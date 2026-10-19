@@ -8,12 +8,44 @@ según los paths de los proyectos/infraestructura/workflows, usando `gcp-dev`.
 Cada etapa exige pruebas → deploy exitosos antes de la siguiente. Reutiliza los
 tres workflows del mismo commit con `workflow_call`; conservan `workflow_dispatch`
 para operación manual, sin triggers push duplicados.
-El job `changes` compara todos los commits del push (before → SHA) y omite los
-componentes no modificados. Solo frontend no ejecuta backend, processor ni Job
-SQL; solo backend no despliega frontend/processor; solo processor no despliega
-los otros servicios. Cambios de infraestructura compartida/coordinador o primer
-push de una rama ejecutan todos. Si falla la detección, no se despliega a ciegas.
+El job `changes` se autentica por OIDC/WIF en `gcp-dev` y solo ejecuta lecturas
+Cloud Run: obtiene la revisión completada que sirve el 100 % del tráfico de cada
+componente, lee su SHA y compara ese commit con el del push. No utiliza
+`github.event.before` como base de despliegue. Así recupera cambios de frontend
+bloqueados por un fallo anterior aunque el nuevo push solo corrija backend.
+Sin cambios pendientes en los otros componentes, un cambio solo de frontend no
+ejecuta backend, processor ni Job SQL. Las diferencias de infraestructura
+compartida/coordinador se evalúan desde la base propia de cada componente.
+Si falla la consulta/detección, no se despliega a ciegas.
 Las condiciones permiten dependencias omitidas, pero bloquean fallos/cancelaciones.
+
+### Identidad de código y despliegues pendientes
+
+- Cada revisión nueva recibe `fudia-commit` (SHA completo) y `fudia-component`.
+  Se consulta metadata de la revisión, nunca las etiquetas mutables del servicio.
+- El tag `deployed` se asigna a la revisión exacta junto con su promoción al
+  100 %, después de smoke en API/frontend. Processor lo hace solo después de
+  startup y configuración exitosa de IAM/Eventarc. No certifica una entrega real.
+- Candidatas sin tráfico, `latestReadyRevisionName` o un workflow exitoso de otro
+  componente no avanzan la base. Una primera revisión auto-live que falla smoke
+  tampoco tiene marca completada y permanece pendiente.
+- Servicio inexistente explícitamente, o instalación anterior sin tag/SHA:
+  seleccionar ese componente para desplegar una vez e inicializar su identidad.
+  La primera publicación de esta corrección puede seleccionar los tres servicios.
+- IAM, red, JSON/identidad inválidos o revisión ausente son errores, no ausencia
+  de cambios. La detección no escribe outputs parciales si falla una consulta.
+- El SHA desplegado debe existir en Git y ser ancestro del commit solicitado.
+  Una ejecución antigua o historia divergente falla para evitar downgrade ciego.
+- Un reparto de tráfico o rollback que no coincida con `deployed` se considera
+  pendiente, no una base certificada. No ejecutar releases manuales/canaries a la
+  vez que el coordinador; para mantener un rollback, pausar los pushes automáticos.
+- El resumen de `changes` indica componente, revisión, SHA y motivo de selección.
+  No se necesitan nuevas variables, claves JSON ni escrituras GitHub para guardar
+  marcas. La identidad de deploy existente puede describir servicios/revisiones;
+  la detección solo invoca `describe`, sin acceder a Secret Manager ni runtime env.
+
+### Alcance de ejecución
+
 No modifican los workflows de AWS, sus triggers ni el environment `dev`.
 Primero se ejecuta processor/migración, después backend y finalmente frontend. Fudia Concierge/Redis no se
 migran en este alcance: conservar un `FUDIA_CONCIERGE_URL` HTTPS alcanzable si
@@ -279,12 +311,17 @@ tokens `sk.` para no incorporarlos al JavaScript público.
 **No crear `GCP_CREDENTIALS` ni copiar AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY.**
 La autenticación GCP utiliza OIDC/WIF. El archivo temporal `gha-creds-*.json`
 queda ignorado preventivamente; estos workflows usan `create_credentials_file:
-false` y no lo generan. Docker se construye **antes** de autenticar; después se
+false` y no lo generan. En los jobs de deploy Docker se construye **antes** de autenticar; después se
 solicita un access token de cuenta de servicio de 3600 s para gcloud, transmitido
 como output enmascarado de Actions y no impreso. Se evita consumir los 5 minutos
 del token OIDC durante builds largos. No existe una clave permanente de GCP.
 Cambiar un secret de Secret Manager exige actualizar su número de versión en
 la referencia y desplegar una revisión. Cambiar `NEXT_PUBLIC_*` exige rebuild.
+
+Excepción necesaria del coordinador: `changes` autentica antes de detectar para
+leer la versión activa en Cloud Run, sin construir ni publicar imágenes. Debe
+usar `environment: gcp-dev` para que coincidan el subject WIF y las variables
+protegidas existentes. No ampliar la condición WIF a jobs sin environment.
 
 ## Fotografías nuevas y persistencia
 
@@ -317,7 +354,7 @@ sin escrituras. Volver DNS a AWS no reconcilia datos nuevos de Cloud SQL.
    la rama por defecto. Revisar Actions → `foods-gcp`: processor → backend → frontend.
    La secuencia completa se serializa sin cancelar migraciones en curso. Cada
    etapa seleccionada exige `verify` y `deploy` exitosos para habilitar la siguiente.
-   Las no modificadas aparecen `skipped`. Se encolan hasta 100 pushes pendientes
+   Las que no tienen diferencias pendientes aparecen `skipped`. Se encolan hasta 100 pushes pendientes
    (`queue: max`) para no reemplazar un push con cambios de otro componente.
    Los triggers de AWS siguen vigentes: un push en su rama de despliegue puede
    desplegar allí. Sus archivos y variables no se modifican.
@@ -380,6 +417,12 @@ orden migrate → candidata → smoke → promoción y bloqueo tras fallos. Las 
 usan comandos simulados: no crean recursos ni ejecutan gcloud/Docker.
 `foods-admin-web/tests/uploads-route.test.mjs` prueba bytes/HEAD, errores,
 filtrado de nombres/MIME y ausencia de cookies/proxy abierto.
+`pending-components.test.mjs` crea un repositorio Git temporal y reproduce
+cambios de frontend bloqueados → corrección solo backend → recuperación del
+frontend pendiente. Cubre distintas bases por componente, primera instalación,
+legado sin etiquetas, candidata sin tráfico, IAM/red, historial y estado inválido.
+Las pruebas de promoción verifican que smoke, migración o Eventarc fallidos no
+actualicen la marca completada. No hacen llamadas a recursos GCP reales.
 Además ejecutar las puertas generales de los proyectos. No omitir pruebas
 fallidas para habilitar un despliegue; el pipeline se mantiene bloqueado.
 
@@ -393,3 +436,5 @@ fallidas para habilitar un despliegue; el pipeline se mantiene bloqueado.
 - [Montaje Cloud Storage y limitaciones FUSE](https://docs.cloud.google.com/run/docs/configuring/services/cloud-storage-volume-mounts).
 - [Acceso público de Cloud Run](https://docs.cloud.google.com/run/docs/authenticating/public).
 - [Workload Identity con pipelines y condiciones](https://docs.cloud.google.com/iam/docs/workload-identity-federation-with-deployment-pipelines).
+- [Etiquetas de revisiones](https://docs.cloud.google.com/run/docs/configuring/services/labels) y
+  [tráfico/tags](https://docs.cloud.google.com/sdk/gcloud/reference/run/services/update-traffic).
