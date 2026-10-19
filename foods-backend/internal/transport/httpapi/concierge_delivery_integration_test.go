@@ -92,8 +92,8 @@ func TestConciergeDeliveryAndPickupOrders(t *testing.T) {
 	if rec.Code != 200 || json.Unmarshal(rec.Body.Bytes(), &quote) != nil || !quote.Covered || quote.Fee != "9.00" {
 		t.Fatalf("quote: %d %s", rec.Code, rec.Body.String())
 	}
-	// Callao (~13 km) queda fuera de cobertura.
-	rec = call("POST", "/delivery-quote", `{"latitude":-12.0566,"longitude":-77.1181}`)
+	// Punto de prueba 0.2° al sur (~22.24 km en línea recta), fuera de los 10 km.
+	rec = call("POST", "/delivery-quote", `{"latitude":-12.245974,"longitude":-77.030601}`)
 	if rec.Code != 200 || !strings.Contains(rec.Body.String(), `"covered":false`) {
 		t.Fatalf("out of range quote: %d %s", rec.Code, rec.Body.String())
 	}
