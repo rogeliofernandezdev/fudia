@@ -192,6 +192,18 @@
   .modal-action-layout>.ds-skeleton.modal-action-main{flex-basis:100%}
   .modal-loading{grid-template-columns:1fr}
 }
+/* Teclado abierto en móvil: con `interactive-widget=resizes-content` el alto útil baja a ~380 px.
+   La hoja ocupa todo el alto, cabecera y pie se compactan y la franja de contexto (ya leída al abrir)
+   se oculta para que el formulario muestre más campos. Las acciones siguen visibles. */
+@media (width<=600px) and (height<=560px){
+  .crud-modal,.crud-modal.compact,.crud-modal.size-sm,.crud-modal.size-md{max-height:100dvh;border-radius:0}
+  .crud-modal>header,.modal-header{min-height:var(--size-52);padding-block:var(--space-1)}
+  .crud-modal>header h2,.modal-header h2{font-size:var(--font-size-md)}
+  .modal-context{display:none}
+  .modal-body,.crud-modal>form:not(.modal-form){padding-top:var(--space-4)}
+  .modal-footer,.crud-modal>footer,.crud-modal>form>footer{padding-block:var(--space-2) calc(var(--space-2) + var(--safe-area-bottom))}
+  .modal-busy{inset:var(--size-52) 0 var(--size-56)}
+}
 @media (prefers-reduced-motion:reduce){
   .modal-overlay-in,.modal-panel-in,.crud-modal{animation:modal-overlay-in var(--duration-fast) linear both}
 }

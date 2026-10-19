@@ -97,11 +97,13 @@ test("Ventas envía fechas independientes sin perder búsqueda ni paginación",a
 });
 
 test("filtros de Ventas usan controles homologados y límites visibles",()=>{
- const {SalesFilters}=compile("src/modules/sales/presentation/sales-page.tsx",resolve,"\nexport {SalesFilters};\n");
- const changes=[];const callbacks={search:value=>changes.push(["q",value]),choose:value=>changes.push(["period",value]),start:value=>changes.push(["from",value]),end:value=>changes.push(["to",value]),clear:()=>changes.push(["clear"])};
+ const {SalesFilters,SalesPeriods}=compile("src/modules/sales/presentation/sales-page.tsx",resolve,"\nexport {SalesFilters,SalesPeriods};\n");
+ const changes=[];const callbacks={search:value=>changes.push(["q",value]),start:value=>changes.push(["from",value]),end:value=>changes.push(["to",value]),clear:()=>changes.push(["clear"])};
  const view=nodes(SalesFilters({q:"Mesa",period:"custom",from:"2026-10-01",to:"2026-10-07",invalidRange:false,...callbacks}));
  assert.deepEqual(Array.from(view.filter(node=>node.type==="FormField"),node=>node.props.label),["Buscar","Desde","Hasta"]);
- const periods=view.filter(node=>node.type==="button"&&node.props.role==="radio");
+ // Los periodos viven fuera de los filtros para quedar fijos en móvil.
+ assert.equal(view.some(node=>node.type==="button"&&node.props.role==="radio"),false);
+ const periods=nodes(SalesPeriods({period:"custom",choose:value=>changes.push(["period",value])})).filter(node=>node.type==="button"&&node.props.role==="radio");
  assert.deepEqual(Array.from(periods,node=>node.props.children),["Hoy","Esta semana","Este mes","Mes anterior","Personalizado"]);
  assert.equal(periods.find(node=>node.props["aria-checked"]).props.children,"Personalizado");
  const inputs=view.filter(node=>node.type==="Input");const searchField=view.find(node=>node.type==="SearchField");

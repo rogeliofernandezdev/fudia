@@ -15,7 +15,10 @@
 @media(width<=600px){
  .ds-tabs{display:flex;width:100%;scroll-snap-type:x mandatory}
  .ds-tabs button{flex:0 0 calc((100% - var(--space-1)) / 2);min-width:0;min-height:var(--size-44);gap:var(--space-1-5);padding:var(--space-1) var(--space-2);white-space:normal}
- .ds-tabs button>span{min-width:0;overflow-wrap:anywhere}
+ /* Las palabras solo se parten con guion si no caben solas; nunca «Recepcione/s». */
+ .ds-tabs button>span{min-width:0;overflow-wrap:break-word;hyphens:auto}
+ /* Sin contadores en móvil: la etiqueta necesita el ancho y la lista ya muestra los registros. */
+ .ds-tabs b{display:none}
  .ds-tabs button:nth-child(odd){scroll-snap-align:start;scroll-snap-stop:always}
  .ds-tabs button:only-child{flex-basis:100%}
  /* Completa el último par sin mostrar restos del grupo anterior. */
@@ -24,5 +27,10 @@
  .ds-tabs-bar>:first-child{flex:none;width:100%}
  .ds-tabs-actions{flex-wrap:wrap;width:100%;margin-left:0}
  .ds-tabs-actions .button{flex:1 1 var(--size-150);min-width:0;padding-inline:var(--space-3);white-space:normal}
+ /* Pestañas que filtran una lista larga: la barra se disuelve para que la pista quede fija bajo
+    la barra superior (mismo patrón que las zonas del Salón) y las acciones sigan el scroll. */
+ .ds-tabs-bar.is-sticky{display:contents}
+ .ds-tabs-bar.is-sticky>.ds-tabs-sticky{position:sticky;top:var(--size-64);z-index:var(--z-raised);width:auto;margin:0 calc(var(--space-4) * -1) var(--space-1);padding:var(--space-2) var(--space-4);background:var(--cloud-50)}
+ .ds-tabs-bar.is-sticky>.ds-tabs-actions{margin-bottom:var(--space-4)}
 }
 @media(prefers-reduced-motion:reduce){.ds-tabs button{transition:none}}

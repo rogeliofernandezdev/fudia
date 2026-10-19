@@ -17,7 +17,8 @@ td .f2,.row-icon.r2{color:var(--digital-700);background:var(--digital-100)}
 .management td:first-child small{margin-left:var(--space-11)}
 .catalog-panel tr.alternate,.standardized-management tr.alternate{background:var(--primary-25)}
 .catalog-panel th:last-child,.catalog-panel td:last-child,.standardized-management th:last-child,.standardized-management td:last-child{text-align:center}
-.table-wrap{width:100%;max-width:100%;overflow-x:auto;overflow-y:auto;overscroll-behavior-x:contain;scrollbar-width:thin;scrollbar-color:var(--ink-400-alpha-40) var(--cloud-50)}
+/* `isolation` encierra la columna fija de la tabla: nunca pinta sobre franjas fijas de la página. */
+.table-wrap{isolation:isolate;width:100%;max-width:100%;overflow-x:auto;overflow-y:auto;overscroll-behavior-x:contain;scrollbar-width:thin;scrollbar-color:var(--ink-400-alpha-40) var(--cloud-50)}
 .table-wrap::-webkit-scrollbar{height:var(--size-6);width:var(--size-6)}
 .table-wrap::-webkit-scrollbar-thumb{border-radius:var(--radius-pill);background:var(--ink-400-alpha-40)}
 .row-action{width:var(--control-height);height:var(--control-height);border:0;border-radius:var(--radius-control);background:transparent;color:var(--ink-400)}

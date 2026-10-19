@@ -70,6 +70,10 @@ Comportamiento común: `Modal` sobre `Dialog` retiene y devuelve el foco, bloque
 el scroll del fondo y apila ventanas. **Escape y el clic en el fondo nunca
 cierran un modal**; los únicos cierres son la X y la acción segura del pie.
 La X nunca queda fuera del alcance del teclado, ni siquiera durante la carga.
+Con el teclado virtual abierto en móvil (`(width<=600px) and (height<=560px)`,
+posible por `interactive-widget=resizes-content`) la hoja ocupa todo el alto,
+la cabecera se compacta a 52 px, el pie reduce su relleno y `modal-context` se
+oculta; al cerrar el teclado todo vuelve a su tamaño.
 
 ```tsx
 <Modal title="Nuevo gasto" icon="receipt" size="md" dirty={isDirty} busy={saving} onClose={close}>
@@ -181,8 +185,8 @@ pantalla completa (100dvh, sin radio) con un solo desplazamiento, el del form.
 El cuerpo y el acordeón no tienen scroll propio; el panel usa `overflow:clip`
 (conserva el radio sin romper `sticky`). Pestañas Menú/Acciones y búsqueda
 quedan fijas arriba al recorrer la lista (`top` compensa el padding del form) y
-las pestañas ocultan sus contadores: el conteo por grupo y los checks ya dicen
-qué está asignado. Escritorio y tablet conservan modal y contadores, con el mismo
+las pestañas ocultan sus contadores, como todas las pestañas móviles: el conteo
+por grupo y los checks ya dicen qué está asignado. Escritorio y tablet conservan modal y contadores, con el mismo
 solo desplazamiento: la barra de pestañas, filtro y búsqueda es `sticky` (`top`
 compensa los 24 px del form) y el acordeón no tiene scroll propio. Validado a 390 × 844, 427 × 840 y 427 × 933 sin scroll horizontal.
 Iconos de las pestañas (todos los anchos): Menú `layout`, Acciones `circleCheck`
@@ -623,6 +627,8 @@ borde `primary-300` y texto `primary-700`. Los contadores usan fondo índigo
 `primary-600` y número blanco `surface` en todas las pestañas, incluido cero;
 su tamaño de 12 px mantiene la etiqueta como contenido principal. El contador
 es circular con una cifra y se amplía a cápsula cuando tiene varias cifras.
+En móvil (≤600 px) ninguna pestaña muestra contador: la etiqueta usa ese ancho y
+solo se parte con guion (`hyphens:auto`) si una palabra no cabe sola.
 Cada `TabItem` exige `icon: IconName`: glifo semántico del set compartido de 16 px
 antes del texto, sin recuadro propio ni colores locales. Nunca ocultarlo en móvil.
 Productos usa `utensils`, Categorías `layers`, Usuarios `users`, Roles `lock`,
@@ -644,6 +650,11 @@ ancho; dos se reparten en columnas iguales y pueden envolver su texto. No poner 
 Las acciones conservan su permiso, bloqueo, evento e icono originales. Si hay
 varias, su grupo puede repartirse en filas en móvil, sin colocar las acciones
 encima de la navegación.
+`TabsBar sticky` se reserva para pestañas que filtran una lista larga (hoy, los
+canales de Pedidos). En móvil la barra se disuelve (`display:contents`) y solo la
+pista queda fija bajo la barra superior, a ancho completo con fondo `cloud-50`
+como las zonas del Salón; las acciones quedan debajo y siguen el scroll. En
+escritorio no cambia nada. Pestañas que separan secciones no usan `sticky`.
 
 Los modales alinean cabecera, cuerpo y pie sobre un margen común de 24 px en
 escritorio y 16 px en móvil. La X y el icono primario comparten una caja de 44 px

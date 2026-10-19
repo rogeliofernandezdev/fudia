@@ -28,7 +28,7 @@ test("en móvil el editor de roles es pantalla completa con un solo scroll y pes
  assert.match(mobile,/\.role-editor-body\{[^}]*overflow:visible/,"sin scroll anidado: desplaza el form");
  assert.match(mobile,/\.role-editor-perms-panel\{[^}]*overflow:clip/,"clip conserva el radio sin romper sticky");
  assert.match(mobile,/\.re-perm-tabs\{position:sticky;top:calc\(var\(--space-4\) \* -1\)/,"pestañas y búsqueda fijas arriba");
- assert.match(mobile,/\.re-perm-tabs \.ds-tabs b\{display:none\}/,"sin contadores en las pestañas móviles");
+ assert.doesNotMatch(css,/\.re-perm-tabs \.ds-tabs b/,"los contadores móviles se ocultan en el componente compartido");
  assert.match(mobile,/\.re-perm-accordion\{overflow:visible\}/);
  assert.doesNotMatch(css.slice(0,css.indexOf("@media")),/\.re-perm-tabs \.ds-tabs b/,"escritorio conserva los contadores");
 });

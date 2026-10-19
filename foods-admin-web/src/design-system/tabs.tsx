@@ -5,9 +5,13 @@ import {Icon,type IconName} from "./icons";
 
 export type TabItem<T extends string>={value:T;label:string;count?:number;icon:IconName};
 
-/** Alinea navegación y acciones de la vista sin llevarlas a la cabecera. */
-export function TabsBar({children,action}:{children:ReactNode;action?:ReactNode}){
-  return <div className="ds-tabs-bar">{children}{action&&<div className="ds-tabs-actions">{action}</div>}</div>;
+/**
+ * Alinea navegación y acciones de la vista sin llevarlas a la cabecera.
+ * `sticky`: solo para pestañas que filtran una lista larga; en móvil la pista queda
+ * fija bajo la barra superior y las acciones se desplazan con la página.
+ */
+export function TabsBar({children,action,sticky=false}:{children:ReactNode;action?:ReactNode;sticky?:boolean}){
+  return <div className={`ds-tabs-bar${sticky?" is-sticky":""}`}>{sticky?<div className="ds-tabs-sticky">{children}</div>:children}{action&&<div className="ds-tabs-actions">{action}</div>}</div>;
 }
 
 /**

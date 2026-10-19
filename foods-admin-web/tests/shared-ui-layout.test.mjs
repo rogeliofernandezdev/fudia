@@ -79,15 +79,40 @@ test("la barra compartida alinea acciones en escritorio y les da una fila comple
  assert.equal(declaration(css,".ds-tabs-actions","width","(width<=600px)"),"100%");
  assert.equal(declaration(css,".ds-tabs-actions .button","flex","(width<=600px)"),"1 1 var(--size-150)");
  for(const file of ["operations/orders/presentation/orders-manager.tsx","menu/products/presentation/catalog-manager.tsx","operations/tables/presentation/tables-manager.tsx","operations/cash/presentation/cash-page.tsx","supply/purchases/presentation/purchases-page.tsx","expenses/presentation/expenses-page.tsx","identity/presentation/users-roles-manager.tsx","organizations/presentation/organization-admin.tsx","platform/presentation/platform-plans-page.tsx"]){
-  assert.match(read(`modules/${file}`),/<TabsBar action=/);
+  assert.match(read(`modules/${file}`),/<TabsBar (sticky )?action=/);
  }
+});
+test("con teclado abierto en móvil el modal cede alto al formulario sin perder acciones",()=>{
+ const css=sheet("design-system/styles/modal.css");const keyboard="(width<=600px) and (height<=560px)";
+ assert.equal(declaration(css,".crud-modal.size-md","max-height",keyboard),"100dvh");
+ assert.equal(declaration(css,".modal-header","min-height",keyboard),"var(--size-52)");
+ assert.equal(declaration(css,".modal-header h2","font-size",keyboard),"var(--font-size-md)");
+ assert.equal(declaration(css,".modal-context","display",keyboard),"none");
+ assert.equal(declaration(css,".modal-footer","display",keyboard),undefined,"el pie sigue visible");
+ assert.equal(declaration(css,".modal-footer","padding-block",keyboard),"var(--space-2) calc(var(--space-2) + var(--safe-area-bottom))");
+});
+test("filtros de listas largas quedan fijos en móvil bajo la barra superior",()=>{
+ const tabs=sheet("design-system/styles/tabs.css");
+ assert.equal(declaration(tabs,".ds-tabs-bar.is-sticky","display","(width<=600px)"),"contents");
+ assert.equal(declaration(tabs,".ds-tabs-bar.is-sticky>.ds-tabs-sticky","position","(width<=600px)"),"sticky");
+ assert.equal(declaration(tabs,".ds-tabs-bar.is-sticky>.ds-tabs-sticky","top","(width<=600px)"),"var(--size-64)");
+ assert.match(read("modules/operations/orders/presentation/orders-manager.tsx"),/<TabsBar sticky action=/);
+ for(const file of ["operations/cash/presentation/cash-page.tsx","menu/products/presentation/catalog-manager.tsx"])assert.doesNotMatch(read(`modules/${file}`),/<TabsBar sticky/,"las pestañas de secciones no se fijan");
+ const sales=sheet("modules/sales/presentation/sales.css");
+ assert.equal(declaration(sales,".sales-periods","position","(max-width:600px)"),"sticky");
+ assert.equal(declaration(sales,".sales-periods","top","(max-width:600px)"),"var(--size-64)");
+ assert.equal(declaration(sales,".sales-panel","overflow","(max-width:600px)"),"clip");
+ assert.equal(declaration(sheet("design-system/styles/data-table.css"),".table-wrap","isolation"),"isolate");
 });
 test("pestañas móviles muestran pares completos con ajuste por grupo y etiquetas largas sin recorte",()=>{
  const css=sheet("design-system/styles/tabs.css");
  assert.equal(declaration(css,".ds-tabs button","flex","(width<=600px)"),"0 0 calc((100% - var(--space-1)) / 2)");
  assert.equal(declaration(css,".ds-tabs","scroll-snap-type","(width<=600px)"),"x mandatory");
  assert.equal(declaration(css,".ds-tabs button:nth-child(odd)","scroll-snap-align","(width<=600px)"),"start");
- assert.equal(declaration(css,".ds-tabs button>span","overflow-wrap","(width<=600px)"),"anywhere");
+ assert.equal(declaration(css,".ds-tabs button>span","overflow-wrap","(width<=600px)"),"break-word");
+ assert.equal(declaration(css,".ds-tabs button>span","hyphens","(width<=600px)"),"auto");
+ assert.equal(declaration(css,".ds-tabs b","display","(width<=600px)"),"none","sin contadores en pestañas móviles");
+ assert.equal(declaration(css,".ds-tabs b","display"),"grid","escritorio conserva los contadores");
  assert.equal(declaration(css,".ds-tabs:has(>button:last-child:nth-child(odd):not(:only-child))::after","flex","(width<=600px)"),"0 0 calc((100% - var(--space-1)) / 2)");
  assert.equal(declaration(css,".ds-tabs button","min-height","(width<=600px)"),"var(--size-44)");
  assert.equal(declaration(css,".ds-tabs button","min-width"),"max-content");

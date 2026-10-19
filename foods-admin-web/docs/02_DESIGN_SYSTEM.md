@@ -180,7 +180,9 @@ El movimiento comunica un cambio de estado, nunca adorna.
   de 4 px y `radius-pill`; selección blanca con borde `primary-300` y texto azul
   `primary-700`. Icono semántico obligatorio de 16 px antes de cada etiqueta,
   del set compartido y siempre visible, también en móvil. Contadores de 12 px,
-  fondo índigo `primary-600` y número blanco, de menor tamaño que la etiqueta.
+  fondo índigo `primary-600` y número blanco, de menor tamaño que la etiqueta;
+  en móvil (≤600 px) los contadores se ocultan en todas las pestañas para dejar
+  el ancho a la etiqueta, que solo se parte con guion si una palabra no cabe sola.
   En móvil: altura mínima de 44 px y dos pestañas completas por grupo, del mismo
   ancho. Desplazamiento horizontal con ajuste al inicio de cada par, sin fragmentos
   de pestañas vecinas. Si el número es impar, la última queda sola en su grupo.
@@ -188,6 +190,14 @@ El movimiento comunica un cambio de estado, nunca adorna.
   `TabsBar` mantiene las acciones de la vista alineadas a la derecha en escritorio.
   En móvil, tabs a ancho completo y acciones en una fila debajo, nunca encima en
   `PageHeader`. Una acción llena su fila; dos se reparten en columnas iguales.
+- Filtros fijos en móvil (≤600 px): solo una fila de chips o pestañas de 44 px que
+  filtra una lista larga y se cambia mientras se recorre (zonas del Salón, periodos
+  de Ventas, canales de Pedidos). Queda fija bajo la barra superior (`top` igual a
+  su altura, `z-raised`); búsqueda, selects, fechas, totales y acciones siguen el
+  scroll. Nunca más de una franja fija por pantalla. Pestañas que separan secciones
+  (Caja, Catálogo, Compras, configuración), el Dashboard y el Kárdex no se fijan.
+  Las tablas aíslan su columna fija (`isolation` en `.table-wrap`) para no pintar
+  sobre la franja.
 - Los modales entran desde `scale(.98)` y 12 px abajo; en móvil la hoja sube
   desde el borde inferior. Nada aparece desde `scale(0)`.
 - Solo se animan `transform`, `opacity`, color y sombra; nunca alto, ancho o
@@ -318,7 +328,10 @@ de página en `03_LAYOUTS.md`. Resumen:
   nunca subtítulos, fechas, responsables ni estados debajo del título.
   `subtitle`, `meta` y `details`, si existen, se presentan fuera de la cabecera. Cuerpo
   desplazable; pie fijo. En móvil, hoja inferior (`sm`/`md`) o pantalla
-  completa (`lg`/`xl`). Escape y el fondo nunca cierran un modal; con cambios
+  completa (`lg`/`xl`). Con el teclado abierto (alto útil ≤560 px) la hoja ocupa
+  todo el alto, la cabecera baja a 52 px con título de 16 px, el pie compacta su
+  relleno y se oculta la franja de contexto, para que el formulario muestre más
+  campos sin perder las acciones. Escape y el fondo nunca cierran un modal; con cambios
   sin guardar, cerrar pide confirmar el descarte. Todo modal de contenido usa
   `ModalHeader` y `ModalFooter`; se exceptúan respuestas success/error y
   confirmaciones warning (`ConfirmDialog`/`FeedbackProvider`). El pie usa
@@ -1685,7 +1698,10 @@ y el gráfico conserva el eje X sin desbordar.
 Ventas ofrece periodos rápidos de un toque (Hoy, Esta semana, Este mes,
 Mes anterior, Personalizado; `radiogroup` en píldoras con la selección de las
 pestañas, fila deslizable de 44 px en móvil), búsqueda y «Desde»/«Hasta» con
-controles homologados. Abre en **Hoy**. Los periodos se calculan con la fecha y
+controles homologados. Los periodos son la primera fila del panel; en móvil quedan
+fijos bajo la barra superior mientras se recorre la lista, con fondo `surface` y
+una línea inferior `cloud-100` que los separa de las filas (el panel usa
+`overflow:clip` para no anular el `sticky`); búsqueda, fechas y total siguen el scroll. Abre en **Hoy**. Los periodos se calculan con la fecha y
 la **zona horaria del local activo** (`sales-periods.ts`, `Intl` con
 `location.timezone`, nunca la del navegador), la semana empieza el lunes y se
 recalculan al pasar la medianoche local. «Desde» y «Hasta» solo se muestran

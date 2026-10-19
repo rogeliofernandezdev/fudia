@@ -73,7 +73,6 @@
   .role-editor-body{flex:none;overflow:visible;padding:0}
   .role-editor-perms-panel{flex:none;overflow:clip}
   .re-perm-tabs{position:sticky;top:calc(var(--space-4) * -1);z-index:var(--z-raised)}
-  .re-perm-tabs .ds-tabs b{display:none}
   .re-perm-accordion{overflow:visible}
   .re-acc-header{padding-inline:var(--space-2)}
   .re-acc-items{padding:0 var(--space-2) var(--space-2) var(--space-6)}

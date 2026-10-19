@@ -47,7 +47,7 @@ export function OrdersManager(){
  const loading=detail.isLoading;
  const closeDetail=()=>setDetailId(null);
  return <div className="orders-page-shell"><PageHeader title="Pedidos" description="Revisa el origen, estado y avance de cada pedido sin perder el contexto operativo." />
- <TabsBar action={canManage?<Button icon="plus" disabled={list.isPending||list.isError||!(list.data?.channelOptions.length)} onClick={()=>setCreating(true)}>Nuevo pedido</Button>:undefined}>
+ <TabsBar sticky action={canManage?<Button icon="plus" disabled={list.isPending||list.isError||!(list.data?.channelOptions.length)} onClick={()=>setCreating(true)}>Nuevo pedido</Button>:undefined}>
   {list.isPending?<div className="orders-tabs-skeleton" role="status" aria-label="Cargando canales">{Array.from({length:4},(_,index)=><Skeleton key={index} width="var(--size-112)" height="calc(var(--control-height) - var(--size-8))" radius="var(--radius-control)"/>)}</div>
   :<Tabs items={tabs} value={channel} onChange={pickChannel} label="Filtrar pedidos por canal"/>}
  </TabsBar>

@@ -38,8 +38,9 @@ export function SalesPage(){
   const money=useMoney();
   const date=(value:string)=>formatRegionalDateTime(value,{country:location?.country,timeZone:location?.timezone},{dateStyle:"medium",timeStyle:"short"});
   return <><PageHeader title="Ventas" description="Historial real de pedidos completamente cobrados del local."/>
-    <section className="panel management standardized-management">
-      <SalesFilters q={q} period={period} from={range.from} to={range.to} invalidRange={invalidRange} search={value=>{setQ(value);setPage(1)}} choose={value=>{if(value==="custom"){custom({})}else{setPeriod(value);setPage(1)}}} start={value=>custom({from:value})} end={value=>custom({to:value})} clear={()=>custom({from:"",to:""})}/>
+    <section className="panel management standardized-management sales-panel">
+      <SalesPeriods period={period} choose={value=>{if(value==="custom"){custom({})}else{setPeriod(value);setPage(1)}}}/>
+      <SalesFilters q={q} period={period} from={range.from} to={range.to} invalidRange={invalidRange} search={value=>{setQ(value);setPage(1)}} start={value=>custom({from:value})} end={value=>custom({to:value})} clear={()=>custom({from:"",to:""})}/>
       {!invalidRange&&<SalesPeriodSummary period={period} range={range} loading={sales.isLoading} error={sales.isError} count={sales.data?.total??0} amount={sales.data?.amountTotal} money={money} day={value=>formatRegionalCalendarDate(value,location?.country,{day:"numeric",month:"short"})}/>}
       {invalidRange?null:sales.isLoading?<SalesTableSkeleton/>
       :sales.isError?<ErrorState title="No pudimos cargar las ventas" text={sales.error.message} onRetry={()=>void sales.refetch()} retrying={sales.isFetching}/>
@@ -52,13 +53,17 @@ export function SalesPage(){
   </>;
 }
 
-function SalesFilters({q,period,from,to,invalidRange,search,choose,start,end,clear}:{q:string;period:SalesPeriod;from:string;to:string;invalidRange:boolean;search:(value:string)=>void;choose:(value:SalesPeriod)=>void;start:(value:string)=>void;end:(value:string)=>void;clear:()=>void}){
+/** Periodos rápidos: hijo directo del panel para quedar fijos en móvil mientras se recorre la lista. */
+function SalesPeriods({period,choose}:{period:SalesPeriod;choose:(value:SalesPeriod)=>void}){
+  return <div className="sales-periods" role="radiogroup" aria-label="Periodo de ventas">
+    {salesPeriods.map(option=><button type="button" key={option.value} role="radio" aria-checked={period===option.value} className={`sales-period${period===option.value?" active":""}`} onClick={()=>choose(option.value)}>{option.label}</button>)}
+  </div>;
+}
+
+function SalesFilters({q,period,from,to,invalidRange,search,start,end,clear}:{q:string;period:SalesPeriod;from:string;to:string;invalidRange:boolean;search:(value:string)=>void;start:(value:string)=>void;end:(value:string)=>void;clear:()=>void}){
   const custom=period==="custom";
   // Las fechas solo aparecen en «Personalizado»: con un periodo rápido, la franja del total ya nombra el periodo.
   return <div className={`sales-filters${custom?" is-custom":""}`}>
-    <div className="sales-periods" role="radiogroup" aria-label="Periodo de ventas">
-      {salesPeriods.map(option=><button type="button" key={option.value} role="radio" aria-checked={period===option.value} className={`sales-period${period===option.value?" active":""}`} onClick={()=>choose(option.value)}>{option.label}</button>)}
-    </div>
     <FormField as="div" label="Buscar" className="sales-search"><SearchField value={q} onChange={event=>search(event.target.value)} placeholder="Pedido, cliente o mesa…" label="Buscar pedido, cliente o mesa"/></FormField>
     {custom&&<>
      <FormField label="Desde"><Input type="date" value={from} min="0001-01-01" max={to||"9999-12-31"} onChange={event=>start(event.target.value)}/></FormField>

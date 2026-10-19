@@ -1,9 +1,9 @@
-.sales-filters{display:grid;grid-template-columns:minmax(0,1fr) repeat(2,minmax(0,var(--size-180))) auto;align-items:start;gap:var(--space-3);padding:var(--space-4)}
+.sales-filters{display:grid;grid-template-columns:minmax(0,1fr) repeat(2,minmax(0,var(--size-180))) auto;align-items:start;gap:var(--space-3);padding:var(--space-3) var(--space-4) var(--space-4)}
 .sales-filters>.form-field{min-width:0;margin:0}
 .sales-filters .form-field-label{line-height:var(--line-height-snug)}
 .sales-filters>.button{margin-top:calc(var(--font-size-label) * var(--line-height-snug) + var(--space-1-5));white-space:nowrap}
 /* Periodos rápidos: un toque, misma selección que las pestañas; las fechas quedan para rangos personalizados. */
-.sales-periods{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:var(--space-2)}
+.sales-periods{display:flex;flex-wrap:wrap;gap:var(--space-2);padding:var(--space-4) var(--space-4) 0}
 /* Sin fechas (periodo rápido) el buscador ocupa toda la fila. */
 .sales-filters:not(.is-custom) .sales-search{grid-column:1/-1}
 .sales-period{min-height:var(--control-height);padding:0 var(--space-3-5);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-pill);background:var(--surface);color:var(--ink-700);font-size:var(--font-size-control);font-weight:var(--weight-semibold);white-space:nowrap;transition:var(--transition-surface),var(--transition-press)}
@@ -68,8 +68,11 @@
  .sales-filters>.button{grid-column:1/-1;justify-self:end;margin-top:0}
 }
 @media(max-width:600px){
- /* Móvil: periodos en una fila deslizable de 44 px, sin saltos de línea. */
- .sales-periods{flex-wrap:nowrap;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none;margin-inline:calc(var(--space-3) * -1);padding-inline:var(--space-3)}
+ /* Móvil: periodos en una fila deslizable de 44 px, fija bajo la barra superior mientras se recorre
+    la lista (patrón de las zonas del Salón); búsqueda, fechas y total siguen el scroll. `clip` no crea
+    contenedor de scroll, así el panel conserva su recorte sin anular el `sticky`. */
+ .sales-panel{overflow:clip}
+ .sales-periods{position:sticky;top:var(--size-64);z-index:var(--z-raised);flex-wrap:nowrap;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none;padding:var(--space-3) var(--space-3) var(--space-2);scroll-padding-inline:var(--space-3);background:var(--surface);box-shadow:0 var(--stroke-1) 0 var(--cloud-100)}
  .sales-period{flex:none;min-height:var(--size-44)}
  .sales-table-wrap .sales-table :is(th,td):first-child{min-width:var(--size-200);max-width:var(--size-220)}
  .sales-table-wrap .sales-table td:first-child b{max-width:var(--size-160)}
