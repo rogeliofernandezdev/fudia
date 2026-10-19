@@ -89,7 +89,7 @@ function ProfileForm({profile,organizationName,locationName}:{profile:MyProfile;
     </div>}
 
     <footer className="profile-actions">
-      <Button type="submit" icon="check" disabled={save.isPending||!isDirty}>{save.isPending?"Guardando…":"Guardar"}</Button>
+      <Button type="submit" icon="check" disabled={save.isPending||!isDirty} loading={save.isPending}>{save.isPending?"Guardando…":"Guardar"}</Button>
     </footer>
   </form>;
 }

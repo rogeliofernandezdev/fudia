@@ -28,7 +28,7 @@
 .setup-nav-heading>small{font-size:var(--font-size-label);color:var(--ink-500)}
 .setup-step-nav>ol{display:grid;gap:var(--space-1-5);list-style:none;margin:0;padding:0}
 .setup-step{width:100%;display:flex;align-items:center;gap:var(--space-3);min-height:var(--control-height);padding:var(--space-3) var(--space-3);border:var(--stroke-1) solid transparent;border-radius:var(--radius-tile);background:transparent;text-align:left;transition:background var(--duration-fast),border-color var(--duration-fast)}
-.setup-step:hover{background:var(--cloud-100)}
+@media (hover:hover) and (pointer:fine){.setup-step:hover{background:var(--cloud-100)}}
 .setup-step.is-current{background:var(--surface);border-color:var(--primary-200);box-shadow:var(--elevation-2)}
 .setup-step-number{flex:none;display:grid;place-items:center;width:var(--size-28);height:var(--size-28);border:var(--stroke-1) solid var(--line-strong);border-radius:50%;font-size:var(--font-size-label);font-weight:var(--weight-bold);color:var(--ink-500);background:var(--surface)}
 .setup-step.is-complete .setup-step-number{border-color:transparent;background:var(--brand-100);color:var(--brand-700)}
@@ -53,7 +53,7 @@
 .setup-service-modes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-3);border:0;padding:0;margin:0;min-width:0}
 .setup-service-modes legend{padding:0;margin-bottom:var(--space-4);font-size:var(--font-size-sm);font-weight:var(--weight-bold)}
 .setup-service-mode{position:relative;display:grid;align-content:start;gap:var(--space-2);min-width:0;padding:var(--space-4) var(--space-3-5);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-tile);background:var(--surface);cursor:pointer;transition:background var(--duration-fast),border-color var(--duration-fast)}
-.setup-service-mode:hover{border-color:var(--primary-300);background:var(--primary-50)}
+@media (hover:hover) and (pointer:fine){.setup-service-mode:hover{border-color:var(--primary-300);background:var(--primary-50)}}
 .setup-service-mode.is-selected{border-color:var(--primary-600);background:var(--primary-50);box-shadow:var(--ring-outline-primary)}
 .setup-service-mode:has(input:focus-visible){outline:var(--stroke-3) solid var(--primary-600-alpha-24);outline-offset:var(--space-1)}
 .setup-service-modes:disabled .setup-service-mode{cursor:default;opacity:.7}

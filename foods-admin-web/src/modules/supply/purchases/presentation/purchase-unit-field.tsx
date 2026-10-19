@@ -51,6 +51,6 @@ export function InventoryUnitDialog({close,save}:{close:()=>void;save:(unit:Inve
    <FormField label="Código"><Input value={draft.code} maxLength={32} disabled={mutation.isPending} onChange={event=>setDraft({...draft,code:event.target.value})}/></FormField>
    {(validation||mutation.isError)&&<p className="field-error span-2" role="alert">{validation||mutation.error?.message}</p>}
   </div>
-  <ModalFooter><Button type="button" kind="ghost" disabled={mutation.isPending} onClick={close}>Cancelar</Button><Button type="button" disabled={mutation.isPending} onClick={submit}>{mutation.isPending?"Guardando…":"Guardar"}</Button></ModalFooter></form>
+  <ModalFooter><Button type="button" kind="ghost" disabled={mutation.isPending} onClick={close}>Cancelar</Button><Button type="button" disabled={mutation.isPending} onClick={submit} loading={mutation.isPending}>{mutation.isPending?"Guardando…":"Guardar"}</Button></ModalFooter></form>
  </Dialog></div>;
 }

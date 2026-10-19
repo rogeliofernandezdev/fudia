@@ -74,12 +74,26 @@ func (r *Catalog) ActivateCategory(ctx context.Context, s scope, id string) (int
 }
 func (r *Catalog) Product(ctx context.Context, s scope, id string) (domain.Product, error) {
 	var p domain.Product
-	err := r.db(ctx).QueryRow(ctx, `SELECT p.id,p.sku,p.name,p.description,p.category_id,c.name,p.price::text,p.active,p.product_type,p.quantity_control,p.image_url,p.prep_minutes,p.allergens,p.featured,p.cost_price::text,p.available_from::text,p.available_until::text,p.available_days,p.available_until_time::text,p.service_destination FROM products p LEFT JOIN menu_categories c ON c.id=p.category_id AND c.organization_id=p.organization_id WHERE p.organization_id=$1 AND p.id=$2`, s.OrganizationID, id).Scan(&p.ID, &p.SKU, &p.Name, &p.Description, &p.CategoryID, &p.CategoryName, &p.Price, &p.Active, &p.ProductType, &p.QuantityControl, &p.ImageURL, &p.PrepMinutes, &p.Allergens, &p.Featured, &p.CostPrice, &p.AvailableFrom, &p.AvailableUntil, &p.AvailableDays, &p.AvailableUntilTime, &p.ServiceDestination)
+	err := r.db(ctx).QueryRow(ctx, `SELECT p.id,p.sku,p.name,p.description,p.category_id,c.name,p.price::text,p.active,p.product_type,p.quantity_control,p.image_url,p.prep_minutes,p.allergens,p.featured,p.cost_price::text,p.available_from::text,p.available_until::text,p.available_days,p.available_until_time::text,p.service_destination,EXISTS(SELECT 1 FROM product_recipes pr WHERE pr.organization_id=p.organization_id AND pr.product_id=p.id AND pr.active) FROM products p LEFT JOIN menu_categories c ON c.id=p.category_id AND c.organization_id=p.organization_id WHERE p.organization_id=$1 AND p.id=$2`, s.OrganizationID, id).Scan(&p.ID, &p.SKU, &p.Name, &p.Description, &p.CategoryID, &p.CategoryName, &p.Price, &p.Active, &p.ProductType, &p.QuantityControl, &p.ImageURL, &p.PrepMinutes, &p.Allergens, &p.Featured, &p.CostPrice, &p.AvailableFrom, &p.AvailableUntil, &p.AvailableDays, &p.AvailableUntilTime, &p.ServiceDestination, &p.HasRecipe)
 	return p, menuError(err)
+}
+// widenCategoryScope amplía el uso de la categoría a «both» cuando recibe un producto de
+// otro tipo. El uso se deduce del formulario de origen y nunca bloquea ni oculta la categoría.
+func (r *Catalog) widenCategoryScope(ctx context.Context, s scope, categoryID *string, productType string) error {
+	if categoryID == nil || *categoryID == "" {
+		return nil
+	}
+	_, err := r.db(ctx).Exec(ctx, `UPDATE menu_categories SET product_scope='both'
+		WHERE organization_id=$1 AND id=$2 AND product_scope NOT IN ('both',$3)`,
+		s.OrganizationID, *categoryID, productType)
+	return err
 }
 func (r *Catalog) CreateProduct(ctx context.Context, s scope, in domain.ProductInput, createFeatured bool) (domain.Product, error) {
 	var p domain.Product
 	err := r.db(ctx).QueryRow(ctx, `INSERT INTO products(organization_id,category_id,sku,name,description,price,active,product_type,quantity_control,image_url,prep_minutes,allergens,featured,cost_price,available_from,available_until,available_days,available_until_time,service_destination) VALUES($1,$2,$3,$4,$5,$6,true,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18) RETURNING id,sku,name,description,category_id,price::text,active,product_type,quantity_control,image_url,prep_minutes,allergens,featured,cost_price::text,available_from::text,available_until::text,available_days,available_until_time::text,service_destination`, s.OrganizationID, in.CategoryID, strings.TrimSpace(in.SKU), strings.TrimSpace(in.Name), strings.TrimSpace(in.Description), in.Price, in.ProductType, in.QuantityControl, in.ImageURL, in.PrepMinutes, in.Allergens, createFeatured, in.CostPrice, in.AvailableFrom, in.AvailableUntil, in.AvailableDays, in.AvailableUntilTime, in.ServiceDestination).Scan(&p.ID, &p.SKU, &p.Name, &p.Description, &p.CategoryID, &p.Price, &p.Active, &p.ProductType, &p.QuantityControl, &p.ImageURL, &p.PrepMinutes, &p.Allergens, &p.Featured, &p.CostPrice, &p.AvailableFrom, &p.AvailableUntil, &p.AvailableDays, &p.AvailableUntilTime, &p.ServiceDestination)
+	if err == nil {
+		err = r.widenCategoryScope(ctx, s, p.CategoryID, p.ProductType)
+	}
 	return p, menuError(err)
 }
 func (r *Catalog) InitialPortions(ctx context.Context, s scope, in domain.ProductInput, p domain.Product) (string, error) {
@@ -129,6 +143,9 @@ func (r *Catalog) HasPortionSales(ctx context.Context, s scope, id string) (bool
 func (r *Catalog) UpdateProduct(ctx context.Context, s scope, id string, in domain.ProductInput, skuValue string, active bool, featured bool) (domain.Product, error) {
 	var p domain.Product
 	err := r.db(ctx).QueryRow(ctx, `UPDATE products SET category_id=$3,sku=$4,name=$5,description=$6,price=$7,active=$8,product_type=$9,quantity_control=$10,image_url=$11,prep_minutes=$12,allergens=$13,featured=$14,cost_price=$15,available_from=$16,available_until=$17,available_days=$18,available_until_time=$19,service_destination=$20,updated_at=now() WHERE organization_id=$1 AND id=$2 RETURNING id,sku,name,description,category_id,price::text,active,product_type,quantity_control,image_url,prep_minutes,allergens,featured,cost_price::text,available_from::text,available_until::text,available_days,available_until_time::text,service_destination`, s.OrganizationID, id, in.CategoryID, skuValue, strings.TrimSpace(in.Name), strings.TrimSpace(in.Description), in.Price, active, in.ProductType, in.QuantityControl, in.ImageURL, in.PrepMinutes, in.Allergens, featured, in.CostPrice, in.AvailableFrom, in.AvailableUntil, in.AvailableDays, in.AvailableUntilTime, in.ServiceDestination).Scan(&p.ID, &p.SKU, &p.Name, &p.Description, &p.CategoryID, &p.Price, &p.Active, &p.ProductType, &p.QuantityControl, &p.ImageURL, &p.PrepMinutes, &p.Allergens, &p.Featured, &p.CostPrice, &p.AvailableFrom, &p.AvailableUntil, &p.AvailableDays, &p.AvailableUntilTime, &p.ServiceDestination)
+	if err == nil {
+		err = r.widenCategoryScope(ctx, s, p.CategoryID, p.ProductType)
+	}
 	return p, menuError(err)
 }
 func (r *Catalog) SetProductActive(ctx context.Context, s scope, id string, in struct{ Active *bool }) (int64, error) {
@@ -192,7 +209,7 @@ func (r *Catalog) Products(ctx context.Context, s scope, f application.CatalogFi
 		return out, err
 	}
 	rows, err := r.db(ctx).Query(ctx, `
-		SELECT p.id,p.sku,p.name,p.description,p.category_id,c.name,p.price::text,p.active,p.product_type,p.quantity_control,p.image_url,p.prep_minutes,p.allergens,p.featured,p.cost_price::text,p.available_from::text,p.available_until::text,p.available_days,p.available_until_time::text,p.service_destination,
+		SELECT p.id,p.sku,p.name,p.description,p.category_id,c.name,p.price::text,p.active,p.product_type,p.quantity_control,p.image_url,p.prep_minutes,p.allergens,p.featured,p.cost_price::text,p.available_from::text,p.available_until::text,p.available_days,p.available_until_time::text,p.service_destination,EXISTS(SELECT 1 FROM product_recipes pr WHERE pr.organization_id=p.organization_id AND pr.product_id=p.id AND pr.active),
 		       CASE
 		         WHEN p.quantity_control='none' THEN NULL
 		         WHEN NOT p.active OR pa.manual_status='sold_out'
@@ -223,7 +240,7 @@ func (r *Catalog) Products(ctx context.Context, s scope, f application.CatalogFi
 	items := []domain.ProductListItem{}
 	for rows.Next() {
 		var p domain.ProductListItem
-		if err = rows.Scan(&p.ID, &p.SKU, &p.Name, &p.Description, &p.CategoryID, &p.CategoryName, &p.Price, &p.Active, &p.ProductType, &p.QuantityControl, &p.ImageURL, &p.PrepMinutes, &p.Allergens, &p.Featured, &p.CostPrice, &p.AvailableFrom, &p.AvailableUntil, &p.AvailableDays, &p.AvailableUntilTime, &p.ServiceDestination, &p.AvailableQuantity, &p.InventoryUnit); err != nil {
+		if err = rows.Scan(&p.ID, &p.SKU, &p.Name, &p.Description, &p.CategoryID, &p.CategoryName, &p.Price, &p.Active, &p.ProductType, &p.QuantityControl, &p.ImageURL, &p.PrepMinutes, &p.Allergens, &p.Featured, &p.CostPrice, &p.AvailableFrom, &p.AvailableUntil, &p.AvailableDays, &p.AvailableUntilTime, &p.ServiceDestination, &p.HasRecipe, &p.AvailableQuantity, &p.InventoryUnit); err != nil {
 			return out, err
 		}
 		items = append(items, p)

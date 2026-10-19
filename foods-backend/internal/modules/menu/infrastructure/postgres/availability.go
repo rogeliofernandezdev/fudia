@@ -131,12 +131,12 @@ func (r *Catalog) UpdateAvailability(ctx context.Context, s scope, productID str
 func (r *Catalog) AuditAvailability(ctx context.Context, s scope, productID string, day time.Time, in domain.AvailabilityInput, currentPortionQuantity *int, soldQuantity int, currentStatus string) (int64, error) {
 	tag, err := r.db(ctx).Exec(ctx, `
 		INSERT INTO audit_log(organization_id,location_id,user_id,action,entity_type,entity_id,reason,created_at,metadata)
-		VALUES($1,$2,$3,'product.availability_updated','product',$4,$5,clock_timestamp(),
+		VALUES($1,$2,$3,'product.availability_updated','product',$4,NULLIF($5,''),clock_timestamp(),
 		 jsonb_build_object('businessDate',$6::text,'previousPortionQuantity',$7::integer,
 		 'portionQuantity',$8::integer,'soldQuantity',$9::integer,'previousManualStatus',$10::text,
-		 'manualStatus',$11::text,'actorName',(SELECT full_name FROM users WHERE id=$3)))`,
+		 'manualStatus',$11::text,'reasonCode',NULLIF($12,''),'actorName',(SELECT full_name FROM users WHERE id=$3)))`,
 		s.OrganizationID, s.LocationID, s.UserID, productID, in.Reason, day.Format("2006-01-02"),
-		currentPortionQuantity, in.PortionQuantity, soldQuantity, currentStatus, in.Status)
+		currentPortionQuantity, in.PortionQuantity, soldQuantity, currentStatus, in.Status, in.ReasonCode)
 	return tag.RowsAffected(), menuError(err)
 }
 func (r *Catalog) ProductExists(ctx context.Context, s scope, productID string) (bool, error) {

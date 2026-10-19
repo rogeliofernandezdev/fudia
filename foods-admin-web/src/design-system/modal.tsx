@@ -4,7 +4,7 @@ import {createContext,useCallback,useContext,useId,useState,type FormHTMLAttribu
 import {Dialog} from "./dialog";
 import {ConfirmDialog} from "./confirm-dialog";
 import {Icon,type IconName} from "./icons";
-import {Button} from "./page-header";
+import {Button,Spinner} from "./page-header";
 import {ErrorState} from "./states";
 import {Skeleton} from "./skeleton";
 
@@ -61,8 +61,12 @@ export function Modal({title,subtitle,meta,details,icon,tone="primary",size="md"
   </ModalContext.Provider>;
 }
 
-/** Cabecera única, también para detalles remotos que usan Dialog directamente. */
-export function ModalHeader({title,titleId,subtitle,subtitleId,meta,details,icon,tone="primary",onClose,busy=false,closeLabel="Cerrar",iconSlot,initialFocusClose=false}:{title:ReactNode;titleId?:string;subtitle?:ReactNode;subtitleId?:string;meta?:ReactNode;details?:ReactNode;icon?:IconName;tone?:ModalTone;onClose:()=>void;busy?:boolean;closeLabel?:string;iconSlot?:ReactNode;initialFocusClose?:boolean}){
+/**
+ * Cabecera única, también para detalles remotos que usan Dialog directamente. Con `busy` deshabilita la X y
+ * cubre el cuerpo con `ModalBusy`: todo modal que guarda lo bloquea sin marcado propio. El botón que originó la
+ * acción es el único que dice «Guardando…». `busyOverlay={false}` solo para pantallas de tarea completa (Comanda).
+ */
+export function ModalHeader({title,titleId,subtitle,subtitleId,meta,details,icon,tone="primary",onClose,busy=false,busyOverlay=true,closeLabel="Cerrar",iconSlot,initialFocusClose=false}:{title:ReactNode;titleId?:string;subtitle?:ReactNode;subtitleId?:string;meta?:ReactNode;details?:ReactNode;icon?:IconName;tone?:ModalTone;onClose:()=>void;busy?:boolean;busyOverlay?:boolean;closeLabel?:string;iconSlot?:ReactNode;initialFocusClose?:boolean}){
   const generatedId=useId();
   return <><header className={`modal-header${iconSlot||icon?" has-icon":""}`}>
     {(iconSlot||icon)&&<span className={`modal-title-icon ${tone==="primary"?"":tone}`.trim()}>{iconSlot??(icon&&<Icon name={icon} size={18}/>)}</span>}
@@ -72,6 +76,7 @@ export function ModalHeader({title,titleId,subtitle,subtitleId,meta,details,icon
     <button type="button" className="modal-close" aria-label={closeLabel} onClick={onClose} disabled={busy} data-dialog-initial-focus={initialFocusClose||undefined}><Icon name="close" size={18}/></button>
   </header>
     {(subtitle||meta||details)&&<div className="modal-context">{subtitle&&<p className="modal-context-description" id={subtitleId}>{subtitle}</p>}{meta&&<div className="modal-heading-meta">{meta}</div>}{details&&<div className="modal-header-details">{details}</div>}</div>}
+    {busy&&busyOverlay&&<ModalBusy/>}
   </>;
 }
 
@@ -115,6 +120,15 @@ export function ModalBody({children,className=""}:{children:ReactNode;className?
 export function ModalFooter({children,note,status,statusLabel="Estado",className=""}:{children?:ReactNode;note?:ReactNode;status?:ReactNode;statusLabel?:string;className?:string}){return <footer className={`modal-footer ${className}`.trim()}>{status&&<div className="modal-footer-status"><span>{statusLabel}</span>{status}</div>}{note&&<p className="modal-footer-note">{note}</p>}{children}</footer>}
 /** «Cancelar» homologado: usa el cierre del modal, que confirma el descarte si hay cambios. */
 export function ModalCancel({label="Cancelar"}:{label?:string}){const {requestClose,busy}=useModal();return <Button action="cancel" onClick={requestClose} disabled={busy}>{label}</Button>}
+
+/**
+ * Guardado en curso sobre el cuerpo del modal: bloquea los clics desde el primer cuadro y atenúa el formulario
+ * tras --duration-fast, sin texto (el botón ya dice «Guardando…»). Solo si la espera supera --delay-long-wait
+ * aparece un spinner central, para que se note que el sistema sigue trabajando.
+ */
+export function ModalBusy({className=""}:{className?:string}){
+  return <div className={`modal-busy ${className}`.trim()} aria-hidden="true"><span className="modal-busy-indicator"><Spinner size={20}/></span></div>;
+}
 
 /** Carga remota dentro del modal: conserva cabecera y X operables; el cuerpo reproduce campos o datos. */
 export function ModalLoading({kind="form",rows=6,label="Cargando"}:{kind?:"form"|"detail";rows?:number;label?:string}){

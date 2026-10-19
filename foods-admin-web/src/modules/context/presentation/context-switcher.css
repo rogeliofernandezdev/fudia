@@ -1,7 +1,8 @@
 /* Owner: Context — selector de empresa y local. */
 .context-switcher{position:relative;min-width:0}
 .context-btn{border:var(--stroke-1) solid transparent;background:transparent;border-radius:var(--radius-control);align-items:center;gap:var(--space-2);height:var(--control-height);max-width:var(--size-260);padding:0 var(--space-2);display:flex;cursor:pointer;transition:background var(--duration-fast),border-color var(--duration-fast)}
-.context-btn:hover:not(:disabled),.context-btn:focus-visible,.context-btn[data-open=true]{background:var(--primary-100);border-color:var(--line)}
+.context-btn:focus-visible,.context-btn[data-open=true]{background:var(--primary-100);border-color:var(--line)}
+@media (hover:hover) and (pointer:fine){.context-btn:hover:not(:disabled){background:var(--primary-100);border-color:var(--line)}}
 .context-btn:disabled{cursor:default;opacity:.85}
 .context-btn>svg:first-child{width:var(--size-28);height:var(--size-28);padding:var(--space-1-5);border-radius:var(--radius-control);color:var(--icon-line);background:var(--primary-100);flex-shrink:0}
 .context-btn>svg:last-child{color:var(--ink-500);flex-shrink:0;transform:rotate(90deg);transition:transform var(--duration-fast)}
@@ -13,7 +14,8 @@
 .context-popover-head{display:flex;align-items:center;gap:var(--space-2-5);padding:var(--space-3) var(--space-4);border-bottom:var(--stroke-1) solid var(--line)}
 .context-popover-head h2{flex:1;min-width:0;margin:0;color:var(--ink-950);font-size:var(--font-size-base);font-weight:var(--weight-bold)}
 .context-close[data-tooltip]:after{left:auto;right:0;bottom:auto;top:calc(100% + var(--space-2));transform:translateY(var(--size-4))}
-.context-close[data-tooltip]:hover:after,.context-close[data-tooltip]:focus-visible:after{transform:translateY(0)}
+.context-close[data-tooltip]:focus-visible:after{transform:translateY(0)}
+@media (hover:hover) and (pointer:fine){.context-close[data-tooltip]:hover:after{transform:translateY(0)}}
 .context-popover-icon{width:var(--size-32);height:var(--size-32);display:grid;place-items:center;flex-shrink:0;border-radius:var(--radius-tile);background:var(--primary-100);color:var(--icon-line)}
 /* Cierre neutro y redondo: no compite con el título ni con «Aplicar». */
 .context-popover-head .context-close{border-color:transparent;border-radius:var(--radius-pill);background:transparent;color:var(--ink-500)}

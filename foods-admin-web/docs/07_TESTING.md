@@ -178,17 +178,26 @@ y servidor temporal al terminar. Es verificación aislada de composición;
 no sustituye una ruta autenticada ni la revisión de teclado, toque y áreas
 seguras en un teléfono físico, que no se ha realizado en esta iteración.
 
-`combo-quantity.test.mjs` renderiza el wizard real para comprobar la precarga de
+`combo-quantity.test.mjs` renderiza la hoja real (`ComboEditor`) para comprobar la precarga de
 «Reservar» en la selección manual y la plantilla con `availableQuantity` del API,
 incluidos agotado y Sin control. Cubre límites compartidos, stock fraccionario
 en opciones de unidades completas, reserva reducida, edición sin reemplazo,
 caché por empresa/local, refresco sin sobrescribir valores y transporte de
-`quota`. Protege la eliminación de `defaultDailyQuota` en Menús y combos.
+`quota`. Protege la eliminación de `defaultDailyQuota` en Menús y combos. También
+cubre Reservar visible en cada línea, el error junto al campo al guardar, la coma
+decimal, la plantilla como primer paso, la confirmación al quitar una parte con
+opciones y «Cuándo se vende» (solo Siempre y Elegir días; «Elegir días» sin días
+bloqueado), las fechas convertidas con la zona del local (Lima UTC-5, Madrid con
+cambio de horario) y «Fuera de fecha» en el listado. El buscador «Agregar opción» se prueba con
+`buildOptionGroups`: secciones por categoría con la de la parte primero, «Sin
+categoría» al final, sin repetir lo agregado y sin secciones vacías.
 
 `combo-detail-modal.test.mjs` fija el detalle de Menús y combos a la anatomía
 compartida (`size-md`, cabecera sin subtítulo, `modal-body`, `modal-record-data`,
 `ModalItemComponents`, `ModalError`, estado en el pie), impide que el módulo
-redefina cuerpo, tamaño o pesos y que vuelva a mostrar reglas de elección.
+redefina cuerpo, tamaño o pesos y que vuelva a mostrar reglas de elección. Fija
+también la hoja de menús: `crud-modal size-lg`, un solo `modal-body`, sin pasos ni
+«Continuar», resumen del pie con el precio en `primary-700` y selección en tinte.
 
 `purchase-response.test.mjs` utiliza las mutaciones reales de TanStack para
 probar respuestas demoradas, clics repetidos, bloqueo compartido entre acciones,
@@ -254,11 +263,11 @@ contraste del botón exitoso, geometría primaria única y uso de `Dialog` en to
 las ventanas. Incluye Tab/Shift+Tab, restauración de foco, ventanas superpuestas
 y cierre exclusivamente explícito (autocierre solo en éxito).
 
-El contrato de servicio separa preparación y cuenta. Probar destino remoto del producto, append sobre la misma cuenta Abierta sin líneas anteriores, botones por mozo, entrega completa antes de cierre/cobro, estados operativos sin modal exitoso y ajuste responsive desde 390 px. Los fixtures cobrables incluyen `billClosedAt`, estado Entregado y todos los productos entregados; Listo no equivale a Entregado. Rechazar cierre/cobro con Cocina, Barra o Entrega directa pendientes, incluso con estado agregado obsoleto; después del cierre no permitir consumo adicional ni con pago parcial.
+El contrato de servicio separa preparación y cuenta. Probar destino remoto del producto, append sobre la misma cuenta Abierta sin líneas anteriores, botones por mozo, entrega completa antes de cierre/cobro, estados operativos sin modal exitoso y ajuste responsive desde 390 px. Los fixtures cobrables incluyen `billClosedAt`, estado Entregado y todos los productos entregados; Listo no equivale a Entregado. Rechazar cierre/cobro con Cocina, Barra o Sin preparación pendientes, incluso con estado agregado obsoleto; después del cierre no permitir consumo adicional ni con pago parcial.
 
 Salón y Pedidos renderizan los controles reales para comprobar una única acción
 «Confirmar entrega» en el pie, sin botones por producto. Un pedido mixto de Cocina,
-Barra y Entrega directa debe tener todos sus productos pendientes Listos; un estado
+Barra y Sin preparación debe tener todos sus productos pendientes Listos; un estado
 agregado Listo no permite saltar productos en preparación. Probar mozo asignado,
 lectura sin permisos, bloqueo durante envío, ronda adicional con entregas previas
 y transición a «Cerrar cuenta» después de servir todo. La entrega envía una sola
@@ -266,7 +275,7 @@ petición de estado, refresca las vistas afectadas y conserva el modal de error,
 sin modal exitoso.
 
 `order-delivery.test.mjs` verifica que ambos detalles (Salón/Pedidos) compartan
-la cancelación de Entrega directa sin servir, oculten la acción ante preparación,
+la cancelación de Sin preparación sin servir, oculten la acción ante preparación,
 entrega, pago o finalización, respeten al mozo asignado y la bloqueen mientras
 se guarda. Las comandas históricas Listas no ofrecen cancelación.
 
@@ -281,7 +290,7 @@ Con gestión conserva las acciones; al perderla retira los formularios abiertos.
 sesión para Administrador, Cocinero, Mozo y roles personalizados, sin privilegios
 por nombre. Cubre permisos independientes de Mesas y Zonas, vacíos y borradores
 sin autorización. `combo-quantity.test.mjs` añade lectura sin altas/edición/estado
-y retiro de wizard/confirmación al perder gestión, conservando consulta.
+y retiro de la hoja/confirmación al perder gestión, conservando consulta.
 
 `inventory-settings-dialog.test.mjs` protege la estructura compartida del modal
 de niveles (formulario, campos y footer), estilos responsive desde 390 px sin
@@ -418,3 +427,70 @@ viewport, controles < 44 px (un `label` de 44 px que envuelve el input cuenta
 como área táctil), textos recortados, padding de `.content` y, en modales,
 rectángulo, márgenes del cuerpo y distancia del pie al borde inferior.
 No sustituye una prueba en el teléfono físico.
+
+## Rendimiento
+
+`performance-budget.test.mjs` protege las decisiones de carga: barrels públicos
+con solo re-exportaciones, `sideEffects` limitado a CSS, `optimizePackageImports`
+para `@/design-system`, `@/providers`, `@/shared/management` y cada módulo,
+`loading.tsx` del grupo admin con `RouteSkeleton` (solo opacidad, sin retraso y
+con `prefers-reduced-motion`), `staleTimes.dynamic`, carga diferida de `qrcode`,
+del buscador de combos y del editor de producto, y tamaño máximo de las imágenes
+de interfaz. `source-contract.test.mjs` fija qué hojas del design system registra
+el root layout.
+
+Medición (Next 16 ya no imprime «First Load JS» en `next build`):
+
+```bash
+npm run build
+npx next start --hostname localhost --port 5181
+node scripts/measure-first-load.mjs http://localhost:5181
+```
+
+El script suma, en gzip, los chunks que descarga el HTML de cada ruta (incluidos
+los que referencia el payload RSC) y su CSS; excluye polyfills `nomodule`. Las
+rutas admin se sirven sin sesión, porque el shell valida en el cliente.
+
+Línea base y resultado de la optimización del 18 oct 2026 (JS / CSS de primera
+carga en kB gzip):
+
+| Ruta | JS antes | JS después | CSS antes | CSS después |
+| --- | ---: | ---: | ---: | ---: |
+| `/login` | 281,3 | 200,7 | 32,1 | 27,0 |
+| `/dashboard` | 289,6 | 189,1 | 52,8 | 36,5 |
+| `/pos` | 336,6 | 189,7 | 67,0 | 35,6 |
+| `/dining-room` | 336,6 | 199,6 | 67,0 | 39,5 |
+| `/kitchen` | 336,6 | 181,4 | 67,0 | 34,4 |
+| `/orders` | 336,6 | 226,1 | 67,0 | 42,2 |
+| `/cash` | 336,6 | 233,2 | 67,0 | 36,4 |
+| `/tables` | 336,6 | 226,2 | 67,0 | 34,0 |
+| `/reservations` | 336,6 | 222,2 | 67,0 | 32,8 |
+| `/combos` | 306,2 | 191,9 | 55,2 | 35,6 |
+| `/products` | 306,2 | 228,6 | 55,2 | 32,5 |
+| `/recipes` | 306,2 | 186,4 | 55,2 | 34,5 |
+| `/sales` | 286,0 | 190,2 | 50,8 | 34,4 |
+| `/purchases` | 297,8 | 234,4 | 54,3 | 35,8 |
+| `/inventory` | 297,8 | 185,6 | 54,3 | 34,7 |
+| `/customers` | 285,6 | 225,3 | 50,4 | 34,1 |
+| `/settings/organization` | 283,6 | 257,6 | 49,7 | 40,2 |
+| `/settings/users` | 276,2 | 223,4 | 48,8 | 34,8 |
+| `/platform/onboarding` | 253,7 | 244,4 | 35,6 | 35,0 |
+| `/table/[qr]` | 276,0 | 149,5 | 19,6 | 25,3 |
+
+Hallazgos que explicaban la línea base: los barrels arrastraban react-select +
+emotion (~53 kB) y el envoltorio de Mapbox (~10 kB) a todas las rutas, incluidos
+login y la carta QR pública; cada ruta de Operaciones cargaba el módulo completo
+(~50 kB), y `qrcode` viajaba con todas ellas. El logo (889 kB, mostrado a 36 px y
+precargado en cada visita) y la imagen de login (1,1 MB a 120 px) se descargaban
+en su resolución original; ahora pesan 16 kB y 66 kB. La carta QR sube 5,7 kB de
+CSS por registrar las hojas compartidas en el root layout, a cambio de 126 kB
+menos de JS.
+
+En navegador (build de producción, sesión real): el toque en el menú lateral
+cambia URL y muestra el skeleton en 16–80 ms; una pantalla nueva aparece hacia
+los ~340 ms (React mantiene un fallback de Suspense ~300 ms; el payload RSC
+tarda 10–60 ms) y una visitada en los últimos 30 s abre en 50–70 ms. Se revisaron
+Dashboard, Punto de venta, Salón, Pedidos y Menús y combos (incluido el buscador
+diferido «Agregar opción») en escritorio y, con el iframe de 427 × 933 y 390 px,
+en móvil. Los sondeos de 10 s de Salón, Cocina y del saldo del catálogo se
+mantienen: son comportamiento aprobado y tienen pruebas propias.

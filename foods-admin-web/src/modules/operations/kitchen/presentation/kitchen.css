@@ -98,14 +98,18 @@
  .kitchen-lane{display:none}
  .kitchen-lane[data-mobile-active=true]{display:block}
 }
-@media(max-width:760px){
- .kitchen-page{gap:var(--space-2-5)}
- /* Móvil: título y descripción a todo el ancho; área y canal debajo en dos columnas iguales. */
- .kitchen-page .page-header{grid-template-columns:minmax(0,1fr);margin-bottom:var(--space-1)}
+/* Hasta 1024 px (tablet, ventana reducida o con menú lateral) título y descripción usan todo el ancho
+   y área y canal van debajo en dos columnas iguales: los filtros nunca compiten con el título. La cabecera
+   global solo pasa a grid en ≤600 px, por eso aquí se fija explícitamente. */
+@media(max-width:1024px){
+ .kitchen-page .page-header{display:grid;grid-template-columns:minmax(0,1fr);align-items:start;margin-bottom:var(--space-1)}
  .kitchen-page .page-header-actions{width:100%}
  .kitchen-header-tools{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-2)}
  .kitchen-header-tools select{min-width:0}
  .kitchen-attention{grid-column:1/-1;grid-row:2}
+}
+@media(max-width:760px){
+ .kitchen-page{gap:var(--space-2-5)}
 }
 @media(max-width:460px){
  .ds-tabs.kitchen-mobile-tabs button{gap:var(--space-1-5);padding:0 var(--space-1-5);font-size:var(--font-size-label)}

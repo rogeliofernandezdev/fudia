@@ -219,3 +219,31 @@ func TestAvailabilityHistoryRoutesRequireReadAndChangesRequireManage(t *testing.
 		t.Fatalf("without read: %d", rec.Code)
 	}
 }
+
+// Agotar usa un motivo de un toque; «Otro» exige detalle y reactivar no pide motivo.
+func TestAvailabilityOneTapReasons(t *testing.T) {
+	pool := integrationPool(t)
+	s := seedInventoryScope(t, pool)
+	api := New(pool)
+	id := seedPortionAvailability(t, pool, s, 15, 5)
+	if rec := updateAvailabilityRequest(t, api, s, id, `{"status":"sold_out","reasonCode":"other"}`); rec.Code != 400 {
+		t.Fatalf("other without detail: %d %s", rec.Code, rec.Body.String())
+	}
+	if rec := updateAvailabilityRequest(t, api, s, id, `{"status":"sold_out","reasonCode":"no_supplies"}`); rec.Code != 204 {
+		t.Fatalf("one-tap sold out: %d %s", rec.Code, rec.Body.String())
+	}
+	if rec := updateAvailabilityRequest(t, api, s, id, `{"status":"available"}`); rec.Code != 204 {
+		t.Fatalf("reactivate without reason: %d %s", rec.Code, rec.Body.String())
+	}
+	var reason, code string
+	if err := pool.QueryRow(context.Background(), `SELECT reason,metadata->>'reasonCode' FROM audit_log WHERE entity_id=$1 AND action='product.availability_updated' AND metadata->>'manualStatus'='sold_out'`, id).Scan(&reason, &code); err != nil {
+		t.Fatal(err)
+	}
+	if reason != "Sin insumos" || code != "no_supplies" {
+		t.Fatalf("stored reason: %q %q", reason, code)
+	}
+	var reactivated *string
+	if err := pool.QueryRow(context.Background(), `SELECT reason FROM audit_log WHERE entity_id=$1 AND action='product.availability_updated' AND metadata->>'manualStatus'='available' ORDER BY created_at DESC LIMIT 1`, id).Scan(&reactivated); err != nil || reactivated != nil {
+		t.Fatalf("reactivation reason: %v err=%v", reactivated, err)
+	}
+}

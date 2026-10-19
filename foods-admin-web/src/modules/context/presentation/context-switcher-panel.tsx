@@ -25,7 +25,7 @@ export function ContextSwitcherPanel({panelRef,id,platformAdmin,organizationId,l
         <FormField label="Local"><Select value={locationId} disabled={busy||(platformAdmin&&!organizationId)||!locations.length} onChange={event=>onLocationChange(event.target.value)}><option value="">Selecciona un local</option>{locations.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</Select></FormField>
         {!locations.length&&(!platformAdmin||organizationId)&&<p className="context-empty" role="status">No hay locales disponibles.</p>}
       </div>
-      <footer className="context-popover-actions"><Button type="submit" className="context-apply" icon={busy?"refresh":"check"} disabled={busy||!canApply} aria-busy={busy}>{busy?"Cambiando…":"Aplicar"}</Button></footer>
+      <footer className="context-popover-actions"><Button type="submit" className="context-apply" icon="check" disabled={busy||!canApply} loading={busy}>{busy?"Cambiando…":"Aplicar"}</Button></footer>
     </form>}
   </section>;
 }

@@ -96,6 +96,6 @@ export function PurchaseCombinationDialog({unit,unitName,close,save}:{unit:strin
    {catalog.isLoading&&<div className="purchase-reference-loading span-2" role="status" aria-label="Cargando catálogo"><Skeleton width="70%"/></div>}
    {catalog.isError&&<div className="span-2"><Button type="button" kind="secondary" icon="refresh" disabled={catalog.isFetching} onClick={()=>void catalog.refetch()}>Reintentar</Button></div>}
    {(validation||mutation.isError||catalog.isError)&&<p className="field-error span-2" role="alert">{validation||mutation.error?.message||catalog.error?.message}</p>}
-  </div><ModalFooter><Button type="button" kind="ghost" disabled={mutation.isPending} onClick={close}>Cancelar</Button><Button type="button" icon="check" disabled={mutation.isPending||catalog.isLoading||catalog.isError} onClick={submit}>{mutation.isPending?"Guardando…":"Guardar"}</Button></ModalFooter></form>
+  </div><ModalFooter><Button type="button" kind="ghost" disabled={mutation.isPending} onClick={close}>Cancelar</Button><Button type="button" icon="check" disabled={mutation.isPending||catalog.isLoading||catalog.isError} onClick={submit} loading={mutation.isPending}>{mutation.isPending?"Guardando…":"Guardar"}</Button></ModalFooter></form>
  </Dialog></div>;
 }

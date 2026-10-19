@@ -198,7 +198,7 @@ test("producto e inventario mantienen una sola fuente de verdad",()=>{
 
   const recipes=read("src/modules/menu/recipes/presentation/recipes-page.tsx");
   const recipesApi=read("src/modules/menu/recipes/infrastructure/recipes-api.ts");
-  assert.ok(recipes.includes('AsyncSelect from "react-select/async"'),"Recetas reutiliza el autocomplete asíncrono existente");
+  assert.ok(recipes.includes('AsyncSelect=dynamic(()=>import("react-select/async")'),"Recetas reutiliza el autocomplete asíncrono existente, cargado al abrir el modal");
   assert.ok(recipes.includes("loadOptions={loadRecipeProductOptions}"),"Producto preparado busca opciones de forma asíncrona");
   assert.ok(recipes.includes("cacheOptions"),"El autocomplete reutiliza resultados recientes");
   assert.equal(recipes.includes('<Select value={draft.productId}'),false,"Producto preparado no vuelve a un select nativo");
@@ -383,7 +383,7 @@ test("combos conserva la misma tabla en movil y el shell no desborda",()=>{
   assert.ok(combos.includes('<DataTable label="Listado de menús y combos"'),"Combos reutiliza la tabla informativa responsive");
   assert.equal(combos.includes("combo-mobile-cards"),false);
   assert.equal(combos.includes("\\n    {draft&&<ComboWizard"),false);
-  const comboCss=readCss("src/modules/menu/combos/presentation/combo-wizard.css");
+  const comboCss=readCss("src/modules/menu/combos/presentation/combo-editor.css");
   assert.ok(comboCss.includes("container-name: combo-list"));
   assert.ok(comboCss.includes("@container combo-list (width <= 820px)"));
   assert.ok(comboCss.includes(".standardized-management.combo-list .table-wrap"));
@@ -444,10 +444,14 @@ test("cocina mantiene jerarquia KDS y semantica de color",()=>{
   assert.equal(css.includes("rgba("),false,"Cocina no introduce colores rgba directos");
 });
 
-test("el root layout carga la base y los estilos compartidos de tablas, sin estilos de features",()=>{
+test("el root layout carga la base y los estilos compartidos del design system, sin estilos de features",()=>{
   const c=read("src/app/layout.tsx");
   const cssImports=[...c.matchAll(/import ["']([^"']+\.css)["']/g)].map(m=>m[1]);
-  assert.deepEqual(cssImports,["@/styles/globals.css","@/design-system/styles/data-table.css"]);
+  assert.deepEqual(cssImports.slice(0,2),["@/styles/globals.css","@/design-system/styles/data-table.css"]);
+  // Los barrels se podan (sideEffects), así que las hojas compartidas se registran una vez aquí.
+  for(const sheet of ["modal","pagination","table-actions","skeleton","tabs","confirm-dialog","form-controls","form-field","remote-modal-skeleton","full-screen-loader"])assert.ok(cssImports.includes(`@/design-system/styles/${sheet}.css`),sheet);
+  assert.ok(cssImports.every(path=>path==="@/styles/globals.css"||path.startsWith("@/design-system/styles/")),"Sin estilos de features en el root layout");
+  for(const heavy of ["location-map","rich-text-editor"])assert.equal(cssImports.includes(`@/design-system/styles/${heavy}.css`),false,`${heavy} se carga con su componente`);
 });
 
 test("las rutas principales componen modulos",()=>{

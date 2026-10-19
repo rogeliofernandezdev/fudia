@@ -5,7 +5,8 @@ import "../../styles/table-qr.css";
 import NextImage from "next/image";
 import {useState,useEffect,useMemo,useRef} from "react";import {useForm} from "react-hook-form";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import QRCode from "qrcode";
+// The QR encoder is only needed when a QR dialog opens; keep it out of the route chunk.
+const loadQRCode=()=>import("qrcode").then(module=>module.default);
 import {readCssToken} from "@/design-system/theme";
 import {Icon} from "@/design-system/icons";import {DataTable,FormField,Input,ModalHeader,ModalFooter} from "@/design-system";
 import {Button,IconButton,PageHeader,Pagination,RowActionButton,Status} from "@/design-system/page-header";
@@ -78,7 +79,7 @@ export function TablesManager(){
   </tr>;
  })}
  </tbody></DataTable>
- {canManageTables&&adding&&<div className="batch-actions"><div><Button icon="plus" kind="ghost" disabled={saveBatch.isPending} onClick={addRow}>Nueva fila</Button></div><div><Button kind="ghost" disabled={saveBatch.isPending} onClick={cancelAdd}>Cancelar</Button><Button icon="check" disabled={saveBatch.isPending||!validNewRows.length} onClick={saveAll}>{saveBatch.isPending?"Guardando…":"Guardar"}</Button></div></div>}
+ {canManageTables&&adding&&<div className="batch-actions"><div><Button icon="plus" kind="ghost" disabled={saveBatch.isPending} onClick={addRow}>Nueva fila</Button></div><div><Button kind="ghost" disabled={saveBatch.isPending} onClick={cancelAdd}>Cancelar</Button><Button icon="check" disabled={saveBatch.isPending||!validNewRows.length} onClick={saveAll} loading={saveBatch.isPending}>{saveBatch.isPending?"Guardando…":"Guardar"}</Button></div></div>}
  {!(canManageTables&&adding)&&<Pagination page={page} size={pageSize} total={data?.total??0} onPage={setPage} onSize={value=>{setPageSize(value);setPage(1)}}/>}
  </>}</section>
 
@@ -100,7 +101,7 @@ function QrDialog({table,restaurantName,close}:{table:Table;restaurantName:strin
 
  useEffect(()=>{
    if(canvasRef.current&&qrUrl){
-     QRCode.toCanvas(canvasRef.current,qrUrl,{width:240,margin:2,color:{dark:readCssToken("--navigation-900"),light:readCssToken("--surface")}},(err)=>{
+     void loadQRCode().then(QRCode=>canvasRef.current&&QRCode.toCanvas(canvasRef.current,qrUrl,{width:240,margin:2,color:{dark:readCssToken("--navigation-900"),light:readCssToken("--surface")}},(err)=>{
        if(err){console.error(err);return}
        const canvas=canvasRef.current;if(!canvas)return;
        const ctx=canvas.getContext("2d");if(!ctx)return;
@@ -110,7 +111,7 @@ function QrDialog({table,restaurantName,close}:{table:Table;restaurantName:strin
          ctx.fillStyle=readCssToken("--surface");ctx.fillRect(x-5,y-5,size+10,size+10);
          ctx.save();ctx.beginPath();ctx.roundRect(x,y,size,size,10);ctx.clip();ctx.drawImage(logo,x,y,size,size);ctx.restore();
        };logo.src="/assets/images/logo.png";
-     });
+     }));
    }
  },[qrUrl]);
 
@@ -157,7 +158,7 @@ function QrDialog({table,restaurantName,close}:{table:Table;restaurantName:strin
  <div className="qr-dialog-body">
    <div className="qr-hero">
      <div className="qr-hero-glow"/>
-     <div className="qr-brand"><NextImage src="/assets/images/logo.png" alt="fudIA" width={24} height={24}/><b>{restaurantName}</b></div>
+     <div className="qr-brand"><NextImage src="/assets/images/logo-mark.png" alt="fudIA" width={24} height={24}/><b>{restaurantName}</b></div>
      <div className="qr-canvas-wrap"><canvas ref={canvasRef}/></div>
      <div className="qr-hero-label"><Icon name="qr" size={14}/><span>Escanea para pedir</span></div>
    </div>
@@ -187,7 +188,7 @@ function PrintQrDialog({tables,restaurantName,close}:{tables:Table[];restaurantN
  const printable=useMemo(()=>tables.filter(t=>t.qrEnabled&&t.qrToken&&t.active),[tables]);
 
  useEffect(()=>{
-   printable.forEach(t=>{
+   void loadQRCode().then(QRCode=>printable.forEach(t=>{
      const canvas=canvasRefs.current[t.id];
      if(canvas){
        QRCode.toCanvas(canvas,`${origin}${publicConciergePath(t.qrToken)}`,{width:200,margin:1,color:{dark:readCssToken("--navigation-900"),light:readCssToken("--surface")}},(err)=>{
@@ -202,7 +203,7 @@ function PrintQrDialog({tables,restaurantName,close}:{tables:Table[];restaurantN
          };logo.src="/assets/images/logo.png";
        });
      }
-   });
+   }));
  },[origin,printable]);
 
  function doPrint(){
@@ -217,7 +218,7 @@ function PrintQrDialog({tables,restaurantName,close}:{tables:Table[];restaurantN
    {printable.length===0?<div className="qr-print-empty"><Icon name="qr" size={32}/><b>No hay mesas con QR activo</b><p>Crea mesas o activa sus QRs para imprimir.</p></div>:
    <div className="qr-print-grid">{printable.map(t=><div key={t.id} className="qr-print-card">
      <div className="qr-print-card-accent"/>
-     <div className="qr-print-card-brand"><span className="qr-print-card-logo"><NextImage src="/assets/images/logo.png" alt="fudIA" width={28} height={28}/></span><b>{restaurantName}</b></div>
+     <div className="qr-print-card-brand"><span className="qr-print-card-logo"><NextImage src="/assets/images/logo-mark.png" alt="fudIA" width={28} height={28}/></span><b>{restaurantName}</b></div>
      <canvas ref={el=>{canvasRefs.current[t.id]=el}}/>
      <div className="qr-print-card-footer"><Icon name="qr" size={14}/><span>Escanea para pedir por WhatsApp</span></div>
    </div>)}</div>}

@@ -19,10 +19,17 @@ const buttonActions:Record<ButtonAction,{kind:ButtonKind;icon:IconName;iconPosit
  back:{kind:"ghost",icon:"chevronLeft",iconPosition:"start"},
 };
 type ButtonProps=ButtonHTMLAttributes<HTMLButtonElement>&{icon?:IconName;kind?:ButtonKind;action?:ButtonAction;/** Bloquea y anuncia la petición en curso; el texto debe cambiar al gerundio del mismo verbo. */loading?:boolean};
+/** Indicador de petición en curso: pista tenue y arco con extremos redondeados, como el set de iconos. Hereda el color del texto. */
+export function Spinner({size=18,className=""}:{size?:IconSize;className?:string}){return <svg className={`ds-spinner ${className}`.trim()} viewBox="0 0 24 24" width={size} height={size} aria-hidden="true"><circle className="ds-spinner-track" cx="12" cy="12" r="8.5"/><path className="ds-spinner-arc" d="M12 3.5a8.5 8.5 0 0 1 8.5 8.5"/></svg>}
+/** En el botón ocupa el lugar del icono para que no cambie de ancho. */
+function ButtonSpinner(){return <Spinner/>}
 export function Button({children,icon,kind="primary",action,type="button",className="",loading=false,disabled,...props}:ButtonProps){
  const definition=action?buttonActions[action]:undefined;
  const variant=definition?.kind??kind,glyph=definition?.icon??icon,trailing=definition?.iconPosition==="end";
- return <button type={type} className={`button ${variant} ${className}`.trim()} disabled={disabled||loading} aria-busy={loading||undefined} {...props}>{glyph&&!trailing&&<Icon name={glyph} size={18}/>}<span>{children}</span>{glyph&&trailing&&<Icon name={glyph} size={18}/>}</button>;
+ const busy=loading||props["aria-busy"]===true||props["aria-busy"]==="true";
+ const lead=busy&&(!glyph||!trailing)?<ButtonSpinner/>:glyph&&!trailing?<Icon name={glyph} size={18}/>:null;
+ const trail=glyph&&trailing?busy?<ButtonSpinner/>:<Icon name={glyph} size={18}/>:null;
+ return <button type={type} className={`button ${variant} ${className}`.trim()} disabled={disabled||busy} aria-busy={busy||undefined} {...props}>{lead}<span>{children}</span>{trail}</button>;
 }
 export function IconButton({icon,label,accessibleLabel,iconSize=18,className="",type="button",...props}:{icon:IconName;label:string;accessibleLabel?:string;iconSize?:IconSize}&Omit<ButtonHTMLAttributes<HTMLButtonElement>,"aria-label">){return <button type={type} className={`ds-icon-button ${className}`.trim()} aria-label={accessibleLabel??label} data-tooltip={label} {...props}><Icon name={icon} size={iconSize}/></button>}
 type RowAction="view"|"review"|"charge"|"edit"|"activate"|"deactivate"|"cancel"|"remove";

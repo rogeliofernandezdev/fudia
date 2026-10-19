@@ -16,7 +16,7 @@
 .crud-modal>header>button,.modal-close{position:relative;display:grid;flex:none;place-items:center;width:var(--size-44);height:var(--size-44);padding:0;border:0;border-radius:var(--radius-control);background:transparent;color:var(--surface);transition:transform var(--duration-press) var(--easing-out)}
 .crud-modal>header>button::before,.modal-close::before{content:"";position:absolute;inset:50% auto auto 50%;width:var(--size-32);height:var(--size-32);box-sizing:border-box;transform:translate(-50%,-50%);border:var(--stroke-1) solid var(--surface);border-radius:var(--radius-control);pointer-events:none}
 .crud-modal>header>button:focus-visible,.modal-close:focus-visible{outline:var(--stroke-2) solid var(--surface);outline-offset:var(--space-0-5)}
-.crud-modal>header>button:active:not(:disabled),.modal-close:active:not(:disabled){transform:scale(.94)}
+.crud-modal>header>button:active:not(:disabled),.modal-close:active:not(:disabled){transform:scale(var(--press-scale-icon))}
 .crud-modal>header>button:disabled,.modal-close:disabled{cursor:not-allowed;opacity:1}
 .modal-title-icon{display:grid;flex:none;place-items:center;width:var(--size-44);height:var(--size-44);border-radius:var(--radius-control);color:var(--surface);background:transparent}
 .crud-modal>header .modal-title-icon>svg,.crud-modal>header>button>svg,.modal-header .modal-title-icon>svg,.modal-header>.modal-close>svg{width:var(--size-20);height:var(--size-20);flex:none}
@@ -112,7 +112,7 @@
 .modal-body{flex:1 1 auto;min-height:0;padding:var(--space-6);overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--ink-400-alpha-40) transparent}
 /* Ayudas de campo dentro del modal: el tooltip crece hacia la izquierda del icono para no salirse del cuerpo ni crear desplazamiento horizontal. */
 .modal-body .field-hint[data-tooltip]:after{left:auto;right:calc(var(--size-8) * -1);transform:translateY(var(--size-4))}
-.modal-body .field-hint[data-tooltip]:is(:hover,:focus-visible):after{transform:translateY(0)}
+@media (hover:hover) and (pointer:fine){.modal-body .field-hint[data-tooltip]:is(:hover,:focus-visible):after{transform:translateY(0)}}
 .crud-modal>form:not(.modal-form){padding:var(--space-6) var(--space-6) 0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--ink-400-alpha-40) transparent}
 .crud-modal>:is(div,section,article):not(.modal-busy,.modal-body,.modal-context,.modal-workspace){flex:1 1 auto;min-height:0;overflow-y:auto}
 
@@ -137,9 +137,11 @@
 .modal-loading-control{height:var(--control-height)}
 .modal-loading-value{width:72%;height:var(--size-14)}
 
-.modal-busy{position:absolute;inset:var(--size-64) 0 var(--size-64);z-index:var(--z-sticky);display:grid;place-content:center;justify-items:center;gap:var(--space-2-5);color:var(--brand-700);background:var(--brand-50-alpha-88);backdrop-filter:blur(var(--blur-1))}
-.modal-busy i{width:var(--size-40);height:var(--size-40);border:var(--stroke-3) solid var(--brand-200);border-top-color:var(--brand-700);border-radius:var(--radius-pill);animation:spin var(--duration-ambient-short) linear infinite}
-.modal-busy span{font-size:var(--font-size-xs);font-weight:var(--weight-semibold)}
+/* Guardado en curso: bloquea desde el primer cuadro, atenúa tras --duration-fast y solo en esperas largas muestra un spinner sin texto. */
+.modal-busy{position:absolute;inset:var(--size-64) 0 var(--size-64);z-index:var(--z-header);display:grid;place-items:center;background:var(--surface-alpha-64);cursor:progress;animation:modal-busy-in var(--duration-base) var(--easing-out) var(--duration-fast) both}
+.modal-busy-indicator{display:grid;place-items:center;width:var(--size-44);height:var(--size-44);border-radius:var(--radius-pill);color:var(--primary-600);background:var(--surface);box-shadow:var(--elevation-3);animation:modal-busy-indicator-in var(--duration-base) var(--easing-out) var(--delay-long-wait) both}
+@keyframes modal-busy-in{from{opacity:0}}
+@keyframes modal-busy-indicator-in{from{opacity:0;transform:scale(.9)}}
 
 .modal-overlay-in{animation:modal-overlay-in var(--duration-base) var(--easing-out) both}
 .modal-panel-in{animation:modal-panel-in var(--duration-slow) var(--easing-out) both}

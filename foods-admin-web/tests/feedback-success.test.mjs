@@ -32,10 +32,10 @@ test("éxito: círculo verde sólido, icono blanco y tamaño centrado compartido
 });
 
 test("el círculo empieza grande y se asienta elásticamente sin deformarse",()=>{
- assert.match(values(rule(".feedback-card.success.in")).animation,/var\(--duration-slow\) var\(--easing-out\) both feedback-success-fade/);
+ assert.match(values(rule(".feedback-card.success.in")).animation,/var\(--duration-fast\) var\(--easing-out\) both feedback-success-fade/,"El éxito aparece apenas termina el guardado");
  assert.match(values(rule(".feedback-icon.success:before")).animation,/var\(--duration-dialog\) var\(--easing-spring\) both feedback-success-settle/);
  assert.equal(values(rule(".feedback-icon.success")).animation,undefined);
- assert.match(values(rule(".feedback-icon.success svg")).animation,/feedback-success-fade var\(--duration-base\) var\(--easing-out\) var\(--duration-slow\)/);
+ assert.match(values(rule(".feedback-icon.success svg")).animation,/feedback-success-fade var\(--duration-fast\) var\(--easing-out\) var\(--duration-press\)/);
  assert.equal(values(rule(".feedback-icon.success svg")).transform,undefined);
  assert.ok(!css.includes("infinite"));
  const settle=ast.nodes.find(node=>node.name==="keyframes"&&node.params==="feedback-success-settle");

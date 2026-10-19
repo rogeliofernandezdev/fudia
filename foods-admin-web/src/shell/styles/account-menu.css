@@ -1,8 +1,9 @@
 .account-menu{position:relative;min-width:0;flex:0 0 auto}
-.account-trigger{min-width:0;height:var(--size-44);margin-left:var(--space-1-5);padding:var(--space-1) var(--space-1-5) var(--space-1) var(--space-1);display:grid;grid-template-columns:var(--size-34) minmax(0,1fr) var(--size-18);align-items:center;gap:var(--space-2);border:var(--stroke-1) solid transparent;border-radius:var(--radius-tile);background:transparent;text-align:left;position:relative;transition:border-color var(--duration-fast) ease,background var(--duration-fast) ease}
-.account-trigger:hover,.account-trigger:focus-visible{background:var(--cloud-100)}
+.account-trigger{min-width:0;height:var(--size-44);margin-left:var(--space-1-5);padding:var(--space-1) var(--space-1-5) var(--space-1) var(--space-1);display:grid;grid-template-columns:var(--size-34) minmax(0,1fr) var(--size-18);align-items:center;gap:var(--space-2);border:var(--stroke-1) solid transparent;border-radius:var(--radius-tile);background:transparent;text-align:left;position:relative;transition:border-color var(--duration-fast) var(--easing-out),background var(--duration-fast) var(--easing-out)}
+.account-trigger:focus-visible{background:var(--cloud-100)}
+@media (hover:hover) and (pointer:fine){.account-trigger:hover{background:var(--cloud-100)}}
 .account-trigger::before{content:"";position:absolute;left:calc(var(--space-2) * -1);top:var(--space-2-5);bottom:var(--space-2-5);width:var(--size-1);background:var(--line)}
-.account-trigger>svg{color:var(--ink-400);transform:rotate(90deg);transition:transform var(--duration-fast) ease}
+.account-trigger>svg{color:var(--ink-400);transform:rotate(90deg);transition:transform var(--duration-fast) var(--easing-out)}
 .account-trigger[aria-expanded="true"]>svg{transform:rotate(-90deg)}
 .account-avatar{width:var(--size-34);height:var(--size-34);display:grid;place-items:center;flex-shrink:0;border-radius:50%;color:var(--surface);background:var(--primary-700);font-size:var(--font-size-control);font-weight:var(--weight-heavy);letter-spacing:var(--letter-spacing-wide)}
 .account-trigger-copy{min-width:0;display:grid;gap:var(--space-0-5)}
@@ -18,15 +19,17 @@
 .account-popover nav{margin:var(--space-1-5) 0;display:grid}
 .account-role-retry{display:flex;align-items:center;gap:var(--space-1-5);width:100%;min-height:var(--control-height);padding:0 var(--space-2);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-control);background:var(--surface);color:var(--primary-700);font-size:var(--font-size-control)}
 .account-popover nav a{min-height:var(--size-52);padding:var(--space-2) var(--space-2);display:grid;grid-template-columns:var(--size-30) minmax(0,1fr) var(--size-16);align-items:center;gap:var(--space-2);border-radius:var(--radius-tile);color:var(--ink-600)}
-.account-popover nav a:hover,.account-popover nav a:focus-visible{color:var(--primary-700);background:var(--primary-100);outline:0}
+.account-popover nav a:focus-visible{color:var(--primary-700);background:var(--primary-100);outline:0}
+@media (hover:hover) and (pointer:fine){.account-popover nav a:hover{color:var(--primary-700);background:var(--primary-100);outline:0}}
 .account-popover nav a>svg:first-child{justify-self:center}
 .account-popover nav a>svg:last-child{color:var(--ink-400)}
 .account-popover nav span{min-width:0;display:grid;gap:var(--space-1)}
 .account-popover nav b{font-size:var(--font-size-label)}
 .account-popover nav small{overflow:hidden;color:var(--ink-500);font-size:var(--font-size-2xs);text-overflow:ellipsis;white-space:nowrap}
 .account-logout{width:100%;min-height:var(--size-44);padding:0 var(--space-2);display:grid;grid-template-columns:var(--size-30) 1fr var(--size-18);align-items:center;gap:var(--space-2);border:0;border-top:var(--stroke-1) solid var(--cloud-150);border-radius:0 0 var(--radius-tile) var(--radius-tile);color:var(--danger-600);background:var(--surface);text-align:left;font-size:var(--font-size-label);font-weight:var(--weight-bold)}
-.account-logout:hover,.account-logout:focus-visible{background:var(--danger-50);outline:0}
-.account-logout:disabled{cursor:wait;opacity:.7}
+.account-logout:focus-visible{background:var(--danger-50);outline:0}
+@media (hover:hover) and (pointer:fine){.account-logout:hover{background:var(--danger-50);outline:0}}
+.account-logout:disabled{cursor:progress;opacity:var(--opacity-busy)}
 .account-logout>svg{justify-self:center}
 .account-logout>i{width:var(--size-14);height:var(--size-14);border:var(--stroke-2) solid var(--danger-200);border-top-color:var(--danger-600);border-radius:50%;animation:account-spin var(--duration-ambient-short) linear infinite}
 @keyframes account-spin{to{transform:rotate(360deg)}}

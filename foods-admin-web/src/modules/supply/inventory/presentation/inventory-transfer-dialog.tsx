@@ -87,9 +87,8 @@ export function InventoryTransferDialog({items,locations,currentLocationId,busy,
 
           {isSubmitted&&hasErrors&&<div className="inventory-validation" role="alert"><Icon name="alert" size={16}/><span>Revisa los campos marcados antes de guardar.</span></div>}
         </div>
-        <ModalFooter><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy||!destinations.length||!items.length}>{busy?"Guardando…":"Guardar"}</Button></ModalFooter>
+        <ModalFooter><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy||!destinations.length||!items.length} loading={busy}>{busy?"Guardando…":"Guardar"}</Button></ModalFooter>
       </form>
-      {busy&&<div className="modal-busy" role="status"><i/><span>Guardando…</span></div>}
     </Dialog>
   </div>;
 }

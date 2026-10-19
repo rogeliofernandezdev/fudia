@@ -29,13 +29,18 @@ evalúan la misma regla bajo bloqueo del pedido. Cerrar cuenta y cobrar exigen
 estado Entregado y ausencia de productos pendientes en todas las rondas.
 No hay reapertura después del cierre ni botón adicional para liberar la mesa.
 
-`products.service_destination` configura Cocina, Barra o Entrega directa sin
+`products.service_destination` (`kitchen`, `bar`, `direct`; el catálogo único `menu/domain.ServiceDestinations` entrega `label` y `shortLabel`, y `direct` se muestra como «Sin preparación (lo entrega el mozo)», antes «Entrega directa») configura Cocina, Barra o Sin preparación sin
 inferirlo de nombres/categorías ni del control de cantidad. Cada venta conserva
 una copia de destino, producto, cantidad y estado en `order_service_items`.
-Cocina y Barra avanzan Pendiente → Preparando → Listo → Entregado; Entrega directa
+Cocina y Barra avanzan Pendiente → Preparando → Listo → Entregado; Sin preparación
 entra en Pendiente de entrega y solo el responsable confirma Entregado.
 Los componentes de un combo conservan tareas separadas, pero una sola línea
 comercial y su precio.
+
+`products.featured` es «Recomendar en la carta digital»: la carta pública del QR
+(`/v1/integrations/concierge/{token}/menu`) lo expone como `recommended` y lista
+esos productos primero. Las vistas operativas (POS, Comanda y sus combos) no lo
+usan para ordenar: conservan categoría y nombre.
 
 «Agregar productos» conserva la misma cuenta y agrega exclusivamente líneas
 nuevas y una ronda identificada por `request_key` para evitar duplicados.
@@ -45,7 +50,7 @@ incluso con pagos parciales. No permite cancelación simple cuando existe prepar
 o entrega.
 
 La migración 73 conserva destinos anteriores (preparados a Cocina y mercadería
-a Entrega directa), conserva atenciones históricas y marca cuentas con pagos
+a Sin preparación), conserva atenciones históricas y marca cuentas con pagos
 anteriores como cerradas para cobro. Las migraciones 70/71 preservan sus
 reconciliaciones históricas; no se reabren cuentas finalizadas.
 
@@ -89,12 +94,16 @@ local.
 | `prepared` | Plato, bebida u otro producto preparado por el restaurante. |
 | `retail` | Mercadería vendible recibida físicamente, como gaseosas, agua o snacks. |
 
-El tipo no se infiere por el nombre de la categoría. Cada categoría declara
-`product_scope`: `prepared`, `retail` o `both`. Así «Bebidas» puede
-aceptar una limonada `prepared` y una gaseosa `retail` usando `both`,
-mientras «Segundos» puede permanecer solo en `prepared`. Inventario solicita
-únicamente categorías activas compatibles con `retail`; no filtra por nombre.
-El alta comercial normal usa `prepared` por defecto; **Inventario > Nuevo
+El tipo no se infiere por el nombre de la categoría. `product_scope`
+(`prepared`, `retail` o `both`) es informativo y **no se pide al usuario**:
+se deduce del formulario de origen (Carta → `prepared`; Compras o Inventario →
+`retail`) y el backend lo amplía a `both` en la misma transacción cuando la
+categoría recibe un producto del otro tipo (alta o edición en Carta, y
+**Nuevo producto vendible** en Inventario). Así «Bebidas» acepta una limonada
+`prepared` y una gaseosa `retail` sin bloquear ni ocultar la categoría.
+Inventario acepta cualquier categoría activa de la organización. La ruta de
+atención no depende de la categoría: la decide `service_destination` del
+producto. El alta comercial normal usa `prepared` por defecto; **Inventario > Nuevo
 producto vendible** fuerza `retail` en backend para que ese atajo nunca cree
 un plato preparado.
 
@@ -143,8 +152,8 @@ El flujo principal de mercadería física comienza en **Inventario > Nueva entra
 1. Si el artículo de inventario existe, se selecciona su `InventoryItemId` y
    se registra la nueva entrada.
 2. Si la mercadería se vende directamente, **Nuevo producto vendible** crea
-   `Product` + `inventory_item`, exige una categoría cuyo `product_scope`
-   admita `retail`, exige precio de venta y registra
+   `Product` + `inventory_item`, exige una categoría activa (si era
+   `prepared` pasa a `both`), exige precio de venta y registra
    `product_type='retail'` + `quantity_control='inventory'` de forma automática.
 3. Si es un ingrediente interno, **Nuevo insumo** crea únicamente
    `inventory_item`; no crea `Product` ni exige precio de venta.

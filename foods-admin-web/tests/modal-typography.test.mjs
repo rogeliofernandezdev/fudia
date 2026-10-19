@@ -48,7 +48,6 @@ test("los módulos no reescriben los pesos de datos informativos semánticos",()
   ["modules/platform/presentation/platform-companies.css",[".company-detail-fields dt",".company-detail-fields dd"]],
   ["modules/expenses/presentation/expenses.css",[".expense-detail-grid dt",".expense-detail-grid dd"]],
   ["modules/menu/products/presentation/product-wizard.css",[".product-review dt",".product-review dd"]],
-  ["modules/menu/combos/presentation/combo-wizard.css",[".combo-review-section dt",".combo-review-section dd"]],
  ])for(const rule of rules(file).filter(rule=>rule.selectors.some(selector=>selectors.includes(selector)))){
   assert.equal(declarations(rule)["font-weight"],undefined,`${file}: ${rule.selector}`);
  }

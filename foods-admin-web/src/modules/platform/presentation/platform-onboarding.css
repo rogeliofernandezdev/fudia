@@ -15,7 +15,7 @@
 .wizard-step.active::after{background:linear-gradient(90deg,var(--primary-600) 0 40%,var(--primary-100) 40% 60%,var(--primary-600) 60% 100%);background-size:200% 100%;animation:onb-progress var(--duration-ambient-long) linear infinite}
 @keyframes onb-progress{from{background-position:100% 0}to{background-position:-100% 0}}
 .wizard-step-icon{display:grid;place-items:center;flex-shrink:0;width:var(--size-38);height:var(--size-38);border-radius:var(--radius-tile);background:var(--cloud-100);color:var(--ink-500);transition:background var(--duration-fast),color var(--duration-fast),box-shadow var(--duration-fast),transform var(--duration-fast)}
-.wizard-step:not(:disabled):not(.active):hover .wizard-step-icon{transform:translateY(calc(var(--size-1) * -1))}
+@media (hover:hover) and (pointer:fine){.wizard-step:not(:disabled):not(.active):hover .wizard-step-icon{transform:translateY(calc(var(--size-1) * -1))}}
 .wizard-step.active .wizard-step-icon{background:var(--primary-600);color:var(--surface);box-shadow:var(--elevation-primary)}
 .wizard-step.done .wizard-step-icon{background:var(--brand-100);color:var(--brand-700);box-shadow:var(--ring-success)}
 .wizard-step-label{display:grid;gap:var(--space-1);min-width:0}

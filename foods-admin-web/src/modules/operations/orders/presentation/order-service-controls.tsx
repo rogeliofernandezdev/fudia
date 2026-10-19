@@ -36,7 +36,7 @@ export function OrderAccountActions({order,onAdd,busy=false}:{order:TableAccount
  if(order.channel!=="salon"||!manage)return null;
  return <>
   {onAdd&&canAddConsumption(order)&&<Button kind="secondary" icon="plus" disabled={busy||mutation.isPending} onClick={onAdd}>Agregar productos</Button>}
-  {canCloseAccount(order)&&<Button icon="receipt" disabled={busy||mutation.isPending} aria-busy={mutation.isPending} onClick={()=>mutation.mutate({orderId:order.id})}>{mutation.isPending?"Cerrando…":"Cerrar cuenta"}</Button>}
+  {canCloseAccount(order)&&<Button icon="receipt" disabled={busy||mutation.isPending} loading={mutation.isPending} onClick={()=>mutation.mutate({orderId:order.id})}>{mutation.isPending?"Cerrando…":"Cerrar cuenta"}</Button>}
  </>;
 }
 

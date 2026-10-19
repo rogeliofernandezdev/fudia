@@ -9,7 +9,7 @@
 .module-item{align-items:center;gap:var(--space-3);border-bottom:var(--stroke-1) solid var(--cloud-100);padding:var(--space-3-5) var(--space-5);display:flex}
 .module-item:last-child{border-bottom:none}
 .module-item.active .module-icon{color:var(--brand-700);background:var(--brand-100)}
-.module-icon{color:var(--ink-300);background:var(--cloud-100);border-radius:var(--radius-tile);place-items:center;width:var(--size-40);height:var(--size-40);display:grid;flex-shrink:0;transition:all var(--duration-base)}
+.module-icon{color:var(--ink-300);background:var(--cloud-100);border-radius:var(--radius-tile);place-items:center;width:var(--size-40);height:var(--size-40);display:grid;flex-shrink:0;transition:var(--transition-surface)}
 .module-info{flex:1;min-width:0}
 .module-info b{color:var(--ink-950);font-size:var(--font-size-xs);font-weight:var(--weight-semibold);display:block}
 .module-info small{color:var(--ink-400);font-size:var(--font-size-label);font-weight:var(--weight-medium);display:block;margin-top:var(--space-0-5)}
@@ -20,8 +20,9 @@
 .module-info em{color:var(--ink-400);font-size:var(--font-size-label);font-style:normal;font-weight:var(--weight-semibold);line-height:var(--line-height-snug);margin-top:var(--space-1-5);display:block}
 .module-item.unavailable .module-icon{color:var(--ink-400);background:var(--cloud-100)}
 .module-item>.status-toggle{flex-shrink:0}
-.module-item>.status-toggle:disabled{cursor:not-allowed;opacity:.42}
+.module-item>.status-toggle:disabled{cursor:not-allowed;opacity:var(--opacity-disabled)}
 .module-item>.status-toggle[data-tooltip]:after{left:auto;right:0;transform:translateY(var(--size-4))}
-.module-item>.status-toggle[data-tooltip]:hover:after,.module-item>.status-toggle[data-tooltip]:focus-visible:after{transform:translateY(0)}
+.module-item>.status-toggle[data-tooltip]:focus-visible:after{transform:translateY(0)}
+@media (hover:hover) and (pointer:fine){.module-item>.status-toggle[data-tooltip]:hover:after{transform:translateY(0)}}
 .module-skeleton-fixed{flex-shrink:0}
 .module-skeleton-info{display:grid;flex:1;gap:var(--space-1-5);min-width:0}

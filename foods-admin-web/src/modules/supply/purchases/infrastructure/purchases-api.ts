@@ -94,7 +94,7 @@ export async function listPurchaseItemCategories(){
   let page=1;
   let total=0;
   do{
-    const params=new URLSearchParams({productType:"retail",page:String(page),pageSize:String(pageSize)});
+    const params=new URLSearchParams({page:String(page),pageSize:String(pageSize)});
     const response=await apiFetch<{items:PurchaseItemCategory[];total:number}>(`purchase-item-categories?${params.toString()}`);
     items.push(...response.items);
     total=response.total;

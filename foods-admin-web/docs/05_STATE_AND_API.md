@@ -90,11 +90,12 @@ Las transiciones de Cocina invalidan comandas, pedidos y el detalle afectado.
 La respuesta confirmada se refleja en el panel correspondiente sin modal de
 éxito; durante el envío se bloquea la acción y un fallo conserva el aviso de error.
 
-El wizard de Menús y combos valida cada paso antes de continuar y todos los pasos
-antes de guardar. Explica el primer error y enfoca el campo afectado. Retroceder
-no borra los datos ni guarda registros parciales. X/Cancelar solicitan confirmación
-cuando hay cambios sin guardar; la recarga utiliza el aviso nativo del navegador.
-No se repite «Paso X de Y» junto a la navegación de pasos.
+La hoja de Menús y combos valida todo al guardar (`validateComboDraft`, que reutiliza
+las reglas por sección de `validateComboStep`). Muestra el primer error junto a su
+campo (bajo la línea si es de Reservar o Recargo), desplaza la hoja hasta el campo
+y lo enfoca; cualquier cambio posterior limpia el aviso. No guarda
+registros parciales. X/Cancelar solicitan confirmación cuando hay cambios sin
+guardar; la recarga utiliza el aviso nativo del navegador.
 
 ## Autocompletes remotos
 
@@ -135,6 +136,15 @@ se cargan con `next/dynamic` cuando la acción realmente se abre.
 El prefetch de datos se incorpora solo en rutas frecuentes y cuando la medición
 demuestre que reduce latencia sin duplicar tráfico.
 
+## Fechas de venta en Menús y combos
+
+`availableFrom`/`availableUntil` viajan al API como instantes ISO, pero el formulario
+las escribe y muestra en la **hora del local activo**: `zonedInputToIso` e
+`isoToZonedInput` (`domain/sale-window.ts`) usan `location.timezone` con `Intl`, no
+el reloj del navegador. Así un menú vence a las 23:59 del local aunque se administre
+desde otro país. El listado (`GET /combos`) devuelve `outsideDates`, calculado en el
+servidor, para mostrar «Fuera de fecha» en un menú activo que no se vende por fecha.
+
 ## Cantidades en Menús y combos
 
 El selector usa `availableQuantity` del listado de Productos, no cupos
@@ -145,9 +155,9 @@ disponibles o stock físico), conserva cero cuando está agotado y deja vacío c
 en unidades completas; un saldo físico fraccionario limita las reservas a su
 parte entera, sin modificar el inventario.
 
-La validación compartida del wizard y el campo rechazan negativos, fracciones
+La validación compartida de la hoja y el campo rechazan negativos, fracciones
 y cantidades superiores al saldo. El usuario puede reducir la reserva.
-La caché incluye empresa/local; se consulta al abrir el wizard y se refresca
+La caché incluye empresa/local; se consulta al abrir la hoja y se refresca
 cada diez segundos mientras permanece abierto. Un refresco no pisa las
 cantidades elegidas. Editar un menú conserva sus reservas persistidas; una
 cantidad que exceda el saldo actualizado muestra validación, no un reemplazo
@@ -255,13 +265,13 @@ La mesa permanece Ocupada desde el primer pedido hasta finalizar la atención.
 El estado de cuenta (Abierta / Por cobrar / Pagada) se muestra separado del
 estado de preparación, sin fusionar etiquetas.
 
-Productos obtiene del backend Cocina, Barra y Entrega directa. Salón y Pedidos
+Productos obtiene del backend Cocina, Barra y Sin preparación. Salón y Pedidos
 muestran destino y estado por producto solo como lectura, sin botones por fila.
 El pie presenta un único «Confirmar entrega» para todo el pedido cuando todos
 los productos pendientes están Listos. Usa `PATCH orders/{id}/status` con
 `status=entregado`: el backend confirma todas las líneas listas en una transacción,
 sin modificar las ya entregadas. No incorpora una alternativa de entrega individual.
-Cocina/Barra preparan de forma independiente; Entrega directa nunca ingresa a KDS.
+Cocina/Barra preparan de forma independiente; Sin preparación nunca ingresa a KDS.
 
 «Agregar productos» abre `ComandaView` en modo append sobre la misma mesa,
 vacío de líneas anteriores; utiliza `requestKey` estable durante el reintento.
@@ -284,7 +294,7 @@ para no permitir una segunda confirmación sobre el estado anterior.
 Invalidan detalle, Pedidos, Salón, POS, Cocina/Barra, Ventas y Dashboard.
 Los detalles abiertos se refrescan cada 10 segundos hasta `completedAt`.
 
-Salón y Pedidos reutilizan `canCancelOrder`: una Entrega directa lista aún sin
+Salón y Pedidos reutilizan `canCancelOrder`: un producto Sin preparación listo aún sin
 servir puede cancelarse si no hay pagos ni preparación iniciada o entrega de
 otros productos. El estado agregado Listo no significa que se haya preparado.
 Pedidos históricos sin detalle de servicio conservan cancelación solo desde

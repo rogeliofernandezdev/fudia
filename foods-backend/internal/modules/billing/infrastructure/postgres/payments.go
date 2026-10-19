@@ -303,7 +303,7 @@ func (r *Payments) POSOrders(ctx context.Context, s scope, f application.POSFilt
 	` + filter
 
 	var totalCount int
-	if err := r.db(ctx).QueryRow(ctx, "SELECT count(*) "+baseFrom+" WHERE "+where, s.OrganizationID, s.LocationID, q, from, to).Scan(&totalCount); err != nil {
+	if err := r.db(ctx).QueryRow(ctx, "SELECT count(*),COALESCE(sum(payment_summary.net_paid),0)::text "+baseFrom+" WHERE "+where, s.OrganizationID, s.LocationID, q, from, to).Scan(&totalCount, &out.AmountTotal); err != nil {
 		return out, err
 	}
 

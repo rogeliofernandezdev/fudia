@@ -12,7 +12,7 @@
   edición, reactivación y desactivación segura.
 - Disponibilidad diaria por local: búsqueda del menú, cupo operativo y cambio
   rápido entre disponible, pocas unidades y agotado sin editar la ficha.
-- Menús y combos compuestos: wizard dedicado, grupos configurables, plantilla de
+- Menús y combos compuestos: hoja única de alta y edición, grupos configurables, plantilla de
   menú del día, alternativas basadas en productos existentes y disponibilidad
   automática según los mínimos de cada grupo obligatorio.
 - Plantilla de gestión homologada en Ventas, Comprobantes, Inventario, Compras,

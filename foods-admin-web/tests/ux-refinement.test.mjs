@@ -166,7 +166,7 @@ test("descartar el wizard y su confirmación restaura el botón de apertura",()=
 });
 test("el selector de composición no limita las alternativas a la primera página",async()=>{
   const calls=[];
-  const api=compile("src/modules/menu/combos/infrastructure/combos-api.ts",{},name=>name==="@/shared/api/client"?{apiFetch:async path=>{calls.push(path);const page=new URLSearchParams(path.split("?")[1]).get("page");return page==="1"?{items:Array.from({length:100},(_,index)=>({id:String(index)})),total:101}:{items:[{id:"100"}],total:101};}}:require(name));
+  const api=compile("src/modules/menu/combos/infrastructure/combos-api.ts",{},name=>name==="../domain/sale-window"?compile("src/modules/menu/combos/domain/sale-window.ts"):name==="@/shared/api/client"?{apiFetch:async path=>{calls.push(path);const page=new URLSearchParams(path.split("?")[1]).get("page");return page==="1"?{items:Array.from({length:100},(_,index)=>({id:String(index)})),total:101}:{items:[{id:"100"}],total:101};}}:require(name));
   const result=await api.listComboProducts();
   assert.equal(result.items.length,101);assert.equal(result.items.at(-1).id,"100");assert.equal(calls.length,2);
 });

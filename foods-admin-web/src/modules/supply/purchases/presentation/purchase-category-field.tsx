@@ -26,15 +26,15 @@ export function PurchaseCategoryField({value,onChange,error,disabled,onBusyChang
  const options=selected&&!items.some(item=>item.id===selected.id)?[...items,selected]:items;
  const draft:CategoryDraft={name:"",sortOrder:0,active:true,productScope:"retail"};
  return <>
-  <FormField label="Categoría" as="div" error={categories.isError?categories.error.message:error} help={!categories.isLoading&&!categories.isError&&!options.length?(can("menu.manage")?"Crea una categoría para mercadería vendible con +.":"Solicita una categoría para mercadería vendible al administrador."):undefined}>
+  <FormField label="Categoría" as="div" error={categories.isError?categories.error.message:error} help={!categories.isLoading&&!categories.isError&&!options.length?(can("menu.manage")?"Crea una categoría con +.":"Solicita una categoría al administrador."):undefined}>
    {categories.isLoading?<div className="purchase-reference-loading" role="status" aria-label="Cargando categorías"><Skeleton width="70%"/></div>:<div className="purchase-reference-controls">
     <Select aria-label="Categoría" value={value} disabled={disabled||creating||categories.isError||!options.length} aria-invalid={Boolean(error)||categories.isError} onChange={event=>onChange(event.target.value)}>
-     <option value="">{categories.isError?"No pudimos cargar las categorías":options.length?"Selecciona una categoría":"No hay categorías para mercadería vendible"}</option>
+     <option value="">{categories.isError?"No pudimos cargar las categorías":options.length?"Selecciona una categoría":"No hay categorías registradas"}</option>
      {options.map(category=><option value={category.id} key={category.id}>{category.name}</option>)}
     </Select>
     {categories.isError?<Button type="button" kind="secondary" icon="refresh" disabled={disabled||categories.isFetching} onClick={()=>void categories.refetch()}>Reintentar</Button>:can("menu.manage")&&<IconButton icon="plus" label="Nueva categoría" disabled={disabled||creating} onClick={()=>{mutation.reset();setCreating(true);onBusyChange(true)}}/>}
    </div>}
   </FormField>
-  {creating&&createPortal(<CategoryDialog draft={draft} retailOnly busy={mutation.isPending} error={mutation.error?.message} close={close} save={async value=>{try{await mutation.mutateAsync(value)}catch{/* Keep the category draft open and display the API error. */}}}/>,document.body)}
+  {creating&&createPortal(<CategoryDialog draft={draft} busy={mutation.isPending} error={mutation.error?.message} close={close} save={async value=>{try{await mutation.mutateAsync(value)}catch{/* Keep the category draft open and display the API error. */}}}/>,document.body)}
  </>;
 }

@@ -41,7 +41,7 @@ export function ConfirmDialog({open,title,description,subject,children,note,tone
       </div>}
       <footer className="confirm-actions">
         <Button kind="ghost" data-dialog-initial-focus autoFocus disabled={pending} onClick={onCancel}>Cancelar</Button>
-        <Button kind={tone==="danger"?"danger":"primary"} disabled={pending||confirmDisabled} aria-busy={pending||undefined} onClick={onConfirm}>{pending?"Procesando…":confirmLabel}</Button>
+        <Button kind={tone==="danger"?"danger":"primary"} disabled={pending||confirmDisabled} loading={pending} onClick={onConfirm}>{pending?"Procesando…":confirmLabel}</Button>
       </footer>
     </Dialog>
   </div>;

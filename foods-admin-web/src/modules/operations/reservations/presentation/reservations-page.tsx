@@ -114,10 +114,9 @@ function ReservationDialog({value:initial,tables,tablesLoading,tablesError,busy,
         </div></ModalBody>
         <ModalFooter>
           <Button kind="ghost" onClick={close} disabled={busy}>Cancelar</Button>
-          <Button type="submit" disabled={busy}>{busy?"Guardando…":"Guardar"}</Button>
+          <Button type="submit" disabled={busy} loading={busy}>{busy?"Guardando…":"Guardar"}</Button>
         </ModalFooter>
       </ModalForm>
-      {busy&&<div className="modal-busy" role="status"><i/><span>Guardando…</span></div>}
     </Dialog>
   </div>;
 }

@@ -29,14 +29,14 @@ function mount({save=async()=>{},draft={...validDraft},busy=false}={}){
   if(name==="../domain/product-schema")return schema;
   if(name==="./product-image-field")return {ProductImageField:"ProductImageField"};
   if(name.endsWith(".css"))return {};
-  if(name==="@/design-system")return {FormField:"FormField",Input:"input",Select:"select",ModalHeader:"ModalHeader",ModalForm:"form",ModalBody:"ModalBody",ModalFooter:"ModalFooter"};
+  if(name==="@/design-system")return {FormField:"FormField",InlineNotice:"InlineNotice",Input:"input",Select:"select",ModalHeader:"ModalHeader",ModalForm:"form",ModalBody:"ModalBody",ModalFooter:"ModalFooter"};
   if(name==="@/design-system/dialog")return {Dialog:"Dialog"};
   if(name==="@/design-system/icons")return {Icon:"Icon"};
   if(name==="@/design-system/rich-text-editor")return {RichTextEditor:"RichTextEditor"};
   if(name==="./allergen-field")return {AllergenField:"AllergenField"};
   return require(name);
  });
- const tree=ProductDialog({draft,categories:[],destinations:[{value:"kitchen",label:"Cocina"},{value:"bar",label:"Barra"},{value:"direct",label:"Entrega directa"}],loadAllergens:async()=>[],currencySymbol:"S/",busy,close:()=>{},save});
+ const tree=ProductDialog({draft,categories:[],destinations:[{value:"kitchen",label:"Cocina"},{value:"bar",label:"Barra"},{value:"direct",label:"Sin preparación (lo entrega el mozo)"}],loadAllergens:async()=>[],currencySymbol:"S/",busy,close:()=>{},save});
  const nodes=[];
  function visit(node){if(!node||typeof node!=="object")return;if(Array.isArray(node)){node.forEach(visit);return}nodes.push(node);visit(node.props?.children)}
  visit(tree);
@@ -165,5 +165,19 @@ test("el API guarda las porciones en un único POST, nunca con un PATCH adiciona
  for(const draft of [{...validDraft,initialPortionQuantity:"15"},{...validDraft,id:"existing",quantityControl:"portions",initialPortionQuantity:"15"}]){
   await saveProduct(draft,null);
   assert.equal(Object.hasOwn(JSON.parse(calls.at(-1).init.body),"initialPortionQuantity"),false);
+ }
+});
+
+test("Destino de atención: sin texto de ayuda y con aviso si «Sin preparación» se aplica a algo que se prepara",()=>{
+ const field=nodes=>nodes.find(node=>node.type==="FormField"&&node.props.label==="Destino de atención");
+ const kitchen=mount({draft:{...validDraft,serviceDestination:"kitchen"}}).nodes;
+ assert.equal(field(kitchen).props.help,undefined,"la etiqueta ya explica el destino");
+ assert.equal(kitchen.some(node=>node.type==="InlineNotice"),false);
+ const soda=mount({draft:{...validDraft,serviceDestination:"direct"}}).nodes;
+ assert.equal(field(soda).props.help,undefined);
+ assert.equal(soda.some(node=>node.type==="InlineNotice"),false,"una gaseosa sin receta ni tiempo no muestra aviso");
+ for(const draft of [{...validDraft,serviceDestination:"direct",hasRecipe:true},{...validDraft,serviceDestination:"direct",prepMinutes:"15"}]){
+  const notice=mount({draft}).nodes.find(node=>node.type==="InlineNotice");
+  assert.equal(notice?.props.tone,"warning","aviso suave, no bloqueo");
  }
 });

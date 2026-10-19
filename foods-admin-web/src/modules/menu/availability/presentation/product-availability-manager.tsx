@@ -7,7 +7,7 @@ import {Button,Icon,Input,PageHeader,Pagination,SearchField,Select,Status} from 
 import {useFeedback} from "@/providers";
 import {useSession} from "@/providers/session-context";
 import {formatRegionalCalendarDate,formatRegionalNumber} from "@/shared/i18n/regional-format";
-import type {AvailabilityChange,AvailabilityItem,AvailabilityStatus} from "../domain/types";
+import type {AvailabilityChange,AvailabilityItem,AvailabilityReasonDraft,AvailabilityStatus} from "../domain/types";
 import {listAvailability,listAvailabilityCategories,updateAvailability} from "../infrastructure/availability-api";
 import {AvailabilityReasonDialog} from "./availability-reason-dialog";
 import {AvailabilityHistoryDialog} from "./availability-history-dialog";
@@ -36,8 +36,8 @@ export function ProductAvailabilityManager(){
  });
  const categories=useQuery({queryKey:["categories","availability-filter",organization?.id],queryFn:listAvailabilityCategories,enabled:canRead});
  const update=useMutation({
-  mutationFn:({item,status,portionQuantity,reason}:AvailabilityChange&{reason:string})=>
-   updateAvailability(item.productId,{status,portionQuantity,note:item.note,reason}),
+  mutationFn:({item,status,portionQuantity,reasonCode,reason}:AvailabilityChange&AvailabilityReasonDraft)=>
+   updateAvailability(item.productId,{status,portionQuantity,note:item.note,reasonCode,reason}),
   retry:false,
   onSuccess:(_,variables)=>{
    setChange(null);
@@ -69,7 +69,10 @@ export function ProductAvailabilityManager(){
  }
 
  function setManualStatus(item:AvailabilityItem,status:"available"|"sold_out"){
-  if(canManage&&!update.isPending)setChange({item,status,portionQuantity:null,kind:"status"});
+  if(!canManage||update.isPending)return;
+  // Reactivar es la acción normal y no pide motivo: se guarda en un toque.
+  if(status==="available"){void update.mutateAsync({item,status,portionQuantity:null,kind:"status",reasonCode:"",reason:""}).catch(()=>{/* onError comunica la respuesta del API. */});return;}
+  setChange({item,status,portionQuantity:null,kind:"status"});
  }
 
  const items=query.data?.items??[];
@@ -127,7 +130,7 @@ export function ProductAvailabilityManager(){
         {item.quantityControl==="none"?<><Icon name={derived?"info":"availability"} size={20}/><span>{derived?"Disponibilidad automática":"Sin límite de cantidad"}<small>{derived?"Según la ficha y sus componentes":"Control manual de disponibilidad"}</small></span></>:<><div><small>Vendidas</small><span>{formatRegionalNumber(item.soldQuantity,location?.country)}</span></div><div><small>Restantes</small><strong>{remainingAmount??"Sin dato"}{remainingAmount!==null&&item.quantityControl==="inventory"&&<small>{item.inventoryUnit??"und"}</small>}</strong></div></>}
        </div>
        <div className="availability-actions">
-        {canManage&&!derived&&(manuallySoldOut||!quantityExhausted)&&<Button kind="secondary" className={manuallySoldOut?"availability-available-action":"availability-soldout-action"} icon={manuallySoldOut?"refresh":"circleMinus"} aria-label={manuallySoldOut?`Marcar ${item.name} como disponible`:`Marcar ${item.name} como agotado`} disabled={update.isPending} onClick={()=>setManualStatus(item,manuallySoldOut?"available":"sold_out")}>{pending?"Guardando…":manuallySoldOut?"Reactivar":"Agotar hoy"}</Button>}
+        {canManage&&!derived&&(manuallySoldOut||!quantityExhausted)&&<Button kind="secondary" className={manuallySoldOut?"availability-available-action":"availability-soldout-action"} icon={manuallySoldOut?"refresh":"circleMinus"} aria-label={manuallySoldOut?`Marcar ${item.name} como disponible`:`Marcar ${item.name} como agotado`} disabled={update.isPending} onClick={()=>setManualStatus(item,manuallySoldOut?"available":"sold_out")} loading={pending}>{pending?"Guardando…":manuallySoldOut?"Reactivar":"Agotar hoy"}</Button>}
         <Button kind="secondary" className="availability-history-action" icon="clock" aria-label={`Ver historial de ${item.name}`} data-tooltip="Ver historial" disabled={update.isPending} onClick={()=>setHistory(item)}>Historial</Button>
        </div>
       </article>;
@@ -136,7 +139,7 @@ export function ProductAvailabilityManager(){
    </div>}
    {!sessionLoading&&canRead&&!query.isLoading&&!query.isError&&<Pagination page={page} size={size} total={query.data?.total??items.length} onPage={setPage} onSize={value=>{setSize(value);setPage(1)}}/>}
   </section>
-  {change&&<AvailabilityReasonDialog change={change} busy={update.isPending} close={()=>setChange(null)} save={async reason=>{if(canManage&&!update.isPending){try{await update.mutateAsync({...change,reason});}catch{/* onError comunica la respuesta del API. */}}}}/>}
+  {change&&<AvailabilityReasonDialog change={change} options={(change.kind==="quota"?query.data?.quotaReasons:query.data?.soldOutReasons)??[]} busy={update.isPending} close={()=>setChange(null)} save={async value=>{if(canManage&&!update.isPending){try{await update.mutateAsync({...change,...value});}catch{/* onError comunica la respuesta del API. */}}}}/>}
   {history&&<AvailabilityHistoryDialog item={history} close={()=>setHistory(null)}/>}
  </>;
 }

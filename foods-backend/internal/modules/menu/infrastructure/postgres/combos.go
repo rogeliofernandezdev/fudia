@@ -54,14 +54,14 @@ func (r *Catalog) Combos(ctx context.Context, s scope, f application.CatalogFilt
 	if err != nil {
 		return out, err
 	}
-	rows, err := r.db(ctx).Query(ctx, `SELECT p.id,p.name,p.description,p.price::text,p.active,count(DISTINCT g.id),count(o.id) FROM menu_combos c JOIN products p ON p.id=c.product_id AND p.organization_id=c.organization_id LEFT JOIN menu_combo_groups g ON g.combo_product_id=c.product_id AND g.organization_id=c.organization_id LEFT JOIN menu_combo_options o ON o.group_id=g.id AND o.organization_id=c.organization_id WHERE c.organization_id=$1 AND p.name ILIKE $2 AND ($3='' OR ($3='active' AND p.active) OR ($3='inactive' AND NOT p.active)) GROUP BY p.id ORDER BY p.updated_at DESC,p.name LIMIT $4 OFFSET $5`, s.OrganizationID, search, status, size, (page-1)*size)
+	rows, err := r.db(ctx).Query(ctx, `SELECT p.id,p.name,p.description,p.price::text,p.active,count(DISTINCT g.id),count(o.id),((p.available_until IS NOT NULL AND now()>p.available_until) OR (p.available_from IS NOT NULL AND now()<p.available_from)) FROM menu_combos c JOIN products p ON p.id=c.product_id AND p.organization_id=c.organization_id LEFT JOIN menu_combo_groups g ON g.combo_product_id=c.product_id AND g.organization_id=c.organization_id LEFT JOIN menu_combo_options o ON o.group_id=g.id AND o.organization_id=c.organization_id WHERE c.organization_id=$1 AND p.name ILIKE $2 AND ($3='' OR ($3='active' AND p.active) OR ($3='inactive' AND NOT p.active)) GROUP BY p.id ORDER BY p.updated_at DESC,p.name LIMIT $4 OFFSET $5`, s.OrganizationID, search, status, size, (page-1)*size)
 	if err != nil {
 		return out, err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var v domain.ComboSummary
-		if err = rows.Scan(&v.ID, &v.Name, &v.Description, &v.Price, &v.Active, &v.GroupCount, &v.OptionCount); err != nil {
+		if err = rows.Scan(&v.ID, &v.Name, &v.Description, &v.Price, &v.Active, &v.GroupCount, &v.OptionCount, &v.OutsideDates); err != nil {
 			return out, err
 		}
 		out.Items = append(out.Items, v)
@@ -151,7 +151,7 @@ func (r *Catalog) OrderCombos(ctx context.Context, s scope, f application.Catalo
 		LEFT JOIN product_availability pa ON pa.organization_id=p.organization_id AND pa.location_id=l.id
 		  AND pa.product_id=p.id AND pa.business_date=$3
 		WHERE c.organization_id=$1 AND p.name ILIKE $4 AND ` + availabilityWhere + `
-		ORDER BY p.featured DESC,p.name
+		ORDER BY p.name
 		LIMIT $5 OFFSET $6`
 	rows, err := r.db(ctx).Query(ctx, listSQL, s.OrganizationID, s.LocationID, day.Format("2006-01-02"), search, size, (page-1)*size)
 	if err != nil {

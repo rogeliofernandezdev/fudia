@@ -15,6 +15,8 @@ function compile(file,resolve=require){
 }
 const quantities=compile("domain/option-quantity.ts");
 const validation=compile("domain/wizard-validation.ts",name=>name==="./option-quantity"?quantities:require(name));
+const saleWindow=compile("domain/sale-window.ts");
+const optionGroups=compile("domain/option-groups.ts",name=>name==="./option-quantity"?quantities:require(name));
 const base={id:"lomo",name:"Lomo saltado",categoryName:"Segundos",price:"20",active:true,availableQuantity:15};
 const cause={...base,id:"causa",name:"Causa rellena",categoryName:"Entradas",availableQuantity:12};
 function nodes(tree,result=[]){if(Array.isArray(tree))tree.forEach(node=>nodes(node,result));else if(tree&&typeof tree==="object"){result.push(tree);nodes(tree.props?.children,result)}return result}
@@ -32,13 +34,17 @@ function mount({products=[base,cause],locationId="local-a",organizationId="org-a
    useMutation:options=>{mutations.push(options);return{isPending:false,mutate:()=>{}}},
   };
   if(name==="@/providers")return{useFeedback:()=>({notify:()=>{}})};
-  if(name==="@/providers/session-context")return{useSession:()=>({organization:{id:organizationId},location:{id:locationId,country:"PE"},can:permission=>permission==="menu.manage"?canManage:true})};
-  if(name==="@/providers/settings-context")return{useSettings:()=>({currencySymbol:"S/"})};
+  if(name==="@/providers/session-context")return{useSession:()=>({organization:{id:organizationId},location:{id:locationId,country:"PE",timezone:"America/Lima"},can:permission=>permission==="menu.manage"?canManage:true})};
+  if(name==="@/providers/settings-context")return{useSettings:()=>({currencySymbol:"S/",currencyPosition:"before",currencyDecimals:2})};
   if(name==="@/shared/hooks/use-debounced-value")return{useDebouncedValue:value=>value};
-  if(name.startsWith("@/design-system"))return Object.fromEntries(["Dialog","Button","ConfirmDialog","Icon","Input","PageHeader","Pagination","RemoteModalSkeleton","RowActionButton","Select","Status","Textarea"].map(key=>[key,key]));
+  if(name.startsWith("@/design-system"))return Object.fromEntries(["Dialog","Button","ConfirmDialog","EmptyState","ErrorState","FormField","Icon","IconButton","Input","MoneyInput","PageHeader","Pagination","RemoteModalSkeleton","RowActionButton","Select","Status","Textarea","ModalHeader","ModalFooter","ModalError","ModalItemComponents"].map(key=>[key,key]));
   if(name==="../domain/option-quantity")return quantities;
   if(name==="../domain/wizard-validation")return validation;
-  if(name.includes("infrastructure")||name.endsWith(".css")||name.includes("regional-format"))return{};
+  if(name==="../domain/sale-window")return saleWindow;
+  if(name==="../domain/option-groups")return optionGroups;
+  if(name==="./combo-option-picker")return{ComboOptionPicker:"ComboOptionPicker"};
+  if(name.includes("regional-format"))return{formatRegionalCalendarDate:value=>`fecha ${value}`,formatRegionalDateTime:value=>value};
+  if(name.includes("infrastructure")||name.endsWith(".css"))return{};
   return require(name);
  });
  function render(fn,props,owner){
@@ -46,12 +52,15 @@ function mount({products=[base,cause],locationId="local-a",organizationId="org-a
   return nodes(fn(props));
  }
  function page(){mutations=[];return render(CombosPage,{},"page")}
- function wizard(){const node=page().find(node=>node.type?.name==="ComboWizard");return{node,view:render(node.type,node.props,"wizard")}}
+ function wizard(){const node=page().find(node=>node.type?.name==="ComboEditor");return{node,view:render(node.type,node.props,"wizard")}}
  function composition(){const node=wizard().view.find(node=>node.type?.name==="CompositionStep");return render(node.type,node.props,"composition")}
- if(autoOpen){page().find(node=>node.type==="PageHeader").props.action.props.onClick();wizard().node.props.setStep(2)}
- return{page,wizard,composition,queries,setCanManage:value=>{canManage=value},setProducts:value=>{products=value},edit:value=>{page();mutations[1].onSuccess(value);wizard().node.props.setStep(2)}};
+ if(autoOpen)page().find(node=>node.type==="PageHeader").props.action.props.onClick();
+ return{page,wizard,composition,queries,setCanManage:value=>{canManage=value},setProducts:value=>{products=value},edit:value=>{page();mutations[1].onSuccess(value)}};
 }
 const quotaInput=view=>view.find(node=>node.type==="Input"&&node.props.id?.includes("-quota-"));
+// Reservar y Recargo están siempre a la vista en cada línea de opción.
+const adjust=ui=>ui.composition();
+const template=ui=>ui.composition().find(node=>node.type==="Button"&&node.props.children==="Usar plantilla Menú del día").props.onClick();
 
 test("menús y combos: lectura no habilita crear, editar ni cambiar estado",()=>{
  const combos=[{id:"combo",name:"Menú del día",price:"25",groupCount:2,active:true},{id:"inactive",name:"Menú inactivo",price:"20",groupCount:1,active:false}];
@@ -85,8 +94,9 @@ test("Reservar parte del saldo disponible del API, incluidos cero y stock fracci
 test("agregar una opción precarga el saldo actual y permite reservar menos",()=>{
  const ui=mount({products:[{...base,availableQuantity:12}]});
  ui.composition().find(node=>node.type==="Button"&&node.props.id==="combo-add-group").props.onClick();
- ui.composition().find(node=>node.type==="Select").props.onChange({target:{value:"lomo"}});
- let input=quotaInput(ui.composition());assert.equal(input.props.value,"12");assert.equal(input.props.max,12);assert.equal(input.props.step,"1");
+ const picker=ui.composition().find(node=>node.type==="ComboOptionPicker");
+ picker.props.onPick(picker.props.products.find(product=>product.id==="lomo"));
+ let input=quotaInput(adjust(ui));assert.equal(input.props.value,"12");assert.equal(input.props.max,12);assert.equal(input.props.step,"1");
  input.props.onChange({target:{value:"7"}});assert.equal(quotaInput(ui.composition()).props.value,"7");
  ui.setProducts([{...base,availableQuantity:10}]);input=quotaInput(ui.composition());
  assert.equal(input.props.value,"7","el refresco no pisa una cantidad elegida");assert.equal(input.props.max,10);
@@ -94,7 +104,7 @@ test("agregar una opción precarga el saldo actual y permite reservar menos",()=
 
 test("la plantilla Menú del día aplica la misma regla a entrada y segundo",()=>{
  const ui=mount();
- ui.composition().find(node=>node.type==="Button"&&node.props.children==="Plantilla Menú del día").props.onClick();
+ template(ui);
  const draft=ui.wizard().node.props.draft;
  assert.equal(draft.groups.find(group=>group.name==="Entrada").options[0].quota,"12");
  assert.equal(draft.groups.find(group=>group.name==="Segundo").options[0].quota,"15");
@@ -102,8 +112,8 @@ test("la plantilla Menú del día aplica la misma regla a entrada y segundo",()=
 
 test("un producto sin control no se confunde con cero disponible",()=>{
  const ui=mount({products:[{...base,availableQuantity:null}]});
- ui.composition().find(node=>node.type==="Button"&&node.props.children==="Plantilla Menú del día").props.onClick();
- const input=quotaInput(ui.composition());assert.equal(input.props.value,"");assert.equal(input.props.placeholder,"Sin límite");assert.equal(input.props.max,undefined);
+ template(ui);
+ const input=quotaInput(adjust(ui));assert.equal(input.props.value,"");assert.equal(input.props.placeholder,"Sin límite");assert.equal(input.props.max,undefined);
 });
 
 test("la validación compartida rechaza excedentes, negativos y fracciones antes de continuar",()=>{
@@ -111,16 +121,23 @@ test("la validación compartida rechaza excedentes, negativos y fracciones antes
   const value={groups:[{name:"Segundo",required:true,minSelections:1,maxSelections:1,options:[{productId:"lomo",quota,surcharge:""}]}]};
   assert.equal(validation.validateComboStep(value,[base],2).field,"combo-group-0-quota-0");
  }
- const ui=mount();ui.composition().find(node=>node.type==="Button"&&node.props.children==="Plantilla Menú del día").props.onClick();
- quotaInput(ui.composition()).props.onChange({target:{value:"13"}});
+ const ui=mount();
+ ui.wizard().view.find(node=>node.type==="Input"&&node.props.id==="combo-name").props.onChange({target:{value:"Menú"}});
+ ui.wizard().view.find(node=>node.type==="MoneyInput"&&node.props.id==="combo-price").props.onChange({target:{value:"15,50"}});
+ assert.equal(ui.wizard().node.props.draft.price,"15.50","la coma decimal se normaliza");
+ template(ui);
+ quotaInput(adjust(ui)).props.onChange({target:{value:"13"}});
  assert.equal(quotaInput(ui.composition()).props["aria-invalid"],true);
- ui.wizard().view.find(node=>node.type==="Button"&&node.props.action==="continue").props.onClick();
- const wizard=ui.wizard();assert.equal(wizard.node.props.step,2);assert.ok(wizard.view.some(node=>node.props.role==="alert"));
+ const lineError=ui.composition().find(node=>node.props?.className==="field-error combo-option-error");
+ assert.match(lineError.props.children,/sin superar la cantidad disponible/,"la línea avisa sin abrir nada");
+ ui.wizard().view.find(node=>node.type==="Button"&&node.props.id==="combo-submit").props.onClick();
+ assert.equal(ui.page().some(node=>node.props?.title==="Menú registrado"),false);
+ assert.equal(quotaInput(ui.composition()).props["aria-describedby"],"combo-group-0-option-0-error","el error queda junto al campo, no arriba de la hoja");
 });
 
 test("editar conserva la reserva persistida sin sustituirla por el saldo",()=>{
  const ui=mount();ui.edit({id:"combo",name:"Menú",description:"",price:"25",availableFrom:null,availableUntil:null,groups:[{name:"Segundo",required:true,minSelections:1,maxSelections:1,options:[{productId:"lomo",quota:4,surcharge:"0.00"}]}]});
- assert.equal(quotaInput(ui.composition()).props.value,"4");assert.equal(quotaInput(ui.composition()).props.max,15);
+ assert.equal(quotaInput(adjust(ui)).props.value,"4");assert.equal(quotaInput(ui.composition()).props.max,15);
 });
 
 test("las cantidades del selector se aíslan por empresa/local y se refrescan con el wizard abierto",()=>{
@@ -133,8 +150,97 @@ test("las cantidades del selector se aíslan por empresa/local y se refrescan co
 
 test("el payload persiste la reserva precargada y no quedan campos antiguos en el wizard",async()=>{
  let payload;
- const api=compile("infrastructure/combos-api.ts",name=>name==="@/shared/api/client"?{apiFetch:async(_,options)=>{payload=JSON.parse(options.body);return{id:"combo"}}}:require(name));
- await api.saveCombo({name:"Menú",description:"",price:"25",availableFrom:"",availableUntil:"",availableDays:[],groups:[{name:"Segundo",required:true,minSelections:1,maxSelections:1,options:[quantities.createComboOption(base)]}]},null);
+ const api=compile("infrastructure/combos-api.ts",name=>name==="@/shared/api/client"?{apiFetch:async(_,options)=>{payload=JSON.parse(options.body);return{id:"combo"}}}:name==="../domain/sale-window"?saleWindow:require(name));
+ await api.saveCombo({name:"Menú",description:"",price:"25",availableFrom:"2026-10-18T00:00",availableUntil:"2026-10-24T23:59",availableDays:[],groups:[{name:"Segundo",required:true,minSelections:1,maxSelections:1,options:[quantities.createComboOption(base)]}]},null,"America/Lima");
  assert.equal(payload.groups[0].options[0].quota,15);
+ assert.deepEqual([payload.availableFrom,payload.availableUntil],["2026-10-18T05:00:00.000Z","2026-10-25T04:59:00.000Z"],"el API recibe las fechas en la hora del local");
  for(const file of ["domain/types.ts","domain/wizard-validation.ts","presentation/combos-page.tsx"]){assert.equal(read(file).includes("defaultDailyQuota"),false,file)}
+});
+
+test("la hoja empieza con la plantilla y quitar una parte con opciones pide confirmación",()=>{
+ const ui=mount();
+ const start=ui.composition();
+ assert.equal(start.find(node=>node.type==="Button"&&node.props.children==="Usar plantilla Menú del día").props.kind,undefined,"la plantilla es la recomendada: botón relleno índigo (primario)");
+ assert.equal(start.find(node=>node.type==="Button"&&node.props.id==="combo-add-group").props.kind,"ghost","«Agregar una parte» es neutra: se distingue de la plantilla");
+ assert.equal(start.filter(node=>node.type==="Button"&&(node.props.kind??"primary")==="primary").length,1,"solo la plantilla se rellena; «Agregar una parte» queda neutra");
+ assert.equal(start.some(node=>node.type==="ComboOptionPicker"),false,"sin partes no hay buscador de opciones");
+ template(ui);
+ assert.deepEqual(Array.from(ui.wizard().node.props.draft.groups,group=>group.name),["Entrada","Segundo","Postre","Bebidas"]);
+ ui.composition().find(node=>node.type==="IconButton"&&node.props.label==="Quitar Segundo").props.onClick();
+ assert.equal(ui.wizard().node.props.draft.groups.length,4,"una parte con opciones no se quita sin confirmar");
+ const confirm=ui.wizard().view.find(node=>node.type==="ConfirmDialog"&&node.props.open);
+ assert.equal(confirm.props.title,"¿Quitar Segundo?");
+ confirm.props.onConfirm();
+ assert.deepEqual(Array.from(ui.wizard().node.props.draft.groups,group=>group.name),["Entrada","Postre","Bebidas"]);
+ ui.composition().find(node=>node.type==="IconButton"&&node.props.label==="Quitar Bebidas").props.onClick();
+ assert.deepEqual(Array.from(ui.wizard().node.props.draft.groups,group=>group.name),["Entrada","Postre"],"una parte vacía se quita al instante");
+});
+
+test("cuándo se vende: solo Siempre y Elegir días; sin «Solo hoy» que obligaba a crear un menú por día",()=>{
+ const ui=mount();
+ const radios=()=>ui.wizard().view.filter(node=>node.type==="button"&&node.props.role==="radio");
+ assert.deepEqual(radios().map(node=>[node.props.children,node.props["aria-checked"]]),[["Siempre",true],["Elegir días",false]]);
+ ui.wizard().view.find(node=>node.type==="Input"&&node.props.id==="combo-name").props.onChange({target:{value:"Menú"}});
+ ui.wizard().view.find(node=>node.type==="MoneyInput"&&node.props.id==="combo-price").props.onChange({target:{value:"15"}});
+ template(ui);
+ radios()[1].props.onClick();
+ const chips=ui.wizard().view.filter(node=>node.type==="button"&&node.props.className?.startsWith("day-chip"));
+ assert.equal(chips.length,7);assert.equal(chips[0].props["aria-pressed"],false);
+ ui.wizard().view.find(node=>node.type==="Button"&&node.props.id==="combo-submit").props.onClick();
+ assert.ok(ui.wizard().view.some(node=>node.props?.className==="field-error"&&node.props.children==="Elige al menos un día o una fecha."),"«Elegir días» sin días ni fechas no se guarda como Siempre");
+ radios()[0].props.onClick();
+ const draft=ui.wizard().node.props.draft;
+ assert.deepEqual(JSON.parse(JSON.stringify([draft.availableDays,draft.availableFrom,draft.availableUntil])),[[],"",""]);
+ assert.equal(read("presentation/combos-page.tsx").includes("Solo hoy"),false);
+});
+
+test("las fechas de venta se convierten con la zona horaria del local, no la del navegador",()=>{
+ assert.equal(saleWindow.zonedInputToIso("2026-10-18T23:59","America/Lima"),"2026-10-19T04:59:00.000Z","Lima es UTC-5");
+ assert.equal(saleWindow.zonedInputToIso("2026-10-18T00:00","Europe/Madrid"),"2026-10-17T22:00:00.000Z","Madrid en horario de verano es UTC+2");
+ assert.equal(saleWindow.zonedInputToIso("2026-12-18T00:00","Europe/Madrid"),"2026-12-17T23:00:00.000Z","y en invierno UTC+1");
+ assert.equal(saleWindow.isoToZonedInput("2026-10-19T04:59:00Z","America/Lima"),"2026-10-18T23:59","editar muestra la hora del local");
+ assert.equal(saleWindow.zonedInputToIso("","America/Lima"),null);assert.equal(saleWindow.isoToZonedInput(null,"America/Lima"),"");
+});
+
+test("un menú activo fuera de sus fechas se lista como «Fuera de fecha», no como Activo",()=>{
+ const ui=mount({autoOpen:false,combos:[{id:"vencido",name:"Especial",price:"20",groupCount:1,active:true,outsideDates:true},{id:"vigente",name:"Menú del día",price:"15",groupCount:2,active:true,outsideDates:false}]});
+ const statuses=ui.page().filter(node=>node.type==="Status").map(node=>[node.props.tone??null,node.props.children]);
+ assert.deepEqual(JSON.parse(JSON.stringify(statuses)),[["gray","Fuera de fecha"],[null,"Activo"]]);
+});
+
+test("agregar opción: buscador con secciones por categoría, primero las de la parte y sin repetir",()=>{
+ const products=[
+  {...base,id:"lomo",name:"Lomo Saltado Criollo",categoryName:"segundos",availableQuantity:12},
+  {...base,id:"arroz",name:"Arroz con Mariscos",categoryName:"segundos",availableQuantity:null},
+  {...base,id:"sopa",name:"Sopa Fuchifú",categoryName:"Sopas",availableQuantity:0},
+  {...base,id:"causa",name:"Causa rellena",categoryName:"Entradas",availableQuantity:3},
+  {...base,id:"puca",name:"puca picante",categoryName:null,availableQuantity:null},
+  {...base,id:"helado",name:"Helado de vainilla",categoryName:"Postres",availableQuantity:5},
+ ];
+ const groups=JSON.parse(JSON.stringify(optionGroups.buildOptionGroups(products,["lomo"],"Segundo")));
+ assert.deepEqual(groups.map(group=>group.label),["Segundos","Entradas","Postres","Sopas","Sin categoría"],"la categoría de la parte va primero y «Sin categoría» al final");
+ assert.deepEqual(groups[0].options.map(option=>option.label),["Arroz con Mariscos"],"lo ya agregado no se repite");
+ assert.equal(groups.find(group=>group.label==="Sopas").options[0].limit,0,"el saldo viaja con cada opción para mostrar Agotado");
+ assert.equal(JSON.parse(JSON.stringify(optionGroups.buildOptionGroups(products,["causa"],"Entrada"))).some(group=>group.label==="Entradas"),false,"una sección sin productos disponibles no se muestra");
+ const ui=mount();template(ui);
+ const picker=ui.composition().find(node=>node.type==="ComboOptionPicker"&&node.props.inputId==="combo-group-0-product");
+ assert.equal(picker.props.partName,"Entrada");assert.deepEqual(Array.from(picker.props.excluded),["causa"]);
+});
+
+test("fuera de fechas: el detalle y el aviso de guardado no dicen que el menú está disponible",()=>{
+ const now=Date.parse("2026-10-18T15:00:00Z");
+ assert.equal(saleWindow.isOutsideDates("2026-05-10T05:00:00Z","2026-05-11T04:59:00Z",now),true,"vencido");
+ assert.equal(saleWindow.isOutsideDates("2026-12-24T05:00:00Z",null,now),true,"aún no empieza");
+ assert.equal(saleWindow.isOutsideDates(null,null,now),false,"Siempre");
+ assert.equal(saleWindow.isOutsideDates("2026-10-01T05:00:00Z","2026-10-31T04:59:00Z",now),false,"vigente");
+ const page=read("presentation/combos-page.tsx");
+ assert.match(page,/value\.active&&isOutsideDates\(value\.availableFrom,value\.availableUntil\)\?<Status tone="gray">Fuera de fecha<\/Status>/,"el detalle coincide con el listado");
+ assert.match(page,/outside\?"Está fuera de sus fechas de venta: se venderá solo en las fechas indicadas\."/);
+});
+
+test("el listado de menús muestra solo el nombre, sin la descripción debajo",()=>{
+ const ui=mount({autoOpen:false,combos:[{id:"m",name:"Menú del día",description:"",price:"15",groupCount:2,active:true,outsideDates:false}]});
+ const view=ui.page();
+ assert.ok(view.some(node=>node.type==="b"&&node.props.children==="Menú del día"));
+ assert.equal(view.some(node=>node.type==="small"&&node.props.children==="Sin descripción"),false);
 });

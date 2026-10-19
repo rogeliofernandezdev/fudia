@@ -351,7 +351,7 @@ export function PurchasesPage(){
               <td><Status tone={meta.tone}>{meta.label}</Status></td>
               <td><div className="purchase-receipt-actions">
                 <RowActionButton action="view" onClick={()=>openDetail(order.id,"view")}/>
-                {canReceive&&<Button kind="primary" icon="stock" disabled={loading} onClick={()=>void openReceipt(order.id)}>{loading?"Cargando…":order.status==="partially_received"?"Continuar":"Recibir"}</Button>}
+                {canReceive&&<Button kind="primary" icon="stock" disabled={loading} onClick={()=>void openReceipt(order.id)} loading={loading}>{loading?"Cargando…":order.status==="partially_received"?"Continuar":"Recibir"}</Button>}
               </div></td>
             </tr>})}</tbody>
           </DataTable>
@@ -359,7 +359,7 @@ export function PurchasesPage(){
           <div className="management-cards purchases-cards purchase-receipt-cards">{receiptItems.map(order=>{const meta=statusMeta[order.status];const loading=receiptLoadingId===order.id;return <article key={order.id}>
             <header><span className="row-icon r2"><Icon name="stock"/></span><div><b>{order.number}</b><small>{order.supplierName}</small></div><Status tone={meta.tone}>{meta.label}</Status></header>
             <dl><div><dt>Artículos</dt><dd>{order.itemCount}</dd></div><div><dt>Entrega</dt><dd>{order.expectedAt?formatRegionalCalendarDate(order.expectedAt,location?.country,{dateStyle:"short"}):"—"}</dd></div></dl>
-            <footer><RowActionButton action="view" onClick={()=>openDetail(order.id,"view")}/>{canReceive&&<Button kind="primary" icon="stock" disabled={loading} onClick={()=>void openReceipt(order.id)}>{loading?"Cargando…":order.status==="partially_received"?"Continuar recepción":"Registrar recepción"}</Button>}</footer>
+            <footer><RowActionButton action="view" onClick={()=>openDetail(order.id,"view")}/>{canReceive&&<Button kind="primary" icon="stock" disabled={loading} onClick={()=>void openReceipt(order.id)} loading={loading}>{loading?"Cargando…":order.status==="partially_received"?"Continuar recepción":"Registrar recepción"}</Button>}</footer>
           </article>})}</div>
         </>}
         {!receipts.isLoading&&!receipts.isError&&<Pagination page={page} size={size} total={receipts.data?.total??0} onPage={setPage} onSize={value=>{setSize(value);setPage(1)}}/>}
@@ -416,6 +416,7 @@ export function PurchasesPage(){
           canApprove={canApprove}
           canReceive={canReceive}
           busy={transition.isPending||approve.isPending}
+          pending={approve.isPending?"approve":transition.isPending?transition.variables?.next:undefined}
           currency={money(detail.data.total)}
           country={location?.country}
           timezone={location?.timezone}
@@ -552,8 +553,7 @@ function PurchaseOrderDialog({initial,suppliers,inventory,currencySymbol,busy,cl
         </section>
 
         {fields.length>0&&<div className="purchase-total"><span><small>TOTAL ESTIMADO</small><b>{fields.length} {fields.length===1?"línea":"líneas"}</b></span><strong>{money(total)}</strong></div>}
-      </div><ModalFooter><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy||!suppliers.length||fields.length===0}>{busy?"Guardando…":"Guardar borrador"}</Button></ModalFooter></form>
-      {busy&&<div className="modal-busy" role="status"><i/><span>Guardando…</span></div>}
+      </div><ModalFooter><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy||!suppliers.length||fields.length===0} loading={busy}>{busy?"Guardando…":"Guardar borrador"}</Button></ModalFooter></form>
     </Dialog></div>
 
     {presentationTarget&&<PurchasePresentationDialog item={presentationTarget.item} close={()=>setPresentationTarget(null)} save={presentation=>{
@@ -584,10 +584,10 @@ function SupplierDialog({initial,busy,close,save}:{initial:SupplierDraft;busy:bo
     <FormField label="RUC" optional error={errors.taxId?.message}><Input inputMode="numeric" maxLength={11} {...register("taxId")} placeholder="20123456789"/></FormField>
     <FormField label="Teléfono" optional><Input {...register("phone")} placeholder="Ej. 987 654 321"/></FormField>
     <FormField className="span-2" label="Correo electrónico" optional error={errors.email?.message}><Input type="email" {...register("email")} placeholder="compras@proveedor.com"/></FormField>
-  </div><ModalFooter><Button kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy}>{busy?"Guardando…":"Guardar"}</Button></ModalFooter></form>{busy&&<div className="modal-busy" role="status"><i/><span>Guardando…</span></div>}</Dialog></div>;
+  </div><ModalFooter><Button kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy} loading={busy}>{busy?"Guardando…":"Guardar"}</Button></ModalFooter></form></Dialog></div>;
 }
 
-function PurchaseDetail({order,mode,canManage,canApprove,canReceive,busy,currency,country,timezone,close,edit,changeStatus,approve,receive,cancel,viewReceipt,viewingReceiptId}:{order:PurchaseOrder;mode:"view"|"review";canManage:boolean;canApprove:boolean;canReceive:boolean;busy:boolean;currency:string;country?:string|null;timezone?:string|null;close:()=>void;edit:()=>void;changeStatus:(next:"draft"|"pending_approval"|"cancelled")=>void;approve:()=>void;receive:()=>void;cancel:()=>void;viewReceipt:(id:string)=>void;viewingReceiptId:string}){
+function PurchaseDetail({order,mode,canManage,canApprove,canReceive,busy,pending,currency,country,timezone,close,edit,changeStatus,approve,receive,cancel,viewReceipt,viewingReceiptId}:{order:PurchaseOrder;mode:"view"|"review";canManage:boolean;canApprove:boolean;canReceive:boolean;busy:boolean;/** Acción en curso: su botón muestra el gerundio y el spinner. */pending?:"approve"|"draft"|"pending_approval"|"cancelled";currency:string;country?:string|null;timezone?:string|null;close:()=>void;edit:()=>void;changeStatus:(next:"draft"|"pending_approval"|"cancelled")=>void;approve:()=>void;receive:()=>void;cancel:()=>void;viewReceipt:(id:string)=>void;viewingReceiptId:string}){
   const money=useMoney();
   const meta=statusMeta[order.status];
   const receivable=order.status==="approved"||order.status==="partially_received";
@@ -604,7 +604,7 @@ function PurchaseDetail({order,mode,canManage,canApprove,canReceive,busy,currenc
         {event.kind==="receipt"&&<RowActionButton action="view" label={viewingReceiptId===event.id?"Cargando recepción":`Ver recepción ${event.code}`} disabled={viewingReceiptId===event.id} aria-busy={viewingReceiptId===event.id} onClick={()=>viewReceipt(event.id)}/>}
       </li>})}</ol>:<p className="purchase-history-empty">Todavía no se recibió mercadería de esta orden.</p>}
     </section>}
-  </div>{busy&&<div className="modal-busy" role="status"><i/><span>Procesando…</span></div>}<ModalFooter status={<Status tone={meta.tone}>{meta.label}</Status>} statusLabel="Estado de la orden">{mode==="review"&&(canManage||canApprove||canReceive)&&order.status!=="received"&&order.status!=="cancelled"&&<section className="purchase-detail-actions"><div><small>SIGUIENTE PASO</small><b>{nextStepLabel(order.status)}</b></div><div>{canManage&&order.status==="draft"&&<><Button kind="secondary" icon="edit" onClick={edit} disabled={busy}>Editar</Button><Button icon="arrowRightCircle" onClick={()=>changeStatus("pending_approval")} disabled={busy}>Enviar a aprobación</Button></>}{order.status==="pending_approval"&&<>{canManage&&<Button kind="ghost" icon="chevronLeft" onClick={()=>changeStatus("draft")} disabled={busy}>Volver a borrador</Button>}{canApprove&&<Button icon="check" onClick={approve} disabled={busy}>Aprobar</Button>}</>}{canReceive&&receivable&&<Button kind="primary" icon="stock" onClick={receive} disabled={busy}>{order.status==="partially_received"?"Continuar en Recepciones":"Ir a Recepciones"}</Button>}{canManage&&cancellable&&<Button action="cancel-record" onClick={cancel} disabled={busy}>Cancelar orden</Button>}</div></section>}</ModalFooter></Dialog></div>;
+  </div><ModalFooter status={<Status tone={meta.tone}>{meta.label}</Status>} statusLabel="Estado de la orden">{mode==="review"&&(canManage||canApprove||canReceive)&&order.status!=="received"&&order.status!=="cancelled"&&<section className="purchase-detail-actions"><div><small>SIGUIENTE PASO</small><b>{nextStepLabel(order.status)}</b></div><div>{canManage&&order.status==="draft"&&<><Button kind="secondary" icon="edit" onClick={edit} disabled={busy}>Editar</Button><Button icon="arrowRightCircle" onClick={()=>changeStatus("pending_approval")} disabled={busy} loading={pending==="pending_approval"}>{pending==="pending_approval"?"Enviando…":"Enviar a aprobación"}</Button></>}{order.status==="pending_approval"&&<>{canManage&&<Button kind="ghost" icon="chevronLeft" onClick={()=>changeStatus("draft")} disabled={busy} loading={pending==="draft"}>{pending==="draft"?"Volviendo a borrador…":"Volver a borrador"}</Button>}{canApprove&&<Button icon="check" onClick={approve} disabled={busy} loading={pending==="approve"}>{pending==="approve"?"Aprobando…":"Aprobar"}</Button>}</>}{canReceive&&receivable&&<Button kind="primary" icon="stock" onClick={receive} disabled={busy}>{order.status==="partially_received"?"Continuar en Recepciones":"Ir a Recepciones"}</Button>}{canManage&&cancellable&&<Button action="cancel-record" onClick={cancel} disabled={busy}>Cancelar orden</Button>}</div></section>}</ModalFooter></Dialog></div>;
 }
 const historyMeta:Record<PurchaseOrderEvent["kind"],{label:string;icon:"stock"|"undo"|"truck"}>={
   receipt:{label:"Recepción",icon:"stock"},

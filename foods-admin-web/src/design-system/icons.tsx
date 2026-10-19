@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-export type IconName = "info"|"grid"|"sales"|"receipt"|"menu"|"utensils"|"chefHat"|"cookingPot"|"kitchen"|"combo"|"stock"|"truck"|"users"|"store"|"settings"|"search"|"bell"|"plus"|"minus"|"chevron"|"chevronLeft"|"filter"|"download"|"upload"|"alert"|"check"|"clock"|"box"|"logout"|"eye"|"lock"|"mail"|"edit"|"power"|"toggleOn"|"toggleOff"|"circleCheck"|"circleMinus"|"circleSlash"|"save"|"refresh"|"close"|"panelCollapse"|"panelExpand"|"qr"|"share"|"trash"|"arrowRightCircle"|"payment"|"cancel"|"availability"|"ledger"|"building"|"contract"|"mapPin"|"userCheck"|"register"|"orders"|"tables"|"layout"|"cash"|"calendar"|"phone"|"kiosk"|"gauge"|"cart"|"route"|"link"|"bike"|"user"|"heart"|"star"|"badge"|"tag"|"wallet"|"pie"|"phoneApp"|"percent"|"layers"|"plug"|"chat"|"login"|"key"|"lightbulb"|"undo"|"transfer"|"invoice"|"dish"|"note"|"send"|"shoppingBag";
+export type IconName = "info"|"grid"|"sales"|"receipt"|"menu"|"utensils"|"chefHat"|"cookingPot"|"kitchen"|"combo"|"stock"|"truck"|"users"|"store"|"settings"|"search"|"bell"|"plus"|"minus"|"chevron"|"chevronLeft"|"filter"|"download"|"upload"|"alert"|"check"|"clock"|"box"|"logout"|"eye"|"lock"|"mail"|"edit"|"power"|"toggleOn"|"toggleOff"|"circleCheck"|"circleMinus"|"circleSlash"|"save"|"refresh"|"close"|"panelCollapse"|"panelExpand"|"qr"|"share"|"trash"|"arrowRightCircle"|"payment"|"cancel"|"availability"|"ledger"|"building"|"contract"|"mapPin"|"userCheck"|"register"|"orders"|"tables"|"layout"|"cash"|"calendar"|"phone"|"kiosk"|"gauge"|"cart"|"route"|"link"|"bike"|"user"|"heart"|"star"|"badge"|"tag"|"wallet"|"pie"|"phoneApp"|"percent"|"layers"|"plug"|"chat"|"login"|"key"|"lightbulb"|"undo"|"transfer"|"invoice"|"dish"|"note"|"send"|"shoppingBag"|"salad"|"dessert"|"drink";
 /** Tamaños homologados: 14 junto a texto de 12–13 px, 16 en chips y pestañas, 18 en acciones, 20 en navegación, 24 en estados vacíos. */
 export type IconSize=14|16|18|20|24|28|32|36|40|48;
 
@@ -105,6 +105,9 @@ const paths: Record<IconName, ReactNode> = {
   undo:<><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></>,
   transfer:<><path d="M4 8h13m0 0-3-3m3 3-3 3"/><path {...A} d="M20 16H7m0 0 3-3m-3 3 3 3"/></>,
   invoice:<><path {...B} d="M7 3h7l4 4v14H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v4h4"/><path {...A} d="M9.5 12h5M9.5 15.5h5M9.5 8.5h2"/></>,
+  salad:<><path {...B} d="M3.5 12h17a8.5 8 0 0 1-17 0z"/><path d="M9 21h6"/><path {...A} d="M8.5 12c-.4-3 1-5.5 4-6.5.4 3-1 5.5-4 6.5zm6 0c.2-2 1.4-3.6 3.5-4.2-.1 2-1.3 3.6-3.5 4.2z"/></>,
+  dessert:<><path {...B} d="M6 13h12l-1.6 7.2a1 1 0 0 1-1 .8H8.6a1 1 0 0 1-1-.8z"/><path d="M5 13a7 6 0 0 1 14 0M10 16v2.5m4-2.5v2.5"/><circle {...D} cx="12" cy="5" r="1.4"/></>,
+  drink:<><path {...B} d="M6 8h12l-1.5 11.2a2 2 0 0 1-2 1.8h-5a2 2 0 0 1-2-1.8z"/><path d="M6.6 12.5h10.8"/><path {...A} d="m12.5 8 2-5H18"/></>,
   dish:<><path {...B} d="M5 16a7 7 0 0 1 14 0z"/><path d="M3 19h18"/><path {...A} d="M12 9V7.5m-1.5 0h3"/></>,
   note:<><path {...B} d="M5 4h14v11l-5 5H5z"/><path d="M14 20v-5h5"/><path {...A} d="M8.5 9h7M8.5 12.5h4"/></>,
 };

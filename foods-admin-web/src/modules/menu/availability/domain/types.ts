@@ -16,16 +16,20 @@ export type AvailabilityItem={
   note:string;
   businessDate:string;
 };
+/** Motivo de un toque del catálogo cerrado del API. «other» exige detalle. */
+export type AvailabilityReasonOption={value:string;label:string};
 export type AvailabilityResponse={
   items:AvailabilityItem[];
   businessDate:string;
+  soldOutReasons?:AvailabilityReasonOption[];
+  quotaReasons?:AvailabilityReasonOption[];
   total:number;
   page:number;
   pageSize:number;
 };
 export type CategoryOption={id:string;name:string};
 export type AvailabilityChange={item:AvailabilityItem;status:"available"|"sold_out";portionQuantity:number|null;kind:"quota"|"status"};
-export type AvailabilityReasonDraft={reason:string};
+export type AvailabilityReasonDraft={reasonCode:string;reason:string};
 export type AvailabilityHistoryItem={
  id:string;createdAt:string;businessDate:string|null;userId:string|null;userName:string;reason:string|null;
  previousPortionQuantity:number|null;portionQuantity:number|null;soldQuantity:number|null;

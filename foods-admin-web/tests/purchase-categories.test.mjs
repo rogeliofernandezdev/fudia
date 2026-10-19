@@ -31,13 +31,13 @@ function mount({items=[],manage=true,loading=false,error=false,pending=false}={}
  const render=()=>{cursor=0;return nodes(PurchaseCategoryField({value:"",onChange:value=>changes.push(value),disabled:false,onBusyChange:value=>writes.push(value)}))};
  return {render,changes,writes,queries,get creates(){return creates}};
 }
-test("sin categorías compatibles hay una salida visible y la creación conserva permisos",async()=>{
+test("sin categorías hay una salida visible y la creación conserva permisos",async()=>{
  const ui=mount(),tree=ui.render();
  assert.equal(tree.find(node=>node.type==="Select").props.disabled,true);
  assert.match(tree.find(node=>node.type==="FormField").props.help,/Crea una categoría/);
  tree.find(node=>node.type==="IconButton"&&node.props.label==="Nueva categoría").props.onClick();
  const dialog=ui.render().find(node=>node.type==="CategoryDialog");
- assert.equal(dialog.props.retailOnly,true);assert.equal(dialog.props.draft.productScope,"retail");
+ assert.equal(Object.hasOwn(dialog.props,"retailOnly"),false,"la categoría no pregunta su uso");assert.equal(dialog.props.draft.productScope,"retail","el uso se deduce del origen: Compras");
  await dialog.props.save({name:"Bebidas",productScope:"retail",sortOrder:0,active:true});
  assert.equal(ui.creates,1);assert.deepEqual(ui.changes,["database-uuid"]);
  assert.ok(ui.render().some(node=>node.type==="option"&&node.props.value==="database-uuid"));
@@ -56,11 +56,11 @@ test("categorías remotas muestran skeleton, error recuperable y selección",()=
  readyTree.find(node=>node.type==="Select").props.onChange({target:{value:"remote-id"}});
  assert.deepEqual(ready.changes,["remote-id"]);
 });
-test("el API consulta categorías de mercadería y usa el POST existente con UUID de servidor",async()=>{
+test("el API consulta todas las categorías activas y usa el POST existente con UUID de servidor",async()=>{
  const calls=[];
  const api=compile("modules/supply/purchases/infrastructure/purchases-api.ts",name=>name==="@/shared/api/client"?{apiFetch:async(path,options)=>{calls.push({path,options});return {items:[{id:"remote",name:"Bebidas"}],total:1}}}:name==="@/shared/api/product-image"?{}:require(name),{URLSearchParams});
  assert.equal((await api.listPurchaseItemCategories())[0].id,"remote");
- assert.match(calls[0].path,/productType=retail/);
+ assert.doesNotMatch(calls[0].path,/productType=/,"Compras ve también las categorías de Carta; el backend amplía su uso a «Ambos»");
  const catalog=compile("modules/menu/products/infrastructure/products-api.ts",name=>name==="@/shared/api/client"?{apiFetch:async(path,options)=>{calls.push({path,options});return {id:"db-uuid"}}}:(name==="@/shared/api/product-image"||name==="@/shared/api/image-upload")?{}:require(name));
  await catalog.saveCategory({name:"Bebidas",productScope:"retail",sortOrder:0,active:true});
  const call=calls.at(-1);assert.equal(call.path,"categories");assert.equal(call.options.method,"POST");
@@ -77,14 +77,16 @@ test("el modal de categoría es compartido, valida, evita Enter y duplica cero p
   if(name.startsWith("@/design-system"))return Object.fromEntries(["Button","FormField","Icon","Input","Select","Dialog"].map(key=>[key,key]));
   return require(name);
  });
- const tree=nodes(CategoryDialog({draft:{name:"",productScope:"retail",sortOrder:0,active:true},retailOnly:true,busy:false,close:()=>{},save:async()=>{saved++;await pending}}));
- assert.equal(tree.some(node=>node.type==="option"&&node.props.value==="prepared"),false);
+ let savedDraft;
+ const tree=nodes(CategoryDialog({draft:{name:"",productScope:"retail",sortOrder:0,active:true},busy:false,close:()=>{},save:async value=>{saved++;savedDraft=value;await pending}}));
+ assert.equal(tree.some(node=>node.type==="FormField"&&node.props.label==="Disponible para"),false,"la categoría pide solo nombre y orden");
+ assert.equal(tree.some(node=>node.type==="option"),false);
  let prevented=0,stopped=0;tree.find(node=>node.type==="form").props.onSubmit({preventDefault(){prevented++},stopPropagation(){stopped++}});
  assert.equal(prevented,1);assert.equal(stopped,1);assert.equal(saved,0);
  const button=tree.find(node=>node.type==="Button"&&node.props.children==="Guardar");
  button.props.onClick();await new Promise(resolve=>setImmediate(resolve));assert.equal(saved,0);
  form.setValue("name","Bebidas");for(let i=0;i<4;i++)button.props.onClick();
- await new Promise(resolve=>setImmediate(resolve));assert.equal(saved,1);finish();
+ await new Promise(resolve=>setImmediate(resolve));assert.equal(saved,1);assert.equal(savedDraft.productScope,"retail","conserva el uso del formulario de origen");finish();
  const source=readFileSync(new URL("modules/menu/products/presentation/catalog-manager.tsx",root),"utf8");
  assert.ok(source.includes('import {CategoryDialog} from "./category-dialog"'));
  assert.equal(source.includes("function CategoryDialog("),false);

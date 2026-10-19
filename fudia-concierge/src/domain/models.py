@@ -31,6 +31,8 @@ class MenuItem(BaseModel):
     status: str = "available"
     isCombo: bool = False
     hasModifiers: bool = False
+    # Recomendado por el local en la carta digital; foods-backend lo envía primero.
+    recommended: bool = False
 
 
 class MenuResponse(BaseModel):

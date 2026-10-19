@@ -161,7 +161,7 @@ func (a *Stock) CreateCatalogItem(ctx context.Context, s scope, in domain.Invent
 			return result, stockFailure(apperror.Unavailable, "categories_unavailable", "No pudimos validar la categoría.")
 		}
 		if !categoryAllowed {
-			return result, stockFailure(apperror.Conflict, "category_not_retail", "La categoría seleccionada no admite mercadería vendible.")
+			return result, stockFailure(apperror.Conflict, "category_unavailable", "La categoría seleccionada no existe o está inactiva.")
 		}
 		var productID string
 		if err := func() error {

@@ -80,7 +80,7 @@ test("acceso al menú sin permiso de gestión: productos y categorías no ofrece
   const {view}=mount({canManage:false,tab,items:[base,{...base,id:"inactive",active:false}],categories:[category,{...category,id:"inactive-category",active:false}]});
   assert.equal(view.filter(node=>node.type==="RowActionButton"||node.type==="Button").length,0,tab);
   assert.equal(view.some(node=>node.type==="th"&&node.props.children==="ACCIONES"),false);
-  assert.equal(view.filter(node=>node.type==="th").length,tab==="products"?6:5);
+  assert.equal(view.filter(node=>node.type==="th").length,tab==="products"?6:4);
   assert.equal(view.filter(node=>node.type==="Pagination").length,1);
   assert.ok(view.some(node=>node.type==="b"&&node.props.children===(tab==="products"?base.name:category.name)));
  }
@@ -112,20 +112,26 @@ test("al perder gestión no permanecen formularios ni confirmaciones editables",
  assert.equal(view.find(node=>node.type==="ConfirmDialog").props.open,false);
 });
 
-test("categorías: buscador, uso y estado sustituyen el título redundante y reinician la página",()=>{
+test("categorías: buscador y estado sustituyen el título redundante y reinician la página",()=>{
  const {view,updates}=mount({tab:"categories",categories:[category]});
  assert.equal(view.some(node=>node.props.className==="toolbar-title"),false);
  const search=view.find(node=>node.type==="SearchField");
  const selects=view.filter(node=>node.type==="Select");
  assert.equal(search.props.label,"Buscar categorías por nombre");
- assert.deepEqual(selects.map(node=>node.props["aria-label"]),["Filtrar categorías por uso","Filtrar categorías por estado"]);
+ assert.deepEqual(selects.map(node=>node.props["aria-label"]),["Filtrar categorías por estado"]);
  for(const field of [search,...selects])field.props.onChange({target:{value:"active"}});
- assert.equal(updates.filter(([index,value])=>index===6&&value===1).length,3);
+ assert.equal(updates.filter(([index,value])=>index===6&&value===1).length,2);
+});
+
+test("la categoría no expone su uso: sin columna ni filtro «Uso» en ningún plan",()=>{
+ const {view}=mount({tab:"categories",categories:[category]});
+ assert.equal(view.some(node=>node.type==="th"&&node.props.children==="USO"),false);
+ assert.equal(view.some(node=>node.type==="Select"&&node.props["aria-label"]==="Filtrar categorías por uso"),false);
 });
 
 test("categorías: los filtros combinados se aplican antes de paginar y conservan el catálogo del selector",()=>{
  const categories=Array.from({length:25},(_,index)=>({...category,id:String(index),name:index===24?"Bebídas especiales":`Categoría ${index}`,productScope:index===24?"retail":"prepared",active:index===24}));
- const {view,queries}=mount({tab:"categories",categories,states:{11:" bebidas ",12:"retail",13:"active"}});
+ const {view,queries}=mount({tab:"categories",categories,states:{11:" bebidas ",12:"active"}});
  assert.deepEqual(view.filter(node=>node.type==="tr"&&node.props.className!==undefined).map(node=>node.key),["24"]);
  assert.equal(view.find(node=>node.type==="Pagination").props.total,1);
  assert.deepEqual(Array.from(queries.find(query=>query.queryKey[0]==="categories").queryKey),["categories","catalog"]);

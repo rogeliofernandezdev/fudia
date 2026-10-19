@@ -12,7 +12,7 @@
 .customer-default{display:flex;align-items:center;gap:var(--space-2);font-size:var(--font-size-sm);font-weight:var(--weight-semibold);color:var(--ink-600);white-space:nowrap}
 .customer-default input{accent-color:var(--primary-600);width:var(--size-16);height:var(--size-16)}
 .customer-address-remove{display:grid;place-items:center;width:var(--size-38);height:var(--size-38);border:var(--stroke-1) solid transparent;border-radius:var(--radius-tile);background:var(--danger-50);color:var(--danger)}
-.customer-address-remove:hover{border-color:var(--danger-600-alpha-16)}
+@media (hover:hover) and (pointer:fine){.customer-address-remove:hover{border-color:var(--danger-600-alpha-16)}}
 .customer-detail{display:flex;flex-direction:column;width:min(var(--size-720),calc(100vw - var(--size-32)));max-height:min(var(--size-760),calc(100dvh - var(--size-32)));overflow:hidden}
 .customer-detail>header>div{display:grid;gap:var(--space-1)}
 .customer-detail>header small{order:2}

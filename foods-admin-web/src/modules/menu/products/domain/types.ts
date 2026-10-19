@@ -1,7 +1,8 @@
 export type CategoryProductScope="prepared"|"retail"|"both";
 export type Category={id:string;name:string;sortOrder:number;active:boolean;productScope:CategoryProductScope;productCount:number};
 export type ServiceDestination="kitchen"|"bar"|"direct";
-export type ServiceDestinationOption={value:ServiceDestination;label:string};
+/** Destino de atención del API; «shortLabel» se usa en las líneas del pedido. */
+export type ServiceDestinationOption={value:ServiceDestination;label:string;shortLabel?:string};
 export type ProductType="prepared"|"retail";
 export type QuantityControl="none"|"portions"|"inventory";
 export type ProductImageFields={imageId?:string;imageKey?:string;imageStatus?:"PROCESSING"|"READY"|"FAILED";imageExpiresAt?:string;imageVariants?:{thumbnail?:string;medium?:string}};
@@ -21,6 +22,8 @@ export type Product=ProductImageFields&{
   prepMinutes:number|null;
   allergens:string[];
   featured:boolean;
+  /** Receta activa: el formulario avisa si se marca «Sin preparación». */
+  hasRecipe?:boolean;
   costPrice:string|null;
 };
 export type List<T>={items:T[];total:number;page?:number;pageSize?:number;serviceDestinationOptions?:ServiceDestinationOption[]};
@@ -41,6 +44,7 @@ export type ProductDraft=ProductImageFields&{
   prepMinutes:string;
   allergens:string[];
   featured:boolean;
+  hasRecipe?:boolean;
   costPrice:string;
 };
 export type CategoryDraft={id?:string;name:string;sortOrder:number;active:boolean;productScope:CategoryProductScope};

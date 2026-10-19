@@ -136,7 +136,7 @@ export function ComandaView({initial,mode,allTables,busy,close,save,channelLabel
 
   return(
     <Dialog onResponseClose={onResponseClose??(()=>close(v))} as="div" className="cmd-shell" role="dialog" aria-modal="true" aria-busy={busy} aria-labelledby="cmd-title">
-      <ModalHeader title={title} titleId="cmd-title" icon="dish" onClose={requestClose} busy={busy} closeLabel={salon?"Cerrar comanda y volver al salón":"Cerrar comanda"} details={<>{onBack&&<Button kind="ghost" icon="chevronLeft" disabled={busy} onClick={()=>{if(!locked())onBack(v)}}>Editar datos del pedido</Button>}{context.length?<ul className="cmd-context">{context.map(item=><li key={item.icon+item.text}><Icon name={item.icon} size={14}/><span>{item.text}</span></li>)}</ul>:<span>{channelLabel}</span>}</>}/>
+      <ModalHeader title={title} titleId="cmd-title" icon="dish" onClose={requestClose} busy={busy} busyOverlay={false} closeLabel={salon?"Cerrar comanda y volver al salón":"Cerrar comanda"} details={<>{onBack&&<Button kind="ghost" icon="chevronLeft" disabled={busy} onClick={()=>{if(!locked())onBack(v)}}>Editar datos del pedido</Button>}{context.length?<ul className="cmd-context">{context.map(item=><li key={item.icon+item.text}><Icon name={item.icon} size={14}/><span>{item.text}</span></li>)}</ul>:<span>{channelLabel}</span>}</>}/>
 
       <div className="cmd-body">
         <section className="cmd-pane" aria-label="Carta del restaurante">

@@ -11,6 +11,8 @@ type PublicMenuItem struct {
 	Status       string  `json:"status"`
 	IsCombo      bool    `json:"isCombo"`
 	HasModifiers bool    `json:"hasModifiers"`
+	// Recommended marca los productos que el local recomienda en la carta digital (Concierge los presenta primero).
+	Recommended bool `json:"recommended"`
 }
 type PublicComboOption struct {
 	ProductID string `json:"productId"`

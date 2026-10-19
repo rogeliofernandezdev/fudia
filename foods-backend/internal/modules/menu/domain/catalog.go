@@ -48,6 +48,8 @@ type Product struct {
 	AvailableUntil     *string  `json:"availableUntil"`
 	AvailableDays      []int    `json:"availableDays"`
 	AvailableUntilTime *string  `json:"availableUntilTime"`
+	// HasRecipe indica receta activa: el formulario avisa si un producto con receta se marca «Sin preparación».
+	HasRecipe bool `json:"hasRecipe"`
 }
 type ProductInput struct {
 	ImageID                *string  `json:"imageId,omitempty"`
@@ -110,7 +112,7 @@ func NormalizeProduct(in ProductInput) (ProductInput, string) {
 		}
 	}
 	if in.ServiceDestination != "kitchen" && in.ServiceDestination != "bar" && in.ServiceDestination != "direct" {
-		return in, "Selecciona Cocina, Barra o Entrega directa."
+		return in, "Selecciona Cocina, Barra o Sin preparación."
 	}
 	if in.QuantityControl == "" {
 		in.QuantityControl = "none"
@@ -133,4 +135,11 @@ func ValidateInitialPortions(in ProductInput) string {
 	return ""
 }
 
-var ServiceDestinations = []map[string]string{{"value": "kitchen", "label": "Cocina"}, {"value": "bar", "label": "Barra"}, {"value": "direct", "label": "Entrega directa"}}
+// ServiceDestinations es el catálogo único de destinos de atención. «label» se usa al elegir el destino del
+// producto; «shortLabel», en las líneas del pedido. «direct» no pasa por Cocina ni Barra: entra como Listo
+// y lo entrega el mozo (gaseosas, agua, cerveza en botella, postres ya porcionados).
+var ServiceDestinations = []map[string]string{
+	{"value": "kitchen", "label": "Cocina", "shortLabel": "Cocina"},
+	{"value": "bar", "label": "Barra", "shortLabel": "Barra"},
+	{"value": "direct", "label": "Sin preparación (lo entrega el mozo)", "shortLabel": "Sin preparación"},
+}

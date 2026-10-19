@@ -32,6 +32,7 @@ class MenuTools:
                         "status": item.status,
                         "isCombo": item.isCombo,
                         "hasModifiers": item.hasModifiers,
+                        "recommended": item.recommended,
                     }
                     for item in menu.items
                 ],

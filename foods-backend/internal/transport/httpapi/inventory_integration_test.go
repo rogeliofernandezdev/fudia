@@ -112,6 +112,38 @@ func seedRetailCategory(t *testing.T, pool *pgxpool.Pool, s scope) string {
 	return categoryID
 }
 
+// Una categoría creada en Carta (prepared) acepta mercadería vendible y pasa sola a «both»:
+// el uso se deduce del origen y se amplía, nunca bloquea ni oculta la categoría.
+func TestInventoryEntryWidensCartaCategoryToBoth(t *testing.T) {
+	pool := integrationPool(t)
+	s := seedInventoryScope(t, pool)
+	api := New(pool)
+	var categoryID string
+	if err := pool.QueryRow(context.Background(), `
+		INSERT INTO menu_categories(organization_id,name,product_scope)
+		VALUES($1,$2,'prepared')
+		RETURNING id`,
+		s.OrganizationID, fmt.Sprintf("Bebidas %d", time.Now().UnixNano()),
+	).Scan(&categoryID); err != nil {
+		t.Fatalf("seed carta category: %v", err)
+	}
+	body := []byte(fmt.Sprintf(`{"newProduct":{"name":%q,"price":"3.50","categoryId":%q},"quantity":6,"unit":"botella","minimumStock":2}`, fmt.Sprintf("Gaseosa %d", time.Now().UnixNano()), categoryID))
+	req := httptest.NewRequest("POST", "/v1/admin/inventory/entries", bytes.NewReader(body))
+	req = req.WithContext(context.WithValue(req.Context(), scopeKey{}, s))
+	rec := httptest.NewRecorder()
+	api.createInventoryEntry(rec, req)
+	if rec.Code != 201 {
+		t.Fatalf("expected entry 201 for a carta category, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	var productScope string
+	if err := pool.QueryRow(context.Background(), `SELECT product_scope FROM menu_categories WHERE id=$1`, categoryID).Scan(&productScope); err != nil {
+		t.Fatal(err)
+	}
+	if productScope != "both" {
+		t.Fatalf("expected category widened to both, got %q", productScope)
+	}
+}
+
 func TestInventoryEntryCreatesProductThenReusesIt(t *testing.T) {
 	pool := integrationPool(t)
 	s := seedInventoryScope(t, pool)

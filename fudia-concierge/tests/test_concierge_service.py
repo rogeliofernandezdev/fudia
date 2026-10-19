@@ -588,3 +588,35 @@ async def test_modified_item_requires_real_modifier_ids() -> None:
     assert fudia.order_calls[0]["lines"][0]["modifiers"] == [
         {"groupId": "g1", "optionId": "o1"}
     ]
+
+
+@pytest.mark.asyncio
+async def test_search_menu_exposes_recommended_from_backend() -> None:
+    class RecommendedFudia(FakeFudia):
+        async def search_menu(
+            self, token: str, query: str = "", product_id: str = ""
+        ) -> MenuResponse:
+            return MenuResponse(
+                items=[
+                    MenuItem(
+                        productId="p2",
+                        name="Ceviche",
+                        price=Decimal("38"),
+                        categoryName="Platos",
+                        recommended=True,
+                    ),
+                    MenuItem(
+                        productId="p1",
+                        name="Lomo saltado",
+                        price=Decimal("32.50"),
+                        categoryName="Platos",
+                    ),
+                ],
+                currencySymbol="S/",
+            )
+
+    session = ConversationSession(phone="51999999999", qr_token="a" * 32)
+    tools = ConciergeTools(RecommendedFudia(), session, "qué me recomiendas")
+    menu = await tools.execute("search_menu", {"query": ""})
+    assert [item["recommended"] for item in menu["items"]] == [True, False]
+    assert MenuItem(productId="x", name="Agua", price=Decimal("3")).recommended is False

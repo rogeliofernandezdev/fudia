@@ -52,7 +52,12 @@ dentro de un módulo.
   Campos y X conservan su geometría; todas las variantes tienen al menos 44 px
   de área táctil y mantienen el mismo orden de teclado.
 - `loading` deshabilita, anuncia `aria-busy` y la etiqueta pasa al gerundio del
-  mismo verbo («Guardar» → «Guardando…»).
+  mismo verbo («Guardar» → «Guardando…»). El `Spinner` compartido
+  reemplaza al icono en su misma posición (al final en «Continuar») para que el
+  botón no cambie de ancho; `aria-busy` explícito produce el mismo resultado.
+  Todo botón cuya etiqueta cambia a gerundio usa `loading` con la misma
+  condición; `disabled` queda para la validez del formulario. Estados completos:
+  `02_DESIGN_SYSTEM.md` › Microinteracciones y estados.
 - Orden: acción segura a la izquierda, principal a la derecha. En móvil los
   botones de un pie ocupan el ancho disponible.
 - Acciones por fila: solo `RowActionButton` (ver, editar, interruptor de
@@ -160,13 +165,16 @@ horizontal (`overflow-x: hidden`): los tooltips ocultos de `FieldLabel`
 Los formularios usan `ModalForm` + `ModalBody` + `ModalFooter`; el `<form>`
 directo con pie de márgenes negativos es heredado y no se usa en modales nuevos.
 
-Checks propios dentro de modales (por ejemplo, permisos del editor de roles,
-`.re-acc-item`): el `<input type="checkbox">` nativo se oculta con
-`opacity:0` y 1 × 1 px, pero su etiqueta declara `position:relative` para ser
-su bloque contenedor. Si el input absoluto quedara referido a `.crud-modal`, el
-foco al marcar o desmarcar desplazaría el panel (con `overflow:hidden`) y el
-modal se vería en blanco. Al marcar, el modal conserva contenido y posición de
-scroll en escritorio y a 390 px; lo cubre `tests/role-editor-scroll.test.mjs`.
+Checks, interruptores y radios propios dentro de modales (permisos del editor
+de roles `.re-acc-item`, «Obligatorio» de la hoja de menús y combos
+`.combo-toggle`, métodos de pago del POS `.pos-method`): el `<input>` nativo se
+oculta con `position:absolute`, `opacity:0` y 1 × 1 px, pero su etiqueta declara
+`position:relative` para ser su bloque contenedor. Si el input absoluto quedara
+referido a `.crud-modal`, el foco al marcar o desmarcar desplazaría el panel
+(con `overflow:hidden`): el pie sube y el modal se ve en blanco. Al marcar, el
+modal conserva contenido y posición de scroll en escritorio y a 390 px; lo
+cubren `tests/role-editor-scroll.test.mjs` y, para todo el CSS de `src/`,
+`tests/hidden-input-anchor.test.mjs`.
 
 En móvil (≤600 px) el editor de roles se comporta como la Comanda: tarea a
 pantalla completa (100dvh, sin radio) con un solo desplazamiento, el del form.
@@ -174,8 +182,9 @@ El cuerpo y el acordeón no tienen scroll propio; el panel usa `overflow:clip`
 (conserva el radio sin romper `sticky`). Pestañas Menú/Acciones y búsqueda
 quedan fijas arriba al recorrer la lista (`top` compensa el padding del form) y
 las pestañas ocultan sus contadores: el conteo por grupo y los checks ya dicen
-qué está asignado. Escritorio y tablet conservan modal, contadores y lista con
-scroll interno. Validado a 390 × 844, 427 × 840 y 427 × 933 sin scroll horizontal.
+qué está asignado. Escritorio y tablet conservan modal y contadores, con el mismo
+solo desplazamiento: la barra de pestañas, filtro y búsqueda es `sticky` (`top`
+compensa los 24 px del form) y el acordeón no tiene scroll propio. Validado a 390 × 844, 427 × 840 y 427 × 933 sin scroll horizontal.
 Iconos de las pestañas (todos los anchos): Menú `layout`, Acciones `circleCheck`
 (acciones permitidas; reemplaza la llave `key`).
 
@@ -221,8 +230,8 @@ Pedidos/Salón, Ventas y POS para que se vean iguales:
 | `ModalItemNote` | Nota del producto como cápsula `cloud-50` con borde `line` e icono `note` |
 | `ModalItemComponents` | Elecciones de menús/combos y modificadores como carta: grupo en versalitas, filete vertical `line`, valor y `side` (destino si difiere, estado). En ≤600 px el filete pasa a separadores horizontales. `name` acepta nodos: el detalle de Menús y combos lista cada parte con sus opciones separadas por «·» y recargos en `small` |
 
-Detalle de Menús y combos: `Dialog` `size-md` con `ModalHeader` (icono `combo`, título = nombre del menú, sin franja ni subtítulo), un solo `modal-body` blanco, `modal-record-data` con Precio y venta («Se vende: Solo hoy» o Días/Desde/Hasta), «Descripción» si existe y «Platos y opciones» como `h3` de 16 px con `ModalItemComponents`, y el `Status` real en `ModalFooter`. No repite el conteo de partes ni las reglas de elección («Obligatorio · elige 1»), que pertenecen al asistente. Error con `ModalError`. No usa tarjetas propias: con ellas el cuerpo en `grid` encogía la sección y ocultaba partes.
-El asistente «Arma tu menú o combo» tampoco lleva subtítulo («NUEVO MENÚ O COMBO») ni borde propio en el panel: el borde dejaba un filo claro alrededor de la cabecera índigo. En móvil (pantalla completa, validado a 427 × 933) `combo-wizard-stage` crece hasta el alto del panel para que el pie quede fijo abajo, sin un bloque vacío debajo.
+Detalle de Menús y combos: `Dialog` `size-md` con `ModalHeader` (icono `combo`, título = nombre del menú, sin franja ni subtítulo), un solo `modal-body` blanco, `modal-record-data` con Precio y venta («Se vende: Un solo día» con su fecha o Días/Desde/Hasta), «Descripción» si existe y «Platos y opciones» como `h3` de 16 px con `ModalItemComponents`, y el `Status` real en `ModalFooter`. No repite el conteo de partes ni las reglas de elección («Obligatorio · elige 1»), que pertenecen al asistente. Error con `ModalError`. No usa tarjetas propias: con ellas el cuerpo en `grid` encogía la sección y ocultaba partes.
+La hoja «Arma tu menú o combo» (`ComboEditor`) tampoco lleva subtítulo («NUEVO MENÚ O COMBO») ni borde propio en el panel: el borde dejaba un filo claro alrededor de la cabecera índigo. Reutiliza `crud-modal size-lg`, un solo `modal-body` y `ModalFooter`; no es un asistente, así que no lleva stepper, «Continuar» ni paso de revisión. En móvil es pantalla completa con el pie fijo (validado a 427 × 933, 427 × 840 y 390 × 844: margen de 16 px, sin desborde horizontal, controles de 44 px).
 
 Los módulos no redefinen estas piezas; solo añaden su propio contexto (por ejemplo
 el destino compartido o el estado de preparación en Pedidos/Salón). Los cuerpos
@@ -255,6 +264,7 @@ Reglas:
 - Producto reutiliza `ModalForm`, `ModalBody` y `ModalFooter`: cuerpo y pie son hermanos.
   El módulo no redefine padding del formulario/cuerpo ni márgenes o altura de los botones;
   así el pie conserva 24/16 px horizontales y 10 px entre acciones, también al guardar.
+- Guardado en curso: pasar `busy` a `ModalHeader` (o `Modal`) añade `ModalBusy`, un velo sin texto que bloquea al instante y atenúa tras 160 ms; si la espera supera 1 s (`--delay-long-wait`) aparece un spinner central sin texto. El único «Guardando…» es el del botón (`loading`). `busyOverlay={false}` queda reservado a la Comanda. Tras guardar, `notify` va antes de cualquier recarga.
 - Carga remota: `ModalLoading` dentro del `Modal` (conserva título y X); el
   error: `ModalError` con «Reintentar». `RemoteModalSkeleton` queda para
   cargas en las que aún no se conoce el título.
@@ -405,8 +415,12 @@ icono tiene un solo significado en toda la aplicación (ver
   usa azul operativo; activar/desactivar usa el interruptor de estado.
   Cancelar y quitar mantienen el rojo semántico. No se presentan como
   enlaces de texto. La columna
-  de acciones centra el grupo completo, cada pictograma se centra ópticamente en
-  su caja y los tooltips se anclan al centro del botón.
+  de acciones centra el grupo completo y cada pictograma se centra ópticamente en
+  su caja. Como la columna de acciones es la última, sus tooltips
+  (`.standard-actions`/`.table-actions`) se anclan al borde derecho del botón y
+  crecen hacia la izquierda: centrados, el tooltip oculto del último botón desbordaba
+  la tabla y creaba scroll horizontal y un hueco a la derecha (visto en Menús y
+  combos con nombres largos). Los demás tooltips siguen centrados.
 - El historial de disponibilidad reutiliza `Modal size="xl"` y `ModalBody`: título
   de la consulta en cabecera, producto en el contexto y tabla de cinco columnas
   (fecha/hora, cambio, cantidad, motivo, usuario). Fecha y hora en líneas estables;
@@ -548,8 +562,9 @@ que todos los proveedores usen el mismo control para retirar un producto.
 
 ## Loader de pantalla completa
 
-`FullScreenLoader` cubre la pantalla durante la validación de sesión y las
-transiciones de ruta. Reutiliza el `Logo` oficial y lo anima como algo que hierve,
+`FullScreenLoader` cubre la pantalla durante la validación de sesión y la carga
+inicial de la aplicación; entre pantallas del shell se usa `RouteSkeleton`
+(`src/app/(admin)/loading.tsx`), que conserva el menú lateral y la barra superior. Reutiliza el `Logo` oficial y lo anima como algo que hierve,
 en un ciclo de 4,8 s que nace desde abajo: el líquido (el logo a color con la
 máscara ondulada `--loader-wave-mask`) sube desde el fondo con curva suave, hierve
 a dos tercios de la altura con una oscilación senoidal leve y baja con calma para

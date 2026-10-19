@@ -27,7 +27,7 @@ export function listAvailabilityHistory(productId:string,page:number,pageSize:nu
  return apiFetch<AvailabilityHistoryResponse>(`product-availability/${productId}/history?${params.toString()}`);
 }
 
-export function updateAvailability(productId:string,payload:{status:"available"|"sold_out";portionQuantity:number|null;note:string;reason:string}){
+export function updateAvailability(productId:string,payload:{status:"available"|"sold_out";portionQuantity:number|null;note:string;reasonCode:string;reason:string}){
   return apiFetch<void>(`product-availability/${productId}`,{
     method:"PATCH",
     body:JSON.stringify(payload),

@@ -2,12 +2,13 @@ package httpapi
 
 import (
 	"net/http"
+
+	menucontracts "github.com/foods-platform/foods-backend/internal/modules/menu/contracts"
 )
 
-var serviceDestinations = []map[string]string{{"value": "kitchen", "label": "Cocina"}, {"value": "bar", "label": "Barra"}, {"value": "direct", "label": "Entrega directa"}}
-
+// listServiceDestinations entrega el catálogo único del módulo de carta; no se duplica aquí.
 func (a *API) listServiceDestinations(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, 200, map[string]any{"items": serviceDestinations})
+	writeJSON(w, 200, map[string]any{"items": menucontracts.ServiceDestinations})
 }
 func (a *API) closeOrderBill(w http.ResponseWriter, r *http.Request) {
 	a.handlers.Orders.CloseOrderBill(w, r)

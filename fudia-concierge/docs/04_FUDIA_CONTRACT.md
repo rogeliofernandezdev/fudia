@@ -7,6 +7,8 @@ Los endpoints de integración exigen X-Fudia-Concierge-Key; el QR no sustituye e
 GET /v1/integrations/concierge/{token}/menu
 
 q busca por nombre, descripción o categoría. productId revalida una selección exacta.
+Cada producto trae `recommended`: los que el local marcó «Recomendar en la carta digital» llegan primero y
+el especialista de carta los presenta como «Recomendados de la casa»; nunca se recomienda otro producto.
 
 ## Rondas
 

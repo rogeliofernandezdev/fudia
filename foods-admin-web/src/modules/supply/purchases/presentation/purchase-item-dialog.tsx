@@ -194,10 +194,9 @@ export function PurchaseItemDialog({
         <ModalFooter>
           {mode!=="existing"&&typeof validationMessage==="string"&&<div className="purchase-validation" role="alert"><Icon name="alert" size={16}/>{validationMessage}</div>}
           <Button type="button" kind="ghost" onClick={close} disabled={locked||catalogBusy}>Cancelar</Button>
-          {mode!=="existing"&&<Button type="button" onClick={()=>void submit()} disabled={locked||catalogBusy}>{locked?"Guardando…":"Crear y agregar"}</Button>}
+          {mode!=="existing"&&<Button type="button" onClick={()=>void submit()} disabled={locked||catalogBusy} loading={locked}>{locked?"Guardando…":"Crear y agregar"}</Button>}
         </ModalFooter>
       </form>
-      {busy&&<div className="modal-busy" role="status"><i/><span>Guardando…</span></div>}
     </Dialog>
   </div>;
 }

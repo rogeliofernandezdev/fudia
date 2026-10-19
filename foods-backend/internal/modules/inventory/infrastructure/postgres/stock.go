@@ -123,7 +123,6 @@ func (r *Stock) RetailCategoryAllowed(ctx context.Context, s scope, organization
 				SELECT 1
 				FROM menu_categories
 				WHERE id=$1 AND organization_id=$2 AND active
-				  AND product_scope IN ('retail','both')
 			)`,
 		in.NewProduct.CategoryID, organizationID,
 	).Scan(&categoryAllowed)
@@ -139,6 +138,12 @@ func (r *Stock) CreateRetailProduct(ctx context.Context, s scope, organizationID
 		organizationID, in.NewProduct.CategoryID, in.NewProduct.SKU,
 		in.NewProduct.Name, in.NewProduct.Description, in.NewProduct.Price,
 	).Scan(&productID, &result.SKU, &result.Name)
+	if err == nil {
+		// Una categoría de Carta que recibe mercadería pasa a «both»: el uso se amplía, no se bloquea.
+		_, err = r.db(ctx).Exec(ctx, `UPDATE menu_categories SET product_scope='both'
+			WHERE organization_id=$1 AND id=$2 AND product_scope='prepared'`,
+			organizationID, in.NewProduct.CategoryID)
+	}
 	return productID, result.SKU, result.Name, err
 }
 func (r *Stock) LinkRetailProduct(ctx context.Context, s scope, organizationID string, productID string, in domain.InventoryEntryInput, result domain.InventoryCatalogCreateResult) (string, string, error) {

@@ -13,7 +13,7 @@
 .purchase-order-modal>form{display:flex;flex:1;min-height:0;flex-direction:column}
 .purchase-order-modal>form>.purchase-form-body{flex:1;min-height:0}
 .purchase-order-modal>form>footer{flex:0 0 auto}
-.purchase-order-modal>.modal-busy{inset:0;z-index:20;border-radius:inherit;background:var(--brand-50-alpha-88);pointer-events:auto}
+.purchase-order-modal>.modal-busy{inset:0;z-index:20;border-radius:inherit;pointer-events:auto}
 .purchase-form-body{display:grid;gap:var(--space-3-5);padding:var(--space-5) var(--space-5);overflow-y:auto;overscroll-behavior:contain;background:var(--surface)}
 .purchase-form-section{display:grid;gap:var(--space-3-5);padding:var(--space-4);border:0;border-radius:var(--radius-card);background:var(--cloud-50)}
 .purchase-section-title{display:flex;align-items:center;gap:var(--space-2-5)}
@@ -97,8 +97,8 @@
 .purchase-existing-search-control{width:100%}
 .purchase-existing-search-control>svg{flex:0 0 auto}
 .purchase-existing-list{display:grid;gap:var(--space-2);max-height:var(--size-310);overflow:auto}
-.purchase-existing-list>button{display:grid;grid-template-columns:var(--size-34) minmax(0,1fr) auto var(--size-16);align-items:center;gap:var(--space-2-5);width:100%;padding:var(--space-2-5) var(--space-3);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-tile);background:var(--surface);color:var(--ink-700);text-align:left;cursor:pointer;transition:border-color var(--duration-fast) ease,box-shadow var(--duration-fast) ease}
-.purchase-existing-list>button:hover{border-color:var(--primary-300);box-shadow:var(--elevation-2)}
+.purchase-existing-list>button{display:grid;grid-template-columns:var(--size-34) minmax(0,1fr) auto var(--size-16);align-items:center;gap:var(--space-2-5);width:100%;padding:var(--space-2-5) var(--space-3);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-tile);background:var(--surface);color:var(--ink-700);text-align:left;cursor:pointer;transition:border-color var(--duration-fast) var(--easing-out),box-shadow var(--duration-fast) var(--easing-out)}
+@media (hover:hover) and (pointer:fine){.purchase-existing-list>button:hover{border-color:var(--primary-300);box-shadow:var(--elevation-2)}}
 .purchase-existing-icon{display:grid;place-items:center;width:var(--size-34);height:var(--size-34);border-radius:var(--radius-tile);background:var(--primary-100);color:var(--primary-700)}
 .purchase-existing-copy{display:grid;gap:var(--space-0-5);min-width:0}
 .purchase-existing-copy b{font-size:var(--font-size-label);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

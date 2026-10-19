@@ -10,7 +10,7 @@ import (
 )
 
 func (a *Catalog) Availability(ctx context.Context, s scope, f CatalogFilter, excludeCombos bool) (AvailabilityPage, error) {
-	out := AvailabilityPage{Items: []domain.AvailabilityItem{}, Page: f.Page, PageSize: f.Size}
+	out := AvailabilityPage{Items: []domain.AvailabilityItem{}, Page: f.Page, PageSize: f.Size, SoldOutReasons: domain.AvailabilitySoldOutReasons, QuotaReasons: domain.AvailabilityQuotaReasons}
 	day, err := a.repo.BusinessDate(ctx, s)
 	if err != nil {
 		return out, menuFailure(apperror.Unavailable, "availability_unavailable", "No pudimos determinar la fecha operativa del local.")
@@ -62,10 +62,8 @@ func (a *Catalog) UpdateAvailability(ctx context.Context, s scope, productID str
 		return menuFailure(apperror.Invalid, "invalid_availability", "La cantidad de porciones no puede ser negativa.")
 	}
 	in.Note = strings.TrimSpace(in.Note)
+	in.ReasonCode = strings.TrimSpace(in.ReasonCode)
 	in.Reason = strings.TrimSpace(in.Reason)
-	if in.Reason == "" || len([]rune(in.Reason)) > 240 {
-		return menuFailure(apperror.Invalid, "availability_reason_required", "Indica el motivo del cambio, de hasta 240 caracteres.")
-	}
 	if len([]rune(in.Note)) > 240 {
 		return menuFailure(apperror.Invalid, "invalid_availability", "La nota no puede superar 240 caracteres.")
 	}
@@ -133,6 +131,22 @@ func (a *Catalog) UpdateAvailability(ctx context.Context, s scope, productID str
 	if hasDailyAvailability && !quantityChanged && currentStatus == in.Status && currentNote == in.Note {
 		return nil
 	}
+	// Agotar y ajustar el cupo piden un motivo de un toque; reactivar es la acción normal y no lo pide.
+	var reasons []domain.AvailabilityReasonOption
+	if in.Status == "sold_out" && currentStatus != "sold_out" {
+		reasons = domain.AvailabilitySoldOutReasons
+	} else if quantityChanged {
+		reasons = domain.AvailabilityQuotaReasons
+	}
+	if reasons == nil {
+		in.ReasonCode, in.Reason = "", ""
+	} else {
+		code, reason, invalid := domain.ResolveAvailabilityReason(reasons, in.ReasonCode, in.Reason)
+		if invalid != "" {
+			return menuFailure(apperror.Invalid, "availability_reason_required", invalid)
+		}
+		in.ReasonCode, in.Reason = code, reason
+	}
 
 	_, err = a.repo.UpdateAvailability(tx.Context(), s, productID, day, in)
 	if err != nil {
@@ -173,11 +187,13 @@ func (a *Catalog) AvailabilityHistory(ctx context.Context, s scope, productID st
 }
 
 type AvailabilityPage struct {
-	Items        []domain.AvailabilityItem `json:"items"`
-	BusinessDate string                    `json:"businessDate"`
-	Total        int                       `json:"total"`
-	Page         int                       `json:"page"`
-	PageSize     int                       `json:"pageSize"`
+	Items          []domain.AvailabilityItem         `json:"items"`
+	BusinessDate   string                            `json:"businessDate"`
+	SoldOutReasons []domain.AvailabilityReasonOption `json:"soldOutReasons"`
+	QuotaReasons   []domain.AvailabilityReasonOption `json:"quotaReasons"`
+	Total          int                               `json:"total"`
+	Page           int                               `json:"page"`
+	PageSize       int                               `json:"pageSize"`
 }
 type AvailabilityHistoryPage struct {
 	Items    []domain.AvailabilityHistoryItem `json:"items"`

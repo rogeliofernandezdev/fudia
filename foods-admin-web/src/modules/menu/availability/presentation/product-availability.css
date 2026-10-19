@@ -129,3 +129,17 @@
  .availability-actions [data-tooltip]:hover::after{transform:translateY(0)}
 }
 @media(prefers-reduced-motion:reduce){.availability-card,.availability-skeleton-head i,.availability-skeleton i,.availability-skeleton span{transition:none;animation:none}}
+
+/* Motivo de un toque: opciones de selección única de 44 px; el radio nativo vive dentro de la etiqueta. */
+.availability-reasons{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-2)}
+.availability-reason{position:relative;display:flex;align-items:center;gap:var(--space-2-5);min-height:var(--size-44);padding:var(--space-2) var(--space-3);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-control);background:var(--surface);color:var(--ink-700);font-size:var(--font-size-sm);font-weight:var(--weight-semibold);line-height:var(--line-height-snug);cursor:pointer;transition:var(--transition-surface),var(--transition-press)}
+.availability-reason input{position:absolute;inset-block-start:50%;inset-inline-start:var(--space-3);width:var(--size-1);height:var(--size-1);margin:0;opacity:0;pointer-events:none}
+.availability-reason i{position:relative;flex:none;width:var(--size-18);height:var(--size-18);border:var(--stroke-1-5) solid var(--line-strong);border-radius:var(--radius-pill);background:var(--surface);transition:var(--transition-surface)}
+.availability-reason i::after{content:"";position:absolute;inset:var(--space-1);border-radius:var(--radius-pill);background:var(--primary-600);opacity:0;transition:opacity var(--duration-fast) var(--easing-out)}
+.availability-reason:has(input:checked){border-color:var(--primary-600);background:var(--primary-50);color:var(--primary-700)}
+.availability-reason:has(input:checked) i{border-color:var(--primary-600)}
+.availability-reason:has(input:checked) i::after{opacity:1}
+.availability-reason:has(input:focus-visible){outline:var(--stroke-2) solid var(--primary-600);outline-offset:var(--space-0-5)}
+.availability-reason:has(input:disabled){cursor:not-allowed;opacity:var(--opacity-disabled)}
+.availability-reason:active{transform:scale(var(--press-scale))}
+@media (hover:hover) and (pointer:fine){.availability-reason:hover{border-color:var(--primary-300)}}

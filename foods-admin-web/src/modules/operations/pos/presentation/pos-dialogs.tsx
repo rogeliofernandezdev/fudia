@@ -43,7 +43,7 @@ export function PaymentDialog({order,shiftName,busy,formatMoney,close,save}:{ord
         </div>
         {method==="cash"&&<div className="pos-cash-impact"><Icon name="cash" size={14}/><span>Este cobro incrementará automáticamente el efectivo esperado del turno.</span></div>}
       </div>
-      <ModalFooter><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy}>{busy?"Registrando…":"Registrar cobro"}</Button></ModalFooter>
+      <ModalFooter><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy} loading={busy}>{busy?"Registrando…":"Registrar cobro"}</Button></ModalFooter>
     </form>
   </Dialog></div>;
 }
@@ -75,7 +75,7 @@ export function RefundDialog({payment,busy,formatMoney,close,save}:{payment:Paym
         </div>
         {payment.method==="cash"&&<div className="pos-refund-warning"><Icon name="alert" size={14}/><span>La devolución saldrá del efectivo esperado del turno que estás operando ahora.</span></div>}
       </div>
-      <ModalFooter><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" kind="danger" icon="undo" disabled={busy}>{busy?"Devolviendo…":"Confirmar devolución"}</Button></ModalFooter>
+      <ModalFooter><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" kind="danger" icon="undo" disabled={busy} loading={busy}>{busy?"Devolviendo…":"Confirmar devolución"}</Button></ModalFooter>
     </form>
   </Dialog></div>;
 }

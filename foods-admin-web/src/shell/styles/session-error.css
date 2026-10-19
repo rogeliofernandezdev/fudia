@@ -11,8 +11,7 @@
 .admin-session-error-actions>button,.admin-session-error-actions>.button{min-height:var(--control-height);padding-inline:var(--space-4);display:inline-flex;align-items:center;justify-content:center;gap:var(--space-2);border-radius:var(--radius-control);font-size:var(--font-size-control);font-weight:var(--weight-bold);cursor:pointer}
 .admin-session-error-primary{border:var(--stroke-1) solid var(--primary-600);color:var(--surface);background:var(--primary-600)}
 .admin-session-error-secondary{border:var(--stroke-1) solid var(--line-strong);color:var(--ink-700);background:var(--surface)}
-.admin-session-error-primary:hover{background:var(--primary-700)}
-.admin-session-error-secondary:hover{border-color:var(--primary-600);color:var(--primary-700);background:var(--primary-50)}
+@media (hover:hover) and (pointer:fine){.admin-session-error-primary:hover{background:var(--primary-700)}.admin-session-error-secondary:hover{border-color:var(--primary-600);color:var(--primary-700);background:var(--primary-50)}}
 .admin-session-error-primary:focus-visible,.admin-session-error-secondary:focus-visible{outline:var(--stroke-3) solid var(--primary-100);outline-offset:var(--space-0-5)}
-.admin-session-error-primary:disabled,.admin-session-error-secondary:disabled{cursor:wait;opacity:.7}
+.admin-session-error-primary:disabled,.admin-session-error-secondary:disabled{cursor:progress;opacity:var(--opacity-busy)}
 @media(width<=600px){.admin-session-error-page{padding:var(--space-6) var(--space-3-5)}.admin-session-error{min-height:var(--size-360);padding:var(--space-8) var(--space-6)}.admin-session-error h1{font-size:var(--font-size-xl)}.admin-session-error-actions{display:grid}.admin-session-error-actions>button,.admin-session-error-actions>.button{width:100%}}

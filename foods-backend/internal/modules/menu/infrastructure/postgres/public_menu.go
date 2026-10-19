@@ -17,7 +17,7 @@ func (r *Catalog) PublicMenu(ctx context.Context, s scope, q, productID string, 
 		       AND (p.available_until_time IS NULL OR (now() AT TIME ZONE l.timezone)::time <= p.available_until_time),
 		       EXISTS(SELECT 1 FROM menu_combos mc WHERE mc.product_id=p.id AND mc.organization_id=p.organization_id),
 		       EXISTS(SELECT 1 FROM product_modifier_groups pmg WHERE pmg.product_id=p.id AND pmg.organization_id=p.organization_id),
-		       COALESCE(sb.quantity,0)::float8,COALESCE(ii.minimum_stock,0)::float8
+		       COALESCE(sb.quantity,0)::float8,COALESCE(ii.minimum_stock,0)::float8,p.featured
 		FROM products p
 		JOIN locations l ON l.id=$2 AND l.organization_id=p.organization_id AND l.active
 		LEFT JOIN menu_categories c ON c.id=p.category_id AND c.organization_id=p.organization_id AND c.active
@@ -31,7 +31,7 @@ func (r *Catalog) PublicMenu(ctx context.Context, s scope, q, productID string, 
 		WHERE p.organization_id=$1 AND p.active
 		  AND ($4='' OR p.name ILIKE $5 OR p.description ILIKE $5 OR COALESCE(c.name,'') ILIKE $5)
 		  AND ($6='' OR p.id::text=$6)
-		ORDER BY c.sort_order NULLS LAST,c.name NULLS LAST,p.name
+		ORDER BY p.featured DESC,c.sort_order NULLS LAST,c.name NULLS LAST,p.name
 		LIMIT 30
 	`, s.OrganizationID, s.LocationID, day.Format("2006-01-02"), q, search, productID)
 	if err != nil {
@@ -50,7 +50,7 @@ func (r *Catalog) PublicMenu(ctx context.Context, s scope, q, productID string, 
 		if err := rows.Scan(
 			&item.ProductID, &item.Name, &item.Description, &item.Price, &item.CategoryName, &item.ImageURL,
 			&quantityControl, &portionQuantity, &soldQuantity, &manualStatus, &scheduleAvailable, &isCombo,
-			&item.HasModifiers, &inventoryQuantity, &minimumStock,
+			&item.HasModifiers, &inventoryQuantity, &minimumStock, &item.Recommended,
 		); err != nil {
 			return nil, err
 		}

@@ -1,5 +1,6 @@
 import {apiFetch} from "@/shared/api/client";
 import type {Combo,ComboDetail,Draft,Product} from "../domain/types";
+import {zonedInputToIso} from "../domain/sale-window";
 
 export function listCombos(page:number,pageSize:number,q:string,status:string){
   const params=new URLSearchParams({page:String(page),pageSize:String(pageSize),q,status});
@@ -14,13 +15,14 @@ export async function listComboProducts(){
   }
 }
 export function getCombo(id:string){return apiFetch<ComboDetail>(`combos/${id}`)}
-export function saveCombo(value:Draft,editingId:string|null){
+/** `timeZone` es la zona del local activo: las fechas de venta se interpretan en su hora, no en la del navegador. */
+export function saveCombo(value:Draft,editingId:string|null,timeZone?:string|null){
   return apiFetch<{id:string}>(editingId?`combos/${editingId}`:"combos",{
     method:editingId?"PATCH":"POST",
     body:JSON.stringify({
       ...value,
-      availableFrom:value.availableFrom?new Date(value.availableFrom).toISOString():null,
-      availableUntil:value.availableUntil?new Date(value.availableUntil).toISOString():null,
+      availableFrom:zonedInputToIso(value.availableFrom,timeZone),
+      availableUntil:zonedInputToIso(value.availableUntil,timeZone),
       availableDays:value.availableDays.length?value.availableDays:null,
       groups:value.groups.map(group=>({...group,options:group.options.map(option=>({...option,surcharge:option.surcharge.trim()||"0",quota:option.quota?Number(option.quota):null}))}))
     })

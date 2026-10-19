@@ -159,3 +159,21 @@ func TestCreateProductWithoutControlHasNoDailyQuantity(t *testing.T) {
 		t.Fatalf("uncontrolled product quantity: %d err=%v", quantityRows, err)
 	}
 }
+
+// Una categoría creada en Compras (retail) que recibe un plato desde Carta pasa sola a «both».
+func TestCreateProductWidensPurchaseCategoryToBoth(t *testing.T) {
+	pool := integrationPool(t)
+	s := seedInventoryScope(t, pool)
+	categoryID := seedRetailCategory(t, pool, s)
+	rec := postProduct(New(pool), s, fmt.Sprintf(`{"name":"Limonada","price":"8","categoryId":%q,"serviceDestination":"bar"}`, categoryID))
+	if rec.Code != 201 {
+		t.Fatalf("create in purchase category: %d %s", rec.Code, rec.Body.String())
+	}
+	var productScope string
+	if err := pool.QueryRow(context.Background(), `SELECT product_scope FROM menu_categories WHERE id=$1`, categoryID).Scan(&productScope); err != nil {
+		t.Fatal(err)
+	}
+	if productScope != "both" {
+		t.Fatalf("expected category widened to both, got %q", productScope)
+	}
+}

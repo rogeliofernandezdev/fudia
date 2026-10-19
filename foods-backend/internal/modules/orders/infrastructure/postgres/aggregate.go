@@ -123,7 +123,7 @@ func (r *Orders) ServiceItems(ctx context.Context, s scope, orderID string) ([]d
 		}
 		for _, destination := range menucontracts.ServiceDestinations {
 			if destination["value"] == item.Destination {
-				item.DestinationLabel = destination["label"]
+				item.DestinationLabel = destination["shortLabel"]
 			}
 		}
 		item.StatusLabel = map[string]string{"nuevo": "Sin enviar", "confirmado": "Pendiente", "preparando": "Preparando", "listo": "Listo", "entregado": "Entregado"}[item.Status]

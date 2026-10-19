@@ -20,40 +20,51 @@ const regional=compile("shared/i18n/regional-format.ts");
 const item={productId:"aji",name:"Ají de gallina",quantityControl:"portions",portionQuantity:15,soldQuantity:5,remaining:10,status:"available",manualStatus:"available",source:"portions",note:"Nota conservada",businessDate:"2026-10-08"};
 const change={item,status:"available",portionQuantity:20,kind:"quota"};
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
+const soldOutReasons=[{value:"sold_out",label:"Se acabó"},{value:"no_supplies",label:"Sin insumos"},{value:"quality",label:"Calidad o merma"},{value:"other",label:"Otro"}];
+const quotaReasons=[{value:"extra_production",label:"Producción adicional"},{value:"count_fix",label:"Corrección de conteo"},{value:"other",label:"Otro"}];
 
 function reasonUI({save=async()=>{},busy=false}={}){
  let control;const guard={current:false};
  const {AvailabilityReasonDialog}=compile("modules/menu/availability/presentation/availability-reason-dialog.tsx",name=>{
   if(name==="react")return {useRef:()=>guard};
-  if(name==="react-hook-form")return {useForm:options=>{control??=createFormControl(options);return {...control,formState:control.control._formState}}};
+  if(name==="react-hook-form")return {useForm:options=>{control??=createFormControl(options);return {...control,formState:control.control._formState}},useWatch:({name})=>control.getValues(name)};
   if(name==="@/design-system")return ds;
   if(name==="../domain/availability-reason-schema")return schema;
   return require(name);
  });
- function render(){const all=nodes(AvailabilityReasonDialog({change,busy,close(){},save}));return {all,form:all.find(n=>n.type==="form"),dialog:all.find(n=>n.type==="Dialog"),save:all.find(n=>n.type==="Button"&&n.props.kind!=="ghost")};}
+ function render(){const all=nodes(AvailabilityReasonDialog({change,options:quotaReasons,busy,close(){},save}));return {all,form:all.find(n=>n.type==="form"),dialog:all.find(n=>n.type==="Dialog"),save:all.find(n=>n.type==="Button"&&n.props.kind!=="ghost")};}
  render();return {render,control};
 }
 
-test("Disponibilidad exige un motivo nuevo, valida en línea y no guarda con Enter",async()=>{
- const saved=[],ui=reasonUI({save:async reason=>saved.push(reason)});
- assert.equal(ui.control.getValues("reason"),"");
- for(const value of ["","   ","a".repeat(241)]){
-  ui.control.setValue("reason",value);await ui.render().save.props.onClick();assert.equal(saved.length,0);
-  assert.ok(ui.render().all.find(n=>n.type==="FormField"&&n.props.label==="Motivo del cambio").props.error);
- }
+test("Disponibilidad: motivo de un toque preseleccionado, detalle solo en Otro y sin guardar con Enter",async()=>{
+ const saved=[],ui=reasonUI({save:async value=>saved.push(value)});
+ assert.equal(ui.control.getValues("reasonCode"),"extra_production","la primera opción viene preseleccionada");
+ const radios=ui.render().all.filter(n=>n.type==="input"&&n.props.type==="radio");
+ assert.deepEqual(Array.from(radios,n=>n.props.value),["extra_production","count_fix","other"]);
+ assert.equal(ui.render().all.find(n=>n.props.role==="radiogroup").props["aria-label"],"Motivo del cambio");
+ assert.equal(ui.render().all.some(n=>n.type==="Textarea"),false,"sin texto libre fuera de «Otro»");
  let prevented=0;ui.render().form.props.onSubmit({preventDefault(){prevented++}});assert.equal(prevented,1);assert.equal(saved.length,0);
- ui.control.setValue("reason","  Producción adicional  ");await ui.render().save.props.onClick();assert.deepEqual(saved,["Producción adicional"]);
+ await ui.render().save.props.onClick();
+ assert.deepEqual(JSON.parse(JSON.stringify(saved)),[{reasonCode:"extra_production",reason:""}],"un toque en Guardar basta");
+ ui.control.setValue("reasonCode","other");
+ assert.ok(ui.render().all.some(n=>n.type==="Textarea"),"«Otro» abre el detalle");
+ for(const value of ["","   ","a".repeat(241)]){
+  ui.control.setValue("reason",value);await ui.render().save.props.onClick();assert.equal(saved.length,1);
+  assert.ok(ui.render().all.find(n=>n.type==="FormField"&&n.props.label==="Detalle").props.error);
+ }
+ ui.control.setValue("reason","  El proveedor no llegó  ");await ui.render().save.props.onClick();
+ assert.deepEqual(JSON.parse(JSON.stringify(saved[1])),{reasonCode:"other",reason:"El proveedor no llegó"});
  const {all,dialog}=ui.render();assert.equal(dialog.props.onResponseClose instanceof Function,true);
  assert.equal(dialog.props.className,"crud-modal compact modal-panel-in");
- assert.equal(all.find(n=>n.type==="FormField"&&n.props.label==="Motivo del cambio").props.className,"span-2");
+ assert.equal(all.find(n=>n.type==="FormField"&&n.props.label==="Motivo").props.className,"span-2");
 });
 
 test("el motivo espera una sola respuesta y bloquea campos y cierres",async()=>{
  let count=0,finish;const response=new Promise(resolve=>{finish=resolve});
- const ui=reasonUI({save:async()=>{count++;await response}});ui.control.setValue("reason","Corrección de conteo");
+ const ui=reasonUI({save:async()=>{count++;await response}});ui.control.setValue("reasonCode","count_fix");
  const first=ui.render().save.props.onClick();ui.render().save.props.onClick();await tick();assert.equal(count,1);
  const {all,dialog}=ui.render();assert.equal(dialog.props["aria-busy"],true);
- assert.ok(all.filter(n=>["Button","Input","Textarea","button"].includes(n.type)).every(n=>n.props.disabled));
+ assert.ok(all.filter(n=>["Button","Input","Textarea","button","input"].includes(n.type)).every(n=>n.props.disabled));
  assert.equal(words(ui.render().save),"Guardando…");finish();await first;
 });
 
@@ -65,7 +76,7 @@ function managerUI(manage=true,{items=[item],result,pending=false}={}){
   if(name==="@/providers/session-context")return {useSession:()=>({organization:{id:"org"},location:{id:"local",country:"PE",timezone:"America/Lima"},can:p=>p==="menu.read"||manage,isLoading:false})};
   if(name==="@/providers")return {useFeedback:()=>({notify:value=>feedback.push(value)})};
   if(name==="@tanstack/react-query")return {
-   useQuery:options=>options.queryKey[0]==="product-availability"?(result??{data:{items,total:items.length,businessDate:item.businessDate}}):{data:{items:[]}},
+   useQuery:options=>options.queryKey[0]==="product-availability"?(result??{data:{items,total:items.length,businessDate:item.businessDate,soldOutReasons,quotaReasons}}):{data:{items:[]}},
    useQueryClient:()=>({invalidateQueries:value=>invalidations.push(value.queryKey)}),
    useMutation:options=>{mutation=options;return {isPending:pending,mutateAsync:async value=>{try{const result=await options.mutationFn(value);options.onSuccess(result,value);return result}catch(error){options.onError(error);throw error}}};},
   };
@@ -85,12 +96,22 @@ test("Guardar cupo pide motivo antes del API; Agotar conserva el cupo sin guarda
  all=ui.render();const save=all.find(n=>n.type==="Button"&&n.props["aria-label"]==="Guardar cupo de Ají de gallina"&&n.props.children==="Guardar");assert.equal(save.props.disabled,false);save.props.onClick();
  assert.equal(ui.apiCalls.length,0);assert.equal(ui.feedback.length,0);
  all=ui.render();const dialog=all.find(n=>n.type==="Reason");assert.equal(dialog.props.change.portionQuantity,20);
- await dialog.props.save("Producción adicional");assert.equal(ui.apiCalls.length,1);
- assert.deepEqual(JSON.parse(JSON.stringify(ui.apiCalls[0])),["aji",{status:"available",portionQuantity:20,note:"Nota conservada",reason:"Producción adicional"}]);
+ assert.deepEqual(Array.from(dialog.props.options,o=>o.value),["extra_production","count_fix","other"],"el cupo usa su propio catálogo del API");
+ await dialog.props.save({reasonCode:"extra_production",reason:""});assert.equal(ui.apiCalls.length,1);
+ assert.deepEqual(JSON.parse(JSON.stringify(ui.apiCalls[0])),["aji",{status:"available",portionQuantity:20,note:"Nota conservada",reasonCode:"extra_production",reason:""}]);
  assert.equal(ui.feedback.length,1);assert.equal(ui.mutation.retry,false);assert.ok(ui.invalidations.some(key=>key[0]==="availability-history"));
  all=ui.render();all.find(n=>n.type==="Input"&&n.props.type==="number").props.onChange({target:{value:"50"}});
  ui.render().find(n=>n.type==="Button"&&n.props.children==="Agotar hoy").props.onClick();
- assert.equal(ui.render().find(n=>n.type==="Reason").props.change.portionQuantity,null);
+ const soldOut=ui.render().find(n=>n.type==="Reason");
+ assert.equal(soldOut.props.change.portionQuantity,null);
+ assert.equal(soldOut.props.options[0].value,"sold_out","agotar abre con «Se acabó» primero");
+});
+
+test("Reactivar no pide motivo: guarda en un toque",async()=>{
+ const ui=managerUI(true,{items:[{...item,manualStatus:"sold_out",status:"sold_out"}]});
+ ui.render().find(n=>n.type==="Button"&&n.props.children==="Reactivar").props.onClick();await tick();
+ assert.equal(ui.render().some(n=>n.type==="Reason"),false);
+ assert.deepEqual(JSON.parse(JSON.stringify(ui.apiCalls[0])),["aji",{status:"available",portionQuantity:null,note:"Nota conservada",reasonCode:"",reason:""}]);
 });
 
 test("solo lectura permite historial pero no editar; su caché y paginación están aisladas",()=>{

@@ -196,6 +196,35 @@ El movimiento comunica un cambio de estado, nunca adorna.
   pasar de página) no se animan.
 - `prefers-reduced-motion: reduce` reduce todo a un fundido instantáneo.
 
+## Microinteracciones y estados
+
+Todo control responde en el mismo cuadro en que se toca y con los mismos
+tokens; ninguna respuesta retrasa la operación. Los estados se componen en este
+orden de prioridad: **deshabilitado > en curso > error > foco > presionado >
+hover > reposo**. Un estado de mayor prioridad nunca se pierde por otro menor
+(por ejemplo, el borde rojo de error se mantiene al pasar el puntero).
+
+| Estado | Contrato | Tokens |
+| --- | --- | --- |
+| Hover | Solo con puntero fino (`@media (hover:hover) and (pointer:fine)`); cambia fondo, borde o color un paso de la escala. Nunca escala ni desplaza un botón | `--transition-surface` (160 ms, `easing-out`) |
+| Foco | Teclado: contorno de 2 px `primary-600` con 2 px de separación (`:focus-visible`), también en casillas, radios, rangos y archivos. Campos: borde `primary-600` + `--ring-focus` | `--ring-focus`, `--ring-danger` |
+| Presionado | Botones de texto `scale(var(--press-scale))` (.97); iconos, X y pasos de cantidad `scale(var(--press-scale-icon))` (.94). Pestañas, paginación y acciones repetidas cientos de veces responden con superficie (`primary-100`/`primary-200`), sin escala | `--transition-press` (120 ms) |
+| En curso | `Button loading`: el `Spinner` compartido (`ds-spinner`: pista tenue al 28 % y arco de 2.5 con extremos redondeados, como el set de iconos) aparece con un fundido de 160 ms y gira en el lugar del icono (no cambia el ancho); la etiqueta pasa al gerundio, el botón queda bloqueado contra doble envío y anuncia `aria-busy`. Conserva su color completo y cursor `progress`: se lee como «trabajando», no como «no disponible». Los controles sin indicador propio usan `--opacity-busy` (.8) | `button-spinner`, `--opacity-busy` |
+| Guardado sobre el formulario | Patrón empresarial: **un solo indicador con texto, el botón** que originó la acción (spinner + gerundio). `ModalHeader busy` añade `ModalBusy`: bloquea los clics desde el primer cuadro y atenúa el cuerpo tras 160 ms con velo neutro `surface-alpha-64` sin blur ni texto, de modo que el formulario sigue legible. Solo si la espera supera `--delay-long-wait` (1 s) aparece al centro un círculo blanco de 44 px con `Spinner` índigo, sin texto. Nunca verde ni un segundo «Guardando…». Las acciones de un detalle (Aprobar, Enviar a aprobación…) marcan `loading` solo en el botón pulsado. Los módulos no escriben `ModalBusy`; la Comanda, pantalla de tarea completa, usa `busyOverlay={false}` | `ModalHeader busy`, `ModalBusy`, `Spinner`, `--delay-long-wait` |
+| Éxito | Se comunica con `FeedbackProvider` (respuesta success) o con el `Status` confirmado del registro. Se notifica en el mismo instante en que el modal se cierra: las recargas (`invalidateQueries`) corren en segundo plano después de `notify`, nunca con `await` antes. La tarjeta aparece en 160 ms y el check a los 120 ms. No existe botón verde ni recoloreo temporal del botón | Matriz de estados |
+| Error | Campo con borde `danger` y `--ring-danger` al enfocar; mensaje `field-error`/`form-error` con icono o texto, que aparece con `feedback-reveal` (opacidad + 4 px, 160 ms). Sin sacudidas | `--ring-danger` |
+| Deshabilitado | `opacity: var(--opacity-disabled)` (.5), `cursor: not-allowed`, sin sombra, sin hover y sin presión. Los campos usan fondo `cloud-100` y texto `ink-500` | `--opacity-disabled` |
+
+- Las transiciones se declaran con `var(--transition-surface)` y, si el control
+  se presiona, `var(--transition-press)`. Prohibido `transition: all` y las
+  curvas genéricas `ease`, `ease-in` o `ease-out`; los bucles ambientales
+  (skeleton) conservan `ease-in-out`.
+- Ningún `:hover` vive fuera de la media de puntero fino, incluidos tooltips,
+  tarjetas y enlaces; el equivalente de teclado se declara con `:focus-visible`.
+- Las superficies de operación (mesas del Salón, tarjetas de módulo) conservan
+  su opacidad de no disponible propia porque comunican ocupación, no bloqueo.
+- `tests/microinteractions.test.mjs` hace cumplir este contrato.
+
 ## Capas
 
 `--z-raised` 1, `--z-sticky` 10, `--z-header` 20, `--z-popover` 30,
@@ -238,7 +267,7 @@ de estado (`alert`, `check`, `circleCheck`, `cancel`, chevrons, `close`,
 
 Un icono tiene un solo significado en toda la aplicación: `receipt` para
 comprobantes y ventas, `invoice` para documentos (orden de compra, contrato,
-recepción), `dish` para platos y productos de la carta, `tables` para mesas,
+recepción), `dish` para platos y productos de la carta (y el segundo de un menú), `salad`, `dessert` y `drink` para entrada, postre y bebida de un menú, `tables` para mesas,
 `note` para avisos informativos, `alert` solo para advertencias y errores. No
 se usan emojis ni glifos Unicode como iconos.
 
@@ -462,7 +491,7 @@ Matriz semántica completa:
 | Pedido / preparación | Entregado | `teal` — azul petróleo | Servido; distinto de Listo y de Pagada |
 | Pedido / preparación | Cancelado | `red` — rojo | Cancelación |
 | Preparación | Pendiente | `orange` — ámbar | Aún sin preparar; distinto del celeste de Cuenta abierta |
-| Entrega directa | Pendiente de entrega (`listo`) | `green` — verde | Disponible para servir; el API conserva esa etiqueta |
+| Sin preparación | Pendiente de entrega (`listo`) | `green` — verde | Disponible para servir; el API conserva esa etiqueta |
 | Cuenta | Cuenta abierta | `sky` — celeste tenue | Sigue admitiendo consumo; distinto de Confirmado |
 | Cuenta | Por cobrar | `orange` — ámbar | Espera el pago |
 | Cuenta | Pagada | `green` — verde | Pago completo |
@@ -675,8 +704,13 @@ no integra un visor PDF.
   `primary-600` punteado sobre `primary-50`. En móvil (≤600 px) el cuadro de 176 px se
   centra arriba del formulario y los campos ocupan el ancho completo debajo.
 - El formulario de producto incluye campos opcionales: tiempo de
-  preparación (minutos), alérgenos (tags seleccionables), plato destacado
-  (switch) y precio de costo. Ninguno es obligatorio; el operador puede
+  preparación (minutos), alérgenos (tags seleccionables), «Recomendar en la
+  carta digital» (switch; el campo interno es `featured`) y precio de costo.
+  Recomendar solo tiene efecto frente al comensal: la carta del QR (Fudia
+  Concierge por WhatsApp) recibe `recommended`, lista esos productos primero
+  y los presenta como «Recomendados de la casa». POS y Comanda no lo usan ni
+  reordenan productos o combos: el personal ubica cada producto por posición
+  fija (categoría y nombre). Ninguno es obligatorio; el operador puede
   registrar un producto solo con nombre, precio y categoría.
 - Producto separa `productType` (`prepared` o `retail`) de categoría y
   `quantityControl`. La categoría sigue siendo comercial y puede mezclar, por
@@ -685,9 +719,20 @@ no integra un visor PDF.
   atajo Inventario > Nuevo producto vendible clasifica automáticamente como
   `retail` sin pedir un paso adicional al usuario. El tipo no se repite como
   un campo de solo lectura porque ya está expresado por la opción seleccionada.
-  El alta rápida sí exige categoría, pero el selector consulta únicamente
-  categorías cuyo `productScope` sea `retail` o `both`; nunca muestra
-  categorías exclusivas de platos preparados.
+  El alta rápida sí exige categoría y muestra todas las categorías activas.
+- La categoría pide solo **nombre y orden**: no pregunta «Disponible para».
+  Su uso (`productScope`) se deduce del formulario de origen (Carta →
+  `prepared`; Compras o Inventario → `retail`) y el backend lo amplía a `both`
+  cuando recibe un producto del otro tipo, sin bloquear ni ocultar. Los
+  selectores de categoría de Carta y Compras muestran todas las categorías
+  activas. La ruta de atención no depende de la categoría: la decide el
+  «Destino de atención» del producto (Cocina, Barra o «Sin preparación (lo
+  entrega el mozo)», sin texto de ayuda bajo el selector porque la etiqueta
+  ya lo explica, y un aviso `warning` no bloqueante si el producto tiene
+  receta o tiempo de preparación; esta
+  última entra al pedido como «Listo»). Como nadie elige el uso, Carta ›
+  Categorías no lo muestra ni lo filtra en ningún plan: la tabla presenta
+  categoría, orden, productos, estado y acciones.
 - El registro y la edición de producto usan un formulario con información adicional
   desplegable. La cabecera y el footer con «Cancelar» y «Guardar» permanecen
   visibles; solo los campos tienen desplazamiento, también en móvil desde 390 px.
@@ -758,6 +803,12 @@ no integra un visor PDF.
   cupo pendiente. `menu.read` sin `menu.manage` conserva consulta e historial,
   con campos bloqueados y sin acciones de escritura. Empresa, local, contrato
   API, invalidaciones y flujo de historial permanecen independientes del layout.
+- Cabecera de Cocina: hasta 1024 px (tablet, ventana reducida o con menú
+  lateral) título y descripción ocupan todo el ancho y los selectores Área de
+  preparación y Canal van debajo en dos columnas iguales, con «Con demora» en su
+  propia fila; desde 1025 px los filtros vuelven a la derecha del título. La
+  cabecera global solo pasa a grid en ≤600 px, por eso `kitchen.css` fija
+  `display:grid` en su variante; nunca hay scroll horizontal.
 - Cocina usa un KDS de tres carriles operativos: «Por preparar», «En preparación»
   y «Listos para entregar». Cada carril es un panel neutro `cloud-50/surface`
   con borde estándar; el color semántico se limita al acento de estado, icono,
@@ -817,22 +868,90 @@ no integra un visor PDF.
   comercial no modifica porciones: Disponibilidad permite ajustar su cantidad,
   marcar Agotado o Reactivar. Se reutilizan FormField e Input, sin nuevas tarjetas,
   títulos ni pasos; el campo ocupa el ancho del formulario también desde 390 px.
-- Los menús y combos usan un wizard independiente de cuatro pasos: información,
-  composición, disponibilidad y revisión. La plantilla «Menú del día» prepara
-  Entrada, Plato principal, Postre y Bebida, pero cada parte puede editarse. En la interfaz,
-  «Partes del menú» identifica esos momentos del menú. El listado no muestra un
+- Los menús y combos se crean y editan en una **hoja única** (`crud-modal size-lg`,
+  pantalla completa con pie fijo en ≤600 px), sin pasos, pestañas ni revisión aparte:
+  se completa de arriba abajo y se guarda con «Crear menú» o «Guardar cambios».
+  Orden: Nombre y Precio (la descripción es opcional y se abre con «Agregar
+  descripción»), «Qué incluye» y «Cuándo se vende». Las secciones se separan con un
+  filete `line` y títulos `h3` de 16 px / 700 en `ink-800`, sin iconos ni tarjetas
+  anidadas. El pie resume «N partes · precio»; el precio es el único protagonista
+  índigo (`primary-700`). Un error se muestra junto a su campo (FormField o
+  `field-error` bajo la parte) y la hoja se desplaza hasta él y lo enfoca; no hay
+  aviso global arriba del cuerpo, que quedaba fuera de vista en menús largos.
+- «Qué incluye» sin partes muestra un recuadro punteado (`combo-parts-start`) con una
+  frase y las dos formas de empezar, diferenciadas por variante: «Usar plantilla Menú
+  del día» como botón relleno índigo (`primary`, la recomendada) y «Agregar una parte» en `ghost`
+  (neutra). En móvil se apilan a todo el ancho. No se usan tarjetas de elección ni un
+  `EmptyState` centrado. **Excepción aprobada** (2026-10-18) a «una primaria por superficie»: solo mientras no hay partes, la plantilla y «Crear menú» son primarias a la vez; al aplicar la plantilla o agregar una parte, el recuadro desaparece.
+  Error de productos y «No hay productos registrados» sí usan `ErrorState` y
+  `EmptyState` (`combo-parts-state`, compactos).
+  La plantilla no reemplaza partes existentes porque solo aparece en ese estado. La plantilla «Menú del día» prepara
+  Entrada, Plato principal, Postre y Bebida, pero cada parte puede editarse. Las
+  papeleras «Quitar {parte}» y «Quitar {opción}» son iconos `danger-600` sin baldosa
+  ni borde (44 px), con fondo `danger-50` solo al pasar el puntero: quitar es
+  destructivo y debe verse, pero una baldosa roja por línea cargaba la tabla. Quitar una parte con opciones pide
+  confirmación; una vacía se quita al instante. Cada parte es una tarjeta (`radius-sheet`) con **identidad propia**,
+  como los KPI del Dashboard: Entrada verde (`brand`, icono `salad`), Segundo o plato
+  principal ámbar (`warning`, `dish`), Postre violeta (`digital`, `dessert`) y Bebidas
+  petróleo (`teal`, `drink`); otras partes rotan esos tonos con `utensils`. El tono vive
+  solo en el degradado `tono-100` → superficie, el borde `tono-100`, el icono duotono
+  sobre una baldosa blanca con `elevation-1` y la fila de títulos de la tabla
+  (`tono-50` con texto `tono-700`/`800`, ≥ 4.5:1); nombres, valores, interruptor y
+  botones siguen neutros e índigo. La cabecera muestra el icono, el nombre con un lápiz
+  junto al texto (el campo crece con su contenido) y debajo «N opciones · El cliente
+  elige 1» o «Puede omitirse»; a la derecha, el interruptor «Obligatorio» y la papelera.
+  En móvil el interruptor baja bajo el nombre. Las opciones son una tabla ligera con una
+  sola fila de títulos (Opción, Reservar, Recargo): Reservar y Recargo están **siempre
+  a la vista** en cada línea, sin abrir nada. Reservar muestra el saldo como sufijo
+  («de 12»; sin control queda vacío con «Sin límite»). Un saldo en cero muestra
+  `Status` gris «Agotado» junto al nombre, como en Disponibilidad. Cada línea tiene su
+  papelera roja «Quitar {opción}» y su error debajo. En móvil cada línea apila
+  nombre y papelera arriba, y Reservar/Recargo debajo con etiqueta visible.
+- «+ Agregar opción» es un **buscador** (`ComboOptionPicker`, `react-select` con
+  `createLookupSelectStyles`, borde punteado en reposo; se descarga al abrir la
+  composición y mientras llega ocupa un `Skeleton` de `--control-height`) y no un selector nativo:
+  filtra la carta al escribir por nombre o categoría, sin distinguir mayúsculas ni
+  tildes, y **conserva las secciones por categoría** (`buildOptionGroups`): primero las
+  categorías de la parte («Segundo» → «Segundos»), luego el resto en orden alfabético
+  y «Sin categoría» al final; el nombre de la sección lleva mayúscula inicial aunque el
+  API lo envíe en minúsculas, y una sección sin productos disponibles no se muestra.
+  Cada plato muestra su saldo a la derecha («12 disp.» o «Agotado»; sin control, nada).
+  Al elegir, la opción se agrega con su reserva precargada, la búsqueda se limpia y el
+  menú sigue abierto para agregar la siguiente; lo ya agregado no se repite. Filas de
+  44 px, texto de control (16 px en móvil, sin zoom) y menú en portal sobre la hoja.
+  «Agregar parte» va al final. Precio y recargo aceptan coma
+  decimal y la normalizan a punto. En la interfaz,
+  «Partes del menú» identifica esos momentos del menú. El listado muestra solo el
+  nombre del menú, sin la descripción debajo (se lee en el detalle). Tampoco muestra un
   total global de «opciones», porque mezclar entradas, platos principales,
   bebidas y postres en una sola cifra es ambiguo. El detalle presenta cada parte
   con sus productos elegibles; así se ve claramente, por ejemplo, que existen
   dos platos principales sin contabilizar la bebida como si fuera otro plato. Las opciones se seleccionan
   entre productos existentes; no se duplican fichas ni controles de disponibilidad.
-  En composición se muestra siempre obligatoriedad, mínimo/máximo y recargo por
-  opción. La disponibilidad del menú se deriva de las partes obligatorias.
+  En composición se muestra siempre la obligatoriedad y la regla de elección de cada
+  parte; Reservar y Recargo se editan directamente en cada línea. La disponibilidad del menú se deriva de las partes obligatorias.
+- «Cuándo se vende» es un selector de dos píldoras (`radiogroup`): «Siempre» (por
+  defecto) y «Elegir días». La selección usa tinte `primary-50` / `primary-300` /
+  `primary-700`, nunca índigo sólido. **No existe «Solo hoy»**: obligaba a crear un
+  menú nuevo cada día. El menú del día es **un solo registro en «Siempre»** (o en
+  días fijos) cuyos platos se cambian cada mañana; el historial no se pierde porque
+  cada venta guarda el nombre de la parte y del plato elegidos. Un especial de un día
+  usa «Elegir días» con la misma fecha en «Desde» y «Hasta». «Elegir días» muestra los
+  siete días (`aria-pressed`, una fila de 44 px desde 390 px) y «Desde»/«Hasta»
+  opcionales; sin días ni fechas no se guarda. Las fechas se escriben y se muestran en
+  la **hora del local activo** (`sale-window.ts`: `zonedInputToIso` /
+  `isoToZonedInput`), nunca en la del navegador.
+- En el listado, un menú activo cuyo rango de fechas ya venció o aún no empieza se
+  muestra con `Status` gris «Fuera de fecha» (mismo tono que «Fuera de horario» en
+  Disponibilidad), no como «Activo»: no se vende. Lo calcula el API (`outsideDates`).
+  El pie del detalle muestra el mismo estado (`isOutsideDates` con sus fechas) y el
+  aviso de guardado dice «Está fuera de sus fechas de venta: se venderá solo en las
+  fechas indicadas.» en vez de «ya está disponible».
 - «Reservar» se precarga con la cantidad disponible del producto en el local,
   tanto en la plantilla como al agregar una opción. Permite reducir el valor,
   pero no superar el saldo ni introducir fracciones. Cero indica agotado; un
   producto sin control conserva el campo vacío con «Sin límite», sin simular cero.
-- El wizard de menús y combos no solicita categoría de producto. Cada alternativa
+- La hoja de menús y combos no solicita categoría de producto. Cada alternativa
   conserva su propia categoría; el producto técnico que representa al menú se
   registra sin `categoryId` para no mezclar clasificación de platos con composición.
 - Los alérgenos provienen del backend (`GET /v1/admin/allergens`) y se
@@ -897,8 +1016,8 @@ no integra un visor PDF.
   por barras genéricas ni por un spinner aislado.
 - Los modales de cobro y devolución usan la cabecera modal estándar, `FormField`
   con primitivas del design system y pie de acciones consistente. La mutación
-  mantiene visible el contexto y muestra el estado ocupado en el botón que la
-  originó. El selector de método de pago conserva una sola línea, un indicador
+  muestra el estado ocupado en el botón que la originó; `ModalBusy` bloquea el
+  cuerpo con un velo neutro sin texto que mantiene legible el contexto del cobro. El selector de método de pago conserva una sola línea, un indicador
   de radio visible y foco accesible. El verde se reserva para cobros en efectivo
   confirmados o mensajes de éxito; selección y saldo usan azul operativo.
 - El detalle de cobro es de consulta: se cierra únicamente con la `X` de la
@@ -972,7 +1091,7 @@ no integra un visor PDF.
 
 ## Componentes y estados
 
-- Usuarios y permisos se separan en dos pestañas. Un usuario puede tener varias asignaciones rol–local. El editor de rol separa claramente «Accesos al sistema» (opciones del menú) de «Permisos de acción» (operaciones dentro de cada pantalla); nunca se presentan como un único concepto. El Administrador de plataforma es el único `[*]`: ve todo el catálogo de módulos aunque estén desactivados, en desarrollo o planificados, y es el único que puede habilitar módulos para una empresa. El Administrador de empresa usa permisos explícitos y nunca recibe `*`. Los demás roles predeterminados permiten adaptar accesos y permisos conservando nombre y descripción, y los roles personalizados permiten editar toda su definición. La activación se realiza desde la tabla, nunca dentro del formulario. En móvil (≤600 px) el editor de rol ocupa la pantalla completa como la Comanda, con un solo desplazamiento y pestañas + búsqueda fijas arriba; las pestañas omiten contadores para que «Acciones» no se corte y los checks queden a la vista (detalle en `04_COMPONENTS.md`). Escritorio no cambia.
+- Usuarios y permisos se separan en dos pestañas. Un usuario puede tener varias asignaciones rol–local. El editor de rol separa claramente «Accesos al sistema» (opciones del menú) de «Permisos de acción» (operaciones dentro de cada pantalla); nunca se presentan como un único concepto. El Administrador de plataforma es el único `[*]`: ve todo el catálogo de módulos aunque estén desactivados, en desarrollo o planificados, y es el único que puede habilitar módulos para una empresa. El Administrador de empresa usa permisos explícitos y nunca recibe `*`. Los demás roles predeterminados permiten adaptar accesos y permisos conservando nombre y descripción, y los roles personalizados permiten editar toda su definición. La activación se realiza desde la tabla, nunca dentro del formulario. En móvil (≤600 px) el editor de rol ocupa la pantalla completa como la Comanda, con un solo desplazamiento y pestañas + búsqueda fijas arriba; las pestañas omiten contadores para que «Acciones» no se corte y los checks queden a la vista (detalle en `04_COMPONENTS.md`). En todos los anchos el editor tiene un solo desplazamiento (el del form, sin padding propio del cuerpo); el título de la cabecera fija es el nombre del rol («Cajero», en caja normal como está registrado; «Nuevo rol» al crear) y la línea de contexto dice la acción («EDITAR ROL PREDETERMINADO» / «EDITAR ROL PERSONALIZADO»), así el rol editado sigue visible al desplazar los permisos; el rol predeterminado muestra solo su descripción de lectura con `Status` gris «Protegido» (no campos bloqueados ni aviso); la búsqueda usa placeholders cortos («Buscar opción…», «Buscar permiso…») que caben a 390 px; cada grupo es una fila con línea fina (sin tarjetas anidadas) y conteo «x de y» tabular; lo marcado va en `ink-950` seminegrita con check `primary-600` y lo no marcado en `ink-500`; en escritorio los permisos se ordenan por columnas (`columns:2`, la izquierda se lee de arriba abajo y luego la derecha), nunca en zigzag, con las casillas alineadas al título del grupo; el `Select` «Todos · Asignados · Sin asignar» filtra la vista sin alterar el conteo del grupo.
 
 - Área táctil mínima de 44 por 44 px en móvil.
 - Skeleton con forma final: el de tablas reproduce cabecera y filas con
@@ -1145,10 +1264,16 @@ primaria con el icono `send`: «Enviar a cocina». Durante el envío muestra
 ## Responsive
 
 Disponibilidad reorganiza sus cinco columnas según el ancho del panel, con
-la acción `clock` «Historial» accesible también en solo lectura. Guardar cupo,
-Agotar y Reactivar abren un formulario CRUD
-compacto con Motivo del cambio obligatorio; ajustar cupo muestra anterior/nuevo
-como lectura. No añade confirmaciones sucesivas ni catálogos locales de motivos.
+la acción `clock` «Historial» accesible también en solo lectura. Agotar y Guardar
+cupo abren un formulario compacto con **motivo de un toque**: opciones de
+selección única de 44 px (`availability-reasons`) que entrega el API
+(`soldOutReasons`: Se acabó, Sin insumos, Calidad o merma, Otro;
+`quotaReasons`: Producción adicional, Corrección de conteo, Otro), con la
+primera preseleccionada para que en hora punta el cambio quede en dos toques.
+Solo «Otro» abre un «Detalle» obligatorio; las demás opciones no piden texto.
+**Reactivar no pide motivo** y guarda en un toque. Ajustar cupo muestra
+anterior/nuevo como lectura. No añade confirmaciones sucesivas ni catálogos
+locales de motivos.
 El historial reutiliza tabla, fecha regional y paginación del sistema: Fecha y
 hora, Cambio, Cantidad, Motivo y Usuario, con X como único cierre. Los valores históricos
 desconocidos se explican sin mostrar ceros ficticios. En móvil, motivo ocupa el
@@ -1312,7 +1437,7 @@ En menús y combos, bajo «precio c/u», un bloque `cloud-50` sin borde
 (`radius-md`) se lee como una carta: grupo en versalitas 12 px / 600 `ink-500`,
 un filete vertical continuo `line` y el plato 14 px `ink-950` (recargo 12 px
 `ink-600`), con el estado a la derecha. Sin iconos repetidos por fila. El destino
-(Cocina, Barra, Entrega directa) se indica una sola vez tras el precio
+(Cocina, Barra, Sin preparación) se indica una sola vez tras el precio
 («S/ 15.00 c/u · Cocina») cuando todos los componentes lo comparten; si difieren,
 cada fila lo muestra en texto 12 px `ink-600`. Cada plato aparece una sola vez y
 las columnas se alinean con subgrid. En móvil (≤600 px) el filete vertical se
@@ -1446,6 +1571,11 @@ natural. Respetar contraste, foco de teclado, estados de carga y sesión activa.
 - Toda mutación muestra estado ocupado en la acción que la originó, evita envíos
   duplicados y conserva visible el contexto de la pantalla.
 - Después de cargar se presenta contenido, vacío accionable o error recuperable.
+- Al navegar entre pantallas del shell, `RouteSkeleton` (encabezado y panel con
+  filas) ocupa el área de contenido al instante con un fundido de opacidad de
+  `--duration-fast`, sin retraso ni movimiento de layout; luego cada pantalla
+  presenta su propio skeleton de datos. Con `prefers-reduced-motion` aparece sin
+  animación. El `FullScreenLoader` queda para la carga inicial y la sesión.
 ## Directorios maestros
 
 El dashboard usa términos cotidianos del restaurante: «Ventas · Hoy»,
@@ -1552,11 +1682,23 @@ reemplaza datos por ceros; el skeleton reproduce el mosaico de cuatro indicadore
 Bajo 1180 px la columna «Ahora mismo» pasa debajo del análisis; en 390 px todo se apila, el selector ocupa el ancho con botones de 44 px
 y el gráfico conserva el eje X sin desbordar.
 
-Ventas ofrece búsqueda, «Fecha de inicio» y «Fecha de fin» mediante controles
-homologados, alineados en escritorio y apilados en móvil. El rango es opcional:
-admite una sola fecha e incluye todo el día final según la zona del local,
-filtrando la fecha de registro mostrada en la tabla. Cambiar un filtro reinicia
-la paginación. «Limpiar fechas» conserva la búsqueda. Un rango invertido muestra
+Ventas ofrece periodos rápidos de un toque (Hoy, Esta semana, Este mes,
+Mes anterior, Personalizado; `radiogroup` en píldoras con la selección de las
+pestañas, fila deslizable de 44 px en móvil), búsqueda y «Desde»/«Hasta» con
+controles homologados. Abre en **Hoy**. Los periodos se calculan con la fecha y
+la **zona horaria del local activo** (`sales-periods.ts`, `Intl` con
+`location.timezone`, nunca la del navegador), la semana empieza el lunes y se
+recalculan al pasar la medianoche local. «Desde» y «Hasta» solo se muestran
+en «Personalizado» (al elegirlo parten del rango del periodo anterior); con un
+periodo rápido no aparecen y el buscador ocupa la fila, porque la franja del
+total ya nombra el periodo. El rango es opcional: admite una
+sola fecha e incluye todo el día final según la zona del local, filtrando la
+fecha de registro mostrada en la tabla; bajo «Hasta» vacío se lee «Vacío: hasta
+hoy» porque el calendario nativo no admite otro texto. Sobre la tabla, una franja
+muestra el total del periodo (cobrado neto de **todo** el filtro, no solo la
+página; importe en `primary-700` como único protagonista), el número de ventas y
+el ticket promedio, con skeleton mientras carga. Cambiar un filtro reinicia
+la paginación. «Limpiar fechas» (solo en Personalizado) conserva la búsqueda. Un rango invertido muestra
 error junto al campo y no consulta el API; el vacío filtrado distingue que no
 hay coincidencias de que todavía no existen ventas.
 

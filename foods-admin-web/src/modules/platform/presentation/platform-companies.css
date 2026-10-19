@@ -1,7 +1,7 @@
 /* Empresas — cartera SaaS con plan y situación de pago */
 .platform-companies-summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:var(--space-3);margin-bottom:var(--space-4)}
-.platform-companies-kpi{display:flex;align-items:center;gap:var(--space-3);min-height:var(--size-72);padding:var(--space-3-5) var(--space-4);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-card);background:var(--surface);box-shadow:var(--elevation-1);color:var(--ink-950);font:inherit;text-align:left;cursor:pointer;transition:border-color var(--duration-fast) ease,box-shadow var(--duration-fast) ease}
-.platform-companies-kpi:hover{border-color:var(--primary-300)}
+.platform-companies-kpi{display:flex;align-items:center;gap:var(--space-3);min-height:var(--size-72);padding:var(--space-3-5) var(--space-4);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-card);background:var(--surface);box-shadow:var(--elevation-1);color:var(--ink-950);font:inherit;text-align:left;cursor:pointer;transition:border-color var(--duration-fast) var(--easing-out),box-shadow var(--duration-fast) var(--easing-out)}
+@media (hover:hover) and (pointer:fine){.platform-companies-kpi:hover{border-color:var(--primary-300)}}
 .platform-companies-kpi:focus-visible{outline:var(--stroke-2) solid var(--primary-600);outline-offset:var(--space-0-5)}
 .platform-companies-kpi.selected{border-color:var(--primary-600);box-shadow:var(--ring-outline-primary)}
 .platform-companies-kpi>span:last-child{display:grid;gap:var(--space-0-5);min-width:0}
@@ -24,7 +24,7 @@
 .platform-company-name{display:flex;align-items:center;gap:var(--space-2-5);min-width:var(--size-220)}
 .platform-company-name>div,.platform-company-cell{display:grid;gap:var(--space-0-5);min-width:0}
 .platform-company-link{font-size:var(--font-size-sm);font-weight:var(--weight-bold);color:var(--ink-950);text-decoration:none}
-.platform-company-link:hover{color:var(--primary-700);text-decoration:underline}
+@media (hover:hover) and (pointer:fine){.platform-company-link:hover{color:var(--primary-700);text-decoration:underline}}
 .platform-company-link:focus-visible{outline:var(--stroke-2) solid var(--primary-600);outline-offset:var(--space-0-5);border-radius:var(--radius-chip)}
 .platform-company-name b,.platform-company-cell b{font-size:var(--font-size-sm);font-weight:var(--weight-bold);color:var(--ink-950)}
 .platform-company-name small,.platform-company-cell small{font-size:var(--font-size-xs);font-weight:var(--weight-semibold);color:var(--ink-500)}

@@ -65,6 +65,9 @@ type ComboSummary struct {
 	Active      bool   `json:"active"`
 	GroupCount  int    `json:"groupCount"`
 	OptionCount int    `json:"optionCount"`
+	// OutsideDates is true when "now" is outside the menu's sale dates (expired or not started), so it is not sold
+	// even though it is active.
+	OutsideDates bool `json:"outsideDates"`
 }
 type OrderComboSummary struct {
 	ImageView

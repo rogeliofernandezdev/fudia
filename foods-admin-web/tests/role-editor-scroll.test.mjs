@@ -32,3 +32,12 @@ test("en móvil el editor de roles es pantalla completa con un solo scroll y pes
  assert.match(mobile,/\.re-perm-accordion\{overflow:visible\}/);
  assert.doesNotMatch(css.slice(0,css.indexOf("@media")),/\.re-perm-tabs \.ds-tabs b/,"escritorio conserva los contadores");
 });
+
+test("el rol editado sigue visible: su nombre es el título de la cabecera fija",()=>{
+ assert.match(manager,/const editorTitle=roleName\|\|"Nuevo rol";/);
+ assert.match(manager,/<ModalHeader title=\{editorTitle\} titleId="role-editor-title" icon="lock" subtitle=\{editorSubtitle\}/);
+ assert.match(manager,/`\$\{initial\.id\?"EDITAR ":""\}ROL \$\{predefined\?"PREDETERMINADO":"PERSONALIZADO"\}`/);
+ assert.match(css,/\.re-perm-tabs\{position:sticky;top:calc\(var\(--space-6\) \* -1\)/,"escritorio: pestañas, filtro y búsqueda fijas bajo la cabecera");
+ assert.match(css,/\.re-acc-items\{columns:2;/,"permisos por columnas, no en zigzag");
+ assert.ok(manager.includes('placeholder={permTab==="menu"?"Buscar opción…":"Buscar permiso…"}'),"placeholders que caben a 390 px");
+});

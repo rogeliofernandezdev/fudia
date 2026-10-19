@@ -33,6 +33,6 @@ export function ErrorState({title="No pudimos cargar la información",text,onRet
     <span><Icon name="alert"/></span>
     <b>{title}</b>
     {text&&<p>{text}</p>}
-    {onRetry&&<Button kind="secondary" icon="refresh" onClick={onRetry} disabled={retrying}>{retrying?"Reintentando…":"Reintentar"}</Button>}
+    {onRetry&&<Button kind="secondary" icon="refresh" onClick={onRetry} disabled={retrying} loading={retrying}>{retrying?"Reintentando…":"Reintentar"}</Button>}
   </div>;
 }

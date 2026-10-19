@@ -2,9 +2,10 @@
 import {DataTable} from "@/design-system/data-table";
 import {Dialog} from "@/design-system/dialog";
 import "./recipes.css";
+import dynamic from "next/dynamic";
 import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import AsyncSelect from "react-select/async";
+import {Skeleton} from "@/design-system/skeleton";
 import {createLookupSelectStyles} from "@/design-system/search-select-styles";
 import {Button,ConfirmDialog,FieldLabel,Icon,Input,PageHeader,RowActionButton,Status,Textarea,ModalHeader,ModalFooter,ModalForm} from "@/design-system";
 import {useFeedback,useSession} from "@/providers";
@@ -19,6 +20,9 @@ import {
 } from "../infrastructure/recipes-api";
 
 const empty=(productId=""):RecipeDraft=>({productId,yieldQuantity:"1",notes:"",active:true,items:[]});
+// The async autocomplete (react-select + emotion) only lives inside the recipe modal:
+// load it on demand and keep the generic signature for typed options.
+const AsyncSelect=dynamic(()=>import("react-select/async"),{ssr:false,loading:()=><Skeleton height="var(--control-height)"/>}) as unknown as typeof import("react-select/async").default;
 
 type RecipeLookupOption={label:string;value:string;unit?:string};
 const recipeLookupSelectStyles=createLookupSelectStyles<RecipeLookupOption>({
@@ -295,7 +299,7 @@ export function RecipesPage(){
 
      <ModalFooter className="recipe-form-footer">
       <Button kind="ghost" icon="close" disabled={save.isPending} onClick={closeRecipe}>Cancelar</Button>
-      <Button type="submit" icon="check" disabled={save.isPending}>{save.isPending?"Guardando…":"Guardar"}</Button>
+      <Button type="submit" icon="check" disabled={save.isPending} loading={save.isPending}>{save.isPending?"Guardando…":"Guardar"}</Button>
      </ModalFooter>
     </ModalForm>
    </Dialog>

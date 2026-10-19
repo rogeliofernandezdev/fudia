@@ -101,7 +101,7 @@ export function LoginForm({hasSession=false}:{hasSession?:boolean}={}) {
         <div className="admin-auth-accent" aria-hidden="true" />
         <div className="admin-auth-body">
           <div className="admin-auth-brand">
-            <Image src="/assets/images/login.png" alt="fudIA" width={1536} height={1024} sizes="120px" priority />
+            <Image src="/assets/images/login-brand.png" alt="fudIA" width={360} height={240} sizes="120px" priority />
           </div>
           <form className="admin-auth-form" onSubmit={submit} aria-busy={loading} noValidate>
             <header className="admin-auth-heading">

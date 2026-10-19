@@ -80,7 +80,7 @@ func (a *Orders) SubmitConciergeDelivery(ctx context.Context, s scope, in Concie
 		return result, quantityErr
 	}
 	// Igual que un pedido manual enviado a cocina: los productos quedan
-	// pendientes de preparación por destino (Cocina/Barra/Entrega directa).
+	// pendientes de preparación por destino (Cocina/Barra/Sin preparación).
 	if err = a.repo.SyncServiceStatus(tx.Context(), s, created.ID); err != nil {
 		return result, orderFailure(apperror.Unavailable, "order_unavailable", "No pudimos enviar el pedido a cocina.")
 	}

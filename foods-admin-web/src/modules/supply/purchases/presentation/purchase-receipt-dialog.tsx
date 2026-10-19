@@ -61,9 +61,8 @@ export function PurchaseReceiptDialog({order,busy,close,save}:{order:PurchaseOrd
           {typeof errors.items?.message==="string"&&<div className="purchase-validation" role="alert"><Icon name="alert" size={16}/>{errors.items.message}</div>}
           <FormField className="purchase-receipt-notes" label="Observación" optional error={errors.notes?.message}><Textarea rows={3} maxLength={500} {...register("notes")} placeholder="Documento, lote, incidencia o referencia de esta recepción"/></FormField>
         </div>
-        <ModalFooter><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" kind="primary" disabled={busy}>{busy?"Confirmando…":"Confirmar recepción"}</Button></ModalFooter>
+        <ModalFooter><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" kind="primary" disabled={busy} loading={busy}>{busy?"Confirmando…":"Confirmar recepción"}</Button></ModalFooter>
       </form>
-      {busy&&<div className="modal-busy" role="status"><i/><span>Confirmando recepción…</span></div>}
     </Dialog>
   </div>;
 }

@@ -8,8 +8,8 @@ function compile(path,resolve){const exports={};vm.runInNewContext(ts.transpileM
 const {filterCategories}=compile("modules/menu/products/domain/category-filters.ts");
 const categories=[{id:"1",name:"Bebídas",productScope:"retail",active:true},{id:"2",name:"Menú especial",productScope:"prepared",active:false},{id:"3",name:"Combos",productScope:"both",active:true}];
 
-test("filtros de categorías: búsqueda sin acentos, uso exacto, estado y combinación",()=>{
- for(const [query,ids] of [[{search:" BEBIDAS ",scope:"",status:""},["1"]],[{search:"",scope:"both",status:""},["3"]],[{search:"",scope:"",status:"inactive"},["2"]],[{search:"menu",scope:"prepared",status:"inactive"},["2"]],[{search:"",scope:"",status:""},["1","2","3"]]])assert.deepEqual(Array.from(filterCategories(categories,query),item=>item.id),ids);
+test("filtros de categorías: búsqueda sin acentos, estado y combinación; el uso no se filtra",()=>{
+ for(const [query,ids] of [[{search:" BEBIDAS ",status:""},["1"]],[{search:"",status:"inactive"},["2"]],[{search:"menu",status:"inactive"},["2"]],[{search:"",status:""},["1","2","3"]]])assert.deepEqual(Array.from(filterCategories(categories,query),item=>item.id),ids);
 });
 
 test("categorías completas: recorre todas las páginas del API antes de filtrar",async()=>{

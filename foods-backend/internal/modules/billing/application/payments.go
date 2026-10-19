@@ -21,8 +21,11 @@ type POSFilter struct {
 	Page, Size              int
 }
 type POSPage struct {
-	Items    []domain.PosOrderSummary `json:"items"`
-	Total    int                      `json:"total"`
+	Items []domain.PosOrderSummary `json:"items"`
+	Total int                      `json:"total"`
+	// AmountTotal suma lo cobrado neto (pagos menos devoluciones) de todo el filtro, no solo de la página;
+	// las fechas se interpretan en la zona horaria del local.
+	AmountTotal string `json:"amountTotal"`
 	Page     int                      `json:"page"`
 	PageSize int                      `json:"pageSize"`
 }

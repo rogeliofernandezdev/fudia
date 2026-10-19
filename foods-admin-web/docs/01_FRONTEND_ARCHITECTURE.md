@@ -49,6 +49,35 @@ No se permiten hojas CSS de negocio dentro de `src/app`. Los estilos globales vi
 `src/styles`; los del design system en `src/design-system/styles`; navegación en
 `src/shell/styles`; y los de negocio dentro de su módulo.
 
+Las hojas compartidas del design system (modal, paginación, acciones de tabla,
+skeleton, pestañas, confirmación, controles, campo, skeleton de modal remoto y
+loader) se registran una sola vez en `src/app/layout.tsx`, junto a `globals.css`
+y `data-table.css`: los barrels se podan por ruta y varias pantallas reutilizan
+esas clases sin importar el componente. Las hojas pesadas y específicas (mapa,
+editor enriquecido) siguen con su componente.
+
+## Rendimiento de carga
+
+- Cada `index.ts` público (módulos, `@/design-system`, `@/providers`,
+  `@/shared/management`) contiene solo re-exportaciones. `next.config.ts` los
+  declara en `experimental.optimizePackageImports` (los módulos se descubren
+  solos) y `package.json` marca `"sideEffects": ["*.css"]`. Así una página que
+  importa `@/modules/operations` carga solo la vista que usa y no POS, Salón,
+  Cocina y Caja a la vez. Un barrel con código propio rompe esta poda.
+- Librerías pesadas que solo aparecen tras una acción se cargan bajo demanda:
+  `next/dynamic` para componentes (editor de producto, buscador de combos,
+  autocompletes de Recetas, diálogos de POS/Pedidos/Ventas) e `import()` para
+  utilidades (`qrcode`, `jspdf`). El reemplazo de carga conserva la geometría
+  final (por ejemplo `Skeleton` con `--control-height`).
+- `src/app/(admin)/loading.tsx` muestra `RouteSkeleton` dentro del shell: habilita
+  el prefetch parcial de rutas dinámicas y responde al toque al instante.
+  `staleTimes.dynamic` (30 s) reutiliza el segmento de una pantalla ya visitada;
+  los datos siguen gobernados por TanStack Query.
+- Las imágenes de interfaz se sirven a su tamaño de uso (`images.unoptimized`):
+  `logo-mark.png` (144 px) y `login-brand.png` (360 × 240). Los originales en alta
+  resolución quedan solo para PDF e impresión de QR.
+- La medición y el presupuesto viven en `docs/07_TESTING.md` › Rendimiento.
+
 ## Puertas
 
 Antes de integrar: `npm run lint`, `npm run typecheck`, `npm test` y `npm run build`.

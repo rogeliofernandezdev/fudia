@@ -36,7 +36,7 @@ function CustomerDialog({initial,channels,busy,close,save}:{initial:CustomerDraf
  const setDefault=(index:number)=>watched.forEach((_,n)=>setValue(`addresses.${n}.default`,n===index));
  const submit=handleSubmit(values=>{if(!showAddresses&&!values.addresses.length)values.addresses=[];save(values)},invalid=>{if(invalid.addresses)setShowAddresses(true)});
  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal customer-modal modal-panel-in" role="dialog" aria-modal="true">
-  <ModalHeader title="Información del cliente" icon="users" subtitle={initial.id?"EDITAR CLIENTE":"NUEVO CLIENTE"} onClose={close} closeLabel="Cerrar"/>
+  <ModalHeader title="Información del cliente" icon="users" subtitle={initial.id?"EDITAR CLIENTE":"NUEVO CLIENTE"} onClose={close} busy={busy} closeLabel="Cerrar"/>
   <form onSubmit={submit} noValidate><div className="customer-form-body">
    <div className="form-grid customer-main-grid">
     <FormField label="Tipo"><Select {...register("customerType")}><option value="person">Persona</option><option value="company">Empresa</option></Select></FormField>
@@ -72,7 +72,7 @@ function CustomerDialog({initial,channels,busy,close,save}:{initial:CustomerDraf
     <label className="switch-row compact"><input type="checkbox" {...register("marketingConsent")}/><span/><b>Acepta comunicaciones</b></label>
     <label className="switch-row compact"><input type="checkbox" {...register("vipOverride")}/><span/><b>Marcar como VIP</b></label>
    </div>}
-  </div><ModalFooter><Button kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" icon="check" disabled={busy}>{busy?"Guardando…":"Guardar"}</Button></ModalFooter></form></Dialog></div>
+  </div><ModalFooter><Button kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" icon="check" disabled={busy} loading={busy}>{busy?"Guardando…":"Guardar"}</Button></ModalFooter></form></Dialog></div>
 }
 function CustomerDetail({customer,loading,error,retry,retrying,channels,close}:{customer?:Customer;loading:boolean;error?:string;retry:()=>void;retrying:boolean;channels:Option[];close:()=>void}){
  const{location}=useSession();const money=useMoney();

@@ -23,8 +23,45 @@ type AvailabilityInput struct {
 	Status          string `json:"status"`
 	PortionQuantity *int   `json:"portionQuantity"`
 	Note            string `json:"note"`
-	Reason          string `json:"reason"`
+	// ReasonCode es un motivo de un toque del catálogo; Reason es el detalle, obligatorio solo con «other».
+	ReasonCode string `json:"reasonCode"`
+	Reason     string `json:"reason"`
 }
+
+// AvailabilityReasonOption es un motivo de un toque. El catálogo es cerrado y lo entrega el API.
+type AvailabilityReasonOption struct {
+	Value string `json:"value"`
+	Label string `json:"label"`
+}
+
+// Motivos para agotar hoy y para ajustar el cupo. Reactivar no exige motivo.
+var (
+	AvailabilitySoldOutReasons = []AvailabilityReasonOption{{"sold_out", "Se acabó"}, {"no_supplies", "Sin insumos"}, {"quality", "Calidad o merma"}, {"other", "Otro"}}
+	AvailabilityQuotaReasons   = []AvailabilityReasonOption{{"extra_production", "Producción adicional"}, {"count_fix", "Corrección de conteo"}, {"other", "Otro"}}
+)
+
+// ResolveAvailabilityReason valida el motivo elegido y devuelve el código y el texto que guarda el historial:
+// la etiqueta del motivo o, con «other», el detalle escrito. Un cliente anterior que solo envía texto
+// se interpreta como «other».
+func ResolveAvailabilityReason(options []AvailabilityReasonOption, code, detail string) (string, string, string) {
+	if code == "" && detail != "" {
+		code = "other"
+	}
+	for _, option := range options {
+		if option.Value != code {
+			continue
+		}
+		if code != "other" {
+			return code, option.Label, ""
+		}
+		if detail == "" || len([]rune(detail)) > 240 {
+			return "", "", "Detalla el motivo, de hasta 240 caracteres."
+		}
+		return code, detail, ""
+	}
+	return "", "", "Selecciona el motivo del cambio."
+}
+
 type AvailabilityHistoryItem struct {
 	ID                      string  `json:"id"`
 	CreatedAt               string  `json:"createdAt"`

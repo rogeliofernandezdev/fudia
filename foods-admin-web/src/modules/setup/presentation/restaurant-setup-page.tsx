@@ -43,7 +43,7 @@ export function RestaurantSetupPage(){
   });
   const finish=useMutation({
     mutationFn:completeRestaurantSetup,
-    onSuccess:async data=>{qc.setQueryData(queryKey,data);await qc.invalidateQueries({queryKey:["session-context"]});notify({tone:"success",title:"Restaurante listo",message:"La configuración esencial está completa. Ya puedes comenzar a atender."})},
+    onSuccess:async data=>{qc.setQueryData(queryKey,data);notify({tone:"success",title:"Restaurante listo",message:"La configuración esencial está completa. Ya puedes comenzar a atender."});await qc.invalidateQueries({queryKey:["session-context"]})},
     onError:error=>notify({tone:"danger",title:"Aún faltan datos",message:error.message}),
   });
 
@@ -77,7 +77,7 @@ export function RestaurantSetupPage(){
 
           {active.key!=="operation"&&active.key!=="review"&&<div className="setup-open-section">{canVisit(active.href)?<><Link className="button primary" href={setupGuideHref(active)}><Icon name={active.icon} size={18}/><span>{active.complete?"Revisar con guía":"Configurar con guía"}</span><Icon name="chevron" size={16}/></Link><span>Te acompañamos en la pantalla de {active.title.toLocaleLowerCase("es")}.</span></>:<p className="setup-permission"><Icon name="lock" size={16}/>Pide al administrador acceso a esta sección para completar el paso.</p>}</div>}
         </div>
-        <footer className="setup-detail-footer"><Button kind="ghost" icon="chevronLeft" disabled={activeIndex===0} onClick={()=>selectStep(steps[activeIndex-1].key)}>Anterior</Button>{active.key==="review"?configured?<Link className="button primary" href={canVisit("/pos")?"/pos":homeHref}>Comenzar a trabajar<Icon name="chevron" size={16}/></Link>:<Button icon="check" disabled={!setup.coreReady||!canManage||finish.isPending} onClick={()=>finish.mutate()}>{finish.isPending?"Finalizando…":"Finalizar puesta en marcha"}</Button>:<Button kind="secondary" onClick={()=>selectStep(steps[activeIndex+1].key)}>Siguiente paso<Icon name="chevron" size={16}/></Button>}</footer>
+        <footer className="setup-detail-footer"><Button kind="ghost" icon="chevronLeft" disabled={activeIndex===0} onClick={()=>selectStep(steps[activeIndex-1].key)}>Anterior</Button>{active.key==="review"?configured?<Link className="button primary" href={canVisit("/pos")?"/pos":homeHref}>Comenzar a trabajar<Icon name="chevron" size={16}/></Link>:<Button icon="check" disabled={!setup.coreReady||!canManage||finish.isPending} onClick={()=>finish.mutate()} loading={finish.isPending}>{finish.isPending?"Finalizando…":"Finalizar puesta en marcha"}</Button>:<Button kind="secondary" onClick={()=>selectStep(steps[activeIndex+1].key)}>Siguiente paso<Icon name="chevron" size={16}/></Button>}</footer>
       </section>
     </div>
     <p className="setup-footer-note"><Icon name="refresh" size={14}/>El avance se actualiza con los datos que registras en cada sección.{query.isFetching&&<span> Actualizando…</span>}</p>

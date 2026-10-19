@@ -2,6 +2,9 @@
   "name": "foods-admin-web",
   "version": "0.1.0",
   "private": true,
+  "sideEffects": [
+    "*.css"
+  ],
   "engines": {
     "node": ">=22.13.0"
   },

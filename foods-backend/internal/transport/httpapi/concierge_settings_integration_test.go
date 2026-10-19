@@ -142,3 +142,58 @@ func TestConciergeEntitlementControlsPublicQRCode(t *testing.T) {
 		t.Fatalf("admin status must not expose a duplicated WhatsApp number: %#v", statusBody)
 	}
 }
+
+// La carta digital del QR (Concierge) marca los productos recomendados y los presenta primero.
+func TestConciergeMenuListsRecommendedFirst(t *testing.T) {
+	pool := integrationPool(t)
+	s := seedInventoryScope(t, pool)
+	api := New(pool)
+	ctx := context.Background()
+	nonce := time.Now().UnixNano()
+	t.Setenv("FUDIA_CONCIERGE_API_KEY", "concierge-test-key")
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO organization_modules(organization_id,module_key,active)
+		VALUES($1,'whatsapp_bot',true)
+		ON CONFLICT(organization_id,module_key) DO UPDATE SET active=true,updated_at=now()
+	`, s.OrganizationID); err != nil {
+		t.Fatal(err)
+	}
+	var token string
+	if err := pool.QueryRow(ctx, `
+		INSERT INTO tables(organization_id,location_id,name,seats,zone,active,qr_token,qr_enabled)
+		VALUES($1,$2,$3,4,'Principal',true,encode(gen_random_bytes(16),'hex'),true)
+		RETURNING qr_token
+	`, s.OrganizationID, s.LocationID, fmt.Sprintf("Mesa recomendados %d", nonce)).Scan(&token); err != nil {
+		t.Fatal(err)
+	}
+	for _, product := range []struct {
+		name     string
+		featured bool
+	}{{"Alfa normal", false}, {"Zeta recomendado", true}} {
+		if _, err := pool.Exec(ctx, `
+			INSERT INTO products(organization_id,sku,name,price,active,product_type,quantity_control,featured,service_destination)
+			VALUES($1,$2,$3,10,true,'prepared','none',$4,'kitchen')
+		`, s.OrganizationID, fmt.Sprintf("REC-%d-%t", nonce, product.featured), product.name, product.featured); err != nil {
+			t.Fatal(err)
+		}
+	}
+	req := httptest.NewRequest("GET", "/v1/integrations/concierge/"+token+"/menu", nil)
+	req.Header.Set("X-Fudia-Concierge-Key", "concierge-test-key")
+	rec := httptest.NewRecorder()
+	api.Routes().ServeHTTP(rec, req)
+	if rec.Code != 200 {
+		t.Fatalf("menu: %d %s", rec.Code, rec.Body.String())
+	}
+	var menu struct {
+		Items []struct {
+			Name        string `json:"name"`
+			Recommended bool   `json:"recommended"`
+		} `json:"items"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &menu); err != nil {
+		t.Fatal(err)
+	}
+	if len(menu.Items) < 2 || menu.Items[0].Name != "Zeta recomendado" || !menu.Items[0].Recommended || menu.Items[1].Recommended {
+		t.Fatalf("recommended products must come first and be marked: %+v", menu.Items)
+	}
+}

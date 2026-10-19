@@ -176,7 +176,7 @@ export function PlatformOnboardingPage(){
         <div>{step>0&&<Button action="back" onClick={()=>setStep(s=>s-1)} disabled={save.isPending}>Atrás</Button>}</div>
         <div>{step<lastStep
           ?<Button type="submit" action="continue">Siguiente</Button>
-          :<Button type="submit" icon="check" disabled={save.isPending}>{save.isPending?"Guardando…":"Guardar"}</Button>}</div>
+          :<Button type="submit" icon="check" disabled={save.isPending} loading={save.isPending}>{save.isPending?"Guardando…":"Guardar"}</Button>}</div>
       </div>
     </form>
   </div>}

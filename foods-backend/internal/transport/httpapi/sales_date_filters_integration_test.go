@@ -31,8 +31,9 @@ func TestSalesDateFiltersUseLocalDaysAndPagination(t *testing.T) {
 		}
 	}
 	type response struct {
-		Items []posOrderSummary `json:"items"`
-		Total int               `json:"total"`
+		Items       []posOrderSummary `json:"items"`
+		Total       int               `json:"total"`
+		AmountTotal string            `json:"amountTotal"`
 	}
 	list := func(query string) response {
 		t.Helper()
@@ -73,6 +74,9 @@ func TestSalesDateFiltersUseLocalDaysAndPagination(t *testing.T) {
 		})
 	}
 	out := list("from=2026-10-07&to=2026-10-07&pageSize=1&page=2")
+	if out.AmountTotal == "" {
+		t.Fatal("the period total covers the whole filter, not only the visible page")
+	}
 	if out.Total != 3 || len(out.Items) != 1 || out.Items[0].Code != "MIDDLE" {
 		t.Fatalf("filtered pagination: %#v", out)
 	}

@@ -1,0 +1,761 @@
+.combo-list { overflow: hidden; container-type: inline-size; container-name: combo-list; }
+.combo-empty { display: grid; place-content: center; justify-items: center; gap: var(--space-2-5); min-height: var(--size-320); padding: var(--space-8); color: var(--ink-500); text-align: center; }
+.combo-empty b { color: var(--ink-950); font-size: var(--font-size-sm); }
+.combo-empty p { margin: 0 0 var(--space-1-5); font-size: var(--font-size-label); }
+.combo-empty.compact { min-height: var(--size-180); border: var(--stroke-1) dashed var(--line-strong); border-radius: var(--radius-card); }
+/* Hoja única de Menús y combos: un solo desplazamiento, secciones separadas por filetes y sin tarjetas anidadas. */
+.combo-editor-body {
+  display: grid;
+  align-content: start;
+  gap: var(--space-6);
+}
+
+.combo-editor-basics {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--size-200);
+  align-items: start;
+  gap: var(--space-4) var(--space-5);
+}
+
+.combo-editor-description {
+  grid-column: 1 / -1;
+}
+
+.combo-editor-link {
+  grid-column: 1 / -1;
+  justify-self: start;
+  min-height: var(--size-44);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  margin-block: calc(var(--space-2) * -1);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--primary-700);
+  font-size: var(--font-size-sm);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+}
+
+.combo-editor-section {
+  min-width: 0;
+  display: grid;
+  gap: var(--space-4);
+  padding-top: var(--space-6);
+  border-top: var(--stroke-1) solid var(--line);
+}
+
+.combo-editor-section > h3 {
+  margin: 0;
+  color: var(--ink-800);
+}
+
+.combo-parts {
+  display: grid;
+  gap: var(--space-4);
+}
+
+/* Cada parte es una tarjeta con identidad propia (tono suave + icono), como los KPI del Dashboard:
+   el tono vive en el degradado, el borde y la baldosa del icono; texto y controles siguen neutros. */
+.combo-part {
+  min-width: 0;
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-3-5) var(--space-4) var(--space-4);
+  border: var(--stroke-1) solid var(--line);
+  border-radius: var(--radius-sheet);
+  background: var(--cloud-50);
+}
+
+.combo-part.tone-green {
+  border-color: var(--brand-100);
+  background: linear-gradient(160deg, var(--brand-100), var(--surface) 70%);
+}
+
+.combo-part.tone-amber {
+  border-color: var(--warning-100);
+  background: linear-gradient(160deg, var(--warning-100), var(--surface) 70%);
+}
+
+.combo-part.tone-violet {
+  border-color: var(--digital-100);
+  background: linear-gradient(160deg, var(--digital-100), var(--surface) 70%);
+}
+
+.combo-part.tone-teal {
+  border-color: var(--teal-100);
+  background: linear-gradient(160deg, var(--teal-100), var(--surface) 70%);
+}
+
+.combo-part-header {
+  display: grid;
+  grid-template-columns: var(--size-40) minmax(0, 1fr) auto var(--size-44);
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.combo-part-icon {
+  width: var(--size-40);
+  height: var(--size-40);
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-tile);
+  background: var(--surface);
+  box-shadow: var(--elevation-1);
+  color: var(--primary-700);
+}
+
+.combo-part.tone-green .combo-part-icon {
+  color: var(--brand-700);
+}
+
+.combo-part.tone-amber .combo-part-icon {
+  color: var(--warning-800);
+}
+
+.combo-part.tone-violet .combo-part-icon {
+  color: var(--digital-700);
+}
+
+.combo-part.tone-teal .combo-part-icon {
+  color: var(--teal-700);
+}
+
+/* La fila de títulos de la tabla toma el tinte de su parte. */
+.combo-part.tone-green .combo-option-head {
+  background: var(--brand-50);
+  color: var(--brand-800);
+}
+
+.combo-part.tone-amber .combo-option-head {
+  background: var(--warning-50);
+  color: var(--warning-800);
+}
+
+.combo-part.tone-violet .combo-option-head {
+  background: var(--digital-50);
+  color: var(--digital-700);
+}
+
+.combo-part.tone-teal .combo-option-head {
+  background: color-mix(in oklab, var(--teal-100) 50%, var(--surface));
+  color: var(--teal-700);
+}
+
+.combo-part-heading {
+  min-width: 0;
+  display: grid;
+}
+
+/* El nombre de la parte es un título editable: crece con su texto y el lápiz indica que se puede cambiar. */
+.combo-part-title {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--ink-400);
+  cursor: text;
+}
+
+.ds-input.combo-part-name {
+  field-sizing: content;
+  width: auto;
+  min-width: var(--size-64);
+  max-width: 100%;
+  height: var(--control-height);
+  margin-inline-start: calc(var(--space-2) * -1);
+  padding-inline: var(--space-2);
+  border-color: transparent;
+  background-color: transparent;
+  color: var(--ink-950);
+  font-size: var(--font-size-md);
+  font-weight: var(--weight-bold);
+}
+
+.ds-input.combo-part-name:focus {
+  border-color: var(--line-strong);
+  background-color: var(--surface);
+}
+
+.ds-input.combo-part-name[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+
+.combo-part-rule {
+  color: var(--ink-600);
+  font-size: var(--font-size-sm);
+}
+
+/* Ancla el input oculto: sin esto, al enfocarlo el navegador desplaza el modal (overflow oculto) y el pie sube. */
+.combo-toggle {
+  position: relative;
+  min-height: var(--size-44);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--ink-700);
+  font-size: var(--font-size-label);
+  cursor: pointer;
+}
+
+.combo-toggle > input {
+  position: absolute;
+  width: var(--size-1);
+  height: var(--size-1);
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.combo-toggle > span {
+  width: var(--size-34);
+  height: var(--size-20);
+  padding: var(--space-1);
+  border-radius: var(--radius-pill);
+  background: var(--line-strong);
+  transition: background var(--duration-fast) var(--easing-out);
+}
+
+.combo-toggle > span::after {
+  content: "";
+  display: block;
+  width: var(--size-14);
+  height: var(--size-14);
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: var(--elevation-1);
+  transition: transform var(--duration-fast) var(--easing-out);
+}
+
+.combo-toggle > input:checked + span {
+  background: var(--primary-600);
+}
+
+.combo-toggle > input:checked + span::after {
+  transform: translateX(var(--size-14));
+}
+
+.combo-toggle b {
+  font-size: var(--font-size-label);
+  font-weight: var(--weight-bold);
+}
+
+.combo-toggle:focus-within {
+  outline: var(--stroke-2) solid var(--primary-600);
+  outline-offset: var(--space-0-5);
+  border-radius: var(--radius-control);
+}
+
+/* Quitar es destructivo: icono rojo sin baldosa para no cargar cada línea; el tinte aparece al pasar el puntero. */
+.combo-part-remove {
+  width: var(--size-44);
+  height: var(--size-44);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--danger-600);
+}
+
+/* Opciones como tabla ligera: reserva y recargo siempre a la vista, con una sola fila de títulos por parte. */
+.combo-option-table {
+  min-width: 0;
+  overflow: hidden;
+  border: var(--stroke-1) solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+}
+
+.combo-option-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--size-140) var(--size-140) var(--size-44);
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3-5);
+  border-bottom: var(--stroke-1) solid var(--line);
+  background: var(--cloud-25);
+  color: var(--ink-600);
+  font-size: var(--font-size-label);
+  font-weight: var(--weight-semibold);
+}
+
+.combo-part-options {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.combo-option {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--size-140) var(--size-140) var(--size-44);
+  align-items: center;
+  gap: var(--space-1-5) var(--space-3);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3-5);
+}
+
+.combo-option + .combo-option {
+  border-top: var(--stroke-1) solid var(--line);
+}
+
+.combo-option-name {
+  min-width: 0;
+  display: grid;
+  gap: var(--space-0-5);
+}
+
+.combo-option-title {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.combo-option-title b {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink-950);
+  font-size: var(--font-size-base);
+  font-weight: var(--weight-semibold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.combo-option-name small {
+  display: block;
+  color: var(--ink-500);
+  font-size: var(--font-size-xs);
+}
+
+.combo-option-name small::first-letter {
+  text-transform: uppercase;
+}
+
+/* En escritorio la fila de títulos nombra cada columna; la etiqueta propia queda solo para lectores de pantalla. */
+.combo-option-cell {
+  position: relative;
+  min-width: 0;
+  display: grid;
+  gap: var(--space-1);
+}
+
+.combo-cell-label {
+  position: absolute;
+  width: var(--size-1);
+  height: var(--size-1);
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.combo-quota > span {
+  min-width: 0;
+  padding-inline: var(--space-2);
+  font-size: var(--font-size-sm);
+}
+
+/* Quitar es destructivo: icono rojo sin baldosa para no cargar cada línea; el tinte aparece al pasar el puntero. */
+.combo-option-remove {
+  width: var(--size-44);
+  height: var(--size-44);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--danger-600);
+}
+
+.combo-option-error {
+  grid-column: 1 / -1;
+}
+
+/* Buscador «Agregar opción» (react-select): borde punteado en reposo; el menú va en un portal sobre la hoja. */
+.combo-pick {
+  min-width: 0;
+}
+
+.combo-pick.invalid .rs__control {
+  border-color: var(--danger);
+}
+
+.combo-pick-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.combo-pick-stock {
+  flex: none;
+  color: var(--ink-500);
+  font-size: var(--font-size-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.combo-pick-stock.sold-out {
+  color: var(--ink-600);
+  font-weight: var(--weight-semibold);
+}
+
+.combo-parts-add {
+  justify-self: start;
+}
+
+/* Error y sin productos: EmptyState/ErrorState homologados, compactos dentro de la hoja. */
+.catalog-state.combo-parts-state {
+  min-height: 0;
+  padding: var(--space-6) var(--space-5);
+  border: var(--stroke-1) dashed var(--line-strong);
+  border-radius: var(--radius-card);
+}
+
+/* Sin partes: recuadro punteado con una frase y las dos formas de empezar (plantilla índigo, agregar parte neutro). */
+.combo-parts-start {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border: var(--stroke-1) dashed var(--line-strong);
+  border-radius: var(--radius-card);
+}
+
+.combo-parts-start p {
+  margin: 0;
+  color: var(--ink-600);
+  font-size: var(--font-size-base);
+}
+
+.combo-parts-start-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2-5);
+}
+
+.combo-parts-loading {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.combo-parts-loading i {
+  height: var(--size-56);
+  border-radius: var(--radius-card);
+  background: var(--cloud-100);
+  animation: combo-parts-pulse 1.2s var(--easing-out) infinite alternate;
+}
+
+@keyframes combo-parts-pulse { from { opacity: .55; } }
+
+.combo-window {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.combo-window-option {
+  min-height: var(--control-height);
+  padding: 0 var(--space-4);
+  border: var(--stroke-1) solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--ink-700);
+  font-size: var(--font-size-control);
+  font-weight: var(--weight-semibold);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: var(--transition-surface), var(--transition-press);
+}
+
+.combo-window-option.active,
+.day-chip.active {
+  border-color: var(--primary-300);
+  background: var(--primary-50);
+  color: var(--primary-700);
+}
+
+.combo-window-option:active,
+.day-chip:active {
+  transform: scale(var(--press-scale));
+}
+
+.combo-window-days {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.combo-days {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.combo-days legend {
+  margin-bottom: var(--space-1-5);
+  padding: 0;
+  color: var(--ink-700);
+  font-size: var(--font-size-label);
+  font-weight: var(--weight-semibold);
+}
+
+.combo-days-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.day-chip {
+  min-width: var(--size-56);
+  min-height: var(--control-height);
+  padding: 0 var(--space-3);
+  border: var(--stroke-1) solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--ink-700);
+  font-size: var(--font-size-control);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+  transition: var(--transition-surface), var(--transition-press);
+}
+
+.combo-days .field-error {
+  display: block;
+  margin-top: var(--space-1-5);
+}
+
+.combo-window-range {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, var(--size-240)));
+  gap: var(--space-4);
+}
+
+/* Resumen del pie: la cifra del precio es la única protagonista índigo de la hoja. */
+.combo-editor-summary {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: 0 auto 0 0;
+  color: var(--ink-600);
+  font-size: var(--font-size-base);
+}
+
+.combo-editor-summary > span + strong::before {
+  content: "·";
+  margin-right: var(--space-2);
+  color: var(--ink-400);
+  font-weight: var(--weight-semibold);
+}
+
+.combo-editor-summary strong {
+  color: var(--primary-700);
+  font-size: var(--font-size-md);
+  font-weight: var(--weight-heavy);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (hover:hover) and (pointer:fine) {
+  .combo-editor-link:hover { text-decoration: underline; text-underline-offset: var(--space-1); }
+  .combo-part-remove:hover { background: var(--danger-50); }
+  .combo-option-remove:hover { background: var(--danger-50); }
+  .ds-input.combo-part-name:not(:focus):hover { border-color: var(--line-strong); background-color: var(--surface); }
+  .combo-window-option:not(.active):hover,
+  .day-chip:not(.active):hover { border-color: var(--primary-300); color: var(--primary-700); }
+}
+.combo-detail-body { display: grid; align-content: start; gap: var(--space-5); }
+.combo-detail-context, .combo-detail-section { min-width: 0; }
+.combo-detail-section > h3 { margin: 0 0 var(--space-3); }
+.combo-detail-description { margin: 0; color: var(--ink-600); font-size: var(--font-size-base); line-height: var(--line-height-normal); overflow-wrap: anywhere; }
+.combo-detail-option { display: inline-flex; align-items: baseline; gap: var(--space-1-5); }
+.combo-detail-option > span { color: var(--ink-400); }
+.combo-detail-empty { margin: 0; color: var(--ink-600); font-size: var(--font-size-base); }
+.combo-detail-loading :is(i, b) { position: relative; display: block; overflow: hidden; height: var(--size-12); border-radius: var(--radius-control); background: var(--cloud-150); }
+.combo-detail-loading :is(i, b)::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, var(--surface-alpha-64), transparent); transform: translateX(-100%); animation: combo-detail-shimmer var(--duration-ambient) ease-in-out infinite; }
+.combo-detail-loading dl i { width: var(--size-62); margin-bottom: var(--space-1-5); }
+.combo-detail-loading dl b { width: var(--size-92); }
+.combo-detail-loading h3 > i { width: var(--size-120); height: var(--size-16); }
+.combo-detail-loading .modal-item-component-group i { width: var(--size-62); }
+.combo-detail-loading .modal-item-component-name b { width: 75%; }
+.combo-detail-skeleton-copy { display:grid; gap:var(--space-1-5); }
+.combo-detail-skeleton-copy b { width:var(--size-168); height:var(--size-16); }
+@keyframes combo-detail-shimmer { to { transform:translateX(100%); } }
+@container combo-list (width <= 820px) {
+  .standardized-management.combo-list .table-wrap {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-gutter: stable;
+  }
+
+  .standardized-management.combo-list .table-wrap table {
+    width: 100%;
+    min-width: var(--size-760);
+  }
+
+  .standardized-management.combo-list .management-cards {
+    display: none;
+  }
+
+  .combo-list th,
+  .combo-list td {
+    padding-inline: var(--space-3);
+  }
+
+  .combo-list .standard-pagination {
+    min-width: 0;
+    gap: var(--space-2-5);
+    flex-wrap: wrap;
+  }
+
+  .combo-list .standard-pagination > span {
+    flex: 1 0 100%;
+  }
+}
+
+@container combo-list (width <= 620px) {
+  .combo-list .toolbar {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .combo-list .toolbar label,
+  .combo-list .toolbar select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .standardized-management.combo-list .table-wrap table {
+    min-width: var(--size-720);
+  }
+}
+
+@media(prefers-reduced-motion:reduce) {
+  .combo-detail-loading :is(i, b)::after { animation:none; }
+  .combo-parts-loading i { animation:none; }
+}
+/* Móvil (≤600 px): la hoja es pantalla completa (crud-modal size-lg) con el pie fijo; una sola columna y objetivos de 44 px. */
+@media (width <= 600px) {
+  .combo-editor-body {
+    gap: var(--space-5);
+  }
+
+  .combo-editor-basics {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-4);
+  }
+
+  .combo-editor-section {
+    padding-top: var(--space-5);
+  }
+
+  .combo-part {
+    padding: var(--space-3) var(--space-3) var(--space-3);
+  }
+
+  /* Móvil: icono, nombre y papelera arriba; el interruptor baja bajo el nombre, al alcance del pulgar. */
+  .combo-part-header {
+    grid-template-columns: var(--size-40) minmax(0, 1fr) var(--size-44);
+    gap: var(--space-1) var(--space-3);
+  }
+
+  .combo-part-icon {
+    align-self: start;
+    margin-top: var(--space-0-5);
+  }
+
+  .combo-part-header > .combo-toggle {
+    grid-column: 2 / -1;
+    grid-row: 2;
+    justify-self: start;
+  }
+
+  .combo-part-remove {
+    grid-column: 3;
+    grid-row: 1;
+    align-self: start;
+  }
+
+  .combo-option-head {
+    display: none;
+  }
+
+  /* Móvil: nombre y papelera arriba; Reservar y Recargo debajo con su etiqueta visible. */
+  .combo-option {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) var(--size-44);
+    padding: var(--space-2-5) var(--space-1) var(--space-3) var(--space-3);
+  }
+
+  .combo-option-name {
+    grid-column: 1 / 3;
+  }
+
+  .combo-option-remove {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .combo-option-cell {
+    grid-row: 2;
+  }
+
+  .combo-option-cell + .combo-option-cell {
+    grid-column: 2 / -1;
+    margin-right: var(--space-2);
+  }
+
+  .combo-cell-label {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip: auto;
+    color: var(--ink-600);
+    font-size: var(--font-size-label);
+    font-weight: var(--weight-semibold);
+  }
+
+  .combo-parts-start {
+    justify-items: stretch;
+    padding: var(--space-4);
+  }
+
+  .combo-parts-start-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .combo-parts-add {
+    justify-self: stretch;
+  }
+
+  .combo-window {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .combo-window-option {
+    min-height: var(--size-44);
+    padding-inline: var(--space-2);
+  }
+
+  .combo-days-chips {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: var(--space-1-5);
+  }
+
+  .day-chip {
+    min-width: 0;
+    min-height: var(--size-44);
+    padding: 0;
+  }
+
+  .combo-window-range {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .combo-editor-summary {
+    flex-basis: 100%;
+    margin: 0;
+  }
+}
+

@@ -83,7 +83,7 @@ export function SubscriptionWorkspace({current,plans,country,timeZone,organizati
      </div>
      {selectedPlan&&<dl className="subscription-plan-preview"><div><dt>Prueba</dt><dd>{selectedPlan.trialDays?selectedPlan.trialDays+" días":"No"}</dd></div><div><dt>Locales</dt><dd>{selectedPlan.maxLocations??"Sin límite"}<small>En uso: {current.usage.locations}</small></dd></div><div><dt>Usuarios</dt><dd>{selectedPlan.maxUsers??"Sin límite"}<small>En uso: {current.usage.users}</small></dd></div><div><dt>Módulos</dt><dd>{selectedPlan.moduleKeys.length}</dd></div><div><dt>Condiciones</dt><dd>{selectedPlan.termsVersion}</dd></div></dl>}
      {needsAcceptance&&<label className={"subscription-accept"+(change.formState.errors.termsAccepted?" has-error":"")}><input type="checkbox" {...change.register("termsAccepted")}/><span><Icon name="check" size={14}/></span><div><b>El cliente aceptó las nuevas condiciones</b><small>Se registrará la aceptación de la versión {selectedPlan?.termsVersion} al aplicar el cambio de plan.</small>{change.formState.errors.termsAccepted?.message&&<small className="field-error" role="alert">{change.formState.errors.termsAccepted.message}</small>}</div></label>}
-     <footer><Button type="submit" icon="check" disabled={save.isPending}>{save.isPending?"Guardando…":"Aplicar cambio"}</Button></footer>
+     <footer><Button type="submit" icon="check" disabled={save.isPending} loading={save.isPending}>{save.isPending?"Guardando…":"Aplicar cambio"}</Button></footer>
     </form>
    </section>
 
@@ -98,7 +98,7 @@ export function SubscriptionWorkspace({current,plans,country,timeZone,organizati
       <FormField label="Referencia externa" optional error={paymentForm.formState.errors.externalReference?.message}><Input {...paymentForm.register("externalReference")} placeholder="ID del procesador o recibo"/></FormField>
       <FormField label="Fecha del pago" optional={paymentStatusValue!=="paid"} error={paymentForm.formState.errors.paidAt?.message}><Input type="datetime-local" {...paymentForm.register("paidAt")}/></FormField>
      </div>
-     <footer><Button type="submit" icon="check" disabled={pay.isPending}>{pay.isPending?"Registrando…":"Registrar pago"}</Button></footer>
+     <footer><Button type="submit" icon="check" disabled={pay.isPending} loading={pay.isPending}>{pay.isPending?"Registrando…":"Registrar pago"}</Button></footer>
     </form>
    </section>
   </div>
