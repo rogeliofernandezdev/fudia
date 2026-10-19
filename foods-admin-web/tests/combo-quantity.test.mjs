@@ -110,6 +110,22 @@ test("la plantilla Menú del día aplica la misma regla a entrada y segundo",()=
  assert.equal(draft.groups.find(group=>group.name==="Segundo").options[0].quota,"15");
 });
 
+test("la plantilla reconoce sinónimos: sopas y ensaladas van a la entrada, refrescos a bebidas",()=>{
+ const soup={...base,id:"sopa",name:"Sopa criolla",categoryName:"Sopas"};
+ const salad={...base,id:"ensalada",name:"Ensalada rusa",categoryName:"Ensaladas"};
+ const drink={...base,id:"chicha",name:"Chicha morada",categoryName:"Refrescos"};
+ const ui=mount({products:[base,cause,soup,salad,drink]});
+ template(ui);
+ const options=name=>ui.wizard().node.props.draft.groups.find(group=>group.name===name).options.map(option=>option.productId);
+ assert.deepEqual(options("Entrada").sort(),["causa","ensalada","sopa"]);
+ assert.deepEqual(options("Segundo"),["lomo"]);
+ assert.deepEqual(options("Bebidas"),["chicha"]);
+ const {belongsToGroup}=optionGroups;
+ assert.equal(belongsToGroup(soup,"Sopas"),true,"una parte propia usa su nombre en singular");
+ assert.equal(belongsToGroup(soup,"Segundo"),false);
+ assert.equal(belongsToGroup({...base,categoryName:null},"Entrada"),false);
+});
+
 test("un producto sin control no se confunde con cero disponible",()=>{
  const ui=mount({products:[{...base,availableQuantity:null}]});
  template(ui);

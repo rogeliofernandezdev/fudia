@@ -899,7 +899,12 @@ no integra un visor PDF.
   Error de productos y «No hay productos registrados» sí usan `ErrorState` y
   `EmptyState` (`combo-parts-state`, compactos).
   La plantilla no reemplaza partes existentes porque solo aparece en ese estado. La plantilla «Menú del día» prepara
-  Entrada, Plato principal, Postre y Bebida, pero cada parte puede editarse. Las
+  Entrada, Segundo, Postre y Bebidas, pero cada parte puede editarse. Cada parte se llena
+  con los productos cuya categoría contiene su nombre o un sinónimo (`option-groups.ts`):
+  Entrada toma entradas, sopas, caldos, ensaladas, piqueos y aperitivos; Segundo,
+  segundos, principales y platos de fondo; Postre, postres y dulces; Bebidas, bebidas,
+  refrescos, jugos, gaseosas e infusiones. Una parte con otro nombre usa solo su nombre
+  en singular. Los mismos criterios ordenan primero esas categorías en «Agregar opción». Las
   papeleras «Quitar {parte}» y «Quitar {opción}» son iconos `danger-600` sin baldosa
   ni borde (44 px), con fondo `danger-50` solo al pasar el puntero: quitar es
   destructivo y debe verse, pero una baldosa roja por línea cargaba la tabla. Quitar una parte con opciones pide

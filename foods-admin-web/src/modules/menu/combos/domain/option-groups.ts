@@ -7,11 +7,23 @@ export type ComboPickGroup={label:string;options:ComboPickOption[]};
 const NO_CATEGORY="Sin categoría";
 export const normalize=(value:string)=>value.normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().trim();
 
-/** Una categoría pertenece a una parte si coincide con su nombre: «Entrada» ↔ «Entradas», «Segundo» ↔ «Segundos». */
+/** Sinónimos de las partes del menú del día: en el Perú la entrada suele ser una sopa, un caldo o una ensalada. */
+const PART_ALIASES:Record<string,string[]>={
+  entrada:["entrada","sopa","caldo","ensalada","piqueo","aperitivo"],
+  segundo:["segundo","principal","fondo"],
+  postre:["postre","dulce"],
+  bebida:["bebida","refresco","jugo","gaseosa","infusion"],
+};
+
+/**
+ * Una categoría pertenece a una parte si contiene su nombre en singular («Entrada» ↔ «Entradas») o, en las partes
+ * de la plantilla, uno de sus sinónimos («Entrada» ↔ «Sopas»). Partes con otro nombre solo usan su propio nombre.
+ */
 export function belongsToGroup(product:Product,groupName:string){
   const category=normalize(product.categoryName??"");
-  const group=normalize(groupName);
-  return Boolean(group)&&(category===group||category===`${group}s`||category.startsWith(`${group} `)||category.includes(group));
+  const group=normalize(groupName).replace(/s$/,"");
+  if(!group||!category)return false;
+  return (PART_ALIASES[group]??[group]).some(term=>category.includes(term));
 }
 
 const capitalize=(value:string)=>value.charAt(0).toLocaleUpperCase("es")+value.slice(1);
