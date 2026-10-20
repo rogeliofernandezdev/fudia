@@ -232,6 +232,13 @@ test("«Costo extra» reemplaza a «Recargo» y explica que se suma si eligen el
  assert.match(css,/\.combo-option-head > :nth-child\(2\) \{\s*padding-right: calc\(var\(--space-2-5\) \+ var\(--stroke-1\)\);/,"Reservar termina con el texto del sufijo");
 });
 
+test("elegir un plato cierra el buscador: no salta al siguiente ni crece la lista bajo el cursor",()=>{
+ const picker=read("presentation/combo-option-search.tsx");
+ assert.match(picker,/closeMenuOnSelect\s/);
+ assert.doesNotMatch(picker,/closeMenuOnSelect=\{false\}/);
+ assert.match(picker,/blurInputOnSelect=\{false\}/,"el foco sigue en el buscador para agregar otro");
+});
+
 test("cuándo se vende: solo Siempre y Elegir días; sin «Solo hoy» que obligaba a crear un menú por día",()=>{
  const ui=mount();
  const radios=()=>ui.wizard().view.filter(node=>node.type==="button"&&node.props.role==="radio");

@@ -23,8 +23,9 @@ function stockLabel(limit:number|null){
 
 /**
  * Buscador «Agregar opción»: filtra la carta al escribir, conserva las secciones por categoría (primero las de la
- * parte) y muestra el saldo de cada plato. Al elegir agrega la opción, limpia la búsqueda y sigue abierto para la
- * siguiente; los productos ya agregados no se repiten.
+ * parte) y muestra el saldo de cada plato. Al elegir agrega la opción, limpia la búsqueda y se cierra: si quedaba
+ * abierto, el resaltado saltaba al plato siguiente y la lista crecía bajo el cursor. El foco sigue en el buscador, así
+ * que escribir o pulsar ↓ lo vuelve a abrir; los productos ya agregados no se repiten.
  */
 export function ComboOptionSearch({inputId,partName,products,excluded,invalid,describedBy,onPick}:{inputId:string;partName:string;products:Product[];excluded:string[];invalid:boolean;describedBy?:string;onPick:(product:Product)=>void}){
   const groups:ComboPickGroup[]=buildOptionGroups(products,excluded,partName);
@@ -41,7 +42,7 @@ export function ComboOptionSearch({inputId,partName,products,excluded,invalid,de
     aria-label={`Agregar opción a ${partName.trim()||"esta parte"}`}
     aria-invalid={invalid}
     aria-errormessage={invalid?describedBy:undefined}
-    closeMenuOnSelect={false}
+    closeMenuOnSelect
     blurInputOnSelect={false}
     isSearchable
     styles={pickStyles}

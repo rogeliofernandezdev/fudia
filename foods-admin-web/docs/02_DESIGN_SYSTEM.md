@@ -951,7 +951,9 @@ no integra un visor PDF.
   API lo envíe en minúsculas, y una sección sin productos disponibles no se muestra.
   Cada plato muestra su saldo a la derecha («12 disp.» o «Agotado»; sin control, nada).
   Al elegir, la opción se agrega con su reserva precargada, la búsqueda se limpia y el
-  menú sigue abierto para agregar la siguiente; lo ya agregado no se repite. Filas de
+  menú **se cierra** (2026-10-20): abierto, el resaltado saltaba al plato siguiente y la
+  lista crecía, como si avanzara solo. El foco queda en el buscador; escribir o pulsar ↓
+  lo reabre para agregar otro. Lo ya agregado no se repite. Filas de
   44 px, texto de control (16 px en móvil, sin zoom) y menú en portal sobre la hoja.
   «Agregar parte» va al final. Precio y costo extra aceptan coma
   decimal y la normalizan a punto. En la interfaz,
