@@ -1,4 +1,6 @@
+import ssl
 from typing import Literal
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -9,6 +11,7 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore",
+        hide_input_in_errors=True,
     )
 
     env: str = "development"
@@ -18,6 +21,8 @@ class Settings(BaseSettings):
     fudia_concierge_api_key: str = ""
 
     redis_url: str = "redis://localhost:6379/0"
+    # Optional private CA mounted by Cloud Run; never disable certificate checks.
+    redis_ca_certfile: str = ""
     session_ttl_seconds: int = 43_200
     # Last venue visited by QR: lets a diner whose table service ended order
     # delivery or pickup from that venue (90 days by default).
@@ -58,9 +63,7 @@ class Settings(BaseSettings):
     # Processing records: finished ones, and ones that may still be needed to
     # recover an operation (must outlive the dead-letter retention).
     processing_record_ttl_seconds: int = Field(default=259_200, ge=3_600)
-    processing_pending_record_ttl_seconds: int = Field(
-        default=1_209_600, ge=86_400
-    )
+    processing_pending_record_ttl_seconds: int = Field(default=1_209_600, ge=86_400)
     # Window to wait for a Meta status receipt before resending an uncertain
     # reply once.
     outbound_reconcile_seconds: float = Field(default=30.0, gt=0, le=600)
@@ -104,6 +107,29 @@ class Settings(BaseSettings):
     whatsapp_app_secret: str = ""
     whatsapp_graph_version: str = ""
 
+    @property
+    def redis_connection_url(self) -> str:
+        if not self.redis_ca_certfile:
+            return self.redis_url
+        parts = urlsplit(self.redis_url)
+        if parts.scheme != "rediss":
+            raise ValueError("REDIS_CA_CERTFILE requires rediss:// (TLS).")
+        query = dict(parse_qsl(parts.query, keep_blank_values=True))
+        if any(key.startswith("ssl_") for key in query):
+            raise ValueError("Configure Redis TLS through REDIS_CA_CERTFILE, not URI overrides.")
+        # Verify that the mounted PEM is readable and valid before connecting.
+        ssl.create_default_context(cafile=self.redis_ca_certfile)
+        query.update(
+            {
+                "ssl_ca_certs": self.redis_ca_certfile,
+                "ssl_cert_reqs": "required",
+                "ssl_check_hostname": "True",
+                "socket_connect_timeout": "10",
+                "socket_timeout": "10",
+            }
+        )
+        return urlunsplit(parts._replace(query=urlencode(query)))
+
     @model_validator(mode="after")
     def validate_recovery_windows(self) -> "Settings":
         if self.queue_order_ttl_seconds <= self.session_ttl_seconds:
@@ -111,10 +137,7 @@ class Settings(BaseSettings):
                 "QUEUE_ORDER_TTL_SECONDS must exceed SESSION_TTL_SECONDS: the "
                 "QR context compares against per-conversation sequences."
             )
-        if (
-            self.processing_pending_record_ttl_seconds
-            < self.queue_dead_letter_retention_seconds
-        ):
+        if self.processing_pending_record_ttl_seconds < self.queue_dead_letter_retention_seconds:
             raise ValueError(
                 "PROCESSING_PENDING_RECORD_TTL_SECONDS must cover "
                 "QUEUE_DEAD_LETTER_RETENTION_SECONDS so a requeued dead "
@@ -145,16 +168,9 @@ class Settings(BaseSettings):
         else:
             required["OPENAI_API_KEY"] = self.openai_api_key
             required["OPENAI_MODEL"] = self.openai_model
-        missing = [
-            name
-            for name, value in required.items()
-            if not str(value).strip()
-        ]
+        missing = [name for name, value in required.items() if not str(value).strip()]
         if missing:
-            raise ValueError(
-                "Missing production settings: "
-                + ", ".join(missing)
-            )
+            raise ValueError("Missing production settings: " + ", ".join(missing))
         return self
 
 

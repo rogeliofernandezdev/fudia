@@ -215,6 +215,15 @@ siguiente paso que ocurrirá; nunca teléfonos, textos, QR ni respuestas.
 
 ## Despliegue en GCP
 
+Implementación manual del release y pasos exactos:
+[Concierge GCP](../../foods-infrastructure/docs/12_CONCIERGE_GCP.md).
+El workflow nuevo no tiene push: verifica, despliega backend con la clave
+compartida y ejecuta un Job de preflight privado antes de HTTP/worker pool.
+`REDIS_CA_CERTFILE` conecta todos los clientes y DLQ con CA y verificación TLS,
+sin overrides inseguros en URI. El worker maneja SIGTERM mediante el lifespan
+y drenaje acotado. Default del release GCP: sesión 3600 s, sin cambiar los
+defaults locales/retenciones de recuperación. Publicar código no ejecuta el deploy.
+
 Un solo proyecto y una sola imagen con dos roles:
 
 | Rol | Ejecución | Escalado |

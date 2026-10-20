@@ -47,8 +47,9 @@ Las condiciones permiten dependencias omitidas, pero bloquean fallos/cancelacion
 ### Alcance de ejecución
 
 No modifican los workflows de AWS, sus triggers ni el environment `dev`.
-Primero se ejecuta processor/migración, después backend y finalmente frontend. Fudia Concierge/Redis no se
-migran en este alcance: conservar un `FUDIA_CONCIERGE_URL` HTTPS alcanzable si
+Primero se ejecuta processor/migración, después backend y finalmente frontend.
+Concierge tiene ahora un [release manual separado](12_CONCIERGE_GCP.md), no
+forma parte de este coordinador; Redis no se crea por pipeline. Conservar un `FUDIA_CONCIERGE_URL` HTTPS alcanzable si
 se utilizan QR/WhatsApp y actualizar en ese servicio su destino de backend a
 GCP al hacer el corte. Dejarlo escribiendo en el API AWS crearía pedidos en la
 base antigua, no en Cloud SQL. Sin esa reconexión no se certifica ese flujo.
@@ -193,7 +194,7 @@ adicional y prueba de conexión. No usar `sslmode=disable` con una IP TCP remota
 | Eventarc | `roles/eventarc.eventReceiver` en proyecto; `roles/run.invoker` solo en processor (el pipeline añade este binding antes del trigger) |
 | Agente administrado de Cloud Run | Mantener `roles/run.serviceAgent`; permiso de conector solo en opción privada. Shared VPC/cross-project queda fuera de este runbook |
 
-Cuando Fudia Concierge se despliegue en GCP (hoy fuera de alcance) necesitará
+Para el release manual de Fudia Concierge ([runbook](12_CONCIERGE_GCP.md)) se usa
 su propia cuenta de servicio, sin claves JSON: `roles/aiplatform.user` en el
 proyecto con Vertex AI habilitado (`aiplatform.googleapis.com`), porque invoca
 Gemini Flash-Lite/Flash con Application Default Credentials, y

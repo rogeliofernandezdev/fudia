@@ -1,0 +1,18 @@
+{
+  "GCP_CONCIERGE_HTTP_SERVICE": "fudia-concierge-dev",
+  "GCP_CONCIERGE_WORKER_POOL": "fudia-concierge-worker-dev",
+  "GCP_CONCIERGE_PREFLIGHT_JOB": "fudia-concierge-check-dev",
+  "GCP_CONCIERGE_HTTP_SERVICE_ACCOUNT": "fudia-concierge-http-dev@project-fb804674-13ae-4b1f-b63.iam.gserviceaccount.com",
+  "GCP_CONCIERGE_WORKER_SERVICE_ACCOUNT": "fudia-concierge-worker-dev@project-fb804674-13ae-4b1f-b63.iam.gserviceaccount.com",
+  "GCP_CONCIERGE_NETWORK": "fudia-dev",
+  "GCP_CONCIERGE_SUBNET": "fudia-concierge-dev",
+  "GCP_CONCIERGE_SECRETS": "REDIS_URL=redis-url-fudia-dev:1,FUDIA_CONCIERGE_API_KEY=concierge-api-key-fudia-dev:1,WHATSAPP_TOKEN=whatsapp-token-fudia-dev:1,WHATSAPP_VERIFY_TOKEN=whatsapp-verify-token-fudia-dev:1,WHATSAPP_APP_SECRET=whatsapp-app-secret-fudia-dev:1",
+  "GCP_CONCIERGE_REDIS_CA_SECRET": "redis-ca-fudia-dev:1",
+  "GCP_CONCIERGE_WORKER_INSTANCES": "1",
+  "GCP_CONCIERGE_HTTP_MAX_INSTANCES": "1",
+  "GOOGLE_CLOUD_LOCATION": "global",
+  "GEMINI_MODEL_LITE": "gemini-3.5-flash-lite",
+  "GEMINI_MODEL_FLASH": "gemini-3.5-flash",
+  "SESSION_TTL_SECONDS": "3600",
+  "QUEUE_WORKER_CONCURRENCY": "8"
+}

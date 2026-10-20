@@ -25,3 +25,8 @@ El API GCP ya no monta el bucket ni recibe los bytes de las nuevas fotos.
 
 Verificación local: `node --check gcp/deploy.mjs` y
 `node --test tests/*.test.mjs` (Node 22; comandos cloud simulados).
+
+Concierge tiene release manual separado, sin trigger push:
+[Concierge GCP](docs/12_CONCIERGE_GCP.md). Reutiliza backend para la clave
+compartida; luego preflight privado, HTTP y worker pool con Redis TLS/CA y ADC.
+Agregar archivos no despliega ni configura recursos reales.

@@ -1,0 +1,177 @@
+name: fudia-concierge-gcp
+
+# Intentionally manual: preparing/pushing this workflow does not activate a bot.
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Entorno GCP
+        type: choice
+        options: [gcp-dev, gcp-staging, gcp-production]
+        default: gcp-dev
+        required: true
+      database_ready:
+        description: Confirmo base restaurada/verificada y backup; backend aplicará migraciones pendientes
+        type: boolean
+        default: false
+        required: true
+      activate_concierge:
+        description: Autorizo activar Concierge y el costo continuo del worker; recursos/IAM/secretos listos
+        type: boolean
+        default: false
+        required: true
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: fudia-concierge-${{ inputs.environment }}-release
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+    services:
+      redis:
+        image: redis:7-alpine
+        ports: [6379:6379]
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s
+          --health-timeout 3s --health-retries 10
+    env:
+      GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+      GCP_REGION: ${{ vars.GCP_REGION }}
+      GCP_ARTIFACT_REPOSITORY: ${{ vars.GCP_ARTIFACT_REPOSITORY }}
+      GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+      GCP_DEPLOY_SERVICE_ACCOUNT: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+      GCP_BACKEND_SERVICE: ${{ vars.GCP_BACKEND_SERVICE }}
+      GCP_BACKEND_SERVICE_ACCOUNT: ${{ vars.GCP_BACKEND_SERVICE_ACCOUNT }}
+      GCP_BACKEND_SECRETS: ${{ vars.GCP_BACKEND_SECRETS }}
+      GCP_FRONTEND_SERVICE: ${{ vars.GCP_FRONTEND_SERVICE }}
+      GCP_IMAGE_PROCESSOR_SERVICE: ${{ vars.GCP_IMAGE_PROCESSOR_SERVICE }}
+      GCP_CONCIERGE_HTTP_SERVICE: ${{ vars.GCP_CONCIERGE_HTTP_SERVICE }}
+      GCP_CONCIERGE_WORKER_POOL: ${{ vars.GCP_CONCIERGE_WORKER_POOL }}
+      GCP_CONCIERGE_PREFLIGHT_JOB: ${{ vars.GCP_CONCIERGE_PREFLIGHT_JOB }}
+      GCP_CONCIERGE_HTTP_SERVICE_ACCOUNT: ${{ vars.GCP_CONCIERGE_HTTP_SERVICE_ACCOUNT }}
+      GCP_CONCIERGE_WORKER_SERVICE_ACCOUNT: ${{ vars.GCP_CONCIERGE_WORKER_SERVICE_ACCOUNT }}
+      GCP_CONCIERGE_NETWORK: ${{ vars.GCP_CONCIERGE_NETWORK }}
+      GCP_CONCIERGE_SUBNET: ${{ vars.GCP_CONCIERGE_SUBNET }}
+      GCP_CONCIERGE_SECRETS: ${{ vars.GCP_CONCIERGE_SECRETS }}
+      GCP_CONCIERGE_REDIS_CA_SECRET: ${{ vars.GCP_CONCIERGE_REDIS_CA_SECRET }}
+      GCP_CONCIERGE_WORKER_INSTANCES: ${{ vars.GCP_CONCIERGE_WORKER_INSTANCES }}
+      GCP_CONCIERGE_HTTP_MAX_INSTANCES: ${{ vars.GCP_CONCIERGE_HTTP_MAX_INSTANCES }}
+      WHATSAPP_PHONE_ID: ${{ vars.WHATSAPP_PHONE_ID }}
+      WHATSAPP_GRAPH_VERSION: ${{ vars.WHATSAPP_GRAPH_VERSION }}
+      GOOGLE_CLOUD_LOCATION: ${{ vars.GOOGLE_CLOUD_LOCATION || 'global' }}
+      GEMINI_MODEL_LITE: ${{ vars.GEMINI_MODEL_LITE || 'gemini-3.5-flash-lite' }}
+      GEMINI_MODEL_FLASH: ${{ vars.GEMINI_MODEL_FLASH || 'gemini-3.5-flash' }}
+      SESSION_TTL_SECONDS: ${{ vars.SESSION_TTL_SECONDS || '3600' }}
+      QUEUE_WORKER_CONCURRENCY: ${{ vars.QUEUE_WORKER_CONCURRENCY || '8' }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+      - name: Validate non-secret references before any deployment
+        run: node foods-infrastructure/gcp/concierge-deploy.mjs validate
+      - run: node --test foods-infrastructure/tests/*.test.mjs
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            fudia-concierge/pyproject.toml
+            fudia-concierge/constraints.txt
+      - run: python -m pip install -c constraints.txt -e ".[dev]"
+        working-directory: fudia-concierge
+      - run: ruff check .
+        working-directory: fudia-concierge
+      - run: mypy src config
+        working-directory: fudia-concierge
+      - run: pytest -q
+        working-directory: fudia-concierge
+        env:
+          REDIS_URL: redis://localhost:6379/0
+          FUDIA_REDIS_INTEGRATION: "1"
+      - run: python -m build
+        working-directory: fudia-concierge
+      - name: Validate Docker image without credentials or publication
+        run: docker build --platform linux/amd64 -t fudia-concierge:ci ./fudia-concierge
+
+  # Reuse the backend release gates, preserve DATABASE_URL and existing auth.
+  # The same numeric key reference must be present in GCP_BACKEND_SECRETS.
+  backend:
+    needs: verify
+    if: ${{ inputs.activate_concierge && inputs.database_ready }}
+    uses: ./.github/workflows/foods-backend-gcp.yml
+    with:
+      environment: ${{ inputs.environment }}
+      database_ready: ${{ inputs.database_ready }}
+
+  deploy:
+    needs: [verify, backend]
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+      GCP_REGION: ${{ vars.GCP_REGION }}
+      GCP_ARTIFACT_REPOSITORY: ${{ vars.GCP_ARTIFACT_REPOSITORY }}
+      GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+      GCP_DEPLOY_SERVICE_ACCOUNT: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+      GCP_BACKEND_SERVICE: ${{ vars.GCP_BACKEND_SERVICE }}
+      GCP_BACKEND_SERVICE_ACCOUNT: ${{ vars.GCP_BACKEND_SERVICE_ACCOUNT }}
+      GCP_BACKEND_SECRETS: ${{ vars.GCP_BACKEND_SECRETS }}
+      GCP_FRONTEND_SERVICE: ${{ vars.GCP_FRONTEND_SERVICE }}
+      GCP_IMAGE_PROCESSOR_SERVICE: ${{ vars.GCP_IMAGE_PROCESSOR_SERVICE }}
+      GCP_CONCIERGE_HTTP_SERVICE: ${{ vars.GCP_CONCIERGE_HTTP_SERVICE }}
+      GCP_CONCIERGE_WORKER_POOL: ${{ vars.GCP_CONCIERGE_WORKER_POOL }}
+      GCP_CONCIERGE_PREFLIGHT_JOB: ${{ vars.GCP_CONCIERGE_PREFLIGHT_JOB }}
+      GCP_CONCIERGE_HTTP_SERVICE_ACCOUNT: ${{ vars.GCP_CONCIERGE_HTTP_SERVICE_ACCOUNT }}
+      GCP_CONCIERGE_WORKER_SERVICE_ACCOUNT: ${{ vars.GCP_CONCIERGE_WORKER_SERVICE_ACCOUNT }}
+      GCP_CONCIERGE_NETWORK: ${{ vars.GCP_CONCIERGE_NETWORK }}
+      GCP_CONCIERGE_SUBNET: ${{ vars.GCP_CONCIERGE_SUBNET }}
+      GCP_CONCIERGE_SECRETS: ${{ vars.GCP_CONCIERGE_SECRETS }}
+      GCP_CONCIERGE_REDIS_CA_SECRET: ${{ vars.GCP_CONCIERGE_REDIS_CA_SECRET }}
+      GCP_CONCIERGE_WORKER_INSTANCES: ${{ vars.GCP_CONCIERGE_WORKER_INSTANCES }}
+      GCP_CONCIERGE_HTTP_MAX_INSTANCES: ${{ vars.GCP_CONCIERGE_HTTP_MAX_INSTANCES }}
+      WHATSAPP_PHONE_ID: ${{ vars.WHATSAPP_PHONE_ID }}
+      WHATSAPP_GRAPH_VERSION: ${{ vars.WHATSAPP_GRAPH_VERSION }}
+      GOOGLE_CLOUD_LOCATION: ${{ vars.GOOGLE_CLOUD_LOCATION || 'global' }}
+      GEMINI_MODEL_LITE: ${{ vars.GEMINI_MODEL_LITE || 'gemini-3.5-flash-lite' }}
+      GEMINI_MODEL_FLASH: ${{ vars.GEMINI_MODEL_FLASH || 'gemini-3.5-flash' }}
+      SESSION_TTL_SECONDS: ${{ vars.SESSION_TTL_SECONDS || '3600' }}
+      QUEUE_WORKER_CONCURRENCY: ${{ vars.QUEUE_WORKER_CONCURRENCY || '8' }}
+      GCP_CONCIERGE_DEPLOY_APPROVED: ${{ inputs.activate_concierge }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+      - run: node foods-infrastructure/gcp/concierge-deploy.mjs validate
+      - name: Build before requesting short-lived cloud credentials
+        run: node foods-infrastructure/gcp/concierge-deploy.mjs build
+      - id: auth
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_lifetime: 3600s
+          create_credentials_file: false
+      - uses: google-github-actions/setup-gcloud@v3
+        env:
+          CLOUDSDK_AUTH_ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
+      - name: Publish, preflight in private network, deploy HTTP and worker
+        run: node foods-infrastructure/gcp/concierge-deploy.mjs deploy
+        env:
+          CLOUDSDK_AUTH_ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
+          GCP_IMAGE_BUILT: "true"

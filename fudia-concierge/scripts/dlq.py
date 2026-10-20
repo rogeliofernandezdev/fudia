@@ -90,12 +90,12 @@ async def main(argv: list[str]) -> int:
     args = parser.parse_args(argv)
 
     queue = RedisInboundQueue(
-        settings.redis_url,
+        settings.redis_connection_url,
         stream=settings.queue_stream,
         group=settings.queue_group,
         dedup_ttl_seconds=86_400,
     )
-    store = RedisConversationStore(settings.redis_url, settings.session_ttl_seconds)
+    store = RedisConversationStore(settings.redis_connection_url, settings.session_ttl_seconds)
     try:
         letters = await queue.dead_letters(
             args.count if args.command == "list" else 10_000

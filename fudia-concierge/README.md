@@ -82,6 +82,12 @@ Las reglas de negocio críticas no viven en prompts: se validan en services/tool
 
 ## Estado
 
+Despliegue GCP manual: [runbook](../foods-infrastructure/docs/12_CONCIERGE_GCP.md)
+y workflow `fudia-concierge-gcp.yml`, independiente del CI existente. Una imagen
+para HTTP, worker pool y Job de preflight. Redis privado con CA montada mediante
+`REDIS_CA_CERTFILE`, AUTH/TLS verificado y secretos versionados; Vertex usa ADC.
+No se ha ejecutado ese despliegue ni el gate externo por agregar este código.
+
 El alcance de código definido para Concierge está cerrado: QR por mesa y habilitación global por módulo, carta real, carrito, combos, modificadores, confirmación protegida, rondas independientes sobre una misma comanda, KDS, solicitud de cuenta con total real, handoff humano, multiagente, aislamiento multi-tenant, cola durable, concurrencia acotada con backpressure, retries, rate limiting, readiness, métricas, trazabilidad, evals y contenedor no-root.
 
 La recuperación por etapas, el envío separado, el lock con fencing, el orden por conversación y la retención están implementados y cubiertos por pruebas con dobles y con un emulador de Redis (`docs/08_RECOVERY_AND_OPERATIONS.md`). Esas pruebas no sustituyen la validación real: siguen pendientes la integración contra Redis real (CI o staging), la confirmación de que Meta devuelve `biz_opaque_callback_data` en los estados y el **gate de activación externa** con credenciales reales de Meta/Vertex AI/Redis y una prueba de humo en el entorno desplegado. Ninguno se considera ejecutado mientras no se proporcionen esas credenciales y entorno.

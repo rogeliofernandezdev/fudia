@@ -96,6 +96,12 @@ en `docs/08_RECOVERY_AND_OPERATIONS.md`.
 
 ## Gate externo de activación
 
+Preparación GCP (2026-10-20): workflow manual separado, referencias numéricas
+de secretos, backend compartiendo clave sin cambiar autenticación, Direct VPC,
+Redis AUTH/TLS con CA, preflight en Job, servicio HTTP y worker pool con drenaje.
+Incluye pruebas offline; su despliegue, IAM/red reales e inferencia con la cuenta
+runtime **siguen pendientes**. Runbook: `foods-infrastructure/docs/12_CONCIERGE_GCP.md`.
+
 Antes de un go-live real se debe ejecutar, en el entorno autorizado, la validación con credenciales reales de Meta/Vertex AI/Redis/Fudia y una prueba de humo QR -> WhatsApp -> múltiples rondas -> KDS -> cuenta.
 
 Ese gate requiere infraestructura y secretos externos. No se marca como ejecutado desde el repositorio y no representa código pendiente.
