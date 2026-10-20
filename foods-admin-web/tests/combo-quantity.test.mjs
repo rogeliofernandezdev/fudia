@@ -37,7 +37,7 @@ function mount({products=[base,cause],locationId="local-a",organizationId="org-a
   if(name==="@/providers/session-context")return{useSession:()=>({organization:{id:organizationId},location:{id:locationId,country:"PE",timezone:"America/Lima"},can:permission=>permission==="menu.manage"?canManage:true})};
   if(name==="@/providers/settings-context")return{useSettings:()=>({currencySymbol:"S/",currencyPosition:"before",currencyDecimals:2})};
   if(name==="@/shared/hooks/use-debounced-value")return{useDebouncedValue:value=>value};
-  if(name.startsWith("@/design-system"))return Object.fromEntries(["Dialog","Button","ConfirmDialog","EmptyState","ErrorState","FormField","Icon","IconButton","Input","MoneyInput","PageHeader","Pagination","RemoteModalSkeleton","RowActionButton","Select","Status","Textarea","ModalHeader","ModalFooter","ModalError","ModalItemComponents"].map(key=>[key,key]));
+  if(name.startsWith("@/design-system"))return Object.fromEntries(["Dialog","Button","ConfirmDialog","EmptyState","ErrorState","FieldLabel","FormField","Icon","IconButton","Input","MoneyInput","PageHeader","Pagination","RemoteModalSkeleton","RowActionButton","Select","Status","Textarea","ModalHeader","ModalFooter","ModalError","ModalItemComponents"].map(key=>[key,key]));
   if(name==="../domain/option-quantity")return quantities;
   if(name==="../domain/wizard-validation")return validation;
   if(name==="../domain/sale-window")return saleWindow;
@@ -58,7 +58,7 @@ function mount({products=[base,cause],locationId="local-a",organizationId="org-a
  return{page,wizard,composition,queries,setCanManage:value=>{canManage=value},setProducts:value=>{products=value},edit:value=>{page();mutations[1].onSuccess(value)}};
 }
 const quotaInput=view=>view.find(node=>node.type==="Input"&&node.props.id?.includes("-quota-"));
-// Reservar y Recargo están siempre a la vista en cada línea de opción.
+// Reservar y Costo extra están siempre a la vista en cada línea de opción.
 const adjust=ui=>ui.composition();
 const template=ui=>ui.composition().find(node=>node.type==="Button"&&node.props.children==="Usar plantilla Menú del día").props.onClick();
 
@@ -190,6 +190,46 @@ test("la hoja empieza con la plantilla y quitar una parte con opciones pide conf
  assert.deepEqual(Array.from(ui.wizard().node.props.draft.groups,group=>group.name),["Entrada","Postre","Bebidas"]);
  ui.composition().find(node=>node.type==="IconButton"&&node.props.label==="Quitar Bebidas").props.onClick();
  assert.deepEqual(Array.from(ui.wizard().node.props.draft.groups,group=>group.name),["Entrada","Postre"],"una parte vacía se quita al instante");
+});
+
+test("«Empezar de nuevo» vuelve al recuadro inicial: confirma si hay opciones y conserva nombre y precio",()=>{
+ const ui=mount();
+ const reset=()=>ui.wizard().view.find(node=>node.type==="Button"&&node.props.children==="Empezar de nuevo");
+ assert.equal(reset(),undefined,"sin partes no hay nada que limpiar");
+ const editor=ui.wizard().view;
+ editor.find(node=>node.type==="Input"&&node.props.id==="combo-name").props.onChange({target:{value:"Menú ejecutivo"}});
+ template(ui);
+ assert.equal(reset().props.kind,"ghost","acción neutra, no compite con «Crear menú»");
+ reset().props.onClick();
+ assert.equal(ui.wizard().node.props.draft.groups.length,4,"con opciones no se limpia sin confirmar");
+ const confirm=ui.wizard().view.find(node=>node.type==="ConfirmDialog"&&node.props.open);
+ assert.equal(confirm.props.title,"¿Empezar de nuevo?");
+ assert.match(confirm.props.description,/4 partes y sus 2 opciones/);
+ confirm.props.onConfirm();
+ const draft=ui.wizard().node.props.draft;
+ assert.equal(draft.groups.length,0);assert.equal(draft.name,"Menú ejecutivo");
+ assert.ok(ui.composition().some(node=>node.type==="Button"&&node.props.children==="Usar plantilla Menú del día"),"vuelven los dos botones de inicio");
+ assert.equal(ui.wizard().view.some(node=>node.type==="ConfirmDialog"&&node.props.open),false);
+ ui.composition().find(node=>node.type==="Button"&&node.props.id==="combo-add-group").props.onClick();
+ reset().props.onClick();
+ assert.equal(ui.wizard().node.props.draft.groups.length,0,"partes vacías se quitan al instante");
+});
+
+test("«Costo extra» reemplaza a «Recargo» y explica que se suma si eligen el plato",()=>{
+ const ui=mount();
+ template(ui);
+ const view=ui.composition();
+ const hints=view.filter(node=>node.type==="FieldLabel");
+ assert.ok(hints.length>1,"ayuda en la fila de títulos y en cada línea (visible en móvil)");
+ assert.ok(hints.every(node=>node.props.hint==="Monto que se suma si se elige este plato."));
+ assert.equal(hints[0].props.children,"Costo extra");
+ const label=view.find(node=>node.type==="label"&&node.props.className==="combo-cell-label");
+ assert.equal(label.props.children,"Costo extra");assert.match(label.props.htmlFor,/-surcharge-/);
+ assert.doesNotMatch(read("presentation/combos-page.tsx"),/>Recargo</,"sin «Recargo» en la interfaz");
+ const css=read("presentation/combo-editor.css");
+ assert.match(css,/\.combo-option-table \{[^}]*overflow: clip;/,"clip: enfocar la ayuda no desplaza las columnas");
+ assert.match(css,/\.combo-option-head > :not\(:first-child\) \{\s*justify-self: end;/,"Reservar y Costo extra terminan en el borde derecho de su campo");
+ assert.match(css,/\.combo-option-head > :nth-child\(2\) \{\s*padding-right: calc\(var\(--space-2-5\) \+ var\(--stroke-1\)\);/,"Reservar termina con el texto del sufijo");
 });
 
 test("cuándo se vende: solo Siempre y Elegir días; sin «Solo hoy» que obligaba a crear un menú por día",()=>{

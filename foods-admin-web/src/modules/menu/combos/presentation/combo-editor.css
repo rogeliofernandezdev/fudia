@@ -46,9 +46,23 @@
   border-top: var(--stroke-1) solid var(--line);
 }
 
-.combo-editor-section > h3 {
+.combo-editor-section > h3,
+.combo-editor-section-head > h3 {
   margin: 0;
   color: var(--ink-800);
+}
+
+/* «Qué incluye» con «Empezar de nuevo» a la derecha; el alto reservado evita saltos al aparecer o quitar el botón. */
+.combo-editor-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: var(--control-height);
+}
+
+.combo-parts-reset {
+  flex: none;
 }
 
 .combo-parts {
@@ -73,9 +87,9 @@
   background: linear-gradient(160deg, var(--brand-100), var(--surface) 70%);
 }
 
-.combo-part.tone-amber {
-  border-color: var(--warning-100);
-  background: linear-gradient(160deg, var(--warning-100), var(--surface) 70%);
+.combo-part.tone-indigo {
+  border-color: var(--primary-100);
+  background: linear-gradient(160deg, var(--primary-100), var(--surface) 70%);
 }
 
 .combo-part.tone-violet {
@@ -110,8 +124,8 @@
   color: var(--brand-700);
 }
 
-.combo-part.tone-amber .combo-part-icon {
-  color: var(--warning-800);
+.combo-part.tone-indigo .combo-part-icon {
+  color: var(--primary-700);
 }
 
 .combo-part.tone-violet .combo-part-icon {
@@ -128,9 +142,9 @@
   color: var(--brand-800);
 }
 
-.combo-part.tone-amber .combo-option-head {
-  background: var(--warning-50);
-  color: var(--warning-800);
+.combo-part.tone-indigo .combo-option-head {
+  background: var(--primary-50);
+  color: var(--primary-800);
 }
 
 .combo-part.tone-violet .combo-option-head {
@@ -257,10 +271,11 @@
   color: var(--danger-600);
 }
 
-/* Opciones como tabla ligera: reserva y recargo siempre a la vista, con una sola fila de títulos por parte. */
+/* Opciones como tabla ligera: reserva y costo extra siempre a la vista, con una sola fila de títulos por parte. */
+/* `clip` recorta el radio sin volver desplazable la tabla: el tooltip oculto ya no la corre al enfocar la ayuda. */
 .combo-option-table {
   min-width: 0;
-  overflow: hidden;
+  overflow: clip;
   border: var(--stroke-1) solid var(--line);
   border-radius: var(--radius-control);
   background: var(--surface);
@@ -344,6 +359,44 @@
   overflow: hidden;
   clip: rect(0 0 0 0);
   white-space: nowrap;
+}
+
+/* En escritorio la ayuda de «Costo extra» vive una sola vez en la fila de títulos; por línea solo queda la etiqueta oculta. */
+.combo-option-cell > .field-label {
+  display: contents;
+}
+
+.combo-option-cell .field-hint {
+  display: none;
+}
+
+/* «Reservar» y «Costo extra» terminan en el borde derecho de su campo (pedido del usuario, 2026-10-20); «Opción»
+   sigue a la izquierda. La ayuda se ancla a la etiqueta, no a la «i»: se abre hacia abajo desde ese borde derecho
+   con el ancho de su columna (140 px), así no tapa «Reservar» ni queda cortada por el `overflow:clip` de la tabla. */
+.combo-option-head > :not(:first-child) {
+  justify-self: end;
+}
+
+/* «Reservar» termina donde termina el texto del sufijo («de 10»): mismo relleno que el adorno del campo más su borde. */
+.combo-option-head > :nth-child(2) {
+  padding-right: calc(var(--space-2-5) + var(--stroke-1));
+}
+
+.combo-option-table .field-label {
+  position: relative;
+}
+
+.combo-option-table .field-label .field-hint {
+  position: static;
+}
+
+.combo-option-table .field-label .field-hint[data-tooltip]::after {
+  top: calc(100% + var(--space-2));
+  right: 0;
+  bottom: auto;
+  left: auto;
+  width: var(--size-140);
+  max-width: none;
 }
 
 .combo-quota > span {
@@ -678,7 +731,7 @@
     display: none;
   }
 
-  /* Móvil: nombre y papelera arriba; Reservar y Recargo debajo con su etiqueta visible. */
+  /* Móvil: nombre y papelera arriba; Reservar y Costo extra debajo con su etiqueta visible. */
   .combo-option {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) var(--size-44);
     padding: var(--space-2-5) var(--space-1) var(--space-3) var(--space-3);
@@ -700,6 +753,20 @@
   .combo-option-cell + .combo-option-cell {
     grid-column: 2 / -1;
     margin-right: var(--space-2);
+  }
+
+  /* Sin fila de títulos, la ayuda acompaña a cada «Costo extra»; un toque la muestra (los tooltips no tienen hover táctil). */
+  .combo-option-cell > .field-label {
+    display: flex;
+  }
+
+  .combo-option-cell .field-hint {
+    display: grid;
+  }
+
+  .combo-option-cell .field-hint[data-tooltip]:focus::after {
+    opacity: 1;
+    transform: translateY(0);
   }
 
   .combo-cell-label {

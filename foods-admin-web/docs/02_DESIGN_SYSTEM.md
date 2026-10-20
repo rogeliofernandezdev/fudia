@@ -904,14 +904,22 @@ no integra un visor PDF.
   Entrada toma entradas, sopas, caldos, ensaladas, piqueos y aperitivos; Segundo,
   segundos, principales y platos de fondo; Postre, postres y dulces; Bebidas, bebidas,
   refrescos, jugos, gaseosas e infusiones. Una parte con otro nombre usa solo su nombre
-  en singular. Los mismos criterios ordenan primero esas categorías en «Agregar opción». Las
+  en singular. Los mismos criterios ordenan primero esas categorías en «Agregar opción».
+  Con partes, la cabecera «Qué incluye» muestra a la derecha «Empezar de nuevo»
+  (`Button kind="ghost"`, icono `refresh`): quita todas las partes y vuelve al recuadro
+  inicial con la plantilla y «Agregar una parte». Si alguna parte tiene opciones pide
+  confirmación («¿Empezar de nuevo?», con el número de partes y opciones, botón «Quitar
+  todo»); si todas están vacías limpia al instante. Nombre, precio, descripción y días de
+  venta se conservan. Las
   papeleras «Quitar {parte}» y «Quitar {opción}» son iconos `danger-600` sin baldosa
   ni borde (44 px), con fondo `danger-50` solo al pasar el puntero: quitar es
   destructivo y debe verse, pero una baldosa roja por línea cargaba la tabla. Quitar una parte con opciones pide
   confirmación; una vacía se quita al instante. Cada parte es una tarjeta (`radius-sheet`) con **identidad propia**,
   como los KPI del Dashboard: Entrada verde (`brand`, icono `salad`), Segundo o plato
-  principal ámbar (`warning`, `dish`), Postre violeta (`digital`, `dessert`) y Bebidas
-  petróleo (`teal`, `drink`); otras partes rotan esos tonos con `utensils`. El tono vive
+  principal índigo (`primary`, `dish`), Postre violeta (`digital`, `dessert`) y Bebidas
+  petróleo (`teal`, `drink`); otras partes rotan esos tonos con `utensils`. Las partes
+  nunca usan ámbar ni rojo (`warning`/`danger`): en un formulario se leen como
+  advertencia o error (cambio aprobado 2026-10-20). El tono vive
   solo en el degradado `tono-100` → superficie, el borde `tono-100`, el icono duotono
   sobre una baldosa blanca con `elevation-1` y la fila de títulos de la tabla
   (`tono-50` con texto `tono-700`/`800`, ≥ 4.5:1); nombres, valores, interruptor y
@@ -919,12 +927,20 @@ no integra un visor PDF.
   junto al texto (el campo crece con su contenido) y debajo «N opciones · El cliente
   elige 1» o «Puede omitirse»; a la derecha, el interruptor «Obligatorio» y la papelera.
   En móvil el interruptor baja bajo el nombre. Las opciones son una tabla ligera con una
-  sola fila de títulos (Opción, Reservar, Recargo): Reservar y Recargo están **siempre
-  a la vista** en cada línea, sin abrir nada. Reservar muestra el saldo como sufijo
+  sola fila de títulos (Opción, Reservar, Costo extra): Reservar y Costo extra están **siempre
+  a la vista** en cada línea, sin abrir nada. «Costo extra» reemplaza a «Recargo», que sonaba
+  a penalización (2026-10-20); lleva la ayuda `FieldLabel` «Monto que se suma si se elige
+  este plato.» una vez en la fila de títulos en escritorio y junto a cada etiqueta en móvil,
+  donde un toque en la «i» la muestra. «Reservar» y «Costo extra» terminan en el borde
+  derecho de su campo y «Opción» queda a la izquierda (decisión del usuario, 2026-10-20,
+  tras descartar centrarlos o alinearlos al borde izquierdo); la ayuda se abre hacia abajo
+  desde ese borde derecho, con el ancho de su columna (140 px). «Reservar» lleva el relleno
+  derecho del sufijo (`space-2-5` + borde) para terminar justo donde termina «de 10». La tabla usa `overflow:clip`, no `hidden`: con
+  `hidden` el tooltip oculto la volvía desplazable y enfocar la «i» corría las columnas. Reservar muestra el saldo como sufijo
   («de 12»; sin control queda vacío con «Sin límite»). Un saldo en cero muestra
   `Status` gris «Agotado» junto al nombre, como en Disponibilidad. Cada línea tiene su
   papelera roja «Quitar {opción}» y su error debajo. En móvil cada línea apila
-  nombre y papelera arriba, y Reservar/Recargo debajo con etiqueta visible.
+  nombre y papelera arriba, y Reservar/Costo extra debajo con etiqueta visible.
 - «+ Agregar opción» es un **buscador** (`ComboOptionPicker`, `react-select` con
   `createLookupSelectStyles`, borde punteado en reposo; se descarga al abrir la
   composición y mientras llega ocupa un `Skeleton` de `--control-height`) y no un selector nativo:
@@ -937,7 +953,7 @@ no integra un visor PDF.
   Al elegir, la opción se agrega con su reserva precargada, la búsqueda se limpia y el
   menú sigue abierto para agregar la siguiente; lo ya agregado no se repite. Filas de
   44 px, texto de control (16 px en móvil, sin zoom) y menú en portal sobre la hoja.
-  «Agregar parte» va al final. Precio y recargo aceptan coma
+  «Agregar parte» va al final. Precio y costo extra aceptan coma
   decimal y la normalizan a punto. En la interfaz,
   «Partes del menú» identifica esos momentos del menú. El listado muestra solo el
   nombre del menú, sin la descripción debajo (se lee en el detalle). Tampoco muestra un
@@ -947,7 +963,7 @@ no integra un visor PDF.
   dos platos principales sin contabilizar la bebida como si fuera otro plato. Las opciones se seleccionan
   entre productos existentes; no se duplican fichas ni controles de disponibilidad.
   En composición se muestra siempre la obligatoriedad y la regla de elección de cada
-  parte; Reservar y Recargo se editan directamente en cada línea. La disponibilidad del menú se deriva de las partes obligatorias.
+  parte; Reservar y Costo extra se editan directamente en cada línea. La disponibilidad del menú se deriva de las partes obligatorias.
 - «Cuándo se vende» es un selector de dos píldoras (`radiogroup`): «Siempre» (por
   defecto) y «Elegir días». La selección usa tinte `primary-50` / `primary-300` /
   `primary-700`, nunca índigo sólido. **No existe «Solo hoy»**: obligaba a crear un
@@ -1453,7 +1469,7 @@ La nota («Sin miel», «Helada al polo») va bajo el nombre como cápsula ajust
 su contenido con icono `note`.
 En menús y combos, bajo «precio c/u», un bloque `cloud-50` sin borde
 (`radius-md`) se lee como una carta: grupo en versalitas 12 px / 600 `ink-500`,
-un filete vertical continuo `line` y el plato 14 px `ink-950` (recargo 12 px
+un filete vertical continuo `line` y el plato 14 px `ink-950` (costo extra 12 px
 `ink-600`), con el estado a la derecha. Sin iconos repetidos por fila. El destino
 (Cocina, Barra, Sin preparación) se indica una sola vez tras el precio
 («S/ 15.00 c/u · Cocina») cuando todos los componentes lo comparten; si difieren,

@@ -92,7 +92,7 @@ La respuesta confirmada se refleja en el panel correspondiente sin modal de
 
 La hoja de Menús y combos valida todo al guardar (`validateComboDraft`, que reutiliza
 las reglas por sección de `validateComboStep`). Muestra el primer error junto a su
-campo (bajo la línea si es de Reservar o Recargo), desplaza la hoja hasta el campo
+campo (bajo la línea si es de Reservar o Costo extra), desplaza la hoja hasta el campo
 y lo enfoca; cualquier cambio posterior limpia el aviso. No guarda
 registros parciales. X/Cancelar solicitan confirmación cuando hay cambios sin
 guardar; la recarga utiliza el aviso nativo del navegador.

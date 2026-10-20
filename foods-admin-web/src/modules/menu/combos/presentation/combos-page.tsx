@@ -5,7 +5,7 @@ import "./combo-editor.css";
 import "./combo-rules.css";
 import {useEffect,useRef,useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,ConfirmDialog,EmptyState,ErrorState,FormField,Icon,IconButton,Input,MoneyInput,PageHeader,Pagination,RemoteModalSkeleton,RowActionButton,Select,Status,Textarea,ModalHeader,ModalFooter,ModalError,ModalItemComponents} from "@/design-system";
+import {Button,ConfirmDialog,EmptyState,ErrorState,FieldLabel,FormField,Icon,IconButton,Input,MoneyInput,PageHeader,Pagination,RemoteModalSkeleton,RowActionButton,Select,Status,Textarea,ModalHeader,ModalFooter,ModalError,ModalItemComponents} from "@/design-system";
 import {useFeedback} from "@/providers";
 import {useSettings} from "@/providers/settings-context";
 import {useSession} from "@/providers/session-context";
@@ -21,13 +21,16 @@ import {getCombo,listComboProducts,listCombos,saveCombo,setComboActive} from "..
 
 const blank:Draft={name:"",description:"",price:"",groups:[],availableFrom:"",availableUntil:"",availableDays:[]};
 const templates:Group[]=[{name:"Entrada",required:true,minSelections:1,maxSelections:1,options:[]},{name:"Segundo",required:true,minSelections:1,maxSelections:1,options:[]},{name:"Postre",required:false,minSelections:0,maxSelections:1,options:[]},{name:"Bebidas",required:false,minSelections:0,maxSelections:1,options:[]}];
+/** Ayuda de «Costo extra»: «Recargo» sonaba a penalización. */
+const EXTRA_COST_HINT="Monto que se suma si se elige este plato.";
 const DAYS=[{d:1,n:"Lun"},{d:2,n:"Mar"},{d:3,n:"Mié"},{d:4,n:"Jue"},{d:5,n:"Vie"},{d:6,n:"Sáb"},{d:0,n:"Dom"}];
 const SALE_WINDOWS:{value:SaleWindow;label:string}[]=[{value:"always",label:"Siempre"},{value:"days",label:"Elegir días"}];
-/** Identidad de cada parte: tono suave e icono propio, como las tarjetas del Dashboard. Las partes nuevas rotan los tonos. */
-type PartTone={tone:"green"|"amber"|"violet"|"teal";icon:"salad"|"dish"|"dessert"|"drink"|"utensils"};
+/** Identidad de cada parte: tono suave e icono propio, como las tarjetas del Dashboard. Las partes nuevas rotan los tonos.
+ *  Sin ámbar ni rojo: esos tonos significan advertencia o error en el sistema. */
+type PartTone={tone:"green"|"indigo"|"violet"|"teal";icon:"salad"|"dish"|"dessert"|"drink"|"utensils"};
 const PART_TONES:{pattern:RegExp;style:PartTone}[]=[
   {pattern:/entrada|sopa|ensalada|piqueo|aperitivo/,style:{tone:"green",icon:"salad"}},
-  {pattern:/segundo|principal|fondo|plato/,style:{tone:"amber",icon:"dish"}},
+  {pattern:/segundo|principal|fondo|plato/,style:{tone:"indigo",icon:"dish"}},
   {pattern:/postre|dulce/,style:{tone:"violet",icon:"dessert"}},
   {pattern:/bebida|refresco|jugo|trago|cafe/,style:{tone:"teal",icon:"drink"}},
 ];
@@ -179,6 +182,7 @@ function ComboEditor({draft,setDraft,products,productsLoading,productsError,retr
   const [issue,setIssue]=useState<WizardIssue|null>(null);
   const [discardOpen,setDiscardOpen]=useState(false);
   const [removing,setRemoving]=useState<number|null>(null);
+  const [resetting,setResetting]=useState(false);
   const [initial]=useState(()=>JSON.stringify(draft));
   const [saleWindow,setSaleWindow]=useState<SaleWindow>(()=>saleWindowOf(draft));
   const [describing,setDescribing]=useState(()=>Boolean(draft.description));
@@ -212,6 +216,10 @@ function ComboEditor({draft,setDraft,products,productsLoading,productsError,retr
   function removeGroup(index:number){update({...draft,groups:draft.groups.filter((_,position)=>position!==index)})}
   // Quitar una parte con opciones pide confirmación; una parte vacía se quita al instante.
   const requestRemoveGroup=(index:number)=>{if(draft.groups[index]?.options.length)setRemoving(index);else removeGroup(index)};
+  // «Empezar de nuevo» vuelve al recuadro inicial (plantilla o parte); con opciones pide confirmación. Nombre, precio y días se conservan.
+  function clearGroups(){setResetting(false);update({...draft,groups:[]})}
+  const requestClearGroups=()=>{if(draft.groups.some(group=>group.options.length))setResetting(true);else clearGroups()};
+  const optionCount=draft.groups.reduce((total,group)=>total+group.options.length,0);
   function chooseWindow(value:SaleWindow){setSaleWindow(value);update({...draft,...applySaleWindow(draft,value)})}
   const removingGroup=removing===null?null:draft.groups[removing];
   const priceReady=amountPattern.test(draft.price);
@@ -229,7 +237,10 @@ function ComboEditor({draft,setDraft,products,productsLoading,productsError,retr
         </div>
 
         <section className="combo-editor-section" aria-labelledby="combo-parts-title">
-          <h3 id="combo-parts-title">Qué incluye</h3>
+          <header className="combo-editor-section-head">
+            <h3 id="combo-parts-title">Qué incluye</h3>
+            {partCount>0&&<Button kind="ghost" icon="refresh" className="combo-parts-reset" onClick={requestClearGroups} disabled={busy}>Empezar de nuevo</Button>}
+          </header>
           <CompositionStep draft={draft} products={products} productsLoading={productsLoading} productsError={productsError} retryProducts={retryProducts} currencySymbol={currencySymbol} currencyPosition={currencyPosition} errorFor={errorFor} addTemplate={addTemplate} addGroup={addGroup} groupAt={groupAt} removeGroup={requestRemoveGroup}/>
         </section>
 
@@ -265,12 +276,13 @@ function ComboEditor({draft,setDraft,products,productsLoading,productsError,retr
     </Dialog>
   </div>
   <ConfirmDialog open={removingGroup!==null} title={`¿Quitar ${removingGroup?.name.trim()||"esta parte"}?`} description={`Se quitarán sus ${removingGroup?.options.length??0} ${removingGroup?.options.length===1?"opción":"opciones"} del menú.`} confirmLabel="Quitar" onCancel={()=>setRemoving(null)} onConfirm={()=>{if(removing!==null)removeGroup(removing);setRemoving(null)}}/>
+  <ConfirmDialog open={resetting} title="¿Empezar de nuevo?" description={`Se quitarán las ${partCount} ${partCount===1?"parte":"partes"} y sus ${optionCount} ${optionCount===1?"opción":"opciones"}. El nombre, el precio y los días de venta se conservan.`} confirmLabel="Quitar todo" onCancel={()=>setResetting(false)} onConfirm={clearGroups}/>
   <ConfirmDialog open={discardOpen} title="¿Descartar los cambios?" description="Los cambios del menú o combo no se han guardado." confirmLabel="Descartar" onCancel={()=>setDiscardOpen(false)} onConfirm={close}/></>
 }
 
 type CompositionProps={draft:Draft;products:Product[];productsLoading:boolean;productsError:boolean;retryProducts:()=>void;currencySymbol:string;currencyPosition:"before"|"after";errorFor:(field:string)=>string|undefined;addTemplate:()=>void;addGroup:()=>void;groupAt:(index:number,group:Group)=>void;removeGroup:(index:number)=>void};
 
-/** Partes del menú: el nombre es el título editable y cada opción una línea con su reserva y recargo a la vista. */
+/** Partes del menú: el nombre es el título editable y cada opción una línea con su reserva y costo extra a la vista. */
 function CompositionStep({draft,products,productsLoading,productsError,retryProducts,currencySymbol,currencyPosition,errorFor,addTemplate,addGroup,groupAt,removeGroup}:CompositionProps){
   if(productsLoading)return <div className="combo-parts-loading" role="status" aria-label="Cargando productos">{Array.from({length:3},(_,index)=><i key={index}/>)}</div>;
   if(productsError)return <ErrorState className="combo-parts-state" title="No pudimos cargar los productos" text="Revisa tu conexión e inténtalo de nuevo." onRetry={retryProducts}/>;
@@ -307,7 +319,7 @@ function CompositionStep({draft,products,productsLoading,productsError,retryProd
         </header>
         {nameError&&<small id={`${prefix}-name-error`} className="field-error" role="alert">{nameError}</small>}
         {group.options.length>0&&<div className="combo-option-table">
-          <div className="combo-option-head" aria-hidden="true"><span>Opción</span><span>Reservar</span><span>Recargo</span></div>
+          <div className="combo-option-head"><span aria-hidden="true">Opción</span><span aria-hidden="true">Reservar</span><FieldLabel hint={EXTRA_COST_HINT}>Costo extra</FieldLabel></div>
           <ul className="combo-part-options">
             {group.options.map((option,optIndex)=>{
               const product=products.find(p=>p.id===option.productId);
@@ -326,9 +338,9 @@ function CompositionStep({draft,products,productsLoading,productsError,retryProd
                     {limit!==null&&<span>de {limit}</span>}
                   </span>
                 </label>
-                <label className="combo-option-cell"><span className="combo-cell-label">Recargo</span>
+                <div className="combo-option-cell"><FieldLabel hint={EXTRA_COST_HINT}><label htmlFor={surchargeId} className="combo-cell-label">Costo extra</label></FieldLabel>
                   <MoneyInput id={surchargeId} symbol={currencySymbol} position={currencyPosition} value={option.surcharge} onChange={e=>setOption({...option,surcharge:decimal(e.target.value)})} placeholder="0.00" aria-invalid={Boolean(errorFor(surchargeId))}/>
-                </label>
+                </div>
                 <IconButton icon="trash" label={`Quitar ${name}`} className="combo-option-remove" onClick={()=>groupAt(index,{...group,options:group.options.filter((_,position)=>position!==optIndex)})}/>
                 {message&&<small id={errorId} className="field-error combo-option-error" role="alert">{message}</small>}
               </li>;

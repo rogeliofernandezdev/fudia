@@ -23,7 +23,7 @@ export function validateComboStep(draft:Draft,products:Product[],step:number):Wi
         if(!product||selected.has(option.productId))return issue(`${prefix}-product`,`Revisa los productos de ${group.name}: deben estar activos y no repetirse.`);
         selected.add(option.productId);
         if(!isReservationValid(option.quota,product))return issue(`${prefix}-quota-${position}`,`Revisa la cantidad reservada de ${product.name}. Debe ser un entero y no superar la cantidad disponible.`);
-        if(option.surcharge.trim()&&!amount(option.surcharge))return issue(`${prefix}-surcharge-${position}`,`Ingresa un recargo válido para ${product.name}.`);
+        if(option.surcharge.trim()&&!amount(option.surcharge))return issue(`${prefix}-surcharge-${position}`,`Ingresa un costo extra válido para ${product.name}.`);
       }
     }
   }

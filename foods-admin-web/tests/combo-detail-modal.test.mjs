@@ -66,7 +66,8 @@ test("cada parte tiene identidad propia: tono suave e icono duotono, texto y con
  const icons=read("design-system/icons.tsx");
  for(const name of ["salad","dessert","drink"])assert.ok(icons.includes(`  ${name}:<>`),`el set define ${name}`);
  assert.match(page,/\{pattern:\/entrada[^}]*tone:"green",icon:"salad"/);
- assert.match(page,/\{pattern:\/segundo[^}]*tone:"amber",icon:"dish"/);
+ assert.match(page,/\{pattern:\/segundo[^}]*tone:"indigo",icon:"dish"/);
+ assert.doesNotMatch(read("modules/menu/combos/presentation/combo-editor.css"),/tone-amber|warning-/,"las partes no usan tonos de advertencia");
  assert.match(page,/\{pattern:\/postre[^}]*tone:"violet",icon:"dessert"/);
  assert.match(page,/\{pattern:\/bebida[^}]*tone:"teal",icon:"drink"/);
  assert.match(page,/className=\{`combo-part tone-\$\{style\.tone\}`\}/);
