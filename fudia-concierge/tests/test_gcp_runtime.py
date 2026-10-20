@@ -9,6 +9,7 @@ from urllib.parse import parse_qs, urlsplit
 import httpx
 import pytest
 import redis.asyncio as redis
+from redis.exceptions import ResponseError
 
 from config.settings import Settings
 from src import preflight
@@ -64,8 +65,13 @@ async def test_preflight_checks_policy_and_cluster_without_queue_mutations(
 ) -> None:
     client = SimpleNamespace(
         ping=AsyncMock(return_value=True),
-        config_get=AsyncMock(return_value={"maxmemory-policy": policy}),
-        info=AsyncMock(return_value={"cluster_enabled": cluster}),
+        config_get=AsyncMock(side_effect=ResponseError("CONFIG is blocked by Memorystore")),
+        info=AsyncMock(
+            side_effect=lambda section: {
+                "memory": {"maxmemory_policy": policy},
+                "cluster": {"cluster_enabled": cluster},
+            }[section]
+        ),
         aclose=AsyncMock(),
     )
     monkeypatch.setattr(ssl, "create_default_context", lambda **kwargs: None)
@@ -77,6 +83,8 @@ async def test_preflight_checks_policy_and_cluster_without_queue_mutations(
         with pytest.raises(RuntimeError):
             await preflight.check_redis(cfg)
     client.aclose.assert_awaited_once()
+    client.config_get.assert_not_called()
+    assert [call.args for call in client.info.await_args_list] == [("memory",), ("cluster",)]
 
 
 @pytest.mark.asyncio

@@ -116,3 +116,12 @@ En Cloud Run revisar los registros de la ejecución del Job de preflight y busca
 no continúa a otras dependencias tras un fallo. El diagnóstico no desactiva TLS,
 no modifica IAM, no consume mensajes ni crea pedidos. Su resultado no sustituye
 la prueba de activación externa.
+
+La comprobación Redis usa solo `PING`, `INFO memory` (`maxmemory_policy`) e
+`INFO cluster` (`cluster_enabled`). No usa `CONFIG GET`: Memorystore bloquea
+`CONFIG` incluso para lecturas. La política debe ser explícitamente `noeviction`
+y cluster debe informar `0`; una respuesta incompleta también bloquea el release.
+No se requieren permisos IAM adicionales ni cambios de configuración Redis para
+hacer estas consultas. Referencias:
+[comandos de Memorystore](https://docs.cloud.google.com/memorystore/docs/redis/supported-commands)
+y [campos de INFO](https://redis.io/docs/latest/commands/info/).

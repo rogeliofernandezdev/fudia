@@ -35,7 +35,7 @@ HINTS = {
     "tls_handshake_failed": "Revisa el puerto TLS y el certificado CA de Redis.",
     "redis_auth_failed": "Revisa AUTH y la codificación de la contraseña en REDIS_URL.",
     "redis_connection_failed": "Revisa IP, puerto, VPC, subred y acceso privado a Redis.",
-    "redis_command_rejected": "Revisa que Redis permita CONFIG GET e INFO, sin cambiar datos.",
+    "redis_command_rejected": "Revisa que Redis permita PING e INFO, sin cambiar datos.",
     "redis_ping_failed": "Redis no confirmó PING.",
     "redis_policy_invalid": "Configura maxmemory-policy=noeviction en Redis.",
     "redis_cluster_enabled": "Este despliegue requiere Redis sin cluster.",
@@ -158,9 +158,11 @@ async def check_redis(cfg: Settings) -> None:
         try:
             if not await client.ping():
                 raise PreflightFailure("redis", "redis_ping_failed")
-            policy = await client.config_get("maxmemory-policy")
+            # Memorystore blocks CONFIG, including CONFIG GET. INFO exposes the
+            # effective policy without administrative commands or extra IAM.
+            memory = await client.info("memory")
             cluster = await client.info("cluster")
-            if policy.get("maxmemory-policy") != "noeviction":
+            if memory.get("maxmemory_policy") != "noeviction":
                 raise PreflightFailure("redis", "redis_policy_invalid")
             if str(cluster.get("cluster_enabled")) != "0":
                 raise PreflightFailure("redis", "redis_cluster_enabled")

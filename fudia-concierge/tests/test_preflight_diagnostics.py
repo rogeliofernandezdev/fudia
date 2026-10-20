@@ -118,8 +118,13 @@ def setup_checks(
     monkeypatch.setattr(ssl, "create_default_context", lambda **kwargs: None)
     redis_client = SimpleNamespace(
         ping=AsyncMock(return_value=True),
-        config_get=AsyncMock(return_value={"maxmemory-policy": "noeviction"}),
-        info=AsyncMock(return_value={"cluster_enabled": 0}),
+        config_get=AsyncMock(side_effect=ResponseError("CONFIG is blocked by Memorystore")),
+        info=AsyncMock(
+            side_effect=lambda section: {
+                "memory": {"maxmemory_policy": "noeviction"},
+                "cluster": {"cluster_enabled": 0},
+            }[section]
+        ),
         aclose=AsyncMock(),
     )
     monkeypatch.setattr(preflight.redis, "from_url", lambda *args, **kwargs: redis_client)
@@ -269,8 +274,10 @@ def test_redis_safety_gates_remain_fail_closed(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     redis_client, responses, vertex = setup_checks(monkeypatch)
-    redis_client.config_get.return_value = {"maxmemory-policy": policy}
-    redis_client.info.return_value = {"cluster_enabled": cluster}
+    redis_client.info.side_effect = lambda section: {
+        "memory": {"maxmemory_policy": policy},
+        "cluster": {"cluster_enabled": cluster},
+    }[section]
     with pytest.raises(SystemExit):
         preflight.main()
     failure = records(capsys)[-1]
@@ -278,3 +285,42 @@ def test_redis_safety_gates_remain_fail_closed(
     assert failure["reason"] == reason
     assert len(responses) == 3
     vertex.aio.models.generate_content.assert_not_called()
+
+
+def test_memorystore_probe_never_uses_blocked_config_command(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    redis_client, _, _ = setup_checks(monkeypatch)
+    complete_immediate(preflight.check_redis(preflight.settings))
+    result = records(capsys)
+    assert result[-1]["stage"] == "redis"
+    assert result[-1]["status"] == "passed"
+    redis_client.config_get.assert_not_called()
+    redis_client.ping.assert_awaited_once()
+    assert [call.args for call in redis_client.info.await_args_list] == [("memory",), ("cluster",)]
+    redis_client.aclose.assert_awaited_once()
+
+
+@pytest.mark.parametrize(
+    "missing,reason", [("memory", "redis_policy_invalid"), ("cluster", "redis_cluster_enabled")]
+)
+def test_unverifiable_redis_info_still_blocks_release(
+    missing: str, reason: str, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    redis_client, responses, vertex = setup_checks(monkeypatch)
+    redis_client.info.side_effect = lambda section: (
+        {}
+        if section == missing
+        else {
+            "memory": {"maxmemory_policy": "noeviction"},
+            "cluster": {"cluster_enabled": 0},
+        }[section]
+    )
+    with pytest.raises(SystemExit):
+        preflight.main()
+    failure = records(capsys)[-1]
+    assert failure["stage"] == "redis"
+    assert failure["reason"] == reason
+    assert len(responses) == 3
+    vertex.aio.models.generate_content.assert_not_called()
+    redis_client.config_get.assert_not_called()
