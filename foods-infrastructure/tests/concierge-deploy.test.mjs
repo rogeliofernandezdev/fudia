@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
-import {CA_PATH, conciergeConfiguration, deployConcierge, httpArgs, runtimeArgs} from "../gcp/concierge-deploy.mjs";
+import {CA_ENV, CA_PATH, conciergeConfiguration, deployConcierge, httpArgs, runtimeArgs} from "../gcp/concierge-deploy.mjs";
 
 const base = JSON.parse(readFileSync(new URL("../gcp/gcp-dev.variables.example.json", import.meta.url)));
 const concierge = JSON.parse(readFileSync(new URL("../gcp/concierge-dev.variables.example.json", import.meta.url)));
@@ -96,6 +96,15 @@ test("actual backend secret is checked, preflight precedes consumers, smoke prec
   assert.ok(pool.includes("--args=-m,src.worker"));
   assert.equal(pool[pool.indexOf("--update-labels") + 1], `fudia-commit=${env.GITHUB_SHA},fudia-component=concierge`);
   assert.ok(!pool.includes("--port"));
+  for (const target of [job, pool]) {
+    const secrets = target[target.indexOf("--set-secrets") + 1];
+    const vars = target[target.indexOf("--set-env-vars") + 1];
+    assert.ok(secrets.includes(`${CA_ENV}=redis-ca-fudia-dev:1`));
+    assert.ok(secrets.split(",").every(ref => !ref.startsWith("/")), "No secret volumes in worker/preflight");
+    assert.ok(vars.split(",").includes("REDIS_CA_CERTFILE="));
+    assert.ok(!vars.includes(`${CA_ENV}=`), "PEM comes from Secret Manager, never plaintext CLI flags");
+    assert.ok(!target.includes("--add-volume"));
+  }
   assert.ok(!h.calls.some(call => call.includes("add-iam-policy-binding")));
 });
 

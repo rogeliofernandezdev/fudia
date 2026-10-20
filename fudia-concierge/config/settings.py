@@ -2,7 +2,7 @@ import ssl
 from typing import Literal
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
-from pydantic import Field, model_validator
+from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -21,8 +21,10 @@ class Settings(BaseSettings):
     fudia_concierge_api_key: str = ""
 
     redis_url: str = "redis://localhost:6379/0"
-    # Optional private CA mounted by Cloud Run; never disable certificate checks.
+    # Private CA supplied as a mounted file OR an in-memory Secret Manager PEM.
+    # Worker pools do not require a secret volume. Never disable TLS checks.
     redis_ca_certfile: str = ""
+    redis_ca_cert_pem: SecretStr = Field(default=SecretStr(""), repr=False, exclude=True)
     session_ttl_seconds: int = 43_200
     # Last venue visited by QR: lets a diner whose table service ended order
     # delivery or pickup from that venue (90 days by default).
@@ -109,19 +111,27 @@ class Settings(BaseSettings):
 
     @property
     def redis_connection_url(self) -> str:
-        if not self.redis_ca_certfile:
+        pem = self.redis_ca_cert_pem.get_secret_value()
+        if not self.redis_ca_certfile and not pem:
             return self.redis_url
+        if self.redis_ca_certfile and pem:
+            raise ValueError("Use only one of REDIS_CA_CERTFILE or REDIS_CA_CERT_PEM.")
         parts = urlsplit(self.redis_url)
         if parts.scheme != "rediss":
-            raise ValueError("REDIS_CA_CERTFILE requires rediss:// (TLS).")
+            raise ValueError("Redis private CA requires rediss:// (TLS).")
         query = dict(parse_qsl(parts.query, keep_blank_values=True))
         if any(key.startswith("ssl_") for key in query):
-            raise ValueError("Configure Redis TLS through REDIS_CA_CERTFILE, not URI overrides.")
-        # Verify that the mounted PEM is readable and valid before connecting.
-        ssl.create_default_context(cafile=self.redis_ca_certfile)
+            raise ValueError("Configure Redis TLS through its private CA setting, not URI overrides.")
+        # Validate either source before connecting; the Redis driver loads cadata
+        # directly into its SSLContext without writing certificate files.
+        if pem:
+            ssl.create_default_context(cadata=pem)
+            query["ssl_ca_data"] = pem
+        else:
+            ssl.create_default_context(cafile=self.redis_ca_certfile)
+            query["ssl_ca_certs"] = self.redis_ca_certfile
         query.update(
             {
-                "ssl_ca_certs": self.redis_ca_certfile,
                 "ssl_cert_reqs": "required",
                 "ssl_check_hostname": "True",
                 "socket_connect_timeout": "10",

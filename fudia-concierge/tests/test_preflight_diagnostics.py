@@ -324,3 +324,34 @@ def test_unverifiable_redis_info_still_blocks_release(
     assert len(responses) == 3
     vertex.aio.models.generate_content.assert_not_called()
     redis_client.config_get.assert_not_called()
+
+
+def test_preflight_checks_worker_pem_without_requiring_a_file(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    redis_client, _, _ = setup_checks(monkeypatch)
+    cfg = preflight.settings.model_copy(update={"redis_ca_certfile": ""})
+    # Validate the field through Settings, rather than model_copy's unchecked updates.
+    options: dict[str, Any] = {"_env_file": None, **cfg.model_dump(), "redis_ca_cert_pem": PRIVATE}
+    monkeypatch.setattr(preflight, "settings", Settings(**options))
+    monkeypatch.setattr(Path, "is_file", lambda path: pytest.fail("Worker CA must not read a file"))
+    preflight.main()
+    result = records(capsys)
+    assert result[-1]["stage"] == "complete"
+    assert result[-1]["status"] == "passed"
+    redis_client.ping.assert_awaited_once()
+
+
+def test_preflight_rejects_missing_ca_in_either_delivery_mode(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    redis_client, _, _ = setup_checks(monkeypatch)
+    monkeypatch.setattr(
+        preflight, "settings", preflight.settings.model_copy(update={"redis_ca_certfile": ""})
+    )
+    with pytest.raises(SystemExit):
+        preflight.main()
+    failure = records(capsys)[-1]
+    assert failure["stage"] == "configuration"
+    assert failure["reason"] in ("configuration_invalid", "ca_missing")
+    redis_client.ping.assert_not_called()

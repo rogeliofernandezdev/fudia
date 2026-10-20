@@ -117,9 +117,11 @@ El proveedor por defecto es Gemini en Vertex AI. El router, `menu` y `service` u
 
 El factory de composición está en `src/application.py`. `src/main.py` crea la
 app ASGI; el worker importa solo el factory para no construir una app/cliente
-LLM HTTP adicional al iniciar. `REDIS_CA_CERTFILE` aplica un único bundle CA y
-TLS verificado a todos los clientes Redis; mantenerlo vacío solo en desarrollo
-local si Redis no requiere CA privada. Release GCP y preflight en
+LLM HTTP adicional al iniciar. `REDIS_CA_CERTFILE` (archivo) o
+`REDIS_CA_CERT_PEM` (secreto en memoria) aplica un único bundle CA y TLS verificado
+a todos los clientes Redis; son mutuamente excluyentes. Worker y preflight GCP
+usan PEM sin volumen y HTTP conserva el archivo montado. Mantener ambas vacías
+solo en desarrollo local si Redis no requiere CA privada. Release GCP y preflight en
 `foods-infrastructure/docs/12_CONCIERGE_GCP.md`.
 
 En `ENV=production`, el servicio falla al arrancar si faltan secretos o parámetros críticos. Las dependencias directas están fijadas y `constraints.txt` congela el conjunto transitivo usado por CI y Docker.

@@ -30,7 +30,8 @@ confirmar antes las variables, IAM y el costo continuo. No configura Meta.
    **referencia numérica** de clave que Concierge. No acepta un backend candidato
    no promovido. No requiere registrar `FUDIA_API_URL` en GitHub.
 5. Ejecuta un **Cloud Run Job de preflight**, bajo la identidad del worker,
-   con Direct VPC egress y los secretos de runtime. Comprueba:
+   con Direct VPC egress y los secretos de runtime. Recibe la CA como PEM en
+   memoria, igual que el worker, antes de iniciarlo. Comprueba:
    - AUTH/TLS con CA y validación de identidad del servidor Redis;
    - `noeviction` y Redis sin cluster;
    - salud del API y clave de integración (GET sobre QR intencionalmente inexistente);
@@ -186,8 +187,14 @@ se completan explícitamente, y las versiones de secretos deben verificarse.
 - `redis-url-fudia-dev`: URI real `rediss://:PASSWORD_URL_ENCODED@IP_PRIVADA:PUERTO_TLS/0`.
   La credencial AUTH se codifica para URI si contiene caracteres reservados.
 - `redis-ca-fudia-dev`: PEM descargado de Memorystore, con todas las CA válidas.
-  Se monta en `/var/run/secrets/redis/server-ca.pem`, solo lectura. La aplicación
-  aplica esa CA a sesiones, locks, rate limit, cola y operaciones DLQ.
+  HTTP conserva el montaje de solo lectura en `/var/run/secrets/redis/server-ca.pem`.
+  Worker y Job de preflight reciben la misma referencia numérica desde Secret
+  Manager como `REDIS_CA_CERT_PEM`, con `REDIS_CA_CERTFILE` vacío. El cliente carga
+  el PEM directamente en memoria, sin archivos temporales ni volúmenes de secretos.
+  Esto evita el rechazo de la CLI al montar secretos en worker pools observado
+  durante el primer despliegue. No exige un secreto, variable GitHub ni rol nuevos.
+  La aplicación aplica la misma CA a sesiones, locks, rate limit, cola y DLQ.
+  No configurar simultáneamente archivo y PEM; no se imprime el certificado.
 - TLS exige certificado válido y hostname/IP coincidente; no se permite URI
   con `ssl_cert_reqs=none`, `ssl_check_hostname=false` ni overrides `ssl_*`.
   Ante una CA incorrecta, faltante o rotada, el despliegue falla: renovar bundle,

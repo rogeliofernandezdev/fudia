@@ -28,8 +28,8 @@ from config.settings import Settings, settings
 from src.infrastructure.vertex_adapter import build_vertex_client
 
 HINTS = {
-    "configuration_invalid": "Revisa proveedor Vertex, TLS de Redis y montaje del certificado CA.",
-    "ca_missing": "Revisa la ruta y el montaje del secreto que contiene el certificado CA.",
+    "configuration_invalid": "Revisa proveedor Vertex, TLS de Redis y la entrega del certificado CA.",
+    "ca_missing": "Revisa el secreto CA: archivo montado o variable REDIS_CA_CERT_PEM.",
     "ca_unreadable": "Revisa los permisos de lectura del archivo CA montado.",
     "tls_certificate_invalid": "Revisa CA, vigencia e identidad del servidor; no desactives TLS.",
     "tls_handshake_failed": "Revisa el puerto TLS y el certificado CA de Redis.",
@@ -152,7 +152,9 @@ def check_stage(stage: str) -> Iterator[None]:
 
 async def check_redis(cfg: Settings) -> None:
     with check_stage("redis"):
-        if not cfg.redis_ca_certfile or not cfg.redis_url.startswith("rediss://"):
+        if not (
+            cfg.redis_ca_certfile or cfg.redis_ca_cert_pem.get_secret_value()
+        ) or not cfg.redis_url.startswith("rediss://"):
             raise PreflightFailure("redis", "configuration_invalid")
         client = redis.from_url(cfg.redis_connection_url, decode_responses=True)
         try:
@@ -235,11 +237,11 @@ async def run(cfg: Settings) -> None:
     with check_stage("configuration"):
         if (
             cfg.llm_provider != "vertex"
-            or not cfg.redis_ca_certfile
+            or not (cfg.redis_ca_certfile or cfg.redis_ca_cert_pem.get_secret_value())
             or not cfg.redis_url.startswith("rediss://")
         ):
             raise PreflightFailure("configuration", "configuration_invalid")
-        if not Path(cfg.redis_ca_certfile).is_file():
+        if cfg.redis_ca_certfile and not Path(cfg.redis_ca_certfile).is_file():
             raise PreflightFailure("configuration", "ca_missing")
     await check_redis(cfg)
     await check_http(cfg)

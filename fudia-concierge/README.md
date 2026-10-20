@@ -87,7 +87,8 @@ manual: [runbook](../foods-infrastructure/docs/12_CONCIERGE_GCP.md) y workflow
 reutilizable `fudia-concierge-gcp.yml`. Cambios exclusivos del bot no fuerzan
 otros componentes al día ni migraciones. Una imagen
 para HTTP, worker pool y Job de preflight. Redis privado con CA montada mediante
-`REDIS_CA_CERTFILE`, AUTH/TLS verificado y secretos versionados; Vertex usa ADC.
+`REDIS_CA_CERTFILE` en HTTP o `REDIS_CA_CERT_PEM` en worker/preflight (sin volumen),
+AUTH/TLS verificado y secretos versionados; Vertex usa ADC.
 No se ha ejecutado ese despliegue ni el gate externo por agregar este código.
 
 El alcance de código definido para Concierge está cerrado: QR por mesa y habilitación global por módulo, carta real, carrito, combos, modificadores, confirmación protegida, rondas independientes sobre una misma comanda, KDS, solicitud de cuenta con total real, handoff humano, multiagente, aislamiento multi-tenant, cola durable, concurrencia acotada con backpressure, retries, rate limiting, readiness, métricas, trazabilidad, evals y contenedor no-root.

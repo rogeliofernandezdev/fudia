@@ -8,6 +8,7 @@ import {candidateRevision, promotionArgs} from "./release-state.mjs";
 const resource = /^[a-z][a-z0-9-]{0,61}[a-z0-9]$/;
 const secretKeys = ["REDIS_URL", "FUDIA_CONCIERGE_API_KEY", "WHATSAPP_TOKEN", "WHATSAPP_VERIFY_TOKEN", "WHATSAPP_APP_SECRET"];
 export const CA_PATH = "/var/run/secrets/redis/server-ca.pem";
+export const CA_ENV = "REDIS_CA_CERT_PEM";
 
 function required(env, key, pattern) {
   const value = env[key] ?? "";
@@ -87,13 +88,13 @@ export function buildConcierge(config, run = command) {
   run("docker", ["build", "--platform", "linux/amd64", "-t", config.image, "./fudia-concierge"]);
 }
 
-export function runtimeArgs(c, apiURL, worker = false) {
+export function runtimeArgs(c, apiURL, worker = false, caAsEnv = worker) {
   const refs = [...c.secrets].map(([key, value]) => `${key}=${value}`);
-  refs.push(`${CA_PATH}=${c.ca}`);
+  refs.push(`${caAsEnv ? CA_ENV : CA_PATH}=${c.ca}`);
   return ["--network", c.network, "--subnet", c.subnet, "--vpc-egress", "private-ranges-only",
     "--set-secrets", refs.join(","), "--set-env-vars", [
       "ENV=production", "LOG_LEVEL=INFO", `FUDIA_API_URL=${httpsURL(apiURL, "URL backend")}`,
-      `WORKER_ENABLED=${worker}`, `REDIS_CA_CERTFILE=${CA_PATH}`,
+      `WORKER_ENABLED=${worker}`, `REDIS_CA_CERTFILE=${caAsEnv ? "" : CA_PATH}`,
       "LLM_PROVIDER=vertex", `GOOGLE_CLOUD_PROJECT=${c.project}`, `GOOGLE_CLOUD_LOCATION=${c.location}`,
       `GEMINI_MODEL_LITE=${c.lite}`, `GEMINI_MODEL_FLASH=${c.flash}`,
       `WHATSAPP_PHONE_ID=${c.phone}`, `WHATSAPP_GRAPH_VERSION=${c.graph}`,
@@ -152,10 +153,11 @@ export async function deployConcierge(c, env, run = command, smoke = smokeConcie
   const digest = run("docker", ["image", "inspect", c.image, "--format", "{{index .RepoDigests 0}}"], true);
   if (!digest.startsWith(`${c.image.split(":")[0]}@sha256:`) || !/@sha256:[a-f0-9]{64}$/.test(digest)) throw new Error("Digest publicado inválido.");
 
-  // Execute dependency checks under the worker's identity and private network.
+  // Exercise the same in-memory CA delivery as the worker before starting it.
+  // HTTP retains its working mounted-file delivery; worker pools need no volume.
   cloud(["run", "jobs", "deploy", c.job, "--image", digest, "--service-account", c.workerIdentity,
     "--command", "python", "--args=-m,src.preflight", "--tasks", "1", "--parallelism", "1",
-    "--max-retries", "0", "--task-timeout", "300s", "--cpu", "1", "--memory", "1Gi", ...runtimeArgs(c, apiURL)]);
+    "--max-retries", "0", "--task-timeout", "300s", "--cpu", "1", "--memory", "1Gi", ...runtimeArgs(c, apiURL, false, true)]);
   cloud(["run", "jobs", "execute", c.job, "--wait"]);
 
   cloud(httpArgs(c, digest, apiURL, Boolean(previousHTTP)));
