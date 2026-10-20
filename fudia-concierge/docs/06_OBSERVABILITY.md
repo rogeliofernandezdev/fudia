@@ -95,3 +95,24 @@ El repositorio deja las señales listas; la plataforma de observabilidad del ent
 - consumo de tokens por nivel, para seguir el costo.
 
 La definición del canal de alerta y su destino pertenece a infraestructura/despliegue y no se hardcodea en Concierge.
+
+## Diagnóstico del preflight GCP
+
+`python -m src.preflight` emite JSON con `event=concierge.preflight`, `stage`,
+`status` (`started`, `passed`, `failed`) y `severity`. Las etapas distinguen
+configuración/CA, Redis, salud del backend, clave de integración, acceso Meta,
+cliente Vertex y cada nivel de modelo (`vertex_lite`, `vertex_flash`). Los
+mensajes se vacían inmediatamente a stdout para conservar el último avance.
+
+Un fallo incluye `reason` de una lista cerrada y una indicación operativa
+`hint`. Cuando corresponde, añade solo el número `http_status` o
+`tls_verify_code`. Clasifica también errores TLS envueltos por Redis/HTTP sin
+copiar sus mensajes. No imprime excepciones completas, tracebacks, cuerpos de
+respuesta, URLs, headers ni credenciales. Una causa desconocida se informa como
+`unexpected_error` junto con la etapa; no se intenta adivinarla.
+
+En Cloud Run revisar los registros de la ejecución del Job de preflight y buscar
+`event=concierge.preflight`, `status=failed`. El proceso termina con código 1 y
+no continúa a otras dependencias tras un fallo. El diagnóstico no desactiva TLS,
+no modifica IAM, no consume mensajes ni crea pedidos. Su resultado no sustituye
+la prueba de activación externa.
