@@ -82,8 +82,10 @@ Las reglas de negocio críticas no viven en prompts: se validan en services/tool
 
 ## Estado
 
-Despliegue GCP manual: [runbook](../foods-infrastructure/docs/12_CONCIERGE_GCP.md)
-y workflow `fudia-concierge-gcp.yml`, independiente del CI existente. Una imagen
+Despliegue GCP por push a `feat/ui-standard` mediante `foods-gcp`, con alternativa
+manual: [runbook](../foods-infrastructure/docs/12_CONCIERGE_GCP.md) y workflow
+reutilizable `fudia-concierge-gcp.yml`. Cambios exclusivos del bot no fuerzan
+otros componentes al día ni migraciones. Una imagen
 para HTTP, worker pool y Job de preflight. Redis privado con CA montada mediante
 `REDIS_CA_CERTFILE`, AUTH/TLS verificado y secretos versionados; Vertex usa ADC.
 No se ha ejecutado ese despliegue ni el gate externo por agregar este código.

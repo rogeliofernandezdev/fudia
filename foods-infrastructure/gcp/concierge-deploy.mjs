@@ -165,6 +165,7 @@ export async function deployConcierge(c, env, run = command, smoke = smokeConcie
 
   cloud(["run", "worker-pools", "deploy", c.worker, "--image", digest, "--service-account", c.workerIdentity,
     "--revision-suffix", c.suffix, "--instances", c.instances,
+    "--update-labels", `fudia-commit=${c.sha},fudia-component=concierge`,
     ...(previousWorker ? ["--no-promote"] : []),
     "--command", "python", "--args=-m,src.worker", "--cpu", "1", "--memory", "1Gi", ...runtimeArgs(c, apiURL, true)]);
   cloud(["run", "worker-pools", "update-instance-split", c.worker, "--to-revisions", `${c.worker}-${c.suffix}=100`]);

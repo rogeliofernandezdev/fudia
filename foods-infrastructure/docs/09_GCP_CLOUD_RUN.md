@@ -3,10 +3,10 @@
 ## Alcance y estado
 
 Preparación de despliegue, no evidencia de un despliegue real. Los workflows
-`foods-gcp.yml` coordina processor → API → frontend por push a `feat/ui-standard`,
+`foods-gcp.yml` coordina processor → API → frontend/Concierge por push a `feat/ui-standard`,
 según los paths de los proyectos/infraestructura/workflows, usando `gcp-dev`.
 Cada etapa exige pruebas → deploy exitosos antes de la siguiente. Reutiliza los
-tres workflows del mismo commit con `workflow_call`; conservan `workflow_dispatch`
+cuatro workflows del mismo commit con `workflow_call`; conservan `workflow_dispatch`
 para operación manual, sin triggers push duplicados.
 El job `changes` se autentica por OIDC/WIF en `gcp-dev` y solo ejecuta lecturas
 Cloud Run: obtiene la revisión completada que sirve el 100 % del tráfico de cada
@@ -15,7 +15,9 @@ componente, lee su SHA y compara ese commit con el del push. No utiliza
 bloqueados por un fallo anterior aunque el nuevo push solo corrija backend.
 Sin cambios pendientes en los otros componentes, un cambio solo de frontend no
 ejecuta backend, processor ni Job SQL. Las diferencias de infraestructura
-compartida/coordinador se evalúan desde la base propia de cada componente.
+compartida se evalúan desde la base propia de cada componente. Coordinador,
+detector y tests ejecutan comprobaciones sin forzar runtime; documentación y
+ejemplos se excluyen. Prompts de Concierge sí son instrucciones ejecutables.
 Si falla la consulta/detección, no se despliega a ciegas.
 Las condiciones permiten dependencias omitidas, pero bloquean fallos/cancelaciones.
 
@@ -31,7 +33,10 @@ Las condiciones permiten dependencias omitidas, pero bloquean fallos/cancelacion
   tampoco tiene marca completada y permanece pendiente.
 - Servicio inexistente explícitamente, o instalación anterior sin tag/SHA:
   seleccionar ese componente para desplegar una vez e inicializar su identidad.
-  La primera publicación de esta corrección puede seleccionar los tres servicios.
+  La primera publicación puede seleccionar componentes antiguos sin estas marcas.
+- Concierge solo completa su release cuando HTTP y la revisión con 100 % de
+  instancias del worker están Ready y tienen el mismo SHA. Un release parcial
+  queda pendiente; no se confía en la última candidata del worker.
 - IAM, red, JSON/identidad inválidos o revisión ausente son errores, no ausencia
   de cambios. La detección no escribe outputs parciales si falla una consulta.
 - El SHA desplegado debe existir en Git y ser ancestro del commit solicitado.
@@ -40,16 +45,19 @@ Las condiciones permiten dependencias omitidas, pero bloquean fallos/cancelacion
   pendiente, no una base certificada. No ejecutar releases manuales/canaries a la
   vez que el coordinador; para mantener un rollback, pausar los pushes automáticos.
 - El resumen de `changes` indica componente, revisión, SHA y motivo de selección.
-  No se necesitan nuevas variables, claves JSON ni escrituras GitHub para guardar
-  marcas. La identidad de deploy existente puede describir servicios/revisiones;
+  No se necesitan claves JSON ni escrituras GitHub para guardar marcas. Registrar
+  también `GCP_CONCIERGE_HTTP_SERVICE` y `GCP_CONCIERGE_WORKER_POOL` en `gcp-dev`.
+  La identidad de deploy debe poder describir servicios/pools y sus revisiones;
   la detección solo invoca `describe`, sin acceder a Secret Manager ni runtime env.
 
 ### Alcance de ejecución
 
 No modifican los workflows de AWS, sus triggers ni el environment `dev`.
-Primero se ejecuta processor/migración, después backend y finalmente frontend.
-Concierge tiene ahora un [release manual separado](12_CONCIERGE_GCP.md), no
-forma parte de este coordinador; Redis no se crea por pipeline. Conservar un `FUDIA_CONCIERGE_URL` HTTPS alcanzable si
+Primero se ejecuta processor/migración, después backend y finalmente frontend y
+Concierge, solo si están pendientes. Concierge no fuerza backend ni migraciones;
+conserva alternativa manual y exige la clave compartida en el backend activo.
+Ver [runbook Concierge](12_CONCIERGE_GCP.md); Redis no se crea por pipeline.
+Conservar un `FUDIA_CONCIERGE_URL` HTTPS alcanzable si
 se utilizan QR/WhatsApp y actualizar en ese servicio su destino de backend a
 GCP al hacer el corte. Dejarlo escribiendo en el API AWS crearía pedidos en la
 base antigua, no en Cloud SQL. Sin esa reconexión no se certifica ese flujo.
@@ -194,7 +202,7 @@ adicional y prueba de conexión. No usar `sslmode=disable` con una IP TCP remota
 | Eventarc | `roles/eventarc.eventReceiver` en proyecto; `roles/run.invoker` solo en processor (el pipeline añade este binding antes del trigger) |
 | Agente administrado de Cloud Run | Mantener `roles/run.serviceAgent`; permiso de conector solo en opción privada. Shared VPC/cross-project queda fuera de este runbook |
 
-Para el release manual de Fudia Concierge ([runbook](12_CONCIERGE_GCP.md)) se usa
+Para el release de Fudia Concierge ([runbook](12_CONCIERGE_GCP.md)) se usa
 su propia cuenta de servicio, sin claves JSON: `roles/aiplatform.user` en el
 proyecto con Vertex AI habilitado (`aiplatform.googleapis.com`), porque invoca
 Gemini Flash-Lite/Flash con Application Default Credentials, y

@@ -1,7 +1,21 @@
 name: fudia-concierge-gcp
 
-# Intentionally manual: preparing/pushing this workflow does not activate a bot.
+# Reused by the branch coordinator; manual dispatch is retained for operations.
 on:
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        required: true
+      activate_concierge:
+        type: boolean
+        required: true
+      deploy_backend:
+        type: boolean
+        default: false
+      database_ready:
+        type: boolean
+        default: false
   workflow_dispatch:
     inputs:
       environment:
@@ -9,6 +23,11 @@ on:
         type: choice
         options: [gcp-dev, gcp-staging, gcp-production]
         default: gcp-dev
+        required: true
+      deploy_backend:
+        description: También desplegar backend (solo para preparar/actualizar su clave o código)
+        type: boolean
+        default: false
         required: true
       database_ready:
         description: Confirmo base restaurada/verificada y backup; backend aplicará migraciones pendientes
@@ -106,7 +125,7 @@ jobs:
   # The same numeric key reference must be present in GCP_BACKEND_SECRETS.
   backend:
     needs: verify
-    if: ${{ inputs.activate_concierge && inputs.database_ready }}
+    if: ${{ inputs.deploy_backend && inputs.activate_concierge && inputs.database_ready }}
     uses: ./.github/workflows/foods-backend-gcp.yml
     with:
       environment: ${{ inputs.environment }}
@@ -114,6 +133,10 @@ jobs:
 
   deploy:
     needs: [verify, backend]
+    if: >-
+      ${{ !cancelled() && needs.verify.result == 'success' && inputs.activate_concierge &&
+          (!inputs.deploy_backend || inputs.database_ready) &&
+          (needs.backend.result == 'success' || needs.backend.result == 'skipped') }}
     runs-on: ubuntu-latest
     timeout-minutes: 35
     environment: ${{ inputs.environment }}

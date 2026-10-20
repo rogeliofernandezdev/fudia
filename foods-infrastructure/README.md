@@ -5,12 +5,12 @@ documentos de docs/.
 
 ## Despliegue GCP sin retirar AWS
 
-Workflow `foods-gcp` por push a `feat/ui-standard`: processor → API → frontend
+Workflow `foods-gcp` por push a `feat/ui-standard`: processor → API → frontend/Concierge
 en `gcp-dev`, ejecutando componentes con cambios pendientes desde su revisión
 activa y completada en Cloud Run, no solo desde el último push. Cambios compartidos
 se evalúan desde la base propia de cada componente. Pruebas → deploy en cada
 etapa; un fallo no hace olvidar los componentes bloqueados.
-Reutiliza los tres workflows
+Reutiliza los cuatro workflows
 GCP, que conservan ejecución manual. OIDC/WIF, Artifact
 Registry, Job de migración, Cloud SQL por socket administrado (sin VPC en el MVP), fotos persistentes y secretos
 de runtime en Secret Manager. Preparación y checklist:
@@ -26,7 +26,9 @@ El API GCP ya no monta el bucket ni recibe los bytes de las nuevas fotos.
 Verificación local: `node --check gcp/deploy.mjs` y
 `node --test tests/*.test.mjs` (Node 22; comandos cloud simulados).
 
-Concierge tiene release manual separado, sin trigger push:
-[Concierge GCP](docs/12_CONCIERGE_GCP.md). Reutiliza backend para la clave
+Concierge se integra al coordinador y conserva ejecución manual:
+[Concierge GCP](docs/12_CONCIERGE_GCP.md). Un cambio exclusivo suyo no fuerza
+despliegues de los otros componentes si están al día. Documentación/tests y
+coordinación no fuerzan runtime; prompts sí. Backend debe tener la clave
 compartida; luego preflight privado, HTTP y worker pool con Redis TLS/CA y ADC.
-Agregar archivos no despliega ni configura recursos reales.
+El siguiente push relevante puede activar el bot; no crea Redis ni concede IAM.

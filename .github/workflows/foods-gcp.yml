@@ -7,9 +7,16 @@ on:
       - "foods-backend/**"
       - "foods-admin-web/**"
       - "fudia-image-processor/**"
+      - "fudia-concierge/**"
       - "foods-infrastructure/**"
       - ".github/workflows/foods-*-gcp.yml"
       - ".github/workflows/foods-gcp.yml"
+      - ".github/workflows/fudia-concierge-gcp.yml"
+      - "!**/*.md"
+      - "!**/.env.example"
+      - "!**/*.example.json"
+      # Prompts are runtime instructions, not documentation.
+      - "fudia-concierge/prompts/**"
 
 permissions:
   contents: read
@@ -32,6 +39,7 @@ jobs:
       processor: ${{ steps.detect.outputs.processor }}
       backend: ${{ steps.detect.outputs.backend }}
       frontend: ${{ steps.detect.outputs.frontend }}
+      concierge: ${{ steps.detect.outputs.concierge }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -39,6 +47,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: "22"
+      - name: Verify infrastructure and component selection before cloud access
+        run: node --test foods-infrastructure/tests/*.test.mjs
       - id: auth
         uses: google-github-actions/auth@v3
         with:
@@ -60,6 +70,8 @@ jobs:
           GCP_IMAGE_PROCESSOR_SERVICE: ${{ vars.GCP_IMAGE_PROCESSOR_SERVICE }}
           GCP_BACKEND_SERVICE: ${{ vars.GCP_BACKEND_SERVICE }}
           GCP_FRONTEND_SERVICE: ${{ vars.GCP_FRONTEND_SERVICE }}
+          GCP_CONCIERGE_HTTP_SERVICE: ${{ vars.GCP_CONCIERGE_HTTP_SERVICE }}
+          GCP_CONCIERGE_WORKER_POOL: ${{ vars.GCP_CONCIERGE_WORKER_POOL }}
           HEAD_SHA: ${{ github.sha }}
         run: node foods-infrastructure/gcp/changed-components.mjs
 
@@ -95,4 +107,18 @@ jobs:
     uses: ./.github/workflows/foods-admin-web-gcp.yml
     with:
       environment: gcp-dev
+    secrets: inherit
+
+  concierge:
+    needs: [changes, processor, backend]
+    if: >-
+      ${{ !cancelled() && needs.changes.result == 'success' &&
+          needs.changes.outputs.concierge == 'true' &&
+          (needs.processor.result == 'success' || needs.processor.result == 'skipped') &&
+          (needs.backend.result == 'success' || needs.backend.result == 'skipped') }}
+    uses: ./.github/workflows/fudia-concierge-gcp.yml
+    with:
+      environment: gcp-dev
+      activate_concierge: true
+      deploy_backend: false
     secrets: inherit

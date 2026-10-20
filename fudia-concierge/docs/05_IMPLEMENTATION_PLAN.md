@@ -96,7 +96,9 @@ en `docs/08_RECOVERY_AND_OPERATIONS.md`.
 
 ## Gate externo de activación
 
-Preparación GCP (2026-10-20): workflow manual separado, referencias numéricas
+Preparación GCP (2026-10-20): workflow reutilizado por `foods-gcp` en pushes a
+`feat/ui-standard`, con alternativa manual y selección independiente de cambios;
+no fuerza backend en cambios exclusivos del bot. Referencias numéricas
 de secretos, backend compartiendo clave sin cambiar autenticación, Direct VPC,
 Redis AUTH/TLS con CA, preflight en Job, servicio HTTP y worker pool con drenaje.
 Incluye pruebas offline; su despliegue, IAM/red reales e inferencia con la cuenta

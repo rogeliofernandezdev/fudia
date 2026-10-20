@@ -116,25 +116,31 @@ revisar sus triggers; mantener intactos los archivos no evita ese comportamiento
 
 1. Verificar datos restaurados, backup, secretos/variables y permisos anteriores.
 2. Hacer commit y push a `feat/ui-standard`. Cambios en los proyectos,
-   infraestructura o workflows GCP activan **foods-gcp**.
+   infraestructura o workflows GCP activan **foods-gcp**; se excluyen Markdown y
+   ejemplos, salvo prompts de Concierge, que sí son ejecutables.
 3. GitHub → Actions → **foods-gcp** → ejecución del commit. Deben terminar
    correctamente los componentes seleccionados (verify/deploy), en orden
-   processor → backend → frontend. Los que no tienen cambios pendientes aparecen `skipped`.
+   processor → backend → frontend/Concierge. Los que no tienen cambios pendientes aparecen `skipped`.
    Si una etapa seleccionada falla, no se ejecuta una etapa dependiente.
    Las migraciones de processor/API conservan exclusión mutua. No se generan
-   despliegues duplicados: los tres componentes se invocan mediante workflow_call.
+   despliegues duplicados: los cuatro componentes se invocan mediante workflow_call.
 4. Abrir la URL frontend del resumen de su deploy. El BFF recibe
    automáticamente la URL del API GCP, salvo override HTTPS explícito.
 
 No se requiere copiar workflows a `master` para este trigger. El pipeline usa
 el código del mismo push y las variables/secrets existentes de `gcp-dev`, sin
-variables nuevas. Las migraciones pendientes quedan habilitadas para desarrollo:
+claves JSON. Registrar también las variables Concierge del
+[runbook](12_CONCIERGE_GCP.md), incluidos los nombres HTTP y worker exigidos por
+el detector. Las migraciones pendientes quedan habilitadas para desarrollo:
 esto no restaura datos ni comprueba automáticamente su integridad/backups.
 Un cambio solo de frontend no ejecuta builds/tests/deploy de backend o processor
 ni migraciones SQL si esos componentes no tenían cambios pendientes. Lo mismo
 aplica a cada proyecto. Se compara el SHA de la revisión con tag `deployed` y
 100 % de tráfico contra HEAD, incluyendo archivos eliminados/renombrados. Los
 cambios compartidos se evalúan desde la base propia de cada componente.
+Concierge no fuerza backend ni migraciones. Su HTTP y worker deben tener el
+mismo SHA y una distribución completada. Documentación/tests/coordinación no
+seleccionan runtime por sí solos, pero no hacen olvidar despliegues pendientes.
 El job `changes` usa las mismas variables/WIF de `gcp-dev`, solo con lecturas
 Cloud Run. En el primer push de esta corrección, revisiones antiguas sin
 etiquetas/marca se despliegan una vez para inicializarlas. Un error de permisos,

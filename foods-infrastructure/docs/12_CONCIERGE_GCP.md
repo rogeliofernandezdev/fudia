@@ -1,4 +1,4 @@
-# Fudia Concierge en GCP: preparación y despliegue manual
+# Fudia Concierge en GCP: preparación y despliegue
 
 Implementación de repositorio del 2026-10-20. **No se ha ejecutado el deploy**,
 leído secretos reales, modificado IAM ni probado proveedores desde esta tarea.
@@ -6,15 +6,23 @@ No cambia AWS, la base restaurada ni la autenticación de usuarios de FudIA.
 
 ## Responsabilidades y orden
 
-`fudia-concierge-gcp.yml` es un workflow **manual**, independiente de `foods-gcp`.
-No tiene trigger push ni schedule. Publicarlo no activa ni mueve un bot.
+`foods-gcp.yml` invoca `fudia-concierge-gcp.yml` mediante `workflow_call` por
+push a `feat/ui-standard`, en `gcp-dev`, cuando Concierge tiene cambios pendientes.
+Usa los archivos del mismo commit: **no requiere copiarlos a master**. El workflow
+Concierge conserva `workflow_dispatch`, sin un segundo trigger push ni schedule.
+Publicar cambios ejecutables en esa rama puede activar/actualizar HTTP y worker;
+confirmar antes las variables, IAM y el costo continuo. No configura Meta.
 
 1. Verifica configuración sin secretos, pruebas de infraestructura, ruff, mypy,
    pytest (incluye integración con Redis temporal), build Python y Docker.
-2. Si el operador confirma **ambas** casillas, invoca `foods-backend-gcp.yml`.
+2. Solo en ejecución manual con `deploy_backend`, `activate_concierge` y
+   `database_ready` confirmados, invoca `foods-backend-gcp.yml`.
    Conserva sus pruebas, migraciones pendientes, candidata, smoke y promoción.
    No restaura ni reinicializa SQL; exige base verificada y backup. Debe estar
    desplegado el procesador requerido por ese workflow.
+   El coordinador pasa `deploy_backend=false`: un cambio exclusivo de Concierge
+   no fuerza backend ni migraciones. Si backend también está pendiente, el
+   coordinador lo despliega antes por su propia selección.
 3. Construye la imagen Concierge antes de obtener credenciales WIF. Publica
    una sola imagen por digest para los tres procesos siguientes.
 4. Descubre el origen HTTPS de `GCP_BACKEND_SERVICE` en proyecto/región actuales.
@@ -44,6 +52,19 @@ deploy worker no promueve HTTP existente. El despliegue de HTTP y pool **no es
 una transacción**: si falla la promoción final puede haber worker nuevo y HTTP
 anterior; mantener compatibilidad entre revisiones y revisar el estado antes de
 reintentar. El pipeline no hace rollback de SQL ni borra recursos.
+
+La detección comprueba HTTP con tag `deployed` y 100 % de tráfico, y la revisión
+real del worker con 100 % de instancias, ambos Ready y con el mismo SHA/componente.
+Una candidata o `latestReadyRevisionName` no completa el release. Un despliegue
+parcial queda pendiente para el siguiente push, incluso si solo cambia otro
+proyecto. Fallos de permisos/red/historial detienen la detección.
+
+Archivos exclusivos `fudia-concierge/**`, su workflow y `gcp/concierge-*` solo
+seleccionan Concierge. Documentación Markdown, `.env.example` y JSON de ejemplo
+no seleccionan runtime; **`fudia-concierge/prompts/**` sí**, aunque sean Markdown.
+Cambios del detector/coordinador/tests ejecutan las pruebas de infraestructura
+sin forzar despliegues. Helpers de infraestructura compartidos seleccionan los
+cuatro componentes desde sus respectivas bases desplegadas.
 
 El Job comprueba dependencias reales solo cuando se ejecuta en GCP. No sustituye
 evals del router/tools, prueba de pedido/KDS, recepción HMAC ni estados de Meta.
@@ -90,12 +111,17 @@ que los pipelines actuales. Los nombres de variables no se trasladan al
 environment AWS. Reutilizar `GCP_PROJECT_ID`, `GCP_REGION`,
 `GCP_ARTIFACT_REPOSITORY`, `GCP_WORKLOAD_IDENTITY_PROVIDER`,
 `GCP_DEPLOY_SERVICE_ACCOUNT`, `GCP_BACKEND_SERVICE` y
-`GCP_BACKEND_SERVICE_ACCOUNT`; también se necesitan las variables normales del
-backend porque se llama su workflow. **No duplicar GOOGLE_CLOUD_PROJECT:** el
+`GCP_BACKEND_SERVICE_ACCOUNT` y `GCP_BACKEND_SECRETS`. Las demás variables del
+backend son necesarias si se selecciona su despliegue. **No duplicar GOOGLE_CLOUD_PROJECT:** el
 deploy lo deriva de `GCP_PROJECT_ID` para runtime. Proteger entornos/ramas y no
 ejecutar el coordinador y este release simultáneamente.
 
 Crear estas **Environment variables**, no GitHub Secrets con credenciales:
+
+El detector del coordinador también exige `GCP_CONCIERGE_HTTP_SERVICE` y
+`GCP_CONCIERGE_WORKER_POOL`, aunque otro componente origine el push. Si faltan,
+falla explícitamente antes de desplegar; no interpreta configuración ausente
+como servicio sin cambios.
 
 | Nombre | Valor para el entorno mostrado |
 | --- | --- |
@@ -130,6 +156,9 @@ Esto no reemplaza la contraseña SQL, no migra usuarios a JWT y no cambia el
 login. La clave de integración no procede del login: autentica servicio a
 servicio. La comparación es de referencias y la prueba HTTP verifica que el
 backend acepte la clave; el pipeline nunca descarga/imprime los valores.
+Cambiar esta variable no modifica una revisión ya desplegada. Si backend aún no
+monta esa referencia, desplegarlo explícitamente primero, con datos/backup
+verificados. El preflight de Concierge rechaza un backend sin la clave esperada.
 
 Opcionales (ya tienen defaults explícitos):
 
@@ -171,22 +200,28 @@ se completan explícitamente, y las versiones de secretos deben verificarse.
 ## Ejecución y cierre (no realizados)
 
 1. Confirmar IAM, versiones de secretos, datos/backup SQL, variables y cuotas.
-2. Publicar código por el proceso normal. No se hizo commit/push desde esta tarea.
-   Revisar los triggers GCP existentes: cambios de infraestructura pueden activar
-   processor/API/frontend, pero no este bot manual. No publicar aún si no se desea
-   ejecutar esos pipelines. La rama AWS conserva sus triggers originales.
-3. Para aparecer en Actions con botón Run workflow, GitHub exige este archivo
-   en la rama predeterminada. Seleccionar luego el ref revisado, no otro código.
-4. Actions → `fudia-concierge-gcp` → Run workflow → environment correcto.
-   Sin confirmar ambas casillas solo verifica; no modifica Cloud Run.
-5. Revisar gates backend → preflight → HTTP → worker → promoción. El resumen
+2. Si backend todavía no monta la clave compartida, preparar su despliegue
+   explícito antes del bot; conservar DATABASE_URL y no reinicializar SQL.
+3. Publicar código revisado a `feat/ui-standard`. En Actions abrir `foods-gcp`
+   del mismo commit y su job `concierge`. No se hizo commit/push desde esta tarea.
+   Los demás componentes se omiten si no tienen cambios pendientes; una falla
+   anterior o falta de marcas de release sí puede seleccionarlos.
+4. Alternativa manual: Actions → `fudia-concierge-gcp` → Run workflow → entorno.
+   El botón exige el archivo en la rama predeterminada; el trigger automático
+   anterior no. `activate_concierge=false` solo verifica. Para desplegar el bot
+   sin backend: `activate_concierge=true`, `deploy_backend=false`.
+   Para desplegar también backend: las tres casillas deben estar confirmadas.
+   No ejecutar la alternativa manual en paralelo al coordinador.
+5. Revisar gates de pruebas → preflight → HTTP → worker → promoción, y backend
+   antes si fue seleccionado. El resumen
    entrega origen HTTP y callback `https://ORIGEN/webhook`.
 6. En Meta configurar callback y el valor privado de WHATSAPP_VERIFY_TOKEN,
    suscripción a mensajes/estados y validar desafío/HMAC. No poner ese token
    en una URL pública, captura, GitHub variable ni log.
 7. Registrar origen HTTP como `FUDIA_CONCIERGE_URL` en el mismo Environment y
-   ejecutar el frontend GCP existente para conectar sus enlaces QR. Este release
-   no cambia ni despliega frontend.
+   ejecutar el frontend GCP existente para conectar sus enlaces QR. El workflow
+   Concierge no cambia ni despliega frontend; el coordinador solo lo selecciona
+   si tiene cambios pendientes. Cambiar una variable GitHub no dispara un push.
 8. Probar QR de empresa/local de prueba con `whatsapp_bot` habilitado, carta,
    confirmación explícita, pedido persistido, KDS, cuenta y estados Meta.
    No cambiar DNS ni apagar AWS hasta validar el corte de escrituras.

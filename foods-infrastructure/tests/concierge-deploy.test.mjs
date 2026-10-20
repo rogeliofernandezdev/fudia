@@ -94,6 +94,7 @@ test("actual backend secret is checked, preflight precedes consumers, smoke prec
   const pool = h.calls.find(call => call.slice(0, 4).join(" ") === "gcloud run worker-pools deploy");
   assert.ok(pool.includes("--no-promote"));
   assert.ok(pool.includes("--args=-m,src.worker"));
+  assert.equal(pool[pool.indexOf("--update-labels") + 1], `fudia-commit=${env.GITHUB_SHA},fudia-component=concierge`);
   assert.ok(!pool.includes("--port"));
   assert.ok(!h.calls.some(call => call.includes("add-iam-policy-binding")));
 });
@@ -118,14 +119,34 @@ test("worker failure leaves existing HTTP traffic untouched; initial installatio
   assert.ok(!first.calls.find(call => call.slice(0, 4).join(" ") === "gcloud run worker-pools deploy").includes("--no-promote"));
 });
 
-test("release is manual, verifies before backend and deploy, uses WIF without credential files", () => {
+test("release is reusable and manual, backend is optional, uses WIF without credential files", () => {
   const workflow = readFileSync(new URL("../../.github/workflows/fudia-concierge-gcp.yml", import.meta.url), "utf8");
   assert.match(workflow, /workflow_dispatch:/);
+  assert.match(workflow, /workflow_call:/);
   assert.doesNotMatch(workflow, /^  push:|^  schedule:/m);
   assert.match(workflow, /uses: \.\/\.github\/workflows\/foods-backend-gcp.yml/);
   assert.match(workflow, /needs: \[verify, backend\]/);
   assert.match(workflow, /inputs.activate_concierge && inputs.database_ready/);
+  assert.match(workflow, /inputs.deploy_backend && inputs.activate_concierge/);
   assert.match(workflow, /create_credentials_file: false/);
   assert.ok(workflow.indexOf("concierge-deploy.mjs build") < workflow.indexOf("uses: google-github-actions/auth"));
   assert.doesNotMatch(workflow, /secrets\.WHATSAPP|secrets\.REDIS|NEXT_PUBLIC_.*CONCIERGE/);
+});
+
+test("Concierge release does not force backend/migrations and blocks deployment on failed gates", () => {
+  const workflow = readFileSync(new URL("../../.github/workflows/fudia-concierge-gcp.yml", import.meta.url), "utf8");
+  const expression = /\n  deploy:\n[\s\S]*?\n    if: >-\n\s*\$\{\{([\s\S]*?)\}\}/.exec(workflow)?.[1];
+  assert.ok(expression);
+  const condition = new Function("needs", "inputs", "cancelled", `return (${expression});`);
+  const needs = {verify: {result: "success"}, backend: {result: "skipped"}};
+  const input = {activate_concierge: true, deploy_backend: false, database_ready: false};
+  assert.equal(condition(needs, input, () => false), true);
+  for (const result of ["failure", "cancelled"]) {
+    assert.equal(condition({...needs, verify: {result}}, input, () => false), false);
+    assert.equal(condition({...needs, backend: {result}}, input, () => false), false);
+  }
+  assert.equal(condition(needs, {...input, activate_concierge: false}, () => false), false);
+  assert.equal(condition(needs, {...input, deploy_backend: true}, () => false), false);
+  assert.equal(condition(needs, input, () => true), false);
+  assert.equal(condition({...needs, backend: {result: "success"}}, {...input, deploy_backend: true, database_ready: true}, () => false), true);
 });
