@@ -313,7 +313,7 @@ async def test_2_whatsapp_failure_resends_without_running_tools_again() -> None:
         ([ADD_P1], "Actualicé tu pedido"),
         ([ADD_P1, ("prepare_confirmation", {})], "¿Confirmas este pedido?"),
         ([("request_human", {"reason": "mozo"})], "personal del local"),
-        ([("request_bill", {})], "saldo pendiente S/ 20.00"),
+        ([("request_bill", {})], "Saldo pendiente: S/ 20.00"),
     ],
 )
 async def test_3_restart_answers_from_persisted_effects(
@@ -396,7 +396,7 @@ async def test_4_bill_request_keeps_its_request_id_after_a_crash() -> None:
     assert backend.bill_calls == 2
     assert len(backend.bill_requests) == 1
     assert backend.bill_requests[0]
-    assert "saldo pendiente S/ 20.00" in record.reply
+    assert "Saldo pendiente: S/ 20.00" in record.reply
 
 
 @pytest.mark.asyncio

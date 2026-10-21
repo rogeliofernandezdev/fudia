@@ -15,12 +15,24 @@ class MenuTools:
         args: dict[str, Any],
     ) -> dict[str, Any]:
         if name == "search_menu":
+            query = str(args.get("query", "")).strip()
             menu = await self.context.fudia.search_menu(
                 self.context.token(),
-                query=str(args.get("query", "")),
+                query=query,
             )
+            matched = bool(menu.items) or not query
+            if not matched:
+                # A query with no match ("para hoy") is not an empty carta:
+                # the agent gets the full carta so it never claims otherwise.
+                menu = await self.context.fudia.search_menu(
+                    self.context.token(),
+                    query="",
+                )
             return {
                 "ok": True,
+                "query": query,
+                "matched": matched,
+                "menuEmpty": not menu.items,
                 "currencySymbol": menu.currencySymbol,
                 "items": [
                     {

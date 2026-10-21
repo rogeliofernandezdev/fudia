@@ -87,5 +87,13 @@
   {
     "input": "Hola",
     "expected": "menu"
+  },
+  {
+    "input": "Que tienes pra hoy?",
+    "expected": "menu"
+  },
+  {
+    "input": "Pero quiero comer",
+    "expected": "menu"
   }
 ]

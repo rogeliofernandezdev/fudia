@@ -154,7 +154,7 @@ paths:
       security: [{ conciergeServiceKey: [] }]
       parameters:
         - { in: path, name: token, required: true, schema: { type: string, minLength: 32, maxLength: 32 } }
-        - { in: query, name: q, schema: { type: string }, description: Búsqueda por nombre, descripción o categoría; vacío devuelve la carta operativa }
+        - { in: query, name: q, schema: { type: string }, description: "Búsqueda por palabras en nombre, descripción o categoría, sin distinguir mayúsculas ni tildes y con plurales simples; basta que coincida una palabra y los productos con más coincidencias van primero. Las palabras de relleno («qué tienes para hoy») se ignoran; vacío o solo relleno devuelve la carta operativa" }
         - { in: query, name: productId, schema: { type: string, format: uuid }, description: Revalidación exacta de una línea seleccionada }
       responses:
         "200": { description: Carta operativa del local, content: { application/json: { schema: { $ref: "#/components/schemas/ConciergeMenuResponse" } } } }

@@ -32,6 +32,7 @@ from src.metrics import (
 )
 from src.observability import fingerprint, log_event
 from src.services.delivery_tools import apply_quote, delivery_summary
+from src.services.formatting import whatsapp_text
 from src.services.ports import (
     AllowAllRateLimiter,
     ConversationLease,
@@ -69,11 +70,11 @@ OFF_SCOPE_REPLY = (
 )
 SCAN_QR_REPLY = (
     "Para atenderte en tu mesa, vuelve a escanear el QR y envía el mensaje "
-    "tal como aparece 😊"
+    "tal como aparece."
 )
 EXPIRED_START_CODE_REPLY = (
     "Ese código de mesa ya venció. Vuelve a escanear el QR de tu mesa y envía "
-    "el mensaje tal como aparece 😊"
+    "el mensaje tal como aparece."
 )
 TOO_LONG_REPLY = (
     "Tu mensaje es demasiado largo. "
@@ -649,7 +650,7 @@ class ConciergeService:
                 "journal": journal,
             }
         )
-        reply = str(result["reply"])
+        reply = whatsapp_text(str(result["reply"]))
         return (f"{notice}\n\n{reply}" if notice else reply), "transcript"
 
     async def _table_service_ended(

@@ -18,18 +18,32 @@ mensaje amable y un código corto de la mesa, sin el token técnico:
   distinguir mayúsculas; luego el token se valida en foods-backend como siempre.
 - Si el cliente borra el mensaje y escribe otra cosa, el bot no adivina la mesa:
   sin contexto responde «Para atenderte en tu mesa, vuelve a escanear el QR y envía
-  el mensaje tal como aparece 😊». Un mensaje de inicio con el código vencido recibe
+  el mensaje tal como aparece.». Un mensaje de inicio con el código vencido recibe
   «Ese código de mesa ya venció…» y no reabre un local ni sienta al cliente.
 - Si Redis no puede emitir el código, `/start` usa el mensaje anterior
   `FUDIA:<token>`; ese formato se sigue aceptando para QR y enlaces antiguos.
-- Al abrir la mesa, la respuesta es determinista, sin modelo: «¡Bienvenido a
-  {local}! 👋 Estás en la Mesa 7.», la carta real de `search_menu` (query vacío)
-  y «¿Qué deseas pedir?». Primero van los «⭐ Recomendados de la casa» y luego
-  las categorías en el orden de foods-backend, con nombre y precio; solo se
-  listan productos `available` o `low`. El nombre de la mesa pasa por
-  `table_label`, que no repite «Mesa». La respuesta se limita a 3500 caracteres
-  (WhatsApp corta en 4096): si no cabe todo, cierra con «…y N platos más.
-  Escríbeme una categoría o un plato y te muestro el resto.». Si la carta falla
+- Al abrir la mesa, la respuesta es determinista, sin modelo: el saludo, la
+  carta real de `search_menu` (query vacío) y «¿Qué deseas pedir?». Primero va
+  «Recomendados de la casa:» y luego las categorías en el orden de foods-backend;
+  solo se listan productos `available` o `low`. El nombre de la mesa pasa por
+  `table_label`, que no repite «Mesa». Ejemplo:
+
+  ```
+  🍽️ Bienvenido a La Panchita
+  📍 Mesa 7
+
+  Recomendados de la casa:
+  - Lomo saltado: S/ 32.50
+
+  Segundos:
+  - Ají de gallina: S/ 15.00
+
+  ¿Qué deseas pedir?
+  ```
+
+  La respuesta se limita a 3500 caracteres (WhatsApp corta en 4096): si no cabe
+  todo, cierra con «Hay N platos más. Escríbeme una categoría o un plato y te
+  muestro el resto.». Si la carta falla
   o está vacía, se envía solo el saludo y la mesa queda abierta igual. El modelo
   atiende a partir del primer mensaje que escribe el cliente.
 - El número del cliente queda prerregistrado en foods-backend al confirmar su
@@ -38,7 +52,7 @@ mensaje amable y un código corto de la mesa, sin el token técnico:
 ## Atención y rondas
 
 1. Resolver la mesa.
-2. Consultar la carta con search_menu por nombre, descripción o categoría; query vacío permite consultar la carta.
+2. Consultar la carta con search_menu por nombre, descripción o categoría; query vacío permite consultar la carta. Preguntas generales («¿qué tienes para hoy?», «quiero comer») usan query vacío. Si un query no coincide con nada, la tool devuelve `matched=false` junto con la carta completa, para que el agente nunca concluya que no hay productos; solo `menuEmpty=true` indica una carta vacía.
 3. Agregar únicamente IDs devueltos por Fudia.
 4. Revalidar producto, combo o modificadores.
 5. Revisar el carrito temporal de la ronda.
@@ -78,6 +92,25 @@ Al terminar se abre un contexto nuevo (`conversationId` nuevo, carrito, confirma
 7. El pedido entra a Cocina como canal `delivery` o `recojo` y se paga al recibir o recoger.
 
 Cambiar el tipo de entrega, la dirección, el nombre o la ubicación invalida una confirmación preparada. `check_order_status` consulta el estado real del último pedido en ambos modos.
+
+## Formato de los mensajes
+
+Todas las respuestas son texto plano de WhatsApp, con la misma estructura en las
+respuestas fijas del código y en las del modelo (`prompts/system.md`):
+
+- Sin asteriscos, guiones bajos, almohadillas ni negritas.
+- Varios elementos: una línea de título que termina en «:» y debajo un elemento
+  por línea con «- ». Producto: «- Nombre: S/ 0.00». Línea de pedido:
+  «- 2 × Nombre».
+- Párrafos cortos separados por una línea en blanco y una sola pregunta al final.
+- Íconos sobrios, como máximo uno al inicio de un bloque: 🍽️ carta, 🧾 pedido o
+  cuenta, ✅ confirmado, 📍 mesa o ubicación, 🛵 delivery, ⏳ en preparación. Nunca
+  caras, manos, corazones, estrellas, fuego ni celebraciones.
+
+Como red de seguridad, `whatsapp_text` (`src/services/formatting.py`) limpia la
+respuesta del modelo antes de enviarla: quita las marcas de markdown, convierte
+viñetas (`*`, `•`, `·`) en «- », agrega «:» a un título que encabeza una lista y
+elimina los emojis informales.
 
 ## Invariantes
 

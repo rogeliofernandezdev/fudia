@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -110,7 +111,8 @@ func TestConciergeQRCodeMenuOrderAndKitchenWorkflow(t *testing.T) {
 		t.Fatalf("concierge API must require service credential: %d %s", unauthorizedRec.Code, unauthorizedRec.Body.String())
 	}
 
-	menuReq := httptest.NewRequest("GET", "/v1/integrations/concierge/"+qrToken+"/menu?q=Concierge", nil)
+	// Búsqueda por palabras: sin tildes, sin mayúsculas y sin palabras de relleno.
+	menuReq := httptest.NewRequest("GET", "/v1/integrations/concierge/"+qrToken+"/menu?q="+url.QueryEscape("¿Qué tienes de CONCIÉRGE para hoy?"), nil)
 	menuReq.Header.Set("X-Fudia-Concierge-Key", "concierge-test-key")
 	menuRec := httptest.NewRecorder()
 	api.Routes().ServeHTTP(menuRec, menuReq)

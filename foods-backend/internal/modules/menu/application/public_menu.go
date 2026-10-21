@@ -13,7 +13,7 @@ func (a *Catalog) PublicMenu(ctx context.Context, s scope, q, productID string) 
 	if err != nil {
 		return nil, menuFailure(apperror.Unavailable, "concierge_unavailable", "No pudimos determinar la fecha operativa.")
 	}
-	raw, err := a.repo.PublicMenu(ctx, s, strings.TrimSpace(q), strings.TrimSpace(productID), day)
+	raw, err := a.repo.PublicMenu(ctx, s, domain.SearchTerms(q), strings.TrimSpace(productID), day)
 	if err != nil {
 		return nil, menuFailure(apperror.Unavailable, "concierge_unavailable", "No pudimos cargar la carta.")
 	}

@@ -6,8 +6,11 @@ import (
 	"time"
 )
 
-func (r *Catalog) PublicMenu(ctx context.Context, s scope, q, productID string, day time.Time) ([]domain.PublicMenuSnapshot, error) {
-	search := "%" + q + "%"
+// PublicMenu busca por palabras (ver domain.SearchTerms): un producto entra si
+// alguna aparece en su nombre, descripción o categoría, comparadas en minúsculas
+// y sin tildes, y los que coinciden con más palabras van primero. Sin términos
+// devuelve la carta completa.
+func (r *Catalog) PublicMenu(ctx context.Context, s scope, terms []string, productID string, day time.Time) ([]domain.PublicMenuSnapshot, error) {
 	rows, err := r.db(ctx).Query(ctx, `
 		SELECT p.id::text,p.name,p.description,p.price::text,c.name,p.image_url,p.quantity_control,
 		       pa.portion_quantity,COALESCE(pa.sold_quantity,0),COALESCE(pa.manual_status,'available'),
@@ -28,12 +31,20 @@ func (r *Catalog) PublicMenu(ctx context.Context, s scope, q, productID string, 
 		  ON ii.organization_id=p.organization_id AND ii.product_id=p.id AND ii.active
 		LEFT JOIN stock_balances sb
 		  ON sb.organization_id=p.organization_id AND sb.location_id=$2 AND sb.inventory_item_id=ii.id
+		CROSS JOIN LATERAL (
+		  SELECT lower(translate(p.name||' '||p.description||' '||COALESCE(c.name,''),
+		         'áéíóúüñàèìòùÁÉÍÓÚÜÑÀÈÌÒÙ','aeiouunaeiouaeiouunaeiou')) AS words
+		) haystack
+		CROSS JOIN LATERAL (
+		  SELECT count(*) AS hits FROM unnest($4::text[]) term
+		  WHERE haystack.words LIKE '%'||term||'%'
+		) term_hits
 		WHERE p.organization_id=$1 AND p.active
-		  AND ($4='' OR p.name ILIKE $5 OR p.description ILIKE $5 OR COALESCE(c.name,'') ILIKE $5)
-		  AND ($6='' OR p.id::text=$6)
-		ORDER BY p.featured DESC,c.sort_order NULLS LAST,c.name NULLS LAST,p.name
+		  AND (cardinality($4::text[])=0 OR term_hits.hits>0)
+		  AND ($5='' OR p.id::text=$5)
+		ORDER BY term_hits.hits DESC,p.featured DESC,c.sort_order NULLS LAST,c.name NULLS LAST,p.name
 		LIMIT 30
-	`, s.OrganizationID, s.LocationID, day.Format("2006-01-02"), q, search, productID)
+	`, s.OrganizationID, s.LocationID, day.Format("2006-01-02"), terms, productID)
 	if err != nil {
 		return nil, err
 	}

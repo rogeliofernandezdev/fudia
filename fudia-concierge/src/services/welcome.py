@@ -6,7 +6,7 @@ from src.domain.models import MenuItem, MenuResponse, TableContext
 from src.services.start_codes import table_label
 
 ORDERABLE_STATUSES = {"available", "low"}
-RECOMMENDED_HEADING = "⭐ Recomendados de la casa"
+RECOMMENDED_HEADING = "Recomendados de la casa"
 UNCATEGORIZED_HEADING = "Otros"
 CLOSING = "¿Qué deseas pedir?"
 # WhatsApp cuts text messages at 4096 characters; keep room for the tail.
@@ -37,9 +37,11 @@ def _sections(items: list[MenuItem]) -> list[tuple[str, list[MenuItem]]]:
 def welcome_message(table: TableContext, menu: MenuResponse | None) -> str:
     """Deterministic first reply to a QR start: greeting plus the real menu,
     so the diner sees the carta without a model call."""
+    # Plain WhatsApp text: no markdown, sober icons only (see
+    # docs/03_CONVERSATION_FLOW.md, «Formato de los mensajes»).
     greeting = (
-        f"¡Bienvenido a {table.organizationName}! 👋\n"
-        f"Estás en la {table_label(table.name)}."
+        f"🍽️ Bienvenido a {table.organizationName}\n"
+        f"📍 {table_label(table.name)}"
     )
     items = [
         item
@@ -56,9 +58,9 @@ def welcome_message(table: TableContext, menu: MenuResponse | None) -> str:
     shown = 0
     full = False
     for heading, section in _sections(items):
-        block = f"*{heading}*"
+        block = f"{heading}:"
         for item in section:
-            line = f"\n• {item.name} · {_price(symbol, item.price)}"
+            line = f"\n- {item.name}: {_price(symbol, item.price)}"
             if len(block) + len(line) + 2 > budget:
                 full = True
                 break
@@ -75,7 +77,7 @@ def welcome_message(table: TableContext, menu: MenuResponse | None) -> str:
     if hidden:
         more = "plato más" if hidden == 1 else "platos más"
         body += (
-            f"\n\n…y {hidden} {more}. Escríbeme una categoría o un plato "
+            f"\n\nHay {hidden} {more}. Escríbeme una categoría o un plato "
             "y te muestro el resto."
         )
     return f"{greeting}\n\n{body}\n\n{CLOSING}"

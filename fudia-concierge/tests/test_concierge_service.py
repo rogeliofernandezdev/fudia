@@ -275,8 +275,8 @@ async def test_qr_start_welcomes_the_diner_with_the_menu() -> None:
 
     reply = await service.handle_message("51999999999", "FUDIA:" + "a" * 32)
 
-    assert reply.startswith("¡Bienvenido a Restaurante Demo! 👋")
-    assert "*Platos*\n• Lomo saltado · S/ 32.50" in reply
+    assert reply.startswith("🍽️ Bienvenido a Restaurante Demo\n📍 Mesa M1\n\n")
+    assert "Platos:\n- Lomo saltado: S/ 32.50" in reply
     assert reply.endswith("¿Qué deseas pedir?")
 
 
@@ -294,8 +294,7 @@ async def test_qr_start_still_welcomes_when_the_menu_fails() -> None:
     reply = await service.handle_message("51999999999", "FUDIA:" + "a" * 32)
 
     assert reply == (
-        "¡Bienvenido a Restaurante Demo! 👋\nEstás en la Mesa M1.\n\n"
-        "¿Qué deseas pedir?"
+        "🍽️ Bienvenido a Restaurante Demo\n📍 Mesa M1\n\n¿Qué deseas pedir?"
     )
     session = await store.get("51999999999")
     assert session is not None and session.table is not None
@@ -711,3 +710,52 @@ async def test_search_menu_exposes_recommended_from_backend() -> None:
     menu = await tools.execute("search_menu", {"query": ""})
     assert [item["recommended"] for item in menu["items"]] == [True, False]
     assert MenuItem(productId="x", name="Agua", price=Decimal("3")).recommended is False
+
+
+class SearchingFudia(FakeFudia):
+    """Matches queries by name like foods-backend, so a query can miss."""
+
+    def __init__(self, items: list[MenuItem]) -> None:
+        super().__init__()
+        self.items = items
+        self.queries: list[str] = []
+
+    async def search_menu(
+        self, token: str, query: str = "", product_id: str = ""
+    ) -> MenuResponse:
+        self.queries.append(query)
+        found = [i for i in self.items if query.lower() in i.name.lower()]
+        return MenuResponse(items=found, currencySymbol="S/")
+
+
+@pytest.mark.asyncio
+async def test_search_without_match_returns_the_full_carta_not_an_empty_one() -> None:
+    lomo = MenuItem(productId="p1", name="Lomo saltado", price=Decimal("15"))
+    fudia = SearchingFudia([lomo])
+    session = ConversationSession(phone="51999999999", qr_token="a" * 32)
+    tools = ConciergeTools(fudia, session, "¿Qué tienes para hoy?")
+
+    menu = await tools.execute("search_menu", {"query": "para hoy"})
+
+    assert fudia.queries == ["para hoy", ""]
+    assert menu["matched"] is False and menu["menuEmpty"] is False
+    assert [item["name"] for item in menu["items"]] == ["Lomo saltado"]
+
+
+@pytest.mark.asyncio
+async def test_search_with_match_or_empty_carta_is_reported_as_such() -> None:
+    lomo = MenuItem(productId="p1", name="Lomo saltado", price=Decimal("15"))
+    session = ConversationSession(phone="51999999999", qr_token="a" * 32)
+
+    fudia = SearchingFudia([lomo])
+    found = await ConciergeTools(fudia, session, "lomo").execute(
+        "search_menu", {"query": "lomo"}
+    )
+    assert fudia.queries == ["lomo"]
+    assert found["matched"] is True and found["menuEmpty"] is False
+
+    empty = await ConciergeTools(SearchingFudia([]), session, "carta").execute(
+        "search_menu", {"query": "ceviche"}
+    )
+    assert empty["matched"] is False and empty["menuEmpty"] is True
+    assert empty["items"] == []

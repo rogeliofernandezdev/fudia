@@ -117,7 +117,7 @@ def _cart_lines(cart: dict[str, Any]) -> str:
         quantity = item.get("quantity", "")
         if isinstance(quantity, float) and quantity.is_integer():
             quantity = int(quantity)
-        rows.append(f"• {quantity} × {item.get('name', '')}")
+        rows.append(f"- {quantity} × {item.get('name', '')}")
     rows.append(f"Total: {_money('', cart.get('total', '0'))}")
     return "\n".join(rows)
 
@@ -171,11 +171,11 @@ def recovery_reply(
     if effect.kind == "request_bill":
         symbol = str(effect.result.get("currencySymbol", ""))
         return (
-            f"Tu cuenta {effect.result.get('code', '')}: "
-            f"total {_money(symbol, effect.result.get('total'))}, "
-            f"pagado {_money(symbol, effect.result.get('paidAmount'))}, "
-            "saldo pendiente "
-            f"{_money(symbol, effect.result.get('remainingAmount'))}. "
+            f"🧾 Tu cuenta {effect.result.get('code', '')}:\n"
+            f"- Total: {_money(symbol, effect.result.get('total'))}\n"
+            f"- Pagado: {_money(symbol, effect.result.get('paidAmount'))}\n"
+            "- Saldo pendiente: "
+            f"{_money(symbol, effect.result.get('remainingAmount'))}\n\n"
             "El pago se realiza con el personal del local."
         )
     if effect.kind == "delivery":
@@ -186,7 +186,7 @@ def recovery_reply(
     cart = effect.result.get("cart", {})
     if effect.kind == "confirmation" and session.awaiting_confirmation:
         return (
-            f"{_cart_lines(cart)}\n"
+            f"🧾 Tu pedido:\n{_cart_lines(cart)}\n\n"
             "¿Confirmas este pedido? Responde «sí» para enviarlo."
         )
-    return f"Actualicé tu pedido:\n{_cart_lines(cart)}\n¿Deseas algo más?"
+    return f"🧾 Actualicé tu pedido:\n{_cart_lines(cart)}\n\n¿Deseas algo más?"

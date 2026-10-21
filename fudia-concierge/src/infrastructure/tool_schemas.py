@@ -8,7 +8,9 @@ TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
         "name": "search_menu",
         "description": (
             "Busca productos reales por nombre, descripción o categoría. "
-            "Usa query vacío para consultar la carta disponible."
+            "Usa query vacío para consultar la carta disponible. Si query no "
+            "coincide con nada devuelve matched=false y la carta completa; "
+            "solo menuEmpty=true significa que la carta está vacía."
         ),
         "parameters": {
             "type": "object",
