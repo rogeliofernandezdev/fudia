@@ -4,7 +4,7 @@ from decimal import Decimal
 from typing import Any
 from uuid import uuid4
 
-from src.domain.models import CartLine, CartModifier, CartSelection
+from src.domain.models import CartLine, CartModifier, CartSelection, MenuItem
 from src.services.confirmation import explicit_confirmation
 from src.services.delivery_tools import (
     DeliveryTools,
@@ -15,6 +15,10 @@ from src.services.delivery_tools import (
 from src.services.menu_tools import MenuTools
 from src.services.ports import FudiaError
 from src.services.tooling import ToolContext
+
+
+def _plain(value: Decimal) -> int | float:
+    return int(value) if value == value.to_integral_value() else float(value)
 
 
 class OrderTools:
@@ -66,6 +70,9 @@ class OrderTools:
                     "code": "modifier_review_required",
                     "name": item.name,
                 }
+            shortfall = self._stock_shortfall(item, quantity)
+            if shortfall:
+                return shortfall
 
             existing = next(
                 (
@@ -162,6 +169,38 @@ class OrderTools:
 
         return {"ok": False, "code": "unknown_order_tool"}
 
+    def _in_cart(self, product_id: str) -> Decimal:
+        """Units of a product the cart already uses, alone or inside combos."""
+        total = Decimal("0")
+        for line in self.context.session.cart:
+            quantity = Decimal(str(line.quantity))
+            if line.product_id == product_id:
+                total += quantity
+            total += quantity * sum(
+                1 for selection in line.selections if selection.product_id == product_id
+            )
+        return total
+
+    def _stock_shortfall(
+        self, item: MenuItem, quantity: float
+    ) -> dict[str, Any] | None:
+        """Portions or units left today cap what the cart may hold, so the
+        diner hears it while ordering instead of when confirming."""
+        if item.remaining is None:
+            return None
+        in_cart = self._in_cart(item.productId)
+        left = max(item.remaining - in_cart, Decimal("0"))
+        if Decimal(str(quantity)) <= left:
+            return None
+        return {
+            "ok": False,
+            "code": "insufficient_stock",
+            "name": item.name,
+            "requested": _plain(Decimal(str(quantity))),
+            "available": _plain(left),
+            "inCart": _plain(in_cart),
+        }
+
     async def _add_modified_item(
         self,
         args: dict[str, Any],
@@ -195,6 +234,9 @@ class OrderTools:
                 "code": "combo_requires_options",
                 "name": item.name,
             }
+        shortfall = self._stock_shortfall(item, quantity)
+        if shortfall:
+            return shortfall
 
         config = await self.context.fudia.get_modifiers(
             self.context.token(),
@@ -373,6 +415,17 @@ class OrderTools:
                     )
                 )
                 surcharge_total += option.surcharge
+
+        # The combo and each chosen dish draw from today's portions or stock.
+        for stocked_id in [combo.id, *(selection.product_id for selection in selections)]:
+            stocked = await self.context.fudia.get_product(
+                self.context.token(), stocked_id
+            )
+            shortfall = (
+                self._stock_shortfall(stocked, quantity) if stocked else None
+            )
+            if shortfall:
+                return shortfall
 
         self.context.session.cart.append(
             CartLine(

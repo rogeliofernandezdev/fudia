@@ -13,6 +13,8 @@ type PublicMenuItem struct {
 	HasModifiers bool    `json:"hasModifiers"`
 	// Recommended marca los productos que el local recomienda en la carta digital (Concierge los presenta primero).
 	Recommended bool `json:"recommended"`
+	// Remaining son las porciones o unidades que quedan hoy; nil si el producto no controla cantidad.
+	Remaining *float64 `json:"remaining"`
 }
 type PublicComboOption struct {
 	ProductID string `json:"productId"`

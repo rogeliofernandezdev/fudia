@@ -103,6 +103,9 @@ class MenuTools:
                         "isCombo": item.isCombo,
                         "hasModifiers": item.hasModifiers,
                         "recommended": item.recommended,
+                        "remaining": (
+                            None if item.remaining is None else str(item.remaining)
+                        ),
                         "includedInCombo": item.productId in included,
                     }
                     for item in menu.items

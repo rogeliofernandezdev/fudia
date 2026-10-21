@@ -55,6 +55,12 @@ comercial y su precio.
 esos productos primero. Las vistas operativas (POS, Comanda y sus combos) no lo
 usan para ordenar: conservan categoría y nombre.
 
+La misma carta expone `remaining`: porciones (`portion_quantity - sold_quantity`
+del día) o unidades de stock que quedan en el local, o `null` con
+`quantity_control='none'`. Concierge lo usa para no aceptar en el carrito más de
+lo disponible; la validación definitiva sigue en `ApplyOrderQuantityDelta` al
+crear el pedido (`insufficient_stock` / `insufficient_portions`).
+
 «Agregar productos» conserva la misma cuenta y agrega exclusivamente líneas
 nuevas y una ronda identificada por `request_key` para evitar duplicados.
 No modifica ni reenvía productos preparados/entregados. Solo una cuenta Abierta

@@ -20,7 +20,9 @@ func (a *Catalog) PublicMenu(ctx context.Context, s scope, q, productID string) 
 	items := []domain.PublicMenuItem{}
 	for _, v := range raw {
 		item := v.Item
-		item.Status = domain.ResolveAvailability(v.Availability, day.Format("2006-01-02")).Status
+		resolved := domain.ResolveAvailability(v.Availability, day.Format("2006-01-02"))
+		item.Status = resolved.Status
+		item.Remaining = resolved.Remaining
 		if item.IsCombo && item.Status == "available" {
 			ok, err := a.repo.ComboAvailable(ctx, s, item.ProductID, day)
 			if err != nil {

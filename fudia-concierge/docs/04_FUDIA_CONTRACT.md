@@ -9,6 +9,9 @@ GET /v1/integrations/concierge/{token}/menu
 q busca por palabras en nombre, descripción o categoría, sin distinguir mayúsculas ni tildes y con plurales simples («ceviches», «aji»); basta una palabra y los productos con más coincidencias van primero. Las palabras de relleno («¿qué tienes para hoy?», «quiero comer») se ignoran: una búsqueda hecha solo de ellas devuelve la carta completa. productId revalida una selección exacta.
 Cada producto trae `recommended`: los que el local marcó «Recomendar en la carta digital» llegan primero y
 el especialista de carta los presenta como «Recomendados de la casa»; nunca se recomienda otro producto.
+Cada producto trae también `remaining`: porciones o unidades que quedan hoy en el local, o `null` si no controla cantidad.
+Al agregar al carrito (producto suelto, con modificadores o combo y cada opción elegida), Concierge suma lo que ya está en el carrito y, si se pasa, responde `insufficient_stock` con `available` e `inCart` sin agregar nada; el agente dice cuántos quedan y pregunta si agrega esa cantidad.
+Es una validación temprana: al confirmar, foods-backend vuelve a validar con bloqueo y responde `insufficient_stock` o `insufficient_portions` si otra mesa pidió antes.
 
 ## Rondas
 

@@ -33,6 +33,8 @@ class MenuItem(BaseModel):
     hasModifiers: bool = False
     # Recomendado por el local en la carta digital; foods-backend lo envía primero.
     recommended: bool = False
+    # Porciones o unidades que quedan hoy; None si el producto no controla cantidad.
+    remaining: Decimal | None = None
 
 
 class MenuResponse(BaseModel):

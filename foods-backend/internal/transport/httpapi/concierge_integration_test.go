@@ -126,7 +126,7 @@ func TestConciergeQRCodeMenuOrderAndKitchenWorkflow(t *testing.T) {
 	if err := json.Unmarshal(menuRec.Body.Bytes(), &menu); err != nil {
 		t.Fatal(err)
 	}
-	if len(menu.Items) != 1 || menu.Items[0].ProductID != productID || menu.Items[0].Price != "27.50" || menu.Items[0].Status != "available" {
+	if len(menu.Items) != 1 || menu.Items[0].ProductID != productID || menu.Items[0].Price != "27.50" || menu.Items[0].Status != "available" || menu.Items[0].Remaining != nil {
 		t.Fatalf("unexpected concierge menu: %#v", menu)
 	}
 
