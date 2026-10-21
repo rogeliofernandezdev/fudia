@@ -220,7 +220,9 @@ func TestProductModifierConfigurationLifecycle(t *testing.T) {
 	orderReq := httptest.NewRequest("POST", "/v1/admin/orders", bytes.NewReader([]byte(`{
 	  "channel":"mostrador",
 	  "items":[{"productId":"`+productID+`","qty":1,"unitPrice":0,"selections":[],
-	    "modifiers":[{"groupId":"`+orderGroupID+`","optionId":"`+orderOptionID+`"}]}]
+	    "modifiers":[
+	      {"groupId":"`+reordered.Groups[0].ID+`","optionId":"`+reordered.Groups[0].Options[0].ID+`"},
+	      {"groupId":"`+orderGroupID+`","optionId":"`+orderOptionID+`"}]}]
 	}`)))
 	orderReq = orderReq.WithContext(context.WithValue(orderReq.Context(), scopeKey{}, s))
 	orderRec := httptest.NewRecorder()
