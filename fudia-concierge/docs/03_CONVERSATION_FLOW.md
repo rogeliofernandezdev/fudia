@@ -23,26 +23,32 @@ mensaje amable y un código corto de la mesa, sin el token técnico:
 - Si Redis no puede emitir el código, `/start` usa el mensaje anterior
   `FUDIA:<token>`; ese formato se sigue aceptando para QR y enlaces antiguos.
 - Al abrir la mesa, la respuesta es determinista, sin modelo: el saludo, la
-  carta real de `search_menu` (query vacío) y «¿Qué deseas pedir?». Primero va
-  «Recomendados de la casa:» y luego las categorías en el orden de foods-backend;
-  solo se listan productos `available` o `low`. El nombre de la mesa pasa por
+  carta real de `search_menu` (query vacío) y «¿Qué deseas pedir?». La carta se
+  arma en `build_carta` (`src/services/carta.py`): primero «Recomendados de la
+  casa:», luego cada combo o menú con su precio y una línea por grupo con sus
+  opciones disponibles (`get_combo`), y después las categorías en el orden de
+  foods-backend. Un plato que es opción de un combo no se repite en su categoría,
+  así que una categoría cubierta por el menú desaparece. Solo se listan productos
+  `available` o `low`; si el detalle de un combo falla, se muestra como plato
+  suelto y sus opciones siguen en sus categorías. El nombre de la mesa pasa por
   `table_label`, que no repite «Mesa». Ejemplo:
 
   ```
   🍽️ Bienvenido a La Panchita
   📍 Mesa 7
 
-  Recomendados de la casa:
-  - Lomo saltado: S/ 32.50
+  Menú (S/ 12.00):
+  - Entrada: Causa Rellena
+  - Segundo: Ají de gallina o Lomo Saltado (+S/ 3.00)
 
-  Segundos:
-  - Ají de gallina: S/ 15.00
+  Marino:
+  - Ceviche: S/ 25.00
 
   ¿Qué deseas pedir?
   ```
 
   La respuesta se limita a 3500 caracteres (WhatsApp corta en 4096): si no cabe
-  todo, cierra con «Hay N platos más. Escríbeme una categoría o un plato y te
+  todo, cierra con «Hay N opciones más. Escríbeme una categoría o un plato y te
   muestro el resto.». Si la carta falla
   o está vacía, se envía solo el saludo y la mesa queda abierta igual. El modelo
   atiende a partir del primer mensaje que escribe el cliente.
@@ -52,7 +58,7 @@ mensaje amable y un código corto de la mesa, sin el token técnico:
 ## Atención y rondas
 
 1. Resolver la mesa.
-2. Consultar la carta con search_menu por nombre, descripción o categoría; query vacío permite consultar la carta. Preguntas generales («¿qué tienes para hoy?», «quiero comer») usan query vacío. Si un query no coincide con nada, la tool devuelve `matched=false` junto con la carta completa, para que el agente nunca concluya que no hay productos; solo `menuEmpty=true` indica una carta vacía.
+2. Consultar la carta con search_menu por nombre, descripción o categoría; query vacío permite consultar la carta. Preguntas generales («¿qué tienes para hoy?», «quiero comer») usan query vacío. Si un query no coincide con nada, la tool devuelve `matched=false` junto con la carta completa, para que el agente nunca concluya que no hay productos; solo `menuEmpty=true` indica una carta vacía. La carta completa trae además `combos` con los grupos y opciones de cada combo, y marca con `includedInCombo` los platos que ya son opción de uno: el agente los muestra dentro del combo y no como platos sueltos.
 3. Agregar únicamente IDs devueltos por Fudia.
 4. Revalidar producto, combo o modificadores.
 5. Revisar el carrito temporal de la ronda.
@@ -101,7 +107,8 @@ respuestas fijas del código y en las del modelo (`prompts/system.md`):
 - Sin asteriscos, guiones bajos, almohadillas ni negritas.
 - Varios elementos: una línea de título que termina en «:» y debajo un elemento
   por línea con «- ». Producto: «- Nombre: S/ 0.00». Línea de pedido:
-  «- 2 × Nombre».
+  «- 2 × Nombre». Combo o menú: «Menú (S/ 12.00):» y una línea por grupo,
+  «- Segundo: Ají de gallina o Lomo saltado (+S/ 3.00)».
 - Párrafos cortos separados por una línea en blanco y una sola pregunta al final.
 - Íconos sobrios, como máximo uno al inicio de un bloque: 🍽️ carta, 🧾 pedido o
   cuenta, ✅ confirmado, 📍 mesa o ubicación, 🛵 delivery, ⏳ en preparación. Nunca

@@ -743,6 +743,34 @@ async def test_search_without_match_returns_the_full_carta_not_an_empty_one() ->
 
 
 @pytest.mark.asyncio
+async def test_full_carta_details_combos_and_flags_their_dishes() -> None:
+    fudia = SearchingFudia(
+        [
+            MenuItem(productId="combo1", name="Combo criollo", price=Decimal("20"), isCombo=True),
+            MenuItem(productId="opt1", name="Papas", price=Decimal("6")),
+            MenuItem(productId="p9", name="Ceviche", price=Decimal("25")),
+        ]
+    )
+    session = ConversationSession(phone="51999999999", qr_token="a" * 32)
+
+    menu = await ConciergeTools(fudia, session, "la carta").execute(
+        "search_menu", {"query": ""}
+    )
+
+    assert [combo["name"] for combo in menu["combos"]] == ["Combo criollo"]
+    group = menu["combos"][0]["groups"][0]
+    assert group["name"] == "Acompañamiento"
+    assert [option["name"] for option in group["options"]] == ["Papas", "Yuca"]
+    flags = {item["name"]: item["includedInCombo"] for item in menu["items"]}
+    assert flags == {"Combo criollo": False, "Papas": True, "Ceviche": False}
+
+    lookup = await ConciergeTools(fudia, session, "ceviche").execute(
+        "search_menu", {"query": "ceviche"}
+    )
+    assert lookup["combos"] == []
+
+
+@pytest.mark.asyncio
 async def test_search_with_match_or_empty_carta_is_reported_as_such() -> None:
     lomo = MenuItem(productId="p1", name="Lomo saltado", price=Decimal("15"))
     session = ConversationSession(phone="51999999999", qr_token="a" * 32)

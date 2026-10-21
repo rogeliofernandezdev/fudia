@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from src.services.carta import build_carta
 from src.services.tooling import ToolContext
 
 
@@ -28,12 +29,45 @@ class MenuTools:
                     self.context.token(),
                     query="",
                 )
+            # The full carta carries each combo with what it includes, so the
+            # agent shows it once instead of repeating its dishes.
+            full = not query or not matched
+            carta = (
+                await build_carta(self.context.fudia, self.context.token(), menu)
+                if full
+                else None
+            )
+            included = carta.included if carta else set()
             return {
                 "ok": True,
                 "query": query,
                 "matched": matched,
                 "menuEmpty": not menu.items,
                 "currencySymbol": menu.currencySymbol,
+                "combos": [
+                    {
+                        "productId": view.item.productId,
+                        "name": view.item.name,
+                        "price": str(view.item.price),
+                        "groups": [
+                            {
+                                "name": group.name,
+                                "minSelections": group.minSelections,
+                                "maxSelections": group.maxSelections,
+                                "options": [
+                                    {
+                                        "productId": option.productId,
+                                        "name": option.name,
+                                        "surcharge": str(option.surcharge),
+                                    }
+                                    for option in group.options
+                                ],
+                            }
+                            for group in view.groups
+                        ],
+                    }
+                    for view in (carta.combos if carta else [])
+                ],
                 "items": [
                     {
                         "productId": item.productId,
@@ -45,6 +79,7 @@ class MenuTools:
                         "isCombo": item.isCombo,
                         "hasModifiers": item.hasModifiers,
                         "recommended": item.recommended,
+                        "includedInCombo": item.productId in included,
                     }
                     for item in menu.items
                 ],

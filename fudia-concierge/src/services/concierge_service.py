@@ -18,7 +18,6 @@ from src.domain.models import (
     EffectRecord,
     GeoPoint,
     InboundMessage,
-    MenuResponse,
     ProcessingRecord,
     VenueContext,
 )
@@ -31,6 +30,7 @@ from src.metrics import (
     SCOPE_DECISIONS,
 )
 from src.observability import fingerprint, log_event
+from src.services.carta import Carta, build_carta
 from src.services.delivery_tools import apply_quote, delivery_summary
 from src.services.formatting import whatsapp_text
 from src.services.ports import (
@@ -549,12 +549,14 @@ class ConciergeService:
             session.pending_order_request_id = None
             session.handoff_pending = False
             try:
-                menu: MenuResponse | None = await self.fudia.search_menu(token)
+                carta: Carta | None = await build_carta(
+                    self.fudia, token, await self.fudia.search_menu(token)
+                )
             except (FudiaError, ValueError):
                 # The carta is a courtesy: the table is already open, so the
                 # greeting goes out and the diner can still ask for it.
-                menu = None
-            reply = welcome_message(table, menu)
+                carta = None
+            reply = welcome_message(table, carta)
             session.messages = [
                 ChatMessage(
                     role="user",

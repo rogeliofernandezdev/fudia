@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-from decimal import Decimal, InvalidOperation
-
-from src.domain.models import MenuItem, MenuResponse, TableContext
+from src.domain.models import MenuItem, TableContext
+from src.services.carta import Carta, combo_heading, combo_lines, money
 from src.services.start_codes import table_label
 
-ORDERABLE_STATUSES = {"available", "low"}
 RECOMMENDED_HEADING = "Recomendados de la casa"
 UNCATEGORIZED_HEADING = "Otros"
 CLOSING = "¿Qué deseas pedir?"
@@ -13,69 +11,69 @@ CLOSING = "¿Qué deseas pedir?"
 MAX_REPLY_CHARS = 3500
 
 
-def _price(symbol: str, value: Decimal) -> str:
-    try:
-        amount = Decimal(value).quantize(Decimal("0.01"))
-    except (InvalidOperation, ValueError):
-        amount = Decimal("0.00")
-    return f"{symbol} {amount}".strip()
+def _sections(carta: Carta) -> list[tuple[str, list[str]]]:
+    """Recommended dishes, then each combo with what it includes, then the
+    remaining categories in the order the backend sends. A dish offered
+    inside a combo is not repeated on its own."""
+    symbol = carta.currency_symbol
 
+    def line(item: MenuItem) -> str:
+        return f"- {item.name}: {money(symbol, item.price)}"
 
-def _sections(items: list[MenuItem]) -> list[tuple[str, list[MenuItem]]]:
-    """Recommended first, then categories in the order the backend sends."""
-    recommended = [item for item in items if item.recommended]
-    sections: dict[str, list[MenuItem]] = {}
-    for item in items:
+    recommended = [line(item) for item in carta.items if item.recommended]
+    categories: dict[str, list[str]] = {}
+    for item in carta.items:
         if item.recommended:
             continue
         heading = (item.categoryName or "").strip() or UNCATEGORIZED_HEADING
-        sections.setdefault(heading, []).append(item)
-    ordered = [(RECOMMENDED_HEADING, recommended)] if recommended else []
-    return ordered + list(sections.items())
+        categories.setdefault(f"{heading}:", []).append(line(item))
+
+    sections = [(f"{RECOMMENDED_HEADING}:", recommended)] if recommended else []
+    # A combo is one entry: it is shown whole or not at all.
+    sections += [
+        (combo_heading(view, symbol), ["\n".join(combo_lines(view, symbol))])
+        for view in carta.combos
+    ]
+    return sections + list(categories.items())
 
 
-def welcome_message(table: TableContext, menu: MenuResponse | None) -> str:
-    """Deterministic first reply to a QR start: greeting plus the real menu,
-    so the diner sees the carta without a model call."""
+def welcome_message(table: TableContext, carta: Carta | None) -> str:
+    """Deterministic first reply to a QR start: greeting plus the real carta,
+    so the diner sees it without a model call."""
     # Plain WhatsApp text: no markdown, sober icons only (see
     # docs/03_CONVERSATION_FLOW.md, «Formato de los mensajes»).
     greeting = (
         f"🍽️ Bienvenido a {table.organizationName}\n"
         f"📍 {table_label(table.name)}"
     )
-    items = [
-        item
-        for item in (menu.items if menu else [])
-        if item.status in ORDERABLE_STATUSES
-    ]
-    if not items:
+    sections = _sections(carta) if carta else []
+    entries = sum(len(lines) for _, lines in sections)
+    if not entries:
         return f"{greeting}\n\n{CLOSING}"
 
-    symbol = menu.currencySymbol if menu else ""
     blocks: list[str] = []
     # Greeting, closing, separators and room for the "more dishes" note.
     budget = MAX_REPLY_CHARS - len(greeting) - len(CLOSING) - 120
     shown = 0
     full = False
-    for heading, section in _sections(items):
-        block = f"{heading}:"
-        for item in section:
-            line = f"\n- {item.name}: {_price(symbol, item.price)}"
-            if len(block) + len(line) + 2 > budget:
+    for heading, lines in sections:
+        block = heading
+        for entry in lines:
+            if len(block) + len(entry) + 3 > budget:
                 full = True
                 break
-            block += line
+            block += f"\n{entry}"
             shown += 1
-        if "\n" in block:
+        if block != heading:
             blocks.append(block)
             budget -= len(block) + 2
         if full:
             break
 
-    hidden = len(items) - shown
+    hidden = entries - shown
     body = "\n\n".join(blocks)
     if hidden:
-        more = "plato más" if hidden == 1 else "platos más"
+        more = "opción más" if hidden == 1 else "opciones más"
         body += (
             f"\n\nHay {hidden} {more}. Escríbeme una categoría o un plato "
             "y te muestro el resto."
