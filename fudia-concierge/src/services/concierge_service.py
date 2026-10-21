@@ -39,12 +39,15 @@ from src.services.ports import (
     FudiaBackend,
     FudiaError,
     LocalConversationLock,
+    LocalTableStartCodes,
     LockLostError,
     RateLimiter,
+    TableStartCodes,
     conversation_identity,
 )
 from src.services.processing import TurnJournal, recovery_reply
 from src.services.service_tools import bill_summary
+from src.services.start_codes import looks_like_start_message, start_code_candidates
 from src.services.tool_registry import ToolRegistry
 
 logger = logging.getLogger(__name__)
@@ -63,8 +66,12 @@ OFF_SCOPE_REPLY = (
     "pedir la cuenta o solicitar atención del personal."
 )
 SCAN_QR_REPLY = (
-    "Para comenzar, escanea el QR de tu mesa y abre WhatsApp "
-    "desde ese enlace."
+    "Para atenderte en tu mesa, vuelve a escanear el QR y envía el mensaje "
+    "tal como aparece 😊"
+)
+EXPIRED_START_CODE_REPLY = (
+    "Ese código de mesa ya venció. Vuelve a escanear el QR de tu mesa y envía "
+    "el mensaje tal como aparece 😊"
 )
 TOO_LONG_REPLY = (
     "Tu mensaje es demasiado largo. "
@@ -164,6 +171,7 @@ class ConciergeService:
         agents: dict[AgentIntent, ConversationAgent] | None = None,
         conversation_lock: ConversationLock | None = None,
         rate_limiter: RateLimiter | None = None,
+        start_codes: TableStartCodes | None = None,
         max_message_chars: int = 2000,
         lock_heartbeat_seconds: float = 5.0,
         lock_ttl_seconds: float = 30.0,
@@ -177,6 +185,7 @@ class ConciergeService:
             conversation_lock or LocalConversationLock()
         )
         self.rate_limiter = rate_limiter or AllowAllRateLimiter()
+        self.start_codes = start_codes or LocalTableStartCodes()
         self.max_message_chars = max_message_chars
         self.lock_heartbeat_seconds = lock_heartbeat_seconds
         self.lock_ttl_seconds = lock_ttl_seconds
@@ -423,6 +432,9 @@ class ConciergeService:
             return await self._recover(message, journal)
 
         token = extract_qr_token(message.text)
+        stale_code = False
+        if token is None:
+            token, stale_code = await self._token_from_start_code(message.text)
         if (
             message.sequence
             and session.context_sequence
@@ -443,8 +455,24 @@ class ConciergeService:
 
         record.stage = "processing"
         await journal.checkpoint(with_session=False)
-        reply, change = await self._respond(message, token, journal)
+        reply, change = await self._respond(
+            message, token, journal, stale_code=stale_code
+        )
         return await self._finish(journal, message.text, reply, change)
+
+    async def _token_from_start_code(self, text: str) -> tuple[str | None, bool]:
+        """QR token behind a short start code ("Mesa 7 · K7P2").
+
+        Returns `(token, False)` when a live code is found. A start message
+        whose code expired returns `(None, True)`; ordinary text that merely
+        looks like a code is ignored.
+        """
+        candidates = start_code_candidates(text)
+        for code in candidates:
+            token = await self.start_codes.resolve(code)
+            if token:
+                return token.lower(), False
+        return None, bool(candidates) and looks_like_start_message(text)
 
     async def _finish(
         self,
@@ -476,6 +504,8 @@ class ConciergeService:
         message: InboundMessage,
         token: str | None,
         journal: TurnJournal,
+        *,
+        stale_code: bool = False,
     ) -> tuple[str, SessionChange]:
         session = journal.session
         text = message.text
@@ -527,6 +557,10 @@ class ConciergeService:
                 ChatMessage(role="assistant", content=reply),
             ]
             return reply, "session"
+
+        if stale_code and (session.mode != "table" or session.table is None):
+            # An old start message must not reopen a venue or seat the diner.
+            return EXPIRED_START_CODE_REPLY, "none"
 
         notice = ""
         if not session.qr_token:

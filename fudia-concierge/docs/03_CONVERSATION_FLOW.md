@@ -2,7 +2,28 @@
 
 ## Inicio
 
-El QR inicia WhatsApp con un token opaco de mesa. El token se resuelve antes del LLM.
+El QR pasa por `/start/{token}`: Concierge valida la mesa y abre WhatsApp con un
+mensaje amable y un código corto de la mesa, sin el token técnico:
+
+> ¡Hola! 👋 Quiero ver la carta.
+> Mesa 7 · K7P2
+
+- WhatsApp no transporta datos ocultos y al escanear aún no se conoce el número
+  del cliente: el primer mensaje es lo único que une el escaneo con el chat. Por
+  eso lleva la referencia de la mesa.
+- El código (4 caracteres sin 0/O/1/I/L, con al menos una letra y un número) se
+  guarda en Redis (`fudia:concierge:startcode:{CÓDIGO}` → token del QR) durante
+  `START_CODE_TTL_SECONDS` (600 s por defecto) con `SET NX`: un código vigente nunca
+  se reasigna. Se resuelve antes del LLM, en cualquier parte del mensaje y sin
+  distinguir mayúsculas; luego el token se valida en foods-backend como siempre.
+- Si el cliente borra el mensaje y escribe otra cosa, el bot no adivina la mesa:
+  sin contexto responde «Para atenderte en tu mesa, vuelve a escanear el QR y envía
+  el mensaje tal como aparece 😊». Un mensaje de inicio con el código vencido recibe
+  «Ese código de mesa ya venció…» y no reabre un local ni sienta al cliente.
+- Si Redis no puede emitir el código, `/start` usa el mensaje anterior
+  `FUDIA:<token>`; ese formato se sigue aceptando para QR y enlaces antiguos.
+- El número del cliente queda prerregistrado en foods-backend al confirmar su
+  primer pedido (ver `04_FUDIA_CONTRACT.md`).
 
 ## Atención y rondas
 

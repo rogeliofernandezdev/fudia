@@ -151,10 +151,13 @@ class MetaWhatsAppAdapter:
     async def start_url(
         self,
         qr_token: str,
+        text: str = "",
     ) -> str:
+        """Deep link with the prefilled start message; without `text` it
+        falls back to the legacy `FUDIA:<token>` message."""
         digits = await self.display_phone_digits()
         message = quote(
-            f"FUDIA:{qr_token}",
+            text or f"FUDIA:{qr_token}",
             safe="",
         )
         return (

@@ -34,6 +34,7 @@ Concierge emite logs JSON para:
 - mensaje recuperado desde efectos persistidos (`concierge.processing.recovered`);
 - mensaje o respuesta de un QR anterior (`concierge.message.superseded`, `concierge.outbound.superseded`);
 - envío incierto o fallido (`concierge.outbound.uncertain`, `concierge.outbound.failed`);
+- código corto de mesa no emitido al escanear; se usa el mensaje `FUDIA:<token>` (`concierge.start_code.failed`);
 - predecesor ausente al ordenar (`concierge.queue.order_gap`);
 - fallo de mantenimiento de cola (`concierge.queue.maintenance_failed`);
 - errores operativos.

@@ -22,17 +22,17 @@ func (r *Orders) ConciergeDeliveryRequestOrder(ctx context.Context, s scope, req
 	`, s.OrganizationID, s.LocationID, requestID).Scan(&orderID)
 	return orderID, orderError(err)
 }
-func (r *Orders) CreateConciergeDeliveryOrder(ctx context.Context, s scope, in application.ConciergeDeliveryInput, subtotal float64, total float64) (domain.Order, error) {
+func (r *Orders) CreateConciergeDeliveryOrder(ctx context.Context, s scope, in application.ConciergeDeliveryInput, subtotal float64, total float64, customerID string) (domain.Order, error) {
 	out, err := scanOrder(r.db(ctx).QueryRow(ctx, `
 		INSERT INTO orders(
-		  organization_id,location_id,channel,customer_name,customer_phone,address,reference,
+		  organization_id,location_id,channel,customer_id,customer_name,customer_phone,address,reference,
 		  table_id,notes,subtotal,delivery_fee,total,status,created_by,
 		  delivery_latitude,delivery_longitude,delivery_distance_km
 		)
-		VALUES($1,$2,$3,$4,$5,$6,$7,NULL,$8,$9,$10,$11,'confirmado',NULL,$12,$13,$14)
+		VALUES($1,$2,$3,NULLIF($15,'')::uuid,$4,$5,$6,$7,NULL,$8,$9,$10,$11,'confirmado',NULL,$12,$13,$14)
 		RETURNING `+orderColumns,
 		s.OrganizationID, s.LocationID, in.Channel, in.CustomerName, in.CustomerPhone, in.Address, in.Reference,
-		in.Notes, subtotal, in.DeliveryFee, total, in.Latitude, in.Longitude, in.DistanceKm,
+		in.Notes, subtotal, in.DeliveryFee, total, in.Latitude, in.Longitude, in.DistanceKm, customerID,
 	))
 	return out, orderError(err)
 }

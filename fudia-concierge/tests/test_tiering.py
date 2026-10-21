@@ -182,3 +182,19 @@ def test_production_requires_vertex_project_but_not_openai_key() -> None:
     Settings(**base, llm_provider="vertex", google_cloud_project="demo")
     with pytest.raises(ValueError, match="OPENAI_API_KEY"):
         Settings(**base, llm_provider="openai", openai_api_key="")
+
+
+def test_meta_credentials_ignore_surrounding_whitespace() -> None:
+    from config.settings import Settings
+
+    cfg = Settings(
+        whatsapp_app_secret="app-secret\n",
+        whatsapp_verify_token="  verify\r\n",
+        whatsapp_token="token \n",
+        whatsapp_phone_id=" 123\n",
+    )
+
+    assert cfg.whatsapp_app_secret == "app-secret"
+    assert cfg.whatsapp_verify_token == "verify"
+    assert cfg.whatsapp_token == "token"
+    assert cfg.whatsapp_phone_id == "123"

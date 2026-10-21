@@ -43,3 +43,13 @@ Cuerpo `{fulfillment: delivery|pickup, customerName, customerPhone, conversation
 POST /v1/integrations/concierge/{token}/bill
 
 Devuelve el consumo acumulado real, moneda, productos, total, pagos registrados, saldo pendiente y estado de pago. Registra la solicitud de cuenta, pero no registra un pago. requestId identifica idempotentemente cada solicitud: repetirlo devuelve la cuenta vigente sin registrar otra solicitud; si se omite, cada llamada se registra.
+
+## Prerregistro del cliente
+
+Al crear un pedido de mesa (`/orders`) o de recojo/delivery, foods-backend usa el
+`customerPhone` del cuerpo para prerregistrar al comensal en `customers` de la
+empresa del QR, dentro de la misma transacción del pedido: reutiliza el cliente si
+el número ya existe (también guardado sin código de país) y si no lo crea con canal
+preferido WhatsApp. El pedido nuevo queda enlazado (`orders.customer_id`); una ronda
+que se suma a una comanda abierta registra al cliente sin cambiar el cliente de esa
+comanda. Concierge no hace llamadas adicionales para esto.

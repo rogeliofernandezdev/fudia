@@ -152,6 +152,10 @@ func (a *Orders) SubmitTable(ctx context.Context, s scope, tableID string, token
 		if err = a.syncKitchenStatus(tx.Context(), s, openOrderID); err != nil {
 			return result, orderFailure(apperror.Unavailable, "order_unavailable", "No pudimos actualizar el estado general de la comanda.")
 		}
+		// Ronda sobre una comanda abierta: el comensal queda prerregistrado, sin cambiar el cliente de la comanda.
+		if _, err = a.repo.RegisterConciergeCustomer(tx.Context(), s, in.CustomerPhone, in.CustomerName); err != nil {
+			return result, orderFailure(apperror.Unavailable, "order_unavailable", "No pudimos registrar al cliente del pedido.")
+		}
 		if _, err = a.repo.SaveQRAppendRequest(tx.Context(), s, tableID, in, openOrderID); err != nil {
 			return result, orderFailure(apperror.Unavailable, "order_unavailable", "No pudimos registrar la idempotencia del pedido.")
 		}
@@ -188,8 +192,13 @@ func (a *Orders) SubmitTable(ctx context.Context, s scope, tableID string, token
 		return result, preparationErr
 	}
 
+	// El comensal queda prerregistrado por su número y la comanda de la mesa enlazada a él.
+	customerID, err := a.repo.RegisterConciergeCustomer(tx.Context(), s, in.CustomerPhone, in.CustomerName)
+	if err != nil {
+		return result, orderFailure(apperror.Unavailable, "order_unavailable", "No pudimos registrar al cliente del pedido.")
+	}
 	var out domain.Order
-	out, err = a.repo.CreateQROrder(tx.Context(), s, tableID, in, subtotal)
+	out, err = a.repo.CreateQROrder(tx.Context(), s, tableID, in, subtotal, customerID)
 	if err != nil {
 		return result, orderFailure(apperror.Unavailable, "order_unavailable", "No pudimos guardar el pedido.")
 	}

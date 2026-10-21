@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any, Protocol
 from uuid import uuid4
@@ -24,6 +26,7 @@ from src.domain.models import (
     ProcessingRecord,
     TableContext,
 )
+from src.services.start_codes import new_start_code
 
 
 class FudiaError(RuntimeError):
@@ -293,3 +296,39 @@ class AllowAllRateLimiter:
 
     async def close(self) -> None:
         return None
+
+
+class TableStartCodes(Protocol):
+    """Short-lived codes that stand for a QR token in the start message."""
+
+    async def issue(self, qr_token: str) -> str: ...
+    async def resolve(self, code: str) -> str | None: ...
+
+
+class LocalTableStartCodes:
+    """In-process codes; production injects RedisTableStartCodes so the HTTP
+    ingress that issues a code and the worker that reads it share them."""
+
+    def __init__(
+        self,
+        ttl_seconds: float = 600.0,
+        clock: Callable[[], float] = time.time,
+    ) -> None:
+        self.ttl_seconds = ttl_seconds
+        self.clock = clock
+        self.codes: dict[str, tuple[str, float]] = {}
+
+    async def issue(self, qr_token: str) -> str:
+        now = self.clock()
+        while True:
+            code = new_start_code()
+            current = self.codes.get(code)
+            if current is None or current[1] <= now:
+                self.codes[code] = (qr_token, now + self.ttl_seconds)
+                return code
+
+    async def resolve(self, code: str) -> str | None:
+        entry = self.codes.get(code.upper())
+        if entry is None or entry[1] <= self.clock():
+            return None
+        return entry[0]

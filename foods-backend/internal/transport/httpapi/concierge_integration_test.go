@@ -237,6 +237,29 @@ func TestConciergeQRCodeMenuOrderAndKitchenWorkflow(t *testing.T) {
 	if requestCount != 2 {
 		t.Fatalf("expected one idempotency record per Concierge round, got %d", requestCount)
 	}
+	// Prerregistro: el número del comensal queda como cliente de la empresa, una sola
+	// vez aunque haya dos rondas, y la comanda de la mesa enlazada a ese cliente.
+	var customerCount int
+	var customerID, customerChannel, linkedCustomerID string
+	if err := pool.QueryRow(ctx, `
+		SELECT count(*) OVER (),id::text,preferred_channel
+		FROM customers
+		WHERE organization_id=$1 AND regexp_replace(phone,'\D','','g')='51999999999'
+		LIMIT 1
+	`, s.OrganizationID).Scan(&customerCount, &customerID, &customerChannel); err != nil {
+		t.Fatal(err)
+	}
+	if customerCount != 1 || customerChannel != "whatsapp" {
+		t.Fatalf("expected one WhatsApp customer pre-registered, got count=%d channel=%s", customerCount, customerChannel)
+	}
+	if err := pool.QueryRow(ctx, `
+		SELECT COALESCE(customer_id::text,'') FROM orders WHERE id=$1 AND organization_id=$2
+	`, created.ID, s.OrganizationID).Scan(&linkedCustomerID); err != nil {
+		t.Fatal(err)
+	}
+	if linkedCustomerID != customerID {
+		t.Fatalf("table order must be linked to the pre-registered customer: %q vs %q", linkedCustomerID, customerID)
+	}
 	var appendAuditCount int
 	if err := pool.QueryRow(ctx, `
 		SELECT count(*) FROM audit_log

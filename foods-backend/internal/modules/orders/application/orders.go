@@ -29,7 +29,9 @@ func orderFailure(kind apperror.Kind, code, message string) error {
 }
 
 type OrderRepository interface {
-	CreateQROrder(ctx context.Context, s scope, tableID string, in QROrderInput, subtotal float64) (domain.Order, error)
+	CreateQROrder(ctx context.Context, s scope, tableID string, in QROrderInput, subtotal float64, customerID string) (domain.Order, error)
+	// RegisterConciergeCustomer prerregistra al comensal de WhatsApp por su número en la empresa del pedido.
+	RegisterConciergeCustomer(ctx context.Context, s scope, phone string, name string) (string, error)
 	LockQRTable(ctx context.Context, s scope, tableID string, token string) (string, error)
 	QRRequestOrder(ctx context.Context, s scope, tableID string, in QROrderInput) (string, error)
 	LockQRTableOrder(ctx context.Context, s scope, tableID string) (string, string, string, float64, float64, *string, bool, bool, error)
@@ -42,7 +44,7 @@ type OrderRepository interface {
 	OpenTableOrder(context.Context, scope, string) (domain.Order, error)
 	LockConciergeDeliveryRequest(ctx context.Context, s scope, requestID string) error
 	ConciergeDeliveryRequestOrder(ctx context.Context, s scope, requestID string) (string, error)
-	CreateConciergeDeliveryOrder(ctx context.Context, s scope, in ConciergeDeliveryInput, subtotal float64, total float64) (domain.Order, error)
+	CreateConciergeDeliveryOrder(ctx context.Context, s scope, in ConciergeDeliveryInput, subtotal float64, total float64, customerID string) (domain.Order, error)
 	SaveConciergeDeliveryRequest(ctx context.Context, s scope, in ConciergeDeliveryInput, orderID string) error
 	AuditConciergeDeliveryCreated(ctx context.Context, s scope, in ConciergeDeliveryInput, orderID string) error
 	ConciergeOrderActive(ctx context.Context, s scope, conversationID string, orderID string) (bool, error)

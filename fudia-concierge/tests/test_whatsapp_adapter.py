@@ -96,3 +96,23 @@ async def test_start_url_rejects_invalid_meta_display_number() -> None:
         await adapter.start_url("a" * 32)
 
     await client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_start_url_prefills_the_friendly_message_when_given() -> None:
+    async def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"display_phone_number": "+51 987 654 321"})
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    adapter = MetaWhatsAppAdapter(
+        token="token",
+        phone_id="global-phone-id",
+        graph_version="v99.0",
+        client=client,
+    )
+
+    url = await adapter.start_url("a" * 32, "¡Hola! 👋 Quiero ver la carta.\nMesa 7 · K7P2")
+
+    assert url.startswith("https://wa.me/51987654321?text=")
+    assert "FUDIA" not in url and "%0AMesa%207%20%C2%B7%20K7P2" in url
+    await client.aclose()

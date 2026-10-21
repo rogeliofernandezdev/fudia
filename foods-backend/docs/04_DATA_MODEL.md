@@ -16,6 +16,19 @@ la misma mesa pertenece a un pedido nuevo con su propio mozo. La migración 72
 vincula las comandas históricas manuales de Salón a su creador de la misma empresa;
 no inventa responsables de WhatsApp ni de registros sin autor.
 
+## Prerregistro de clientes de WhatsApp
+
+Los pedidos de Fudia Concierge (mesa por QR, recojo y delivery) prerregistran al
+comensal en `customers` de la empresa, dentro de la transacción del pedido
+(`RegisterConciergeCustomer`). Se compara solo el número en dígitos: reutiliza un
+cliente activo con el mismo número, también si fue guardado sin código de país
+(«987654321» frente a «51987654321»); si no existe crea uno con
+`preferred_channel='whatsapp'`, teléfono `+<dígitos>` y nombre del pedido o
+«Cliente WhatsApp ####». No hay índice único por teléfono: un `pg_advisory_xact_lock`
+por empresa y número evita duplicados concurrentes. El pedido nuevo guarda
+`orders.customer_id`; una ronda sumada a una comanda abierta registra al cliente
+sin reemplazar el cliente de esa comanda.
+
 ## Entrega y cierre de pedidos de mesa
 
 La mesa solo tiene estados Libre/Ocupada. El primer pedido guardado crea una

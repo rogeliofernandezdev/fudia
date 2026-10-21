@@ -251,7 +251,7 @@ async def test_without_qr_or_memory_the_diner_must_scan() -> None:
         MemoryConversationStore(), DeliveryFudia(), RecordingEngine()
     )
     reply = await service.handle_message(PHONE, "Quiero delivery")
-    assert "escanea el QR" in reply
+    assert "vuelve a escanear el QR" in reply
 
 
 async def test_location_pin_is_quoted_by_backend_without_the_model() -> None:

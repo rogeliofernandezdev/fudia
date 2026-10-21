@@ -62,7 +62,11 @@ func (a *Orders) SubmitConciergeDelivery(ctx context.Context, s scope, in Concie
 	if preparationErr != nil {
 		return result, preparationErr
 	}
-	created, err := a.repo.CreateConciergeDeliveryOrder(tx.Context(), s, in, subtotal, subtotal+in.DeliveryFee)
+	customerID, err := a.repo.RegisterConciergeCustomer(tx.Context(), s, in.CustomerPhone, in.CustomerName)
+	if err != nil {
+		return result, orderFailure(apperror.Unavailable, "order_unavailable", "No pudimos registrar al cliente del pedido.")
+	}
+	created, err := a.repo.CreateConciergeDeliveryOrder(tx.Context(), s, in, subtotal, subtotal+in.DeliveryFee, customerID)
 	if err != nil {
 		return result, orderFailure(apperror.Unavailable, "order_unavailable", "No pudimos guardar el pedido.")
 	}

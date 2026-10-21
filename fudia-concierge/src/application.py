@@ -16,6 +16,7 @@ from src.infrastructure.concurrency import RedisConversationLock
 from src.infrastructure.fudia_client import FudiaClient
 from src.infrastructure.queue import RedisInboundQueue
 from src.infrastructure.rate_limit import RedisRateLimiter
+from src.infrastructure.start_codes import RedisTableStartCodes
 from src.infrastructure.state_store import RedisConversationStore
 from src.infrastructure.whatsapp_adapter import MetaWhatsAppAdapter
 from src.services.concierge_service import ConciergeService
@@ -62,6 +63,10 @@ def create_app(
         cfg.conversation_lock_ttl_seconds,
         cfg.conversation_lock_wait_seconds,
     )
+    start_codes = RedisTableStartCodes(
+        redis_url,
+        cfg.start_code_ttl_seconds,
+    )
     rate_limiter = RedisRateLimiter(
         redis_url,
         cfg.rate_limit_messages,
@@ -96,6 +101,7 @@ def create_app(
         ai.agents,
         conversation_lock=conversation_lock,
         rate_limiter=rate_limiter,
+        start_codes=start_codes,
         max_message_chars=cfg.max_message_chars,
         lock_heartbeat_seconds=max(
             0.1,
@@ -129,6 +135,7 @@ def create_app(
     app.state.whatsapp = whatsapp
     app.state.inbound_queue = inbound_queue
     app.state.fudia = fudia
+    app.state.start_codes = start_codes
     app.state.conversation_store = store
     app.state.queue_worker = worker
     app.state.queue_worker_task = None
@@ -165,6 +172,7 @@ def create_app(
         await inbound_queue.close()
         await conversation_lock.close()
         await rate_limiter.close()
+        await start_codes.close()
         await fudia.close()
         await store.close()
         await whatsapp.close()

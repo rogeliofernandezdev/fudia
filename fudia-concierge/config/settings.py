@@ -2,7 +2,7 @@ import ssl
 from typing import Literal
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
-from pydantic import Field, SecretStr, model_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -32,6 +32,9 @@ class Settings(BaseSettings):
     # A table context with no concierge order ends after this idle time; an
     # order ends it when foods-backend reports the account finished.
     table_idle_seconds: int = Field(default=10_800, ge=600)
+    # Short table code of the QR start message ("Mesa 7 · K7P2"): how long a
+    # scan stays valid before the diner sends the prefilled message.
+    start_code_ttl_seconds: int = Field(default=600, ge=60, le=86_400)
     queue_stream: str = "fudia:concierge:inbound"
     queue_group: str = "fudia-concierge"
     queue_consumer: str = ""
@@ -108,6 +111,19 @@ class Settings(BaseSettings):
     whatsapp_verify_token: str = ""
     whatsapp_app_secret: str = ""
     whatsapp_graph_version: str = ""
+
+    @field_validator(
+        "whatsapp_token",
+        "whatsapp_phone_id",
+        "whatsapp_verify_token",
+        "whatsapp_app_secret",
+        mode="before",
+    )
+    @classmethod
+    def _strip_meta_credentials(cls, value: object) -> object:
+        # A secret created with `echo` keeps a trailing newline: the webhook
+        # would reject every signature (403) and the verify challenge.
+        return value.strip() if isinstance(value, str) else value
 
     @property
     def redis_connection_url(self) -> str:

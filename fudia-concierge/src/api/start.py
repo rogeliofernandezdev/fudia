@@ -1,12 +1,17 @@
 from __future__ import annotations
 
+import logging
+
 import httpx
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import RedirectResponse
 
+from src.observability import log_event
 from src.services.ports import FudiaError
+from src.services.start_codes import start_message
 
 router = APIRouter(tags=["whatsapp"])
+logger = logging.getLogger(__name__)
 
 
 @router.get("/start/{token}")
@@ -43,9 +48,23 @@ async def start_whatsapp(
             ),
         )
 
+    # Friendly start message with a short table code; if the shared code
+    # store is unavailable the legacy FUDIA:<token> message still works.
+    text = ""
+    start_codes = getattr(request.app.state, "start_codes", None)
+    if start_codes is not None:
+        try:
+            text = start_message(table.name, await start_codes.issue(token))
+        except Exception as exc:
+            log_event(
+                logger,
+                "concierge.start_code.failed",
+                errorType=type(exc).__name__,
+            )
     try:
         url = await request.app.state.whatsapp.start_url(
-            token
+            token,
+            text,
         )
     except (httpx.HTTPError, RuntimeError) as exc:
         raise HTTPException(

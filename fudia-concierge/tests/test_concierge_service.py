@@ -20,6 +20,7 @@ from src.domain.models import (
 )
 from src.infrastructure.state_store import MemoryConversationStore
 from src.services.concierge_service import ConciergeService, extract_qr_token
+from src.services.ports import LocalTableStartCodes
 from src.services.tools import ConciergeTools, explicit_confirmation
 
 
@@ -249,7 +250,65 @@ async def test_disabled_concierge_rejects_qr() -> None:
 async def test_service_requires_qr_before_conversation() -> None:
     service = ConciergeService(MemoryConversationStore(), FakeFudia(), QuietEngine())
     reply = await service.handle_message("51999999999", "Quiero un lomo")
-    assert "escanea el QR" in reply
+    assert "vuelve a escanear el QR" in reply
+
+
+@pytest.mark.asyncio
+async def test_short_start_code_opens_the_table_like_the_qr_token() -> None:
+    store = MemoryConversationStore()
+    codes = LocalTableStartCodes()
+    service = ConciergeService(store, FakeFudia(), QuietEngine(), start_codes=codes)
+    code = await codes.issue("a" * 32)
+
+    reply = await service.handle_message(
+        "51999999999", f"¡Hola! 👋 Quiero ver la carta.\nMesa M1 · {code}"
+    )
+
+    assert "Restaurante Demo" in reply and "mesa M1" in reply
+    session = await store.get("51999999999")
+    assert session is not None and session.qr_token == "a" * 32
+
+
+@pytest.mark.asyncio
+async def test_start_code_alone_and_in_lowercase_still_opens_the_table() -> None:
+    store = MemoryConversationStore()
+    codes = LocalTableStartCodes()
+    service = ConciergeService(store, FakeFudia(), QuietEngine(), start_codes=codes)
+    code = await codes.issue("a" * 32)
+
+    reply = await service.handle_message("51911111111", code.lower())
+
+    assert "mesa M1" in reply
+
+
+@pytest.mark.asyncio
+async def test_expired_start_code_asks_to_scan_again_without_seating_the_diner() -> None:
+    now = [1_000.0]
+    store = MemoryConversationStore()
+    codes = LocalTableStartCodes(ttl_seconds=600, clock=lambda: now[0])
+    service = ConciergeService(store, FakeFudia(), QuietEngine(), start_codes=codes)
+    code = await codes.issue("a" * 32)
+    now[0] += 601
+
+    reply = await service.handle_message(
+        "51999999999", f"¡Hola! 👋 Quiero ver la carta.\nMesa M1 · {code}"
+    )
+
+    assert "ya venció" in reply
+    assert await store.get("51999999999") is None
+
+
+@pytest.mark.asyncio
+async def test_deleted_start_message_never_guesses_a_table() -> None:
+    store = MemoryConversationStore()
+    codes = LocalTableStartCodes()
+    service = ConciergeService(store, FakeFudia(), QuietEngine(), start_codes=codes)
+    await codes.issue("a" * 32)
+
+    reply = await service.handle_message("51999999999", "Hola, quiero 2 lomos")
+
+    assert "vuelve a escanear el QR" in reply
+    assert await store.get("51999999999") is None
 
 
 @pytest.mark.asyncio

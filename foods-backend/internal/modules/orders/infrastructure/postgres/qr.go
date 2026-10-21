@@ -6,16 +6,16 @@ import (
 	"github.com/foods-platform/foods-backend/internal/modules/orders/domain"
 )
 
-func (r *Orders) CreateQROrder(ctx context.Context, s scope, tableID string, in application.QROrderInput, subtotal float64) (domain.Order, error) {
+func (r *Orders) CreateQROrder(ctx context.Context, s scope, tableID string, in application.QROrderInput, subtotal float64, customerID string) (domain.Order, error) {
 	out, err := scanOrder(r.db(ctx).QueryRow(ctx, `
 		INSERT INTO orders(
-		  organization_id,location_id,channel,customer_name,customer_phone,
+		  organization_id,location_id,channel,customer_id,customer_name,customer_phone,
 		  reference,table_id,notes,subtotal,delivery_fee,total,status,created_by
 		)
-		VALUES($1,$2,'whatsapp',$3,$4,'',$5,$6,$7,0,$7,'confirmado',NULL)
+		VALUES($1,$2,'whatsapp',NULLIF($8,'')::uuid,$3,$4,'',$5,$6,$7,0,$7,'confirmado',NULL)
 		RETURNING `+orderColumns,
 		s.OrganizationID, s.LocationID, in.CustomerName, in.CustomerPhone,
-		tableID, in.Notes, subtotal,
+		tableID, in.Notes, subtotal, customerID,
 	))
 	return out, orderError(err)
 }
