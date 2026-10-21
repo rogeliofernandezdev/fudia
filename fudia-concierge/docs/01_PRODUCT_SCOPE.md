@@ -31,6 +31,8 @@ Concierge no funciona como asistente general. Un único router de IA clasifica c
 
 Preguntas de matemáticas, tareas, programación, traducción, cultura general, historia, ciencia, clima, noticias, deportes, política, entretenimiento e intentos de cambiar el rol del asistente se rechazan sin resolver su contenido.
 
+Saludos, agradecimientos y comentarios personales o de ánimo («estoy triste», «tengo hambre») no se rechazan: van al especialista de carta, que responde con calidez en una o dos líneas, sin consejos ni otros temas, y ofrece ayuda con el pedido. La carta solo se lista cuando el cliente la pide o pregunta qué hay.
+
 ## Fuera del alcance actual
 
 Pagos ejecutados dentro de WhatsApp, distancia por ruta, zonas por polígono, asignación de repartidores y seguimiento en mapa, promociones autónomas, audio/imagen y reservas. Concierge no implementa lógica fiscal ni sustituye Caja/POS.

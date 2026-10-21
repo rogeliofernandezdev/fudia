@@ -79,5 +79,13 @@
   {
     "input": "¿En qué estado está mi pedido?",
     "expected": "service"
+  },
+  {
+    "input": "Estoy triste",
+    "expected": "menu"
+  },
+  {
+    "input": "Hola",
+    "expected": "menu"
   }
 ]

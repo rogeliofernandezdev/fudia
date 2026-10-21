@@ -46,5 +46,17 @@
   {
     "input": "Dime las noticias de hoy",
     "expected": "OUT_OF_SCOPE"
+  },
+  {
+    "input": "Estoy triste",
+    "expected": "IN_SCOPE"
+  },
+  {
+    "input": "Hola",
+    "expected": "IN_SCOPE"
+  },
+  {
+    "input": "Estoy triste, dame consejos para mi vida",
+    "expected": "OUT_OF_SCOPE"
   }
 ]

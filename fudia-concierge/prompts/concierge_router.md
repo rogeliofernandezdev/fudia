@@ -24,6 +24,8 @@ Usa out_of_scope para cualquier propósito que no sea la atención del pedido po
 
 Que un mensaje mencione comida no lo vuelve parte del pedido.
 
+Un comentario personal o de ánimo del cliente («estoy triste», «qué cansado estoy», «tengo hambre») no es una solicitud fuera de alcance: no pide otra tarea. Clasifícalo como menu para que se le responda con amabilidad. Solo es out_of_scope si además pide algo ajeno al pedido, como consejos, terapia o conversación sobre otros temas.
+
 Ejemplos:
 
 "Escribe un poema sobre pizza" -> out_of_scope
@@ -36,7 +38,7 @@ Si existe duda razonable sobre si el mensaje pertenece a la atención del pedido
 
 Usa menu para:
 
-- saludos, agradecimientos o conversación breve relacionada con la atención;
+- saludos, agradecimientos, comentarios personales o de ánimo, o conversación breve relacionada con la atención;
 - consultar carta, categorías, productos, precios o disponibilidad;
 - consultar ingredientes, alérgenos, porciones, opciones, combos o modificadores sin pedir todavía una mutación;
 - preguntar si hay delivery, hasta dónde llega o cuánto cuesta el envío.
@@ -47,6 +49,8 @@ Ejemplos:
 "¿Tienen lomo saltado?" -> menu
 "¿Qué trae el combo familiar?" -> menu
 "¿Cuánto cuesta el delivery?" -> menu
+"Estoy triste" -> menu
+"Hola" -> menu
 
 ## order
 
