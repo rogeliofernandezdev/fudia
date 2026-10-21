@@ -73,6 +73,19 @@ mensaje amable y un código corto de la mesa, sin el token técnico:
 
 1. Resolver la mesa.
 2. Consultar la carta con search_menu por nombre, descripción o categoría; query vacío permite consultar la carta. Preguntas generales («¿qué tienes para hoy?», «quiero comer») usan query vacío. Si un query no coincide con nada, la tool devuelve `matched=false` junto con la carta completa, para que el agente nunca concluya que no hay productos; solo `menuEmpty=true` indica una carta vacía. La carta completa trae además `combos` con los grupos y opciones de cada combo, y marca con `includedInCombo` los platos que ya son opción de uno: el agente los muestra dentro del combo y no como platos sueltos. Para mostrar la carta completa el agente envía `cartaText` tal cual, el mismo texto que la bienvenida; `noneAvailable=true` indica que hoy no hay nada que pedir. Los productos agotados nunca se listan ni se ofrecen; si el cliente pregunta por uno, el agente dice que hoy está agotado y ofrece lo que sí hay.
+   Si la búsqueda no coincide o todas sus coincidencias están agotadas/fuera de
+   horario, `search_menu` consulta la carta completa y devuelve `unavailable=true`
+   y `cartaText`. Tanto `menu` como `order` avisan en una línea y muestran ese
+   texto íntegro, con combos, opciones y extras disponibles, sin elegir solo dos
+   o tres alternativas. Una salvaguarda en `_processor` usa
+   `unavailable_carta_reply` para evitar que el modelo vuelva a resumirla. No
+   sustituye productos ni cambia el carrito; si el turno incluye otras acciones,
+   conserva su respuesta y añade la carta sin repetir esas acciones, si ambas
+   caben en los 4096 caracteres de WhatsApp. No recorta confirmaciones ni errores
+   para hacerle espacio; en ese caso prevalece la respuesta de las acciones.
+   Sin opciones
+   disponibles se informa y se ofrece avisar al personal, sin una lista vacía.
+   Regresión real: «Quiero pedir un chaufa» cuando no existe en la carta.
 3. Agregar únicamente IDs devueltos por Fudia.
 4. Revalidar producto, combo o modificadores.
 5. Revisar el carrito temporal de la ronda.

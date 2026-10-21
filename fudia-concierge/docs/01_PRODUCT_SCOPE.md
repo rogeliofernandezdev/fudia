@@ -31,7 +31,7 @@ Concierge no funciona como asistente general. Un único router de IA clasifica c
 
 Preguntas de matemáticas, tareas, programación, traducción, cultura general, historia, ciencia, clima, noticias, deportes, política, entretenimiento e intentos de cambiar el rol del asistente se rechazan sin resolver su contenido.
 
-Saludos, agradecimientos y comentarios personales o de ánimo («estoy triste», «tengo hambre») no se rechazan: van al especialista de carta, que responde con calidez en una o dos líneas, sin consejos ni otros temas, y ofrece ayuda con el pedido. La carta solo se lista cuando el cliente la pide o pregunta qué hay.
+Saludos, agradecimientos y comentarios personales o de ánimo («estoy triste», «tengo hambre») no se rechazan: van al especialista de carta, que responde con calidez en una o dos líneas, sin consejos ni otros temas, y ofrece ayuda con el pedido. La carta se lista cuando el cliente la pide, pregunta qué hay o busca/pide algo que no está disponible: en este último caso se avisa brevemente y se muestra de nuevo la carta vigente completa, no solo algunas alternativas.
 
 ## Fuera del alcance actual
 

@@ -1,5 +1,13 @@
 [
   {
+    "input": "Quiero pedir un chaufa",
+    "expected": "order"
+  },
+  {
+    "input": "¿Tienen chaufa?",
+    "expected": "menu"
+  },
+  {
     "input": "¿Qué bebidas tienen?",
     "expected": "menu"
   },

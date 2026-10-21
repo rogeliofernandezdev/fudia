@@ -2,11 +2,26 @@ from __future__ import annotations
 
 from typing import Any
 
-from src.services.carta import build_carta, render_carta
+from src.services.carta import ORDERABLE_STATUSES, build_carta, render_carta
 from src.services.tooling import ToolContext
 
 # Leaves room in a WhatsApp message for an intro line and a closing question.
 CARTA_TEXT_CHARS = 3300
+
+
+def unavailable_carta_reply(result: dict[str, Any]) -> str:
+    """Render the live carta instead of letting the model select a few alternatives."""
+    if result.get("ok") is not True or result.get("unavailable") is not True:
+        return ""
+    text = result.get("cartaText")
+    if not isinstance(text, str) or not text:
+        return ""
+    if result.get("noneAvailable") is True:
+        return f"{text}\n\nSi necesitas ayuda, puedo avisar al personal del local."
+    return (
+        "Lo que buscas no está disponible hoy. Te comparto nuestra carta:\n\n"
+        f"{text}\n\n¿Qué deseas pedir?"
+    )
 
 
 class MenuTools:
@@ -25,16 +40,18 @@ class MenuTools:
                 query=query,
             )
             matched = bool(menu.items) or not query
-            if not matched:
-                # A query with no match ("para hoy") is not an empty carta:
-                # the agent gets the full carta so it never claims otherwise.
+            unavailable = bool(query) and not any(
+                item.status in ORDERABLE_STATUSES for item in menu.items
+            )
+            if unavailable:
+                # Missing or sold-out results must lead back to the live carta.
                 menu = await self.context.fudia.search_menu(
                     self.context.token(),
                     query="",
                 )
             # The full carta carries each combo with what it includes, so the
             # agent shows it once instead of repeating its dishes.
-            full = not query or not matched
+            full = not query or unavailable
             carta = (
                 await build_carta(self.context.fudia, self.context.token(), menu)
                 if full
@@ -45,6 +62,7 @@ class MenuTools:
                 "ok": True,
                 "query": query,
                 "matched": matched,
+                "unavailable": unavailable,
                 "menuEmpty": not menu.items,
                 "noneAvailable": bool(carta and not carta.available),
                 "currencySymbol": menu.currencySymbol,

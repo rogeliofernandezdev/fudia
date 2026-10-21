@@ -834,6 +834,108 @@ async def test_search_without_match_returns_the_full_carta_not_an_empty_one() ->
     assert fudia.queries == ["para hoy", ""]
     assert menu["matched"] is False and menu["menuEmpty"] is False
     assert [item["name"] for item in menu["items"]] == ["Lomo saltado"]
+    assert menu["unavailable"] is True
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("intent", ["menu", "order"])
+@pytest.mark.parametrize("missing_status", [None, "sold_out", "out_of_hours", "unavailable"])
+async def test_unavailable_request_returns_canonical_carta_not_model_summary(
+    intent: str, missing_status: str | None,
+) -> None:
+    items = [
+        MenuItem(productId="combo1", name="Combo criollo", price=Decimal("20"), isCombo=True),
+        MenuItem(productId="opt1", name="Papas", price=Decimal("6")),
+        MenuItem(productId="p9", name="Ceviche", price=Decimal("25"), status="low"),
+    ]
+    if missing_status:
+        items.append(MenuItem(productId="chaufa", name="Chaufa", price=Decimal("18"), status=missing_status))
+    fudia = SearchingFudia(items)
+    store = MemoryConversationStore()
+
+    class SummarizingAgent:
+        async def reply(self, session, user_message, tool_handler) -> str:
+            await tool_handler("search_menu", {"query": "chaufa"})
+            return "Te puedo ofrecer un delicioso ceviche. ¿Te provoca?"
+
+    agent = SummarizingAgent()
+    service = ConciergeService(
+        store, fudia, FixedRouter(intent), agents={"menu": agent, "order": agent, "service": agent},
+    )
+    await service.handle_message("51999999999", "FUDIA:" + "a" * 32)
+    reply = await service.handle_message("51999999999", "Quiero pedir un chaufa")
+
+    assert reply == (
+        "Lo que buscas no está disponible hoy. Te comparto nuestra carta:\n\n"
+        "🍱 Combo criollo (S/ 20.00)\n"
+        "🍴 Otros:\n- Papas\n"
+        "🍴 Acompañamiento:\n- Yuca (+S/ 3.00)\n\n"
+        "➕ Extras\n🍴 Otros:\n- Ceviche (S/ 25.00)\n\n¿Qué deseas pedir?"
+    )
+    assert "Chaufa" not in reply and "delicioso" not in reply
+    assert fudia.queries[-2:] == ["chaufa", ""]
+    session = await store.get("51999999999")
+    assert session is not None and session.cart == []
+    assert session.messages[-1].content == reply
+    assert not fudia.order_calls
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("items", [[], [MenuItem(
+    productId="p1", name="Chaufa", price=Decimal("18"), status="sold_out",
+)]])
+async def test_unavailable_request_with_no_alternatives_does_not_offer_an_empty_carta(items) -> None:
+    class SearchingAgent:
+        async def reply(self, session, user_message, tool_handler) -> str:
+            await tool_handler("search_menu", {"query": "chaufa"})
+            return "Prueba otro plato."
+
+    service = ConciergeService(MemoryConversationStore(), SearchingFudia(items), SearchingAgent())
+    await service.handle_message("51999999999", "FUDIA:" + "a" * 32)
+    reply = await service.handle_message("51999999999", "Quiero un chaufa")
+    assert reply == (
+        "Hoy no tenemos platos disponibles.\n\n"
+        "Si necesitas ayuda, puedo avisar al personal del local."
+    )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("already_in_reply", "long_acknowledgement"),
+    [(False, False), (True, False), (False, True)],
+)
+async def test_unavailable_carta_preserves_other_actions_and_does_not_repeat_them(
+    already_in_reply, long_acknowledgement,
+) -> None:
+    from src.services.menu_tools import unavailable_carta_reply
+
+    class MixedAgent:
+        async def reply(self, session, user_message, tool_handler) -> str:
+            missing = await tool_handler("search_menu", {"query": "chaufa"})
+            added = await tool_handler("add_item", {"productId": "p1", "quantity": 1})
+            assert added["ok"] is True
+            reply = "Agregué un lomo saltado a tu pedido."
+            if long_acknowledgement:
+                reply += "\n" + "Detalle de pedido. " * 210
+            return reply + ("\n\n" + unavailable_carta_reply(missing) if already_in_reply else "")
+
+    service = ConciergeService(
+        MemoryConversationStore(),
+        SearchingFudia([MenuItem(productId="p1", name="Lomo saltado", price=Decimal("15"))]),
+        MixedAgent(),
+    )
+    await service.handle_message("51999999999", "FUDIA:" + "a" * 32)
+    reply = await service.handle_message("51999999999", "Un lomo y un chaufa")
+    assert reply.startswith("Agregué un lomo saltado a tu pedido.")
+    if long_acknowledgement and not already_in_reply:
+        assert "Te comparto nuestra carta:" not in reply
+    else:
+        assert reply.count("Te comparto nuestra carta:") == 1
+        assert "- Lomo saltado (S/ 15.00)" in reply
+    assert len(reply) <= 4096
+    session = await service.store.get("51999999999")
+    assert session is not None and len(session.cart) == 1
+    assert session.cart[0].product_id == "p1" and session.cart[0].quantity == 1
 
 
 @pytest.mark.asyncio

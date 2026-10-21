@@ -10,6 +10,7 @@ from typing import Any, Literal, cast
 from uuid import uuid4
 
 from src.ai.contracts import ConciergeRouter, ConversationAgent
+from src.ai.tiering import READ_ONLY_TOOLS
 from src.domain.intents import AgentIntent, ConciergeRoute
 from src.domain.models import (
     ChatMessage,
@@ -33,6 +34,7 @@ from src.observability import fingerprint, log_event
 from src.services.carta import Carta, build_carta
 from src.services.delivery_tools import apply_quote, delivery_summary
 from src.services.formatting import whatsapp_text
+from src.services.menu_tools import unavailable_carta_reply
 from src.services.ports import (
     AllowAllRateLimiter,
     ConversationLease,
@@ -311,24 +313,43 @@ class ConciergeService:
                 user_message,
                 journal,
             )
+            fallback = ""
+            action_attempted = False
 
             async def execute(
                 name: str,
                 args: dict[str, Any],
             ) -> dict[str, Any]:
-                return await registry.execute_for(
+                nonlocal fallback, action_attempted
+                result = await registry.execute_for(
                     intent,
                     name,
                     args,
                 )
+                if name == "search_menu":
+                    fallback = unavailable_carta_reply(result) or fallback
+                elif name not in READ_ONLY_TOOLS:
+                    action_attempted = True
+                return result
 
             # Tools keep the diner's literal words (explicit confirmation);
             # only the agent also reads the current delivery state.
-            return await self.agents[intent].reply(
+            reply = await self.agents[intent].reply(
                 session,
                 agent_message(session, user_message),
                 execute,
             )
+            if fallback:
+                # Keep acknowledgements/errors for mixed requests with actions.
+                # A read-only miss always returns the canonical, unabridged carta.
+                if not action_attempted:
+                    return fallback
+                # Never truncate an action acknowledgement/confirmation to fit
+                # the carta, or exceed WhatsApp's single-message limit.
+                if fallback in reply or len(reply) + len(fallback) + 2 > 4096:
+                    return reply
+                return f"{reply}\n\n{fallback}"
+            return reply
 
         return process
 

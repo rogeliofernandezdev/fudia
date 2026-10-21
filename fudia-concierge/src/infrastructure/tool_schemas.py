@@ -11,7 +11,9 @@ TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
             "Usa query vacío para consultar la carta disponible. Si query no "
             "coincide con nada devuelve matched=false y la carta completa; "
             "solo menuEmpty=true significa que la carta está vacía. La carta "
-            "completa trae cartaText listo para enviar y noneAvailable."
+            "completa trae cartaText listo para enviar y noneAvailable. "
+            "Si no hay coincidencias disponibles, unavailable=true: muestra "
+            "cartaText completo, sin resumir alternativas ni sustituir productos."
         ),
         "parameters": {
             "type": "object",
