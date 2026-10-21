@@ -99,6 +99,33 @@ Al terminar se abre un contexto nuevo (`conversationId` nuevo, carrito, confirma
 
 Cambiar el tipo de entrega, la dirección, el nombre o la ubicación invalida una confirmación preparada. `check_order_status` consulta el estado real del último pedido en ambos modos.
 
+## Contexto de cada turno
+
+Cada mensaje llega al especialista precedido por un bloque
+«[Estado de la atención]» (`agent_message`), en mesa y en delivery:
+
+- Modo: mesa abierta (mesa, local y sede) o pedido sin mesa con sus datos de
+  entrega y lo que falta.
+- Carrito de la ronda: una línea por producto con cantidad, opciones de combo,
+  modificadores, nota y subtotal, y el total.
+- Si hay una confirmación pendiente, si ya se enviaron pedidos en esta atención
+  y si el personal ya fue avisado.
+
+Junto con la conversación reciente, permite entender «otro igual», «el
+segundo», «sin cebolla el lomo» o «quita la causa» sin volver a preguntar. El
+bloque solo llega al modelo: el historial guarda el mensaje del cliente tal cual
+y las tools que exigen confirmación explícita leen sus palabras literales.
+`prompts/system.md` («Entender el contexto») pide interpretar la intención, no
+las palabras sueltas, y hacer una sola pregunta corta si una referencia es
+ambigua.
+
+Cada especialista (`prompts/menu_agent.md`, `order_agent.md`,
+`service_agent.md`) está organizado por intenciones del cliente (ver la carta,
+buscar algo, recomendar, agregar, referirse a algo ya dicho, cambiar, confirmar,
+cuenta, estado, personal) y cierra con ejemplos correcto/incorrecto tomados de
+conversaciones reales. Cuando una conversación real sale mal, se agrega aquí
+como ejemplo y en `evals/` como caso, para que no se repita.
+
 ## Formato de los mensajes
 
 Todas las respuestas son texto plano de WhatsApp, con la misma estructura en las

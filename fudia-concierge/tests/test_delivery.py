@@ -192,7 +192,8 @@ async def test_finished_table_account_switches_to_delivery_mode() -> None:
     await service.handle_message(PHONE, "Quiero otra gaseosa")
     session = await store.get(PHONE)
     assert session is not None and session.mode == "table"
-    assert engine.messages[-1] == "Quiero otra gaseosa"
+    assert "Modo: mesa abierta, Mesa M1" in engine.messages[-1]
+    assert engine.messages[-1].endswith("Mensaje del cliente:\nQuiero otra gaseosa")
 
     fudia.active = False
     reply = await service.handle_message(PHONE, "Quiero pedir para llevar")

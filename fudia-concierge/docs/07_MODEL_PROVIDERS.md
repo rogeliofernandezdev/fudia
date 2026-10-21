@@ -10,7 +10,7 @@ schemas de tools (`src/infrastructure/tool_schemas.py`).
 | Tarea | Nivel | Modelo por defecto | Motivo |
 |---|---|---|---|
 | Router (`out_of_scope/menu/order/service`) | Lite | `gemini-3.5-flash-lite` | Clasificación corta, salida restringida a cuatro etiquetas. |
-| Carta (`menu`) | Lite | `gemini-3.5-flash-lite` | Lecturas de carta, combos y modificadores. |
+| Carta (`menu`) | Flash | `gemini-3.5-flash` | Interpreta preguntas abiertas («¿qué tienes para hoy?», «algo ligero para dos»), saludos y referencias a lo ya mostrado; Lite las tomaba de forma literal. |
 | Servicio (`service`) | Lite | `gemini-3.5-flash-lite` | Pedir la cuenta o al personal: una sola acción. |
 | Pedido (`order`) | Flash | `gemini-3.5-flash` | Encadena búsqueda, modificadores, combos, carrito y confirmación. |
 

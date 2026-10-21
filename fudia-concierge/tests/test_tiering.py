@@ -119,7 +119,7 @@ async def test_router_falls_back_to_flash_on_error() -> None:
 
 def test_tier_policy_matches_task_difficulty() -> None:
     assert ROUTER_TIER == "lite"
-    assert AGENT_TIERS == {"menu": "lite", "order": "flash", "service": "lite"}
+    assert AGENT_TIERS == {"menu": "flash", "order": "flash", "service": "lite"}
 
 
 def test_vertex_stack_uses_lite_and_flash_models(
@@ -161,7 +161,7 @@ def test_vertex_stack_uses_lite_and_flash_models(
     menu: Any = stack.agents["menu"]
     order: Any = stack.agents["order"]
     service: Any = stack.agents["service"]
-    assert (menu.primary.model, menu.escalation.model) == ("lite-model", "flash-model")
+    assert (menu.primary.model, menu.escalation) == ("flash-model", None)
     assert (service.primary.model, service.escalation.model) == ("lite-model", "flash-model")
     assert (order.primary.model, order.escalation) == ("flash-model", None)
 

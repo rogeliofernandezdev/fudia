@@ -95,5 +95,33 @@
   {
     "input": "Pero quiero comer",
     "expected": "menu"
+  },
+  {
+    "input": "¿Qué me recomiendas?",
+    "expected": "menu"
+  },
+  {
+    "input": "Otro igual",
+    "expected": "order"
+  },
+  {
+    "input": "Un menú con lomo",
+    "expected": "order"
+  },
+  {
+    "input": "Quita la causa",
+    "expected": "order"
+  },
+  {
+    "input": "¿Qué llevo hasta ahora?",
+    "expected": "order"
+  },
+  {
+    "input": "¿Ya sale lo mío?",
+    "expected": "service"
+  },
+  {
+    "input": "La cuenta por favor",
+    "expected": "service"
   }
 ]

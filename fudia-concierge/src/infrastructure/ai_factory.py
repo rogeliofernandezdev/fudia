@@ -29,7 +29,7 @@ from src.infrastructure.tool_schemas import (
 ModelTier = Literal["lite", "flash"]
 
 AGENT_TIERS: dict[AgentIntent, ModelTier] = {
-    "menu": "lite",
+    "menu": "flash",
     "order": "flash",
     "service": "lite",
 }

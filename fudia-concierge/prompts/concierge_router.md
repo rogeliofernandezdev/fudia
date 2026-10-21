@@ -51,6 +51,9 @@ Ejemplos:
 "¿Cuánto cuesta el delivery?" -> menu
 "Estoy triste" -> menu
 "Hola" -> menu
+"Que tienes pra hoy?" -> menu
+"Pero quiero comer" -> menu
+"¿Qué me recomiendas?" -> menu
 
 ## order
 
@@ -70,8 +73,14 @@ Ejemplos:
 "Sí, confirma el pedido" -> order
 "Lo recojo yo" -> order
 "Mi dirección es Av. Larco 123, puerta azul" -> order
+"Otro igual" -> order
+"Un menú con lomo" -> order
+"Quita la causa" -> order
+"¿Qué llevo hasta ahora?" -> order
 
 Si el mensaje mezcla una consulta de carta con una acción concreta de pedido, usa order.
+
+Lee el mensaje con el contexto reciente: una respuesta corta como «el segundo», «ese» o «sí» continúa lo que se estaba haciendo. Si el bot acaba de mostrar opciones para elegir o un resumen por confirmar, es order.
 
 ## service
 

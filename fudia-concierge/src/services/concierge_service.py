@@ -49,8 +49,13 @@ from src.services.ports import (
 )
 from src.services.processing import TurnJournal, recovery_reply
 from src.services.service_tools import bill_summary
-from src.services.start_codes import looks_like_start_message, start_code_candidates
+from src.services.start_codes import (
+    looks_like_start_message,
+    start_code_candidates,
+    table_label,
+)
 from src.services.tool_registry import ToolRegistry
+from src.services.tooling import cart_payload
 from src.services.welcome import welcome_message
 
 logger = logging.getLogger(__name__)
@@ -114,11 +119,64 @@ def obviously_out_of_scope(text: str) -> bool:
     )
 
 
+def _cart_state(session: ConversationSession) -> list[str]:
+    """The round being built, as the agent needs it to resolve «otro igual»,
+    «quita la causa» or «sin cebolla el segundo» without guessing."""
+    cart = cart_payload(session)
+    if not cart["items"]:
+        return ["Carrito de esta ronda: vacío."]
+    lines = ["Carrito de esta ronda (aún no enviado a cocina):"]
+    for item in cart["items"]:
+        quantity = item["quantity"]
+        if isinstance(quantity, float) and quantity.is_integer():
+            quantity = int(quantity)
+        details = [
+            f"{selection['groupName']}: {selection['name']}"
+            for selection in item["selections"]
+        ] + [modifier["name"] for modifier in item["modifiers"]]
+        if item["note"]:
+            details.append(f"nota: {item['note']}")
+        extra = f" ({'; '.join(details)})" if details else ""
+        lines.append(
+            f"- {quantity} × {item['name']}{extra}: {item['lineTotal']}"
+        )
+    lines.append(f"Total del carrito: {cart['total']}")
+    return lines
+
+
+def _round_state(session: ConversationSession) -> list[str]:
+    lines = _cart_state(session)
+    if session.awaiting_confirmation:
+        lines.append(
+            "Confirmación pendiente: ya se mostró el resumen; un «sí» del "
+            "cliente lo envía y cualquier cambio exige mostrarlo de nuevo."
+        )
+    lines.append(
+        "Pedidos ya enviados en esta atención: sí."
+        if session.last_order_id
+        else "Pedidos ya enviados en esta atención: ninguno."
+    )
+    return lines
+
+
 def agent_message(session: ConversationSession, user_message: str) -> str:
-    """Table turns go to the agent unchanged; delivery turns carry the
-    current delivery state so the agent knows what is still missing."""
+    """Every turn carries the current state of the attention (table or
+    delivery, cart, pending confirmation) so the agent reads each message in
+    context instead of in isolation."""
     if session.mode != "delivery":
-        return user_message
+        table = session.table
+        if table is None:
+            return user_message
+        lines = [
+            "[Estado de la atención (no lo copies textual)]",
+            f"Modo: mesa abierta, {table_label(table.name)} en "
+            f"{table.organizationName} - {table.locationName}.",
+            *_round_state(session),
+        ]
+        if session.handoff_pending:
+            lines.append("El personal del local ya fue avisado y está en camino.")
+        lines += ["", "Mensaje del cliente:", user_message]
+        return "\n".join(lines)
     summary = delivery_summary(session)
     venue = session.venue
     fulfillment = {
@@ -153,6 +211,7 @@ def agent_message(session: ConversationSession, user_message: str) -> str:
         ]
     if summary["missing"]:
         lines.append("Falta: " + ", ".join(summary["missing"]) + ".")
+    lines += _round_state(session)
     lines += ["", "Mensaje del cliente:", user_message]
     return "\n".join(lines)
 

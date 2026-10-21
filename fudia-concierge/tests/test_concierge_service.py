@@ -6,6 +6,9 @@ import pytest
 from src.domain.models import (
     BillItem,
     BillSummary,
+    CartLine,
+    CartModifier,
+    CartSelection,
     ComboDetail,
     ComboGroup,
     ComboOption,
@@ -19,7 +22,11 @@ from src.domain.models import (
     TableContext,
 )
 from src.infrastructure.state_store import MemoryConversationStore
-from src.services.concierge_service import ConciergeService, extract_qr_token
+from src.services.concierge_service import (
+    ConciergeService,
+    agent_message,
+    extract_qr_token,
+)
 from src.services.ports import FudiaError, LocalTableStartCodes
 from src.services.tools import ConciergeTools, explicit_confirmation
 
@@ -203,6 +210,93 @@ class FixedRouter:
         self.calls += 1
         return self.value
 
+
+
+def test_table_turn_carries_the_state_of_the_attention() -> None:
+    session = ConversationSession(
+        phone="51999999999",
+        qr_token="a" * 32,
+        table=TableContext(
+            name="MESA 7",
+            seats=4,
+            organizationName="La Panchita",
+            locationName="Miraflores",
+            conciergeEnabled=True,
+        ),
+        cart=[
+            CartLine(
+                product_id="p1",
+                name="Lomo saltado",
+                quantity=2.0,
+                unit_price=Decimal("15"),
+                modifiers=[
+                    CartModifier(
+                        group_id="g",
+                        group_name="Extras",
+                        option_id="o",
+                        name="Sin cebolla",
+                        surcharge=Decimal("0"),
+                    )
+                ],
+            ),
+            CartLine(
+                product_id="m1",
+                name="Menú",
+                quantity=1.0,
+                unit_price=Decimal("12"),
+                item_type="combo",
+                selections=[
+                    CartSelection(
+                        group_id="g1",
+                        group_name="Segundo",
+                        product_id="p2",
+                        name="Ají de gallina",
+                        surcharge=Decimal("0"),
+                    )
+                ],
+            ),
+        ],
+        awaiting_confirmation=True,
+        last_order_id="o1",
+        handoff_pending=True,
+    )
+
+    note = agent_message(session, "otro igual al primero")
+
+    assert note == (
+        "[Estado de la atención (no lo copies textual)]\n"
+        "Modo: mesa abierta, MESA 7 en La Panchita - Miraflores.\n"
+        "Carrito de esta ronda (aún no enviado a cocina):\n"
+        "- 2 × Lomo saltado (Sin cebolla): 30.00\n"
+        "- 1 × Menú (Segundo: Ají de gallina): 12.00\n"
+        "Total del carrito: 42.00\n"
+        "Confirmación pendiente: ya se mostró el resumen; un «sí» del cliente "
+        "lo envía y cualquier cambio exige mostrarlo de nuevo.\n"
+        "Pedidos ya enviados en esta atención: sí.\n"
+        "El personal del local ya fue avisado y está en camino.\n\n"
+        "Mensaje del cliente:\notro igual al primero"
+    )
+
+
+def test_table_turn_with_empty_cart_says_so() -> None:
+    session = ConversationSession(
+        phone="51999999999",
+        qr_token="a" * 32,
+        table=TableContext(
+            name="M1",
+            seats=4,
+            organizationName="Restaurante Demo",
+            locationName="Local principal",
+            conciergeEnabled=True,
+        ),
+    )
+
+    note = agent_message(session, "hola")
+
+    assert "Modo: mesa abierta, Mesa M1" in note
+    assert "Carrito de esta ronda: vacío." in note
+    assert "Pedidos ya enviados en esta atención: ninguno." in note
+    assert "Confirmación pendiente" not in note
 
 
 def test_extract_qr_token() -> None:
