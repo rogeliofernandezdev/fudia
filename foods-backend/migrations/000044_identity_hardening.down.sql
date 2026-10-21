@@ -1,0 +1,2 @@
+-- Migración de reparación de datos e invariantes de identidad.
+-- No se eliminan roles ni se revierte la protección del Administrador para evitar pérdida de acceso.

@@ -1,0 +1,11 @@
+.platform-channel-modal{width:min(var(--size-540),calc(100vw - var(--size-32)))}
+.platform-channel-modal form{padding:0}
+.platform-channel-fields{padding:var(--space-18) var(--space-20)}
+.platform-channel-fields .ds-input[readonly]{color:var(--ink-600);background:var(--palette-blue-95);cursor:default}
+.platform-channel-modal form>footer{margin:0;padding:var(--space-14) var(--space-20);border-top:var(--stroke-1) solid var(--line);background:var(--surface);display:flex;justify-content:flex-end;gap:var(--space-9)}
+
+@media(max-width:600px){
+ .platform-channel-modal{width:calc(100vw - var(--size-16));max-height:calc(100dvh - var(--size-16))}
+ .platform-channel-fields{padding:var(--space-16)}
+ .platform-channel-modal form>footer{padding:var(--space-12) var(--space-16)}
+}
