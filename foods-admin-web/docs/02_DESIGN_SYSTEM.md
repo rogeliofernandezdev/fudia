@@ -1027,6 +1027,9 @@ no integra un visor PDF.
   medio de `/api/public/concierge/:qr`. No se muestra una pantalla pública
   intermedia con acciones duplicadas. `/table/:qr` existe únicamente como
   redirección técnica para conservar la compatibilidad de QR ya impresos.
+- El modal «Código QR de la mesa» muestra el QR, «Escanea para pedir» y la frase de
+  ayuda, **sin la URL** del enlace (retirada 2026-10-20): es técnica y no le sirve al
+  personal. «Compartir» y «Descargar» siguen usando ese enlace.
 - Las zonas (Terraza, Salón, Barra, etc.) se administran en un tab dentro de
   la página de Mesas, con su propio CRUD. El campo Zona al crear/editar mesas
   es un select que carga las zonas activas del API, no un input libre.

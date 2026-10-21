@@ -163,8 +163,8 @@ function QrDialog({table,restaurantName,close}:{table:Table;restaurantName:strin
      <div className="qr-hero-label"><Icon name="qr" size={14}/><span>Escanea para pedir</span></div>
    </div>
    <div className="qr-info">
+     {/* Sin URL visible: el enlace técnico no le sirve al personal; Compartir y Descargar lo siguen usando. */}
      <p className="qr-hint">El cliente escanea este código desde su celular para iniciar su pedido con Fudia Concierge en WhatsApp.</p>
-     <div className="qr-url"><Icon name="share" size={14}/><span>{qrUrl}</span></div>
    </div>
  </div>
  <ModalFooter className="qr-footer">

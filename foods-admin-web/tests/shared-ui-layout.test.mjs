@@ -189,3 +189,10 @@ test("todas las pestañas requieren iconos y Cocina no los oculta en móvil",()=
  assert.doesNotMatch(read("modules/operations/kitchen/presentation/kitchen.css"),/\.ds-tabs\.kitchen-mobile-tabs button svg\{display:none\}/);
  assert.doesNotMatch(read("modules/operations/kitchen/presentation/kitchen.css"),/\.ds-tabs\.kitchen-mobile-tabs button\{[^}]*flex:/);
 });
+test("el modal del QR de mesa no muestra la URL técnica; compartir y descargar la siguen usando",()=>{
+ const tables=read("modules/operations/tables/presentation/tables-manager.tsx");
+ assert.doesNotMatch(tables,/qr-url/,"sin franja con la URL");
+ assert.doesNotMatch(tables,/<span>\{qrUrl\}<\/span>/);
+ assert.match(tables,/url:qrUrl/,"Compartir conserva el enlace");
+ assert.doesNotMatch(read("modules/operations/styles/table-qr.css"),/\.qr-url/,"sin estilos huérfanos");
+});
