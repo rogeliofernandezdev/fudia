@@ -20,6 +20,7 @@ from src.domain.models import (
     ConversationSession,
     InboundMessage,
     MenuItem,
+    MenuResponse,
     OrderResult,
     ProcessingRecord,
     TableContext,
@@ -75,6 +76,11 @@ class Backend:
             locationName="Local",
             conciergeEnabled=True,
         )
+
+    async def search_menu(
+        self, token: str, query: str = "", product_id: str = ""
+    ) -> MenuResponse:
+        return MenuResponse(currencySymbol="S/")
 
     async def get_product(self, token: str, product_id: str) -> MenuItem:
         return MenuItem(

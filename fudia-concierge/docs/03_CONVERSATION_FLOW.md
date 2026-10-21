@@ -22,6 +22,16 @@ mensaje amable y un código corto de la mesa, sin el token técnico:
   «Ese código de mesa ya venció…» y no reabre un local ni sienta al cliente.
 - Si Redis no puede emitir el código, `/start` usa el mensaje anterior
   `FUDIA:<token>`; ese formato se sigue aceptando para QR y enlaces antiguos.
+- Al abrir la mesa, la respuesta es determinista, sin modelo: «¡Bienvenido a
+  {local}! 👋 Estás en la Mesa 7.», la carta real de `search_menu` (query vacío)
+  y «¿Qué deseas pedir?». Primero van los «⭐ Recomendados de la casa» y luego
+  las categorías en el orden de foods-backend, con nombre y precio; solo se
+  listan productos `available` o `low`. El nombre de la mesa pasa por
+  `table_label`, que no repite «Mesa». La respuesta se limita a 3500 caracteres
+  (WhatsApp corta en 4096): si no cabe todo, cierra con «…y N platos más.
+  Escríbeme una categoría o un plato y te muestro el resto.». Si la carta falla
+  o está vacía, se envía solo el saludo y la mesa queda abierta igual. El modelo
+  atiende a partir del primer mensaje que escribe el cliente.
 - El número del cliente queda prerregistrado en foods-backend al confirmar su
   primer pedido (ver `04_FUDIA_CONTRACT.md`).
 

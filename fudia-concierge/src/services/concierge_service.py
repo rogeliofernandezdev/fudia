@@ -18,6 +18,7 @@ from src.domain.models import (
     EffectRecord,
     GeoPoint,
     InboundMessage,
+    MenuResponse,
     ProcessingRecord,
     VenueContext,
 )
@@ -49,6 +50,7 @@ from src.services.processing import TurnJournal, recovery_reply
 from src.services.service_tools import bill_summary
 from src.services.start_codes import looks_like_start_message, start_code_candidates
 from src.services.tool_registry import ToolRegistry
+from src.services.welcome import welcome_message
 
 logger = logging.getLogger(__name__)
 
@@ -545,10 +547,13 @@ class ConciergeService:
             session.awaiting_confirmation = False
             session.pending_order_request_id = None
             session.handoff_pending = False
-            reply = (
-                f"Hola, estás en {table.organizationName}, mesa {table.name}. "
-                "¿Qué deseas pedir?"
-            )
+            try:
+                menu: MenuResponse | None = await self.fudia.search_menu(token)
+            except (FudiaError, ValueError):
+                # The carta is a courtesy: the table is already open, so the
+                # greeting goes out and the diner can still ask for it.
+                menu = None
+            reply = welcome_message(table, menu)
             session.messages = [
                 ChatMessage(
                     role="user",

@@ -20,7 +20,7 @@ from src.domain.models import (
 )
 from src.infrastructure.state_store import MemoryConversationStore
 from src.services.concierge_service import ConciergeService, extract_qr_token
-from src.services.ports import LocalTableStartCodes
+from src.services.ports import FudiaError, LocalTableStartCodes
 from src.services.tools import ConciergeTools, explicit_confirmation
 
 
@@ -226,7 +226,7 @@ async def test_bootstrap_qr_resolves_table_and_persists_session() -> None:
     reply = await service.handle_message("51999999999", "FUDIA:" + "a" * 32)
 
     assert "Restaurante Demo" in reply
-    assert "mesa M1" in reply
+    assert "Mesa M1" in reply
     session = await store.get("51999999999")
     assert session is not None
     assert session.qr_token == "a" * 32
@@ -264,9 +264,41 @@ async def test_short_start_code_opens_the_table_like_the_qr_token() -> None:
         "51999999999", f"¡Hola! 👋 Quiero ver la carta.\nMesa M1 · {code}"
     )
 
-    assert "Restaurante Demo" in reply and "mesa M1" in reply
+    assert "Restaurante Demo" in reply and "Mesa M1" in reply
     session = await store.get("51999999999")
     assert session is not None and session.qr_token == "a" * 32
+
+
+@pytest.mark.asyncio
+async def test_qr_start_welcomes_the_diner_with_the_menu() -> None:
+    service = ConciergeService(MemoryConversationStore(), FakeFudia(), QuietEngine())
+
+    reply = await service.handle_message("51999999999", "FUDIA:" + "a" * 32)
+
+    assert reply.startswith("¡Bienvenido a Restaurante Demo! 👋")
+    assert "*Platos*\n• Lomo saltado · S/ 32.50" in reply
+    assert reply.endswith("¿Qué deseas pedir?")
+
+
+@pytest.mark.asyncio
+async def test_qr_start_still_welcomes_when_the_menu_fails() -> None:
+    class MenuDownFudia(FakeFudia):
+        async def search_menu(
+            self, token: str, query: str = "", product_id: str = ""
+        ) -> MenuResponse:
+            raise FudiaError(503, "fudia_unreachable", "sin conexión")
+
+    store = MemoryConversationStore()
+    service = ConciergeService(store, MenuDownFudia(), QuietEngine())
+
+    reply = await service.handle_message("51999999999", "FUDIA:" + "a" * 32)
+
+    assert reply == (
+        "¡Bienvenido a Restaurante Demo! 👋\nEstás en la Mesa M1.\n\n"
+        "¿Qué deseas pedir?"
+    )
+    session = await store.get("51999999999")
+    assert session is not None and session.table is not None
 
 
 @pytest.mark.asyncio
@@ -278,7 +310,7 @@ async def test_start_code_alone_and_in_lowercase_still_opens_the_table() -> None
 
     reply = await service.handle_message("51911111111", code.lower())
 
-    assert "mesa M1" in reply
+    assert "Mesa M1" in reply
 
 
 @pytest.mark.asyncio
