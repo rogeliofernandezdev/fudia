@@ -233,6 +233,56 @@ async def test_agent_reports_empty_answer(tmp_path: Path) -> None:
     assert error.value.reply == "¿Qué deseas pedir?"
 
 
+@pytest.mark.asyncio
+async def test_reply_cut_by_the_output_ceiling_drops_its_unfinished_line(
+    tmp_path: Path,
+) -> None:
+    cut = text_response("🍽️ Esta es nuestra carta:\n\nMarino:\n- Cev")
+    assert cut.candidates is not None
+    cut.candidates[0].finish_reason = types.FinishReason.MAX_TOKENS
+    client = FakeClient([cut])
+
+    async def handler(name: str, args: dict[str, Any]) -> dict[str, Any]:
+        return {}
+
+    reply = await agent(tmp_path, client).reply(session(), "carta", handler)
+
+    assert reply == "🍽️ Esta es nuestra carta:\n\nMarino:"
+
+
+@pytest.mark.asyncio
+async def test_complete_reply_is_kept_whole(tmp_path: Path) -> None:
+    done = text_response("Marino:\n- Ceviche: S/ 25.00")
+    assert done.candidates is not None
+    done.candidates[0].finish_reason = types.FinishReason.STOP
+
+    async def handler(name: str, args: dict[str, Any]) -> dict[str, Any]:
+        return {}
+
+    reply = await agent(tmp_path, FakeClient([done])).reply(session(), "x", handler)
+
+    assert reply == "Marino:\n- Ceviche: S/ 25.00"
+
+
+def test_agent_sets_thinking_level_and_output_ceiling(tmp_path: Path) -> None:
+    tuned = GeminiToolAgent(
+        FakeClient([]),  # type: ignore[arg-type]
+        "gemini-test-flash",
+        prompt(tmp_path, "system.md", "SYSTEM"),
+        prompt(tmp_path, "menu.md", "ROLE"),
+        MENU_TOOL_SCHEMAS,
+        "menu",
+        "flash",
+        max_output_tokens=4096,
+        thinking_level="low",
+    )
+
+    assert tuned.config.max_output_tokens == 4096
+    assert tuned.config.thinking_config is not None
+    assert tuned.config.thinking_config.thinking_level == types.ThinkingLevel.LOW
+    assert agent(tmp_path, FakeClient([])).config.thinking_config is None
+
+
 def test_function_declarations_reuse_shared_json_schema() -> None:
     declarations = function_declarations(MENU_TOOL_SCHEMAS)
 

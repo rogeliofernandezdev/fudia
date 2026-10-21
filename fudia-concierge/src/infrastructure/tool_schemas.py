@@ -10,7 +10,8 @@ TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
             "Busca productos reales por nombre, descripción o categoría. "
             "Usa query vacío para consultar la carta disponible. Si query no "
             "coincide con nada devuelve matched=false y la carta completa; "
-            "solo menuEmpty=true significa que la carta está vacía."
+            "solo menuEmpty=true significa que la carta está vacía. La carta "
+            "completa trae cartaText listo para enviar y noneAvailable."
         ),
         "parameters": {
             "type": "object",

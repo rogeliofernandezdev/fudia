@@ -8,6 +8,9 @@ from src.domain.models import ComboGroup, MenuItem, MenuResponse
 from src.services.ports import FudiaBackend, FudiaError
 
 ORDERABLE_STATUSES = {"available", "low"}
+RECOMMENDED_HEADING = "Recomendados de la casa"
+UNCATEGORIZED_HEADING = "Otros"
+NONE_AVAILABLE = "Hoy no tenemos platos disponibles."
 
 
 @dataclass
@@ -18,13 +21,18 @@ class ComboView:
 
 @dataclass
 class Carta:
-    """The full carta as the diner reads it: each combo with what it
-    includes, and the dishes that are not already offered inside a combo."""
+    """The full carta as the diner reads it: only what can be ordered today,
+    each combo with what it includes and the dishes that are not already
+    offered inside a combo. Sold-out dishes are left out."""
 
     currency_symbol: str = ""
     combos: list[ComboView] = field(default_factory=list)
     items: list[MenuItem] = field(default_factory=list)
     included: set[str] = field(default_factory=set)
+
+    @property
+    def available(self) -> bool:
+        return bool(self.combos or self.items)
 
 
 def money(symbol: str, value: Decimal) -> str:
@@ -105,3 +113,66 @@ def combo_lines(view: ComboView, symbol: str) -> list[str]:
         )
         lines.append(f"- {group.name}: {joined}")
     return lines
+
+
+def _sections(carta: Carta) -> list[tuple[str, list[str]]]:
+    """Recommended dishes, then each combo with what it includes, then the
+    remaining categories in the order the backend sends. A dish offered
+    inside a combo is not repeated on its own."""
+    symbol = carta.currency_symbol
+
+    def line(item: MenuItem) -> str:
+        return f"- {item.name}: {money(symbol, item.price)}"
+
+    recommended = [line(item) for item in carta.items if item.recommended]
+    categories: dict[str, list[str]] = {}
+    for item in carta.items:
+        if item.recommended:
+            continue
+        heading = (item.categoryName or "").strip() or UNCATEGORIZED_HEADING
+        categories.setdefault(f"{heading}:", []).append(line(item))
+
+    sections = [(f"{RECOMMENDED_HEADING}:", recommended)] if recommended else []
+    # A combo is one entry: it is shown whole or not at all.
+    sections += [
+        (combo_heading(view, symbol), ["\n".join(combo_lines(view, symbol))])
+        for view in carta.combos
+    ]
+    return sections + list(categories.items())
+
+
+def render_carta(carta: Carta, max_chars: int) -> str:
+    """The carta as plain WhatsApp text, within `max_chars`. Shared by the
+    QR welcome and by search_menu, so both show it the same way."""
+    if not carta.available:
+        return NONE_AVAILABLE
+
+    # Room for separators and the "more" note.
+    budget = max_chars - 120
+    blocks: list[str] = []
+    sections = _sections(carta)
+    entries = sum(len(lines) for _, lines in sections)
+    shown = 0
+    full = False
+    for heading, lines in sections:
+        block = heading
+        for entry in lines:
+            if len(block) + len(entry) + 3 > budget:
+                full = True
+                break
+            block += f"\n{entry}"
+            shown += 1
+        if block != heading:
+            blocks.append(block)
+            budget -= len(block) + 2
+        if full:
+            break
+
+    hidden = entries - shown
+    if hidden:
+        more = "opción más" if hidden == 1 else "opciones más"
+        blocks.append(
+            f"Hay {hidden} {more}. Escríbeme una categoría o un plato "
+            "y te muestro el resto."
+        )
+    return "\n\n".join(blocks)

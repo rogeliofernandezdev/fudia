@@ -858,10 +858,36 @@ async def test_full_carta_details_combos_and_flags_their_dishes() -> None:
     flags = {item["name"]: item["includedInCombo"] for item in menu["items"]}
     assert flags == {"Combo criollo": False, "Papas": True, "Ceviche": False}
 
+    assert menu["noneAvailable"] is False
+    assert menu["cartaText"].startswith("Combo criollo (S/ 20.00):\n")
+    assert "- Acompañamiento: Papas o Yuca (+S/ 3.00)" in menu["cartaText"]
+    assert "Papas: S/" not in menu["cartaText"]
+
     lookup = await ConciergeTools(fudia, session, "ceviche").execute(
         "search_menu", {"query": "ceviche"}
     )
-    assert lookup["combos"] == []
+    assert lookup["combos"] == [] and lookup["cartaText"] == ""
+
+
+@pytest.mark.asyncio
+async def test_full_carta_reports_when_everything_is_sold_out() -> None:
+    fudia = SearchingFudia(
+        [
+            MenuItem(productId="p1", name="Ceviche", price=Decimal("25"), status="sold_out"),
+            MenuItem(productId="p2", name="Causa", price=Decimal("20"), status="sold_out"),
+        ]
+    )
+    session = ConversationSession(phone="51999999999", qr_token="a" * 32)
+
+    menu = await ConciergeTools(fudia, session, "que tienes para hoy").execute(
+        "search_menu", {"query": "para hoy"}
+    )
+
+    assert menu["matched"] is False and menu["menuEmpty"] is False
+    assert menu["noneAvailable"] is True
+    assert menu["cartaText"] == (
+        "Hoy no tenemos platos disponibles."
+    )
 
 
 @pytest.mark.asyncio

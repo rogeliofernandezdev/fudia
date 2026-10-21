@@ -55,7 +55,7 @@ El agente de pedido ya usa Flash y no escala.
   llamada reenvía `system_instruction`, y el turno del modelo se devuelve
   intacto para conservar las *thought signatures* entre llamadas a tools.
 - Límites: `LLM_TIMEOUT_SECONDS` por llamada, `LLM_MAX_OUTPUT_TOKENS` y
-  `LLM_MAX_TOOL_ROUNDS` por turno.
+  `LLM_MAX_TOOL_ROUNDS` por turno. Si una respuesta termina por `MAX_TOKENS`, se descarta su última línea incompleta y el evento `concierge.agent.completed` registra `truncated=true`.
 
 ## Configuración
 
@@ -64,11 +64,12 @@ El agente de pedido ya usa Flash y no escala.
 | `LLM_PROVIDER` | `vertex` | `vertex` u `openai`. |
 | `GOOGLE_CLOUD_PROJECT` | — | Proyecto con Vertex AI habilitado. Obligatorio en producción con Vertex. |
 | `GOOGLE_CLOUD_LOCATION` | `global` | Endpoint global o una región soportada por los modelos. |
-| `GEMINI_MODEL_LITE` | `gemini-3.5-flash-lite` | Router, carta y servicio. |
-| `GEMINI_MODEL_FLASH` | `gemini-3.5-flash` | Pedido y escalado. |
+| `GEMINI_MODEL_LITE` | `gemini-3.5-flash-lite` | Router y servicio. |
+| `GEMINI_MODEL_FLASH` | `gemini-3.5-flash` | Carta, pedido y escalado. |
 | `LLM_TIMEOUT_SECONDS` | `20` | Tiempo máximo por llamada al modelo. |
 | `LLM_MAX_RETRIES` | `2` | Reintentos del SDK ante 408/429/5xx. |
-| `LLM_MAX_OUTPUT_TOKENS` | `1024` | Tope de salida por llamada de agente. |
+| `LLM_MAX_OUTPUT_TOKENS` | `4096` | Tope de salida por llamada de agente. En Gemini incluye el razonamiento interno: con 1024 la carta salía cortada. |
+| `GEMINI_THINKING_LEVEL` | `low` | Profundidad de razonamiento de los agentes Gemini (`minimal`, `low`, `medium`, `high`; vacío usa el del modelo). |
 | `LLM_MAX_TOOL_ROUNDS` | `8` | Vueltas de tools por turno. |
 | `OPENAI_API_KEY`, `OPENAI_MODEL`, `OPENAI_MODEL_LITE` | — | Solo con `LLM_PROVIDER=openai`. Sin `OPENAI_MODEL_LITE` todo usa `OPENAI_MODEL` y no hay escalado. |
 

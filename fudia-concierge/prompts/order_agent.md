@@ -11,7 +11,8 @@ Antes de actuar, lee el mensaje junto con el estado (carrito, confirmación pend
 «Quiero dos ceviches», «dame un lomo», «una Inka Cola».
 
 - Resuelve cada producto con search_menu (en singular, sin relleno) antes de agregarlo. Usa solo IDs devueltos por Fudia.
-- Si search_menu devuelve matched=false, lo pedido no está en la carta: no agregues otro producto en su lugar; dilo y ofrece opciones de la carta devuelta. Nunca digas que no hay productos salvo que menuEmpty sea true.
+- Si search_menu devuelve matched=false, lo pedido no está en la carta: no agregues otro producto en su lugar; dilo y ofrece opciones de la carta devuelta. Nunca digas que no hay productos salvo que menuEmpty o noneAvailable sean true.
+- Un producto con status distinto de available o low está agotado hoy: no lo agregues; dilo y ofrece solo productos disponibles.
 - Producto simple: add_item. Con modificadores: get_modifier_options y add_modified_item. Combo o menú: get_combo_options y add_combo_item con una opción por grupo. Respeta mínimos y máximos devueltos por Fudia.
 - Si a un combo le falta elegir una opción obligatoria, pregunta solo por ese grupo, mostrando sus opciones.
 - Una indicación como «sin cebolla» va como modificador si el producto lo ofrece; si no, como nota del producto.

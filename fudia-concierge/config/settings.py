@@ -89,7 +89,11 @@ class Settings(BaseSettings):
     # Per-call budget for a single model request, and the tool-loop ceiling.
     llm_timeout_seconds: float = Field(default=20.0, gt=0, le=120)
     llm_max_retries: int = Field(default=2, ge=0, le=5)
-    llm_max_output_tokens: int = Field(default=1_024, ge=64, le=8_192)
+    # On Gemini the model's internal reasoning counts against this ceiling,
+    # so it must leave room for a full carta after thinking.
+    llm_max_output_tokens: int = Field(default=4_096, ge=64, le=8_192)
+    # Reasoning depth of Gemini agents; "" leaves the model default.
+    gemini_thinking_level: Literal["", "minimal", "low", "medium", "high"] = "low"
     llm_max_tool_rounds: int = Field(default=8, ge=1, le=16)
 
     # Vertex AI uses Application Default Credentials (Cloud Run service

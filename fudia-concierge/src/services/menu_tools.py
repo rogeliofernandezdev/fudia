@@ -2,8 +2,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from src.services.carta import build_carta
+from src.services.carta import build_carta, render_carta
 from src.services.tooling import ToolContext
+
+# Leaves room in a WhatsApp message for an intro line and a closing question.
+CARTA_TEXT_CHARS = 3300
 
 
 class MenuTools:
@@ -43,7 +46,10 @@ class MenuTools:
                 "query": query,
                 "matched": matched,
                 "menuEmpty": not menu.items,
+                "noneAvailable": bool(carta and not carta.available),
                 "currencySymbol": menu.currencySymbol,
+                # Ready to send: grouped like the QR welcome, without sold out.
+                "cartaText": render_carta(carta, CARTA_TEXT_CHARS) if carta else "",
                 "combos": [
                     {
                         "productId": view.item.productId,

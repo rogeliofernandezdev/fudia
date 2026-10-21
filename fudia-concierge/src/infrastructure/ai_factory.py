@@ -88,6 +88,7 @@ def _build_vertex(cfg: Settings, prompts: Path) -> AiStack:
             tier,
             max_rounds=cfg.llm_max_tool_rounds,
             max_output_tokens=cfg.llm_max_output_tokens,
+            thinking_level=cfg.gemini_thinking_level,
         )
 
     router_path = prompts / "concierge_router.md"

@@ -164,11 +164,11 @@ async def test_combo_without_detail_stays_a_plain_dish() -> None:
 
 
 @pytest.mark.asyncio
-async def test_unavailable_dishes_are_hidden_and_uncategorized_go_to_otros() -> None:
+async def test_sold_out_dishes_are_left_out_and_uncategorized_go_to_otros() -> None:
     menu = MenuResponse(
         currencySymbol="S/",
         items=[
-            item("Ceviche", status="out_of_stock"),
+            item("Ceviche", "Marino", status="sold_out"),
             item("Causa", status="low"),
             item("Turrón", None),
         ],
@@ -176,15 +176,58 @@ async def test_unavailable_dishes_are_hidden_and_uncategorized_go_to_otros() -> 
 
     reply = welcome_message(table(), await build_carta(ComboFudia(), "t", menu))
 
-    assert "Ceviche" not in reply
-    assert "- Causa: S/ 28.00" in reply
-    assert "Otros:\n- Turrón" in reply
+    assert reply == (
+        "🍽️ Bienvenido a La Panchita\n📍 MESA 7\n\n"
+        "Fondos:\n- Causa: S/ 28.00\n\n"
+        "Otros:\n- Turrón: S/ 28.00\n\n"
+        "¿Qué deseas pedir?"
+    )
+    assert "Ceviche" not in reply and "gotado" not in reply
 
 
-def test_empty_carta_sends_only_the_greeting() -> None:
-    reply = welcome_message(table(), carta())
+@pytest.mark.asyncio
+async def test_sold_out_combo_is_left_out_and_its_dishes_stay_in_their_categories() -> None:
+    menu = MenuResponse(
+        currencySymbol="S/",
+        items=[
+            item("Causa Rellena", "Entradas", price="20"),
+            item("Lomo Saltado", "Segundos", price="15"),
+            item("Menú", "Combos", price="12", combo=True, status="sold_out"),
+        ],
+    )
 
-    assert reply.endswith("📍 MESA 7\n\n¿Qué deseas pedir?")
+    reply = welcome_message(table(), await build_carta(ComboFudia(), "t", menu))
+
+    assert "Entradas:\n- Causa Rellena: S/ 20.00" in reply
+    assert "Segundos:\n- Lomo Saltado: S/ 15.00" in reply
+    assert "Menú" not in reply
+
+
+@pytest.mark.asyncio
+async def test_nothing_available_says_there_are_no_dishes_today() -> None:
+    menu = MenuResponse(
+        currencySymbol="S/",
+        items=[
+            item("Causa Rellena", "Entradas", status="sold_out"),
+            item("Ceviche", "Marino", status="sold_out"),
+            item("Menú", "Combos", combo=True, status="sold_out"),
+        ],
+    )
+
+    reply = welcome_message(table(), await build_carta(ComboFudia(), "t", menu))
+
+    assert reply == (
+        "🍽️ Bienvenido a La Panchita\n📍 MESA 7\n\n"
+        "Hoy no tenemos platos disponibles.\n\n"
+        "Si necesitas ayuda, puedo avisar al personal del local."
+    )
+    assert welcome_message(table(), carta()) == reply
+
+
+def test_unreadable_carta_sends_only_the_greeting() -> None:
+    reply = welcome_message(table(), None)
+
+    assert reply == "🍽️ Bienvenido a La Panchita\n📍 MESA 7\n\n¿Qué deseas pedir?"
 
 
 def test_long_carta_fits_whatsapp_and_counts_the_rest() -> None:

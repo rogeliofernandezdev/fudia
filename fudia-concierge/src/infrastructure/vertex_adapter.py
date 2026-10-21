@@ -62,6 +62,20 @@ def build_vertex_client(
     )
 
 
+def _finish_reason(
+    response: types.GenerateContentResponse,
+) -> types.FinishReason | None:
+    candidates = response.candidates or []
+    return candidates[0].finish_reason if candidates else None
+
+
+def complete_lines(text: str) -> str:
+    """A reply cut by the output ceiling, without its unfinished last line."""
+    if "\n" not in text:
+        return text
+    return text.rsplit("\n", 1)[0].rstrip()
+
+
 def function_declarations(
     tool_schemas: list[dict[str, Any]],
 ) -> list[types.FunctionDeclaration]:
@@ -196,7 +210,8 @@ class GeminiToolAgent:
         tier: ModelTier,
         *,
         max_rounds: int = 8,
-        max_output_tokens: int = 1_024,
+        max_output_tokens: int = 4_096,
+        thinking_level: str = "",
     ) -> None:
         self.client = client
         self.model = model
@@ -206,6 +221,13 @@ class GeminiToolAgent:
         base = system_prompt_path.read_text(encoding="utf-8")
         role = role_prompt_path.read_text(encoding="utf-8")
         self.config = types.GenerateContentConfig(
+            thinking_config=(
+                types.ThinkingConfig(
+                    thinking_level=types.ThinkingLevel(thinking_level.upper())
+                )
+                if thinking_level
+                else None
+            ),
             system_instruction=f"{base}\n\n{role}",
             tools=[
                 types.Tool(
@@ -259,6 +281,10 @@ class GeminiToolAgent:
             calls = response.function_calls or []
             if not calls:
                 text = (response.text or "").strip()
+                truncated = _finish_reason(response) == types.FinishReason.MAX_TOKENS
+                if truncated:
+                    # Never send a half-written line such as «- Cev».
+                    text = complete_lines(text)
                 duration = time.perf_counter() - started
                 outcome = "completed" if text else "empty"
                 AGENT_REQUESTS.labels(agent=self.agent_name, result=outcome).inc()
@@ -276,6 +302,7 @@ class GeminiToolAgent:
                     inputTokens=input_tokens,
                     outputTokens=output_tokens,
                     empty=not text,
+                    truncated=truncated,
                 )
                 if not text:
                     raise AgentIncompleteError(EMPTY_REPLY)

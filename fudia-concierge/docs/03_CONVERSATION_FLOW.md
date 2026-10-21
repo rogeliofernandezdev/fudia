@@ -28,9 +28,13 @@ mensaje amable y un código corto de la mesa, sin el token técnico:
   casa:», luego cada combo o menú con su precio y una línea por grupo con sus
   opciones disponibles (`get_combo`), y después las categorías en el orden de
   foods-backend. Un plato que es opción de un combo no se repite en su categoría,
-  así que una categoría cubierta por el menú desaparece. Solo se listan productos
-  `available` o `low`; si el detalle de un combo falla, se muestra como plato
-  suelto y sus opciones siguen en sus categorías. El nombre de la mesa pasa por
+  así que una categoría cubierta por el menú desaparece. Solo se listan los
+  productos `available` o `low`; los demás (porciones del día sin cargar, sin
+  stock, fuera de horario o agotados a mano) no aparecen. Si no queda nada que
+  pedir, se responde «Hoy no tenemos platos disponibles.» y se ofrece avisar al
+  personal. Un combo agotado no aparece y sus platos disponibles siguen en sus
+  categorías; si el detalle de un combo falla, se muestra como plato suelto. `render_carta` arma este texto y lo comparten la bienvenida y
+  `search_menu` (`cartaText`). El nombre de la mesa pasa por
   `table_label`, que no repite «Mesa». Ejemplo:
 
   ```
@@ -58,7 +62,7 @@ mensaje amable y un código corto de la mesa, sin el token técnico:
 ## Atención y rondas
 
 1. Resolver la mesa.
-2. Consultar la carta con search_menu por nombre, descripción o categoría; query vacío permite consultar la carta. Preguntas generales («¿qué tienes para hoy?», «quiero comer») usan query vacío. Si un query no coincide con nada, la tool devuelve `matched=false` junto con la carta completa, para que el agente nunca concluya que no hay productos; solo `menuEmpty=true` indica una carta vacía. La carta completa trae además `combos` con los grupos y opciones de cada combo, y marca con `includedInCombo` los platos que ya son opción de uno: el agente los muestra dentro del combo y no como platos sueltos.
+2. Consultar la carta con search_menu por nombre, descripción o categoría; query vacío permite consultar la carta. Preguntas generales («¿qué tienes para hoy?», «quiero comer») usan query vacío. Si un query no coincide con nada, la tool devuelve `matched=false` junto con la carta completa, para que el agente nunca concluya que no hay productos; solo `menuEmpty=true` indica una carta vacía. La carta completa trae además `combos` con los grupos y opciones de cada combo, y marca con `includedInCombo` los platos que ya son opción de uno: el agente los muestra dentro del combo y no como platos sueltos. Para mostrar la carta completa el agente envía `cartaText` tal cual, el mismo texto que la bienvenida; `noneAvailable=true` indica que hoy no hay nada que pedir. Los productos agotados nunca se listan ni se ofrecen; si el cliente pregunta por uno, el agente dice que hoy está agotado y ofrece lo que sí hay.
 3. Agregar únicamente IDs devueltos por Fudia.
 4. Revalidar producto, combo o modificadores.
 5. Revisar el carrito temporal de la ronda.
