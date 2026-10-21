@@ -151,6 +151,8 @@ func TestProductModifierConfigurationLifecycle(t *testing.T) {
 
 	// Rename, reprice, reorder, add, and remove options by carrying their IDs.
 	edited := identical
+	// Keep the original group option slices intact for the ID comparisons below.
+	edited.Groups = append([]modifierGroupView(nil), identical.Groups...)
 	edited.Groups[1].Options = []modifierOptionView{
 		{ID: identical.Groups[1].Options[1].ID, Name: "Tocino", Surcharge: "4.50"},
 		{ID: identical.Groups[1].Options[0].ID, Name: "Queso premium", Surcharge: "3.75"},
