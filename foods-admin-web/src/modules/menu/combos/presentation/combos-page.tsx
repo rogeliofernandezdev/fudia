@@ -14,7 +14,7 @@ import {useDebouncedValue} from "@/shared/hooks/use-debounced-value";
 import type {Combo,ComboDetail,Draft,Group,Product} from "../domain/types";
 import {createComboOption,isReservationValid,reservationLimit} from "../domain/option-quantity";
 import {validateComboDraft,type WizardIssue} from "../domain/wizard-validation";
-import {applySaleWindow,isOutsideDates,isoToZonedInput,saleWindowOf,zonedInputToIso,type SaleWindow} from "../domain/sale-window";
+import {applySaleWindow,changeSaleDate,fullDaySchedule,isOutsideDates,isoToZonedInput,saleWindowOf,zonedInputToIso,type SaleWindow} from "../domain/sale-window";
 import {belongsToGroup,normalize} from "../domain/option-groups";
 import {ComboOptionPicker} from "./combo-option-picker";
 import {getCombo,listComboProducts,listCombos,saveCombo,setComboActive} from "../infrastructure/combos-api";
@@ -64,7 +64,7 @@ export function CombosPage(){
       const edited=Boolean(editingId);
       // Un menú guardado fuera de sus fechas no se vende todavía (o ya no): el aviso no debe decir que está disponible.
       const outside=isOutsideDates(zonedInputToIso(value.availableFrom,location?.timezone),zonedInputToIso(value.availableUntil,location?.timezone));
-      setDraft(null);setEditingId(null);void client.invalidateQueries({queryKey:["combos"]});void client.invalidateQueries({queryKey:["products"]});
+      setDraft(null);setEditingId(null);void client.invalidateQueries({queryKey:["combos"]});void client.invalidateQueries({queryKey:["combo-detail"]});void client.invalidateQueries({queryKey:["products"]});
       notify({tone:"success",title:edited?"Menú actualizado":"Menú registrado",message:outside?"Está fuera de sus fechas de venta: se venderá solo en las fechas indicadas.":edited?"Los cambios ya están disponibles para la operación.":"El menú ya está disponible para la operación."});
     },
     onError:error=>notify({tone:"danger",title:"No se pudo guardar",message:error.message})
@@ -76,7 +76,8 @@ export function CombosPage(){
       // Las fechas se muestran en la hora del local, no en la del navegador.
       const toLocalInput=(source:string|null)=>isoToZonedInput(source,location?.timezone);
       setEditingId(value.id);
-      setDraft({name:value.name,description:value.description,price:value.price,availableFrom:toLocalInput(value.availableFrom),availableUntil:toLocalInput(value.availableUntil),availableDays:value.availableDays??[],groups:value.groups.map(group=>({name:group.name,required:group.required,minSelections:group.minSelections,maxSelections:group.maxSelections,options:group.options.map(option=>({productId:option.productId,surcharge:option.surcharge==="0.00"?"":option.surcharge,quota:option.quota===null?"":String(option.quota)}))}))});
+      const schedule=fullDaySchedule({availableFrom:toLocalInput(value.availableFrom),availableUntil:toLocalInput(value.availableUntil),availableDays:value.availableDays??[]});
+      setDraft({name:value.name,description:value.description,price:value.price,...schedule,groups:value.groups.map(group=>({name:group.name,required:group.required,minSelections:group.minSelections,maxSelections:group.maxSelections,options:group.options.map(option=>({productId:option.productId,surcharge:option.surcharge==="0.00"?"":option.surcharge,quota:option.quota===null?"":String(option.quota)}))}))});
     },
     onError:(error,requestedId)=>{if(editingId===requestedId)setEditingId(null);notify({tone:"danger",title:"No se pudo abrir el menú",message:error.message})}
   });
@@ -130,9 +131,9 @@ export function CombosPage(){
 function ComboDetailDialog({query,currencySymbol,close}:{query:ReturnType<typeof useQuery<ComboDetail,Error>>;currencySymbol:string;close:()=>void}){
   const{location}=useSession();
   const value=query.data;
-  const from=value?.availableFrom?new Date(value.availableFrom):null;
-  const until=value?.availableUntil?new Date(value.availableUntil):null;
-  const singleDay=Boolean(from&&until&&until.getTime()>from.getTime()&&until.getTime()-from.getTime()<=24*60*60*1000);
+  const localFrom=isoToZonedInput(value?.availableFrom,location?.timezone).slice(0,10);
+  const localUntil=isoToZonedInput(value?.availableUntil,location?.timezone).slice(0,10);
+  const singleDay=Boolean(localFrom&&localUntil&&localFrom===localUntil);
   const days=value?.availableDays?.length?value.availableDays.map(day=>DAYS.find(item=>item.d===day)?.n).filter(Boolean).join(", "):"Todos los días";
   const money=(amount:string|number)=>`${currencySymbol} ${Number(amount).toFixed(2)}`;
   const formatDate=(date:string|null|undefined)=>date?formatRegionalDateTime(date,{country:location?.country,timeZone:location?.timezone},{dateStyle:"medium",timeStyle:"short"}):"Sin límite";
@@ -145,7 +146,7 @@ function ComboDetailDialog({query,currencySymbol,close}:{query:ReturnType<typeof
         {query.isError?<ModalError title="No pudimos cargar el menú" text={query.error.message} onRetry={()=>query.refetch()} retrying={query.isFetching}/>:value&&<div className="modal-body combo-detail-body" tabIndex={0} aria-label="Precio, horario y platos del menú">
           <section className="combo-detail-context" aria-label="Datos del menú"><dl className="modal-record-data">
             <div><dt>Precio</dt><dd>{money(value.price)}</dd></div>
-            {singleDay?<div><dt>Se vende</dt><dd>Un solo día<small>{formatCalendarDate(value.availableFrom)}</small></dd></div>:<>
+            {singleDay?<div><dt>Se vende</dt><dd>Un solo día<small>{formatCalendarDate(localFrom)}</small></dd></div>:<>
               <div><dt>Días de venta</dt><dd>{days}</dd></div>
               <div><dt>Desde</dt><dd>{formatDate(value.availableFrom)}</dd></div>
               <div><dt>Hasta</dt><dd>{formatDate(value.availableUntil)}</dd></div>
@@ -258,8 +259,8 @@ function ComboEditor({draft,setDraft,products,productsLoading,productsError,retr
               {errorFor("combo-days")&&<small className="field-error" role="alert">{errorFor("combo-days")}</small>}
             </fieldset>
             <div className="combo-window-range">
-              <FormField label="Desde" optional error={errorFor("combo-from")}><Input id="combo-from" type="datetime-local" value={draft.availableFrom} onChange={e=>update({...draft,availableFrom:e.target.value})}/></FormField>
-              <FormField label="Hasta" optional error={errorFor("combo-until")}><Input id="combo-until" type="datetime-local" value={draft.availableUntil} onChange={e=>update({...draft,availableUntil:e.target.value})}/></FormField>
+              <FormField label="Desde" optional error={errorFor("combo-from")}><Input id="combo-from" type="date" value={draft.availableFrom.slice(0,10)} onChange={e=>update({...draft,...changeSaleDate(draft,"availableFrom",e.target.value)})}/></FormField>
+              <FormField label="Hasta" optional error={errorFor("combo-until")}><Input id="combo-until" type="date" value={draft.availableUntil.slice(0,10)} onChange={e=>update({...draft,...changeSaleDate(draft,"availableUntil",e.target.value)})}/></FormField>
             </div>
           </div>}
         </section>

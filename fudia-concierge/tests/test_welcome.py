@@ -10,7 +10,7 @@ from src.domain.models import (
     MenuResponse,
     TableContext,
 )
-from src.services.carta import Carta, build_carta
+from src.services.carta import Carta, build_carta, category_icon
 from src.services.ports import FudiaError
 from src.services.welcome import MAX_REPLY_CHARS, welcome_message
 
@@ -127,26 +127,30 @@ def test_recommended_go_first_and_categories_keep_backend_order() -> None:
 
     assert reply == (
         "🍽️ Bienvenido a La Panchita\n📍 MESA 7\n\n"
-        "Recomendados de la casa:\n- Lomo saltado: S/ 32.50\n\n"
-        "Fondos:\n- Ají de gallina: S/ 28.00\n- Arroz con pollo: S/ 28.00\n\n"
-        "Bebidas:\n- Chicha morada: S/ 8.00\n\n"
+        "👨‍🍳 Recomendados de la casa:\n- Lomo saltado (S/ 32.50)\n\n"
+        "🍛 Fondos:\n- Ají de gallina (S/ 28.00)\n- Arroz con pollo (S/ 28.00)\n\n"
+        "🥤 Bebidas:\n- Chicha morada (S/ 8.00)\n\n"
         "¿Qué deseas pedir?"
     )
     assert "*" not in reply
 
 
 @pytest.mark.asyncio
-async def test_combo_shows_what_it_includes_and_its_dishes_are_not_repeated() -> None:
+async def test_menu_groups_its_dishes_by_category_and_extras_go_apart() -> None:
     full = await build_carta(ComboFudia(), "a" * 32, LA_PANCHITA)
 
     reply = welcome_message(table(), full)
 
     assert reply == (
         "🍽️ Bienvenido a La Panchita\n📍 MESA 7\n\n"
-        "Menú (S/ 12.00):\n"
-        "- Entrada: Causa Rellena\n"
-        "- Segundo: Aji de gallina o Lomo Saltado (+S/ 3.00)\n\n"
-        "Marino:\n- Ceviche: S/ 25.00\n\n"
+        "🍱 Menú (S/ 12.00)\n"
+        "🥗 Entradas:\n"
+        "- Causa Rellena\n"
+        "🍛 Segundos:\n"
+        "- Aji de gallina\n"
+        "- Lomo Saltado (+S/ 3.00)\n\n"
+        "➕ Extras\n"
+        "🐟 Marino:\n- Ceviche (S/ 25.00)\n\n"
         "¿Qué deseas pedir?"
     )
     assert full.included == {"causa rellena", "aji de gallina", "lomo saltado"}
@@ -158,8 +162,9 @@ async def test_combo_without_detail_stays_a_plain_dish() -> None:
 
     reply = welcome_message(table(), full)
 
-    assert "Combos:\n- Menú: S/ 12.00" in reply
-    assert "Segundos:\n- Aji de gallina: S/ 15.00" in reply
+    assert "🍱 Combos:\n- Menú (S/ 12.00)" in reply
+    assert "🍛 Segundos:\n- Aji de gallina (S/ 15.00)" in reply
+    assert "Extras" not in reply
     assert full.included == set()
 
 
@@ -178,8 +183,8 @@ async def test_sold_out_dishes_are_left_out_and_uncategorized_go_to_otros() -> N
 
     assert reply == (
         "🍽️ Bienvenido a La Panchita\n📍 MESA 7\n\n"
-        "Fondos:\n- Causa: S/ 28.00\n\n"
-        "Otros:\n- Turrón: S/ 28.00\n\n"
+        "🍛 Fondos:\n- Causa (S/ 28.00)\n\n"
+        "🍴 Otros:\n- Turrón (S/ 28.00)\n\n"
         "¿Qué deseas pedir?"
     )
     assert "Ceviche" not in reply and "gotado" not in reply
@@ -198,8 +203,8 @@ async def test_sold_out_combo_is_left_out_and_its_dishes_stay_in_their_categorie
 
     reply = welcome_message(table(), await build_carta(ComboFudia(), "t", menu))
 
-    assert "Entradas:\n- Causa Rellena: S/ 20.00" in reply
-    assert "Segundos:\n- Lomo Saltado: S/ 15.00" in reply
+    assert "🥗 Entradas:\n- Causa Rellena (S/ 20.00)" in reply
+    assert "🍛 Segundos:\n- Lomo Saltado (S/ 15.00)" in reply
     assert "Menú" not in reply
 
 
@@ -241,3 +246,15 @@ def test_long_carta_fits_whatsapp_and_counts_the_rest() -> None:
     assert 0 < shown < 200
     assert f"Hay {200 - shown} opciones más." in reply
     assert reply.endswith("¿Qué deseas pedir?")
+
+
+def test_category_icon_follows_the_category_name() -> None:
+    assert category_icon("Entradas") == "🥗"
+    assert category_icon("Segundos") == "🍛"
+    assert category_icon("Platos de fondo") == "🍛"
+    assert category_icon("MARINO") == "🐟"
+    assert category_icon("Postres") == "🍰"
+    assert category_icon("Bebidas Embotelladas") == "🥤"
+    assert category_icon("Menú del día") == "🍱"
+    assert category_icon("Café e infusiones") == "☕"
+    assert category_icon("Otros") == "🍴"

@@ -370,7 +370,7 @@ async def test_qr_start_welcomes_the_diner_with_the_menu() -> None:
     reply = await service.handle_message("51999999999", "FUDIA:" + "a" * 32)
 
     assert reply.startswith("🍽️ Bienvenido a Restaurante Demo\n📍 Mesa M1\n\n")
-    assert "Platos:\n- Lomo saltado: S/ 32.50" in reply
+    assert "🍛 Platos:\n- Lomo saltado (S/ 32.50)" in reply
     assert reply.endswith("¿Qué deseas pedir?")
 
 
@@ -859,9 +859,13 @@ async def test_full_carta_details_combos_and_flags_their_dishes() -> None:
     assert flags == {"Combo criollo": False, "Papas": True, "Ceviche": False}
 
     assert menu["noneAvailable"] is False
-    assert menu["cartaText"].startswith("Combo criollo (S/ 20.00):\n")
-    assert "- Acompañamiento: Papas o Yuca (+S/ 3.00)" in menu["cartaText"]
-    assert "Papas: S/" not in menu["cartaText"]
+    assert menu["cartaText"] == (
+        "🍱 Combo criollo (S/ 20.00)\n"
+        "🍴 Otros:\n- Papas\n"
+        "🍴 Acompañamiento:\n- Yuca (+S/ 3.00)\n\n"
+        "➕ Extras\n"
+        "🍴 Otros:\n- Ceviche (S/ 25.00)"
+    )
 
     lookup = await ConciergeTools(fudia, session, "ceviche").execute(
         "search_menu", {"query": "ceviche"}

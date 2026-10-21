@@ -192,6 +192,14 @@ cambio de horario) y «Fuera de fecha» en el listado. El buscador «Agregar opc
 `buildOptionGroups`: secciones por categoría con la de la parte primero, «Sin
 categoría» al final, sin repetir lo agregado y sin secciones vacías.
 
+`combo-sale-window.test.mjs` cubre la selección de fecha en cualquiera de los dos
+calendarios: completar el otro extremo, reemplazar un rango vencido, conservar
+rangos de varios días, limpiar límites y volver a Siempre. Verifica 00:00 y
+23:59:59.999 en Lima, el último instante incluido y la exclusión del día siguiente,
+días de 23/25 horas en Madrid y el payload ISO real de guardado. La prueba de
+interacción de `combo-quantity.test.mjs` exige calendarios `date` sin nuevos
+controles y refresco de `combo-detail` tras guardar.
+
 `combo-detail-modal.test.mjs` fija el detalle de Menús y combos a la anatomía
 compartida (`size-md`, cabecera sin subtítulo, `modal-body`, `modal-record-data`,
 `ModalItemComponents`, `ModalError`, estado en el pie), impide que el módulo

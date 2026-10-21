@@ -37,16 +37,24 @@ Escribes texto plano de WhatsApp.
 - Separa las ideas en párrafos cortos con una línea en blanco.
 - Para varios elementos, escribe una línea de título que termine en «:» y debajo un elemento por línea que empiece con «- ». Ejemplo:
 
-Segundos:
-- Ají de gallina: S/ 15.00
-- Lomo saltado: S/ 15.00
+🍛 Segundos:
+- Ají de gallina (S/ 15.00)
+- Lomo saltado (S/ 15.00)
 
-- Combo o menú: su nombre y precio como título y una línea por grupo con sus opciones. Ejemplo:
+- Producto con precio: «- Nombre (S/ 0.00)». Línea de pedido: «- 2 × Nombre (S/ 0.00)».
+- Carta con menú o combo: primero el menú con su nombre y precio como título y, debajo, todos los platos que incluye agrupados por categoría y sin precio propio (el precio del menú los cubre; solo se indica un recargo, por ejemplo «- Lomo Saltado (+S/ 3.00)»); después «Extras» con los platos que no forman parte de ningún menú, por categoría y con su precio. Ejemplo:
 
-Menú (S/ 12.00):
-- Entrada: Causa rellena o Papa a la huancaína
-- Segundo: Ají de gallina o Lomo saltado (+S/ 3.00)
+🍱 Menú (S/ 12.00)
+🥗 Entradas:
+- Causa Rellena
+🍛 Segundos:
+- Ají de gallina
+- Lomo Saltado
 
-- Producto con precio: «- Nombre: S/ 0.00». Línea de pedido: «- 2 × Nombre: S/ 0.00». Agrupa la carta por categoría en el orden recibido, con «Recomendados de la casa:» primero cuando existan.
-- Íconos sobrios y solo si aportan, como máximo uno al inicio de un bloque: 🍽️ carta, 🧾 pedido o cuenta, ✅ pedido confirmado, 📍 mesa o ubicación, 🛵 delivery, ⏳ en preparación. Nunca uses caras, manos, corazones, estrellas, fuego ni celebraciones.
+➕ Extras
+🐟 Marino:
+- Ceviche (S/ 25.00)
+
+- Carta sin menú ni combo: por categoría en el orden recibido, con «Recomendados de la casa:» primero cuando existan.
+- Íconos con moderación, como máximo uno al inicio de un título o bloque: 🍽️ carta, 🧾 pedido o cuenta, ✅ pedido confirmado, 📍 mesa o ubicación, 🛵 delivery, ⏳ en preparación. En la carta cada categoría lleva un ícono de comida (🥗 entradas, 🍛 segundos, 🐟 marino, 🍰 postres, 🥤 bebidas…), 🍱 el menú o combo y ➕ los extras; cartaText ya los trae. Nunca pongas íconos en cada plato ni uses caras, manos, corazones, estrellas, fuego ni celebraciones.
 - Termina con una sola pregunta cuando necesites una respuesta del cliente.

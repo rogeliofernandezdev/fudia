@@ -24,29 +24,36 @@ mensaje amable y un código corto de la mesa, sin el token técnico:
   `FUDIA:<token>`; ese formato se sigue aceptando para QR y enlaces antiguos.
 - Al abrir la mesa, la respuesta es determinista, sin modelo: el saludo, la
   carta real de `search_menu` (query vacío) y «¿Qué deseas pedir?». La carta se
-  arma en `build_carta` (`src/services/carta.py`): primero «Recomendados de la
-  casa:», luego cada combo o menú con su precio y una línea por grupo con sus
-  opciones disponibles (`get_combo`), y después las categorías en el orden de
-  foods-backend. Un plato que es opción de un combo no se repite en su categoría,
-  así que una categoría cubierta por el menú desaparece. Solo se listan los
-  productos `available` o `low`; los demás (porciones del día sin cargar, sin
-  stock, fuera de horario o agotados a mano) no aparecen. Si no queda nada que
-  pedir, se responde «Hoy no tenemos platos disponibles.» y se ofrece avisar al
-  personal. Un combo agotado no aparece y sus platos disponibles siguen en sus
-  categorías; si el detalle de un combo falla, se muestra como plato suelto. `render_carta` arma este texto y lo comparten la bienvenida y
-  `search_menu` (`cartaText`). El nombre de la mesa pasa por
-  `table_label`, que no repite «Mesa». Ejemplo:
+  arma en `build_carta` (`src/services/carta.py`). Si hay menús o combos
+  disponibles, cada uno va primero con su nombre y precio y, debajo, todos los
+  platos que incluye (`get_combo`) agrupados por su categoría, sin precio propio
+  porque el del menú los cubre (solo se indica un recargo, «(+S/ 3.00)»);
+  después «Extras» con los platos que no forman parte de ningún menú, también por
+  categoría. Un plato del menú no se repite en Extras. Sin menús, van primero
+  «Recomendados de la casa:» y luego cada categoría en el orden de foods-backend.
+  Solo se listan los productos `available` o `low`; los demás (porciones del día
+  sin cargar, sin stock, fuera de horario o agotados a mano) no aparecen. Si no
+  queda nada que pedir, se responde «Hoy no tenemos platos disponibles.» y se
+  ofrece avisar al personal. Un combo agotado no aparece y sus platos disponibles
+  van a sus categorías; si el detalle de un combo falla, se muestra como plato
+  suelto. `render_carta` arma este texto y lo comparten la bienvenida y
+  `search_menu` (`cartaText`). El nombre de la mesa pasa por `table_label`, que
+  no repite «Mesa». Ejemplo:
 
   ```
   🍽️ Bienvenido a La Panchita
   📍 Mesa 7
 
-  Menú (S/ 12.00):
-  - Entrada: Causa Rellena
-  - Segundo: Ají de gallina o Lomo Saltado (+S/ 3.00)
+  🍱 Menú (S/ 12.00)
+  🥗 Entradas:
+  - Causa Rellena
+  🍛 Segundos:
+  - Ají de gallina
+  - Lomo Saltado
 
-  Marino:
-  - Ceviche: S/ 25.00
+  ➕ Extras
+  🐟 Marino:
+  - Ceviche (S/ 25.00)
 
   ¿Qué deseas pedir?
   ```
@@ -137,13 +144,17 @@ respuestas fijas del código y en las del modelo (`prompts/system.md`):
 
 - Sin asteriscos, guiones bajos, almohadillas ni negritas.
 - Varios elementos: una línea de título que termina en «:» y debajo un elemento
-  por línea con «- ». Producto: «- Nombre: S/ 0.00». Línea de pedido:
-  «- 2 × Nombre». Combo o menú: «Menú (S/ 12.00):» y una línea por grupo,
-  «- Segundo: Ají de gallina o Lomo saltado (+S/ 3.00)».
+  por línea con «- ». Producto: «- Nombre (S/ 0.00)». Línea de pedido:
+  «- 2 × Nombre». Carta con menú: «Menú (S/ 12.00)» con sus platos por
+  categoría y sin precio propio y luego «Extras» con el resto, como en el ejemplo de Inicio.
 - Párrafos cortos separados por una línea en blanco y una sola pregunta al final.
-- Íconos sobrios, como máximo uno al inicio de un bloque: 🍽️ carta, 🧾 pedido o
-  cuenta, ✅ confirmado, 📍 mesa o ubicación, 🛵 delivery, ⏳ en preparación. Nunca
-  caras, manos, corazones, estrellas, fuego ni celebraciones.
+- Íconos con moderación, como máximo uno al inicio de un título o bloque: 🍽️
+  carta, 🧾 pedido o cuenta, ✅ confirmado, 📍 mesa o ubicación, 🛵 delivery, ⏳ en
+  preparación. En la carta, cada categoría lleva un ícono de comida según su
+  nombre (`category_icon` en `src/services/carta.py`: 🥗 entradas, 🍛 segundos o
+  fondos, 🐟 marino, 🍰 postres, 🥤 bebidas, ☕ café…, 🍴 si no reconoce el nombre),
+  🍱 el menú o combo, ➕ los extras y 👨‍🍳 los recomendados. Nunca íconos en cada
+  plato ni caras, manos, corazones, estrellas, fuego o celebraciones.
 
 Como red de seguridad, `whatsapp_text` (`src/services/formatting.py`) limpia la
 respuesta del modelo antes de enviarla: quita las marcas de markdown, convierte

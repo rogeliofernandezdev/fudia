@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import unicodedata
 from dataclasses import dataclass, field
 from decimal import Decimal, InvalidOperation
 
@@ -8,9 +9,39 @@ from src.domain.models import ComboGroup, MenuItem, MenuResponse
 from src.services.ports import FudiaBackend, FudiaError
 
 ORDERABLE_STATUSES = {"available", "low"}
-RECOMMENDED_HEADING = "Recomendados de la casa"
+RECOMMENDED_HEADING = "👨‍🍳 Recomendados de la casa"
 UNCATEGORIZED_HEADING = "Otros"
+EXTRAS_HEADING = "➕ Extras"
+COMBO_ICON = "🍱"
 NONE_AVAILABLE = "Hoy no tenemos platos disponibles."
+
+# One food icon per category heading, by the words in the category name the
+# restaurant chose; the first match wins and anything else gets 🍴.
+CATEGORY_ICONS: tuple[tuple[tuple[str, ...], str], ...] = (
+    (("menu", "combo", "promo"), COMBO_ICON),
+    (("entrada", "piqueo", "ensalada"), "🥗"),
+    (("sopa", "caldo", "crema"), "🍲"),
+    (("marin", "pescado", "marisco", "cevich"), "🐟"),
+    (("pollo", "brasa"), "🍗"),
+    (("parrilla", "carne", "anticucho"), "🥩"),
+    (("pasta", "tallarin"), "🍝"),
+    (("pizza",), "🍕"),
+    (("sandwich", "sanguch", "hamburguesa"), "🥪"),
+    (("desayuno",), "🍳"),
+    (("postre", "dulce", "torta"), "🍰"),
+    (("cafe", "infusion"), "☕"),
+    (("cerveza", "trago", "coctel", "vino", "bar"), "🍺"),
+    (("bebida", "jugo", "refresco", "gaseosa"), "🥤"),
+    (("segundo", "fondo", "plato", "criollo"), "🍛"),
+)
+
+
+def category_icon(name: str) -> str:
+    plain = unicodedata.normalize("NFKD", name.lower()).encode("ascii", "ignore").decode()
+    for words, icon in CATEGORY_ICONS:
+        if any(word in plain for word in words):
+            return icon
+    return "🍴"
 
 
 @dataclass
@@ -27,8 +58,11 @@ class Carta:
 
     currency_symbol: str = ""
     combos: list[ComboView] = field(default_factory=list)
+    # Dishes outside every combo (the «Extras» when there are combos).
     items: list[MenuItem] = field(default_factory=list)
     included: set[str] = field(default_factory=set)
+    # Every orderable product by id, in backend order.
+    orderable: dict[str, MenuItem] = field(default_factory=dict)
 
     @property
     def available(self) -> bool:
@@ -86,59 +120,81 @@ async def build_carta(
         combos=combos,
         items=items,
         included=included,
+        orderable={item.productId: item for item in orderable},
     )
 
 
-def combo_heading(view: ComboView, symbol: str) -> str:
-    return f"{view.item.name} ({money(symbol, view.item.price)}):"
+def _dish_line(item: MenuItem, symbol: str) -> str:
+    return f"- {item.name} ({money(symbol, item.price)})"
 
 
-def combo_lines(view: ComboView, symbol: str) -> list[str]:
-    """One line per group: «- Segundo: Ají de gallina o Lomo saltado»."""
-    lines = []
+def _menu_dish_line(name: str, symbol: str, surcharge: Decimal) -> str:
+    """A dish inside a menu: the menu price covers it, so only an extra
+    charge for choosing it is shown."""
+    line = f"- {name}"
+    if surcharge > 0:
+        line += f" (+{money(symbol, surcharge)})"
+    return line
+
+
+def _by_category(lines: list[tuple[MenuItem, str]]) -> list[str]:
+    """«Categoría:» followed by its dishes, categories in backend order."""
+    categories: dict[str, list[str]] = {}
+    for item, line in lines:
+        heading = (item.categoryName or "").strip() or UNCATEGORIZED_HEADING
+        categories.setdefault(f"{category_icon(heading)} {heading}:", []).append(line)
+    return [entry for heading, dishes in categories.items() for entry in (heading, *dishes)]
+
+
+def _combo_section(view: ComboView, carta: Carta) -> list[str]:
+    """The combo with every dish it includes, grouped by the dish's category.
+    The combo price covers its dishes, so they carry no price of their own."""
+    symbol = carta.currency_symbol
+    order = list(carta.orderable)
+    dishes: dict[str, tuple[MenuItem, str]] = {}
+    unlisted: dict[str, list[str]] = {}
     for group in view.groups:
-        names = [
-            option.name
-            + (
-                f" (+{money(symbol, option.surcharge)})"
-                if option.surcharge > 0
-                else ""
-            )
-            for option in group.options
-        ]
-        joined = (
-            names[0]
-            if len(names) == 1
-            else f"{', '.join(names[:-1])} o {names[-1]}"
-        )
-        lines.append(f"- {group.name}: {joined}")
+        for option in group.options:
+            item = carta.orderable.get(option.productId)
+            line = _menu_dish_line(option.name, symbol, option.surcharge)
+            if item is None:
+                # Not in the menu listing: keep it under the combo's group.
+                unlisted.setdefault(
+                    f"{category_icon(group.name)} {group.name}:", []
+                ).append(line)
+            elif option.productId not in dishes:
+                dishes[option.productId] = (item, line)
+    listed = sorted(dishes.items(), key=lambda entry: order.index(entry[0]))
+    lines = [f"{COMBO_ICON} {view.item.name} ({money(symbol, view.item.price)})"]
+    lines += _by_category([dish for _, dish in listed])
+    lines += [entry for heading, rows in unlisted.items() for entry in (heading, *rows)]
     return lines
 
 
-def _sections(carta: Carta) -> list[tuple[str, list[str]]]:
-    """Recommended dishes, then each combo with what it includes, then the
-    remaining categories in the order the backend sends. A dish offered
-    inside a combo is not repeated on its own."""
+def _sections(carta: Carta) -> list[list[str]]:
+    """Each combo with all the dishes it includes, then «Extras» with the
+    dishes outside any combo by category. Without combos: recommended
+    dishes first, then each category."""
     symbol = carta.currency_symbol
+    if carta.combos:
+        sections = [_combo_section(view, carta) for view in carta.combos]
+        extras = _by_category([(item, _dish_line(item, symbol)) for item in carta.items])
+        if extras:
+            sections.append([EXTRAS_HEADING, *extras])
+        return sections
 
-    def line(item: MenuItem) -> str:
-        return f"- {item.name}: {money(symbol, item.price)}"
-
-    recommended = [line(item) for item in carta.items if item.recommended]
-    categories: dict[str, list[str]] = {}
-    for item in carta.items:
-        if item.recommended:
-            continue
-        heading = (item.categoryName or "").strip() or UNCATEGORIZED_HEADING
-        categories.setdefault(f"{heading}:", []).append(line(item))
-
-    sections = [(f"{RECOMMENDED_HEADING}:", recommended)] if recommended else []
-    # A combo is one entry: it is shown whole or not at all.
-    sections += [
-        (combo_heading(view, symbol), ["\n".join(combo_lines(view, symbol))])
-        for view in carta.combos
-    ]
-    return sections + list(categories.items())
+    recommended = [_dish_line(item, symbol) for item in carta.items if item.recommended]
+    sections = [[f"{RECOMMENDED_HEADING}:", *recommended]] if recommended else []
+    rest = _by_category(
+        [(item, _dish_line(item, symbol)) for item in carta.items if not item.recommended]
+    )
+    # One section per category, so a blank line separates them.
+    for line in rest:
+        if not line.startswith("- "):
+            sections.append([line])
+        else:
+            sections[-1].append(line)
+    return sections
 
 
 def render_carta(carta: Carta, max_chars: int) -> str:
@@ -147,32 +203,34 @@ def render_carta(carta: Carta, max_chars: int) -> str:
     if not carta.available:
         return NONE_AVAILABLE
 
-    # Room for separators and the "more" note.
-    budget = max_chars - 120
-    blocks: list[str] = []
     sections = _sections(carta)
-    entries = sum(len(lines) for _, lines in sections)
+    total = sum(1 for section in sections for line in section if line.startswith("- "))
+    # Room for the "more" note.
+    budget = max_chars - 120
+    pieces: list[str] = []
+    length = 0
     shown = 0
-    full = False
-    for heading, lines in sections:
-        block = heading
-        for entry in lines:
-            if len(block) + len(entry) + 3 > budget:
-                full = True
+    for section in sections:
+        for index, line in enumerate(section):
+            piece = ("\n\n" if index == 0 else "\n") + line if pieces else line
+            if length + len(piece) > budget:
                 break
-            block += f"\n{entry}"
-            shown += 1
-        if block != heading:
-            blocks.append(block)
-            budget -= len(block) + 2
-        if full:
-            break
+            pieces.append(piece)
+            length += len(piece)
+            shown += line.startswith("- ")
+        else:
+            continue
+        break
+    # A heading left without dishes at the cut is dropped.
+    while pieces and not pieces[-1].lstrip("\n").startswith("- "):
+        pieces.pop()
 
-    hidden = entries - shown
+    text = "".join(pieces)
+    hidden = total - shown
     if hidden:
         more = "opción más" if hidden == 1 else "opciones más"
-        blocks.append(
-            f"Hay {hidden} {more}. Escríbeme una categoría o un plato "
+        text += (
+            f"\n\nHay {hidden} {more}. Escríbeme una categoría o un plato "
             "y te muestro el resto."
         )
-    return "\n\n".join(blocks)
+    return text

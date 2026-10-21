@@ -142,7 +142,14 @@ demuestre que reduce latencia sin duplicar tráfico.
 las escribe y muestra en la **hora del local activo**: `zonedInputToIso` e
 `isoToZonedInput` (`domain/sale-window.ts`) usan `location.timezone` con `Intl`, no
 el reloj del navegador. Así un menú vence a las 23:59 del local aunque se administre
-desde otro país. El listado (`GET /combos`) devuelve `outsideDates`, calculado en el
+desde otro país. Los calendarios piden únicamente el día: `changeSaleDate` completa
+el otro límite si falta y ajusta un rango anterior que ya no contiene el día
+elegido. `fullDaySchedule` prepara 00:00 y 23:59:59.999 locales; la conversión a
+ISO conserva segundos y milisegundos, incluido el último minuto del día. Los
+límites se convierten por separado para respetar días de 23 o 25 horas por cambios
+de horario. La edición normaliza solo el borrador; no escribe al abrir. Guardar
+invalida también `combo-detail` para retirar fechas y estados anteriores.
+El listado (`GET /combos`) devuelve `outsideDates`, calculado en el
 servidor, para mostrar «Fuera de fecha» en un menú activo que no se vende por fecha.
 
 ## Cantidades en Menús y combos

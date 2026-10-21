@@ -974,7 +974,13 @@ no integra un visor PDF.
   cada venta guarda el nombre de la parte y del plato elegidos. Un especial de un día
   usa «Elegir días» con la misma fecha en «Desde» y «Hasta». «Elegir días» muestra los
   siete días (`aria-pressed`, una fila de 44 px desde 390 px) y «Desde»/«Hasta»
-  opcionales; sin días ni fechas no se guarda. Las fechas se escriben y se muestran en
+  opcionales, con calendarios de fecha sin controles de hora; sin días ni fechas no
+  se guarda. Elegir una fecha (incluido «Hoy» del calendario nativo) completa el
+  otro extremo si estaba vacío; si la fecha queda fuera del rango anterior, reúne
+  ambos extremos en el día elegido. «Desde» incluye las 00:00 y «Hasta» todo el
+  día final, hasta las 23:59:59.999. No se añade otro selector ni una opción «Solo
+  hoy». Al editar se preparan los límites completos en el borrador; solo Guardar
+  los persiste. Las fechas se escriben y se muestran en
   la **hora del local activo** (`sale-window.ts`: `zonedInputToIso` /
   `isoToZonedInput`), nunca en la del navegador.
 - En el listado, un menú activo cuyo rango de fechas ya venció o aún no empieza se

@@ -21,7 +21,7 @@ const base={id:"lomo",name:"Lomo saltado",categoryName:"Segundos",price:"20",act
 const cause={...base,id:"causa",name:"Causa rellena",categoryName:"Entradas",availableQuantity:12};
 function nodes(tree,result=[]){if(Array.isArray(tree))tree.forEach(node=>nodes(node,result));else if(tree&&typeof tree==="object"){result.push(tree);nodes(tree.props?.children,result)}return result}
 function mount({products=[base,cause],locationId="local-a",organizationId="org-a",canManage=true,combos=[],autoOpen=true}={}){
- const frames=new Map(),queries=[];let active,mutations=[];
+ const frames=new Map(),queries=[],invalidations=[];let active,mutations=[];
  const {CombosPage}=compile("presentation/combos-page.tsx",name=>{
   if(name==="react")return{
    useEffect:()=>{},
@@ -29,7 +29,7 @@ function mount({products=[base,cause],locationId="local-a",organizationId="org-a
    useRef:initial=>{const i=active.refCursor++;return active.refs[i]??(active.refs[i]={current:initial})},
   };
   if(name==="@tanstack/react-query")return{
-   useQueryClient:()=>({invalidateQueries:async()=>{}}),
+   useQueryClient:()=>({invalidateQueries:async options=>{invalidations.push(options.queryKey)}}),
    useQuery:options=>{queries.push(options);return{data:{items:options.queryKey.includes("combo-picker")?products:combos,total:products.length},isLoading:false,isError:false}},
    useMutation:options=>{mutations.push(options);return{isPending:false,mutate:()=>{}}},
   };
@@ -55,7 +55,7 @@ function mount({products=[base,cause],locationId="local-a",organizationId="org-a
  function wizard(){const node=page().find(node=>node.type?.name==="ComboEditor");return{node,view:render(node.type,node.props,"wizard")}}
  function composition(){const node=wizard().view.find(node=>node.type?.name==="CompositionStep");return render(node.type,node.props,"composition")}
  if(autoOpen)page().find(node=>node.type==="PageHeader").props.action.props.onClick();
- return{page,wizard,composition,queries,setCanManage:value=>{canManage=value},setProducts:value=>{products=value},edit:value=>{page();mutations[1].onSuccess(value)}};
+ return{page,wizard,composition,queries,invalidations,setCanManage:value=>{canManage=value},setProducts:value=>{products=value},edit:value=>{page();mutations[1].onSuccess(value)},saved:value=>{page();mutations[0].onSuccess({id:"menu"},value)}};
 }
 const quotaInput=view=>view.find(node=>node.type==="Input"&&node.props.id?.includes("-quota-"));
 // Reservar y Costo extra están siempre a la vista en cada línea de opción.
@@ -263,6 +263,41 @@ test("las fechas de venta se convierten con la zona horaria del local, no la del
  assert.equal(saleWindow.zonedInputToIso("2026-12-18T00:00","Europe/Madrid"),"2026-12-17T23:00:00.000Z","y en invierno UTC+1");
  assert.equal(saleWindow.isoToZonedInput("2026-10-19T04:59:00Z","America/Lima"),"2026-10-18T23:59","editar muestra la hora del local");
  assert.equal(saleWindow.zonedInputToIso("","America/Lima"),null);assert.equal(saleWindow.isoToZonedInput(null,"America/Lima"),"");
+});
+
+test("el calendario completa el día elegido sin pedir horas ni agregar controles",()=>{
+ const ui=mount();
+ ui.wizard().view.find(node=>node.type==="button"&&node.props.role==="radio"&&node.props.children==="Elegir días").props.onClick();
+ const from=ui.wizard().view.find(node=>node.type==="Input"&&node.props.id==="combo-from");
+ assert.equal(from.props.type,"date");
+ from.props.onChange({target:{value:"2026-10-21"}});
+ const state=ui.wizard();
+ assert.equal(state.node.props.draft.availableFrom,"2026-10-21T00:00");
+ assert.equal(state.node.props.draft.availableUntil,"2026-10-21T23:59:59.999");
+ const until=state.view.find(node=>node.type==="Input"&&node.props.id==="combo-until");
+ assert.equal(until.props.type,"date");assert.equal(until.props.value,"2026-10-21");
+ until.props.onChange({target:{value:"2026-10-23"}});
+ assert.equal(ui.wizard().node.props.draft.availableUntil,"2026-10-23T23:59:59.999");
+ assert.equal(state.view.filter(node=>node.type==="button"&&node.props.role==="radio").length,2);
+});
+
+test("guardar refresca también el detalle: no conserva Fuera de fecha de antes de editar",()=>{
+ const ui=mount();
+ const draft=ui.wizard().node.props.draft;
+ ui.saved(draft);
+ assert.ok(ui.invalidations.some(key=>key[0]==="combo-detail"));
+});
+
+test("editar presenta días completos y seleccionar hoy sustituye un rango vencido",()=>{
+ const ui=mount({autoOpen:false});
+ ui.edit({id:"menu",name:"Menú",description:"",price:"15",groups:[],availableDays:[],availableFrom:"2026-10-20T17:00:00Z",availableUntil:"2026-10-20T19:00:00Z"});
+ let state=ui.wizard();
+ assert.equal(state.node.props.draft.availableFrom,"2026-10-20T00:00");
+ assert.equal(state.node.props.draft.availableUntil,"2026-10-20T23:59:59.999");
+ state.view.find(node=>node.type==="Input"&&node.props.id==="combo-from").props.onChange({target:{value:"2026-10-21"}});
+ state=ui.wizard();
+ assert.equal(state.node.props.draft.availableFrom,"2026-10-21T00:00");
+ assert.equal(state.node.props.draft.availableUntil,"2026-10-21T23:59:59.999");
 });
 
 test("un menú activo fuera de sus fechas se lista como «Fuera de fecha», no como Activo",()=>{

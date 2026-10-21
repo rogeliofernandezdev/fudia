@@ -16,7 +16,24 @@ export function applySaleWindow(schedule:Schedule,window:SaleWindow):Schedule{
  return window==="always"?{availableDays:[],availableFrom:"",availableUntil:""}:schedule;
 }
 
-// Fechas de venta: el formulario usa hora local del LOCAL (datetime-local sin zona); el API recibe instantes ISO.
+/** Fechas del calendario completas; el API mantiene su rango de instantes inclusivo. */
+export function fullDaySchedule(schedule:Schedule):Schedule{
+ return {...schedule,
+  availableFrom:schedule.availableFrom?`${schedule.availableFrom.slice(0,10)}T00:00`:"",
+  availableUntil:schedule.availableUntil?`${schedule.availableUntil.slice(0,10)}T23:59:59.999`:"",
+ };
+}
+
+/** Al elegir un primer día completa la otra fecha; al moverlo fuera del rango, reúne ambos límites. */
+export function changeSaleDate(schedule:Schedule,field:"availableFrom"|"availableUntil",date:string):Schedule{
+ if(!date)return {...schedule,[field]:""};
+ const next={...schedule,[field]:date};
+ if(field==="availableFrom"&&(!next.availableUntil||next.availableUntil.slice(0,10)<date))next.availableUntil=date;
+ if(field==="availableUntil"&&(!next.availableFrom||next.availableFrom.slice(0,10)>date))next.availableFrom=date;
+ return fullDaySchedule(next);
+}
+
+// Fechas de venta: el formulario usa días del LOCAL; el API recibe instantes ISO.
 // La conversión usa la zona horaria del local, nunca la del navegador.
 const pad=(value:number)=>String(value).padStart(2,"0");
 function wallClock(date:Date,timeZone?:string|null){
@@ -33,10 +50,11 @@ const offsetAt=(instant:number,timeZone?:string|null)=>{
 
 /** «2026-10-18T23:59» en la zona del local → instante ISO (UTC). Vacío o inválido → null. */
 export function zonedInputToIso(value:string,timeZone?:string|null):string|null{
- const match=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(value);
+ const match=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?$/.exec(value);
  if(!match)return null;
- const [,year,month,day,hour,minute]=match.map(Number);
- const guess=Date.UTC(year,month-1,day,hour,minute);
+ const [,year,month,day,hour,minute]=match.slice(0,6).map(Number);
+ const second=Number(match[6]??0),millisecond=Number((match[7]??"").padEnd(3,"0"));
+ const guess=Date.UTC(year,month-1,day,hour,minute,second,millisecond);
  // Dos pasadas para cruzar bien un cambio de horario.
  let instant=guess-offsetAt(guess,timeZone);
  instant=guess-offsetAt(instant,timeZone);
