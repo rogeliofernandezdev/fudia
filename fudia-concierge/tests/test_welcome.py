@@ -10,7 +10,7 @@ from src.domain.models import (
     MenuResponse,
     TableContext,
 )
-from src.services.carta import Carta, build_carta, category_icon
+from src.services.carta import Carta, build_carta, category_course, category_icon
 from src.services.ports import FudiaError
 from src.services.welcome import MAX_REPLY_CHARS, welcome_message
 
@@ -258,3 +258,67 @@ def test_category_icon_follows_the_category_name() -> None:
     assert category_icon("Menú del día") == "🍱"
     assert category_icon("Café e infusiones") == "☕"
     assert category_icon("Otros") == "🍴"
+
+
+class CourseFudia:
+    async def get_combo(self, token: str, product_id: str) -> ComboDetail:
+        def group(name: str, *dishes: str) -> ComboGroup:
+            return ComboGroup(
+                id=name,
+                name=name,
+                required=True,
+                minSelections=1,
+                maxSelections=1,
+                options=[option(dish) for dish in dishes],
+            )
+
+        # Groups arrive out of course order on purpose.
+        return ComboDetail(
+            id=product_id,
+            name="Menú",
+            price=Decimal("12"),
+            groups=[
+                group("Postre", "Torta de 3 leches"),
+                group("Bebida", "Agua de cebada"),
+                group("Segundo", "Aji de gallina", "Lomo Saltado"),
+                group("Entrada", "Causa Rellena"),
+            ],
+        )
+
+
+@pytest.mark.asyncio
+async def test_menu_lists_courses_as_entradas_segundos_bebidas_postres() -> None:
+    menu = MenuResponse(
+        currencySymbol="S/",
+        items=[
+            item("Torta de 3 leches", "Postres", price="25"),
+            item("Agua de cebada", "Bebidas", price="2"),
+            item("Aji de gallina", "Segundos", price="15"),
+            item("Lomo Saltado", "Segundos", price="15"),
+            item("Causa Rellena", "Entradas", price="20"),
+            item("Menú", "Combos", price="12", combo=True),
+        ],
+    )
+
+    reply = welcome_message(table(), await build_carta(CourseFudia(), "t", menu))
+
+    assert (
+        "🍱 Menú (S/ 12.00)\n"
+        "🥗 Entradas:\n- Causa Rellena\n"
+        "🍛 Segundos:\n- Aji de gallina\n- Lomo Saltado\n"
+        "🥤 Bebidas:\n- Agua de cebada\n"
+        "🍰 Postres:\n- Torta de 3 leches"
+    ) in reply
+
+
+def test_category_course_orders_a_meal() -> None:
+    courses = ["Postres", "Bebidas", "Segundos", "Sopas", "Entradas", "Marino"]
+
+    assert sorted(courses, key=category_course) == [
+        "Entradas",
+        "Sopas",
+        "Segundos",
+        "Marino",
+        "Bebidas",
+        "Postres",
+    ]

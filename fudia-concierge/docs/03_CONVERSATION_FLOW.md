@@ -26,7 +26,10 @@ mensaje amable y un código corto de la mesa, sin el token técnico:
   carta real de `search_menu` (query vacío) y «¿Qué deseas pedir?». La carta se
   arma en `build_carta` (`src/services/carta.py`). Si hay menús o combos
   disponibles, cada uno va primero con su nombre y precio y, debajo, todos los
-  platos que incluye (`get_combo`) agrupados por su categoría, sin precio propio
+  platos que incluye (`get_combo`) agrupados por su categoría en orden de
+  tiempos (entradas, sopas, segundos, bebidas y postres, según el nombre de la
+  categoría con `category_course`; dentro de cada una, el orden de foods-backend),
+  sin precio propio
   porque el del menú los cubre (solo se indica un recargo, «(+S/ 3.00)»);
   después «Extras» con los platos que no forman parte de ningún menú, también por
   categoría. Un plato del menú no se repite en Extras. Sin menús, van primero

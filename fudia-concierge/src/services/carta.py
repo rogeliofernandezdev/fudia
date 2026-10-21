@@ -15,33 +15,45 @@ EXTRAS_HEADING = "➕ Extras"
 COMBO_ICON = "🍱"
 NONE_AVAILABLE = "Hoy no tenemos platos disponibles."
 
-# One food icon per category heading, by the words in the category name the
-# restaurant chose; the first match wins and anything else gets 🍴.
-CATEGORY_ICONS: tuple[tuple[tuple[str, ...], str], ...] = (
-    (("menu", "combo", "promo"), COMBO_ICON),
-    (("entrada", "piqueo", "ensalada"), "🥗"),
-    (("sopa", "caldo", "crema"), "🍲"),
-    (("marin", "pescado", "marisco", "cevich"), "🐟"),
-    (("pollo", "brasa"), "🍗"),
-    (("parrilla", "carne", "anticucho"), "🥩"),
-    (("pasta", "tallarin"), "🍝"),
-    (("pizza",), "🍕"),
-    (("sandwich", "sanguch", "hamburguesa"), "🥪"),
-    (("desayuno",), "🍳"),
-    (("postre", "dulce", "torta"), "🍰"),
-    (("cafe", "infusion"), "☕"),
-    (("cerveza", "trago", "coctel", "vino", "bar"), "🍺"),
-    (("bebida", "jugo", "refresco", "gaseosa"), "🥤"),
-    (("segundo", "fondo", "plato", "criollo"), "🍛"),
+# Course of a category inside a menu: entradas, segundos, bebidas, postres.
+STARTER, SOUP, MAIN, DRINK, DESSERT = range(5)
+
+# One food icon and course per category heading, by the words in the category
+# name the restaurant chose; the first match wins and anything else is a main
+# course with 🍴.
+CATEGORY_ICONS: tuple[tuple[tuple[str, ...], str, int], ...] = (
+    (("menu", "combo", "promo"), COMBO_ICON, MAIN),
+    (("entrada", "piqueo", "ensalada"), "🥗", STARTER),
+    (("sopa", "caldo", "crema"), "🍲", SOUP),
+    (("marin", "pescado", "marisco", "cevich"), "🐟", MAIN),
+    (("pollo", "brasa"), "🍗", MAIN),
+    (("parrilla", "carne", "anticucho"), "🥩", MAIN),
+    (("pasta", "tallarin"), "🍝", MAIN),
+    (("pizza",), "🍕", MAIN),
+    (("sandwich", "sanguch", "hamburguesa"), "🥪", MAIN),
+    (("desayuno",), "🍳", MAIN),
+    (("postre", "dulce", "torta"), "🍰", DESSERT),
+    (("cafe", "infusion"), "☕", DRINK),
+    (("cerveza", "trago", "coctel", "vino", "bar"), "🍺", DRINK),
+    (("bebida", "jugo", "refresco", "gaseosa"), "🥤", DRINK),
+    (("segundo", "fondo", "plato", "criollo"), "🍛", MAIN),
 )
 
 
-def category_icon(name: str) -> str:
+def _category_kind(name: str) -> tuple[str, int]:
     plain = unicodedata.normalize("NFKD", name.lower()).encode("ascii", "ignore").decode()
-    for words, icon in CATEGORY_ICONS:
+    for words, icon, course in CATEGORY_ICONS:
         if any(word in plain for word in words):
-            return icon
-    return "🍴"
+            return icon, course
+    return "🍴", MAIN
+
+
+def category_icon(name: str) -> str:
+    return _category_kind(name)[0]
+
+
+def category_course(name: str) -> int:
+    return _category_kind(name)[1]
 
 
 @dataclass
@@ -147,27 +159,35 @@ def _by_category(lines: list[tuple[MenuItem, str]]) -> list[str]:
 
 
 def _combo_section(view: ComboView, carta: Carta) -> list[str]:
-    """The combo with every dish it includes, grouped by the dish's category.
-    The combo price covers its dishes, so they carry no price of their own."""
+    """The combo with every dish it includes, grouped by the dish's category
+    in course order (entradas, segundos, bebidas, postres). The combo price
+    covers its dishes, so they carry no price of their own."""
     symbol = carta.currency_symbol
-    order = list(carta.orderable)
-    dishes: dict[str, tuple[MenuItem, str]] = {}
-    unlisted: dict[str, list[str]] = {}
+    order = {product_id: index for index, product_id in enumerate(carta.orderable)}
+    # (course, backend position, heading, line) per dish, once each.
+    dishes: dict[str, tuple[int, int, str, str]] = {}
     for group in view.groups:
         for option in group.options:
+            if option.productId in dishes:
+                continue
             item = carta.orderable.get(option.productId)
-            line = _menu_dish_line(option.name, symbol, option.surcharge)
-            if item is None:
-                # Not in the menu listing: keep it under the combo's group.
-                unlisted.setdefault(
-                    f"{category_icon(group.name)} {group.name}:", []
-                ).append(line)
-            elif option.productId not in dishes:
-                dishes[option.productId] = (item, line)
-    listed = sorted(dishes.items(), key=lambda entry: order.index(entry[0]))
+            # A dish missing from the menu listing stays under the combo group.
+            heading = (
+                (item.categoryName or "").strip() or UNCATEGORIZED_HEADING
+                if item
+                else group.name
+            )
+            dishes[option.productId] = (
+                category_course(heading),
+                order.get(option.productId, len(order)),
+                f"{category_icon(heading)} {heading}:",
+                _menu_dish_line(option.name, symbol, option.surcharge),
+            )
+    categories: dict[str, list[str]] = {}
+    for _, _, heading, line in sorted(dishes.values()):
+        categories.setdefault(heading, []).append(line)
     lines = [f"{COMBO_ICON} {view.item.name} ({money(symbol, view.item.price)})"]
-    lines += _by_category([dish for _, dish in listed])
-    lines += [entry for heading, rows in unlisted.items() for entry in (heading, *rows)]
+    lines += [entry for heading, rows in categories.items() for entry in (heading, *rows)]
     return lines
 
 

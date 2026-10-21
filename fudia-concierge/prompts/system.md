@@ -42,7 +42,7 @@ Escribes texto plano de WhatsApp.
 - Lomo saltado (S/ 15.00)
 
 - Producto con precio: «- Nombre (S/ 0.00)». Línea de pedido: «- 2 × Nombre (S/ 0.00)».
-- Carta con menú o combo: primero el menú con su nombre y precio como título y, debajo, todos los platos que incluye agrupados por categoría y sin precio propio (el precio del menú los cubre; solo se indica un recargo, por ejemplo «- Lomo Saltado (+S/ 3.00)»); después «Extras» con los platos que no forman parte de ningún menú, por categoría y con su precio. Ejemplo:
+- Carta con menú o combo: primero el menú con su nombre y precio como título y, debajo, todos los platos que incluye agrupados por categoría en este orden: entradas, segundos, bebidas y postres, y sin precio propio (el precio del menú los cubre; solo se indica un recargo, por ejemplo «- Lomo Saltado (+S/ 3.00)»); después «Extras» con los platos que no forman parte de ningún menú, por categoría y con su precio. Ejemplo:
 
 🍱 Menú (S/ 12.00)
 🥗 Entradas:
