@@ -53,14 +53,14 @@ func (r *Repository) Get(ctx context.Context, organizationID, id string) (domain
 		return c, err
 	}
 	c.Addresses = []domain.Address{}
-	rows, err := r.db.Query(ctx, `SELECT id,label,address,reference,district,city,country_code,is_default FROM customer_addresses WHERE customer_id=$1 AND organization_id=$2 AND active ORDER BY is_default DESC,created_at`, c.ID, organizationID)
+	rows, err := r.db.Query(ctx, `SELECT id,label,address,reference,district,city,country_code,is_default,latitude::float8,longitude::float8 FROM customer_addresses WHERE customer_id=$1 AND organization_id=$2 AND active ORDER BY is_default DESC,created_at`, c.ID, organizationID)
 	if err != nil {
 		return c, err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var ad domain.Address
-		if err = rows.Scan(&ad.ID, &ad.Label, &ad.Address, &ad.Reference, &ad.District, &ad.City, &ad.CountryCode, &ad.Default); err != nil {
+		if err = rows.Scan(&ad.ID, &ad.Label, &ad.Address, &ad.Reference, &ad.District, &ad.City, &ad.CountryCode, &ad.Default, &ad.Latitude, &ad.Longitude); err != nil {
 			return c, err
 		}
 		c.Addresses = append(c.Addresses, ad)
@@ -91,7 +91,7 @@ func (r *Repository) Save(ctx context.Context, organizationID, id string, in dom
 		}
 	}
 	for _, ad := range in.Addresses {
-		_, err = tx.Exec(ctx, `INSERT INTO customer_addresses(organization_id,customer_id,label,address,reference,district,city,country_code,is_default) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`, organizationID, c.ID, ad.Label, ad.Address, ad.Reference, ad.District, ad.City, ad.CountryCode, ad.Default)
+		_, err = tx.Exec(ctx, `INSERT INTO customer_addresses(organization_id,customer_id,label,address,reference,district,city,country_code,is_default,latitude,longitude) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`, organizationID, c.ID, ad.Label, ad.Address, ad.Reference, ad.District, ad.City, ad.CountryCode, ad.Default, ad.Latitude, ad.Longitude)
 		if err != nil {
 			return c, application.ErrAddress
 		}

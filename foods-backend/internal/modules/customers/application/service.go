@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/foods-platform/foods-backend/internal/modules/customers/domain"
+	deliverycontracts "github.com/foods-platform/foods-backend/internal/modules/delivery/contracts"
 	"github.com/foods-platform/foods-backend/internal/platform/apperror"
 	"github.com/foods-platform/foods-backend/internal/platform/requestscope"
 	"strings"
@@ -66,6 +67,11 @@ func (s *Service) Save(ctx context.Context, scope requestscope.Scope, id string,
 	if !domain.Normalize(&in) {
 		return domain.Customer{}, apperror.New(apperror.Invalid, "invalid_customer", "El nombre y los datos del cliente no son válidos.")
 	}
+	for _, address := range in.Addresses {
+		if !validPoint(address.Latitude, address.Longitude) {
+			return domain.Customer{}, apperror.New(apperror.Invalid, "invalid_address", "Revisa la ubicación marcada en las direcciones del cliente.")
+		}
+	}
 	c, err := s.repository.Save(ctx, scope.OrganizationID, id, in)
 	switch {
 	case errors.Is(err, ErrNotFound):
@@ -97,4 +103,12 @@ func notFound() error {
 }
 func unavailable(message string) error {
 	return apperror.New(apperror.Unavailable, "customer_unavailable", message)
+}
+
+// validPoint acepta una dirección sin ubicar o con ambas coordenadas dentro de rango.
+func validPoint(latitude, longitude *float64) bool {
+	if latitude == nil || longitude == nil {
+		return latitude == nil && longitude == nil
+	}
+	return deliverycontracts.ValidCoordinates(*latitude, *longitude)
 }

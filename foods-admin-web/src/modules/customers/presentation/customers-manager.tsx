@@ -1,10 +1,11 @@
 "use client";
 import {DataTable} from "@/design-system/data-table";
 import {Dialog} from "@/design-system/dialog";
+import {LocationMap} from "@/design-system/location-map";
 import "./customers.css";
 import {useRef,useState} from "react";import {useFieldArray,useForm} from "react-hook-form";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,ConfirmDialog,EmptyState,ErrorState,FormField,Icon,Input,PageHeader,Pagination,RemoteModalSkeleton,RowActionButton,SearchField,Select,Status,TableSkeleton,Textarea,ModalHeader,ModalFooter} from "@/design-system";
+import {Button,ConfirmDialog,EmptyState,ErrorState,FormField,Icon,Input,PageHeader,Pagination,RemoteModalSkeleton,RowActionButton,SearchField,Select,Status,TableSkeleton,Textarea,ModalHeader,ModalForm,ModalBody,ModalFooter,FormDisclosure} from "@/design-system";
 import {customerResolver} from "../domain/customer-schema";import type {Customer,CustomerDraft,Option} from "../domain/types";
 import {getCustomer,listCustomers,saveCustomer,setCustomerActive} from "../infrastructure/customers-api";
 import {useFeedback} from "@/providers/feedback-provider";
@@ -24,30 +25,32 @@ export function CustomersManager(){const qc=useQueryClient();const{notify}=useFe
  async function edit(id:string){cancelledDraft.current=null;setDraftLoading(true);setCustomerDraft({...empty,id});try{const c=await getCustomer(id);if(cancelledDraft.current===id){cancelledDraft.current=null;return}setCustomerDraft({id:c.id,customerType:c.customerType,displayName:c.displayName,documentType:c.documentType,documentNumber:c.documentNumber,phone:c.phone,email:c.email,preferredChannel:c.preferredChannel,preferences:c.preferences,notes:c.notes,marketingConsent:c.marketingConsent,vipOverride:c.vipOverride,addresses:c.addresses??[]})}catch(e){if(cancelledDraft.current!==id){setCustomerDraft(null);notify({tone:"danger",title:"No se pudo cargar",message:(e as Error).message})}}finally{setDraftLoading(false)}}
  const items=list.data?.items??[];const filtered=Boolean(debouncedQ||status||segment);return <><PageHeader title="Clientes" description="Directorio maestro, preferencias e historial de relación con tus clientes." action={canManage?<Button icon="plus" onClick={()=>setCustomerDraft({...empty})}>Nuevo cliente</Button>:undefined}/><section className="panel management standardized-management customers-panel"><div className="toolbar"><SearchField value={q} onChange={e=>{setQ(e.target.value);setPage(1)}} placeholder="Buscar por nombre, documento, teléfono o correo…" label="Buscar clientes"/><Select aria-label="Filtrar por segmento" value={segment} onChange={e=>{setSegment(e.target.value);setPage(1)}}><option value="">Todos los segmentos</option>{(list.data?.segmentOptions??[]).map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</Select><Select aria-label="Filtrar por estado" value={status} onChange={e=>{setStatus(e.target.value);setPage(1)}}><option value="">Todos los estados</option><option value="active">Activos</option><option value="inactive">Inactivos</option></Select></div>
  {list.isLoading?<TableSkeleton columns={columns} label="Cargando clientes"/>:list.isError?<ErrorState title="No pudimos cargar los clientes" text={list.error.message} onRetry={()=>void list.refetch()} retrying={list.isFetching}/>:!items.length?(filtered?<EmptyState icon="search" title="Sin coincidencias" text="No hay clientes que coincidan con la búsqueda o los filtros."/>:<EmptyState icon="users" title="Aún no hay clientes" text={canManage?"Registra el primer cliente para guardar sus datos y preferencias.":"Los clientes registrados aparecerán aquí."} action={canManage?<Button icon="plus" onClick={()=>setCustomerDraft({...empty})}>Nuevo cliente</Button>:undefined}/>):<><DataTable label="Listado de clientes" containerClassName="hover-scroll"><thead><tr>{columns.map(c=><th key={c}>{c}</th>)}</tr></thead><tbody>{items.map((c,i)=><tr className={i%2?"alternate":""} key={c.id}><td><span className={`row-icon r${i%3}`}><Icon name="users" size={18}/></span><b>{c.displayName}</b>{c.documentNumber?<small className="doc-beside">{c.documentType} {c.documentNumber}</small>:null}</td><td>{c.phone||c.email||"Sin contacto"}<small>{c.phone&&c.email?c.email:""}</small></td><td><Status tone={c.segment==="vip"?"blue":c.segment==="frequent"?"green":"gray"}>{segmentLabels[c.segment]}</Status></td><td><b>{c.visitCount} visitas</b><small>{money(c.totalSpent)} acumulado</small></td><td><Status active={c.active}>{c.active?"Activo":"Inactivo"}</Status></td><td><div className="table-actions"><RowActionButton action="view" onClick={()=>setDetailId(c.id)}/>{canManage&&<><RowActionButton action="edit" onClick={()=>void edit(c.id)}/><RowActionButton action={c.active?"deactivate":"activate"} stateLabel={`Estado de ${c.displayName}`} onClick={()=>setTarget(c)}/></>}</div></td></tr>)}</tbody></DataTable><div className="management-cards">{items.map(c=><article key={c.id}><header><span className="row-icon r0"><Icon name="users"/></span><div><b>{c.displayName}</b>{c.documentNumber?<small className="doc-beside">{c.documentType} {c.documentNumber}</small>:null}</div><Status active={c.active}>{c.active?"Activo":"Inactivo"}</Status></header><dl><div><dt>Contacto</dt><dd>{c.phone||c.email||"Sin contacto"}</dd></div><div><dt>Segmento</dt><dd>{segmentLabels[c.segment]}</dd></div><div><dt>Actividad</dt><dd>{c.visitCount} visitas · {money(c.totalSpent)}</dd></div></dl><footer><RowActionButton action="view" onClick={()=>setDetailId(c.id)}/>{canManage&&<><RowActionButton action="edit" onClick={()=>void edit(c.id)}/><RowActionButton action={c.active?"deactivate":"activate"} stateLabel={`Estado de ${c.displayName}`} onClick={()=>setTarget(c)}/></>}</footer></article>)}</div></>}
- <Pagination page={page} size={size} total={list.data?.total??0} onPage={setPage} onSize={v=>{setSize(v);setPage(1)}}/></section>{draft&&(draftLoading||list.isLoading?<RemoteModalSkeleton className="customer-modal" label="Cargando cliente" close={()=>{if(draft.id)cancelledDraft.current=draft.id;setCustomerDraft(null);setDraftLoading(false)}}/>:<CustomerDialog initial={draft} channels={list.data?.channelOptions??[]} busy={save.isPending} close={()=>setCustomerDraft(null)} save={v=>save.mutate(v)}/>)} {detailId&&<CustomerDetail loading={detail.isLoading} customer={detail.data} error={detail.error?.message} retry={()=>void detail.refetch()} retrying={detail.isFetching} channels={list.data?.channelOptions??[]} close={()=>setDetailId(null)}/>}<ConfirmDialog open={Boolean(target)} title={target?.active?"Desactivar cliente":"Activar cliente"} subject={target?{label:"Cliente",name:target.displayName}:undefined} description={target?.active?"Dejará de estar disponible; su historial y preferencias se conservarán.":"Volverá a estar disponible para nuevos pedidos."} tone={target?.active?"danger":"success"} confirmLabel={target?.active?"Desactivar":"Activar"} pending={changeStatus.isPending} onCancel={()=>setTarget(null)} onConfirm={()=>target&&changeStatus.mutate(target)}/></>}
+ <Pagination page={page} size={size} total={list.data?.total??0} onPage={setPage} onSize={v=>{setSize(v);setPage(1)}}/></section>{draft&&(draftLoading||list.isLoading?<RemoteModalSkeleton className="customer-modal" label="Cargando cliente" close={()=>{if(draft.id)cancelledDraft.current=draft.id;setCustomerDraft(null);setDraftLoading(false)}}/>:<CustomerDialog initial={draft} channels={list.data?.channelOptions??[]} documentTypes={list.data?.documentTypeOptions??[]} busy={save.isPending} close={()=>setCustomerDraft(null)} save={v=>save.mutate(v)}/>)} {detailId&&<CustomerDetail loading={detail.isLoading} customer={detail.data} error={detail.error?.message} retry={()=>void detail.refetch()} retrying={detail.isFetching} channels={list.data?.channelOptions??[]} close={()=>setDetailId(null)}/>}<ConfirmDialog open={Boolean(target)} title={target?.active?"Desactivar cliente":"Activar cliente"} subject={target?{label:"Cliente",name:target.displayName}:undefined} description={target?.active?"Dejará de estar disponible; su historial y preferencias se conservarán.":"Volverá a estar disponible para nuevos pedidos."} tone={target?.active?"danger":"success"} confirmLabel={target?.active?"Desactivar":"Activar"} pending={changeStatus.isPending} onCancel={()=>setTarget(null)} onConfirm={()=>target&&changeStatus.mutate(target)}/></>}
 
-function CustomerDialog({initial,channels,busy,close,save}:{initial:CustomerDraft;channels:Option[];busy:boolean;close:()=>void;save:(v:CustomerDraft)=>void}){
+function CustomerDialog({initial,channels,documentTypes,busy,close,save}:{initial:CustomerDraft;channels:Option[];documentTypes:Option[];busy:boolean;close:()=>void;save:(v:CustomerDraft)=>void}){
  const{register,control,watch,setValue,handleSubmit,formState:{errors}}=useForm<CustomerDraft>({defaultValues:initial,resolver:customerResolver,mode:"onSubmit",reValidateMode:"onChange"});
  const addresses=useFieldArray({control,name:"addresses"});
  const watched=watch("addresses");
+ const documentType=watch("documentType");
+ // El documento define el tipo: RUC es empresa; DNI, CE o pasaporte es persona; sin documento conserva el tipo guardado.
+ const isCompany=documentType?documentType==="RUC":initial.customerType==="company";
  const[showAddresses,setShowAddresses]=useState(initial.addresses.length>0);
  const[showExtras,setShowExtras]=useState(Boolean(initial.preferences||initial.notes||initial.marketingConsent||initial.vipOverride));
- const add=()=>{setShowAddresses(true);addresses.append({label:"Principal",address:"",reference:"",district:"",city:"",countryCode:"PE",default:!addresses.fields.length})};
+ const add=()=>{setShowAddresses(true);addresses.append({label:"Principal",address:"",reference:"",district:"",city:"",countryCode:"PE",default:!addresses.fields.length,latitude:null,longitude:null})};
  const setDefault=(index:number)=>watched.forEach((_,n)=>setValue(`addresses.${n}.default`,n===index));
- const submit=handleSubmit(values=>{if(!showAddresses&&!values.addresses.length)values.addresses=[];save(values)},invalid=>{if(invalid.addresses)setShowAddresses(true)});
+ const submit=handleSubmit(values=>{values.customerType=isCompany?"company":"person";if(!showAddresses&&!values.addresses.length)values.addresses=[];save(values)},invalid=>{if(invalid.addresses)setShowAddresses(true)});
+ const addressSummary=addresses.fields.length?`${addresses.fields.length} ${addresses.fields.length===1?"registrada":"registradas"}`:"Opcional";
  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal customer-modal modal-panel-in" role="dialog" aria-modal="true">
   <ModalHeader title="Información del cliente" icon="users" subtitle={initial.id?"EDITAR CLIENTE":"NUEVO CLIENTE"} onClose={close} busy={busy} closeLabel="Cerrar"/>
-  <form onSubmit={submit} noValidate><div className="customer-form-body">
+  <ModalForm onSubmit={submit} noValidate><ModalBody>
    <div className="form-grid customer-main-grid">
-    <FormField label="Tipo"><Select {...register("customerType")}><option value="person">Persona</option><option value="company">Empresa</option></Select></FormField>
-    <FormField className="span-2" label="Nombre o razón social" error={errors.displayName?.message}><Input autoFocus maxLength={180} {...register("displayName")} placeholder="Ej. María Torres"/></FormField>
-    <FormField label="Tipo de documento"><Select {...register("documentType")}><option value="">Sin documento</option><option>DNI</option><option>CE</option><option>RUC</option><option>PASAPORTE</option></Select></FormField>
-    <FormField label="Número de documento" error={errors.documentNumber?.message}><Input {...register("documentNumber")} placeholder="Ej. 12345678"/></FormField>
-    <FormField label="Teléfono" optional error={errors.phone?.message}><Input type="tel" inputMode="tel" {...register("phone")} placeholder="Ej. 987 654 321"/></FormField>
-    <FormField label="Correo electrónico" optional error={errors.email?.message}><Input type="email" inputMode="email" {...register("email")} placeholder="cliente@correo.com"/></FormField>
+    <FormField label="Documento"><Select {...register("documentType")}>{documentTypes.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</Select></FormField>
+    <FormField label="Número de documento" error={errors.documentNumber?.message}><Input autoFocus inputMode={documentType==="DNI"||documentType==="RUC"?"numeric":undefined} disabled={!documentType} {...register("documentNumber")} placeholder={documentType==="RUC"?"Ej. 20123456789":documentType?"Ej. 12345678":"No aplica"}/></FormField>
+    <FormField className="customer-field-full" label={isCompany?"Razón social":"Nombre"} error={errors.displayName?.message}><Input maxLength={180} {...register("displayName")} placeholder={isCompany?"Ej. Inversiones Torres S.A.C.":"Ej. María Torres"}/></FormField>
+    <FormField className="customer-field-contact" label="Teléfono" optional error={errors.phone?.message}><Input type="tel" inputMode="tel" {...register("phone")} placeholder="Ej. 987 654 321"/></FormField>
+    <FormField className="customer-field-contact" label="Correo electrónico" optional error={errors.email?.message}><Input type="email" inputMode="email" {...register("email")} placeholder="cliente@correo.com"/></FormField>
    </div>
-   <button type="button" className={showAddresses?"product-extras-toggle open":"product-extras-toggle"} onClick={()=>setShowAddresses(!showAddresses)} aria-expanded={showAddresses}><Icon name="chevron" size={16}/><b>Direcciones</b><small>{addresses.fields.length?`${addresses.fields.length} ${addresses.fields.length===1?"registrada":"registradas"}`:"Opcional"}</small></button>
-   {showAddresses&&<div className="customer-addresses">
+   <FormDisclosure title="Direcciones de entrega" summary={addressSummary} open={showAddresses} onToggle={()=>setShowAddresses(!showAddresses)}><div className="customer-addresses">
     {addresses.fields.map((field,i)=><div className="customer-address" key={field.id}>
      <div className="customer-address-head">
       <Input {...register(`addresses.${i}.label`)} placeholder="Etiqueta (Casa, Trabajo...)" aria-label="Etiqueta de la dirección"/>
@@ -55,24 +58,25 @@ function CustomerDialog({initial,channels,busy,close,save}:{initial:CustomerDraf
       <button type="button" className="customer-address-remove" onClick={()=>addresses.remove(i)} aria-label="Quitar dirección"><Icon name="close" size={14}/></button>
      </div>
      <div className="form-grid">
-      <FormField className="span-2" label="Dirección" error={errors.addresses?.[i]?.address?.message}><Input {...register(`addresses.${i}.address`)} placeholder="Calle, número, interior"/></FormField>
+      <div className="span-2 customer-address-map">
+       <LocationMap addressLabel="Dirección" mapLabel={`Mapa de la dirección ${watched[i]?.label||i+1}`} latitude={watched[i]?.latitude??null} longitude={watched[i]?.longitude??null} address={watched[i]?.address??""} onAddressChange={value=>setValue(`addresses.${i}.address`,value,{shouldDirty:true,shouldValidate:Boolean(errors.addresses?.[i]?.address)})} onChange={point=>{setValue(`addresses.${i}.latitude`,point.lat,{shouldDirty:true});setValue(`addresses.${i}.longitude`,point.lng,{shouldDirty:true})}} onPlaceChange={place=>{if(place.district)setValue(`addresses.${i}.district`,place.district,{shouldDirty:true});if(place.city)setValue(`addresses.${i}.city`,place.city,{shouldDirty:true})}}/>
+       {errors.addresses?.[i]?.address?.message&&<small className="field-error" role="alert">{errors.addresses[i]?.address?.message}</small>}
+      </div>
       <FormField label="Distrito"><Input {...register(`addresses.${i}.district`)}/></FormField>
       <FormField label="Ciudad"><Input {...register(`addresses.${i}.city`)}/></FormField>
       <FormField className="span-2" label="Referencia" optional error={errors.addresses?.[i]?.reference?.message}><Input {...register(`addresses.${i}.reference`)} placeholder="Punto de referencia para el repartidor"/></FormField>
      </div>
     </div>)}
-    <Button icon="plus" onClick={add}>Agregar dirección</Button>
-   </div>}
-   <button type="button" className={showExtras?"product-extras-toggle open":"product-extras-toggle"} onClick={()=>setShowExtras(!showExtras)} aria-expanded={showExtras}><Icon name="chevron" size={16}/><b>Información adicional</b><small>Opcional</small></button>
-   {showExtras&&<div className="form-grid customer-extras">
+    <Button kind="secondary" icon="plus" className="customer-address-add" onClick={add}>Agregar dirección</Button>
+   </div></FormDisclosure>
+   <FormDisclosure title="Información adicional" open={showExtras} onToggle={()=>setShowExtras(!showExtras)}><div className="form-grid customer-extras">
     <FormField label="Canal preferido"><Select {...register("preferredChannel")}><option value="none">Sin preferencia</option>{channels.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</Select></FormField>
-    <div/>
     <FormField className="span-2" label="Preferencias"><Textarea rows={2} {...register("preferences")} placeholder="Ej. Sin picante, mesa junto a la ventana"/></FormField>
     <FormField className="span-2" label="Notas internas" help="Visibles solo para el equipo."><Textarea rows={2} {...register("notes")}/></FormField>
     <label className="switch-row compact"><input type="checkbox" {...register("marketingConsent")}/><span/><b>Acepta comunicaciones</b></label>
     <label className="switch-row compact"><input type="checkbox" {...register("vipOverride")}/><span/><b>Marcar como VIP</b></label>
-   </div>}
-  </div><ModalFooter><Button kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" icon="check" disabled={busy} loading={busy}>{busy?"Guardando…":"Guardar"}</Button></ModalFooter></form></Dialog></div>
+   </div></FormDisclosure>
+  </ModalBody><ModalFooter><Button action="cancel" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" icon="check" disabled={busy} loading={busy}>{busy?"Guardando…":"Guardar"}</Button></ModalFooter></ModalForm></Dialog></div>
 }
 function CustomerDetail({customer,loading,error,retry,retrying,channels,close}:{customer?:Customer;loading:boolean;error?:string;retry:()=>void;retrying:boolean;channels:Option[];close:()=>void}){
  const{location}=useSession();const money=useMoney();
@@ -100,7 +104,7 @@ function CustomerDetail({customer,loading,error,retry,retrying,channels,close}:{
     </section>
     <section className="customer-detail-section">
      <header><div><small>ENTREGAS</small><h3>Direcciones de entrega registradas</h3></div></header>
-     {customer.addresses?.length?customer.addresses.map(a=><div className="customer-detail-address" key={a.id}><div><b>{a.label}</b>{a.default&&<span>Predeterminada</span>}</div><p>{a.address}{a.district?`, ${a.district}`:""}{a.city?`, ${a.city}`:""}</p>{a.reference&&<small>{a.reference}</small>}</div>):<p className="customer-detail-empty">No registradas.</p>}
+     {customer.addresses?.length?customer.addresses.map(a=><div className="customer-detail-address" key={a.id}><div><b>{a.label}</b>{a.default&&<span>Predeterminada</span>}</div><p>{a.address}{a.district?`, ${a.district}`:""}{a.city?`, ${a.city}`:""}</p>{a.latitude!=null&&a.longitude!=null&&<small className="customer-detail-located"><Icon name="mapPin" size={14}/>Ubicada en el mapa</small>}{a.reference&&<small>{a.reference}</small>}</div>):<p className="customer-detail-empty">No registradas.</p>}
     </section>
     <section className="customer-detail-section">
      <header><div><small>RELACIÓN</small><h3>Preferencias y notas internas</h3></div></header>

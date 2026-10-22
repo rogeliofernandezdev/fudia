@@ -9,6 +9,9 @@ export type Address={
   city:string;
   countryCode:string;
   default:boolean;
+  /** Punto marcado en el mapa; ambos null si la dirección no está ubicada. */
+  latitude?:number|null;
+  longitude?:number|null;
 };
 
 export type Customer={

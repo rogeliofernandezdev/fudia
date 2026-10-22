@@ -3,14 +3,16 @@ package domain
 import "strings"
 
 type Address struct {
-	ID          string `json:"id"`
-	Label       string `json:"label"`
-	Address     string `json:"address"`
-	Reference   string `json:"reference"`
-	District    string `json:"district"`
-	City        string `json:"city"`
-	CountryCode string `json:"countryCode"`
-	Default     bool   `json:"default"`
+	ID          string   `json:"id"`
+	Label       string   `json:"label"`
+	Address     string   `json:"address"`
+	Reference   string   `json:"reference"`
+	District    string   `json:"district"`
+	City        string   `json:"city"`
+	CountryCode string   `json:"countryCode"`
+	Default     bool     `json:"default"`
+	Latitude    *float64 `json:"latitude"`
+	Longitude   *float64 `json:"longitude"`
 }
 type Customer struct {
 	ID               string    `json:"id"`

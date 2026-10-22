@@ -9,7 +9,7 @@ export {TimezoneSelect} from "./timezone-select";
 export {ConfirmDialog} from "./confirm-dialog";
 export {Dialog} from "./dialog";
 export {Modal, ModalHeader, ModalBusy, ModalWorkspace, ModalItemList, ModalItemNote, ModalItemComponents, type ModalItemComponent, ModalForm, ModalBody, ModalFooter, ModalCancel, ModalLoading, ModalError, useModal, type ModalSize} from "./modal";
-export {MoneyInput, NumberStepper, InlineNotice} from "./form-controls";
+export {MoneyInput, NumberStepper, InlineNotice, FormDisclosure} from "./form-controls";
 export {FormField} from "./form-field";
 export {LocationMap, type Coordinates} from "./location-map";
 

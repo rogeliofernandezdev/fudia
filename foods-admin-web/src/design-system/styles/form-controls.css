@@ -36,3 +36,11 @@
   .ds-stepper-button:hover:not(:disabled){background:var(--primary-50)}
   .ds-stepper-button.danger:hover:not(:disabled){background:var(--danger-50)}
 }
+
+/* FormDisclosure — sección opcional plegable de formularios (Producto, Cliente). */
+.form-disclosure{display:grid;gap:var(--space-2-5);margin-top:var(--space-4);min-width:0}
+.form-disclosure-toggle{display:flex;align-items:center;gap:var(--space-2);width:100%;min-height:var(--control-height);padding:var(--space-2-5) var(--space-3-5);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-tile);background:var(--cloud-25);color:var(--ink-700);font-size:var(--font-size-control);font-weight:var(--weight-semibold);text-align:left;cursor:pointer;transition:var(--transition-surface)}
+.form-disclosure-toggle svg{flex-shrink:0;color:var(--primary-600);transition:transform var(--duration-fast)}
+.form-disclosure-toggle.open svg{transform:rotate(90deg)}
+.form-disclosure-toggle small{margin-left:auto;color:var(--ink-400);font-weight:var(--weight-medium)}
+@media (hover:hover) and (pointer:fine){.form-disclosure-toggle:hover{border-color:var(--primary-300);background:var(--surface)}}

@@ -100,7 +100,7 @@ test("las hojas móviles ocupan el ancho completo, sin tarjetas flotantes",()=>{
 });
 
 test("acordeones, mapa y sugerencias conservan áreas táctiles",()=>{
- const toggle=rulesFor("modules/menu/products/presentation/product-wizard.css",".product-extras-toggle").find(rule=>!rule.media);
+ const toggle=rulesFor("design-system/styles/form-controls.css",".form-disclosure-toggle").find(rule=>!rule.media);
  assert.equal(toggle.values["min-height"],"var(--control-height)","Direcciones e Información adicional medían 37 px");
  const zoom=rulesFor("design-system/styles/location-map.css",".location-map-canvas .mapboxgl-ctrl-group button").find(rule=>touch(rule.media));
  assert.deepEqual([zoom?.values.width,zoom?.values.height],["var(--size-44)","var(--size-44)"]);

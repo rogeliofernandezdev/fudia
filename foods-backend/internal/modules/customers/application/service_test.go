@@ -80,3 +80,23 @@ func TestListBoundsPaginationAndTenant(t *testing.T) {
 		t.Fatalf("invalid filter %#v %v", r, err)
 	}
 }
+func TestSaveRejectsIncompleteOrOutOfRangeAddressPoint(t *testing.T) {
+	lat, lng, far := -12.0464, -77.0428, 120.0
+	for _, address := range []domain.Address{
+		{Address: "Av. Arequipa 1234", Latitude: &lat},
+		{Address: "Av. Arequipa 1234", Longitude: &lng},
+		{Address: "Av. Arequipa 1234", Latitude: &far, Longitude: &lng},
+	} {
+		r := &memoryCustomers{}
+		if _, err := New(r).Save(context.Background(), requestscope.Scope{OrganizationID: "org"}, "", domain.Input{DisplayName: "Ana", Addresses: []domain.Address{address}}); err == nil || r.saves != 0 {
+			t.Fatalf("invalid point persisted: %#v", address)
+		}
+	}
+	r := &memoryCustomers{}
+	if _, err := New(r).Save(context.Background(), requestscope.Scope{OrganizationID: "org"}, "", domain.Input{DisplayName: "Ana", Addresses: []domain.Address{{Address: "Av. Arequipa 1234", Latitude: &lat, Longitude: &lng}}}); err != nil {
+		t.Fatal(err)
+	}
+	if got := r.input.Addresses[0]; got.Latitude == nil || *got.Latitude != lat || *got.Longitude != lng {
+		t.Fatalf("point lost: %#v", got)
+	}
+}

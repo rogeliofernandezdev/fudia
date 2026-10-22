@@ -1,6 +1,6 @@
 "use client";
 import "./styles/form-controls.css";
-import {forwardRef,type InputHTMLAttributes,type ReactNode} from "react";
+import {forwardRef,useId,type InputHTMLAttributes,type ReactNode} from "react";
 import {Icon,type IconName} from "./icons";
 
 type MoneyInputProps=Omit<InputHTMLAttributes<HTMLInputElement>,"type"|"inputMode">&{
@@ -60,4 +60,16 @@ export function InlineNotice({tone="info",title,children,action,className=""}:{t
     <div>{title&&<b>{title}</b>}{children&&<p>{children}</p>}</div>
     {action}
   </div>;
+}
+
+/**
+ * Sección opcional plegable de un formulario («Direcciones», «Información adicional»). El encabezado es un
+ * botón de ancho completo con chevron, título y resumen a la derecha («Opcional», «2 registradas»).
+ */
+export function FormDisclosure({title,summary="Opcional",open,onToggle,children,className=""}:{title:ReactNode;summary?:ReactNode;open:boolean;onToggle:()=>void;children:ReactNode;className?:string}){
+  const id=useId();
+  return <section className={`form-disclosure ${className}`.trim()}>
+    <button type="button" className={open?"form-disclosure-toggle open":"form-disclosure-toggle"} onClick={onToggle} aria-expanded={open} aria-controls={open?id:undefined}><Icon name="chevron" size={16}/><b>{title}</b><small>{summary}</small></button>
+    {open&&<div id={id} className="form-disclosure-body">{children}</div>}
+  </section>;
 }

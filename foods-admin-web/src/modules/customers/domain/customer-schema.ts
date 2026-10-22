@@ -14,6 +14,8 @@ export const addressSchema=z.object({
   district:z.string().trim(),
   city:z.string().trim(),
   reference:z.string().trim().max(200,"La referencia no puede superar 200 caracteres."),
+  latitude:z.number().min(-90).max(90).nullable().optional(),
+  longitude:z.number().min(-180).max(180).nullable().optional(),
 });
 
 export const customerSchema=z.object({

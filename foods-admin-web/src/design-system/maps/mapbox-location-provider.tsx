@@ -7,13 +7,23 @@ import type { Map as MapboxMap, Marker as MapboxMarker } from "mapbox-gl";
 import { readCssToken } from "@/design-system/theme";
 import { Icon } from "@/design-system/icons";
 import { Input } from "@/design-system/page-header";
-import type { Coordinates, LocationMapProps } from "./map-provider";
+import type { Coordinates, LocationMapProps, PlaceDetails } from "./map-provider";
 
 type Suggestion = { mapbox_id: string; name: string; place_formatted?: string };
 type SearchFeature = {
   geometry: { coordinates: [number, number] };
-  properties?: { full_address?: string; name?: string; place_formatted?: string };
+  properties?: {
+    full_address?: string; name?: string; place_formatted?: string;
+    context?: Partial<Record<"locality" | "place" | "region", { name?: string }>>;
+  };
 };
+
+/** En Perú Mapbox informa el distrito como place (o locality) y el departamento como region. */
+function placeDetails(feature: SearchFeature): PlaceDetails {
+  const context = feature.properties?.context ?? {};
+  const region = context.region?.name?.replace(/^(departamento|provincia constitucional) del? /i, "") ?? "";
+  return { district: context.locality?.name ?? context.place?.name ?? "", city: region };
+}
 
 const DEFAULT_CENTER: [number, number] = [-77.042793, -12.046374];
 const PERU_BOUNDS: [[number, number], [number, number]] = [
@@ -33,7 +43,8 @@ function createSessionToken() {
 }
 
 export function MapboxLocationMap({
-  latitude, longitude, address, onAddressChange, onChange,
+  latitude, longitude, address, onAddressChange, onChange, onPlaceChange,
+  addressLabel = "Dirección del local", mapLabel = "Mapa para seleccionar la ubicación del local",
 }: LocationMapProps) {
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<MapboxMap | null>(null);
@@ -199,6 +210,7 @@ export function MapboxLocationMap({
 
       suppressNextSearch.current = true;
       onAddressChange(selectedAddress);
+      onPlaceChange?.(placeDetails(feature));
       map.current?.flyTo({
         center: [temporaryLongitude, temporaryLatitude],
         zoom: 17,
@@ -241,7 +253,7 @@ export function MapboxLocationMap({
 
   return <div className="location-map-wrapper">
     <label className="location-map-label">
-      Dirección del local
+      {addressLabel}
       <span className="location-map-search">
         <span className="location-map-search-icon"><Icon name="search" size={14}/></span>
         <Input value={address} onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
@@ -270,7 +282,7 @@ export function MapboxLocationMap({
       </span>
     </label>
     <div className="location-map-canvas-shell">
-      <div ref={container} className="location-map-canvas" aria-label="Mapa para seleccionar la ubicación del local" />
+      <div ref={container} className="location-map-canvas" aria-label={mapLabel} />
       {mapLoading&&<div className="location-map-canvas-skeleton" role="status" aria-label="Cargando mapa"><i/><i/><i/><span/></div>}
     </div>
     <div className="location-map-footer">
