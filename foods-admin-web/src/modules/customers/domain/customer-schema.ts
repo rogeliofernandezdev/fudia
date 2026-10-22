@@ -8,6 +8,12 @@ const documentRules:Record<string,{pattern:RegExp;message:string}>={
   CE:{pattern:/^[A-Za-z0-9]{9,12}$/,message:"El carné de extranjería tiene entre 9 y 12 caracteres."},
 };
 
+function isBlankAddress(address:unknown){
+  if(!address||typeof address!=="object")return true;
+  const a=address as Record<string,unknown>;
+  return ["address","reference","district","city"].every(key=>!String(a[key]??"").trim())&&a.latitude==null&&a.longitude==null;
+}
+
 export const addressSchema=z.object({
   label:z.string().trim().max(60,"La etiqueta no puede superar 60 caracteres."),
   address:z.string().trim().min(1,"Ingresa la dirección."),
@@ -23,9 +29,10 @@ export const customerSchema=z.object({
   displayName:z.string().trim().min(1,"Ingresa el nombre o razón social.").max(180,"El nombre no puede superar 180 caracteres."),
   documentType:z.string(),
   documentNumber:z.string().trim(),
-  phone:z.string().trim().max(40,"El teléfono no puede superar 40 caracteres."),
+  phone:z.string().trim().min(1,"Ingresa el teléfono.").max(40,"El teléfono no puede superar 40 caracteres."),
   email:z.string().trim().refine(value=>value===""||/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),"Ingresa un correo válido."),
-  addresses:z.array(addressSchema),
+  // La dirección del formulario es opcional: si quedó en blanco no se valida ni se envía.
+  addresses:z.preprocess(value=>Array.isArray(value)?value.filter(address=>!isBlankAddress(address)):value,z.array(addressSchema)),
 }).superRefine((value,ctx)=>{
   const rule=documentRules[value.documentType];
   if(value.documentType&&!value.documentNumber)ctx.addIssue({code:"custom",path:["documentNumber"],message:"Ingresa el número del documento."});

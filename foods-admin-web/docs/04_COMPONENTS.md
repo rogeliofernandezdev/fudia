@@ -294,16 +294,15 @@ Reglas:
   con botones de 44 px también en escritorio y foco visible sin recortar. Se usa
   en carta y resumen de comanda; la apariencia por defecto no cambia.
 - `FormDisclosure({title,summary,open,onToggle})`: sección opcional plegable de
-  un formulario (Producto › «Información adicional», Cliente › «Direcciones de
-  entrega» e «Información adicional»). Encabezado de ancho completo y alto `--control-height` (44 px en táctil) con
+  un formulario (Producto › «Información adicional»). Encabezado de ancho completo y alto `--control-height` (44 px en táctil) con
   chevron índigo que gira al abrir, título y resumen a la derecha («Opcional» o
-  el conteo real, p. ej. «2 registradas»). Estilo único en `form-controls.css`;
+  un estado real, p. ej. «Registrada»). Estilo único en `form-controls.css`;
   los módulos no redeclaran el toggle. Dentro de una sección «Opcional» los
   campos no repiten la marca `optional`.
 - `LocationMap({latitude,longitude,address,onAddressChange,onChange,onPlaceChange,addressLabel,mapLabel})`
   (`@/design-system/location-map`, Mapbox): buscador con sugerencias, mapa con pin
   arrastrable y aviso «Ubicación definida». Lo usan Locales (etiqueta por defecto
-  «Dirección del local») y Clientes › direcciones (`addressLabel="Dirección"`).
+  «Dirección del local») y Clientes › dirección de entrega (`addressLabel` acepta contenido, p. ej. con «Opcional»).
   `onPlaceChange` entrega `{district, city}` de la sugerencia elegida: en Perú Mapbox
   informa el distrito como `place` (o `locality`) y el departamento como `region`, sin
   el prefijo «Departamento de». Se importa directo, no desde el barrel, y carga su CSS.

@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 export type MapProviderName = "google" | "mapbox";
 export type Coordinates = { lat: number; lng: number };
 /** División administrativa de la sugerencia elegida; vacía si el proveedor no la informa. */
@@ -12,7 +14,7 @@ export type LocationMapProps = {
   /** Distrito y ciudad de la sugerencia elegida en el buscador. */
   onPlaceChange?: (place: PlaceDetails) => void;
   /** Etiqueta visible del buscador; por defecto, la del local. */
-  addressLabel?: string;
+  addressLabel?: ReactNode;
   /** Nombre accesible del mapa. */
   mapLabel?: string;
 };

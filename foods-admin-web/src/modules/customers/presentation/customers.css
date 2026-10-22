@@ -3,15 +3,8 @@
 .customer-modal{width:min(var(--size-720),calc(100vw - var(--size-32)));max-height:min(var(--size-760),calc(100dvh - var(--size-32)))}
 .customer-main-grid{grid-template-columns:repeat(2,minmax(0,1fr));align-content:start}
 .customer-main-grid>.customer-field-full{grid-column:1/-1}
-.customer-addresses{display:grid;gap:var(--space-3)}
-.customer-address-add{justify-self:start}
+.customer-address{margin-top:var(--space-4)}
 .customer-address-map{display:grid;gap:var(--space-1-5);min-width:0}
-.customer-address{border:var(--stroke-1) solid var(--line);border-radius:var(--radius-card);padding:var(--space-3-5);background:var(--primary-25);display:grid;gap:var(--space-3)}
-.customer-address-head{display:grid;grid-template-columns:minmax(var(--size-140),.6fr) auto var(--size-38);align-items:center;gap:var(--space-2-5)}
-.customer-default{display:flex;align-items:center;gap:var(--space-2);font-size:var(--font-size-sm);font-weight:var(--weight-semibold);color:var(--ink-600);white-space:nowrap}
-.customer-default input{accent-color:var(--primary-600);width:var(--size-16);height:var(--size-16)}
-.customer-address-remove{display:grid;place-items:center;width:var(--size-38);height:var(--size-38);border:var(--stroke-1) solid transparent;border-radius:var(--radius-tile);background:var(--danger-50);color:var(--danger)}
-@media (hover:hover) and (pointer:fine){.customer-address-remove:hover{border-color:var(--danger-600-alpha-16)}}
 .customer-detail{display:flex;flex-direction:column;width:min(var(--size-720),calc(100vw - var(--size-32)));max-height:min(var(--size-760),calc(100dvh - var(--size-32)));overflow:hidden}
 .customer-detail>header>div{display:grid;gap:var(--space-1)}
 .customer-detail>header small{order:2}
@@ -20,7 +13,7 @@
 .customer-detail-summary>div{display:grid;gap:var(--space-1-5)}
 .customer-detail-summary small,.customer-detail-fields small{color:var(--ink-700);font-size:var(--font-size-label);font-weight:var(--modal-label-weight);letter-spacing:var(--letter-spacing-caps)}
 .customer-detail-summary b{font-size:var(--font-size-control);font-weight:var(--modal-value-weight)}
-.customer-detail-fields{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-3)}
+.customer-detail-fields{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--space-3)}
 .customer-detail-fields>div{display:grid;align-content:start;gap:var(--space-1-5);min-width:0;padding:var(--space-3-5) var(--space-4);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-card);background:var(--surface)}
 .customer-detail-fields b{font-size:var(--font-size-control);font-weight:var(--modal-value-weight);overflow-wrap:anywhere}
 .customer-detail-section{overflow:hidden;border:var(--stroke-1) solid var(--line);border-radius:var(--radius-card);background:var(--surface)}
@@ -36,10 +29,6 @@
 .customer-detail-address small{color:var(--ink-400);font-size:var(--font-size-label)}
 .customer-detail-address .customer-detail-located{display:inline-flex;align-items:center;gap:var(--space-1);color:var(--ink-500)}
 .customer-detail-located svg{color:var(--primary-600)}
-.customer-detail-notes{display:grid;gap:var(--space-1-5);padding:var(--space-3-5) var(--space-4)}
-.customer-detail-notes b{font-size:var(--font-size-label);font-weight:var(--weight-bold);color:var(--ink-600)}
-.customer-detail-notes p{margin:0 0 var(--space-2-5);color:var(--ink-600);font-size:var(--font-size-label);line-height:var(--line-height-normal)}
-.customer-detail-notes p:last-child{margin-bottom:0}
 .customer-detail-empty{margin:0;padding:var(--space-3-5) var(--space-4);color:var(--ink-400);font-size:var(--font-size-label)}
 
 .customer-detail-skeleton-body i,
@@ -88,11 +77,6 @@
  .customer-modal{width:100%;max-height:calc(100dvh - var(--space-4) - var(--safe-area-top))}
  .customer-main-grid{grid-template-columns:minmax(var(--size-120),.42fr) minmax(0,1fr);column-gap:var(--space-2-5)}
  .customer-main-grid>.customer-field-contact{grid-column:1/-1}
- .customer-address-add{justify-self:stretch}
- .customer-address{padding:var(--space-3)}
- .customer-address-head{grid-template-columns:minmax(0,1fr) var(--size-44)}
- .customer-address-remove{grid-column:2;grid-row:1;width:var(--size-44);height:var(--size-44)}
- .customer-default{grid-column:1/-1}
  .customer-detail{width:100vw;height:100dvh;max-height:none;border-radius:0}
  .customer-detail-body{padding:var(--space-4)}
  .customer-detail-summary{grid-template-columns:repeat(2,1fr)}
