@@ -74,6 +74,7 @@ type InventoryStockHandler interface {
 	CreateInventoryTransfer(http.ResponseWriter, *http.Request)
 	ListInventoryTransfers(http.ResponseWriter, *http.Request)
 	CreatePurchaseInventoryItem(http.ResponseWriter, *http.Request)
+	ListLinkableProducts(http.ResponseWriter, *http.Request)
 	ListInventory(http.ResponseWriter, *http.Request)
 	ListInventoryProducts(http.ResponseWriter, *http.Request)
 	ListInventoryMovements(http.ResponseWriter, *http.Request)

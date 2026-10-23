@@ -5,6 +5,7 @@ import {Button,FormField,Icon,Input,Textarea,ModalHeader,ModalFooter} from "@/de
 import {useSession} from "@/providers/session-context";
 import {formatRegionalNumber} from "@/shared/i18n/regional-format";
 import {purchaseReceiptResolver} from "../domain/purchase-schema";
+import {requiresWholeQuantity} from "../domain/purchase-totals";
 import type {PurchaseOrder,PurchaseReceiptDraft} from "../domain/types";
 
 export function PurchaseReceiptDialog({order,busy,close,save}:{order:PurchaseOrder;busy:boolean;close:()=>void;save:(draft:PurchaseReceiptDraft)=>void}){
@@ -33,8 +34,8 @@ export function PurchaseReceiptDialog({order,busy,close,save}:{order:PurchaseOrd
         setError(`items.${index}.quantity`,{type:"manual",message:"No puede superar la cantidad pendiente."});
         return;
       }
-      if(quantity>0&&orderLine.presentationType!=="unit"&&!Number.isInteger(quantity)){
-        setError(`items.${index}.quantity`,{type:"manual",message:"Paquetes y cajas se reciben en cantidades enteras."});
+      if(quantity>0&&requiresWholeQuantity(orderLine.presentationType)&&!Number.isInteger(quantity)){
+        setError(`items.${index}.quantity`,{type:"manual",message:"Esta presentación se recibe en cantidades enteras."});
         return;
       }
     }
@@ -44,7 +45,7 @@ export function PurchaseReceiptDialog({order,busy,close,save}:{order:PurchaseOrd
   return <div className="modal-backdrop modal-overlay-in" role="presentation">
     <Dialog onResponseClose={close} className="crud-modal purchase-receipt-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="purchase-receipt-title" aria-busy={busy}>
 
-      <ModalHeader title={<>Recibir {order.number}</>} titleId="purchase-receipt-title" icon="stock" subtitle="PASO 2 · RECEPCIÓN" onClose={close} busy={busy} closeLabel="Cerrar"/>
+      <ModalHeader title={<>Recibir {order.number}</>} titleId="purchase-receipt-title" icon="stock" onClose={close} busy={busy} closeLabel="Cerrar"/>
       <form onSubmit={handleSubmit(submit)} noValidate>
         <div className="purchase-receipt-body">
           <div className="purchase-receipt-intro"><Icon name="truck" size={18}/><p><b>Registra únicamente lo que llegó.</b> Puedes recibir una parte ahora y completar lo pendiente en otra recepción.</p></div>
@@ -54,7 +55,7 @@ export function PurchaseReceiptDialog({order,busy,close,save}:{order:PurchaseOrd
               <div><small>SOLICITADO</small><b>{formatRegionalNumber(Number(item.quantity),location?.country,{maximumFractionDigits:3})}</b></div>
               <div><small>RECIBIDO</small><b>{formatRegionalNumber(Number(item.receivedQuantity),location?.country,{maximumFractionDigits:3})}</b></div>
               <div><small>PENDIENTE</small><b>{formatRegionalNumber(Number(item.pendingQuantity),location?.country,{maximumFractionDigits:3})}</b></div>
-              <label>Recibir ahora<Input type="number" min="0" max={item.pendingQuantity} step={item.presentationType==="unit"?"0.001":"1"} inputMode="decimal" {...register(`items.${index}.quantity`)} aria-invalid={Boolean(errors.items?.[index]?.quantity)}/>{errors.items?.[index]?.quantity?.message&&<small className="field-error">{errors.items[index]?.quantity?.message}</small>}</label>
+              <label>Recibir ahora<Input type="number" min="0" max={item.pendingQuantity} step={requiresWholeQuantity(item.presentationType)?"1":"0.001"} inputMode="decimal" {...register(`items.${index}.quantity`)} aria-invalid={Boolean(errors.items?.[index]?.quantity)}/>{errors.items?.[index]?.quantity?.message&&<small className="field-error">{errors.items[index]?.quantity?.message}</small>}</label>
               <input type="hidden" {...register(`items.${index}.purchaseOrderItemId`)}/>
             </article>)}
           </div>

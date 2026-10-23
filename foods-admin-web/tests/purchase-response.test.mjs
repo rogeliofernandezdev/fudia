@@ -41,6 +41,11 @@ function mount({status="draft",api,refresh=Promise.resolve()}={}){
   if(name==="react-hook-form"||name.includes("purchase-schema")||name.endsWith(".css"))return{};
   if(name==="@/shared/hooks/use-debounced-value")return{useDebouncedValue:value=>value};
   if(name==="@/shared/i18n/regional-format")return{formatRegionalNumber:value=>String(value),formatRegionalDateTime:()=>"8 oct. 2026",formatRegionalCalendarDate:()=>"8 oct. 2026"};
+  if(name.startsWith("../domain/")&&!name.includes("purchase-schema")){
+   const domain={};
+   vm.runInNewContext(ts.transpileModule(readFileSync(new URL(`../src/modules/supply/purchases/domain/${name.slice("../domain/".length)}.ts`,import.meta.url),"utf8"),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText,{exports:domain,require});
+   return domain;
+  }
   if(name==="../infrastructure/purchases-api")return{
    setPurchaseOrderStatus:async(id,next)=>{calls.push({id,next});return api()},
    approvePurchaseOrder:async id=>{calls.push({id,next:"approved"});return api()},

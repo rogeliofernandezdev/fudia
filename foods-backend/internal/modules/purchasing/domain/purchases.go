@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 type SupplierView struct {
@@ -141,7 +142,7 @@ func NormalizeSupplier(in SupplierInput) (SupplierInput, string) {
 	if in.Name == "" {
 		return in, "El nombre del proveedor es obligatorio."
 	}
-	if len(in.Name) > 180 || len(in.TaxID) > 11 || len(in.Email) > 180 || len(in.Phone) > 40 {
+	if utf8.RuneCountInString(in.Name) > 180 || utf8.RuneCountInString(in.TaxID) > 11 || utf8.RuneCountInString(in.Email) > 180 || utf8.RuneCountInString(in.Phone) > 40 {
 		return in, "Revisa la longitud de los datos del proveedor."
 	}
 	if in.Email != "" && !strings.Contains(in.Email, "@") {
@@ -161,7 +162,7 @@ func NormalizePurchaseOrder(in PurchaseOrderInput) (PurchaseOrderInput, string) 
 			return in, "La fecha esperada no es válida."
 		}
 	}
-	if len(in.Notes) > 500 {
+	if utf8.RuneCountInString(in.Notes) > 500 {
 		return in, "Las notas no pueden superar 500 caracteres."
 	}
 	if len(in.Items) == 0 {

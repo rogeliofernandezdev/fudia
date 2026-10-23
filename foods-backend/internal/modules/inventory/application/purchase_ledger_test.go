@@ -65,27 +65,49 @@ func TestPurchaseLedgerOwnsWeightedAverageAndKardex(t *testing.T) {
 	}
 }
 
-func TestPurchaseReturnPreservesAverageAndRejectsShortage(t *testing.T) {
-	f := &purchaseLedgerFake{balance: contracts.Balance{Quantity: 8, AverageUnitCost: 3}}
+func TestPurchaseReturnReversesReceiptCostAndRejectsShortage(t *testing.T) {
+	// 10 u at S/2 plus a wrong receipt of 10 u at S/4: correcting it restores S/2.
+	f := &purchaseLedgerFake{balance: contracts.Balance{Quantity: 20, AverageUnitCost: 3}}
 	ledger := NewPurchaseLedger(f)
 	ctx := context.Background()
 	err := ledger.ReturnPurchase(ctx, scope{}, contracts.PurchaseReturn{
-		ItemID: "item", Quantity: 2, UnitsPerPresentation: 3,
-		Kind: "supplier_return", ReturnID: "return-1",
+		ItemID: "item", Quantity: 1, UnitsPerPresentation: 10, UnitCost: 40,
+		Kind: "receipt_correction", ReturnID: "return-1",
 	})
 	if err != nil { t.Fatal(err) }
-	if !near(f.updatedQuantity, 2) || !near(f.updatedCost, 3) ||
-		!near(f.movement.Delta, -6) || !near(f.movement.ValueDelta, -18) ||
-		!near(f.movement.BalanceValue, 6) {
+	if !near(f.updatedQuantity, 10) || !near(f.updatedCost, 2) ||
+		!near(f.movement.Delta, -10) || !near(f.movement.UnitCost, 4) ||
+		!near(f.movement.ValueDelta, -40) || !near(f.movement.BalanceValue, 20) ||
+		f.movement.Type != "receipt_correction" || f.movement.SourceType != "purchase_return" {
 		t.Fatalf("wrong return balance or movement: %#v, balance %f/%f", f.movement, f.updatedQuantity, f.updatedCost)
 	}
 	f.writes = 0
 	err = ledger.ReturnPurchase(ctx, scope{}, contracts.PurchaseReturn{
-		ItemID: "item", Quantity: 3, UnitsPerPresentation: 3,
-		Kind: "receipt_correction", ReturnID: "return-2",
+		ItemID: "item", Quantity: 3, UnitsPerPresentation: 10, UnitCost: 40,
+		Kind: "supplier_return", ReturnID: "return-2",
 	})
 	if !errors.Is(err, contracts.ErrInsufficientStock) || f.writes != 0 {
 		t.Fatalf("shortage must reject without writes: err=%v writes=%d", err, f.writes)
+	}
+}
+
+func TestPurchaseReturnNeverLeavesNegativeValue(t *testing.T) {
+	// Stock consumed at average leaves less value than the receipt carried.
+	f := &purchaseLedgerFake{balance: contracts.Balance{Quantity: 4, AverageUnitCost: 1}}
+	err := NewPurchaseLedger(f).ReturnPurchase(context.Background(), scope{}, contracts.PurchaseReturn{
+		ItemID: "item", Quantity: 2, UnitsPerPresentation: 1, UnitCost: 5,
+		Kind: "supplier_return", ReturnID: "return-1",
+	})
+	if err != nil { t.Fatal(err) }
+	if !near(f.updatedQuantity, 2) || !near(f.updatedCost, 0) || !near(f.movement.BalanceValue, 0) || !near(f.movement.ValueDelta, -4) {
+		t.Fatalf("value must floor at zero: %#v, balance %f/%f", f.movement, f.updatedQuantity, f.updatedCost)
+	}
+	f = &purchaseLedgerFake{balance: contracts.Balance{Quantity: 2, AverageUnitCost: 1.5}}
+	if err = NewPurchaseLedger(f).ReturnPurchase(context.Background(), scope{}, contracts.PurchaseReturn{
+		ItemID: "item", Quantity: 2, UnitsPerPresentation: 1, UnitCost: 5, Kind: "supplier_return", ReturnID: "return-2",
+	}); err != nil { t.Fatal(err) }
+	if !near(f.updatedQuantity, 0) || !near(f.updatedCost, 1.5) || !near(f.movement.BalanceValue, 0) {
+		t.Fatalf("empty balance keeps its last average: %#v, balance %f/%f", f.movement, f.updatedQuantity, f.updatedCost)
 	}
 }
 

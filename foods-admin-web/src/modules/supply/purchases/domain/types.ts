@@ -116,11 +116,15 @@ export type SupplierDraft={
   phone:string;
 };
 
+/** Producto de la carta que aún usa Disponibilidad (o ningún control) y puede vincularse al inventario. */
+export type LinkableProduct={productId:string;sku:string;name:string;categoryName:string|null;quantityControl:"none"|"portions"};
+
 export type PurchaseInventoryItemDraft={
-  mode:"new_product"|"new_ingredient";
+  /** new_product se vende a clientes; new_ingredient es un insumo; link_product reutiliza un producto existente. */
+  mode:"new_product"|"new_ingredient"|"link_product";
+  productId:string;
   categoryId:string;
   name:string;
-  description:string;
   price:string;
   unit:string;
   presentationType:PresentationType;

@@ -46,6 +46,9 @@ func (a *API) updatePurchaseOrderStatus(w http.ResponseWriter, r *http.Request) 
 func (a *API) approvePurchaseOrder(w http.ResponseWriter, r *http.Request) {
 	a.handlers.Purchasing.ApprovePurchaseOrder(w, r)
 }
+func (a *API) listLinkableProducts(w http.ResponseWriter, r *http.Request) {
+	a.handlers.InventoryStock.ListLinkableProducts(w, r)
+}
 func (a *API) createPurchaseInventoryItem(w http.ResponseWriter, r *http.Request) {
 	a.handlers.InventoryStock.CreatePurchaseInventoryItem(w, r)
 }

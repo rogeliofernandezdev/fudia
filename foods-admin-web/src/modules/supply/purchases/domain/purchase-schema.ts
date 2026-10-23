@@ -5,10 +5,7 @@ import type {PurchaseInventoryItemDraft,PurchaseOrderDraft,PurchaseReceiptDraft,
 const lineSchema=z.object({
   inventoryItemId:z.string().trim().min(1,"Selecciona un artículo."),
   presentationId:z.string().trim().min(1,"Selecciona una presentación."),
-  quantity:z.string().trim().refine(value=>{
-    const parsed=Number(value);
-    return value!==""&&Number.isFinite(parsed)&&parsed>0;
-  },"Ingresa una cantidad mayor que cero."),
+  quantity:z.string().trim().refine(value=>/^[0-9]+([.][0-9]{1,3})?$/.test(value)&&Number(value)>0,"Ingresa una cantidad mayor que cero, con hasta tres decimales."),
   unitCost:z.string().trim().regex(/^[0-9]+([.][0-9]{1,4})?$/,"Ingresa un costo válido."),
 });
 
@@ -61,9 +58,9 @@ export const supplierResolver=makeResolver<SupplierDraft>(supplierSchema);
 
 
 const purchaseInventoryCommon={
+  productId:z.string().default(""),
   categoryId:z.string(),
-  name:z.string().trim().min(1,"Ingresa el nombre del artículo.").max(160),
-  description:z.string().max(1000),
+  name:z.string(),
   price:z.string(),
   unit:z.string().trim().min(1,"Selecciona una unidad de inventario."),
   presentationType:z.string().trim().regex(/^[a-z][a-z0-9_-]{0,31}$/,"Selecciona una presentación."),
@@ -74,17 +71,25 @@ const purchaseInventoryCommon={
     return value!==""&&Number.isFinite(parsed)&&parsed>=0;
   },"El stock mínimo no puede ser negativo."),
 };
+const articleName=z.string().trim().min(1,"Ingresa el nombre del artículo.").max(160);
 
 export const purchaseInventoryItemSchema=z.discriminatedUnion("mode",[
   z.object({
     mode:z.literal("new_product"),
     ...purchaseInventoryCommon,
+    name:articleName,
     categoryId:z.string().trim().min(1,"Selecciona una categoría."),
     price:z.string().trim().regex(/^[0-9]+([.][0-9]{1,2})?$/,"Ingresa un precio válido."),
   }),
   z.object({
     mode:z.literal("new_ingredient"),
     ...purchaseInventoryCommon,
+    name:articleName,
+  }),
+  z.object({
+    mode:z.literal("link_product"),
+    ...purchaseInventoryCommon,
+    productId:z.string().trim().min(1,"Selecciona el producto de la carta."),
   }),
 ]).superRefine((value,ctx)=>{
   const rows=value.presentations??[{presentationType:value.presentationType,unitsPerPresentation:value.unitsPerPresentation,isDefault:true}];

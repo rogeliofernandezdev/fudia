@@ -10,6 +10,7 @@ import (
 	"math"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 func (a *Purchasing) Receive(ctx context.Context, s scope, id string, in domain.PurchaseReceiptInput) (map[string]any, error) {
@@ -19,7 +20,7 @@ func (a *Purchasing) Receive(ctx context.Context, s scope, id string, in domain.
 	if len(in.IdempotencyKey) > 120 {
 		return result, purchaseFailure(apperror.Invalid, "invalid_purchase_receipt", "La clave de idempotencia es demasiado larga.")
 	}
-	if len(in.Notes) > 500 {
+	if utf8.RuneCountInString(in.Notes) > 500 {
 		return result, purchaseFailure(apperror.Invalid, "invalid_purchase_receipt", "Las notas no pueden superar 500 caracteres.")
 	}
 	if len(in.Items) == 0 {
@@ -106,7 +107,7 @@ func (a *Purchasing) Receive(ctx context.Context, s scope, id string, in domain.
 			return result, purchaseFailure(apperror.Conflict, "purchase_receipt_exceeds_pending", "La cantidad recibida de "+line.ItemName+" supera lo pendiente.")
 		}
 		if line.PresentationType != "unit" && math.Abs(line.ReceiveQuantity-math.Round(line.ReceiveQuantity)) > 0.000001 {
-			return result, purchaseFailure(apperror.Invalid, "invalid_purchase_receipt_quantity", "Paquetes y cajas deben recibirse en cantidades enteras.")
+			return result, purchaseFailure(apperror.Invalid, "invalid_purchase_receipt_quantity", "Esta presentación se recibe en cantidades enteras; para fracciones usa la unidad de inventario.")
 		}
 		lines = append(lines, line)
 	}

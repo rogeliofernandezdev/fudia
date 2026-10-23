@@ -272,6 +272,8 @@ type LocationSettings struct {
 }
 
 type PurchaseInventoryItemInput struct {
+	// ProductID links an existing catalog product (without inventory) instead of creating one.
+	ProductID            string                       `json:"productId"`
 	NewProduct           *InventoryNewProductInput    `json:"newProduct"`
 	NewIngredient        *InventoryNewIngredientInput `json:"newIngredient"`
 	Unit                 string                       `json:"unit"`
@@ -279,4 +281,21 @@ type PurchaseInventoryItemInput struct {
 	UnitsPerPresentation float64                      `json:"unitsPerPresentation"`
 	MinimumStock         float64                      `json:"minimumStock"`
 	Presentations        []InventoryPresentationInput `json:"presentations"`
+}
+
+// LinkableProduct is a sellable catalog product that does not control inventory yet
+// and can be linked to it without duplicating the commercial record.
+type LinkableProduct struct {
+	ProductID       string  `json:"productId"`
+	SKU             string  `json:"sku"`
+	Name            string  `json:"name"`
+	CategoryName    *string `json:"categoryName"`
+	QuantityControl string  `json:"quantityControl"`
+}
+
+// LinkProductCandidate is the locked state used to decide whether a product can be linked.
+type LinkProductCandidate struct {
+	ID, SKU, Name, QuantityControl string
+	CategoryID                     *string
+	HasRecipe, IsCombo             bool
 }

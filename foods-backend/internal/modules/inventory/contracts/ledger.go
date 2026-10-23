@@ -21,9 +21,11 @@ type PurchaseReceipt struct {
 	ReceiptID, Note string
 }
 
+// PurchaseReturn reverses part of a receipt. UnitCost is the receipt's cost per
+// presentation: the outflow is valued at that cost and the average is recalculated.
 type PurchaseReturn struct {
 	ItemID, Kind, ReturnID, Note string
-	Quantity, UnitsPerPresentation float64
+	Quantity, UnitsPerPresentation, UnitCost float64
 }
 
 // ErrInsufficientStock is a stable business result of Inventory, not a SQL error.

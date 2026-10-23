@@ -209,6 +209,28 @@ La tabla de Carta y productos permite activar un producto inactivo mediante
 conserva la ficha comercial y el historial, exige `menu.manage` y refresca los
 listados del catálogo, disponibilidad, comandas y selectores de abastecimiento.
 
+## Agregar artículo en Compras
+
+«Agregar artículo» abre en la búsqueda (`purchase-item-picker`, sobre
+`purchase-inventory-items?q=`). Con dos o más caracteres consulta también
+`purchase-linkable-products?q=` (`purchase-linkable-products`, hasta 20): productos
+activos de la carta que aún usan cupo del día o ningún control, sin combo ni receta
+activa. Elegir uno abre «Controlar con inventario» y envía
+`POST purchase-inventory-items` con `productId`, unidad, presentaciones y stock
+mínimo: el backend reutiliza el mismo producto (nombre, precio, categoría, imagen e
+historial), lo pasa a Inventario físico y deja el stock en 0. «Crear artículo
+nuevo» envía `newProduct` si «Se vende a clientes» está activo (categoría y precio)
+o `newIngredient` si no; el interruptor nace activo sin el módulo `recetas` y
+apagado con él. Al guardar se refrescan `purchase-inventory`,
+`purchase-linkable-products`, `inventory`, `products` y `product-availability`.
+Cada vista remota mantiene skeleton, error con Reintentar y vacío propio.
+
+Los totales de la orden replican al backend: cada subtotal es
+`round(cantidad × costo, 2)` (cantidad con hasta 3 decimales y costo con 4) y el
+total suma los subtotales redondeados (`purchase-totals.ts`). Las presentaciones
+distintas de la unidad de inventario exigen cantidades enteras al pedir, recibir
+y devolver, con el mismo mensaje en las tres pantallas.
+
 ## Estado de categorías
 
 En Compras, «Nuevo producto vendible» exige una categoría activa compatible con

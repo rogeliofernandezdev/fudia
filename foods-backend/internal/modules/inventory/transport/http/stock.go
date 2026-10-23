@@ -90,6 +90,10 @@ func (h *Stock) ListInventoryCombinations(w http.ResponseWriter, r *http.Request
 	out, err := h.service.Combinations(r.Context(), stockScope(r), r.URL.Query().Get("unit"))
 	stockResponse(w, 200, map[string]any{"items": out}, err)
 }
+func (h *Stock) ListLinkableProducts(w http.ResponseWriter, r *http.Request) {
+	out, err := h.service.LinkableProducts(r.Context(), stockScope(r), r.URL.Query().Get("q"))
+	stockResponse(w, 200, map[string]any{"items": out}, err)
+}
 func (h *Stock) CreatePurchaseInventoryItem(w http.ResponseWriter, r *http.Request) {
 	var in domain.PurchaseInventoryItemInput
 	if json.NewDecoder(r.Body).Decode(&in) != nil {

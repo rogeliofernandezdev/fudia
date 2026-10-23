@@ -282,7 +282,7 @@ func (r *Purchasing) Receipts(ctx context.Context, s scope, f application.Filter
 	items := []domain.PurchaseReceiptSummary{}
 	for rows.Next() {
 		var x domain.PurchaseReceiptSummary
-		if rows.Scan(&x.ID, &x.Code, &x.PurchaseOrderID, &x.Number, &x.SupplierName, &x.Notes, &x.CreatedByName, &x.CreatedAt, &x.ItemCount) != nil {
+		if err := rows.Scan(&x.ID, &x.Code, &x.PurchaseOrderID, &x.Number, &x.SupplierName, &x.Notes, &x.CreatedByName, &x.CreatedAt, &x.ItemCount); err != nil {
 			return out, err
 		}
 		items = append(items, x)
@@ -417,7 +417,7 @@ func (r *Purchasing) Receipt(ctx context.Context, s scope, id string) (domain.Pu
 	out.Items = []domain.PurchaseReceiptItemView{}
 	for rows.Next() {
 		var x domain.PurchaseReceiptItemView
-		if rows.Scan(&x.ID, &x.PurchaseOrderItemID, &x.InventoryItemID, &x.ItemName, &x.Quantity, &x.PresentationType, &x.UnitsPerPresentation, &x.StockQuantity, &x.UnitCost, &x.PresentationName, &x.ReturnedQuantity, &x.ReturnableQuantity) != nil {
+		if err := rows.Scan(&x.ID, &x.PurchaseOrderItemID, &x.InventoryItemID, &x.ItemName, &x.Quantity, &x.PresentationType, &x.UnitsPerPresentation, &x.StockQuantity, &x.UnitCost, &x.PresentationName, &x.ReturnedQuantity, &x.ReturnableQuantity); err != nil {
 			return out, purchaseError(err)
 		}
 		out.Items = append(out.Items, x)

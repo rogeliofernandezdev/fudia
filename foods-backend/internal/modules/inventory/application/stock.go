@@ -97,6 +97,10 @@ type StockRepository interface {
 	Items(context.Context, scope, StockFilter) (ItemsPage, error)
 	Products(context.Context, scope, StockFilter) (ProductsPage, error)
 	Movements(context.Context, scope, StockFilter) (MovementsPage, error)
+	LinkableProducts(ctx context.Context, s scope, query string, limit int) ([]domain.LinkableProduct, error)
+	LockLinkableProduct(ctx context.Context, s scope, productID string) (domain.LinkProductCandidate, error)
+	ProductInOpenOrders(ctx context.Context, s scope, productID string) (bool, error)
+	MarkProductInventoryControlled(ctx context.Context, s scope, product domain.LinkProductCandidate) error
 }
 
 func (a *Stock) validateUnit(ctx context.Context, s scope, code string) error {

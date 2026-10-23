@@ -92,6 +92,7 @@ func (a *API) Routes() *http.ServeMux {
 	m.Handle("PATCH /v1/admin/suppliers/{id}", a.auth(a.requirePermission("purchases.manage", http.HandlerFunc(a.updateSupplier))))
 	m.Handle("PATCH /v1/admin/suppliers/{id}/status", a.auth(a.requirePermission("purchases.manage", http.HandlerFunc(a.updateSupplierStatus))))
 	m.Handle("GET /v1/admin/purchase-inventory-items", a.auth(a.requirePermission("purchases.read", http.HandlerFunc(a.listInventoryProducts))))
+	m.Handle("GET /v1/admin/purchase-linkable-products", a.auth(a.requirePermission("purchases.read", http.HandlerFunc(a.listLinkableProducts))))
 	m.Handle("POST /v1/admin/purchase-inventory-items", a.auth(a.requirePermission("purchases.manage", http.HandlerFunc(a.createPurchaseInventoryItem))))
 	m.Handle("GET /v1/admin/purchase-combinations", a.auth(a.requirePermission("purchases.read", http.HandlerFunc(a.listInventoryCombinations))))
 	m.Handle("POST /v1/admin/purchase-combinations", a.auth(a.requirePermission("purchases.manage", http.HandlerFunc(a.createInventoryCombination))))

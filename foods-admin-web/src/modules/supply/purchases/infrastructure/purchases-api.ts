@@ -1,5 +1,4 @@
 import {apiFetch} from "@/shared/api/client";
-import {uploadProductImage} from "@/shared/api/product-image";
 import type {PurchaseCombination,PurchasePresentation,PurchasePresentationDraft} from "../domain/types";
 
 export function listPurchaseCombinations(unit=""){
@@ -11,7 +10,7 @@ export function savePurchaseCombination(input:{unit:string;code:string;name:stri
 export function savePurchasePresentation(id:string,draft:PurchasePresentationDraft){
   return apiFetch<PurchasePresentation>(`purchase-inventory-items/${id}/presentations`,{method:"POST",body:JSON.stringify({...draft,unitsPerPresentation:Number(draft.unitsPerPresentation)})});
 }
-import type {PurchaseInventoryItemDraft,PurchaseInventoryOption,PurchaseItemCategory,PurchaseOrder,PurchaseOrderDraft,PurchaseOrdersResponse,PurchaseReceiptDetail,PurchaseReceiptDraft,PurchaseReceiptResult,PurchaseReturnDraft,PurchaseStatus,Supplier,SupplierDraft,SuppliersResponse} from "../domain/types";
+import type {LinkableProduct,PurchaseInventoryItemDraft,PurchaseInventoryOption,PurchaseItemCategory,PurchaseOrder,PurchaseOrderDraft,PurchaseOrdersResponse,PurchaseReceiptDetail,PurchaseReceiptDraft,PurchaseReceiptResult,PurchaseReturnDraft,PurchaseStatus,Supplier,SupplierDraft,SuppliersResponse} from "../domain/types";
 
 export function listPurchaseOrders(input:{q:string;status:string;page:number;pageSize:number}){
   const params=new URLSearchParams({q:input.q,status:input.status,page:String(input.page),pageSize:String(input.pageSize)});
@@ -104,7 +103,11 @@ export async function listPurchaseItemCategories(){
   return items;
 }
 
-export async function createPurchaseInventoryItem(draft:PurchaseInventoryItemDraft,file:File|null=null){
+export function listLinkableProducts(q:string){
+  return apiFetch<{items:LinkableProduct[]}>(`purchase-linkable-products?${new URLSearchParams({q}).toString()}`);
+}
+
+export function createPurchaseInventoryItem(draft:PurchaseInventoryItemDraft){
   const common={
     unit:draft.unit,
     presentationType:draft.presentationType,
@@ -112,18 +115,18 @@ export async function createPurchaseInventoryItem(draft:PurchaseInventoryItemDra
     minimumStock:Number(draft.minimumStock||0),
     ...(draft.presentations?{presentations:draft.presentations.map(row=>({...row,unitsPerPresentation:Number(row.unitsPerPresentation)}))}:{}),
   };
-  const payload=draft.mode==="new_ingredient"
-    ?{...common,newIngredient:{name:draft.name.trim()}}
-    :{...common,newProduct:{
-      sku:"",
-      name:draft.name.trim(),
-      categoryId:draft.categoryId.trim(),
-      description:draft.description.trim(),
-      price:draft.price.trim(),
-    }};
-  const item=await apiFetch<PurchaseInventoryOption>("purchase-inventory-items",{method:"POST",body:JSON.stringify(payload)});
-  if(file&&item.productId)await uploadProductImage(item.productId,file);
-  return item;
+  const payload=draft.mode==="link_product"
+    ?{...common,productId:draft.productId}
+    :draft.mode==="new_ingredient"
+      ?{...common,newIngredient:{name:draft.name.trim()}}
+      :{...common,newProduct:{
+        sku:"",
+        name:draft.name.trim(),
+        categoryId:draft.categoryId.trim(),
+        description:"",
+        price:draft.price.trim(),
+      }};
+  return apiFetch<PurchaseInventoryOption>("purchase-inventory-items",{method:"POST",body:JSON.stringify(payload)});
 }
 
 

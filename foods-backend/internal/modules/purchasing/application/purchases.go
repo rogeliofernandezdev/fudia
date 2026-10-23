@@ -188,7 +188,7 @@ func (a *Purchasing) SaveOrder(ctx context.Context, s scope, orderID string, in 
 			return result, purchaseFailure(apperror.Unavailable, "purchase_unavailable", "No pudimos validar los artículos de la orden.")
 		}
 		if presentationType != "unit" && math.Abs(line.Quantity-math.Round(line.Quantity)) > 0.000001 {
-			return result, purchaseFailure(apperror.Invalid, "invalid_purchase_quantity", "Paquetes y cajas deben comprarse en cantidades enteras.")
+			return result, purchaseFailure(apperror.Invalid, "invalid_purchase_quantity", "Esta presentación se compra en cantidades enteras; para fracciones usa la unidad de inventario.")
 		}
 		if _, err = a.repo.CreateOrderItem(tx.Context(), s, id, line, presentationType, unitsPerPresentation); err != nil {
 			return result, purchaseFailure(apperror.Conflict, "purchase_item_conflict", "No pudimos agregar una de las líneas de la orden.")

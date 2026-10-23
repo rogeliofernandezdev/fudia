@@ -20,6 +20,7 @@ func (a *Stock) CreatePurchaseItem(ctx context.Context, s scope, input domain.Pu
 		legacyType, legacyFactor = "unit", 1
 	}
 	normalized, invalid := domain.NormalizeInventoryEntry(domain.InventoryEntryInput{
+		ProductID:            input.ProductID,
 		NewProduct:           input.NewProduct,
 		NewIngredient:        input.NewIngredient,
 		Quantity:             1,
@@ -31,8 +32,8 @@ func (a *Stock) CreatePurchaseItem(ctx context.Context, s scope, input domain.Pu
 	if invalid != "" {
 		return result, stockFailure(apperror.Invalid, "invalid_purchase_item", invalid)
 	}
-	if normalized.NewProduct == nil && normalized.NewIngredient == nil {
-		return result, stockFailure(apperror.Invalid, "invalid_purchase_item", "Selecciona Nuevo producto vendible o Nuevo insumo.")
+	if normalized.ProductID == "" && normalized.NewProduct == nil && normalized.NewIngredient == nil {
+		return result, stockFailure(apperror.Invalid, "invalid_purchase_item", "Selecciona un producto de la carta o crea un artículo nuevo.")
 	}
 	presentations := input.Presentations
 	if len(presentations) == 0 {
@@ -68,7 +69,13 @@ func (a *Stock) CreatePurchaseItem(ctx context.Context, s scope, input domain.Pu
 	}
 	defer tx.Rollback(ctx)
 
-	created, createErr := a.CreateCatalogItem(tx.Context(), s, normalized)
+	var created domain.InventoryCatalogCreateResult
+	var createErr error
+	if normalized.ProductID != "" {
+		created, createErr = a.linkExistingProduct(tx.Context(), s, normalized)
+	} else {
+		created, createErr = a.CreateCatalogItem(tx.Context(), s, normalized)
+	}
 	if createErr != nil {
 		return result, createErr
 	}
@@ -97,7 +104,9 @@ func (a *Stock) CreatePurchaseItem(ctx context.Context, s scope, input domain.Pu
 	if err = tx.Commit(ctx); err != nil {
 		return result, stockFailure(apperror.Unavailable, "inventory_unavailable", "No pudimos crear el artículo.")
 	}
-	if created.ProductID != nil {
+	if normalized.ProductID != "" {
+		_ = a.audit.Record(ctx, s, "product.linked_to_inventory", "product", *created.ProductID)
+	} else if created.ProductID != nil {
 		_ = a.audit.Record(ctx, s, "product.created_from_purchase", "product", *created.ProductID)
 	} else {
 		_ = a.audit.Record(ctx, s, "inventory.ingredient_created_from_purchase", "inventory_item", created.InventoryItemID)

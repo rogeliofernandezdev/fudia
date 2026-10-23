@@ -189,7 +189,37 @@ El selector «Producto existente» muestra únicamente productos activos con
 `quantity_control='inventory'`. Los productos con `none` o `portions` no son
 elegibles para una entrada y registrar stock nunca cambia implícitamente el modo
 de control de un plato o producto preparado. La mercadería física nueva se crea
-desde **Inventario > Nueva entrada > Nuevo producto físico**.
+desde **Inventario > Nueva entrada > Nuevo producto físico** o desde Compras.
+
+#### Vincular un producto existente al inventario
+
+Un restaurante puede empezar solo con Productos y Disponibilidad y luego controlar
+existencias sin rehacer su catálogo. `GET /purchase-linkable-products` lista
+productos activos con `none` o `portions`, sin combo ni receta activa.
+`POST /purchase-inventory-items` con `productId` ejecuta, en una transacción y de
+forma explícita (nunca como efecto de registrar stock):
+
+1. Bloquea el producto y rechaza combos (`product_link_combo`), productos con
+   receta activa (`product_link_recipe`: su stock ya se descuenta por ingredientes)
+   y productos en pedidos abiertos (`quantity_control_open_orders`).
+2. Cambia `quantity_control` a `inventory` y `product_type` a `retail`; la
+   categoría de Carta que lo contiene pasa a `both`. Conserva nombre, precio,
+   categoría, imagen, destino de atención e historial; el historial de porciones
+   queda como lectura en Disponibilidad. A diferencia de la edición en Productos,
+   no lo bloquean las ventas anteriores por porciones.
+3. Crea o reutiliza su `inventory_item` (1:1 con el producto) con la unidad y las
+   presentaciones elegidas y saldo 0, sin movimiento de Kárdex. La existencia real
+   entra solo por una recepción de compra o un documento de Inventario.
+
+#### Valorización de devoluciones y correcciones de compra
+
+`receipt_correction` y `supplier_return` salen del saldo al costo de la recepción
+original (`purchase_receipt_items.unit_cost / units_per_presentation`), no al
+promedio: el costo promedio se recalcula como
+`(valor actual − cantidad × costo de recepción) / saldo restante`. Así una
+recepción registrada por error no deja su precio dentro del promedio. Si parte de
+la mercadería ya se consumió al promedio, el valor restante nunca baja de cero; con
+saldo cero se conserva el último promedio.
 
 La pantalla de Productos permanece dedicada al catálogo comercial: alta de
 platos y edición de nombre, precio, categoría, imagen y estado. Para productos

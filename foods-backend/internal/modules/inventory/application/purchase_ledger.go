@@ -59,10 +59,10 @@ func (l *PurchaseLedger) ReceivePurchase(ctx context.Context, s scope, in contra
 }
 
 func (l *PurchaseLedger) ReturnPurchase(ctx context.Context, s scope, in contracts.PurchaseReturn) error {
-	if in.ItemID == "" || in.ReturnID == "" || in.Quantity <= 0 || in.UnitsPerPresentation <= 0 ||
+	if in.ItemID == "" || in.ReturnID == "" || in.Quantity <= 0 || in.UnitsPerPresentation <= 0 || in.UnitCost < 0 ||
 		(in.Kind != "supplier_return" && in.Kind != "receipt_correction") ||
-		math.IsNaN(in.Quantity) || math.IsNaN(in.UnitsPerPresentation) ||
-		math.IsInf(in.Quantity, 0) || math.IsInf(in.UnitsPerPresentation, 0) {
+		math.IsNaN(in.Quantity) || math.IsNaN(in.UnitsPerPresentation) || math.IsNaN(in.UnitCost) ||
+		math.IsInf(in.Quantity, 0) || math.IsInf(in.UnitsPerPresentation, 0) || math.IsInf(in.UnitCost, 0) {
 		return errors.New("invalid inventory return")
 	}
 	quantity := math.Round(in.Quantity*in.UnitsPerPresentation*1000) / 1000
@@ -73,15 +73,25 @@ func (l *PurchaseLedger) ReturnPurchase(ctx context.Context, s scope, in contrac
 	if quantity > balance.Quantity+0.000001 {
 		return contracts.ErrInsufficientStock
 	}
+	// The outflow reverses the receipt at its own cost, so a wrong receipt does not
+	// leave its price inside the average. Consumption at average cost can leave less
+	// value than the receipt carried; the remaining value never goes below zero.
+	unitCost := in.UnitCost / in.UnitsPerPresentation
 	after := math.Round((balance.Quantity-quantity)*1000) / 1000
-	if _, err = l.repo.SaveBalance(ctx, s, in.ItemID, after, balance.AverageUnitCost); err != nil {
+	valueBefore := balance.Quantity * balance.AverageUnitCost
+	average := balance.AverageUnitCost
+	if after > 0 {
+		average = math.Round(math.Max(valueBefore-quantity*unitCost, 0)/after*10000) / 10000
+	}
+	balanceValue := math.Round(after*average*10000) / 10000
+	if _, err = l.repo.SaveBalance(ctx, s, in.ItemID, after, average); err != nil {
 		return err
 	}
 	return l.repo.SaveMovement(ctx, s, contracts.Movement{
 		ProductID: balance.ProductID, ItemID: in.ItemID, Type: in.Kind,
-		Delta: -quantity, Balance: after, UnitCost: balance.AverageUnitCost,
+		Delta: -quantity, Balance: after, UnitCost: math.Round(unitCost*10000) / 10000,
 		SourceType: "purchase_return", SourceID: in.ReturnID, Note: in.Note,
-		ValueDelta: math.Round(-quantity*balance.AverageUnitCost*10000) / 10000,
-		BalanceValue: math.Round(after*balance.AverageUnitCost*10000) / 10000,
+		ValueDelta:   math.Round((balanceValue-valueBefore)*10000) / 10000,
+		BalanceValue: balanceValue,
 	})
 }

@@ -509,6 +509,14 @@ Matriz semántica completa:
 | Cuenta | Por cobrar | `orange` — ámbar | Espera el pago |
 | Cuenta | Pagada | `green` — verde | Pago completo |
 | Cuenta | Finalizada | `gray` — gris neutro | Atención terminada; visualmente distinta del verde de Pagada |
+| Orden de compra | Borrador | `gray` — gris | Aún editable, sin aprobar |
+| Orden de compra | Por aprobar / Recepción parcial | `orange` — ámbar | Espera aprobación o mercadería pendiente |
+| Orden de compra | Aprobada | `blue` — índigo | Lista para recibir |
+| Orden de compra | Recibida | `green` — verde | Recepción completa |
+| Orden de compra | Cancelada | `red` — rojo | Cancelación, igual que el pedido |
+
+Compras centraliza su mapeo en `purchaseStatusMeta`
+(`supply/purchases/domain/purchase-status.ts`); ninguna pantalla lo redefine.
 
 El color representa un significado compartido, no un identificador universal:
 verde es un hito cumplido, ámbar una resolución pendiente y azul petróleo una
@@ -1982,6 +1990,61 @@ el panel depende de `whatsapp_bot`.
 - Carga con skeleton de filas y error con `ErrorState` y reintento. Sin
   `organizations.manage` los controles quedan de solo lectura y no hay pie.
 
+### Compras: nueva orden de compra
+
+La cabecera lleva solo icono, «Nueva orden de compra» (o «Editar orden») y X, sin
+subtítulo. El cuerpo es blanco y tipográfico: «Datos de la orden» y «Artículos · N»
+son títulos de sección de 16 px / 700, sin icono ni frase de ayuda, separados por una
+línea `cloud-100`; no hay tarjetas `cloud-50` anidadas. Sin líneas, bajo «Artículos»
+queda una sola frase de ayuda. Las líneas son una lista blanca con borde `line` y
+líneas finas entre filas, sin número, icono ni cabecera tintada: nombre 14 px / 600,
+«Se vende» o «Insumo» · unidad, la papelera a la derecha (tooltip anclado al borde,
+`standard-actions`, para no crear scroll horizontal) y debajo Presentación de compra,
+Cantidad, Costo unitario y Subtotal (16 px / 600 tabular, alineado a la derecha). En
+móvil Presentación ocupa la fila, Cantidad y Costo comparten la siguiente y Subtotal
+va en una fila con etiqueta a la izquierda y monto a la derecha. Al agregar un
+artículo su presentación predeterminada queda seleccionada.
+
+**Agregar a una lista** usa la fila punteada índigo `purchase-add-row`: ancho
+completo, 48 px, borde punteado `primary-300`, fondo `primary-50`, icono y texto
+`primary-700` 600; al pasar el mouse `primary-100` con borde `primary-400`. Va al final
+de la lista («Agregar artículo», «Crear artículo nuevo») y nunca es una segunda acción
+primaria: el pie conserva Cancelar y «Guardar borrador». Cierra la sección la fila
+«Total estimado · N líneas» con el monto en 18 px / 700 tabular, sin franja tintada.
+
+### Compras: agregar artículo
+
+«Agregar artículo» abre directamente en «Buscar artículo»: el caso diario es
+reponer algo que ya existe. Los resultados son una sola lista blanca con borde
+`line`, radio de mosaico y líneas finas `cloud-100` entre filas: sin tarjeta ni ícono
+por fila. Cada fila mide al menos 56 px: nombre 14 px / 600 `ink-950`, debajo
+«Se vende» o «Insumo» · unidad en 12 px `ink-500`; a la derecha el saldo con su unidad
+(«20 und», 14 px / 600 tabular `ink-800`) o `Status` gris «Agotado» si es cero, y un
+chevron `ink-400` que pasa a `primary-600` con el fondo `cloud-50` al pasar el mouse.
+El saldo se ve también en móvil. Desde dos caracteres aparece el grupo «En tu carta, sin
+inventario» con los productos que aún usan cupo del día o ningún control, cada uno
+con «Vincular» (13 px / 600 `primary-700`) en lugar del saldo, en la misma lista con
+líneas: así un restaurante que empezó solo con Productos y Disponibilidad
+no duplica su catálogo. Bajo los resultados, «Crear artículo nuevo» es la fila
+punteada índigo de agregar (ver «Nueva orden de compra»). Si no hay coincidencias,
+el estado vacío ofrece esa misma acción. En esta vista el pie solo tiene Cancelar.
+
+- **Crear artículo nuevo**: Nombre (prellenado con la búsqueda), el interruptor
+  `switch-row` «Se vende a clientes» y, si está activo, Categoría y Precio de
+  venta. Después Unidad de inventario, Stock mínimo y Presentación de compra, y
+  la nota «Stock inicial: 0»; con Recetas añade «Todo artículo puede usarse como
+  ingrediente en Recetas». El interruptor nace activo sin Recetas y apagado con
+  Recetas. No hay tarjetas de tipo, imagen ni descripción: se completan en Productos.
+- **Controlar con inventario**: resumen del producto (nombre, control actual y
+  categoría), la nota «Conserva nombre, precio, categoría e historial» que avisa
+  que empieza en 0 y aparecerá «Agotado» hasta una recepción o una entrada, y los
+  mismos campos de unidad, stock mínimo y presentación. Combos y productos con
+  receta no aparecen: su stock ya sale de sus componentes.
+
+Crear y vincular usan «Volver» (`action="back"`) y una sola acción primaria:
+«Crear y agregar» o «Vincular y agregar». El encabezado lleva solo icono, título
+(«Agregar artículo», «Nuevo artículo» o «Controlar con inventario») y X.
+
 ### Compras: recepciones e historial de la orden
 
 La recepción es una etapa de la orden de compra, no un objeto aparte.
@@ -1997,7 +2060,11 @@ Corrección de recepción (`undo`) y Devolución al proveedor (`truck`), ambas e
 rojo tenue porque restan stock. Cada fila muestra código, fecha, usuario y
 artículos; las correcciones y devoluciones añaden su motivo. Cada recepción tiene
 la acción «Ver» que abre su detalle («DETALLE DE RECEPCIÓN») encima de la orden,
-con «Corregir / devolver». Al guardar, la orden y su historial se refrescan. Si
+con «Corregir / devolver» en su `ModalFooter` como `danger-outline` (inicia una
+acción que resta stock; no es la confirmación). La tabla Recepciones y sus tarjetas
+móviles usan las mismas etiquetas «Recibir» y «Continuar». «Corregir o devolver
+recepción» pasa a pantalla completa en ≤760 px y su tabla usa `DataTable`. Al
+guardar, la orden y su historial se refrescan. Si
 la orden puede recibirse y aún no tiene recepciones, la sección dice «Todavía no
 se recibió mercadería de esta orden.». El cuerpo del detalle usa
 `grid-auto-rows: max-content` para que ninguna sección se comprima en móvil.

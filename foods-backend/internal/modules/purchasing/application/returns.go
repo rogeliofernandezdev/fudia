@@ -9,6 +9,7 @@ import (
 	"github.com/foods-platform/foods-backend/internal/platform/unitofwork"
 	"math"
 	"strings"
+	"unicode/utf8"
 )
 
 func (a *Purchasing) Return(ctx context.Context, s scope, id string, in domain.PurchaseReturnInput) (map[string]any, error) {
@@ -17,7 +18,7 @@ func (a *Purchasing) Return(ctx context.Context, s scope, id string, in domain.P
 	in.Kind = strings.TrimSpace(in.Kind)
 	in.Reason = strings.TrimSpace(in.Reason)
 	in.Notes = strings.TrimSpace(in.Notes)
-	if len(in.IdempotencyKey) > 120 || (in.Kind != "supplier_return" && in.Kind != "receipt_correction") || in.Reason == "" || len(in.Reason) > 160 || len(in.Notes) > 500 || len(in.Items) == 0 {
+	if len(in.IdempotencyKey) > 120 || (in.Kind != "supplier_return" && in.Kind != "receipt_correction") || in.Reason == "" || utf8.RuneCountInString(in.Reason) > 160 || utf8.RuneCountInString(in.Notes) > 500 || len(in.Items) == 0 {
 		return result, purchaseFailure(apperror.Invalid, "invalid_purchase_return", "Indica tipo, motivo y cantidades a devolver.")
 	}
 	seen := map[string]bool{}
@@ -90,10 +91,10 @@ func (a *Purchasing) Return(ctx context.Context, s scope, id string, in domain.P
 			return result, purchaseFailure(apperror.Conflict, "purchase_return_exceeds_received", "La devolución supera lo recibido disponible.")
 		}
 		if presentationType != "unit" && math.Abs(requested.Quantity-math.Round(requested.Quantity)) > 0.000001 {
-			return result, purchaseFailure(apperror.Invalid, "invalid_purchase_return_quantity", "Paquetes y cajas deben devolverse en cantidades enteras.")
+			return result, purchaseFailure(apperror.Invalid, "invalid_purchase_return_quantity", "Esta presentación se devuelve en cantidades enteras; para fracciones usa la unidad de inventario.")
 		}
 		if err = a.stock.ReturnPurchase(tx.Context(), s, inventorycontracts.PurchaseReturn{
-			ItemID: itemID, Quantity: requested.Quantity, UnitsPerPresentation: units,
+			ItemID: itemID, Quantity: requested.Quantity, UnitsPerPresentation: units, UnitCost: unitCost,
 			Kind: in.Kind, ReturnID: returnID, Note: code + " · " + in.Reason,
 		}); errors.Is(err, inventorycontracts.ErrInsufficientStock) {
 			return result, purchaseFailure(apperror.Conflict, "insufficient_stock", "No hay stock suficiente para registrar la devolución.")
