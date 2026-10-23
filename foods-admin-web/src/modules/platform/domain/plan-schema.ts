@@ -15,6 +15,7 @@ export const planSchema=z.object({
  trialDays:z.coerce.number().int("Usa días enteros.").min(0,"No puede ser negativo.").max(365,"Máximo 365 días."),
  maxLocations:optionalInt("Locales"),
  maxUsers:optionalInt("Usuarios"),
+ maxConciergeConversations:optionalInt("Conversaciones de Concierge"),
  termsVersion:z.string().trim().min(1,"Ingresa la versión de condiciones.").max(80,"Máximo 80 caracteres."),
  moduleKeys:z.array(z.string()).min(1,"Incluye al menos un módulo."),
  active:z.boolean(),

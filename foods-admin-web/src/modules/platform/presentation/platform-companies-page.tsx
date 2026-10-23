@@ -2,22 +2,23 @@
 import {DataTable} from "@/design-system/data-table";
 import "./platform-companies.css";
 import "./platform-skeletons.css";
-import {useState} from "react";
+import {useMemo,useState} from "react";
 import Link from "next/link";
-import {useQuery} from "@tanstack/react-query";
+import {useQuery,type UseQueryResult} from "@tanstack/react-query";
 import {EmptyState,ErrorState,PageHeader,Pagination,RowActionButton,SearchField,Select,Status,TableSkeleton} from "@/design-system";
 import {Icon,type IconName} from "@/design-system/icons";
 import {useSession} from "@/providers";
 import {useDebouncedValue} from "@/shared/hooks/use-debounced-value";
 import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
 import {companySettingsPath} from "@/shared/routing/page-routes";
-import {listPlatformOrganizations} from "../infrastructure/platform-api";
+import {listConciergeUsage,listPlatformOrganizations} from "../infrastructure/platform-api";
+import {ConciergeUsageCell,ConciergeUsageNotice} from "./platform-concierge-usage";
 import {CompanyDetailDialog} from "./platform-company-detail-dialog";
 import {paymentStandingTone} from "../domain/subscription-status";
-import type {PaymentStanding,PlatformOrganization,PlatformOrganizationPage} from "../domain/types";
+import type {ConciergeUsagePage,PaymentStanding,PlatformOrganization,PlatformOrganizationPage} from "../domain/types";
 
 const DAY=86_400_000;
-const columns=["EMPRESA","PLAN","PRECIO","PRÓXIMO VENCIMIENTO","ÚLTIMO PAGO","SITUACIÓN","ACCIONES"];
+const columns=["EMPRESA","PLAN","PRECIO","PRÓXIMO VENCIMIENTO","ÚLTIMO PAGO","SITUACIÓN","CONCIERGE DEL MES","ACCIONES"];
 const summaryCards:Array<{key:"total"|PaymentStanding;label:string;icon:IconName}>=[
  {key:"total",label:"Empresas",icon:"building"},
  {key:"up_to_date",label:"Al día",icon:"circleCheck"},
@@ -52,12 +53,20 @@ function CompaniesDirectory(){
   placeholderData:previous=>previous,
  });
  const data=list.data;
+ const organizationIds=useMemo(()=>data?.items.map(company=>company.id)??[],[data]);
+ /** Uso de Fudia Concierge solo de la página visible; `summary` cuenta toda la cartera. */
+ const conciergeUsage=useQuery({
+  queryKey:["platform-concierge-usage",organizationIds],
+  queryFn:()=>listConciergeUsage(organizationIds),
+  enabled:organizationIds.length>0,
+ });
  const filtered=Boolean(debouncedQ.trim()||planId||standing);
  const pickStanding=(value:string)=>{setStanding(value);setPage(1)};
 
  return <>
   <PageHeader title="Empresas y planes" description="Plan contratado, vencimientos y situación de pago de cada empresa cliente."/>
   <CompaniesSummary data={data} loading={list.isLoading} active={standing} onPick={pickStanding}/>
+  {organizationIds.length>0&&<ConciergeUsageNotice usage={conciergeUsage}/>}
   <section className="panel management standardized-management platform-companies-panel">
    <div className="toolbar">
     <SearchField value={q} onChange={event=>{setQ(event.target.value);setPage(1)}} placeholder="Buscar por nombre, razón social o RUC..." label="Buscar empresas"/>
@@ -73,7 +82,7 @@ function CompaniesDirectory(){
    {list.isLoading?<CompaniesTableSkeleton/>
     :list.isError?<ErrorState title="No pudimos cargar las empresas" text={list.error.message} retrying={list.isFetching} onRetry={()=>void list.refetch()}/>
     :!data?.items.length?<EmptyState icon="building" title={filtered?"Sin coincidencias":"Aún no hay empresas"} text={filtered?"Ninguna empresa coincide con la búsqueda o los filtros aplicados.":"Las empresas registradas desde «Registrar empresa» aparecerán aquí con su plan."}/>
-    :<CompaniesTable data={data} busy={list.isFetching}/>}
+    :<CompaniesTable data={data} busy={list.isFetching} conciergeUsage={conciergeUsage}/>}
    {data&&data.total>0&&<Pagination page={page} size={pageSize} total={data.total} onPage={setPage} onSize={value=>{setPageSize(value);setPage(1)}}/>}
   </section>
  </>;
@@ -93,7 +102,7 @@ function CompaniesSummary({data,loading,active,onPick}:{data?:PlatformOrganizati
  </div>;
 }
 
-function CompaniesTable({data,busy}:{data:PlatformOrganizationPage;busy:boolean}){
+function CompaniesTable({data,busy,conciergeUsage}:{data:PlatformOrganizationPage;busy:boolean;conciergeUsage:UseQueryResult<ConciergeUsagePage>}){
  const{location}=useSession();
  const[now]=useState(()=>Date.now());
  const[detailId,setDetailId]=useState<string|null>(null);
@@ -120,12 +129,13 @@ function CompaniesTable({data,busy}:{data:PlatformOrganizationPage;busy:boolean}
     <td>{dueDate(company)}</td>
     <td>{lastPayment(company)}</td>
     <td>{standing(company)}</td>
+    <td><ConciergeUsageCell organizationId={company.id} usage={conciergeUsage}/></td>
     <td><div className="table-actions">{actions(company)}</div></td>
    </tr>)}</tbody>
   </DataTable>
  <div className="management-cards" aria-busy={busy}>{data.items.map(company=><article key={company.id}>
   <header><span className="row-icon r0"><Icon name="building"/></span><div><Link className="platform-company-link" href={companySettingsPath(company.id)}>{company.tradeName}</Link><small>{companyNote(company)}</small></div>{standing(company)}</header>
-  <dl><div><dt>Plan</dt><dd>{plan(company)}</dd></div><div><dt>Precio</dt><dd>{price(company)}</dd></div><div><dt>Próximo vencimiento</dt><dd>{dueDate(company)}</dd></div><div><dt>Último pago</dt><dd>{lastPayment(company)}</dd></div></dl>
+  <dl><div><dt>Plan</dt><dd>{plan(company)}</dd></div><div><dt>Precio</dt><dd>{price(company)}</dd></div><div><dt>Próximo vencimiento</dt><dd>{dueDate(company)}</dd></div><div><dt>Último pago</dt><dd>{lastPayment(company)}</dd></div><div><dt>Concierge del mes</dt><dd><ConciergeUsageCell organizationId={company.id} usage={conciergeUsage}/></dd></div></dl>
   <footer>{actions(company)}</footer>
  </article>)}</div>
  {detailId&&<CompanyDetailDialog organizationId={detailId} standingOptions={data.standingOptions} close={()=>setDetailId(null)}/>}

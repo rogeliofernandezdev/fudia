@@ -400,3 +400,17 @@ El borrador de filas es estado local; `deliveryFeeErrors` valida límites
 `deliveryFeesPayload` envía `{tiers:[{maxDistanceKm,fee}]}` numérico y ordenado.
 El backend vuelve a validar y es la autoridad. Al guardar se reemplaza la caché
 con la respuesta, sin otra consulta. Las tarifas aplican al local activo.
+
+## Tope mensual de Fudia Concierge (solo Plataforma)
+
+`platform-api` es el único consumidor de `/v1/platform/concierge-usage*` y del
+campo `maxConciergeConversations` (`PlatformSubscriptionPlan`); el plan de empresa
+y `getCurrentOrganizationSubscription` no lo reciben. Claves de caché:
+`["platform-concierge-settings"]` (modo y porcentaje global),
+`["platform-concierge-usage",ids]` (uso del mes de la página visible de Empresas,
+consultado después de cargarla, máximo 100 ids; `summary` cuenta toda la cartera) y
+`["platform-concierge-usage-detail",id]` (detalle, tokens, historial). Guardar la
+configuración reemplaza su caché e invalida uso y detalles; guardar la excepción
+de tope (`PATCH {limitSource,maxConversations}`, número solo con tope propio)
+reemplaza el detalle e invalida el listado; guardar un plan invalida ambos. Los
+topes vienen siempre del API y los números/meses usan `regional-format`.

@@ -81,6 +81,7 @@ func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages) *httpapi.API {
 		Subscriptions:          subscriptionhttp.New(subscriptions),
 		Platform:               platformhttp.New(platform),
 		Concierge:              conciergehttp.New(conciergeapp.New(conciergepg.New(db), menu, orders, audit), func() string { return os.Getenv("FUDIA_CONCIERGE_API_KEY") }),
+		ConciergeUsage:         conciergehttp.NewUsage(conciergeapp.NewUsage(conciergepg.NewUsage(db), conciergepg.New(db), work, audit)),
 		MenuCatalog:            menuhttp.NewCatalog(menu),
 		Payments:               billinghttp.NewPayments(billingapp.NewPayments(paymentsRepo, work, audit, methods, orders)),
 		Cash:                   billinghttp.NewCash(billingapp.NewCash(paymentsRepo, work)),

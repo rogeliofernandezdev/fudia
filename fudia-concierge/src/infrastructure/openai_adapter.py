@@ -21,6 +21,7 @@ from src.metrics import (
     SCOPE_DECISIONS,
 )
 from src.observability import fingerprint, log_event
+from src.services.usage_meter import record_tokens
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +46,7 @@ def _record_usage(response: Any, role: str, tier: ModelTier) -> tuple[int, int]:
     used_out = int(getattr(usage, "output_tokens", 0) or 0)
     MODEL_TOKENS.labels(role=role, tier=tier, direction="input").inc(used_in)
     MODEL_TOKENS.labels(role=role, tier=tier, direction="output").inc(used_out)
+    record_tokens(tier, used_in, used_out)
     return used_in, used_out
 
 

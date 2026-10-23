@@ -28,7 +28,7 @@ test("mostrador no exige mesas; salón y operación mixta sí",()=>{
   }
 });
 
-test("la guía respeta módulos contratados; Emprende ofrece abastecimiento sin exigir recetas",()=>{
+test("la guía respeta módulos contratados; el abastecimiento es opcional y no exige recetas",()=>{
   assert.deepEqual(keys(empty),["operation","catalog","cash","team","review"]);
   assert.equal(keys({...empty,modules:{recetas:true}}).includes("recipes"),false);
   const basic=buildSetupSteps({...empty,modules:{inventario:true,compras:true}});

@@ -38,6 +38,41 @@ class FakeFudia:
         self.handoff_calls: list[dict[str, Any]] = []
         self.handoff_status = "none"
         self.concierge_enabled = concierge_enabled
+        self.opened: list[dict[str, str]] = []
+        self.usage_reports: list[dict[str, Any]] = []
+        # foods-backend in enforce mode at 100 %: only new conversations fail.
+        self.conversation_limit_reached = False
+
+    async def open_conversation(
+        self, token: str, conversation_id: str, kind: str
+    ) -> None:
+        known = any(o["conversation_id"] == conversation_id for o in self.opened)
+        if self.conversation_limit_reached and not known:
+            raise FudiaError(
+                409,
+                "concierge_conversation_limit_reached",
+                "Fudia Concierge no puede iniciar conversaciones nuevas.",
+            )
+        if not known:
+            self.opened.append(
+                {"token": token, "conversation_id": conversation_id, "kind": kind}
+            )
+
+    async def report_usage(
+        self,
+        token: str,
+        conversation_id: str,
+        request_id: str,
+        tiers: list[dict[str, Any]],
+    ) -> None:
+        self.usage_reports.append(
+            {
+                "token": token,
+                "conversation_id": conversation_id,
+                "request_id": request_id,
+                "tiers": tiers,
+            }
+        )
 
     async def resolve_table(self, token: str) -> TableContext:
         assert token == "a" * 32

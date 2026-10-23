@@ -19,6 +19,9 @@ export type SubscriptionPlan={
  active:boolean;
 };
 
+/** Plan visto por Plataforma: agrega el tope mensual de Concierge, que nunca llega a las empresas. */
+export type PlatformSubscriptionPlan=SubscriptionPlan&{maxConciergeConversations:number|null};
+
 export type SubscriptionPlanDraft={
  id?:string;
  code:string;
@@ -30,6 +33,7 @@ export type SubscriptionPlanDraft={
  trialDays:number;
  maxLocations:string;
  maxUsers:string;
+ maxConciergeConversations:string;
  moduleKeys:string[];
  termsVersion:string;
  active:boolean;
@@ -148,3 +152,41 @@ export type PlatformOrganizationDetail={
  administrators:Array<{name:string;email:string;active:boolean}>;
  locations:Array<{id:string;name:string;code:string;address:string;phone:string;active:boolean}>;
 };
+
+/** Uso de Fudia Concierge: exclusivo del administrador de plataforma. */
+export type ConciergeUsageMode="measure"|"warn"|"enforce";
+export type ConciergeLimitSource="plan"|"custom"|"unlimited";
+export type ConciergeAlert="none"|"warning"|"reached";
+export type ConciergeTier="lite"|"flash";
+
+export type ConciergeUsageSettings={mode:ConciergeUsageMode;warnPercent:number;updatedAt:string};
+export type ConciergeUsageSettingsInput={mode:ConciergeUsageMode;warnPercent:number};
+export type ConciergeUsageSettingsDraft={mode:ConciergeUsageMode;warnPercent:string};
+
+export type ConciergeUsageSummary={
+ organizationId:string;
+ organizationName:string;
+ month:string;
+ planName:string|null;
+ maxConversations:number|null;
+ limitSource:ConciergeLimitSource;
+ conversations:number;
+ rejectedConversations:number;
+ usagePercent:number|null;
+ alert:ConciergeAlert;
+};
+
+export type ConciergeUsagePage={settings:ConciergeUsageSettings;summary:{warning:number;reached:number};items:ConciergeUsageSummary[]};
+
+export type ConciergeTierTokens={tier:ConciergeTier;inputTokens:number;outputTokens:number};
+export type ConciergeUsageMonth={month:string;conversations:number;rejectedConversations:number;inputTokens:number;outputTokens:number};
+
+export type ConciergeUsageDetail=ConciergeUsageSummary&{
+ planMaxConversations:number|null;
+ settings:ConciergeUsageSettings;
+ tokens:ConciergeTierTokens[];
+ history:ConciergeUsageMonth[];
+};
+
+export type ConciergeLimitOverride={limitSource:ConciergeLimitSource;maxConversations:number|null};
+export type ConciergeLimitDraft={limitSource:ConciergeLimitSource;maxConversations:string};

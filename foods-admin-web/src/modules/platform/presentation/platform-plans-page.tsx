@@ -6,8 +6,9 @@ import {Controller,useForm} from "react-hook-form";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Button,EmptyState,ErrorState,FormField,Input,PageHeader,Select,Status,Tabs,TabsBar,Textarea,ModalHeader,ModalFooter} from "@/design-system";
 import {Icon} from "@/design-system/icons";
-import {useFeedback} from "@/providers";
-import type {PlatformModule,SubscriptionPlan,SubscriptionPlanDraft} from "../domain/types";
+import {useFeedback,useSession} from "@/providers";
+import type {PlatformModule,PlatformSubscriptionPlan,SubscriptionPlanDraft} from "../domain/types";
+import {formatCount} from "../domain/concierge-usage";
 import {planResolver} from "../domain/plan-schema";
 import {getPlatformOnboardingContext,listReadyModules,listSubscriptionPlans,saveSubscriptionPlan} from "../infrastructure/platform-api";
 import {PlatformPlansSkeleton} from "./platform-skeletons";
@@ -15,11 +16,12 @@ import {PlatformPlansSkeleton} from "./platform-skeletons";
 const billingTabs:Array<{value:"monthly"|"annual";label:string;icon:"calendar"|"refresh"}>=[{value:"monthly",label:"Mensual",icon:"calendar"},{value:"annual",label:"Anual",icon:"refresh"}];
 const blank:SubscriptionPlanDraft={
  code:"",name:"",description:"",currency:"PEN",monthlyPrice:"",annualPrice:"",trialDays:0,
- maxLocations:"",maxUsers:"",moduleKeys:[],termsVersion:"",active:true,
+ maxLocations:"",maxUsers:"",maxConciergeConversations:"",moduleKeys:[],termsVersion:"",active:true,
 };
 
 export function PlatformPlansPage(){
  const{notify}=useFeedback();
+ const{location}=useSession();
  const client=useQueryClient();
  const plans=useQuery({queryKey:["platform-plans"],queryFn:listSubscriptionPlans});
  const modules=useQuery({queryKey:["platform-ready-modules"],queryFn:listReadyModules});
@@ -28,15 +30,16 @@ export function PlatformPlansPage(){
  const[billing,setBilling]=useState<"monthly"|"annual">("monthly");
  const save=useMutation({
   mutationFn:saveSubscriptionPlan,
-  onSuccess:()=>{setDraft(null);void client.invalidateQueries({queryKey:["platform-plans"]});void client.invalidateQueries({queryKey:["platform-onboarding-context"]});notify({tone:"success",title:"Plan guardado",message:"Precios, límites y módulos del plan quedaron actualizados."})},
+  onSuccess:()=>{setDraft(null);void client.invalidateQueries({queryKey:["platform-plans"]});void client.invalidateQueries({queryKey:["platform-onboarding-context"]});void client.invalidateQueries({queryKey:["platform-concierge-usage"]});void client.invalidateQueries({queryKey:["platform-concierge-usage-detail"]});notify({tone:"success",title:"Plan guardado",message:"Precios, límites y módulos del plan quedaron actualizados."})},
   onError:e=>notify({tone:"danger",title:"No se pudo guardar",message:e.message}),
  });
  const visible=(plans.data?.items??[]).filter(plan=>plan.code!=="legacy");
  const moduleMap=new Map((modules.data??[]).map(module=>[module.key,module]));
- const edit=(plan:SubscriptionPlan)=>setDraft({
+ const edit=(plan:PlatformSubscriptionPlan)=>setDraft({
   id:plan.id,code:plan.code,name:plan.name,description:plan.description,currency:plan.currency,
   monthlyPrice:plan.monthlyPrice,annualPrice:plan.annualPrice,trialDays:plan.trialDays,
   maxLocations:plan.maxLocations?.toString()??"",maxUsers:plan.maxUsers?.toString()??"",
+  maxConciergeConversations:plan.maxConciergeConversations?.toString()??"",
   moduleKeys:plan.moduleKeys,termsVersion:plan.termsVersion,active:plan.active,
  });
 
@@ -71,6 +74,7 @@ export function PlatformPlansPage(){
          <div><dt>Locales</dt><dd>{plan.maxLocations??"∞"}</dd></div>
          <div><dt>Usuarios</dt><dd>{plan.maxUsers??"∞"}</dd></div>
          <div><dt>Prueba</dt><dd>{plan.trialDays?plan.trialDays+" días":"No"}</dd></div>
+         <div className="plan-capacity-wide"><dt>Conversaciones de Concierge al mes</dt><dd>{plan.maxConciergeConversations===null?"Ilimitado":formatCount(plan.maxConciergeConversations,location?.country)}</dd></div>
        </dl>
        <section className="plan-includes">
          <header><h3>Incluye {included.length} módulos</h3></header>
@@ -103,6 +107,7 @@ function PlanDialog({value:initial,modules,currencies,busy,close,save}:{value:Su
      <FormField label="Días de prueba" error={errors.trialDays?.message}><Input type="number" inputMode="numeric" min="0" max="365" step="1" {...register("trialDays")}/></FormField>
      <FormField label="Máx. locales" help="Vacío = sin límite." error={errors.maxLocations?.message}><Input type="number" inputMode="numeric" min="1" step="1" {...register("maxLocations")}/></FormField>
      <FormField label="Máx. usuarios" help="Vacío = sin límite." error={errors.maxUsers?.message}><Input type="number" inputMode="numeric" min="1" step="1" {...register("maxUsers")}/></FormField>
+     <FormField label="Conversaciones de Concierge al mes" help="Vacío = ilimitado. Solo lo ve Plataforma." error={errors.maxConciergeConversations?.message}><Input type="number" inputMode="numeric" min="1" step="1" {...register("maxConciergeConversations")}/></FormField>
      <label className="switch-row compact"><input type="checkbox" {...register("active")}/><span/><b>Plan disponible para nuevas empresas</b></label>
     </div>
     <Controller control={control} name="moduleKeys" render={({field})=>{

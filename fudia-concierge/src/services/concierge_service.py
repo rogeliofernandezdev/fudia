@@ -36,6 +36,7 @@ from src.services.delivery_tools import apply_quote, delivery_summary
 from src.services.formatting import whatsapp_text
 from src.services.menu_tools import unavailable_carta_reply
 from src.services.ports import (
+    CONVERSATION_LIMIT_CODE,
     AllowAllRateLimiter,
     ConversationLease,
     ConversationLock,
@@ -48,6 +49,7 @@ from src.services.ports import (
     RateLimiter,
     TableStartCodes,
     conversation_identity,
+    message_ref,
 )
 from src.services.processing import TurnJournal, recovery_reply
 from src.services.service_tools import bill_summary
@@ -58,6 +60,7 @@ from src.services.start_codes import (
 )
 from src.services.tool_registry import ToolRegistry
 from src.services.tooling import cart_payload
+from src.services.usage_meter import TokenMeter, current_meter, metering
 from src.services.welcome import welcome_message
 
 logger = logging.getLogger(__name__)
@@ -91,6 +94,16 @@ RATE_LIMITED_REPLY = (
     "Has enviado muchos mensajes en poco tiempo. "
     "Continúa con tu pedido dentro de un momento."
 )
+# foods-backend did not open a new conversation this month. The diner is
+# invited to order in person; caps and plans are never mentioned.
+CONVERSATION_LIMIT_TABLE_REPLY = (
+    "En este momento no podemos tomar tu pedido por WhatsApp. "
+    "Por favor, pide directamente al personal del restaurante en tu mesa."
+)
+CONVERSATION_LIMIT_DELIVERY_REPLY = (
+    "En este momento no podemos tomar pedidos por WhatsApp. "
+    "Te esperamos en el local para atenderte en mesa."
+)
 
 # How a reply relates to the session: untouched, changed, or changed and
 # recorded in the transcript the agents read.
@@ -104,6 +117,12 @@ class _LegacyRouter:
         user_message: str,
     ) -> ConciergeRoute:
         return "order"
+
+
+def conversation_id_for(message_id: str) -> str:
+    """Id of the attention opened by this message. Deterministic, so a retry
+    of the same message reopens (and counts) the same conversation."""
+    return message_ref(f"conversation:{message_id}")[:32]
 
 
 def extract_qr_token(text: str) -> str | None:
@@ -396,18 +415,75 @@ class ConciergeService:
                 message, identity, record, RATE_LIMITED_REPLY
             )
 
-        lease = ConversationLease(
-            self.conversation_lock,
-            identity,
-            await self.conversation_lock.acquire(identity),
-        )
-        try:
-            return await self._guarded(
-                lease,
-                self._process_locked(message, channel_key, lease),
+        with metering() as meter:
+            lease = ConversationLease(
+                self.conversation_lock,
+                identity,
+                await self.conversation_lock.acquire(identity),
             )
-        finally:
-            await self.conversation_lock.release(identity, lease.token)
+            try:
+                record = await self._guarded(
+                    lease,
+                    self._process_locked(message, channel_key, lease),
+                )
+            finally:
+                await self.conversation_lock.release(identity, lease.token)
+        await self._report_usage(meter, message, record)
+        return record
+
+    async def _report_usage(
+        self,
+        meter: TokenMeter,
+        message: InboundMessage,
+        record: ProcessingRecord,
+    ) -> None:
+        """Persist the turn's tokens per company in foods-backend. Each attempt
+        of a message is its own request: a retried turn really spent again."""
+        tiers = meter.tiers()
+        if not tiers or not meter.qr_token or not meter.conversation_id:
+            return
+        request_id = f"{message_ref(message.message_id)[:32]}:{record.attempts}"
+        try:
+            await self.fudia.report_usage(
+                meter.qr_token, meter.conversation_id, request_id, tiers
+            )
+        except Exception as exc:
+            log_event(
+                logger,
+                "concierge.usage.report_failed",
+                conversation=meter.conversation_id,
+                errorType=type(exc).__name__,
+                code=getattr(exc, "code", ""),
+            )
+
+    async def _open_conversation(
+        self,
+        token: str,
+        conversation_id: str,
+        kind: Literal["table", "delivery"],
+    ) -> bool:
+        """Count a new attention. False only when foods-backend refuses new
+        conversations this month; any other failure keeps serving the diner
+        (the conversation is still counted by its first usage report)."""
+        try:
+            await self.fudia.open_conversation(token, conversation_id, kind)
+        except FudiaError as exc:
+            if exc.code == CONVERSATION_LIMIT_CODE:
+                log_event(
+                    logger,
+                    "concierge.conversation.limit_reached",
+                    conversation=conversation_id,
+                    kind=kind,
+                )
+                return False
+            log_event(
+                logger,
+                "concierge.conversation.open_failed",
+                conversation=conversation_id,
+                kind=kind,
+                code=exc.code,
+            )
+        return True
 
     async def _prepare_unlocked(
         self,
@@ -578,6 +654,9 @@ class ConciergeService:
         record.reply = reply
         record.stage = "reply_ready"
         record.conversation_id = conversation_id or session.conversation_id
+        meter = current_meter()
+        if meter is not None:
+            meter.bind(session.qr_token, record.conversation_id)
         # Session, effects and the prepared reply become durable together.
         await journal.checkpoint(with_session=change != "none")
         return record
@@ -608,10 +687,17 @@ class ConciergeService:
                     "en este momento. Pide ayuda al personal.",
                     "none",
                 )
+            conversation_id = conversation_id_for(message.message_id)
+            if not await self._open_conversation(
+                token, conversation_id, "table"
+            ):
+                # The current session, if any, stays as it was: a
+                # conversation in progress is never cut.
+                return CONVERSATION_LIMIT_TABLE_REPLY, "none"
             # A new QR opens a new context: the previous table's cart,
             # pending confirmation and handoff no longer apply.
             session.qr_token = token
-            session.conversation_id = uuid4().hex
+            session.conversation_id = conversation_id
             session.context_sequence = message.sequence
             session.table = table
             session.mode = "table"
@@ -659,6 +745,12 @@ class ConciergeService:
             )
             if memory is None:
                 return SCAN_QR_REPLY, "none"
+            if not await self._open_conversation(
+                memory.qr_token,
+                conversation_id_for(message.message_id),
+                "delivery",
+            ):
+                return CONVERSATION_LIMIT_DELIVERY_REPLY, "none"
             session.qr_token = memory.qr_token
             self._open_delivery(
                 session, message, memory.venue, memory.customer_name
@@ -672,6 +764,12 @@ class ConciergeService:
             if session.table is None:
                 return SCAN_QR_REPLY, "none"
             if await self._table_service_ended(session):
+                if not await self._open_conversation(
+                    session.qr_token or "",
+                    conversation_id_for(message.message_id),
+                    "delivery",
+                ):
+                    return CONVERSATION_LIMIT_DELIVERY_REPLY, "none"
                 venue = session.venue or VenueContext(
                     organizationName=session.table.organizationName,
                     locationName=session.table.locationName,
@@ -769,7 +867,7 @@ class ConciergeService:
     ) -> None:
         """New context without a table: nothing from the table carries over
         (cart, confirmation, handoff or transcript)."""
-        session.conversation_id = uuid4().hex
+        session.conversation_id = conversation_id_for(message.message_id)
         session.context_sequence = message.sequence
         session.mode = "delivery"
         session.table = None

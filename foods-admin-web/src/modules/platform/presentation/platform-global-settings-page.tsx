@@ -11,6 +11,7 @@ import {Button,ConfirmDialog,EmptyState,ErrorState,FormField,Icon,Input,PageHead
 import {useFeedback} from "@/providers";
 import type {PlatformWhatsAppChannel,PlatformWhatsAppChannelDraft} from "../domain/types";
 import {getPlatformGlobalCatalogs,listPlatformWhatsAppChannels,savePlatformWhatsAppChannel} from "../infrastructure/platform-api";
+import {ConciergeUsageSettingsPanel} from "./platform-concierge-usage";
 
 type CountryLookupOption={label:string;value:string};
 const countrySelectStyles=createLookupSelectStyles<CountryLookupOption>();
@@ -104,6 +105,7 @@ export function PlatformGlobalSettingsPage(){
     </tbody></DataTable>
     <div className="management-cards">{items.map(item=><article key={item.id}><header><span className="row-icon r0"><Icon name="chat"/></span><div><b>{item.countryName}</b><small>{item.countryCode}</small></div>{status(item)}</header><dl><div><dt>Nombre</dt><dd>{item.displayName}</dd></div><div><dt>Número</dt><dd>{item.phoneNumber}</dd></div><div><dt>Moneda</dt><dd>{currencyOf(item.countryCode)}</dd></div></dl><footer>{actions(item)}</footer></article>)}</div></>}
   </section>
+  <ConciergeUsageSettingsPanel/>
 
   {draft&&<div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={()=>{setDraft(null);setEditingId(undefined)}} className="crud-modal platform-channel-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="global-channel-title" aria-busy={save.isPending}><ModalHeader title="Canal global de WhatsApp" titleId="global-channel-title" icon="chat" subtitle={editingId?"EDITAR CANAL":"NUEVO CANAL"} onClose={()=>{setDraft(null);setEditingId(undefined)}} busy={save.isPending} closeLabel="Cerrar"/>
    <form onSubmit={event=>{event.preventDefault();submit()}}>

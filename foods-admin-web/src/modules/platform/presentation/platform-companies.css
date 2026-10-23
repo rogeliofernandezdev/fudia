@@ -18,7 +18,7 @@
 .platform-companies-kpi .kpi-label{width:70%;height:var(--size-10);border-radius:var(--radius-control)}
 
 .platform-companies-panel{overflow:hidden}
-.platform-companies-table{min-width:var(--size-1020)}
+.platform-companies-table{min-width:var(--size-1160)}
 .platform-companies-table td{vertical-align:middle}
 .platform-companies-table tr.inactive td{color:var(--ink-500)}
 .platform-company-name{display:flex;align-items:center;gap:var(--space-2-5);min-width:var(--size-220)}

@@ -12,23 +12,31 @@ function compile(file,imports={}){
 }
 const routes=compile("src/shared/routing/page-routes.ts");
 const navigation=compile("src/shell/navigation.ts",{"@/shared/routing/page-routes":routes});
-const context={user:{platformAdmin:false},modules:{reportes:true,pos:true,pedidos:true,cocina:true,mesas:true,caja:true,productos:true,combos:true,inventario:true,compras:true,clientes:true,locales:true,fiscal:true,usuarios:true},menuAccess:["*"],permissions:["*"]};
+const context={user:{platformAdmin:false},modules:{reportes:true,pos:true,pedidos:true,cocina:true,mesas:true,caja:true,productos:true,combos:true,clientes:true,locales:true,fiscal:true,usuarios:true,whatsapp_bot:true},menuAccess:["*"],permissions:["*"]};
+const impulso={...context,modules:{...context.modules,reservas:true,recetas:true,inventario:true,kardex:true,compras:true,costos:true}};
 const keys=ctx=>navigation.visibleNavigation(ctx).flatMap(group=>group.items.map(item=>item.module));
 
-test("Emprende presenta Menús y combos, Inventario y Compras sin módulos ajenos al plan",()=>{
+test("Emprende presenta venta, atención y Concierge sin abastecimiento ni control",()=>{
  const modules=keys(context);
- for(const key of ["productos","combos","inventario","compras"])assert.ok(modules.includes(key),key);
- for(const key of ["recetas","kardex","reservas","facturacion","whatsapp_bot"])assert.equal(modules.includes(key),false,key);
+ for(const key of ["productos","combos","whatsapp_bot"])assert.ok(modules.includes(key),key);
+ for(const key of ["inventario","compras","kardex","recetas","reservas","costos","facturacion"])assert.equal(modules.includes(key),false,key);
  assert.ok(navigation.visibleNavigation(context).every(group=>group.items.length>0));
 });
 
-test("Inventario y Compras incluidos conservan acceso y acciones propios del rol",()=>{
+test("Impulso suma abastecimiento, recetas, reservas y gastos a todo Emprende",()=>{
+ const base=keys(context),modules=keys(impulso);
+ for(const key of base)assert.ok(modules.includes(key),key);
+ for(const key of ["inventario","compras","kardex","recetas","reservas","costos"])assert.ok(modules.includes(key),key);
+});
+
+test("Inventario y Compras de Impulso conservan acceso y acciones propios del rol",()=>{
  for(const [module,permission] of [["inventario","inventory.read"],["compras","purchases.read"]]){
   const item=navigation.navigationGroups.flatMap(group=>group.items).find(item=>item.module===module);
-  assert.equal(navigation.canOpenNavigationItem(item,{...context,menuAccess:[module],permissions:[permission]}),true);
-  assert.equal(navigation.canOpenNavigationItem(item,{...context,menuAccess:["pedidos"],permissions:[permission]}),false);
-  assert.equal(navigation.canOpenNavigationItem(item,{...context,menuAccess:[module],permissions:["orders.read"]}),false);
-  assert.equal(navigation.canOpenNavigationItem(item,{...context,modules:{...context.modules,[module]:false}}),false);
+  assert.equal(navigation.canOpenNavigationItem(item,{...impulso,menuAccess:[module],permissions:[permission]}),true);
+  assert.equal(navigation.canOpenNavigationItem(item,{...impulso,menuAccess:["pedidos"],permissions:[permission]}),false);
+  assert.equal(navigation.canOpenNavigationItem(item,{...impulso,menuAccess:[module],permissions:["orders.read"]}),false);
+  assert.equal(navigation.canOpenNavigationItem(item,{...impulso,modules:{...impulso.modules,[module]:false}}),false);
+  assert.equal(navigation.canOpenNavigationItem(item,context),false);
  }
 });
 

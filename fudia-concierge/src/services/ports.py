@@ -68,6 +68,23 @@ class FudiaBackend(Protocol):
     async def create_delivery_order(
         self, token: str, order: dict[str, Any]
     ) -> OrderResult: ...
+    async def open_conversation(
+        self, token: str, conversation_id: str, kind: str
+    ) -> None:
+        """Count a new attention; idempotent by `conversation_id`. Raises
+        `FudiaError` with `CONVERSATION_LIMIT_CODE` when no new conversation
+        may start this month."""
+    async def report_usage(
+        self,
+        token: str,
+        conversation_id: str,
+        request_id: str,
+        tiers: list[dict[str, Any]],
+    ) -> None: ...
+
+
+# foods-backend rejects opening a conversation (never one in progress).
+CONVERSATION_LIMIT_CODE = "concierge_conversation_limit_reached"
 
 
 class LockLostError(RuntimeError):

@@ -231,9 +231,21 @@ remotos y el aislamiento de caché por usuario/empresa/local. Contexto verifica
 que el selector conserve el local activo para empresa y plataforma; la empresa
 se muestra por separado en la barra superior.
 
-`plan-navigation.test.mjs` verifica Menús y combos, Inventario y Compras en Emprende, ocultación de
+`plan-navigation.test.mjs` verifica Menús y combos y Concierge en Emprende, abastecimiento, recetas, reservas y gastos desde Impulso como suma acumulativa, ocultación de
 módulos no incluidos incluso con rol de acceso total, separación de acceso y
 lectura, catálogo de Plataforma y recarga de roles/permisos al cambiar el plan.
+
+`concierge-usage-limit.test.mjs` protege el tope mensual de Fudia Concierge, solo
+de Plataforma: el plan valida y envía `maxConciergeConversations` como número o
+`null` (vacío = ilimitado) y lo muestra con los demás límites; el plan que ven las
+empresas (`SubscriptionPlan`, `getCurrentOrganizationSubscription`) no gana el
+campo y ningún archivo fuera de `src/modules/platform` (incluido Admin › Fudia
+Concierge) referencia `concierge-usage` ni el tope. Ejecuta la API real con `fetch`
+simulado (rutas `concierge-usage`, máximo 100 empresas, PATCH de configuración y de
+excepción), los formatos regionales («0 / N», «N / Ilimitado»), validaciones, el
+mapeo central de avisos (ámbar cerca del tope, rojo tope alcanzado, «Solo
+medición» en modo medir), skeleton/error/vacío de cada vista, el modal de detalle
+de solo lectura y la ausencia de topes comerciales fijos en el frontend.
 
 Probar validaciones, permisos, filtros, errores y vacíos. Validar 390 px, escritorio
 y accesibilidad. Puertas: lint, typecheck, tests y build.

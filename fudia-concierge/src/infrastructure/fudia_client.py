@@ -25,6 +25,10 @@ from src.services.ports import FudiaError as FudiaError
 
 
 def _endpoint_label(path: str) -> str:
+    if path.endswith("/usage"):
+        return "usage"
+    if path.endswith("/conversations"):
+        return "conversations"
     if "/menu" in path:
         return "menu"
     if "/orders" in path:
@@ -429,6 +433,43 @@ class FudiaClient:
             json={"latitude": latitude, "longitude": longitude},
         )
         return DeliveryQuote.model_validate(body)
+
+    async def open_conversation(
+        self,
+        token: str,
+        conversation_id: str,
+        kind: str,
+    ) -> None:
+        # Idempotent by conversationId: a retry never counts twice.
+        await self._json(
+            "POST",
+            (
+                "/v1/integrations/concierge/"
+                f"{quote(token, safe='')}/conversations"
+            ),
+            retryable=True,
+            json={"conversationId": conversation_id, "kind": kind},
+        )
+
+    async def report_usage(
+        self,
+        token: str,
+        conversation_id: str,
+        request_id: str,
+        tiers: list[dict[str, Any]],
+    ) -> None:
+        # Best effort and single attempt: it must not delay the reply.
+        await self._json(
+            "POST",
+            (
+                "/v1/integrations/concierge/"
+                f"{quote(token, safe='')}"
+                "/conversations/"
+                f"{quote(conversation_id, safe='')}"
+                "/usage"
+            ),
+            json={"requestId": request_id, "tiers": tiers},
+        )
 
     async def create_delivery_order(
         self,

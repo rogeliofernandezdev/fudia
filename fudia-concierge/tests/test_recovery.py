@@ -65,6 +65,21 @@ class Backend:
         self.bill_requests: list[str] = []
         self.die_after_order = False
         self.die_after_bill = False
+        self.opened: dict[str, str] = {}
+
+    async def open_conversation(
+        self, token: str, conversation_id: str, kind: str
+    ) -> None:
+        self.opened[conversation_id] = kind
+
+    async def report_usage(
+        self,
+        token: str,
+        conversation_id: str,
+        request_id: str,
+        tiers: list[dict[str, Any]],
+    ) -> None:
+        return None
 
     async def resolve_table(self, token: str) -> TableContext:
         return TableContext(

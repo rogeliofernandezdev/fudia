@@ -532,6 +532,49 @@ los módulos previos, precios, límites, suscripciones y roles; no modifica otro
 planes. Su respaldo permite rollback sin eliminar habilitaciones preexistentes
 ni sobrescribir ediciones administrativas posteriores.
 
+La migración 000090 homologa los planes acumulativos: Emprende queda con la
+operación de venta y atención más `whatsapp_bot`; Impulso y Escala suman
+`reservas`, `recetas`, `inventario`, `kardex`, `compras` y `costos`. Las
+suscripciones Emprende no canceladas con Inventario o Compras activos pasan al
+plan inactivo `emprende-abastecimiento`, copia de precio y límites de Emprende
+con sus módulos previos más Concierge. Sincroniza `inventario`, `compras`,
+`costos` y `whatsapp_bot` en suscripciones no canceladas de esos planes. No
+cambia precios, límites, descripciones, roles ni el plan `legacy`. El rollback
+restaura solo filas que no fueron editadas después.
+
+### Límite mensual de Fudia Concierge
+
+La migración 000091 añade `subscription_plans.max_concierge_conversations`
+(NULL = ilimitado; 500/1500/4000 para emprende/impulso/escala y el valor de
+Emprende en `emprende-abastecimiento`). Solo `PlatformPlanView` (catálogo de
+Plataforma) lo expone; `SubscriptionPlanView`, usado en `/v1/admin/plans` y en
+la suscripción de la empresa, no lo incluye.
+
+- `concierge_usage_settings`: una sola fila con el modo global
+  (`measure`/`warn`/`enforce`, inicial `measure`), `warn_percent` (inicial 80)
+  y quién lo cambió.
+- `organization_concierge_limits`: excepción por empresa; una fila con
+  `max_conversations` NULL es ilimitada; sin fila rige el tope del plan.
+- `concierge_monthly_usage`: contador por empresa y mes (zona horaria de la
+  empresa) con conversaciones y rechazos. Abrir una conversación bloquea esta
+  fila, de modo que dos aperturas concurrentes no superan el tope.
+- `concierge_conversations`: una fila por `conversationId` de Concierge y
+  empresa (`kind` `table` o `delivery`); reabrir el mismo id no cuenta otra vez.
+- `concierge_token_usage`: tokens de entrada y salida por turno (`request_id`)
+  y nivel (`lite`/`flash`), idempotentes por conversación, turno y nivel, y
+  atribuidos al mes de la conversación.
+
+`POST /v1/integrations/concierge/{token}/conversations` registra la atención:
+201 nueva, 200 si ya existía y, solo en modo `enforce` con el tope efectivo
+alcanzado, 409 `concierge_conversation_limit_reached` (el rechazo suma en
+`rejected_conversations`). Las conversaciones ya registradas siempre se aceptan.
+`POST .../conversations/{conversationId}/usage` guarda los tokens del turno y
+nunca rechaza: una conversación desconocida se registra y cuenta sin aplicar el
+tope. Las rutas `/v1/platform/concierge-usage*` y
+`/v1/platform/organizations/{id}/concierge-usage` exigen administrador de
+plataforma; `alert` es `none` en modo `measure`, `warning` desde el porcentaje
+de aviso y `reached` al 100 %.
+
 ### Zona horaria sugerida en onboarding
 
 `platform_countries.default_timezone` contiene una sugerencia IANA editable en

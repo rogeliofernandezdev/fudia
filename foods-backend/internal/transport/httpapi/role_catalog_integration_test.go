@@ -38,16 +38,21 @@ func TestEmprendeSubscriptionAndRoleCatalog(t *testing.T) {
 	})
 
 	modules := api.activeModules(s.OrganizationID)
-	if !modules["combos"] || !modules["inventario"] || !modules["compras"] || modules["recetas"] || modules["kardex"] {
+	if !modules["combos"] || !modules["whatsapp_bot"] || modules["inventario"] || modules["compras"] || modules["kardex"] || modules["recetas"] || modules["costos"] {
 		t.Fatalf("incorrect Emprende modules: %+v", modules)
 	}
 	catalog, err := api.loadRoleCatalog(ctx, s)
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, menu := range []string{"combos", "inventario", "compras"} {
+	for _, menu := range []string{"combos", "whatsapp_bot"} {
 		if !slices.Contains(roleCatalogValues(catalog.Menus), menu) {
 			t.Fatalf("Emprende cannot configure %s", menu)
+		}
+	}
+	for _, menu := range []string{"inventario", "compras", "kardex", "costos"} {
+		if slices.Contains(roleCatalogValues(catalog.Menus), menu) {
+			t.Fatalf("Emprende exposes Impulso module %s", menu)
 		}
 	}
 	rec := httptest.NewRecorder()
@@ -77,12 +82,12 @@ func TestEmprendeSubscriptionAndRoleCatalog(t *testing.T) {
 		}
 		if role.SystemKey != nil && *role.SystemKey == "administrator" {
 			foundAdmin = true
-			for _, menu := range []string{"combos", "inventario", "compras"} {
+			for _, menu := range []string{"combos", "whatsapp_bot"} {
 				if !slices.Contains(role.MenuAccess, menu) {
 					t.Fatalf("company administrator missing %s", menu)
 				}
 			}
-			for _, permission := range []string{"inventory.read", "inventory.manage", "purchases.read", "purchases.manage"} {
+			for _, permission := range []string{"menu.read", "menu.manage", "organizations.manage"} {
 				if !slices.Contains(role.Permissions, permission) {
 					t.Fatalf("company administrator missing %s", permission)
 				}
@@ -140,7 +145,7 @@ func TestEmprendeSubscriptionAndRoleCatalog(t *testing.T) {
 	req = httptest.NewRequest("GET", "/v1/admin/permission-catalog", nil).WithContext(context.WithValue(ctx, scopeKey{}, s))
 	rec = httptest.NewRecorder()
 	api.getPermissionCatalog(rec, req)
-	if rec.Code != 200 || strings.Contains(rec.Body.String(), "recipes.manage") || !strings.Contains(rec.Body.String(), "combos") || !strings.Contains(rec.Body.String(), "inventory.manage") || !strings.Contains(rec.Body.String(), "purchases.manage") {
+	if rec.Code != 200 || strings.Contains(rec.Body.String(), "recipes.manage") || !strings.Contains(rec.Body.String(), "combos") || strings.Contains(rec.Body.String(), "inventory.manage") || strings.Contains(rec.Body.String(), "purchases.manage") {
 		t.Fatalf("unscoped HTTP catalog: %d %s", rec.Code, rec.Body.String())
 	}
 	// The platform master retains the commercial catalog, not a tenant-restricted view.

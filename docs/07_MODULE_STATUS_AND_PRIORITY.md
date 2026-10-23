@@ -6,6 +6,20 @@
 
 ## Última revisión
 
+Homologación de planes (2026-10-23): planes acumulativos con módulos Disponibles.
+Emprende vende y atiende en un local e incluye Concierge; Impulso suma Inventario,
+Compras, Kardex, Recetas, Reservas y Costos y gastos; Escala tiene los módulos de
+Impulso con más locales y usuarios. Matriz oficial en `docs/01_PRODUCT_SCOPE.md`.
+Migración 000090; las empresas Emprende existentes conservan abastecimiento en el
+plan no vendible «Emprende con abastecimiento».
+
+Límite mensual de Concierge (2026-10-23, migración 000091): foods-backend cuenta
+conversaciones (QR y delivery/recojo tras la mesa) y tokens Lite/Flash por
+empresa y mes. Topes por plan 500/1,500/4,000, modo global `measure` (inicial),
+`warn` o `enforce`, aviso al 80 % y excepción por empresa, todo editable en
+Plataforma sin desplegar y visible solo para el administrador de plataforma.
+Arranca solo midiendo: con un mes de costo real se confirman o ajustan los topes.
+
 Ticket operativo de pago (2026-10-08): PDF de 80 mm con preview y acción explícita
 de impresión después del cobro, copias desde POS/Ventas y contexto real del local.
 No es facturación electrónica; la emisión fiscal permanece en P0. Cierre A4 intacto.
@@ -70,8 +84,8 @@ recetas, mesas o movimientos.
 Al primer ingreso, el Administrador de empresa recibe un asistente persistente
 de puesta en marcha. Este valida la operación real (tipo de atención, carta,
 caja y mesas cuando corresponda) y muestra pasos opcionales según los módulos
-contratados. Emprende ofrece Inventario y Compras como pasos opcionales;
-no presenta ni exige Recetas.
+contratados. Inventario y Compras son pasos opcionales cuando el plan los
+incluye (desde Impulso); Recetas nunca es obligatorio.
 
 ### ✅ Medios de pago
 
@@ -178,7 +192,7 @@ esté terminado. Falta la parte de costeo y rentabilidad.
 | Usuarios y roles | `usuarios` | 🟢 Ready / activable | Roles/permisos forman parte del onboarding. Auditoría de cierre pendiente. |
 | Facturación | `facturacion` | 🔵 En desarrollo | Pantallas actuales no constituyen facturación electrónica real. **Siguiente prioridad.** |
 | Integraciones | `integraciones` | 🔵 En desarrollo | Pendiente completar adaptadores operativos. |
-| Fudia Concierge | `whatsapp_bot` | ✅ **100% cerrado** | QR/WhatsApp, menú real, pedidos/KDS, combos, modificadores, rondas, cuenta, handoff, multiagente, cola durable, aislamiento multicanal, resiliencia, observabilidad, evals y CI/Docker están cerrados. La activación comercial sigue dependiendo del plan/entitlement; el go-live requiere credenciales externas. Ampliación 2026-10-16: delivery/recojo tras la mesa con tarifas por distancia (pendiente CI con PostgreSQL y evals reales). |
+| Fudia Concierge | `whatsapp_bot` | ✅ **100% cerrado** | QR/WhatsApp, menú real, pedidos/KDS, combos, modificadores, rondas, cuenta, handoff, multiagente, cola durable, aislamiento multicanal, resiliencia, observabilidad, evals y CI/Docker están cerrados. La activación comercial sigue dependiendo del plan/entitlement; el go-live requiere credenciales externas. Ampliación 2026-10-16: delivery/recojo tras la mesa con tarifas por distancia (pendiente CI con PostgreSQL y evals reales). Ampliación 2026-10-23: medición y tope mensual de conversaciones por plan con modo medir/avisar/bloquear, solo para Plataforma (migración 000091). |
 
 ---
 

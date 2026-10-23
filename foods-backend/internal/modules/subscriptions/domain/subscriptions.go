@@ -17,6 +17,13 @@ type SubscriptionPlanView struct {
 	TermsVersion string   `json:"termsVersion"`
 	Active       bool     `json:"active"`
 }
+
+// PlatformPlanView is the plan as the platform administrator sees it. The
+// Concierge cap is never part of the company-facing SubscriptionPlanView.
+type PlatformPlanView struct {
+	SubscriptionPlanView
+	MaxConciergeConversations *int `json:"maxConciergeConversations"`
+}
 type SubscriptionPlanInput struct {
 	Code         string   `json:"code"`
 	Name         string   `json:"name"`
@@ -30,6 +37,8 @@ type SubscriptionPlanInput struct {
 	ModuleKeys   []string `json:"moduleKeys"`
 	TermsVersion string   `json:"termsVersion"`
 	Active       bool     `json:"active"`
+	// Monthly Fudia Concierge conversations; nil is unlimited. Platform only.
+	MaxConciergeConversations *int `json:"maxConciergeConversations"`
 }
 type SubscriptionPaymentView struct {
 	ID                string  `json:"id"`

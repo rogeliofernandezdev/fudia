@@ -30,6 +30,7 @@ from src.metrics import (
     SCOPE_DECISIONS,
 )
 from src.observability import fingerprint, log_event
+from src.services.usage_meter import record_tokens
 
 logger = logging.getLogger(__name__)
 
@@ -126,6 +127,7 @@ def _record_usage(
     )
     MODEL_TOKENS.labels(role=role, tier=tier, direction="input").inc(prompt)
     MODEL_TOKENS.labels(role=role, tier=tier, direction="output").inc(output)
+    record_tokens(tier, prompt, output)
     return prompt, output
 
 

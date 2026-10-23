@@ -69,10 +69,10 @@ func (r *Subscriptions) SaveModule(ctx context.Context, org, key string, active 
 func (r *Subscriptions) CreatePlan(ctx context.Context, s scope, in domain.SubscriptionPlanInput) (string, error) {
 	var id string
 	err := r.db(ctx).QueryRow(ctx, `
-			INSERT INTO subscription_plans(code,name,description,currency,monthly_price,annual_price,trial_days,max_locations,max_users,module_keys,terms_version,active)
-			VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+			INSERT INTO subscription_plans(code,name,description,currency,monthly_price,annual_price,trial_days,max_locations,max_users,module_keys,terms_version,active,max_concierge_conversations)
+			VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
 			RETURNING id
-		`, in.Code, in.Name, in.Description, in.Currency, in.MonthlyPrice, in.AnnualPrice, in.TrialDays, in.MaxLocations, in.MaxUsers, in.ModuleKeys, in.TermsVersion, in.Active).Scan(&id)
+		`, in.Code, in.Name, in.Description, in.Currency, in.MonthlyPrice, in.AnnualPrice, in.TrialDays, in.MaxLocations, in.MaxUsers, in.ModuleKeys, in.TermsVersion, in.Active, in.MaxConciergeConversations).Scan(&id)
 	return id, subscriptionError(err)
 }
 func (r *Subscriptions) PlanLimitsExceeded(ctx context.Context, s scope, id string, in domain.SubscriptionPlanInput) (bool, error) {
@@ -95,15 +95,26 @@ func (r *Subscriptions) UpdatePlan(ctx context.Context, s scope, id string, in d
 	tag, err := r.db(ctx).Exec(ctx, `
 				UPDATE subscription_plans
 				SET code=$2,name=$3,description=$4,currency=$5,monthly_price=$6,annual_price=$7,
-				    trial_days=$8,max_locations=$9,max_users=$10,module_keys=$11,terms_version=$12,active=$13,updated_at=now()
+				    trial_days=$8,max_locations=$9,max_users=$10,module_keys=$11,terms_version=$12,active=$13,
+				    max_concierge_conversations=$14,updated_at=now()
 				WHERE id=$1 AND code<>'legacy'
-			`, id, in.Code, in.Name, in.Description, in.Currency, in.MonthlyPrice, in.AnnualPrice, in.TrialDays, in.MaxLocations, in.MaxUsers, in.ModuleKeys, in.TermsVersion, in.Active)
+			`, id, in.Code, in.Name, in.Description, in.Currency, in.MonthlyPrice, in.AnnualPrice, in.TrialDays, in.MaxLocations, in.MaxUsers, in.ModuleKeys, in.TermsVersion, in.Active, in.MaxConciergeConversations)
 	return tag.RowsAffected(), subscriptionError(err)
 }
-func (r *Subscriptions) Plans(ctx context.Context) ([]domain.SubscriptionPlanView, error) {
+func (r *Subscriptions) PlatformPlan(ctx context.Context, id string) (domain.PlatformPlanView, error) {
+	var out domain.PlatformPlanView
+	err := r.db(ctx).QueryRow(ctx, `
+		SELECT id,code,name,description,currency,monthly_price::text,annual_price::text,
+		       trial_days,max_locations,max_users,module_keys,terms_version,active,max_concierge_conversations
+		FROM subscription_plans
+		WHERE id=$1
+	`, id).Scan(&out.ID, &out.Code, &out.Name, &out.Description, &out.Currency, &out.MonthlyPrice, &out.AnnualPrice, &out.TrialDays, &out.MaxLocations, &out.MaxUsers, &out.ModuleKeys, &out.TermsVersion, &out.Active, &out.MaxConciergeConversations)
+	return out, subscriptionError(err)
+}
+func (r *Subscriptions) Plans(ctx context.Context) ([]domain.PlatformPlanView, error) {
 	rows, err := r.db(ctx).Query(ctx, `
 		SELECT id,code,name,description,currency,monthly_price::text,annual_price::text,
-		       trial_days,max_locations,max_users,module_keys,terms_version,active
+		       trial_days,max_locations,max_users,module_keys,terms_version,active,max_concierge_conversations
 		FROM subscription_plans
 		ORDER BY active DESC,
 		         CASE code WHEN 'emprende' THEN 1 WHEN 'impulso' THEN 2 WHEN 'escala' THEN 3 ELSE 4 END,
@@ -113,10 +124,10 @@ func (r *Subscriptions) Plans(ctx context.Context) ([]domain.SubscriptionPlanVie
 		return nil, err
 	}
 	defer rows.Close()
-	items := []domain.SubscriptionPlanView{}
+	items := []domain.PlatformPlanView{}
 	for rows.Next() {
-		var item domain.SubscriptionPlanView
-		if err = rows.Scan(&item.ID, &item.Code, &item.Name, &item.Description, &item.Currency, &item.MonthlyPrice, &item.AnnualPrice, &item.TrialDays, &item.MaxLocations, &item.MaxUsers, &item.ModuleKeys, &item.TermsVersion, &item.Active); err != nil {
+		var item domain.PlatformPlanView
+		if err = rows.Scan(&item.ID, &item.Code, &item.Name, &item.Description, &item.Currency, &item.MonthlyPrice, &item.AnnualPrice, &item.TrialDays, &item.MaxLocations, &item.MaxUsers, &item.ModuleKeys, &item.TermsVersion, &item.Active, &item.MaxConciergeConversations); err != nil {
 			return nil, err
 		}
 		items = append(items, item)

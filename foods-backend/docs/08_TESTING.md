@@ -68,6 +68,28 @@ idempotencia, aislamiento de otros planes, precios/límites/contratos intactos y
 rollback con habilitaciones previas y ediciones posteriores. Roles y catálogos
 presentan ambos módulos sin conceder acciones nuevas a los otros perfiles.
 
+La migración 90 verifica la matriz acumulativa de planes, precios/límites
+intactos, paso de Emprende con abastecimiento al plan no vendible, Emprende sin
+abastecimiento, suscripción cancelada intacta, Compras/Costos/Concierge en
+Impulso y Escala, y rollback sin sobrescribir ediciones posteriores. El catálogo
+de roles de Emprende expone Concierge y oculta Inventario, Compras, Kardex y
+Costos.
+
+`concierge_usage_integration_test.go` cubre el límite mensual de Concierge:
+conteo idempotente por `conversationId`, modo `measure` sin bloqueo ni aviso
+pasado el tope, `warn` con aviso al porcentaje y al 100 % sin bloquear,
+`enforce` con 409 explícito sin cortar la conversación en curso, rechazos
+contados aparte, excepción propia/ilimitada/del plan y cambio del tope del plan
+aplicados sin redeploy, tokens Lite/Flash idempotentes por turno, reporte de una
+conversación no registrada sin bloqueo e historial. Ocho aperturas concurrentes
+con tope 3 abren exactamente 3. Una sesión real de administrador de empresa
+recibe 403 en todas las rutas de Plataforma (incluidos planes) sin aplicar
+escrituras, y contexto, suscripción, planes disponibles y Concierge settings no
+exponen topes, modo ni uso. La migración 91 se prueba down/up (topes base,
+`emprende-abastecimiento` = Emprende, `legacy` ilimitado, política única en
+`measure`/80 %). `concierge/domain/usage_test.go` prueba tope efectivo, bloqueo
+y avisos. Ejecutar en PostgreSQL temporal.
+
 ## Combinaciones y conversiones de compra
 
 `inventory_combinations_integration_test.go` prueba siembra para nuevas

@@ -253,6 +253,45 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { description: Credencial de Fudia Concierge inválida }
         "404": { description: QR inexistente, inactivo o deshabilitado }
+  /v1/integrations/concierge/{token}/conversations:
+    post:
+      operationId: openConciergeConversation
+      summary: Abre y cuenta una conversación de Concierge (atención completa iniciada por QR o continuación en delivery/recojo)
+      description: "Idempotente por conversationId. Cuenta una conversación por empresa y mes (zona horaria de la empresa). En modo enforce, al alcanzar el tope efectivo rechaza solo conversaciones nuevas; una conversación ya abierta nunca se corta."
+      security: [{ conciergeServiceKey: [] }]
+      parameters:
+        - { in: path, name: token, required: true, schema: { type: string, minLength: 32, maxLength: 32 } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ConciergeConversationInput" }
+      responses:
+        "200": { description: Conversación ya registrada (reintento), content: { application/json: { schema: { $ref: "#/components/schemas/ConciergeConversation" } } } }
+        "201": { description: Conversación nueva registrada, content: { application/json: { schema: { $ref: "#/components/schemas/ConciergeConversation" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { description: Credencial de Fudia Concierge inválida }
+        "404": { description: "QR inexistente, inactivo o deshabilitado" }
+        "409": { description: "concierge_conversation_limit_reached: no se abren conversaciones nuevas este mes", content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+  /v1/integrations/concierge/{token}/conversations/{conversationId}/usage:
+    post:
+      operationId: reportConciergeConversationUsage
+      summary: Registra los tokens consumidos por nivel de modelo en un turno de la conversación
+      description: "Idempotente por requestId y nivel. Nunca bloquea: si la conversación no estaba registrada se registra y cuenta sin aplicar el tope."
+      security: [{ conciergeServiceKey: [] }]
+      parameters:
+        - { in: path, name: token, required: true, schema: { type: string, minLength: 32, maxLength: 32 } }
+        - { in: path, name: conversationId, required: true, schema: { type: string, maxLength: 160 } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ConciergeUsageReport" }
+      responses:
+        "204": { description: Consumo registrado }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { description: Credencial de Fudia Concierge inválida }
+        "404": { description: "QR inexistente, inactivo o deshabilitado" }
   /v1/integrations/concierge/{token}/orders/{orderId}:
     get:
       operationId: getConciergeOrderStatus
@@ -385,23 +424,62 @@ paths:
       security: [{ sessionCookie: [] }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/SubscriptionPaymentInput" } } } }
       responses: { "201": { description: Pago registrado }, "400": { $ref: "#/components/responses/BadRequest" }, "403": { $ref: "#/components/responses/Forbidden" }, "404": { description: Empresa o suscripción inexistente, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }, "409": { description: Moneda distinta o referencia duplicada, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } } }
+  /v1/platform/concierge-usage/settings:
+    get:
+      operationId: getConciergeUsageSettings
+      summary: Lee el modo de aplicación y el porcentaje de aviso del límite mensual de Concierge
+      description: Solo administrador de plataforma.
+      security: [{ sessionCookie: [] }]
+      responses: { "200": { description: Configuración global, content: { application/json: { schema: { $ref: "#/components/schemas/ConciergeUsageSettings" } } } }, "403": { $ref: "#/components/responses/Forbidden" } }
+    patch:
+      operationId: updateConciergeUsageSettings
+      summary: Cambia el modo (measure, warn, enforce) y el porcentaje de aviso sin desplegar
+      description: Solo administrador de plataforma.
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ConciergeUsageSettingsInput" } } } }
+      responses: { "200": { description: Configuración guardada, content: { application/json: { schema: { $ref: "#/components/schemas/ConciergeUsageSettings" } } } }, "400": { $ref: "#/components/responses/BadRequest" }, "403": { $ref: "#/components/responses/Forbidden" } }
+  /v1/platform/concierge-usage:
+    get:
+      operationId: listConciergeUsage
+      summary: Uso de Concierge del mes en curso por empresa, con tope efectivo y aviso
+      description: "Solo administrador de plataforma. organizationId (repetible, máximo 100) limita los items; summary cuenta todas las empresas."
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: query, name: organizationId, required: false, style: form, explode: true, schema: { type: array, maxItems: 100, items: { type: string, format: uuid } } }
+      responses: { "200": { description: Uso mensual, content: { application/json: { schema: { $ref: "#/components/schemas/ConciergeUsagePage" } } } }, "400": { $ref: "#/components/responses/BadRequest" }, "403": { $ref: "#/components/responses/Forbidden" } }
+  /v1/platform/organizations/{id}/concierge-usage:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    get:
+      operationId: getOrganizationConciergeUsage
+      summary: Uso de Concierge de una empresa (mes en curso, tokens por nivel e historial de 6 meses) y su excepción de tope
+      description: Solo administrador de plataforma.
+      security: [{ sessionCookie: [] }]
+      responses: { "200": { description: Uso de la empresa, content: { application/json: { schema: { $ref: "#/components/schemas/ConciergeUsageDetail" } } } }, "403": { $ref: "#/components/responses/Forbidden" }, "404": { description: Empresa inexistente, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } } }
+    patch:
+      operationId: updateOrganizationConciergeLimit
+      summary: Define la excepción de tope de la empresa (usar el del plan, un tope propio o ilimitado)
+      description: Solo administrador de plataforma. Aplica desde la siguiente conversación sin desplegar.
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ConciergeLimitOverrideInput" } } } }
+      responses: { "200": { description: Excepción guardada, content: { application/json: { schema: { $ref: "#/components/schemas/ConciergeUsageDetail" } } } }, "400": { $ref: "#/components/responses/BadRequest" }, "403": { $ref: "#/components/responses/Forbidden" }, "404": { description: Empresa inexistente, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } } }
   /v1/platform/plans:
     get:
       operationId: listSubscriptionPlans
+      description: Solo administrador de plataforma. Incluye el tope mensual de conversaciones de Concierge, que no se expone a las empresas.
       security: [{ sessionCookie: [] }]
-      responses: { "200": { description: Catálogo SaaS de planes } }
+      responses: { "200": { description: Catálogo SaaS de planes, content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/PlatformSubscriptionPlan" } } } } } } } }
     post:
       operationId: createSubscriptionPlan
       security: [{ sessionCookie: [] }]
-      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/SubscriptionPlanInput" } } } }
-      responses: { "201": { description: Plan creado }, "400": { $ref: "#/components/responses/BadRequest" }, "403": { $ref: "#/components/responses/Forbidden" }, "409": { description: Código o configuración en conflicto } }
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/PlatformSubscriptionPlanInput" } } } }
+      responses: { "201": { description: Plan creado, content: { application/json: { schema: { $ref: "#/components/schemas/PlatformSubscriptionPlan" } } } }, "400": { $ref: "#/components/responses/BadRequest" }, "403": { $ref: "#/components/responses/Forbidden" }, "409": { description: Código o configuración en conflicto } }
   /v1/platform/plans/{id}:
     parameters: [{ $ref: "#/components/parameters/EntityId" }]
     patch:
       operationId: updateSubscriptionPlan
       security: [{ sessionCookie: [] }]
-      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/SubscriptionPlanInput" } } } }
-      responses: { "200": { description: Plan actualizado }, "409": { description: El cambio viola uso actual o configuración del plan } }
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/PlatformSubscriptionPlanInput" } } } }
+      responses: { "200": { description: Plan actualizado, content: { application/json: { schema: { $ref: "#/components/schemas/PlatformSubscriptionPlan" } } } }, "409": { description: El cambio viola uso actual o configuración del plan } }
   /v1/platform/subscription:
     patch:
       operationId: updateOrganizationSubscription
@@ -1728,6 +1806,18 @@ components:
     LoginRequest: { type: object, required: [email, password], properties: { email: { type: string, format: email }, password: { type: string, minLength: 8 } } }
     SubscriptionPlanInput: { type: object, required: [code, name, currency, monthlyPrice, annualPrice, trialDays, moduleKeys, termsVersion, active], properties: { code: { type: string, pattern: "^[a-z0-9][a-z0-9_-]{1,39}$" }, name: { type: string }, description: { type: string }, currency: { type: string, pattern: "^[A-Z]{3}$" }, monthlyPrice: { type: string }, annualPrice: { type: string }, trialDays: { type: integer, minimum: 0, maximum: 365 }, maxLocations: { type: [integer, "null"], minimum: 1 }, maxUsers: { type: [integer, "null"], minimum: 1 }, moduleKeys: { type: array, minItems: 1, uniqueItems: true, items: { type: string } }, termsVersion: { type: string }, active: { type: boolean } } }
     SubscriptionPlan: { allOf: [{ $ref: "#/components/schemas/SubscriptionPlanInput" }, { type: object, required: [id], properties: { id: { type: string, format: uuid } } }] }
+    PlatformSubscriptionPlanInput: { allOf: [{ $ref: "#/components/schemas/SubscriptionPlanInput" }, { type: object, properties: { maxConciergeConversations: { type: [integer, "null"], minimum: 1, description: "Tope mensual de conversaciones de Concierge; null es ilimitado. Solo Plataforma." } } }] }
+    PlatformSubscriptionPlan: { allOf: [{ $ref: "#/components/schemas/SubscriptionPlan" }, { type: object, required: [maxConciergeConversations], properties: { maxConciergeConversations: { type: [integer, "null"] } } }] }
+    ConciergeConversationInput: { type: object, required: [conversationId, kind], properties: { conversationId: { type: string, minLength: 1, maxLength: 160 }, kind: { type: string, enum: [table, delivery], description: "table: atención iniciada por QR; delivery: delivery o recojo después de la mesa" } } }
+    ConciergeConversation: { type: object, required: [conversationId, kind, month], properties: { conversationId: { type: string }, kind: { type: string, enum: [table, delivery] }, month: { type: string, pattern: "^[0-9]{4}-[0-9]{2}$" } } }
+    ConciergeUsageReport: { type: object, required: [requestId, tiers], properties: { requestId: { type: string, minLength: 1, maxLength: 160 }, tiers: { type: array, minItems: 1, maxItems: 2, items: { $ref: "#/components/schemas/ConciergeTierTokens" } } } }
+    ConciergeTierTokens: { type: object, required: [tier, inputTokens, outputTokens], properties: { tier: { type: string, enum: [lite, flash] }, inputTokens: { type: integer, minimum: 0 }, outputTokens: { type: integer, minimum: 0 } } }
+    ConciergeUsageSettingsInput: { type: object, required: [mode, warnPercent], properties: { mode: { type: string, enum: [measure, warn, enforce], description: "measure solo cuenta; warn avisa al administrador de plataforma; enforce además rechaza conversaciones nuevas al 100 %" }, warnPercent: { type: integer, minimum: 1, maximum: 100 } } }
+    ConciergeUsageSettings: { allOf: [{ $ref: "#/components/schemas/ConciergeUsageSettingsInput" }, { type: object, required: [updatedAt], properties: { updatedAt: { type: string, format: date-time } } }] }
+    ConciergeLimitOverrideInput: { type: object, required: [limitSource], properties: { limitSource: { type: string, enum: [plan, custom, unlimited] }, maxConversations: { type: [integer, "null"], minimum: 1, description: Requerido solo con limitSource=custom } } }
+    ConciergeUsageSummary: { type: object, required: [organizationId, organizationName, month, planName, maxConversations, limitSource, conversations, rejectedConversations, usagePercent, alert], properties: { organizationId: { type: string, format: uuid }, organizationName: { type: string }, month: { type: string, pattern: "^[0-9]{4}-[0-9]{2}$" }, planName: { type: [string, "null"] }, maxConversations: { type: [integer, "null"], description: Tope efectivo; null es ilimitado }, limitSource: { type: string, enum: [plan, custom, unlimited] }, conversations: { type: integer }, rejectedConversations: { type: integer }, usagePercent: { type: [integer, "null"] }, alert: { type: string, enum: [none, warning, reached], description: "Siempre none en modo measure" } } }
+    ConciergeUsagePage: { type: object, required: [settings, summary, items], properties: { settings: { $ref: "#/components/schemas/ConciergeUsageSettings" }, summary: { type: object, required: [warning, reached], properties: { warning: { type: integer }, reached: { type: integer } } }, items: { type: array, items: { $ref: "#/components/schemas/ConciergeUsageSummary" } } } }
+    ConciergeUsageDetail: { allOf: [{ $ref: "#/components/schemas/ConciergeUsageSummary" }, { type: object, required: [planMaxConversations, settings, tokens, history], properties: { planMaxConversations: { type: [integer, "null"] }, settings: { $ref: "#/components/schemas/ConciergeUsageSettings" }, tokens: { type: array, items: { $ref: "#/components/schemas/ConciergeTierTokens" } }, history: { type: array, description: "Últimos 6 meses con actividad, el más reciente primero", items: { type: object, required: [month, conversations, rejectedConversations, inputTokens, outputTokens], properties: { month: { type: string }, conversations: { type: integer }, rejectedConversations: { type: integer }, inputTokens: { type: integer }, outputTokens: { type: integer } } } } } }] }
     SubscriptionUpdateInput: { type: object, required: [planId, billingCycle, status, autoRenew, termsAccepted], properties: { planId: { type: string, format: uuid }, billingCycle: { type: string, enum: [monthly, annual] }, status: { type: string, enum: [trial, active, past_due, cancelled] }, autoRenew: { type: boolean }, termsAccepted: { type: boolean } } }
     SubscriptionPaymentInput: { type: object, required: [amount, currency, status, provider], properties: { amount: { type: string }, currency: { type: string, pattern: "^[A-Z]{3}$" }, status: { type: string, enum: [pending, paid, failed, refunded] }, provider: { type: string }, externalReference: { type: string }, paidAt: { type: string, format: date-time } } }
     PlatformOrganization: { type: object, required: [id, legalName, tradeName, taxId, active, createdAt, subscription, lastPayment, paymentStanding], properties: { id: { type: string, format: uuid }, legalName: { type: string }, tradeName: { type: string }, taxId: { type: string }, active: { type: boolean }, createdAt: { type: string, format: date-time }, subscription: { oneOf: [{ type: "null" }, { type: object, required: [plan, billingCycle, priceAmount, currency, status, renewsAt, trialEndsAt, autoRenew], properties: { plan: { type: object, required: [id, code, name], properties: { id: { type: string, format: uuid }, code: { type: string }, name: { type: string } } }, billingCycle: { type: string, enum: [monthly, annual] }, priceAmount: { type: string }, currency: { type: string }, status: { type: string, enum: [trial, active, past_due, cancelled] }, renewsAt: { type: [string, "null"], format: date-time }, trialEndsAt: { type: [string, "null"], format: date-time }, autoRenew: { type: boolean } } }] }, lastPayment: { oneOf: [{ type: "null" }, { type: object, required: [amount, currency, paidAt], properties: { amount: { type: string }, currency: { type: string }, paidAt: { type: [string, "null"], format: date-time } } }] }, paymentStanding: { type: string, enum: [up_to_date, due_soon, overdue, trial, cancelled, none], description: "Al día, por vencer dentro de dueSoonDays, vencida (past_due), en prueba, cancelada o sin suscripción" } } }

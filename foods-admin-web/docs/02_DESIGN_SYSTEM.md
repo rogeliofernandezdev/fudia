@@ -1836,7 +1836,7 @@ Formulario de cliente (`ModalForm` + `ModalBody`, un solo scroll con barra fina)
 - El catálogo distingue **Disponible**, **En desarrollo** y **Planificado**.
 - `active` representa únicamente si un módulo **Disponible** está habilitado para una empresa; no representa su estado de desarrollo.
 - El Administrador de plataforma ve todos los módulos en navegación y catálogo, incluso si están inactivos o no terminados.
-- Los usuarios de empresa solo ven módulos disponibles, incluidos en su plan, activos para su organización y permitidos por su rol. Emprende incluye «Menús y combos», «Inventario» y «Compras», sin nuevas pantallas ni controles específicos del plan.
+- Los usuarios de empresa solo ven módulos disponibles, incluidos en su plan, activos para su organización y permitidos por su rol. Emprende incluye «Menús y combos» y «Fudia Concierge»; «Inventario», «Compras», «Kárdex», «Recetas», «Reservas» y «Costos y gastos» aparecen desde Impulso. No hay pantallas ni controles específicos de un plan: todo depende de los módulos efectivos.
 - Usuarios y roles muestra únicamente accesos y acciones de módulos efectivos del plan. Los contadores y la vista previa cuentan esos mismos elementos; se omiten grupos vacíos. La empresa no recibe el catálogo comercial completo de Plataforma.
 - Un módulo **En desarrollo** o **Planificado** nunca puede activarse para una empresa; el backend debe rechazar cualquier intento aunque el frontend falle.
 
@@ -2164,3 +2164,19 @@ PostgreSQL para mantener compatibilidad durante el despliegue.
 - «Agregar productos» reutiliza la comanda con solo líneas nuevas y aparece únicamente con cuenta Abierta. «Cerrar cuenta» es primaria y aparece solo después de entregar todos los productos de todas las rondas. Después se muestra el enlace a cobro solo con entrega completa, permiso y saldo; no se ofrecen más consumos ni reapertura.
 - Cocina y Barra reutilizan el mismo KDS con selector de estación alimentado por backend, permisos independientes y las mismas primitivas visuales.
 - En móvil (390 px) las filas permiten wrap sin desbordar; la entrega global y las demás acciones del pie conservan 44 px y ancho disponible. No se duplican clases de los estilos base.
+
+### Tope mensual de Fudia Concierge (Plataforma)
+
+Exclusivo del administrador de plataforma; las empresas nunca ven su tope ni su
+consumo. Planes SaaS muestra «Conversaciones de Concierge al mes» en una fila
+propia de la capacidad (vacío = «Ilimitado»). Configuración global elige el modo
+con opciones excluyentes de 44 px (Solo medir, Avisar, Bloquear conversaciones
+nuevas, cada una con su explicación) y el porcentaje de aviso, y aclara que en
+Bloquear las conversaciones en curso nunca se cortan. En Empresas y planes cada
+empresa muestra «usadas / tope» («0 / N» sin consumo, «N / Ilimitado») con
+skeleton propio y «No disponible» ante error; `Status` ámbar «Cerca del tope» y
+rojo «Tope alcanzado» salen de `conciergeAlertTone`, y un `InlineNotice` resume la
+cartera o el error con Reintentar. La ficha de detalle agrega una sección de solo
+lectura; el formulario de la empresa ofrece uso, origen del tope, tokens Lite/Flash,
+historial de 6 meses (vacío «Aún no hay historial») y la excepción Usar el del
+plan / Tope propio / Ilimitado.

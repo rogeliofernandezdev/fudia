@@ -114,6 +114,28 @@ El token QR es fijo por mesa: cuando el cliente se va, el siguiente comensal usa
 
 Al terminar se abre un contexto nuevo (`conversationId` nuevo, carrito, confirmación, handoff e historial vacíos, `mode=delivery`). La respuesta de ese turno empieza con un aviso: la atención en mesa terminó y puede pedir para recojo o delivery. Un nuevo QR vuelve siempre al modo mesa.
 
+## Conversaciones y límite mensual
+
+Cada contexto nuevo es una conversación que foods-backend cuenta por empresa y
+mes: el QR de una mesa (`kind=table`) y el paso a recojo o delivery tras la
+mesa (`kind=delivery`). Antes de cambiar la sesión, Concierge llama a
+`POST .../conversations` con un `conversationId` derivado del mensaje que la
+abre, de modo que reprocesar ese mensaje no cuenta dos veces.
+
+- Si foods-backend responde `409 concierge_conversation_limit_reached` (modo
+  `enforce` con el tope del mes alcanzado), el bot responde en texto plano
+  «En este momento no podemos tomar tu pedido por WhatsApp. Por favor, pide
+  directamente al personal del restaurante en tu mesa.» (o, para delivery,
+  «…Te esperamos en el local para atenderte en mesa.») y no modifica la sesión.
+  Nunca menciona topes ni planes.
+- Una conversación en curso nunca se corta: sus mensajes no vuelven a pasar
+  por el tope; solo se evalúa al abrir una nueva.
+- Cualquier otro fallo al registrar la conversación no interrumpe la atención:
+  el primer reporte de tokens la registra y la cuenta.
+- Después de cada turno con llamadas al modelo, Concierge reporta los tokens por
+  nivel (`lite`/`flash`) en `POST .../conversations/{conversationId}/usage`
+  (best effort, un intento, no retrasa la respuesta si falla).
+
 ## Pedido sin mesa: recojo o delivery
 
 1. El cliente arma el carrito con la carta real, igual que en mesa.

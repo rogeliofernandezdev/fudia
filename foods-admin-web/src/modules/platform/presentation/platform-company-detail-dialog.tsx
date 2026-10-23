@@ -10,6 +10,7 @@ import {companySettingsPath} from "@/shared/routing/page-routes";
 import {getPlatformOrganization} from "../infrastructure/platform-api";
 import type {Option,PlatformOrganizationDetail} from "../domain/types";
 import {paymentStandingTone,subscriptionStatusLabel,subscriptionStatusTone} from "../domain/subscription-status";
+import {ConciergeUsageDialogSection} from "./platform-concierge-usage";
 
 export function CompanyDetailDialog({organizationId,standingOptions,close}:{organizationId:string;standingOptions:Option[];close:()=>void}){
  const detail=useQuery({queryKey:["platform-organization",organizationId],queryFn:()=>getPlatformOrganization(organizationId)});
@@ -69,6 +70,8 @@ function CompanyDetailContent({company,standingOptions}:{company:PlatformOrganiz
      <div><dt>Condiciones</dt><dd>{subscription.termsVersion?`Versión ${subscription.termsVersion}${subscription.termsAcceptedAt?" · aceptadas el "+date(subscription.termsAcceptedAt):""}`:"Sin aceptación registrada"}</dd></div>
     </dl>:<p className="company-detail-empty">La empresa no tiene una suscripción registrada.</p>}
    </section>
+
+   <ConciergeUsageDialogSection organizationId={company.id}/>
 
    <section className="company-detail-section">
     <header><small>CONTACTO</small><h3>Administradores</h3></header>

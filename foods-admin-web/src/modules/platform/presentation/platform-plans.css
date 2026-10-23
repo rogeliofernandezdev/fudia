@@ -23,6 +23,8 @@
 .plan-capacity{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-px);margin:0 var(--space-5) var(--space-5);overflow:hidden;border:var(--stroke-1) solid var(--line);border-radius:var(--radius-card);background:var(--line)}
 .plan-capacity>div{display:grid;gap:var(--space-1);padding:var(--space-2-5) var(--space-3);background:var(--cloud-50)}
 .plan-capacity dt{font-size:var(--font-size-label);font-weight:var(--weight-bold);color:var(--ink-500)}
+/* El tope de Concierge ocupa su propia fila: la etiqueta es larga y no debe recortarse a 390 px. */
+.plan-capacity>.plan-capacity-wide{grid-column:1/-1;display:flex;align-items:baseline;justify-content:space-between;gap:var(--space-3)}
 .plan-capacity dd{margin:0;font-size:var(--font-size-base);font-weight:var(--weight-bold);font-variant-numeric:tabular-nums;color:var(--ink-950);white-space:nowrap}
 .plan-includes{flex:1;padding:var(--space-4) var(--space-5) var(--space-5);border-top:var(--stroke-1) solid var(--line)}
 .plan-includes>header{display:block;min-height:0;padding:0;margin:0 0 var(--space-3);border:0;background:none}

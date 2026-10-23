@@ -37,6 +37,9 @@ Concierge emite logs JSON para:
 - código corto de mesa no emitido al escanear; se usa el mensaje `FUDIA:<token>` (`concierge.start_code.failed`);
 - predecesor ausente al ordenar (`concierge.queue.order_gap`);
 - fallo de mantenimiento de cola (`concierge.queue.maintenance_failed`);
+- conversación nueva rechazada por el tope mensual (`concierge.conversation.limit_reached`),
+  fallo al registrarla sin cortar la atención (`concierge.conversation.open_failed`) y
+  fallo al reportar tokens (`concierge.usage.report_failed`);
 - errores operativos.
 
 Para llamadas LLM se registran modelo, nivel (`lite`/`flash`), latencia, número de tools e input/output tokens (incluidos los de razonamiento), pero no prompt ni respuesta.
@@ -70,6 +73,17 @@ Para llamadas LLM se registran modelo, nivel (`lite`/`flash`), latencia, número
 - `fudia_concierge_queue_pending`, `fudia_concierge_queue_dead_letter`, `fudia_concierge_queue_stream_length` (estado compartido de Redis: agregar con `max`).
 
 No se usan teléfonos, mesa, organización, local, QR, conversationId o messageId como labels.
+
+## Consumo por empresa
+
+El costo por empresa no sale de Prometheus. Los adaptadores Vertex y OpenAI
+registran los tokens de cada llamada en el medidor del turno
+(`src/services/usage_meter.py`, un `ContextVar`) además de
+`fudia_concierge_model_tokens_total`. Al terminar el turno, Concierge envía los
+totales por nivel a foods-backend
+(`POST .../conversations/{conversationId}/usage`), que los persiste por empresa
+y mes junto con el conteo de conversaciones. El uso mensual, el tope y los
+avisos solo se ven en Plataforma (administrador de plataforma).
 
 ## Trazabilidad persistente
 

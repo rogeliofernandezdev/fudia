@@ -13,6 +13,22 @@ Cada producto trae también `remaining`: porciones o unidades que quedan hoy en 
 Al agregar al carrito (producto suelto, con modificadores o combo y cada opción elegida), Concierge suma lo que ya está en el carrito y, si se pasa, responde `insufficient_stock` con `available` e `inCart` sin agregar nada; el agente dice cuántos quedan y pregunta si agrega esa cantidad.
 Es una validación temprana: al confirmar, foods-backend vuelve a validar con bloqueo y responde `insufficient_stock` o `insufficient_portions` si otra mesa pidió antes.
 
+## Conversaciones y consumo
+
+POST /v1/integrations/concierge/{token}/conversations
+
+Cuerpo `{conversationId, kind: table|delivery}`. Registra y cuenta una atención
+por empresa y mes; es idempotente por `conversationId` (201 nueva, 200 ya
+registrada). En modo `enforce` con el tope mensual alcanzado responde
+`409 concierge_conversation_limit_reached` solo para conversaciones nuevas.
+
+POST /v1/integrations/concierge/{token}/conversations/{conversationId}/usage
+
+Cuerpo `{requestId, tiers: [{tier: lite|flash, inputTokens, outputTokens}]}`.
+Guarda los tokens del turno, idempotente por `requestId` y nivel; responde 204 y
+nunca bloquea. Concierge usa `requestId = <referencia del mensaje>:<intento>`.
+Topes, modo y uso solo se consultan en Plataforma; Concierge no los conoce.
+
 ## Rondas
 
 POST /v1/integrations/concierge/{token}/orders

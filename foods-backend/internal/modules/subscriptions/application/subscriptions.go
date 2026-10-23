@@ -38,7 +38,8 @@ type SubscriptionRepository interface {
 	CreatePlan(ctx context.Context, s scope, in domain.SubscriptionPlanInput) (string, error)
 	PlanLimitsExceeded(ctx context.Context, s scope, id string, in domain.SubscriptionPlanInput) (bool, error)
 	UpdatePlan(ctx context.Context, s scope, id string, in domain.SubscriptionPlanInput) (int64, error)
-	Plans(ctx context.Context) ([]domain.SubscriptionPlanView, error)
+	PlatformPlan(context.Context, string) (domain.PlatformPlanView, error)
+	Plans(ctx context.Context) ([]domain.PlatformPlanView, error)
 	AvailablePlans(ctx context.Context) ([]domain.SubscriptionPlanView, error)
 	OrganizationExists(context.Context, string) (bool, error)
 	MarkPastDue(ctx context.Context, s scope, organizationID string) (int64, error)
@@ -74,7 +75,7 @@ func NormalizePlanInput(in *domain.SubscriptionPlanInput) bool {
 	if !monthlyOK || !annualOK || monthly.Sign() < 0 || annual.Sign() < 0 || in.TrialDays < 0 || in.TrialDays > 365 {
 		return false
 	}
-	if (in.MaxLocations != nil && *in.MaxLocations < 1) || (in.MaxUsers != nil && *in.MaxUsers < 1) {
+	if (in.MaxLocations != nil && *in.MaxLocations < 1) || (in.MaxUsers != nil && *in.MaxUsers < 1) || (in.MaxConciergeConversations != nil && *in.MaxConciergeConversations < 1) {
 		return false
 	}
 	seen := map[string]bool{}
@@ -105,8 +106,8 @@ func (a *Subscriptions) SyncModules(ctx context.Context, organizationID string, 
 	}
 	return nil
 }
-func (a *Subscriptions) SavePlan(ctx context.Context, s scope, requestID string, in domain.SubscriptionPlanInput, create bool) (domain.SubscriptionPlanView, error) {
-	var result domain.SubscriptionPlanView
+func (a *Subscriptions) SavePlan(ctx context.Context, s scope, requestID string, in domain.SubscriptionPlanInput, create bool) (domain.PlatformPlanView, error) {
+	var result domain.PlatformPlanView
 	if !NormalizePlanInput(&in) {
 		return result, subscriptionFailure(apperror.Invalid, "invalid_plan", "Revisa código, precios, límites, módulos y versión de condiciones.")
 	}
@@ -157,14 +158,14 @@ func (a *Subscriptions) SavePlan(ctx context.Context, s scope, requestID string,
 		return result, subscriptionFailure(apperror.Unavailable, "plans_unavailable", "No pudimos guardar el plan.")
 	}
 	_ = a.audit.Record(ctx, s, map[bool]string{true: "subscription_plan.created", false: "subscription_plan.updated"}[create], "subscription_plan", id)
-	plan, err := a.repo.Plan(ctx, id, false)
+	plan, err := a.repo.PlatformPlan(ctx, id)
 	if err != nil {
 		return result, subscriptionFailure(apperror.Unavailable, "plans_unavailable", "El plan se guardó pero no pudimos volver a cargarlo.")
 	}
 	return plan, nil
 
 }
-func (a *Subscriptions) Plans(ctx context.Context) ([]domain.SubscriptionPlanView, error) {
+func (a *Subscriptions) Plans(ctx context.Context) ([]domain.PlatformPlanView, error) {
 	out, err := a.repo.Plans(ctx)
 	if err != nil {
 		return nil, subscriptionFailure(apperror.Unavailable, "plans_unavailable", "No pudimos cargar los planes.")

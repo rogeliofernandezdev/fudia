@@ -222,3 +222,13 @@ su anulación usa rojo sólido. La salida segura Cancelar de esa confirmación
 sigue neutra. Reutilizar `Button action="cancel"`, `"cancel-record"`, `"back"`
 y `"continue"`; Continuar coloca la flecha a la derecha. No añadir colores
 locales. Autoridad: `docs/02_DESIGN_SYSTEM.md` › Colores e intención de Cancelar.
+
+## Fudia Concierge en Plataforma
+
+Configuración global agrega, bajo los canales, el panel «Tope mensual de
+conversaciones» (modo y porcentaje de aviso). Empresas y planes suma la columna
+«Concierge del mes» (también en las tarjetas móviles) y un aviso de cartera sobre
+la tabla. El formulario de la empresa agrega, bajo la suscripción, dos paneles
+(consumo del mes y tope de la empresa) que pasan a una columna bajo 900 px y el
+historial de 6 meses con scroll horizontal controlado. Nada de esto aparece en
+pantallas, navegación ni configuración de empresa.

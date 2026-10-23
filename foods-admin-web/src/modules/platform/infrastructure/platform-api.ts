@@ -1,6 +1,7 @@
 import {ApiClientError,apiFetch} from "@/shared/api/client";
 import {expireBrowserSession} from "@/shared/session/expire-session";
-import type {Country,Currency,OrganizationSubscription,PlatformModule,PlatformOnboardingContext,PlatformOnboardingDraft,PlatformOrganizationDetail,PlatformOrganizationFilters,PlatformOrganizationPage,SubscriptionPlan,SubscriptionPlanDraft,PlatformWhatsAppChannel,PlatformWhatsAppChannelDraft} from "../domain/types";
+import type {ConciergeLimitOverride,ConciergeUsageDetail,ConciergeUsagePage,ConciergeUsageSettings,ConciergeUsageSettingsInput,Country,Currency,OrganizationSubscription,PlatformModule,PlatformOnboardingContext,PlatformOnboardingDraft,PlatformOrganizationDetail,PlatformOrganizationFilters,PlatformOrganizationPage,PlatformSubscriptionPlan,SubscriptionPlanDraft,PlatformWhatsAppChannel,PlatformWhatsAppChannelDraft} from "../domain/types";
+import {optionalLimit} from "../domain/concierge-usage";
 
 async function platformFetch<T>(path:string,init?:RequestInit):Promise<T>{
  const response=await fetch(`/api/platform/${path}`,{
@@ -28,8 +29,8 @@ async function platformFetch<T>(path:string,init?:RequestInit):Promise<T>{
  return body as T;
 }
 
-export async function listSubscriptionPlans():Promise<{items:SubscriptionPlan[]}>{
- return platformFetch<{items:SubscriptionPlan[]}>("plans");
+export async function listSubscriptionPlans():Promise<{items:PlatformSubscriptionPlan[]}>{
+ return platformFetch<{items:PlatformSubscriptionPlan[]}>("plans");
 }
 
 export async function listReadyModules():Promise<PlatformModule[]>{
@@ -53,14 +54,15 @@ export async function getPlatformGlobalCatalogs():Promise<{countryOptions:Countr
  return platformFetch<{countryOptions:Country[];currencyOptions:Currency[]}>("onboarding/catalogs?scope=all");
 }
 
-export async function saveSubscriptionPlan(draft:SubscriptionPlanDraft):Promise<SubscriptionPlan>{
+export async function saveSubscriptionPlan(draft:SubscriptionPlanDraft):Promise<PlatformSubscriptionPlan>{
  const payload={
   ...draft,
   trialDays:Number(draft.trialDays)||0,
-  maxLocations:draft.maxLocations.trim()?Number(draft.maxLocations):null,
-  maxUsers:draft.maxUsers.trim()?Number(draft.maxUsers):null,
+  maxLocations:optionalLimit(draft.maxLocations),
+  maxUsers:optionalLimit(draft.maxUsers),
+  maxConciergeConversations:optionalLimit(draft.maxConciergeConversations),
  };
- return platformFetch<SubscriptionPlan>(draft.id?`plans/${draft.id}`:"plans",{
+ return platformFetch<PlatformSubscriptionPlan>(draft.id?`plans/${draft.id}`:"plans",{
   method:draft.id?"PATCH":"POST",
   body:JSON.stringify(payload),
  });
@@ -113,3 +115,19 @@ export async function recordSubscriptionPayment(input:{amount:string;currency:st
 
 export async function listPlatformWhatsAppChannels(){return platformFetch<{items:PlatformWhatsAppChannel[]}>("whatsapp-channels");}
 export async function savePlatformWhatsAppChannel(draft:PlatformWhatsAppChannelDraft,id?:string){return platformFetch<PlatformWhatsAppChannel>(id?`whatsapp-channels/${id}`:"whatsapp-channels",{method:id?"PATCH":"POST",body:JSON.stringify(draft)});}
+
+/** Uso de Fudia Concierge: solo Plataforma. Las empresas nunca consultan su tope ni su consumo. */
+export async function getConciergeUsageSettings(){return platformFetch<ConciergeUsageSettings>("concierge-usage/settings");}
+export async function updateConciergeUsageSettings(input:ConciergeUsageSettingsInput){return platformFetch<ConciergeUsageSettings>("concierge-usage/settings",{method:"PATCH",body:JSON.stringify(input)});}
+
+/** El contrato admite hasta 100 empresas por consulta; `summary` siempre cuenta toda la cartera. */
+export async function listConciergeUsage(organizationIds:string[]){
+ const params=new URLSearchParams();
+ organizationIds.slice(0,100).forEach(id=>params.append("organizationId",id));
+ const query=params.toString();
+ return platformFetch<ConciergeUsagePage>(query?`concierge-usage?${query}`:"concierge-usage");
+}
+
+const conciergeUsagePath=(organizationId:string)=>`organizations/${encodeURIComponent(organizationId)}/concierge-usage`;
+export async function getOrganizationConciergeUsage(organizationId:string){return platformFetch<ConciergeUsageDetail>(conciergeUsagePath(organizationId));}
+export async function updateOrganizationConciergeLimit(organizationId:string,input:ConciergeLimitOverride){return platformFetch<ConciergeUsageDetail>(conciergeUsagePath(organizationId),{method:"PATCH",body:JSON.stringify(input)});}
