@@ -17,6 +17,13 @@ func New(pool *pgxpool.Pool) *Repository { return &Repository{pool} }
 
 var _ application.Repository = (*Repository)(nil)
 
+// localDayStartSQL es el instante en que empieza el día local (hoy - offset) del local $2.
+// Comparar created_at con ese límite usa los índices (organization_id,location_id,created_at);
+// convertir cada fila con (created_at AT TIME ZONE tz)::date obliga a leer todo el historial del local.
+func localDayStartSQL(offset string) string {
+	return `(SELECT (((now() AT TIME ZONE l.timezone)::date-(` + offset + `))::timestamp AT TIME ZONE l.timezone) FROM locations l WHERE l.id=$2 AND l.organization_id=$1)`
+}
+
 const netPaidSQL = `
 	COALESCE((
 	  SELECT sum(
@@ -27,7 +34,8 @@ const netPaidSQL = `
 	  WHERE p.order_id=o.id AND p.organization_id=o.organization_id AND p.location_id=o.location_id
 	),0)
 `
-const dashboardMovementsSQL = `
+
+var dashboardMovementsSQL = `
 	WITH loc AS (
 	  SELECT timezone,(now() AT TIME ZONE timezone)::date AS today
 	  FROM locations
@@ -39,7 +47,7 @@ const dashboardMovementsSQL = `
 	  JOIN orders o ON o.id=p.order_id AND o.organization_id=p.organization_id
 	  CROSS JOIN loc
 	  WHERE p.organization_id=$1 AND p.location_id=$2
-	    AND (p.created_at AT TIME ZONE loc.timezone)::date>=loc.today-$3::int
+	    AND p.created_at>=` + localDayStartSQL("$3::int") + `
 	  UNION ALL
 	  SELECT (pr.created_at AT TIME ZONE loc.timezone),-pr.amount,p.method,p.order_id,o.channel
 	  FROM payment_refunds pr
@@ -47,19 +55,18 @@ const dashboardMovementsSQL = `
 	  JOIN orders o ON o.id=p.order_id AND o.organization_id=p.organization_id
 	  CROSS JOIN loc
 	  WHERE pr.organization_id=$1 AND pr.location_id=$2
-	    AND (pr.created_at AT TIME ZONE loc.timezone)::date>=loc.today-$3::int
+	    AND pr.created_at>=` + localDayStartSQL("$3::int") + `
 	)`
-const dashboardPaidOrdersSQL = `
+var dashboardPaidOrdersSQL = `
 	SELECT o.id,o.total
 	FROM orders o
 	WHERE o.organization_id=$1 AND o.location_id=$2 AND o.status<>'cancelado'
 	  AND (` + netPaidSQL + `) >= o.total
-	  AND EXISTS(
-	    SELECT 1 FROM payments window_payment
-	    JOIN locations l ON l.id=window_payment.location_id AND l.organization_id=window_payment.organization_id
-	    WHERE window_payment.order_id=o.id AND window_payment.organization_id=o.organization_id AND window_payment.location_id=o.location_id
-	      AND (window_payment.created_at AT TIME ZONE l.timezone)::date
-	          BETWEEN (now() AT TIME ZONE l.timezone)::date-$3::int AND (now() AT TIME ZONE l.timezone)::date-$4::int
+	  AND o.id IN (
+	    SELECT window_payment.order_id FROM payments window_payment
+	    WHERE window_payment.organization_id=$1 AND window_payment.location_id=$2
+	      AND window_payment.created_at>=` + localDayStartSQL("$3::int") + `
+	      AND window_payment.created_at<` + localDayStartSQL("$4::int-1") + `
 	  )`
 
 type dashboardOperations = domain.DashboardOperations
@@ -300,29 +307,26 @@ func loadDashboardInsights(ctx context.Context, tx database.Executor, s scope, p
 }
 func (r *Repository) Dashboard(ctx context.Context, s scope, period domain.DashboardPeriod, canSeeExpected bool, labels map[string]string) (domain.Dashboard, error) {
 	tx := database.ExecutorFor(ctx, r.pool)
+	// El resumen comparte el pool con la operación: una consulta degradada se corta en vez de retener la conexión.
+	if _, err := tx.Exec(ctx, `SET LOCAL statement_timeout = '5s'`); err != nil {
+		return domain.Dashboard{}, &application.ReportError{Stage: application.Summary, Cause: err}
+	}
 	var err error
 	var salesNet, averageTicket string
 	var paidOrders, openOrders, critical, purchases, reservationsToday, kitchenPending int
 
 	err = tx.QueryRow(ctx, `
-		WITH loc AS (
-		  SELECT timezone
-		  FROM locations
-		  WHERE id=$2 AND organization_id=$1
-		),
-		today_payments AS (
+		WITH today_payments AS (
 		  SELECT p.order_id,p.amount
 		  FROM payments p
-		  CROSS JOIN loc
 		  WHERE p.organization_id=$1 AND p.location_id=$2
-		    AND (p.created_at AT TIME ZONE loc.timezone)::date BETWEEN (now() AT TIME ZONE loc.timezone)::date-($3::int-1) AND (now() AT TIME ZONE loc.timezone)::date
+		    AND p.created_at>=`+localDayStartSQL("$3::int-1")+` AND p.created_at<`+localDayStartSQL("-1")+`
 		),
 		today_refunds AS (
 		  SELECT pr.amount
 		  FROM payment_refunds pr
-		  CROSS JOIN loc
 		  WHERE pr.organization_id=$1 AND pr.location_id=$2
-		    AND (pr.created_at AT TIME ZONE loc.timezone)::date BETWEEN (now() AT TIME ZONE loc.timezone)::date-($3::int-1) AND (now() AT TIME ZONE loc.timezone)::date
+		    AND pr.created_at>=`+localDayStartSQL("$3::int-1")+` AND pr.created_at<`+localDayStartSQL("-1")+`
 		),
 		sales AS (
 		  SELECT
@@ -334,7 +338,7 @@ func (r *Repository) Dashboard(ctx context.Context, s scope, period domain.Dashb
 		  FROM orders o
 		  WHERE o.organization_id=$1 AND o.location_id=$2 AND o.status<>'cancelado'
 		    AND (`+netPaidSQL+`) >= o.total
-		    AND EXISTS(SELECT 1 FROM today_payments p WHERE p.order_id=o.id)
+		    AND o.id IN (SELECT order_id FROM today_payments)
 		)
 		SELECT
 		  sales.net::text,
@@ -355,10 +359,9 @@ func (r *Repository) Dashboard(ctx context.Context, s scope, period domain.Dashb
 		   WHERE organization_id=$1 AND location_id=$2 AND status='pending_approval'),
 		  (SELECT count(*)
 		   FROM reservations r
-		   CROSS JOIN loc
 		   WHERE r.organization_id=$1 AND r.location_id=$2
 		     AND r.status IN ('pending','confirmed')
-		     AND (r.starts_at AT TIME ZONE loc.timezone)::date=(now() AT TIME ZONE loc.timezone)::date),
+		     AND r.starts_at>=`+localDayStartSQL("0")+` AND r.starts_at<`+localDayStartSQL("-1")+`),
 		  (SELECT count(*) FROM orders
 		   WHERE organization_id=$1 AND location_id=$2
 		     AND status IN ('confirmado','preparando'))
@@ -377,12 +380,12 @@ func (r *Repository) Dashboard(ctx context.Context, s scope, period domain.Dashb
 		  SELECT extract(hour FROM p.created_at AT TIME ZONE l.timezone)::int AS hour,p.amount AS value
 		  FROM payments p JOIN locations l ON l.id=p.location_id AND l.organization_id=p.organization_id
 		  WHERE p.organization_id=$1 AND p.location_id=$2
-		    AND (p.created_at AT TIME ZONE l.timezone)::date=(now() AT TIME ZONE l.timezone)::date
+		    AND p.created_at>=`+localDayStartSQL("0")+` AND p.created_at<`+localDayStartSQL("-1")+`
 		  UNION ALL
 		  SELECT extract(hour FROM pr.created_at AT TIME ZONE l.timezone)::int AS hour,-pr.amount AS value
 		  FROM payment_refunds pr JOIN locations l ON l.id=pr.location_id AND l.organization_id=pr.organization_id
 		  WHERE pr.organization_id=$1 AND pr.location_id=$2
-		    AND (pr.created_at AT TIME ZONE l.timezone)::date=(now() AT TIME ZONE l.timezone)::date
+		    AND pr.created_at>=`+localDayStartSQL("0")+` AND pr.created_at<`+localDayStartSQL("-1")+`
 		) movements
 		GROUP BY hour ORDER BY hour
 	`, s.OrganizationID, s.LocationID)
@@ -412,12 +415,10 @@ func (r *Repository) Dashboard(ctx context.Context, s scope, period domain.Dashb
 		JOIN orders o ON o.id=oi.order_id AND o.organization_id=oi.organization_id
 		WHERE o.organization_id=$1 AND o.location_id=$2 AND o.status<>'cancelado'
 		  AND (`+netPaidSQL+`) >= o.total
-		  AND EXISTS(
-		    SELECT 1 FROM payments today_payment
-		    JOIN locations l ON l.id=today_payment.location_id AND l.organization_id=today_payment.organization_id
-		    WHERE today_payment.order_id=o.id AND today_payment.organization_id=o.organization_id AND today_payment.location_id=o.location_id
-		      AND (today_payment.created_at AT TIME ZONE l.timezone)::date
-		          BETWEEN (now() AT TIME ZONE l.timezone)::date-($3::int-1) AND (now() AT TIME ZONE l.timezone)::date
+		  AND o.id IN (
+		    SELECT today_payment.order_id FROM payments today_payment
+		    WHERE today_payment.organization_id=$1 AND today_payment.location_id=$2
+		      AND today_payment.created_at>=`+localDayStartSQL("$3::int-1")+` AND today_payment.created_at<`+localDayStartSQL("-1")+`
 		  )
 		GROUP BY oi.name ORDER BY sum(oi.qty) DESC,oi.name LIMIT 5
 	`, s.OrganizationID, s.LocationID, period.Days)
