@@ -359,7 +359,7 @@ function CashRegisters({items,loading,error,canManage,money,dateTime,businessDat
       const cardClass="cash-register-card"+(!item.active?" inactive":shift?" open":"");
       return <article className={cardClass} key={item.id}>
         <header>
-          <div className="cash-register-name"><span><Icon name="sales" size={18}/></span><div><small>{item.code}</small><h3>{item.name}</h3></div></div>
+          <div className="cash-register-name"><span><Icon name="sales" size={18}/></span><div><h3>{item.name}</h3></div></div>
           <div className="cash-register-header-actions">
             <Status tone={statusTone}>{statusLabel}</Status>
             {canManage&&<div className="cash-register-admin">

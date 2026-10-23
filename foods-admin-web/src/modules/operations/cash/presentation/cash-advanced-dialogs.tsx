@@ -58,7 +58,7 @@ export function CashOperationDialog({shift,registers,busy,close,save}:{shift:Cas
         {type==="transfer"&&<FormField label="Caja de destino" error={errors.targetShiftId?.message}>
           <Select {...register("targetShiftId")}>
             <option value="">{targets.length?"Selecciona una caja con turno abierto":"No hay otra caja operando"}</option>
-            {targets.map(item=><option value={item.openShift!.id} key={item.id}>{item.name} · {item.openShift!.code}</option>)}
+            {targets.map(item=><option value={item.openShift!.id} key={item.id}>{item.name}</option>)}
           </Select>
         </FormField>}
         <FormField label="Monto" error={errors.amount?.message}>

@@ -10,7 +10,7 @@ export type CashReportPalette={primary:string;ink:string;muted:string;surface:st
 export function buildCashReportPdf(report:CashShiftReport,logo:Uint8Array,palette:CashReportPalette){
  const doc=new jsPDF({orientation:"landscape",unit:"mm",format:"a4",compress:true});
  const f=cashReportFormat(report),s=report.shift,w=297,margin=16,width=w-margin*2;
- doc.setProperties({title:`Cierre de caja - ${s.code}`,subject:`${report.organizationName} / ${report.locationName}`,author:"Fudia",creator:"Fudia"});
+ doc.setProperties({title:`Cierre de caja - ${s.cashRegisterName} - ${s.businessDate}`,subject:`${report.organizationName} / ${report.locationName}`,author:"Fudia",creator:"Fudia"});
  doc.setCreationDate(new Date(report.generatedAt));
  let y=42;
  function section(title:string,headers:string[],rows:RowInput[],empty:string,widths?:number[]){
@@ -25,7 +25,7 @@ export function buildCashReportPdf(report:CashShiftReport,logo:Uint8Array,palett
   y=(doc as jsPDF&{lastAutoTable:{finalY:number}}).lastAutoTable.finalY+6;
  }
  section("Empresa y local",["Empresa","Local"],[[report.organizationName,report.locationName]],"",[132,133]);
- section("Datos del turno",["Caja / turno","Encargado","Apertura","Cierre / responsable"],[[`${s.cashRegisterName}\n${s.code}`,s.openedByName,f.date(s.openedAt),`${s.closedAt?f.date(s.closedAt):"Turno abierto"}\n${s.closedByName||"Sin cierre"}`]],"",[65,65,65,70]);
+ section("Datos del turno",["Caja","Encargado","Apertura","Cierre / responsable"],[[s.cashRegisterName,s.openedByName,f.date(s.openedAt),`${s.closedAt?f.date(s.closedAt):"Turno abierto"}\n${s.closedByName||"Sin cierre"}`]],"",[65,65,65,70]);
  if(s.openingNote||s.closingNote)section("Observaciones del turno",["Apertura","Cierre"],[[s.openingNote||"Sin observación",s.closingNote||"Sin observación"]],"");
  const hasRefunds=Number(report.refundedAmount)>0;
  section("Resumen de cobros",["Cobrado en el turno",...(hasRefunds?["Reversos registrados","Cobrado menos reversos"]:[])],[[f.money(report.collectedAmount),...(hasRefunds?[f.money(report.refundedAmount),f.money(report.netCollectedAmount)]:[])]],"");
@@ -50,7 +50,7 @@ export function buildCashReportPdf(report:CashShiftReport,logo:Uint8Array,palett
   doc.setFont("helvetica","normal");doc.setFontSize(9);doc.setTextColor(palette.muted);
   // Avoid letting long organization names collide with the right-hand title.
   const identity=doc.splitTextToSize(`${report.organizationName} / ${report.locationName}`,160) as string[];
-  doc.text(identity.slice(0,2),margin+16,23);doc.text(s.code,w-margin,21,{align:"right"});
+  doc.text(identity.slice(0,2),margin+16,23);doc.text(s.cashRegisterName,w-margin,21,{align:"right"});
   doc.setDrawColor(palette.line);doc.line(margin,31,w-margin,31);doc.line(margin,193,w-margin,193);
   doc.setFontSize(8);doc.text(`${f.day(s.businessDate)} · ${report.timezone}`,margin,198);
   doc.text(`${report.persisted?"Copia del cierre registrado":"Detalle reconstruido / consulta"} · ${page} / ${pages}`,w-margin,198,{align:"right"});

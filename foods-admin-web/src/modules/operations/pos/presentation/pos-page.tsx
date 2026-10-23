@@ -120,7 +120,7 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
     <section className={"pos-shift-banner "+(shift?"active":"missing")}>
       <span className="pos-shift-icon"><Icon name={shift?"register":"alert"} size={20}/></span>
       {current.isLoading?<div className="pos-shift-loading" aria-label="Cargando turno" aria-busy="true"><i/><i/></div>
-      :shift?<><div className="pos-shift-copy"><small>TURNO ACTIVO</small><b>{shift.cashRegisterName}<span>· {shift.code}</span></b><p>Cajero: {cashShiftAttribution(shift).name}</p></div><Status tone="green">Listo para cobrar</Status></>
+      :shift?<><div className="pos-shift-copy"><small>TURNO ACTIVO</small><b>{shift.cashRegisterName}</b><p>Cajero: {cashShiftAttribution(shift).name}</p></div><Status tone="green">Listo para cobrar</Status></>
       :<><div><small>TURNO REQUERIDO</small><b>No estás asignado a una caja abierta</b><p>Inicia o únete a un turno antes de registrar cobros o devoluciones.</p></div>{cashLink()}</>}
     </section>
 
@@ -176,7 +176,7 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
       data={paymentOrder.data}
       shiftLoading={current.isLoading}
       shiftError={current.error?.message}
-      shiftName={shift?shift.cashRegisterName+" · "+shift.code:null}
+      shiftName={shift?shift.cashRegisterName:null}
       canManage={canManage}
       busy={pay.isPending}
       formatMoney={money}

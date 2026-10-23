@@ -20,6 +20,7 @@ Construir una plataforma SaaS multiempresa para restaurantes peruanos.
 12. Ejecutar lint, typecheck, tests y build antes de cerrar una implementación.
 13. Evitar información visual redundante en wizards y formularios: si el progreso ya está representado por pasos visibles, no repetir indicadores como "Paso X de Y".
 14. Respetar la matriz de estados aprobada en el sistema visual de cada frontend: fondos tenues, texto legible y etiqueta explícita. Reutilizar sus componentes, tokens y mapeos centrales; no recolorear estados por pantalla ni introducir variantes sólidas sin aprobación.
+15. No mostrar códigos generados por la base (tipo `CJ-6E57C7`, `CAJ-…`, `CLI-…`, `OC-…`, `REC-…`) en pantallas, PDF, archivos, notas ni mensajes. La única excepción es el código del pedido (`PED-…`). Identificar cada registro por datos que el usuario reconoce: nombre, proveedor, fecha o local.
 
 ## Identidad
 

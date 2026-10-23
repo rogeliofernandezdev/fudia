@@ -650,6 +650,22 @@ test("mesas conserva edición inline dentro de la tabla",()=>{
   assert.equal(page.includes('style={{flexWrap:"wrap"}}'),false,"Mesas no introduce estilos inline para composición");
 });
 
+test("solo el pedido muestra un código generado; caja y turnos se identifican por nombre",()=>{
+  const cash={
+    page:read("src/modules/operations/cash/presentation/cash-page.tsx"),
+    content:read("src/modules/operations/cash/presentation/cash-report-content.tsx"),
+    dialog:read("src/modules/operations/cash/presentation/cash-report-dialog.tsx"),
+    advanced:read("src/modules/operations/cash/presentation/cash-advanced-dialogs.tsx"),
+    pdf:read("src/modules/operations/cash/infrastructure/cash-report-pdf.ts"),
+    pos:read("src/modules/operations/pos/presentation/pos-page.tsx"),
+  };
+  for(const [name,source] of Object.entries(cash)){
+    for(const code of ["shift.code","openShift!.code","s.code","{item.code}</small>"])assert.equal(source.includes(code),false,`${name} no muestra ${code} (CJ-/CAJ-)`);
+  }
+  assert.ok(cash.dialog.includes("shift.cashRegisterName??\"Vista previa del cierre\""),"El informe se titula con el nombre de la caja");
+  assert.ok(cash.pos.includes("data.order.code"),"El pedido conserva su código");
+});
+
 test("abastecimiento no muestra códigos internos y sigue el modelo de botones",()=>{
   const files={
     purchases:read("src/modules/supply/purchases/presentation/purchases-page.tsx"),

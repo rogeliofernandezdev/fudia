@@ -17,7 +17,6 @@
 .pos-shift-banner.missing small{color:var(--warning-600)}
 .pos-shift-banner>.status,.pos-shift-banner>.button{flex:0 0 auto}
 .pos-shift-copy>b{display:flex;align-items:center;gap:var(--space-1-5);min-width:0;text-transform:none}
-.pos-shift-copy>b>span{color:var(--ink-500);font-size:var(--font-size-label);font-weight:var(--weight-semibold);font-variant-numeric:tabular-nums}
 .pos-shift-loading i{display:block;position:relative;overflow:hidden;border-radius:var(--radius-control);background:var(--cloud-100)}
 .pos-shift-loading i:first-child{width:var(--size-92);height:var(--size-9)}
 .pos-shift-loading i:last-child{width:var(--size-210);max-width:75%;height:var(--size-13);margin-top:var(--space-1-5)}

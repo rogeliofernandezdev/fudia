@@ -1059,6 +1059,13 @@ no integra un visor PDF.
   `management-cards`; nunca desaparece el contenido al ocultarse la tabla.
   No se agrega una segunda cabecera de resultados ni se repite el total si la
   paginación ya informa rango y total.
+- En toda la aplicación, el único código generado por la base que se muestra es
+  el del pedido (`PED-…`), porque Salón, Cocina, POS, Ventas y el ticket lo usan
+  para referirse a él. Cajas (`CJ-…`), turnos (`CAJ-…`), clientes (`CLI-…`),
+  documentos de abastecimiento y SKU automáticos no se muestran en pantallas,
+  PDF, nombres de archivo ni notificaciones: la caja se identifica por su nombre
+  y el turno por su caja, día operativo y horas de apertura y cierre. Los
+  códigos que escribe el usuario (local, medio de pago, plan) sí se muestran.
 - Abastecimiento (Inventario, Kárdex y Compras) no muestra códigos generados por
   la base (`OC-…`, `REC-…`, `DEV-…`, `TRF-…`, `ENT-…` ni SKU automáticos). Cada
   documento se identifica por lo que el usuario reconoce: la orden y la recepción
