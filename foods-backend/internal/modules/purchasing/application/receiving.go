@@ -116,10 +116,9 @@ func (a *Purchasing) Receive(ctx context.Context, s scope, id string, in domain.
 		if _, err = a.repo.CreateReceiptItem(tx.Context(), s, receiptID, line); err != nil {
 			return result, purchaseFailure(apperror.Unavailable, "purchase_unavailable", "No pudimos guardar el detalle de la recepción.")
 		}
-		note := "Recepción " + receiptCode + " de " + number
-		if in.Notes != "" {
-			note += " · " + in.Notes
-		}
+		// The Kárdex shows the receipt and supplier as reference; the note keeps
+		// only what the user wrote, without internal document codes.
+		note := in.Notes
 		// Inventory owns weighted-average costing, stock locks and Kárdex writes.
 		// The existing Purchasing UoW context keeps all writes atomic.
 		if err = a.stock.ReceivePurchase(tx.Context(), s, inventorycontracts.PurchaseReceipt{

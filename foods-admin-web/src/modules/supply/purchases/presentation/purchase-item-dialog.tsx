@@ -182,7 +182,7 @@ export function PurchaseItemDialog({
         <ModalFooter>
           {!searching&&typeof validationMessage==="string"&&<div className="purchase-validation" role="alert"><Icon name="alert" size={16}/>{validationMessage}</div>}
           {searching
-            ?<Button type="button" kind="ghost" onClick={close} disabled={locked}>Cancelar</Button>
+            ?<Button type="button" action="cancel" onClick={close} disabled={locked}>Cancelar</Button>
             :<Button type="button" action="back" onClick={()=>setView({kind:"search"})} disabled={locked||catalogBusy}>Volver</Button>}
           {!searching&&<Button type="button" onClick={()=>void submit()} disabled={locked||catalogBusy} loading={locked}>{locked?"Guardando…":view.kind==="link"?"Vincular y agregar":"Crear y agregar"}</Button>}
         </ModalFooter>

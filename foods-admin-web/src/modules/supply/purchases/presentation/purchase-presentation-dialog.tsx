@@ -30,6 +30,6 @@ export function PurchasePresentationDialog({item,close,save}:{item:PurchaseInven
    <PurchasePresentationsField unit={item.unit} value={rows} onChange={setRows} disabled={mutation.isPending} onBusyChange={setCatalogBusy}/>
    <p className="field-help">Las compras anteriores y el stock no se modifican.</p>
    {(validation||mutation.isError)&&<p className="field-error" role="alert">{validation||mutation.error?.message}</p>}
-  </div><ModalFooter><Button type="button" kind="ghost" disabled={mutation.isPending||catalogBusy} onClick={close}>Cancelar</Button><Button type="button" disabled={mutation.isPending||catalogBusy} onClick={submit} loading={mutation.isPending}>{mutation.isPending?"Guardando…":"Guardar"}</Button></ModalFooter></form>
+  </div><ModalFooter><Button type="button" action="cancel" disabled={mutation.isPending||catalogBusy} onClick={close}>Cancelar</Button><Button type="button" disabled={mutation.isPending||catalogBusy} onClick={submit} loading={mutation.isPending}>{mutation.isPending?"Guardando…":"Guardar"}</Button></ModalFooter></form>
  </Dialog></div>;
 }

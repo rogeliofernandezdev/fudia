@@ -45,7 +45,7 @@ export function InventoryPage(){
  });
  const transferSave=useMutation({
   mutationFn:createInventoryTransfer,
-  onSuccess:result=>{setTransferOpen(false);void client.invalidateQueries({queryKey:["inventory"]});void client.invalidateQueries({queryKey:["inventory-movements"]});notify({tone:"success",title:"Transferencia registrada",message:result.code+" movió el stock al local destino."})},
+  onSuccess:result=>{setTransferOpen(false);void client.invalidateQueries({queryKey:["inventory"]});void client.invalidateQueries({queryKey:["inventory-movements"]});notify({tone:"success",title:"Transferencia registrada",message:"El stock se movió a "+result.toLocationName+"."})},
   onError:error=>notify({tone:"danger",title:"No se pudo transferir",message:error.message}),
  });
 
@@ -71,7 +71,7 @@ export function InventoryPage(){
   <PageHeader
    title="Inventario"
    description="Consulta existencias del local y registra ajustes manuales con trazabilidad."
-   action={(can("inventory.manage")||can("inventory.transfer"))?<div className="inventory-header-actions">{can("inventory.transfer")&&<Button kind="secondary" icon="truck" disabled={noInventory} onClick={()=>setTransferOpen(true)}>Transferir</Button>}{can("inventory.manage")&&<Button icon="edit" disabled={noInventory} onClick={()=>setAdjustmentOpen(true)}>Registrar ajuste</Button>}</div>:undefined}
+   action={(can("inventory.manage")||can("inventory.transfer"))?<>{can("inventory.transfer")&&<Button kind="secondary" icon="truck" disabled={noInventory} onClick={()=>setTransferOpen(true)}>Transferir</Button>}{can("inventory.manage")&&<Button icon="edit" disabled={noInventory} onClick={()=>setAdjustmentOpen(true)}>Registrar ajuste</Button>}</>:undefined}
   />
   <section className="panel standardized-management inventory-panel">
    <div className="inventory-toolbar">

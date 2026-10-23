@@ -205,6 +205,15 @@ Cantidades, saldos y niveles se validan contra el rango de las columnas
 (menores que 10000000000). Un saldo resultante fuera de rango responde
 `stock_limit_exceeded` en lugar de un error de base de datos.
 
+El Kárdex no expone códigos generados por la base (`REC-…`, `OC-…`, `DEV-…`,
+`TRF-…`, `ENT-…`, `PED-…`). `sourceReference` es legible: «Recepción de compra ·
+Proveedor», «Devolución de compra · Proveedor» o «Corrección de compra ·
+Proveedor», «Transferencia · Origen → Destino», «Entrada manual», «Ajuste de
+inventario» y «Pedido · Mesa N / Mostrador / Recojo / Delivery / WhatsApp». Las
+notas guardan solo el texto del usuario (notas de recepción, motivo de la
+devolución, nota de la transferencia); la migración 88 quitó esos códigos de las
+notas históricas.
+
 La búsqueda de Inventario (`q`) compara nombre y SKU de forma literal: `%` y `_`
 no actúan como comodines. Los listados desempatan por id para que la paginación
 sea estable con nombres repetidos.

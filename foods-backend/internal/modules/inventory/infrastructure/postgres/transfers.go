@@ -54,7 +54,7 @@ func (r *Stock) TransferIncomingMovement(ctx context.Context, s scope, in domain
 	tag, err := r.db(ctx).Exec(ctx, `
 			INSERT INTO stock_movements(organization_id,location_id,product_id,inventory_item_id,movement_type,quantity_delta,balance_after,source_type,source_id,note,created_by,unit_cost,value_delta,balance_value_after)
 			VALUES($1,$2,$3,$4,'transfer_in',$5,$6,'inventory_transfer',$7,$8,$9,$10,$11,$12)
-		`, s.OrganizationID, in.ToLocationID, productID, line.InventoryItemID, line.Quantity, dstAfter, transferID, code+" desde transferencia", s.UserID, src.Cost, valueDelta, balanceValue)
+		`, s.OrganizationID, in.ToLocationID, productID, line.InventoryItemID, line.Quantity, dstAfter, transferID, in.Notes, s.UserID, src.Cost, valueDelta, balanceValue)
 	return tag.RowsAffected(), stockError(err)
 }
 func (r *Stock) LockTransferBalances(ctx context.Context, s scope, itemID, destination string) (map[string]domain.LocationBalance, error) {

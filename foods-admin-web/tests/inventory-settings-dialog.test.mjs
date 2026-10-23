@@ -34,7 +34,7 @@ function mount({busy=false,save=async()=>{},close=()=>{}}={}){
   const nodes=[];
   function visit(node){if(Array.isArray(node)){node.forEach(visit);return}if(node&&typeof node==="object"){nodes.push(node);visit(node.props?.children)}}
   visit(InventorySettingsDialog({item,busy,save,close}));
-  return {nodes,dialog:nodes.find(node=>node.type==="Dialog"),form:nodes.find(node=>node.type==="form"),button:nodes.find(node=>node.type==="Button"&&node.props.kind!=="ghost")};
+  return {nodes,dialog:nodes.find(node=>node.type==="Dialog"),form:nodes.find(node=>node.type==="form"),button:nodes.find(node=>node.type==="Button"&&node.props.kind!=="ghost"&&node.props.action!=="cancel")};
  }
  render();return {render,control};
 }

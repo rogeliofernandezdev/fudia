@@ -24,8 +24,8 @@ const PurchaseReturnDialog=dynamic(()=>import("./purchase-return-dialog").then(m
 const statusMeta=purchaseStatusMeta;
 const emptyOrder:PurchaseOrderDraft={id:"",supplierId:"",expectedAt:"",notes:"",items:[]};
 const emptySupplier:SupplierDraft={id:"",taxId:"",name:"",email:"",phone:""};
-const orderColumns=["ORDEN","PROVEEDOR","FECHA","TOTAL","ESTADO","ACCIONES"];
-const receiptColumns=["ORDEN","PROVEEDOR","ENTREGA ESPERADA","ARTÍCULOS","ESTADO","ACCIONES"];
+const orderColumns=["PROVEEDOR","ENTREGA ESPERADA","CREADA","TOTAL","ESTADO","ACCIONES"];
+const receiptColumns=["PROVEEDOR","ENTREGA ESPERADA","ARTÍCULOS","ESTADO","ACCIONES"];
 const supplierColumns=["PROVEEDOR","RUC","CONTACTO","ESTADO","ACCIONES"];
 
 
@@ -106,11 +106,11 @@ export function PurchasesPage(){
 
   const saveOrder=useMutation({
     mutationFn:savePurchaseOrder,
-    onSuccess:result=>{
+    onSuccess:()=>{
       setOrderDraft(null);
       void qc.invalidateQueries({queryKey:["purchase-orders"]});
       void qc.invalidateQueries({queryKey:["dashboard"]});
-      notify({tone:"success",title:"Orden guardada",message:result.number+" quedó en borrador y lista para revisión."});
+      notify({tone:"success",title:"Orden guardada",message:"La orden quedó en borrador y lista para revisión."});
     },
     onError:error=>notify({tone:"danger",title:"No se pudo guardar la orden",message:error.message}),
   });
@@ -163,7 +163,7 @@ export function PurchasesPage(){
       notify({
         tone:"success",
         title:result.status==="received"?"Recepción completada":"Recepción parcial registrada",
-        message:result.code+" quedó vinculada a "+result.number+" y actualizó Inventario y Kárdex.",
+        message:"La recepción quedó registrada en la orden y actualizó Inventario y Kárdex.",
       });
     },
     onError:error=>notify({tone:"danger",title:"No se pudo registrar la recepción",message:error.message}),
@@ -171,7 +171,7 @@ export function PurchasesPage(){
 
   const returnPurchase=useMutation({
     mutationFn:createPurchaseReturn,
-    onSuccess:result=>{setReturnReceipt(null);setReceiptDetail(null);void qc.invalidateQueries({queryKey:["purchase-order"]});void qc.invalidateQueries({queryKey:["purchase-orders"]});void qc.invalidateQueries({queryKey:["inventory"]});void qc.invalidateQueries({queryKey:["inventory-products"]});void qc.invalidateQueries({queryKey:["inventory-movements"]});notify({tone:"success",title:result.kind==="receipt_correction"?"Recepción corregida":"Devolución registrada",message:result.code+" actualizó Inventario y Kárdex."})},
+    onSuccess:result=>{setReturnReceipt(null);setReceiptDetail(null);void qc.invalidateQueries({queryKey:["purchase-order"]});void qc.invalidateQueries({queryKey:["purchase-orders"]});void qc.invalidateQueries({queryKey:["inventory"]});void qc.invalidateQueries({queryKey:["inventory-products"]});void qc.invalidateQueries({queryKey:["inventory-movements"]});notify({tone:"success",title:result.kind==="receipt_correction"?"Recepción corregida":"Devolución registrada",message:"Inventario y Kárdex quedaron actualizados."})},
     onError:error=>notify({tone:"danger",title:"No se pudo procesar",message:error.message}),
   });
 
@@ -280,7 +280,7 @@ export function PurchasesPage(){
         <SearchField
           value={q}
           onChange={event=>{setQ(event.target.value);setPage(1)}}
-          placeholder={tab==="suppliers"?"Buscar proveedor o RUC...":tab==="receipts"?"Buscar orden pendiente de recepción...":"Buscar por orden o proveedor..."}
+          placeholder={tab==="suppliers"?"Buscar proveedor o RUC...":tab==="receipts"?"Buscar orden pendiente de recepción...":"Buscar por proveedor..."}
         />
 
         {tab==="orders"?<Select aria-label="Filtrar órdenes por estado" value={status} onChange={event=>{setStatus(event.target.value);setPage(1)}}>
@@ -318,8 +318,8 @@ export function PurchasesPage(){
           <DataTable label="Órdenes de compra" containerClassName="hover-scroll purchases-table-wrap">
             <thead><tr>{orderColumns.map(column=><th key={column}>{column}</th>)}</tr></thead>
             <tbody>{orderItems.map((order,index)=>{const meta=statusMeta[order.status];return <tr className={index%2?"alternate":""} key={order.id}>
-              <td><span className={"row-icon r"+index%3}><Icon name="receipt" size={18}/></span><b>{order.number}</b><small>{order.itemCount} {order.itemCount===1?"artículo":"artículos"}</small></td>
-              <td><b>{order.supplierName}</b>{order.expectedAt&&<small>Entrega esperada: {formatRegionalCalendarDate(order.expectedAt,location?.country,{dateStyle:"medium"})}</small>}</td>
+              <td><span className={"row-icon r"+index%3}><Icon name="receipt" size={18}/></span><b>{order.supplierName}</b><small>{order.itemCount} {order.itemCount===1?"artículo":"artículos"}</small></td>
+              <td>{order.expectedAt?formatRegionalCalendarDate(order.expectedAt,location?.country,{dateStyle:"medium"}):"Sin fecha"}</td>
               <td>{formatRegionalDateTime(order.createdAt,{country:location?.country,timeZone:location?.timezone},{dateStyle:"medium"})}</td>
               <td><b className="purchase-money">{money(order.total)}</b></td>
               <td><Status tone={meta.tone}>{meta.label}</Status></td>
@@ -331,8 +331,8 @@ export function PurchasesPage(){
           </DataTable>
 
           <div className="management-cards purchases-cards">{orderItems.map(order=>{const meta=statusMeta[order.status];return <article key={order.id}>
-            <header><span className="row-icon r0"><Icon name="receipt"/></span><div><b>{order.number}</b><small>{order.supplierName}</small></div><Status tone={meta.tone}>{meta.label}</Status></header>
-            <dl><div><dt>Artículos</dt><dd>{order.itemCount}</dd></div><div><dt>Total</dt><dd>{money(order.total)}</dd></div><div><dt>Creada</dt><dd>{formatRegionalDateTime(order.createdAt,{country:location?.country,timeZone:location?.timezone},{dateStyle:"short"})}</dd></div></dl>
+            <header><span className="row-icon r0"><Icon name="receipt"/></span><div><b>{order.supplierName}</b><small>{order.itemCount} {order.itemCount===1?"artículo":"artículos"}</small></div><Status tone={meta.tone}>{meta.label}</Status></header>
+            <dl><div><dt>Entrega</dt><dd>{order.expectedAt?formatRegionalCalendarDate(order.expectedAt,location?.country,{dateStyle:"short"}):"Sin fecha"}</dd></div><div><dt>Total</dt><dd>{money(order.total)}</dd></div><div><dt>Creada</dt><dd>{formatRegionalDateTime(order.createdAt,{country:location?.country,timeZone:location?.timezone},{dateStyle:"short"})}</dd></div></dl>
             <footer><RowActionButton action="view" onClick={()=>openDetail(order.id,"view")}/>{canReviewPurchase(order.status,reviewAccess)&&<RowActionButton action="review" onClick={()=>openDetail(order.id,"review")}/>}</footer>
           </article>})}</div>
         </>}
@@ -348,22 +348,21 @@ export function PurchasesPage(){
           <DataTable label="Recepciones de compra" containerClassName="hover-scroll purchases-table-wrap purchase-receipts-table">
             <thead><tr>{receiptColumns.map(column=><th key={column}>{column}</th>)}</tr></thead>
             <tbody>{receiptItems.map((order,index)=>{const meta=statusMeta[order.status];const loading=receiptLoadingId===order.id;return <tr className={index%2?"alternate":""} key={order.id}>
-              <td><span className={"row-icon r"+index%3}><Icon name="stock" size={18}/></span><b>{order.number}</b></td>
-              <td><b>{order.supplierName}</b></td>
+              <td><span className={"row-icon r"+index%3}><Icon name="stock" size={18}/></span><b>{order.supplierName}</b></td>
               <td>{order.expectedAt?formatRegionalCalendarDate(order.expectedAt,location?.country,{dateStyle:"medium"}):"Sin fecha"}</td>
               <td>{order.itemCount}</td>
               <td><Status tone={meta.tone}>{meta.label}</Status></td>
               <td><div className="purchase-receipt-actions">
                 <RowActionButton action="view" onClick={()=>openDetail(order.id,"view")}/>
-                {canReceive&&<Button kind="primary" icon="stock" disabled={loading} onClick={()=>void openReceipt(order.id)} loading={loading}>{loading?"Cargando…":order.status==="partially_received"?"Continuar":"Recibir"}</Button>}
+                {canReceive&&<Button kind="secondary" icon="stock" disabled={loading} onClick={()=>void openReceipt(order.id)} loading={loading}>{loading?"Cargando…":order.status==="partially_received"?"Continuar":"Recibir"}</Button>}
               </div></td>
             </tr>})}</tbody>
           </DataTable>
 
           <div className="management-cards purchases-cards purchase-receipt-cards">{receiptItems.map(order=>{const meta=statusMeta[order.status];const loading=receiptLoadingId===order.id;return <article key={order.id}>
-            <header><span className="row-icon r2"><Icon name="stock"/></span><div><b>{order.number}</b><small>{order.supplierName}</small></div><Status tone={meta.tone}>{meta.label}</Status></header>
-            <dl><div><dt>Artículos</dt><dd>{order.itemCount}</dd></div><div><dt>Entrega</dt><dd>{order.expectedAt?formatRegionalCalendarDate(order.expectedAt,location?.country,{dateStyle:"short"}):"—"}</dd></div></dl>
-            <footer><RowActionButton action="view" onClick={()=>openDetail(order.id,"view")}/>{canReceive&&<Button kind="primary" icon="stock" disabled={loading} onClick={()=>void openReceipt(order.id)} loading={loading}>{loading?"Cargando…":order.status==="partially_received"?"Continuar":"Recibir"}</Button>}</footer>
+            <header><span className="row-icon r2"><Icon name="stock"/></span><div><b>{order.supplierName}</b><small>{order.itemCount} {order.itemCount===1?"artículo":"artículos"}</small></div><Status tone={meta.tone}>{meta.label}</Status></header>
+            <dl><div><dt>Entrega</dt><dd>{order.expectedAt?formatRegionalCalendarDate(order.expectedAt,location?.country,{dateStyle:"short"}):"—"}</dd></div></dl>
+            <footer><RowActionButton action="view" onClick={()=>openDetail(order.id,"view")}/>{canReceive&&<Button kind="secondary" icon="stock" disabled={loading} onClick={()=>void openReceipt(order.id)} loading={loading}>{loading?"Cargando…":order.status==="partially_received"?"Continuar":"Recibir"}</Button>}</footer>
           </article>})}</div>
         </>}
         {!receipts.isLoading&&!receipts.isError&&<Pagination page={page} size={size} total={receipts.data?.total??0} onPage={setPage} onSize={value=>{setSize(value);setPage(1)}}/>}
@@ -565,7 +564,7 @@ function PurchaseOrderDialog({initial,suppliers,inventory,currencySymbol,busy,cl
           {typeof errors.items?.message==="string"&&<div className="purchase-validation" role="alert"><Icon name="alert" size={16}/>{errors.items.message}</div>}
           {fields.length>0&&<div className="purchase-total"><span>Total estimado<small>{fields.length} {fields.length===1?"línea":"líneas"}</small></span><strong>{money(total)}</strong></div>}
         </section>
-      </div><ModalFooter><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy||!suppliers.length||fields.length===0} loading={busy}>{busy?"Guardando…":"Guardar borrador"}</Button></ModalFooter></form>
+      </div><ModalFooter><Button type="button" action="cancel" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy||!suppliers.length||fields.length===0} loading={busy}>{busy?"Guardando…":"Guardar borrador"}</Button></ModalFooter></form>
     </Dialog></div>
 
     {presentationTarget&&<PurchasePresentationDialog item={presentationTarget.item} close={()=>setPresentationTarget(null)} save={presentation=>{
@@ -596,7 +595,7 @@ function SupplierDialog({initial,busy,close,save}:{initial:SupplierDraft;busy:bo
     <FormField label="RUC" optional error={errors.taxId?.message}><Input inputMode="numeric" maxLength={11} {...register("taxId")} placeholder="20123456789"/></FormField>
     <FormField label="Teléfono" optional><Input {...register("phone")} placeholder="Ej. 987 654 321"/></FormField>
     <FormField className="span-2" label="Correo electrónico" optional error={errors.email?.message}><Input type="email" {...register("email")} placeholder="compras@proveedor.com"/></FormField>
-  </div><ModalFooter><Button kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy} loading={busy}>{busy?"Guardando…":"Guardar"}</Button></ModalFooter></form></Dialog></div>;
+  </div><ModalFooter><Button action="cancel" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy} loading={busy}>{busy?"Guardando…":"Guardar"}</Button></ModalFooter></form></Dialog></div>;
 }
 
 function PurchaseDetail({order,mode,canManage,canApprove,canReceive,busy,pending,currency,country,timezone,close,edit,changeStatus,approve,receive,cancel,viewReceipt,viewingReceiptId}:{order:PurchaseOrder;mode:"view"|"review";canManage:boolean;canApprove:boolean;canReceive:boolean;busy:boolean;/** Acción en curso: su botón muestra el gerundio y el spinner. */pending?:"approve"|"draft"|"pending_approval"|"cancelled";currency:string;country?:string|null;timezone?:string|null;close:()=>void;edit:()=>void;changeStatus:(next:"draft"|"pending_approval"|"cancelled")=>void;approve:()=>void;receive:()=>void;cancel:()=>void;viewReceipt:(id:string)=>void;viewingReceiptId:string}){
@@ -605,15 +604,15 @@ function PurchaseDetail({order,mode,canManage,canApprove,canReceive,busy,pending
   const receivable=order.status==="approved"||order.status==="partially_received";
   const cancellable=order.status==="draft"||order.status==="pending_approval"||order.status==="approved";
   const history=order.history??[];
-  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal purchase-detail-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="purchase-detail-title" aria-busy={busy}><ModalHeader title={order.number} titleId="purchase-detail-title" icon="receipt" subtitle={mode==="view"?"DETALLE DE ORDEN":"REVISAR ORDEN"} onClose={close} busy={busy} closeLabel="Cerrar"/><div className="purchase-detail-body">
+  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal purchase-detail-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="purchase-detail-title" aria-busy={busy}><ModalHeader title="Orden de compra" titleId="purchase-detail-title" icon="receipt" subtitle={mode==="view"?"DETALLE DE ORDEN":"REVISAR ORDEN"} onClose={close} busy={busy} closeLabel="Cerrar"/><div className="purchase-detail-body">
     <section className="purchase-detail-summary"><div><small>PROVEEDOR</small><b>{order.supplierName}</b></div><div><small>TOTAL</small><b>{currency}</b></div><div><small>ARTÍCULOS</small><b>{order.itemCount}</b></div></section>
     <section className="purchase-detail-meta"><div><small>CREADA</small><b>{formatRegionalDateTime(order.createdAt,{country,timeZone:timezone},{dateStyle:"medium",timeStyle:"short"})}</b></div><div><small>ENTREGA ESPERADA</small><b>{order.expectedAt?formatRegionalCalendarDate(order.expectedAt,country,{dateStyle:"medium"}):"Sin fecha"}</b></div><div><small>NOTAS</small><b>{order.notes||"Sin notas"}</b></div></section>
-    <section className="purchase-detail-lines"><header><div><small>DETALLE</small><h3>Artículos de la orden</h3></div></header><DataTable label="Estado de recepción por artículo" containerClassName="hover-scroll" className="purchase-receipt-progress-table"><thead><tr><th>ARTÍCULO</th><th>PRESENTACIÓN DE COMPRA</th><th>SOLICITADO</th><th>RECIBIDO</th><th>PENDIENTE</th><th>COSTO</th><th>SUBTOTAL</th></tr></thead><tbody>{order.items.map((item,index)=><tr className={index%2?"alternate":""} key={item.id}><td><b>{item.itemName}</b><small>{item.sku||item.unit}</small></td><td>{presentationName(item.presentationType,item.unitsPerPresentation,item.unit,item.presentationName)}</td><td>{formatRegionalNumber(Number(item.quantity),country,{maximumFractionDigits:3})}</td><td><b className="purchase-received-qty">{formatRegionalNumber(Number(item.receivedQuantity),country,{maximumFractionDigits:3})}</b></td><td><b className={Number(item.pendingQuantity)>0?"purchase-pending-qty":""}>{formatRegionalNumber(Number(item.pendingQuantity),country,{maximumFractionDigits:3})}</b></td><td>{formatRegionalNumber(Number(item.unitCost),country,{minimumFractionDigits:2,maximumFractionDigits:4})}</td><td><b>{money(item.lineTotal)}</b></td></tr>)}</tbody></DataTable></section>
+    <section className="purchase-detail-lines"><header><div><small>DETALLE</small><h3>Artículos de la orden</h3></div></header><DataTable label="Estado de recepción por artículo" containerClassName="hover-scroll" className="purchase-receipt-progress-table"><thead><tr><th>ARTÍCULO</th><th>PRESENTACIÓN DE COMPRA</th><th>SOLICITADO</th><th>RECIBIDO</th><th>PENDIENTE</th><th>COSTO</th><th>SUBTOTAL</th></tr></thead><tbody>{order.items.map((item,index)=><tr className={index%2?"alternate":""} key={item.id}><td><b>{item.itemName}</b></td><td>{presentationName(item.presentationType,item.unitsPerPresentation,item.unit,item.presentationName)}</td><td>{formatRegionalNumber(Number(item.quantity),country,{maximumFractionDigits:3})}</td><td><b className="purchase-received-qty">{formatRegionalNumber(Number(item.receivedQuantity),country,{maximumFractionDigits:3})}</b></td><td><b className={Number(item.pendingQuantity)>0?"purchase-pending-qty":""}>{formatRegionalNumber(Number(item.pendingQuantity),country,{maximumFractionDigits:3})}</b></td><td>{formatRegionalNumber(Number(item.unitCost),country,{minimumFractionDigits:2,maximumFractionDigits:4})}</td><td><b>{money(item.lineTotal)}</b></td></tr>)}</tbody></DataTable></section>
     {(history.length>0||receivable)&&<section className="purchase-detail-lines purchase-order-history" aria-labelledby="purchase-history-title"><header><div><small>HISTORIAL</small><h3 id="purchase-history-title">Recepciones y correcciones</h3></div>{history.length>0&&<span>{history.length} {history.length===1?"documento":"documentos"}</span>}</header>
       {history.length?<ol className="purchase-history-list">{history.map(event=>{const meta=historyMeta[event.kind];return <li className={"purchase-history-event "+event.kind} key={event.id}>
         <span className="purchase-history-icon" aria-hidden="true"><Icon name={meta.icon} size={16}/></span>
-        <div><b>{meta.label}</b><small>{event.code} · <time dateTime={event.createdAt}>{formatRegionalDateTime(event.createdAt,{country,timeZone:timezone},{dateStyle:"medium",timeStyle:"short"})}</time> · {event.createdByName} · {event.itemCount} {event.itemCount===1?"artículo":"artículos"}</small>{event.reason&&<p>{event.reason}</p>}{event.notes&&<p>{event.notes}</p>}</div>
-        {event.kind==="receipt"&&<RowActionButton action="view" label={viewingReceiptId===event.id?"Cargando recepción":`Ver recepción ${event.code}`} disabled={viewingReceiptId===event.id} aria-busy={viewingReceiptId===event.id} onClick={()=>viewReceipt(event.id)}/>}
+        <div><b>{meta.label}</b><small><time dateTime={event.createdAt}>{formatRegionalDateTime(event.createdAt,{country,timeZone:timezone},{dateStyle:"medium",timeStyle:"short"})}</time> · {event.createdByName} · {event.itemCount} {event.itemCount===1?"artículo":"artículos"}</small>{event.reason&&<p>{event.reason}</p>}{event.notes&&<p>{event.notes}</p>}</div>
+        {event.kind==="receipt"&&<RowActionButton action="view" label={viewingReceiptId===event.id?"Cargando recepción":`Ver recepción del ${formatRegionalDateTime(event.createdAt,{country,timeZone:timezone},{dateStyle:"medium",timeStyle:"short"})}`} disabled={viewingReceiptId===event.id} aria-busy={viewingReceiptId===event.id} onClick={()=>viewReceipt(event.id)}/>}
       </li>})}</ol>:<p className="purchase-history-empty">Todavía no se recibió mercadería de esta orden.</p>}
     </section>}
   </div><ModalFooter status={<Status tone={meta.tone}>{meta.label}</Status>} statusLabel="Estado de la orden">{mode==="review"&&(canManage||canApprove||canReceive)&&order.status!=="received"&&order.status!=="cancelled"&&<section className="purchase-detail-actions"><div><small>SIGUIENTE PASO</small><b>{nextStepLabel(order.status)}</b></div><div>{canManage&&order.status==="draft"&&<><Button kind="secondary" icon="edit" onClick={edit} disabled={busy}>Editar</Button><Button icon="arrowRightCircle" onClick={()=>changeStatus("pending_approval")} disabled={busy} loading={pending==="pending_approval"}>{pending==="pending_approval"?"Enviando…":"Enviar a aprobación"}</Button></>}{order.status==="pending_approval"&&<>{canManage&&<Button kind="ghost" icon="chevronLeft" onClick={()=>changeStatus("draft")} disabled={busy} loading={pending==="draft"}>{pending==="draft"?"Volviendo a borrador…":"Volver a borrador"}</Button>}{canApprove&&<Button icon="check" onClick={approve} disabled={busy} loading={pending==="approve"}>{pending==="approve"?"Aprobando…":"Aprobar"}</Button>}</>}{canReceive&&receivable&&<Button kind="primary" icon="stock" onClick={receive} disabled={busy}>{order.status==="partially_received"?"Continuar en Recepciones":"Ir a Recepciones"}</Button>}{canManage&&cancellable&&<Button action="cancel-record" onClick={cancel} disabled={busy}>Cancelar orden</Button>}</div></section>}</ModalFooter></Dialog></div>;
@@ -629,8 +628,8 @@ function ReceiptHistoryDetail({receipt,canManage,close,startReturn}:{receipt:Pur
  const quantity=(value:string)=>formatRegionalNumber(Number(value),location?.country,{maximumFractionDigits:3});
  return <div className="modal-backdrop modal-overlay-in" role="presentation"><Dialog onResponseClose={close} className="crud-modal purchase-detail-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="receipt-history-title">
 
-  <ModalHeader title={receipt.code} titleId="receipt-history-title" icon="receipt" subtitle="DETALLE DE RECEPCIÓN" onClose={close} closeLabel="Cerrar"/>
-  <div className="purchase-detail-body"><section className="purchase-detail-summary"><div><small>ORDEN</small><b>{receipt.number}</b></div><div><small>PROVEEDOR</small><b>{receipt.supplierName}</b></div><div><small>USUARIO</small><b>{receipt.createdByName}</b></div></section>
+  <ModalHeader title="Recepción de compra" titleId="receipt-history-title" icon="receipt" subtitle="DETALLE DE RECEPCIÓN" onClose={close} closeLabel="Cerrar"/>
+  <div className="purchase-detail-body"><section className="purchase-detail-summary"><div><small>RECIBIDA</small><b>{formatRegionalDateTime(receipt.createdAt,{country:location?.country,timeZone:location?.timezone},{dateStyle:"medium",timeStyle:"short"})}</b></div><div><small>PROVEEDOR</small><b>{receipt.supplierName}</b></div><div><small>USUARIO</small><b>{receipt.createdByName}</b></div></section>
    <section className="purchase-detail-lines"><header><div><small>DETALLE</small><h3>Artículos recibidos</h3></div></header><DataTable label="Artículos de la recepción" containerClassName="hover-scroll"><thead><tr><th>ARTÍCULO</th><th>RECIBIDO</th><th>DEVUELTO/CORREGIDO</th><th>DISPONIBLE</th><th>COSTO</th></tr></thead><tbody>{receipt.items.map((i,index)=><tr className={index%2?"alternate":""} key={i.id}><td><b>{i.itemName}</b></td><td>{quantity(i.quantity)}</td><td>{quantity(i.returnedQuantity)}</td><td><b>{quantity(i.returnableQuantity)}</b></td><td>{formatRegionalNumber(Number(i.unitCost),location?.country,{minimumFractionDigits:2,maximumFractionDigits:4})}</td></tr>)}</tbody></DataTable></section>
    {receipt.notes&&<section className="purchase-detail-meta purchase-receipt-history-notes"><div><small>NOTAS</small><b>{receipt.notes}</b></div></section>}
   </div>

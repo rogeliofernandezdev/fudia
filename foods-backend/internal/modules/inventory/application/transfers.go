@@ -120,7 +120,7 @@ func (a *Stock) Transfer(ctx context.Context, s scope, in domain.TransferInput) 
 		if _, err = a.repo.CreateTransferItem(tx.Context(), s, transferID, line, src); err != nil {
 			return result, stockFailure(apperror.Unavailable, "transfer_unavailable", "No pudimos guardar el detalle.")
 		}
-		if err = a.movement(tx.Context(), s, productID, line.InventoryItemID, "transfer_out", -line.Quantity, srcAfter, src.Cost, "inventory_transfer", transferID, code+" → "+destination); err != nil {
+		if err = a.movement(tx.Context(), s, productID, line.InventoryItemID, "transfer_out", -line.Quantity, srcAfter, src.Cost, "inventory_transfer", transferID, in.Notes); err != nil {
 			return result, stockFailure(apperror.Unavailable, "transfer_unavailable", "No pudimos registrar el Kárdex de origen.")
 		}
 		valueDelta := math.Round(line.Quantity*src.Cost*10000) / 10000

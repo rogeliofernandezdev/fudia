@@ -313,7 +313,7 @@ func TestKardexUsesReadableInventoryEntryReference(t *testing.T) {
 		t.Fatalf("expected one kardex movement, got %d", len(payload.Items))
 	}
 	item := payload.Items[0]
-	if item.MovementType != "entry" || !strings.HasPrefix(item.SourceReference, "ENT-") {
+	if item.MovementType != "entry" || item.SourceReference != "Entrada manual" {
 		t.Fatalf("expected readable inventory entry reference, got type=%q reference=%q", item.MovementType, item.SourceReference)
 	}
 	if item.Note != "recepción proveedor" {

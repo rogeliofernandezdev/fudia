@@ -650,6 +650,27 @@ test("mesas conserva edición inline dentro de la tabla",()=>{
   assert.equal(page.includes('style={{flexWrap:"wrap"}}'),false,"Mesas no introduce estilos inline para composición");
 });
 
+test("abastecimiento no muestra códigos internos y sigue el modelo de botones",()=>{
+  const files={
+    purchases:read("src/modules/supply/purchases/presentation/purchases-page.tsx"),
+    receipt:read("src/modules/supply/purchases/presentation/purchase-receipt-dialog.tsx"),
+    returns:read("src/modules/supply/purchases/presentation/purchase-return-dialog.tsx"),
+    inventory:read("src/modules/supply/inventory/presentation/inventory-page.tsx"),
+  };
+  for(const [name,source] of Object.entries(files)){
+    for(const code of ["order.number","receipt.number","receipt.code","event.code","result.code","result.number","item.sku"])assert.equal(source.includes(code),false,`${name} no muestra ${code}`);
+  }
+  assert.ok(files.purchases.includes('const orderColumns=["PROVEEDOR"'),"Las órdenes se identifican por proveedor");
+  assert.ok(files.purchases.includes('const receiptColumns=["PROVEEDOR"'),"Las recepciones se identifican por proveedor");
+  assert.equal(files.purchases.includes('kind="primary" icon="stock" disabled={loading}'),false,"Recibir por fila no repite acciones primarias");
+  assert.equal(files.inventory.includes("inventory-header-actions"),false,"Las acciones de Inventario son hijas directas de page-header-actions");
+  const supply=["inventory/presentation/inventory-adjustment-dialog.tsx","inventory/presentation/inventory-settings-dialog.tsx","inventory/presentation/inventory-transfer-dialog.tsx","purchases/presentation/purchase-item-dialog.tsx","purchases/presentation/purchase-presentation-dialog.tsx","purchases/presentation/purchase-presentations-field.tsx","purchases/presentation/purchase-receipt-dialog.tsx","purchases/presentation/purchase-return-dialog.tsx","purchases/presentation/purchase-unit-field.tsx","purchases/presentation/purchases-page.tsx"];
+  for(const path of supply){
+    const source=read("src/modules/supply/"+path);
+    assert.equal(/kind="ghost"[^>]*>Cancelar</.test(source),false,path+" usa action=\"cancel\" para salir sin guardar");
+  }
+});
+
 test("inventario busca artículos en el servidor y valoriza las entradas",()=>{
   const api=read("src/modules/supply/inventory/infrastructure/inventory-api.ts");
   const lookup=read("src/modules/supply/inventory/presentation/inventory-item-lookup.tsx");
@@ -710,7 +731,7 @@ test("abastecimiento diferencia inventario de kardex por icono",()=>{
   assert.ok(navigation.includes('name:"Inventario",icon:"stock"'),"Inventario conserva el icono de stock físico");
   assert.ok(navigation.includes('name:"Kardex",icon:"ledger"'),"Kárdex usa un icono propio de historial/ledger");
   assert.ok(icons.includes("ledger:"),"El design system define el icono de Kárdex");
-  assert.ok(kardex.includes('name="ledger"'),"Kárdex reutiliza su semántica visual dentro de la pantalla");
+  assert.ok(kardex.includes('icon="ledger"'),"Kárdex reutiliza su semántica visual dentro de la pantalla");
 });
 
 

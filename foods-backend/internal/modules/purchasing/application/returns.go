@@ -95,7 +95,7 @@ func (a *Purchasing) Return(ctx context.Context, s scope, id string, in domain.P
 		}
 		if err = a.stock.ReturnPurchase(tx.Context(), s, inventorycontracts.PurchaseReturn{
 			ItemID: itemID, Quantity: requested.Quantity, UnitsPerPresentation: units, UnitCost: unitCost,
-			Kind: in.Kind, ReturnID: returnID, Note: code + " · " + in.Reason,
+			Kind: in.Kind, ReturnID: returnID, Note: in.Reason,
 		}); errors.Is(err, inventorycontracts.ErrInsufficientStock) {
 			return result, purchaseFailure(apperror.Conflict, "insufficient_stock", "No hay stock suficiente para registrar la devolución.")
 		} else if err != nil {

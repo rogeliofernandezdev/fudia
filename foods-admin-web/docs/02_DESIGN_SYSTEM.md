@@ -1059,6 +1059,22 @@ no integra un visor PDF.
   `management-cards`; nunca desaparece el contenido al ocultarse la tabla.
   No se agrega una segunda cabecera de resultados ni se repite el total si la
   paginación ya informa rango y total.
+- Abastecimiento (Inventario, Kárdex y Compras) no muestra códigos generados por
+  la base (`OC-…`, `REC-…`, `DEV-…`, `TRF-…`, `ENT-…` ni SKU automáticos). Cada
+  documento se identifica por lo que el usuario reconoce: la orden y la recepción
+  por su proveedor (primera columna y entidad de las tarjetas), con fecha y
+  cantidad de artículos; los modales usan títulos de documento («Orden de
+  compra», «Recepción de compra», «Recibir mercadería») y el proveedor como
+  contexto; el Kárdex usa referencias legibles («Recepción de compra ·
+  Proveedor», «Transferencia · Origen → Destino», «Entrada manual»,
+  «Pedido · Mesa 4»). Las notificaciones describen el resultado sin códigos.
+- Las acciones de cabecera de Abastecimiento son hijas directas de
+  `page-header-actions` (sin contenedores propios), como en el resto de
+  pantallas: una primaria y como máximo una secundaria, con la separación y la
+  versión móvil compartidas. «Cancelar» de salida usa `action="cancel"`,
+  «Limpiar filtros» es secundaria con icono `close` y los estados vacío y de
+  error del Kárdex usan `EmptyState` y `ErrorState`. En Recepciones, «Recibir»
+  por fila es secundaria: una tabla no repite acciones primarias.
 - Punto de venta (`/pos`) usa un único panel de gestión con búsqueda y filtro de
   estado. En escritorio presenta tabla estándar y en móvil tarjetas equivalentes;
   la acción de cobrar es iconográfica, usa `RowActionButton` y muestra tooltip,

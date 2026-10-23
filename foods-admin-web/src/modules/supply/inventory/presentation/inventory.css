@@ -9,9 +9,6 @@
 .inventory-quantity{font-variant-numeric:tabular-nums;font-size:var(--font-size-control);font-weight:var(--weight-bold)}
 .inventory-status-note{display:grid;gap:var(--space-1)}
 .inventory-status-note small{color:var(--ink-400);font-size:var(--font-size-label)}
-.inventory-state{min-height:var(--size-280);padding:var(--space-6);display:grid;place-content:center;justify-items:center;text-align:center;gap:var(--space-2);color:var(--ink-500)}
-.inventory-state b{color:var(--ink-950);font-size:var(--font-size-sm)}
-.inventory-state p{margin:0 0 var(--space-1-5);font-size:var(--font-size-label)}
 .inventory-skeleton td i{display:block;height:var(--size-10);border-radius:var(--radius-control);background:linear-gradient(90deg,var(--cloud-100),var(--primary-25),var(--cloud-100));background-size:200% 100%;animation:inventory-shimmer var(--duration-ambient) infinite}
 .inventory-skeleton td:first-child i{width:var(--size-150)}
 .inventory-skeleton td:not(:first-child) i{width:var(--size-72)}

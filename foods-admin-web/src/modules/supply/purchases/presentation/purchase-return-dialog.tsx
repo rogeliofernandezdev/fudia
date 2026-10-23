@@ -39,7 +39,7 @@ export function PurchaseReturnDialog({receipt,busy,close,save}:{receipt:Purchase
 
  return <div className="modal-backdrop modal-overlay-in" role="presentation"><Dialog onResponseClose={close} className="crud-modal purchase-return-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="purchase-return-title" aria-busy={busy}>
 
-  <ModalHeader title="Corregir o devolver recepción" titleId="purchase-return-title" icon="undo" subtitle={<>{receipt.code} · {receipt.number}</>} onClose={close} busy={busy} closeLabel="Cerrar"/>
+  <ModalHeader title="Corregir o devolver recepción" titleId="purchase-return-title" icon="undo" subtitle={receipt.supplierName} onClose={close} busy={busy} closeLabel="Cerrar"/>
   <form onSubmit={submit} noValidate>
    <div className="purchase-return-body" inert={busy}>
     <div className="form-grid">
@@ -56,7 +56,7 @@ export function PurchaseReturnDialog({receipt,busy,close,save}:{receipt:Purchase
     {errors.items&&<div className="purchase-validation" role="alert"><Icon name="alert" size={16}/>{errors.items}</div>}
     <FormField label="Notas" optional><Textarea rows={2} maxLength={500} value={notes} onChange={e=>setNotes(e.target.value)}/></FormField>
    </div>
-   <ModalFooter><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy} loading={busy}>{busy?"Procesando…":kind==="receipt_correction"?"Registrar corrección":"Registrar devolución"}</Button></ModalFooter>
+   <ModalFooter><Button type="button" action="cancel" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy} loading={busy}>{busy?"Procesando…":kind==="receipt_correction"?"Registrar corrección":"Registrar devolución"}</Button></ModalFooter>
   </form>
  </Dialog></div>;
 }

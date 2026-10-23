@@ -34,7 +34,7 @@ export function InventorySettingsDialog({item,busy,close,save}:{item:InventoryIt
     <FormField label="Punto de reorden" error={errors.reorderPoint?.message}><Input type="number" min="0" step="0.001" inputMode="decimal" disabled={locked} {...register("reorderPoint")}/></FormField>
     <FormField className="span-2" label="Stock óptimo" error={errors.optimalStock?.message}><Input type="number" min="0" step="0.001" inputMode="decimal" disabled={locked} {...register("optimalStock")}/></FormField>
    </div>
-   <ModalFooter><Button kind="ghost" onClick={close} disabled={locked}>Cancelar</Button><Button disabled={locked} onClick={submit} loading={locked}>{locked?"Guardando…":"Guardar"}</Button></ModalFooter>
+   <ModalFooter><Button action="cancel" onClick={close} disabled={locked}>Cancelar</Button><Button disabled={locked} onClick={submit} loading={locked}>{locked?"Guardando…":"Guardar"}</Button></ModalFooter>
   </form>
  </Dialog></div>
 }

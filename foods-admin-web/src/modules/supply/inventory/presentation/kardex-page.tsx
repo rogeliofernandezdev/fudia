@@ -3,7 +3,7 @@ import {DataTable} from "@/design-system/data-table";
 import "./inventory.css";
 import {useState} from "react";
 import {useQuery} from "@tanstack/react-query";
-import {Button,Icon,Input,PageHeader,Pagination,Select,Status} from "@/design-system";
+import {Button,EmptyState,ErrorState,Icon,Input,PageHeader,Pagination,Select,Status} from "@/design-system";
 import {useSession} from "@/providers/session-context";
 import {formatRegionalDateTime,formatRegionalNumber} from "@/shared/i18n/regional-format";
 import {listStockMovements} from "../infrastructure/inventory-api";
@@ -49,12 +49,12 @@ export function KardexPage(){
       <Input type="date" value={to} min={from||undefined} onChange={event=>{setTo(event.target.value);setPage(1)}} aria-label="Fecha hasta"/>
      </div>
     </div>
-    {activeFilters>0&&<Button kind="ghost" icon="refresh" onClick={resetFilters}>Limpiar</Button>}
+    {activeFilters>0&&<Button kind="secondary" icon="close" onClick={resetFilters}>Limpiar filtros</Button>}
    </div>
 
    {movements.isLoading?<KardexSkeleton/>:movements.isError?
-    <div className="inventory-state"><Icon name="alert" size={24}/><b>No pudimos cargar el Kárdex</b><p>{movements.error.message}</p><Button kind="secondary" icon="refresh" onClick={()=>movements.refetch()}>Reintentar</Button></div>
-   :!items.length?<div className="inventory-state"><Icon name="ledger" size={24}/><b>Sin movimientos</b><p>{activeFilters?"No encontramos movimientos que coincidan con los filtros seleccionados.":"Aún no hay movimientos registrados en este local."}</p>{activeFilters>0&&<Button kind="secondary" icon="refresh" onClick={resetFilters}>Ver todos</Button>}</div>
+    <ErrorState title="No pudimos cargar el Kárdex" text={movements.error.message} onRetry={()=>void movements.refetch()}/>
+   :!items.length?<EmptyState icon="ledger" title="Sin movimientos" text={activeFilters?"No encontramos movimientos que coincidan con los filtros seleccionados.":"Aún no hay movimientos registrados en este local."} action={activeFilters>0?<Button kind="secondary" icon="close" onClick={resetFilters}>Limpiar filtros</Button>:undefined}/>
    :<>
     <DataTable label="Movimientos del Kárdex" containerClassName="hover-scroll inventory-table-wrap" className="kardex-table">
       <thead><tr><th>ARTÍCULO</th><th>FECHA</th><th>TIPO</th><th>MOTIVO</th><th>CANTIDAD</th><th>STOCK ANTERIOR</th><th>STOCK RESULTANTE</th><th>COSTO U.</th><th>VALOR MOV.</th><th>VALOR SALDO</th><th>USUARIO</th></tr></thead>

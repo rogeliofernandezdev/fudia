@@ -147,8 +147,8 @@ func TestPurchaseReceiptSupportsPartialReceivingAndTracksOrder(t *testing.T) {
 	if err := json.Unmarshal(listRec.Body.Bytes(), &kardex); err != nil {
 		t.Fatal(err)
 	}
-	if len(kardex.Items) != 1 || !strings.Contains(kardex.Items[0].SourceReference, number) || !strings.Contains(kardex.Items[0].SourceReference, "REC-") {
-		t.Fatalf("receipt must be linked to its order in kardex: %#v", kardex.Items)
+	if len(kardex.Items) != 1 || kardex.Items[0].SourceReference != "Recepción de compra · Proveedor recepción" || strings.Contains(kardex.Items[0].Note, "REC-") {
+		t.Fatalf("receipt must show its supplier without internal codes in kardex: %#v", kardex.Items)
 	}
 
 	overBody := []byte(fmt.Sprintf(`{"items":[{"purchaseOrderItemId":%q,"quantity":7}]}`, lineID))
