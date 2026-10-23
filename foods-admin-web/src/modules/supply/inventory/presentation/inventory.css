@@ -17,7 +17,7 @@
 .inventory-skeleton td:not(:first-child) i{width:var(--size-72)}
 
 .inventory-adjustment-modal{width:min(var(--size-620),calc(100vw - var(--size-28)));overflow:hidden}
-.inventory-adjustment-body{max-height:min(68vh,var(--size-620));padding:var(--space-5) var(--space-5);overflow:auto;display:grid;gap:var(--space-4);background:var(--surface)}
+.inventory-adjustment-body{max-height:min(68vh,var(--size-620));padding:var(--space-5) var(--space-5);overflow:auto;display:grid;grid-auto-rows:max-content;gap:var(--space-4);background:var(--surface)}
 .inventory-adjustment-field,.inventory-adjustment-grid>label{display:grid;gap:var(--space-1-5);color:var(--ink-700);font-size:var(--font-size-label);font-weight:var(--weight-bold)}
 .inventory-adjustment-balance{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-px);overflow:hidden;border:var(--stroke-1) solid var(--line);border-radius:var(--radius-tile);background:var(--line)}
 .inventory-adjustment-balance>div{padding:var(--space-3) var(--space-3-5);background:var(--cloud-50);display:grid;gap:var(--space-1)}
@@ -31,11 +31,15 @@
 .inventory-adjustment-preview>span{display:grid;gap:var(--space-0-5)}
 .inventory-adjustment-preview b{font-size:var(--font-size-label)}
 .inventory-adjustment-preview small{font-size:var(--font-size-label);color:var(--ink-600)}
+.inventory-adjustment-hint{color:var(--ink-500);font-size:var(--font-size-label);font-weight:var(--weight-semibold)}
+.inventory-item-lookup{min-width:0}
+.inventory-item-lookup.invalid .rs__control{border-color:var(--danger-600)!important}
+.inventory-item-lookup .rs__control--is-disabled{background:var(--cloud-50)}
 .inventory-validation{min-height:var(--size-40);padding:var(--space-2) var(--space-3);border:var(--stroke-1) solid var(--danger-200);border-radius:var(--radius-tile);background:var(--danger-50);color:var(--danger);display:flex;align-items:center;gap:var(--space-2);font-size:var(--font-size-control);font-weight:var(--weight-semibold)}
 /* Transferencia entre locales */
 .inventory-transfer-modal{width:min(var(--size-680),calc(100vw - var(--size-28)));overflow:hidden}
 .inventory-transfer-modal form{padding:0}
-.inventory-transfer-body{max-height:min(68vh,var(--size-640));padding:var(--space-5) var(--space-5);overflow:auto;display:grid;gap:var(--space-4);background:var(--surface)}
+.inventory-transfer-body{max-height:min(68vh,var(--size-640));padding:var(--space-5) var(--space-5);overflow:auto;display:grid;grid-auto-rows:max-content;gap:var(--space-4);background:var(--surface)}
 .inventory-transfer-route{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:end;gap:var(--space-3)}
 .inventory-transfer-origin{display:grid;gap:var(--space-1-5);min-width:0}
 .inventory-transfer-origin small{font-size:var(--font-size-control);font-weight:var(--weight-semibold);color:var(--ink-950)}
@@ -52,7 +56,7 @@
 .inventory-transfer-table td:last-child{text-align:center}
 .inventory-transfer-table td .field-error{display:block;margin-top:var(--space-1)}
 .inventory-transfer-table tr.has-error td{background:var(--danger-50)}
-.inventory-transfer-table .ds-select{min-width:var(--size-200)}
+.inventory-transfer-table .inventory-item-lookup{min-width:var(--size-200)}
 .inventory-transfer-available{font-size:var(--font-size-control);font-weight:var(--weight-bold);font-variant-numeric:tabular-nums;color:var(--ink-600);white-space:nowrap!important}
 .inventory-transfer-quantity{display:flex;align-items:center;gap:var(--space-2);min-width:var(--size-150)}
 .inventory-transfer-quantity .ds-input{width:var(--size-96)}
@@ -73,7 +77,7 @@
  .inventory-transfer-route{grid-template-columns:1fr}
  .inventory-transfer-arrow{display:none}
  .inventory-transfer-lines-head{flex-wrap:wrap}
- .inventory-transfer-table .ds-select{min-width:var(--size-150)}
+ .inventory-transfer-table .inventory-item-lookup{width:var(--size-150);min-width:0}
  .inventory-transfer-table th:nth-child(2),.inventory-transfer-table td.inventory-transfer-available,.inventory-transfer-quantity span{display:none}
  .inventory-transfer-hint{display:block}
  .inventory-transfer-quantity{min-width:0}

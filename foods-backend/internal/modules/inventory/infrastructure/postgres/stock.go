@@ -20,6 +20,14 @@ type Stock struct{ pool *pgxpool.Pool }
 
 func NewStock(pool *pgxpool.Pool) *Stock                  { return &Stock{pool} }
 func (r *Stock) db(ctx context.Context) database.Executor { return database.ExecutorFor(ctx, r.pool) }
+
+// containsPattern builds an ILIKE pattern that matches the text literally:
+// % and _ typed by the user are not wildcards. Backslash is PostgreSQL's
+// default LIKE escape character.
+func containsPattern(query string) string {
+	escaped := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(strings.TrimSpace(query))
+	return "%" + escaped + "%"
+}
 func stockError(err error) error {
 	if errors.Is(err, pgx.ErrNoRows) {
 		return application.ErrNotFound
@@ -153,7 +161,7 @@ func (r *Stock) LinkRetailProduct(ctx context.Context, s scope, organizationID s
 			)
 			VALUES($1,'SELL-'||upper(substr(replace($2::text,'-',''),1,12)),$3,$4,$5,true,$2::uuid)
 			RETURNING id,unit`,
-		organizationID, productID, result.Name, in.Unit, in.MinimumStock,
+		organizationID, productID, result.Name, in.Unit, in.MinimumStockValue(),
 	).Scan(&result.InventoryItemID, &result.Unit)
 	return result.InventoryItemID, result.Unit, err
 }
@@ -168,7 +176,7 @@ func (r *Stock) CreateIngredient(ctx context.Context, s scope, organizationID st
 				$2,$3,$4,true
 			)
 			RETURNING id,sku,unit`,
-		organizationID, result.Name, in.Unit, in.MinimumStock,
+		organizationID, result.Name, in.Unit, in.MinimumStockValue(),
 	).Scan(&result.InventoryItemID, &result.SKU, &result.Unit)
 	return result.InventoryItemID, result.SKU, result.Unit, err
 }
@@ -213,11 +221,11 @@ func (r *Stock) LinkEntryProduct(ctx context.Context, s scope, in domain.Invento
 			INSERT INTO inventory_items(
 				organization_id,sku,name,unit,minimum_stock,active,product_id
 			)
-			VALUES($1,'SELL-'||upper(substr(replace($2::text,'-',''),1,12)),$3,$4,$5,true,$2::uuid)
+			VALUES($1,'SELL-'||upper(substr(replace($2::text,'-',''),1,12)),$3,$4,COALESCE($5::numeric,0),true,$2::uuid)
 			ON CONFLICT (organization_id,product_id) WHERE product_id IS NOT NULL
 			DO UPDATE SET
 				name=EXCLUDED.name,
-				minimum_stock=EXCLUDED.minimum_stock,
+				minimum_stock=COALESCE($5::numeric,inventory_items.minimum_stock),
 				active=true,
 				updated_at=now()
 			RETURNING id,unit`,
@@ -232,7 +240,7 @@ func (r *Stock) EntryLocationSettings(ctx context.Context, s scope, inventoryIte
 		ON CONFLICT(location_id,inventory_item_id) DO UPDATE SET minimum_stock=EXCLUDED.minimum_stock,
 		  reorder_point=GREATEST(inventory_location_settings.reorder_point,EXCLUDED.minimum_stock),
 		  optimal_stock=GREATEST(inventory_location_settings.optimal_stock,EXCLUDED.minimum_stock),updated_at=now()
-	`, s.OrganizationID, s.LocationID, inventoryItemID, in.MinimumStock)
+	`, s.OrganizationID, s.LocationID, inventoryItemID, in.MinimumStockValue())
 	return tag.RowsAffected(), stockError(err)
 }
 func (r *Stock) EnsureEntryBalance(ctx context.Context, s scope, inventoryItemID string) (int64, error) {
@@ -252,14 +260,6 @@ func (r *Stock) LockEntryBalance(ctx context.Context, s scope, inventoryItemID s
 		WHERE organization_id=$1 AND location_id=$2 AND inventory_item_id=$3
 		FOR UPDATE`, s.OrganizationID, s.LocationID, inventoryItemID).Scan(&current, &averageCost)
 	return current, averageCost, stockError(err)
-}
-func (r *Stock) UpdateEntryBalance(ctx context.Context, s scope, inventoryItemID string, balanceAfter float64) (int64, error) {
-	tag, err := r.db(ctx).Exec(ctx, `
-		UPDATE stock_balances
-		SET quantity=$4,updated_at=now()
-		WHERE organization_id=$1 AND location_id=$2 AND inventory_item_id=$3`,
-		s.OrganizationID, s.LocationID, inventoryItemID, balanceAfter)
-	return tag.RowsAffected(), stockError(err)
 }
 func (r *Stock) CreateEntry(ctx context.Context, s scope, productID *string, inventoryItemID string, in domain.InventoryEntryInput, presentationID string) (string, error) {
 	var entryID string
@@ -334,7 +334,7 @@ func (r *Stock) CreateAdjustment(ctx context.Context, s scope, in domain.Invento
 func (r *Stock) Items(ctx context.Context, s scope, f application.StockFilter) (application.ItemsPage, error) {
 	out := application.ItemsPage{Page: f.Page, PageSize: f.Size}
 	page, size := f.Page, f.Size
-	search := "%" + strings.TrimSpace(f.Query) + "%"
+	search := containsPattern(f.Query)
 	var total int
 	if err := r.db(ctx).QueryRow(ctx, `
 		SELECT count(*)
@@ -377,7 +377,7 @@ func (r *Stock) Items(ctx context.Context, s scope, f application.StockFilter) (
 		 AND ils.inventory_item_id=ii.id
 		WHERE ii.organization_id=$1 AND ii.active
 		  AND (p.name ILIKE $3 OR ii.name ILIKE $3 OR p.sku ILIKE $3 OR ii.sku ILIKE $3)
-		ORDER BY COALESCE(p.active,ii.active) DESC,COALESCE(p.name,ii.name)
+		ORDER BY COALESCE(p.active,ii.active) DESC,COALESCE(p.name,ii.name),ii.id
 		LIMIT $4 OFFSET $5`,
 		s.OrganizationID, s.LocationID, search, size, (page-1)*size)
 	if err != nil {
@@ -407,7 +407,7 @@ func (r *Stock) Items(ctx context.Context, s scope, f application.StockFilter) (
 func (r *Stock) Products(ctx context.Context, s scope, f application.StockFilter) (application.ProductsPage, error) {
 	out := application.ProductsPage{Page: f.Page, PageSize: f.Size}
 	page, size := f.Page, f.Size
-	search := "%" + strings.TrimSpace(f.Query) + "%"
+	search := containsPattern(f.Query)
 	rows, err := r.db(ctx).Query(ctx, `
 		SELECT ii.id,p.id,COALESCE(p.sku,ii.sku),COALESCE(p.name,ii.name),
 		       CASE WHEN p.id IS NULL THEN 'ingredient' ELSE 'product' END,
@@ -461,7 +461,7 @@ func (r *Stock) Products(ctx context.Context, s scope, f application.StockFilter
 		    )
 		  ))
 		  AND (p.name ILIKE $3 OR ii.name ILIKE $3 OR p.sku ILIKE $3 OR ii.sku ILIKE $3)
-		ORDER BY COALESCE(p.name,ii.name)
+		ORDER BY COALESCE(p.name,ii.name),ii.id
 		LIMIT $4 OFFSET $5`, s.OrganizationID, s.LocationID, search, size, (page-1)*size)
 	if err != nil {
 		return out, err
@@ -535,7 +535,7 @@ func (r *Stock) Movements(ctx context.Context, s scope, f application.StockFilte
 		LEFT JOIN inventory_adjustments ia ON ia.id=sm.source_id AND ia.organization_id=sm.organization_id AND sm.source_type='inventory_adjustment'
 		LEFT JOIN users u ON u.id=sm.created_by
 		WHERE `+where+`
-		ORDER BY sm.created_at DESC,sm.id DESC LIMIT $9 OFFSET $10`,
+		ORDER BY sm.created_at DESC,sm.sequence_number DESC LIMIT $9 OFFSET $10`,
 		s.OrganizationID, s.LocationID, inventoryItemID, productID, movementType, sourceType, from, to, size, (page-1)*size)
 	if err != nil {
 		return out, err

@@ -10,7 +10,7 @@ import {useFeedback} from "@/providers";
 import {useSession} from "@/providers/session-context";
 import {formatRegionalNumber} from "@/shared/i18n/regional-format";
 import {useDebouncedValue} from "@/shared/hooks/use-debounced-value";
-import {createInventoryAdjustment,createInventoryTransfer,listInventory,listInventoryProducts,listTransferLocations,updateInventorySettings} from "../infrastructure/inventory-api";
+import {createInventoryAdjustment,createInventoryTransfer,listInventory,listTransferLocations,updateInventorySettings} from "../infrastructure/inventory-api";
 import type {InventoryItem} from "../domain/types";
 
 const InventoryAdjustmentDialog=dynamic(()=>import("./inventory-adjustment-dialog").then(module=>module.InventoryAdjustmentDialog),{ssr:false});
@@ -37,16 +37,15 @@ export function InventoryPage(){
  const[transferOpen,setTransferOpen]=useState(false);
 
  const inventory=useQuery({queryKey:["inventory",debouncedSearch,page,size],queryFn:()=>listInventory({q:debouncedSearch,page,pageSize:size})});
- const products=useQuery({queryKey:["inventory-products"],queryFn:()=>listInventoryProducts(),enabled:adjustmentOpen||transferOpen,staleTime:10000});
  const locations=useQuery({queryKey:["transfer-locations"],queryFn:listTransferLocations,enabled:transferOpen,staleTime:30000});
  const settingsSave=useMutation({
   mutationFn:updateInventorySettings,
-  onSuccess:()=>{setSettingsItem(null);void client.invalidateQueries({queryKey:["inventory"]});void client.invalidateQueries({queryKey:["inventory-products"]});notify({tone:"success",title:"Niveles actualizados",message:"Los niveles de reposición quedaron configurados para este local."})},
+  onSuccess:()=>{setSettingsItem(null);void client.invalidateQueries({queryKey:["inventory"]});notify({tone:"success",title:"Niveles actualizados",message:"Los niveles de reposición quedaron configurados para este local."})},
   onError:error=>notify({tone:"danger",title:"No se pudieron guardar los niveles",message:error.message}),
  });
  const transferSave=useMutation({
   mutationFn:createInventoryTransfer,
-  onSuccess:result=>{setTransferOpen(false);void client.invalidateQueries({queryKey:["inventory"]});void client.invalidateQueries({queryKey:["inventory-products"]});void client.invalidateQueries({queryKey:["inventory-movements"]});notify({tone:"success",title:"Transferencia registrada",message:result.code+" movió el stock al local destino."})},
+  onSuccess:result=>{setTransferOpen(false);void client.invalidateQueries({queryKey:["inventory"]});void client.invalidateQueries({queryKey:["inventory-movements"]});notify({tone:"success",title:"Transferencia registrada",message:result.code+" movió el stock al local destino."})},
   onError:error=>notify({tone:"danger",title:"No se pudo transferir",message:error.message}),
  });
 
@@ -55,7 +54,6 @@ export function InventoryPage(){
   onSuccess:result=>{
    setAdjustmentOpen(false);
    void client.invalidateQueries({queryKey:["inventory"]});
-   void client.invalidateQueries({queryKey:["inventory-products"]});
    void client.invalidateQueries({queryKey:["inventory-movements"]});
    const sign=result.movementType==="entry"?"+":"-";
    notify({
@@ -104,27 +102,22 @@ export function InventoryPage(){
   </section>
 
   {settingsItem&&<InventorySettingsDialog item={settingsItem} busy={settingsSave.isPending} close={()=>setSettingsItem(null)} save={async draft=>{try{await settingsSave.mutateAsync(draft);}catch{/* La mutación ya comunica el error mediante onError. */}}}/>}
-  {transferOpen&&(products.isLoading||locations.isLoading?
+  {transferOpen&&(locations.isLoading?
    <RemoteModalSkeleton className="inventory-adjustment-modal" label="Cargando transferencia" rows={5} close={()=>setTransferOpen(false)}/>
-   :products.isError||locations.isError?
-   <InventoryAdjustmentLoadError message={(products.error??locations.error)?.message??"No se pudo preparar la transferencia."} close={()=>setTransferOpen(false)} retry={()=>{void products.refetch();void locations.refetch()}}/>
-   :<InventoryTransferDialog items={products.data?.items??[]} locations={locations.data?.items??[]} currentLocationId={location?.id??""} busy={transferSave.isPending} close={()=>setTransferOpen(false)} save={draft=>transferSave.mutate(draft)}/>
+   :locations.isError?
+   <TransferLoadError message={locations.error.message} close={()=>setTransferOpen(false)} retry={()=>void locations.refetch()}/>
+   :<InventoryTransferDialog locations={locations.data?.items??[]} currentLocationId={location?.id??""} busy={transferSave.isPending} close={()=>setTransferOpen(false)} save={draft=>transferSave.mutate(draft)}/>
   )}
 
-  {adjustmentOpen&&(products.isLoading?
-   <RemoteModalSkeleton className="inventory-adjustment-modal" label="Cargando artículos de inventario" rows={5} close={()=>setAdjustmentOpen(false)}/>
-   :products.isError?
-   <InventoryAdjustmentLoadError message={products.error.message} close={()=>setAdjustmentOpen(false)} retry={()=>products.refetch()}/>
-   :<InventoryAdjustmentDialog items={products.data?.items??[]} busy={save.isPending} close={()=>setAdjustmentOpen(false)} save={draft=>save.mutate(draft)}/>
-  )}
+  {adjustmentOpen&&<InventoryAdjustmentDialog busy={save.isPending} close={()=>setAdjustmentOpen(false)} save={draft=>save.mutate(draft)}/>}
  </>;
 }
 
-function InventoryAdjustmentLoadError({message,close,retry}:{message:string;close:()=>void;retry:()=>void}){
+function TransferLoadError({message,close,retry}:{message:string;close:()=>void;retry:()=>void}){
  return <div className="modal-backdrop modal-overlay-in" role="presentation"><Dialog onResponseClose={close} className="crud-modal inventory-adjustment-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="inventory-load-error-title">
 
-  <ModalHeader title="No pudimos cargar los artículos" titleId="inventory-load-error-title" icon="alert" subtitle="INVENTARIO" onClose={close} closeLabel="Cerrar"/>
-  <ErrorState title="Artículos no disponibles" text={message} onRetry={retry}/>
+  <ModalHeader title="No pudimos cargar los locales" titleId="inventory-load-error-title" icon="alert" subtitle="INVENTARIO" onClose={close} closeLabel="Cerrar"/>
+  <ErrorState title="Locales no disponibles" text={message} onRetry={retry}/>
  </Dialog></div>;
 }
 

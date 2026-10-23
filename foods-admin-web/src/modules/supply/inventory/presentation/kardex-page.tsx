@@ -6,8 +6,9 @@ import {useQuery} from "@tanstack/react-query";
 import {Button,Icon,Input,PageHeader,Pagination,Select,Status} from "@/design-system";
 import {useSession} from "@/providers/session-context";
 import {formatRegionalDateTime,formatRegionalNumber} from "@/shared/i18n/regional-format";
-import {listInventoryProducts,listStockMovements} from "../infrastructure/inventory-api";
-import type {StockMovement} from "../domain/types";
+import {listStockMovements} from "../infrastructure/inventory-api";
+import type {InventoryProductOption,StockMovement} from "../domain/types";
+import {InventoryItemLookup} from "./inventory-item-lookup";
 
 const movementLabels:Record<StockMovement["movementType"],string>={
  entry:"Entrada",sale:"Venta",sale_reversal:"Reversa de venta",sale_adjustment:"Ajuste por edición",
@@ -20,25 +21,25 @@ function traceLabel(item:StockMovement){if(item.reason)return reasonLabels[item.
 
 export function KardexPage(){
  const{location}=useSession();
- const[inventoryItemId,setInventoryItemId]=useState("");
+ const[itemFilter,setItemFilter]=useState<InventoryProductOption|null>(null);
+ const inventoryItemId=itemFilter?.id??"";
  const[movementType,setMovementType]=useState("");
  const[sourceType,setSourceType]=useState("");
  const[from,setFrom]=useState("");
  const[to,setTo]=useState("");
  const[page,setPage]=useState(1);
  const[size,setSize]=useState(25);
- const products=useQuery({queryKey:["inventory-products","kardex"],queryFn:()=>listInventoryProducts()});
  const movements=useQuery({queryKey:["inventory-movements",inventoryItemId,movementType,sourceType,from,to,page,size],queryFn:()=>listStockMovements({inventoryItemId,movementType,sourceType,from,to,page,pageSize:size})});
  const items=movements.data?.items??[];
  const activeFilters=[inventoryItemId,movementType,sourceType,from,to].filter(Boolean).length;
- function resetFilters(){setInventoryItemId("");setMovementType("");setSourceType("");setFrom("");setTo("");setPage(1)}
+ function resetFilters(){setItemFilter(null);setMovementType("");setSourceType("");setFrom("");setTo("");setPage(1)}
 
  return <>
   <PageHeader title="Kárdex" description="Trazabilidad física y valorizada de cada movimiento de inventario del local."/>
   <section className="panel standardized-management inventory-panel">
    <div className="inventory-toolbar kardex-toolbar">
     <div className="kardex-filters">
-     <Select value={inventoryItemId} onChange={event=>{setInventoryItemId(event.target.value);setPage(1)}} disabled={products.isLoading} aria-label="Filtrar Kárdex por artículo"><option value="">Todos los artículos</option>{products.data?.items.map(item=><option value={item.id} key={item.id}>{item.name}{item.kind==="ingredient"?" · Insumo":""}</option>)}</Select>
+     <InventoryItemLookup clearable ariaLabel="Filtrar Kárdex por artículo" placeholder="Todos los artículos" value={itemFilter} onChange={item=>{setItemFilter(item);setPage(1)}}/>
      <Select value={movementType} onChange={event=>{setMovementType(event.target.value);setPage(1)}} aria-label="Filtrar por tipo de movimiento"><option value="">Todos los movimientos</option>{Object.entries(movementLabels).map(([value,label])=><option key={value} value={value}>{label}</option>)}</Select>
      <Select value={sourceType} onChange={event=>{setSourceType(event.target.value);setPage(1)}} aria-label="Filtrar por origen"><option value="">Todos los orígenes</option><option value="purchase_receipt">Recepción de compra</option><option value="purchase_return">Devolución/corrección</option><option value="inventory_transfer">Transferencia</option><option value="order">Pedido / receta</option><option value="inventory_adjustment">Ajuste</option><option value="inventory_entry">Entrada manual</option></Select>
      <div className="kardex-range" role="group" aria-label="Periodo">

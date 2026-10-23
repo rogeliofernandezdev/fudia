@@ -66,9 +66,21 @@ type InventoryEntryInput struct {
 	Unit                 string                       `json:"unit"`
 	PresentationType     string                       `json:"presentationType"`
 	UnitsPerPresentation float64                      `json:"unitsPerPresentation"`
-	MinimumStock         float64                      `json:"minimumStock"`
-	Note                 string                       `json:"note"`
+	// MinimumStock is optional: an entry only changes the configured minimum when it is sent.
+	MinimumStock *float64 `json:"minimumStock"`
+	// UnitCost is the cost per base unit; without it the entry is valued at the current average.
+	UnitCost *float64 `json:"unitCost"`
+	Note     string   `json:"note"`
 }
+
+// MinimumStockValue returns the requested minimum, or zero when it was not sent.
+func (in InventoryEntryInput) MinimumStockValue() float64 {
+	if in.MinimumStock == nil {
+		return 0
+	}
+	return *in.MinimumStock
+}
+
 type InventoryCatalogCreateResult struct {
 	InventoryItemID string
 	ProductID       *string
@@ -104,6 +116,8 @@ type InventoryAdjustmentInput struct {
 	Reason          string  `json:"reason"`
 	Quantity        float64 `json:"quantity"`
 	Observation     string  `json:"observation"`
+	// UnitCost values an entry adjustment per base unit; exits always leave at average cost.
+	UnitCost *float64 `json:"unitCost"`
 }
 type InventoryCombinationView struct {
 	Code      string `json:"code"`
@@ -131,22 +145,51 @@ type InventoryBalanceLock struct {
 	AverageUnitCost float64
 }
 
+// MaxStockQuantity is the exclusive bound of numeric(14,3) stock columns.
+const MaxStockQuantity = 1e11
+
+// MaxUnitCost is the exclusive bound of numeric(14,4) cost columns.
+const MaxUnitCost = 1e10
+
+func validAmount(value, max float64) bool {
+	return !math.IsNaN(value) && !math.IsInf(value, 0) && value >= 0 && value < max
+}
+
+// NormalizeUnitCost rounds an optional cost to four decimals and rejects invalid values.
+func NormalizeUnitCost(cost *float64) (*float64, string) {
+	if cost == nil {
+		return nil, ""
+	}
+	if !validAmount(*cost, MaxUnitCost) {
+		return nil, "El costo unitario debe ser cero o mayor y menor que 10000000000."
+	}
+	rounded := math.Round(*cost*10000) / 10000
+	return &rounded, ""
+}
+
 func NormalizeInventoryEntry(in InventoryEntryInput) (InventoryEntryInput, string) {
 	in.InventoryItemID = strings.TrimSpace(in.InventoryItemID)
 	in.ProductID = strings.TrimSpace(in.ProductID)
 	in.Unit = strings.TrimSpace(in.Unit)
 	in.PresentationType = strings.ToLower(strings.TrimSpace(in.PresentationType))
 	in.Note = strings.TrimSpace(in.Note)
-	if math.IsNaN(in.Quantity) || math.IsInf(in.Quantity, 0) || in.Quantity <= 0 || in.Quantity >= 1e11 {
-		return in, "La cantidad de entrada debe ser mayor que cero."
+	if !validAmount(in.Quantity, MaxStockQuantity) || in.Quantity <= 0 {
+		return in, "La cantidad de entrada debe ser mayor que cero y menor que 100000000000."
 	}
 	in.Quantity = math.Round(in.Quantity*1000) / 1000
 	in.UnitsPerPresentation = math.Round(in.UnitsPerPresentation*1000) / 1000
 	if in.Quantity <= 0 {
 		return in, "La cantidad de entrada debe ser al menos 0.001."
 	}
-	if math.IsNaN(in.MinimumStock) || math.IsInf(in.MinimumStock, 0) || in.MinimumStock < 0 || in.MinimumStock >= 1e11 {
-		return in, "El stock mínimo no puede ser negativo."
+	if len([]rune(in.Note)) > 240 {
+		return in, "La nota no puede superar 240 caracteres."
+	}
+	if in.MinimumStock != nil && !validAmount(*in.MinimumStock, MaxStockQuantity) {
+		return in, "El stock mínimo debe ser cero o mayor y menor que 100000000000."
+	}
+	var invalidCost string
+	if in.UnitCost, invalidCost = NormalizeUnitCost(in.UnitCost); invalidCost != "" {
+		return in, invalidCost
 	}
 	if in.Unit == "" {
 		in.Unit = "und"
@@ -219,6 +262,9 @@ func NormalizeInventoryAdjustment(in InventoryAdjustmentInput) (InventoryAdjustm
 	in.MovementType = strings.ToLower(strings.TrimSpace(in.MovementType))
 	in.Reason = strings.ToLower(strings.TrimSpace(in.Reason))
 	in.Observation = strings.TrimSpace(in.Observation)
+	if !validAmount(in.Quantity, MaxStockQuantity) {
+		return in, "La cantidad debe ser mayor que cero y menor que 100000000000."
+	}
 	in.Quantity = math.Round(in.Quantity*1000) / 1000
 	if in.InventoryItemID == "" {
 		return in, "Selecciona un artículo existente."
@@ -232,8 +278,15 @@ func NormalizeInventoryAdjustment(in InventoryAdjustmentInput) (InventoryAdjustm
 	if in.Quantity <= 0 {
 		return in, "La cantidad debe ser mayor que cero."
 	}
-	if len(in.Observation) > 240 {
+	if len([]rune(in.Observation)) > 240 {
 		return in, "La observación no puede superar 240 caracteres."
+	}
+	if in.MovementType == "exit" {
+		in.UnitCost = nil
+	}
+	var invalidCost string
+	if in.UnitCost, invalidCost = NormalizeUnitCost(in.UnitCost); invalidCost != "" {
+		return in, invalidCost
 	}
 	return in, ""
 }
@@ -269,6 +322,11 @@ type LocationSettings struct {
 	MinimumStock float64 `json:"minimumStock"`
 	ReorderPoint float64 `json:"reorderPoint"`
 	OptimalStock float64 `json:"optimalStock"`
+}
+
+// ValidLocationSettings checks every level fits the stock columns.
+func ValidLocationSettings(in LocationSettings) bool {
+	return validAmount(in.MinimumStock, MaxStockQuantity) && validAmount(in.ReorderPoint, MaxStockQuantity) && validAmount(in.OptimalStock, MaxStockQuantity)
 }
 
 type PurchaseInventoryItemInput struct {

@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	audit "github.com/foods-platform/foods-backend/internal/modules/audit/application"
-	"github.com/foods-platform/foods-backend/internal/modules/inventory/domain"
 	inventorycontracts "github.com/foods-platform/foods-backend/internal/modules/inventory/contracts"
+	"github.com/foods-platform/foods-backend/internal/modules/inventory/domain"
 	menucontracts "github.com/foods-platform/foods-backend/internal/modules/menu/contracts"
 	"github.com/foods-platform/foods-backend/internal/platform/apperror"
 	"github.com/foods-platform/foods-backend/internal/platform/requestscope"
@@ -47,7 +47,8 @@ type StockRepository interface {
 	RecipeIngredients(context.Context, scope, string) ([]domain.RecipeIngredient, error)
 	NetRecipeUsage(context.Context, scope, string) (map[string]float64, error)
 	SaveBalance(context.Context, scope, string, float64, float64) (int64, error)
-	TransferDestination(ctx context.Context, s scope, in domain.TransferInput) (string, error)
+	// TransferDestination returns the destination's canonical id and its name.
+	TransferDestination(ctx context.Context, s scope, in domain.TransferInput) (string, string, error)
 	ExistingTransfer(ctx context.Context, s scope, in domain.TransferInput) (string, string, string, error)
 	CreateTransfer(ctx context.Context, s scope, in domain.TransferInput) (string, string, error)
 	TransferItem(ctx context.Context, s scope, line domain.TransferLine) (*string, string, error)
@@ -87,7 +88,6 @@ type StockRepository interface {
 	EntryLocationSettings(ctx context.Context, s scope, inventoryItemID string, in domain.InventoryEntryInput) (int64, error)
 	EnsureEntryBalance(ctx context.Context, s scope, inventoryItemID string) (int64, error)
 	LockEntryBalance(ctx context.Context, s scope, inventoryItemID string) (float64, float64, error)
-	UpdateEntryBalance(ctx context.Context, s scope, inventoryItemID string, balanceAfter float64) (int64, error)
 	CreateEntry(ctx context.Context, s scope, productID *string, inventoryItemID string, in domain.InventoryEntryInput, presentationID string) (string, error)
 	LockAdjustmentItem(ctx context.Context, s scope, in domain.InventoryAdjustmentInput) (*string, string, string, error)
 	EnsureAdjustmentBalance(ctx context.Context, s scope, in domain.InventoryAdjustmentInput) (int64, error)
@@ -134,7 +134,38 @@ func (*inventoryCombinationError) Error() string {
 type Movement = inventorycontracts.Movement
 
 func (a *Stock) movement(ctx context.Context, s scope, productID *string, item, kind string, delta, balance, cost float64, source, sourceID, note string) error {
-	return a.repo.SaveMovement(ctx, s, Movement{ProductID: productID, ItemID: item, Type: kind, Delta: delta, Balance: balance, UnitCost: cost, ValueDelta: math.Round(delta*cost*10000) / 10000, BalanceValue: math.Round(balance*cost*10000) / 10000, SourceType: source, SourceID: sourceID, Note: note})
+	return a.inflow(ctx, s, productID, item, kind, delta, balance, cost, cost, source, sourceID, note)
+}
+
+// inflow records stock valued at its own cost while the balance is valued at the
+// resulting average, which differs when an entry brings a new cost.
+func (a *Stock) inflow(ctx context.Context, s scope, productID *string, item, kind string, delta, balance, cost, average float64, source, sourceID, note string) error {
+	return a.repo.SaveMovement(ctx, s, Movement{ProductID: productID, ItemID: item, Type: kind, Delta: delta, Balance: balance, UnitCost: cost, ValueDelta: math.Round(delta*cost*10000) / 10000, BalanceValue: math.Round(balance*average*10000) / 10000, SourceType: source, SourceID: sourceID, Note: note})
+}
+
+// weightedAverage blends an inflow into the moving average cost.
+func weightedAverage(current, average, quantity, unitCost float64) float64 {
+	after := current + quantity
+	if after <= 0 {
+		return average
+	}
+	return math.Round((current*average+quantity*unitCost)/after*10000) / 10000
+}
+
+// inflowCost uses the cost sent with the document or the current average. An
+// item without average cost needs an explicit one, or its stock would be worth zero.
+func inflowCost(sent *float64, average float64) (float64, error) {
+	if sent != nil {
+		return *sent, nil
+	}
+	if average <= 0 {
+		return 0, stockFailure(apperror.Invalid, "unit_cost_required", "Ingresa el costo unitario: el artículo todavía no tiene costo promedio.")
+	}
+	return average, nil
+}
+
+func stockLimitFailure() error {
+	return stockFailure(apperror.Invalid, "stock_limit_exceeded", "El stock resultante supera el máximo permitido.")
 }
 func (a *Stock) CreateCatalogItem(ctx context.Context, s scope, in domain.InventoryEntryInput) (domain.InventoryCatalogCreateResult, error) {
 	organizationID := s.OrganizationID
@@ -286,8 +317,11 @@ func (a *Stock) CreateEntry(ctx context.Context, s scope, in domain.InventoryEnt
 	if inventoryUnit != in.Unit {
 		return result, stockFailure(apperror.Conflict, "inventory_unit_conflict", "La unidad base de este artículo es "+inventoryUnit+". Registra la entrada usando esa misma unidad base.")
 	}
-	if _, err = a.repo.EntryLocationSettings(tx.Context(), s, inventoryItemID, in); err != nil {
-		return result, stockFailure(apperror.Unavailable, "inventory_unavailable", "No pudimos actualizar el stock mínimo del local.")
+	// An entry only changes the configured minimum when it sends one.
+	if createdInventoryItem || in.MinimumStock != nil {
+		if _, err = a.repo.EntryLocationSettings(tx.Context(), s, inventoryItemID, in); err != nil {
+			return result, stockFailure(apperror.Unavailable, "inventory_unavailable", "No pudimos actualizar el stock mínimo del local.")
+		}
 	}
 
 	presentationID, err := a.ensurePresentation(tx.Context(), s, inventoryItemID, in.PresentationType, in.UnitsPerPresentation)
@@ -319,8 +353,16 @@ func (a *Stock) CreateEntry(ctx context.Context, s scope, in domain.InventoryEnt
 	}(); err != nil {
 		return result, stockFailure(apperror.Unavailable, "inventory_unavailable", "No pudimos bloquear el saldo de inventario.")
 	}
+	unitCost, err := inflowCost(in.UnitCost, averageCost)
+	if err != nil {
+		return result, err
+	}
 	balanceAfter := math.Round((current+stockQuantity)*1000) / 1000
-	if _, err = a.repo.UpdateEntryBalance(tx.Context(), s, inventoryItemID, balanceAfter); err != nil {
+	if balanceAfter >= domain.MaxStockQuantity {
+		return result, stockLimitFailure()
+	}
+	newAverage := weightedAverage(current, averageCost, stockQuantity, unitCost)
+	if _, err = a.repo.SaveBalance(tx.Context(), s, inventoryItemID, balanceAfter, newAverage); err != nil {
 		return result, stockFailure(apperror.Unavailable, "inventory_unavailable", "No pudimos actualizar el saldo.")
 	}
 
@@ -333,7 +375,7 @@ func (a *Stock) CreateEntry(ctx context.Context, s scope, in domain.InventoryEnt
 		return result, stockFailure(apperror.Unavailable, "inventory_unavailable", "No pudimos registrar el documento de entrada.")
 	}
 
-	if err = a.movement(tx.Context(), s, productID, inventoryItemID, "entry", stockQuantity, balanceAfter, averageCost, "inventory_entry", entryID, in.Note); err != nil {
+	if err = a.inflow(tx.Context(), s, productID, inventoryItemID, "entry", stockQuantity, balanceAfter, unitCost, newAverage, "inventory_entry", entryID, in.Note); err != nil {
 		return result, stockFailure(apperror.Unavailable, "inventory_unavailable", "No pudimos registrar el movimiento de Kárdex.")
 	}
 
@@ -424,8 +466,18 @@ func (a *Stock) CreateAdjustment(ctx context.Context, s scope, in domain.Invento
 	if stockAfter < 0 {
 		stockAfter = 0
 	}
+	if stockAfter >= domain.MaxStockQuantity {
+		return result, stockLimitFailure()
+	}
 
-	newAverage := averageCost
+	// Entries bring their own cost into the average; exits leave at average cost.
+	unitCost, newAverage := averageCost, averageCost
+	if in.MovementType == "entry" {
+		if unitCost, err = inflowCost(in.UnitCost, averageCost); err != nil {
+			return result, err
+		}
+		newAverage = weightedAverage(stockBefore, averageCost, in.Quantity, unitCost)
+	}
 	if _, err = a.repo.UpdateAdjustmentBalance(tx.Context(), s, in, stockAfter, newAverage); err != nil {
 		return result, stockFailure(apperror.Unavailable, "inventory_unavailable", "No pudimos actualizar el stock.")
 	}
@@ -440,7 +492,7 @@ func (a *Stock) CreateAdjustment(ctx context.Context, s scope, in domain.Invento
 		return result, stockFailure(apperror.Unavailable, "inventory_unavailable", "No pudimos registrar la trazabilidad del ajuste.")
 	}
 
-	if err = a.movement(tx.Context(), s, productID, in.InventoryItemID, "inventory_adjustment", delta, stockAfter, averageCost, "inventory_adjustment", adjustmentID, in.Observation); err != nil {
+	if err = a.inflow(tx.Context(), s, productID, in.InventoryItemID, "inventory_adjustment", delta, stockAfter, unitCost, newAverage, "inventory_adjustment", adjustmentID, in.Observation); err != nil {
 		return result, stockFailure(apperror.Unavailable, "inventory_unavailable", "No pudimos registrar el movimiento de Kárdex.")
 	}
 
@@ -459,6 +511,8 @@ func (a *Stock) CreateAdjustment(ctx context.Context, s scope, in domain.Invento
 		"quantity":        in.Quantity,
 		"stockBefore":     stockBefore,
 		"stockAfter":      stockAfter,
+		"unitCost":        unitCost,
+		"averageUnitCost": newAverage,
 		"observation":     in.Observation,
 		"createdAt":       createdAt,
 		"createdByName":   s.Name,

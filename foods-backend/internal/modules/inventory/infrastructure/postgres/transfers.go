@@ -6,10 +6,10 @@ import (
 	"github.com/foods-platform/foods-backend/internal/modules/inventory/domain"
 )
 
-func (r *Stock) TransferDestination(ctx context.Context, s scope, in domain.TransferInput) (string, error) {
-	var destination string
-	err := r.db(ctx).QueryRow(ctx, `SELECT name FROM locations WHERE id=$1 AND organization_id=$2 AND active FOR SHARE`, in.ToLocationID, s.OrganizationID).Scan(&destination)
-	return destination, stockError(err)
+func (r *Stock) TransferDestination(ctx context.Context, s scope, in domain.TransferInput) (string, string, error) {
+	var id, destination string
+	err := r.db(ctx).QueryRow(ctx, `SELECT id::text,name FROM locations WHERE id=$1 AND organization_id=$2 AND active FOR SHARE`, in.ToLocationID, s.OrganizationID).Scan(&id, &destination)
+	return id, destination, stockError(err)
 }
 func (r *Stock) ExistingTransfer(ctx context.Context, s scope, in domain.TransferInput) (string, string, string, error) {
 	var existingID string

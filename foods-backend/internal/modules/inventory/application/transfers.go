@@ -35,15 +35,21 @@ func (a *Stock) Transfer(ctx context.Context, s scope, in domain.TransferInput) 
 		return result, stockFailure(apperror.Unavailable, "transfer_unavailable", "No pudimos iniciar la transferencia.")
 	}
 	defer tx.Rollback(ctx)
-	var destination string
+	var destinationID, destination string
 	if err = func() error {
 		var err error
-		destination, err = a.repo.TransferDestination(tx.Context(), s, in)
+		destinationID, destination, err = a.repo.TransferDestination(tx.Context(), s, in)
 		return err
 	}(); errors.Is(err, ErrNotFound) {
 		return result, stockFailure(apperror.NotFound, "destination_not_found", "El local destino no existe o está inactivo.")
 	} else if err != nil {
 		return result, stockFailure(apperror.Unavailable, "transfer_unavailable", "No pudimos validar el destino.")
+	}
+	// PostgreSQL accepts several spellings of the same UUID, while balances come
+	// back keyed by the canonical one: use it from here on.
+	in.ToLocationID = destinationID
+	if in.ToLocationID == s.LocationID {
+		return result, stockFailure(apperror.Invalid, "invalid_transfer", "Selecciona otro local y al menos un artículo.")
 	}
 	if in.IdempotencyKey != "" {
 		var existingID, existingCode, existingTo string
@@ -87,13 +93,19 @@ func (a *Stock) Transfer(ctx context.Context, s scope, in domain.TransferInput) 
 		if err != nil {
 			return result, stockFailure(apperror.Unavailable, "transfer_unavailable", "No pudimos bloquear los saldos.")
 		}
-		src := balances[s.LocationID]
-		dst := balances[in.ToLocationID]
+		src, srcFound := balances[s.LocationID]
+		dst, dstFound := balances[in.ToLocationID]
+		if !srcFound || !dstFound {
+			return result, stockFailure(apperror.Unavailable, "transfer_unavailable", "No pudimos bloquear los saldos.")
+		}
 		if line.Quantity > src.Quantity+0.000001 {
 			return result, stockFailure(apperror.Conflict, "insufficient_stock", "No hay stock suficiente de "+name+" para transferir.")
 		}
 		srcAfter := math.Round((src.Quantity-line.Quantity)*1000) / 1000
 		dstAfter := math.Round((dst.Quantity+line.Quantity)*1000) / 1000
+		if dstAfter >= domain.MaxStockQuantity {
+			return result, stockLimitFailure()
+		}
 		dstAvg := src.Cost
 		if dstAfter > 0 {
 			dstAvg = math.Round(((dst.Quantity*dst.Cost)+(line.Quantity*src.Cost))/dstAfter*10000) / 10000

@@ -72,13 +72,7 @@ func (a *Stock) SavePresentation(ctx context.Context, s scope, itemID string, in
 		return result, stockFailure(apperror.Unavailable, "inventory_presentations_unavailable", "No pudimos guardar la presentación.")
 	}
 	defer tx.Rollback(ctx)
-	var unit string
-	_ = unit
-	err = func() error {
-		var err error
-		unit, err = a.repo.LockPresentationItem(tx.Context(), s, itemID)
-		return err
-	}()
+	_, err = a.repo.LockPresentationItem(tx.Context(), s, itemID)
 	if errors.Is(err, ErrNotFound) {
 		return result, stockFailure(apperror.NotFound, "inventory_item_not_found", "El artículo no existe.")
 	}
@@ -117,7 +111,7 @@ func (a *Stock) Combinations(ctx context.Context, s scope, unit string) ([]domai
 	return items, nil
 }
 func (a *Stock) LocationSettings(ctx context.Context, s scope, id string, in domain.LocationSettings) error {
-	if in.MinimumStock < 0 || in.ReorderPoint < 0 || in.OptimalStock < 0 {
+	if !domain.ValidLocationSettings(in) {
 		return stockFailure(apperror.Invalid, "invalid_inventory_settings", "Revisa los niveles de stock.")
 	}
 	if in.ReorderPoint < in.MinimumStock {
@@ -127,7 +121,10 @@ func (a *Stock) LocationSettings(ctx context.Context, s scope, id string, in dom
 		in.OptimalStock = in.ReorderPoint
 	}
 	var exists bool
-	if err := func() error { var err error; exists, err = a.repo.ItemExists(ctx, s, id); return err }(); err != nil || !exists {
+	if err := func() error { var err error; exists, err = a.repo.ItemExists(ctx, s, id); return err }(); err != nil {
+		return stockFailure(apperror.Unavailable, "inventory_unavailable", "No pudimos validar el artículo de inventario.")
+	}
+	if !exists {
 		return stockFailure(apperror.NotFound, "inventory_item_not_found", "El artículo de inventario no existe.")
 	}
 	_, err := a.repo.LocationSettings(ctx, s, id, in)

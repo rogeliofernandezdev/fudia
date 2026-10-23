@@ -1,11 +1,12 @@
 "use client";
 import {Dialog} from "@/design-system/dialog";
-import {useMemo} from "react";
-import {useForm,useWatch} from "react-hook-form";
+import {useState} from "react";
+import {Controller,useForm,useWatch} from "react-hook-form";
 import {Button,Icon,Input,Select,Textarea,ModalHeader,ModalFooter} from "@/design-system";
 import {useSession} from "@/providers/session-context";
 import {formatRegionalNumber} from "@/shared/i18n/regional-format";
 import {inventoryAdjustmentResolver} from "../domain/inventory-adjustment-schema";
+import {InventoryItemLookup} from "./inventory-item-lookup";
 import type {InventoryAdjustmentDraft,InventoryAdjustmentReason,InventoryAdjustmentType,InventoryProductOption} from "../domain/types";
 
 const entryReasons:Array<{value:InventoryAdjustmentReason;label:string}>=[
@@ -24,10 +25,12 @@ const defaults:InventoryAdjustmentDraft={
   reason:"surplus_adjustment",
   quantity:"",
   observation:"",
+  unitCost:"",
 };
 
-export function InventoryAdjustmentDialog({items,busy,close,save}:{items:InventoryProductOption[];busy:boolean;close:()=>void;save:(draft:InventoryAdjustmentDraft)=>void}){
+export function InventoryAdjustmentDialog({busy,close,save}:{busy:boolean;close:()=>void;save:(draft:InventoryAdjustmentDraft)=>void}){
   const{location}=useSession();
+  const[selected,setSelected]=useState<InventoryProductOption|null>(null);
   const{
     control,register,handleSubmit,setValue,setError,
     formState:{errors,isSubmitted},
@@ -38,27 +41,32 @@ export function InventoryAdjustmentDialog({items,busy,close,save}:{items:Invento
     reValidateMode:"onChange",
   });
 
-  const inventoryItemId=useWatch({control,name:"inventoryItemId"});
   const movementType=useWatch({control,name:"movementType"})??"entry";
   const quantityValue=useWatch({control,name:"quantity"});
-  const selected=useMemo(()=>items.find(item=>item.id===inventoryItemId),[items,inventoryItemId]);
   const reasons=movementType==="entry"?entryReasons:exitReasons;
   const currentStock=Number(selected?.quantity??0);
   const quantity=Number(quantityValue||0);
   const projected=movementType==="entry"?currentStock+quantity:currentStock-quantity;
+  const averageCost=Number(selected?.averageUnitCost??0);
+  const money=(value:number)=>formatRegionalNumber(value,location?.country,{minimumFractionDigits:2,maximumFractionDigits:4});
   const hasErrors=Object.keys(errors).length>0;
 
   function changeMovement(type:InventoryAdjustmentType){
     const nextReasons=type==="entry"?entryReasons:exitReasons;
     setValue("movementType",type,{shouldDirty:true,shouldValidate:isSubmitted});
     setValue("reason",nextReasons[0].value,{shouldDirty:true,shouldValidate:isSubmitted});
+    if(type==="exit")setValue("unitCost","",{shouldValidate:isSubmitted});
   }
 
   function submit(draft:InventoryAdjustmentDraft){
-    const item=items.find(option=>option.id===draft.inventoryItemId);
     const amount=Number(draft.quantity);
-    if(draft.movementType==="exit"&&item&&amount>Number(item.quantity)){
+    if(draft.movementType==="exit"&&selected&&amount>Number(selected.quantity)){
       setError("quantity",{type:"manual",message:"La salida no puede superar el stock actual."});
+      return;
+    }
+    // Without an average, the entry would be worth zero: the cost is required.
+    if(draft.movementType==="entry"&&selected&&averageCost<=0&&draft.unitCost.trim()===""){
+      setError("unitCost",{type:"manual",message:"Ingresa el costo unitario: el artículo todavía no tiene costo promedio."});
       return;
     }
     save(draft);
@@ -70,13 +78,10 @@ export function InventoryAdjustmentDialog({items,busy,close,save}:{items:Invento
       <ModalHeader title="Registrar ajuste" titleId="inventory-adjustment-title" icon="stock" subtitle="INVENTARIO" onClose={close} busy={busy} closeLabel="Cerrar"/>
       <form onSubmit={handleSubmit(submit)} noValidate>
         <div className="inventory-adjustment-body">
-          <label className="inventory-adjustment-field">Artículo
-            <Select autoFocus {...register("inventoryItemId")} aria-invalid={Boolean(errors.inventoryItemId)}>
-              <option value="">{items.length?"Selecciona un artículo existente":"No hay artículos disponibles"}</option>
-              {items.map(item=><option value={item.id} key={item.id}>{item.name}{item.kind==="ingredient"?" · Insumo":""}</option>)}
-            </Select>
+          <div className="inventory-adjustment-field">Artículo
+            <Controller control={control} name="inventoryItemId" render={({field})=><InventoryItemLookup autoFocus ariaLabel="Artículo" placeholder="Buscar artículo existente..." value={selected} invalid={Boolean(errors.inventoryItemId)} disabled={busy} onChange={item=>{setSelected(item);field.onChange(item?.id??"")}}/>}/>
             {errors.inventoryItemId?.message&&<small className="field-error">{errors.inventoryItemId.message}</small>}
-          </label>
+          </div>
 
           {selected&&<section className="inventory-adjustment-balance" aria-label="Saldo actual">
             <div><small>STOCK ACTUAL</small><strong>{formatRegionalNumber(currentStock,location?.country,{maximumFractionDigits:3})} {selected.unit}</strong></div>
@@ -100,6 +105,10 @@ export function InventoryAdjustmentDialog({items,busy,close,save}:{items:Invento
               <Input type="number" min="0.001" step="0.001" inputMode="decimal" {...register("quantity")} placeholder="0" aria-invalid={Boolean(errors.quantity)}/>
               {errors.quantity?.message&&<small className="field-error">{errors.quantity.message}</small>}
             </label>
+            {movementType==="entry"&&<label>Costo unitario{selected?" por "+selected.unit:""}
+              <Input type="number" min="0" step="0.0001" inputMode="decimal" {...register("unitCost")} placeholder={averageCost>0?money(averageCost):"0.00"} aria-invalid={Boolean(errors.unitCost)}/>
+              {errors.unitCost?.message?<small className="field-error">{errors.unitCost.message}</small>:selected&&<small className="inventory-adjustment-hint">{averageCost>0?"Vacío usa el promedio actual: "+money(averageCost):"Obligatorio: el artículo aún no tiene costo promedio."}</small>}
+            </label>}
             <label className="span-2">Observación opcional
               <Textarea maxLength={240} rows={3} {...register("observation")} placeholder="Agrega una referencia si necesitas explicar el ajuste"/>
               {errors.observation?.message&&<small className="field-error">{errors.observation.message}</small>}
@@ -113,7 +122,7 @@ export function InventoryAdjustmentDialog({items,busy,close,save}:{items:Invento
 
           {isSubmitted&&hasErrors&&<div className="inventory-validation" role="alert"><Icon name="alert" size={16}/><span>Revisa los campos marcados antes de guardar.</span></div>}
         </div>
-        <ModalFooter><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy||items.length===0} loading={busy}>{busy?"Guardando…":"Guardar"}</Button></ModalFooter>
+        <ModalFooter><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy} loading={busy}>{busy?"Guardando…":"Guardar"}</Button></ModalFooter>
       </form>
     </Dialog>
   </div>;

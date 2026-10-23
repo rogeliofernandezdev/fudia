@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"context"
-	"strings"
 
 	"github.com/foods-platform/foods-backend/internal/modules/inventory/domain"
 )
@@ -15,7 +14,7 @@ const linkableProductFilter = `
 	AND NOT EXISTS(SELECT 1 FROM product_recipes pr WHERE pr.product_id=p.id AND pr.organization_id=p.organization_id AND pr.active)`
 
 func (r *Stock) LinkableProducts(ctx context.Context, s scope, query string, limit int) ([]domain.LinkableProduct, error) {
-	search := "%" + strings.NewReplacer(`\`, `\\`, "%", `\%`, "_", `\_`).Replace(query) + "%"
+	search := containsPattern(query)
 	rows, err := r.db(ctx).Query(ctx, `
 		SELECT p.id,p.sku,p.name,c.name,p.quantity_control
 		FROM products p

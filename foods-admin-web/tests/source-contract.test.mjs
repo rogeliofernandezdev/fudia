@@ -100,7 +100,7 @@ test("los modales remotos muestran skeleton mientras esperan datos",()=>{
     "src/modules/menu/products/presentation/catalog-manager.tsx":["RemoteModalSkeleton","categories.isLoading"],
     "src/modules/identity/presentation/users-roles-manager.tsx":["RemoteModalSkeleton","roles.isLoading||locations.isLoading","permissions.isLoading"],
     "src/modules/organizations/presentation/organization-admin.tsx":["RemoteModalSkeleton","profiles.isLoading"],
-    "src/modules/supply/inventory/presentation/inventory-page.tsx":["RemoteModalSkeleton","products.isLoading"],
+    "src/modules/supply/inventory/presentation/inventory-page.tsx":["RemoteModalSkeleton","locations.isLoading"],
     "src/design-system/maps/mapbox-location-provider.tsx":["mapLoading","location-map-canvas-skeleton","location-map-suggestions-loading"],
   };
   for(const [p,needles] of Object.entries(contracts)){
@@ -648,6 +648,24 @@ test("mesas conserva edición inline dentro de la tabla",()=>{
   assert.ok(api.includes('method:"PATCH"'),"La edición persiste con PATCH");
   assert.ok(api.includes('tables/${draft.id}'),"La edición usa el endpoint específico de la mesa");
   assert.equal(page.includes('style={{flexWrap:"wrap"}}'),false,"Mesas no introduce estilos inline para composición");
+});
+
+test("inventario busca artículos en el servidor y valoriza las entradas",()=>{
+  const api=read("src/modules/supply/inventory/infrastructure/inventory-api.ts");
+  const lookup=read("src/modules/supply/inventory/presentation/inventory-item-lookup.tsx");
+  const adjustment=read("src/modules/supply/inventory/presentation/inventory-adjustment-dialog.tsx");
+  const transfer=read("src/modules/supply/inventory/presentation/inventory-transfer-dialog.tsx");
+  const kardex=read("src/modules/supply/inventory/presentation/kardex-page.tsx");
+  const page=read("src/modules/supply/inventory/presentation/inventory-page.tsx");
+  assert.equal(api.includes("listInventoryProducts"),false,"No queda una lista de artículos truncada por la paginación");
+  assert.ok(api.includes('pageSize:"20"'),"La búsqueda pide una página explícita");
+  assert.ok(lookup.includes("react-select/async")&&lookup.includes("searchInventoryProducts"),"El selector busca en el servidor");
+  assert.ok(lookup.includes("createLookupSelectStyles"),"El selector reutiliza los estilos compartidos de búsqueda");
+  for(const [name,source] of [["ajuste",adjustment],["transferencia",transfer],["Kárdex",kardex]])assert.ok(source.includes("<InventoryItemLookup"),name+" usa el buscador de artículos");
+  assert.equal(page.includes("inventory-products"),false,"Inventario no precarga artículos para los diálogos");
+  assert.ok(adjustment.includes("Costo unitario"),"El ajuste de entrada pide costo unitario");
+  assert.ok(adjustment.includes("el artículo todavía no tiene costo promedio"),"El costo es obligatorio sin promedio");
+  assert.ok(api.includes('draft.movementType==="entry"&&draft.unitCost.trim()!==""'),"Solo las entradas envían costo");
 });
 
 test("empresa y kardex respetan no duplicación y patrón de gestión",()=>{

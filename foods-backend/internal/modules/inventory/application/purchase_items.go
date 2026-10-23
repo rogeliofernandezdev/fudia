@@ -27,7 +27,7 @@ func (a *Stock) CreatePurchaseItem(ctx context.Context, s scope, input domain.Pu
 		Unit:                 input.Unit,
 		PresentationType:     legacyType,
 		UnitsPerPresentation: legacyFactor,
-		MinimumStock:         input.MinimumStock,
+		MinimumStock:         &input.MinimumStock,
 	})
 	if invalid != "" {
 		return result, stockFailure(apperror.Invalid, "invalid_purchase_item", invalid)
@@ -116,7 +116,7 @@ func (a *Stock) CreatePurchaseItem(ctx context.Context, s scope, input domain.Pu
 		control := "inventory"
 		quantityControl = &control
 	}
-	minimumStock := strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.3f", normalized.MinimumStock), "0"), ".")
+	minimumStock := strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.3f", normalized.MinimumStockValue()), "0"), ".")
 	if minimumStock == "" {
 		minimumStock = "0"
 	}

@@ -5,13 +5,15 @@ export function listInventory(input:{q:string;page:number;pageSize:number}){
   const params=new URLSearchParams({q:input.q,page:String(input.page),pageSize:String(input.pageSize)});
   return apiFetch<InventoryList>(`inventory?${params.toString()}`);
 }
-export function listInventoryProducts(q=""){
-  const params=new URLSearchParams({q});
-  return apiFetch<{items:InventoryProductOption[]}>(`inventory/products?${params.toString()}`);
+// Lookups search on the server: the list is paginated and never truncates the catalog.
+export function searchInventoryProducts(q=""){
+  const params=new URLSearchParams({q:q.trim(),page:"1",pageSize:"20"});
+  return apiFetch<{items:InventoryProductOption[];total:number}>(`inventory/products?${params.toString()}`);
 }
 export function createInventoryAdjustment(draft:InventoryAdjustmentDraft){
   return apiFetch<InventoryAdjustmentResult>("inventory/adjustments",{method:"POST",body:JSON.stringify({
     inventoryItemId:draft.inventoryItemId,movementType:draft.movementType,reason:draft.reason,quantity:Number(draft.quantity),observation:draft.observation.trim(),
+    ...(draft.movementType==="entry"&&draft.unitCost.trim()!==""?{unitCost:Number(draft.unitCost)}:{}),
   })});
 }
 export function updateInventorySettings(draft:InventorySettingsDraft){

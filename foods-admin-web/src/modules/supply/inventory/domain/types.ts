@@ -51,6 +51,8 @@ export type InventoryAdjustmentDraft={
   reason:InventoryAdjustmentReason;
   quantity:string;
   observation:string;
+  /** Costo por unidad base; solo aplica a entradas. Vacío usa el costo promedio vigente. */
+  unitCost:string;
 };
 
 export type InventoryAdjustmentResult={
@@ -63,6 +65,8 @@ export type InventoryAdjustmentResult={
   quantity:number;
   stockBefore:number;
   stockAfter:number;
+  unitCost:number;
+  averageUnitCost:number;
   observation:string;
   createdAt:string;
   createdByName:string;

@@ -11,6 +11,11 @@ const schema=z.object({
     return value!==""&&Number.isFinite(parsed)&&parsed>0;
   },"Ingresa una cantidad mayor que cero."),
   observation:z.string().max(240,"La observación no puede superar 240 caracteres."),
+  unitCost:z.string().trim().refine(value=>{
+    if(value==="")return true;
+    const parsed=Number(value);
+    return Number.isFinite(parsed)&&parsed>=0&&parsed<1e10;
+  },"Ingresa un costo igual o mayor que cero."),
 }).superRefine((value,ctx)=>{
   if(value.movementType==="entry"&&value.reason!=="surplus_adjustment"){
     ctx.addIssue({code:"custom",path:["reason"],message:"Selecciona un motivo de entrada válido."});

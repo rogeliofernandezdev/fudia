@@ -115,7 +115,7 @@ func (a *Stock) ApplyOrderQuantityDelta(ctx context.Context, s scope, orderID st
 				return stockFailure(apperror.Unavailable, "quantity_unavailable", "No pudimos actualizar el stock del producto.")
 			}
 			if math.Abs(balanceDelta) > 0.000001 {
-				if err := a.movement(ctx, s, &productID, inventoryItemID, movementType, balanceDelta, nextBalance, averageCost, "order", orderID, "Pedido "+orderID); err != nil {
+				if err := a.movement(ctx, s, &productID, inventoryItemID, movementType, balanceDelta, nextBalance, averageCost, "order", orderID, orderMovementNote(movementType)); err != nil {
 					return stockFailure(apperror.Unavailable, "quantity_unavailable", "No pudimos registrar el movimiento de Kárdex.")
 				}
 			}
@@ -124,6 +124,19 @@ func (a *Stock) ApplyOrderQuantityDelta(ctx context.Context, s scope, orderID st
 		}
 	}
 	return nil
+}
+
+// orderMovementNote describes an order movement; the Kárdex shows the order code
+// from source_id, so the note never repeats the raw identifier.
+func orderMovementNote(movementType string) string {
+	switch movementType {
+	case "sale_reversal":
+		return "Reversa de venta"
+	case "sale_adjustment":
+		return "Ajuste por edición del pedido"
+	default:
+		return "Salida automática por venta"
+	}
 }
 func (a *Stock) DesiredRecipeUsage(ctx context.Context, s scope, products map[string]float64) (map[string]float64, error) {
 	recipes, inventory, err := a.repo.RecipeModules(ctx, s)

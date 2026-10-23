@@ -127,7 +127,7 @@ func TestInventoryEntryWidensCartaCategoryToBoth(t *testing.T) {
 	).Scan(&categoryID); err != nil {
 		t.Fatalf("seed carta category: %v", err)
 	}
-	body := []byte(fmt.Sprintf(`{"newProduct":{"name":%q,"price":"3.50","categoryId":%q},"quantity":6,"unit":"botella","minimumStock":2}`, fmt.Sprintf("Gaseosa %d", time.Now().UnixNano()), categoryID))
+	body := []byte(fmt.Sprintf(`{"newProduct":{"name":%q,"price":"3.50","categoryId":%q},"quantity":6,"unitCost":1.5,"unit":"botella","minimumStock":2}`, fmt.Sprintf("Gaseosa %d", time.Now().UnixNano()), categoryID))
 	req := httptest.NewRequest("POST", "/v1/admin/inventory/entries", bytes.NewReader(body))
 	req = req.WithContext(context.WithValue(req.Context(), scopeKey{}, s))
 	rec := httptest.NewRecorder()
@@ -151,7 +151,7 @@ func TestInventoryEntryCreatesProductThenReusesIt(t *testing.T) {
 	name := fmt.Sprintf("Agua mineral %d", time.Now().UnixNano())
 	categoryID := seedRetailCategory(t, pool, s)
 
-	firstBody := []byte(fmt.Sprintf(`{"newProduct":{"name":%q,"price":"4.50","categoryId":%q},"quantity":12,"unit":"botella","minimumStock":3,"note":"primera compra"}`, name, categoryID))
+	firstBody := []byte(fmt.Sprintf(`{"newProduct":{"name":%q,"price":"4.50","categoryId":%q},"quantity":12,"unitCost":1.5,"unit":"botella","minimumStock":3,"note":"primera compra"}`, name, categoryID))
 	firstReq := httptest.NewRequest("POST", "/v1/admin/inventory/entries", bytes.NewReader(firstBody))
 	firstReq = firstReq.WithContext(context.WithValue(firstReq.Context(), scopeKey{}, s))
 	firstRec := httptest.NewRecorder()
@@ -217,7 +217,7 @@ func TestInventoryPackageEntryConvertsToBaseUnits(t *testing.T) {
 	name := fmt.Sprintf("Caja de agua %d", time.Now().UnixNano())
 	categoryID := seedRetailCategory(t, pool, s)
 
-	body := []byte(fmt.Sprintf(`{"newProduct":{"name":%q,"price":"4.50","categoryId":%q},"quantity":5,"unit":"botella","presentationType":"box","unitsPerPresentation":12,"minimumStock":6,"note":"5 cajas x 12"}`, name, categoryID))
+	body := []byte(fmt.Sprintf(`{"newProduct":{"name":%q,"price":"4.50","categoryId":%q},"quantity":5,"unitCost":1.5,"unit":"botella","presentationType":"box","unitsPerPresentation":12,"minimumStock":6,"note":"5 cajas x 12"}`, name, categoryID))
 	req := httptest.NewRequest("POST", "/v1/admin/inventory/entries", bytes.NewReader(body))
 	req = req.WithContext(context.WithValue(req.Context(), scopeKey{}, s))
 	rec := httptest.NewRecorder()
@@ -286,7 +286,7 @@ func TestKardexUsesReadableInventoryEntryReference(t *testing.T) {
 	name := fmt.Sprintf("Kardex agua %d", time.Now().UnixNano())
 	categoryID := seedRetailCategory(t, pool, s)
 
-	body := []byte(fmt.Sprintf(`{"newProduct":{"name":%q,"price":"4.50","categoryId":%q},"quantity":12,"unit":"botella","minimumStock":3,"note":"recepción proveedor"}`, name, categoryID))
+	body := []byte(fmt.Sprintf(`{"newProduct":{"name":%q,"price":"4.50","categoryId":%q},"quantity":12,"unitCost":1.5,"unit":"botella","minimumStock":3,"note":"recepción proveedor"}`, name, categoryID))
 	req := httptest.NewRequest("POST", "/v1/admin/inventory/entries", bytes.NewReader(body))
 	req = req.WithContext(context.WithValue(req.Context(), scopeKey{}, s))
 	rec := httptest.NewRecorder()
@@ -327,7 +327,7 @@ func TestInventoryIngredientEntryDoesNotCreateProduct(t *testing.T) {
 	api := New(pool)
 	name := fmt.Sprintf("Carne de res %d", time.Now().UnixNano())
 
-	body := []byte(fmt.Sprintf(`{"newIngredient":{"name":%q},"quantity":15,"unit":"kg","minimumStock":2,"note":"recepción de insumo"}`, name))
+	body := []byte(fmt.Sprintf(`{"newIngredient":{"name":%q},"quantity":15,"unitCost":1.5,"unit":"kg","minimumStock":2,"note":"recepción de insumo"}`, name))
 	req := httptest.NewRequest("POST", "/v1/admin/inventory/entries", bytes.NewReader(body))
 	req = req.WithContext(context.WithValue(req.Context(), scopeKey{}, s))
 	rec := httptest.NewRecorder()
@@ -441,7 +441,7 @@ func TestCreateInventoryEntryRollsBackNewProductOnLateFailure(t *testing.T) {
 	badScope.UserID = "00000000-0000-0000-0000-000000000001"
 	name := fmt.Sprintf("Atomic Cola %d", time.Now().UnixNano())
 	categoryID := seedRetailCategory(t, pool, s)
-	body := []byte(fmt.Sprintf(`{"newProduct":{"name":%q,"price":"5.00","categoryId":%q},"quantity":12,"unit":"botella","minimumStock":2,"note":"primera entrada"}`, name, categoryID))
+	body := []byte(fmt.Sprintf(`{"newProduct":{"name":%q,"price":"5.00","categoryId":%q},"quantity":12,"unitCost":1.5,"unit":"botella","minimumStock":2,"note":"primera entrada"}`, name, categoryID))
 	req := httptest.NewRequest("POST", "/v1/admin/inventory/entries", bytes.NewReader(body))
 	req = req.WithContext(context.WithValue(req.Context(), scopeKey{}, badScope))
 	rec := httptest.NewRecorder()

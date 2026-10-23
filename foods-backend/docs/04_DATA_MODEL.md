@@ -185,6 +185,30 @@ El flujo principal de mercadería física comienza en **Inventario > Nueva entra
    presentación o saldo parcial.
 7. Las reposiciones posteriores usan siempre el mismo `InventoryItemId`.
 
+#### Valorización de entradas y ajustes
+
+Una entrada (`POST /inventory/entries`) o un ajuste de entrada acepta `unitCost`,
+el costo por unidad base. Con costo, el promedio se recalcula como en una
+recepción: `(saldo × promedio + cantidad × costo) / saldo resultante`; el Kárdex
+valoriza el movimiento a ese costo y el saldo al nuevo promedio. Sin costo, la
+entrada usa el promedio vigente. Si el artículo todavía no tiene promedio
+(`average_unit_cost = 0`), el costo es obligatorio (`unit_cost_required`): de lo
+contrario esa existencia valdría cero y bajaría el promedio de la próxima compra.
+Las salidas siempre salen al promedio e ignoran `unitCost`.
+
+`minimumStock` es opcional en una entrada: solo cambia el mínimo configurado del
+local (y el del artículo al revincular un producto) cuando se envía. Un artículo
+nuevo sin ese campo queda con mínimo 0.
+
+Cantidades, saldos y niveles se validan contra el rango de las columnas
+`numeric(14,3)` (menores que 100000000000) y los costos contra `numeric(14,4)`
+(menores que 10000000000). Un saldo resultante fuera de rango responde
+`stock_limit_exceeded` en lugar de un error de base de datos.
+
+La búsqueda de Inventario (`q`) compara nombre y SKU de forma literal: `%` y `_`
+no actúan como comodines. Los listados desempatan por id para que la paginación
+sea estable con nombres repetidos.
+
 El selector «Producto existente» muestra únicamente productos activos con
 `quantity_control='inventory'`. Los productos con `none` o `portions` no son
 elegibles para una entrada y registrar stock nunca cambia implícitamente el modo
@@ -243,6 +267,22 @@ La actualización de pedido, el descuento/restauración y el movimiento de Kárd
 comparten la misma transacción. Esto evita sobreventa cuando dos pedidos intentan
 consumir simultáneamente el último stock.
 
+El movimiento de Kárdex de un pedido guarda el pedido en `source_id` y el Kárdex
+muestra su código como referencia; la nota solo describe el motivo («Salida
+automática por venta», «Reversa de venta» o «Ajuste por edición del pedido») y
+nunca repite el identificador interno. La migración `000086_kardex_order_notes`
+convierte las notas históricas «Pedido <uuid>» al mismo formato, solo cuando la
+nota coincide exactamente con el `source_id` del movimiento.
+
+### Transferencias entre locales
+
+El local destino se valida en PostgreSQL y, desde ese momento, la transferencia
+usa el identificador canónico que devuelve la base (PostgreSQL acepta el mismo
+UUID en mayúsculas o sin guiones). Con ese identificador se rechaza transferir
+al mismo local y se ubican los saldos bloqueados de origen y destino; si alguno
+de los dos saldos no aparece, la transferencia se revierte en lugar de asumir
+existencia cero.
+
 ### Resolución de disponibilidad
 
 Orden de precedencia:
@@ -268,7 +308,7 @@ por su cuenta.
 | `inventory_presentations` | Presentaciones reutilizables de ingreso y su factor hacia la unidad base. |
 | `stock_balances` | Saldo físico actual por local e item interno, siempre expresado en unidad base. |
 | `inventory_entries` | Documento auditable: cantidad recibida, presentación, factor y equivalencia en unidad base. |
-| `stock_movements` | Kárdex: entradas, ventas, reversas y ajustes, con saldo resultante. |
+| `stock_movements` | Kárdex: entradas, ventas, reversas y ajustes, con saldo resultante. `sequence_number` (identidad, migración 87) fija el orden de registro: los movimientos de una misma transacción comparten `created_at`, y el Kárdex ordena por fecha y luego por esa secuencia. |
 | `menu_combos` | Identifica productos compuestos vendidos como menú o combo. |
 | `menu_combo_groups` | Grupos de elección del combo. |
 | `menu_combo_options` | Productos existentes usados como alternativas del combo. |

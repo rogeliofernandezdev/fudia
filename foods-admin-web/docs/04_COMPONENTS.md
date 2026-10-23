@@ -539,6 +539,23 @@ vacío, lectura, paginación y acciones derivadas respetan el contrato existente
 El modal de historial conserva la tabla de cinco columnas descrita arriba;
 esta composición no añade cambios a su layout.
 
+## Buscador de artículos de inventario
+
+`InventoryItemLookup` (Inventario) es el único selector de artículos en Registrar
+ajuste, Transferir y el filtro del Kárdex. Busca en el servidor
+(`inventory/products?q=`, 20 resultados por consulta) con `react-select/async` y
+`createLookupSelectStyles`, de modo que ningún artículo queda fuera por la
+paginación. Mantiene el artículo elegido completo para mostrar existencia, unidad
+y costo promedio sin una segunda consulta. En Transferir excluye los artículos ya
+elegidos en otras líneas; en móvil su ancho es fijo para que la tabla no desborde.
+
+El ajuste de entrada pide **Costo unitario** por unidad base. Vacío usa el
+promedio actual (el texto de ayuda lo muestra); si el artículo aún no tiene
+promedio es obligatorio, y el backend repite esa validación. Las salidas no
+muestran el campo. Los cuerpos de Registrar ajuste y Transferir usan
+`grid-auto-rows:max-content` para que, al desplazarse, ninguna sección se
+comprima.
+
 ## Niveles de inventario
 
 El ajuste de niveles de Inventario usa el mismo `crud-modal compact`, `FormField`

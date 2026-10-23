@@ -162,7 +162,7 @@ func TestPurchaseCombinationsCatalogConversionsAndDefault(t *testing.T) {
 		t.Fatalf("sale deducted packaging instead of unit: %v %v", balance, err)
 	}
 	// Five bags of half a kilogram add 2.5 kg.
-	entry := call(s, "POST", "/v1/admin/inventory/entries", `{"newIngredient":{"name":"Arroz medio kilo"},"unit":"kg","quantity":5,"presentationType":"bag","unitsPerPresentation":0.5}`, "", api.createInventoryEntry)
+	entry := call(s, "POST", "/v1/admin/inventory/entries", `{"newIngredient":{"name":"Arroz medio kilo"},"unit":"kg","quantity":5,"unitCost":3.2,"presentationType":"bag","unitsPerPresentation":0.5}`, "", api.createInventoryEntry)
 	if entry.Code != 201 {
 		t.Fatalf("fractional contents %d %s", entry.Code, entry.Body.String())
 	}

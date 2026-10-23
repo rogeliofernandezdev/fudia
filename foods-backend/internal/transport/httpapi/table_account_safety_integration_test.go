@@ -200,7 +200,7 @@ func TestCancelDirectRestoresStockOnceAndPreservesGuards(t *testing.T) {
 	api := New(pool)
 	ctx := context.Background()
 	category := seedRetailCategory(t, pool, s)
-	serviceSafetyCall(t, s, "", fmt.Sprintf(`{"newProduct":{"name":"Gaseosa cancelación","price":"10","categoryId":%q},"quantity":12,"unit":"botella"}`, category), api.createInventoryEntry, 201)
+	serviceSafetyCall(t, s, "", fmt.Sprintf(`{"newProduct":{"name":"Gaseosa cancelación","price":"10","categoryId":%q},"quantity":12,"unit":"botella","unitCost":4}`, category), api.createInventoryEntry, 201)
 	var product, register string
 	if err := pool.QueryRow(ctx, `SELECT id FROM products WHERE organization_id=$1 AND name='Gaseosa cancelación'`, s.OrganizationID).Scan(&product); err != nil {
 		t.Fatal(err)
