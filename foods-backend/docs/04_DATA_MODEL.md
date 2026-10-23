@@ -374,6 +374,22 @@ plan básico no depende de recetas para comenzar a vender.
 
 Los valores iniciales se siembran durante la migración, pero la lógica de aplicación no contiene una lista cerrada de medios de pago.
 
+Una empresa tiene como máximo **4 medios activos** (`MaxActivePaymentMethods`):
+crear o activar un quinto responde `payment_method_limit` y obliga a desactivar
+otro antes. `payment_method_templates` se agrupa por `country_code`: Perú (`PE`)
+siembra Efectivo, Tarjeta, Yape y Plin; el resto de países usa el conjunto
+general (`country_code=''`): Efectivo, Tarjeta, Transferencia bancaria y
+Billetera digital, con «Otro» inactivo. El país se toma del perfil fiscal
+predeterminado de la empresa. La migración 89 llevó las empresas peruanas
+existentes a ese conjunto (Transferencia, Billetera digital y Otro quedan
+inactivos con su historial intacto) y dejó toda empresa con 4 activos como
+máximo, conservando los de menor orden.
+
+El cobro del POS lee el catálogo en `GET /v1/admin/payment-methods/operational?usage=sales`
+(activos y habilitados para ventas, en su orden). Nombre e indicador `affectsCash`
+vienen del catálogo: solo un medio que impacta caja anuncia y suma el efectivo
+esperado del turno, y los pagos devueltos exponen `methodName` y `affectsCash`.
+
 ## Gastos operativos
 
 Los gastos operativos son documentos del local y no reemplazan la contabilidad general.

@@ -8,6 +8,7 @@ type PaymentView struct {
 	CashRegisterName string `json:"cashRegisterName"`
 	Method           string `json:"method"`
 	MethodName       string `json:"methodName"`
+	AffectsCash      bool   `json:"affectsCash"`
 	Amount           string `json:"amount"`
 	RefundedAmount   string `json:"refundedAmount"`
 	NetAmount        string `json:"netAmount"`

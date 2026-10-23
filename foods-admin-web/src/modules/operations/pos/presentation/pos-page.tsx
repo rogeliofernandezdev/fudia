@@ -14,9 +14,8 @@ import {useDebouncedValue} from "@/shared/hooks/use-debounced-value";
 import {pageRoutes} from "@/shared/routing/page-routes";
 import {cashShiftAttribution} from "../../cash/domain/shift-attribution";
 import {getCurrentCashShift} from "../../cash/infrastructure/cash-api";
-import type {Payment,PaymentDraft,POSOrderDetail,POSOrderSummary} from "../domain/types";
-import {paymentMethodMeta} from "./pos-meta";
-import {createPayment,getPOSOrder,listPOSOrders,refundPayment} from "../infrastructure/pos-api";
+import type {Payment,PaymentDraft,PaymentMethodOption,POSOrderDetail,POSOrderSummary} from "../domain/types";
+import {createPayment,getPOSOrder,listPOSOrders,listSalesPaymentMethods,refundPayment} from "../infrastructure/pos-api";
 const PaymentDialog=dynamic(()=>import("./pos-dialogs").then(module=>module.PaymentDialog),{ssr:false});
 const RefundDialog=dynamic(()=>import("./pos-dialogs").then(module=>module.RefundDialog),{ssr:false});
 const PaymentTicketDialog=dynamic(()=>import("@/modules/sales").then(module=>module.PaymentTicketDialog),{ssr:false});
@@ -49,6 +48,12 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
     queryKey:["cash-shift","current"],
     queryFn:getCurrentCashShift,
     refetchInterval:30000,
+  });
+  const methods=useQuery({
+    queryKey:["payment-methods","sales"],
+    queryFn:listSalesPaymentMethods,
+    enabled:Boolean(paymentOrderId),
+    staleTime:60000,
   });
   const orders=useQuery({
     queryKey:["pos-orders",debouncedQ,paymentStatus,page,size],
@@ -177,6 +182,10 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
       shiftLoading={current.isLoading}
       shiftError={current.error?.message}
       shiftName={shift?shift.cashRegisterName:null}
+      methodsLoading={methods.isLoading}
+      methodsError={methods.error?.message}
+      methods={methods.data?.items}
+      retryMethods={()=>void methods.refetch()}
       canManage={canManage}
       busy={pay.isPending}
       formatMoney={money}
@@ -203,18 +212,20 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
   </div>;
 }
 
-function POSPaymentEntry({loading,error,data,shiftLoading,shiftError,shiftName,canManage,busy,formatMoney,close,retryOrder,retryShift,save}:{loading:boolean;error?:string;data?:POSOrderDetail;shiftLoading:boolean;shiftError?:string;shiftName:string|null;canManage:boolean;busy:boolean;formatMoney:(value:number)=>string;close:()=>void;retryOrder:()=>void;retryShift:()=>void;save:(draft:PaymentDraft)=>void}){
+function POSPaymentEntry({loading,error,data,shiftLoading,shiftError,shiftName,methodsLoading,methodsError,methods,retryMethods,canManage,busy,formatMoney,close,retryOrder,retryShift,save}:{loading:boolean;error?:string;data?:POSOrderDetail;shiftLoading:boolean;shiftError?:string;shiftName:string|null;methodsLoading:boolean;methodsError?:string;methods?:PaymentMethodOption[];retryMethods:()=>void;canManage:boolean;busy:boolean;formatMoney:(value:number)=>string;close:()=>void;retryOrder:()=>void;retryShift:()=>void;save:(draft:PaymentDraft)=>void}){
   let state:{title:string;text:string;icon?:IconName;retry?:()=>void;cash?:boolean}|undefined;
   if(!canManage)state={title:"No puedes registrar cobros",text:"Tu rol necesita permiso para administrar cobros.",icon:"lock"};
   else if(error)state={title:"No pudimos cargar el pedido",text:error,retry:retryOrder};
   else if(shiftError)state={title:"No pudimos validar tu caja",text:shiftError,retry:retryShift};
-  else if(!loading&&!shiftLoading){
+  else if(methodsError)state={title:"No pudimos cargar los medios de pago",text:methodsError,retry:retryMethods};
+  else if(!loading&&!shiftLoading&&!methodsLoading){
     if(!data)state={title:"Pedido no disponible",text:"No pudimos encontrar este pedido en el local activo.",retry:retryOrder};
     else if(data.paymentStatus==="paid"||Number(data.remainingAmount)<=0)state={title:"El pedido ya está pagado",text:"No tiene saldo pendiente de cobro.",icon:"circleCheck"};
     else if(data.order.completedAt||data.order.status==="cancelado")state={title:"El pedido está cerrado",text:"No se pueden registrar nuevos cobros.",icon:"lock"};
     else if(!canChargeAccount(data.order))state=data.order.channel==="salon"?{title:"Cuenta no disponible para cobro",text:"El mozo debe entregar todos los productos y cerrar la cuenta antes de cobrar.",icon:"clock"}:{title:"Pedido no listo",text:"El pedido todavía no está listo para cobrar.",icon:"clock"};
     else if(!shiftName)state={title:"Necesitas un turno de caja",text:"Abre un turno o únete a una caja para registrar el cobro.",icon:"register",cash:true};
-    else return <PaymentDialog order={{...data.order,paidAmount:data.paidAmount,remainingAmount:data.remainingAmount,paymentStatus:data.paymentStatus}} shiftName={shiftName} busy={busy} formatMoney={formatMoney} close={close} save={save}/>;
+    else if(!methods?.length)state={title:"Sin medios de pago para ventas",text:"Activa al menos un medio para ventas en Configuración › Medios de pago.",icon:"wallet"};
+    else return <PaymentDialog methods={methods} order={{...data.order,paidAmount:data.paidAmount,remainingAmount:data.remainingAmount,paymentStatus:data.paymentStatus}} shiftName={shiftName} busy={busy} formatMoney={formatMoney} close={close} save={save}/>;
   }
   return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal pos-payment-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="pos-payment-entry-title">
 
@@ -262,7 +273,7 @@ export function POSDetailDialog({loading,error,data,canManage,hasShift,formatMon
         <h3 id="pos-detail-payments-title" className="modal-section-title modal-section-rule">Pagos registrados</h3>
         {data.payments.length?<div className="pos-payment-list">{data.payments.map(payment=>{
           const net=Number(payment.netAmount);
-          return <article key={payment.id}><span className={"pos-payment-method pm-"+payment.method}><Icon name={paymentMethodMeta[payment.method]?.icon??"wallet"} size={16}/></span><div><b>{paymentMethodMeta[payment.method]?.label??"Otro"}</b><small>{payment.cashRegisterName} · {formatDateTime(payment.createdAt)}</small><small>Cobrado por: {payment.createdByName||"Sin información"}</small>{payment.reference&&<em>{payment.reference}</em>}</div><span className="pos-payment-values"><b>{formatMoney(Number(payment.amount))}</b>{Number(payment.refundedAmount)>0&&<small>Devuelto {formatMoney(Number(payment.refundedAmount))}</small>}</span>{canManage&&net>0&&!closed&&<Button kind="ghost" className="pos-refund-action" icon="undo" disabled={!hasShift} onClick={()=>refund(payment)}>Devolver</Button>}</article>})}</div>
+          return <article key={payment.id}><span className={"pos-payment-method"+(payment.affectsCash?" cash":"")}><Icon name={payment.affectsCash?"cash":"wallet"} size={16}/></span><div><b>{payment.methodName}</b><small>{payment.cashRegisterName} · {formatDateTime(payment.createdAt)}</small><small>Cobrado por: {payment.createdByName||"Sin información"}</small>{payment.reference&&<em>{payment.reference}</em>}</div><span className="pos-payment-values"><b>{formatMoney(Number(payment.amount))}</b>{Number(payment.refundedAmount)>0&&<small>Devuelto {formatMoney(Number(payment.refundedAmount))}</small>}</span>{canManage&&net>0&&!closed&&<Button kind="ghost" className="pos-refund-action" icon="undo" disabled={!hasShift} onClick={()=>refund(payment)}>Devolver</Button>}</article>})}</div>
         :<p className="pos-detail-empty">Sin pagos registrados.</p>}
       </section>
     </div></ModalWorkspace>}

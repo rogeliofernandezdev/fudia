@@ -1066,6 +1066,12 @@ no integra un visor PDF.
   PDF, nombres de archivo ni notificaciones: la caja se identifica por su nombre
   y el turno por su caja, día operativo y horas de apertura y cierre. Los
   códigos que escribe el usuario (local, medio de pago, plan) sí se muestran.
+- El cobro (POS) muestra los medios del catálogo de Configuración › Medios de
+  pago: activos y habilitados para ventas, en su orden y con su nombre (hasta 4,
+  por ejemplo Efectivo, Tarjeta, Yape y Plin). El icono y la nota de efectivo
+  esperado siguen a «Impacta caja», nunca al código. Mientras carga el catálogo
+  se muestra el skeleton del cobro; un error ofrece Reintentar y la ausencia de
+  medios lleva a configurarlos.
 - Abastecimiento (Inventario, Kárdex y Compras) no muestra códigos generados por
   la base (`OC-…`, `REC-…`, `DEV-…`, `TRF-…`, `ENT-…` ni SKU automáticos). Cada
   documento se identifica por lo que el usuario reconoce: la orden y la recepción

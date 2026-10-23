@@ -77,7 +77,7 @@ func (r *Payments) RequireShiftAssignment(ctx context.Context, s scope, shiftID 
 }
 func (r *Payments) OrderPayments(ctx context.Context, s scope, orderID string) ([]domain.PaymentView, error) {
 	rows, err := r.db(ctx).Query(ctx, `
-		SELECT p.id::text,p.order_id::text,o.code,p.shift_id::text,cr.name,p.method,pm.name,p.amount::text,
+		SELECT p.id::text,p.order_id::text,o.code,p.shift_id::text,cr.name,p.method,pm.name,pm.affects_cash,p.amount::text,
 		       COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id),0)::text,
 		       (p.amount-COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id),0))::text,
 		       p.reference,u.full_name,to_char(p.created_at,'YYYY-MM-DD"T"HH24:MI:SSOF')
@@ -97,7 +97,7 @@ func (r *Payments) OrderPayments(ctx context.Context, s scope, orderID string) (
 	items := []domain.PaymentView{}
 	for rows.Next() {
 		var item domain.PaymentView
-		if err := rows.Scan(&item.ID, &item.OrderID, &item.OrderCode, &item.ShiftID, &item.CashRegisterName, &item.Method, &item.MethodName, &item.Amount, &item.RefundedAmount, &item.NetAmount, &item.Reference, &item.CreatedByName, &item.CreatedAt); err != nil {
+		if err := rows.Scan(&item.ID, &item.OrderID, &item.OrderCode, &item.ShiftID, &item.CashRegisterName, &item.Method, &item.MethodName, &item.AffectsCash, &item.Amount, &item.RefundedAmount, &item.NetAmount, &item.Reference, &item.CreatedByName, &item.CreatedAt); err != nil {
 			return nil, err
 		}
 		items = append(items, item)
@@ -107,7 +107,7 @@ func (r *Payments) OrderPayments(ctx context.Context, s scope, orderID string) (
 func (r *Payments) Payment(ctx context.Context, s scope, id string) (domain.PaymentView, error) {
 	var item domain.PaymentView
 	err := r.db(ctx).QueryRow(ctx, `
-		SELECT p.id::text,p.order_id::text,o.code,p.shift_id::text,cr.name,p.method,pm.name,p.amount::text,
+		SELECT p.id::text,p.order_id::text,o.code,p.shift_id::text,cr.name,p.method,pm.name,pm.affects_cash,p.amount::text,
 		       COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id),0)::text,
 		       (p.amount-COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id),0))::text,
 		       p.reference,u.full_name,to_char(p.created_at,'YYYY-MM-DD"T"HH24:MI:SSOF')
@@ -119,7 +119,7 @@ func (r *Payments) Payment(ctx context.Context, s scope, id string) (domain.Paym
 		JOIN payment_methods pm ON pm.organization_id=p.organization_id AND pm.code=p.method
 		WHERE p.id=$1 AND p.organization_id=$2 AND p.location_id=$3
 	`, id, s.OrganizationID, s.LocationID).Scan(
-		&item.ID, &item.OrderID, &item.OrderCode, &item.ShiftID, &item.CashRegisterName, &item.Method, &item.MethodName, &item.Amount,
+		&item.ID, &item.OrderID, &item.OrderCode, &item.ShiftID, &item.CashRegisterName, &item.Method, &item.MethodName, &item.AffectsCash, &item.Amount,
 		&item.RefundedAmount, &item.NetAmount, &item.Reference, &item.CreatedByName, &item.CreatedAt,
 	)
 	return item, billingError(err)

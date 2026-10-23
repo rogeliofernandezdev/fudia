@@ -1,5 +1,5 @@
 import {apiFetch} from "@/shared/api/client";
-import type {Payment,PaymentDraft,POSOrderDetail,POSOrdersResponse,RefundDraft} from "../domain/types";
+import type {Payment,PaymentDraft,PaymentMethodOption,POSOrderDetail,POSOrdersResponse,RefundDraft} from "../domain/types";
 
 export function listPOSOrders(input:{q:string;paymentStatus:string;page:number;pageSize:number}){
   const params=new URLSearchParams({
@@ -13,6 +13,11 @@ export function listPOSOrders(input:{q:string;paymentStatus:string;page:number;p
 
 export function getPOSOrder(id:string){
   return apiFetch<POSOrderDetail>(`pos/orders/${id}`);
+}
+
+/** Medios activos y habilitados para ventas del catálogo de la empresa. */
+export function listSalesPaymentMethods(){
+  return apiFetch<{items:PaymentMethodOption[]}>("payment-methods/operational?usage=sales");
 }
 
 export function createPayment(orderId:string,draft:PaymentDraft){

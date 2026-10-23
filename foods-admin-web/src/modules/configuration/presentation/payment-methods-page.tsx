@@ -53,7 +53,7 @@ export function PaymentMethodsPage(){
  const filtered=Boolean(q||status);
  const items=query.data?.items??[];
  const actions=(item:PaymentMethod)=>canManage&&<><RowActionButton action="edit" onClick={()=>edit(item)}/><RowActionButton action={item.active?"deactivate":"activate"} stateLabel={`Estado de ${item.name}`} onClick={()=>setStatusTarget(item)}/></>;
- return <><PageHeader title="Medios de pago" description="Administra el catálogo único utilizado por cobros, caja y gastos." action={canManage?<Button icon="plus" onClick={create}>Nuevo medio</Button>:undefined}/>
+ return <><PageHeader title="Medios de pago" description="Administra el catálogo único utilizado por cobros, caja y gastos. Puedes tener hasta 4 medios activos." action={canManage?<Button icon="plus" onClick={create}>Nuevo medio</Button>:undefined}/>
   <section className="panel management standardized-management payment-methods-panel">
    <div className="toolbar">
     <SearchField value={q} onChange={e=>{setQ(e.target.value);setPage(1)}} placeholder="Buscar por nombre, código o descripción..." label="Buscar medios de pago"/>

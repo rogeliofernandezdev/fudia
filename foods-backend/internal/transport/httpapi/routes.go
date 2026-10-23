@@ -35,6 +35,8 @@ func (a *API) Routes() *http.ServeMux {
 	m.Handle("GET /v1/admin/concierge-settings/delivery-fees", a.auth(a.requirePermission("organizations.read", http.HandlerFunc(a.getConciergeDeliveryFees))))
 	m.Handle("PUT /v1/admin/concierge-settings/delivery-fees", a.auth(a.requirePermission("organizations.manage", http.HandlerFunc(a.saveConciergeDeliveryFees))))
 	m.Handle("GET /v1/admin/payment-methods", a.auth(a.requirePermission("organizations.read", http.HandlerFunc(a.listPaymentMethodsAdmin))))
+	// Checkout reads the active catalog through the admin BFF; any operator may list it.
+	m.Handle("GET /v1/admin/payment-methods/operational", a.auth(http.HandlerFunc(a.listOperationalPaymentMethods)))
 	m.Handle("POST /v1/admin/payment-methods", a.auth(a.requirePermission("organizations.manage", http.HandlerFunc(a.createPaymentMethod))))
 	m.Handle("PATCH /v1/admin/payment-methods/{code}", a.auth(a.requirePermission("organizations.manage", http.HandlerFunc(a.updatePaymentMethod))))
 	m.Handle("PATCH /v1/admin/payment-methods/{code}/status", a.auth(a.requirePermission("organizations.manage", http.HandlerFunc(a.updatePaymentMethodStatus))))

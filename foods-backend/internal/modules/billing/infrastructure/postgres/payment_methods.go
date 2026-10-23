@@ -131,6 +131,15 @@ func (r *Methods) SetActive(ctx context.Context, org, code string, active bool) 
 	`, org, code, active)
 	return tag.RowsAffected() > 0, err
 }
+func (r *Methods) ActiveCount(ctx context.Context, org string) (int, error) {
+	// The organization row serializes concurrent activations of its catalog.
+	if _, err := r.db(ctx).Exec(ctx, `SELECT 1 FROM organizations WHERE id=$1 FOR UPDATE`, org); err != nil {
+		return 0, err
+	}
+	var count int
+	err := r.db(ctx).QueryRow(ctx, `SELECT count(*) FROM payment_methods WHERE organization_id=$1 AND active`, org).Scan(&count)
+	return count, err
+}
 func (r *Methods) Continuity(ctx context.Context, org string) (bool, error) {
 	var sales, expenses int
 	err := r.db(ctx).QueryRow(ctx, `

@@ -89,7 +89,7 @@ func TestPlatformOnboardingCreatesOperationalTenant(t *testing.T){
 
 	var paymentMethods,expenseCategories,cashRegisters,zones,setupPending int
 	if err:=pool.QueryRow(context.Background(),`SELECT count(*) FROM payment_methods WHERE organization_id=$1 AND active`,created.OrganizationID).Scan(&paymentMethods);err!=nil{t.Fatal(err)}
-	if paymentMethods!=5{t.Fatalf("expected 5 default payment methods, got %d",paymentMethods)}
+	if paymentMethods!=4{t.Fatalf("expected 4 default payment methods, got %d",paymentMethods)}
 	if err:=pool.QueryRow(context.Background(),`SELECT count(*) FROM expense_categories WHERE organization_id=$1 AND active`,created.OrganizationID).Scan(&expenseCategories);err!=nil{t.Fatal(err)}
 	if expenseCategories!=6{t.Fatalf("expected 6 default expense categories, got %d",expenseCategories)}
 	if err:=pool.QueryRow(context.Background(),`SELECT count(*) FROM cash_registers WHERE organization_id=$1 AND location_id=$2 AND active AND name='Caja principal'`,created.OrganizationID,created.LocationID).Scan(&cashRegisters);err!=nil{t.Fatal(err)}

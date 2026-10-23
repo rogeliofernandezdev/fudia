@@ -21,7 +21,7 @@ const positiveMoney=z.string().trim().refine(value=>{
 },"Ingresa un monto mayor que cero.");
 
 const paymentSchema=z.object({
-  method:z.enum(["cash","card","transfer","other"]),
+  method:z.string().trim().min(1,"Selecciona un medio de pago."),
   amount:positiveMoney,
   reference:z.string().max(120,"La referencia no puede superar 120 caracteres."),
 });

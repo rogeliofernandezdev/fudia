@@ -137,9 +137,7 @@
 .pos-payment-list article{display:grid;grid-template-columns:var(--size-34) minmax(0,1fr) auto auto;align-items:start;gap:var(--space-2-5);padding-block:var(--space-3)}
 .pos-payment-list article+article{border-top:var(--stroke-1) solid var(--line)}
 .pos-payment-method{display:grid;place-items:center;width:var(--size-32);height:var(--size-32);border-radius:var(--radius-tile);background:var(--primary-100);color:var(--primary-700);flex:0 0 auto}
-.pos-payment-method.pm-cash{background:var(--brand-100);color:var(--brand-700)}
-.pos-payment-method.pm-transfer{background:var(--digital-100);color:var(--digital-700)}
-.pos-payment-method.pm-other{background:var(--cloud-100);color:var(--ink-600)}
+.pos-payment-method.cash{background:var(--brand-100);color:var(--brand-700)}
 .pos-payment-list article>div{display:grid;gap:var(--space-0-5);min-width:0;overflow-wrap:anywhere}
 .pos-payment-list article>div b{font-size:var(--font-size-base)}
 .pos-payment-list article>div small{color:var(--ink-500);font-size:var(--font-size-label)}

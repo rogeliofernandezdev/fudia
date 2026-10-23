@@ -29,6 +29,14 @@ type methodsStub struct {
 	tx         context.Context
 	continuity bool
 	writes     int
+	active     int
+}
+
+func (r *methodsStub) ActiveCount(ctx context.Context, org string) (int, error) {
+	if ctx != r.tx {
+		return 0, errors.New("wrong transaction")
+	}
+	return r.active, nil
 }
 
 func (r *methodsStub) SetActive(ctx context.Context, org, code string, active bool) (bool, error) {
@@ -72,5 +80,20 @@ func TestMethodsValidateBeforeStartingTransaction(t *testing.T) {
 	}
 	if _, err := service.Save(context.Background(), "org", "", domain.PaymentMethodInput{Code: "cash", Name: "Cash"}, false); err == nil {
 		t.Fatal("allowed method without usage")
+	}
+}
+
+func TestMethodsAllowAtMostFourActive(t *testing.T) {
+	for _, active := range []int{4, 5} {
+		tx := &methodTx{ctx: context.WithValue(context.Background(), struct{}{}, "transaction")}
+		repo := &methodsStub{tx: tx.ctx, continuity: true, active: active}
+		err := NewMethods(repo, methodWork{tx}).SetActive(context.Background(), "org", "yape", true)
+		var problem *apperror.Error
+		if active == 4 && (err != nil || !tx.committed) {
+			t.Fatalf("four active methods are allowed: %v", err)
+		}
+		if active == 5 && (!errors.As(err, &problem) || problem.Code != "payment_method_limit" || tx.committed) {
+			t.Fatalf("a fifth active method must be rejected: %v", err)
+		}
 	}
 }

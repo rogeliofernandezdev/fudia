@@ -27,6 +27,8 @@ type MethodRepository interface {
 	Save(context.Context, string, string, domain.PaymentMethodInput, bool) (domain.PaymentMethodView, error)
 	SetActive(context.Context, string, string, bool) (bool, error)
 	Continuity(context.Context, string) (bool, error)
+	// ActiveCount locks the organization's catalog and counts its active methods.
+	ActiveCount(context.Context, string) (int, error)
 	Find(context.Context, string, string, string) (domain.PaymentMethodView, error)
 }
 type Methods struct {
@@ -88,6 +90,16 @@ func (m *Methods) continuity(ctx context.Context, org string) error {
 	}
 	return nil
 }
+func (m *Methods) activeLimit(ctx context.Context, org string) error {
+	count, err := m.repo.ActiveCount(ctx, org)
+	if err != nil {
+		return methodFailure(apperror.Unavailable, "payment_methods_unavailable", "No pudimos validar la cantidad de medios de pago activos.")
+	}
+	if count > domain.MaxActivePaymentMethods {
+		return methodFailure(apperror.Conflict, "payment_method_limit", "Puedes tener hasta 4 medios de pago activos. Desactiva uno antes de agregar o activar otro.")
+	}
+	return nil
+}
 func (m *Methods) Save(ctx context.Context, org, code string, in domain.PaymentMethodInput, updating bool) (domain.PaymentMethodView, error) {
 	var out domain.PaymentMethodView
 	domain.NormalizePaymentMethodInput(&in)
@@ -117,6 +129,11 @@ func (m *Methods) Save(ctx context.Context, org, code string, in domain.PaymentM
 	if err = m.continuity(tx.Context(), org); err != nil {
 		return out, err
 	}
+	if !updating {
+		if err = m.activeLimit(tx.Context(), org); err != nil {
+			return out, err
+		}
+	}
 	if err = tx.Commit(ctx); err != nil {
 		return out, methodFailure(apperror.Unavailable, "payment_methods_unavailable", "No pudimos guardar el medio de pago.")
 	}
@@ -141,6 +158,11 @@ func (m *Methods) SetActive(ctx context.Context, org, code string, active bool) 
 	}
 	if err = m.continuity(tx.Context(), org); err != nil {
 		return err
+	}
+	if active {
+		if err = m.activeLimit(tx.Context(), org); err != nil {
+			return err
+		}
 	}
 	if err = tx.Commit(ctx); err != nil {
 		return methodFailure(apperror.Unavailable, "payment_methods_unavailable", "No pudimos actualizar el medio de pago.")

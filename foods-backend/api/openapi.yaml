@@ -1499,6 +1499,16 @@ paths:
         "404": { description: Pedido no encontrado }
         "409": { description: Transición no permitida o requiere Cocina }
         "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/payment-methods/operational:
+    get:
+      operationId: listCheckoutPaymentMethods
+      summary: Medios activos para cobrar o registrar gastos, leídos por el BFF administrativo
+      description: Misma respuesta que /v1/operations/payment-methods. Una empresa tiene como máximo 4 medios activos.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: query, name: usage, required: true, schema: { type: string, enum: [sales, expenses] } }
+      responses:
+        "200": { description: Catálogo de medios de pago, content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, maxItems: 4, items: { $ref: "#/components/schemas/PaymentMethod" } } } } } } }
   /v1/operations/payment-methods:
     get:
       operationId: listOperationalPaymentMethods
@@ -2085,7 +2095,7 @@ components:
     PaymentMethodInput: { type: object, required: [name, salesEnabled, expensesEnabled, affectsCash, sortOrder], properties: { code: { type: string, pattern: "^[a-z0-9][a-z0-9_-]{0,39}$" }, name: { type: string, minLength: 1, maxLength: 80 }, description: { type: string, maxLength: 180 }, salesEnabled: { type: boolean }, expensesEnabled: { type: boolean }, affectsCash: { type: boolean }, sortOrder: { type: integer, minimum: 0, maximum: 9999 } } }
     PaymentMethod: { type: object, required: [code, name, description, active, salesEnabled, expensesEnabled, affectsCash, sortOrder], properties: { code: { type: string }, name: { type: string }, description: { type: string }, active: { type: boolean }, salesEnabled: { type: boolean }, expensesEnabled: { type: boolean }, affectsCash: { type: boolean }, sortOrder: { type: integer } } }
     PaymentInput: { type: object, required: [orderId, method, amount], properties: { orderId: { type: string, format: uuid }, method: { type: string }, amount: { type: number, exclusiveMinimum: 0 }, reference: { type: string, maxLength: 120 } } }
-    Payment: { type: object, required: [id, orderId, orderCode, shiftId, cashRegisterName, method, methodName, amount, refundedAmount, netAmount, reference, createdByName, createdAt], properties: { id: { type: string, format: uuid }, orderId: { type: string, format: uuid }, orderCode: { type: string }, shiftId: { type: string, format: uuid }, cashRegisterName: { type: string }, method: { type: string }, methodName: { type: string, description: "Nombre del catálogo de la empresa, disponible también para pagos con medios ahora inactivos." }, amount: { type: string }, refundedAmount: { type: string }, netAmount: { type: string }, reference: { type: string }, createdByName: { type: string }, createdAt: { type: string, format: date-time } } }
+    Payment: { type: object, required: [id, orderId, orderCode, shiftId, cashRegisterName, method, methodName, amount, refundedAmount, netAmount, reference, createdByName, createdAt], properties: { id: { type: string, format: uuid }, orderId: { type: string, format: uuid }, orderCode: { type: string }, shiftId: { type: string, format: uuid }, cashRegisterName: { type: string }, method: { type: string }, methodName: { type: string, description: "Nombre del catálogo de la empresa, disponible también para pagos con medios ahora inactivos." }, affectsCash: { type: boolean, description: "El medio impacta el efectivo esperado del turno" }, amount: { type: string }, refundedAmount: { type: string }, netAmount: { type: string }, reference: { type: string }, createdByName: { type: string }, createdAt: { type: string, format: date-time } } }
     RefundInput: { type: object, required: [amount, reason], properties: { amount: { type: number, exclusiveMinimum: 0 }, reason: { type: string, minLength: 1, maxLength: 120 }, note: { type: string, maxLength: 240 } } }
     ComboOptionInput: { type: object, required: [productId, surcharge], properties: { productId: { type: string, format: uuid }, surcharge: { type: string, pattern: "^[0-9]+(\\.[0-9]{1,2})?$" } } }
     ComboGroupInput: { type: object, required: [name, required, minSelections, maxSelections, options], properties: { name: { type: string, maxLength: 120 }, required: { type: boolean }, minSelections: { type: integer, minimum: 0 }, maxSelections: { type: integer, minimum: 1 }, options: { type: array, items: { $ref: "#/components/schemas/ComboOptionInput" } } } }

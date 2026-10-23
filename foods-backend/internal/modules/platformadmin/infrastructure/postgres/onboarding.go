@@ -59,8 +59,15 @@ func (r *Platform) SeedPaymentMethods(ctx context.Context, organizationID string
 		INSERT INTO payment_methods(
 			organization_id,code,name,description,active,sales_enabled,expenses_enabled,affects_cash,sort_order
 		)
-		SELECT $1,code,name,description,active,sales_enabled,expenses_enabled,affects_cash,sort_order
-		FROM payment_method_templates
+		SELECT $1,t.code,t.name,t.description,t.active,t.sales_enabled,t.expenses_enabled,t.affects_cash,t.sort_order
+		FROM payment_method_templates t
+		-- Country templates (Peru: cash, card, Yape, Plin) or the general set.
+		WHERE t.country_code=COALESCE((
+		  SELECT x.country_code FROM payment_method_templates x
+		  WHERE x.country_code=(
+		    SELECT fp.country_code::text FROM organization_fiscal_profiles fp
+		    WHERE fp.organization_id=$1 ORDER BY fp.is_default DESC,fp.created_at LIMIT 1)
+		  LIMIT 1),'')
 		ON CONFLICT (organization_id,code) DO NOTHING
 	`, organizationID)
 	return err

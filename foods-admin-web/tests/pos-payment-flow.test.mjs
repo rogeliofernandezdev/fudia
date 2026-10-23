@@ -26,7 +26,7 @@ function mountPage({canManage=true,shift=true,busy=false,initialOrderId="order-1
   if(name==="react")return{...require(name),useState:value=>{const index=stateIndex++;return[value,next=>changes.push({index,next})]}};
   if(name==="@tanstack/react-query")return{
    useQueryClient:()=>({invalidateQueries:options=>invalidations.push(options.queryKey)}),
-   useQuery:options=>{queries.push(options);return{isLoading:false,isPending:false,isFetching:false,isError:false,refetch:()=>{},data:options.queryKey[0]==="cash-shift"?{shift:shift?{cashRegisterName:"Caja principal",code:"CAJ-001",openedByName:"Ana"}:null}:options.queryKey[0]==="pos-orders"?{items:listed,total:listed.length}:options.enabled?detail:undefined}},
+   useQuery:options=>{queries.push(options);return{isLoading:false,isPending:false,isFetching:false,isError:false,refetch:()=>{},data:options.queryKey[0]==="cash-shift"?{shift:shift?{cashRegisterName:"Caja principal",code:"CAJ-001",openedByName:"Ana"}:null}:options.queryKey[0]==="pos-orders"?{items:listed,total:listed.length}:options.queryKey[0]==="payment-methods"?{items:catalog}:options.enabled?detail:undefined}},
    useMutation:options=>{mutations.push(options);return{isPending:busy,mutate:input=>sent.push(input)}},
   };
   if(name==="@/design-system")return primitives;
@@ -38,7 +38,6 @@ function mountPage({canManage=true,shift=true,busy=false,initialOrderId="order-1
   if(name==="@/shared/routing/page-routes")return{pageRoutes:{cash:"/cash"}};
   if(name.endsWith("service-flow"))return serviceFlowExports;
   if(name.endsWith("shift-attribution"))return{cashShiftAttribution:()=>({name:"Ana"})};
-  if(name==="./pos-meta")return compile("pos-meta.ts",require);
   if(name.startsWith("@/")||name.startsWith("../")||name.startsWith("./"))return{};
   return require(name);
  };
@@ -47,7 +46,8 @@ function mountPage({canManage=true,shift=true,busy=false,initialOrderId="order-1
  const entry=nodes(tree).find(node=>node.type===compiled.POSPaymentEntry);
  return{...compiled,entry,queries,mutations,changes,sent,invalidations,notices,tree};
 }
-function entryProps(changes={}){return{loading:false,data:detail,shiftLoading:false,shiftName:"Caja principal",canManage:true,busy:false,formatMoney:value=>`S/ ${value}`,close:()=>{},retryOrder:()=>{},retryShift:()=>{},save:()=>{},...changes}}
+const catalog=[{code:"cash",name:"Efectivo",affectsCash:true},{code:"card",name:"Tarjeta",affectsCash:false},{code:"yape",name:"Yape",affectsCash:false},{code:"plin",name:"Plin",affectsCash:false}];
+function entryProps(changes={}){return{loading:false,data:detail,shiftLoading:false,shiftName:"Caja principal",methodsLoading:false,methods:catalog,retryMethods:()=>{},canManage:true,busy:false,formatMoney:value=>`S/ ${value}`,close:()=>{},retryOrder:()=>{},retryShift:()=>{},save:()=>{},...changes}}
 
 test("Cobrar saldo abre el formulario real, no el detalle, sin registrar pagos al abrir",()=>{
  const view=mountPage();
@@ -147,11 +147,10 @@ test("el formulario de pago tiene Registrar cobro y envía solo al confirmar",()
    if(name==="@/design-system")return primitives;
    if(name==="@/design-system/dialog")return{Dialog:"Dialog"};
    if(name==="react-hook-form")return{useForm:options=>{defaults=options.defaultValues;return{register:()=>({}),handleSubmit:save=>()=>save(defaults),formState:{errors:{}}}},useWatch:()=>"cash"};
-   if(name==="./pos-meta")return{paymentMethodMeta:Object.fromEntries(["cash","card","transfer","other"].map(value=>[value,{icon:"cash",label:value}]))};
    if(name.startsWith("../"))return{};
    return require(name);
   });
-  const tree=PaymentDialog({order:{...detail.order,paidAmount:detail.paidAmount,remainingAmount:detail.remainingAmount,paymentStatus:detail.paymentStatus},shiftName:"Caja principal",busy,formatMoney:String,close:()=>{},save:()=>saved++});
+  const tree=PaymentDialog({order:{...detail.order,paidAmount:detail.paidAmount,remainingAmount:detail.remainingAmount,paymentStatus:detail.paymentStatus},methods:catalog,shiftName:"Caja principal",busy,formatMoney:String,close:()=>{},save:()=>saved++});
   const all=nodes(tree),submit=all.find(node=>node.type==="Button"&&node.props.type==="submit"),form=all.find(node=>node.type==="form");
   assert.ok(submit);
   assert.equal(submit.props.children,busy?"Registrando…":"Registrar cobro");
@@ -183,7 +182,7 @@ test("detalle de cobro respeta cabecera simple, datos alineados y resumen inferi
 
 test("detalle de cobro conserva permisos de devolución, turno y cierre",()=>{
  const {POSDetailDialog}=mountPage();let refunded=0;
- const payment={id:"p1",method:"cash",amount:"10",netAmount:"8",refundedAmount:"2",createdAt:detail.order.createdAt,cashRegisterName:"Caja principal",createdByName:"Ana"};
+ const payment={id:"p1",method:"cash",methodName:"Efectivo",affectsCash:true,amount:"10",netAmount:"8",refundedAmount:"2",createdAt:detail.order.createdAt,cashRegisterName:"Caja principal",createdByName:"Ana"};
  const render=changes=>nodes(POSDetailDialog({loading:false,data:{...detail,payments:[payment]},canManage:true,hasShift:true,formatMoney:String,formatDateTime:String,close:()=>{},refund:()=>refunded++,...changes}));
  const action=render().find(node=>node.type==="Button"&&node.props.children==="Devolver");action.props.onClick();assert.equal(refunded,1);
  assert.equal(render({canManage:false}).some(node=>node.props.children==="Devolver"),false);
@@ -246,4 +245,36 @@ test("el contexto etiqueta el dato real sin mezclar cliente y mesa",()=>{
   assert.equal(view.find(node=>node.type==="dd").props.children[0],value);
   assert.equal(view.some(node=>node.props?.children==="Cliente / mesa"),false);
  }
+});
+
+test("el cobro usa el catálogo de medios de pago y la nota de caja sigue a Impacta caja",()=>{
+ for(const watched of ["cash","yape"]){
+  let defaults;
+  const {PaymentDialog}=compile("pos-dialogs.tsx",name=>{
+   if(name==="@/design-system")return primitives;
+   if(name==="@/design-system/dialog")return{Dialog:"Dialog"};
+   if(name==="react-hook-form")return{useForm:options=>{defaults=options.defaultValues;return{register:()=>({}),handleSubmit:save=>()=>save(defaults),formState:{errors:{}}}},useWatch:()=>watched};
+   if(name.startsWith("../"))return{};
+   return require(name);
+  });
+  const all=nodes(PaymentDialog({order:{...detail.order,paidAmount:detail.paidAmount,remainingAmount:detail.remainingAmount,paymentStatus:detail.paymentStatus},methods:catalog,shiftName:"Caja principal",busy:false,formatMoney:String,close:()=>{},save:()=>{}}));
+  const labels=all.filter(node=>node.type==="label"&&String(node.props.className).startsWith("pos-method")).map(node=>node.props.children.at(-1).props.children);
+  assert.deepEqual(labels,["Efectivo","Tarjeta","Yape","Plin"],"las opciones vienen del catálogo, en su orden");
+  assert.equal(defaults.method,"cash","el primer medio activo queda seleccionado");
+  assert.equal(all.some(node=>node.props?.className==="pos-cash-impact"),watched==="cash","solo un medio que impacta caja anuncia el efectivo esperado");
+  assert.equal(all.some(node=>node.type==="FormField"&&node.props.label==="Referencia"),watched!=="cash");
+ }
+ const source=readFileSync(new URL("pos-dialogs.tsx",root),"utf8");
+ assert.equal(source.includes('["cash","card","transfer","other"]'),false,"el cobro no fija los medios en el frontend");
+});
+
+test("el cobro espera el catálogo y explica errores o ausencia de medios",()=>{
+ const view=mountPage();
+ const loading=nodes(view.POSPaymentEntry(entryProps({methodsLoading:true,methods:undefined})));
+ assert.ok(loading.some(node=>node.type===view.POSPaymentLoading));
+ const failed=nodes(view.POSPaymentEntry(entryProps({methodsError:"Sin conexión",methods:undefined}))).find(node=>node.type==="ErrorState");
+ assert.equal(failed.props.title,"No pudimos cargar los medios de pago");
+ const empty=nodes(view.POSPaymentEntry(entryProps({methods:[]}))).find(node=>node.type==="EmptyState");
+ assert.equal(empty.props.title,"Sin medios de pago para ventas");
+ assert.ok(view.queries.some(options=>options.queryKey[0]==="payment-methods"&&options.queryKey[1]==="sales"));
 });
