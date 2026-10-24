@@ -2,12 +2,10 @@
 .manual-order-modal{display:flex;flex-direction:column;width:min(var(--size-580),calc(100vw - var(--size-32)));max-height:calc(100dvh - var(--size-40));background:var(--surface);border-radius:var(--radius-card);box-shadow:var(--elevation-4);overflow:hidden;color:var(--ink-950)}
 .manual-order-form{display:flex;flex-direction:column;min-height:0}
 .manual-order-body{overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;min-height:0;padding:var(--space-5)}
-.manual-order-fields{min-width:0;margin:0;padding:0;border:0;display:grid;gap:var(--space-4);grid-template-columns:repeat(2,minmax(0,1fr))}
-.manual-order-wide{grid-column:1/-1}
+.manual-order-fields{min-width:0;margin:0;padding:0;border:0}
 .manual-order-actions{flex-shrink:0}
 @media(max-width:600px){
  .manual-order-modal{width:100%;max-height:calc(100dvh - var(--space-4) - var(--safe-area-top));border-radius:var(--radius-sheet) var(--radius-sheet) 0 0}
  .manual-order-body{padding:var(--space-4)}
- .manual-order-fields{grid-template-columns:minmax(0,1fr)}
  .manual-order-actions>.button{flex:1}
 }

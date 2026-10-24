@@ -6,10 +6,16 @@
    con texto oscuro, distinto del ámbar de demora, para verse a distancia. */
 .kitchen-page{display:grid;gap:var(--space-3-5);min-width:0}
 
-/* Cabecera de página: filtro de canal y aviso de demora */
-.kitchen-header-tools{display:flex;align-items:center;gap:var(--space-2-5)}
-.kitchen-header-tools select{min-width:var(--size-190)}
+/* Cabecera de página: aviso de demora y selector de estación (qué pantalla se opera). */
+.kitchen-header-tools{display:flex;align-items:center;gap:var(--space-4)}
+.kitchen-station{display:flex;align-items:center;gap:var(--space-2-5)}
 .kitchen-attention{display:inline-flex;align-items:center;gap:var(--space-1-5);color:var(--warning-600);font-size:var(--font-size-label);font-weight:var(--weight-heavy);white-space:nowrap}
+
+/* Filtro «Origen del pedido» sobre los carriles (patrón de controles del Salón): chips de la
+   Comanda con icono por canal; etiqueta visible de 12 px. */
+.kitchen-filters{display:flex;align-items:center;gap:var(--space-3);min-width:0;padding:var(--space-2-5) var(--space-3-5);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-card);background:var(--surface);box-shadow:var(--elevation-1)}
+.kitchen-filter-label{flex:none;color:var(--ink-600);font-size:var(--font-size-label);font-weight:var(--weight-semibold)}
+.ds-tabs.kitchen-area-tabs{flex:none}
 
 /* Pestañas (Tabs del design system) solo cuando los carriles no caben */
 .ds-tabs.kitchen-mobile-tabs{display:none}
@@ -98,15 +104,16 @@
  .kitchen-lane{display:none}
  .kitchen-lane[data-mobile-active=true]{display:block}
 }
-/* Hasta 1024 px (tablet, ventana reducida o con menú lateral) título y descripción usan todo el ancho
-   y área y canal van debajo en dos columnas iguales: los filtros nunca compiten con el título. La cabecera
-   global solo pasa a grid en ≤600 px, por eso aquí se fija explícitamente. */
+/* Hasta 1024 px estación y demora bajan bajo el título; la cabecera global solo pasa a grid en ≤600 px. */
 @media(max-width:1024px){
  .kitchen-page .page-header{display:grid;grid-template-columns:minmax(0,1fr);align-items:start;margin-bottom:var(--space-1)}
- .kitchen-page .page-header-actions{width:100%}
- .kitchen-header-tools{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-2)}
- .kitchen-header-tools select{min-width:0}
- .kitchen-attention{grid-column:1/-1;grid-row:2}
+ .kitchen-header-tools{flex-wrap:wrap;justify-content:space-between}
+}
+/* Móvil: estación a todo el ancho; el origen del pedido en su propia fila y deslizable. */
+@media(max-width:760px){
+ .kitchen-header-tools,.kitchen-station{width:100%}
+ .ds-tabs.kitchen-area-tabs{flex:1 1 auto}
+ .kitchen-filters{flex-direction:column;align-items:stretch;gap:var(--space-2);padding:var(--space-2-5) var(--space-3)}
 }
 @media(max-width:760px){
  .kitchen-page{gap:var(--space-2-5)}

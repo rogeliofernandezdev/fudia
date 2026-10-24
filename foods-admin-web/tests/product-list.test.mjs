@@ -39,7 +39,7 @@ function mount({items=[base],loading=false,locationId="local-a",canManage=true,t
 
 test("productos: nombre sin descripción, disponibles del backend y paginación global",()=>{
  const {view}=mount();
- assert.deepEqual(view.filter(node=>node.type==="th").map(node=>node.props.children),["PRODUCTO","CATEGORÍA","PRECIO","CONTROL DE CANTIDAD","DISPONIBLES","ESTADO","ACCIONES"]);
+ assert.deepEqual(view.filter(node=>node.type==="th").map(node=>node.props.children),["Producto","Categoría","Precio","Control de cantidad","Disponibles","Estado","Acciones"]);
  assert.ok(view.some(node=>node.type==="b"&&node.props.children==="Ají de gallina"));
  assert.ok(view.some(node=>node.type==="b"&&node.props.children==="12"));
  assert.equal(view.some(node=>node.props.children===base.description||node.props.children==="Sin descripción"),false);
@@ -79,7 +79,7 @@ test("acceso al menú sin permiso de gestión: productos y categorías no ofrece
  for(const tab of ["products","categories"]){
   const {view}=mount({canManage:false,tab,items:[base,{...base,id:"inactive",active:false}],categories:[category,{...category,id:"inactive-category",active:false}]});
   assert.equal(view.filter(node=>node.type==="RowActionButton"||node.type==="Button").length,0,tab);
-  assert.equal(view.some(node=>node.type==="th"&&node.props.children==="ACCIONES"),false);
+  assert.equal(view.some(node=>node.type==="th"&&node.props.children==="Acciones"),false);
   assert.equal(view.filter(node=>node.type==="th").length,tab==="products"?6:4);
   assert.equal(view.filter(node=>node.type==="Pagination").length,1);
   assert.ok(view.some(node=>node.type==="b"&&node.props.children===(tab==="products"?base.name:category.name)));

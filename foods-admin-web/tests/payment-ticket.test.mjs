@@ -48,28 +48,28 @@ test("PDF real mide 80 mm y conserva todas las líneas en tickets grandes",async
  }
 });
 
-test("preview es el PDF real y la impresión solo sucede al activar su botón",()=>{
+test("preview es el PDF real, sin aviso ni botón de impresión propio; solo descarga",()=>{
  const source=read("modules/sales/presentation/payment-ticket-dialog.tsx");
  assert.doesNotMatch(source,/Imprime al/);
- assert.match(source,/Este ticket no reemplaza una boleta o factura\./);
- assert.match(source,/src=\{prepared!\.url\}/);assert.match(source,/URL.revokeObjectURL\(url\)/);assert.match(source,/cancelled=true/);assert.match(source,/contentWindow\.print\(\)/);assert.match(source,/onClick=\{print\}/);assert.match(source,/onClick=\{download\}/);assert.match(source,/disabled=\{!ready/);assert.ok(!source.includes("createPayment"));assert.match(source,/organization\?\.id,location\?\.id,orderId/);
- const css=read("modules/sales/presentation/payment-ticket.css");assert.match(css,/overflow:auto/);
+ assert.doesNotMatch(source,/no reemplaza una boleta o factura/,"sin aviso sobre el visor");
+ assert.doesNotMatch(source,/Imprimir ticket|contentWindow\.print|srcDoc/,"el visor del PDF ya ofrece imprimir");
+ assert.match(source,/src=\{prepared!\.url\}/);assert.match(source,/URL.revokeObjectURL\(url\)/);assert.match(source,/cancelled=true/);assert.match(source,/onClick=\{download\}/);assert.ok(!source.includes("createPayment"));assert.match(source,/organization\?\.id,location\?\.id,orderId/);
+ const css=read("modules/sales/presentation/payment-ticket.css");assert.match(css,/overflow:auto/);assert.doesNotMatch(css,/payment-ticket-print-frame|payment-ticket-body>p/);
  assert.match(source,/<ModalFooter/);assert.match(read("design-system/styles/modal.css"),/@media \(width<=600px\)/);
 });
 
-test("el botón de impresión llama solo al documento aislado, tras estar preparado",()=>{
- for(const ready of [false,true]){
-  let state=0,prints=0,focus=0;const values=[{url:"blob:ticket",html:"<html></html>",filename:"ticket.pdf"},null,0,ready];
-  const ui=compile("modules/sales/presentation/payment-ticket-dialog.tsx",name=>{
-   if(name==="react")return{useEffect:()=>{},useState:()=>[values[state++],()=>{}],useRef:()=>({current:{contentWindow:{focus:()=>focus++,print:()=>prints++}}})};
-   if(name==="@tanstack/react-query")return{useQuery:()=>({data:fixture(),isFetching:false,isPending:false,isError:false})};
-   if(name==="@/providers")return{useSession:()=>({organization:{id:"org"},location:{id:"loc"}})};
-   if(name==="@/design-system")return{Button:"Button",ErrorState:"ErrorState",Icon:"Icon"};if(name==="@/design-system/dialog")return{Dialog:"Dialog"};
-   if(name.startsWith("../")||name.endsWith(".css"))return{};return require(name);
-  });
-  const tree=ui.PaymentTicketDialog({orderId:"order-1",paymentId:"pay-2",close:()=>{}}),nodes=[];
-  function visit(item){if(!item||typeof item!=="object")return;if(Array.isArray(item)){item.forEach(visit);return;}nodes.push(item);visit(item.props?.children);}visit(tree);
-  assert.equal(prints,0);assert.equal(nodes.find(node=>node.type==="iframe"&&node.props.src)?.props.src,"blob:ticket");
-  const print=nodes.find(node=>node.type==="Button"&&node.props.children==="Imprimir ticket");assert.equal(print.props.disabled,!ready);print.props.onClick();assert.equal(prints,ready?1:0);assert.equal(focus,ready?1:0);
- }
+test("la descarga usa el PDF preparado y es la única acción del pie",()=>{
+ let state=0;const values=[{url:"blob:ticket",filename:"ticket.pdf"},null,0];
+ const ui=compile("modules/sales/presentation/payment-ticket-dialog.tsx",name=>{
+  if(name==="react")return{useEffect:()=>{},useState:()=>[values[state++],()=>{}]};
+  if(name==="@tanstack/react-query")return{useQuery:()=>({data:fixture(),isFetching:false,isPending:false,isError:false})};
+  if(name==="@/providers")return{useSession:()=>({organization:{id:"org"},location:{id:"loc"}})};
+  if(name==="@/design-system")return{Button:"Button",ErrorState:"ErrorState",Icon:"Icon"};if(name==="@/design-system/dialog")return{Dialog:"Dialog"};
+  if(name.startsWith("../")||name.endsWith(".css"))return{};return require(name);
+ });
+ const tree=ui.PaymentTicketDialog({orderId:"order-1",paymentId:"pay-2",close:()=>{}}),nodes=[];
+ function visit(item){if(!item||typeof item!=="object")return;if(Array.isArray(item)){item.forEach(visit);return;}nodes.push(item);visit(item.props?.children);}visit(tree);
+ assert.equal(nodes.filter(node=>node.type==="iframe").length,1);assert.equal(nodes.find(node=>node.type==="iframe").props.src,"blob:ticket");
+ const buttons=nodes.filter(node=>node.type==="Button");assert.deepEqual(buttons.map(node=>node.props.children),["Descargar PDF"]);
+ assert.equal(buttons[0].props.kind,undefined,"descargar es la acción principal: índigo");assert.equal(buttons[0].props.disabled,false);
 });

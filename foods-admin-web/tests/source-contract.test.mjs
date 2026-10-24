@@ -137,11 +137,11 @@ test("producto e inventario mantienen una sola fuente de verdad",()=>{
   const adjustmentSchema=read("src/modules/supply/inventory/domain/inventory-adjustment-schema.ts");
   assert.ok(dialog.includes("useForm<InventoryAdjustmentDraft>"),"El ajuste usa React Hook Form");
   assert.ok(dialog.includes("resolver:inventoryAdjustmentResolver"),"El ajuste delega validación al resolver Zod");
-  assert.ok(dialog.includes("STOCK ACTUAL"),"El formulario muestra la existencia actual");
-  assert.ok(dialog.includes("UNIDAD DE INVENTARIO"),"El formulario muestra la unidad de inventario");
+  assert.ok(dialog.includes("Stock actual"),"El formulario muestra la existencia actual");
+  assert.ok(dialog.includes("Unidad de inventario"),"El formulario muestra la unidad de inventario");
   assert.ok(dialog.includes("Tipo de movimiento"),"El ajuste solicita entrada o salida");
-  assert.ok(dialog.includes('value="entry"'),"El ajuste permite entrada");
-  assert.ok(dialog.includes('value="exit"'),"El ajuste permite salida");
+  assert.ok(dialog.includes('value:"entry"'),"El ajuste permite entrada");
+  assert.ok(dialog.includes('value:"exit"'),"El ajuste permite salida");
   for(const reason of ["Ajuste por sobrante","Ajuste por faltante","Merma","Vencimiento","Otro motivo de salida"])assert.ok(dialog.includes(reason),reason);
   assert.ok(dialog.includes("La salida no puede superar el stock actual."),"La interfaz evita saldos negativos antes de enviar");
   assert.ok(dialog.includes("Observación opcional"),"La observación permanece opcional");
@@ -162,7 +162,7 @@ test("producto e inventario mantienen una sola fuente de verdad",()=>{
   assert.ok(kardex.includes("location?.country"),"Kárdex toma el país del local activo");
   assert.ok(kardex.includes("location?.timezone"),"Kárdex toma la zona horaria del local activo");
   assert.equal(kardex.includes(forbiddenRegionalLocale),false,"Kárdex no fija Perú como región");
-  for(const column of ["MOTIVO","STOCK ANTERIOR","STOCK RESULTANTE","USUARIO"])assert.ok(kardex.includes(column),column);
+  for(const column of ["Motivo","Stock anterior","Stock resultante","Usuario"])assert.ok(kardex.includes(column),column);
   assert.ok(kardex.includes("item.reason"),"Kárdex expone el motivo del ajuste");
   assert.ok(kardex.includes("item.balanceBefore"),"Kárdex expone el saldo anterior");
   assert.ok(kardex.includes("item.balanceAfter"),"Kárdex expone el saldo resultante");
@@ -219,7 +219,7 @@ test("producto e inventario mantienen una sola fuente de verdad",()=>{
   assert.ok(recipes.includes('inventoryItemId:""'),"Agregar insumo crea una fila vacía sin depender del catálogo cargado");
   assert.equal(recipes.includes("draft.items.length>=(inventory.data?.items.length??0)"),false,"No existe un máximo ligado al tamaño del catálogo cargado");
   assert.ok(recipes.includes('className="recipe-skeleton-table"'),"El skeleton de recetas usa la misma geometría de tabla");
-  assert.ok(recipes.includes("<th>PRODUCTO</th><th>RENDIMIENTO</th><th>INSUMOS</th><th>ESTADO</th><th>ACCIONES</th>"),"El skeleton conserva las columnas reales");
+  assert.ok(recipes.includes("<th>Producto</th><th>Rendimiento</th><th>Insumos</th><th>Estado</th><th>Acciones</th>"),"El skeleton conserva las columnas reales");
   assert.equal(recipes.includes("recipe-list-skeleton-head"),false,"El skeleton no usa barras genéricas como cabecera");
 });
 
@@ -242,7 +242,7 @@ test("compras concentra orden recepcion y altas de abastecimiento",()=>{
   assert.ok(purchases.includes('openDetail(order.id,"view")'),"El ojo abre el detalle en modo solo lectura");
   assert.ok(purchases.includes('openDetail(order.id,"review")'),"Revisar orden abre un modo operativo distinto");
   assert.ok(purchases.includes('mode==="review"&&(canManage||canApprove||canReceive)'),"Las acciones de workflow solo existen en modo revisión");
-  assert.ok(purchases.includes('mode==="view"?"DETALLE DE ORDEN":"REVISAR ORDEN"'),"El modal comunica claramente si es consulta o revisión");
+  assert.ok(purchases.includes('mode==="view"?"Detalle de orden":"Revisar orden"'),"El modal comunica claramente si es consulta o revisión");
   assert.ok(purchases.includes("Ir a Recepciones"),"Una orden aprobada deriva al workspace de Recepciones");
   assert.ok(purchases.includes('tab==="receipts"'),"Compras tiene una vista independiente de Recepciones");
   assert.ok(purchases.includes('queryKey:["purchase-orders","receivable-summary"]'),"El contador de Recepciones se consulta aunque la pestaña no esté activa");
@@ -258,7 +258,7 @@ test("compras concentra orden recepcion y altas de abastecimiento",()=>{
   assert.equal(purchases.includes("PurchaseFlowSteps"),false,"La navegación por pestañas evita repetir un stepper dentro del módulo");
   assert.equal(receiptDialog.includes("PurchaseFlowSteps"),false,"El modal de recepción no repite el flujo completo");
   assert.ok(purchases.includes("partially_received"),"Compras representa una recepción parcial sin cerrar la orden");
-  for(const column of ["SOLICITADO","RECIBIDO","PENDIENTE"])assert.ok(purchases.includes(column),column);
+  for(const column of ["Solicitado","Recibido","Pendiente"])assert.ok(purchases.includes(column),column);
   assert.ok(purchases.includes("Agregar artículo"),"La OC expone un único punto claro para agregar artículos");
   assert.equal((purchases.match(/>Agregar artículo</g)??[]).length,1,"La OC tiene un único punto para agregar artículos, al final de la lista");
   assert.ok(purchases.includes('className="purchase-add-row"'),"Agregar artículo es la fila punteada índigo, no otra acción primaria");
@@ -314,7 +314,7 @@ test("caja separa cajas fisicas de sus turnos",()=>{
   assert.ok(page.includes("Registrar caja"),"El primer paso funcional es registrar una caja");
   assert.ok(page.includes("Iniciar turno"),"El turno se inicia desde una caja existente");
   assert.ok(page.includes("cash-overview"),"Cajas muestra un resumen operativo");
-  assert.ok(page.includes("EFECTIVO ESPERADO"),"El resumen agrega el efectivo esperado de turnos abiertos");
+  assert.ok(page.includes("Efectivo esperado"),"El resumen agrega el efectivo esperado de turnos abiertos");
   assert.ok(page.includes("Editar caja"),"Las cajas pueden renombrarse sin perder historial");
   assert.ok(page.includes("toggleStatus"),"Las cajas pueden activarse o desactivarse");
   assert.ok(page.includes("businessDate(item.businessDate)"),"El historial usa día operativo");
@@ -328,10 +328,10 @@ test("caja separa cajas fisicas de sus turnos",()=>{
 
   assert.ok(dialogs.includes("CashRegisterDialog"),"Registrar caja tiene un formulario propio");
   assert.ok(dialogs.includes("Estás iniciando un turno en"),"El modal de turno deja clara la caja seleccionada");
-  assert.ok(dialogs.includes('cashRegister.name.toUpperCase()'),"El turno muestra el nombre de su caja");
-  assert.ok(dialogs.includes("EFECTIVO ESPERADO"),"El arqueo muestra el esperado antes de cerrar");
+  assert.ok(dialogs.includes('subtitle={cashRegister.name}'),"El turno muestra el nombre de su caja");
+  assert.ok(dialogs.includes("Efectivo esperado"),"El arqueo muestra el esperado antes de cerrar");
   assert.ok(dialogs.includes("Efectivo contado"),"El arqueo solicita el efectivo contado");
-  assert.ok(dialogs.includes("DIFERENCIA"),"El cierre calcula sobrante o faltante");
+  assert.ok(dialogs.includes("Diferencia"),"El cierre calcula sobrante o faltante");
   assert.ok(dialogs.includes("cashMovementSourceLabel(item.sourceType)"),"El detalle de turno muestra el origen de cada movimiento");
   assert.ok(dialogs.includes("Cierre ciego activo"),"El arqueo soporta cierre ciego real");
   assert.ok(dialogs.includes("Por denominaciones"),"El arqueo permite conteo por denominaciones");
@@ -369,7 +369,8 @@ test("pos cobra pedidos y sincroniza efectivo con caja",()=>{
 
   assert.ok(route.includes("POSPage"),"/pos ya no es un placeholder");
   assert.equal(route.includes("ComingSoonPage"),false,"Punto de venta tiene implementación operativa");
-  assert.ok(page.includes("Por cobrar"),"POS conserva pagos parciales en la cola de cobro");
+  assert.ok(page.includes("Con saldo pendiente"),"POS conserva pagos parciales en la cola de cobro");
+  assert.ok(page.includes('useState("all")'),"POS muestra todos los cobros por defecto");
   assert.ok(page.includes("getCurrentCashShift"),"POS exige un turno asignado para operar");
   assert.ok(page.includes("No estás asignado a una caja abierta"),"POS explica claramente cuando falta turno");
   assert.ok(page.includes("PaymentDialog"),"POS registra cobros desde la bandeja");
@@ -540,7 +541,7 @@ test("reportes y ventas usan skeleton con forma final",()=>{
   assert.equal(dashboard.includes("Cargando datos reales…"),false,"Reportes no usa un estado de carga genérico");
 
   assert.ok(sales.includes("<SalesTableSkeleton/>"),"Ventas usa skeleton dedicado durante la carga");
-  assert.ok(sales.includes("<th>PEDIDO</th><th>CLIENTE / MESA</th><th>CANAL</th><th>MEDIO DE PAGO</th><th>FECHA</th><th>TOTAL</th><th>ESTADO</th>"),"Ventas conserva la cabecera final durante la carga");
+  assert.ok(sales.includes("<th>Pedido</th><th>Cliente / mesa</th><th>Canal</th><th>Medio de pago</th><th>Fecha</th><th>Total</th><th>Estado</th>"),"Ventas conserva la cabecera final durante la carga");
   assert.ok(sales.includes("sales-skeleton-name")&&sales.includes("sales-skeleton-customer")&&sales.includes("sales-skeleton-status"),"Ventas reproduce la estructura de las filas reales");
   assert.ok(salesCss.includes("@keyframes sales-shimmer"),"Ventas define shimmer del skeleton");
   assert.equal(sales.includes("Cargando ventas…"),false,"Ventas no usa un estado de carga genérico");
@@ -676,8 +677,8 @@ test("abastecimiento no muestra códigos internos y sigue el modelo de botones",
   for(const [name,source] of Object.entries(files)){
     for(const code of ["order.number","receipt.number","receipt.code","event.code","result.code","result.number","item.sku"])assert.equal(source.includes(code),false,`${name} no muestra ${code}`);
   }
-  assert.ok(files.purchases.includes('const orderColumns=["PROVEEDOR"'),"Las órdenes se identifican por proveedor");
-  assert.ok(files.purchases.includes('const receiptColumns=["PROVEEDOR"'),"Las recepciones se identifican por proveedor");
+  assert.ok(files.purchases.includes('const orderColumns=["Proveedor"'),"Las órdenes se identifican por proveedor");
+  assert.ok(files.purchases.includes('const receiptColumns=["Proveedor"'),"Las recepciones se identifican por proveedor");
   assert.equal(files.purchases.includes('kind="primary" icon="stock" disabled={loading}'),false,"Recibir por fila no repite acciones primarias");
   assert.equal(files.inventory.includes("inventory-header-actions"),false,"Las acciones de Inventario son hijas directas de page-header-actions");
   const supply=["inventory/presentation/inventory-adjustment-dialog.tsx","inventory/presentation/inventory-settings-dialog.tsx","inventory/presentation/inventory-transfer-dialog.tsx","purchases/presentation/purchase-item-dialog.tsx","purchases/presentation/purchase-presentation-dialog.tsx","purchases/presentation/purchase-presentations-field.tsx","purchases/presentation/purchase-receipt-dialog.tsx","purchases/presentation/purchase-return-dialog.tsx","purchases/presentation/purchase-unit-field.tsx","purchases/presentation/purchases-page.tsx"];
@@ -717,7 +718,7 @@ test("empresa y kardex respetan no duplicación y patrón de gestión",()=>{
   assert.ok(kardex.includes('className="panel standardized-management inventory-panel"'),"Kárdex usa el panel estándar de gestión");
   assert.ok(kardex.includes("inventory-toolbar kardex-toolbar"),"Kárdex reutiliza la barra de Inventario");
   assert.ok(kardex.includes("management-cards kardex-cards"),"Kárdex ofrece tarjetas equivalentes en móvil");
-  assert.ok(kardex.includes("<th>ARTÍCULO</th><th>FECHA</th>"),"Kárdex presenta primero la entidad gestionada");
+  assert.ok(kardex.includes("<th>Artículo</th><th>Fecha</th>"),"Kárdex presenta primero la entidad gestionada");
   assert.ok(kardex.includes('className="inventory-product-cell"'),"La primera columna reutiliza el patrón de entidad de Inventario");
   assert.equal(kardex.includes("kardex-results-header"),false,"Kárdex no agrega una cabecera redundante de resultados");
   assert.equal(kardex.includes("selectedItem"),false,"Kárdex no repite el artículo seleccionado fuera del filtro");
@@ -920,11 +921,11 @@ test("el POS comparte patrones de tabla, móvil y modales",()=>{
   assert.ok(page.includes('className="management-cards pos-order-cards"'),"El POS conserva tarjetas equivalentes en móvil");
   assert.ok(page.includes('action="charge"'),"Cobrar usa la acción iconográfica homologada");
   const detail=page.slice(page.indexOf("function POSDetailDialog("),page.indexOf("function POSLoading("));
-  assert.ok(detail.includes('title="Detalle de cobro"'),"La comprobación se limita al modal de consulta");
+  assert.ok(detail.includes('aria-labelledby="pos-detail-title"'),"La comprobación se limita al modal de consulta");
   assert.equal(detail.includes("Cobrar saldo"),false,"El detalle de consulta no duplica la acción de cobro");
   assert.equal(detail.includes('type="submit"'),false,"El detalle de consulta no registra pagos");
   assert.ok(page.includes('className="table-wrap pos-table-wrap pos-table-skeleton"'),"El skeleton reproduce la tabla final");
-  assert.ok(page.includes("<POSDetailLoading/>"),"El detalle remoto tiene skeleton propio");
+  assert.ok(page.includes("<POSDetailLoading close={close}"),"El detalle remoto tiene skeleton propio");
   assert.ok(dialogs.includes("FormField"),"Cobro y devolución usan campos compartidos");
   assert.equal(dialogs.includes('type="submit" icon="check"'),false,"El botón primario no duplica el icono aportado por el estilo global");
   assert.equal(dialogs.includes('className="modal-busy"'),false,"La mutación no cubre ni oculta el contexto del formulario");

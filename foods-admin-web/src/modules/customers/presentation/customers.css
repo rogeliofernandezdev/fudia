@@ -3,7 +3,7 @@
 .customer-modal{width:min(var(--size-720),calc(100vw - var(--size-32)));max-height:min(var(--size-760),calc(100dvh - var(--size-32)))}
 .customer-main-grid{grid-template-columns:repeat(2,minmax(0,1fr));align-content:start}
 .customer-main-grid>.customer-field-full{grid-column:1/-1}
-.customer-address{margin-top:var(--space-4)}
+.customer-address{margin-top:0}
 .customer-address-map{display:grid;gap:var(--space-1-5);min-width:0}
 .customer-detail{display:flex;flex-direction:column;width:min(var(--size-720),calc(100vw - var(--size-32)));max-height:min(var(--size-760),calc(100dvh - var(--size-32)));overflow:hidden}
 .customer-detail>header>div{display:grid;gap:var(--space-1)}

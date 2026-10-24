@@ -69,13 +69,16 @@ test("el detalle identifica claramente Apertura y Cierre junto a sus autores",()
  const {CashShiftDetailDialog}=compile("modules/operations/cash/presentation/cash-dialogs.tsx",resolve);
  for(const closedAt of [null,"2026-10-03T04:45:15.654321Z"]){
   const all=nodes(CashShiftDetailDialog({shift:{...shift,status:closedAt?"closed":"open",closedAt,closedByName:closedAt?"Edith":""},formatMoney:String,formatDateTime:date,formatBusinessDate:value=>value,close:()=>{}}));
-  const labels=all.filter(node=>node.type==="small");
-  assert.ok(labels.some(node=>node.props.children?.[0]==="Apertura: "));
-  assert.equal(labels.some(node=>node.props.children?.[0]==="Cierre: "),Boolean(closedAt));
-  assert.equal(all.some(node=>node.type==="dd"&&node.props.children==="En curso"),false,"un turno abierto no inventa responsable de cierre");
+  const facts=all.find(node=>node.type==="DetailFacts").props.items;
+  const opening=facts.find(item=>item.label==="Apertura");
+  assert.equal(opening.value.props.children,expected(shift.openedAt));
+  assert.equal(facts.some(item=>item.label==="Cerrado por"),Boolean(closedAt));
+  assert.equal(facts.some(item=>item.value==="En curso"),false,"un turno abierto no inventa responsable de cierre");
   assert.equal(all.some(node=>node.type==="ModalHeader"&&node.props.title===shift.code),false,"el detalle no titula con el código técnico");
-  const times=all.filter(node=>node.type==="time");
-  assert.equal(times[0].props.children,expected(shift.openedAt));
-  if(closedAt)assert.equal(times[1].props.children,expected(closedAt));
+  if(closedAt){
+   const closing=facts.find(item=>item.label==="Cerrado por").value.props.children[1];
+   assert.equal(closing.props.children[0],"Cierre: ");
+   assert.equal(closing.props.children[1].props.children,expected(closedAt));
+  }
  }
 });

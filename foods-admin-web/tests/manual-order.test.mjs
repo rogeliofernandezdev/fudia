@@ -34,7 +34,7 @@ test("pedido manual: integración usa el endpoint existente con POST y respuesta
  const result=await api.createManualOrder({...fields,lines:[line]});assert.equal(result.id,"server-uuid");assert.equal(sent.path,"orders");assert.equal(sent.options.method,"POST");assert.equal(JSON.parse(sent.options.body).sendToKitchen,true);
 });
 function nodes(tree,result=[]){if(Array.isArray(tree)){tree.forEach(node=>nodes(node,result));return result}if(tree&&typeof tree==="object"){result.push(tree);nodes(tree.props?.children,result)}return result}
-const ds=Object.fromEntries(["Button","ConfirmDialog","Dialog","ModalHeader","ModalFooter","FormField","Icon","IconButton","Input","NumberStepper","Select","Textarea"].map(name=>[name,name]));
+const ds=Object.fromEntries(["Button","ChoiceGroup","ConfirmDialog","Dialog","ModalHeader","ModalFooter","FormField","FormSection","Icon","IconButton","Input","NumberStepper","Select","Textarea"].map(name=>[name,name]));
 function hooksMount(file,props,overrides={}){
  const state=[],refs=[];let cursor=0,refCursor=0;
  const compiled=compile(file,name=>{
@@ -47,6 +47,7 @@ function hooksMount(file,props,overrides={}){
   if(name.endsWith("manual-order-schema"))return schema;
   if(name.endsWith("comanda-catalog"))return{ComandaCatalog:"ComandaCatalog",ComboConfigurator:"ComboConfigurator"};
   if(name==="./comanda-view")return{ComandaView:"ComandaView"};
+  if(name==="./order-meta")return{channelIcons:{delivery:"truck",recojo:"box",mostrador:"store"}};
   return require(name);
  },{crypto:{randomUUID:()=>"temporary-key"},window:{addEventListener:()=>{},removeEventListener:()=>{}}});
  const Component=Object.values(compiled)[0];
@@ -59,8 +60,9 @@ const goToOrder=async view=>{await view.render().find(node=>node.type==="form").
 test("pedido manual: datos primero, misma comanda, volver conserva productos y notas sin guardar",async()=>{
  let calls=0;const view=mount({onSave:async()=>calls++});let rendered=view.render();
  assert.equal(rendered.find(node=>node.type==="Dialog").props["aria-modal"],"true");
- assert.deepEqual(rendered.filter(node=>node.type==="FormField").map(node=>node.props.label),["Tipo de atención","Cliente","Teléfono","Dirección de entrega","Referencia de entrega","Costo de envío"]);
- assert.deepEqual(rendered.filter(node=>node.type==="option").map(node=>node.props.children),["Delivery","Recojo","Mostrador"]);
+ assert.deepEqual(rendered.filter(node=>node.type==="FormField").map(node=>node.props.label),["Cliente","Teléfono","Dirección de entrega","Referencia de entrega","Costo de envío"]);
+ assert.deepEqual(rendered.find(node=>node.type==="ChoiceGroup").props.options.map(option=>option.label),["Delivery","Recojo","Mostrador"]);
+ assert.deepEqual(rendered.filter(node=>node.type==="FormSection").map(node=>node.props.title),["Tipo de atención","Cliente","Entrega"]);
  assert.equal(rendered.some(node=>node.type==="ComandaCatalog"),false);
  let comanda=await goToOrder(view);assert.equal(calls,0);assert.equal(comanda.props.initial.tableId,"");assert.equal(comanda.props.channelLabel,"Delivery");
  comanda.props.onBack({...comanda.props.initial,lines:[line],notes:"Entregar en recepción"});

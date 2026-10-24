@@ -1,11 +1,11 @@
 /* Table CSS owned by the design system; all values use shared tokens. */
 /* Hide legacy duplicate cards until all modules have adopted DataTable. */
 .management-cards{display:none}
-/* Tablas: cabecera azul operativa, filas de 56 px y cifras tabulares */
+/* Tablas: cabecera índigo profundo (la de navegación) en caja normal, filas de 56 px separadas por línea fina, sin cebra y con cifras tabulares. El azul queda solo para acciones. */
 table{width:100%;border-collapse:collapse;white-space:nowrap;font-variant-numeric:tabular-nums}
-table thead,.catalog-panel thead,.standardized-management thead{color:var(--surface);background:var(--primary-600)}
-th{height:var(--size-40);padding:0 var(--space-4);color:var(--surface);background:transparent;text-align:left;font-size:var(--font-size-2xs);font-weight:var(--weight-bold);letter-spacing:var(--letter-spacing-caps);text-transform:uppercase}
-td{height:var(--size-56);padding:0 var(--space-4);border-top:var(--stroke-1) solid var(--cloud-100);color:var(--ink-600);font-size:var(--font-size-control)}
+table thead,.catalog-panel thead,.standardized-management thead{color:var(--surface);background:var(--navigation-900)}
+th{height:var(--size-40);padding:0 var(--space-4);color:var(--surface);background:transparent;text-align:left;font-size:var(--font-size-label);font-weight:var(--weight-semibold)}
+td{height:var(--size-56);padding:0 var(--space-4);border-top:var(--stroke-1) solid var(--line);color:var(--ink-600);font-size:var(--font-size-control)}
 td:first-child{color:var(--ink-950);font-weight:var(--weight-semibold)}
 td small{display:block;margin-top:var(--space-0-5);color:var(--ink-400);font-size:var(--font-size-label);font-weight:var(--weight-medium)}
 tbody tr{transition:background var(--duration-fast)}
@@ -15,8 +15,9 @@ td .f1,.row-icon.r1{color:var(--brand-700);background:var(--brand-100)}
 td .f2,.row-icon.r2{color:var(--digital-700);background:var(--digital-100)}
 .management td:first-child{min-width:var(--size-260)}
 .management td:first-child small{margin-left:var(--space-11)}
-.catalog-panel tr.alternate,.standardized-management tr.alternate{background:var(--primary-25)}
 .catalog-panel th:last-child,.catalog-panel td:last-child,.standardized-management th:last-child,.standardized-management td:last-child{text-align:center}
+/* La columna de acciones mide lo que sus botones: sin espacio vacío a la derecha. */
+tbody td:last-child:has(>[class*="actions"],>.ds-icon-button,>.row-action,>.icon-button){width:1%;white-space:nowrap}
 /* `isolation` encierra la columna fija de la tabla: nunca pinta sobre franjas fijas de la página. */
 .table-wrap{isolation:isolate;width:100%;max-width:100%;overflow-x:auto;overflow-y:auto;overscroll-behavior-x:contain;scrollbar-width:thin;scrollbar-color:var(--ink-400-alpha-40) var(--cloud-50)}
 .table-wrap::-webkit-scrollbar{height:var(--size-6);width:var(--size-6)}
@@ -48,15 +49,13 @@ td .f2,.row-icon.r2{color:var(--digital-700);background:var(--digital-100)}
   .panel .table-wrap:not(.data-table-viewport){width:100%;max-width:100%;overflow-x:auto;overflow-y:auto;overscroll-behavior-x:contain}
   .panel .table-wrap:not(.data-table-viewport)>table{width:max-content;min-width:100%}
   .panel .table-wrap:not(.data-table-viewport)>table :is(th,td):first-child{position:sticky;inset-inline-start:0;z-index:var(--z-raised);border-inline-end:var(--stroke-1) solid var(--line)}
-  .panel .table-wrap:not(.data-table-viewport)>table thead th:first-child{z-index:calc(var(--z-raised) + 1);background:var(--primary-600)}
+  .panel .table-wrap:not(.data-table-viewport)>table thead th:first-child{z-index:calc(var(--z-raised) + 1);background:var(--navigation-900)}
   .panel .table-wrap:not(.data-table-viewport)>table tbody td:first-child{background:var(--surface)}
-  .panel .table-wrap:not(.data-table-viewport)>table tr.alternate td:first-child{background:var(--primary-25)}
   .data-table{width:max-content;min-width:100%}
   .data-table :is(th,td){padding-inline:var(--space-3)}
   .data-table :is(th,td):first-child{position:sticky;inset-inline-start:0;z-index:var(--z-raised);border-inline-end:var(--stroke-1) solid var(--line)}
-  .data-table thead th:first-child{z-index:calc(var(--z-raised) + 1);background:var(--primary-600)}
+  .data-table thead th:first-child{z-index:calc(var(--z-raised) + 1);background:var(--navigation-900)}
   .data-table tbody td:first-child{background:var(--surface)}
-  .standardized-management .data-table tr.alternate td:first-child,.catalog-panel .data-table tr.alternate td:first-child{background:var(--primary-25)}
   .management .data-table td:first-child{min-width:var(--size-190);max-width:var(--size-220)}
   .data-table td:first-child b{display:inline-block;vertical-align:middle;max-width:var(--size-120);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .data-table td:first-child small{max-width:var(--size-150);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

@@ -85,7 +85,7 @@ export function ProductAvailabilityManager(){
   <section className="panel availability-panel">
    <header className="availability-toolbar">
     <SearchField value={search} onChange={event=>{setSearch(event.target.value);setPage(1)}} placeholder="Buscar plato o producto…"/>
-    <Select value={categoryId} onChange={event=>{setCategoryId(event.target.value);setPage(1)}} disabled={categories.isLoading} aria-label="Filtrar por categoría">
+    <Select chip value={categoryId} onChange={event=>{setCategoryId(event.target.value);setPage(1)}} disabled={categories.isLoading} aria-label="Filtrar por categoría">
      <option value="">Todas las categorías</option>
      {categories.data?.items.map(category=><option value={category.id} key={category.id}>{category.name}</option>)}
     </Select>

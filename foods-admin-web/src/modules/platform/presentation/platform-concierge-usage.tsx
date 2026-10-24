@@ -126,7 +126,7 @@ export function ConciergeUsageDialogSection({organizationId}:{organizationId:str
  const detail=useQuery({queryKey:detailKey(organizationId),queryFn:()=>getOrganizationConciergeUsage(organizationId)});
  const data=detail.data;
  return <section className="company-detail-section" aria-busy={detail.isLoading}>
-  <header><small>FUDIA CONCIERGE</small><h3>Conversaciones del mes</h3></header>
+  <header><small>Fudia concierge</small><h3>Conversaciones del mes</h3></header>
   {detail.isLoading?<div className="company-detail-fields" role="status" aria-label="Cargando uso de Concierge">{Array.from({length:4},(_,index)=><div key={index}><i className="platform-skeleton-block company-detail-skeleton-label"/><i className="platform-skeleton-block company-detail-skeleton-value"/></div>)}</div>
    :detail.isError||!data?<ErrorState className="concierge-dialog-state" title="No pudimos cargar el uso de Concierge" text={detail.error?.message} retrying={detail.isFetching} onRetry={()=>void detail.refetch()}/>
    :<dl className="company-detail-fields">
@@ -174,7 +174,7 @@ export function ConciergeUsagePanel({organizationId}:{organizationId:string}){
   </div>
   <section className="panel concierge-panel concierge-history" aria-labelledby="concierge-history-title">
    <PanelHeader id="concierge-history-title" title="Historial de los últimos 6 meses"/>
-   {data.history.length?<DataTable label="Historial mensual de Fudia Concierge"><thead><tr><th>MES</th><th>CONVERSACIONES</th><th>RECHAZADAS</th><th>TOKENS DE ENTRADA</th><th>TOKENS DE SALIDA</th></tr></thead><tbody>{data.history.map(month=><tr key={month.month}><td><b>{conciergeMonthLabel(month.month,country)}</b></td><td>{formatCount(month.conversations,country)}</td><td>{formatCount(month.rejectedConversations,country)}</td><td>{formatCount(month.inputTokens,country)}</td><td>{formatCount(month.outputTokens,country)}</td></tr>)}</tbody></DataTable>
+   {data.history.length?<DataTable label="Historial mensual de Fudia Concierge"><thead><tr><th>Mes</th><th>Conversaciones</th><th>Rechazadas</th><th>Tokens de entrada</th><th>Tokens de salida</th></tr></thead><tbody>{data.history.map(month=><tr key={month.month}><td><b>{conciergeMonthLabel(month.month,country)}</b></td><td>{formatCount(month.conversations,country)}</td><td>{formatCount(month.rejectedConversations,country)}</td><td>{formatCount(month.inputTokens,country)}</td><td>{formatCount(month.outputTokens,country)}</td></tr>)}</tbody></DataTable>
     :<EmptyState icon="chat" title="Aún no hay historial" text="El consumo mensual aparecerá aquí cuando la empresa use Fudia Concierge."/>}
   </section>
  </div>;

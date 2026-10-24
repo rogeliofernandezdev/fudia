@@ -52,9 +52,9 @@ export function PurchaseReceiptDialog({order,busy,close,save}:{order:PurchaseOrd
           <div className="purchase-receipt-lines">
             {order.items.map((item,index)=><article className="purchase-receipt-line" key={item.id}>
               <div className="purchase-receipt-item"><b>{item.itemName}</b><small>{item.presentationType==="unit"?item.unit:(item.presentationName??item.presentationType)+" · "+item.unit}</small></div>
-              <div><small>SOLICITADO</small><b>{formatRegionalNumber(Number(item.quantity),location?.country,{maximumFractionDigits:3})}</b></div>
-              <div><small>RECIBIDO</small><b>{formatRegionalNumber(Number(item.receivedQuantity),location?.country,{maximumFractionDigits:3})}</b></div>
-              <div><small>PENDIENTE</small><b>{formatRegionalNumber(Number(item.pendingQuantity),location?.country,{maximumFractionDigits:3})}</b></div>
+              <div><small>Solicitado</small><b>{formatRegionalNumber(Number(item.quantity),location?.country,{maximumFractionDigits:3})}</b></div>
+              <div><small>Recibido</small><b>{formatRegionalNumber(Number(item.receivedQuantity),location?.country,{maximumFractionDigits:3})}</b></div>
+              <div><small>Pendiente</small><b>{formatRegionalNumber(Number(item.pendingQuantity),location?.country,{maximumFractionDigits:3})}</b></div>
               <label>Recibir ahora<Input type="number" min="0" max={item.pendingQuantity} step={requiresWholeQuantity(item.presentationType)?"1":"0.001"} inputMode="decimal" {...register(`items.${index}.quantity`)} aria-invalid={Boolean(errors.items?.[index]?.quantity)}/>{errors.items?.[index]?.quantity?.message&&<small className="field-error">{errors.items[index]?.quantity?.message}</small>}</label>
               <input type="hidden" {...register(`items.${index}.purchaseOrderItemId`)}/>
             </article>)}

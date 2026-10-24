@@ -67,6 +67,13 @@
   /* Tinte de selección de chips: un paso sobre el fondo tenue de su familia */
   --sky-200: #c2dded;
 
+  /* Tintes decorativos: solo identidad de iconos (IconTile) en accesos, KPI,
+     canales y categorías. Nunca representan estados ni acciones. */
+  --peach-100: #fff0e6;
+  --peach-700: #b4521d;
+  --rose-100: #fdecf3;
+  --rose-700: #a8336a;
+
   /* Advertencia y notas */
   --warning-50: #fff6ec;
   --warning-100: #ffe8cf;
@@ -309,7 +316,7 @@
   --size-1160: 1160px;
   --size-1450: 1450px;
 
-  /* Tipografía: una familia (Manrope), escala fija por rol */
+  /* Tipografía: una familia (Plus Jakarta Sans), escala fija por rol */
   --font-size-2xs: 10px;
   --font-size-xs: 12px;
   --font-size-sm: 13px;
@@ -431,16 +438,8 @@
   --motion-dialog-duration: var(--duration-dialog);
   --motion-dialog-easing: var(--easing-out);
 
-  /* Iconografía duotono: trazo neutro, detalle índigo y tinte del estado activo */
+  /* Iconografía: trazo neutro heredado (Tabler, monocromo) */
   --icon-line: var(--ink-800);
-  --icon-accent: var(--primary-600);
-  --icon-accent-inverse: var(--primary-400);
-  /* Acento derivado del color del icono: más claro y, si el color es neutro, índigo.
-     Tinta → índigo; índigo → índigo claro; blanco → blanco; rojo/verde/ámbar conservan su tono. */
-  --icon-accent-lift: .15;
-  --icon-accent-chroma: .17;
-  --icon-accent-auto: oklch(from currentColor min(calc(l + var(--icon-accent-lift)), 1) max(c, calc(var(--icon-accent-chroma) * clamp(0, (.9 - l) * 4, 1))) h);
-  --icon-fill-active: color-mix(in srgb, currentColor 16%, transparent);
 
   /* Iconos embebidos */
   --icon-mask-check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5L20 7'/%3E%3C/svg%3E");
@@ -452,7 +451,7 @@
 
 /* next/font supplies its variables on body, so resolve font aliases here. */
 body {
-  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, "Segoe UI", sans-serif;
   --font-mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
 }
 
@@ -599,5 +598,5 @@ body {
   --ease-out: var(--easing-out);
   --ease-in-out: var(--easing-in-out);
   --ease-drawer: var(--easing-drawer);
-  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, "Segoe UI", sans-serif;
 }

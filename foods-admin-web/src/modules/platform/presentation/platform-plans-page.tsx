@@ -4,7 +4,7 @@ import "./platform-plans.css";
 import {useMemo,useState} from "react";
 import {Controller,useForm} from "react-hook-form";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,EmptyState,ErrorState,FormField,Input,PageHeader,Select,Status,Tabs,TabsBar,Textarea,ModalHeader,ModalFooter} from "@/design-system";
+import {Button,EmptyState,ErrorState,FormField,Input,PageHeader,Select,Status,Tabs,TabsBar,Textarea,ModalHeader,ModalFooter,FormSection} from "@/design-system";
 import {Icon} from "@/design-system/icons";
 import {useFeedback,useSession} from "@/providers";
 import type {PlatformModule,PlatformSubscriptionPlan,SubscriptionPlanDraft} from "../domain/types";
@@ -93,26 +93,30 @@ export function PlatformPlansPage(){
 function PlanDialog({value:initial,modules,currencies,busy,close,save}:{value:SubscriptionPlanDraft;modules:PlatformModule[];currencies:{code:string;name:string}[];busy:boolean;close:()=>void;save:(value:SubscriptionPlanDraft)=>void}){
  const{register,control,handleSubmit,setValue,formState:{errors}}=useForm<SubscriptionPlanDraft>({defaultValues:initial,resolver:planResolver,mode:"onSubmit",reValidateMode:"onChange"});
  const groups=useMemo(()=>Array.from(new Set(modules.map(module=>module.category))),[modules]);
- return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal plan-dialog modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="plan-dialog-title"><ModalHeader title="Configuración comercial" titleId="plan-dialog-title" icon="payment" subtitle={initial.id?"EDITAR PLAN":"NUEVO PLAN"} onClose={close} busy={busy} closeLabel="Cerrar"/>
+ return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal plan-dialog modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="plan-dialog-title"><ModalHeader title="Configuración comercial" titleId="plan-dialog-title" icon="payment" subtitle={initial.id?"Editar plan":"Nuevo plan"} onClose={close} busy={busy} closeLabel="Cerrar"/>
   <form onSubmit={handleSubmit(value=>save({...value,trialDays:Number(value.trialDays)}))} noValidate>
    <div className="plan-form">
-    <div className="form-grid">
+    <FormSection icon="layers" title="Identificación del plan" bare><div className="form-grid">
      <FormField label="Código" help="Identificador técnico; no se muestra al cliente." error={errors.code?.message}><Input minLength={2} maxLength={40} {...register("code",{onChange:e=>setValue("code",e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g,""))})} placeholder="ej. crecimiento"/></FormField>
      <FormField label="Nombre" error={errors.name?.message}><Input maxLength={120} {...register("name")} placeholder="Crecimiento"/></FormField>
      <FormField className="span-2" label="Descripción" optional error={errors.description?.message}><Textarea maxLength={500} rows={2} {...register("description")}/></FormField>
      <FormField label="Moneda" error={errors.currency?.message}><Select {...register("currency")}>{currencies.map(item=><option key={item.code} value={item.code}>{item.code+" — "+item.name}</option>)}</Select></FormField>
      <FormField label="Versión de condiciones" error={errors.termsVersion?.message}><Input maxLength={80} {...register("termsVersion")} placeholder="2026-09"/></FormField>
+    </div></FormSection>
+    <FormSection icon="cash" tone="brand" title="Precio y prueba" bare><div className="form-grid">
      <FormField label="Precio mensual" error={errors.monthlyPrice?.message}><Input type="number" inputMode="decimal" min="0" step="0.01" {...register("monthlyPrice")}/></FormField>
      <FormField label="Precio anual" error={errors.annualPrice?.message}><Input type="number" inputMode="decimal" min="0" step="0.01" {...register("annualPrice")}/></FormField>
      <FormField label="Días de prueba" error={errors.trialDays?.message}><Input type="number" inputMode="numeric" min="0" max="365" step="1" {...register("trialDays")}/></FormField>
+    </div></FormSection>
+    <FormSection icon="gauge" tone="digital" title="Límites" bare><div className="form-grid">
      <FormField label="Máx. locales" help="Vacío = sin límite." error={errors.maxLocations?.message}><Input type="number" inputMode="numeric" min="1" step="1" {...register("maxLocations")}/></FormField>
      <FormField label="Máx. usuarios" help="Vacío = sin límite." error={errors.maxUsers?.message}><Input type="number" inputMode="numeric" min="1" step="1" {...register("maxUsers")}/></FormField>
      <FormField label="Conversaciones de Concierge al mes" help="Vacío = ilimitado. Solo lo ve Plataforma." error={errors.maxConciergeConversations?.message}><Input type="number" inputMode="numeric" min="1" step="1" {...register("maxConciergeConversations")}/></FormField>
      <label className="switch-row compact"><input type="checkbox" {...register("active")}/><span/><b>Plan disponible para nuevas empresas</b></label>
-    </div>
+    </div></FormSection>
     <Controller control={control} name="moduleKeys" render={({field})=>{
      const selected=field.value;const toggle=(key:string)=>field.onChange(selected.includes(key)?selected.filter(item=>item!==key):[...selected,key]);
-     return <section className={"plan-modules"+(errors.moduleKeys?" has-error":"")}><header><div><small>LÍMITES Y MÓDULOS</small><h3>Módulos incluidos</h3>{errors.moduleKeys?.message&&<small className="field-error" role="alert">{errors.moduleKeys.message}</small>}</div><b>{selected.length}</b></header>{groups.map(group=><div className="plan-module-group" key={group}><strong>{group}</strong><div>{modules.filter(module=>module.category===group).map(module=><label key={module.key} className={selected.includes(module.key)?"selected":""}><input type="checkbox" checked={selected.includes(module.key)} onChange={()=>toggle(module.key)}/><span><Icon name="check" size={14}/></span><div><b>{module.name}</b><small>{module.description}</small></div></label>)}</div></div>)}</section>;
+     return <section className={"plan-modules"+(errors.moduleKeys?" has-error":"")}><header><div><small>Límites y módulos</small><h3>Módulos incluidos</h3>{errors.moduleKeys?.message&&<small className="field-error" role="alert">{errors.moduleKeys.message}</small>}</div><b>{selected.length}</b></header>{groups.map(group=><div className="plan-module-group" key={group}><strong>{group}</strong><div>{modules.filter(module=>module.category===group).map(module=><label key={module.key} className={selected.includes(module.key)?"selected":""}><input type="checkbox" checked={selected.includes(module.key)} onChange={()=>toggle(module.key)}/><span><Icon name="check" size={14}/></span><div><b>{module.name}</b><small>{module.description}</small></div></label>)}</div></div>)}</section>;
     }}/>
    </div>
    <ModalFooter><Button kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" icon="check" disabled={busy} loading={busy}>{busy?"Guardando…":"Guardar"}</Button></ModalFooter>

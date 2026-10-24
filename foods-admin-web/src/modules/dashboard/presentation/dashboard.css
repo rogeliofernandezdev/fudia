@@ -27,7 +27,7 @@
 .dash-kpi.violet{border-color:var(--digital-100);background:linear-gradient(160deg,var(--digital-50),var(--surface) 62%)}
 .dash-kpi.amber{border-color:var(--warning-100);background:linear-gradient(160deg,var(--warning-50),var(--surface) 62%)}
 .dash-kpi-head{display:flex;align-items:center;gap:var(--space-2-5);min-width:0}
-.dash-kpi-head small{overflow:hidden;font-size:var(--font-size-sm);line-height:var(--line-height-tight);font-weight:var(--weight-bold);text-overflow:ellipsis;white-space:nowrap;color:var(--ink-600)}
+.dash-kpi-head small{flex:1;min-width:0;overflow:hidden;font-size:var(--font-size-sm);line-height:var(--line-height-tight);font-weight:var(--weight-bold);text-overflow:ellipsis;white-space:nowrap;color:var(--ink-600)}
 .dash-kpi-icon{display:grid;place-items:center;flex:0 0 auto;width:var(--size-32);height:var(--size-32);border-radius:var(--radius-tile);color:var(--primary-700);background:var(--primary-100)}
 .dash-kpi strong{font-size:var(--font-size-2xl);font-weight:var(--weight-bold);font-variant-numeric:tabular-nums;line-height:var(--line-height-tight);letter-spacing:var(--letter-spacing-snug);white-space:nowrap;color:var(--ink-950)}
 .dash-kpi.lead strong{font-size:var(--font-size-3xl);line-height:var(--line-height-none);letter-spacing:var(--letter-spacing-tight)}

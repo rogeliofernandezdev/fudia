@@ -53,8 +53,8 @@ valores arbitrarios (`p-[13px]`).
 | Superficie | `surface`, `cloud-25`, `cloud-50`, `cloud-100`, `cloud-150` | Paneles en blanco; fondo de página `cloud-50`; superficies hundidas y filas alternas en `cloud-25`/`primary-25` |
 | Líneas | `line`, `line-strong` | Bordes de 1 px; `line-strong` en hover de campos |
 | Texto e iconos | `ink-950`, `ink-800`, `ink-700`, `ink-600`, `ink-500`, `ink-400`, `ink-300` | `ink-950` títulos y datos; `ink-600` texto secundario; `ink-500` metadatos; `ink-400` es el mínimo legible (4.5:1 sobre blanco); `ink-300` solo para iconos deshabilitados |
-| Azul operativo | `primary-25` … `primary-800` | `primary-600` acción primaria, selección, foco y cabecera de tabla; `primary-700` hover y texto de acción; `primary-100`/`primary-50` fondos de selección |
-| Navegación | `navigation-900`, `navigation-950`, `navigation-text` | Sidebar, cabecera de pantallas completas y backdrop |
+| Azul operativo | `primary-25` … `primary-800` | `primary-600` acción primaria, selección y foco; `primary-700` hover y texto de acción; `primary-100`/`primary-50` fondos de selección |
+| Navegación | `navigation-900`, `navigation-950`, `navigation-text` | Sidebar, cabecera de pantallas completas, cabecera de tablas y backdrop |
 | Verde restaurante | `brand-50` … `brand-800` | Éxito confirmado, activo, pagado; `brand-600` (menta) solo en la franja de marca y el carril «Listo» |
 | Violeta digital | `digital-50` … `digital-700` | WhatsApp, integraciones, «En preparación» |
 | Entrega completada | `teal-100`, `teal-700` | Azul petróleo para Entregado; Finalizada usa gris neutro para distinguirla de Pagada |
@@ -74,13 +74,14 @@ Reglas:
 
 ## Tipografía
 
-Una sola familia, Manrope, con escala fija por rol. No hay segunda familia: los
-importes, cantidades y porcentajes usan Manrope con cifras tabulares
+Una sola familia, Plus Jakarta Sans (`next/font`, variable `--font-jakarta`),
+con escala fija por rol. No hay segunda familia: los
+importes, cantidades y porcentajes usan Plus Jakarta Sans con cifras tabulares
 (`font-variant-numeric: tabular-nums`, clase `.tabular`), nunca monoespaciada.
 
 | Token | Tamaño | Rol |
 | --- | --- | --- |
-| `--font-size-2xs` | 10 px | Cabeceras de tabla y etiquetas en mayúsculas espaciadas |
+| `--font-size-2xs` | 10 px | Etiquetas en mayúsculas espaciadas (no las cabeceras de tabla) |
 | `--font-size-xs` (`--font-size-label`) | 12 px | Labels, metadatos, estados |
 | `--font-size-sm` (`--font-size-control`) | 13 px | Controles, celdas, descripción de página (16 px en táctil) |
 | `--font-size-base` | 14 px | Cuerpo |
@@ -91,8 +92,8 @@ importes, cantidades y porcentajes usan Manrope con cifras tabulares
 | `--font-size-3xl` / `--font-size-4xl` | 36 / 48 px | Solo cifras protagonistas (Ventas del dashboard: 36 px) |
 
 - Pesos: `--weight-regular` 400, `--weight-medium` 500, `--weight-semibold`
-  600, `--weight-bold` 700, `--weight-heavy` 800. Manrope no tiene pesos
-  superiores a 800. Jerarquía habitual: título 800, encabezado de sección 700,
+  600, `--weight-bold` 700, `--weight-heavy` 800. Plus Jakarta Sans no tiene
+  pesos superiores a 800. Jerarquía habitual: título 800, encabezado de sección 700,
   botones y labels 600, cuerpo 400–500.
 - Interlineado: `none` 1, `tight` 1.2, `snug` 1.35, `normal` 1.5, `relaxed` 1.65.
 - Tracking: `--letter-spacing-tight` (−0.02 em) en títulos de 22 px o más,
@@ -244,36 +245,24 @@ comanda), `--z-modal` 110, `--z-sheet` 120, `--z-confirm` 130,
 
 ## Iconos
 
-Un único set propio en `design-system/icons.tsx`: 24 × 24, trazo 1.7,
-extremos y uniones redondeados, esquinas suaves. `IconSize` limita los tamaños: 14 junto a texto de
-12–13 px, 16 en chips, pestañas y pasos de cantidad, 18 en acciones y botones
-(por defecto en `Button` e `IconButton`), 20 en navegación, 24 en estados
-vacíos, 28 en el interruptor de estado.
+Un único set en `design-system/icons.tsx`, dibujado con
+[Tabler Icons](https://tabler.io/icons) (`@tabler/icons-react`, licencia MIT):
+retícula de 24 × 24, trazo 1.75, extremos y uniones redondeados en todos los
+glifos. Las pantallas usan solo `Icon name="…"` con los nombres de `IconName`;
+el glifo de Tabler que corresponde a cada nombre se decide únicamente en ese
+archivo, así que cambiar un dibujo no toca las pantallas. No se importan
+iconos de Tabler (ni de otra librería) directamente en los módulos.
+`IconSize` limita los tamaños: 14 junto a texto de 12–13 px, 16 en chips,
+pestañas y pasos de cantidad, 18 en acciones y botones (por defecto en
+`Button` e `IconButton`), 20 en navegación, 24 en estados vacíos, 28 en el
+interruptor de estado.
 
-El set es **duotono**. Cada icono se dibuja en tres capas:
-
-- **Línea**: la estructura, en `currentColor`. En superficies neutras usa
-  `--icon-line` (`ink-800`).
-- **Acento** (`icon-accent` en trazo, `icon-dot` sólido): un único detalle con
-  significado (el punto del pin, el badajo de la campana, la cabeza del
-  usuario, las líneas del comprobante), en `--icon-accent` (`primary-600`).
-- **Cuerpo** (`icon-body`): la silueta cerrada. Se rellena con
-  `--icon-fill-active` (16 % del color del icono) cuando el elemento está
-  activo: página actual de la navegación, pestaña activa, `aria-current`,
-  `aria-pressed` o `Icon filled`.
-
-El duotono aplica en todo el sistema. El acento no se asigna por pantalla:
-`--icon-accent-auto` lo deriva del color del icono con color relativo
-OKLCH, subiendo la luminosidad (`--icon-accent-lift`) y, si el color es
-neutro, dándole croma índigo (`--icon-accent-chroma`). Así, un icono en tinta
-recibe detalle índigo, uno índigo recibe índigo claro, uno blanco sobre fondo
-de color permanece blanco, y rojo, verde, ámbar, violeta, petróleo o celeste
-conservan su tono, por lo que el acento nunca mezcla semánticas. Sobre la
-navegación oscura el acento es `--icon-accent-inverse` (`primary-400`).
-`Status` conserva el color exacto de la matriz: su icono es monocromo. Sin
-soporte de color relativo el icono se ve monocromo. Los glifos de interfaz y
-de estado (`alert`, `check`, `circleCheck`, `cancel`, chevrons, `close`,
-`plus`, `minus`, `menu`, `refresh`, `undo`) no tienen acento.
+El set es **monocromo**: el trazo hereda `currentColor` (`--icon-line`,
+`ink-800`, en superficies neutras). El color de identidad no va en el trazo:
+lo aporta el contenedor tintado (cuadrito de `--radius-tile` con fondo
+tenue y el icono en el tono oscuro de la misma familia), como en la
+navegación, los KPI y los mosaicos de categoría. `Status` conserva el color
+exacto de la matriz.
 
 Un icono tiene un solo significado en toda la aplicación: `receipt` para
 comprobantes y ventas, `invoice` para documentos (orden de compra, contrato,
@@ -318,7 +307,9 @@ de página en `03_LAYOUTS.md`. Resumen:
   descripción de una línea, retorno opcional y como máximo una acción primaria y
   una secundaria. Sin eyebrow.
 - **Modales**: `Modal` con tamaños `sm` 480, `md` 640, `lg` 880 y `xl` 1040.
-  Cabecera índigo `primary-700`, título blanco de 18 px e icono blanco de 20 px
+  Cabecera índigo profundo `navigation-900` (borde `navigation-950`), título
+  blanco de 18 px e icono blanco de 20 px dentro de un recuadro translúcido
+  (`surface-alpha-16`, `--radius-tile`, 40 px)
   centrado en un espacio de 44 px, sin recuadro. Altura mínima 64 px y padding vertical de 8 px;
   puede crecer si el título necesita varias líneas. La X blanca mide 20 px,
   dentro de un cuadro visible de 32 px con solo contorno blanco de 1 px y fondo
@@ -391,6 +382,58 @@ de página en `03_LAYOUTS.md`. Resumen:
   filas de 56 px, cifras tabulares, hover `primary-25` y tarjetas equivalentes
   en móvil.
 - **Estados**: `Status` en píldora con icono o punto semántico y texto.
+
+### Identidad de iconos, indicadores y filtros
+
+- **`IconTile`** (`design-system/icon-tile.tsx`): icono monocromo sobre un
+  cuadrito `--radius-tile` tintado. Tonos: `primary`, `brand`, `digital`,
+  `teal`, `sky`, `neutral`, los decorativos `peach` y `rose`, y `warning` solo
+  para lo que pide atención. Fondo `*-100` y trazo en el tono oscuro de la misma
+  familia. Es la única forma de dar color de identidad a un icono (accesos, KPI,
+  canales, categorías, secciones). Los tintes `peach-*` y `rose-*` son
+  decorativos: nunca representan estados ni acciones.
+- **`StatCard`** (`design-system/stat-card.tsx`): indicador homologado con
+  `IconTile` y etiqueta arriba, flecha ↗ (`arrowUpRight`, 44 px táctiles en
+  móvil) cuando abre el detalle, cifra protagonista de 28 px / 800 (22 px en
+  móvil) con cifras tabulares y una línea de contexto de 12 px. `attention`
+  tiñe la cifra y el icono en ámbar solo para demoras o vencidos.
+- **Campos con icono al inicio**: `Input icon="…"` envuelve el campo en
+  `ds-input-shell` con el icono de 16 px en `ink-400`. Se usa en correo
+  (`mail`), teléfono (`phone`), dirección (`mapPin`), documento (`badge`),
+  búsqueda (`search`) y referencias (`invoice`). Fechas nativas no llevan icono
+  propio porque el navegador ya muestra el suyo. Los importes usan el prefijo
+  de `MoneyInput`.
+- **Filtros en chip**: `Select chip` presenta el filtro con `--control-height`
+  y el radio estándar de campos (`--radius-control`, sin píldora), con peso 600. Cuando filtra (opción
+  distinta de la primera, normalmente «Todos») se tiñe en `primary-50` con
+  borde `primary-200` y texto `primary-700`. Se usa en las barras de filtros
+  de los listados; los selectores de formularios conservan su forma.
+
+### Formularios por secciones
+
+- **`FormSection icon title tone`** agrupa los campos por tema con un título de
+  14 px / 700 `ink-800` e `IconTile` pequeño; dos columnas en escritorio y una
+  en móvil. Entre secciones hay una línea fina `line`. `bare` conserva la
+  retícula propia del formulario. Contenedores: `form-sections` (con relleno
+  del cuerpo) o `form-sections-flow` (dentro de `ModalBody`).
+- **`ChoiceGroup`** reemplaza al select en elecciones únicas de hasta 5
+  opciones (medio de pago, tipo de atención): botones de `--control-height` con
+  icono; el elegido en `primary-50` con borde `primary-600`. Son radios nativos
+  compatibles con `register`. En móvil, dos por fila y en píldora.
+- **Icono al inicio automático**: `FormField` deduce el icono de su etiqueta
+  (`design-system/field-icon.ts`: correo → `mail`, teléfono → `phone`, fecha →
+  `calendar`, categoría → `tag`, proveedor → `truck`, nombre/descripción →
+  `edit`, etc.) para `Input` y `Select`; `icon={false}` lo omite y `icon="…"`
+  lo fija. No aplica a importes (`MoneyInput`), áreas de texto ni casillas.
+- Formularios organizados así: gasto, cliente, proveedor, usuario, local,
+  reserva, pedido manual, caja (registrar caja, iniciar turno, movimiento y
+  cierre), plan SaaS (identificación, precio y prueba, límites), suscripción
+  (ciclo y estado del pago con `ChoiceGroup`), cobro y devolución en POS, medio
+  de pago (datos y dónde se usa), menús y combos (datos, qué incluye, cuándo se
+  vende) e inventario (niveles de stock, ajuste con entrada/salida en
+  `ChoiceGroup`, transferencia).
+- Subtítulos de modal y etiquetas se escriben en caja normal («Nuevo gasto»,
+  «Fondo inicial»); solo las siglas van en mayúsculas.
 
 ### Jerarquía de acciones y botones móviles
 
@@ -490,6 +533,7 @@ Paleta exacta de `Status` (fondo / texto e icono):
 | `orange` — ámbar | `warning-100` · `#FFE8CF` | `warning-800` · `#7A3B0D` |
 | `teal` — azul petróleo | `teal-100` · `#E6F5F7` | `teal-700` · `#0B6B78` |
 | `red` | `danger-50` · `#FFF1EF` | `danger-700` · `#A5281E` |
+| `navy` — contorno | `surface` con borde interior de 1,5 px `navigation-900` | `navigation-900` · `#1A2151` |
 | `gray emphasis` | `cloud-150` · `#E9ECF4` | `ink-800` · `#222842` |
 
 Matriz semántica completa:
@@ -506,6 +550,7 @@ Matriz semántica completa:
 | Preparación | Pendiente | `orange` — ámbar | Aún sin preparar; distinto del celeste de Cuenta abierta |
 | Sin preparación | Pendiente de entrega (`listo`) | `green` — verde | Disponible para servir; el API conserva esa etiqueta |
 | Cuenta | Cuenta abierta | `sky` — celeste tenue | Sigue admitiendo consumo; distinto de Confirmado |
+| Mesa (Salón) | Libre | `navy` — contorno azul marino | Mesa sin pedido; aprobado para no confundirse con Entregado (`teal`) ni Listo (`green`) |
 | Cuenta | Por cobrar | `orange` — ámbar | Espera el pago |
 | Cuenta | Pagada | `green` — verde | Pago completo |
 | Cuenta | Finalizada | `gray` — gris neutro | Atención terminada; visualmente distinta del verde de Pagada |
@@ -528,6 +573,100 @@ mismo color; no se colorean por producto. `teal-100` / `teal-700` son tokens com
 también accesibles en Tailwind.
 
 ## Especificaciones por pantalla
+
+### Detalles al estilo de la referencia
+
+Todos los modales de detalle siguen la organización de la plataforma logística
+de referencia (`design-system/detail-view.tsx`):
+
+- **`DetailHero title status meta`**: identidad en 22 px / 800 (código del
+  pedido `PED-…`, importe del gasto, nombre del cliente o de la caja) con su
+  `Status` sin énfasis al lado y una línea de contexto de 12 px con icono. El
+  estado ya no se repite en el resumen del pie ni en el footer.
+- **`DetailContact icon name detail actions`**: tarjeta blanca con borde `line`
+  y radio de tarjeta, `IconTile`, nombre en 14 px / 700, dato secundario y
+  acciones secundarias (por ejemplo «Llamar» con `tel:`).
+- **`Tabs`** cuando hay más de un bloque: «Productos» y «Pagos» (venta y
+  cobro), «Productos» y «Seguimiento» (pedido). No crear una pestaña para pocos datos ni repetir lo que cabecera,
+  identidad o tarjeta ya muestran: van en la identidad.
+- Ritmo vertical en pedido y venta: 16 px entre identidad/tarjeta y pestañas
+  (`padding-bottom` de 4 px más el gap de 12 px) y 12 px entre pestañas y el
+  primer contenido; las pestañas no llevan margen propio y los títulos `sr-only`
+  de panel no se envuelven en un `header` que agregue otra fila. Paneles
+  inactivos con `hidden`; los títulos de panel quedan como `sr-only`.
+- **`DetailFacts items`**: datos en dos columnas (etiqueta 12 px / 600
+  `ink-500`, valor 14 px `ink-950`); `wide` ocupa la fila; una columna en móvil.
+- **`DetailTimeline steps`**: hitos o movimientos con círculo de 32 px
+  (`navigation-900` y blanco), título y hora en la misma línea separados por
+  «•», descripción gris y valor a la derecha (`aside`). Se usa para pagos de
+  venta y cobro, movimientos de caja y el progreso del pedido.
+- Títulos de sección (`modal-section-title`) en 16 px / 700, caja normal, con
+  línea fina `line`; la franja `modal-record-data` es blanca con borde `line`.
+- Aplicado en: detalle de pedido, venta, cobro en POS, turno de caja, gasto y
+  cliente.
+
+### Detalle de venta (organización)
+
+**Detalle de venta** sigue el patrón de «Detalle del pedido» (siguiente
+sección), con la misma geometría de modal y hoja inferior móvil:
+
+1. **Cabecera**: icono del canal (`utensils` si hay mesa) y como título la mesa
+   («Mesa 03», sin repetir «Mesa»), el cliente o «Venta directa». El código
+   `PED-…` no se repite en el detalle: ya identifica la fila del listado.
+2. **Identidad**: estado de pago (`Status`, sin énfasis); debajo, reloj y fecha
+   de registro, y una segunda línea con el icono del canal, «Salón · Atendido por
+   …» (mozo solo en salón).
+3. **Tarjeta de cliente** (`DetailContact`): solo si hay cliente.
+4. **Pestañas** (`Tabs` compartidas, sin pista ni superficie local):
+   «Productos» (líneas de `modal.css` y «Notas generales») y «Pagos»
+   (`DetailTimeline`). No hay pestaña «Detalles»: mesa, cliente, fecha, canal y
+   mozo ya se ven arriba y no se repiten en ningún otro bloque. Paneles con
+   sangría horizontal de 16 px (12 px a ≤600 px).
+5. **Resumen de venta** fijo al pie, como «Resumen de cuenta»: subtotal,
+   delivery si aplica y «Pagado neto» (`brand-800` si hay pagos); el importe
+   principal es «Saldo pendiente» o, saldada, «Total pagado» en `brand-800`.
+6. «Ver resumen de pago» (`secondary`, icono `eye`) en `ModalFooter` solo con un
+   pago registrado; no se añade una acción vacía ni otro cierre.
+
+### Detalle de cobro en POS (organización)
+
+Igual que «Detalle de venta»: cabecera con mesa, cliente o «Venta directa» e
+icono del canal; identidad con estado de pago, fecha y «Canal · Atendido por»;
+tarjeta de cliente solo si existe; pestañas «Productos» y «Pagos» (con
+«Devolver» en cada pago cuando corresponde) y «Resumen de cobro» fijo («Saldo
+pendiente» o «Total pagado»). Excepción: el código `PED-…` se muestra como texto
+secundario junto al estado, porque en POS no aparece en el listado. Mismo
+tamaño que el pedido y hoja inferior en móvil; el modal de registrar cobro
+conserva su pantalla completa.
+
+### Detalle del pedido (organización)
+
+Inspirado en la referencia de plataforma logística aprobada: información limpia
+y por capas, sin franjas de metadatos.
+
+1. **Identidad**: estado del pedido (`Status`, sin énfasis), hora de registro
+   con icono `clock` y, debajo, `OrderAttribution` en una línea con icono
+   `users`: «Atendido por …» (salón) · «Cobrado por …». El código del pedido no
+   se repite en el detalle.
+2. **Tarjeta de contacto** (`order-detail-contact`): `IconTile` `user` en tono
+   `teal`, cliente o mesa en 14 px / 700, teléfono debajo y botón secundario
+   «Llamar» (`tel:`). Solo si hay cliente o teléfono.
+3. **Pestañas** (`Tabs`): «Productos» (con contador, por defecto) y
+   «Seguimiento». No hay pestaña «Detalles»: mesa, cliente, teléfono y fecha ya
+   están en cabecera, tarjeta e identidad. Los paneles inactivos usan `hidden`.
+   Los paneles llevan sangría horizontal de 16 px en escritorio y 12 px
+   a ≤600 px para que el contenido se lea dentro de la sección de la pestaña.
+   No se añade otra tarjeta ni se cambian los radios, colores, tabs o pie.
+4. **Entrega** (`order-detail-context`): dirección, referencia y «Ver
+   ubicación» bajo la tarjeta de contacto, solo en pedidos con entrega.
+5. **Seguimiento** («Progreso del pedido», `OrderTimeline`): hitos con círculo
+   de 32 px; cumplidos en `navigation-900` con icono blanco unidos por línea
+   oscura, el actual en `primary-600` y los pendientes en `cloud-100`. Hitos:
+   «Pedido registrado» (hora de alta), estado de preparación actual, «Cuenta
+   cerrada» solo en salón (hora de cierre), pago y «Mesa liberada» / «Pedido
+   completado» (hora de cierre). Solo horas que el backend registra; el resto
+   dice «Estado actual», «Registrado» o «Pendiente».
+6. El resumen de cuenta y las acciones permanecen fijos al pie.
 
 ### Comanda de Salón, Pedidos y pedido manual
 
@@ -639,10 +778,26 @@ página y la tira de zonas queda fija bajo la barra superior (`top` igual a su a
 con fondo `cloud-50` a ancho completo y `scroll-padding` para que el primer chip
 conserve el margen lateral; escritorio conserva búsqueda y zonas en la misma tarjeta.
 
-Las tarjetas de mesa tienen la misma altura en toda la grilla (filas `1fr`); el
-importe o «Abrir mesa» queda anclado abajo. Estado y tiempo de ocupación pasan a una
-segunda línea cuando no caben juntos. Debajo de 480 px el resumen Mesas/Libres/Ocupadas
-oculta sus iconos para que las tres cifras quepan.
+Las mesas se muestran en orden natural por nombre (01, 02… 10), en «Todas» y en
+cada zona; el API las agrupa por zona, lo que sin encabezados parecía desordenado.
+
+Las tarjetas de mesa siguen la ficha de la referencia y tienen la misma altura en
+toda la grilla (filas `1fr`, mínimo 240 px en escritorio, 224 px ≤960 px, 208 px
+≤600 px y 184 px ≤480 px). Contenido mínimo: número de mesa grande con su `Status`,
+una línea con capacidad y zona, el mozo si está ocupada (cada dato en una línea
+recortada) y un pie a todo el ancho con el importe y el tiempo abierta («Hace 25 min»;
+sin hora válida no se muestra) o «Abrir mesa», más un botón redondo de 44 px. Familia
+y «Cobrado por» quedan en el detalle de la mesa. El pie distingue el estado a simple
+vista: **ocupada** en índigo (`primary-100`, importe `primary-800`, botón `primary-600`
+con ojo) y **libre** en gris nube (`cloud-100`, «Abrir mesa» y botón `+` en
+`navigation-900`). Las tarjetas son blancas con borde neutro: sin rojo, sin verde
+(salvo el `Status` «Libre» de la matriz de estados) y sin bandas superiores.
+
+El resumen sigue los KPI de la referencia: cuatro tarjetas blancas compactas
+(`dl.salon-overview-stats`: Mesas, Libres, Ocupadas y Consumo abierto) con etiqueta
+de 12 px / 600 en caja normal arriba («Libres» en `navigation-900`, «Ocupadas» en
+`primary-700`, como sus pies) y cifra de 22 px / 800 con su icono de línea al lado.
+En móvil (≤600 px) forman una cuadrícula de 2×2; debajo de 480 px se ocultan los iconos.
 
 ### Ticket de pago para el comensal
 
@@ -651,10 +806,11 @@ Formato de rollo de 80 mm, área útil de 70 mm, negro sobre blanco, nombre del
 restaurante, datos del local, fecha del cobro, mesa/cliente, consumo con cantidad,
 precio e importe, total y medios de pago reales. Los pagos parciales muestran
 saldo y nunca se presentan como cuenta pagada. Se identifica como no fiscal;
-no inventa serie, impuesto, QR tributario ni aprobación SUNAT. La impresión es
-explícita desde «Imprimir ticket»; el documento aislado comparte las líneas
-medidas del PDF y no incluye la interfaz. La vista previa conserva descarga,
-reintento, skeleton, X y controles de 44 px en móvil. El cierre de caja A4 no cambia.
+no inventa serie, impuesto, QR tributario ni aprobación SUNAT. El modal no
+repite avisos sobre el visor ni tiene botón propio de impresión: el visor del PDF
+ya permite imprimir y el pie ofrece solo «Descargar PDF», como acción primaria
+índigo (es la tarea del modal; en otros contextos descargar sigue siendo secundario). La vista previa
+conserva reintento, skeleton, X y controles de 44 px en móvil. El cierre de caja A4 no cambia.
 
 ### Resumen de cierre e informe de caja
 
@@ -824,12 +980,15 @@ no integra un visor PDF.
   cupo pendiente. `menu.read` sin `menu.manage` conserva consulta e historial,
   con campos bloqueados y sin acciones de escritura. Empresa, local, contrato
   API, invalidaciones y flujo de historial permanecen independientes del layout.
-- Cabecera de Cocina: hasta 1024 px (tablet, ventana reducida o con menú
-  lateral) título y descripción ocupan todo el ancho y los selectores Área de
-  preparación y Canal van debajo en dos columnas iguales, con «Con demora» en su
-  propia fila; desde 1025 px los filtros vuelven a la derecha del título. La
-  cabecera global solo pasa a grid en ≤600 px, por eso `kitchen.css` fija
-  `display:grid` en su variante; nunca hay scroll horizontal.
+- Cocina separa dos ideas distintas, nunca en la misma barra ni con combos sin
+  etiqueta: **Estación** (qué pantalla se opera) en la cabecera, junto al título,
+  con las `Tabs` compartidas «Cocina | Barra» (solo si el API ofrece más de una;
+  cambia la cola y el título), y **Origen del pedido** (canal) como filtro sobre
+  los carriles (`kitchen-filters`, como los controles del Salón) con los chips de
+  la Comanda: «Todos» primero, icono por canal (`utensils`, `store`, `box`,
+  `truck`, `share`) y check en el activo. «N con demora» acompaña a la estación.
+  Hasta 1024 px la estación baja bajo el título; en ≤760 px ocupa todo el ancho y
+  los chips se deslizan; nunca hay scroll horizontal de página.
 - Cocina usa un KDS de tres carriles operativos: «Por preparar», «En preparación»
   y «Listos para entregar». Cada carril es un panel neutro `cloud-50/surface`
   con borde estándar; el color semántico se limita al acento de estado, icono,
@@ -1291,8 +1450,24 @@ primaria con el icono `send`: «Enviar a cocina». Durante el envío muestra
 
 ## Tablas y paginación
 
-- Cabecera azul `primary-600`, texto blanco en mayúsculas, filas alternas sutiles y
-  acciones iconográficas consistentes; el color semántico se reserva para estados.
+- Cabecera en índigo profundo `navigation-900` con texto blanco en caja normal
+  (12 px / 600, sin mayúsculas ni tracking), así el azul `primary-600` queda solo
+  para acciones. Sin filas alternas: las filas se separan con una línea fina
+  `line` y hover `primary-25`. Acciones iconográficas consistentes; el color
+  semántico se reserva para estados. Aplica también a cabeceras de listas en
+  grilla (Disponibilidad).
+- Los títulos de columna se escriben en caja normal en el JSX («Medio de pago»,
+  «Cliente / mesa», «Acciones»); solo las siglas conservan mayúsculas (RUC,
+  IGV, DNI, QR).
+- La columna de acciones mide lo que sus botones (`width:1%`): sin espacio
+  vacío a la derecha. Los tooltips de cualquier botón de la última columna se
+  anclan al borde derecho y crecen hacia la izquierda; centrados, aunque
+  invisibles, ensanchaban el área desplazable y dejaban un hueco a la derecha.
+- Celdas de dos líneas (`<b>` + `<small>`) solo cuando el dato secundario no
+  tiene columna propia; nunca se repite en la segunda línea un valor que ya
+  muestra otra columna o un filtro.
+- Las barras de filtros de listados usan `Select chip` (ver «Identidad de
+  iconos, indicadores y filtros»).
 - Escala tipográfica única para todas las tablas, definida en
   `src/design-system/styles/data-table.css` y los tokens, nunca sobrescrita por módulo: cabecera y líneas secundarias usan
   `--font-size-label` (12 px); celdas, paginación y controles usan
@@ -1818,9 +1993,9 @@ la cabecera permanece visible. Desde 390 px conserva todos los datos y acciones.
 Reutiliza `ModalWorkspace` y `ModalItemList`: productos y pagos son listas con
 separadores, sin tarjetas con borde exterior. Los pagos tienen una separación
 visible respecto a los productos; las notas usan `modal-detail-notes`.
-El resumen inferior fijo `modal-summary` muestra «Resumen de venta», estado
-real con énfasis, subtotal y pagado neto, y Total como importe principal.
-Delivery y saldo pendiente se añaden solo cuando aplican. El total no se
+El resumen inferior fijo `modal-summary` muestra «Resumen de venta», subtotal,
+delivery si aplica y pagado neto, con «Saldo pendiente» o «Total pagado» como
+importe principal (ver «Detalle de venta (organización)»). El total no se
 duplica dentro del cuerpo desplazable. El pie de acciones solo existe si se
 puede «Ver resumen de pago», con icono `eye` y variante `secondary`; no repite
 estado ni añade otro cierre. Consulta el documento operativo existente sin

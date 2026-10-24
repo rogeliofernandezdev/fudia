@@ -156,7 +156,7 @@ test("concierge: datos remotos con skeleton, error explícito y vacío",()=>{
 
 test("concierge: el listado de empresas muestra uso del mes y aviso de cartera",()=>{
  const page=read(`${platform}presentation/platform-companies-page.tsx`);
- assert.match(page,/"CONCIERGE DEL MES","ACCIONES"\]/);
+ assert.match(page,/"Concierge del mes","Acciones"\]/);
  assert.match(page,/queryKey:\["platform-concierge-usage",organizationIds\]/);
  assert.match(page,/enabled:organizationIds\.length>0/,"Consulta después de cargar la página de empresas");
  assert.equal((page.match(/<ConciergeUsageCell organizationId=\{company\.id\} usage=\{conciergeUsage\}\/>/g)||[]).length,2,"Tabla y tarjetas móviles");

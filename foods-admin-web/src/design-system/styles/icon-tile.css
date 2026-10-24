@@ -1,0 +1,13 @@
+/* IconTile: icono monocromo sobre un cuadrito tintado. El tono aporta identidad
+   (acceso, KPI, canal, categoría); los estados siguen usando `Status`. */
+.icon-tile{display:inline-grid;flex:none;place-items:center;width:var(--size-32);height:var(--size-32);border-radius:var(--radius-tile);color:var(--primary-700);background:var(--primary-100)}
+.icon-tile.size-sm{width:var(--size-28);height:var(--size-28)}
+.icon-tile.size-lg{width:var(--size-40);height:var(--size-40)}
+.icon-tile.tone-brand{color:var(--brand-700);background:var(--brand-100)}
+.icon-tile.tone-digital{color:var(--digital-700);background:var(--digital-100)}
+.icon-tile.tone-teal{color:var(--teal-700);background:var(--teal-100)}
+.icon-tile.tone-sky{color:var(--sky-800);background:var(--sky-100)}
+.icon-tile.tone-peach{color:var(--peach-700);background:var(--peach-100)}
+.icon-tile.tone-rose{color:var(--rose-700);background:var(--rose-100)}
+.icon-tile.tone-warning{color:var(--warning-800);background:var(--warning-100)}
+.icon-tile.tone-neutral{color:var(--ink-700);background:var(--cloud-100)}

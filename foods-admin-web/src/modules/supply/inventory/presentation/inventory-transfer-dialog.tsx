@@ -2,7 +2,7 @@
 import {Dialog} from "@/design-system/dialog";
 import {useState} from "react";
 import {Controller,useFieldArray,useForm,useWatch} from "react-hook-form";
-import {Button,FormField,Icon,Input,RowActionButton,Select,Textarea,ModalHeader,ModalFooter} from "@/design-system";
+import {Button,FormField,Icon,Input,RowActionButton,Select,Textarea,ModalHeader,ModalFooter,FormSection,IconTile} from "@/design-system";
 import {useSession} from "@/providers/session-context";
 import {formatRegionalNumber} from "@/shared/i18n/regional-format";
 import {inventoryTransferResolver} from "../domain/inventory-transfer-schema";
@@ -45,9 +45,10 @@ export function InventoryTransferDialog({locations,currentLocationId,busy,close,
   return <div className="modal-backdrop modal-overlay-in" role="presentation">
     <Dialog onResponseClose={close} className="crud-modal inventory-transfer-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="inventory-transfer-title" aria-busy={busy}>
 
-      <ModalHeader title="Transferir a otro local" titleId="inventory-transfer-title" icon="truck" subtitle="INVENTARIO" onClose={close} busy={busy} closeLabel="Cerrar"/>
+      <ModalHeader title="Transferir a otro local" titleId="inventory-transfer-title" icon="truck" subtitle="Inventario" onClose={close} busy={busy} closeLabel="Cerrar"/>
       <form onSubmit={handleSubmit(submit)} noValidate>
         <div className="inventory-transfer-body">
+          <FormSection icon="route" title="Ruta del traslado" bare>
           <div className="inventory-transfer-route">
             <div className="inventory-transfer-origin"><small>Origen</small><strong>{location?.name??"Local activo"}</strong></div>
             <span className="inventory-transfer-arrow" aria-hidden="true"><Icon name="chevron" size={16}/></span>
@@ -58,14 +59,15 @@ export function InventoryTransferDialog({locations,currentLocationId,busy,close,
               </Select>
             </FormField>
           </div>
+          </FormSection>
 
           <section className="inventory-transfer-lines" aria-labelledby="inventory-transfer-lines-title">
             <div className="inventory-transfer-lines-head">
-              <b id="inventory-transfer-lines-title">Artículos a transferir</b>
+              <h3 id="inventory-transfer-lines-title" className="form-section-title"><IconTile name="stock" tone="brand" size="sm"/>Artículos a transferir</h3>
               <Button type="button" kind="secondary" icon="plus" onClick={add} disabled={busy||lines.some(line=>!line?.inventoryItemId)}>Agregar artículo</Button>
             </div>
             {fields.length>0&&<div className="table-wrap"><table className="inventory-transfer-table">
-              <thead><tr><th>ARTÍCULO</th><th>DISPONIBLE</th><th>CANTIDAD</th><th><span className="sr-only">Acciones</span></th></tr></thead>
+              <thead><tr><th>Artículo</th><th>Disponible</th><th>Cantidad</th><th><span className="sr-only">Acciones</span></th></tr></thead>
               <tbody>{fields.map((field,index)=>{
                 const line=lines[index];
                 const item=line?.inventoryItemId?picked[line.inventoryItemId]:undefined;
@@ -82,9 +84,11 @@ export function InventoryTransferDialog({locations,currentLocationId,busy,close,
             {errors.items?.message&&<small className="field-error" role="alert">{errors.items.message}</small>}
           </section>
 
+          <FormSection icon="note" tone="neutral" title="Nota" bare>
           <FormField label="Nota" optional error={errors.notes?.message}>
             <Textarea rows={2} maxLength={500} placeholder="Motivo o referencia del traslado" {...register("notes")}/>
           </FormField>
+          </FormSection>
 
           {isSubmitted&&hasErrors&&<div className="inventory-validation" role="alert"><Icon name="alert" size={16}/><span>Revisa los campos marcados antes de guardar.</span></div>}
         </div>

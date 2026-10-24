@@ -40,8 +40,8 @@ export function KardexPage(){
    <div className="inventory-toolbar kardex-toolbar">
     <div className="kardex-filters">
      <InventoryItemLookup clearable ariaLabel="Filtrar Kárdex por artículo" placeholder="Todos los artículos" value={itemFilter} onChange={item=>{setItemFilter(item);setPage(1)}}/>
-     <Select value={movementType} onChange={event=>{setMovementType(event.target.value);setPage(1)}} aria-label="Filtrar por tipo de movimiento"><option value="">Todos los movimientos</option>{Object.entries(movementLabels).map(([value,label])=><option key={value} value={value}>{label}</option>)}</Select>
-     <Select value={sourceType} onChange={event=>{setSourceType(event.target.value);setPage(1)}} aria-label="Filtrar por origen"><option value="">Todos los orígenes</option><option value="purchase_receipt">Recepción de compra</option><option value="purchase_return">Devolución/corrección</option><option value="inventory_transfer">Transferencia</option><option value="order">Pedido / receta</option><option value="inventory_adjustment">Ajuste</option><option value="inventory_entry">Entrada manual</option></Select>
+     <Select chip value={movementType} onChange={event=>{setMovementType(event.target.value);setPage(1)}} aria-label="Filtrar por tipo de movimiento"><option value="">Todos los movimientos</option>{Object.entries(movementLabels).map(([value,label])=><option key={value} value={value}>{label}</option>)}</Select>
+     <Select chip value={sourceType} onChange={event=>{setSourceType(event.target.value);setPage(1)}} aria-label="Filtrar por origen"><option value="">Todos los orígenes</option><option value="purchase_receipt">Recepción de compra</option><option value="purchase_return">Devolución/corrección</option><option value="inventory_transfer">Transferencia</option><option value="order">Pedido / receta</option><option value="inventory_adjustment">Ajuste</option><option value="inventory_entry">Entrada manual</option></Select>
      <div className="kardex-range" role="group" aria-label="Periodo">
       <Icon name="calendar" size={16}/>
       <Input type="date" value={from} max={to||undefined} onChange={event=>{setFrom(event.target.value);setPage(1)}} aria-label="Fecha desde"/>
@@ -57,7 +57,7 @@ export function KardexPage(){
    :!items.length?<EmptyState icon="ledger" title="Sin movimientos" text={activeFilters?"No encontramos movimientos que coincidan con los filtros seleccionados.":"Aún no hay movimientos registrados en este local."} action={activeFilters>0?<Button kind="secondary" icon="close" onClick={resetFilters}>Limpiar filtros</Button>:undefined}/>
    :<>
     <DataTable label="Movimientos del Kárdex" containerClassName="hover-scroll inventory-table-wrap" className="kardex-table">
-      <thead><tr><th>ARTÍCULO</th><th>FECHA</th><th>TIPO</th><th>MOTIVO</th><th>CANTIDAD</th><th>STOCK ANTERIOR</th><th>STOCK RESULTANTE</th><th>COSTO U.</th><th>VALOR MOV.</th><th>VALOR SALDO</th><th>USUARIO</th></tr></thead>
+      <thead><tr><th>Artículo</th><th>Fecha</th><th>Tipo</th><th>Motivo</th><th>Cantidad</th><th>Stock anterior</th><th>Stock resultante</th><th>Costo u.</th><th>Valor mov.</th><th>Valor saldo</th><th>Usuario</th></tr></thead>
       <tbody>{items.map((item,index)=>{const delta=Number(item.quantityDelta);return <tr className={index%2?"alternate":""} key={item.id}>
        <td className="inventory-product-cell"><span className={"row-icon r"+index%3}><Icon name="stock" size={18}/></span><b>{item.itemName}</b></td>
        <td>{formatRegionalDateTime(item.createdAt,{country:location?.country,timeZone:location?.timezone})}</td>
@@ -76,10 +76,10 @@ export function KardexPage(){
      {items.map((item,index)=>{const delta=Number(item.quantityDelta);return <article key={item.id}>
       <header><span className={"row-icon r"+index%3}><Icon name="stock" size={18}/></span><div><b>{item.itemName}</b><small>{formatRegionalDateTime(item.createdAt,{country:location?.country,timeZone:location?.timezone})}</small></div><Status tone={delta<0?"orange":"green"}>{movementLabel(item)}</Status></header>
       <dl>
-       <div><dt>CANTIDAD</dt><dd>{delta>0?"+":""}{formatRegionalNumber(delta,location?.country,{maximumFractionDigits:3})}</dd></div>
-       <div><dt>STOCK RESULTANTE</dt><dd>{formatRegionalNumber(Number(item.balanceAfter),location?.country,{maximumFractionDigits:3})}</dd></div>
-       <div><dt>VALOR MOV.</dt><dd>{formatRegionalNumber(Number(item.valueDelta),location?.country,{minimumFractionDigits:2,maximumFractionDigits:2})}</dd></div>
-       <div><dt>VALOR SALDO</dt><dd>{formatRegionalNumber(Number(item.balanceValueAfter),location?.country,{minimumFractionDigits:2,maximumFractionDigits:2})}</dd></div>
+       <div><dt>Cantidad</dt><dd>{delta>0?"+":""}{formatRegionalNumber(delta,location?.country,{maximumFractionDigits:3})}</dd></div>
+       <div><dt>Stock resultante</dt><dd>{formatRegionalNumber(Number(item.balanceAfter),location?.country,{maximumFractionDigits:3})}</dd></div>
+       <div><dt>Valor mov.</dt><dd>{formatRegionalNumber(Number(item.valueDelta),location?.country,{minimumFractionDigits:2,maximumFractionDigits:2})}</dd></div>
+       <div><dt>Valor saldo</dt><dd>{formatRegionalNumber(Number(item.balanceValueAfter),location?.country,{minimumFractionDigits:2,maximumFractionDigits:2})}</dd></div>
       </dl>
       <footer><span><b>{traceLabel(item)}</b>{item.note&&<small>{item.note}</small>}</span><small>{item.createdByName||"Usuario no disponible"}</small></footer>
      </article>})}
@@ -92,7 +92,7 @@ export function KardexPage(){
 
 function KardexSkeleton(){
  return <>
-  <div className="table-wrap inventory-table-wrap kardex-skeleton-table"><table className="kardex-table" aria-label="Cargando Kárdex"><thead><tr>{["ARTÍCULO","FECHA","TIPO","MOTIVO","CANTIDAD","STOCK ANTERIOR","STOCK RESULTANTE","COSTO U.","VALOR MOV.","VALOR SALDO","USUARIO"].map(label=><th key={label}>{label}</th>)}</tr></thead><tbody>{Array.from({length:6},(_,index)=><tr className="inventory-skeleton" key={index}>{Array.from({length:11},(_,cell)=><td key={cell}><i/></td>)}</tr>)}</tbody></table></div>
+  <div className="table-wrap inventory-table-wrap kardex-skeleton-table"><table className="kardex-table" aria-label="Cargando Kárdex"><thead><tr>{["Artículo","Fecha","Tipo","Motivo","Cantidad","Stock anterior","Stock resultante","Costo u.","Valor mov.","Valor saldo","Usuario"].map(label=><th key={label}>{label}</th>)}</tr></thead><tbody>{Array.from({length:6},(_,index)=><tr className="inventory-skeleton" key={index}>{Array.from({length:11},(_,cell)=><td key={cell}><i/></td>)}</tr>)}</tbody></table></div>
   <div className="management-cards kardex-skeleton-cards" aria-label="Cargando Kárdex">{Array.from({length:4},(_,index)=><article key={index}><header><i/><div><span/><small/></div></header><dl><div/><div/><div/><div/></dl></article>)}</div>
  </>;
 }

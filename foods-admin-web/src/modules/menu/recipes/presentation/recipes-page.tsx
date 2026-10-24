@@ -182,12 +182,12 @@ export function RecipesPage(){
     <div className="catalog-state error"><Icon name="alert" size={24}/><b>No pudimos cargar las recetas</b><p>{recipes.error.message}</p><Button kind="secondary" icon="refresh" onClick={()=>recipes.refetch()}>Reintentar</Button></div>
    :!items.length?
     <div className="catalog-state"><Icon name="cookingPot" size={24}/><b>Aún no hay recetas configuradas</b><p>Configura una receta cuando quieras descontar insumos automáticamente al vender un producto preparado.</p>{canManage&&<Button icon="plus" onClick={openNew}>Nueva receta</Button>}</div>
-   :<DataTable label="Listado de recetas" containerClassName="hover-scroll"><thead><tr><th>PRODUCTO</th><th>RENDIMIENTO</th><th>INSUMOS</th><th>ESTADO</th><th>ACCIONES</th></tr></thead><tbody>{items.map((r,i)=><tr className={i%2?"alternate":""} key={r.id}><td><b>{r.productName}</b></td><td>{r.yieldQuantity}</td><td>{r.itemCount}</td><td><Status active={r.active}>{r.active?"Activa":"Inactiva"}</Status></td><td>{canManage?<div className="table-actions"><RowActionButton action="edit" label={loadingId===r.productId?"Cargando receta":"Editar receta"} disabled={loadingId===r.productId||statusChange.isPending} onClick={()=>void edit(r.productId)}/><RowActionButton action={r.active?"deactivate":"activate"} stateLabel={`Estado de ${r.productName}`} label={r.active?"Desactivar receta":"Activar receta"} disabled={statusChange.isPending||loadingId===r.productId} onClick={()=>r.active?setStatusTarget(r):statusChange.mutate({productId:r.productId,active:true})}/></div>:<span className="recipe-read-only">Solo lectura</span>}</td></tr>)}</tbody></DataTable>}
+   :<DataTable label="Listado de recetas" containerClassName="hover-scroll"><thead><tr><th>Producto</th><th>Rendimiento</th><th>Insumos</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>{items.map((r,i)=><tr className={i%2?"alternate":""} key={r.id}><td><b>{r.productName}</b></td><td>{r.yieldQuantity}</td><td>{r.itemCount}</td><td><Status active={r.active}>{r.active?"Activa":"Inactiva"}</Status></td><td>{canManage?<div className="table-actions"><RowActionButton action="edit" label={loadingId===r.productId?"Cargando receta":"Editar receta"} disabled={loadingId===r.productId||statusChange.isPending} onClick={()=>void edit(r.productId)}/><RowActionButton action={r.active?"deactivate":"activate"} stateLabel={`Estado de ${r.productName}`} label={r.active?"Desactivar receta":"Activar receta"} disabled={statusChange.isPending||loadingId===r.productId} onClick={()=>r.active?setStatusTarget(r):statusChange.mutate({productId:r.productId,active:true})}/></div>:<span className="recipe-read-only">Solo lectura</span>}</td></tr>)}</tbody></DataTable>}
   </section>
 
   {draft&&<div className="modal-backdrop modal-overlay-in" role="presentation">
    <Dialog onResponseClose={resetRecipe} className="crud-modal recipe-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="recipe-modal-title" aria-busy={save.isPending}>
-    <ModalHeader title={editingProductId?"Editar receta":"Configurar receta"} titleId="recipe-modal-title" icon="cookingPot" subtitle={editingProductId?"EDITAR RECETA":"NUEVA RECETA"} onClose={closeRecipe} busy={save.isPending} closeLabel="Cerrar" details={<><p>Define cuánto produce la receta y qué insumos consume.</p></>}/>
+    <ModalHeader title={editingProductId?"Editar receta":"Configurar receta"} titleId="recipe-modal-title" icon="cookingPot" subtitle={editingProductId?"Editar receta":"Nueva receta"} onClose={closeRecipe} busy={save.isPending} closeLabel="Cerrar" details={<><p>Define cuánto produce la receta y qué insumos consume.</p></>}/>
 
     <ModalForm className="recipe-form" onSubmit={submit} noValidate>
      <div className="recipe-form-body">
@@ -243,7 +243,7 @@ export function RecipesPage(){
        {ingredientDefaults.isError&&draft.items.length===0?<div className="recipe-inline-state error"><Icon name="alert" size={18}/><span><b>No pudimos cargar los insumos</b><small>Reintenta la carga o busca un insumo cuando agregues una fila.</small></span><Button kind="secondary" icon="refresh" onClick={()=>ingredientDefaults.refetch()}>Reintentar</Button></div>
        :draft.items.length===0?<div className={attempted?"recipe-inline-state warning":"recipe-inline-state"}><Icon name="stock" size={20}/><span><b>Agrega al menos un insumo</b><small>La receta necesita un insumo con cantidad válida para poder guardarse.</small></span></div>
        :<div className="recipe-ingredients-grid">
-        <div className="recipe-ingredients-head" aria-hidden="true"><span>INSUMO</span><span>CANTIDAD</span><span>MERMA %</span><span>ACCIÓN</span></div>
+        <div className="recipe-ingredients-head" aria-hidden="true"><span>Insumo</span><span>Cantidad</span><span>Merma %</span><span>Acción</span></div>
         {draft.items.map((item,index)=>{
          const selected=ingredientOptions[item.inventoryItemId]??null;
          const usedIds=new Set(draft.items.map(source=>source.inventoryItemId).filter(id=>id&&id!==item.inventoryItemId));
@@ -320,7 +320,7 @@ export function RecipesPage(){
 function RecipeListSkeleton(){
  return <div className="table-wrap recipe-skeleton-wrap" aria-label="Cargando recetas" aria-busy="true">
   <table className="recipe-skeleton-table">
-   <thead><tr><th>PRODUCTO</th><th>RENDIMIENTO</th><th>INSUMOS</th><th>ESTADO</th><th>ACCIONES</th></tr></thead>
+   <thead><tr><th>Producto</th><th>Rendimiento</th><th>Insumos</th><th>Estado</th><th>Acciones</th></tr></thead>
    <tbody>
     {Array.from({length:5},(_,row)=><tr className={row%2?"alternate":""} key={row}>
      <td><span className="recipe-skeleton-product"><i/><small/></span></td>

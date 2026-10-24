@@ -1,8 +1,21 @@
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import test from "node:test";
+import postcss from "postcss";
 import {renderDetail,exampleOrder,detailComponents} from "./helpers/order-detail-fixture.mjs";
 const read=file=>readFileSync(new URL(`../src/${file}`,import.meta.url),"utf8");
+
+test("los paneles del pedido quedan remetidos bajo las pestañas sin cambiar su diseño",()=>{
+ const css=postcss.parse(read("modules/operations/orders/presentation/order-detail.css"));
+ const panel=css.nodes.find(node=>node.selector===".order-detail-panel");
+ assert.ok(panel.nodes.some(node=>node.prop==="padding-inline"&&node.value==="var(--space-4)"),"16 px de sangría en escritorio");
+ assert.equal(panel.nodes.some(node=>["background","border","border-radius"].includes(node.prop)),false,"sin otra tarjeta ni cambios de radio");
+ const mobile=css.nodes.find(node=>node.type==="atrule"&&node.params==="(width<=600px)");
+ assert.ok(mobile.nodes.some(node=>node.selector===".order-detail-panel"&&node.nodes.some(decl=>decl.prop==="padding-inline"&&decl.value==="var(--space-3)")),"12 px de sangría en móvil");
+ assert.equal((renderDetail().match(/class="order-detail-panel"/g)??[]).length,2,"Productos y Seguimiento comparten la sangría; no hay pestaña Detalles");
+ assert.equal(css.nodes.some(node=>node.selector===".order-detail-tabs"),false,"los tabs heredan radio y quedan a 12 px del contenido, sin margen extra");
+ assert.doesNotMatch(read("modules/operations/orders/presentation/order-detail-dialog.tsx"),/<header className="order-detail-section-head"><h3 id="order-detail-products-title"/,"el título accesible no añade otra fila al panel");
+});
 
 test("Modal y detalle remoto comparten cabecera y workspace, sin implementación alternativa",()=>{
  const modal=read("design-system/modal.tsx"),detail=read("modules/operations/orders/presentation/order-detail-dialog.tsx");
@@ -29,13 +42,17 @@ test("cabecera breve, responsables en el cuerpo y estados junto a su informació
  const headerEnd=html.indexOf("</header>");
  assert.doesNotMatch(html.slice(0,headerEnd),/Confirmado|Cuenta abierta|Cielo Fernandez|<time/);
  assert.ok(html.indexOf('class="order-attribution"')>headerEnd);
- assert.ok(html.indexOf('class="order-attribution"')<html.indexOf('<time'));
+ assert.ok(html.indexOf('class="order-detail-hero"')>headerEnd,"estado y hora encabezan el cuerpo");
+ assert.ok(html.indexOf('aria-label="Estado del pedido"')<html.indexOf('role="tablist"'),"el estado va antes de las pestañas");
+ assert.match(html,/role="tablist" aria-label="Información del pedido"/);
  assert.ok(html.indexOf('class="order-attribution"')<html.indexOf('id="order-detail-products-title"'));
- assert.match(html,/status sky emphasized[^>]*><svg[^>]*class="status-icon"/);
+ assert.match(html,/status sky emphasized[^>]*><svg[^>]*class="[^"]*status-icon"/);
  assert.match(html,/<\/svg>Cuenta abierta/);
  assert.match(renderDetail({skeleton:true}),/order-detail-information/);
  const delivery=renderDetail({order:{...exampleOrder,channel:"delivery",customerPhone:"999 123 456",address:"Av. Los Olivos 124"}});
- assert.ok(delivery.indexOf('id="order-detail-products-title"')<delivery.indexOf('aria-label="Contacto y entrega"'));
+ assert.match(delivery,/aria-label="Entrega"/);
+ assert.match(delivery,/class="order-detail-contact"/);
+ assert.match(delivery,/href="tel:999123456"/);
 });
 test("cada estado del pedido tiene un tono propio y las preparaciones lo reutilizan",()=>{
  const {orderStatus,serviceStatusTone,accountTone}=detailComponents();
@@ -99,7 +116,7 @@ test("resumen agrupado y estado de cuenta destacado sin recolorear los demás es
  const css=read("design-system/styles/modal.css"),global=read("styles/globals.css"),html=renderDetail();
  const heading=html.slice(html.indexOf('class="modal-summary-heading"'),html.indexOf('class="modal-summary-lines"'));
  assert.match(heading,/Resumen de cuenta[\s\S]*Cuenta abierta/);
- assert.match(css,/\.modal-summary-heading\{[^}]*flex-wrap:wrap[^}]*border-bottom:var\(--stroke-2\) solid var\(--primary-200\)/,'el resumen abre con la misma regla que las secciones');
+ assert.match(css,/\.modal-summary-heading\{[^}]*flex-wrap:wrap[^}]*border-bottom:var\(--stroke-1\) solid var\(--line\)/,'el resumen abre con la misma línea fina que las secciones');
  assert.match(css,/\.modal-summary-lines\{[^}]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
  assert.match(global,/\.status.blue\{color:var\(--primary-700\);background:var\(--primary-100\)/);
  assert.match(global,/\.status.sky\{color:var\(--sky-800\);background:var\(--sky-100\)/);

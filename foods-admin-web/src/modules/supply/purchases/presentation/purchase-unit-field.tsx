@@ -45,7 +45,7 @@ export function InventoryUnitDialog({close,save}:{close:()=>void;save:(unit:Inve
  }
  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal supplier-modal modal-panel-in" aria-labelledby="inventory-unit-title" aria-busy={mutation.isPending}>
 
-  <ModalHeader title="Unidad de inventario" titleId="inventory-unit-title" icon="box" subtitle="NUEVA UNIDAD" onClose={close} busy={mutation.isPending} closeLabel="Cerrar"/>
+  <ModalHeader title="Unidad de inventario" titleId="inventory-unit-title" icon="box" subtitle="Nueva unidad" onClose={close} busy={mutation.isPending} closeLabel="Cerrar"/>
   <form onSubmit={event=>{event.preventDefault();event.stopPropagation()}} noValidate><div className="form-grid">
    <FormField label="Nombre"><Input data-dialog-initial-focus value={draft.name} maxLength={80} disabled={mutation.isPending} onChange={event=>setDraft({...draft,name:event.target.value})}/></FormField>
    <FormField label="Código"><Input value={draft.code} maxLength={32} disabled={mutation.isPending} onChange={event=>setDraft({...draft,code:event.target.value})}/></FormField>

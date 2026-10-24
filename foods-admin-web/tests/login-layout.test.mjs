@@ -54,7 +54,7 @@ test("acceso: Ingresar conserva estados y no incorpora selectores ni enlaces sin
  const form=readFileSync(new URL("../src/modules/auth/presentation/login-form.tsx",import.meta.url),"utf8");
  assert.match(form,/>Ingresar<Icon name="lock" size=\{18\}\/>/);
  const iconSource=readFileSync(new URL("../src/design-system/icons.tsx",import.meta.url),"utf8");
- assert.match(iconSource,/lock:<><rect /);
+ assert.match(iconSource,/lock:IconLock/);
  assert.doesNotMatch(iconSource,/\bsignIn:</);
  assert.doesNotMatch(form,/>Ingresar<Icon name="(?:login|arrowRightCircle|key|signIn)"/);
  assert.match(form,/aria-busy=\{loading\}/);

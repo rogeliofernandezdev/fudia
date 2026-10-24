@@ -19,7 +19,7 @@ export function CategoryDialog({draft,busy,close,save,error}:{draft:CategoryDraf
  }
  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal compact modal-panel-in" aria-labelledby="category-title" aria-busy={locked}>
 
-  <ModalHeader title="Datos de la categoría" titleId="category-title" icon="menu" subtitle={draft.id?"EDITAR CATEGORÍA":"NUEVA CATEGORÍA"} onClose={close} busy={locked} closeLabel="Cerrar"/>
+  <ModalHeader title="Datos de la categoría" titleId="category-title" icon="menu" subtitle={draft.id?"Editar categoría":"Nueva categoría"} onClose={close} busy={locked} closeLabel="Cerrar"/>
   <form onSubmit={event=>{event.preventDefault();event.stopPropagation()}} noValidate><div className="form-grid" inert={busy}>
    <FormField className="span-2" label="Nombre" error={errors.name?.message}><Input data-dialog-initial-focus maxLength={120} {...register("name")} placeholder="Ej. Bebidas"/></FormField>
    <FormField className="span-2" label="Orden de aparición" help="Menor número aparece primero en la carta." error={errors.sortOrder?.message}><Input type="number" min="0" inputMode="numeric" {...register("sortOrder")}/></FormField>

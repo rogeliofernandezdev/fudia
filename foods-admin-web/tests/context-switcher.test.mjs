@@ -109,7 +109,7 @@ test("contexto: el selector muestra solo el local para empresa y plataforma",()=
   const host=controller({platformAdmin});
   const view=host.render();
   assert.ok(view.some(node=>node.type==="b"&&node.props.children==="Local principal"));
-  assert.ok(view.some(node=>node.type==="small"&&node.props.children==="LOCAL ACTIVO"));
+  assert.ok(view.some(node=>node.type==="small"&&node.props.children==="Local activo"));
   assert.equal(view.some(node=>node.props.children==="Foods Restaurante"||node.props.children==="EMPRESA"),false);
   assert.ok(view.some(node=>node.type==="Icon"&&node.props.name==="store"));
  }

@@ -15,7 +15,7 @@
 
 .inventory-adjustment-modal{width:min(var(--size-620),calc(100vw - var(--size-28)));overflow:hidden}
 .inventory-adjustment-body{max-height:min(68vh,var(--size-620));padding:var(--space-5) var(--space-5);overflow:auto;display:grid;grid-auto-rows:max-content;gap:var(--space-4);background:var(--surface)}
-.inventory-adjustment-field,.inventory-adjustment-grid>label{display:grid;gap:var(--space-1-5);color:var(--ink-700);font-size:var(--font-size-label);font-weight:var(--weight-bold)}
+.inventory-adjustment-field,.inventory-adjustment-grid>label,.inventory-adjustment-grid>.inventory-adjustment-type{display:grid;gap:var(--space-1-5);color:var(--ink-700);font-size:var(--font-size-label);font-weight:var(--weight-bold)}
 .inventory-adjustment-balance{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-px);overflow:hidden;border:var(--stroke-1) solid var(--line);border-radius:var(--radius-tile);background:var(--line)}
 .inventory-adjustment-balance>div{padding:var(--space-3) var(--space-3-5);background:var(--cloud-50);display:grid;gap:var(--space-1)}
 .inventory-adjustment-balance small{color:var(--ink-400);font-size:var(--font-size-label);font-weight:var(--weight-heavy);letter-spacing:var(--letter-spacing-caps)}

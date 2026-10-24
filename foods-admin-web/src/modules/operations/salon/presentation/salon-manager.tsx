@@ -20,6 +20,7 @@ import {OrderDetailContent,OrderDetailSkeleton,orderDetailTitleId} from "../../o
 import {isEditableOrder,parseIsoDate,statusMeta} from "../../orders/presentation/order-meta";
 
 /* ── helpers ── */
+const tableOrder=new Intl.Collator("es",{numeric:true,sensitivity:"base"});
 const emptyDraft=(tableId=""):Draft=>({channel:"salon",customerName:"",customerPhone:"",address:"",reference:"",tableId,notes:"",deliveryFee:"0",lines:[]});
 const draftFromOrder=(o:Order):Draft=>({
   channel:o.channel||"salon",
@@ -137,7 +138,8 @@ export function SalonManager(){
     onError:e=>notify({tone:"danger",title:"No se pudo cancelar el pedido",message:e.message}),
   });
 
-  const tables=floor.data?.items??[];
+  // El API agrupa por zona; sin encabezados de zona eso parece desordenado. Orden natural por número de mesa (01, 02… 10).
+  const tables=[...floor.data?.items??[]].sort((a,b)=>tableOrder.compare(a.name,b.name));
   const zones=[...new Set(tables.map(t=>t.zone).filter(Boolean))];
   const visible=tables.filter(t=>{
     const matchZone=!zone||t.zone===zone;
@@ -147,6 +149,7 @@ export function SalonManager(){
   });
   const occupiedCount=tables.filter(t=>t.order).length;
   const freeCount=tables.length-occupiedCount;
+  const openTotal=tables.reduce((sum,t)=>sum+Number(t.order?.total??0),0);
   const closeDraft=()=>{setDraft(null);setEditingOrderId(null);setAdditionKey(null)};
   const openNewDraft=(tableId:string)=>{setEditingOrderId(null);setAdditionKey(null);setDraft(emptyDraft(tableId))};
   const addProducts=(o:Order)=>{setAdditionKey(crypto.randomUUID());setEditingOrderId(o.id);setDraft({...emptyDraft(o.tableId),customerName:o.customerName});setDetailId(null)};
@@ -167,20 +170,13 @@ export function SalonManager(){
     <>
       <PageHeader title="Salón" description="Consulta el estado de las mesas y gestiona las comandas activas desde un solo lugar."/>
 
-      <section className="salon-overview-stats" aria-label="Resumen del salón">
-        <div className="salon-overview-stat">
-          <span className="salon-overview-stat-icon"><Icon name="grid" size={18}/></span>
-          <span><small>Mesas</small><b>{floor.isLoading?countSkeleton:tables.length}</b></span>
-        </div>
-        <div className="salon-overview-stat free">
-          <span className="salon-overview-stat-icon"><Icon name="check" size={18}/></span>
-          <span><small>Libres</small><b>{floor.isLoading?countSkeleton:freeCount}</b></span>
-        </div>
-        <div className="salon-overview-stat occupied">
-          <span className="salon-overview-stat-icon"><Icon name="receipt" size={18}/></span>
-          <span><small>Ocupadas</small><b>{floor.isLoading?countSkeleton:occupiedCount}</b></span>
-        </div>
-      </section>
+      {/* KPI al estilo de la referencia: etiqueta pequeña arriba (en el tono de su estado) y cifra con icono de línea. */}
+      <dl className="salon-overview-stats" aria-label="Resumen del salón">
+        <div><dt>Mesas</dt><dd><Icon name="grid" size={20}/>{floor.isLoading?countSkeleton:tables.length}</dd></div>
+        <div className="free"><dt>Libres</dt><dd><Icon name="check" size={20}/>{floor.isLoading?countSkeleton:freeCount}</dd></div>
+        <div className="occupied"><dt>Ocupadas</dt><dd><Icon name="utensils" size={20}/>{floor.isLoading?countSkeleton:occupiedCount}</dd></div>
+        <div><dt>Consumo abierto</dt><dd><Icon name="wallet" size={20}/>{floor.isLoading?countSkeleton:money(openTotal)}</dd></div>
+      </dl>
 
       <section className="salon-controls" aria-label="Controles del salón">
         <div className="salon-toolbar">
@@ -217,35 +213,22 @@ export function SalonManager(){
                 disabled={!o&&!canManage}
                 aria-label={`Mesa ${t.name}${o?`, ocupada, pedido ${o.code}`:", libre"}`}
               >
-                <div className="salon-table-inner">
-                  <div className="salon-table-top">
-                    {o&&meta?<Status tone={meta.tone}>{meta.label}</Status>:<Status tone="green">Libre</Status>}
-                    {o&&elapsed&&<span className={`salon-table-elapsed${elapsed.needsReview?" is-stale":""}`} title={elapsed.description} aria-label={elapsed.description}><Icon name="clock" size={14}/>{elapsed.label}</span>}
-                  </div>
+                {/* Ficha simple (referencia): número y estado, una línea de datos y pie con importe y acción. */}
+                <header className="salon-table-head">
+                  <strong className="salon-table-name">{t.name.replace(/^mesa\s*/i,"")||t.name}</strong>
+                  {o&&meta?<Status tone={meta.tone} emphasis>{meta.label}</Status>:<Status tone="navy" emphasis>Libre</Status>}
+                </header>
 
-                  <div className="salon-table-name-row">
-                    <span className="salon-table-icon">
-                      <Icon name="utensils" size={18}/>
-                    </span>
-                    <strong className="salon-table-name">{t.name}</strong>
-                    <small className="salon-table-seats">Capacidad: {t.seats} {t.seats===1?"persona":"personas"}{zones.length>1&&t.zone?` · ${t.zone}`:""}</small>
-                    {o?.customerName&&<span className="salon-table-family">{o.customerName}</span>}
-                    {o&&<span className="salon-table-staff">Mozo: {o.waiterName||"Sin asignar"}</span>}
-                    {Boolean(o?.collectedByNames?.length)&&<span className="salon-table-staff">Cobrado por: {o!.collectedByNames!.join(" · ")}</span>}
-                  </div>
+                <p className="salon-table-meta">
+                  <span>{t.seats} {t.seats===1?"persona":"personas"}{zones.length>1&&t.zone?` · ${t.zone}`:""}</span>
+                  {o&&<span>Mozo: {o.waiterName||"Sin asignar"}</span>}
+                </p>
 
-                  {o?(
-                    <div className="salon-table-order">
-                      <b className="salon-table-total">{money(o.total)}</b>
-                      <Icon name="eye" size={20}/>
-                    </div>
-                  ):(
-                    <span className="salon-table-cta">
-                      <Icon name="plus" size={14}/>
-                      Abrir mesa
-                    </span>
-                  )}
-                </div>
+                <footer className="salon-table-foot">
+                  {o?<span className="salon-table-amount"><b className="salon-table-total">{money(o.total)}</b>{elapsed?.known&&<small className={`salon-table-elapsed${elapsed.needsReview?" is-stale":""}`} title={elapsed.description}>Hace {elapsed.label}</small>}</span>
+                  :<b className="salon-table-open">Abrir mesa</b>}
+                  <span className="salon-table-go" aria-hidden="true"><Icon name={o?"eye":"plus"} size={18}/></span>
+                </footer>
               </button>
             );
           })}
@@ -308,17 +291,17 @@ export function SalonManager(){
 function SalonTableSkeleton(){
   return(
     <div className="salon-table salon-table-skeleton" aria-hidden="true">
-      <div className="salon-table-inner">
-        <div className="salon-table-top">
-          <Skeleton width="var(--size-72)" height="var(--size-20)" radius="var(--radius-pill)"/>
-          <Skeleton width="var(--size-48)" height="var(--size-20)" radius="var(--radius-tile)"/>
-        </div>
-        <div className="salon-table-name-row">
-          <Skeleton width="var(--size-36)" height="var(--size-36)" radius="var(--radius-pill)"/>
-          <Skeleton width="var(--size-92)" height="var(--size-20)"/>
-          <Skeleton width="var(--size-72)" height="var(--size-12)"/>
-        </div>
-        <Skeleton className="salon-table-skeleton-action" height="var(--size-40)" radius="var(--radius-card)"/>
+      <div className="salon-table-head">
+        <Skeleton width="var(--size-48)" height="var(--size-24)"/>
+        <Skeleton width="var(--size-72)" height="var(--size-20)" radius="var(--radius-pill)"/>
+      </div>
+      <div className="salon-table-meta">
+        <Skeleton width="var(--size-120)" height="var(--size-10)"/>
+        <Skeleton width="var(--size-92)" height="var(--size-10)"/>
+      </div>
+      <div className="salon-table-foot">
+        <Skeleton width="var(--size-86)" height="var(--size-16)"/>
+        <Skeleton width="var(--size-44)" height="var(--size-44)" radius="var(--radius-pill)"/>
       </div>
     </div>
   );

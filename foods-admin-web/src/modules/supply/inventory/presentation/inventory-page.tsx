@@ -17,7 +17,7 @@ const InventoryAdjustmentDialog=dynamic(()=>import("./inventory-adjustment-dialo
 const InventorySettingsDialog=dynamic(()=>import("./inventory-settings-dialog").then(module=>module.InventorySettingsDialog),{ssr:false});
 const InventoryTransferDialog=dynamic(()=>import("./inventory-transfer-dialog").then(module=>module.InventoryTransferDialog),{ssr:false});
 
-const inventoryColumns=["ARTÍCULO","TIPO","UNIDAD","EXISTENCIA","MÍNIMO / REORDEN","COSTO PROM.","VALOR","ESTADO","ACCIONES"];
+const inventoryColumns=["Artículo","Tipo","Unidad","Existencia","Mínimo / reorden","Costo prom.","Valor","Estado","Acciones"];
 const statusMeta={
  ok:{label:"Saludable",tone:"green" as const},
  low:{label:"Stock bajo",tone:"orange" as const},
@@ -116,7 +116,7 @@ export function InventoryPage(){
 function TransferLoadError({message,close,retry}:{message:string;close:()=>void;retry:()=>void}){
  return <div className="modal-backdrop modal-overlay-in" role="presentation"><Dialog onResponseClose={close} className="crud-modal inventory-adjustment-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="inventory-load-error-title">
 
-  <ModalHeader title="No pudimos cargar los locales" titleId="inventory-load-error-title" icon="alert" subtitle="INVENTARIO" onClose={close} closeLabel="Cerrar"/>
+  <ModalHeader title="No pudimos cargar los locales" titleId="inventory-load-error-title" icon="alert" subtitle="Inventario" onClose={close} closeLabel="Cerrar"/>
   <ErrorState title="Locales no disponibles" text={message} onRetry={retry}/>
  </Dialog></div>;
 }

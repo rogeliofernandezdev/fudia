@@ -15,10 +15,15 @@ test("el detalle de menú usa la anatomía compartida de los modales de detalle"
  assert.match(dialog,/<ModalHeader title=\{value\?\.name\?\?"Menú o combo"\} titleId="combo-detail-title" icon="combo" onClose=\{close\} closeLabel="Cerrar"\/>/);
  assert.doesNotMatch(dialog,/subtitle=|DETALLE DEL MENÚ|PARTES DEL MENÚ|QUÉ INCLUYE/,"sin franja ni datos redundantes bajo el título");
  assert.match(dialog,/className="modal-body combo-detail-body"/,"un solo cuerpo desplazable del design system");
- assert.match(dialog,/<dl className="modal-record-data">/,"precio y venta usan la franja de datos compartida");
- assert.match(dialog,/<ModalItemComponents label="Platos y opciones del menú"/,"las partes del menú se leen como carta compartida");
+ assert.match(dialog,/className="combo-detail-hero"/,"estado y venta encabezan el cuerpo, como el pedido");
+ assert.match(dialog,/<p className="combo-detail-schedule"><Icon name="calendar"/);
+ assert.match(dialog,/<ModalItemList className="combo-detail-parts">/,"las partes son una lista con su icono, como los productos del pedido");
+ assert.match(dialog,/<IconTile name=\{style\.icon\} tone=\{PART_TILE\[style\.tone\]\} size="sm"\/>/);
+ assert.match(dialog,/<ModalWorkspace summary=\{<section className="modal-summary"/,"resumen fijo al pie");
+ assert.match(dialog,/<div className="modal-summary-total"><span>Precio<\/span>/,"el precio es el importe principal");
  assert.match(dialog,/<ModalError title="No pudimos cargar el menú"/);
- assert.match(dialog,/<ModalFooter status=\{value\.active&&isOutsideDates\(value\.availableFrom,value\.availableUntil\)\?<Status tone="gray">Fuera de fecha<\/Status>:<Status active=\{value\.active\}>/,"estado real en el pie, igual que el listado");
+ assert.match(dialog,/value\.active&&isOutsideDates\(value\.availableFrom,value\.availableUntil\)\?<Status tone="gray">Fuera de fecha<\/Status>:<Status active=\{value\.active\}>/,"estado real junto a la venta, igual que el listado");
+ assert.doesNotMatch(dialog,/<ModalFooter/,"detalle de lectura sin pie de acciones");
  assert.doesNotMatch(dialog,/Button[^>]*>Cerrar</,"la X es el único cierre de un detalle");
 });
 
@@ -62,9 +67,9 @@ test("el pie resume partes y precio, y el precio es el único protagonista índi
  assert.equal(rules[".day-chip.active"].background,"var(--primary-50)");
 });
 
-test("cada parte tiene identidad propia: tono suave e icono duotono, texto y controles neutros",()=>{
+test("cada parte tiene identidad propia: tono suave e icono del set, texto y controles neutros",()=>{
  const icons=read("design-system/icons.tsx");
- for(const name of ["salad","dessert","drink"])assert.ok(icons.includes(`  ${name}:<>`),`el set define ${name}`);
+ for(const name of ["salad","dessert","drink"])assert.ok(icons.includes(` ${name}:Icon`),`el set define ${name}`);
  assert.match(page,/\{pattern:\/entrada[^}]*tone:"green",icon:"salad"/);
  assert.match(page,/\{pattern:\/segundo[^}]*tone:"indigo",icon:"dish"/);
  assert.doesNotMatch(read("modules/menu/combos/presentation/combo-editor.css"),/tone-amber|warning-/,"las partes no usan tonos de advertencia");

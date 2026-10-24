@@ -30,14 +30,14 @@ function render(tone,closing){
 }
 const css=readdirSync(resolve(root,".next/static/css")).filter(name=>name.endsWith(".css")).map(name=>readFileSync(resolve(root,".next/static/css",name),"utf8")).join("\n");
 assert.ok(css.includes("feedback-success-settle"),"Ejecuta el build para comprobar el CSS final.");
-const font=css.match(/@font-face\{[^}]*font-family:Manrope;[^}]*unicode-range:u\+00\?\?[^}]*\}/)?.[0]?.match(/media\/([^/)]+\.woff2)/)?.[1];
-assert.ok(font,"Fuente Manrope real del frontend.");
+const font=css.match(/@font-face\{[^}]*font-family:Plus Jakarta Sans;[^}]*unicode-range:u\+00\?\?[^}]*\}/)?.[0]?.match(/media\/([^/)]+\.woff2)/)?.[1];
+assert.ok(font,"Fuente Plus Jakarta Sans real del frontend.");
 const output=resolve(process.argv[2]??resolve(root,".next/feedback-preview"));mkdirSync(output,{recursive:true});
 const server=createServer((req,res)=>{
  if(req.url==="/font.woff2"){res.setHeader("content-type","font/woff2");res.end(readFileSync(resolve(root,".next/static/media",font)));return;}
  const url=new URL(req.url,"http://localhost");
  res.setHeader("content-type","text/html; charset=utf-8");
- res.end(`<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width, initial-scale=1"><style>@font-face{font-family:Manrope;font-weight:200 800;src:url(/font.woff2)}:root{--font-manrope:Manrope}${css}.feedback-preview-paused *,.feedback-preview-paused *:before{animation-play-state:paused!important}</style></head><body class="${url.searchParams.has("paused")?"feedback-preview-paused":""}">${render(url.searchParams.get("tone")??"success",url.searchParams.has("out"))}</body></html>`);
+ res.end(`<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width, initial-scale=1"><style>@font-face{font-family:Plus Jakarta Sans;font-weight:200 800;src:url(/font.woff2)}:root{--font-jakarta:"Plus Jakarta Sans"}${css}.feedback-preview-paused *,.feedback-preview-paused *:before{animation-play-state:paused!important}</style></head><body class="${url.searchParams.has("paused")?"feedback-preview-paused":""}">${render(url.searchParams.get("tone")??"success",url.searchParams.has("out"))}</body></html>`);
 });
 await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
 const {chromium}=require(process.env.FOODS_PLAYWRIGHT_PATH??"playwright");let browser;

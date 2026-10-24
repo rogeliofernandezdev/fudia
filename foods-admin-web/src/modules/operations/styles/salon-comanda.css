@@ -4,7 +4,7 @@
  * Agregar productos no se anima: es una acción repetida cientos de veces por turno. */
 
 .cmd-shell{position:fixed;inset:0;z-index:var(--z-task);display:flex;flex-direction:column;background:var(--surface);color:var(--ink-950);outline:0;animation:modal-overlay-in var(--duration-base) var(--easing-out) both}
-.cmd-shell>.modal-header{padding-top:calc(var(--space-2) + var(--safe-area-top));border-bottom-color:var(--primary-800);background:var(--primary-700)}
+.cmd-shell>.modal-header{padding-top:calc(var(--space-2) + var(--safe-area-top));border-bottom-color:var(--navigation-950);background:var(--navigation-900)}
 .cmd-shell>.modal-context{padding-block:var(--space-2);background:var(--surface)}
 .cmd-shell .modal-header-details{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-1) var(--space-3);color:var(--ink-600);font-size:var(--font-size-sm);line-height:var(--line-height-snug)}
 .cmd-context{min-width:0;display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-1) var(--space-4);margin:0;padding:0;list-style:none}

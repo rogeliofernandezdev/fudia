@@ -14,8 +14,8 @@ const require=createRequire(import.meta.url);
 const root=resolve(dirname(fileURLToPath(import.meta.url)),"../..");
 const cssDir=resolve(root,".next/static/css");
 const css=readdirSync(cssDir).filter(name=>name.endsWith(".css")).map(name=>readFileSync(resolve(cssDir,name),"utf8")).join("\n");
-const font=css.match(/@font-face\{[^}]*font-family:Manrope;[^}]*unicode-range:u\+00\?\?[^}]*\}/)?.[0].match(/media\/([^/)]+\.woff2)/)?.[1];
-assert.ok(font,"Run build first to load the real Manrope font.");
+const font=css.match(/@font-face\{[^}]*font-family:Plus Jakarta Sans;[^}]*unicode-range:u\+00\?\?[^}]*\}/)?.[0].match(/media\/([^/)]+\.woff2)/)?.[1];
+assert.ok(font,"Run build first to load the real Plus Jakarta Sans font.");
 const out=resolve(process.argv[2]??resolve(root,".next/sale-detail-preview"));mkdirSync(out,{recursive:true});
 const pos=process.argv[3]==="pos";
 const {SaleDetailDialog,POSDetailDialog}=detailComponents({includePOS:pos});
@@ -38,7 +38,7 @@ function fixture(query){
 const server=createServer((req,res)=>{
  if(req.url==="/font.woff2"){res.setHeader("content-type","font/woff2");res.end(readFileSync(resolve(root,".next/static/media",font)));return;}
  const url=new URL(req.url,"http://localhost");res.setHeader("content-type","text/html; charset=utf-8");
- res.end(`<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width, initial-scale=1"><style>${css}@font-face{font-family:Manrope;font-weight:200 800;src:url(/font.woff2)}:root{--font-manrope:Manrope}</style></head><body>${fixture(url.searchParams)}</body></html>`);
+ res.end(`<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width, initial-scale=1"><style>${css}@font-face{font-family:Plus Jakarta Sans;font-weight:200 800;src:url(/font.woff2)}:root{--font-jakarta:"Plus Jakarta Sans"}</style></head><body>${fixture(url.searchParams)}</body></html>`);
 });
 await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
 const {chromium}=require(process.env.FOODS_PLAYWRIGHT_PATH??"playwright");let browser;

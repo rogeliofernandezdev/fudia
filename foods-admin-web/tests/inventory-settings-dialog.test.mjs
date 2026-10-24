@@ -42,7 +42,8 @@ function mount({busy=false,save=async()=>{},close=()=>{}}={}){
 test("niveles de inventario usa cuerpo y footer del modal compartido",()=>{
  const {dialog,form,nodes}=mount().render();
  assert.ok(dialog.props.children.includes(form));
- assert.equal(form.props.children[0].props.className,"form-grid");
+ assert.equal(form.props.children[0].props.title,"Niveles de stock");
+ assert.equal(form.props.children[0].props.children.props.className,"form-grid");
  assert.equal(form.props.children[1].type,"ModalFooter");
  assert.equal(form.props.children[1].props.children.length,2);
  assert.equal(nodes.find(node=>node.type==="FormField"&&node.props.label==="Stock óptimo").props.className,"span-2");

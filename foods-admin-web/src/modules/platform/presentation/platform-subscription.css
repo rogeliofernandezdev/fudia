@@ -8,7 +8,7 @@
 .subscription-editor>header h2,.subscription-history>header h2{margin:var(--space-0-5) 0 0;font-size:var(--font-size-md);font-weight:var(--weight-bold);color:var(--ink-950)}
 .subscription-editor form>.form-grid{gap:var(--space-4) var(--space-5);padding:var(--space-5)}
 .subscription-editor form>footer{display:flex;justify-content:flex-end;padding:var(--space-3) var(--space-5);border-top:var(--stroke-1) solid var(--line);background:var(--cloud-50)}
-.subscription-editor .form-grid label{font-size:var(--font-size-control);font-weight:var(--weight-semibold);color:var(--ink-950)}
+.subscription-editor .form-grid label:not(.choice-option){font-size:var(--font-size-control);font-weight:var(--weight-semibold);color:var(--ink-950)}
 
 .subscription-plan-preview{display:grid;grid-template-columns:repeat(5,1fr);gap:var(--space-px);margin:0 var(--space-5) var(--space-5);overflow:hidden;border:var(--stroke-1) solid var(--line);border-radius:var(--radius-card);background:var(--line)}
 .subscription-plan-preview>div{padding:var(--space-2-5) var(--space-3);background:var(--surface)}
@@ -59,3 +59,5 @@
  .subscription-accept{margin:0 var(--space-3-5) var(--space-3-5)}
  .subscription-history table{min-width:var(--size-650)}
 }
+.subscription-editor-title{display:flex;align-items:center;gap:var(--space-2-5)}
+.subscription-editor-title h2{margin:0}

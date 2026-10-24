@@ -35,7 +35,7 @@ test("los estilos consumen la paleta y escalas sin volver a escribir valores de 
 
 test("todos los tokens usados existen y sus dependencias no forman ciclos",()=>{
   const names=new Set();tokenAst.walkDecls(d=>names.add(d.prop));
-  const external=new Set(["--font-manrope","--font-geist-mono"]);
+  const external=new Set(["--font-jakarta","--font-geist-mono"]);
   for(const file of sourceFiles.filter(file=>/\.(css|tsx|ts)$/.test(file))){
     for(const match of read(file).matchAll(/(?:var\(|readCssToken\(")(--[\w-]+)/g)){
       assert.ok(names.has(match[1])||external.has(match[1]),`${file}: ${match[1]}`);

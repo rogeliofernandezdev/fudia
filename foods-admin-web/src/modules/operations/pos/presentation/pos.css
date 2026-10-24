@@ -7,9 +7,9 @@
 .pos-shift-banner{display:grid;grid-template-columns:var(--size-36) minmax(var(--size-220),1fr) auto;align-items:center;gap:var(--space-3);margin-bottom:var(--space-3-5);padding:var(--space-2-5) var(--space-3);border-radius:var(--radius-tile);border:var(--stroke-1) solid var(--line);background:linear-gradient(105deg,var(--primary-50),var(--surface) 48%);box-shadow:var(--elevation-1)}
 .pos-shift-banner.active{border-color:var(--line)}
 .pos-shift-banner.missing{border-color:var(--line-strong);background:var(--cloud-50)}
-.pos-shift-icon{display:grid;place-items:center;width:var(--size-36);height:var(--size-36);border-radius:var(--radius-tile);background:var(--primary-600);color:var(--surface);flex:0 0 auto;box-shadow:var(--elevation-primary)}
-.pos-shift-banner.active .pos-shift-icon{color:var(--surface);background:var(--primary-600)}
-.pos-shift-banner.missing .pos-shift-icon{color:var(--warning-600);background:var(--surface);box-shadow:none}
+.pos-shift-icon{display:grid;place-items:center;width:var(--size-36);height:var(--size-36);border-radius:var(--radius-tile);background:var(--primary-100);color:var(--primary-700);flex:0 0 auto}
+.pos-shift-banner.active .pos-shift-icon{color:var(--primary-700);background:var(--primary-100)}
+.pos-shift-banner.missing .pos-shift-icon{color:var(--warning-800);background:var(--warning-100)}
 .pos-shift-banner>div{display:grid;gap:var(--space-0-5);min-width:0}
 .pos-shift-banner small{color:var(--primary-700);font-size:var(--font-size-label);font-weight:var(--weight-heavy);letter-spacing:var(--letter-spacing-caps)}
 .pos-shift-banner b{font-size:var(--font-size-xs);color:var(--ink-950)}
@@ -49,8 +49,8 @@
 .pos-order-cards article>footer{justify-content:flex-end}
 
 /* Estados */
-:is(.pos-shift-loading i,.pos-table-skeleton i,.pos-card-skeleton i,.pos-card-skeleton b,.pos-card-skeleton small,.pos-card-skeleton div,.pos-detail-loading i,.pos-detail-loading b,.pos-detail-loading small,.pos-payment-loading i,.pos-payment-loading b){position:relative;overflow:hidden;background:var(--cloud-100)}
-:is(.pos-shift-loading i,.pos-table-skeleton i,.pos-card-skeleton i,.pos-card-skeleton b,.pos-card-skeleton small,.pos-card-skeleton div,.pos-detail-loading i,.pos-detail-loading b,.pos-detail-loading small,.pos-payment-loading i,.pos-payment-loading b):after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,var(--surface-alpha-80),transparent);transform:translateX(-100%);animation:pos-shimmer var(--duration-ambient) ease-in-out infinite}
+:is(.pos-shift-loading i,.pos-table-skeleton i,.pos-card-skeleton i,.pos-card-skeleton b,.pos-card-skeleton small,.pos-card-skeleton div,.pos-payment-loading i,.pos-payment-loading b){position:relative;overflow:hidden;background:var(--cloud-100)}
+:is(.pos-shift-loading i,.pos-table-skeleton i,.pos-card-skeleton i,.pos-card-skeleton b,.pos-card-skeleton small,.pos-card-skeleton div,.pos-payment-loading i,.pos-payment-loading b):after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,var(--surface-alpha-80),transparent);transform:translateX(-100%);animation:pos-shimmer var(--duration-ambient) ease-in-out infinite}
 .pos-table-skeleton{pointer-events:none}
 .pos-sk-entity{display:flex;align-items:center;gap:var(--space-2-5)}
 .pos-sk-entity>i{width:var(--size-34);height:var(--size-34);flex:0 0 auto;border-radius:var(--radius-tile)}
@@ -75,7 +75,7 @@
 .pos-payment-body{display:grid;gap:var(--space-3-5);padding:var(--space-5)}
 .pos-payment-overview{display:grid;grid-template-columns:1.25fr 1fr;overflow:hidden;border:var(--stroke-1) solid var(--line);border-radius:var(--radius-card);background:var(--surface)}
 .pos-payment-balance{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-3-5);background:var(--primary-50)}
-.pos-payment-balance>span{display:grid;place-items:center;width:var(--size-36);height:var(--size-36);flex:0 0 auto;border-radius:var(--radius-tile);background:var(--primary-600);color:var(--surface)}
+.pos-payment-balance>span{display:grid;place-items:center;width:var(--size-36);height:var(--size-36);flex:0 0 auto;border-radius:var(--radius-tile);background:var(--primary-100);color:var(--primary-700)}
 .pos-payment-balance>div{display:grid;gap:var(--space-1)}
 .pos-payment-overview small,.pos-refund-source small{color:var(--ink-500);font-size:var(--font-size-label);font-weight:var(--weight-heavy);letter-spacing:var(--letter-spacing-caps)}
 .pos-payment-balance strong{color:var(--primary-700);font-size:var(--font-size-xl);font-weight:var(--weight-heavy);font-variant-numeric:tabular-nums}
@@ -124,15 +124,26 @@
 .pos-payment-loading-field>i{height:var(--size-12);width:var(--size-80)}
 .pos-payment-loading-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-2);width:min(100%,var(--size-300));margin-left:auto;margin-top:auto}
 
-/* Modal de detalle */
-.pos-detail-modal{display:flex;flex-direction:column;width:min(var(--size-900),100%);max-height:min(var(--size-820),calc(100dvh - var(--space-12)));overflow:hidden}
-.pos-detail-modal>footer{flex-shrink:0}
-.pos-detail-body{display:grid;align-content:start;gap:var(--space-5);background:var(--surface)}
-.pos-detail-context{min-width:0}
-.pos-detail-section{min-width:0}
-.pos-detail-section+.pos-detail-section{padding-top:var(--space-3)}
-.pos-detail-section>h3.modal-section-title{margin:0 0 var(--space-3)}
+/* Modal de detalle: patrón de Detalle de pedido (`order-detail.css`) — identidad, tarjeta, pestañas y paneles remetidos. */
+.crud-modal.pos-detail-modal{width:min(var(--size-760),100%);max-width:var(--size-760);max-height:calc(100dvh - var(--space-12));display:flex;flex-direction:column;overflow:hidden}
+.pos-detail-modal>header{flex-shrink:0}
+.pos-detail-body{min-width:0}
+.pos-detail-content{display:flex;flex-direction:column;gap:var(--space-3)}
+.pos-detail-hero{display:grid;gap:var(--space-4);padding-bottom:var(--space-1)}
+.pos-detail-identity{display:grid;justify-items:start;gap:var(--space-1)}
+.pos-detail-status{display:flex;align-items:center;flex-wrap:wrap;gap:var(--space-1-5)}
+/* En POS el código del pedido solo aparece aquí (el listado no lo muestra): texto secundario junto al estado. */
+.pos-detail-status>span:not(.status){color:var(--ink-600);font-size:var(--font-size-label);white-space:nowrap}
+.pos-detail-identity p{display:flex;align-items:center;gap:var(--space-1-5);margin:0;color:var(--ink-500);font-size:var(--font-size-label)}
+.pos-detail-identity p>svg{flex:none}
+.pos-detail-identity p>span{min-width:0;overflow-wrap:anywhere}
+.pos-detail-panel{min-width:0;padding-inline:var(--space-4)}
 .pos-detail-empty{margin:0;font-size:var(--font-size-base);line-height:var(--line-height-normal);color:var(--ink-500)}
+.pos-detail-paid b{color:var(--ink-600)}
+.pos-detail-paid.has-payment b{color:var(--brand-800)}
+.pos-detail-totals.is-paid .modal-summary-total span,.pos-detail-totals.is-paid .modal-summary-total strong{color:var(--brand-800)}
+.pos-detail-skeleton-copy{min-width:0;display:grid;align-content:center;gap:var(--space-1-5)}
+.pos-detail-skeleton-action.ds-skeleton{width:var(--size-220);height:var(--control-height);border-radius:var(--radius-control)}
 .pos-payment-list{display:grid}
 .pos-payment-list article{display:grid;grid-template-columns:var(--size-34) minmax(0,1fr) auto auto;align-items:start;gap:var(--space-2-5);padding-block:var(--space-3)}
 .pos-payment-list article+article{border-top:var(--stroke-1) solid var(--line)}
@@ -147,21 +158,8 @@
 .pos-payment-values small{color:var(--danger);font-size:var(--font-size-label);font-weight:var(--weight-semibold)}
 .pos-refund-action{height:var(--control-height);min-height:var(--control-height);padding:0 var(--space-2-5);font-size:var(--font-size-label)}
 
-/* Skeleton del detalle */
-.pos-detail-loading :is(i,b,small){display:block;height:var(--size-12);border-radius:var(--radius-control)}
-.pos-detail-loading .pos-detail-context i{width:var(--size-72);margin-bottom:var(--space-1-5)}
-.pos-detail-loading .pos-detail-context b{width:75%}
-.pos-detail-loading .modal-summary-heading b,.pos-detail-section-skeleton>h3>b{width:var(--size-150)}
-.pos-detail-loading .modal-summary-line :is(i,b),.pos-detail-loading .modal-summary-total :is(i,b){width:var(--size-72)}
-.pos-detail-section-skeleton>div{display:grid;grid-template-columns:var(--size-28) 1fr var(--size-86);align-items:center;gap:var(--space-2-5);padding:var(--space-3) var(--space-3-5)}
-.pos-detail-section-skeleton>div+div{border-top:var(--stroke-1) solid var(--line)}
-.pos-detail-section-skeleton>div>i{height:var(--size-28);border-radius:50%}
-.pos-detail-section-skeleton>div>span{display:grid;gap:var(--space-1-5)}
-.pos-detail-section-skeleton>div span b{width:42%;height:var(--size-10);border-radius:var(--radius-chip)}
-.pos-detail-section-skeleton>div span small{width:64%;height:var(--size-8);border-radius:var(--radius-chip)}
-.pos-detail-section-skeleton>div>i:last-child{width:var(--size-86);height:var(--size-10);border-radius:var(--radius-chip)}
-
 @media(max-width:700px){
+ .pos-detail-body{flex:1 1 auto}
  .pos-toolbar{grid-template-columns:1fr;padding:var(--space-2-5)}
  .pos-toolbar .ds-select{width:100%}
 }
@@ -185,12 +183,17 @@
  .pos-refund-action{grid-column:1/-1;width:100%}
 }
 @media(max-width:600px){
- .crud-modal.pos-payment-modal,.crud-modal.pos-detail-modal{width:100%;height:100dvh;max-height:100dvh;border-radius:0}
+ .crud-modal.pos-payment-modal{width:100%;height:100dvh;max-height:100dvh;border-radius:0}
+ .modal-backdrop:has(.pos-detail-modal){padding:0}
+ .crud-modal.pos-detail-modal{width:100%;max-height:calc(100dvh - var(--space-4) - var(--safe-area-top))}
+ .pos-detail-body{padding:var(--space-4)}
+ .pos-detail-panel{padding-inline:var(--space-3)}
+ .pos-detail-skeleton-action.ds-skeleton{width:100%;height:var(--size-48);border-radius:var(--radius-pill)}
 }
 @media(max-width:430px){
  .pos-order-cards dl{grid-template-columns:1fr 1fr}
  .pos-order-cards dl .remaining{grid-column:1/-1}
 }
 @media(prefers-reduced-motion:reduce){
- :is(.pos-shift-loading i,.pos-table-skeleton i,.pos-card-skeleton i,.pos-card-skeleton b,.pos-card-skeleton small,.pos-card-skeleton div,.pos-detail-loading i,.pos-detail-loading b,.pos-detail-loading small,.pos-payment-loading i,.pos-payment-loading b):after{animation:none}
+ :is(.pos-shift-loading i,.pos-table-skeleton i,.pos-card-skeleton i,.pos-card-skeleton b,.pos-card-skeleton small,.pos-card-skeleton div,.pos-payment-loading i,.pos-payment-loading b):after{animation:none}
 }

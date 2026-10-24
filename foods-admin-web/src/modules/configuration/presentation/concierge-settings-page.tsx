@@ -29,7 +29,7 @@ export function ConciergeSettingsPage(){
       </div>}
 
       <div className="concierge-readonly-field">
-       <small>ADMINISTRACIÓN DEL CANAL</small>
+       <small>Administración del canal</small>
        <b>Meta / WhatsApp Business</b>
        <p>El número oficial no se almacena ni se configura en esta aplicación. Fudia utiliza la integración técnica autorizada con Meta para operar el bot.</p>
       </div>

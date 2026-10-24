@@ -46,7 +46,7 @@ export function PurchaseReturnDialog({receipt,busy,close,save}:{receipt:Purchase
      <FormField className="span-2" label="Tipo"><Select value={kind} onChange={e=>setKind(e.target.value as PurchaseReturnKind)}><option value="receipt_correction">Corrección de recepción · reabre pendiente en la OC</option><option value="supplier_return">Devolución a proveedor · mantiene la OC recibida</option></Select></FormField>
      <FormField className="span-2" label="Motivo" error={errors.reason}><Input autoFocus maxLength={160} value={reason} onChange={e=>setReason(e.target.value)} placeholder="Ej. cantidad registrada por error / mercadería defectuosa"/></FormField>
     </div>
-    <DataTable label="Artículos a corregir o devolver" containerClassName="hover-scroll purchase-return-table"><thead><tr><th>ARTÍCULO</th><th>RECIBIDO</th><th>YA DEVUELTO</th><th>DISPONIBLE</th><th>CANTIDAD</th></tr></thead><tbody>{receipt.items.map((i,index)=><tr className={index%2?"alternate":""} key={i.id}>
+    <DataTable label="Artículos a corregir o devolver" containerClassName="hover-scroll purchase-return-table"><thead><tr><th>Artículo</th><th>Recibido</th><th>Ya devuelto</th><th>Disponible</th><th>Cantidad</th></tr></thead><tbody>{receipt.items.map((i,index)=><tr className={index%2?"alternate":""} key={i.id}>
      <td><b>{i.itemName}</b><small>{i.presentationName||i.presentationType}</small></td>
      <td>{quantity(i.quantity)}</td>
      <td>{quantity(i.returnedQuantity)}</td>

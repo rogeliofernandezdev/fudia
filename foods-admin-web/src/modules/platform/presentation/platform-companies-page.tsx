@@ -18,7 +18,7 @@ import {paymentStandingTone} from "../domain/subscription-status";
 import type {ConciergeUsagePage,PaymentStanding,PlatformOrganization,PlatformOrganizationPage} from "../domain/types";
 
 const DAY=86_400_000;
-const columns=["EMPRESA","PLAN","PRECIO","PRÓXIMO VENCIMIENTO","ÚLTIMO PAGO","SITUACIÓN","CONCIERGE DEL MES","ACCIONES"];
+const columns=["Empresa","Plan","Precio","Próximo vencimiento","Último pago","Situación","Concierge del mes","Acciones"];
 const summaryCards:Array<{key:"total"|PaymentStanding;label:string;icon:IconName}>=[
  {key:"total",label:"Empresas",icon:"building"},
  {key:"up_to_date",label:"Al día",icon:"circleCheck"},
@@ -70,11 +70,11 @@ function CompaniesDirectory(){
   <section className="panel management standardized-management platform-companies-panel">
    <div className="toolbar">
     <SearchField value={q} onChange={event=>{setQ(event.target.value);setPage(1)}} placeholder="Buscar por nombre, razón social o RUC..." label="Buscar empresas"/>
-    <Select aria-label="Filtrar por plan" value={planId} onChange={event=>{setPlanId(event.target.value);setPage(1)}} disabled={!data}>
+    <Select chip aria-label="Filtrar por plan" value={planId} onChange={event=>{setPlanId(event.target.value);setPage(1)}} disabled={!data}>
      <option value="">Todos los planes</option>
      {data?.planOptions.map(option=><option key={option.value} value={option.value}>{option.label}</option>)}
     </Select>
-    <Select aria-label="Filtrar por situación de pago" value={standing} onChange={event=>pickStanding(event.target.value)} disabled={!data}>
+    <Select chip aria-label="Filtrar por situación de pago" value={standing} onChange={event=>pickStanding(event.target.value)} disabled={!data}>
      <option value="">Toda situación de pago</option>
      {data?.standingOptions.map(option=><option key={option.value} value={option.value}>{option.label}</option>)}
     </Select>

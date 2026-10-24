@@ -16,6 +16,33 @@ exportan desde `@/design-system` (salvo `useMoney` y `useCurrency`, desde
 `@/providers`). Una variante nueva se agrega aquí y en el design system; nunca
 dentro de un módulo.
 
+### Iconos, indicadores y filtros
+
+- `Icon name` — set único de Tabler (monocromo, trazo 1.75); nunca importar
+  Tabler directamente en un módulo.
+- `IconTile name tone size` — icono sobre cuadrito tintado (`primary`, `brand`,
+  `digital`, `teal`, `sky`, `peach`, `rose`, `warning`, `neutral`).
+- `StatCard icon tone label value meta href attention` — indicador con flecha ↗
+  hacia el detalle; agrupar con `.stat-grid`.
+- `Input icon` — campo con icono al inicio (correo, teléfono, dirección,
+  documento, referencia).
+- `Select chip` — filtro de barras de listados con radio estándar de campo; se tiñe cuando filtra.
+
+### Detalles
+
+- `DetailHero`, `DetailContact`, `DetailFacts`, `DetailTimeline` — organización
+  de modales de detalle (identidad con estado, contacto, datos en dos columnas,
+  progreso o movimientos con círculos). Combinar con `Tabs`.
+- En Ventas, `sales-detail-overview` agrupa identidad y contacto en dos columnas
+  (una en móvil); `sales-detail-content` relaciona las pestañas con su
+  panel con las pastillas compartidas sobre una misma superficie `cloud-50`,
+  sin otra tarjeta para el contenido. `sales-detail-facts` alinea etiquetas y valores en filas.
+  El contenedor mantiene `radius-card` (14 px); pista y selección heredan
+  `radius-pill` del componente compartido. Los paneles conservan sangría de 12 px.
+  Las etiquetas tienen ancho natural en escritorio y tres columnas en móvil;
+  no altera la navegación horizontal del resto de `Tabs`.
+  Fecha y reloj no se separan en nodos sin alineación; cliente y mozo se conservan.
+
 ### Botones
 
 `Button kind`:
@@ -215,6 +242,8 @@ La paleta y asignación obligatorias se consultan únicamente en la
 [matriz de estados](02_DESIGN_SYSTEM.md#colores-de-operación-pedido-preparación-y-cuenta);
 no definir colores alternativos en cada consumidor.
 
+`Select` con icono (incluido el que `FormField` deduce de la etiqueta) superpone el icono sobre un `<select>` de ancho completo con padding izquierdo: la lista nativa se abre alineada al borde del campo, sin recortarse desde el texto.
+
 `ModalItemList` agrupa líneas de consumo sin encabezados de tabla ni borde exterior.
 Cada línea usa `modal-item-row` y `role="listitem"`; su cantidad usa
 `modal-item-quantity`, circular, con fondo `primary-100` y texto `primary-700`;
@@ -234,7 +263,7 @@ Pedidos/Salón, Ventas y POS para que se vean iguales:
 | `ModalItemNote` | Nota del producto como cápsula `cloud-50` con borde `line` e icono `note` |
 | `ModalItemComponents` | Elecciones de menús/combos y modificadores como carta: grupo en versalitas, filete vertical `line`, valor y `side` (destino si difiere, estado). En ≤600 px el filete pasa a separadores horizontales. `name` acepta nodos: el detalle de Menús y combos lista cada parte con sus opciones separadas por «·» y recargos en `small` |
 
-Detalle de Menús y combos: `Dialog` `size-md` con `ModalHeader` (icono `combo`, título = nombre del menú, sin franja ni subtítulo), un solo `modal-body` blanco, `modal-record-data` con Precio y venta («Se vende: Un solo día» con su fecha o Días/Desde/Hasta), «Descripción» si existe y «Platos y opciones» como `h3` de 16 px con `ModalItemComponents`, y el `Status` real en `ModalFooter`. No repite el conteo de partes ni las reglas de elección («Obligatorio · elige 1»), que pertenecen al asistente. Error con `ModalError`. No usa tarjetas propias: con ellas el cuerpo en `grid` encogía la sección y ocultaba partes.
+Detalle de Menús y combos (patrón de Detalle de pedido): `Dialog` `size-md` con `ModalHeader` (icono `combo`, título = nombre del menú, sin franja ni subtítulo) y `ModalWorkspace`. Arriba, el `Status` real (Activo, Inactivo o «Fuera de fecha») y una línea con icono `calendar` de cuándo se vende («Se vende el …» o días · desde · hasta), con la descripción si existe. «Platos y opciones» (`h3` de 16 px) es una `ModalItemList`: cada parte lleva su `IconTile` (`sm`, mismo tono e icono que en el editor), el nombre de la parte en 12 px y sus platos en 14 px separados por «·», con el costo extra si aplica. El resumen fijo «Resumen del menú» muestra Partes y Opciones, con el Precio como importe principal. Es de lectura: sin `ModalFooter`; la X es el único cierre. No repite reglas de elección («Obligatorio · elige 1»). Error con `ModalError`; la carga usa `Skeleton` con la misma geometría.
 La hoja «Arma tu menú o combo» (`ComboEditor`) tampoco lleva subtítulo («NUEVO MENÚ O COMBO») ni borde propio en el panel: el borde dejaba un filo claro alrededor de la cabecera índigo. Reutiliza `crud-modal size-lg`, un solo `modal-body` y `ModalFooter`; no es un asistente, así que no lleva stepper, «Continuar» ni paso de revisión. En móvil es pantalla completa con el pie fijo (validado a 427 × 933, 427 × 840 y 390 × 844: margen de 16 px, sin desborde horizontal, controles de 44 px).
 
 Los módulos no redefinen estas piezas; solo añaden su propio contexto (por ejemplo

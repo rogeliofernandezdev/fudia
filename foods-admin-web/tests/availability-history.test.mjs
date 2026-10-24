@@ -183,7 +183,7 @@ test("historial muestra skeleton, error con reintento, vacío y valores reales s
  const entry={id:"event",createdAt:"2026-10-09T01:00:00Z",businessDate:"2026-10-08",reason:"Nueva producción",userName:"Daniel",previousPortionQuantity:15,portionQuantity:20,soldQuantity:5,previousManualStatus:"available",manualStatus:"available"};
  result={data:{items:[entry],total:1}};const all=render();assert.ok(all.some(n=>n.type==="Pagination"&&n.props.total===1));assert.ok(all.some(n=>n.type==="time"&&/8:00|20:00/.test(words(n))));
  assert.deepEqual(JSON.parse(JSON.stringify(keys[0])),["availability-history","org","local","aji",1,10]);
- assert.deepEqual(all.filter(n=>n.type==="th").map(n=>n.props.children),["FECHA Y HORA","CAMBIO","CANTIDAD","MOTIVO","USUARIO"]);
+ assert.deepEqual(all.filter(n=>n.type==="th").map(n=>n.props.children),["Fecha y hora","Cambio","Cantidad","Motivo","Usuario"]);
  assert.equal(all.find(n=>n.type==="Modal").props.size,"xl");
  assert.equal(all.find(n=>n.type==="Modal").props.title,"Historial de disponibilidad");
  assert.equal(all.find(n=>n.type==="Modal").props.subtitle,item.name);

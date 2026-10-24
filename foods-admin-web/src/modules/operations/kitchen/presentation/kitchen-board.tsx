@@ -1,8 +1,9 @@
 "use client";
+import "../../styles/salon-comanda.css";
 import "./kitchen.css";
 import {useEffect,useState} from "react";
 import {keepPreviousData,useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,ErrorState,Icon,IconName,PageHeader,Select,Tabs} from "@/design-system";
+import {Button,ErrorState,Icon,IconName,PageHeader,Skeleton,Tabs} from "@/design-system";
 import {useFeedback,useSession} from "@/providers";
 import {formatRegionalNumber} from "@/shared/i18n/regional-format";
 import type {KitchenStatus,KitchenTicket} from "../domain/types";
@@ -13,6 +14,11 @@ const lanes:Array<{status:KitchenStatus;label:string;shortLabel:string;descripti
   {status:"preparando",label:"EN PREPARACIÓN",shortLabel:"Preparando",description:"Trabajo activo",icon:"cookingPot"},
   {status:"listo",label:"LISTOS PARA ENTREGAR",shortLabel:"Listos",description:"Esperando entrega",icon:"check"},
 ];
+
+/** Icono por área de preparación; las áreas y sus nombres llegan del API. */
+const destinationIcons:Record<string,IconName>={kitchen:"chefHat",bar:"drink"};
+/** Icono por origen del pedido (canal), igual que en Pedidos y Salón. */
+const channelIcons:Record<string,IconName>={salon:"utensils",mostrador:"store",recojo:"box",delivery:"truck",whatsapp:"share"};
 
 function parseIsoDate(value:string){
   if(!value)return null;
@@ -113,11 +119,23 @@ export function KitchenBoard(){
       title={destination==="bar"?"Barra":"Cocina"}
       description="Prepara y libera pedidos del local con una cola clara por estado."
       action={<div className="kitchen-header-tools">
-        <Select value={destination} onChange={event=>setDestination(event.target.value)} aria-label="Área de preparación">{(tickets.data?.destinationOptions??[]).map(option=><option value={option.value} key={option.value}>{option.label}</option>)}</Select>
         {attention>0&&<span className="kitchen-attention"><Icon name="alert" size={14}/>{attention} con demora</span>}
-        <Select value={channel} onChange={event=>setChannel(event.target.value)} aria-label="Filtrar comandas por canal"><option value="">Todos los canales</option>{(tickets.data?.channelOptions??[]).map(option=><option value={option.value} key={option.value}>{option.label}</option>)}</Select>
+        {/* Estación: qué pantalla se opera (Cocina o Barra). No es un filtro de pedidos. */}
+        {(tickets.data?.destinationOptions?.length??0)>1&&<div className="kitchen-station">
+          <span className="kitchen-filter-label">Estación</span>
+          <Tabs className="kitchen-area-tabs" label="Estación de preparación" value={destination} onChange={setDestination} items={(tickets.data?.destinationOptions??[]).map(option=>({value:option.value,label:option.label,icon:destinationIcons[option.value]??"kitchen"}))}/>
+        </div>}
       </div>}
     />
+
+    {/* Filtro por origen del pedido (canal), con icono por canal; afecta solo la cola de esta estación. */}
+    <section className="kitchen-filters" aria-label="Filtrar por origen del pedido">
+      <span className="kitchen-filter-label">Origen del pedido</span>
+      {tickets.isPending?<Skeleton width="min(var(--size-320),100%)" height="var(--size-44)" radius="var(--radius-pill)"/>
+      :<div className="cmd-chips" role="group" aria-label="Origen del pedido">
+        {[{value:"",label:"Todos"},...(tickets.data?.channelOptions??[])].map(option=><button type="button" key={option.value} className="cmd-chip" aria-pressed={channel===option.value} onClick={()=>setChannel(option.value)}>{channel===option.value?<span className="cmd-chip-check" aria-hidden="true"><Icon name="check" size={14}/></span>:option.value&&<Icon name={channelIcons[option.value]??"receipt"} size={16}/>}{option.label}</button>)}
+      </div>}
+    </section>
 
     <Tabs className="kitchen-mobile-tabs" label="Estado de las comandas" value={mobileLane} onChange={setMobileLane} items={lanes.map(lane=>({value:lane.status,label:lane.shortLabel,icon:lane.icon,count:counts[lane.status]}))}/>
 

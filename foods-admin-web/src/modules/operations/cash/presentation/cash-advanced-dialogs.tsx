@@ -24,7 +24,7 @@ export function CashTeamDialog({shift,users,options,loading,busyUserId,close,ass
         <Button icon="plus" disabled={!selected||Boolean(busyUserId)} onClick={()=>{if(selected){assign(selected);setSelected("")}}}>Asignar</Button>
       </div>
       <section className="cash-team-list">
-        <header><small>EQUIPO ACTUAL</small><b>{users.length} {users.length===1?"persona":"personas"}</b></header>
+        <header><small>Equipo actual</small><b>{users.length} {users.length===1?"persona":"personas"}</b></header>
         {loading?<div role="status" aria-busy="true" aria-label="Cargando equipo del turno">{Array.from({length:2},(_,index)=><div className="cash-team-member" aria-hidden="true" key={index}><Skeleton className="cash-sk-icon"/><span className="cash-sk-lines"><Skeleton className="cash-sk-line"/><Skeleton className="cash-sk-line short"/></span><Skeleton className="cash-sk-action"/></div>)}</div>
         :users.length?users.map(user=><div className="cash-team-member" key={user.userId}><span><Icon name="users" size={16}/></span><div><b>{user.name}</b><small>Asignado al turno</small></div><Button kind="ghost" disabled={Boolean(busyUserId)} onClick={()=>unassign(user.userId)} loading={busyUserId===user.userId}>{busyUserId===user.userId?"Quitando…":"Quitar"}</Button></div>)
         :<EmptyState className="cash-state-compact" icon="users" title="Sin equipo asignado" text="Asigna personas para que operen este turno."/>}

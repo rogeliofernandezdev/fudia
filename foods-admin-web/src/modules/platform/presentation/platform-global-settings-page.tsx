@@ -107,7 +107,7 @@ export function PlatformGlobalSettingsPage(){
   </section>
   <ConciergeUsageSettingsPanel/>
 
-  {draft&&<div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={()=>{setDraft(null);setEditingId(undefined)}} className="crud-modal platform-channel-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="global-channel-title" aria-busy={save.isPending}><ModalHeader title="Canal global de WhatsApp" titleId="global-channel-title" icon="chat" subtitle={editingId?"EDITAR CANAL":"NUEVO CANAL"} onClose={()=>{setDraft(null);setEditingId(undefined)}} busy={save.isPending} closeLabel="Cerrar"/>
+  {draft&&<div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={()=>{setDraft(null);setEditingId(undefined)}} className="crud-modal platform-channel-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="global-channel-title" aria-busy={save.isPending}><ModalHeader title="Canal global de WhatsApp" titleId="global-channel-title" icon="chat" subtitle={editingId?"Editar canal":"Nuevo canal"} onClose={()=>{setDraft(null);setEditingId(undefined)}} busy={save.isPending} closeLabel="Cerrar"/>
    <form onSubmit={event=>{event.preventDefault();submit()}}>
     <div className="form-grid platform-channel-fields">
      {validationError&&<p className="field-error span-2" role="alert">{validationError}</p>}

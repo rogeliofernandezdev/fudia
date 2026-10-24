@@ -48,8 +48,13 @@
 
 .combo-editor-section > h3,
 .combo-editor-section-head > h3 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2-5);
   margin: 0;
   color: var(--ink-800);
+  font-size: var(--font-size-base);
+  font-weight: var(--weight-bold);
 }
 
 /* «Qué incluye» con «Empezar de nuevo» a la derecha; el alto reservado evita saltos al aparecer o quitar el botón. */
@@ -611,23 +616,22 @@
   .combo-window-option:not(.active):hover,
   .day-chip:not(.active):hover { border-color: var(--primary-300); color: var(--primary-700); }
 }
+/* Detalle de menú (patrón de Detalle de pedido): estado y venta arriba, partes como lista
+   con IconTile y resumen fijo con el precio. Tipografía, cuerpo y resumen son de modal.css. */
 .combo-detail-body { display: grid; align-content: start; gap: var(--space-5); }
-.combo-detail-context, .combo-detail-section { min-width: 0; }
-.combo-detail-section > h3 { margin: 0 0 var(--space-3); }
+.combo-detail-hero { display: grid; justify-items: start; gap: var(--space-1-5); min-width: 0; }
+.combo-detail-schedule { display: flex; align-items: center; gap: var(--space-1-5); margin: 0; color: var(--ink-500); font-size: var(--font-size-label); }
+.combo-detail-schedule > svg { flex: none; }
 .combo-detail-description { margin: 0; color: var(--ink-600); font-size: var(--font-size-base); line-height: var(--line-height-normal); overflow-wrap: anywhere; }
-.combo-detail-option { display: inline-flex; align-items: baseline; gap: var(--space-1-5); }
-.combo-detail-option > span { color: var(--ink-400); }
+.combo-detail-section { min-width: 0; }
+.combo-detail-section > h3 { margin: 0 0 var(--space-3); }
+.combo-detail-part { grid-template-columns: auto minmax(0, 1fr); align-items: center; }
+.combo-detail-part-copy { min-width: 0; display: grid; gap: var(--space-0-5); }
+.combo-detail-part-copy > small { color: var(--ink-500); font-size: var(--font-size-label); }
+.combo-detail-part-copy > span { color: var(--ink-950); font-size: var(--font-size-base); overflow-wrap: anywhere; }
+.combo-detail-option { display: inline-flex; align-items: baseline; gap: var(--space-1-5); margin-inline-end: var(--space-1-5); }
+.combo-detail-option > span, .combo-detail-option > small { color: var(--ink-400); }
 .combo-detail-empty { margin: 0; color: var(--ink-600); font-size: var(--font-size-base); }
-.combo-detail-loading :is(i, b) { position: relative; display: block; overflow: hidden; height: var(--size-12); border-radius: var(--radius-control); background: var(--cloud-150); }
-.combo-detail-loading :is(i, b)::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, var(--surface-alpha-64), transparent); transform: translateX(-100%); animation: combo-detail-shimmer var(--duration-ambient) ease-in-out infinite; }
-.combo-detail-loading dl i { width: var(--size-62); margin-bottom: var(--space-1-5); }
-.combo-detail-loading dl b { width: var(--size-92); }
-.combo-detail-loading h3 > i { width: var(--size-120); height: var(--size-16); }
-.combo-detail-loading .modal-item-component-group i { width: var(--size-62); }
-.combo-detail-loading .modal-item-component-name b { width: 75%; }
-.combo-detail-skeleton-copy { display:grid; gap:var(--space-1-5); }
-.combo-detail-skeleton-copy b { width:var(--size-168); height:var(--size-16); }
-@keyframes combo-detail-shimmer { to { transform:translateX(100%); } }
 @container combo-list (width <= 820px) {
   .standardized-management.combo-list .table-wrap {
     display: block;
@@ -682,7 +686,6 @@
 }
 
 @media(prefers-reduced-motion:reduce) {
-  .combo-detail-loading :is(i, b)::after { animation:none; }
   .combo-parts-loading i { animation:none; }
 }
 /* Móvil (≤600 px): la hoja es pantalla completa (crud-modal size-lg) con el pie fijo; una sola columna y objetivos de 44 px. */

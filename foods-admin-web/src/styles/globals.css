@@ -59,12 +59,6 @@ p{text-wrap:pretty}
 .ds-spinner :is(circle,path){fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round}
 .ds-spinner-track{opacity:.28}
 .button svg,.icon-button svg,.row-action svg,.toolbar button svg{display:block;flex:none}
-/* Duotono en todo el sistema: el acento deriva del color del icono (tinta → índigo, blanco → blanco, semánticos conservan su tono). Status conserva el color exacto de la matriz. */
-.icon-dot{fill:currentColor;stroke:none}
-@supports (color:oklch(from red l c h)){.icon-accent{stroke:var(--icon-accent-auto)}.icon-dot{fill:var(--icon-accent-auto)}}
-.status-icon :is(.icon-accent,.icon-dot){stroke:currentColor}
-.status-icon .icon-dot{fill:currentColor;stroke:none}
-:is(.ds-tabs button.active,[aria-current=page],[aria-pressed=true]) .icon-body,.is-filled .icon-body{fill:var(--icon-fill-active)}
 .button.primary{color:var(--surface);background:var(--primary-600);box-shadow:var(--elevation-primary)}
 .button.secondary{color:var(--primary-700);border-color:var(--primary-200);background:var(--surface)}
 .button.ghost{color:var(--ink-700);border-color:var(--line);background:var(--surface)}
@@ -91,6 +85,8 @@ p{text-wrap:pretty}
 .status.red{color:var(--danger-700);background:var(--danger-50)}
 .status.violet{color:var(--digital-700);background:var(--digital-100)}
 .status.teal{color:var(--teal-700);background:var(--teal-100)}
+/* Mesa libre: contorno azul marino sobre blanco, sin relleno; distinto de Entregado y Listo. */
+.status.navy{color:var(--navigation-900);background:var(--surface);box-shadow:inset 0 0 0 var(--stroke-1-5) var(--navigation-900)}
 .status.emphasized{padding:var(--space-1-5) var(--space-3);font-weight:var(--weight-bold)}
 .status.gray.emphasized{color:var(--ink-800);background:var(--cloud-150)}
 
@@ -160,6 +156,22 @@ p{text-wrap:pretty}
 .ds-input-shell{display:flex;align-items:center;gap:var(--space-2);height:var(--control-height);min-height:var(--control-height);padding:0 var(--space-2-5);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-control);color:var(--ink-400);background:var(--surface);transition:border-color var(--duration-fast),box-shadow var(--duration-fast)}
 .ds-input-shell .ds-input{height:calc(var(--control-height) - var(--size-2));min-height:calc(var(--control-height) - var(--size-2));padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
 .ds-input-shell:focus-within{border-color:var(--primary-600);box-shadow:var(--ring-focus)}
+.ds-input-shell.has-leading-icon{width:100%;color:var(--ink-400)}
+.ds-input-shell.has-leading-icon>svg{flex:none}
+.ds-input-shell.has-leading-icon>.ds-select{flex:1;min-width:0;height:calc(var(--control-height) - var(--size-2));min-height:calc(var(--control-height) - var(--size-2));padding-left:0;border:0;border-radius:0;background-color:transparent;box-shadow:none}
+.ds-input-shell.has-leading-icon:has(.ds-select:disabled){background:var(--cloud-100)}
+/* Select con icono: el <select> ocupa todo el campo y el icono se superpone; así la lista
+   nativa se abre alineada al borde del campo y no recortada desde el texto. */
+.ds-input-shell.has-leading-icon.is-select{position:relative;padding:0}
+.ds-input-shell.has-leading-icon.is-select>svg{position:absolute;top:50%;left:var(--space-2-5);transform:translateY(-50%);pointer-events:none}
+.ds-input-shell.has-leading-icon.is-select>.ds-select{width:100%;padding-left:calc(var(--space-2-5) + var(--size-16) + var(--space-2));border-radius:inherit}
+.ds-input-shell.has-leading-icon:has(.ds-input:disabled){background:var(--cloud-100)}
+.ds-input-shell.has-leading-icon:has(.ds-input:read-only:not(:disabled)){border-style:dashed;background:var(--cloud-50)}
+.ds-input-shell.has-leading-icon:has(.ds-input[aria-invalid=true]):focus-within{box-shadow:var(--ring-danger)}
+.ds-input-shell.has-leading-icon:has(.ds-input[aria-invalid=true]){border-color:var(--danger)}
+/* Filtros en píldora: misma altura que el resto de controles, radio completo y tinte cuando filtran. */
+.ds-select.filter-chip{width:auto;min-width:0;border-color:var(--line-strong);border-radius:var(--radius-control);font-weight:var(--weight-semibold);color:var(--ink-700)}
+.ds-select.filter-chip:has(option:checked:not(:first-child)){border-color:var(--primary-200);color:var(--primary-700);background-color:var(--primary-50)}
 .switch-row{position:relative;display:grid;grid-template-columns:var(--size-36) 1fr;align-items:center;min-height:var(--size-52);padding:var(--space-2) var(--space-2-5);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-tile)}
 .switch-row input{position:absolute;opacity:0}
 .switch-row>span{width:var(--size-36);height:var(--size-22);padding:var(--space-0-5);border-radius:var(--radius-pill);background:var(--line-strong);transition:background-color var(--duration-fast) var(--easing-out)}

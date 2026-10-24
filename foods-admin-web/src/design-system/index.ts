@@ -1,4 +1,8 @@
 export {Icon, type IconName, type IconSize} from "./icons";
+export {IconTile, type IconTileTone} from "./icon-tile";
+export {StatCard} from "./stat-card";
+export {FormSection, ChoiceGroup, type ChoiceOption} from "./form-section";
+export {DetailHero, DetailContact, DetailFacts, DetailTimeline, type DetailFact, type DetailStep} from "./detail-view";
 export {Logo} from "./logo";
 export {PageHeader, Button, type ButtonKind, type ButtonAction, Spinner, IconButton, RowActionButton, FieldLabel, Input, Select, Textarea, Status, Pagination} from "./page-header";
 export {EmptyState, ErrorState} from "./states";

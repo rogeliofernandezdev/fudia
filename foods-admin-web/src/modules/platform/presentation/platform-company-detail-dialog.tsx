@@ -18,7 +18,7 @@ export function CompanyDetailDialog({organizationId,standingOptions,close}:{orga
  return <div className="modal-backdrop modal-overlay-in">
   <Dialog onResponseClose={close} className="crud-modal company-detail modal-panel-in" role="dialog" aria-modal="true" aria-busy={detail.isLoading} aria-labelledby="company-detail-title">
 
-   <ModalHeader title={company?.tradeName??(detail.isLoading?"Cargando empresa…":"Empresa")} titleId="company-detail-title" icon="building" subtitle="DETALLE DE LA EMPRESA" onClose={close} closeLabel="Cerrar detalle"/>
+   <ModalHeader title={company?.tradeName??(detail.isLoading?"Cargando empresa…":"Empresa")} titleId="company-detail-title" icon="building" subtitle="Detalle de la empresa" onClose={close} closeLabel="Cerrar detalle"/>
    {detail.isLoading?<CompanyDetailSkeleton/>
     :detail.isError||!company?<div className="company-detail-body"><ErrorState title="No pudimos cargar el detalle" text={detail.error?.message} retrying={detail.isFetching} onRetry={()=>void detail.refetch()}/></div>
     :<CompanyDetailContent company={company} standingOptions={standingOptions}/>}
@@ -37,14 +37,14 @@ function CompanyDetailContent({company,standingOptions}:{company:PlatformOrganiz
  return <>
   <div className="company-detail-body">
    <section className="company-detail-summary">
-    <div><small>SITUACIÓN</small><Status tone={paymentStandingTone(company.paymentStanding)}>{standingOptions.find(option=>option.value===company.paymentStanding)?.label??company.paymentStanding}</Status></div>
-    <div><small>PLAN</small><b>{subscription?`${subscription.planName} · ${subscription.billingCycle==="annual"?"Anual":"Mensual"}`:"Sin plan"}</b></div>
+    <div><small>Situación</small><Status tone={paymentStandingTone(company.paymentStanding)}>{standingOptions.find(option=>option.value===company.paymentStanding)?.label??company.paymentStanding}</Status></div>
+    <div><small>Plan</small><b>{subscription?`${subscription.planName} · ${subscription.billingCycle==="annual"?"Anual":"Mensual"}`:"Sin plan"}</b></div>
     <div><small>{subscription?.status==="trial"?"FIN DE PRUEBA":"PRÓXIMO VENCIMIENTO"}</small><b>{subscription?.status==="cancelled"?"—":date(due)}</b></div>
-    <div><small>TOTAL PAGADO</small><b>{company.payments.paidCount?`${subscription?.currency??company.currency} ${Number(company.payments.totalPaid).toFixed(2)}`:"Sin pagos"}</b>{company.payments.paidCount>0&&<em>{company.payments.paidCount} {company.payments.paidCount===1?"pago":"pagos"} · último {date(company.payments.lastPaidAt)}</em>}</div>
+    <div><small>Total pagado</small><b>{company.payments.paidCount?`${subscription?.currency??company.currency} ${Number(company.payments.totalPaid).toFixed(2)}`:"Sin pagos"}</b>{company.payments.paidCount>0&&<em>{company.payments.paidCount} {company.payments.paidCount===1?"pago":"pagos"} · último {date(company.payments.lastPaidAt)}</em>}</div>
    </section>
 
    <section className="company-detail-section">
-    <header><small>EMPRESA</small><h3>Datos generales y fiscales</h3></header>
+    <header><small>Empresa</small><h3>Datos generales y fiscales</h3></header>
     <dl className="company-detail-fields">
      <div><dt>Razón social</dt><dd>{company.legalName}</dd></div>
      <div><dt>RUC</dt><dd>{company.taxId||"—"}</dd></div>
@@ -58,7 +58,7 @@ function CompanyDetailContent({company,standingOptions}:{company:PlatformOrganiz
    </section>
 
    <section className="company-detail-section">
-    <header><small>CONTRATO</small><h3>Suscripción y uso</h3></header>
+    <header><small>Contrato</small><h3>Suscripción y uso</h3></header>
     {subscription?<dl className="company-detail-fields">
      <div><dt>Estado</dt><dd><Status tone={subscriptionStatusTone(subscription.status)}>{subscriptionStatusLabel(subscription.status)}</Status></dd></div>
      <div><dt>Precio contratado</dt><dd>{subscription.currency} {Number(subscription.priceAmount).toFixed(2)} / {subscription.billingCycle==="annual"?"año":"mes"}</dd></div>
@@ -74,7 +74,7 @@ function CompanyDetailContent({company,standingOptions}:{company:PlatformOrganiz
    <ConciergeUsageDialogSection organizationId={company.id}/>
 
    <section className="company-detail-section">
-    <header><small>CONTACTO</small><h3>Administradores</h3></header>
+    <header><small>Contacto</small><h3>Administradores</h3></header>
     {company.administrators.length?<ul className="company-detail-list">{company.administrators.map(admin=><li key={admin.email}>
      <div><b>{admin.name}</b>{!admin.active&&<Status active={false}>Inactivo</Status>}</div>
      <a href={"mailto:"+admin.email}>{admin.email}</a>
@@ -82,7 +82,7 @@ function CompanyDetailContent({company,standingOptions}:{company:PlatformOrganiz
    </section>
 
    <section className="company-detail-section">
-    <header><small>OPERACIÓN</small><h3>Locales</h3></header>
+    <header><small>Operación</small><h3>Locales</h3></header>
     {company.locations.length?<ul className="company-detail-list">{company.locations.map(item=><li key={item.id}>
      <div><b>{item.name}</b><small>{item.code}</small>{!item.active&&<Status active={false}>Inactivo</Status>}</div>
      <p>{[item.address,item.phone].filter(Boolean).join(" · ")||"Sin dirección ni teléfono registrados."}</p>

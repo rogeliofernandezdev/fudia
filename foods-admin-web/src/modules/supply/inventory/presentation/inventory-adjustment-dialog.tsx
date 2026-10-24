@@ -2,7 +2,7 @@
 import {Dialog} from "@/design-system/dialog";
 import {useState} from "react";
 import {Controller,useForm,useWatch} from "react-hook-form";
-import {Button,Icon,Input,Select,Textarea,ModalHeader,ModalFooter} from "@/design-system";
+import {Button,Icon,Input,Select,Textarea,ModalHeader,ModalFooter,FormSection,ChoiceGroup} from "@/design-system";
 import {useSession} from "@/providers/session-context";
 import {formatRegionalNumber} from "@/shared/i18n/regional-format";
 import {inventoryAdjustmentResolver} from "../domain/inventory-adjustment-schema";
@@ -75,38 +75,38 @@ export function InventoryAdjustmentDialog({busy,close,save}:{busy:boolean;close:
   return <div className="modal-backdrop modal-overlay-in" role="presentation">
     <Dialog onResponseClose={close} className="crud-modal inventory-adjustment-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="inventory-adjustment-title" aria-busy={busy}>
 
-      <ModalHeader title="Registrar ajuste" titleId="inventory-adjustment-title" icon="stock" subtitle="INVENTARIO" onClose={close} busy={busy} closeLabel="Cerrar"/>
+      <ModalHeader title="Registrar ajuste" titleId="inventory-adjustment-title" icon="stock" subtitle="Inventario" onClose={close} busy={busy} closeLabel="Cerrar"/>
       <form onSubmit={handleSubmit(submit)} noValidate>
         <div className="inventory-adjustment-body">
+          <FormSection icon="stock" title="Artículo" bare>
           <div className="inventory-adjustment-field">Artículo
             <Controller control={control} name="inventoryItemId" render={({field})=><InventoryItemLookup autoFocus ariaLabel="Artículo" placeholder="Buscar artículo existente..." value={selected} invalid={Boolean(errors.inventoryItemId)} disabled={busy} onChange={item=>{setSelected(item);field.onChange(item?.id??"")}}/>}/>
             {errors.inventoryItemId?.message&&<small className="field-error">{errors.inventoryItemId.message}</small>}
           </div>
 
           {selected&&<section className="inventory-adjustment-balance" aria-label="Saldo actual">
-            <div><small>STOCK ACTUAL</small><strong>{formatRegionalNumber(currentStock,location?.country,{maximumFractionDigits:3})} {selected.unit}</strong></div>
-            <div><small>UNIDAD DE INVENTARIO</small><strong>{selected.unit}</strong></div>
+            <div><small>Stock actual</small><strong>{formatRegionalNumber(currentStock,location?.country,{maximumFractionDigits:3})} {selected.unit}</strong></div>
+            <div><small>Unidad de inventario</small><strong>{selected.unit}</strong></div>
           </section>}
 
+          </FormSection>
+          <FormSection icon="transfer" tone="digital" title="Movimiento" bare>
           <div className="inventory-adjustment-grid">
-            <label>Tipo de movimiento
-              <Select value={movementType} onChange={event=>changeMovement(event.target.value as InventoryAdjustmentType)}>
-                <option value="entry">Entrada</option>
-                <option value="exit">Salida</option>
-              </Select>
-            </label>
+            <div className="span-2 inventory-adjustment-type"><span>Tipo de movimiento</span>
+              <ChoiceGroup label="Tipo de movimiento" name="movementType" value={movementType} onChange={event=>changeMovement(event.target.value as InventoryAdjustmentType)} options={[{value:"entry",label:"Entrada",icon:"plus"},{value:"exit",label:"Salida",icon:"minus"}]}/>
+            </div>
             <label>Motivo
-              <Select {...register("reason")} aria-invalid={Boolean(errors.reason)}>
+              <Select icon="note" {...register("reason")} aria-invalid={Boolean(errors.reason)}>
                 {reasons.map(reason=><option value={reason.value} key={reason.value}>{reason.label}</option>)}
               </Select>
               {errors.reason?.message&&<small className="field-error">{errors.reason.message}</small>}
             </label>
             <label>Cantidad{selected?" ("+selected.unit+")":""}
-              <Input type="number" min="0.001" step="0.001" inputMode="decimal" {...register("quantity")} placeholder="0" aria-invalid={Boolean(errors.quantity)}/>
+              <Input icon="gauge" type="number" min="0.001" step="0.001" inputMode="decimal" {...register("quantity")} placeholder="0" aria-invalid={Boolean(errors.quantity)}/>
               {errors.quantity?.message&&<small className="field-error">{errors.quantity.message}</small>}
             </label>
             {movementType==="entry"&&<label>Costo unitario{selected?" por "+selected.unit:""}
-              <Input type="number" min="0" step="0.0001" inputMode="decimal" {...register("unitCost")} placeholder={averageCost>0?money(averageCost):"0.00"} aria-invalid={Boolean(errors.unitCost)}/>
+              <Input icon="cash" type="number" min="0" step="0.0001" inputMode="decimal" {...register("unitCost")} placeholder={averageCost>0?money(averageCost):"0.00"} aria-invalid={Boolean(errors.unitCost)}/>
               {errors.unitCost?.message?<small className="field-error">{errors.unitCost.message}</small>:selected&&<small className="inventory-adjustment-hint">{averageCost>0?"Vacío usa el promedio actual: "+money(averageCost):"Obligatorio: el artículo aún no tiene costo promedio."}</small>}
             </label>}
             <label className="span-2">Observación opcional
@@ -114,6 +114,7 @@ export function InventoryAdjustmentDialog({busy,close,save}:{busy:boolean;close:
               {errors.observation?.message&&<small className="field-error">{errors.observation.message}</small>}
             </label>
           </div>
+          </FormSection>
 
           {selected&&Number.isFinite(quantity)&&quantity>0&&<div className={"inventory-adjustment-preview "+movementType}>
             <Icon name={movementType==="entry"?"plus":"minus"} size={16}/>

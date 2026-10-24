@@ -11,7 +11,7 @@ import {detailComponents} from "./order-detail-fixture.mjs";
 const require=createRequire(import.meta.url);
 const root=resolve(dirname(fileURLToPath(import.meta.url)),"../..");
 const css=readdirSync(resolve(root,".next/static/css")).filter(name=>name.endsWith(".css")).map(name=>readFileSync(resolve(root,".next/static/css",name),"utf8")).join("\n");
-const font=css.match(/@font-face\{[^}]*font-family:Manrope;[^}]*unicode-range:u\+00\?\?[^}]*\}/)?.[0].match(/media\/([^/)]+\.woff2)/)?.[1];
+const font=css.match(/@font-face\{[^}]*font-family:Plus Jakarta Sans;[^}]*unicode-range:u\+00\?\?[^}]*\}/)?.[0].match(/media\/([^/)]+\.woff2)/)?.[1];
 assert.ok(font,"Requiere el build con la fuente real");
 const out=resolve(process.argv[2]??resolve(root,".next/comanda-preview"));mkdirSync(out,{recursive:true});
 function fixture(query){
@@ -28,7 +28,7 @@ function fixture(query){
 const server=createServer((req,res)=>{
  if(req.url==="/font.woff2"){res.setHeader("content-type","font/woff2");res.end(readFileSync(resolve(root,".next/static/media",font)));return;}
  const url=new URL(req.url,"http://localhost");res.setHeader("content-type","text/html; charset=utf-8");
- res.end(`<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width, initial-scale=1"><style>${css}@font-face{font-family:Manrope;font-weight:200 800;src:url(/font.woff2)}:root{--font-manrope:Manrope}</style></head><body>${fixture(url.searchParams)}</body></html>`);
+ res.end(`<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width, initial-scale=1"><style>${css}@font-face{font-family:Plus Jakarta Sans;font-weight:200 800;src:url(/font.woff2)}:root{--font-jakarta:"Plus Jakarta Sans"}</style></head><body>${fixture(url.searchParams)}</body></html>`);
 });
 await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
 const {chromium}=require(process.env.FOODS_PLAYWRIGHT_PATH??"playwright");let browser;

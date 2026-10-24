@@ -2,7 +2,8 @@
 import "./manual-order.css";
 import {useEffect,useRef,useState,type FormEvent} from "react";
 import {useForm,useWatch} from "react-hook-form";
-import {Button,ConfirmDialog,Dialog,FormField,Input,Select,ModalHeader,ModalFooter} from "@/design-system";
+import {Button,ChoiceGroup,ConfirmDialog,Dialog,FormField,FormSection,Input,ModalHeader,ModalFooter} from "@/design-system";
+import {channelIcons} from "./order-meta";
 import {useFeedback} from "@/providers/feedback-provider";
 import type {Draft} from "../../salon/domain/types";
 import {ComandaView} from "./comanda-view";
@@ -47,15 +48,20 @@ export function ManualOrderDialog({channels,currencySymbol,busy,onClose,onSave}:
     <ModalHeader title="Datos del pedido" titleId="manual-order-title" icon="truck" onClose={()=>close()} busy={locked}/>
     <form className="modal-form manual-order-form" onSubmit={continueOrder}>
      <div className="manual-order-body">
-      <fieldset className="manual-order-fields" disabled={locked}>
-       <FormField className="manual-order-wide" label="Tipo de atención" error={errors.channel?.message}><Select {...register("channel")} data-dialog-initial-focus>{channelOptions.map(option=><option value={option.value} key={option.value}>{option.label}</option>)}</Select></FormField>
-       <FormField label="Cliente" optional={!delivery} error={errors.customerName?.message}><Input {...register("customerName")} autoComplete="name" maxLength={160}/></FormField>
-       <FormField label="Teléfono" optional={!delivery} error={errors.customerPhone?.message}><Input {...register("customerPhone")} type="tel" autoComplete="tel" maxLength={30}/></FormField>
-       {delivery&&<>
-        <FormField className="manual-order-wide" label="Dirección de entrega" error={errors.address?.message}><Input {...register("address")} autoComplete="street-address" maxLength={240}/></FormField>
-        <FormField label="Referencia de entrega" optional error={errors.reference?.message}><Input {...register("reference")} maxLength={240}/></FormField>
-        <FormField label="Costo de envío" error={errors.deliveryFee?.message}><Input {...register("deliveryFee")} type="number" inputMode="decimal" min="0" step="0.01" aria-label={`Costo de envío en ${currencySymbol}`}/></FormField>
-       </>}
+      <fieldset className="manual-order-fields form-sections-flow" disabled={locked}>
+       <FormSection icon="orders" title="Tipo de atención">
+        <ChoiceGroup label="Tipo de atención" initialFocus options={channelOptions.map(option=>({...option,icon:channelIcons[option.value]??"receipt"}))} {...register("channel")}/>
+        {errors.channel?.message&&<small className="field-error span-2" role="alert">{errors.channel.message}</small>}
+       </FormSection>
+       <FormSection icon="user" tone="teal" title="Cliente">
+        <FormField label="Cliente" optional={!delivery} error={errors.customerName?.message}><Input {...register("customerName")} autoComplete="name" maxLength={160}/></FormField>
+        <FormField label="Teléfono" optional={!delivery} error={errors.customerPhone?.message}><Input icon="phone" {...register("customerPhone")} type="tel" autoComplete="tel" maxLength={30}/></FormField>
+       </FormSection>
+       {delivery&&<FormSection icon="truck" tone="peach" title="Entrega">
+        <FormField className="span-2" label="Dirección de entrega" error={errors.address?.message}><Input icon="mapPin" {...register("address")} autoComplete="street-address" maxLength={240}/></FormField>
+        <FormField label="Referencia de entrega" optional error={errors.reference?.message}><Input icon="note" {...register("reference")} maxLength={240}/></FormField>
+        <FormField label="Costo de envío" error={errors.deliveryFee?.message}><Input icon="cash" {...register("deliveryFee")} type="number" inputMode="decimal" min="0" step="0.01" aria-label={`Costo de envío en ${currencySymbol}`}/></FormField>
+       </FormSection>}
       </fieldset>
      </div>
      <ModalFooter className="manual-order-actions"><Button action="cancel" disabled={locked} onClick={()=>close()}>Cancelar</Button><Button type="submit" action="continue" disabled={locked||!channelOptions.length}>Continuar</Button></ModalFooter>

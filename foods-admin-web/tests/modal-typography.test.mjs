@@ -27,14 +27,15 @@ test("un único dueño define etiquetas 600, valores 400 y secciones 700 en moda
  assert.equal(declarations(shared.find(rule=>rule.selector===".crud-modal h3"))["font-size"],"var(--font-size-md)");
  // Títulos de sección del cuerpo (pedido, venta, cobro): un único dueño en modal.css.
  const sectionTitle=declarations(shared.find(rule=>rule.selector===".crud-modal .modal-section-title"));
- assert.equal(sectionTitle["text-transform"],"uppercase");
- assert.equal(sectionTitle["letter-spacing"],"var(--letter-spacing-caps)");
- assert.equal(sectionTitle.color,"var(--ink-800)");
- assert.equal(declarations(shared.find(rule=>rule.selector===".modal-section-rule"))["border-bottom"],"var(--stroke-2) solid var(--primary-200)");
+ assert.equal(sectionTitle["text-transform"],undefined,"caja normal, como la referencia aprobada");
+ assert.equal(sectionTitle["letter-spacing"],undefined);
+ assert.equal(sectionTitle.color,"var(--ink-950)");
+ assert.equal(sectionTitle["font-size"],"var(--font-size-md)");
+ assert.equal(declarations(shared.find(rule=>rule.selector===".modal-section-rule"))["border-bottom"],"var(--stroke-1) solid var(--line)");
  for(const [file,selector] of [["modules/operations/orders/presentation/order-detail.css",".order-detail-section-head h3"],["modules/sales/presentation/sales.css",".sales-detail-section h3"],["modules/operations/pos/presentation/pos.css",".pos-detail-section h3"]]){
   assert.equal(rules(file).some(rule=>rule.selector===selector),false,`${file}: la tipografía de sección no se redefine por pantalla`);
  }
- assert.equal(declarations(rules("modules/sales/presentation/sales.css").find(rule=>rule.selector===".sales-detail-payments p"))["font-size"],"var(--font-size-label)");
+ assert.equal(declarations(rules("modules/sales/presentation/sales.css").find(rule=>rule.selector===".sales-detail-notes p"))["font-size"],"var(--font-size-label)");
  // Las notas de producto pertenecen a la línea compartida de modal.css.
  assert.equal(declarations(shared.find(rule=>rule.selector===".modal-item-note"))["font-size"],"var(--font-size-label)");
 });

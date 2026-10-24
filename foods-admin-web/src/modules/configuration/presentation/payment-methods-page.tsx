@@ -5,7 +5,7 @@ import "./payment-methods.css";
 import {useState} from "react";
 import {useForm} from "react-hook-form";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,EmptyState,ErrorState,FormField,Input,PageHeader,Pagination,RowActionButton,SearchField,Select,Status,TableSkeleton,Textarea,ModalHeader,ModalFooter} from "@/design-system";
+import {Button,EmptyState,ErrorState,FormField,Input,PageHeader,Pagination,RowActionButton,SearchField,Select,Status,TableSkeleton,Textarea,ModalHeader,ModalFooter,FormSection} from "@/design-system";
 import {ConfirmDialog} from "@/design-system/confirm-dialog";
 import {Icon} from "@/design-system/icons";
 import {useFeedback} from "@/providers/feedback-provider";
@@ -23,7 +23,7 @@ const blank:PaymentMethodDraft={
  affectsCash:false,
  sortOrder:100,
 };
-const columns=["MEDIO","VENTAS","GASTOS","CAJA","ORDEN","ESTADO","ACCIONES"];
+const columns=["Medio","Ventas","Gastos","Caja","Orden","Estado","Acciones"];
 
 export function PaymentMethodsPage(){
  const{can}=useSession();
@@ -57,7 +57,7 @@ export function PaymentMethodsPage(){
   <section className="panel management standardized-management payment-methods-panel">
    <div className="toolbar">
     <SearchField value={q} onChange={e=>{setQ(e.target.value);setPage(1)}} placeholder="Buscar por nombre, código o descripción..." label="Buscar medios de pago"/>
-    <Select aria-label="Filtrar por estado" value={status} onChange={e=>{setStatus(e.target.value);setPage(1)}}>
+    <Select chip aria-label="Filtrar por estado" value={status} onChange={e=>{setStatus(e.target.value);setPage(1)}}>
      <option value="">Todos los estados</option>
      <option value="active">Activos</option>
      <option value="inactive">Inactivos</option>
@@ -81,19 +81,19 @@ function PaymentMethodDialog({value:initial,editing,busy,close,save}:{value:Paym
  const{register,handleSubmit,setValue,formState:{errors}}=useForm<PaymentMethodDraft>({defaultValues:initial,resolver:paymentMethodResolver,mode:"onSubmit",reValidateMode:"onChange"});
  const submit=handleSubmit(value=>save({...value,code:value.code.trim().toLowerCase(),name:value.name.trim(),description:value.description.trim(),sortOrder:Number(value.sortOrder)}));
  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal payment-method-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="payment-method-title">
-  <ModalHeader title="Configuración del medio de pago" titleId="payment-method-title" icon="payment" subtitle={editing?"EDITAR MEDIO":"NUEVO MEDIO"} onClose={close} busy={busy} closeLabel="Cerrar"/>
+  <ModalHeader title="Configuración del medio de pago" titleId="payment-method-title" icon="payment" subtitle={editing?"Editar medio":"Nuevo medio"} onClose={close} busy={busy} closeLabel="Cerrar"/>
   <form onSubmit={submit} noValidate><div className="payment-method-form-body">
-   <div className="form-grid">
+   <FormSection icon="payment" title="Datos del medio de pago" bare><div className="form-grid">
     <FormField label="Código interno" help={editing?"El código no se puede cambiar.":"Minúsculas, números, guion o guion bajo."} error={errors.code?.message}><Input readOnly={editing} maxLength={40} {...register("code",{onChange:e=>setValue("code",e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g,""))})} placeholder="ej. voucher"/></FormField>
     <FormField label="Orden" help="Menor número aparece primero." error={errors.sortOrder?.message}><Input type="number" inputMode="numeric" min={0} max={9999} {...register("sortOrder")}/></FormField>
     <FormField className="span-2" label="Nombre" error={errors.name?.message}><Input maxLength={80} {...register("name")} placeholder="Ej. Vale corporativo"/></FormField>
     <FormField className="span-2" label="Descripción" optional error={errors.description?.message}><Textarea maxLength={180} rows={3} {...register("description")} placeholder="Describe cuándo debe utilizarse este medio."/></FormField>
-   </div>
-   <div className="payment-method-toggle-grid">
+   </div></FormSection>
+   <FormSection icon="layers" tone="digital" title="Dónde se usa" bare><div className="payment-method-toggle-grid">
     <label className="payment-method-toggle"><input type="checkbox" {...register("salesEnabled")}/><span><b>Ventas</b><small>Disponible al cobrar pedidos.</small></span></label>
     <label className="payment-method-toggle"><input type="checkbox" {...register("expensesEnabled")}/><span><b>Gastos</b><small>Disponible al registrar gastos.</small></span></label>
     <label className="payment-method-toggle"><input type="checkbox" {...register("affectsCash")}/><span><b>Impacta Caja</b><small>Se considera movimiento físico de efectivo en cobros y devoluciones.</small></span></label>
-   </div>
+   </div></FormSection>
    {errors.salesEnabled?.message&&<div className="payment-method-warning" role="alert">{errors.salesEnabled.message}</div>}
   </div><ModalFooter><Button kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" icon="check" disabled={busy} loading={busy}>{busy?"Guardando…":"Guardar"}</Button></ModalFooter></form>
  </Dialog></div>

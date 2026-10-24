@@ -12,8 +12,8 @@ const sourceCss=["styles/variables.css","styles/globals.css","design-system/styl
 const fontCss=readdirSync(resolve(root,".next/static/css")).filter(name=>name.endsWith(".css")).map(name=>readFileSync(resolve(root,".next/static/css",name),"utf8")).join("\n");
 const css=process.env.FOODS_PREVIEW_COMPILED_CSS==="1"?fontCss:sourceCss;
 if(process.env.FOODS_PREVIEW_COMPILED_CSS==="1")assert.ok(css.includes(".modal-item-list")&&css.includes(".modal-detail-notes")&&!css.includes(".modal-item-columns"),"El build debe incluir la lista simple y las notas de la referencia elegida.");
-const font=fontCss.match(/@font-face\{[^}]*font-family:Manrope;[^}]*unicode-range:u\+00\?\?[^}]*\}/)?.[0]?.match(/media\/([^/)]+\.woff2)/)?.[1];
-assert.ok(font,"Un build previo debe aportar la fuente Manrope real.");
+const font=fontCss.match(/@font-face\{[^}]*font-family:Plus Jakarta Sans;[^}]*unicode-range:u\+00\?\?[^}]*\}/)?.[0]?.match(/media\/([^/)]+\.woff2)/)?.[1];
+assert.ok(font,"Un build previo debe aportar la fuente Plus Jakarta Sans real.");
 const output=resolve(process.argv[2]??resolve(root,".next/order-modal-preview"));mkdirSync(output,{recursive:true});
 const server=createServer((req,res)=>{
  if(req.url==="/font.woff2"){res.setHeader("content-type","font/woff2");res.end(readFileSync(resolve(root,".next/static/media",font)));return;}
@@ -30,7 +30,7 @@ const server=createServer((req,res)=>{
  if(account==="completed")order={...order,completedAt:"2026-10-10T13:00:00-05:00"};
  if(account==="awaiting")order={...order,billClosedAt:"2026-10-10T13:00:00-05:00",accountState:"awaiting_payment"};
  res.setHeader("content-type","text/html; charset=utf-8");
- res.end(`<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><style>@font-face{font-family:Manrope;font-weight:200 800;src:url(/font.woff2)}:root{--font-manrope:Manrope}${css}</style></head><body><main style="padding:24px"><h1>Pedidos</h1><p>Vista de comprobación; datos ilustrativos, sin operaciones reales.</p></main>${renderDetail({order,userId:url.searchParams.has("readonly")?"another-waiter":undefined,skeleton:url.searchParams.has("skeleton"),editable:url.searchParams.has("editable"),error:url.searchParams.has("error")?"Error de prueba":undefined})}</body></html>`);
+ res.end(`<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><style>@font-face{font-family:Plus Jakarta Sans;font-weight:200 800;src:url(/font.woff2)}:root{--font-jakarta:"Plus Jakarta Sans"}${css}</style></head><body><main style="padding:24px"><h1>Pedidos</h1><p>Vista de comprobación; datos ilustrativos, sin operaciones reales.</p></main>${renderDetail({order,userId:url.searchParams.has("readonly")?"another-waiter":undefined,skeleton:url.searchParams.has("skeleton"),editable:url.searchParams.has("editable"),error:url.searchParams.has("error")?"Error de prueba":undefined})}</body></html>`);
 });
 await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
 const {chromium}=require(process.env.FOODS_PLAYWRIGHT_PATH??"playwright");

@@ -94,14 +94,14 @@ function SalesPeriodSummary({period,range,loading,error,count,amount,money,day}:
 function SalesResults({items,money,date,view}:{items:Sale[];money:(value:string|number)=>string;date:(value:string)=>string;view:(id:string)=>void}){
   const action=(sale:Sale)=><div className="standard-actions"><RowActionButton action="view" label={`Ver detalle de la venta ${sale.code}`} onClick={()=>view(sale.id)}/></div>;
   return <>
-    <DataTable label="Historial de ventas" className="sales-table" containerClassName="hover-scroll sales-table-wrap"><thead><tr><th>PEDIDO</th><th>CLIENTE / MESA</th><th>CANAL</th><th>MEDIO DE PAGO</th><th>FECHA</th><th>TOTAL</th><th>ESTADO</th><th>ACCIONES</th></tr></thead><tbody>{items.map((sale,i)=><tr className={i%2?"alternate":""} key={sale.id}><td><span className="row-icon"><Icon name="receipt"/></span><b>{sale.code}</b></td><td><b>{sale.tableName||sale.customerName||"Venta directa"}</b>{sale.customerName&&sale.tableName?<small>{sale.customerName}</small>:null}</td><td>{channelLabel[sale.channel]??sale.channel}</td><td><span className="sales-payment-methods">{paymentMethodsLabel(sale)}</span></td><td>{date(sale.createdAt)}</td><td><b>{money(sale.total)}</b></td><td><Status tone="green">Pagada</Status></td><td>{action(sale)}</td></tr>)}</tbody></DataTable>
+    <DataTable label="Historial de ventas" className="sales-table" containerClassName="hover-scroll sales-table-wrap"><thead><tr><th>Pedido</th><th>Cliente / mesa</th><th>Canal</th><th>Medio de pago</th><th>Fecha</th><th>Total</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>{items.map((sale,i)=><tr className={i%2?"alternate":""} key={sale.id}><td><span className="row-icon"><Icon name="receipt"/></span><b>{sale.code}</b></td><td><b>{sale.tableName||sale.customerName||"Venta directa"}</b>{sale.customerName&&sale.tableName?<small>{sale.customerName}</small>:null}</td><td>{channelLabel[sale.channel]??sale.channel}</td><td><span className="sales-payment-methods">{paymentMethodsLabel(sale)}</span></td><td>{date(sale.createdAt)}</td><td><b>{money(sale.total)}</b></td><td><Status tone="green">Pagada</Status></td><td>{action(sale)}</td></tr>)}</tbody></DataTable>
   </>;
 }
 
 function SalesTableSkeleton(){
   return <div aria-label="Cargando ventas" aria-busy="true"><div className="table-wrap hover-scroll sales-table-wrap">
     <table>
-      <thead><tr><th>PEDIDO</th><th>CLIENTE / MESA</th><th>CANAL</th><th>MEDIO DE PAGO</th><th>FECHA</th><th>TOTAL</th><th>ESTADO</th><th>ACCIONES</th></tr></thead>
+      <thead><tr><th>Pedido</th><th>Cliente / mesa</th><th>Canal</th><th>Medio de pago</th><th>Fecha</th><th>Total</th><th>Estado</th><th>Acciones</th></tr></thead>
       <tbody>{Array.from({length:6},(_,index)=><tr className={`sales-skeleton${index%2?" alternate":""}`} key={index}>
         <td><div className="sales-skeleton-name"><span/><div><b/><i/></div></div></td>
         <td><div className="sales-skeleton-customer"><b/><i/></div></td>

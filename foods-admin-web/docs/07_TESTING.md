@@ -164,7 +164,7 @@ consulta de historial sin permiso de escritura.
 
 Después de `npm run build`, ejecutar desde `foods-admin-web`
 `node tests/helpers/availability-page-preview.mjs .next/availability-page-preview`.
-El helper renderiza el componente real y las primitivas compartidas con Manrope
+El helper renderiza el componente real y las primitivas compartidas con Plus Jakarta Sans
 y CSS compilado del build. Sustituye las consultas por datos ilustrativos
 aislados; no consulta ni modifica datos de restaurantes. Usa Playwright y las
 variables opcionales `FOODS_PLAYWRIGHT_PATH`/`FOODS_BROWSER_PATH` para las rutas
@@ -360,7 +360,7 @@ La cabecera llega al borde superior y ocupa todo el ancho del modal, sin franja
 degradada ni elementos decorativos anteriores.
 
 La comprobación visual aislada `tests/helpers/shared-ui-preview.mjs` renderiza las
-primitivas React reales con sus CSS y Manrope del build, usando datos ilustrativos.
+primitivas React reales con sus CSS y Plus Jakarta Sans del build, usando datos ilustrativos.
 No consulta ni modifica datos de restaurantes. Con Playwright disponible y, si
 hace falta, `FOODS_PLAYWRIGHT_PATH`/`FOODS_BROWSER_PATH` apuntando a sus instalaciones
 locales, ejecutar `node tests/helpers/shared-ui-preview.mjs .next/shared-ui-preview`.
@@ -399,7 +399,7 @@ su contraste mínimo 4.5:1 y su correspondencia con la
 Después de `npm run build`, ejecutar
 `node tests/helpers/order-modal-preview.mjs .next/order-modal-preview` para
 generar capturas y `geometry.json` del componente real con datos ilustrativos,
-Manrope del build y CSS fuente de los mismos componentes. Para comprobar también
+Plus Jakarta Sans del build y CSS fuente de los mismos componentes. Para comprobar también
 interacciones con los estilos compilados, definir `FOODS_PREVIEW_COMPILED_CSS=1`:
 ambos helpers cargarán conjuntamente los CSS del build. Es una comprobación aislada
 de composición, no una captura de una ruta autenticada ni garantía del orden de navegación.
@@ -514,3 +514,22 @@ Dashboard, Punto de venta, Salón, Pedidos y Menús y combos (incluido el buscad
 diferido «Agregar opción») en escritorio y, con el iframe de 427 × 933 y 390 px,
 en móvil. Los sondeos de 10 s de Salón, Cocina y del saldo del catálogo se
 mantienen: son comportamiento aprobado y tienen pruebas propias.
+
+`order-timeline.test.mjs` verifica el seguimiento del pedido: hitos de salón y delivery, solo horas reales del backend (alta, cierre de cuenta, cierre de la atención), pago sin hora inventada y corte en pedidos cancelados.
+`modal-redesign.test.mjs` verifica que Productos, Detalles y Seguimiento compartan
+la sangría interior (16 px en escritorio, 12 px en móvil), sin cambiar las pestañas
+redondeadas, la superficie o las acciones del modal.
+
+`sales-detail.test.mjs` verifica además el agrupado identidad/atención y
+pestañas/panel (pastillas compartidas y superficie común, sin tarjeta independiente),
+radio original del contenedor (14 px), pista y selección con `radius-pill` compartido,
+sangría interior de los paneles,
+filas alineadas de «Detalles», reloj junto a la fecha, «Mesa» sin duplicar su prefijo,
+conservación simultánea de cliente y mozo, etiquetas de ancho natural en escritorio,
+tres pestañas visibles en móvil y cantidad con el mismo fondo oscuro y
+texto blanco que el icono de pagos. La comprobación en navegador mantiene los
+productos, pagos y detalles accesibles, resumen fijo y acción secundaria a
+ancho completo en móvil de 390 px.
+Para la regresión del pie de Ventas, verificar además anchos de 375, 412, 480 y
+600 px y una altura de 400 px: el modal se acota al overlay y reserva filas para
+resumen y acciones. Comprobar el límite inferior del botón, no solo su presencia en el DOM.

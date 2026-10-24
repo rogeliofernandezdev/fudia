@@ -1,114 +1,52 @@
-import type { ReactNode } from "react";
-export type IconName = "info"|"grid"|"sales"|"receipt"|"menu"|"utensils"|"chefHat"|"cookingPot"|"kitchen"|"combo"|"stock"|"truck"|"users"|"store"|"settings"|"search"|"bell"|"plus"|"minus"|"chevron"|"chevronLeft"|"filter"|"download"|"upload"|"alert"|"check"|"clock"|"box"|"logout"|"eye"|"lock"|"mail"|"edit"|"power"|"toggleOn"|"toggleOff"|"circleCheck"|"circleMinus"|"circleSlash"|"save"|"refresh"|"close"|"panelCollapse"|"panelExpand"|"qr"|"share"|"trash"|"arrowRightCircle"|"payment"|"cancel"|"availability"|"ledger"|"building"|"contract"|"mapPin"|"userCheck"|"register"|"orders"|"tables"|"layout"|"cash"|"calendar"|"phone"|"kiosk"|"gauge"|"cart"|"route"|"link"|"bike"|"user"|"heart"|"star"|"badge"|"tag"|"wallet"|"pie"|"phoneApp"|"percent"|"layers"|"plug"|"chat"|"login"|"key"|"lightbulb"|"undo"|"transfer"|"invoice"|"dish"|"note"|"send"|"shoppingBag"|"salad"|"dessert"|"drink";
+import {
+  IconAlertTriangle, IconArmchair, IconArrowBackUp, IconArrowsExchange, IconBan, IconBell, IconBike,
+  IconBowlSpoon, IconBox, IconBuilding, IconBuildingStore, IconBulb, IconCalendar, IconCash, IconCashRegister, IconChartBar,
+  IconChartPie, IconCheck, IconChefHat, IconChevronLeft, IconChevronRight, IconCircleArrowRight, IconCircleCheck,
+  IconCircleMinus, IconCircleX, IconClipboardCheck, IconClipboardList, IconClock, IconContract, IconCreditCard, IconCup,
+  IconDeviceDesktop, IconDeviceFloppy, IconDeviceMobile, IconDownload, IconEye, IconFileInvoice, IconFilter, IconGauge,
+  IconHeart, IconIceCream2, IconId, IconInfoCircle, IconKey, IconLayout, IconLayoutBoardSplit, IconLayoutGrid,
+  IconLayoutSidebarLeftCollapse, IconLayoutSidebarLeftExpand, IconLink, IconLock, IconLogin, IconLogout, IconMail,
+  IconMapPin, IconMenu2, IconMessageCircle, IconMinus, IconNote, IconNotebook, IconPackages, IconPencil, IconPercentage,
+  IconPhone, IconPlug, IconPlus, IconPower, IconQrcode, IconReceipt, IconRefresh, IconRoute, IconSalad, IconSearch,
+  IconSend, IconSettings, IconShare, IconShoppingBag, IconShoppingCart, IconSoup, IconStack2, IconStar, IconTag,
+  IconToggleLeftFilled, IconToggleRightFilled, IconToolsKitchen2, IconTrash, IconTruck, IconUpload, IconUser, IconUserCheck,
+  IconUsers, IconWallet, IconX, IconArrowUpRight, IconFlame, IconChecks, IconMotorbike, type Icon as TablerIcon,
+} from "@tabler/icons-react";
+
+export type IconName = "info"|"grid"|"sales"|"receipt"|"menu"|"utensils"|"chefHat"|"cookingPot"|"kitchen"|"combo"|"stock"|"truck"|"users"|"store"|"settings"|"search"|"bell"|"plus"|"minus"|"chevron"|"chevronLeft"|"filter"|"download"|"upload"|"alert"|"check"|"clock"|"box"|"logout"|"eye"|"lock"|"mail"|"edit"|"power"|"toggleOn"|"toggleOff"|"circleCheck"|"circleMinus"|"circleSlash"|"save"|"refresh"|"close"|"panelCollapse"|"panelExpand"|"qr"|"share"|"trash"|"arrowRightCircle"|"payment"|"cancel"|"availability"|"ledger"|"building"|"contract"|"mapPin"|"userCheck"|"register"|"orders"|"tables"|"layout"|"cash"|"calendar"|"phone"|"kiosk"|"gauge"|"cart"|"route"|"link"|"bike"|"user"|"heart"|"star"|"badge"|"tag"|"wallet"|"pie"|"phoneApp"|"percent"|"layers"|"plug"|"chat"|"login"|"key"|"lightbulb"|"undo"|"transfer"|"invoice"|"dish"|"note"|"send"|"shoppingBag"|"salad"|"dessert"|"drink"|"arrowUpRight"|"flame"|"checks"|"motorbike";
 /** Tamaños homologados: 14 junto a texto de 12–13 px, 16 en chips y pestañas, 18 en acciones, 20 en navegación, 24 en estados vacíos. */
 export type IconSize=14|16|18|20|24|28|32|36|40|48;
 
 /**
- * Capas del duotono. `B` es la silueta cerrada que se rellena con un tinte
- * cuando el icono está activo; `A` es el detalle de acento (trazo) y `D` el
- * detalle de acento sólido. Sin contexto de acento ambas capas heredan
- * `currentColor`, por lo que el icono se ve monocromo sobre fondos de color y
- * en estados semánticos. Los glifos de estado y de interfaz (alerta, check,
- * chevrons, cierre, más/menos, menú) no llevan acento.
+ * Set único del sistema, dibujado con Tabler Icons (MIT): retícula de 24 px,
+ * trazo de 1.75 y extremos redondeados en todos los glifos. Los iconos son
+ * monocromos y heredan `currentColor`; el color de identidad lo aporta
+ * `IconTile`, nunca el propio trazo. Las pantallas usan solo los nombres de
+ * `IconName`, de modo que cambiar un glifo se hace únicamente aquí.
  */
-const B={className:"icon-body"} as const;
-const A={className:"icon-accent"} as const;
-const D={className:"icon-dot"} as const;
-
-const paths: Record<IconName, ReactNode> = {
-  shoppingBag:<><path {...B} d="M6.2 7h11.6a1 1 0 0 1 1 .9l1 12a1 1 0 0 1-1 1.1H5.2a1 1 0 0 1-1-1.1l1-12a1 1 0 0 1 1-.9z"/><path {...A} d="M9 10V6a3 3 0 0 1 6 0v4"/></>,
-  send:<><path {...B} d="m22 2-7 20-4-9-9-4Z"/><path {...A} d="M22 2 11 13"/></>,
-  info:<><circle {...B} cx="12" cy="12" r="9"/><path {...A} d="M12 11v6"/><circle {...D} cx="12" cy="7.5" r="1.1"/></>,
-  toggleOn:<><rect x="2" y="6" width="20" height="12" rx="6" fill="currentColor"/><circle cx="16" cy="12" r="4" fill="var(--surface)" stroke="none"/></>,
-  toggleOff:<><rect x="2" y="6" width="20" height="12" rx="6" fill="currentColor" fillOpacity=".12"/><circle cx="8" cy="12" r="4" fill="currentColor" stroke="none"/></>,
-  circleCheck:<><circle {...B} cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/></>,
-  circleMinus:<><circle {...B} cx="12" cy="12" r="9"/><path d="M8 12h8"/></>,
-  circleSlash:<><circle {...B} cx="12" cy="12" r="9"/><path d="m5.6 5.6 12.8 12.8"/></>,
-  grid:<><rect {...B} x="4" y="4" width="6.5" height="6.5" rx="2"/><rect {...B} x="4" y="13.5" width="6.5" height="6.5" rx="2"/><rect {...B} x="13.5" y="13.5" width="6.5" height="6.5" rx="2"/><rect {...A} x="13.5" y="4" width="6.5" height="6.5" rx="3.25"/></>,
-  sales:<><path d="M3 21h18M6 17v-6M12 17V5"/><path {...A} d="M18 17v-3"/></>,
-  receipt:<><path {...B} d="M6 4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17l-3-2-3 2-3-2-3 2z"/><path {...A} d="M9.5 8h5m-5 4h5"/></>,
-  menu:<path d="M4 7h16M4 12h16M4 17h16"/>,
-  utensils:<><path d="M7 3v7m-3-7v4a3 3 0 0 0 6 0V3M7 10v11"/><path {...A} d="M16 21V3c3 2 4 5 4 8h-4"/></>,
-  chefHat:<><path {...B} d="M7 14.5a4 4 0 0 1-.5-7.9 5.5 5.5 0 0 1 11 0 4 4 0 0 1-.5 7.9V20a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1z"/><path {...A} d="M7 17.5h10"/></>,
-  cookingPot:<><path {...B} d="M5 10h14l-.8 8.2a2 2 0 0 1-2 1.8H7.8a2 2 0 0 1-2-1.8z"/><path d="M3 10h18M3 13h2m14 0h2"/><path {...A} d="M9 6.5c1-1 1-2 0-3M12 6.5c1-1 1-2 0-3M15 6.5c1-1 1-2 0-3"/></>,
-  kitchen:<><path {...B} d="M5 17a7 7 0 0 1 14 0z"/><path d="M3 21h18"/><path {...A} d="M12 10V8m-2 0h4"/></>,
-  combo:<><rect {...B} x="3" y="4" width="18" height="16" rx="3"/><path d="M3 11h18"/><path {...A} d="M12 11v9"/></>,
-  stock:<><path {...B} d="M4 8v8l8 4 8-4V8l-8-4z"/><path d="m4 8 8 4 8-4M12 12v8"/><path {...A} d="m8 6 8 4v3"/></>,
-  truck:<><path {...B} d="M3 7a1 1 0 0 1 1-1h10v11H3z"/><path d="M14 10h4l3 3v4h-7"/><circle {...A} cx="7" cy="18" r="2"/><circle {...A} cx="18" cy="18" r="2"/></>,
-  users:<><circle cx="9" cy="8" r="3"/><path d="M3 20c0-4 2-7 6-7s6 3 6 7"/><circle {...A} cx="17" cy="9" r="2.5"/><path {...A} d="M16.5 13c3 0 5 2.4 5 6"/></>,
-  store:<><path {...B} d="M4 10h16v10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M3 10 5 4.7a1 1 0 0 1 1-.7h12a1 1 0 0 1 1 .7L21 10z"/><path {...A} d="M9.5 21v-4.5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1V21"/></>,
-  settings:<><path {...B} d="M19 13v-2l2-2-2-4-3 1-2-1V2h-4v3L8 6 5 5 3 9l2 2v2l-2 2 2 4 3-1 2 1v3h4v-3l2-1 3 1 2-4z"/><circle {...A} cx="12" cy="12" r="3"/></>,
-  search:<><circle {...B} cx="11" cy="11" r="7"/><path {...A} d="m20 20-4-4"/></>,
-  bell:<><path {...B} d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9z"/><path {...A} d="M10 21h4"/></>,
-  plus:<path d="M12 5v14M5 12h14"/>,
-  minus:<path d="M5 12h14"/>,
-  chevron:<path d="m9 18 6-6-6-6"/>,
-  chevronLeft:<path d="m15 18-6-6 6-6"/>,
-  filter:<><path {...B} d="M4 5h16l-6 7v6l-4 2v-8z"/></>,
-  download:<><path d="M4 20h16"/><path {...A} d="M12 3v12m-4-4 4 4 4-4"/></>,
-  upload:<><path d="M4 20h16"/><path {...A} d="M12 15V3M8 7l4-4 4 4"/></>,
-  alert:<><path d="m12 3 10 18H2zM12 9v5m0 3h.01"/></>,
-  check:<path d="m5 12 4 4L19 6"/>,
-  clock:<><circle {...B} cx="12" cy="12" r="9"/><path {...A} d="M12 7v5l3 2"/></>,
-  box:<><rect {...B} x="4" y="4" width="16" height="16" rx="3"/><path {...A} d="M8 9h8m-8 4h5"/></>,
-  logout:<><path d="M10 5H6a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h4"/><path {...A} d="m14 8 4 4-4 4m4-4H9"/></>,
-  eye:<><path {...B} d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle {...D} cx="12" cy="12" r="2.5"/></>,
-  lock:<><rect {...B} x="4" y="10" width="16" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><path {...A} d="M12 14.5v2"/></>,
-  mail:<><rect {...B} x="3" y="5" width="18" height="14" rx="2.5"/><path {...A} d="m3.5 7.5 8.5 5.5 8.5-5.5"/></>,
-  edit:<><path {...B} d="M4 20h4L19 9l-4-4L4 16z"/><path {...A} d="m13.5 6.5 4 4"/></>,
-  power:<><path d="M17.7 5.3a9 9 0 1 1-11.4 0"/><path {...A} d="M12 3v9"/></>,
-  save:<><path {...B} d="M5 4a1 1 0 0 1 1-1h11l2 2v15a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1z"/><path d="M8 21v-6a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v6"/><path {...A} d="M8 3v4h7"/></>,
-  refresh:<><path d="M20 6v5h-5M4 18v-5h5M6.1 8A7 7 0 0 1 18 6l2 5M4 13l2 5a7 7 0 0 0 11.9-2"/></>,
-  close:<path d="M6 6l12 12M18 6 6 18"/>,
-  panelCollapse:<><rect {...B} x="3" y="4" width="18" height="16" rx="2.5"/><path d="M9 4v16"/><path {...A} d="m15 10-2 2 2 2"/></>,
-  panelExpand:<><rect {...B} x="3" y="4" width="18" height="16" rx="2.5"/><path d="M9 4v16"/><path {...A} d="m13 10 2 2-2 2"/></>,
-  qr:<><rect {...B} x="3" y="3" width="7" height="7" rx="1.5"/><rect {...B} x="14" y="3" width="7" height="7" rx="1.5"/><rect {...B} x="3" y="14" width="7" height="7" rx="1.5"/><path {...A} d="M14 14h3v3h-3zM18 18h3v3h-3z"/></>,
-  share:<><circle cx="18" cy="5" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/><circle {...A} cx="6" cy="12" r="3"/></>,
-  trash:<><path {...B} d="m7 7 1 13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-13z"/><path d="M4 7h16M9 7V4h6v3"/><path {...A} d="M10.5 11v6m3-6v6"/></>,
-  arrowRightCircle:<><circle {...B} cx="12" cy="12" r="9"/><path {...A} d="M8 12h8m-3-3 3 3-3 3"/></>,
-  payment:<><rect {...B} x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3 9.5h18"/><path {...A} d="M7 15h4"/></>,
-  cancel:<><circle {...B} cx="12" cy="12" r="9"/><path d="m9 9 6 6m0-6-6 6"/></>,
-  availability:<><path d="M4 17h12M6 17a6 6 0 0 1 10.7-3.7M3 21h14"/><path {...A} d="M12 8v3m-2-3h4m2 0 2 2 4-5"/></>,
-  ledger:<><path {...B} d="M5 4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1z"/><path d="M8.5 7h7M8.5 11h2.5M8.5 15h7"/><path {...A} d="m14 11 1.5 1.5 3-3"/></>,
-  building:<><path {...B} d="M4 21V5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v16z"/><path d="M15 9h4a1 1 0 0 1 1 1v11M2 21h20"/><path {...A} d="M8 8h3m-3 4h3m-3 4h3"/></>,
-  contract:<><path {...B} d="M6 4a1 1 0 0 1 1-1h8l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1z"/><path d="M15 3v4h4M9 11h6"/><path {...A} d="M9 16c1-2 2-2 3 0s2 2 3 0"/></>,
-  mapPin:<><path {...B} d="M12 21s7-6 7-11a7 7 0 0 0-14 0c0 5 7 11 7 11z"/><circle {...D} cx="12" cy="10" r="2.5"/></>,
-  userCheck:<><circle cx="10" cy="8" r="4"/><path d="M3 21a7 7 0 0 1 12-5"/><path {...A} d="m16 18 2 2 4-4"/></>,
-  register:<><rect {...B} x="3" y="10" width="18" height="10" rx="2.5"/><path d="M7 10V6a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v4"/><path {...A} d="M7 15h3m4 0h3"/></>,
-  orders:<><rect {...B} x="5" y="4" width="14" height="17" rx="2.5"/><path d="M9 4V2.5h6V4"/><path {...A} d="M9 10h6M9 14h6M9 18h3"/></>,
-  tables:<><rect {...B} x="3" y="7" width="18" height="4" rx="1.5"/><path d="M6 20l2-9m10 9-2-9"/><path {...A} d="M12 11v9"/></>,
-  layout:<><rect {...B} x="3" y="3" width="18" height="18" rx="2.5"/><path d="M3 10h18"/><path {...A} d="M10 10v11"/></>,
-  cash:<><rect {...B} x="2" y="6" width="20" height="12" rx="2.5"/><path d="M5.5 9h.01M18.5 15h.01"/><circle {...A} cx="12" cy="12" r="3"/></>,
-  calendar:<><rect {...B} x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18"/><path {...A} d="M8 3v4m8-4v4"/></>,
-  phone:<><path {...B} d="M5 3h4l2 5-2.5 1.5a11 11 0 0 0 6 6L16 13l5 2v4a2 2 0 0 1-2 2A17 17 0 0 1 3 5a2 2 0 0 1 2-2z"/></>,
-  kiosk:<><rect {...B} x="5" y="3" width="14" height="12" rx="2.5"/><path d="M12 15v5M8 21h8"/><path {...A} d="M9 9h6"/></>,
-  gauge:<><path d="M4 16a8 8 0 0 1 16 0M4 20h16"/><path {...A} d="m12 16 4-5"/><circle {...D} cx="12" cy="16" r="1.6"/></>,
-  cart:<><path d="M2 3h3l2.5 11h10L20 7H6"/><circle {...D} cx="9" cy="20" r="1.6"/><circle {...D} cx="18" cy="20" r="1.6"/></>,
-  route:<><path d="M8.5 6H15a3 3 0 0 1 0 6H9a3 3 0 0 0 0 6h6.5"/><circle {...A} cx="6" cy="6" r="2.5"/><circle {...A} cx="18" cy="18" r="2.5"/></>,
-  link:<><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path {...A} d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></>,
-  bike:<><circle cx="6" cy="17" r="3"/><circle cx="18" cy="17" r="3"/><path d="m6 17 3-8h4l3 8M9 9h6"/><path {...A} d="m13 9 2-3h3"/></>,
-  user:<><path {...B} d="M4 21a8 8 0 0 1 16 0z"/><circle {...A} cx="12" cy="8" r="4"/></>,
-  heart:<><path {...B} d="M12 21s-7-4.5-9-9a5 5 0 0 1 9-3 5 5 0 0 1 9 3c-2 4.5-9 9-9 9z"/></>,
-  star:<><path {...B} d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.3 6.5 20.2l1-6.2L3 9.6l6.2-.9z"/></>,
-  badge:<><rect {...B} x="4" y="3" width="16" height="18" rx="2.5"/><path d="M7 18a5 5 0 0 1 10 0"/><circle {...A} cx="12" cy="10" r="3"/></>,
-  tag:<><path {...B} d="M3 12V5a2 2 0 0 1 2-2h6l10 10-8 8z"/><circle {...D} cx="7.5" cy="7.5" r="1.6"/></>,
-  wallet:<><rect {...B} x="3" y="6" width="18" height="14" rx="2.5"/><path d="M3 10h18"/><path {...A} d="M15.5 15h2.5"/></>,
-  pie:<><path d="M21 12A9 9 0 1 1 12 3"/><path {...A} d="M12 3v9h9"/></>,
-  phoneApp:<><rect {...B} x="7" y="2" width="10" height="20" rx="2.5"/><path {...A} d="M11 18h2"/></>,
-  percent:<><path d="m19 5-14 14"/><circle {...A} cx="7" cy="7" r="2.5"/><circle {...A} cx="17" cy="17" r="2.5"/></>,
-  layers:<><path {...B} d="m12 3 9 5-9 5-9-5z"/><path {...A} d="m3 13 9 5 9-5"/></>,
-  plug:<><path {...B} d="M6 8h12v3a6 6 0 0 1-12 0z"/><path d="M9 2v6M15 2v6"/><path {...A} d="M12 17v5"/></>,
-  chat:<><path {...B} d="M21 12a8 8 0 0 1-11.6 7.1L4 21l1.9-5.4A8 8 0 1 1 21 12z"/><path {...A} d="M8.5 12h.01M12 12h.01M15.5 12h.01"/></>,
-  login:<><path d="M14 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5"/><path {...A} d="m9 17 5-5-5-5M14 12H3"/></>,
-  key:<><path d="m10.8 12.2 9.7-9.7M14 8l3 3M17.5 4.5 20 7"/><circle {...A} cx="7.5" cy="15.5" r="4.5"/></>,
-  lightbulb:<><path {...B} d="M8.5 15.5A7 7 0 1 1 15.5 15.5c-.9.7-1.5 1.5-1.5 2.5h-4c0-1-.6-1.8-1.5-2.5z"/><path {...A} d="M10 22h4"/></>,
-  undo:<><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></>,
-  transfer:<><path d="M4 8h13m0 0-3-3m3 3-3 3"/><path {...A} d="M20 16H7m0 0 3-3m-3 3 3 3"/></>,
-  invoice:<><path {...B} d="M7 3h7l4 4v14H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v4h4"/><path {...A} d="M9.5 12h5M9.5 15.5h5M9.5 8.5h2"/></>,
-  salad:<><path {...B} d="M3.5 12h17a8.5 8 0 0 1-17 0z"/><path d="M9 21h6"/><path {...A} d="M8.5 12c-.4-3 1-5.5 4-6.5.4 3-1 5.5-4 6.5zm6 0c.2-2 1.4-3.6 3.5-4.2-.1 2-1.3 3.6-3.5 4.2z"/></>,
-  dessert:<><path {...B} d="M6 13h12l-1.6 7.2a1 1 0 0 1-1 .8H8.6a1 1 0 0 1-1-.8z"/><path d="M5 13a7 6 0 0 1 14 0M10 16v2.5m4-2.5v2.5"/><circle {...D} cx="12" cy="5" r="1.4"/></>,
-  drink:<><path {...B} d="M6 8h12l-1.5 11.2a2 2 0 0 1-2 1.8h-5a2 2 0 0 1-2-1.8z"/><path d="M6.6 12.5h10.8"/><path {...A} d="m12.5 8 2-5H18"/></>,
-  dish:<><path {...B} d="M5 16a7 7 0 0 1 14 0z"/><path d="M3 19h18"/><path {...A} d="M12 9V7.5m-1.5 0h3"/></>,
-  note:<><path {...B} d="M5 4h14v11l-5 5H5z"/><path d="M14 20v-5h5"/><path {...A} d="M8.5 9h7M8.5 12.5h4"/></>,
+const glyphs: Record<IconName, TablerIcon> = {
+  info:IconInfoCircle, grid:IconLayoutGrid, sales:IconChartBar, receipt:IconReceipt, menu:IconMenu2,
+  utensils:IconToolsKitchen2, chefHat:IconChefHat, cookingPot:IconSoup, kitchen:IconSoup, combo:IconLayoutBoardSplit,
+  stock:IconPackages, truck:IconTruck, users:IconUsers, store:IconBuildingStore, settings:IconSettings, search:IconSearch,
+  bell:IconBell, plus:IconPlus, minus:IconMinus, chevron:IconChevronRight, chevronLeft:IconChevronLeft, filter:IconFilter,
+  download:IconDownload, upload:IconUpload, alert:IconAlertTriangle, check:IconCheck, clock:IconClock, box:IconBox,
+  logout:IconLogout, eye:IconEye, lock:IconLock, mail:IconMail, edit:IconPencil, power:IconPower,
+  toggleOn:IconToggleRightFilled, toggleOff:IconToggleLeftFilled, circleCheck:IconCircleCheck, circleMinus:IconCircleMinus,
+  circleSlash:IconBan, save:IconDeviceFloppy, refresh:IconRefresh, close:IconX, panelCollapse:IconLayoutSidebarLeftCollapse,
+  panelExpand:IconLayoutSidebarLeftExpand, qr:IconQrcode, share:IconShare, trash:IconTrash,
+  arrowRightCircle:IconCircleArrowRight, payment:IconCreditCard, cancel:IconCircleX, availability:IconClipboardCheck,
+  ledger:IconNotebook, building:IconBuilding, contract:IconContract, mapPin:IconMapPin, userCheck:IconUserCheck,
+  register:IconCashRegister, orders:IconClipboardList, tables:IconArmchair, layout:IconLayout, cash:IconCash,
+  calendar:IconCalendar, phone:IconPhone, kiosk:IconDeviceDesktop, gauge:IconGauge, cart:IconShoppingCart, route:IconRoute,
+  link:IconLink, bike:IconBike, user:IconUser, heart:IconHeart, star:IconStar, badge:IconId, tag:IconTag, wallet:IconWallet,
+  pie:IconChartPie, phoneApp:IconDeviceMobile, percent:IconPercentage, layers:IconStack2, plug:IconPlug,
+  chat:IconMessageCircle, login:IconLogin, key:IconKey, lightbulb:IconBulb, undo:IconArrowBackUp,
+  transfer:IconArrowsExchange, invoice:IconFileInvoice, dish:IconBowlSpoon, note:IconNote, send:IconSend,
+  shoppingBag:IconShoppingBag, salad:IconSalad, dessert:IconIceCream2, drink:IconCup,
+  arrowUpRight:IconArrowUpRight, flame:IconFlame, checks:IconChecks, motorbike:IconMotorbike,
 };
-export function Icon({name,size=20,className,filled=false}:{name:IconName,size?:IconSize;className?:string;filled?:boolean}) { return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={[filled&&"is-filled",className].filter(Boolean).join(" ")||undefined}>{paths[name]}</svg> }
+
+export function Icon({name,size=20,className}:{name:IconName,size?:IconSize;className?:string}) {
+  const Glyph=glyphs[name];
+  return <Glyph size={size} stroke={1.75} aria-hidden="true" className={className}/>;
+}

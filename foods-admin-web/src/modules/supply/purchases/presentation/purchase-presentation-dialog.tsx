@@ -25,7 +25,7 @@ export function PurchasePresentationDialog({item,close,save}:{item:PurchaseInven
  }
  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal supplier-modal modal-panel-in" aria-labelledby="purchase-presentation-title" aria-busy={mutation.isPending}>
 
-  <ModalHeader title={item.name} titleId="purchase-presentation-title" icon="box" subtitle="PRESENTACIÓN DE COMPRA" onClose={close} busy={mutation.isPending||catalogBusy} closeLabel="Cerrar"/>
+  <ModalHeader title={item.name} titleId="purchase-presentation-title" icon="box" subtitle="Presentación de compra" onClose={close} busy={mutation.isPending||catalogBusy} closeLabel="Cerrar"/>
   <form onSubmit={event=>{event.preventDefault();event.stopPropagation()}} noValidate><div className="purchase-item-section">
    <PurchasePresentationsField unit={item.unit} value={rows} onChange={setRows} disabled={mutation.isPending} onBusyChange={setCatalogBusy}/>
    <p className="field-help">Las compras anteriores y el stock no se modifican.</p>

@@ -40,8 +40,16 @@ export function RowActionButton({action,label,stateLabel="Estado activo",classNa
  return <IconButton icon={definition.icon} label={label??definition.label} className={`${definition.tone==="danger"?"danger":""} ${className}`.trim()} {...props}/>;
 }
 export function FieldLabel({children,hint}:{children:React.ReactNode;hint:string}){return <span className="field-label">{children}<i className="field-hint" data-tooltip={hint} tabIndex={0} role="note" aria-label={hint}>i</i></span>}
-export const Input=forwardRef<HTMLInputElement,InputHTMLAttributes<HTMLInputElement>>(function Input({className="",...props},ref){return <input ref={ref} className={`ds-input ${className}`.trim()} {...props}/>});
-export const Select=forwardRef<HTMLSelectElement,SelectHTMLAttributes<HTMLSelectElement>>(function Select({className="",children,...props},ref){return <select ref={ref} className={`ds-select ${className}`.trim()} {...props}>{children}</select>});
+/** `icon` muestra un icono al inicio del campo (correo, teléfono, fecha, dirección, documento). */
+export const Input=forwardRef<HTMLInputElement,InputHTMLAttributes<HTMLInputElement>&{icon?:IconName}>(function Input({className="",icon,...props},ref){
+ const input=<input ref={ref} className={`ds-input ${className}`.trim()} {...props}/>;
+ return icon?<span className="ds-input-shell has-leading-icon"><Icon name={icon} size={16}/>{input}</span>:input;
+});
+/** `chip` presenta el select como filtro en píldora; se tiñe cuando filtra (opción distinta de la primera). */
+export const Select=forwardRef<HTMLSelectElement,SelectHTMLAttributes<HTMLSelectElement>&{chip?:boolean;icon?:IconName}>(function Select({className="",chip=false,icon,children,...props},ref){
+ const select=<select ref={ref} className={`ds-select${chip?" filter-chip":""} ${className}`.trim()} {...props}>{children}</select>;
+ return icon&&!chip?<span className="ds-input-shell has-leading-icon is-select"><Icon name={icon} size={16}/>{select}</span>:select;
+});
 export const Textarea=forwardRef<HTMLTextAreaElement,TextareaHTMLAttributes<HTMLTextAreaElement>>(function Textarea({className="",...props},ref){return <textarea ref={ref} className={`ds-textarea ${className}`.trim()} {...props}/>});
 /**
  * Encabezado de página: el título repite el nombre de la navegación; sin eyebrow (el menú ya indica el grupo).
@@ -59,7 +67,7 @@ export function PageHeader({title,description,action,back,meta}:{title:string;de
  </header>;
 }
 /** Tonos tenues definidos en docs/02_DESIGN_SYSTEM.md: sky cuenta abierta, blue confirmado, green listo/éxito, violet preparación, orange por resolver, teal entregado, red cancelado/error, gray neutro/finalizado. */
-export function Status({tone="green",active,icon,emphasis=false,children}:{tone?:"green"|"blue"|"sky"|"orange"|"red"|"violet"|"gray"|"teal";active?:boolean;icon?:IconName;emphasis?:boolean;children:React.ReactNode}){
+export function Status({tone="green",active,icon,emphasis=false,children}:{tone?:"green"|"blue"|"sky"|"orange"|"red"|"violet"|"gray"|"teal"|"navy";active?:boolean;icon?:IconName;emphasis?:boolean;children:React.ReactNode}){
  const binary=active!==undefined;
  const glyph=binary?(active?"circleCheck":"circleMinus"):icon;
  return <span className={`status ${binary?(active?"green":"gray"):tone}${emphasis?" emphasized":""}`}>{glyph?<Icon name={glyph} size={emphasis?16:14} className="status-icon"/>:<i aria-hidden="true"/>}{children}</span>

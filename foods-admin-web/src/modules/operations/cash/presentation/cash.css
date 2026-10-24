@@ -4,7 +4,7 @@
 .cash-registers-workspace{display:grid;gap:0;background:var(--cloud-50)}
 .cash-overview{display:flex;align-items:stretch;justify-content:space-between;gap:var(--space-6);margin:var(--space-5) var(--space-5) 0;padding:var(--space-4) var(--space-5);border-radius:var(--radius-card);background:var(--ink-950);color:var(--surface)}
 .cash-overview-copy{display:flex;align-items:center;gap:var(--space-3);min-width:0}
-.cash-overview-icon{display:grid;place-items:center;width:var(--size-42);height:var(--size-42);border-radius:var(--radius-tile);background:var(--primary-600);color:var(--surface);flex:0 0 auto}
+.cash-overview-icon{display:grid;place-items:center;width:var(--size-42);height:var(--size-42);border-radius:var(--radius-tile);background:var(--primary-100);color:var(--primary-700);flex:0 0 auto}
 .cash-overview-copy>div{display:grid;gap:var(--space-0-5);min-width:0}
 .cash-overview-copy small,.cash-overview-metrics small{font-size:var(--font-size-label);font-weight:var(--weight-heavy);letter-spacing:var(--letter-spacing-caps);opacity:.66}
 .cash-overview-copy b{font-size:var(--font-size-sm)}

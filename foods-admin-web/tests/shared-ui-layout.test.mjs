@@ -32,8 +32,8 @@ test("franjas de lectura igualan etiqueta y valor y alinean la fecha al extremo 
  assert.equal(declaration(css,".modal-inline-date","text-align"),"right");
  assert.equal(declaration(css,".modal-inline-metadata","flex-wrap"),"wrap");
  const source=read("modules/operations/orders/presentation/order-detail-dialog.tsx");
- assert.match(source,/order-detail-information modal-inline-metadata/);
- assert.match(source,/order-detail-opened modal-inline-date/);
+ assert.doesNotMatch(source,/order-detail-facts|value:"details"/,"sin pestaña Detalles: mesa, cliente, teléfono y fecha ya están en cabecera, tarjeta e identidad");
+ assert.match(source,/<OrderAttribution [^>]*\/>\s*<\/div>/,"los responsables completan la identidad");
  assert.equal(declaration(sheet("modules/operations/orders/presentation/order-detail.css"),".order-attribution dt","font-size"),undefined);
 });
 
@@ -124,7 +124,7 @@ test("cabecera, cuerpo y pie comparten margen y el cierre conserva 44 px en todo
  const css=sheet("design-system/styles/modal.css");
  assert.equal(declaration(css,".crud-modal>header","padding"),"var(--space-2) var(--space-6)");
  assert.equal(declaration(css,".crud-modal>header","min-height"),"var(--size-64)");
- assert.equal(declaration(css,".crud-modal>header","background"),"var(--primary-700)");
+ assert.equal(declaration(css,".crud-modal>header","background"),"var(--navigation-900)");
  assert.doesNotMatch(read("design-system/styles/modal.css"),/modal-accent/);
  assert.doesNotMatch(read("design-system/modal.tsx"),/modal-accent/);
  assert.equal(declaration(css,".crud-modal>header h2","color"),"var(--surface)");
@@ -135,9 +135,9 @@ test("cabecera, cuerpo y pie comparten margen y el cierre conserva 44 px en todo
  for(const prop of ["width","height"])assert.equal(declaration(css,".modal-close",prop),"var(--size-44)");
  assert.equal(declaration(css,".modal-footer>.modal-footer-note","flex-basis"),"100%");
 });
-test("icono blanco sin recuadro y X blanca con solo contorno y sin hover de color",()=>{
+test("icono blanco en recuadro translúcido y X blanca con solo contorno y sin hover de color",()=>{
  const css=sheet("design-system/styles/modal.css");
- assert.equal(declaration(css,".modal-title-icon","background"),"transparent");
+ assert.equal(declaration(css,".modal-title-icon","background"),"var(--surface-alpha-16)");
  assert.equal(declaration(css,".modal-title-icon","color"),"var(--surface)");
  assert.equal(declaration(css,".modal-close","background"),"transparent");
  assert.equal(declaration(css,".modal-close","border"),"0");

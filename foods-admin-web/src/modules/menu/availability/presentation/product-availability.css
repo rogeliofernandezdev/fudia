@@ -4,7 +4,7 @@
 .availability-panel>.availability-toolbar{min-height:0;border-bottom:var(--stroke-1) solid var(--line);display:grid;grid-template-columns:minmax(var(--size-240),var(--size-520)) var(--size-240) auto;justify-content:start;align-items:center;gap:var(--space-3);padding:var(--space-4) var(--space-5);background:var(--surface)}
 .availability-panel>.availability-toolbar .ds-select{font-size:var(--font-size-control)}
 .availability-table-wrap{overscroll-behavior:contain;width:100%;overflow-x:auto}
-.availability-list-head{min-width:var(--availability-min-width);min-height:var(--control-height);color:var(--surface);background:var(--primary-600);grid-template-columns:var(--availability-columns);align-items:center;display:grid}
+.availability-list-head{min-width:var(--availability-min-width);min-height:var(--control-height);color:var(--surface);background:var(--navigation-900);grid-template-columns:var(--availability-columns);align-items:center;display:grid}
 .availability-list-head>span{padding:var(--space-3) var(--space-4);font-size:var(--font-size-base);font-weight:var(--weight-semibold);white-space:nowrap;display:flex;align-items:center;gap:var(--space-2)}
 .availability-list-head>span:last-child{justify-content:flex-end}
 .availability-grid{display:grid}

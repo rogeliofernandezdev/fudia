@@ -20,7 +20,7 @@ import {addOrderConsumption} from "../infrastructure/service-api";
 import {OrderDetailContent,OrderDetailSkeleton,orderDetailTitleId} from "./order-detail-dialog";
 import {channelIcons,orderStatus,registeredAt} from "./order-meta";
 
-const columns=["PEDIDO","CANAL","ESTADO","REGISTRADO","TOTAL","ACCIONES"];
+const columns=["Pedido","Canal","Estado","Registrado","Total","Acciones"];
 
 export function OrdersManager(){
  const qc=useQueryClient();const{notify}=useFeedback();const settings=useSettings();const money=useMoney();const{can,location}=useSession();const canManage=can("orders.manage");
@@ -54,7 +54,7 @@ export function OrdersManager(){
  <section className="panel management standardized-management orders-panel" aria-busy={list.isFetching&&list.isPlaceholderData}>
   <div className="toolbar">
    <SearchField label="Buscar pedidos" value={q} onChange={e=>{setQ(e.target.value);setPage(1)}} placeholder="Buscar cliente, mesa o teléfono"/>
-   <Select aria-label="Filtrar por estado" value={status} onChange={e=>{setStatus(e.target.value);setPage(1)}}><option value="">Todos los estados</option><option value="abiertos">Abiertos</option>{(list.data?.statusOptions??[]).map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</Select>
+   <Select chip aria-label="Filtrar por estado" value={status} onChange={e=>{setStatus(e.target.value);setPage(1)}}><option value="">Todos los estados</option><option value="abiertos">Abiertos</option>{(list.data?.statusOptions??[]).map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</Select>
    {hasActiveFilters&&<Button kind="ghost" icon="close" onClick={clearFilters}>Limpiar filtros</Button>}
   </div>
   {list.isPending?<TableSkeleton columns={columns} label="Cargando pedidos"/>

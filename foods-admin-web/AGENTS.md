@@ -64,7 +64,7 @@ La autoridad visual exclusiva de este proyecto es
   `modal-action-main` permite la acción principal en una fila propia. No aplica
   a iconos, confirmaciones ni feedback.
 - Jerarquía obligatoria de modales: etiquetas de datos 12 px / 600, valores 14 px / 400 y
-  títulos de sección 16 px / 700, también en móvil, excepto los títulos de sección del cuerpo en Detalle de pedido, venta y cobro (`modal-section-title`: 13 px / 700, mayúsculas con `letter-spacing-caps`, `ink-800`, con regla inferior `modal-section-rule` de 2 px `primary-200`; el título del resumen del pie usa el mismo estilo). Reservar el tamaño móvil
+  títulos de sección 16 px / 700 en caja normal, también en móvil (`modal-section-title`: `ink-950`, sin mayúsculas; `modal-section-rule` es una línea fina de 1 px `line`; el título del resumen del pie usa el mismo estilo). Los detalles (pedido, venta, cobro, turno, gasto, cliente) se organizan con `DetailHero`, `DetailContact`, `Tabs`, `DetailFacts` y `DetailTimeline` (ver «Detalles al estilo de la referencia» en `docs/02_DESIGN_SYSTEM.md`). Reservar el tamaño móvil
   de control (16 px) para campos editables, no para datos informativos.
   Usar los roles de `modal.css`; no invertir pesos
   por pantalla. Totales principales, estados, productos y acciones conservan

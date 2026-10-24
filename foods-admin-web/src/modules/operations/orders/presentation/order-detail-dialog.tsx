@@ -1,7 +1,8 @@
 "use client";
 import "./order-detail.css";
 import Link from "next/link";
-import {Button,ErrorState,Icon,Skeleton,Status} from "@/design-system";
+import {useState} from "react";
+import {Button,ErrorState,Icon,IconTile,Skeleton,Status,Tabs} from "@/design-system";
 import {ModalHeader,ModalFooter,ModalWorkspace,ModalItemList,ModalItemNote,ModalItemComponents} from "@/design-system/modal";
 import {useMoney,useSession} from "@/providers";
 import {pageRoutes} from "@/shared/routing/page-routes";
@@ -12,6 +13,7 @@ import {formatRegionalNumber} from "@/shared/i18n/regional-format";
 import type {Order,OrderItem,OrderItemSelection} from "../domain/types";
 import type {ServiceItem} from "../domain/service-flow";
 import {OrderAttribution,OrderAttributionSkeleton} from "./order-attribution";
+import {OrderTimeline} from "./order-timeline";
 import {channelIcons,isEditableOrder,openedAgo,orderStatus,registeredAt,serviceStatusTone,tableTitle} from "./order-meta";
 import {OrderAccountActions,OrderItemService,accountLabel,accountTone} from "./order-service-controls";
 
@@ -41,6 +43,7 @@ type ContentProps<T extends Order>={
 export function OrderDetailContent<T extends Order>({variant,order,error,retrying=false,canManage:hasPermission,busy,close,retry,advance,add,cancel,edit}:ContentProps<T>){
   const{location,user,can}=useSession();
   const money=useMoney();
+  const[tab,setTab]=useState<"products"|"tracking">("products");
   const table=variant==="table";
   const canManage=Boolean(hasPermission&&order&&canManageOrderService(order,user?.id));
   const meta=order?orderStatus(order.status):null;
@@ -81,30 +84,47 @@ export function OrderDetailContent<T extends Order>({variant,order,error,retryin
       }>
       <div className="modal-body order-detail-body" tabIndex={0} aria-label="Productos y datos del pedido">
         <div className="order-detail-content">
-          <div className="order-detail-information modal-inline-metadata" aria-label="Datos del pedido">
-            <OrderAttribution channel={order.channel} waiterName={order.waiterName} collectedByNames={order.collectedByNames}/>
-            <span className="order-detail-opened modal-inline-date"><Icon name="clock" size={14}/><time dateTime={order.createdAt}>{opened}</time></span>
-            {subtitle&&<span className="modal-inline-description">{subtitle}</span>}
-          </div>
-          <header className="order-detail-section-head modal-section-rule"><h3 id="order-detail-products-title" className="modal-section-title">Productos del pedido</h3><div className="order-detail-status" aria-label="Estado del pedido"><Status tone={meta.tone}>{meta.label}</Status></div></header>
-          {(order.customerPhone||order.address||order.reference||point)&&<section className="order-detail-context" aria-label="Contacto y entrega">
-            {order.customerPhone&&<div><span><Icon name="users" size={16}/></span><p><small>CONTACTO</small><b>{order.customerPhone}</b></p></div>}
-            {(order.address||order.reference||point)&&<div><span><Icon name="truck" size={16}/></span><p><small>ENTREGA</small><b>{order.address||"Dirección no registrada"}</b>{order.reference&&<em>{order.reference}</em>}
-              {point&&<span className="order-detail-map">
-                <a className="order-detail-map-link" href={point.mapUrl} target="_blank" rel="noopener noreferrer" aria-label="Ver ubicación de entrega en Google Maps (se abre en otra pestaña)">Ver ubicación</a>
-                {point.distanceKm!==null&&<span className="order-detail-map-distance">{formatRegionalNumber(point.distanceKm,location?.country,{maximumFractionDigits:1})} km</span>}
-              </span>}
-            </p></div>}
-          </section>}
-
-          <section className="order-detail-consumption" aria-labelledby="order-detail-products-title">
-            <ModalItemList className="order-detail-items">
-              {items.map(item=><OrderDetailLine key={item.id} order={order} item={item} hideStatus={sharedService}/>)}
-              {!items.length&&<div className="order-detail-empty" role="listitem"><Icon name="receipt" size={20}/><span>Sin ítems cargados aún.</span></div>}
-            </ModalItemList>
+          <section className="order-detail-hero" aria-label="Resumen del pedido">
+            <div className="order-detail-identity">
+              <div className="order-detail-identity-head"><div className="order-detail-status" aria-label="Estado del pedido"><Status tone={meta.tone}>{meta.label}</Status></div></div>
+              <p><Icon name="clock" size={14}/><time dateTime={order.createdAt}>{opened}</time></p>
+              <OrderAttribution channel={order.channel} waiterName={order.waiterName} collectedByNames={order.collectedByNames}/>
+            </div>
+            {(subtitle||order.customerName||order.customerPhone)&&<div className="order-detail-contact">
+              <IconTile name="user" tone="teal"/>
+              <div><b>{subtitle||order.customerName||"Cliente sin nombre"}</b><small>{order.customerPhone||"Sin teléfono registrado"}</small></div>
+              {order.customerPhone&&<a className="button secondary order-detail-call" href={`tel:${order.customerPhone.replace(/\s+/g,"")}`} aria-label={`Llamar a ${order.customerPhone}`}><Icon name="phone" size={16}/><span>Llamar</span></a>}
+            </div>}
+            {/* Sin pestaña «Detalles»: mesa, cliente, teléfono y fecha ya están arriba; la entrega es el único dato propio. */}
+            {(order.address||order.reference||point)&&<section className="order-detail-context" aria-label="Entrega">
+              <div><span><Icon name="mapPin" size={16}/></span><p><small>Entrega</small><b>{order.address||"Dirección no registrada"}</b>{order.reference&&<em>{order.reference}</em>}
+                {point&&<span className="order-detail-map">
+                  <a className="order-detail-map-link" href={point.mapUrl} target="_blank" rel="noopener noreferrer" aria-label="Ver ubicación de entrega en Google Maps (se abre en otra pestaña)">Ver ubicación</a>
+                  {point.distanceKm!==null&&<span className="order-detail-map-distance">{formatRegionalNumber(point.distanceKm,location?.country,{maximumFractionDigits:1})} km</span>}
+                </span>}
+              </p></div>
+            </section>}
           </section>
-          {order.notes&&<section className="modal-detail-notes order-detail-notes" aria-labelledby="order-detail-notes-title"><span><Icon name="edit" size={16}/></span><div><h3 id="order-detail-notes-title">Notas generales</h3><p>{order.notes}</p></div></section>}
 
+          <Tabs className="order-detail-tabs" label="Información del pedido" value={tab} onChange={setTab} items={[
+            {value:"products",label:"Productos",icon:"dish",count:items.length},
+            {value:"tracking",label:"Seguimiento",icon:"route"},
+          ]}/>
+
+          <div className="order-detail-panel" role="tabpanel" aria-labelledby="order-detail-products-title" hidden={tab!=="products"}>
+            <h3 id="order-detail-products-title" className="sr-only">Productos del pedido</h3>
+            <section className="order-detail-consumption" aria-labelledby="order-detail-products-title">
+              <ModalItemList className="order-detail-items">
+                {items.map(item=><OrderDetailLine key={item.id} order={order} item={item} hideStatus={sharedService}/>)}
+                {!items.length&&<div className="order-detail-empty" role="listitem"><Icon name="receipt" size={20}/><span>Sin ítems cargados aún.</span></div>}
+              </ModalItemList>
+            </section>
+            {order.notes&&<section className="modal-detail-notes order-detail-notes" aria-labelledby="order-detail-notes-title"><span><Icon name="edit" size={16}/></span><div><h3 id="order-detail-notes-title">Notas generales</h3><p>{order.notes}</p></div></section>}
+          </div>
+
+          <div className="order-detail-panel" role="tabpanel" aria-label="Seguimiento" hidden={tab!=="tracking"}>
+            <OrderTimeline order={order} country={location?.country} timeZone={location?.timezone}/>
+          </div>
         </div>
       </div>
       </ModalWorkspace>

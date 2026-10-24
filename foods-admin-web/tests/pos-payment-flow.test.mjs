@@ -10,8 +10,8 @@ const root=new URL("../src/modules/operations/pos/presentation/",import.meta.url
 const serviceFlowExports={};
 vm.runInNewContext(ts.transpileModule(readFileSync(new URL("../src/modules/operations/orders/domain/service-flow.ts",import.meta.url),"utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{exports:serviceFlowExports});
 const detail={order:{billClosedAt:"2026-10-07T13:00:00Z",id:"order-1",code:"PED-001",channel:"salon",status:"entregado",tableName:"Mesa 04",customerName:"",total:"40",createdAt:"2026-10-07T12:00:00Z",items:[]},paidAmount:"10",remainingAmount:"30",paymentStatus:"partial",payments:[]};
-const primitives=Object.fromEntries(["Button","EmptyState","ErrorState","FormField","Icon","Input","PageHeader","Pagination","RowActionButton","SearchField","Select","Status","Textarea","ModalHeader","ModalFooter","ModalWorkspace","ModalItemList"].map(name=>[name,name]));
-function nodes(tree){const result=[];function visit(node){if(!node||typeof node!=="object")return;if(Array.isArray(node)){node.forEach(visit);return}result.push(node);visit(node.props?.children);visit(node.props?.action);visit(node.props?.summary)}visit(tree);return result}
+const primitives=Object.fromEntries(["Button","EmptyState","ErrorState","FormField","Icon","Input","PageHeader","Pagination","RowActionButton","SearchField","Select","Status","Textarea","ModalHeader","ModalFooter","ModalWorkspace","ModalItemList","DetailHero","DetailContact","DetailFacts","DetailTimeline","Tabs","Skeleton"].map(name=>[name,name]));
+function nodes(tree){const result=[];function visit(node){if(!node||typeof node!=="object")return;if(Array.isArray(node)){node.forEach(visit);return}result.push(node);visit(node.props?.children);visit(node.props?.action);visit(node.props?.summary);visit(node.props?.status);visit(node.props?.steps?.map?.(step=>step.aside))}visit(tree);return result}
 function compile(file,resolve,extra=""){
  const exports={};
  const source=readFileSync(new URL(file,root),"utf8")+extra;
@@ -162,22 +162,31 @@ test("el formulario de pago tiene Registrar cobro y envía solo al confirmar",()
  }
 });
 
-test("detalle de cobro respeta cabecera simple, datos alineados y resumen inferior compartido",()=>{
+test("detalle de cobro sigue el patrón del pedido: cabecera con mesa, identidad, pestañas y resumen fijo",()=>{
  const {POSDetailDialog}=mountPage();
  const view=nodes(POSDetailDialog({loading:false,data:{...detail,order:{...detail.order,waiterName:"Daniel Machaca Rojasa",items:[{id:"line-1",name:"Puca picante con chicharrón",qty:"1",unitPrice:"40",note:"Sin sal"}]}},canManage:false,hasShift:false,formatMoney:String,formatDateTime:()=>"7 oct. 2026",close:()=>{},refund:()=>{}}));
- const header=view.find(node=>node.type==="ModalHeader");assert.equal(header.props.title,"Detalle de cobro");assert.equal(header.props.subtitle,undefined);
- assert.deepEqual(view.filter(node=>node.type==="dt").map(node=>node.props.children),["Mesa","Canal","Atendido por","Fecha del pedido"]);
- const workspace=view.find(node=>node.type==="ModalWorkspace");assert.equal(workspace.props.summary.props.className,"modal-summary");
+ const header=view.find(node=>node.type==="ModalHeader");assert.equal(header.props.title,"Mesa 04");assert.equal(header.props.icon,"utensils");assert.equal(header.props.subtitle,undefined);
+ assert.equal(view.some(node=>node.type==="DetailFacts"||node.type==="DetailHero"),false,"sin pestaña Detalles ni datos repetidos");
+ assert.deepEqual(Array.from(view.find(node=>node.type==="Tabs").props.items,item=>item.label),["Productos","Pagos"]);
+ const identity=nodes(view.find(node=>node.props.className==="pos-detail-identity"));
+ assert.equal(identity.find(node=>node.type==="Status").props.tone,"orange");
+ assert.ok(identity.some(node=>node.type==="span"&&node.props.children==="PED-001"),"en POS el código solo aparece en el detalle");
+ assert.ok(identity.some(node=>node.type==="time"&&node.props.children==="7 oct. 2026"));
+ assert.ok(identity.some(node=>node.type==="span"&&node.props.children==="Salón · Atendido por Daniel Machaca Rojasa"));
+ assert.equal(view.some(node=>node.type==="DetailContact"),false,"sin cliente no hay tarjeta");
+ const workspace=view.find(node=>node.type==="ModalWorkspace");assert.equal(workspace.props.summary.props.className,"modal-summary pos-detail-totals");
  assert.ok(nodes(workspace.props.summary).some(node=>node.props.children==="Pagado neto"));
- assert.ok(nodes(workspace.props.summary).some(node=>node.type==="Status"&&node.props.tone==="orange"));
+ assert.ok(nodes(workspace.props.summary).some(node=>node.props.children==="Saldo pendiente"));
+ assert.equal(nodes(workspace.props.summary).some(node=>node.type==="Status"),false,"el estado encabeza el cuerpo y no se repite en el resumen");
  assert.equal(view.filter(node=>node.type==="ModalItemList").length,1);
  assert.ok(view.some(node=>node.props.className==="modal-item-quantity"));
  assert.ok(view.some(node=>node.props.children==="Sin pagos registrados."));
- assert.equal(view.some(node=>node.props.children==="CONSUMO"||node.props.children==="PAGOS"),false);
  assert.equal(view.some(node=>node.props.className==="pos-detail-summary"),false);
- const css=readFileSync(new URL("pos.css",root),"utf8");
- assert.doesNotMatch(css,/\.pos-detail-section\+\.pos-detail-section\{[^}]*border-top/,"la división no repite la línea de los productos");
- assert.match(readFileSync(new URL("pos-page.tsx",root),"utf8"),/<h3 id="pos-detail-payments-title" className="modal-section-title modal-section-rule">/,"cada sección abre con su título subrayado");
+ const paid=nodes(POSDetailDialog({loading:false,data:{...detail,order:{...detail.order,customerName:"Ana"},paidAmount:"40",remainingAmount:"0",paymentStatus:"paid"},canManage:false,hasShift:false,formatMoney:String,formatDateTime:String,close:()=>{},refund:()=>{}}));
+ assert.equal(paid.find(node=>node.type==="ModalWorkspace").props.summary.props.className,"modal-summary pos-detail-totals is-paid");
+ assert.ok(nodes(paid.find(node=>node.type==="ModalWorkspace").props.summary).some(node=>node.props.children==="Total pagado"));
+ assert.equal(paid.find(node=>node.type==="DetailContact").props.name,"Ana");
+ assert.match(readFileSync(new URL("pos-page.tsx",root),"utf8"),/<h3 id="pos-detail-payments-title" className="sr-only">/,"cada panel conserva su título accesible");
 });
 
 test("detalle de cobro conserva permisos de devolución, turno y cierre",()=>{
@@ -203,47 +212,46 @@ test("detalle de cobro no muestra importes anteriores en carga, error o ausencia
  for(const changes of [{loading:true},{error:"Sin conexión"},{data:undefined}]){
   const tree=POSDetailDialog({...props,...changes}),view=nodes(tree);
   assert.equal(view.some(node=>node.props["aria-labelledby"]==="pos-detail-summary-title"),false);
-  assert.equal(view.find(node=>node.type==="ModalHeader").props.details,undefined);
+  if(changes.loading)assert.equal(view.some(node=>node.type?.name==="POSDetailLoading"),true,"skeleton con la geometría final");
+ else assert.equal(view.find(node=>node.type==="ModalHeader").props.details,undefined);
   if(changes.loading)assert.equal(view.find(node=>node.type==="Dialog").props["aria-busy"],true);
   if(changes.error)assert.equal(view.find(node=>node.type==="ErrorState").props.text,"Sin conexión");
  }
 });
 
-test("POS móvil no combina pantalla completa con márgenes del backdrop",()=>{
+test("detalle POS usa el tamaño y la hoja móvil del pedido; el cobro conserva pantalla completa",()=>{
  const css=readFileSync(new URL("pos.css",root),"utf8");
- assert.match(css,/\.pos-detail-modal\{[^}]*width:min\(var\(--size-900\),100%\)/);
- assert.match(css,/\.pos-detail-modal\{[^}]*max-height:min\(var\(--size-820\),calc\(100dvh - var\(--space-12\)\)\)/);
- assert.match(css,/@media\(max-width:600px\)\{\s*\.crud-modal\.pos-payment-modal,\.crud-modal\.pos-detail-modal\{width:100%;height:100dvh;max-height:100dvh/);
+ const order=readFileSync(new URL("../../orders/presentation/order-detail.css",root),"utf8");
+ const rule=(sheet,selector)=>sheet.match(new RegExp(`(?:^|\\n)${selector.replace(/[.()]/g,"\\$&")}\\{([^}]*)\\}`))?.[1];
+ assert.equal(rule(css,".crud-modal.pos-detail-modal"),rule(order,".crud-modal.order-detail"),"mismo ancho, alto y columna que el pedido");
+ assert.match(css,/@media\(max-width:600px\)\{\s*\.crud-modal\.pos-payment-modal\{width:100%;height:100dvh;max-height:100dvh/);
+ assert.match(css,/\.modal-backdrop:has\(\.pos-detail-modal\)\{padding:0\}/);
+ assert.match(css,/ \.crud-modal\.pos-detail-modal\{width:100%;max-height:calc\(100dvh - var\(--space-4\) - var\(--safe-area-top\)\)\}/);
  assert.equal(css.includes("width:100vw"),false);
- assert.equal(css.includes(".pos-order-lines strong{grid-column:2}"),false);
- assert.doesNotMatch(css,/\.pos-detail-context dl/);
+ assert.doesNotMatch(css,/\.pos-detail-context/);
+ assert.doesNotMatch(css,/\.pos-detail-tabs/,"pestañas compartidas a 12 px del contenido");
 });
 
-test("datos de cobro diferencian etiquetas y valores y comparten filas compactas en móvil",()=>{
+test("detalle de cobro usa la línea compartida del modal y muestra su barra",()=>{
  const css=readFileSync(new URL("pos.css",root),"utf8");
- assert.doesNotMatch(css,/\.pos-detail-context (?:dt|dd)\{[^}]*font-weight:/,"la jerarquía pertenece al modal compartido");
  assert.doesNotMatch(css,/\.pos-order-lines/,"las líneas de producto usan la línea compartida del modal");
- assert.match(readFileSync(new URL("pos-page.tsx",root),"utf8"),/className="pos-detail-context"[^>]*><dl className="modal-record-data">/);
  const shared=readFileSync(new URL("../src/design-system/styles/modal.css",import.meta.url),"utf8");
  assert.match(shared,/\.modal-item-name\{[^}]*font-weight:var\(--weight-semibold\)/);
  // Los modales muestran la barra siempre que hay más contenido; hover-scroll (oculta hasta el hover) queda para vistas como el menú.
  assert.match(shared,/\.modal-body\{[^}]*overflow-y:auto[^}]*scrollbar-width:thin/);
  for(const file of ["pos-page.tsx","../../../sales/presentation/sale-detail-dialog.tsx"])assert.doesNotMatch(readFileSync(new URL(file,root),"utf8"),/modal-body[^"]*hover-scroll/,`${file}: el cuerpo del modal no oculta su barra`);
- assert.match(shared,/@media\(width<=620px\)\{\s*\.modal-record-data\{grid-auto-flow:row;grid-template-columns:minmax\(0,1fr\)/);
- assert.match(shared,/\.modal-record-data>div\{[^}]*grid-template-columns:var\(--size-120\) minmax\(0,1fr\)/);
 });
 
-test("el contexto etiqueta el dato real sin mezclar cliente y mesa",()=>{
+test("el detalle identifica mesa, cliente o venta directa una sola vez",()=>{
  const {POSDetailDialog}=mountPage();
- for(const [order,label,value] of [
-  [{...detail.order,tableName:"10",customerName:"Ana"},"Mesa","10"],
-  [{...detail.order,channel:"delivery",tableName:"",customerName:"Ana"},"Cliente","Ana"],
-  [{...detail.order,channel:"pickup",tableName:"",customerName:""},"Venta","Venta directa"],
+ for(const [order,title] of [
+  [{...detail.order,tableName:"10",customerName:"Ana"},"Mesa 10"],
+  [{...detail.order,channel:"delivery",tableName:"",customerName:"Ana"},"Ana"],
+  [{...detail.order,channel:"pickup",tableName:"",customerName:""},"Venta directa"],
  ]){
   const view=nodes(POSDetailDialog({loading:false,data:{...detail,order},canManage:false,hasShift:false,formatMoney:String,formatDateTime:()=>"Hoy",close:()=>{},refund:()=>{}}));
-  assert.equal(view.find(node=>node.type==="dt").props.children,label);
-  assert.equal(view.find(node=>node.type==="dd").props.children[0],value);
-  assert.equal(view.some(node=>node.props?.children==="Cliente / mesa"),false);
+  assert.equal(view.find(node=>node.type==="ModalHeader").props.title,title);
+  assert.equal(view.some(node=>node.type==="DetailFacts"||node.props?.children==="Cliente / mesa"),false);
  }
 });
 

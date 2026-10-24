@@ -141,14 +141,14 @@ export function DashboardView(){
     <div className={"dash-board"+(query.isPlaceholderData?" refreshing":"")} aria-busy={query.isFetching}>
       <section className="dash-kpis" aria-label="Indicadores del periodo">
         <article className="panel dash-kpi lead green dash-enter" style={enter(0)}>
-          <div className="dash-kpi-head"><span className="dash-kpi-icon"><Icon name="sales" size={18}/></span><small>Ventas · {shown.title}</small></div>
+          <div className="dash-kpi-head"><span className="dash-kpi-icon"><Icon name="sales" size={18}/></span><small>Ventas · {shown.title}</small>{canOpen(pageRoutes.sales)&&<Link href={pageRoutes.sales} className="stat-card-link" aria-label="Ver detalle de ventas"><Icon name="arrowUpRight" size={16}/></Link>}</div>
           <strong><CountUp value={salesNet} format={money}>{money(data.salesNet)}</CountUp></strong>
           {changeLine(salesChange)}
           {salesChange&&previous&&<em className="dash-kpi-before">Antes: {money(previous.salesNet)}</em>}
           <Sparkline values={salesSeries}/>
         </article>
         <article className="panel dash-kpi blue dash-enter" style={enter(1)}>
-          <div className="dash-kpi-head"><span className="dash-kpi-icon"><Icon name="receipt" size={18}/></span><small>Pedidos cobrados</small></div>
+          <div className="dash-kpi-head"><span className="dash-kpi-icon"><Icon name="receipt" size={18}/></span><small>Pedidos cobrados</small>{canOpen(pageRoutes.sales)&&<Link href={pageRoutes.sales} className="stat-card-link" aria-label="Ver pedidos cobrados"><Icon name="arrowUpRight" size={16}/></Link>}</div>
           <strong><CountUp value={data.paidOrders} format={compact}>{String(data.paidOrders)}</CountUp></strong>
           {changeLine(ordersChange,"Pagados por completo en el periodo")}
           <Sparkline values={orderSeries}/>
@@ -160,7 +160,7 @@ export function DashboardView(){
           <Sparkline values={ticketSeries}/>
         </article>
         <article className="panel dash-kpi amber dash-enter" style={enter(3)}>
-          <div className="dash-kpi-head"><span className="dash-kpi-icon"><Icon name="orders" size={18}/></span><small>Pedidos en atención</small></div>
+          <div className="dash-kpi-head"><span className="dash-kpi-icon"><Icon name="orders" size={18}/></span><small>Pedidos en atención</small>{canOpen(pageRoutes.orders)&&<Link href={pageRoutes.orders} className="stat-card-link" aria-label="Ver pedidos en atención"><Icon name="arrowUpRight" size={16}/></Link>}</div>
           <strong><CountUp value={data.openOrders} format={compact}>{String(data.openOrders)}</CountUp></strong>
           <em>{data.kitchenPending?`${data.kitchenPending} en cocina`:"Sin pedidos en cocina"}</em>
           {data.openOrders>0&&<RankTrack ratio={kitchenShare} index={0}/>}
@@ -220,7 +220,7 @@ export function DashboardView(){
           </section>
 
           <section className="panel alerts dash-enter" style={enter(5)}>
-            <header><span className="panel-icon warning"><Icon name="alert" size={18}/></span><div><small>REQUIERE ATENCIÓN</small><h2>Pendientes por revisar</h2></div>{alerts.length>0&&<b>{alerts.length}</b>}</header>
+            <header><span className="panel-icon warning"><Icon name="alert" size={18}/></span><div><small>Requiere atención</small><h2>Pendientes por revisar</h2></div>{alerts.length>0&&<b>{alerts.length}</b>}</header>
             {alerts.length?<div className="alert-list">{alerts.map(alert=>{const content=<><span className="alert-icon"><Icon name={alert.icon} size={18}/></span><span className="alert-copy"><b>{alert.title}</b><small>{alert.detail}</small></span><span className="alert-count">{alert.count}</span></>;return canOpen(alert.href)?<Link className={"alert-row "+alert.tone} key={alert.title} href={alert.href}>
               {content}
               <Icon name="chevron" size={16}/>

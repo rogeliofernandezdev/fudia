@@ -25,7 +25,7 @@ export function ProductDialog({draft,categories,destinations,loadAllergens,creat
   try{await handleSubmit(values=>save(values,pendingFile))()}
   finally{submitting.current=false}
  }
- return <div className="modal-backdrop modal-overlay-in" role="presentation"><Dialog onResponseClose={close} className="crud-modal product-form modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="product-title" aria-busy={busy}><ModalHeader title="Información del producto" titleId="product-title" icon="box" subtitle={draft.id?"EDITAR PRODUCTO":"NUEVO PRODUCTO"} onClose={close} busy={busy} closeLabel="Cerrar"/><ModalForm onSubmit={event=>event.preventDefault()} noValidate><ModalBody className="product-form-body"><div className="form-grid">
+ return <div className="modal-backdrop modal-overlay-in" role="presentation"><Dialog onResponseClose={close} className="crud-modal product-form modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="product-title" aria-busy={busy}><ModalHeader title="Información del producto" titleId="product-title" icon="box" subtitle={draft.id?"Editar producto":"Nuevo producto"} onClose={close} busy={busy} closeLabel="Cerrar"/><ModalForm onSubmit={event=>event.preventDefault()} noValidate><ModalBody className="product-form-body"><div className="form-grid">
   <div className="product-identity span-2">
   <div className="form-grid product-identity-fields">
   <FormField className="span-2" label="Nombre del producto" error={errors.name?.message}><Input autoFocus maxLength={160} {...register("name")} placeholder="Ej. Lomo saltado"/></FormField>

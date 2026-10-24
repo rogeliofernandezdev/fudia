@@ -3,11 +3,13 @@ export type TableOccupationTime={
   label:string;
   description:string;
   needsReview:boolean;
+  /** Sin hora de apertura válida no hay tiempo que mostrar en la tarjeta. */
+  known:boolean;
 };
 export function formatTableOccupation(occupiedSince:string|undefined,nowMs:number):TableOccupationTime{
   const openedAt=occupiedSince?Date.parse(occupiedSince):NaN;
   if(!Number.isFinite(openedAt)||openedAt>nowMs)return{
-    label:"—",description:"No hay una hora de apertura válida",needsReview:false,
+    label:"—",description:"No hay una hora de apertura válida",needsReview:false,known:false,
   };
   const minutes=Math.floor((nowMs-openedAt)/60000);
   const days=Math.floor(minutes/1440);
@@ -19,5 +21,6 @@ export function formatTableOccupation(occupiedSince:string|undefined,nowMs:numbe
     label,
     description:needsReview?`Ocupada desde hace ${label}. Revisar una posible comanda antigua abierta.`:`Mesa ocupada desde hace ${label}.`,
     needsReview,
+    known:true,
   };
 }

@@ -121,7 +121,7 @@ export function PlatformOnboardingPage(){
         {step===0&&<div className="form-grid">
           <Field className="span-2" label="Razón social" error={err("legalName")}><Input maxLength={180} {...register("legalName")} placeholder="Restaurante Perú SAC" autoComplete="organization"/></Field>
           <Field label="Nombre comercial" error={err("tradeName")}><Input maxLength={180} {...register("tradeName")} placeholder="Mi restaurante"/></Field>
-          <Field label="Identificación fiscal" error={err("taxId")}><Input maxLength={32} inputMode="numeric" {...register("taxId")} placeholder="RUC 20512345678"/></Field>
+          <Field label="Identificación fiscal" error={err("taxId")}><Input icon="badge" maxLength={32} inputMode="numeric" {...register("taxId")} placeholder="RUC 20512345678"/></Field>
         </div>}
 
         {step===1&&<>
@@ -157,7 +157,7 @@ export function PlatformOnboardingPage(){
             <Controller name="timezone" control={control} render={({field})=><TimezoneSelect value={field.value} onChange={field.onChange} onBlur={field.onBlur} name={field.name} inputRef={field.ref} invalid={Boolean(errors.timezone)} disabled={save.isPending}/>}/>
           </Field>
           <Field className="span-2" label="Nombre del local" error={err("locationName")}><Input {...register("locationName")} placeholder="Sede principal"/></Field>
-          <Field label="Teléfono"><Input type="tel" {...register("locationPhone")} placeholder="+51 999 888 777"/></Field>
+          <Field label="Teléfono"><Input icon="phone" type="tel" {...register("locationPhone")} placeholder="+51 999 888 777"/></Field>
           <Field label="Horario de atención"><Input {...register("locationHours")} placeholder="Lun-Dom 12:00-23:00"/></Field>
           <div className={"form-field span-2"+(errors.address?" has-error":"")}>
             <LocationMap latitude={latitude?Number(latitude):null} longitude={longitude?Number(longitude):null} address={address} onAddressChange={a=>setValue("address",a,{shouldValidate:Boolean(errors.address)})} onChange={c=>{setValue("latitude",c.lat.toFixed(7));setValue("longitude",c.lng.toFixed(7))}}/>
@@ -167,7 +167,7 @@ export function PlatformOnboardingPage(){
 
         {step===4&&<div className="form-grid">
           <Field className="span-2" label="Nombre completo" error={err("adminName")}><Input {...register("adminName")} placeholder="Juan Pérez" autoComplete="off"/></Field>
-          <Field className="span-2" label="Correo electrónico" error={err("adminEmail")}><Input type="email" {...register("adminEmail")} placeholder="admin@restaurante.com" autoComplete="off"/></Field>
+          <Field className="span-2" label="Correo electrónico" error={err("adminEmail")}><Input icon="mail" type="email" {...register("adminEmail")} placeholder="admin@restaurante.com" autoComplete="off"/></Field>
           <Field className="span-2" label="Contraseña" error={err("adminPassword")}><Input type="password" {...register("adminPassword")} placeholder="Mínimo 8 caracteres" autoComplete="new-password"/></Field>
         </div>}
       </section>

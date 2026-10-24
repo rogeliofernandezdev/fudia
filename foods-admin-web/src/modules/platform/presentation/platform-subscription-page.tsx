@@ -4,7 +4,7 @@ import "./platform-subscription.css";
 import {useMemo} from "react";
 import {useForm,useWatch} from "react-hook-form";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,EmptyState,ErrorState,FormField,Input,PageHeader,Select,Status} from "@/design-system";
+import {Button,EmptyState,ErrorState,FormField,Input,PageHeader,Select,Status,ChoiceGroup,IconTile} from "@/design-system";
 import {Icon} from "@/design-system/icons";
 import {useFeedback,useSession} from "@/providers";
 import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
@@ -72,11 +72,11 @@ export function SubscriptionWorkspace({current,plans,country,timeZone,organizati
  return <>
   <div className="platform-subscription-grid">
    <section className="panel subscription-editor">
-    <header><div><small>Contrato</small><h2>Plan y ciclo</h2></div><Status tone={subscriptionStatusTone(current.status)}>{subscriptionStatusLabel(current.status)}</Status></header>
+    <header><div className="subscription-editor-title"><IconTile name="contract"/><h2>Plan y ciclo</h2></div><Status tone={subscriptionStatusTone(current.status)}>{subscriptionStatusLabel(current.status)}</Status></header>
     <form onSubmit={change.handleSubmit(values=>{if(needsAcceptance&&!values.termsAccepted){change.setError("termsAccepted",{type:"custom",message:"Registra la aceptación de las nuevas condiciones."});return}save.mutate(values)})} noValidate>
      <div className="form-grid">
       <FormField className="span-2" label="Plan" error={change.formState.errors.planId?.message}><Select {...change.register("planId",{onChange:()=>change.setValue("termsAccepted",false)})}>{availablePlans.map(plan=><option value={plan.id} key={plan.id}>{plan.name}</option>)}</Select></FormField>
-      <FormField label="Ciclo"><Select {...change.register("billingCycle")}><option value="monthly">Mensual</option><option value="annual">Anual</option></Select></FormField>
+      <FormField as="div" label="Ciclo"><ChoiceGroup label="Ciclo de facturación" options={[{value:"monthly",label:"Mensual",icon:"calendar"},{value:"annual",label:"Anual",icon:"star"}]} {...change.register("billingCycle")}/></FormField>
       <FormField label="Estado"><Select {...change.register("status")}>{Object.entries(subscriptionStatusLabels).map(([value,label])=><option key={value} value={value}>{label}</option>)}</Select></FormField>
       <FormField label="Precio del plan"><Input readOnly tabIndex={-1} value={selectedPlan?(selectedPlan.currency+" "+Number(billingCycle==="annual"?selectedPlan.annualPrice:selectedPlan.monthlyPrice).toFixed(2)):""}/></FormField>
       <label className="switch-row compact"><input type="checkbox" {...change.register("autoRenew")}/><span/><b>Renovación automática</b></label>
@@ -88,12 +88,12 @@ export function SubscriptionWorkspace({current,plans,country,timeZone,organizati
    </section>
 
    <section className="panel subscription-editor">
-    <header><div><small>Cobro SaaS</small><h2>Registrar pago</h2></div></header>
+    <header><div className="subscription-editor-title"><IconTile name="cash" tone="brand"/><h2>Registrar pago</h2></div></header>
     <form onSubmit={paymentForm.handleSubmit(values=>pay.mutate(values))} noValidate>
      <div className="form-grid">
       <FormField label="Monto" error={paymentForm.formState.errors.amount?.message}><Input type="number" inputMode="decimal" min="0" step="0.01" {...paymentForm.register("amount")}/></FormField>
       <FormField label="Moneda"><Input readOnly tabIndex={-1} {...paymentForm.register("currency")}/></FormField>
-      <FormField label="Estado"><Select {...paymentForm.register("status")}>{Object.entries(paymentStatusLabels).map(([value,label])=><option key={value} value={value}>{label}</option>)}</Select></FormField>
+      <FormField as="div" className="span-2" label="Estado del pago"><ChoiceGroup label="Estado del pago" options={Object.entries(paymentStatusLabels).map(([value,label])=>({value,label}))} {...paymentForm.register("status")}/></FormField>
       <FormField label="Proveedor" help="Pasarela o canal por el que se cobró." error={paymentForm.formState.errors.provider?.message}><Input {...paymentForm.register("provider")} placeholder="manual"/></FormField>
       <FormField label="Referencia externa" optional error={paymentForm.formState.errors.externalReference?.message}><Input {...paymentForm.register("externalReference")} placeholder="ID del procesador o recibo"/></FormField>
       <FormField label="Fecha del pago" optional={paymentStatusValue!=="paid"} error={paymentForm.formState.errors.paidAt?.message}><Input type="datetime-local" {...paymentForm.register("paidAt")}/></FormField>
@@ -105,7 +105,7 @@ export function SubscriptionWorkspace({current,plans,country,timeZone,organizati
 
   <section className="panel subscription-history">
    <header><div><small>Historial</small><h2>Pagos de suscripción</h2></div><b>{current.payments.length}</b></header>
-   {current.payments.length?<DataTable label="Historial de pagos de suscripción"><thead><tr><th>FECHA</th><th>MONTO</th><th>ESTADO</th><th>PROVEEDOR</th><th>REFERENCIA</th></tr></thead><tbody>{current.payments.map(item=><tr key={item.id}><td>{dateLabel(item.paidAt??item.createdAt,country,timeZone)}</td><td><b>{item.currency+" "+Number(item.amount).toFixed(2)}</b></td><td><Status tone={paymentStatusTone(item.status)}>{paymentStatusLabel(item.status)}</Status></td><td>{item.provider}</td><td>{item.externalReference??"—"}</td></tr>)}</tbody></DataTable>:<EmptyState icon="receipt" title="Aún no hay pagos" text="Los pagos registrados para esta empresa aparecerán aquí."/>}
+   {current.payments.length?<DataTable label="Historial de pagos de suscripción"><thead><tr><th>Fecha</th><th>Monto</th><th>Estado</th><th>Proveedor</th><th>Referencia</th></tr></thead><tbody>{current.payments.map(item=><tr key={item.id}><td>{dateLabel(item.paidAt??item.createdAt,country,timeZone)}</td><td><b>{item.currency+" "+Number(item.amount).toFixed(2)}</b></td><td><Status tone={paymentStatusTone(item.status)}>{paymentStatusLabel(item.status)}</Status></td><td>{item.provider}</td><td>{item.externalReference??"—"}</td></tr>)}</tbody></DataTable>:<EmptyState icon="receipt" title="Aún no hay pagos" text="Los pagos registrados para esta empresa aparecerán aquí."/>}
   </section>
  </>;
 }

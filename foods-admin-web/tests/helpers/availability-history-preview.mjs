@@ -32,7 +32,7 @@ function load(path){
 const {AvailabilityHistoryDialog}=load("modules/menu/availability/presentation/availability-history-dialog");
 const css=readdirSync(resolve(root,".next/static/css")).filter(name=>name.endsWith(".css")).map(name=>readFileSync(resolve(root,".next/static/css",name),"utf8")).join("\n");
 assert.match(css,/availability-history-quantity[^}]*flex-wrap:wrap/);
-const font=css.match(/@font-face\{[^}]*font-family:Manrope;[^}]*unicode-range:u\+00\?\?[^}]*\}/)?.[0]?.match(/media\/([^/)]+\.woff2)/)?.[1];assert.ok(font);
+const font=css.match(/@font-face\{[^}]*font-family:Plus Jakarta Sans;[^}]*unicode-range:u\+00\?\?[^}]*\}/)?.[0]?.match(/media\/([^/)]+\.woff2)/)?.[1];assert.ok(font);
 const output=resolve(process.argv[2]);mkdirSync(output,{recursive:true});
 const server=createServer((req,res)=>{
  if(req.url==="/font.woff2"){res.setHeader("content-type","font/woff2");res.end(readFileSync(resolve(root,".next/static/media",font)));return;}
@@ -41,7 +41,7 @@ const server=createServer((req,res)=>{
  const records=mode==="legacy"?[legacy]:mode==="long"?Array.from({length:10},(_,index)=>({...entry,id:String(index),reason:"Producción adicional para atender una reserva de grupo; se confirma la cantidad preparada y el motivo del ajuste con el responsable de cocina.",userName:"Luis Angel Quispe Sulca Fernández de los Ríos",previousPortionQuantity:2000000000,portionQuantity:2100000000})):mode==="empty"?[]:[entry,{...entry,id:"status",previousPortionQuantity:20,portionQuantity:20,previousManualStatus:"available",manualStatus:"sold_out",reason:"Cierre de producción"},legacy];
  result=mode==="loading"?{isLoading:true}:mode==="error"?{isError:true,error:{message:"No pudimos conectar con el servidor. Inténtalo de nuevo."}}:{data:{items:records,total:records.length,page:1,pageSize:10}};
  const markup=renderToStaticMarkup(React.createElement(AvailabilityHistoryDialog,{item,close:()=>{}}));
- res.setHeader("content-type","text/html; charset=utf-8");res.end(`<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>@font-face{font-family:Manrope;font-weight:200 800;src:url(/font.woff2)}:root{--font-manrope:Manrope}${css}</style></head><body>${markup}</body></html>`);
+ res.setHeader("content-type","text/html; charset=utf-8");res.end(`<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>@font-face{font-family:Plus Jakarta Sans;font-weight:200 800;src:url(/font.woff2)}:root{--font-jakarta:"Plus Jakarta Sans"}${css}</style></head><body>${markup}</body></html>`);
 });
 await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
 const {chromium}=require(process.env.FOODS_PLAYWRIGHT_PATH??"playwright");let browser;

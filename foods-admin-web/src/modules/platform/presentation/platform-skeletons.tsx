@@ -44,7 +44,7 @@ export function PlatformSubscriptionSkeleton(){
     </div>
     <section className="panel subscription-history platform-subscription-history-skeleton" aria-label="Cargando historial de pagos" aria-busy="true">
       <header><div><i className="platform-skeleton-block eyebrow"/><i className="platform-skeleton-block heading"/></div><i className="platform-skeleton-block counter"/></header>
-      <div className="table-wrap"><table><thead><tr><th>FECHA</th><th>MONTO</th><th>ESTADO</th><th>PROVEEDOR</th><th>REFERENCIA</th></tr></thead><tbody>{Array.from({length:4},(_,row)=><tr key={row}>{Array.from({length:5},(_,cell)=><td key={cell}><i className="platform-skeleton-block table-line"/></td>)}</tr>)}</tbody></table></div>
+      <div className="table-wrap"><table><thead><tr><th>Fecha</th><th>Monto</th><th>Estado</th><th>Proveedor</th><th>Referencia</th></tr></thead><tbody>{Array.from({length:4},(_,row)=><tr key={row}>{Array.from({length:5},(_,cell)=><td key={cell}><i className="platform-skeleton-block table-line"/></td>)}</tr>)}</tbody></table></div>
     </section>
   </>;
 }

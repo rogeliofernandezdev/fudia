@@ -38,9 +38,9 @@ const sourceCss=["styles/variables.css","styles/globals.css","design-system/styl
 const mediaDir=resolve(root,".next/static/media");
 const fontCss=readdirSync(resolve(root,".next/static/css")).filter(name=>name.endsWith(".css")).map(name=>readFileSync(resolve(root,".next/static/css",name),"utf8")).join("\n");
 const css=process.env.FOODS_PREVIEW_COMPILED_CSS==="1"?fontCss:sourceCss;
-const latinFace=fontCss.match(/@font-face\{[^}]*font-family:Manrope;[^}]*unicode-range:u\+00\?\?[^}]*\}/)?.[0];
+const latinFace=fontCss.match(/@font-face\{[^}]*font-family:Plus Jakarta Sans;[^}]*unicode-range:u\+00\?\?[^}]*\}/)?.[0];
 const font=latinFace?.match(/media\/([^/)]+\.woff2)/)?.[1];
-assert.ok(font,"Genera el build para cargar la fuente Manrope real del frontend.");
+assert.ok(font,"Genera el build para cargar la fuente Plus Jakarta Sans real del frontend.");
 const noop=()=>{};
 function fixture(showModal,long,typography=false,actions=false,cancelRecord=false,manyTabs=false,longTabs=false,twoActions=false,evenTabs=false){
  const items=longTabs?[{value:"products",label:"Productos disponibles",icon:"utensils",count:123456},{value:"categories",label:"Categorías de la carta",icon:"layers",count:0}]:[{value:"products",label:"Productos",icon:"utensils",count:9},{value:"categories",label:"Categorías",icon:"layers",count:8}];
@@ -65,7 +65,7 @@ const server=createServer((req,res)=>{
  if(req.url==="/font.woff2"){res.setHeader("content-type","font/woff2");res.end(readFileSync(resolve(mediaDir,font)));return;}
  const url=new URL(req.url,"http://localhost");
  res.setHeader("content-type","text/html; charset=utf-8");
- res.end(`<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><style>@font-face{font-family:Manrope;font-weight:200 800;src:url(/font.woff2)}:root{--font-manrope:Manrope}${css}</style></head><body>${fixture(url.searchParams.has("modal"),url.searchParams.has("long"),url.searchParams.has("typography"),url.searchParams.has("actions"),url.searchParams.has("cancel-record"),url.searchParams.has("many-tabs"),url.searchParams.has("long-tabs"),url.searchParams.has("two-actions"),url.searchParams.has("even-tabs"))}</body></html>`);
+ res.end(`<!doctype html><html lang="es"><head><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><style>@font-face{font-family:Plus Jakarta Sans;font-weight:200 800;src:url(/font.woff2)}:root{--font-jakarta:"Plus Jakarta Sans"}${css}</style></head><body>${fixture(url.searchParams.has("modal"),url.searchParams.has("long"),url.searchParams.has("typography"),url.searchParams.has("actions"),url.searchParams.has("cancel-record"),url.searchParams.has("many-tabs"),url.searchParams.has("long-tabs"),url.searchParams.has("two-actions"),url.searchParams.has("even-tabs"))}</body></html>`);
 });
 await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
 const {chromium}=require(process.env.FOODS_PLAYWRIGHT_PATH??"playwright");
