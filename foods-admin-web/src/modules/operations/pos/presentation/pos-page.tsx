@@ -25,8 +25,8 @@ const paymentMeta={
   partial:{label:"Pago parcial",tone:"orange" as const},
   paid:{label:"Pagado",tone:"green" as const},
 };
-const channelLabel:Record<string,string>={salon:"Salón",mostrador:"Mostrador",recojo:"Recojo",delivery:"Delivery",whatsapp:"WhatsApp"};
-const channelIcons:Record<string,IconName>={salon:"utensils",mostrador:"store",recojo:"box",delivery:"truck",whatsapp:"share"};
+const channelLabel:Record<string,string>={salon:"Salón",mostrador:"Recojo en local",recojo:"Recojo en local",delivery:"Delivery",whatsapp:"WhatsApp"};
+const channelIcons:Record<string,IconName>={salon:"utensils",mostrador:"box",recojo:"box",delivery:"truck",whatsapp:"share"};
 
 export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
   const qc=useQueryClient();
@@ -134,7 +134,6 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
         <SearchField value={q} onChange={event=>{setQ(event.target.value);setPage(1)}} placeholder="Buscar pedido, cliente o mesa…" label="Buscar pedidos por cliente o mesa"/>
         <Select chip aria-label="Filtrar por estado de cobro" value={paymentStatus} onChange={event=>{setPaymentStatus(event.target.value);setPage(1)}}>
           <option value="all">Todos</option>
-          <option value="unpaid">Con saldo pendiente</option>
           <option value="pending">Sin pagos</option>
           <option value="partial">Pago parcial</option>
           <option value="paid">Pagado</option>

@@ -13,7 +13,7 @@ func (r *Orders) LegacyKitchenOrders(ctx context.Context, s scope, channel, dest
 		WHERE organization_id=$1
 		  AND location_id=$2
 		  AND status IN ('confirmado','preparando','listo')
-		  AND ($3='' OR channel=$3)
+		  AND ($3='' OR channel=$3 OR ($3 IN ('recojo','mostrador') AND channel IN ('recojo','mostrador')) OR ($3='salon' AND channel='whatsapp'))
  AND $4 <> 'bar'
 		  AND NOT EXISTS(SELECT 1 FROM order_service_items si WHERE si.order_id=orders.id AND si.organization_id=orders.organization_id)
  AND NOT EXISTS (
@@ -54,7 +54,7 @@ func (r *Orders) KitchenRounds(ctx context.Context, s scope, channel, destinatio
 		  AND kr.status IN ('confirmado','preparando','listo')
 		  AND o.status NOT IN ('entregado','cancelado')
  AND NOT EXISTS(SELECT 1 FROM order_service_items si WHERE si.order_id=o.id AND si.organization_id=o.organization_id)
-		  AND ($3='' OR o.channel=$3)
+		  AND ($3='' OR o.channel=$3 OR ($3 IN ('recojo','mostrador') AND o.channel IN ('recojo','mostrador')) OR ($3='salon' AND o.channel='whatsapp'))
  AND $4 <> 'bar'
 		ORDER BY
 		  CASE kr.status WHEN 'preparando' THEN 0 WHEN 'confirmado' THEN 1 ELSE 2 END,
@@ -89,7 +89,7 @@ func (r *Orders) ServiceTickets(ctx context.Context, s scope, channel, destinati
  LEFT JOIN tables t ON t.id=o.table_id AND t.organization_id=o.organization_id AND t.location_id=o.location_id
  WHERE o.organization_id=$1 AND o.location_id=$2 AND o.completed_at IS NULL AND o.status<>'cancelado'
  AND si.destination IN ('kitchen','bar') AND si.status IN ('confirmado','preparando','listo')
- AND ($3='' OR o.channel=$3) AND ($4='' OR si.destination=$4)
+ AND ($3='' OR o.channel=$3 OR ($3 IN ('recojo','mostrador') AND o.channel IN ('recojo','mostrador')) OR ($3='salon' AND o.channel='whatsapp')) AND ($4='' OR si.destination=$4)
  ORDER BY si.created_at,si.id`, s.OrganizationID, s.LocationID, channel, destination)
 	if err != nil {
 		return nil, err

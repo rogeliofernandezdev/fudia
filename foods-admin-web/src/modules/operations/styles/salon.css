@@ -82,21 +82,21 @@
 }
 
 /* ── Floor grid ── */
-.salon-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--size-212),1fr));grid-auto-rows:1fr;gap:var(--space-4);align-items:stretch}
+/* Como máximo cuatro mesas por fila: más columnas recargan el tablero. */
+.salon-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(max(var(--size-212),calc((100% - var(--space-4) * 3) / 4)),1fr));grid-auto-rows:1fr;gap:var(--space-4);align-items:stretch}
 
 /* ════════════════
-   TABLE CARD — ficha de la referencia con pie de color
-   Número grande y Status arriba, una línea por dato y un pie a todo el ancho con la
-   acción en un botón redondo de 44 px. El pie dice el estado a simple vista:
-   ocupada = índigo (`primary-100`, importe `primary-800`, botón `primary-600`);
-   libre = gris nube (`cloud-100`, «Abrir mesa» y botón en `navigation-900`).
+   TABLE CARD — plano de mesa (O1)
+   Arriba quién (cliente) o dónde (zona) y el Status. Al centro el plato es la mesa:
+   lleno en índigo cuando está ocupada y vacío punteado cuando está libre, así se
+   distingue sin leer. Un pedido QR por WhatsApp lleva su distintivo sobre el plato.
+   Pie: importe con mozo u origen y tiempo, o «Abrir mesa», y botón redondo de 44 px.
 ════════════════ */
 .salon-table{
   position:relative;
   display:flex;
   flex-direction:column;
   gap:var(--space-3);
-  min-height:var(--size-240);
   padding:var(--space-4);
   overflow:hidden;
   border-radius:var(--radius-sheet);
@@ -115,28 +115,41 @@
 
 @media (hover:hover) and (pointer:fine){.salon-table:not(:disabled):hover{border-color:var(--primary-300)}}
 
-.salon-table-head{display:flex;align-items:center;justify-content:space-between;gap:var(--space-2)}
-.salon-table-name{min-width:0;color:var(--ink-950);font-size:var(--font-size-2xl);font-weight:var(--weight-heavy);letter-spacing:var(--letter-spacing-snug);line-height:var(--line-height-none);overflow-wrap:anywhere}
+/* Quién a la izquierda y estado a la derecha; si no caben, el estado baja sin recortar el nombre. */
+.salon-table-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-1-5) var(--space-2);min-height:var(--size-28)}
+.salon-table-who{flex:1 1 var(--size-96);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink-800);font-size:var(--font-size-base);font-weight:var(--weight-semibold)}
+.salon-table.free .salon-table-who{color:var(--ink-500)}
 /* Estado destacado: variante compartida `emphasized` (sin recolorear) y texto de 13 px. */
 .salon-table-head>.status{flex:none;font-size:var(--font-size-sm)}
 
-/* Una línea por dato, recortada: la tarjeta no crece con nombres largos. */
-.salon-table-meta{margin:0;display:grid;gap:var(--space-0-5);color:var(--ink-500);font-size:var(--font-size-label);line-height:var(--line-height-normal)}
-.salon-table-meta>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-/* Tiempo de ocupación bajo el importe: neutro; más de un día abierta pasa a advertencia. */
-.salon-table-elapsed{color:var(--ink-500);font-size:var(--font-size-label)}
-.salon-table-elapsed.is-stale{color:var(--warning-800);font-weight:var(--weight-semibold)}
+/* El plato: lleno = ocupada; vacío punteado = libre. El tamaño del texto sigue al largo del nombre. */
+.salon-table-stage{display:grid;place-items:center;align-content:center;gap:var(--space-2);height:var(--size-140);border-radius:var(--radius-tile);background:var(--primary-100)}
+.salon-table.free .salon-table-stage{background:var(--surface);box-shadow:inset 0 0 0 var(--stroke-1) var(--cloud-150)}
+.salon-table-plate{position:relative;display:grid;place-items:center;width:var(--size-76);height:var(--size-76);padding:var(--space-1-5);border-radius:50%;background:var(--primary-600);color:var(--surface);font-weight:var(--weight-heavy);line-height:var(--line-height-tight);text-align:center}
+.salon-table.free .salon-table-plate{background:transparent;border:var(--stroke-2) dashed var(--line-strong);color:var(--ink-400)}
+.salon-table-plate>span:first-child{display:-webkit-box;overflow:hidden;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere}
+.salon-table-plate.is-short{font-size:var(--font-size-2xl)}
+.salon-table-plate.is-medium{font-size:var(--font-size-base)}
+.salon-table-plate.is-long{font-size:var(--font-size-label)}
+/* Bajo el plato: mozo (nombre y primer apellido), origen QR o capacidad si está libre. */
+.salon-table-caption{display:inline-flex;align-items:center;gap:var(--space-1);max-width:100%;padding:0 var(--space-3);overflow:hidden;color:var(--ink-600);font-size:var(--font-size-label);font-weight:var(--weight-semibold);white-space:nowrap}
+.salon-table-caption>span{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.salon-table.free .salon-table-caption{color:var(--ink-500)}
+.salon-table-qr{position:absolute;right:calc(var(--space-1-5) * -1);bottom:calc(var(--space-1) * -1);display:grid;place-items:center;width:var(--size-26);height:var(--size-26);border:var(--stroke-2) solid var(--surface);border-radius:50%;background:var(--navigation-900);color:var(--surface)}
 
-/* Pie a todo el ancho: compensa el padding de la tarjeta y llega a sus bordes. */
-.salon-table-foot{margin:auto calc(var(--space-4) * -1) calc(var(--space-4) * -1);display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);min-height:var(--size-72);padding:var(--space-3) var(--space-4);background:var(--cloud-100)}
-.salon-table.occupied .salon-table-foot{background:var(--primary-100)}
+/* Pie sin banda: importe y tiempo abierta, o «Abrir mesa». */
+.salon-table-foot{margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:var(--space-2)}
 .salon-table-amount{min-width:0;display:grid;gap:var(--space-0-5)}
 .salon-table-total{color:var(--primary-800);font-size:var(--font-size-lg);font-weight:var(--weight-heavy);font-variant-numeric:tabular-nums;line-height:var(--line-height-tight);white-space:nowrap}
 .salon-table-open{color:var(--navigation-900);font-size:var(--font-size-base);font-weight:var(--weight-bold);line-height:var(--line-height-tight)}
+/* Tiempo de ocupación: neutro; más de un día abierta pasa a advertencia. */
+.salon-table-elapsed{color:var(--ink-500);font-size:var(--font-size-label)}
+.salon-table-elapsed.is-stale{color:var(--warning-800);font-weight:var(--weight-semibold)}
 .salon-table-go{display:grid;place-items:center;flex:none;width:var(--size-44);height:var(--size-44);border-radius:var(--radius-pill);background:var(--navigation-900);color:var(--surface);transition:var(--transition-surface)}
-.salon-table.occupied .salon-table-go{background:var(--primary-600)}
+/* El plato es el único círculo sólido de una mesa ocupada; «ver» queda tenue. */
+.salon-table.occupied .salon-table-go{background:var(--primary-100);color:var(--primary-700)}
 @media (hover:hover) and (pointer:fine){
-  .salon-table.occupied:hover .salon-table-go{background:var(--primary-700)}
+  .salon-table.occupied:hover .salon-table-go{background:var(--primary-200)}
   .salon-table.free:hover .salon-table-go{background:var(--ink-950)}
 }
 
@@ -151,8 +164,7 @@
 
 /* ── Responsive ── */
 @media(max-width:960px){
-  .salon-grid{grid-template-columns:repeat(auto-fill,minmax(var(--size-180),1fr));gap:var(--space-3)}
-  .salon-table{min-height:var(--size-224)}
+  .salon-grid{grid-template-columns:repeat(auto-fill,minmax(max(var(--size-180),calc((100% - var(--space-3) * 3) / 4)),1fr));gap:var(--space-3)}
 }
 @media(max-width:600px){
   .salon-overview-stats{
@@ -196,10 +208,10 @@
   }
 
   .salon-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-2-5)}
-  .salon-table{min-height:var(--size-208);padding:var(--space-3);gap:var(--space-2-5)}
-  .salon-table-foot{margin:auto calc(var(--space-3) * -1) calc(var(--space-3) * -1);min-height:var(--size-64);padding:var(--space-2-5) var(--space-3)}
-  .salon-table-name{font-size:var(--font-size-xl)}
-  .salon-table-head{flex-direction:column;align-items:flex-start;gap:var(--space-1-5)}
+  .salon-table{padding:var(--space-3);gap:var(--space-2-5)}
+  .salon-table-stage{height:var(--size-104)}
+  .salon-table-plate{width:var(--size-56);height:var(--size-56)}
+  .salon-table-plate.is-short{font-size:var(--font-size-xl)}
   .salon-table-total{font-size:var(--font-size-md)}
 }
 @media(max-width:480px){
@@ -207,5 +219,4 @@
   .salon-overview-stats dd>svg{display:none}
 
   .salon-grid{gap:var(--space-2)}
-  .salon-table{min-height:var(--size-184)}
 }

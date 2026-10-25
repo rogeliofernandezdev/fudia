@@ -20,7 +20,7 @@ func TestOperationalOrdersListReturnsRealWhatsAppOrdersAndCurrency(t *testing.T)
 		t.Fatal(err)
 	}
 
-	req:=httptest.NewRequest("GET","/v1/operations/orders?status=abiertos&channel=whatsapp&page=1&pageSize=20",nil)
+	req:=httptest.NewRequest("GET","/v1/operations/orders?status=abiertos&channel=salon&page=1&pageSize=20",nil)
 	req=req.WithContext(context.WithValue(req.Context(),scopeKey{},s))
 	rec:=httptest.NewRecorder()
 	api.listOrders(rec,req)
@@ -32,6 +32,7 @@ func TestOperationalOrdersListReturnsRealWhatsAppOrdersAndCurrency(t *testing.T)
 		Items []order `json:"items"`
 		Total int `json:"total"`
 		ChannelCounts map[string]int `json:"channelCounts"`
+		ChannelOptions []map[string]string `json:"channelOptions"`
 		CurrencySymbol string `json:"currencySymbol"`
 	}
 	if err:=json.Unmarshal(rec.Body.Bytes(),&out);err!=nil{
@@ -49,8 +50,14 @@ func TestOperationalOrdersListReturnsRealWhatsAppOrdersAndCurrency(t *testing.T)
 	if !found{
 		t.Fatalf("real WhatsApp order %s not returned: %#v",orderID,out.Items)
 	}
-	if out.Total<1||out.ChannelCounts["whatsapp"]<1{
+	// El pedido QR por WhatsApp conserva su canal, pero se filtra y cuenta como Salón.
+	if out.Total<1||out.ChannelCounts["salon"]<1||out.ChannelCounts["whatsapp"]!=0{
 		t.Fatalf("unexpected list counts: total=%d channels=%#v",out.Total,out.ChannelCounts)
+	}
+	for _,option:=range out.ChannelOptions{
+		if option["value"]=="whatsapp"{
+			t.Fatalf("WhatsApp is an origin, not a service tab: %#v",out.ChannelOptions)
+		}
 	}
 	if out.CurrencySymbol==""{
 		t.Fatal("currency symbol must come from the location fiscal profile")

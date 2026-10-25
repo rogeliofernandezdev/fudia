@@ -59,7 +59,7 @@ test("preview es el PDF real, sin aviso ni botón de impresión propio; solo des
 });
 
 test("la descarga usa el PDF preparado y es la única acción del pie",()=>{
- let state=0;const values=[{url:"blob:ticket",filename:"ticket.pdf"},null,0];
+ let state=0;const values=[{url:"blob:ticket",filename:"ticket.pdf",rows:[]},true,null,0];
  const ui=compile("modules/sales/presentation/payment-ticket-dialog.tsx",name=>{
   if(name==="react")return{useEffect:()=>{},useState:()=>[values[state++],()=>{}]};
   if(name==="@tanstack/react-query")return{useQuery:()=>({data:fixture(),isFetching:false,isPending:false,isError:false})};
@@ -72,4 +72,25 @@ test("la descarga usa el PDF preparado y es la única acción del pie",()=>{
  assert.equal(nodes.filter(node=>node.type==="iframe").length,1);assert.equal(nodes.find(node=>node.type==="iframe").props.src,"blob:ticket");
  const buttons=nodes.filter(node=>node.type==="Button");assert.deepEqual(buttons.map(node=>node.props.children),["Descargar PDF"]);
  assert.equal(buttons[0].props.kind,undefined,"descargar es la acción principal: índigo");assert.equal(buttons[0].props.disabled,false);
+});
+test("sin visor de PDF (Chrome Android) la vista previa usa las mismas líneas en papel de 80 mm",()=>{
+ let state=0;const rows=[{text:"Fudia",bold:true,center:true,size:13},{text:"",rule:true},{text:"TOTAL",right:"S/ 30.00",bold:true,size:12},{text:"No es un comprobante fiscal",center:true,size:8}];
+ const values=[{url:"blob:ticket",filename:"ticket.pdf",rows},false,null,0];
+ const ui=compile("modules/sales/presentation/payment-ticket-dialog.tsx",name=>{
+  if(name==="react")return{useEffect:()=>{},useState:()=>[values[state++],()=>{}]};
+  if(name==="@tanstack/react-query")return{useQuery:()=>({data:fixture(),isFetching:false,isPending:false,isError:false})};
+  if(name==="@/providers")return{useSession:()=>({organization:{id:"org"},location:{id:"loc"}})};
+  if(name==="@/design-system")return{Button:"Button",ErrorState:"ErrorState",Icon:"Icon"};if(name==="@/design-system/dialog")return{Dialog:"Dialog"};
+  if(name.startsWith("../")||name.endsWith(".css"))return{};return require(name);
+ });
+ const tree=ui.PaymentTicketDialog({orderId:"order-1",close:()=>{}}),nodes=[];
+ function visit(item){if(!item||typeof item!=="object")return;if(Array.isArray(item)){item.forEach(visit);return;}nodes.push(item);visit(item.props?.children);}visit(tree);
+ assert.equal(nodes.some(node=>node.type==="iframe"),false,"no se muestra un iframe que Android no puede renderizar");
+ const paper=nodes.find(node=>typeof node.type==="function");assert.ok(paper,"usa la vista en papel");
+ const html=[];function walk(item){if(!item||typeof item!=="object")return;if(Array.isArray(item)){item.forEach(walk);return;}html.push(item);walk(item.props?.children);}walk(paper.type(paper.props));
+ assert.equal(html.filter(node=>node.type==="hr").length,1);
+ assert.ok(html.some(node=>node.type==="p"&&node.props.className==="is-bold is-lg"));
+ assert.ok(html.some(node=>node.type==="span"&&node.props.children==="S/ 30.00"));
+ assert.ok(html.some(node=>node.type==="p"&&node.props.className==="is-center is-sm"));
+ assert.ok(nodes.some(node=>node.type==="Button"&&node.props.children==="Descargar PDF"),"la descarga del PDF se mantiene");
 });

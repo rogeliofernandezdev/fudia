@@ -207,4 +207,5 @@ type ConciergeHandler interface {
 	GetConciergeOrderStatus(http.ResponseWriter, *http.Request)
 	GetConciergeDeliveryFees(http.ResponseWriter, *http.Request)
 	SaveConciergeDeliveryFees(http.ResponseWriter, *http.Request)
+	QuoteAdminDelivery(http.ResponseWriter, *http.Request)
 }

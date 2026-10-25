@@ -24,11 +24,12 @@ type Page struct {
 }
 
 func (a *Orders) List(ctx context.Context, s scope, f Filter) (Page, error) {
+	f.Channel = domain.NormalizeChannel(f.Channel)
 	out, err := a.repo.List(ctx, s, f)
 	if err != nil {
 		return out, orderFailure(apperror.Unavailable, "orders_unavailable", "No pudimos cargar los pedidos.")
 	}
-	out.ChannelOptions = domain.Channels
+	out.ChannelOptions = domain.ServiceChannels
 	out.StatusOptions = domain.Statuses
 	return out, nil
 }

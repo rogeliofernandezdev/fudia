@@ -18,12 +18,16 @@ type TableSubmission struct {
 	Created bool
 }
 
- // Read-side projections published by Orders. Aliases keep existing JSON and
- // transaction contracts stable while consumers stop importing domain directly.
+// Read-side projections published by Orders. Aliases keep existing JSON and
+// transaction contracts stable while consumers stop importing domain directly.
 type Order = domain.Order
 type OrderItem = domain.OrderItem
 type OrderItemInput = domain.OrderItemInput
+
 var Channels = domain.Channels
+
+// NormalizeChannel publica la compatibilidad de lectura de tipos históricos.
+func NormalizeChannel(channel string) string { return domain.NormalizeChannel(channel) }
 
 // ConciergeDeliveryInput crea un pedido de delivery o recojo sin mesa.
 // Concierge calcula DeliveryFee y DistanceKm con las tarifas del local antes

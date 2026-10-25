@@ -25,6 +25,7 @@ const netPaidSQL = `
 func scanOrder(row pgx.Row) (domain.Order, error) {
 	var o domain.Order
 	err := row.Scan(&o.ID, &o.Code, &o.Channel, &o.Status, &o.CustomerID, &o.CustomerName, &o.CustomerPhone, &o.Address, &o.Reference, &o.TableID, &o.TableName, &o.Notes, &o.Subtotal, &o.DeliveryFee, &o.Total, &o.CreatedAt, &o.UpdatedAt, &o.CompletedAt, &o.WaiterID, &o.WaiterName, &o.CollectedByNames, &o.BillClosedAt, &o.DeliveryLatitude, &o.DeliveryLongitude, &o.DeliveryDistanceKm)
+	o.Channel = domain.NormalizeChannel(o.Channel)
 	o.AccountState = "open"
 	if o.BillClosedAt != "" {
 		o.AccountState = "awaiting_payment"
@@ -126,10 +127,7 @@ func (r *Orders) ServiceItems(ctx context.Context, s scope, orderID string) ([]d
 				item.DestinationLabel = destination["shortLabel"]
 			}
 		}
-		item.StatusLabel = map[string]string{"nuevo": "Sin enviar", "confirmado": "Pendiente", "preparando": "Preparando", "listo": "Listo", "entregado": "Entregado"}[item.Status]
-		if item.Destination == "direct" && item.Status == "listo" {
-			item.StatusLabel = "Pendiente de entrega"
-		}
+		item.StatusLabel = map[string]string{"nuevo": "Sin enviar", "confirmado": "Pendiente", "preparando": "Preparando", "listo": "Por entregar", "entregado": "Entregado"}[item.Status]
 		items = append(items, item)
 	}
 	return items, rows.Err()

@@ -81,7 +81,7 @@ test("dashboard conserva importes negativos y estados vacíos específicos",()=>
 
 test("dashboard consolida la operación en vivo en una columna",()=>{
  const nodes=render(base);
- for(const label of ["Atención","Cocina","Delivery","Caja","Mesas ocupadas","3 de 8","Por preparar","En preparación","Listos para entregar","Por despachar","En camino","Turnos abiertos","1 de 2","Efectivo en caja","S/ 120.00","Productos agotados","S/ 80.00"])assert.ok(has(nodes,label),label);
+ for(const label of ["Atención","Cocina","Delivery","Caja","Mesas ocupadas","3 de 8","Por preparar","En preparación","Por entregar","Por despachar","En camino","Turnos abiertos","1 de 2","Efectivo en caja","S/ 120.00","Productos agotados","S/ 80.00"])assert.ok(has(nodes,label),label);
  assert.ok(has(nodes,"3 pedidos pendientes · 2 con pago parcial"));
 });
 

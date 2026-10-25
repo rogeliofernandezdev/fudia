@@ -17,8 +17,8 @@ inventario trazable y emitir comprobantes electrónicos para Perú.
 
 ## Canales
 
-- Atención en mesa y mostrador.
-- Recojo en local.
+- Atención en mesa.
+- Recojo en local (pedidos presenciales y encargos previos; incluye el antiguo Mostrador).
 - Delivery propio.
 - Pedido recibido por WhatsApp mediante integración.
 

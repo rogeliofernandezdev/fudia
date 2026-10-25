@@ -204,6 +204,9 @@ export function SalonManager(){
             const meta=o?statusMeta[o.status]??{label:o.status,tone:"gray" as const}:null;
             const elapsed=o?formatTableOccupation(t.occupiedSince,clock):null;
             const tableState=o?"occupied":"free";
+            const plate=t.name.replace(/^mesa\s*/i,"")||t.name;
+            const viaQR=o?.channel==="whatsapp";
+            const seats=`${t.seats} ${t.seats===1?"persona":"personas"}`;
             return(
               <button
                 key={t.id}
@@ -211,23 +214,32 @@ export function SalonManager(){
                 className={`salon-table ${tableState}`}
                 onClick={()=>o?setDetailId(o.id):canManage&&openNewDraft(t.id)}
                 disabled={!o&&!canManage}
-                aria-label={`Mesa ${t.name}${o?`, ocupada, pedido ${o.code}`:", libre"}`}
+                aria-label={`Mesa ${t.name}${o?`, ocupada, pedido ${o.code}${viaQR?", pedido por QR":""}`:", libre"}`}
               >
-                {/* Ficha simple (referencia): número y estado, una línea de datos y pie con importe y acción. */}
+                {/* Plano de mesa: quién o dónde y estado arriba; el plato es la mesa (lleno = ocupada). */}
                 <header className="salon-table-head">
-                  <strong className="salon-table-name">{t.name.replace(/^mesa\s*/i,"")||t.name}</strong>
+                  <span className="salon-table-who">{o?(o.customerName||t.zone||seats):t.zone}</span>
                   {o&&meta?<Status tone={meta.tone} emphasis>{meta.label}</Status>:<Status tone="navy" emphasis>Libre</Status>}
                 </header>
 
-                <p className="salon-table-meta">
-                  <span>{t.seats} {t.seats===1?"persona":"personas"}{zones.length>1&&t.zone?` · ${t.zone}`:""}</span>
-                  {o&&<span>Mozo: {o.waiterName||"Sin asignar"}</span>}
-                </p>
+                <div className="salon-table-stage">
+                  <strong className={`salon-table-plate ${plate.length<=3?"is-short":plate.length<=6?"is-medium":"is-long"}`} aria-hidden="true">
+                    <span>{plate}</span>
+                    {viaQR&&<span className="salon-table-qr"><Icon name="whatsapp" size={14}/></span>}
+                  </strong>
+                  {/* Bajo el plato: quién la atiende (o el origen QR); libre, su capacidad. */}
+                  <small className="salon-table-caption">
+                    {!o?seats:viaQR?<><Icon name="whatsapp" size={14}/>Pedido por QR</>:<span title={o.waiterName||undefined}>Mozo: {o.waiterName?o.waiterName.split(/\s+/).slice(0,2).join(" "):"sin asignar"}</span>}
+                  </small>
+                </div>
 
                 <footer className="salon-table-foot">
-                  {o?<span className="salon-table-amount"><b className="salon-table-total">{money(o.total)}</b>{elapsed?.known&&<small className={`salon-table-elapsed${elapsed.needsReview?" is-stale":""}`} title={elapsed.description}>Hace {elapsed.label}</small>}</span>
+                  {o?<span className="salon-table-amount">
+                    <b className="salon-table-total">{money(o.total)}</b>
+                    {elapsed?.known&&<small className={`salon-table-elapsed${elapsed.needsReview?" is-stale":""}`} title={elapsed.description}>{elapsed.label}</small>}
+                  </span>
                   :<b className="salon-table-open">Abrir mesa</b>}
-                  <span className="salon-table-go" aria-hidden="true"><Icon name={o?"eye":"plus"} size={18}/></span>
+                  <span className="salon-table-go" aria-hidden="true"><Icon name={o?"orders":"plus"} size={18}/></span>
                 </footer>
               </button>
             );
@@ -287,17 +299,16 @@ export function SalonManager(){
   );
 }
 
-/** Tarjeta de mesa en carga: estado, tiempo, icono, nombre, personas y acción. */
+/** Tarjeta de mesa en carga: misma geometría que el plano de mesa (cabecera, plato y pie). */
 function SalonTableSkeleton(){
   return(
-    <div className="salon-table salon-table-skeleton" aria-hidden="true">
+    <div className="salon-table free salon-table-skeleton" aria-hidden="true">
       <div className="salon-table-head">
-        <Skeleton width="var(--size-48)" height="var(--size-24)"/>
-        <Skeleton width="var(--size-72)" height="var(--size-20)" radius="var(--radius-pill)"/>
+        <Skeleton width="var(--size-92)" height="var(--size-12)"/>
+        <Skeleton width="var(--size-72)" height="var(--size-24)" radius="var(--radius-pill)"/>
       </div>
-      <div className="salon-table-meta">
-        <Skeleton width="var(--size-120)" height="var(--size-10)"/>
-        <Skeleton width="var(--size-92)" height="var(--size-10)"/>
+      <div className="salon-table-stage">
+        <Skeleton width="var(--size-56)" height="var(--size-56)" radius="var(--radius-pill)"/>
       </div>
       <div className="salon-table-foot">
         <Skeleton width="var(--size-86)" height="var(--size-16)"/>

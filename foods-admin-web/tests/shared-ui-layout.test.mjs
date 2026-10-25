@@ -187,7 +187,9 @@ test("todas las pestañas requieren iconos y Cocina no los oculta en móvil",()=
  assert.match(source,/icon:IconName/);
  assert.doesNotMatch(source,/icon\?:IconName|item\.icon&&/);
  assert.doesNotMatch(read("modules/operations/kitchen/presentation/kitchen.css"),/\.ds-tabs\.kitchen-mobile-tabs button svg\{display:none\}/);
- assert.doesNotMatch(read("modules/operations/kitchen/presentation/kitchen.css"),/\.ds-tabs\.kitchen-mobile-tabs button\{[^}]*flex:/);
+ // Excepción documentada: los tres carriles de Cocina se ven a la vez en columnas iguales (sin pares deslizables).
+ assert.match(read("modules/operations/kitchen/presentation/kitchen.css"),/\.ds-tabs\.kitchen-mobile-tabs button\{flex:1 1 0;min-width:0;min-height:var\(--size-44\)\}/);
+ assert.match(read("modules/operations/kitchen/presentation/kitchen.css"),/\.ds-tabs\.kitchen-mobile-tabs:has\(>button:last-child:nth-child\(odd\):not\(:only-child\)\)::after\{content:none\}/,"sin hueco de relleno junto a la tercera pestaña");
 });
 test("el modal del QR de mesa no muestra la URL técnica; compartir y descargar la siguen usando",()=>{
  const tables=read("modules/operations/tables/presentation/tables-manager.tsx");

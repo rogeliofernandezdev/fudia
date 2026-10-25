@@ -1547,6 +1547,7 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
     post:
       operationId: createOperationalOrder
+      description: "Usar recojo para Recojo en local, tanto presencial como por encargo. El alias histórico mostrador se acepta por compatibilidad y se guarda como recojo, sin inferir ni cambiar el origen del pedido."
       summary: Crea un pedido desde la operación
       security: [{ sessionCookie: [] }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/OrderInput" } } } }
@@ -1656,14 +1657,28 @@ paths:
     get:
       operationId: listOrders
       summary: Bandeja de pedidos del local activo
+      description: "channelOptions y channelCounts usan tipos de atención (salon, recojo, delivery). channel=salon incluye los pedidos QR de mesa por WhatsApp y channel=recojo incluye el alias histórico mostrador; el canal guardado de cada pedido no cambia."
       security: [{ sessionCookie: [] }]
       parameters: [{ in: query, name: q, schema: { type: string } }, { in: query, name: channel, schema: { type: string, enum: [salon, mostrador, recojo, delivery, whatsapp] } }, { in: query, name: status, schema: { type: string, enum: [abiertos, nuevo, confirmado, preparando, listo, en_camino, entregado, cancelado] } }]
       responses: { "200": { description: Pedidos paginados con conteos por canal }, "403": { $ref: "#/components/responses/Forbidden" } }
     post:
       operationId: createOrder
+      description: "Usar recojo para Recojo en local. mostrador es un alias de compatibilidad: se persiste como recojo. No se cambia el origen del pedido."
       security: [{ sessionCookie: [] }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/OrderInput" } } } }
       responses: { "201": { description: Pedido creado, content: { application/json: { schema: { $ref: "#/components/schemas/Order" } } } }, "400": { description: Datos inválidos } }
+  /v1/admin/delivery-quote:
+    post:
+      operationId: quoteAdminDelivery
+      summary: Sugiere el costo de envío del alta manual según la distancia en línea recta desde el local activo
+      description: "Usa las mismas tarifas del local que Concierge. La ubicación viaja en el cuerpo, nunca en la URL. covered=false cuando supera el mayor rango; el costo sugerido es editable al crear el pedido."
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ConciergeDeliveryQuoteInput" } } } }
+      responses:
+        "200": { description: Cotización, content: { application/json: { schema: { $ref: "#/components/schemas/ConciergeDeliveryQuote" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: "delivery_unavailable: el local no tiene ubicación o rangos de tarifa" }
   /v1/admin/orders/floor:
     get:
       operationId: getOrdersFloor
@@ -2229,7 +2244,7 @@ components:
     ConciergeHandoffInput: { type: object, required: [conversationId, customerPhone, reason], properties: { conversationId: { type: string, minLength: 1, maxLength: 160 }, customerPhone: { type: string, maxLength: 32 }, reason: { type: string, maxLength: 240 } } }
     ConciergeHandoff: { type: object, required: [id, tableId, tableName, conversationId, customerPhone, reason, status, requestedAt], properties: { id: { type: string, format: uuid }, tableId: { type: string, format: uuid }, tableName: { type: string }, conversationId: { type: string }, customerPhone: { type: string }, reason: { type: string }, status: { type: string, enum: [pending, resolved] }, requestedAt: { type: string, format: date-time }, resolvedAt: { type: [string, "null"], format: date-time }, resolvedByName: { type: [string, "null"] } } }
     OrderItemInput: { type: object, required: [productId, qty], properties: { productId: { type: string, format: uuid }, name: { type: string, maxLength: 160 }, qty: { type: number, exclusiveMinimum: 0 }, unitPrice: { type: number, minimum: 0, description: "Opcional por compatibilidad. En el alta el servidor obtiene el precio del catálogo; el cliente puede omitirlo." }, note: { type: string, maxLength: 240 }, selections: { type: array, items: { $ref: "#/components/schemas/OrderComboSelectionInput" } }, modifiers: { type: array, items: { $ref: "#/components/schemas/OrderModifierSelectionInput" } }, reprice: { type: boolean } } }
-    OrderInput: { type: object, required: [channel, items], description: "Para delivery se requieren customerName, customerPhone válido (7 a 15 dígitos; admite prefijo + y separadores) y address. Solo salón admite tableId. El servidor recalcula precios y disponibilidad del catálogo en el alcance de la sesión. El alta manual desde Pedidos envía sendToKitchen=true.", properties: { channel: { type: string, enum: [salon, mostrador, recojo, delivery, whatsapp] }, customerId: { type: string, format: uuid }, customerName: { type: string, maxLength: 160 }, customerPhone: { type: string, maxLength: 30 }, address: { type: string, maxLength: 240 }, reference: { type: string, maxLength: 240 }, tableId: { type: string, format: uuid }, notes: { type: string, maxLength: 500 }, deliveryFee: { type: number, minimum: 0 }, sendToKitchen: { type: boolean, default: false, description: "true registra el pedido Confirmado y lo incorpora a Cocina; false guarda un pedido Nuevo pendiente de envío." }, items: { type: array, minItems: 1, items: { $ref: "#/components/schemas/OrderItemInput" } } } }
+    OrderInput: { type: object, required: [channel, items], description: "Para delivery se requieren customerName, customerPhone válido (7 a 15 dígitos; admite prefijo + y separadores) y address. Solo salón admite tableId. El servidor recalcula precios y disponibilidad del catálogo en el alcance de la sesión. El alta manual desde Pedidos envía sendToKitchen=true.", properties: { channel: { type: string, enum: [salon, mostrador, recojo, delivery, whatsapp] }, customerId: { type: string, format: uuid }, customerName: { type: string, maxLength: 160 }, customerPhone: { type: string, maxLength: 30 }, address: { type: string, maxLength: 240 }, reference: { type: string, maxLength: 240 }, tableId: { type: string, format: uuid }, notes: { type: string, maxLength: 500 }, deliveryFee: { type: number, minimum: 0 }, deliveryLatitude: { type: number, minimum: -90, maximum: 90, description: "Punto de entrega marcado en el mapa; solo delivery y junto con deliveryLongitude. El servidor calcula la distancia desde el local." }, deliveryLongitude: { type: number, minimum: -180, maximum: 180 }, sendToKitchen: { type: boolean, default: false, description: "true registra el pedido Confirmado y lo incorpora a Cocina; false guarda un pedido Nuevo pendiente de envío." }, items: { type: array, minItems: 1, items: { $ref: "#/components/schemas/OrderItemInput" } } } }
     OrderUpdateInput:
       type: object
       required: [items]
@@ -2257,6 +2272,7 @@ components:
         statusLabel: { type: string }
     Order:
       type: object
+      description: "Recojo en local usa channel=recojo e incluye pedidos históricos de mostrador sin modificar su almacenamiento. channelOptions omite mostrador; los filtros recojo/mostrador agrupan ambos códigos en Pedidos y Cocina y los conteos usan recojo. Por compatibilidad, las altas antiguas con mostrador se aceptan y se guardan como recojo. No se cambia ni se infiere el origen WhatsApp."
       required: [id, code, channel, status, customerName, customerPhone, address, reference, tableId, tableName, waiterId, waiterName, collectedByNames, notes, subtotal, deliveryFee, total, createdAt, updatedAt]
       properties:
         id: { type: string, format: uuid }
@@ -2268,7 +2284,7 @@ components:
         customerPhone: { type: string }
         address: { type: string }
         reference: { type: string }
-        deliveryLatitude: { type: [number, "null"], minimum: -90, maximum: 90, readOnly: true, description: "Latitud del punto de entrega fijado por WhatsApp en pedidos de Concierge; null si no hay ubicación." }
+        deliveryLatitude: { type: [number, "null"], minimum: -90, maximum: 90, readOnly: true, description: "Latitud del punto de entrega fijado por WhatsApp en Concierge o marcado en el mapa del alta manual; null si no hay ubicación." }
         deliveryLongitude: { type: [number, "null"], minimum: -180, maximum: 180, readOnly: true, description: "Longitud del punto de entrega; null cuando deliveryLatitude es null." }
         deliveryDistanceKm: { type: [number, "null"], minimum: 0, readOnly: true, description: "Distancia en línea recta desde el local usada para cotizar el delivery; null si no se cotizó." }
         tableId: { type: string }

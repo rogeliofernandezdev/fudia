@@ -12,12 +12,20 @@ const resolver=compile("../../shared/forms/zod-resolver.ts");
 const schema=compile("orders/domain/manual-order-schema.ts",name=>name==="@/shared/forms/zod-resolver"?resolver:require(name));
 const fields={...schema.emptyManualOrder,customerName:" Ana ",customerPhone:"+51 (999) 123-456",address:" Av. Perú 100 ",reference:"Puerta azul",deliveryFee:"5"};
 const line={lineKey:"line-1",productId:"product-1",name:"Plato",itemType:"product",qty:2,unitPrice:25,note:"Sin cebolla",selections:[]};
-const channels=[{value:"delivery",label:"Delivery"},{value:"recojo",label:"Recojo"},{value:"mostrador",label:"Mostrador"},{value:"whatsapp",label:"WhatsApp"},{value:"salon",label:"Salón"}];
+const channels=[{value:"delivery",label:"Delivery"},{value:"recojo",label:"Recojo en local"},{value:"mostrador",label:"Mostrador"},{value:"whatsapp",label:"WhatsApp"},{value:"salon",label:"Salón"}];
 
 test("pedido manual: delivery exige cliente, teléfono válido, dirección y envío no negativo",()=>{
  assert.equal(schema.manualOrderSchema.safeParse(fields).success,true);
  for(const patch of [{customerName:" "},{customerPhone:""},{customerPhone:"abc999123456"},{customerPhone:"123"},{customerPhone:"1234567890123456"},{address:" "},{deliveryFee:""},{deliveryFee:"-1"},{deliveryFee:"NaN"},{channel:"whatsapp"},{channel:"salon"}])assert.equal(schema.manualOrderSchema.safeParse({...fields,...patch}).success,false,JSON.stringify(patch));
  assert.equal(schema.manualOrderSchema.safeParse({...fields,customerPhone:"999123456",deliveryFee:"0"}).success,true);
+});
+test("pedido manual: recojo en local reemplaza mostrador sin pedir datos de delivery",()=>{
+ assert.equal(schema.isManualOrderChannel("mostrador"),false);
+ assert.equal(schema.manualOrderSchema.safeParse({...fields,channel:"mostrador"}).success,false);
+ const pickup={...fields,channel:"recojo",customerName:"",customerPhone:"",address:"",deliveryFee:""};
+ assert.equal(schema.manualOrderSchema.safeParse(pickup).success,true);
+ const payload=schema.manualOrderPayload({...pickup,lines:[line]});
+ assert.equal(payload.channel,"recojo");assert.equal(payload.deliveryFee,0);assert.equal(payload.address,"");
 });
 test("pedido manual: payload no envía empresa, local, mesa ni precios controlados por cliente",()=>{
  const payload=schema.manualOrderPayload({...fields,lines:[line,{...line,lineKey:"combo-1",itemType:"combo",productId:"combo-product",selections:[{groupId:"group-1",productId:"option-1",name:"Elección",surcharge:3}]}]});
@@ -34,16 +42,17 @@ test("pedido manual: integración usa el endpoint existente con POST y respuesta
  const result=await api.createManualOrder({...fields,lines:[line]});assert.equal(result.id,"server-uuid");assert.equal(sent.path,"orders");assert.equal(sent.options.method,"POST");assert.equal(JSON.parse(sent.options.body).sendToKitchen,true);
 });
 function nodes(tree,result=[]){if(Array.isArray(tree)){tree.forEach(node=>nodes(node,result));return result}if(tree&&typeof tree==="object"){result.push(tree);nodes(tree.props?.children,result)}return result}
-const ds=Object.fromEntries(["Button","ChoiceGroup","ConfirmDialog","Dialog","ModalHeader","ModalFooter","FormField","FormSection","Icon","IconButton","Input","NumberStepper","Select","Textarea"].map(name=>[name,name]));
+const ds=Object.fromEntries(["Button","ChoiceGroup","ConfirmDialog","Tabs","Dialog","ModalHeader","ModalFooter","FormField","FormSection","Icon","IconButton","Input","LocationMap","MoneyInput","NumberStepper","Select","Textarea"].map(name=>[name,name]));
 function hooksMount(file,props,overrides={}){
  const state=[],refs=[];let cursor=0,refCursor=0;
  const compiled=compile(file,name=>{
   if(name.endsWith(".css"))return{};
   if(name==="react")return{...require("react"),useEffect:()=>{},useRef:value=>{const index=refCursor++;return refs[index]??(refs[index]={current:value})},useState:value=>{const index=cursor++;if(state[index]===undefined)state[index]=value;return[state[index],next=>{state[index]=typeof next==="function"?next(state[index]):next}]}};
   if(name==="@/design-system")return ds;
+  if(name==="@/design-system/location-map")return{LocationMap:"LocationMap"};
   if(name==="@/providers")return{useMoney:()=>value=>`S/ ${Number(value).toFixed(2)}`};
   if(name==="@/providers/feedback-provider")return{useFeedback:()=>({notify:()=>{}})};
-  if(name==="react-hook-form")return{useWatch:({name})=>fields[name],useForm:()=>({register:name=>({name}),control:{},formState:{errors:{},isDirty:false,isSubmitting:false},handleSubmit:callback=>async()=>{const result=schema.manualOrderSchema.safeParse(fields);if(result.success)return callback(result.data)}})};
+  if(name==="react-hook-form")return{useWatch:({name})=>fields[name],useForm:()=>({register:name=>({name}),setValue:(name,value)=>{fields[name]=value},control:{},formState:{errors:{},isDirty:false,isSubmitting:false},handleSubmit:callback=>async()=>{const result=schema.manualOrderSchema.safeParse(fields);if(result.success)return callback(result.data)}})};
   if(name.endsWith("manual-order-schema"))return schema;
   if(name.endsWith("comanda-catalog"))return{ComandaCatalog:"ComandaCatalog",ComboConfigurator:"ComboConfigurator"};
   if(name==="./comanda-view")return{ComandaView:"ComandaView"};
@@ -53,22 +62,45 @@ function hooksMount(file,props,overrides={}){
  const Component=Object.values(compiled)[0];
  return{state,render:()=>{cursor=0;refCursor=0;return nodes(Component({...props,...overrides}))}};
 }
-const mount=(overrides={})=>hooksMount("orders/presentation/manual-order-dialog.tsx",{channels,currencySymbol:"S/",busy:false,onSave:async()=>{},onClose:()=>{}},overrides);
+const mount=(overrides={})=>hooksMount("orders/presentation/manual-order-dialog.tsx",{channels,currencySymbol:"S/",busy:false,onSave:async()=>{},onClose:()=>{},quoteDelivery:async()=>({covered:true,distanceKm:"2.35",fee:"6",maxDistanceKm:"5.00",currencySymbol:"S/"})},overrides);
 const mountComanda=(overrides={})=>hooksMount("orders/presentation/comanda-view.tsx",{initial:{...fields,tableId:"",lines:[]},mode:"create",allTables:[],busy:false,currencySymbol:"S/",channelLabel:"Delivery",close:()=>{},save:async()=>{},notify:()=>{}},overrides);
 const goToOrder=async view=>{await view.render().find(node=>node.type==="form").props.onSubmit();return view.render().find(node=>node.type==="ComandaView")};
 
 test("pedido manual: datos primero, misma comanda, volver conserva productos y notas sin guardar",async()=>{
  let calls=0;const view=mount({onSave:async()=>calls++});let rendered=view.render();
  assert.equal(rendered.find(node=>node.type==="Dialog").props["aria-modal"],"true");
- assert.deepEqual(rendered.filter(node=>node.type==="FormField").map(node=>node.props.label),["Cliente","Teléfono","Dirección de entrega","Referencia de entrega","Costo de envío"]);
- assert.deepEqual(rendered.find(node=>node.type==="ChoiceGroup").props.options.map(option=>option.label),["Delivery","Recojo","Mostrador"]);
- assert.deepEqual(rendered.filter(node=>node.type==="FormSection").map(node=>node.props.title),["Tipo de atención","Cliente","Entrega"]);
+ assert.deepEqual(rendered.filter(node=>node.type==="FormField").map(node=>node.props.label),["Nombre del cliente","Teléfono","Referencia","Costo de envío"]);
+ assert.equal(rendered.find(node=>node.type==="LocationMap").props.addressLabel,"Dirección de entrega");
+ assert.ok(rendered.some(node=>node.type==="MoneyInput"&&node.props.symbol==="S/"));
+ const channelTabs=rendered.find(node=>node.type==="Tabs");assert.equal(channelTabs.props.label,"Tipo de atención");assert.equal(channelTabs.props.value,"delivery");
+ assert.deepEqual(channelTabs.props.items.map(item=>item.label),["Delivery","Recojo en local"]);assert.ok(channelTabs.props.items.every(item=>item.icon));
+ assert.equal(rendered.some(node=>node.type==="ChoiceGroup"||node.type==="FormSection"),false,"sin radios propios ni títulos de sección");
+ assert.equal(rendered.find(node=>node.type==="LocationMap").props.hint,false);
  assert.equal(rendered.some(node=>node.type==="ComandaCatalog"),false);
  let comanda=await goToOrder(view);assert.equal(calls,0);assert.equal(comanda.props.initial.tableId,"");assert.equal(comanda.props.channelLabel,"Delivery");
  comanda.props.onBack({...comanda.props.initial,lines:[line],notes:"Entregar en recepción"});
  fields.deliveryFee="7";comanda=await goToOrder(view);
  assert.equal(comanda.props.initial.lines[0].note,"Sin cebolla");assert.equal(comanda.props.initial.notes,"Entregar en recepción");assert.equal(comanda.props.initial.deliveryFee,"7");assert.equal(calls,0);
  await comanda.props.save(comanda.props.initial,true);assert.equal(calls,1);fields.deliveryFee="5";
+});
+const flush=()=>new Promise(resolve=>setImmediate(resolve));
+test("pedido manual: el punto del mapa sugiere el envío, viaja en el alta y respeta la cobertura",async()=>{
+ const sent=[];let saved;const view=mount({quoteDelivery:async point=>{sent.push(point);return{covered:true,distanceKm:"2.35",fee:"6",maxDistanceKm:"5.00",currencySymbol:"S/"}},onSave:async draft=>{saved=draft}});
+ await view.render().find(node=>node.type==="LocationMap").props.onChange({lat:-12.1219,lng:-77.0297});await flush();
+ assert.deepEqual(JSON.parse(JSON.stringify(sent)),[{latitude:-12.1219,longitude:-77.0297}]);assert.equal(fields.deliveryLatitude,"-12.121900");assert.equal(fields.deliveryFee,"6.00");
+ assert.equal(view.render().find(node=>node.type==="FormField"&&node.props.label==="Costo de envío").props.help,"Sugerido para 2.35 km");
+ const comanda=await goToOrder(view);await comanda.props.save({...comanda.props.initial,lines:[line]});
+ assert.equal(saved.deliveryLatitude,"-12.121900");
+ const payload=schema.manualOrderPayload(saved);assert.equal(payload.deliveryLatitude,-12.1219);assert.equal(payload.deliveryLongitude,-77.0297);
+ assert.equal("deliveryLatitude" in schema.manualOrderPayload({...saved,channel:"recojo"}),false,"recojo no envía punto");
+ const far=mount({quoteDelivery:async()=>({covered:false,distanceKm:"9.10",fee:"0.00",maxDistanceKm:"5.00",currencySymbol:"S/"})});
+ await far.render().find(node=>node.type==="LocationMap").props.onChange({lat:-12.2,lng:-77.1});await flush();
+ assert.equal(fields.deliveryFee,"6.00","fuera de cobertura no cambia el costo escrito");
+ assert.equal(far.render().find(node=>node.type==="FormField"&&node.props.label==="Costo de envío").props.help,"Fuera de cobertura (hasta 5.00 km)");
+ const manual=mount({quoteDelivery:async()=>{throw Object.assign(new Error("Sin tarifas"),{code:"delivery_unavailable"})}});
+ await manual.render().find(node=>node.type==="LocationMap").props.onChange({lat:-12.2,lng:-77.1});await flush();
+ assert.equal(manual.render().find(node=>node.type==="FormField"&&node.props.label==="Costo de envío").props.help,undefined,"sin tarifas el costo sigue manual sin avisos");
+ Object.assign(fields,{deliveryLatitude:"",deliveryLongitude:"",deliveryFee:"5"});
 });
 test("pedido manual: datos inválidos impiden continuar y un fallo conserva la comanda",async()=>{
  const original=fields.address;fields.address="";const invalid=mount();await goToOrder(invalid);assert.equal(invalid.state[0],"details");fields.address=original;

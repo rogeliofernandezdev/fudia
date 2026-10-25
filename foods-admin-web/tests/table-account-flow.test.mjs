@@ -22,7 +22,7 @@ const controls=compile("presentation/order-service-controls.tsx",name=>{
  return require(name);
 });
 function nodes(tree){const all=[];function visit(n){if(!n||typeof n!=="object")return;if(Array.isArray(n)){n.forEach(visit);return}all.push(n);visit(n.props?.children)}visit(tree);return all}
-const order={id:"order",channel:"salon",status:"entregado",waiterId:"waiter",total:"40",paidAmount:"0",remainingAmount:"40",serviceItems:[{id:"service",orderItemId:"item",name:"Gaseosa",destination:"direct",destinationLabel:"Entrega directa",status:"listo",statusLabel:"Pendiente de entrega"}]};
+const order={id:"order",channel:"salon",status:"entregado",waiterId:"waiter",total:"40",paidAmount:"0",remainingAmount:"40",serviceItems:[{id:"service",orderItemId:"item",name:"Gaseosa",destination:"direct",destinationLabel:"Entrega directa",status:"listo",statusLabel:"Por entregar"}]};
 
 test("cerrar y cobrar requieren entrega completa; agregar requiere cuenta abierta",()=>{
  assert.equal(flow.canAddConsumption(order),true);
@@ -41,7 +41,7 @@ test("el producto muestra solo destino y estado; la entrega no se repite por fil
  userId="waiter";manage=true;
  const ready=nodes(controls.OrderItemService({order,itemId:"item"}));
  assert.equal(ready.some(n=>n.type==="Button"),false);
- assert.ok(ready.some(n=>n.type==="Status"&&n.props.children==="Pendiente de entrega"));
+ assert.ok(ready.some(n=>n.type==="Status"&&n.props.children==="Por entregar"));
  for(const [viewer,permission] of [["other",true],["waiter",false]]){userId=viewer;manage=permission;assert.equal(nodes(controls.OrderItemService({order,itemId:"item"})).some(n=>n.type==="Button"),false)}
  userId="waiter";manage=true;
  for(const status of ["confirmado","preparando","entregado"]){assert.equal(nodes(controls.OrderItemService({order:{...order,serviceItems:[{...order.serviceItems[0],status}]},itemId:"item"})).some(n=>n.type==="Button"),false)}

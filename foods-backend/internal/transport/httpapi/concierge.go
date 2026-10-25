@@ -55,3 +55,6 @@ func (a *API) getConciergeDeliveryFees(w http.ResponseWriter, r *http.Request) {
 func (a *API) saveConciergeDeliveryFees(w http.ResponseWriter, r *http.Request) {
 	a.handlers.Concierge.SaveConciergeDeliveryFees(w, r)
 }
+func (a *API) quoteAdminDelivery(w http.ResponseWriter, r *http.Request) {
+	a.handlers.Concierge.QuoteAdminDelivery(w, r)
+}

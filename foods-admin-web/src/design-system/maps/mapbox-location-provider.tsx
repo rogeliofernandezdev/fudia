@@ -44,7 +44,7 @@ function createSessionToken() {
 
 export function MapboxLocationMap({
   latitude, longitude, address, onAddressChange, onChange, onPlaceChange,
-  addressLabel = "Dirección del local", mapLabel = "Mapa para seleccionar la ubicación del local",
+  addressLabel = "Dirección del local", mapLabel = "Mapa para seleccionar la ubicación del local", hint = true, addressError,
 }: LocationMapProps) {
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<MapboxMap | null>(null);
@@ -79,6 +79,7 @@ export function MapboxLocationMap({
     let active = true;
     let localMap: MapboxMap | null = null;
     let localMarker: MapboxMarker | null = null;
+    let resizeObserver: ResizeObserver | null = null;
     setMapLoading(true);
     void import("mapbox-gl").then(({ default: mapboxgl }) => {
       if (!active || !container.current) return;
@@ -105,11 +106,15 @@ export function MapboxLocationMap({
         localMarker!.setLngLat(event.lngLat);
         callbacks.current.onChange({ lat: event.lngLat.lat, lng: event.lngLat.lng });
       });
+      // El contenedor puede crecer después (errores del formulario, paneles); Mapbox solo escucha la ventana.
+      resizeObserver = new ResizeObserver(() => localMap?.resize());
+      resizeObserver.observe(container.current);
       map.current = localMap;
       marker.current = localMarker;
     }).catch(() => { setMapLoading(false); setError("No se pudo cargar Mapbox."); });
     return () => {
       active = false;
+      resizeObserver?.disconnect();
       localMarker?.remove();
       localMap?.remove();
       marker.current = null;
@@ -262,7 +267,7 @@ export function MapboxLocationMap({
         }}
           onBlur={() => window.setTimeout(() => setOpen(false), 150)}
           placeholder="Escribe calle, número y distrito" autoComplete="off" role="combobox"
-          aria-autocomplete="list" aria-expanded={open} className="location-map-input" />
+          aria-autocomplete="list" aria-expanded={open} aria-invalid={addressError ? true : undefined} className="location-map-input" />
         {searching && <span className="location-map-spinner"><Icon name="refresh" size={14}/></span>}
         {suggesting && <div className="location-map-suggestions location-map-suggestions-loading" aria-label="Buscando direcciones">
           {Array.from({length:3},(_,index)=><div className="location-map-suggestion-skeleton" key={index}><i/><span><b/><small/></span></div>)}
@@ -281,14 +286,15 @@ export function MapboxLocationMap({
         </div>}
       </span>
     </label>
+    {addressError && <small className="field-error" role="alert">{addressError}</small>}
     <div className="location-map-canvas-shell">
       <div ref={container} className="location-map-canvas" aria-label={mapLabel} />
       {mapLoading&&<div className="location-map-canvas-skeleton" role="status" aria-label="Cargando mapa"><i/><i/><i/><span/></div>}
     </div>
-    <div className="location-map-footer">
+    {hint && <div className="location-map-footer">
       <p>Selecciona una sugerencia y, si hace falta, ajusta el punto en el mapa.</p>
       {latitude != null && longitude != null && <span className="location-map-badge">Ubicación definida</span>}
-    </div>
+    </div>}
     {error && <p role="alert" className="location-map-error">{error}</p>}
   </div>;
 }

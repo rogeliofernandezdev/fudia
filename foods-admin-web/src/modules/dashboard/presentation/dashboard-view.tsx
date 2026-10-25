@@ -112,7 +112,7 @@ export function DashboardView(){
   if(enabled("cocina"))areas.push({title:"Cocina",icon:"kitchen",href:pageRoutes.kitchen,rows:[
     {label:"Por preparar",value:String(operations.kitchenConfirmed)},
     {label:"En preparación",value:String(operations.kitchenPreparing)},
-    {label:"Listos para entregar",value:String(operations.readyOrders),tone:"green"},
+    {label:"Por entregar",value:String(operations.readyOrders),tone:"green"},
   ]});
   if(enabled("delivery"))areas.push({title:"Delivery",icon:"truck",href:pageRoutes.delivery,rows:[
     {label:"Por despachar",value:String(operations.deliveryPending)},

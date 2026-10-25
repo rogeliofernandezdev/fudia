@@ -82,6 +82,7 @@ type OrderRepository interface {
 	Floor(context.Context, scope) ([]domain.FloorTable, error)
 	CreateOrder(ctx context.Context, s scope, in domain.OrderInput, customerID *string, tableID *string, subtotal float64, total float64, initialStatus string) (domain.Order, error)
 	CustomerActive(ctx context.Context, s scope, in domain.OrderInput) (bool, error)
+	LocationPoint(ctx context.Context, s scope) (latitude *float64, longitude *float64, err error)
 	LockTable(ctx context.Context, s scope, in domain.OrderInput) (string, error)
 	TableOccupied(ctx context.Context, s scope, in domain.OrderInput) (bool, error)
 	LockEditableOrder(ctx context.Context, s scope, id string) (string, string, string, error)

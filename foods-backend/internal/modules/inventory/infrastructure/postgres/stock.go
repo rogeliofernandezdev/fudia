@@ -518,8 +518,8 @@ func (r *Stock) Movements(ctx context.Context, s scope, f application.StockFilte
 		           WHEN sm.source_type='order' THEN (
 		             SELECT 'Pedido · '||CASE o.channel
 		               WHEN 'salon' THEN COALESCE('Mesa '||tb.name,'Salón')
-		               WHEN 'mostrador' THEN 'Mostrador'
-		               WHEN 'recojo' THEN 'Recojo'
+		               WHEN 'mostrador' THEN 'Recojo en local'
+		               WHEN 'recojo' THEN 'Recojo en local'
 		               WHEN 'delivery' THEN 'Delivery'
 		               WHEN 'whatsapp' THEN 'WhatsApp'
 		               ELSE 'Venta' END

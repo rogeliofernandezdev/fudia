@@ -369,7 +369,8 @@ test("pos cobra pedidos y sincroniza efectivo con caja",()=>{
 
   assert.ok(route.includes("POSPage"),"/pos ya no es un placeholder");
   assert.equal(route.includes("ComingSoonPage"),false,"Punto de venta tiene implementación operativa");
-  assert.ok(page.includes("Con saldo pendiente"),"POS conserva pagos parciales en la cola de cobro");
+  assert.ok(page.includes('<option value="partial">Pago parcial</option>'),"POS conserva pagos parciales en la cola de cobro");
+  assert.equal(page.includes("Con saldo pendiente"),false,"el filtro no repite Sin pagos + Pago parcial en otra opción");
   assert.ok(page.includes('useState("all")'),"POS muestra todos los cobros por defecto");
   assert.ok(page.includes("getCurrentCashShift"),"POS exige un turno asignado para operar");
   assert.ok(page.includes("No estás asignado a una caja abierta"),"POS explica claramente cuando falta turno");
@@ -419,7 +420,7 @@ test("cocina mantiene jerarquia KDS y semantica de color",()=>{
   const kitchen=read("src/modules/operations/kitchen/presentation/kitchen-board.tsx");
   const css=readCss("src/modules/operations/kitchen/presentation/kitchen.css");
   assert.ok(kitchen.includes("function formatElapsed"),"Cocina formatea tiempos largos en unidades legibles");
-  for(const label of ["A tiempo","Por vencer","Con demora","Listo"])assert.ok(kitchen.includes(label),label);
+  for(const label of ["A tiempo","Por vencer","Con demora","Por entregar"])assert.ok(kitchen.includes(label),label);
   assert.ok(kitchen.includes('kind="primary"'),"Las transiciones de cocina usan acción primaria azul");
   assert.equal(kitchen.includes('kind={next==="listo"?"success":"primary"}'),false,"Verde queda reservado al estado listo");
   assert.ok(kitchen.includes("kitchen-skeleton-head"),"El skeleton reproduce la tarjeta de comanda");

@@ -20,7 +20,7 @@ test("seguimiento usa solo horas reales: cierre de cuenta y liberación con hora
 
 test("delivery no muestra cierre de cuenta y un pedido cancelado corta el seguimiento",()=>{
  const delivery=renderDetail({order:{...exampleOrder,channel:"delivery",tableId:"",tableName:"",status:"listo",paymentStatus:"partial"}});
- assert.deepEqual(steps(delivery),["done:Pedido registrado","current:Listo para entregar","current:Pago parcial","pending:Pedido completado"]);
+ assert.deepEqual(steps(delivery),["done:Pedido registrado","current:Por entregar","current:Pago parcial","pending:Pedido completado"]);
  const cancelled=renderDetail({order:{...exampleOrder,status:"cancelado"}});
  assert.deepEqual(steps(cancelled),["done:Pedido registrado","done:Pedido cancelado"]);
 });

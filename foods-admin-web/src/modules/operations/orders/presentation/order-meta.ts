@@ -2,14 +2,17 @@ import type {IconName} from "@/design-system";
 import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
 
 /** Owner: operations/orders — presentación compartida por Pedidos y Salón. */
-export const channelIcons:Record<string,IconName>={salon:"utensils",mostrador:"store",recojo:"box",delivery:"truck",whatsapp:"share"};
+export const channelIcons:Record<string,IconName>={salon:"utensils",mostrador:"box",recojo:"box",delivery:"truck",whatsapp:"share"};
+
+/** Tipo de atención del canal guardado: un pedido QR por WhatsApp se atiende en Salón. */
+export const serviceChannel=(channel:string)=>channel==="whatsapp"?"salon":channel==="mostrador"?"recojo":channel;
 
 export type OrderStatusTone="green"|"blue"|"orange"|"gray"|"violet"|"teal"|"red";
 export const statusMeta:Record<string,{label:string;tone:OrderStatusTone}>={
   nuevo:{label:"Nuevo",tone:"gray"},
   confirmado:{label:"Confirmado",tone:"blue"},
   preparando:{label:"Preparando",tone:"violet"},
-  listo:{label:"Listo para entregar",tone:"green"},
+  listo:{label:"Por entregar",tone:"green"},
   en_camino:{label:"En camino",tone:"orange"},
   entregado:{label:"Entregado",tone:"teal"},
   cancelado:{label:"Cancelado",tone:"red"},

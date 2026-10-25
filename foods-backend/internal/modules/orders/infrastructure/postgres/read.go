@@ -10,7 +10,7 @@ import (
 func (r *Orders) List(ctx context.Context, s scope, f application.Filter) (application.Page, error) {
 	out := application.Page{Page: f.Page, PageSize: f.Size}
 	page, size, q, channel, status := f.Page, f.Size, strings.TrimSpace(f.Query), f.Channel, f.Status
-	where := `organization_id=$1 AND location_id=$2 AND ($3='' OR code ILIKE '%'||$3||'%' OR customer_name ILIKE '%'||$3||'%' OR customer_phone ILIKE '%'||$3||'%') AND ($4='' OR channel=$4) AND ($5='' OR ($5='abiertos' AND status<>'cancelado' AND (status<>'entregado' OR (channel='salon' AND completed_at IS NULL))) OR status=$5)`
+	where := `organization_id=$1 AND location_id=$2 AND ($3='' OR code ILIKE '%'||$3||'%' OR customer_name ILIKE '%'||$3||'%' OR customer_phone ILIKE '%'||$3||'%') AND ($4='' OR channel=$4 OR ($4 IN ('recojo','mostrador') AND channel IN ('recojo','mostrador')) OR ($4='salon' AND channel='whatsapp')) AND ($5='' OR ($5='abiertos' AND status<>'cancelado' AND (status<>'entregado' OR (channel='salon' AND completed_at IS NULL))) OR status=$5)`
 	var total int
 	if err := r.db(ctx).QueryRow(ctx, `SELECT count(*) FROM orders WHERE `+where, s.OrganizationID, s.LocationID, q, channel, status).Scan(&total); err != nil {
 		return out, err
@@ -36,7 +36,7 @@ func (r *Orders) List(ctx context.Context, s scope, f application.Filter) (appli
 			var ch string
 			var n int
 			if countRows.Scan(&ch, &n) == nil {
-				channelCounts[ch] = n
+				channelCounts[domain.ServiceChannel(ch)] += n
 			}
 		}
 	}

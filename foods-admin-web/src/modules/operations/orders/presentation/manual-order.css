@@ -1,11 +1,30 @@
 /* Owner: Orders — datos de atención previos a la comanda compartida. */
 .manual-order-modal{display:flex;flex-direction:column;width:min(var(--size-580),calc(100vw - var(--size-32)));max-height:calc(100dvh - var(--size-40));background:var(--surface);border-radius:var(--radius-card);box-shadow:var(--elevation-4);overflow:hidden;color:var(--ink-950)}
 .manual-order-form{display:flex;flex-direction:column;min-height:0}
-.manual-order-body{overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;min-height:0;padding:var(--space-5)}
-.manual-order-fields{min-width:0;margin:0;padding:0;border:0}
+.manual-order-body{overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;min-height:0;padding:var(--space-5) var(--space-6) var(--space-6)}
+/* Proximidad en lugar de títulos: tipo arriba, luego quién, dónde y extras. */
+.manual-order-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-4);min-width:0;margin:0;padding:0;border:0}
+.manual-order-type{grid-column:1/-1;display:grid;gap:var(--space-1-5);margin-bottom:var(--space-1)}
+.manual-order-map{grid-column:1/-1;display:grid;gap:var(--space-1-5);min-width:0}
 .manual-order-actions{flex-shrink:0}
+/* Escritorio: el delivery usa dos paneles; a la izquierda quién y extras, a la derecha dónde. */
+@media(min-width:900px){
+ .manual-order-modal.delivery{width:min(var(--size-880),calc(100vw - var(--size-32)))}
+ .manual-order-modal.delivery .manual-order-fields{grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);grid-template-rows:auto auto auto auto 1fr;grid-template-areas:"type type" "name map" "phone map" "reference map" "fee map";column-gap:var(--space-6)}
+ .manual-order-modal.delivery .manual-order-type{grid-area:type}
+ .manual-order-modal.delivery .manual-order-name{grid-area:name}
+ .manual-order-modal.delivery .manual-order-phone{grid-area:phone}
+ .manual-order-modal.delivery .manual-order-reference{grid-area:reference}
+ .manual-order-modal.delivery .manual-order-fee{grid-area:fee}
+ .manual-order-modal.delivery .manual-order-map{grid-area:map;grid-template-rows:minmax(0,1fr)}
+ .manual-order-modal.delivery .location-map-wrapper{display:flex;flex-direction:column;height:100%}
+ .manual-order-modal.delivery .location-map-canvas-shell{flex:1 1 auto;min-height:var(--size-200)}
+ .manual-order-modal.delivery .location-map-canvas{height:100%}
+}
 @media(max-width:600px){
  .manual-order-modal{width:100%;max-height:calc(100dvh - var(--space-4) - var(--safe-area-top));border-radius:var(--radius-sheet) var(--radius-sheet) 0 0}
  .manual-order-body{padding:var(--space-4)}
+ .manual-order-fields{grid-template-columns:minmax(0,1fr)}
+ .manual-order-map .location-map-canvas{height:var(--size-176)}
  .manual-order-actions>.button{flex:1}
 }

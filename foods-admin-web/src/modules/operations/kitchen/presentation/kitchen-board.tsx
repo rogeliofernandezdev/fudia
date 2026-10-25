@@ -12,13 +12,13 @@ import {listKitchenTickets,updateKitchenTicketStatus} from "../infrastructure/ki
 const lanes:Array<{status:KitchenStatus;label:string;shortLabel:string;description:string;icon:IconName}>= [
   {status:"confirmado",label:"POR PREPARAR",shortLabel:"Pendientes",description:"Pedidos nuevos",icon:"clock"},
   {status:"preparando",label:"EN PREPARACIÓN",shortLabel:"Preparando",description:"Trabajo activo",icon:"cookingPot"},
-  {status:"listo",label:"LISTOS PARA ENTREGAR",shortLabel:"Listos",description:"Esperando entrega",icon:"check"},
+  {status:"listo",label:"POR ENTREGAR",shortLabel:"Por entregar",description:"Esperando entrega",icon:"check"},
 ];
 
 /** Icono por área de preparación; las áreas y sus nombres llegan del API. */
 const destinationIcons:Record<string,IconName>={kitchen:"chefHat",bar:"drink"};
 /** Icono por origen del pedido (canal), igual que en Pedidos y Salón. */
-const channelIcons:Record<string,IconName>={salon:"utensils",mostrador:"store",recojo:"box",delivery:"truck",whatsapp:"share"};
+const channelIcons:Record<string,IconName>={salon:"utensils",mostrador:"box",recojo:"box",delivery:"truck",whatsapp:"share"};
 
 function parseIsoDate(value:string){
   if(!value)return null;
@@ -57,7 +57,7 @@ function formatElapsed(minutes:number){
 function urgencyCopy(tone:ReturnType<typeof urgency>):{label:string|null;icon:IconName}{
   if(tone==="late")return {label:"Con demora",icon:"alert"};
   if(tone==="warning")return {label:"Por vencer",icon:"alert"};
-  if(tone==="ready")return {label:"Listo",icon:"check"};
+  if(tone==="ready")return {label:"Por entregar",icon:"check"};
   if(tone==="fresh")return {label:"A tiempo",icon:"clock"};
   return {label:null,icon:"clock"};
 }

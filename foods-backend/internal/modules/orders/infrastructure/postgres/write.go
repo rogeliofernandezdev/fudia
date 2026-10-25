@@ -9,13 +9,23 @@ import (
 
 func (r *Orders) CreateOrder(ctx context.Context, s scope, in domain.OrderInput, customerID *string, tableID *string, subtotal float64, total float64, initialStatus string) (domain.Order, error) {
 	o, err := scanOrder(r.db(ctx).QueryRow(ctx, `
-		INSERT INTO orders(organization_id,location_id,channel,customer_id,customer_name,customer_phone,address,reference,table_id,notes,subtotal,delivery_fee,total,status,created_by,waiter_id)
-		VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,CASE WHEN $3='salon' AND $9::uuid IS NOT NULL AND EXISTS(SELECT 1 FROM users u WHERE u.id=$15::uuid AND u.organization_id=$1::uuid) THEN $15::uuid ELSE NULL END)
+		INSERT INTO orders(organization_id,location_id,channel,customer_id,customer_name,customer_phone,address,reference,table_id,notes,subtotal,delivery_fee,total,status,created_by,waiter_id,delivery_latitude,delivery_longitude,delivery_distance_km)
+		VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,CASE WHEN $3='salon' AND $9::uuid IS NOT NULL AND EXISTS(SELECT 1 FROM users u WHERE u.id=$15::uuid AND u.organization_id=$1::uuid) THEN $15::uuid ELSE NULL END,$16,$17,$18)
 		RETURNING `+orderColumns,
 		s.OrganizationID, s.LocationID, in.Channel, customerID, in.CustomerName,
 		strings.TrimSpace(in.CustomerPhone), strings.TrimSpace(in.Address), strings.TrimSpace(in.Reference),
-		tableID, strings.TrimSpace(in.Notes), subtotal, in.DeliveryFee, total, initialStatus, s.UserID))
+		tableID, strings.TrimSpace(in.Notes), subtotal, in.DeliveryFee, total, initialStatus, s.UserID,
+		in.DeliveryLatitude, in.DeliveryLongitude, in.DeliveryDistanceKm))
 	return o, orderError(err)
+}
+func (r *Orders) LocationPoint(ctx context.Context, s scope) (*float64, *float64, error) {
+	var latitude, longitude *float64
+	err := r.db(ctx).QueryRow(ctx, `
+		SELECT latitude::float8,longitude::float8
+		FROM locations
+		WHERE id=$2 AND organization_id=$1
+	`, s.OrganizationID, s.LocationID).Scan(&latitude, &longitude)
+	return latitude, longitude, orderError(err)
 }
 func (r *Orders) CustomerActive(ctx context.Context, s scope, in domain.OrderInput) (bool, error) {
 	var ok bool

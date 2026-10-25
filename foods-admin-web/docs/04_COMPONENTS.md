@@ -398,7 +398,7 @@ icono tiene un solo significado en toda la aplicación (ver
   `onResponseClose` de `Dialog`, de hijo a padre; nunca queda un formulario detrás.
   Los cierres de respuesta no disparan confirmaciones de descarte. Las validaciones
   locales permanecen junto a los campos y no usan el diálogo de respuesta.
-  Excepción: las transiciones Preparando/Listo de Cocina se confirman con el
+  Excepción: las transiciones Preparando/Por entregar de Cocina se confirman con el
   cambio de panel, sin modal de éxito. Los errores sí muestran el diálogo.
   Los avisos de éxito se cierran automáticamente (4,2 s por defecto) o mediante
   Aceptar/X. Errores e información requieren cierre explícito. No se cierran al

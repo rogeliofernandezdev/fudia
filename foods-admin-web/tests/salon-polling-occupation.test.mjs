@@ -40,22 +40,28 @@ test("la pantalla conserva el centrado, el polling parcial y estados semánticos
  assert.doesNotMatch(page,/<Status tone="red">Ocupada<\/Status>/);
  assert.doesNotMatch(page,/className="salon-table-order-status"/);
  assert.match(page,/elapsed\?\.known&&<small className=\{`salon-table-elapsed/,"sin hora de apertura no se muestra «—»");
- assert.match(page,/<p className="salon-table-meta">/,"una línea por dato, sin iconos ni etiquetas repetidas");
+ assert.match(page,/<small className="salon-table-caption">/,"bajo el plato: mozo, origen QR o capacidad");
+ assert.match(page,/Mozo: \{o\.waiterName\?o\.waiterName\.split\(\/\\s\+\/\)\.slice\(0,2\)/,"mozo con nombre y primer apellido");
+ assert.match(page,/<span className="salon-table-who">\{o\?\(o\.customerName\|\|t\.zone\|\|seats\):t\.zone\}<\/span>/,"la cabecera dice quién o dónde; el plato ya identifica la mesa");
+ assert.match(page,/className=\{`salon-table-plate \$\{plate\.length<=3\?"is-short"/,"el tamaño del nombre en el plato sigue a su largo");
+ assert.match(page,/viaQR&&<span className="salon-table-qr"><Icon name="whatsapp"/,"el pedido QR por WhatsApp lleva su distintivo sobre el plato");
  assert.match(page,/new Intl\.Collator\("es",\{numeric:true,sensitivity:"base"\}\)/,"orden natural por número de mesa");
  assert.match(page,/\[\.\.\.floor\.data\?\.items\?\?\[\]\]\.sort\(\(a,b\)=>tableOrder\.compare\(a\.name,b\.name\)\)/);
  const order=new Intl.Collator("es",{numeric:true,sensitivity:"base"});
  assert.deepEqual(["08","09","01","10","2","Mesa 3"].sort(order.compare),["01","2","08","09","10","Mesa 3"]);
- assert.doesNotMatch(page,/collectedByNames|customerName\?`\$\{o\.customerName\}/,"cobro y familia quedan en el detalle de la mesa");
+ assert.doesNotMatch(page,/collectedByNames/,"«Cobrado por» queda en el detalle de la mesa");
 });
 
-test("paleta de salon: pie de color índigo/azul marino, sin verde, rojo ni bandas; KPI como la referencia",()=>{
+test("paleta de salon: plato lleno índigo (ocupada) o punteado (libre), sin verde, rojo ni bandas; KPI como la referencia",()=>{
  const css=readFileSync(new URL("../src/modules/operations/styles/salon.css",import.meta.url),"utf8");
- assert.match(css,/\.salon-table-foot\{margin:auto calc\(var\(--space-4\) \* -1\) calc\(var\(--space-4\) \* -1\);[^}]*background:var\(--cloud-100\)\}/,"pie a todo el ancho; libre en gris nube");
- assert.match(css,/\.salon-table\.occupied \.salon-table-foot\{background:var\(--primary-100\)\}/,"ocupada en índigo");
- assert.match(css,/\.salon-table\.occupied \.salon-table-go\{background:var\(--primary-600\)\}/);
+ assert.match(css,/\.salon-table-stage\{[^}]*background:var\(--primary-100\)\}/,"escenario índigo tenue en ocupadas");
+ assert.match(css,/\.salon-table-plate\{[^}]*background:var\(--primary-600\);color:var\(--surface\)/,"plato lleno en índigo cuando está ocupada");
+ assert.match(css,/\.salon-table\.free \.salon-table-plate\{background:transparent;border:var\(--stroke-2\) dashed var\(--line-strong\)/,"plato vacío punteado cuando está libre");
+ assert.match(css,/\.salon-table-foot\{margin-top:auto;/,"pie sin banda de color");
+ assert.match(css,/\.salon-table\.occupied \.salon-table-go\{background:var\(--primary-100\);color:var\(--primary-700\)\}/,"el plato es el único círculo sólido");
+ assert.match(css,/\.salon-grid\{display:grid;grid-template-columns:repeat\(auto-fill,minmax\(max\(var\(--size-212\),calc\(\(100% - var\(--space-4\) \* 3\) \/ 4\)\),1fr\)\)/,"como máximo cuatro mesas por fila");
  assert.match(css,/\.salon-table-go\{[^}]*background:var\(--navigation-900\);color:var\(--surface\)/,"«Abrir mesa» en azul marino");
  assert.match(css,/\.salon-table-open\{color:var\(--navigation-900\)/);
- assert.match(css,/\.salon-table\{[\s\S]*?min-height:var\(--size-240\)/,"tarjetas altas");
  assert.doesNotMatch(css,/danger|brand-/,"sin rojo ni verde en las tarjetas: el verde queda solo en el Status «Libre»");
  assert.doesNotMatch(css,/\.salon-table[^{]*::before/,"sin bandas superiores");
  const page=readFileSync(new URL("../src/modules/operations/salon/presentation/salon-manager.tsx",import.meta.url),"utf8");

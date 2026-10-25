@@ -21,7 +21,7 @@ const server=createServer((req,res)=>{
  const long=url.searchParams.has("long");
  let order=url.searchParams.has("delivery")?{...exampleOrder,channel:"delivery",tableName:undefined,customerName:"Rosa Quispe",customerPhone:"999 123 456",address:"Av. Los Olivos 124, departamento 302",reference:"Frente al parque, llamar al llegar",deliveryFee:"5",total:"35",remainingAmount:"35"}:long?{...exampleOrder,waiterName:"María José Fernández de la Cruz",items:Array.from({length:20},(_,index)=>({...exampleOrder.items[index%2],id:`item-${index}`,name:index===0?"Caldo de Gallina Tradicional con ingredientes y acompañamientos adicionales":"Producto de prueba para verificar desplazamiento",note:"Nota de cocina que conserva toda su información incluso en una pantalla pequeña"}))}:exampleOrder;
  const stage=url.searchParams.get("stage");
- if(stage)order={...order,status:stage,serviceItems:order.serviceItems.map(item=>({...item,status:stage,statusLabel:{nuevo:"Pendiente",preparando:"Preparando",listo:"Listo",entregado:"Entregado",cancelado:"Cancelado"}[stage]??item.statusLabel}))};
+ if(stage)order={...order,status:stage,serviceItems:order.serviceItems.map(item=>({...item,status:stage,statusLabel:{nuevo:"Pendiente",preparando:"Preparando",listo:"Por entregar",entregado:"Entregado",cancelado:"Cancelado"}[stage]??item.statusLabel}))};
  if(stage==="en_camino")order={...order,channel:"delivery",tableName:undefined,customerName:"Rosa Quispe"};
  if(stage==="cancelado")order={...order,channel:"mostrador",tableName:undefined,customerName:"Rosa Quispe"};
  if(url.searchParams.has("unassigned"))order={...order,waiterId:undefined,waiterName:undefined};

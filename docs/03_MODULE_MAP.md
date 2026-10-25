@@ -8,7 +8,7 @@
 | Organizations | empresas, locales, áreas, mesas, cajas y series |
 | Menu | categorías, productos, recetas, combos, modificadores y precios |
 | Service | reservas, turnos de mesa, comandas y estado del servicio |
-| Orders | pedidos de salón, mostrador, recojo, delivery y WhatsApp |
+| Orders | pedidos de salón, recojo en local y delivery; conserva ingreso por WhatsApp |
 | Kitchen | estaciones, tickets, cursos, tiempos y estados KDS |
 | Billing | cuentas, descuentos, propina, pagos, caja y cierres |
 | EInvoicing | boletas, facturas, notas, XML/CDR y estado SUNAT |
@@ -27,7 +27,7 @@
 - Comanda y seguimiento por estación.
 - KDS para cocina/bar.
 - Cobro, división, comprobante e impresión.
-- Cola de pedidos de mostrador, recojo, delivery y WhatsApp.
+- Cola de pedidos de salón, recojo en local y delivery; conserva ingreso por WhatsApp.
 - Cierre de caja y sincronización.
 
 ## Web administrativa

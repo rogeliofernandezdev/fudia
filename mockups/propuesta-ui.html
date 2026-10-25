@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Propuesta UI fudIA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+:root{
+  --surface:#fff;--cloud-25:#fbfbfe;--cloud-50:#f7f8fc;--cloud-100:#f0f2f8;--line:#e2e6ef;--line-strong:#cdd3e1;
+  --ink-400:#6e768e;--ink-500:#59617c;--ink-600:#444c68;--ink-700:#313854;--ink-800:#222842;--ink-950:#11152b;
+  --primary-50:#f6f7ff;--primary-100:#eef0ff;--primary-200:#dbdffb;--primary-600:#4654cd;--primary-700:#3946b8;
+  --nav-900:#1a2151;--nav-950:#0f1438;--nav-text:#c9d0f2;
+  --brand-100:#e8f7f1;--brand-600:#63dcae;--brand-700:#16875f;
+  --digital-100:#f2ecff;--digital-700:#5421a8;--teal-100:#e6f5f7;--teal-700:#0b6b78;
+  --sky-100:#e0f2fe;--sky-800:#075985;--warning-50:#fff6ec;--warning-100:#ffe8cf;--warning-600:#b54708;--warning-800:#7a3b0d;
+  --tint-peach:#fff0e6;--tint-peach-ink:#b4521d;--tint-rose:#fdecf3;--tint-rose-ink:#a8336a;
+  --font:Manrope,system-ui,sans-serif;
+  --control:38px;--r-control:6px;--r-card:14px;--pill:999px;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--font);background:var(--cloud-50);color:var(--ink-950);font-size:14px}
+.label{font-size:12px;font-weight:600;color:var(--ink-700)}
+.shell{display:grid;grid-template-columns:232px minmax(0,1fr);min-height:100vh}
+.side{background:var(--nav-950);color:var(--nav-text);padding:18px 12px;display:flex;flex-direction:column;gap:18px}
+.logo{display:flex;align-items:center;gap:10px;color:#fff;font-weight:800;font-size:18px;padding:0 8px}
+.logo span{width:30px;height:30px;border-radius:9px;background:var(--primary-600);display:grid;place-items:center}
+.group small{display:block;font-size:11px;font-weight:600;color:#8d97c9;padding:0 10px 6px}
+.item{display:flex;align-items:center;gap:10px;height:40px;padding:0 10px;border-radius:10px;font-weight:500;color:var(--nav-text)}
+.item .ic{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:rgba(255,255,255,.06);font-size:17px}
+.item.active{background:var(--primary-600);color:#fff}
+.item.active .ic{background:rgba(255,255,255,.18)}
+.item .count{margin-left:auto;font-size:11px;font-weight:700;background:rgba(255,255,255,.12);padding:2px 7px;border-radius:var(--pill)}
+.main{padding:24px 28px;display:flex;flex-direction:column;gap:20px;min-width:0}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.top h1{margin:0;font-size:22px;font-weight:800;letter-spacing:-.01em}
+.top p{margin:2px 0 0;color:var(--ink-500);font-size:13px}
+.spacer{flex:1}
+.btn{height:var(--control);border-radius:var(--r-control);border:1px solid var(--line-strong);background:#fff;color:var(--ink-800);font:600 13px var(--font);padding:0 14px;display:inline-flex;align-items:center;gap:8px;cursor:pointer}
+.btn.primary{background:var(--primary-600);border-color:var(--primary-600);color:#fff}
+.btn.icon{width:var(--control);padding:0;justify-content:center;font-size:18px}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.kpi{background:#fff;border:1px solid var(--line);border-radius:var(--r-card);padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.kpi-head{display:flex;align-items:center;gap:8px;color:var(--ink-600);font-size:12px;font-weight:600}
+.tile{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-size:17px}
+.kpi-head .go{margin-left:auto;color:var(--ink-400);font-size:16px}
+.kpi b{white-space:nowrap;font-size:26px;font-weight:800;letter-spacing:-.02em}
+.kpi .meta{font-size:12px;color:var(--ink-500)}
+.kpi.attention b{color:var(--warning-600)}
+.card{background:#fff;border:1px solid var(--line);border-radius:var(--r-card);padding:16px}
+.card-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.card-head h2{margin:0;font-size:16px;font-weight:700}
+.card-head h2 em{font-style:normal;color:var(--ink-400);font-weight:600}
+.field{position:relative;display:flex;align-items:center}
+.field i{position:absolute;left:11px;color:var(--ink-400);font-size:17px}
+.field input,.field select{height:var(--control);width:100%;border:1px solid var(--line-strong);border-radius:var(--r-control);font:400 13px var(--font);color:var(--ink-950);padding:0 12px 0 36px;background:#fff}
+.field.prefix span{position:absolute;left:12px;color:var(--ink-600);font-weight:600;font-size:13px}
+.field.prefix input{padding-left:36px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.chip{height:32px;border:1px solid var(--line-strong);border-radius:var(--pill);padding:0 12px;display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--ink-700);background:#fff}
+.chip.on{background:var(--primary-50);border-color:var(--primary-200);color:var(--primary-700)}
+.chip i{font-size:14px}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:separate;border-spacing:0;min-width:760px}
+thead th{background:var(--nav-900);color:#fff;font-size:12px;font-weight:600;text-align:left;padding:11px 14px}
+thead th:first-child{border-radius:10px 0 0 10px}thead th:last-child{border-radius:0 10px 10px 0}
+tbody td{white-space:nowrap;padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:middle}
+tbody tr:hover td{background:var(--cloud-25)}
+.two b{display:block;font-weight:600;font-size:13.5px}
+.two small{display:block;color:var(--ink-500);font-size:12px;margin-top:2px}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.status{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 9px;border-radius:var(--pill);font-size:12px;font-weight:600}
+.status i{font-size:13px}
+.s-confirm{background:var(--primary-100);color:var(--primary-700)}
+.s-prep{background:var(--digital-100);color:var(--digital-700)}
+.s-ready{background:var(--brand-100);color:var(--brand-700)}
+.s-deliv{background:var(--teal-100);color:var(--teal-700)}
+.s-open{background:var(--sky-100);color:var(--sky-800)}
+.s-due{background:var(--warning-100);color:var(--warning-800)}
+.s-paid{background:var(--brand-100);color:var(--brand-700)}
+.channel{display:inline-flex;align-items:center;gap:8px}
+.channel .tile{width:28px;height:28px;font-size:15px}
+.row-act{width:32px;height:32px;border-radius:8px;border:1px solid var(--line);background:#fff;display:grid;place-items:center;color:var(--ink-600)}
+.foot{display:flex;align-items:center;justify-content:space-between;padding-top:12px;color:var(--ink-500);font-size:12.5px}
+.pager{display:flex;gap:6px}.pager span{min-width:30px;height:30px;border-radius:var(--r-control);border:1px solid var(--line);display:grid;place-items:center;font-weight:600;color:var(--ink-700)}
+.pager .on{background:var(--primary-600);border-color:var(--primary-600);color:#fff}
+.lower{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:20px;align-items:start}
+.modal{background:#fff;border-radius:var(--r-card);border:1px solid var(--line);overflow:hidden}
+.modal-head{background:var(--nav-900);color:#fff;padding:16px 18px;display:flex;align-items:center;gap:12px}
+.modal-head .tile{background:rgba(255,255,255,.12);color:#fff}
+.modal-head h3{margin:0;font-size:16px;font-weight:700}.modal-head p{margin:2px 0 0;color:var(--nav-text);font-size:12.5px}
+.modal-head .x{margin-left:auto;font-size:20px;color:var(--nav-text)}
+.modal-body{padding:18px;display:flex;flex-direction:column;gap:18px}
+.section-title{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--ink-800)}
+.section-title i{color:var(--primary-600);font-size:17px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.f{display:flex;flex-direction:column;gap:6px}.f.full{grid-column:1/-1}
+textarea{border:1px solid var(--line-strong);border-radius:var(--r-control);font:400 13px var(--font);padding:10px 12px;min-height:70px;resize:none}
+.seg{display:flex;gap:8px;flex-wrap:wrap}
+.seg label{height:var(--control);border:1px solid var(--line-strong);border-radius:var(--r-control);padding:0 12px;display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--ink-700)}
+.seg label.on{border-color:var(--primary-600);background:var(--primary-50);color:var(--primary-700)}
+.hint{font-size:12px;color:var(--ink-500)}
+.modal-foot{display:flex;justify-content:flex-end;gap:10px;padding:14px 18px;border-top:1px solid var(--line);background:var(--cloud-25)}
+.detail-top{display:flex;align-items:flex-start;gap:10px}
+.detail-top h3{margin:0;font-size:18px;font-weight:800}
+.detail-top p{margin:3px 0 0;color:var(--ink-500);font-size:12.5px}
+.tabs{display:flex;gap:18px;border-bottom:1px solid var(--line);margin:14px 0}
+.tabs span{padding:0 0 10px;font-weight:600;color:var(--ink-500);font-size:13px;display:inline-flex;gap:6px;align-items:center}
+.tabs .on{color:var(--ink-950);box-shadow:inset 0 -2px 0 var(--primary-600)}
+.tabs em{font-style:normal;font-size:11px;background:var(--cloud-100);border-radius:var(--pill);padding:1px 7px;color:var(--ink-600)}
+dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 16px;margin:0 0 16px}
+dt{font-size:12px;font-weight:600;color:var(--ink-500)}dd{margin:3px 0 0;font-size:14px;color:var(--ink-950)}
+.tl{list-style:none;margin:0;padding:0;position:relative}
+.tl:before{content:"";position:absolute;left:15px;top:8px;bottom:8px;width:2px;background:var(--line)}
+.tl li{display:flex;gap:12px;padding:0 0 14px;position:relative}
+.tl .dot{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-size:16px;flex:none;border:3px solid #fff}
+.tl b{font-size:13px;font-weight:700}.tl small{display:block;color:var(--ink-500);font-size:12px;margin-top:2px}
+.tl .pending .dot{background:var(--cloud-100);color:var(--ink-400)}.tl .pending b{color:var(--ink-500)}
+.fontbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--line);font-size:12.5px;color:var(--ink-600)}
+.fontbar button{height:32px;border-radius:999px;border:1px solid var(--line-strong);background:#fff;padding:0 14px;font-size:13px;font-weight:600;color:var(--ink-700);cursor:pointer}
+.fontbar button.on{background:var(--primary-600);border-color:var(--primary-600);color:#fff}
+.mobile-top{display:none}
+@media (max-width:1100px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:768px){
+  .shell{grid-template-columns:1fr}.side{display:none}
+  .mobile-top{display:flex;align-items:center;gap:10px;background:var(--nav-950);color:#fff;padding:12px 16px;font-weight:800}
+  .main{padding:16px}
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .lower{grid-template-columns:1fr}.grid2{grid-template-columns:1fr}
+  .chips{flex-wrap:nowrap;overflow-x:auto}.chip{flex:none}
+  :root{--control:44px}
+  .btn{border-radius:var(--pill)}
+  .top .primary{width:100%;justify-content:center}
+}
+</style>
+</head>
+<body>
+<div class="fontbar"><b>Fuente:</b><button class="on" data-font="Manrope" style="font-family:Manrope">Manrope (actual)</button><button data-font="Inter" style="font-family:Inter">Inter</button><button data-font="Plus Jakarta Sans" style="font-family:'Plus Jakarta Sans'">Plus Jakarta Sans</button><span id="font-note">Más moderna y redondeada; es la que usa hoy fudIA.</span></div>
+<div class="mobile-top"><i class="ti ti-menu-2"></i> fudIA <span class="spacer"></span><i class="ti ti-bell"></i></div>
+<div class="shell">
+  <aside class="side">
+    <div class="logo"><span><i class="ti ti-tools-kitchen-2"></i></span>fudIA</div>
+    <div class="group"><small>Operación</small>
+      <div class="item"><span class="ic"><i class="ti ti-layout-dashboard"></i></span>Inicio</div>
+      <div class="item"><span class="ic"><i class="ti ti-armchair"></i></span>Salón</div>
+      <div class="item active"><span class="ic"><i class="ti ti-receipt"></i></span>Pedidos<span class="count">18</span></div>
+      <div class="item"><span class="ic"><i class="ti ti-chef-hat"></i></span>Cocina<span class="count">6</span></div>
+      <div class="item"><span class="ic"><i class="ti ti-cash-register"></i></span>Caja y turnos</div>
+    </div>
+    <div class="group"><small>Carta y abastecimiento</small>
+      <div class="item"><span class="ic"><i class="ti ti-tools-kitchen-2"></i></span>Carta y productos</div>
+      <div class="item"><span class="ic"><i class="ti ti-packages"></i></span>Inventario</div>
+      <div class="item"><span class="ic"><i class="ti ti-truck"></i></span>Compras</div>
+      <div class="item"><span class="ic"><i class="ti ti-wallet"></i></span>Costos y gastos</div>
+    </div>
+    <div class="group"><small>Configuración</small>
+      <div class="item"><span class="ic"><i class="ti ti-message-chatbot"></i></span>Fudia Concierge</div>
+      <div class="item"><span class="ic"><i class="ti ti-users"></i></span>Usuarios y roles</div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="top">
+      <div><h1>Pedidos</h1><p>Local Miraflores · Hoy</p></div>
+      <span class="spacer"></span>
+      <button class="btn"><i class="ti ti-download"></i>Exportar</button>
+      <button class="btn primary"><i class="ti ti-plus"></i>Nuevo pedido</button>
+    </div>
+
+    <section class="kpis">
+      <div class="kpi"><div class="kpi-head"><span class="tile" style="background:var(--primary-100);color:var(--primary-700)"><i class="ti ti-receipt"></i></span>En curso<i class="ti ti-arrow-up-right go"></i></div><b>18</b><span class="meta">7 en salón · 11 delivery</span></div>
+      <div class="kpi"><div class="kpi-head"><span class="tile" style="background:var(--tint-peach);color:var(--tint-peach-ink)"><i class="ti ti-cash"></i></span>Ventas de hoy<i class="ti ti-arrow-up-right go"></i></div><b>S/ 2,480</b><span class="meta">64 pedidos cobrados</span></div>
+      <div class="kpi"><div class="kpi-head"><span class="tile" style="background:var(--tint-rose);color:var(--tint-rose-ink)"><i class="ti ti-message-chatbot"></i></span>Por Concierge<i class="ti ti-arrow-up-right go"></i></div><b>23</b><span class="meta">36 % de los pedidos</span></div>
+      <div class="kpi attention"><div class="kpi-head"><span class="tile" style="background:var(--warning-100);color:var(--warning-800)"><i class="ti ti-clock-exclamation"></i></span>Con demora<i class="ti ti-arrow-up-right go"></i></div><b>2</b><span class="meta">Más de 25 min en cocina</span></div>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <h2>Pedidos <em>(120)</em></h2>
+        <span class="spacer"></span>
+        <div class="field" style="width:260px;max-width:100%"><i class="ti ti-search"></i><input placeholder="Buscar cliente, mesa o pedido"></div>
+        <button class="btn icon" aria-label="Más filtros"><i class="ti ti-adjustments-horizontal"></i></button>
+      </div>
+      <div class="chips">
+        <span class="chip on"><i class="ti ti-calendar"></i>Hoy<i class="ti ti-chevron-down"></i></span>
+        <span class="chip">Estado<i class="ti ti-chevron-down"></i></span>
+        <span class="chip">Canal<i class="ti ti-chevron-down"></i></span>
+        <span class="chip">Mozo<i class="ti ti-chevron-down"></i></span>
+        <span class="chip">Medio de pago<i class="ti ti-chevron-down"></i></span>
+      </div>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>Pedido</th><th>Cliente</th><th>Canal</th><th>Preparación</th><th>Cuenta</th><th class="num">Total</th><th></th></tr></thead>
+        <tbody>
+          <tr><td class="two"><b>PED-1048</b><small>12:42 · hace 8 min</small></td><td class="two"><b>Mesa 7</b><small>Lucía Ramos · 4 personas</small></td><td><span class="channel"><span class="tile" style="background:var(--cloud-100);color:var(--ink-700)"><i class="ti ti-armchair"></i></span>Salón</span></td><td><span class="status s-prep"><i class="ti ti-flame"></i>En preparación</span></td><td><span class="status s-open"><i class="ti ti-receipt"></i>Cuenta abierta</span></td><td class="num two"><b>S/ 148.00</b><small>5 productos</small></td><td><span class="row-act"><i class="ti ti-dots"></i></span></td></tr>
+          <tr><td class="two"><b>PED-1047</b><small>12:35 · hace 15 min</small></td><td class="two"><b>Carlos Medina</b><small>Av. Pardo 412, Miraflores</small></td><td><span class="channel"><span class="tile" style="background:var(--digital-100);color:var(--digital-700)"><i class="ti ti-brand-whatsapp"></i></span>Concierge</span></td><td><span class="status s-ready"><i class="ti ti-circle-check"></i>Listo para entregar</span></td><td><span class="status s-due"><i class="ti ti-clock"></i>Por cobrar</span></td><td class="num two"><b>S/ 62.50</b><small>Delivery S/ 6.00</small></td><td><span class="row-act"><i class="ti ti-dots"></i></span></td></tr>
+          <tr><td class="two"><b>PED-1046</b><small>12:20 · hace 30 min</small></td><td class="two"><b>Mesa 3</b><small>Sin nombre · 2 personas</small></td><td><span class="channel"><span class="tile" style="background:var(--cloud-100);color:var(--ink-700)"><i class="ti ti-armchair"></i></span>Salón</span></td><td><span class="status s-deliv"><i class="ti ti-checks"></i>Entregado</span></td><td><span class="status s-paid"><i class="ti ti-circle-check"></i>Pagada</span></td><td class="num two"><b>S/ 86.00</b><small>Yape</small></td><td><span class="row-act"><i class="ti ti-dots"></i></span></td></tr>
+          <tr><td class="two"><b>PED-1045</b><small>12:11 · hace 39 min</small></td><td class="two"><b>Andrea Torres</b><small>Recojo en local</small></td><td><span class="channel"><span class="tile" style="background:var(--tint-peach);color:var(--tint-peach-ink)"><i class="ti ti-shopping-bag"></i></span>Recojo</span></td><td><span class="status s-confirm"><i class="ti ti-send"></i>Confirmado</span></td><td><span class="status s-due"><i class="ti ti-clock"></i>Por cobrar</span></td><td class="num two"><b>S/ 39.90</b><small>2 productos</small></td><td><span class="row-act"><i class="ti ti-dots"></i></span></td></tr>
+        </tbody>
+      </table>
+      </div>
+      <div class="foot"><span>1–4 de 120</span><div class="pager"><span><i class="ti ti-chevron-left"></i></span><span class="on">1</span><span>2</span><span>3</span><span><i class="ti ti-chevron-right"></i></span></div></div>
+    </section>
+
+    <div class="lower">
+      <section class="modal">
+        <div class="modal-head"><span class="tile"><i class="ti ti-wallet"></i></span><div><h3>Registrar gasto</h3><p>Local Miraflores</p></div><i class="ti ti-x x"></i></div>
+        <div class="modal-body">
+          <div class="section-title"><i class="ti ti-file-description"></i>Datos del gasto</div>
+          <div class="grid2">
+            <div class="f"><span class="label">Fecha</span><div class="field"><i class="ti ti-calendar"></i><input value="23/10/2026"></div></div>
+            <div class="f"><span class="label">Categoría</span><div class="field"><i class="ti ti-category"></i><select><option>Servicios</option></select></div></div>
+            <div class="f full"><span class="label">Descripción</span><div class="field"><i class="ti ti-pencil"></i><input value="Recarga de gas para cocina"></div></div>
+            <div class="f"><span class="label">Importe</span><div class="field prefix"><span>S/</span><input value="120.00"></div></div>
+            <div class="f"><span class="label">Referencia</span><div class="field"><i class="ti ti-hash"></i><input placeholder="Número de boleta o factura"></div></div>
+          </div>
+          <div class="section-title"><i class="ti ti-credit-card"></i>Medio de pago</div>
+          <div class="seg">
+            <label class="on"><i class="ti ti-cash"></i>Efectivo</label>
+            <label><i class="ti ti-building-bank"></i>Transferencia</label>
+            <label><i class="ti ti-credit-card"></i>Tarjeta</label>
+            <label><i class="ti ti-device-mobile"></i>Yape</label>
+          </div>
+          <span class="hint">El efectivo descuenta de la caja abierta del turno.</span>
+          <div class="f"><span class="label">Notas (opcional)</span><textarea placeholder="Detalle adicional para contabilidad"></textarea></div>
+        </div>
+        <div class="modal-foot"><button class="btn">Cancelar</button><button class="btn primary"><i class="ti ti-check"></i>Registrar gasto</button></div>
+      </section>
+
+      <section class="card">
+        <div class="detail-top">
+          <div><h3>PED-1047</h3><p>Carlos Medina · Concierge · Delivery</p></div>
+          <span class="spacer"></span>
+          <span class="status s-due"><i class="ti ti-clock"></i>Por cobrar</span>
+        </div>
+        <div class="tabs"><span class="on">Seguimiento</span><span>Productos <em>3</em></span><span>Pagos</span></div>
+        <dl>
+          <div><dt>Dirección</dt><dd>Av. Pardo 412</dd></div>
+          <div><dt>Teléfono</dt><dd>987 654 321</dd></div>
+          <div><dt>Mozo</dt><dd>Concierge</dd></div>
+          <div><dt>Total</dt><dd>S/ 62.50</dd></div>
+        </dl>
+        <ul class="tl">
+          <li><span class="dot" style="background:var(--primary-100);color:var(--primary-700)"><i class="ti ti-send"></i></span><div><b>Confirmado</b><small>12:35 · por WhatsApp</small></div></li>
+          <li><span class="dot" style="background:var(--digital-100);color:var(--digital-700)"><i class="ti ti-flame"></i></span><div><b>En preparación</b><small>12:37 · Cocina</small></div></li>
+          <li><span class="dot" style="background:var(--brand-100);color:var(--brand-700)"><i class="ti ti-circle-check"></i></span><div><b>Listo para entregar</b><small>12:49 · Cocina</small></div></li>
+          <li class="pending"><span class="dot"><i class="ti ti-motorbike"></i></span><div><b>Entregado</b><small>Pendiente</small></div></li>
+        </ul>
+      </section>
+    </div>
+  </main>
+</div>
+<script>
+const notes={"Manrope":"Más moderna y redondeada; es la que usa hoy fudIA.","Inter":"Más neutra; muy legible en tablas y datos densos.","Plus Jakarta Sans":"Más cálida y amable; algo más ancha."};
+document.querySelectorAll(".fontbar button").forEach(b=>b.addEventListener("click",()=>{document.documentElement.style.setProperty("--font","'"+b.dataset.font+"',system-ui,sans-serif");document.querySelectorAll(".fontbar button").forEach(x=>x.classList.toggle("on",x===b));document.getElementById("font-note").textContent=notes[b.dataset.font];}));
+</script>
+</body>
+</html>

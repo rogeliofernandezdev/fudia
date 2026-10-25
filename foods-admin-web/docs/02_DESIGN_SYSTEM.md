@@ -55,7 +55,7 @@ valores arbitrarios (`p-[13px]`).
 | Texto e iconos | `ink-950`, `ink-800`, `ink-700`, `ink-600`, `ink-500`, `ink-400`, `ink-300` | `ink-950` títulos y datos; `ink-600` texto secundario; `ink-500` metadatos; `ink-400` es el mínimo legible (4.5:1 sobre blanco); `ink-300` solo para iconos deshabilitados |
 | Azul operativo | `primary-25` … `primary-800` | `primary-600` acción primaria, selección y foco; `primary-700` hover y texto de acción; `primary-100`/`primary-50` fondos de selección |
 | Navegación | `navigation-900`, `navigation-950`, `navigation-text` | Sidebar, cabecera de pantallas completas, cabecera de tablas y backdrop |
-| Verde restaurante | `brand-50` … `brand-800` | Éxito confirmado, activo, pagado; `brand-600` (menta) solo en la franja de marca y el carril «Listo» |
+| Verde restaurante | `brand-50` … `brand-800` | Éxito confirmado, activo, pagado; `brand-600` (menta) solo en la franja de marca y el carril «Por entregar» |
 | Violeta digital | `digital-50` … `digital-700` | WhatsApp, integraciones, «En preparación» |
 | Entrega completada | `teal-100`, `teal-700` | Azul petróleo para Entregado; Finalizada usa gris neutro para distinguirla de Pagada |
 | Cuenta abierta | `sky-100`, `sky-800` | Celeste tenue, distinto del índigo de Confirmado |
@@ -420,6 +420,8 @@ de página en `03_LAYOUTS.md`. Resumen:
   opciones (medio de pago, tipo de atención): botones de `--control-height` con
   icono; el elegido en `primary-50` con borde `primary-600`. Son radios nativos
   compatibles con `register`. En móvil, dos por fila y en píldora.
+- **Error en campos con icono**: el anillo rojo de foco lo dibuja solo el
+  contenedor `.ds-input-shell`; el `<input>` interno nunca repite otro anillo.
 - **Icono al inicio automático**: `FormField` deduce el icono de su etiqueta
   (`design-system/field-icon.ts`: correo → `mail`, teléfono → `phone`, fecha →
   `calendar`, categoría → `tag`, proveedor → `truck`, nombre/descripción →
@@ -543,14 +545,14 @@ Matriz semántica completa:
 | Pedido | Nuevo | `gray` — gris | Registrado, aún sin confirmar |
 | Pedido | Confirmado | `blue` — índigo | Comanda enviada |
 | Pedido / preparación | Preparando | `violet` — violeta | En elaboración; coincide con el panel de Cocina |
-| Pedido / preparación | Listo para entregar / Listo | `green` — verde | Preparación terminada, falta servir |
+| Pedido / preparación | Por entregar | `green` — verde | Preparación terminada, falta servir |
 | Pedido | En camino | `orange` — ámbar | Delivery en traslado |
-| Pedido / preparación | Entregado | `teal` — azul petróleo | Servido; distinto de Listo y de Pagada |
+| Pedido / preparación | Entregado | `teal` — azul petróleo | Servido; distinto de Por entregar y de Pagada |
 | Pedido / preparación | Cancelado | `red` — rojo | Cancelación |
 | Preparación | Pendiente | `orange` — ámbar | Aún sin preparar; distinto del celeste de Cuenta abierta |
-| Sin preparación | Pendiente de entrega (`listo`) | `green` — verde | Disponible para servir; el API conserva esa etiqueta |
+| Sin preparación | Por entregar (`listo`) | `green` — verde | Disponible para servir; misma etiqueta que Cocina y Barra |
 | Cuenta | Cuenta abierta | `sky` — celeste tenue | Sigue admitiendo consumo; distinto de Confirmado |
-| Mesa (Salón) | Libre | `navy` — contorno azul marino | Mesa sin pedido; aprobado para no confundirse con Entregado (`teal`) ni Listo (`green`) |
+| Mesa (Salón) | Libre | `navy` — contorno azul marino | Mesa sin pedido; aprobado para no confundirse con Entregado (`teal`) ni Por entregar (`green`) |
 | Cuenta | Por cobrar | `orange` — ámbar | Espera el pago |
 | Cuenta | Pagada | `green` — verde | Pago completo |
 | Cuenta | Finalizada | `gray` — gris neutro | Atención terminada; visualmente distinta del verde de Pagada |
@@ -668,6 +670,27 @@ y por capas, sin franjas de metadatos.
    dice «Estado actual», «Registrado» o «Pendiente».
 6. El resumen de cuenta y las acciones permanecen fijos al pie.
 
+### Datos del pedido manual
+
+El primer paso del pedido manual elige el tipo de atención con las mismas
+`Tabs` de los detalles (como Productos | Seguimiento): pista a todo el ancho,
+pestañas con icono a la izquierda y su tamaño natural, sin ajustes locales. Los campos se agrupan por proximidad, sin `FormSection`, títulos ni
+líneas: «Nombre del cliente», «Teléfono», «Referencia» y «Costo de envío».
+En delivery y escritorio (≥900 px) el modal se ensancha a 880 px con dos
+paneles: a la izquierda quién y extras; a la derecha «Dirección de entrega»
+(`LocationMap hint={false}`, sin ayuda ni etiqueta «Ubicación definida») con el
+mapa a la altura del panel. `LocationMap addressError` marca el buscador en rojo
+y muestra el mensaje bajo él, como cualquier campo; el mapa se redimensiona
+cuando su contenedor cambia de alto (por ejemplo, al aparecer errores). En tablet y móvil es una
+sola columna con el mapa bajo la dirección (176 px en móvil). Recojo conserva
+el ancho de 580 px con solo Nombre y Teléfono opcionales.
+
+Marcar o mover el pin guarda el punto (viaja en el alta) y cotiza con las
+tarifas del local, las mismas de Concierge: llena «Costo de envío»
+(`MoneyInput` con el símbolo de la empresa) y la ayuda del campo dice
+«Sugerido para N km» o «Fuera de cobertura (hasta N km)». El costo sigue siendo
+editable; si el local no tiene tarifas queda manual sin avisos.
+
 ### Comanda de Salón, Pedidos y pedido manual
 
 La tarea a pantalla completa conserva la cabecera índigo homologada, con icono,
@@ -781,17 +804,38 @@ conserve el margen lateral; escritorio conserva búsqueda y zonas en la misma ta
 Las mesas se muestran en orden natural por nombre (01, 02… 10), en «Todas» y en
 cada zona; el API las agrupa por zona, lo que sin encabezados parecía desordenado.
 
-Las tarjetas de mesa siguen la ficha de la referencia y tienen la misma altura en
-toda la grilla (filas `1fr`, mínimo 240 px en escritorio, 224 px ≤960 px, 208 px
-≤600 px y 184 px ≤480 px). Contenido mínimo: número de mesa grande con su `Status`,
-una línea con capacidad y zona, el mozo si está ocupada (cada dato en una línea
-recortada) y un pie a todo el ancho con el importe y el tiempo abierta («Hace 25 min»;
-sin hora válida no se muestra) o «Abrir mesa», más un botón redondo de 44 px. Familia
-y «Cobrado por» quedan en el detalle de la mesa. El pie distingue el estado a simple
-vista: **ocupada** en índigo (`primary-100`, importe `primary-800`, botón `primary-600`
-con ojo) y **libre** en gris nube (`cloud-100`, «Abrir mesa» y botón `+` en
-`navigation-900`). Las tarjetas son blancas con borde neutro: sin rojo, sin verde
-(salvo el `Status` «Libre» de la matriz de estados) y sin bandas superiores.
+Las tarjetas de mesa son un **plano de mesa** y tienen la misma altura por fila
+de la grilla, con **como máximo cuatro por fila** (dos en móvil). De arriba abajo:
+
+- **Quién o dónde:** el cliente o la familia del pedido; sin nombre, la zona; si
+  tampoco hay zona, la capacidad. No se repite «Mesa 1»: el plato ya identifica la
+  mesa. A la derecha, en la misma línea, el `Status` de la matriz (`emphasis`,
+  13 px). Si no caben (tarjeta angosta o estado largo como «Por
+  entregar»), el estado baja a la línea siguiente: nunca recorta el nombre por
+  debajo de 96 px.
+- **El plato** (`salon-table-plate`, 76 px; 56 px en móvil) sobre un escenario
+  (`salon-table-stage`) de 140 px de alto (104 px en móvil)
+  muestra el nombre de la mesa sin el prefijo «Mesa». Su tamaño sigue al largo:
+  hasta 3 caracteres grande, hasta 6 mediano y, si es más largo, pequeño en dos
+  líneas como máximo. **Ocupada:** plato lleno `primary-600` con texto blanco
+  sobre un escenario `primary-100`. **Libre:** plato vacío con borde punteado
+  `line-strong` sobre blanco. La diferencia se ve sin leer.
+- **Bajo el plato** (`salon-table-caption`, 12 px seminegrita `ink-600`): «Mozo:
+  Nombre Apellido» (nombre y primer apellido; el completo en `title`, «Mozo: sin
+  asignar» si falta); si está libre, la capacidad («5 personas»).
+- **Pedido QR por WhatsApp** (canal `whatsapp`): un distintivo redondo
+  `navigation-900` con el icono `whatsapp` sobre el plato y, bajo el plato,
+  «Pedido por QR» con el icono en lugar del mozo.
+- **Pie sin banda:** el importe (`primary-800`) con el tiempo abierta debajo, o
+  bien «Abrir mesa». A la derecha, un botón redondo de
+  44 px: comanda tenue (icono `orders`, el de «Pedidos»; `primary-100`, icono `primary-700`) si está ocupada, para que
+  el plato sea el único círculo sólido; `+` `navigation-900` si está libre.
+  El tiempo solo aparece si la hora de apertura es válida; con más de un día pasa
+  a `warning-800`.
+
+Sin rojo, sin verde fuera del `Status`, sin bandas superiores ni pseudo-elementos
+decorativos. «Cobrado por» queda en el detalle de la mesa. El skeleton reproduce
+cabecera, plato y pie.
 
 El resumen sigue los KPI de la referencia: cuatro tarjetas blancas compactas
 (`dl.salon-overview-stats`: Mesas, Libres, Ocupadas y Consumo abierto) con etiqueta
@@ -811,6 +855,12 @@ repite avisos sobre el visor ni tiene botón propio de impresión: el visor del 
 ya permite imprimir y el pie ofrece solo «Descargar PDF», como acción primaria
 índigo (es la tarea del modal; en otros contextos descargar sigue siendo secundario). La vista previa
 conserva reintento, skeleton, X y controles de 44 px en móvil. El cierre de caja A4 no cambia.
+Si el navegador no tiene visor de PDF integrado (`navigator.pdfViewerEnabled ===
+false`, como Chrome en Android, que dentro de un `iframe` solo mostraría «Abrir»
+con un nombre interno), la vista previa es un papel HTML de 80 mm
+(`payment-ticket-paper`) construido con las mismas líneas `paymentTicketRows` del
+PDF: tamaños 8/9/11–13 pt mapeados a 11/12/13/14 px, separadores punteados y
+cifras tabulares. «Descargar PDF» sigue entregando el PDF real.
 
 ### Resumen de cierre e informe de caja
 
@@ -907,7 +957,7 @@ no integra un visor PDF.
   entrega el mozo)», sin texto de ayuda bajo el selector porque la etiqueta
   ya lo explica, y un aviso `warning` no bloqueante si el producto tiene
   receta o tiempo de preparación; esta
-  última entra al pedido como «Listo»). Como nadie elige el uso, Carta ›
+  última entra al pedido como «Por entregar»). Como nadie elige el uso, Carta ›
   Categorías no lo muestra ni lo filtra en ningún plan: la tabla presenta
   categoría, orden, productos, estado y acciones.
 - El registro y la edición de producto usan un formulario con información adicional
@@ -985,22 +1035,27 @@ no integra un visor PDF.
   con las `Tabs` compartidas «Cocina | Barra» (solo si el API ofrece más de una;
   cambia la cola y el título), y **Origen del pedido** (canal) como filtro sobre
   los carriles (`kitchen-filters`, como los controles del Salón) con los chips de
-  la Comanda: «Todos» primero, icono por canal (`utensils`, `store`, `box`,
-  `truck`, `share`) y check en el activo. «N con demora» acompaña a la estación.
+  la Comanda: «Todos» primero, un chip por tipo de atención de `channelOptions`
+  (Salón `utensils`, Recojo `box`, Delivery `truck`; los pedidos QR por WhatsApp
+  van en Salón) y check en el activo. «N con demora» acompaña a la estación.
   Hasta 1024 px la estación baja bajo el título; en ≤760 px ocupa todo el ancho y
-  los chips se deslizan; nunca hay scroll horizontal de página.
+  los chips se deslizan conservando su alto de 44 px (`flex:none` en columna);
+  nunca hay scroll horizontal de página. **Excepción a las pestañas móviles de dos
+  en dos:** los tres carriles de Cocina (`kitchen-mobile-tabs`) se ven siempre
+  juntos en columnas iguales, sin pares deslizables ni hueco de relleno, porque
+  el cocinero necesita ver los tres estados a la vez.
 - Cocina usa un KDS de tres carriles operativos: «Por preparar», «En preparación»
-  y «Listos para entregar». Cada carril es un panel neutro `cloud-50/surface`
+  y «Por entregar». Cada carril es un panel neutro `cloud-50/surface`
   con borde estándar; el color semántico se limita al acento de estado, icono,
   contador y etiquetas: azul para «Por preparar», violeta para «En preparación»,
-  verde para «Listo» y ámbar exclusivamente para «Por vencer» o «Con demora». El cuerpo del carril permanece neutro y la cabecera completa usa un fondo semántico de contraste medio/alto: `primary-600` para «Por preparar», `digital-500` para «En preparación» y `brand-600` para «Listo». Azul y violeta usan título/descripción en `surface`; el verde `brand-600` usa `ink-950` para el título y `ink-600` para la descripción, evitando que el texto se pierda sobre el fondo menta. Icono y contador se apoyan en `surface` y conservan `brand-700` como acento. Esta diferencia cromática debe ser evidente incluso al escanear la pantalla rápidamente. No se añaden franjas superiores ni barras laterales de color. Los nombres de mesa se muestran en mayúsculas (`MESA 1`, `MESA 2`) para facilitar el escaneo; nombres de clientes y otros identificadores conservan su escritura original. Los botones que cambian el flujo son
+  verde para «Por entregar» y ámbar exclusivamente para «Por vencer» o «Con demora». El cuerpo del carril permanece neutro y la cabecera completa usa un fondo semántico de contraste medio/alto: `primary-600` para «Por preparar», `digital-500` para «En preparación» y `brand-600` para «Por entregar». Azul y violeta usan título/descripción en `surface`; el verde `brand-600` usa `ink-950` para el título y `ink-600` para la descripción, evitando que el texto se pierda sobre el fondo menta. Icono y contador se apoyan en `surface` y conservan `brand-700` como acento. Esta diferencia cromática debe ser evidente incluso al escanear la pantalla rápidamente. No se añaden franjas superiores ni barras laterales de color. Los nombres de mesa se muestran en mayúsculas (`MESA 1`, `MESA 2`) para facilitar el escaneo; nombres de clientes y otros identificadores conservan su escritura original. Los botones que cambian el flujo son
   acciones primarias azules; el verde no se usa como CTA antes de confirmar el
   éxito. Las tarjetas son densas, con borde `line`, radio de 14 px y sin
   sombras o transformaciones decorativas que compitan con la información.
   `danger` no se usa para retrasos de cocina porque se reserva para errores y
   acciones destructivas. El tiempo nunca se muestra como minutos de cuatro cifras: se formatea como
   minutos, horas/minutos o días/horas según corresponda. La urgencia siempre
-  incluye texto explícito («A tiempo», «Por vencer», «Con demora», «Listo»);
+  incluye texto explícito («A tiempo», «Por vencer», «Con demora», «Por entregar»);
   nunca depende solo del color. El objetivo de preparación aparece como dato
   secundario. El skeleton reproduce cabecera, identidad, líneas de productos y
   acción de cada tarjeta, no bloques rectangulares genéricos.
@@ -1248,7 +1303,9 @@ no integra un visor PDF.
   error del Kárdex usan `EmptyState` y `ErrorState`. En Recepciones, «Recibir»
   por fila es secundaria: una tabla no repite acciones primarias.
 - Punto de venta (`/pos`) usa un único panel de gestión con búsqueda y filtro de
-  estado. En escritorio presenta tabla estándar y en móvil tarjetas equivalentes;
+  estado. El filtro ofrece exactamente los estados de la columna Cobro: Todos,
+  Sin pagos, Pago parcial y Pagado; no se agregan opciones que sumen otras
+  (como «Con saldo pendiente»), porque repiten lo mismo. En escritorio presenta tabla estándar y en móvil tarjetas equivalentes;
   la acción de cobrar es iconográfica, usa `RowActionButton` y muestra tooltip,
   igual que el resto de acciones de fila. El turno de caja se presenta como
   contexto compacto y no como una segunda cabecera de página.
@@ -1386,7 +1443,7 @@ no integra un visor PDF.
   La validación previa se muestra junto a los campos, sin modal de respuesta; la única
   excepción es superar las existencias en la Comanda, que usa el aviso `info` (ver Comanda).
 - Excepción operativa: Cocina no muestra ese diálogo al pasar una comanda a
-  Preparando/Listo; el cambio entre paneles confirma la operación. Los errores
+  Preparando/Por entregar; el cambio entre paneles confirma la operación. Los errores
   conservan el aviso. Éxito se cierra automáticamente o con Aceptar/X; errores e
   información requieren una acción explícita. Escape y el fondo no cierran los
   modales; los formularios conservan X/Cancelar. Todos reutilizan `Dialog` para
@@ -1591,13 +1648,13 @@ en las órdenes y los ajustes de inventario, sin cambios del contrato ni de stoc
 ## Acción principal
 
 En el detalle de mesa de Salón, la siguiente acción del flujo es dominante:
-Confirmar entrega cuando todo está Listo, Cerrar cuenta cuando todo está Entregado
+Confirmar entrega cuando todo está por entregar, Cerrar cuenta cuando todo está Entregado
 y Cobrar cuando la cuenta está Por cobrar. Comparten azul primario; Cobrar usa
 `action-pay` con icono de tarjeta y hover `action-pay-hover`.
 La entrega se confirma una sola vez para todo el pedido desde el pie.
 El verde se reserva para los
-estados confirmados, no para representar una acción pendiente. Preparación y cuenta se presentan en regiones distintas: `listo` se expresa como «Listo para entregar»; la cuenta usa Cuenta abierta / Por cobrar / Pagada. Los importes se comunican en Pagado y Saldo pendiente. Las tarjetas de Salón reutilizan ese mismo estado y color,
-sin combinar «Listo» o «Entregado» con «por cobrar»; el saldo se consulta en el
+estados confirmados, no para representar una acción pendiente. Preparación y cuenta se presentan en regiones distintas: `listo` se expresa como «Por entregar» en todo el sistema (pedido, producto, carril de Cocina, Dashboard, filtro de Pedidos y catálogo del API; solo el mensaje de WhatsApp al comensal dice «listo»); la cuenta usa Cuenta abierta / Por cobrar / Pagada. Los importes se comunican en Pagado y Saldo pendiente. Las tarjetas de Salón reutilizan ese mismo estado y color,
+sin combinar «Por entregar» o «Entregado» con «por cobrar»; el saldo se consulta en el
 resumen de cuenta del detalle. Los modales no tienen franja superior decorativa:
 la cabecera índigo sólida llega al borde superior y ocupa todo el ancho.
 No se agrega una instrucción genérica para liberar la mesa: el estado, el saldo
@@ -1704,7 +1761,7 @@ tercera fila. El orden de los componentes es el que entrega el
 API. El área desplazable de productos conserva el foco por teclado, pero sin
 contorno azul visible. El estado de preparación por línea se
 omite cuando todas las preparaciones repiten el estado del pedido (Nuevo/Sin enviar,
-Preparando, Listo, Entregado), porque el estado del pedido ya lo expresa; se muestra
+Preparando, Por entregar, Entregado), porque el estado del pedido ya lo expresa; se muestra
 por línea cuando difieren entre sí o del pedido. Confirmado conserva «Pendiente» por
 línea: la comanda enviada aún no empieza a prepararse.
 
@@ -1732,9 +1789,14 @@ Las tarjetas de mesa y las filas de Pedidos conservan estos nombres también en
 móvil. No se muestra un cobrador antes de registrar pagos. Las acciones de atención
 no aparecen para otro mozo; el acceso de cobro mantiene su permiso independiente.
 
-En el listado de Pedidos el canal se representa una sola vez con icono: el avatar
-de la columna Pedido (`order-row-icon`, tono por canal). La columna Canal muestra
-solo el texto, sin repetir el icono.
+Las pestañas de Pedidos son tipos de atención, no orígenes: Todos | Salón |
+Recojo | Delivery. «Mostrador» es Recojo y un pedido QR por WhatsApp es Salón
+(ocupa mesa), así que no tienen pestaña propia. En el listado el tipo de
+atención se representa una sola vez con icono: el avatar de la columna Pedido
+(`order-row-icon`, tono por tipo; `serviceChannel` de `order-meta.ts`). La
+columna Canal muestra solo el texto y, si el pedido llegó por el QR de WhatsApp,
+una segunda línea discreta «vía WhatsApp» (`order-channel-origin`, icono
+`share` de 14 px, `ink-500`). Los pedidos QR también muestran su mozo.
 
 Pedidos reutiliza esta misma estructura del detalle de Salón: fecha en el contexto
 del cuerpo y cantidades circulares por producto, sin conteo agregado de unidades.
@@ -2335,7 +2397,7 @@ PostgreSQL para mantener compatibilidad durante el despliegue.
 ## Entrega del pedido y cuenta de mesa
 
 - Salón/Pedidos distinguen preparación y cuenta sin códigos técnicos ni instrucciones redundantes. El destino y estado de cada producto se presentan en una fila compacta y alineada; el estado se omite cuando repite el del pedido (ver detalle compartido).
-- El pie muestra un único botón primario «Confirmar entrega» para todo el pedido cuando todos los productos pendientes están Listos. No se muestran botones de entrega individuales: destino y estado de cada producto son datos de lectura. Cocina/Barra preparan; el mozo confirma todo con una acción. Las rondas adicionales incluyen solo productos aún sin entregar y no repiten las entregas anteriores. No se muestran modales exitosos en estas transiciones operativas.
+- El pie muestra un único botón primario «Confirmar entrega» para todo el pedido cuando todos los productos pendientes están por entregar. No se muestran botones de entrega individuales: destino y estado de cada producto son datos de lectura. Cocina/Barra preparan; el mozo confirma todo con una acción. Las rondas adicionales incluyen solo productos aún sin entregar y no repiten las entregas anteriores. No se muestran modales exitosos en estas transiciones operativas.
 - «Agregar productos» reutiliza la comanda con solo líneas nuevas y aparece únicamente con cuenta Abierta. «Cerrar cuenta» es primaria y aparece solo después de entregar todos los productos de todas las rondas. Después se muestra el enlace a cobro solo con entrega completa, permiso y saldo; no se ofrecen más consumos ni reapertura.
 - Cocina y Barra reutilizan el mismo KDS con selector de estación alimentado por backend, permisos independientes y las mismas primitivas visuales.
 - En móvil (390 px) las filas permiten wrap sin desbordar; la entrega global y las demás acciones del pie conservan 44 px y ancho disponible. No se duplican clases de los estilos base.

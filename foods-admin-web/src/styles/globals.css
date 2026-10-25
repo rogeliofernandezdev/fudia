@@ -152,7 +152,8 @@ p{text-wrap:pretty}
 .ds-input:disabled,.ds-select:disabled,.ds-textarea:disabled,.form-grid input:disabled,.form-grid select:disabled,.form-grid textarea:disabled{cursor:not-allowed;color:var(--ink-500);background:var(--cloud-100)}
 .ds-input:read-only:not(:disabled),.ds-textarea:read-only:not(:disabled){background:var(--cloud-50);border-style:dashed}
 .ds-input[aria-invalid=true],.ds-select[aria-invalid=true],.ds-textarea[aria-invalid=true]{border-color:var(--danger)}
-.ds-input[aria-invalid=true]:focus,.ds-select[aria-invalid=true]:focus,.ds-textarea[aria-invalid=true]:focus{box-shadow:var(--ring-danger)}
+/* Dentro de .ds-input-shell el anillo lo dibuja el contenedor; el input interno no repite otro. */
+.ds-input[aria-invalid=true]:focus:not(.ds-input-shell>.ds-input),.ds-select[aria-invalid=true]:focus,.ds-textarea[aria-invalid=true]:focus{box-shadow:var(--ring-danger)}
 .ds-input-shell{display:flex;align-items:center;gap:var(--space-2);height:var(--control-height);min-height:var(--control-height);padding:0 var(--space-2-5);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-control);color:var(--ink-400);background:var(--surface);transition:border-color var(--duration-fast),box-shadow var(--duration-fast)}
 .ds-input-shell .ds-input{height:calc(var(--control-height) - var(--size-2));min-height:calc(var(--control-height) - var(--size-2));padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
 .ds-input-shell:focus-within{border-color:var(--primary-600);box-shadow:var(--ring-focus)}

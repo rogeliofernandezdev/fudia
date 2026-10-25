@@ -190,6 +190,7 @@ func (a *API) Routes() *http.ServeMux {
 	m.Handle("POST /v1/admin/orders/{id}/bill/close", a.auth(a.requirePermission("orders.manage", http.HandlerFunc(a.closeOrderBill))))
 	m.Handle("PATCH /v1/admin/orders/{id}/service-items/{itemId}/deliver", a.auth(a.requirePermission("orders.manage", http.HandlerFunc(a.deliverOrderServiceItem))))
 	m.Handle("POST /v1/admin/orders", a.auth(a.requirePermission("orders.manage", http.HandlerFunc(a.createOrder))))
+	m.Handle("POST /v1/admin/delivery-quote", a.auth(a.requirePermission("orders.manage", http.HandlerFunc(a.quoteAdminDelivery))))
 	m.Handle("GET /v1/admin/orders/{id}", a.auth(a.requirePermission("orders.read", http.HandlerFunc(a.getOrder))))
 	m.Handle("GET /v1/admin/kitchen/tickets", a.auth(a.requirePermission("orders.read", http.HandlerFunc(a.listKitchenTickets))))
 	m.Handle("PATCH /v1/admin/kitchen/tickets/{id}/status", a.auth(a.requirePreparationPermission(http.HandlerFunc(a.updateKitchenTicketStatus))))

@@ -257,12 +257,14 @@ func loadDashboardInsights(ctx context.Context, tx database.Executor, s scope, p
 		return items, rows.Err()
 	}
 	if out.SalesByChannel, err = breakdown(`
-		SELECT m.channel,m.channel,sum(m.amount)::text,count(*) FILTER (WHERE m.amount>0)::int
+		SELECT CASE WHEN m.channel='mostrador' THEN 'recojo' ELSE m.channel END AS channel,
+		       CASE WHEN m.channel='mostrador' THEN 'recojo' ELSE m.channel END,
+		       sum(m.amount)::text,count(*) FILTER (WHERE m.amount>0)::int
 		FROM movements m CROSS JOIN loc
 		WHERE m.local_at::date>loc.today-$4::int
-		GROUP BY m.channel
+		GROUP BY 1,2
 		HAVING sum(m.amount)<>0
-		ORDER BY sum(m.amount) DESC,m.channel
+		ORDER BY sum(m.amount) DESC,1
 	`, channelLabels); err != nil {
 		return out, err
 	}

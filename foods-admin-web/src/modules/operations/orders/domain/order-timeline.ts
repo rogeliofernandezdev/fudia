@@ -12,7 +12,7 @@ const serviceLabels:Record<string,string>={
   nuevo:"Sin enviar a preparación",
   confirmado:"Comanda enviada",
   preparando:"En preparación",
-  listo:"Listo para entregar",
+  listo:"Por entregar",
   en_camino:"En camino",
   entregado:"Entregado",
 };

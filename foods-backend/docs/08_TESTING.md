@@ -121,6 +121,13 @@ horario y ausencia de cupo del día. Conserva la descripción para editar.
 
 ## Delivery y recojo de Concierge
 
+`pickup_channels_integration_test.go` verifica que el alias histórico
+`mostrador` y `recojo` comparten filtros y conteos de Pedidos/Cocina, lectura de
+POS y altas canónicas, sin reescribir los pedidos antiguos ni mezclar empresas
+o locales. El dashboard prueba agregación conjunta de cobros de ambos códigos.
+`orders/domain/channels_test.go` protege la única opción «Recojo en local» y la
+compatibilidad. La integración requiere PostgreSQL efímero.
+
 `delivery/domain/fees_test.go` prueba la distancia en línea recta redondeada a
 0.01 km, la elección del primer rango que cubre la distancia, la ausencia de
 cobertura sin rangos o más allá del mayor límite y la validación de rangos

@@ -6,7 +6,7 @@ import {useState} from "react";
 import {keepPreviousData,useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Button,ConfirmDialog,DataTable,EmptyState,ErrorState,Icon,PageHeader,Pagination,RowActionButton,SearchField,Select,Skeleton,Status,TableSkeleton,Tabs,TabsBar} from "@/design-system";
 import type {Order} from "../domain/types";
-import {createManualOrder,getOrder,listOrders,updateOrderStatus} from "../infrastructure/orders-api";
+import {createManualOrder,getOrder,listOrders,quoteDelivery,updateOrderStatus} from "../infrastructure/orders-api";
 import type {ManualOrderDraft} from "../domain/manual-order-schema";
 const ManualOrderDialog=dynamic(()=>import("./manual-order-dialog").then(module=>module.ManualOrderDialog),{ssr:false});
 import {useFeedback} from "@/providers/feedback-provider";
@@ -18,7 +18,7 @@ import {ComandaView} from "./comanda-view";
 import type {Draft} from "../../salon/domain/types";
 import {addOrderConsumption} from "../infrastructure/service-api";
 import {OrderDetailContent,OrderDetailSkeleton,orderDetailTitleId} from "./order-detail-dialog";
-import {channelIcons,orderStatus,registeredAt} from "./order-meta";
+import {channelIcons,orderStatus,registeredAt,serviceChannel} from "./order-meta";
 
 const columns=["Pedido","Canal","Estado","Registrado","Total","Acciones"];
 
@@ -62,16 +62,16 @@ export function OrdersManager(){
   :!items.length?<EmptyState icon="receipt" title={hasActiveFilters?"Sin coincidencias":"Aún no hay pedidos abiertos"} text={hasActiveFilters?"Prueba con otro canal, estado o término de búsqueda.":"Los pedidos nuevos aparecerán aquí cuando ingresen."} action={hasActiveFilters?<Button kind="secondary" icon="close" onClick={clearFilters}>Limpiar filtros</Button>:undefined}/>
   :<DataTable label="Listado de pedidos" containerClassName="hover-scroll" className="orders-table">
      <thead><tr>{columns.map(column=><th key={column}>{column}</th>)}</tr></thead>
-     <tbody>{items.map((o,index)=>{const meta=orderStatus(o.status);const subject=o.tableName||o.customerName||"Pedido";const secondary=o.tableName&&o.customerName?o.customerName:undefined;return <tr className={index%2?"alternate":""} key={o.id}>
+     <tbody>{items.map((o,index)=>{const meta=orderStatus(o.status);const service=serviceChannel(o.channel);const subject=o.tableName||o.customerName||"Pedido";const secondary=o.tableName&&o.customerName?o.customerName:undefined;return <tr className={index%2?"alternate":""} key={o.id}>
       <td>
-       <span className={"row-icon order-row-icon oc-"+o.channel}><Icon name={channelIcons[o.channel]??"receipt"} size={18}/></span>
+       <span className={"row-icon order-row-icon oc-"+service}><Icon name={channelIcons[service]??"receipt"} size={18}/></span>
        <b>{subject}</b>
        {secondary&&<small>{secondary}</small>}
-       {o.channel==="salon"&&<small className="order-staff">Mozo: {o.waiterName||"Sin asignar"}</small>}
+       {service==="salon"&&<small className="order-staff">Mozo: {o.waiterName||"Sin asignar"}</small>}
        {Boolean(o.collectedByNames?.length)&&<small className="order-staff">Cobrado por: {o.collectedByNames!.join(" · ")}</small>}
        <small className="order-mobile-registered"><time dateTime={o.createdAt}>{registeredAt(o.createdAt,location?.country,location?.timezone)}</time></small>
       </td>
-      <td><span className="order-channel-cell">{channelLabel(o.channel)}</span></td>
+      <td><span className="order-channel-cell">{channelLabel(service)}{o.channel==="whatsapp"&&<small className="order-channel-origin"><Icon name="share" size={14}/>vía WhatsApp</small>}</span></td>
       <td><Status tone={meta.tone}>{meta.label}</Status></td>
       <td><time className="order-registered" dateTime={o.createdAt}>{registeredAt(o.createdAt,location?.country,location?.timezone)}</time></td>
       <td><b className="order-table-total">{money(o.total)}</b></td>
@@ -80,7 +80,7 @@ export function OrdersManager(){
    </DataTable>}
   <Pagination page={page} size={size} total={list.data?.total??0} onPage={setPage} onSize={v=>{setSize(v);setPage(1)}}/>
  </section>
- {creating&&canManage&&<ManualOrderDialog channels={channelOptions} currencySymbol={settings.currencySymbol} busy={create.isPending} onClose={()=>{if(!create.isPending)setCreating(false)}} onSave={async draft=>{try{await create.mutateAsync(draft)}catch{/* Feedback conserva el error y el formulario permanece abierto. */}}}/>}
+ {creating&&canManage&&<ManualOrderDialog channels={channelOptions} currencySymbol={settings.currencySymbol} quoteDelivery={quoteDelivery} busy={create.isPending} onClose={()=>{if(!create.isPending)setCreating(false)}} onSave={async draft=>{try{await create.mutateAsync(draft)}catch{/* Feedback conserva el error y el formulario permanece abierto. */}}}/>}
  {adding&&<ComandaView mode="append" initial={adding.draft} allTables={[{id:adding.order.tableId,name:adding.order.tableName,zone:"",seats:0,order:null}]} busy={append.isPending} close={()=>setAdding(null)} save={draft=>append.mutateAsync(draft).then(()=>{}).catch(()=>{})} notify={notify}/>}
  {detailId&&<div className="modal-backdrop modal-overlay-in">
   <Dialog onResponseClose={closeDetail} className="crud-modal order-detail modal-panel-in" role="dialog" aria-modal="true" aria-labelledby={orderDetailTitleId} aria-busy={loading}>

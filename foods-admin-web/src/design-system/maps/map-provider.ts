@@ -17,6 +17,10 @@ export type LocationMapProps = {
   addressLabel?: ReactNode;
   /** Nombre accesible del mapa. */
   mapLabel?: string;
+  /** false oculta la ayuda y la etiqueta «Ubicación definida» cuando el formulario ya confirma el punto. */
+  hint?: boolean;
+  /** Error de la dirección: marca el buscador y se muestra bajo él. */
+  addressError?: string;
 };
 
 export function getMapProvider(): MapProviderName {

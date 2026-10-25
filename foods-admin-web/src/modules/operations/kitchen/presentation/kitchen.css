@@ -99,7 +99,9 @@
    pestañas con un solo carril visible: nunca hay desplazamiento horizontal. */
 @container admin-main (width<=900px){
  .ds-tabs.kitchen-mobile-tabs{display:flex;width:100%}
- .ds-tabs.kitchen-mobile-tabs button{min-height:var(--size-44)}
+ /* Los tres carriles siempre visibles en columnas iguales, sin deslizar ni hueco de relleno. */
+ .ds-tabs.kitchen-mobile-tabs button{flex:1 1 0;min-width:0;min-height:var(--size-44)}
+ .ds-tabs.kitchen-mobile-tabs:has(>button:last-child:nth-child(odd):not(:only-child))::after{content:none}
  .kitchen-board{display:block}
  .kitchen-lane{display:none}
  .kitchen-lane[data-mobile-active=true]{display:block}
@@ -114,6 +116,8 @@
  .kitchen-header-tools,.kitchen-station{width:100%}
  .ds-tabs.kitchen-area-tabs{flex:1 1 auto}
  .kitchen-filters{flex-direction:column;align-items:stretch;gap:var(--space-2);padding:var(--space-2-5) var(--space-3)}
+ /* En columna, la tira no debe encogerse a cero: conserva la altura de sus chips de 44 px. */
+ .kitchen-filters .cmd-chips{flex:none}
 }
 @media(max-width:760px){
  .kitchen-page{gap:var(--space-2-5)}

@@ -158,9 +158,21 @@
 }
 
 .order-channel-cell{
+  display:grid;
+  gap:var(--space-0-5);
   color:var(--ink-600);
   font-size:var(--font-size-label);
   font-weight:var(--weight-semibold);
+}
+
+/* Origen del pedido bajo su tipo de atención (QR de mesa por WhatsApp). */
+.order-channel-origin{
+  display:inline-flex;
+  align-items:center;
+  gap:var(--space-1);
+  color:var(--ink-500);
+  font-size:var(--font-size-label);
+  font-weight:var(--weight-regular);
 }
 
 .order-table-total{

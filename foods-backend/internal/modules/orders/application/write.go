@@ -13,7 +13,7 @@ import (
 
 func (a *Orders) Create(ctx context.Context, s scope, in domain.OrderInput) (domain.Order, error) {
 	var result domain.Order
-	in.Channel = strings.TrimSpace(in.Channel)
+	in.Channel = domain.NormalizeChannel(strings.TrimSpace(in.Channel))
 	in.CustomerName = strings.TrimSpace(in.CustomerName)
 	if !domain.ValidOrderChannel(in.Channel) || len(in.Items) == 0 || in.DeliveryFee < 0 {
 		return result, orderFailure(apperror.Invalid, "invalid_order", "El canal y al menos un producto son obligatorios.")
@@ -26,6 +26,9 @@ func (a *Orders) Create(ctx context.Context, s scope, in domain.OrderInput) (dom
 	}
 	if in.Channel != "salon" && strings.TrimSpace(in.TableID) != "" {
 		return result, orderFailure(apperror.Invalid, "table_not_allowed", "Solo los pedidos de Salón pueden ocupar una mesa.")
+	}
+	if pointErr := a.resolveDeliveryPoint(ctx, s, &in); pointErr != nil {
+		return result, pointErr
 	}
 	tx, err := a.work.Begin(ctx, unitofwork.Options{})
 	if err != nil {
@@ -107,6 +110,32 @@ func (a *Orders) Create(ctx context.Context, s scope, in domain.OrderInput) (dom
 	return o, nil
 
 }
+// resolveDeliveryPoint valida el punto del mapa y calcula la distancia desde el
+// local. Fuera de delivery el punto se descarta; sin coordenadas del local se
+// guarda el punto sin distancia.
+func (a *Orders) resolveDeliveryPoint(ctx context.Context, s scope, in *domain.OrderInput) error {
+	in.DeliveryDistanceKm = nil
+	if in.Channel != "delivery" {
+		in.DeliveryLatitude, in.DeliveryLongitude = nil, nil
+		return nil
+	}
+	if in.DeliveryLatitude == nil && in.DeliveryLongitude == nil {
+		return nil
+	}
+	if in.DeliveryLatitude == nil || in.DeliveryLongitude == nil || !deliverycontracts.ValidCoordinates(*in.DeliveryLatitude, *in.DeliveryLongitude) {
+		return orderFailure(apperror.Invalid, "invalid_delivery_point", "Marca un punto de entrega válido en el mapa.")
+	}
+	latitude, longitude, err := a.repo.LocationPoint(ctx, s)
+	if err != nil {
+		return orderFailure(apperror.Unavailable, "order_unavailable", "No pudimos guardar el pedido.")
+	}
+	if latitude != nil && longitude != nil {
+		distance := deliverycontracts.DistanceKm(*latitude, *longitude, *in.DeliveryLatitude, *in.DeliveryLongitude)
+		in.DeliveryDistanceKm = &distance
+	}
+	return nil
+}
+
 func (a *Orders) Update(ctx context.Context, s scope, id string, in domain.OrderUpdateInput) (domain.Order, error) {
 	var result domain.Order
 	in.CustomerName = strings.TrimSpace(in.CustomerName)

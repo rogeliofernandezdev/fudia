@@ -385,7 +385,7 @@ Cada vez que se cierre una prioridad:
 Secuencia obligatoria: Mesa Libre → primer pedido / Cuenta Abierta / Mesa Ocupada → preparación por Cocina o Barra (o Sin preparación) → mozo confirma entrega de todos los productos → puede agregar otra ronda solo mientras Abierta → Cerrar cuenta → Por cobrar / Mesa Ocupada → pago parcial mantiene Por cobrar → pago completo + todos entregados finaliza atención y libera mesa. Cierre y cobro anticipados se bloquean tanto en interfaz como en API. No se agregan productos ni se reabre después del cierre.
 
 La confirmación del mozo es un único botón «Confirmar entrega» en el pie del
-detalle de Salón/Pedidos. Requiere todos los productos pendientes Listos y confirma
+detalle de Salón/Pedidos. Requiere todos los productos pendientes por entregar y confirma
 el conjunto en una transacción; las entregas anteriores no se repiten. No hay
 acciones individuales por producto en la interfaz. El destino y el estado por
 producto se conservan únicamente como información de seguimiento.

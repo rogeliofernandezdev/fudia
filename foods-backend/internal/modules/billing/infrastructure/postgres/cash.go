@@ -567,7 +567,7 @@ func (r *Payments) BuildReport(ctx context.Context, s scope, id string) (domain.
 		return out, billingError(err)
 	}
 	// EXISTS includes each order line only once, regardless of the number of payments.
-	rows, err = r.db(ctx).Query(ctx, `SELECT i.id::text,o.code,COALESCE(NULLIF(t.name,''),NULLIF(o.customer_name,''),'Mostrador'),i.name,
+	rows, err = r.db(ctx).Query(ctx, `SELECT i.id::text,o.code,COALESCE(NULLIF(t.name,''),NULLIF(o.customer_name,''),'Venta sin mesa'),i.name,
  concat_ws(' · ',NULLIF(i.note,''),(SELECT string_agg(sel.group_name||': '||sel.option_name,' · ' ORDER BY sel.id) FROM order_item_combo_selections sel WHERE sel.order_item_id=i.id AND sel.organization_id=i.organization_id)),
  i.qty::text,i.unit_price::text,round(i.qty*i.unit_price,2)::text,
  to_char(i.created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"'),COALESCE(u.full_name,'')

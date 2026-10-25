@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/foods-platform/foods-backend/internal/modules/billing/application"
 	"github.com/foods-platform/foods-backend/internal/modules/billing/domain"
+	ordercontracts "github.com/foods-platform/foods-backend/internal/modules/orders/contracts"
 	"github.com/foods-platform/foods-backend/internal/platform/database"
 	"github.com/foods-platform/foods-backend/internal/platform/requestscope"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -340,6 +341,7 @@ func (r *Payments) POSOrders(ctx context.Context, s scope, f application.POSFilt
 		); err != nil {
 			return out, err
 		}
+		item.Channel = ordercontracts.NormalizeChannel(item.Channel)
 		items = append(items, item)
 	}
 	if err := rows.Err(); err != nil {

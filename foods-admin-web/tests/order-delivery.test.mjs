@@ -55,7 +55,7 @@ test("la preparación y el saldo se muestran sin mezclarse",()=>{
  assert.equal(orderStatus("listo").tone,"green");
  assert.equal(orderStatus("entregado").tone,"teal");
  const html=renderDetail({order:ready});
- assert.match(html,/Listo para entregar/);
+ assert.match(html,/Por entregar/);
  assert.match(html,/Saldo pendiente/);
  assert.match(html,/Confirmar entrega/);
 });

@@ -121,3 +121,47 @@ func TestManualDeliveryKitchenPaymentAndDispatch(t *testing.T) {
 		t.Fatalf("POS delivery detail: %d %s", detail.Code, detail.Body.String())
 	}
 }
+
+func TestManualDeliveryStoresMapPointAndServerDistance(t *testing.T) {
+	pool := integrationPool(t)
+	s := seedInventoryScope(t, pool)
+	api := New(pool)
+	ctx := context.Background()
+	var productID string
+	if err := pool.QueryRow(ctx, `INSERT INTO products(organization_id,sku,name,price,active,product_type,quantity_control) VALUES($1,'DELIVERY-MAP','Plato mapa',25,true,'prepared','none') RETURNING id`, s.OrganizationID).Scan(&productID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, `UPDATE locations SET latitude=-12.1219,longitude=-77.0297 WHERE id=$1`, s.LocationID); err != nil {
+		t.Fatal(err)
+	}
+	create := func(channel, point string) (*httptest.ResponseRecorder, map[string]any) {
+		body := []byte(fmt.Sprintf(`{"channel":%q,"customerName":"Ana","customerPhone":"999123456","address":"Av. Perú 100","deliveryFee":4,%s"sendToKitchen":true,"items":[{"productId":%q,"qty":1}]}`, channel, point, productID))
+		req := httptest.NewRequest("POST", "/v1/admin/orders", bytes.NewReader(body))
+		req = req.WithContext(context.WithValue(req.Context(), scopeKey{}, s))
+		rec := httptest.NewRecorder()
+		api.createOrder(rec, req)
+		out := map[string]any{}
+		_ = json.Unmarshal(rec.Body.Bytes(), &out)
+		return rec, out
+	}
+	rec, created := create("delivery", `"deliveryLatitude":-12.1119,"deliveryLongitude":-77.0297,"deliveryDistanceKm":0.01,`)
+	if rec.Code != 201 {
+		t.Fatalf("create with point: %d %s", rec.Code, rec.Body.String())
+	}
+	if created["deliveryLatitude"] != -12.1119 || created["deliveryLongitude"] != -77.0297 {
+		t.Fatalf("point not stored: %v", created)
+	}
+	if distance, ok := created["deliveryDistanceKm"].(float64); !ok || distance < 1.1 || distance > 1.12 {
+		t.Fatalf("distance must be computed by the server, got %v", created["deliveryDistanceKm"])
+	}
+	if created["deliveryFee"] != "4.00" {
+		t.Fatalf("manual fee must be kept as entered: %v", created["deliveryFee"])
+	}
+	rec, pickup := create("recojo", `"deliveryLatitude":-12.1119,"deliveryLongitude":-77.0297,`)
+	if rec.Code != 201 || pickup["deliveryLatitude"] != nil {
+		t.Fatalf("pickup must drop the point: %d %v", rec.Code, pickup)
+	}
+	if rec, _ = create("delivery", `"deliveryLatitude":-12.1119,`); rec.Code != 400 || !strings.Contains(rec.Body.String(), "invalid_delivery_point") {
+		t.Fatalf("incomplete point must be rejected: %d %s", rec.Code, rec.Body.String())
+	}
+}

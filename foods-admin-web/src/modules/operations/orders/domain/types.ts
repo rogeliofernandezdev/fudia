@@ -57,3 +57,6 @@ export type OrdersResponse={
   channelOptions:Option[];
   statusOptions:Option[];
 };
+
+/** Costo de envío sugerido por las tarifas del local para un punto del mapa. */
+export type DeliveryQuote={covered:boolean;distanceKm:string;fee:string;maxDistanceKm:string;currencySymbol:string};

@@ -249,17 +249,25 @@ La desactivación sigue bloqueada cuando hay productos activos asociados.
 ## Alta manual desde Pedidos
 
 «Nuevo pedido» abre un formulario breve de datos, con Delivery inicialmente seleccionado.
-Los tipos seleccionables (Delivery, Recojo y Mostrador) toman sus etiquetas de
+Los tipos seleccionables (Recojo en local y Delivery) toman sus etiquetas de
 `channelOptions` del API. Salón conserva su toma de comanda por mesa; WhatsApp
 conserva el ingreso por Concierge y no se ofrece como origen manual.
 Delivery exige cliente, teléfono válido y dirección; referencia, notas y costo
 de envío completan la entrega. «Continuar» valida estos datos y abre `ComandaView`,
 la misma toma de pedidos utilizada por Salón: carta, cantidades, elecciones,
 notas y resumen. Delivery muestra cliente/dirección en lugar de mesa e incluye
-el envío en el total. Recojo y Mostrador tampoco solicitan mesa. «Editar datos»
+el envío en el total. Recojo en local no solicita mesa, dirección ni envío. «Editar datos»
 vuelve al formulario conservando productos, elecciones y notas. Avanzar o volver
 no realiza peticiones de creación ni genera pedidos parciales. El catálogo
 operativo es paginado y presenta la disponibilidad real del local.
+
+`recojo` unifica pedidos presenciales y encargos para retirar. `mostrador` deja
+de ser seleccionable: el API mantiene el alias histórico para clientes antiguos,
+normaliza altas y lecturas a `recojo` y suma ambos códigos en filtros, conteos y
+reportes, sin reescribir registros ni auditorías. Caja, Ventas y Cocina muestran
+«Recojo en local». No se infiere el origen a partir del retiro: WhatsApp y los
+vínculos existentes de Concierge se conservan; esta simplificación no crea un
+nuevo catálogo ni un selector de origen.
 
 La acción explícita «Registrar y enviar a cocina» hace POST al endpoint existente
 `/v1/admin/orders` con `sendToKitchen=true`; no guarda al pulsar Enter desde un
@@ -269,7 +277,7 @@ mediante el cierre directo de respuesta, sin abrir una confirmación de descarte
 X/Cancelar confirma el descarte si hubo cambios. El éxito cierra el formulario,
 selecciona el canal creado, limpia filtros e invalida Pedidos, Cocina, POS,
 Dashboard y disponibilidad. No se registran pagos desde este formulario: el cobro
-sigue en POS. Delivery continúa con Listo → En camino → Entregado.
+sigue en POS. Delivery continúa con Por entregar → En camino → Entregado.
 
 ## Responsable de mesa y autoría del cobro
 
@@ -297,7 +305,7 @@ estado de preparación, sin fusionar etiquetas.
 Productos obtiene del backend Cocina, Barra y Sin preparación. Salón y Pedidos
 muestran destino y estado por producto solo como lectura, sin botones por fila.
 El pie presenta un único «Confirmar entrega» para todo el pedido cuando todos
-los productos pendientes están Listos. Usa `PATCH orders/{id}/status` con
+los productos pendientes están por entregar. Usa `PATCH orders/{id}/status` con
 `status=entregado`: el backend confirma todas las líneas listas en una transacción,
 sin modificar las ya entregadas. No incorpora una alternativa de entrega individual.
 Cocina/Barra preparan de forma independiente; Sin preparación nunca ingresa a KDS.
@@ -325,7 +333,7 @@ Los detalles abiertos se refrescan cada 10 segundos hasta `completedAt`.
 
 Salón y Pedidos reutilizan `canCancelOrder`: un producto Sin preparación listo aún sin
 servir puede cancelarse si no hay pagos ni preparación iniciada o entrega de
-otros productos. El estado agregado Listo no significa que se haya preparado.
+otros productos. El estado agregado Por entregar no significa que se haya preparado.
 Pedidos históricos sin detalle de servicio conservan cancelación solo desde
 Nuevo/Confirmado. Backend valida de nuevo bajo bloqueo y revierte cantidades
 una sola vez; la autorización del mozo y `orders.manage` no cambia.
@@ -380,9 +388,10 @@ abrir el enlace y no incorpora una acción de cobro al modal de consulta.
 ## Punto de entrega en el detalle de pedido
 
 `Order` incluye `deliveryLatitude`, `deliveryLongitude` y `deliveryDistanceKm`
-(números o `null`, solo lectura). Concierge los guarda al crear pedidos delivery
-con el pin de WhatsApp; los pedidos manuales y de Salón los devuelven en `null`.
-No se envían en altas ni ediciones. `deliveryPoint` (dominio de
+(números o `null`). Concierge los guarda con el pin de WhatsApp y el alta
+manual de delivery con el punto marcado en el mapa (`deliveryLatitude` y
+`deliveryLongitude` en `POST /v1/admin/orders`; la distancia la calcula el
+servidor). Recojo y Salón los devuelven en `null`. Las ediciones no los cambian. `deliveryPoint` (dominio de
 `operations/orders`) es el único que interpreta esos campos y construye la URL
 `https://www.google.com/maps/search/?api=1&query=lat,lng`: devuelve `null` si el
 canal no es `delivery` o falta alguna coordenada válida, y descarta distancias

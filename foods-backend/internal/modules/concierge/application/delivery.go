@@ -127,6 +127,17 @@ func (a *Concierge) QuoteDelivery(ctx context.Context, token string, in domain.D
 	return out.view, err
 }
 
+// QuoteAdminDelivery sugiere el costo de envío del alta manual con las mismas
+// tarifas del local que usa Concierge. El cajero puede corregirlo al guardar.
+func (a *Concierge) QuoteAdminDelivery(ctx context.Context, s scope, in domain.DeliveryQuoteInput) (domain.DeliveryQuote, error) {
+	setup, err := a.repo.DeliverySetup(ctx, s)
+	if err != nil {
+		return domain.DeliveryQuote{}, conciergeFailure(apperror.Unavailable, "delivery_unavailable", "No pudimos cargar las tarifas de delivery.")
+	}
+	out, err := quote(setup, in.Latitude, in.Longitude)
+	return out.view, err
+}
+
 // SubmitDelivery crea el pedido de recojo o delivery. La tarifa se recalcula
 // con las tarifas vigentes del local; nunca se acepta un costo del cliente.
 func (a *Concierge) SubmitDelivery(ctx context.Context, token string, in DeliveryOrderInput) (ordercontracts.TableSubmission, error) {

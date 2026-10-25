@@ -113,6 +113,23 @@ manuales de Salón a su autor original cuando pertenece a la misma empresa.
 
 ## Alta manual de delivery
 
+Los tipos manuales son `recojo` («Recojo en local») y `delivery`. Mostrador ya
+no es una modalidad separada: el catálogo `channelOptions` lo omite. Las altas
+con el alias histórico `mostrador` se normalizan a `recojo`; las lecturas de
+Pedidos, Cocina y POS también. Los filtros `recojo` y `mostrador` incluyen ambos
+códigos en Pedidos/Cocina; los conteos y el desglose del dashboard los suman una
+sola vez bajo `recojo`. No se reescribe la base ni se pierde auditoría. El origen
+WhatsApp y sus vínculos de Concierge permanecen intactos, sin inferirlos desde
+la modalidad de entrega. No requiere migración.
+
+Las pestañas de Pedidos y Cocina son tipos de atención: `channelOptions` de
+`GET /v1/admin/orders` y del KDS es `domain.ServiceChannels` (Salón, Recojo en
+local, Delivery). El canal guardado no cambia: `whatsapp` sigue identificando el
+pedido QR de mesa creado por Concierge, pero `domain.ServiceChannel` lo agrupa en
+`salon` para `channelCounts`, y el filtro `channel=salon` incluye `whatsapp` en
+Pedidos y Cocina. `domain.Channels` (con WhatsApp) se mantiene para validación,
+etiquetas e historial de otros módulos.
+
 `POST /v1/admin/orders` conserva `orders.manage` y el alcance de empresa/local
 derivado de la sesión. Delivery requiere nombre, teléfono válido de 7 a 15 dígitos
 y dirección; el número admite `+` inicial y separadores habituales. El envío es
@@ -211,4 +228,5 @@ La descripción permanece en el contrato para editar sin perder información.
 - `POST /v1/integrations/concierge/{token}/bill` acepta `requestId`: repetirlo devuelve la cuenta vigente y no registra otra solicitud (`audit_log_concierge_bill_request_uq`). Sin `requestId` cada llamada se registra, por compatibilidad.
 - Concierge conserva idempotencia por solicitud/ronda y puede ampliar la cuenta de Salón solo mientras Abierta, sin reenviar consumos anteriores. Después del cierre devuelve `409 order_bill_closed`, igual que el flujo del mozo.
 - Delivery y recojo de Concierge (migración 000083): `GET .../{token}/delivery-options`, `POST .../{token}/delivery-quote` (ubicación en el cuerpo, nunca en la URL), `POST .../{token}/delivery-orders` y `GET .../{token}/orders/{orderId}?conversationId=`. La distancia es en línea recta (haversine, redondeada a 0.01 km) entre `locations.latitude/longitude` y el pin del cliente; se aplica el primer rango de `delivery_fee_tiers` cuyo límite la cubre. El pedido se crea sin mesa con canal `delivery` o `recojo`, `status=confirmado` y enviado a cocina; guarda `delivery_latitude`, `delivery_longitude` y `delivery_distance_km`. La tarifa aceptada (`quotedFee`) debe coincidir con la vigente (`409 delivery_fee_changed`); `requestId` es idempotente en `concierge_delivery_requests` y su reintento devuelve el mismo pedido aunque cambien las tarifas.
+- Alta manual de delivery con mapa: `POST /v1/admin/orders` acepta `deliveryLatitude` y `deliveryLongitude` (ambos o ninguno, solo `delivery`; en otros canales se descartan). El servidor calcula `delivery_distance_km` desde el local activo y la deja en `null` si el local no tiene coordenadas. `POST /v1/admin/delivery-quote` (`orders.manage`, punto en el cuerpo) sugiere el costo con las mismas tarifas de Concierge; a diferencia de Concierge, el costo enviado en el alta es editable por el cajero y no se compara con la tarifa.
 - `GET|PUT /v1/admin/concierge-settings/delivery-fees` (`organizations.read` / `organizations.manage`) lee y reemplaza los rangos del local activo: hasta 10, límites distintos de 0.01 a 50 km y costos de 0 a 999 con dos decimales. Una lista vacía deja solo recojo. El cálculo puro vive en `delivery/domain` y se publica en `delivery/contracts`.

@@ -45,8 +45,8 @@ No hay reapertura después del cierre ni botón adicional para liberar la mesa.
 `products.service_destination` (`kitchen`, `bar`, `direct`; el catálogo único `menu/domain.ServiceDestinations` entrega `label` y `shortLabel`, y `direct` se muestra como «Sin preparación (lo entrega el mozo)», antes «Entrega directa») configura Cocina, Barra o Sin preparación sin
 inferirlo de nombres/categorías ni del control de cantidad. Cada venta conserva
 una copia de destino, producto, cantidad y estado en `order_service_items`.
-Cocina y Barra avanzan Pendiente → Preparando → Listo → Entregado; Sin preparación
-entra en Pendiente de entrega y solo el responsable confirma Entregado.
+Cocina y Barra avanzan Pendiente → Preparando → Por entregar → Entregado; Sin preparación
+entra directamente en Por entregar y solo el responsable confirma Entregado.
 Los componentes de un combo conservan tareas separadas, pero una sola línea
 comercial y su precio.
 
@@ -209,7 +209,7 @@ El Kárdex no expone códigos generados por la base (`REC-…`, `OC-…`, `DEV-�
 `TRF-…`, `ENT-…`, `PED-…`). `sourceReference` es legible: «Recepción de compra ·
 Proveedor», «Devolución de compra · Proveedor» o «Corrección de compra ·
 Proveedor», «Transferencia · Origen → Destino», «Entrada manual», «Ajuste de
-inventario» y «Pedido · Mesa N / Mostrador / Recojo / Delivery / WhatsApp». Las
+inventario» y «Pedido · Mesa N / Recojo en local / Delivery / WhatsApp». Las
 notas guardan solo el texto del usuario (notas de recepción, motivo de la
 devolución, nota de la transferencia); la migración 88 quitó esos códigos de las
 notas históricas.

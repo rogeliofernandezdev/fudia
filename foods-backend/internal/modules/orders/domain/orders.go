@@ -102,6 +102,11 @@ type OrderInput struct {
 	DeliveryFee   float64          `json:"deliveryFee"`
 	Items         []OrderItemInput `json:"items"`
 	SendToKitchen bool             `json:"sendToKitchen"`
+	// Punto de entrega fijado en el mapa; solo delivery. Ambos o ninguno.
+	DeliveryLatitude  *float64 `json:"deliveryLatitude"`
+	DeliveryLongitude *float64 `json:"deliveryLongitude"`
+	// Calculada por el servidor desde el local; nunca se lee del cliente.
+	DeliveryDistanceKm *float64 `json:"-"`
 }
 type OrderUpdateInput struct {
 	CustomerName  string           `json:"customerName"`
@@ -158,7 +163,7 @@ type KitchenTicket struct {
 	Items         []OrderItem `json:"items"`
 }
 
-var Statuses = []map[string]string{{"value": "nuevo", "label": "Nuevo"}, {"value": "confirmado", "label": "Confirmado"}, {"value": "preparando", "label": "Preparando"}, {"value": "listo", "label": "Listo"}, {"value": "en_camino", "label": "En camino"}, {"value": "entregado", "label": "Entregado"}, {"value": "cancelado", "label": "Cancelado"}}
+var Statuses = []map[string]string{{"value": "nuevo", "label": "Nuevo"}, {"value": "confirmado", "label": "Confirmado"}, {"value": "preparando", "label": "Preparando"}, {"value": "listo", "label": "Por entregar"}, {"value": "en_camino", "label": "En camino"}, {"value": "entregado", "label": "Entregado"}, {"value": "cancelado", "label": "Cancelado"}}
 var Transitions = map[string][]string{
 	"nuevo":      {"confirmado", "cancelado"},
 	"confirmado": {"cancelado"},

@@ -144,6 +144,16 @@ func (h *Handler) GetConciergeOrderStatus(w http.ResponseWriter, r *http.Request
 	out, err := h.service.OrderStatus(r.Context(), r.PathValue("token"), r.PathValue("orderId"), r.URL.Query().Get("conversationId"))
 	respond(w, 200, out, err)
 }
+// QuoteAdminDelivery recibe el punto del mapa en el cuerpo, nunca en la URL.
+func (h *Handler) QuoteAdminDelivery(w http.ResponseWriter, r *http.Request) {
+	var in domain.DeliveryQuoteInput
+	if json.NewDecoder(r.Body).Decode(&in) != nil {
+		shared.Fail(w, 400, "invalid_location", "Marca un punto de entrega válido en el mapa.")
+		return
+	}
+	out, err := h.service.QuoteAdminDelivery(r.Context(), conciergeScope(r), in)
+	respond(w, 200, out, err)
+}
 func (h *Handler) GetConciergeDeliveryFees(w http.ResponseWriter, r *http.Request) {
 	out, err := h.service.DeliveryFees(r.Context(), conciergeScope(r))
 	respond(w, 200, out, err)

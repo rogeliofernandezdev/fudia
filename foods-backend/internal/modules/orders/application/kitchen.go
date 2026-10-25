@@ -21,8 +21,8 @@ type KitchenPage struct {
 }
 
 func (a *Orders) Kitchen(ctx context.Context, s scope, channel, destination string) (KitchenPage, error) {
-	out := KitchenPage{Items: []domain.KitchenTicket{}, Counts: map[string]int{"confirmado": 0, "preparando": 0, "listo": 0}, DestinationOptions: menucontracts.ServiceDestinations[:2], ChannelOptions: domain.Channels}
-	channel = strings.TrimSpace(channel)
+	out := KitchenPage{Items: []domain.KitchenTicket{}, Counts: map[string]int{"confirmado": 0, "preparando": 0, "listo": 0}, DestinationOptions: menucontracts.ServiceDestinations[:2], ChannelOptions: domain.ServiceChannels}
+	channel = domain.NormalizeChannel(strings.TrimSpace(channel))
 	destination = strings.TrimSpace(destination)
 	if channel != "" && !domain.ValidOrderChannel(channel) {
 		return out, orderFailure(apperror.Invalid, "invalid_channel", "El canal seleccionado no es válido.")
@@ -74,6 +74,9 @@ func (a *Orders) Kitchen(ctx context.Context, s scope, channel, destination stri
 	for _, ticket := range current {
 		out.Items = append(out.Items, ticket)
 		out.Counts[ticket.Status]++
+	}
+	for i := range out.Items {
+		out.Items[i].Channel = domain.NormalizeChannel(out.Items[i].Channel)
 	}
 	out.ServerTime = time.Now().UTC()
 	return out, nil

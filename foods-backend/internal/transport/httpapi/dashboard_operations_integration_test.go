@@ -81,7 +81,7 @@ func TestDashboardConsolidatesRestaurantOperations(t *testing.T) {
 	}
 	full := order("mostrador", "entregado", 50, nil)
 	exec(`UPDATE orders SET completed_at=now() WHERE id=$1`, full)
-	partial := order("mostrador", "preparando", 50, nil)
+	partial := order("recojo", "preparando", 50, nil)
 	order("salon", "confirmado", 30, table)
 	order("delivery", "listo", 10, nil)
 	order("delivery", "en_camino", 20, nil)
@@ -118,7 +118,7 @@ func TestDashboardConsolidatesRestaurantOperations(t *testing.T) {
 	if result.Period.From != result.BusinessDate || result.Period.To != result.BusinessDate || result.Previous.SalesNet != "0" || result.Previous.PaidOrders != 0 {
 		t.Fatalf("today period and previous window: %+v %+v", result.Period, result.Previous)
 	}
-	if len(result.SalesByChannel) != 1 || result.SalesByChannel[0].Value != "mostrador" || result.SalesByChannel[0].Label != "Mostrador" || result.SalesByChannel[0].Total != "70.00" || result.SalesByChannel[0].Count != 2 {
+	if len(result.SalesByChannel) != 1 || result.SalesByChannel[0].Value != "recojo" || result.SalesByChannel[0].Label != "Recojo en local" || result.SalesByChannel[0].Total != "70.00" || result.SalesByChannel[0].Count != 2 {
 		t.Fatalf("sales by channel: %+v", result.SalesByChannel)
 	}
 	if len(result.SalesByPaymentMethod) != 1 || result.SalesByPaymentMethod[0].Value != "card" || result.SalesByPaymentMethod[0].Total != "70.00" || result.SalesByPaymentMethod[0].Label == "" {

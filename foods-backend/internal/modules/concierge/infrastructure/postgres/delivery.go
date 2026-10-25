@@ -33,10 +33,12 @@ func (r *Concierge) feeTiers(ctx context.Context, s scope) ([]deliverycontracts.
 func (r *Concierge) DeliverySetup(ctx context.Context, s scope) (application.DeliverySetup, error) {
 	var out application.DeliverySetup
 	err := r.db(ctx).QueryRow(ctx, `
-		SELECT l.address,l.phone,l.latitude::float8,l.longitude::float8
+		SELECT l.address,l.phone,l.latitude::float8,l.longitude::float8,COALESCE(p.currency_symbol,'')
 		FROM locations l
+		LEFT JOIN organization_fiscal_profiles p
+		  ON p.id=l.fiscal_profile_id AND p.organization_id=l.organization_id
 		WHERE l.id=$2 AND l.organization_id=$1 AND l.active
-	`, s.OrganizationID, s.LocationID).Scan(&out.Address, &out.Phone, &out.Latitude, &out.Longitude)
+	`, s.OrganizationID, s.LocationID).Scan(&out.Address, &out.Phone, &out.Latitude, &out.Longitude, &out.CurrencySymbol)
 	if err != nil {
 		return out, conciergeError(err)
 	}
