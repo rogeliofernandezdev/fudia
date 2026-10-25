@@ -15,6 +15,7 @@ import {useCurrentProfile} from "@/modules/identity";
 import {RestaurantSetupTour} from "@/modules/setup";
 import {pageRoutes} from "@/shared/routing/page-routes";
 import {deleteSession} from "@/shared/session/session-api";
+import {beginSignOut} from "@/shared/session/expire-session";
 import {broadcastSessionChange} from "@/shared/session/session-events";
 import {accessKey,firstAccessibleRoute,moduleIsActive,navigationItemForPath,visibleNavigation} from "./navigation";
 import {AdminSessionError} from "./admin-session-error";
@@ -31,7 +32,10 @@ export function AdminShell({children}:{children:React.ReactNode}){
  const homeHref=navigationContext?firstAccessibleRoute(navigationContext):pageRoutes.noAccess;
  const currentItem=navigationItemForPath(path);
  const blockReason=isPlatformAdmin?null:!currentItem?null:currentItem.platformAdminOnly?"platform":!modules||!moduleIsActive(modules,currentItem.module)?"module":!canAccess(accessKey(currentItem))||Boolean(currentItem.permission&&!can(currentItem.permission))?"role":null;
- async function logout(){if(signingOut)return;setSigningOut(true);try{await deleteSession()}finally{broadcastSessionChange("signed-out");queryClient.clear();router.replace(pageRoutes.login);router.refresh()}}
+ // Una sola navegación sin recarga: la caché se vacía al desmontar el panel, no antes (evita el 401 en cadena).
+ const leaving=useRef(false);
+ useEffect(()=>()=>{if(leaving.current)queryClient.clear()},[queryClient]);
+ async function logout(){if(signingOut)return;setSigningOut(true);leaving.current=true;beginSignOut();try{await deleteSession()}catch{/* La cookie se borra en el BFF aunque la revocación remota falle. */}finally{broadcastSessionChange("signed-out");router.replace(pageRoutes.login)}}
  useEffect(()=>{if(!menuOpen)return;const previous=document.body.style.overflow;document.body.style.overflow="hidden";const close=(event:KeyboardEvent)=>{if(event.key==="Escape")setMenuOpen(false)};document.addEventListener("keydown",close);return()=>{document.body.style.overflow=previous;document.removeEventListener("keydown",close)}},[menuOpen]);
  useEffect(()=>{if(!accountOpen)return;const close=(event:MouseEvent)=>{if(!accountRef.current?.contains(event.target as Node))setAccountOpen(false)};const escape=(event:KeyboardEvent)=>{if(event.key==="Escape")setAccountOpen(false)};document.addEventListener("mousedown",close);document.addEventListener("keydown",escape);return()=>{document.removeEventListener("mousedown",close);document.removeEventListener("keydown",escape)}},[accountOpen]);
  if(isUnauthorized)return <FullScreenLoader label="Tu sesión finalizó"/>;

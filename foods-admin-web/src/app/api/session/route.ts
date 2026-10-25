@@ -30,7 +30,8 @@ export async function DELETE(request:NextRequest){
   const cookie=request.headers.get("cookie")??"";
   // scope=local: el backend ya respondió 401, así que no hay sesión remota que revocar.
   const localOnly=request.nextUrl.searchParams.get("scope")==="local";
-  if(!localOnly&&cookie)try{await fetch(`${apiUrl()}/v1/auth/logout`,{method:"POST",headers:{"Content-Type":"application/json",cookie},cache:"no-store"})}catch{}
+  // La revocación remota tiene un tope: la cookie se borra igual y el cierre no queda esperando a un backend lento.
+  if(!localOnly&&cookie)try{await fetch(`${apiUrl()}/v1/auth/logout`,{method:"POST",headers:{"Content-Type":"application/json",cookie},cache:"no-store",signal:AbortSignal.timeout(3000)})}catch{}
   const next=new NextResponse(null,{status:204});
   next.headers.set("set-cookie","foods_session=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax");
   return next;

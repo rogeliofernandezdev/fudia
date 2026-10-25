@@ -857,6 +857,12 @@ test("una sesión activa no se reemplaza silenciosamente",()=>{
   assert.ok(expiration.includes('fetch("/api/session?scope=local"'),"La expiración solo borra la cookie, sin logout remoto");
   assert.ok(route.includes('searchParams.get("scope")==="local"')&&route.includes("if(!localOnly&&cookie)"),"El BFF omite el logout del backend si la sesión ya venció o no hay cookie");
   assert.ok(session.includes("retry:(failures,error)=>!isUnauthorizedError(error)"),"Un 401 del contexto no se reintenta");
+  // Cierre manual rápido: una sola navegación, sin el 401 en cadena ni recarga completa.
+  assert.ok(shell.includes("beginSignOut();"),"El cierre manual desactiva la salida por sesión vencida");
+  assert.ok(expiration.includes("export function beginSignOut()"),"La salida por 401 se omite durante un cierre manual");
+  assert.doesNotMatch(shell,/async function logout\(\)\{[^}]*queryClient\.clear\(\)/,"La caché no se vacía antes de salir del panel: provocaría otro 401");
+  assert.ok(shell.includes("useEffect(()=>()=>{if(leaving.current)queryClient.clear()},[queryClient]);"),"La caché se vacía al desmontar el panel");
+  assert.ok(route.includes("signal:AbortSignal.timeout(3000)"),"La revocación remota tiene un tope y no bloquea el cierre");
   const loginPage=read("src/app/login/page.tsx");
   assert.ok(loginPage.includes('(await cookies()).get("foods_session")')&&loginPage.includes("hasSession={hasSession}"),"El login sabe en el servidor si existe una cookie de sesión");
   assert.ok(login.includes("useState(hasSession)")&&login.includes("if(!hasSession)return;"),"Sin cookie el login no muestra «Validando sesión» ni consulta el contexto");

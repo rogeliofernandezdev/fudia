@@ -38,6 +38,15 @@ carga de imágenes o administración de plataforma elimina la cookie, descarta e
 estado del usuario y comunica el cierre a las demás pestañas. Un `401` es
 definitivo: el contexto no se reintenta y la expiración solo borra la cookie en
 el BFF (`DELETE /api/session?scope=local`), sin llamar al logout del backend.
+
+«Cerrar sesión» desde el menú es una sola navegación sin recarga: marca el
+cierre como manual (`beginSignOut`), así el `401` que llega después no abre la
+salida por «Tu sesión finalizó» ni una segunda llamada. Luego llama a
+`DELETE /api/session`, avisa a las demás pestañas y navega a `/login`; la caché
+de consultas se vacía al desmontar el panel, nunca antes (vaciarla con el panel
+montado vuelve a pedir el contexto y provoca ese `401` en cadena). El BFF borra
+la cookie siempre y limita la revocación en el backend a 3 s; el cliente no
+espera más de 5 s aunque la red falle.
 El login lee la cookie en el servidor: sin cookie muestra el formulario de
 inmediato; con cookie valida una sola vez («Validando sesión») y, si sigue
 vigente, entra al primer acceso permitido. Si la validación

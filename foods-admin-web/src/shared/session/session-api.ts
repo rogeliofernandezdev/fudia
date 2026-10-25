@@ -15,6 +15,7 @@ export async function loadSessionContext():Promise<SessionContextResponse>{
 }
 
 export async function deleteSession(){
-  const response=await fetch("/api/session",{method:"DELETE"});
+  // El BFF limita la revocación remota; aquí solo se evita esperar sin fin si la red cae.
+  const response=await fetch("/api/session",{method:"DELETE",signal:AbortSignal.timeout(5000)});
   if(!response.ok&&response.status!==204)throw new Error(`session_${response.status}`);
 }
