@@ -5,6 +5,7 @@ import {resolve,dirname} from "node:path";
 import {fileURLToPath} from "node:url";
 import {createServer} from "node:http";
 import assert from "node:assert/strict";
+import {resolveTokens} from "./design-tokens.mjs";
 import React from "react";
 import {renderToStaticMarkup} from "react-dom/server";
 import {detailComponents} from "./order-detail-fixture.mjs";
@@ -65,7 +66,7 @@ try{
   for(const price of geometry.prices){assert.equal(price.fontWeight,"700");assert.ok(price.right<=width,`${name}: precios legibles`);}
   if(query.includes("sheet")){
    const draftColors=await page.locator(".salon-comanda-draft").evaluate(el=>({color:getComputedStyle(el).color,background:getComputedStyle(el).backgroundColor,border:getComputedStyle(el).borderColor,shadow:getComputedStyle(el).boxShadow}));
-   const draftLight=[luminance(draftColors.color),luminance(draftColors.background)].sort((a,b)=>b-a);assert.ok((draftLight[0]+.05)/(draftLight[1]+.05)>=4.5,`${name}: contraste AA de Guardar comanda`);assert.equal(draftColors.background,"rgb(219, 223, 251)",`${name}: fondo índigo de Guardar comanda`);assert.equal(draftColors.shadow,"none",`${name}: acción secundaria sin sombra`);
+   const draftLight=[luminance(draftColors.color),luminance(draftColors.background)].sort((a,b)=>b-a);assert.ok((draftLight[0]+.05)/(draftLight[1]+.05)>=4.5,`${name}: contraste AA de Guardar comanda`);const expectedBackground="rgb("+resolveTokens("var(--primary-200)").slice(1).match(/../g).map(v=>parseInt(v,16)).join(", ")+")";assert.equal(draftColors.background,expectedBackground,`${name}: fondo azul de Guardar comanda`);assert.equal(draftColors.shadow,"none",`${name}: acción secundaria sin sombra`);
    const borderLight=[luminance(draftColors.border),luminance(draftColors.background)].sort((a,b)=>b-a);assert.ok((borderLight[0]+.05)/(borderLight[1]+.05)>=3,`${name}: borde del botón distinguible de su fondo`);
    await page.locator(".salon-comanda-draft").hover();const hoverColors=await page.locator(".salon-comanda-draft").evaluate(el=>({color:getComputedStyle(el).color,background:getComputedStyle(el).backgroundColor}));const hoverLight=[luminance(hoverColors.color),luminance(hoverColors.background)].sort((a,b)=>b-a);assert.ok((hoverLight[0]+.05)/(hoverLight[1]+.05)>=4.5,`${name}: texto del botón legible también al hover`);await page.mouse.move(0,0);
    if(width<=900){

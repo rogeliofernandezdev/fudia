@@ -16,7 +16,7 @@ function setup(){
   const classes=new Set(),attributes={};const el={...target(),id,children:[],parentElement:{classList:{remove(){}}},classList:{add:value=>classes.add(value),remove:value=>classes.delete(value)},setAttribute:(key,value)=>{attributes[key]=value;},removeAttribute:key=>{delete attributes[key];},append(...nodes){this.children.push(...nodes);},querySelector:()=>el.span,textContent:"",attributes,classes};
   el.span={removeAttribute(){},textContent:""};return el;
  }
- for(const id of ["printButton","downloadButton","previous","viewBookmark"])elements.set(id,element(id));
+ for(const id of ["printButton","downloadButton","previous","viewBookmark","secondaryToolbarButtonContainer"])elements.set(id,element(id));
  const document={...target(),body:element("body"),documentElement:{style:{setProperty:(...args)=>calls.push(["style",...args])}},createElement:()=>({...element(),getBoundingClientRect:()=>({height:140})}),getElementById:id=>elements.get(id),fullscreenElement:null};
  const parent={document:target(),postMessage:message=>messages.push(message)};
  const options={setAll:value=>calls.push(["options",value])};

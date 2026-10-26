@@ -121,7 +121,7 @@ export function PurchaseItemDialog({
 
       <ModalHeader title={view.kind==="create"?"Nuevo artículo":view.kind==="link"?"Controlar con inventario":"Agregar artículo"} titleId="purchase-item-title" icon="stock" onClose={close} busy={locked||catalogBusy} closeLabel="Cerrar"/>
 
-      <form onSubmit={event=>event.preventDefault()} noValidate>
+      <form autoComplete="off" onSubmit={event=>event.preventDefault()} noValidate>
         <div className="purchase-item-body" inert={busy}>
           {view.kind==="search"?<section className="purchase-item-section purchase-existing-section">
             <label className="purchase-existing-search">Buscar artículo
@@ -160,7 +160,7 @@ export function PurchaseItemDialog({
           </section>:view.kind==="create"?<>
             <section className="purchase-item-section">
               <div className="form-grid">
-                <label className="span-2">Nombre<Input autoFocus maxLength={160} {...register("name")} placeholder="Ej. Inca Kola 500 ml o Carne de res" aria-invalid={Boolean(errors.name)}/>{errors.name?.message&&<small className="field-error">{errors.name.message}</small>}</label>
+                <label className="span-2">Nombre<Input autoFocus autoComplete="off" maxLength={160} {...register("name")} placeholder="Ej. Inca Kola 500 ml o Carne de res" aria-invalid={Boolean(errors.name)}/>{errors.name?.message&&<small className="field-error">{errors.name.message}</small>}</label>
                 <label className="switch-row compact span-2"><input type="checkbox" checked={mode==="new_product"} disabled={locked} onChange={event=>setSold(event.target.checked)}/><span/><b>Se vende a clientes<small>{mode==="new_product"?"Aparecerá en la carta y su disponibilidad saldrá del stock.":"Queda como insumo: no aparece en la carta."}</small></b></label>
                 {mode==="new_product"&&<>
                   <PurchaseCategoryField value={categoryId} onChange={value=>setValue("categoryId",value,{shouldDirty:true,shouldValidate:isSubmitted})} error={errors.categoryId?.message} disabled={busy} onBusyChange={setCatalogBusy}/>

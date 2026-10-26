@@ -1,6 +1,9 @@
 import {cp,mkdir,readFile,writeFile} from "node:fs/promises";
 import {fileURLToPath} from "node:url";
 import {join} from "node:path";
+import {createElement} from "react";
+import {renderToStaticMarkup} from "react-dom/server";
+import {IconPrinter,IconDownload} from "@tabler/icons-react";
 
 const root=fileURLToPath(new URL("../",import.meta.url));
 const vendor=join(root,"vendor/pdfjs"),destination=join(root,"public/pdfjs");
@@ -21,6 +24,12 @@ await cp(join(vendor,"LICENSE"),join(destination,"LICENSE"));
 await cp(join(root,"src/styles/variables.css"),join(destination,"fudia-tokens.css"));
 await cp(join(root,"src/shared/pdf-viewer/runtime/fudia-bridge.mjs"),join(destination,"fudia-bridge.mjs"));
 await cp(join(root,"src/design-system/styles/pdfjs-viewer.css"),join(destination,"fudia-viewer.css"));
+// The isolated viewer uses the same Tabler outline family as FudIA, without a React runtime.
+const icons=join(destination,"fudia-icons");
+await mkdir(icons,{recursive:true});
+for(const [name,Icon] of [["printer",IconPrinter],["download",IconDownload]]){
+ await writeFile(join(icons,`${name}.svg`),renderToStaticMarkup(createElement(Icon,{size:24,stroke:1.75,color:"black"})));
+}
 const html=(await readFile(join(vendor,"web/viewer.html"),"utf8"))
  .replace('initial-scale=1, maximum-scale=1','initial-scale=1, viewport-fit=cover')
  .replace('<html dir="ltr"','<html lang="es" dir="ltr"')

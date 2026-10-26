@@ -17,12 +17,12 @@ tarea, no por la decoración.
 - **Modo Operar.** Familiaridad, densidad útil, una acción dominante por
   superficie y estados siempre visibles. La identidad vive en los detalles
   precisos (color, forma, movimiento), no en adornos.
-- **Identidad cromática propia.** Azul operativo índigo para acción y
-  selección, navegación índigo profundo, verde restaurante para éxito
-  confirmado y la franja de marca, violeta para canales digitales. Neutros
-  fríos teñidos de índigo en todo el sistema, nunca grises puros.
+- **Identidad cromática propia.** Azul operativo vivo para acción y
+  selección, navegación en marino azul de la misma familia, verde restaurante
+  para éxito confirmado y la franja de marca, violeta para canales digitales.
+  Neutros fríos teñidos de azul en todo el sistema, nunca grises puros.
 - **Firma de marca.** La franja existente se conserva en el acceso.
-  Los modales no tienen franja ni degradado: la cabecera índigo
+  Los modales no tienen franja ni degradado: la cabecera marino
   ocupa el ancho completo y llega al borde superior del panel.
 - **Sin elementos de plantilla.** Prohibido: eyebrows en mayúsculas sobre los
   títulos, numeración decorativa de secciones, barras laterales de color en
@@ -54,13 +54,44 @@ valores arbitrarios (`p-[13px]`).
 | Líneas | `line`, `line-strong` | Bordes de 1 px; `line-strong` en hover de campos |
 | Texto e iconos | `ink-950`, `ink-800`, `ink-700`, `ink-600`, `ink-500`, `ink-400`, `ink-300` | `ink-950` títulos y datos; `ink-600` texto secundario; `ink-500` metadatos; `ink-400` es el mínimo legible (4.5:1 sobre blanco); `ink-300` solo para iconos deshabilitados |
 | Azul operativo | `primary-25` … `primary-800` | `primary-600` acción primaria, selección y foco; `primary-700` hover y texto de acción; `primary-100`/`primary-50` fondos de selección |
+| Índigo de estados | `indigo-100`, `indigo-600`, `indigo-700` | Conserva el tono aprobado de Confirmado y Por preparar; independiente del azul de las acciones |
 | Navegación | `navigation-900`, `navigation-950`, `navigation-text` | Sidebar, cabecera de pantallas completas, cabecera de tablas y backdrop |
-| Verde restaurante | `brand-50` … `brand-800` | Éxito confirmado, activo, pagado; `brand-600` (menta) solo en la franja de marca y el carril «Por entregar» |
+| Verde restaurante | `brand-50` … `brand-800` | Éxito confirmado, activo, pagado; `brand-600` (verde vivo) solo en la franja de marca y el carril «Por entregar» |
 | Violeta digital | `digital-50` … `digital-700` | WhatsApp, integraciones, «En preparación» |
 | Entrega completada | `teal-100`, `teal-700` | Azul petróleo para Entregado; Finalizada usa gris neutro para distinguirla de Pagada |
 | Cuenta abierta | `sky-100`, `sky-800` | Celeste tenue, distinto del índigo de Confirmado |
 | Advertencia | `warning-50` … `warning-800`, `note-100`, `note-ink` | Advertencias operativas; notas de cocina |
 | Error | `danger-50` … `danger-700` | Errores y acciones destructivas |
+
+La referencia cromática aprobada aporta un azul vivo, blancos fríos azulados y
+contraste con un marino de la misma familia azul (no índigo). Se adapta a la
+identidad existente sin incorporar marcas ni piezas
+gráficas de la referencia. La rampa principal es compartida por botones,
+pestañas, contadores, campos seleccionados, enlaces y foco; no se recolorea cada
+pantalla por separado. El verde restaurante, rojo coral y ámbar dorado se
+completan con fondos menta, rosados y crema. Conservan su significado: éxito,
+error y advertencia; el violeta digital y los demás estados mantienen sus valores.
+Los tonos de texto son más oscuros que el acento para asegurar contraste AA.
+
+| Muestra | Token | Valor | Aplicación |
+| --- | --- | --- | --- |
+| Azul vivo | `primary-600` | `#005BFF` | Acción principal, contador seleccionado y foco |
+| Azul profundo | `primary-700` | `#004BD6` | Hover y texto de acción |
+| Azul tenue | `primary-100` | `#EAF2FF` | Selección e iconos sobre fondo claro |
+| Borde azul | `primary-200` | `#CFDEFE` | Acciones secundarias y selección |
+| Marino | `navigation-900` | `#0D2060` | Sidebar, cabeceras de modal y de tabla; ítem activo en `primary-600` sobre él |
+| Marino profundo | `navigation-950` | `#091548` | Bordes de cabecera y backdrop |
+| Fondo frío | `cloud-50` | `#F4F7FD` | Fondo general azulado; paneles en blanco |
+| Línea | `line` | `#E1E7F2` | Bordes de 1 px de paneles y campos |
+| Verde vivo | `brand-600` | `#00BD68` | Marca y carril Por entregar, con tinta oscura |
+| Verde legible | `brand-700` | `#007E44` | Iconos, interruptores y check blanco de éxito |
+| Menta suave | `brand-100` | `#E2F8EC` | Fondo de estados positivos |
+| Rojo coral vivo | `danger-500` | `#FF3B4A` | Acento gráfico y superficies con tinta oscura |
+| Rojo coral legible | `danger-600` | `#C8233A` | Errores y confirmación destructiva con texto blanco |
+| Rosado suave | `danger-50` | `#FFF1F2` | Fondo de error o cancelación persistida |
+| Ámbar legible | `warning-600` | `#A75C00` | Iconos y mensajes de advertencia |
+| Ámbar vivo | `warning-500` | `#FFB020` | Superficies de énfasis con tinta oscura |
+| Crema suave | `warning-100` | `#FFF1D2` | Fondo de estados pendientes o advertencias |
 
 Reglas:
 
@@ -68,6 +99,9 @@ Reglas:
 - El verde nunca es una acción pendiente: se reserva para estados confirmados.
   No existe botón verde.
 - Rojo y ámbar solo comunican error o advertencia; nunca decoran.
+- Los pasos `danger-500` y `warning-500` son acentos vivos: no se usan como
+  texto ni como fondo de texto blanco. Los estados mantienen fondos suaves,
+  tinta oscura y etiqueta; las acciones destructivas sólidas usan `danger-600`.
 - Los estados combinan color, texto e icono; nunca dependen solo del color.
 - Transparencias por paso (`ink-950-alpha-8`, `primary-600-alpha-24`…), no
   porcentajes sueltos.
@@ -137,7 +171,7 @@ salvo `--elevation-1`, que es un apoyo mínimo del panel.
 
 ## Elevación y anillos
 
-Una sola fuente de luz superior y sombras teñidas de índigo:
+Una sola fuente de luz superior y sombras teñidas de azul operativo:
 
 - `--elevation-1`: panel en reposo.
 - `--elevation-2`: tarjeta interactiva, marca, logo.
@@ -181,7 +215,7 @@ El movimiento comunica un cambio de estado, nunca adorna.
   de 4 px y `radius-pill`; selección blanca con borde `primary-300` y texto azul
   `primary-700`. Icono semántico obligatorio de 16 px antes de cada etiqueta,
   del set compartido y siempre visible, también en móvil. Contadores de 12 px,
-  fondo índigo `primary-600` y número blanco, de menor tamaño que la etiqueta;
+  fondo azul vivo `primary-600` y número blanco, de menor tamaño que la etiqueta;
   en móvil (≤600 px) los contadores se ocultan en todas las pestañas para dejar
   el ancho a la etiqueta, que solo se parte con guion si una palabra no cabe sola.
   En móvil: altura mínima de 44 px y dos pestañas completas por grupo, del mismo
@@ -221,7 +255,7 @@ hover > reposo**. Un estado de mayor prioridad nunca se pierde por otro menor
 | Foco | Teclado: contorno de 2 px `primary-600` con 2 px de separación (`:focus-visible`), también en casillas, radios, rangos y archivos. Campos: borde `primary-600` + `--ring-focus` | `--ring-focus`, `--ring-danger` |
 | Presionado | Botones de texto `scale(var(--press-scale))` (.97); iconos, X y pasos de cantidad `scale(var(--press-scale-icon))` (.94). Pestañas, paginación y acciones repetidas cientos de veces responden con superficie (`primary-100`/`primary-200`), sin escala | `--transition-press` (120 ms) |
 | En curso | `Button loading`: el `Spinner` compartido (`ds-spinner`: pista tenue al 28 % y arco de 2.5 con extremos redondeados, como el set de iconos) aparece con un fundido de 160 ms y gira en el lugar del icono (no cambia el ancho); la etiqueta pasa al gerundio, el botón queda bloqueado contra doble envío y anuncia `aria-busy`. Conserva su color completo y cursor `progress`: se lee como «trabajando», no como «no disponible». Los controles sin indicador propio usan `--opacity-busy` (.8) | `button-spinner`, `--opacity-busy` |
-| Guardado sobre el formulario | Patrón empresarial: **un solo indicador con texto, el botón** que originó la acción (spinner + gerundio). `ModalHeader busy` añade `ModalBusy`: bloquea los clics desde el primer cuadro y atenúa el cuerpo tras 160 ms con velo neutro `surface-alpha-64` sin blur ni texto, de modo que el formulario sigue legible. Solo si la espera supera `--delay-long-wait` (1 s) aparece al centro un círculo blanco de 44 px con `Spinner` índigo, sin texto. Nunca verde ni un segundo «Guardando…». Las acciones de un detalle (Aprobar, Enviar a aprobación…) marcan `loading` solo en el botón pulsado. Los módulos no escriben `ModalBusy`; la Comanda, pantalla de tarea completa, usa `busyOverlay={false}` | `ModalHeader busy`, `ModalBusy`, `Spinner`, `--delay-long-wait` |
+| Guardado sobre el formulario | Patrón empresarial: **un solo indicador con texto, el botón** que originó la acción (spinner + gerundio). `ModalHeader busy` añade `ModalBusy`: bloquea los clics desde el primer cuadro y atenúa el cuerpo tras 160 ms con velo neutro `surface-alpha-64` sin blur ni texto, de modo que el formulario sigue legible. Solo si la espera supera `--delay-long-wait` (1 s) aparece al centro un círculo blanco de 44 px con `Spinner` azul, sin texto. Nunca verde ni un segundo «Guardando…». Las acciones de un detalle (Aprobar, Enviar a aprobación…) marcan `loading` solo en el botón pulsado. Los módulos no escriben `ModalBusy`; la Comanda, pantalla de tarea completa, usa `busyOverlay={false}` | `ModalHeader busy`, `ModalBusy`, `Spinner`, `--delay-long-wait` |
 | Éxito | Se comunica con `FeedbackProvider` (respuesta success) o con el `Status` confirmado del registro. Se notifica en el mismo instante en que el modal se cierra: las recargas (`invalidateQueries`) corren en segundo plano después de `notify`, nunca con `await` antes. La tarjeta aparece en 160 ms y el check a los 120 ms. No existe botón verde ni recoloreo temporal del botón | Matriz de estados |
 | Error | Campo con borde `danger` y `--ring-danger` al enfocar; mensaje `field-error`/`form-error` con icono o texto, que aparece con `feedback-reveal` (opacidad + 4 px, 160 ms). Sin sacudidas | `--ring-danger` |
 | Deshabilitado | `opacity: var(--opacity-disabled)` (.5), `cursor: not-allowed`, sin sombra, sin hover y sin presión. Los campos usan fondo `cloud-100` y texto `ink-500` | `--opacity-disabled` |
@@ -275,7 +309,7 @@ se usan emojis ni glifos Unicode como iconos.
 Mobile-first desde 390 px, validado en hardware real cuando el cambio afecta
 gestos, teclado o áreas seguras.
 
-- `viewport-fit=cover` y `themeColor` índigo; barras fijas y hojas suman
+- `viewport-fit=cover` y `themeColor` marino (`navigation-900`); barras fijas y hojas suman
   `--safe-area-top` y `--safe-area-bottom`.
 - Sin destello de toque (`-webkit-tap-highlight-color: transparent`),
   `touch-action: manipulation` en controles y sin selección de texto al
@@ -307,7 +341,7 @@ de página en `03_LAYOUTS.md`. Resumen:
   descripción de una línea, retorno opcional y como máximo una acción primaria y
   una secundaria. Sin eyebrow.
 - **Modales**: `Modal` con tamaños `sm` 480, `md` 640, `lg` 880 y `xl` 1040.
-  Cabecera índigo profundo `navigation-900` (borde `navigation-950`), título
+  Cabecera marino `navigation-900` (borde `navigation-950`), título
   blanco de 18 px e icono blanco de 20 px dentro de un recuadro translúcido
   (`surface-alpha-16`, `--radius-tile`, 40 px)
   centrado en un espacio de 44 px, sin recuadro. Altura mínima 64 px y padding vertical de 8 px;
@@ -348,7 +382,7 @@ de página en `03_LAYOUTS.md`. Resumen:
   del cuerpo («Productos del pedido», «Pagos registrados») usan
   `modal-section-title`: 13 px / 700, mayúsculas por CSS (`text-transform`; el
   DOM conserva el texto normal para lectores de pantalla), `letter-spacing-caps`
-  y `ink-800` (tinta neutra: el índigo queda para la mesa y el total). Abren la sección con `modal-section-rule` (2 px `primary-200`,
+  y `ink-800` (tinta neutra: el azul queda para la mesa y el total). Abren la sección con `modal-section-rule` (2 px `primary-200`,
   10 px bajo el texto). En Detalle de pedido la regla va en la cabecera completa,
   junto al estado. El título del pie («Resumen de cobro», «Resumen de venta»,
   «Resumen de cuenta») usa el mismo `modal-section-title`, y `modal-summary-heading`
@@ -470,7 +504,7 @@ Al descartar cambios, Cancelar sigue siendo neutro; la acción explícita
 
 El mapa `buttonActions` de `Button` fija variante, icono y posición:
 `cancel` (X inicial, neutro), `cancel-record` (icono cancelar inicial, rojo tenue),
-`back` (flecha izquierda inicial, neutro) y `continue` (índigo primario, chevron
+`back` (flecha izquierda inicial, neutro) y `continue` (azul primario, chevron
 a la derecha del texto: «Continuar →»). La intención prevalece sobre `kind` o
 `icon` locales; nunca se deduce del contenido de `children`. El dueño de los
 colores y sus hover es `globals.css`: neutro `cloud-50`/`ink-950`/`line-strong`,
@@ -528,14 +562,14 @@ Paleta exacta de `Status` (fondo / texto e icono):
 | Tono | Fondo tenue | Texto e icono |
 | --- | --- | --- |
 | `gray` | `cloud-100` · `#F0F2F8` | `ink-500` · `#59617C` |
-| `blue` — índigo | `primary-100` · `#EEF0FF` | `primary-700` · `#3946B8` |
+| `blue` — índigo | `indigo-100` · `#EEF0FF` | `indigo-700` · `#3946B8` |
 | `sky` — celeste | `sky-100` · `#E0F2FE` | `sky-800` · `#075985` |
 | `violet` | `digital-100` · `#F2ECFF` | `digital-700` · `#5421A8` |
-| `green` | `brand-100` · `#E8F7F1` | `brand-800` · `#0E6646` |
-| `orange` — ámbar | `warning-100` · `#FFE8CF` | `warning-800` · `#7A3B0D` |
+| `green` | `brand-100` · `#E2F8EC` | `brand-800` · `#06613A` |
+| `orange` — ámbar | `warning-100` · `#FFF1D2` | `warning-800` · `#784400` |
 | `teal` — azul petróleo | `teal-100` · `#E6F5F7` | `teal-700` · `#0B6B78` |
-| `red` | `danger-50` · `#FFF1EF` | `danger-700` · `#A5281E` |
-| `navy` — contorno | `surface` con borde interior de 1,5 px `navigation-900` | `navigation-900` · `#1A2151` |
+| `red` | `danger-50` · `#FFF1F2` | `danger-700` · `#B51F33` |
+| `navy` — contorno | `surface` con borde interior de 1,5 px `navigation-900` | `navigation-900` · `#0D2060` |
 | `gray emphasis` | `cloud-150` · `#E9ECF4` | `ink-800` · `#222842` |
 
 Matriz semántica completa:
@@ -693,7 +727,7 @@ editable; si el local no tiene tarifas queda manual sin avisos.
 
 ### Comanda de Salón, Pedidos y pedido manual
 
-La tarea a pantalla completa conserva la cabecera índigo homologada, con icono,
+La tarea a pantalla completa conserva la cabecera marino homologada, con icono,
 título y X. El catálogo presenta buscador, categorías del API y acceso explícito
 a «Menús y combos». Las categorías usan una sola fila deslizable con el dedo,
 sin barra visible; se conserva el desplazamiento nativo y el foco de teclado.
@@ -731,14 +765,14 @@ Un producto agotado impide agregar pero permite reducir lo ya seleccionado.
 Los combos conservan su configuración de opciones, sin restar elecciones
 distintas como si fueran un producto simple. Los estados de disponibilidad no cambian.
 La composición conserva blanco (`surface`) para lectura, cápsulas gris frío
-(`cloud-100`) para cantidades e índigo tenue (`primary-50`) en el pie y la barra
-de subtotal. El importe y el + usan índigo; los iconos alternativos usan
+(`cloud-100`) para cantidades e azul tenue (`primary-50`) en el pie y la barra
+de subtotal. El importe y el + usan azul; los iconos alternativos usan
 `primary-100`/`primary-700` para productos y `digital-100`/`digital-700` para combos.
-Las categorías tienen cuatro acentos de navegación de la paleta: índigo
+Las categorías tienen cuatro acentos de navegación de la paleta: azul
 (`primary-100`/`primary-700`), celeste (`sky-100`/`sky-800`), violeta
 (`digital-100`/`digital-700`) y petróleo (`teal-100`/`teal-700`). Se asignan
 establemente por ID, no por nombre ni orden del API; las familias pueden repetirse.
-«Todo» usa índigo y «Menús y combos» violeta. La opción seleccionada no invierte a
+«Todo» usa azul y «Menús y combos» violeta. La opción seleccionada no invierte a
 relleno sólido: toma el tinte un paso más marcado de su familia (`primary-200`,
 `sky-200`, `digital-200`, `teal-200`) con texto oscuro de la familia (`primary-800`,
 `sky-800`, `digital-700`, `teal-700`) y el check blanco dentro de una insignia circular
@@ -758,7 +792,7 @@ control circular de 44 px, fondo `primary-100`, sin borde y color `primary-700`,
 sin sombra
 ni cambio de color al hover. Su nombre accesible es «Volver a la carta»;
 no guarda, descarta ni cierra la comanda y conserva productos y notas.
-La cabecera índigo queda por encima del scrim móvil: conserva título, icono y X
+La cabecera marino queda por encima del scrim móvil: conserva título, icono y X
 blancos, sin oscurecerse al abrir la hoja. El scrim atenúa únicamente el fondo
 operativo y mantiene el cierre de la hoja al tocar fuera de ella.
 El resumen conserva la misma composición: foto, nombre/precio juntos y cantidad
@@ -777,7 +811,7 @@ el pedido y cierran la comanda al completarse; guardar no es almacenamiento
 local: también reserva las cantidades de inventario según el flujo vigente.
 Guardar usa el portapapeles `orders`, fondo `primary-200`, texto `primary-700` y borde
 `primary-600`, distinguible del footer `primary-50` sin sombras; enviar conserva
-el índigo sólido y el avión de envío `send`. En móvil, ambas acciones usan
+el azul sólido y el avión de envío `send`. En móvil, ambas acciones usan
 `radius-pill`, con altura táctil mínima de 44 px; escritorio conserva su geometría.
 Al guardar una comanda solo ese botón
 muestra «Guardando…», sin presentar «Enviando…» en la otra acción. Ambas acciones
@@ -795,7 +829,7 @@ Comanda (`cmd-chips`/`cmd-chip`): una fila deslizable sin barra visible, «Todas
 primero, chips de 44 px y la misma selección tenue (`primary-200`, texto
 `primary-800` e insignia de check `cmd-chip-check`, con `aria-pressed`); las demás conservan
 `primary-100`/`primary-700`. Todas
-las zonas usan índigo: los acentos celeste, violeta y petróleo de las categorías ya
+las zonas usan azul: los acentos celeste, violeta y petróleo de las categorías ya
 significan estados en esta pantalla. En móvil (≤600 px) la búsqueda se desplaza con la
 página y la tira de zonas queda fija bajo la barra superior (`top` igual a su altura),
 con fondo `cloud-50` a ancho completo y `scroll-padding` para que el primer chip
@@ -983,7 +1017,7 @@ descargar y alternar al detalle HTML del informe sin depender del visor nativo.
   compartidas por cabecera y filas: Producto, Disponibilidad, Cupo de hoy,
   Unidades de hoy y Acciones. La identidad del producto muestra solo foto o
   icono (48 px) y nombre (16 px/700): la categoría ya se filtra en la barra y
-  el control se lee en Cupo de hoy, así que no se repiten bajo el nombre. La cabecera índigo `primary-600` usa etiquetas de 14 px/600 en caja
+  el control se lee en Cupo de hoy, así que no se repiten bajo el nombre. La cabecera azul `primary-600` usa etiquetas de 14 px/600 en caja
   normal e iconos semánticos. Esta escala es propia del listado operativo,
   no redefine las tablas de gestión. `dish`, `cookingPot`, `stock`, `gauge`,
   `calendar` y `clock` proceden del set compartido.
@@ -1017,7 +1051,7 @@ descargar y alternar al detalle HTML del informe sin depender del visor nativo.
   no es entero o es menor al mayor entre 1 y las porciones ya vendidas.
   «Agotar hoy» y «Reactivar» son alternativas secundarias: la primera usa
   texto y borde `warning`, fondo blanco y hover `warning-50`, sin rojo ni
-  relleno ámbar sólido; Reactivar conserva índigo. Historial usa `clock`,
+  relleno ámbar sólido; Reactivar conserva azul. Historial usa `clock`,
   tooltip y nombre accesible en escritorio; en contenedores estrechos muestra
   también la etiqueta. Guardar es la única acción sólida y solo existe mientras
   hay un cupo editado. Los valores de columnas y controles se centralizan en
@@ -1057,7 +1091,7 @@ descargar y alternar al detalle HTML del informe sin depender del visor nativo.
   y «Por entregar». Cada carril es un panel neutro `cloud-50/surface`
   con borde estándar; el color semántico se limita al acento de estado, icono,
   contador y etiquetas: azul para «Por preparar», violeta para «En preparación»,
-  verde para «Por entregar» y ámbar exclusivamente para «Por vencer» o «Con demora». El cuerpo del carril permanece neutro y la cabecera completa usa un fondo semántico de contraste medio/alto: `primary-600` para «Por preparar», `digital-500` para «En preparación» y `brand-600` para «Por entregar». Azul y violeta usan título/descripción en `surface`; el verde `brand-600` usa `ink-950` para el título y `ink-600` para la descripción, evitando que el texto se pierda sobre el fondo menta. Icono y contador se apoyan en `surface` y conservan `brand-700` como acento. Esta diferencia cromática debe ser evidente incluso al escanear la pantalla rápidamente. No se añaden franjas superiores ni barras laterales de color. Los nombres de mesa se muestran en mayúsculas (`MESA 1`, `MESA 2`) para facilitar el escaneo; nombres de clientes y otros identificadores conservan su escritura original. Los botones que cambian el flujo son
+  verde para «Por entregar» y ámbar exclusivamente para «Por vencer» o «Con demora». El cuerpo del carril permanece neutro y la cabecera completa usa un fondo semántico de contraste medio/alto: `kds-pending` (índigo) para «Por preparar», `digital-500` para «En preparación» y `brand-600` para «Por entregar». Azul y violeta usan título/descripción en `surface`; el verde `brand-600` usa `ink-950` para el título y `ink-800` para la descripción, evitando que el texto se pierda sobre el fondo verde vivo. Icono y contador se apoyan en `surface` y conservan `brand-700` como acento. Esta diferencia cromática debe ser evidente incluso al escanear la pantalla rápidamente. No se añaden franjas superiores ni barras laterales de color. Los nombres de mesa se muestran en mayúsculas (`MESA 1`, `MESA 2`) para facilitar el escaneo; nombres de clientes y otros identificadores conservan su escritura original. Los botones que cambian el flujo son
   acciones primarias azules; el verde no se usa como CTA antes de confirmar el
   éxito. Las tarjetas son densas, con borde `line`, radio de 14 px y sin
   sombras o transformaciones decorativas que compitan con la información.
@@ -1119,12 +1153,12 @@ descargar y alternar al detalle HTML del informe sin depender del visor nativo.
   descripción»), «Qué incluye» y «Cuándo se vende». Las secciones se separan con un
   filete `line` y títulos `h3` de 16 px / 700 en `ink-800`, sin iconos ni tarjetas
   anidadas. El pie resume «N partes · precio»; el precio es el único protagonista
-  índigo (`primary-700`). Un error se muestra junto a su campo (FormField o
+  azul (`primary-700`). Un error se muestra junto a su campo (FormField o
   `field-error` bajo la parte) y la hoja se desplaza hasta él y lo enfoca; no hay
   aviso global arriba del cuerpo, que quedaba fuera de vista en menús largos.
 - «Qué incluye» sin partes muestra un recuadro punteado (`combo-parts-start`) con una
   frase y las dos formas de empezar, diferenciadas por variante: «Usar plantilla Menú
-  del día» como botón relleno índigo (`primary`, la recomendada) y «Agregar una parte» en `ghost`
+  del día» como botón relleno azul (`primary`, la recomendada) y «Agregar una parte» en `ghost`
   (neutra). En móvil se apilan a todo el ancho. No se usan tarjetas de elección ni un
   `EmptyState` centrado. **Excepción aprobada** (2026-10-18) a «una primaria por superficie»: solo mientras no hay partes, la plantilla y «Crear menú» son primarias a la vez; al aplicar la plantilla o agregar una parte, el recuadro desaparece.
   Error de productos y «No hay productos registrados» sí usan `ErrorState` y
@@ -1147,14 +1181,14 @@ descargar y alternar al detalle HTML del informe sin depender del visor nativo.
   destructivo y debe verse, pero una baldosa roja por línea cargaba la tabla. Quitar una parte con opciones pide
   confirmación; una vacía se quita al instante. Cada parte es una tarjeta (`radius-sheet`) con **identidad propia**,
   como los KPI del Dashboard: Entrada verde (`brand`, icono `salad`), Segundo o plato
-  principal índigo (`primary`, `dish`), Postre violeta (`digital`, `dessert`) y Bebidas
+  principal azul (`primary`, `dish`), Postre violeta (`digital`, `dessert`) y Bebidas
   petróleo (`teal`, `drink`); otras partes rotan esos tonos con `utensils`. Las partes
   nunca usan ámbar ni rojo (`warning`/`danger`): en un formulario se leen como
   advertencia o error (cambio aprobado 2026-10-20). El tono vive
   solo en el degradado `tono-100` → superficie, el borde `tono-100`, el icono duotono
   sobre una baldosa blanca con `elevation-1` y la fila de títulos de la tabla
   (`tono-50` con texto `tono-700`/`800`, ≥ 4.5:1); nombres, valores, interruptor y
-  botones siguen neutros e índigo. La cabecera muestra el icono, el nombre con un lápiz
+  botones siguen neutros y azules. La cabecera muestra el icono, el nombre con un lápiz
   junto al texto (el campo crece con su contenido) y debajo «N opciones · El cliente
   elige 1» o «Puede omitirse»; a la derecha, el interruptor «Obligatorio» y la papelera.
   En móvil el interruptor baja bajo el nombre. Las opciones son una tabla ligera con una
@@ -1199,7 +1233,7 @@ descargar y alternar al detalle HTML del informe sin depender del visor nativo.
   parte; Reservar y Costo extra se editan directamente en cada línea. La disponibilidad del menú se deriva de las partes obligatorias.
 - «Cuándo se vende» es un selector de dos píldoras (`radiogroup`): «Siempre» (por
   defecto) y «Elegir días». La selección usa tinte `primary-50` / `primary-300` /
-  `primary-700`, nunca índigo sólido. **No existe «Solo hoy»**: obligaba a crear un
+  `primary-700`, nunca azul sólido. **No existe «Solo hoy»**: obligaba a crear un
   menú nuevo cada día. El menú del día es **un solo registro en «Siempre»** (o en
   días fijos) cuyos platos se cambian cada mañana; el historial no se pierde porque
   cada venta guarda el nombre de la parte y del plato elegidos. Un especial de un día
@@ -1337,7 +1371,7 @@ descargar y alternar al detalle HTML del informe sin depender del visor nativo.
   tres tarjetas de importes encima de los productos. La cabecera muestra
   «Detalle de cobro», icono y X; el código va fuera de ella. En escritorio,
   Mesa, Canal, Atendido por (solo Salón) y Fecha del pedido van en una sola fila.
-  `modal-record-data` es una franja: fondo `primary-50` (índigo tenue de marca,
+  `modal-record-data` es una franja: fondo `primary-50` (azul tenue de marca,
   no el violeta `digital-*`, reservado a canales digitales y «En preparación»),
   borde `primary-100`, radio de tile y las parejas en columnas separadas por
   líneas `primary-200`. Cada columna mide según su contenido (`grid-auto-columns:
@@ -1516,7 +1550,7 @@ primaria con el icono `send`: «Enviar a cocina». Durante el envío muestra
 
 ## Tablas y paginación
 
-- Cabecera en índigo profundo `navigation-900` con texto blanco en caja normal
+- Cabecera en marino `navigation-900` con texto blanco en caja normal
   (12 px / 600, sin mayúsculas ni tracking), así el azul `primary-600` queda solo
   para acciones. Sin filas alternas: las filas se separan con una línea fina
   `line` y hover `primary-25`. Acciones iconográficas consistentes; el color
@@ -1671,7 +1705,7 @@ El verde se reserva para los
 estados confirmados, no para representar una acción pendiente. Preparación y cuenta se presentan en regiones distintas: `listo` se expresa como «Por entregar» en todo el sistema (pedido, producto, carril de Cocina, Dashboard, filtro de Pedidos y catálogo del API; solo el mensaje de WhatsApp al comensal dice «listo»); la cuenta usa Cuenta abierta / Por cobrar / Pagada. Los importes se comunican en Pagado y Saldo pendiente. Las tarjetas de Salón reutilizan ese mismo estado y color,
 sin combinar «Por entregar» o «Entregado» con «por cobrar»; el saldo se consulta en el
 resumen de cuenta del detalle. Los modales no tienen franja superior decorativa:
-la cabecera índigo sólida llega al borde superior y ocupa todo el ancho.
+la cabecera marino sólida llega al borde superior y ocupa todo el ancho.
 No se agrega una instrucción genérica para liberar la mesa: el estado, el saldo
 y las acciones disponibles ya expresan el avance. Quitar ese texto no modifica
 los requisitos de cierre de cuenta, entrega y pago. En móvil, las acciones ocupan todo el ancho
@@ -1752,7 +1786,7 @@ distancia se muestra solo el enlace y, sin coordenadas, no se muestra nada. Desd
 Cada producto ocupa dos filas: cantidad, nombre e importe en la primera; en la
 segunda, a todo el ancho, «precio c/u · destino» y el estado de preparación
 alineado a la derecha, bajo el importe. Todos los productos (simples, menús y
-combos) siguen el mismo patrón: cantidad índigo, nombre, nota, «precio c/u ·
+combos) siguen el mismo patrón: cantidad azul, nombre, nota, «precio c/u ·
 destino» y estado. La información secundaria es siempre neutra: fondo `cloud-50`,
 borde `line`, iconos de 14 px en `ink-500` y texto 12 px `ink-700`; no hay
 colores propios por tipo de producto. El mismo patrón se aplica en los detalles de
@@ -1830,7 +1864,7 @@ dentro de `modal-action-layout`, sin huecos de media columna.
 Los textos de interfaz se conservan en UTF-8 y Unicode NFC; no se reparan
 tildes mediante reemplazos indiscriminados sobre nombres recibidos del API.
 
-El botón primario usa `primary-600` (`#4654CD`), `--control-height`,
+El botón primario usa `primary-600` (`#005BFF`), `--control-height`,
 `--font-size-control` y `--radius-control` en escritorio; en móvil usa
 `--radius-pill`, igual que los botones secundarios.
 Su jerarquía procede del color, no de una altura distinta. En avisos exitosos,
@@ -1848,8 +1882,8 @@ contraseña conservan `FormField` e `Input`, sus etiquetas persistentes,
 iconos, autocompletado y estados de validación.
 
 El formulario utiliza exclusivamente tokens globales de `variables.css`.
-El fondo mantiene halos suaves índigo y menta; la cabecera conserva el
-degradado blanco/índigo y la franja superior de marca. La acción primaria
+El fondo mantiene halos suaves azules y menta; la cabecera conserva el
+degradado blanco/azul y la franja superior de marca. La acción primaria
 «Ingresar» ocupa todo el ancho del formulario, conserva el tono
 `primary-600` y usa el icono `lock` del design system (candado),
 con trazo discreto y coherente con los controles del formulario. La recuperación de contraseña
@@ -1955,7 +1989,7 @@ operación en vivo y las alertas siempre son actuales.
 - **Evolución de ventas.** Tarjeta a ancho completo de la columna principal con
   la hora pico o el mejor día en la cabecera (en móvil, en una franja bajo el
   título). Una sola serie: las ventas del periodo como onda
-  índigo (`primary-600`) con curva suave monótona (sin picos ni valles inventados),
+  azul (`primary-600`) con curva suave monótona (sin picos ni valles inventados),
   línea de 3 px con un brillo suave y degradado que se desvanece hacia la base. No
   dibuja el periodo de comparación ni promedios: la comparación vive en la
   variación del indicador de Ventas, para que el gráfico se lea sin
@@ -1970,7 +2004,7 @@ operación en vivo y las alertas siempre son actuales.
   Las categorías muestran cinco y agrupan el resto en «Otras». Medios de pago es un
   anillo de participación de 150 px con el total al centro y una leyenda (muestra,
   medio, cobros, importe y porcentaje) que es su lectura accesible; el anillo es
-  decorativo. Usa la rampa índigo de mayor a menor tono (`primary-700`, `-500`,
+  decorativo. Usa la rampa azul de mayor a menor tono (`primary-700`, `-500`,
   `-300`, `-200` e `ink-300`), nunca colores categóricos nuevos; desde el sexto
   medio agrupa el resto en «Otros N». Canales y medios usan las etiquetas que
   entrega el API.
@@ -2292,7 +2326,7 @@ móvil Presentación ocupa la fila, Cantidad y Costo comparten la siguiente y Su
 va en una fila con etiqueta a la izquierda y monto a la derecha. Al agregar un
 artículo su presentación predeterminada queda seleccionada.
 
-**Agregar a una lista** usa la fila punteada índigo `purchase-add-row`: ancho
+**Agregar a una lista** usa la fila punteada azul `purchase-add-row`: ancho
 completo, 48 px, borde punteado `primary-300`, fondo `primary-50`, icono y texto
 `primary-700` 600; al pasar el mouse `primary-100` con borde `primary-400`. Va al final
 de la lista («Agregar artículo», «Crear artículo nuevo») y nunca es una segunda acción
@@ -2313,7 +2347,7 @@ inventario» con los productos que aún usan cupo del día o ningún control, ca
 con «Vincular» (13 px / 600 `primary-700`) en lugar del saldo, en la misma lista con
 líneas: así un restaurante que empezó solo con Productos y Disponibilidad
 no duplica su catálogo. Bajo los resultados, «Crear artículo nuevo» es la fila
-punteada índigo de agregar (ver «Nueva orden de compra»). Si no hay coincidencias,
+punteada azul de agregar (ver «Nueva orden de compra»). Si no hay coincidencias,
 el estado vacío ofrece esa misma acción. En esta vista el pie solo tiene Cancelar.
 
 - **Crear artículo nuevo**: Nombre (prellenado con la búsqueda), el interruptor
@@ -2391,7 +2425,7 @@ tenue, motivo, «Ingreso · Origen · Usuario», fecha y nota; importe a la dere
 en verde o rojo), no una tabla. El pie fijo `modal-summary` («Resumen de caja» y
 estado Abierto/Cerrado) muestra Fondo inicial, Ingresos, Egresos y, al cerrar,
 Contado y Diferencia (color solo si hay sobrante o faltante) en tres columnas
-(dos en móvil); «Esperado» es el total índigo. «Ver informe y PDF» es una acción
+(dos en móvil); «Esperado» es el total azul. «Ver informe y PDF» es una acción
 de consulta: botón `secondary` con icono `eye` en `ModalFooter`. En móvil el
 modal ocupa toda la pantalla.
 

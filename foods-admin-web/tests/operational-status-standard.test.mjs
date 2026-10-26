@@ -14,13 +14,13 @@ css.walkRules(rule=>{
 });
 const palette=[
  ["gray","cloud-100","#f0f2f8","ink-500","#59617c"],
- ["blue","primary-100","#eef0ff","primary-700","#3946b8"],
+ ["blue","indigo-100","#eef0ff","indigo-700","#3946b8"],
  ["sky","sky-100","#e0f2fe","sky-800","#075985"],
  ["violet","digital-100","#f2ecff","digital-700","#5421a8"],
- ["green","brand-100","#e8f7f1","brand-800","#0e6646"],
- ["orange","warning-100","#ffe8cf","warning-800","#7a3b0d"],
+ ["green","brand-100","#e2f8ec","brand-800","#06613a"],
+ ["orange","warning-100","#fff1d2","warning-800","#784400"],
  ["teal","teal-100","#e6f5f7","teal-700","#0b6b78"],
- ["red","danger-50","#fff1ef","danger-700","#a5281e"],
+ ["red","danger-50","#fff1f2","danger-700","#b51f33"],
  ["gray emphasis","cloud-150","#e9ecf4","ink-800","#222842"],
 ];
 function luminance(hex){

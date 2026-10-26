@@ -27,8 +27,9 @@ durante la visualización. Cambiarlo carga un documento nuevo y libera el anteri
 El llamador conserva permisos, descarga autenticada/generación y errores de esa
 operación. No añadir botones externos de imprimir o abrir.
 El zoom inicial es «Ajuste de la página»: muestra la hoja completa inmediatamente,
-sin abrir impresión. No cambia el formato de 80 mm ni A4. El control «Anchura de
-la página» sigue disponible para leer con más detalle. `size="sm"` conserva el
+sin abrir impresión. No cambia el formato de 80 mm ni A4. La barra conserva
+zoom +/− y oculta el selector de escala; «Herramientas → Ajustar al ancho» permite
+ampliar la lectura sin ese desplegable. `size="sm"` conserva el
 modal de ticket de 480 px y `size="lg"` el informe de 960 px; respetan el límite
 del viewport y las hojas móviles del sistema visual. `subtitle` conserva el
 contexto de la cabecera original.
@@ -36,6 +37,14 @@ La barra, superficie de lectura y acciones del visor usan gris oscuro neutro,
 con controles claros y hoja blanca, como un visor PDF de escritorio. La cabecera
 del modal conserva FudIA. El tema reside en tokens `pdf-viewer-*` de
 `variables.css`, incluidos menús, búsqueda y miniaturas oficiales.
+La barra agrupa navegación, zoom y herramientas en una fila cuando dispone de
+440 px. Por debajo usa dos filas centradas, sin dejar controles aislados en los
+extremos. Todos conservan áreas táctiles de 44 px.
+Los iconos mantienen el centrado flex nativo de PDF.js; no desplazar sus
+pseudoelementos con `translate(-50%, -50%)`. El número de página se centra en su campo.
+Imprimir y Descargar PDF usan los iconos outline Printer y Download de Tabler,
+con el trazo de 1.75 del sistema visual. El script de preparación genera sus SVG
+locales para el iframe; conservan las acciones oficiales de PDF.js.
 
 ## Distribución y despliegue
 

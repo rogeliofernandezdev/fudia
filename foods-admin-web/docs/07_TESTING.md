@@ -63,7 +63,7 @@ bloqueo de clics repetidos, progreso en la acción elegida y aviso «sin enviar 
 El botón secundario tiene fondo `primary-200`, borde `primary-600` y texto
 `primary-700`; el hover usa `primary-300`/`primary-800` para conservar contraste AA.
 Comprueba los iconos de portapapeles/envío, radios completos en las acciones
-móviles y cabecera blanca sobre índigo sin quedar cubierta por el scrim abierto.
+móviles y cabecera blanca sobre marino sin quedar cubierta por el scrim abierto.
 Incluye resumen móvil abierto, notas, opciones de combos, nombres largos y
 ausencia de imagen; comprueba cantidades de 44 px, foco sin recortar y pie visible.
 La foto del catálogo acompaña al borrador sin formar parte del payload del pedido.
@@ -551,3 +551,12 @@ ancho completo en móvil de 390 px.
 Para la regresión del pie de Ventas, verificar además anchos de 375, 412, 480 y
 600 px y una altura de 400 px: el modal se acota al overlay y reserva filas para
 resumen y acciones. Comprobar el límite inferior del botón, no solo su presencia en el DOM.
+
+### Paleta compartida
+
+Después del build, `node tests/helpers/palette-preview.mjs` sirve en
+`http://localhost:5196` las rampas reales y los componentes `Status` y `Button`.
+Es una muestra aislada sin API ni operaciones del restaurante. Revisar escritorio
+y 390 px: verde con menta, rojo con rosado y ámbar con crema; etiquetas e iconos
+conservan el significado de cada estado. `design-tokens.test.mjs` comprueba el
+contraste de texto, acciones destructivas, hover y la superficie verde de Cocina.

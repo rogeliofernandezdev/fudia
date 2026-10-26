@@ -143,7 +143,7 @@ remotos que necesitan `Dialog` directamente. La cabecera reserva una fila para
 icono, título y X. `subtitle`, `meta` y `details` se renderizan en `.modal-context`,
 fuera de la cabecera; no duplicar información ya presente en el cuerpo.
 En detalles operativos, responsables y fecha se ubican en el cuerpo. Cabecera
-índigo `primary-700`, título blanco, cuerpo blanco y pie fijo `cloud-50`,
+azul `primary-700`, título blanco, cuerpo blanco y pie fijo `cloud-50`,
 con los mismos márgenes horizontales de 24/16 px. Padding vertical de 8 px y altura
 mínima de 64 px, no altura fija: los textos largos conservan su información.
 Icono primario blanco de 20 px, centrado en un espacio de 44 px sin recuadro.
@@ -276,7 +276,7 @@ Pedidos/Salón, Ventas y POS para que se vean iguales:
 | `ModalItemComponents` | Elecciones de menús/combos y modificadores como carta: grupo en versalitas, filete vertical `line`, valor y `side` (destino si difiere, estado). En ≤600 px el filete pasa a separadores horizontales. `name` acepta nodos: el detalle de Menús y combos lista cada parte con sus opciones separadas por «·» y recargos en `small` |
 
 Detalle de Menús y combos (patrón de Detalle de pedido): `Dialog` `size-md` con `ModalHeader` (icono `combo`, título = nombre del menú, sin franja ni subtítulo) y `ModalWorkspace`. Arriba, el `Status` real (Activo, Inactivo o «Fuera de fecha») y una línea con icono `calendar` de cuándo se vende («Se vende el …» o días · desde · hasta), con la descripción si existe. «Platos y opciones» (`h3` de 16 px) es una `ModalItemList`: cada parte lleva su `IconTile` (`sm`, mismo tono e icono que en el editor), el nombre de la parte en 12 px y sus platos en 14 px separados por «·», con el costo extra si aplica. El resumen fijo «Resumen del menú» muestra Partes y Opciones, con el Precio como importe principal. Es de lectura: sin `ModalFooter`; la X es el único cierre. No repite reglas de elección («Obligatorio · elige 1»). Error con `ModalError`; la carga usa `Skeleton` con la misma geometría.
-La hoja «Arma tu menú o combo» (`ComboEditor`) tampoco lleva subtítulo («NUEVO MENÚ O COMBO») ni borde propio en el panel: el borde dejaba un filo claro alrededor de la cabecera índigo. Reutiliza `crud-modal size-lg`, un solo `modal-body` y `ModalFooter`; no es un asistente, así que no lleva stepper, «Continuar» ni paso de revisión. En móvil es pantalla completa con el pie fijo (validado a 427 × 933, 427 × 840 y 390 × 844: margen de 16 px, sin desborde horizontal, controles de 44 px).
+La hoja «Arma tu menú o combo» (`ComboEditor`) tampoco lleva subtítulo («NUEVO MENÚ O COMBO») ni borde propio en el panel: el borde dejaba un filo claro alrededor de la cabecera marino. Reutiliza `crud-modal size-lg`, un solo `modal-body` y `ModalFooter`; no es un asistente, así que no lleva stepper, «Continuar» ni paso de revisión. En móvil es pantalla completa con el pie fijo (validado a 427 × 933, 427 × 840 y 390 × 844: margen de 16 px, sin desborde horizontal, controles de 44 px).
 
 Los módulos no redefinen estas piezas; solo añaden su propio contexto (por ejemplo
 el destino compartido o el estado de preparación en Pedidos/Salón). Los cuerpos
@@ -336,7 +336,7 @@ Reglas:
   en carta y resumen de comanda; la apariencia por defecto no cambia.
 - `FormDisclosure({title,summary,open,onToggle})`: sección opcional plegable de
   un formulario (Producto › «Información adicional»). Encabezado de ancho completo y alto `--control-height` (44 px en táctil) con
-  chevron índigo que gira al abrir, título y resumen a la derecha («Opcional» o
+  chevron azul que gira al abrir, título y resumen a la derecha («Opcional» o
   un estado real, p. ej. «Registrada»). Estilo único en `form-controls.css`;
   los módulos no redeclaran el toggle. Dentro de una sección «Opcional» los
   campos no repiten la marca `optional`.
@@ -562,7 +562,7 @@ solo admite enteros. Guardar inválido o durante una mutación queda bloqueado.
 Los cambios válidos abren el formulario de motivo existente antes del API.
 
 Agotar hoy usa `Button kind="secondary"`, icono `circleMinus`, texto/borde
-`warning` y hover `warning-50`; Reactivar usa `secondary`, `refresh` e índigo.
+`warning` y hover `warning-50`; Reactivar usa `secondary`, `refresh` y azul.
 El agotado manual es reversible y no usa el estilo destructivo del catálogo.
 Historial usa `Button secondary` con `clock`, tooltip y nombre accesible
 descriptivo: icono en escritorio, icono y texto en contenedor ≤1020 px.
@@ -694,7 +694,7 @@ se retiró el marcado y CSS de `catalog-tabs`. Usar este componente para cualqui
 navegación entre vistas equivalentes, sin recrear estilos por módulo. La pista
 `cloud-150` tiene 4 px de margen interior y radio de cápsula, sin sombra ni marco.
 Cada opción conserva `--control-height`; la seleccionada usa superficie blanca,
-borde `primary-300` y texto `primary-700`. Los contadores usan fondo índigo
+borde `primary-300` y texto `primary-700`. Los contadores usan fondo azul
 `primary-600` y número blanco `surface` en todas las pestañas, incluido cero;
 su tamaño de 12 px mantiene la etiqueta como contenido principal. El contador
 es circular con una cifra y se amplía a cápsula cuando tiene varias cifras.
@@ -733,7 +733,7 @@ y glifos de 20 px; el icono primario no tiene fondo y la X tiene contorno blanco
 sin relleno, sombra ni cambio de color con hover. Las notas del pie tienen
 una fila propia, por encima de las acciones. Se preservan los tamaños,
 el cierre explícito y los contratos de foco/respuesta. No hay franja de marca
-en los modales: la cabecera índigo ocupa el ancho y el borde superior completos.
+en los modales: la cabecera marino ocupa el ancho y el borde superior completos.
 
 En móvil el fondo no añade padding superior a un panel de `100dvh`: eso recortaba
 el pie de los modales completos. Las hojas compactas dejan margen superior seguro;

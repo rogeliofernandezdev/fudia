@@ -117,7 +117,7 @@ Un único componente con `EmptyState`, título de la opción y retorno mediante
 
 ### Tarea a pantalla completa
 
-La comanda ocupa la pantalla con cabecera índigo `primary-700`. El título es el
+La comanda ocupa la pantalla con cabecera azul `primary-700`. El título es el
 dato que el usuario confirma («Mesa 04», «Delivery · Rosa
 Quispe»), no el nombre genérico de la pantalla. Un solo control de cierre que
 confirma el descarte si hay líneas. Detalle completo en `02_DESIGN_SYSTEM.md`

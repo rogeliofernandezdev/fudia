@@ -1,6 +1,6 @@
 /* Design tokens of foods-admin-web. Single source, imported once by globals.css.
  * Names describe a role or a scale step, never a pixel value.
- * Colors: cool neutrals tinted toward the operational indigo, plus semantic ramps.
+ * Colors: vivid operational blue, cool neutrals and independent semantic ramps.
  * Tailwind utilities read these same tokens through the @theme inline block at the end.
  * Component selectors stay in their owning sheets. */
 :root {
@@ -33,12 +33,12 @@
   --sidebar-toolbar-bg-color: var(--pdf-viewer-toolbar);
   --toolbar-height: var(--size-64);
   --pdf-document-actions-height: var(--size-88);
-  --cloud-25: #fbfbfe;
-  --cloud-50: #f7f8fc;
+  --cloud-25: #fafcff;
+  --cloud-50: #f4f7fd;
   --cloud-100: #f0f2f8;
   --cloud-150: #e9ecf4;
-  --line: #e2e6ef;
-  --line-strong: #cdd3e1;
+  --line: #e1e7f2;
+  --line-strong: #ccd5e6;
 
   /* Neutros: texto e iconos (ink-400 es el mínimo legible: 4.5:1 sobre blanco) */
   --ink-300: #a8afc2;
@@ -50,30 +50,35 @@
   --ink-950: #11152b;
 
   /* Azul operativo: acciones, selección y foco */
-  --primary-25: #fafbff;
-  --primary-50: #f6f7ff;
-  --primary-100: #eef0ff;
-  --primary-200: #dbdffb;
-  --primary-300: #b7bef2;
-  --primary-400: #8a94e3;
-  --primary-500: #6370d9;
-  --primary-600: #4654cd;
-  --primary-700: #3946b8;
-  --primary-800: #2c3792;
+  --primary-25: #fbfcff;
+  --primary-50: #f4f8ff;
+  --primary-100: #eaf2ff;
+  --primary-200: #cfdefe;
+  --primary-300: #a7c5ff;
+  --primary-400: #72a1ff;
+  --primary-500: #3578fa;
+  --primary-600: #005bff;
+  --primary-700: #004bd6;
+  --primary-800: #003baf;
 
-  /* Navegación */
-  --navigation-900: #1a2151;
-  --navigation-950: #0f1438;
-  --navigation-text: #c9d0f2;
+  /* Approved operational states stay indigo, independently of action branding. */
+  --indigo-100: #eef0ff;
+  --indigo-600: #4654cd;
+  --indigo-700: #3946b8;
+
+  /* Navegación: azul marino profundo */
+  --navigation-900: #0d2060;
+  --navigation-950: #091548;
+  --navigation-text: #c4d1f5;
 
   /* Verde restaurante: identidad y éxito confirmado */
-  --brand-50: #f1faf6;
-  --brand-100: #e8f7f1;
-  --brand-200: #c4ebda;
-  --brand-300: #98dfc1;
-  --brand-600: #63dcae;
-  --brand-700: #16875f;
-  --brand-800: #0e6646;
+  --brand-50: #f0fcf5;
+  --brand-100: #e2f8ec;
+  --brand-200: #b6edcd;
+  --brand-300: #7bdfa7;
+  --brand-600: #00bd68;
+  --brand-700: #007e44;
+  --brand-800: #06613a;
 
   /* Violeta digital: canales digitales e integraciones */
   --digital-50: #f9f5ff;
@@ -101,20 +106,22 @@
   --rose-700: #a8336a;
 
   /* Advertencia y notas */
-  --warning-50: #fff6ec;
-  --warning-100: #ffe8cf;
-  --warning-200: #f6cf9f;
-  --warning-600: #b54708;
-  --warning-800: #7a3b0d;
+  --warning-50: #fffaf0;
+  --warning-100: #fff1d2;
+  --warning-200: #ffe0a3;
+  --warning-500: #ffb020;
+  --warning-600: #a75c00;
+  --warning-800: #784400;
   --note-100: #fef3c7;
   --note-ink: #6b4a0a;
 
   /* Error y acciones destructivas */
-  --danger-50: #fff1ef;
-  --danger-100: #ffe1dd;
-  --danger-200: #f3c1bb;
-  --danger-600: #c9362b;
-  --danger-700: #a5281e;
+  --danger-50: #fff1f2;
+  --danger-100: #ffe2e5;
+  --danger-200: #ffbdc4;
+  --danger-500: #ff3b4a;
+  --danger-600: #c8233a;
+  --danger-700: #b51f33;
 
   /* Transparencias por paso */
   --ink-400-alpha-40: color-mix(in srgb, var(--ink-400) 40%, transparent);
@@ -501,8 +508,8 @@ body {
 }
 
 .kitchen-page {
-  --kds-pending: var(--primary-600);
-  --kds-pending-dark: var(--primary-700);
+  --kds-pending: var(--indigo-600);
+  --kds-pending-dark: var(--indigo-700);
   --kds-cooking: var(--digital-500);
   --kds-cooking-dark: var(--digital-700);
   --kds-cooking-soft: var(--digital-100);
@@ -528,8 +535,11 @@ body {
   .restaurant-setup {
     --control-height: var(--size-44);
     --font-size-control: var(--font-size-md);
-    --toolbar-height: var(--size-112);
   }
+}
+
+@media (width<440px) {
+  :root { --toolbar-height: var(--size-112); }
 }
 
 @media (any-pointer:coarse) {
@@ -577,8 +587,10 @@ body {
   --color-sky-100: var(--sky-100);
   --color-sky-800: var(--sky-800);
   --color-warning-50: var(--warning-50);
+  --color-warning-500: var(--warning-500);
   --color-warning-600: var(--warning-600);
   --color-danger-50: var(--danger-50);
+  --color-danger-500: var(--danger-500);
   --color-danger-600: var(--danger-600);
   --spacing: var(--space-1);
   --radius-*: initial;

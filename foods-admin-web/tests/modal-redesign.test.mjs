@@ -118,7 +118,7 @@ test("resumen agrupado y estado de cuenta destacado sin recolorear los demás es
  assert.match(heading,/Resumen de cuenta[\s\S]*Cuenta abierta/);
  assert.match(css,/\.modal-summary-heading\{[^}]*flex-wrap:wrap[^}]*border-bottom:var\(--stroke-1\) solid var\(--line\)/,'el resumen abre con la misma línea fina que las secciones');
  assert.match(css,/\.modal-summary-lines\{[^}]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
- assert.match(global,/\.status.blue\{color:var\(--primary-700\);background:var\(--primary-100\)/);
+ assert.match(global,/\.status.blue\{color:var\(--indigo-700\);background:var\(--indigo-100\)/);
  assert.match(global,/\.status.sky\{color:var\(--sky-800\);background:var\(--sky-100\)/);
  assert.doesNotMatch(global,/\.status\.(?:blue|sky|violet)\.emphasized\{/);
  assert.match(css,/\.modal-summary\{grid-template-columns:minmax\(0,2fr\) minmax\(0,1fr\)/);

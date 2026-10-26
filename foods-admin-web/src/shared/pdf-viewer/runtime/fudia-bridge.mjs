@@ -23,6 +23,14 @@ for(const [id,label] of [["printButton","Imprimir"],["downloadButton","Descargar
 const fullscreen=document.createElement("button");fullscreen.id="fudiaFullscreen";
 fullscreen.type="button";fullscreen.className="fudia-fullscreen";fullscreen.textContent="Pantalla completa";fullscreen.setAttribute("aria-label","Pantalla completa");fullscreen.title="Pantalla completa";
 controls.append(fullscreen);
+const fitWidth=document.createElement("button");fitWidth.id="fudiaFitWidth";
+fitWidth.type="button";fitWidth.className="toolbarButton labeled";
+const fitWidthLabel=document.createElement("span");fitWidthLabel.textContent="Ajustar al ancho";
+fitWidth.append(fitWidthLabel);button("secondaryToolbarButtonContainer").append(fitWidth);
+fitWidth.addEventListener("click",()=>{
+ if(!app?.pdfDocument)return;
+ app.pdfViewer.currentScaleValue="page-width";app.secondaryToolbar.close();
+},{signal});
 const hint=document.createElement("p");hint.id="fudiaPrintHelp";hint.setAttribute("role","status");hint.setAttribute("aria-live","polite");
 const defaultHint="Si aparece, elige «Todas las impresoras». Si no puedes imprimir, usa «Descargar PDF». Depende del dispositivo y su servicio de impresión.";
 hint.textContent=defaultHint;

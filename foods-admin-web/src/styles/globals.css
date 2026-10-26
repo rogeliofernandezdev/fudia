@@ -78,7 +78,7 @@ p{text-wrap:pretty}
 .status{display:inline-flex;align-items:center;gap:var(--space-1-5);width:max-content;padding:var(--space-1) var(--space-2-5);border-radius:var(--radius-pill);color:var(--brand-800);background:var(--brand-100);font-size:var(--font-size-label);font-weight:var(--weight-semibold);line-height:var(--line-height-snug)}
 .status i{width:var(--size-6);height:var(--size-6);border-radius:var(--radius-pill);background:currentColor}
 .status-icon{display:block;flex:none;stroke-width:2}
-.status.blue{color:var(--primary-700);background:var(--primary-100)}
+.status.blue{color:var(--indigo-700);background:var(--indigo-100)}
 .status.sky{color:var(--sky-800);background:var(--sky-100)}
 .status.orange{color:var(--warning-800);background:var(--warning-100)}
 .status.gray{color:var(--ink-500);background:var(--cloud-100)}
