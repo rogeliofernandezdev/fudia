@@ -107,6 +107,9 @@ type OrderRepository interface {
 	ExistingSelections(context.Context, scope, string) ([]domain.PreparedOrderSelection, error)
 	ComboGroups(context.Context, scope, string) (map[string]*domain.ComboGroup, []string, error)
 	ModifierGroups(context.Context, scope, string) (map[string]*domain.ModifierGroup, []string, error)
+	// OrderProducts precarga en una consulta los productos activos del local; los
+	// que no devuelve se validan uno por uno con ProductIsCombo/ProductForOrder.
+	OrderProducts(ctx context.Context, s scope, productIDs []string) (map[string]domain.OrderProductSnapshot, error)
 	ProductIsCombo(ctx context.Context, s scope, productID *string) (bool, error)
 	ProductForOrder(ctx context.Context, s scope, productID *string) (string, float64, bool, error)
 	ExistingComboItem(ctx context.Context, s scope, in domain.OrderItemInput, existingOrderID string) (string, float64, string, string, error)

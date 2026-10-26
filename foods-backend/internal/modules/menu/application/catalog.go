@@ -24,6 +24,7 @@ type product = domain.Product
 
 var normalizeCategoryProductScope = domain.NormalizeCategoryProductScope
 var normalizeProduct = domain.NormalizeProduct
+var normalizeProductCategory = domain.NormalizeProductCategory
 var validateInitialPortions = domain.ValidateInitialPortions
 
 type CatalogFilter struct {
@@ -113,6 +114,7 @@ type CatalogRepository interface {
 	InitialPortions(ctx context.Context, s scope, in domain.ProductInput, p domain.Product) (string, error)
 	ProductCreatedAudit(ctx context.Context, s scope, p domain.Product, in domain.ProductInput) (int64, error)
 	LockProduct(ctx context.Context, s scope, id string) (string, string, string, string, error)
+	ProductCategoryAvailable(ctx context.Context, s scope, categoryID string, productID *string) (bool, error)
 	HasStockMovements(ctx context.Context, s scope, id string) (bool, error)
 	HasPortionSales(ctx context.Context, s scope, id string) (bool, error)
 	UpdateProduct(ctx context.Context, s scope, id string, in domain.ProductInput, skuValue string, active bool, featured bool) (domain.Product, error)
@@ -250,6 +252,9 @@ func (a *Catalog) CreateProduct(ctx context.Context, s scope, in domain.ProductI
 	if invalid != "" {
 		return result, menuFailure(apperror.Invalid, "invalid_product", invalid)
 	}
+	if in, invalid = normalizeProductCategory(in); invalid != "" {
+		return result, menuFailure(apperror.Invalid, "category_required", invalid)
+	}
 	if strings.TrimSpace(in.SKU) == "" {
 		generated, err := a.nextSKU(ctx, s)
 		if err != nil {
@@ -266,6 +271,9 @@ func (a *Catalog) CreateProduct(ctx context.Context, s scope, in domain.ProductI
 		return result, menuFailure(apperror.Unavailable, "product_unavailable", "No pudimos iniciar el registro del producto.")
 	}
 	defer tx.Rollback(ctx)
+	if err = a.requireProductCategory(tx.Context(), s, *in.CategoryID, nil); err != nil {
+		return result, err
+	}
 	var p product
 	err = func() error {
 		var err error
@@ -316,6 +324,9 @@ func (a *Catalog) UpdateProduct(ctx context.Context, s scope, id string, in doma
 	if invalid != "" {
 		return result, menuFailure(apperror.Invalid, "invalid_product", invalid)
 	}
+	if in, invalid = normalizeProductCategory(in); invalid != "" {
+		return result, menuFailure(apperror.Invalid, "category_required", invalid)
+	}
 	active := true
 	if in.Active != nil {
 		active = *in.Active
@@ -343,6 +354,9 @@ func (a *Catalog) UpdateProduct(ctx context.Context, s scope, id string, in doma
 	}
 	if err != nil {
 		return result, menuFailure(apperror.Unavailable, "product_unavailable", "No pudimos validar el producto.")
+	}
+	if err = a.requireProductCategory(tx.Context(), s, *in.CategoryID, &id); err != nil {
+		return result, err
 	}
 	if skuValue == "" {
 		skuValue = currentSKU
@@ -396,6 +410,18 @@ func (a *Catalog) UpdateProduct(ctx context.Context, s scope, id string, in doma
 	_ = a.audit.Record(ctx, s, "product.updated", "product", p.ID)
 	return a.hydratedWrite(ctx, s, p)
 
+}
+// requireProductCategory acepta una categoría activa de la empresa o, al editar,
+// la categoría que el producto ya tiene aunque se haya desactivado.
+func (a *Catalog) requireProductCategory(ctx context.Context, s scope, categoryID string, productID *string) error {
+	available, err := a.repo.ProductCategoryAvailable(ctx, s, categoryID, productID)
+	if err != nil {
+		return menuFailure(apperror.Unavailable, "category_unavailable", "No pudimos validar la categoría.")
+	}
+	if !available {
+		return menuFailure(apperror.Invalid, "invalid_category", "La categoría seleccionada no existe o está inactiva. Elige otra categoría.")
+	}
+	return nil
 }
 func (a *Catalog) SetProductActive(ctx context.Context, s scope, id string, active bool) error {
 	tag, err := a.repo.SetProductActive(ctx, s, id, struct{ Active *bool }{&active})

@@ -15,9 +15,10 @@ func TestProductListAvailableQuantityUsesLocalDayAndOrderConsumption(t *testing.
 	if _, err := pool.Exec(ctx, `UPDATE locations SET timezone='Pacific/Kiritimati' WHERE id=$1`, s.LocationID); err != nil {
 		t.Fatal(err)
 	}
+	category := seedProductCategory(t, pool, s.OrganizationID)
 	create := func(body string) string {
 		t.Helper()
-		rec := postProduct(api, s, body)
+		rec := postProduct(api, s, withProductCategory(body, category))
 		if rec.Code != 201 {
 			t.Fatalf("create: %d %s", rec.Code, rec.Body.String())
 		}

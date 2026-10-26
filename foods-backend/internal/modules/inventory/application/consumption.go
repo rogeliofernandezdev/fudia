@@ -23,20 +23,18 @@ func (a *Stock) ApplyOrderQuantityDelta(ctx context.Context, s scope, orderID st
 		productIDs = append(productIDs, id)
 	}
 	sort.Strings(productIDs)
+	locked, err := a.repo.LockQuantityProducts(ctx, s, productIDs)
+	if err != nil {
+		return stockFailure(apperror.Unavailable, "quantity_unavailable", "No pudimos validar la cantidad del producto.")
+	}
 
 	for _, productID := range productIDs {
 		change := delta[productID]
-		var name, control string
-		if err := func() error {
-			var err error
-			name, control, err = a.repo.LockQuantityProduct(ctx, s, productID)
-			return err
-		}(); err != nil {
-			if errors.Is(err, ErrNotFound) {
-				return stockFailure(apperror.Conflict, "product_unavailable", "Un producto del pedido ya no existe.")
-			}
-			return stockFailure(apperror.Unavailable, "quantity_unavailable", "No pudimos validar la cantidad del producto.")
+		product, ok := locked[productID]
+		if !ok {
+			return stockFailure(apperror.Conflict, "product_unavailable", "Un producto del pedido ya no existe.")
 		}
+		name, control := product.Name, product.Control
 
 		switch control {
 		case "none":
@@ -152,15 +150,17 @@ func (a *Stock) DesiredRecipeUsage(ctx context.Context, s scope, products map[st
 		ids = append(ids, id)
 	}
 	sort.Strings(ids)
+	active, err := a.repo.ActiveRecipes(ctx, s, ids)
+	if err != nil {
+		return nil, err
+	}
 	for _, id := range ids {
-		recipeID, yield, err := a.repo.ActiveRecipe(ctx, s, id)
-		if errors.Is(err, ErrNotFound) {
+		recipe, ok := active[id]
+		if !ok {
 			continue
 		}
-		if err != nil {
-			return nil, err
-		}
-		ingredients, err := a.repo.RecipeIngredients(ctx, s, recipeID)
+		yield := recipe.Yield
+		ingredients, err := a.repo.RecipeIngredients(ctx, s, recipe.ID)
 		if err != nil {
 			return nil, err
 		}

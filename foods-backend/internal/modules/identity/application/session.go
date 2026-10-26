@@ -19,7 +19,9 @@ type SessionRepository interface {
 	FirstLocation(context.Context, domain.Candidate) (string, error)
 	CreateSession(context.Context, domain.Session) error
 	RevokeSession(context.Context, []byte) error
-	SessionScope(context.Context, []byte) (requestscope.Scope, error)
+	// SessionAccess resuelve sesión, administrador de plataforma y permisos del
+	// local en una sola consulta.
+	SessionAccess(context.Context, []byte) (requestscope.Scope, domain.Access, error)
 	IsPlatformAdmin(context.Context, string) (bool, error)
 	HasPermission(context.Context, requestscope.Scope, string) (bool, error)
 }
@@ -87,22 +89,41 @@ func (s *Service) Logout(ctx context.Context, token string) error {
 	}
 	return nil
 }
-func (s *Service) Authenticate(ctx context.Context, token string) (requestscope.Scope, error) {
+func (s *Service) Authenticate(ctx context.Context, token string) (requestscope.Scope, domain.Access, error) {
 	if token == "" {
-		return requestscope.Scope{}, apperror.New(apperror.Unauthenticated, "unauthenticated", "Inicia sesión para continuar.")
+		return requestscope.Scope{}, domain.Access{}, apperror.New(apperror.Unauthenticated, "unauthenticated", "Inicia sesión para continuar.")
 	}
 	hash := sha256.Sum256([]byte(token))
-	scope, err := s.repository.SessionScope(ctx, hash[:])
+	scope, access, err := s.repository.SessionAccess(ctx, hash[:])
 	if errors.Is(err, ErrNotFound) {
-		return scope, apperror.New(apperror.Unauthenticated, "session_expired", "Tu sesión venció. Ingresa nuevamente.")
+		return scope, access, apperror.New(apperror.Unauthenticated, "session_expired", "Tu sesión venció. Ingresa nuevamente.")
 	}
 	if err != nil {
-		return scope, unavailable("No pudimos validar la sesión.")
+		return scope, access, unavailable("No pudimos validar la sesión.")
 	}
-	return scope, nil
+	return scope, access, nil
+}
+
+type accessKey struct{}
+type scopedAccess struct {
+	scope  requestscope.Scope
+	access domain.Access
+}
+
+// WithAccess guarda en la petición los permisos leídos al autenticar. Authorize
+// solo los usa para ese mismo alcance de empresa, local y usuario.
+func WithAccess(ctx context.Context, scope requestscope.Scope, access domain.Access) context.Context {
+	return context.WithValue(ctx, accessKey{}, scopedAccess{scope, access})
 }
 func (s *Service) Authorize(ctx context.Context, scope requestscope.Scope, permission string) error {
-	// Preserve the existing fallback: a failed platform lookup still checks tenant roles.
+	if cached, ok := ctx.Value(accessKey{}).(scopedAccess); ok && cached.scope == scope {
+		if cached.access.Allows(permission) {
+			return nil
+		}
+		return apperror.New(apperror.Forbidden, "forbidden", "No tienes permisos para realizar esta acción.")
+	}
+	// Without access read at authentication (direct calls), keep the per-check lookups;
+	// a failed platform lookup still checks tenant roles.
 	if admin, err := s.repository.IsPlatformAdmin(ctx, scope.UserID); err == nil && admin {
 		return nil
 	}

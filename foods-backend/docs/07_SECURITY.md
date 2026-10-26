@@ -10,6 +10,15 @@ El backend deriva usuario, organización, local y permisos de la sesión. Nunca
 confía en identificadores de alcance enviados por el cliente. Se auditan
 anulaciones, descuentos, ajustes, cierres y comprobantes.
 
+La autenticación resuelve en una sola consulta (`SessionAccess`) la sesión, si
+el usuario es administrador de plataforma y los permisos de sus roles activos en
+el local de la sesión, con las mismas reglas que antes aplicaban por separado
+`IsPlatformAdmin` y `HasPermission`. El middleware guarda ese acceso en el
+contexto de la petición (`application.WithAccess`) y `Authorize` lo reutiliza
+solo para el mismo usuario, empresa y local; para cualquier otro alcance, o si
+no hay acceso en el contexto, vuelve a consultar. El acceso no se cachea entre
+peticiones: un permiso retirado deja de valer en la siguiente.
+
 Los roles mantienen dos dimensiones independientes:
 
 - `menu_access`: opciones y rutas administrativas que el usuario puede abrir.

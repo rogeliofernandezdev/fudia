@@ -10,6 +10,10 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	platformdomain "github.com/foods-platform/foods-backend/internal/modules/platformadmin/domain"
+	platformpg "github.com/foods-platform/foods-backend/internal/modules/platformadmin/infrastructure/postgres"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func TestPlatformOnboardingCreatesOperationalTenant(t *testing.T){
@@ -55,7 +59,7 @@ func TestPlatformOnboardingCreatesOperationalTenant(t *testing.T){
 	rec:=httptest.NewRecorder()
 	api.onboardTenant(rec,req)
 	if rec.Code!=201{t.Fatalf("onboarding: %d %s",rec.Code,rec.Body.String())}
-	var created struct{OrganizationID,LocationID,AdministratorID string}
+	var created struct{OrganizationID,FiscalProfileID,LocationID,AdministratorID string}
 	if err:=json.Unmarshal(rec.Body.Bytes(),&created);err!=nil{t.Fatal(err)}
 	if created.OrganizationID==""||created.LocationID==""||created.AdministratorID==""{t.Fatalf("incomplete onboarding response: %#v",created)}
 
@@ -86,6 +90,20 @@ func TestPlatformOnboardingCreatesOperationalTenant(t *testing.T){
 	if moduleRec.Code!=403||!strings.Contains(moduleRec.Body.String(),"platform_forbidden"){t.Fatalf("company administrator must not toggle modules: %d %s",moduleRec.Code,moduleRec.Body.String())}
 	if err:=pool.QueryRow(context.Background(),`SELECT count(*) FROM roles WHERE organization_id=$1 AND system_key IS NOT NULL`,created.OrganizationID).Scan(&defaults);err!=nil{t.Fatal(err)}
 	if defaults!=len(defaultOrganizationRoles){t.Fatalf("expected %d predefined roles, got %d",len(defaultOrganizationRoles),defaults)}
+	// Roles are seeded in one statement; a retry returns the same ids in seed order without duplicating.
+	retriedRoles,err:=platformpg.New(pool).SeedRoles(context.Background(),created.OrganizationID,defaultOrganizationRoles)
+	if err!=nil{t.Fatal(err)}
+	if len(retriedRoles)!=len(defaultOrganizationRoles){t.Fatalf("role retry returned %d ids",len(retriedRoles))}
+	for i,seed:=range defaultOrganizationRoles{
+		var name string
+		if err:=pool.QueryRow(context.Background(),`SELECT name FROM roles WHERE id=$1 AND organization_id=$2`,retriedRoles[i],created.OrganizationID).Scan(&name);err!=nil||name!=seed.Name{t.Fatalf("role %d id out of order: %s err=%v",i,name,err)}
+	}
+	var retriedRoleCount int
+	if err:=pool.QueryRow(context.Background(),`SELECT count(*) FROM roles WHERE organization_id=$1`,created.OrganizationID).Scan(&retriedRoleCount);err!=nil{t.Fatal(err)}
+	if retriedRoleCount!=len(defaultOrganizationRoles){t.Fatalf("role retry duplicated roles: %d",retriedRoleCount)}
+	var fiscalCountry,fiscalCurrency,locationProfile string
+	if err:=pool.QueryRow(context.Background(),`SELECT fp.country_code,fp.currency,l.fiscal_profile_id::text FROM locations l JOIN organization_fiscal_profiles fp ON fp.id=l.fiscal_profile_id WHERE l.id=$1 AND fp.is_default`,created.LocationID).Scan(&fiscalCountry,&fiscalCurrency,&locationProfile);err!=nil{t.Fatal(err)}
+	if fiscalCountry!="PE"||fiscalCurrency!="PEN"||locationProfile!=created.FiscalProfileID{t.Fatalf("batched tenant must link the configured default profile: %s %s %s",fiscalCountry,fiscalCurrency,locationProfile)}
 
 	var paymentMethods,expenseCategories,cashRegisters,zones,setupPending int
 	if err:=pool.QueryRow(context.Background(),`SELECT count(*) FROM payment_methods WHERE organization_id=$1 AND active`,created.OrganizationID).Scan(&paymentMethods);err!=nil{t.Fatal(err)}
@@ -96,8 +114,32 @@ func TestPlatformOnboardingCreatesOperationalTenant(t *testing.T){
 	if cashRegisters!=1{t.Fatalf("expected Caja principal after onboarding, got %d",cashRegisters)}
 	if err:=pool.QueryRow(context.Background(),`SELECT count(*) FROM zones WHERE organization_id=$1 AND location_id=$2 AND active AND name='Principal'`,created.OrganizationID,created.LocationID).Scan(&zones);err!=nil{t.Fatal(err)}
 	if zones!=1{t.Fatalf("expected Principal zone after onboarding, got %d",zones)}
-	if err:=pool.QueryRow(context.Background(),`SELECT count(*) FROM organization_operational_setup WHERE organization_id=$1 AND service_mode IS NULL AND completed_at IS NULL`,created.OrganizationID).Scan(&setupPending);err!=nil{t.Fatal(err)}
-	if setupPending!=1{t.Fatalf("expected pending restaurant setup after onboarding, got %d",setupPending)}
+	if err:=pool.QueryRow(context.Background(),`SELECT count(*) FROM organization_operational_setup WHERE organization_id=$1 AND service_mode='dine_in' AND completed_at IS NULL`,created.OrganizationID).Scan(&setupPending);err!=nil{t.Fatal(err)}
+	if setupPending!=1{t.Fatalf("expected pending restaurant setup in dine_in after onboarding, got %d",setupPending)}
+	assertOnboardingRestaurantDefaults(t,pool,created.OrganizationID,created.LocationID)
+
+	// Retrying the seed step must not duplicate anything nor overwrite a mode the tenant already changed.
+	if _,err:=pool.Exec(context.Background(),`UPDATE organization_operational_setup SET service_mode='mixed' WHERE organization_id=$1`,created.OrganizationID);err!=nil{t.Fatal(err)}
+	before:=onboardingSeedCounts(t,pool,created.OrganizationID,created.LocationID)
+	for i:=0;i<2;i++{
+		if err:=platformpg.New(pool).SeedOperationalDefaults(context.Background(),created.OrganizationID,created.LocationID,created.AdministratorID,platformdomain.NewTenantOperationalDefaults());err!=nil{t.Fatalf("retry %d: %v",i+1,err)}
+	}
+	if after:=onboardingSeedCounts(t,pool,created.OrganizationID,created.LocationID);after!=before{t.Fatalf("seed retry duplicated defaults: before=%v after=%v",before,after)}
+	var retriedMode string
+	if err:=pool.QueryRow(context.Background(),`SELECT service_mode FROM organization_operational_setup WHERE organization_id=$1`,created.OrganizationID).Scan(&retriedMode);err!=nil{t.Fatal(err)}
+	if retriedMode!="mixed"{t.Fatalf("seed retry overwrote the service mode: %s",retriedMode)}
+	if _,err:=pool.Exec(context.Background(),`UPDATE organization_operational_setup SET service_mode='dine_in' WHERE organization_id=$1`,created.OrganizationID);err!=nil{t.Fatal(err)}
+	// The batched zone insert also creates the zone of the default tables when no template provides it.
+	terrace:=platformdomain.NewTenantOperationalDefaults()
+	terrace.TableZone="Terraza"
+	terrace.Tables=[]platformdomain.DefaultTable{{Name:"Mesa T1",Seats:4,QREnabled:true}}
+	if err:=platformpg.New(pool).SeedOperationalDefaults(context.Background(),created.OrganizationID,created.LocationID,created.AdministratorID,terrace);err!=nil{t.Fatal(err)}
+	var terraceZones,terraceTables int
+	if err:=pool.QueryRow(context.Background(),`SELECT (SELECT count(*) FROM zones WHERE organization_id=$1 AND location_id=$2 AND name='Terraza' AND active),(SELECT count(*) FROM tables WHERE organization_id=$1 AND location_id=$2 AND name='Mesa T1' AND zone='Terraza' AND seats=4)`,created.OrganizationID,created.LocationID).Scan(&terraceZones,&terraceTables);err!=nil{t.Fatal(err)}
+	if terraceZones!=1||terraceTables!=1{t.Fatalf("expected non-template zone and its table, got zones=%d tables=%d",terraceZones,terraceTables)}
+	for _,cleanup:=range []string{`DELETE FROM tables WHERE organization_id=$1 AND name='Mesa T1'`,`DELETE FROM zones WHERE organization_id=$1 AND name='Terraza'`}{
+		if _,err:=pool.Exec(context.Background(),cleanup,created.OrganizationID);err!=nil{t.Fatal(err)}
+	}
 
 	var registerID string
 	if err:=pool.QueryRow(context.Background(),`SELECT id FROM cash_registers WHERE organization_id=$1 AND location_id=$2 AND name='Caja principal'`,created.OrganizationID,created.LocationID).Scan(&registerID);err!=nil{t.Fatal(err)}
@@ -122,6 +164,56 @@ func TestPlatformOnboardingCreatesOperationalTenant(t *testing.T){
 	loginRec:=httptest.NewRecorder()
 	api.login(loginRec,loginReq)
 	if loginRec.Code!=200||!strings.Contains(loginRec.Header().Get("Set-Cookie"),"foods_session="){t.Fatalf("new tenant administrator cannot login: %d %s",loginRec.Code,loginRec.Body.String())}
+}
+
+// assertOnboardingRestaurantDefaults verifies the seed_operational_defaults preload:
+// «General», «Mesa 1» and «Mesa 2» free in «Principal» for 2 people, and no demo data.
+func assertOnboardingRestaurantDefaults(t *testing.T,pool *pgxpool.Pool,organizationID,locationID string){
+	t.Helper()
+	ctx:=context.Background()
+	var categories int
+	if err:=pool.QueryRow(ctx,`SELECT count(*) FROM menu_categories WHERE organization_id=$1 AND name='General' AND active AND product_scope='both'`,organizationID).Scan(&categories);err!=nil{t.Fatal(err)}
+	if categories!=1{t.Fatalf("expected active General category for any product type, got %d",categories)}
+	rows,err:=pool.Query(ctx,`SELECT name,seats,zone,active,qr_enabled,qr_token<>'' FROM tables WHERE organization_id=$1 AND location_id=$2 ORDER BY name`,organizationID,locationID)
+	if err!=nil{t.Fatal(err)}
+	defer rows.Close()
+	var tables []string
+	for rows.Next(){
+		var name,zone string
+		var seats int
+		var active,qrEnabled,hasToken bool
+		if err:=rows.Scan(&name,&seats,&zone,&active,&qrEnabled,&hasToken);err!=nil{t.Fatal(err)}
+		if seats!=2||zone!="Principal"||!active||!qrEnabled||!hasToken{t.Fatalf("unexpected default table %s: seats=%d zone=%s active=%v qr=%v token=%v",name,seats,zone,active,qrEnabled,hasToken)}
+		tables=append(tables,name)
+	}
+	if err:=rows.Err();err!=nil{t.Fatal(err)}
+	if strings.Join(tables,",")!="Mesa 1,Mesa 2"{t.Fatalf("expected Mesa 1 and Mesa 2, got %v",tables)}
+	var occupied,products,orders,shifts int
+	if err:=pool.QueryRow(ctx,`
+		SELECT
+		  (SELECT count(*) FROM orders o JOIN tables t ON t.id=o.table_id WHERE t.organization_id=$1),
+		  (SELECT count(*) FROM products WHERE organization_id=$1),
+		  (SELECT count(*) FROM orders WHERE organization_id=$1),
+		  (SELECT count(*) FROM cash_shifts WHERE organization_id=$1)
+	`,organizationID).Scan(&occupied,&products,&orders,&shifts);err!=nil{t.Fatal(err)}
+	if occupied!=0||products!=0||orders!=0||shifts!=0{t.Fatalf("onboarding must not create demo data: occupied=%d products=%d orders=%d shifts=%d",occupied,products,orders,shifts)}
+}
+
+type onboardingSeedCount struct{ExpenseCategories,Zones,CashRegisters,Categories,Tables,Setups int}
+
+func onboardingSeedCounts(t *testing.T,pool *pgxpool.Pool,organizationID,locationID string)onboardingSeedCount{
+	t.Helper()
+	var c onboardingSeedCount
+	if err:=pool.QueryRow(context.Background(),`
+		SELECT
+		  (SELECT count(*) FROM expense_categories WHERE organization_id=$1),
+		  (SELECT count(*) FROM zones WHERE organization_id=$1 AND location_id=$2),
+		  (SELECT count(*) FROM cash_registers WHERE organization_id=$1 AND location_id=$2),
+		  (SELECT count(*) FROM menu_categories WHERE organization_id=$1),
+		  (SELECT count(*) FROM tables WHERE organization_id=$1 AND location_id=$2),
+		  (SELECT count(*) FROM organization_operational_setup WHERE organization_id=$1)
+	`,organizationID,locationID).Scan(&c.ExpenseCategories,&c.Zones,&c.CashRegisters,&c.Categories,&c.Tables,&c.Setups);err!=nil{t.Fatal(err)}
+	return c
 }
 
 func TestReservationsPersistCapacityAndSchedule(t *testing.T){

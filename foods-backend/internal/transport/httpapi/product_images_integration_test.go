@@ -36,6 +36,7 @@ func TestDirectImageTenantPermissionsAsyncRaceAndSupersededEvents(t *testing.T) 
 	pool := integrationPool(t)
 	s := seedInventoryScope(t, pool)
 	other := seedInventoryScope(t, pool)
+	category := seedProductCategory(t, pool, s.OrganizationID)
 	ctx := context.Background()
 	repository := menupg.NewImages(pool)
 	t.Cleanup(func() {
@@ -91,7 +92,7 @@ func TestDirectImageTenantPermissionsAsyncRaceAndSupersededEvents(t *testing.T) 
 	if _, err := service.CompleteImage(ctx, other, grant.ImageID); err == nil {
 		t.Fatal("cross-tenant complete")
 	}
-	created, err := service.CreateProduct(ctx, s, domain.ProductInput{Name: "Unconfirmed", Price: "10", SKU: "unconfirmed", ImageID: &grant.ImageID})
+	created, err := service.CreateProduct(ctx, s, domain.ProductInput{Name: "Unconfirmed", Price: "10", SKU: "unconfirmed", CategoryID: &category, ImageID: &grant.ImageID})
 	if err == nil || created.ID != "" {
 		t.Fatal("attached unconfirmed upload")
 	}
@@ -102,7 +103,7 @@ func TestDirectImageTenantPermissionsAsyncRaceAndSupersededEvents(t *testing.T) 
 	if _, err = pool.Exec(ctx, `UPDATE product_images SET status='READY',processed_at=now() WHERE id=$1`, grant.ImageID); err != nil {
 		t.Fatal(err)
 	}
-	product, err := service.CreateProduct(ctx, s, domain.ProductInput{Name: "Causa", Price: "10", SKU: "CAUSA", ImageID: &grant.ImageID})
+	product, err := service.CreateProduct(ctx, s, domain.ProductInput{Name: "Causa", Price: "10", SKU: "CAUSA", CategoryID: &category, ImageID: &grant.ImageID})
 	if err != nil || product.ImageStatus == nil || *product.ImageStatus != "READY" {
 		t.Fatalf("save race %#v %v", product, err)
 	}

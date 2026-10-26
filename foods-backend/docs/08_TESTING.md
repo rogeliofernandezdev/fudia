@@ -28,6 +28,28 @@ Las pruebas de alta de producto verifican cantidad inicial positiva, 15 porcione
 en el local/día correcto, listados reales, ajustes y Agotado/Reactivar posteriores,
 edición comercial sin sobrescribir cantidades, permisos y aislamiento. PostgreSQL
 temporal comprueba rollback completo si fallan disponibilidad o auditoría.
+Todas crean el producto con una categoría activa (`seedProductCategory`); las
+unitarias de `menu/application` y `menu/domain` verifican que falte, esté vacía o
+mal formada (`category_required`), que una categoría inactiva o ajena se rechace
+dentro de la transacción (`invalid_category`) y que la edición permita conservar la
+categoría actual del producto.
+
+El onboarding (`platform_mvp_integration_test.go`) verifica la precarga de
+`seed_operational_defaults`: categoría «General» (`both`), «Mesa 1» y «Mesa 2» en
+«Principal» para 2 personas, libres y con QR, modalidad `dine_in`, sin productos,
+pedidos ni turnos; un reintento directo de `SeedOperationalDefaults` no duplica
+filas ni sobrescribe la modalidad, y una zona fuera de las plantillas se crea en
+el mismo lote junto con su mesa. `platform_onboarding_regression_test.go` fuerza
+un fallo en la auditoría final y comprueba que no queda empresa, categoría, mesas
+ni puesta en marcha. Las unitarias de `platformadmin` cubren los valores e
+invariantes de la precarga y que el paso corre dentro de la transacción con
+rollback ante fallo.
+Las unitarias también comprueban que empresa y roles son una llamada cada uno,
+que el rol de administrador asignado es el devuelto por `SeedRoles` y que un
+fallo dentro del batch de `CreateTenant` se atribuye a su paso
+(`create_location` → `location_code_already_registered`). La integración
+reintenta `SeedRoles` sin duplicar roles, valida el orden de sus ids y que el
+local quede enlazado al perfil fiscal configurado.
 
 Probar invariantes, casos de uso, contrato HTTP y persistencia. Puertas: go test,
 go vet, validación OpenAPI y build.
@@ -139,3 +161,14 @@ precios del catálogo, envío y distancia guardados; reintento idempotente con e
 mismo pedido aunque cambien las tarifas; pedido de recojo sin dirección ni envío;
 estado visible solo para la conversación dueña y `active=false` al cancelar. Se
 ejecuta con `DATABASE_URL` de una base efímera (CI), nunca con datos del negocio.
+
+`identity/application` verifica que, con el acceso leído al autenticar, la
+petición autoriza sin otra consulta, rechaza permisos no otorgados, no reutiliza
+el acceso para otro local y deja pasar al administrador de plataforma.
+`orders/application` comprueba que la preparación precarga todos los productos en
+una consulta, salta los modificadores de productos que no los tienen, sigue
+rechazando modificadores ajenos y productos no disponibles, y usa las consultas
+individuales para productos fuera de la precarga. `inventory/application`
+comprueba un único bloqueo ordenado para todos los productos del pedido y el
+error `product_unavailable` cuando falta alguno. La integración existente cubre
+la inserción en lote con combos, modificadores, recetas y Concierge.

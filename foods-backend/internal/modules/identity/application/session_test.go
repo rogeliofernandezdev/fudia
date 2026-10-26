@@ -19,6 +19,8 @@ type memorySessions struct {
 	seenEmail, seenPermission                    string
 	allowed, admin                               bool
 	revoked                                      []byte
+	access                                       domain.Access
+	permissionLookups                            int
 }
 
 func (r *memorySessions) Candidates(_ context.Context, email string) ([]domain.Candidate, error) {
@@ -36,11 +38,15 @@ func (r *memorySessions) RevokeSession(_ context.Context, hash []byte) error {
 	r.revoked = hash
 	return nil
 }
-func (r *memorySessions) SessionScope(context.Context, []byte) (requestscope.Scope, error) {
-	return requestscope.Scope{UserID: "user-a", OrganizationID: "org-a", LocationID: "location-a"}, r.sessionError
+func (r *memorySessions) SessionAccess(context.Context, []byte) (requestscope.Scope, domain.Access, error) {
+	return requestscope.Scope{UserID: "user-a", OrganizationID: "org-a", LocationID: "location-a"}, r.access, r.sessionError
 }
-func (r *memorySessions) IsPlatformAdmin(context.Context, string) (bool, error) { return r.admin, nil }
+func (r *memorySessions) IsPlatformAdmin(context.Context, string) (bool, error) {
+	r.permissionLookups++
+	return r.admin, nil
+}
 func (r *memorySessions) HasPermission(_ context.Context, s requestscope.Scope, p string) (bool, error) {
+	r.permissionLookups++
 	r.seenScope = s
 	r.seenPermission = p
 	return r.allowed, r.errorPermission
@@ -95,13 +101,13 @@ func TestSessionErrorsAndPermissionsKeepScope(t *testing.T) {
 	r := &memorySessions{}
 	s := New(r, credentials{})
 	ctx := context.Background()
-	_, err := s.Authenticate(ctx, "")
+	_, _, err := s.Authenticate(ctx, "")
 	assertCode(t, err, "unauthenticated")
 	r.sessionError = ErrNotFound
-	_, err = s.Authenticate(ctx, "expired")
+	_, _, err = s.Authenticate(ctx, "expired")
 	assertCode(t, err, "session_expired")
 	r.sessionError = errors.New("database password must not leak")
-	_, err = s.Authenticate(ctx, "token")
+	_, _, err = s.Authenticate(ctx, "token")
 	assertCode(t, err, "session_unavailable")
 	scope := requestscope.Scope{UserID: "u", OrganizationID: "o", LocationID: "l"}
 	err = s.Authorize(ctx, scope, "customers.manage")
@@ -123,5 +129,34 @@ func TestLogoutHashesToken(t *testing.T) {
 	want := sha256.Sum256([]byte("token"))
 	if string(r.revoked) != string(want[:]) {
 		t.Fatal("raw token persisted")
+	}
+}
+
+func TestAuthorizeUsesAccessReadWithTheSession(t *testing.T) {
+	r := &memorySessions{access: domain.Access{Permissions: []string{"orders.read", "kitchen.manage"}}}
+	s := New(r, credentials{})
+	scope, access, err := s.Authenticate(context.Background(), "token")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := WithAccess(context.Background(), scope, access)
+	if err = s.Authorize(ctx, scope, "kitchen.manage"); err != nil {
+		t.Fatalf("granted permission rejected: %v", err)
+	}
+	assertCode(t, s.Authorize(ctx, scope, "cash.manage"), "forbidden")
+	if r.permissionLookups != 0 {
+		t.Fatalf("authorization must not query again within the request, got %d lookups", r.permissionLookups)
+	}
+	// Access read for one tenant/local is never reused for another scope.
+	other := scope
+	other.LocationID = "location-b"
+	r.allowed = false
+	assertCode(t, s.Authorize(ctx, other, "kitchen.manage"), "forbidden")
+	if r.permissionLookups == 0 || r.seenScope != other {
+		t.Fatal("a different scope must fall back to its own permission lookup")
+	}
+	admin := WithAccess(context.Background(), scope, domain.Access{PlatformAdmin: true})
+	if err = s.Authorize(admin, scope, "anything.manage"); err != nil {
+		t.Fatalf("platform administrator rejected: %v", err)
 	}
 }

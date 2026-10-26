@@ -2,6 +2,10 @@ package application
 
 import (
 	"context"
+	"errors"
+	"github.com/foods-platform/foods-backend/internal/modules/inventory/domain"
+	"github.com/foods-platform/foods-backend/internal/platform/apperror"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -10,13 +14,23 @@ import (
 type orderStockRepository struct {
 	StockRepository
 	movements []Movement
+	locks     [][]string
+	missing   bool
 }
 
 func (r *orderStockRepository) OrderBusinessDate(context.Context, scope, string) (string, error) {
 	return "2026-10-23", nil
 }
-func (r *orderStockRepository) LockQuantityProduct(context.Context, scope, string) (string, string, error) {
-	return "Inca Kola 500 ml", "inventory", nil
+func (r *orderStockRepository) LockQuantityProducts(_ context.Context, _ scope, ids []string) (map[string]domain.QuantityProduct, error) {
+	r.locks = append(r.locks, ids)
+	out := map[string]domain.QuantityProduct{}
+	for _, id := range ids {
+		if r.missing && id == "product-2" {
+			continue
+		}
+		out[id] = domain.QuantityProduct{Name: "Inca Kola 500 ml", Control: "inventory"}
+	}
+	return out, nil
 }
 func (r *orderStockRepository) LockProductInventory(context.Context, scope, string) (string, error) {
 	return "item-1", nil
@@ -58,5 +72,26 @@ func TestOrderMovementNoteDoesNotExposeTheOrderID(t *testing.T) {
 		if m.Note != want.note || strings.Contains(m.Note, orderID) || m.SourceID != orderID {
 			t.Fatalf("%s: unexpected movement %#v", movementType, m)
 		}
+	}
+}
+
+func TestOrderQuantityLocksAllProductsOnceInIDOrder(t *testing.T) {
+	repo := &orderStockRepository{}
+	stock := &Stock{repo: repo}
+	delta := map[string]float64{"product-3": 1, "product-1": 2, "product-2": 1}
+	if err := stock.ApplyOrderQuantityDelta(context.Background(), scope{}, "order-1", delta, "sale"); err != nil {
+		t.Fatal(err)
+	}
+	if want := [][]string{{"product-1", "product-2", "product-3"}}; !reflect.DeepEqual(repo.locks, want) {
+		t.Fatalf("expected a single sorted lock, got %v", repo.locks)
+	}
+	if len(repo.movements) != 3 {
+		t.Fatalf("every product must still move stock, got %d", len(repo.movements))
+	}
+	missing := &orderStockRepository{missing: true}
+	err := (&Stock{repo: missing}).ApplyOrderQuantityDelta(context.Background(), scope{}, "order-1", delta, "sale")
+	var failure *apperror.Error
+	if !errors.As(err, &failure) || failure.Code != "product_unavailable" {
+		t.Fatalf("missing product must be reported, got %v", err)
 	}
 }

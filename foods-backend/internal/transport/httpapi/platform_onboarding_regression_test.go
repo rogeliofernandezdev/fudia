@@ -303,3 +303,42 @@ func TestPlatformOnboardingPersistsChosenLocalTimezone(t *testing.T) {
 		t.Fatalf("unexpected persisted zones: %s / %s", companyZone, localZone)
 	}
 }
+
+func TestPlatformOnboardingRollsBackRestaurantDefaultsWhenLaterStepFails(t *testing.T) {
+	pool := integrationPool(t)
+	actor := seedInventoryScope(t, pool)
+	api := New(pool)
+	ctx := context.Background()
+	nonce := time.Now().UnixNano()
+	seedOperationalWhatsAppChannel(t, pool, "PE", fmt.Sprint(nonce))
+	taxID := fmt.Sprintf("%011d", nonce%100000000000)
+	// The final audit runs after seed_operational_defaults; failing it must undo the preload.
+	function := fmt.Sprintf("onboarding_audit_failure_%d", nonce)
+	if _, err := pool.Exec(ctx, fmt.Sprintf(`CREATE FUNCTION %s() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.action='organization.onboarded' AND NEW.metadata->>'platformActor'='%s' THEN RAISE EXCEPTION 'test audit failure'; END IF; RETURN NEW; END $$; CREATE TRIGGER %s BEFORE INSERT ON audit_log FOR EACH ROW EXECUTE FUNCTION %s()`, function, actor.UserID, function, function)); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_, _ = pool.Exec(ctx, fmt.Sprintf("DROP TRIGGER IF EXISTS %s ON audit_log; DROP FUNCTION IF EXISTS %s()", function, function))
+	})
+	body := seededOnboardingBody(t, pool, "emprende", taxID, fmt.Sprintf("rollback-%d@example.test", nonce))
+	req := httptest.NewRequest("POST", "/v1/platform/organizations", bytes.NewReader(body))
+	req = req.WithContext(context.WithValue(req.Context(), scopeKey{}, actor))
+	rec := httptest.NewRecorder()
+	api.onboardTenant(rec, req)
+	if rec.Code < 500 {
+		t.Fatalf("failed audit must abort onboarding: %d %s", rec.Code, rec.Body.String())
+	}
+	var organizations, categories, tables, setups int
+	if err := pool.QueryRow(ctx, `
+		SELECT
+		  (SELECT count(*) FROM organizations WHERE tax_id=$1),
+		  (SELECT count(*) FROM menu_categories c JOIN organizations o ON o.id=c.organization_id WHERE o.tax_id=$1),
+		  (SELECT count(*) FROM tables t JOIN organizations o ON o.id=t.organization_id WHERE o.tax_id=$1),
+		  (SELECT count(*) FROM organization_operational_setup s JOIN organizations o ON o.id=s.organization_id WHERE o.tax_id=$1)
+	`, taxID).Scan(&organizations, &categories, &tables, &setups); err != nil {
+		t.Fatal(err)
+	}
+	if organizations != 0 || categories != 0 || tables != 0 || setups != 0 {
+		t.Fatalf("partial onboarding left data: organizations=%d categories=%d tables=%d setups=%d", organizations, categories, tables, setups)
+	}
+}

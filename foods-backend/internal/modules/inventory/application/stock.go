@@ -38,12 +38,14 @@ func stockFailure(kind apperror.Kind, code, message string) error {
 
 type StockRepository interface {
 	OrderBusinessDate(ctx context.Context, s scope, orderID string) (string, error)
-	LockQuantityProduct(ctx context.Context, s scope, productID string) (string, string, error)
+	// LockQuantityProducts bloquea en una consulta, en orden de id, los productos
+	// del pedido; los inexistentes no aparecen en el resultado.
+	LockQuantityProducts(ctx context.Context, s scope, productIDs []string) (map[string]domain.QuantityProduct, error)
 	LockPortions(ctx context.Context, s scope, productID string, businessDate string) (*int, int, string, error)
 	UpdateSoldPortions(ctx context.Context, s scope, productID string, businessDate string, nextSold int) (int64, error)
 	LockProductInventory(ctx context.Context, s scope, productID string) (string, error)
 	RecipeModules(context.Context, scope) (bool, bool, error)
-	ActiveRecipe(context.Context, scope, string) (string, float64, error)
+	ActiveRecipes(context.Context, scope, []string) (map[string]domain.ActiveRecipe, error)
 	RecipeIngredients(context.Context, scope, string) ([]domain.RecipeIngredient, error)
 	NetRecipeUsage(context.Context, scope, string) (map[string]float64, error)
 	SaveBalance(context.Context, scope, string, float64, float64) (int64, error)

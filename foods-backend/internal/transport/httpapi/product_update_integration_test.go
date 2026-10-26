@@ -16,6 +16,7 @@ func TestProductUpdatePersistsCommercialDataAndDestination(t *testing.T) {
 	s := seedInventoryScope(t, pool)
 	api := New(pool)
 	ctx := context.Background()
+	category := seedProductCategory(t, pool, s.OrganizationID)
 	for i, destination := range []string{"kitchen", "bar", "direct"} {
 		t.Run(destination, func(t *testing.T) {
 			var id string
@@ -26,7 +27,7 @@ func TestProductUpdatePersistsCommercialDataAndDestination(t *testing.T) {
 			active, featured, minutes := false, true, 8
 			image, cost, from, until, cutoff := "/test-product.png", "2.50", "2026-01-01 00:00:00+00", "2030-12-31 00:00:00+00", "18:00:00"
 			input := productInput{
-				SKU: fmt.Sprintf("EDIT-UPDATED-%d", i), Name: "Producto actualizado", Description: "Descripción actualizada", Price: "7.50",
+				SKU: fmt.Sprintf("EDIT-UPDATED-%d", i), Name: "Producto actualizado", Description: "Descripción actualizada", Price: "7.50", CategoryID: &category,
 				Active: &active, Featured: &featured, ProductType: "prepared", QuantityControl: "none",
 				ServiceDestination: destination, ImageURL: &image, CostPrice: &cost, PrepMinutes: &minutes,
 				Allergens: []string{"leche"}, AvailableFrom: &from, AvailableUntil: &until,
@@ -53,8 +54,8 @@ func TestProductUpdatePersistsCommercialDataAndDestination(t *testing.T) {
 			}
 			// Check the committed values, not only the HTTP response.
 			var stored productInput
-			if err = pool.QueryRow(ctx, `SELECT sku,name,description,price::text,active,featured,product_type,quantity_control,service_destination,image_url,cost_price::text,prep_minutes,allergens,available_from::text,available_until::text,available_days,available_until_time::text FROM products WHERE organization_id=$1 AND id=$2`, s.OrganizationID, id).Scan(
-				&stored.SKU, &stored.Name, &stored.Description, &stored.Price, &stored.Active, &stored.Featured,
+			if err = pool.QueryRow(ctx, `SELECT sku,name,description,category_id::text,price::text,active,featured,product_type,quantity_control,service_destination,image_url,cost_price::text,prep_minutes,allergens,available_from::text,available_until::text,available_days,available_until_time::text FROM products WHERE organization_id=$1 AND id=$2`, s.OrganizationID, id).Scan(
+				&stored.SKU, &stored.Name, &stored.Description, &stored.CategoryID, &stored.Price, &stored.Active, &stored.Featured,
 				&stored.ProductType, &stored.QuantityControl, &stored.ServiceDestination, &stored.ImageURL,
 				&stored.CostPrice, &stored.PrepMinutes, &stored.Allergens, &stored.AvailableFrom, &stored.AvailableUntil,
 				&stored.AvailableDays, &stored.AvailableUntilTime,
@@ -85,8 +86,9 @@ func TestProductUpdatePreservesOmittedDestinationAndTenantBoundary(t *testing.T)
 	if _, err := pool.Exec(ctx, `INSERT INTO products(organization_id,sku,name,price) VALUES($1,'EDIT-TAKEN','Otro producto',4),($2,'EDIT-OTHER-TENANT','Producto de otra empresa',4)`, owner.OrganizationID, other.OrganizationID); err != nil {
 		t.Fatal(err)
 	}
+	category := seedProductCategory(t, pool, owner.OrganizationID)
 	update := func(s scope, body string) *httptest.ResponseRecorder {
-		req := httptest.NewRequest("PATCH", "/v1/admin/products/"+id, bytes.NewBufferString(body))
+		req := httptest.NewRequest("PATCH", "/v1/admin/products/"+id, bytes.NewBufferString(withProductCategory(body, category)))
 		req.SetPathValue("id", id)
 		req = req.WithContext(context.WithValue(req.Context(), scopeKey{}, s))
 		rec := httptest.NewRecorder()

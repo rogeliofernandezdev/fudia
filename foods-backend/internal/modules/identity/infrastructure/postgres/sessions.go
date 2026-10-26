@@ -50,10 +50,24 @@ func (r *SessionRepository) RevokeSession(ctx context.Context, hash []byte) erro
 	_, err := r.db.Exec(ctx, `UPDATE sessions SET revoked_at=COALESCE(revoked_at,now()) WHERE token_hash=$1`, hash)
 	return err
 }
-func (r *SessionRepository) SessionScope(ctx context.Context, hash []byte) (requestscope.Scope, error) {
+func (r *SessionRepository) SessionAccess(ctx context.Context, hash []byte) (requestscope.Scope, domain.Access, error) {
 	var s requestscope.Scope
-	err := r.db.QueryRow(ctx, `SELECT s.user_id,s.organization_id,s.location_id,u.full_name FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at>now() AND u.active`, hash).Scan(&s.UserID, &s.OrganizationID, &s.LocationID, &s.Name)
-	return s, translate(err)
+	var access domain.Access
+	// Same rules as IsPlatformAdmin and HasPermission: active user, active roles of
+	// the organization assigned to the session's location.
+	err := r.db.QueryRow(ctx, `
+		SELECT s.user_id,s.organization_id,s.location_id,u.full_name,u.platform_admin,
+		       COALESCE((
+		         SELECT array_agg(DISTINCT p.permission)
+		         FROM user_roles ur
+		         JOIN roles ro ON ro.id=ur.role_id
+		         CROSS JOIN LATERAL unnest(ro.permissions) AS p(permission)
+		         WHERE ur.user_id=s.user_id AND ur.location_id=s.location_id
+		           AND ro.organization_id=s.organization_id AND ro.active
+		       ),'{}')
+		FROM sessions s JOIN users u ON u.id=s.user_id
+		WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at>now() AND u.active`, hash).Scan(&s.UserID, &s.OrganizationID, &s.LocationID, &s.Name, &access.PlatformAdmin, &access.Permissions)
+	return s, access, translate(err)
 }
 func (r *SessionRepository) IsPlatformAdmin(ctx context.Context, userID string) (bool, error) {
 	var admin bool

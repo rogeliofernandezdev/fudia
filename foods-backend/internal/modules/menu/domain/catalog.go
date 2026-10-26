@@ -1,6 +1,9 @@
 package domain
 
-import "strings"
+import (
+	"regexp"
+	"strings"
+)
 
 type Category struct {
 	ID           string `json:"id"`
@@ -121,6 +124,23 @@ func NormalizeProduct(in ProductInput) (ProductInput, string) {
 	case "none", "portions", "inventory":
 	default:
 		return in, "El control de cantidad no es válido."
+	}
+	return in, ""
+}
+var categoryIDPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
+
+// NormalizeProductCategory exige una categoría al crear o editar un producto:
+// «Sin categoría» ya no es una opción. La existencia y el estado de la
+// categoría se comprueban después contra la empresa.
+func NormalizeProductCategory(in ProductInput) (ProductInput, string) {
+	if in.CategoryID == nil || strings.TrimSpace(*in.CategoryID) == "" {
+		in.CategoryID = nil
+		return in, "Selecciona una categoría para el producto."
+	}
+	categoryID := strings.TrimSpace(*in.CategoryID)
+	in.CategoryID = &categoryID
+	if !categoryIDPattern.MatchString(categoryID) {
+		return in, "La categoría seleccionada no es válida."
 	}
 	return in, ""
 }

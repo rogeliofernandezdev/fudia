@@ -12,6 +12,29 @@ Los endpoints paginados deben evitar N+1 y consultas por fila. Antes de agregar
 caché, se reduce el número de round trips y se agrupan cálculos en SQL cuando sea
 seguro.
 
+Con la base remota cada consulta cuesta una ida y vuelta de red (~150-230 ms
+medidos desde fuera de la región). Por eso:
+
+- Cada petición autenticada hace una sola consulta de sesión y permisos.
+- Al crear o editar un pedido, los productos se precargan en una consulta
+  (`OrderProducts`: combo, precio, disponibilidad y si tiene modificadores); los
+  modificadores solo se consultan si el producto los tiene o el pedido los envía.
+  Un producto que la precarga no devuelve se valida con las consultas
+  individuales anteriores, conservando sus mensajes.
+- El consumo de inventario bloquea todos los productos del pedido en una consulta
+  ordenada por id (`LockQuantityProducts`, mismo orden de bloqueo que el ciclo
+  anterior) y busca sus recetas activas en otra (`ActiveRecipes`).
+- `InsertItems` inserta cada línea con sus selecciones de combo, modificadores y
+  líneas de servicio en una sentencia, y envía todas las líneas en un `pgx.Batch`.
+
+Prueba de carga (100 restaurantes con Cocina, Salón y Pedidos refrescando cada
+10 s, POS y Caja cada 30 s, y el ciclo completo de mesa) sobre Postgres
+desechable: con la API en la misma región que la base soporta 100 restaurantes,
+incluso a 6 veces el ritmo de hora punta, sin errores y con p95 menor a 160 ms.
+La base remota acepta como máximo 40 conexiones, por lo que la API debe
+desplegarse en su misma región; `DATABASE_MAX_CONNS` no puede compensar la
+latencia.
+
 Las búsquedas `ILIKE '%texto%'` de catálogos operativos usan `pg_trgm` e índices
 GIN sobre los campos realmente consultados. Los filtros por tenant/local/estado
 usan índices B-tree o parciales acordes al patrón de lectura.

@@ -947,6 +947,14 @@ no integra un visor PDF.
   `retail` sin pedir un paso adicional al usuario. El tipo no se repite como
   un campo de solo lectura porque ya está expresado por la opción seleccionada.
   El alta rápida sí exige categoría y muestra todas las categorías activas.
+- Carta › Producto también exige categoría: no existe la opción «Sin
+  categoría». El selector parte de «Selecciona una categoría» (vacío, como
+  Gastos y Compras) y, al guardar sin elegir, muestra «Selecciona una
+  categoría.» bajo el campo con `aria-invalid`. Una categoría inactiva solo se
+  lista para el producto que ya la usa. Si hay una única categoría activa
+  (empresa nueva con «General»), el alta la deja preseleccionada. El backend
+  repite la validación (`category_required`, `invalid_category`). La tabla de
+  productos conserva «Sin categoría» solo como lectura de productos históricos.
 - La categoría pide solo **nombre y orden**: no pregunta «Disponible para».
   Su uso (`productScope`) se deduce del formulario de origen (Carta →
   `prepared`; Compras o Inventario → `retail`) y el backend lo amplía a `both`
@@ -2172,6 +2180,12 @@ no simula datos ni duplica formularios: deriva al mantenimiento correspondiente
 y comprueba los cambios al regresar. Son obligatorios el tipo de atención, una
 categoría, un producto vendible y una caja; las mesas solo son obligatorias para
 salón o modalidad mixta.
+
+El onboarding de una empresa nueva ya deja Salón como tipo de atención, la
+categoría «General», «Mesa 1» y «Mesa 2» (2 personas, zona «Principal») y la
+«Caja principal»: Forma de atención, Mesas y Caja aparecen completos y el
+paso de Carta solo espera el primer producto. Todo sigue siendo editable; no se crean
+productos, pedidos ni turnos de caja de ejemplo.
 
 Los pasos opcionales se construyen desde los módulos activos de la suscripción.
 Inventario, recetas y proveedores no aparecen cuando el plan no los incluye;

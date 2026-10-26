@@ -14,7 +14,10 @@ import {productResolver} from "../domain/product-schema";
 
 export function ProductDialog({draft,categories,destinations,loadAllergens,createAllergen,currencySymbol,busy,close,save,imageScope=""}:{imageScope?:string;draft:ProductDraft;categories:Category[];destinations:ServiceDestinationOption[];loadAllergens:(q:string)=>Promise<AllergenOption[]>;createAllergen?:(name:string)=>Promise<string>;currencySymbol:string;busy:boolean;close:()=>void;save:(d:ProductDraft,f:File|null)=>Promise<void>}){
  const[showExtras,setShowExtras]=useState(Boolean(draft.prepMinutes)||draft.allergens.length>0||draft.featured);const[pendingFile,setPendingFile]=useState<File|null>(null);const[imageValidating,setImageValidating]=useState(false);const imageInvalid=useRef(false);
- const{register,control,watch,setValue,handleSubmit,formState:{errors}}=useForm<ProductDraft>({defaultValues:{...draft,initialPortionQuantity:draft.initialPortionQuantity??"",serviceDestination:draft.serviceDestination??"kitchen"},resolver:productResolver,mode:"onSubmit",reValidateMode:"onChange"});
+ // Every product needs a category: inactive ones only stay listed for the product that already uses them.
+ const categoryOptions=categories.filter(c=>c.active||c.id===draft.categoryId);
+ const onlyCategory=!draft.categoryId&&categoryOptions.length===1?categoryOptions[0].id:"";
+ const{register,control,watch,setValue,handleSubmit,formState:{errors}}=useForm<ProductDraft>({defaultValues:{...draft,categoryId:draft.categoryId||onlyCategory,initialPortionQuantity:draft.initialPortionQuantity??"",serviceDestination:draft.serviceDestination??"kitchen"},resolver:productResolver,mode:"onSubmit",reValidateMode:"onChange"});
  const submitting=useRef(false);
  const value=watch();
  const inventoryLocked=Boolean(draft.id)&&draft.quantityControl==="inventory";
@@ -30,7 +33,7 @@ export function ProductDialog({draft,categories,destinations,loadAllergens,creat
   <div className="form-grid product-identity-fields">
   <FormField className="span-2" label="Nombre del producto" error={errors.name?.message}><Input autoFocus maxLength={160} {...register("name")} placeholder="Ej. Lomo saltado"/></FormField>
   <FormField label="Precio de venta" error={errors.price?.message}><div className={"money-input"+(errors.price?" has-error":"")}><span>{currencySymbol}</span><input inputMode="decimal" {...register("price")} placeholder="0.00" aria-invalid={Boolean(errors.price)}/></div></FormField>
-  <FormField label="Categoría"><Select {...register("categoryId")}><option value="">Sin categoría</option>{categories.filter(c=>(c.active||c.id===value.categoryId)).map(c=><option value={c.id} key={c.id}>{c.name}</option>)}</Select></FormField>
+  <FormField label="Categoría" error={errors.categoryId?.message}><Select aria-invalid={Boolean(errors.categoryId)} {...register("categoryId")}><option value="">Selecciona una categoría</option>{categoryOptions.map(c=><option value={c.id} key={c.id}>{c.name}</option>)}</Select></FormField>
   <FormField className="span-2" label="Destino de atención" error={errors.serviceDestination?.message}><Select disabled={busy||!destinations.length} {...register("serviceDestination")}>{destinations.map(option=><option key={option.value} value={option.value}>{option.label}</option>)}</Select></FormField>
   {value.serviceDestination==="direct"&&(draft.hasRecipe||Number(value.prepMinutes)>0)&&<InlineNotice className="span-2" tone="warning" title="Este producto parece prepararse">{draft.hasRecipe?"Tiene receta":"Tiene tiempo de preparación"}. Con «Sin preparación» no llegará a Cocina ni a Barra: entra al pedido como Listo.</InlineNotice>}
   </div>

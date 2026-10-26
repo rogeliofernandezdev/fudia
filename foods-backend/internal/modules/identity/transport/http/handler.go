@@ -55,12 +55,13 @@ func (h *Handler) Auth(next http.Handler) http.Handler {
 		if token == "" {
 			token = strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
 		}
-		s, err := h.service.Authenticate(r.Context(), token)
+		s, access, err := h.service.Authenticate(r.Context(), token)
 		if err != nil {
 			shared.WriteError(w, err)
 			return
 		}
-		next.ServeHTTP(w, r.WithContext(requestscope.With(r.Context(), s)))
+		ctx := application.WithAccess(requestscope.With(r.Context(), s), s, access)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 func (h *Handler) RequirePermission(permission string, next http.Handler) http.Handler {

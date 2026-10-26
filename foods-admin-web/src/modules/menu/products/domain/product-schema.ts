@@ -11,7 +11,7 @@ export const productSchema=z.object({
   price:z.string().trim().regex(money,"Ingresa un precio válido, por ejemplo 12.50."),
   costPrice:z.string().trim().refine(value=>value===""||money.test(value),"Ingresa un costo válido o déjalo vacío."),
   prepMinutes:z.string().trim().refine(value=>value===""||(/^\d+$/.test(value)&&Number(value)<=600),"Usa minutos enteros, hasta 600."),
-  categoryId:z.string(),
+  categoryId:z.string().trim().min(1,"Selecciona una categoría."),
   description:z.string(),
   serviceDestination:z.enum(["kitchen","bar","direct"]).default("kitchen"),
   quantityControl:z.enum(["none","portions","inventory"]),

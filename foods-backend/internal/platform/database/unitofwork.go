@@ -13,6 +13,8 @@ type Executor interface {
 	Query(context.Context, string, ...any) (pgx.Rows, error)
 	QueryRow(context.Context, string, ...any) pgx.Row
 	Exec(context.Context, string, ...any) (pgconn.CommandTag, error)
+	// SendBatch envía varias sentencias en una sola ida y vuelta.
+	SendBatch(context.Context, *pgx.Batch) pgx.BatchResults
 }
 type transactionKey struct{}
 type binding struct {

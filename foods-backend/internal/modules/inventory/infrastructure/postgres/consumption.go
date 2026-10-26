@@ -16,15 +16,28 @@ func (r *Stock) OrderBusinessDate(ctx context.Context, s scope, orderID string) 
 		orderID, s.OrganizationID, s.LocationID).Scan(&businessDate)
 	return businessDate, stockError(err)
 }
-func (r *Stock) LockQuantityProduct(ctx context.Context, s scope, productID string) (string, string, error) {
-	var name string
-	var control string
-	err := r.db(ctx).QueryRow(ctx, `
-			SELECT name,quantity_control
+func (r *Stock) LockQuantityProducts(ctx context.Context, s scope, productIDs []string) (map[string]domain.QuantityProduct, error) {
+	// ORDER BY id keeps the lock order the per-product loop used (sorted ids).
+	rows, err := r.db(ctx).Query(ctx, `
+			SELECT id::text,name,quantity_control
 			FROM products
-			WHERE id=$1 AND organization_id=$2
-			FOR UPDATE`, productID, s.OrganizationID).Scan(&name, &control)
-	return name, control, stockError(err)
+			WHERE id=ANY($1::uuid[]) AND organization_id=$2
+			ORDER BY id
+			FOR UPDATE`, productIDs, s.OrganizationID)
+	if err != nil {
+		return nil, stockError(err)
+	}
+	defer rows.Close()
+	out := map[string]domain.QuantityProduct{}
+	for rows.Next() {
+		var id string
+		var v domain.QuantityProduct
+		if err = rows.Scan(&id, &v.Name, &v.Control); err != nil {
+			return nil, err
+		}
+		out[id] = v
+	}
+	return out, rows.Err()
 }
 func (r *Stock) LockPortions(ctx context.Context, s scope, productID string, businessDate string) (*int, int, string, error) {
 	var portionQuantity *int
@@ -59,11 +72,22 @@ func (r *Stock) RecipeModules(ctx context.Context, s scope) (bool, bool, error) 
 	err := r.db(ctx).QueryRow(ctx, `SELECT COALESCE((SELECT active FROM organization_modules WHERE organization_id=$1 AND module_key='recetas'),true),COALESCE((SELECT active FROM organization_modules WHERE organization_id=$1 AND module_key='inventario'),true)`, s.OrganizationID).Scan(&recipes, &inventory)
 	return recipes, inventory, err
 }
-func (r *Stock) ActiveRecipe(ctx context.Context, s scope, productID string) (string, float64, error) {
-	var id string
-	var yield float64
-	err := r.db(ctx).QueryRow(ctx, `SELECT id,yield_quantity::float8 FROM product_recipes WHERE organization_id=$1 AND product_id=$2 AND active`, s.OrganizationID, productID).Scan(&id, &yield)
-	return id, yield, stockError(err)
+func (r *Stock) ActiveRecipes(ctx context.Context, s scope, productIDs []string) (map[string]domain.ActiveRecipe, error) {
+	rows, err := r.db(ctx).Query(ctx, `SELECT product_id::text,id::text,yield_quantity::float8 FROM product_recipes WHERE organization_id=$1 AND product_id=ANY($2::uuid[]) AND active`, s.OrganizationID, productIDs)
+	if err != nil {
+		return nil, stockError(err)
+	}
+	defer rows.Close()
+	out := map[string]domain.ActiveRecipe{}
+	for rows.Next() {
+		var productID string
+		var v domain.ActiveRecipe
+		if err = rows.Scan(&productID, &v.ID, &v.Yield); err != nil {
+			return nil, err
+		}
+		out[productID] = v
+	}
+	return out, rows.Err()
 }
 func (r *Stock) RecipeIngredients(ctx context.Context, s scope, recipeID string) ([]domain.RecipeIngredient, error) {
 	rows, err := r.db(ctx).Query(ctx, `SELECT inventory_item_id::text,quantity::float8,waste_percent::float8 FROM product_recipe_items WHERE recipe_id=$1 AND organization_id=$2 ORDER BY inventory_item_id`, recipeID, s.OrganizationID)

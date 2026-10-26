@@ -16,15 +16,16 @@ function compile(path,resolve){
 }
 const resolver=compile("shared/forms/zod-resolver.ts",require);
 const schema=compile("modules/menu/products/domain/product-schema.ts",name=>name==="@/shared/forms/zod-resolver"?resolver:require(name));
-const validDraft={name:"Lomo saltado",price:"25",costPrice:"",prepMinutes:"",categoryId:"",description:"",quantityControl:"none",allergens:[],featured:false,active:true,productType:"prepared",imageUrl:null};
+const validDraft={name:"Lomo saltado",price:"25",costPrice:"",prepMinutes:"",categoryId:"cat-general",description:"",quantityControl:"none",allergens:[],featured:false,active:true,productType:"prepared",imageUrl:null};
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
-function mount({save=async()=>{},draft={...validDraft},busy=false}={}){
- let formControl;
+function mount({save=async()=>{},draft={...validDraft},busy=false,categories=[],errors={}}={}){
+ let formControl,formOptions;
  const {ProductDialog}=compile("modules/menu/products/presentation/product-dialog.tsx",name=>{
   if(name==="react")return {useRef:value=>({current:value}),useState:value=>[value,()=>{}]};
   if(name==="react-hook-form")return {Controller:"Controller",useForm:options=>{
+   formOptions=options;
    formControl=createFormControl(options);
-   return {...formControl,watch:()=>draft,formState:{errors:{}}};
+   return {...formControl,watch:()=>draft,formState:{errors}};
   }};
   if(name==="../domain/product-schema")return schema;
   if(name==="./product-image-field")return {ProductImageField:"ProductImageField"};
@@ -36,11 +37,11 @@ function mount({save=async()=>{},draft={...validDraft},busy=false}={}){
   if(name==="./allergen-field")return {AllergenField:"AllergenField"};
   return require(name);
  });
- const tree=ProductDialog({draft,categories:[],destinations:[{value:"kitchen",label:"Cocina"},{value:"bar",label:"Barra"},{value:"direct",label:"Sin preparación (lo entrega el mozo)"}],loadAllergens:async()=>[],currencySymbol:"S/",busy,close:()=>{},save});
+ const tree=ProductDialog({draft,categories,destinations:[{value:"kitchen",label:"Cocina"},{value:"bar",label:"Barra"},{value:"direct",label:"Sin preparación (lo entrega el mozo)"}],loadAllergens:async()=>[],currencySymbol:"S/",busy,close:()=>{},save});
  const nodes=[];
  function visit(node){if(!node||typeof node!=="object")return;if(Array.isArray(node)){node.forEach(visit);return}nodes.push(node);visit(node.props?.children)}
  visit(tree);
- return {form:nodes.find(node=>node.type==="form"),button:nodes.find(node=>node.type==="button"&&node.props.className==="button primary"),nodes,control:formControl};
+ return {form:nodes.find(node=>node.type==="form"),button:nodes.find(node=>node.type==="button"&&node.props.className==="button primary"),nodes,control:formControl,options:formOptions};
 }
 
 test("producto mantiene cuerpo y pie separados con primitivas compartidas al guardar",()=>{
@@ -180,4 +181,44 @@ test("Destino de atención: sin texto de ayuda y con aviso si «Sin preparación
   const notice=mount({draft}).nodes.find(node=>node.type==="InlineNotice");
   assert.equal(notice?.props.tone,"warning","aviso suave, no bloqueo");
  }
+});
+
+const categoryField=nodes=>nodes.find(node=>node.type==="FormField"&&node.props.label==="Categoría");
+const optionLabels=nodes=>{
+ const select=nodes.find(node=>node.type==="select"&&node.props.name==="categoryId");
+ return [select.props.children].flat(2).map(option=>option.props.children);
+};
+
+test("la categoría es obligatoria: sin «Sin categoría» y con el error visible en el campo",async()=>{
+ const categories=[{id:"cat-general",name:"General",active:true,productScope:"both"},{id:"cat-old",name:"Antigua",active:false,productScope:"both"},{id:"cat-drinks",name:"Bebidas",active:true,productScope:"both"}];
+ const {nodes}=mount({draft:{...validDraft,categoryId:""},categories});
+ assert.deepEqual(optionLabels(nodes),["Selecciona una categoría","General","Bebidas"]);
+ assert.equal(nodes.some(node=>node.type==="option"&&node.props.children==="Sin categoría"),false);
+ const invalid=mount({draft:{...validDraft,categoryId:""},categories,errors:{categoryId:{message:"Selecciona una categoría."}}}).nodes;
+ assert.equal(categoryField(invalid).props.error,"Selecciona una categoría.");
+ assert.equal(invalid.find(node=>node.type==="select"&&node.props.name==="categoryId").props["aria-invalid"],true);
+ let saved=0;
+ const {button,control}=mount({draft:{...validDraft,categoryId:""},categories,save:async()=>{saved++}});
+ button.props.onClick();await tick();
+ assert.equal(saved,0,"no guarda sin categoría");
+ assert.equal(control.getFieldState("categoryId").error?.message,"Selecciona una categoría.");
+ control.setValue("categoryId","cat-drinks");
+ button.props.onClick();await tick();
+ assert.equal(saved,1);
+});
+
+test("la categoría inactiva solo se conserva para el producto que ya la usa y una única activa se preselecciona",()=>{
+ const categories=[{id:"cat-general",name:"General",active:true,productScope:"both"},{id:"cat-old",name:"Antigua",active:false,productScope:"both"}];
+ assert.deepEqual(optionLabels(mount({draft:{...validDraft,id:"existing",categoryId:"cat-old"},categories}).nodes),["Selecciona una categoría","General","Antigua"]);
+ assert.equal(mount({draft:{...validDraft,categoryId:""},categories}).options.defaultValues.categoryId,"cat-general","empresa nueva: «General» queda elegida");
+ assert.equal(mount({draft:{...validDraft,categoryId:""},categories:[...categories,{id:"cat-drinks",name:"Bebidas",active:true,productScope:"both"}]}).options.defaultValues.categoryId,"","con varias categorías se elige explícitamente");
+});
+
+test("el esquema rechaza la categoría vacía o con espacios",()=>{
+ for(const categoryId of [""," "]){
+  const result=schema.productSchema.safeParse({...validDraft,categoryId});
+  assert.equal(result.success,false);
+  assert.equal(result.error.issues.find(issue=>issue.path[0]==="categoryId")?.message,"Selecciona una categoría.");
+ }
+ assert.equal(schema.productSchema.safeParse(validDraft).success,true);
 });

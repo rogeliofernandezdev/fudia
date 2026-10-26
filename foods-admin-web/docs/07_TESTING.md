@@ -218,6 +218,10 @@ los modales de origen. Conserva foco, scroll y cierre explícito sin Escape/fond
 `product-dialog.test.mjs` verifica cantidad inicial obligatoria y positiva solo
 en altas con porciones, campo a ancho completo, único POST y ausencia de cantidad
 en Sin control/PATCH. Conserva guardado explícito, bloqueo y reintento manual.
+También exige categoría: el selector no ofrece «Sin categoría», el esquema
+rechaza vacío o espacios con «Selecciona una categoría.», el campo muestra el
+error con `aria-invalid`, no se guarda hasta elegir una, la categoría inactiva
+solo se lista para el producto que ya la tiene y una única activa se preselecciona.
 
 `table-batch.test.mjs` prueba una sola escritura, errores de resultado incierto
 sin reintento automático, conservación del borrador, refresco de mesas y bloqueo

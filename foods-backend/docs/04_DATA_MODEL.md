@@ -99,7 +99,13 @@ Pedido y detalle de pedido conservan siempre esa referencia; no existe un segund
 catálogo vendible dentro de Inventario.
 
 Producto describe **qué se vende**: nombre, precio, categoría, imagen, estado y
-demás datos comerciales. Además separa dos clasificaciones independientes:
+demás datos comerciales. La categoría es obligatoria al crear y editar en Carta
+(`NormalizeProductCategory` + `ProductCategoryAvailable`): sin categoría responde
+`category_required`; una categoría inexistente, de otra empresa o inactiva responde
+`invalid_category`. Al editar se acepta la categoría que el producto ya tiene aunque
+esté inactiva. La categoría se bloquea con `FOR SHARE` mientras se guarda, para que
+no se desactive en paralelo. `products.category_id` sigue admitiendo `NULL` solo
+para productos históricos; no hay migración de datos. Además separa dos clasificaciones independientes:
 `products.product_type` describe si el producto es preparado o mercadería de
 reventa, mientras `products.quantity_control` describe de dónde sale su
 disponibilidad. La categoría sigue siendo comercial y no determina ninguna de
@@ -358,10 +364,58 @@ recibibles y el historial vive en el detalle de cada orden. `GET
 
 El onboarding de una organización crea en una sola transacción la empresa, su perfil fiscal por defecto, el local principal, el administrador, los roles predefinidos, la suscripción y los módulos permitidos por el plan. Además copia desde plantillas persistidas en base de datos los medios de pago, categorías iniciales de gasto, una zona `Principal` y una `Caja principal` para el primer local.
 
-Estas filas son configuración inicial editable, no datos comerciales de ejemplo. No se crean productos, proveedores, recetas, mesas, clientes ni movimientos ficticios.
+Para reducir idas y vueltas a una base remota, el onboarding agrupa sus
+escrituras:
+
+| Paso | Antes | Ahora |
+| --- | --- | --- |
+| Empresa, perfil fiscal, local y administrador (`CreateTenant`) | 4 consultas | 1 `pgx.Batch` de 4 sentencias |
+| Roles predefinidos (`SeedRoles`) | 12 consultas | 1 sentencia con `jsonb_array_elements` |
+| Precarga operativa (`SeedOperationalDefaults`) | 7 consultas | 1 `pgx.Batch` de 6 sentencias |
+
+`CreateTenant` no puede ser una única sentencia con CTE: el perfil fiscal lo crea
+el trigger `organizations_default_fiscal_profile` y otra CTE de la misma
+sentencia no vería esa fila. Dentro del batch cada sentencia sí ve la anterior y
+ubica la empresa por su `tax_id` único. Si una sentencia falla, el repositorio
+devuelve `TenantCreateError` con el paso (`create_organization`,
+`configure_fiscal_profile`, `create_location` o `create_administrator`), así los
+logs y los mensajes de conflicto (identificación fiscal, correo o código de local
+duplicados) se conservan. `SeedRoles` usa `ON CONFLICT DO NOTHING` y devuelve los
+ids en el orden de los roles, también los ya existentes, por lo que un reintento
+no duplica roles.
+
+Medido contra la base remota de desarrollo dentro de una transacción revertida
+(20 rondas, latencia de ~150-230 ms por consulta): empresa + roles bajaron de
+2.835 ms a 376 ms en promedio y la precarga operativa de 2.211 ms a 286 ms.
+
+El paso `seed_operational_defaults` (`SeedOperationalDefaults`) completa la
+precarga del restaurante a partir de `platformadmin/domain.NewTenantOperationalDefaults`:
+
+| Registro | Valor inicial |
+| --- | --- |
+| Categoría de productos | «General», activa y con `product_scope='both'` para platos y mercadería. |
+| Mesas | «Mesa 1» y «Mesa 2» en la zona «Principal» del primer local, activas, para 2 personas y con QR habilitado. Quedan libres porque la ocupación se deriva de pedidos abiertos. |
+| Modalidad de atención | `organization_operational_setup.service_mode='dine_in'` (Salón), con `completed_at` nulo. |
+
+El paso inserta cada tipo de registro con una sola sentencia de conjunto
+(plantillas con `INSERT … SELECT`, mesas con `unnest`) y envía las seis sentencias
+(gastos, zonas, cajas, categoría, mesas y puesta en marcha) en un único
+`pgx.Batch` dentro de la transacción: una ida y vuelta a la base en lugar de siete.
+La sentencia de zonas agrega la zona de las mesas solo si las plantillas no la
+traen. Todas las sentencias del paso usan las restricciones únicas existentes con
+`ON CONFLICT DO NOTHING` (`menu_categories(organization_id,name)`,
+`zones(organization_id,location_id,name)`, `tables(organization_id,location_id,name)`
+y la clave de `organization_operational_setup`): un reintento no duplica filas ni
+sobrescribe una modalidad ya elegida. Comparte la transacción del onboarding, así
+que un fallo posterior (suscripción, rol o auditoría) revierte también la precarga.
+Solo se aplica a empresas nuevas: no existe migración de datos para empresas
+existentes.
+
+Estas filas son configuración inicial editable, no datos comerciales de ejemplo. No se crean productos, proveedores, recetas, clientes, pedidos, turnos de caja ni movimientos ficticios.
 
 `organization_operational_setup` conserva el avance de la puesta en marcha por
-empresa. El tipo de atención puede ser mostrador, salón o mixto; salón y mixto
+empresa. Las empresas nuevas inician en Salón; el tipo de atención puede cambiarse
+a mostrador, salón o mixto desde la puesta en marcha; salón y mixto
 exigen al menos una mesa activa. Para finalizar también se requiere una
 categoría activa, un producto activo asociado a categoría y una caja activa en
 el local. Usuarios adicionales, inventario, recetas y proveedores son pasos

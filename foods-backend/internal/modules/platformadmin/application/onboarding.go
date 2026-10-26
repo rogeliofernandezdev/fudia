@@ -53,6 +53,33 @@ const (
 )
 const tenantOnboardingFlow = "platform.onboarding"
 
+// TenantCreateStep identifica cada sentencia del envío de CreateTenant.
+type TenantCreateStep int
+
+const (
+	TenantStepOrganization TenantCreateStep = iota
+	TenantStepFiscal
+	TenantStepLocation
+	TenantStepAdministrator
+)
+
+var tenantCreateSteps = map[TenantCreateStep]string{
+	TenantStepOrganization:  onboardingStepCreateOrganization,
+	TenantStepFiscal:        onboardingStepConfigureFiscal,
+	TenantStepLocation:      onboardingStepCreateLocation,
+	TenantStepAdministrator: onboardingStepCreateAdministrator,
+}
+
+// TenantCreateError conserva el paso que falló dentro del envío, para que el
+// flujo registre y clasifique el error igual que cuando eran consultas separadas.
+type TenantCreateError struct {
+	Step TenantCreateStep
+	Err  error
+}
+
+func (e *TenantCreateError) Error() string { return e.Err.Error() }
+func (e *TenantCreateError) Unwrap() error { return e.Err }
+
 func (a *Platform) reject(ctx context.Context, code, msg string) error {
 	a.flow.Log(ctx, "application_flow_rejected", onboardingStepValidate, nil, "error_code", code, "error_kind", "user")
 	return platformFailure(apperror.Invalid, code, msg)
@@ -167,46 +194,20 @@ func (a *Platform) Onboard(ctx context.Context, s scope, in domain.TenantOnboard
 	defer func() { _ = tx.Rollback(ctx) }()
 	a.flow.Log(ctx, "application_flow_step_completed", onboardingStepBeginTransaction, nil)
 
-	var organizationID, profileID, locationID, userID, roleID string
-
-	err = func() error {
-		var err error
-		organizationID, err = a.repo.CreateOrganization(tx.Context(), s, in)
-		return err
-	}()
+	var roleID string
+	tenant, err := a.repo.CreateTenant(tx.Context(), s, in, currency, hash)
 	if err != nil {
-		return result, a.onboardingFailure(ctx, onboardingStepCreateOrganization, err)
+		step := onboardingStepCreateOrganization
+		var stepErr *TenantCreateError
+		if errors.As(err, &stepErr) {
+			step = tenantCreateSteps[stepErr.Step]
+		}
+		return result, a.onboardingFailure(ctx, step, err)
 	}
+	organizationID, profileID, locationID, userID := tenant.OrganizationID, tenant.FiscalProfileID, tenant.LocationID, tenant.AdministratorID
 	a.flow.Log(ctx, "application_flow_step_completed", onboardingStepCreateOrganization, nil, "organization_id", organizationID)
-
-	err = func() error {
-		var err error
-		profileID, err = a.repo.ConfigureFiscal(tx.Context(), s, organizationID, in, currency)
-		return err
-	}()
-	if err != nil {
-		return result, a.onboardingFailure(ctx, onboardingStepConfigureFiscal, err)
-	}
 	a.flow.Log(ctx, "application_flow_step_completed", onboardingStepConfigureFiscal, nil, "organization_id", organizationID, "fiscal_profile_id", profileID)
-
-	err = func() error {
-		var err error
-		locationID, err = a.repo.CreateLocation(tx.Context(), s, organizationID, profileID, in)
-		return err
-	}()
-	if err != nil {
-		return result, a.onboardingFailure(ctx, onboardingStepCreateLocation, err)
-	}
 	a.flow.Log(ctx, "application_flow_step_completed", onboardingStepCreateLocation, nil, "organization_id", organizationID, "location_id", locationID)
-
-	err = func() error {
-		var err error
-		userID, err = a.repo.CreateAdministrator(tx.Context(), s, organizationID, in, hash)
-		return err
-	}()
-	if err != nil {
-		return result, a.onboardingFailure(ctx, onboardingStepCreateAdministrator, err)
-	}
 	a.flow.Log(ctx, "application_flow_step_completed", onboardingStepCreateAdministrator, nil, "organization_id", organizationID, "administrator_id", userID)
 
 	roleID, err = a.seedRoles(tx.Context(), organizationID)
@@ -223,14 +224,16 @@ func (a *Platform) Onboard(ctx context.Context, s scope, in domain.TenantOnboard
 	}
 	a.flow.Log(ctx, "application_flow_step_completed", onboardingStepSeedPaymentMethods, nil, "organization_id", organizationID)
 
-	if err = a.repo.SeedOperationalDefaults(tx.Context(), organizationID, locationID, userID); err != nil {
+	// Categoría, mesas, modalidad de atención y plantillas operativas comparten
+	// la transacción: si falla cualquier paso posterior, nada queda creado.
+	defaults := domain.NewTenantOperationalDefaults()
+	if err = defaults.Validate(); err != nil {
+		return result, a.onboardingFailure(ctx, onboardingStepSeedDefaults, err)
+	}
+	if err = a.repo.SeedOperationalDefaults(tx.Context(), organizationID, locationID, userID, defaults); err != nil {
 		return result, a.onboardingFailure(ctx, onboardingStepSeedDefaults, err)
 	}
 	a.flow.Log(ctx, "application_flow_step_completed", onboardingStepSeedDefaults, nil, "organization_id", organizationID, "location_id", locationID)
-
-	if _, err = a.repo.CreateOperationalSetup(tx.Context(), s, organizationID); err != nil {
-		return result, a.onboardingFailure(ctx, onboardingStepSeedDefaults, err)
-	}
 
 	if err = a.subscriptions.Create(tx.Context(), organizationID, userID, in.PlanID, in.BillingCycle, in.TermsAccepted); err != nil {
 		return result, a.onboardingFailure(ctx, onboardingStepCreateSubscription, err)
@@ -262,15 +265,18 @@ func (a *Platform) Onboard(ctx context.Context, s scope, in domain.TenantOnboard
 
 }
 func (a *Platform) seedRoles(ctx context.Context, org string) (string, error) {
-	admin := ""
-	for _, seed := range identitycontracts.DefaultOrganizationRoles {
-		id, err := a.repo.SeedRole(ctx, org, seed)
-		if err != nil {
-			return "", err
-		}
+	seeds := identitycontracts.DefaultOrganizationRoles
+	ids, err := a.repo.SeedRoles(ctx, org, seeds)
+	if err != nil {
+		return "", err
+	}
+	if len(ids) != len(seeds) {
+		return "", errors.New("role seed returned an unexpected number of ids")
+	}
+	for i, seed := range seeds {
 		if seed.SystemKey == "administrator" {
-			admin = id
+			return ids[i], nil
 		}
 	}
-	return admin, nil
+	return "", nil
 }

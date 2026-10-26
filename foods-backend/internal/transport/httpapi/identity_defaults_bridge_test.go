@@ -28,17 +28,16 @@ var roleCatalogValues = identitydomain.RoleCatalogValues
 func seedOrganizationRoles(ctx context.Context, tx pgx.Tx, organizationID string) (string, error) {
 	ctx = database.WithTransaction(ctx, nil, tx)
 	repo := platformpg.New(nil)
-	administratorID := ""
-	for _, seed := range identitydomain.DefaultOrganizationRoles {
-		id, err := repo.SeedRole(ctx, organizationID, seed)
-		if err != nil {
-			return "", err
-		}
+	ids, err := repo.SeedRoles(ctx, organizationID, identitydomain.DefaultOrganizationRoles)
+	if err != nil {
+		return "", err
+	}
+	for i, seed := range identitydomain.DefaultOrganizationRoles {
 		if seed.SystemKey == "administrator" {
-			administratorID = id
+			return ids[i], nil
 		}
 	}
-	return administratorID, nil
+	return "", nil
 }
 func sha256Sum(token string) []byte {
 	sum := sha256.Sum256([]byte(token))

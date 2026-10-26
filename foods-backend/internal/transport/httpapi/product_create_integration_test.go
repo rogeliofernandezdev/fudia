@@ -20,7 +20,8 @@ func TestCreateProductWithInitialPortionsAndLaterAvailability(t *testing.T) {
 	if _, err := pool.Exec(ctx, `UPDATE locations SET timezone='Pacific/Kiritimati' WHERE id=$1`, s.LocationID); err != nil {
 		t.Fatal(err)
 	}
-	rec := postProduct(api, s, `{"name":"Ají de gallina","price":"20","quantityControl":"portions","initialPortionQuantity":15,"serviceDestination":"kitchen"}`)
+	category := seedProductCategory(t, pool, s.OrganizationID)
+	rec := postProduct(api, s, withProductCategory(`{"name":"Ají de gallina","price":"20","quantityControl":"portions","initialPortionQuantity":15,"serviceDestination":"kitchen"}`, category))
 	if rec.Code != 201 {
 		t.Fatalf("create: %d %s", rec.Code, rec.Body.String())
 	}
@@ -56,7 +57,7 @@ func TestCreateProductWithInitialPortionsAndLaterAvailability(t *testing.T) {
 		t.Fatalf("updated availability: %d %d %s", quota, sold, status)
 	}
 	// Commercial editing does not reset the daily quota.
-	req := httptest.NewRequest("PATCH", "/", strings.NewReader(`{"name":"Ají de gallina actualizado","price":"22","quantityControl":"portions"}`))
+	req := httptest.NewRequest("PATCH", "/", strings.NewReader(withProductCategory(`{"name":"Ají de gallina actualizado","price":"22","quantityControl":"portions"}`, category)))
 	req.SetPathValue("id", created.ID)
 	req = req.WithContext(context.WithValue(req.Context(), scopeKey{}, s))
 	updated := httptest.NewRecorder()
@@ -84,7 +85,7 @@ func TestCreateProductRollsBackWhenInitialAvailabilityOrAuditFails(t *testing.T)
 			t.Cleanup(func() {
 				_, _ = pool.Exec(ctx, fmt.Sprintf("DROP TRIGGER IF EXISTS %s ON %s; DROP FUNCTION IF EXISTS %s()", function, table, function))
 			})
-			rec := postProduct(New(pool), s, `{"name":"Fallido","price":"20","quantityControl":"portions","initialPortionQuantity":15}`)
+			rec := postProduct(New(pool), s, withProductCategory(`{"name":"Fallido","price":"20","quantityControl":"portions","initialPortionQuantity":15}`, seedProductCategory(t, pool, s.OrganizationID)))
 			if rec.Code != 503 {
 				t.Fatalf("failed save: %d %s", rec.Code, rec.Body.String())
 			}
@@ -103,7 +104,8 @@ func TestCreateProductScopesInitialQuantityAndRequiresMenuManage(t *testing.T) {
 	// A foreign local cannot be used to initialize portions, even with a direct handler call.
 	foreign := owner
 	foreign.LocationID = other.LocationID
-	if rec := postProduct(New(pool), foreign, `{"name":"Ají","price":"20","quantityControl":"portions","initialPortionQuantity":15}`); rec.Code != 503 {
+	category := seedProductCategory(t, pool, owner.OrganizationID)
+	if rec := postProduct(New(pool), foreign, withProductCategory(`{"name":"Ají","price":"20","quantityControl":"portions","initialPortionQuantity":15}`, category)); rec.Code != 503 {
 		t.Fatalf("foreign local: %d %s", rec.Code, rec.Body.String())
 	}
 	var count int
@@ -125,7 +127,7 @@ func TestCreateProductScopesInitialQuantityAndRequiresMenuManage(t *testing.T) {
 	t.Cleanup(func() { _, _ = pool.Exec(ctx, `DELETE FROM sessions WHERE token_hash=$1`, hash[:]) })
 	routes := New(pool).Routes()
 	call := func(authenticated bool) *httptest.ResponseRecorder {
-		req := httptest.NewRequest("POST", "/v1/admin/products", strings.NewReader(`{"name":"Ají","price":"20","quantityControl":"portions","initialPortionQuantity":15}`))
+		req := httptest.NewRequest("POST", "/v1/admin/products", strings.NewReader(withProductCategory(`{"name":"Ají","price":"20","quantityControl":"portions","initialPortionQuantity":15}`, category)))
 		if authenticated {
 			req.AddCookie(&http.Cookie{Name: "foods_session", Value: token})
 		}
@@ -150,7 +152,7 @@ func TestCreateProductScopesInitialQuantityAndRequiresMenuManage(t *testing.T) {
 func TestCreateProductWithoutControlHasNoDailyQuantity(t *testing.T) {
 	pool := integrationPool(t)
 	s := seedInventoryScope(t, pool)
-	rec := postProduct(New(pool), s, `{"name":"Sin límite","price":"20"}`)
+	rec := postProduct(New(pool), s, withProductCategory(`{"name":"Sin límite","price":"20"}`, seedProductCategory(t, pool, s.OrganizationID)))
 	if rec.Code != 201 {
 		t.Fatalf("without portions: %d %s", rec.Code, rec.Body.String())
 	}

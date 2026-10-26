@@ -130,6 +130,38 @@ func (r *Orders) ModifierGroups(ctx context.Context, s scope, productID string) 
 	}
 	return groups, groupOrder, nil
 }
+func (r *Orders) OrderProducts(ctx context.Context, s scope, productIDs []string) (map[string]domain.OrderProductSnapshot, error) {
+	rows, err := r.db(ctx).Query(ctx, `
+		SELECT p.id::text,
+		       EXISTS(SELECT 1 FROM menu_combos c WHERE c.product_id=p.id AND c.organization_id=p.organization_id),
+		       p.name,p.price::float8,
+		       p.active
+		       AND (p.available_from IS NULL OR now() >= p.available_from)
+		       AND (p.available_until IS NULL OR now() <= p.available_until)
+		       AND (p.available_days IS NULL OR extract(dow FROM now() AT TIME ZONE l.timezone)::integer = ANY(p.available_days))
+		       AND (p.available_until_time IS NULL OR (now() AT TIME ZONE l.timezone)::time <= p.available_until_time)
+		       AND COALESCE(pa.manual_status,'available') <> 'sold_out',
+		       EXISTS(SELECT 1 FROM product_modifier_groups g WHERE g.product_id=p.id AND g.organization_id=p.organization_id)
+		FROM products p
+		JOIN locations l ON l.id=$3 AND l.organization_id=p.organization_id AND l.active
+		LEFT JOIN product_availability pa ON pa.organization_id=p.organization_id AND pa.location_id=l.id
+		  AND pa.product_id=p.id AND pa.business_date=(now() AT TIME ZONE l.timezone)::date
+		WHERE p.organization_id=$2 AND p.id=ANY($1::uuid[])`, productIDs, s.OrganizationID, s.LocationID)
+	if err != nil {
+		return nil, orderError(err)
+	}
+	defer rows.Close()
+	out := map[string]domain.OrderProductSnapshot{}
+	for rows.Next() {
+		var id string
+		var v domain.OrderProductSnapshot
+		if err := rows.Scan(&id, &v.IsCombo, &v.Name, &v.Price, &v.Available, &v.HasModifiers); err != nil {
+			return nil, err
+		}
+		out[id] = v
+	}
+	return out, rows.Err()
+}
 func (r *Orders) ProductIsCombo(ctx context.Context, s scope, productID *string) (bool, error) {
 	var isCombo bool
 	err := r.db(ctx).QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM menu_combos WHERE product_id=$1 AND organization_id=$2)`, *productID, s.OrganizationID).Scan(&isCombo)

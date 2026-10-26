@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"encoding/json"
 	menucontracts "github.com/foods-platform/foods-backend/internal/modules/menu/contracts"
 	"github.com/foods-platform/foods-backend/internal/modules/orders/domain"
 	"github.com/jackc/pgx/v5"
@@ -168,51 +169,100 @@ func (r *Orders) QuantityUsage(ctx context.Context, s scope, orderID string) (ma
 	}
 	return usage, rows.Err()
 }
+// insertItemSQL inserta una línea con sus selecciones de combo, modificadores y
+// líneas de servicio en una sola sentencia. Las líneas de servicio son una por
+// selección de combo o, sin selecciones, una para el producto.
+const insertItemSQL = `
+	WITH item AS (
+		INSERT INTO order_items(organization_id,order_id,product_id,name,qty,unit_price,note,item_type,kitchen_round_id)
+		VALUES($1,$2,$3,$4,$5,$6,$7,$8,NULLIF($9,'')::uuid)
+		RETURNING id
+	), selections AS (
+		INSERT INTO order_item_combo_selections(organization_id,order_item_id,group_id,group_name,option_product_id,option_name,surcharge)
+		SELECT $1,item.id,x.group_id,x.group_name,x.product_id,x.name,x.surcharge
+		FROM item CROSS JOIN ROWS FROM (jsonb_to_recordset($10::jsonb) AS (group_id uuid,group_name text,product_id uuid,name text,surcharge numeric)) WITH ORDINALITY AS x(group_id,group_name,product_id,name,surcharge,position)
+		ORDER BY x.position
+	), modifiers AS (
+		INSERT INTO order_item_modifier_selections(organization_id,order_item_id,group_id,group_name,option_id,option_name,surcharge)
+		SELECT $1,item.id,x.group_id,x.group_name,x.option_id,x.name,x.surcharge
+		FROM item CROSS JOIN ROWS FROM (jsonb_to_recordset($11::jsonb) AS (group_id uuid,group_name text,option_id uuid,name text,surcharge numeric)) WITH ORDINALITY AS x(group_id,group_name,option_id,name,surcharge,position)
+		ORDER BY x.position
+	)
+	INSERT INTO order_service_items(organization_id,order_id,order_item_id,product_id,name,qty,destination,status)
+	SELECT $1,$2,item.id,NULLIF(t.product_id,'')::uuid,t.name,$5,COALESCE(p.service_destination,'kitchen'),
+	       CASE WHEN o.status='nuevo' THEN 'nuevo' WHEN COALESCE(p.service_destination,'kitchen')='direct' THEN 'listo' ELSE 'confirmado' END
+	FROM item
+	CROSS JOIN ROWS FROM (jsonb_to_recordset($12::jsonb) AS (product_id text,name text)) WITH ORDINALITY AS t(product_id,name,position)
+	JOIN orders o ON o.id=$2 AND o.organization_id=$1
+	LEFT JOIN products p ON p.id=NULLIF(t.product_id,'')::uuid AND p.organization_id=$1
+	ORDER BY t.position`
+
+type serviceTarget struct {
+	ProductID string `json:"product_id"`
+	Name      string `json:"name"`
+}
+type selectionRow struct {
+	GroupID   string  `json:"group_id"`
+	GroupName string  `json:"group_name"`
+	ProductID string  `json:"product_id"`
+	Name      string  `json:"name"`
+	Surcharge float64 `json:"surcharge"`
+}
+type modifierRow struct {
+	GroupID   string  `json:"group_id"`
+	GroupName string  `json:"group_name"`
+	OptionID  string  `json:"option_id"`
+	Name      string  `json:"name"`
+	Surcharge float64 `json:"surcharge"`
+}
+
+// InsertItems envía todas las líneas en un único pgx.Batch (una ida y vuelta),
+// en el mismo orden en que llegaron.
 func (r *Orders) InsertItems(ctx context.Context, s scope, orderID, roundID string, items []domain.PreparedOrderItem) error {
+	if len(items) == 0 {
+		return nil
+	}
+	batch := &pgx.Batch{}
 	for _, it := range items {
-		var itemID string
-		if err := r.db(ctx).QueryRow(ctx, `
-			INSERT INTO order_items(organization_id,order_id,product_id,name,qty,unit_price,note,item_type,kitchen_round_id)
-			VALUES($1,$2,$3,$4,$5,$6,$7,$8,NULLIF($9,'')::uuid) RETURNING id`,
-			s.OrganizationID, orderID, it.ProductID, it.Name, it.Qty, it.UnitPrice, it.Note, it.ItemType, roundID).Scan(&itemID); err != nil {
-			return err
-		}
-		for _, sel := range it.Selections {
-			if _, err := r.db(ctx).Exec(ctx, `
-				INSERT INTO order_item_combo_selections(organization_id,order_item_id,group_id,group_name,option_product_id,option_name,surcharge)
-				VALUES($1,$2,$3,$4,$5,$6,$7)`,
-				s.OrganizationID, itemID, sel.GroupID, sel.GroupName, sel.ProductID, sel.Name, sel.Surcharge); err != nil {
-				return err
-			}
+		selections := make([]selectionRow, len(it.Selections))
+		targets := make([]serviceTarget, 0, len(it.Selections)+1)
+		for i, sel := range it.Selections {
+			selections[i] = selectionRow{sel.GroupID, sel.GroupName, sel.ProductID, sel.Name, sel.Surcharge}
+			targets = append(targets, serviceTarget{sel.ProductID, sel.Name})
 		}
 		if len(it.Selections) == 0 {
 			productID := ""
 			if it.ProductID != nil {
 				productID = *it.ProductID
 			}
-			if err := r.insertServiceItem(ctx, s, orderID, itemID, productID, it.Name, it.Qty); err != nil {
-				return err
-			}
-		} else {
-			for _, sel := range it.Selections {
-				if err := r.insertServiceItem(ctx, s, orderID, itemID, sel.ProductID, sel.Name, it.Qty); err != nil {
-					return err
-				}
-			}
+			targets = append(targets, serviceTarget{productID, it.Name})
 		}
-		for _, modifier := range it.Modifiers {
-			if _, err := r.db(ctx).Exec(ctx, `
-				INSERT INTO order_item_modifier_selections(
-				  organization_id,order_item_id,group_id,group_name,option_id,option_name,surcharge
-				)
-				VALUES($1,$2,$3,$4,$5,$6,$7)`,
-				s.OrganizationID, itemID, modifier.GroupID, modifier.GroupName,
-				modifier.OptionID, modifier.Name, modifier.Surcharge); err != nil {
-				return err
-			}
+		modifiers := make([]modifierRow, len(it.Modifiers))
+		for i, m := range it.Modifiers {
+			modifiers[i] = modifierRow{m.GroupID, m.GroupName, m.OptionID, m.Name, m.Surcharge}
+		}
+		rawSelections, err := json.Marshal(selections)
+		if err != nil {
+			return err
+		}
+		rawModifiers, err := json.Marshal(modifiers)
+		if err != nil {
+			return err
+		}
+		rawTargets, err := json.Marshal(targets)
+		if err != nil {
+			return err
+		}
+		batch.Queue(insertItemSQL, s.OrganizationID, orderID, it.ProductID, it.Name, it.Qty, it.UnitPrice, it.Note, it.ItemType, roundID, rawSelections, rawModifiers, rawTargets)
+	}
+	results := r.db(ctx).SendBatch(ctx, batch)
+	for range batch.Len() {
+		if _, err := results.Exec(); err != nil {
+			_ = results.Close()
+			return err
 		}
 	}
-	return nil
+	return results.Close()
 }
 func (r *Orders) insertServiceItem(ctx context.Context, s scope, orderID, itemID, productID, name string, qty float64) error {
 	_, err := r.db(ctx).Exec(ctx, `INSERT INTO order_service_items(organization_id,order_id,order_item_id,product_id,name,qty,destination,status)

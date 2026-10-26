@@ -47,16 +47,16 @@ func New(repo Repository, work unitofwork.Manager, catalogs FiscalCatalog, subsc
 func platformFailure(k apperror.Kind, c, m string) error { return apperror.New(k, c, m) }
 
 type Repository interface {
-	CreateOrganization(ctx context.Context, s scope, in domain.TenantOnboardingInput) (string, error)
-	ConfigureFiscal(ctx context.Context, s scope, organizationID string, in domain.TenantOnboardingInput, currency orgcontracts.CurrencyOption) (string, error)
-	CreateLocation(ctx context.Context, s scope, organizationID string, profileID string, in domain.TenantOnboardingInput) (string, error)
-	CreateAdministrator(ctx context.Context, s scope, organizationID string, in domain.TenantOnboardingInput, hash string) (string, error)
-	CreateOperationalSetup(ctx context.Context, s scope, organizationID string) (int64, error)
+	// CreateTenant crea empresa, perfil fiscal, primer local y administrador en un
+	// solo envío; si falla devuelve *TenantCreateError con el paso afectado.
+	CreateTenant(ctx context.Context, s scope, in domain.TenantOnboardingInput, currency orgcontracts.CurrencyOption, hash string) (domain.TenantRecords, error)
 	AssignAdministrator(ctx context.Context, s scope, userID string, roleID string, locationID string) (int64, error)
 	AuditOnboarded(ctx context.Context, s scope, organizationID string, locationID string, userID string) (int64, error)
-	SeedRole(context.Context, string, identitycontracts.OrganizationRoleSeed) (string, error)
+	// SeedRoles inserta todos los roles en una sentencia y devuelve sus ids en el
+	// orden recibido, incluidos los que ya existían.
+	SeedRoles(context.Context, string, []identitycontracts.OrganizationRoleSeed) ([]string, error)
 	SeedPaymentMethods(ctx context.Context, organizationID string) error
-	SeedOperationalDefaults(ctx context.Context, organizationID string, locationID string, userID string) error
+	SeedOperationalDefaults(ctx context.Context, organizationID string, locationID string, userID string, defaults domain.TenantOperationalDefaults) error
 	MarkPastDue(ctx context.Context, s scope) (int64, error)
 	Organizations(context.Context, Filter) (OrganizationPage, error)
 	Organization(context.Context, string) (domain.PlatformOrganizationDetail, error)

@@ -14,6 +14,20 @@ func (a *Orders) prepareItems(ctx context.Context, s scope, existingOrderID stri
 	subtotal := 0.0
 	plannedOptionUsage := map[domain.ComboOptionUsageKey]float64{}
 
+	productIDs := make([]string, 0, len(inputs))
+	for _, in := range inputs {
+		if id := strings.TrimSpace(in.ProductID); id != "" {
+			productIDs = append(productIDs, id)
+		}
+	}
+	snapshots := map[string]domain.OrderProductSnapshot{}
+	if len(productIDs) > 0 {
+		var err error
+		if snapshots, err = a.repo.OrderProducts(ctx, s, productIDs); err != nil {
+			return nil, 0, orderFailure(apperror.Unavailable, "order_unavailable", "No pudimos validar el producto del pedido.")
+		}
+	}
+
 	for _, in := range inputs {
 		if in.Qty <= 0 {
 			return nil, 0, orderFailure(apperror.Invalid, "invalid_order", "Cada línea necesita una cantidad mayor a cero.")
@@ -24,9 +38,12 @@ func (a *Orders) prepareItems(ctx context.Context, s scope, existingOrderID stri
 		}
 		productID := &productIDValue
 
-		isCombo := false
-		if err := func() error { var err error; isCombo, err = a.repo.ProductIsCombo(ctx, s, productID); return err }(); err != nil {
-			return nil, 0, orderFailure(apperror.Unavailable, "order_unavailable", "No pudimos validar el producto del pedido.")
+		snapshot, preloaded := snapshots[productIDValue]
+		isCombo := snapshot.IsCombo
+		if !preloaded {
+			if err := func() error { var err error; isCombo, err = a.repo.ProductIsCombo(ctx, s, productID); return err }(); err != nil {
+				return nil, 0, orderFailure(apperror.Unavailable, "order_unavailable", "No pudimos validar el producto del pedido.")
+			}
 		}
 
 		if !isCombo {
@@ -36,22 +53,38 @@ func (a *Orders) prepareItems(ctx context.Context, s scope, existingOrderID stri
 			if in.UnitPrice < 0 {
 				return nil, 0, orderFailure(apperror.Invalid, "invalid_order", "Cada línea necesita un precio válido.")
 			}
-			var productName string
-			var productPrice float64
-			var available bool
-			err := func() error {
-				var err error
-				productName, productPrice, available, err = a.repo.ProductForOrder(ctx, s, productID)
-				return err
-			}()
-			if errors.Is(err, ErrNotFound) {
-				return nil, 0, orderFailure(apperror.NotFound, "product_not_found", "El producto ya no existe.")
-			}
-			if err != nil {
-				return nil, 0, orderFailure(apperror.Unavailable, "order_unavailable", "No pudimos validar el producto.")
+			productName, productPrice, available := snapshot.Name, snapshot.Price, snapshot.Available
+			if !preloaded {
+				err := func() error {
+					var err error
+					productName, productPrice, available, err = a.repo.ProductForOrder(ctx, s, productID)
+					return err
+				}()
+				if errors.Is(err, ErrNotFound) {
+					return nil, 0, orderFailure(apperror.NotFound, "product_not_found", "El producto ya no existe.")
+				}
+				if err != nil {
+					return nil, 0, orderFailure(apperror.Unavailable, "order_unavailable", "No pudimos validar el producto.")
+				}
 			}
 			if !available {
 				return nil, 0, orderFailure(apperror.Conflict, "product_unavailable", productName+" no está disponible en este momento.")
+			}
+			// A preloaded product without modifier groups needs no lookup unless the
+			// client sent modifiers, which must still be rejected as foreign.
+			if preloaded && !snapshot.HasModifiers && len(in.Modifiers) == 0 {
+				item := domain.PreparedOrderItem{
+					ProductID: productID,
+					Name:      productName,
+					Qty:       in.Qty,
+					UnitPrice: productPrice,
+					Note:      strings.TrimSpace(in.Note),
+					ItemType:  "product",
+					Modifiers: []domain.PreparedOrderModifier{},
+				}
+				prepared = append(prepared, item)
+				subtotal += item.Qty * item.UnitPrice
+				continue
 			}
 			modifiers, modifierSurcharge, modifierErr := a.prepareModifiers(ctx, s, *productID, in.Modifiers)
 			if modifierErr != nil {

@@ -110,6 +110,23 @@ func (r *Catalog) ProductCreatedAudit(ctx context.Context, s scope, p domain.Pro
 		VALUES($1,$2,$3,'product.created','product',$4,jsonb_build_object('initialPortionQuantity',$5::integer))`, s.OrganizationID, s.LocationID, s.UserID, p.ID, in.InitialPortionQuantity)
 	return tag.RowsAffected(), menuError(err)
 }
+// ProductCategoryAvailable bloquea la categoría en modo compartido para que no
+// se desactive mientras se guarda el producto.
+func (r *Catalog) ProductCategoryAvailable(ctx context.Context, s scope, categoryID string, productID *string) (bool, error) {
+	var available bool
+	err := r.db(ctx).QueryRow(ctx, `
+		SELECT c.active OR EXISTS(
+			SELECT 1 FROM products p
+			WHERE p.organization_id=c.organization_id AND p.id=$3::uuid AND p.category_id=c.id
+		)
+		FROM menu_categories c
+		WHERE c.organization_id=$1 AND c.id=$2
+		FOR SHARE OF c`, s.OrganizationID, categoryID, productID).Scan(&available)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	return available, err
+}
 func (r *Catalog) LockProduct(ctx context.Context, s scope, id string) (string, string, string, string, error) {
 	var currentSKU string
 	var currentControl string

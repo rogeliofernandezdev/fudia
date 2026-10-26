@@ -232,6 +232,15 @@ type ModifierOption struct {
 	Name      string
 	Surcharge float64
 }
+// OrderProductSnapshot es la vista de catálogo de un producto al preparar el
+// pedido; se lee para todos los productos en una sola consulta.
+type OrderProductSnapshot struct {
+	IsCombo      bool
+	Name         string
+	Price        float64
+	Available    bool
+	HasModifiers bool
+}
 type ModifierGroup struct {
 	ID       string
 	Name     string
