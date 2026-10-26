@@ -1,4 +1,5 @@
 import {z} from "zod";
+import {presentationContentError} from "./presentation-content";
 import type {FieldError,FieldErrors,Resolver} from "react-hook-form";
 import type {PurchaseInventoryItemDraft,PurchaseOrderDraft,PurchaseReceiptDraft,SupplierDraft} from "./types";
 
@@ -66,6 +67,8 @@ const purchaseInventoryCommon={
   presentationType:z.string().trim().regex(/^[a-z][a-z0-9_-]{0,31}$/,"Selecciona una presentación."),
   unitsPerPresentation:z.string(),
   presentations:z.array(z.object({presentationType:z.string().regex(/^[a-z][a-z0-9_-]{0,31}$/),unitsPerPresentation:z.string(),isDefault:z.boolean()})).min(1,"Agrega una presentación.").max(50).optional(),
+  unitCountable:z.boolean().optional(),
+  unitName:z.string().optional(),
   minimumStock:z.string().trim().refine(value=>{
     const parsed=Number(value);
     return value!==""&&Number.isFinite(parsed)&&parsed>=0;
@@ -98,6 +101,8 @@ export const purchaseInventoryItemSchema=z.discriminatedUnion("mode",[
     const factor=Number(row.unitsPerPresentation),key=row.presentationType+":"+factor;
     if(row.unitsPerPresentation.trim()===""||!Number.isFinite(factor)||factor<=0||factor>=1e11||Math.abs(factor*1000-Math.round(factor*1000))>0.000001||(row.presentationType==="unit"&&factor!==1)){
       ctx.addIssue({code:"custom",path:[value.presentations?"presentations":"unitsPerPresentation"],message:"Ingresa un contenido mayor que cero, con hasta tres decimales. La compra en la misma unidad de inventario equivale a 1."});
+    }else if(presentationContentError({countable:Boolean(value.unitCountable),unitName:value.unitName??""},row.presentationType,row.unitsPerPresentation)){
+      ctx.addIssue({code:"custom",path:[value.presentations?"presentations":"unitsPerPresentation"],message:presentationContentError({countable:true,unitName:value.unitName??""},row.presentationType,row.unitsPerPresentation)});
     }else if(seen.has(key)){ctx.addIssue({code:"custom",path:["presentations"],message:"No repitas la misma presentación y conversión."})}
     seen.add(key);
   }

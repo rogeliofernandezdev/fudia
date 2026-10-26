@@ -207,7 +207,7 @@ export function CashShiftDetailDialog({shift,formatMoney,formatDateTime,formatBu
         }))}/>:<p className="cash-detail-empty">Este turno no registró movimientos.</p>}
       </section>
     </div></ModalWorkspace>
-    {viewReport&&(closed||shift.expectedVisible)&&<ModalFooter><Button kind="secondary" icon="eye" onClick={viewReport}>Ver informe y PDF</Button></ModalFooter>}
+    {viewReport&&(closed||shift.expectedVisible)&&<ModalFooter><Button kind="secondary" icon="eye" onClick={viewReport}>Previsualizar informe</Button></ModalFooter>}
   </Dialog></div>;
 }
 

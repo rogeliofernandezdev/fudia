@@ -202,9 +202,9 @@ test("detalle de cobro conserva permisos de devolución, turno y cierre",()=>{
 test("consultar el resumen de pago es secundario y no repite el cobro",()=>{
  const {POSDetailDialog}=mountPage();let opened=0;
  const props={loading:false,data:detail,canManage:false,hasShift:false,formatMoney:String,formatDateTime:String,close:()=>{},refund:()=>{},ticket:()=>opened++};
- const button=nodes(POSDetailDialog(props)).find(node=>node.type==="Button"&&node.props.children==="Ver resumen de pago");
+ const button=nodes(POSDetailDialog(props)).find(node=>node.type==="Button"&&node.props.children==="Previsualizar");
  assert.equal(button.props.kind,"secondary");assert.equal(button.props.icon,"eye");button.props.onClick();assert.equal(opened,1);
- for(const changes of [{loading:true},{error:"Sin conexión"},{data:undefined},{data:{...detail,paidAmount:"0"}}])assert.equal(nodes(POSDetailDialog({...props,...changes})).some(node=>node.props.children==="Ver resumen de pago"),false);
+ for(const changes of [{loading:true},{error:"Sin conexión"},{data:undefined},{data:{...detail,paidAmount:"0"}}])assert.equal(nodes(POSDetailDialog({...props,...changes})).some(node=>node.props.children==="Previsualizar"),false);
 });
 
 test("detalle de cobro no muestra importes anteriores en carga, error o ausencia de datos",()=>{

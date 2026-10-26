@@ -7,6 +7,7 @@ import "@/design-system/styles/data-table.css";
 // (`sideEffects` in package.json) and some screens reuse these classes directly.
 // Heavy, feature-specific sheets (map, rich text) stay with their component.
 import "@/design-system/styles/modal.css";
+import "@/design-system/styles/pdf-viewer.css";
 import "@/design-system/styles/pagination.css";
 import "@/design-system/styles/table-actions.css";
 import "@/design-system/styles/skeleton.css";

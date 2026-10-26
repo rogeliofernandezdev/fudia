@@ -3,6 +3,18 @@
 Componentes pequeños y accesibles. Design system no conoce autenticación ni API.
 Formularios usan React Hook Form y Zod. Catálogos siempre llegan del API.
 
+## PdfViewer
+
+`@/shared/pdf-viewer` exporta un modal cliente reutilizable basado en el visor
+oficial completo de Mozilla. Recibe `document: Blob | null`, `filename`, `title`
+y `onClose`; admite `subtitle`, `size` (`sm`: 480 px, `lg`: 960 px), `loading`,
+`error`, `onRetry`, `notice` y `details` opcionales. El zoom inicial ajusta la
+página completa y conserva las dimensiones del PDF.
+El llamador obtiene/genera el Blob con sus permisos y hooks actuales. El visor
+no conoce el dominio ni recibe tokens o URLs privadas. Se monta al previsualizar
+y se desmonta al cerrar. Las acciones de impresión y descarga viven únicamente
+en el visor. Ver [contrato, actualización y validación](09_PDF_VIEWER.md).
+
 Las tablas usan paginación, acciones iconográficas y scroll horizontal únicamente
 cuando el contenido excede el ancho. La barra permanece oculta en reposo y se
 muestra al pasar el cursor o enfocar el contenedor. Formularios CRUD usan modal

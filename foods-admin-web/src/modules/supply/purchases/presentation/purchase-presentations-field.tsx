@@ -7,6 +7,7 @@ import {Dialog} from "@/design-system/dialog";
 import {useSession} from "@/providers/session-context";
 import type {PurchaseCombination,PurchasePresentationDraft} from "../domain/types";
 import {listPurchaseCombinations,savePurchaseCombination} from "../infrastructure/purchases-api";
+import {presentationContentError,presentationUnitRule,type PresentationUnitRule} from "../domain/presentation-content";
 
 function normalizeName(text:string){return text.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/\s+/g," ").trim()}
 function duplicatesIndividual(option:PurchaseCombination,individual?:PurchaseCombination){return Boolean(individual)&&option.code!=="unit"&&normalizeName(option.name)===normalizeName(individual?.unitName??"")}
@@ -16,7 +17,7 @@ function visibleCombinations(catalog:PurchaseCombination[],row?:PurchasePresenta
  return catalog.filter(option=>!duplicatesIndividual(option,individual)||(option.code===row?.presentationType&&Number(row.unitsPerPresentation)>0&&Number(row.unitsPerPresentation)!==1));
 }
 
-export function PurchasePresentationsField({unit,value,onChange,error,disabled,onBusyChange}:{unit:string;value:PurchasePresentationDraft[];onChange:(rows:PurchasePresentationDraft[])=>void;error?:string;disabled:boolean;onBusyChange:(busy:boolean)=>void}){
+export function PurchasePresentationsField({unit,value,onChange,error,disabled,onBusyChange,onUnitRuleChange}:{unit:string;value:PurchasePresentationDraft[];onChange:(rows:PurchasePresentationDraft[])=>void;error?:string;disabled:boolean;onBusyChange:(busy:boolean)=>void;onUnitRuleChange?:(rule:PresentationUnitRule)=>void}){
  const{organization,can}=useSession();
  const qc=useQueryClient();
  const queryKey=["purchase-combinations",organization?.id,unit];
@@ -27,6 +28,17 @@ export function PurchasePresentationsField({unit,value,onChange,error,disabled,o
  const individual=catalog.find(option=>option.code==="unit");
  const unitName=individual?.unitName??catalog[0]?.unitName??unit;
  const options=visibleCombinations(catalog,row);
+ const unitRule=presentationUnitRule(catalog,unitName);
+ const contentError=presentationContentError(unitRule,row.presentationType,row.unitsPerPresentation);
+ const reportedRule=useRef("");
+ useEffect(()=>{
+  if(!query.data)return;
+  const rule=presentationUnitRule(query.data.items,unit);
+  const key=`${unit}:${rule.countable}:${rule.unitName}`;
+  if(reportedRule.current===key)return;
+  reportedRule.current=key;
+  onUnitRuleChange?.(rule);
+ },[unit,query.data,onUnitRuleChange]);
  useEffect(()=>{
   const catalog=query.data?.items??[];
   const row=value.find(item=>item.isDefault)??value[0];
@@ -54,8 +66,9 @@ export function PurchasePresentationsField({unit,value,onChange,error,disabled,o
       </Select>
       {can("purchases.manage")&&<IconButton icon="plus" label="Nueva presentación" disabled={disabled||creating} onClick={()=>{setCreating(true);onBusyChange(true)}}/>}
      </div></FormField>
-     <FormField label={`Contenido en ${unitName.toLowerCase()}`}><Input type="number" min="0.001" step="0.001" inputMode="decimal" value={row.unitsPerPresentation} disabled={disabled||creating||!row.presentationType||row.presentationType==="unit"} placeholder="Ej. 10" aria-label="Contenido de la presentación" onChange={event=>update({...row,unitsPerPresentation:event.target.value})}/></FormField>
-     {selected&&selected.code!=="unit"&&Number(row.unitsPerPresentation)>0&&<small className="purchase-presentation-equivalence">1 {selected.name.toLowerCase()} = {row.unitsPerPresentation} {unitName.toLowerCase()}</small>}
+     <FormField label={`Contenido en ${unitName.toLowerCase()}`}><Input type="number" min={unitRule.countable?"1":"0.001"} step={unitRule.countable?"1":"0.001"} inputMode="decimal" aria-invalid={Boolean(contentError)} value={row.unitsPerPresentation} disabled={disabled||creating||!row.presentationType||row.presentationType==="unit"} placeholder="Ej. 10" aria-label="Contenido de la presentación" onChange={event=>update({...row,unitsPerPresentation:event.target.value})}/></FormField>
+     {!error&&contentError&&<small className="field-error" role="alert">{contentError}</small>}
+     {selected&&selected.code!=="unit"&&Number(row.unitsPerPresentation)>0&&!contentError&&<small className="purchase-presentation-equivalence">1 {selected.name.toLowerCase()} = {row.unitsPerPresentation} {unitName.toLowerCase()}</small>}
     </div>}
   {error&&<small className="field-error" role="alert">{error}</small>}
   {creating&&createPortal(<PurchaseCombinationDialog unit={unit} unitName={unitName} close={close} save={combination=>{

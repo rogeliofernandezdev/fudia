@@ -12,8 +12,10 @@ function compile(path,resolve){
  return exports;
 }
 function nodes(tree,result=[]){if(Array.isArray(tree)){tree.forEach(node=>nodes(node,result));return result}if(tree&&typeof tree==="object"){result.push(tree);nodes(tree.props?.children,result)}return result}
-const combos=[{code:"unit",name:"Unidad base",unit:"botella",unitName:"Botella",isDefault:false},{code:"crate",name:"Jaba",unit:"botella",unitName:"Botella",isDefault:true}];
-function mount({items=combos,loading=false,error=false,manage=true,pending=false,organization="org-a",initial=[],unit="botella",unitName="Botella"}={}){
+const presentationContent=compile("src/modules/supply/purchases/domain/presentation-content.ts",require);
+const withPresentationContent=name=>name==="../domain/presentation-content"||name==="./presentation-content"?presentationContent:require(name);
+const combos=[{code:"unit",name:"Unidad base",unit:"botella",unitName:"Botella",unitCountable:true,isDefault:false},{code:"crate",name:"Jaba",unit:"botella",unitName:"Botella",unitCountable:true,isDefault:true}];
+function mount({items=combos,loading=false,error=false,manage=true,pending=false,organization="org-a",initial=[],unit="botella",unitName="Botella",rules=[]}={}){
  const state=[],refs=[],queries=[],writes=[],mutations=[];let cursor=0,refCursor=0,rows=initial;
  const query={data:loading||error?undefined:{items},isLoading:loading,isError:error,isFetching:false,error:error?new Error("Catálogo no disponible"):null,refetch:()=>writes.push("refetch")};
  const exports=compile("src/modules/supply/purchases/presentation/purchase-presentations-field.tsx",name=>{
@@ -23,11 +25,11 @@ function mount({items=combos,loading=false,error=false,manage=true,pending=false
   if(name==="@/providers/session-context")return{useSession:()=>({organization:{id:organization},can:()=>manage})};
   if(name.startsWith("@/design-system"))return Object.fromEntries(["Button","FormField","Icon","IconButton","Input","Select","Dialog"].map(key=>[key,key]));
   if(name==="../infrastructure/purchases-api")return{};
-  return require(name);
+  return withPresentationContent(name);
  });
- const render=()=>{cursor=0;return nodes(exports.PurchasePresentationsField({unit,value:rows,onChange:value=>{rows=value},disabled:false,onBusyChange:value=>writes.push(value)}))};
+ const render=()=>{cursor=refCursor=0;return nodes(exports.PurchasePresentationsField({unit,value:rows,onChange:value=>{rows=value},disabled:false,onBusyChange:value=>writes.push(value),onUnitRuleChange:rule=>rules.push(rule)}))};
  const dialog=()=>{cursor=refCursor=0;return nodes(exports.PurchaseCombinationDialog({unit,unitName,close:()=>writes.push("close"),save:value=>writes.push(value)}))};
- return{render,dialog,queries,writes,mutations,get rows(){return rows}};
+ return{render,dialog,queries,writes,mutations,rules,get rows(){return rows}};
 }
 test("presentaciones: opción preferida remota por unidad y empresa, sin adivinar contenido",()=>{
  const ui=mount();ui.render();const tree=ui.render();
@@ -135,7 +137,7 @@ test("presentación nueva: nombre obligatorio, catálogo recuperable y códigos 
  collision.dialog().find(node=>node.props.children==="Guardar").props.onClick();assert.equal(collision.mutations[0].code,"fardo-grande-2");
 });
 test("conversiones: admite bolsa de medio kg, rechaza duplicados, factores inválidos y dos preferencias",()=>{
- const {purchaseInventoryItemSchema}=compile("src/modules/supply/purchases/domain/purchase-schema.ts",require);
+ const {purchaseInventoryItemSchema}=compile("src/modules/supply/purchases/domain/purchase-schema.ts",withPresentationContent);
  const base={mode:"new_ingredient",categoryId:"",name:"Arroz",description:"",price:"",unit:"kg",presentationType:"unit",unitsPerPresentation:"1",minimumStock:"0"};
  const valid={presentationType:"bag",unitsPerPresentation:"0.5",isDefault:true};
  assert.equal(purchaseInventoryItemSchema.safeParse({...base,presentations:[valid]}).success,true);
@@ -156,4 +158,40 @@ test("transporte: combinaciones y conversiones se persisten; crear no genera sto
  assert.equal(calls[0].path,"purchase-combinations?unit=kg");assert.equal(calls[1].options.method,"POST");
  assert.equal(JSON.parse(calls[2].options.body).unitsPerPresentation,.5);
  const body=JSON.parse(calls[3].options.body);assert.equal(body.presentations[0].unitsPerPresentation,.5);assert.equal("quantity" in body,false);
+});
+
+test("unidad contable: un paquete de botellas no puede contener menos de 1",()=>{
+ const {presentationContentError,presentationUnitRule}=presentationContent;
+ const bottle=presentationUnitRule(combos,"botella"),kilo=presentationUnitRule([{code:"unit",name:"Unidad base",unit:"kg",unitName:"Kilogramo",unitCountable:false,isDefault:true}],"kg");
+ assert.deepEqual({...bottle},{countable:true,unitName:"Botella"});
+ assert.equal(presentationContentError(bottle,"package","0.001"),"La presentación debe contener al menos 1 botella. Las fracciones solo se usan con unidades de medida como kilos o litros.");
+ for(const value of ["1","6",""])assert.equal(presentationContentError(bottle,"package",value),"");
+ assert.equal(presentationContentError(bottle,"unit","0.5"),"","la unidad base la valida su propia regla");
+ assert.equal(presentationContentError(kilo,"bag","0.5"),"","kilos y litros admiten fracciones");
+ // A combination created later without the flag keeps the unit countable.
+ assert.equal(presentationUnitRule([...combos,{code:"pack",name:"Pack",unit:"botella",unitName:"Botella",isDefault:false}],"botella").countable,true);
+});
+test("unidad contable: el campo sube de 1 en 1, muestra el error y reporta la regla una vez",()=>{
+ const ui=mount({initial:[{presentationType:"crate",unitsPerPresentation:"0.001",isDefault:true}]});
+ ui.render();const tree=ui.render();
+ const input=tree.find(node=>node.type==="Input"&&node.props["aria-label"]==="Contenido de la presentación");
+ assert.equal(input.props.min,"1");assert.equal(input.props.step,"1");assert.equal(input.props["aria-invalid"],true);
+ assert.ok(tree.some(node=>node.props?.role==="alert"&&String(node.props.children).includes("al menos 1 botella")));
+ assert.equal(tree.some(node=>node.props?.className==="purchase-presentation-equivalence"),false,"no muestra una equivalencia imposible");
+ assert.equal(ui.rules.length,1);assert.equal(ui.rules[0].countable,true);
+ const kilos=[{code:"unit",name:"Unidad base",unit:"kg",unitName:"Kilogramo",unitCountable:false,isDefault:false},{code:"bag",name:"Bolsa",unit:"kg",unitName:"Kilogramo",unitCountable:false,isDefault:true}];
+ const measured=mount({unit:"kg",items:kilos,initial:[{presentationType:"bag",unitsPerPresentation:"0.5",isDefault:true}]});
+ measured.render();const measuredTree=measured.render();
+ const measuredInput=measuredTree.find(node=>node.type==="Input"&&node.props["aria-label"]==="Contenido de la presentación");
+ assert.equal(measuredInput.props.min,"0.001");assert.equal(measuredInput.props["aria-invalid"],false);
+ assert.equal(measuredTree.some(node=>node.props?.role==="alert"),false);
+});
+test("unidad contable: el esquema bloquea el guardado con el mismo mensaje del backend",()=>{
+ const {purchaseInventoryItemSchema}=compile("src/modules/supply/purchases/domain/purchase-schema.ts",withPresentationContent);
+ const base={mode:"new_ingredient",categoryId:"",name:"Agua mineral",description:"",price:"",unit:"botella",presentationType:"unit",unitsPerPresentation:"1",minimumStock:"0",unitCountable:true,unitName:"Botella"};
+ const rejected=purchaseInventoryItemSchema.safeParse({...base,presentations:[{presentationType:"package",unitsPerPresentation:"0.001",isDefault:true}]});
+ assert.equal(rejected.success,false);
+ assert.ok(rejected.error.issues.some(issue=>issue.message.startsWith("La presentación debe contener al menos 1 botella")));
+ assert.equal(purchaseInventoryItemSchema.safeParse({...base,presentations:[{presentationType:"package",unitsPerPresentation:"6",isDefault:true}]}).success,true);
+ assert.equal(purchaseInventoryItemSchema.safeParse({...base,unitCountable:false,unit:"kg",presentations:[{presentationType:"bag",unitsPerPresentation:"0.5",isDefault:true}]}).success,true);
 });

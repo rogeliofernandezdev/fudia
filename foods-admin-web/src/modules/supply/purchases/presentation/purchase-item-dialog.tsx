@@ -108,7 +108,7 @@ export function PurchaseItemDialog({
       <PurchaseUnitField value={unit} onChange={value=>{setValue("unit",value,{shouldDirty:true,shouldValidate:isSubmitted});setValue("presentations",[],{shouldDirty:true})}} error={errors.unit?.message} disabled={locked||catalogBusy} onBusyChange={setCatalogBusy}/>
       <label>Stock mínimo<Input type="number" min="0" step="0.001" inputMode="decimal" {...register("minimumStock")} aria-invalid={Boolean(errors.minimumStock)}/>{errors.minimumStock?.message&&<small className="field-error">{errors.minimumStock.message}</small>}</label>
     </div>
-    <PurchasePresentationsField unit={unit} value={presentations} disabled={locked} onBusyChange={setCatalogBusy} error={errors.presentations?.message??errors.unitsPerPresentation?.message} onChange={rows=>{
+    <PurchasePresentationsField unit={unit} value={presentations} disabled={locked} onBusyChange={setCatalogBusy} error={errors.presentations?.message??errors.unitsPerPresentation?.message} onUnitRuleChange={rule=>{setValue("unitCountable",rule.countable);setValue("unitName",rule.unitName)}} onChange={rows=>{
       setValue("presentations",rows,{shouldDirty:true,shouldValidate:isSubmitted});
       const preferred=rows.find(row=>row.isDefault)??rows[0];
       setValue("presentationType",preferred?.presentationType??"unit",{shouldDirty:true});

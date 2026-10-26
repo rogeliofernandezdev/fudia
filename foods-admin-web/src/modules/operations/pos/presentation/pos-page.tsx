@@ -299,7 +299,7 @@ export function POSDetailDialog({loading,error,data,canManage,hasShift,formatMon
         </section>
       </div>
     </div></ModalWorkspace>}
-    {!error&&data&&paid>0&&ticket&&<ModalFooter><Button kind="secondary" icon="eye" onClick={ticket}>Ver resumen de pago</Button></ModalFooter>}
+    {!error&&data&&paid>0&&ticket&&<ModalFooter><Button kind="secondary" icon="eye" onClick={ticket}>Previsualizar</Button></ModalFooter>}
     </>}
   </Dialog></div>;
 }

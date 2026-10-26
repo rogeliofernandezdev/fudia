@@ -1,7 +1,7 @@
 export type PurchaseStatus="draft"|"pending_approval"|"approved"|"partially_received"|"received"|"cancelled";
 export type PurchaseTab="orders"|"receipts"|"suppliers";
 export type PresentationType=string;
-export type PurchaseCombination={code:string;name:string;unit:string;unitName:string;isDefault:boolean};
+export type PurchaseCombination={code:string;name:string;unit:string;unitName:string;unitCountable:boolean;isDefault:boolean};
 export type PurchasePresentationDraft={presentationType:string;unitsPerPresentation:string;isDefault:boolean};
 
 export type Supplier={
@@ -131,6 +131,9 @@ export type PurchaseInventoryItemDraft={
   unitsPerPresentation:string;
   minimumStock:string;
   presentations?:PurchasePresentationDraft[];
+  /** Regla de la unidad recibida del API; no la elige el usuario. */
+  unitCountable?:boolean;
+  unitName?:string;
 };
 
 export type PurchaseReceiptLineDraft={

@@ -15,5 +15,9 @@
 foods-admin-web/__*.png
 foods-admin-web/__*.cjs
 
+# Generated from the pinned Mozilla distribution by pdfjs:prepare.
+foods-admin-web/public/pdfjs/
+tmp/pdfjs-6.4.299/
+
 # Temporary credentials created by google-github-actions/auth (OIDC).
 gha-creds-*.json

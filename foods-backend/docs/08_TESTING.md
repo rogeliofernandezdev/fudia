@@ -172,3 +172,12 @@ individuales para productos fuera de la precarga. `inventory/application`
 comprueba un único bloqueo ordenado para todos los productos del pedido y el
 error `product_unavailable` cuando falta alguno. La integración existente cubre
 la inserción en lote con combos, modificadores, recetas y Concierge.
+
+`inventory_presentation_content_integration_test.go` verifica el catálogo con
+`countable`, que las combinaciones expongan `unitCountable` (también al crear
+una nueva), que un «Paquete = 0,001 botellas» se rechace con
+`invalid_presentation_content` sin dejar el artículo a medias, que «Paquete = 6
+botellas» se acepte, que agregar después una presentación fraccionaria también
+se rechace y que una bolsa de 0,5 kg siga permitida. Las unitarias de
+`inventory/domain` y `inventory/application` cubren la regla y que la
+presentación rechazada nunca se guarda.

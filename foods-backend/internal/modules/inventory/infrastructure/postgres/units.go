@@ -17,7 +17,7 @@ func NewUnits(db *pgxpool.Pool) *UnitRepository { return &UnitRepository{db} }
 var _ application.UnitRepository = (*UnitRepository)(nil)
 
 func (r *UnitRepository) List(ctx context.Context, organizationID string) ([]domain.Unit, error) {
-	rows, err := r.db.Query(ctx, `SELECT id,code,name FROM inventory_units WHERE organization_id=$1 ORDER BY sort_order,name,code`, organizationID)
+	rows, err := r.db.Query(ctx, `SELECT id,code,name,countable FROM inventory_units WHERE organization_id=$1 ORDER BY sort_order,name,code`, organizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -25,7 +25,7 @@ func (r *UnitRepository) List(ctx context.Context, organizationID string) ([]dom
 	items := []domain.Unit{}
 	for rows.Next() {
 		var item domain.Unit
-		if err = rows.Scan(&item.ID, &item.Code, &item.Name); err != nil {
+		if err = rows.Scan(&item.ID, &item.Code, &item.Name, &item.Countable); err != nil {
 			return nil, err
 		}
 		items = append(items, item)

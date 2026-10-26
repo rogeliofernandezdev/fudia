@@ -25,7 +25,8 @@ func (a *Stock) CreateCombination(ctx context.Context, s scope, in domain.Invent
 	defer tx.Rollback(ctx)
 	// Serialize catalog/default changes on the base-unit row.
 	var unitName string
-	err = func() error { var err error; unitName, err = a.repo.LockUnit(tx.Context(), s, in); return err }()
+	var unitCountable bool
+	err = func() error { var err error; unitName, unitCountable, err = a.repo.LockUnit(tx.Context(), s, in); return err }()
 	if errors.Is(err, ErrNotFound) {
 		return result, stockFailure(apperror.Invalid, "invalid_inventory_unit", "Selecciona una unidad base de tu empresa.")
 	}
@@ -58,7 +59,7 @@ func (a *Stock) CreateCombination(ctx context.Context, s scope, in domain.Invent
 	if err != nil {
 		return result, stockFailure(apperror.Unavailable, "inventory_combinations_unavailable", "No pudimos guardar la combinación.")
 	}
-	return domain.InventoryCombinationView{Code: in.Code, Name: name, Unit: in.Unit, UnitName: unitName, IsDefault: in.IsDefault}, nil
+	return domain.InventoryCombinationView{Code: in.Code, Name: name, Unit: in.Unit, UnitName: unitName, UnitCountable: unitCountable, IsDefault: in.IsDefault}, nil
 
 }
 func (a *Stock) SavePresentation(ctx context.Context, s scope, itemID string, in domain.InventoryPresentationInput) (domain.InventoryPresentationOption, error) {
@@ -82,7 +83,7 @@ func (a *Stock) SavePresentation(ctx context.Context, s scope, itemID string, in
 	id, err := a.ensurePresentation(tx.Context(), s, itemID, in.PresentationType, in.UnitsPerPresentation)
 	var invalidCombo *inventoryCombinationError
 	if errors.As(err, &invalidCombo) {
-		return result, stockFailure(apperror.Invalid, "invalid_inventory_combination", invalidCombo.Error())
+		return result, stockFailure(apperror.Invalid, invalidCombo.Code(), invalidCombo.Error())
 	}
 	if err == nil && in.IsDefault {
 		err = a.repo.DefaultPresentation(tx.Context(), s, itemID, id)

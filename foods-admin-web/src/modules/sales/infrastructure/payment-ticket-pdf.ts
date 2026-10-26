@@ -42,15 +42,3 @@ export function buildPaymentTicketPdf(layout:PaymentTicketLayout){
  });
  return doc.output("blob");
 }
-
-const escapeHtml=(value:string)=>value.replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]!));
-
-// Same measured lines as the PDF. No scripts, external assets or raw API HTML.
-// Printing this isolated document cannot include the shell, modals or buttons.
-export function paymentTicketPrintHtml(layout:PaymentTicketLayout){
- return`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Ticket ${escapeHtml(layout.code)}</title><style>
- @page{size:80mm ${layout.height}mm;margin:0}*{box-sizing:border-box}html,body{margin:0;padding:0;background:white;color:black;font-family:Arial,Helvetica,sans-serif}
- section{position:relative;width:80mm;height:${layout.height}mm;margin:0 auto;break-after:page;overflow:hidden}section:last-child{break-after:auto}
- p{position:absolute;margin:0;line-height:1.35;white-space:pre}hr{position:absolute;left:5mm;width:70mm;margin:0;border:0;border-top:.15mm solid black}
- </style></head><body>${layout.pages.map(page=>`<section>${page.rules.map(y=>`<hr style="top:${y}mm">`).join("")}${page.texts.map(item=>`<p style="top:${item.y}mm;left:${item.align==="right"?item.x-item.width:item.align==="center"?5:item.x}mm;width:${item.align==="center"?70:item.width}mm;font-size:${item.size}pt;font-weight:${item.bold?700:400};text-align:${item.align}">${escapeHtml(item.text)}</p>`).join("")}</section>`).join("")}</body></html>`;
-}

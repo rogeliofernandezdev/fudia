@@ -12,6 +12,14 @@ const moduleBarrels=readdirSync(join(process.cwd(),"src/modules"),{withFileTypes
 const nextConfig: NextConfig = {
   output:"standalone",
   images:{unoptimized:true},
+  async headers(){
+    return [{source:"/pdfjs/:path*",headers:[
+      {key:"Content-Security-Policy",value:"frame-ancestors 'self'"},
+      {key:"X-Frame-Options",value:"SAMEORIGIN"},
+      {key:"Referrer-Policy",value:"no-referrer"},
+      {key:"X-Content-Type-Options",value:"nosniff"},
+    ]}];
+  },
   experimental:{
     optimizePackageImports:["@/design-system","@/providers","@/shared/management",...moduleBarrels],
     // Pages are thin server wrappers; their data lives in TanStack Query. Reusing a

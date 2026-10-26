@@ -13,7 +13,8 @@ function compile(path,resolve){
  vm.runInNewContext(ts.transpileModule(readFileSync(new URL(path,root),"utf8"),{compilerOptions:{target:ts.ScriptTarget.ES2020,module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText,{exports,require:resolve});
  return exports;
 }
-const schema=compile("modules/supply/purchases/domain/purchase-schema.ts",require);
+const presentationContent=compile("modules/supply/purchases/domain/presentation-content.ts",require);
+const schema=compile("modules/supply/purchases/domain/purchase-schema.ts",name=>name==="./presentation-content"?presentationContent:require(name));
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 const valid={name:"Agua mineral",categoryId:"drinks",price:"3.50",unit:"botella",presentationType:"package",unitsPerPresentation:"10"};
 function mount({save=async()=>{},busy=false,modules={},linkable=[]}={}){

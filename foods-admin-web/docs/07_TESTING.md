@@ -1,5 +1,17 @@
 # Pruebas
 
+## Visor PDF compartido
+
+`pdf-viewer.test.mjs` verifica versión alineada del visor oficial completo,
+motor/worker locales, protocolo de transferencia, impresión de PDF.js, fallos,
+límites de canvas y liberación de listeners/URLs. Los tests de ticket y caja
+conservan el formato y contenido de sus generadores.
+El harness `node tests/helpers/pdf-viewer-preview.mjs` permite comprobar el
+componente real sin sesión, pagos ni escrituras de negocio: ticket, caja,
+80 páginas y archivo dañado. Ver [matriz y límites](09_PDF_VIEWER.md).
+La impresión Android/iPhone requiere pruebas en dispositivos físicos con sus
+servicios e impresoras; cambiar el viewport no valida ese soporte.
+
 ## Subida directa de imágenes
 
 image-upload.test.mjs verifica validación antes de autorización, bytes solo a
@@ -339,6 +351,8 @@ permisos, refresco y cambio de cupo con confirmación abierta. Usuarios y Locale
 ejercitan la misma capacidad compartida.
 
 `purchase-presentations.test.mjs` verifica opciones remotas sin catálogo fijo,
+la regla de unidades contables (contenido mínimo 1, pasos de 1, error visible,
+esquema con el mismo mensaje del backend y kilos con fracciones),
 preferencia por empresa/unidad sin adivinar contenido, una sola presentación
 sin controles redundantes y + junto al selector. Cubre skeleton/error/vacío,
 lectura sin alta, etiquetas «Unidad de inventario» / «Presentación de compra»,

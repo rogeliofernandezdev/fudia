@@ -27,8 +27,8 @@ func (r *valuationRepository) EntryLocationSettings(context.Context, scope, stri
 	r.settingsCalls++
 	return 1, nil
 }
-func (r *valuationRepository) CombinationAllowed(context.Context, scope, string, string) (bool, error) {
-	return true, nil
+func (r *valuationRepository) PresentationRule(context.Context, scope, string, string) (domain.PresentationRule, error) {
+	return domain.PresentationRule{Allowed: true}, nil
 }
 func (r *valuationRepository) EnsurePresentation(context.Context, scope, string, string, float64) (string, error) {
 	return "presentation-1", nil

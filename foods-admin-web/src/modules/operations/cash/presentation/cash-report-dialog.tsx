@@ -1,44 +1,35 @@
 "use client";
 import {useEffect,useState} from "react";
-import {Button,ErrorState,RemoteModalSkeleton,ModalHeader,ModalFooter} from "@/design-system";
-import {Dialog} from "@/design-system/dialog";
 import {readCssToken} from "@/design-system/theme";
+import {PdfViewer} from "@/shared/pdf-viewer";
 import {useCashReport} from "../application/use-cash-report";
+import type {CashShiftReport} from "../domain/types";
 import {CashReportContent} from "./cash-report-content";
 import "./cash-report.css";
 
 export function CashReportDialog({shiftId,close}:{shiftId:string;close:()=>void}){
  const report=useCashReport(shiftId);
- const [pdf,setPdf]=useState<{url:string;filename:string}|null>(null);
- const [error,setError]=useState<string|null>(null);
+ const [pdf,setPdf]=useState<{document:Blob;filename:string;source:CashShiftReport}|null>(null);
+ const [error,setError]=useState<{message:string;source:CashShiftReport}|null>(null);
  const [attempt,setAttempt]=useState(0);
- const [detail,setDetail]=useState(false);
  useEffect(()=>{
   if(!report.data)return;
-  let cancelled=false,url:string|undefined;
+  let cancelled=false;
   const value=report.data;
-  Promise.all([import("../infrastructure/cash-report-pdf")]).then(async([builder])=>{
+  import("../infrastructure/cash-report-pdf").then(async builder=>{
    const logo=await builder.loadFudiaReportLogo();
    if(cancelled)return;
-   const blob=builder.buildCashReportPdf(value,logo,{primary:readCssToken("--primary-600"),ink:readCssToken("--ink-950"),muted:readCssToken("--ink-500"),surface:readCssToken("--surface"),soft:readCssToken("--cloud-50"),line:readCssToken("--line"),brand:readCssToken("--brand-600")});
-   url=URL.createObjectURL(blob);
-   setPdf({url,filename:`cierre-${`${value.shift.cashRegisterName}-${value.shift.businessDate}`.normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-zA-Z0-9_-]+/g,"-").toLowerCase()}.pdf`});
+   const document=builder.buildCashReportPdf(value,logo,{primary:readCssToken("--primary-600"),ink:readCssToken("--ink-950"),muted:readCssToken("--ink-500"),surface:readCssToken("--surface"),soft:readCssToken("--cloud-50"),line:readCssToken("--line"),brand:readCssToken("--brand-600")});
+   setPdf({document,source:value,filename:`cierre-${`${value.shift.cashRegisterName}-${value.shift.businessDate}`.normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-zA-Z0-9_-]+/g,"-").toLowerCase()}.pdf`});
    setError(null);
-  }).catch(cause=>{if(!cancelled)setError(cause instanceof Error?cause.message:"No pudimos generar la vista previa.");});
-  return()=>{cancelled=true;if(url)URL.revokeObjectURL(url);};
+  }).catch(cause=>{if(!cancelled)setError({message:cause instanceof Error?cause.message:"No pudimos generar la vista previa.",source:value});});
+  return()=>{cancelled=true;};
  },[report.data,attempt]);
- if(report.isLoading)return <RemoteModalSkeleton className="cash-report-preview" label="Cargando informe de caja" rows={6} close={close}/>;
- const failure=report.isError?report.error.message:error;
- return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal cash-report-preview modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-report-title">
-  <ModalHeader title={report.data?.shift.cashRegisterName??"Vista previa del cierre"} titleId="cash-report-title" icon="receipt" subtitle="Informe de caja" onClose={close} closeLabel="Cerrar informe"/>
-  <div className="cash-report-preview-body">
-   {failure?<ErrorState title={report.isError?"No pudimos cargar el informe":report.data?.shift.status==="closed"?"El cierre está guardado, pero no pudimos generar el PDF":"No pudimos generar el PDF del turno"} text={failure} onRetry={()=>{setError(null);if(report.isError)void report.refetch();else setAttempt(value=>value+1);}}/>
-   :report.data&&<>
-    {!report.data.persisted&&<p>Este turno {report.data.shift.status==="open"?"sigue abierto; sus datos pueden cambiar":"es anterior al informe persistido; el detalle se reconstruyó con los registros disponibles"}.</p>}
-    {detail?<CashReportContent report={report.data}/>:pdf?<iframe key={pdf.url} src={pdf.url} title="Vista previa del PDF de cierre de caja"/>:<div role="status" aria-label="Generando PDF" aria-busy="true" className="cash-report-pdf-skeleton"><div className="remote-modal-skeleton-grid" aria-hidden="true">{Array.from({length:6},(_,index)=><div key={index} className="remote-modal-skeleton-field"><i/><b/></div>)}</div><div className="remote-modal-skeleton-section" aria-hidden="true"><span/><i/><i/></div></div>}
-    <p>Si tu navegador no muestra el PDF, usa «Descargar PDF» o consulta «Ver detalle».</p>
-   </>}
-  </div>
-  {report.data&&!report.isError&&<ModalFooter><Button kind="ghost" onClick={()=>setDetail(value=>!value)}>{detail?"Ver PDF":"Ver detalle"}</Button><Button icon="download" disabled={!pdf||Boolean(failure)} onClick={()=>{if(!pdf)return;const anchor=document.createElement("a");anchor.href=pdf.url;anchor.download=pdf.filename;anchor.click();}}>Descargar PDF</Button></ModalFooter>}
- </Dialog></div>;
+ const current=pdf?.source===report.data?pdf:null;
+ const failure=report.isError?report.error.message:error?.source===report.data?error?.message:null;
+ return <PdfViewer title={report.data?.shift.cashRegisterName??"Vista previa del cierre"} subtitle="Informe de caja" size="lg" document={current?.document??null} filename={current?.filename??"informe-de-caja.pdf"} onClose={close}
+  loading={report.isLoading||(!current&&!failure)} error={failure}
+  onRetry={()=>{setError(null);setPdf(null);if(report.isError)void report.refetch();else setAttempt(value=>value+1);}}
+  notice={report.data&&!report.data.persisted?`Este turno ${report.data.shift.status==="open"?"sigue abierto; sus datos pueden cambiar":"es anterior al informe persistido; el detalle se reconstruyó con los registros disponibles"}.`:undefined}
+  details={report.data&&!report.isError?<CashReportContent report={report.data}/>:undefined}/>;
 }

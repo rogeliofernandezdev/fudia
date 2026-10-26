@@ -120,11 +120,12 @@ type InventoryAdjustmentInput struct {
 	UnitCost *float64 `json:"unitCost"`
 }
 type InventoryCombinationView struct {
-	Code      string `json:"code"`
-	Name      string `json:"name"`
-	Unit      string `json:"unit"`
-	UnitName  string `json:"unitName"`
-	IsDefault bool   `json:"isDefault"`
+	Code          string `json:"code"`
+	Name          string `json:"name"`
+	Unit          string `json:"unit"`
+	UnitName      string `json:"unitName"`
+	UnitCountable bool   `json:"unitCountable"`
+	IsDefault     bool   `json:"isDefault"`
 }
 type InventoryCombinationInput struct {
 	Unit      string `json:"unit"`

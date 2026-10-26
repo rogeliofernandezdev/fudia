@@ -1,0 +1,20 @@
+/* Owner: design-system/pdf-viewer — modal único para PDF, sin dominio ni autenticación. */
+.crud-modal.pdf-viewer-modal{display:flex;flex-direction:column;width:min(var(--size-960),100%);max-height:calc(100dvh - var(--space-12));overflow:hidden;background:var(--surface)}
+.crud-modal.pdf-viewer-sm{width:min(var(--size-480),100%)}
+.pdf-viewer-context{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);padding:var(--space-2) var(--space-4);border-bottom:var(--stroke-1) solid var(--line);font-size:var(--font-size-sm);color:var(--ink-600)}
+.pdf-viewer-details{min-height:0;overflow:auto;padding:var(--space-4);overscroll-behavior:contain}
+.crud-modal.pdf-viewer-modal>.pdf-viewer-frame{position:relative;flex:1 1 auto;min-height:var(--size-220);height:calc(65vh + var(--size-80));margin:var(--space-4);overflow:hidden;border:var(--stroke-1) solid var(--line);border-radius:var(--radius-control)}
+.crud-modal.pdf-viewer-sm>.pdf-viewer-frame{height:calc(55vh + var(--size-80));border-radius:0}
+.pdf-viewer-frame>iframe{display:block;width:100%;height:100%;border:0;background:var(--pdf-viewer-canvas)}
+.pdf-viewer-state{display:grid;align-content:center;gap:var(--space-4);min-height:var(--size-220);width:100%;padding:var(--space-6);background:var(--cloud-50)}
+.pdf-viewer-modal>.pdf-viewer-state{flex:1}
+.crud-modal.pdf-viewer-modal>.pdf-viewer-context{flex:none;overflow:visible}
+.pdf-viewer-overlay{position:absolute;inset:0;display:grid;align-items:center;padding:var(--space-4);background:var(--cloud-50)}
+@media(width<=600px){
+ .modal-backdrop:has(>.pdf-viewer-modal){padding:0}
+ .crud-modal.pdf-viewer-modal{width:100%;max-height:calc(100dvh - var(--space-4) - var(--safe-area-top));border-radius:var(--radius-sheet) var(--radius-sheet) 0 0}
+ .crud-modal.pdf-viewer-lg>.pdf-viewer-frame{height:calc(55vh + var(--size-80))}
+ .pdf-viewer-context{flex-wrap:wrap}
+ .pdf-viewer-context>.button{margin-left:auto}
+}
+@media(width<=600px) and (height<=560px){.crud-modal.pdf-viewer-modal{max-height:100dvh;border-radius:0}.crud-modal.pdf-viewer-modal>.pdf-viewer-frame{min-height:0}}

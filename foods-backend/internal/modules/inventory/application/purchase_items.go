@@ -84,7 +84,7 @@ func (a *Stock) CreatePurchaseItem(ctx context.Context, s scope, input domain.Pu
 		id, err = a.ensurePresentation(tx.Context(), s, created.InventoryItemID, p.PresentationType, p.UnitsPerPresentation)
 		var comboErr *inventoryCombinationError
 		if errors.As(err, &comboErr) {
-			return result, stockFailure(apperror.Invalid, "invalid_inventory_combination", comboErr.Error())
+			return result, stockFailure(apperror.Invalid, comboErr.Code(), comboErr.Error())
 		}
 		if err == nil && p.IsDefault {
 			err = a.repo.DefaultPresentation(tx.Context(), s, created.InventoryItemID, id)

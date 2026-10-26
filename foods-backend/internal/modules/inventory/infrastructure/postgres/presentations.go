@@ -6,10 +6,11 @@ import (
 	"strings"
 )
 
-func (r *Stock) LockUnit(ctx context.Context, s scope, in domain.InventoryCombinationInput) (string, error) {
+func (r *Stock) LockUnit(ctx context.Context, s scope, in domain.InventoryCombinationInput) (string, bool, error) {
 	var unitName string
-	err := r.db(ctx).QueryRow(ctx, `SELECT name FROM inventory_units WHERE organization_id=$1 AND code=$2 FOR UPDATE`, s.OrganizationID, in.Unit).Scan(&unitName)
-	return unitName, stockError(err)
+	var countable bool
+	err := r.db(ctx).QueryRow(ctx, `SELECT name,countable FROM inventory_units WHERE organization_id=$1 AND code=$2 FOR UPDATE`, s.OrganizationID, in.Unit).Scan(&unitName, &countable)
+	return unitName, countable, stockError(err)
 }
 func (r *Stock) EnsurePresentationType(ctx context.Context, s scope, in domain.InventoryCombinationInput) (int64, error) {
 	tag, err := r.db(ctx).Exec(ctx, `INSERT INTO inventory_presentation_types(organization_id,code,name) VALUES($1,$2,$3) ON CONFLICT(organization_id,code) DO NOTHING`, s.OrganizationID, in.Code, in.Name)
@@ -49,7 +50,7 @@ func (r *Stock) Presentation(ctx context.Context, s scope, id string) (domain.In
 }
 func (r *Stock) Combinations(ctx context.Context, s scope, unit string) ([]domain.InventoryCombinationView, error) {
 	rows, err := r.db(ctx).Query(ctx, `
- SELECT t.code,t.name,u.code,u.name,
+ SELECT t.code,t.name,u.code,u.name,u.countable,
   CASE WHEN t.code='unit' THEN NOT EXISTS(SELECT 1 FROM inventory_unit_combinations d WHERE d.organization_id=u.organization_id AND d.unit=u.code AND d.is_default AND d.presentation_type<>'unit') ELSE c.is_default END
  FROM inventory_units u JOIN inventory_presentation_types t ON t.organization_id=u.organization_id
  LEFT JOIN inventory_unit_combinations c ON c.organization_id=u.organization_id AND c.unit=u.code AND c.presentation_type=t.code
@@ -62,7 +63,7 @@ func (r *Stock) Combinations(ctx context.Context, s scope, unit string) ([]domai
 	items := []domain.InventoryCombinationView{}
 	for rows.Next() {
 		var x domain.InventoryCombinationView
-		if err = rows.Scan(&x.Code, &x.Name, &x.Unit, &x.UnitName, &x.IsDefault); err != nil {
+		if err = rows.Scan(&x.Code, &x.Name, &x.Unit, &x.UnitName, &x.UnitCountable, &x.IsDefault); err != nil {
 			return nil, err
 		}
 		items = append(items, x)

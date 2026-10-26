@@ -62,7 +62,7 @@ type StockRepository interface {
 	LockTransferBalances(context.Context, scope, string, string) (map[string]domain.LocationBalance, error)
 	Transfers(context.Context, scope, StockFilter) (TransfersPage, error)
 	Presentations(context.Context, scope, string) ([]domain.InventoryPresentationOption, error)
-	LockUnit(ctx context.Context, s scope, in domain.InventoryCombinationInput) (string, error)
+	LockUnit(ctx context.Context, s scope, in domain.InventoryCombinationInput) (string, bool, error)
 	EnsurePresentationType(ctx context.Context, s scope, in domain.InventoryCombinationInput) (int64, error)
 	PresentationTypeName(ctx context.Context, s scope, in domain.InventoryCombinationInput) (string, error)
 	ClearDefaultCombination(ctx context.Context, s scope, in domain.InventoryCombinationInput) (int64, error)
@@ -75,7 +75,9 @@ type StockRepository interface {
 	ItemExists(ctx context.Context, s scope, id string) (bool, error)
 	LocationSettings(ctx context.Context, s scope, id string, in domain.LocationSettings) (int64, error)
 	UnitExists(context.Context, scope, string) (bool, error)
-	CombinationAllowed(context.Context, scope, string, string) (bool, error)
+	// PresentationRule informa en una consulta si la presentación está configurada
+	// para la unidad base del artículo y si esa unidad es contable.
+	PresentationRule(context.Context, scope, string, string) (domain.PresentationRule, error)
 	EnsurePresentation(context.Context, scope, string, string, float64) (string, error)
 	DefaultPresentation(context.Context, scope, string, string) error
 	SaveMovement(context.Context, scope, Movement) error
@@ -116,20 +118,34 @@ func (a *Stock) validateUnit(ctx context.Context, s scope, code string) error {
 	return nil
 }
 func (a *Stock) ensurePresentation(ctx context.Context, s scope, item, kind string, factor float64) (string, error) {
-	allowed, err := a.repo.CombinationAllowed(ctx, s, item, kind)
+	rule, err := a.repo.PresentationRule(ctx, s, item, kind)
 	if err != nil {
 		return "", err
 	}
-	if !allowed {
+	if !rule.Allowed {
 		return "", &inventoryCombinationError{}
+	}
+	if invalid := domain.PresentationContentError(rule, kind, factor); invalid != "" {
+		return "", &inventoryCombinationError{code: "invalid_presentation_content", message: invalid}
 	}
 	return a.repo.EnsurePresentation(ctx, s, item, kind, factor)
 }
 
-type inventoryCombinationError struct{}
+// inventoryCombinationError es un rechazo de validación al guardar una
+// presentación: combinación no configurada o contenido inválido para la unidad.
+type inventoryCombinationError struct{ code, message string }
 
-func (*inventoryCombinationError) Error() string {
+func (e *inventoryCombinationError) Error() string {
+	if e.message != "" {
+		return e.message
+	}
 	return "La presentación no está configurada para la unidad base de este artículo."
+}
+func (e *inventoryCombinationError) Code() string {
+	if e.code != "" {
+		return e.code
+	}
+	return "invalid_inventory_combination"
 }
 
 // Movement remains an alias for existing callers; published ledger DTO lives in contracts.
@@ -329,7 +345,7 @@ func (a *Stock) CreateEntry(ctx context.Context, s scope, in domain.InventoryEnt
 	presentationID, err := a.ensurePresentation(tx.Context(), s, inventoryItemID, in.PresentationType, in.UnitsPerPresentation)
 	var invalidCombination *inventoryCombinationError
 	if errors.As(err, &invalidCombination) {
-		return result, stockFailure(apperror.Invalid, "invalid_inventory_combination", invalidCombination.Error())
+		return result, stockFailure(apperror.Invalid, invalidCombination.Code(), invalidCombination.Error())
 	}
 	if err == nil && createdInventoryItem {
 		err = a.repo.DefaultPresentation(tx.Context(), s, inventoryItemID, presentationID)

@@ -42,12 +42,16 @@ func (r *Stock) UnitExists(ctx context.Context, s scope, code string) (bool, err
 	err := r.db(ctx).QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM inventory_units WHERE organization_id=$1 AND code=$2)`, s.OrganizationID, code).Scan(&valid)
 	return valid, err
 }
-func (r *Stock) CombinationAllowed(ctx context.Context, s scope, item, typeCode string) (bool, error) {
-	var allowed bool
+func (r *Stock) PresentationRule(ctx context.Context, s scope, item, typeCode string) (domain.PresentationRule, error) {
+	var rule domain.PresentationRule
 	err := r.db(ctx).QueryRow(ctx, `SELECT EXISTS(
  SELECT 1 FROM inventory_items i JOIN inventory_presentation_types t ON t.organization_id=i.organization_id AND t.code=$3
- WHERE i.organization_id=$1 AND i.id=$2 AND (t.code='unit' OR EXISTS(SELECT 1 FROM inventory_unit_combinations c WHERE c.organization_id=i.organization_id AND c.unit=i.unit AND c.presentation_type=t.code)))`, s.OrganizationID, item, typeCode).Scan(&allowed)
-	return allowed, err
+ WHERE i.organization_id=$1 AND i.id=$2 AND (t.code='unit' OR EXISTS(SELECT 1 FROM inventory_unit_combinations c WHERE c.organization_id=i.organization_id AND c.unit=i.unit AND c.presentation_type=t.code))),
+ COALESCE(u.countable,false),COALESCE(u.name,'')
+ FROM (SELECT 1) one
+ LEFT JOIN inventory_items i ON i.organization_id=$1 AND i.id=$2
+ LEFT JOIN inventory_units u ON u.organization_id=i.organization_id AND u.code=i.unit`, s.OrganizationID, item, typeCode).Scan(&rule.Allowed, &rule.Countable, &rule.UnitName)
+	return rule, err
 }
 func (r *Stock) EnsurePresentation(ctx context.Context, s scope, inventoryItemID, presentationType string, unitsPerPresentation float64) (string, error) {
 	if _, err := r.db(ctx).Exec(ctx, `

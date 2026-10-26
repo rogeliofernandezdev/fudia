@@ -850,17 +850,18 @@ Formato de rollo de 80 mm, área útil de 70 mm, negro sobre blanco, nombre del
 restaurante, datos del local, fecha del cobro, mesa/cliente, consumo con cantidad,
 precio e importe, total y medios de pago reales. Los pagos parciales muestran
 saldo y nunca se presentan como cuenta pagada. Se identifica como no fiscal;
-no inventa serie, impuesto, QR tributario ni aprobación SUNAT. El modal no
-repite avisos sobre el visor ni tiene botón propio de impresión: el visor del PDF
-ya permite imprimir y el pie ofrece solo «Descargar PDF», como acción primaria
-índigo (es la tarea del modal; en otros contextos descargar sigue siendo secundario). La vista previa
-conserva reintento, skeleton, X y controles de 44 px en móvil. El cierre de caja A4 no cambia.
-Si el navegador no tiene visor de PDF integrado (`navigator.pdfViewerEnabled ===
-false`, como Chrome en Android, que dentro de un `iframe` solo mostraría «Abrir»
-con un nombre interno), la vista previa es un papel HTML de 80 mm
-(`payment-ticket-paper`) construido con las mismas líneas `paymentTicketRows` del
-PDF: tamaños 8/9/11–13 pt mapeados a 11/12/13/14 px, separadores punteados y
-cifras tabulares. «Descargar PDF» sigue entregando el PDF real.
+no inventa serie, impuesto, QR tributario ni aprobación SUNAT.
+La previsualización usa `PdfViewer`, con el visor oficial completo de Mozilla
+PDF.js alojado en el mismo origen. No depende del visor nativo ni cambia a papel
+HTML en Android. La zona del visor utiliza controles y superficies gris oscuro,
+iconos/texto claros y hoja blanca, siguiendo la referencia de visor PDF aprobada.
+La cabecera mantiene el diseño de FudIA. Los tokens `pdf-viewer-*` centralizan
+este tema de documento. «Imprimir» y «Descargar PDF» permanecen visibles dentro
+del visor, también en móvil. Conserva skeleton,
+error explícito, reintento, X y controles de 44 px. El formato del PDF no cambia.
+La ayuda móvil explica «Todas las impresoras» cuando corresponda y ofrece
+descargar si el sistema no permite imprimir. No garantiza compatibilidad con
+todas las impresoras. El diálogo de selección pertenece al sistema operativo.
 
 ### Resumen de cierre e informe de caja
 
@@ -881,8 +882,8 @@ línea y la acción requiere activar explícitamente su botón.
 El informe PDF usa el logo propio de Fudia, los colores del sistema y A4
 horizontal con márgenes, texto seleccionable, cabeceras repetidas y numeración.
 Los nombres largos se envuelven sin recortar filas.
-La vista previa permite descargar o ver el detalle HTML si el navegador móvil
-no integra un visor PDF.
+La vista previa reutiliza `PdfViewer` en todas las pantallas. Permite imprimir,
+descargar y alternar al detalle HTML del informe sin depender del visor nativo.
 
 ### Layout general
 
@@ -1608,6 +1609,12 @@ y detalle; no se limita a apilar columnas de escritorio.
 
 El registro muestra «Unidad de inventario», «Presentación de compra» y su contenido, sin filas de
 «Otra presentación», radios de «Predeterminada» ni «Nueva combinación».
+Si la unidad es contable según el API (`unitCountable`: botella, lata, unidad,
+paquete, bolsa o caja), el contenido sube de 1 en 1 desde 1. Un contenido menor
+a 1 muestra bajo el campo «La presentación debe contener al menos 1 botella…»,
+oculta la equivalencia y bloquea Guardar en el registro y en «Presentación de
+compra». Kilos y litros conservan pasos de 0.001. El frontend no fija la lista
+de unidades contables: la recibe del API.
 Presentación y contenido comparten dos columnas en escritorio y se apilan en
 móvil; se evita una tarjeta adicional dentro de la sección existente. El +
 de Unidad de inventario y el de Presentación de compra reutilizan el mismo `IconButton`, contenedor

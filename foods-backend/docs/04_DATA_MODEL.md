@@ -170,6 +170,19 @@ convierte existencias. La FK `(organization_id,unit)` de `inventory_items` impid
 usar unidades ajenas o inexistentes. Compras e Inventario comparten el catálogo;
 crear una unidad es auditable y no altera unidades de artículos anteriores.
 
+`inventory_units.countable` (migración 92) marca las unidades que se cuentan por
+piezas: `und`, `botella`, `lata`, `paquete`, `bolsa` y `caja`. Kilos, gramos,
+litros, mililitros y las unidades que crea cada empresa quedan como medibles. En
+una unidad contable, una presentación distinta de la unidad base debe contener
+al menos 1 (por ejemplo, «Paquete = 6 botellas»); si no, responde 400
+`invalid_presentation_content`. Las medibles admiten fracciones (una bolsa de
+0,5 kg). La regla vive en `ensurePresentation`, así que aplica al crear un
+artículo desde Compras, al agregar una presentación y al registrar una entrada;
+se valida en la misma consulta que la combinación unidad–presentación. La
+migración solo clasifica el catálogo: no corrige presentaciones ni stock ya
+guardados. Origen: un «Paquete = 0,001 botellas» convirtió 2 paquetes en 0,002
+botellas y un costo promedio de 10 000 por botella.
+
 ### Flujo de Inventario
 
 El flujo principal de mercadería física comienza en **Inventario > Nueva entrada**:

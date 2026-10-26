@@ -65,7 +65,7 @@ try{
   if(width<=600&&geometry.footer){
    const actions=await page.locator("footer .button").evaluateAll(buttons=>buttons.map(button=>({radius:parseFloat(getComputedStyle(button).borderRadius),height:button.getBoundingClientRect().height,clipped:button.scrollWidth>button.clientWidth+1,text:button.textContent,secondary:button.classList.contains("secondary")})));
    actions.forEach(action=>{assert.ok(action.radius>=action.height/2,`${name}: mobile actions are pills`);assert.ok(action.height>=44,`${name}: touch target`);assert.equal(action.clipped,false,`${name}: action label is not clipped`);});
-   const viewPayment=actions.find(action=>action.text==="Ver resumen de pago");assert.ok(viewPayment?.secondary,`${name}: viewing payment is secondary`);
+   const viewPayment=actions.find(action=>action.text==="Previsualizar");assert.ok(viewPayment?.secondary,`${name}: viewing payment is secondary`);
   }
   assert.ok(geometry.summary.bottom<=height+1,`${name}: summary stays visible`);
   if(pos&&query.includes("readonly"))assert.equal(geometry.refunds,0,`${name}: no unauthorized actions`);

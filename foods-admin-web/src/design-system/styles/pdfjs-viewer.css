@@ -1,0 +1,56 @@
+/* Owner: design-system/pdf-viewer — FudIA skin; Mozilla owns rendering and print media. */
+@media screen{
+ :root{color-scheme:dark}
+ html,body{font-family:Arial,Helvetica,sans-serif;overscroll-behavior:none;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
+ #toolbarContainer{height:var(--toolbar-height);background:var(--pdf-viewer-toolbar);border-bottom:var(--stroke-1) solid var(--pdf-viewer-line);box-shadow:none}
+ #toolbarViewer{height:100%;padding:var(--space-2);gap:var(--space-1);box-sizing:border-box;align-items:center}
+ #toolbarViewerLeft,#toolbarViewerMiddle,#toolbarViewerRight{align-items:center;gap:var(--space-1)}
+ .toolbarButton,.dropdownToolbarButton{height:var(--size-44);min-width:var(--size-44);min-height:var(--size-44);border-radius:var(--radius-control);touch-action:manipulation;user-select:none;-webkit-user-select:none}
+ .toolbarButton::before{inset:50% auto auto 50%;transform:translate(-50%,-50%)}
+ .toolbarButton.labeled{aspect-ratio:auto}
+ .toolbarField,#scaleSelect{font-size:var(--font-size-control);min-height:var(--size-44);color:var(--pdf-viewer-ink);background:var(--pdf-viewer-field);border-color:var(--pdf-viewer-line);box-sizing:border-box}
+ #scaleSelectContainer{min-width:var(--size-138);height:var(--size-44)}
+ #pageNumber{width:var(--size-52)}
+ .splitToolbarButtonSeparator,.verticalToolbarSeparator{display:none}
+ #viewerContainer{bottom:var(--pdf-document-actions-height);background:var(--pdf-viewer-canvas);overscroll-behavior:contain;scrollbar-color:var(--pdf-viewer-muted) var(--pdf-viewer-canvas)}
+ #fudiaDocumentActions{position:fixed;inset:auto 0 0;z-index:1000;padding:var(--space-3) max(var(--space-4),env(safe-area-inset-right));padding-bottom:calc(var(--space-3) + env(safe-area-inset-bottom));background:var(--pdf-viewer-toolbar);border-top:var(--stroke-1) solid var(--pdf-viewer-line);color:var(--pdf-viewer-ink)}
+ .fudia-document-buttons{display:flex;justify-content:flex-end;align-items:center;gap:var(--space-2)}
+ .fudia-document-action{display:flex;align-items:center;justify-content:center;gap:var(--space-2);width:auto;aspect-ratio:auto;padding:var(--space-2) var(--space-4);border:var(--stroke-1) solid var(--pdf-viewer-line);color:var(--pdf-viewer-ink);background:var(--pdf-viewer-toolbar);font-size:var(--font-size-sm);font-weight:var(--weight-semibold);white-space:nowrap}
+ .fudia-document-action::before{position:static;transform:none;flex:none;inset:auto;mask-size:var(--size-20)}
+ .fudia-document-action>span{display:inline;overflow:visible;width:auto;height:auto;clip-path:none;position:static}
+ #fudiaDocumentActions #printButton.hidden{display:flex!important}
+ .fudia-fullscreen{min-height:var(--size-44);padding:var(--space-2) var(--space-3);border:var(--stroke-1) solid var(--pdf-viewer-line);border-radius:var(--radius-control);background:var(--pdf-viewer-toolbar);color:var(--pdf-viewer-ink);font-size:var(--font-size-sm);touch-action:manipulation}
+ #fudiaPrintHelp{display:none;max-width:75ch;margin:var(--space-2) 0 0 auto;font-size:var(--font-size-xs);line-height:var(--line-height-normal);color:var(--pdf-viewer-muted)}
+ #fudiaPrintHelp.is-visible{display:block}
+ #viewBookmark{display:none}
+ #secondaryPrint,#secondaryDownload{display:none}
+ #findbar{max-width:calc(100vw - var(--size-24));max-height:calc(100dvh - var(--toolbar-height));height:auto;overflow:auto;box-sizing:border-box;padding:var(--space-3);gap:var(--space-2)}
+ #findbar .toolbarHorizontalGroup{height:auto;min-height:var(--size-44);gap:var(--space-2)}
+ #findbar .toolbarLabel{min-height:var(--size-44);display:flex;align-items:center}
+ #findbar input[type="checkbox"]{min-width:var(--size-20);min-height:var(--size-20)}
+ button:focus-visible,input:focus-visible,select:focus-visible{outline:var(--stroke-2) solid var(--pdf-viewer-ink);outline-offset:var(--stroke-2)}
+ button:active{filter:brightness(.95)}
+ @media(hover:hover) and (pointer:fine){.fudia-document-action:hover,.fudia-fullscreen:hover{background:var(--pdf-viewer-hover)}}
+ @media(width<=900px){#toolbarViewerMiddle{position:static;transform:none;margin-inline:auto}}
+ @media(width<=600px){
+  #toolbarViewer{display:grid;grid-template-columns:minmax(0,1fr) auto;align-content:center}
+  #toolbarViewerLeft{grid-column:1/-1;justify-content:flex-start}
+  #toolbarViewerMiddle{grid-row:2;grid-column:1;margin:0;justify-content:flex-start}
+  #toolbarViewerRight{grid-row:2;grid-column:2;justify-content:flex-end}
+  #toolbarViewerRight>#editorModeButtons,#editorModeSeparator{display:none}
+  #scaleSelectContainer{display:block!important}
+  #findbar{position:fixed;inset:var(--toolbar-height) var(--space-3) auto;width:auto}
+  #findInputContainer>.loadingInput{flex:1;min-width:0}
+  #findInput{width:100%;min-width:0}
+  #fudiaDocumentActions{padding:var(--space-3);padding-bottom:calc(var(--space-3) + env(safe-area-inset-bottom))}
+  .fudia-document-buttons{display:grid;grid-template-columns:1fr 1fr var(--size-44)}
+  .fudia-document-action{width:100%;box-sizing:border-box;border-radius:var(--radius-control);min-height:var(--size-44)}
+  .fudia-fullscreen{width:var(--size-44);height:var(--size-44);padding:0;overflow:hidden;font-size:0}
+  .fudia-fullscreen::before{content:"";display:block;width:var(--size-20);height:var(--size-20);margin:auto;background:currentColor;mask:url(web/images/toolbarButton-presentationMode.svg) center/contain no-repeat}
+  #fudiaPrintHelp{display:block;margin:var(--space-2) 0 0;font-size:var(--font-size-xs)}
+ }
+ @media(width<=600px) and (height<=500px){
+  #fudiaPrintHelp:not(.is-visible){display:none}
+ }
+}
+@media print{#fudiaDocumentActions{display:none!important}}

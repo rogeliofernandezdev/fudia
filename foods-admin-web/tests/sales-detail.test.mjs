@@ -222,7 +222,7 @@ test("venta usa listas y resumen compartidos, separa pagos y conserva la única 
  const summary=nodes(workspace.props.summary);
  assert.ok(summary.some(node=>node.props.className==="modal-summary-total"));
  assert.ok(summary.some(node=>node.type==="strong"&&node.props.children==="MON 55.00"));
- const button=view.find(node=>node.type==="Button");assert.equal(view.filter(node=>node.type==="Button").length,1);assert.equal(button.props.children,"Ver resumen de pago");assert.equal(button.props.kind,"secondary");assert.equal(button.props.icon,"eye");button.props.onClick();assert.equal(opened,1);
+ const button=view.find(node=>node.type==="Button");assert.equal(view.filter(node=>node.type==="Button").length,1);assert.equal(button.props.children,"Previsualizar");assert.equal(button.props.kind,"secondary");assert.equal(button.props.icon,"eye");button.props.onClick();assert.equal(opened,1);
  assert.equal(view.filter(node=>node.type==="Status").length,1,"el estado no se duplica en el footer de acciones");
  assert.ok(view.some(node=>node.props.className==="modal-detail-notes sales-detail-notes"));
  assert.doesNotMatch(read("src/modules/sales/presentation/sales.css"),/\.sales-detail-section\+\.sales-detail-section\{[^}]*border-top/,"la división no repite la línea de los productos");
@@ -245,7 +245,7 @@ test("el resumen de pago permanece fuera del scroll y de las tres pestañas",()=
   const footer=view.find(node=>node.type==="ModalFooter");
   assert.ok(footer,`pie disponible en ${tab}`);
   const button=nodes(footer).find(node=>node.type==="Button");
-  assert.equal(button.props.children,"Ver resumen de pago");
+  assert.equal(button.props.children,"Previsualizar");
   button.props.onClick();
  }
  assert.equal(opened,2);

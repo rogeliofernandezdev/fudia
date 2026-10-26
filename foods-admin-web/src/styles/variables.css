@@ -7,6 +7,32 @@
 
   /* Neutros: superficie, fondos y líneas */
   --surface: #ffffff;
+  /* Document chrome: neutral dark viewer approved separately from the FudIA shell. */
+  --pdf-viewer-toolbar: #3b3b3b;
+  --pdf-viewer-canvas: #262626;
+  --pdf-viewer-field: #202020;
+  --pdf-viewer-ink: #f5f5f5;
+  --pdf-viewer-muted: #c8c8c8;
+  --pdf-viewer-line: #626262;
+  --pdf-viewer-hover: #525252;
+  /* Mozilla aliases keep its menus, controls and sidebar in the same theme. */
+  --toolbar-bg-color: var(--pdf-viewer-toolbar);
+  --toolbar-icon-bg-color: var(--pdf-viewer-ink);
+  --toolbar-icon-hover-bg-color: var(--pdf-viewer-ink);
+  --toolbar-icon-opacity: 1;
+  --body-bg-color: var(--pdf-viewer-canvas);
+  --field-bg-color: var(--pdf-viewer-field);
+  --field-color: var(--pdf-viewer-ink);
+  --main-color: var(--pdf-viewer-ink);
+  --doorhanger-bg-color: var(--pdf-viewer-toolbar);
+  --doorhanger-border-color: var(--pdf-viewer-line);
+  --toolbar-border-color: var(--pdf-viewer-line);
+  --button-hover-color: var(--pdf-viewer-hover);
+  --toggled-btn-bg-color: var(--pdf-viewer-hover);
+  --toggled-btn-color: var(--pdf-viewer-ink);
+  --sidebar-toolbar-bg-color: var(--pdf-viewer-toolbar);
+  --toolbar-height: var(--size-64);
+  --pdf-document-actions-height: var(--size-88);
   --cloud-25: #fbfbfe;
   --cloud-50: #f7f8fc;
   --cloud-100: #f0f2f8;
@@ -502,6 +528,7 @@ body {
   .restaurant-setup {
     --control-height: var(--size-44);
     --font-size-control: var(--font-size-md);
+    --toolbar-height: var(--size-112);
   }
 }
 

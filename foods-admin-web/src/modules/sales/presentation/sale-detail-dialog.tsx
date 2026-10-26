@@ -77,7 +77,7 @@ export function SaleDetailDialog({loading,error,data,money,date,close,retry,tick
           }))}/>:<p className="sales-detail-empty">No hay pagos registrados.</p>}
         </section>      </div>
     </div></ModalWorkspace>}
-    {!error&&data&&paid>0&&ticket&&<ModalFooter><Button kind="secondary" icon="eye" onClick={ticket}>Ver resumen de pago</Button></ModalFooter>}
+    {!error&&data&&paid>0&&ticket&&<ModalFooter><Button kind="secondary" icon="eye" onClick={ticket}>Previsualizar</Button></ModalFooter>}
     </>}
   </Dialog></div>;
 }

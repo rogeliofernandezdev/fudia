@@ -10,6 +10,29 @@ type Unit struct {
 	ID   string `json:"id"`
 	Code string `json:"code"`
 	Name string `json:"name"`
+	// Countable indica que la unidad se cuenta por piezas (botella, lata...).
+	Countable bool `json:"countable"`
+}
+
+// PresentationRule es lo que la unidad base de un artículo permite al guardar
+// una presentación.
+type PresentationRule struct {
+	Allowed   bool
+	Countable bool
+	UnitName  string
+}
+
+// PresentationContentError rechaza presentaciones de unidades contables con
+// menos de una pieza; las unidades de medida admiten fracciones.
+func PresentationContentError(rule PresentationRule, presentationType string, unitsPerPresentation float64) string {
+	if !rule.Countable || presentationType == "unit" || unitsPerPresentation >= 1 {
+		return ""
+	}
+	unit := strings.ToLower(strings.TrimSpace(rule.UnitName))
+	if unit == "" {
+		unit = "unidad"
+	}
+	return "La presentación debe contener al menos 1 " + unit + ". Las fracciones solo se usan con unidades de medida como kilos o litros."
 }
 type UnitInput struct {
 	Code string `json:"code"`
