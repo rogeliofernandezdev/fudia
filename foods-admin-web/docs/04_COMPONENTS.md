@@ -30,6 +30,10 @@ generales comienzan directamente; `LocationMap` aporta su propia etiqueta
 «Dirección del local» y recibe `addressError`, sin otro `FormField` que la
 repita. El bloque fiscal conserva un único rótulo visible «Perfil fiscal» y
 su sección mantiene el nombre accesible «Configuración fiscal».
+Usa `ModalForm` + `ModalBody` + `ModalFooter`: el mapa y sus controles quedan
+dentro del cuerpo desplazable y recortado, separados del pie. El formulario
+no usa el footer sticky heredado que permitía superponer controles del mapa
+sobre Cancelar o Guardar.
 
 ## PdfViewer
 
