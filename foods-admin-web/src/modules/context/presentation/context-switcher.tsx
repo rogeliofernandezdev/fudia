@@ -28,7 +28,7 @@ export function ContextSwitcher(){
 
   const orgs=useQuery({queryKey:["organizations"],queryFn:listOrganizations,enabled:open&&!!user?.platformAdmin});
   const orgLocations=useQuery({queryKey:["org-locations",orgId],queryFn:()=>listOrgLocations(orgId),enabled:open&&!!orgId&&!!user?.platformAdmin});
-  const myLocations=useQuery({queryKey:["available-locations"],queryFn:listAvailableLocations,enabled:!!user&&!user.platformAdmin});
+  const myLocations=useQuery({queryKey:["available-locations",organization?.id,user?.id],queryFn:listAvailableLocations,enabled:!!user&&!user.platformAdmin,staleTime:0,refetchOnWindowFocus:"always"});
   const locations=user?.platformAdmin?orgLocations:myLocations;
   const locOptions=locations.data?.items??[];
   const loading=locations.isLoading||Boolean(user?.platformAdmin&&orgs.isLoading);

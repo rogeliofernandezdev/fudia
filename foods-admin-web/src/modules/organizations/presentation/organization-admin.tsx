@@ -94,6 +94,7 @@ export function LocationsManager(){
    setDraft(null);
    notify({tone:"success",title:"Local guardado",message:"El local y su perfil fiscal quedaron asociados correctamente."});
    void client.invalidateQueries({queryKey:["locations"]});
+   void client.invalidateQueries({queryKey:["available-locations"]});
    void client.invalidateQueries({queryKey:["fiscal-profiles"]});
    void client.invalidateQueries({queryKey:["organization-subscription"]});
   },
@@ -105,6 +106,7 @@ export function LocationsManager(){
    setRemove(null);
    notify({tone:"success",title:"Local desactivado",message:"El local conserva su historial y ya no admite nuevas operaciones."});
    void client.invalidateQueries({queryKey:["locations"]});
+   void client.invalidateQueries({queryKey:["available-locations"]});
    void client.invalidateQueries({queryKey:["organization-subscription"]});
   },
   onError:e=>{setRemove(null);notify({tone:"danger",title:"No se pudo desactivar",message:e.message});},

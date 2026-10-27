@@ -19,6 +19,17 @@ solo para el mismo usuario, empresa y local; para cualquier otro alcance, o si
 no hay acceso en el contexto, vuelve a consultar. El acceso no se cachea entre
 peticiones: un permiso retirado deja de valer en la siguiente.
 
+El rol reservado `system_key='administrator'` («Administrador de empresa»)
+se aplica a todos los locales activos de la misma empresa, incluidos los creados
+después de su asignación. No requiere duplicar filas en `user_roles`. La regla
+se usa en login, listado/cambio de local, permisos de sesión, autorización,
+perfil y opciones/permisos de Caja. Los demás roles siguen limitados al local
+asignado. El nombre del rol, `users.manage` o el plan contratado no convierten
+un rol personalizado en administrador. Un rol inactivo o retirado no concede
+acceso; tampoco se permite saltar a otra empresa ni seleccionar locales inactivos.
+El administrador de empresa no obtiene privilegios de plataforma y sus módulos
+siguen sujetos a la suscripción. El cambio no modifica cookies ni autenticación.
+
 Los roles mantienen dos dimensiones independientes:
 
 - `menu_access`: opciones y rutas administrativas que el usuario puede abrir.
@@ -30,7 +41,8 @@ etiquetas no modifica códigos, asignaciones ni validaciones de autorización.
 
 Ocultar una opción no sustituye la autorización de sus APIs. Toda operación
 continúa validando `permissions` en backend; los roles inactivos no conceden
-accesos ni permisos. El rol Administrador usa `*` en ambas dimensiones.
+accesos ni permisos. El Administrador de empresa conserva el catálogo explícito
+de permisos y accesos definido para ese rol; `*` identifica el acceso de plataforma.
 
 ## Propiedad de la atención en mesa
 

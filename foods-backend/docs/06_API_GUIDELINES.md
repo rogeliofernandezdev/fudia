@@ -10,6 +10,13 @@ REST JSON descrito en api/openapi.yaml. Los errores usan código estable, mensaj
 seguro y correlationId. Paginación, filtros, idempotencia y concurrencia se
 definen en OpenAPI antes del frontend.
 
+`GET /v1/admin/locations/available` devuelve los locales activos autorizados por
+la sesión: todos los de la misma empresa para el rol reservado Administrador de
+empresa; solo los asignados para otros roles. `POST /v1/admin/switch-context`
+valida nuevamente el destino y conserva la sesión opaca. La autorización después
+del cambio aplica el mismo alcance, sin conceder acceso de plataforma. No requiere
+migración ni modificar manualmente asignaciones existentes.
+
 Inventario expone `InventoryItem.unitCountable` desde el catálogo de unidades de
 la empresa. El PATCH de niveles rechaza fracciones en mínimo u óptimo
 con `400 fractional_inventory_settings` para unidades contables, antes de

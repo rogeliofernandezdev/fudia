@@ -168,8 +168,9 @@ func (r *Payments) AssignableUser(ctx context.Context, s scope, in domain.ShiftU
 		SELECT DISTINCT u.full_name
 		FROM users u
 		JOIN user_roles ur ON ur.user_id=u.id
+		JOIN roles ro ON ro.id=ur.role_id AND ro.organization_id=u.organization_id AND ro.active
 		WHERE u.id=$1 AND u.organization_id=$2 AND u.active
-		  AND (ur.location_id IS NULL OR ur.location_id=$3)
+		  AND (ur.location_id IS NULL OR ur.location_id=$3 OR ro.system_key='administrator')
 	`, in.UserID, s.OrganizationID, s.LocationID).Scan(&name)
 	return name, billingError(err)
 }
@@ -479,9 +480,10 @@ func (r *Payments) UserOptions(ctx context.Context, s scope) ([]domain.CashUserO
 		       )
 		FROM users u
 		JOIN user_roles ur ON ur.user_id=u.id
+		JOIN roles ro ON ro.id=ur.role_id AND ro.organization_id=u.organization_id AND ro.active
 		WHERE u.organization_id=$1
 		  AND u.active
-		  AND (ur.location_id IS NULL OR ur.location_id=$2)
+		  AND (ur.location_id IS NULL OR ur.location_id=$2 OR ro.system_key='administrator')
 		ORDER BY u.full_name
 	`, s.OrganizationID, s.LocationID)
 	if err != nil {
@@ -682,7 +684,7 @@ func (r *Payments) CanSeeExpected(ctx context.Context, s scope) (bool, error) {
 		  FROM user_roles ur
 		  JOIN roles ro ON ro.id=ur.role_id
 		  WHERE ur.user_id=$1
-		    AND (ur.location_id IS NULL OR ur.location_id=$2)
+		    AND (ur.location_id IS NULL OR ur.location_id=$2 OR ro.system_key='administrator')
 		    AND ro.active
 		    AND ro.organization_id=$3
 		    AND (

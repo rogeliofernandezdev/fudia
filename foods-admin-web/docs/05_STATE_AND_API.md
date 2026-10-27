@@ -1,5 +1,15 @@
 # Estado e integración
 
+## Cambio de local
+
+El selector consulta `locations/available`; el backend incluye todos los locales
+activos de la empresa para el rol reservado Administrador de empresa y mantiene
+los otros roles limitados a sus asignaciones. El plan no decide permisos del
+usuario. La caché usa `available-locations` con empresa y usuario, se revalida
+al recuperar el foco y se invalida al guardar/desactivar locales o modificar
+usuarios/roles. Cambiar de local conserva el flujo de sesión y limpia los datos
+remotos antes de cargar el contexto autorizado del destino.
+
 ## Fotografías de producto en GCP
 
 Preview blob inmediato, validación JPEG/PNG/WebP, 5 MiB y 4000×4000 px antes de

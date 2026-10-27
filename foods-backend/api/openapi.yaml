@@ -512,6 +512,32 @@ paths:
       operationId: getAdminContext
       security: [{ sessionCookie: [] }]
       responses: { "200": { description: Contexto activo de empresa y local, content: { application/json: { schema: { $ref: "#/components/schemas/SessionContext" } } } }, "401": { $ref: "#/components/responses/Unauthorized" } }
+  /v1/admin/locations/available:
+    get:
+      operationId: listAvailableLocations
+      summary: Lista locales activos accesibles para el usuario
+      description: El rol reservado Administrador de empresa accede a todos los locales activos de su empresa; otros roles solo a sus locales asignados. El límite del plan no sustituye la autorización.
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200":
+          description: Locales autorizados
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, name, code, active]
+                      properties:
+                        id: { type: string, format: uuid }
+                        name: { type: string }
+                        code: { type: string }
+                        active: { type: boolean }
+        "401": { $ref: "#/components/responses/Unauthorized" }
   /v1/admin/restaurant-setup:
     get:
       operationId: getRestaurantSetup
@@ -533,6 +559,7 @@ paths:
   /v1/admin/switch-context:
     post:
       operationId: switchAdminContext
+      description: El administrador de empresa puede cambiar entre sus locales activos sin asignaciones repetidas; los otros roles necesitan asignación en el destino. Solo el administrador de plataforma puede cambiar de empresa.
       security: [{ sessionCookie: [] }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/SwitchContextInput" } } } }
       responses: { "200": { description: Contexto activo actualizado, content: { application/json: { schema: { $ref: "#/components/schemas/ContextSwitchResponse" } } } }, "400": { $ref: "#/components/responses/BadRequest" }, "401": { $ref: "#/components/responses/Unauthorized" }, "403": { $ref: "#/components/responses/Forbidden" } }

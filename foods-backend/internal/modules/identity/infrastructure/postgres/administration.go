@@ -83,7 +83,7 @@ func (r *AdministrationRepository) HasAdministrator(ctx context.Context, org str
 			FROM users u
 			JOIN user_roles ur ON ur.user_id=u.id
 			JOIN roles r ON r.id=ur.role_id AND r.organization_id=u.organization_id
-			JOIN locations l ON l.id=ur.location_id AND l.organization_id=u.organization_id
+			JOIN locations l ON l.organization_id=u.organization_id AND (l.id=ur.location_id OR r.system_key='administrator')
 			WHERE u.organization_id=$1
 			  AND u.active
 			  AND NOT u.platform_admin
@@ -258,7 +258,7 @@ func (r *AdministrationRepository) Profile(ctx context.Context, s requestscope.S
 		         FROM user_roles ur
 		         JOIN roles r ON r.id=ur.role_id
 		         WHERE ur.user_id=u.id
-		           AND ur.location_id=$2
+		           AND (ur.location_id=$2 OR r.system_key='administrator')
 		           AND r.organization_id=$3
 		           AND r.active
 		       ),ARRAY[]::text[]),
@@ -268,7 +268,7 @@ func (r *AdministrationRepository) Profile(ctx context.Context, s requestscope.S
 		         JOIN roles r ON r.id=ur.role_id
 		         CROSS JOIN LATERAL unnest(r.permissions) permission
 		         WHERE ur.user_id=u.id
-		           AND ur.location_id=$2
+		           AND (ur.location_id=$2 OR r.system_key='administrator')
 		           AND r.organization_id=$3
 		           AND r.active
 		       ),ARRAY[]::text[]),
@@ -352,9 +352,11 @@ func (r *AdministrationRepository) AvailableLocations(ctx context.Context, s req
 		FROM locations l
 		WHERE l.organization_id=$1 AND l.active
 		  AND (
-		    EXISTS(SELECT 1 FROM users u WHERE u.id=$2 AND u.platform_admin)
+		    EXISTS(SELECT 1 FROM users u WHERE u.id=$2 AND u.active AND u.platform_admin)
 		    OR EXISTS(SELECT 1 FROM user_roles ur JOIN roles ro ON ro.id=ur.role_id
-		              WHERE ur.user_id=$2 AND ur.location_id=l.id AND ro.active)
+		              JOIN users u ON u.id=ur.user_id AND u.organization_id=l.organization_id AND u.active
+		              WHERE ur.user_id=$2 AND ro.organization_id=l.organization_id AND ro.active
+		                AND (ur.location_id=l.id OR ro.system_key='administrator'))
 		  )
 		ORDER BY l.name`, s.OrganizationID, s.UserID))
 }
@@ -370,7 +372,7 @@ func (r *AdministrationRepository) ContextDestination(ctx context.Context, org, 
 }
 func (r *AdministrationRepository) HasLocationRole(ctx context.Context, id, loc string) (bool, error) {
 	var ok bool
-	err := r.db(ctx).QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM user_roles ur JOIN roles ro ON ro.id=ur.role_id WHERE ur.user_id=$1 AND ur.location_id=$2 AND ro.active)`, id, loc).Scan(&ok)
+	err := r.db(ctx).QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM user_roles ur JOIN roles ro ON ro.id=ur.role_id JOIN users u ON u.id=ur.user_id AND u.organization_id=ro.organization_id AND u.active JOIN locations l ON l.id=$2 AND l.organization_id=ro.organization_id AND l.active WHERE ur.user_id=$1 AND (ur.location_id=l.id OR ro.system_key='administrator') AND ro.active)`, id, loc).Scan(&ok)
 	return ok, err
 }
 func (r *AdministrationRepository) SwitchSessionContext(ctx context.Context, hash []byte, in domain.SwitchContextInput) error {
@@ -388,14 +390,14 @@ func (r *AdministrationRepository) CurrentContext(ctx context.Context, s request
 		         FROM user_roles ur
 		         JOIN roles ro ON ro.id=ur.role_id AND ro.organization_id=$1 AND ro.active
 		         CROSS JOIN LATERAL unnest(ro.permissions) permission
-		         WHERE ur.user_id=$3 AND ur.location_id=$2
+		         WHERE ur.user_id=$3 AND (ur.location_id=$2 OR ro.system_key='administrator')
 		       ),ARRAY[]::text[]) END,
 		       CASE WHEN u.platform_admin THEN ARRAY['*']::text[] ELSE COALESCE((
 		         SELECT array_agg(DISTINCT access_key ORDER BY access_key)
 		         FROM user_roles ur
 		         JOIN roles ro ON ro.id=ur.role_id AND ro.organization_id=$1 AND ro.active
 		         CROSS JOIN LATERAL unnest(ro.menu_access) access_key
-		         WHERE ur.user_id=$3 AND ur.location_id=$2
+		         WHERE ur.user_id=$3 AND (ur.location_id=$2 OR ro.system_key='administrator')
 		       ),ARRAY[]::text[]) END
 		FROM organizations o
 		JOIN locations l ON l.organization_id=o.id
@@ -415,7 +417,7 @@ func (r *AdministrationRepository) SetupRequired(ctx context.Context, org string
 	return required, administrationError(err)
 }
 
-// Cash reporting retains its existing wildcard and organization-wide-role policy.
+// The reserved company administrator applies to every local in the same tenant.
 func (r *AdministrationRepository) CashExpectedVisible(ctx context.Context, s requestscope.Scope) (bool, error) {
 	var platform bool
 	if err := r.db(ctx).QueryRow(ctx, `SELECT platform_admin FROM users WHERE id=$1 AND active`, s.UserID).Scan(&platform); err == nil && platform {
@@ -428,7 +430,7 @@ func (r *AdministrationRepository) CashExpectedVisible(ctx context.Context, s re
 		  FROM user_roles ur
 		  JOIN roles ro ON ro.id=ur.role_id
 		  WHERE ur.user_id=$1
-		    AND (ur.location_id IS NULL OR ur.location_id=$2)
+		    AND (ur.location_id IS NULL OR ur.location_id=$2 OR ro.system_key='administrator')
 		    AND ro.active
 		    AND ro.organization_id=$3
 		    AND (

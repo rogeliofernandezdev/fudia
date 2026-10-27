@@ -1,5 +1,13 @@
 # Pruebas
 
+`company_admin_locations_integration_test.go` verifica con PostgreSQL temporal
+que el administrador de empresa ve los tres locales con una sola asignación,
+incluye un local recién creado y cambia mediante la cookie real sin perder
+permisos, perfil ni opciones de Caja. Comprueba autorización de reserva, login
+con el local original inactivo, rechazo de otra empresa/local inactivo y
+revocación inmediata. Un rol personalizado con el mismo nombre o `users.manage`
+permanece limitado a su asignación; un administrador inactivo no concede acceso.
+
 `inventory/application/location_settings_test.go` comprueba niveles enteros para
 unidades contables, fracciones medibles, normalización y rechazo si falta la
 metadata de la unidad. `inventory_settings_units_integration_test.go` comprueba
