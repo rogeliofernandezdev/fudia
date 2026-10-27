@@ -54,7 +54,7 @@ func TestPaymentMethodsSeedByCountryAndLimitActiveToFour(t *testing.T) {
 		t.Fatalf("operational catalog: %d %s %v", rec.Code, rec.Body.String(), err)
 	}
 
-	// Another country receives the general set: four active methods, «Otro» inactive.
+	// Other countries start with Efectivo and Tarjeta only.
 	general := scopeForInventory{seedInventoryScope(t, pool), pool}
 	if _, err := pool.Exec(ctx, `UPDATE organization_fiscal_profiles SET country_code='CO' WHERE organization_id=$1`, general.OrganizationID); err != nil {
 		t.Fatal(err)
@@ -65,8 +65,12 @@ func TestPaymentMethodsSeedByCountryAndLimitActiveToFour(t *testing.T) {
 	if err := seedOrganizationPaymentMethods(ctx, pool, general.OrganizationID); err != nil {
 		t.Fatal(err)
 	}
-	if codes := activeMethodCodes(t, general); len(codes) != 4 || codes[2] != "transfer" || codes[3] != "wallet" {
-		t.Fatalf("general set must keep four active methods: %v", codes)
+	if codes := activeMethodCodes(t, general); len(codes) != 2 || codes[0] != "cash" || codes[1] != "card" {
+		t.Fatalf("general set must contain cash and card only: %v", codes)
+	}
+	var seededTotal int
+	if err := pool.QueryRow(ctx, `SELECT count(*) FROM payment_methods WHERE organization_id=$1`, general.OrganizationID).Scan(&seededTotal); err != nil || seededTotal != 2 {
+		t.Fatalf("general catalog must contain two entries in total: %d %v", seededTotal, err)
 	}
 
 	// A fifth active method is rejected.

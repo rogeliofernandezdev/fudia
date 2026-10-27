@@ -27,9 +27,11 @@ type PaymentMethodInput struct {
 
 var PaymentMethodCodePattern = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,39}$`)
 
-// MaxActivePaymentMethods keeps checkout choices short: a company operates with
-// at most four active payment methods (Peru: cash, card, Yape and Plin).
-const MaxActivePaymentMethods = 4
+// Inactive entries retain their history and still consume a catalog slot.
+const MaxPaymentMethods = 4
+
+// Retained for activation checks on catalogs created before the total limit.
+const MaxActivePaymentMethods = MaxPaymentMethods
 
 func NormalizePaymentMethodInput(in *PaymentMethodInput) {
 	in.Code = strings.ToLower(strings.TrimSpace(in.Code))

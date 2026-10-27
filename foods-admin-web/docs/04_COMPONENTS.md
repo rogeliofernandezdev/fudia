@@ -17,6 +17,14 @@ mantiene la jerarquía principal del campo.
 Componentes pequeños y accesibles. Design system no conoce autenticación ni API.
 Formularios usan React Hook Form y Zod. Catálogos siempre llegan del API.
 
+Medios de pago recibe `catalogTotal` y `catalogLimit` del API y oculta «Nuevo
+medio» al completar las cuatro plazas, incluidos inactivos, aunque el listado
+esté filtrado o paginado. La edición sigue disponible. Su diálogo reutiliza
+`ModalForm` + `ModalBody` + `ModalFooter`: solo el cuerpo se desplaza, sin el pie
+heredado sticky ni márgenes negativos. Cabecera y acciones conservan los estilos
+compartidos. La precarga viene del backend: Perú tiene Efectivo, Tarjeta, Yape y
+Plin; los demás países, Efectivo y Tarjeta.
+
 El modal de Locales muestra «Datos del local» solo en la cabecera. Los campos
 generales comienzan directamente; `LocationMap` aporta su propia etiqueta
 «Dirección del local» y recibe `addressError`, sin otro `FormField` que la

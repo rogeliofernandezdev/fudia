@@ -16,10 +16,12 @@ type MethodFilter struct {
 	Page, Size    int
 }
 type MethodPage struct {
-	Items    []domain.PaymentMethodView `json:"items"`
-	Total    int                        `json:"total"`
-	Page     int                        `json:"page"`
-	PageSize int                        `json:"pageSize"`
+	Items        []domain.PaymentMethodView `json:"items"`
+	Total        int                        `json:"total"`
+	Page         int                        `json:"page"`
+	PageSize     int                        `json:"pageSize"`
+	CatalogTotal int                        `json:"catalogTotal"`
+	CatalogLimit int                        `json:"catalogLimit"`
 }
 type MethodRepository interface {
 	Operational(context.Context, string, string) ([]domain.PaymentMethodView, error)
@@ -29,6 +31,8 @@ type MethodRepository interface {
 	Continuity(context.Context, string) (bool, error)
 	// ActiveCount locks the organization's catalog and counts its active methods.
 	ActiveCount(context.Context, string) (int, error)
+	// CatalogCount locks the organization and includes inactive methods.
+	CatalogCount(context.Context, string) (int, error)
 	Find(context.Context, string, string, string) (domain.PaymentMethodView, error)
 }
 type Methods struct {
@@ -78,6 +82,7 @@ func (m *Methods) List(ctx context.Context, org string, f MethodFilter) (MethodP
 	if err != nil {
 		return out, methodFailure(apperror.Unavailable, "payment_methods_unavailable", "No pudimos cargar los medios de pago.")
 	}
+	out.CatalogLimit = domain.MaxPaymentMethods
 	return out, nil
 }
 func (m *Methods) continuity(ctx context.Context, org string) error {
@@ -119,6 +124,15 @@ func (m *Methods) Save(ctx context.Context, org, code string, in domain.PaymentM
 		return out, methodFailure(apperror.Unavailable, "payment_methods_unavailable", "No pudimos guardar el medio de pago.")
 	}
 	defer tx.Rollback(ctx)
+	if !updating {
+		count, countErr := m.repo.CatalogCount(tx.Context(), org)
+		if countErr != nil {
+			return out, methodFailure(apperror.Unavailable, "payment_methods_unavailable", "No pudimos validar la cantidad de medios de pago.")
+		}
+		if count >= domain.MaxPaymentMethods {
+			return out, methodFailure(apperror.Conflict, "payment_method_limit", "Puedes registrar hasta 4 medios de pago en total, incluidos los inactivos. Edita uno existente.")
+		}
+	}
 	out, err = m.repo.Save(tx.Context(), org, code, in, updating)
 	if errors.Is(err, ErrNotFound) {
 		return out, methodFailure(apperror.NotFound, "payment_method_not_found", "El medio de pago no existe.")

@@ -1,5 +1,12 @@
 # API
 
+El catálogo administrable de medios de pago expone `catalogTotal` y
+`catalogLimit` junto a la paginación. El total del catálogo incluye inactivos y
+no cambia con filtros; `total` sigue siendo el resultado filtrado. Un quinto
+registro se rechaza con `409 payment_method_limit` bajo bloqueo de empresa,
+también ante altas concurrentes. Editar o desactivar conserva el registro y su
+historial. La precarga crea cuatro medios en Perú y dos en otros países.
+
 `POSOrderDetail.receiptContext` expone identidad actual de empresa/local,
 dirección/teléfono y moneda/zona del perfil fiscal del local, con el mismo permiso
 `orders.read` y alcance de sesión. Permite un ticket operativo de pago de 80 mm;

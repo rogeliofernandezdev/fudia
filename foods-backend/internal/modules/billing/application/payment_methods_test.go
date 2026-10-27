@@ -30,6 +30,25 @@ type methodsStub struct {
 	continuity bool
 	writes     int
 	active     int
+	catalog    int
+	countError error
+	countCalls int
+}
+
+func (r *methodsStub) CatalogCount(ctx context.Context, org string) (int, error) {
+	if ctx != r.tx {
+		return 0, errors.New("wrong transaction")
+	}
+	r.countCalls++
+	return r.catalog, r.countError
+}
+
+func (r *methodsStub) Save(ctx context.Context, org, code string, in domain.PaymentMethodInput, updating bool) (domain.PaymentMethodView, error) {
+	if ctx != r.tx {
+		return domain.PaymentMethodView{}, errors.New("wrong transaction")
+	}
+	r.writes++
+	return domain.PaymentMethodView{Code: code, Name: in.Name, Active: true, SalesEnabled: in.SalesEnabled}, nil
 }
 
 func (r *methodsStub) ActiveCount(ctx context.Context, org string) (int, error) {
@@ -95,5 +114,39 @@ func TestMethodsAllowAtMostFourActive(t *testing.T) {
 		if active == 5 && (!errors.As(err, &problem) || problem.Code != "payment_method_limit" || tx.committed) {
 			t.Fatalf("a fifth active method must be rejected: %v", err)
 		}
+	}
+}
+
+func TestMethodsCountInactiveEntriesBeforeCreating(t *testing.T) {
+	for _, count := range []int{3, 4, 5} {
+		tx := &methodTx{ctx: context.WithValue(context.Background(), struct{}{}, "transaction")}
+		repo := &methodsStub{tx: tx.ctx, continuity: true, catalog: count, active: 3}
+		_, err := NewMethods(repo, methodWork{tx}).Save(context.Background(), "org", "", domain.PaymentMethodInput{Code: "voucher", Name: "Vale", SalesEnabled: true}, false)
+		if count < 4 {
+			if err != nil || !tx.committed || repo.writes != 1 {
+				t.Fatalf("fourth entry rejected: %v", err)
+			}
+		} else {
+			var problem *apperror.Error
+			if !errors.As(err, &problem) || problem.Code != "payment_method_limit" || tx.committed || repo.writes != 0 {
+				t.Fatalf("catalog of %d allowed another entry: %v", count, err)
+			}
+		}
+	}
+}
+
+func TestMethodsAllowEditingFullCatalogAndFailClosedOnCountError(t *testing.T) {
+	tx := &methodTx{ctx: context.WithValue(context.Background(), struct{}{}, "transaction")}
+	repo := &methodsStub{tx: tx.ctx, continuity: true, catalog: 4}
+	_, err := NewMethods(repo, methodWork{tx}).Save(context.Background(), "org", "cash", domain.PaymentMethodInput{Name: "Efectivo", SalesEnabled: true}, true)
+	if err != nil || !tx.committed || repo.writes != 1 || repo.countCalls != 0 {
+		t.Fatalf("editing full catalog: %v", err)
+	}
+	tx = &methodTx{ctx: context.WithValue(context.Background(), struct{}{}, "transaction")}
+	repo = &methodsStub{tx: tx.ctx, continuity: true, countError: errors.New("database unavailable")}
+	_, err = NewMethods(repo, methodWork{tx}).Save(context.Background(), "org", "", domain.PaymentMethodInput{Code: "voucher", Name: "Vale", SalesEnabled: true}, false)
+	var problem *apperror.Error
+	if !errors.As(err, &problem) || problem.Code != "payment_methods_unavailable" || tx.committed || repo.writes != 0 {
+		t.Fatalf("count failure permitted write: %v", err)
 	}
 }

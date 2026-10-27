@@ -1422,11 +1422,12 @@ paths:
         - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
         - { in: query, name: pageSize, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
       responses:
-        "200": { description: Catálogo paginado de medios de pago }
+        "200": { description: Catálogo paginado; catalogTotal incluye inactivos e ignora filtros, content: { application/json: { schema: { type: object, required: [items, total, page, pageSize, catalogTotal, catalogLimit], properties: { items: { type: array, items: { $ref: "#/components/schemas/PaymentMethod" } }, total: { type: integer, minimum: 0 }, page: { type: integer }, pageSize: { type: integer }, catalogTotal: { type: integer, minimum: 0 }, catalogLimit: { type: integer, const: 4, description: Máximo total de registros activos e inactivos por empresa } } } } } }
         "403": { $ref: "#/components/responses/Forbidden" }
     post:
       operationId: createPaymentMethod
       summary: Crea un medio de pago para la empresa
+      description: Máximo cuatro registros en total, incluidos los inactivos. Un catálogo histórico que supera el límite conserva su historial pero no admite altas. Se serializan las altas por empresa.
       security: [{ sessionCookie: [] }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/PaymentMethodInput" } } } }
       responses:
@@ -1610,7 +1611,7 @@ paths:
     get:
       operationId: listCheckoutPaymentMethods
       summary: Medios activos para cobrar o registrar gastos, leídos por el BFF administrativo
-      description: Misma respuesta que /v1/operations/payment-methods. Una empresa tiene como máximo 4 medios activos.
+      description: Misma respuesta que /v1/operations/payment-methods. Una empresa puede registrar como máximo 4 medios en total, incluidos los inactivos; los catálogos históricos conservan sus filas y no admiten nuevas altas.
       security: [{ sessionCookie: [] }]
       parameters:
         - { in: query, name: usage, required: true, schema: { type: string, enum: [sales, expenses] } }

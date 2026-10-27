@@ -43,8 +43,8 @@ func TestPaymentMethodAdminLifecycle(t *testing.T) {
 	s := seedInventoryScope(t, pool)
 	api := New(pool)
 
-	// A company keeps at most four active methods: free a slot before adding one.
-	if _, err := pool.Exec(context.Background(), `UPDATE payment_methods SET active=false WHERE organization_id=$1 AND code='plin'`, s.OrganizationID); err != nil {
+	// This disposable catalog starts with three entries; deactivation does not free a slot.
+	if _, err := pool.Exec(context.Background(), `DELETE FROM payment_methods WHERE organization_id=$1 AND code='plin'`, s.OrganizationID); err != nil {
 		t.Fatal(err)
 	}
 	createReq := httptest.NewRequest("POST", "/v1/admin/payment-methods", bytes.NewBufferString(`{

@@ -24,4 +24,6 @@ export type PaymentMethodsResponse={
  total:number;
  page:number;
  pageSize:number;
+ catalogTotal:number;
+ catalogLimit:number;
 };

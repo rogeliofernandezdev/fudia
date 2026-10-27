@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"encoding/json"
+	billingcontracts "github.com/foods-platform/foods-backend/internal/modules/billing/contracts"
 	identitycontracts "github.com/foods-platform/foods-backend/internal/modules/identity/contracts"
 	orgcontracts "github.com/foods-platform/foods-backend/internal/modules/organizations/contracts"
 	"github.com/foods-platform/foods-backend/internal/modules/platformadmin/application"
@@ -110,6 +111,9 @@ func nonNil(values []string) []string {
 	return values
 }
 func (r *Platform) SeedPaymentMethods(ctx context.Context, organizationID string) error {
+	if _, err := r.db(ctx).Exec(ctx, `SELECT 1 FROM organizations WHERE id=$1 FOR UPDATE`, organizationID); err != nil {
+		return err
+	}
 	_, err := r.db(ctx).Exec(ctx, `
 		INSERT INTO payment_methods(
 			organization_id,code,name,description,active,sales_enabled,expenses_enabled,affects_cash,sort_order
@@ -117,14 +121,15 @@ func (r *Platform) SeedPaymentMethods(ctx context.Context, organizationID string
 		SELECT $1,t.code,t.name,t.description,t.active,t.sales_enabled,t.expenses_enabled,t.affects_cash,t.sort_order
 		FROM payment_method_templates t
 		-- Country templates (Peru: cash, card, Yape, Plin) or the general set.
-		WHERE t.country_code=COALESCE((
-		  SELECT x.country_code FROM payment_method_templates x
-		  WHERE x.country_code=(
+		WHERE t.active AND t.country_code=CASE WHEN (
 		    SELECT fp.country_code::text FROM organization_fiscal_profiles fp
-		    WHERE fp.organization_id=$1 ORDER BY fp.is_default DESC,fp.created_at LIMIT 1)
-		  LIMIT 1),'')
+		    WHERE fp.organization_id=$1 ORDER BY fp.is_default DESC,fp.created_at LIMIT 1
+		  )='PE' THEN 'PE' ELSE '' END
+		AND NOT EXISTS(SELECT 1 FROM payment_methods p WHERE p.organization_id=$1 AND p.code=t.code)
+		ORDER BY t.sort_order,t.code
+		LIMIT GREATEST($2-(SELECT count(*) FROM payment_methods WHERE organization_id=$1),0)
 		ON CONFLICT (organization_id,code) DO NOTHING
-	`, organizationID)
+	`, organizationID, billingcontracts.MaxPaymentMethods)
 	return err
 }
 

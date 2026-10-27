@@ -1,5 +1,12 @@
 # Pruebas
 
+Medios de pago: `payment_methods_total_limit_integration_test.go` comprueba que
+un inactivo consume plaza, que los filtros no alteran la capacidad y que tres
+altas concurrentes con dos plazas disponibles terminan en cuatro registros y
+un rechazo 409. Las pruebas de país verifican cuatro medios para Perú y solo
+Efectivo/Tarjeta para otros países. El ciclo administrativo inicia con tres filas
+de prueba para permitir el cuarto registro; desactivar no libera plazas.
+
 `company_admin_locations_integration_test.go` verifica con PostgreSQL temporal
 que el administrador de empresa ve los tres locales con una sola asignación,
 incluye un local recién creado y cambia mediante la cookie real sin perder

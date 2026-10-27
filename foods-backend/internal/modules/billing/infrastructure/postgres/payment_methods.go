@@ -91,7 +91,9 @@ func (r *Methods) List(ctx context.Context, org string, f application.MethodFilt
 	where := `organization_id=$1
 		AND ($2='' OR code ILIKE '%'||$2||'%' OR name ILIKE '%'||$2||'%' OR description ILIKE '%'||$2||'%')
 		AND ($3='' OR ($3='active' AND active) OR ($3='inactive' AND NOT active))`
-	if err := r.db(ctx).QueryRow(ctx, `SELECT count(*) FROM payment_methods WHERE `+where, org, f.Query, f.Status).Scan(&out.Total); err != nil {
+	if err := r.db(ctx).QueryRow(ctx, `SELECT
+		(SELECT count(*) FROM payment_methods WHERE `+where+`),
+		count(*) FROM payment_methods WHERE organization_id=$1`, org, f.Query, f.Status).Scan(&out.Total, &out.CatalogTotal); err != nil {
 		return out, err
 	}
 	items, err := readMethods(r.db(ctx).Query(ctx, `
@@ -138,6 +140,14 @@ func (r *Methods) ActiveCount(ctx context.Context, org string) (int, error) {
 	}
 	var count int
 	err := r.db(ctx).QueryRow(ctx, `SELECT count(*) FROM payment_methods WHERE organization_id=$1 AND active`, org).Scan(&count)
+	return count, err
+}
+func (r *Methods) CatalogCount(ctx context.Context, org string) (int, error) {
+	if _, err := r.db(ctx).Exec(ctx, `SELECT 1 FROM organizations WHERE id=$1 FOR UPDATE`, org); err != nil {
+		return 0, err
+	}
+	var count int
+	err := r.db(ctx).QueryRow(ctx, `SELECT count(*) FROM payment_methods WHERE organization_id=$1`, org).Scan(&count)
 	return count, err
 }
 func (r *Methods) Continuity(ctx context.Context, org string) (bool, error) {

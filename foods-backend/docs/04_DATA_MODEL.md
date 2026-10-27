@@ -441,16 +441,20 @@ plan básico no depende de recetas para comenzar a vender.
 
 Los valores iniciales se siembran durante la migración, pero la lógica de aplicación no contiene una lista cerrada de medios de pago.
 
-Una empresa tiene como máximo **4 medios activos** (`MaxActivePaymentMethods`):
-crear o activar un quinto responde `payment_method_limit` y obliga a desactivar
-otro antes. `payment_method_templates` se agrupa por `country_code`: Perú (`PE`)
-siembra Efectivo, Tarjeta, Yape y Plin; el resto de países usa el conjunto
-general (`country_code=''`): Efectivo, Tarjeta, Transferencia bancaria y
-Billetera digital, con «Otro» inactivo. El país se toma del perfil fiscal
-predeterminado de la empresa. La migración 89 llevó las empresas peruanas
-existentes a ese conjunto (Transferencia, Billetera digital y Otro quedan
-inactivos con su historial intacto) y dejó toda empresa con 4 activos como
-máximo, conservando los de menor orden.
+Una empresa puede registrar como máximo **4 medios en total**, incluidos los
+inactivos (`MaxPaymentMethods`). Crear un quinto responde `payment_method_limit`;
+desactivar uno no libera una plaza. Se puede editar un medio existente. La
+validación bloquea la fila de empresa antes de contar e insertar para serializar
+altas concurrentes. El listado expone `catalogTotal` y `catalogLimit` sin depender
+de búsqueda, estado ni paginación.
+
+`payment_method_templates` se agrupa por `country_code`: Perú (`PE`) precarga
+Efectivo, Tarjeta, Yape y Plin; los demás países, Efectivo y Tarjeta. El país se
+toma del perfil fiscal predeterminado de la empresa. La migración 93 deshabilita
+las plantillas generales adicionales para futuras precargas; no borra ni modifica
+medios de empresas existentes ni su historial. Los catálogos históricos con más
+de cuatro filas conservan sus registros, pero no admiten nuevas altas. El límite
+anterior de cuatro activos se conserva para sus activaciones.
 
 El cobro del POS lee el catálogo en `GET /v1/admin/payment-methods/operational?usage=sales`
 (activos y habilitados para ventas, en su orden). Nombre e indicador `affectsCash`
