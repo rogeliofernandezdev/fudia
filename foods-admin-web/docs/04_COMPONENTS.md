@@ -17,6 +17,12 @@ mantiene la jerarquía principal del campo.
 Componentes pequeños y accesibles. Design system no conoce autenticación ni API.
 Formularios usan React Hook Form y Zod. Catálogos siempre llegan del API.
 
+El modal de Locales muestra «Datos del local» solo en la cabecera. Los campos
+generales comienzan directamente; `LocationMap` aporta su propia etiqueta
+«Dirección del local» y recibe `addressError`, sin otro `FormField` que la
+repita. El bloque fiscal conserva un único rótulo visible «Perfil fiscal» y
+su sección mantiene el nombre accesible «Configuración fiscal».
+
 ## PdfViewer
 
 `@/shared/pdf-viewer` exporta un modal cliente reutilizable basado en el visor
