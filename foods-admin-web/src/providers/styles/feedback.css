@@ -22,7 +22,7 @@
 .feedback-card.out{animation:var(--duration-fast) var(--easing-out) both alert-panel-out}
 .feedback-card.success.out{animation:var(--duration-fast) var(--easing-out) reverse both feedback-success-fade}
 .feedback-icon.success{border:0;color:var(--surface);position:relative;isolation:isolate}
-.feedback-icon.success:before{content:"";position:absolute;inset:0;background:var(--brand-700);border-radius:50%;animation:var(--duration-dialog) var(--easing-spring) both feedback-success-settle}
+.feedback-icon.success:before{content:"";position:absolute;inset:0;background:var(--brand-600);border-radius:50%;animation:var(--duration-dialog) var(--easing-spring) both feedback-success-settle}
 .feedback-icon.success svg{position:relative;z-index:1;stroke-width:var(--stroke-3);animation:feedback-success-fade var(--duration-fast) var(--easing-out) var(--duration-press) both}
 @media (prefers-reduced-motion:reduce){.feedback-overlay,.feedback-card,.feedback-icon,.feedback-icon:before,.feedback-icon svg{animation:none!important}}
 @keyframes feedback-success-settle{

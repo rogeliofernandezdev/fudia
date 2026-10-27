@@ -219,7 +219,7 @@ export function SalonManager(){
                 {/* Plano de mesa: quién o dónde y estado arriba; el plato es la mesa (lleno = ocupada). */}
                 <header className="salon-table-head">
                   <span className="salon-table-who">{o?(o.customerName||t.zone||seats):t.zone}</span>
-                  {o&&meta?<Status tone={meta.tone} emphasis>{meta.label}</Status>:<Status tone="navy" emphasis>Libre</Status>}
+                  {o&&meta?<Status tone={meta.tone} emphasis>{meta.label}</Status>:<Status tone="green" emphasis>Libre</Status>}
                 </header>
 
                 <div className="salon-table-stage">

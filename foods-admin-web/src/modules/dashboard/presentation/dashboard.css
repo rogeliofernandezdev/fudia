@@ -28,13 +28,9 @@
 .dash-kpi.amber{border-color:var(--warning-100);background:linear-gradient(160deg,var(--warning-50),var(--surface) 62%)}
 .dash-kpi-head{display:flex;align-items:center;gap:var(--space-2-5);min-width:0}
 .dash-kpi-head small{flex:1;min-width:0;overflow:hidden;font-size:var(--font-size-sm);line-height:var(--line-height-tight);font-weight:var(--weight-bold);text-overflow:ellipsis;white-space:nowrap;color:var(--ink-600)}
-.dash-kpi-icon{display:grid;place-items:center;flex:0 0 auto;width:var(--size-32);height:var(--size-32);border-radius:var(--radius-tile);color:var(--primary-700);background:var(--primary-100)}
 .dash-kpi strong{font-size:var(--font-size-2xl);font-weight:var(--weight-bold);font-variant-numeric:tabular-nums;line-height:var(--line-height-tight);letter-spacing:var(--letter-spacing-snug);white-space:nowrap;color:var(--ink-950)}
 .dash-kpi.lead strong{font-size:var(--font-size-3xl);line-height:var(--line-height-none);letter-spacing:var(--letter-spacing-tight)}
 .dash-kpi em{font-size:var(--font-size-xs);font-style:normal;color:var(--ink-500)}
-.dash-kpi.green .dash-kpi-icon{color:var(--brand-700);background:var(--brand-100)}
-.dash-kpi.violet .dash-kpi-icon{color:var(--digital-700);background:var(--digital-100)}
-.dash-kpi.amber .dash-kpi-icon{color:var(--warning-800);background:var(--warning-100)}
 .dash-kpi.green .dash-spark-stop{stop-color:var(--brand-600)}
 .dash-kpi.violet .dash-spark-stop{stop-color:var(--digital-500)}
 .dash-kpi.green .dash-spark-line{stroke:var(--brand-300)}
@@ -48,9 +44,10 @@
 
 /* Variación: el porcentaje con signo en pastilla; la comparación como texto */
 .dash-change{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-1) var(--space-1-5);margin:0;font-size:var(--font-size-xs);color:var(--ink-500)}
-.dash-change b{display:inline-flex;align-items:center;min-height:var(--size-22);padding:0 var(--space-2);border-radius:var(--radius-pill);font-weight:var(--weight-bold);font-variant-numeric:tabular-nums;color:var(--ink-600);background:var(--cloud-100)}
+.dash-change b{display:inline-flex;align-items:center;gap:var(--space-1);min-height:var(--size-22);padding:0 var(--space-2);border-radius:var(--radius-pill);font-weight:var(--weight-bold);font-variant-numeric:tabular-nums;color:var(--ink-600);background:var(--cloud-100)}
 .dash-change.up b{color:var(--brand-700);background:var(--brand-100)}
 .dash-change.down b{color:var(--danger);background:var(--danger-50)}
+.dash-change.down b svg{color:var(--danger-500)}
 
 /* Minigráfico: curva suave con área que se desvanece; crece y se transforma desde JS */
 .dash-spark{position:relative;display:block}

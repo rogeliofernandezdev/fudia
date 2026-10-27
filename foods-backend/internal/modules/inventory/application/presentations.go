@@ -26,7 +26,11 @@ func (a *Stock) CreateCombination(ctx context.Context, s scope, in domain.Invent
 	// Serialize catalog/default changes on the base-unit row.
 	var unitName string
 	var unitCountable bool
-	err = func() error { var err error; unitName, unitCountable, err = a.repo.LockUnit(tx.Context(), s, in); return err }()
+	err = func() error {
+		var err error
+		unitName, unitCountable, err = a.repo.LockUnit(tx.Context(), s, in)
+		return err
+	}()
 	if errors.Is(err, ErrNotFound) {
 		return result, stockFailure(apperror.Invalid, "invalid_inventory_unit", "Selecciona una unidad base de tu empresa.")
 	}
@@ -115,12 +119,6 @@ func (a *Stock) LocationSettings(ctx context.Context, s scope, id string, in dom
 	if !domain.ValidLocationSettings(in) {
 		return stockFailure(apperror.Invalid, "invalid_inventory_settings", "Revisa los niveles de stock.")
 	}
-	if in.ReorderPoint < in.MinimumStock {
-		in.ReorderPoint = in.MinimumStock
-	}
-	if in.OptimalStock < in.ReorderPoint {
-		in.OptimalStock = in.ReorderPoint
-	}
 	var exists bool
 	if err := func() error { var err error; exists, err = a.repo.ItemExists(ctx, s, id); return err }(); err != nil {
 		return stockFailure(apperror.Unavailable, "inventory_unavailable", "No pudimos validar el artículo de inventario.")
@@ -128,7 +126,20 @@ func (a *Stock) LocationSettings(ctx context.Context, s scope, id string, in dom
 	if !exists {
 		return stockFailure(apperror.NotFound, "inventory_item_not_found", "El artículo de inventario no existe.")
 	}
-	_, err := a.repo.LocationSettings(ctx, s, id, in)
+	rule, err := a.repo.PresentationRule(ctx, s, id, "unit")
+	if err != nil {
+		return stockFailure(apperror.Unavailable, "inventory_units_unavailable", "No pudimos validar la unidad del artículo.")
+	}
+	if rule.Countable && !domain.WholeLocationSettings(in) {
+		return stockFailure(apperror.Invalid, "fractional_inventory_settings", "Usa cantidades enteras para los niveles de stock de esta unidad.")
+	}
+	if in.ReorderPoint < in.MinimumStock {
+		in.ReorderPoint = in.MinimumStock
+	}
+	if in.OptimalStock < in.ReorderPoint {
+		in.OptimalStock = in.ReorderPoint
+	}
+	_, err = a.repo.LocationSettings(ctx, s, id, in)
 	if err != nil {
 		return stockFailure(apperror.Unavailable, "inventory_unavailable", "No pudimos actualizar los niveles del artículo.")
 	}

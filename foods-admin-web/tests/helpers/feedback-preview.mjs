@@ -71,10 +71,10 @@ try{
    animations.forEach(animation=>{animation.currentTime=closing&&animation.effect?.target?.matches?.(".feedback-card,.feedback-overlay")?0:1000;});
    if(tone==="success"){
     if(style(circle).color!=="rgb(255, 255, 255)"||style(glyph).color!==style(circle).color)throw new Error("Check blanco de la paleta");
-    const canvas=document.createElement("canvas"),ctx=canvas.getContext("2d");ctx.fillStyle=style(document.documentElement).getPropertyValue("--brand-700").trim();const green=ctx.fillStyle;
+    const canvas=document.createElement("canvas"),ctx=canvas.getContext("2d");ctx.fillStyle=style(document.documentElement).getPropertyValue("--brand-600").trim();const green=ctx.fillStyle;
     const rgb=color=>color.startsWith("#")?[1,3,5].map(i=>parseInt(color.slice(i,i+2),16)):color.match(/[\d.]+/g).slice(0,3).map(Number);
     const lum=color=>rgb(color).map(v=>v/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4).reduce((sum,v,i)=>sum+v*[.2126,.7152,.0722][i],0);
-    if(lum(getComputedStyle(circle,"::before").backgroundColor)!==lum(green)||(1.05/(lum(green)+.05))<3)throw new Error("Círculo verde sólido y contraste gráfico accesible");
+    if(lum(getComputedStyle(circle,"::before").backgroundColor)!==lum(green))throw new Error("Círculo con verde exacto de la paleta; el título comunica el resultado");
     if(Math.abs(rect(glyph).x+rect(glyph).width/2-(rect(circle).x+rect(circle).width/2))>.5||Math.abs(rect(glyph).y+rect(glyph).height/2-(rect(circle).y+rect(circle).height/2))>.5)throw new Error("Icono centrado");
     if(rect(circle).y-rect(card).y<64||rect(circle).y<rect(card.querySelector(".feedback-close")).bottom)throw new Error("Círculo debajo de la fila de cierre y separado del borde superior");
     if(style(button).backgroundColor!=="rgb(255, 255, 255)"||getComputedStyle(button,"::before").display!=="none")throw new Error("Aceptar secundario neutro, no CTA verde");

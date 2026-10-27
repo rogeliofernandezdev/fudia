@@ -10,4 +10,8 @@
 .icon-tile.tone-peach{color:var(--peach-700);background:var(--peach-100)}
 .icon-tile.tone-rose{color:var(--rose-700);background:var(--rose-100)}
 .icon-tile.tone-warning{color:var(--warning-800);background:var(--warning-100)}
+.icon-tile.tone-danger{color:var(--danger-700);background:var(--danger-50)}
 .icon-tile.tone-neutral{color:var(--ink-700);background:var(--cloud-100)}
+.icon-tile.vivid.tone-primary{color:var(--surface);background:var(--primary-600)}
+.icon-tile.vivid.tone-brand{color:var(--surface);background:var(--brand-600)}
+.icon-tile.vivid.tone-danger{color:var(--surface);background:var(--danger-500)}

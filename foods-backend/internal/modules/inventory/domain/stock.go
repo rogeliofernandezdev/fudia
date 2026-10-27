@@ -15,6 +15,7 @@ type InventoryItemView struct {
 	CategoryName    *string   `json:"categoryName"`
 	Active          bool      `json:"active"`
 	Unit            string    `json:"unit"`
+	UnitCountable   bool      `json:"unitCountable"`
 	Quantity        string    `json:"quantity"`
 	MinimumStock    string    `json:"minimumStock"`
 	ReorderPoint    string    `json:"reorderPoint"`
@@ -328,6 +329,11 @@ type LocationSettings struct {
 // ValidLocationSettings checks every level fits the stock columns.
 func ValidLocationSettings(in LocationSettings) bool {
 	return validAmount(in.MinimumStock, MaxStockQuantity) && validAmount(in.ReorderPoint, MaxStockQuantity) && validAmount(in.OptimalStock, MaxStockQuantity)
+}
+
+// WholeLocationSettings prevents fractional thresholds for units counted by piece.
+func WholeLocationSettings(in LocationSettings) bool {
+	return math.Trunc(in.MinimumStock) == in.MinimumStock && math.Trunc(in.ReorderPoint) == in.ReorderPoint && math.Trunc(in.OptimalStock) == in.OptimalStock
 }
 
 type PurchaseInventoryItemInput struct {

@@ -10,7 +10,7 @@ const values=node=>Object.fromEntries(node.nodes.filter(n=>n.type==="decl").map(
 
 test("éxito: círculo verde sólido, icono blanco y tamaño centrado compartido",()=>{
  const icon=values(rule(".feedback-icon.success")),shape=values(rule(".feedback-icon.success:before")),base=values(rule(".feedback-icon"));
- assert.equal(shape.background,"var(--brand-700)");
+ assert.equal(shape.background,"var(--brand-600)");
  assert.equal(icon.color,"var(--surface)");
  assert.equal(icon.border,"0");
  assert.equal(shape["border-radius"],"50%");
@@ -77,4 +77,16 @@ test("no modifica error, información, autocierre ni callback posterior",()=>{
   const context=node.parent.type==="atrule"?node.parent.params:"root";
   for(const selector of node.selectors){const key=`${context}|${selector}`;assert.ok(!seen.has(key),key);seen.add(key);}
  });
+});
+
+test("confirmación positiva comparte el verde exacto; la destructiva mantiene su intención",()=>{
+ const confirm=postcss.parse(read("src/design-system/styles/confirm-dialog.css"));
+ const get=selector=>values(confirm.nodes.find(node=>node.selector===selector));
+ assert.equal(get(".confirm-icon.success").background,"var(--brand-600)");
+ assert.equal(get(".confirm-icon.success").color,"var(--surface)");
+ assert.equal(get(".confirm-icon.danger").background,"var(--danger-50)");
+ assert.equal(get(".confirm-icon.danger").color,"var(--danger-600)");
+ const source=read("src/design-system/confirm-dialog.tsx");
+ assert.match(source,/kind=\{tone==="danger"\?"danger":"primary"\}/,"confirmar es acción pendiente; no botón verde");
+ assert.match(source,/className=\{`confirm-icon \$\{tone\}`\} aria-hidden="true"/);
 });

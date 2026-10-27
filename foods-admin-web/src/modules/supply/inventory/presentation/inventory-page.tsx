@@ -17,7 +17,7 @@ const InventoryAdjustmentDialog=dynamic(()=>import("./inventory-adjustment-dialo
 const InventorySettingsDialog=dynamic(()=>import("./inventory-settings-dialog").then(module=>module.InventorySettingsDialog),{ssr:false});
 const InventoryTransferDialog=dynamic(()=>import("./inventory-transfer-dialog").then(module=>module.InventoryTransferDialog),{ssr:false});
 
-const inventoryColumns=["Artículo","Tipo","Unidad","Existencia","Mínimo / reorden","Costo prom.","Valor","Estado","Acciones"];
+const inventoryColumns=["Artículo","Tipo","Unidad","Existencia","Stock mínimo","Costo prom.","Valor","Estado","Acciones"];
 const statusMeta={
  ok:{label:"Saludable",tone:"green" as const},
  low:{label:"Stock bajo",tone:"orange" as const},
@@ -90,7 +90,7 @@ export function InventoryPage(){
        <td>{item.kind==="ingredient"?"Insumo":"Producto"}</td>
        <td>{item.unit}</td>
        <td><b className="inventory-quantity">{formatRegionalNumber(Number(item.quantity),location?.country,{maximumFractionDigits:3})}</b></td>
-       <td><b>{formatRegionalNumber(Number(item.minimumStock),location?.country,{maximumFractionDigits:3})} / {formatRegionalNumber(Number(item.reorderPoint),location?.country,{maximumFractionDigits:3})}</b></td>
+       <td><b>{formatRegionalNumber(Number(item.minimumStock),location?.country,{maximumFractionDigits:3})}</b></td>
        <td>{formatRegionalNumber(Number(item.averageUnitCost),location?.country,{minimumFractionDigits:2,maximumFractionDigits:4})}</td>
        <td><b>{formatRegionalNumber(Number(item.stockValue),location?.country,{minimumFractionDigits:2,maximumFractionDigits:2})}</b></td>
        <td><Status tone={meta.tone}>{meta.label}</Status></td>

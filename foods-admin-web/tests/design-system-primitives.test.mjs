@@ -1,8 +1,24 @@
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import test from "node:test";
+import postcss from "postcss";
+import {resolveTokens} from "./helpers/design-tokens.mjs";
 
 const read=file=>readFileSync(new URL(`../${file}`,import.meta.url),"utf8");
+
+test("IconTile vivo respeta los acentos y el trazo blanco aprobado para verde",()=>{
+ const css=postcss.parse(read("src/design-system/styles/icon-tile.css"));
+ const luminance=hex=>hex.slice(1).match(/../g).map(v=>parseInt(v,16)/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4).reduce((s,v,i)=>s+v*[.2126,.7152,.0722][i],0);
+ for(const [tone,token] of [["primary","primary-600"],["brand","brand-600"],["danger","danger-500"]]){
+  const rule=css.nodes.find(node=>node.selector===`.icon-tile.vivid.tone-${tone}`);
+  const values=Object.fromEntries(rule.nodes.map(node=>[node.prop,node.value]));
+  assert.equal(values.background,`var(--${token})`);
+  const light=[luminance(resolveTokens(values.color)),luminance(resolveTokens(values.background))].sort((a,b)=>b-a);
+  if(tone==="brand")assert.equal(values.color,"var(--surface)","El icono decorativo verde lleva el trazo blanco solicitado");
+  else assert.ok((light[0]+.05)/(light[1]+.05)>=3,tone);
+ }
+ assert.match(read("src/design-system/icon-tile.tsx"),/aria-hidden="true"/,"Estos iconos acompañan etiquetas visibles");
+});
 
 test("primitivas homologadas: se exportan desde el design system y providers",()=>{
  const index=read("src/design-system/index.ts");

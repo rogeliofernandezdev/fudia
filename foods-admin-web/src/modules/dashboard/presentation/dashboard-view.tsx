@@ -4,6 +4,7 @@ import Link from "next/link";
 import {useState,type CSSProperties} from "react";
 import {keepPreviousData,useQuery} from "@tanstack/react-query";
 import {Icon,type IconName} from "@/design-system/icons";
+import {IconTile} from "@/design-system/icon-tile";
 import {PageHeader} from "@/design-system/page-header";
 import {useSession} from "@/providers/session-context";
 import {useSettings} from "@/providers/settings-context";
@@ -129,7 +130,7 @@ export function DashboardView(){
   ] satisfies AlertItem[]).filter(item=>item.count>0&&enabled(navigationItemForPath(item.href)?.module??""));
 
   // Sin base de comparación (el periodo anterior no vendió) no hay porcentaje que mostrar: se omite la línea.
-  const changeLine=(item:Change|undefined,fallback?:string)=>item?<p className={"dash-change "+item.direction}><b>{item.value}</b> {item.text}</p>:fallback?<em>{fallback}</em>:null;
+  const changeLine=(item:Change|undefined,fallback?:string)=>item?<p className={"dash-change "+item.direction}><b><Icon name={item.direction==="up"?"arrowUpRight":item.direction==="down"?"arrowDownRight":"minus"} size={14}/>{item.value}</b> {item.text}</p>:fallback?<em>{fallback}</em>:null;
   const kitchenShare=data.openOrders>0?Math.min(1,data.kitchenPending/data.openOrders):0;
   // Cada indicador tiene su tono de identidad (solo icono, tinte, minigráfico y barra; nunca un estado).
   // Entrada escalonada: indicadores, tendencia, desgloses y ranking; la columna en vivo acompaña a la tendencia.
@@ -141,26 +142,26 @@ export function DashboardView(){
     <div className={"dash-board"+(query.isPlaceholderData?" refreshing":"")} aria-busy={query.isFetching}>
       <section className="dash-kpis" aria-label="Indicadores del periodo">
         <article className="panel dash-kpi lead green dash-enter" style={enter(0)}>
-          <div className="dash-kpi-head"><span className="dash-kpi-icon"><Icon name="sales" size={18}/></span><small>Ventas · {shown.title}</small>{canOpen(pageRoutes.sales)&&<Link href={pageRoutes.sales} className="stat-card-link" aria-label="Ver detalle de ventas"><Icon name="arrowUpRight" size={16}/></Link>}</div>
+          <div className="dash-kpi-head"><IconTile name="sales" tone="brand" appearance="vivid" className="dash-kpi-icon"/><small>Ventas · {shown.title}</small>{canOpen(pageRoutes.sales)&&<Link href={pageRoutes.sales} className="stat-card-link" aria-label="Ver detalle de ventas"><Icon name="arrowUpRight" size={16}/></Link>}</div>
           <strong><CountUp value={salesNet} format={money}>{money(data.salesNet)}</CountUp></strong>
           {changeLine(salesChange)}
           {salesChange&&previous&&<em className="dash-kpi-before">Antes: {money(previous.salesNet)}</em>}
           <Sparkline values={salesSeries}/>
         </article>
         <article className="panel dash-kpi blue dash-enter" style={enter(1)}>
-          <div className="dash-kpi-head"><span className="dash-kpi-icon"><Icon name="receipt" size={18}/></span><small>Pedidos cobrados</small>{canOpen(pageRoutes.sales)&&<Link href={pageRoutes.sales} className="stat-card-link" aria-label="Ver pedidos cobrados"><Icon name="arrowUpRight" size={16}/></Link>}</div>
+          <div className="dash-kpi-head"><IconTile name="receipt" tone="primary" appearance="vivid" className="dash-kpi-icon"/><small>Pedidos cobrados</small>{canOpen(pageRoutes.sales)&&<Link href={pageRoutes.sales} className="stat-card-link" aria-label="Ver pedidos cobrados"><Icon name="arrowUpRight" size={16}/></Link>}</div>
           <strong><CountUp value={data.paidOrders} format={compact}>{String(data.paidOrders)}</CountUp></strong>
           {changeLine(ordersChange,"Pagados por completo en el periodo")}
           <Sparkline values={orderSeries}/>
         </article>
         <article className="panel dash-kpi violet dash-enter" style={enter(2)}>
-          <div className="dash-kpi-head"><span className="dash-kpi-icon"><Icon name="payment" size={18}/></span><small>Promedio por pedido</small></div>
+          <div className="dash-kpi-head"><IconTile name="payment" tone="digital" className="dash-kpi-icon"/><small>Promedio por pedido</small></div>
           <strong><CountUp value={Number(data.averageTicket)||0} format={money}>{money(data.averageTicket)}</CountUp></strong>
           {changeLine(ticketChange,"Por pedido cobrado")}
           <Sparkline values={ticketSeries}/>
         </article>
         <article className="panel dash-kpi amber dash-enter" style={enter(3)}>
-          <div className="dash-kpi-head"><span className="dash-kpi-icon"><Icon name="orders" size={18}/></span><small>Pedidos en atención</small>{canOpen(pageRoutes.orders)&&<Link href={pageRoutes.orders} className="stat-card-link" aria-label="Ver pedidos en atención"><Icon name="arrowUpRight" size={16}/></Link>}</div>
+          <div className="dash-kpi-head"><IconTile name="orders" tone="warning" className="dash-kpi-icon"/><small>Pedidos en atención</small>{canOpen(pageRoutes.orders)&&<Link href={pageRoutes.orders} className="stat-card-link" aria-label="Ver pedidos en atención"><Icon name="arrowUpRight" size={16}/></Link>}</div>
           <strong><CountUp value={data.openOrders} format={compact}>{String(data.openOrders)}</CountUp></strong>
           <em>{data.kitchenPending?`${data.kitchenPending} en cocina`:"Sin pedidos en cocina"}</em>
           {data.openOrders>0&&<RankTrack ratio={kitchenShare} index={0}/>}

@@ -18,7 +18,7 @@ export function createInventoryAdjustment(draft:InventoryAdjustmentDraft){
 }
 export function updateInventorySettings(draft:InventorySettingsDraft){
   return apiFetch<void>(`inventory/items/${draft.inventoryItemId}/settings`,{method:"PATCH",body:JSON.stringify({
-    minimumStock:Number(draft.minimumStock||0),reorderPoint:Number(draft.reorderPoint||0),optimalStock:Number(draft.optimalStock||0),
+    minimumStock:Number(draft.minimumStock||0),optimalStock:Number(draft.optimalStock||0),
   })});
 }
 export function listStockMovements(input:{inventoryItemId?:string;movementType?:string;sourceType?:string;from?:string;to?:string;page?:number;pageSize?:number}={}){

@@ -3,6 +3,9 @@
 .form-field-label{display:flex;align-items:baseline;gap:var(--space-1-5);font-size:var(--font-size-label)}
 .form-field-label em{font-style:normal;font-size:var(--font-size-label);font-weight:var(--weight-semibold);color:var(--ink-500)}
 .form-field>input,.form-field>select{height:var(--control-height)}
+.form-field.numeric-value .ds-input{font-size:var(--font-size-md);font-weight:var(--weight-bold);font-variant-numeric:tabular-nums}
+.form-field.numeric-value .ds-input-shell{gap:var(--space-3)}
+.form-field.numeric-value .ds-input-shell>svg{width:var(--size-20);height:var(--size-20)}
 .form-field.has-error>input,.form-field.has-error>select,.form-field.has-error>textarea,.form-field.has-error>.money-input{border-color:var(--danger)}
 .field-help{font-size:var(--font-size-control);font-weight:var(--control-value-weight,var(--weight-semibold));line-height:var(--line-height-snug);color:var(--ink-600)}
 .field-error{animation:feedback-reveal var(--duration-fast) var(--easing-out);font-size:var(--font-size-control);font-weight:var(--weight-semibold);line-height:var(--line-height-snug);color:var(--danger)}

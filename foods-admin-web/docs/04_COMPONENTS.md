@@ -1,5 +1,19 @@
 # Componentes
 
+Los niveles de Inventario usan `unitCountable` del API: mínimo y óptimo
+con paso 1/teclado numérico si se cuentan piezas, o 0.001/decimal si se miden.
+Los ceros finales del formato de base se omiten (`100.000` → `100`), sin redondear
+fracciones históricas. El óptimo nunca queda por debajo del mínimo. Se retira
+Punto de reorden del formulario, listado, borrador y payload de guardado; el campo
+antiguo permanece en backend solo por compatibilidad, sin condicionar el óptimo.
+Este diálogo corto usa `modal-form-compact`: 12 px sobre su sección inicial,
+conservando márgenes laterales y pie compartidos. Los dos campos de cantidad
+usan `FormField className="numeric-value"`: valor de 16 px / 700 y cifras
+tabulares e icono neutro de 20 px separado 12 px del número. Ambos usan una
+caja simple (`box`) para representar existencias; las etiquetas distinguen
+el mínimo del óptimo. El icono mantiene presencia sin reducirse y el número
+mantiene la jerarquía principal del campo.
+
 Componentes pequeños y accesibles. Design system no conoce autenticación ni API.
 Formularios usan React Hook Form y Zod. Catálogos siempre llegan del API.
 
@@ -32,8 +46,10 @@ dentro de un módulo.
 
 - `Icon name` — set único de Tabler (monocromo, trazo 1.75); nunca importar
   Tabler directamente en un módulo.
-- `IconTile name tone size` — icono sobre cuadrito tintado (`primary`, `brand`,
-  `digital`, `teal`, `sky`, `peach`, `rose`, `warning`, `neutral`).
+- `IconTile name tone size appearance` — icono sobre cuadrito tintado (`primary`, `brand`,
+  `digital`, `teal`, `sky`, `peach`, `rose`, `warning`, `danger`, `neutral`). Por
+  defecto `appearance="soft"`; `vivid` admite `primary`, `brand` y `danger` para
+  acentos de Dashboard y flujos de Caja. No sustituye `Status` ni colorea botones.
 - `StatCard icon tone label value meta href attention` — indicador con flecha ↗
   hacia el detalle; agrupar con `.stat-grid`.
 - `Input icon` — campo con icono al inicio (correo, teléfono, dirección,
@@ -353,6 +369,10 @@ Reglas:
   foco en el primer campo con error. Mensajes: «Ingresa…» o «Selecciona…».
 - Solo lectura con fondo `cloud-50` y borde punteado; deshabilitado con
   `cloud-100`.
+- Foco de campos compuestos: `ds-input-shell` y `money-input` son dueños del
+  único borde/anillo visible. El input/select interior no dibuja un segundo
+  rectángulo, tampoco en `form-grid`; foco con error se representa en rojo sobre
+  ese contenedor. Los campos independientes y los botones mantienen su foco.
 
 ### Avisos y feedback
 
@@ -415,7 +435,7 @@ icono tiene un solo significado en toda la aplicación (ver
   Los avisos de éxito se cierran automáticamente (4,2 s por defecto) o mediante
   Aceptar/X. Errores e información requieren cierre explícito. No se cierran al
   pulsar el fondo ni con Escape.
-  La respuesta `success` presenta círculo verde restaurante `brand-700` y check
+  La respuesta `success` presenta círculo verde restaurante `brand-600` y check
   blanco `surface` centrado (76/36 px). El panel reserva 64 px sobre el símbolo
   para separarlo de la X y 32 px al pie; título `ink-950` de 18 px / 700,
   explicación `ink-600` de 14 px. «Aceptar» es secundario neutro sobre blanco,

@@ -36,7 +36,7 @@ test("la pantalla conserva el centrado, el polling parcial y estados semánticos
  assert.match(page,/setInterval\(\(\)=>setClock\(Date\.now\(\)\),30000\)/);
  assert.match(page,/floor\.isError&&!floor\.data/);
  assert.match(page,/<Status tone=\{meta\.tone\} emphasis>\{meta\.label\}<\/Status>/,"estado destacado con la variante compartida");
- assert.match(page,/<Status tone="navy" emphasis>Libre<\/Status>/,"Libre no comparte tono con Entregado (teal) ni Listo (green)");
+ assert.match(page,/<Status tone="green" emphasis>Libre<\/Status>/,"Libre usa el estado positivo compartido aprobado");
  assert.doesNotMatch(page,/<Status tone="red">Ocupada<\/Status>/);
  assert.doesNotMatch(page,/className="salon-table-order-status"/);
  assert.match(page,/elapsed\?\.known&&<small className=\{`salon-table-elapsed/,"sin hora de apertura no se muestra «—»");
@@ -52,7 +52,7 @@ test("la pantalla conserva el centrado, el polling parcial y estados semánticos
  assert.doesNotMatch(page,/collectedByNames/,"«Cobrado por» queda en el detalle de la mesa");
 });
 
-test("paleta de salon: plato lleno índigo (ocupada) o punteado (libre), sin verde, rojo ni bandas; KPI como la referencia",()=>{
+test("paleta de salón: contenedores originales y color semántico solo en estados",()=>{
  const css=readFileSync(new URL("../src/modules/operations/styles/salon.css",import.meta.url),"utf8");
  assert.match(css,/\.salon-table-stage\{[^}]*background:var\(--primary-100\)\}/,"escenario índigo tenue en ocupadas");
  assert.match(css,/\.salon-table-plate\{[^}]*background:var\(--primary-600\);color:var\(--surface\)/,"plato lleno en índigo cuando está ocupada");
@@ -60,9 +60,9 @@ test("paleta de salon: plato lleno índigo (ocupada) o punteado (libre), sin ver
  assert.match(css,/\.salon-table-foot\{margin-top:auto;/,"pie sin banda de color");
  assert.match(css,/\.salon-table\.occupied \.salon-table-go\{background:var\(--primary-100\);color:var\(--primary-700\)\}/,"el plato es el único círculo sólido");
  assert.match(css,/\.salon-grid\{display:grid;grid-template-columns:repeat\(auto-fill,minmax\(max\(var\(--size-212\),calc\(\(100% - var\(--space-4\) \* 3\) \/ 4\)\),1fr\)\)/,"como máximo cuatro mesas por fila");
- assert.match(css,/\.salon-table-go\{[^}]*background:var\(--navigation-900\);color:var\(--surface\)/,"«Abrir mesa» en azul marino");
+ assert.match(css,/\.salon-table-go\{[^}]*background:var\(--navigation-900\);color:var\(--surface\)/,"«Abrir mesa» conserva azul marino");
  assert.match(css,/\.salon-table-open\{color:var\(--navigation-900\)/);
- assert.doesNotMatch(css,/danger|brand-/,"sin rojo ni verde en las tarjetas: el verde queda solo en el Status «Libre»");
+ assert.doesNotMatch(css,/danger|brand-/,"los contenedores no se tiñen de verde o rojo");
  assert.doesNotMatch(css,/\.salon-table[^{]*::before/,"sin bandas superiores");
  const page=readFileSync(new URL("../src/modules/operations/salon/presentation/salon-manager.tsx",import.meta.url),"utf8");
  assert.match(page,/<dl className="salon-overview-stats" aria-label="Resumen del salón">/);

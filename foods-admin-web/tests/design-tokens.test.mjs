@@ -9,6 +9,15 @@ const read=file=>readFileSync(new URL(file,root),"utf8");
 function files(dir){return readdirSync(new URL(dir+"/",root),{withFileTypes:true}).flatMap(entry=>entry.isDirectory()?files(`${dir}/${entry.name}`):[`${dir}/${entry.name}`]);}
 const sourceFiles=files("src");
 
+test("los acentos coinciden con las muestras RGB registradas del PNG de referencia",()=>{
+  const reference=JSON.parse(read("docs/visual-references/hero-dashboard-palette.json"));
+  for(const sample of reference.samples){
+    assert.equal(resolveTokens(`var(--${sample.token})`).toUpperCase(),sample.hex,sample.region);
+    assert.ok(sample.alpha>=250);
+  }
+  assert.equal(resolveTokens("var(--amount-paid)"),resolveTokens("var(--brand-600)"),"Los importes pagados usan el verde exacto de la referencia");
+});
+
 test("la paleta operativa conserva contraste AA y una rampa azul luminosa ordenada",()=>{
   const luminance=value=>value.slice(1).match(/../g).map(v=>parseInt(v,16)/255)
     .map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4)

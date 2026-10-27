@@ -48,8 +48,9 @@
 .order-detail-notes h3{margin:0;color:var(--ink-950);font-size:var(--font-size-base);font-weight:var(--weight-bold);line-height:var(--line-height-snug)}
 .order-detail-notes p{margin:0;color:var(--ink-700);font-size:var(--font-size-label);line-height:var(--line-height-normal);overflow-wrap:anywhere}
 .order-detail-paid b{color:var(--ink-600)}
-.order-detail-paid.has-payment b{color:var(--brand-800)}
-.order-detail-totals.is-paid .modal-summary-total span,.order-detail-totals.is-paid .modal-summary-total strong{color:var(--brand-800)}
+.order-detail-paid.has-payment b{color:var(--amount-paid)}
+.order-detail-totals.is-paid .modal-summary-total span{color:var(--brand-700)}
+.order-detail-totals.is-paid .modal-summary-total strong{color:var(--amount-paid)}
 .order-detail-actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:var(--space-3);flex-shrink:0;background:var(--cloud-50)}
 .order-detail-notice{flex:1 1 var(--size-170);min-width:0;display:flex;align-items:flex-start;gap:var(--space-2);margin:0;color:var(--ink-600);font-size:var(--font-size-label);line-height:var(--line-height-normal)}
 .order-detail-notice>svg{flex-shrink:0}

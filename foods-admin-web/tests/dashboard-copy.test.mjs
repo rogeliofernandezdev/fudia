@@ -24,6 +24,7 @@ function render(data,sessionOverrides={},queryOverrides={}){
   if(name==="next/link")return {default:"Link"};
   if(name==="@tanstack/react-query")return {keepPreviousData:previous=>previous,useQuery:()=>({data,isLoading:false,isError:false,isFetching:false,isPlaceholderData:false,...queryOverrides})};
   if(name==="@/design-system/icons")return {Icon:"Icon"};
+  if(name==="@/design-system/icon-tile")return {IconTile:"IconTile"};
   if(name==="@/design-system/page-header")return {PageHeader:"PageHeader"};
   if(name==="@/providers/session-context")return {useSession:()=>({user:{name:"Ana",platformAdmin:false},location:{id:"local",name:"Principal"},organization:{id:"company"},modules,menuAccess:["*"],permissions:["*"],setupRequired:false,...sessionOverrides})};
   if(name==="@/providers/settings-context")return {useSettings:()=>({currencyDecimals:2,currencySymbol:"S/",currencyPosition:"before"})};

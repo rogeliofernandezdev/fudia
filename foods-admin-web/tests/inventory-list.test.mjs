@@ -32,7 +32,7 @@ function mount(items){
  return nodes(InventoryPage());
 }
 
-test("inventario muestra mínimo y reorden juntos, con cero y cantidades fraccionarias",()=>{
+test("inventario muestra solo stock mínimo, con cero y cantidades fraccionarias",()=>{
  const items=[base,{...base,inventoryItemId:"cola",minimumStock:"5",reorderPoint:"5"},{...base,inventoryItemId:"zero",minimumStock:"0",reorderPoint:"0"},{...base,inventoryItemId:"fraction",minimumStock:"1.125",reorderPoint:"2.5"}];
  const view=mount(items);
  const rows=view.filter(node=>node.type==="tr"&&node.key!==null);
@@ -42,10 +42,12 @@ test("inventario muestra mínimo y reorden juntos, con cero y cantidades fraccio
   assert.equal(cell.type,"td");
   assert.equal(cell.props.children.type,"b");
   assert.equal(nodes(cell).some(node=>node.type==="small"||node.type==="br"),false);
-  assert.equal(cell.props.children.props.children.join(""),`${regional.formatRegionalNumber(Number(items[index].minimumStock),"PE",{maximumFractionDigits:3})} / ${regional.formatRegionalNumber(Number(items[index].reorderPoint),"PE",{maximumFractionDigits:3})}`);
+  assert.equal(cell.props.children.props.children,regional.formatRegionalNumber(Number(items[index].minimumStock),"PE",{maximumFractionDigits:3}));
   assert.equal(row.props.children.length,9);
  });
  assert.equal(view.filter(node=>node.type==="Pagination").length,1);
+ assert.ok(view.some(node=>node.type==="th"&&node.props.children==="Stock mínimo"));
+ assert.equal(view.some(node=>node.type==="th"&&String(node.props.children).toLowerCase().includes("reorden")),false);
 });
 
 test("la tabla conserva el nowrap compartido y desplazamiento horizontal en móvil sin sobrescribir textos secundarios",()=>{

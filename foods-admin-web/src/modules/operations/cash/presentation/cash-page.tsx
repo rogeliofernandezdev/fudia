@@ -4,7 +4,7 @@ import {Dialog} from "@/design-system/dialog";
 import "./cash.css";
 import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,ConfirmDialog,EmptyState,ErrorState,Icon,IconButton,PageHeader,Pagination,RemoteModalSkeleton,RowActionButton,SearchField,Select,Skeleton,Status,TableSkeleton,Tabs,TabsBar,ModalHeader} from "@/design-system";
+import {Button,ConfirmDialog,EmptyState,ErrorState,Icon,IconButton,IconTile,PageHeader,Pagination,RemoteModalSkeleton,RowActionButton,SearchField,Select,Skeleton,Status,TableSkeleton,Tabs,TabsBar,ModalHeader} from "@/design-system";
 import {useFeedback,useMoney,useSession} from "@/providers";
 import {useSettings} from "@/providers/settings-context";
 import {formatRegionalCalendarDate,formatRegionalDateTime} from "@/shared/i18n/regional-format";
@@ -340,7 +340,7 @@ function CashRegisters({items,loading,error,canManage,money,dateTime,businessDat
   return <div className="cash-registers-workspace">
     <section className="cash-overview" aria-label="Resumen operativo de cajas">
       <div className="cash-overview-copy">
-        <span className="cash-overview-icon"><Icon name="sales" size={20}/></span>
+        <IconTile name="sales" tone="primary" appearance="vivid" size="lg" className="cash-overview-icon"/>
         <div><small>Estado operativo</small><b>{open.length?open.length+" "+(open.length===1?"caja operando":"cajas operando"):"Sin turnos abiertos"}</b><p>{available} {available===1?"caja disponible":"cajas disponibles"} para iniciar turno.</p></div>
       </div>
       <div className="cash-overview-metrics">
@@ -359,7 +359,7 @@ function CashRegisters({items,loading,error,canManage,money,dateTime,businessDat
       const cardClass="cash-register-card"+(!item.active?" inactive":shift?" open":"");
       return <article className={cardClass} key={item.id}>
         <header>
-          <div className="cash-register-name"><span><Icon name="sales" size={18}/></span><div><h3>{item.name}</h3></div></div>
+          <div className="cash-register-name"><IconTile name="sales" tone={item.active&&shift?"brand":"primary"} appearance="vivid" className="cash-register-symbol"/><div><h3>{item.name}</h3></div></div>
           <div className="cash-register-header-actions">
             <Status tone={statusTone}>{statusLabel}</Status>
             {canManage&&<div className="cash-register-admin">
@@ -381,18 +381,22 @@ function CashRegisters({items,loading,error,canManage,money,dateTime,businessDat
             <div className="cash-register-balance"><small>{shift.expectedVisible?"SALDO ESPERADO":"CIERRE CIEGO"}</small><strong>{shift.expectedVisible?money(Number(shift.expectedAmount)):"Oculto"}</strong><span>{shift.movementCount} {shift.movementCount===1?"movimiento":"movimientos"}</span></div>
           </section>
           {shift.expectedVisible?<section className="cash-register-flow">
-            <div><small>Fondo inicial</small><b>{money(Number(shift.openingAmount))}</b></div>
-            <div className="income"><small>Ingresos</small><b>+{money(Number(shift.incomeAmount))}</b></div>
-            <div className="expense"><small>Egresos</small><b>-{money(Number(shift.expenseAmount))}</b></div>
+            <div className="opening"><span className="cash-flow-label"><IconTile name="wallet" tone="primary" appearance="vivid" size="sm"/><small>Fondo inicial</small></span><b>{money(Number(shift.openingAmount))}</b></div>
+            <div className="income"><span className="cash-flow-label"><IconTile name="plus" tone="brand" appearance="vivid" size="sm"/><small>Ingresos</small></span><b>+{money(Number(shift.incomeAmount))}</b></div>
+            <div className="expense"><span className="cash-flow-label"><IconTile name="minus" tone="danger" appearance="vivid" size="sm"/><small>Egresos</small></span><b>-{money(Number(shift.expenseAmount))}</b></div>
           </section>:<div className="cash-register-blind"><Icon name="lock" size={14}/><span>El detalle de efectivo está oculto hasta cerrar el turno.</span></div>}
           <footer>
-            <RowActionButton action="view" label={`Ver turno de ${item.name}`} onClick={()=>view(shift)}/>
+            <div className="cash-register-tools">
+              <RowActionButton action="view" label={`Ver turno de ${item.name}`} onClick={()=>view(shift)}/>
+              {canManage&&<>
+                <IconButton icon="users" label="Equipo del turno" onClick={()=>team(shift)}/>
+                <IconButton icon="share" label="Operaciones de caja" onClick={()=>operation(shift)}/>
+              </>}
+            </div>
             {canManage&&<>
-              <IconButton icon="users" label="Equipo del turno" onClick={()=>team(shift)}/>
-              <IconButton icon="share" label="Operaciones de caja" onClick={()=>operation(shift)}/>
               <Button kind="secondary" icon="plus" onClick={()=>movement(shift,"income")}>Ingreso</Button>
               <Button kind="secondary" icon="minus" onClick={()=>movement(shift,"expense")}>Egreso</Button>
-              <Button kind="danger" icon="lock" onClick={()=>close(shift)}>Cerrar turno</Button>
+              <Button kind="danger-outline" icon="lock" onClick={()=>close(shift)}>Cerrar turno</Button>
             </>}
           </footer>
         </>:<div className="cash-register-idle">

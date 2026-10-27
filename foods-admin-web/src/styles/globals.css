@@ -78,6 +78,7 @@ p{text-wrap:pretty}
 .status{display:inline-flex;align-items:center;gap:var(--space-1-5);width:max-content;padding:var(--space-1) var(--space-2-5);border-radius:var(--radius-pill);color:var(--brand-800);background:var(--brand-100);font-size:var(--font-size-label);font-weight:var(--weight-semibold);line-height:var(--line-height-snug)}
 .status i{width:var(--size-6);height:var(--size-6);border-radius:var(--radius-pill);background:currentColor}
 .status-icon{display:block;flex:none;stroke-width:2}
+.status.green i,.status.green .status-icon{color:var(--brand-600)}
 .status.blue{color:var(--indigo-700);background:var(--indigo-100)}
 .status.sky{color:var(--sky-800);background:var(--sky-100)}
 .status.orange{color:var(--warning-800);background:var(--warning-100)}
@@ -85,7 +86,7 @@ p{text-wrap:pretty}
 .status.red{color:var(--danger-700);background:var(--danger-50)}
 .status.violet{color:var(--digital-700);background:var(--digital-100)}
 .status.teal{color:var(--teal-700);background:var(--teal-100)}
-/* Mesa libre: contorno azul marino sobre blanco, sin relleno; distinto de Entregado y Listo. */
+/* Variante de contorno marino; la mesa Libre utiliza el estado positivo green. */
 .status.navy{color:var(--navigation-900);background:var(--surface);box-shadow:inset 0 0 0 var(--stroke-1-5) var(--navigation-900)}
 .status.emphasized{padding:var(--space-1-5) var(--space-3);font-weight:var(--weight-bold)}
 .status.gray.emphasized{color:var(--ink-800);background:var(--cloud-150)}
@@ -148,18 +149,18 @@ p{text-wrap:pretty}
   &:is(select){padding-right:var(--space-8);appearance:none;background-image:var(--select-chevron-image);background-position:right var(--size-10) center;background-repeat:no-repeat;background-size:var(--size-16)}
 }
 .ds-input::placeholder,.ds-textarea::placeholder,.form-grid input::placeholder,.form-grid textarea::placeholder{color:var(--ink-400);font-weight:var(--weight-regular);opacity:1}
-.ds-input:focus,.ds-select:focus,.ds-textarea:focus,.form-grid input:focus,.form-grid select:focus,.form-grid textarea:focus,.toolbar select:focus{border-color:var(--primary-600);outline:0;box-shadow:var(--ring-focus)}
+:is(.ds-input,.ds-select,.ds-textarea,.form-grid input,.form-grid select,.form-grid textarea,.toolbar select):focus:not(:where(.ds-input-shell *,.money-input *)){border-color:var(--primary-600);outline:0;box-shadow:var(--ring-focus)}
 .ds-input:disabled,.ds-select:disabled,.ds-textarea:disabled,.form-grid input:disabled,.form-grid select:disabled,.form-grid textarea:disabled{cursor:not-allowed;color:var(--ink-500);background:var(--cloud-100)}
 .ds-input:read-only:not(:disabled),.ds-textarea:read-only:not(:disabled){background:var(--cloud-50);border-style:dashed}
 .ds-input[aria-invalid=true],.ds-select[aria-invalid=true],.ds-textarea[aria-invalid=true]{border-color:var(--danger)}
 /* Dentro de .ds-input-shell el anillo lo dibuja el contenedor; el input interno no repite otro. */
-.ds-input[aria-invalid=true]:focus:not(.ds-input-shell>.ds-input),.ds-select[aria-invalid=true]:focus,.ds-textarea[aria-invalid=true]:focus{box-shadow:var(--ring-danger)}
+:is(.ds-input,.ds-select,.ds-textarea)[aria-invalid=true]:focus:not(:where(.ds-input-shell *,.money-input *)){border-color:var(--danger);box-shadow:var(--ring-danger)}
 .ds-input-shell{display:flex;align-items:center;gap:var(--space-2);height:var(--control-height);min-height:var(--control-height);padding:0 var(--space-2-5);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-control);color:var(--ink-400);background:var(--surface);transition:border-color var(--duration-fast),box-shadow var(--duration-fast)}
-.ds-input-shell .ds-input{height:calc(var(--control-height) - var(--size-2));min-height:calc(var(--control-height) - var(--size-2));padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
+.ds-input-shell .ds-input{height:calc(var(--control-height) - var(--size-2));min-height:calc(var(--control-height) - var(--size-2));padding:0;border:0;border-radius:0;background:transparent;outline:0;box-shadow:none}
 .ds-input-shell:focus-within{border-color:var(--primary-600);box-shadow:var(--ring-focus)}
 .ds-input-shell.has-leading-icon{width:100%;color:var(--ink-400)}
 .ds-input-shell.has-leading-icon>svg{flex:none}
-.ds-input-shell.has-leading-icon>.ds-select{flex:1;min-width:0;height:calc(var(--control-height) - var(--size-2));min-height:calc(var(--control-height) - var(--size-2));padding-left:0;border:0;border-radius:0;background-color:transparent;box-shadow:none}
+.ds-input-shell.has-leading-icon>.ds-select{flex:1;min-width:0;height:calc(var(--control-height) - var(--size-2));min-height:calc(var(--control-height) - var(--size-2));padding-left:0;border:0;border-radius:0;background-color:transparent;outline:0;box-shadow:none}
 .ds-input-shell.has-leading-icon:has(.ds-select:disabled){background:var(--cloud-100)}
 /* Select con icono: el <select> ocupa todo el campo y el icono se superpone; así la lista
    nativa se abre alineada al borde del campo y no recortada desde el texto. */
@@ -168,8 +169,8 @@ p{text-wrap:pretty}
 .ds-input-shell.has-leading-icon.is-select>.ds-select{width:100%;padding-left:calc(var(--space-2-5) + var(--size-16) + var(--space-2));border-radius:inherit}
 .ds-input-shell.has-leading-icon:has(.ds-input:disabled){background:var(--cloud-100)}
 .ds-input-shell.has-leading-icon:has(.ds-input:read-only:not(:disabled)){border-style:dashed;background:var(--cloud-50)}
-.ds-input-shell.has-leading-icon:has(.ds-input[aria-invalid=true]):focus-within{box-shadow:var(--ring-danger)}
-.ds-input-shell.has-leading-icon:has(.ds-input[aria-invalid=true]){border-color:var(--danger)}
+.ds-input-shell:has(:is(.ds-input,.ds-select)[aria-invalid=true]):focus-within{box-shadow:var(--ring-danger)}
+.ds-input-shell:has(:is(.ds-input,.ds-select)[aria-invalid=true]){border-color:var(--danger)}
 /* Filtros en píldora: misma altura que el resto de controles, radio completo y tinte cuando filtran. */
 .ds-select.filter-chip{width:auto;min-width:0;border-color:var(--line-strong);border-radius:var(--radius-control);font-weight:var(--weight-semibold);color:var(--ink-700)}
 .ds-select.filter-chip:has(option:checked:not(:first-child)){border-color:var(--primary-200);color:var(--primary-700);background-color:var(--primary-50)}

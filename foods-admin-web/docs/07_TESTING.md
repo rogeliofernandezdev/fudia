@@ -334,9 +334,11 @@ CSS local, validación explícita, normalización de niveles, guardado por botó
 una sola petición pendiente. Verifica bloqueo de campos/cierres y conserva el
 cierre global únicamente al comunicar la respuesta del API.
 
-`inventory-list.test.mjs` verifica Mínimo / Reorden en una sola línea, incluidos
+`inventory-list.test.mjs` verifica Stock mínimo sin punto de reorden, incluidos
 cero y fracciones, sin texto secundario ni CSS correctivo. Conserva nueve
 columnas, paginación compartida y desplazamiento horizontal en móvil.
+El formulario conserva solo mínimo y óptimo, no envía el atributo antiguo y
+permite bajar el óptimo aunque el registro conserve un reorden histórico mayor.
 
 `location-plan-limit.test.mjs` verifica «Nuevo local» deshabilitado al alcanzar
 la capacidad remota del plan, primer local, límite ilimitado, guardia del handler,
@@ -554,9 +556,29 @@ resumen y acciones. Comprobar el límite inferior del botón, no solo su presenc
 
 ### Paleta compartida
 
+En la revisión de foco, probar clic y Tab en 390 px y escritorio: campos con
+icono, buscador, selectores, importes con prefijo/sufijo, campos independientes,
+solo lectura y errores. En `ds-input-shell`/`money-input`, el control interno
+debe computar `box-shadow: none` y `outline-width: 0px`, con un solo anillo en
+el contenedor. El error mantiene anillo/borde rojo; los campos independientes
+conservan su propio anillo y los deshabilitados siguen sin recibir foco.
+
 Después del build, `node tests/helpers/palette-preview.mjs` sirve en
 `http://localhost:5196` las rampas reales y los componentes `Status` y `Button`.
 Es una muestra aislada sin API ni operaciones del restaurante. Revisar escritorio
 y 390 px: verde con menta, rojo con rosado y ámbar con crema; etiquetas e iconos
 conservan el significado de cada estado. `design-tokens.test.mjs` comprueba el
 contraste de texto, acciones destructivas, hover y la superficie verde de Cocina.
+
+`node tests/helpers/palette-screens-preview.mjs` muestra en `localhost:5198`
+los indicadores reales del Dashboard y la función de tarjetas de Caja, con datos
+ilustrativos y animaciones detenidas. Usa los CSS fuente y la fuente del último
+build. Revisar escritorio y 390 px; `?long` prueba nombres/importes largos y
+`?blind` comprueba que cierre ciego no muestra cifras ni flujos de efectivo.
+
+`node tests/helpers/salon-feedback-preview.mjs` sirve los componentes reales en
+`localhost:5199/salon`, `/success`, `/confirm` y `/danger`, con datos ilustrativos
+y sin operaciones. Revisar Mesas en 390 y 1280 px: «Libre» con `Status.green`,
+contenedores originales, dos/cuatro columnas sin desborde. Los símbolos de
+éxito y confirmación positiva deben computar `rgb(3, 192, 86)` y check blanco;
+confirmación destructiva conserva el rojo, Cancelar neutro y botones móviles de 44 px.

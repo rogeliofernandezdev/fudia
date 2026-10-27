@@ -1,5 +1,11 @@
 # Pruebas
 
+`inventory/application/location_settings_test.go` comprueba niveles enteros para
+unidades contables, fracciones medibles, normalización y rechazo si falta la
+metadata de la unidad. `inventory_settings_units_integration_test.go` comprueba
+el catálogo en el listado real, 400 sin escritura para botellas y aceptación de
+fracciones en kg; requiere PostgreSQL efímero.
+
 El dashboard verifica ventas por categoría con dos decimales y solo pedidos
 totalmente pagados. La regresión de cantidades fraccionarias comprueba el
 redondeo después de sumar, en hoy/7/30 días, sin modificar cantidades ni precios

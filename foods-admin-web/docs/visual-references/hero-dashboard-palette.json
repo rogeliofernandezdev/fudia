@@ -1,0 +1,122 @@
+{
+  "source": "hero-dashboard.png",
+  "sha256": "305cac9c78286a6bef50291c04f177c725157e16442f06dd8fab97621127ec1a",
+  "dimensions": [
+    1672,
+    941
+  ],
+  "method": "Most frequent stored RGB in each selected rectangle, alpha >= 250 and max(R,G,B)-min(R,G,B) > 50. Coordinates are zero-based; right/bottom are exclusive. No quantization, unpremultiplication or background compositing.",
+  "note": "Raster samples, not canonical vector brand values. The PNG contains gradients, noise and near-opaque alpha; other pixels differ. Text/hover/tints are separately derived for accessibility.",
+  "samples": [
+    {
+      "token": "primary-600",
+      "region": "Botón azul de campana",
+      "box": [
+        1250,
+        40,
+        1335,
+        115
+      ],
+      "rgb": [
+        0,
+        82,
+        252
+      ],
+      "hex": "#0052FC",
+      "matchingPixels": 245,
+      "examplePixel": [
+        1317,
+        41
+      ],
+      "alpha": 253
+    },
+    {
+      "token": "brand-600",
+      "region": "Círculo verde de visita completada",
+      "box": [
+        991,
+        384,
+        1028,
+        425
+      ],
+      "rgb": [
+        3,
+        192,
+        86
+      ],
+      "hex": "#03C056",
+      "matchingPixels": 9,
+      "examplePixel": [
+        1011,
+        412
+      ],
+      "alpha": 253
+    },
+    {
+      "token": "danger-500",
+      "region": "Círculo rojo de incidencia",
+      "box": [
+        985,
+        499,
+        1022,
+        538
+      ],
+      "rgb": [
+        253,
+        54,
+        34
+      ],
+      "hex": "#FD3622",
+      "matchingPixels": 7,
+      "examplePixel": [
+        997,
+        506
+      ],
+      "alpha": 253
+    },
+    {
+      "token": "warning-500",
+      "region": "Pin ámbar del mapa",
+      "box": [
+        812,
+        419,
+        846,
+        459
+      ],
+      "rgb": [
+        253,
+        159,
+        10
+      ],
+      "hex": "#FD9F0A",
+      "matchingPixels": 6,
+      "examplePixel": [
+        825,
+        424
+      ],
+      "alpha": 253
+    },
+    {
+      "token": "navigation-900",
+      "region": "Interior de la barra lateral",
+      "box": [
+        421,
+        568,
+        520,
+        678
+      ],
+      "rgb": [
+        5,
+        35,
+        82
+      ],
+      "hex": "#052352",
+      "matchingPixels": 875,
+      "examplePixel": [
+        517,
+        569
+      ],
+      "alpha": 253
+    }
+  ]
+}

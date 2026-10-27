@@ -140,8 +140,9 @@
 .pos-detail-panel{min-width:0;padding-inline:var(--space-4)}
 .pos-detail-empty{margin:0;font-size:var(--font-size-base);line-height:var(--line-height-normal);color:var(--ink-500)}
 .pos-detail-paid b{color:var(--ink-600)}
-.pos-detail-paid.has-payment b{color:var(--brand-800)}
-.pos-detail-totals.is-paid .modal-summary-total span,.pos-detail-totals.is-paid .modal-summary-total strong{color:var(--brand-800)}
+.pos-detail-paid.has-payment b{color:var(--amount-paid)}
+.pos-detail-totals.is-paid .modal-summary-total span{color:var(--brand-700)}
+.pos-detail-totals.is-paid .modal-summary-total strong{color:var(--amount-paid)}
 .pos-detail-skeleton-copy{min-width:0;display:grid;align-content:center;gap:var(--space-1-5)}
 .pos-detail-skeleton-action.ds-skeleton{width:var(--size-220);height:var(--control-height);border-radius:var(--radius-control)}
 .pos-payment-list{display:grid}

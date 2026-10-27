@@ -16,9 +16,9 @@ function compile(path,resolve){
 }
 const resolver=compile("shared/forms/zod-resolver.ts",require);
 const schema=compile("modules/supply/inventory/domain/inventory-settings-schema.ts",name=>name==="@/shared/forms/zod-resolver"?resolver:require(name));
-const item={inventoryItemId:"water",name:"Agua mineral San Luis",minimumStock:"2.000",reorderPoint:"2.000",optimalStock:"2.000"};
+const item={inventoryItemId:"water",name:"Agua mineral San Luis",unitCountable:true,minimumStock:"2.000",reorderPoint:"2.000",optimalStock:"2.000"};
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
-function mount({busy=false,save=async()=>{},close=()=>{}}={}){
+function mount({busy=false,save=async()=>{},close=()=>{},record=item}={}){
  let control;const submitting={current:false};
  const {InventorySettingsDialog}=compile("modules/supply/inventory/presentation/inventory-settings-dialog.tsx",name=>{
   if(name==="react")return {useRef:()=>submitting};
@@ -33,7 +33,7 @@ function mount({busy=false,save=async()=>{},close=()=>{}}={}){
  function render(){
   const nodes=[];
   function visit(node){if(Array.isArray(node)){node.forEach(visit);return}if(node&&typeof node==="object"){nodes.push(node);visit(node.props?.children)}}
-  visit(InventorySettingsDialog({item,busy,save,close}));
+  visit(InventorySettingsDialog({item:record,busy,save,close}));
   return {nodes,dialog:nodes.find(node=>node.type==="Dialog"),form:nodes.find(node=>node.type==="form"),button:nodes.find(node=>node.type==="Button"&&node.props.kind!=="ghost"&&node.props.action!=="cancel")};
  }
  render();return {render,control};
@@ -46,7 +46,8 @@ test("niveles de inventario usa cuerpo y footer del modal compartido",()=>{
  assert.equal(form.props.children[0].props.children.props.className,"form-grid");
  assert.equal(form.props.children[1].type,"ModalFooter");
  assert.equal(form.props.children[1].props.children.length,2);
- assert.equal(nodes.find(node=>node.type==="FormField"&&node.props.label==="Stock óptimo").props.className,"span-2");
+ assert.deepEqual(nodes.filter(node=>node.type==="FormField").map(node=>node.props.label),["Stock mínimo","Stock óptimo"]);
+ assert.equal(nodes.some(node=>node.type==="Input"&&node.props.name==="reorderPoint"),false);
  assert.equal(dialog.props["aria-labelledby"],nodes.find(node=>node.type==="ModalHeader").props.titleId);
  assert.equal(dialog.props.className,"crud-modal compact modal-panel-in");
  assert.ok(!nodes.some(node=>node.props.className==="modal-accent"));
@@ -57,7 +58,7 @@ test("la estructura activa márgenes, acciones contiguas y una columna a 390 px 
  const rules=parse("styles/globals.css"),modal=parse("design-system/styles/modal.css");
  const value=(rule,prop)=>rule.nodes.find(node=>node.prop===prop)?.value;
  const desktop=(list,selector)=>list.find(rule=>rule.selector===selector&&rule.parent.type==="root");
- assert.equal(value(desktop(modal,".crud-modal>form:not(.modal-form)"),"padding"),"var(--space-6) var(--space-6) 0");
+  assert.equal(value(desktop(modal,".crud-modal>form:not(.modal-form)"),"padding"),"var(--space-6) var(--space-6) 0");
  const footer=desktop(modal,".modal-footer,.crud-modal>footer,.crud-modal>form>footer");
  assert.equal(value(footer,"justify-content"),"flex-end");
  assert.equal(value(footer,"gap"),"var(--space-2-5)");
@@ -73,21 +74,57 @@ test("la estructura activa márgenes, acciones contiguas y una columna a 390 px 
 
 test("guardar conserva los niveles y su normalización existente",async()=>{
  const saved=[];const ui=mount({save:async draft=>saved.push(draft)});
- assert.equal(ui.control.getValues("minimumStock"),"2.000");
+ assert.equal(ui.control.getValues("minimumStock"),"2");
  ui.control.setValue("minimumStock","5");
- ui.control.setValue("reorderPoint","3");
  ui.control.setValue("optimalStock","4");
  await ui.render().button.props.onClick();
  assert.equal(saved.length,1);
  assert.equal(saved[0].minimumStock,"5");
- assert.equal(saved[0].reorderPoint,"5");
+ assert.equal("reorderPoint" in saved[0],false);
  assert.equal(saved[0].optimalStock,"5");
  assert.equal(saved[0].inventoryItemId,item.inventoryItemId);
 });
 
+test("guardar omite el reorden heredado del contrato HTTP",async()=>{
+ const requests=[];
+ const api=compile("modules/supply/inventory/infrastructure/inventory-api.ts",name=>name==="@/shared/api/client"?{apiFetch:async(path,options)=>{requests.push({path,body:JSON.parse(options.body)})}}:require(name));
+ await api.updateInventorySettings({inventoryItemId:"water",minimumStock:"5",optimalStock:"10"});
+ assert.equal(requests[0].path,"inventory/items/water/settings");
+ assert.deepEqual(requests[0].body,{minimumStock:5,optimalStock:10});
+});
+
+test("unidades contables muestran enteros y rechazan fracciones en ambos niveles",async()=>{
+ const saved=[];const ui=mount({save:async value=>saved.push(value)});
+ assert.ok(ui.render().nodes.filter(node=>node.type==="Input").every(node=>node.props.step==="1"&&node.props.inputMode==="numeric"));
+ for(const field of ["minimumStock","optimalStock"]){
+  ui.control.setValue(field,"1.5");
+  await ui.render().button.props.onClick();
+  assert.equal(saved.length,0);
+  assert.equal(ui.render().nodes.find(node=>node.type==="FormField"&&node.props.children.props.name===field).props.error,"Ingresa una cantidad entera para esta unidad.");
+  ui.control.setValue(field,"2");
+ }
+ await ui.render().button.props.onClick();assert.equal(saved.length,1);
+});
+
+test("unidades medibles conservan fracciones y eliminan solo ceros de presentación",async()=>{
+ const saved=[];const ui=mount({record:{...item,unitCountable:false,minimumStock:"0.500",reorderPoint:"1.250",optimalStock:"2.000"},save:async value=>saved.push(value)});
+ assert.equal(ui.control.getValues("minimumStock"),"0.5");
+ assert.equal(ui.control.getValues("optimalStock"),"2");
+ assert.ok(ui.render().nodes.filter(node=>node.type==="Input").every(node=>node.props.step==="0.001"&&node.props.inputMode==="decimal"));
+ await ui.render().button.props.onClick();assert.equal(saved[0].minimumStock,"0.5");
+});
+
+test("un nivel fraccionario histórico no se redondea silenciosamente",async()=>{
+ let saved=0;const ui=mount({record:{...item,minimumStock:"99.993"},save:async()=>{saved++}});
+ assert.equal(ui.control.getValues("minimumStock"),"99.993");
+ await ui.render().button.props.onClick();assert.equal(saved,0);
+ ui.control.setValue("minimumStock","100");
+ await ui.render().button.props.onClick();assert.equal(saved,1);
+});
+
 test("campos vacíos o negativos muestran validación local sin enviar al API",async()=>{
  let saved=0;const ui=mount({save:async()=>{saved++}});
- for(const name of ["minimumStock","reorderPoint","optimalStock"]){
+ for(const name of ["minimumStock","optimalStock"]){
   for(const invalid of ["","-1","NaN","Infinity"]){
    ui.control.setValue(name,invalid);
    await ui.render().button.props.onClick();

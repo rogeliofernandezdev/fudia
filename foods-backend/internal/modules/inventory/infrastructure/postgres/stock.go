@@ -353,7 +353,7 @@ func (r *Stock) Items(ctx context.Context, s scope, f application.StockFilter) (
 	rows, err := r.db(ctx).Query(ctx, `
 		SELECT ii.id,p.id,COALESCE(p.sku,ii.sku),COALESCE(p.name,ii.name),
 		       CASE WHEN p.id IS NULL THEN 'ingredient' ELSE 'product' END,
-		       c.name,COALESCE(p.active,ii.active),ii.unit,
+		       c.name,COALESCE(p.active,ii.active),ii.unit,COALESCE(u.countable,false),
 		       COALESCE(sb.quantity,0)::text,
 		       COALESCE(ils.minimum_stock,ii.minimum_stock)::text,
 		       COALESCE(ils.reorder_point,COALESCE(ils.minimum_stock,ii.minimum_stock))::text,
@@ -371,6 +371,8 @@ func (r *Stock) Items(ctx context.Context, s scope, f application.StockFilter) (
 		  ON p.id=ii.product_id AND p.organization_id=ii.organization_id
 		LEFT JOIN menu_categories c
 		  ON c.id=p.category_id AND c.organization_id=p.organization_id
+		LEFT JOIN inventory_units u
+		  ON u.organization_id=ii.organization_id AND u.code=ii.unit
 		LEFT JOIN stock_balances sb
 		  ON sb.organization_id=ii.organization_id
 		 AND sb.location_id=$2
@@ -393,7 +395,7 @@ func (r *Stock) Items(ctx context.Context, s scope, f application.StockFilter) (
 		var item domain.InventoryItemView
 		if err := rows.Scan(
 			&item.InventoryItemID, &item.ProductID, &item.SKU, &item.Name, &item.Kind,
-			&item.CategoryName, &item.Active, &item.Unit, &item.Quantity, &item.MinimumStock,
+			&item.CategoryName, &item.Active, &item.Unit, &item.UnitCountable, &item.Quantity, &item.MinimumStock,
 			&item.ReorderPoint, &item.OptimalStock, &item.AverageUnitCost, &item.StockValue,
 			&item.Status, &item.UpdatedAt,
 		); err != nil {

@@ -30,7 +30,7 @@ export function ConfirmDialog({open,title,description,subject,children,note,tone
   return <div className="confirm-overlay modal-overlay-in">
     <Dialog onResponseClose={onCancel} className="confirm-card" role="alertdialog" aria-modal="true" aria-labelledby={`${id}-title`} aria-describedby={hasDescription?`${id}-description`:undefined} aria-busy={pending}>
       <header className="confirm-header">
-        <span className={`confirm-icon ${tone}`}><Icon name={tone==="danger"?"alert":"check"} size={20}/></span>
+        <span className={`confirm-icon ${tone}`} aria-hidden="true"><Icon name={tone==="danger"?"alert":"check"} size={20}/></span>
         <h2 id={`${id}-title`}>{title}</h2>
       </header>
       {hasDescription&&<div className="confirm-body" id={`${id}-description`}>

@@ -10,6 +10,16 @@ REST JSON descrito en api/openapi.yaml. Los errores usan código estable, mensaj
 seguro y correlationId. Paginación, filtros, idempotencia y concurrencia se
 definen en OpenAPI antes del frontend.
 
+Inventario expone `InventoryItem.unitCountable` desde el catálogo de unidades de
+la empresa. El PATCH de niveles rechaza fracciones en mínimo u óptimo
+con `400 fractional_inventory_settings` para unidades contables, antes de
+normalizar mínimo ≤ óptimo. Las medibles admiten decimales. No convierte
+existencias ni niveles históricos y conserva alcance de empresa/local y permisos.
+El frontend ya no expone ni envía `reorderPoint`. El atributo permanece obsoleto
+en el contrato para clientes anteriores; al omitirlo se iguala al mínimo, de modo
+que un valor histórico no limite el óptimo. No se elimina la columna ni se
+reescriben registros al desplegar.
+
 ## Registro por lote de mesas
 
 `POST /v1/admin/tables/batch` exige `tables.manage` y sesión de empresa/local.

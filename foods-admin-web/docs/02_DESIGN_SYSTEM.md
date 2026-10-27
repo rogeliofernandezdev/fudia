@@ -73,25 +73,35 @@ completan con fondos menta, rosados y crema. Conservan su significado: éxito,
 error y advertencia; el violeta digital y los demás estados mantienen sus valores.
 Los tonos de texto son más oscuros que el acento para asegurar contraste AA.
 
+Los acentos se verificaron sobre el PNG original `hero-dashboard.png` mediante
+histogramas RGB por región, sin cuantización ni elección visual. El registro
+[de muestras](visual-references/hero-dashboard-palette.json) conserva el SHA-256,
+rectángulos, píxeles de ejemplo, opacidad y valor predominante de cada región.
+El archivo tiene degradados, ruido y transparencia: estos son colores exactos
+muestreados del raster, no una afirmación sobre los valores de una guía de marca.
+Los fondos tenues, hover y tonos oscuros son derivados propios para contraste AA;
+no se presentan como colores extraídos del original. El rojo muestreado pertenece
+al icono de incidencia; el punto rojo de la campana usa otra tonalidad.
+
 | Muestra | Token | Valor | Aplicación |
 | --- | --- | --- | --- |
-| Azul vivo | `primary-600` | `#005BFF` | Acción principal, contador seleccionado y foco |
-| Azul profundo | `primary-700` | `#004BD6` | Hover y texto de acción |
-| Azul tenue | `primary-100` | `#EAF2FF` | Selección e iconos sobre fondo claro |
-| Borde azul | `primary-200` | `#CFDEFE` | Acciones secundarias y selección |
-| Marino | `navigation-900` | `#0D2060` | Sidebar, cabeceras de modal y de tabla; ítem activo en `primary-600` sobre él |
-| Marino profundo | `navigation-950` | `#091548` | Bordes de cabecera y backdrop |
+| Azul vivo | `primary-600` | `#0052FC` | Acción principal, contador seleccionado y foco |
+| Azul profundo | `primary-700` | `#0043CF` | Hover y texto de acción |
+| Azul tenue | `primary-100` | `#EAF0FF` | Selección e iconos sobre fondo claro |
+| Borde azul | `primary-200` | `#CEDCFF` | Acciones secundarias y selección |
+| Marino | `navigation-900` | `#052352` | Sidebar, cabeceras de modal y de tabla; ítem activo en `primary-600` sobre él |
+| Marino profundo | `navigation-950` | `#041A40` | Bordes de cabecera y backdrop |
 | Fondo frío | `cloud-50` | `#F4F7FD` | Fondo general azulado; paneles en blanco |
 | Línea | `line` | `#E1E7F2` | Bordes de 1 px de paneles y campos |
-| Verde vivo | `brand-600` | `#00BD68` | Marca y carril Por entregar, con tinta oscura |
-| Verde legible | `brand-700` | `#007E44` | Iconos, interruptores y check blanco de éxito |
-| Menta suave | `brand-100` | `#E2F8EC` | Fondo de estados positivos |
-| Rojo coral vivo | `danger-500` | `#FF3B4A` | Acento gráfico y superficies con tinta oscura |
-| Rojo coral legible | `danger-600` | `#C8233A` | Errores y confirmación destructiva con texto blanco |
-| Rosado suave | `danger-50` | `#FFF1F2` | Fondo de error o cancelación persistida |
-| Ámbar legible | `warning-600` | `#A75C00` | Iconos y mensajes de advertencia |
-| Ámbar vivo | `warning-500` | `#FFB020` | Superficies de énfasis con tinta oscura |
-| Crema suave | `warning-100` | `#FFF1D2` | Fondo de estados pendientes o advertencias |
+| Verde vivo | `brand-600` | `#03C056` | Marca y carril Por entregar, con tinta oscura |
+| Verde legible | `brand-700` | `#007B35` | Texto, contornos e interruptores que requieren contraste |
+| Menta suave | `brand-100` | `#E3F8E9` | Fondo de estados positivos |
+| Rojo coral vivo | `danger-500` | `#FD3622` | Acento gráfico y superficies con tinta oscura |
+| Rojo coral legible | `danger-600` | `#BF2817` | Errores y confirmación destructiva con texto blanco |
+| Rosado suave | `danger-50` | `#FFF2EF` | Fondo de error o cancelación persistida |
+| Ámbar legible | `warning-600` | `#9D5700` | Iconos y mensajes de advertencia |
+| Ámbar vivo | `warning-500` | `#FD9F0A` | Superficies de énfasis con tinta oscura |
+| Crema suave | `warning-100` | `#FFF0D8` | Fondo de estados pendientes o advertencias |
 
 Reglas:
 
@@ -103,6 +113,20 @@ Reglas:
   texto ni como fondo de texto blanco. Los estados mantienen fondos suaves,
   tinta oscura y etiqueta; las acciones destructivas sólidas usan `danger-600`.
 - Los estados combinan color, texto e icono; nunca dependen solo del color.
+  En `Status.green`, el punto o icono decorativo usa el verde vivo `brand-600`,
+  mientras el texto conserva `brand-800` sobre menta `brand-100` para legibilidad.
+- El verde oscuro no es una paleta anterior: `brand-700` y `brand-800` son
+  derivados legibles del acento. Los textos, contornos de controles y chips
+  conservan esos tonos; los símbolos de éxito y confirmación positiva usan
+  `brand-600` exacto con check blanco, acompañados siempre por un título visible.
+- `IconTile appearance="vivid"` reutiliza los acentos exactos en superficies
+  pequeñas: azul `primary-600`, verde `brand-600` y rojo `danger-500`. Solo
+  contiene un icono, sin cifras ni texto, con trazo blanco. Azul y rojo conservan
+  contraste gráfico mínimo 3:1. El verde exacto con trazo blanco es una decisión
+  visual explícita: tiene menor contraste, es decorativo (`aria-hidden`) y debe
+  acompañar una etiqueta visible; no usarlo solo para comunicar información ni
+  como control sin etiqueta. El valor por defecto sigue tenue. Rojo exige una
+  intención real de egreso, caída o error.
 - Transparencias por paso (`ink-950-alpha-8`, `primary-600-alpha-24`…), no
   porcentajes sueltos.
 
@@ -188,7 +212,11 @@ Una sola fuente de luz superior y sombras teñidas de azul operativo:
 
 El foco de teclado es único: contorno de 2 px `primary-600` con 2 px de
 separación en todo control (`:focus-visible`); los campos usan además
-`--ring-focus`.
+`--ring-focus`. En campos compuestos (`ds-input-shell`, buscadores, selectores
+con icono y `money-input`) solo el contenedor dibuja borde y anillo mediante
+`:focus-within`; el input/select interno no repite sombra ni contorno rectangular,
+incluso dentro de `form-grid`. En error, el mismo contenedor usa `ring-danger`.
+Los campos independientes conservan su propio foco visible.
 
 ## Movimiento
 
@@ -565,11 +593,11 @@ Paleta exacta de `Status` (fondo / texto e icono):
 | `blue` — índigo | `indigo-100` · `#EEF0FF` | `indigo-700` · `#3946B8` |
 | `sky` — celeste | `sky-100` · `#E0F2FE` | `sky-800` · `#075985` |
 | `violet` | `digital-100` · `#F2ECFF` | `digital-700` · `#5421A8` |
-| `green` | `brand-100` · `#E2F8EC` | `brand-800` · `#06613A` |
-| `orange` — ámbar | `warning-100` · `#FFF1D2` | `warning-800` · `#784400` |
+| `green` | `brand-100` · `#E3F8E9` | `brand-800` · `#055E2B` |
+| `orange` — ámbar | `warning-100` · `#FFF0D8` | `warning-800` · `#744000` |
 | `teal` — azul petróleo | `teal-100` · `#E6F5F7` | `teal-700` · `#0B6B78` |
-| `red` | `danger-50` · `#FFF1F2` | `danger-700` · `#B51F33` |
-| `navy` — contorno | `surface` con borde interior de 1,5 px `navigation-900` | `navigation-900` · `#0D2060` |
+| `red` | `danger-50` · `#FFF2EF` | `danger-700` · `#9F2115` |
+| `navy` — contorno | `surface` con borde interior de 1,5 px `navigation-900` | `navigation-900` · `#052352` |
 | `gray emphasis` | `cloud-150` · `#E9ECF4` | `ink-800` · `#222842` |
 
 Matriz semántica completa:
@@ -586,7 +614,7 @@ Matriz semántica completa:
 | Preparación | Pendiente | `orange` — ámbar | Aún sin preparar; distinto del celeste de Cuenta abierta |
 | Sin preparación | Por entregar (`listo`) | `green` — verde | Disponible para servir; misma etiqueta que Cocina y Barra |
 | Cuenta | Cuenta abierta | `sky` — celeste tenue | Sigue admitiendo consumo; distinto de Confirmado |
-| Mesa (Salón) | Libre | `navy` — contorno azul marino | Mesa sin pedido; aprobado para no confundirse con Entregado (`teal`) ni Por entregar (`green`) |
+| Mesa (Salón) | Libre | `green` — menta y acento verde vivo | Mesa sin pedido; etiqueta explícita Libre, aprobada en la paleta positiva global |
 | Cuenta | Por cobrar | `orange` — ámbar | Espera el pago |
 | Cuenta | Pagada | `green` — verde | Pago completo |
 | Cuenta | Finalizada | `gray` — gris neutro | Atención terminada; visualmente distinta del verde de Pagada |
@@ -659,8 +687,14 @@ sección), con la misma geometría de modal y hoja inferior móvil:
    mozo ya se ven arriba y no se repiten en ningún otro bloque. Paneles con
    sangría horizontal de 16 px (12 px a ≤600 px).
 5. **Resumen de venta** fijo al pie, como «Resumen de cuenta»: subtotal,
-   delivery si aplica y «Pagado neto» (`brand-800` si hay pagos); el importe
-   principal es «Saldo pendiente» o, saldada, «Total pagado» en `brand-800`.
+   delivery si aplica y «Pagado neto» (`amount-paid` si hay pagos); el importe
+   principal es «Saldo pendiente» o, saldada, «Total pagado» en `amount-paid`.
+   Por decisión explícita de producto, `amount-paid` resuelve al verde exacto
+   `brand-600` (`#03C056`): Pedidos, Ventas y POS comparten el mismo color de cifra.
+   Las etiquetas auxiliares usan `brand-700` y el estado Pagada conserva su tono.
+   Excepción de contraste: este acento sobre el pie claro no alcanza AA para
+   texto; no se presenta como una variante accesible de texto ni se extiende
+   a etiquetas, botones o estados. No oscurecer el importe de forma local.
 6. «Ver resumen de pago» (`secondary`, icono `eye`) en `ModalFooter` solo con un
    pago registrado; no se añade una acción vacía ni otro cierre.
 
@@ -868,7 +902,8 @@ de la grilla, con **como máximo cuatro por fila** (dos en móvil). De arriba ab
   a `warning-800`.
 
 Sin rojo, sin verde fuera del `Status`, sin bandas superiores ni pseudo-elementos
-decorativos. «Cobrado por» queda en el detalle de la mesa. El skeleton reproduce
+decorativos. «Libre» usa el tono positivo compartido `green`; los estados de
+pedido conservan sus mapeos. «Cobrado por» queda en el detalle de la mesa. El skeleton reproduce
 cabecera, plato y pie.
 
 El resumen sigue los KPI de la referencia: cuatro tarjetas blancas compactas
@@ -1452,10 +1487,10 @@ descargar y alternar al detalle HTML del informe sin depender del visor nativo.
   semántico, título, explicación breve y acción «Aceptar». El botón «Aceptar»
   usa `--control-height` como todos los demás botones. El comportamiento y
   jerarquía siguen el estándar de Bodegas, reinterpretado con tokens Foods.
-- En la respuesta de éxito, el círculo de 76 px es verde restaurante `brand-700`, con
+- En la respuesta de éxito, el círculo de 76 px es verde restaurante `brand-600`, con
   check blanco `surface` de 36 px centrado. Es una señal de resultado, no una
   variante sólida de los chips de estado, que mantienen sus fondos tenues.
-  Toda la composición conserva la paleta Foods: círculo `brand-700`, título
+  Toda la composición conserva la paleta Foods: círculo `brand-600`, título
   `ink-950`, superficie `surface` y texto secundario `ink-600`. «Aceptar» es
   cierre secundario neutro, blanco con borde `line-strong`, nunca un CTA menta.
   No lleva otro check redundante y usa `radius-pill` en móvil.
@@ -1493,6 +1528,11 @@ descargar y alternar al detalle HTML del informe sin depender del visor nativo.
   retener y restaurar el foco, sin agregar nuevas formas de cierre.
 - Confirmaciones destructivas son diálogos independientes: identifican el registro,
   conservan «Cancelar» como acción segura y bloquean la repetición durante el envío.
+  Las confirmaciones positivas (`tone="success"`) usan símbolo `brand-600` y
+  check blanco, con título legible al lado; confirmar sigue siendo una acción
+  azul pendiente. Las destructivas conservan símbolo rojo tenue y confirmación
+  roja; nunca se presentan en verde. El check blanco sobre verde vivo es la
+  misma elección gráfica explícita de `IconTile`, no texto blanco sobre verde.
   La composición es simple: icono y título alineados verticalmente en una fila,
   frase y acciones dentro de una sola superficie, sin tarjetas internas ni divisores. La frase usa texto regular y
   negrita únicamente en el nombre del registro. Impacto e historial solo se
@@ -1864,11 +1904,11 @@ dentro de `modal-action-layout`, sin huecos de media columna.
 Los textos de interfaz se conservan en UTF-8 y Unicode NFC; no se reparan
 tildes mediante reemplazos indiscriminados sobre nombres recibidos del API.
 
-El botón primario usa `primary-600` (`#005BFF`), `--control-height`,
+El botón primario usa `primary-600` (`#0052FC`), `--control-height`,
 `--font-size-control` y `--radius-control` en escritorio; en móvil usa
 `--radius-pill`, igual que los botones secundarios.
 Su jerarquía procede del color, no de una altura distinta. En avisos exitosos,
-el verde `brand-700` pertenece al símbolo confirmado, no al botón. «Aceptar»
+el verde `brand-600` pertenece al símbolo confirmado, no al botón. «Aceptar»
 solo cierra el aviso y usa superficie blanca, texto `ink-950` y borde neutro.
 No se utiliza `brand-600` como botón ni blanco sobre menta.
 
@@ -1964,10 +2004,11 @@ operación en vivo y las alertas siempre son actuales.
   Ventas es la protagonista por tamaño: columna 1.4 veces más ancha y cifra de
   36 px (28 px en móvil); las demás usan 28 px (22 px en móvil).
 - **Tono por indicador.** Para distinguirlos de un vistazo, cada indicador lleva
-  un tono de la identidad, siempre tenue: Ventas en verde restaurante (`brand`),
+  un tono de la identidad: Ventas en verde restaurante (`brand`),
   Pedidos cobrados en azul operativo (`primary`), Promedio por pedido en violeta
   digital (`digital`) y Pedidos en atención en ámbar (`warning`). El tono solo
-  colorea el cuadro del icono (fondo 100, icono 700/800), un tinte de esquina
+  colorea el cuadro del icono (Ventas y Pedidos cobrados usan `IconTile vivid`;
+  violeta y ámbar conservan el fondo tenue), un tinte de esquina
   (tono 50 que se funde con la superficie al 62 %), el borde (tono 100), el
   minigráfico y la barra de cocina. Las cifras siguen en `ink-950` y la variación
   conserva su verde o rojo propio; no es un estado ni se reutiliza fuera del
@@ -1978,7 +2019,8 @@ operación en vivo y las alertas siempre son actuales.
   Pedidos en atención muestra los pedidos en cocina y una barra con su
   proporción. La variación es una pastilla con el porcentaje y signo (+/−) en
   verde o rojo tenue, seguida de la comparación en texto `ink-500` («vs. el
-  viernes pasado»). «Hoy» se compara con el mismo día de la semana anterior; 7 y
+  viernes pasado»). Una flecha ascendente, descendente o un signo menos acompaña
+  el porcentaje, sin depender solo del color. «Hoy» se compara con el mismo día de la semana anterior; 7 y
   30 días, con la ventana anterior de igual duración. Si el periodo de
   comparación no tuvo ventas no hay porcentaje posible: se omiten la variación y
   el importe anterior (sin textos del tipo «Sin ventas para comparar»); los demás
@@ -2403,6 +2445,19 @@ El nombre de la caja, «Sin turno activo» y los importes del flujo usan 14 px,
 por encima de sus etiquetas y metadatos de 12 px. La pantalla no muestra el
 código técnico del turno (`CAJ-…`): el turno se identifica por su caja, cajero y
 apertura, también en el aviso «Turno iniciado» y en los nombres accesibles.
+
+El resumen operativo usa marino `navigation-900` con texto secundario
+`navigation-text`. Los iconos de caja y los tres conceptos del flujo reutilizan
+`IconTile vivid`: Fondo inicial azul, Ingresos verde y Egresos rojo. Cada
+concepto mantiene etiqueta y cantidad con signo; los importes usan tinta oscura
+de su familia sobre azul, menta y rosado tenues. El saldo esperado es azul.
+En móvil de hasta 520 px, cada concepto ocupa una fila con icono/etiqueta a la
+izquierda e importe a la derecha. «Cerrar turno» es `danger-outline` al abrir
+el flujo; la confirmación conserva su acción destructiva. Cierre ciego,
+permisos, cifras, cálculos y estados no cambian.
+En hasta 760 px, las tres herramientas se agrupan en una fila, Ingreso y
+Egreso comparten la siguiente y Cerrar turno ocupa una fila completa; no quedan
+botones de texto aislados con media fila vacía.
 
 El historial de Turnos tiene ocho columnas, con Caja primero y sus movimientos
 en `small`; no hay columna de código de turno y la búsqueda se presenta «por caja

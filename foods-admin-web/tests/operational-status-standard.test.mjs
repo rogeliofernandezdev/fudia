@@ -17,10 +17,10 @@ const palette=[
  ["blue","indigo-100","#eef0ff","indigo-700","#3946b8"],
  ["sky","sky-100","#e0f2fe","sky-800","#075985"],
  ["violet","digital-100","#f2ecff","digital-700","#5421a8"],
- ["green","brand-100","#e2f8ec","brand-800","#06613a"],
- ["orange","warning-100","#fff1d2","warning-800","#784400"],
+ ["green","brand-100","#e3f8e9","brand-800","#055e2b"],
+ ["orange","warning-100","#fff0d8","warning-800","#744000"],
  ["teal","teal-100","#e6f5f7","teal-700","#0b6b78"],
- ["red","danger-50","#fff1f2","danger-700","#b51f33"],
+ ["red","danger-50","#fff2ef","danger-700","#9f2115"],
  ["gray emphasis","cloud-150","#e9ecf4","ink-800","#222842"],
 ];
 function luminance(hex){
@@ -37,6 +37,10 @@ for(const [tone,bgToken,bg,fgToken,fg] of palette){
   assert.equal(resolveTokens(rule.get("background")),bg);
   assert.equal(resolveTokens(rule.get("color")),fg);
   assert.ok((luminance(bg)+.05)/(luminance(fg)+.05)>=4.5);
+  if(tone==="green"){
+   assert.equal(rules.get(".status.green i,.status.green .status-icon").get("color"),"var(--brand-600)");
+   assert.equal(resolveTokens("var(--brand-600)"),"#03c056");
+  }
  });
 }
 test("la documentación canónica conserva la paleta exacta del componente",()=>{

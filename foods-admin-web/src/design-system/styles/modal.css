@@ -114,6 +114,7 @@
 .modal-body .field-hint[data-tooltip]:after{left:auto;right:calc(var(--size-8) * -1);transform:translateY(var(--size-4))}
 @media (hover:hover) and (pointer:fine){.modal-body .field-hint[data-tooltip]:is(:hover,:focus-visible):after{transform:translateY(0)}}
 .crud-modal>form:not(.modal-form){padding:var(--space-6) var(--space-6) 0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--ink-400-alpha-40) transparent}
+.crud-modal>form.modal-form-compact:not(.modal-form){padding-top:var(--space-3)}
 .crud-modal>:is(div,section,article):not(.modal-busy,.modal-body,.modal-context,.modal-workspace){flex:1 1 auto;min-height:0;overflow-y:auto}
 
 .modal-footer,.crud-modal>footer,.crud-modal>form>footer{flex:none;display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:var(--space-2-5);padding:var(--space-4) var(--space-6) calc(var(--space-4) + var(--safe-area-bottom));border-top:var(--stroke-1) solid var(--line);background:var(--cloud-50)}

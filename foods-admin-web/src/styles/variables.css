@@ -51,15 +51,15 @@
 
   /* Azul operativo: acciones, selección y foco */
   --primary-25: #fbfcff;
-  --primary-50: #f4f8ff;
-  --primary-100: #eaf2ff;
-  --primary-200: #cfdefe;
-  --primary-300: #a7c5ff;
-  --primary-400: #72a1ff;
-  --primary-500: #3578fa;
-  --primary-600: #005bff;
-  --primary-700: #004bd6;
-  --primary-800: #003baf;
+  --primary-50: #f4f7ff;
+  --primary-100: #eaf0ff;
+  --primary-200: #cedcff;
+  --primary-300: #a4bfff;
+  --primary-400: #6c98ff;
+  --primary-500: #3172fc;
+  --primary-600: #0052fc;
+  --primary-700: #0043cf;
+  --primary-800: #0035a6;
 
   /* Approved operational states stay indigo, independently of action branding. */
   --indigo-100: #eef0ff;
@@ -67,18 +67,18 @@
   --indigo-700: #3946b8;
 
   /* Navegación: azul marino profundo */
-  --navigation-900: #0d2060;
-  --navigation-950: #091548;
-  --navigation-text: #c4d1f5;
+  --navigation-900: #052352;
+  --navigation-950: #041a40;
+  --navigation-text: #c4d3ee;
 
   /* Verde restaurante: identidad y éxito confirmado */
-  --brand-50: #f0fcf5;
-  --brand-100: #e2f8ec;
-  --brand-200: #b6edcd;
-  --brand-300: #7bdfa7;
-  --brand-600: #00bd68;
-  --brand-700: #007e44;
-  --brand-800: #06613a;
+  --brand-50: #f0fcf3;
+  --brand-100: #e3f8e9;
+  --brand-200: #b8edc8;
+  --brand-300: #7cdd9f;
+  --brand-600: #03c056;
+  --brand-700: #007b35;
+  --brand-800: #055e2b;
 
   /* Violeta digital: canales digitales e integraciones */
   --digital-50: #f9f5ff;
@@ -106,22 +106,22 @@
   --rose-700: #a8336a;
 
   /* Advertencia y notas */
-  --warning-50: #fffaf0;
-  --warning-100: #fff1d2;
-  --warning-200: #ffe0a3;
-  --warning-500: #ffb020;
-  --warning-600: #a75c00;
-  --warning-800: #784400;
+  --warning-50: #fff9ef;
+  --warning-100: #fff0d8;
+  --warning-200: #ffdcaa;
+  --warning-500: #fd9f0a;
+  --warning-600: #9d5700;
+  --warning-800: #744000;
   --note-100: #fef3c7;
   --note-ink: #6b4a0a;
 
   /* Error y acciones destructivas */
-  --danger-50: #fff1f2;
-  --danger-100: #ffe2e5;
-  --danger-200: #ffbdc4;
-  --danger-500: #ff3b4a;
-  --danger-600: #c8233a;
-  --danger-700: #b51f33;
+  --danger-50: #fff2ef;
+  --danger-100: #ffe6df;
+  --danger-200: #ffc4b5;
+  --danger-500: #fd3622;
+  --danger-600: #bf2817;
+  --danger-700: #9f2115;
 
   /* Transparencias por paso */
   --ink-400-alpha-40: color-mix(in srgb, var(--ink-400) 40%, transparent);
@@ -161,6 +161,7 @@
   --surface-alpha-92: color-mix(in srgb, var(--surface) 92%, transparent);
 
   /* Alias semánticos */
+  --amount-paid: var(--brand-600);
   --action-pay: var(--primary-600);
   --action-pay-hover: var(--primary-700);
   --danger: var(--danger-600);

@@ -6,8 +6,14 @@ const stockLevel=z.string().trim().refine(value=>value!==""&&Number.isFinite(Num
 const schema=z.object({
   inventoryItemId:z.string().trim().min(1,"Selecciona un artículo."),
   minimumStock:stockLevel,
-  reorderPoint:stockLevel,
   optimalStock:stockLevel,
 });
 
-export const inventorySettingsResolver=zodResolver<InventorySettingsDraft>(schema);
+const wholeSchema=schema.superRefine((value,context)=>{
+  for(const field of ["minimumStock","optimalStock"] as const){
+    const amount=Number(value[field]);
+    if(Number.isFinite(amount)&&amount>=0&&!Number.isInteger(amount))context.addIssue({code:"custom",path:[field],message:"Ingresa una cantidad entera para esta unidad."});
+  }
+});
+const decimalResolver=zodResolver<InventorySettingsDraft>(schema),wholeResolver=zodResolver<InventorySettingsDraft>(wholeSchema);
+export const inventorySettingsResolver=(countable:boolean)=>countable?wholeResolver:decimalResolver;
