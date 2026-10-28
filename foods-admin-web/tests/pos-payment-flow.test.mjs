@@ -26,7 +26,7 @@ function mountPage({canManage=true,shift=true,busy=false,initialOrderId="order-1
   if(name==="react")return{...require(name),useState:value=>{const index=stateIndex++;return[value,next=>changes.push({index,next})]}};
   if(name==="@tanstack/react-query")return{
    useQueryClient:()=>({invalidateQueries:options=>invalidations.push(options.queryKey)}),
-   useQuery:options=>{queries.push(options);return{isLoading:false,isPending:false,isFetching:false,isError:false,refetch:()=>{},data:options.queryKey[0]==="cash-shift"?{shift:shift?{cashRegisterName:"Caja principal",code:"CAJ-001",openedByName:"Ana"}:null}:options.queryKey[0]==="pos-orders"?{items:listed,total:listed.length}:options.queryKey[0]==="payment-methods"?{items:catalog}:options.enabled?detail:undefined}},
+   useQuery:options=>{queries.push(options);return{isLoading:false,isPending:false,isFetching:false,isError:false,refetch:()=>{},data:options.queryKey[0]==="pos-cash-access"?{shift:shift?{cashRegisterName:"Caja principal",code:"CAJ-001",openedByName:"Ana"}:null}:options.queryKey[0]==="pos-orders"?{items:listed,total:listed.length}:options.queryKey[0]==="payment-methods"?{items:catalog}:options.enabled?detail:undefined}},
    useMutation:options=>{mutations.push(options);return{isPending:busy,mutate:input=>sent.push(input)}},
   };
   if(name==="@/design-system")return primitives;
@@ -47,7 +47,18 @@ function mountPage({canManage=true,shift=true,busy=false,initialOrderId="order-1
  return{...compiled,entry,queries,mutations,changes,sent,invalidations,notices,tree};
 }
 const catalog=[{code:"cash",name:"Efectivo",affectsCash:true},{code:"card",name:"Tarjeta",affectsCash:false},{code:"yape",name:"Yape",affectsCash:false},{code:"plin",name:"Plin",affectsCash:false}];
-function entryProps(changes={}){return{loading:false,data:detail,shiftLoading:false,shiftName:"Caja principal",methodsLoading:false,methods:catalog,retryMethods:()=>{},canManage:true,busy:false,formatMoney:value=>`S/ ${value}`,close:()=>{},retryOrder:()=>{},retryShift:()=>{},save:()=>{},...changes}}
+test("un colaborador asignado cobra sin cash.manage; al perder el turno se bloquea",()=>{
+ const assigned=mountPage({canManage:false,shift:true});
+ assert.equal(assigned.entry.props.canCollect,true);
+ assert.equal(assigned.POSPaymentEntry(assigned.entry.props).type,"PaymentDialog");
+ assigned.entry.props.save({method:"cash",amount:"30",reference:""});
+ assert.equal(assigned.sent.length,1);
+ const revoked=mountPage({canManage:false,shift:false});
+ assert.equal(revoked.entry.props.canCollect,false);
+ revoked.entry.props.save({method:"cash",amount:"30",reference:""});
+ assert.equal(revoked.sent.length,0);
+});
+function entryProps(changes={}){return{loading:false,data:detail,shiftLoading:false,shiftName:"Caja principal",methodsLoading:false,methods:catalog,retryMethods:()=>{},canCollect:true,busy:false,formatMoney:value=>`S/ ${value}`,close:()=>{},retryOrder:()=>{},retryShift:()=>{},save:()=>{},...changes}}
 
 test("Cobrar saldo abre el formulario real, no el detalle, sin registrar pagos al abrir",()=>{
  const view=mountPage();
@@ -120,7 +131,7 @@ test("errores de pedido o caja tienen reintento y la caja ausente ofrece ir a Ca
 
 test("el formulario no permite cobrar sin permiso, pedidos pagados, cancelados o con cuenta abierta",()=>{
  const view=mountPage();
- for(const changes of [{canManage:false},{data:{...detail,paymentStatus:"paid",remainingAmount:"0"}},{data:{...detail,order:{...detail.order,completedAt:"2026-10-07T14:00:00Z"}}},{data:{...detail,order:{...detail.order,status:"cancelado"}}},{data:{...detail,order:{...detail.order,billClosedAt:undefined,status:"preparando"}}},{data:{...detail,order:{...detail.order,channel:"delivery",status:"preparando"}}},...["confirmado","preparando","listo"].map(status=>({data:{...detail,order:{...detail.order,status}}})),{data:{...detail,order:{...detail.order,serviceItems:[{status:"listo",destination:"bar"}]}}}]){
+ for(const changes of [{canCollect:false},{data:{...detail,paymentStatus:"paid",remainingAmount:"0"}},{data:{...detail,order:{...detail.order,completedAt:"2026-10-07T14:00:00Z"}}},{data:{...detail,order:{...detail.order,status:"cancelado"}}},{data:{...detail,order:{...detail.order,billClosedAt:undefined,status:"preparando"}}},{data:{...detail,order:{...detail.order,channel:"delivery",status:"preparando"}}},...["confirmado","preparando","listo"].map(status=>({data:{...detail,order:{...detail.order,status}}})),{data:{...detail,order:{...detail.order,serviceItems:[{status:"listo",destination:"bar"}]}}}]){
   assert.equal(nodes(view.POSPaymentEntry(entryProps(changes))).some(node=>node.type==="PaymentDialog"),false);
  }
  assert.equal(view.POSPaymentEntry(entryProps()).type,"PaymentDialog");
@@ -128,7 +139,7 @@ test("el formulario no permite cobrar sin permiso, pedidos pagados, cancelados o
 });
 
 test("el envío se bloquea durante el cobro y conserva separados los detalles de consulta",()=>{
- for(const options of [{busy:true},{canManage:false},{shift:false}]){
+ for(const options of [{busy:true},{canManage:false,shift:false},{shift:false}]){
   const view=mountPage(options);
   view.entry.props.save({method:"cash",amount:"30",reference:""});
   assert.equal(view.sent.length,0);

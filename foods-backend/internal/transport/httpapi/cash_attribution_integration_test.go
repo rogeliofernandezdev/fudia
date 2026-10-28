@@ -84,19 +84,24 @@ func TestCashShiftAttributionKeepsOpeningAndTracksTeamAndCloser(t *testing.T) {
 	for _, status := range []string{"open", "closed"} {
 		if status == "closed" {
 			edith := scope{OrganizationID: s.OrganizationID, LocationID: s.LocationID, UserID: edithID, Name: "Edith"}
-			closed := decode(request(edith, api.closeCashShift, "POST", path+"/close", `{"countedAmount":100}`, opened.ID, "", 200))
-			if closed.OpenedByName != "Jimena" || closed.ClosedByName != "Edith" || len(closed.ActiveUserNames) != 0 {
-				t.Fatalf("closing must identify Edith without overwriting Jimena: %#v", closed)
+			request(edith, api.closeCashShift, "POST", path+"/close", `{"countedAmount":100}`, opened.ID, "", 403)
+			closed := decode(request(s, api.closeCashShift, "POST", path+"/close", `{"countedAmount":100}`, opened.ID, "", 200))
+			if closed.OpenedByName != "Jimena" || closed.ClosedByName != "Jimena" || len(closed.ActiveUserNames) != 0 {
+				t.Fatalf("only Jimena can close her own turn: %#v", closed)
 			}
 			var opener, closer string
 			if err := pool.QueryRow(ctx, `SELECT opened_by::text,closed_by::text FROM cash_shifts WHERE id=$1`, opened.ID).Scan(&opener, &closer); err != nil {
 				t.Fatal(err)
 			}
-			if opener != s.UserID || closer != edithID {
+			if opener != s.UserID || closer != opener {
 				t.Fatalf("persisted attribution: %s / %s", opener, closer)
 			}
 		}
-		list := request(s, api.listCashShifts, "GET", "/v1/admin/cash-shifts?q="+url.QueryEscape("Edith")+"&status="+status, "", "", "", 200)
+		queryName := "Edith"
+		if status == "closed" {
+			queryName = "Jimena"
+		}
+		list := request(s, api.listCashShifts, "GET", "/v1/admin/cash-shifts?q="+url.QueryEscape(queryName)+"&status="+status, "", "", "", 200)
 		var result struct {
 			Items []cashShiftView `json:"items"`
 			Total int             `json:"total"`
@@ -110,7 +115,7 @@ func TestCashShiftAttributionKeepsOpeningAndTracksTeamAndCloser(t *testing.T) {
 		if status == "open" && !reflect.DeepEqual(result.Items[0].ActiveUserNames, []string{"Edith"}) {
 			t.Fatalf("list team: %#v", result.Items[0])
 		}
-		if status == "closed" && result.Items[0].ClosedByName != "Edith" {
+		if status == "closed" && result.Items[0].ClosedByName != "Jimena" {
 			t.Fatalf("list closer: %#v", result.Items[0])
 		}
 	}

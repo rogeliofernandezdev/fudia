@@ -372,7 +372,7 @@ test("pos cobra pedidos y sincroniza efectivo con caja",()=>{
   assert.ok(page.includes('<option value="partial">Pago parcial</option>'),"POS conserva pagos parciales en la cola de cobro");
   assert.equal(page.includes("Con saldo pendiente"),false,"el filtro no repite Sin pagos + Pago parcial en otra opción");
   assert.ok(page.includes('useState("all")'),"POS muestra todos los cobros por defecto");
-  assert.ok(page.includes("getCurrentCashShift"),"POS exige un turno asignado para operar");
+  assert.ok(page.includes("getPOSCollectionAccess"),"POS exige un turno asignado sin consultar saldos administrativos");
   assert.ok(page.includes("No estás asignado a una caja abierta"),"POS explica claramente cuando falta turno");
   assert.ok(page.includes("PaymentDialog"),"POS registra cobros desde la bandeja");
   assert.ok(page.includes("RefundDialog"),"POS permite devolver pagos existentes");

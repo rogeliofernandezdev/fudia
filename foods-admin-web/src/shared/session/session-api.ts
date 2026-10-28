@@ -6,6 +6,8 @@ export type SessionContextResponse={
   menuAccess:string[];
   permissions:string[];
   setupRequired:boolean;
+	/** Capacidad temporal del turno; no modifica los permisos del rol. */
+	cashCollection?:boolean;
 };
 
 export async function loadSessionContext():Promise<SessionContextResponse>{

@@ -10,7 +10,31 @@ import (
 
 type Payments struct{ service *application.Payments }
 
+func (h *Payments) RequireCollection(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if err := h.service.AuthorizeCollection(r.Context(), billingScope(r)); err != nil {
+			shared.WriteError(w, err)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+func (h *Payments) CollectionAccess(w http.ResponseWriter, r *http.Request) {
+	shift, err := h.service.CollectionAccess(r.Context(), billingScope(r))
+	billingResponse(w, 200, map[string]any{"shift": shift}, err)
+}
+
 func NewPayments(service *application.Payments) *Payments { return &Payments{service} }
+func (h *Payments) RequireCollectionRead(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		shift, err := h.service.AuthorizeCollectionRead(r.Context(), billingScope(r))
+		if err != nil {
+			shared.WriteError(w, err)
+			return
+		}
+		next.ServeHTTP(w, r.WithContext(application.WithCollectionRead(r.Context(), shift)))
+	})
+}
 func (h *Payments) CreatePayment(w http.ResponseWriter, r *http.Request) {
 	var in domain.PaymentInput
 	if json.NewDecoder(r.Body).Decode(&in) != nil {

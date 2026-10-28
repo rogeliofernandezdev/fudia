@@ -1330,6 +1330,7 @@ paths:
     post:
       operationId: closeCashShift
       summary: Cierra el turno con arqueo, saldo esperado y diferencia
+      description: Requiere cash.manage y ser el usuario que abrió el turno. Otro cajero o administrador recibe 403 cash_shift_owner_required. La identidad se valida bajo bloqueo antes de guardar conteos o modificar el turno.
       security: [{ sessionCookie: [] }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/CashShiftCloseInput" } } } }
       responses:
@@ -1342,6 +1343,7 @@ paths:
     get:
       operationId: listCashUserOptions
       summary: Usuarios del local disponibles para asignar a turnos de caja
+      description: Excluye al usuario actual, administradores de empresa o plataforma e inactivos. Los demás deben tener un rol activo en el local. assignedShiftId permite excluir en cliente a quienes ya operan otro turno.
       security: [{ sessionCookie: [] }]
       responses:
         "200": { description: Usuarios y turno activo, content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/CashUserOption" } } } } } } }
@@ -1357,10 +1359,12 @@ paths:
     post:
       operationId: assignCashShiftUser
       summary: Asigna un usuario del local a un turno abierto
+      description: Requiere cash.manage. Autoriza temporalmente cobros desde POS sin modificar roles. Rechaza administradores, autoasignaciones, inactivos, usuarios ajenos al local, duplicados y asignaciones a otro turno activo.
       security: [{ sessionCookie: [] }]
       requestBody: { required: true, content: { application/json: { schema: { type: object, required: [userId], properties: { userId: { type: string, format: uuid } } } } } }
       responses:
         "201": { description: Usuario asignado, content: { application/json: { schema: { $ref: "#/components/schemas/CashShiftUser" } } } }
+        "400": { description: Usuario inválido o autoasignación }
         "404": { description: Turno o usuario no disponible }
         "409": { description: El usuario ya opera otro turno }
   /v1/admin/cash-shifts/{id}/users/{userId}:
@@ -1374,6 +1378,23 @@ paths:
       responses:
         "204": { description: Usuario retirado }
         "404": { description: Usuario no asignado }
+        "409": { description: Turno cerrado }
+  /v1/admin/pos/access:
+    get:
+      operationId: getPOSCollectionAccess
+      summary: Turno autorizado para cobrar del usuario actual
+      description: Sesión obligatoria. Devuelve null si no existe asignación activa a turno abierto. Solo incluye identidad del turno, nombre de caja y responsable de apertura; no expone saldos ni movimientos.
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Alcance operativo de cobro, content: { application/json: { schema: { type: object, required: [shift], properties: { shift: { anyOf: [{ $ref: "#/components/schemas/POSCollectionShift" }, { type: "null" }] } } } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /v1/operations/pos/access:
+    get:
+      operationId: getOperationalPOSCollectionAccess
+      summary: Alias operativo de autorización de cobro
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Turno mínimo autorizado o null, content: { application/json: { schema: { type: object, required: [shift], properties: { shift: { anyOf: [{ $ref: "#/components/schemas/POSCollectionShift" }, { type: "null" }] } } } } } }
   /v1/admin/cash-shifts/{id}/operations:
     parameters: [{ $ref: "#/components/parameters/EntityId" }]
     post:
@@ -1390,6 +1411,7 @@ paths:
     get:
       operationId: listPOSOrders
       summary: Pedidos del local con estado de cobro
+      description: Conserva permisos de lectura existentes. Una asignación temporal habilita cuentas abiertas con saldo y pagos de su turno; no habilita el historial de ventas de otros turnos.
       security: [{ sessionCookie: [] }]
       parameters:
         - { in: query, name: q, schema: { type: string } }
@@ -1477,7 +1499,7 @@ paths:
     post:
       operationId: createPaymentBatch
       summary: Registra un cobro dividido en varios medios de pago
-      description: "Requiere cash.manage y turno asignado. Salón exige cuenta cerrada y todos los productos entregados; pendientes devuelven 409 products_not_delivered. Todos los pagos se registran atómicamente; al completar el saldo se finaliza la atención y libera la mesa en la misma transacción."
+      description: "Requiere cash.manage o asignación temporal activa, y turno abierto asignado. Salón exige cuenta cerrada y todos los productos entregados; pendientes devuelven 409 products_not_delivered. Todos los pagos se registran atómicamente; al completar el saldo se finaliza la atención y libera la mesa en la misma transacción."
       security: [{ sessionCookie: [] }]
       requestBody:
         required: true
@@ -1987,7 +2009,7 @@ components:
         cashBalance: { type: [string, "null"], description: Efectivo esperado de turnos abiertos; null si una caja ciega impide consultar el importe }
         soldOutProducts: { type: integer, minimum: 0, description: Productos activos agotados hoy por control manual, cupos, inventario o composición de menú; excluye productos fuera de horario }
     ContextLocation: { type: object, required: [id, name, country, timezone], properties: { id: { type: string, format: uuid }, name: { type: string }, country: { type: string, pattern: "^[A-Z]{2}$" }, timezone: { type: string } } }
-    SessionContext: { type: object, required: [user, organization, location, modules, menuAccess, permissions, setupRequired], properties: { user: { type: object, required: [id, name, platformAdmin], properties: { id: { type: string, format: uuid }, name: { type: string }, platformAdmin: { type: boolean } } }, organization: { type: object, required: [id, name], properties: { id: { type: string, format: uuid }, name: { type: string } } }, location: { $ref: "#/components/schemas/ContextLocation" }, modules: { type: object, additionalProperties: { type: boolean } }, menuAccess: { type: array, items: { type: string } }, permissions: { type: array, items: { type: string } }, setupRequired: { type: boolean } } }
+    SessionContext: { type: object, required: [user, organization, location, modules, menuAccess, permissions, setupRequired, cashCollection], properties: { user: { type: object, required: [id, name, platformAdmin], properties: { id: { type: string, format: uuid }, name: { type: string }, platformAdmin: { type: boolean } } }, organization: { type: object, required: [id, name], properties: { id: { type: string, format: uuid }, name: { type: string } } }, location: { $ref: "#/components/schemas/ContextLocation" }, modules: { type: object, additionalProperties: { type: boolean } }, menuAccess: { type: array, items: { type: string } }, permissions: { type: array, items: { type: string } }, setupRequired: { type: boolean }, cashCollection: { type: boolean, description: Capacidad temporal de POS por asignación activa; no modifica roles ni permisos } } }
     RestaurantSetupInput: { type: object, required: [serviceMode], properties: { serviceMode: { type: string, enum: [counter, dine_in, mixed] } } }
     RestaurantSetupCounts: { type: object, required: [categories, products, tables, cashRegisters, users, inventoryItems, recipes, suppliers], properties: { categories: { type: integer, minimum: 0 }, products: { type: integer, minimum: 0 }, tables: { type: integer, minimum: 0 }, cashRegisters: { type: integer, minimum: 0 }, users: { type: integer, minimum: 0 }, inventoryItems: { type: integer, minimum: 0 }, recipes: { type: integer, minimum: 0 }, suppliers: { type: integer, minimum: 0 } } }
     RestaurantSetup: { type: object, required: [serviceMode, coreReady, counts, modules], properties: { serviceMode: { type: string, enum: [counter, dine_in, mixed, ""], description: "Las empresas nuevas inician en dine_in (Salón); una cadena vacía solo aparece en empresas antiguas sin modalidad elegida." }, completedAt: { type: [string, "null"], format: date-time }, coreReady: { type: boolean }, counts: { $ref: "#/components/schemas/RestaurantSetupCounts" }, modules: { type: object, additionalProperties: { type: boolean } } } }
@@ -2200,10 +2222,11 @@ components:
     CashCountLine: { type: object, required: [denomination, quantity], properties: { denomination: { type: number, exclusiveMinimum: 0 }, quantity: { type: integer, minimum: 0 } } }
     CashShiftCloseInput: { type: object, description: "Informa countedAmount o counts. Si counts contiene líneas, el backend calcula el total contado.", properties: { countedAmount: { type: number, minimum: 0 }, counts: { type: array, items: { $ref: "#/components/schemas/CashCountLine" } }, note: { type: string, maxLength: 240 } } }
     CashMovement: { type: object, required: [id, movementType, sourceType, amount, reason, note, createdByName, createdAt], properties: { id: { type: string, format: uuid }, movementType: { type: string, enum: [income, expense] }, sourceType: { type: string, enum: [manual, cash_sale, cash_refund, cash_pull, transfer_in, transfer_out, deposit, adjustment] }, sourceId: { type: [string, "null"], format: uuid }, amount: { type: string }, reason: { type: string }, note: { type: string }, createdByName: { type: string }, createdAt: { type: string, format: date-time } } }
-    CashShift: { type: object, required: [id, code, cashRegisterId, cashRegisterName, blindClose, expectedVisible, status, openingAmount, incomeAmount, expenseAmount, expectedAmount, openingNote, closingNote, openedByName, closedByName, activeUserNames, businessDate, openedAt, movementCount], properties: { id: { type: string, format: uuid }, code: { type: string }, cashRegisterId: { type: string, format: uuid }, cashRegisterName: { type: string }, blindClose: { type: boolean }, expectedVisible: { type: boolean, description: "False cuando el turno usa cierre ciego y el usuario no tiene cash.expected.read." }, status: { type: string, enum: [open, closed] }, openingAmount: { type: string }, incomeAmount: { type: string }, expenseAmount: { type: string }, expectedAmount: { type: string, description: "Vacío durante un cierre ciego sin permiso para consultar el esperado." }, closingExpectedAmount: { type: [string, "null"] }, closingCountedAmount: { type: [string, "null"] }, varianceAmount: { type: [string, "null"] }, openingNote: { type: string }, closingNote: { type: string }, openedByName: { type: string, description: "Persona que abrió el turno; no cambia al modificar el equipo." }, closedByName: { type: string, description: "Persona autenticada que cerró el turno; vacío mientras está abierto." }, activeUserNames: { type: array, items: { type: string }, description: "Equipo actualmente asignado al turno. Vacío cuando no hay asignaciones o el turno está cerrado." }, businessDate: { type: string, format: date }, openedAt: { type: string, format: date-time }, closedAt: { type: [string, "null"], format: date-time }, movementCount: { type: integer, minimum: 0 }, movements: { type: array, items: { $ref: "#/components/schemas/CashMovement" } } } }
+    CashShift: { type: object, required: [id, code, cashRegisterId, cashRegisterName, blindClose, expectedVisible, status, openingAmount, incomeAmount, expenseAmount, expectedAmount, openingNote, closingNote, openedByName, closedByName, activeUserNames, businessDate, openedAt, movementCount], properties: { id: { type: string, format: uuid }, code: { type: string }, cashRegisterId: { type: string, format: uuid }, cashRegisterName: { type: string }, blindClose: { type: boolean }, expectedVisible: { type: boolean, description: "False cuando el turno usa cierre ciego y el usuario no tiene cash.expected.read." }, status: { type: string, enum: [open, closed] }, openingAmount: { type: string }, incomeAmount: { type: string }, expenseAmount: { type: string }, expectedAmount: { type: string, description: "Vacío durante un cierre ciego sin permiso para consultar el esperado." }, closingExpectedAmount: { type: [string, "null"] }, closingCountedAmount: { type: [string, "null"] }, varianceAmount: { type: [string, "null"] }, openingNote: { type: string }, closingNote: { type: string }, openedById: { type: string, format: uuid, description: "UUID del abridor; solo esta identidad puede cerrar. Puede faltar en informes históricos persistidos." }, openedByName: { type: string, description: "Persona que abrió el turno; no cambia al modificar el equipo." }, closedByName: { type: string, description: "Persona autenticada que cerró el turno; vacío mientras está abierto." }, activeUserNames: { type: array, items: { type: string }, description: "Equipo actualmente asignado al turno. Vacío cuando no hay asignaciones o el turno está cerrado." }, businessDate: { type: string, format: date }, openedAt: { type: string, format: date-time }, closedAt: { type: [string, "null"], format: date-time }, movementCount: { type: integer, minimum: 0 }, movements: { type: array, items: { $ref: "#/components/schemas/CashMovement" } } } }
     CashShiftList: { type: object, required: [items, total, page, pageSize], properties: { items: { type: array, items: { $ref: "#/components/schemas/CashShift" } }, total: { type: integer, minimum: 0 }, page: { type: integer, minimum: 1 }, pageSize: { type: integer, minimum: 1 } } }
     CashShiftUser: { type: object, required: [userId, name, assignedAt], properties: { userId: { type: string, format: uuid }, name: { type: string }, assignedAt: { type: string, format: date-time } } }
     CashUserOption: { type: object, required: [id, name], properties: { id: { type: string, format: uuid }, name: { type: string }, assignedShiftId: { type: [string, "null"], format: uuid } } }
+    POSCollectionShift: { type: object, required: [id, cashRegisterName, openedByName], properties: { id: { type: string, format: uuid }, cashRegisterName: { type: string }, openedByName: { type: string } } }
     CashOperationInput: { type: object, required: [operationType, amount, reason], properties: { operationType: { type: string, enum: [cash_pull, deposit, transfer] }, targetShiftId: { type: string, format: uuid }, amount: { type: number, exclusiveMinimum: 0 }, reason: { type: string, minLength: 1, maxLength: 120 }, note: { type: string, maxLength: 240 } } }
     CashOperation: { type: object, required: [id, operationType, amount, reason, note, createdAt], properties: { id: { type: string, format: uuid }, operationType: { type: string, enum: [cash_pull, deposit, transfer] }, amount: { type: string }, reason: { type: string }, note: { type: string }, createdAt: { type: string, format: date-time } } }
     POSOrderSummary: { type: object, required: [id, code, channel, status, customerName, tableName, total, paidAmount, remainingAmount, paymentStatus, paymentMethods, createdAt], properties: { billClosed: { type: boolean, description: La cuenta está cerrada para cobro }, id: { type: string, format: uuid }, code: { type: string }, channel: { type: string }, status: { type: string }, customerName: { type: string }, tableName: { type: string }, total: { type: string }, paidAmount: { type: string }, remainingAmount: { type: string }, paymentStatus: { type: string, enum: [pending, partial, paid] }, paymentMethods: { type: array, uniqueItems: true, items: { type: string }, description: "Nombres del catálogo de la empresa usados en pagos con importe neto positivo; sin duplicados, ordenados por nombre. Incluye medios ahora inactivos y devuelve un arreglo vacío si no hay cobros vigentes." }, createdAt: { type: string, format: date-time } } }

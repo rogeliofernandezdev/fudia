@@ -122,16 +122,16 @@ func TestCompanyAdministratorUsesAllOwnLocations(t *testing.T) {
 		if err != nil || !visible {
 			t.Fatalf("cash permission: %v %v", visible, err)
 		}
-		if _, err := cash.AssignableUser(ctx, targetScope, billingdomain.ShiftUserInput{UserID: s.UserID}); err != nil {
-			t.Fatalf("admin missing from assignable cash users: %v", err)
+		if _, err := cash.AssignableUser(ctx, targetScope, billingdomain.ShiftUserInput{UserID: s.UserID}); err == nil {
+			t.Fatal("administrator must not be assignable as a collaborator")
 		}
 		options, err := cash.UserOptions(ctx, targetScope)
 		found := false
 		for _, option := range options {
 			found = found || option.ID == s.UserID
 		}
-		if err != nil || !found {
-			t.Fatalf("admin missing from cash options: %v", err)
+		if err != nil || found {
+			t.Fatalf("administrator included in collaborator options: %v", err)
 		}
 	}
 	other := seedInventoryScope(t, api.db)

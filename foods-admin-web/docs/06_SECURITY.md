@@ -1,5 +1,17 @@
 # Seguridad
 
+`cashCollection` es una capacidad temporal de sesión que permite abrir POS con
+una asignación activa a un turno abierto. No añade `cash.manage`, permisos ni
+accesos permanentes al rol. POS consulta `pos/access`, cuya proyección no incluye
+saldos administrativos; cobro y devolución mantienen condiciones distintas.
+El equipo de turno excluye al actor, asignados y turnos cerrados en cliente;
+la API filtra administradores, inactivos y usuarios ajenos al local y vuelve a
+validar todo al asignar. El backend es la autoridad sobre revocación y cierre,
+incluso cuando la caché visual aún no se ha refrescado.
+El cierre del turno requiere `cash.manage` y coincidir con `openedById`.
+La interfaz oculta el cierre a otros usuarios y la API lo rechaza aunque sean
+administradores. Los informes históricos conservan sus autores originales.
+
 La UI representa permisos, pero backend autoriza. No guardar tokens en localStorage.
 Proteger mutaciones contra CSRF y pedir motivo para acciones sensibles.
 

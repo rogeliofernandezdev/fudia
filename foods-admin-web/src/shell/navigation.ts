@@ -24,7 +24,7 @@ export const navigationGroups:NavGroup[]=[
  {label:"CONFIGURACIÓN",items:[{href:pageRoutes.gettingStarted,name:"Puesta en marcha",icon:"check",module:"locales",access:"locales",permission:"organizations.read"},{href:pageRoutes.organizationSettings,name:"Empresa",icon:"building",module:"locales",access:"locales",permission:"organizations.read"},{href:pageRoutes.taxSettings,name:"Fiscal y moneda",icon:"percent",module:"fiscal",permission:"organizations.read"},{href:pageRoutes.paymentMethods,name:"Medios de pago",icon:"payment",module:"fiscal",access:"fiscal",permission:"organizations.read"},{href:pageRoutes.usersSettings,name:"Usuarios y roles",icon:"users",module:"usuarios",permission:"users.read"},{href:pageRoutes.billingSettings,name:"Facturación",icon:"receipt",module:"facturacion"},{href:pageRoutes.modulesSettings,name:"Módulos",icon:"layers",module:"fiscal",platformAdminOnly:true},{href:pageRoutes.companiesSettings,name:"Empresas y planes",icon:"contract",module:"locales",platformAdminOnly:true},{href:pageRoutes.platformGlobalSettings,name:"Países y WhatsApp",icon:"chat",module:"integraciones",platformAdminOnly:true},{href:pageRoutes.integrationsSettings,name:"Integraciones",icon:"plug",module:"integraciones"},{href:pageRoutes.concierge,name:"Fudia Concierge",icon:"chat",module:"whatsapp_bot",permission:"organizations.read"}]}
 ];
 
-type AccessContext=Pick<SessionContextResponse,"user"|"modules"|"menuAccess"|"permissions"|"setupRequired">;
+type AccessContext=Pick<SessionContextResponse,"user"|"modules"|"menuAccess"|"permissions"|"setupRequired"|"cashCollection">;
 
 export function accessKey(item:NavItem){return item.access??item.module}
 
@@ -38,6 +38,7 @@ export function canOpenNavigationItem(item:NavItem,context:AccessContext){
   if(context.user.platformAdmin)return true;
   if(item.platformAdminOnly)return false;
   if(!moduleIsActive(context.modules,item.module))return false;
+  if(item.module==="pos"&&context.cashCollection)return true;
   if(!(context.menuAccess.includes("*")||context.menuAccess.includes(accessKey(item))))return false;
   if(item.permission&&!(context.permissions.includes("*")||context.permissions.includes(item.permission)))return false;
   return true;

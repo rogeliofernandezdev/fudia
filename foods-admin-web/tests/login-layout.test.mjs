@@ -52,11 +52,11 @@ test("acceso: vista baja conserva desplazamiento natural y foco visible",()=>{
 
 test("acceso: Ingresar conserva estados y no incorpora selectores ni enlaces sin destino",()=>{
  const form=readFileSync(new URL("../src/modules/auth/presentation/login-form.tsx",import.meta.url),"utf8");
- assert.match(form,/>Ingresar<Icon name="lock" size=\{18\}\/>/);
+ assert.match(form,/>Ingresar<Icon name="arrowRightCircle" size=\{18\}\/>/);
  const iconSource=readFileSync(new URL("../src/design-system/icons.tsx",import.meta.url),"utf8");
  assert.match(iconSource,/lock:IconLock/);
  assert.doesNotMatch(iconSource,/\bsignIn:</);
- assert.doesNotMatch(form,/>Ingresar<Icon name="(?:login|arrowRightCircle|key|signIn)"/);
+ assert.doesNotMatch(form,/>Ingresar<Icon name="(?:lock|login|key|signIn)"/);
  assert.match(form,/aria-busy=\{loading\}/);
  assert.match(form,/Verificando acceso…/);
  assert.match(form,/aria-pressed=\{showPassword\}/);
@@ -119,8 +119,8 @@ test("acceso: recuperar conserva texto plano al pasar el cursor y foco visible c
 test("acceso: conserva una tarjeta y el orden original; destaca marca y campos sin panel lateral",()=>{
  assert.equal(values(".admin-auth-shell")["max-width"],"360px");
  assert.equal(values(".admin-auth-card")["grid-template-columns"],undefined);
- assert.ok(values(".admin-auth-brand").background.includes("linear-gradient"));
- assert.equal(values(".admin-auth-heading h1")["font-size"],"18px");
+ assert.equal(values(".admin-auth-brand").background,"var(--surface)");
+ assert.equal(values(".admin-auth-heading h1")["font-size"],"22px");
  assert.equal(values(".admin-auth-heading h1")["font-weight"],"700");
  assert.equal(values(".admin-auth-heading")["text-align"],"center");
  assert.equal(values(".admin-auth-help").color,"var(--ink-600)");
@@ -128,11 +128,11 @@ test("acceso: conserva una tarjeta y el orden original; destaca marca y campos s
  const help=postcss.parse(source).nodes.find(node=>node.selector===".admin-auth-help");
  assert.equal(help.nodes.find(node=>node.prop==="font-weight").value,"var(--weight-medium)","El peso sigue usando el token compartido; values ya resuelve su valor");
  assert.equal(values(".admin-auth-footer")["min-height"],undefined);
- assert.equal(values(".admin-auth-form").gap,"12px");
- assert.equal(values(".admin-auth-form").padding,"20px 24px");
+ assert.equal(values(".admin-auth-form").gap,"16px");
+ assert.equal(values(".admin-auth-form").padding,"20px 24px 24px");
  assert.equal(values(".admin-auth-field:focus-within .admin-auth-input:not([aria-invalid=\"true\"])")["box-shadow"],"var(--ring-focus)");
- assert.equal(values(".admin-auth-field>svg").background,"var(--primary-100)");
- assert.equal(values(".admin-auth-field>svg").width,"26px");
+ assert.equal(values(".admin-auth-field>svg").background,undefined);
+ assert.equal(values(".admin-auth-field>svg").width,"20px");
  assert.equal(values(".admin-auth-accent").height,"4px");
  assert.equal(source.includes("min-width:900px"),false);
  assert.equal(source.includes("admin-auth-brand-copy"),false);

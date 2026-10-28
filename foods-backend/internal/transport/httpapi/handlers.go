@@ -117,6 +117,9 @@ type OrdersHandler interface {
 	AppendOrderItems(http.ResponseWriter, *http.Request)
 }
 type PaymentsHandler interface {
+	RequireCollection(http.Handler) http.Handler
+	RequireCollectionRead(http.Handler) http.Handler
+	CollectionAccess(http.ResponseWriter, *http.Request)
 	CreatePayment(http.ResponseWriter, *http.Request)
 	RefundPayment(http.ResponseWriter, *http.Request)
 	CreatePaymentBatch(http.ResponseWriter, *http.Request)

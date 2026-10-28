@@ -72,10 +72,20 @@ type Administration struct {
 	passwords     Passwords
 	organizations OrganizationAccess
 	audit         audit.Repository
+	collector     CashCollector
+}
+
+type CashCollector interface {
+	CanCollect(context.Context, requestscope.Scope) (bool, error)
+}
+
+func (a *Administration) WithCashCollection(collector CashCollector) *Administration {
+	a.collector = collector
+	return a
 }
 
 func NewAdministration(repo AdministrationRepository, work unitofwork.Manager, passwords Passwords, organizations OrganizationAccess, audit audit.Repository) *Administration {
-	return &Administration{repo, work, passwords, organizations, audit}
+	return &Administration{repo: repo, work: work, passwords: passwords, organizations: organizations, audit: audit}
 }
 func failure(kind apperror.Kind, code, message string) error {
 	return apperror.New(kind, code, message)
@@ -473,5 +483,12 @@ func (a *Administration) Context(ctx context.Context, s requestscope.Scope) (dom
 			return out, failure(apperror.Unavailable, "context_unavailable", "No pudimos cargar el estado inicial de la empresa.")
 		}
 	}
-	return domain.WorkContext{User: map[string]any{"id": s.UserID, "name": s.Name, "platformAdmin": record.PlatformAdmin}, Organization: map[string]string{"id": s.OrganizationID, "name": record.OrganizationName}, Location: map[string]string{"id": s.LocationID, "name": record.LocationName, "country": record.Country, "timezone": record.Timezone}, Modules: modules, MenuAccess: record.MenuAccess, Permissions: record.Permissions, SetupRequired: required}, nil
+	collection := false
+	if a.collector != nil && modules["pos"] {
+		collection, err = a.collector.CanCollect(ctx, s)
+		if err != nil {
+			return out, failure(apperror.Unavailable, "context_unavailable", "No pudimos validar tu autorización de cobro.")
+		}
+	}
+	return domain.WorkContext{User: map[string]any{"id": s.UserID, "name": s.Name, "platformAdmin": record.PlatformAdmin}, Organization: map[string]string{"id": s.OrganizationID, "name": record.OrganizationName}, Location: map[string]string{"id": s.LocationID, "name": record.LocationName, "country": record.Country, "timezone": record.Timezone}, Modules: modules, MenuAccess: record.MenuAccess, Permissions: record.Permissions, SetupRequired: required, CashCollection: collection}, nil
 }

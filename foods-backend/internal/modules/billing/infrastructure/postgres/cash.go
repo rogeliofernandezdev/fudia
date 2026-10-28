@@ -11,6 +11,18 @@ import (
 
 var _ application.CashRepository = (*Payments)(nil)
 
+// Shared by the selector and the write validation. Reserved administrators are
+// excluded even when another local role would otherwise make them eligible.
+const cashCollaboratorPredicate = `
+ u.organization_id=$1 AND u.active AND NOT u.platform_admin AND u.id<>$3
+ AND EXISTS (SELECT 1 FROM user_roles ur JOIN roles ro ON ro.id=ur.role_id
+   AND ro.organization_id=u.organization_id AND ro.active
+   WHERE ur.user_id=u.id AND (ur.location_id IS NULL OR ur.location_id=$2))
+ AND NOT EXISTS (SELECT 1 FROM user_roles ur JOIN roles ro ON ro.id=ur.role_id
+   AND ro.organization_id=u.organization_id AND ro.active
+   WHERE ur.user_id=u.id AND ro.system_key='administrator')
+`
+
 func (r *Payments) CreateRegister(ctx context.Context, s scope, in domain.RegisterInput) (domain.CashRegisterView, error) {
 	var item domain.CashRegisterView
 	err := r.db(ctx).QueryRow(ctx, `
@@ -100,20 +112,21 @@ func (r *Payments) CreateMovement(ctx context.Context, s scope, shiftID string, 
 		Scan(&item.ID, &item.MovementType, &item.SourceType, &item.SourceID, &item.Amount, &item.Reason, &item.Note, &item.CreatedByName, &item.CreatedAt)
 	return item, billingError(err)
 }
-func (r *Payments) LockClosingShift(ctx context.Context, s scope, shiftID string) (string, float64, float64, float64, error) {
+func (r *Payments) LockClosingShift(ctx context.Context, s scope, shiftID string) (string, bool, float64, float64, float64, error) {
 	var status string
+	var owned bool
 	var opening float64
 	var income float64
 	var expense float64
 	err := r.db(ctx).QueryRow(ctx, `
-		SELECT cs.status,cs.opening_amount::float8,
+		SELECT cs.status,cs.opened_by=$4,cs.opening_amount::float8,
 		       COALESCE((SELECT sum(cm.amount) FROM cash_movements cm WHERE cm.shift_id=cs.id AND cm.organization_id=cs.organization_id AND cm.movement_type='income'),0)::float8,
 		       COALESCE((SELECT sum(cm.amount) FROM cash_movements cm WHERE cm.shift_id=cs.id AND cm.organization_id=cs.organization_id AND cm.movement_type='expense'),0)::float8
 		FROM cash_shifts cs
 		WHERE cs.id=$1 AND cs.organization_id=$2 AND cs.location_id=$3
 		FOR UPDATE
-	`, shiftID, s.OrganizationID, s.LocationID).Scan(&status, &opening, &income, &expense)
-	return status, opening, income, expense, billingError(err)
+	`, shiftID, s.OrganizationID, s.LocationID, s.UserID).Scan(&status, &owned, &opening, &income, &expense)
+	return status, owned, opening, income, expense, billingError(err)
 }
 func (r *Payments) SaveCountLine(ctx context.Context, s scope, shiftID string, line domain.CountLineInput) (int64, error) {
 	tag, err := r.db(ctx).Exec(ctx, `
@@ -132,7 +145,7 @@ func (r *Payments) CloseShift(ctx context.Context, s scope, shiftID string, in d
 		    closing_note=$7,
 		    closed_by=$8,
 		    closed_at=now()
-		WHERE id=$1 AND organization_id=$2 AND location_id=$3
+		WHERE id=$1 AND organization_id=$2 AND location_id=$3 AND opened_by=$8 AND status='open'
 	`, shiftID, s.OrganizationID, s.LocationID, expected, counted, variance, in.Note, s.UserID)
 	return tag.RowsAffected(), billingError(err)
 }
@@ -165,13 +178,11 @@ func (r *Payments) LockAssignShift(ctx context.Context, s scope, id string) (boo
 func (r *Payments) AssignableUser(ctx context.Context, s scope, in domain.ShiftUserInput) (string, error) {
 	var name string
 	err := r.db(ctx).QueryRow(ctx, `
-		SELECT DISTINCT u.full_name
+		SELECT u.full_name
 		FROM users u
-		JOIN user_roles ur ON ur.user_id=u.id
-		JOIN roles ro ON ro.id=ur.role_id AND ro.organization_id=u.organization_id AND ro.active
-		WHERE u.id=$1 AND u.organization_id=$2 AND u.active
-		  AND (ur.location_id IS NULL OR ur.location_id=$3 OR ro.system_key='administrator')
-	`, in.UserID, s.OrganizationID, s.LocationID).Scan(&name)
+		WHERE `+cashCollaboratorPredicate+` AND u.id=$4
+		FOR SHARE OF u
+	`, s.OrganizationID, s.LocationID, s.UserID, in.UserID).Scan(&name)
 	return name, billingError(err)
 }
 func (r *Payments) AssignUser(ctx context.Context, s scope, id string, in domain.ShiftUserInput, name string) (domain.CashShiftUserView, error) {
@@ -260,6 +271,7 @@ const cashShiftColumns = `
 	CASE WHEN cs.variance_amount IS NULL THEN NULL ELSE cs.variance_amount::text END,
 	cs.opening_note,
 	cs.closing_note,
+	cs.opened_by::text,
 	opened.full_name,
 	COALESCE(closed.full_name,''),
 	ARRAY(
@@ -295,6 +307,7 @@ func scanCashShift(row pgx.Row) (domain.CashShiftView, error) {
 		&shift.VarianceAmount,
 		&shift.OpeningNote,
 		&shift.ClosingNote,
+		&shift.OpenedByID,
 		&shift.OpenedByName,
 		&shift.ClosedByName,
 		&shift.ActiveUserNames,
@@ -464,7 +477,7 @@ func (r *Payments) Shifts(ctx context.Context, s scope, f application.CashFilter
 func (r *Payments) UserOptions(ctx context.Context, s scope) ([]domain.CashUserOption, error) {
 	var out []domain.CashUserOption
 	rows, err := r.db(ctx).Query(ctx, `
-		SELECT DISTINCT u.id::text,u.full_name,
+		SELECT u.id::text,u.full_name,
 		       (
 		         SELECT su.shift_id::text
 		         FROM cash_shift_users su
@@ -479,13 +492,9 @@ func (r *Payments) UserOptions(ctx context.Context, s scope) ([]domain.CashUserO
 		         LIMIT 1
 		       )
 		FROM users u
-		JOIN user_roles ur ON ur.user_id=u.id
-		JOIN roles ro ON ro.id=ur.role_id AND ro.organization_id=u.organization_id AND ro.active
-		WHERE u.organization_id=$1
-		  AND u.active
-		  AND (ur.location_id IS NULL OR ur.location_id=$2 OR ro.system_key='administrator')
+		WHERE `+cashCollaboratorPredicate+`
 		ORDER BY u.full_name
-	`, s.OrganizationID, s.LocationID)
+	`, s.OrganizationID, s.LocationID, s.UserID)
 	if err != nil {
 		return out, err
 	}

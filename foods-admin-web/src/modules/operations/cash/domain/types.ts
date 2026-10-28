@@ -39,6 +39,7 @@ export type CashShift={
   varianceAmount:string|null;
   openingNote:string;
   closingNote:string;
+  openedById?:string;
   openedByName:string;
   closedByName:string;
   activeUserNames:string[];

@@ -123,13 +123,15 @@ Quispe»), no el nombre genérico de la pantalla. Un solo control de cierre que
 confirma el descarte si hay líneas. Detalle completo en `02_DESIGN_SYSTEM.md`
 › Comanda.
 
-El pie informativo del acceso presenta Conexión segura, Acceso por empresa y
-Usuario validado en una sola fila, con cada icono junto a su texto sin saltos.
-Usa tipografía auxiliar y espaciado compacto desde 390 px, sin recortar mensajes.
 El login conserva una sola tarjeta centrada y el orden original en todos los
-anchos: logo, formulario y mensajes informativos. La cabecera de marca tiene una
-superficie casi blanca; los campos permanecen blancos con iconos contenidos,
-acción única «Ingresar» y copyright externo. En viewport bajo conserva scroll
+anchos: logo, formulario y mensaje «Mesas, pedidos y cocina en un solo lugar».
+El fondo usa `navigation-900`, con iluminación discreta de `primary-600`;
+la tarjeta y la cabecera de marca permanecen blancas, sin línea divisoria entre
+logo y formulario. Conserva la franja verde/azul de marca. Los campos blancos
+usan iconos simples de 20 px, sin otra superficie detrás, y el foco compartido.
+La acción única «Ingresar» usa azul `primary-600`, flecha en círculo y geometría
+pill en móvil. El copyright externo usa `navigation-text` sobre el fondo marino.
+En viewport bajo conserva scroll
 de página y acceso a la acción. No añade panel lateral, títulos decorativos,
 selección de empresa/local/rol ni indicadores operativos ficticios.
 «Recuperar contraseña» se muestra bajo el campo como acción secundaria de texto

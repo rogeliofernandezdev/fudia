@@ -1,5 +1,12 @@
 package domain
 
+// CollectionShift exposes only what a POS operator needs, never cash balances.
+type CollectionShift struct {
+	ID               string `json:"id"`
+	CashRegisterName string `json:"cashRegisterName"`
+	OpenedByName     string `json:"openedByName"`
+}
+
 type CashMovementView struct {
 	ID            string  `json:"id"`
 	MovementType  string  `json:"movementType"`
@@ -28,6 +35,7 @@ type CashShiftView struct {
 	VarianceAmount        *string            `json:"varianceAmount"`
 	OpeningNote           string             `json:"openingNote"`
 	ClosingNote           string             `json:"closingNote"`
+	OpenedByID            string             `json:"openedById"`
 	OpenedByName          string             `json:"openedByName"`
 	ClosedByName          string             `json:"closedByName"`
 	ActiveUserNames       []string           `json:"activeUserNames"`

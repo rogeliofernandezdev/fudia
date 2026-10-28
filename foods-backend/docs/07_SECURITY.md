@@ -1,5 +1,34 @@
 # Seguridad
 
+## Colaboradores de Caja
+
+La asignación activa en `cash_shift_users` concede una capacidad temporal de
+cobro, nunca `cash.manage` ni un rol. POS permite cobros individuales y divididos
+con permiso administrativo o asignación vigente al turno abierto. Solo habilita
+su lectura operativa, medios de venta y pagos del turno; no habilita devoluciones,
+movimientos manuales, transferencias, cajas, cierres ni gestión del equipo.
+Los permisos de lectura permanentes anteriores continúan independientes.
+`cashCollection` del contexto permite mostrar POS temporalmente sin alterar
+`permissions` ni `menuAccess`; se refresca en cliente cada 30 s y al recuperar foco.
+La API valida cada solicitud y el cobro vuelve a comprobar el turno bajo bloqueo.
+El endpoint `pos/access` expone solo identidad y responsable, sin saldos financieros.
+
+Asignar exige `cash.manage`. Selector y escritura excluyen administradores
+reservados/de plataforma, al actor, inactivos y usuarios sin rol activo en el
+local. Los índices existentes impiden duplicados y otro turno activo en el local.
+El responsable que abre un turno se incorpora por el flujo de apertura, separado
+de la asignación de colaboradores; conserva sus facultades administrativas.
+Cerrar exige además que el usuario autenticado coincida con `opened_by`.
+No existe excepción para otro cajero o administrador. Se verifica bajo bloqueo
+antes de guardar conteos y se repite la condición en el UPDATE de cierre.
+
+Cobrar bloquea primero el turno y después la asignación en modo compartido;
+retirar y cerrar bloquean el turno de forma exclusiva. Así pueden cobrar varios
+usuarios mientras el bloqueo del pedido protege el saldo, y ningún cobro nuevo
+se confirma con una asignación ya retirada o un turno cerrado. Un cobro que ya
+tenía los bloqueos termina antes del retiro/cierre. El historial permanece intacto.
+No cambia autenticación, cookies, tablas ni migraciones.
+
 El catálogo de permisos y las respuestas de roles para usuarios de empresa
 proyectan únicamente accesos/acciones de módulos incluidos, activos y
 disponibles en su suscripción. Crear o editar un rol no permite asignar valores

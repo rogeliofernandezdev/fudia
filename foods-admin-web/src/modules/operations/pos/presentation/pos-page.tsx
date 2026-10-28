@@ -12,10 +12,8 @@ import {useFeedback,useMoney,useSession} from "@/providers";
 import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
 import {useDebouncedValue} from "@/shared/hooks/use-debounced-value";
 import {pageRoutes} from "@/shared/routing/page-routes";
-import {cashShiftAttribution} from "../../cash/domain/shift-attribution";
-import {getCurrentCashShift} from "../../cash/infrastructure/cash-api";
 import type {Payment,PaymentDraft,PaymentMethodOption,POSOrderDetail,POSOrderSummary} from "../domain/types";
-import {createPayment,getPOSOrder,listPOSOrders,listSalesPaymentMethods,refundPayment} from "../infrastructure/pos-api";
+import {createPayment,getPOSCollectionAccess,getPOSOrder,listPOSOrders,listSalesPaymentMethods,refundPayment} from "../infrastructure/pos-api";
 const PaymentDialog=dynamic(()=>import("./pos-dialogs").then(module=>module.PaymentDialog),{ssr:false});
 const RefundDialog=dynamic(()=>import("./pos-dialogs").then(module=>module.RefundDialog),{ssr:false});
 const PaymentTicketDialog=dynamic(()=>import("@/modules/sales").then(module=>module.PaymentTicketDialog),{ssr:false});
@@ -31,7 +29,7 @@ const channelIcons:Record<string,IconName>={salon:"utensils",mostrador:"box",rec
 export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
   const qc=useQueryClient();
   const{notify}=useFeedback();
-  const{can,location}=useSession();
+  const{can,location,organization,user}=useSession();
   const money=useMoney();
   const canManage=can("cash.manage");
   const[q,setQ]=useState("");
@@ -45,10 +43,11 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
   const[ticketTarget,setTicketTarget]=useState<{orderId:string;paymentId?:string}|null>(null);
 
   const current=useQuery({
-    queryKey:["cash-shift","current"],
-    queryFn:getCurrentCashShift,
+    queryKey:["pos-cash-access",organization?.id,location?.id,user?.id],
+    queryFn:getPOSCollectionAccess,
     refetchInterval:30000,
   });
+  const canCollect=canManage||(!current.isError&&Boolean(current.data?.shift));
   const methods=useQuery({
     queryKey:["payment-methods","sales"],
     queryFn:listSalesPaymentMethods,
@@ -68,7 +67,7 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
   const paymentOrder=useQuery({
     queryKey:["pos-order",paymentOrderId],
     queryFn:()=>getPOSOrder(paymentOrderId!),
-    enabled:Boolean(paymentOrderId)&&canManage,
+    enabled:Boolean(paymentOrderId)&&canCollect,
     staleTime:0,
     refetchOnMount:"always",
     refetchOnWindowFocus:false,
@@ -80,6 +79,7 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
     for(const key of ["salon-floor","orders","order"])void qc.invalidateQueries({queryKey:[key]});
     void qc.invalidateQueries({queryKey:["cash-registers"]});
     void qc.invalidateQueries({queryKey:["cash-shift"]});
+    void qc.invalidateQueries({queryKey:["pos-cash-access"]});
     void qc.invalidateQueries({queryKey:["sales"]});
     void qc.invalidateQueries({queryKey:["sale-detail"]});
     void qc.invalidateQueries({queryKey:["dashboard"]});
@@ -93,7 +93,7 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
       refresh();
       notify({tone:"success",title:"Cobro registrado",message:"El pago quedó asociado al turno activo.",onClose:()=>setTicketTarget({orderId:variables.orderId,paymentId:item.id})});
     },
-    onError:error=>notify({tone:"danger",title:"No se pudo registrar el cobro",message:error.message}),
+    onError:error=>{void current.refetch();void qc.invalidateQueries({queryKey:["session-context"]});notify({tone:"danger",title:"No se pudo registrar el cobro",message:error.message});},
   });
 
   const refund=useMutation({
@@ -115,7 +115,7 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
   function actionsFor(item:POSOrderSummary){
     return <div className="pos-actions">
       <RowActionButton action="view" label={`Ver detalle de ${item.code}`} onClick={()=>setDetailId(item.id)}/>
-      {canManage&&item.paymentStatus!=="paid"&&<RowActionButton action="charge" label={shift?`Cobrar ${item.code}`:"Abre un turno para cobrar"} disabled={!shift||!canChargeAccount({...item,billClosedAt:item.billClosed?"closed":undefined})} onClick={()=>setPaymentOrderId(item.id)}/>}
+      {canCollect&&item.paymentStatus!=="paid"&&<RowActionButton action="charge" label={shift?`Cobrar ${item.code}`:"Necesitas un turno abierto para cobrar"} disabled={!shift||!canChargeAccount({...item,billClosedAt:item.billClosed?"closed":undefined})} onClick={()=>setPaymentOrderId(item.id)}/>}
     </div>;
   }
 
@@ -125,8 +125,9 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
     <section className={"pos-shift-banner "+(shift?"active":"missing")}>
       <span className="pos-shift-icon"><Icon name={shift?"register":"alert"} size={20}/></span>
       {current.isLoading?<div className="pos-shift-loading" aria-label="Cargando turno" aria-busy="true"><i/><i/></div>
-      :shift?<><div className="pos-shift-copy"><small>Turno activo</small><b>{shift.cashRegisterName}</b><p>Cajero: {cashShiftAttribution(shift).name}</p></div><Status tone="green">Listo para cobrar</Status></>
-      :<><div><small>Turno requerido</small><b>No estás asignado a una caja abierta</b><p>Inicia o únete a un turno antes de registrar cobros o devoluciones.</p></div>{cashLink()}</>}
+      :current.isError?<ErrorState title="No pudimos validar tu turno" text={current.error.message} onRetry={()=>void current.refetch()}/>
+      :shift?<><div className="pos-shift-copy"><small>Turno activo</small><b>{shift.cashRegisterName}</b><p>Responsable de apertura: {shift.openedByName}</p></div><Status tone="green">Listo para cobrar</Status></>
+      :<><div><small>Turno requerido</small><b>No estás asignado a una caja abierta</b><p>{canManage?"Abre un turno antes de registrar cobros.":"Pide al responsable de caja que te asigne al equipo de un turno abierto."}</p></div>{canManage&&cashLink()}</>}
     </section>
 
     <section className="panel standardized-management pos-panel">
@@ -185,15 +186,15 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
       methodsError={methods.error?.message}
       methods={methods.data?.items}
       retryMethods={()=>void methods.refetch()}
-      canManage={canManage}
+      canCollect={canCollect}
       busy={pay.isPending}
       formatMoney={money}
       close={()=>{if(!pay.isPending)setPaymentOrderId(null)}}
       retryOrder={()=>void paymentOrder.refetch()}
       retryShift={()=>void current.refetch()}
-      save={draft=>{if(canManage&&shift&&!pay.isPending)pay.mutate({orderId:paymentOrderId,draft})}}
+      save={draft=>{if(canCollect&&shift&&!pay.isPending)pay.mutate({orderId:paymentOrderId,draft})}}
     />}
-    {refundTarget&&shift&&<RefundDialog payment={refundTarget} busy={refund.isPending} formatMoney={money} close={()=>setRefundTarget(null)} save={draft=>refund.mutate({paymentId:refundTarget.id,draft})}/>}
+    {refundTarget&&shift&&canManage&&<RefundDialog payment={refundTarget} busy={refund.isPending} formatMoney={money} close={()=>setRefundTarget(null)} save={draft=>refund.mutate({paymentId:refundTarget.id,draft})}/>}
     {detailId&&<POSDetailDialog
       loading={detail.isLoading}
       error={detail.error?.message}
@@ -211,9 +212,9 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
   </div>;
 }
 
-function POSPaymentEntry({loading,error,data,shiftLoading,shiftError,shiftName,methodsLoading,methodsError,methods,retryMethods,canManage,busy,formatMoney,close,retryOrder,retryShift,save}:{loading:boolean;error?:string;data?:POSOrderDetail;shiftLoading:boolean;shiftError?:string;shiftName:string|null;methodsLoading:boolean;methodsError?:string;methods?:PaymentMethodOption[];retryMethods:()=>void;canManage:boolean;busy:boolean;formatMoney:(value:number)=>string;close:()=>void;retryOrder:()=>void;retryShift:()=>void;save:(draft:PaymentDraft)=>void}){
+function POSPaymentEntry({loading,error,data,shiftLoading,shiftError,shiftName,methodsLoading,methodsError,methods,retryMethods,canCollect,busy,formatMoney,close,retryOrder,retryShift,save}:{loading:boolean;error?:string;data?:POSOrderDetail;shiftLoading:boolean;shiftError?:string;shiftName:string|null;methodsLoading:boolean;methodsError?:string;methods?:PaymentMethodOption[];retryMethods:()=>void;canCollect:boolean;busy:boolean;formatMoney:(value:number)=>string;close:()=>void;retryOrder:()=>void;retryShift:()=>void;save:(draft:PaymentDraft)=>void}){
   let state:{title:string;text:string;icon?:IconName;retry?:()=>void;cash?:boolean}|undefined;
-  if(!canManage)state={title:"No puedes registrar cobros",text:"Tu rol necesita permiso para administrar cobros.",icon:"lock"};
+  if(!canCollect)state={title:"No puedes registrar cobros",text:"Necesitas permiso de cobro o una asignación activa a un turno abierto.",icon:"lock"};
   else if(error)state={title:"No pudimos cargar el pedido",text:error,retry:retryOrder};
   else if(shiftError)state={title:"No pudimos validar tu caja",text:shiftError,retry:retryShift};
   else if(methodsError)state={title:"No pudimos cargar los medios de pago",text:methodsError,retry:retryMethods};

@@ -75,6 +75,8 @@ func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages) *httpapi.API {
 	paymentsRepo := billingpg.NewPayments(db)
 	methods := billingapp.NewMethods(billingpg.NewMethods(db), work)
 	identityAdminRepo := identitypg.NewAdministration(db)
+	identityService := identityapp.New(identitypg.New(db), credentials.Credentials{})
+	payments := billingapp.NewPayments(paymentsRepo, work, audit, methods, orders).WithAuthorization(identityService)
 
 	return httpapi.NewWithHandlers(httpapi.Handlers{
 		Organizations:          orghttp.New(organizations),
@@ -83,7 +85,7 @@ func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages) *httpapi.API {
 		Concierge:              conciergehttp.New(conciergeapp.New(conciergepg.New(db), menu, orders, audit), func() string { return os.Getenv("FUDIA_CONCIERGE_API_KEY") }),
 		ConciergeUsage:         conciergehttp.NewUsage(conciergeapp.NewUsage(conciergepg.NewUsage(db), conciergepg.New(db), work, audit)),
 		MenuCatalog:            menuhttp.NewCatalog(menu),
-		Payments:               billinghttp.NewPayments(billingapp.NewPayments(paymentsRepo, work, audit, methods, orders)),
+		Payments:               billinghttp.NewPayments(payments),
 		Cash:                   billinghttp.NewCash(billingapp.NewCash(paymentsRepo, work)),
 		PaymentMethods:         billinghttp.NewMethods(methods),
 		Floor:                  servicehttp.NewFloor(serviceapp.NewFloor(servicepg.NewFloor(db), work, audit)),
@@ -91,8 +93,8 @@ func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages) *httpapi.API {
 		Reporting:              reporthttp.New(reportapp.New(reportpg.New(db), work, identityAdminRepo)),
 		Expenses:               billinghttp.NewExpenses(billingapp.NewExpenses(billingpg.NewExpenses(db), methods, audit)),
 		Modules:                subscriptionhttp.NewModules(subscriptionapp.NewModules(accessRepo, access, audit)),
-		IdentityAdministration: identityhttp.NewAdministration(identityapp.NewAdministration(identityAdminRepo, work, credentials.Credentials{}, access, audit)),
-		Identity:               identityhttp.New(identityapp.New(identitypg.New(db), credentials.Credentials{}), os.Getenv("FOODS_COOKIE_SECURE") == "true"),
+		IdentityAdministration: identityhttp.NewAdministration(identityapp.NewAdministration(identityAdminRepo, work, credentials.Credentials{}, access, audit).WithCashCollection(payments)),
+		Identity:               identityhttp.New(identityService, os.Getenv("FOODS_COOKIE_SECURE") == "true"),
 		Customers:              customerhttp.New(customerapp.New(customerpg.New(db))),
 		InventoryStock:         inventoryhttp.NewStock(stock),
 		Purchasing:             purchasehttp.New(purchaseapp.New(purchasepg.New(db), work, audit, inventoryapp.NewPurchaseLedger(inventoryRepo))),

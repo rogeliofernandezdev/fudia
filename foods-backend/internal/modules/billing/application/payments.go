@@ -18,6 +18,7 @@ import (
 type scope = requestscope.Scope
 type POSFilter struct {
 	Query, From, To, Status string
+	CollectionShiftID       string
 	Page, Size              int
 }
 type POSPage struct {
@@ -26,12 +27,12 @@ type POSPage struct {
 	// AmountTotal suma lo cobrado neto (pagos menos devoluciones) de todo el filtro, no solo de la página;
 	// las fechas se interpretan en la zona horaria del local.
 	AmountTotal string `json:"amountTotal"`
-	Page     int                      `json:"page"`
-	PageSize int                      `json:"pageSize"`
+	Page        int    `json:"page"`
+	PageSize    int    `json:"pageSize"`
 }
 type POSOrderDetail struct {
 	ReceiptContext  domain.PaymentReceiptContext `json:"receiptContext"`
-	Order           ordercontracts.Order            `json:"order"`
+	Order           ordercontracts.Order         `json:"order"`
 	PaidAmount      string                       `json:"paidAmount"`
 	RemainingAmount string                       `json:"remainingAmount"`
 	PaymentStatus   string                       `json:"paymentStatus"`
@@ -43,15 +44,16 @@ type PaymentOrders interface {
 	PaymentOrder(context.Context, scope, string) (ordercontracts.Order, error)
 }
 type Payments struct {
-	repo    PaymentRepository
-	work    unitofwork.Manager
-	audit   audit.Repository
-	methods ExpenseMethods
-	orders  PaymentOrders
+	repo       PaymentRepository
+	work       unitofwork.Manager
+	audit      audit.Repository
+	methods    ExpenseMethods
+	orders     PaymentOrders
+	authorizer PermissionAuthorizer
 }
 
 func NewPayments(repo PaymentRepository, work unitofwork.Manager, audit audit.Repository, methods ExpenseMethods, orders PaymentOrders) *Payments {
-	return &Payments{repo, work, audit, methods, orders}
+	return &Payments{repo: repo, work: work, audit: audit, methods: methods, orders: orders}
 }
 func paymentFailure(k apperror.Kind, c, m string) error { return apperror.New(k, c, m) }
 func validPOSDates(from, to string) bool {
@@ -66,6 +68,8 @@ func validPOSDates(from, to string) bool {
 }
 
 type PaymentRepository interface {
+	CollectionShift(context.Context, scope) (*domain.CollectionShift, error)
+	CollectionOrderVisible(context.Context, scope, string, string) (bool, error)
 	CurrentShift(ctx context.Context, s scope) (string, error)
 	ExpectedCash(ctx context.Context, s scope, shiftID string) (float64, error)
 	RequireShiftAssignment(ctx context.Context, s scope, shiftID string) error
@@ -371,6 +375,8 @@ func (a *Payments) CreateBatch(ctx context.Context, s scope, in domain.PaymentBa
 }
 func (a *Payments) List(ctx context.Context, s scope, f POSFilter) (POSPage, error) {
 	var result POSPage
+	collectionShift := collectionReadScope(ctx)
+	f.CollectionShiftID = collectionShift
 	q, from, to := strings.TrimSpace(f.Query), strings.TrimSpace(f.From), strings.TrimSpace(f.To)
 	if !validPOSDates(from, to) || strings.HasPrefix(from, "0000-") || strings.HasPrefix(to, "0000-") {
 		return result, paymentFailure(apperror.Invalid, "invalid_order_date_filter", "Ingresa fechas válidas con el formato AAAA-MM-DD.")
@@ -398,6 +404,16 @@ func (a *Payments) List(ctx context.Context, s scope, f POSFilter) (POSPage, err
 }
 func (a *Payments) Get(ctx context.Context, s scope, id string) (POSOrderDetail, error) {
 	var result POSOrderDetail
+	collectionShift := collectionReadScope(ctx)
+	if collectionShift != "" {
+		visible, err := a.repo.CollectionOrderVisible(ctx, s, id, collectionShift)
+		if err != nil {
+			return result, paymentFailure(apperror.Unavailable, "payments_unavailable", "No pudimos validar el pedido.")
+		}
+		if !visible {
+			return result, paymentFailure(apperror.NotFound, "order_not_found", "El pedido no está disponible para este turno.")
+		}
+	}
 	o, err := a.orders.PaymentOrder(ctx, s, id)
 	if err != nil {
 		return result, err
@@ -412,6 +428,15 @@ func (a *Payments) Get(ctx context.Context, s scope, id string) (POSOrderDetail,
 		paid += value
 	}
 	total, _ := strconv.ParseFloat(o.Total, 64)
+	if collectionShift != "" {
+		visible := make([]domain.PaymentView, 0, len(payments))
+		for _, payment := range payments {
+			if payment.ShiftID == collectionShift {
+				visible = append(visible, payment)
+			}
+		}
+		payments = visible
+	}
 	remaining := math.Max(0, total-paid)
 	var identity domain.PaymentReceiptContext
 	err = func() error { var err error; identity, err = a.repo.ReceiptContext(ctx, s); return err }()

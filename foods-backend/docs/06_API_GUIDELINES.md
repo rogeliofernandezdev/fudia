@@ -1,5 +1,15 @@
 # API
 
+POS acepta `cash.manage` o una asignación activa en `cash_shift_users` para
+registrar cobros individuales/divididos. Mantiene un turno abierto obligatorio,
+alcance empresa/local y bloqueo del pedido. `GET pos/access` (Admin y Operación)
+solo devuelve el turno mínimo del usuario o null. `SessionContext.cashCollection`
+es una capacidad temporal, independiente de roles, `permissions` y `menuAccess`.
+La lectura temporal incluye cuentas abiertas con saldo y pagos del turno; las
+lecturas permanentes ya autorizadas se conservan. Selector y asignación excluyen
+administradores, autoasignaciones, inactivos y usuarios ajenos al local. Retirar y
+cerrar revocan bajo bloqueo transaccional y conservan las filas históricas.
+
 El catálogo administrable de medios de pago expone `catalogTotal` y
 `catalogLimit` junto a la paginación. El total del catálogo incluye inactivos y
 no cambia con filtros; `total` sigue siendo el resultado filtrado. Un quinto
@@ -125,7 +135,8 @@ exige `orders.manage` y ser su mozo. Otro usuario recibe 403
 `order_assigned_to_another_waiter`, incluso con un permiso amplio. La propiedad
 se verifica bajo el mismo bloqueo de pedido que protege la mutación. La lectura
 sigue disponible con `orders.read`. Cocina conserva `kitchen.manage` para preparar
-y POS conserva `cash.manage` y la asignación de turno para cobrar: no cambian el mozo.
+y POS exige permiso administrativo o autorización temporal, además de asignación
+a turno abierto para cobrar: no cambian el mozo.
 Los pedidos sin asignación conservan sus permisos anteriores; no se asigna un mozo
 ficticio a WhatsApp. La asignación pertenece al pedido/servicio, no a la mesa permanente.
 

@@ -9,6 +9,7 @@ import {useFeedback,useMoney,useSession} from "@/providers";
 import {useSettings} from "@/providers/settings-context";
 import {formatRegionalCalendarDate,formatRegionalDateTime} from "@/shared/i18n/regional-format";
 import {cashShiftAttribution,cashShiftTeamName} from "../domain/shift-attribution";
+import {canCloseCashShift} from "../domain/shift-ownership";
 import type {CashMovementType,CashRegister,CashRegisterDraft,CashShift} from "../domain/types";
 import {assignCashShiftUser,closeCashShift,createCashMovement,createCashOperation,createCashRegister,getCashShift,listCashRegisters,listCashShifts,listCashShiftUsers,listCashUserOptions,openCashShift,setCashRegisterActive,unassignCashShiftUser,updateCashRegister} from "../infrastructure/cash-api";
 import {CashMovementDialog,CashRegisterDialog,CashShiftDetailDialog,OpenCashShiftDialog} from "./cash-dialogs";
@@ -22,7 +23,7 @@ const historyColumns=["Caja","Día operativo","Cajero / cierre","Apertura","Cier
 export function CashPage(){
   const qc=useQueryClient();
   const{notify}=useFeedback();
-  const{can,location}=useSession();
+  const{can,location,user}=useSession();
   const settings=useSettings();
   const money=useMoney();
   const canManage=can("cash.manage");
@@ -226,6 +227,7 @@ export function CashPage(){
           loading={registers.isLoading}
           error={registers.isError?registers.error.message:null}
           canManage={canManage}
+          currentUserId={user?.id}
           money={money}
           dateTime={dateTime}
           businessDate={businessDate}
@@ -238,7 +240,7 @@ export function CashPage(){
           movement={(shift,type)=>setMovementTarget({shift,type})}
           team={setTeamTarget}
           operation={setOperationTarget}
-          close={setCloseTarget}
+          close={shift=>{if(canCloseCashShift(shift,user?.id,canManage))setCloseTarget(shift)}}
         /></>
         :<section className="cash-history">
           <h2 className="sr-only">Turnos</h2>
@@ -281,7 +283,7 @@ export function CashPage(){
     {registerDialog&&<CashRegisterDialog initial={registerEditTarget} busy={saveRegister.isPending} close={()=>{setRegisterDialog(false);setRegisterEditTarget(null)}} save={draft=>saveRegister.mutate({target:registerEditTarget,draft})}/>} 
     {shiftTarget&&<OpenCashShiftDialog cashRegister={shiftTarget} busy={startShift.isPending} close={()=>setShiftTarget(null)} save={draft=>startShift.mutate({cashRegisterId:shiftTarget.id,draft})}/>}
     {movementTarget&&<CashMovementDialog type={movementTarget.type} busy={movement.isPending} close={()=>setMovementTarget(null)} save={draft=>movement.mutate({shiftId:movementTarget.shift.id,draft})}/>}
-    {closeTarget&&<CashClosingDialog shift={closeTarget} busy={closeShiftMutation.isPending} currency={settings.currency} formatMoney={money} close={()=>setCloseTarget(null)} save={async draft=>{try{await closeShiftMutation.mutateAsync({shiftId:closeTarget.id,draft});}catch{/* onError reports the API response. */}}}/>}
+    {closeTarget&&canCloseCashShift(closeTarget,user?.id,canManage)&&<CashClosingDialog shift={closeTarget} busy={closeShiftMutation.isPending} currency={settings.currency} formatMoney={money} close={()=>setCloseTarget(null)} save={async draft=>{if(!canCloseCashShift(closeTarget,user?.id,canManage))return;try{await closeShiftMutation.mutateAsync({shiftId:closeTarget.id,draft});}catch{/* onError reports the API response. */}}}/>}
     {reportId&&<CashReportDialog shiftId={reportId} close={()=>setReportId(null)}/>}
     {teamTarget&&<CashTeamDialog
       shift={teamTarget}
@@ -321,7 +323,7 @@ export function CashPage(){
   </div>;
 }
 
-function CashRegisters({items,loading,error,canManage,money,dateTime,businessDate,retry,create,edit,toggleStatus,start,view,movement,team,operation,close}:{items:CashRegister[];loading:boolean;error:string|null;canManage:boolean;money:(value:number)=>string;dateTime:(value:string)=>string;businessDate:(value:string)=>string;retry:()=>void;create:()=>void;edit:(item:CashRegister)=>void;toggleStatus:(item:CashRegister)=>void;start:(item:CashRegister)=>void;view:(shift:CashShift)=>void;movement:(shift:CashShift,type:CashMovementType)=>void;team:(shift:CashShift)=>void;operation:(shift:CashShift)=>void;close:(shift:CashShift)=>void}){
+function CashRegisters({items,loading,error,canManage,currentUserId,money,dateTime,businessDate,retry,create,edit,toggleStatus,start,view,movement,team,operation,close}:{items:CashRegister[];loading:boolean;error:string|null;canManage:boolean;currentUserId?:string;money:(value:number)=>string;dateTime:(value:string)=>string;businessDate:(value:string)=>string;retry:()=>void;create:()=>void;edit:(item:CashRegister)=>void;toggleStatus:(item:CashRegister)=>void;start:(item:CashRegister)=>void;view:(shift:CashShift)=>void;movement:(shift:CashShift,type:CashMovementType)=>void;team:(shift:CashShift)=>void;operation:(shift:CashShift)=>void;close:(shift:CashShift)=>void}){
   if(loading)return <CashRegistersSkeleton/>;
   if(error)return <ErrorState title="No pudimos cargar las cajas" text={error} onRetry={retry}/>;
   if(!items.length)return <EmptyState
@@ -396,7 +398,7 @@ function CashRegisters({items,loading,error,canManage,money,dateTime,businessDat
             {canManage&&<>
               <Button kind="secondary" icon="plus" onClick={()=>movement(shift,"income")}>Ingreso</Button>
               <Button kind="secondary" icon="minus" onClick={()=>movement(shift,"expense")}>Egreso</Button>
-              <Button kind="danger-outline" icon="lock" onClick={()=>close(shift)}>Cerrar turno</Button>
+              {canCloseCashShift(shift,currentUserId,canManage)&&<Button kind="danger-outline" icon="lock" onClick={()=>close(shift)}>Cerrar turno</Button>}
             </>}
           </footer>
         </>:<div className="cash-register-idle">

@@ -27,6 +27,7 @@ function mountPage(value=shift,tab="registers"){
   if(name==="@/providers/settings-context")return{useSettings:()=>({currencySymbol:"S/",currencyPosition:"before",currencyDecimals:2})};
   if(name==="@/shared/i18n/regional-format")return regional;
   if(name.endsWith("shift-attribution"))return attribution;
+  if(name.endsWith("shift-ownership"))return compile("modules/operations/cash/domain/shift-ownership.ts");
   if(name.startsWith("@/")||name.startsWith(".")||name==="react-hook-form")return{};
   return require(name);
  };

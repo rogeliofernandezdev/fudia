@@ -17,21 +17,21 @@ import {pageRoutes} from "@/shared/routing/page-routes";
 import {deleteSession} from "@/shared/session/session-api";
 import {beginSignOut} from "@/shared/session/expire-session";
 import {broadcastSessionChange} from "@/shared/session/session-events";
-import {accessKey,firstAccessibleRoute,moduleIsActive,navigationItemForPath,visibleNavigation} from "./navigation";
+import {canOpenNavigationItem,firstAccessibleRoute,moduleIsActive,navigationItemForPath,visibleNavigation} from "./navigation";
 import {AdminSessionError} from "./admin-session-error";
 import {NavigationSearch} from "./navigation-search";
 import {AccountRole} from "./account-role";
 
 export function AdminShell({children}:{children:React.ReactNode}){
- const path=usePathname();const router=useRouter();const queryClient=useQueryClient();const{user,organization,location,modules,menuAccess,permissions,setupRequired,canAccess,can,isLoading,isError,isUnauthorized}=useSession();const[menuOpen,setMenuOpen]=useState(false);const[collapsed,setCollapsed]=useState(false);const[accountOpen,setAccountOpen]=useState(false);const[signingOut,setSigningOut]=useState(false);const accountRef=useRef<HTMLDivElement>(null);
+ const path=usePathname();const router=useRouter();const queryClient=useQueryClient();const{user,organization,location,modules,menuAccess,permissions,setupRequired,cashCollection,can,isLoading,isError,isUnauthorized}=useSession();const[menuOpen,setMenuOpen]=useState(false);const[collapsed,setCollapsed]=useState(false);const[accountOpen,setAccountOpen]=useState(false);const[signingOut,setSigningOut]=useState(false);const accountRef=useRef<HTMLDivElement>(null);
  const isPlatformAdmin=Boolean(user?.platformAdmin);
  const profile=useCurrentProfile();
  const roleProps={roleNames:profile.data?.roleNames,platformAdmin:isPlatformAdmin,loading:profile.isLoading,error:profile.isError?profile.error.message:undefined};
- const navigationContext=user&&modules?{user,modules,menuAccess,permissions,setupRequired}:null;
+ const navigationContext=user&&modules?{user,modules,menuAccess,permissions,setupRequired,cashCollection}:null;
  const visibleGroups=navigationContext?visibleNavigation(navigationContext):[];
  const homeHref=navigationContext?firstAccessibleRoute(navigationContext):pageRoutes.noAccess;
  const currentItem=navigationItemForPath(path);
- const blockReason=isPlatformAdmin?null:!currentItem?null:currentItem.platformAdminOnly?"platform":!modules||!moduleIsActive(modules,currentItem.module)?"module":!canAccess(accessKey(currentItem))||Boolean(currentItem.permission&&!can(currentItem.permission))?"role":null;
+ const blockReason=isPlatformAdmin?null:!currentItem?null:currentItem.platformAdminOnly?"platform":!modules||!moduleIsActive(modules,currentItem.module)?"module":navigationContext&&!canOpenNavigationItem(currentItem,navigationContext)?"role":null;
  // Una sola navegación sin recarga: la caché se vacía al desmontar el panel, no antes (evita el 401 en cadena).
  const leaving=useRef(false);
  useEffect(()=>()=>{if(leaving.current)queryClient.clear()},[queryClient]);

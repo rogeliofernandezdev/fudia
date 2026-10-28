@@ -1,6 +1,9 @@
 import {apiFetch} from "@/shared/api/client";
 import type {Payment,PaymentDraft,PaymentMethodOption,POSOrderDetail,POSOrdersResponse,RefundDraft} from "../domain/types";
 
+export type POSCollectionShift={id:string;cashRegisterName:string;openedByName:string};
+export function getPOSCollectionAccess(){return apiFetch<{shift:POSCollectionShift|null}>("pos/access");}
+
 export function listPOSOrders(input:{q:string;paymentStatus:string;page:number;pageSize:number}){
   const params=new URLSearchParams({
     q:input.q,

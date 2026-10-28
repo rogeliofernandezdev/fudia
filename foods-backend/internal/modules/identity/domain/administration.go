@@ -255,11 +255,12 @@ type ContextRecord struct {
 	Permissions, MenuAccess                           []string
 }
 type WorkContext struct {
-	User          map[string]any    `json:"user"`
-	Organization  map[string]string `json:"organization"`
-	Location      map[string]string `json:"location"`
-	Modules       map[string]bool   `json:"modules"`
-	MenuAccess    []string          `json:"menuAccess"`
-	Permissions   []string          `json:"permissions"`
-	SetupRequired bool              `json:"setupRequired"`
+	User           map[string]any    `json:"user"`
+	Organization   map[string]string `json:"organization"`
+	Location       map[string]string `json:"location"`
+	Modules        map[string]bool   `json:"modules"`
+	MenuAccess     []string          `json:"menuAccess"`
+	Permissions    []string          `json:"permissions"`
+	SetupRequired  bool              `json:"setupRequired"`
+	CashCollection bool              `json:"cashCollection"`
 }

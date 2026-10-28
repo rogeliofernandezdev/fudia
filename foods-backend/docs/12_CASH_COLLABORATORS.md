@@ -1,0 +1,60 @@
+# Colaboradores temporales para cobrar en POS
+
+## Diagnóstico
+
+La asignación de equipo ya persistía en `cash_shift_users`, pero POS y las rutas
+de cobro exigían `cash.manage`. El mesero no tenía acceso a POS y el selector
+permitía incorporar administradores o al propio usuario. Los pagos bloqueaban
+el pedido, pero no coordinaban la vigencia de la asignación con retiro/cierre.
+
+## Implementación
+
+- Billing valida permiso administrativo o asignación activa, sin modificar roles.
+  La capacidad temporal se limita a cobros y lectura operativa de POS.
+- Identity proyecta `cashCollection` en el contexto mediante un puerto inyectado
+  desde composición. Los permisos y accesos permanentes permanecen intactos.
+- POS usa un endpoint mínimo de turno sin saldos ni movimientos administrativos.
+  Devoluciones conservan `cash.manage`; Caja conserva sus permisos anteriores.
+- El selector y la escritura comparten la validación de colaborador. El cliente
+  también excluye al actor, asignados y turnos cerrados y revalida la selección.
+- Cobrar bloquea turno/asignación en modo compartido; retirar/cerrar usan bloqueo
+  exclusivo del turno. El bloqueo del pedido sigue evitando sobrecobros.
+- `assigned_by`, `assigned_at`, `unassigned_at`, `payments.created_by` y `shift_id`
+  conservan la trazabilidad existente. El abridor sigue como responsable.
+- Solo el usuario que abrió el turno puede cerrarlo, con permiso `cash.manage`.
+  Otro cajero o administrador recibe `403 cash_shift_owner_required`, sin
+  guardar conteos, informes ni modificar equipo. La interfaz oculta el cierre
+  a quienes no son el abridor, comparando UUID y no nombres.
+
+## Archivos y responsabilidad
+
+`billing/application/{cash,payments,collection}.go` y adaptadores PostgreSQL:
+reglas, autorización limitada, transacciones y consultas con alcance.
+`identity/application/administration.go`, dominio de contexto y composición:
+capacidad de sesión sin dependencia de implementaciones de otros módulos.
+`transport/httpapi/routes.go` y transporte de Billing: autorización por ruta.
+`api/openapi.yaml`: contrato de contexto y acceso mínimo de POS.
+Frontend: equipo de Caja, POS, proveedores de sesión y navegación temporal.
+Pruebas de aplicación, integración y frontend acompañan estos cambios.
+
+## Alcance y despliegue
+
+No requiere tablas, migraciones, JWT ni cambios de roles. Requiere desplegar
+backend y frontend. La navegación y el turno se refrescan cada 30 segundos y
+al recuperar foco; esta demora visual no concede cobros tras una revocación,
+porque el backend vuelve a validar bajo bloqueo. Los permisos de lectura que
+el rol ya poseía siguen vigentes. Un cobro iniciado con los bloqueos ya adquiridos
+se confirma antes del retiro/cierre, conservando el orden transaccional.
+
+## Verificación realizada
+
+- PostgreSQL 16 desechable: 20 grupos de regresión de Caja, pagos y aislamiento;
+  prueba final de colaboradores con sus seis escenarios aprobada, incluido cierre
+  concurrente y cobro dividido. Contenedores eliminados al terminar.
+- Go: pruebas generales, arquitectura, `go vet ./...` y build del API aprobados.
+- Frontend: lint sin errores (seis advertencias anteriores), TypeScript y build
+  de producción aprobados. Pruebas de POS, equipo, permisos y navegación aprobadas.
+  La suite general verificó 567 casos; su única expectativa antigua exigía la
+  consulta financiera anterior de turno. Se actualizó al endpoint mínimo y se
+  verificaron los 44 casos del archivo de contratos, sin fallos restantes.
+- No se utilizaron datos de producción ni se desplegó durante la implementación.

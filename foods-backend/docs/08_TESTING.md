@@ -1,5 +1,16 @@
 # Pruebas
 
+`cash_collaborators_integration_test.go` recorre rutas con cookie real para
+asignación de mozo, exclusión de administradores/actor/inactivos/otros locales,
+duplicados y otro turno, capacidad de sesión sin `cash.manage`, cobros individual
+y dividido, límites de lectura temporal y rechazo de operaciones administrativas.
+Comprueba atribución, saldo con dos autores simultáneos, doble cobro completo,
+revocación/historial y cierre. Una barrera real de filas pone un cierre delante
+de un cobro ya autorizado: el cobro espera y se rechaza después del cierre sin
+persistir ni provocar interbloqueo. Se ejecuta en PostgreSQL 16 temporal.
+`billing/application/collection_test.go` cubre autorización administrativa,
+asignación temporal y fallos de permisos/base sin conceder permisos permanentes.
+
 Medios de pago: `payment_methods_total_limit_integration_test.go` comprueba que
 un inactivo consume plaza, que los filtros no alteran la capacidad y que tres
 altas concurrentes con dos plazas disponibles terminan en cuatro registros y

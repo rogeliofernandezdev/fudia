@@ -41,7 +41,7 @@ type CashRepository interface {
 	AssignOpeningUser(ctx context.Context, s scope, id string) (int64, error)
 	LockMovementShift(ctx context.Context, s scope, shiftID string) (string, error)
 	CreateMovement(ctx context.Context, s scope, shiftID string, in domain.CashMovementInput) (domain.CashMovementView, error)
-	LockClosingShift(ctx context.Context, s scope, shiftID string) (string, float64, float64, float64, error)
+	LockClosingShift(ctx context.Context, s scope, shiftID string) (string, bool, float64, float64, float64, error)
 	SaveCountLine(ctx context.Context, s scope, shiftID string, line domain.CountLineInput) (int64, error)
 	CloseShift(ctx context.Context, s scope, shiftID string, in domain.CloseShiftInput, expected float64, counted float64, variance float64) (int64, error)
 	UnassignClosingUsers(ctx context.Context, s scope, shiftID string) (int64, error)
@@ -280,10 +280,11 @@ func (a *Cash) Close(ctx context.Context, s scope, id string, in domain.CloseShi
 
 	shiftID := id
 	var status string
+	var owned bool
 	var opening, income, expense float64
 	err = func() error {
 		var err error
-		status, opening, income, expense, err = a.repo.LockClosingShift(tx.Context(), s, shiftID)
+		status, owned, opening, income, expense, err = a.repo.LockClosingShift(tx.Context(), s, shiftID)
 		return err
 	}()
 	if errors.Is(err, ErrNotFound) {
@@ -291,6 +292,9 @@ func (a *Cash) Close(ctx context.Context, s scope, id string, in domain.CloseShi
 	}
 	if err != nil {
 		return result, paymentFailure(apperror.Unavailable, "cash_unavailable", "No pudimos validar el turno de caja.")
+	}
+	if !owned {
+		return result, paymentFailure(apperror.Forbidden, "cash_shift_owner_required", "Solo la persona que abrió el turno puede cerrarlo.")
 	}
 	if status != "open" {
 		return result, paymentFailure(apperror.Conflict, "cash_shift_closed", "El turno ya fue cerrado.")
@@ -309,8 +313,10 @@ func (a *Cash) Close(ctx context.Context, s scope, id string, in domain.CloseShi
 
 	expected := opening + income - expense
 	variance := counted - expected
-	if _, err := a.repo.CloseShift(tx.Context(), s, shiftID, in, expected, counted, variance); err != nil {
+	if changed, err := a.repo.CloseShift(tx.Context(), s, shiftID, in, expected, counted, variance); err != nil {
 		return result, paymentFailure(apperror.Unavailable, "cash_unavailable", "No pudimos cerrar el turno de caja.")
+	} else if changed != 1 {
+		return result, paymentFailure(apperror.Conflict, "cash_shift_closed", "El turno ya no está disponible para cierre.")
 	}
 
 	if _, err := a.repo.UnassignClosingUsers(tx.Context(), s, shiftID); err != nil {
@@ -344,6 +350,9 @@ func (a *Cash) Assign(ctx context.Context, s scope, id string, in domain.ShiftUs
 		return result, paymentFailure(apperror.Invalid, "invalid_cash_user", "Selecciona un usuario válido.")
 	}
 	in.UserID = strings.TrimSpace(in.UserID)
+	if in.UserID == s.UserID {
+		return result, paymentFailure(apperror.Invalid, "cash_self_assignment", "No puedes asignarte como colaborador de tu propio turno.")
+	}
 
 	tx, err := a.work.Begin(ctx, unitofwork.Options{})
 	if err != nil {
@@ -383,12 +392,30 @@ func (a *Cash) Assign(ctx context.Context, s scope, id string, in domain.ShiftUs
 
 }
 func (a *Cash) Unassign(ctx context.Context, s scope, id string, userID string) error {
-	tag, err := a.repo.UnassignUser(ctx, s, id, userID)
+	tx, err := a.work.Begin(ctx, unitofwork.Options{})
+	if err != nil {
+		return paymentFailure(apperror.Unavailable, "cash_unavailable", "No pudimos retirar al usuario del turno.")
+	}
+	defer tx.Rollback(ctx)
+	open, err := a.repo.LockAssignShift(tx.Context(), s, id)
+	if errors.Is(err, ErrNotFound) {
+		return paymentFailure(apperror.NotFound, "cash_shift_not_found", "El turno no existe en este local.")
+	}
+	if err != nil {
+		return paymentFailure(apperror.Unavailable, "cash_unavailable", "No pudimos validar el turno.")
+	}
+	if !open {
+		return paymentFailure(apperror.Conflict, "cash_shift_closed", "El turno ya está cerrado.")
+	}
+	tag, err := a.repo.UnassignUser(tx.Context(), s, id, userID)
 	if err != nil {
 		return paymentFailure(apperror.Unavailable, "cash_unavailable", "No pudimos retirar al usuario del turno.")
 	}
 	if tag == 0 {
 		return paymentFailure(apperror.NotFound, "cash_user_not_assigned", "El usuario ya no está asignado a este turno.")
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return paymentFailure(apperror.Unavailable, "cash_unavailable", "No pudimos confirmar el retiro del colaborador.")
 	}
 	return nil
 

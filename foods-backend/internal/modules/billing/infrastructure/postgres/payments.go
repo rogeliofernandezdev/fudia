@@ -23,18 +23,27 @@ var _ application.PaymentRepository = (*Payments)(nil)
 func (r *Payments) CurrentShift(ctx context.Context, s scope) (string, error) {
 	var id string
 	err := r.db(ctx).QueryRow(ctx, `
+		WITH active_collection_shift AS MATERIALIZED (
+		  SELECT cs.id,cs.organization_id,cs.location_id
+		  FROM cash_shifts cs
+		  WHERE cs.organization_id=$1 AND cs.location_id=$2 AND cs.status='open'
+		    AND EXISTS(SELECT 1 FROM cash_shift_users assigned WHERE assigned.shift_id=cs.id
+		      AND assigned.organization_id=$1 AND assigned.location_id=$2 AND assigned.user_id=$3 AND assigned.unassigned_at IS NULL)
+		  LIMIT 1
+		  FOR SHARE OF cs
+		)
 		SELECT cs.id::text
-		FROM cash_shift_users su
-		JOIN cash_shifts cs ON cs.id=su.shift_id
-		  AND cs.organization_id=su.organization_id
-		  AND cs.location_id=su.location_id
+		FROM active_collection_shift cs
+		JOIN cash_shift_users su ON cs.id=su.shift_id
+		  AND cs.organization_id=su.organization_id AND cs.location_id=su.location_id
+		JOIN users u ON u.id=su.user_id AND u.organization_id=su.organization_id AND u.active
 		WHERE su.organization_id=$1
 		  AND su.location_id=$2
 		  AND su.user_id=$3
 		  AND su.unassigned_at IS NULL
-		  AND cs.status='open'
 		ORDER BY su.assigned_at DESC
 		LIMIT 1
+		FOR SHARE OF su
 	`, s.OrganizationID, s.LocationID, s.UserID).Scan(&id)
 	return id, billingError(err)
 }
@@ -301,10 +310,12 @@ func (r *Payments) POSOrders(ctx context.Context, s scope, f application.POSFilt
 		  OR COALESCE(t.name,'') ILIKE '%'||$3||'%')
 		AND ($4='' OR o.created_at >= (NULLIF($4,'')::date::timestamp AT TIME ZONE loc.timezone))
 		AND ($5='' OR o.created_at < ((NULLIF($5,'')::date + interval '1 day') AT TIME ZONE loc.timezone))
+		AND ($6='' OR (o.completed_at IS NULL AND payment_summary.net_paid < o.total)
+		 OR EXISTS(SELECT 1 FROM payments cp WHERE cp.order_id=o.id AND cp.organization_id=$1 AND cp.location_id=$2 AND cp.shift_id=NULLIF($6,'')::uuid))
 	` + filter
 
 	var totalCount int
-	if err := r.db(ctx).QueryRow(ctx, "SELECT count(*),COALESCE(sum(payment_summary.net_paid),0)::text "+baseFrom+" WHERE "+where, s.OrganizationID, s.LocationID, q, from, to).Scan(&totalCount, &out.AmountTotal); err != nil {
+	if err := r.db(ctx).QueryRow(ctx, "SELECT count(*),COALESCE(sum(payment_summary.net_paid),0)::text "+baseFrom+" WHERE "+where, s.OrganizationID, s.LocationID, q, from, to, f.CollectionShiftID).Scan(&totalCount, &out.AmountTotal); err != nil {
 		return out, err
 	}
 
@@ -324,8 +335,8 @@ func (r *Payments) POSOrders(ctx context.Context, s scope, f application.POSFilt
 	`+baseFrom+`
 		WHERE `+where+`
 		ORDER BY o.created_at DESC,o.id DESC
-		LIMIT $6 OFFSET $7
-	`, s.OrganizationID, s.LocationID, q, from, to, size, (page-1)*size)
+		LIMIT $7 OFFSET $8
+	`, s.OrganizationID, s.LocationID, q, from, to, f.CollectionShiftID, size, (page-1)*size)
 	if err != nil {
 		return out, err
 	}

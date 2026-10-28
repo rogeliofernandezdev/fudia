@@ -4,16 +4,19 @@ import {useMemo,useState} from "react";
 import {useForm,useWatch} from "react-hook-form";
 import {Button,EmptyState,FormField,Icon,Input,Select,Skeleton,Textarea,ModalHeader,ModalFooter} from "@/design-system";
 import {cashOperationResolver} from "../domain/cash-schema";
+import {availableCashCollaborators} from "../domain/collaborators";
+import {useSession} from "@/providers";
 import type {CashOperationDraft,CashRegister,CashShift,CashShiftUser,CashUserOption} from "../domain/types";
 
 export function CashTeamDialog({shift,users,options,loading,busyUserId,close,assign,unassign}:{shift:CashShift;users:CashShiftUser[];options:CashUserOption[];loading:boolean;busyUserId:string|null;close:()=>void;assign:(userId:string)=>void;unassign:(userId:string)=>void}){
   const[selected,setSelected]=useState("");
-  const available=useMemo(()=>options.filter(option=>!option.assignedShiftId&&!users.some(user=>user.userId===option.id)),[options,users]);
+  const {user:currentUser}=useSession();
+  const available=useMemo(()=>availableCashCollaborators(options,users,currentUser?.id??"",shift.status),[options,users,currentUser?.id,shift.status]);
   return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal cash-modal cash-team-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-team-title">
 
     <ModalHeader title="Equipo del turno" titleId="cash-team-title" icon="users" subtitle={shift.cashRegisterName.toUpperCase()} onClose={close} closeLabel="Cerrar"/>
     <div className="cash-team-body">
-      <p className="cash-dialog-intro">Las personas asignadas pueden registrar movimientos y cobrar desde POS usando este turno.</p>
+      <p className="cash-dialog-intro">Los colaboradores pueden cobrar desde POS mientras este turno siga abierto. La asignación no cambia su rol ni permite administrar la caja.</p>
       <div className="cash-team-add">
         <FormField label="Agregar al equipo">
           <Select value={selected} onChange={event=>setSelected(event.target.value)} disabled={loading||!available.length}>
@@ -21,7 +24,7 @@ export function CashTeamDialog({shift,users,options,loading,busyUserId,close,ass
             {available.map(option=><option value={option.id} key={option.id}>{option.name}</option>)}
           </Select>
         </FormField>
-        <Button icon="plus" disabled={!selected||Boolean(busyUserId)} onClick={()=>{if(selected){assign(selected);setSelected("")}}}>Asignar</Button>
+        <Button icon="plus" disabled={!available.some(option=>option.id===selected)||Boolean(busyUserId)} onClick={()=>{if(available.some(option=>option.id===selected)){assign(selected);setSelected("")}}}>Asignar</Button>
       </div>
       <section className="cash-team-list">
         <header><small>Equipo actual</small><b>{users.length} {users.length===1?"persona":"personas"}</b></header>

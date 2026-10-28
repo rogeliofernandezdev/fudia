@@ -29,7 +29,7 @@ test("retirar integrantes actualiza el equipo sin transferir la responsabilidad 
   assert.equal(cashShiftTeamName(shift),"Edith");
   assert.equal(cashShiftTeamName({...shift,activeUserNames:[]}),"Sin usuarios asignados");
 });
-test("si Jimena abre y Edith cierra, el historial atribuye el cierre a Edith",()=>{
+test("un cierre histórico de Edith conserva su autor aunque Jimena haya abierto",()=>{
   const result=cashShiftAttribution({status:"closed",openedByName:"Jimena",closedByName:"Edith",activeUserNames:[]});
   assert.equal(result.label,"Cerrado por");
   assert.equal(result.name,"Edith");
