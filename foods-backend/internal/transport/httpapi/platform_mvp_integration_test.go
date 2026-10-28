@@ -289,6 +289,7 @@ func TestDashboardReflectsRealPaymentsAndRefunds(t *testing.T){
 	s:=seedInventoryScope(t,pool)
 	api:=New(pool)
 	ctx:=context.Background()
+	grantCashManagementForPaymentTest(t,api,s)
 	nonce:=time.Now().UnixNano()
 	var registerID string
 	if err:=pool.QueryRow(ctx,`

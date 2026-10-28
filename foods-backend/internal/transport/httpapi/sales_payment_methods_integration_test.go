@@ -15,6 +15,7 @@ func TestSalesListPaymentMethods(t *testing.T) {
 	s := seedInventoryScope(t, pool)
 	api := New(pool)
 	ctx := context.Background()
+	grantCashManagementForPaymentTest(t, api, s)
 	var registerID, orderID string
 	if err := pool.QueryRow(ctx, `INSERT INTO cash_registers(organization_id,location_id,name,created_by)
 		VALUES($1,$2,'Caja ventas',$3) RETURNING id`, s.OrganizationID, s.LocationID, s.UserID).Scan(&registerID); err != nil {

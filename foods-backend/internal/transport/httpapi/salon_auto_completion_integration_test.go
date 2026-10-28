@@ -17,6 +17,7 @@ func TestSalonAutomaticCompletion(t *testing.T) {
 			s := seedInventoryScope(t, pool)
 			api := New(pool)
 			ctx := context.Background()
+			grantCashManagementForPaymentTest(t, api, s)
 			request := func(handler http.HandlerFunc, method, path, body, id string) *httptest.ResponseRecorder {
 				r := httptest.NewRequest(method, path, strings.NewReader(body))
 				r.SetPathValue("id", id)

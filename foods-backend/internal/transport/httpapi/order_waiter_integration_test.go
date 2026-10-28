@@ -36,6 +36,7 @@ func TestTableWaiterOwnershipAndIndependentPaymentAttribution(t *testing.T) {
 	cashier := owner
 	cashier.UserID = seedID(`INSERT INTO users(organization_id,email,full_name,password_hash) VALUES($1,'caja@test.local','Eva Cajera','test') RETURNING id`, owner.OrganizationID)
 	cashier.Name = "Eva Cajera"
+	grantCashManagementForPaymentTest(t, api, cashier)
 	otherLocation := owner
 	otherLocation.LocationID = seedID(`INSERT INTO locations(organization_id,name,code) VALUES($1,'Otro local','OTHER') RETURNING id`, owner.OrganizationID)
 	tableID := seedID(`INSERT INTO tables(organization_id,location_id,name,seats,zone,qr_token) VALUES($1,$2,'Mesa 04',4,'Principal',encode(gen_random_bytes(16),'hex')) RETURNING id`, owner.OrganizationID, owner.LocationID)

@@ -1,5 +1,20 @@
 # Pruebas
 
+## Puerta completa de integración
+
+GitHub Actions ejecuta las migraciones y `go test ./...` con `DATABASE_URL`
+apuntando a PostgreSQL 18 durante toda la suite. Esa es la puerta completa para
+cambios de autorización, caja y cobros. Ejecutar casos seleccionados con base y
+luego la suite general sin esa variable no equivale a CI: las integraciones
+omiten su ejecución si no hay base. Usar siempre una base efímera, nunca datos
+del negocio, y verificar también `go vet ./...` y los builds de API y migrador.
+
+Los escenarios que simulan un cajero declaran explícitamente `cash.manage`
+mediante `grantCashManagementForPaymentTest`, únicamente para ese actor. El
+fixture general de inventario no recibe permisos de caja. Las pruebas de mozos
+conservan sus permisos propios y la validación de que el colaborador solo cobra
+las atenciones vinculadas a él por la comanda.
+
 `cash_register_permissions_integration_test.go` verifica con cookie real que
 Cajero no crea, edita ni desactiva cajas, pero conserva consulta, apertura y
 cierre de su turno. El administrador configura cajas y sigue sin poder desactivar

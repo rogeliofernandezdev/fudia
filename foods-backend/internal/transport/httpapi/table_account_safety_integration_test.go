@@ -199,6 +199,7 @@ func TestCancelDirectRestoresStockOnceAndPreservesGuards(t *testing.T) {
 	s := seedInventoryScope(t, pool)
 	api := New(pool)
 	ctx := context.Background()
+	grantCashManagementForPaymentTest(t, api, s)
 	category := seedRetailCategory(t, pool, s)
 	serviceSafetyCall(t, s, "", fmt.Sprintf(`{"newProduct":{"name":"Gaseosa cancelación","price":"10","categoryId":%q},"quantity":12,"unit":"botella","unitCost":4}`, category), api.createInventoryEntry, 201)
 	var product, register string

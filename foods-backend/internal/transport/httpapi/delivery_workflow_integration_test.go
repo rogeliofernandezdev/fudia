@@ -15,6 +15,7 @@ func TestManualDeliveryKitchenPaymentAndDispatch(t *testing.T) {
 	s := seedInventoryScope(t, pool)
 	api := New(pool)
 	ctx := context.Background()
+	grantCashManagementForPaymentTest(t, api, s)
 	var productID string
 	if err := pool.QueryRow(ctx, `INSERT INTO products(organization_id,sku,name,price,active,product_type,quantity_control) VALUES($1,'DELIVERY-TEST','Plato delivery',25,true,'prepared','none') RETURNING id`, s.OrganizationID).Scan(&productID); err != nil {
 		t.Fatal(err)

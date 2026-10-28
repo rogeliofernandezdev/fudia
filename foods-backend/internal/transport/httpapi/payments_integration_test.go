@@ -143,6 +143,7 @@ func TestSplitPaymentBatchAndCompletePaidOrder(t *testing.T) {
 	s:=seedInventoryScope(t,pool)
 	api:=New(pool)
 	ctx:=context.Background()
+	grantCashManagementForPaymentTest(t,api,s)
 
 	var registerID string
 	if err:=pool.QueryRow(ctx,`

@@ -17,6 +17,7 @@ func TestCashClosingReportDetailsSnapshotAndIsolation(t *testing.T) {
 	s := seedInventoryScope(t, pool)
 	api := New(pool)
 	ctx := context.Background()
+	grantCashManagementForPaymentTest(t, api, s)
 	call := func(method, path, body, id string, target scope, handler http.HandlerFunc) *httptest.ResponseRecorder {
 		req := httptest.NewRequest(method, path, strings.NewReader(body))
 		req.SetPathValue("id", id)
