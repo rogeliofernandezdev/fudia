@@ -14,7 +14,9 @@ var ErrConflict = errors.New("billing record conflict")
 
 type CashFilter struct {
 	Query, Status string
-	Page, Size    int
+	// Set by the use case, never from request parameters.
+	OwnerID    string
+	Page, Size int
 }
 type CashPage struct {
 	Items    []domain.CashShiftView `json:"items"`
@@ -30,6 +32,8 @@ type Cash struct {
 func NewCash(repo CashRepository, work unitofwork.Manager) *Cash { return &Cash{repo, work} }
 
 type CashRepository interface {
+	CanReadAllShifts(context.Context, scope) (bool, error)
+	OwnsShift(context.Context, scope, string) (bool, error)
 	RequireShiftAssignment(context.Context, scope, string) error
 	ExpectedCash(context.Context, scope, string) (float64, error)
 	CreateRegister(ctx context.Context, s scope, in domain.RegisterInput) (domain.CashRegisterView, error)
@@ -89,13 +93,17 @@ func (a *Cash) CreateRegister(ctx context.Context, s scope, in domain.RegisterIn
 }
 func (a *Cash) UpdateRegister(ctx context.Context, s scope, id string, in domain.RegisterInput) (domain.CashRegisterView, error) {
 	var result domain.CashRegisterView
+	all, err := a.readAllShifts(ctx, s)
+	if err != nil {
+		return result, err
+	}
 	in.Name = strings.TrimSpace(in.Name)
 	if len(in.Name) < 1 || len(in.Name) > 80 {
 		return result, paymentFailure(apperror.Invalid, "invalid_cash_register", "El nombre de la caja debe tener entre 1 y 80 caracteres.")
 	}
 
 	var item domain.CashRegisterView
-	err := func() error { var err error; item, err = a.repo.UpdateRegister(ctx, s, id, in); return err }()
+	err = func() error { var err error; item, err = a.repo.UpdateRegister(ctx, s, id, in); return err }()
 	if errors.Is(err, ErrNotFound) {
 		return result, paymentFailure(apperror.NotFound, "cash_register_not_found", "La caja no existe en este local.")
 	}
@@ -109,7 +117,7 @@ func (a *Cash) UpdateRegister(ctx context.Context, s scope, id string, in domain
 	if err != nil {
 		return result, paymentFailure(apperror.Unavailable, "cash_unavailable", "La caja se actualizó, pero no pudimos cargar su turno.")
 	}
-	item.OpenShift = openShift
+	item.OpenShift = cashRegisterShift(openShift, s.UserID, all)
 	return item, nil
 
 }
@@ -508,6 +516,9 @@ func (a *Cash) Report(ctx context.Context, s scope, id string) (domain.CashShift
 		return result, paymentFailure(apperror.Unavailable, "cash_report_unavailable", "No pudimos cargar el resumen de caja.")
 	}
 	defer tx.Rollback(ctx)
+	if err := a.requireShiftRead(tx.Context(), s, id); err != nil {
+		return result, err
+	}
 	var stored []byte
 	err = func() error { var err error; stored, err = a.repo.StoredReport(tx.Context(), s, id); return err }()
 	var out domain.CashShiftReport
@@ -522,6 +533,7 @@ func (a *Cash) Report(ctx context.Context, s scope, id string) (domain.CashShift
 	if err != nil {
 		return result, paymentFailure(apperror.Unavailable, "cash_report_unavailable", "No pudimos cargar el resumen de caja.")
 	}
+	out.Shift.DetailsVisible = true
 	if out.Shift.Status == "open" && out.Shift.BlindClose && !a.canSeeExpected(ctx, s) {
 		return result, paymentFailure(apperror.Forbidden, "cash_report_blind_close", "El detalle de este cierre ciego estará disponible después de cerrar el turno.")
 	}
@@ -546,6 +558,7 @@ func (a *Cash) visibility(ctx context.Context, s scope, shift *domain.CashShiftV
 		return
 	}
 	shift.ExpectedVisible = true
+	shift.DetailsVisible = true
 	if shift.Status == "open" && shift.BlindClose && !a.canSeeExpected(ctx, s) {
 		shift.OpeningAmount = ""
 		shift.IncomeAmount = ""
@@ -578,6 +591,9 @@ func (a *Cash) openShift(ctx context.Context, s scope, id string) (*domain.CashS
 	return &out, nil
 }
 func (a *Cash) Get(ctx context.Context, s scope, id string) (domain.CashShiftView, error) {
+	if err := a.requireShiftRead(ctx, s, id); err != nil {
+		return domain.CashShiftView{}, err
+	}
 	out, err := a.shift(ctx, s, id)
 	if errors.Is(err, ErrNotFound) {
 		return out, paymentFailure(apperror.NotFound, "cash_shift_not_found", "El turno de caja no existe en este local.")
@@ -588,6 +604,10 @@ func (a *Cash) Get(ctx context.Context, s scope, id string) (domain.CashShiftVie
 	return out, nil
 }
 func (a *Cash) Registers(ctx context.Context, s scope, q string) ([]domain.CashRegisterView, error) {
+	all, err := a.readAllShifts(ctx, s)
+	if err != nil {
+		return nil, err
+	}
 	out, err := a.repo.Registers(ctx, s, q)
 	if err != nil {
 		return nil, paymentFailure(apperror.Unavailable, "cash_unavailable", "No pudimos cargar las cajas del local.")
@@ -597,11 +617,19 @@ func (a *Cash) Registers(ctx context.Context, s scope, q string) ([]domain.CashR
 		if err != nil {
 			return nil, paymentFailure(apperror.Unavailable, "cash_unavailable", "No pudimos cargar el turno de la caja.")
 		}
-		out[i].OpenShift = shift
+		out[i].OpenShift = cashRegisterShift(shift, s.UserID, all)
 	}
 	return out, nil
 }
 func (a *Cash) List(ctx context.Context, s scope, f CashFilter) (CashPage, error) {
+	all, err := a.readAllShifts(ctx, s)
+	if err != nil {
+		return CashPage{}, err
+	}
+	f.OwnerID = ""
+	if !all {
+		f.OwnerID = s.UserID
+	}
 	f.Query = strings.TrimSpace(f.Query)
 	f.Status = strings.TrimSpace(f.Status)
 	if f.Status != "" && f.Status != "open" && f.Status != "closed" {
@@ -624,6 +652,13 @@ func (a *Cash) Current(ctx context.Context, s scope) (*domain.CashShiftView, err
 	if err != nil {
 		return nil, paymentFailure(apperror.Unavailable, "cash_unavailable", "No pudimos cargar tu turno de caja.")
 	}
+	all, err := a.readAllShifts(ctx, s)
+	if err != nil {
+		return nil, err
+	}
+	if !all && out.OpenedByID != s.UserID {
+		return nil, nil
+	}
 	out.Movements, err = a.repo.Movements(ctx, s, out.ID)
 	if err != nil {
 		return nil, paymentFailure(apperror.Unavailable, "cash_unavailable", "No pudimos cargar los movimientos del turno.")
@@ -639,6 +674,9 @@ func (a *Cash) UserOptions(ctx context.Context, s scope) ([]domain.CashUserOptio
 	return out, nil
 }
 func (a *Cash) Users(ctx context.Context, s scope, id string) ([]domain.CashShiftUserView, error) {
+	if err := a.requireShiftRead(ctx, s, id); err != nil {
+		return nil, err
+	}
 	out, err := a.repo.ShiftUsers(ctx, s, id)
 	if err != nil {
 		return nil, paymentFailure(apperror.Unavailable, "cash_unavailable", "No pudimos cargar el equipo del turno.")

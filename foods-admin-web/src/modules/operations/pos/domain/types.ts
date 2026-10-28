@@ -5,6 +5,7 @@ export type PaymentMethodOption={code:string;name:string;affectsCash:boolean};
 export type PaymentStatus="pending"|"partial"|"paid";
 
 export type POSOrderSummary={
+  waiterId?:string;
   id:string;
   code:string;
   channel:string;

@@ -312,10 +312,11 @@ func (r *Payments) POSOrders(ctx context.Context, s scope, f application.POSFilt
 		AND ($5='' OR o.created_at < ((NULLIF($5,'')::date + interval '1 day') AT TIME ZONE loc.timezone))
 		AND ($6='' OR (o.completed_at IS NULL AND payment_summary.net_paid < o.total)
 		 OR EXISTS(SELECT 1 FROM payments cp WHERE cp.order_id=o.id AND cp.organization_id=$1 AND cp.location_id=$2 AND cp.shift_id=NULLIF($6,'')::uuid))
+		AND ($6='' OR (o.channel='salon' AND o.table_id IS NOT NULL AND o.waiter_id=$7))
 	` + filter
 
 	var totalCount int
-	if err := r.db(ctx).QueryRow(ctx, "SELECT count(*),COALESCE(sum(payment_summary.net_paid),0)::text "+baseFrom+" WHERE "+where, s.OrganizationID, s.LocationID, q, from, to, f.CollectionShiftID).Scan(&totalCount, &out.AmountTotal); err != nil {
+	if err := r.db(ctx).QueryRow(ctx, "SELECT count(*),COALESCE(sum(payment_summary.net_paid),0)::text "+baseFrom+" WHERE "+where, s.OrganizationID, s.LocationID, q, from, to, f.CollectionShiftID, s.UserID).Scan(&totalCount, &out.AmountTotal); err != nil {
 		return out, err
 	}
 
@@ -331,12 +332,12 @@ func (r *Payments) POSOrders(ctx context.Context, s scope, f application.POSFilt
 		         ELSE 'partial'
 		       END,
 		       to_char(o.created_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),
-		       payment_summary.payment_methods,o.bill_closed_at IS NOT NULL
+		       payment_summary.payment_methods,o.bill_closed_at IS NOT NULL,COALESCE(o.waiter_id::text,'')
 	`+baseFrom+`
 		WHERE `+where+`
 		ORDER BY o.created_at DESC,o.id DESC
-		LIMIT $7 OFFSET $8
-	`, s.OrganizationID, s.LocationID, q, from, to, f.CollectionShiftID, size, (page-1)*size)
+		LIMIT $8 OFFSET $9
+	`, s.OrganizationID, s.LocationID, q, from, to, f.CollectionShiftID, s.UserID, size, (page-1)*size)
 	if err != nil {
 		return out, err
 	}
@@ -348,7 +349,7 @@ func (r *Payments) POSOrders(ctx context.Context, s scope, f application.POSFilt
 		if err := rows.Scan(
 			&item.ID, &item.Code, &item.Channel, &item.Status, &item.CustomerName, &item.TableName,
 			&item.Total, &item.PaidAmount, &item.RemainingAmount, &item.PaymentStatus, &item.CreatedAt,
-			&item.PaymentMethods, &item.BillClosed,
+			&item.PaymentMethods, &item.BillClosed, &item.WaiterID,
 		); err != nil {
 			return out, err
 		}

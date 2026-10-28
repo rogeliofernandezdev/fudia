@@ -1,6 +1,6 @@
 "use client";
 import {DataTable} from "@/design-system/data-table";
-import {canChargeAccount} from "../../orders/domain/service-flow";
+import {canChargeAccount,canCollectOrder} from "../../orders/domain/service-flow";
 import {Dialog} from "@/design-system/dialog";
 import "./pos.css";
 import Link from "next/link";
@@ -108,6 +108,7 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
 
   const shift=current.data?.shift??null;
   const items=orders.data?.items??[];
+  const canCollectSelected=paymentOrder.data?canCollectOrder(paymentOrder.data.order,user?.id,canManage,canCollect):canCollect;
 
   function dateTime(value:string){
     return formatRegionalDateTime(value,{country:location?.country,timeZone:location?.timezone},{dateStyle:"medium",timeStyle:"short"});
@@ -115,7 +116,7 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
   function actionsFor(item:POSOrderSummary){
     return <div className="pos-actions">
       <RowActionButton action="view" label={`Ver detalle de ${item.code}`} onClick={()=>setDetailId(item.id)}/>
-      {canCollect&&item.paymentStatus!=="paid"&&<RowActionButton action="charge" label={shift?`Cobrar ${item.code}`:"Necesitas un turno abierto para cobrar"} disabled={!shift||!canChargeAccount({...item,billClosedAt:item.billClosed?"closed":undefined})} onClick={()=>setPaymentOrderId(item.id)}/>}
+      {canCollectOrder(item,user?.id,canManage,canCollect)&&item.paymentStatus!=="paid"&&<RowActionButton action="charge" label={shift?`Cobrar ${item.code}`:"Necesitas un turno abierto para cobrar"} disabled={!shift||!canChargeAccount({...item,billClosedAt:item.billClosed?"closed":undefined})} onClick={()=>setPaymentOrderId(item.id)}/>}
     </div>;
   }
 
@@ -186,13 +187,13 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
       methodsError={methods.error?.message}
       methods={methods.data?.items}
       retryMethods={()=>void methods.refetch()}
-      canCollect={canCollect}
+      canCollect={canCollectSelected}
       busy={pay.isPending}
       formatMoney={money}
       close={()=>{if(!pay.isPending)setPaymentOrderId(null)}}
       retryOrder={()=>void paymentOrder.refetch()}
       retryShift={()=>void current.refetch()}
-      save={draft=>{if(canCollect&&shift&&!pay.isPending)pay.mutate({orderId:paymentOrderId,draft})}}
+      save={draft=>{if(canCollectSelected&&shift&&!pay.isPending)pay.mutate({orderId:paymentOrderId,draft})}}
     />}
     {refundTarget&&shift&&canManage&&<RefundDialog payment={refundTarget} busy={refund.isPending} formatMoney={money} close={()=>setRefundTarget(null)} save={draft=>refund.mutate({paymentId:refundTarget.id,draft})}/>}
     {detailId&&<POSDetailDialog

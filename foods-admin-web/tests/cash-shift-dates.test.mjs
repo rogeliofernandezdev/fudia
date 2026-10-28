@@ -49,6 +49,21 @@ test("un cajero abre y cierra su turno sin acciones para crear, editar o desacti
  assert.ok(administrator.renderRegisters({items:[]}).props.action);
 });
 
+test("una caja ocupada por otro cajero no muestra importes, movimientos ni acciones",()=>{
+ const cashier=mountPage();
+ const foreign={...shift,id:"foreign",detailsVisible:false,expectedVisible:false,openedById:"other",openingAmount:"",incomeAmount:"",expenseAmount:"",expectedAmount:"",movementCount:0};
+ const tree=cashier.renderRegisters({items:[{id:"register",name:"Caja ocupada",active:true,openShift:foreign}],canManage:true,canManageRegisters:false});
+ const all=nodes(tree);
+ assert.equal(all.some(node=>node.type==="RowActionButton"&&node.props.action==="view"),false);
+ assert.equal(all.some(node=>node.type==="IconButton"),false);
+ assert.equal(all.some(node=>node.type==="Button"),false);
+ assert.equal(all.some(node=>node.props?.className==="cash-register-balance"),false);
+ assert.equal(all.some(node=>node.props?.className==="cash-register-flow"),false);
+ assert.ok(all.some(node=>node.type==="span"&&node.props.children==="Este turno está a cargo de otro cajero."));
+ assert.ok(all.some(node=>node.type==="small"&&node.props.children==="Efectivo de tu turno"));
+ assert.equal(all.some(node=>node.type==="strong"&&node.props.children==="S/ 0"),false);
+});
+
 test("la tarjeta de caja muestra fecha y hora de apertura del local, no el día operativo",()=>{
  const {all}=mountPage();
  const time=all.find(node=>node.type==="time");

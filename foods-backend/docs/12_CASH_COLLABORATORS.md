@@ -9,6 +9,20 @@ el pedido, pero no coordinaban la vigencia de la asignación con retiro/cierre.
 
 ## Implementación
 
+El mozo colaborador solo cobra sus propias atenciones de Salón. Se usa
+`orders.waiter_id`, que el flujo de comanda vincula automáticamente con el
+usuario autenticado; no hay una asignación manual nueva de mesas. Una mesa
+de otro mozo, sin responsable o un pedido de Recojo/Delivery no concede cobro
+temporal. `cash.manage` conserva la autorización del cajero para cobrar otras
+atenciones. La consulta de POS temporal filtra también filas, total y sumas
+por el mozo vinculado al pedido.
+
+Cobro individual y dividido comprueban esa vinculación después de bloquear el
+pedido y antes de escribir pagos o movimientos, dentro de la misma transacción.
+Un rechazo devuelve `403 cash_collection_order_forbidden`, sin cobros parciales.
+La interfaz comparte `canCollectOrder` entre Mesa, Pedidos y POS. El API conserva
+la autoridad definitiva aunque se cambie el UUID desde el navegador.
+
 - Billing valida permiso administrativo o asignación activa, sin modificar roles.
   La capacidad temporal se limita a cobros y lectura operativa de POS.
 - Identity proyecta `cashCollection` en el contexto mediante un puerto inyectado
@@ -38,6 +52,21 @@ Frontend: equipo de Caja, POS, proveedores de sesión y navegación temporal.
 Pruebas de aplicación, integración y frontend acompañan estos cambios.
 
 ## Alcance y despliegue
+
+La lectura financiera de Caja se limita a los turnos abiertos por el usuario;
+solo el administrador reservado de empresa (o de plataforma) puede consultar
+todos los del local. `cash.read`, `cash.manage`, `cash.expected.read` o administrar
+cajas no amplían ese alcance. Listado, búsqueda y total se filtran en SQL antes
+de paginar. Detalle, equipo e informe (incluido el snapshot del cierre) validan
+propietario en backend y devuelven 404 para turnos ajenos. Una asignación temporal
+no concede estos datos; el turno financiero actual devuelve null si solo es
+colaborador. POS conserva su acceso mínimo y la capacidad de cobrar.
+
+El catálogo de cajas conserva ocupación y responsable, con `detailsVisible=false`
+para cajas ajenas. Sus importes, notas, movimientos y equipo no se exponen, y
+el frontend omite detalle y acciones de operación sobre esa proyección. El saldo
+del resumen solo agrega los turnos visibles. No modifica historiales ni requiere
+una migración adicional. La autorización del cierre sigue reservada al abridor.
 
 No crea tablas ni modifica autenticación o roles de los colaboradores.
 La administración de cajas usa el permiso separado `cash.registers.manage`;

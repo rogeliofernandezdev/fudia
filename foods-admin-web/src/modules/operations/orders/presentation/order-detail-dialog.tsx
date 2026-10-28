@@ -7,7 +7,7 @@ import {ModalHeader,ModalFooter,ModalWorkspace,ModalItemList,ModalItemNote,Modal
 import {useMoney,useSession} from "@/providers";
 import {pageRoutes} from "@/shared/routing/page-routes";
 import {canCancelOrder,canManageOrderService,nextOrderAction} from "../domain/order-actions";
-import {canChargeAccount} from "../domain/service-flow";
+import {canChargeAccount,canCollectOrder} from "../domain/service-flow";
 import {deliveryPoint} from "../domain/delivery-point";
 import {formatRegionalNumber} from "@/shared/i18n/regional-format";
 import type {Order,OrderItem,OrderItemSelection} from "../domain/types";
@@ -51,7 +51,7 @@ export function OrderDetailContent<T extends Order>({variant,order,error,retryin
   const paid=Number(order?.paidAmount??0);
   const remaining=Number(order?.remainingAmount??order?.total??0);
   const hasPayments=paid>0.00001;
-  const canCharge=Boolean((can("cash.manage")||cashCollection)&&order&&canChargeAccount(order)&&remaining>0.00001);
+  const canCharge=Boolean(order&&canCollectOrder(order,user?.id,can("cash.manage"),cashCollection)&&canChargeAccount(order)&&remaining>0.00001);
   const canCancel=Boolean(order&&canCancelOrder(order));
   const editable=Boolean(edit&&order&&isEditableOrder(order)&&(!(order.serviceItems?.length)||order.status==="nuevo"));
   const actionIcon=action?.status==="entregado"?"availability":action?.status==="confirmado"?"chefHat":action?.icon;

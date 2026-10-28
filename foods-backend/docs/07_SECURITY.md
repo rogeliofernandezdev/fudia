@@ -2,6 +2,15 @@
 
 ## Colaboradores de Caja
 
+`cash.read` permite consultar únicamente los turnos que abrió la identidad
+autenticada. El administrador reservado de empresa o plataforma puede consultar
+todos los del local seleccionado. La búsqueda, el total y la paginación aplican
+ese alcance en SQL; detalle, equipo e informe lo validan también por UUID antes
+de leer movimientos o snapshots persistidos. `cash.manage`, administrar cajas,
+conocer el esperado y ser colaborador no sustituyen la propiedad del turno.
+El catálogo conserva solo ocupación y responsable de cajas ajenas, marcadas
+con `detailsVisible=false`; no expone sus importes, notas, movimientos ni equipo.
+
 Crear, editar, activar o desactivar cajas requiere `cash.registers.manage`
 («Administrar cajas»). `cash.manage` («Operar turnos y cobros») conserva apertura,
 operación, equipo y cierre personal del turno, sin configurar el catálogo de
@@ -12,8 +21,17 @@ Un administrador puede delegar explícitamente el permiso mediante roles.
 
 La asignación activa en `cash_shift_users` concede una capacidad temporal de
 cobro, nunca `cash.manage` ni un rol. POS permite cobros individuales y divididos
-con permiso administrativo o asignación vigente al turno abierto. Solo habilita
-su lectura operativa, medios de venta y pagos del turno; no habilita devoluciones,
+con permiso administrativo o asignación vigente al turno abierto.
+
+Para un colaborador sin `cash.manage`, el cobro exige además una atención de
+Salón cuyo `orders.waiter_id` sea el actor autenticado. Este vínculo procede del
+flujo de la comanda, sin asignación manual adicional. La comprobación ocurre bajo
+el bloqueo del pedido y en la transacción de cada cobro simple o dividido.
+El listado y detalle temporal de POS aplican la misma propiedad; el cajero
+mantiene sus permisos de cobro generales.
+
+La capacidad temporal solo habilita su lectura operativa, medios de venta y pagos
+del turno; no habilita devoluciones,
 movimientos manuales, transferencias, cajas, cierres ni gestión del equipo.
 Los permisos de lectura permanentes anteriores continúan independientes.
 `cashCollection` del contexto permite mostrar POS temporalmente sin alterar

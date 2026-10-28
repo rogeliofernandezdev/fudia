@@ -23,7 +23,7 @@ const historyColumns=["Caja","Día operativo","Cajero / cierre","Apertura","Cier
 export function CashPage(){
   const qc=useQueryClient();
   const{notify}=useFeedback();
-  const{can,location,user}=useSession();
+  const{can,location,user,organization}=useSession();
   const settings=useSettings();
   const money=useMoney();
   const canManage=can("cash.manage");
@@ -45,17 +45,17 @@ export function CashPage(){
   const[reportId,setReportId]=useState<string|null>(null);
 
   const registers=useQuery({
-    queryKey:["cash-registers"],
+    queryKey:["cash-registers",organization?.id,location?.id,user?.id],
     queryFn:()=>listCashRegisters(),
     refetchInterval:30000,
   });
   const history=useQuery({
-    queryKey:["cash-shifts",q,status,page,size],
+    queryKey:["cash-shifts",organization?.id,location?.id,user?.id,q,status,page,size],
     queryFn:()=>listCashShifts({q,status,page,pageSize:size}),
     enabled:tab==="history",
   });
   const detail=useQuery({
-    queryKey:["cash-shift",detailId],
+    queryKey:["cash-shift",organization?.id,location?.id,user?.id,detailId],
     queryFn:()=>getCashShift(detailId!),
     enabled:Boolean(detailId),
   });
@@ -65,7 +65,7 @@ export function CashPage(){
     enabled:Boolean(teamTarget),
   });
   const userOptions=useQuery({
-    queryKey:["cash-user-options"],
+    queryKey:["cash-user-options",organization?.id,location?.id,user?.id],
     queryFn:listCashUserOptions,
     enabled:Boolean(teamTarget),
   });
@@ -294,6 +294,9 @@ export function CashPage(){
       users={teamUsers.data?.items??[]}
       options={userOptions.data?.items??[]}
       loading={teamUsers.isLoading||userOptions.isLoading}
+      error={teamUsers.error?.message||userOptions.error?.message}
+      retrying={teamUsers.isFetching||userOptions.isFetching}
+      retry={()=>{void teamUsers.refetch();void userOptions.refetch()}}
       busyUserId={assignUser.isPending?assignUser.variables?.userId??null:unassignUser.isPending?unassignUser.variables?.userId??null:null}
       close={()=>setTeamTarget(null)}
       assign={userId=>assignUser.mutate({shiftId:teamTarget.id,userId})}
@@ -340,8 +343,10 @@ function CashRegisters({items,loading,error,canManage,canManageRegisters,current
   const active=items.filter(item=>item.active);
   const open=active.filter(item=>item.openShift);
   const available=active.length-open.length;
-  const hiddenExpected=open.some(item=>item.openShift&&!item.openShift.expectedVisible);
-  const expected=open.reduce((sum,item)=>sum+(item.openShift?.expectedVisible?Number(item.openShift.expectedAmount):0),0);
+  const visibleOpen=open.filter(item=>item.openShift?.detailsVisible!==false);
+  const restricted=visibleOpen.length!==open.length;
+  const hiddenExpected=visibleOpen.some(item=>!item.openShift?.expectedVisible);
+  const expected=visibleOpen.reduce((sum,item)=>sum+(item.openShift?.expectedVisible?Number(item.openShift.expectedAmount):0),0);
 
   return <div className="cash-registers-workspace">
     <section className="cash-overview" aria-label="Resumen operativo de cajas">
@@ -352,7 +357,7 @@ function CashRegisters({items,loading,error,canManage,canManageRegisters,current
       <div className="cash-overview-metrics">
         <div><small>Cajas activas</small><strong>{active.length}</strong></div>
         <div><small>Turnos abiertos</small><strong>{open.length}</strong></div>
-        <div className="money"><small>Efectivo esperado</small><strong>{hiddenExpected?"Cierre ciego":money(expected)}</strong></div>
+        <div className="money"><small>{restricted?"Efectivo de tu turno":"Efectivo esperado"}</small><strong>{restricted&&!visibleOpen.length?"—":hiddenExpected?"Cierre ciego":money(expected)}</strong></div>
       </div>
     </section>
 
@@ -380,12 +385,13 @@ function CashRegisters({items,loading,error,canManage,canManageRegisters,current
             <div className="cash-register-live-copy">
               <small>Turno en curso</small>
               <p><Icon name="users" size={14}/>Cajero: {cashShiftAttribution(shift).name}</p>
-              <p>Equipo actual: {cashShiftTeamName(shift)}</p>
+              {shift.detailsVisible!==false&&<p>Equipo actual: {cashShiftTeamName(shift)}</p>}
               <p><Icon name="clock" size={14}/><time dateTime={shift.openedAt}>Apertura: {dateTime(shift.openedAt)}</time></p>
               <em>Día operativo {businessDate(shift.businessDate)}</em>
             </div>
-            <div className="cash-register-balance"><small>{shift.expectedVisible?"SALDO ESPERADO":"CIERRE CIEGO"}</small><strong>{shift.expectedVisible?money(Number(shift.expectedAmount)):"Oculto"}</strong><span>{shift.movementCount} {shift.movementCount===1?"movimiento":"movimientos"}</span></div>
+            {shift.detailsVisible!==false&&<div className="cash-register-balance"><small>{shift.expectedVisible?"SALDO ESPERADO":"CIERRE CIEGO"}</small><strong>{shift.expectedVisible?money(Number(shift.expectedAmount)):"Oculto"}</strong><span>{shift.movementCount} {shift.movementCount===1?"movimiento":"movimientos"}</span></div>}
           </section>
+          {shift.detailsVisible===false?<div className="cash-register-blind"><Icon name="lock" size={14}/><span>Este turno está a cargo de otro cajero.</span></div>:<>
           {shift.expectedVisible?<section className="cash-register-flow">
             <div className="opening"><span className="cash-flow-label"><IconTile name="wallet" tone="primary" appearance="vivid" size="sm"/><small>Fondo inicial</small></span><b>{money(Number(shift.openingAmount))}</b></div>
             <div className="income"><span className="cash-flow-label"><IconTile name="plus" tone="brand" appearance="vivid" size="sm"/><small>Ingresos</small></span><b>+{money(Number(shift.incomeAmount))}</b></div>
@@ -405,6 +411,7 @@ function CashRegisters({items,loading,error,canManage,canManageRegisters,current
               {canCloseCashShift(shift,currentUserId,canManage)&&<Button kind="danger-outline" icon="lock" onClick={()=>close(shift)}>Cerrar turno</Button>}
             </>}
           </footer>
+          </>}
         </>:<div className="cash-register-idle">
           <span><Icon name={item.active?"clock":"power"} size={20}/></span>
           <div><small>{item.active?"LISTA PARA OPERAR":"FUERA DE OPERACIÓN"}</small><b>{item.active?"Sin turno activo":"Caja desactivada"}</b><p>{item.active?"Inicia un turno para registrar fondo, movimientos y arqueo.":"Actívala cuando vuelva a utilizarse en el local."}</p></div>

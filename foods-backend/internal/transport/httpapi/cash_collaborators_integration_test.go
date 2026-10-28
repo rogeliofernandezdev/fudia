@@ -33,7 +33,7 @@ func TestCashCollaboratorsCollectWithTemporaryAuthority(t *testing.T) {
 		return id
 	}
 	cashierRole := role("Cajero de prueba", "cashier", []string{"cash.manage", "cash.read", "orders.read"})
-	waiterRole := role("Mozo de prueba", "waiter", []string{"orders.read", "menu.read"})
+	waiterRole := role("Mozo de prueba", "waiter", []string{"orders.read", "orders.manage", "menu.read"})
 	administratorRole := role("Administrador de empresa", "administrator", []string{"cash.manage", "cash.read", "orders.read"})
 	exec(`INSERT INTO user_roles(user_id,role_id,location_id) VALUES($1,$2,$3)`, s.UserID, cashierRole, s.LocationID)
 	user := func(name, roleID, location string, active bool) scope {
@@ -106,8 +106,11 @@ func TestCashCollaboratorsCollectWithTemporaryAuthority(t *testing.T) {
 	})
 	order := func(total int) string {
 		t.Helper()
-		var id string
-		if err := pool.QueryRow(ctx, `INSERT INTO orders(organization_id,location_id,code,channel,status,total,created_by) VALUES($1,$2,$3,'recojo','listo',$4,$5) RETURNING id`, s.OrganizationID, s.LocationID, fmt.Sprintf("PED-TEAM-%d", time.Now().UnixNano()), total, s.UserID).Scan(&id); err != nil {
+		var id, tableID string
+		if err := pool.QueryRow(ctx, `INSERT INTO tables(organization_id,location_id,name,seats,zone,qr_token) VALUES($1,$2,$3,4,'Principal',encode(gen_random_bytes(16),'hex')) RETURNING id`, s.OrganizationID, s.LocationID, fmt.Sprintf("Mesa equipo %d", time.Now().UnixNano())).Scan(&tableID); err != nil {
+			t.Fatal(err)
+		}
+		if err := pool.QueryRow(ctx, `INSERT INTO orders(organization_id,location_id,code,channel,status,total,created_by,table_id,waiter_id,bill_closed_at) VALUES($1,$2,$3,'salon','entregado',$4,$5,$6,$7,now()) RETURNING id`, s.OrganizationID, s.LocationID, fmt.Sprintf("PED-TEAM-%d", time.Now().UnixNano()), total, s.UserID, tableID, waiter.UserID).Scan(&id); err != nil {
 			t.Fatal(err)
 		}
 		return id
@@ -165,6 +168,64 @@ func TestCashCollaboratorsCollectWithTemporaryAuthority(t *testing.T) {
 			expect(waiterCall(request.method, request.path, request.body), 403)
 		}
 		expect(waiterCall("GET", "/v1/admin/payment-methods/operational?usage=sales", nil), 200)
+	})
+	t.Run("solo cobra la atencion vinculada automaticamente al enviar comanda", func(t *testing.T) {
+		otherWaiter := user("Otra moza", waiterRole, s.LocationID, true)
+		expect(assign(otherWaiter.UserID), 201)
+		otherWaiterCall := companySession(t, api, otherWaiter)
+		var tableID, productID string
+		if err := pool.QueryRow(ctx, `INSERT INTO tables(organization_id,location_id,name,seats,zone,qr_token) VALUES($1,$2,'Mesa de comanda',4,'Principal',encode(gen_random_bytes(16),'hex')) RETURNING id`, s.OrganizationID, s.LocationID).Scan(&tableID); err != nil {
+			t.Fatal(err)
+		}
+		if err := pool.QueryRow(ctx, `INSERT INTO products(organization_id,sku,name,price,product_type,quantity_control,service_destination) VALUES($1,$2,'Plato directo',20,'prepared','none','direct') RETURNING id`, s.OrganizationID, fmt.Sprintf("team-plate-%d", time.Now().UnixNano())).Scan(&productID); err != nil {
+			t.Fatal(err)
+		}
+		created := waiterCall("POST", "/v1/admin/orders", map[string]any{"channel": "salon", "tableId": tableID, "sendToKitchen": true, "items": []map[string]any{{"productId": productID, "qty": 1}}})
+		expect(created, 201)
+		var linked struct {
+			ID       string `json:"id"`
+			WaiterID string `json:"waiterId"`
+		}
+		if err := json.Unmarshal(created.Body.Bytes(), &linked); err != nil || linked.WaiterID != waiter.UserID {
+			t.Fatalf("command did not bind its waiter: %s %v", created.Body.String(), err)
+		}
+		var serviceID string
+		if err := pool.QueryRow(ctx, `SELECT id FROM order_service_items WHERE order_id=$1`, linked.ID).Scan(&serviceID); err != nil {
+			t.Fatal(err)
+		}
+		expect(waiterCall("PATCH", "/v1/admin/orders/"+linked.ID+"/service-items/"+serviceID+"/deliver", nil), 200)
+		expect(waiterCall("POST", "/v1/admin/orders/"+linked.ID+"/bill/close", nil), 200)
+		for _, request := range []struct {
+			path string
+			body any
+		}{
+			{"/v1/admin/payments", map[string]any{"orderId": linked.ID, "method": "cash", "amount": 10}},
+			{"/v1/operations/payments/batch", map[string]any{"orderId": linked.ID, "payments": []map[string]any{{"method": "cash", "amount": 5}, {"method": "card", "amount": 5}}}},
+		} {
+			denied := otherWaiterCall("POST", request.path, request.body)
+			expect(denied, 403)
+			if !strings.Contains(denied.Body.String(), "cash_collection_order_forbidden") {
+				t.Fatal(denied.Body.String())
+			}
+		}
+		var count int
+		if err := pool.QueryRow(ctx, `SELECT count(*) FROM payments WHERE order_id=$1`, linked.ID).Scan(&count); err != nil || count != 0 {
+			t.Fatalf("denied collection wrote payments: %d %v", count, err)
+		}
+		expect(otherWaiterCall("GET", "/v1/admin/pos/orders/"+linked.ID, nil), 404)
+		listed := otherWaiterCall("GET", "/v1/admin/pos/orders?paymentStatus=all", nil)
+		expect(listed, 200)
+		if strings.Contains(listed.Body.String(), linked.ID) {
+			t.Fatal("another waiter's table appeared in POS")
+		}
+		expect(pay(waiterCall, linked.ID, 5), 201)
+		expect(waiterCall("POST", "/v1/operations/payments/batch", map[string]any{"orderId": linked.ID, "payments": []map[string]any{{"method": "cash", "amount": 5}, {"method": "card", "amount": 10}}}), 201)
+		for _, change := range []string{"waiter_id=NULL", "channel='recojo',table_id=NULL,status='listo',bill_closed_at=NULL"} {
+			id := order(12)
+			exec("UPDATE orders SET "+change+" WHERE id=$1", id)
+			expect(pay(waiterCall, id, 12), 403)
+			expect(pay(cashierCall, id, 12), 201)
+		}
 	})
 	t.Run("cobro dividido y lectura limitada al turno", func(t *testing.T) {
 		id := order(25)

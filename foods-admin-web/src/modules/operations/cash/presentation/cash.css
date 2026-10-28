@@ -123,7 +123,7 @@
 .cash-denomination-count label>b{text-align:right;color:var(--ink-950);font-variant-numeric:tabular-nums}
 
 .cash-team-modal{width:min(var(--size-580),calc(100vw - var(--size-32)))}
-.cash-team-body{display:grid;gap:var(--space-3-5);padding:var(--space-5)}
+.cash-team-body{display:grid;align-content:start;gap:var(--space-3-5);padding:var(--space-5)}
 .cash-team-add{display:grid;grid-template-columns:1fr auto;align-items:end;gap:var(--space-2)}
 .cash-team-list{overflow:hidden;border:var(--stroke-1) solid var(--line);border-radius:var(--radius-tile)}
 .cash-team-list>header{display:flex;align-items:center;justify-content:space-between;gap:var(--space-2-5);padding:var(--space-2-5) var(--space-3);background:var(--cloud-50)}

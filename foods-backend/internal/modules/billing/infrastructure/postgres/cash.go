@@ -290,7 +290,7 @@ const cashShiftColumns = `
 `
 
 func scanCashShift(row pgx.Row) (domain.CashShiftView, error) {
-	var shift domain.CashShiftView
+	shift := domain.CashShiftView{DetailsVisible: true}
 	err := row.Scan(
 		&shift.ID,
 		&shift.Code,
@@ -427,7 +427,12 @@ func (r *Payments) Shifts(ctx context.Context, s scope, f application.CashFilter
 		      AND su.location_id=cs.location_id AND su.unassigned_at IS NULL
 		      AND cs.status='open' AND u.full_name ILIKE '%'||$3||'%'
 		  ))
-		AND ($4='' OR cs.status=$4)`
+		AND ($4='' OR cs.status=$4)
+		AND ($5::uuid IS NULL OR cs.opened_by=$5)`
+	var ownerID any
+	if f.OwnerID != "" {
+		ownerID = f.OwnerID
+	}
 
 	var total int
 	if err := r.db(ctx).QueryRow(ctx, `
@@ -436,7 +441,7 @@ func (r *Payments) Shifts(ctx context.Context, s scope, f application.CashFilter
 		JOIN cash_registers cr ON cr.id=cs.cash_register_id AND cr.organization_id=cs.organization_id AND cr.location_id=cs.location_id
 		JOIN users opened ON opened.id=cs.opened_by AND opened.organization_id=cs.organization_id
 		LEFT JOIN users closed ON closed.id=cs.closed_by AND closed.organization_id=cs.organization_id
-		WHERE `+where, s.OrganizationID, s.LocationID, q, status).Scan(&total); err != nil {
+		WHERE `+where, s.OrganizationID, s.LocationID, q, status, ownerID).Scan(&total); err != nil {
 		return out, err
 	}
 
@@ -448,8 +453,8 @@ func (r *Payments) Shifts(ctx context.Context, s scope, f application.CashFilter
 		LEFT JOIN users closed ON closed.id=cs.closed_by AND closed.organization_id=cs.organization_id
 		WHERE `+where+`
 		ORDER BY cs.opened_at DESC
-		LIMIT $5 OFFSET $6
-	`, s.OrganizationID, s.LocationID, q, status, size, (page-1)*size)
+		LIMIT $6 OFFSET $7
+	`, s.OrganizationID, s.LocationID, q, status, ownerID, size, (page-1)*size)
 	if err != nil {
 		return out, err
 	}
@@ -684,6 +689,29 @@ func (r *Payments) IsPlatformAdmin(ctx context.Context, s scope) (bool, error) {
 	var platformAdmin bool
 	err := r.db(ctx).QueryRow(ctx, `SELECT platform_admin FROM users WHERE id=$1 AND active`, s.UserID).Scan(&platformAdmin)
 	return platformAdmin, billingError(err)
+}
+
+func (r *Payments) CanReadAllShifts(ctx context.Context, s scope) (bool, error) {
+	var allowed bool
+	err := r.db(ctx).QueryRow(ctx, `SELECT EXISTS (
+	 SELECT 1 FROM users u WHERE u.id=$1 AND u.active AND (
+	  u.platform_admin OR (u.organization_id=$2 AND EXISTS (
+	   SELECT 1 FROM user_roles ur JOIN roles ro ON ro.id=ur.role_id
+	   WHERE ur.user_id=u.id AND ro.organization_id=$2
+	    AND ro.active AND ro.system_key='administrator'
+	  ))
+	 )
+	)`, s.UserID, s.OrganizationID).Scan(&allowed)
+	return allowed, billingError(err)
+}
+
+func (r *Payments) OwnsShift(ctx context.Context, s scope, id string) (bool, error) {
+	var owned bool
+	err := r.db(ctx).QueryRow(ctx, `SELECT EXISTS (
+	 SELECT 1 FROM cash_shifts WHERE id=$1 AND organization_id=$2
+	  AND location_id=$3 AND opened_by=$4
+	)`, id, s.OrganizationID, s.LocationID, s.UserID).Scan(&owned)
+	return owned, billingError(err)
 }
 func (r *Payments) CanSeeExpected(ctx context.Context, s scope) (bool, error) {
 	var allowed bool

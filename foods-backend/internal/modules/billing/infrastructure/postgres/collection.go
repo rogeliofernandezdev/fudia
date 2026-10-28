@@ -25,7 +25,16 @@ func (r *Payments) CollectionOrderVisible(ctx context.Context, s scope, orderID,
 	var visible bool
 	err := r.db(ctx).QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM orders o
   WHERE o.organization_id=$1 AND o.location_id=$2 AND o.id=$3 AND o.status<>'cancelado'
+  AND o.channel='salon' AND o.table_id IS NOT NULL AND o.waiter_id=$5
   AND ((o.completed_at IS NULL AND o.total>(SELECT COALESCE(sum(p.amount-COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=$1),0)),0) FROM payments p WHERE p.order_id=o.id AND p.organization_id=$1 AND p.location_id=$2))
-   OR EXISTS(SELECT 1 FROM payments p WHERE p.order_id=o.id AND p.organization_id=$1 AND p.location_id=$2 AND p.shift_id=$4)))`, s.OrganizationID, s.LocationID, orderID, shiftID).Scan(&visible)
+   OR EXISTS(SELECT 1 FROM payments p WHERE p.order_id=o.id AND p.organization_id=$1 AND p.location_id=$2 AND p.shift_id=$4)))`, s.OrganizationID, s.LocationID, orderID, shiftID, s.UserID).Scan(&visible)
 	return visible, err
+}
+
+func (r *Payments) OwnsCollectionOrder(ctx context.Context, s scope, id string) (bool, error) {
+	var owned bool
+	err := r.db(ctx).QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM orders
+	 WHERE id=$1 AND organization_id=$2 AND location_id=$3
+	 AND channel='salon' AND table_id IS NOT NULL AND waiter_id=$4)`, id, s.OrganizationID, s.LocationID, s.UserID).Scan(&owned)
+	return owned, err
 }

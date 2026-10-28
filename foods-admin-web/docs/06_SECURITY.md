@@ -1,11 +1,24 @@
 # Seguridad
 
+En Caja, el API limita el historial y los movimientos a los turnos que abrió el
+usuario. Solo el administrador reservado consulta todos los del local. La
+asignación temporal para cobrar no permite leer las finanzas de otro cajero.
+Detalle, equipo e informe se validan también al acceder directamente por UUID.
+Las cajas ocupadas por otra persona llegan con `detailsVisible=false`: muestran
+ocupación y responsable, sin importes, movimientos, equipo ni acciones del turno.
+El resumen agrega solo turnos visibles y las consultas incluyen empresa, local y
+usuario en sus claves de caché. La autorización definitiva permanece en backend.
+
 `cashCollection` es una capacidad temporal de sesión que permite abrir POS con
 una asignación activa a un turno abierto. No añade `cash.manage`, permisos ni
 accesos permanentes al rol. POS consulta `pos/access`, cuya proyección no incluye
 saldos administrativos; cobro y devolución mantienen condiciones distintas.
 El acceso «Cobrar saldo» en los detalles de Mesa y Pedidos también reconoce
-`cashCollection`. Enlaza a `/pos?orderId=…`, que abre el formulario compartido
+`cashCollection`, únicamente para las atenciones de Salón cuyo `waiterId` coincide
+con el mozo autenticado. Ese vínculo se toma del flujo existente al enviar la
+comanda; no requiere asignar mesas manualmente. POS reutiliza `canCollectOrder`
+para sus filas, el formulario y el envío. El cajero con `cash.manage` conserva
+su autorización general. Enlaza a `/pos?orderId=…`, que abre el formulario compartido
 de cobro para esa cuenta. Sigue exigiendo entrega, cierre de cuenta y saldo;
 no concede edición de otras mesas ni registra pagos al abrir. POS vuelve a
 consultar el turno y el backend valida la asignación al confirmar cada cobro.

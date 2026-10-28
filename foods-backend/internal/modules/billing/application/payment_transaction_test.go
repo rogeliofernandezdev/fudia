@@ -13,8 +13,8 @@ import (
 type paymentProjectionKey struct{}
 
 type paymentProjectionTx struct {
-	ctx       context.Context
-	committed bool
+	ctx        context.Context
+	committed  bool
 	rolledBack bool
 }
 
@@ -85,7 +85,7 @@ func TestCreatePaymentReadsProjectionBeforeCommit(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			tx := &paymentProjectionTx{}
 			repo := &paymentProjectionRepo{projectionErr: tc.readError}
-			svc := NewPayments(repo, paymentProjectionWork{tx}, nil, paymentProjectionMethods{}, paymentProjectionOrders{})
+			svc := NewPayments(repo, paymentProjectionWork{tx}, nil, paymentProjectionMethods{}, paymentProjectionOrders{}).WithAuthorization(collectionPermissions{allowed: map[string]bool{"cash.manage": true}})
 			s := requestscope.Scope{OrganizationID: "org", LocationID: "loc", UserID: "user"}
 			payment, err := svc.Create(context.Background(), s, domain.PaymentInput{
 				OrderID: "order-1", Method: "card", Amount: 10,

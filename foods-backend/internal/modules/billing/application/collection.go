@@ -59,8 +59,28 @@ func (a *Payments) AuthorizeCollection(ctx context.Context, s scope) error {
 	return nil
 }
 
-// Existing financial readers retain their scope. Temporary operators see open
-// accounts to collect and payments of their own active shift, not sales history.
+// Called after locking the order, inside the payment transaction. The assignment
+// cannot change between this check and persisting either a single or split charge.
+func (a *Payments) requireCollectionOrder(ctx context.Context, s scope, id string) error {
+	if a.authorizer == nil {
+		return paymentFailure(apperror.Unavailable, "cash_collection_unavailable", "No pudimos validar tu autorización de cobro.")
+	}
+	err := a.authorizer.Authorize(ctx, s, "cash.manage")
+	if err == nil || !forbiddenPermission(err) {
+		return err
+	}
+	owned, err := a.repo.OwnsCollectionOrder(ctx, s, id)
+	if err != nil {
+		return paymentFailure(apperror.Unavailable, "cash_collection_unavailable", "No pudimos validar quién está atendiendo esta mesa.")
+	}
+	if !owned {
+		return paymentFailure(apperror.Forbidden, "cash_collection_order_forbidden", "Solo puedes cobrar las mesas que estás atendiendo.")
+	}
+	return nil
+}
+
+// Existing financial readers retain their scope. Temporary operators see only
+// their own table accounts and payments in their active shift.
 func (a *Payments) AuthorizeCollectionRead(ctx context.Context, s scope) (string, error) {
 	if a.authorizer == nil {
 		shift, err := a.CollectionAccess(ctx, s)

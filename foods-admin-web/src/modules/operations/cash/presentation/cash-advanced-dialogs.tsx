@@ -1,14 +1,17 @@
 "use client";
 import {Dialog} from "@/design-system/dialog";
 import {useMemo,useState} from "react";
+import dynamic from "next/dynamic";
 import {useForm,useWatch} from "react-hook-form";
-import {Button,EmptyState,FormField,Icon,Input,Select,Skeleton,Textarea,ModalHeader,ModalFooter} from "@/design-system";
+import {Button,EmptyState,ErrorState,FormField,Icon,Input,Select,Skeleton,Textarea,ModalHeader,ModalFooter} from "@/design-system";
 import {cashOperationResolver} from "../domain/cash-schema";
 import {availableCashCollaborators} from "../domain/collaborators";
 import {useSession} from "@/providers";
 import type {CashOperationDraft,CashRegister,CashShift,CashShiftUser,CashUserOption} from "../domain/types";
 
-export function CashTeamDialog({shift,users,options,loading,busyUserId,close,assign,unassign}:{shift:CashShift;users:CashShiftUser[];options:CashUserOption[];loading:boolean;busyUserId:string|null;close:()=>void;assign:(userId:string)=>void;unassign:(userId:string)=>void}){
+const CashCollaboratorSearch=dynamic(()=>import("./cash-collaborator-search").then(module=>module.CashCollaboratorSearch),{ssr:false,loading:()=><Skeleton height="var(--control-height)"/>});
+
+export function CashTeamDialog({shift,users,options,loading,error,retrying,retry,busyUserId,close,assign,unassign}:{shift:CashShift;users:CashShiftUser[];options:CashUserOption[];loading:boolean;error?:string;retrying?:boolean;retry?:()=>void;busyUserId:string|null;close:()=>void;assign:(userId:string)=>void;unassign:(userId:string)=>void}){
   const[selected,setSelected]=useState("");
   const {user:currentUser}=useSession();
   const available=useMemo(()=>availableCashCollaborators(options,users,currentUser?.id??"",shift.status),[options,users,currentUser?.id,shift.status]);
@@ -17,14 +20,12 @@ export function CashTeamDialog({shift,users,options,loading,busyUserId,close,ass
     <ModalHeader title="Equipo del turno" titleId="cash-team-title" icon="users" subtitle={shift.cashRegisterName.toUpperCase()} onClose={close} closeLabel="Cerrar"/>
     <div className="cash-team-body">
       <p className="cash-dialog-intro">Los colaboradores pueden cobrar desde POS mientras este turno siga abierto. La asignación no cambia su rol ni permite administrar la caja.</p>
+      {error?<ErrorState title="No pudimos cargar el equipo" text={error} onRetry={retry} retrying={retrying}/>:<>
       <div className="cash-team-add">
-        <FormField label="Agregar al equipo">
-          <Select value={selected} onChange={event=>setSelected(event.target.value)} disabled={loading||!available.length}>
-            <option value="">{loading?"Cargando usuarios…":available.length?"Selecciona un usuario":"No hay usuarios disponibles"}</option>
-            {available.map(option=><option value={option.id} key={option.id}>{option.name}</option>)}
-          </Select>
+        <FormField as="div" label={<label htmlFor="cash-team-user">Agregar al equipo</label>}>
+          <CashCollaboratorSearch options={available} value={selected} onChange={setSelected} disabled={loading||!available.length||Boolean(busyUserId)} loading={loading}/>
         </FormField>
-        <Button icon="plus" disabled={!available.some(option=>option.id===selected)||Boolean(busyUserId)} onClick={()=>{if(available.some(option=>option.id===selected)){assign(selected);setSelected("")}}}>Asignar</Button>
+        <Button icon="plus" disabled={loading||!available.some(option=>option.id===selected)||Boolean(busyUserId)} onClick={()=>{if(!loading&&!busyUserId&&available.some(option=>option.id===selected)){assign(selected);setSelected("")}}}>Asignar</Button>
       </div>
       <section className="cash-team-list">
         <header><small>Equipo actual</small><b>{users.length} {users.length===1?"persona":"personas"}</b></header>
@@ -32,6 +33,7 @@ export function CashTeamDialog({shift,users,options,loading,busyUserId,close,ass
         :users.length?users.map(user=><div className="cash-team-member" key={user.userId}><span><Icon name="users" size={16}/></span><div><b>{user.name}</b><small>Asignado al turno</small></div><Button kind="ghost" disabled={Boolean(busyUserId)} onClick={()=>unassign(user.userId)} loading={busyUserId===user.userId}>{busyUserId===user.userId?"Quitando…":"Quitar"}</Button></div>)
         :<EmptyState className="cash-state-compact" icon="users" title="Sin equipo asignado" text="Asigna personas para que operen este turno."/>}
       </section>
+      </>}
     </div>
   </Dialog></div>;
 }

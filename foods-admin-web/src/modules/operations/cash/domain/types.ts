@@ -29,6 +29,8 @@ export type CashShift={
   cashRegisterName:string;
   blindClose:boolean;
   expectedVisible:boolean;
+  /** False for occupancy-only projections of another cashier's register. */
+  detailsVisible?:boolean;
   status:CashShiftStatus;
   openingAmount:string;
   incomeAmount:string;

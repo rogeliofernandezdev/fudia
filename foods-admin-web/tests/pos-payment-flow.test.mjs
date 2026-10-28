@@ -9,7 +9,7 @@ const require=createRequire(import.meta.url);
 const root=new URL("../src/modules/operations/pos/presentation/",import.meta.url);
 const serviceFlowExports={};
 vm.runInNewContext(ts.transpileModule(readFileSync(new URL("../src/modules/operations/orders/domain/service-flow.ts",import.meta.url),"utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{exports:serviceFlowExports});
-const detail={order:{billClosedAt:"2026-10-07T13:00:00Z",id:"order-1",code:"PED-001",channel:"salon",status:"entregado",tableName:"Mesa 04",customerName:"",total:"40",createdAt:"2026-10-07T12:00:00Z",items:[]},paidAmount:"10",remainingAmount:"30",paymentStatus:"partial",payments:[]};
+const detail={order:{waiterId:"waiter",billClosedAt:"2026-10-07T13:00:00Z",id:"order-1",code:"PED-001",channel:"salon",status:"entregado",tableName:"Mesa 04",customerName:"",total:"40",createdAt:"2026-10-07T12:00:00Z",items:[]},paidAmount:"10",remainingAmount:"30",paymentStatus:"partial",payments:[]};
 const primitives=Object.fromEntries(["Button","EmptyState","ErrorState","FormField","Icon","Input","PageHeader","Pagination","RowActionButton","SearchField","Select","Status","Textarea","ModalHeader","ModalFooter","ModalWorkspace","ModalItemList","DetailHero","DetailContact","DetailFacts","DetailTimeline","Tabs","Skeleton"].map(name=>[name,name]));
 function nodes(tree){const result=[];function visit(node){if(!node||typeof node!=="object")return;if(Array.isArray(node)){node.forEach(visit);return}result.push(node);visit(node.props?.children);visit(node.props?.action);visit(node.props?.summary);visit(node.props?.status);visit(node.props?.steps?.map?.(step=>step.aside))}visit(tree);return result}
 function compile(file,resolve,extra=""){
@@ -18,7 +18,7 @@ function compile(file,resolve,extra=""){
  vm.runInNewContext(ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText,{exports,require:resolve});
  return exports;
 }
-function mountPage({canManage=true,shift=true,busy=false,initialOrderId="order-1",listed=[]}={}){
+function mountPage({canManage=true,shift=true,busy=false,initialOrderId="order-1",listed=[],userId="waiter"}={}){
  const queries=[],mutations=[],changes=[],sent=[],invalidations=[],notices=[];let stateIndex=0,dynamicIndex=0;
  const resolve=name=>{
   if(name==="next/dynamic")return{default:()=>["PaymentDialog","RefundDialog","PaymentTicketDialog"][dynamicIndex++]};
@@ -31,7 +31,7 @@ function mountPage({canManage=true,shift=true,busy=false,initialOrderId="order-1
   };
   if(name==="@/design-system")return primitives;
   if(name==="@/design-system/dialog")return{Dialog:"Dialog"};
-  if(name==="@/providers")return{useFeedback:()=>({notify:value=>notices.push(value)}),useMoney:()=>value=>`S/ ${value}`,useSession:()=>({can:()=>canManage,location:{country:"PE",timezone:"America/Lima"}})};
+  if(name==="@/providers")return{useFeedback:()=>({notify:value=>notices.push(value)}),useMoney:()=>value=>`S/ ${value}`,useSession:()=>({can:()=>canManage,user:{id:userId},location:{country:"PE",timezone:"America/Lima"}})};
   if(name==="@/providers/settings-context")return{useSettings:()=>({currencySymbol:"S/",currencyDecimals:2,currencyPosition:"before"})};
   if(name==="@/shared/i18n/regional-format")return{formatRegionalNumber:value=>String(value),formatRegionalDateTime:()=>"Hoy"};
   if(name==="@/shared/hooks/use-debounced-value")return{useDebouncedValue:value=>value};
@@ -57,6 +57,18 @@ test("un colaborador asignado cobra sin cash.manage; al perder el turno se bloqu
  assert.equal(revoked.entry.props.canCollect,false);
  revoked.entry.props.save({method:"cash",amount:"30",reference:""});
  assert.equal(revoked.sent.length,0);
+});
+
+test("el colaborador no abre el cobro ni muestra la acción para la atención de otro mozo",()=>{
+ const foreign=mountPage({canManage:false,userId:"other",listed:[{...detail.order,paymentStatus:"partial"}]});
+ assert.equal(foreign.entry.props.canCollect,false);
+ assert.equal(nodes(foreign.tree).some(node=>node.type==="RowActionButton"&&node.props.action==="charge"),false);
+ foreign.entry.props.save({payments:[{method:"cash",amount:30}]});
+ assert.equal(foreign.sent.length,0);
+ const own=mountPage({canManage:false,listed:[{...detail.order,paymentStatus:"partial"}]});
+ assert.ok(nodes(own.tree).some(node=>node.type==="RowActionButton"&&node.props.action==="charge"));
+ const cashier=mountPage({canManage:true,userId:"other",listed:[{...detail.order,paymentStatus:"partial"}]});
+ assert.ok(nodes(cashier.tree).some(node=>node.type==="RowActionButton"&&node.props.action==="charge"));
 });
 function entryProps(changes={}){return{loading:false,data:detail,shiftLoading:false,shiftName:"Caja principal",methodsLoading:false,methods:catalog,retryMethods:()=>{},canCollect:true,busy:false,formatMoney:value=>`S/ ${value}`,close:()=>{},retryOrder:()=>{},retryShift:()=>{},save:()=>{},...changes}}
 

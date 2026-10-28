@@ -79,7 +79,7 @@ func TestCashShiftUsersTransferCountsAndBlindClose(t *testing.T) {
 	api.getCurrentCashShift(currentRec,currentReq)
 	var current struct{Shift *cashShiftView `json:"shift"`}
 	if err:=json.Unmarshal(currentRec.Body.Bytes(),&current);err!=nil{t.Fatal(err)}
-	if current.Shift==nil||current.Shift.ID!=shift1.ID{t.Fatalf("assigned user must resolve first shift, got %#v",current.Shift)}
+	if current.Shift!=nil{t.Fatalf("assignment must not expose another cashier's financial shift, got %#v",current.Shift)}
 
 	conflictBody:=[]byte(fmt.Sprintf(`{"userId":%q}`,user2ID))
 	conflictReq:=httptest.NewRequest("POST","/v1/admin/cash-shifts/"+shift1.ID+"/users",bytes.NewReader(conflictBody))

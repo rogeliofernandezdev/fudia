@@ -121,6 +121,14 @@ Los autocompletes de catálogos grandes no cargan el catálogo completo. La aper
 
 ## Performance de consultas en cliente
 
+Equipo del turno reutiliza el selector buscable `react-select` y los estilos de
+lookup compartidos. Filtra por nombre, sin distinguir tildes ni mayúsculas,
+sobre los colaboradores del local ya cargados desde `cash-users/options`:
+escribir no dispara peticiones. Esta lista de equipo no es un catálogo masivo.
+La caché incluye empresa, local y usuario; asignar/quitar invalida las opciones.
+El API mantiene la autorización y las exclusiones definitivas al asignar.
+Errores de opciones o equipo bloquean la asignación y ofrecen Reintentar.
+
 Locales y Mi perfil comparten la lectura de suscripción, con caché por empresa
 y usuario y refresco al recuperar foco. «Nuevo local» consulta `maxLocations`
 y el uso activo devueltos por el API; no deduce capacidad por nombre de plan,

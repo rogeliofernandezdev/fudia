@@ -30,6 +30,7 @@ type CashShiftView struct {
 	ExpenseAmount         string             `json:"expenseAmount"`
 	ExpectedAmount        string             `json:"expectedAmount"`
 	ExpectedVisible       bool               `json:"expectedVisible"`
+	DetailsVisible        bool               `json:"detailsVisible"`
 	ClosingExpectedAmount *string            `json:"closingExpectedAmount"`
 	ClosingCountedAmount  *string            `json:"closingCountedAmount"`
 	VarianceAmount        *string            `json:"varianceAmount"`

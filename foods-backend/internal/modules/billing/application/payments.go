@@ -68,6 +68,7 @@ func validPOSDates(from, to string) bool {
 }
 
 type PaymentRepository interface {
+	OwnsCollectionOrder(context.Context, scope, string) (bool, error)
 	CollectionShift(context.Context, scope) (*domain.CollectionShift, error)
 	CollectionOrderVisible(context.Context, scope, string, string) (bool, error)
 	CurrentShift(ctx context.Context, s scope) (string, error)
@@ -136,6 +137,9 @@ func (a *Payments) Create(ctx context.Context, s scope, in domain.PaymentInput) 
 	}
 	if err != nil {
 		return result, paymentFailure(apperror.Unavailable, "payments_unavailable", "No pudimos validar el pedido.")
+	}
+	if err := a.requireCollectionOrder(tx.Context(), s, in.OrderID); err != nil {
+		return result, err
 	}
 	if err = func() error { var err error; paid, err = a.repo.PaidForOrder(tx.Context(), s, in); return err }(); err != nil {
 		return result, paymentFailure(apperror.Unavailable, "payments_unavailable", "No pudimos validar el saldo pendiente.")
@@ -320,6 +324,9 @@ func (a *Payments) CreateBatch(ctx context.Context, s scope, in domain.PaymentBa
 	}
 	if err != nil {
 		return result, paymentFailure(apperror.Unavailable, "payments_unavailable", "No pudimos validar el pedido.")
+	}
+	if err := a.requireCollectionOrder(tx.Context(), s, in.OrderID); err != nil {
+		return result, err
 	}
 	if err = func() error { var err error; paid, err = a.repo.BatchPaid(tx.Context(), s, in); return err }(); err != nil {
 		return result, paymentFailure(apperror.Unavailable, "payments_unavailable", "No pudimos validar el saldo pendiente.")

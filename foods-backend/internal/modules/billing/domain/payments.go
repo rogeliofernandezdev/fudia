@@ -17,6 +17,7 @@ type PaymentView struct {
 	CreatedAt        string `json:"createdAt"`
 }
 type PosOrderSummary struct {
+	WaiterID        string   `json:"waiterId"`
 	BillClosed      bool     `json:"billClosed"`
 	ID              string   `json:"id"`
 	Code            string   `json:"code"`

@@ -41,10 +41,12 @@ test("el cajero tiene un enlace de cobro solo con saldo y permiso",()=>{
 test("el colaborador cobra desde Mesa y Pedidos usando el mismo modal de POS sin cash.manage",()=>{
  const closed={...served,billClosedAt:"2026-10-11",remainingAmount:"30"};
  for(const variant of ["table","order"]){
-  const html=renderDetail({order:closed,variant,permissions:["orders.read"],userId:"other",cashCollection:true});
+  const html=renderDetail({order:closed,variant,permissions:["orders.read"],userId:closed.waiterId,cashCollection:true});
   assert.match(html,/Cobrar saldo/);
   assert.ok(html.includes(`href="/pos?orderId=${closed.id}"`));
-  assert.doesNotMatch(html,/Editar comanda|Cancelar pedido|Agregar productos/);
+  assert.doesNotMatch(renderDetail({order:closed,variant,permissions:["orders.read"],userId:"other",cashCollection:true}),/Cobrar saldo/);
+  assert.doesNotMatch(renderDetail({order:{...closed,waiterId:undefined},variant,permissions:["orders.read"],cashCollection:true}),/Cobrar saldo/);
+  assert.doesNotMatch(renderDetail({order:{...closed,channel:"recojo"},variant,permissions:["orders.read"],cashCollection:true}),/Cobrar saldo/);
   assert.doesNotMatch(renderDetail({order:closed,variant,permissions:["orders.read"],cashCollection:false}),/Cobrar saldo/);
  }
 });
