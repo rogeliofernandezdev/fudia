@@ -1,4 +1,5 @@
 export const pageRoutes={
+  home:"/",
   dashboard:"/dashboard",
   sales:"/sales",
   pos:"/pos",

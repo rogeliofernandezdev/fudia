@@ -12,12 +12,12 @@ export function PlatformShell({children}:{children:React.ReactNode}){
   const path=usePathname();
   const{user,isLoading,isError}=useSession();
   if(isLoading)return <FullScreenLoader label="Validando acceso de plataforma"/>;
-  if(isError)return <main className="platform-content"><div className="catalog-state"><b>No pudimos validar tu sesión.</b><Link href={pageRoutes.dashboard}>Volver al admin</Link></div></main>;
-  if(!user?.platformAdmin)return <main className="platform-content"><div className="catalog-state"><b>Acceso restringido</b><p>Solo un administrador de plataforma puede registrar empresas.</p><Link href={pageRoutes.dashboard}>Volver al admin</Link></div></main>;
+  if(isError)return <main className="platform-content"><div className="catalog-state"><b>No pudimos validar tu sesión.</b><Link href={pageRoutes.home}>Volver al admin</Link></div></main>;
+  if(!user?.platformAdmin)return <main className="platform-content"><div className="catalog-state"><b>Acceso restringido</b><p>Solo un administrador de plataforma puede registrar empresas.</p><Link href={pageRoutes.home}>Volver al admin</Link></div></main>;
   return <div className="platform-shell">
     <header className="platform-topbar">
       <div className="platform-brand">
-        <Link href={pageRoutes.dashboard} aria-label="Ir al admin"><Logo/></Link>
+        <Link href={pageRoutes.home} aria-label="Ir al admin"><Logo/></Link>
         <span className="platform-brand-divider" aria-hidden="true"/>
         <span className="platform-context"><small>Plataforma</small><b>Administración SaaS</b></span>
       </div>
@@ -27,7 +27,7 @@ export function PlatformShell({children}:{children:React.ReactNode}){
         <Link className={path===pageRoutes.platformSubscription?"active":""} href={pageRoutes.platformSubscription} aria-current={path===pageRoutes.platformSubscription?"page":undefined}><Icon name="receipt" size={16}/><span>Suscripción actual</span></Link>
         <Link className={path===pageRoutes.platformGlobalSettings?"active":""} href={pageRoutes.platformGlobalSettings} aria-current={path===pageRoutes.platformGlobalSettings?"page":undefined}><Icon name="chat" size={16}/><span>Países y WhatsApp</span></Link>
       </nav>
-      <Link href={pageRoutes.dashboard} className="button secondary platform-exit" aria-label="Volver al admin"><Icon name="chevronLeft" size={16}/>Volver al admin</Link>
+      <Link href={pageRoutes.home} className="button secondary platform-exit" aria-label="Volver al admin"><Icon name="chevronLeft" size={16}/>Volver al admin</Link>
     </header>
     <main className="platform-content">{children}</main>
   </div>;

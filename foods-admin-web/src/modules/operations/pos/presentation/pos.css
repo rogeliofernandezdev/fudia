@@ -71,8 +71,10 @@
 
 /* Modal de cobro y devolución */
 .pos-payment-modal{display:flex;flex-direction:column;width:min(var(--size-640),100%);overflow:hidden}
-.pos-payment-modal>form{display:flex;flex-direction:column;min-height:0;padding:0}
-.pos-payment-body{display:grid;gap:var(--space-3-5);padding:var(--space-5)}
+.pos-payment-modal>.modal-form{overflow:hidden}
+.pos-cash-change{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);padding:var(--space-3);border-radius:var(--radius-tile);background:var(--primary-50);color:var(--ink-600)}
+.pos-cash-change strong{font-size:var(--font-size-md);font-variant-numeric:tabular-nums;color:var(--primary-700)}
+.pos-payment-body{display:grid;grid-auto-rows:max-content;align-content:start;gap:var(--space-3-5)}
 .pos-payment-overview{display:grid;grid-template-columns:1.25fr 1fr;overflow:hidden;border:var(--stroke-1) solid var(--line);border-radius:var(--radius-card);background:var(--surface)}
 .pos-payment-balance{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-3-5);background:var(--primary-50)}
 .pos-payment-balance>span{display:grid;place-items:center;width:var(--size-36);height:var(--size-36);flex:0 0 auto;border-radius:var(--radius-tile);background:var(--primary-100);color:var(--primary-700)}
@@ -169,16 +171,12 @@
  .pos-shift-banner>.button{width:100%}
  .pos-shift-banner>.button,.pos-shift-banner>.status{grid-column:1/-1;width:100%;margin:var(--space-0-5) 0 0;justify-content:center}
  .pos-shift-copy>b{align-items:flex-start;flex-direction:column;gap:var(--space-px)}
- .pos-payment-modal>form{min-height:0;flex:1}
- .pos-payment-body{padding:var(--space-3-5);overflow-y:auto}
  .pos-payment-overview{grid-template-columns:1fr}
  .pos-payment-overview dl{border-top:var(--stroke-1) solid var(--line)}
  .pos-methods{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:minmax(var(--size-126),1fr);padding-bottom:var(--space-1);overflow-x:auto;scrollbar-width:thin}
  .pos-payment-loading-methods{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:minmax(var(--size-126),1fr);overflow:hidden}
  .pos-payment-fields,.refund-fields{grid-template-columns:1fr}
  .pos-refund-note{grid-column:auto}
- .pos-payment-modal form>footer{position:sticky;bottom:0}
- .pos-payment-modal form>footer .button{flex:1}
  .pos-payment-list article{grid-template-columns:var(--size-34) 1fr}
  .pos-payment-values{grid-column:2;justify-items:start}
  .pos-refund-action{grid-column:1/-1;width:100%}

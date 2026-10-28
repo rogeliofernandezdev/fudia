@@ -88,6 +88,8 @@ export type PaymentDraft={
   method:PaymentMethod;
   amount:string;
   reference:string;
+  /** Local cash tender, used to calculate change; never sent as payment revenue. */
+  receivedAmount?:string;
 };
 
 export type RefundDraft={

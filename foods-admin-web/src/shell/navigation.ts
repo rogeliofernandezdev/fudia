@@ -51,8 +51,17 @@ export function visibleNavigation(context:AccessContext){
 }
 
 export function firstAccessibleRoute(context:AccessContext){
-  if(!context.user.platformAdmin&&context.setupRequired&&(context.permissions.includes("*")||context.permissions.includes("organizations.manage")))return pageRoutes.gettingStarted;
+  const setup=navigationItemForPath(pageRoutes.gettingStarted);
+  if(!context.user.platformAdmin&&context.setupRequired&&(context.permissions.includes("*")||context.permissions.includes("organizations.manage"))&&setup&&canOpenNavigationItem(setup,context))return pageRoutes.gettingStarted;
   return visibleNavigation(context)[0]?.items[0]?.href??pageRoutes.noAccess;
+}
+
+/** Resolve generic entry points without granting access to an unavailable dashboard. */
+export function accessibleLandingRedirect(path:string,context:AccessContext){
+  if(path===pageRoutes.home)return firstAccessibleRoute(context);
+  const dashboard=navigationItemForPath(pageRoutes.dashboard);
+  if(path===pageRoutes.dashboard&&dashboard&&!canOpenNavigationItem(dashboard,context))return firstAccessibleRoute(context);
+  return null;
 }
 
 export function navigationItemForPath(path:string){

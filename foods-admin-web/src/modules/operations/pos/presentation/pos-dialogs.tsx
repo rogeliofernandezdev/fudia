@@ -1,27 +1,27 @@
 "use client";
 import {Dialog} from "@/design-system/dialog";
 import {useForm,useWatch} from "react-hook-form";
-import {Button,FormField,FormSection,Icon,Input,Textarea,ModalHeader,ModalFooter} from "@/design-system";
-import {paymentResolver,refundResolver} from "../domain/pos-schema";
+import {Button,FormField,FormSection,Icon,Input,Textarea,ModalHeader,ModalForm,ModalBody,ModalFooter} from "@/design-system";
+import {cashChange,paymentResolverFor,refundResolver} from "../domain/pos-schema";
 import type {Payment,PaymentDraft,PaymentMethodOption,POSOrderSummary,RefundDraft} from "../domain/types";
 
 /** El icono sigue a «Impacta caja»; el nombre y el orden vienen del catálogo. */
 export function paymentMethodIcon(affectsCash:boolean){return affectsCash?"cash" as const:"wallet" as const}
 
-export function PaymentDialog({order,methods,shiftName,busy,formatMoney,close,save}:{order:POSOrderSummary;methods:PaymentMethodOption[];shiftName:string;busy:boolean;formatMoney:(value:number)=>string;close:()=>void;save:(draft:PaymentDraft)=>void}){
+export function PaymentForm({order,methods,shiftName,busy,formatMoney,close,save}:{order:POSOrderSummary;methods:PaymentMethodOption[];shiftName:string;busy:boolean;formatMoney:(value:number)=>string;close:()=>void;save:(draft:PaymentDraft)=>void}){
   const{control,register,handleSubmit,formState:{errors}}=useForm<PaymentDraft>({
-    defaultValues:{method:methods[0]?.code??"",amount:Number(order.remainingAmount).toFixed(2),reference:""},
-    resolver:paymentResolver,
+    defaultValues:{method:methods[0]?.code??"",amount:Number(order.remainingAmount).toFixed(2),reference:"",receivedAmount:""},
+    resolver:paymentResolverFor(methods,Number(order.remainingAmount)),
     mode:"onSubmit",
     reValidateMode:"onChange",
   });
   const method=useWatch({control,name:"method"});
+  const amount=useWatch({control,name:"amount"});
+  const received=useWatch({control,name:"receivedAmount"});
   const selected=methods.find(option=>option.code===method);
-  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal pos-payment-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="pos-payment-title" aria-busy={busy}>
-
-    <ModalHeader title={order.tableName||order.customerName||"Registrar cobro"} titleId="pos-payment-title" icon="cash" subtitle="Cobro" onClose={close} busy={busy} closeLabel="Cerrar"/>
-    <form onSubmit={handleSubmit(save)} noValidate inert={busy}>
-      <div className="pos-payment-body">
+  const change=cashChange(amount,received);
+  return <ModalForm onSubmit={handleSubmit(save)} noValidate inert={busy}>
+      <ModalBody className="pos-payment-body">
         <section className="pos-payment-overview">
           <div className="pos-payment-balance"><span><Icon name="wallet" size={18}/></span><div><small>Saldo a cobrar</small><strong>{formatMoney(Number(order.remainingAmount))}</strong></div></div>
           <dl><div><dt>Total del pedido</dt><dd>{formatMoney(Number(order.total))}</dd></div><div><dt>Pagado</dt><dd>{formatMoney(Number(order.paidAmount))}</dd></div></dl>
@@ -44,16 +44,21 @@ export function PaymentDialog({order,methods,shiftName,busy,formatMoney,close,sa
         <FormField label="Monto" error={errors.amount?.message}>
           <Input type="number" min="0.01" max={order.remainingAmount} step="0.01" inputMode="decimal" {...register("amount")} aria-invalid={Boolean(errors.amount)}/>
         </FormField>
+        {selected?.affectsCash&&<>
+        <FormField label="Efectivo recibido" error={errors.receivedAmount?.message}>
+          <Input type="number" min={amount||"0.01"} step="0.01" inputMode="decimal" {...register("receivedAmount")} aria-invalid={Boolean(errors.receivedAmount)} placeholder="0.00"/>
+        </FormField>
+        <div className="pos-cash-change" role="status" aria-live="polite"><span>Vuelto</span><strong>{change===null?"—":formatMoney(change)}</strong></div>
+        </>}
         {selected&&!selected.affectsCash&&<FormField label="Referencia" optional error={errors.reference?.message}>
           <Input icon="invoice" maxLength={120} {...register("reference")} placeholder="Ej. voucher o número de operación"/>
         </FormField>}
         </div>
         </FormSection>
         {selected?.affectsCash&&<div className="pos-cash-impact"><Icon name="cash" size={14}/><span>Este cobro incrementará automáticamente el efectivo esperado del turno.</span></div>}
-      </div>
+      </ModalBody>
       <ModalFooter><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy} loading={busy}>{busy?"Registrando…":"Registrar cobro"}</Button></ModalFooter>
-    </form>
-  </Dialog></div>;
+    </ModalForm>;
 }
 
 export function RefundDialog({payment,busy,formatMoney,close,save}:{payment:Payment;busy:boolean;formatMoney:(value:number)=>string;close:()=>void;save:(draft:RefundDraft)=>void}){
@@ -67,8 +72,8 @@ export function RefundDialog({payment,busy,formatMoney,close,save}:{payment:Paym
   return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal pos-payment-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="pos-refund-title" aria-busy={busy}>
 
     <ModalHeader title={payment.orderCode} titleId="pos-refund-title" icon="undo" subtitle="Devolución" onClose={close} busy={busy} closeLabel="Cerrar"/>
-    <form onSubmit={handleSubmit(save)} noValidate inert={busy}>
-      <div className="pos-payment-body">
+    <ModalForm onSubmit={handleSubmit(save)} noValidate inert={busy}>
+      <ModalBody className="pos-payment-body">
         <div className="pos-refund-source"><span className={"pos-payment-method"+(payment.affectsCash?" cash":"")}><Icon name={paymentMethodIcon(payment.affectsCash)} size={16}/></span><div><small>Pago disponible para devolver</small><strong>{formatMoney(max)}</strong><span>{payment.methodName} · {payment.cashRegisterName}</span></div></div>
         <FormSection icon="undo" tone="peach" title="Datos de la devolución" bare>
         <div className="pos-payment-fields refund-fields">
@@ -84,8 +89,8 @@ export function RefundDialog({payment,busy,formatMoney,close,save}:{payment:Paym
         </div>
         </FormSection>
         {payment.affectsCash&&<div className="pos-refund-warning"><Icon name="alert" size={14}/><span>La devolución saldrá del efectivo esperado del turno que estás operando ahora.</span></div>}
-      </div>
+      </ModalBody>
       <ModalFooter><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" kind="danger" icon="undo" disabled={busy} loading={busy}>{busy?"Devolviendo…":"Confirmar devolución"}</Button></ModalFooter>
-    </form>
+    </ModalForm>
   </Dialog></div>;
 }

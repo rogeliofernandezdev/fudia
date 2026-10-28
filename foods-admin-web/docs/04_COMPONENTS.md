@@ -692,6 +692,18 @@ El texto inferior describe la espera («Preparando tu espacio»,
 
 ## Primitivas homologadas (usar siempre antes que soluciones locales)
 
+POS conserva un único `Dialog` al cargar y registrar un cobro: `POSPaymentEntry`
+mantiene cabecera, backdrop y foco mientras alterna skeleton, error o `PaymentForm`.
+El formulario se importa directamente para evitar un segundo montaje o una espera
+vacía al descargar su código. Los medios provienen del catálogo; cuando
+`affectsCash` está activo se exige «Efectivo recibido» mayor o igual al monto del
+cobro y se muestra «Vuelto» calculado, también en pagos parciales. Recibido y vuelto
+son ayudas locales: el API recibe solo el monto cobrado para no inflar Caja.
+Cobro y devolución usan `ModalForm` → `ModalBody` + `ModalFooter`: el formulario
+no añade padding, el cuerpo aplica el margen compartido y es el único scroll.
+El pie queda al ras del panel, sin márgenes negativos ni estilos sticky propios;
+conserva las acciones visibles en móvil.
+
 Todas se exportan desde `@/design-system` (salvo `useMoney`, desde `@/providers`).
 Un módulo no debe definir su propio estado vacío, skeleton, buscador, pestañas,
 pastilla de estado ni formateador de dinero.

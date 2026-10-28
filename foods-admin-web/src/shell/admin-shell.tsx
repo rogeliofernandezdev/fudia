@@ -17,7 +17,7 @@ import {pageRoutes} from "@/shared/routing/page-routes";
 import {deleteSession} from "@/shared/session/session-api";
 import {beginSignOut} from "@/shared/session/expire-session";
 import {broadcastSessionChange} from "@/shared/session/session-events";
-import {canOpenNavigationItem,firstAccessibleRoute,moduleIsActive,navigationItemForPath,visibleNavigation} from "./navigation";
+import {accessibleLandingRedirect,canOpenNavigationItem,firstAccessibleRoute,moduleIsActive,navigationItemForPath,visibleNavigation} from "./navigation";
 import {AdminSessionError} from "./admin-session-error";
 import {NavigationSearch} from "./navigation-search";
 import {AccountRole} from "./account-role";
@@ -32,6 +32,9 @@ export function AdminShell({children}:{children:React.ReactNode}){
  const homeHref=navigationContext?firstAccessibleRoute(navigationContext):pageRoutes.noAccess;
  const currentItem=navigationItemForPath(path);
  const blockReason=isPlatformAdmin?null:!currentItem?null:currentItem.platformAdminOnly?"platform":!modules||!moduleIsActive(modules,currentItem.module)?"module":navigationContext&&!canOpenNavigationItem(currentItem,navigationContext)?"role":null;
+ const sessionReady=!isLoading&&!isError&&!isUnauthorized&&Boolean(user&&location&&modules&&menuAccess);
+ const landingRedirect=sessionReady&&navigationContext?accessibleLandingRedirect(path,navigationContext):null;
+ useEffect(()=>{if(landingRedirect)router.replace(landingRedirect)},[landingRedirect,router]);
  // Una sola navegación sin recarga: la caché se vacía al desmontar el panel, no antes (evita el 401 en cadena).
  const leaving=useRef(false);
  useEffect(()=>()=>{if(leaving.current)queryClient.clear()},[queryClient]);
@@ -41,6 +44,7 @@ export function AdminShell({children}:{children:React.ReactNode}){
  if(isUnauthorized)return <FullScreenLoader label="Tu sesión finalizó"/>;
  if(isError)return <AdminSessionError fullPage icon="alert" eyebrow="SESIÓN NO DISPONIBLE" title="No pudimos cargar tu sesión" description="Comprueba tu conexión e inténtalo nuevamente. Si el problema continúa, vuelve al inicio de sesión."><button className="admin-session-error-primary" type="button" onClick={()=>window.location.reload()}><Icon name="refresh" size={18}/>Reintentar</button><button className="admin-session-error-secondary" type="button" disabled={signingOut} onClick={()=>void logout()}><Icon name="logout" size={18}/>{signingOut?"Cerrando sesión…":"Volver al inicio de sesión"}</button></AdminSessionError>;
  if(isLoading||!user||!location||!modules||!menuAccess)return <FullScreenLoader label="Preparando tu espacio"/>;
+ if(landingRedirect)return <FullScreenLoader label="Abriendo tu espacio"/>;
  return <div className="admin-shell" data-sidebar={collapsed?"collapsed":"expanded"}>
   {menuOpen&&<button className="sidebar-scrim" aria-label="Cerrar navegación" onClick={()=>setMenuOpen(false)}/>} 
   <aside className={`sidebar${menuOpen?" open":""}`} aria-label="Navegación principal"><div className="sidebar-brand"><Link href={homeHref} onClick={()=>setMenuOpen(false)}><Logo inverse/></Link><button className="sidebar-close" onClick={()=>setMenuOpen(false)} aria-label="Cerrar navegación"><Icon name="close"/></button></div><nav>{visibleGroups.map(group=><section key={group.label}><small>{group.label}</small>{group.items.map(item=><Link key={item.href} href={item.href} onClick={()=>setMenuOpen(false)} className={currentItem?.href===item.href?"active":""} aria-current={currentItem?.href===item.href?"page":undefined} aria-label={item.name} title={item.name}><span className="nav-icon"><Icon name={item.icon}/></span><span>{item.name}</span></Link>)}</section>)}</nav></aside>

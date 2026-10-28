@@ -43,7 +43,7 @@ test("los controles compactos conservan 44 px en táctil y móvil",()=>{
 
 test("Próximamente usa el retorno compartido mediante pageRoutes",()=>{
  const page=read("shared/management/coming-soon-page.tsx");
- assert.match(page,/back=\{\{href:pageRoutes\.dashboard,label:"Volver al inicio"\}\}/);
+ assert.match(page,/back=\{\{href:pageRoutes\.home,label:"Volver al inicio"\}\}/);
  assert.match(page,/<EmptyState icon="settings" title="Próximamente"/);
  assert.doesNotMatch(page,/href="\/dashboard"|settings-back/,"el enlace suelto no tenía estilo: icono y texto en dos filas de 36 px");
 });

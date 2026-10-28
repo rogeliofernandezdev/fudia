@@ -374,7 +374,7 @@ test("pos cobra pedidos y sincroniza efectivo con caja",()=>{
   assert.ok(page.includes('useState("all")'),"POS muestra todos los cobros por defecto");
   assert.ok(page.includes("getPOSCollectionAccess"),"POS exige un turno asignado sin consultar saldos administrativos");
   assert.ok(page.includes("No estás asignado a una caja abierta"),"POS explica claramente cuando falta turno");
-  assert.ok(page.includes("PaymentDialog"),"POS registra cobros desde la bandeja");
+  assert.ok(page.includes("PaymentForm"),"POS registra cobros desde la bandeja dentro del modal estable");
   assert.ok(page.includes("RefundDialog"),"POS permite devolver pagos existentes");
   assert.ok(dialogs.includes("incrementará automáticamente el efectivo esperado"),"El cobro en efectivo comunica su impacto en Caja");
   assert.ok(dialogs.includes("La devolución saldrá del efectivo esperado"),"La devolución en efectivo comunica su impacto en Caja");

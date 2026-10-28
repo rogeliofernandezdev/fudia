@@ -47,6 +47,16 @@ ejecutar dentro de ellas. El sidebar y la protección de rutas consumen
 validar cada petición. Conceder un permiso no concede automáticamente una opción
 del menú, ni conceder una opción autoriza sus acciones.
 
+La entrada `/` pertenece al layout autenticado y espera el contexto antes de
+redirigir a `firstAccessibleRoute`, igual que login y cambio de local. Si se abre
+`/dashboard` sin acceso efectivo (menú, permiso de lectura y módulo activo), el
+shell reemplaza la ruta por ese mismo destino permitido sin mostrar el contenido
+del Dashboard ni el aviso de acceso denegado durante la transición. No se infiere
+el destino por el nombre del rol. Sin opciones válidas se entra a `/no-access`;
+los enlaces genéricos de regreso al inicio usan `/`. Puesta en marcha solo tiene
+prioridad si también es accesible. Las demás rutas restringidas mantienen su
+aviso y la autorización definitiva del API no cambia.
+
 Carta y productos usa las etiquetas «Ver carta y productos» y «Administrar carta
 y productos» del catálogo remoto. Sin `menu.manage`, Productos y Categorías
 conservan lectura, filtros y paginación, pero no muestran altas, edición,

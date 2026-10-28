@@ -16,6 +16,41 @@ const context={user:{platformAdmin:false},modules:{reportes:true,pos:true,pedido
 const impulso={...context,modules:{...context.modules,reservas:true,recetas:true,inventario:true,kardex:true,compras:true,costos:true}};
 const keys=ctx=>navigation.visibleNavigation(ctx).flatMap(group=>group.items.map(item=>item.module));
 
+test("inicio y Dashboard no habilitado llevan al primer acceso efectivo del cajero",()=>{
+ const cashier={...context,menuAccess:["caja"],permissions:["cash.read","cash.manage"]};
+ assert.equal(navigation.firstAccessibleRoute(cashier),"/cash");
+ for(const path of ["/","/dashboard"])assert.equal(navigation.accessibleLandingRedirect(path,cashier),"/cash");
+ const pos={...cashier,menuAccess:["caja","pos"],permissions:[...cashier.permissions,"orders.read"]};
+ assert.equal(navigation.accessibleLandingRedirect("/dashboard",pos),"/pos");
+ assert.equal(navigation.accessibleLandingRedirect("/pos",pos),null);
+ assert.equal(navigation.accessibleLandingRedirect("/settings/users",pos),null);
+});
+
+test("el inicio respeta revocación de permisos, módulos y colaboradores temporales",()=>{
+ const cashier={...context,menuAccess:["pos","caja"],permissions:["orders.read","cash.read"]};
+ assert.equal(navigation.accessibleLandingRedirect("/",{...cashier,modules:{...context.modules,pos:false}}),"/cash");
+ assert.equal(navigation.accessibleLandingRedirect("/",{...cashier,permissions:["cash.read"]}),"/cash");
+ assert.equal(navigation.accessibleLandingRedirect("/dashboard",{...cashier,permissions:[]}),"/no-access");
+ assert.equal(navigation.accessibleLandingRedirect("/",{...context,menuAccess:[],permissions:[],cashCollection:true}),"/pos");
+});
+
+test("Dashboard se conserva para quien tiene acceso y sin opciones no hay bucles",()=>{
+ assert.equal(navigation.accessibleLandingRedirect("/",context),"/dashboard");
+ assert.equal(navigation.accessibleLandingRedirect("/dashboard",context),null);
+ const none={...context,menuAccess:[],permissions:[]};
+ assert.equal(navigation.accessibleLandingRedirect("/",none),"/no-access");
+ assert.equal(navigation.accessibleLandingRedirect("/no-access",none),null);
+ assert.equal(navigation.accessibleLandingRedirect("/dashboard",{...none,user:{platformAdmin:true},modules:{}}),null);
+});
+
+test("puesta en marcha tiene prioridad únicamente cuando es accesible",()=>{
+ const setup={...context,setupRequired:true};
+ assert.equal(navigation.firstAccessibleRoute(setup),"/settings/getting-started");
+ const restricted={...setup,menuAccess:["caja"],permissions:["organizations.manage","cash.read"]};
+ assert.equal(navigation.firstAccessibleRoute(restricted),"/cash");
+ assert.equal(navigation.firstAccessibleRoute({...setup,modules:{...context.modules,locales:false}}),"/dashboard");
+});
+
 test("Emprende presenta venta, atención y Concierge sin abastecimiento ni control",()=>{
  const modules=keys(context);
  for(const key of ["productos","combos","whatsapp_bot"])assert.ok(modules.includes(key),key);
