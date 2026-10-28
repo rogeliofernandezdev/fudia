@@ -41,7 +41,7 @@ type ContentProps<T extends Order>={
 };
 
 export function OrderDetailContent<T extends Order>({variant,order,error,retrying=false,canManage:hasPermission,busy,close,retry,advance,add,cancel,edit}:ContentProps<T>){
-  const{location,user,can}=useSession();
+  const{location,user,can,cashCollection}=useSession();
   const money=useMoney();
   const[tab,setTab]=useState<"products"|"tracking">("products");
   const table=variant==="table";
@@ -51,7 +51,7 @@ export function OrderDetailContent<T extends Order>({variant,order,error,retryin
   const paid=Number(order?.paidAmount??0);
   const remaining=Number(order?.remainingAmount??order?.total??0);
   const hasPayments=paid>0.00001;
-  const canCharge=Boolean(can("cash.manage")&&order&&canChargeAccount(order)&&remaining>0.00001);
+  const canCharge=Boolean((can("cash.manage")||cashCollection)&&order&&canChargeAccount(order)&&remaining>0.00001);
   const canCancel=Boolean(order&&canCancelOrder(order));
   const editable=Boolean(edit&&order&&isEditableOrder(order)&&(!(order.serviceItems?.length)||order.status==="nuevo"));
   const actionIcon=action?.status==="entregado"?"availability":action?.status==="confirmado"?"chefHat":action?.icon;

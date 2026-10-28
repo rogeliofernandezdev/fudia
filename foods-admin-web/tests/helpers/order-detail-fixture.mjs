@@ -19,7 +19,7 @@ export const exampleOrder={id:"preview-order",code:"PED-004",channel:"salon",sta
  {id:"s-one",orderItemId:"one",name:"Caldo de Gallina Tradicional",destination:"cocina",destinationLabel:"Cocina",status:"pendiente",statusLabel:"Pendiente"},
  {id:"s-two",orderItemId:"two",name:"Jarra de Chicha Morada (1.5 L)",destination:"barra",destinationLabel:"Barra",status:"pendiente",statusLabel:"Pendiente"}
 ]};
-export function detailComponents({userId="preview-waiter",permissions=["orders.manage"],includePOS=false,includeComanda=false,category="",categoriesOpen=false,comandaOpen=false,catalogState="ready",extraCategories=false}={}){
+export function detailComponents({userId="preview-waiter",permissions=["orders.manage"],cashCollection=false,includePOS=false,includeComanda=false,category="",categoriesOpen=false,comandaOpen=false,catalogState="ready",extraCategories=false}={}){
  const cache=new Map();
  function load(path){
   const file=resolve(root,path);
@@ -40,7 +40,7 @@ export function detailComponents({userId="preview-waiter",permissions=["orders.m
     return {useQuery:()=>({data:{items:names.map((name,index)=>({id:`cat${index}`,name}))},isLoading:catalogState==="loading",isError:catalogState==="category-error",isFetching:false,refetch:()=>{}}),useInfiniteQuery:options=>({data:{pages:[{items:catalogState==="empty"?[]:options.queryKey[1]==="combos"?[{id:"combo1",name:"Menú criollo",price:"25",groupCount:3,imageUrl:null},{id:"combo2",name:"Combo para compartir",price:"48",groupCount:2,imageUrl:null}]:products,total:6}]},isLoading:catalogState==="loading",isError:catalogState==="error",error:new Error("Sin conexión de prueba"),isFetching:false,hasNextPage:false,isFetchingNextPage:false,refetch:()=>{},fetchNextPage:()=>{}})};
    }
    if(name==="next/link")return {__esModule:true,default:({children,...props})=>h("a",props,children)};
-   if(name==="@/providers")return {useSession:()=>({user:{id:userId},location:{country:"PE",timezone:"America/Lima"},can:value=>permissions.includes(value)}),useMoney:()=>value=>`S/ ${Number(value).toFixed(2)}`,useFeedback:()=>({notify:()=>{}})};
+   if(name==="@/providers")return {useSession:()=>({user:{id:userId},location:{country:"PE",timezone:"America/Lima"},cashCollection,can:value=>permissions.includes(value)}),useMoney:()=>value=>`S/ ${Number(value).toFixed(2)}`,useFeedback:()=>({notify:()=>{}})};
    if(name==="@/providers/feedback-provider")return {useFeedback:()=>({notify:()=>{}})};
    if(name==="@/design-system")return {...load("design-system/page-header.tsx"),...load("design-system/icons.tsx"),...load("design-system/icon-tile.tsx"),...load("design-system/detail-view.tsx"),...load("design-system/tabs.tsx"),...load("design-system/skeleton.tsx"),...load("design-system/states.tsx"),...load("design-system/modal.tsx"),...(includeComanda?{...load("design-system/dialog.tsx"),...load("design-system/confirm-dialog.tsx"),...load("design-system/form-field.tsx"),...load("design-system/form-controls.tsx"),...load("design-system/search-field.tsx")}:{})};
    if(name==="../infrastructure/service-api")return {closeOrderAccount:()=>{throw new Error("API writes are disabled in visual fixtures");}};
@@ -56,8 +56,8 @@ export function detailComponents({userId="preview-waiter",permissions=["orders.m
  }
  return {...load("modules/operations/orders/domain/order-actions.ts"),...load("modules/operations/orders/domain/service-flow.ts"),...load("modules/operations/orders/presentation/order-detail-dialog.tsx"),...load("design-system/modal.tsx"),...load("modules/operations/orders/presentation/order-meta.ts"),...load("modules/operations/orders/presentation/order-service-controls.tsx"),...load("modules/sales/presentation/sale-detail-dialog.tsx"),...(includePOS?load("modules/operations/pos/presentation/pos-page.tsx"):{}),...(includeComanda?load("modules/operations/orders/presentation/comanda-view.tsx"):{})};
 }
-export function renderDetail({order=exampleOrder,skeleton=false,error,variant="order",permissions,userId,busy=false,editable=false}={}){
- const {OrderDetailContent,OrderDetailSkeleton}=detailComponents({permissions,userId});
+export function renderDetail({order=exampleOrder,skeleton=false,error,variant="order",permissions,userId,cashCollection=false,busy=false,editable=false}={}){
+ const {OrderDetailContent,OrderDetailSkeleton}=detailComponents({permissions,userId,cashCollection});
  const noop=()=>{};
  return renderToStaticMarkup(h(QueryClientProvider,{client:new QueryClient()},
   h("div",{className:"modal-backdrop"},h("section",{className:"crud-modal order-detail",role:"dialog","aria-modal":true,"aria-labelledby":"order-detail-title"},

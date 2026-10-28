@@ -4,6 +4,11 @@
 una asignación activa a un turno abierto. No añade `cash.manage`, permisos ni
 accesos permanentes al rol. POS consulta `pos/access`, cuya proyección no incluye
 saldos administrativos; cobro y devolución mantienen condiciones distintas.
+El acceso «Cobrar saldo» en los detalles de Mesa y Pedidos también reconoce
+`cashCollection`. Enlaza a `/pos?orderId=…`, que abre el formulario compartido
+de cobro para esa cuenta. Sigue exigiendo entrega, cierre de cuenta y saldo;
+no concede edición de otras mesas ni registra pagos al abrir. POS vuelve a
+consultar el turno y el backend valida la asignación al confirmar cada cobro.
 El equipo de turno excluye al actor, asignados y turnos cerrados en cliente;
 la API filtra administradores, inactivos y usuarios ajenos al local y vuelve a
 validar todo al asignar. El backend es la autoridad sobre revocación y cierre,

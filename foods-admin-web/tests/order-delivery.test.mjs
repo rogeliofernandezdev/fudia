@@ -37,6 +37,24 @@ test("el cajero tiene un enlace de cobro solo con saldo y permiso",()=>{
  assert.doesNotMatch(renderDetail({order:closed,permissions:[]}),/Cobrar saldo/);
  assert.doesNotMatch(renderDetail({order:{...closed,remainingAmount:"0"},permissions:["cash.manage"]}),/Cobrar saldo/);
 });
+
+test("el colaborador cobra desde Mesa y Pedidos usando el mismo modal de POS sin cash.manage",()=>{
+ const closed={...served,billClosedAt:"2026-10-11",remainingAmount:"30"};
+ for(const variant of ["table","order"]){
+  const html=renderDetail({order:closed,variant,permissions:["orders.read"],userId:"other",cashCollection:true});
+  assert.match(html,/Cobrar saldo/);
+  assert.ok(html.includes(`href="/pos?orderId=${closed.id}"`));
+  assert.doesNotMatch(html,/Editar comanda|Cancelar pedido|Agregar productos/);
+  assert.doesNotMatch(renderDetail({order:closed,variant,permissions:["orders.read"],cashCollection:false}),/Cobrar saldo/);
+ }
+});
+
+test("la autorización temporal no permite cobrar cuentas abiertas, pendientes de entrega o pagadas",()=>{
+ const closed={...served,billClosedAt:"2026-10-11",remainingAmount:"30"};
+ for(const order of [served,ready,{...closed,remainingAmount:"0"},{...closed,completedAt:"2026-10-11"},{...closed,serviceItems:[{status:"listo"}]}]){
+  assert.doesNotMatch(renderDetail({order,variant:"table",permissions:[],cashCollection:true}),/Cobrar saldo/);
+ }
+});
 test("mozos ajenos no administran entrega ni cobro",()=>{
  assert.equal(canManageOrderService(ready,"preview-waiter"),true);
  assert.equal(canManageOrderService(ready,"other"),false);
