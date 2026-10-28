@@ -86,6 +86,7 @@
 .cash-history-toolbar>p{display:flex;align-items:center;gap:var(--space-2);margin:0;color:var(--ink-400);font-size:var(--font-size-label);line-height:var(--line-height-snug)}
 .cash-history-table td{font-variant-numeric:tabular-nums}
 .cash-history-table table{min-width:var(--size-1020)}
+.cash-history-table .cash-history-amount{text-align:right;white-space:nowrap}
 .cash-attribution{min-width:var(--size-150);max-width:var(--size-260);white-space:normal;overflow-wrap:anywhere}
 .cash-balanced{color:var(--ink-700)}
 .cash-positive{color:var(--primary-700);font-weight:var(--weight-semibold)}

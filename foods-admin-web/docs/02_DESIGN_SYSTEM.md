@@ -2459,11 +2459,20 @@ En hasta 760 px, las tres herramientas se agrupan en una fila, Ingreso y
 Egreso comparten la siguiente y Cerrar turno ocupa una fila completa; no quedan
 botones de texto aislados con media fila vacía.
 
-El historial de Turnos tiene ocho columnas, con Caja primero y sus movimientos
+El historial de Turnos tiene diez columnas: Caja, Día operativo, Cajero / cierre,
+Apertura, Cierre, Efectivo esperado, Efectivo contado, Resultado, Estado y Acciones.
+Caja va primero y sus movimientos
 en `small`; no hay columna de código de turno y la búsqueda se presenta «por caja
 o persona». Peso visual ligero: sin icono repetido en cada fila (el estado ya
-distingue abierto y cerrado), Caja y responsable en peso regular con su rol en `small`. La diferencia cero se muestra en `ink-700` regular; solo un sobrante
-(`primary-700`) o un faltante (`danger`) llevan color y seminegrita.
+distingue abierto y cerrado), Caja y responsable en peso regular con su rol en `small`.
+Los importes se alinean a la derecha y usan cifras tabulares. En turnos cerrados,
+esperado y contado proceden de los valores guardados al cierre; no se reconstruyen
+desde los movimientos actuales. Resultado usa `Status`: Cuadrado (`green`),
+Sobrante (`blue`) o Faltante (`red`); los dos últimos muestran debajo el importe
+absoluto de la diferencia guardada. En turnos abiertos, esperado respeta el cierre
+ciego, contado muestra «—» y resultado «Pendiente». Un dato de cierre ausente no
+se convierte en cero ni en Cuadrado: se muestra «Sin registro». En móvil conserva
+las columnas y el desplazamiento horizontal de `DataTable`, con Caja fija.
 
 ### Detalle del turno
 

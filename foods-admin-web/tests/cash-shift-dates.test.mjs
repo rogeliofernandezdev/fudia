@@ -92,6 +92,51 @@ test("el historial conserva apertura y cierre y no inventa cierre en un turno ab
  assert.equal(times[1].props.children,expected(closed.closedAt));
 });
 
+function historyCells(changes){
+ return mountPage({...shift,...changes},"history").all.filter(node=>node.type==="td");
+}
+function cellText(cell){
+ const text=node=>node==null||typeof node==="boolean"?"":Array.isArray(node)?node.map(text).join(""):typeof node==="object"?text(node.props?.children):String(node);
+ return text(cell);
+}
+
+test("el historial explica el faltante con el esperado y contado guardados al cerrar",()=>{
+ const cells=historyCells({status:"closed",expectedAmount:"999",closingExpectedAmount:"65.00",closingCountedAmount:"59.97",varianceAmount:"-5.03"});
+ assert.equal(cells.length,10);
+ assert.equal(cellText(cells[5]),"S/ 65");
+ assert.equal(cellText(cells[6]),"S/ 59.97");
+ assert.equal(cellText(cells[7]),"FaltanteS/ 5.03");
+ assert.equal(nodes(cells[7]).find(node=>node.type==="Status").props.tone,"red");
+});
+
+test("el resultado distingue sobrante y cuadrado, incluso con contado cero",()=>{
+ for(const [expected,counted,variance,label,tone] of [["60","65","5","SobranteS/ 5","blue"],["0","0","0","Cuadrado","green"]]){
+  const cells=historyCells({status:"closed",closingExpectedAmount:expected,closingCountedAmount:counted,varianceAmount:variance});
+  assert.equal(cellText(cells[7]),label);
+  assert.equal(nodes(cells[7]).find(node=>node.type==="Status").props.tone,tone);
+  assert.equal(cellText(cells[6]),"S/ "+Number(counted));
+ }
+});
+
+test("un turno abierto muestra esperado actual y resultado pendiente, respetando cierre ciego",()=>{
+ const open={expectedAmount:"150",closingCountedAmount:"100",varianceAmount:"-50"};
+ const cells=historyCells(open);
+ assert.equal(cellText(cells[5]),"S/ 150");
+ assert.equal(cellText(cells[6]),"—");
+ assert.equal(cellText(cells[7]),"Pendiente");
+ const blind=historyCells({...open,expectedVisible:false});
+ assert.equal(cellText(blind[5]),"Cierre ciego");
+ assert.equal(cellText(blind[6]),"—");
+ assert.equal(cellText(blind[7]),"Pendiente");
+});
+
+test("un cierre sin datos no inventa un importe cero ni un resultado cuadrado",()=>{
+ for(const missing of [null,undefined,"","invalid"]){
+  const cells=historyCells({status:"closed",expectedAmount:"65",closingExpectedAmount:missing,closingCountedAmount:missing,varianceAmount:missing});
+  for(const index of [5,6,7])assert.equal(cellText(cells[index]),"Sin registro");
+ }
+});
+
 test("el detalle identifica claramente Apertura y Cierre junto a sus autores",()=>{
  const {resolve,date}=mountPage();
  const {CashShiftDetailDialog}=compile("modules/operations/cash/presentation/cash-dialogs.tsx",resolve);

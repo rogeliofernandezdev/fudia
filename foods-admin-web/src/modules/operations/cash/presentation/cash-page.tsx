@@ -18,7 +18,13 @@ import {CashReportDialog} from "./cash-report-dialog";
 import {CashOperationDialog,CashTeamDialog} from "./cash-advanced-dialogs";
 
 type CashTab="registers"|"history";
-const historyColumns=["Caja","Día operativo","Cajero / cierre","Apertura","Cierre","Diferencia","Estado","Acciones"];
+const historyColumns=["Caja","Día operativo","Cajero / cierre","Apertura","Cierre","Efectivo esperado","Efectivo contado","Resultado","Estado","Acciones"];
+
+function recordedAmount(value:string|null|undefined){
+  if(value==null||value.trim()==="")return null;
+  const amount=Number(value);
+  return Number.isFinite(amount)?amount:null;
+}
 
 export function CashPage(){
   const qc=useQueryClient();
@@ -262,9 +268,12 @@ export function CashPage(){
           :history.isError?<ErrorState title="No pudimos cargar los turnos" text={history.error.message} onRetry={()=>void history.refetch()}/>
           :!historyItems.length?<EmptyState icon="clock" title={q||status?"Sin coincidencias":"Aún no hay turnos registrados"} text={q||status?"Ajusta la búsqueda o el filtro.":"Cuando una caja cierre su primer turno aparecerá aquí para consulta."}/>
           :<DataTable label="Historial de turnos de caja" containerClassName="hover-scroll cash-history-table">
-            <thead><tr>{historyColumns.map(column=><th key={column}>{column}</th>)}</tr></thead>
+            <thead><tr>{historyColumns.map((column,index)=><th className={index>=5&&index<=7?"cash-history-amount":undefined} scope="col" key={column}>{column}</th>)}</tr></thead>
             <tbody>{historyItems.map((item,index)=>{
-              const variance=Number(item.varianceAmount??0);
+              const closed=item.status==="closed";
+              const expected=recordedAmount(closed?item.closingExpectedAmount:item.expectedVisible?item.expectedAmount:null);
+              const counted=closed?recordedAmount(item.closingCountedAmount):null;
+              const variance=closed?recordedAmount(item.varianceAmount):null;
               const attribution=cashShiftAttribution(item);
               return <tr className={index%2?"alternate":""} key={item.id}>
                 <td>{item.cashRegisterName}<small>{item.movementCount} {item.movementCount===1?"movimiento":"movimientos"}</small></td>
@@ -272,7 +281,12 @@ export function CashPage(){
                 <td className="cash-attribution"><span>{attribution.name}</span><small>{attribution.label}</small></td>
                 <td><time dateTime={item.openedAt}>{dateTime(item.openedAt)}</time></td>
                 <td>{item.closedAt?<time dateTime={item.closedAt}>{dateTime(item.closedAt)}</time>:"—"}</td>
-                <td><span className={item.status==="open"?"cash-neutral":variance===0?"cash-balanced":variance>0?"cash-positive":"cash-negative"}>{item.status==="open"?"—":(variance>0?"+":"")+money(variance)}</span></td>
+                <td className="cash-history-amount">{!closed&&!item.expectedVisible?<span className="cash-neutral">Cierre ciego</span>:expected===null?<span className="cash-neutral">Sin registro</span>:money(expected)}</td>
+                <td className="cash-history-amount">{!closed?"—":counted===null?<span className="cash-neutral">Sin registro</span>:money(counted)}</td>
+                <td className="cash-history-amount">{!closed?<span className="cash-neutral">Pendiente</span>:variance===null?<span className="cash-neutral">Sin registro</span>:<>
+                  <Status tone={variance===0?"green":variance>0?"blue":"red"}>{variance===0?"Cuadrado":variance>0?"Sobrante":"Faltante"}</Status>
+                  {variance!==0&&<small>{money(Math.abs(variance))}</small>}
+                </>}</td>
                 <td><Status tone={item.status==="open"?"green":"gray"}>{item.status==="open"?"Abierto":"Cerrado"}</Status></td>
                 <td><div className="table-actions"><RowActionButton action="view" label={`Ver turno de ${item.cashRegisterName} del ${businessDate(item.businessDate)}`} onClick={()=>setDetailId(item.id)}/></div></td>
               </tr>;
