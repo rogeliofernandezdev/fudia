@@ -50,7 +50,7 @@ test("distingue carga, lista vacía y ausencia de coincidencias",()=>{
 function nodes(tree){const out=[];function visit(node){if(!node||typeof node!=="object")return;if(Array.isArray(node)){node.forEach(visit);return}out.push(node);visit(node.props?.children)}visit(tree);return out}
 const collaborators=compile("modules/operations/cash/domain/collaborators.ts");
 function dialog(props={}){
- const calls=[];
+ const calls=[],removed=[];
  const {CashTeamDialog}=compile("modules/operations/cash/presentation/cash-advanced-dialogs.tsx",name=>{
   if(name==="react")return{useState:()=>["first-id",()=>{}],useMemo:fn=>fn()};
   if(name==="next/dynamic")return{default:()=>"CashCollaboratorSearch"};
@@ -61,8 +61,8 @@ function dialog(props={}){
   if(name.endsWith("cash-schema"))return{};
   return require(name);
  });
- const tree=CashTeamDialog({shift:{status:"open",cashRegisterName:"Caja principal"},users:[],options,loading:false,busyUserId:null,assign:id=>calls.push(id),unassign:()=>{},close:()=>{},...props});
- return{all:nodes(tree),calls};
+ const tree=CashTeamDialog({shift:{status:"open",cashRegisterName:"Caja principal"},users:[],options,loading:false,busyUserId:null,assign:id=>calls.push(id),unassign:id=>removed.push(id),close:()=>{},...props});
+ return{all:nodes(tree),calls,removed};
 }
 
 test("asigna solo la selección disponible y bloquea dobles acciones o datos cargando",()=>{
@@ -88,4 +88,20 @@ test("un error remoto ofrece reintento y no muestra controles de asignación",()
  error.props.onRetry();
  assert.equal(retries,1);
  assert.equal(view.all.some(node=>node.type==="CashCollaboratorSearch"),false);
+});
+
+test("el responsable se omite de colaboradores y búsqueda incluso al consultar como otro usuario",()=>{
+ const shift={status:"open",cashRegisterName:"Caja principal",openedById:"responsible"};
+ const view=dialog({shift,users:[{userId:"responsible",name:"Cajera responsable"},{userId:"helper",name:"Mozo colaborador"}],options:[...options,{id:"responsible",name:"Cajera responsable",assignedShiftId:null}]});
+ assert.equal(view.all.some(node=>node.type==="b"&&node.props.children==="Cajera responsable"),false);
+ assert.ok(view.all.some(node=>node.type==="b"&&node.props.children==="Mozo colaborador"));
+ const search=view.all.find(node=>node.type==="CashCollaboratorSearch");
+ assert.equal(search.props.options.some(option=>option.id==="responsible"),false);
+ const remove=view.all.filter(node=>node.type==="Button"&&node.props.children==="Quitar");
+ assert.equal(remove.length,1);
+ remove[0].props.onClick();
+ assert.deepEqual(view.removed,["helper"]);
+ const ownOnly=dialog({shift,users:[{userId:"responsible",name:"Cajera responsable"}]});
+ assert.ok(ownOnly.all.some(node=>node.type==="EmptyState"&&node.props.title==="Sin colaboradores"));
+ assert.equal(ownOnly.all.some(node=>node.type==="Button"&&node.props.children==="Quitar"),false);
 });

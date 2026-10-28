@@ -44,6 +44,10 @@ reservados/de plataforma, al actor, inactivos y usuarios sin rol activo en el
 local. Los índices existentes impiden duplicados y otro turno activo en el local.
 El responsable que abre un turno se incorpora por el flujo de apertura, separado
 de la asignación de colaboradores; conserva sus facultades administrativas.
+Ese vínculo interno permanece activo, pero el responsable se excluye del listado
+y del resumen de colaboradores. Retirarlo devuelve `409 cash_shift_owner_not_removable`
+bajo bloqueo del turno; también se impide en SQL. El cierre libera el vínculo
+mediante su flujo habitual. No cambia cómo se autoriza la operación del cajero.
 Cerrar exige además que el usuario autenticado coincida con `opened_by`.
 No existe excepción para otro cajero o administrador. Se verifica bajo bloqueo
 antes de guardar conteos y se repite la condición en el UPDATE de cierre.

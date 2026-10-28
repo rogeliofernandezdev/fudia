@@ -204,6 +204,8 @@ func (r *Payments) UnassignUser(ctx context.Context, s scope, id string, userID 
 		  AND shift_id=$3
 		  AND user_id=$4
 		  AND unassigned_at IS NULL
+		  AND EXISTS (SELECT 1 FROM cash_shifts cs WHERE cs.id=$3
+		    AND cs.organization_id=$1 AND cs.location_id=$2 AND cs.opened_by<>$4)
 	`, s.OrganizationID, s.LocationID, id, userID)
 	return tag.RowsAffected(), billingError(err)
 }
@@ -280,6 +282,7 @@ const cashShiftColumns = `
 	  JOIN users u ON u.id=su.user_id AND u.organization_id=su.organization_id
 	  WHERE su.shift_id=cs.id AND su.organization_id=cs.organization_id
 	    AND su.location_id=cs.location_id AND su.unassigned_at IS NULL
+	    AND su.user_id<>cs.opened_by
 	    AND cs.status='open'
 	  ORDER BY su.assigned_at,u.full_name,su.user_id
 	),
@@ -521,9 +524,11 @@ func (r *Payments) ShiftUsers(ctx context.Context, s scope, id string) ([]domain
 		SELECT su.user_id::text,u.full_name,to_char(su.assigned_at,'YYYY-MM-DD"T"HH24:MI:SSOF')
 		FROM cash_shift_users su
 		JOIN users u ON u.id=su.user_id AND u.organization_id=su.organization_id
+		JOIN cash_shifts cs ON cs.id=su.shift_id AND cs.organization_id=su.organization_id AND cs.location_id=su.location_id
 		WHERE su.organization_id=$1
 		  AND su.location_id=$2
 		  AND su.shift_id=$3
+		  AND su.user_id<>cs.opened_by
 		  AND su.unassigned_at IS NULL
 		ORDER BY su.assigned_at,u.full_name
 	`, s.OrganizationID, s.LocationID, id)

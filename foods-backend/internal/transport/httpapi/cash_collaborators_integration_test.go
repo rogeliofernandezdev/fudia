@@ -87,6 +87,35 @@ func TestCashCollaboratorsCollectWithTemporaryAuthority(t *testing.T) {
 		return cashierCall("POST", "/v1/admin/cash-shifts/"+shift+"/users", map[string]string{"userId": id})
 	}
 
+	t.Run("responsable interno no aparece ni puede retirarse como colaborador", func(t *testing.T) {
+		for _, call := range []func(string, string, any) *httptest.ResponseRecorder{cashierCall, companySession(t, api, administrator)} {
+			listed := call("GET", "/v1/admin/cash-shifts/"+shift+"/users", nil)
+			expect(listed, 200)
+			var team struct {
+				Items []struct {
+					UserID string `json:"userId"`
+				} `json:"items"`
+			}
+			if err := json.Unmarshal(listed.Body.Bytes(), &team); err != nil {
+				t.Fatal(err)
+			}
+			for _, person := range team.Items {
+				if person.UserID == s.UserID {
+					t.Fatal("responsible cashier exposed as collaborator")
+				}
+			}
+			denied := call("DELETE", "/v1/admin/cash-shifts/"+shift+"/users/"+s.UserID, nil)
+			expect(denied, 409)
+			if !strings.Contains(denied.Body.String(), "cash_shift_owner_not_removable") {
+				t.Fatal(denied.Body.String())
+			}
+		}
+		var active bool
+		if err := pool.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM cash_shift_users WHERE shift_id=$1 AND user_id=$2 AND unassigned_at IS NULL)`, shift, s.UserID).Scan(&active); err != nil || !active {
+			t.Fatalf("responsible association lost: %v %v", active, err)
+		}
+		expect(cashierCall("GET", "/v1/admin/pos/access", nil), 200)
+	})
 	t.Run("selector y restricciones de asignación", func(t *testing.T) {
 		rec := cashierCall("GET", "/v1/admin/cash-users/options", nil)
 		expect(rec, 200)

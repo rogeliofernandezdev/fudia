@@ -57,14 +57,14 @@ func TestCashShiftAttributionKeepsOpeningAndTracksTeamAndCloser(t *testing.T) {
 		t.Fatal(err)
 	}
 	opened := decode(request(s, api.openCashShift, "POST", "/v1/admin/cash-shifts", fmt.Sprintf(`{"cashRegisterId":%q,"openingAmount":100}`, register.ID), "", "", 201))
-	if opened.OpenedByName != "Jimena" || !reflect.DeepEqual(opened.ActiveUserNames, []string{"Jimena"}) {
+	if opened.OpenedByName != "Jimena" || len(opened.ActiveUserNames) != 0 {
 		t.Fatalf("opening: %#v", opened)
 	}
 	path := "/v1/admin/cash-shifts/" + opened.ID
-	request(s, api.unassignCashShiftUser, "DELETE", path+"/users/"+s.UserID, "", opened.ID, s.UserID, 204)
+	request(s, api.unassignCashShiftUser, "DELETE", path+"/users/"+s.UserID, "", opened.ID, s.UserID, 409)
 	removed := decode(request(s, api.getCashShift, "GET", path, "", opened.ID, "", 200))
 	if removed.OpenedByName != "Jimena" || removed.ActiveUserNames == nil || len(removed.ActiveUserNames) != 0 {
-		t.Fatalf("removal must leave empty team and keep opening audit: %#v", removed)
+		t.Fatalf("protected responsible must stay separate from collaborators: %#v", removed)
 	}
 	request(s, api.assignCashShiftUser, "POST", path+"/users", fmt.Sprintf(`{"userId":%q}`, edithID), opened.ID, "", 201)
 	assigned := decode(request(s, api.getCashShift, "GET", path, "", opened.ID, "", 200))

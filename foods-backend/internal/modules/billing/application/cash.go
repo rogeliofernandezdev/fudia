@@ -415,6 +415,15 @@ func (a *Cash) Unassign(ctx context.Context, s scope, id string, userID string) 
 	if !open {
 		return paymentFailure(apperror.Conflict, "cash_shift_closed", "El turno ya está cerrado.")
 	}
+	targetScope := s
+	targetScope.UserID = userID
+	responsible, err := a.repo.OwnsShift(tx.Context(), targetScope, id)
+	if err != nil {
+		return paymentFailure(apperror.Unavailable, "cash_unavailable", "No pudimos validar al responsable del turno.")
+	}
+	if responsible {
+		return paymentFailure(apperror.Conflict, "cash_shift_owner_not_removable", "El cajero responsable no se puede quitar del turno.")
+	}
 	tag, err := a.repo.UnassignUser(tx.Context(), s, id, userID)
 	if err != nil {
 		return paymentFailure(apperror.Unavailable, "cash_unavailable", "No pudimos retirar al usuario del turno.")

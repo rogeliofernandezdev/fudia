@@ -14,7 +14,8 @@ const CashCollaboratorSearch=dynamic(()=>import("./cash-collaborator-search").th
 export function CashTeamDialog({shift,users,options,loading,error,retrying,retry,busyUserId,close,assign,unassign}:{shift:CashShift;users:CashShiftUser[];options:CashUserOption[];loading:boolean;error?:string;retrying?:boolean;retry?:()=>void;busyUserId:string|null;close:()=>void;assign:(userId:string)=>void;unassign:(userId:string)=>void}){
   const[selected,setSelected]=useState("");
   const {user:currentUser}=useSession();
-  const available=useMemo(()=>availableCashCollaborators(options,users,currentUser?.id??"",shift.status),[options,users,currentUser?.id,shift.status]);
+  const collaborators=useMemo(()=>users.filter(user=>user.userId!==shift.openedById),[users,shift.openedById]);
+  const available=useMemo(()=>availableCashCollaborators(options,users,currentUser?.id??"",shift.status).filter(option=>option.id!==shift.openedById),[options,users,currentUser?.id,shift.status,shift.openedById]);
   return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal cash-modal cash-team-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="cash-team-title">
 
     <ModalHeader title="Equipo del turno" titleId="cash-team-title" icon="users" subtitle={shift.cashRegisterName.toUpperCase()} onClose={close} closeLabel="Cerrar"/>
@@ -28,10 +29,10 @@ export function CashTeamDialog({shift,users,options,loading,error,retrying,retry
         <Button icon="plus" disabled={loading||!available.some(option=>option.id===selected)||Boolean(busyUserId)} onClick={()=>{if(!loading&&!busyUserId&&available.some(option=>option.id===selected)){assign(selected);setSelected("")}}}>Asignar</Button>
       </div>
       <section className="cash-team-list">
-        <header><small>Equipo actual</small><b>{users.length} {users.length===1?"persona":"personas"}</b></header>
+        <header><small>Colaboradores</small><b>{collaborators.length} {collaborators.length===1?"persona":"personas"}</b></header>
         {loading?<div role="status" aria-busy="true" aria-label="Cargando equipo del turno">{Array.from({length:2},(_,index)=><div className="cash-team-member" aria-hidden="true" key={index}><Skeleton className="cash-sk-icon"/><span className="cash-sk-lines"><Skeleton className="cash-sk-line"/><Skeleton className="cash-sk-line short"/></span><Skeleton className="cash-sk-action"/></div>)}</div>
-        :users.length?users.map(user=><div className="cash-team-member" key={user.userId}><span><Icon name="users" size={16}/></span><div><b>{user.name}</b><small>Asignado al turno</small></div><Button kind="ghost" disabled={Boolean(busyUserId)} onClick={()=>unassign(user.userId)} loading={busyUserId===user.userId}>{busyUserId===user.userId?"Quitando…":"Quitar"}</Button></div>)
-        :<EmptyState className="cash-state-compact" icon="users" title="Sin equipo asignado" text="Asigna personas para que operen este turno."/>}
+        :collaborators.length?collaborators.map(user=><div className="cash-team-member" key={user.userId}><span><Icon name="users" size={16}/></span><div><b>{user.name}</b><small>Asignado al turno</small></div><Button kind="ghost" disabled={Boolean(busyUserId)} onClick={()=>{if(user.userId!==shift.openedById)unassign(user.userId)}} loading={busyUserId===user.userId}>{busyUserId===user.userId?"Quitando…":"Quitar"}</Button></div>)
+        :<EmptyState className="cash-state-compact" icon="users" title="Sin colaboradores" text="Agrega personas para apoyar los cobros de este turno."/>}
       </section>
       </>}
     </div>
