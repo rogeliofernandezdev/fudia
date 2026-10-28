@@ -1,10 +1,12 @@
 /** Código de un medio del catálogo de la empresa (Configuración › Medios de pago). */
+import type {TipPolicy,TipReceipt} from "../../tips";
 export type PaymentMethod=string;
 /** Medio activo y habilitado para ventas, en el orden del catálogo. */
 export type PaymentMethodOption={code:string;name:string;affectsCash:boolean};
 export type PaymentStatus="pending"|"partial"|"paid";
 
 export type POSOrderSummary={
+ deliveryFee?:string;
   waiterId?:string;
   id:string;
   code:string;
@@ -70,6 +72,8 @@ export type Payment={
 };
 
 export type POSOrderDetail={
+ tipPolicy?:TipPolicy;
+ tip?:TipReceipt;
   order:POSOrder;
   paidAmount:string;
   remainingAmount:string;
@@ -85,6 +89,10 @@ export type POSOrdersResponse={
 };
 
 export type PaymentDraft={
+ tipEnabled?:boolean;
+ tipKind?:"percentage"|"fixed";
+ tipValue?:string;
+ tipDirectToStaff?:boolean;
   method:PaymentMethod;
   amount:string;
   reference:string;

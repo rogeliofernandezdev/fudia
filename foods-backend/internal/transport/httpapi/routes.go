@@ -4,6 +4,12 @@ import "net/http"
 
 func (a *API) Routes() *http.ServeMux {
 	m := http.NewServeMux()
+	if a.handlers.Tips != nil {
+		m.Handle("GET /v1/admin/tip-settings", a.auth(a.requirePermission("organizations.read", http.HandlerFunc(a.handlers.Tips.GetSettings))))
+		m.Handle("PUT /v1/admin/tip-settings", a.auth(a.requirePermission("organizations.manage", http.HandlerFunc(a.handlers.Tips.UpdateSettings))))
+		m.Handle("GET /v1/admin/cash-shifts/{id}/tips", a.auth(a.requirePermission("cash.read", http.HandlerFunc(a.handlers.Tips.Workspace))))
+		m.Handle("POST /v1/admin/cash-shifts/{id}/tip-payouts", a.auth(a.requirePermission("cash.manage", http.HandlerFunc(a.handlers.Tips.Payout))))
+	}
 	m.HandleFunc("POST /v1/auth/login", a.login)
 	m.HandleFunc("POST /v1/auth/logout", a.logout)
 	m.Handle("GET /v1/platform/onboarding/catalogs", a.auth(a.requirePlatformAdmin(http.HandlerFunc(a.getPlatformOnboardingCatalogs))))

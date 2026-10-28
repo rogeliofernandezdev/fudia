@@ -7,10 +7,10 @@ export type PaymentTicketLayout={height:number;pages:{texts:TicketText[];rules:n
 
 // 80 mm roll with a conservative 70 mm content area. Large tickets continue,
 // rather than exceeding PDF page limits or truncating consumption lines.
-export function layoutPaymentTicket(detail:SaleDetail,paymentId?:string):PaymentTicketLayout{
+export function layoutPaymentTicket(detail:SaleDetail,paymentId?:string,mode:"payment"|"prebill"="payment"):PaymentTicketLayout{
  const measure=new jsPDF({unit:"mm",format:[80,500],orientation:"portrait"});
  const pages:PaymentTicketLayout["pages"]=[{texts:[],rules:[]}];let y=6;
- for(const row of paymentTicketRows(detail,paymentId)){
+ for(const row of paymentTicketRows(detail,paymentId,mode)){
   if(row.rule){if(y>475){pages.push({texts:[],rules:[]});y=6;}pages.at(-1)!.rules.push(y+1);y+=5;continue;}
   const size=row.size??9,lineHeight=size*.352778*1.35;
   measure.setFont("helvetica",row.bold?"bold":"normal");measure.setFontSize(size);

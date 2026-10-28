@@ -54,8 +54,10 @@ import (
 func New(db *pgxpool.Pool) *integrationAPI {
 	orders := orderapp.New(orderpg.New(db), database.NewUnitOfWork(db), auditpg.New(db), inventoryapp.NewStock(inventorypg.NewStock(db), database.NewUnitOfWork(db), auditpg.New(db)))
 	identityService := identityapp.New(identitypg.New(db), credentials.Credentials{})
-	payments := billingapp.NewPayments(billingpg.NewPayments(db), database.NewUnitOfWork(db), auditpg.New(db), billingapp.NewMethods(billingpg.NewMethods(db), database.NewUnitOfWork(db)), orders).WithAuthorization(identityService)
+	tips := billingapp.NewTips(billingpg.NewPayments(db), database.NewUnitOfWork(db))
+	payments := billingapp.NewPayments(billingpg.NewPayments(db), database.NewUnitOfWork(db), auditpg.New(db), billingapp.NewMethods(billingpg.NewMethods(db), database.NewUnitOfWork(db)), orders).WithAuthorization(identityService).WithTips(tips)
 	return &integrationAPI{db: db, API: NewWithHandlers(Handlers{
+		Tips:                   billinghttp.NewTips(tips),
 		Organizations:          orghttp.New(orgapp.New(orgpg.New(db), database.NewUnitOfWork(db), subscriptionapp.NewAccess(subscriptionpg.NewAccess(db)), auditpg.New(db))),
 		Subscriptions:          subscriptionhttp.New(subscriptionapp.New(subscriptionpg.New(db), database.NewUnitOfWork(db), auditpg.New(db))),
 		Platform:               platformhttp.New(platformapp.New(platformpg.New(db), database.NewUnitOfWork(db), orgapp.New(orgpg.New(db), database.NewUnitOfWork(db), subscriptionapp.NewAccess(subscriptionpg.NewAccess(db)), auditpg.New(db)), subscriptionapp.New(subscriptionpg.New(db), database.NewUnitOfWork(db), auditpg.New(db)), credentials.Credentials{}, platformdiag.Diagnostics{}, platformdiag.Diagnostics{})),

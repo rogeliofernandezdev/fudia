@@ -1,7 +1,49 @@
 openapi: 3.1.0
-info: { title: Foods API, version: 0.14.0, description: API operativa y administrativa multiempresa. }
+info: { title: Foods API, version: 0.15.0, description: API operativa y administrativa multiempresa. }
 servers: [{ url: http://localhost:8080 }]
 paths:
+  /v1/admin/tip-settings:
+    get:
+      operationId: getTipSettings
+      summary: Configuración efectiva de propinas del restaurante o local
+      security: [{ sessionCookie: [] }]
+      parameters: [{ name: scope, in: query, schema: { type: string, enum: [organization, location], default: location } }]
+      responses:
+        "200": { description: Exige organizations.read, content: { application/json: { schema: { $ref: "#/components/schemas/TipPolicy" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    put:
+      operationId: updateTipSettings
+      summary: El administrador configura las propinas o restaura la herencia del local
+      security: [{ sessionCookie: [] }]
+      parameters: [{ name: scope, in: query, schema: { type: string, enum: [organization, location], default: location } }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/TipSettingsInput" } } } }
+      responses:
+        "200": { description: Configuración guardada, content: { application/json: { schema: { $ref: "#/components/schemas/TipPolicy" } } } }
+        "400": { description: Porcentaje, canales o configuración inválida }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/cash-shifts/{id}/tips:
+    get:
+      operationId: getCashShiftTips
+      summary: Propinas del turno, saldo disponible y trabajadores del local
+      description: Exige cash.read y ser el cajero de apertura o administrador reservado. available incluye pendientes de turnos anteriores dentro del alcance permitido; report.pending corresponde a los recibidos en el turno consultado.
+      security: [{ sessionCookie: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Propinas y destinatarios, content: { application/json: { schema: { $ref: "#/components/schemas/TipWorkspace" } } } }
+        "404": { description: Turno inexistente o ajeno }
+  /v1/admin/cash-shifts/{id}/tip-payouts:
+    post:
+      operationId: createTipPayout
+      summary: Entrega auditada de propinas al personal
+      description: Exige cash.manage, turno abierto asignado y titularidad de apertura o administrador reservado. Efectivo reduce el cajón; transferencia solo reduce pendiente. requestKey es obligatorio e idempotente para el mismo actor, turno y contenido. Bloquea saldos antes de asignarlos e impide sobregiros concurrentes.
+      security: [{ sessionCookie: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/TipPayoutInput" } } } }
+      responses:
+        "201": { description: Entrega registrada o repetición de la misma solicitud, content: { application/json: { schema: { $ref: "#/components/schemas/TipPayout" } } } }
+        "400": { description: Moneda, destinatario o monto inválido }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: Saldo insuficiente, turno cerrado o clave reutilizada con otro contenido }
   /v1/admin/product-images/uploads:
     post:
       operationId: authorizeProductImageUpload
@@ -1525,6 +1567,7 @@ paths:
                     type: object
                     required: [method, amount]
                     properties:
+                      tip: { $ref: "#/components/schemas/TipInput" }
                       method: { type: string, minLength: 1 }
                       amount: { type: number, exclusiveMinimum: 0 }
                       reference: { type: string, maxLength: 120 }
@@ -2224,12 +2267,13 @@ components:
         collectedAmount: { type: string }
         refundedAmount: { type: string }
         netCollectedAmount: { type: string }
+        tips: { $ref: "#/components/schemas/TipReport" }
     CashRegister: { type: object, required: [id, code, name, active, blindClose, openShift], properties: { id: { type: string, format: uuid }, code: { type: string }, name: { type: string }, active: { type: boolean }, blindClose: { type: boolean }, openShift: { anyOf: [{ $ref: "#/components/schemas/CashShift" }, { type: "null" }] } } }
     CashShiftOpenInput: { type: object, required: [cashRegisterId, openingAmount], properties: { cashRegisterId: { type: string, format: uuid }, openingAmount: { type: number, minimum: 0 }, note: { type: string, maxLength: 240 } } }
     CashMovementInput: { type: object, required: [movementType, amount, reason], properties: { movementType: { type: string, enum: [income, expense] }, amount: { type: number, exclusiveMinimum: 0 }, reason: { type: string, minLength: 1, maxLength: 120 }, note: { type: string, maxLength: 240 } } }
     CashCountLine: { type: object, required: [denomination, quantity], properties: { denomination: { type: number, exclusiveMinimum: 0 }, quantity: { type: integer, minimum: 0 } } }
     CashShiftCloseInput: { type: object, description: "Informa countedAmount o counts. Si counts contiene líneas, el backend calcula el total contado.", properties: { countedAmount: { type: number, minimum: 0 }, counts: { type: array, items: { $ref: "#/components/schemas/CashCountLine" } }, note: { type: string, maxLength: 240 } } }
-    CashMovement: { type: object, required: [id, movementType, sourceType, amount, reason, note, createdByName, createdAt], properties: { id: { type: string, format: uuid }, movementType: { type: string, enum: [income, expense] }, sourceType: { type: string, enum: [manual, cash_sale, cash_refund, cash_pull, transfer_in, transfer_out, deposit, adjustment] }, sourceId: { type: [string, "null"], format: uuid }, amount: { type: string }, reason: { type: string }, note: { type: string }, createdByName: { type: string }, createdAt: { type: string, format: date-time } } }
+    CashMovement: { type: object, required: [id, movementType, sourceType, amount, reason, note, createdByName, createdAt], properties: { id: { type: string, format: uuid }, movementType: { type: string, enum: [income, expense] }, sourceType: { type: string, enum: [manual, cash_sale, cash_refund, cash_pull, transfer_in, transfer_out, deposit, adjustment, cash_tip, tip_payout] }, sourceId: { type: [string, "null"], format: uuid }, amount: { type: string }, reason: { type: string }, note: { type: string }, createdByName: { type: string }, createdAt: { type: string, format: date-time } } }
     CashShift: { type: object, required: [id, code, cashRegisterId, cashRegisterName, blindClose, expectedVisible, detailsVisible, status, openingAmount, incomeAmount, expenseAmount, expectedAmount, openingNote, closingNote, openedByName, closedByName, activeUserNames, businessDate, openedAt, movementCount], properties: { id: { type: string, format: uuid }, code: { type: string }, cashRegisterId: { type: string, format: uuid }, cashRegisterName: { type: string }, blindClose: { type: boolean }, expectedVisible: { type: boolean, description: "False en una caja ajena o cuando el turno usa cierre ciego y el usuario no tiene cash.expected.read." }, detailsVisible: { type: boolean, description: "False en la proyección de ocupación de una caja ajena. No incluye importes, notas, movimientos ni equipo. No concede acceso al detalle ni al informe." }, status: { type: string, enum: [open, closed] }, openingAmount: { type: string }, incomeAmount: { type: string }, expenseAmount: { type: string }, expectedAmount: { type: string, description: "Vacío durante un cierre ciego sin permiso para consultar el esperado." }, closingExpectedAmount: { type: [string, "null"] }, closingCountedAmount: { type: [string, "null"] }, varianceAmount: { type: [string, "null"] }, openingNote: { type: string }, closingNote: { type: string }, openedById: { type: string, format: uuid, description: "UUID del abridor; solo esta identidad puede cerrar. Puede faltar en informes históricos persistidos." }, openedByName: { type: string, description: "Persona que abrió el turno; no cambia al modificar el equipo." }, closedByName: { type: string, description: "Persona autenticada que cerró el turno; vacío mientras está abierto." }, activeUserNames: { type: array, items: { type: string }, description: "Colaboradores adicionales activos; excluye al cajero responsable. Vacío cuando no hay colaboradores o el turno está cerrado." }, businessDate: { type: string, format: date }, openedAt: { type: string, format: date-time }, closedAt: { type: [string, "null"], format: date-time }, movementCount: { type: integer, minimum: 0 }, movements: { type: array, items: { $ref: "#/components/schemas/CashMovement" } } } }
     CashShiftList: { type: object, required: [items, total, page, pageSize], properties: { items: { type: array, items: { $ref: "#/components/schemas/CashShift" } }, total: { type: integer, minimum: 0 }, page: { type: integer, minimum: 1 }, pageSize: { type: integer, minimum: 1 } } }
     CashShiftUser: { type: object, required: [userId, name, assignedAt], properties: { userId: { type: string, format: uuid }, name: { type: string }, assignedAt: { type: string, format: date-time } } }
@@ -2239,7 +2283,7 @@ components:
     CashOperation: { type: object, required: [id, operationType, amount, reason, note, createdAt], properties: { id: { type: string, format: uuid }, operationType: { type: string, enum: [cash_pull, deposit, transfer] }, amount: { type: string }, reason: { type: string }, note: { type: string }, createdAt: { type: string, format: date-time } } }
     POSOrderSummary: { type: object, required: [id, code, channel, status, customerName, tableName, total, paidAmount, remainingAmount, paymentStatus, paymentMethods, createdAt], properties: { waiterId: { type: string, description: "Mozo vinculado a la atención por el flujo de comanda; vacío si no hay responsable." }, billClosed: { type: boolean, description: La cuenta está cerrada para cobro }, id: { type: string, format: uuid }, code: { type: string }, channel: { type: string }, status: { type: string }, customerName: { type: string }, tableName: { type: string }, total: { type: string }, paidAmount: { type: string }, remainingAmount: { type: string }, paymentStatus: { type: string, enum: [pending, partial, paid] }, paymentMethods: { type: array, uniqueItems: true, items: { type: string }, description: "Nombres del catálogo de la empresa usados en pagos con importe neto positivo; sin duplicados, ordenados por nombre. Incluye medios ahora inactivos y devuelve un arreglo vacío si no hay cobros vigentes." }, createdAt: { type: string, format: date-time } } }
     POSOrderList: { type: object, required: [items, total, amountTotal, page, pageSize], properties: { items: { type: array, items: { $ref: "#/components/schemas/POSOrderSummary" } }, total: { type: integer }, amountTotal: { type: string, description: Cobrado neto de todo el filtro en la moneda del local }, page: { type: integer }, pageSize: { type: integer } } }
-    POSOrderDetail: { type: object, required: [order, paidAmount, remainingAmount, paymentStatus, payments, receiptContext], properties: { receiptContext: { $ref: "#/components/schemas/PaymentReceiptContext" }, order: { $ref: "#/components/schemas/Order" }, paidAmount: { type: string }, remainingAmount: { type: string }, paymentStatus: { type: string, enum: [pending, partial, paid] }, payments: { type: array, items: { $ref: "#/components/schemas/Payment" } } } }
+    POSOrderDetail: { type: object, required: [order, paidAmount, remainingAmount, paymentStatus, payments, receiptContext], properties: { tipPolicy: { $ref: "#/components/schemas/TipPolicy" }, tip: { $ref: "#/components/schemas/TipReceipt" }, receiptContext: { $ref: "#/components/schemas/PaymentReceiptContext" }, order: { $ref: "#/components/schemas/Order" }, paidAmount: { type: string }, remainingAmount: { type: string }, paymentStatus: { type: string, enum: [pending, partial, paid] }, payments: { type: array, items: { $ref: "#/components/schemas/Payment" } } } }
     PaymentReceiptContext:
       type: object
       description: Identidad actual del restaurante/local y formato monetario para ticket operativo no fiscal. No emite boleta, factura, serie fiscal ni aceptación SUNAT.
@@ -2259,7 +2303,93 @@ components:
         currencyDecimals: { type: integer }
     PaymentMethodInput: { type: object, required: [name, salesEnabled, expensesEnabled, affectsCash, sortOrder], properties: { code: { type: string, pattern: "^[a-z0-9][a-z0-9_-]{0,39}$" }, name: { type: string, minLength: 1, maxLength: 80 }, description: { type: string, maxLength: 180 }, salesEnabled: { type: boolean }, expensesEnabled: { type: boolean }, affectsCash: { type: boolean }, sortOrder: { type: integer, minimum: 0, maximum: 9999 } } }
     PaymentMethod: { type: object, required: [code, name, description, active, salesEnabled, expensesEnabled, affectsCash, sortOrder], properties: { code: { type: string }, name: { type: string }, description: { type: string }, active: { type: boolean }, salesEnabled: { type: boolean }, expensesEnabled: { type: boolean }, affectsCash: { type: boolean }, sortOrder: { type: integer } } }
-    PaymentInput: { type: object, required: [orderId, method, amount], properties: { orderId: { type: string, format: uuid }, method: { type: string }, amount: { type: number, exclusiveMinimum: 0 }, reference: { type: string, maxLength: 120 } } }
+    TipSettings:
+      type: object
+      required: [mode, percentage, showSuggestion, allowFixed, channels]
+      properties:
+        mode: { type: string, enum: [disabled, suggest, collect] }
+        percentage: { type: number, minimum: 0, maximum: 100 }
+        showSuggestion: { type: boolean }
+        allowFixed: { type: boolean }
+        channels: { type: array, minItems: 1, items: { type: string, enum: [salon, recojo, delivery, whatsapp] } }
+    TipSettingsInput:
+      anyOf:
+        - allOf:
+            - { $ref: "#/components/schemas/TipSettings" }
+            - { type: object, properties: { inherit: { type: boolean, const: false } } }
+        - { type: object, required: [inherit], properties: { inherit: { type: boolean, const: true, description: Solo para local; elimina la excepción local } } }
+    TipPolicy:
+      allOf:
+        - { $ref: "#/components/schemas/TipSettings" }
+        - type: object
+          required: [inherited, country, currency, decimals, channelOptions]
+          properties:
+            inherited: { type: boolean }
+            country: { type: string }
+            currency: { type: string }
+            decimals: { type: integer, minimum: 0, maximum: 2 }
+            channelOptions: { type: array, items: { type: object, required: [value, label], properties: { value: { type: string }, label: { type: string } } } }
+    TipInput:
+      type: object
+      required: [kind, value]
+      properties:
+        kind: { type: string, enum: [percentage, fixed] }
+        value: { type: number, exclusiveMinimum: 0, maximum: 1000000000, description: Porcentaje hasta 100 o monto fijo con los decimales de la moneda }
+        directToStaff: { type: boolean, default: false, description: No entra en caja ni en propinas pendientes }
+    TipReceipt:
+      type: object
+      required: [id, paymentId, orderCode, amount, methodName, affectsCash, directToStaff, createdByName, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        paymentId: { type: string, format: uuid }
+        orderCode: { type: string }
+        amount: { type: string }
+        methodName: { type: string }
+        affectsCash: { type: boolean }
+        directToStaff: { type: boolean }
+        createdByName: { type: string }
+        createdAt: { type: string, format: date-time }
+    TipPayoutInput:
+      type: object
+      required: [recipientId, amount, method, requestKey]
+      properties:
+        recipientId: { type: string, format: uuid }
+        amount: { type: number, exclusiveMinimum: 0, maximum: 1000000000 }
+        method: { type: string, enum: [cash, transfer] }
+        note: { type: string, maxLength: 240 }
+        requestKey: { type: string, minLength: 8, maxLength: 100 }
+    TipPayout:
+      type: object
+      required: [id, recipientId, recipientName, amount, method, note, createdByName, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        recipientId: { type: string, format: uuid }
+        recipientName: { type: string }
+        amount: { type: string }
+        method: { type: string, enum: [cash, transfer] }
+        note: { type: string }
+        createdByName: { type: string }
+        createdAt: { type: string, format: date-time }
+    TipReport:
+      type: object
+      required: [cashCollected, otherCollected, direct, cashPaidOut, otherPaidOut, pending, receipts, payouts]
+      properties:
+        cashCollected: { type: string }
+        otherCollected: { type: string }
+        direct: { type: string }
+        cashPaidOut: { type: string }
+        otherPaidOut: { type: string }
+        pending: { type: string }
+        receipts: { type: array, items: { $ref: "#/components/schemas/TipReceipt" } }
+        payouts: { type: array, items: { $ref: "#/components/schemas/TipPayout" } }
+    TipWorkspace:
+      type: object
+      required: [report, available, recipients]
+      properties:
+        report: { $ref: "#/components/schemas/TipReport" }
+        available: { type: string }
+        recipients: { type: array, items: { type: object, required: [id, name], properties: { id: { type: string, format: uuid }, name: { type: string } } } }
+    PaymentInput: { type: object, description: "amount solo representa consumo. tip se cobra adicionalmente una sola vez por pedido, sobre total menos delivery, redondeado según la moneda. La transacción revierte íntegra si la propina falla.", required: [orderId, method, amount], properties: { tip: { $ref: "#/components/schemas/TipInput" }, orderId: { type: string, format: uuid }, method: { type: string }, amount: { type: number, exclusiveMinimum: 0 }, reference: { type: string, maxLength: 120 } } }
     Payment: { type: object, required: [id, orderId, orderCode, shiftId, cashRegisterName, method, methodName, amount, refundedAmount, netAmount, reference, createdByName, createdAt], properties: { id: { type: string, format: uuid }, orderId: { type: string, format: uuid }, orderCode: { type: string }, shiftId: { type: string, format: uuid }, cashRegisterName: { type: string }, method: { type: string }, methodName: { type: string, description: "Nombre del catálogo de la empresa, disponible también para pagos con medios ahora inactivos." }, affectsCash: { type: boolean, description: "El medio impacta el efectivo esperado del turno" }, amount: { type: string }, refundedAmount: { type: string }, netAmount: { type: string }, reference: { type: string }, createdByName: { type: string }, createdAt: { type: string, format: date-time } } }
     RefundInput: { type: object, required: [amount, reason], properties: { amount: { type: number, exclusiveMinimum: 0 }, reason: { type: string, minLength: 1, maxLength: 120 }, note: { type: string, maxLength: 240 } } }
     ComboOptionInput: { type: object, required: [productId, surcharge], properties: { productId: { type: string, format: uuid }, surcharge: { type: string, pattern: "^[0-9]+(\\.[0-9]{1,2})?$" } } }

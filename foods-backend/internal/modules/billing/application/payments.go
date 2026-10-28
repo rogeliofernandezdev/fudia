@@ -31,6 +31,8 @@ type POSPage struct {
 	PageSize    int    `json:"pageSize"`
 }
 type POSOrderDetail struct {
+	TipPolicy       *domain.TipPolicy            `json:"tipPolicy,omitempty"`
+	Tip             *domain.TipView              `json:"tip,omitempty"`
 	ReceiptContext  domain.PaymentReceiptContext `json:"receiptContext"`
 	Order           ordercontracts.Order         `json:"order"`
 	PaidAmount      string                       `json:"paidAmount"`
@@ -44,6 +46,7 @@ type PaymentOrders interface {
 	PaymentOrder(context.Context, scope, string) (ordercontracts.Order, error)
 }
 type Payments struct {
+	tips       *Tips
 	repo       PaymentRepository
 	work       unitofwork.Manager
 	audit      audit.Repository
@@ -166,6 +169,14 @@ func (a *Payments) Create(ctx context.Context, s scope, in domain.PaymentInput) 
 	if methodDef.AffectsCash {
 		if _, err := a.repo.SaleMovement(tx.Context(), s, in, shiftID, id, orderCode); err != nil {
 			return result, paymentFailure(apperror.Unavailable, "payments_unavailable", "No pudimos reflejar el cobro en caja.")
+		}
+	}
+	if in.Tip != nil {
+		if a.tips == nil {
+			return result, paymentFailure(apperror.Unavailable, "tips_unavailable", "La gestión de propinas no está disponible.")
+		}
+		if err = a.tips.RecordPayment(tx.Context(), s, in.OrderID, id, shiftID, in.Tip, methodDef.AffectsCash); err != nil {
+			return result, err
 		}
 	}
 	closed, err := a.orders.CompleteDeliveredAccount(tx.Context(), s, in.OrderID)
@@ -356,6 +367,14 @@ func (a *Payments) CreateBatch(ctx context.Context, s scope, in domain.PaymentBa
 			return result, paymentFailure(apperror.Unavailable, "payments_unavailable", "No pudimos registrar uno de los medios de pago.")
 		}
 		ids = append(ids, id)
+		if p.Tip != nil {
+			if a.tips == nil {
+				return result, paymentFailure(apperror.Unavailable, "tips_unavailable", "La gestión de propinas no está disponible.")
+			}
+			if err = a.tips.RecordPayment(tx.Context(), s, in.OrderID, id, shiftID, p.Tip, methodDefs[p.Method].AffectsCash); err != nil {
+				return result, err
+			}
+		}
 		if methodDefs[p.Method].AffectsCash {
 			if _, err = a.repo.BatchSaleMovement(tx.Context(), s, shiftID, id, p, orderCode); err != nil {
 				return result, paymentFailure(apperror.Unavailable, "payments_unavailable", "No pudimos reflejar el cobro en caja.")
@@ -450,13 +469,25 @@ func (a *Payments) Get(ctx context.Context, s scope, id string) (POSOrderDetail,
 	if err != nil {
 		return result, paymentFailure(apperror.Unavailable, "payments_unavailable", "No pudimos cargar los datos del restaurante.")
 	}
-	return POSOrderDetail{
+	out := POSOrderDetail{
 		ReceiptContext:  identity,
 		Order:           o,
 		PaidAmount:      strconv.FormatFloat(paid, 'f', 2, 64),
 		RemainingAmount: strconv.FormatFloat(remaining, 'f', 2, 64),
 		PaymentStatus:   domain.PaymentStatus(total, paid),
 		Payments:        payments,
-	}, nil
+	}
+	if a.tips != nil {
+		policy, e := a.tips.Policy(ctx, s, false)
+		if e != nil {
+			return result, e
+		}
+		out.TipPolicy = &policy
+		out.Tip, err = a.tips.repo.TipForOrder(ctx, s, id)
+		if err != nil {
+			return result, paymentFailure(apperror.Unavailable, "tips_unavailable", "No pudimos cargar la propina de la cuenta.")
+		}
+	}
+	return out, nil
 
 }

@@ -7,6 +7,12 @@ import (
 
 // Handlers injects the extracted verticals. Only cmd/api composes production adapters.
 type Handlers struct {
+	Tips interface {
+		GetSettings(http.ResponseWriter, *http.Request)
+		UpdateSettings(http.ResponseWriter, *http.Request)
+		Workspace(http.ResponseWriter, *http.Request)
+		Payout(http.ResponseWriter, *http.Request)
+	}
 	Concierge              ConciergeHandler
 	ConciergeUsage         ConciergeUsageHandler
 	Platform               PlatformHandler

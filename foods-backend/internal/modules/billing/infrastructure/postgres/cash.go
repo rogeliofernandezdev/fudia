@@ -683,6 +683,13 @@ func (r *Payments) BuildReport(ctx context.Context, s scope, id string) (domain.
 	}
 	err = rows.Err()
 	rows.Close()
+	if err == nil {
+		var tips domain.TipReport
+		tips, err = r.TipReport(ctx, s, id)
+		if err == nil {
+			out.Tips = &tips
+		}
+	}
 	return out, billingError(err)
 }
 func (r *Payments) StoredReport(ctx context.Context, s scope, id string) ([]byte, error) {

@@ -1,6 +1,8 @@
 import {z} from "zod";
 import type {FieldError,FieldErrors,Resolver} from "react-hook-form";
 import type {PaymentDraft,PaymentMethodOption,RefundDraft} from "./types";
+import {calculateTip} from "../../tips/domain/calculation";
+import type {TipPolicy} from "../../tips/domain/types";
 
 function resolverFor<T extends Record<string,unknown>>(schema:z.ZodType<T>):Resolver<T>{
   return values=>{
@@ -25,6 +27,10 @@ const paymentSchema=z.object({
   amount:positiveMoney,
   reference:z.string().max(120,"La referencia no puede superar 120 caracteres."),
   receivedAmount:z.string().optional(),
+  tipEnabled:z.boolean().optional(),
+  tipKind:z.enum(["percentage","fixed"]).optional(),
+  tipValue:z.string().optional(),
+  tipDirectToStaff:z.boolean().optional(),
 });
 
 const refundSchema=z.object({
@@ -34,15 +40,18 @@ const refundSchema=z.object({
 });
 
 export const paymentResolver=resolverFor<PaymentDraft>(paymentSchema);
-export function paymentResolverFor(methods:PaymentMethodOption[],remaining:number){
+export function paymentResolverFor(methods:PaymentMethodOption[],remaining:number,policy?:TipPolicy,base=remaining){
   return resolverFor<PaymentDraft>(paymentSchema.superRefine((draft,ctx)=>{
     const amount=Number(draft.amount);
     if(amount>remaining)ctx.addIssue({code:"custom",path:["amount"],message:"El monto no puede superar el saldo pendiente."});
+    const tip=calculateTip(Boolean(draft.tipEnabled),draft.tipKind??"percentage",draft.tipValue??"",base,policy?.decimals??2);
+    const value=Number(draft.tipValue),scale=10**(draft.tipKind==="fixed"?(policy?.decimals??2):2);
+    if(draft.tipEnabled&&(policy?.mode!=="collect"||tip<=0||value>1e9||Math.abs(value*scale-Math.round(value*scale))>.00001||((draft.tipKind??"percentage")==="percentage"&&value>100)||(draft.tipKind==="fixed"&&!policy?.allowFixed))){ctx.addIssue({code:"custom",path:["tipValue"],message:"Ingresa una propina válida en la moneda del local."})}
     if(!methods.some(method=>method.code===draft.method&&method.affectsCash))return;
     const received=Number(draft.receivedAmount);
     if(!draft.receivedAmount?.trim()||!Number.isFinite(received)||received<=0){
       ctx.addIssue({code:"custom",path:["receivedAmount"],message:"Ingresa el efectivo recibido."});
-    }else if(received<amount){
+    }else if(received<amount+(draft.tipEnabled&&!draft.tipDirectToStaff?tip:0)){
       ctx.addIssue({code:"custom",path:["receivedAmount"],message:"El efectivo recibido debe cubrir el monto del cobro."});
     }
   }));

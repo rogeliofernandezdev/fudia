@@ -9,6 +9,7 @@ import {ConfirmDialog} from "@/design-system/confirm-dialog";
 import {useFeedback} from "@/providers/feedback-provider";
 import {useSession} from "@/providers/session-context";
 import {useSubscriptionCapacity} from "@/modules/identity";
+import {TipSettingsPanel} from "@/modules/operations/tips";
 import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
 import {Icon} from "@/design-system/icons";
 import {LocationMap} from "@/design-system/location-map";
@@ -70,6 +71,7 @@ export function CompanySettings(){
     <div><Button kind="ghost" disabled={!dirty||save.isPending} onClick={()=>{setDraft({});setSubmitted(false)}}>Cancelar</Button><Button type="submit" icon="check" disabled={!dirty||save.isPending} loading={save.isPending}>{save.isPending?"Guardando…":"Guardar"}</Button></div>
    </footer>}
   </form>}
+  {query.data&&<TipSettingsPanel/>}
  </>;
 }
 

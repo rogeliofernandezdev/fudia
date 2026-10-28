@@ -74,6 +74,9 @@
 .pos-payment-modal>.modal-form{overflow:hidden}
 .pos-cash-change{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);padding:var(--space-3);border-radius:var(--radius-tile);background:var(--primary-50);color:var(--ink-600)}
 .pos-cash-change strong{font-size:var(--font-size-md);font-variant-numeric:tabular-nums;color:var(--primary-700)}
+.pos-tip-toggle{grid-column:1/-1;display:flex;align-items:center;gap:var(--space-2-5);min-height:var(--size-44);font-size:var(--font-size-base);color:var(--ink-700)}
+.pos-tip-toggle input{flex:none;width:var(--size-18);height:var(--size-18);accent-color:var(--primary-600)}
+.pos-tip-help{grid-column:1/-1;margin:0;color:var(--ink-500);font-size:var(--font-size-label);line-height:var(--line-height-normal)}
 .pos-payment-body{display:grid;grid-auto-rows:max-content;align-content:start;gap:var(--space-3-5)}
 .pos-payment-overview{display:grid;grid-template-columns:1.25fr 1fr;overflow:hidden;border:var(--stroke-1) solid var(--line);border-radius:var(--radius-card);background:var(--surface)}
 .pos-payment-balance{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-3-5);background:var(--primary-50)}

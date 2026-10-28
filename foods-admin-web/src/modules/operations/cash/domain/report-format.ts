@@ -16,6 +16,6 @@ export function cashReportFormat(report:CashShiftReport){
 }
 
 export function cashMovementSource(source:string){
- const labels:Record<string,string>={cash_sale:"Venta en efectivo",cash_refund:"Reverso de cobro",cash_pull:"Retiro",transfer_in:"Transferencia recibida",transfer_out:"Transferencia enviada",deposit:"Depósito",adjustment:"Ajuste",manual:"Manual"};
+ const labels:Record<string,string>={cash_tip:"Propina recibida",tip_payout:"Entrega de propinas",cash_sale:"Venta en efectivo",cash_refund:"Reverso de cobro",cash_pull:"Retiro",transfer_in:"Transferencia recibida",transfer_out:"Transferencia enviada",deposit:"Depósito",adjustment:"Ajuste",manual:"Manual"};
  return labels[source]??source;
 }

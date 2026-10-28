@@ -7,6 +7,8 @@ import ts from "typescript";
 
 const require=createRequire(import.meta.url);
 const root=new URL("../src/modules/operations/pos/presentation/",import.meta.url);
+const tipCalculation={};
+vm.runInNewContext(ts.transpileModule(readFileSync(new URL("../src/modules/operations/tips/domain/calculation.ts",import.meta.url),"utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{exports:tipCalculation});
 const serviceFlowExports={};
 vm.runInNewContext(ts.transpileModule(readFileSync(new URL("../src/modules/operations/orders/domain/service-flow.ts",import.meta.url),"utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{exports:serviceFlowExports});
 const detail={order:{waiterId:"waiter",billClosedAt:"2026-10-07T13:00:00Z",id:"order-1",code:"PED-001",channel:"salon",status:"entregado",tableName:"Mesa 04",customerName:"",total:"40",createdAt:"2026-10-07T12:00:00Z",items:[]},paidAmount:"10",remainingAmount:"30",paymentStatus:"partial",payments:[]};
@@ -30,7 +32,8 @@ function mountPage({canManage=true,shift=true,busy=false,initialOrderId="order-1
    useQuery:options=>{queries.push(options);return{isLoading:false,isPending:false,isFetching:false,isError:false,refetch:()=>{},data:options.queryKey[0]==="pos-cash-access"?{shift:shift?{cashRegisterName:"Caja principal",code:"CAJ-001",openedByName:"Ana"}:null}:options.queryKey[0]==="pos-orders"?{items:listed,total:listed.length}:options.queryKey[0]==="payment-methods"?{items:catalog}:options.enabled?detail:undefined}},
    useMutation:options=>{mutations.push(options);return{isPending:busy,mutate:input=>sent.push(input)}},
   };
-  if(name==="@/design-system")return primitives;
+  if(name.endsWith("/tips"))return tipCalculation;
+   if(name==="@/design-system")return primitives;
   if(name==="@/design-system/dialog")return{Dialog:"Dialog"};
   if(name==="@/providers")return{useFeedback:()=>({notify:value=>notices.push(value)}),useMoney:()=>value=>`S/ ${value}`,useSession:()=>({can:()=>canManage,user:{id:userId},location:{country:"PE",timezone:"America/Lima"}})};
   if(name==="@/providers/settings-context")return{useSettings:()=>({currencySymbol:"S/",currencyDecimals:2,currencyPosition:"before"})};
@@ -182,10 +185,11 @@ test("el formulario de pago tiene Registrar cobro y envía solo al confirmar",()
  for(const busy of [false,true]){
   let defaults,saved=0;
   const {PaymentForm}=compile("pos-dialogs.tsx",name=>{
+   if(name.endsWith("/tips"))return tipCalculation;
    if(name==="@/design-system")return primitives;
    if(name==="@/design-system/dialog")return{Dialog:"Dialog"};
    if(name==="react-hook-form")return{useForm:options=>{defaults=options.defaultValues;return{register:()=>({}),handleSubmit:save=>()=>save(defaults),formState:{errors:{}}}},useWatch:()=>"cash"};
-   if(name.endsWith("pos-schema"))return compile("../domain/pos-schema.ts",require);
+   if(name.endsWith("pos-schema"))return compile("../domain/pos-schema.ts",name=>name.endsWith("tips/domain/calculation")?tipCalculation:require(name));
    if(name.startsWith("../"))return{};
    return require(name);
   });
@@ -249,6 +253,18 @@ test("consultar el resumen de pago es secundario y no repite el cobro",()=>{
  for(const changes of [{loading:true},{error:"Sin conexión"},{data:undefined},{data:{...detail,paidAmount:"0"}}])assert.equal(nodes(POSDetailDialog({...props,...changes})).some(node=>node.props.children==="Previsualizar"),false);
 });
 
+test("el detalle distingue propina cobrada, total recibido y consumo pendiente",()=>{
+ const {POSDetailDialog}=mountPage();
+ const props={loading:false,canManage:false,hasShift:false,formatMoney:value=>`S/ ${value}`,formatDateTime:String,close:()=>{},refund:()=>{}};
+ const data={...detail,paidAmount:"40",remainingAmount:"0",tip:{amount:"5",directToStaff:false}};
+ let tree=nodes(POSDetailDialog({...props,data}));
+ function text(value){if(Array.isArray(value))return value.map(text).join(" ");if(value&&typeof value==="object")return text(value.props?.children);return typeof value==="string"?value:""}
+ assert.ok(tree.some(node=>text(node).includes("Propina cobrada S/ 5")));
+ assert.ok(tree.some(node=>text(node).includes("Total pagado con propina S/ 45")));
+ tree=nodes(POSDetailDialog({...props,data:{...data,tip:{amount:"5",directToStaff:true}}}));
+ assert.ok(!tree.some(node=>text(node).includes("Total pagado con propina")));
+});
+
 test("detalle de cobro no muestra importes anteriores en carga, error o ausencia de datos",()=>{
  const {POSDetailDialog}=mountPage();const props={loading:false,data:detail,canManage:false,hasShift:false,formatMoney:String,formatDateTime:String,close:()=>{},refund:()=>{}};
  for(const changes of [{loading:true},{error:"Sin conexión"},{data:undefined}]){
@@ -301,10 +317,11 @@ test("el cobro usa el catálogo de medios de pago y la nota de caja sigue a Impa
  for(const watched of ["cash","yape"]){
   let defaults;
   const {PaymentForm}=compile("pos-dialogs.tsx",name=>{
+   if(name.endsWith("/tips"))return tipCalculation;
    if(name==="@/design-system")return primitives;
    if(name==="@/design-system/dialog")return{Dialog:"Dialog"};
    if(name==="react-hook-form")return{useForm:options=>{defaults=options.defaultValues;return{register:()=>({}),handleSubmit:save=>()=>save(defaults),formState:{errors:{}}}},useWatch:()=>watched};
-   if(name.endsWith("pos-schema"))return compile("../domain/pos-schema.ts",require);
+   if(name.endsWith("pos-schema"))return compile("../domain/pos-schema.ts",name=>name.endsWith("tips/domain/calculation")?tipCalculation:require(name));
    if(name.startsWith("../"))return{};
    return require(name);
   });

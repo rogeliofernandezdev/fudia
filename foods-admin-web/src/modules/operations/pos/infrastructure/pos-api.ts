@@ -31,6 +31,7 @@ export function createPayment(orderId:string,draft:PaymentDraft){
       method:draft.method,
       amount:Number(draft.amount),
       reference:draft.reference.trim(),
+      ...(draft.tipEnabled?{tip:{kind:draft.tipKind??"percentage",value:Number(draft.tipValue),directToStaff:Boolean(draft.tipDirectToStaff)}}:{}),
     }),
   });
 }

@@ -47,6 +47,9 @@ es índigo con flecha al final. Referencia: `docs/02_DESIGN_SYSTEM.md`.
 
 Ejecutar `npm run lint`, `npm run typecheck`, `npm test` y `npm run build`.
 
+Propinas en configuración, POS, precuenta y caja:
+[docs/10_TIPS.md](docs/10_TIPS.md).
+
 ## Cloud Run
 
 El Dockerfile standalone también funciona en Cloud Run con su `PORT` inyectado.

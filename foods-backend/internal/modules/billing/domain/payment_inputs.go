@@ -1,10 +1,11 @@
 package domain
 
 type PaymentInput struct {
-	OrderID   string  `json:"orderId"`
-	Method    string  `json:"method"`
-	Amount    float64 `json:"amount"`
-	Reference string  `json:"reference"`
+	Tip       *TipInput `json:"tip,omitempty"`
+	OrderID   string    `json:"orderId"`
+	Method    string    `json:"method"`
+	Amount    float64   `json:"amount"`
+	Reference string    `json:"reference"`
 }
 
 type RefundInput struct {
@@ -19,7 +20,8 @@ type PaymentBatchInput struct {
 }
 
 type PaymentLine struct {
-	Method    string  `json:"method"`
-	Amount    float64 `json:"amount"`
-	Reference string  `json:"reference"`
+	Tip       *TipInput `json:"tip,omitempty"`
+	Method    string    `json:"method"`
+	Amount    float64   `json:"amount"`
+	Reference string    `json:"reference"`
 }

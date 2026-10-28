@@ -4,6 +4,9 @@ API oficial en Go. Antes de implementar, leer AGENTS.md y todos los documentos d
 
 Verificación: go test ./..., go vet ./... y go build ./cmd/api.
 
+Propinas: configuración, cobro, entrega al personal y reporte separado en
+[docs/13_TIPS.md](docs/13_TIPS.md).
+
 Imágenes GCP: carga directa firmada, sin bytes en el API; el proyecto independiente
 `../fudia-image-processor` genera WebP de 200/600 px. Contrato y configuración en
 [docs/11_PRODUCT_IMAGES.md](docs/11_PRODUCT_IMAGES.md).

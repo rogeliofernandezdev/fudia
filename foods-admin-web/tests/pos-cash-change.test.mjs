@@ -5,11 +5,36 @@ import {createRequire} from "node:module";
 import vm from "node:vm";
 import ts from "typescript";
 const require=createRequire(import.meta.url);
+const tipCalculation={};
+vm.runInNewContext(ts.transpileModule(readFileSync(new URL("../src/modules/operations/tips/domain/calculation.ts",import.meta.url),"utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{exports:tipCalculation});
 const exports={};
-vm.runInNewContext(ts.transpileModule(readFileSync(new URL("../src/modules/operations/pos/domain/pos-schema.ts",import.meta.url),"utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{exports,require});
+vm.runInNewContext(ts.transpileModule(readFileSync(new URL("../src/modules/operations/pos/domain/pos-schema.ts",import.meta.url),"utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{exports,require:name=>name.endsWith("tips/domain/calculation")?tipCalculation:require(name)});
 const {cashChange,paymentResolverFor}=exports;
 const methods=[{code:"bills",name:"Efectivo",affectsCash:true},{code:"card",name:"Tarjeta",affectsCash:false}];
 const validate=(draft,remaining=10)=>paymentResolverFor(methods,remaining)({method:"bills",amount:"10",reference:"",...draft},{},{});
+
+test("propina aceptada se suma al efectivo recibido, sin alterar el consumo",()=>{
+ const policy={mode:"collect",percentage:10,allowFixed:true,decimals:2,channels:["salon"]};
+ const resolve=draft=>paymentResolverFor(methods,100,policy,100)({method:"bills",amount:"50",reference:"",receivedAmount:"60",tipEnabled:true,tipKind:"percentage",tipValue:"10",...draft},{},{});
+ assert.equal(Object.keys(resolve({}).errors).length,0);
+ assert.equal(resolve({}).values.amount,"50");
+ assert.ok(resolve({receivedAmount:"59.99"}).errors.receivedAmount);
+ assert.equal(Object.keys(resolve({receivedAmount:"50",tipDirectToStaff:true}).errors).length,0);
+ assert.equal(Object.keys(resolve({method:"card",receivedAmount:"",tipKind:"fixed",tipValue:"5"}).errors).length,0);
+ assert.ok(resolve({tipValue:"101"}).errors.tipValue);
+ assert.ok(resolve({tipValue:"-1"}).errors.tipValue);
+ assert.ok(resolve({tipKind:"fixed",tipValue:"5.001"}).errors.tipValue);
+ assert.equal(tipCalculation.canCollectTip(policy,"salon",true),false);
+ assert.equal(tipCalculation.canCollectTip(policy,"delivery",false),false);
+ assert.equal(tipCalculation.canCollectTip({...policy,mode:"suggest"},"salon",false),false);
+});
+
+test("propinas en moneda sin centavos solo aceptan montos fijos enteros",()=>{
+ const policy={mode:"collect",allowFixed:true,decimals:0};
+ const resolve=value=>paymentResolverFor(methods,100,policy,100)({method:"card",amount:"100",reference:"",tipEnabled:true,tipKind:"fixed",tipValue:value},{},{});
+ assert.ok(resolve("5.5").errors.tipValue);
+ assert.equal(Object.keys(resolve("5").errors).length,0);
+});
 
 test("el vuelto se calcula sobre el cobro actual y redondea a centavos",()=>{
  assert.equal(cashChange("10","20"),10);

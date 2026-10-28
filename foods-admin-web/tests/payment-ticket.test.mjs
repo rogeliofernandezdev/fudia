@@ -16,6 +16,29 @@ function fixture(count=3){return{
  order:{id:"order-1",code:"PED-8C26A1",channel:"salon",status:"entregado",customerName:"Familia Calderón",tableName:"03",waiterName:"José Carlos Calderón",createdAt:"2026-10-08T17:00:00Z",subtotal:"60.00",deliveryFee:"0",total:"60.00",items:Array.from({length:count},(_,index)=>({id:`item-${index}`,name:index===0?"Ají de gallina":index===1?"Lomo saltado con arroz y papas fritas":"Chicha morada",qty:"1",unitPrice:"20.00",selections:index===0?[{groupName:"Entrada",name:"Causa rellena"}]:[]}))},
  paidAmount:"60.00",remainingAmount:"0.00",paymentStatus:"paid",payments:[{id:"pay-1",method:"cash",methodName:"Efectivo",amount:"40",netAmount:"40",refundedAmount:"0",reference:"",createdByName:"Ana María",createdAt:"2026-10-08T18:05:00Z"},{id:"pay-2",method:"custom",methodName:"Yape del restaurante",amount:"20",netAmount:"20",refundedAmount:"0",reference:"YP-38294",createdByName:"Ana María",createdAt:"2026-10-08T18:06:00Z"}]};}
 
+test("precuenta muestra sugerencia voluntaria sin inventar pagos ni sumar delivery a su base",()=>{
+ const sample=fixture();sample.payments=[];sample.paidAmount="0";sample.remainingAmount="60";sample.order.deliveryFee="10";
+ sample.tipPolicy={mode:"suggest",percentage:10,showSuggestion:true,channels:["salon"]};
+ const rows=domain.paymentTicketRows(sample,undefined,"prebill");
+ assert.ok(rows.some(v=>v.text==="PRECUENTA"));
+ assert.ok(rows.some(v=>v.text.includes("Propina sugerida")&&v.right==="S/ 5.00"));
+ assert.ok(rows.some(v=>v.text==="Total si acepta la sugerencia"&&v.right==="S/ 65.00"));
+ assert.ok(!rows.some(v=>v.text==="PAGOS REGISTRADOS"||v.text==="CUENTA PAGADA"));
+ assert.equal(sample.paidAmount,"0");assert.equal(sample.order.total,"60.00");
+ sample.tipPolicy.mode="disabled";
+ assert.ok(!domain.paymentTicketRows(sample,undefined,"prebill").some(v=>v.text.includes("Propina sugerida")));
+});
+
+test("ticket separa consumo de propina cobrada y no la vuelve a sugerir",()=>{
+ const sample=fixture();sample.tip={paymentId:"pay-1",amount:"6",directToStaff:false};
+ const rows=domain.paymentTicketRows(sample);
+ assert.ok(rows.some(v=>v.text==="Propina aceptada"&&v.right==="S/ 6.00"));
+ assert.ok(rows.some(v=>v.text==="Total recibido por este medio"&&v.right==="S/ 46.00"));
+ assert.ok(rows.some(v=>v.text==="Pagado"&&v.right==="S/ 60.00"));
+ sample.tip.directToStaff=true;
+ assert.ok(!domain.paymentTicketRows(sample).some(v=>v.text==="Consumo y propina"||v.text==="Total recibido por este medio"));
+});
+
 test("ticket muestra el consumo y los pagos reales sin simular un documento fiscal",()=>{
  const rows=domain.paymentTicketRows(fixture(),"pay-2"),text=rows.map(row=>`${row.text} ${row.right??""}`).join("\n");
  for(const value of ["La Panchita","20123456789","Av. Perú","José Carlos Calderón","1 x Ají de gallina","Causa rellena","S/ 60.00","Efectivo","Yape del restaurante","YP-38294","Ana María","CUENTA PAGADA","No es un comprobante fiscal"])assert.ok(text.includes(value),value);

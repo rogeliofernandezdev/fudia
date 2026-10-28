@@ -40,7 +40,7 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
   const[paymentOrderId,setPaymentOrderId]=useState<string|null>(initialOrderId||null);
   const[detailId,setDetailId]=useState<string|null>(null);
   const[refundTarget,setRefundTarget]=useState<Payment|null>(null);
-  const[ticketTarget,setTicketTarget]=useState<{orderId:string;paymentId?:string}|null>(null);
+  const[ticketTarget,setTicketTarget]=useState<{orderId:string;paymentId?:string;mode?:"payment"|"prebill"}|null>(null);
 
   const current=useQuery({
     queryKey:["pos-cash-access",organization?.id,location?.id,user?.id],
@@ -208,6 +208,7 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
       close={()=>setDetailId(null)}
       refund={setRefundTarget}
       ticket={()=>{setDetailId(null);setTicketTarget({orderId:detailId})}}
+      prebill={()=>{setDetailId(null);setTicketTarget({orderId:detailId,mode:"prebill"})}}
     />}
     {ticketTarget&&<PaymentTicketDialog {...ticketTarget} close={()=>setTicketTarget(null)}/>}
   </div>;
@@ -227,7 +228,7 @@ function POSPaymentEntry({loading,error,data,shiftLoading,shiftError,shiftName,m
     else if(!canChargeAccount(data.order))state=data.order.channel==="salon"?{title:"Cuenta no disponible para cobro",text:"El mozo debe entregar todos los productos y cerrar la cuenta antes de cobrar.",icon:"clock"}:{title:"Pedido no listo",text:"El pedido todavía no está listo para cobrar.",icon:"clock"};
     else if(!shiftName)state={title:"Necesitas un turno de caja",text:"Abre un turno o únete a una caja para registrar el cobro.",icon:"register",cash:true};
     else if(!methods?.length)state={title:"Sin medios de pago para ventas",text:"Activa al menos un medio para ventas en Configuración › Medios de pago.",icon:"wallet"};
-    else form=<PaymentForm methods={methods} order={{...data.order,paidAmount:data.paidAmount,remainingAmount:data.remainingAmount,paymentStatus:data.paymentStatus}} shiftName={shiftName} busy={busy} formatMoney={formatMoney} close={close} save={save}/>;
+    else form=<PaymentForm methods={methods} order={{...data.order,paidAmount:data.paidAmount,remainingAmount:data.remainingAmount,paymentStatus:data.paymentStatus}} shiftName={shiftName} busy={busy} formatMoney={formatMoney} close={close} save={save} tipPolicy={data.tipPolicy} registeredTip={data.tip}/>;
   }
   return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal pos-payment-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="pos-payment-entry-title" aria-busy={busy||(!state&&!form)}>
 
@@ -244,7 +245,7 @@ function POSPaymentLoading(){return <div className="modal-body pos-payment-body 
 </div>}
 
 /** Detalle de cobro con el patrón de Detalle de pedido: cabecera con mesa o cliente, identidad, tarjeta, pestañas y resumen fijo. */
-export function POSDetailDialog({loading,error,data,canManage,hasShift,formatMoney,formatDateTime,retry,close,refund,ticket}:{loading:boolean;error?:string;data?:POSOrderDetail;canManage:boolean;hasShift:boolean;formatMoney:(value:number)=>string;formatDateTime:(value:string)=>string;retry?:()=>void;close:()=>void;refund:(payment:Payment)=>void;ticket?:()=>void}){
+export function POSDetailDialog({loading,error,data,canManage,hasShift,formatMoney,formatDateTime,retry,close,refund,ticket,prebill}:{loading:boolean;error?:string;data?:POSOrderDetail;canManage:boolean;hasShift:boolean;formatMoney:(value:number)=>string;formatDateTime:(value:string)=>string;retry?:()=>void;close:()=>void;refund:(payment:Payment)=>void;ticket?:()=>void;prebill?:()=>void}){
   const closed=Boolean(data&&(data.order.completedAt||data.order.status==="cancelado"));
   const tableName=data?.order.tableName?.trim();
   const title=tableName?(/^mesa\b/i.test(tableName)?tableName:`Mesa ${tableName}`):data?.order.customerName||(data?"Venta directa":"Detalle de cobro");
@@ -262,8 +263,9 @@ export function POSDetailDialog({loading,error,data,canManage,hasShift,formatMon
       <div className="modal-summary-lines">
         <div className="modal-summary-line"><span>Total del pedido</span><b>{formatMoney(Number(data.order.total))}</b></div>
         <div className={`modal-summary-line pos-detail-paid${paid>0.00001?" has-payment":""}`}><span>Pagado neto</span><b>{formatMoney(paid)}</b></div>
+        {data.tip&&<div className="modal-summary-line"><span>{data.tip.directToStaff?"Propina directa al personal":"Propina cobrada"}</span><b>{formatMoney(Number(data.tip.amount))}</b></div>}
       </div>
-      <div className="modal-summary-total"><span>{remaining>0.00001?"Saldo pendiente":"Total pagado"}</span><strong>{formatMoney(remaining>0.00001?remaining:Number(data.order.total))}</strong></div>
+      <div className="modal-summary-total"><span>{remaining>0.00001?"Saldo pendiente":data.tip&&!data.tip.directToStaff?"Total pagado con propina":"Total pagado"}</span><strong>{formatMoney(remaining>0.00001?remaining:Number(data.order.total)+(data.tip&&!data.tip.directToStaff?Number(data.tip.amount):0))}</strong></div>
     </section>}>
     <div className="modal-body pos-detail-body" tabIndex={0} aria-label="Productos y pagos del pedido">
       <div className="pos-detail-content">
@@ -302,7 +304,7 @@ export function POSDetailDialog({loading,error,data,canManage,hasShift,formatMon
         </section>
       </div>
     </div></ModalWorkspace>}
-    {!error&&data&&paid>0&&ticket&&<ModalFooter><Button kind="secondary" icon="eye" onClick={ticket}>Previsualizar</Button></ModalFooter>}
+    {!error&&data&&<ModalFooter>{remaining>0&&!closed&&prebill&&<Button kind="secondary" icon="receipt" onClick={prebill}>Ver precuenta</Button>}{paid>0&&ticket&&<Button kind="secondary" icon="eye" onClick={ticket}>Previsualizar</Button>}</ModalFooter>}
     </>}
   </Dialog></div>;
 }

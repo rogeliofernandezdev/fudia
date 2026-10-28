@@ -1,3 +1,4 @@
+import type {TipReport} from "../../tips";
 export type CashShiftStatus="open"|"closed";
 export type CashReportSale={id:string;orderCode:string;customer:string;name:string;details:string;quantity:string;unitPrice:string;total:string;createdAt:string;waiterName:string};
 export type CashReportPayment={id:string;orderCode:string;methodName:string;amount:string;reference:string;createdByName:string;createdAt:string};
@@ -7,13 +8,14 @@ export type CashShiftReport={
  shift:CashShift;sales:CashReportSale[];payments:CashReportPayment[];refunds:CashReportPayment[];
  methods:{name:string;amount:string}[];counts:{denomination:string;quantity:number;total:string}[];
  collectedAmount:string;refundedAmount:string;netCollectedAmount:string;
+ tips?:TipReport;
 };
 export type CashMovementType="income"|"expense";
 
 export type CashMovement={
   id:string;
   movementType:CashMovementType;
-  sourceType:"manual"|"cash_sale"|"cash_refund"|"cash_pull"|"transfer_in"|"transfer_out"|"deposit"|"adjustment";
+  sourceType:"manual"|"cash_sale"|"cash_refund"|"cash_pull"|"transfer_in"|"transfer_out"|"deposit"|"adjustment"|"cash_tip"|"tip_payout";
   sourceId:string|null;
   amount:string;
   reason:string;

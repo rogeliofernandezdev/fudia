@@ -34,13 +34,18 @@ export function buildCashReportPdf(report:CashShiftReport,logo:Uint8Array,palett
  section("Productos vendidos - pedidos con cobros en el turno",["Fecha y hora","Pedido / mesa / mozo","Producto / detalle","Cantidad","Precio unitario","Importe"],report.sales.map(item=>[f.date(item.createdAt),`${item.orderCode}\n${item.customer}${item.waiterName?`\nMozo: ${item.waiterName}`:""}`,`${item.name}${item.details?`\n${item.details}`:""}`,f.quantity(item.quantity),f.money(item.unitPrice),f.money(item.total)]),"No hay productos de pedidos cobrados en este turno.",[32,46,88,25,37,37]);
  section("Alcance de los productos",["Criterio del informe"],[["Cada línea comercial aparece una sola vez. En pagos parciales o en turnos distintos, el valor del pedido no equivale al importe cobrado en este turno. Los cobros y el arqueo se detallan por separado."]],"");
  section("Detalle de cada cobro",["Fecha y hora","Pedido","Medio de pago","Referencia","Cobrado por","Importe"],report.payments.map(item=>[f.date(item.createdAt),item.orderCode,item.methodName,item.reference||"-",item.createdByName,f.money(item.amount)]),"No se registraron cobros.",[32,37,43,58,58,37]);
- const expenses=s.movements?.filter(item=>item.movementType==="expense")??[];
- const incomes=s.movements?.filter(item=>item.movementType==="income"&&item.sourceType!=="cash_sale")??[];
+ const expenses=s.movements?.filter(item=>item.movementType==="expense"&&item.sourceType!=="tip_payout")??[];
+ const incomes=s.movements?.filter(item=>item.movementType==="income"&&item.sourceType!=="cash_sale"&&item.sourceType!=="cash_tip")??[];
  for(const [title,items] of [["Egresos de efectivo",expenses],["Otros ingresos de efectivo",incomes]] as const){
   section(title,["Fecha y hora","Origen","Motivo / observación","Registrado por","Importe"],items.map(item=>[f.date(item.createdAt),cashMovementSource(item.sourceType),`${item.reason}${item.note?`\n${item.note}`:""}`,item.createdByName,f.money(item.amount)]),`No se registraron ${title.toLowerCase()}.`,[32,43,95,58,37]);
  }
  if(report.refunds.length)section("Reversos de cobros registrados en el turno",["Fecha y hora","Pedido","Medio de pago","Motivo","Registrado por","Importe"],report.refunds.map(item=>[f.date(item.createdAt),item.orderCode,item.methodName,item.reference,item.createdByName,f.money(item.amount)]),"",[32,37,43,58,58,37]);
  if(report.counts.length)section("Conteo por denominaciones",["Denominación","Cantidad","Importe"],report.counts.map(item=>[f.money(item.denomination),String(item.quantity),f.money(item.total)]),"",[100,65,100]);
+ if(report.tips){const t=report.tips;
+  section("Propinas - separadas del consumo",["En efectivo","Otros medios","Directas al personal","Entregadas en efectivo","Por transferencia","Pendientes del turno"],[[f.money(t.cashCollected),f.money(t.otherCollected),f.money(t.direct),f.money(t.cashPaidOut),f.money(t.otherPaidOut),f.money(t.pending)]],"");
+  section("Propinas recibidas",["Fecha y hora","Pedido","Medio","Destino","Registrada por","Importe"],t.receipts.map(v=>[f.date(v.createdAt),v.orderCode,v.methodName,v.directToStaff?"Directa al personal":v.affectsCash?"Cajón de efectivo":"Pendiente de entrega",v.createdByName,f.money(v.amount)]),"Sin propinas recibidas.");
+  section("Entregas de propinas",["Fecha y hora","Trabajador","Medio de entrega","Observación","Registrada por","Importe"],t.payouts.map(v=>[f.date(v.createdAt),v.recipientName,v.method==="cash"?"Efectivo":"Transferencia",v.note||"-",v.createdByName,f.money(v.amount)]),"Sin entregas de propinas.");
+ }
  const pages=doc.getNumberOfPages();
  for(let page=1;page<=pages;page++){
   doc.setPage(page);

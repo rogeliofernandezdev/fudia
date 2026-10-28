@@ -103,6 +103,7 @@ type CashReportMethod struct {
 	Amount string `json:"amount"`
 }
 type CashShiftReport struct {
+	Tips               *TipReport          `json:"tips,omitempty"`
 	Version            int                 `json:"version"`
 	Persisted          bool                `json:"persisted"`
 	GeneratedAt        string              `json:"generatedAt"`
