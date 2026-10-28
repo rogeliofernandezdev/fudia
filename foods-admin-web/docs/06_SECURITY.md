@@ -14,6 +14,10 @@ administradores. Los informes históricos conservan sus autores originales.
 
 La UI representa permisos, pero backend autoriza. No guardar tokens en localStorage.
 Proteger mutaciones contra CSRF y pedir motivo para acciones sensibles.
+La creación, edición y activación de cajas usa `cash.registers.manage`.
+`cash.manage` solo habilita operar turnos; no muestra «Registrar caja», edición
+ni cambios de estado. Los diálogos y confirmaciones vuelven a comprobar el permiso
+al enviar. La API protege las tres mutaciones con el mismo permiso independiente.
 
 Cada rol tiene dos controles independientes. `menuAccess` decide qué opciones
 aparecen y qué rutas puede abrir; `permissions` decide qué acciones puede

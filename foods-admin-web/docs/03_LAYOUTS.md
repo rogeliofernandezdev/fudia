@@ -129,13 +129,16 @@ El fondo usa `navigation-900`, con iluminación discreta de `primary-600`;
 la tarjeta y la cabecera de marca permanecen blancas, sin línea divisoria entre
 logo y formulario. Conserva la franja verde/azul de marca. Los campos blancos
 usan iconos simples de 20 px, sin otra superficie detrás, y el foco compartido.
-La acción única «Ingresar» usa azul `primary-600`, flecha en círculo y geometría
+La acción única «Ingresar» usa azul `primary-600`, llave de acceso de 20 px y geometría
 pill en móvil. El copyright externo usa `navigation-text` sobre el fondo marino.
 En viewport bajo conserva scroll
 de página y acceso a la acción. No añade panel lateral, títulos decorativos,
 selección de empresa/local/rol ni indicadores operativos ficticios.
 «Recuperar contraseña» se muestra bajo el campo como acción secundaria de texto
 y abre únicamente el aviso «Próximamente», sin recuperación funcional ni solicitudes.
+La pestaña usa «FudIA · Gestión de restaurantes» y las páginas con título propio
+usan «Título · FudIA». `app/favicon.ico` y `app/apple-icon.png` contienen el
+símbolo oficial existente de `logo-mark.png`, sin modificar el dibujo de marca.
 
 El aviso de configuración inicial comparte los bordes laterales del título y
 del listado: el padding lo define únicamente el contenedor global `.content`.

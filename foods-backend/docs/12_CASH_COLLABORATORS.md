@@ -39,8 +39,10 @@ Pruebas de aplicación, integración y frontend acompañan estos cambios.
 
 ## Alcance y despliegue
 
-No requiere tablas, migraciones, JWT ni cambios de roles. Requiere desplegar
-backend y frontend. La navegación y el turno se refrescan cada 30 segundos y
+No crea tablas ni modifica autenticación o roles de los colaboradores.
+La administración de cajas usa el permiso separado `cash.registers.manage`;
+la migración 94 lo incorpora únicamente a administradores reservados existentes.
+Requiere desplegar backend y frontend. La navegación y el turno se refrescan cada 30 segundos y
 al recuperar foco; esta demora visual no concede cobros tras una revocación,
 porque el backend vuelve a validar bajo bloqueo. Los permisos de lectura que
 el rol ya poseía siguen vigentes. Un cobro iniciado con los bloqueos ya adquiridos

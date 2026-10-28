@@ -27,6 +27,7 @@ export function CashPage(){
   const settings=useSettings();
   const money=useMoney();
   const canManage=can("cash.manage");
+  const canManageRegisters=can("cash.registers.manage");
   const[tab,setTab]=useState<CashTab>("registers");
   const[q,setQ]=useState("");
   const[status,setStatus]=useState("");
@@ -79,11 +80,13 @@ export function CashPage(){
   }
 
   function openNewRegister(){
+    if(!canManageRegisters)return;
     setRegisterEditTarget(null);
     setRegisterDialog(true);
   }
 
   function openEditRegister(item:CashRegister){
+    if(!canManageRegisters)return;
     setRegisterEditTarget(item);
     setRegisterDialog(true);
   }
@@ -205,7 +208,7 @@ export function CashPage(){
     if(next==="history")void qc.invalidateQueries({queryKey:["cash-shifts"]});
   }
 
-  const headerAction=tab==="registers"&&canManage&&registerItems.length>0
+  const headerAction=tab==="registers"&&canManageRegisters&&registerItems.length>0
     ?<Button icon="plus" onClick={openNewRegister}>Registrar caja</Button>
     :undefined;
 
@@ -227,6 +230,7 @@ export function CashPage(){
           loading={registers.isLoading}
           error={registers.isError?registers.error.message:null}
           canManage={canManage}
+          canManageRegisters={canManageRegisters}
           currentUserId={user?.id}
           money={money}
           dateTime={dateTime}
@@ -234,7 +238,7 @@ export function CashPage(){
           retry={()=>registers.refetch()}
           create={openNewRegister}
           edit={openEditRegister}
-          toggleStatus={setRegisterStatusTarget}
+          toggleStatus={item=>{if(canManageRegisters)setRegisterStatusTarget(item)}}
           start={setShiftTarget}
           view={shift=>setDetailId(shift.id)}
           movement={(shift,type)=>setMovementTarget({shift,type})}
@@ -280,7 +284,7 @@ export function CashPage(){
       }
     </section>
 
-    {registerDialog&&<CashRegisterDialog initial={registerEditTarget} busy={saveRegister.isPending} close={()=>{setRegisterDialog(false);setRegisterEditTarget(null)}} save={draft=>saveRegister.mutate({target:registerEditTarget,draft})}/>} 
+    {registerDialog&&canManageRegisters&&<CashRegisterDialog initial={registerEditTarget} busy={saveRegister.isPending} close={()=>{setRegisterDialog(false);setRegisterEditTarget(null)}} save={draft=>{if(canManageRegisters)saveRegister.mutate({target:registerEditTarget,draft})}}/>}
     {shiftTarget&&<OpenCashShiftDialog cashRegister={shiftTarget} busy={startShift.isPending} close={()=>setShiftTarget(null)} save={draft=>startShift.mutate({cashRegisterId:shiftTarget.id,draft})}/>}
     {movementTarget&&<CashMovementDialog type={movementTarget.type} busy={movement.isPending} close={()=>setMovementTarget(null)} save={draft=>movement.mutate({shiftId:movementTarget.shift.id,draft})}/>}
     {closeTarget&&canCloseCashShift(closeTarget,user?.id,canManage)&&<CashClosingDialog shift={closeTarget} busy={closeShiftMutation.isPending} currency={settings.currency} formatMoney={money} close={()=>setCloseTarget(null)} save={async draft=>{if(!canCloseCashShift(closeTarget,user?.id,canManage))return;try{await closeShiftMutation.mutateAsync({shiftId:closeTarget.id,draft});}catch{/* onError reports the API response. */}}}/>}
@@ -309,7 +313,7 @@ export function CashPage(){
         :detail.data&&<CashShiftDetailDialog shift={detail.data} formatMoney={money} formatDateTime={dateTime} formatBusinessDate={businessDate} close={()=>setDetailId(null)} viewReport={()=>{setDetailId(null);setReportId(detailId);}}/>)}
 
     <ConfirmDialog
-      open={Boolean(registerStatusTarget)}
+      open={Boolean(registerStatusTarget)&&canManageRegisters}
       title={registerStatusTarget?.active?"Desactivar caja":"Activar caja"}
       description={registerStatusTarget?.active
         ?"“"+(registerStatusTarget?.name??"")+"” dejará de admitir nuevos turnos. Su historial se conservará."
@@ -318,19 +322,19 @@ export function CashPage(){
       confirmLabel={registerStatusTarget?.active?"Desactivar":"Activar"}
       pending={toggleRegister.isPending}
       onCancel={()=>setRegisterStatusTarget(null)}
-      onConfirm={()=>registerStatusTarget&&toggleRegister.mutate(registerStatusTarget)}
+      onConfirm={()=>canManageRegisters&&registerStatusTarget&&toggleRegister.mutate(registerStatusTarget)}
     />
   </div>;
 }
 
-function CashRegisters({items,loading,error,canManage,currentUserId,money,dateTime,businessDate,retry,create,edit,toggleStatus,start,view,movement,team,operation,close}:{items:CashRegister[];loading:boolean;error:string|null;canManage:boolean;currentUserId?:string;money:(value:number)=>string;dateTime:(value:string)=>string;businessDate:(value:string)=>string;retry:()=>void;create:()=>void;edit:(item:CashRegister)=>void;toggleStatus:(item:CashRegister)=>void;start:(item:CashRegister)=>void;view:(shift:CashShift)=>void;movement:(shift:CashShift,type:CashMovementType)=>void;team:(shift:CashShift)=>void;operation:(shift:CashShift)=>void;close:(shift:CashShift)=>void}){
+function CashRegisters({items,loading,error,canManage,canManageRegisters,currentUserId,money,dateTime,businessDate,retry,create,edit,toggleStatus,start,view,movement,team,operation,close}:{items:CashRegister[];loading:boolean;error:string|null;canManage:boolean;canManageRegisters:boolean;currentUserId?:string;money:(value:number)=>string;dateTime:(value:string)=>string;businessDate:(value:string)=>string;retry:()=>void;create:()=>void;edit:(item:CashRegister)=>void;toggleStatus:(item:CashRegister)=>void;start:(item:CashRegister)=>void;view:(shift:CashShift)=>void;movement:(shift:CashShift,type:CashMovementType)=>void;team:(shift:CashShift)=>void;operation:(shift:CashShift)=>void;close:(shift:CashShift)=>void}){
   if(loading)return <CashRegistersSkeleton/>;
   if(error)return <ErrorState title="No pudimos cargar las cajas" text={error} onRetry={retry}/>;
   if(!items.length)return <EmptyState
     icon="sales"
     title="Aún no hay cajas registradas"
-    text="Registra la primera caja del local. Luego podrás iniciar turnos, controlar el efectivo y cerrar con arqueo."
-    action={canManage?<Button icon="plus" onClick={create}>Registrar caja</Button>:undefined}
+    text={canManageRegisters?"Registra la primera caja del local. Luego podrás iniciar turnos, controlar el efectivo y cerrar con arqueo.":"Pide al administrador que registre una caja para este local. Luego podrás abrir tu turno."}
+    action={canManageRegisters?<Button icon="plus" onClick={create}>Registrar caja</Button>:undefined}
   />;
 
   const active=items.filter(item=>item.active);
@@ -364,7 +368,7 @@ function CashRegisters({items,loading,error,canManage,currentUserId,money,dateTi
           <div className="cash-register-name"><IconTile name="sales" tone={item.active&&shift?"brand":"primary"} appearance="vivid" className="cash-register-symbol"/><div><h3>{item.name}</h3></div></div>
           <div className="cash-register-header-actions">
             <Status tone={statusTone}>{statusLabel}</Status>
-            {canManage&&<div className="cash-register-admin">
+            {canManageRegisters&&<div className="cash-register-admin">
               <RowActionButton action="edit" label={`Editar caja ${item.name}`} onClick={()=>edit(item)}/>
               <RowActionButton action={item.active?"deactivate":"activate"} stateLabel={`Estado de ${item.name}`} label={item.active&&shift?"Cierra el turno antes de desactivar":undefined} disabled={Boolean(item.active&&shift)} onClick={()=>toggleStatus(item)}/>
             </div>}

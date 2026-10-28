@@ -2,6 +2,14 @@
 
 ## Colaboradores de Caja
 
+Crear, editar, activar o desactivar cajas requiere `cash.registers.manage`
+(«Administrar cajas»). `cash.manage` («Operar turnos y cobros») conserva apertura,
+operación, equipo y cierre personal del turno, sin configurar el catálogo de
+cajas. El rol reservado Administrador de empresa recibe el nuevo permiso por
+defecto y por la migración 94 para roles existentes. Cajero, Supervisor y Gerente
+no lo reciben por tener `cash.manage`, por su nombre ni por otros permisos.
+Un administrador puede delegar explícitamente el permiso mediante roles.
+
 La asignación activa en `cash_shift_users` concede una capacidad temporal de
 cobro, nunca `cash.manage` ni un rol. POS permite cobros individuales y divididos
 con permiso administrativo o asignación vigente al turno abierto. Solo habilita

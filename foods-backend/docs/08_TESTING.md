@@ -1,5 +1,11 @@
 # Pruebas
 
+`cash_register_permissions_integration_test.go` verifica con cookie real que
+Cajero no crea, edita ni desactiva cajas, pero conserva consulta, apertura y
+cierre de su turno. El administrador configura cajas y sigue sin poder desactivar
+un turno abierto. La migración 94 se comprueba idempotente, limitada al rol
+reservado (no al nombre o `cash.manage`) y reversible sin quitar operación.
+
 `cash_collaborators_integration_test.go` recorre rutas con cookie real para
 asignación de mozo, exclusión de administradores/actor/inactivos/otros locales,
 duplicados y otro turno, capacidad de sesión sin `cash.manage`, cobros individual

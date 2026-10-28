@@ -16,14 +16,14 @@ const shift={id:"shift-1",code:"CAJ-001",cashRegisterId:"register-1",cashRegiste
 const country="PE",timezone="America/Lima";
 const expected=value=>new Intl.DateTimeFormat("es-PE",{timeZone:timezone,dateStyle:"medium",timeStyle:"short"}).format(new Date(value));
 function nodes(tree){const result=[];function visit(node){if(!node||typeof node!=="object")return;if(Array.isArray(node)){node.forEach(visit);return}result.push(node);visit(node.props?.children)}visit(tree);return result}
-function mountPage(value=shift,tab="registers"){
+function mountPage(value=shift,tab="registers",permissions=["cash.manage","cash.registers.manage"]){
  let index=0;
  const resolve=name=>{
   if(name==="react")return{...require(name),useState:initial=>[index++===0?tab:initial,()=>{}]};
   if(name==="@tanstack/react-query")return{useQueryClient:()=>({invalidateQueries:()=>{}}),useMutation:()=>({}),useQuery:options=>({data:options.queryKey[0]==="cash-registers"?{items:[{id:"register-1",code:"CAJ",name:"Caja principal",active:true,openShift:value}]}:options.queryKey[0]==="cash-shifts"?{items:[value],total:1}:{},isLoading:false,isError:false})};
   if(name==="@/design-system")return new Proxy({},{get:(_,key)=>String(key)});
   if(name==="@/design-system/dialog")return{Dialog:"Dialog"};
-  if(name==="@/providers")return{useSession:()=>({can:()=>true,location:{country,timezone}}),useFeedback:()=>({notify:()=>{}}),useMoney:()=>value=>"S/ "+value};
+  if(name==="@/providers")return{useSession:()=>({can:permission=>permissions.includes(permission),user:{id:"cash-user"},location:{country,timezone}}),useFeedback:()=>({notify:()=>{}}),useMoney:()=>value=>"S/ "+value};
   if(name==="@/providers/settings-context")return{useSettings:()=>({currencySymbol:"S/",currencyPosition:"before",currencyDecimals:2})};
   if(name==="@/shared/i18n/regional-format")return regional;
   if(name.endsWith("shift-attribution"))return attribution;
@@ -34,8 +34,20 @@ function mountPage(value=shift,tab="registers"){
  const page=compile("modules/operations/cash/presentation/cash-page.tsx",resolve,"\nexport {CashRegisters};\n");
  const tree=page.CashPage();
  const registers=nodes(tree).find(node=>node.type===page.CashRegisters);
- return{all:nodes(registers?page.CashRegisters(registers.props):tree),date:registers?.props.dateTime,resolve};
+ return{all:nodes(registers?page.CashRegisters(registers.props):tree),date:registers?.props.dateTime,resolve,renderRegisters:changes=>page.CashRegisters({...registers.props,...changes})};
 }
+
+test("un cajero abre y cierra su turno sin acciones para crear, editar o desactivar cajas",()=>{
+ const cashier=mountPage({...shift,openedById:"cash-user"},"registers",["cash.manage"]);
+ assert.equal(cashier.all.some(node=>node.type==="RowActionButton"&&["edit","activate","deactivate"].includes(node.props.action)),false);
+ assert.ok(cashier.all.some(node=>node.type==="Button"&&node.props.children==="Cerrar turno"));
+ assert.equal(cashier.renderRegisters({items:[]}).props.action,undefined);
+ const idle=nodes(cashier.renderRegisters({items:[{id:"register",name:"Caja",active:true,openShift:null}]}));
+ assert.ok(idle.some(node=>node.type==="Button"&&node.props.children==="Iniciar turno"));
+ const administrator=mountPage();
+ assert.ok(administrator.all.some(node=>node.type==="RowActionButton"&&node.props.action==="edit"));
+ assert.ok(administrator.renderRegisters({items:[]}).props.action);
+});
 
 test("la tarjeta de caja muestra fecha y hora de apertura del local, no el día operativo",()=>{
  const {all}=mountPage();

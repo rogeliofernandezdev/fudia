@@ -1228,6 +1228,7 @@ paths:
     post:
       operationId: createCashRegister
       summary: Registra una nueva caja física o lógica en el local activo
+      description: Requiere cash.registers.manage. cash.manage solo permite operar turnos y no autoriza crear cajas.
       security: [{ sessionCookie: [] }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/CashRegisterInput" } } } }
       responses:
@@ -1240,6 +1241,7 @@ paths:
     patch:
       operationId: updateCashRegister
       summary: Renombra una caja del local activo
+      description: Requiere cash.registers.manage; no se concede por operar turnos.
       security: [{ sessionCookie: [] }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/CashRegisterInput" } } } }
       responses:
@@ -1251,6 +1253,7 @@ paths:
     patch:
       operationId: updateCashRegisterStatus
       summary: Activa o desactiva una caja; no permite desactivar si tiene turno abierto
+      description: Requiere cash.registers.manage. Conserva el rechazo de desactivación con turno abierto.
       security: [{ sessionCookie: [] }]
       requestBody: { required: true, content: { application/json: { schema: { type: object, required: [active], properties: { active: { type: boolean } } } } } }
       responses:
