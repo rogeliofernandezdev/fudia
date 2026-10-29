@@ -71,6 +71,9 @@ func validPOSDates(from, to string) bool {
 }
 
 type PaymentRepository interface {
+	CanReadAllShifts(context.Context, scope) (bool, error)
+	OpenCollectionShifts(context.Context, scope) ([]domain.CollectionShift, error)
+	LockCollectionShift(context.Context, scope, string) (string, error)
 	OwnsCollectionOrder(context.Context, scope, string) (bool, error)
 	CollectionShift(context.Context, scope) (*domain.CollectionShift, error)
 	CollectionOrderVisible(context.Context, scope, string, string) (bool, error)
@@ -119,12 +122,9 @@ func (a *Payments) Create(ctx context.Context, s scope, in domain.PaymentInput) 
 		return result, paymentFailure(apperror.Unavailable, "payment_methods_unavailable", "No pudimos validar el medio de pago.")
 	}
 
-	shiftID, err := a.repo.CurrentShift(tx.Context(), s)
-	if errors.Is(err, ErrNotFound) {
-		return result, paymentFailure(apperror.Conflict, "cash_shift_required", "Debes estar asignado a un turno de caja abierto para cobrar.")
-	}
+	shiftID, err := a.collectionPaymentShift(tx.Context(), s, in.ShiftID)
 	if err != nil {
-		return result, paymentFailure(apperror.Unavailable, "payments_unavailable", "No pudimos validar tu turno de caja.")
+		return result, err
 	}
 
 	var orderCode, status string
@@ -314,12 +314,9 @@ func (a *Payments) CreateBatch(ctx context.Context, s scope, in domain.PaymentBa
 		methodDefs[p.Method] = methodDef
 	}
 
-	shiftID, err := a.repo.CurrentShift(tx.Context(), s)
-	if errors.Is(err, ErrNotFound) {
-		return result, paymentFailure(apperror.Conflict, "cash_shift_required", "Debes estar asignado a un turno de caja abierto para cobrar.")
-	}
+	shiftID, err := a.collectionPaymentShift(tx.Context(), s, in.ShiftID)
 	if err != nil {
-		return result, paymentFailure(apperror.Unavailable, "payments_unavailable", "No pudimos validar tu turno de caja.")
+		return result, err
 	}
 
 	var orderCode, status string

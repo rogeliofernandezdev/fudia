@@ -40,6 +40,23 @@ la autoridad definitiva aunque se cambie el UUID desde el navegador.
   guardar conteos, informes ni modificar equipo. La interfaz oculta el cierre
   a quienes no son el abridor, comparando UUID y no nombres.
 
+## Elección de caja por el administrador
+
+El administrador reservado de empresa puede cobrar sin ser colaborador ni abrir
+su propio turno. `GET /pos/access` devuelve `canChooseShift`, las cajas con turno
+abierto del local activo y su abridor, sin saldos. Si solo hay una, `shift` la
+selecciona automáticamente. Con varias, el formulario exige una elección; con
+ninguna, impide cobrar. `assignedShift` conserva el turno realmente asignado para
+las devoluciones, cuya autorización no se amplía.
+
+Cobro individual y dividido aceptan `shiftId` opcional únicamente para el
+administrador. El backend valida el rol reservado, empresa, local y estado del
+turno dentro de la transacción, y lo bloquea en modo compartido frente al cierre.
+Un cajero o mozo que envía `shiftId` recibe 403; conservan su turno autorizado.
+El pago guarda al administrador en `created_by`, y el movimiento usa el turno
+elegido. No se modifica `opened_by`, no se crea una asignación y solo el abridor
+conserva el derecho de cierre. El efectivo se entrega físicamente a la caja elegida.
+
 ## Archivos y responsabilidad
 
 `billing/application/{cash,payments,collection}.go` y adaptadores PostgreSQL:

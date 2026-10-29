@@ -4,12 +4,12 @@ import {useForm,useWatch} from "react-hook-form";
 import {Button,FormField,FormSection,Icon,Input,Select,Textarea,ModalHeader,ModalForm,ModalBody,ModalFooter} from "@/design-system";
 import {calculateTip,canCollectTip,type TipPolicy,type TipReceipt} from "../../tips";
 import {cashChange,paymentResolverFor,refundResolver} from "../domain/pos-schema";
-import type {Payment,PaymentDraft,PaymentMethodOption,POSOrderSummary,RefundDraft} from "../domain/types";
+import type {POSCollectionShift,Payment,PaymentDraft,PaymentMethodOption,POSOrderSummary,RefundDraft} from "../domain/types";
 
 /** El icono sigue a «Impacta caja»; el nombre y el orden vienen del catálogo. */
 export function paymentMethodIcon(affectsCash:boolean){return affectsCash?"cash" as const:"wallet" as const}
 
-export function PaymentForm({order,methods,shiftName,busy,formatMoney,close,save,tipPolicy,registeredTip}:{order:POSOrderSummary;methods:PaymentMethodOption[];shiftName:string;busy:boolean;formatMoney:(value:number)=>string;close:()=>void;save:(draft:PaymentDraft)=>void;tipPolicy?:TipPolicy;registeredTip?:TipReceipt}){
+export function PaymentForm({order,methods,shiftName,shiftOptions=[],selectedShiftId="",selectShift,busy,formatMoney,close,save,tipPolicy,registeredTip}:{order:POSOrderSummary;methods:PaymentMethodOption[];shiftName:string;shiftOptions?:POSCollectionShift[];selectedShiftId?:string;selectShift?:(id:string)=>void;busy:boolean;formatMoney:(value:number)=>string;close:()=>void;save:(draft:PaymentDraft)=>void;tipPolicy?:TipPolicy;registeredTip?:TipReceipt}){
   const tipAllowed=canCollectTip(tipPolicy,order.channel,Boolean(registeredTip));
   const tipBase=Math.max(0,Number(order.total)-Number(order.deliveryFee??0));
   const{control,register,handleSubmit,formState:{errors}}=useForm<PaymentDraft>({
@@ -29,13 +29,13 @@ export function PaymentForm({order,methods,shiftName,busy,formatMoney,close,save
   const collected=(Number(amount)||0)+(direct?0:tip);
   const selected=methods.find(option=>option.code===method);
   const change=cashChange(String(collected),received);
-  return <ModalForm onSubmit={handleSubmit(save)} noValidate inert={busy}>
+  return <ModalForm onSubmit={handleSubmit(draft=>{if(shiftOptions.length>1&&!selectedShiftId)return;save(draft)})} noValidate inert={busy}>
       <ModalBody className="pos-payment-body">
         <section className="pos-payment-overview">
           <div className="pos-payment-balance"><span><Icon name="wallet" size={18}/></span><div><small>Saldo a cobrar</small><strong>{formatMoney(Number(order.remainingAmount))}</strong></div></div>
           <dl><div><dt>Total del pedido</dt><dd>{formatMoney(Number(order.total))}</dd></div><div><dt>Pagado</dt><dd>{formatMoney(Number(order.paidAmount))}</dd></div></dl>
         </section>
-        <div className="pos-shift-note"><Icon name="register" size={14}/><span>Turno activo: <b>{shiftName}</b></span></div>
+        {shiftOptions.length>1?<FormField label="Caja para este cobro"><Select value={selectedShiftId} disabled={busy} onChange={event=>selectShift?.(event.target.value)} required><option value="">Selecciona una caja abierta</option>{shiftOptions.map(option=><option key={option.id} value={option.id}>{option.cashRegisterName} · {option.openedByName}</option>)}</Select></FormField>:<div className="pos-shift-note"><Icon name="register" size={14}/><span>Turno activo: <b>{shiftName}</b></span></div>}
         <FormSection icon="payment" tone="brand" title="Medio de pago" bare>
         <fieldset className="pos-methods">
           <legend className="sr-only">Medio de pago</legend>
@@ -76,9 +76,9 @@ export function PaymentForm({order,methods,shiftName,busy,formatMoney,close,save
         </div>
         </FormSection>
         {tip>0&&!direct&&<div className="pos-cash-change" role="status"><span>Total a cobrar con propina</span><strong>{formatMoney(collected)}</strong></div>}
-        {selected?.affectsCash&&<div className="pos-cash-impact"><Icon name="cash" size={14}/><span>Este cobro incrementará automáticamente el efectivo esperado del turno.</span></div>}
+        {selected?.affectsCash&&<div className="pos-cash-impact"><Icon name="cash" size={14}/><span>Entrega el efectivo a la caja indicada. El consumo incrementará automáticamente el efectivo esperado del turno.</span></div>}
       </ModalBody>
-      <ModalFooter><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy} loading={busy}>{busy?"Registrando…":"Registrar cobro"}</Button></ModalFooter>
+      <ModalFooter><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy||(shiftOptions.length>1&&!selectedShiftId)} loading={busy}>{busy?"Registrando…":"Registrar cobro"}</Button></ModalFooter>
     </ModalForm>;
 }
 

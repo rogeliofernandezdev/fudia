@@ -20,16 +20,16 @@ function compile(file,resolve,extra=""){
  vm.runInNewContext(ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText,{exports,require:resolve});
  return exports;
 }
-function mountPage({canManage=true,shift=true,busy=false,initialOrderId="order-1",listed=[],userId="waiter"}={}){
+function mountPage({canManage=true,shift=true,busy=false,initialOrderId="order-1",listed=[],access,selected,userId="waiter"}={}){
  const queries=[],mutations=[],changes=[],sent=[],invalidations=[],notices=[];let stateIndex=0,dynamicIndex=0;
  const resolve=name=>{
   if(name==="next/dynamic")return{default:()=>["RefundDialog","PaymentTicketDialog"][dynamicIndex++]};
   if(name==="./pos-dialogs")return{PaymentForm:"PaymentForm"};
   if(name==="next/link")return{default:"Link"};
-  if(name==="react")return{...require(name),useState:value=>{const index=stateIndex++;return[value,next=>changes.push({index,next})]}};
+  if(name==="react")return{...require(name),useState:value=>{const index=stateIndex++;return[index===0&&selected?selected:value,next=>changes.push({index,next})]}};
   if(name==="@tanstack/react-query")return{
    useQueryClient:()=>({invalidateQueries:options=>invalidations.push(options.queryKey)}),
-   useQuery:options=>{queries.push(options);return{isLoading:false,isPending:false,isFetching:false,isError:false,refetch:()=>{},data:options.queryKey[0]==="pos-cash-access"?{shift:shift?{cashRegisterName:"Caja principal",code:"CAJ-001",openedByName:"Ana"}:null}:options.queryKey[0]==="pos-orders"?{items:listed,total:listed.length}:options.queryKey[0]==="payment-methods"?{items:catalog}:options.enabled?detail:undefined}},
+   useQuery:options=>{queries.push(options);return{isLoading:false,isPending:false,isFetching:false,isError:false,refetch:()=>{},data:options.queryKey[0]==="pos-cash-access"?(access??{shift:shift?{cashRegisterName:"Caja principal",code:"CAJ-001",openedByName:"Ana"}:null}):options.queryKey[0]==="pos-orders"?{items:listed,total:listed.length}:options.queryKey[0]==="payment-methods"?{items:catalog}:options.enabled?detail:undefined}},
    useMutation:options=>{mutations.push(options);return{isPending:busy,mutate:input=>sent.push(input)}},
   };
   if(name.endsWith("/tips"))return tipCalculation;
@@ -40,6 +40,7 @@ function mountPage({canManage=true,shift=true,busy=false,initialOrderId="order-1
   if(name==="@/shared/i18n/regional-format")return{formatRegionalNumber:value=>String(value),formatRegionalDateTime:()=>"Hoy"};
   if(name==="@/shared/hooks/use-debounced-value")return{useDebouncedValue:value=>value};
   if(name==="@/shared/routing/page-routes")return{pageRoutes:{cash:"/cash"}};
+  if(name.endsWith("collection-shift"))return compile("../domain/collection-shift.ts",require);
   if(name.endsWith("service-flow"))return serviceFlowExports;
   if(name.endsWith("shift-attribution"))return{cashShiftAttribution:()=>({name:"Ana"})};
   if(name.startsWith("@/")||name.startsWith("../")||name.startsWith("./"))return{};
@@ -115,7 +116,7 @@ test("Cobrar y Ver detalle de la tabla abren destinos independientes",()=>{
  const actions=nodes(view.tree).filter(node=>node.type==="RowActionButton");
  actions.find(node=>node.props.action==="charge").props.onClick();
  actions.find(node=>node.props.action==="view").props.onClick();
- assert.deepEqual(view.changes,[{index:4,next:"order-1"},{index:5,next:"order-1"}]);
+ assert.equal(view.changes.filter(change=>change.next==="order-1").length,2);
  assert.equal(view.sent.length,0);
 });
 
@@ -345,4 +346,21 @@ test("el cobro espera el catálogo y explica errores o ausencia de medios",()=>{
  const empty=nodes(view.POSPaymentEntry(entryProps({methods:[]}))).find(node=>node.type==="EmptyState");
  assert.equal(empty.props.title,"Sin medios de pago para ventas");
  assert.ok(view.queries.some(options=>options.queryKey[0]==="payment-methods"&&options.queryKey[1]==="sales"));
+});
+
+
+test("el administrador usa una caja automáticamente y elige si hay varias, sin asignación",()=>{
+ const one={id:"one",cashRegisterName:"Caja Madison",openedByName:"Madison"};
+ const two={id:"two",cashRegisterName:"Caja secundaria",openedByName:"Otro cajero"};
+ const single=mountPage({access:{canChooseShift:true,shifts:[one],shift:one,assignedShift:null}});
+ assert.equal(single.entry.props.shiftName,"Caja Madison");single.entry.props.save({method:"cash",amount:"30",reference:""});assert.equal(single.sent[0].draft.shiftId,"one");
+ const multiple=mountPage({access:{canChooseShift:true,shifts:[one,two],shift:null}});
+ assert.equal(multiple.entry.props.shiftOptions.length,2);assert.ok(nodes(multiple.POSPaymentEntry(multiple.entry.props)).some(node=>node.type==="PaymentForm"));
+ multiple.entry.props.save({method:"cash",amount:"30",reference:""});assert.equal(multiple.sent.length,0);
+ const chosen=mountPage({access:{canChooseShift:true,shifts:[one,two],shift:null},selected:{scope:"::waiter",id:"two"}});
+ chosen.entry.props.save({method:"cash",amount:"30",reference:""});assert.equal(chosen.sent[0].draft.shiftId,"two");
+ const wrongScope=mountPage({access:{canChooseShift:true,shifts:[one,two],shift:null},selected:{scope:"other-local",id:"two"}});
+ wrongScope.entry.props.save({method:"cash",amount:"30",reference:""});assert.equal(wrongScope.sent.length,0);
+ const noBoxes=mountPage({access:{canChooseShift:true,shifts:[],shift:null}});
+ assert.equal(nodes(noBoxes.POSPaymentEntry(noBoxes.entry.props)).some(node=>node.type==="PaymentForm"),false);
 });

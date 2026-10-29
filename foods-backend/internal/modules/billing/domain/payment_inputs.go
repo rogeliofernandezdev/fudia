@@ -1,6 +1,7 @@
 package domain
 
 type PaymentInput struct {
+	ShiftID   string    `json:"shiftId,omitempty"`
 	Tip       *TipInput `json:"tip,omitempty"`
 	OrderID   string    `json:"orderId"`
 	Method    string    `json:"method"`
@@ -15,6 +16,7 @@ type RefundInput struct {
 }
 
 type PaymentBatchInput struct {
+	ShiftID  string        `json:"shiftId,omitempty"`
 	OrderID  string        `json:"orderId"`
 	Payments []PaymentLine `json:"payments"`
 }

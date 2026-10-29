@@ -441,3 +441,15 @@ configuración reemplaza su caché e invalida uso y detalles; guardar la excepci
 de tope (`PATCH {limitSource,maxConversations}`, número solo con tope propio)
 reemplaza el detalle e invalida el listado; guardar un plan invalida ambos. Los
 topes vienen siempre del API y los números/meses usan `regional-format`.
+
+
+## Caja de cobro del administrador
+
+POS usa las capacidades del API `pos/access`, no infiere la elección a partir de
+`cash.manage`. Para administrador, una caja abierta se selecciona automáticamente;
+varias muestran un selector en el formulario de cobro y ninguna impide registrar.
+La elección se limita a empresa/local/usuario de la consulta, se descarta al cerrar
+el formulario y se revalida si cambian las opciones. Solo el cobro administrativo
+envía `shiftId`. Cajeros y colaboradores conservan el turno asignado. El cobro
+identifica al actor y no cambia al abridor. Devoluciones usan `assignedShift`,
+sin heredar la elección administrativa de caja.

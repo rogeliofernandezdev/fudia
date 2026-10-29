@@ -20,8 +20,8 @@ func (h *Payments) RequireCollection(next http.Handler) http.Handler {
 	})
 }
 func (h *Payments) CollectionAccess(w http.ResponseWriter, r *http.Request) {
-	shift, err := h.service.CollectionAccess(r.Context(), billingScope(r))
-	billingResponse(w, 200, map[string]any{"shift": shift}, err)
+	out, err := h.service.CollectionOptions(r.Context(), billingScope(r))
+	billingResponse(w, 200, out, err)
 }
 
 func NewPayments(service *application.Payments) *Payments { return &Payments{service} }

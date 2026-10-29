@@ -38,3 +38,29 @@ func (r *Payments) OwnsCollectionOrder(ctx context.Context, s scope, id string) 
 	 AND channel='salon' AND table_id IS NOT NULL AND waiter_id=$4)`, id, s.OrganizationID, s.LocationID, s.UserID).Scan(&owned)
 	return owned, err
 }
+
+func (r *Payments) OpenCollectionShifts(ctx context.Context, s scope) ([]domain.CollectionShift, error) {
+	rows, err := r.db(ctx).Query(ctx, `SELECT cs.id::text,cr.name,u.full_name FROM cash_shifts cs
+ JOIN cash_registers cr ON cr.id=cs.cash_register_id AND cr.organization_id=cs.organization_id AND cr.location_id=cs.location_id
+ JOIN users u ON u.id=cs.opened_by AND u.organization_id=cs.organization_id
+ WHERE cs.organization_id=$1 AND cs.location_id=$2 AND cs.status='open'
+ ORDER BY cr.name,cs.id`, s.OrganizationID, s.LocationID)
+	if err != nil {
+		return nil, billingError(err)
+	}
+	defer rows.Close()
+	out := []domain.CollectionShift{}
+	for rows.Next() {
+		var item domain.CollectionShift
+		if err = rows.Scan(&item.ID, &item.CashRegisterName, &item.OpenedByName); err != nil {
+			return nil, billingError(err)
+		}
+		out = append(out, item)
+	}
+	return out, rows.Err()
+}
+func (r *Payments) LockCollectionShift(ctx context.Context, s scope, id string) (string, error) {
+	var result string
+	err := r.db(ctx).QueryRow(ctx, `SELECT id::text FROM cash_shifts WHERE id=$1 AND organization_id=$2 AND location_id=$3 AND status='open' FOR SHARE`, id, s.OrganizationID, s.LocationID).Scan(&result)
+	return result, billingError(err)
+}

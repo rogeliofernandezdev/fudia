@@ -1436,7 +1436,7 @@ paths:
       description: Sesión obligatoria. Devuelve null si no existe asignación activa a turno abierto. Solo incluye identidad del turno, nombre de caja y responsable de apertura; no expone saldos ni movimientos.
       security: [{ sessionCookie: [] }]
       responses:
-        "200": { description: Alcance operativo de cobro, content: { application/json: { schema: { type: object, required: [shift], properties: { shift: { anyOf: [{ $ref: "#/components/schemas/POSCollectionShift" }, { type: "null" }] } } } } } }
+        "200": { description: Alcance operativo de cobro, content: { application/json: { schema: { $ref: "#/components/schemas/POSCollectionAccess" } } } }
         "401": { $ref: "#/components/responses/Unauthorized" }
   /v1/operations/pos/access:
     get:
@@ -1444,7 +1444,7 @@ paths:
       summary: Alias operativo de autorización de cobro
       security: [{ sessionCookie: [] }]
       responses:
-        "200": { description: Turno mínimo autorizado o null, content: { application/json: { schema: { type: object, required: [shift], properties: { shift: { anyOf: [{ $ref: "#/components/schemas/POSCollectionShift" }, { type: "null" }] } } } } } }
+        "200": { description: Turno mínimo autorizado o null, content: { application/json: { schema: { $ref: "#/components/schemas/POSCollectionAccess" } } } }
   /v1/admin/cash-shifts/{id}/operations:
     parameters: [{ $ref: "#/components/parameters/EntityId" }]
     post:
@@ -1549,7 +1549,7 @@ paths:
     post:
       operationId: createPaymentBatch
       summary: Registra un cobro dividido en varios medios de pago
-      description: "Requiere cash.manage o asignación temporal activa, y turno abierto asignado. Sin cash.manage solo admite las atenciones de Salón vinculadas al mozo autenticado; de lo contrario devuelve 403 cash_collection_order_forbidden antes de registrar cualquier pago. Salón exige cuenta cerrada y todos los productos entregados; pendientes devuelven 409 products_not_delivered. Todos los pagos se registran atómicamente; al completar el saldo se finaliza la atención y libera la mesa en la misma transacción."
+      description: "Requiere cash.manage o asignación temporal activa, y turno abierto. El administrador reservado puede seleccionar shiftId de un turno del local activo; cajeros y colaboradores conservan el turno asignado. Sin cash.manage solo admite las atenciones de Salón vinculadas al mozo autenticado; de lo contrario devuelve 403 cash_collection_order_forbidden antes de registrar cualquier pago. Salón exige cuenta cerrada y todos los productos entregados; pendientes devuelven 409 products_not_delivered. Todos los pagos se registran atómicamente; al completar el saldo se finaliza la atención y libera la mesa en la misma transacción."
       security: [{ sessionCookie: [] }]
       requestBody:
         required: true
@@ -1559,6 +1559,7 @@ paths:
               type: object
               required: [orderId, payments]
               properties:
+                shiftId: { type: string, format: uuid, description: "Solo administrador; mismo criterio de selección que el cobro individual." }
                 orderId: { type: string, format: uuid }
                 payments:
                   type: array
@@ -2285,6 +2286,7 @@ components:
     CashShiftList: { type: object, required: [items, total, page, pageSize], properties: { items: { type: array, items: { $ref: "#/components/schemas/CashShift" } }, total: { type: integer, minimum: 0 }, page: { type: integer, minimum: 1 }, pageSize: { type: integer, minimum: 1 } } }
     CashShiftUser: { type: object, required: [userId, name, assignedAt], properties: { userId: { type: string, format: uuid }, name: { type: string }, assignedAt: { type: string, format: date-time } } }
     CashUserOption: { type: object, required: [id, name], properties: { id: { type: string, format: uuid }, name: { type: string }, assignedShiftId: { type: [string, "null"], format: uuid } } }
+    POSCollectionAccess: { type: object, required: [shift, shifts, canChooseShift], properties: { shift: { anyOf: [{ $ref: "#/components/schemas/POSCollectionShift" }, { type: "null" }], description: "Asignado para cajero/mozo; seleccionado automáticamente para administrador si hay exactamente un turno abierto." }, assignedShift: { anyOf: [{ $ref: "#/components/schemas/POSCollectionShift" }, { type: "null" }], description: "Turno realmente asignado al administrador; conserva las reglas de devoluciones." }, shifts: { type: array, description: "Opciones del local activo, solo para administrador reservado.", items: { $ref: "#/components/schemas/POSCollectionShift" } }, canChooseShift: { type: boolean } } }
     POSCollectionShift: { type: object, required: [id, cashRegisterName, openedByName], properties: { id: { type: string, format: uuid }, cashRegisterName: { type: string }, openedByName: { type: string } } }
     CashOperationInput: { type: object, required: [operationType, amount, reason], properties: { operationType: { type: string, enum: [cash_pull, deposit, transfer] }, targetShiftId: { type: string, format: uuid }, amount: { type: number, exclusiveMinimum: 0 }, reason: { type: string, minLength: 1, maxLength: 120 }, note: { type: string, maxLength: 240 } } }
     CashOperation: { type: object, required: [id, operationType, amount, reason, note, createdAt], properties: { id: { type: string, format: uuid }, operationType: { type: string, enum: [cash_pull, deposit, transfer] }, amount: { type: string }, reason: { type: string }, note: { type: string }, createdAt: { type: string, format: date-time } } }
@@ -2396,7 +2398,7 @@ components:
         report: { $ref: "#/components/schemas/TipReport" }
         available: { type: string }
         recipients: { type: array, items: { type: object, required: [id, name], properties: { id: { type: string, format: uuid }, name: { type: string } } } }
-    PaymentInput: { type: object, description: "amount solo representa consumo. tip se cobra adicionalmente una sola vez por pedido, sobre total menos delivery, redondeado según la moneda. La transacción revierte íntegra si la propina falla.", required: [orderId, method, amount], properties: { tip: { $ref: "#/components/schemas/TipInput" }, orderId: { type: string, format: uuid }, method: { type: string }, amount: { type: number, exclusiveMinimum: 0 }, reference: { type: string, maxLength: 120 } } }
+    PaymentInput: { type: object, description: "amount solo representa consumo. tip se cobra adicionalmente una sola vez por pedido, sobre total menos delivery, redondeado según la moneda. La transacción revierte íntegra si la propina falla.", required: [orderId, method, amount], properties: { shiftId: { type: string, format: uuid, description: "Solo administrador: turno abierto del local activo. Se omite si solo hay uno; con varios es obligatorio. No cambia al abridor ni crea asignación." }, tip: { $ref: "#/components/schemas/TipInput" }, orderId: { type: string, format: uuid }, method: { type: string }, amount: { type: number, exclusiveMinimum: 0 }, reference: { type: string, maxLength: 120 } } }
     Payment: { type: object, required: [id, orderId, orderCode, shiftId, cashRegisterName, method, methodName, amount, refundedAmount, netAmount, reference, createdByName, createdAt], properties: { id: { type: string, format: uuid }, orderId: { type: string, format: uuid }, orderCode: { type: string }, shiftId: { type: string, format: uuid }, cashRegisterName: { type: string }, method: { type: string }, methodName: { type: string, description: "Nombre del catálogo de la empresa, disponible también para pagos con medios ahora inactivos." }, affectsCash: { type: boolean, description: "El medio impacta el efectivo esperado del turno" }, amount: { type: string }, refundedAmount: { type: string }, netAmount: { type: string }, reference: { type: string }, createdByName: { type: string }, createdAt: { type: string, format: date-time } } }
     RefundInput: { type: object, required: [amount, reason], properties: { amount: { type: number, exclusiveMinimum: 0 }, reason: { type: string, minLength: 1, maxLength: 120 }, note: { type: string, maxLength: 240 } } }
     ComboOptionInput: { type: object, required: [productId, surcharge], properties: { productId: { type: string, format: uuid }, surcharge: { type: string, pattern: "^[0-9]+(\\.[0-9]{1,2})?$" } } }

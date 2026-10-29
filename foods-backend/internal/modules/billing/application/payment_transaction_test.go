@@ -108,3 +108,7 @@ func TestCreatePaymentReadsProjectionBeforeCommit(t *testing.T) {
 		})
 	}
 }
+
+func (*paymentProjectionRepo) CanReadAllShifts(context.Context, scope) (bool, error) {
+	return false, nil
+}

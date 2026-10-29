@@ -78,3 +78,5 @@ func TestCollectionAdministrativeAuthorizationRemainsUnchanged(t *testing.T) {
 		t.Fatalf("administrative scope: %q %v calls=%d", shift, err, repo.calls)
 	}
 }
+
+func (*collectionRepo) CanReadAllShifts(context.Context, scope) (bool, error) { return false, nil }

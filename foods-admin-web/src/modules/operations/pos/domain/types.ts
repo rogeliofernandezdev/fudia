@@ -88,7 +88,11 @@ export type POSOrdersResponse={
   pageSize:number;
 };
 
+export type POSCollectionShift={id:string;cashRegisterName:string;openedByName:string};
+export type POSCollectionAccess={shift:POSCollectionShift|null;assignedShift?:POSCollectionShift|null;shifts?:POSCollectionShift[];canChooseShift?:boolean};
+
 export type PaymentDraft={
+ shiftId?:string;
  tipEnabled?:boolean;
  tipKind?:"percentage"|"fixed";
  tipValue?:string;
