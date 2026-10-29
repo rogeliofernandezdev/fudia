@@ -730,12 +730,19 @@ y por capas, sin franjas de metadatos.
 4. **Entrega** (`order-detail-context`): dirección, referencia y «Ver
    ubicación» bajo la tarjeta de contacto, solo en pedidos con entrega.
 5. **Seguimiento** («Progreso del pedido», `OrderTimeline`): hitos con círculo
-   de 32 px; cumplidos en `navigation-900` con icono blanco unidos por línea
-   oscura, el actual en `primary-600` y los pendientes en `cloud-100`. Hitos:
+   de 32 px con `IconTile`: registro azul vivo, preparación con su tono semántico,
+   cuenta en celeste y pago confirmado en verde vivo. Cancelación usa coral;
+   los pendientes permanecen neutros. La línea es tenue y el hito actual lleva
+   contorno de foco visual sin reemplazar su tono. Hitos:
    «Pedido registrado» (hora de alta), estado de preparación actual, «Cuenta
    cerrada» solo en salón (hora de cierre), pago y «Mesa liberada» / «Pedido
    completado» (hora de cierre). Solo horas que el backend registra; el resto
    dice «Estado actual», «Registrado» o «Pendiente».
+   La identidad superior agrupa fecha y atención en dos columnas iguales también
+   desde 390 px, con etiquetas de 12 px, valores de 14 px e iconos de 16 px junto
+   a la etiqueta, sin recuadros decorativos. La fecha compacta conserva la hora
+   completa en el seguimiento y en su nombre accesible. La autoría del cobro, si
+   existe, ocupa una fila completa. Los nombres largos se ajustan sin truncarse.
 6. El resumen de cuenta y las acciones permanecen fijos al pie.
 
 ### Datos del pedido manual

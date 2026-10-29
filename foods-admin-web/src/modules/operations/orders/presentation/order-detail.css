@@ -7,11 +7,10 @@
 .order-detail-information{padding-bottom:var(--space-4);margin-bottom:var(--space-2);border-bottom:var(--stroke-1) solid var(--line);color:var(--ink-600);font-size:var(--font-size-label)}
 .order-detail-body{min-width:0}
 .order-detail-content{display:flex;flex-direction:column;gap:var(--space-3)}
-/* Responsables: en el detalle es una línea de la identidad (`.order-detail-identity p`); los bloques son del skeleton. */
-.order-attribution{display:flex;flex-wrap:wrap;gap:var(--space-2) var(--space-5);margin:0}
-.order-detail-identity p>svg{flex:none}
-.order-detail-identity p>span{min-width:0;overflow-wrap:anywhere}
-.order-attribution>div{min-width:0;display:grid;grid-template-columns:auto minmax(0,1fr);align-items:start;gap:var(--space-2)}
+/* Responsables integrados en la misma cuadrícula que la fecha. */
+.order-attribution{display:contents}
+.order-detail-meta-item,.order-attribution>div{min-width:0;display:grid;align-content:start;gap:var(--space-1-5);min-height:var(--size-44)}
+.order-attribution-collector{grid-column:1/-1}
 .order-detail-context{display:grid;gap:var(--space-3)}
 .order-detail-context>div{min-width:0;display:flex;align-items:flex-start;gap:var(--space-2)}
 .order-detail-context>div>span{flex:none;color:var(--ink-500)}
@@ -86,31 +85,35 @@
 }
 /* Detalle al estilo de la referencia: identidad, contacto, pestañas, datos en dos columnas y progreso. */
 .order-detail-hero{display:grid;gap:var(--space-4);padding-bottom:var(--space-1)}
-.order-detail-identity{display:grid;gap:var(--space-1)}
+.order-detail-identity{display:grid;gap:var(--space-3)}
 .order-detail-identity-head{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2-5)}
 .order-detail-identity h3{margin:0;color:var(--ink-950);font-size:var(--font-size-xl);font-weight:var(--weight-heavy);letter-spacing:var(--letter-spacing-tight);line-height:var(--line-height-tight)}
-.order-detail-identity p{display:flex;align-items:center;gap:var(--space-1-5);margin:0;color:var(--ink-500);font-size:var(--font-size-label)}
+.order-detail-metadata{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-3) var(--space-6)}
+.order-detail-metadata small{display:flex;align-items:center;gap:var(--space-1-5);color:var(--ink-500);font-size:var(--font-size-label);font-weight:var(--modal-label-weight);line-height:var(--line-height-normal)}
+.order-detail-metadata small>svg{flex:none}
+.order-detail-metadata b,.order-detail-metadata time{color:var(--ink-950);font-size:var(--font-size-base);font-weight:var(--weight-semibold);line-height:var(--line-height-normal);overflow-wrap:anywhere}
 .order-detail-contact{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-3) var(--space-4);border:var(--stroke-1) solid var(--line);border-radius:var(--radius-card);background:var(--surface)}
 .order-detail-contact>div{display:grid;flex:1;gap:var(--space-0-5);min-width:0}
 .order-detail-contact b{overflow:hidden;color:var(--ink-950);font-size:var(--font-size-base);font-weight:var(--weight-bold);text-overflow:ellipsis;white-space:nowrap}
 .order-detail-contact small{color:var(--ink-500);font-size:var(--font-size-label)}
 .order-detail-panel{display:grid;min-width:0;gap:var(--space-4);padding-inline:var(--space-4)}
 .order-detail-panel[hidden]{display:none}
-/* Progreso: círculos oscuros para lo cumplido, índigo para lo actual y gris para lo pendiente. */
+/* Progreso: IconTile aplica la paleta semántica de cada hito; el pendiente sigue neutro. */
 .order-timeline-title{margin:0;color:var(--ink-950);font-size:var(--font-size-md);font-weight:var(--weight-bold)}
 .order-timeline ol{display:grid;gap:var(--space-4);margin:var(--space-3) 0 0;padding:0;list-style:none}
 .order-timeline li{position:relative;display:flex;align-items:flex-start;gap:var(--space-3)}
-.order-timeline li:not(:last-child):after{content:"";position:absolute;top:var(--size-32);bottom:calc(var(--space-4) * -1);left:calc(var(--size-16) - var(--stroke-1));width:var(--stroke-2);background:var(--navigation-900)}
+.order-timeline li:not(:last-child):after{content:"";position:absolute;top:var(--size-32);bottom:calc(var(--space-4) * -1);left:calc(var(--size-16) - var(--stroke-1));width:var(--stroke-2);background:var(--line-strong)}
 .order-timeline li.is-pending:not(:last-child):after,.order-timeline li.is-current:not(:last-child):after{background:var(--line)}
-.order-timeline-dot{display:grid;flex:none;place-items:center;width:var(--size-32);height:var(--size-32);border-radius:var(--radius-pill);color:var(--surface);background:var(--navigation-900)}
-.order-timeline li.is-current .order-timeline-dot{background:var(--primary-600)}
-.order-timeline li.is-pending .order-timeline-dot{color:var(--ink-400);background:var(--cloud-100)}
+.order-timeline-dot{border-radius:var(--radius-pill)}
+.order-timeline li.is-current .order-timeline-dot{outline:var(--stroke-2) solid var(--primary-200);outline-offset:var(--stroke-2)}
+.order-timeline li.is-pending .order-timeline-dot{color:var(--ink-400)}
 .order-timeline li>div{display:grid;gap:var(--space-0-5);min-width:0;padding-top:var(--space-1-5)}
 .order-timeline b{color:var(--ink-950);font-size:var(--font-size-sm);font-weight:var(--weight-bold)}
 .order-timeline small{color:var(--ink-500);font-size:var(--font-size-label)}
 .order-timeline li.is-pending b{color:var(--ink-500);font-weight:var(--weight-medium)}
 .order-timeline li.is-current small{color:var(--primary-700);font-weight:var(--weight-semibold)}
 @media (width<=600px){
+  .order-detail-metadata{gap:var(--space-3)}
   .order-detail-panel{padding-inline:var(--space-3)}
   .order-detail-contact{flex-wrap:wrap}
   .order-detail-call{width:100%;justify-content:center}

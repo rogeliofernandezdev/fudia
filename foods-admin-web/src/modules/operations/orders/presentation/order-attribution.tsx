@@ -3,11 +3,13 @@ import {Skeleton} from "@/design-system/skeleton";
 
 type Props={channel:string;waiterName?:string;collectedByNames?:string[]};
 
-/** Responsables en una línea de la identidad: mozo (solo salón) y quién cobró. */
+/** Identidad legible: etiqueta y persona, con el icono como apoyo. */
 export function OrderAttribution({channel,waiterName,collectedByNames=[]}:Props){
-  const parts=[channel==="salon"&&`Atendido por ${waiterName||"sin asignar"}`,collectedByNames.length>0&&`Cobrado por ${collectedByNames.join(", ")}`].filter(Boolean);
-  if(!parts.length)return null;
-  return <p className="order-attribution" aria-label="Responsables de la atención y del cobro"><Icon name="users" size={14}/><span>{parts.join(" · ")}</span></p>;
+  if(channel!=="salon"&&!collectedByNames.length)return null;
+  return <div className="order-attribution" aria-label="Responsables de la atención y del cobro">
+    {channel==="salon"&&<div><small><Icon name="users" size={16}/>Atendido por</small><b>{waiterName||"Sin asignar"}</b></div>}
+    {collectedByNames.length>0&&<div className="order-attribution-collector"><small><Icon name="payment" size={16}/>Cobrado por</small><b>{collectedByNames.join(", ")}</b></div>}
+  </div>;
 }
 
 export function OrderAttributionSkeleton(){

@@ -948,7 +948,7 @@ test("Pedidos no expone el identificador técnico como información visual",()=>
   assert.ok(orders.includes("<OrderDetailContent"),"Pedidos utiliza el detalle compartido");
   assert.ok(detail.includes("<ModalWorkspace summary="),"El resumen y los productos utilizan el mismo workspace");
   assert.ok(detail.includes('className="modal-body order-detail-body"'),"Productos en cuerpo desplazable");
-  assert.ok(detail.includes("<time dateTime={order.createdAt}>"),"La fecha está dentro del detalle");
+  assert.ok(detail.includes("<time dateTime={order.createdAt}"),"La fecha está dentro del detalle y permite atributos accesibles");
   assert.equal(orders.includes("orders-order-meta"),false,"No conserva el bloque de metadatos retirado");
 });
 
