@@ -23,6 +23,7 @@ type CashMovementInput struct {
 }
 
 type CloseShiftInput struct {
+	TipPayout     *TipPayoutInput  `json:"tipPayout,omitempty"`
 	CountedAmount *float64         `json:"countedAmount"`
 	Note          string           `json:"note"`
 	Counts        []CountLineInput `json:"counts"`

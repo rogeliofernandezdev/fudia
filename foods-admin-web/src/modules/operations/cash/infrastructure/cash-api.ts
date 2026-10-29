@@ -101,6 +101,7 @@ export function closeCashShift(shiftId:string,draft:CloseCashShiftDraft){
   return apiFetch<CashShift>(`cash-shifts/${shiftId}/close`,{
     method:"POST",
     body:JSON.stringify({
+      tipPayout:draft.tipPayout?{...draft.tipPayout,amount:Number(draft.tipPayout.amount),note:""}:undefined,
       countedAmount:draft.counts.some(line=>Number(line.quantity)>0)?undefined:Number(draft.countedAmount),
       counts:draft.counts.filter(line=>Number(line.denomination)>0&&Number(line.quantity)>0).map(line=>({
         denomination:Number(line.denomination),

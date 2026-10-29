@@ -67,12 +67,7 @@ func (r *Payments) InsertTip(ctx context.Context, s scope, orderID, paymentID, s
 	if err != nil {
 		return billingError(err)
 	}
-	if !affectsCash || in.DirectToStaff {
-		return nil
-	}
-	_, err = r.db(ctx).Exec(ctx, `INSERT INTO cash_movements(organization_id,location_id,shift_id,movement_type,source_type,source_id,amount,reason,note,created_by)
- VALUES($1,$2,$3,'income','cash_tip',$4,$5,'Propina recibida','',$6)`, s.OrganizationID, s.LocationID, shiftID, id, amount, s.UserID)
-	return billingError(err)
+	return nil
 }
 func (r *Payments) TipRecipients(ctx context.Context, s scope) ([]domain.TipRecipient, error) {
 	rows, err := r.db(ctx).Query(ctx, `SELECT u.id::text,u.full_name FROM users u WHERE u.organization_id=$1 AND u.active AND NOT u.platform_admin
@@ -177,13 +172,6 @@ func (r *Payments) InsertTipPayout(ctx context.Context, s scope, shiftID string,
 	}
 	if remaining > .00001 {
 		return out, application.ErrConflict
-	}
-	if in.Method == "cash" {
-		_, err = r.db(ctx).Exec(ctx, `INSERT INTO cash_movements(organization_id,location_id,shift_id,movement_type,source_type,source_id,amount,reason,note,created_by)
- SELECT $1,$2,$3,'expense','tip_payout',$4,$5,'Entrega de propinas a '||u.full_name,$6,$7 FROM users u WHERE u.id=$8 AND u.organization_id=$1`, s.OrganizationID, s.LocationID, shiftID, id, in.Amount, in.Note, s.UserID, in.RecipientID)
-		if err != nil {
-			return out, err
-		}
 	}
 	return r.FindTipPayout(ctx, s, in.RequestKey)
 }

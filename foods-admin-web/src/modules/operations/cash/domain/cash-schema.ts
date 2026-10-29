@@ -52,6 +52,7 @@ const operationSchema=z.object({
 });
 
 const closeSchema=z.object({
+  tipPayout:z.object({recipientId:z.string().min(1,"Selecciona un trabajador."),amount:moneyField("Ingresa un monto de propina mayor que cero."),method:z.enum(["cash","transfer"]),requestKey:z.string().min(8).max(100)}).optional(),
   countedAmount:z.string(),
   note:z.string().max(240,"La observación no puede superar 240 caracteres."),
   counts:z.array(z.object({

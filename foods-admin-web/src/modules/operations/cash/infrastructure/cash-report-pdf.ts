@@ -43,7 +43,7 @@ export function buildCashReportPdf(report:CashShiftReport,logo:Uint8Array,palett
  if(report.counts.length)section("Conteo por denominaciones",["Denominación","Cantidad","Importe"],report.counts.map(item=>[f.money(item.denomination),String(item.quantity),f.money(item.total)]),"",[100,65,100]);
  if(report.tips){const t=report.tips;
   section("Propinas - separadas del consumo",["En efectivo","Otros medios","Directas al personal","Entregadas en efectivo","Por transferencia","Pendientes del turno"],[[f.money(t.cashCollected),f.money(t.otherCollected),f.money(t.direct),f.money(t.cashPaidOut),f.money(t.otherPaidOut),f.money(t.pending)]],"");
-  section("Propinas recibidas",["Fecha y hora","Pedido","Medio","Destino","Registrada por","Importe"],t.receipts.map(v=>[f.date(v.createdAt),v.orderCode,v.methodName,v.directToStaff?"Directa al personal":v.affectsCash?"Cajón de efectivo":"Pendiente de entrega",v.createdByName,f.money(v.amount)]),"Sin propinas recibidas.");
+  section("Propinas recibidas",["Fecha y hora","Pedido","Medio","Destino","Registrada por","Importe"],t.receipts.map(v=>[f.date(v.createdAt),v.orderCode,v.methodName,v.directToStaff?"Directa al personal":v.affectsCash?"Efectivo separado":"Pendiente de entrega",v.createdByName,f.money(v.amount)]),"Sin propinas recibidas.");
   section("Entregas de propinas",["Fecha y hora","Trabajador","Medio de entrega","Observación","Registrada por","Importe"],t.payouts.map(v=>[f.date(v.createdAt),v.recipientName,v.method==="cash"?"Efectivo":"Transferencia",v.note||"-",v.createdByName,f.money(v.amount)]),"Sin entregas de propinas.");
  }
  const pages=doc.getNumberOfPages();

@@ -120,8 +120,8 @@ func (r *Payments) LockClosingShift(ctx context.Context, s scope, shiftID string
 	var expense float64
 	err := r.db(ctx).QueryRow(ctx, `
 		SELECT cs.status,cs.opened_by=$4,cs.opening_amount::float8,
-		       COALESCE((SELECT sum(cm.amount) FROM cash_movements cm WHERE cm.shift_id=cs.id AND cm.organization_id=cs.organization_id AND cm.movement_type='income'),0)::float8,
-		       COALESCE((SELECT sum(cm.amount) FROM cash_movements cm WHERE cm.shift_id=cs.id AND cm.organization_id=cs.organization_id AND cm.movement_type='expense'),0)::float8
+		       COALESCE((SELECT sum(cm.amount) FROM cash_movements cm WHERE cm.shift_id=cs.id AND cm.organization_id=cs.organization_id AND cm.location_id=cs.location_id AND cm.source_type NOT IN ('cash_tip','tip_payout') AND cm.movement_type='income'),0)::float8,
+		       COALESCE((SELECT sum(cm.amount) FROM cash_movements cm WHERE cm.shift_id=cs.id AND cm.organization_id=cs.organization_id AND cm.location_id=cs.location_id AND cm.source_type NOT IN ('cash_tip','tip_payout') AND cm.movement_type='expense'),0)::float8
 		FROM cash_shifts cs
 		WHERE cs.id=$1 AND cs.organization_id=$2 AND cs.location_id=$3
 		FOR UPDATE
@@ -261,12 +261,12 @@ const cashShiftColumns = `
 	cr.blind_close,
 	cs.status,
 	cs.opening_amount::text,
-	COALESCE((SELECT sum(cm.amount) FROM cash_movements cm WHERE cm.shift_id=cs.id AND cm.organization_id=cs.organization_id AND cm.movement_type='income'),0)::text,
-	COALESCE((SELECT sum(cm.amount) FROM cash_movements cm WHERE cm.shift_id=cs.id AND cm.organization_id=cs.organization_id AND cm.movement_type='expense'),0)::text,
+	COALESCE((SELECT sum(cm.amount) FROM cash_movements cm WHERE cm.shift_id=cs.id AND cm.organization_id=cs.organization_id AND cm.location_id=cs.location_id AND cm.source_type NOT IN ('cash_tip','tip_payout') AND cm.movement_type='income'),0)::text,
+	COALESCE((SELECT sum(cm.amount) FROM cash_movements cm WHERE cm.shift_id=cs.id AND cm.organization_id=cs.organization_id AND cm.location_id=cs.location_id AND cm.source_type NOT IN ('cash_tip','tip_payout') AND cm.movement_type='expense'),0)::text,
 	(
 	  cs.opening_amount
-	  + COALESCE((SELECT sum(cm.amount) FROM cash_movements cm WHERE cm.shift_id=cs.id AND cm.organization_id=cs.organization_id AND cm.movement_type='income'),0)
-	  - COALESCE((SELECT sum(cm.amount) FROM cash_movements cm WHERE cm.shift_id=cs.id AND cm.organization_id=cs.organization_id AND cm.movement_type='expense'),0)
+	  + COALESCE((SELECT sum(cm.amount) FROM cash_movements cm WHERE cm.shift_id=cs.id AND cm.organization_id=cs.organization_id AND cm.location_id=cs.location_id AND cm.source_type NOT IN ('cash_tip','tip_payout') AND cm.movement_type='income'),0)
+	  - COALESCE((SELECT sum(cm.amount) FROM cash_movements cm WHERE cm.shift_id=cs.id AND cm.organization_id=cs.organization_id AND cm.location_id=cs.location_id AND cm.source_type NOT IN ('cash_tip','tip_payout') AND cm.movement_type='expense'),0)
 	)::text,
 	CASE WHEN cs.closing_expected_amount IS NULL THEN NULL ELSE cs.closing_expected_amount::text END,
 	CASE WHEN cs.closing_counted_amount IS NULL THEN NULL ELSE cs.closing_counted_amount::text END,
@@ -289,7 +289,7 @@ const cashShiftColumns = `
 	cs.business_date::text,
 	to_char(cs.opened_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"'),
 	CASE WHEN cs.closed_at IS NULL THEN NULL ELSE to_char(cs.closed_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') END,
-	(SELECT count(*) FROM cash_movements cm WHERE cm.shift_id=cs.id AND cm.organization_id=cs.organization_id)
+	(SELECT count(*) FROM cash_movements cm WHERE cm.shift_id=cs.id AND cm.organization_id=cs.organization_id AND cm.location_id=cs.location_id AND cm.source_type NOT IN ('cash_tip','tip_payout'))
 `
 
 func scanCashShift(row pgx.Row) (domain.CashShiftView, error) {
@@ -370,7 +370,7 @@ func (r *Payments) Movements(ctx context.Context, s scope, shiftID string) ([]do
 		       to_char(cm.created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"')
 		FROM cash_movements cm
 		JOIN users u ON u.id=cm.created_by AND u.organization_id=cm.organization_id
-		WHERE cm.shift_id=$1 AND cm.organization_id=$2 AND cm.location_id=$3
+		WHERE cm.shift_id=$1 AND cm.organization_id=$2 AND cm.location_id=$3 AND cm.source_type NOT IN ('cash_tip','tip_payout')
 		ORDER BY cm.created_at DESC,cm.id DESC
 	`, shiftID, s.OrganizationID, s.LocationID)
 	if err != nil {
@@ -568,7 +568,7 @@ func (r *Payments) BuildReport(ctx context.Context, s scope, id string) (domain.
 	rows, err := r.db(ctx).Query(ctx, `SELECT cm.id::text,cm.movement_type,cm.source_type,cm.source_id::text,cm.amount::text,cm.reason,cm.note,u.full_name,
  to_char(cm.created_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"')
  FROM cash_movements cm JOIN users u ON u.id=cm.created_by AND u.organization_id=cm.organization_id
- WHERE cm.shift_id=$1 AND cm.organization_id=$2 AND cm.location_id=$3 ORDER BY cm.created_at,cm.id`, id, s.OrganizationID, s.LocationID)
+ WHERE cm.shift_id=$1 AND cm.organization_id=$2 AND cm.location_id=$3 AND cm.source_type NOT IN ('cash_tip','tip_payout') ORDER BY cm.created_at,cm.id`, id, s.OrganizationID, s.LocationID)
 	if err != nil {
 		return out, billingError(err)
 	}

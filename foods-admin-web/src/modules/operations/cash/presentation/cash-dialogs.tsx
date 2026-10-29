@@ -2,6 +2,7 @@
 import {Dialog} from "@/design-system/dialog";
 import {cashShiftAttribution,cashShiftTeamName} from "../domain/shift-attribution";
 import {useRef,useState} from "react";
+import {TipClosingSection,type TipWorkspace} from "../../tips";
 import {CashReportContent} from "./cash-report-content";
 import {useForm,useWatch} from "react-hook-form";
 import {Button,FormField,FormSection,Icon,Input,Status,Tabs,Textarea,ModalHeader,ModalFooter,ModalItemList,ModalWorkspace,DetailHero,DetailContact,DetailFacts,DetailTimeline} from "@/design-system";
@@ -99,13 +100,13 @@ export function CashMovementDialog({type,busy,close,save}:{type:CashMovementType
   </Dialog></div>;
 }
 
-export function CloseCashShiftDialog({shift,report,busy,currency,formatMoney,close,save}:{shift:CashShift;report?:CashShiftReport;busy:boolean;currency:string;formatMoney:(value:number)=>string;close:()=>void;save:(draft:CloseCashShiftDraft)=>void|Promise<void>}){
+export function CloseCashShiftDialog({shift,report,tipWorkspace,busy,currency,formatMoney,close,save}:{shift:CashShift;report?:CashShiftReport;tipWorkspace?:TipWorkspace;busy:boolean;currency:string;formatMoney:(value:number)=>string;close:()=>void;save:(draft:CloseCashShiftDraft)=>void|Promise<void>}){
   const blind=shift.blindClose&&!shift.expectedVisible;
   const expected=Number(shift.expectedAmount||0);
   const denominations=denominationsForCurrency(currency);
   const[byDenomination,setByDenomination]=useState(false);
   const sending=useRef(false);
-  const{control,register,handleSubmit,setValue,formState:{errors}}=useForm<CloseCashShiftDraft>({
+  const{control,register,handleSubmit,setValue,setError,formState:{errors}}=useForm<CloseCashShiftDraft>({
     defaultValues:{
       countedAmount:shift.expectedVisible&&Number.isFinite(expected)?expected.toFixed(2):"",
       note:"",
@@ -115,6 +116,7 @@ export function CloseCashShiftDialog({shift,report,busy,currency,formatMoney,clo
     mode:"onSubmit",
     reValidateMode:"onChange",
   });
+  const tipPayout=useWatch({control,name:"tipPayout"});
   const countedValue=useWatch({control,name:"countedAmount"})??"";
   const countLines=useWatch({control,name:"counts"})??[];
   const denominationTotal=countLines.reduce((sum,line)=>sum+(Number(line.denomination)||0)*(Number(line.quantity)||0),0);
@@ -127,7 +129,7 @@ export function CloseCashShiftDialog({shift,report,busy,currency,formatMoney,clo
     <ModalHeader title="Cerrar turno" titleId="cash-close-title" icon="lock" subtitle={shift.cashRegisterName} onClose={close} busy={busy} closeLabel="Cerrar"/>
     <form onSubmit={event=>event.preventDefault()} onKeyDown={event=>{if(event.key==="Enter"&&(event.target as HTMLElement).tagName==="INPUT")event.preventDefault();}} noValidate inert={busy}>
       <div className="cash-dialog-body">
-        {report&&<CashReportContent report={report}/>}
+        {report&&<CashReportContent report={report} showTips={false}/>}
         {blind
           ?<div className="cash-blind-close-note"><Icon name="lock" size={16}/><span><b>Cierre ciego activo</b><small>Cuenta el efectivo sin consultar el saldo esperado. La diferencia se calculará al confirmar.</small></span></div>
           :!report&&<section className="cash-close-summary">
@@ -137,7 +139,9 @@ export function CloseCashShiftDialog({shift,report,busy,currency,formatMoney,clo
             <div className="expected"><small>Efectivo esperado</small><strong>{formatMoney(expected)}</strong></div>
           </section>}
 
+        {tipWorkspace&&<TipClosingSection workspace={tipWorkspace} value={tipPayout} onChange={value=>setValue("tipPayout",value,{shouldValidate:Boolean(errors.tipPayout)})} busy={busy} error={errors.tipPayout?.message} formatMoney={formatMoney}/>}
         <FormSection icon="cash" tone="brand" title="Conteo de efectivo" bare>
+        <p className="tip-help">Cuenta únicamente el efectivo de la operación. Mantén las propinas separadas de este conteo.</p>
         <Tabs className="cash-count-mode" label="Modo de conteo" value={byDenomination?"denominations":"total"} onChange={value=>setByDenomination(value==="denominations")} items={[{value:"total",label:"Monto total",icon:"cash"},{value:"denominations",label:"Por denominaciones",icon:"wallet"}]}/>
 
         {!byDenomination?<FormField label="Efectivo contado" error={errors.countedAmount?.message}>
@@ -163,7 +167,7 @@ export function CloseCashShiftDialog({shift,report,busy,currency,formatMoney,clo
         </FormSection>
         <p className="cash-close-warning"><Icon name="alert" size={14}/>Al cerrar el turno ya no se podrán registrar nuevos movimientos.</p>
       </div>
-      <ModalFooter><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="button" icon="lock" disabled={busy} onClick={()=>{if(busy||sending.current)return;sending.current=true;if(byDenomination)setValue("countedAmount",denominationTotal.toFixed(2));else setValue("counts",denominations.map(value=>({denomination:String(value),quantity:""})));void handleSubmit(async draft=>{try{await save({...draft,counts:byDenomination?draft.counts:[]});}finally{sending.current=false;}},()=>{sending.current=false;})().catch(()=>{sending.current=false;});}} loading={busy}>{busy?"Cerrando…":"Cerrar turno"}</Button></ModalFooter>
+      <ModalFooter><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="button" icon="lock" disabled={busy} onClick={()=>{if(busy||sending.current)return;sending.current=true;if(byDenomination)setValue("countedAmount",denominationTotal.toFixed(2));else setValue("counts",denominations.map(value=>({denomination:String(value),quantity:""})));void handleSubmit(async draft=>{try{if(draft.tipPayout&&Number(draft.tipPayout.amount)>Number(tipWorkspace?.available??0)){setError("tipPayout",{type:"validate",message:"El monto supera las propinas pendientes."});return;}await save({...draft,counts:byDenomination?draft.counts:[]});}finally{sending.current=false;}},()=>{sending.current=false;})().catch(()=>{sending.current=false;});}} loading={busy}>{busy?"Cerrando…":"Cerrar turno"}</Button></ModalFooter>
     </form>
   </Dialog></div>;
 }

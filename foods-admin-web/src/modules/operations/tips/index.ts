@@ -5,3 +5,6 @@ export {TipPayoutDialog} from "./presentation/tip-payout-dialog";
 
 export type {TipSettings} from "./domain/types";
 export {TipSettingsFields} from "./presentation/tip-settings-fields";
+
+export {getTipWorkspace} from "./infrastructure/tips-api";
+export {TipClosingSection,type TipClosingDraft} from "./presentation/tip-closing-section";

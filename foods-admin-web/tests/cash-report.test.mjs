@@ -34,6 +34,7 @@ test("cerrar exige botón explícito, bloquea doble envío y espera el API",asyn
  const dialog=compile("modules/operations/cash/presentation/cash-dialogs.tsx",name=>{
   if(name==="react")return{useState:value=>[value,()=>{}],useRef:value=>({current:value})};
   if(name==="react-hook-form")return{useForm:options=>{form=rhf.createFormControl(options);return {...form,formState:{errors:{}}}},useWatch:options=>form.control._getWatch(options.name)};
+  if(name.endsWith("/tips"))return{TipClosingSection:"TipClosingSection"};
   if(name.endsWith("cash-schema"))return schema;
   if(name==="@/design-system")return new Proxy({},{get:(_,key)=>String(key)});
   if(name==="@/design-system/dialog")return{Dialog:"Dialog"};

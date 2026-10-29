@@ -94,7 +94,7 @@ func loadDashboardOperations(ctx context.Context, tx database.Executor, s scope,
 		  SELECT cs.opening_amount + COALESCE((
 		    SELECT sum(CASE cm.movement_type WHEN 'income' THEN cm.amount ELSE -cm.amount END)
 		    FROM cash_movements cm
-		    WHERE cm.organization_id=cs.organization_id AND cm.location_id=cs.location_id AND cm.shift_id=cs.id
+		    WHERE cm.organization_id=cs.organization_id AND cm.location_id=cs.location_id AND cm.shift_id=cs.id AND cm.source_type NOT IN ('cash_tip','tip_payout')
 		  ),0) AS balance,cr.blind_close
 		  FROM cash_shifts cs
 		  JOIN cash_registers cr ON cr.id=cs.cash_register_id AND cr.organization_id=cs.organization_id AND cr.location_id=cs.location_id

@@ -188,33 +188,42 @@ func (a *Tips) Workspace(ctx context.Context, s scope, shiftID string) (TipWorks
 	return out, tx.Commit(ctx)
 }
 func (a *Tips) Payout(ctx context.Context, s scope, shiftID string, in domain.TipPayoutInput) (domain.TipPayoutView, error) {
+	tx, err := a.work.Begin(ctx, unitofwork.Options{})
+	if err != nil {
+		return domain.TipPayoutView{}, err
+	}
+	defer tx.Rollback(ctx)
+	out, err := a.payoutInTransaction(tx.Context(), s, shiftID, in)
+	if err != nil {
+		return out, err
+	}
+	return out, tx.Commit(ctx)
+}
+
+// The closing use case passes its transaction so delivery and closure commit together.
+func (a *Tips) payoutInTransaction(ctx context.Context, s scope, shiftID string, in domain.TipPayoutInput) (domain.TipPayoutView, error) {
 	var out domain.TipPayoutView
 	in.Note = strings.TrimSpace(in.Note)
 	in.RequestKey = strings.TrimSpace(in.RequestKey)
 	if !domain.ValidMoney(in.Amount, 2) || in.RecipientID == "" || (in.Method != "cash" && in.Method != "transfer") || len(in.Note) > 240 || len(in.RequestKey) < 8 || len(in.RequestKey) > 100 {
 		return out, paymentFailure(apperror.Invalid, "invalid_tip_payout", "Revisa el destinatario, monto y medio de entrega de la propina.")
 	}
-	tx, err := a.work.Begin(ctx, unitofwork.Options{})
-	if err != nil {
-		return out, err
-	}
-	defer tx.Rollback(ctx)
-	status, err := a.repo.LockMovementShift(tx.Context(), s, shiftID)
+	status, err := a.repo.LockMovementShift(ctx, s, shiftID)
 	if errors.Is(err, ErrNotFound) {
 		return out, paymentFailure(apperror.NotFound, "cash_shift_not_found", "El turno no existe en este local.")
 	}
 	if err != nil {
 		return out, err
 	}
-	if err = a.repo.RequireShiftAssignment(tx.Context(), s, shiftID); err != nil {
+	if err = a.repo.RequireShiftAssignment(ctx, s, shiftID); err != nil {
 		return out, paymentFailure(apperror.Forbidden, "cash_shift_not_assigned", "Debes estar asignado al turno para entregar propinas.")
 	}
-	all, err := a.repo.CanReadAllShifts(tx.Context(), s)
+	all, err := a.repo.CanReadAllShifts(ctx, s)
 	if err != nil {
 		return out, err
 	}
 	if !all {
-		owned, e := a.repo.OwnsShift(tx.Context(), s, shiftID)
+		owned, e := a.repo.OwnsShift(ctx, s, shiftID)
 		if e != nil {
 			return out, e
 		}
@@ -222,13 +231,13 @@ func (a *Tips) Payout(ctx context.Context, s scope, shiftID string, in domain.Ti
 			return out, paymentFailure(apperror.Forbidden, "tip_payout_forbidden", "Solo puedes entregar propinas desde tu propio turno.")
 		}
 	}
-	previous, err := a.repo.FindTipPayout(tx.Context(), s, in.RequestKey)
+	previous, err := a.repo.FindTipPayout(ctx, s, in.RequestKey)
 	if err == nil {
 		amount, _ := strconv.ParseFloat(previous.Amount, 64)
 		if previous.ShiftID != shiftID || previous.CreatedByID != s.UserID || previous.RecipientID != in.RecipientID || previous.Method != in.Method || math.Abs(amount-in.Amount) > .00001 || previous.Note != in.Note {
 			return out, paymentFailure(apperror.Conflict, "tip_payout_request_conflict", "La solicitud ya se utilizó para otra entrega.")
 		}
-		return previous, tx.Commit(ctx)
+		return previous, nil
 	}
 	if !errors.Is(err, ErrNotFound) {
 		return out, err
@@ -236,14 +245,14 @@ func (a *Tips) Payout(ctx context.Context, s scope, shiftID string, in domain.Ti
 	if status != "open" {
 		return out, paymentFailure(apperror.Conflict, "cash_shift_closed", "El turno está cerrado.")
 	}
-	p, err := a.Policy(tx.Context(), s, false)
+	p, err := a.Policy(ctx, s, false)
 	if err != nil {
 		return out, err
 	}
 	if !domain.ValidMoney(in.Amount, p.Decimals) {
 		return out, paymentFailure(apperror.Invalid, "invalid_tip_payout", "El monto no respeta los decimales de la moneda del local.")
 	}
-	recipients, err := a.repo.TipRecipients(tx.Context(), s)
+	recipients, err := a.repo.TipRecipients(ctx, s)
 	if err != nil {
 		return out, err
 	}
@@ -254,7 +263,7 @@ func (a *Tips) Payout(ctx context.Context, s scope, shiftID string, in domain.Ti
 	if !valid {
 		return out, paymentFailure(apperror.Invalid, "invalid_tip_recipient", "Selecciona un trabajador del local.")
 	}
-	balances, err := a.repo.LockTipBalances(tx.Context(), s, all)
+	balances, err := a.repo.LockTipBalances(ctx, s, all)
 	if err != nil {
 		return out, err
 	}
@@ -265,18 +274,9 @@ func (a *Tips) Payout(ctx context.Context, s scope, shiftID string, in domain.Ti
 	if in.Amount > available+.00001 {
 		return out, paymentFailure(apperror.Conflict, "tip_payout_exceeds_pending", "La entrega supera las propinas pendientes disponibles.")
 	}
-	if in.Method == "cash" {
-		expected, e := a.repo.ExpectedCash(tx.Context(), s, shiftID)
-		if e != nil {
-			return out, e
-		}
-		if in.Amount > expected+.00001 {
-			return out, paymentFailure(apperror.Conflict, "tip_payout_exceeds_cash", "No hay suficiente efectivo esperado en este turno.")
-		}
-	}
-	out, err = a.repo.InsertTipPayout(tx.Context(), s, shiftID, in, balances)
+	out, err = a.repo.InsertTipPayout(ctx, s, shiftID, in, balances)
 	if err != nil {
 		return out, err
 	}
-	return out, tx.Commit(ctx)
+	return out, nil
 }

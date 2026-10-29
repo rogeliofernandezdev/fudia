@@ -148,18 +148,36 @@ func TestTipsCollectionPayoutIsolationAndClosingSnapshot(t *testing.T) {
 	expect(payout(shift.ID, "payout-cash-1", "cash", 6), 201)
 	expect(payout(shift.ID, "payout-cash-1", "cash", 6), 201)
 	expect(payout(shift.ID, "payout-cash-1", "cash", 7), 409)
-	expect(payout(shift.ID, "payout-transfer-1", "transfer", 4), 201)
+	expect(payout(shift.ID, "payout-transfer-1", "transfer", 2), 201)
 	report := call("GET", "/v1/admin/cash-shifts/"+shift.ID+"/report", nil)
 	expect(report, 200)
 	var r cashShiftReport
 	_ = json.Unmarshal(report.Body.Bytes(), &r)
-	if r.CollectedAmount != "140.00" || r.Shift.ExpectedAmount != "164.00" || r.Tips.Pending != "5.00" {
+	if r.CollectedAmount != "140.00" || r.Shift.ExpectedAmount != "160.00" || r.Tips.Pending != "7.00" {
 		t.Fatalf("cash/report: %s", report.Body.String())
 	}
 	// Assigned waiters cannot use the cashier's financial tip workspace.
 	waiterCall := companySession(t, api, scope{OrganizationID: s.OrganizationID, LocationID: s.LocationID, UserID: recipient})
 	expect(waiterCall("GET", "/v1/admin/cash-shifts/"+shift.ID+"/tips", nil), 403)
-	expect(call("POST", "/v1/admin/cash-shifts/"+shift.ID+"/close", map[string]any{"countedAmount": 164}), 200)
+	// Legacy tip ledger entries must also stay outside operational balances.
+	if _, err := api.db.Exec(ctx, "INSERT INTO cash_movements(organization_id,location_id,shift_id,movement_type,source_type,amount,reason,created_by) VALUES($1,$2,$3,'income','cash_tip',90,'Legacy tip',$4),($1,$2,$3,'expense','tip_payout',20,'Legacy payout',$4)", s.OrganizationID, s.LocationID, shift.ID, s.UserID); err != nil {
+		t.Fatal(err)
+	}
+	payoutAtClose := map[string]any{"recipientId": recipient, "amount": 2, "method": "cash", "requestKey": "closing-tip-payout"}
+	closeInput := map[string]any{"countedAmount": 160, "tipPayout": payoutAtClose}
+	// Fail after the payout is written: the whole transaction must roll back.
+	if _, err := api.db.Exec(ctx, fmt.Sprintf("CREATE FUNCTION fail_tip_close() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.shift_id='%s'::uuid THEN RAISE EXCEPTION 'test report failure'; END IF; RETURN NEW; END $$; CREATE TRIGGER fail_tip_close BEFORE INSERT ON cash_shift_reports FOR EACH ROW EXECUTE FUNCTION fail_tip_close()", shift.ID)); err != nil {
+		t.Fatal(err)
+	}
+	expect(call("POST", "/v1/admin/cash-shifts/"+shift.ID+"/close", closeInput), 503)
+	if workspace(shift.ID).Available != "7.00" {
+		t.Fatal("failed close left a tip delivery")
+	}
+	if _, err := api.db.Exec(ctx, "DROP TRIGGER fail_tip_close ON cash_shift_reports; DROP FUNCTION fail_tip_close()"); err != nil {
+		t.Fatal(err)
+	}
+	expect(call("POST", "/v1/admin/cash-shifts/"+shift.ID+"/close", closeInput), 200)
+	expect(call("POST", "/v1/admin/cash-shifts/"+shift.ID+"/close", closeInput), 409)
 	closed := call("GET", "/v1/admin/cash-shifts/"+shift.ID+"/report", nil)
 	expect(closed, 200)
 	var before cashShiftReport

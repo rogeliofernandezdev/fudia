@@ -89,7 +89,7 @@ func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages) *httpapi.API {
 		ConciergeUsage:         conciergehttp.NewUsage(conciergeapp.NewUsage(conciergepg.NewUsage(db), conciergepg.New(db), work, audit)),
 		MenuCatalog:            menuhttp.NewCatalog(menu),
 		Payments:               billinghttp.NewPayments(payments),
-		Cash:                   billinghttp.NewCash(billingapp.NewCash(paymentsRepo, work)),
+		Cash:                   billinghttp.NewCash(billingapp.NewCash(paymentsRepo, work).WithTips(tips)),
 		PaymentMethods:         billinghttp.NewMethods(methods),
 		Floor:                  servicehttp.NewFloor(serviceapp.NewFloor(servicepg.NewFloor(db), work, audit)),
 		Reservations:           servicehttp.NewReservations(serviceapp.NewReservations(servicepg.NewReservations(db), work, audit)),

@@ -52,8 +52,8 @@ func (r *Payments) ExpectedCash(ctx context.Context, s scope, shiftID string) (f
 	err := r.db(ctx).QueryRow(ctx, `
 		SELECT (
 		  cs.opening_amount
-		  + COALESCE((SELECT sum(cm.amount) FROM cash_movements cm WHERE cm.shift_id=cs.id AND cm.organization_id=cs.organization_id AND cm.movement_type='income'),0)
-		  - COALESCE((SELECT sum(cm.amount) FROM cash_movements cm WHERE cm.shift_id=cs.id AND cm.organization_id=cs.organization_id AND cm.movement_type='expense'),0)
+		  + COALESCE((SELECT sum(cm.amount) FROM cash_movements cm WHERE cm.shift_id=cs.id AND cm.organization_id=cs.organization_id AND cm.location_id=cs.location_id AND cm.source_type NOT IN ('cash_tip','tip_payout') AND cm.movement_type='income'),0)
+		  - COALESCE((SELECT sum(cm.amount) FROM cash_movements cm WHERE cm.shift_id=cs.id AND cm.organization_id=cs.organization_id AND cm.location_id=cs.location_id AND cm.source_type NOT IN ('cash_tip','tip_payout') AND cm.movement_type='expense'),0)
 		)::float8
 		FROM cash_shifts cs
 		WHERE cs.id=$1 AND cs.organization_id=$2 AND cs.location_id=$3 AND cs.status='open'

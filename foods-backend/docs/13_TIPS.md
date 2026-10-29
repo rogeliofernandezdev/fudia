@@ -55,10 +55,10 @@ cualquier error revierte también el pago y sus movimientos de caja.
 | Caso | Efectivo esperado | Pendiente de entregar | Ventas |
 | --- | --- | --- | --- |
 | Sugerencia sin aceptar | No cambia | No cambia | No cambia |
-| Propina cobrada en efectivo | Aumenta | Aumenta | No cambia |
+| Propina cobrada en efectivo | No cambia | Aumenta | No cambia |
 | Propina cobrada por otro medio | No cambia | Aumenta | No cambia |
 | Entrega directa al personal | No cambia | No cambia | No cambia |
-| Entrega al trabajador desde el cajón | Disminuye | Disminuye | No cambia |
+| Entrega al trabajador desde el efectivo separado | No cambia | Disminuye | No cambia |
 | Entrega por transferencia | No cambia | Disminuye | No cambia |
 
 Una propina directa se registra informativamente, sin movimiento ni deuda a cargo
@@ -82,15 +82,27 @@ clave, actor, turno y contenido devuelve la entrega existente. Reutilizarla con
 otros datos produce 409. El cliente conserva la clave al reintentar un error de red.
 Los UUID de las entidades los genera PostgreSQL con `gen_random_uuid()`.
 
-El turno se bloquea antes de modificar efectivo. Los recibos de propina pendientes
+El turno se bloquea antes de registrar la entrega. Los recibos de propina pendientes
 se bloquean en orden determinista y se vuelven a consultar sus asignaciones en una
 segunda sentencia bajo READ COMMITTED. Así dos entregas concurrentes no consumen
-el mismo saldo. Cada asignación queda en `tip_payout_allocations`. Se valida también
-que una entrega en efectivo no supere el efectivo esperado del turno.
+el mismo saldo. Cada asignación queda en `tip_payout_allocations`. La entrega reduce únicamente
+el saldo de propinas, separado del efectivo esperado operativo.
 
-El movimiento de efectivo usa `cash_tip` o `tip_payout`; una entrega es una salida
-del cajón, separada de un gasto operativo. No hay distribución automática por
+No se generan movimientos `cash_tip` o `tip_payout`. Los registros antiguos se
+conservan para auditoría y se excluyen de los cálculos operativos de turnos
+abiertos, movimientos, arqueo y dashboard. Los snapshots cerrados no se reescriben. No hay distribución automática por
 porcentaje entre trabajadores: el operador elige explícitamente quién recibe.
+
+## Cierre con entrega opcional
+
+`POST /v1/admin/cash-shifts/{id}/close` acepta `tipPayout` opcional con el mismo
+contrato de entrega. Solo el abridor cierra su turno. Se bloquea el turno y se
+valida la entrega con las mismas reglas de destinatario, moneda, saldo y alcance.
+Entrega, asignaciones, conteo y snapshot se confirman en una sola transacción;
+un fallo revierte todo. La misma solicitud de entrega no se duplica al reintentar.
+Cerrar sin entrega conserva las propinas pendientes; pueden entregarse desde un
+próximo turno autorizado. Una transferencia es un registro de dinero ya entregado,
+no una orden de transferencia bancaria.
 
 ## Reportes, cierres y documentos
 

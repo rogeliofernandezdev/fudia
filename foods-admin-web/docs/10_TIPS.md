@@ -16,12 +16,11 @@ paso del local y los valores se conservan al avanzar o volver.
   en cuenta la propina retenida, manteniendo `amount` como consumo.
 - **POS → Ver detalle → Ver precuenta:** PDF de 80 mm con sugerencia voluntaria,
   antes de cobrar. Previsualizar pago mantiene el ticket de cobros confirmados.
-- **Caja → Propinas:** entrega manual a un trabajador con búsqueda autocompletable,
-  importe y efectivo/transferencia. No sustituye la función Egreso operativo.
+- **Caja → Cerrar turno:** si hay saldo pendiente, muestra una sección opcional de entrega con trabajador autocompletable, importe y efectivo separado/transferencia. La casilla inicia desmarcada. El mismo botón de cierre envía conteo y entrega en una sola petición y transacción; no abre otro modal. Sin entrega, el saldo queda pendiente para un próximo turno. Las propinas no modifican ingresos, egresos ni efectivo esperado de caja.
 - **Reporte de caja y su PDF:** sección separada de propinas recibidas y entregadas,
   con destinatario, actor, medio, fecha y saldo pendiente del turno.
 
-`TipSettingsDialog` se abre desde las acciones de Locales y recibe `location` (id y nombre) y `close`. La consulta y el guardado usan el local elegido; no cambian la sesión ni el local activo. `TipPayoutDialog` recibe `shift` y `close`.
+`TipSettingsDialog` se abre desde las acciones de Locales y recibe `location` (id y nombre) y `close`. La consulta y el guardado usan el local elegido; no cambian la sesión ni el local activo. `TipClosingSection` es controlado por el formulario de cierre y usa el espacio de propinas del turno, incluso en cierre ciego sin exponer el efectivo esperado. El reporte detallado de propinas se muestra en la consulta del informe; en el cierre se presenta solo la sección de entrega para evitar duplicados.
 El flujo usa `ModalForm → ModalBody + ModalFooter`; solo el cuerpo se desplaza, y
 el pie permanece accesible en móvil. El estado remoto contempla skeleton, error
 con reintento y ausencia de datos. La consulta está ligada a empresa, local y actor.

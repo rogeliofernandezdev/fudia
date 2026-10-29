@@ -16,7 +16,6 @@ import {CashMovementDialog,CashRegisterDialog,CashShiftDetailDialog,OpenCashShif
 import {CashClosingDialog} from "./cash-closing-dialog";
 import {CashReportDialog} from "./cash-report-dialog";
 import {CashOperationDialog,CashTeamDialog} from "./cash-advanced-dialogs";
-import {TipPayoutDialog} from "../../tips";
 
 type CashTab="registers"|"history";
 const historyColumns=["Caja","Día operativo","Cajero / cierre","Apertura","Cierre","Efectivo esperado","Efectivo contado","Resultado","Estado","Acciones"];
@@ -48,7 +47,6 @@ export function CashPage(){
   const[closeTarget,setCloseTarget]=useState<CashShift|null>(null);
   const[teamTarget,setTeamTarget]=useState<CashShift|null>(null);
   const[operationTarget,setOperationTarget]=useState<CashShift|null>(null);
-  const[tipTarget,setTipTarget]=useState<CashShift|null>(null);
   const[detailId,setDetailId]=useState<string|null>(null);
   const[reportId,setReportId]=useState<string|null>(null);
 
@@ -252,7 +250,6 @@ export function CashPage(){
           movement={(shift,type)=>setMovementTarget({shift,type})}
           team={setTeamTarget}
           operation={setOperationTarget}
-          tips={setTipTarget}
           close={shift=>{if(canCloseCashShift(shift,user?.id,canManage))setCloseTarget(shift)}}
         /></>
         :<section className="cash-history">
@@ -319,7 +316,6 @@ export function CashPage(){
       assign={userId=>assignUser.mutate({shiftId:teamTarget.id,userId})}
       unassign={userId=>unassignUser.mutate({shiftId:teamTarget.id,userId})}
     />}
-    {tipTarget&&<TipPayoutDialog shift={tipTarget} close={()=>setTipTarget(null)}/>}
     {operationTarget&&<CashOperationDialog
       shift={operationTarget}
       registers={registerItems}
@@ -348,7 +344,7 @@ export function CashPage(){
   </div>;
 }
 
-function CashRegisters({items,loading,error,canManage,canManageRegisters,currentUserId,money,dateTime,businessDate,retry,create,edit,toggleStatus,start,view,movement,team,operation,tips,close}:{items:CashRegister[];loading:boolean;error:string|null;canManage:boolean;canManageRegisters:boolean;currentUserId?:string;money:(value:number)=>string;dateTime:(value:string)=>string;businessDate:(value:string)=>string;retry:()=>void;create:()=>void;edit:(item:CashRegister)=>void;toggleStatus:(item:CashRegister)=>void;start:(item:CashRegister)=>void;view:(shift:CashShift)=>void;movement:(shift:CashShift,type:CashMovementType)=>void;team:(shift:CashShift)=>void;operation:(shift:CashShift)=>void;tips:(shift:CashShift)=>void;close:(shift:CashShift)=>void}){
+function CashRegisters({items,loading,error,canManage,canManageRegisters,currentUserId,money,dateTime,businessDate,retry,create,edit,toggleStatus,start,view,movement,team,operation,close}:{items:CashRegister[];loading:boolean;error:string|null;canManage:boolean;canManageRegisters:boolean;currentUserId?:string;money:(value:number)=>string;dateTime:(value:string)=>string;businessDate:(value:string)=>string;retry:()=>void;create:()=>void;edit:(item:CashRegister)=>void;toggleStatus:(item:CashRegister)=>void;start:(item:CashRegister)=>void;view:(shift:CashShift)=>void;movement:(shift:CashShift,type:CashMovementType)=>void;team:(shift:CashShift)=>void;operation:(shift:CashShift)=>void;close:(shift:CashShift)=>void}){
   if(loading)return <CashRegistersSkeleton/>;
   if(error)return <ErrorState title="No pudimos cargar las cajas" text={error} onRetry={retry}/>;
   if(!items.length)return <EmptyState
@@ -424,7 +420,6 @@ function CashRegisters({items,loading,error,canManage,canManageRegisters,current
               </>}
             </div>
             {canManage&&<>
-              <Button kind="secondary" icon="percent" onClick={()=>tips(shift)}>Propinas</Button>
               <Button kind="secondary" icon="plus" onClick={()=>movement(shift,"income")}>Ingreso</Button>
               <Button kind="secondary" icon="minus" onClick={()=>movement(shift,"expense")}>Egreso</Button>
               {canCloseCashShift(shift,currentUserId,canManage)&&<Button kind="danger-outline" icon="lock" onClick={()=>close(shift)}>Cerrar turno</Button>}

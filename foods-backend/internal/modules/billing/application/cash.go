@@ -25,11 +25,16 @@ type CashPage struct {
 	PageSize int                    `json:"pageSize"`
 }
 type Cash struct {
+	tips *Tips
 	repo CashRepository
 	work unitofwork.Manager
 }
 
-func NewCash(repo CashRepository, work unitofwork.Manager) *Cash { return &Cash{repo, work} }
+func NewCash(repo CashRepository, work unitofwork.Manager) *Cash {
+	return &Cash{repo: repo, work: work}
+}
+
+func (a *Cash) WithTips(tips *Tips) *Cash { a.tips = tips; return a }
 
 type CashRepository interface {
 	CanReadAllShifts(context.Context, scope) (bool, error)
@@ -306,6 +311,15 @@ func (a *Cash) Close(ctx context.Context, s scope, id string, in domain.CloseShi
 	}
 	if status != "open" {
 		return result, paymentFailure(apperror.Conflict, "cash_shift_closed", "El turno ya fue cerrado.")
+	}
+
+	if in.TipPayout != nil {
+		if a.tips == nil {
+			return result, paymentFailure(apperror.Unavailable, "tips_unavailable", "No pudimos registrar la entrega. El turno sigue abierto.")
+		}
+		if _, err := a.tips.payoutInTransaction(tx.Context(), s, shiftID, *in.TipPayout); err != nil {
+			return result, err
+		}
 	}
 
 	if len(in.Counts) > 0 {

@@ -1,4 +1,4 @@
-import type {TipReport} from "../../tips";
+import type {TipReport,TipClosingDraft} from "../../tips";
 export type CashShiftStatus="open"|"closed";
 export type CashReportSale={id:string;orderCode:string;customer:string;name:string;details:string;quantity:string;unitPrice:string;total:string;createdAt:string;waiterName:string};
 export type CashReportPayment={id:string;orderCode:string;methodName:string;amount:string;reference:string;createdByName:string;createdAt:string};
@@ -93,6 +93,7 @@ export type CashCountLine={
 };
 
 export type CloseCashShiftDraft={
+  tipPayout?:TipClosingDraft;
   countedAmount:string;
   note:string;
   counts:CashCountLine[];
