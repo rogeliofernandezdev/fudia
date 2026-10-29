@@ -1,3 +1,4 @@
+import type {TipSettings} from "@/modules/operations/tips";
 export type Country={code:string;name:string;defaultCurrency:string;callingCode:string;defaultTimezone:string};
 export type Currency={code:string;name:string;symbol:string;decimals:number};
 
@@ -70,8 +71,9 @@ export type OrganizationSubscription={
  payments:SubscriptionPayment[];
 };
 
-export type PlatformOnboardingContext={countryOptions:Country[];currencyOptions:Currency[];plans:SubscriptionPlan[]};
+export type PlatformOnboardingContext={tipOptions?:{defaults:TipSettings;countryDefaults:Record<string,TipSettings>;channels:{value:string;label:string}[]};countryOptions:Country[];currencyOptions:Currency[];plans:SubscriptionPlan[]};
 export type PlatformOnboardingDraft={
+ tipSettings?:TipSettings;
  legalName:string;tradeName:string;taxId:string;timezone:string;
  planId:string;billingCycle:"monthly"|"annual";termsAccepted:boolean;
  country:string;currency:string;currencyPosition:"before"|"after";taxName:string;taxRate:string;taxIncluded:boolean;

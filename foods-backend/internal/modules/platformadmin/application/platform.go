@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"errors"
+	billingcontracts "github.com/foods-platform/foods-backend/internal/modules/billing/contracts"
 	identitycontracts "github.com/foods-platform/foods-backend/internal/modules/identity/contracts"
 	orgcontracts "github.com/foods-platform/foods-backend/internal/modules/organizations/contracts"
 	"github.com/foods-platform/foods-backend/internal/modules/platformadmin/domain"
@@ -32,6 +33,7 @@ type OrganizationPage struct {
 	StandingOptions []domain.OptionView               `json:"standingOptions"`
 }
 type Platform struct {
+	tips          billingcontracts.InitialTipConfigurator
 	catalogs      FiscalCatalog
 	subscriptions SubscriptionCreator
 	passwords     PasswordHasher
@@ -39,6 +41,11 @@ type Platform struct {
 	flow          FlowObserver
 	repo          Repository
 	work          unitofwork.Manager
+}
+
+func (a *Platform) WithTips(tips billingcontracts.InitialTipConfigurator) *Platform {
+	a.tips = tips
+	return a
 }
 
 func New(repo Repository, work unitofwork.Manager, catalogs FiscalCatalog, subscriptions SubscriptionCreator, passwords PasswordHasher, failures FailureClassifier, flow FlowObserver) *Platform {

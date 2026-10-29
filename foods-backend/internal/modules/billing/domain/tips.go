@@ -2,6 +2,24 @@ package domain
 
 import "math"
 
+func TipChannelOptions() []TipChannelOption {
+	return []TipChannelOption{{Value: "salon", Label: "Salón"}, {Value: "recojo", Label: "Recojo"}, {Value: "delivery", Label: "Delivery"}, {Value: "whatsapp", Label: "WhatsApp"}}
+}
+func ValidTipSettings(in TipSettings) bool {
+	if in.Mode != "disabled" && in.Mode != "suggest" && in.Mode != "collect" {
+		return false
+	}
+	if math.IsNaN(in.Percentage) || math.IsInf(in.Percentage, 0) || in.Percentage < 0 || in.Percentage > 100 || math.Abs(in.Percentage*100-math.Round(in.Percentage*100)) >= .00001 || len(in.Channels) == 0 {
+		return false
+	}
+	for _, c := range in.Channels {
+		if c != "salon" && c != "recojo" && c != "delivery" && c != "whatsapp" {
+			return false
+		}
+	}
+	return true
+}
+
 type TipSettings struct {
 	Mode           string   `json:"mode"`
 	Percentage     float64  `json:"percentage"`

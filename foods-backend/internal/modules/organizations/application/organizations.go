@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	audit "github.com/foods-platform/foods-backend/internal/modules/audit/application"
+	billingcontracts "github.com/foods-platform/foods-backend/internal/modules/billing/contracts"
 	"github.com/foods-platform/foods-backend/internal/modules/organizations/domain"
 	"github.com/foods-platform/foods-backend/internal/platform/apperror"
 	"github.com/foods-platform/foods-backend/internal/platform/requestscope"
@@ -493,6 +494,6 @@ func (a *Organizations) OnboardingCatalogs(ctx context.Context, all bool) (map[s
 	if err != nil {
 		return result, organizationFailure(apperror.Unavailable, "catalogs_unavailable", "No pudimos cargar las monedas disponibles.")
 	}
-	return map[string]any{"countryOptions": countries, "currencyOptions": currencies}, nil
+	return map[string]any{"countryOptions": countries, "currencyOptions": currencies, "tipOptions": billingcontracts.OnboardingTipOptions()}, nil
 
 }

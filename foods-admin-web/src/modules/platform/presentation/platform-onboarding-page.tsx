@@ -7,9 +7,10 @@ import {useMutation,useQuery} from "@tanstack/react-query";
 import {Icon,IconName} from "@/design-system/icons";
 import {LocationMap} from "@/design-system/location-map";
 import {ApiClientError} from "@/shared/api/client";
-import {Button,EmptyState,ErrorState,FormField as Field,Input,PageHeader,Select} from "@/design-system";
+import {Button,EmptyState,ErrorState,FormSection,FormField as Field,Input,PageHeader,Select} from "@/design-system";
 import {pageRoutes} from "@/shared/routing/page-routes";
 import {TimezoneSelect} from "@/design-system/timezone-select";
+import {TipSettingsFields} from "@/modules/operations/tips";
 import {countryLocationDefaults} from "../domain/onboarding-defaults";
 import {useFeedback} from "@/providers/feedback-provider";
 import type {PlatformOnboardingDraft} from "../domain/types";
@@ -47,6 +48,7 @@ export function PlatformOnboardingPage(){
     defaultValues:blank,resolver:onboardingResolver,mode:"onSubmit",reValidateMode:"onChange",
   });
   const[planId,billingCycle,address,latitude,longitude]=useWatch({control,name:["planId","billingCycle","address","latitude","longitude"]});
+  const country=useWatch({control,name:"country"});
   const selectedPlan=ctx?.plans.find(plan=>plan.id===planId)??null;
 
   useEffect(()=>{if(firstPlanId&&!getValues("planId"))setValue("planId",firstPlanId)},[firstPlanId,getValues,setValue]);
@@ -163,6 +165,11 @@ export function PlatformOnboardingPage(){
             <LocationMap latitude={latitude?Number(latitude):null} longitude={longitude?Number(longitude):null} address={address} onAddressChange={a=>setValue("address",a,{shouldValidate:Boolean(errors.address)})} onChange={c=>{setValue("latitude",c.lat.toFixed(7));setValue("longitude",c.lng.toFixed(7))}}/>
             {err("address")&&<small className="field-error" role="alert">{err("address")}</small>}
           </div>
+          {ctx.tipOptions&&<FormSection title="Propinas" icon="percent" className="span-2" bare><Controller name="tipSettings" control={control} render={({field})=><div className="tip-settings-form">
+            <label className="tip-checkbox"><input type="checkbox" checked={Boolean(field.value)} disabled={save.isPending} onChange={event=>field.onChange(event.target.checked?(ctx.tipOptions!.countryDefaults[country]??ctx.tipOptions!.defaults):undefined)}/><span>Configurar propinas para este local ahora</span></label>
+            {field.value?<TipSettingsFields value={field.value} onChange={field.onChange} disabled={save.isPending} currency={getValues("currency")} channelOptions={ctx.tipOptions!.channels}/>:<p className="tip-help">Opcional. Puedes configurarlas después desde Locales → Propinas.</p>}
+            {err("tipSettings")&&<p className="field-error" role="alert">{err("tipSettings")}</p>}
+          </div>}/></FormSection>}
         </div>}
 
         {step===4&&<div className="form-grid">

@@ -11,6 +11,47 @@ import (
 	billing "github.com/foods-platform/foods-backend/internal/modules/billing/domain"
 )
 
+func TestTipSettingsTargetLocationWithoutSwitchingSession(t *testing.T) {
+	api, s, role := seedIdentityAdministrator(t)
+	ctx := context.Background()
+	if _, err := api.db.Exec(ctx, `UPDATE roles SET system_key='administrator',permissions=ARRAY['organizations.read','organizations.manage'],menu_access=ARRAY['locales'] WHERE id=$1`, role); err != nil {
+		t.Fatal(err)
+	}
+	var target string
+	if err := api.db.QueryRow(ctx, `INSERT INTO locations(organization_id,name,code,fiscal_profile_id) SELECT organization_id,'Local propinas','TIPS-TARGET',fiscal_profile_id FROM locations WHERE id=$1 RETURNING id`, s.LocationID).Scan(&target); err != nil {
+		t.Fatal(err)
+	}
+	call := companySession(t, api, s)
+	path := "/v1/admin/tip-settings?scope=location&locationId=" + target
+	w := call("PUT", path, map[string]any{"mode": "collect", "percentage": 15, "allowFixed": true, "showSuggestion": true, "channels": []string{"salon"}, "inherit": false})
+	if w.Code != 200 {
+		t.Fatalf("target save: %d %s", w.Code, w.Body.String())
+	}
+	var selected billing.TipPolicy
+	_ = json.Unmarshal(w.Body.Bytes(), &selected)
+	if selected.Inherited || selected.Percentage != 15 || selected.Mode != "collect" {
+		t.Fatalf("incorrect target policy: %s", w.Body.String())
+	}
+	w = call("GET", "/v1/admin/tip-settings", nil)
+	var active billing.TipPolicy
+	_ = json.Unmarshal(w.Body.Bytes(), &active)
+	if w.Code != 200 || active.Mode != "disabled" {
+		t.Fatalf("target save changed active local: %s", w.Body.String())
+	}
+	foreign := seedInventoryScope(t, api.db)
+	w = call("GET", "/v1/admin/tip-settings?scope=location&locationId="+foreign.LocationID, nil)
+	if w.Code != 404 {
+		t.Fatalf("foreign location exposed: %d %s", w.Code, w.Body.String())
+	}
+	if _, err := api.db.Exec(ctx, `UPDATE roles SET system_key='cashier' WHERE id=$1`, role); err != nil {
+		t.Fatal(err)
+	}
+	w = call("GET", path, nil)
+	if w.Code != 403 {
+		t.Fatalf("target location permission bypass: %d %s", w.Code, w.Body.String())
+	}
+}
+
 func TestTipsCollectionPayoutIsolationAndClosingSnapshot(t *testing.T) {
 	api, s, role := seedIdentityAdministrator(t)
 	ctx := context.Background()

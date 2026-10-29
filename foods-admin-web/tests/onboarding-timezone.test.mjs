@@ -46,6 +46,16 @@ test("zona obligatoria en Primer local, no en Empresa",()=>{
   assert.equal(locationSchema.safeParse({...local,timezone:"America/New_York"}).success,true);
 });
 
+test("las propinas del primer local son opcionales y se validan en ese paso",()=>{
+ const local={locationName:"Principal",address:"Dirección de prueba",timezone:"America/Lima"};
+ assert.equal(onboardingStepFields[0].includes("tipSettings"),false);
+ assert.equal(onboardingStepFields[3].includes("tipSettings"),true);
+ assert.equal(locationSchema.safeParse(local).success,true);
+ const tipSettings={mode:"collect",percentage:10,showSuggestion:true,allowFixed:true,channels:["salon"]};
+ assert.equal(locationSchema.safeParse({...local,tipSettings}).success,true);
+ for(const invalid of [{...tipSettings,percentage:101},{...tipSettings,percentage:10.123},{...tipSettings,channels:[]}])assert.equal(locationSchema.safeParse({...local,tipSettings:invalid}).success,false);
+});
+
 test("búsqueda por ciudad o IANA mantiene el identificador persistido",()=>{
   const options=timezoneOptions("America/Argentina/Buenos_Aires");
   const matches=(search)=>options.filter(option=>createFilter()({...option,data:option},search));

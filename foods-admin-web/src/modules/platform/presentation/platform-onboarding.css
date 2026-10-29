@@ -3,6 +3,9 @@
 
 /* Una sola tarjeta: stepper · cabecera del paso · cuerpo · acciones */
 .onboarding-form{display:grid;gap:0}
+.onboarding-form .tip-checkbox{display:flex;align-items:center}
+.onboarding-form .tip-checkbox input{height:var(--size-18);min-height:var(--size-18);padding:0}
+.onboarding-form .tip-checkbox>span{font:inherit}
 
 /* Stepper: segmentos con tile de icono y barra de progreso por tramo.
    Azul = paso en curso; verde (brand) = completado, como pide el design system. */

@@ -6,12 +6,27 @@ La migración `000095_tips` incorpora la configuración y los registros financie
 de propinas dentro del módulo billing. No requiere secretos ni servicios nuevos.
 Se conservan las cookies de sesión y la autorización de empresa/local existente.
 
+El alta de empresa acepta `tipSettings` opcional para el primer local. Plataforma
+valida el contrato de billing y llama al puerto `InitialTipConfigurator` con el
+contexto de su transacción. Si falla la configuración o un paso posterior, se
+revierte todo el alta. El administrador nuevo queda como responsable de la
+configuración. Si se omite, se mantienen los valores iniciales por país.
+`PlatformOnboardingCatalogs.tipOptions` proporciona los valores iniciales y los
+canales de la interfaz; no se duplican catálogos en el wizard.
+
 `GET/PUT /v1/admin/tip-settings?scope=organization|location` consulta o actualiza
 el modo `disabled`, `suggest` o `collect`, porcentaje sugerido, sugerencia en la
 precuenta, permiso de monto libre y tipos de atención. Solo el administrador
 reservado puede modificarla, además del permiso `organizations.manage` de la ruta.
 Un local hereda del restaurante; `inherit:true` elimina su excepción. Los canales
 disponibles se entregan en `channelOptions`; el frontend no mantiene su catálogo.
+
+La interfaz se administra desde **Locales → Propinas** en la fila del local
+elegido. Envía `scope=location&locationId={id}` para consultar y guardar sin cambiar
+el local activo de la sesión. El backend exige autorización de administrador
+sobre el destino y valida que pertenezca a la empresa. Guardar fija la configuración
+de ese local (`inherit:false`). El alcance de restaurante y la herencia permanecen
+en el API por compatibilidad con datos existentes, sin controles de herencia en UI.
 
 Sin configuración explícita, Perú y los demás países quedan desactivados; Chile
 inicia en sugerencia de 10 % para Salón. Son valores iniciales de producto, no un

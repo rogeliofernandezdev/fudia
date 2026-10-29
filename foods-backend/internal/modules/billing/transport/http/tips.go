@@ -12,7 +12,12 @@ type Tips struct{ service *application.Tips }
 
 func NewTips(service *application.Tips) *Tips { return &Tips{service} }
 func (h *Tips) GetSettings(w http.ResponseWriter, r *http.Request) {
-	out, err := h.service.Policy(r.Context(), billingScope(r), r.URL.Query().Get("scope") == "organization")
+	s, err := h.service.SettingsScope(r.Context(), billingScope(r), r.URL.Query().Get("locationId"))
+	if err != nil {
+		billingResponse(w, 200, nil, err)
+		return
+	}
+	out, err := h.service.Policy(r.Context(), s, r.URL.Query().Get("scope") == "organization")
 	billingResponse(w, 200, out, err)
 }
 func (h *Tips) UpdateSettings(w http.ResponseWriter, r *http.Request) {
@@ -21,7 +26,12 @@ func (h *Tips) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 		shared.Fail(w, 400, "invalid_tip_settings", "Revisa la configuración de propinas.")
 		return
 	}
-	out, err := h.service.SavePolicy(r.Context(), billingScope(r), r.URL.Query().Get("scope") == "organization", in)
+	s, err := h.service.SettingsScope(r.Context(), billingScope(r), r.URL.Query().Get("locationId"))
+	if err != nil {
+		billingResponse(w, 200, nil, err)
+		return
+	}
+	out, err := h.service.SavePolicy(r.Context(), s, r.URL.Query().Get("scope") == "organization", in)
 	billingResponse(w, 200, out, err)
 }
 func (h *Tips) Workspace(w http.ResponseWriter, r *http.Request) {

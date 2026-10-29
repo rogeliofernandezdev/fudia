@@ -35,15 +35,45 @@ type Tips struct {
 	work unitofwork.Manager
 }
 
+// Used by the authorized platform onboarding transaction, before role assignment.
+func (a *Tips) ConfigureInitialTips(ctx context.Context, s scope, in domain.TipSettings) error {
+	if !domain.ValidTipSettings(in) {
+		return paymentFailure(apperror.Invalid, "invalid_tip_settings", "Revisa la configuración de propinas del primer local.")
+	}
+	return a.repo.SaveTipSettings(ctx, s, false, domain.TipSettingsInput{TipSettings: in})
+}
+
 func NewTips(repo TipRepository, work unitofwork.Manager) *Tips { return &Tips{repo, work} }
 func (a *Payments) WithTips(tips *Tips) *Payments               { a.tips = tips; return a }
 
+// A settings dialog may target another location without changing the actor's
+// active session. Only the reserved company administrator may choose a different
+// target; the policy query also requires that location to belong to the company.
+func (a *Tips) SettingsScope(ctx context.Context, s scope, locationID string) (scope, error) {
+	if locationID == "" || locationID == s.LocationID {
+		return s, nil
+	}
+	target := s
+	target.LocationID = locationID
+	admin, err := a.repo.CanReadAllShifts(ctx, target)
+	if err != nil {
+		return s, err
+	}
+	if !admin {
+		return s, paymentFailure(apperror.Forbidden, "tips_settings_forbidden", "No puedes configurar las propinas de este local.")
+	}
+	return target, nil
+}
+
 func (a *Tips) Policy(ctx context.Context, s scope, global bool) (domain.TipPolicy, error) {
 	p, err := a.repo.TipPolicy(ctx, s, global)
+	if errors.Is(err, ErrNotFound) {
+		return p, paymentFailure(apperror.NotFound, "location_not_found", "El local no está disponible en esta empresa.")
+	}
 	if err != nil {
 		return p, paymentFailure(apperror.Unavailable, "tips_unavailable", "No pudimos cargar la configuración de propinas.")
 	}
-	p.ChannelOptions = []domain.TipChannelOption{{Value: "salon", Label: "Salón"}, {Value: "recojo", Label: "Recojo"}, {Value: "delivery", Label: "Delivery"}, {Value: "whatsapp", Label: "WhatsApp"}}
+	p.ChannelOptions = domain.TipChannelOptions()
 	return p, nil
 }
 func (a *Tips) SavePolicy(ctx context.Context, s scope, global bool, in domain.TipSettingsInput) (domain.TipPolicy, error) {
@@ -58,12 +88,7 @@ func (a *Tips) SavePolicy(ctx context.Context, s scope, global bool, in domain.T
 	if _, err := a.Policy(ctx, s, global); err != nil {
 		return out, err
 	}
-	valid := in.Mode == "disabled" || in.Mode == "suggest" || in.Mode == "collect"
-	valid = valid && !math.IsNaN(in.Percentage) && !math.IsInf(in.Percentage, 0) && in.Percentage >= 0 && in.Percentage <= 100 && len(in.Channels) > 0
-	valid = valid && math.Abs(in.Percentage*100-math.Round(in.Percentage*100)) < .00001
-	for _, channel := range in.Channels {
-		valid = valid && (channel == "salon" || channel == "recojo" || channel == "delivery" || channel == "whatsapp")
-	}
+	valid := domain.ValidTipSettings(in.TipSettings)
 	if (!in.Inherit || global) && !valid {
 		return out, paymentFailure(apperror.Invalid, "invalid_tip_settings", "Revisa el porcentaje, el modo y los tipos de atención de las propinas.")
 	}

@@ -4,9 +4,13 @@ La vertical `src/modules/operations/tips` concentra contratos, cálculos y las d
 superficies reutilizables. Usa los tokens y componentes existentes, sin crear
 otra paleta ni otro patrón de modal.
 
-- **Empresa → Propinas:** configuración del restaurante y excepción/herencia del
-  local activo. Modos desactivado, sugerencia y gestión. Los tipos de atención
-  vienen de `TipPolicy.channelOptions`.
+El wizard Registrar empresa incorpora la opción «Configurar propinas para este
+local ahora» dentro de Primer local, sin añadir otro paso. Comparte
+`TipSettingsFields` con Locales. Si se omite, no envía `tipSettings`; al marcarla
+usa los valores y canales del catálogo de onboarding. La validación pertenece al
+paso del local y los valores se conservan al avanzar o volver.
+
+- **Locales → Propinas:** acción de cada fila que abre la configuración del local elegido, identificado por su nombre. Sin pestañas de alcance ni casilla de herencia. Guardar crea una configuración propia para ese local.
 - **POS → Cobrar:** aceptación sin marcar por defecto; porcentaje o monto libre;
   entrega directa al personal opcional. El efectivo recibido y el vuelto toman
   en cuenta la propina retenida, manteniendo `amount` como consumo.
@@ -17,7 +21,7 @@ otra paleta ni otro patrón de modal.
 - **Reporte de caja y su PDF:** sección separada de propinas recibidas y entregadas,
   con destinatario, actor, medio, fecha y saldo pendiente del turno.
 
-`TipSettingsPanel` se integra en Empresa. `TipPayoutDialog` recibe `shift` y `close`.
+`TipSettingsDialog` se abre desde las acciones de Locales y recibe `location` (id y nombre) y `close`. La consulta y el guardado usan el local elegido; no cambian la sesión ni el local activo. `TipPayoutDialog` recibe `shift` y `close`.
 El flujo usa `ModalForm → ModalBody + ModalFooter`; solo el cuerpo se desplaza, y
 el pie permanece accesible en móvil. El estado remoto contempla skeleton, error
 con reintento y ausencia de datos. La consulta está ligada a empresa, local y actor.

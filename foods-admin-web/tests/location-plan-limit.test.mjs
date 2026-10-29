@@ -25,7 +25,7 @@ function mount({max=1,usage=1,items=[local],pending=false,error=false,fetching=f
  const {LocationsManager}=compile("modules/organizations/presentation/organization-admin.tsx",name=>{
   if(name==="react")return {useState:initial=>{const index=cursor++;if(!(index in state))state[index]=initial;return[state[index],value=>{state[index]=value}]}};
   if(name==="@tanstack/react-query")return {useQueryClient:()=>({invalidateQueries:async options=>{invalidations.push(options.queryKey)}}),useMutation:options=>{mutations.push(options);return {isPending:false}},useQuery:options=>{queries.push(options);return {data:{items:options.queryKey[0]==="locations"?items:[],total:items.length},isLoading:false,isError:false}}};
-  if(name==="@/modules/operations/tips")return {TipSettingsPanel:"TipSettingsPanel"};
+  if(name==="@/modules/operations/tips")return {TipSettingsDialog:"TipSettingsDialog"};
   if(name==="@/modules/identity")return capacity;
   if(name==="@/providers/session-context")return {useSession:()=>({organization:{id:"panchita"},can:permission=>permission==="organizations.manage"?manage:readPlan})};
   if(name==="@/providers/feedback-provider")return {useFeedback:()=>({notify:()=>{}})};
@@ -36,6 +36,17 @@ function mount({max=1,usage=1,items=[local],pending=false,error=false,fetching=f
  function render(){cursor=0;const view=nodes(LocationsManager());return {view,header:view.find(node=>node.type==="PageHeader"),button:view.find(node=>node.type==="Button"&&node.props.children==="Nuevo local")};}
  return {render,subscription,mutations,queries,invalidations,get retries(){return retries}};
 }
+
+test("Propinas abre la configuración del local elegido desde Locales",()=>{
+ const other={...local,id:"other-local",name:"Sede Sur"};
+ const ui=mount({max:3,usage:2,items:[local,other]});
+ const action=ui.render().view.find(node=>node.type==="Button"&&node.props["aria-label"]==="Configurar propinas de Sede Sur");
+ assert.ok(action);action.props.onClick();
+ const dialog=ui.render().view.find(node=>node.type==="TipSettingsDialog");
+ assert.equal(dialog.props.location.id,"other-local");assert.equal(dialog.props.location.name,"Sede Sur");
+ dialog.props.close();assert.ok(!ui.render().view.some(node=>node.type==="TipSettingsDialog"));
+ assert.ok(!mount({manage:false}).render().view.some(node=>node.type==="Button"&&node.props.children==="Propinas"));
+});
 
 test("Emprende con un local bloquea Nuevo local también desde el handler, pero permite editar",()=>{
  const ui=mount(),initial=ui.render();

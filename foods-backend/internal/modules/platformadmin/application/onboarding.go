@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"errors"
+	billingcontracts "github.com/foods-platform/foods-backend/internal/modules/billing/contracts"
 	identitycontracts "github.com/foods-platform/foods-backend/internal/modules/identity/contracts"
 	orgcontracts "github.com/foods-platform/foods-backend/internal/modules/organizations/contracts"
 	"github.com/foods-platform/foods-backend/internal/modules/platformadmin/domain"
@@ -127,6 +128,9 @@ func (a *Platform) Onboard(ctx context.Context, s scope, in domain.TenantOnboard
 	var result map[string]string
 	a.flow.Log(ctx, "application_flow_started", "", nil, "actor_user_id", s.UserID)
 	domain.NormalizeTenantOnboardingInput(&in)
+	if in.TipSettings != nil && !billingcontracts.ValidTipSettings(billingcontracts.TipSettings(*in.TipSettings)) {
+		return result, a.reject(ctx, "invalid_tip_settings", "Revisa la configuración de propinas del primer local.")
+	}
 
 	if in.LegalName == "" || in.TradeName == "" || len(in.LegalName) > 180 || len(in.TradeName) > 180 {
 		return result, a.reject(ctx, "invalid_company_data", "Ingresa una razón social y un nombre comercial válidos.")
@@ -205,6 +209,14 @@ func (a *Platform) Onboard(ctx context.Context, s scope, in domain.TenantOnboard
 		return result, a.onboardingFailure(ctx, step, err)
 	}
 	organizationID, profileID, locationID, userID := tenant.OrganizationID, tenant.FiscalProfileID, tenant.LocationID, tenant.AdministratorID
+	if in.TipSettings != nil {
+		if a.tips == nil {
+			return result, a.onboardingFailure(ctx, onboardingStepSeedDefaults, errors.New("initial tip configurator unavailable"))
+		}
+		if err = a.tips.ConfigureInitialTips(tx.Context(), scope{OrganizationID: organizationID, LocationID: locationID, UserID: userID}, billingcontracts.TipSettings(*in.TipSettings)); err != nil {
+			return result, a.onboardingFailure(ctx, onboardingStepSeedDefaults, err)
+		}
+	}
 	a.flow.Log(ctx, "application_flow_step_completed", onboardingStepCreateOrganization, nil, "organization_id", organizationID)
 	a.flow.Log(ctx, "application_flow_step_completed", onboardingStepConfigureFiscal, nil, "organization_id", organizationID, "fiscal_profile_id", profileID)
 	a.flow.Log(ctx, "application_flow_step_completed", onboardingStepCreateLocation, nil, "organization_id", organizationID, "location_id", locationID)

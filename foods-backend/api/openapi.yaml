@@ -7,7 +7,7 @@ paths:
       operationId: getTipSettings
       summary: Configuración efectiva de propinas del restaurante o local
       security: [{ sessionCookie: [] }]
-      parameters: [{ name: scope, in: query, schema: { type: string, enum: [organization, location], default: location } }]
+      parameters: [{ name: scope, in: query, schema: { type: string, enum: [organization, location], default: location } }, { name: locationId, in: query, description: "Local de esta empresa. Al indicar otro local se exige autorización de administrador sobre ese destino; no cambia el local activo.", schema: { type: string, format: uuid } }]
       responses:
         "200": { description: Exige organizations.read, content: { application/json: { schema: { $ref: "#/components/schemas/TipPolicy" } } } }
         "403": { $ref: "#/components/responses/Forbidden" }
@@ -15,7 +15,7 @@ paths:
       operationId: updateTipSettings
       summary: El administrador configura las propinas o restaura la herencia del local
       security: [{ sessionCookie: [] }]
-      parameters: [{ name: scope, in: query, schema: { type: string, enum: [organization, location], default: location } }]
+      parameters: [{ name: scope, in: query, schema: { type: string, enum: [organization, location], default: location } }, { name: locationId, in: query, description: "Local de esta empresa. Al indicar otro local se exige autorización de administrador sobre ese destino; no cambia el local activo.", schema: { type: string, format: uuid } }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/TipSettingsInput" } } } }
       responses:
         "200": { description: Configuración guardada, content: { application/json: { schema: { $ref: "#/components/schemas/TipPolicy" } } } }
@@ -1956,9 +1956,16 @@ components:
       type: object
       required: [countryOptions, currencyOptions]
       properties:
+        tipOptions:
+          type: object
+          required: [defaults, countryDefaults, channels]
+          properties:
+            defaults: { $ref: "#/components/schemas/TipSettings" }
+            countryDefaults: { type: object, additionalProperties: { $ref: "#/components/schemas/TipSettings" } }
+            channels: { type: array, items: { type: object, required: [value, label], properties: { value: { type: string }, label: { type: string } } } }
         countryOptions: { type: array, items: { $ref: "#/components/schemas/PlatformCountryOption" } }
         currencyOptions: { type: array, items: { $ref: "#/components/schemas/CurrencyOption" } }
-    TenantOnboardingInput: { type: object, required: [legalName, tradeName, taxId, timezone, planId, billingCycle, termsAccepted, country, currency, currencyPosition, taxName, taxRate, taxIncluded, locationName, locationCode, address, adminName, adminEmail, adminPassword], properties: { legalName: { type: string }, tradeName: { type: string }, taxId: { type: string, minLength: 6, maxLength: 32 }, timezone: { type: string, description: Zona IANA elegida para el primer local; también inicializa la zona predeterminada de la empresa., example: America/Lima }, planId: { type: string, format: uuid }, billingCycle: { type: string, enum: [monthly, annual] }, termsAccepted: { type: boolean, const: true }, country: { type: string, pattern: "^[A-Z]{2}$", default: PE }, currency: { type: string, pattern: "^[A-Z]{3}$", default: PEN }, currencyPosition: { type: string, enum: [before, after] }, taxName: { type: string }, taxRate: { type: string }, taxIncluded: { type: boolean }, locationName: { type: string }, locationCode: { type: string }, address: { type: string }, adminName: { type: string }, adminEmail: { type: string, format: email }, adminPassword: { type: string, minLength: 8, writeOnly: true } } }
+    TenantOnboardingInput: { type: object, required: [legalName, tradeName, taxId, timezone, planId, billingCycle, termsAccepted, country, currency, currencyPosition, taxName, taxRate, taxIncluded, locationName, locationCode, address, adminName, adminEmail, adminPassword], properties: { tipSettings: { $ref: "#/components/schemas/TipSettings" }, legalName: { type: string }, tradeName: { type: string }, taxId: { type: string, minLength: 6, maxLength: 32 }, timezone: { type: string, description: Zona IANA elegida para el primer local; también inicializa la zona predeterminada de la empresa., example: America/Lima }, planId: { type: string, format: uuid }, billingCycle: { type: string, enum: [monthly, annual] }, termsAccepted: { type: boolean, const: true }, country: { type: string, pattern: "^[A-Z]{2}$", default: PE }, currency: { type: string, pattern: "^[A-Z]{3}$", default: PEN }, currencyPosition: { type: string, enum: [before, after] }, taxName: { type: string }, taxRate: { type: string }, taxIncluded: { type: boolean }, locationName: { type: string }, locationCode: { type: string }, address: { type: string }, adminName: { type: string }, adminEmail: { type: string, format: email }, adminPassword: { type: string, minLength: 8, writeOnly: true } } }
     DashboardHourlySale:
       type: object
       required: [hour, total]

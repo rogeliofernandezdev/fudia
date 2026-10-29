@@ -9,7 +9,7 @@ import {ConfirmDialog} from "@/design-system/confirm-dialog";
 import {useFeedback} from "@/providers/feedback-provider";
 import {useSession} from "@/providers/session-context";
 import {useSubscriptionCapacity} from "@/modules/identity";
-import {TipSettingsPanel} from "@/modules/operations/tips";
+import {TipSettingsDialog} from "@/modules/operations/tips";
 import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
 import {Icon} from "@/design-system/icons";
 import {LocationMap} from "@/design-system/location-map";
@@ -71,7 +71,6 @@ export function CompanySettings(){
     <div><Button kind="ghost" disabled={!dirty||save.isPending} onClick={()=>{setDraft({});setSubmitted(false)}}>Cancelar</Button><Button type="submit" icon="check" disabled={!dirty||save.isPending} loading={save.isPending}>{save.isPending?"Guardando…":"Guardar"}</Button></div>
    </footer>}
   </form>}
-  {query.data&&<TipSettingsPanel/>}
  </>;
 }
 
@@ -88,6 +87,7 @@ export function LocationsManager(){
  const[size,setSize]=useState(10);
  const[draft,setDraft]=useState<LocationDraft|null>(null);
  const[remove,setRemove]=useState<Location|null>(null);
+ const[tipLocation,setTipLocation]=useState<Location|null>(null);
  const locations=useQuery({queryKey:["locations",organization?.id,page,size],queryFn:()=>listLocations(page,size)});
  const profiles=useQuery({queryKey:["fiscal-profiles-options",organization?.id],queryFn:()=>listProfiles(1,100)});
  const save=useMutation({
@@ -118,9 +118,10 @@ export function LocationsManager(){
  function create(){if(!createDisabled)setDraft({...blankLocation,fiscalProfileId:profiles.data?.items.find(x=>x.default)?.id??""});}
  return <><PageHeader title="Locales" description={reason||"Administra sedes y asigna a cada una su jurisdicción fiscal."} action={canManage?<><Button icon="plus" onClick={create} disabled={createDisabled} title={reason||undefined}>Nuevo local</Button>{canReadPlan&&subscription.isError&&<Button kind="secondary" icon="refresh" onClick={()=>subscription.refetch()}>Reintentar</Button>}</>:undefined}/>
   <section className="panel management catalog-panel">
-   {locations.isLoading||canReadPlan&&subscription.isLoading?<TableSkeleton columns={locationColumns} label="Cargando locales"/>:locations.isError?<ErrorState title="No pudimos cargar los locales" text={locations.error.message} onRetry={()=>void locations.refetch()}/>:!list?.items.length?<EmptyState icon="store" title="Aún no hay locales" text="Registra el primer local para iniciar la operación." action={canManage?<Button icon="plus" onClick={create} disabled={createDisabled}>Nuevo local</Button>:undefined}/>:<DataTable label="Locales de la organización" containerClassName="hover-scroll"><thead><tr><th>Local</th><th>Contacto</th><th>País / moneda</th><th>Horario</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>{list.items.map((item,i)=><tr className={i%2?"alternate":""} key={item.id}><td><span className={`row-icon r${i%3}`}><Icon name="store"/></span><b>{item.name}</b><small>{item.address||"Sin dirección"}</small></td><td>{item.phone||"—"}<small>{item.openingHours||""}</small></td><td><b>{item.country} / {item.currency}</b></td><td>{item.timezone}</td><td><Status active={item.active}>{item.active?"Activo":"Inactivo"}</Status></td><td>{canManage&&<div className="table-actions"><RowActionButton action="edit" onClick={()=>setDraft({...item})}/>{item.active&&<RowActionButton action="deactivate" stateLabel={`Estado de ${item.name}`} onClick={()=>setRemove(item)}/>}</div>}</td></tr>)}</tbody></DataTable>}
+   {locations.isLoading||canReadPlan&&subscription.isLoading?<TableSkeleton columns={locationColumns} label="Cargando locales"/>:locations.isError?<ErrorState title="No pudimos cargar los locales" text={locations.error.message} onRetry={()=>void locations.refetch()}/>:!list?.items.length?<EmptyState icon="store" title="Aún no hay locales" text="Registra el primer local para iniciar la operación." action={canManage?<Button icon="plus" onClick={create} disabled={createDisabled}>Nuevo local</Button>:undefined}/>:<DataTable label="Locales de la organización" containerClassName="hover-scroll"><thead><tr><th>Local</th><th>Contacto</th><th>País / moneda</th><th>Horario</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>{list.items.map((item,i)=><tr className={i%2?"alternate":""} key={item.id}><td><span className={`row-icon r${i%3}`}><Icon name="store"/></span><b>{item.name}</b><small>{item.address||"Sin dirección"}</small></td><td>{item.phone||"—"}<small>{item.openingHours||""}</small></td><td><b>{item.country} / {item.currency}</b></td><td>{item.timezone}</td><td><Status active={item.active}>{item.active?"Activo":"Inactivo"}</Status></td><td>{canManage&&<div className="table-actions"><Button kind="secondary" icon="percent" onClick={()=>setTipLocation(item)} aria-label={`Configurar propinas de ${item.name}`}>Propinas</Button><RowActionButton action="edit" onClick={()=>setDraft({...item})}/>{item.active&&<RowActionButton action="deactivate" stateLabel={`Estado de ${item.name}`} onClick={()=>setRemove(item)}/>}</div>}</td></tr>)}</tbody></DataTable>}
    <Pagination page={page} size={size} total={list?.total??0} onPage={setPage} onSize={v=>{setSize(v);setPage(1)}}/>
   </section>
+  {tipLocation&&<TipSettingsDialog key={tipLocation.id} location={tipLocation} close={()=>setTipLocation(null)}/>}
   {draft&&(profiles.isLoading?<RemoteModalSkeleton className="compact" label="Cargando datos del local" close={()=>setDraft(null)}/>:<LocationDialog value={draft} profiles={profiles.data?.items.filter(x=>x.active)??[]} busy={save.isPending} close={()=>setDraft(null)} save={v=>save.mutate(v)}/>)}
   <ConfirmDialog open={Boolean(remove)} title="Desactivar local" description={`El local “${remove?.name??""}” dejará de admitir nuevas operaciones, pero conservará su historial.`} confirmLabel="Desactivar" pending={deactivate.isPending} onCancel={()=>setRemove(null)} onConfirm={()=>remove&&deactivate.mutate(remove.id)}/>
  </>;

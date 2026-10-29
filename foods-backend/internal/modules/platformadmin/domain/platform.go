@@ -6,29 +6,39 @@ import (
 )
 
 type TenantOnboardingInput struct {
-	LegalName        string   `json:"legalName"`
-	TradeName        string   `json:"tradeName"`
-	TaxID            string   `json:"taxId"`
-	Timezone         string   `json:"timezone"`
-	Country          string   `json:"country"`
-	Currency         string   `json:"currency"`
-	CurrencyPosition string   `json:"currencyPosition"`
-	TaxName          string   `json:"taxName"`
-	TaxRate          string   `json:"taxRate"`
-	TaxIncluded      bool     `json:"taxIncluded"`
-	LocationName     string   `json:"locationName"`
-	LocationCode     string   `json:"locationCode"`
-	Address          string   `json:"address"`
-	LocationPhone    string   `json:"locationPhone"`
-	LocationHours    string   `json:"locationHours"`
-	Latitude         *float64 `json:"latitude,omitempty"`
-	Longitude        *float64 `json:"longitude,omitempty"`
-	AdminName        string   `json:"adminName"`
-	AdminEmail       string   `json:"adminEmail"`
-	AdminPassword    string   `json:"adminPassword"`
-	PlanID           string   `json:"planId"`
-	BillingCycle     string   `json:"billingCycle"`
-	TermsAccepted    bool     `json:"termsAccepted"`
+	TipSettings      *InitialTipSettings `json:"tipSettings,omitempty"`
+	LegalName        string              `json:"legalName"`
+	TradeName        string              `json:"tradeName"`
+	TaxID            string              `json:"taxId"`
+	Timezone         string              `json:"timezone"`
+	Country          string              `json:"country"`
+	Currency         string              `json:"currency"`
+	CurrencyPosition string              `json:"currencyPosition"`
+	TaxName          string              `json:"taxName"`
+	TaxRate          string              `json:"taxRate"`
+	TaxIncluded      bool                `json:"taxIncluded"`
+	LocationName     string              `json:"locationName"`
+	LocationCode     string              `json:"locationCode"`
+	Address          string              `json:"address"`
+	LocationPhone    string              `json:"locationPhone"`
+	LocationHours    string              `json:"locationHours"`
+	Latitude         *float64            `json:"latitude,omitempty"`
+	Longitude        *float64            `json:"longitude,omitempty"`
+	AdminName        string              `json:"adminName"`
+	AdminEmail       string              `json:"adminEmail"`
+	AdminPassword    string              `json:"adminPassword"`
+	PlanID           string              `json:"planId"`
+	BillingCycle     string              `json:"billingCycle"`
+	TermsAccepted    bool                `json:"termsAccepted"`
+}
+
+// Onboarding owns its input. Billing validates and persists it through its port.
+type InitialTipSettings struct {
+	Mode           string   `json:"mode"`
+	Percentage     float64  `json:"percentage"`
+	ShowSuggestion bool     `json:"showSuggestion"`
+	AllowFixed     bool     `json:"allowFixed"`
+	Channels       []string `json:"channels"`
 }
 type PlatformOrganizationPlan struct {
 	ID   string `json:"id"`

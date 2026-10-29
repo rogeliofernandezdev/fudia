@@ -77,6 +77,7 @@ func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages) *httpapi.API {
 	identityAdminRepo := identitypg.NewAdministration(db)
 	identityService := identityapp.New(identitypg.New(db), credentials.Credentials{})
 	tips := billingapp.NewTips(paymentsRepo, work)
+	platform.WithTips(tips)
 	payments := billingapp.NewPayments(paymentsRepo, work, audit, methods, orders).WithAuthorization(identityService).WithTips(tips)
 
 	return httpapi.NewWithHandlers(httpapi.Handlers{

@@ -24,6 +24,7 @@ export const fiscalSchema=z.object({
 });
 
 export const locationSchema=z.object({
+  tipSettings:z.object({mode:z.enum(["disabled","suggest","collect"]),percentage:z.number().finite().min(0).max(100).refine(value=>Math.abs(value*100-Math.round(value*100))<.00001,"Usa hasta dos decimales"),showSuggestion:z.boolean(),allowFixed:z.boolean(),channels:z.array(z.string()).min(1,"Selecciona al menos un tipo de atención")}).optional(),
   timezone:z.string().trim().min(1,"Selecciona la zona horaria"),
   locationName:z.string().trim().min(2,"Ingresa el nombre del local"),
   address:z.string().trim().min(3,"Ingresa la dirección"),
