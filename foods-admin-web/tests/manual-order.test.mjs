@@ -154,6 +154,55 @@ test("comanda: disminuir conserva notas y combos; el pie abre revisión sin envi
  const reviewButton=view.render().find(node=>node.type==="Button"&&node.props.className==="cmd-bar-submit");assert.equal(reviewButton.props.icon,"shoppingBag");reviewButton.props.onClick();assert.equal(view.state[1],true);assert.equal(saves,0);
  const busy=mountComanda({initial,busy:true});busy.render().find(node=>node.type==="ComandaCatalog").props.onDecrease("p");assert.equal(busy.state[0].lines.length,3);
 });
+
+test("comanda: los clics rápidos del mismo render no sobrepasan las existencias",()=>{
+ const view=mountComanda();
+ const pick=view.render().find(node=>node.type==="ComandaCatalog").props.onPick;
+ const product={id:"p",name:"Plato",price:"10",remaining:3};
+ for(let index=0;index<100;index++)pick(product);
+ assert.equal(view.state[0].lines[0].qty,3);
+ const stepper=view.render().find(node=>node.type==="NumberStepper");
+ assert.equal(stepper.props.max,3);
+});
+
+test("comanda: dos líneas del mismo producto comparten tope incluso con callbacks anteriores",()=>{
+ const initial={...fields,tableId:"",lines:[{...line,lineKey:"one",productId:"p",qty:1},{...line,lineKey:"two",productId:"p",qty:1}]};
+ const view=mountComanda({initial});
+ view.render().find(node=>node.type==="ComandaCatalog").props.onAvailability([{id:"p",remaining:3}]);
+ const steppers=view.render().filter(node=>node.type==="NumberStepper");
+ assert.deepEqual(steppers.map(node=>node.props.max),[2,2]);
+ steppers[0].props.onChange(2);steppers[1].props.onChange(2);
+ assert.equal(view.state[0].lines.reduce((sum,item)=>sum+item.qty,0),3);
+ assert.deepEqual(view.render().filter(node=>node.type==="NumberStepper").map(node=>node.props.max),[2,1]);
+ view.render().filter(node=>node.type==="NumberStepper")[0].props.onChange(1);
+ assert.deepEqual(view.render().filter(node=>node.type==="NumberStepper").map(node=>node.props.max),[2,2]);
+});
+
+test("comanda: editar suma las unidades ya reservadas y no redondea existencias hacia arriba",()=>{
+ const initial={...fields,tableId:"",lines:[{...line,productId:"p",qty:4,sourceItemId:"saved-item"}]};
+ const view=mountComanda({initial,mode:"edit"});
+ const catalog=view.render().find(node=>node.type==="ComandaCatalog");
+ assert.equal(catalog.props.reservedByProduct.p,4);
+ const pick=catalog.props.onPick;
+ for(let index=0;index<20;index++)pick({id:"p",name:"Plato",price:"10",remaining:2.8});
+ assert.equal(view.state[0].lines[0].qty,6);
+ assert.equal(view.render().find(node=>node.type==="NumberStepper").props.max,6);
+ const fractional=mountComanda();
+ fractional.render().find(node=>node.type==="ComandaCatalog").props.onPick({id:"p",name:"Plato",price:"10",remaining:.5});
+ assert.equal(fractional.state[0].lines.length,0);
+});
+
+test("comanda: los productos sin control no heredan un tope anterior",()=>{
+ const view=mountComanda();
+ let catalog=view.render().find(node=>node.type==="ComandaCatalog");
+ catalog.props.onAvailability([{id:"p",remaining:2}]);
+ catalog=view.render().find(node=>node.type==="ComandaCatalog");
+ catalog.props.onAvailability([{id:"p",remaining:null}]);
+ const pick=view.render().find(node=>node.type==="ComandaCatalog").props.onPick;
+ for(let index=0;index<5;index++)pick({id:"p",name:"Plato",price:"10",remaining:null});
+ assert.equal(view.state[0].lines[0].qty,5);
+ assert.equal(view.render().find(node=>node.type==="NumberStepper").props.max,undefined);
+});
 test("comanda: conserva la foto real en el resumen con cantidades suaves y fallback sin imagen",()=>{
  const view=mountComanda();view.render().find(node=>node.type==="ComandaCatalog").props.onPick({id:"p",name:"Plato",price:"18",imageUrl:"/foto-del-plato.jpg"});
  const rendered=view.render();assert.equal(view.state[0].lines[0].imageUrl,"/foto-del-plato.jpg");

@@ -29,8 +29,9 @@ function categoryTone(id:string){
  * Las páginas del API se cargan al llegar al final de la lista.
  * Enter en el buscador agrega el primer plato disponible.
  */
-export function ComandaCatalog({qtyByProduct,onAvailability,onPick,onDecrease,onConfigureCombo,disabled=false}:{
+export function ComandaCatalog({qtyByProduct,reservedByProduct={},onAvailability,onPick,onDecrease,onConfigureCombo,disabled=false}:{
   qtyByProduct:Record<string,number>;
+  reservedByProduct?:Record<string,number>;
   /** Informa las existencias cargadas para acotar también las líneas del resumen. */
   onAvailability?:(items:CatalogProduct[])=>void;
   onPick:(p:CatalogProduct)=>void;
@@ -125,7 +126,7 @@ export function ComandaCatalog({qtyByProduct,onAvailability,onPick,onDecrease,on
           <ErrorState title="No pudimos cargar la carta" text={salonCatalog.error.message} onRetry={()=>salonCatalog.refetch()} retrying={salonCatalog.isFetching}/>
         ):salonItems.length?(
           <ul className="cmd-list">
-            {salonItems.map(p=><MenuItem key={p.id} p={p} qty={qtyByProduct[p.id]??0} money={money} onPick={onPick} onDecrease={onDecrease} disabled={disabled}/>)}
+            {salonItems.map(p=><MenuItem key={p.id} p={p} qty={qtyByProduct[p.id]??0} reserved={reservedByProduct[p.id]??0} money={money} onPick={onPick} onDecrease={onDecrease} disabled={disabled}/>)}
           </ul>
         ):(
           <EmptyState icon={searching?"search":"dish"} title={searching?"Sin coincidencias":"Aún no hay platos"} text={searching?"Ningún plato coincide con la búsqueda.":"Activa productos en Carta y productos para venderlos aquí."}/>
@@ -270,31 +271,39 @@ function ComboItem({combo,qty,money,onConfigure,disabled=false}:{combo:ComboSumm
         <span className="cmd-item-visual" aria-hidden="true"><Icon name="combo" size={24}/>{combo.imageUrl&&<img className="cmd-item-thumb" src={combo.imageUrl} alt="" loading="lazy" onError={event=>{event.currentTarget.hidden=true}}/>}</span>
         <span className="cmd-item-copy">
           <strong>{combo.name}</strong>
-          <span className="cmd-item-price">desde {money(combo.price)}</span>
-          <small>{combo.groupCount} {combo.groupCount===1?"elección":"elecciones"}</small>
+          <span className="cmd-item-bottom">
+          <span className="cmd-item-offer"><span className="cmd-item-price">desde {money(combo.price)}</span>
+            <small>{combo.groupCount} {combo.groupCount===1?"elección":"elecciones"}</small></span>
+          <span className="cmd-item-add" aria-hidden="true">{qty>0?<b>{qty}</b>:<Icon name="chevron" size={16}/>}</span>
+          </span>
         </span>
-        <span className="cmd-item-add" aria-hidden="true">{qty>0?<b>{qty}</b>:<Icon name="chevron" size={16}/>}</span>
       </button>
     </li>
   );
 }
 
-function MenuItem({p,qty,money,onPick,onDecrease,disabled=false}:{p:CatalogProduct;qty:number;money:Money;onPick:(p:CatalogProduct)=>void;onDecrease:(productId:string)=>void;disabled?:boolean}){
+function MenuItem({p,qty,reserved=0,money,onPick,onDecrease,disabled=false}:{p:CatalogProduct;qty:number;reserved?:number;money:Money;onPick:(p:CatalogProduct)=>void;onDecrease:(productId:string)=>void;disabled?:boolean}){
   const availability=p.availabilityStatus??"available";
   const unavailable=availability==="sold_out"||availability==="unavailable";
+  const stockMax=typeof p.remaining==="number"&&Number.isFinite(p.remaining)?Math.max(0,Math.floor(p.remaining+reserved)):undefined;
+  const max=unavailable?qty:stockMax;
+  const atLimit=stockMax!==undefined&&qty>=stockMax;
   const label=unavailable?`${p.name}, no disponible`:qty>0?`Agregar otro ${p.name}, llevas ${qty}`:`Agregar ${p.name}`;
   return(
     <li>
       <article className={"cmd-item"+(qty>0?" picked":"")+(unavailable?" unavailable":"")} aria-label={p.name}>
         <span className="cmd-item-visual" aria-hidden="true"><Icon name="dish" size={24}/>{p.imageUrl&&<img className="cmd-item-thumb" src={p.imageUrl} alt="" loading="lazy" onError={event=>{event.currentTarget.hidden=true}}/>}</span>
-        <span className="cmd-item-copy">
+        <div className="cmd-item-copy">
           <strong>{p.name}</strong>
-          <span className="cmd-item-price">{money(p.price)}</span>
+          <div className="cmd-item-bottom">
+          <span className="cmd-item-offer"><span className="cmd-item-price">{money(p.price)}</span>
           {availability==="low"&&<small className="low">{p.remaining!==null&&p.remaining!==undefined?`Quedan ${p.remaining}`:"Pocas unidades"}</small>}
           {availability==="sold_out"&&<small className="blocked">Agotado</small>}
           {availability==="unavailable"&&<small className="blocked">Fuera de horario</small>}
-        </span>
-        {qty>0?<NumberStepper appearance="soft" value={qty} min={1} label={p.name} disabled={disabled} max={unavailable?qty:undefined} onChange={next=>next>qty?onPick(p):onDecrease(p.id)} onRemove={()=>onDecrease(p.id)}/>:<button type="button" className="cmd-item-add" disabled={disabled||unavailable} aria-label={label} onClick={()=>onPick(p)}><Icon name={unavailable?"circleSlash":"plus"} size={18}/></button>}
+          </span>
+        {qty>0?<NumberStepper appearance="soft" value={qty} min={1} label={p.name} disabled={disabled} max={max} onChange={next=>next>qty?onPick(p):onDecrease(p.id)} onRemove={()=>onDecrease(p.id)}/>:<button type="button" className="cmd-item-add" disabled={disabled||unavailable||atLimit} aria-label={label} onClick={()=>onPick(p)}><Icon name={unavailable?"circleSlash":"plus"} size={18}/></button>}
+          </div>
+        </div>
       </article>
     </li>
   );
@@ -306,7 +315,7 @@ function MenuRows({n}:{n:number}){
     <ul className="cmd-list" aria-hidden="true">
       {Array.from({length:n},(_,i)=>(
         <li className="cmd-item cmd-item-skeleton" key={i}>
-          <Skeleton className="cmd-item-visual" width="var(--size-56)" height="var(--size-56)"/>
+          <Skeleton className="cmd-item-visual" width="var(--size-80)" height="var(--size-80)"/>
           <span className="cmd-item-copy"><Skeleton width={i%3===0?"72%":"58%"} height="var(--size-12)"/><Skeleton width="34%" height="var(--size-9)"/></span>
           <Skeleton width="var(--size-32)" height="var(--size-32)" radius="var(--radius-pill)"/>
         </li>

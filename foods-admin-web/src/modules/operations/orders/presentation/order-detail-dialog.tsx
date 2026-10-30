@@ -9,7 +9,7 @@ import {pageRoutes} from "@/shared/routing/page-routes";
 import {canCancelOrder,canManageOrderService,nextOrderAction} from "../domain/order-actions";
 import {canChargeAccount,canCollectOrder} from "../domain/service-flow";
 import {deliveryPoint} from "../domain/delivery-point";
-import {formatRegionalDateTime,formatRegionalNumber} from "@/shared/i18n/regional-format";
+import {formatRegionalNumber} from "@/shared/i18n/regional-format";
 import type {Order,OrderItem,OrderItemSelection} from "../domain/types";
 import type {ServiceItem} from "../domain/service-flow";
 import {OrderAttribution,OrderAttributionSkeleton} from "./order-attribution";
@@ -63,7 +63,7 @@ export function OrderDetailContent<T extends Order>({variant,order,error,retryin
   const sharedService=Boolean(order&&order.status!=="confirmado"&&services.length>0&&services.every(service=>service.status===order.status));
   const title=table||order?.channel==="salon"?tableTitle(order?.tableName):order?(order.tableName||order.customerName||"Pedido"):"Pedido";
   const subtitle=order?(table?order.customerName:order.tableName&&order.customerName?order.customerName:""):"";
-  const opened=order?(table?openedAgo(order.createdAt,location?.country,location?.timezone):formatRegionalDateTime(order.createdAt,{country:location?.country,timeZone:location?.timezone},{dateStyle:"medium"})):"";
+  const opened=order?(table?openedAgo(order.createdAt,location?.country,location?.timezone):registeredAt(order.createdAt,location?.country,location?.timezone)):"";
   return <>
 
     <ModalHeader title={title} titleId={orderDetailTitleId} icon={table?"utensils":order?channelIcons[order.channel]??"receipt":"receipt"} onClose={close} closeLabel="Cerrar detalle"/>
@@ -87,10 +87,8 @@ export function OrderDetailContent<T extends Order>({variant,order,error,retryin
           <section className="order-detail-hero" aria-label="Resumen del pedido">
             <div className="order-detail-identity">
               <div className="order-detail-identity-head"><div className="order-detail-status" aria-label="Estado del pedido"><Status tone={meta.tone}>{meta.label}</Status></div></div>
-              <div className="order-detail-metadata">
-                <div className="order-detail-meta-item"><small><Icon name="clock" size={16}/>{table?"Apertura":"Fecha del pedido"}</small><time dateTime={order.createdAt} aria-label={registeredAt(order.createdAt,location?.country,location?.timezone)}>{opened}</time></div>
-                <OrderAttribution channel={order.channel} waiterName={order.waiterName} collectedByNames={order.collectedByNames}/>
-              </div>
+              <p><Icon name="clock" size={14}/><time dateTime={order.createdAt}>{opened}</time></p>
+              <OrderAttribution channel={order.channel} waiterName={order.waiterName} collectedByNames={order.collectedByNames}/>
             </div>
             {(subtitle||order.customerName||order.customerPhone)&&<div className="order-detail-contact">
               <IconTile name="user" tone="teal"/>

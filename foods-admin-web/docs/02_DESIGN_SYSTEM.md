@@ -738,11 +738,10 @@ y por capas, sin franjas de metadatos.
    cerrada» solo en salón (hora de cierre), pago y «Mesa liberada» / «Pedido
    completado» (hora de cierre). Solo horas que el backend registra; el resto
    dice «Estado actual», «Registrado» o «Pendiente».
-   La identidad superior agrupa fecha y atención en dos columnas iguales también
-   desde 390 px, con etiquetas de 12 px, valores de 14 px e iconos de 16 px junto
-   a la etiqueta, sin recuadros decorativos. La fecha compacta conserva la hora
-   completa en el seguimiento y en su nombre accesible. La autoría del cobro, si
-   existe, ocupa una fila completa. Los nombres largos se ajustan sin truncarse.
+   La identidad superior conserva el formato compacto: estado, fecha con hora
+   e icono `clock`, y atención en otra línea («Salón · Atendido por …»).
+   Sin etiquetas adicionales ni columnas; los nombres largos se ajustan sin
+   truncarse también desde 390 px. La autoría del cobro se conserva si existe.
 6. El resumen de cuenta y las acciones permanecen fijos al pie.
 
 ### Datos del pedido manual
@@ -786,10 +785,16 @@ sin separadores «·» ni píldoras (para no confundirse con los chips de catego
 En móvil (≤600 px) la línea ocupa todo el ancho: el primer dato (zona) queda a la
 izquierda y los siguientes (personas, cliente) se alinean a la derecha.
 
-Productos y combos muestran foto propia de 64 px si existe e icono del sistema como
-alternativa, sin imágenes inventadas. Nombre y precio tienen jerarquía clara;
-el nombre usa seminegrita y el precio negrita oscura, juntos junto a la foto.
-Las filas usan separadores suaves, sin tarjetas ni fondos de selección.
+Productos y combos usan tarjetas blancas con borde tenue, radio de 14 px y
+separación de 12 px sobre fondo `cloud-25`. La foto propia de 80 px queda a la
+izquierda, con icono del sistema como alternativa, sin imágenes inventadas.
+Nombre en seminegrita, precio en negrita y disponibilidad forman un único bloque
+compacto de lectura junto a la foto, con separaciones de 4 px. Se reserva la línea
+de disponibilidad aun cuando no haya aviso para alinear nombre y precio entre
+productos equivalentes. El control de cantidad se alinea con la fila del precio,
+sin repartir el texto en filas estiradas. Las tarjetas de una misma fila comparten
+altura, tanto disponibles como agotadas. La composición funciona
+desde 390 px, sin truncar nombres ni reducir las áreas táctiles.
 La cantidad se acota a las existencias informadas por la carta (`remaining`: porciones
 del día o inventario físico) más lo ya reservado por el pedido guardado que se edita;
 los productos sin control no tienen tope. Al intentar superar ese tope con el + de la
@@ -802,6 +807,15 @@ solo quedan N porciones/unidades de {producto}»; «{producto} está agotado por
 se agotó manualmente).
 El + agrega una unidad; al seleccionar un producto aparece `NumberStepper appearance="soft"`
 con disminuir, cantidad y aumentar. En una unidad, disminuir pasa a Quitar.
+El + de la carta y del resumen queda deshabilitado al alcanzar el máximo real,
+incluyendo las unidades ya reservadas al editar. Los cambios de cantidad se validan
+sobre el borrador más reciente para impedir superar el tope con clics rápidos o
+con varias líneas del mismo producto. Las existencias fraccionarias no se redondean
+hacia arriba para vender unidades completas; sin control no se inventa un máximo.
+La cápsula conserva el fondo neutro y el número centrado: disminuir lleva círculo
+blanco y aumentar círculo azul operativo con icono blanco. Los círculos visibles
+son de 32 px dentro de áreas táctiles de 44 px, tanto en la carta como en el resumen.
+Quitar conserva el acento destructivo y los controles bloqueados usan tonos neutros.
 Un producto agotado impide agregar pero permite reducir lo ya seleccionado.
 Los combos conservan su configuración de opciones, sin restar elecciones
 distintas como si fueran un producto simple. Los estados de disponibilidad no cambian.

@@ -75,6 +75,19 @@ test("categorías y carta se deslizan sin barras visibles; el resumen muestra ba
  assert.match(source,/queryFn:listOrderCategories/);
 });
 
+test("carta: el contador recibe el máximo real y el + inicial respeta cero existencias",()=>{
+ const p={id:"p",name:"Plato",price:"10",remaining:3};
+ const base={p,qty:3,money:String,onPick:()=>{},onDecrease:()=>{}};
+ const stepper=nodes(exports.MenuItem(base)).find(node=>node.type==="NumberStepper");
+ assert.equal(stepper.props.max,3);
+ const editing=nodes(exports.MenuItem({...base,p:{...p,remaining:2},qty:4,reserved:4})).find(node=>node.type==="NumberStepper");
+ assert.equal(editing.props.max,6);
+ const zero=nodes(exports.MenuItem({...base,p:{...p,remaining:.5},qty:0})).find(node=>node.type==="button");
+ assert.equal(zero.props.disabled,true);
+ const uncontrolled=nodes(exports.MenuItem({...base,p:{...p,remaining:null}})).find(node=>node.type==="NumberStepper");
+ assert.equal(uncontrolled.props.max,undefined);
+});
+
 test("cada categoría conserva su acento al renombrar o reordenar; selección incluye una marca",()=>{
  assert.equal(exports.categoryTone(""),"indigo");assert.equal(exports.categoryTone("__combos"),"violet");
  const original=new Map(categories.map(item=>[item.id,exports.categoryTone(item.id)]));
