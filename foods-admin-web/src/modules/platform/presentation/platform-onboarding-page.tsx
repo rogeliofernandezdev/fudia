@@ -16,6 +16,8 @@ import {useFeedback} from "@/providers/feedback-provider";
 import type {PlatformOnboardingDraft} from "../domain/types";
 import {onboardingResolver,onboardingStepFields} from "../domain/onboarding-schemas";
 import {createPlatformOrganization,getPlatformOnboardingContext} from "../infrastructure/platform-api";
+import {RestaurantProfileFields} from "@/modules/organizations/presentation/restaurant-profile-fields";
+import {saveRestaurantProfile,type RestaurantProfileDraft} from "@/modules/organizations/infrastructure/restaurant-profile-api";
 import {PlatformOnboardingSkeleton} from "./platform-skeletons";
 
 const blank:PlatformOnboardingDraft={
@@ -27,7 +29,7 @@ const blank:PlatformOnboardingDraft={
 };
 
 const steps:Array<{key:string;title:string;icon:IconName;heading:string}>=[
-  {key:"empresa",title:"Empresa",icon:"building",heading:"Datos legales"},
+  {key:"empresa",title:"Restaurante",icon:"building",heading:"Datos del restaurante"},
   {key:"plan",title:"Plan y contrato",icon:"contract",heading:"Suscripción SaaS"},
   {key:"fiscal",title:"Fiscal",icon:"receipt",heading:"Perfil fiscal del primer local"},
   {key:"local",title:"Primer local",icon:"mapPin",heading:"Sede inicial"},
@@ -38,6 +40,8 @@ const lastStep=steps.length-1;
 export function PlatformOnboardingPage(){
   const{notify}=useFeedback();
   const[step,setStep]=useState(0);
+ const[identity,setIdentity]=useState<RestaurantProfileDraft>({foundedOn:"",logo:null,pages:[]});
+ const[createdId,setCreatedId]=useState<string|null>(null),[readingImages,setReadingImages]=useState(false);
   const[reached,setReached]=useState(0);
   const context=useQuery({queryKey:["platform-onboarding-context"],queryFn:getPlatformOnboardingContext});
   const ctx=context.data;
@@ -68,8 +72,14 @@ export function PlatformOnboardingPage(){
   },[ctx,getValues,setValue]);
 
   const save=useMutation({
-    mutationFn:(values:PlatformOnboardingDraft)=>createPlatformOrganization(values),
+    mutationFn:async(values:PlatformOnboardingDraft)=>{
+ let id=createdId;
+ if(!id){const created=await createPlatformOrganization({...values,foundedOn:identity.foundedOn});id=created.organizationId;setCreatedId(id);}
+ await saveRestaurantProfile(identity,id,id);
+ return id;
+ },
     onSuccess:()=>{
+      setCreatedId(null);setIdentity({foundedOn:"",logo:null,pages:[]});
       const country=ctx?.countryOptions[0];
       const currency=country&&ctx?.currencyOptions.some(option=>option.code===country.defaultCurrency)
         ?country.defaultCurrency
@@ -78,7 +88,7 @@ export function PlatformOnboardingPage(){
       reset({...blank,planId:firstPlanId,country:country?.code??"",currency,timezone:country?.defaultTimezone??""});
       setStep(0);setReached(0);
     },
-    onError:e=>{const message=e instanceof ApiClientError&&e.status>=500&&e.correlationId?`${e.message} Código de seguimiento: ${e.correlationId}`:e.message;notify({tone:"danger",title:"No se pudo registrar",message})},
+    onError:e=>{const message=e instanceof ApiClientError&&e.status>=500&&e.correlationId?`${e.message} Código de seguimiento: ${e.correlationId}`:e.message;notify({tone:"danger",title:createdId?"Restaurante creado; falta guardar la identidad":"No se pudo registrar",message})},
   });
 
   function goTo(index:number){if(index<=reached)setStep(index)}
@@ -109,6 +119,8 @@ export function PlatformOnboardingPage(){
   !ctx?.plans.length?<EmptyState icon="settings" title="Primero crea un plan comercial" text="El alta de una empresa exige un plan activo con precio, límites, condiciones y módulos definidos." action={<Link className="button primary" href={pageRoutes.platformPlans}><Icon name="plus" size={18}/><span>Crear plan</span></Link>}/>:
   !ctx.countryOptions.length||!ctx.currencyOptions.length?<EmptyState icon="settings" title="Configura un país con WhatsApp activo" text="El onboarding necesita al menos un país activo, su moneda predeterminada activa y un canal de WhatsApp habilitado." action={<Link className="button primary" href={pageRoutes.platformGlobalSettings}><Icon name="settings" size={18}/><span>Abrir Países y WhatsApp</span></Link>}/>:
   <div className="onboarding-wizard">
+ {createdId&&<p role="status">El restaurante ya fue creado. Reintenta guardar para completar el logo y la carta virtual sin volver a registrarlo.</p>}
+    {createdId?<section className="panel management"><h2>Completar identidad del restaurante</h2><RestaurantProfileFields value={identity} onChange={setIdentity} maxPages={ctx.maxMenuPages} disabled={save.isPending} onBusy={setReadingImages}/><Button loading={save.isPending} disabled={save.isPending||readingImages} onClick={()=>save.mutate(getValues())}>Completar registro</Button></section>:<>
     <nav className="wizard-steps" aria-label="Pasos del registro">
       {steps.map((s,i)=><button key={s.key} type="button" className={"wizard-step"+(i===step?" active":i<reached?" done":"")} onClick={()=>goTo(i)} disabled={i>reached||save.isPending} aria-current={i===step?"step":undefined}>
         <span className="wizard-step-icon">{i<reached&&i!==step?<Icon name="check" size={18}/>:<Icon name={s.icon} size={18}/>}</span>
@@ -124,7 +136,7 @@ export function PlatformOnboardingPage(){
           <Field className="span-2" label="Razón social" error={err("legalName")}><Input maxLength={180} {...register("legalName")} placeholder="Restaurante Perú SAC" autoComplete="organization"/></Field>
           <Field label="Nombre comercial" error={err("tradeName")}><Input maxLength={180} {...register("tradeName")} placeholder="Mi restaurante"/></Field>
           <Field label="Identificación fiscal" error={err("taxId")}><Input icon="badge" maxLength={32} inputMode="numeric" {...register("taxId")} placeholder="RUC 20512345678"/></Field>
-        </div>}
+        <div className="span-2"><RestaurantProfileFields value={identity} onChange={setIdentity} maxPages={ctx.maxMenuPages} disabled={save.isPending||readingImages} onBusy={setReadingImages}/></div></div>}
 
         {step===1&&<>
           <div className="form-grid">
@@ -156,18 +168,18 @@ export function PlatformOnboardingPage(){
 
         {step===3&&<div className="form-grid">
           <Field as="div" className="span-2" label="Zona horaria" help="Sugerida según el país. Puedes cambiarla para este local." error={err("timezone")}>
-            <Controller name="timezone" control={control} render={({field})=><TimezoneSelect value={field.value} onChange={field.onChange} onBlur={field.onBlur} name={field.name} inputRef={field.ref} invalid={Boolean(errors.timezone)} disabled={save.isPending}/>}/>
+            <Controller name="timezone" control={control} render={({field})=><TimezoneSelect value={field.value} onChange={field.onChange} onBlur={field.onBlur} name={field.name} inputRef={field.ref} invalid={Boolean(errors.timezone)} disabled={save.isPending||readingImages}/>}/>
           </Field>
           <Field className="span-2" label="Nombre del local" error={err("locationName")}><Input {...register("locationName")} placeholder="Sede principal"/></Field>
           <Field label="Teléfono"><Input icon="phone" type="tel" {...register("locationPhone")} placeholder="+51 999 888 777"/></Field>
-          <Field label="Horario de atención"><Input {...register("locationHours")} placeholder="Lun-Dom 12:00-23:00"/></Field>
+          <Field label="Fecha de apertura" optional><Input type="date" {...register("locationOpenedOn")}/></Field><Field label="Horario de atención"><Input {...register("locationHours")} placeholder="Lun-Dom 12:00-23:00"/></Field>
           <div className={"form-field span-2"+(errors.address?" has-error":"")}>
             <LocationMap latitude={latitude?Number(latitude):null} longitude={longitude?Number(longitude):null} address={address} onAddressChange={a=>setValue("address",a,{shouldValidate:Boolean(errors.address)})} onChange={c=>{setValue("latitude",c.lat.toFixed(7));setValue("longitude",c.lng.toFixed(7))}}/>
             {err("address")&&<small className="field-error" role="alert">{err("address")}</small>}
           </div>
           {ctx.tipOptions&&<FormSection title="Propinas" icon="percent" className="span-2" bare><Controller name="tipSettings" control={control} render={({field})=><div className="tip-settings-form">
-            <label className="tip-checkbox"><input type="checkbox" checked={Boolean(field.value)} disabled={save.isPending} onChange={event=>field.onChange(event.target.checked?(ctx.tipOptions!.countryDefaults[country]??ctx.tipOptions!.defaults):undefined)}/><span>Configurar propinas para este local ahora</span></label>
-            {field.value?<TipSettingsFields value={field.value} onChange={field.onChange} disabled={save.isPending} currency={getValues("currency")} channelOptions={ctx.tipOptions!.channels}/>:<p className="tip-help">Opcional. Puedes configurarlas después desde Locales → Propinas.</p>}
+            <label className="tip-checkbox"><input type="checkbox" checked={Boolean(field.value)} disabled={save.isPending||readingImages} onChange={event=>field.onChange(event.target.checked?(ctx.tipOptions!.countryDefaults[country]??ctx.tipOptions!.defaults):undefined)}/><span>Configurar propinas para este local ahora</span></label>
+            {field.value?<TipSettingsFields value={field.value} onChange={field.onChange} disabled={save.isPending||readingImages} currency={getValues("currency")} channelOptions={ctx.tipOptions!.channels}/>:<p className="tip-help">Opcional. Puedes configurarlas después desde Locales → Propinas.</p>}
             {err("tipSettings")&&<p className="field-error" role="alert">{err("tipSettings")}</p>}
           </div>}/></FormSection>}
         </div>}
@@ -180,12 +192,12 @@ export function PlatformOnboardingPage(){
       </section>
 
       <div className="wizard-footer">
-        <div>{step>0&&<Button action="back" onClick={()=>setStep(s=>s-1)} disabled={save.isPending}>Atrás</Button>}</div>
+        <div>{step>0&&<Button action="back" onClick={()=>setStep(s=>s-1)} disabled={save.isPending||readingImages}>Atrás</Button>}</div>
         <div>{step<lastStep
           ?<Button type="submit" action="continue">Siguiente</Button>
-          :<Button type="submit" icon="check" disabled={save.isPending} loading={save.isPending}>{save.isPending?"Guardando…":"Guardar"}</Button>}</div>
+          :<Button type="submit" icon="check" disabled={save.isPending||readingImages} loading={save.isPending}>{save.isPending?"Guardando…":"Guardar"}</Button>}</div>
       </div>
-    </form>
+    </form></>}
   </div>}
   </>;
 }

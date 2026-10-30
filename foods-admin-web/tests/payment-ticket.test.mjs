@@ -87,6 +87,7 @@ test("ticket entrega el Blob real y su nombre al visor compartido",()=>{
   if(name==="react")return{useEffect:()=>{},useState:()=>[values[state++],()=>{}]};
   if(name==="@tanstack/react-query")return{useQuery:()=>({data,isFetching:false,isPending:false,isError:false})};
   if(name==="@/providers")return{useSession:()=>({organization:{id:"org"},location:{id:"loc"}})};
+  if(name==="@/shared/api/restaurant-branding")return {loadRestaurantReportLogo:async()=>null};
   if(name==="@/shared/pdf-viewer")return{PdfViewer:"PdfViewer"};
   if(name.startsWith("../")||name.endsWith(".css"))return{};return require(name);
  });
@@ -101,6 +102,7 @@ test("cambiar el documento o pago nunca muestra el PDF anterior",()=>{
   if(name==="react")return{useEffect:()=>{},useState:()=>[values[state++],()=>{}]};
   if(name==="@tanstack/react-query")return{useQuery:()=>({data:fixture(),isFetching:false,isPending:false,isError:false})};
   if(name==="@/providers")return{useSession:()=>({organization:{id:"org"},location:{id:"loc"}})};
+  if(name==="@/shared/api/restaurant-branding")return {loadRestaurantReportLogo:async()=>null};
   if(name==="@/shared/pdf-viewer")return{PdfViewer:"PdfViewer"};
   if(name.startsWith("../")||name.endsWith(".css"))return{};return require(name);
  });

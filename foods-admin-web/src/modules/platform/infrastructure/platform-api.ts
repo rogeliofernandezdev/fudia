@@ -40,10 +40,11 @@ export async function listReadyModules():Promise<PlatformModule[]>{
 
 export async function getPlatformOnboardingContext():Promise<PlatformOnboardingContext>{
  const[data,plans]=await Promise.all([
-  platformFetch<Pick<PlatformOnboardingContext,"countryOptions"|"currencyOptions"|"tipOptions">>("onboarding/catalogs"),
+  platformFetch<Pick<PlatformOnboardingContext,"countryOptions"|"currencyOptions"|"tipOptions"|"maxMenuPages">>("onboarding/catalogs"),
   listSubscriptionPlans(),
  ]);
  return {
+  maxMenuPages:data.maxMenuPages,
   tipOptions:data.tipOptions,
   countryOptions:data.countryOptions??[],
   currencyOptions:data.currencyOptions??[],

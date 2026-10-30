@@ -494,6 +494,6 @@ func (a *Organizations) OnboardingCatalogs(ctx context.Context, all bool) (map[s
 	if err != nil {
 		return result, organizationFailure(apperror.Unavailable, "catalogs_unavailable", "No pudimos cargar las monedas disponibles.")
 	}
-	return map[string]any{"countryOptions": countries, "currencyOptions": currencies, "tipOptions": billingcontracts.OnboardingTipOptions()}, nil
+	return map[string]any{"countryOptions": countries, "currencyOptions": currencies, "tipOptions": billingcontracts.OnboardingTipOptions(), "maxMenuPages": 20}, nil
 
 }

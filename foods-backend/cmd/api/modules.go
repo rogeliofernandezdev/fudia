@@ -69,6 +69,7 @@ func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages) *httpapi.API {
 	access := subscriptionapp.NewAccess(accessRepo)
 	subscriptions := subscriptionapp.New(subscriptionpg.New(db), work, audit)
 	organizations := orgapp.New(orgpg.New(db), work, access, audit)
+	profiles := orgapp.NewRestaurantProfiles(orgpg.NewRestaurantProfiles(db), menu.RestaurantMedia())
 	platform := platformapp.New(platformpg.New(db), work, organizations, subscriptions,
 		credentials.Credentials{}, platformdiag.Diagnostics{}, platformdiag.Diagnostics{})
 
@@ -81,11 +82,12 @@ func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages) *httpapi.API {
 	payments := billingapp.NewPayments(paymentsRepo, work, audit, methods, orders).WithAuthorization(identityService).WithTips(tips)
 
 	return httpapi.NewWithHandlers(httpapi.Handlers{
+		RestaurantProfile:      orghttp.New(organizations).WithProfiles(profiles),
 		Tips:                   billinghttp.NewTips(tips),
 		Organizations:          orghttp.New(organizations),
 		Subscriptions:          subscriptionhttp.New(subscriptions),
 		Platform:               platformhttp.New(platform),
-		Concierge:              conciergehttp.New(conciergeapp.New(conciergepg.New(db), menu, orders, audit), func() string { return os.Getenv("FUDIA_CONCIERGE_API_KEY") }),
+		Concierge:              conciergehttp.New(conciergeapp.New(conciergepg.New(db), menu, orders, audit).WithBranding(profiles), func() string { return os.Getenv("FUDIA_CONCIERGE_API_KEY") }),
 		ConciergeUsage:         conciergehttp.NewUsage(conciergeapp.NewUsage(conciergepg.NewUsage(db), conciergepg.New(db), work, audit)),
 		MenuCatalog:            menuhttp.NewCatalog(menu),
 		Payments:               billinghttp.NewPayments(payments),

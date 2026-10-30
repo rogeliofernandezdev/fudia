@@ -7,7 +7,7 @@ import {useSession} from "@/providers";
 import {pageRoutes} from "@/shared/routing/page-routes";
 
 const sections:Array<{icon:IconName;title:string;description:string;href:string;permission?:string;platformAdminOnly?:boolean;module?:string;access?:string}>=[
-  {icon:"building",title:"Empresa",description:"Razón social, nombre comercial e identidad general",href:pageRoutes.organizationSettings,permission:"organizations.manage"},
+  {icon:"building",title:"Mi restaurante",description:"Razón social, nombre comercial e identidad general",href:pageRoutes.organizationSettings,permission:"organizations.manage"},
   {icon:"percent",title:"Fiscal y moneda",description:"Perfiles, monedas, impuestos y tasas",href:pageRoutes.taxSettings,permission:"organizations.read"},
   {icon:"payment",title:"Medios de pago",description:"Catálogo único para ventas, caja y gastos",href:pageRoutes.paymentMethods,permission:"organizations.read"},
   {icon:"users",title:"Usuarios y roles",description:"Equipo, roles y accesos por local",href:pageRoutes.usersSettings,permission:"users.read"},

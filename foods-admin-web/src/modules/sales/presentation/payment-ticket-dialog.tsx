@@ -3,6 +3,7 @@ import {useEffect,useState} from "react";
 import {useQuery} from "@tanstack/react-query";
 import {useSession} from "@/providers";
 import {PdfViewer} from "@/shared/pdf-viewer";
+import {loadRestaurantReportLogo} from "@/shared/api/restaurant-branding";
 import {getSaleDetail} from "../infrastructure/sales-api";
 import type {SaleDetail} from "../domain/types";
 
@@ -14,9 +15,10 @@ export function PaymentTicketDialog({orderId,paymentId,close,mode="payment"}:{or
  useEffect(()=>{
   if(!detail.data||detail.isFetching)return;
   let cancelled=false;const data=detail.data;
-  import("../infrastructure/payment-ticket-pdf").then(builder=>{
-   const layout=builder.layoutPaymentTicket(data,paymentId,mode);
-   const document=builder.buildPaymentTicketPdf(layout);
+  import("../infrastructure/payment-ticket-pdf").then(async builder=>{
+   const logo=await loadRestaurantReportLogo();
+   const layout=builder.layoutPaymentTicket(data,paymentId,mode,Boolean(logo));
+   const document=builder.buildPaymentTicketPdf(layout,logo);
    if(!cancelled){setPrepared({document,filename:`${mode=== "prebill"?"precuenta":"ticket"}-${data.order.code.replace(/[^a-zA-Z0-9_-]/g,"-")}-80mm.pdf`,source:data,paymentId,mode});setError(null);}
   }).catch(cause=>{if(!cancelled)setError({message:cause instanceof Error?cause.message:"No pudimos preparar el ticket.",source:data,paymentId,mode});});
   return()=>{cancelled=true;};

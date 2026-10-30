@@ -25,6 +25,7 @@ function mount({max=1,usage=1,items=[local],pending=false,error=false,fetching=f
  const {LocationsManager}=compile("modules/organizations/presentation/organization-admin.tsx",name=>{
   if(name==="react")return {useState:initial=>{const index=cursor++;if(!(index in state))state[index]=initial;return[state[index],value=>{state[index]=value}]}};
   if(name==="@tanstack/react-query")return {useQueryClient:()=>({invalidateQueries:async options=>{invalidations.push(options.queryKey)}}),useMutation:options=>{mutations.push(options);return {isPending:false}},useQuery:options=>{queries.push(options);return {data:{items:options.queryKey[0]==="locations"?items:[],total:items.length},isLoading:false,isError:false}}};
+  if(name==="./restaurant-profile-settings")return {RestaurantProfileSettings:()=>null};
   if(name==="@/modules/operations/tips")return {TipSettingsDialog:"TipSettingsDialog"};
   if(name==="@/modules/identity")return capacity;
   if(name==="@/providers/session-context")return {useSession:()=>({organization:{id:"panchita"},can:permission=>permission==="organizations.manage"?manage:readPlan})};

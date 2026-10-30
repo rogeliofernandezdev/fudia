@@ -51,6 +51,7 @@ type LocationView struct {
 	Address         string   `json:"address"`
 	Phone           string   `json:"phone"`
 	OpeningHours    string   `json:"openingHours"`
+	OpenedOn        *string  `json:"openedOn,omitempty"`
 	Latitude        *float64 `json:"latitude"`
 	Longitude       *float64 `json:"longitude"`
 	Timezone        string   `json:"timezone"`
@@ -65,6 +66,7 @@ type LocationInput struct {
 	Address         string   `json:"address"`
 	Phone           string   `json:"phone"`
 	OpeningHours    string   `json:"openingHours"`
+	OpenedOn        *string  `json:"openedOn,omitempty"`
 	Latitude        *float64 `json:"latitude,omitempty"`
 	Longitude       *float64 `json:"longitude,omitempty"`
 	Timezone        string   `json:"timezone"`
@@ -135,6 +137,11 @@ type PlatformCountryOption struct {
 }
 
 func ValidateLocationInput(in *LocationInput) bool {
+	if in.OpenedOn != nil && *in.OpenedOn != "" {
+		if _, err := time.Parse("2006-01-02", *in.OpenedOn); err != nil {
+			return false
+		}
+	}
 	in.Name, in.Code, in.Address, in.Phone, in.OpeningHours, in.Timezone, in.FiscalProfileID = strings.TrimSpace(in.Name), strings.ToUpper(strings.TrimSpace(in.Code)), strings.TrimSpace(in.Address), strings.TrimSpace(in.Phone), strings.TrimSpace(in.OpeningHours), strings.TrimSpace(in.Timezone), strings.TrimSpace(in.FiscalProfileID)
 	return in.Name != "" && in.Code != "" && len(in.Code) <= 30 && in.Timezone != "" && in.FiscalProfileID != ""
 }

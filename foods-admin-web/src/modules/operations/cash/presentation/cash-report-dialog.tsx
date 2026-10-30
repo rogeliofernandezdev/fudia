@@ -2,6 +2,7 @@
 import {useEffect,useState} from "react";
 import {readCssToken} from "@/design-system/theme";
 import {PdfViewer} from "@/shared/pdf-viewer";
+import {loadRestaurantReportLogo} from "@/shared/api/restaurant-branding";
 import {useCashReport} from "../application/use-cash-report";
 import type {CashShiftReport} from "../domain/types";
 import {CashReportContent} from "./cash-report-content";
@@ -17,7 +18,7 @@ export function CashReportDialog({shiftId,close}:{shiftId:string;close:()=>void}
   let cancelled=false;
   const value=report.data;
   import("../infrastructure/cash-report-pdf").then(async builder=>{
-   const logo=await builder.loadFudiaReportLogo();
+   const logo=await loadRestaurantReportLogo()??await builder.loadFudiaReportLogo();
    if(cancelled)return;
    const document=builder.buildCashReportPdf(value,logo,{primary:readCssToken("--primary-600"),ink:readCssToken("--ink-950"),muted:readCssToken("--ink-500"),surface:readCssToken("--surface"),soft:readCssToken("--cloud-50"),line:readCssToken("--line"),brand:readCssToken("--brand-600")});
    setPdf({document,source:value,filename:`cierre-${`${value.shift.cashRegisterName}-${value.shift.businessDate}`.normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-zA-Z0-9_-]+/g,"-").toLowerCase()}.pdf`});

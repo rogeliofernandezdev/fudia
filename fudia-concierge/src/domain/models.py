@@ -37,7 +37,14 @@ class MenuItem(BaseModel):
     remaining: Decimal | None = None
 
 
+class ReplyImage(BaseModel):
+    url: str
+    caption: str = ""
+
+
 class MenuResponse(BaseModel):
+    restaurantLogoUrl: str | None = None
+    virtualMenuUrls: list[str] = Field(default_factory=list)
     items: list[MenuItem] = Field(default_factory=list)
     currencySymbol: str = ""
 
@@ -213,6 +220,7 @@ class ConversationSession(BaseModel):
     pending_order_request_id: str | None = None
     last_order_id: str | None = None
     handoff_pending: bool = False
+
     def memory(self) -> CustomerMemory | None:
         """What outlives the session: the venue of the last QR context."""
         if not self.qr_token or self.venue is None:
@@ -305,9 +313,7 @@ PREPARED_STAGES: frozenset[str] = frozenset(
         "superseded",
     }
 )
-TERMINAL_STAGES: frozenset[str] = frozenset(
-    {"sent", "failed", "superseded"}
-)
+TERMINAL_STAGES: frozenset[str] = frozenset({"sent", "failed", "superseded"})
 
 
 class EffectRecord(BaseModel):
@@ -336,6 +342,8 @@ class ProcessingRecord(BaseModel):
     attempts: int = 0
     effects: list[EffectRecord] = Field(default_factory=list)
     reply: str = ""
+    media: list[ReplyImage] = Field(default_factory=list)
+    part_index: int = 0
     send_attempts: int = 0
     resends: int = 0
     last_send_at: float = 0.0

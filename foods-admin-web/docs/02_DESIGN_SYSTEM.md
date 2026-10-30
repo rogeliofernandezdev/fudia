@@ -2567,3 +2567,13 @@ cartera o el error con Reintentar. La ficha de detalle agrega una sección de so
 lectura; el formulario de la empresa ofrece uso, origen del tope, tokens Lite/Flash,
 historial de 6 meses (vacío «Aún no hay historial») y la excepción Usar el del
 plan / Tope propio / Ilimitado.
+
+## Mi restaurante: identidad y carta virtual
+
+Nombre visible de Empresa; conserva datos legales y permisos. Añade fecha de
+fundación, logo y páginas de Carta virtual en secciones simples con los controles
+existentes. Preview proporcional, estados PROCESSING/FAILED explícitos, orden
+mediante Subir/Bajar/Quitar y archivos JPEG/PNG/WebP. Galería fluida desde 390 px,
+controles táctiles de 44 px, sin códigos generados ni colores por pantalla.
+El wizard usa los mismos campos; no repite nombre comercial ni indicadores de pasos.
+La fecha de apertura se configura en cada Local. Ver `../../docs/09_RESTAURANT_IDENTITY.md`.

@@ -31,6 +31,8 @@ CONFIRMED_STATUSES = frozenset({"sent", "delivered", "read"})
 
 
 class WhatsAppSender(Protocol):
+    async def send_image(self, phone: str, url: str, caption: str = "", callback_ref: str = "") -> None: ...
+
     async def send_text(
         self,
         phone: str,
@@ -74,30 +76,24 @@ class ReplyDispatcher:
         if record.stage == "failed":
             return DeliveryOutcome.FAILED
 
-        ref = message_ref(record.message_id)
+        ref = message_ref(
+            record.message_id if record.part_index == 0 else f"{record.message_id}:image:{record.part_index}"
+        )
         if await self._context_replaced(message, record):
-            return await self._transition(
-                record, "superseded", DeliveryOutcome.SUPERSEDED
-            )
+            return await self._transition(record, "superseded", DeliveryOutcome.SUPERSEDED)
 
         if record.stage in ("sending", "uncertain"):
             status = await self.records.outbound_status(ref)
             if status in CONFIRMED_STATUSES:
-                return await self._transition(
-                    record, "sent", DeliveryOutcome.SENT
-                )
+                return await self._accepted(message, record)
             if status == "failed":
                 record.last_error = "meta_status_failed"
-                return await self._transition(
-                    record, "failed", DeliveryOutcome.FAILED
-                )
+                return await self._transition(record, "failed", DeliveryOutcome.FAILED)
             if self.clock() - record.last_send_at < self.reconcile_seconds:
                 return DeliveryOutcome.DEFERRED
             if record.resends >= self.max_resends:
                 record.last_error = "delivery_unconfirmed"
-                return await self._transition(
-                    record, "failed", DeliveryOutcome.FAILED
-                )
+                return await self._transition(record, "failed", DeliveryOutcome.FAILED)
             # No confirmation within the window: Meta most likely never
             # accepted it. Resending may duplicate a text, never an action.
             record.resends += 1
@@ -108,16 +104,14 @@ class ReplyDispatcher:
         await self.records.put_record(record)
         OUTBOUND_REPLIES.labels(state="sending").inc()
         try:
-            await self.whatsapp.send_text(
-                message.phone,
-                record.reply,
-                callback_ref=ref,
-            )
+            if record.part_index == 0:
+                await self.whatsapp.send_text(message.phone, record.reply, callback_ref=ref)
+            else:
+                image = record.media[record.part_index - 1]
+                await self.whatsapp.send_image(message.phone, image.url, image.caption, callback_ref=ref)
         except WhatsAppDeliveryUncertain:
             record.last_error = "delivery_uncertain"
-            await self._transition(
-                record, "uncertain", DeliveryOutcome.DEFERRED
-            )
+            await self._transition(record, "uncertain", DeliveryOutcome.DEFERRED)
             return DeliveryOutcome.DEFERRED
         except Exception as exc:
             # Meta answered with an error or was unreachable: the message
@@ -127,6 +121,17 @@ class ReplyDispatcher:
             await self.records.put_record(record)
             OUTBOUND_REPLIES.labels(state="retry").inc()
             raise
+        return await self._accepted(message, record)
+
+    async def _accepted(self, message: InboundMessage, record: ProcessingRecord) -> DeliveryOutcome:
+        if record.part_index < len(record.media):
+            record.part_index += 1
+            record.stage = "reply_ready"
+            record.send_attempts = 0
+            record.resends = 0
+            record.last_send_at = 0
+            await self.records.put_record(record)
+            return await self.deliver(message, record)
         return await self._transition(record, "sent", DeliveryOutcome.SENT)
 
     async def _context_replaced(
@@ -140,10 +145,7 @@ class ReplyDispatcher:
             message.phone,
             message.sender_phone_id.strip() or "default",
         )
-        return (
-            session is not None
-            and session.conversation_id != record.conversation_id
-        )
+        return session is not None and session.conversation_id != record.conversation_id
 
     async def _transition(
         self,

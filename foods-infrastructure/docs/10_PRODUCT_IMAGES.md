@@ -167,3 +167,13 @@ Fuentes: [POST policy](https://docs.cloud.google.com/storage/docs/xml-api/post-o
 [Eventarc](https://docs.cloud.google.com/run/docs/triggering/storage-triggers),
 [lifecycle](https://docs.cloud.google.com/storage/docs/lifecycle),
 [libvips](https://www.libvips.org/API/8.17/using-vipsthumbnail.html).
+
+## Identidad del restaurante
+
+Desde migración 000096, el pipeline también procesa originales en
+restaurants/{organizationId}/branding/{imageId}/. Eventarc no debe filtrar
+únicamente /products/. Mismos límites, CORS, permisos y lifecycle; el worker
+no necesita permisos nuevos sobre organizations. SELECT en product_images ya
+incluye purpose. Desplegar primero migración, después worker actualizado y
+finalmente API/frontend para evitar READY incompleto de un worker antiguo.
+Perfiles y limitaciones: `../../docs/09_RESTAURANT_IDENTITY.md`.

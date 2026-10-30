@@ -18,7 +18,7 @@ func ImageOriginalKey(organizationID, imageID, contentType string) string {
 func ImagePrefix(original string) string { return original[:strings.LastIndex(original, "/")+1] }
 func ParseImageOriginalKey(key string) (organizationID, imageID string, ok bool) {
 	parts := strings.Split(key, "/")
-	if len(parts) != 5 || parts[0] != "restaurants" || parts[2] != "products" || !imageUUID.MatchString(parts[1]) || !imageUUID.MatchString(parts[3]) {
+	if len(parts) != 5 || parts[0] != "restaurants" || (parts[2] != "products" && parts[2] != "branding") || !imageUUID.MatchString(parts[1]) || !imageUUID.MatchString(parts[3]) {
 		return "", "", false
 	}
 	if parts[4] != "original.jpg" && parts[4] != "original.png" && parts[4] != "original.webp" {
@@ -28,6 +28,7 @@ func ParseImageOriginalKey(key string) (organizationID, imageID string, ok bool)
 }
 
 type ImageRecord struct {
+	Purpose                                                                      string
 	ID, OrganizationID, LocationID, UploadedBy, OriginalKey, ContentType, Status string
 	ProductID                                                                    *string
 	SizeBytes                                                                    int64

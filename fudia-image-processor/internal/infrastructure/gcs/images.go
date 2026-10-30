@@ -10,6 +10,7 @@ import (
 	"google.golang.org/api/googleapi"
 	"io"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -57,6 +58,12 @@ func (g *Images) WriteVariant(ctx context.Context, key string, data []byte, gene
 	object := g.client.Bucket(g.bucket).Object(key)
 	writer := object.If(storage.Conditions{DoesNotExist: true}).NewWriter(ctx)
 	writer.ContentType = "image/webp"
+	if strings.HasSuffix(key, "/delivery.jpg") {
+		writer.ContentType = "image/jpeg"
+	}
+	if strings.HasSuffix(key, "/logo.png") {
+		writer.ContentType = "image/png"
+	}
 	writer.CacheControl = "private,max-age=1800,immutable"
 	writer.Metadata = map[string]string{"source-generation": strconv.FormatInt(generation, 10)}
 	writer.ChunkSize = 0 // bounded files, no 16 MB chunk buffer per request
@@ -69,7 +76,7 @@ func (g *Images) WriteVariant(ctx context.Context, key string, data []byte, gene
 	var apiError *googleapi.Error
 	if errors.As(err, &apiError) && apiError.Code == 412 {
 		attrs, inspectErr := object.Attrs(ctx)
-		if inspectErr == nil && attrs.Metadata["source-generation"] == strconv.FormatInt(generation, 10) && attrs.ContentType == "image/webp" && attrs.Size == int64(len(data)) {
+		if inspectErr == nil && attrs.Metadata["source-generation"] == strconv.FormatInt(generation, 10) && attrs.ContentType == writer.ContentType && attrs.Size == int64(len(data)) {
 			return nil
 		}
 	}

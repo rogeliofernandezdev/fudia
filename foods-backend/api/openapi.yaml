@@ -2,6 +2,90 @@ openapi: 3.1.0
 info: { title: Foods API, version: 0.15.0, description: API operativa y administrativa multiempresa. }
 servers: [{ url: http://localhost:8080 }]
 paths:
+  /v1/admin/organization/profile:
+    get:
+      summary: Consultar identidad del restaurante
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Resultado, content: { application/json: { schema: { $ref: "#/components/schemas/RestaurantProfile" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    patch:
+      summary: Administrar identidad; exige organizations.manage
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/RestaurantProfileInput" } } } }
+      responses:
+        "204": { description: Guardado }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/organization/profile/uploads:
+    post:
+      summary: Administrar identidad; exige organizations.manage
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/RestaurantMediaUploadInput" } } } }
+      responses:
+        "201": { description: Resultado, content: { application/json: { schema: { $ref: "#/components/schemas/ProductImageUploadAuthorization" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/organization/profile/images/{imageId}:
+    parameters: [{ name: imageId, in: path, required: true, schema: { type: string, format: uuid } }]
+    get:
+      summary: Consultar identidad del restaurante
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Resultado, content: { application/json: { schema: { $ref: "#/components/schemas/RestaurantImage" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/organization/profile/images/{imageId}/complete:
+    parameters: [{ name: imageId, in: path, required: true, schema: { type: string, format: uuid } }]
+    post:
+      summary: Administrar identidad; exige organizations.manage
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Resultado, content: { application/json: { schema: { $ref: "#/components/schemas/RestaurantImage" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/platform/organizations/{id}/profile:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    get:
+      summary: Administrar identidad del restaurante desde Plataforma
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Resultado, content: { application/json: { schema: { $ref: "#/components/schemas/RestaurantProfile" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    patch:
+      summary: Administrar identidad del restaurante desde Plataforma
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/RestaurantProfileInput" } } } }
+      responses:
+        "204": { description: Guardado }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/platform/organizations/{id}/profile/uploads:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    post:
+      summary: Administrar identidad del restaurante desde Plataforma
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/RestaurantMediaUploadInput" } } } }
+      responses:
+        "201": { description: Resultado, content: { application/json: { schema: { $ref: "#/components/schemas/ProductImageUploadAuthorization" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/platform/organizations/{id}/profile/images/{imageId}:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }, { name: imageId, in: path, required: true, schema: { type: string, format: uuid } }]
+    get:
+      summary: Administrar identidad del restaurante desde Plataforma
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Resultado, content: { application/json: { schema: { $ref: "#/components/schemas/RestaurantImage" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/platform/organizations/{id}/profile/images/{imageId}/complete:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }, { name: imageId, in: path, required: true, schema: { type: string, format: uuid } }]
+    post:
+      summary: Administrar identidad del restaurante desde Plataforma
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Resultado, content: { application/json: { schema: { $ref: "#/components/schemas/RestaurantImage" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/restaurant-branding:
+    get:
+      summary: Identidad del restaurante activo para documentos; exige sesión, sin permisos de configuración
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: URLs privadas firmadas temporales; solo imágenes READY compatibles con WhatsApp, content: { application/json: { schema: { $ref: "#/components/schemas/RestaurantBranding" } } } }
   /v1/admin/tip-settings:
     get:
       operationId: getTipSettings
@@ -1919,6 +2003,43 @@ components:
     Unauthorized: { description: Sesión inválida, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
     Forbidden: { description: Permiso insuficiente, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
   schemas:
+    RestaurantBranding:
+      type: object
+      properties:
+        restaurantLogoUrl: { type: [string, "null"], format: uri }
+        virtualMenuUrls: { type: array, items: { type: string, format: uri }, description: Páginas JPEG en orden; URLs firmadas temporales }
+    RestaurantImage:
+      type: object
+      required: [id, purpose, url, status]
+      properties:
+        id: { type: string, format: uuid }
+        purpose: { type: string, enum: [restaurant_logo, virtual_menu] }
+        url: { type: [string, "null"], format: uri }
+        deliveryUrl: { type: [string, "null"], format: uri, description: PNG o JPEG para envío por WhatsApp; solo READY }
+        status: { type: string, enum: [PROCESSING, READY, FAILED] }
+        expiresAt: { type: string, format: date-time }
+    RestaurantProfile:
+      type: object
+      required: [foundedOn, logo, menuPages, maxMenuPages]
+      properties:
+        foundedOn: { type: string, description: Fecha ISO o cadena vacía }
+        logo: { oneOf: [{ $ref: "#/components/schemas/RestaurantImage" }, { type: "null" }] }
+        menuPages: { type: array, items: { $ref: "#/components/schemas/RestaurantImage" }, maxItems: 20 }
+        maxMenuPages: { type: integer, const: 20 }
+    RestaurantProfileInput:
+      type: object
+      required: [foundedOn, logoImageId, menuImageIds]
+      properties:
+        foundedOn: { type: string, description: Fecha ISO o cadena vacía para quitarla }
+        logoImageId: { type: [string, "null"], format: uuid }
+        menuImageIds: { type: array, maxItems: 20, uniqueItems: true, items: { type: string, format: uuid }, description: Orden final de las imágenes confirmadas del restaurante }
+    RestaurantMediaUploadInput:
+      allOf:
+        - { $ref: "#/components/schemas/ProductImageUploadInput" }
+      type: object
+      required: [purpose]
+      properties:
+        purpose: { type: string, enum: [restaurant_logo, virtual_menu] }
     InventoryUnit: { type: object, required: [id, code, name, countable], properties: { id: { type: string, format: uuid }, code: { type: string, description: Código estable de la unidad base }, name: { type: string }, countable: { type: boolean, description: "Se cuenta por piezas (und, botella, lata, paquete, bolsa, caja). Sus presentaciones distintas de la unidad base deben contener al menos 1; las unidades de medida (kg, g, l, ml) y las creadas por la empresa admiten fracciones." } } }
     InventoryUnitsResponse: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/InventoryUnit" } } } }
     InventoryUnitInput: { type: object, required: [code, name], properties: { code: { type: string, maxLength: 32, pattern: "^[a-z][a-z0-9_-]{0,31}$" }, name: { type: string, minLength: 1, maxLength: 80 } } }
@@ -1968,7 +2089,7 @@ components:
             channels: { type: array, items: { type: object, required: [value, label], properties: { value: { type: string }, label: { type: string } } } }
         countryOptions: { type: array, items: { $ref: "#/components/schemas/PlatformCountryOption" } }
         currencyOptions: { type: array, items: { $ref: "#/components/schemas/CurrencyOption" } }
-    TenantOnboardingInput: { type: object, required: [legalName, tradeName, taxId, timezone, planId, billingCycle, termsAccepted, country, currency, currencyPosition, taxName, taxRate, taxIncluded, locationName, locationCode, address, adminName, adminEmail, adminPassword], properties: { tipSettings: { $ref: "#/components/schemas/TipSettings" }, legalName: { type: string }, tradeName: { type: string }, taxId: { type: string, minLength: 6, maxLength: 32 }, timezone: { type: string, description: Zona IANA elegida para el primer local; también inicializa la zona predeterminada de la empresa., example: America/Lima }, planId: { type: string, format: uuid }, billingCycle: { type: string, enum: [monthly, annual] }, termsAccepted: { type: boolean, const: true }, country: { type: string, pattern: "^[A-Z]{2}$", default: PE }, currency: { type: string, pattern: "^[A-Z]{3}$", default: PEN }, currencyPosition: { type: string, enum: [before, after] }, taxName: { type: string }, taxRate: { type: string }, taxIncluded: { type: boolean }, locationName: { type: string }, locationCode: { type: string }, address: { type: string }, adminName: { type: string }, adminEmail: { type: string, format: email }, adminPassword: { type: string, minLength: 8, writeOnly: true } } }
+    TenantOnboardingInput: { type: object, required: [legalName, tradeName, taxId, timezone, planId, billingCycle, termsAccepted, country, currency, currencyPosition, taxName, taxRate, taxIncluded, locationName, locationCode, address, adminName, adminEmail, adminPassword], properties: { foundedOn: { type: string, format: date }, locationOpenedOn: { type: string, format: date }, tipSettings: { $ref: "#/components/schemas/TipSettings" }, legalName: { type: string }, tradeName: { type: string }, taxId: { type: string, minLength: 6, maxLength: 32 }, timezone: { type: string, description: Zona IANA elegida para el primer local; también inicializa la zona predeterminada de la empresa., example: America/Lima }, planId: { type: string, format: uuid }, billingCycle: { type: string, enum: [monthly, annual] }, termsAccepted: { type: boolean, const: true }, country: { type: string, pattern: "^[A-Z]{2}$", default: PE }, currency: { type: string, pattern: "^[A-Z]{3}$", default: PEN }, currencyPosition: { type: string, enum: [before, after] }, taxName: { type: string }, taxRate: { type: string }, taxIncluded: { type: boolean }, locationName: { type: string }, locationCode: { type: string }, address: { type: string }, adminName: { type: string }, adminEmail: { type: string, format: email }, adminPassword: { type: string, minLength: 8, writeOnly: true } } }
     DashboardHourlySale:
       type: object
       required: [hour, total]
@@ -2083,7 +2204,7 @@ components:
     OrganizationInput: { type: object, required: [legalName, tradeName, taxId, timezone], properties: { legalName: { type: string, maxLength: 180 }, tradeName: { type: string, maxLength: 180 }, taxId: { type: string, minLength: 6, maxLength: 32 }, timezone: { type: string } } }
     Organization: { allOf: [{ $ref: "#/components/schemas/OrganizationInput" }, { type: object, required: [id, active], properties: { id: { type: string, format: uuid }, active: { type: boolean } } }] }
     FiscalProfileInput: { type: object, required: [country, currency, currencyPosition, taxName, taxRate, taxIncluded, default], properties: { country: { type: string, pattern: "^[A-Z]{2}$" }, currency: { type: string, pattern: "^[A-Z]{3}$" }, currencyPosition: { type: string, enum: [before, after] }, taxName: { type: string, maxLength: 30 }, taxRate: { type: string, pattern: "^(0(\\.[0-9]+)?|1(\\.0+)?)$" }, taxIncluded: { type: boolean }, default: { type: boolean } } }
-    LocationInput: { type: object, required: [name, code, address, timezone, fiscalProfileId], properties: { name: { type: string }, code: { type: string, maxLength: 30 }, address: { type: string }, timezone: { type: string }, fiscalProfileId: { type: string, format: uuid }, active: { type: boolean } } }
+    LocationInput: { type: object, required: [name, code, address, timezone, fiscalProfileId], properties: { openedOn: { type: [string, "null"], description: Fecha ISO o cadena vacía para quitar; omitido conserva valor }, name: { type: string }, code: { type: string, maxLength: 30 }, address: { type: string }, timezone: { type: string }, fiscalProfileId: { type: string, format: uuid }, active: { type: boolean } } }
     ExchangeRateInput: { type: object, required: [baseCurrency, quoteCurrency, rate, effectiveAt, source], properties: { baseCurrency: { type: string, pattern: "^[A-Z]{3}$" }, quoteCurrency: { type: string, pattern: "^[A-Z]{3}$" }, rate: { type: string, pattern: "^[0-9]+(\\.[0-9]+)?$" }, effectiveAt: { type: string, format: date-time }, source: { type: string, enum: [manual, provider] }, providerReference: { type: [string, "null"] } } }
     CategoryInput: { type: object, required: [name, sortOrder], properties: { name: { type: string, maxLength: 120 }, sortOrder: { type: integer, minimum: 0 }, active: { type: boolean }, productScope: { type: string, enum: [prepared, retail, both], default: prepared, description: "Uso informativo de la categoría. El cliente lo deduce del formulario de origen (Carta: prepared; Compras o Inventario: retail) y no lo pide al usuario; el backend lo amplía a both cuando la categoría recibe un producto del otro tipo." } } }
     Category: { allOf: [{ $ref: "#/components/schemas/CategoryInput" }, { type: object, required: [id, active, productScope, productCount], properties: { id: { type: string, format: uuid }, active: { type: boolean }, productCount: { type: integer } } }] }
@@ -2093,7 +2214,8 @@ components:
       additionalProperties: false
       required: [contentType, sizeBytes, width, height]
       properties:
-        productId: { type: string, format: uuid, description: Omitir para un producto nuevo }
+        purpose: { type: string, enum: [product, restaurant_logo, virtual_menu], default: product }
+        productId: { type: string, format: uuid, description: Omitir para un producto nuevo; no usar para logo ni carta }
         contentType: { type: string, enum: [image/jpeg, image/png, image/webp] }
         sizeBytes: { type: integer, minimum: 1, maximum: 5242880 }
         width: { type: integer, minimum: 1, maximum: 4000 }
@@ -2423,7 +2545,7 @@ components:
     ConciergeSettings: { allOf: [{ $ref: "#/components/schemas/ConciergeSettingsInput" }, { type: object, required: [organizationName, locationName], properties: { organizationName: { type: string }, locationName: { type: string } } }] }
     PublicTableContext: { type: object, required: [name, seats, zone, organizationName, locationName, conciergeEnabled, whatsappPhone], properties: { name: { type: string }, seats: { type: integer, minimum: 1 }, zone: { type: string }, organizationName: { type: string }, locationName: { type: string }, conciergeEnabled: { type: boolean }, whatsappPhone: { type: string, description: "Número E.164 del local; vacío cuando Concierge no está configurado." } } }
     ConciergeMenuItem: { allOf: [{ $ref: "#/components/schemas/ProductImage" }, { type: object, required: [productId, name, description, price, status, isCombo, hasModifiers, recommended], properties: { recommended: { type: boolean, description: "Producto recomendado por el local en la carta digital; se lista primero." }, productId: { type: string, format: uuid }, name: { type: string }, description: { type: string }, price: { type: string }, categoryName: { type: [string, "null"] }, imageUrl: { type: [string, "null"] }, status: { type: string, enum: [available, low, sold_out, unavailable] }, isCombo: { type: boolean }, hasModifiers: { type: boolean }, remaining: { type: [number, "null"], description: "Porciones o unidades que quedan hoy en el local; null si el producto no controla cantidad. Al confirmar, foods-backend vuelve a validar y responde insufficient_stock o insufficient_portions." } } } ] }
-    ConciergeMenuResponse: { type: object, required: [items, currencySymbol], properties: { items: { type: array, items: { $ref: "#/components/schemas/ConciergeMenuItem" } }, currencySymbol: { type: string } } }
+    ConciergeMenuResponse: { type: object, required: [items, currencySymbol], properties: { restaurantLogoUrl: { type: [string, "null"], format: uri }, virtualMenuUrls: { type: array, items: { type: string, format: uri } }, items: { type: array, items: { $ref: "#/components/schemas/ConciergeMenuItem" } }, currencySymbol: { type: string } } }
     ConciergeComboOption: { type: object, required: [productId, name, surcharge, available], properties: { productId: { type: string, format: uuid }, name: { type: string }, surcharge: { type: string }, available: { type: boolean } } }
     ConciergeComboGroup: { type: object, required: [id, name, required, minSelections, maxSelections, options], properties: { id: { type: string, format: uuid }, name: { type: string }, required: { type: boolean }, minSelections: { type: integer, minimum: 0 }, maxSelections: { type: integer, minimum: 1 }, options: { type: array, items: { $ref: "#/components/schemas/ConciergeComboOption" } } } }
     ConciergeComboDetail: { allOf: [{ $ref: "#/components/schemas/ProductImage" }, { type: object, required: [id, name, description, price, groups], properties: { id: { type: string, format: uuid }, name: { type: string }, description: { type: string }, price: { type: string }, imageUrl: { type: [string, "null"] }, groups: { type: array, items: { $ref: "#/components/schemas/ConciergeComboGroup" } } } } ] }

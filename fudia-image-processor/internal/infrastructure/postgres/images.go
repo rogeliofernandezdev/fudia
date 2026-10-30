@@ -20,11 +20,11 @@ func imageError(err error) error {
 	return err
 }
 
-const imageColumns = `id,organization_id,location_id,uploaded_by,product_id,original_key,content_type,size_bytes,width,height,status,generation,confirmed_at,expires_at,attempts`
+const imageColumns = `id,organization_id,location_id,uploaded_by,product_id,original_key,content_type,size_bytes,width,height,status,generation,confirmed_at,expires_at,attempts,purpose`
 
 func scanImage(row pgx.Row) (domain.ImageRecord, error) {
 	var v domain.ImageRecord
-	err := row.Scan(&v.ID, &v.OrganizationID, &v.LocationID, &v.UploadedBy, &v.ProductID, &v.OriginalKey, &v.ContentType, &v.SizeBytes, &v.Width, &v.Height, &v.Status, &v.Generation, &v.ConfirmedAt, &v.ExpiresAt, &v.Attempts)
+	err := row.Scan(&v.ID, &v.OrganizationID, &v.LocationID, &v.UploadedBy, &v.ProductID, &v.OriginalKey, &v.ContentType, &v.SizeBytes, &v.Width, &v.Height, &v.Status, &v.Generation, &v.ConfirmedAt, &v.ExpiresAt, &v.Attempts, &v.Purpose)
 	return v, imageError(err)
 }
 func (r *Images) Claim(ctx context.Context, organizationID, id string, generation int64) (domain.ImageRecord, bool, error) {

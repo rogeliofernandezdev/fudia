@@ -131,7 +131,7 @@ func (p *ProductImages) view(ctx context.Context, record domain.ImageRecord, var
 		generation = *record.Generation
 	}
 	if record.Status == "READY" {
-		key = domain.ImagePrefix(key) + variant + ".webp"
+		key = domain.ImageVariantKey(record, variant)
 		generation = 0
 	}
 	result := domain.ImageResult{ImageView: domain.ImageView{ImageID: &record.ID, ImageKey: &key, ImageStatus: &record.Status}}
@@ -148,7 +148,7 @@ func (p *ProductImages) view(ctx context.Context, record domain.ImageRecord, var
 	if detail && record.Status == "READY" {
 		result.ImageVariants = map[string]string{}
 		for _, name := range []string{"thumbnail", "medium"} {
-			signed, expires, err := p.storage.ReadURL(ctx, domain.ImagePrefix(record.OriginalKey)+name+".webp", 0)
+			signed, expires, err := p.storage.ReadURL(ctx, domain.ImageVariantKey(record, name), 0)
 			if err != nil {
 				return result, menuFailure(apperror.Unavailable, "image_url_unavailable", "No pudimos cargar las versiones de la imagen.")
 			}
@@ -198,7 +198,9 @@ func (a *Catalog) productImageViews(ctx context.Context, s scope, ids []string, 
 		group.Go(func() error {
 			view, err := a.direct.view(groupCtx, record, variant, detail)
 			if err != nil {
-				if detail { return err } // Missing optional photos must not prevent ordering from the catalogue.
+				if detail {
+					return err
+				} // Missing optional photos must not prevent ordering from the catalogue.
 			}
 			mu.Lock()
 			out[id] = view

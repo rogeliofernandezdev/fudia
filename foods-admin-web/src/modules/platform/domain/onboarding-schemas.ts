@@ -30,6 +30,7 @@ export const locationSchema=z.object({
   address:z.string().trim().min(3,"Ingresa la dirección"),
   locationPhone:z.string().optional(),
   locationHours:z.string().optional(),
+  locationOpenedOn:z.union([z.literal(""),z.iso.date()]).optional(),
 });
 
 export const adminSchema=z.object({

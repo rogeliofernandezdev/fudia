@@ -8,6 +8,7 @@ import (
 	deliverycontracts "github.com/foods-platform/foods-backend/internal/modules/delivery/contracts"
 	menucontracts "github.com/foods-platform/foods-backend/internal/modules/menu/contracts"
 	ordercontracts "github.com/foods-platform/foods-backend/internal/modules/orders/contracts"
+	orgcontracts "github.com/foods-platform/foods-backend/internal/modules/organizations/contracts"
 	"github.com/foods-platform/foods-backend/internal/platform/apperror"
 	"github.com/foods-platform/foods-backend/internal/platform/requestscope"
 	"strings"
@@ -21,8 +22,9 @@ type QRContext struct {
 	TableID, TableName, OrganizationName, LocationName, CurrencySymbol string
 }
 type MenuResult struct {
+	orgcontracts.RestaurantBranding
 	Items          []menucontracts.PublicMenuItem `json:"items"`
-	CurrencySymbol string                      `json:"currencySymbol"`
+	CurrencySymbol string                         `json:"currencySymbol"`
 }
 type Menu interface {
 	PublicMenu(context.Context, scope, string, string) ([]menucontracts.PublicMenuItem, error)
@@ -37,28 +39,33 @@ type Orders interface {
 	ConciergeOrder(ctx context.Context, s scope, conversationID, orderID string) (ordercontracts.ConciergeOrderState, error)
 }
 type Concierge struct {
-	repo   Repository
-	menu   Menu
-	orders Orders
-	audit  audit.Repository
+	repo     Repository
+	menu     Menu
+	orders   Orders
+	audit    audit.Repository
+	branding orgcontracts.BrandingReader
 }
 
 func New(repo Repository, menu Menu, orders Orders, audit audit.Repository) *Concierge {
-	return &Concierge{repo, menu, orders, audit}
+	return &Concierge{repo: repo, menu: menu, orders: orders, audit: audit}
+}
+func (a *Concierge) WithBranding(reader orgcontracts.BrandingReader) *Concierge {
+	a.branding = reader
+	return a
 }
 func conciergeFailure(k apperror.Kind, c, m string) error { return apperror.New(k, c, m) }
 
 type Bill struct {
-	OrderID         string                  `json:"orderId"`
-	Code            string                  `json:"code"`
-	TableName       string                  `json:"tableName"`
-	Status          string                  `json:"status"`
-	CurrencySymbol  string                  `json:"currencySymbol"`
+	OrderID         string                     `json:"orderId"`
+	Code            string                     `json:"code"`
+	TableName       string                     `json:"tableName"`
+	Status          string                     `json:"status"`
+	CurrencySymbol  string                     `json:"currencySymbol"`
 	Items           []ordercontracts.OrderItem `json:"items"`
-	Total           string                  `json:"total"`
-	PaidAmount      string                  `json:"paidAmount"`
-	RemainingAmount string                  `json:"remainingAmount"`
-	PaymentStatus   string                  `json:"paymentStatus"`
+	Total           string                     `json:"total"`
+	PaidAmount      string                     `json:"paidAmount"`
+	RemainingAmount string                     `json:"remainingAmount"`
+	PaymentStatus   string                     `json:"paymentStatus"`
 }
 type Repository interface {
 	ResolveQR(context.Context, string) (QRContext, error)
@@ -92,6 +99,12 @@ func (a *Concierge) Menu(ctx context.Context, token, q, productID string) (MenuR
 	}
 	out.CurrencySymbol = qr.CurrencySymbol
 	out.Items, err = a.menu.PublicMenu(ctx, qr.Scope, q, productID)
+	if err == nil && a.branding != nil && q == "" && productID == "" {
+		branding, brandErr := a.branding.Branding(ctx, qr.Scope)
+		if brandErr == nil {
+			out.RestaurantBranding = branding
+		}
+	}
 	return out, err
 }
 func (a *Concierge) Combo(ctx context.Context, token, id string) (menucontracts.PublicComboDetail, error) {

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from src.domain.models import ReplyImage
 from src.services.carta import ORDERABLE_STATUSES, build_carta, render_carta
 from src.services.tooling import ToolContext
 
@@ -18,15 +19,13 @@ def unavailable_carta_reply(result: dict[str, Any]) -> str:
         return ""
     if result.get("noneAvailable") is True:
         return f"{text}\n\nSi necesitas ayuda, puedo avisar al personal del local."
-    return (
-        "Lo que buscas no está disponible hoy. Te comparto nuestra carta:\n\n"
-        f"{text}\n\n¿Qué deseas pedir?"
-    )
+    return f"Lo que buscas no está disponible hoy. Te comparto nuestra carta:\n\n{text}\n\n¿Qué deseas pedir?"
 
 
 class MenuTools:
     def __init__(self, context: ToolContext) -> None:
         self.context = context
+        self.media: list[ReplyImage] = []
 
     async def execute(
         self,
@@ -40,9 +39,7 @@ class MenuTools:
                 query=query,
             )
             matched = bool(menu.items) or not query
-            unavailable = bool(query) and not any(
-                item.status in ORDERABLE_STATUSES for item in menu.items
-            )
+            unavailable = bool(query) and not any(item.status in ORDERABLE_STATUSES for item in menu.items)
             if unavailable:
                 # Missing or sold-out results must lead back to the live carta.
                 menu = await self.context.fudia.search_menu(
@@ -52,11 +49,12 @@ class MenuTools:
             # The full carta carries each combo with what it includes, so the
             # agent shows it once instead of repeating its dishes.
             full = not query or unavailable
-            carta = (
-                await build_carta(self.context.fudia, self.context.token(), menu)
-                if full
-                else None
-            )
+            carta = await build_carta(self.context.fudia, self.context.token(), menu) if full else None
+            if full:
+                self.media = [
+                    ReplyImage(url=url, caption=f"Carta virtual · página {index + 1}")
+                    for index, url in enumerate(menu.virtualMenuUrls)
+                ]
             included = carta.included if carta else set()
             return {
                 "ok": True,
@@ -103,9 +101,7 @@ class MenuTools:
                         "isCombo": item.isCombo,
                         "hasModifiers": item.hasModifiers,
                         "recommended": item.recommended,
-                        "remaining": (
-                            None if item.remaining is None else str(item.remaining)
-                        ),
+                        "remaining": (None if item.remaining is None else str(item.remaining)),
                         "includedInCombo": item.productId in included,
                     }
                     for item in menu.items

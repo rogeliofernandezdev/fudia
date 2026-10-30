@@ -270,3 +270,17 @@ Este documento define responsabilidades e invariantes. El runbook conserva los
 comandos/permisos concretos. Mantenerlos coherentes con código y migraciones,
 sin presentar las limitaciones pendientes como capacidades implementadas.
 
+
+## Perfiles de identidad y carta virtual
+
+El contrato product_images incorpora purpose. Además de product (compatibilidad
+200/600 WebP), admite restaurant_logo y virtual_menu bajo /branding/. El logo
+exige thumbnail.webp 200, medium.webp 600 y logo.png 600, preservando alfa.
+Carta virtual exige thumbnail.webp 200, medium.webp 2400 y delivery.jpg 2400.
+No ampliar; quitar metadata y orientar a sRGB. JPEG se usa para WhatsApp, WebP
+para web; no enviar WebP como imagen de Meta. Todas las variantes deben existir
+antes de READY; ninguna original fallida entra a la limpieza exitosa.
+Los perfiles no modifican productos, precios ni organizaciones: el estado vive
+en la reserva y el API resuelve referencias. IAM/Eventarc/lease/fencing y
+protección por generación siguen iguales. Desplegar migración 000096, después
+worker y luego API/frontend. Ver `../../docs/09_RESTAURANT_IDENTITY.md`.

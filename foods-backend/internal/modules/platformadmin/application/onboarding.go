@@ -128,6 +128,16 @@ func (a *Platform) Onboard(ctx context.Context, s scope, in domain.TenantOnboard
 	var result map[string]string
 	a.flow.Log(ctx, "application_flow_started", "", nil, "actor_user_id", s.UserID)
 	domain.NormalizeTenantOnboardingInput(&in)
+	if in.FoundedOn != "" {
+		if _, err := time.Parse("2006-01-02", in.FoundedOn); err != nil {
+			return result, a.reject(ctx, "invalid_founding_date", "La fecha de fundación no es válida.")
+		}
+	}
+	if in.LocationOpenedOn != "" {
+		if _, err := time.Parse("2006-01-02", in.LocationOpenedOn); err != nil {
+			return result, a.reject(ctx, "invalid_opening_date", "La fecha de apertura no es válida.")
+		}
+	}
 	if in.TipSettings != nil && !billingcontracts.ValidTipSettings(billingcontracts.TipSettings(*in.TipSettings)) {
 		return result, a.reject(ctx, "invalid_tip_settings", "Revisa la configuración de propinas del primer local.")
 	}

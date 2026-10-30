@@ -55,55 +55,31 @@ class MetaWhatsAppAdapter:
         return self._client
 
     def _ensure_configured(self) -> None:
-        if (
-            not self.token
-            or not self.phone_id
-            or not self.graph_version
-        ):
-            raise RuntimeError(
-                "WhatsApp no está configurado."
-            )
+        if not self.token or not self.phone_id or not self.graph_version:
+            raise RuntimeError("WhatsApp no está configurado.")
 
     async def display_phone_digits(self) -> str:
         now = time.monotonic()
-        if (
-            self._display_phone_digits
-            and now < self._display_phone_expires_at
-        ):
+        if self._display_phone_digits and now < self._display_phone_expires_at:
             return self._display_phone_digits
 
         self._ensure_configured()
-        url = (
-            "https://graph.facebook.com/"
-            f"{self.graph_version}/"
-            f"{self.phone_id}"
-        )
+        url = f"https://graph.facebook.com/{self.graph_version}/{self.phone_id}"
         response: httpx.Response | None = None
         for attempt in range(3):
             try:
                 response = await self._http().get(
                     url,
-                    headers={
-                        "Authorization": (
-                            f"Bearer {self.token}"
-                        )
-                    },
-                    params={
-                        "fields": "display_phone_number"
-                    },
+                    headers={"Authorization": (f"Bearer {self.token}")},
+                    params={"fields": "display_phone_number"},
                 )
             except httpx.TransportError:
                 if attempt == 2:
                     raise
-                await asyncio.sleep(
-                    0.2 * (2**attempt)
-                )
+                await asyncio.sleep(0.2 * (2**attempt))
                 continue
 
-            should_retry = (
-                response.status_code == 429
-                or response.status_code >= 500
-            )
+            should_retry = response.status_code == 429 or response.status_code >= 500
             if should_retry and attempt < 2:
                 retry_after = response.headers.get(
                     "Retry-After",
@@ -121,9 +97,7 @@ class MetaWhatsAppAdapter:
             break
 
         if response is None:
-            raise RuntimeError(
-                "Meta no respondió."
-            )
+            raise RuntimeError("Meta no respondió.")
         response.raise_for_status()
         body = response.json()
         digits = re.sub(
@@ -140,9 +114,7 @@ class MetaWhatsAppAdapter:
             r"[1-9][0-9]{7,14}",
             digits,
         ):
-            raise RuntimeError(
-                "Meta no devolvió un número de WhatsApp válido."
-            )
+            raise RuntimeError("Meta no devolvió un número de WhatsApp válido.")
 
         self._display_phone_digits = digits
         self._display_phone_expires_at = now + 300.0
@@ -160,10 +132,7 @@ class MetaWhatsAppAdapter:
             text or f"FUDIA:{qr_token}",
             safe="",
         )
-        return (
-            f"https://wa.me/{digits}"
-            f"?text={message}"
-        )
+        return f"https://wa.me/{digits}?text={message}"
 
     async def send_text(
         self,
@@ -181,17 +150,28 @@ class MetaWhatsAppAdapter:
         in Meta status webhooks for reconciliation.
         """
         self._ensure_configured()
-        url = (
-            "https://graph.facebook.com/"
-            f"{self.graph_version}/"
-            f"{self.phone_id}/messages"
-        )
         payload: dict[str, object] = {
             "messaging_product": "whatsapp",
             "to": phone,
             "type": "text",
             "text": {"body": message},
         }
+        await self._send_payload(payload, callback_ref)
+
+    async def send_image(self, phone: str, url: str, caption: str = "", callback_ref: str = "") -> None:
+        await self._send_payload(
+            {
+                "messaging_product": "whatsapp",
+                "to": phone,
+                "type": "image",
+                "image": {"link": url, "caption": caption},
+            },
+            callback_ref,
+        )
+
+    async def _send_payload(self, payload: dict[str, object], callback_ref: str) -> None:
+        self._ensure_configured()
+        url = f"https://graph.facebook.com/{self.graph_version}/{self.phone_id}/messages"
         if callback_ref:
             payload["biz_opaque_callback_data"] = callback_ref
         response: httpx.Response | None = None
@@ -199,35 +179,20 @@ class MetaWhatsAppAdapter:
             try:
                 response = await self._http().post(
                     url,
-                    headers={
-                        "Authorization": (
-                            f"Bearer {self.token}"
-                        )
-                    },
+                    headers={"Authorization": (f"Bearer {self.token}")},
                     json=payload,
                 )
             except NOT_SENT_ERRORS:
                 if attempt == 2:
-                    WHATSAPP_OUTBOUND.labels(
-                        result="transport_error"
-                    ).inc()
+                    WHATSAPP_OUTBOUND.labels(result="transport_error").inc()
                     raise
-                await asyncio.sleep(
-                    0.2 * (2**attempt)
-                )
+                await asyncio.sleep(0.2 * (2**attempt))
                 continue
             except httpx.TransportError as exc:
-                WHATSAPP_OUTBOUND.labels(
-                    result="uncertain"
-                ).inc()
-                raise WhatsAppDeliveryUncertain(
-                    "Meta no respondió después de recibir el envío."
-                ) from exc
+                WHATSAPP_OUTBOUND.labels(result="uncertain").inc()
+                raise WhatsAppDeliveryUncertain("Meta no respondió después de recibir el envío.") from exc
 
-            should_retry = (
-                response.status_code == 429
-                or response.status_code >= 500
-            )
+            should_retry = response.status_code == 429 or response.status_code >= 500
             if should_retry and attempt < 2:
                 retry_after = response.headers.get(
                     "Retry-After",
@@ -245,26 +210,15 @@ class MetaWhatsAppAdapter:
             break
 
         if response is None:
-            WHATSAPP_OUTBOUND.labels(
-                result="no_response"
-            ).inc()
-            raise RuntimeError(
-                "WhatsApp no respondió."
-            )
+            WHATSAPP_OUTBOUND.labels(result="no_response").inc()
+            raise RuntimeError("WhatsApp no respondió.")
         if response.is_success:
-            WHATSAPP_OUTBOUND.labels(
-                result="success"
-            ).inc()
+            WHATSAPP_OUTBOUND.labels(result="success").inc()
         else:
-            WHATSAPP_OUTBOUND.labels(
-                result="http_error"
-            ).inc()
+            WHATSAPP_OUTBOUND.labels(result="http_error").inc()
         response.raise_for_status()
 
     async def close(self) -> None:
-        if (
-            self._client is not None
-            and self._external_client is None
-        ):
+        if self._client is not None and self._external_client is None:
             await self._client.aclose()
             self._client = None

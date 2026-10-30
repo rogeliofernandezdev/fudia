@@ -6,6 +6,7 @@ export const locationSchema=z.object({
  name:z.string().trim().min(1,"Ingresa el nombre del local.").max(120,"El nombre no puede superar 120 caracteres."),
  address:z.string().trim().min(3,"Ingresa la dirección del local."),
  phone:z.string().trim().max(40,"El teléfono no puede superar 40 caracteres."),
+ openedOn:z.union([z.literal(""),z.iso.date()]).nullable().optional(),
  openingHours:z.string().trim().max(120,"El horario no puede superar 120 caracteres."),
  timezone:z.string().trim().min(3,"Indica la zona horaria."),
  fiscalProfileId:z.string().min(1,"Selecciona el perfil fiscal."),

@@ -9,9 +9,12 @@ import (
 	"net/http"
 )
 
-type Handler struct{ service *application.Organizations }
+type Handler struct {
+	service  *application.Organizations
+	profiles *application.RestaurantProfiles
+}
 
-func New(service *application.Organizations) *Handler { return &Handler{service} }
+func New(service *application.Organizations) *Handler { return &Handler{service: service} }
 func orgScope(r *http.Request) requestscope.Scope     { s, _ := requestscope.From(r.Context()); return s }
 func respond(w http.ResponseWriter, status int, out any, err error) {
 	if err != nil {

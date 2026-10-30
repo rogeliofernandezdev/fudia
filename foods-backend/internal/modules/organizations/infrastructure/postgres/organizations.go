@@ -170,11 +170,11 @@ func (r *Organizations) UpdateOrganization(ctx context.Context, s scope, in doma
 }
 func (r *Organizations) CreateLocation(ctx context.Context, s scope, in domain.LocationInput) (domain.LocationView, error) {
 	var out domain.LocationView
-	err := r.db(ctx).QueryRow(ctx, `INSERT INTO locations(organization_id,name,code,address,phone,opening_hours,latitude,longitude,timezone,fiscal_profile_id) SELECT $1,$2,$3,$4,$5,$6,$7,$8,$9,p.id FROM organization_fiscal_profiles p WHERE p.id=$10 AND p.organization_id=$1 AND p.active RETURNING id,name,code,address,phone,opening_hours,latitude,longitude,timezone,fiscal_profile_id,(SELECT country_code FROM organization_fiscal_profiles WHERE id=fiscal_profile_id),(SELECT currency FROM organization_fiscal_profiles WHERE id=fiscal_profile_id),active`, s.OrganizationID, in.Name, in.Code, in.Address, in.Phone, in.OpeningHours, in.Latitude, in.Longitude, in.Timezone, in.FiscalProfileID).Scan(&out.ID, &out.Name, &out.Code, &out.Address, &out.Phone, &out.OpeningHours, &out.Latitude, &out.Longitude, &out.Timezone, &out.FiscalProfileID, &out.Country, &out.Currency, &out.Active)
+	err := r.db(ctx).QueryRow(ctx, `INSERT INTO locations(organization_id,name,code,address,phone,opening_hours,latitude,longitude,timezone,fiscal_profile_id,opened_on) SELECT $1,$2,$3,$4,$5,$6,$7,$8,$9,p.id,NULLIF($11,'')::date FROM organization_fiscal_profiles p WHERE p.id=$10 AND p.organization_id=$1 AND p.active RETURNING id,name,code,address,phone,opening_hours,latitude,longitude,timezone,fiscal_profile_id,(SELECT country_code FROM organization_fiscal_profiles WHERE id=fiscal_profile_id),(SELECT currency FROM organization_fiscal_profiles WHERE id=fiscal_profile_id),active,opened_on::text`, s.OrganizationID, in.Name, in.Code, in.Address, in.Phone, in.OpeningHours, in.Latitude, in.Longitude, in.Timezone, in.FiscalProfileID, in.OpenedOn).Scan(&out.ID, &out.Name, &out.Code, &out.Address, &out.Phone, &out.OpeningHours, &out.Latitude, &out.Longitude, &out.Timezone, &out.FiscalProfileID, &out.Country, &out.Currency, &out.Active, &out.OpenedOn)
 	return out, organizationError(err)
 }
 func (r *Organizations) UpdateLocation(ctx context.Context, s scope, id string, in domain.LocationInput, active bool) (int64, error) {
-	tag, err := r.db(ctx).Exec(ctx, `UPDATE locations l SET name=$1,code=$2,address=$3,phone=$4,opening_hours=$5,latitude=$6,longitude=$7,timezone=$8,fiscal_profile_id=p.id,active=$9,updated_at=now() FROM organization_fiscal_profiles p WHERE l.id=$10 AND l.organization_id=$11 AND p.id=$12 AND p.organization_id=l.organization_id AND p.active`, in.Name, in.Code, in.Address, in.Phone, in.OpeningHours, in.Latitude, in.Longitude, in.Timezone, active, id, s.OrganizationID, in.FiscalProfileID)
+	tag, err := r.db(ctx).Exec(ctx, `UPDATE locations l SET name=$1,code=$2,address=$3,phone=$4,opening_hours=$5,latitude=$6,longitude=$7,timezone=$8,fiscal_profile_id=p.id,active=$9,opened_on=CASE WHEN $13::text IS NULL THEN l.opened_on ELSE NULLIF($13,'')::date END,updated_at=now() FROM organization_fiscal_profiles p WHERE l.id=$10 AND l.organization_id=$11 AND p.id=$12 AND p.organization_id=l.organization_id AND p.active`, in.Name, in.Code, in.Address, in.Phone, in.OpeningHours, in.Latitude, in.Longitude, in.Timezone, active, id, s.OrganizationID, in.FiscalProfileID, in.OpenedOn)
 	return tag.RowsAffected(), organizationError(err)
 }
 func (r *Organizations) DeactivateLocation(ctx context.Context, s scope, id string) (int64, error) {
@@ -250,7 +250,7 @@ func scanFiscalProfile(rows pgx.Rows, item *domain.FiscalProfile) error {
 }
 func (r *Organizations) Locations(ctx context.Context, s scope, page int, size int) (application.LocationsPage, error) {
 	var out application.LocationsPage
-	rows, err := r.db(ctx).Query(ctx, `SELECT l.id,l.name,l.code,l.address,l.phone,l.opening_hours,l.latitude,l.longitude,l.timezone,l.fiscal_profile_id,p.country_code,p.currency,l.active FROM locations l JOIN organization_fiscal_profiles p ON p.id=l.fiscal_profile_id AND p.organization_id=l.organization_id WHERE l.organization_id=$1 ORDER BY l.active DESC,l.name LIMIT $2 OFFSET $3`, s.OrganizationID, size, (page-1)*size)
+	rows, err := r.db(ctx).Query(ctx, `SELECT l.id,l.name,l.code,l.address,l.phone,l.opening_hours,l.latitude,l.longitude,l.timezone,l.fiscal_profile_id,p.country_code,p.currency,l.active,l.opened_on::text FROM locations l JOIN organization_fiscal_profiles p ON p.id=l.fiscal_profile_id AND p.organization_id=l.organization_id WHERE l.organization_id=$1 ORDER BY l.active DESC,l.name LIMIT $2 OFFSET $3`, s.OrganizationID, size, (page-1)*size)
 	if err != nil {
 		return out, err
 	}
@@ -258,7 +258,7 @@ func (r *Organizations) Locations(ctx context.Context, s scope, page int, size i
 	items := []domain.LocationView{}
 	for rows.Next() {
 		var item domain.LocationView
-		if err = rows.Scan(&item.ID, &item.Name, &item.Code, &item.Address, &item.Phone, &item.OpeningHours, &item.Latitude, &item.Longitude, &item.Timezone, &item.FiscalProfileID, &item.Country, &item.Currency, &item.Active); err != nil {
+		if err = rows.Scan(&item.ID, &item.Name, &item.Code, &item.Address, &item.Phone, &item.OpeningHours, &item.Latitude, &item.Longitude, &item.Timezone, &item.FiscalProfileID, &item.Country, &item.Currency, &item.Active, &item.OpenedOn); err != nil {
 			return out, err
 		}
 		items = append(items, item)

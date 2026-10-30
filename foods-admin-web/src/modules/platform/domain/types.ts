@@ -71,13 +71,13 @@ export type OrganizationSubscription={
  payments:SubscriptionPayment[];
 };
 
-export type PlatformOnboardingContext={tipOptions?:{defaults:TipSettings;countryDefaults:Record<string,TipSettings>;channels:{value:string;label:string}[]};countryOptions:Country[];currencyOptions:Currency[];plans:SubscriptionPlan[]};
-export type PlatformOnboardingDraft={
+export type PlatformOnboardingContext={maxMenuPages:number;tipOptions?:{defaults:TipSettings;countryDefaults:Record<string,TipSettings>;channels:{value:string;label:string}[]};countryOptions:Country[];currencyOptions:Currency[];plans:SubscriptionPlan[]};
+export type PlatformOnboardingDraft={foundedOn?:string;
  tipSettings?:TipSettings;
  legalName:string;tradeName:string;taxId:string;timezone:string;
  planId:string;billingCycle:"monthly"|"annual";termsAccepted:boolean;
  country:string;currency:string;currencyPosition:"before"|"after";taxName:string;taxRate:string;taxIncluded:boolean;
- locationName:string;locationCode:string;address:string;locationPhone:string;locationHours:string;latitude:string;longitude:string;
+ locationName:string;locationCode:string;address:string;locationPhone:string;locationHours:string;locationOpenedOn?:string;latitude:string;longitude:string;
  adminName:string;adminEmail:string;adminPassword:string;
 };
 

@@ -7,6 +7,14 @@ import (
 
 // Handlers injects the extracted verticals. Only cmd/api composes production adapters.
 type Handlers struct {
+	RestaurantProfile interface {
+		RestaurantProfile(http.ResponseWriter, *http.Request)
+		SaveRestaurantProfile(http.ResponseWriter, *http.Request)
+		AuthorizeRestaurantImage(http.ResponseWriter, *http.Request)
+		CompleteRestaurantImage(http.ResponseWriter, *http.Request)
+		RestaurantImage(http.ResponseWriter, *http.Request)
+		RestaurantBranding(http.ResponseWriter, *http.Request)
+	}
 	Tips interface {
 		GetSettings(http.ResponseWriter, *http.Request)
 		UpdateSettings(http.ResponseWriter, *http.Request)

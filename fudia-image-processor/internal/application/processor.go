@@ -71,13 +71,27 @@ func (p *ImageProcessor) Process(ctx context.Context, key string, generation int
 		variants, err = p.transformer.Transform(ctx, content, record)
 	}
 	if err == nil {
-		for _, name := range []string{"thumbnail", "medium"} {
+		names := []string{"thumbnail", "medium"}
+		if record.Purpose == "restaurant_logo" {
+			names = append(names, "logo")
+		}
+		if record.Purpose == "virtual_menu" {
+			names = append(names, "delivery")
+		}
+		for _, name := range names {
 			data, ok := variants[name]
 			if !ok || len(data) == 0 {
 				err = fmt.Errorf("missing %s variant", name)
 				break
 			}
-			if err = p.storage.WriteVariant(ctx, domain.ImagePrefix(key)+name+".webp", data, generation); err != nil {
+			extension := ".webp"
+			if name == "delivery" {
+				extension = ".jpg"
+			}
+			if name == "logo" {
+				extension = ".png"
+			}
+			if err = p.storage.WriteVariant(ctx, domain.ImagePrefix(key)+name+extension, data, generation); err != nil {
 				break
 			}
 		}

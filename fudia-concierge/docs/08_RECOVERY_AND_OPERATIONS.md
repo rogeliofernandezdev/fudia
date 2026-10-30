@@ -309,3 +309,17 @@ repositorio sin autorización explícita.
 - La integración Redis se ejecutó localmente con un emulador (fakeredis con
   Lua). El job `capacity` de CI la ejecuta contra Redis 7 real; la versión de
   Memorystore elegida debe validarse en staging.
+
+## Carta virtual: entrega por partes
+
+MenuResponse admite restaurantLogoUrl y virtualMenuUrls opcionales. Solo el
+backend resuelve estos enlaces temporales por QR. El contenido de imágenes no
+sustituye la validación del catálogo estructurado. ProcessingRecord conserva
+media[] y part_index junto con la respuesta; la preparación usa el commit
+fenced existente. El outbox envía texto y después imágenes en orden. Cada parte
+tiene su propia referencia Meta y reconciliación; se guarda avance después de
+cada aceptación. Un reintento continúa en la parte pendiente. Las URLs viven
+solo en Redis privado y caducan; si una entrega se retrasa hasta su caducidad,
+el cliente puede volver a solicitar la carta para obtener enlaces nuevos.
+Las garantías comerciales existentes no cambian. No se cambia el perfil global
+del bot ni se envían campañas. Ver `../../docs/09_RESTAURANT_IDENTITY.md`.

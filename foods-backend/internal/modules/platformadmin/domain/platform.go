@@ -6,6 +6,7 @@ import (
 )
 
 type TenantOnboardingInput struct {
+	FoundedOn        string              `json:"foundedOn"`
 	TipSettings      *InitialTipSettings `json:"tipSettings,omitempty"`
 	LegalName        string              `json:"legalName"`
 	TradeName        string              `json:"tradeName"`
@@ -21,6 +22,7 @@ type TenantOnboardingInput struct {
 	LocationCode     string              `json:"locationCode"`
 	Address          string              `json:"address"`
 	LocationPhone    string              `json:"locationPhone"`
+	LocationOpenedOn string              `json:"locationOpenedOn"`
 	LocationHours    string              `json:"locationHours"`
 	Latitude         *float64            `json:"latitude,omitempty"`
 	Longitude        *float64            `json:"longitude,omitempty"`

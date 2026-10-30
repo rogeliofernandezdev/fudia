@@ -20,6 +20,7 @@ from src.domain.models import (
     GeoPoint,
     InboundMessage,
     ProcessingRecord,
+    ReplyImage,
     VenueContext,
 )
 from src.graph.app import build_graph
@@ -347,6 +348,8 @@ class ConciergeService:
                 )
                 if name == "search_menu":
                     fallback = unavailable_carta_reply(result) or fallback
+                    if journal is not None and registry.menu.media:
+                        journal.record.media = registry.menu.media
                 elif name not in READ_ONLY_TOOLS:
                     action_attempted = True
                 return result
@@ -715,9 +718,16 @@ class ConciergeService:
             session.pending_order_request_id = None
             session.handoff_pending = False
             try:
-                carta: Carta | None = await build_carta(
-                    self.fudia, token, await self.fudia.search_menu(token)
-                )
+                menu = await self.fudia.search_menu(token)
+                journal.record.media = [
+                    ReplyImage(url=url, caption=f"Carta virtual · página {index+1}")
+                    for index, url in enumerate(menu.virtualMenuUrls)
+                ]
+                if menu.restaurantLogoUrl:
+                    journal.record.media.insert(
+                        0, ReplyImage(url=menu.restaurantLogoUrl, caption=table.organizationName)
+                    )
+                carta: Carta | None = await build_carta(self.fudia, token, menu)
             except (FudiaError, ValueError):
                 # The carta is a courtesy: the table is already open, so the
                 # greeting goes out and the diner can still ask for it.

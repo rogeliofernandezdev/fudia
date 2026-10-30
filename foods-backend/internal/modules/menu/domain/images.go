@@ -13,6 +13,7 @@ const MaxImageDimension = 4000
 var imageUUID = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
 
 type ImageUploadInput struct {
+	Purpose     string  `json:"purpose,omitempty"`
 	ProductID   *string `json:"productId,omitempty"`
 	ContentType string  `json:"contentType"`
 	SizeBytes   int64   `json:"sizeBytes"`
@@ -21,6 +22,12 @@ type ImageUploadInput struct {
 }
 
 func (in ImageUploadInput) Validate() string {
+	if in.Purpose != "" && in.Purpose != "product" && in.Purpose != "restaurant_logo" && in.Purpose != "virtual_menu" {
+		return "El uso de la imagen no es válido."
+	}
+	if in.Purpose != "" && in.Purpose != "product" && in.ProductID != nil {
+		return "La imagen del restaurante no corresponde a un producto."
+	}
 	if in.ContentType != "image/jpeg" && in.ContentType != "image/png" && in.ContentType != "image/webp" {
 		return "Solo se aceptan imágenes JPEG, PNG o WebP."
 	}
@@ -35,14 +42,27 @@ func (in ImageUploadInput) Validate() string {
 	}
 	return ""
 }
-func ImageOriginalKey(organizationID, imageID, contentType string) string {
+func ImageOriginalKey(organizationID, imageID, contentType string, purpose ...string) string {
 	extension := map[string]string{"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}[contentType]
-	return fmt.Sprintf("restaurants/%s/products/%s/original.%s", organizationID, imageID, extension)
+	folder := "products"
+	if len(purpose) > 0 && (purpose[0] == "restaurant_logo" || purpose[0] == "virtual_menu") {
+		folder = "branding"
+	}
+	return fmt.Sprintf("restaurants/%s/%s/%s/original.%s", organizationID, folder, imageID, extension)
 }
 func ImagePrefix(original string) string { return original[:strings.LastIndex(original, "/")+1] }
+func ImageVariantKey(record ImageRecord, variant string) string {
+	if record.Purpose == "virtual_menu" && variant == "delivery" {
+		return ImagePrefix(record.OriginalKey) + "delivery.jpg"
+	}
+	if record.Purpose == "restaurant_logo" && variant == "medium" {
+		return ImagePrefix(record.OriginalKey) + "logo.png"
+	}
+	return ImagePrefix(record.OriginalKey) + variant + ".webp"
+}
 func ParseImageOriginalKey(key string) (organizationID, imageID string, ok bool) {
 	parts := strings.Split(key, "/")
-	if len(parts) != 5 || parts[0] != "restaurants" || parts[2] != "products" || !imageUUID.MatchString(parts[1]) || !imageUUID.MatchString(parts[3]) {
+	if len(parts) != 5 || parts[0] != "restaurants" || (parts[2] != "products" && parts[2] != "branding") || !imageUUID.MatchString(parts[1]) || !imageUUID.MatchString(parts[3]) {
 		return "", "", false
 	}
 	if parts[4] != "original.jpg" && parts[4] != "original.png" && parts[4] != "original.webp" {
@@ -52,6 +72,7 @@ func ParseImageOriginalKey(key string) (organizationID, imageID string, ok bool)
 }
 
 type ImageRecord struct {
+	Purpose                                                                      string
 	ID, OrganizationID, LocationID, UploadedBy, OriginalKey, ContentType, Status string
 	ProductID                                                                    *string
 	SizeBytes                                                                    int64

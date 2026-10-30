@@ -53,14 +53,45 @@ func (v Vips) Transform(ctx context.Context, content []byte, record domain.Image
 		return nil, err
 	}
 	out := map[string][]byte{}
-	for _, variant := range []struct {
+	mediumEdge := 600
+	if record.Purpose == "virtual_menu" {
+		mediumEdge = 2400
+	}
+	variants := []struct {
 		name string
 		edge int
-	}{{"thumbnail", 200}, {"medium", 600}} {
-		output := filepath.Join(directory, variant.name+".webp")
+	}{{"thumbnail", 200}, {"medium", mediumEdge}}
+	if record.Purpose == "restaurant_logo" {
+		variants = append(variants, struct {
+			name string
+			edge int
+		}{"logo", 600})
+	}
+	if record.Purpose == "virtual_menu" {
+		variants = append(variants, struct {
+			name string
+			edge int
+		}{"delivery", 2400})
+	}
+	for _, variant := range variants {
+		format, options := "webp", "[Q=90,strip]"
+		if record.Purpose == "" || record.Purpose == "product" {
+			options = "[Q=82,strip]"
+		}
+		if variant.name == "delivery" {
+			format, options = "jpeg", "[Q=88,strip,background=255]"
+		}
+		if variant.name == "logo" {
+			format, options = "png", "[compression=9,strip]"
+		}
+		extension := format
+		if format == "jpeg" {
+			extension = "jpg"
+		}
+		output := filepath.Join(directory, variant.name+"."+extension)
 		commandCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 		// No shell, no user-supplied paths/options. Auto-orient; sRGB; strip metadata; never upscale.
-		cmd := exec.CommandContext(commandCtx, "vipsthumbnail", input, "--size", strconv.Itoa(variant.edge)+">", "--export-profile", "srgb", "-o", output+"[Q=82,strip]")
+		cmd := exec.CommandContext(commandCtx, "vipsthumbnail", input, "--size", strconv.Itoa(variant.edge)+">", "--export-profile", "srgb", "-o", output+options)
 		cmd.Env = append(os.Environ(), "VIPS_CONCURRENCY=1")
 		var diagnostics bytes.Buffer
 		if v.Diagnostics != nil {
@@ -82,9 +113,12 @@ func (v Vips) Transform(ctx context.Context, content []byte, record domain.Image
 		if err != nil {
 			return nil, err
 		}
-		config, format, err := image.DecodeConfig(bytes.NewReader(data))
-		if err != nil || format != "webp" || config.Width > variant.edge || config.Height > variant.edge {
+		config, actualFormat, err := image.DecodeConfig(bytes.NewReader(data))
+		if err != nil || actualFormat != format || config.Width > variant.edge || config.Height > variant.edge {
 			return nil, errors.New("invalid optimized output")
+		}
+		if int64(len(data)) > domain.MaxImageBytes {
+			return nil, application.ErrInvalidImage
 		}
 		out[variant.name] = data
 	}

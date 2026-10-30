@@ -18,7 +18,7 @@ import (
 func (r *Platform) CreateTenant(ctx context.Context, s scope, in domain.TenantOnboardingInput, currency orgcontracts.CurrencyOption, hash string) (domain.TenantRecords, error) {
 	var out domain.TenantRecords
 	batch := &pgx.Batch{}
-	batch.Queue(`INSERT INTO organizations(legal_name,trade_name,tax_id,timezone) VALUES($1,$2,$3,$4) RETURNING id`, in.LegalName, in.TradeName, in.TaxID, in.Timezone)
+	batch.Queue(`INSERT INTO organizations(legal_name,trade_name,tax_id,timezone,founded_on) VALUES($1,$2,$3,$4,NULLIF($5,'')::date) RETURNING id`, in.LegalName, in.TradeName, in.TaxID, in.Timezone, in.FoundedOn)
 	batch.Queue(`
 		UPDATE organization_fiscal_profiles
 		SET country_code=$1,currency=$2,currency_symbol=$3,currency_position=$4,currency_decimals=$5,tax_name=$6,tax_rate=$7,tax_included=$8,updated_at=now()
@@ -26,13 +26,13 @@ func (r *Platform) CreateTenant(ctx context.Context, s scope, in domain.TenantOn
 		RETURNING id
 	`, in.Country, currency.Code, currency.Symbol, in.CurrencyPosition, currency.Decimals, in.TaxName, in.TaxRate, in.TaxIncluded, in.TaxID)
 	batch.Queue(`
-		INSERT INTO locations(organization_id,name,code,address,phone,opening_hours,latitude,longitude,timezone,fiscal_profile_id)
-		SELECT o.id,$2,$3,$4,$5,$6,$7,$8,$9,fp.id
+		INSERT INTO locations(organization_id,name,code,address,phone,opening_hours,latitude,longitude,timezone,fiscal_profile_id,opened_on)
+		SELECT o.id,$2,$3,$4,$5,$6,$7,$8,$9,fp.id,NULLIF($10,'')::date
 		FROM organizations o
 		JOIN organization_fiscal_profiles fp ON fp.organization_id=o.id AND fp.is_default
 		WHERE o.tax_id=$1
 		RETURNING id
-	`, in.TaxID, in.LocationName, in.LocationCode, in.Address, in.LocationPhone, in.LocationHours, in.Latitude, in.Longitude, in.Timezone)
+	`, in.TaxID, in.LocationName, in.LocationCode, in.Address, in.LocationPhone, in.LocationHours, in.Latitude, in.Longitude, in.Timezone, in.LocationOpenedOn)
 	batch.Queue(`
 		INSERT INTO users(organization_id,email,full_name,password_hash)
 		SELECT id,$2,$3,$4 FROM organizations WHERE tax_id=$1

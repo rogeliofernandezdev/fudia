@@ -10,7 +10,10 @@ Eventos autenticados por IAM de Cloud Run; procesamiento dentro de la petición.
 PostgreSQL es la autoridad de UUID; el procesador nunca genera identificadores.
 Mantener dominio/aplicación independientes de GCS, PostgreSQL y libvips.
 No cambiar el esquema: las migraciones pertenecen a foods-backend.
-Generar únicamente WebP 200/600 sin ampliar; READY exige ambas variantes.
+Procesar perfiles por purpose sin ampliar: producto WebP 200/600; logo añade
+PNG 600 con transparencia; carta virtual WebP 200/2400 y JPEG 2400 compatible
+con WhatsApp. READY exige todas las variantes de su perfil. Ver
+`../docs/09_RESTAURANT_IDENTITY.md` y `docs/01_ARCHITECTURE.md`.
 Preservar generación, lease, fencing, tenencia y protección de fotos reemplazadas.
 Usar solo el contrato SQL de imágenes y una identidad/usuario de mínimo privilegio.
 No firmar URLs de lectura, recibir uploads del frontend ni cambiar sesiones a JWT.

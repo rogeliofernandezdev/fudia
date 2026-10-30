@@ -50,7 +50,7 @@ export function buildCashReportPdf(report:CashShiftReport,logo:Uint8Array,palett
  for(let page=1;page<=pages;page++){
   doc.setPage(page);
   doc.setFillColor(palette.primary);doc.rect(0,0,w,3,"F");doc.setFillColor(palette.brand);doc.rect(0,0,w/3,3,"F");
-  doc.addImage(logo,"PNG",margin,9,12,12,"fudia-logo","FAST");doc.setFont("helvetica","bold");doc.setFontSize(18);doc.setTextColor(palette.ink);doc.text("fudIA",margin+16,17);
+  const image=doc.getImageProperties(logo),ratio=Math.min(12/image.width,12/image.height);doc.addImage(logo,"PNG",margin+(12-image.width*ratio)/2,9+(12-image.height*ratio)/2,image.width*ratio,image.height*ratio,"restaurant-logo","FAST");doc.setFont("helvetica","bold");doc.setFontSize(18);doc.setTextColor(palette.ink);doc.text("fudIA",margin+16,17);
   doc.setFontSize(10);doc.text(s.status==="closed"?"CIERRE DE CAJA":"RESUMEN DEL TURNO",w-margin,14,{align:"right"});
   doc.setFont("helvetica","normal");doc.setFontSize(9);doc.setTextColor(palette.muted);
   // Avoid letting long organization names collide with the right-hand title.

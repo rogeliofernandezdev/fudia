@@ -1,0 +1,15 @@
+.restaurant-profile-fields{display:grid;gap:var(--space-6);min-width:0}
+.restaurant-media-section{display:grid;gap:var(--space-3);min-width:0}
+.restaurant-media-section h3{font-size:var(--text-lg);font-weight:var(--weight-semibold)}
+.restaurant-media-section p{color:var(--ink-500);max-width:65ch}
+.restaurant-logo-editor{display:flex;align-items:center;flex-wrap:wrap;gap:var(--space-4)}
+.restaurant-logo-editor>.restaurant-media-preview{width:var(--size-120);height:var(--size-120)}
+.restaurant-media-preview{display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;background:var(--cloud-50);border-radius:var(--radius-tile);min-width:0;height:var(--size-240)}
+.restaurant-media-preview img{width:100%;height:100%;object-fit:contain;min-height:0}
+.restaurant-media-preview small{padding:var(--space-2);color:var(--ink-600);font-size:var(--text-sm)}
+.restaurant-menu-pages{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,var(--size-240)),1fr));gap:var(--space-5)}
+.restaurant-menu-pages li{min-width:0}
+.restaurant-page-actions{display:flex;flex-wrap:wrap;gap:var(--space-2);align-items:center;justify-content:space-between;padding-block:var(--space-2)}
+.restaurant-page-actions>div{display:flex;gap:var(--space-1);flex-wrap:wrap}
+.restaurant-media-empty{padding-block:var(--space-3)}
+.restaurant-profile-fields input[type=file]{height:auto;min-height:var(--control-height);max-width:100%;padding:var(--space-2)}
