@@ -44,13 +44,15 @@ test("pedido manual: integración usa el endpoint existente con POST y respuesta
 function nodes(tree,result=[]){if(Array.isArray(tree)){tree.forEach(node=>nodes(node,result));return result}if(tree&&typeof tree==="object"){result.push(tree);nodes(tree.props?.children,result)}return result}
 const ds=Object.fromEntries(["Button","ChoiceGroup","ConfirmDialog","Tabs","Dialog","ModalHeader","ModalFooter","FormField","FormSection","Icon","IconButton","Input","LocationMap","MoneyInput","NumberStepper","Select","Textarea"].map(name=>[name,name]));
 function hooksMount(file,props,overrides={}){
- const state=[],refs=[];let cursor=0,refCursor=0;
+ const state=[],refs=[],queries=[];let cursor=0,refCursor=0;
  const compiled=compile(file,name=>{
   if(name.endsWith(".css"))return{};
-  if(name==="react")return{...require("react"),useEffect:()=>{},useRef:value=>{const index=refCursor++;return refs[index]??(refs[index]={current:value})},useState:value=>{const index=cursor++;if(state[index]===undefined)state[index]=value;return[state[index],next=>{state[index]=typeof next==="function"?next(state[index]):next}]}};
+  if(name==="react")return{...require("react"),useCallback:callback=>callback,useEffect:()=>{},useRef:value=>{const index=refCursor++;return refs[index]??(refs[index]={current:value})},useState:value=>{const index=cursor++;if(state[index]===undefined)state[index]=value;return[state[index],next=>{state[index]=typeof next==="function"?next(state[index]):next}]}};
   if(name==="@/design-system")return ds;
   if(name==="@/design-system/location-map")return{LocationMap:"LocationMap"};
-  if(name==="@/providers")return{useMoney:()=>value=>`S/ ${Number(value).toFixed(2)}`};
+  if(name==="@/providers")return{useMoney:()=>value=>`S/ ${Number(value).toFixed(2)}`,useSession:()=>({location:{id:"test-location"}})};
+  if(name==="@tanstack/react-query")return{useQuery:input=>{queries.push(input);return{data:undefined,isError:Boolean(overrides.availabilityError),refetch:async()=>{}}}};
+  if(name.endsWith("/infrastructure/catalog-api"))return{listSelectedProductAvailability:async()=>({items:[]})};
   if(name==="@/providers/feedback-provider")return{useFeedback:()=>({notify:()=>{}})};
   if(name==="react-hook-form")return{useWatch:({name})=>fields[name],useForm:()=>({register:name=>({name}),setValue:(name,value)=>{fields[name]=value},control:{},formState:{errors:{},isDirty:false,isSubmitting:false},handleSubmit:callback=>async()=>{const result=schema.manualOrderSchema.safeParse(fields);if(result.success)return callback(result.data)}})};
   if(name.endsWith("manual-order-schema"))return schema;
@@ -60,7 +62,7 @@ function hooksMount(file,props,overrides={}){
   return require(name);
  },{crypto:{randomUUID:()=>"temporary-key"},window:{addEventListener:()=>{},removeEventListener:()=>{}}});
  const Component=Object.values(compiled)[0];
- return{state,render:()=>{cursor=0;refCursor=0;return nodes(Component({...props,...overrides}))}};
+ return{state,queries,render:()=>{cursor=0;refCursor=0;return nodes(Component({...props,...overrides}))}};
 }
 const mount=(overrides={})=>hooksMount("orders/presentation/manual-order-dialog.tsx",{channels,currencySymbol:"S/",busy:false,onSave:async()=>{},onClose:()=>{},quoteDelivery:async()=>({covered:true,distanceKm:"2.35",fee:"6",maxDistanceKm:"5.00",currencySymbol:"S/"})},overrides);
 const mountComanda=(overrides={})=>hooksMount("orders/presentation/comanda-view.tsx",{initial:{...fields,tableId:"",lines:[]},mode:"create",allTables:[],busy:false,currencySymbol:"S/",channelLabel:"Delivery",close:()=>{},save:async()=>{},notify:()=>{}},overrides);
@@ -149,10 +151,11 @@ test("comanda compartida: Salón mantiene mesa obligatoria y borrador; volver in
 test("comanda: disminuir conserva notas y combos; el pie abre revisión sin enviar",()=>{
  let saves=0;const initial={...fields,tableId:"",lines:[{...line,lineKey:"first",productId:"p",itemType:"product",qty:2,note:"Primera nota"},{...line,lineKey:"second",productId:"p",itemType:"product",qty:1,note:"Segunda nota"},{...line,lineKey:"combo",productId:"combo",itemType:"combo",qty:2}]};
  const view=mountComanda({initial,save:()=>saves++});
- view.render().find(node=>node.type==="ComandaCatalog").props.onDecrease("p");assert.equal(view.state[0].lines.length,2);assert.equal(view.state[0].lines[0].note,"Primera nota");assert.equal(view.state[0].lines[1].qty,2);
- view.render().find(node=>node.type==="ComandaCatalog").props.onDecrease("p");assert.equal(view.state[0].lines[0].qty,1);
+ assert.equal(view.render().find(node=>node.type==="ComandaCatalog").props.onDecrease,undefined);
+ view.render().filter(node=>node.type==="NumberStepper")[1].props.onRemove();assert.equal(view.state[0].lines.length,2);assert.equal(view.state[0].lines[0].note,"Primera nota");assert.equal(view.state[0].lines[1].qty,2);
+ view.render().find(node=>node.type==="NumberStepper").props.onChange(1);assert.equal(view.state[0].lines[0].qty,1);
  const reviewButton=view.render().find(node=>node.type==="Button"&&node.props.className==="cmd-bar-submit");assert.equal(reviewButton.props.icon,"shoppingBag");reviewButton.props.onClick();assert.equal(view.state[1],true);assert.equal(saves,0);
- const busy=mountComanda({initial,busy:true});busy.render().find(node=>node.type==="ComandaCatalog").props.onDecrease("p");assert.equal(busy.state[0].lines.length,3);
+ const busy=mountComanda({initial,busy:true});busy.render().filter(node=>node.type==="NumberStepper")[1].props.onRemove();assert.equal(busy.state[0].lines.length,3);
 });
 
 test("comanda: los clics rápidos del mismo render no sobrepasan las existencias",()=>{
@@ -202,6 +205,51 @@ test("comanda: los productos sin control no heredan un tope anterior",()=>{
  for(let index=0;index<5;index++)pick({id:"p",name:"Plato",price:"10",remaining:null});
  assert.equal(view.state[0].lines[0].qty,5);
  assert.equal(view.render().find(node=>node.type==="NumberStepper").props.max,undefined);
+});
+
+test("comanda: Agotado bloquea aumentos en carta y resumen sin borrar cantidades ni notas",()=>{
+ const initial={...fields,tableId:"",lines:[{...line,productId:"p",qty:2,note:"Sin ají"}]};
+ const view=mountComanda({initial});
+ let catalog=view.render().find(node=>node.type==="ComandaCatalog");
+ assert.equal(view.render().find(node=>node.type==="NumberStepper").props.max,2,"No aumenta mientras carga la disponibilidad");
+ catalog.props.onAvailability([{id:"p",remaining:null,availabilityStatus:"available"}]);
+ catalog=view.render().find(node=>node.type==="ComandaCatalog");
+ const oldPick=catalog.props.onPick;
+ const oldIncrease=view.render().find(node=>node.type==="NumberStepper").props.onChange;
+ catalog.props.onAvailability([{id:"p",remaining:null,availabilityStatus:"sold_out"}]);
+ const blocked=view.render();
+ assert.equal(blocked.find(node=>node.type==="NumberStepper").props.max,2);
+ assert.equal(blocked.find(node=>node.type==="ComandaCatalog").props.availabilityByProduct.p.availabilityStatus,"sold_out");
+ oldPick({id:"p",name:"Plato",price:"10",remaining:null,availabilityStatus:"available"});oldIncrease(3);
+ assert.equal(view.state[0].lines[0].qty,2);
+ assert.equal(view.state[0].lines[0].note,"Sin ají");
+ blocked.find(node=>node.type==="NumberStepper").props.onChange(1);
+ assert.equal(view.state[0].lines[0].qty,1,"Permite disminuir aunque esté agotado");
+ view.render().find(node=>node.type==="ComandaCatalog").props.onAvailability([{id:"p",remaining:null,availabilityStatus:"available"}]);
+ assert.equal(view.render().find(node=>node.type==="NumberStepper").props.max,undefined,"Reactivar Sin control recupera su comportamiento");
+ view.render().find(node=>node.type==="NumberStepper").props.onChange(2);
+ assert.equal(view.state[0].lines[0].qty,2);
+});
+
+test("comanda: refresca los productos elegidos por local aunque no estén en la categoría visible",()=>{
+ const view=mountComanda({initial:{...fields,tableId:"",lines:[line,{...line,lineKey:"combo",itemType:"combo",productId:"combo"}]}});
+ view.render();const query=view.queries.at(-1);
+ assert.deepEqual(JSON.parse(JSON.stringify(query.queryKey)),["order-selected-availability","test-location",[line.productId]]);
+ assert.equal(query.refetchInterval,10000);assert.equal(query.refetchIntervalInBackground,false);assert.equal(query.refetchOnWindowFocus,"always");assert.equal(query.enabled,true);
+ const failed=mountComanda({initial:{...fields,tableId:"",lines:[line]},availabilityError:true});
+ failed.render().find(node=>node.type==="ComandaCatalog").props.onAvailability([{id:line.productId,remaining:null,availabilityStatus:"available"}]);
+ const rendered=failed.render();assert.equal(rendered.find(node=>node.type==="NumberStepper").props.max,line.qty);
+ assert.ok(rendered.some(node=>node.props.role==="alert"&&JSON.stringify(node.props.children).includes("No pudimos actualizar")));
+});
+
+test("disponibilidad seleccionada: consulta lotes acotados, sin búsqueda ni paginación de la carta",async()=>{
+ const calls=[];
+ const api=compile("salon/infrastructure/catalog-api.ts",name=>name==="@/shared/api/client"?{apiFetch:async path=>{calls.push(new URL(path,"http://test/"));return {items:[],total:0}}}:require(name),{URLSearchParams});
+ const ids=Array.from({length:101},(_,index)=>`00000000-0000-4000-8000-${String(index).padStart(12,"0")}`);
+ await api.listSelectedProductAvailability(ids);
+ assert.equal(calls.length,2);assert.equal(calls[0].searchParams.get("productIds").split(",").length,100);assert.equal(calls[1].searchParams.get("productIds"),ids[100]);
+ for(const url of calls){assert.equal(url.searchParams.get("pageSize"),"100");assert.equal(url.searchParams.get("q"),null);assert.equal(url.searchParams.get("categoryId"),null);}
+ await api.listSelectedProductAvailability([]);assert.equal(calls.length,2);
 });
 test("comanda: conserva la foto real en el resumen con cantidades suaves y fallback sin imagen",()=>{
  const view=mountComanda();view.render().find(node=>node.type==="ComandaCatalog").props.onPick({id:"p",name:"Plato",price:"18",imageUrl:"/foto-del-plato.jpg"});

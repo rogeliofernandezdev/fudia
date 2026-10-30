@@ -1,9 +1,11 @@
 "use client";
 /* eslint-disable @next/next/no-img-element -- Imágenes de presentación provenientes del catálogo del restaurante. */
 import "../../styles/salon-comanda.css";
-import {useState,useEffect,useRef} from "react";
+import {useState,useEffect,useRef,useCallback} from "react";
 import {Button,ConfirmDialog,Dialog,FormField,Icon,Input,NumberStepper,Select,Textarea,ModalHeader,ModalFooter} from "@/design-system";
-import {useMoney} from "@/providers";
+import {useMoney,useSession} from "@/providers";
+import {useQuery} from "@tanstack/react-query";
+import {listSelectedProductAvailability} from "../../salon/infrastructure/catalog-api";
 import {useFeedback} from "@/providers/feedback-provider";
 import {CatalogProduct,ComboConfigurator,ComboSelection,ConfiguredCombo,ComandaCatalog} from "../../salon/presentation/comanda-catalog";
 import type {Draft,FloorTable,LineDraft} from "../../salon/domain/types";
@@ -20,6 +22,7 @@ const sameDraft=(a:Draft,b:Draft)=>JSON.stringify([a.lines,a.notes,a.customerNam
  */
 export function ComandaView({initial,mode,allTables,busy,close,save,channelLabel="Salón",onBack,onResponseClose}:{initial:Draft;mode:"create"|"edit"|"append";allTables:FloorTable[];busy:boolean;close:(draft:Draft)=>void;save:(v:Draft,sendToKitchen:boolean)=>void|Promise<void>;notify:(n:{tone:"danger"|"success";title:string;message:string})=>void;channelLabel?:string;onBack?:(draft:Draft)=>void;onResponseClose?:()=>void}){
   const money=useMoney();
+  const {location}=useSession();
   const adding=mode==="append";
   const editing=mode!=="create";
   const salon=initial.channel==="salon";
@@ -39,17 +42,33 @@ export function ComandaView({initial,mode,allTables,busy,close,save,channelLabel
   const qtyByProduct=v.lines.reduce<Record<string,number>>((acc,line)=>{acc[line.productId]=(acc[line.productId]??0)+line.qty;return acc},{});
   // Tope por existencias: lo que la carta informa como disponible más lo ya reservado por este pedido guardado.
   // Productos sin control (remaining null) no tienen tope; el backend valida de nuevo al guardar.
-  const[stock,setStock]=useState<Record<string,number>>({});
+  const[availability,setAvailability]=useState<Record<string,CatalogProduct>>({});
+  const availabilityRef=useRef<Record<string,CatalogProduct>>({});
   const reserved=initial.lines.reduce<Record<string,number>>((acc,line)=>{if(line.itemType==="product"&&line.sourceItemId)acc[line.productId]=(acc[line.productId]??0)+line.qty;return acc},{});
-  const recordAvailability=(items:CatalogProduct[])=>setStock(prev=>{
-    const next={...prev};let changed=false;
+  const recordAvailability=useCallback((items:CatalogProduct[])=>{
+    const next={...availabilityRef.current};let changed=false;
     for(const item of items){
-      if(typeof item.remaining==="number"&&Number.isFinite(item.remaining)&&next[item.id]!==item.remaining){next[item.id]=item.remaining;changed=true}
-      else if(item.remaining===null&&item.id in next){delete next[item.id];changed=true}
+      const previous=next[item.id];
+      if(!previous||previous.remaining!==item.remaining||previous.availabilityStatus!==item.availabilityStatus){next[item.id]=item;changed=true}
     }
-    return changed?next:prev;
+    if(changed){availabilityRef.current=next;setAvailability(next)}
+  },[]);
+  const blockedFor=(productId:string)=>["sold_out","unavailable"].includes(availabilityRef.current[productId]?.availabilityStatus??"");
+  const quantityLimit=(productId:string,remaining?:number|null)=>typeof remaining==="number"&&Number.isFinite(remaining)?Math.max(0,Math.floor(remaining+(reserved[productId]??0))):undefined;
+  const limitFor=(productId:string,remaining?:number|null)=>quantityLimit(productId,remaining===undefined?availabilityRef.current[productId]?.remaining:remaining);
+  const selectedIds=Array.from(new Set(v.lines.filter(line=>line.itemType==="product").map(line=>line.productId))).sort();
+  const selectedAvailability=useQuery({
+    queryKey:["order-selected-availability",location?.id,selectedIds],
+    queryFn:()=>listSelectedProductAvailability(selectedIds),
+    enabled:selectedIds.length>0,
+    refetchInterval:10000,
+    refetchIntervalInBackground:false,
+    refetchOnWindowFocus:"always",
+    staleTime:0,
   });
-  const limitFor=(productId:string,remaining?:number|null)=>{if(remaining===null)return undefined;const known=typeof remaining==="number"?remaining:stock[productId];return typeof known==="number"&&Number.isFinite(known)?Math.max(0,Math.floor(known+(reserved[productId]??0))):undefined};
+  useEffect(()=>{if(selectedAvailability.data)recordAvailability(selectedAvailability.data.items)},[selectedAvailability.data,selectedAvailability.dataUpdatedAt,recordAvailability]);
+  // Una categoría con caché anterior no debe reemplazar el estado fresco de lo seleccionado.
+  const recordCatalogAvailability=(items:CatalogProduct[])=>recordAvailability(items.filter(item=>!selectedAvailability.data?.items.some(selected=>selected.id===item.id)));
   const {notify:feedback}=useFeedback();
   // Superar las existencias abre el aviso de validación (tono info: no cierra la comanda) y no cambia la cantidad.
   const warnStock=(name:string,limit:number)=>{
@@ -64,9 +83,11 @@ export function ComandaView({initial,mode,allTables,busy,close,save,channelLabel
 
   const patchLine=(i:number,p:Partial<LineDraft>)=>{if(!locked())setV(prev=>({...prev,lines:prev.lines.map((l,n)=>n===i?{...l,...p}:l)}))};
   const tap=(p:CatalogProduct)=>{
-    if(locked())return;
-    if(typeof p.remaining==="number"&&stock[p.id]!==p.remaining)setStock(prev=>({...prev,[p.id]:p.remaining as number}));
-    const limit=limitFor(p.id,p.remaining);
+    if(locked()||selectedAvailability.isError)return;
+    if(!availabilityRef.current[p.id])recordAvailability([p]);
+    const current=availabilityRef.current[p.id]??p;
+    if(["sold_out","unavailable"].includes(current.availabilityStatus??""))return;
+    const limit=limitFor(p.id,current.remaining);
     if(limit!==undefined&&(qtyByProduct[p.id]??0)>=limit){warnStock(p.name,limit);return}
     const existing=v.lines.find(l=>l.itemType==="product"&&l.productId===p.id);
     setV(prev=>{
@@ -86,20 +107,9 @@ export function ComandaView({initial,mode,allTables,busy,close,save,channelLabel
       const line=prev.lines[i];if(!line)return prev;
       const limit=line.itemType==="product"?limitFor(line.productId):undefined;
       const selected=prev.lines.reduce((sum,item)=>sum+(item.productId===line.productId?item.qty:0),0);
-      if(qty>line.qty&&limit!==undefined&&selected-line.qty+qty>limit)return prev;
+      if(qty>line.qty&&((line.itemType==="product"&&(!availabilityRef.current[line.productId]||blockedFor(line.productId)))||(limit!==undefined&&selected-line.qty+qty>limit)))return prev;
       return {...prev,lines:prev.lines.map((item,index)=>index===i?{...item,qty}:item)};
     });
-  };
-  const decreaseProduct=(productId:string)=>{
-    if(locked())return;
-    setV(prev=>{
-      // Reduce la última línea del producto; conserva las notas de las demás líneas.
-      const index=prev.lines.findLastIndex(line=>line.itemType==="product"&&line.productId===productId);
-      if(index<0)return prev;
-      return {...prev,lines:prev.lines.flatMap((line,i)=>i!==index?[line]:line.qty>1?[{...line,qty:line.qty-1}]:[])};
-    });
-    const line=v.lines.find(item=>item.itemType==="product"&&item.productId===productId);
-    if(line)setAnnouncement(`${line.name}. Cantidad: ${Math.max(0,(qtyByProduct[productId]??0)-1)}.`);
   };
   const removeLine=(i:number)=>{if(locked())return;const removed=v.lines[i];setV(prev=>({...prev,lines:prev.lines.filter((_,n)=>n!==i)}));if(removed)setAnnouncement(`${removed.name} quitado de la comanda.`)};
   const toggleNote=(key:string)=>setOpenNotes(prev=>prev.includes(key)?prev.filter(item=>item!==key):[...prev,key]);
@@ -155,7 +165,7 @@ export function ComandaView({initial,mode,allTables,busy,close,save,channelLabel
 
       <div className="cmd-body">
         <section className="cmd-pane" aria-label="Carta del restaurante">
-          <ComandaCatalog qtyByProduct={qtyByProduct} reservedByProduct={reserved} onAvailability={recordAvailability} onPick={tap} onDecrease={decreaseProduct} onConfigureCombo={configureCombo} disabled={busy}/>
+          <ComandaCatalog qtyByProduct={qtyByProduct} reservedByProduct={reserved} availabilityByProduct={availability} onAvailability={recordCatalogAvailability} onPick={tap} onConfigureCombo={configureCombo} disabled={busy||selectedAvailability.isError}/>
         </section>
 
         <aside className={"cmd-summary"+(sheetOpen?" open":"")} aria-label="Resumen de la comanda">
@@ -189,8 +199,9 @@ export function ComandaView({initial,mode,allTables,busy,close,save,channelLabel
               <ul className="cmd-lines">
                 {v.lines.map((l,i)=>{
                   const noteOpen=Boolean(l.note)||openNotes.includes(l.lineKey);
-                  const limit=l.itemType==="product"?limitFor(l.productId):undefined;
-                  const lineMax=limit===undefined?undefined:Math.max(l.qty,limit-((qtyByProduct[l.productId]??0)-l.qty));
+                  const limit=l.itemType==="product"?quantityLimit(l.productId,availability[l.productId]?.remaining):undefined;
+                  const blocked=l.itemType==="product"&&(!availability[l.productId]||selectedAvailability.isError||["sold_out","unavailable"].includes(availability[l.productId]?.availabilityStatus??""));
+                  const lineMax=blocked?l.qty:limit===undefined?undefined:Math.max(l.qty,limit-((qtyByProduct[l.productId]??0)-l.qty));
                   return(
                     <li className={"cmd-line"+(l.itemType==="combo"?" combo":"")} key={l.lineKey}>
                       <span className="cmd-line-visual" aria-hidden="true"><Icon name={l.itemType==="combo"?"combo":"dish"} size={24}/>{l.imageUrl&&<img className="cmd-item-thumb" src={l.imageUrl} alt="" loading="lazy" onError={event=>{event.currentTarget.hidden=true}}/>}</span>
@@ -198,7 +209,7 @@ export function ComandaView({initial,mode,allTables,busy,close,save,channelLabel
                         <strong>{l.name}</strong>
                         <em>{money(l.qty*l.unitPrice)}</em>
                         {l.qty>1&&<small className="cmd-line-unit">{money(l.unitPrice)} c/u</small>}
-                        {lineMax!==undefined&&l.qty>=lineMax&&<small className="cmd-line-limit">Máximo disponible: {limit}</small>}
+                        {blocked?<small className="cmd-line-limit">{selectedAvailability.isError?"No pudimos actualizar la disponibilidad":!availability[l.productId]?"Verificando disponibilidad…":"No disponible para agregar"}</small>:lineMax!==undefined&&l.qty>=lineMax&&<small className="cmd-line-limit">Máximo disponible: {limit}</small>}
                       </div>
                       <NumberStepper appearance="soft" value={l.qty} min={1} max={lineMax} label={l.name} disabled={busy} onChange={qty=>{if(lineMax!==undefined&&limit!==undefined&&qty>lineMax){warnStock(l.name,limit);return}setQty(i,qty)}} onRemove={()=>removeLine(i)}/>
                       {l.itemType==="combo"&&<ul className="cmd-line-selections" aria-label="Elecciones del menú">
@@ -221,6 +232,7 @@ export function ComandaView({initial,mode,allTables,busy,close,save,channelLabel
           </div>
 
           <ModalFooter className="cmd-summary-foot">
+            {selectedAvailability.isError&&<p className="cmd-error" role="alert">No pudimos actualizar la disponibilidad. <button type="button" className="cmd-text-button" onClick={()=>void selectedAvailability.refetch()}>Reintentar</button></p>}
             {validationError&&<p className="cmd-error" role="alert">{validationError}</p>}
             {v.channel==="delivery"&&<dl className="cmd-charges"><div><dt>Subtotal</dt><dd>{money(subtotal)}</dd></div><div><dt>Envío</dt><dd>{money(deliveryFee)}</dd></div></dl>}
             <div className="cmd-total"><span>{v.channel==="delivery"?"Total":"Subtotal"}</span><strong>{money(total)}</strong></div>

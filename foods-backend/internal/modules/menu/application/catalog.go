@@ -29,6 +29,7 @@ var validateInitialPortions = domain.ValidateInitialPortions
 
 type CatalogFilter struct {
 	Query, Status, CategoryID, ProductType string
+	ProductIDs                             []string
 	IncludeInactive                        bool
 	Page, Size                             int
 }
@@ -411,6 +412,7 @@ func (a *Catalog) UpdateProduct(ctx context.Context, s scope, id string, in doma
 	return a.hydratedWrite(ctx, s, p)
 
 }
+
 // requireProductCategory acepta una categoría activa de la empresa o, al editar,
 // la categoría que el producto ya tiene aunque se haya desactivado.
 func (a *Catalog) requireProductCategory(ctx context.Context, s scope, categoryID string, productID *string) error {

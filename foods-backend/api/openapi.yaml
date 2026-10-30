@@ -856,11 +856,13 @@ paths:
       summary: Resuelve la disponibilidad operativa del menú para el local y día de negocio activos
       security: [{ sessionCookie: [] }]
       parameters:
+        - { in: query, name: productIds, style: form, explode: false, description: "Filtra un lote de hasta 100 UUID de productos dentro de la empresa y el local activos.", schema: { type: array, minItems: 1, maxItems: 100, items: { type: string, format: uuid } } }
         - { in: query, name: q, schema: { type: string } }
         - { in: query, name: categoryId, schema: { type: string, format: uuid } }
         - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
         - { in: query, name: pageSize, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
       responses:
+        "400": { $ref: "#/components/responses/BadRequest" }
         "200": { description: Disponibilidad efectiva por producto, content: { application/json: { schema: { type: object, required: [items, businessDate, total, page, pageSize], properties: { items: { type: array, items: { $ref: "#/components/schemas/ProductAvailability" } }, businessDate: { type: string, format: date }, soldOutReasons: { type: array, items: { $ref: "#/components/schemas/AvailabilityReasonOption" } }, quotaReasons: { type: array, items: { $ref: "#/components/schemas/AvailabilityReasonOption" } }, total: { type: integer, minimum: 0 }, page: { type: integer, minimum: 1 }, pageSize: { type: integer, minimum: 1 } } } } } }
         "403": { $ref: "#/components/responses/Forbidden" }
   /v1/admin/product-availability/{productId}:

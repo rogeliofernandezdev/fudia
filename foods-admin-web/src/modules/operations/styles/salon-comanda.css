@@ -78,7 +78,6 @@
 .cmd-item:not(.cmd-item-combo) .cmd-item-add{padding:var(--space-1-5);background-color:var(--primary-600);background-clip:content-box;color:var(--surface)}
 .cmd-item:not(.cmd-item-combo) .cmd-item-add:disabled{background-color:var(--cloud-100);color:var(--ink-400)}
 .cmd-item:disabled .cmd-item-add,.cmd-item-add:disabled{background:var(--cloud-100);color:var(--ink-400);cursor:not-allowed}
-.cmd-item-bottom>.ds-stepper{flex:none;margin-block:calc((var(--size-20) - var(--size-44))/2)}
 .cmd-item-skeleton>.ds-skeleton:last-child{grid-column:3;grid-row:1;justify-self:end}
 .cmd-item-add:active:not(:disabled){background-color:var(--primary-50)}
 .cmd-item:not(.cmd-item-combo) .cmd-item-add:active:not(:disabled){background-color:var(--primary-700)}

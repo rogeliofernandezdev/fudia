@@ -16,7 +16,8 @@ func (r *Catalog) Availability(ctx context.Context, s scope, f application.Catal
 		FROM products p
 		WHERE p.organization_id=$1 AND p.active AND p.name ILIKE $2
 		  AND ($3='' OR p.category_id::text=$3)
-		  AND (NOT $4 OR NOT EXISTS (SELECT 1 FROM menu_combos mc WHERE mc.product_id=p.id AND mc.organization_id=p.organization_id))`, s.OrganizationID, search, categoryID, excludeCombos).Scan(&total)
+		  AND (NOT $4 OR NOT EXISTS (SELECT 1 FROM menu_combos mc WHERE mc.product_id=p.id AND mc.organization_id=p.organization_id))
+		  AND ($5::uuid[] IS NULL OR p.id=ANY($5::uuid[]))`, s.OrganizationID, search, categoryID, excludeCombos, f.ProductIDs).Scan(&total)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -42,8 +43,9 @@ func (r *Catalog) Availability(ctx context.Context, s scope, f application.Catal
 		WHERE p.organization_id=$1 AND p.active AND p.name ILIKE $4
 		  AND ($5='' OR p.category_id::text=$5)
 		  AND (NOT $6 OR NOT EXISTS (SELECT 1 FROM menu_combos mc WHERE mc.product_id=p.id AND mc.organization_id=p.organization_id))
+		  AND ($9::uuid[] IS NULL OR p.id=ANY($9::uuid[]))
 		ORDER BY c.sort_order NULLS LAST,c.name,p.name
-		LIMIT $7 OFFSET $8`, s.OrganizationID, s.LocationID, day.Format("2006-01-02"), search, categoryID, excludeCombos, size, (page-1)*size)
+		LIMIT $7 OFFSET $8`, s.OrganizationID, s.LocationID, day.Format("2006-01-02"), search, categoryID, excludeCombos, size, (page-1)*size, f.ProductIDs)
 	if err != nil {
 		return nil, 0, err
 	}

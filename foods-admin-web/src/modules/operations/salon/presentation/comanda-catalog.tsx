@@ -3,7 +3,7 @@
 
 import {useEffect,useRef,useState,type KeyboardEvent,type RefObject} from "react";
 import {useInfiniteQuery,useQuery} from "@tanstack/react-query";
-import {Button,EmptyState,ErrorState,Icon,Modal,ModalBody,ModalFooter,NumberStepper,SearchField,Skeleton} from "@/design-system";
+import {Button,EmptyState,ErrorState,Icon,Modal,ModalBody,ModalFooter,SearchField,Skeleton} from "@/design-system";
 import {useMoney} from "@/providers";
 import type {CatalogProduct,ComboGroup,ComboOption,ComboSelection,ComboSummary,ConfiguredCombo} from "../domain/catalog-types";
 import {getOrderCombo,listOrderCategories,listOrderCombos,listSalonProducts} from "../infrastructure/catalog-api";
@@ -29,13 +29,13 @@ function categoryTone(id:string){
  * Las páginas del API se cargan al llegar al final de la lista.
  * Enter en el buscador agrega el primer plato disponible.
  */
-export function ComandaCatalog({qtyByProduct,reservedByProduct={},onAvailability,onPick,onDecrease,onConfigureCombo,disabled=false}:{
+export function ComandaCatalog({qtyByProduct,reservedByProduct={},availabilityByProduct={},onAvailability,onPick,onConfigureCombo,disabled=false}:{
   qtyByProduct:Record<string,number>;
   reservedByProduct?:Record<string,number>;
+  availabilityByProduct?:Record<string,CatalogProduct>;
   /** Informa las existencias cargadas para acotar también las líneas del resumen. */
   onAvailability?:(items:CatalogProduct[])=>void;
   onPick:(p:CatalogProduct)=>void;
-  onDecrease:(productId:string)=>void;
   onConfigureCombo?:(comboId:string)=>void;
   disabled?:boolean;
 }){
@@ -57,7 +57,10 @@ export function ComandaCatalog({qtyByProduct,reservedByProduct={},onAvailability
     initialPageParam:1,
     getNextPageParam:(last,all)=>all.length*pageSize<last.total?all.length+1:undefined,
     enabled:!combos,
-    staleTime:60000,
+    staleTime:10000,
+    refetchInterval:10000,
+    refetchIntervalInBackground:false,
+    refetchOnWindowFocus:"always",
   });
   const comboCatalog=useInfiniteQuery({
     queryKey:["order-catalog","combos",q,pageSize],
@@ -126,7 +129,7 @@ export function ComandaCatalog({qtyByProduct,reservedByProduct={},onAvailability
           <ErrorState title="No pudimos cargar la carta" text={salonCatalog.error.message} onRetry={()=>salonCatalog.refetch()} retrying={salonCatalog.isFetching}/>
         ):salonItems.length?(
           <ul className="cmd-list">
-            {salonItems.map(p=><MenuItem key={p.id} p={p} qty={qtyByProduct[p.id]??0} reserved={reservedByProduct[p.id]??0} money={money} onPick={onPick} onDecrease={onDecrease} disabled={disabled}/>)}
+            {salonItems.map(p=><MenuItem key={p.id} p={availabilityByProduct[p.id]??p} qty={qtyByProduct[p.id]??0} reserved={reservedByProduct[p.id]??0} money={money} onPick={onPick} disabled={disabled}/>)}
           </ul>
         ):(
           <EmptyState icon={searching?"search":"dish"} title={searching?"Sin coincidencias":"Aún no hay platos"} text={searching?"Ningún plato coincide con la búsqueda.":"Activa productos en Carta y productos para venderlos aquí."}/>
@@ -282,11 +285,10 @@ function ComboItem({combo,qty,money,onConfigure,disabled=false}:{combo:ComboSumm
   );
 }
 
-function MenuItem({p,qty,reserved=0,money,onPick,onDecrease,disabled=false}:{p:CatalogProduct;qty:number;reserved?:number;money:Money;onPick:(p:CatalogProduct)=>void;onDecrease:(productId:string)=>void;disabled?:boolean}){
+function MenuItem({p,qty,reserved=0,money,onPick,disabled=false}:{p:CatalogProduct;qty:number;reserved?:number;money:Money;onPick:(p:CatalogProduct)=>void;disabled?:boolean}){
   const availability=p.availabilityStatus??"available";
   const unavailable=availability==="sold_out"||availability==="unavailable";
   const stockMax=typeof p.remaining==="number"&&Number.isFinite(p.remaining)?Math.max(0,Math.floor(p.remaining+reserved)):undefined;
-  const max=unavailable?qty:stockMax;
   const atLimit=stockMax!==undefined&&qty>=stockMax;
   const label=unavailable?`${p.name}, no disponible`:qty>0?`Agregar otro ${p.name}, llevas ${qty}`:`Agregar ${p.name}`;
   return(
@@ -301,7 +303,7 @@ function MenuItem({p,qty,reserved=0,money,onPick,onDecrease,disabled=false}:{p:C
           {availability==="sold_out"&&<small className="blocked">Agotado</small>}
           {availability==="unavailable"&&<small className="blocked">Fuera de horario</small>}
           </span>
-        {qty>0?<NumberStepper appearance="soft" value={qty} min={1} label={p.name} disabled={disabled} max={max} onChange={next=>next>qty?onPick(p):onDecrease(p.id)} onRemove={()=>onDecrease(p.id)}/>:<button type="button" className="cmd-item-add" disabled={disabled||unavailable||atLimit} aria-label={label} onClick={()=>onPick(p)}><Icon name={unavailable?"circleSlash":"plus"} size={18}/></button>}
+        <button type="button" className="cmd-item-add" disabled={disabled||unavailable||atLimit} aria-label={label} onClick={()=>onPick(p)}><Icon name={unavailable?"circleSlash":"plus"} size={18}/></button>
           </div>
         </div>
       </article>

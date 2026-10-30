@@ -48,6 +48,7 @@ export function ProductAvailabilityManager(){
    void client.invalidateQueries({queryKey:["products"]});
    void client.invalidateQueries({queryKey:["availability-history"]});
    void client.invalidateQueries({queryKey:["order-catalog"]});
+   void client.invalidateQueries({queryKey:["order-selected-availability"]});
    void client.invalidateQueries({queryKey:["dashboard"]});
    void client.invalidateQueries({queryKey:["combos"]});
    notify({

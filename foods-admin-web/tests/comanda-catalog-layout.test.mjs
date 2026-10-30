@@ -47,19 +47,21 @@ test("categorías conservan carga, error recuperable y menús aun cuando el cat�
  assert.ok(error.some(node=>node.props.role==="alert"));error.find(node=>node.type==="Button"&&node.props.children==="Reintentar").props.onClick();assert.equal(retries,1);
  assert.equal(error.filter(node=>node.type==="button").length,2);
 });
-test("productos conservan precio, controles de cantidad y bloqueo; foto rota deja visible el icono",()=>{
+test("la carta conserva un único + aunque el producto ya esté agregado; foto rota deja visible el icono",()=>{
  const money=value=>`S/ ${value}`;const picks=[];
  const p={id:"p",name:"Plato de prueba",price:"18",imageUrl:"/broken-image"};
- const decreases=[];const view=nodes(exports.MenuItem({p,qty:2,money,onPick:item=>picks.push(item),onDecrease:id=>decreases.push(id)}));
+ const view=nodes(exports.MenuItem({p,qty:2,money,onPick:item=>picks.push(item)}));
  assert.ok(view.some(node=>node.props.className==="cmd-item-price"&&node.props.children==="S/ 18"));
  assert.ok(view.some(node=>node.type==="Icon"&&node.props.name==="dish"));
  const image={hidden:false};view.find(node=>node.type==="img").props.onError({currentTarget:image});assert.equal(image.hidden,true);
  assert.match(view.find(node=>node.type==="article").props.className,/picked/);
- const stepper=view.find(node=>node.type==="NumberStepper");assert.equal(stepper.props.appearance,"soft");stepper.props.onChange(3);assert.equal(picks[0],p);stepper.props.onChange(1);stepper.props.onRemove();assert.deepEqual(decreases,["p","p"]);
+ assert.equal(view.some(node=>node.type==="NumberStepper"),false);
+ const buttons=view.filter(node=>node.type==="button");assert.equal(buttons.length,1);
+ assert.equal(buttons[0].props.children.props.name,"plus");buttons[0].props.onClick();buttons[0].props.onClick();assert.deepEqual(picks,[p,p]);
  for(const availabilityStatus of ["sold_out","unavailable"]){
-  const props={p:{...p,availabilityStatus},money,onPick:()=>{},onDecrease:()=>{}};
+  const props={p:{...p,availabilityStatus},money,onPick:()=>{}};
   assert.equal(nodes(exports.MenuItem({...props,qty:0})).find(node=>node.type==="button").props.disabled,true);
-  const selected=nodes(exports.MenuItem({...props,qty:2})).find(node=>node.type==="NumberStepper");assert.equal(selected.props.max,2);assert.equal(selected.props.disabled,false);
+  const selected=nodes(exports.MenuItem({...props,qty:2})).find(node=>node.type==="button");assert.equal(selected.props.disabled,true);
  }
  let configured=0;const combo=nodes(exports.ComboItem({combo:{id:"combo",name:"Menú",price:"25",groupCount:2},qty:0,money,onConfigure:()=>configured++}));combo.find(node=>node.type==="button").props.onClick();assert.equal(configured,1);
 });
@@ -75,17 +77,18 @@ test("categorías y carta se deslizan sin barras visibles; el resumen muestra ba
  assert.match(source,/queryFn:listOrderCategories/);
 });
 
-test("carta: el contador recibe el máximo real y el + inicial respeta cero existencias",()=>{
+test("carta: el + respeta el máximo real, las reservas y cero existencias",()=>{
  const p={id:"p",name:"Plato",price:"10",remaining:3};
- const base={p,qty:3,money:String,onPick:()=>{},onDecrease:()=>{}};
- const stepper=nodes(exports.MenuItem(base)).find(node=>node.type==="NumberStepper");
- assert.equal(stepper.props.max,3);
- const editing=nodes(exports.MenuItem({...base,p:{...p,remaining:2},qty:4,reserved:4})).find(node=>node.type==="NumberStepper");
- assert.equal(editing.props.max,6);
+ const base={p,qty:3,money:String,onPick:()=>{}};
+ assert.equal(nodes(exports.MenuItem(base)).find(node=>node.type==="button").props.disabled,true);
+ assert.equal(nodes(exports.MenuItem({...base,qty:2})).find(node=>node.type==="button").props.disabled,false);
+ const editing=nodes(exports.MenuItem({...base,p:{...p,remaining:2},qty:4,reserved:4})).find(node=>node.type==="button");
+ assert.equal(editing.props.disabled,false);
+ assert.equal(nodes(exports.MenuItem({...base,p:{...p,remaining:2},qty:6,reserved:4})).find(node=>node.type==="button").props.disabled,true);
  const zero=nodes(exports.MenuItem({...base,p:{...p,remaining:.5},qty:0})).find(node=>node.type==="button");
  assert.equal(zero.props.disabled,true);
- const uncontrolled=nodes(exports.MenuItem({...base,p:{...p,remaining:null}})).find(node=>node.type==="NumberStepper");
- assert.equal(uncontrolled.props.max,undefined);
+ const uncontrolled=nodes(exports.MenuItem({...base,p:{...p,remaining:null}})).find(node=>node.type==="button");
+ assert.equal(uncontrolled.props.disabled,false);
 });
 
 test("cada categoría conserva su acento al renombrar o reordenar; selección incluye una marca",()=>{

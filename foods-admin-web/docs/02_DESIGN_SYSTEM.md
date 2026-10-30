@@ -805,14 +805,24 @@ tope, la línea muestra «Máximo disponible: N» en `warning-800`. El backend v
 validar al guardar y responde con el mismo criterio («La cantidad excede las existencias:
 solo quedan N porciones/unidades de {producto}»; «{producto} está agotado por hoy» si
 se agotó manualmente).
-El + agrega una unidad; al seleccionar un producto aparece `NumberStepper appearance="soft"`
-con disminuir, cantidad y aumentar. En una unidad, disminuir pasa a Quitar.
+La carta conserva siempre un único botón circular + para agregar una unidad,
+incluso si el producto ya está seleccionado. Solo el resumen de la comanda usa
+`NumberStepper appearance="soft"` con disminuir, cantidad y aumentar. En una
+unidad, disminuir pasa a Quitar; no se duplican estos controles en la carta.
 El + de la carta y del resumen queda deshabilitado al alcanzar el máximo real,
+o cuando el producto pasa a Agotado o Fuera de horario. La carta visible y los
+productos seleccionados se refrescan cada 10 segundos, sin consultar en segundo
+plano. Los seleccionados se consultan en lotes de hasta 100 UUID, aunque se cambie
+de filtro o categoría. Al volver a la ventana se refresca la disponibilidad.
+Mientras se verifica un producto seleccionado, o si falla la consulta, se bloquea
+el aumento y se conserva la opción de disminuir o quitar; el error ofrece Reintentar.
+La cantidad y las notas nunca se borran al recibir un cambio de disponibilidad.
+El máximo de existencias sigue
 incluyendo las unidades ya reservadas al editar. Los cambios de cantidad se validan
 sobre el borrador más reciente para impedir superar el tope con clics rápidos o
 con varias líneas del mismo producto. Las existencias fraccionarias no se redondean
 hacia arriba para vender unidades completas; sin control no se inventa un máximo.
-La cápsula conserva el fondo neutro y el número centrado: disminuir lleva círculo
+La cápsula del resumen conserva el fondo neutro y el número centrado: disminuir lleva círculo
 blanco y aumentar círculo azul operativo con icono blanco. Los círculos visibles
 son de 32 px dentro de áreas táctiles de 44 px, tanto en la carta como en el resumen.
 Quitar conserva el acento destructivo y los controles bloqueados usan tonos neutros.
