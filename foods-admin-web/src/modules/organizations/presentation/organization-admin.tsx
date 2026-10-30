@@ -10,7 +10,8 @@ import {useFeedback} from "@/providers/feedback-provider";
 import {useSession} from "@/providers/session-context";
 import {useSubscriptionCapacity} from "@/modules/identity";
 import {TipSettingsDialog} from "@/modules/operations/tips";
-import {RestaurantProfileSettings} from "./restaurant-profile-settings";
+import {ProfileLogoSlot,ProfileMenuPanel,useRestaurantProfile} from "./restaurant-profile-settings";
+import {OrganizationPanel} from "./organization-panel";
 import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
 import {Icon} from "@/design-system/icons";
 import {LocationMap} from "@/design-system/location-map";
@@ -22,7 +23,7 @@ import {locationResolver,organizationErrors,profileResolver,rateResolver} from "
 import {createRate as persistRate,deactivateLocation,deactivateProfile as removeProfileApi,deleteRate as removeRateApi,getOrganization,listLocations,listProfiles,listRates,saveLocation,saveProfile as persistProfile,updateOrganization} from "../infrastructure/organizations-api";
 
 const locationColumns=["Local","Contacto","País / moneda","Horario","Estado","Acciones"],profileColumns=["País","Moneda","Impuesto","Locales","Estado","Acciones"],rateColumns=["Par","Tasa","Vigencia","Fuente","Registrado por","Acciones"];
-function OrganizationFormSkeleton(){return <div className="organization-settings" role="status" aria-busy="true" aria-label="Cargando datos de la empresa">{[3,1].map((fields,section)=><section className="panel organization-section" key={section} aria-hidden="true"><header className="organization-section-header"><div className="organization-section-title"><Skeleton width="var(--size-36)" height="var(--size-36)" radius="var(--radius-tile)"/><div><Skeleton width="var(--size-120)" height="var(--size-9)"/><Skeleton width="var(--size-180)"/></div></div></header><div className={`organization-fields${fields===1?" single":""}`}>{Array.from({length:fields},(_,field)=><div className={`organization-field-skeleton${fields>1&&field===0?" span-2":""}`} key={field}><Skeleton width="var(--size-120)" height="var(--size-11)"/><Skeleton height="var(--control-height)"/></div>)}</div></section>)}</div>}
+function OrganizationFormSkeleton(){return <div className="organization-layout" role="status" aria-busy="true" aria-label="Cargando datos de la empresa"><section className="panel organization-panel organization-identity" aria-hidden="true"><header className="organization-panel-header"><div><Skeleton width="var(--size-28)" height="var(--size-28)" radius="var(--radius-tile)"/><Skeleton width="var(--size-160)" height="var(--size-11)"/></div></header><div className="organization-panel-body"><Skeleton width="var(--size-120)" height="var(--size-120)" radius="var(--radius-tile)"/><div className="form-section-grid">{[0,1,2,3].map(field=><div className="organization-field-skeleton" key={field}><Skeleton width="var(--size-120)" height="var(--size-11)"/><Skeleton height="var(--control-height)"/></div>)}</div></div></section></div>}
 
 export function CompanySettings(){
  const{notify}=useFeedback();
@@ -30,49 +31,41 @@ export function CompanySettings(){
  const canManage=can("organizations.manage");
  const client=useQueryClient();
  const query=useQuery({queryKey:["organization"],queryFn:getOrganization});
+ const profile=useRestaurantProfile();
  const[draft,setDraft]=useState<Partial<Organization>>({});
  const[submitted,setSubmitted]=useState(false);
  const value={...query.data,...draft} as Organization;
- const dirty=Object.keys(draft).length>0;
+ const companyDirty=Object.keys(draft).length>0;
+ const dirty=companyDirty||profile.dirty;
  const errors=submitted?organizationErrors(value):{};
  const save=useMutation({
-  mutationFn:()=>updateOrganization(value),
-  onSuccess:data=>{client.setQueryData(["organization"],data);setDraft({});setSubmitted(false);notify({tone:"success",title:"Empresa actualizada",message:"Los datos de la empresa se guardaron correctamente."})},
+  // Company first: a failed identity upload must not discard already valid legal data.
+  mutationFn:async()=>{const images=profile.dirty;if(companyDirty){client.setQueryData(["organization"],await updateOrganization(value));setDraft({});setSubmitted(false);}await profile.persist();return images;},
+  onSuccess:images=>notify({tone:"success",title:"Cambios guardados",message:images?"Tu restaurante quedó actualizado. Las imágenes se optimizan en segundo plano.":"Los datos de tu restaurante quedaron actualizados."}),
   onError:e=>notify({tone:"danger",title:"No se pudo guardar",message:e.message}),
  });
+ const locked=!canManage||save.isPending;
  function change<K extends keyof Organization>(key:K,value:Organization[K]){setDraft(current=>({...current,[key]:value}))}
- function submit(){if(!canManage||!dirty||save.isPending)return;setSubmitted(true);if(Object.keys(organizationErrors(value)).length)return;save.mutate()}
- return <><PageHeader title="Mi restaurante" description="Identidad y configuración general de tu restaurante."/>
+ function cancel(){setDraft({});setSubmitted(false);profile.reset()}
+ function submit(){if(!canManage||!dirty||save.isPending||profile.reading)return;setSubmitted(true);if(Object.keys(organizationErrors(value)).length)return;save.mutate()}
+ return <><PageHeader title="Mi restaurante" description="Datos, logo y carta virtual."/>
   {query.isLoading?<OrganizationFormSkeleton/>:query.isError?<section className="panel management"><ErrorState title="No pudimos cargar la empresa" text={query.error.message} onRetry={()=>void query.refetch()} retrying={query.isFetching}/></section>:
-  <form className="organization-settings" noValidate onSubmit={event=>{event.preventDefault();submit()}}>
-   <section className="panel organization-section">
-    <header className="organization-section-header">
-     <div className="organization-section-title"><span><Icon name="receipt" size={18}/></span><div><h2>Datos de la empresa</h2><p>Información utilizada en documentos, configuración fiscal y administración.</p></div></div>
-     <Status active={value.active}>{value.active?"Activa":"Inactiva"}</Status>
-    </header>
-    <div className="organization-fields">
-     <FormField className="span-2" label="Razón social" error={errors.legalName}><Input required readOnly={!canManage} maxLength={180} value={value.legalName} onChange={event=>change("legalName",event.target.value)}/></FormField>
+  <form className="organization-layout" noValidate onSubmit={event=>{event.preventDefault();submit()}}>
+   <OrganizationPanel icon="building" title="Datos del restaurante" className="organization-identity">
+    <ProfileLogoSlot profile={profile} disabled={locked}/>
+    <div className="form-section-grid">
      <FormField label="Nombre comercial" error={errors.tradeName}><Input required readOnly={!canManage} maxLength={180} value={value.tradeName} onChange={event=>change("tradeName",event.target.value)}/></FormField>
+     <FormField label="Fecha de fundación" optional><Input type="date" readOnly={!canManage} disabled={save.isPending||!profile.value} value={profile.value?.foundedOn??""} onChange={event=>profile.value&&profile.change({...profile.value,foundedOn:event.target.value})}/></FormField>
+     <FormField label="Razón social" error={errors.legalName}><Input required readOnly={!canManage} maxLength={180} value={value.legalName} onChange={event=>change("legalName",event.target.value)}/></FormField>
      <FormField label="Identificación fiscal" error={errors.taxId}><Input icon="badge" required readOnly={!canManage} minLength={6} maxLength={32} value={value.taxId} onChange={event=>change("taxId",event.target.value)}/></FormField>
     </div>
-   </section>
-
-   <section className="panel organization-section">
-    <header className="organization-section-header">
-     <div className="organization-section-title"><span><Icon name="settings" size={18}/></span><div><h2>Preferencias generales</h2><p>Valor base utilizado cuando un local no define una configuración específica.</p></div></div>
-    </header>
-    <div className="organization-fields single">
-     <FormField as="div" label="Zona horaria predeterminada" help="Se aplica a los locales que no definen su propia zona horaria." error={errors.timezone}><TimezoneSelect value={value.timezone} onChange={timezone=>change("timezone",timezone)} invalid={Boolean(errors.timezone)} disabled={!canManage||save.isPending}/></FormField>
-     <div className="organization-config-note"><Icon name="alert" size={16}/><div><b>Configuración por local</b><span>País, moneda, impuestos, dirección y horario se administran desde Locales y Fiscal.</span></div></div>
-    </div>
-   </section>
-
-   {canManage&&<footer className="organization-savebar">
-    <div><span className={dirty?"dirty":""}><i/>{dirty?"Cambios sin guardar":"Todo actualizado"}</span><small>{dirty?"Guarda para aplicar la nueva configuración.":"Los datos coinciden con la información almacenada."}</small></div>
-    <div><Button kind="ghost" disabled={!dirty||save.isPending} onClick={()=>{setDraft({});setSubmitted(false)}}>Cancelar</Button><Button type="submit" icon="check" disabled={!dirty||save.isPending} loading={save.isPending}>{save.isPending?"Guardando…":"Guardar"}</Button></div>
+   </OrganizationPanel>
+   <ProfileMenuPanel profile={profile} disabled={locked}/>
+   {canManage&&(dirty||save.isPending)&&<footer className="panel organization-savebar">
+    <span><i/>Cambios sin guardar</span>
+    <div><Button kind="ghost" disabled={save.isPending} onClick={cancel}>Cancelar</Button><Button type="submit" icon="check" disabled={save.isPending||profile.reading} loading={save.isPending}>{save.isPending?"Guardando…":"Guardar"}</Button></div>
    </footer>}
   </form>}
-  {query.data&&<RestaurantProfileSettings key={query.data.id} canManage={canManage}/>}
  </>;
 }
 

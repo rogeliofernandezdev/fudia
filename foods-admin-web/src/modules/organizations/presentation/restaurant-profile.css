@@ -1,15 +1,28 @@
 .restaurant-profile-fields{display:grid;gap:var(--space-6);min-width:0}
-.restaurant-media-section{display:grid;gap:var(--space-3);min-width:0}
-.restaurant-media-section h3{font-size:var(--text-lg);font-weight:var(--weight-semibold)}
-.restaurant-media-section p{color:var(--ink-500);max-width:65ch}
-.restaurant-logo-editor{display:flex;align-items:center;flex-wrap:wrap;gap:var(--space-4)}
-.restaurant-logo-editor>.restaurant-media-preview{width:var(--size-120);height:var(--size-120)}
-.restaurant-media-preview{display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;background:var(--cloud-50);border-radius:var(--radius-tile);min-width:0;height:var(--size-240)}
-.restaurant-media-preview img{width:100%;height:100%;object-fit:contain;min-height:0}
-.restaurant-media-preview small{padding:var(--space-2);color:var(--ink-600);font-size:var(--text-sm)}
-.restaurant-menu-pages{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,var(--size-240)),1fr));gap:var(--space-5)}
-.restaurant-menu-pages li{min-width:0}
-.restaurant-page-actions{display:flex;flex-wrap:wrap;gap:var(--space-2);align-items:center;justify-content:space-between;padding-block:var(--space-2)}
-.restaurant-page-actions>div{display:flex;gap:var(--space-1);flex-wrap:wrap}
-.restaurant-media-empty{padding-block:var(--space-3)}
-.restaurant-profile-fields input[type=file]{height:auto;min-height:var(--control-height);max-width:100%;padding:var(--space-2)}
+.restaurant-logo{display:grid;grid-template-columns:var(--size-120);gap:var(--space-2);align-content:start;min-width:0}
+.restaurant-logo-frame{position:relative}
+/* X de 24 px montada sobre la esquina del recuadro; el área táctil se amplía a 44 px. */
+.restaurant-logo-remove{position:absolute;top:calc(var(--space-2) * -1);right:calc(var(--space-2) * -1);z-index:1;width:var(--size-24);height:var(--size-24);padding:0;display:grid;place-items:center;border:var(--stroke-1) solid var(--line-strong);border-radius:50%;background:var(--surface);color:var(--ink-600);box-shadow:var(--elevation-2);cursor:pointer;transition:var(--transition-surface)}
+.restaurant-logo-remove::before{content:"";position:absolute;inset:calc(var(--space-2-5) * -1)}
+.restaurant-logo-remove:focus-visible{outline:0;box-shadow:var(--ring-focus)}
+.restaurant-logo-remove:disabled{cursor:not-allowed;opacity:var(--opacity-disabled)}
+@media(hover:hover){.restaurant-logo-remove:not(:disabled):hover{border-color:var(--danger-200);background:var(--danger-50);color:var(--danger-600)}}
+.restaurant-media-status{position:absolute;left:var(--space-2);bottom:var(--space-2);pointer-events:none}
+.restaurant-menu{display:grid;gap:var(--space-3);min-width:0}
+.restaurant-menu-copy{margin:0;color:var(--ink-500);font-size:var(--font-size-sm)}
+.restaurant-menu-pages{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--size-160),1fr));gap:var(--space-4)}
+.restaurant-page{display:grid;grid-template-rows:auto auto;min-width:0;overflow:hidden;border:var(--stroke-1) solid var(--line);border-radius:var(--radius-tile);background:var(--surface)}
+.restaurant-page figure{position:relative;margin:0;aspect-ratio:3/4;background:var(--cloud-50)}
+.restaurant-page img{width:100%;height:100%;object-fit:contain}
+.restaurant-page figcaption{position:absolute;top:var(--space-2);left:var(--space-2);min-width:var(--size-24);height:var(--size-24);padding-inline:var(--space-1-5);border-radius:var(--radius-pill);background:var(--navigation-900);color:var(--surface);font-size:var(--font-size-label);font-weight:var(--weight-bold);font-variant-numeric:tabular-nums;display:grid;place-items:center}
+.restaurant-page-placeholder{height:100%;display:grid;place-items:center;color:var(--ink-400);font-size:var(--font-size-label)}
+.restaurant-page-bar{display:flex;align-items:center;justify-content:space-between;gap:var(--space-1-5);padding:var(--space-1-5);border-top:var(--stroke-1) solid var(--line)}
+.restaurant-page-bar>div{display:flex;gap:var(--space-1-5)}
+.restaurant-page-add{display:grid;min-width:0}
+.restaurant-page-add>.image-drop-tile{aspect-ratio:auto;height:100%;min-height:var(--size-210)}
+
+@media(width<=600px){
+ .restaurant-menu-pages{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-3)}
+ .restaurant-page-bar{padding:var(--space-1)}
+ .restaurant-page-bar>div{gap:var(--space-1)}
+}

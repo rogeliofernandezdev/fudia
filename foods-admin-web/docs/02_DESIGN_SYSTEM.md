@@ -1022,7 +1022,7 @@ descargar y alternar al detalle HTML del informe sin depender del visor nativo.
   conserva el foco inicial); el cuadro se ubica a la izquierda por grid.
   El cuadro siempre conserva el borde punteado (`--line-strong`) para indicar
   que acepta arrastrar un archivo. Sin imagen, fondo `cloud-25`, icono `upload`
-  en círculo `primary-100`, «Arrastra tu foto aquí», «o haz clic para elegirla»
+  en círculo `primary-100` (`ImageDropTile`), «Arrastra tu foto aquí»
   y «JPEG, PNG o WebP · 5 MB»; en táctil (`hover: none`) dice «Toca para elegir
   una foto». Con imagen, fondo `surface`, 6 px de margen interno y la foto con
   `object-fit: cover` dentro del marco punteado. Debajo van «Cambiar» (secondary, ancho flexible)
@@ -2570,10 +2570,39 @@ plan / Tope propio / Ilimitado.
 
 ## Mi restaurante: identidad y carta virtual
 
-Nombre visible de Empresa; conserva datos legales y permisos. Añade fecha de
-fundación, logo y páginas de Carta virtual en secciones simples con los controles
-existentes. Preview proporcional, estados PROCESSING/FAILED explícitos, orden
-mediante Subir/Bajar/Quitar y archivos JPEG/PNG/WebP. Galería fluida desde 390 px,
-controles táctiles de 44 px, sin códigos generados ni colores por pantalla.
+Nombre visible de Empresa; conserva datos legales y permisos. Pocas palabras:
+sin descripciones de sección ni textos de ayuda; las etiquetas se explican
+solas. Dos paneles a todo el ancho (`OrganizationPanel`, que reutiliza el
+encabezado estándar `.panel > header`: `IconTile` pequeño + título de 16 px /
+700) y un pie de guardado que **solo aparece cuando hay cambios**:
+
+- **Datos del restaurante** (`building`, `primary`): logo a la izquierda y, a
+  su derecha, una retícula de dos columnas: Nombre comercial | Fecha de
+  fundación (opcional) y Razón social | Identificación fiscal. El logo es un
+  `ImageDropTile` cuadrado con `contain` («Subir logo» + regla de archivos)
+  cuyo lado se calcula con tokens como dos filas de campo (etiqueta + 6 px +
+  `--control-height`) más su separación: empieza con la primera etiqueta y
+  termina al ras del último input (140 px en escritorio; 120 px en móvil, donde
+  se apila). Tocar el recuadro reemplaza el logo; quitarlo es una X de 24 px
+  (área táctil de 44 px) montada sobre la esquina superior derecha, blanca con
+  borde `line-strong`, que en hover pasa a rojo tenue. La zona
+  horaria **no** se edita aquí: es por local (Locales). No se muestra el estado
+  Activa ni una nota sobre Locales y Fiscal: el menú ya los ofrece.
+- **Carta virtual** (`utensils`, `digital`: se muestra en el chatbot), a todo
+  el ancho, con el contador «N de M» a la derecha del encabezado. Galería
+  `auto-fill` de 160 px (dos columnas en móvil): cada página es una ficha con
+  borde `line`, imagen 3:4 en `contain` sobre `cloud-50`, número en píldora
+  `navigation-900` y una barra inferior con «Mover antes»/«Mover después» a la
+  izquierda y «Quitar página» (rojo tenue) a la derecha, todos de 44 px. El
+  último recuadro es un `ImageDropTile` múltiple «Añadir páginas»; también es
+  el estado vacío. PROCESSING/FAILED se muestran con `Status` sobre la imagen.
+  El error de carga del perfil se informa solo aquí, con Reintentar.
+
+En móvil Datos del restaurante apila logo y campos en una columna. El pie
+(`panel organization-savebar`) es sticky a 16 px del fondo (8 px en móvil) y
+aparece solo con cambios: «Cambios sin guardar», Cancelar (ghost) y Guardar a la derecha con 10 px de separación; en móvil ambos
+comparten el ancho a 44 px. Guardar persiste primero la empresa y luego la identidad
+(sube imágenes y guarda el perfil); si la identidad falla, los datos legales ya
+quedan guardados. Sin códigos generados ni colores por pantalla.
 El wizard usa los mismos campos; no repite nombre comercial ni indicadores de pasos.
 La fecha de apertura se configura en cada Local. Ver `../../docs/09_RESTAURANT_IDENTITY.md`.

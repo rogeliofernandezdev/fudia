@@ -41,7 +41,6 @@ export const organizationSchema=z.object({
  legalName:z.string().trim().min(1,"Ingresa la razón social.").max(180,"La razón social no puede superar 180 caracteres."),
  tradeName:z.string().trim().min(1,"Ingresa el nombre comercial.").max(180,"El nombre comercial no puede superar 180 caracteres."),
  taxId:z.string().trim().min(6,"La identificación fiscal debe tener al menos 6 caracteres.").max(32,"La identificación fiscal no puede superar 32 caracteres."),
- timezone:z.string().trim().min(3,"Selecciona la zona horaria."),
 });
 export type OrganizationErrors=Partial<Record<keyof z.infer<typeof organizationSchema>,string>>;
 export function organizationErrors(value:Organization):OrganizationErrors{

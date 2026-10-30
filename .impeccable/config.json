@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "broken-image",
+        "value": "*",
+        "files": [
+          "foods-admin-web/src/design-system/image-drop-tile.tsx"
+        ],
+        "createdAt": "2026-10-30T06:04:53.004Z",
+        "reason": "Claude: FileImage asigna src por ref con una URL blob temporal (mismo patrón que la vista previa anterior); no es un placeholder"
+      }
+    ]
+  }
+}

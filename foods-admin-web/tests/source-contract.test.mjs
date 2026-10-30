@@ -713,9 +713,14 @@ test("empresa y kardex respetan no duplicación y patrón de gestión",()=>{
   const kardex=read("src/modules/supply/inventory/presentation/kardex-page.tsx");
   const inventoryCss=readCss("src/modules/supply/inventory/presentation/inventory.css");
   assert.equal(company.includes("organization-summary"),false,"Empresa no repite los datos del formulario en una tarjeta resumen");
-  assert.ok(company.includes("organization-section"),"Empresa separa identidad legal y configuración general sin duplicar datos");
-  assert.ok(company.includes("organization-section-header"),"Empresa usa cabeceras compactas de sección");
+  const companySettings=company.slice(company.indexOf("export function CompanySettings"),company.indexOf("const blankLocation"));
+  assert.ok(companySettings.includes('title="Datos del restaurante"'),"Mi restaurante reúne logo y datos en un solo panel antes de Carta virtual");
+  assert.equal(companySettings.includes("TimezoneSelect"),false,"La zona horaria se configura por local, no en Mi restaurante");
+  assert.equal(/help="/.test(company.slice(company.indexOf("export function CompanySettings"),company.indexOf("const blankLocation"))),false,"Mi restaurante no agrega textos de ayuda a campos autoexplicativos");
+  assert.equal(company.split('organization-savebar"').length-1,1,"Mi restaurante tiene un único pie de guardado para empresa e identidad");
+  assert.equal(read("src/modules/organizations/presentation/restaurant-profile-settings.tsx").includes("<Button"),false,"La identidad no agrega un segundo Guardar");
   assert.ok(companyCss.includes(".organization-savebar"),"Empresa conserva una barra de guardado consistente");
+  assert.equal(read("src/modules/organizations/presentation/restaurant-profile-fields.tsx").includes('type="file"'),false,"Logo y carta usan ImageDropTile, no el control de archivo nativo");
   assert.ok(kardex.includes('className="panel standardized-management inventory-panel"'),"Kárdex usa el panel estándar de gestión");
   assert.ok(kardex.includes("inventory-toolbar kardex-toolbar"),"Kárdex reutiliza la barra de Inventario");
   assert.ok(kardex.includes("management-cards kardex-cards"),"Kárdex ofrece tarjetas equivalentes en móvil");
