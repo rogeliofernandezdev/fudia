@@ -2593,8 +2593,8 @@ encabezado estándar `.panel > header`: `IconTile` pequeño + título de 16 px /
   `--control-height`) más su separación: empieza con la primera etiqueta y
   termina al ras del último input (140 px en escritorio; 120 px en móvil, donde
   se apila). Tocar el recuadro reemplaza el logo; quitarlo es una X de 24 px
-  (área táctil de 44 px) montada sobre la esquina superior derecha, blanca con
-  borde `line-strong`, que en hover pasa a rojo tenue. La zona
+  (área táctil de 44 px) montada sobre la esquina superior derecha, con fondo y
+  borde `danger-500`, X blanca y hover `danger-600`. La zona
   horaria **no** se edita aquí: es por local (Locales). No se muestra el estado
   Activa ni una nota sobre Locales y Fiscal: el menú ya los ofrece.
 - **Carta virtual** (`utensils`, `digital`: se muestra en el chatbot), a todo
@@ -2629,3 +2629,8 @@ puede seleccionar. Al editar pedidos se cuenta una sola vez su reserva previa.
 Sin control conserva cantidades libres hasta marcarse agotado. El catálogo
 refresca las existencias sin consultar al servidor por cada clic; el backend
 revalida al guardar.
+
+La imagen del formulario de producto se estira en escritorio desde el inicio
+del campo Nombre hasta el borde inferior del selector Destino de atención.
+En móvil conserva el formato cuadrado y se apila sobre los campos.
+`ImageRemoveButton` usa el círculo rojo `danger-500` y la X blanca compartidos.
