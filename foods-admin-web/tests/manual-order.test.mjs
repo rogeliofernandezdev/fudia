@@ -56,6 +56,7 @@ function hooksMount(file,props,overrides={}){
   if(name==="@/providers/feedback-provider")return{useFeedback:()=>({notify:()=>{}})};
   if(name==="react-hook-form")return{useWatch:({name})=>fields[name],useForm:()=>({register:name=>({name}),setValue:(name,value)=>{fields[name]=value},control:{},formState:{errors:{},isDirty:false,isSubmitting:false},handleSubmit:callback=>async()=>{const result=schema.manualOrderSchema.safeParse(fields);if(result.success)return callback(result.data)}})};
   if(name.endsWith("manual-order-schema"))return schema;
+  if(name==="../domain/draft-availability")return compile("orders/domain/draft-availability.ts");
   if(name.endsWith("comanda-catalog"))return{ComandaCatalog:"ComandaCatalog",ComboConfigurator:"ComboConfigurator"};
   if(name==="./comanda-view")return{ComandaView:"ComandaView"};
   if(name==="./order-meta")return{channelIcons:{delivery:"truck",recojo:"box",mostrador:"store"}};
@@ -144,7 +145,7 @@ test("comanda compartida: Salón mantiene mesa obligatoria y borrador; volver in
  const delivery=mountComanda({onBack:draft=>{returned=draft}});
  rendered=delivery.render();rendered.find(node=>node.type==="ComandaCatalog").props.onConfigureCombo("combo-product");rendered=delivery.render();
  const choices=[{groupId:"group-1",groupName:"Segundo",productId:"option-1",name:"Lomo",surcharge:3}];
- rendered.find(node=>node.type==="ComboConfigurator").props.onConfirm({productId:"combo-product",name:"Menú del día",unitPrice:23,selections:choices});
+ rendered.find(node=>node.type==="ComboConfigurator").props.onConfirm({productId:"combo-product",name:"Menú del día",unitPrice:23,selections:choices,availability:{id:"combo-product",name:"Menú del día",groups:[{id:"group-1",name:"Segundo",options:[{productId:"option-1",name:"Lomo",available:true,remaining:null,quotaRemaining:null}]}]}});
  rendered=delivery.render();nodes(rendered.find(node=>node.type==="ModalHeader").props.details).find(node=>node.type==="Button"&&node.props.children==="Editar datos del pedido").props.onClick();
  assert.equal(returned.lines[0].itemType,"combo");assert.equal(returned.lines[0].selections,choices);
 });
@@ -233,13 +234,43 @@ test("comanda: Agotado bloquea aumentos en carta y resumen sin borrar cantidades
 
 test("comanda: refresca los productos elegidos por local aunque no estén en la categoría visible",()=>{
  const view=mountComanda({initial:{...fields,tableId:"",lines:[line,{...line,lineKey:"combo",itemType:"combo",productId:"combo"}]}});
- view.render();const query=view.queries.at(-1);
+ view.render();const query=view.queries.findLast(query=>query.queryKey[0]==="order-selected-availability");
  assert.deepEqual(JSON.parse(JSON.stringify(query.queryKey)),["order-selected-availability","test-location",[line.productId]]);
  assert.equal(query.refetchInterval,10000);assert.equal(query.refetchIntervalInBackground,false);assert.equal(query.refetchOnWindowFocus,"always");assert.equal(query.enabled,true);
  const failed=mountComanda({initial:{...fields,tableId:"",lines:[line]},availabilityError:true});
  failed.render().find(node=>node.type==="ComandaCatalog").props.onAvailability([{id:line.productId,remaining:null,availabilityStatus:"available"}]);
  const rendered=failed.render();assert.equal(rendered.find(node=>node.type==="NumberStepper").props.max,line.qty);
  assert.ok(rendered.some(node=>node.props.role==="alert"&&JSON.stringify(node.props.children).includes("No pudimos actualizar")));
+});
+
+function configuredStockCombo(id="menu",remaining=3){
+ const selection={groupId:"second",groupName:"Segundo",productId:"aji",name:"Ají de gallina",surcharge:0};
+ return {productId:id,name:"Menú",unitPrice:10,selections:[selection],availability:{id,name:"Menú",groups:[{id:"second",name:"Segundo",options:[{productId:"aji",name:selection.name,available:remaining>0,remaining,quotaRemaining:3}]}]}};
+}
+function addStockCombo(view,combo){
+ view.render().find(node=>node.type==="ComandaCatalog").props.onConfigureCombo(combo.productId);
+ view.render().find(node=>node.type==="ComboConfigurator").props.onConfirm(combo);
+}
+test("comanda: el más de un combo respeta las tres porciones incluso con callbacks repetidos",()=>{
+ const view=mountComanda();addStockCombo(view,configuredStockCombo());
+ const stepper=view.render().find(node=>node.type==="NumberStepper");
+ assert.equal(stepper.props.max,3);
+ stepper.props.onChange(3);stepper.props.onChange(8);stepper.props.onChange(4);
+ assert.equal(view.state[0].lines[0].qty,3);
+});
+test("comanda: un plato suelto y dos menús consumen las mismas tres porciones",()=>{
+ const view=mountComanda();addStockCombo(view,configuredStockCombo());
+ view.render().find(node=>node.type==="NumberStepper").props.onChange(2);
+ const product={id:"aji",name:"Ají de gallina",price:"10",remaining:3,availabilityStatus:"available"};
+ const pick=view.render().find(node=>node.type==="ComandaCatalog").props.onPick;
+ pick(product);pick(product);
+ assert.equal(view.state[0].lines.length,2);assert.equal(view.state[0].lines[1].qty,1);
+ addStockCombo(view,configuredStockCombo("another-menu"));
+ assert.equal(view.state[0].lines.length,2,"Otro menú tampoco puede reutilizar las porciones consumidas");
+});
+test("comanda: no acepta un combo con una alternativa agotada aunque se invoque confirmar directamente",()=>{
+ const view=mountComanda();addStockCombo(view,configuredStockCombo("menu",0));
+ assert.equal(view.state[0].lines.length,0);
 });
 
 test("disponibilidad seleccionada: consulta lotes acotados, sin búsqueda ni paginación de la carta",async()=>{

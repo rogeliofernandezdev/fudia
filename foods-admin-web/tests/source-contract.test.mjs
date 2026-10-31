@@ -721,6 +721,11 @@ test("empresa y kardex respetan no duplicación y patrón de gestión",()=>{
   assert.equal(read("src/modules/organizations/presentation/restaurant-profile-settings.tsx").includes("<Button"),false,"La identidad no agrega un segundo Guardar");
   assert.ok(companyCss.includes(".organization-savebar"),"Empresa conserva una barra de guardado consistente");
   assert.equal(read("src/modules/organizations/presentation/restaurant-profile-fields.tsx").includes('type="file"'),false,"Logo y carta usan ImageDropTile, no el control de archivo nativo");
+  for(const path of ["src/modules/menu/products/presentation/product-image-field.tsx","src/modules/organizations/presentation/restaurant-profile-fields.tsx"]){
+    const source=read(path);
+    assert.equal(/>Cambiar<|icon="trash"/.test(source),false,`${path}: las imágenes no usan botones Cambiar ni papelera`);
+    assert.ok(/onRemove=|ImageRemoveButton/.test(source),`${path}: quitar una imagen usa la X estándar`);
+  }
   assert.ok(kardex.includes('className="panel standardized-management inventory-panel"'),"Kárdex usa el panel estándar de gestión");
   assert.ok(kardex.includes("inventory-toolbar kardex-toolbar"),"Kárdex reutiliza la barra de Inventario");
   assert.ok(kardex.includes("management-cards kardex-cards"),"Kárdex ofrece tarjetas equivalentes en móvil");
@@ -788,7 +793,7 @@ test("países y WhatsApp tiene acceso completo para plataforma",()=>{
   const publicApi=read("src/modules/platform/index.ts");
 
   assert.ok(routes.includes('platformGlobalSettings:"/platform/configuracion-global"'),"El catálogo central declara la ruta de configuración global");
-  assert.ok(navigation.includes('href:pageRoutes.platformGlobalSettings,name:"Países y WhatsApp",icon:"chat",module:"integraciones",platformAdminOnly:true'),"El menú principal expone el acceso solo al administrador de plataforma");
+  assert.ok(navigation.includes('href:pageRoutes.platformGlobalSettings,name:"Países y WhatsApp",icon:"whatsapp",module:"integraciones",platformAdminOnly:true'),"El menú principal expone el acceso solo al administrador de plataforma");
   assert.ok(platformShell.includes('href={pageRoutes.platformGlobalSettings}'),"La navegación de Plataforma reutiliza la misma ruta");
   assert.ok(platformShell.includes("<span>Países y WhatsApp</span>"),"Ambos accesos usan un nombre funcional y reconocible");
   assert.ok(route.includes('from "@/modules/platform"'),"La ruta consume la API pública del módulo");

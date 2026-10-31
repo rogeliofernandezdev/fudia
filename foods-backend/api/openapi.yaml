@@ -934,6 +934,17 @@ paths:
       security: [{ sessionCookie: [] }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ComboInput" } } } }
       responses: { "201": { description: Menú o combo actualizado }, "400": { $ref: "#/components/responses/BadRequest" }, "404": { description: No encontrado }, "409": { description: Alternativa inválida o conflicto } }
+  /v1/admin/order-combos/{id}:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    get:
+      operationId: getOrderCombo
+      summary: Opciones del menú con existencias compartidas y cupo restante del local y día activos
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Menú para configurar una comanda, content: { application/json: { schema: { $ref: "#/components/schemas/OrderComboDetail" } } } }
+        "404": { description: Menú no encontrado }
+        "409": { description: Menú no disponible }
+        "403": { $ref: "#/components/responses/Forbidden" }
   /v1/admin/product-availability:
     get:
       operationId: listProductAvailability
@@ -2525,7 +2536,7 @@ components:
     PaymentInput: { type: object, description: "amount solo representa consumo. tip se cobra adicionalmente una sola vez por pedido, sobre total menos delivery, redondeado según la moneda. La transacción revierte íntegra si la propina falla.", required: [orderId, method, amount], properties: { shiftId: { type: string, format: uuid, description: "Solo administrador: turno abierto del local activo. Se omite si solo hay uno; con varios es obligatorio. No cambia al abridor ni crea asignación." }, tip: { $ref: "#/components/schemas/TipInput" }, orderId: { type: string, format: uuid }, method: { type: string }, amount: { type: number, exclusiveMinimum: 0 }, reference: { type: string, maxLength: 120 } } }
     Payment: { type: object, required: [id, orderId, orderCode, shiftId, cashRegisterName, method, methodName, amount, refundedAmount, netAmount, reference, createdByName, createdAt], properties: { id: { type: string, format: uuid }, orderId: { type: string, format: uuid }, orderCode: { type: string }, shiftId: { type: string, format: uuid }, cashRegisterName: { type: string }, method: { type: string }, methodName: { type: string, description: "Nombre del catálogo de la empresa, disponible también para pagos con medios ahora inactivos." }, affectsCash: { type: boolean, description: "El medio impacta el efectivo esperado del turno" }, amount: { type: string }, refundedAmount: { type: string }, netAmount: { type: string }, reference: { type: string }, createdByName: { type: string }, createdAt: { type: string, format: date-time } } }
     RefundInput: { type: object, required: [amount, reason], properties: { amount: { type: number, exclusiveMinimum: 0 }, reason: { type: string, minLength: 1, maxLength: 120 }, note: { type: string, maxLength: 240 } } }
-    ComboOptionInput: { type: object, required: [productId, surcharge], properties: { productId: { type: string, format: uuid }, surcharge: { type: string, pattern: "^[0-9]+(\\.[0-9]{1,2})?$" } } }
+    ComboOptionInput: { type: object, required: [productId, surcharge], properties: { quota: { type: [integer, "null"], minimum: 1, description: "Cupo por alternativa y día operativo; null no establece cupo propio. No puede superar las existencias del local al registrar la alternativa." }, productId: { type: string, format: uuid }, surcharge: { type: string, pattern: "^[0-9]+(\\.[0-9]{1,2})?$" } } }
     ComboGroupInput: { type: object, required: [name, required, minSelections, maxSelections, options], properties: { name: { type: string, maxLength: 120 }, required: { type: boolean }, minSelections: { type: integer, minimum: 0 }, maxSelections: { type: integer, minimum: 1 }, options: { type: array, items: { $ref: "#/components/schemas/ComboOptionInput" } } } }
     ComboInput: { type: object, required: [name, description, price, groups], properties: { name: { type: string, maxLength: 160 }, description: { type: string, maxLength: 1000 }, price: { type: string, pattern: "^[0-9]+(\\.[0-9]{1,2})?$" }, categoryId: { type: [string, "null"], format: uuid }, groups: { type: array, minItems: 1, items: { $ref: "#/components/schemas/ComboGroupInput" } } } }
     ComboSummary: { type: object, required: [id, name, description, price, active, groupCount, optionCount, outsideDates], properties: { id: { type: string, format: uuid }, name: { type: string }, description: { type: string }, price: { type: string }, active: { type: boolean }, groupCount: { type: integer, minimum: 0 }, optionCount: { type: integer, minimum: 0 }, outsideDates: { type: boolean, description: "Activo pero fuera de su rango de fechas de venta (vencido o aún no empieza); no se vende." } } }
@@ -2549,6 +2560,40 @@ components:
     ConciergeComboOption: { type: object, required: [productId, name, surcharge, available], properties: { productId: { type: string, format: uuid }, name: { type: string }, surcharge: { type: string }, available: { type: boolean } } }
     ConciergeComboGroup: { type: object, required: [id, name, required, minSelections, maxSelections, options], properties: { id: { type: string, format: uuid }, name: { type: string }, required: { type: boolean }, minSelections: { type: integer, minimum: 0 }, maxSelections: { type: integer, minimum: 1 }, options: { type: array, items: { $ref: "#/components/schemas/ConciergeComboOption" } } } }
     ConciergeComboDetail: { allOf: [{ $ref: "#/components/schemas/ProductImage" }, { type: object, required: [id, name, description, price, groups], properties: { id: { type: string, format: uuid }, name: { type: string }, description: { type: string }, price: { type: string }, imageUrl: { type: [string, "null"] }, groups: { type: array, items: { $ref: "#/components/schemas/ConciergeComboGroup" } } } } ] }
+    OrderComboDetail:
+      allOf:
+        - $ref: "#/components/schemas/ProductImage"
+        - type: object
+          required: [id, name, description, price, groups]
+          properties:
+            id: { type: string, format: uuid }
+            name: { type: string }
+            description: { type: string }
+            price: { type: string }
+            imageUrl: { type: [string, "null"] }
+            groups:
+              type: array
+              items:
+                type: object
+                required: [id, name, required, minSelections, maxSelections, options]
+                properties:
+                  id: { type: string, format: uuid }
+                  name: { type: string }
+                  required: { type: boolean }
+                  minSelections: { type: integer, minimum: 0 }
+                  maxSelections: { type: integer, minimum: 1 }
+                  options:
+                    type: array
+                    items:
+                      type: object
+                      required: [productId, name, surcharge, available, remaining, quotaRemaining]
+                      properties:
+                        productId: { type: string, format: uuid }
+                        name: { type: string }
+                        surcharge: { type: string }
+                        available: { type: boolean }
+                        remaining: { type: [number, "null"], minimum: 0, description: "Existencias físicas compartidas con platos sueltos y otros combos. null corresponde a Sin control." }
+                        quotaRemaining: { type: [number, "null"], minimum: 0, description: "Cupo restante de esta alternativa en este menú para el local y día activos; null no establece cupo propio." }
     OrderComboSelectionInput: { type: object, required: [groupId, productId], properties: { groupId: { type: string, format: uuid }, productId: { type: string, format: uuid } } }
     OrderModifierSelectionInput: { type: object, required: [groupId, optionId], properties: { groupId: { type: string, format: uuid }, optionId: { type: string, format: uuid } } }
     OrderModifierSelection: { type: object, required: [groupId, groupName, optionId, name, surcharge], properties: { groupId: { type: string, format: uuid }, groupName: { type: string }, optionId: { type: string, format: uuid }, name: { type: string }, surcharge: { type: string } } }

@@ -25,7 +25,7 @@ export function PlatformShell({children}:{children:React.ReactNode}){
         <Link className={path===pageRoutes.platformOnboarding?"active":""} href={pageRoutes.platformOnboarding} aria-current={path===pageRoutes.platformOnboarding?"page":undefined}><Icon name="building" size={16}/><span>Registrar empresa</span></Link>
         <Link className={path===pageRoutes.platformPlans?"active":""} href={pageRoutes.platformPlans} aria-current={path===pageRoutes.platformPlans?"page":undefined}><Icon name="payment" size={16}/><span>Planes SaaS</span></Link>
         <Link className={path===pageRoutes.platformSubscription?"active":""} href={pageRoutes.platformSubscription} aria-current={path===pageRoutes.platformSubscription?"page":undefined}><Icon name="receipt" size={16}/><span>Suscripción actual</span></Link>
-        <Link className={path===pageRoutes.platformGlobalSettings?"active":""} href={pageRoutes.platformGlobalSettings} aria-current={path===pageRoutes.platformGlobalSettings?"page":undefined}><Icon name="chat" size={16}/><span>Países y WhatsApp</span></Link>
+        <Link className={path===pageRoutes.platformGlobalSettings?"active":""} href={pageRoutes.platformGlobalSettings} aria-current={path===pageRoutes.platformGlobalSettings?"page":undefined}><Icon name="whatsapp" size={16}/><span>Países y WhatsApp</span></Link>
       </nav>
       <Link href={pageRoutes.home} className="button secondary platform-exit" aria-label="Volver al admin"><Icon name="chevronLeft" size={16}/>Volver al admin</Link>
     </header>

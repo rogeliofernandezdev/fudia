@@ -1,8 +1,7 @@
 "use client";
 import {useEffect,useRef,useState} from "react";
 import {FormField,FormSection,IconButton,Input,Status} from "@/design-system";
-import {Icon} from "@/design-system/icons";
-import {FileImage,ImageDropTile} from "@/design-system/image-drop-tile";
+import {FileImage,ImageDropTile,ImageRemoveButton} from "@/design-system/image-drop-tile";
 import {readImageMetadata} from "@/shared/api/image-upload";
 import type {MediaDraft,RestaurantProfileDraft} from "../infrastructure/restaurant-profile-api";
 import "./restaurant-profile.css";
@@ -35,12 +34,8 @@ function MediaStatus({item}:{item:MediaDraft}){
 export function RestaurantLogoField({value,onChange,disabled=false,onBusy}:{value:MediaDraft|null;onChange:(value:MediaDraft|null)=>void;disabled?:boolean;onBusy?:(busy:boolean)=>void}){
  const{error,reading,read}=useImageSelection(onBusy),busy=disabled||reading;
  async function choose(files:File[]){if(await read(files))onChange({file:files[0]});}
- // Tapping the tile replaces the logo; the corner X is the only way to remove it.
  return <div className="restaurant-logo">
-  <div className="restaurant-logo-frame">
-   <ImageDropTile src={value?.image?.url} file={value?.file} alt="Logo del restaurante" fit="contain" disabled={busy} label={value?"Cambiar logo":"Subir logo"} dropText="Subir logo" tapText="Subir logo" hint={imageHint} onFiles={files=>void choose(files)}>{value&&<MediaStatus item={value}/>}</ImageDropTile>
-   {value&&!disabled&&<button type="button" className="restaurant-logo-remove" aria-label="Quitar logo" title="Quitar logo" disabled={busy} onClick={()=>onChange(null)}><Icon name="close" size={14}/></button>}
-  </div>
+  <ImageDropTile src={value?.image?.url} file={value?.file} alt="Logo del restaurante" fit="contain" disabled={busy} label={value?"Cambiar logo":"Subir logo"} dropText="Subir logo" tapText="Subir logo" hint={imageHint} removeLabel="Quitar logo" onFiles={files=>void choose(files)} onRemove={()=>onChange(null)}>{value&&<MediaStatus item={value}/>}</ImageDropTile>
   {error&&<p className="field-error" role="alert">{error}</p>}
  </div>;
 }
@@ -52,7 +47,7 @@ function MenuPage({item,index,total,disabled,move,remove}:{item:MediaDraft;index
  const preview=item.file?<FileImage file={item.file} alt={alt}/>:src?<img src={src} alt={alt} decoding="async"/>:<span className="restaurant-page-placeholder">Sin vista previa</span>;
  return <li className="restaurant-page">
   <figure>{preview}<figcaption aria-label={`Página ${page}`}>{page}</figcaption><MediaStatus item={item}/></figure>
-  {!disabled&&<div className="restaurant-page-bar"><div><IconButton icon="chevronLeft" label="Mover antes" accessibleLabel={`Mover la página ${page} antes`} disabled={index===0} onClick={()=>move(-1)}/><IconButton icon="chevron" label="Mover después" accessibleLabel={`Mover la página ${page} después`} disabled={index===total-1} onClick={()=>move(1)}/></div><IconButton icon="trash" label="Quitar página" accessibleLabel={`Quitar la página ${page}`} className="danger" onClick={remove}/></div>}
+  {!disabled&&<><ImageRemoveButton label={`Quitar la página ${page}`} onClick={remove}/><div className="restaurant-page-bar"><IconButton icon="chevronLeft" label="Mover antes" accessibleLabel={`Mover la página ${page} antes`} disabled={index===0} onClick={()=>move(-1)}/><IconButton icon="chevron" label="Mover después" accessibleLabel={`Mover la página ${page} después`} disabled={index===total-1} onClick={()=>move(1)}/></div></>}
  </li>;
 }
 

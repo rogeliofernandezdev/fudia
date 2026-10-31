@@ -161,12 +161,13 @@ function CategoryFilters({categories,category,loading,error,retrying,onRetry,onC
 }
 
 /** Opciones de un menú o combo: hoja inferior en móvil y modal mediano en escritorio. */
-export function ComboConfigurator({comboId,initialSelections=[],editing=false,onClose,onConfirm}:{
+export function ComboConfigurator({comboId,initialSelections=[],editing=false,onClose,onConfirm,canSelect}:{
   comboId:string;
   initialSelections?:ComboSelection[];
   editing?:boolean;
   onClose:()=>void;
   onConfirm:(combo:ConfiguredCombo)=>void;
+  canSelect?:(selections:ComboSelection[],detail:import("../domain/catalog-types").ComboDetail)=>boolean;
 }){
   const[selected,setSelected]=useState<Record<string,string[]>>(()=>{
     const result:Record<string,string[]>={};
@@ -174,7 +175,7 @@ export function ComboConfigurator({comboId,initialSelections=[],editing=false,on
     return result;
   });
   const money=useMoney();
-  const combo=useQuery({queryKey:["order-combo",comboId],queryFn:()=>getOrderCombo(comboId),staleTime:15000});
+  const combo=useQuery({queryKey:["order-combo",comboId],queryFn:()=>getOrderCombo(comboId),staleTime:0,refetchOnMount:"always",refetchInterval:10000,refetchIntervalInBackground:false});
   const data=combo.data;
   const initialMapped=useRef(false);
 
@@ -191,11 +192,20 @@ export function ComboConfigurator({comboId,initialSelections=[],editing=false,on
     initialMapped.current=true;
   },[data,initialSelections]);
 
+  const choices=(values:Record<string,string[]>)=>data?data.groups.flatMap(group=>(values[group.id]??[]).flatMap(id=>{const option=group.options.find(item=>item.productId===id);return option?[{groupId:group.id,groupName:group.name,productId:id,name:option.name,surcharge:Number(option.surcharge)||0}]:[]})):[];
+  const optionAvailable=(group:ComboGroup,option:ComboOption)=>{
+    if(!data)return false;
+    const existing=initialSelections.some(selection=>selection.productId===option.productId&&(selection.groupId===group.id||selection.groupName.trim().toLowerCase()===group.name.trim().toLowerCase()));
+    if(!option.available&&!(editing&&existing&&canSelect))return false;
+    const ids=selected[group.id]??[];
+    const next=ids.includes(option.productId)?ids:group.maxSelections===1?[option.productId]:[...ids,option.productId];
+    return !canSelect||canSelect(choices({...selected,[group.id]:next}),data);
+  };
   const toggle=(group:ComboGroup,option:ComboOption)=>{
     setSelected(prev=>{
       const current=prev[group.id]??[];
       if(current.includes(option.productId))return{...prev,[group.id]:current.filter(id=>id!==option.productId)};
-      if(!option.available)return prev;
+      if(!optionAvailable(group,option))return prev;
       if(group.maxSelections===1)return{...prev,[group.id]:[option.productId]};
       if(current.length>=group.maxSelections)return prev;
       return{...prev,[group.id]:[...current,option.productId]};
@@ -206,7 +216,7 @@ export function ComboConfigurator({comboId,initialSelections=[],editing=false,on
     const selectedIds=selected[group.id]??[];
     const count=selectedIds.length;
     const minimum=group.required?Math.max(1,group.minSelections):group.minSelections;
-    const allAvailable=selectedIds.every(id=>group.options.find(option=>option.productId===id)?.available);
+    const allAvailable=selectedIds.every(id=>(()=>{const option=group.options.find(option=>option.productId===id);return option&&optionAvailable(group,option)})());
     return count>=minimum&&count<=group.maxSelections&&allAvailable;
   }));
 
@@ -243,10 +253,11 @@ export function ComboConfigurator({comboId,initialSelections=[],editing=false,on
                 <div className="cmd-combo-options">
                   {group.options.map(option=>{
                     const picked=selectedIds.includes(option.productId);
+                    const available=optionAvailable(group,option);
                     return(
-                      <button type="button" key={option.productId} className="cmd-combo-option" aria-pressed={picked} disabled={!option.available&&!picked} onClick={()=>toggle(group,option)}>
+                      <button type="button" key={option.productId} className="cmd-combo-option" aria-pressed={picked} disabled={!available&&!picked} onClick={()=>toggle(group,option)}>
                         <span className="cmd-combo-check" aria-hidden="true">{picked&&<Icon name="check" size={14}/>}</span>
-                        <span className="cmd-combo-option-copy"><b>{option.name}</b>{!option.available&&<small>Agotado</small>}</span>
+                        <span className="cmd-combo-option-copy"><b>{option.name}</b>{!available&&<small>{option.available?"Sin saldo disponible en la comanda":"Agotado"}</small>}</span>
                         <span className="cmd-combo-option-price">{Number(option.surcharge)>0?`+ ${money(option.surcharge)}`:"Incluido"}</span>
                       </button>
                     );
@@ -259,7 +270,7 @@ export function ComboConfigurator({comboId,initialSelections=[],editing=false,on
       </ModalBody>
       <ModalFooter className="cmd-combo-foot">
         <p className="cmd-combo-total"><small>Total del menú</small><strong>{combo.isLoading?<Skeleton width="var(--size-72)" height="var(--size-18)"/>:money(finalPrice)}</strong></p>
-        <Button icon={editing?"check":"plus"} disabled={!valid||combo.isLoading||combo.isError} onClick={()=>data&&onConfirm({productId:data.id,name:data.name,unitPrice:finalPrice,selections,imageUrl:data.imageUrl})}>
+        <Button icon={editing?"check":"plus"} disabled={!valid||combo.isLoading||combo.isError||combo.isFetching} onClick={()=>data&&onConfirm({productId:data.id,name:data.name,unitPrice:finalPrice,selections,imageUrl:data.imageUrl,availability:data})}>
           {editing?"Guardar":"Agregar menú"}
         </Button>
       </ModalFooter>

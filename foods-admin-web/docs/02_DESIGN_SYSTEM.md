@@ -332,6 +332,15 @@ recepción), `dish` para platos y productos de la carta (y el segundo de un men�
 `note` para avisos informativos, `alert` solo para advertencias y errores. No
 se usan emojis ni glifos Unicode como iconos.
 
+La navegación comparte su selección con los accesos de Configuración mediante
+`navigationItemForPath`; la búsqueda y el menú móvil consumen el mismo catálogo.
+Cocina usa `chefHat`, Carta y productos `dish`, Mesas y zonas `grid`, Caja y turnos
+`cashShift` (reloj con importe), Apps de delivery `apps`, Repartidores `motorbike`,
+Personal y asistencias `userCheck`, Locales `mapPin`, Mi restaurante `store`,
+Puesta en marcha `checklist`, Países y WhatsApp `whatsapp` y Concierge `chatbot`.
+Los glifos nuevos pertenecen al mismo set Tabler; se mantienen tamaño, trazo y
+color compartidos. Los demás accesos conservan su símbolo de dominio.
+
 ## Plataforma móvil
 
 Mobile-first desde 390 px, validado en hardware real cuando el cambio afecta
@@ -1025,9 +1034,9 @@ descargar y alternar al detalle HTML del informe sin depender del visor nativo.
   en círculo `primary-100` (`ImageDropTile`), «Arrastra tu foto aquí»
   y «JPEG, PNG o WebP · 5 MB»; en táctil (`hover: none`) dice «Toca para elegir
   una foto». Con imagen, fondo `surface`, 6 px de margen interno y la foto con
-  `object-fit: cover` dentro del marco punteado. Debajo van «Cambiar» (secondary, ancho flexible)
-  y un IconButton «Quitar imagen» de 44 px; no se superpone una X sobre la foto.
-  Todo el cuadro abre el selector y también acepta arrastrar y soltar un
+  `object-fit: cover` dentro del marco punteado. Para quitarla, una X circular
+  (`ImageRemoveButton`) montada sobre la esquina superior derecha; no hay botones
+  «Cambiar» ni papelera debajo. Todo el cuadro abre el selector y también acepta arrastrar y soltar un
   archivo (con la misma validación). Mientras se arrastra, el borde pasa a
   `primary-600` punteado sobre `primary-50`. En móvil (≤600 px) el cuadro de 176 px se
   centra arriba del formulario y los campos ocupan el ancho completo debajo.
@@ -2592,8 +2601,9 @@ encabezado estándar `.panel > header`: `IconTile` pequeño + título de 16 px /
   el ancho, con el contador «N de M» a la derecha del encabezado. Galería
   `auto-fill` de 160 px (dos columnas en móvil): cada página es una ficha con
   borde `line`, imagen 3:4 en `contain` sobre `cloud-50`, número en píldora
-  `navigation-900` y una barra inferior con «Mover antes»/«Mover después» a la
-  izquierda y «Quitar página» (rojo tenue) a la derecha, todos de 44 px. El
+  `navigation-900`, la X estándar «Quitar página» sobre la esquina superior
+  derecha y una barra inferior centrada con «Mover antes»/«Mover después» de
+  44 px. El
   último recuadro es un `ImageDropTile` múltiple «Añadir páginas»; también es
   el estado vacío. PROCESSING/FAILED se muestran con `Status` sobre la imagen.
   El error de carga del perfil se informa solo aquí, con Reintentar.
@@ -2606,3 +2616,16 @@ comparten el ancho a 44 px. Guardar persiste primero la empresa y luego la ident
 quedan guardados. Sin códigos generados ni colores por pantalla.
 El wizard usa los mismos campos; no repite nombre comercial ni indicadores de pasos.
 La fecha de apertura se configura en cada Local. Ver `../../docs/09_RESTAURANT_IDENTITY.md`.
+
+
+### Existencias en la comanda
+
+El control `+` de cada menú respeta el menor saldo entre sus componentes y sus
+cupos por alternativa. La comanda suma el mismo plato entre líneas sueltas y
+todos los combos; no muestra existencias independientes por tarjeta. Al llegar
+al límite deshabilita el incremento, conserva la disminución y permite cambiar
+las opciones. Una alternativa con cero existencias se muestra agotada y no se
+puede seleccionar. Al editar pedidos se cuenta una sola vez su reserva previa.
+Sin control conserva cantidades libres hasta marcarse agotado. El catálogo
+refresca las existencias sin consultar al servidor por cada clic; el backend
+revalida al guardar.

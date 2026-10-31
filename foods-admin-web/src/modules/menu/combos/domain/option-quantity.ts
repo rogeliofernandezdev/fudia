@@ -11,7 +11,8 @@ export function createComboOption(product:Product):Option{
 }
 
 export function isReservationValid(quota:string,product:Product):boolean{
+  if(reservationLimit(product)===0)return false;
   if(!quota)return true;
   const value=Number(quota),limit=reservationLimit(product);
-  return /^\d+$/.test(quota)&&Number.isSafeInteger(value)&&(limit===null||value<=limit);
+  return /^\d+$/.test(quota)&&Number.isSafeInteger(value)&&value>0&&(limit===null||value<=limit);
 }

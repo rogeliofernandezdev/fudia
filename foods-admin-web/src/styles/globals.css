@@ -187,13 +187,6 @@ p{text-wrap:pretty}
 .switch-row small{margin-top:var(--space-0-5);color:var(--ink-400);font-size:var(--font-size-label);font-weight:var(--weight-medium)}
 .switch-row.compact{flex-wrap:wrap;gap:var(--space-1) var(--space-2);min-height:auto;padding:var(--space-2) var(--space-3)}
 .switch-row.compact small{flex-basis:100%}
-.image-upload{display:grid;gap:var(--space-2-5);margin-top:var(--space-4)}
-.image-label{color:var(--ink-600);font-size:var(--font-size-label);font-weight:var(--weight-semibold)}
-.image-drop{position:relative;display:grid;place-items:center;width:100%;height:var(--size-120);overflow:hidden;border:var(--stroke-2) dashed var(--line-strong);border-radius:var(--radius-tile);color:var(--ink-400);background:var(--cloud-25);cursor:pointer;transition:border-color var(--duration-fast),background var(--duration-fast)}
-.image-drop img{width:100%;height:100%;object-fit:cover}
-.image-drop-empty{display:grid;place-items:center;gap:var(--space-1-5);text-align:center}
-.image-drop-empty span{font-size:var(--font-size-label);font-weight:var(--weight-semibold)}
-.image-clear{position:absolute;top:var(--space-1-5);right:var(--space-1-5);z-index:var(--z-raised);display:grid;place-items:center;width:var(--size-36);height:var(--size-36);border:0;border-radius:var(--radius-control);color:var(--surface);background:var(--ink-950-alpha-80);cursor:pointer;transition:background var(--duration-fast)}
 .allergen-picker{display:grid;gap:var(--space-1-5)}
 .react-select-container .rs__control,.react-select-container .rs__value-container{outline:none}
 .react-select-container .rs__input-container,.react-select-container .rs__input,.react-select-container .rs__input-container input{height:auto;min-height:0;padding:0;border:0;outline:0;background:transparent;box-shadow:none}
@@ -215,8 +208,6 @@ p{text-wrap:pretty}
   .button.danger:hover:not(:disabled){background:var(--danger-700)}
   .button.danger-outline:hover:not(:disabled){border-color:var(--danger-600);background:var(--danger-100)}
   .ds-input:hover:not(:disabled,:focus,[aria-invalid=true]),.ds-select:hover:not(:disabled,:focus,[aria-invalid=true]),.ds-textarea:hover:not(:disabled,:focus,[aria-invalid=true]),.form-grid :is(input,select,textarea):hover:not(:disabled,:focus,[aria-invalid=true]),.ds-input-shell:hover:not(:focus-within),.react-select-container .rs__control:hover{border-color:var(--line-strong)}
-  .image-drop:hover{border-color:var(--primary-600);background:var(--primary-50)}
-  .image-clear:hover{background:var(--danger)}
   .hover-scroll:hover{scrollbar-width:thin;scrollbar-color:var(--ink-400-alpha-40) transparent}
   .hover-scroll:hover::-webkit-scrollbar{height:var(--size-6)}
 }

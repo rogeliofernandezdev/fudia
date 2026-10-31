@@ -91,6 +91,16 @@ test("Reservar parte del saldo disponible del API, incluidos cero y stock fracci
  }
 });
 
+test("no permite incorporar una opción agotada ni reservar cero",()=>{
+ for(const quota of ["","0","1"]){assert.equal(quantities.isReservationValid(quota,{...base,availableQuantity:0}),false);}
+ assert.equal(quantities.isReservationValid("0",base),false);
+ const ui=mount({products:[{...base,availableQuantity:0}]});
+ ui.composition().find(node=>node.type==="Button"&&node.props.id==="combo-add-group").props.onClick();
+ const picker=ui.composition().find(node=>node.type==="ComboOptionPicker");
+ picker.props.onPick(picker.props.products[0]);
+ assert.equal(ui.wizard().node.props.draft.groups[0].options.length,0);
+});
+
 test("agregar una opción precarga el saldo actual y permite reservar menos",()=>{
  const ui=mount({products:[{...base,availableQuantity:12}]});
  ui.composition().find(node=>node.type==="Button"&&node.props.id==="combo-add-group").props.onClick();

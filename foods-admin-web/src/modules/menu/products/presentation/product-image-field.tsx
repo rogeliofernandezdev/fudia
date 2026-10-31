@@ -1,14 +1,13 @@
 "use client";
 import {useEffect,useRef,useState} from "react";
 import {useQuery} from "@tanstack/react-query";
-import {FormField,Button,IconButton,Status} from "@/design-system";
+import {FormField,Button,Status} from "@/design-system";
 import {ImageDropTile} from "@/design-system/image-drop-tile";
 import {localImagePreview,readImageMetadata,validateImageFile} from "@/shared/api/image-upload";
 import {getProduct} from "../infrastructure/products-api";
 import type {ProductDraft} from "../domain/types";
 
 export function ProductImageField({draft,name,busy,scopeKey,onSelect,onRemove,onValidation}:{draft:ProductDraft;name:string;busy:boolean;scopeKey:string;onSelect:(file:File|null)=>void;onRemove:()=>void;onValidation:(pending:boolean,error:string)=>void}){
- const input=useRef<HTMLInputElement>(null);
  const sequence=useRef(0);
  const blob=useRef<string|null>(null);
  const[preview,setPreview]=useState<string|null>(null);
@@ -28,10 +27,8 @@ export function ProductImageField({draft,name,busy,scopeKey,onSelect,onRemove,on
   catch(error){if(current!==sequence.current)return;const message=error instanceof Error?error.message:"La imagen no es válida.";setError(message);onSelect(null);onValidation(false,message)}
  }
  function clear(){sequence.current++;if(blob.current)URL.revokeObjectURL(blob.current);blob.current=null;setPreview(null);setChanged(true);setError("");onSelect(null);onValidation(false,"");onRemove()}
- function pick(){input.current?.click()}
  return <FormField as="div" className="product-image" label="Imagen" optional error={error}>
-  <ImageDropTile inputRef={input} src={source} alt={name} disabled={busy} label={source?"Cambiar imagen del producto":"Seleccionar imagen del producto"} dropText="Arrastra tu foto aquí" tapText="Toca para elegir una foto" hint="JPEG, PNG o WebP · 5 MB" onFiles={([file])=>void select(file)}/>
-  {source&&<div className="product-image-actions"><Button kind="secondary" icon="refresh" disabled={busy} onClick={pick}>Cambiar</Button><IconButton icon="trash" label="Quitar imagen" disabled={busy} onClick={clear}/></div>}
+  <ImageDropTile src={source} alt={name} disabled={busy} label={source?"Cambiar imagen del producto":"Seleccionar imagen del producto"} dropText="Arrastra tu foto aquí" tapText="Toca para elegir una foto" hint="JPEG, PNG o WebP · 5 MB" removeLabel="Quitar imagen" onFiles={([file])=>void select(file)} onRemove={clear}/>
   {!changed&&image.imageStatus==="PROCESSING"&&<p role="status"><Status tone="orange">Optimizando imagen</Status></p>}
   {!changed&&image.imageStatus==="FAILED"&&<p role="status"><Status tone="red">No se pudo optimizar</Status> Selecciona otra imagen para reintentar.</p>}
   {!changed&&detail.isError&&<p role="alert">No pudimos actualizar la imagen. <Button kind="secondary" onClick={()=>void detail.refetch()}>Reintentar</Button></p>}

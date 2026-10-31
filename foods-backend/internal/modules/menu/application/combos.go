@@ -76,7 +76,7 @@ func (a *Catalog) SaveCombo(ctx context.Context, s scope, id string, in domain.C
 				return result, menuFailure(apperror.Conflict, "combo_option_conflict", "No pudimos guardar una de las alternativas.")
 			}
 			if tag == 0 {
-				return result, menuFailure(apperror.Conflict, "combo_option_invalid", "Una alternativa no existe, está inactiva o crea una referencia circular.")
+				return result, menuFailure(apperror.Conflict, "combo_option_invalid", "Una alternativa no está disponible o su cantidad reservada supera las existencias del local.")
 			}
 		}
 	}
@@ -147,6 +147,40 @@ func (a *Catalog) OrderCombo(ctx context.Context, s scope, id string) (domain.Or
 	}
 	if !available {
 		return out, menuFailure(apperror.Conflict, "combo_unavailable", "Este menú o combo no está disponible en este momento.")
+	}
+	// Resolve physical availability once per batch, across every selected group.
+	ids := []string{}
+	seen := map[string]bool{}
+	for _, group := range out.Groups {
+		for _, option := range group.Options {
+			if !seen[option.ProductID] {
+				ids = append(ids, option.ProductID)
+				seen[option.ProductID] = true
+			}
+		}
+	}
+	physical := map[string]domain.AvailabilityItem{}
+	for offset := 0; offset < len(ids); offset += 100 {
+		end := offset + 100
+		if end > len(ids) {
+			end = len(ids)
+		}
+		snapshots, _, readErr := a.repo.Availability(ctx, s, CatalogFilter{Page: 1, Size: 100, ProductIDs: ids[offset:end]}, day, false)
+		if readErr != nil {
+			return out, menuFailure(apperror.Unavailable, "combo_unavailable", "No pudimos comprobar las existencias de las opciones.")
+		}
+		for _, snapshot := range snapshots {
+			item := domain.ResolveAvailability(snapshot, day.Format("2006-01-02"))
+			physical[item.ProductID] = item
+		}
+	}
+	for gi := range out.Groups {
+		for oi := range out.Groups[gi].Options {
+			option := &out.Groups[gi].Options[oi]
+			item, found := physical[option.ProductID]
+			option.Remaining = item.Remaining
+			option.Available = option.Available && found && (item.Status == "available" || item.Status == "low") && (option.QuotaRemaining == nil || *option.QuotaRemaining >= 1) && (option.Remaining == nil || *option.Remaining >= 1)
+		}
 	}
 	views, err := a.productImageViews(ctx, s, []string{id}, "medium", false)
 	if err != nil {

@@ -34,6 +34,11 @@ func ValidateCombo(in ComboInput) string {
 	}
 	groupNames := map[string]bool{}
 	for _, group := range in.Groups {
+		for _, option := range group.Options {
+			if option.Quota != nil && *option.Quota <= 0 {
+				return "La cantidad reservada debe ser mayor a cero."
+			}
+		}
 		groupName := strings.TrimSpace(group.Name)
 		if groupName == "" || group.MaxSelections < 1 || group.MinSelections < 0 || group.MaxSelections < group.MinSelections {
 			return "Revisa las reglas de selección de cada grupo."
@@ -86,10 +91,12 @@ type ComboOption struct {
 	Quota     *int   `json:"quota"`
 }
 type OrderComboOption struct {
-	ProductID string `json:"productId"`
-	Name      string `json:"name"`
-	Surcharge string `json:"surcharge"`
-	Available bool   `json:"available"`
+	ProductID      string   `json:"productId"`
+	Name           string   `json:"name"`
+	Surcharge      string   `json:"surcharge"`
+	Available      bool     `json:"available"`
+	Remaining      *float64 `json:"remaining"`
+	QuotaRemaining *float64 `json:"quotaRemaining"`
 }
 type ComboGroup struct {
 	ID            string        `json:"id"`

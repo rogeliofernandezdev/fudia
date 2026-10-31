@@ -1,19 +1,19 @@
 import {
   IconAlertTriangle, IconArmchair, IconArrowBackUp, IconArrowsExchange, IconBan, IconBell, IconBike,
-  IconBowlSpoon, IconBox, IconBuilding, IconBuildingStore, IconBulb, IconCalendar, IconCash, IconCashRegister, IconChartBar,
+  IconApps, IconBowlSpoon, IconBox, IconBuilding, IconBuildingStore, IconBulb, IconCalendar, IconCash, IconCashRegister, IconChartBar, IconClockDollar,
   IconChartPie, IconCheck, IconChefHat, IconChevronLeft, IconChevronRight, IconCircleArrowRight, IconCircleCheck,
   IconCircleMinus, IconCircleX, IconClipboardCheck, IconClipboardList, IconClock, IconContract, IconCreditCard, IconCup,
   IconDeviceDesktop, IconDeviceFloppy, IconDeviceMobile, IconDownload, IconEye, IconFileInvoice, IconFilter, IconGauge,
   IconHeart, IconIceCream2, IconId, IconInfoCircle, IconKey, IconLayout, IconLayoutBoardSplit, IconLayoutGrid,
   IconLayoutSidebarLeftCollapse, IconLayoutSidebarLeftExpand, IconLink, IconLock, IconLogin, IconLogout, IconMail,
   IconMapPin, IconMenu2, IconMessageCircle, IconMinus, IconNote, IconNotebook, IconPackages, IconPencil, IconPercentage,
-  IconPhone, IconPlug, IconPlus, IconPower, IconQrcode, IconReceipt, IconRefresh, IconRoute, IconSalad, IconSearch,
+  IconListCheck, IconMessageChatbot, IconPhone, IconPlug, IconPlus, IconPower, IconQrcode, IconReceipt, IconRefresh, IconRoute, IconSalad, IconSearch,
   IconSend, IconSettings, IconShare, IconShoppingBag, IconShoppingCart, IconSoup, IconStack2, IconStar, IconTag,
   IconToggleLeftFilled, IconToggleRightFilled, IconToolsKitchen2, IconTrash, IconTruck, IconUpload, IconUser, IconUserCheck,
   IconUsers, IconWallet, IconX, IconArrowUpRight, IconArrowDownRight, IconFlame, IconChecks, IconMotorbike, IconBrandWhatsapp, type Icon as TablerIcon,
 } from "@tabler/icons-react";
 
-export type IconName = "info"|"grid"|"sales"|"receipt"|"menu"|"utensils"|"chefHat"|"cookingPot"|"kitchen"|"combo"|"stock"|"truck"|"users"|"store"|"settings"|"search"|"bell"|"plus"|"minus"|"chevron"|"chevronLeft"|"filter"|"download"|"upload"|"alert"|"check"|"clock"|"box"|"logout"|"eye"|"lock"|"mail"|"edit"|"power"|"toggleOn"|"toggleOff"|"circleCheck"|"circleMinus"|"circleSlash"|"save"|"refresh"|"close"|"panelCollapse"|"panelExpand"|"qr"|"share"|"trash"|"arrowRightCircle"|"payment"|"cancel"|"availability"|"ledger"|"building"|"contract"|"mapPin"|"userCheck"|"register"|"orders"|"tables"|"layout"|"cash"|"calendar"|"phone"|"kiosk"|"gauge"|"cart"|"route"|"link"|"bike"|"user"|"heart"|"star"|"badge"|"tag"|"wallet"|"pie"|"phoneApp"|"percent"|"layers"|"plug"|"chat"|"login"|"key"|"lightbulb"|"undo"|"transfer"|"invoice"|"dish"|"note"|"send"|"shoppingBag"|"salad"|"dessert"|"drink"|"arrowUpRight"|"arrowDownRight"|"flame"|"checks"|"motorbike"|"whatsapp";
+export type IconName = "info"|"grid"|"sales"|"receipt"|"menu"|"utensils"|"chefHat"|"cookingPot"|"kitchen"|"combo"|"stock"|"truck"|"users"|"store"|"settings"|"search"|"bell"|"plus"|"minus"|"chevron"|"chevronLeft"|"filter"|"download"|"upload"|"alert"|"check"|"clock"|"box"|"logout"|"eye"|"lock"|"mail"|"edit"|"power"|"toggleOn"|"toggleOff"|"circleCheck"|"circleMinus"|"circleSlash"|"save"|"refresh"|"close"|"panelCollapse"|"panelExpand"|"qr"|"share"|"trash"|"arrowRightCircle"|"payment"|"cancel"|"availability"|"ledger"|"building"|"contract"|"mapPin"|"userCheck"|"register"|"orders"|"tables"|"layout"|"cash"|"calendar"|"phone"|"kiosk"|"gauge"|"cart"|"route"|"link"|"bike"|"user"|"heart"|"star"|"badge"|"tag"|"wallet"|"pie"|"phoneApp"|"percent"|"layers"|"plug"|"chat"|"login"|"key"|"lightbulb"|"undo"|"transfer"|"invoice"|"dish"|"note"|"send"|"shoppingBag"|"salad"|"dessert"|"drink"|"arrowUpRight"|"arrowDownRight"|"flame"|"checks"|"motorbike"|"whatsapp"|"cashShift"|"apps"|"checklist"|"chatbot";
 /** Tamaños homologados: 14 junto a texto de 12–13 px, 16 en chips y pestañas, 18 en acciones, 20 en navegación, 24 en estados vacíos. */
 export type IconSize=14|16|18|20|24|28|32|36|40|48;
 
@@ -25,6 +25,7 @@ export type IconSize=14|16|18|20|24|28|32|36|40|48;
  * `IconName`, de modo que cambiar un glifo se hace únicamente aquí.
  */
 const glyphs: Record<IconName, TablerIcon> = {
+  cashShift:IconClockDollar, apps:IconApps, checklist:IconListCheck, chatbot:IconMessageChatbot,
   info:IconInfoCircle, grid:IconLayoutGrid, sales:IconChartBar, receipt:IconReceipt, menu:IconMenu2,
   utensils:IconToolsKitchen2, chefHat:IconChefHat, cookingPot:IconSoup, kitchen:IconSoup, combo:IconLayoutBoardSplit,
   stock:IconPackages, truck:IconTruck, users:IconUsers, store:IconBuildingStore, settings:IconSettings, search:IconSearch,

@@ -34,7 +34,8 @@ export function ComboOptionSearch({inputId,partName,products,excluded,invalid,de
     instanceId={`${inputId}-picker`}
     options={groups}
     value={null}
-    onChange={option=>{const product=option&&products.find(item=>item.id===option.value);if(product)onPick(product)}}
+    isOptionDisabled={option=>option.limit===0}
+    onChange={option=>{const product=option&&products.find(item=>item.id===option.value);if(product&&option?.limit!==0)onPick(product)}}
     filterOption={filterOption}
     formatOptionLabel={option=><><span className="combo-pick-name">{option.label}</span>{stockLabel(option.limit)}</>}
     placeholder="+ Agregar opción: busca un plato…"

@@ -235,7 +235,7 @@ function ComboEditor({draft,setDraft,products,productsLoading,productsError,retr
     if(saleWindow==="days"&&!draft.availableDays.length&&!draft.availableFrom&&!draft.availableUntil){showIssue({step:3,field:"combo-days",message:"Elige al menos un día o una fecha."});return;}
     finish();
   }
-  function addTemplate(){update({...draft,groups:templates.map(group=>({...group,options:products.filter(product=>belongsToGroup(product,group.name)).map(createComboOption)}))})}
+  function addTemplate(){update({...draft,groups:templates.map(group=>({...group,options:products.filter(product=>product.active&&reservationLimit(product)!==0&&belongsToGroup(product,group.name)).map(createComboOption)}))})}
   function addGroup(){const index=draft.groups.length;update({...draft,groups:[...draft.groups,{name:"",required:true,minSelections:1,maxSelections:1,options:[]}]});reveal(`combo-group-${index}-name`)}
   function groupAt(index:number,next:Group){update({...draft,groups:draft.groups.map((group,position)=>position===index?next:group)})}
   function removeGroup(index:number){update({...draft,groups:draft.groups.filter((_,position)=>position!==index)})}
@@ -373,7 +373,7 @@ function CompositionStep({draft,products,productsLoading,productsError,retryProd
             })}
           </ul>
         </div>}
-        <ComboOptionPicker inputId={`${prefix}-product`} partName={group.name} products={products} excluded={group.options.map(option=>option.productId)} invalid={Boolean(productError)} describedBy={productError?`${prefix}-product-error`:undefined} onPick={product=>groupAt(index,{...group,options:[...group.options,createComboOption(product)]})}/>
+        <ComboOptionPicker inputId={`${prefix}-product`} partName={group.name} products={products} excluded={group.options.map(option=>option.productId)} invalid={Boolean(productError)} describedBy={productError?`${prefix}-product-error`:undefined} onPick={product=>{if(product.active&&reservationLimit(product)!==0)groupAt(index,{...group,options:[...group.options,createComboOption(product)]})}}/>
         {productError&&<small id={`${prefix}-product-error`} className="field-error" role="alert">{productError}</small>}
       </section>;
     })}

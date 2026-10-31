@@ -37,7 +37,12 @@ func (r *Catalog) CreateComboGroup(ctx context.Context, s scope, id string, grou
 	return groupID, menuError(err)
 }
 func (r *Catalog) CreateComboOption(ctx context.Context, s scope, id string, groupID string, option domain.ComboOptionInput, optionIndex int) (int64, error) {
-	tag, err := r.db(ctx).Exec(ctx, `INSERT INTO menu_combo_options(organization_id,group_id,option_product_id,surcharge,sort_order,default_quota) SELECT $1,$2,p.id,$4,$5,$6 FROM products p WHERE p.id=$3 AND p.organization_id=$1 AND p.active AND p.id<>$7`, s.OrganizationID, groupID, option.ProductID, normalizedSurcharge(option.Surcharge), optionIndex, option.Quota, id)
+	tag, err := r.db(ctx).Exec(ctx, `INSERT INTO menu_combo_options(organization_id,group_id,option_product_id,surcharge,sort_order,default_quota) SELECT $1,$2,p.id,$4,$5,$6 FROM products p WHERE p.id=$3 AND p.organization_id=$1 AND p.active AND p.id<>$7
+ AND ($6::integer IS NULL OR $6>0)
+ AND EXISTS(SELECT 1 FROM locations l LEFT JOIN product_availability pa ON pa.organization_id=p.organization_id AND pa.location_id=l.id AND pa.product_id=p.id AND pa.business_date=(now() AT TIME ZONE l.timezone)::date
+ WHERE l.id=$8 AND l.organization_id=p.organization_id AND l.active AND COALESCE(pa.manual_status,'available')<>'sold_out'
+ AND (p.quantity_control='none' OR (p.quantity_control='portions' AND COALESCE(pa.portion_quantity,0)-COALESCE(pa.sold_quantity,0)>=COALESCE($6,1))
+ OR (p.quantity_control='inventory' AND COALESCE((SELECT sb.quantity FROM inventory_items ii JOIN stock_balances sb ON sb.organization_id=ii.organization_id AND sb.inventory_item_id=ii.id AND sb.location_id=l.id WHERE ii.organization_id=p.organization_id AND ii.product_id=p.id AND ii.active),0)>=COALESCE($6,1))))`, s.OrganizationID, groupID, option.ProductID, normalizedSurcharge(option.Surcharge), optionIndex, option.Quota, id, s.LocationID)
 	return tag.RowsAffected(), menuError(err)
 }
 func (r *Catalog) BusinessDate(ctx context.Context, s scope) (time.Time, error) {
@@ -269,11 +274,8 @@ func (r *Catalog) OrderCombo(ctx context.Context, s scope, id string, day time.T
 			       AND (p.available_until IS NULL OR now() <= p.available_until)
 			       AND (p.available_days IS NULL OR extract(dow FROM now() AT TIME ZONE l.timezone)::integer = ANY(p.available_days))
 			       AND (p.available_until_time IS NULL OR (now() AT TIME ZONE l.timezone)::time <= p.available_until_time)
-			       AND COALESCE(pa.manual_status,'available') <> 'sold_out'
-			       
-			       AND (
-			         o.default_quota IS NULL OR
-			         COALESCE((
+			       AND COALESCE(pa.manual_status,'available') <> 'sold_out',
+			       CASE WHEN o.default_quota IS NULL THEN NULL ELSE greatest(0,o.default_quota-COALESCE((
 			           SELECT sum(oi.qty)
 			           FROM order_item_combo_selections ssel
 			           JOIN order_items oi ON oi.id=ssel.order_item_id AND oi.organization_id=ssel.organization_id
@@ -285,8 +287,7 @@ func (r *Catalog) OrderCombo(ctx context.Context, s scope, id string, day time.T
 			             AND ord.location_id=l.id
 			             AND ord.status<>'cancelado'
 			             AND (ord.created_at AT TIME ZONE l.timezone)::date=$4::date
-			         ),0) < o.default_quota
-			       )
+			         ),0))::float8 END
 			FROM menu_combo_options o
 			JOIN menu_combo_groups g ON g.id=o.group_id AND g.organization_id=o.organization_id
 			JOIN products p ON p.id=o.option_product_id AND p.organization_id=o.organization_id
@@ -300,7 +301,7 @@ func (r *Catalog) OrderCombo(ctx context.Context, s scope, id string, day time.T
 		}
 		for options.Next() {
 			var o domain.OrderComboOption
-			if err = options.Scan(&o.ProductID, &o.Name, &o.Surcharge, &o.Available); err != nil {
+			if err = options.Scan(&o.ProductID, &o.Name, &o.Surcharge, &o.Available, &o.QuotaRemaining); err != nil {
 				options.Close()
 				return out, false, err
 			}

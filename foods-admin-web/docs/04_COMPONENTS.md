@@ -381,16 +381,22 @@ Reglas:
   `onPlaceChange` entrega `{district, city}` de la sugerencia elegida: en Perú Mapbox
   informa el distrito como `place` (o `locality`) y el departamento como `region`, sin
   el prefijo «Departamento de». Se importa directo, no desde el barrel, y carga su CSS.
-- `ImageDropTile({src,file,alt,label,dropText,tapText,hint,fit,multiple,inputRef,onFiles})`
+- `ImageDropTile({src,file,alt,label,dropText,tapText,hint,fit,multiple,removeLabel,onFiles,onRemove})`
   (`@/design-system/image-drop-tile`, se importa directo y carga su CSS): único
   control para elegir imágenes. Recuadro punteado `line-strong` sobre `cloud-25`,
   icono `upload` en círculo `primary-100`, texto distinto para ratón y táctil
   (`hover: none`) y la regla de archivos en `ink-400`; acepta arrastrar y soltar
-  (`primary-600` sobre `primary-50`). Con imagen la muestra (`cover` o `contain`) y
-  un toque la reemplaza; `file` presenta el archivo local con `FileImage`, que
-  libera la URL temporal. Las acciones Cambiar/Quitar van fuera del recuadro.
-  Lo usan Producto › Imagen y Mi restaurante › Logo y Carta virtual. Prohibido
-  mostrar el `<input type="file">` nativo.
+  (`primary-600` sobre `primary-50`). Con imagen la muestra (`cover` o `contain`);
+  `file` presenta el archivo local con `FileImage`, que libera la URL temporal.
+- **Estándar para toda imagen editable:** tocar la imagen la reemplaza y
+  `onRemove` muestra `ImageRemoveButton`, una X circular de 24 px (área táctil de
+  44 px) montada sobre la esquina superior derecha: fondo `surface`, borde
+  `line-strong`, sombra `elevation-2` y hover rojo tenue (`danger-50`/`danger-600`).
+  Es la única forma de quitar: no se agregan botones «Cambiar» ni papelera.
+  `ImageRemoveButton` también se usa sola sobre fichas que no son un
+  `ImageDropTile` (páginas de la carta); su contenedor lleva `position: relative`
+  y no recorta el desborde. Lo usan Producto › Imagen y Mi restaurante › Logo y
+  Carta virtual. Prohibido mostrar el `<input type="file">` nativo.
 - `SearchField` para buscar, `Select` para catálogos del API, `Tabs` para
   vistas o segmentos. Sin `<input>`, `<select>` ni pestañas locales.
 - Validación: React Hook Form + Zod en `onSubmit` y revalidación `onChange`;

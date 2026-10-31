@@ -228,12 +228,12 @@ func (r *Catalog) Products(ctx context.Context, s scope, f application.CatalogFi
 	rows, err := r.db(ctx).Query(ctx, `
 		SELECT p.id,p.sku,p.name,p.description,p.category_id,c.name,p.price::text,p.active,p.product_type,p.quantity_control,p.image_url,p.prep_minutes,p.allergens,p.featured,p.cost_price::text,p.available_from::text,p.available_until::text,p.available_days,p.available_until_time::text,p.service_destination,EXISTS(SELECT 1 FROM product_recipes pr WHERE pr.organization_id=p.organization_id AND pr.product_id=p.id AND pr.active),
 		       CASE
-		         WHEN p.quantity_control='none' THEN NULL
 		         WHEN NOT p.active OR pa.manual_status='sold_out'
 		           OR (p.available_from IS NOT NULL AND now()<p.available_from)
 		           OR (p.available_until IS NOT NULL AND now()>p.available_until)
 		           OR (p.available_days IS NOT NULL AND NOT (extract(dow FROM now() AT TIME ZONE l.timezone)::integer=ANY(p.available_days)))
 		           OR (p.available_until_time IS NOT NULL AND (now() AT TIME ZONE l.timezone)::time>p.available_until_time) THEN 0
+		         WHEN p.quantity_control='none' THEN NULL
 		         WHEN p.quantity_control='portions' THEN GREATEST(COALESCE(pa.portion_quantity,0)-COALESCE(pa.sold_quantity,0),0)
 		         WHEN p.quantity_control='inventory' THEN GREATEST(COALESCE(sb.quantity,0),0)
 		       END::float8,
