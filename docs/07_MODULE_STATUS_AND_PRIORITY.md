@@ -190,7 +190,7 @@ esté terminado. Falta la parte de costeo y rentabilidad.
 | --- | --- | --- | --- |
 | Fiscal y moneda | `fiscal` | 🟢 Ready / activable | Perfil fiscal y moneda reales. Auditoría de cierre pendiente. |
 | Usuarios y roles | `usuarios` | 🟢 Ready / activable | Roles/permisos forman parte del onboarding. Auditoría de cierre pendiente. |
-| Facturación | `facturacion` | 🔵 En desarrollo | Boleta y factura de Perú desde el cobro con motor SUNAT propio (XML UBL 2.1, firma, SOAP y CDR; aceptadas en SUNAT beta), credenciales cifradas por empresa, Comprobantes con descarga de XML y CDR, y Configuración › Facturación (2026-11-01). Falta nota de crédito, resumen diario y bajas, emisión desde Ventas, impresión con QR y Cloud Tasks. Piloto por empresa desde Módulos (solo Plataforma). |
+| Facturación | `facturacion` | 🟢 Ready / activable | Boleta y factura de Perú desde el cobro con motor SUNAT propio (XML UBL 2.1, firma, SOAP y CDR; aceptadas en SUNAT beta), credenciales cifradas por empresa, Comprobantes con descarga de XML y CDR, y Configuración › Facturación (2026-11-01). Falta nota de crédito, resumen diario y bajas, emisión desde Ventas, impresión con QR y Cloud Tasks. Disponible desde el 2026-11-01 en Impulso y Escala (migración 000099); la empresa decide si emite. |
 | Integraciones | `integraciones` | 🔵 En desarrollo | Pendiente completar adaptadores operativos. |
 | Fudia Concierge | `whatsapp_bot` | ✅ **100% cerrado** | QR/WhatsApp, menú real, pedidos/KDS, combos, modificadores, rondas, cuenta, handoff, multiagente, cola durable, aislamiento multicanal, resiliencia, observabilidad, evals y CI/Docker están cerrados. La activación comercial sigue dependiendo del plan/entitlement; el go-live requiere credenciales externas. Ampliación 2026-10-16: delivery/recojo tras la mesa con tarifas por distancia (pendiente CI con PostgreSQL y evals reales). Ampliación 2026-10-23: medición y tope mensual de conversaciones por plan con modo medir/avisar/bloquear, solo para Plataforma (migración 000091). |
 
@@ -368,8 +368,9 @@ Punto de continuación de Facturación:
    `getStatus` con ticket);
 10. prueba en producción con el certificado y el usuario SOL de una empresa
     piloto;
-11. pasar `facturacion` a disponible e incluirlo en Impulso y Escala; hoy
-    Plataforma lo activa como piloto por empresa desde Módulos.
+11. ✅ `facturacion` disponible e incluido en Impulso y Escala (migración
+    000099); los suscriptores actuales de esos planes lo reciben activo y un
+    piloto en otro plan termina.
 
 ---
 

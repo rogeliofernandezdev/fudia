@@ -93,7 +93,7 @@ func TestPlatformOnboardingCreatesOperationalTenant(t *testing.T) {
 	if subscriptionStatus != "trial" || billingCycle != "monthly" || price != "99.00" {
 		t.Fatalf("unexpected subscription: status=%s cycle=%s price=%s", subscriptionStatus, billingCycle, price)
 	}
-	if err := pool.QueryRow(context.Background(), `SELECT count(*) FROM organization_modules WHERE organization_id=$1 AND module_key IN ('facturacion','integraciones','crm','bi') AND active`, created.OrganizationID).Scan(&inactiveFuture); err != nil {
+	if err := pool.QueryRow(context.Background(), `SELECT count(*) FROM organization_modules WHERE organization_id=$1 AND module_key IN ('carta_qr','integraciones','crm','bi') AND active`, created.OrganizationID).Scan(&inactiveFuture); err != nil {
 		t.Fatal(err)
 	}
 	// Plans never switch on modules in development (pilots) or planned ones.

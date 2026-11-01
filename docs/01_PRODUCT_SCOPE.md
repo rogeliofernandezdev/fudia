@@ -104,6 +104,7 @@ Plataforma y fuera del plan.
 | Kardex | `kardex` | — | ✓ | ✓ |
 | Compras | `compras` | — | ✓ | ✓ |
 | Costos y gastos | `costos` | — | ✓ | ✓ |
+| Facturación electrónica | `facturacion` | — | ✓ | ✓ |
 
 - **Emprende** vende y atiende en un solo local. Los egresos del turno se
   registran en Caja; no incluye abastecimiento ni control de costos.
@@ -115,8 +116,8 @@ Plataforma y fuera del plan.
   60 usuarios.
 - Concierge está en todos los planes, con un límite mensual de conversaciones
   por plan, como los límites de locales y usuarios.
-- **Facturación electrónica** (`facturacion`, en desarrollo): al cerrarse se
-  incluirá desde **Impulso**, no en Emprende. Es opcional en dos niveles: la
+- **Facturación electrónica** (`facturacion`, disponible desde el 2026-11-01,
+  migración 000099): se incluye desde **Impulso**, no en Emprende. Es opcional en dos niveles: la
   empresa puede desactivarla y, con ella activa, el cajero emite solo si el
   cliente pide comprobante. Detalle en
   [`foods-backend/docs/14_EINVOICING.md`](../foods-backend/docs/14_EINVOICING.md).

@@ -13,7 +13,7 @@ function compile(file,imports={}){
 const routes=compile("src/shared/routing/page-routes.ts");
 const navigation=compile("src/shell/navigation.ts",{"@/shared/routing/page-routes":routes});
 const context={user:{platformAdmin:false},modules:{reportes:true,pos:true,pedidos:true,cocina:true,mesas:true,caja:true,productos:true,combos:true,clientes:true,locales:true,fiscal:true,usuarios:true,whatsapp_bot:true},menuAccess:["*"],permissions:["*"]};
-const impulso={...context,modules:{...context.modules,reservas:true,recetas:true,inventario:true,kardex:true,compras:true,costos:true}};
+const impulso={...context,modules:{...context.modules,reservas:true,recetas:true,inventario:true,kardex:true,compras:true,costos:true,facturacion:true}};
 const keys=ctx=>navigation.visibleNavigation(ctx).flatMap(group=>group.items.map(item=>item.module));
 
 test("inicio y Dashboard no habilitado llevan al primer acceso efectivo del cajero",()=>{
@@ -58,10 +58,10 @@ test("Emprende presenta venta, atención y Concierge sin abastecimiento ni contr
  assert.ok(navigation.visibleNavigation(context).every(group=>group.items.length>0));
 });
 
-test("Impulso suma abastecimiento, recetas, reservas y gastos a todo Emprende",()=>{
+test("Impulso suma abastecimiento, recetas, reservas, gastos y facturación a todo Emprende",()=>{
  const base=keys(context),modules=keys(impulso);
  for(const key of base)assert.ok(modules.includes(key),key);
- for(const key of ["inventario","compras","kardex","recetas","reservas","costos"])assert.ok(modules.includes(key),key);
+ for(const key of ["inventario","compras","kardex","recetas","reservas","costos","facturacion"])assert.ok(modules.includes(key),key);
 });
 
 test("Inventario y Compras de Impulso conservan acceso y acciones propios del rol",()=>{

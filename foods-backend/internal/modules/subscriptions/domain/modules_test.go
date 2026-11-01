@@ -14,8 +14,11 @@ func TestModuleEnabledByAvailability(t *testing.T) {
 		{"reportes", outsidePlan, false},
 		{"reportes", ModuleSwitch{InPlan: true}, false},
 		// A pilot does not depend on the plan: plans cannot include it.
-		{"facturacion", outsidePlan, true},
-		{"facturacion", ModuleSwitch{InPlan: true}, false},
+		{"carta_qr", outsidePlan, true},
+		{"carta_qr", ModuleSwitch{InPlan: true}, false},
+		// Facturación is ready: it needs the plan (Impulso and Escala).
+		{"facturacion", on, true},
+		{"facturacion", outsidePlan, false},
 		// Planned modules stay closed even with stale data.
 		{"crm", on, false},
 	}
@@ -24,7 +27,7 @@ func TestModuleEnabledByAvailability(t *testing.T) {
 			t.Errorf("%s %+v: got %v", c.key, c.state, got)
 		}
 	}
-	if ModuleCanPilot("reportes") || !ModuleCanPilot("facturacion") || ModuleCanPilot("crm") {
+	if ModuleCanPilot("reportes") || !ModuleCanPilot("carta_qr") || ModuleCanPilot("facturacion") || ModuleCanPilot("crm") {
 		t.Fatal("only development modules can be piloted")
 	}
 }
