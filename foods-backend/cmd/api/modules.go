@@ -79,12 +79,17 @@ func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages) *httpapi.API {
 	identityService := identityapp.New(identitypg.New(db), credentials.Credentials{})
 	tips := billingapp.NewTips(paymentsRepo, work)
 	platform.WithTips(tips)
-	payments := billingapp.NewPayments(paymentsRepo, work, audit, methods, orders).WithAuthorization(identityService).WithTips(tips)
+	organizations.WithTips(tips)
+	taxRegimes := orgapp.NewTaxRegimes(orgpg.NewTaxRegimes(db), work, audit)
+	fiscalDocuments, einvoicingHandler := newEInvoicing(db, work, audit, orders, taxRegimes, access)
+	payments := billingapp.NewPayments(paymentsRepo, work, audit, methods, orders).WithAuthorization(identityService).WithTips(tips).WithFiscal(fiscalDocuments)
 
 	return httpapi.NewWithHandlers(httpapi.Handlers{
 		RestaurantProfile:      orghttp.New(organizations).WithProfiles(profiles),
 		Tips:                   billinghttp.NewTips(tips),
 		Organizations:          orghttp.New(organizations),
+		TaxRegimes:             orghttp.NewTaxRegimes(taxRegimes),
+		EInvoicing:             einvoicingHandler,
 		Subscriptions:          subscriptionhttp.New(subscriptions),
 		Platform:               platformhttp.New(platform),
 		Concierge:              conciergehttp.New(conciergeapp.New(conciergepg.New(db), menu, orders, audit).WithBranding(profiles), func() string { return os.Getenv("FUDIA_CONCIERGE_API_KEY") }),

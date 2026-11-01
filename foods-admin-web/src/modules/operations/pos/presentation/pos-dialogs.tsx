@@ -1,15 +1,17 @@
 "use client";
 import {Dialog} from "@/design-system/dialog";
+import {useState} from "react";
 import {useForm,useWatch} from "react-hook-form";
 import {Button,FormField,FormSection,Icon,Input,Select,Textarea,ModalHeader,ModalForm,ModalBody,ModalFooter} from "@/design-system";
 import {calculateTip,canCollectTip,type TipPolicy,type TipReceipt} from "../../tips";
+import {CheckoutFiscalSection,blankFiscalDraft,fiscalRequest,validateFiscalDraft,type CheckoutOptions,type FiscalDraft,type FiscalErrors} from "@/modules/einvoicing";
 import {cashChange,paymentResolverFor,refundResolver} from "../domain/pos-schema";
 import type {POSCollectionShift,Payment,PaymentDraft,PaymentMethodOption,POSOrderSummary,RefundDraft} from "../domain/types";
 
 /** El icono sigue a «Impacta caja»; el nombre y el orden vienen del catálogo. */
 export function paymentMethodIcon(affectsCash:boolean){return affectsCash?"cash" as const:"wallet" as const}
 
-export function PaymentForm({order,methods,shiftName,shiftOptions=[],selectedShiftId="",selectShift,busy,formatMoney,close,save,tipPolicy,registeredTip}:{order:POSOrderSummary;methods:PaymentMethodOption[];shiftName:string;shiftOptions?:POSCollectionShift[];selectedShiftId?:string;selectShift?:(id:string)=>void;busy:boolean;formatMoney:(value:number)=>string;close:()=>void;save:(draft:PaymentDraft)=>void;tipPolicy?:TipPolicy;registeredTip?:TipReceipt}){
+export function PaymentForm({order,methods,shiftName,shiftOptions=[],selectedShiftId="",selectShift,busy,formatMoney,close,save,tipPolicy,registeredTip,fiscalOptions}:{order:POSOrderSummary;methods:PaymentMethodOption[];shiftName:string;shiftOptions?:POSCollectionShift[];selectedShiftId?:string;selectShift?:(id:string)=>void;busy:boolean;formatMoney:(value:number)=>string;close:()=>void;save:(draft:PaymentDraft)=>void;tipPolicy?:TipPolicy;registeredTip?:TipReceipt;fiscalOptions?:CheckoutOptions}){
   const tipAllowed=canCollectTip(tipPolicy,order.channel,Boolean(registeredTip));
   const tipBase=Math.max(0,Number(order.total)-Number(order.deliveryFee??0));
   const{control,register,handleSubmit,formState:{errors}}=useForm<PaymentDraft>({
@@ -29,7 +31,21 @@ export function PaymentForm({order,methods,shiftName,shiftOptions=[],selectedShi
   const collected=(Number(amount)||0)+(direct?0:tip);
   const selected=methods.find(option=>option.code===method);
   const change=cashChange(String(collected),received);
-  return <ModalForm onSubmit={handleSubmit(draft=>{if(shiftOptions.length>1&&!selectedShiftId)return;save(draft)})} noValidate inert={busy}>
+  // One document per order: it is requested by the payment that settles the account.
+  const[fiscal,setFiscal]=useState<FiscalDraft>(()=>({...blankFiscalDraft(fiscalOptions),customerName:order.channel==="salon"?"":order.customerName??""}));
+  const[fiscalErrors,setFiscalErrors]=useState<FiscalErrors>({});
+  const settles=Number(amount)+0.000001>=Number(order.remainingAmount);
+  const offerFiscal=Boolean(fiscalOptions?.enabled)&&settles;
+  function submit(draft:PaymentDraft){
+    if(shiftOptions.length>1&&!selectedShiftId)return;
+    if(offerFiscal){
+      const errors=validateFiscalDraft(fiscalOptions,fiscal,Number(order.total));
+      setFiscalErrors(errors);
+      if(Object.keys(errors).length)return;
+    }
+    save({...draft,fiscal:offerFiscal?fiscalRequest(fiscalOptions,fiscal):undefined});
+  }
+  return <ModalForm onSubmit={handleSubmit(submit)} noValidate inert={busy}>
       <ModalBody className="pos-payment-body">
         <section className="pos-payment-overview">
           <div className="pos-payment-balance"><span><Icon name="wallet" size={18}/></span><div><small>Saldo a cobrar</small><strong>{formatMoney(Number(order.remainingAmount))}</strong></div></div>
@@ -48,6 +64,7 @@ export function PaymentForm({order,methods,shiftName,shiftOptions=[],selectedShi
           {errors.method?.message&&<small className="field-error">{errors.method.message}</small>}
         </fieldset>
         </FormSection>
+        {offerFiscal&&fiscalOptions&&<CheckoutFiscalSection options={fiscalOptions} value={fiscal} onChange={next=>{setFiscal(next);setFiscalErrors({})}} errors={fiscalErrors} disabled={busy}/>}
         {tipAllowed&&<FormSection icon="percent" title="Propina" bare>
           <label className="pos-tip-toggle"><input type="checkbox" {...register("tipEnabled")}/><span>El cliente acepta dejar propina</span></label>
           {enabled&&<div className="pos-payment-fields">

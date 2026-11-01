@@ -18,8 +18,9 @@ Las reglas específicas deben leerse completas antes de modificar ese proyecto;
 los documentos de la raíz conservan únicamente decisiones transversales.
 
 La solución se organiza en cinco proyectos. Fudia Concierge orquesta la
-conversación con el comensal y consume foods-backend como fuente de verdad. SUNAT,
-impresión y pagos continúan encapsulados como integraciones del backend. No se crea una aplicación móvil nativa en la fase
+conversación con el comensal y consume foods-backend como fuente de verdad. La
+facturación electrónica por país, la impresión y los pagos continúan encapsulados
+como integraciones del backend. No se crea una aplicación móvil nativa en la fase
 inicial: `foods-admin-web` concentra la experiencia web operativa y administrativa y debe ser adaptable desde 390 px.
 
 ## Documentación

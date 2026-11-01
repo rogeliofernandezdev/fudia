@@ -43,6 +43,7 @@ function mountPage({canManage=true,shift=true,busy=false,initialOrderId="order-1
   if(name.endsWith("collection-shift"))return compile("../domain/collection-shift.ts",require);
   if(name.endsWith("service-flow"))return serviceFlowExports;
   if(name.endsWith("shift-attribution"))return{cashShiftAttribution:()=>({name:"Ana"})};
+  if(name==="@/modules/einvoicing")return{useCheckoutOptions:()=>({isLoading:false,data:undefined}),fiscalStatusView:{ACCEPTED:{label:"Aceptado"},PENDING:{label:"Emitiendo"}}};
   if(name.startsWith("@/")||name.startsWith("../")||name.startsWith("./"))return{};
   return require(name);
  };
@@ -190,6 +191,8 @@ test("el formulario de pago tiene Registrar cobro y envía solo al confirmar",()
    if(name==="@/design-system")return primitives;
    if(name==="@/design-system/dialog")return{Dialog:"Dialog"};
    if(name==="react-hook-form")return{useForm:options=>{defaults=options.defaultValues;return{register:()=>({}),handleSubmit:save=>()=>save(defaults),formState:{errors:{}}}},useWatch:()=>"cash"};
+   if(name==="react")return{...require(name),useState:value=>[typeof value==="function"?value():value,()=>{}]};
+   if(name==="@/modules/einvoicing")return{CheckoutFiscalSection:"CheckoutFiscalSection",blankFiscalDraft:()=>({documentType:"none",customerDocumentType:"",customerDocumentNumber:"",customerName:"",customerAddress:""}),fiscalRequest:()=>undefined,validateFiscalDraft:()=>({})};
    if(name.endsWith("pos-schema"))return compile("../domain/pos-schema.ts",name=>name.endsWith("tips/domain/calculation")?tipCalculation:require(name));
    if(name.startsWith("../"))return{};
    return require(name);
@@ -322,6 +325,8 @@ test("el cobro usa el catálogo de medios de pago y la nota de caja sigue a Impa
    if(name==="@/design-system")return primitives;
    if(name==="@/design-system/dialog")return{Dialog:"Dialog"};
    if(name==="react-hook-form")return{useForm:options=>{defaults=options.defaultValues;return{register:()=>({}),handleSubmit:save=>()=>save(defaults),formState:{errors:{}}}},useWatch:()=>watched};
+   if(name==="react")return{...require(name),useState:value=>[typeof value==="function"?value():value,()=>{}]};
+   if(name==="@/modules/einvoicing")return{CheckoutFiscalSection:"CheckoutFiscalSection",blankFiscalDraft:()=>({documentType:"none",customerDocumentType:"",customerDocumentNumber:"",customerName:"",customerAddress:""}),fiscalRequest:()=>undefined,validateFiscalDraft:()=>({})};
    if(name.endsWith("pos-schema"))return compile("../domain/pos-schema.ts",name=>name.endsWith("tips/domain/calculation")?tipCalculation:require(name));
    if(name.startsWith("../"))return{};
    return require(name);

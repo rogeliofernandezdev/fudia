@@ -1,5 +1,6 @@
 /** Código de un medio del catálogo de la empresa (Configuración › Medios de pago). */
 import type {TipPolicy,TipReceipt} from "../../tips";
+import type {FiscalDocumentRef,FiscalRequest} from "@/modules/einvoicing";
 export type PaymentMethod=string;
 /** Medio activo y habilitado para ventas, en el orden del catálogo. */
 export type PaymentMethodOption={code:string;name:string;affectsCash:boolean};
@@ -55,6 +56,8 @@ export type POSOrder={
 };
 
 export type Payment={
+  /** Present on the payment that requested an electronic document. */
+  fiscalDocument?:FiscalDocumentRef;
   id:string;
   orderId:string;
   orderCode:string;
@@ -93,6 +96,8 @@ export type POSCollectionAccess={shift:POSCollectionShift|null;assignedShift?:PO
 
 export type PaymentDraft={
  shiftId?:string;
+ /** Electronic document for the payment that settles the account. */
+ fiscal?:FiscalRequest;
  tipEnabled?:boolean;
  tipKind?:"percentage"|"fixed";
  tipValue?:string;

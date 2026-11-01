@@ -539,6 +539,62 @@ su identificador para mantener trazabilidad.
 - Los catálogos de países y monedas son datos de referencia del backend. Los tipos
   de cambio son datos temporales de negocio y siempre están acotados por empresa.
 
+### Regímenes de impuesto con vigencia
+
+Migración `000097_fiscal_tax_regimes` (2026-11-01). Es la base de impuestos de
+facturación electrónica ([14_EINVOICING.md](14_EINVOICING.md)).
+
+`tax_name`/`tax_rate` del perfil siguen siendo la **tasa general**: el alta de
+empresa, Mi restaurante y los perfiles fiscales no cambian. Un **régimen** la
+reemplaza solo durante su vigencia y puede tener varios componentes, como el
+régimen peruano de restaurantes MYPE: IGV 8 % + IPM 2,5 % en 2026 y 12 % + 3 %
+en 2027.
+
+`fiscal_profile_tax_regimes`
+
+| Campo | Tipo | Propósito |
+| --- | --- | --- |
+| `id` | `uuid` | `gen_random_uuid()`. |
+| `organization_id` | `uuid` | Alcance de tenant; FK compuesta con el perfil. |
+| `fiscal_profile_id` | `uuid` | Perfil fiscal (país) al que aplica. |
+| `name` | `text` | Nombre visible, hasta 60 caracteres. |
+| `valid_from` | `date` | Inicio de vigencia, inclusive. |
+| `valid_to` | `date` nulo | Fin de vigencia, exclusivo; nulo = sin fin. |
+| `created_by`, `created_at`, `updated_at` | | Autoría y fechas. |
+
+`fiscal_profile_tax_regime_components`
+
+| Campo | Tipo | Propósito |
+| --- | --- | --- |
+| `regime_id` + `organization_id` | `uuid` | Régimen dueño; FK compuesta, borrado en cascada. |
+| `code` | `text` | Código estable (`^[a-z][a-z0-9_]{0,19}$`), único en el régimen; p. ej. `igv`, `ipm`. |
+| `name` | `text` | Nombre visible, hasta 30 caracteres. |
+| `rate` | `numeric(7,6)` | Tasa exacta del componente. |
+| `sort_order` | `smallint` | Orden de presentación. |
+
+Reglas:
+
+- Los regímenes de un perfil no se superponen: restricción `EXCLUDE` con
+  `btree_gist` sobre `daterange(valid_from, valid_to, '[)')`. Las escrituras
+  bloquean además la fila del perfil.
+- Impuesto efectivo en una fecha: el régimen que la cubre (suma exacta de sus
+  componentes) o, si no hay ninguno, la tasa general como componente `general`.
+  La fecha por defecto es hoy en la zona horaria del local de la sesión.
+- Entre 1 y 5 componentes; tasas entre 0 y 1 con hasta seis decimales; la suma
+  no supera 1.
+- Un régimen se puede corregir o eliminar con auditoría (`tax_regime.created`,
+  `tax_regime.updated`, `tax_regime.deleted`). Lo que ya se emitió no cambia,
+  porque ventas y comprobantes guardan una copia de los componentes aplicados.
+  Un perfil inactivo conserva sus regímenes, pero no admite cambios.
+- Elegir un régimen especial es una decisión del administrador de la empresa.
+  El sistema no siembra regímenes ni infiere que la empresa califica.
+- API: `GET|POST /v1/admin/fiscal-profiles/{id}/tax-regimes` y
+  `PUT|DELETE /v1/admin/fiscal-profiles/{id}/tax-regimes/{regimeId}`, con los
+  permisos `organizations.read` y `organizations.manage`. Otros módulos
+  consultan el impuesto efectivo con el contrato `organizations/contracts.TaxResolver`.
+- Hoy ningún cálculo de POS ni de Ventas usa la tasa: los precios se guardan tal
+  como se publican. El desglose lo hará facturación electrónica con este contrato.
+
 ## Planes y suscripciones SaaS
 
 `subscription_plans` es el catálogo comercial administrado por Plataforma.

@@ -27,7 +27,9 @@ function mount({max=1,usage=1,items=[local],pending=false,error=false,fetching=f
   if(name==="@tanstack/react-query")return {useQueryClient:()=>({invalidateQueries:async options=>{invalidations.push(options.queryKey)}}),useMutation:options=>{mutations.push(options);return {isPending:false}},useQuery:options=>{queries.push(options);return {data:{items:options.queryKey[0]==="locations"?items:[],total:items.length},isLoading:false,isError:false}}};
   if(name==="./restaurant-profile-settings")return {ProfileLogoSlot:()=>null,ProfileMenuPanel:()=>null,useRestaurantProfile:()=>({})};
   if(name==="./organization-panel")return {OrganizationPanel:"OrganizationPanel"};
-  if(name==="@/modules/operations/tips")return {TipSettingsDialog:"TipSettingsDialog"};
+  if(name==="./tax-regimes")return {TaxRegimeDialog:"TaxRegimeDialog",TaxRegimesPanel:"TaxRegimesPanel",useTaxRegimes:()=>({})};
+  if(name==="@/modules/operations/tips")return {TipSettingsFields:"TipSettingsFields",getTipSettings:()=>{},tipDraftFromPolicy:value=>value};
+  if(name==="@/shared/api/client")return {ApiClientError:class extends Error{}};
   if(name==="@/modules/identity")return capacity;
   if(name==="@/providers/session-context")return {useSession:()=>({organization:{id:"panchita"},can:permission=>permission==="organizations.manage"?manage:readPlan})};
   if(name==="@/providers/feedback-provider")return {useFeedback:()=>({notify:()=>{}})};
@@ -39,15 +41,16 @@ function mount({max=1,usage=1,items=[local],pending=false,error=false,fetching=f
  return {render,subscription,mutations,queries,invalidations,get retries(){return retries}};
 }
 
-test("Propinas abre la configuración del local elegido desde Locales",()=>{
+test("Propinas se configura dentro del formulario del local, no desde la fila",async()=>{
  const other={...local,id:"other-local",name:"Sede Sur"};
- const ui=mount({max:3,usage:2,items:[local,other]});
- const action=ui.render().view.find(node=>node.type==="Button"&&node.props["aria-label"]==="Configurar propinas de Sede Sur");
- assert.ok(action);action.props.onClick();
- const dialog=ui.render().view.find(node=>node.type==="TipSettingsDialog");
- assert.equal(dialog.props.location.id,"other-local");assert.equal(dialog.props.location.name,"Sede Sur");
- dialog.props.close();assert.ok(!ui.render().view.some(node=>node.type==="TipSettingsDialog"));
- assert.ok(!mount({manage:false}).render().view.some(node=>node.type==="Button"&&node.props.children==="Propinas"));
+ const ui=mount({max:3,usage:2,items:[local,other]}),view=ui.render().view;
+ assert.ok(!view.some(node=>node.type==="Button"&&node.props.children==="Propinas"));
+ view.filter(node=>node.type==="RowActionButton"&&node.props.action==="edit")[1].props.onClick();
+ assert.equal(ui.render().view.find(node=>node.type?.name==="LocationDialog").props.value.id,"other-local");
+ await ui.mutations[0].onSuccess(undefined,{value:other,tips:{mode:"collect",percentage:10,showSuggestion:true,allowFixed:true,channels:["salon"]}});
+ assert.ok(ui.invalidations.some(key=>key[0]==="tip-settings"));
+ const source=readFileSync(new URL("modules/organizations/presentation/organization-admin.tsx",root),"utf8");
+ assert.ok(source.includes("save(v,tips&&tipPolicy.data?.editable?tips:undefined)"),"solo se envían propinas editadas por quien puede cambiarlas");
 });
 
 test("Emprende con un local bloquea Nuevo local también desde el handler, pero permite editar",()=>{

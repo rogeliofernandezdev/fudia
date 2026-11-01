@@ -15,6 +15,17 @@ type PaymentView struct {
 	Reference        string `json:"reference"`
 	CreatedByName    string `json:"createdByName"`
 	CreatedAt        string `json:"createdAt"`
+	// FiscalDocument is set only on the payment that requested a document.
+	FiscalDocument *FiscalDocumentRef `json:"fiscalDocument,omitempty"`
+}
+
+// FiscalDocumentRef identifies the electronic document requested at checkout.
+type FiscalDocumentRef struct {
+	ID           string `json:"id"`
+	DocumentType string `json:"documentType"`
+	Label        string `json:"label"`
+	Number       string `json:"number"`
+	Status       string `json:"status"`
 }
 type PosOrderSummary struct {
 	WaiterID        string   `json:"waiterId"`

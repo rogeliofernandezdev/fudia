@@ -5,6 +5,7 @@ import (
 	"errors"
 	audit "github.com/foods-platform/foods-backend/internal/modules/audit/application"
 	"github.com/foods-platform/foods-backend/internal/modules/billing/domain"
+	einvoicing "github.com/foods-platform/foods-backend/internal/modules/einvoicing/contracts"
 	ordercontracts "github.com/foods-platform/foods-backend/internal/modules/orders/contracts"
 	"github.com/foods-platform/foods-backend/internal/platform/apperror"
 	"github.com/foods-platform/foods-backend/internal/platform/requestscope"
@@ -53,6 +54,7 @@ type Payments struct {
 	methods    ExpenseMethods
 	orders     PaymentOrders
 	authorizer PermissionAuthorizer
+	fiscal     einvoicing.Issuer
 }
 
 func NewPayments(repo PaymentRepository, work unitofwork.Manager, audit audit.Repository, methods ExpenseMethods, orders PaymentOrders) *Payments {
@@ -183,6 +185,10 @@ func (a *Payments) Create(ctx context.Context, s scope, in domain.PaymentInput) 
 	if err != nil {
 		return result, paymentFailure(apperror.Unavailable, "payments_unavailable", "No pudimos finalizar la cuenta del pedido.")
 	}
+	fiscal, err := a.requestFiscal(tx.Context(), s, in.OrderID, in.Fiscal, in.Amount+0.00001 >= remaining)
+	if err != nil {
+		return result, err
+	}
 	// Read the result before committing so a failed projection cannot leave a
 	// persisted charge behind while the client receives a retryable error.
 	item, err := a.repo.Payment(tx.Context(), s, id)
@@ -195,6 +201,8 @@ func (a *Payments) Create(ctx context.Context, s scope, in domain.PaymentInput) 
 	if closed {
 		_ = a.audit.Record(ctx, s, "order.completed", "order", in.OrderID)
 	}
+	a.dispatchFiscal(fiscal)
+	item.FiscalDocument = fiscal
 	return item, nil
 
 }
@@ -382,13 +390,19 @@ func (a *Payments) CreateBatch(ctx context.Context, s scope, in domain.PaymentBa
 	if err != nil {
 		return result, paymentFailure(apperror.Unavailable, "payments_unavailable", "No pudimos finalizar la cuenta del pedido.")
 	}
+	fiscal, err := a.requestFiscal(tx.Context(), s, in.OrderID, in.Fiscal, totalBatch+0.00001 >= remaining)
+	if err != nil {
+		return result, err
+	}
 	if err = tx.Commit(ctx); err != nil {
 		return result, paymentFailure(apperror.Unavailable, "payments_unavailable", "No pudimos confirmar el cobro.")
 	}
 	if closed {
 		_ = a.audit.Record(ctx, s, "order.completed", "order", in.OrderID)
 	}
+	a.dispatchFiscal(fiscal)
 	return map[string]any{
+		"fiscalDocument":  fiscal,
 		"paymentIds":      ids,
 		"paidNow":         strconv.FormatFloat(totalBatch, 'f', 2, 64),
 		"remainingAmount": strconv.FormatFloat(math.Max(0, remaining-totalBatch), 'f', 2, 64),

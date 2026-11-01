@@ -18,6 +18,9 @@ func (h *Tips) GetSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	out, err := h.service.Policy(r.Context(), s, r.URL.Query().Get("scope") == "organization")
+	if err == nil {
+		out.Editable, err = h.service.CanEditSettings(r.Context(), s)
+	}
 	billingResponse(w, 200, out, err)
 }
 func (h *Tips) UpdateSettings(w http.ResponseWriter, r *http.Request) {

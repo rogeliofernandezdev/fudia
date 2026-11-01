@@ -5,13 +5,13 @@
 | Módulo | Responsabilidad |
 | --- | --- |
 | Identity | sesión, usuarios, roles, permisos y dispositivos |
-| Organizations | empresas, locales, áreas, mesas, cajas y series |
+| Organizations | empresas, perfiles fiscales por país, locales, áreas, mesas y cajas |
 | Menu | categorías, productos, recetas, combos, modificadores y precios |
 | Service | reservas, turnos de mesa, comandas y estado del servicio |
 | Orders | pedidos de salón, recojo en local y delivery; conserva ingreso por WhatsApp |
 | Kitchen | estaciones, tickets, cursos, tiempos y estados KDS |
 | Billing | cuentas, descuentos, propina, pagos, caja y cierres |
-| EInvoicing | boletas, facturas, notas, XML/CDR y estado SUNAT |
+| EInvoicing | series fiscales, comprobantes, notas y anulaciones; núcleo neutro con jurisdicciones por país y proveedores homologados como adaptadores |
 | Inventory | insumos, lotes, movimientos, conteos, mermas y stock |
 | Purchasing | proveedores, órdenes de compra y recepciones |
 | Customers | identidad, datos tributarios, direcciones y preferencias |

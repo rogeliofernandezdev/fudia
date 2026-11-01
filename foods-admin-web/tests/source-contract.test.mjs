@@ -482,20 +482,20 @@ test("las rutas principales componen modulos",()=>{
 test("mvp admin no presenta datos simulados como operacion real",()=>{
   const dashboard=read("src/modules/dashboard/presentation/dashboard-view.tsx");
   const sales=read("src/modules/sales/presentation/sales-page.tsx");
-  const receipts=read("src/modules/sales/presentation/receipts-page.tsx");
+  const receipts=read("src/modules/einvoicing/presentation/fiscal-documents-page.tsx");
   const reservations=read("src/modules/operations/reservations/presentation/reservations-page.tsx");
   const configuration=read("src/modules/configuration/presentation/configuration-home-page.tsx");
   assert.ok(dashboard.includes("getDashboard"),"Dashboard consume datos del backend");
   assert.equal(dashboard.includes("12,840.50"),false,"Dashboard no conserva ventas ficticias");
   assert.ok(sales.includes("listSales"),"Ventas consulta pedidos realmente pagados");
   assert.equal(sales.includes("#10482"),false,"Ventas no conserva filas de ejemplo");
-  assert.ok(receipts.includes("Fuera del MVP actual"),"Comprobantes no simula facturacion aun no implementada");
+  assert.ok(receipts.includes("listFiscalDocuments"),"Comprobantes consulta documentos fiscales reales");
   assert.ok(reservations.includes("saveReservation"),"Reservas persiste altas y ediciones");
   assert.ok(configuration.includes("href:pageRoutes.organizationSettings"),"Configuracion enlaza los datos de empresa");
   assert.equal(configuration.includes("Facturación electrónica"),false,"Facturacion futura no se ofrece en el hub MVP");
 });
 
-test("platform admin ve todo el catalogo y modulos no listos no se activan desde UI",()=>{
+test("platform admin ve todo el catalogo, pilota modulos en desarrollo y no activa planificados",()=>{
   const shell=read("src/shell/admin-shell.tsx");
   const navigation=read("src/shell/navigation.ts");
   const view=read("src/modules/modules/presentation/modules-view.tsx");
@@ -506,9 +506,11 @@ test("platform admin ve todo el catalogo y modulos no listos no se activan desde
   assert.ok(shell.includes("const blockReason=isPlatformAdmin?null"),"El admin de plataforma puede entrar a rutas aunque el módulo esté inactivo");
   assert.ok(types.includes("ModuleAvailability = \"ready\" | \"development\" | \"planned\""),"El frontend modela disponibilidad separada de activación");
   for(const label of ["Disponible","En desarrollo","Planificado"])assert.ok(view.includes(label),label);
-  assert.ok(view.includes("const activable=m.availability===\"ready\""),"Solo módulos listos son activables");
-  assert.ok(view.includes("disabled={!activable||toggle.isPending}"),"El toggle se bloquea para módulos no disponibles");
-  assert.ok(view.includes("Solo los módulos disponibles pueden habilitarse para una empresa."),"La UI explica la regla de activación");
+  assert.ok(view.includes("const activable=m.availability!==\"planned\""),"Los planificados no se activan");
+  assert.ok(view.includes("disabled={!activable||toggle.isPending}"),"El toggle se bloquea para módulos planificados");
+  assert.ok(view.includes("module.active||module.availability===\"development\""),"Un piloto se confirma antes de activarse");
+  assert.ok(view.includes("Piloto activo en esta empresa."),"La UI distingue un piloto activo");
+  assert.ok(view.includes("los que están en desarrollo, solo como piloto"),"La UI explica la regla de activación");
 });
 test("pantallas completas usan loader FUDIA y cargas internas conservan skeleton",()=>{
   const routeLoading=read("src/app/loading.tsx");

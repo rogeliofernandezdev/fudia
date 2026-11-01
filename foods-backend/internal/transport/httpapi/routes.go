@@ -10,6 +10,26 @@ func (a *API) Routes() *http.ServeMux {
 		m.Handle("GET /v1/admin/cash-shifts/{id}/tips", a.auth(a.requirePermission("cash.read", http.HandlerFunc(a.handlers.Tips.Workspace))))
 		m.Handle("POST /v1/admin/cash-shifts/{id}/tip-payouts", a.auth(a.requirePermission("cash.manage", http.HandlerFunc(a.handlers.Tips.Payout))))
 	}
+	if e := a.handlers.EInvoicing; e != nil {
+		m.Handle("GET /v1/admin/einvoicing/settings", a.auth(a.requirePermission("organizations.read", http.HandlerFunc(e.Settings))))
+		m.Handle("PUT /v1/admin/einvoicing/profiles/{id}", a.auth(a.requirePermission("organizations.manage", http.HandlerFunc(e.SaveProfile))))
+		m.Handle("PUT /v1/admin/einvoicing/locations/{id}", a.auth(a.requirePermission("organizations.manage", http.HandlerFunc(e.SaveLocation))))
+		m.Handle("PUT /v1/admin/einvoicing/profiles/{id}/credentials", a.auth(a.requirePermission("organizations.manage", http.HandlerFunc(e.SaveCredentials))))
+		// Checkout reads the options of the session location; any operator may list them.
+		m.Handle("GET /v1/admin/einvoicing/checkout-options", a.auth(http.HandlerFunc(e.CheckoutOptions)))
+		m.Handle("GET /v1/admin/fiscal-documents", a.auth(a.requirePermission("orders.read", http.HandlerFunc(e.List))))
+		m.Handle("GET /v1/admin/fiscal-documents/{id}", a.auth(a.requirePermission("orders.read", http.HandlerFunc(e.Get))))
+		m.Handle("GET /v1/admin/fiscal-documents/{id}/files/{kind}", a.auth(a.requirePermission("orders.read", http.HandlerFunc(e.File))))
+		m.Handle("POST /v1/admin/fiscal-documents/{id}/retry", a.auth(a.requirePermission("orders.manage", http.HandlerFunc(e.Retry))))
+		m.Handle("POST /internal/einvoicing/documents/{id}/process", e.WorkerAuth(http.HandlerFunc(e.ProcessDocument)))
+		m.Handle("POST /internal/einvoicing/sweep", e.WorkerAuth(http.HandlerFunc(e.Sweep)))
+	}
+	if a.handlers.TaxRegimes != nil {
+		m.Handle("GET /v1/admin/fiscal-profiles/{id}/tax-regimes", a.auth(a.requirePermission("organizations.read", http.HandlerFunc(a.handlers.TaxRegimes.List))))
+		m.Handle("POST /v1/admin/fiscal-profiles/{id}/tax-regimes", a.auth(a.requirePermission("organizations.manage", http.HandlerFunc(a.handlers.TaxRegimes.Create))))
+		m.Handle("PUT /v1/admin/fiscal-profiles/{id}/tax-regimes/{regimeId}", a.auth(a.requirePermission("organizations.manage", http.HandlerFunc(a.handlers.TaxRegimes.Update))))
+		m.Handle("DELETE /v1/admin/fiscal-profiles/{id}/tax-regimes/{regimeId}", a.auth(a.requirePermission("organizations.manage", http.HandlerFunc(a.handlers.TaxRegimes.Delete))))
+	}
 	m.HandleFunc("POST /v1/auth/login", a.login)
 	m.HandleFunc("POST /v1/auth/logout", a.logout)
 	m.Handle("GET /v1/platform/onboarding/catalogs", a.auth(a.requirePlatformAdmin(http.HandlerFunc(a.getPlatformOnboardingCatalogs))))

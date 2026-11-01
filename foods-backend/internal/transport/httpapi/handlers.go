@@ -21,6 +21,26 @@ type Handlers struct {
 		Workspace(http.ResponseWriter, *http.Request)
 		Payout(http.ResponseWriter, *http.Request)
 	}
+	TaxRegimes interface {
+		List(http.ResponseWriter, *http.Request)
+		Create(http.ResponseWriter, *http.Request)
+		Update(http.ResponseWriter, *http.Request)
+		Delete(http.ResponseWriter, *http.Request)
+	}
+	EInvoicing interface {
+		Settings(http.ResponseWriter, *http.Request)
+		SaveProfile(http.ResponseWriter, *http.Request)
+		SaveLocation(http.ResponseWriter, *http.Request)
+		SaveCredentials(http.ResponseWriter, *http.Request)
+		CheckoutOptions(http.ResponseWriter, *http.Request)
+		File(http.ResponseWriter, *http.Request)
+		List(http.ResponseWriter, *http.Request)
+		Get(http.ResponseWriter, *http.Request)
+		Retry(http.ResponseWriter, *http.Request)
+		WorkerAuth(http.Handler) http.Handler
+		ProcessDocument(http.ResponseWriter, *http.Request)
+		Sweep(http.ResponseWriter, *http.Request)
+	}
 	Concierge              ConciergeHandler
 	ConciergeUsage         ConciergeUsageHandler
 	Platform               PlatformHandler

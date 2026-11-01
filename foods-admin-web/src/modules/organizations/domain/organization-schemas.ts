@@ -1,6 +1,7 @@
 import {z} from "zod";
 import {zodResolver} from "@/shared/forms/zod-resolver";
-import type {LocationDraft,Organization,ProfileDraft,RateDraft} from "./types";
+import type {LocationDraft,Organization,ProfileDraft,RateDraft,TaxRegimeDraft} from "./types";
+import {totalPercent} from "./tax-regimes";
 
 export const locationSchema=z.object({
  name:z.string().trim().min(1,"Ingresa el nombre del local.").max(120,"El nombre no puede superar 120 caracteres."),
@@ -50,3 +51,17 @@ export function organizationErrors(value:Organization):OrganizationErrors{
  for(const issue of result.error.issues){const key=issue.path[0] as keyof OrganizationErrors;errors[key]??=issue.message}
  return errors;
 }
+
+const percent=z.string().trim().min(1,"Ingresa el porcentaje.").regex(/^\d{1,3}([.]\d{1,4})?$/,"Usa un porcentaje con hasta 4 decimales.").refine(value=>Number(value)<=100,"Usa un porcentaje entre 0 y 100.");
+export const taxRegimeSchema=z.object({
+ name:z.string().trim().min(1,"Ingresa el nombre del régimen.").max(60,"Máximo 60 caracteres."),
+ validFrom:z.iso.date("Indica desde cuándo rige."),
+ validUntil:z.union([z.literal(""),z.iso.date()]),
+ components:z.array(z.object({name:z.string().trim().min(1,"Ingresa el impuesto.").max(30,"Máximo 30 caracteres."),percent})).min(1,"Agrega al menos un impuesto.").max(5,"Máximo 5 impuestos."),
+}).superRefine((value,ctx)=>{
+ if(value.validUntil&&value.validUntil<value.validFrom)ctx.addIssue({code:"custom",path:["validUntil"],message:"Debe ser igual o posterior a la fecha de inicio."});
+ const names=value.components.map(component=>component.name.trim().toLowerCase());
+ names.forEach((name,index)=>{if(name&&names.indexOf(name)!==index)ctx.addIssue({code:"custom",path:["components",index,"name"],message:"Este impuesto ya está en el régimen."})});
+ if(totalPercent(value.components)>100)ctx.addIssue({code:"custom",path:["components"],message:"La suma no puede superar el 100 %."});
+});
+export const taxRegimeResolver=zodResolver<TaxRegimeDraft>(taxRegimeSchema.passthrough());

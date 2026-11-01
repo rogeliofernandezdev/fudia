@@ -1,0 +1,46 @@
+/* Comprobante en el cobro, Comprobantes y Configuración › Facturación. */
+.checkout-fiscal{display:grid;gap:var(--space-3)}
+.checkout-fiscal .span-2{grid-column:1/-1}
+.fiscal-lines{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.crud-modal .modal-section-title.fiscal-section-title{margin:var(--space-5) 0 var(--space-2)}
+.fiscal-lines thead,.fiscal-lines tr{background:transparent}
+.fiscal-lines th,.fiscal-lines td{height:auto;padding:var(--space-2) 0;border-bottom:var(--stroke-1) solid var(--line);text-align:left;font-size:var(--font-size-base)}
+.fiscal-lines th{color:var(--ink-600);font-size:var(--font-size-label);font-weight:var(--weight-semibold)}
+.fiscal-lines .num{text-align:right;white-space:nowrap}
+.fiscal-totals{display:grid;gap:var(--space-1-5);margin:0;padding:var(--space-3) 0 0}
+.fiscal-totals div{display:flex;justify-content:space-between;gap:var(--space-3);font-variant-numeric:tabular-nums}
+.fiscal-totals dt{color:var(--ink-600);font-size:var(--font-size-base)}
+.fiscal-totals dd{margin:0;color:var(--ink-950);font-size:var(--font-size-base)}
+.fiscal-totals .grand dt,.fiscal-totals .grand dd{color:var(--ink-950);font-weight:var(--weight-bold)}
+.einvoicing-layout{display:grid;gap:var(--space-4)}
+.einvoicing-profile{display:grid;gap:var(--space-4);padding:var(--space-5)}
+.einvoicing-profile-head{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3)}
+.einvoicing-profile-head h2{margin:0}
+.einvoicing-section-header{padding:var(--space-4) var(--space-5)}
+.einvoicing-section-header h2{margin:0}
+.einvoicing-profile-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-4)}
+.einvoicing-profile-actions{display:flex;justify-content:flex-end;gap:var(--space-2-5)}
+.einvoicing-series-cell b{font-variant-numeric:tabular-nums}
+.einvoicing-credentials{display:grid;gap:var(--space-3);padding-top:var(--space-4);border-top:var(--stroke-1) solid var(--line)}
+.einvoicing-credentials-head{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--space-3)}
+.einvoicing-credentials-head div{display:grid;gap:var(--space-1)}
+.einvoicing-credentials-head small{color:var(--ink-600);font-size:var(--font-size-label)}
+.einvoicing-credentials-facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-3);margin:0}
+.einvoicing-credentials-facts dt{color:var(--ink-600);font-size:var(--font-size-label)}
+.einvoicing-credentials-facts dd{margin:0;color:var(--ink-950);overflow-wrap:anywhere}
+.einvoicing-credentials-intro{margin-bottom:var(--space-4)}
+.form-field .einvoicing-file{position:relative;display:flex;align-items:center;gap:var(--space-3);min-width:0;cursor:pointer}
+.form-field .einvoicing-file input{position:absolute;inset:0;width:var(--size-1);height:var(--size-1);opacity:0;pointer-events:none}
+.einvoicing-file:focus-within .button{box-shadow:var(--ring-focus)}
+.einvoicing-file .button{flex:none;min-height:var(--size-44)}
+.einvoicing-file small{min-width:0;color:var(--ink-600);font-size:var(--font-size-base);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fiscal-files{display:flex;flex-wrap:wrap;gap:var(--space-2-5);margin-top:var(--space-4)}
+
+@media(width<=600px){
+ .einvoicing-profile-fields{grid-template-columns:1fr}
+ .einvoicing-profile{padding:var(--space-4)}
+ .einvoicing-section-header{padding:var(--space-3) var(--space-4)}
+ .einvoicing-profile-actions .button{flex:1}
+ .einvoicing-credentials-facts{grid-template-columns:1fr}
+ .fiscal-files .button{flex:1}
+}

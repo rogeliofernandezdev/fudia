@@ -9,3 +9,9 @@ export type LocationDraft={id?:string;name:string;code:string;address:string;pho
 export type Rate={id:string;baseCurrency:string;quoteCurrency:string;rate:string;effectiveAt:string;source:"manual"|"provider";providerReference:string|null;createdByName:string|null};
 export type ProfileDraft={id?:string;country:string;currency:string;currencyPosition:"before"|"after";taxName:string;taxPercent:string;taxIncluded:boolean;default:boolean};
 export type RateDraft={baseCurrency:string;quoteCurrency:string;rate:string;effectiveAt:string;source:"manual"|"provider";providerReference:string};
+export type TaxComponent={code:string;name:string;rate:string};
+export type TaxRegime={id:string;name:string;validFrom:string;validTo:string|null;components:TaxComponent[];totalRate:string};
+export type EffectiveTax={date:string;source:"general"|"regime";regimeId:string|null;regimeName:string|null;components:TaxComponent[];totalRate:string;taxIncluded:boolean};
+export type TaxRegimesView={items:TaxRegime[];general:TaxComponent;taxIncluded:boolean;effective:EffectiveTax};
+// Form draft: percentages as typed and an inclusive end date («hasta»).
+export type TaxRegimeDraft={id?:string;name:string;validFrom:string;validUntil:string;components:{name:string;percent:string}[]};

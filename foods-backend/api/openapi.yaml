@@ -765,6 +765,110 @@ paths:
       operationId: deactivateFiscalProfile
       security: [{ sessionCookie: [] }]
       responses: { "204": { description: Perfil desactivado }, "409": { description: Perfil predeterminado o en uso } }
+  /v1/admin/fiscal-profiles/{id}/tax-regimes:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    get:
+      operationId: listTaxRegimes
+      description: Regímenes de impuesto con vigencia del perfil fiscal, su tasa general y el impuesto efectivo en `date` (por defecto, hoy en la zona horaria del local de la sesión). Permiso organizations.read.
+      security: [{ sessionCookie: [] }]
+      parameters: [{ in: query, name: date, required: false, schema: { type: string, format: date } }]
+      responses: { "200": { description: Regímenes e impuesto efectivo, content: { application/json: { schema: { $ref: "#/components/schemas/TaxRegimesView" } } } }, "400": { $ref: "#/components/responses/BadRequest" }, "403": { $ref: "#/components/responses/Forbidden" }, "404": { description: profile_not_found, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } } }
+    post:
+      operationId: createTaxRegime
+      description: Permiso organizations.manage. Auditoría tax_regime.created.
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/TaxRegimeInput" } } } }
+      responses: { "201": { description: Régimen creado, content: { application/json: { schema: { $ref: "#/components/schemas/TaxRegime" } } } }, "400": { description: invalid_tax_regime, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }, "403": { $ref: "#/components/responses/Forbidden" }, "404": { description: profile_not_found, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }, "409": { description: tax_regime_overlap o profile_inactive, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } } }
+  /v1/admin/fiscal-profiles/{id}/tax-regimes/{regimeId}:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }, { in: path, name: regimeId, required: true, schema: { type: string, format: uuid } }]
+    put:
+      operationId: updateTaxRegime
+      description: Reemplaza nombre, vigencia y componentes. Permiso organizations.manage. Auditoría tax_regime.updated.
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/TaxRegimeInput" } } } }
+      responses: { "200": { description: Régimen actualizado, content: { application/json: { schema: { $ref: "#/components/schemas/TaxRegime" } } } }, "400": { description: invalid_tax_regime, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }, "403": { $ref: "#/components/responses/Forbidden" }, "404": { description: profile_not_found o tax_regime_not_found, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }, "409": { description: tax_regime_overlap o profile_inactive, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } } }
+    delete:
+      operationId: deleteTaxRegime
+      description: Permiso organizations.manage. Auditoría tax_regime.deleted.
+      security: [{ sessionCookie: [] }]
+      responses: { "204": { description: Régimen eliminado }, "403": { $ref: "#/components/responses/Forbidden" }, "404": { description: profile_not_found o tax_regime_not_found, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }, "409": { description: profile_inactive, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } } }
+  /v1/admin/einvoicing/settings:
+    get:
+      operationId: getEInvoicingSettings
+      description: "Activación por perfil fiscal, series por local y proveedores registrados. entitled indica si el plan o el piloto incluyen el módulo facturacion. Permiso organizations.read."
+      security: [{ sessionCookie: [] }]
+      responses: { "200": { description: Configuración de facturación, content: { application/json: { schema: { $ref: "#/components/schemas/EInvoicingSettings" } } } }, "403": { $ref: "#/components/responses/Forbidden" } }
+  /v1/admin/einvoicing/profiles/{id}:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    put:
+      operationId: saveEInvoicingProfile
+      description: "Activa o desactiva la emisión del perfil fiscal. Al activar exige el módulo en el plan, un emisor válido (Perú: RUC con dígito verificador y razón social en Mi restaurante) y las credenciales que el proveedor necesita en ese ambiente (sunat en producción: usuario y clave SOL y certificado). Un proveedor de pruebas no admite production. Permiso organizations.manage; auditoría einvoicing.profile.updated."
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [enabled, provider, environment], properties: { enabled: { type: boolean }, provider: { type: string }, environment: { type: string, enum: [test, production] } } } } } }
+      responses: { "200": { description: Configuración actualizada, content: { application/json: { schema: { $ref: "#/components/schemas/EInvoicingSettings" } } } }, "400": { description: invalid_einvoicing_settings }, "404": { description: profile_not_found }, "409": { description: einvoicing_not_entitled, einvoicing_issuer_incomplete, einvoicing_credentials_missing o einvoicing_unsupported_country } }
+  /v1/admin/einvoicing/profiles/{id}/credentials:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    put:
+      operationId: saveEInvoicingCredentials
+      description: "Credenciales del proveedor para el perfil fiscal, cifradas con AES-256-GCM y llave maestra externa (FUDIA_EINVOICING_MASTER_KEY). Un valor vacío conserva el guardado. El proveedor declara sus campos (credentials.fields en la configuración); un archivo va en base64. Nunca se devuelven: la respuesta solo trae metadatos (titular y vencimiento del certificado). Permiso organizations.manage; auditoría einvoicing.credentials.updated."
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [provider, values], properties: { provider: { type: string }, values: { type: object, additionalProperties: { type: string } } } } } } }
+      responses: { "200": { description: Configuración actualizada, content: { application/json: { schema: { $ref: "#/components/schemas/EInvoicingSettings" } } } }, "400": { description: invalid_einvoicing_credentials o invalid_einvoicing_settings }, "404": { description: profile_not_found }, "503": { description: einvoicing_credentials_unavailable (cifrado no configurado) } }
+  /v1/admin/einvoicing/locations/{id}:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    put:
+      operationId: saveEInvoicingLocation
+      description: "Series por tipo de comprobante del país y comprobante sugerido al cobrar. Una serie con comprobantes emitidos no se renombra. Permiso organizations.manage; auditoría einvoicing.location.updated."
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [series], properties: { defaultDocument: { type: string, enum: [none, receipt, invoice] }, series: { type: object, additionalProperties: { type: string }, description: "Clave = tipo de comprobante (receipt, invoice). Perú: B### y F###" } } } } } }
+      responses: { "200": { description: Configuración actualizada, content: { application/json: { schema: { $ref: "#/components/schemas/EInvoicingSettings" } } } }, "400": { description: invalid_einvoicing_series o invalid_einvoicing_settings }, "404": { description: location_not_found }, "409": { description: einvoicing_series_in_use, einvoicing_series_taken o einvoicing_unsupported_country } }
+  /v1/admin/einvoicing/checkout-options:
+    get:
+      operationId: getEInvoicingCheckoutOptions
+      description: "Comprobantes que ofrece el cobro del local de la sesión. enabled=false cuando el módulo, el perfil o el país no permiten emitir. Cualquier usuario autenticado."
+      security: [{ sessionCookie: [] }]
+      responses: { "200": { description: Opciones del cobro, content: { application/json: { schema: { $ref: "#/components/schemas/EInvoicingCheckoutOptions" } } } } }
+  /v1/admin/fiscal-documents:
+    get:
+      operationId: listFiscalDocuments
+      description: "Comprobantes del local de la sesión, más recientes primero. Permiso orders.read."
+      security: [{ sessionCookie: [] }]
+      parameters: [{ in: query, name: status, schema: { type: string } }, { in: query, name: q, schema: { type: string } }, { in: query, name: page, schema: { type: integer } }, { in: query, name: pageSize, schema: { type: integer } }]
+      responses: { "200": { description: Página de comprobantes, content: { application/json: { schema: { type: object, required: [items, total, page, pageSize, statusOptions], properties: { items: { type: array, items: { $ref: "#/components/schemas/FiscalDocumentSummary" } }, total: { type: integer }, page: { type: integer }, pageSize: { type: integer }, statusOptions: { type: array, items: { type: object, properties: { value: { type: string }, label: { type: string } } } } } } } } } }
+  /v1/admin/fiscal-documents/{id}:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    get:
+      operationId: getFiscalDocument
+      description: "Permiso orders.read; solo comprobantes del local de la sesión."
+      security: [{ sessionCookie: [] }]
+      responses: { "200": { description: Detalle del comprobante, content: { application/json: { schema: { $ref: "#/components/schemas/FiscalDocumentDetail" } } } }, "404": { description: fiscal_document_not_found } }
+  /v1/admin/fiscal-documents/{id}/files/{kind}:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }, { in: path, name: kind, required: true, schema: { type: string, enum: [xml, cdr] } }]
+    get:
+      operationId: downloadFiscalDocumentFile
+      description: "XML firmado (application/xml) o CDR de SUNAT (application/zip) del local de la sesión. Permiso orders.read."
+      security: [{ sessionCookie: [] }]
+      responses: { "200": { description: Archivo legal del comprobante }, "404": { description: fiscal_document_file_not_found } }
+  /v1/admin/fiscal-documents/{id}/retry:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    post:
+      operationId: retryFiscalDocument
+      description: "Reenvía un comprobante con error temporal de envío. Permiso orders.manage; auditoría fiscal_document.retried."
+      security: [{ sessionCookie: [] }]
+      responses: { "200": { description: Comprobante reenviado, content: { application/json: { schema: { $ref: "#/components/schemas/FiscalDocumentDetail" } } } }, "409": { description: fiscal_document_not_retryable } }
+  /internal/einvoicing/documents/{id}/process:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    post:
+      operationId: processFiscalDocument
+      description: "Worker de Cloud Tasks. Requiere X-Fudia-Worker-Key (FUDIA_EINVOICING_WORKER_KEY) y, en Cloud Run, invocador OIDC privado. Idempotente."
+      security: [{ workerKey: [] }]
+      responses: { "204": { description: Procesado o nada pendiente }, "401": { description: einvoicing_worker_unauthorized }, "503": { description: einvoicing_worker_not_configured o einvoicing_process_failed } }
+  /internal/einvoicing/sweep:
+    post:
+      operationId: sweepFiscalDocuments
+      description: "Barrido de Cloud Scheduler; procesa hasta 50 comprobantes PENDING/ERROR vencidos o SENDING abandonados."
+      security: [{ workerKey: [] }]
+      responses: { "200": { description: Cantidad procesada }, "401": { description: einvoicing_worker_unauthorized } }
   /v1/admin/locations:
     get:
       operationId: listLocations
@@ -1657,6 +1761,7 @@ paths:
               required: [orderId, payments]
               properties:
                 shiftId: { type: string, format: uuid, description: "Solo administrador; mismo criterio de selección que el cobro individual." }
+                fiscal: { $ref: "#/components/schemas/FiscalRequest" }
                 orderId: { type: string, format: uuid }
                 payments:
                   type: array
@@ -2006,7 +2111,7 @@ paths:
     parameters: [{ $ref: "#/components/parameters/EntityId" }]
     patch: { operationId: updateUserStatus, security: [{ sessionCookie: [] }], responses: { "204": { description: Estado actualizado }, "409": { description: Conflicto por auto-desactivación o último administrador; plan_limit_reached si reactivar supera el máximo de usuarios activos, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }, "503": { description: No se pudo validar el usuario o la capacidad de la suscripción } } }
 components:
-  securitySchemes: { sessionCookie: { type: apiKey, in: cookie, name: foods_session }, conciergeServiceKey: { type: apiKey, in: header, name: X-Fudia-Concierge-Key } }
+  securitySchemes: { sessionCookie: { type: apiKey, in: cookie, name: foods_session }, conciergeServiceKey: { type: apiKey, in: header, name: X-Fudia-Concierge-Key }, workerKey: { type: apiKey, in: header, name: X-Fudia-Worker-Key } }
   parameters:
     EntityId: { in: path, name: id, required: true, schema: { type: string, format: uuid } }
   responses:
@@ -2014,6 +2119,123 @@ components:
     Unauthorized: { description: Sesión inválida, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
     Forbidden: { description: Permiso insuficiente, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
   schemas:
+    FiscalRequest:
+      type: object
+      description: "Comprobante pedido en el cobro que completa la cuenta; none o ausente no emite. Se valida en la transacción del pago: 400 invalid_fiscal_customer o invalid_fiscal_document; 409 fiscal_requires_full_payment, einvoicing_not_enabled, einvoicing_series_missing, order_has_fiscal_document o fiscal_total_mismatch revierten el pago completo."
+      required: [documentType]
+      properties:
+        documentType: { type: string, enum: [none, receipt, invoice] }
+        customer: { type: object, properties: { documentType: { type: string, enum: ["", DNI, CE, RUC, PASAPORTE] }, documentNumber: { type: string }, name: { type: string, maxLength: 200 }, address: { type: string } } }
+    FiscalDocumentRef:
+      type: object
+      required: [id, documentType, label, number, status]
+      properties: { id: { type: string, format: uuid }, documentType: { type: string }, label: { type: string }, number: { type: string, description: "Número fiscal legal, p. ej. B001-45" }, status: { type: string } }
+    FiscalDocumentSummary:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        documentType: { type: string }
+        label: { type: string }
+        number: { type: string }
+        issueDate: { type: string, format: date }
+        customerName: { type: string }
+        customerDocument: { type: string }
+        currency: { type: string }
+        total: { type: string }
+        status: { type: string, enum: [PENDING, SENDING, ACCEPTED, OBSERVED, REJECTED, ERROR, CANCELLED] }
+        statusMessage: { type: string }
+        orderId: { type: string, format: uuid }
+        orderCode: { type: string }
+        createdAt: { type: string, format: date-time }
+        acceptedAt: { type: [string, "null"], format: date-time }
+        canRetry: { type: boolean }
+    FiscalDocumentDetail:
+      allOf:
+        - { $ref: "#/components/schemas/FiscalDocumentSummary" }
+        - type: object
+          properties:
+            customer: { type: object }
+            breakdown: { type: object, description: "lines (no, description, quantity, unitPrice, netAmount, taxAmount, total), taxes (code, name, rate, amount), netTotal, taxTotal, total" }
+            providerLabel: { type: string }
+            environment: { type: string, enum: [test, production] }
+            providerReference: { type: string }
+            pdfUrl: { type: string }
+            xmlUrl: { type: string }
+            cdrUrl: { type: string }
+            digestValue: { type: string, description: "Valor resumen (hash) de la firma" }
+            providerCode: { type: string, description: "Código de respuesta de SUNAT o del proveedor" }
+            files: { type: array, items: { type: string, enum: [xml, cdr] } }
+            attempts: { type: integer }
+            nextAttemptAt: { type: [string, "null"], format: date-time }
+    EInvoicingCheckoutOptions:
+      type: object
+      required: [enabled, defaultDocument, documentTypes, customerDocumentTypes, identityThreshold, currency]
+      properties:
+        enabled: { type: boolean }
+        defaultDocument: { type: string, enum: [none, receipt, invoice] }
+        documentTypes: { type: array, items: { type: object, properties: { value: { type: string }, label: { type: string } } } }
+        customerDocumentTypes: { type: array, items: { type: object, properties: { value: { type: string }, label: { type: string }, pattern: { type: string } } } }
+        identityThreshold: { type: string, description: "Total de boleta desde el cual se identifica al cliente; vacío si el país no lo exige" }
+        invoiceCustomerDocumentType: { type: string, description: "Documento del cliente que exige la factura (Perú: RUC)" }
+        currency: { type: string }
+    EInvoicingSettings:
+      type: object
+      properties:
+        entitled: { type: boolean }
+        profiles: { type: array, items: { type: object, properties: { fiscalProfileId: { type: string, format: uuid }, country: { type: string }, countryName: { type: string }, currency: { type: string }, default: { type: boolean }, supported: { type: boolean }, enabled: { type: boolean }, provider: { type: string }, environment: { type: string }, issuerIssue: { type: string, description: "Dato del emisor que impide activar (p. ej. RUC inválido en Mi restaurante)" }, credentials: { type: object, properties: { configured: { type: boolean }, required: { type: boolean }, updatedAt: { type: string }, metadata: { type: object, additionalProperties: { type: string } }, fields: { type: array, items: { type: object, properties: { key: { type: string }, label: { type: string }, type: { type: string, enum: [text, secret, file] }, accept: { type: string }, required: { type: boolean } } } } } } } } }
+        locations: { type: array, items: { type: object, properties: { locationId: { type: string, format: uuid }, name: { type: string }, fiscalProfileId: { type: string, format: uuid }, country: { type: string }, supported: { type: boolean }, defaultDocument: { type: string }, series: { type: array, items: { type: object, properties: { documentType: { type: string }, label: { type: string }, series: { type: string }, suggested: { type: string }, lastNumber: { type: integer } } } } } } }
+        providerOptions: { type: array, items: { type: object, properties: { value: { type: string }, label: { type: string } } } }
+        environmentLabels: { type: object, additionalProperties: { type: string } }
+    TaxRate: { type: string, pattern: "^(0\\.[0-9]{6}|1\\.000000)$", description: Fracción exacta con seis decimales; "0.080000" = 8 % }
+    TaxComponent:
+      type: object
+      required: [code, name, rate]
+      properties:
+        code: { type: string, pattern: "^[a-z][a-z0-9_]{0,19}$", description: Código estable del componente; "general" identifica la tasa general del perfil }
+        name: { type: string, maxLength: 30 }
+        rate: { $ref: "#/components/schemas/TaxRate" }
+    TaxRegime:
+      type: object
+      required: [id, name, validFrom, validTo, components, totalRate]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, maxLength: 60 }
+        validFrom: { type: string, format: date, description: Inicio de vigencia, inclusive }
+        validTo: { type: [string, "null"], format: date, description: Fin de vigencia, exclusivo; null = sin fin }
+        components: { type: array, minItems: 1, maxItems: 5, items: { $ref: "#/components/schemas/TaxComponent" } }
+        totalRate: { $ref: "#/components/schemas/TaxRate" }
+    TaxRegimeInput:
+      type: object
+      required: [name, validFrom, components]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 60 }
+        validFrom: { type: string, format: date }
+        validTo: { type: [string, "null"], format: date, description: Debe ser posterior a validFrom }
+        components:
+          type: array
+          minItems: 1
+          maxItems: 5
+          description: Códigos únicos; tasas entre 0 y 1 con hasta seis decimales; la suma no puede superar 1. Las vigencias de un perfil no se superponen.
+          items: { type: object, required: [code, name, rate], properties: { code: { type: string, pattern: "^[a-z][a-z0-9_]{0,19}$" }, name: { type: string, maxLength: 30 }, rate: { type: string } } }
+    EffectiveTax:
+      type: object
+      required: [date, source, regimeId, regimeName, components, totalRate, taxIncluded]
+      properties:
+        date: { type: string, format: date }
+        source: { type: string, enum: [general, regime] }
+        regimeId: { type: [string, "null"], format: uuid }
+        regimeName: { type: [string, "null"] }
+        components: { type: array, items: { $ref: "#/components/schemas/TaxComponent" } }
+        totalRate: { $ref: "#/components/schemas/TaxRate" }
+        taxIncluded: { type: boolean }
+    TaxRegimesView:
+      type: object
+      required: [items, general, taxIncluded, effective]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/TaxRegime" }, description: Ordenados por validFrom descendente }
+        general: { $ref: "#/components/schemas/TaxComponent" }
+        taxIncluded: { type: boolean }
+        effective: { $ref: "#/components/schemas/EffectiveTax" }
     RestaurantBranding:
       type: object
       properties:
@@ -2215,7 +2437,7 @@ components:
     OrganizationInput: { type: object, required: [legalName, tradeName, taxId, timezone], properties: { legalName: { type: string, maxLength: 180 }, tradeName: { type: string, maxLength: 180 }, taxId: { type: string, minLength: 6, maxLength: 32 }, timezone: { type: string } } }
     Organization: { allOf: [{ $ref: "#/components/schemas/OrganizationInput" }, { type: object, required: [id, active], properties: { id: { type: string, format: uuid }, active: { type: boolean } } }] }
     FiscalProfileInput: { type: object, required: [country, currency, currencyPosition, taxName, taxRate, taxIncluded, default], properties: { country: { type: string, pattern: "^[A-Z]{2}$" }, currency: { type: string, pattern: "^[A-Z]{3}$" }, currencyPosition: { type: string, enum: [before, after] }, taxName: { type: string, maxLength: 30 }, taxRate: { type: string, pattern: "^(0(\\.[0-9]+)?|1(\\.0+)?)$" }, taxIncluded: { type: boolean }, default: { type: boolean } } }
-    LocationInput: { type: object, required: [name, code, address, timezone, fiscalProfileId], properties: { openedOn: { type: [string, "null"], description: Fecha ISO o cadena vacía para quitar; omitido conserva valor }, name: { type: string }, code: { type: string, maxLength: 30 }, address: { type: string }, timezone: { type: string }, fiscalProfileId: { type: string, format: uuid }, active: { type: boolean } } }
+    LocationInput: { type: object, required: [name, code, address, timezone, fiscalProfileId], properties: { openedOn: { type: [string, "null"], description: Fecha ISO o cadena vacía para quitar; omitido conserva valor }, name: { type: string }, code: { type: string, maxLength: 30 }, address: { type: string }, timezone: { type: string }, fiscalProfileId: { type: string, format: uuid }, active: { type: boolean }, tipSettings: { allOf: [{ $ref: "#/components/schemas/TipSettings" }], description: "Opcional. Propinas propias del local, guardadas en la misma transacción que el local; si se rechazan (400 invalid_tip_settings, 403 tips_settings_forbidden: solo el administrador reservado), el local no cambia. Omitido conserva la configuración actual." } } }
     ExchangeRateInput: { type: object, required: [baseCurrency, quoteCurrency, rate, effectiveAt, source], properties: { baseCurrency: { type: string, pattern: "^[A-Z]{3}$" }, quoteCurrency: { type: string, pattern: "^[A-Z]{3}$" }, rate: { type: string, pattern: "^[0-9]+(\\.[0-9]+)?$" }, effectiveAt: { type: string, format: date-time }, source: { type: string, enum: [manual, provider] }, providerReference: { type: [string, "null"] } } }
     CategoryInput: { type: object, required: [name, sortOrder], properties: { name: { type: string, maxLength: 120 }, sortOrder: { type: integer, minimum: 0 }, active: { type: boolean }, productScope: { type: string, enum: [prepared, retail, both], default: prepared, description: "Uso informativo de la categoría. El cliente lo deduce del formulario de origen (Carta: prepared; Compras o Inventario: retail) y no lo pide al usuario; el backend lo amplía a both cuando la categoría recibe un producto del otro tipo." } } }
     Category: { allOf: [{ $ref: "#/components/schemas/CategoryInput" }, { type: object, required: [id, active, productScope, productCount], properties: { id: { type: string, format: uuid }, active: { type: boolean }, productCount: { type: integer } } }] }
@@ -2469,6 +2691,7 @@ components:
           required: [inherited, country, currency, decimals, channelOptions]
           properties:
             inherited: { type: boolean }
+            editable: { type: boolean, description: GET /v1/admin/tip-settings y PUT. true si el actor es el administrador reservado de la empresa y puede cambiarlas; en otras lecturas siempre false }
             country: { type: string }
             currency: { type: string }
             decimals: { type: integer, minimum: 0, maximum: 2 }
@@ -2533,8 +2756,8 @@ components:
         report: { $ref: "#/components/schemas/TipReport" }
         available: { type: string }
         recipients: { type: array, items: { type: object, required: [id, name], properties: { id: { type: string, format: uuid }, name: { type: string } } } }
-    PaymentInput: { type: object, description: "amount solo representa consumo. tip se cobra adicionalmente una sola vez por pedido, sobre total menos delivery, redondeado según la moneda. La transacción revierte íntegra si la propina falla.", required: [orderId, method, amount], properties: { shiftId: { type: string, format: uuid, description: "Solo administrador: turno abierto del local activo. Se omite si solo hay uno; con varios es obligatorio. No cambia al abridor ni crea asignación." }, tip: { $ref: "#/components/schemas/TipInput" }, orderId: { type: string, format: uuid }, method: { type: string }, amount: { type: number, exclusiveMinimum: 0 }, reference: { type: string, maxLength: 120 } } }
-    Payment: { type: object, required: [id, orderId, orderCode, shiftId, cashRegisterName, method, methodName, amount, refundedAmount, netAmount, reference, createdByName, createdAt], properties: { id: { type: string, format: uuid }, orderId: { type: string, format: uuid }, orderCode: { type: string }, shiftId: { type: string, format: uuid }, cashRegisterName: { type: string }, method: { type: string }, methodName: { type: string, description: "Nombre del catálogo de la empresa, disponible también para pagos con medios ahora inactivos." }, affectsCash: { type: boolean, description: "El medio impacta el efectivo esperado del turno" }, amount: { type: string }, refundedAmount: { type: string }, netAmount: { type: string }, reference: { type: string }, createdByName: { type: string }, createdAt: { type: string, format: date-time } } }
+    PaymentInput: { type: object, description: "amount solo representa consumo. tip se cobra adicionalmente una sola vez por pedido, sobre total menos delivery, redondeado según la moneda. La transacción revierte íntegra si la propina falla.", required: [orderId, method, amount], properties: { fiscal: { $ref: "#/components/schemas/FiscalRequest" }, shiftId: { type: string, format: uuid, description: "Solo administrador: turno abierto del local activo. Se omite si solo hay uno; con varios es obligatorio. No cambia al abridor ni crea asignación." }, tip: { $ref: "#/components/schemas/TipInput" }, orderId: { type: string, format: uuid }, method: { type: string }, amount: { type: number, exclusiveMinimum: 0 }, reference: { type: string, maxLength: 120 } } }
+    Payment: { type: object, required: [id, orderId, orderCode, shiftId, cashRegisterName, method, methodName, amount, refundedAmount, netAmount, reference, createdByName, createdAt], properties: { id: { type: string, format: uuid }, orderId: { type: string, format: uuid }, orderCode: { type: string }, shiftId: { type: string, format: uuid }, cashRegisterName: { type: string }, method: { type: string }, methodName: { type: string, description: "Nombre del catálogo de la empresa, disponible también para pagos con medios ahora inactivos." }, affectsCash: { type: boolean, description: "El medio impacta el efectivo esperado del turno" }, amount: { type: string }, refundedAmount: { type: string }, netAmount: { type: string }, reference: { type: string }, createdByName: { type: string }, createdAt: { type: string, format: date-time }, fiscalDocument: { $ref: "#/components/schemas/FiscalDocumentRef" } } }
     RefundInput: { type: object, required: [amount, reason], properties: { amount: { type: number, exclusiveMinimum: 0 }, reason: { type: string, minLength: 1, maxLength: 120 }, note: { type: string, maxLength: 240 } } }
     ComboOptionInput: { type: object, required: [productId, surcharge], properties: { quota: { type: [integer, "null"], minimum: 1, description: "Cupo por alternativa y día operativo; null no establece cupo propio. No puede superar las existencias del local al registrar la alternativa." }, productId: { type: string, format: uuid }, surcharge: { type: string, pattern: "^[0-9]+(\\.[0-9]{1,2})?$" } } }
     ComboGroupInput: { type: object, required: [name, required, minSelections, maxSelections, options], properties: { name: { type: string, maxLength: 120 }, required: { type: boolean }, minSelections: { type: integer, minimum: 0 }, maxSelections: { type: integer, minimum: 1 }, options: { type: array, items: { $ref: "#/components/schemas/ComboOptionInput" } } } }

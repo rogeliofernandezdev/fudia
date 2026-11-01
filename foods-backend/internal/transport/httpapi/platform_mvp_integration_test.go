@@ -93,11 +93,12 @@ func TestPlatformOnboardingCreatesOperationalTenant(t *testing.T) {
 	if subscriptionStatus != "trial" || billingCycle != "monthly" || price != "99.00" {
 		t.Fatalf("unexpected subscription: status=%s cycle=%s price=%s", subscriptionStatus, billingCycle, price)
 	}
-	if err := pool.QueryRow(context.Background(), `SELECT count(*) FROM organization_modules WHERE organization_id=$1 AND module_key IN ('facturacion','integraciones','crm','bi') AND NOT active`, created.OrganizationID).Scan(&inactiveFuture); err != nil {
+	if err := pool.QueryRow(context.Background(), `SELECT count(*) FROM organization_modules WHERE organization_id=$1 AND module_key IN ('facturacion','integraciones','crm','bi') AND active`, created.OrganizationID).Scan(&inactiveFuture); err != nil {
 		t.Fatal(err)
 	}
-	if inactiveFuture != 4 {
-		t.Fatalf("future modules must start inactive, got %d", inactiveFuture)
+	// Plans never switch on modules in development (pilots) or planned ones.
+	if inactiveFuture != 0 {
+		t.Fatalf("future modules must start inactive, got %d active", inactiveFuture)
 	}
 
 	var adminRoles, defaults, wildcardRoles int
@@ -557,12 +558,33 @@ func TestModuleAvailabilityProtectsTenantActivation(t *testing.T) {
 		t.Fatalf("crm must be planned, got %s", got)
 	}
 
-	req := httptest.NewRequest("PATCH", "/v1/admin/modules", bytes.NewReader([]byte(`{"key":"carta_qr","active":true}`)))
-	req = req.WithContext(context.WithValue(req.Context(), scopeKey{}, s))
-	rec := httptest.NewRecorder()
-	api.toggleModule(rec, req)
-	if rec.Code != 409 || !strings.Contains(rec.Body.String(), "module_not_ready") {
-		t.Fatalf("development module activation must be rejected: %d %s", rec.Code, rec.Body.String())
+	toggle := func(body string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest("PATCH", "/v1/admin/modules", bytes.NewReader([]byte(body)))
+		req = req.WithContext(context.WithValue(req.Context(), scopeKey{}, s))
+		rec := httptest.NewRecorder()
+		api.toggleModule(rec, req)
+		return rec
+	}
+	if rec := toggle(`{"key":"crm","active":true}`); rec.Code != 409 || !strings.Contains(rec.Body.String(), "module_not_ready") {
+		t.Fatalf("planned module activation must be rejected: %d %s", rec.Code, rec.Body.String())
+	}
+
+	// A module in development is a platform pilot for this company only: it is
+	// usable (session and backend checks agree) and plan syncs keep it.
+	if rec := toggle(`{"key":"carta_qr","active":true}`); rec.Code != 204 {
+		t.Fatalf("platform must be able to pilot a development module: %d %s", rec.Code, rec.Body.String())
+	}
+	if !api.activeModules(s.OrganizationID)["carta_qr"] {
+		t.Fatal("a piloted module must be active in the session")
+	}
+	if err := api.syncPlanModules(s.OrganizationID, []string{"reportes"}); err != nil {
+		t.Fatal(err)
+	}
+	if !api.activeModules(s.OrganizationID)["carta_qr"] {
+		t.Fatal("a plan sync must not switch off a pilot")
+	}
+	if rec := toggle(`{"key":"carta_qr","active":false}`); rec.Code != 204 || api.activeModules(s.OrganizationID)["carta_qr"] {
+		t.Fatalf("platform must be able to end a pilot: %d %s", rec.Code, rec.Body.String())
 	}
 
 	_, err := pool.Exec(context.Background(), `

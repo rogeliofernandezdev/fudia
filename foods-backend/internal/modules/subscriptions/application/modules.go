@@ -31,7 +31,7 @@ func (a *Modules) List(ctx context.Context, org string) ([]domain.ModuleView, er
 	}
 	items := make([]domain.ModuleView, 0, len(domain.ModuleCatalog))
 	for _, m := range domain.ModuleCatalog {
-		items = append(items, domain.ModuleView{ModuleDef: m, Availability: domain.ModuleAvailability(m.Key), Active: configured[m.Key] && domain.ModuleCanActivate(m.Key)})
+		items = append(items, domain.ModuleView{ModuleDef: m, Availability: domain.ModuleAvailability(m.Key), Active: configured[m.Key] && (domain.ModuleCanActivate(m.Key) || domain.ModuleCanPilot(m.Key))})
 	}
 	return items, nil
 }
@@ -49,7 +49,9 @@ func (a *Modules) SetActive(ctx context.Context, s requestscope.Scope, key strin
 	if !valid {
 		return apperror.New(apperror.Invalid, "invalid_module", "El módulo no existe.")
 	}
-	if active && !domain.ModuleCanActivate(key) {
+	// The route is platform-only: switching on a module in development is a
+	// pilot for this company; planned modules stay closed.
+	if active && !domain.ModuleCanActivate(key) && !domain.ModuleCanPilot(key) {
 		return apperror.New(apperror.Conflict, "module_not_ready", "Este módulo todavía no está disponible para empresas.")
 	}
 	if err := a.repo.SetActive(ctx, s.OrganizationID, key, active); err != nil {

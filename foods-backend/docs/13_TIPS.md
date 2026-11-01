@@ -21,11 +21,15 @@ reservado puede modificarla, además del permiso `organizations.manage` de la ru
 Un local hereda del restaurante; `inherit:true` elimina su excepción. Los canales
 disponibles se entregan en `channelOptions`; el frontend no mantiene su catálogo.
 
-La interfaz se administra desde **Locales → Propinas** en la fila del local
-elegido. Envía `scope=location&locationId={id}` para consultar y guardar sin cambiar
-el local activo de la sesión. El backend exige autorización de administrador
-sobre el destino y valida que pertenezca a la empresa. Guardar fija la configuración
-de ese local (`inherit:false`). El alcance de restaurante y la herencia permanecen
+La interfaz se administra dentro del formulario del local (Locales → editar o
+nuevo local). La lectura usa `scope=location&locationId={id}` sin cambiar el local
+activo de la sesión y devuelve `editable`: true solo para el administrador
+reservado. El guardado viaja como `tipSettings` opcional en `POST /v1/admin/locations`
+y `PATCH /v1/admin/locations/{id}`: Organizations llama al contrato
+`billing/contracts.LocationTipConfigurator` dentro de la transacción del local,
+así que una configuración inválida (400) o sin permiso (403) también descarta el
+cambio del local. Guardar fija la configuración de ese local (`inherit:false`);
+`PUT /v1/admin/tip-settings` se conserva para compatibilidad. El alcance de restaurante y la herencia permanecen
 en el API por compatibilidad con datos existentes, sin controles de herencia en UI.
 
 Sin configuración explícita, Perú y los demás países quedan desactivados; Chile

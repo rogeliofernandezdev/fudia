@@ -6,6 +6,10 @@ EInvoicing, Inventory, Purchasing, Customers, Delivery, Messaging y Reporting.
 Orders coordina el pedido; Kitchen administra su preparación; Billing administra
 cuenta y pago. Ninguno modifica directamente las tablas del otro.
 
+EInvoicing emite el comprobante fiscal a partir de un pago confirmado por
+Billing, mediante su contrato y outbox. Las reglas fiscales dependen del país
+del perfil fiscal del local; ver [14_EINVOICING.md](14_EINVOICING.md).
+
 Menu define qué se vende y con qué modo de control; Inventory es la única
 autoridad sobre existencias y sobre la disponibilidad calculada. Orders no
 descuenta stock por sí mismo: registra la venta y solicita a Inventory el

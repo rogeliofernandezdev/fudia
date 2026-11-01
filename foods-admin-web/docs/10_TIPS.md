@@ -10,7 +10,7 @@ local ahora» dentro de Primer local, sin añadir otro paso. Comparte
 usa los valores y canales del catálogo de onboarding. La validación pertenece al
 paso del local y los valores se conservan al avanzar o volver.
 
-- **Locales → Propinas:** acción de cada fila que abre la configuración del local elegido, identificado por su nombre. Sin pestañas de alcance ni casilla de herencia. Guardar crea una configuración propia para ese local.
+- **Locales → editar o nuevo local:** sección «Propinas» dentro del formulario del local (2026-11-01; reemplaza el botón «Propinas» de cada fila). Empieza con el selector «Funcionamiento» y muestra el resto solo si no están desactivadas. Solo la ve el administrador reservado (`editable` del API); para otros usuarios no aparece. Se envían únicamente si se cambiaron, junto con el local y en la misma transacción: un local nuevo sin cambios sigue heredando la configuración de la empresa. Sin pestañas de alcance ni casilla de herencia.
 - **POS → Cobrar:** aceptación sin marcar por defecto; porcentaje o monto libre;
   entrega directa al personal opcional. El efectivo recibido y el vuelto toman
   en cuenta la propina retenida, manteniendo `amount` como consumo.
@@ -20,7 +20,7 @@ paso del local y los valores se conservan al avanzar o volver.
 - **Reporte de caja y su PDF:** sección separada de propinas recibidas y entregadas,
   con destinatario, actor, medio, fecha y saldo pendiente del turno.
 
-`TipSettingsDialog` se abre desde las acciones de Locales y recibe `location` (id y nombre) y `close`. La consulta y el guardado usan el local elegido; no cambian la sesión ni el local activo. `TipClosingSection` es controlado por el formulario de cierre y usa el espacio de propinas del turno, incluso en cierre ciego sin exponer el efectivo esperado. El reporte detallado de propinas se muestra en la consulta del informe; en el cierre se presenta solo la sección de entrega para evitar duplicados.
+`LocationDialog` consulta `getTipSettings("location", id)` (o la de la empresa para un local nuevo) y reutiliza `TipSettingsFields` y `tipDraftFromPolicy`; la sección tiene skeleton y error con reintento, y un 403 la oculta. La consulta y el guardado usan el local elegido; no cambian la sesión ni el local activo. `TipClosingSection` es controlado por el formulario de cierre y usa el espacio de propinas del turno, incluso en cierre ciego sin exponer el efectivo esperado. El reporte detallado de propinas se muestra en la consulta del informe; en el cierre se presenta solo la sección de entrega para evitar duplicados.
 El flujo usa `ModalForm → ModalBody + ModalFooter`; solo el cuerpo se desplaza, y
 el pie permanece accesible en móvil. El estado remoto contempla skeleton, error
 con reintento y ausencia de datos. La consulta está ligada a empresa, local y actor.

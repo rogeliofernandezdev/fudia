@@ -100,6 +100,10 @@ func (a *Subscriptions) SyncModules(ctx context.Context, organizationID string, 
 		allowed[key] = true
 	}
 	for _, m := range domain.ModuleCatalog {
+		// A pilot is switched per company by the platform; plan changes keep it.
+		if domain.ModuleCanPilot(m.Key) {
+			continue
+		}
 		if err := a.repo.SaveModule(ctx, organizationID, m.Key, allowed[m.Key] && domain.ModuleCanActivate(m.Key)); err != nil {
 			return err
 		}

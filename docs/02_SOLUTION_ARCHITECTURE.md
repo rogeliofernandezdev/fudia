@@ -10,7 +10,8 @@ vertical slices, PostgreSQL, REST/OpenAPI y mensajería solo donde aporte valor.
 foods-admin-web ─ HTTPS/OpenAPI ─ foods-backend ─ PostgreSQL
                                       │              ^
 WhatsApp ─ fudia-concierge ─────────────┤              │ contrato de imágenes
-                                      ├─ SUNAT/OSE   │
+                                      ├─ proveedor   │
+                                      │  fiscal/país │
                                       ├─ impresión   │
                                       └─ pagos       │
                                                      │
@@ -58,6 +59,21 @@ La empresa es la frontera de tenencia. Sus perfiles fiscales se separan por paí
 cada local referencia uno de esos perfiles. Moneda, impuesto y tipo de cambio no
 se duplican como preferencias del usuario ni como columnas independientes del
 local. Los tipos de cambio son históricos, efectivos por fecha y auditables.
+
+## Facturación electrónica por país
+
+La facturación sigue la misma frontera: el país de un comprobante es el del
+perfil fiscal del local. El módulo `einvoicing` tiene un núcleo neutro y dos
+puertos registrados en `cmd/api`: **jurisdicción** (reglas fiscales del país) y
+**proveedor** (transporte). En Perú el proveedor es un motor propio que firma
+con el certificado de cada empresa y envía a SUNAT; un OSE/PSE o servicio
+externo puede agregarse como otro adaptador. Las credenciales se guardan
+cifradas en PostgreSQL con una llave maestra externa. No hay servicios ni
+pantallas por país y el cobro nunca espera a la autoridad tributaria: la
+emisión sale por outbox. La
+emisión es opcional: depende del plan (desde Impulso), de que la empresa la
+mantenga activa y de que el cliente pida comprobante en cada venta.
+Detalle: [`foods-backend/docs/14_EINVOICING.md`](../foods-backend/docs/14_EINVOICING.md).
 
 
 ## Fudia Concierge

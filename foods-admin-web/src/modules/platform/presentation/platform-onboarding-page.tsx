@@ -179,7 +179,7 @@ export function PlatformOnboardingPage(){
           </div>
           {ctx.tipOptions&&<FormSection title="Propinas" icon="percent" className="span-2" bare><Controller name="tipSettings" control={control} render={({field})=><div className="tip-settings-form">
             <label className="tip-checkbox"><input type="checkbox" checked={Boolean(field.value)} disabled={save.isPending||readingImages} onChange={event=>field.onChange(event.target.checked?(ctx.tipOptions!.countryDefaults[country]??ctx.tipOptions!.defaults):undefined)}/><span>Configurar propinas para este local ahora</span></label>
-            {field.value?<TipSettingsFields value={field.value} onChange={field.onChange} disabled={save.isPending||readingImages} currency={getValues("currency")} channelOptions={ctx.tipOptions!.channels}/>:<p className="tip-help">Opcional. Puedes configurarlas después desde Locales → Propinas.</p>}
+            {field.value?<TipSettingsFields value={field.value} onChange={field.onChange} disabled={save.isPending||readingImages} currency={getValues("currency")} channelOptions={ctx.tipOptions!.channels}/>:<p className="tip-help">Opcional. Puedes configurarlas después al editar el local en Locales.</p>}
             {err("tipSettings")&&<p className="field-error" role="alert">{err("tipSettings")}</p>}
           </div>}/></FormSection>}
         </div>}

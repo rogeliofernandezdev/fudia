@@ -1,5 +1,5 @@
 export type TipSettings={mode:"disabled"|"suggest"|"collect";percentage:number;showSuggestion:boolean;allowFixed:boolean;channels:string[]};
-export type TipPolicy=TipSettings&{inherited:boolean;country:string;currency:string;decimals:number;channelOptions:{value:string;label:string}[]};
+export type TipPolicy=TipSettings&{inherited:boolean;editable?:boolean;country:string;currency:string;decimals:number;channelOptions:{value:string;label:string}[]};
 export type TipInput={kind:"percentage"|"fixed";value:number;directToStaff:boolean};
 export type TipReceipt={id:string;paymentId:string;orderCode:string;amount:string;methodName:string;affectsCash:boolean;directToStaff:boolean;createdByName:string;createdAt:string};
 export type TipPayout={id:string;recipientId:string;recipientName:string;amount:string;method:"cash"|"transfer";note:string;createdByName:string;createdAt:string};

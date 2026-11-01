@@ -11,19 +11,31 @@ type Capacity struct {
 	Used    int
 }
 type AccessRepository interface {
-	ActiveModules(context.Context, string) (map[string]bool, error)
+	ModuleSwitches(context.Context, string) (map[string]domain.ModuleSwitch, error)
 	LockCapacity(context.Context, string, string) (Capacity, error)
 }
 type Access struct{ repo AccessRepository }
 
 func NewAccess(repo AccessRepository) *Access { return &Access{repo} }
+
+// ModuleEntitled reports whether the company can use the module, with the same
+// rule as the session (domain.ModuleEnabled), so a platform pilot of a module
+// in development shows its screens and passes its backend checks alike.
+func (a *Access) ModuleEntitled(ctx context.Context, org, key string) (bool, error) {
+	modules, err := a.ActiveModules(ctx, org)
+	if err != nil {
+		return false, err
+	}
+	return modules[key], nil
+}
 func (a *Access) ActiveModules(ctx context.Context, org string) (map[string]bool, error) {
-	modules, err := a.repo.ActiveModules(ctx, org)
+	switches, err := a.repo.ModuleSwitches(ctx, org)
 	if err != nil {
 		return nil, err
 	}
-	for key, active := range modules {
-		modules[key] = active && domain.ModuleCanActivate(key)
+	modules := make(map[string]bool, len(switches))
+	for key, state := range switches {
+		modules[key] = domain.ModuleEnabled(key, state)
 	}
 	return modules, nil
 }

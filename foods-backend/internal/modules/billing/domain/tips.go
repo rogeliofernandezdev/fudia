@@ -31,6 +31,8 @@ type TipPolicy struct {
 	TipSettings
 	ChannelOptions []TipChannelOption `json:"channelOptions"`
 	Inherited      bool               `json:"inherited"`
+	// Editable is set only by the settings endpoint: the actor may change them.
+	Editable bool `json:"editable"`
 	Country        string             `json:"country"`
 	Currency       string             `json:"currency"`
 	Decimals       int                `json:"decimals"`

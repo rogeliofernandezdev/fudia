@@ -29,7 +29,9 @@ inventario trazable y emitir comprobantes electrónicos para Perú.
 - Mesas, reservas simples y comandas.
 - POS, caja, medios de pago, división de cuenta y propina.
 - Pantalla de cocina (KDS) e impresión de comandas.
-- Boletas, facturas, notas y envío electrónico a SUNAT mediante proveedor.
+- Boletas, facturas, notas y envío electrónico a SUNAT con motor propio
+  (firma con el certificado de cada empresa), preparado para sumar un
+  proveedor externo.
 - Recetas, insumos, compras, movimientos y stock por local.
 - Pedidos por WhatsApp con confirmación humana y trazabilidad.
 - Dashboard, cierre de caja y reportes de ventas, costos e inventario.
@@ -40,7 +42,6 @@ inventario trazable y emitir comprobantes electrónicos para Perú.
 - Aplicación nativa iOS/Android.
 - Flota logística avanzada.
 - Contabilidad general completa.
-- Motor propio de homologación SUNAT.
 
 ## Suscripción SaaS
 
@@ -78,7 +79,9 @@ Los tres incluyen 14 días de prueba.
 
 Los planes son **acumulativos**: cada uno incluye todo el anterior. Solo se
 venden módulos **Disponibles** (`ready`); los módulos en desarrollo o
-planificados no forman parte de ningún plan hasta su cierre.
+planificados no forman parte de ningún plan hasta su cierre. Un módulo en
+desarrollo puede activarse como **piloto** en una empresa concreta, solo por
+Plataforma y fuera del plan.
 
 | Módulo | Clave | Emprende | Impulso | Escala |
 | --- | --- | :---: | :---: | :---: |
@@ -112,6 +115,11 @@ planificados no forman parte de ningún plan hasta su cierre.
   60 usuarios.
 - Concierge está en todos los planes, con un límite mensual de conversaciones
   por plan, como los límites de locales y usuarios.
+- **Facturación electrónica** (`facturacion`, en desarrollo): al cerrarse se
+  incluirá desde **Impulso**, no en Emprende. Es opcional en dos niveles: la
+  empresa puede desactivarla y, con ella activa, el cajero emite solo si el
+  cliente pide comprobante. Detalle en
+  [`foods-backend/docs/14_EINVOICING.md`](../foods-backend/docs/14_EINVOICING.md).
 
 #### Límite mensual de Concierge (acordado e implementado 2026-10-23, migración 000091)
 

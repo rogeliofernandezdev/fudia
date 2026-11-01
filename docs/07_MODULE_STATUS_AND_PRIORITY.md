@@ -50,7 +50,7 @@ los evals reales del router con Vertex.
 | ✅ **100% cerrado** | Alcance actual definido, UI y backend reales, persistencia, permisos, multiempresa/local cuando aplica, contrato actualizado y CI verde. |
 | 🟢 **Ready / activable** | El catálogo permite activarlo y existe implementación funcional, pero aún no se ha hecho una auditoría de cierre completa para declararlo 100%. |
 | 🟡 **Parcial** | Una parte importante funciona, pero faltan capacidades incluidas en el alcance del módulo. |
-| 🔵 **En desarrollo** | Existe base o pantalla, pero no está habilitado como módulo terminado para empresas. |
+| 🔵 **En desarrollo** | Existe base o pantalla, pero no está habilitado como módulo terminado para empresas. Plataforma puede activarlo como piloto en una empresa concreta (Módulos › Activar piloto); ningún plan lo incluye. |
 | ⚪ **Planificado** | Está contemplado en el catálogo/roadmap, pero no debe considerarse implementado. |
 
 **Regla:** no marcar un módulo como **100% cerrado** únicamente porque
@@ -190,7 +190,7 @@ esté terminado. Falta la parte de costeo y rentabilidad.
 | --- | --- | --- | --- |
 | Fiscal y moneda | `fiscal` | 🟢 Ready / activable | Perfil fiscal y moneda reales. Auditoría de cierre pendiente. |
 | Usuarios y roles | `usuarios` | 🟢 Ready / activable | Roles/permisos forman parte del onboarding. Auditoría de cierre pendiente. |
-| Facturación | `facturacion` | 🔵 En desarrollo | Pantallas actuales no constituyen facturación electrónica real. **Siguiente prioridad.** |
+| Facturación | `facturacion` | 🔵 En desarrollo | Boleta y factura de Perú desde el cobro con motor SUNAT propio (XML UBL 2.1, firma, SOAP y CDR; aceptadas en SUNAT beta), credenciales cifradas por empresa, Comprobantes con descarga de XML y CDR, y Configuración › Facturación (2026-11-01). Falta nota de crédito, resumen diario y bajas, emisión desde Ventas, impresión con QR y Cloud Tasks. Piloto por empresa desde Módulos (solo Plataforma). |
 | Integraciones | `integraciones` | 🔵 En desarrollo | Pendiente completar adaptadores operativos. |
 | Fudia Concierge | `whatsapp_bot` | ✅ **100% cerrado** | QR/WhatsApp, menú real, pedidos/KDS, combos, modificadores, rondas, cuenta, handoff, multiagente, cola durable, aislamiento multicanal, resiliencia, observabilidad, evals y CI/Docker están cerrados. La activación comercial sigue dependiendo del plan/entitlement; el go-live requiere credenciales externas. Ampliación 2026-10-16: delivery/recojo tras la mesa con tarifas por distancia (pendiente CI con PostgreSQL y evals reales). Ampliación 2026-10-23: medición y tope mensual de conversaciones por plan con modo medir/avisar/bloquear, solo para Plataforma (migración 000091). |
 
@@ -275,8 +275,17 @@ Debe incluir como mínimo:
 10. permisos, auditoría, OpenAPI y pruebas;
 11. onboarding/configuración inicial necesaria para una empresa nueva.
 
-**No construir un motor SUNAT propio.** La arquitectura define al proveedor
-electrónico como adaptador externo.
+**Motor SUNAT propio** (decisión del 2026-11-01, reemplaza «no construir un
+motor SUNAT propio»): Fudia genera, firma y envía el XML con el certificado de
+cada empresa. El motor es un adaptador del puerto de proveedor, así que un
+OSE/PSE o un servicio como llama.pe puede sumarse después sin rehacer el módulo.
+
+Diseño aprobado (2026-11-01): módulo `einvoicing` con núcleo neutro,
+jurisdicción por país (Perú primero) y proveedor como puerto,
+resueltos por el `country_code` del perfil fiscal del local. Es opcional e
+independiente: se incluye desde Impulso, la empresa puede desactivarla y en
+cada cobro se elige Sin comprobante, Boleta o Factura. Detalle en
+[`foods-backend/docs/14_EINVOICING.md`](../foods-backend/docs/14_EINVOICING.md).
 
 ### P1 — Costeo real y rentabilidad
 
@@ -340,13 +349,27 @@ no bloquea el inicio de **P0 — Facturación electrónica**.
 
 Punto de continuación de Facturación:
 
-1. definir modelo persistente de series y comprobantes;
-2. definir contrato del adaptador de proveedor homologado;
-3. implementar configuración administrativa por empresa/local;
-4. emitir boleta/factura desde una venta/pago real;
-5. implementar historial, estados, reintentos idempotentes y auditoría;
-6. integrar notas/anulaciones según soporte del proveedor;
-7. cerrar OpenAPI, pruebas y flujo POS -> comprobante fiscal.
+1. ✅ regímenes de impuesto con vigencia en el perfil fiscal, con su pestaña
+   en Fiscal y moneda (migración 000097);
+2. ✅ modelo de series y comprobantes, puertos de jurisdicción y proveedor,
+   `jurisdictions/pe` y `providers/fake` (migración 000098);
+3. ✅ Configuración › Facturación: activación por país y series por local;
+4. ✅ boleta/factura desde el cobro del POS, solo si el cajero la elige y en el
+   pago que salda la cuenta; cobro intacto sin módulo;
+5. ✅ Comprobantes: historial, estados, detalle, reintento y auditoría;
+6. ✅ outbox en la fila del comprobante, envío en proceso y endpoints internos
+   para Cloud Tasks y Cloud Scheduler. Falta crear la cola, el job y la cuenta
+   de servicio en `foods-infrastructure` y el adaptador de Cloud Tasks;
+7. ✅ motor SUNAT propio (`providers/sunat`): XML UBL 2.1, firma, `sendBill`
+   y CDR; credenciales cifradas por perfil fiscal con llave maestra externa;
+   XML y CDR descargables; validación del emisor. Aceptado en SUNAT beta;
+8. emisión posterior desde Ventas y representación impresa (80 mm/A4 con QR);
+9. nota de crédito, resumen diario y comunicación de baja (`sendSummary` y
+   `getStatus` con ticket);
+10. prueba en producción con el certificado y el usuario SOL de una empresa
+    piloto;
+11. pasar `facturacion` a disponible e incluirlo en Impulso y Escala; hoy
+    Plataforma lo activa como piloto por empresa desde Módulos.
 
 ---
 

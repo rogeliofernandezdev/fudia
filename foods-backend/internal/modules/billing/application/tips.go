@@ -43,6 +43,29 @@ func (a *Tips) ConfigureInitialTips(ctx context.Context, s scope, in domain.TipS
 	return a.repo.SaveTipSettings(ctx, s, false, domain.TipSettingsInput{TipSettings: in})
 }
 
+// Used by the location form transaction; s.LocationID is the saved location.
+func (a *Tips) ConfigureLocationTips(ctx context.Context, s scope, in domain.TipSettings) error {
+	editable, err := a.CanEditSettings(ctx, s)
+	if err != nil {
+		return paymentFailure(apperror.Unavailable, "tips_unavailable", "No pudimos validar quién configura las propinas.")
+	}
+	if !editable {
+		return paymentFailure(apperror.Forbidden, "tips_settings_forbidden", "Solo el administrador puede configurar propinas.")
+	}
+	if !domain.ValidTipSettings(in) {
+		return paymentFailure(apperror.Invalid, "invalid_tip_settings", "Revisa el porcentaje, el modo y los tipos de atención de las propinas.")
+	}
+	if err := a.repo.SaveTipSettings(ctx, s, false, domain.TipSettingsInput{TipSettings: in}); err != nil {
+		return paymentFailure(apperror.Unavailable, "tips_unavailable", "No pudimos guardar la configuración de propinas.")
+	}
+	return nil
+}
+
+// CanEditSettings reports whether the actor is the reserved company administrator.
+func (a *Tips) CanEditSettings(ctx context.Context, s scope) (bool, error) {
+	return a.repo.CanReadAllShifts(ctx, s)
+}
+
 func NewTips(repo TipRepository, work unitofwork.Manager) *Tips { return &Tips{repo, work} }
 func (a *Payments) WithTips(tips *Tips) *Payments               { a.tips = tips; return a }
 
@@ -98,7 +121,9 @@ func (a *Tips) SavePolicy(ctx context.Context, s scope, global bool, in domain.T
 	if err = a.repo.SaveTipSettings(ctx, s, global, in); err != nil {
 		return out, paymentFailure(apperror.Unavailable, "tips_unavailable", "No pudimos guardar la configuración de propinas.")
 	}
-	return a.Policy(ctx, s, global)
+	out, err = a.Policy(ctx, s, global)
+	out.Editable = err == nil
+	return out, err
 }
 
 // Called inside the payment transaction, after the order has been locked and authorized.

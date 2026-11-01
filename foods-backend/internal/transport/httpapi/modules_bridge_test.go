@@ -2,7 +2,12 @@ package httpapi
 
 import (
 	"context"
+
+	auditpg "github.com/foods-platform/foods-backend/internal/modules/audit/infrastructure/postgres"
+	subscriptionapp "github.com/foods-platform/foods-backend/internal/modules/subscriptions/application"
 	subscriptiondomain "github.com/foods-platform/foods-backend/internal/modules/subscriptions/domain"
+	subscriptionpg "github.com/foods-platform/foods-backend/internal/modules/subscriptions/infrastructure/postgres"
+	"github.com/foods-platform/foods-backend/internal/platform/database"
 )
 
 const moduleAvailabilityReady = subscriptiondomain.ModuleAvailabilityReady
@@ -20,4 +25,10 @@ func (a *integrationAPI) readOrganizationModules(ctx context.Context, org string
 func (a *integrationAPI) activeModules(orgID string) map[string]bool {
 	result, _ := a.readOrganizationModules(context.Background(), orgID)
 	return result
+}
+
+// syncPlanModules applies a plan's modules to a company, as a plan or
+// subscription change does.
+func (a *integrationAPI) syncPlanModules(orgID string, keys []string) error {
+	return subscriptionapp.New(subscriptionpg.New(a.db), database.NewUnitOfWork(a.db), auditpg.New(a.db)).SyncModules(context.Background(), orgID, keys)
 }

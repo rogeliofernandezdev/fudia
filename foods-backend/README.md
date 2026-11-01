@@ -7,6 +7,10 @@ Verificación: go test ./..., go vet ./... y go build ./cmd/api.
 Propinas: configuración, cobro, entrega al personal y reporte separado en
 [docs/13_TIPS.md](docs/13_TIPS.md).
 
+Facturación electrónica por país (diseño aprobado, sin implementar): núcleo
+neutro, jurisdicción por país y proveedor homologado como puertos, en
+[docs/14_EINVOICING.md](docs/14_EINVOICING.md).
+
 Imágenes GCP: carga directa firmada, sin bytes en el API; el proyecto independiente
 `../fudia-image-processor` genera WebP de 200/600 px. Contrato y configuración en
 [docs/11_PRODUCT_IMAGES.md](docs/11_PRODUCT_IMAGES.md).
@@ -36,6 +40,8 @@ configuración administrativa. Cada país define también su moneda predetermina
 y el onboarding exige esa asociación.
 
 `FUDIA_CONCIERGE_API_KEY` autentica las llamadas internas desde el servicio Concierge. El acceso de una organización se controla mediante `organization_modules.whatsapp_bot`, administrado únicamente desde la plataforma global.
+
+`FUDIA_EINVOICING_MASTER_KEY` (32 bytes en base64, con `FUDIA_EINVOICING_KEY_VERSION` y `FUDIA_EINVOICING_PREVIOUS_KEYS` para rotar) cifra las credenciales SOL y los certificados de cada empresa; sin ella no se guardan credenciales ni se emite en producción. `FUDIA_EINVOICING_WORKER_KEY` protege los endpoints internos de envío. Ver `docs/14_EINVOICING.md`.
 
 ## Responsabilidades y Repository
 

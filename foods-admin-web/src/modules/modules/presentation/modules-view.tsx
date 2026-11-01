@@ -10,7 +10,7 @@ import type {Module, ModuleAvailability} from "../domain/types";
 
 const availabilityMeta:Record<ModuleAvailability,{label:string;tone:"green"|"blue"|"gray";description:string}>={
   ready:{label:"Disponible",tone:"green",description:"Puede habilitarse para la empresa."},
-  development:{label:"En desarrollo",tone:"blue",description:"Visible para plataforma, todavía no activable para empresas."},
+  development:{label:"En desarrollo",tone:"blue",description:"Solo como piloto: se activa para esta empresa, no por plan."},
   planned:{label:"Planificado",tone:"gray",description:"Incluido en el roadmap, todavía no activable para empresas."},
 };
 
@@ -33,7 +33,7 @@ export function ModulesView() {
   const {user, organization} = useSession();
   const {notify} = useFeedback();
   const client = useQueryClient();
-  const [confirm, setConfirm] = useState<Module|null>(null);
+  const [confirm, setConfirm] = useState<{module:Module;active:boolean}|null>(null);
   const modules = useQuery({queryKey: ["modules"], queryFn: listModules});
   const toggle = useMutation({
     mutationFn: toggleModule,
@@ -53,8 +53,9 @@ export function ModulesView() {
   const pendingKey = toggle.isPending ? toggle.variables?.key : undefined;
 
   function onToggle(module: Module) {
-    if(module.availability!=="ready"||toggle.isPending)return;
-    if(module.active){setConfirm(module);return;}
+    if(module.availability==="planned"||toggle.isPending)return;
+    // Turning off always confirms; turning on a module in development is a pilot.
+    if(module.active||module.availability==="development"){setConfirm({module,active:!module.active});return;}
     toggle.mutate({key: module.key, active: true});
   }
 
@@ -74,7 +75,7 @@ export function ModulesView() {
 
   return (
     <>
-      <PageHeader title="Módulos" description="Catálogo completo de FUDIA. Solo los módulos disponibles pueden habilitarse para una empresa." />
+      <PageHeader title="Módulos" description="Catálogo completo de FUDIA. Los módulos disponibles se habilitan para una empresa; los que están en desarrollo, solo como piloto." />
       {organization && <div className="modules-org-banner"><Icon name="store" size={16} /><span>Gestionando módulos de <b>{organization.name}</b> — los cambios aplican a todos sus locales y usuarios.</span></div>}
       {modules.isLoading ? <ModulesSkeleton/> : modules.isError ? (
         <div className="panel management"><ErrorState title="No pudimos cargar los módulos" text={modules.error.message} onRetry={() => void modules.refetch()} retrying={modules.isFetching}/></div>
@@ -88,14 +89,15 @@ export function ModulesView() {
               <div className="module-list">
                 {list.filter(m => m.category === cat).map(m => {
                   const availability=availabilityMeta[m.availability];
-                  const activable=m.availability==="ready";
+                  const activable=m.availability!=="planned";
+                  const pilot=m.availability==="development"&&m.active;
                   const busy=pendingKey===m.key;
                   return <div key={m.key} className={`module-item${m.active ? " active" : ""}${!activable?" unavailable":""}`} aria-busy={busy}>
                     <span className="module-icon"><Icon name={m.icon as IconName} size={20} /></span>
                     <div className="module-info">
                       <div className="module-title-row"><b>{m.name}</b><Status tone={availability.tone}>{availability.label}</Status></div>
                       <small>{m.description}</small>
-                      <em>{availability.description}</em>
+                      <em>{pilot?"Piloto activo en esta empresa.":availability.description}</em>
                     </div>
                     <RowActionButton
                       action={m.active ? "deactivate" : "activate"}
@@ -112,7 +114,7 @@ export function ModulesView() {
           ))}
         </div>
       )}
-      <ConfirmDialog open={Boolean(confirm)} title="Desactivar módulo" subject={confirm?{label:"Módulo",name:confirm.name}:undefined} description={`Dejará de estar disponible para todos los locales y usuarios de ${organization?.name??"la empresa"}.`} confirmLabel="Desactivar" pending={toggle.isPending} onCancel={() => {if(!toggle.isPending)setConfirm(null)}} onConfirm={() => confirm&&toggle.mutate({key: confirm.key, active: false})}/>
+      <ConfirmDialog open={Boolean(confirm)} tone={confirm?.active?"success":"danger"} title={confirm?.active?"Activar piloto":"Desactivar módulo"} subject={confirm?{label:"Módulo",name:confirm.module.name}:undefined} description={confirm?.active?`Todavía está en desarrollo. Se habilita solo para ${organization?.name??"esta empresa"} y los cambios de plan no lo apagan.`:`Dejará de estar disponible para todos los locales y usuarios de ${organization?.name??"la empresa"}.`} confirmLabel={confirm?.active?"Activar piloto":"Desactivar"} pending={toggle.isPending} onCancel={() => {if(!toggle.isPending)setConfirm(null)}} onConfirm={() => confirm&&toggle.mutate({key: confirm.module.key, active: confirm.active})}/>
     </>
   );
 }

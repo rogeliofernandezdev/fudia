@@ -37,7 +37,7 @@ func (h *Handler) UpdateOrganization(w http.ResponseWriter, r *http.Request) {
 	respond(w, 200, out, err)
 }
 func (h *Handler) CreateLocation(w http.ResponseWriter, r *http.Request) {
-	var in domain.LocationInput
+	var in application.LocationSaveInput
 	if json.NewDecoder(r.Body).Decode(&in) != nil {
 		shared.Fail(w, 400, "invalid_request", "Revisa los datos enviados.")
 		return
@@ -46,7 +46,7 @@ func (h *Handler) CreateLocation(w http.ResponseWriter, r *http.Request) {
 	respond(w, 201, out, err)
 }
 func (h *Handler) UpdateLocation(w http.ResponseWriter, r *http.Request) {
-	var in domain.LocationInput
+	var in application.LocationSaveInput
 	if json.NewDecoder(r.Body).Decode(&in) != nil {
 		shared.Fail(w, 400, "invalid_request", "Revisa los datos enviados.")
 		return

@@ -29,10 +29,36 @@ type Organizations struct {
 	work   unitofwork.Manager
 	access OrganizationAccess
 	audit  audit.Repository
+	tips   billingcontracts.LocationTipConfigurator
+}
+
+// LocationSaveInput is the location form: the location itself plus, optionally,
+// its own tip settings, saved in the same transaction.
+type LocationSaveInput struct {
+	domain.LocationInput
+	TipSettings *billingcontracts.TipSettings `json:"tipSettings,omitempty"`
 }
 
 func New(repo OrganizationRepository, work unitofwork.Manager, access OrganizationAccess, audit audit.Repository) *Organizations {
-	return &Organizations{repo, work, access, audit}
+	return &Organizations{repo: repo, work: work, access: access, audit: audit}
+}
+func (a *Organizations) WithTips(tips billingcontracts.LocationTipConfigurator) *Organizations {
+	a.tips = tips
+	return a
+}
+
+// configureTips runs inside the location transaction so a rejected tip
+// configuration also discards the location change.
+func (a *Organizations) configureTips(ctx context.Context, s scope, locationID string, settings *billingcontracts.TipSettings) error {
+	if settings == nil {
+		return nil
+	}
+	if a.tips == nil {
+		return organizationFailure(apperror.Unavailable, "tips_unavailable", "La configuración de propinas no está disponible.")
+	}
+	target := s
+	target.LocationID = locationID
+	return a.tips.ConfigureLocationTips(ctx, target, *settings)
 }
 func organizationFailure(k apperror.Kind, c, m string) error { return apperror.New(k, c, m) }
 
@@ -162,8 +188,9 @@ func (a *Organizations) Update(ctx context.Context, s scope, in domain.Organizat
 	return out, nil
 
 }
-func (a *Organizations) CreateLocation(ctx context.Context, s scope, in domain.LocationInput) (domain.LocationView, error) {
+func (a *Organizations) CreateLocation(ctx context.Context, s scope, input LocationSaveInput) (domain.LocationView, error) {
 	var result domain.LocationView
+	in := input.LocationInput
 	if !domain.ValidateLocationInput(&in) {
 		return result, organizationFailure(apperror.Invalid, "invalid_location", "Completa los datos obligatorios del local.")
 	}
@@ -180,6 +207,9 @@ func (a *Organizations) CreateLocation(ctx context.Context, s scope, in domain.L
 	if err != nil {
 		return result, organizationFailure(apperror.Conflict, "location_conflict", "El código ya existe o el perfil fiscal no pertenece a la empresa.")
 	}
+	if err = a.configureTips(tx.Context(), s, out.ID, input.TipSettings); err != nil {
+		return result, err
+	}
 	if err = tx.Commit(ctx); err != nil {
 		return result, organizationFailure(apperror.Unavailable, "location_unavailable", "No pudimos confirmar el nuevo local.")
 	}
@@ -187,7 +217,8 @@ func (a *Organizations) CreateLocation(ctx context.Context, s scope, in domain.L
 	return out, nil
 
 }
-func (a *Organizations) UpdateLocation(ctx context.Context, s scope, id string, in domain.LocationInput) error {
+func (a *Organizations) UpdateLocation(ctx context.Context, s scope, id string, input LocationSaveInput) error {
+	in := input.LocationInput
 	if !domain.ValidateLocationInput(&in) {
 		return organizationFailure(apperror.Invalid, "invalid_location", "Completa los datos obligatorios del local.")
 	}
@@ -195,9 +226,20 @@ func (a *Organizations) UpdateLocation(ctx context.Context, s scope, id string, 
 	if in.Active != nil {
 		active = *in.Active
 	}
-	command, err := a.repo.UpdateLocation(ctx, s, id, in, active)
+	tx, err := a.work.Begin(ctx, unitofwork.Options{})
+	if err != nil {
+		return organizationFailure(apperror.Unavailable, "location_unavailable", "No pudimos actualizar el local.")
+	}
+	defer tx.Rollback(ctx)
+	command, err := a.repo.UpdateLocation(tx.Context(), s, id, in, active)
 	if err != nil || command == 0 {
 		return organizationFailure(apperror.Conflict, "location_conflict", "No pudimos actualizar el local.")
+	}
+	if err = a.configureTips(tx.Context(), s, id, input.TipSettings); err != nil {
+		return err
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return organizationFailure(apperror.Unavailable, "location_unavailable", "No pudimos confirmar los cambios del local.")
 	}
 	_ = a.audit.Record(ctx, s, "location.updated", "location", id)
 	return nil

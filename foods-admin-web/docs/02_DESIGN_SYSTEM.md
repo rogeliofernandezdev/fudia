@@ -1501,6 +1501,20 @@ descargar y alternar al detalle HTML del informe sin depender del visor nativo.
   selecciona un perfil existente. Los tipos de cambio se gestionan en una vista
   separada con moneda origen, moneda destino, vigencia, fuente e historial. No se
   mezclan estos conceptos en un único formulario ni se duplican valores por local.
+- **Fiscal y moneda** (`/settings/tax`; el título coincide con el menú) tiene tres
+  pestañas: Perfiles fiscales, Regímenes y Tipos de cambio. **Regímenes** lista
+  los impuestos con vigencia del perfil (nombre, vigencia «desde – hasta»,
+  impuestos, total y estado Vigente `green` / Programado `blue` / Finalizado
+  `gray`, calculado con la fecha de negocio que devuelve el API). El selector de
+  país aparece en la barra solo si hay más de un perfil activo. Sin regímenes, el
+  vacío indica la tasa general que se aplica.
+- El formulario del régimen es una sola hoja: nombre, «Desde», «Hasta» opcional
+  e inclusiva (el API la guarda como fin exclusivo), y de 1 a 5 filas
+  impuesto + porcentaje con quitar; «Agregar impuesto» debajo y el total en la
+  nota del pie. No se pide código: se deriva del nombre. Las filas omiten el
+  icono automático para no repetirlo.
+- Las propinas de un local se editan dentro del formulario del local (sección
+  «Propinas»), no desde un botón en la fila de Locales.
 - El onboarding de plataforma se presenta como un wizard de cinco pasos:
   Empresa → Plan y contrato → Fiscal → Primer local → Administrador. La confirmación final crea el tenant
   completo de forma transaccional; avanzar entre pasos no persiste datos parciales.
@@ -1742,6 +1756,43 @@ cantidades ni modificar el historial de compras. La compra individual muestra
 el nombre remoto de la unidad (por ejemplo, Botella), nunca «Unidad base»;
 conserva el código técnico `unit` y contenido 1. Los mismos términos se utilizan
 en las órdenes y los ajustes de inventario, sin cambios del contrato ni de stock.
+
+## Facturación electrónica
+
+- **Cobro (POS):** sección «Comprobante» después de «Medio de pago», solo si la
+  facturación está activa para el local y el monto salda la cuenta. «Sin
+  comprobante / Boleta / Factura» usa `Tabs` (cambia el modo del formulario) con
+  el valor inicial configurado por local. Boleta: «Documento» opcional y
+  «Número»; el nombre aparece solo con documento. Factura: identificación
+  fiscal (etiqueta del API, «RUC» en Perú), «Razón social» y «Dirección»
+  opcional. Errores en línea; el backend valida de nuevo. El aviso de éxito
+  dice «Boleta B001-4 · estado: emitiendo.».
+- **Comprobantes** (`/receipts`, menú Control): búsqueda por número, cliente o
+  pedido, filtro de estado, tabla Comprobante · Fecha · Cliente · Total ·
+  Estado. El detalle usa `DetailHero` (total y estado), `DetailFacts`, una
+  lista de líneas sin cabecera oscura y los totales «Valor de venta», cada
+  impuesto con su tasa y «Total». «XML firmado» y «CDR de SUNAT» son botones
+  secundarios con icono `download` cuando el API los lista en `files`; el
+  código de respuesta solo se muestra si el comprobante no fue aceptado.
+  «Reenviar» (secundario) solo con error de envío. El número fiscal y `PED-`
+  son las únicas referencias visibles.
+- **Estados fiscales** (mapeo central `fiscalStatusView`): Emitiendo `sky`,
+  Aceptado `green`, Observado `orange`, Con error `orange`, Rechazado `red`,
+  Anulado `gray`.
+- **Configuración › Facturación:** un panel por país (interruptor «Emitir
+  comprobantes electrónicos», Proveedor y Ambiente; Guardar/Cancelar solo con
+  cambios) y la tabla «Series por local» con edición en modal (serie por tipo,
+  sugerida por el API, y «Comprobante sugerido al cobrar»). Una serie que ya
+  emitió comprobantes queda de solo lectura. Sin el módulo en el plan se muestra
+  un vacío que lo explica.
+- **Credenciales del proveedor:** bloque dentro del panel del país, separado por
+  una línea, con `Status` Configuradas `green`, Pendientes `orange` (obligatorias
+  en producción) u Opcionales `gray`, y solo metadatos no secretos (usuario,
+  titular y vencimiento del certificado). «Configurar/Actualizar credenciales»
+  abre un modal compacto armado con `credentials.fields` del API (texto,
+  secreto con `autocomplete=new-password`, archivo `.pfx` en base64); los
+  valores nunca vuelven y un campo vacío conserva el guardado. Si el emisor
+  está incompleto se muestra `InlineNotice` warning con «Ir a Mi restaurante».
 
 ## Configuración financiera
 
@@ -2202,11 +2253,12 @@ Formulario de cliente (`ModalForm` + `ModalBody`, un solo scroll con barra fina)
 ### Disponibilidad de módulos
 
 - El catálogo distingue **Disponible**, **En desarrollo** y **Planificado**.
-- `active` representa únicamente si un módulo **Disponible** está habilitado para una empresa; no representa su estado de desarrollo.
+- `active` representa si un módulo está habilitado para una empresa (por plan si es **Disponible**, como piloto si está **En desarrollo**); no representa su estado de desarrollo.
 - El Administrador de plataforma ve todos los módulos en navegación y catálogo, incluso si están inactivos o no terminados.
 - Los usuarios de empresa solo ven módulos disponibles, incluidos en su plan, activos para su organización y permitidos por su rol. Emprende incluye «Menús y combos» y «Fudia Concierge»; «Inventario», «Compras», «Kárdex», «Recetas», «Reservas» y «Costos y gastos» aparecen desde Impulso. No hay pantallas ni controles específicos de un plan: todo depende de los módulos efectivos.
 - Usuarios y roles muestra únicamente accesos y acciones de módulos efectivos del plan. Los contadores y la vista previa cuentan esos mismos elementos; se omiten grupos vacíos. La empresa no recibe el catálogo comercial completo de Plataforma.
-- Un módulo **En desarrollo** o **Planificado** nunca puede activarse para una empresa; el backend debe rechazar cualquier intento aunque el frontend falle.
+- **Piloto** (decisión del 2026-11-01): el Administrador de plataforma puede activar un módulo **En desarrollo** para una sola empresa desde Módulos, con confirmación «Activar piloto» (`ConfirmDialog` tono success). Ningún plan lo incluye, los cambios de plan no lo apagan y la tarjeta muestra «Piloto activo en esta empresa.». Mientras está activo, la empresa ve sus pantallas como cualquier módulo efectivo; desactivarlo pide la confirmación habitual.
+- Un módulo **Planificado** nunca puede activarse para una empresa; el backend rechaza cualquier intento (`module_not_ready`) aunque el frontend falle, y lo ignora aunque haya datos antiguos activos.
 
 ## Onboarding comercial y suscripción
 

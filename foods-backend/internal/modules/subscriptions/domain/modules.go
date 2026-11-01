@@ -87,8 +87,39 @@ func ModuleAvailability(key string) string {
 	}
 	return ModuleAvailabilityPlanned
 }
+
+// ModuleCanActivate reports whether a plan may include the module and turn it
+// on for every company on that plan.
 func ModuleCanActivate(key string) bool {
 	return ModuleAvailability(key) == ModuleAvailabilityReady
+}
+
+// ModuleCanPilot reports whether the platform administrator may switch the
+// module on for one company before it is ready: modules in development only.
+func ModuleCanPilot(key string) bool {
+	return ModuleAvailability(key) == ModuleAvailabilityDevelopment
+}
+
+// ModuleSwitch is a company's stored switch for a module.
+type ModuleSwitch struct {
+	// On: switched on and the subscription is not cancelled.
+	On bool
+	// InPlan: the plan includes the module, or the company has no subscription.
+	InPlan bool
+}
+
+// ModuleEnabled is the single rule for whether a company can use a module. A
+// ready module needs its plan; a development module is a pilot that the
+// platform switches on per company (plans cannot include it); planned modules
+// are never usable, even with stale data.
+func ModuleEnabled(key string, state ModuleSwitch) bool {
+	switch {
+	case ModuleCanActivate(key):
+		return state.On && state.InPlan
+	case ModuleCanPilot(key):
+		return state.On
+	}
+	return false
 }
 func ModuleCategories() []string {
 	seen := map[string]bool{}
