@@ -21,11 +21,11 @@ type Handlers struct {
 		Workspace(http.ResponseWriter, *http.Request)
 		Payout(http.ResponseWriter, *http.Request)
 	}
-	TaxRegimes interface {
+	SpecialTaxes interface {
 		List(http.ResponseWriter, *http.Request)
-		Create(http.ResponseWriter, *http.Request)
-		Update(http.ResponseWriter, *http.Request)
-		Delete(http.ResponseWriter, *http.Request)
+		CreateRate(http.ResponseWriter, *http.Request)
+		UpdateRate(http.ResponseWriter, *http.Request)
+		DeleteRate(http.ResponseWriter, *http.Request)
 	}
 	EInvoicing interface {
 		Settings(http.ResponseWriter, *http.Request)

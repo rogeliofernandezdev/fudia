@@ -539,61 +539,78 @@ su identificador para mantener trazabilidad.
 - Los catálogos de países y monedas son datos de referencia del backend. Los tipos
   de cambio son datos temporales de negocio y siempre están acotados por empresa.
 
-### Regímenes de impuesto con vigencia
+### Tasa especial de impuesto
 
-Migración `000097_fiscal_tax_regimes` (2026-11-01). Es la base de impuestos de
-facturación electrónica ([14_EINVOICING.md](14_EINVOICING.md)).
+Migración `000100_special_tax_rates` (2026-11-01). Reemplaza los regímenes por
+perfil de la `000097`, que repetían el IGV del perfil y pedían escribir
+porcentajes fijados por ley. Es la base de impuestos de facturación electrónica
+([14_EINVOICING.md](14_EINVOICING.md)).
 
-`tax_name`/`tax_rate` del perfil siguen siendo la **tasa general**: el alta de
-empresa, Mi restaurante y los perfiles fiscales no cambian. Un **régimen** la
-reemplaza solo durante su vigencia y puede tener varios componentes, como el
-régimen peruano de restaurantes MYPE: IGV 8 % + IPM 2,5 % en 2026 y 12 % + 3 %
-en 2027.
+`tax_name`/`tax_rate` del perfil siguen siendo el **impuesto general** (IGV
+18 %): el alta de empresa, Mi restaurante y los perfiles fiscales no cambian.
+Una **tasa especial** es legal y por país —en Perú, MYPE de restaurantes,
+hoteles y alojamientos (Leyes 31556, 32219 y 32387)— y solo reemplaza el
+porcentaje del mismo impuesto mientras tiene una tasa vigente. El comprobante
+muestra un solo IGV con la tasa total; el IPM no se separa.
 
-`fiscal_profile_tax_regimes`
+`special_tax_regimes` (catálogo de plataforma, sin empresa)
+
+| Campo | Tipo | Propósito |
+| --- | --- | --- |
+| `code` | `text` PK | Código estable, p. ej. `pe_mype_restaurants`. |
+| `country_code` | `char(2)` | País donde aplica; `UNIQUE (code,country_code)`. |
+| `name` | `text` | Nombre visible: «MYPE restaurante (padrón SUNAT)». |
+
+`special_tax_rates` (vigencias que registran los administradores de plataforma)
 
 | Campo | Tipo | Propósito |
 | --- | --- | --- |
 | `id` | `uuid` | `gen_random_uuid()`. |
-| `organization_id` | `uuid` | Alcance de tenant; FK compuesta con el perfil. |
-| `fiscal_profile_id` | `uuid` | Perfil fiscal (país) al que aplica. |
-| `name` | `text` | Nombre visible, hasta 60 caracteres. |
-| `valid_from` | `date` | Inicio de vigencia, inclusive. |
-| `valid_to` | `date` nulo | Fin de vigencia, exclusivo; nulo = sin fin. |
+| `regime_code` | `text` | FK a `special_tax_regimes`. |
+| `valid_from`, `valid_to` | `date` | Vigencia: inicio inclusive, fin exclusivo (nulo = sin fin). |
+| `rate` | `numeric(7,6)` | Tasa total del comprobante (IGV + IPM). |
+| `legal_basis` | `text` | Ley o norma que la fija (1 a 120 caracteres). |
 | `created_by`, `created_at`, `updated_at` | | Autoría y fechas. |
 
-`fiscal_profile_tax_regime_components`
+Punto de partida sembrado para `pe_mype_restaurants`: 10 % en 2025, 10,5 % en
+2026 y 15 % en 2027. Las prórrogas o cambios legales se registran desde
+Plataforma › Países y WhatsApp, en el formulario del país (pestaña «Tasa
+especial»), sin migraciones.
 
-| Campo | Tipo | Propósito |
-| --- | --- | --- |
-| `regime_id` + `organization_id` | `uuid` | Régimen dueño; FK compuesta, borrado en cascada. |
-| `code` | `text` | Código estable (`^[a-z][a-z0-9_]{0,19}$`), único en el régimen; p. ej. `igv`, `ipm`. |
-| `name` | `text` | Nombre visible, hasta 30 caracteres. |
-| `rate` | `numeric(7,6)` | Tasa exacta del componente. |
-| `sort_order` | `smallint` | Orden de presentación. |
+`organization_fiscal_profiles.special_tax_regime` (`text` nulo): régimen en
+que la empresa está acogida. FK compuesta `(special_tax_regime, country_code)`
+a `special_tax_regimes(code, country_code)`, de modo que un perfil no puede
+acogerse a la tasa de otro país.
 
 Reglas:
 
-- Los regímenes de un perfil no se superponen: restricción `EXCLUDE` con
-  `btree_gist` sobre `daterange(valid_from, valid_to, '[)')`. Las escrituras
-  bloquean además la fila del perfil.
-- Impuesto efectivo en una fecha: el régimen que la cubre (suma exacta de sus
-  componentes) o, si no hay ninguno, la tasa general como componente `general`.
-  La fecha por defecto es hoy en la zona horaria del local de la sesión.
-- Entre 1 y 5 componentes; tasas entre 0 y 1 con hasta seis decimales; la suma
-  no supera 1.
-- Un régimen se puede corregir o eliminar con auditoría (`tax_regime.created`,
-  `tax_regime.updated`, `tax_regime.deleted`). Lo que ya se emitió no cambia,
-  porque ventas y comprobantes guardan una copia de los componentes aplicados.
-  Un perfil inactivo conserva sus regímenes, pero no admite cambios.
-- Elegir un régimen especial es una decisión del administrador de la empresa.
-  El sistema no siembra regímenes ni infiere que la empresa califica.
-- API: `GET|POST /v1/admin/fiscal-profiles/{id}/tax-regimes` y
-  `PUT|DELETE /v1/admin/fiscal-profiles/{id}/tax-regimes/{regimeId}`, con los
-  permisos `organizations.read` y `organizations.manage`. Otros módulos
-  consultan el impuesto efectivo con el contrato `organizations/contracts.TaxResolver`.
-- Hoy ningún cálculo de POS ni de Ventas usa la tasa: los precios se guardan tal
-  como se publican. El desglose lo hará facturación electrónica con este contrato.
+- Las vigencias de un régimen no se superponen: `EXCLUDE` con `btree_gist`
+  sobre `daterange(valid_from, valid_to, '[)')` (409
+  `special_tax_rate_overlap`).
+- Una vigencia nueva o corregida aplica a todas las empresas acogidas a la vez.
+  Lo ya emitido no cambia: los comprobantes guardan una copia del impuesto.
+- Impuesto efectivo en una fecha: si el perfil está acogido y una vigencia cubre
+  esa fecha, un único componente `special` con el nombre del impuesto del
+  perfil y esa tasa; si no, el componente `general` con `tax_rate`.
+- **Vencimiento** (`domain.SpecialTaxStatusOn`): se siguen las vigencias
+  encadenadas desde hoy (cada una empieza donde termina la anterior).
+  `current` si cubren más de 30 días (`SpecialTaxWarnDays`), `expiring` si
+  terminan antes y `expired` si ninguna cubre hoy; en ese caso se factura con la
+  tasa general hasta que Plataforma registre la nueva vigencia.
+- Acogerse es una decisión del administrador de la empresa (padrón SUNAT); el
+  sistema no lo infiere. Se audita con `fiscal_profile.updated`; las vigencias,
+  con `special_tax_rate.created|updated|deleted`.
+- API de empresa: `specialTaxRegime` en `FiscalProfileInput` (400
+  `invalid_special_tax_regime` si no existe para el país); el listado de perfiles
+  devuelve `specialTaxRegime`, `specialTax` (estado de hoy) y
+  `specialTaxRegimeOptions` con sus vigencias.
+- API de plataforma (solo `platform_admin`): `GET
+  /v1/platform/special-tax-regimes` (vigencias, empresas acogidas y estado),
+  `POST /v1/platform/special-tax-regimes/{code}/rates`, `PATCH|DELETE
+  /v1/platform/special-tax-rates/{id}`.
+- Otros módulos consultan el impuesto efectivo con
+  `organizations/contracts.TaxResolver`. Hoy ningún cálculo de POS ni de Ventas
+  usa la tasa: el desglose lo hace facturación electrónica.
 
 ## Planes y suscripciones SaaS
 

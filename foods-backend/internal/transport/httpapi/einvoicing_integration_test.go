@@ -218,13 +218,20 @@ func TestCheckoutIssuesElectronicReceiptsAndInvoices(t *testing.T) {
 		t.Fatalf("no document requested: %s", w.Body.String())
 	}
 
-	// A dated tax regime applies its components to new documents.
-	call(api.handlers.TaxRegimes.Create, "POST", fmt.Sprintf(`{"name":"MYPE","validFrom":"%s","components":[{"code":"igv","name":"IGV","rate":"0.08"},{"code":"ipm","name":"IPM","rate":"0.025"}]}`,
-		time.Now().AddDate(0, 0, -2).Format("2006-01-02")), map[string]string{"id": profileID}, 201)
+	// An enrolled profile issues with the legal special rate of the day, as a
+	// single IGV line; outside the calendar the general rate applies.
+	if _, err := pool.Exec(ctx, `UPDATE organization_fiscal_profiles SET special_tax_regime='pe_mype_restaurants' WHERE id=$1`, profileID); err != nil {
+		t.Fatal(err)
+	}
 	mypeID, _ := documentOf(pay(order([3]string{"Menú", "1", "22.10"}), "22.10", `{"documentType":"receipt"}`, 201))
-	var components int
-	if err := pool.QueryRow(ctx, `SELECT count(*) FROM fiscal_document_taxes WHERE document_id=$1 AND code IN ('igv','ipm')`, mypeID).Scan(&components); err != nil || components != 2 {
-		t.Fatalf("regime components: %d %v", components, err)
+	var taxLines int
+	var sameRate bool
+	if err := pool.QueryRow(ctx, `
+		SELECT count(*),bool_and(d.rate=COALESCE(
+			(SELECT t.rate FROM special_tax_rates t JOIN fiscal_documents f ON f.id=d.document_id
+			 WHERE t.regime_code='pe_mype_restaurants' AND daterange(t.valid_from,t.valid_to,'[)') @> f.issue_date),0.18))
+		FROM fiscal_document_taxes d WHERE d.document_id=$1 AND d.name='IGV'`, mypeID).Scan(&taxLines, &sameRate); err != nil || taxLines != 1 || !sameRate {
+		t.Fatalf("special rate: %d %v %v", taxLines, sameRate, err)
 	}
 
 	// Listing, filters and detail of the session location.

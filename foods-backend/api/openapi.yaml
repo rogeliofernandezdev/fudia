@@ -748,12 +748,40 @@ paths:
     get:
       operationId: listFiscalProfiles
       security: [{ sessionCookie: [] }]
+      description: "Cada perfil incluye specialTaxRegime (código o null) y specialTax (SpecialTaxStatus del régimen hoy, o null si no está acogido). La respuesta trae specialTaxRegimeOptions: SpecialTaxRegime[]."
       responses: { "200": { description: Perfiles fiscales de la empresa } }
     post:
       operationId: createFiscalProfile
       security: [{ sessionCookie: [] }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/FiscalProfileInput" } } } }
       responses: { "201": { description: Perfil creado }, "409": { description: País duplicado o perfil predeterminado inválido } }
+  /v1/platform/special-tax-regimes:
+    get:
+      operationId: listSpecialTaxRegimes
+      description: Solo administradores de plataforma. Calendario legal de cada tasa especial, empresas acogidas y estado de vencimiento.
+      security: [{ sessionCookie: [] }]
+      responses: { "200": { description: Tasas especiales, content: { application/json: { schema: { $ref: "#/components/schemas/SpecialTaxRegimesView" } } } }, "403": { $ref: "#/components/responses/Forbidden" } }
+  /v1/platform/special-tax-regimes/{code}/rates:
+    parameters: [{ in: path, name: code, required: true, schema: { type: string } }]
+    post:
+      operationId: createSpecialTaxRate
+      description: Registra una vigencia; aplica a todas las empresas acogidas. Auditoría special_tax_rate.created.
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/SpecialTaxRateInput" } } } }
+      responses: { "201": { description: Vigencia creada }, "400": { description: invalid_special_tax_rate }, "403": { $ref: "#/components/responses/Forbidden" }, "404": { description: special_tax_rate_not_found }, "409": { description: special_tax_rate_overlap } }
+  /v1/platform/special-tax-rates/{id}:
+    parameters: [{ $ref: "#/components/parameters/EntityId" }]
+    patch:
+      operationId: updateSpecialTaxRate
+      description: Auditoría special_tax_rate.updated. Los comprobantes emitidos conservan su tasa.
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/SpecialTaxRateInput" } } } }
+      responses: { "204": { description: Vigencia actualizada }, "400": { description: invalid_special_tax_rate }, "403": { $ref: "#/components/responses/Forbidden" }, "404": { description: special_tax_rate_not_found }, "409": { description: special_tax_rate_overlap } }
+    delete:
+      operationId: deleteSpecialTaxRate
+      description: Auditoría special_tax_rate.deleted.
+      security: [{ sessionCookie: [] }]
+      responses: { "204": { description: Vigencia eliminada }, "403": { $ref: "#/components/responses/Forbidden" }, "404": { description: special_tax_rate_not_found } }
   /v1/admin/fiscal-profiles/{id}:
     parameters: [{ $ref: "#/components/parameters/EntityId" }]
     patch:
@@ -765,33 +793,6 @@ paths:
       operationId: deactivateFiscalProfile
       security: [{ sessionCookie: [] }]
       responses: { "204": { description: Perfil desactivado }, "409": { description: Perfil predeterminado o en uso } }
-  /v1/admin/fiscal-profiles/{id}/tax-regimes:
-    parameters: [{ $ref: "#/components/parameters/EntityId" }]
-    get:
-      operationId: listTaxRegimes
-      description: Regímenes de impuesto con vigencia del perfil fiscal, su tasa general y el impuesto efectivo en `date` (por defecto, hoy en la zona horaria del local de la sesión). Permiso organizations.read.
-      security: [{ sessionCookie: [] }]
-      parameters: [{ in: query, name: date, required: false, schema: { type: string, format: date } }]
-      responses: { "200": { description: Regímenes e impuesto efectivo, content: { application/json: { schema: { $ref: "#/components/schemas/TaxRegimesView" } } } }, "400": { $ref: "#/components/responses/BadRequest" }, "403": { $ref: "#/components/responses/Forbidden" }, "404": { description: profile_not_found, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } } }
-    post:
-      operationId: createTaxRegime
-      description: Permiso organizations.manage. Auditoría tax_regime.created.
-      security: [{ sessionCookie: [] }]
-      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/TaxRegimeInput" } } } }
-      responses: { "201": { description: Régimen creado, content: { application/json: { schema: { $ref: "#/components/schemas/TaxRegime" } } } }, "400": { description: invalid_tax_regime, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }, "403": { $ref: "#/components/responses/Forbidden" }, "404": { description: profile_not_found, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }, "409": { description: tax_regime_overlap o profile_inactive, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } } }
-  /v1/admin/fiscal-profiles/{id}/tax-regimes/{regimeId}:
-    parameters: [{ $ref: "#/components/parameters/EntityId" }, { in: path, name: regimeId, required: true, schema: { type: string, format: uuid } }]
-    put:
-      operationId: updateTaxRegime
-      description: Reemplaza nombre, vigencia y componentes. Permiso organizations.manage. Auditoría tax_regime.updated.
-      security: [{ sessionCookie: [] }]
-      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/TaxRegimeInput" } } } }
-      responses: { "200": { description: Régimen actualizado, content: { application/json: { schema: { $ref: "#/components/schemas/TaxRegime" } } } }, "400": { description: invalid_tax_regime, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }, "403": { $ref: "#/components/responses/Forbidden" }, "404": { description: profile_not_found o tax_regime_not_found, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }, "409": { description: tax_regime_overlap o profile_inactive, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } } }
-    delete:
-      operationId: deleteTaxRegime
-      description: Permiso organizations.manage. Auditoría tax_regime.deleted.
-      security: [{ sessionCookie: [] }]
-      responses: { "204": { description: Régimen eliminado }, "403": { $ref: "#/components/responses/Forbidden" }, "404": { description: profile_not_found o tax_regime_not_found, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }, "409": { description: profile_inactive, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } } }
   /v1/admin/einvoicing/settings:
     get:
       operationId: getEInvoicingSettings
@@ -2187,55 +2188,53 @@ components:
         providerOptions: { type: array, items: { type: object, properties: { value: { type: string }, label: { type: string } } } }
         environmentLabels: { type: object, additionalProperties: { type: string } }
     TaxRate: { type: string, pattern: "^(0\\.[0-9]{6}|1\\.000000)$", description: Fracción exacta con seis decimales; "0.080000" = 8 % }
-    TaxComponent:
+    SpecialTaxRate:
       type: object
-      required: [code, name, rate]
-      properties:
-        code: { type: string, pattern: "^[a-z][a-z0-9_]{0,19}$", description: Código estable del componente; "general" identifica la tasa general del perfil }
-        name: { type: string, maxLength: 30 }
-        rate: { $ref: "#/components/schemas/TaxRate" }
-    TaxRegime:
-      type: object
-      required: [id, name, validFrom, validTo, components, totalRate]
+      required: [id, validFrom, validTo, rate, legalBasis]
       properties:
         id: { type: string, format: uuid }
-        name: { type: string, maxLength: 60 }
-        validFrom: { type: string, format: date, description: Inicio de vigencia, inclusive }
-        validTo: { type: [string, "null"], format: date, description: Fin de vigencia, exclusivo; null = sin fin }
-        components: { type: array, minItems: 1, maxItems: 5, items: { $ref: "#/components/schemas/TaxComponent" } }
-        totalRate: { $ref: "#/components/schemas/TaxRate" }
-    TaxRegimeInput:
+        validFrom: { type: string, format: date, description: Inicio, inclusive }
+        validTo: { type: [string, "null"], format: date, description: Fin, exclusivo; null = sin fin }
+        rate: { $ref: "#/components/schemas/TaxRate", description: Tasa total del comprobante (IGV + IPM) }
+        legalBasis: { type: string, maxLength: 120 }
+    SpecialTaxRateInput:
       type: object
-      required: [name, validFrom, components]
+      required: [validFrom, rate, legalBasis]
       properties:
-        name: { type: string, minLength: 1, maxLength: 60 }
         validFrom: { type: string, format: date }
-        validTo: { type: [string, "null"], format: date, description: Debe ser posterior a validFrom }
-        components:
+        validTo: { type: [string, "null"], format: date, description: Exclusivo; posterior a validFrom. Las vigencias de un régimen no se superponen. }
+        rate: { type: string, description: Fracción entre 0 y 1 con hasta seis decimales }
+        legalBasis: { type: string, minLength: 1, maxLength: 120 }
+    SpecialTaxRegime:
+      type: object
+      description: Tasa especial fijada por ley para un país (p. ej. MYPE restaurante en Perú). La plataforma registra sus vigencias; la empresa solo indica si está acogida.
+      required: [code, country, name, rates]
+      properties:
+        code: { type: string, pattern: "^[a-z][a-z0-9_]{0,39}$" }
+        country: { type: string, pattern: "^[A-Z]{2}$" }
+        name: { type: string }
+        rates: { type: array, items: { $ref: "#/components/schemas/SpecialTaxRate" }, description: Ordenadas por validFrom. Fuera de estas fechas se aplica la tasa general del perfil. }
+    SpecialTaxStatus:
+      type: object
+      description: "current: las vigencias encadenadas desde hoy cubren más de 30 días; expiring: terminan antes; expired: ninguna cubre hoy y se factura con la tasa general."
+      required: [state, rate, rateValidTo, coverageEnd]
+      properties:
+        state: { type: string, enum: [current, expiring, expired] }
+        rate: { type: [string, "null"], description: Tasa de hoy }
+        rateValidTo: { type: [string, "null"], format: date, description: Fin exclusivo de la vigencia de hoy }
+        coverageEnd: { type: [string, "null"], format: date, description: Fin exclusivo de las vigencias encadenadas desde hoy; null = sin fin }
+    SpecialTaxRegimesView:
+      type: object
+      required: [items, today, warnDays]
+      properties:
+        today: { type: string, format: date }
+        warnDays: { type: integer, description: Días de anticipación del aviso }
+        items:
           type: array
-          minItems: 1
-          maxItems: 5
-          description: Códigos únicos; tasas entre 0 y 1 con hasta seis decimales; la suma no puede superar 1. Las vigencias de un perfil no se superponen.
-          items: { type: object, required: [code, name, rate], properties: { code: { type: string, pattern: "^[a-z][a-z0-9_]{0,19}$" }, name: { type: string, maxLength: 30 }, rate: { type: string } } }
-    EffectiveTax:
-      type: object
-      required: [date, source, regimeId, regimeName, components, totalRate, taxIncluded]
-      properties:
-        date: { type: string, format: date }
-        source: { type: string, enum: [general, regime] }
-        regimeId: { type: [string, "null"], format: uuid }
-        regimeName: { type: [string, "null"] }
-        components: { type: array, items: { $ref: "#/components/schemas/TaxComponent" } }
-        totalRate: { $ref: "#/components/schemas/TaxRate" }
-        taxIncluded: { type: boolean }
-    TaxRegimesView:
-      type: object
-      required: [items, general, taxIncluded, effective]
-      properties:
-        items: { type: array, items: { $ref: "#/components/schemas/TaxRegime" }, description: Ordenados por validFrom descendente }
-        general: { $ref: "#/components/schemas/TaxComponent" }
-        taxIncluded: { type: boolean }
-        effective: { $ref: "#/components/schemas/EffectiveTax" }
+          items:
+            allOf:
+              - { $ref: "#/components/schemas/SpecialTaxRegime" }
+              - { type: object, required: [enrolledProfiles, status], properties: { enrolledProfiles: { type: integer }, status: { $ref: "#/components/schemas/SpecialTaxStatus" } } }
     RestaurantBranding:
       type: object
       properties:
@@ -2436,7 +2435,7 @@ components:
     OrganizationSettings: { allOf: [{ $ref: "#/components/schemas/OrganizationSettingsInput" }, { type: object, required: [currencySymbol, currencyDecimals, currencyOptions, countryOptions], properties: { currencySymbol: { type: string }, currencyDecimals: { type: integer, minimum: 0, maximum: 4 }, currencyOptions: { type: array, items: { $ref: "#/components/schemas/CurrencyOption" } }, countryOptions: { type: array, items: { $ref: "#/components/schemas/CountryOption" } } } }] }
     OrganizationInput: { type: object, required: [legalName, tradeName, taxId, timezone], properties: { legalName: { type: string, maxLength: 180 }, tradeName: { type: string, maxLength: 180 }, taxId: { type: string, minLength: 6, maxLength: 32 }, timezone: { type: string } } }
     Organization: { allOf: [{ $ref: "#/components/schemas/OrganizationInput" }, { type: object, required: [id, active], properties: { id: { type: string, format: uuid }, active: { type: boolean } } }] }
-    FiscalProfileInput: { type: object, required: [country, currency, currencyPosition, taxName, taxRate, taxIncluded, default], properties: { country: { type: string, pattern: "^[A-Z]{2}$" }, currency: { type: string, pattern: "^[A-Z]{3}$" }, currencyPosition: { type: string, enum: [before, after] }, taxName: { type: string, maxLength: 30 }, taxRate: { type: string, pattern: "^(0(\\.[0-9]+)?|1(\\.0+)?)$" }, taxIncluded: { type: boolean }, default: { type: boolean } } }
+    FiscalProfileInput: { type: object, required: [country, currency, currencyPosition, taxName, taxRate, taxIncluded, default], properties: { country: { type: string, pattern: "^[A-Z]{2}$" }, currency: { type: string, pattern: "^[A-Z]{3}$" }, currencyPosition: { type: string, enum: [before, after] }, taxName: { type: string, maxLength: 30 }, taxRate: { type: string, pattern: "^(0(\\.[0-9]+)?|1(\\.0+)?)$" }, taxIncluded: { type: boolean }, default: { type: boolean }, specialTaxRegime: { type: [string, "null"], description: "Código de SpecialTaxRegime del mismo país en que la empresa está acogida (padrón). null = solo tasa general. 400 invalid_special_tax_regime si no corresponde al país." } } }
     LocationInput: { type: object, required: [name, code, address, timezone, fiscalProfileId], properties: { openedOn: { type: [string, "null"], description: Fecha ISO o cadena vacía para quitar; omitido conserva valor }, name: { type: string }, code: { type: string, maxLength: 30 }, address: { type: string }, timezone: { type: string }, fiscalProfileId: { type: string, format: uuid }, active: { type: boolean }, tipSettings: { allOf: [{ $ref: "#/components/schemas/TipSettings" }], description: "Opcional. Propinas propias del local, guardadas en la misma transacción que el local; si se rechazan (400 invalid_tip_settings, 403 tips_settings_forbidden: solo el administrador reservado), el local no cambia. Omitido conserva la configuración actual." } } }
     ExchangeRateInput: { type: object, required: [baseCurrency, quoteCurrency, rate, effectiveAt, source], properties: { baseCurrency: { type: string, pattern: "^[A-Z]{3}$" }, quoteCurrency: { type: string, pattern: "^[A-Z]{3}$" }, rate: { type: string, pattern: "^[0-9]+(\\.[0-9]+)?$" }, effectiveAt: { type: string, format: date-time }, source: { type: string, enum: [manual, provider] }, providerReference: { type: [string, "null"] } } }
     CategoryInput: { type: object, required: [name, sortOrder], properties: { name: { type: string, maxLength: 120 }, sortOrder: { type: integer, minimum: 0 }, active: { type: boolean }, productScope: { type: string, enum: [prepared, retail, both], default: prepared, description: "Uso informativo de la categoría. El cliente lo deduce del formulario de origen (Carta: prepared; Compras o Inventario: retail) y no lo pide al usuario; el backend lo amplía a both cuando la categoría recibe un producto del otro tipo." } } }

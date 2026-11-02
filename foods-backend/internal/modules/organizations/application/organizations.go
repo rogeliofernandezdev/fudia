@@ -82,10 +82,15 @@ type ProfilesPage struct {
 	PageSize        int                     `json:"pageSize"`
 	CurrencyOptions []domain.CurrencyOption `json:"currencyOptions"`
 	CountryOptions  []domain.CountryOption  `json:"countryOptions"`
+	// SpecialTaxRegimeOptions are the legal regimes a profile can enroll in,
+	// each with its dated rates.
+	SpecialTaxRegimeOptions []domain.SpecialTaxRegime `json:"specialTaxRegimeOptions"`
 }
 type OrganizationRepository interface {
 	Currencies(ctx context.Context) ([]domain.CurrencyOption, error)
 	Countries(ctx context.Context) ([]domain.CountryOption, error)
+	SpecialTaxRegimes(ctx context.Context) ([]domain.SpecialTaxRegime, error)
+	BusinessDate(ctx context.Context, s scope) (string, error)
 	GlobalCountries(ctx context.Context) ([]domain.PlatformCountryOption, error)
 	OnboardingCountries(ctx context.Context) ([]domain.PlatformCountryOption, error)
 	CurrencyByCode(ctx context.Context, code string) (domain.CurrencyOption, bool, error)
@@ -390,6 +395,15 @@ func (a *Organizations) SaveProfile(ctx context.Context, s scope, id string, in 
 	if !valid {
 		return result, organizationFailure(apperror.Invalid, "invalid_profile", "Revisa país, moneda e impuesto.")
 	}
+	if in.SpecialTaxRegime != nil {
+		regimes, err := a.repo.SpecialTaxRegimes(ctx)
+		if err != nil {
+			return result, organizationFailure(apperror.Unavailable, "catalogs_unavailable", "No pudimos validar la tasa especial.")
+		}
+		if !specialRegimeOffered(regimes, *in.SpecialTaxRegime, in.Country) {
+			return result, organizationFailure(apperror.Invalid, "invalid_special_tax_regime", "La tasa especial no está disponible para este país.")
+		}
+	}
 	tx, err := a.work.Begin(ctx, unitofwork.Options{})
 	if err != nil {
 		return result, organizationFailure(apperror.Unavailable, "profile_unavailable", "No pudimos guardar el perfil fiscal.")
@@ -461,12 +475,29 @@ func (a *Organizations) Profiles(ctx context.Context, s scope, page int, size in
 	for _, country := range countries {
 		countryNames[country.Code] = country.Name
 	}
+	regimes, err := a.repo.SpecialTaxRegimes(ctx)
+	var today string
+	if err == nil {
+		today, err = a.repo.BusinessDate(ctx, s)
+	}
+	if err != nil {
+		return result, organizationFailure(apperror.Unavailable, "profiles_unavailable", "No pudimos cargar las tasas especiales.")
+	}
 	out, err := a.repo.Profiles(ctx, s, page, size)
 	if err != nil {
 		return result, organizationFailure(apperror.Unavailable, "profiles_unavailable", "No pudimos cargar los perfiles fiscales.")
 	}
 	out.CurrencyOptions = currencies
 	out.CountryOptions = countries
+	out.SpecialTaxRegimeOptions = regimes
+	for i, item := range out.Items {
+		for _, regime := range regimes {
+			if item.SpecialTaxRegime != nil && *item.SpecialTaxRegime == regime.Code {
+				status := domain.SpecialTaxStatusOn(regime, today)
+				out.Items[i].SpecialTax = &status
+			}
+		}
+	}
 	for i := range out.Items {
 		out.Items[i].CountryName = out.Items[i].Country
 		if name, ok := countryNames[out.Items[i].Country]; ok {
@@ -538,4 +569,13 @@ func (a *Organizations) OnboardingCatalogs(ctx context.Context, all bool) (map[s
 	}
 	return map[string]any{"countryOptions": countries, "currencyOptions": currencies, "tipOptions": billingcontracts.OnboardingTipOptions(), "maxMenuPages": 20}, nil
 
+}
+
+func specialRegimeOffered(regimes []domain.SpecialTaxRegime, code, country string) bool {
+	for _, regime := range regimes {
+		if regime.Code == code && regime.Country == country {
+			return true
+		}
+	}
+	return false
 }

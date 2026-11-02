@@ -1501,18 +1501,34 @@ descargar y alternar al detalle HTML del informe sin depender del visor nativo.
   selecciona un perfil existente. Los tipos de cambio se gestionan en una vista
   separada con moneda origen, moneda destino, vigencia, fuente e historial. No se
   mezclan estos conceptos en un único formulario ni se duplican valores por local.
-- **Fiscal y moneda** (`/settings/tax`; el título coincide con el menú) tiene tres
-  pestañas: Perfiles fiscales, Regímenes y Tipos de cambio. **Regímenes** lista
-  los impuestos con vigencia del perfil (nombre, vigencia «desde – hasta»,
-  impuestos, total y estado Vigente `green` / Programado `blue` / Finalizado
-  `gray`, calculado con la fecha de negocio que devuelve el API). El selector de
-  país aparece en la barra solo si hay más de un perfil activo. Sin regímenes, el
-  vacío indica la tasa general que se aplica.
-- El formulario del régimen es una sola hoja: nombre, «Desde», «Hasta» opcional
-  e inclusiva (el API la guarda como fin exclusivo), y de 1 a 5 filas
-  impuesto + porcentaje con quitar; «Agregar impuesto» debajo y el total en la
-  nota del pie. No se pide código: se deriva del nombre. Las filas omiten el
-  icono automático para no repetirlo.
+- **Fiscal y moneda** (`/settings/tax`; el título coincide con el menú) tiene dos
+  pestañas: Perfiles fiscales y Tipos de cambio. El impuesto se define una sola
+  vez, en el perfil: nombre y porcentaje general. No hay pestaña ni formulario
+  de regímenes ni filas «impuesto + porcentaje»: el comprobante lleva un solo
+  impuesto.
+- Si el país del perfil tiene una tasa especial legal, el formulario del perfil
+  muestra un interruptor con el nombre del régimen, «MYPE restaurante (padrón
+  SUNAT)». Marcado, su descripción dice solo la tasa de hoy y hasta cuándo rige
+  («Hoy factura con 10,5 % hasta el 31/12/2026»). El usuario no escribe
+  porcentajes especiales ni ve el calendario completo. Cambiar de país lo
+  desmarca. En la tabla, la celda Impuesto añade «MYPE: 10,5 % hoy».
+- Aviso de vencimiento (`InlineNotice` `warning`): cuando las vigencias
+  registradas terminan en 30 días o menos, o ya no cubren hoy, Fiscal y moneda
+  lo muestra sobre la tabla y en el formulario: «La tasa especial vence el
+  31/12/2027. Desde el 01/01/2028 se facturará con IGV 18 % si no se registra una
+  nueva vigencia».
+- **Plataforma › Países y WhatsApp**: la tasa especial pertenece al país, no a
+  un panel aparte. La tabla de países añade la columna «Tasa especial» («MYPE
+  restaurante: 10,5 %» y «hasta 31/12/2026»; `Status` `orange` «Por vencer» o
+  «Sin vigencia»). Si las vigencias terminan en 30 días o menos, un
+  `InlineNotice` `warning` sobre la tabla pide registrar la nueva.
+- El formulario del país («País», editar) tiene las pestañas WhatsApp y Tasa
+  especial; la segunda solo aparece si el país tiene una. Muestra el régimen,
+  las empresas acogidas, «Nueva vigencia» y la tabla Vigencia («desde» y «hasta»
+  inclusivo), Tasa, Base legal y Estado (Vigente `green` / Programada `blue` /
+  Finalizada `gray`). Crear o editar una vigencia ocurre dentro de la pestaña,
+  sin abrir un modal encima; la propuesta empieza donde termina la última y dura
+  un año. Las fechas legales se muestran completas (`31/12/2027`).
 - Las propinas de un local se editan dentro del formulario del local (sección
   «Propinas»), no desde un botón en la fila de Locales.
 - El onboarding de plataforma se presenta como un wizard de cinco pasos:

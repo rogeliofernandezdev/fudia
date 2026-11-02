@@ -1,9 +1,0 @@
-/* Fiscal y moneda › Regímenes: filas de impuesto (nombre, porcentaje, quitar) alineadas al pie de los campos. */
-.tax-regime-components{display:grid;gap:var(--space-3)}
-.tax-regime-components>.modal-section-title{margin:0}
-.tax-regime-components>.button{justify-self:start}
-.tax-regime-component{display:grid;grid-template-columns:minmax(0,1fr) var(--size-120) auto;gap:var(--space-3);align-items:end}
-
-@media(width<=600px){
- .tax-regime-component{grid-template-columns:minmax(0,1fr) var(--size-100) auto;gap:var(--space-2)}
-}

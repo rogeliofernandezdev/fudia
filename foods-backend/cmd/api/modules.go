@@ -80,15 +80,16 @@ func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages) *httpapi.API {
 	tips := billingapp.NewTips(paymentsRepo, work)
 	platform.WithTips(tips)
 	organizations.WithTips(tips)
-	taxRegimes := orgapp.NewTaxRegimes(orgpg.NewTaxRegimes(db), work, audit)
-	fiscalDocuments, einvoicingHandler := newEInvoicing(db, work, audit, orders, taxRegimes, access)
+	taxRepository := orgpg.NewTaxes(db)
+	taxes := orgapp.NewTaxes(taxRepository)
+	fiscalDocuments, einvoicingHandler := newEInvoicing(db, work, audit, orders, taxes, access)
 	payments := billingapp.NewPayments(paymentsRepo, work, audit, methods, orders).WithAuthorization(identityService).WithTips(tips).WithFiscal(fiscalDocuments)
 
 	return httpapi.NewWithHandlers(httpapi.Handlers{
 		RestaurantProfile:      orghttp.New(organizations).WithProfiles(profiles),
 		Tips:                   billinghttp.NewTips(tips),
+		SpecialTaxes:           orghttp.NewSpecialTaxes(orgapp.NewSpecialTaxes(taxRepository, audit)),
 		Organizations:          orghttp.New(organizations),
-		TaxRegimes:             orghttp.NewTaxRegimes(taxRegimes),
 		EInvoicing:             einvoicingHandler,
 		Subscriptions:          subscriptionhttp.New(subscriptions),
 		Platform:               platformhttp.New(platform),

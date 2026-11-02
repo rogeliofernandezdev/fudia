@@ -1,7 +1,6 @@
 import {apiFetch} from "@/shared/api/client";
 import type {TipSettings} from "@/modules/operations/tips";
-import type {Currency,List,Location,LocationDraft,Organization,ProfileDraft,ProfilesResponse,Rate,RateDraft,TaxRegime,TaxRegimeDraft,TaxRegimesView} from "../domain/types";
-import {regimeInput} from "../domain/tax-regimes";
+import type {Currency,List,Location,LocationDraft,Organization,ProfileDraft,ProfilesResponse,Rate,RateDraft} from "../domain/types";
 
 export function getOrganization(){return apiFetch<Organization>("organization")}
 export function updateOrganization(value:Organization){
@@ -23,16 +22,10 @@ export function listRates(page:number,pageSize:number){
  return apiFetch<List<Rate>&{currencyOptions:Currency[]}>(`exchange-rates?page=${page}&pageSize=${pageSize}`);
 }
 export function saveProfile(value:ProfileDraft){
- return apiFetch<void>(value.id?`fiscal-profiles/${value.id}`:"fiscal-profiles",{method:value.id?"PATCH":"POST",body:JSON.stringify({...value,taxRate:String(Number(value.taxPercent)/100)})});
+ return apiFetch<void>(value.id?`fiscal-profiles/${value.id}`:"fiscal-profiles",{method:value.id?"PATCH":"POST",body:JSON.stringify({...value,taxRate:String(Number(value.taxPercent)/100),specialTaxRegime:value.specialTaxRegime||null})});
 }
 export function deactivateProfile(id:string){return apiFetch<void>(`fiscal-profiles/${id}`,{method:"DELETE"})}
 export function createRate(value:RateDraft){
  return apiFetch<Rate>("exchange-rates",{method:"POST",body:JSON.stringify({...value,effectiveAt:new Date(value.effectiveAt).toISOString(),providerReference:value.providerReference||null})});
 }
 export function deleteRate(id:string){return apiFetch<void>(`exchange-rates/${id}`,{method:"DELETE"})}
-export function listTaxRegimes(profileId:string){return apiFetch<TaxRegimesView>(`fiscal-profiles/${encodeURIComponent(profileId)}/tax-regimes`)}
-export function saveTaxRegime(profileId:string,draft:TaxRegimeDraft){
- const path=`fiscal-profiles/${encodeURIComponent(profileId)}/tax-regimes`;
- return apiFetch<TaxRegime>(draft.id?`${path}/${encodeURIComponent(draft.id)}`:path,{method:draft.id?"PUT":"POST",body:JSON.stringify(regimeInput(draft))});
-}
-export function deleteTaxRegime(profileId:string,id:string){return apiFetch<void>(`fiscal-profiles/${encodeURIComponent(profileId)}/tax-regimes/${encodeURIComponent(id)}`,{method:"DELETE"})}

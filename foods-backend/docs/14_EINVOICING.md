@@ -4,7 +4,7 @@ Estado: **implementado con motor SUNAT propio** (2026-11-01, migración 000098).
 Emite boletas y facturas de Perú desde el cobro: genera el XML UBL 2.1, lo
 firma con el certificado de la empresa, lo envía por SOAP a SUNAT y guarda el
 XML firmado y el CDR. Probado contra SUNAT beta con CDR aceptado (factura,
-boleta con DNI, boleta anónima y régimen MYPE). Falta la nota de crédito, el
+boleta con DNI, boleta anónima y tasa especial MYPE). Falta la nota de crédito, el
 resumen diario y la comunicación de baja, la emisión posterior desde Ventas, la
 representación impresa con QR y la cola de Cloud Tasks. Este documento es
 la referencia del módulo `einvoicing` (contexto EInvoicing; clave comercial
@@ -35,7 +35,7 @@ Pruebas: `domain/document_test.go`, `jurisdictions/pe/pe_test.go`,
 `providers/sunat/sunat_test.go` (XML, verificación de la firma, CDR, faults y
 errores HTTP con un servidor SOAP local), `platform/secretbox` y
 `einvoicing_integration_test.go` (cobro → comprobante → proveedor, rollback,
-reintento, rechazo, régimen MYPE, aislamiento por empresa, series en uso y
+reintento, rechazo, tasa especial MYPE, aislamiento por empresa, series en uso y
 credenciales cifradas usadas en el envío con descarga de XML y CDR). La prueba
 contra SUNAT beta real es opcional: `SUNAT_BETA=1 go test ./internal/modules/einvoicing/providers/sunat -run Beta`.
 
@@ -261,17 +261,28 @@ de respaldo**.
 
 ## Impuestos
 
-El campo único `tax_rate` del perfil fiscal no alcanza. En Perú, un restaurante
-MYPE que cumpla los requisitos de la Ley 31556 (ampliada por la Ley 32219) aplica
-IGV 8 % + IPM 2,5 % en 2026 y 12 % + 3 % en 2027, para luego volver a 18 %.
-**Implementado (migración 000097):** regímenes de impuesto con vigencia y
-componentes por perfil fiscal; la tasa del perfil queda como tasa general. Ver
-«Regímenes de impuesto con vigencia» en `04_DATA_MODEL.md`. EInvoicing obtiene
-el impuesto de la fecha de emisión con `organizations/contracts.TaxResolver` y
-guarda una copia de los componentes en cada comprobante.
+El comprobante lleva **un solo impuesto** con su tasa total. En Perú el «IGV
+18 %» ya es IGV 16 % + IPM 2 %, y la tasa especial de MYPE de restaurantes,
+hoteles y alojamientos (Leyes 31556, 32219 y 32387; padrón SUNAT, al menos 70 %
+de ingresos del rubro) solo cambia ese porcentaje: 10 % en 2025, 10,5 % en 2026
+(IGV 8 + IPM 2,5) y 15 % en 2027 (IGV 12 + IPM 3); desde 2028 vuelve la tasa
+general. El IPM no se emite como un impuesto aparte.
 
-Si el contribuyente califica o no para una tasa especial es una decisión del
-administrador de la empresa, no una inferencia del sistema.
+**Implementado (migración 000100, reemplaza los regímenes por perfil de la
+000097):** los administradores de plataforma registran las vigencias legales
+(`special_tax_rates`, con base legal) y el perfil fiscal solo indica si la
+empresa está acogida (`special_tax_regime`). Plataforma y la empresa reciben un
+aviso 30 días antes de que terminen las vigencias registradas. Ver «Tasa especial de impuesto» en `04_DATA_MODEL.md`.
+EInvoicing obtiene el impuesto de la fecha de emisión con
+`organizations/contracts.TaxResolver` —un único componente con el nombre del
+impuesto del perfil— y guarda una copia en cada comprobante; todas las líneas
+usan la misma tasa, como exige SUNAT.
+
+Estar en el padrón es una declaración del administrador de la empresa, no una
+inferencia del sistema. SUNAT acepta sin observación un comprobante al 18 % de
+una empresa del padrón, por eso la tasa se aplica sola una vez marcada.
+Pendiente para notas de crédito y débito: heredar la tasa del comprobante que
+modifican, no la vigente.
 
 ## Perú (`jurisdictions/pe`)
 
@@ -298,7 +309,7 @@ Envío directo a SUNAT (SEE-Del contribuyente) con `providers/sunat`:
 
 Mapeo UBL: `CustomizationID` 2.0, tipo de operación `0101`, importe en letras
 (nota `1000`), forma de pago Contado en facturas, IGV `1000` con el porcentaje
-total del régimen (MYPE: 10,5 = IGV 8 + IPM 2,5), afectación `10`, unidad
+total vigente (tasa especial MYPE 2026: 10,5), afectación `10`, unidad
 `NIU` o `ZZ`, cliente anónimo con tipo `0`, número `-` y «CLIENTES VARIOS».
 
 ## Agregar un país

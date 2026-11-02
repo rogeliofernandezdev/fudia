@@ -66,6 +66,12 @@ func (r *Organizations) Countries(ctx context.Context) ([]domain.CountryOption, 
 	}
 	return items, rows.Err()
 }
+func (r *Organizations) SpecialTaxRegimes(ctx context.Context) ([]domain.SpecialTaxRegime, error) {
+	return specialTaxRegimes(ctx, r.db(ctx), "")
+}
+func (r *Organizations) BusinessDate(ctx context.Context, s scope) (string, error) {
+	return businessDate(ctx, r.db(ctx), s)
+}
 func (r *Organizations) GlobalCountries(ctx context.Context) ([]domain.PlatformCountryOption, error) {
 	rows, err := r.db(ctx).Query(ctx, `
 		SELECT c.code,c.name,c.default_currency,COALESCE(c.calling_code,''),c.default_timezone
@@ -233,11 +239,11 @@ func (r *Organizations) ClearProfileDefaults(ctx context.Context, s scope) (int6
 }
 func (r *Organizations) CreateProfile(ctx context.Context, s scope, in domain.FiscalProfileInput, currency domain.CurrencyOption) (string, error) {
 	var id string
-	err := r.db(ctx).QueryRow(ctx, `INSERT INTO organization_fiscal_profiles(organization_id,country_code,currency,currency_symbol,currency_position,currency_decimals,tax_name,tax_rate,tax_included,is_default) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`, s.OrganizationID, in.Country, currency.Code, currency.Symbol, in.CurrencyPosition, currency.Decimals, in.TaxName, in.TaxRate, in.TaxIncluded, in.Default).Scan(&id)
+	err := r.db(ctx).QueryRow(ctx, `INSERT INTO organization_fiscal_profiles(organization_id,country_code,currency,currency_symbol,currency_position,currency_decimals,tax_name,tax_rate,tax_included,is_default,special_tax_regime) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id`, s.OrganizationID, in.Country, currency.Code, currency.Symbol, in.CurrencyPosition, currency.Decimals, in.TaxName, in.TaxRate, in.TaxIncluded, in.Default, in.SpecialTaxRegime).Scan(&id)
 	return id, organizationError(err)
 }
 func (r *Organizations) UpdateProfile(ctx context.Context, s scope, id string, in domain.FiscalProfileInput, currency domain.CurrencyOption) (int64, error) {
-	tag, err := r.db(ctx).Exec(ctx, `UPDATE organization_fiscal_profiles SET country_code=$1,currency=$2,currency_symbol=$3,currency_position=$4,currency_decimals=$5,tax_name=$6,tax_rate=$7,tax_included=$8,is_default=$9,active=true,updated_at=now() WHERE id=$10 AND organization_id=$11`, in.Country, currency.Code, currency.Symbol, in.CurrencyPosition, currency.Decimals, in.TaxName, in.TaxRate, in.TaxIncluded, in.Default, id, s.OrganizationID)
+	tag, err := r.db(ctx).Exec(ctx, `UPDATE organization_fiscal_profiles SET country_code=$1,currency=$2,currency_symbol=$3,currency_position=$4,currency_decimals=$5,tax_name=$6,tax_rate=$7,tax_included=$8,is_default=$9,special_tax_regime=$12,active=true,updated_at=now() WHERE id=$10 AND organization_id=$11`, in.Country, currency.Code, currency.Symbol, in.CurrencyPosition, currency.Decimals, in.TaxName, in.TaxRate, in.TaxIncluded, in.Default, id, s.OrganizationID, in.SpecialTaxRegime)
 	return tag.RowsAffected(), organizationError(err)
 }
 func (r *Organizations) DefaultProfileCount(ctx context.Context, s scope) (int, error) {
@@ -246,7 +252,7 @@ func (r *Organizations) DefaultProfileCount(ctx context.Context, s scope) (int, 
 	return defaults, organizationError(err)
 }
 func scanFiscalProfile(rows pgx.Rows, item *domain.FiscalProfile) error {
-	return rows.Scan(&item.ID, &item.Country, &item.Currency, &item.CurrencySymbol, &item.CurrencyPosition, &item.CurrencyDecimals, &item.TaxName, &item.TaxRate, &item.TaxIncluded, &item.Default, &item.Active, &item.AssignedLocations)
+	return rows.Scan(&item.ID, &item.Country, &item.Currency, &item.CurrencySymbol, &item.CurrencyPosition, &item.CurrencyDecimals, &item.TaxName, &item.TaxRate, &item.TaxIncluded, &item.Default, &item.Active, &item.AssignedLocations, &item.SpecialTaxRegime)
 }
 func (r *Organizations) Locations(ctx context.Context, s scope, page int, size int) (application.LocationsPage, error) {
 	var out application.LocationsPage
@@ -302,7 +308,8 @@ func (r *Organizations) Rates(ctx context.Context, s scope, page int, size int) 
 }
 func (r *Organizations) Profiles(ctx context.Context, s scope, page int, size int) (application.ProfilesPage, error) {
 	var out application.ProfilesPage
-	rows, err := r.db(ctx).Query(ctx, `SELECT p.id,p.country_code,p.currency,p.currency_symbol,p.currency_position,p.currency_decimals,p.tax_name,p.tax_rate::text,p.tax_included,p.is_default,p.active,count(l.id) FROM organization_fiscal_profiles p LEFT JOIN locations l ON l.fiscal_profile_id=p.id AND l.organization_id=p.organization_id WHERE p.organization_id=$1 GROUP BY p.id ORDER BY p.is_default DESC,p.country_code LIMIT $2 OFFSET $3`, s.OrganizationID, size, (page-1)*size)
+	rows, err := r.db(ctx).Query(ctx, `SELECT p.id,p.country_code,p.currency,p.currency_symbol,p.currency_position,p.currency_decimals,p.tax_name,p.tax_rate::text,p.tax_included,p.is_default,p.active,count(l.id),p.special_tax_regime
+		FROM organization_fiscal_profiles p LEFT JOIN locations l ON l.fiscal_profile_id=p.id AND l.organization_id=p.organization_id WHERE p.organization_id=$1 GROUP BY p.id ORDER BY p.is_default DESC,p.country_code LIMIT $2 OFFSET $3`, s.OrganizationID, size, (page-1)*size)
 	if err != nil {
 		return out, err
 	}

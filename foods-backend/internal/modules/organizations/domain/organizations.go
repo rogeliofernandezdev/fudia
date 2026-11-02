@@ -34,15 +34,20 @@ type FiscalProfile struct {
 	Default           bool   `json:"default"`
 	Active            bool   `json:"active"`
 	AssignedLocations int    `json:"assignedLocations"`
+	// SpecialTaxRegime is the legal regime the company is enrolled in and
+	// SpecialTax its rate today and when the registered rates run out.
+	SpecialTaxRegime *string           `json:"specialTaxRegime"`
+	SpecialTax       *SpecialTaxStatus `json:"specialTax"`
 }
 type FiscalProfileInput struct {
-	Country          string `json:"country"`
-	Currency         string `json:"currency"`
-	CurrencyPosition string `json:"currencyPosition"`
-	TaxName          string `json:"taxName"`
-	TaxRate          string `json:"taxRate"`
-	TaxIncluded      bool   `json:"taxIncluded"`
-	Default          bool   `json:"default"`
+	Country          string  `json:"country"`
+	Currency         string  `json:"currency"`
+	CurrencyPosition string  `json:"currencyPosition"`
+	TaxName          string  `json:"taxName"`
+	TaxRate          string  `json:"taxRate"`
+	TaxIncluded      bool    `json:"taxIncluded"`
+	Default          bool    `json:"default"`
+	SpecialTaxRegime *string `json:"specialTaxRegime"`
 }
 type LocationView struct {
 	ID              string   `json:"id"`
@@ -150,6 +155,13 @@ func NormalizePlatformFiscalInput(in *FiscalProfileInput) bool {
 	in.Currency = strings.ToUpper(strings.TrimSpace(in.Currency))
 	in.CurrencyPosition = strings.TrimSpace(in.CurrencyPosition)
 	in.TaxName = strings.TrimSpace(in.TaxName)
+	if in.SpecialTaxRegime != nil {
+		if code := strings.TrimSpace(*in.SpecialTaxRegime); code == "" {
+			in.SpecialTaxRegime = nil
+		} else {
+			in.SpecialTaxRegime = &code
+		}
+	}
 	rate, validRate := new(big.Rat).SetString(in.TaxRate)
 	return validRate && rate.Sign() >= 0 && rate.Cmp(big.NewRat(1, 1)) <= 0 && (in.CurrencyPosition == "before" || in.CurrencyPosition == "after") && in.TaxName != "" && len(in.TaxName) <= 30
 }

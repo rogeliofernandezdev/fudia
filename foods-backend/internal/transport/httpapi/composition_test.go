@@ -71,18 +71,19 @@ func New(db *pgxpool.Pool) *integrationAPI {
 	identityService := identityapp.New(identitypg.New(db), credentials.Credentials{})
 	tips := billingapp.NewTips(billingpg.NewPayments(db), database.NewUnitOfWork(db))
 	access := subscriptionapp.NewAccess(subscriptionpg.NewAccess(db))
-	taxRegimes := orgapp.NewTaxRegimes(orgpg.NewTaxRegimes(db), database.NewUnitOfWork(db), auditpg.New(db))
+	taxRepository := orgpg.NewTaxes(db)
+	taxes := orgapp.NewTaxes(taxRepository)
 	registry := einvoicingports.NewRegistry().WithJurisdiction(pe.New()).WithProvider(fake.New()).WithProvider(sunat.New().WithEndpoints(os.Getenv("FUDIA_TEST_SUNAT_URL"), os.Getenv("FUDIA_TEST_SUNAT_URL")))
 	keyring, _ := secretbox.New(1, map[int][]byte{1: []byte("integration-test-master-key-32b!")})
-	fiscal := einvoicingapp.NewDocuments(einvoicingpg.New(db), auditpg.New(db), orders, taxRegimes, access, registry)
+	fiscal := einvoicingapp.NewDocuments(einvoicingpg.New(db), auditpg.New(db), orders, taxes, access, registry)
 	fiscal.WithDispatcher(syncDispatcher{fiscal}).WithCipher(keyring)
 	fiscalSettings := einvoicingapp.NewSettings(einvoicingpg.New(db), database.NewUnitOfWork(db), auditpg.New(db), access, registry).WithCipher(keyring)
 	payments := billingapp.NewPayments(billingpg.NewPayments(db), database.NewUnitOfWork(db), auditpg.New(db), billingapp.NewMethods(billingpg.NewMethods(db), database.NewUnitOfWork(db)), orders).WithAuthorization(identityService).WithTips(tips).WithFiscal(fiscal)
 	return &integrationAPI{db: db, fiscal: fiscal, API: NewWithHandlers(Handlers{
 		Tips:                   billinghttp.NewTips(tips),
 		RestaurantProfile:      orghttp.New(orgapp.New(orgpg.New(db), database.NewUnitOfWork(db), subscriptionapp.NewAccess(subscriptionpg.NewAccess(db)), auditpg.New(db))).WithProfiles(orgapp.NewRestaurantProfiles(orgpg.NewRestaurantProfiles(db), menuapp.NewCatalog(menupg.NewCatalog(db), database.NewUnitOfWork(db), auditpg.New(db), menufiles.Images{Directory: "./uploads/products"}).RestaurantMedia())),
+		SpecialTaxes:           orghttp.NewSpecialTaxes(orgapp.NewSpecialTaxes(taxRepository, auditpg.New(db))),
 		Organizations:          orghttp.New(orgapp.New(orgpg.New(db), database.NewUnitOfWork(db), subscriptionapp.NewAccess(subscriptionpg.NewAccess(db)), auditpg.New(db)).WithTips(tips)),
-		TaxRegimes:             orghttp.NewTaxRegimes(taxRegimes),
 		EInvoicing:             einvoicinghttp.New(fiscal, fiscalSettings, func() string { return os.Getenv("FUDIA_EINVOICING_WORKER_KEY") }),
 		Subscriptions:          subscriptionhttp.New(subscriptionapp.New(subscriptionpg.New(db), database.NewUnitOfWork(db), auditpg.New(db))),
 		Platform:               platformhttp.New(platformapp.New(platformpg.New(db), database.NewUnitOfWork(db), orgapp.New(orgpg.New(db), database.NewUnitOfWork(db), subscriptionapp.NewAccess(subscriptionpg.NewAccess(db)), auditpg.New(db)), subscriptionapp.New(subscriptionpg.New(db), database.NewUnitOfWork(db), auditpg.New(db)), credentials.Credentials{}, platformdiag.Diagnostics{}, platformdiag.Diagnostics{}).WithTips(tips)),

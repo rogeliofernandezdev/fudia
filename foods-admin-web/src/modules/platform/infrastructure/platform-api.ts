@@ -1,5 +1,6 @@
 import {ApiClientError,apiFetch} from "@/shared/api/client";
 import {expireBrowserSession} from "@/shared/session/expire-session";
+import type {SpecialTaxRegime,SpecialTaxStatus} from "@/shared/fiscal/special-tax";
 import type {ConciergeLimitOverride,ConciergeUsageDetail,ConciergeUsagePage,ConciergeUsageSettings,ConciergeUsageSettingsInput,Country,Currency,OrganizationSubscription,PlatformModule,PlatformOnboardingContext,PlatformOnboardingDraft,PlatformOrganizationDetail,PlatformOrganizationFilters,PlatformOrganizationPage,PlatformSubscriptionPlan,SubscriptionPlanDraft,PlatformWhatsAppChannel,PlatformWhatsAppChannelDraft} from "../domain/types";
 import {optionalLimit} from "../domain/concierge-usage";
 
@@ -133,3 +134,8 @@ export async function listConciergeUsage(organizationIds:string[]){
 const conciergeUsagePath=(organizationId:string)=>`organizations/${encodeURIComponent(organizationId)}/concierge-usage`;
 export async function getOrganizationConciergeUsage(organizationId:string){return platformFetch<ConciergeUsageDetail>(conciergeUsagePath(organizationId));}
 export async function updateOrganizationConciergeLimit(organizationId:string,input:ConciergeLimitOverride){return platformFetch<ConciergeUsageDetail>(conciergeUsagePath(organizationId),{method:"PATCH",body:JSON.stringify(input)});}
+export type SpecialTaxRegimesView={items:(SpecialTaxRegime&{enrolledProfiles:number;status:SpecialTaxStatus})[];today:string;warnDays:number};
+export type SpecialTaxRateInput={validFrom:string;validTo:string|null;rate:string;legalBasis:string};
+export async function listSpecialTaxRegimes(){return platformFetch<SpecialTaxRegimesView>("special-tax-regimes");}
+export async function saveSpecialTaxRate(regime:string,input:SpecialTaxRateInput,id?:string){return platformFetch<void>(id?`special-tax-rates/${encodeURIComponent(id)}`:`special-tax-regimes/${encodeURIComponent(regime)}/rates`,{method:id?"PATCH":"POST",body:JSON.stringify(input)});}
+export async function deleteSpecialTaxRate(id:string){return platformFetch<void>(`special-tax-rates/${encodeURIComponent(id)}`,{method:"DELETE"});}

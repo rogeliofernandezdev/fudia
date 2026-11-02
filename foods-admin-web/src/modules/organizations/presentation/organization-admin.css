@@ -29,3 +29,6 @@
  .organization-savebar>div{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
  .organization-savebar .button{min-width:0}
 }
+
+/* Fiscal y moneda: aviso de vencimiento de la tasa especial sobre la tabla de perfiles. */
+.special-tax-notice{margin-bottom:var(--space-3)}

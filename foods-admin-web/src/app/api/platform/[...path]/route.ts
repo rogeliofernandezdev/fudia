@@ -30,3 +30,4 @@ async function proxy(request:NextRequest,{params}:{params:Promise<{path:string[]
 export const GET=proxy;
 export const POST=proxy;
 export const PATCH=proxy;
+export const DELETE=proxy;

@@ -24,12 +24,6 @@ func (a *API) Routes() *http.ServeMux {
 		m.Handle("POST /internal/einvoicing/documents/{id}/process", e.WorkerAuth(http.HandlerFunc(e.ProcessDocument)))
 		m.Handle("POST /internal/einvoicing/sweep", e.WorkerAuth(http.HandlerFunc(e.Sweep)))
 	}
-	if a.handlers.TaxRegimes != nil {
-		m.Handle("GET /v1/admin/fiscal-profiles/{id}/tax-regimes", a.auth(a.requirePermission("organizations.read", http.HandlerFunc(a.handlers.TaxRegimes.List))))
-		m.Handle("POST /v1/admin/fiscal-profiles/{id}/tax-regimes", a.auth(a.requirePermission("organizations.manage", http.HandlerFunc(a.handlers.TaxRegimes.Create))))
-		m.Handle("PUT /v1/admin/fiscal-profiles/{id}/tax-regimes/{regimeId}", a.auth(a.requirePermission("organizations.manage", http.HandlerFunc(a.handlers.TaxRegimes.Update))))
-		m.Handle("DELETE /v1/admin/fiscal-profiles/{id}/tax-regimes/{regimeId}", a.auth(a.requirePermission("organizations.manage", http.HandlerFunc(a.handlers.TaxRegimes.Delete))))
-	}
 	m.HandleFunc("POST /v1/auth/login", a.login)
 	m.HandleFunc("POST /v1/auth/logout", a.logout)
 	m.Handle("GET /v1/platform/onboarding/catalogs", a.auth(a.requirePlatformAdmin(http.HandlerFunc(a.getPlatformOnboardingCatalogs))))
@@ -48,6 +42,12 @@ func (a *API) Routes() *http.ServeMux {
 	m.Handle("PATCH /v1/platform/concierge-usage/settings", a.auth(a.requirePlatformAdmin(http.HandlerFunc(a.updateConciergeUsageSettings))))
 	m.Handle("GET /v1/platform/organizations/{id}/concierge-usage", a.auth(a.requirePlatformAdmin(http.HandlerFunc(a.getOrganizationConciergeUsage))))
 	m.Handle("PATCH /v1/platform/organizations/{id}/concierge-usage", a.auth(a.requirePlatformAdmin(http.HandlerFunc(a.updateOrganizationConciergeLimit))))
+	if a.handlers.SpecialTaxes != nil {
+		m.Handle("GET /v1/platform/special-tax-regimes", a.auth(a.requirePlatformAdmin(http.HandlerFunc(a.handlers.SpecialTaxes.List))))
+		m.Handle("POST /v1/platform/special-tax-regimes/{code}/rates", a.auth(a.requirePlatformAdmin(http.HandlerFunc(a.handlers.SpecialTaxes.CreateRate))))
+		m.Handle("PATCH /v1/platform/special-tax-rates/{id}", a.auth(a.requirePlatformAdmin(http.HandlerFunc(a.handlers.SpecialTaxes.UpdateRate))))
+		m.Handle("DELETE /v1/platform/special-tax-rates/{id}", a.auth(a.requirePlatformAdmin(http.HandlerFunc(a.handlers.SpecialTaxes.DeleteRate))))
+	}
 	m.Handle("GET /v1/platform/plans", a.auth(a.requirePlatformAdmin(http.HandlerFunc(a.listSubscriptionPlans))))
 	m.Handle("POST /v1/platform/plans", a.auth(a.requirePlatformAdmin(http.HandlerFunc(a.createSubscriptionPlan))))
 	m.Handle("PATCH /v1/platform/plans/{id}", a.auth(a.requirePlatformAdmin(http.HandlerFunc(a.updateSubscriptionPlan))))
