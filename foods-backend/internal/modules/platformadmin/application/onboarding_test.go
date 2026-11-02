@@ -102,6 +102,8 @@ func (onboardingCatalog) ValidateFiscal(context.Context, *orgcontracts.FiscalPro
 	return orgcontracts.CurrencyOption{Code: "PEN", Symbol: "S/", Decimals: 2}, true, nil
 }
 
+func (onboardingCatalog) ValidateSpecialTaxRegime(context.Context, string, *string) error { return nil }
+
 type onboardingSubscriptions struct {
 	t      *testing.T
 	events *[]string

@@ -19,13 +19,18 @@
 .platform-topbar .platform-exit{flex-shrink:0;font-size:var(--font-size-control);padding:0 var(--space-3) 0 var(--space-2);color:var(--surface);background:transparent;border-color:var(--surface-alpha-40)}
 @media (hover:hover) and (pointer:fine){.platform-topbar .platform-exit:hover{background:var(--surface-alpha-8);border-color:var(--surface-alpha-40)}}
 .platform-content{max-width:var(--size-960);margin:auto;padding:var(--space-7) var(--space-8) var(--space-16)}
-@media(max-width:900px){.platform-context{display:none}.platform-brand-divider{display:none}}
+/* Five sections: the brand subtitle goes first, then inactive links keep only
+   their icon (the label stays for screen readers and as a tooltip). */
+@media(max-width:1240px){.platform-context{display:none}.platform-brand-divider{display:none}}
+@media(max-width:1180px){
+  .platform-nav a:not(.active) span{position:absolute;width:var(--size-1);height:var(--size-1);overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+  .platform-nav a:not(.active){padding:0 var(--space-2-5)}
+}
 @media(max-width:760px){
   .platform-topbar{flex-wrap:wrap;height:auto;gap:var(--space-2-5) var(--space-3);padding:var(--space-2-5) var(--space-4)}
   .platform-brand>a{min-height:var(--size-44);align-items:center}
   .platform-nav{order:3;width:100%;margin:0}
   .platform-nav a{flex:0 0 auto;justify-content:center;min-width:var(--control-height);height:var(--control-height);padding:0 var(--space-3)}
-  .platform-nav a:not(.active) span{display:none}
   .platform-nav a.active{flex:1}
   .platform-topbar .platform-exit{margin-left:auto;width:auto;min-width:var(--control-height);font-size:0;gap:0;padding:0 var(--space-2-5)}
   .platform-exit svg{margin:0}

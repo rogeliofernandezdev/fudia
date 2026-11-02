@@ -337,7 +337,8 @@ La navegación comparte su selección con los accesos de Configuración mediante
 Cocina usa `chefHat`, Carta y productos `dish`, Mesas y zonas `grid`, Caja y turnos
 `cashShift` (reloj con importe), Apps de delivery `apps`, Repartidores `motorbike`,
 Personal y asistencias `userCheck`, Locales `mapPin`, Mi restaurante `store`,
-Puesta en marcha `checklist`, Países y WhatsApp `whatsapp` y Concierge `chatbot`.
+Puesta en marcha `checklist`, Países y WhatsApp `whatsapp`, Impuestos de plataforma
+`tax` (recibo con porcentaje, `IconReceiptTax`) y Concierge `chatbot`.
 Los glifos nuevos pertenecen al mismo set Tabler; se mantienen tamaño, trazo y
 color compartidos. Los demás accesos conservan su símbolo de dominio.
 
@@ -496,7 +497,8 @@ de página en `03_LAYOUTS.md`. Resumen:
 - **Icono al inicio automático**: `FormField` deduce el icono de su etiqueta
   (`design-system/field-icon.ts`: correo → `mail`, teléfono → `phone`, fecha →
   `calendar`, categoría → `tag`, proveedor → `truck`, nombre/descripción →
-  `edit`, etc.) para `Input` y `Select`; `icon={false}` lo omite y `icon="…"`
+  `edit`, porcentaje/tasa/% → `percent`, impuesto/IGV → `tax`, etc.) para
+  `Input` y `Select`; `icon={false}` lo omite y `icon="…"`
   lo fija. No aplica a importes (`MoneyInput`), áreas de texto ni casillas.
 - Formularios organizados así: gasto, cliente, proveedor, usuario, local,
   reserva, pedido manual, caja (registrar caja, iniciar turno, movimiento y
@@ -1506,34 +1508,47 @@ descargar y alternar al detalle HTML del informe sin depender del visor nativo.
   vez, en el perfil: nombre y porcentaje general. No hay pestaña ni formulario
   de regímenes ni filas «impuesto + porcentaje»: el comprobante lleva un solo
   impuesto.
-- Si el país del perfil tiene una tasa especial legal, el formulario del perfil
-  muestra un interruptor con el nombre del régimen, «MYPE restaurante (padrón
-  SUNAT)». Marcado, su descripción dice solo la tasa de hoy y hasta cuándo rige
-  («Hoy factura con 10,5 % hasta el 31/12/2026»). El usuario no escribe
+- Si el país del perfil tiene un IGV reducido legal, el formulario del perfil
+  muestra un interruptor con su nombre, «IGV reducido MYPE (restaurantes y
+  hoteles)». Desmarcado, la descripción dice «Márcalo solo si la empresa está en
+  el padrón MYPE de SUNAT»; marcado, solo la tasa de hoy y hasta cuándo rige
+  («En el padrón de SUNAT. Hoy factura con 10,5 % hasta el 31/12/2026»). El usuario no escribe
   porcentajes especiales ni ve el calendario completo. Cambiar de país lo
   desmarca. En la tabla, la celda Impuesto añade «MYPE: 10,5 % hoy».
 - Aviso de vencimiento (`InlineNotice` `warning`): cuando las vigencias
   registradas terminan en 30 días o menos, o ya no cubren hoy, Fiscal y moneda
-  lo muestra sobre la tabla y en el formulario: «La tasa especial vence el
-  31/12/2027. Desde el 01/01/2028 se facturará con IGV 18 % si no se registra una
-  nueva vigencia».
-- **Plataforma › Países y WhatsApp**: la tasa especial pertenece al país, no a
-  un panel aparte. La tabla de países añade la columna «Tasa especial» («MYPE
-  restaurante: 10,5 %» y «hasta 31/12/2026»; `Status` `orange` «Por vencer» o
-  «Sin vigencia»). Si las vigencias terminan en 30 días o menos, un
-  `InlineNotice` `warning` sobre la tabla pide registrar la nueva.
-- El formulario del país («País», editar) tiene las pestañas WhatsApp y Tasa
-  especial; la segunda solo aparece si el país tiene una. Muestra el régimen,
-  las empresas acogidas, «Nueva vigencia» y la tabla Vigencia («desde» y «hasta»
-  inclusivo), Tasa, Base legal y Estado (Vigente `green` / Programada `blue` /
-  Finalizada `gray`). Crear o editar una vigencia ocurre dentro de la pestaña,
-  sin abrir un modal encima; la propuesta empieza donde termina la última y dura
-  un año. Las fechas legales se muestran completas (`31/12/2027`).
+  lo muestra sobre la tabla y en el formulario: «El IGV reducido vence el
+  31/12/2027. Desde el 01/01/2028 se facturará con IGV 18 % si no se registra el
+  periodo siguiente».
+- **Plataforma › Impuestos** (`/platform/taxes`) es la única pantalla del
+  calendario legal; «Países y WhatsApp» solo administra canales y no muestra
+  impuestos. Sigue el patrón estándar de listado: `PageHeader` con una línea de
+  descripción y la acción primaria «Nuevo periodo», un único panel
+  `standardized-management` y la tabla Periodo (`row-icon` `calendar`), IGV,
+  Base legal, Estado (Vigente `green` / Programado `blue` / Finalizado `gray`) y
+  Acciones, en orden cronológico. No hay cabeceras ni botones dentro del panel.
+  La columna Impuesto solo aparece si más de un país tiene IGV reducido. Un
+  periodo de año completo se nombra por su año («2026») y otro por sus fechas
+  completas («01/03/2028 – 31/12/2028»). En móvil la tabla se desliza en
+  horizontal, como el resto de listados.
+- Crear o editar un periodo abre un modal compacto: cabecera solo con icono
+  `tax`, «Nuevo periodo» o «Editar periodo» y X; campos Impuesto (solo lectura),
+  Desde, Hasta opcional e inclusivo, IGV % con la ayuda «Total que sale en el
+  comprobante (IGV + IPM)» y Base legal; la nota del pie dice a cuántas empresas
+  acogidas se aplica. La propuesta empieza donde termina el último periodo y dura
+  un año. Si los periodos registrados terminan en 30 días o menos, o ya no
+  cubren hoy, un `InlineNotice` `warning` sobre la tabla pide registrar el
+  siguiente.
 - Las propinas de un local se editan dentro del formulario del local (sección
   «Propinas»), no desde un botón en la fila de Locales.
 - El onboarding de plataforma se presenta como un wizard de cinco pasos:
   Empresa → Plan y contrato → Fiscal → Primer local → Administrador. La confirmación final crea el tenant
   completo de forma transaccional; avanzar entre pasos no persiste datos parciales.
+- El paso Fiscal del alta muestra, debajo de «Impuesto incluido en el precio»,
+  la misma casilla «IGV reducido MYPE (restaurantes y hoteles)» que el perfil
+  fiscal (componente compartido `SpecialRegimeSwitch`), solo si el país elegido
+  tiene IGV reducido. Cambiar de país la desmarca; marcada, la empresa nace
+  acogida en su primer perfil fiscal.
 
 ## Componentes y estados
 
@@ -2334,7 +2349,9 @@ versión de condiciones, y exige registrar la aceptación antes de crear el
 tenant. Plataforma administra el catálogo en `/platform/plans` y la
 suscripción de la empresa activa en `/platform/subscription`.
 
-El Administrador de plataforma accede a «Países y WhatsApp» directamente desde
+El Administrador de plataforma accede a «Países y WhatsApp»
+(`/platform/global-settings`; la anterior `/platform/configuracion-global`
+redirige) directamente desde
 el grupo Configuración del menú principal y también desde la navegación del área
 de plataforma. La pantalla muestra la moneda predeterminada de cada país y
 administra únicamente su número público, nombre visible y estado. El país se
@@ -2342,6 +2359,12 @@ elige mediante un autocomplete y su moneda queda asociada sin edición durante
 el onboarding. `WHATSAPP_PHONE_ID`, los tokens y las demás credenciales de Meta
 se inyectan exclusivamente mediante variables de entorno y nunca se exponen en
 esta interfaz. Los usuarios de empresa nunca ven este acceso.
+
+La navegación del área de plataforma añade «Impuestos» (`tax`), con el
+IGV reducido MYPE y sus periodos; no aparece en el menú principal. Con cinco secciones,
+la barra oculta «Administración SaaS» bajo 1240 px y deja solo el icono de las
+secciones inactivas bajo 1180 px (el nombre queda como `title` y para lectores
+de pantalla).
 
 El Administrador de empresa con permiso `subscription.read` ve en Mi perfil
 un resumen de solo lectura con plan, estado, precio/ciclo, renovación, prueba,

@@ -30,5 +30,5 @@
  .organization-savebar .button{min-width:0}
 }
 
-/* Fiscal y moneda: aviso de vencimiento de la tasa especial sobre la tabla de perfiles. */
+/* Fiscal y moneda: aviso de vencimiento del IGV reducido MYPE sobre la tabla de perfiles. */
 .special-tax-notice{margin-bottom:var(--space-3)}

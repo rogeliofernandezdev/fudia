@@ -1,4 +1,4 @@
-// Legal special tax rates (e.g. MYPE restaurante in Peru). Rates are exact
+// Reduced IGV set by law for a country (Peru: MYPE restaurants and hotels). Rates are exact
 // fractions ("0.105000"); validTo is an exclusive end date, as the API sends it.
 export type SpecialTaxRate={id:string;validFrom:string;validTo:string|null;rate:string;legalBasis:string};
 export type SpecialTaxRegime={code:string;country:string;name:string;rates:SpecialTaxRate[]};
@@ -52,6 +52,14 @@ export function ratePeriodState(rate:SpecialTaxRate,today:string):RatePeriodStat
 
 // Last day the special rate applies (the exclusive end minus one day).
 export function lastDay(validTo:string){return shiftDate(validTo,-1)}
+
+// "2026" when the period is a whole calendar year; otherwise its first and
+// last day, or only its start when it has no end.
+export function ratePeriodLabel(rate:Pick<SpecialTaxRate,"validFrom"|"validTo">,day:(iso:string)=>string){
+ const year=rate.validFrom.slice(0,4);
+ if(rate.validFrom===`${year}-01-01`&&rate.validTo===`${Number(year)+1}-01-01`)return year;
+ return rate.validTo?`${day(rate.validFrom)} – ${day(lastDay(rate.validTo))}`:`Desde ${day(rate.validFrom)}`;
+}
 
 export function regimesForCountry(options:SpecialTaxRegime[],country:string){
  return options.filter(option=>option.country===country);

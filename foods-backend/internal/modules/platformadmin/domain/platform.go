@@ -18,6 +18,9 @@ type TenantOnboardingInput struct {
 	TaxName          string              `json:"taxName"`
 	TaxRate          string              `json:"taxRate"`
 	TaxIncluded      bool                `json:"taxIncluded"`
+	// SpecialTaxRegime enrolls the first fiscal profile in its country's
+	// reduced IGV (Peru: MYPE restaurants in the SUNAT padrón); nil = general.
+	SpecialTaxRegime *string             `json:"specialTaxRegime"`
 	LocationName     string              `json:"locationName"`
 	LocationCode     string              `json:"locationCode"`
 	Address          string              `json:"address"`
@@ -72,6 +75,17 @@ type PlatformOrganizationView struct {
 	Subscription    *PlatformOrganizationSubscription `json:"subscription"`
 	LastPayment     *PlatformOrganizationPayment      `json:"lastPayment"`
 	PaymentStanding string                            `json:"paymentStanding"`
+	Tax             PlatformOrganizationTax           `json:"tax"`
+}
+
+// PlatformOrganizationTax is the tax of the company's default fiscal profile:
+// its general rate and, when enrolled in a reduced IGV, the regime name and the
+// rate it invoices with today (nil when no period covers today).
+type PlatformOrganizationTax struct {
+	Name          string  `json:"name"`
+	Rate          string  `json:"rate"`
+	SpecialRegime *string `json:"specialRegime"`
+	SpecialRate   *string `json:"specialRate"`
 }
 type OptionView struct {
 	Value string `json:"value"`

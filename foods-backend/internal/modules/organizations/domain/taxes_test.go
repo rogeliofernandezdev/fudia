@@ -4,7 +4,7 @@ import "testing"
 
 func peruMype() *SpecialTaxRegime {
 	to2026, to2027, to2028 := "2026-01-01", "2027-01-01", "2028-01-01"
-	return &SpecialTaxRegime{Code: "pe_mype_restaurants", Country: "PE", Name: "Tasa especial MYPE de restaurantes y hoteles", Rates: []SpecialTaxRate{
+	return &SpecialTaxRegime{Code: "pe_mype_restaurants", Country: "PE", Name: "IGV reducido MYPE (restaurantes y hoteles)", Rates: []SpecialTaxRate{
 		{ValidFrom: "2025-01-01", ValidTo: &to2026, Rate: "0.100000"},
 		{ValidFrom: "2026-01-01", ValidTo: &to2027, Rate: "0.105000"},
 		{ValidFrom: "2027-01-01", ValidTo: &to2028, Rate: "0.150000"},

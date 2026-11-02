@@ -101,8 +101,20 @@ func (r *Platform) Organizations(ctx context.Context, f application.Filter) (app
 		       last_amount IS NOT NULL,COALESCE(last_amount::text,''),COALESCE(last_currency,''),
 		       CASE WHEN last_paid_at IS NULL THEN NULL ELSE to_char(last_paid_at AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS"Z"') END,
 		       standing,
+		       COALESCE(tx.tax_name,''),COALESCE(tx.tax_rate::text,''),tx.regime_name,tx.special_rate::text,
 		       count(*) OVER()
 		FROM base
+		LEFT JOIN LATERAL (
+			SELECT fp.tax_name,fp.tax_rate,g.name AS regime_name,
+			       (SELECT t.rate FROM special_tax_rates t
+			        WHERE t.regime_code=fp.special_tax_regime
+			          AND t.valid_from<=(now() AT TIME ZONE o.timezone)::date
+			          AND (t.valid_to IS NULL OR t.valid_to>(now() AT TIME ZONE o.timezone)::date)) AS special_rate
+			FROM organization_fiscal_profiles fp
+			JOIN organizations o ON o.id=fp.organization_id
+			LEFT JOIN special_tax_regimes g ON g.code=fp.special_tax_regime
+			WHERE fp.organization_id=base.id AND fp.is_default
+		) tx ON true
 		WHERE ($2='' OR trade_name ILIKE '%'||$2||'%' OR legal_name ILIKE '%'||$2||'%' OR tax_id ILIKE '%'||$2||'%')
 		  AND ($3='' OR plan_id::text=$3)
 		  AND ($4='' OR standing=$4)
@@ -127,7 +139,8 @@ func (r *Platform) Organizations(ctx context.Context, f application.Filter) (app
 			&sub.BillingCycle, &sub.PriceAmount, &sub.Currency, &sub.Status,
 			&sub.RenewsAt, &sub.TrialEndsAt, &sub.AutoRenew,
 			&hasPayment, &payment.Amount, &payment.Currency, &payment.PaidAt,
-			&item.PaymentStanding, &total,
+			&item.PaymentStanding,
+			&item.Tax.Name, &item.Tax.Rate, &item.Tax.SpecialRegime, &item.Tax.SpecialRate, &total,
 		); err != nil {
 			return out, err
 		}

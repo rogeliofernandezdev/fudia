@@ -33,7 +33,7 @@ function mount({max=1,usage=1,items=[local],pending=false,error=false,fetching=f
   if(name==="@/providers/session-context")return {useSession:()=>({organization:{id:"panchita"},can:permission=>permission==="organizations.manage"?manage:readPlan})};
   if(name==="@/providers/feedback-provider")return {useFeedback:()=>({notify:()=>{}})};
   if(name.startsWith("@/design-system"))return Object.fromEntries(["Dialog","ConfirmDialog","RemoteModalSkeleton","Icon","LocationMap","Button","EmptyState","ErrorState","FormField","Input","PageHeader","Pagination","RowActionButton","Select","Skeleton","Status","TableSkeleton","Tabs","TabsBar","TimezoneSelect"].map(key=>[key,key]));
-  if(name==="react-hook-form"||name.startsWith("../")||name.endsWith(".css")||name==="@/shared/i18n/regional-format"||name==="@/shared/fiscal/special-tax")return {};
+  if(name==="react-hook-form"||name.startsWith("../")||name==="./special-tax-switch"||name.endsWith(".css")||name==="@/shared/i18n/regional-format"||name==="@/shared/fiscal/special-tax")return {};
   return require(name);
  });
  function render(){cursor=0;const view=nodes(LocationsManager());return {view,header:view.find(node=>node.type==="PageHeader"),button:view.find(node=>node.type==="Button"&&node.props.children==="Nuevo local")};}

@@ -395,14 +395,8 @@ func (a *Organizations) SaveProfile(ctx context.Context, s scope, id string, in 
 	if !valid {
 		return result, organizationFailure(apperror.Invalid, "invalid_profile", "Revisa país, moneda e impuesto.")
 	}
-	if in.SpecialTaxRegime != nil {
-		regimes, err := a.repo.SpecialTaxRegimes(ctx)
-		if err != nil {
-			return result, organizationFailure(apperror.Unavailable, "catalogs_unavailable", "No pudimos validar la tasa especial.")
-		}
-		if !specialRegimeOffered(regimes, *in.SpecialTaxRegime, in.Country) {
-			return result, organizationFailure(apperror.Invalid, "invalid_special_tax_regime", "La tasa especial no está disponible para este país.")
-		}
+	if err := a.ValidateSpecialTaxRegime(ctx, in.Country, in.SpecialTaxRegime); err != nil {
+		return result, err
 	}
 	tx, err := a.work.Begin(ctx, unitofwork.Options{})
 	if err != nil {
@@ -481,7 +475,7 @@ func (a *Organizations) Profiles(ctx context.Context, s scope, page int, size in
 		today, err = a.repo.BusinessDate(ctx, s)
 	}
 	if err != nil {
-		return result, organizationFailure(apperror.Unavailable, "profiles_unavailable", "No pudimos cargar las tasas especiales.")
+		return result, organizationFailure(apperror.Unavailable, "profiles_unavailable", "No pudimos cargar el IGV reducido.")
 	}
 	out, err := a.repo.Profiles(ctx, s, page, size)
 	if err != nil {
@@ -567,8 +561,29 @@ func (a *Organizations) OnboardingCatalogs(ctx context.Context, all bool) (map[s
 	if err != nil {
 		return result, organizationFailure(apperror.Unavailable, "catalogs_unavailable", "No pudimos cargar las monedas disponibles.")
 	}
-	return map[string]any{"countryOptions": countries, "currencyOptions": currencies, "tipOptions": billingcontracts.OnboardingTipOptions(), "maxMenuPages": 20}, nil
+	regimes, err := a.repo.SpecialTaxRegimes(ctx)
+	if err != nil {
+		return result, organizationFailure(apperror.Unavailable, "catalogs_unavailable", "No pudimos cargar el IGV reducido.")
+	}
+	return map[string]any{"countryOptions": countries, "currencyOptions": currencies, "specialTaxRegimeOptions": regimes, "tipOptions": billingcontracts.OnboardingTipOptions(), "maxMenuPages": 20}, nil
 
+}
+
+// ValidateSpecialTaxRegime checks that a fiscal profile only enrolls in a
+// reduced IGV of its own country; nil code means not enrolled. Shared by the
+// fiscal profile form and tenant onboarding.
+func (a *Organizations) ValidateSpecialTaxRegime(ctx context.Context, country string, code *string) error {
+	if code == nil {
+		return nil
+	}
+	regimes, err := a.repo.SpecialTaxRegimes(ctx)
+	if err != nil {
+		return organizationFailure(apperror.Unavailable, "catalogs_unavailable", "No pudimos validar el IGV reducido.")
+	}
+	if !specialRegimeOffered(regimes, *code, country) {
+		return organizationFailure(apperror.Invalid, "invalid_special_tax_regime", "El IGV reducido no está disponible para este país.")
+	}
+	return nil
 }
 
 func specialRegimeOffered(regimes []domain.SpecialTaxRegime, code, country string) bool {

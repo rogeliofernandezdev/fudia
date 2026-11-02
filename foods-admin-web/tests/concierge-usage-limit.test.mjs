@@ -88,7 +88,7 @@ test("concierge: uso y tope solo existen en Plataforma",()=>{
  ]);
  assert.match(read(`${platform}presentation/platform-companies-page.tsx`),/if\(!user\?\.platformAdmin\)return <RestrictedCompanies\/>/);
  assert.match(read(`${platform}presentation/platform-company-detail-page.tsx`),/if\(!user\?\.platformAdmin\)return <RestrictedCompanies\/>/);
- assert.match(read("src/app/platform/configuracion-global/page.tsx"),/PlatformGlobalSettingsPage/,"Configuración global vive bajo el shell de Plataforma");
+ assert.match(read("src/app/platform/global-settings/page.tsx"),/PlatformGlobalSettingsPage/,"Configuración global vive bajo el shell de Plataforma");
  assert.match(read("src/modules/platform/presentation/platform-shell.tsx"),/!user\?\.platformAdmin/);
 });
 

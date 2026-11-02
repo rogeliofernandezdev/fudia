@@ -21,10 +21,10 @@ func (r *Platform) CreateTenant(ctx context.Context, s scope, in domain.TenantOn
 	batch.Queue(`INSERT INTO organizations(legal_name,trade_name,tax_id,timezone,founded_on) VALUES($1,$2,$3,$4,NULLIF($5,'')::date) RETURNING id`, in.LegalName, in.TradeName, in.TaxID, in.Timezone, in.FoundedOn)
 	batch.Queue(`
 		UPDATE organization_fiscal_profiles
-		SET country_code=$1,currency=$2,currency_symbol=$3,currency_position=$4,currency_decimals=$5,tax_name=$6,tax_rate=$7,tax_included=$8,updated_at=now()
+		SET country_code=$1,currency=$2,currency_symbol=$3,currency_position=$4,currency_decimals=$5,tax_name=$6,tax_rate=$7,tax_included=$8,special_tax_regime=$10,updated_at=now()
 		WHERE organization_id=(SELECT id FROM organizations WHERE tax_id=$9) AND is_default
 		RETURNING id
-	`, in.Country, currency.Code, currency.Symbol, in.CurrencyPosition, currency.Decimals, in.TaxName, in.TaxRate, in.TaxIncluded, in.TaxID)
+	`, in.Country, currency.Code, currency.Symbol, in.CurrencyPosition, currency.Decimals, in.TaxName, in.TaxRate, in.TaxIncluded, in.TaxID, in.SpecialTaxRegime)
 	batch.Queue(`
 		INSERT INTO locations(organization_id,name,code,address,phone,opening_hours,latitude,longitude,timezone,fiscal_profile_id,opened_on)
 		SELECT o.id,$2,$3,$4,$5,$6,$7,$8,$9,fp.id,NULLIF($10,'')::date

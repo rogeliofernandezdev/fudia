@@ -19,11 +19,13 @@ import {createPlatformOrganization,getPlatformOnboardingContext} from "../infras
 import {RestaurantProfileFields} from "@/modules/organizations/presentation/restaurant-profile-fields";
 import {saveRestaurantProfile,type RestaurantProfileDraft} from "@/modules/organizations/infrastructure/restaurant-profile-api";
 import {PlatformOnboardingSkeleton} from "./platform-skeletons";
+import {SpecialRegimeSwitch} from "@/modules/organizations/presentation/special-tax-switch";
+import {regimesForCountry} from "@/shared/fiscal/special-tax";
 
 const blank:PlatformOnboardingDraft={
  legalName:"",tradeName:"",taxId:"",timezone:"",
  planId:"",billingCycle:"monthly",termsAccepted:false,
- country:"",currency:"",currencyPosition:"before",taxName:"IGV",taxRate:"18",taxIncluded:false,
+ country:"",currency:"",currencyPosition:"before",taxName:"IGV",taxRate:"18",taxIncluded:false,specialTaxRegime:"",
  locationName:"",locationCode:"",address:"",locationPhone:"",locationHours:"",latitude:"",longitude:"",
  adminName:"",adminEmail:"",adminPassword:"",
 };
@@ -53,6 +55,7 @@ export function PlatformOnboardingPage(){
   });
   const[planId,billingCycle,address,latitude,longitude]=useWatch({control,name:["planId","billingCycle","address","latitude","longitude"]});
   const country=useWatch({control,name:"country"});
+  const[enrolled,taxName,taxRate]=useWatch({control,name:["specialTaxRegime","taxName","taxRate"]});
   const selectedPlan=ctx?.plans.find(plan=>plan.id===planId)??null;
 
   useEffect(()=>{if(firstPlanId&&!getValues("planId"))setValue("planId",firstPlanId)},[firstPlanId,getValues,setValue]);
@@ -108,6 +111,7 @@ export function PlatformOnboardingPage(){
     const current=getValues();
     const defaults=countryLocationDefaults(country,current);
     setValue("country",code,{shouldDirty:true,shouldValidate:Boolean(errors.country)});
+    setValue("specialTaxRegime","");
     setValue("timezone",defaults.timezone,{shouldDirty:true,shouldValidate:Boolean(errors.timezone)});
     if(ctx?.currencyOptions.some(currency=>currency.code===country.defaultCurrency))setValue("currency",country.defaultCurrency);
   };
@@ -164,6 +168,7 @@ export function PlatformOnboardingPage(){
           <Field label="Porcentaje %" error={err("taxRate")}><Input type="number" inputMode="decimal" min="0" max="100" step="0.0001" {...register("taxRate")} placeholder="18"/></Field>
           <Field label="Posición del símbolo"><Select {...register("currencyPosition")}><option value="before">Antes del monto</option><option value="after">Después del monto</option></Select></Field>
           <label className="switch-row compact"><input type="checkbox" {...register("taxIncluded")}/><span/><b>Impuesto incluido en el precio</b></label>
+          {regimesForCountry(ctx.specialTaxRegimeOptions,country).map(regime=><SpecialRegimeSwitch key={regime.code} regime={regime} country={country} general={`${taxName} ${taxRate} %`} checked={enrolled===regime.code} onChange={on=>setValue("specialTaxRegime",on?regime.code:"",{shouldDirty:true})}/>)}
         </div>}
 
         {step===3&&<div className="form-grid">

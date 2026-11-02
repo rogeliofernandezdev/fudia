@@ -539,16 +539,17 @@ su identificador para mantener trazabilidad.
 - Los catálogos de países y monedas son datos de referencia del backend. Los tipos
   de cambio son datos temporales de negocio y siempre están acotados por empresa.
 
-### Tasa especial de impuesto
+### IGV reducido MYPE
 
-Migración `000100_special_tax_rates` (2026-11-01). Reemplaza los regímenes por
+Migración `000100_special_tax_rates` (2026-11-01); `000101_reduced_igv_name`
+le da el nombre que usan los restaurantes. Reemplaza los regímenes por
 perfil de la `000097`, que repetían el IGV del perfil y pedían escribir
 porcentajes fijados por ley. Es la base de impuestos de facturación electrónica
 ([14_EINVOICING.md](14_EINVOICING.md)).
 
 `tax_name`/`tax_rate` del perfil siguen siendo el **impuesto general** (IGV
 18 %): el alta de empresa, Mi restaurante y los perfiles fiscales no cambian.
-Una **tasa especial** es legal y por país —en Perú, MYPE de restaurantes,
+El **IGV reducido** es legal y por país —en Perú, MYPE de restaurantes,
 hoteles y alojamientos (Leyes 31556, 32219 y 32387)— y solo reemplaza el
 porcentaje del mismo impuesto mientras tiene una tasa vigente. El comprobante
 muestra un solo IGV con la tasa total; el IPM no se separa.
@@ -559,9 +560,9 @@ muestra un solo IGV con la tasa total; el IPM no se separa.
 | --- | --- | --- |
 | `code` | `text` PK | Código estable, p. ej. `pe_mype_restaurants`. |
 | `country_code` | `char(2)` | País donde aplica; `UNIQUE (code,country_code)`. |
-| `name` | `text` | Nombre visible: «MYPE restaurante (padrón SUNAT)». |
+| `name` | `text` | Nombre visible: «IGV reducido MYPE (restaurantes y hoteles)». |
 
-`special_tax_rates` (vigencias que registran los administradores de plataforma)
+`special_tax_rates` (periodos que registran los administradores de plataforma)
 
 | Campo | Tipo | Propósito |
 | --- | --- | --- |
@@ -574,8 +575,7 @@ muestra un solo IGV con la tasa total; el IPM no se separa.
 
 Punto de partida sembrado para `pe_mype_restaurants`: 10 % en 2025, 10,5 % en
 2026 y 15 % en 2027. Las prórrogas o cambios legales se registran desde
-Plataforma › Países y WhatsApp, en el formulario del país (pestaña «Tasa
-especial»), sin migraciones.
+Plataforma › Impuestos (`/platform/taxes`), sin migraciones.
 
 `organization_fiscal_profiles.special_tax_regime` (`text` nulo): régimen en
 que la empresa está acogida. FK compuesta `(special_tax_regime, country_code)`
@@ -598,7 +598,11 @@ Reglas:
   terminan antes y `expired` si ninguna cubre hoy; en ese caso se factura con la
   tasa general hasta que Plataforma registre la nueva vigencia.
 - Acogerse es una decisión del administrador de la empresa (padrón SUNAT); el
-  sistema no lo infiere. Se audita con `fiscal_profile.updated`; las vigencias,
+  sistema no lo infiere. Se marca al registrar la empresa (paso Fiscal del alta,
+  `specialTaxRegime` en `TenantOnboardingInput`, que el primer perfil fiscal
+  guarda) o después en Fiscal y moneda; ambos validan que el IGV reducido sea
+  del país del perfil (`ValidateSpecialTaxRegime`, 400
+  `invalid_special_tax_regime`). Se audita con `fiscal_profile.updated`; las vigencias,
   con `special_tax_rate.created|updated|deleted`.
 - API de empresa: `specialTaxRegime` en `FiscalProfileInput` (400
   `invalid_special_tax_regime` si no existe para el país); el listado de perfiles

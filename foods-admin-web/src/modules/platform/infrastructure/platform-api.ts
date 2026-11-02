@@ -41,7 +41,7 @@ export async function listReadyModules():Promise<PlatformModule[]>{
 
 export async function getPlatformOnboardingContext():Promise<PlatformOnboardingContext>{
  const[data,plans]=await Promise.all([
-  platformFetch<Pick<PlatformOnboardingContext,"countryOptions"|"currencyOptions"|"tipOptions"|"maxMenuPages">>("onboarding/catalogs"),
+  platformFetch<Pick<PlatformOnboardingContext,"countryOptions"|"currencyOptions"|"specialTaxRegimeOptions"|"tipOptions"|"maxMenuPages">>("onboarding/catalogs"),
   listSubscriptionPlans(),
  ]);
  return {
@@ -49,6 +49,7 @@ export async function getPlatformOnboardingContext():Promise<PlatformOnboardingC
   tipOptions:data.tipOptions,
   countryOptions:data.countryOptions??[],
   currencyOptions:data.currencyOptions??[],
+  specialTaxRegimeOptions:data.specialTaxRegimeOptions??[],
   plans:plans.items.filter(plan=>plan.active&&plan.code!=="legacy"),
  };
 }
@@ -76,6 +77,7 @@ export async function createPlatformOrganization(draft:PlatformOnboardingDraft){
   ...draft,
   locationCode:draft.locationCode||draft.locationName.toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,8).padStart(3,"L"),
   taxRate:String(Number(draft.taxRate)/100),
+  specialTaxRegime:draft.specialTaxRegime||null,
   latitude:draft.latitude?Number(draft.latitude):null,
   longitude:draft.longitude?Number(draft.longitude):null,
  };

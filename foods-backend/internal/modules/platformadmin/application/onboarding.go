@@ -14,6 +14,7 @@ import (
 
 type FiscalCatalog interface {
 	ValidateFiscal(context.Context, *orgcontracts.FiscalProfileInput, bool) (orgcontracts.CurrencyOption, bool, error)
+	ValidateSpecialTaxRegime(ctx context.Context, country string, code *string) error
 }
 type SubscriptionCreator interface {
 	Create(context.Context, string, string, string, string, bool) error
@@ -155,16 +156,22 @@ func (a *Platform) Onboard(ctx context.Context, s scope, in domain.TenantOnboard
 		return result, a.reject(ctx, "invalid_timezone", "La zona horaria seleccionada no es válida.")
 	}
 
-	currency, fiscalOK, catalogErr := a.catalogs.ValidateFiscal(ctx, &orgcontracts.FiscalProfileInput{
+	fiscal := orgcontracts.FiscalProfileInput{
 		Country: in.Country, Currency: in.Currency, CurrencyPosition: in.CurrencyPosition,
 		TaxName: in.TaxName, TaxRate: in.TaxRate, TaxIncluded: in.TaxIncluded, Default: true,
-	}, true)
+		SpecialTaxRegime: in.SpecialTaxRegime,
+	}
+	currency, fiscalOK, catalogErr := a.catalogs.ValidateFiscal(ctx, &fiscal, true)
 	if catalogErr != nil {
 		a.flow.Log(ctx, "application_flow_failed", onboardingStepValidate, catalogErr)
 		return result, platformFailure(apperror.Unavailable, "catalogs_unavailable", "No pudimos validar la configuración global de países, monedas y WhatsApp. Intenta nuevamente.")
 	}
 	if !fiscalOK {
 		return result, a.reject(ctx, "invalid_fiscal_profile", "El país o su moneda predeterminada no están habilitados, o el país todavía no tiene un canal de WhatsApp operativo.")
+	}
+	in.SpecialTaxRegime = fiscal.SpecialTaxRegime
+	if err := a.catalogs.ValidateSpecialTaxRegime(ctx, fiscal.Country, in.SpecialTaxRegime); err != nil {
+		return result, err
 	}
 	if in.LocationName == "" || in.LocationCode == "" || len(in.LocationName) > 180 || len(in.LocationCode) > 80 {
 		return result, a.reject(ctx, "invalid_location", "Ingresa un nombre y un código válidos para el primer local.")

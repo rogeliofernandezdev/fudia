@@ -9,7 +9,8 @@ import {EmptyState,ErrorState,PageHeader,Pagination,RowActionButton,SearchField,
 import {Icon,type IconName} from "@/design-system/icons";
 import {useSession} from "@/providers";
 import {useDebouncedValue} from "@/shared/hooks/use-debounced-value";
-import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
+import {formatRegionalDateTime,formatRegionalNumber} from "@/shared/i18n/regional-format";
+import {ratePercentLabel} from "@/shared/fiscal/special-tax";
 import {companySettingsPath} from "@/shared/routing/page-routes";
 import {listConciergeUsage,listPlatformOrganizations} from "../infrastructure/platform-api";
 import {ConciergeUsageCell,ConciergeUsageNotice} from "./platform-concierge-usage";
@@ -18,7 +19,7 @@ import {paymentStandingTone} from "../domain/subscription-status";
 import type {ConciergeUsagePage,PaymentStanding,PlatformOrganization,PlatformOrganizationPage} from "../domain/types";
 
 const DAY=86_400_000;
-const columns=["Empresa","Plan","Precio","Próximo vencimiento","Último pago","Situación","Concierge del mes","Acciones"];
+const columns=["Empresa","IGV","Plan","Precio","Próximo vencimiento","Último pago","Situación","Concierge del mes","Acciones"];
 const summaryCards:Array<{key:"total"|PaymentStanding;label:string;icon:IconName}>=[
  {key:"total",label:"Empresas",icon:"building"},
  {key:"up_to_date",label:"Al día",icon:"circleCheck"},
@@ -118,12 +119,18 @@ function CompaniesTable({data,busy,conciergeUsage}:{data:PlatformOrganizationPag
  };
  const lastPayment=(company:PlatformOrganization)=>company.lastPayment?<div className="platform-company-cell"><b className="platform-company-amount">{company.lastPayment.currency} {Number(company.lastPayment.amount).toFixed(2)}</b><small>{company.lastPayment.paidAt?date(company.lastPayment.paidAt):"Sin fecha"}</small></div>:<span className="platform-company-muted">Sin pagos</span>;
  const plan=(company:PlatformOrganization)=>company.subscription?<div className="platform-company-cell"><b>{company.subscription.plan.name}</b><small>{company.subscription.billingCycle==="annual"?"Anual":"Mensual"}{company.subscription.autoRenew?" · Renovación automática":""}</small></div>:<span className="platform-company-muted">Sin plan</span>;
+ const percent=(rate:string)=>ratePercentLabel(rate,value=>formatRegionalNumber(value,location?.country,{maximumFractionDigits:4}));
+ // Enrolled companies show the rate they invoice with today; the rest, their general rate.
+ const tax=({tax:t}:PlatformOrganization)=>t.specialRegime
+  ?<div className="platform-company-cell"><b>{t.name} {percent(t.specialRate??t.rate)}</b><small>{t.specialRate?"MYPE · padrón SUNAT":"MYPE · sin tasa hoy"}</small></div>
+  :<div className="platform-company-cell"><b>{t.name} {percent(t.rate)}</b><small>General</small></div>;
  const actions=(company:PlatformOrganization)=><><RowActionButton action="view" label="Ver detalle" onClick={()=>setDetailId(company.id)}/><Link href={companySettingsPath(company.id)} className="ds-icon-button" aria-label={"Gestionar suscripción de "+company.tradeName} data-tooltip="Gestionar suscripción"><Icon name="receipt" size={18}/></Link></>;
 
  return <><DataTable label="Empresas registradas" containerClassName="hover-scroll" className="platform-companies-table" aria-busy={busy}>
    <thead><tr>{columns.map(column=><th key={column}>{column}</th>)}</tr></thead>
    <tbody>{data.items.map(company=><tr key={company.id} className={company.active?"":"inactive"}>
     <td><div className="platform-company-name"><span className="row-icon"><Icon name="building" size={18}/></span><div><Link className="platform-company-link" href={companySettingsPath(company.id)}>{company.tradeName}</Link><small>{companyNote(company)}</small></div></div></td>
+    <td>{tax(company)}</td>
     <td>{plan(company)}</td>
     <td>{price(company)}</td>
     <td>{dueDate(company)}</td>
@@ -135,7 +142,7 @@ function CompaniesTable({data,busy,conciergeUsage}:{data:PlatformOrganizationPag
   </DataTable>
  <div className="management-cards" aria-busy={busy}>{data.items.map(company=><article key={company.id}>
   <header><span className="row-icon r0"><Icon name="building"/></span><div><Link className="platform-company-link" href={companySettingsPath(company.id)}>{company.tradeName}</Link><small>{companyNote(company)}</small></div>{standing(company)}</header>
-  <dl><div><dt>Plan</dt><dd>{plan(company)}</dd></div><div><dt>Precio</dt><dd>{price(company)}</dd></div><div><dt>Próximo vencimiento</dt><dd>{dueDate(company)}</dd></div><div><dt>Último pago</dt><dd>{lastPayment(company)}</dd></div><div><dt>Concierge del mes</dt><dd><ConciergeUsageCell organizationId={company.id} usage={conciergeUsage}/></dd></div></dl>
+  <dl><div><dt>IGV</dt><dd>{tax(company)}</dd></div><div><dt>Plan</dt><dd>{plan(company)}</dd></div><div><dt>Precio</dt><dd>{price(company)}</dd></div><div><dt>Próximo vencimiento</dt><dd>{dueDate(company)}</dd></div><div><dt>Último pago</dt><dd>{lastPayment(company)}</dd></div><div><dt>Concierge del mes</dt><dd><ConciergeUsageCell organizationId={company.id} usage={conciergeUsage}/></dd></div></dl>
   <footer>{actions(company)}</footer>
  </article>)}</div>
  {detailId&&<CompanyDetailDialog organizationId={detailId} standingOptions={data.standingOptions} close={()=>setDetailId(null)}/>}

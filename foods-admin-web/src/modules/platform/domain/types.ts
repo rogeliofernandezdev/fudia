@@ -1,3 +1,4 @@
+import type {SpecialTaxRegime} from "@/shared/fiscal/special-tax";
 import type {TipSettings} from "@/modules/operations/tips";
 export type Country={code:string;name:string;defaultCurrency:string;callingCode:string;defaultTimezone:string};
 export type Currency={code:string;name:string;symbol:string;decimals:number};
@@ -71,12 +72,14 @@ export type OrganizationSubscription={
  payments:SubscriptionPayment[];
 };
 
-export type PlatformOnboardingContext={maxMenuPages:number;tipOptions?:{defaults:TipSettings;countryDefaults:Record<string,TipSettings>;channels:{value:string;label:string}[]};countryOptions:Country[];currencyOptions:Currency[];plans:SubscriptionPlan[]};
+export type PlatformOnboardingContext={maxMenuPages:number;specialTaxRegimeOptions:SpecialTaxRegime[];tipOptions?:{defaults:TipSettings;countryDefaults:Record<string,TipSettings>;channels:{value:string;label:string}[]};countryOptions:Country[];currencyOptions:Currency[];plans:SubscriptionPlan[]};
 export type PlatformOnboardingDraft={foundedOn?:string;
  tipSettings?:TipSettings;
  legalName:string;tradeName:string;taxId:string;timezone:string;
  planId:string;billingCycle:"monthly"|"annual";termsAccepted:boolean;
  country:string;currency:string;currencyPosition:"before"|"after";taxName:string;taxRate:string;taxIncluded:boolean;
+ // Code of the reduced IGV the company is enrolled in; "" = general rate.
+ specialTaxRegime:string;
  locationName:string;locationCode:string;address:string;locationPhone:string;locationHours:string;locationOpenedOn?:string;latitude:string;longitude:string;
  adminName:string;adminEmail:string;adminPassword:string;
 };
@@ -106,6 +109,9 @@ export type PlatformOrganization={
  }|null;
  lastPayment:{amount:string;currency:string;paidAt:string|null}|null;
  paymentStanding:PaymentStanding;
+ // Tax of the default fiscal profile; rates are fractions ("0.105000").
+ // specialRate is null when the enrolled reduced IGV has no period for today.
+ tax:{name:string;rate:string;specialRegime:string|null;specialRate:string|null};
 };
 
 export type PlatformOrganizationPage={

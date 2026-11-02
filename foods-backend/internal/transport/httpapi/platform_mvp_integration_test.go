@@ -37,7 +37,7 @@ func TestPlatformOnboardingCreatesOperationalTenant(t *testing.T) {
 	`, fmt.Sprintf("mvp-%d", nonce), planModules).Scan(&planID); err != nil {
 		t.Fatal(err)
 	}
-	body := []byte(fmt.Sprintf(`{
+	template := fmt.Sprintf(`{
 		"legalName":"MVP Restaurant SAC",
 		"tradeName":"MVP Restaurant",
 		"taxId":%q,
@@ -48,6 +48,7 @@ func TestPlatformOnboardingCreatesOperationalTenant(t *testing.T) {
 		"taxName":"IGV",
 		"taxRate":"0.18",
 		"taxIncluded":false,
+		"specialTaxRegime":"%%s",
 		"locationName":"Local principal",
 		"tipSettings":{"mode":"collect","percentage":12,"showSuggestion":true,"allowFixed":true,"channels":["salon"]},
 		"locationCode":"PRINCIPAL",
@@ -58,11 +59,19 @@ func TestPlatformOnboardingCreatesOperationalTenant(t *testing.T) {
 		"planId":%q,
 		"billingCycle":"monthly",
 		"termsAccepted":true
-	}`, taxID, email, password, planID))
-	req := httptest.NewRequest("POST", "/v1/platform/organizations", bytes.NewReader(body))
-	req = req.WithContext(context.WithValue(req.Context(), scopeKey{}, actor))
-	rec := httptest.NewRecorder()
-	api.onboardTenant(rec, req)
+	}`, taxID, email, password, planID)
+	onboard := func(regime string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest("POST", "/v1/platform/organizations", bytes.NewReader([]byte(fmt.Sprintf(template, regime))))
+		req = req.WithContext(context.WithValue(req.Context(), scopeKey{}, actor))
+		rec := httptest.NewRecorder()
+		api.onboardTenant(rec, req)
+		return rec
+	}
+	// A company only enrolls in the reduced IGV of its own country.
+	if rec := onboard("unknown_regime"); rec.Code != 400 || !strings.Contains(rec.Body.String(), "invalid_special_tax_regime") {
+		t.Fatalf("unknown reduced IGV: %d %s", rec.Code, rec.Body.String())
+	}
+	rec := onboard("pe_mype_restaurants")
 	if rec.Code != 201 {
 		t.Fatalf("onboarding: %d %s", rec.Code, rec.Body.String())
 	}
@@ -72,6 +81,10 @@ func TestPlatformOnboardingCreatesOperationalTenant(t *testing.T) {
 	}
 	if created.OrganizationID == "" || created.LocationID == "" || created.AdministratorID == "" {
 		t.Fatalf("incomplete onboarding response: %#v", created)
+	}
+	var regime *string
+	if err := pool.QueryRow(context.Background(), `SELECT special_tax_regime FROM organization_fiscal_profiles WHERE id=$1`, created.FiscalProfileID).Scan(&regime); err != nil || regime == nil || *regime != "pe_mype_restaurants" {
+		t.Fatalf("first fiscal profile must keep the MYPE enrollment: %v %v", regime, err)
 	}
 	var tipMode string
 	var tipPercentage float64

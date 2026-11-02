@@ -228,6 +228,15 @@ sigue neutra. Reutilizar `Button action="cancel"`, `"cancel-record"`, `"back"`
 y `"continue"`; Continuar coloca la flecha a la derecha. No añadir colores
 locales. Autoridad: `docs/02_DESIGN_SYSTEM.md` › Colores e intención de Cancelar.
 
+## IGV en la lista de Empresas
+
+La lista de Empresas de Plataforma tiene la columna «IGV» después de Empresa
+(también en las tarjetas móviles), tomada del perfil fiscal predeterminado: las
+acogidas al IGV reducido muestran la tasa con la que facturan hoy y «MYPE ·
+padrón SUNAT» («IGV 10.5 %»), o «MYPE · sin tasa hoy» si ningún periodo cubre
+hoy; el resto, su tasa general y «General» («IGV 18 %»). Así se distingue de un
+vistazo qué empresas son MYPE sin abrir cada una.
+
 ## Fudia Concierge en Plataforma
 
 Configuración global agrega, bajo los canales, el panel «Tope mensual de

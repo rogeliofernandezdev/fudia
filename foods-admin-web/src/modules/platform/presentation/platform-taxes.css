@@ -1,0 +1,4 @@
+/* Plataforma › Impuestos: aviso de vencimiento sobre la tabla y campo de solo lectura del impuesto en el modal. */
+.tax-expiry-notice{margin-bottom:var(--space-3)}
+.tax-rate-modal form{padding:0}
+.tax-rate-modal .ds-input[readonly]{color:var(--ink-600);background:var(--cloud-100);cursor:default}

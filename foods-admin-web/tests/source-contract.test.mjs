@@ -791,10 +791,11 @@ test("países y WhatsApp tiene acceso completo para plataforma",()=>{
   const navigation=read("src/shell/navigation.ts");
   const platformShell=read("src/modules/platform/presentation/platform-shell.tsx");
   const page=read("src/modules/platform/presentation/platform-global-settings-page.tsx");
-  const route=read("src/app/platform/configuracion-global/page.tsx");
+  const route=read("src/app/platform/global-settings/page.tsx");
   const publicApi=read("src/modules/platform/index.ts");
 
-  assert.ok(routes.includes('platformGlobalSettings:"/platform/configuracion-global"'),"El catálogo central declara la ruta de configuración global");
+  assert.ok(routes.includes('platformGlobalSettings:"/platform/global-settings"'),"El catálogo central declara la ruta de configuración global");
+  assert.ok(routes.includes('{legacy:"/platform/configuracion-global",canonical:pageRoutes.platformGlobalSettings}'),"La ruta anterior en español redirige a la canónica");
   assert.ok(navigation.includes('href:pageRoutes.platformGlobalSettings,name:"Países y WhatsApp",icon:"whatsapp",module:"integraciones",platformAdminOnly:true'),"El menú principal expone el acceso solo al administrador de plataforma");
   assert.ok(platformShell.includes('href={pageRoutes.platformGlobalSettings}'),"La navegación de Plataforma reutiliza la misma ruta");
   assert.ok(platformShell.includes("<span>Países y WhatsApp</span>"),"Ambos accesos usan un nombre funcional y reconocible");
@@ -808,6 +809,8 @@ test("países y WhatsApp tiene acceso completo para plataforma",()=>{
   assert.equal(page.includes("secretRef"),false,"El formulario no expone referencias de credenciales");
   assert.equal(page.includes("META_WHATSAPP"),false,"El formulario no sugiere nombres de secretos");
   assert.ok(page.includes('label="Moneda asociada"'),"El modal muestra la moneda derivada del país");
+  assert.equal(/special|Tax|IGV/.test(page),false,"Países y WhatsApp no mezcla impuestos con los canales");
+  assert.ok(routes.includes('platformTaxes:"/platform/taxes"')&&platformShell.includes("<span>Impuestos</span>"),"El IGV reducido MYPE vive en Plataforma › Impuestos");
   assert.ok(page.includes("readOnly tabIndex={-1}"),"La moneda asociada no se puede alterar manualmente");
   assert.ok(page.includes('from "react-select"'),"El país usa un selector con autocompletado");
   assert.ok(page.includes("isSearchable"),"El selector de país permite buscar");

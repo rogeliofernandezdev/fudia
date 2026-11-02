@@ -90,7 +90,7 @@ func (a *SpecialTaxes) List(ctx context.Context, s scope) (SpecialTaxRegimesView
 		out.Today, err = a.repo.BusinessDate(ctx, s)
 	}
 	if err != nil {
-		return out, organizationFailure(apperror.Unavailable, "special_taxes_unavailable", "No pudimos cargar las tasas especiales.")
+		return out, organizationFailure(apperror.Unavailable, "special_taxes_unavailable", "No pudimos cargar los impuestos.")
 	}
 	for _, regime := range regimes {
 		out.Items = append(out.Items, SpecialTaxRegimeView{SpecialTaxRegime: regime, EnrolledProfiles: enrolled[regime.Code], Status: domain.SpecialTaxStatusOn(regime, out.Today)})
@@ -104,7 +104,7 @@ func (a *SpecialTaxes) CreateRate(ctx context.Context, s scope, regime string, i
 	}
 	id, err := a.repo.CreateSpecialRate(ctx, s, regime, in)
 	if err != nil {
-		return nil, specialRateFailure(err, "No encontramos la tasa especial.")
+		return nil, specialRateFailure(err, "No encontramos el IGV reducido.")
 	}
 	_ = a.audit.Record(ctx, s, "special_tax_rate.created", "special_tax_rate", id)
 	return map[string]string{"id": id}, nil
@@ -119,7 +119,7 @@ func (a *SpecialTaxes) UpdateRate(ctx context.Context, s scope, id string, in do
 		err = ErrNotFound
 	}
 	if err != nil {
-		return specialRateFailure(err, "No encontramos la vigencia.")
+		return specialRateFailure(err, "No encontramos el periodo.")
 	}
 	_ = a.audit.Record(ctx, s, "special_tax_rate.updated", "special_tax_rate", id)
 	return nil
@@ -131,7 +131,7 @@ func (a *SpecialTaxes) DeleteRate(ctx context.Context, s scope, id string) error
 		err = ErrNotFound
 	}
 	if err != nil {
-		return specialRateFailure(err, "No encontramos la vigencia.")
+		return specialRateFailure(err, "No encontramos el periodo.")
 	}
 	_ = a.audit.Record(ctx, s, "special_tax_rate.deleted", "special_tax_rate", id)
 	return nil
@@ -144,9 +144,9 @@ func invalidSpecialRate() error {
 func specialRateFailure(err error, notFound string) error {
 	switch {
 	case errors.Is(err, ErrSpecialTaxRateOverlap):
-		return organizationFailure(apperror.Conflict, "special_tax_rate_overlap", "Las fechas se cruzan con otra vigencia de esta tasa especial.")
+		return organizationFailure(apperror.Conflict, "special_tax_rate_overlap", "Las fechas se cruzan con otro periodo de este IGV reducido.")
 	case errors.Is(err, ErrNotFound):
 		return organizationFailure(apperror.NotFound, "special_tax_rate_not_found", notFound)
 	}
-	return organizationFailure(apperror.Unavailable, "special_taxes_unavailable", "No pudimos guardar la tasa especial.")
+	return organizationFailure(apperror.Unavailable, "special_taxes_unavailable", "No pudimos guardar el periodo.")
 }

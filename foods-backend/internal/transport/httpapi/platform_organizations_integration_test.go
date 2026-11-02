@@ -76,6 +76,30 @@ func TestPlatformOrganizationsReportPlanAndPaymentStanding(t *testing.T) {
 	if found.Summary["total"] < 1 || found.Summary["due_soon"] < 1 {
 		t.Fatalf("summary must count the organization: %#v", found.Summary)
 	}
+	if item.Tax.Name == "" || item.Tax.Rate == "" || item.Tax.SpecialRegime != nil || item.Tax.SpecialRate != nil {
+		t.Fatalf("a company outside the padrón lists only its general tax: %#v", item.Tax)
+	}
+	// Enrolled companies show the reduced IGV and the rate they invoice with today.
+	enrolled, err := pool.Exec(ctx, `UPDATE organization_fiscal_profiles SET special_tax_regime='pe_mype_restaurants' WHERE organization_id=$1 AND is_default AND country_code='PE'`, actor.OrganizationID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_, _ = pool.Exec(context.Background(), `UPDATE organization_fiscal_profiles SET special_tax_regime=NULL WHERE organization_id=$1`, actor.OrganizationID)
+	})
+	if enrolled.RowsAffected() == 1 {
+		var regime string
+		var today *string
+		if err := pool.QueryRow(ctx, `
+			SELECT g.name,(SELECT t.rate::text FROM special_tax_rates t WHERE t.regime_code=g.code AND t.valid_from<=current_date AND (t.valid_to IS NULL OR t.valid_to>current_date))
+			FROM special_tax_regimes g WHERE g.code='pe_mype_restaurants'`).Scan(&regime, &today); err != nil {
+			t.Fatal(err)
+		}
+		tax := list(url.Values{"q": {tradeName}}).Items[0].Tax
+		if tax.SpecialRegime == nil || *tax.SpecialRegime != regime || (today == nil) != (tax.SpecialRate == nil) || (today != nil && *tax.SpecialRate != *today) {
+			t.Fatalf("enrolled company must list its reduced IGV: %#v", tax)
+		}
+	}
 
 	if _, err := pool.Exec(ctx, `UPDATE organization_subscriptions SET renews_at=now()-interval '1 day' WHERE organization_id=$1`, actor.OrganizationID); err != nil {
 		t.Fatal(err)

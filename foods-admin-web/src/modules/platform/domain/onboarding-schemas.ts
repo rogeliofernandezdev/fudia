@@ -21,6 +21,7 @@ export const fiscalSchema=z.object({
   taxRate:z.string().trim().min(1,"Ingresa el porcentaje").refine(value=>Number(value)>=0&&Number(value)<=100,"Porcentaje inválido"),
   currencyPosition:z.enum(["before","after"]),
   taxIncluded:z.boolean(),
+  specialTaxRegime:z.string(),
 });
 
 export const locationSchema=z.object({

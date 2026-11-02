@@ -52,7 +52,8 @@ export const pageRoutes={
   platformOnboarding:"/platform/onboarding",
   platformPlans:"/platform/plans",
   platformSubscription:"/platform/subscription",
-  platformGlobalSettings:"/platform/configuracion-global",
+  platformGlobalSettings:"/platform/global-settings",
+  platformTaxes:"/platform/taxes",
   login:"/login",
 } as const;
 
@@ -99,6 +100,7 @@ export const legacyPageAliases=[
 export const legacyPageRedirects=[
   ...legacyPageAliases,
   {legacy:"/configuracion/onboarding",canonical:pageRoutes.platformOnboarding},
+  {legacy:"/platform/configuracion-global",canonical:pageRoutes.platformGlobalSettings},
 ] as const;
 
 export function companySettingsPath(organizationId:string){

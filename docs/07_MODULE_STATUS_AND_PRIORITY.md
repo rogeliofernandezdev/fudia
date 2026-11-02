@@ -349,8 +349,8 @@ no bloquea el inicio de **P0 — Facturación electrónica**.
 
 Punto de continuación de Facturación:
 
-1. ✅ tasa especial legal por país (MYPE restaurante en Perú): Plataforma
-   registra las vigencias con base legal y recibe aviso 30 días antes de que
+1. ✅ IGV reducido MYPE de restaurantes (Perú): Plataforma › Impuestos
+   registra la tasa de cada periodo con base legal y recibe aviso 30 días antes de que
    terminen; el perfil fiscal solo marca si la empresa está en el padrón
    (migración 000100, reemplaza los regímenes por perfil de la 000097);
 2. ✅ modelo de series y comprobantes, puertos de jurisdicción y proveedor,
