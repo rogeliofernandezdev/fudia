@@ -18,7 +18,10 @@ inventario trazable y emitir comprobantes electrónicos para Perú.
 ## Canales
 
 - Atención en mesa.
-- Recojo en local (pedidos presenciales y encargos previos; incluye el antiguo Mostrador).
+- Recojo en local (pedidos presenciales y encargos previos).
+- Venta por mostrador: pedidos independientes desde el QR de un mostrador (Fudia
+  Concierge) o registrados por el cajero; se atienden como recojo en local y se
+  cobran en caja, sin mesa ni cuenta abierta.
 - Delivery propio.
 - Pedido recibido por WhatsApp mediante integración.
 

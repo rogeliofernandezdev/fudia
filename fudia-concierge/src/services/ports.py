@@ -13,8 +13,10 @@ from uuid import uuid4
 from src.domain.models import (
     BillSummary,
     ComboDetail,
+    ConsentDecision,
     ConversationSession,
     CustomerMemory,
+    CustomerProfile,
     DeliveryOptions,
     DeliveryQuote,
     InboundMessage,
@@ -53,7 +55,7 @@ class FudiaBackend(Protocol):
     ) -> dict[str, Any]: ...
     async def create_order(
         self, token: str, phone: str, lines: list[dict[str, Any]],
-        conversation_id: str, request_id: str
+        conversation_id: str, request_id: str, customer_name: str = ""
     ) -> OrderResult: ...
     async def request_bill(
         self, token: str, phone: str, conversation_id: str, request_id: str = ""
@@ -68,6 +70,19 @@ class FudiaBackend(Protocol):
     async def create_delivery_order(
         self, token: str, order: dict[str, Any]
     ) -> OrderResult: ...
+    async def get_customer(self, token: str, phone: str) -> CustomerProfile:
+        """Name and promotional consent of the diner in the QR company."""
+    async def record_marketing_consent(
+        self,
+        token: str,
+        phone: str,
+        conversation_id: str,
+        request_id: str,
+        decision: ConsentDecision,
+        evidence: str,
+    ) -> CustomerProfile:
+        """Store the question or the answer with its literal evidence;
+        idempotent by `request_id`."""
     async def open_conversation(
         self, token: str, conversation_id: str, kind: str
     ) -> None:

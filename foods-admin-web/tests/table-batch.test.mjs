@@ -118,3 +118,16 @@ test("el formulario conserva el borrador, refresca resultado incierto y bloquea 
  const onError=errorHandler.slice(errorHandler.indexOf("onError:"));
  assert.doesNotMatch(onError,/setNewRows|setAdding/);
 });
+
+test("venta por mostrador: el alta y la edición envían el tipo de atención, mesa por defecto",async()=>{
+ const calls=[];
+ const api=compile("src/modules/operations/tables/infrastructure/tables-api.ts",{"@/shared/api/client":{ApiClientError,apiFetch:async(path,init)=>{calls.push({path,body:JSON.parse(init.body)});return{items:[]}}}});
+ await api.createTables([{name:"Mesa 1",seats:"2",zone:"",serviceType:"table"},{name:"Mostrador",seats:"1",zone:"",serviceType:"counter"}]);
+ assert.deepEqual(calls[0].body.items.map(item=>item.serviceType),["table","counter"]);
+ await api.saveTable({id:"t1",name:"Mostrador",seats:"1",zone:"",active:true,serviceType:"table"});
+ assert.equal(calls[1].path,"tables/t1");assert.equal(calls[1].body.serviceType,"table");
+ const manager=read("src/modules/operations/tables/presentation/tables-manager.tsx");
+ assert.ok(manager.includes('const emptyRow:RowDraft={name:"",seats:"2",zone:"",active:true,serviceType:"table"'),"la casilla inicia desactivada");
+ assert.ok(manager.includes("<b>Venta por mostrador</b>"),"casilla «Venta por mostrador» en alta y edición");
+ assert.equal((manager.match(/<CounterSwitch /g)??[]).length,2);
+});

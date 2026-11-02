@@ -18,7 +18,7 @@ import {ComandaView} from "./comanda-view";
 import type {Draft} from "../../salon/domain/types";
 import {addOrderConsumption} from "../infrastructure/service-api";
 import {OrderDetailContent,OrderDetailSkeleton,orderDetailTitleId} from "./order-detail-dialog";
-import {channelIcons,orderStatus,registeredAt,serviceChannel} from "./order-meta";
+import {channelIcons,orderStatus,originLabel,registeredAt,serviceChannel} from "./order-meta";
 
 const columns=["Pedido","Canal","Estado","Registrado","Total","Acciones"];
 
@@ -71,7 +71,7 @@ export function OrdersManager(){
        {Boolean(o.collectedByNames?.length)&&<small className="order-staff">Cobrado por: {o.collectedByNames!.join(" · ")}</small>}
        <small className="order-mobile-registered"><time dateTime={o.createdAt}>{registeredAt(o.createdAt,location?.country,location?.timezone)}</time></small>
       </td>
-      <td><span className="order-channel-cell">{channelLabel(service)}{o.channel==="whatsapp"&&<small className="order-channel-origin"><Icon name="share" size={14}/>vía WhatsApp</small>}</span></td>
+      <td><span className="order-channel-cell">{channelLabel(service)}{o.channel==="whatsapp"&&<small className="order-channel-origin"><Icon name="share" size={14}/>vía WhatsApp</small>}{o.origin==="counter"&&<small className="order-channel-origin"><Icon name="store" size={14}/>{originLabel(o.origin)}</small>}</span></td>
       <td><Status tone={meta.tone}>{meta.label}</Status></td>
       <td><time className="order-registered" dateTime={o.createdAt}>{registeredAt(o.createdAt,location?.country,location?.timezone)}</time></td>
       <td><b className="order-table-total">{money(o.total)}</b></td>
@@ -80,7 +80,7 @@ export function OrdersManager(){
    </DataTable>}
   <Pagination page={page} size={size} total={list.data?.total??0} onPage={setPage} onSize={v=>{setSize(v);setPage(1)}}/>
  </section>
- {creating&&canManage&&<ManualOrderDialog channels={channelOptions} currencySymbol={settings.currencySymbol} quoteDelivery={quoteDelivery} busy={create.isPending} onClose={()=>{if(!create.isPending)setCreating(false)}} onSave={async draft=>{try{await create.mutateAsync(draft)}catch{/* Feedback conserva el error y el formulario permanece abierto. */}}}/>}
+ {creating&&canManage&&<ManualOrderDialog channels={list.data?.manualChannelOptions??channelOptions} currencySymbol={settings.currencySymbol} quoteDelivery={quoteDelivery} busy={create.isPending} onClose={()=>{if(!create.isPending)setCreating(false)}} onSave={async draft=>{try{await create.mutateAsync(draft)}catch{/* Feedback conserva el error y el formulario permanece abierto. */}}}/>}
  {adding&&<ComandaView mode="append" initial={adding.draft} allTables={[{id:adding.order.tableId,name:adding.order.tableName,zone:"",seats:0,order:null}]} busy={append.isPending} close={()=>setAdding(null)} save={draft=>append.mutateAsync(draft).then(()=>{}).catch(()=>{})} notify={notify}/>}
  {detailId&&<div className="modal-backdrop modal-overlay-in">
   <Dialog onResponseClose={closeDetail} className="crud-modal order-detail modal-panel-in" role="dialog" aria-modal="true" aria-labelledby={orderDetailTitleId} aria-busy={loading}>

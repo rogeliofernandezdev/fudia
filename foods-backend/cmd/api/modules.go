@@ -84,6 +84,7 @@ func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages) *httpapi.API {
 	taxes := orgapp.NewTaxes(taxRepository)
 	fiscalDocuments, einvoicingHandler := newEInvoicing(db, work, audit, orders, taxes, access)
 	payments := billingapp.NewPayments(paymentsRepo, work, audit, methods, orders).WithAuthorization(identityService).WithTips(tips).WithFiscal(fiscalDocuments)
+	customers := customerapp.New(customerpg.New(db))
 
 	return httpapi.NewWithHandlers(httpapi.Handlers{
 		RestaurantProfile:      orghttp.New(organizations).WithProfiles(profiles),
@@ -93,7 +94,7 @@ func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages) *httpapi.API {
 		EInvoicing:             einvoicingHandler,
 		Subscriptions:          subscriptionhttp.New(subscriptions),
 		Platform:               platformhttp.New(platform),
-		Concierge:              conciergehttp.New(conciergeapp.New(conciergepg.New(db), menu, orders, audit).WithBranding(profiles), func() string { return os.Getenv("FUDIA_CONCIERGE_API_KEY") }),
+		Concierge:              conciergehttp.New(conciergeapp.New(conciergepg.New(db), menu, orders, audit).WithBranding(profiles).WithCustomers(customers), func() string { return os.Getenv("FUDIA_CONCIERGE_API_KEY") }),
 		ConciergeUsage:         conciergehttp.NewUsage(conciergeapp.NewUsage(conciergepg.NewUsage(db), conciergepg.New(db), work, audit)),
 		MenuCatalog:            menuhttp.NewCatalog(menu),
 		Payments:               billinghttp.NewPayments(payments),
@@ -106,7 +107,7 @@ func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages) *httpapi.API {
 		Modules:                subscriptionhttp.NewModules(subscriptionapp.NewModules(accessRepo, access, audit)),
 		IdentityAdministration: identityhttp.NewAdministration(identityapp.NewAdministration(identityAdminRepo, work, credentials.Credentials{}, access, audit).WithCashCollection(payments)),
 		Identity:               identityhttp.New(identityService, os.Getenv("FOODS_COOKIE_SECURE") == "true"),
-		Customers:              customerhttp.New(customerapp.New(customerpg.New(db))),
+		Customers:              customerhttp.New(customers),
 		InventoryStock:         inventoryhttp.NewStock(stock),
 		Purchasing:             purchasehttp.New(purchaseapp.New(purchasepg.New(db), work, audit, inventoryapp.NewPurchaseLedger(inventoryRepo))),
 		Orders:                 orderhttp.New(orders),

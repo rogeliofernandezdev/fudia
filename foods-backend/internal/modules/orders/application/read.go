@@ -19,8 +19,10 @@ type Page struct {
 	PageSize       int                 `json:"pageSize"`
 	ChannelCounts  map[string]int      `json:"channelCounts"`
 	ChannelOptions []map[string]string `json:"channelOptions"`
-	StatusOptions  []map[string]string `json:"statusOptions"`
-	CurrencySymbol string              `json:"currencySymbol"`
+	// ManualChannelOptions son los tipos que se registran sin mesa (Mostrador, Recojo y Delivery).
+	ManualChannelOptions []map[string]string `json:"manualChannelOptions"`
+	StatusOptions        []map[string]string `json:"statusOptions"`
+	CurrencySymbol       string              `json:"currencySymbol"`
 }
 
 func (a *Orders) List(ctx context.Context, s scope, f Filter) (Page, error) {
@@ -30,6 +32,7 @@ func (a *Orders) List(ctx context.Context, s scope, f Filter) (Page, error) {
 		return out, orderFailure(apperror.Unavailable, "orders_unavailable", "No pudimos cargar los pedidos.")
 	}
 	out.ChannelOptions = domain.ServiceChannels
+	out.ManualChannelOptions = domain.ManualChannels
 	out.StatusOptions = domain.Statuses
 	return out, nil
 }

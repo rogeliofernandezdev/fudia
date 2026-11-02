@@ -24,3 +24,14 @@ func TestTableModelsKeepZoneJSONContract(t *testing.T) {
 		}
 	}
 }
+
+func TestServiceTypeDefaultsToTableAndRejectsUnknownValues(t *testing.T) {
+	counter := ServiceTypeCounter
+	empty := ServiceType("")
+	if ServiceTypeOrDefault(nil) != ServiceTypeTable || ServiceTypeOrDefault(&empty) != ServiceTypeTable || ServiceTypeOrDefault(&counter) != ServiceTypeCounter {
+		t.Fatal("omitted service type must keep a traditional table")
+	}
+	if !ServiceTypeTable.Valid() || !ServiceTypeCounter.Valid() || ServiceType("bar").Valid() || empty.Valid() {
+		t.Fatal("only table and counter are persisted")
+	}
+}

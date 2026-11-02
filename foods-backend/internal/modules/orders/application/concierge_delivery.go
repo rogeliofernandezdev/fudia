@@ -36,7 +36,48 @@ func (a *Orders) SubmitConciergeDelivery(ctx context.Context, s scope, in Concie
 	if message := normalizeConciergeDelivery(&in); message != "" {
 		return result, orderFailure(apperror.Invalid, "invalid_order", message)
 	}
+	return a.submitWithoutTable(ctx, s, in, nil)
+}
 
+// SubmitCounter registra una venta por mostrador desde su QR: un pedido
+// independiente, sin mesa, cuenta abierta ni mozo, confirmado y enviado a
+// preparación, que se cobra en caja. Varios clientes con el mismo QR crean
+// pedidos distintos y el QR nunca se bloquea por pedidos abiertos; requestId
+// evita duplicar el mismo pedido.
+func (a *Orders) SubmitCounter(ctx context.Context, s scope, counterTableID string, token string, in QROrderInput) (TableSubmission, error) {
+	order := ConciergeDeliveryInput{
+		Channel:        domain.ChannelCounter,
+		CustomerName:   in.CustomerName,
+		CustomerPhone:  in.CustomerPhone,
+		ConversationID: in.ConversationID,
+		RequestID:      in.RequestID,
+		Notes:          in.Notes,
+		Items:          in.Items,
+		CounterTableID: counterTableID,
+	}
+	if message := normalizeCounterOrder(&order); message != "" {
+		return TableSubmission{}, orderFailure(apperror.Invalid, "invalid_order", message)
+	}
+	// El QR sigue activo y es de mostrador: FOR SHARE permite pedidos
+	// simultáneos y espera solo a un cambio de tipo en curso.
+	validate := func(txCtx context.Context) error {
+		err := a.repo.ShareCounterQR(txCtx, s, counterTableID, token)
+		if errors.Is(err, ErrNotFound) {
+			return orderFailure(apperror.NotFound, "table_not_found", "El mostrador no existe o el QR ya no está activo.")
+		}
+		if err != nil {
+			return orderFailure(apperror.Unavailable, "order_unavailable", "No pudimos validar el mostrador.")
+		}
+		return nil
+	}
+	return a.submitWithoutTable(ctx, s, order, validate)
+}
+
+// submitWithoutTable es el registro común de pedidos de Concierge que no
+// ocupan mesa (delivery, recojo y mostrador): idempotencia por requestId,
+// cliente prerregistrado, inventario y envío a preparación en una transacción.
+func (a *Orders) submitWithoutTable(ctx context.Context, s scope, in ConciergeDeliveryInput, validate func(context.Context) error) (TableSubmission, error) {
+	var result TableSubmission
 	tx, err := a.work.Begin(ctx, unitofwork.Options{})
 	if err != nil {
 		return result, orderFailure(apperror.Unavailable, "order_unavailable", "No pudimos iniciar el pedido.")
@@ -56,6 +97,11 @@ func (a *Orders) SubmitConciergeDelivery(ctx context.Context, s scope, in Concie
 	}
 	if !errors.Is(err, ErrNotFound) {
 		return result, orderFailure(apperror.Unavailable, "order_unavailable", "No pudimos validar la idempotencia del pedido.")
+	}
+	if validate != nil {
+		if err = validate(tx.Context()); err != nil {
+			return result, err
+		}
 	}
 
 	prepared, subtotal, preparationErr := a.prepareItems(tx.Context(), s, "", in.Items)
@@ -158,12 +204,8 @@ func normalizeConciergeDelivery(in *ConciergeDeliveryInput) string {
 	if in.Channel != "delivery" && in.Channel != "recojo" {
 		return "El pedido debe ser delivery o recojo en local."
 	}
-	if len(in.Items) == 0 || len(in.Items) > 50 || in.ConversationID == "" || len(in.ConversationID) > 160 ||
-		in.RequestID == "" || len(in.RequestID) > 160 || utf8.RuneCountInString(in.Notes) > 240 {
-		return "Revisa los productos y datos del pedido."
-	}
-	if in.CustomerName == "" || utf8.RuneCountInString(in.CustomerName) > 160 {
-		return "Ingresa el nombre del cliente (máximo 160 caracteres)."
+	if message := validateOrderWithoutTable(in); message != "" {
+		return message
 	}
 	if in.Channel == "recojo" {
 		if len(in.CustomerPhone) > 32 {
@@ -181,6 +223,38 @@ func normalizeConciergeDelivery(in *ConciergeDeliveryInput) string {
 	}
 	if in.DeliveryFee < 0 || in.DistanceKm == nil || *in.DistanceKm < 0 {
 		return "No pudimos calcular el costo de envío."
+	}
+	return ""
+}
+
+// normalizeCounterOrder: el cliente recoge en el mostrador, sin dirección ni envío.
+func normalizeCounterOrder(in *ConciergeDeliveryInput) string {
+	in.CustomerName = strings.TrimSpace(in.CustomerName)
+	in.CustomerPhone = strings.TrimSpace(in.CustomerPhone)
+	in.ConversationID = strings.TrimSpace(in.ConversationID)
+	in.RequestID = strings.TrimSpace(in.RequestID)
+	in.Notes = strings.TrimSpace(in.Notes)
+	in.Address, in.Reference, in.DeliveryFee = "", "", 0
+	in.Latitude, in.Longitude, in.DistanceKm = nil, nil, nil
+	if in.CounterTableID == "" {
+		return "Revisa los productos y datos del pedido."
+	}
+	if message := validateOrderWithoutTable(in); message != "" {
+		return message
+	}
+	if len(in.CustomerPhone) > 32 {
+		return "Ingresa un teléfono válido de 7 a 15 dígitos."
+	}
+	return ""
+}
+
+func validateOrderWithoutTable(in *ConciergeDeliveryInput) string {
+	if len(in.Items) == 0 || len(in.Items) > 50 || in.ConversationID == "" || len(in.ConversationID) > 160 ||
+		in.RequestID == "" || len(in.RequestID) > 160 || utf8.RuneCountInString(in.Notes) > 240 {
+		return "Revisa los productos y datos del pedido."
+	}
+	if in.CustomerName == "" || utf8.RuneCountInString(in.CustomerName) > 160 {
+		return "Ingresa el nombre del cliente (máximo 160 caracteres)."
 	}
 	return ""
 }

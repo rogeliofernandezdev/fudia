@@ -15,25 +15,28 @@ type Address struct {
 	Longitude   *float64 `json:"longitude"`
 }
 type Customer struct {
-	ID               string    `json:"id"`
-	Code             string    `json:"code"`
-	CustomerType     string    `json:"customerType"`
-	DisplayName      string    `json:"displayName"`
-	DocumentType     string    `json:"documentType"`
-	DocumentNumber   string    `json:"documentNumber"`
-	Phone            string    `json:"phone"`
-	Email            string    `json:"email"`
-	PreferredChannel string    `json:"preferredChannel"`
-	Preferences      string    `json:"preferences"`
-	Notes            string    `json:"notes"`
-	MarketingConsent bool      `json:"marketingConsent"`
-	VIPOverride      bool      `json:"vipOverride"`
-	VisitCount       int       `json:"visitCount"`
-	TotalSpent       string    `json:"totalSpent"`
-	LastPurchaseAt   *string   `json:"lastPurchaseAt"`
-	Active           bool      `json:"active"`
-	Segment          string    `json:"segment"`
-	Addresses        []Address `json:"addresses,omitempty"`
+	ID               string `json:"id"`
+	Code             string `json:"code"`
+	CustomerType     string `json:"customerType"`
+	DisplayName      string `json:"displayName"`
+	DocumentType     string `json:"documentType"`
+	DocumentNumber   string `json:"documentNumber"`
+	Phone            string `json:"phone"`
+	Email            string `json:"email"`
+	PreferredChannel string `json:"preferredChannel"`
+	Preferences      string `json:"preferences"`
+	Notes            string `json:"notes"`
+	MarketingConsent bool   `json:"marketingConsent"`
+	// Último estado registrado (pending, asked, granted, declined, withdrawn) y su fecha.
+	MarketingConsentStatus    string    `json:"marketingConsentStatus"`
+	MarketingConsentUpdatedAt *string   `json:"marketingConsentUpdatedAt"`
+	VIPOverride               bool      `json:"vipOverride"`
+	VisitCount                int       `json:"visitCount"`
+	TotalSpent                string    `json:"totalSpent"`
+	LastPurchaseAt            *string   `json:"lastPurchaseAt"`
+	Active                    bool      `json:"active"`
+	Segment                   string    `json:"segment"`
+	Addresses                 []Address `json:"addresses,omitempty"`
 }
 type Input struct {
 	CustomerType     string    `json:"customerType"`

@@ -47,7 +47,7 @@ test("Mesas y Zonas mantienen nombres accesibles y css por componente",()=>{
   const css=read("src/modules/operations/styles/table-qr.css");
   assert.match(src,/label="Mesas del local"/);
   assert.match(src,/label="Zonas del local"/);
-  assert.match(css,/\.tables-management-table\{min-width:var\(--size-760\)\}/);
+  assert.match(css,/\.tables-management-table\{min-width:var\(--size-900\)\}/);
   assert.match(css,/\.zones-management-table\{min-width:var\(--size-540\)\}/);
 });
 

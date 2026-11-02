@@ -10,6 +10,8 @@ import httpx
 from src.domain.models import (
     BillSummary,
     ComboDetail,
+    ConsentDecision,
+    CustomerProfile,
     DeliveryOptions,
     DeliveryQuote,
     MenuItem,
@@ -345,7 +347,18 @@ class FudiaClient:
         lines: list[dict[str, Any]],
         conversation_id: str,
         request_id: str,
+        customer_name: str = "",
     ) -> OrderResult:
+        payload: dict[str, Any] = {
+            "customerPhone": phone,
+            "conversationId": conversation_id,
+            "requestId": request_id,
+            "items": lines,
+        }
+        # A counter QR needs the name the cashier calls out; foods-backend
+        # decides the flow from the QR, never from this field.
+        if customer_name:
+            payload["customerName"] = customer_name
         body = await self._json(
             "POST",
             (
@@ -353,12 +366,7 @@ class FudiaClient:
                 f"{quote(token, safe='')}/orders"
             ),
             retryable=True,
-            json={
-                "customerPhone": phone,
-                "conversationId": conversation_id,
-                "requestId": request_id,
-                "items": lines,
-            },
+            json=payload,
         )
         return OrderResult.model_validate(body)
 
@@ -487,3 +495,43 @@ class FudiaClient:
             json=order,
         )
         return OrderResult.model_validate(body)
+
+    async def get_customer(self, token: str, phone: str) -> CustomerProfile:
+        # The phone travels in the body, never in the URL.
+        body = await self._json(
+            "POST",
+            (
+                "/v1/integrations/concierge/"
+                f"{quote(token, safe='')}/customer"
+            ),
+            retryable=True,
+            json={"customerPhone": phone},
+        )
+        return CustomerProfile.model_validate(body)
+
+    async def record_marketing_consent(
+        self,
+        token: str,
+        phone: str,
+        conversation_id: str,
+        request_id: str,
+        decision: ConsentDecision,
+        evidence: str,
+    ) -> CustomerProfile:
+        # Idempotent by requestId: a retry never duplicates the evidence.
+        body = await self._json(
+            "POST",
+            (
+                "/v1/integrations/concierge/"
+                f"{quote(token, safe='')}/marketing-consent"
+            ),
+            retryable=True,
+            json={
+                "customerPhone": phone,
+                "conversationId": conversation_id,
+                "requestId": request_id,
+                "decision": decision,
+                "evidence": evidence,
+            },
+        )
+        return CustomerProfile.model_validate(body)

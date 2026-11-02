@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"errors"
+	customercontracts "github.com/foods-platform/foods-backend/internal/modules/customers/contracts"
 	"github.com/foods-platform/foods-backend/internal/modules/customers/domain"
 	"github.com/foods-platform/foods-backend/internal/platform/apperror"
 	"github.com/foods-platform/foods-backend/internal/platform/requestscope"
@@ -28,8 +29,8 @@ func (r *memoryCustomers) Get(_ context.Context, org, id string) (domain.Custome
 	r.id = id
 	return domain.Customer{}, r.err
 }
-func (r *memoryCustomers) Save(_ context.Context, org, id string, in domain.Input) (domain.Customer, error) {
-	r.organizationID = org
+func (r *memoryCustomers) Save(_ context.Context, s requestscope.Scope, id string, in domain.Input) (domain.Customer, error) {
+	r.organizationID = s.OrganizationID
 	r.id = id
 	r.input = in
 	r.saves++
@@ -43,6 +44,45 @@ func (r *memoryCustomers) SetActive(_ context.Context, org, id string, _ bool) e
 func (r *memoryCustomers) Audit(_ context.Context, s requestscope.Scope, _, _ string) {
 	r.audits++
 	r.scope = s
+}
+func (r *memoryCustomers) WhatsAppProfile(_ context.Context, org, digits string) (customercontracts.WhatsAppProfile, error) {
+	r.organizationID = org
+	r.id = digits
+	return customercontracts.WhatsAppProfile{MarketingConsent: customercontracts.ConsentPending}, r.err
+}
+func (r *memoryCustomers) RecordWhatsAppConsent(_ context.Context, s requestscope.Scope, digits string, in customercontracts.ConsentEvidence) (customercontracts.WhatsAppProfile, error) {
+	r.scope = s
+	r.id = digits
+	r.saves++
+	return customercontracts.WhatsAppProfile{Known: true, MarketingConsent: in.Decision}, r.err
+}
+
+func TestWhatsAppConsentValidatesBeforePersistence(t *testing.T) {
+	r := &memoryCustomers{}
+	s := New(r)
+	scope := requestscope.Scope{OrganizationID: "org", LocationID: "loc"}
+	for _, in := range []customercontracts.ConsentEvidence{
+		{CustomerPhone: "123", RequestID: "r1", Decision: customercontracts.ConsentGranted},
+		{CustomerPhone: "+51 987 654 321", RequestID: "r1", Decision: "maybe"},
+		{CustomerPhone: "+51 987 654 321", RequestID: " ", Decision: customercontracts.ConsentGranted},
+	} {
+		var failure *apperror.Error
+		if _, err := s.RecordWhatsAppConsent(context.Background(), scope, in); !errors.As(err, &failure) || failure.Code != "invalid_customer_contact" {
+			t.Fatalf("invalid consent must be rejected: %+v %v", in, err)
+		}
+	}
+	if r.saves != 0 {
+		t.Fatal("invalid consent reached persistence")
+	}
+	out, err := s.RecordWhatsAppConsent(context.Background(), scope, customercontracts.ConsentEvidence{CustomerPhone: "+51 987 654 321", RequestID: "r1", Decision: customercontracts.ConsentDeclined, Evidence: " No, gracias "})
+	if err != nil || out.MarketingConsent != customercontracts.ConsentDeclined || r.id != "51987654321" || r.scope.OrganizationID != "org" {
+		t.Fatalf("consent keeps tenant and phone digits: %+v %v %+v", out, err, r)
+	}
+	r.err = ErrNotFound
+	var failure *apperror.Error
+	if _, err = s.RecordWhatsAppConsent(context.Background(), scope, customercontracts.ConsentEvidence{CustomerPhone: "987654321", RequestID: "r2", Decision: customercontracts.ConsentAsked}); !errors.As(err, &failure) || failure.Code != "customer_not_found" {
+		t.Fatalf("unknown customer: %v", err)
+	}
 }
 func TestSaveValidatesBeforePersistenceAndKeepsTenant(t *testing.T) {
 	r := &memoryCustomers{}

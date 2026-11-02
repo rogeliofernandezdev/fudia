@@ -18,12 +18,16 @@ func (r *Stock) OrderBusinessDate(ctx context.Context, s scope, orderID string) 
 }
 func (r *Stock) LockQuantityProducts(ctx context.Context, s scope, productIDs []string) (map[string]domain.QuantityProduct, error) {
 	// ORDER BY id keeps the lock order the per-product loop used (sorted ids).
+	// FOR NO KEY UPDATE still serializes concurrent consumption of a product,
+	// but does not conflict with the KEY SHARE that the order_items foreign key
+	// already took in this transaction: with FOR UPDATE two simultaneous
+	// orders of the same product deadlocked (40P01).
 	rows, err := r.db(ctx).Query(ctx, `
 			SELECT id::text,name,quantity_control
 			FROM products
 			WHERE id=ANY($1::uuid[]) AND organization_id=$2
 			ORDER BY id
-			FOR UPDATE`, productIDs, s.OrganizationID)
+			FOR NO KEY UPDATE`, productIDs, s.OrganizationID)
 	if err != nil {
 		return nil, stockError(err)
 	}

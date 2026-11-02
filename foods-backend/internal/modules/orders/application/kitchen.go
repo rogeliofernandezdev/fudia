@@ -76,6 +76,7 @@ func (a *Orders) Kitchen(ctx context.Context, s scope, channel, destination stri
 		out.Counts[ticket.Status]++
 	}
 	for i := range out.Items {
+		out.Items[i].Origin = domain.Origin(out.Items[i].Channel)
 		out.Items[i].Channel = domain.NormalizeChannel(out.Items[i].Channel)
 	}
 	out.ServerTime = time.Now().UTC()

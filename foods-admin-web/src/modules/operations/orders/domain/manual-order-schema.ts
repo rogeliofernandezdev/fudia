@@ -5,8 +5,10 @@ import type {LineDraft} from "../../salon/domain/types";
 /** deliveryLatitude/deliveryLongitude: punto marcado en el mapa, "" si no se marcó. */
 export type ManualOrderFields={channel:string;customerName:string;customerPhone:string;address:string;reference:string;deliveryFee:string;notes:string;deliveryLatitude:string;deliveryLongitude:string};
 export type ManualOrderDraft=ManualOrderFields&{lines:LineDraft[]};
-export const emptyManualOrder:ManualOrderFields={channel:"delivery",customerName:"",customerPhone:"",address:"",reference:"",deliveryFee:"0",notes:"",deliveryLatitude:"",deliveryLongitude:""};
-export const isManualOrderChannel=(channel:string)=>["delivery","recojo"].includes(channel);
+/** La venta por mostrador es el alta más frecuente del cajero: primera pestaña y valor inicial. */
+export const emptyManualOrder:ManualOrderFields={channel:"mostrador",customerName:"",customerPhone:"",address:"",reference:"",deliveryFee:"0",notes:"",deliveryLatitude:"",deliveryLongitude:""};
+/** Tipos sin mesa: Mostrador (venta por mostrador), Recojo en local y Delivery. */
+export const isManualOrderChannel=(channel:string)=>["mostrador","delivery","recojo"].includes(channel);
 const validPhone=(value:string)=>/^\+?[\d\s().-]+$/.test(value)&&value.replace(/\D/g,"").length>=7&&value.replace(/\D/g,"").length<=15;
 export const manualOrderSchema=z.object({
  channel:z.string().refine(isManualOrderChannel,"Selecciona un tipo de atención válido."),

@@ -260,6 +260,8 @@ func (a *API) Routes() *http.ServeMux {
 	m.Handle("GET /v1/integrations/concierge/{token}/delivery-options", a.conciergeServiceAuth(http.HandlerFunc(a.getConciergeDeliveryOptions)))
 	m.Handle("POST /v1/integrations/concierge/{token}/delivery-quote", a.conciergeServiceAuth(http.HandlerFunc(a.quoteConciergeDelivery)))
 	m.Handle("POST /v1/integrations/concierge/{token}/delivery-orders", a.conciergeServiceAuth(http.HandlerFunc(a.createConciergeDeliveryOrder)))
+	m.Handle("POST /v1/integrations/concierge/{token}/customer", a.conciergeServiceAuth(http.HandlerFunc(a.getConciergeCustomer)))
+	m.Handle("POST /v1/integrations/concierge/{token}/marketing-consent", a.conciergeServiceAuth(http.HandlerFunc(a.recordConciergeMarketingConsent)))
 	m.Handle("POST /v1/integrations/concierge/{token}/handoffs", a.conciergeServiceAuth(http.HandlerFunc(a.requestConciergeHandoff)))
 	m.Handle("GET /v1/integrations/concierge/{token}/handoffs/{conversationId}", a.conciergeServiceAuth(http.HandlerFunc(a.getConciergeHandoffStatus)))
 	m.Handle("POST /v1/integrations/concierge/{token}/conversations", a.conciergeServiceAuth(http.HandlerFunc(a.openConciergeConversation)))

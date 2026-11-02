@@ -58,3 +58,9 @@ func (a *API) saveConciergeDeliveryFees(w http.ResponseWriter, r *http.Request) 
 func (a *API) quoteAdminDelivery(w http.ResponseWriter, r *http.Request) {
 	a.handlers.Concierge.QuoteAdminDelivery(w, r)
 }
+func (a *API) getConciergeCustomer(w http.ResponseWriter, r *http.Request) {
+	a.handlers.Concierge.GetConciergeCustomer(w, r)
+}
+func (a *API) recordConciergeMarketingConsent(w http.ResponseWriter, r *http.Request) {
+	a.handlers.Concierge.RecordConciergeMarketingConsent(w, r)
+}

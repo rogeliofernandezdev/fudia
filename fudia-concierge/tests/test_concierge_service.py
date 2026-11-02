@@ -12,7 +12,9 @@ from src.domain.models import (
     ComboDetail,
     ComboGroup,
     ComboOption,
+    ConsentStatus,
     ConversationSession,
+    CustomerProfile,
     MenuItem,
     MenuResponse,
     ModifierConfig,
@@ -42,6 +44,40 @@ class FakeFudia:
         self.usage_reports: list[dict[str, Any]] = []
         # foods-backend in enforce mode at 100 %: only new conversations fail.
         self.conversation_limit_reached = False
+        self.consent_status: ConsentStatus = "granted"
+        self.consent_calls: list[dict[str, Any]] = []
+
+    async def get_customer(self, token: str, phone: str) -> CustomerProfile:
+        # By default the diner already answered: existing flows never see the
+        # promotional question unless a test asks for it.
+        return CustomerProfile(
+            known=True, customerName="Ana", marketingConsent=self.consent_status
+        )
+
+    async def record_marketing_consent(
+        self,
+        token: str,
+        phone: str,
+        conversation_id: str,
+        request_id: str,
+        decision: str,
+        evidence: str,
+    ) -> CustomerProfile:
+        self.consent_calls.append(
+            {
+                "token": token,
+                "phone": phone,
+                "conversation_id": conversation_id,
+                "request_id": request_id,
+                "decision": decision,
+                "evidence": evidence,
+            }
+        )
+        if decision != "asked" or self.consent_status == "pending":
+            self.consent_status = decision  # type: ignore[assignment]
+        return CustomerProfile(
+            known=True, customerName="Ana", marketingConsent=self.consent_status
+        )
 
     async def open_conversation(
         self, token: str, conversation_id: str, kind: str
@@ -169,6 +205,7 @@ class FakeFudia:
         lines: list[dict[str, Any]],
         conversation_id: str,
         request_id: str,
+        customer_name: str = "",
     ) -> OrderResult:
         self.order_calls.append(
             {

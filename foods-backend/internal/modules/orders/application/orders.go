@@ -33,6 +33,8 @@ type OrderRepository interface {
 	// RegisterConciergeCustomer prerregistra al comensal de WhatsApp por su número en la empresa del pedido.
 	RegisterConciergeCustomer(ctx context.Context, s scope, phone string, name string) (string, error)
 	LockQRTable(ctx context.Context, s scope, tableID string, token string) (string, error)
+	// ShareCounterQR valida el QR de mostrador sin bloquear pedidos simultáneos (FOR SHARE).
+	ShareCounterQR(ctx context.Context, s scope, tableID string, token string) error
 	QRRequestOrder(ctx context.Context, s scope, tableID string, in QROrderInput) (string, error)
 	LockQRTableOrder(ctx context.Context, s scope, tableID string) (string, string, string, float64, float64, *string, bool, bool, error)
 	QROrderTotal(ctx context.Context, s scope, openOrderID string) (float64, error)

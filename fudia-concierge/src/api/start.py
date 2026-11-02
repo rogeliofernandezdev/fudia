@@ -54,7 +54,9 @@ async def start_whatsapp(
     start_codes = getattr(request.app.state, "start_codes", None)
     if start_codes is not None:
         try:
-            text = start_message(table.name, await start_codes.issue(token))
+            text = start_message(
+                table.name, await start_codes.issue(token), table.serviceType
+            )
         except Exception as exc:
             log_event(
                 logger,

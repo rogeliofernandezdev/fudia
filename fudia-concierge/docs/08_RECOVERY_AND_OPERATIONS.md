@@ -83,6 +83,8 @@ antes verifica el lock (`RedisConversationStore.commit`):
 | Preparar confirmación | `requestId` se crea y persiste en la sesión al preparar. |
 | Crear ronda | Se reutiliza `pending_order_request_id`; si no existía, se crea y persiste antes de llamar. foods-backend devuelve la misma ronda ante el mismo `requestId`. |
 | Crear pedido delivery/recojo | Igual que una ronda: `requestId` persistido antes de llamar y cuerpo completo guardado como datos de reintento (`mode=delivery`). foods-backend devuelve el mismo pedido ante el mismo `requestId` aunque la tarifa haya cambiado; `delivery_fee_changed` (4xx) marca el efecto `failed`, recotiza e invalida la confirmación. |
+| Crear pedido de mostrador | Igual que una ronda (mismo endpoint `/orders`, `mode=counter` y `customerName` en los datos de reintento). Cada `requestId` es un pedido independiente; repetirlo devuelve el mismo pedido. |
+| Consentimiento promocional (`marketing_consent`) | La pregunta usa `requestId=consent-ask-<conversationId>` y la respuesta o el retiro un `requestId` nuevo, persistidos antes de llamar. foods-backend no duplica evidencia ante el mismo `requestId` y registra la pregunta una sola vez por cliente y empresa. Si la pregunta no se pudo registrar no se muestra. La recuperación rearma la confirmación del pedido seguida de la pregunta. |
 | Handoff | foods-backend mantiene un único handoff pendiente por conversación (índice único). |
 | Cuenta | `requestId` nuevo por solicitud, persistido antes de llamar. foods-backend registra cada `requestId` una sola vez (índice único `audit_log_concierge_bill_request_uq`) y devuelve la cuenta vigente al repetirlo; por eso la llamada también se reintenta ante 5xx. |
 

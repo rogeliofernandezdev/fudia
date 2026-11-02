@@ -24,6 +24,8 @@ export type Order={
   id:string;
   code:string;
   channel:string;
+  /** "counter" en la venta por mostrador (se atiende como Recojo en local). */
+  origin?:"standard"|"counter";
   status:string;completedAt?:string;billClosedAt?:string;accountState?:"open"|"awaiting_payment"|"paid";serviceItems?:ServiceItem[];
   customerId:string;
   customerName:string;
@@ -55,6 +57,8 @@ export type OrdersResponse={
   total:number;
   channelCounts:Record<string,number>;
   channelOptions:Option[];
+  /** Tipos sin mesa del alta manual: Mostrador, Recojo en local y Delivery. */
+  manualChannelOptions?:Option[];
   statusOptions:Option[];
 };
 

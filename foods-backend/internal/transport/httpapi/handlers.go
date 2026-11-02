@@ -241,6 +241,8 @@ type ConciergeHandler interface {
 	GetConciergeDeliveryOptions(http.ResponseWriter, *http.Request)
 	QuoteConciergeDelivery(http.ResponseWriter, *http.Request)
 	CreateConciergeDeliveryOrder(http.ResponseWriter, *http.Request)
+	GetConciergeCustomer(http.ResponseWriter, *http.Request)
+	RecordConciergeMarketingConsent(http.ResponseWriter, *http.Request)
 	GetConciergeOrderStatus(http.ResponseWriter, *http.Request)
 	GetConciergeDeliveryFees(http.ResponseWriter, *http.Request)
 	SaveConciergeDeliveryFees(http.ResponseWriter, *http.Request)

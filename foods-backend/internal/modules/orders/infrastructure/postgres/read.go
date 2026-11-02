@@ -90,7 +90,7 @@ func (r *Orders) Floor(ctx context.Context, s scope) ([]domain.FloorTable, error
 		    AND p.organization_id=o.organization_id
 		    AND p.location_id=o.location_id
 		) payment_totals ON o.id IS NOT NULL
-		WHERE t.organization_id=$1 AND t.location_id=$2 AND t.active
+		WHERE t.organization_id=$1 AND t.location_id=$2 AND t.active AND t.service_type='table'
 		ORDER BY t.zone,t.name
 	`, s.OrganizationID, s.LocationID)
 	if err != nil {

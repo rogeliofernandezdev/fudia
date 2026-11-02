@@ -14,7 +14,9 @@ from src.ai.tiering import READ_ONLY_TOOLS
 from src.domain.intents import AgentIntent, ConciergeRoute
 from src.domain.models import (
     ChatMessage,
+    ConsentDecision,
     ConversationSession,
+    CustomerProfile,
     DeliveryDetails,
     EffectRecord,
     GeoPoint,
@@ -33,6 +35,12 @@ from src.metrics import (
 )
 from src.observability import fingerprint, log_event
 from src.services.carta import Carta, build_carta
+from src.services.consent import (
+    asks_to_withdraw,
+    consent_answer,
+    consent_question,
+    consent_reply,
+)
 from src.services.delivery_tools import apply_quote, delivery_summary
 from src.services.formatting import whatsapp_text
 from src.services.menu_tools import unavailable_carta_reply
@@ -126,6 +134,16 @@ def conversation_id_for(message_id: str) -> str:
     return message_ref(f"conversation:{message_id}")[:32]
 
 
+def profile_name(profile: CustomerProfile | None) -> str:
+    """Name a returning diner gave before. The placeholder foods-backend uses
+    for a number registered without a name («Cliente WhatsApp 1234») does not
+    count: that diner is asked for it."""
+    if profile is None or not profile.known:
+        return ""
+    name = " ".join(profile.customerName.split())
+    return "" if name.lower().startswith("cliente whatsapp") else name
+
+
 def extract_qr_token(text: str) -> str | None:
     match = QR_PATTERN.search(text)
     return match.group(1).lower() if match else None
@@ -185,6 +203,26 @@ def agent_message(session: ConversationSession, user_message: str) -> str:
     """Every turn carries the current state of the attention (table or
     delivery, cart, pending confirmation) so the agent reads each message in
     context instead of in isolation."""
+    if session.mode == "counter":
+        table = session.table
+        place = (
+            f" en {table.organizationName} - {table.locationName}"
+            if table
+            else ""
+        )
+        name = session.delivery.customer_name
+        lines = [
+            "[Estado de la atención (no lo copies textual)]",
+            f"Modo: venta por mostrador{place}. Cada pedido confirmado es "
+            "independiente, se recoge en el mostrador y se paga en caja; no "
+            "hay cuenta abierta ni delivery.",
+            f"Nombre del cliente: {name or 'pendiente (pídelo antes de confirmar)'}.",
+            *_round_state(session),
+            "",
+            "Mensaje del cliente:",
+            user_message,
+        ]
+        return "\n".join(lines)
     if session.mode != "delivery":
         table = session.table
         if table is None:
@@ -703,7 +741,10 @@ class ConciergeService:
             session.conversation_id = conversation_id
             session.context_sequence = message.sequence
             session.table = table
-            session.mode = "table"
+            counter = table.serviceType == "counter"
+            # foods-backend decides the order flow from the QR; the session
+            # only mirrors it to guide the conversation.
+            session.mode = "counter" if counter else "table"
             session.venue = VenueContext(
                 organizationName=table.organizationName,
                 locationName=table.locationName,
@@ -717,6 +758,18 @@ class ConciergeService:
             session.awaiting_confirmation = False
             session.pending_order_request_id = None
             session.handoff_pending = False
+            session.consent_checked = False
+            session.consent_prompt_pending = False
+            if counter:
+                # The cashier calls the order by name: a returning diner is
+                # greeted by it, a new one is asked for it.
+                profile = await self._customer_profile(token, message.phone)
+                session.delivery = DeliveryDetails(
+                    customer_name=profile_name(profile)
+                )
+                session.consent_checked = bool(
+                    profile and profile.marketingConsent != "pending"
+                )
             try:
                 menu = await self.fudia.search_menu(token)
                 journal.record.media = [
@@ -732,11 +785,17 @@ class ConciergeService:
                 # The carta is a courtesy: the table is already open, so the
                 # greeting goes out and the diner can still ask for it.
                 carta = None
-            reply = welcome_message(table, carta)
+            reply = welcome_message(
+                table, carta, customer_name=session.delivery.customer_name
+            )
             session.messages = [
                 ChatMessage(
                     role="user",
-                    content="Inicié mi pedido desde el QR de la mesa.",
+                    content=(
+                        "Inicié mi pedido desde el QR del mostrador."
+                        if counter
+                        else "Inicié mi pedido desde el QR de la mesa."
+                    ),
                 ),
                 ChatMessage(role="assistant", content=reply),
             ]
@@ -823,6 +882,18 @@ class ConciergeService:
             session.handoff_pending = False
             await journal.checkpoint()
 
+        if session.consent_prompt_pending:
+            # The promotional question is answered once, without the model;
+            # anything else continues the order without interrupting it.
+            session.consent_prompt_pending = False
+            answer = consent_answer(text)
+            if answer is not None:
+                reply = await self._record_consent(session, journal, answer, text)
+                return (f"{notice}\n\n{reply}" if notice else reply), "transcript"
+        if session.qr_token and asks_to_withdraw(text):
+            reply = await self._record_consent(session, journal, "withdrawn", text)
+            return (f"{notice}\n\n{reply}" if notice else reply), "transcript"
+
         if obviously_out_of_scope(text):
             SCOPE_DECISIONS.labels(
                 decision="out_of_scope"
@@ -841,7 +912,107 @@ class ConciergeService:
             }
         )
         reply = whatsapp_text(str(result["reply"]))
+        question = await self._consent_question(session, journal)
+        if question:
+            reply = f"{reply}\n\n{question}"
         return (f"{notice}\n\n{reply}" if notice else reply), "transcript"
+
+    async def _customer_profile(
+        self, token: str, phone: str
+    ) -> CustomerProfile | None:
+        """Best effort: without it the diner is simply asked for a name."""
+        try:
+            return await self.fudia.get_customer(token, phone)
+        except Exception as exc:
+            log_event(
+                logger,
+                "concierge.customer.lookup_failed",
+                errorType=type(exc).__name__,
+                code=getattr(exc, "code", ""),
+            )
+            return None
+
+    async def _consent_question(
+        self,
+        session: ConversationSession,
+        journal: TurnJournal,
+    ) -> str:
+        """After the first confirmed order of the attention, ask once per
+        company (foods-backend remembers it) for promotional consent."""
+        created = any(
+            effect.kind == "create_order" and effect.status == "done"
+            for effect in journal.record.effects
+        )
+        if not created or session.consent_checked or not session.qr_token:
+            return ""
+        session.consent_checked = True
+        token = session.qr_token
+        profile = await self._customer_profile(token, session.phone)
+        if profile is None or profile.marketingConsent != "pending":
+            return ""
+        venue = session.venue
+        question = consent_question(venue.organizationName if venue else "")
+        request_id = f"consent-ask-{session.conversation_id}"
+        payload = {
+            "token": token,
+            "phone": session.phone,
+            "conversationId": session.conversation_id,
+            "decision": "asked",
+            "evidence": question,
+        }
+        await journal.before_effect("marketing_consent", request_id, payload)
+        try:
+            await self.fudia.record_marketing_consent(
+                token, session.phone, session.conversation_id, request_id,
+                "asked", question,
+            )
+        except FudiaError as exc:
+            # Without a recorded question it is not asked: it would be asked
+            # again in another attention.
+            await journal.effect_failed(exc.code, 400 <= exc.status_code < 500)
+            return ""
+        session.consent_prompt_pending = True
+        await journal.after_effect({"decision": "asked", "question": question})
+        return question
+
+    async def _record_consent(
+        self,
+        session: ConversationSession,
+        journal: TurnJournal,
+        decision: Literal["granted", "declined", "withdrawn"],
+        evidence: str,
+    ) -> str:
+        """Store the diner's answer (or withdrawal) with their literal words."""
+        venue = session.venue
+        reply = consent_reply(decision, venue.organizationName if venue else "")
+        token = session.qr_token or ""
+        request_id = uuid4().hex
+        await journal.before_effect(
+            "marketing_consent",
+            request_id,
+            {
+                "token": token,
+                "phone": session.phone,
+                "conversationId": session.conversation_id,
+                "decision": decision,
+                "evidence": evidence[:500],
+            },
+        )
+        try:
+            await self.fudia.record_marketing_consent(
+                token, session.phone, session.conversation_id, request_id,
+                decision, evidence[:500],
+            )
+        except FudiaError as exc:
+            await journal.effect_failed(exc.code, 400 <= exc.status_code < 500)
+            if exc.code == "customer_not_found":
+                return "Todavía no tienes promociones activas con nosotros."
+            return (
+                "No pude guardar tu preferencia en este momento. "
+                "Escríbemela de nuevo en unos minutos."
+            )
+        await journal.after_effect({"decision": decision, "reply": reply})
+        return reply
 
     async def _table_service_ended(
         self,
@@ -896,6 +1067,12 @@ class ConciergeService:
         point: GeoPoint,
     ) -> tuple[str, SessionChange]:
         """A shared pin is quoted by foods-backend without the model."""
+        if session.mode == "counter":
+            return (
+                "Recibí tu ubicación. Este pedido es para recoger en el "
+                "mostrador del local.",
+                "none",
+            )
         if session.mode != "delivery" or not session.qr_token:
             return (
                 "Recibí tu ubicación. Mientras tu atención en mesa siga "
@@ -1011,6 +1188,7 @@ class ConciergeService:
                         list(payload.get("lines", [])),
                         conversation_id=conversation_id,
                         request_id=effect.request_id,
+                        customer_name=str(payload.get("customerName", "")),
                     )
                 if (
                     same_context
@@ -1042,6 +1220,28 @@ class ConciergeService:
                 await journal.after_effect(
                     {"status": str(handoff.get("status", "pending"))}
                 )
+            elif effect.kind == "marketing_consent":
+                decision = str(payload.get("decision", ""))
+                evidence = str(payload.get("evidence", ""))
+                await self.fudia.record_marketing_consent(
+                    token,
+                    phone,
+                    conversation_id,
+                    effect.request_id,
+                    cast(ConsentDecision, decision),
+                    evidence,
+                )
+                result: dict[str, Any] = {"decision": decision}
+                if decision == "asked":
+                    result["question"] = evidence
+                    if same_context:
+                        session.consent_prompt_pending = True
+                else:
+                    venue = session.venue
+                    result["reply"] = consent_reply(
+                        decision, venue.organizationName if venue else ""
+                    )
+                await journal.after_effect(result)
             elif effect.kind == "request_bill":
                 bill = await self.fudia.request_bill(
                     token, phone, conversation_id, effect.request_id

@@ -12,6 +12,10 @@ export type POSOrderSummary={
   id:string;
   code:string;
   channel:string;
+  /** "counter" en la venta por mostrador. */
+  origin?:string;
+  /** Productos resumidos por el backend («2 × Ceviche, 1 × Chicha»). */
+  itemsText?:string;
   status:string;
   completedAt?:string;
   billClosedAt?:string;
@@ -43,6 +47,7 @@ export type POSOrder={
   id:string;
   code:string;
   channel:string;
+  origin?:string;
   status:string;
   completedAt?:string;
   billClosedAt?:string;

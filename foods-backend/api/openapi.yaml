@@ -207,6 +207,40 @@ paths:
         "403": { description: Sin permiso }
         "404": { description: Producto no pertenece a la empresa }
         "409": { description: Imagen no confirmada o de otro producto/empresa/local }
+  /v1/admin/tables:
+    get:
+      operationId: listTables
+      summary: Mesas y mostradores del local de la sesión
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: query, name: q, schema: { type: string } }
+        - { in: query, name: status, schema: { type: string, enum: ["", active, inactive] } }
+        - { in: query, name: page, schema: { type: integer, minimum: 1 } }
+        - { in: query, name: pageSize, schema: { type: integer, minimum: 1, maximum: 100 } }
+      responses:
+        "200": { description: Mesas paginadas, content: { application/json: { schema: { type: object, required: [items, total, page, pageSize], properties: { items: { type: array, items: { $ref: "#/components/schemas/Table" } }, total: { type: integer }, page: { type: integer }, pageSize: { type: integer } } } } } }
+    post:
+      operationId: createTable
+      summary: Registra una mesa tradicional o un mostrador (venta por mostrador)
+      security: [{ sessionCookie: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/TableInput" } } } }
+      responses:
+        "201": { description: Mesa registrada con su QR, content: { application/json: { schema: { $ref: "#/components/schemas/Table" } } } }
+        "400": { description: "invalid_request, invalid_zone o invalid_service_type" }
+        "409": { description: table_conflict }
+  /v1/admin/tables/{id}:
+    patch:
+      operationId: updateTable
+      summary: Edita una mesa; serviceType omitido conserva el tipo actual
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/TableInput" } } } }
+      responses:
+        "200": { description: Mesa actualizada, content: { application/json: { schema: { $ref: "#/components/schemas/Table" } } } }
+        "400": { description: "invalid_request, invalid_zone o invalid_service_type" }
+        "404": { description: table_not_found }
+        "409": { description: "table_conflict, o table_in_use al desactivar o cambiar el tipo de atención de una mesa con cuenta abierta" }
   /v1/admin/tables/batch:
     post:
       operationId: createTablesBatch
@@ -233,6 +267,7 @@ paths:
                       seats: { type: integer, default: 2, minimum: 1 }
                       zone: { type: string, default: "", description: Nombre de una zona activa del local; vacío significa sin zona }
                       qrEnabled: { type: boolean, default: true }
+                      serviceType: { $ref: "#/components/schemas/TableServiceType" }
       responses:
         "201":
           description: Mesas y auditoría confirmadas
@@ -246,7 +281,7 @@ paths:
                     type: array
                     items:
                       type: object
-                      required: [id, name, seats, zone, active, qrToken, qrEnabled]
+                      required: [id, name, seats, zone, active, qrToken, qrEnabled, serviceType]
                       properties:
                         id: { type: string, format: uuid }
                         name: { type: string }
@@ -255,6 +290,7 @@ paths:
                         active: { type: boolean }
                         qrToken: { type: string }
                         qrEnabled: { type: boolean }
+                        serviceType: { $ref: "#/components/schemas/TableServiceType" }
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { description: Sesión ausente o vencida }
         "403": { $ref: "#/components/responses/Forbidden" }
@@ -315,8 +351,8 @@ paths:
   /v1/integrations/concierge/{token}/orders:
     post:
       operationId: createConciergeOrder
-      summary: Crea un pedido WhatsApp de mesa; Fudia deriva tenencia y mesa del QR y recalcula precios y disponibilidad
-      description: "Las nuevas rondas de una cuenta existente de Salón requieren cuenta Abierta. Después de Cerrar cuenta devuelve 409 order_bill_closed; los reintentos de solicitudes ya confirmadas conservan idempotencia."
+      summary: Crea un pedido WhatsApp desde el QR; Fudia deriva tenencia, mesa y tipo de atención del QR y recalcula precios y disponibilidad
+      description: "El tipo de atención del QR decide el flujo en un solo lugar. Mesa (serviceType=table): la primera ronda abre la cuenta y ocupa la mesa; las nuevas rondas requieren cuenta Abierta y después de Cerrar cuenta devuelve 409 order_bill_closed. Mostrador (serviceType=counter): cada requestId crea un pedido independiente con channel=recojo y origin=counter, sin mesa ni cuenta abierta, confirmado y enviado a preparación; customerName es obligatorio y el QR nunca se bloquea por pedidos abiertos. En ambos casos los reintentos con el mismo requestId son idempotentes."
       security: [{ conciergeServiceKey: [] }]
       parameters:
         - { in: path, name: token, required: true, schema: { type: string, minLength: 32, maxLength: 32 } }
@@ -332,10 +368,39 @@ paths:
         "401": { description: Credencial de Fudia Concierge inválida }
         "404": { description: QR inexistente, inactivo o deshabilitado }
         "409": { description: Mesa ocupada o producto/stock ya no disponible }
+  /v1/integrations/concierge/{token}/customer:
+    post:
+      operationId: getConciergeCustomer
+      summary: Reconoce al comensal por su número en la empresa del QR
+      description: "El número viaja en el cuerpo, nunca en la URL. known=false indica que no es cliente todavía (Concierge pide su nombre). marketingConsent es pending si nunca se le preguntó."
+      security: [{ conciergeServiceKey: [] }]
+      parameters:
+        - { in: path, name: token, required: true, schema: { type: string, minLength: 32, maxLength: 32 } }
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [customerPhone], properties: { customerPhone: { type: string, maxLength: 32 } } } } } }
+      responses:
+        "200": { description: Perfil del comensal, content: { application/json: { schema: { $ref: "#/components/schemas/ConciergeCustomerProfile" } } } }
+        "400": { description: invalid_customer_contact }
+        "401": { description: Credencial de Fudia Concierge inválida }
+        "404": { description: QR inexistente, inactivo o deshabilitado }
+  /v1/integrations/concierge/{token}/marketing-consent:
+    post:
+      operationId: recordConciergeMarketingConsent
+      summary: Registra la pregunta promocional o la respuesta del cliente con fecha y evidencia
+      description: "asked se registra una sola vez por cliente y empresa; granted activa customers.marketingConsent y declined/withdrawn lo desactivan (quedan fuera de campañas). evidence guarda el texto literal del cliente. requestId es idempotente. 404 customer_not_found si el número aún no es cliente de la empresa."
+      security: [{ conciergeServiceKey: [] }]
+      parameters:
+        - { in: path, name: token, required: true, schema: { type: string, minLength: 32, maxLength: 32 } }
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ConciergeMarketingConsentInput" } } } }
+      responses:
+        "200": { description: Perfil con el consentimiento vigente, content: { application/json: { schema: { $ref: "#/components/schemas/ConciergeCustomerProfile" } } } }
+        "400": { description: invalid_customer_contact }
+        "401": { description: Credencial de Fudia Concierge inválida }
+        "404": { description: QR inexistente o customer_not_found }
   /v1/integrations/concierge/{token}/bill:
     post:
       operationId: requestConciergeBill
       summary: Solicita la cuenta y devuelve el consumo acumulado real de la mesa con pagos y saldo pendiente
+      description: "Un QR de mostrador no tiene cuenta abierta: responde 409 counter_has_no_bill y cada pedido se paga en caja."
       security: [{ conciergeServiceKey: [] }]
       parameters:
         - { in: path, name: token, required: true, schema: { type: string, minLength: 32, maxLength: 32 } }
@@ -2647,7 +2712,7 @@ components:
     POSCollectionShift: { type: object, required: [id, cashRegisterName, openedByName], properties: { id: { type: string, format: uuid }, cashRegisterName: { type: string }, openedByName: { type: string } } }
     CashOperationInput: { type: object, required: [operationType, amount, reason], properties: { operationType: { type: string, enum: [cash_pull, deposit, transfer] }, targetShiftId: { type: string, format: uuid }, amount: { type: number, exclusiveMinimum: 0 }, reason: { type: string, minLength: 1, maxLength: 120 }, note: { type: string, maxLength: 240 } } }
     CashOperation: { type: object, required: [id, operationType, amount, reason, note, createdAt], properties: { id: { type: string, format: uuid }, operationType: { type: string, enum: [cash_pull, deposit, transfer] }, amount: { type: string }, reason: { type: string }, note: { type: string }, createdAt: { type: string, format: date-time } } }
-    POSOrderSummary: { type: object, required: [id, code, channel, status, customerName, tableName, total, paidAmount, remainingAmount, paymentStatus, paymentMethods, createdAt], properties: { waiterId: { type: string, description: "Mozo vinculado a la atención por el flujo de comanda; vacío si no hay responsable." }, billClosed: { type: boolean, description: La cuenta está cerrada para cobro }, id: { type: string, format: uuid }, code: { type: string }, channel: { type: string }, status: { type: string }, customerName: { type: string }, tableName: { type: string }, total: { type: string }, paidAmount: { type: string }, remainingAmount: { type: string }, paymentStatus: { type: string, enum: [pending, partial, paid] }, paymentMethods: { type: array, uniqueItems: true, items: { type: string }, description: "Nombres del catálogo de la empresa usados en pagos con importe neto positivo; sin duplicados, ordenados por nombre. Incluye medios ahora inactivos y devuelve un arreglo vacío si no hay cobros vigentes." }, createdAt: { type: string, format: date-time } } }
+    POSOrderSummary: { type: object, required: [id, code, channel, status, customerName, tableName, total, paidAmount, remainingAmount, paymentStatus, paymentMethods, createdAt], properties: { origin: { type: string, enum: [standard, counter], description: "counter identifica la venta por mostrador (Concierge o cajero); channel sigue siendo recojo." }, itemsText: { type: string, description: "Productos del pedido como «2 × Ceviche, 1 × Chicha», para la bandeja de caja." }, waiterId: { type: string, description: "Mozo vinculado a la atención por el flujo de comanda; vacío si no hay responsable." }, billClosed: { type: boolean, description: La cuenta está cerrada para cobro }, id: { type: string, format: uuid }, code: { type: string }, channel: { type: string }, status: { type: string }, customerName: { type: string }, tableName: { type: string }, total: { type: string }, paidAmount: { type: string }, remainingAmount: { type: string }, paymentStatus: { type: string, enum: [pending, partial, paid] }, paymentMethods: { type: array, uniqueItems: true, items: { type: string }, description: "Nombres del catálogo de la empresa usados en pagos con importe neto positivo; sin duplicados, ordenados por nombre. Incluye medios ahora inactivos y devuelve un arreglo vacío si no hay cobros vigentes." }, createdAt: { type: string, format: date-time } } }
     POSOrderList: { type: object, required: [items, total, amountTotal, page, pageSize], properties: { items: { type: array, items: { $ref: "#/components/schemas/POSOrderSummary" } }, total: { type: integer }, amountTotal: { type: string, description: Cobrado neto de todo el filtro en la moneda del local }, page: { type: integer }, pageSize: { type: integer } } }
     POSOrderDetail: { type: object, required: [order, paidAmount, remainingAmount, paymentStatus, payments, receiptContext], properties: { tipPolicy: { $ref: "#/components/schemas/TipPolicy" }, tip: { $ref: "#/components/schemas/TipReceipt" }, receiptContext: { $ref: "#/components/schemas/PaymentReceiptContext" }, order: { $ref: "#/components/schemas/Order" }, paidAmount: { type: string }, remainingAmount: { type: string }, paymentStatus: { type: string, enum: [pending, partial, paid] }, payments: { type: array, items: { $ref: "#/components/schemas/Payment" } } } }
     PaymentReceiptContext:
@@ -2773,11 +2838,16 @@ components:
     ExpenseVoidInput: { type: object, required: [reason], properties: { reason: { type: string, minLength: 4, maxLength: 240 } } }
     Expense: { allOf: [{ $ref: "#/components/schemas/ExpenseInput" }, { type: object, required: [id, categoryName, status, createdByName, createdAt, voidedByName, voidReason], properties: { id: { type: string, format: uuid }, categoryName: { type: string }, status: { type: string, enum: [active, void] }, createdByName: { type: string }, createdAt: { type: string, format: date-time }, voidedByName: { type: string }, voidedAt: { type: [string, "null"], format: date-time }, voidReason: { type: string } } }] }
     CustomerInput: { type: object, required: [customerType, displayName, preferredChannel], properties: { customerType: { type: string, enum: [person, company] }, displayName: { type: string, maxLength: 160 }, documentType: { type: string }, documentNumber: { type: string }, phone: { type: string }, email: { type: string }, preferredChannel: { type: string, enum: [none, whatsapp, phone, email] }, preferences: { type: string }, notes: { type: string }, marketingConsent: { type: boolean }, vipOverride: { type: boolean }, addresses: { type: array, items: { $ref: "#/components/schemas/CustomerAddress" } } } }
-    Customer: { allOf: [{ $ref: "#/components/schemas/CustomerInput" }, { type: object, required: [id, code, visitCount, totalSpent, active, segment], properties: { id: { type: string, format: uuid }, code: { type: string }, visitCount: { type: integer, minimum: 0 }, totalSpent: { type: string }, lastPurchaseAt: { type: [string, "null"], format: date-time }, active: { type: boolean }, segment: { type: string, enum: [new, recurrent, frequent, vip] } } }] }
+    Customer: { allOf: [{ $ref: "#/components/schemas/CustomerInput" }, { type: object, required: [id, code, visitCount, totalSpent, active, segment], properties: { id: { type: string, format: uuid }, code: { type: string }, visitCount: { type: integer, minimum: 0 }, totalSpent: { type: string }, lastPurchaseAt: { type: [string, "null"], format: date-time }, marketingConsentStatus: { type: string, enum: [pending, asked, granted, declined, withdrawn], readOnly: true, description: "Último evento de consentimiento promocional (WhatsApp o Clientes); sin eventos, granted si marketingConsent ya estaba activo." }, marketingConsentUpdatedAt: { type: [string, "null"], format: date-time, readOnly: true }, active: { type: boolean }, segment: { type: string, enum: [new, recurrent, frequent, vip] } } }] }
     RoleInput: { type: object, required: [name, menuAccess, permissions], properties: { name: { type: string }, description: { type: string }, menuAccess: { type: array, minItems: 1, items: { type: string } }, permissions: { type: array, minItems: 1, items: { type: string } } } }
     ConciergeSettingsInput: { type: object, required: [active, whatsappPhone], properties: { active: { type: boolean }, whatsappPhone: { type: string, pattern: "^\\+[1-9][0-9]{7,14}$", description: "Número internacional E.164. Puede estar vacío solo si active=false." } } }
     ConciergeSettings: { allOf: [{ $ref: "#/components/schemas/ConciergeSettingsInput" }, { type: object, required: [organizationName, locationName], properties: { organizationName: { type: string }, locationName: { type: string } } }] }
-    PublicTableContext: { type: object, required: [name, seats, zone, organizationName, locationName, conciergeEnabled, whatsappPhone], properties: { name: { type: string }, seats: { type: integer, minimum: 1 }, zone: { type: string }, organizationName: { type: string }, locationName: { type: string }, conciergeEnabled: { type: boolean }, whatsappPhone: { type: string, description: "Número E.164 del local; vacío cuando Concierge no está configurado." } } }
+    TableServiceType: { type: string, enum: [table, counter], default: table, description: "table: mesa tradicional con cuenta abierta, ocupación y rondas. counter: venta por mostrador; cada pedido es independiente, no ocupa la mesa, no aparece en el mapa de Salón y se cobra en caja." }
+    Table: { type: object, required: [id, name, seats, zone, active, qrToken, qrEnabled, serviceType], properties: { id: { type: string, format: uuid }, name: { type: string }, seats: { type: integer }, zone: { type: string }, active: { type: boolean }, qrToken: { type: string }, qrEnabled: { type: boolean }, serviceType: { $ref: "#/components/schemas/TableServiceType" } } }
+    TableInput: { type: object, required: [name], properties: { name: { type: string }, seats: { type: integer, minimum: 1, default: 2 }, zone: { type: string }, active: { type: boolean }, qrEnabled: { type: boolean, default: true }, serviceType: { $ref: "#/components/schemas/TableServiceType" } } }
+    ConciergeCustomerProfile: { type: object, required: [known, customerName, marketingConsent], properties: { known: { type: boolean }, customerName: { type: string }, marketingConsent: { type: string, enum: [pending, asked, granted, declined, withdrawn] } } }
+    ConciergeMarketingConsentInput: { type: object, required: [customerPhone, requestId, decision], properties: { customerPhone: { type: string, maxLength: 32 }, conversationId: { type: string, maxLength: 160 }, requestId: { type: string, maxLength: 160 }, decision: { type: string, enum: [asked, granted, declined, withdrawn] }, evidence: { type: string, maxLength: 500, description: "Texto literal del cliente (o de la pregunta enviada para asked)." } } }
+    PublicTableContext: { type: object, required: [name, seats, zone, organizationName, locationName, conciergeEnabled, whatsappPhone], properties: { name: { type: string }, serviceType: { $ref: "#/components/schemas/TableServiceType" }, seats: { type: integer, minimum: 1 }, zone: { type: string }, organizationName: { type: string }, locationName: { type: string }, conciergeEnabled: { type: boolean }, whatsappPhone: { type: string, description: "Número E.164 del local; vacío cuando Concierge no está configurado." } } }
     ConciergeMenuItem: { allOf: [{ $ref: "#/components/schemas/ProductImage" }, { type: object, required: [productId, name, description, price, status, isCombo, hasModifiers, recommended], properties: { recommended: { type: boolean, description: "Producto recomendado por el local en la carta digital; se lista primero." }, productId: { type: string, format: uuid }, name: { type: string }, description: { type: string }, price: { type: string }, categoryName: { type: [string, "null"] }, imageUrl: { type: [string, "null"] }, status: { type: string, enum: [available, low, sold_out, unavailable] }, isCombo: { type: boolean }, hasModifiers: { type: boolean }, remaining: { type: [number, "null"], description: "Porciones o unidades que quedan hoy en el local; null si el producto no controla cantidad. Al confirmar, foods-backend vuelve a validar y responde insufficient_stock o insufficient_portions." } } } ] }
     ConciergeMenuResponse: { type: object, required: [items, currencySymbol], properties: { restaurantLogoUrl: { type: [string, "null"], format: uri }, virtualMenuUrls: { type: array, items: { type: string, format: uri } }, items: { type: array, items: { $ref: "#/components/schemas/ConciergeMenuItem" } }, currencySymbol: { type: string } } }
     ConciergeComboOption: { type: object, required: [productId, name, surcharge, available], properties: { productId: { type: string, format: uuid }, name: { type: string }, surcharge: { type: string }, available: { type: boolean } } }
@@ -2863,12 +2933,13 @@ components:
         statusLabel: { type: string }
     Order:
       type: object
-      description: "Recojo en local usa channel=recojo e incluye pedidos históricos de mostrador sin modificar su almacenamiento. channelOptions omite mostrador; los filtros recojo/mostrador agrupan ambos códigos en Pedidos y Cocina y los conteos usan recojo. Por compatibilidad, las altas antiguas con mostrador se aceptan y se guardan como recojo. No se cambia ni se infiere el origen WhatsApp."
+      description: "Recojo en local usa channel=recojo e incluye la venta por mostrador (guardada como mostrador). channelOptions omite mostrador; los filtros recojo/mostrador agrupan ambos códigos en Pedidos y Cocina y los conteos usan recojo. origin=counter identifica la venta por mostrador: el alta con channel=mostrador la registra sin mesa y se conserva como mostrador. No se cambia ni se infiere el origen WhatsApp."
       required: [id, code, channel, status, customerName, customerPhone, address, reference, tableId, tableName, waiterId, waiterName, collectedByNames, notes, subtotal, deliveryFee, total, createdAt, updatedAt]
       properties:
         id: { type: string, format: uuid }
         code: { type: string }
         channel: { type: string, enum: [salon, mostrador, recojo, delivery, whatsapp] }
+        origin: { type: string, enum: [standard, counter], readOnly: true, description: "counter: venta por mostrador; standard: cualquier otro pedido." }
         status: { type: string, enum: [nuevo, confirmado, preparando, listo, en_camino, entregado, cancelado] }
         customerId: { type: string }
         customerName: { type: string }
@@ -2894,8 +2965,8 @@ components:
         serviceItems: { type: array, items: { $ref: "#/components/schemas/OrderServiceItem" } }
         completedAt: { type: string, format: date-time, description: Finalización automática; exige cuenta cerrada y pagada con todos los productos entregados en Salón }
         items: { type: array, items: { $ref: "#/components/schemas/OrderItem" } }
-    OperationalOrderList: { type: object, required: [items, total, page, pageSize, channelCounts, channelOptions, statusOptions, currencySymbol], properties: { items: { type: array, items: { $ref: "#/components/schemas/Order" } }, total: { type: integer }, page: { type: integer }, pageSize: { type: integer }, channelCounts: { type: object, additionalProperties: { type: integer } }, channelOptions: { type: array, items: { $ref: "#/components/schemas/Option" } }, statusOptions: { type: array, items: { $ref: "#/components/schemas/Option" } }, currencySymbol: { type: string } } }
-    KitchenTicket: { type: object, required: [id, orderId, roundNumber, code, channel, status, customerName, tableName, notes, createdAt, updatedAt, items], properties: { id: { type: string, description: Identificador opaco de ronda y estación }, destination: { type: string, enum: [kitchen, bar] }, orderId: { type: string, format: uuid }, roundNumber: { type: integer, minimum: 0 }, code: { type: string }, channel: { type: string, enum: [salon, mostrador, recojo, delivery, whatsapp] }, status: { type: string, enum: [confirmado, preparando, listo] }, customerName: { type: string }, tableName: { type: string }, notes: { type: string }, createdAt: { type: string, format: date-time }, updatedAt: { type: string, format: date-time }, targetMinutes: { type: [integer, "null"], minimum: 1 }, items: { type: array, items: { $ref: "#/components/schemas/OrderItem" } } } }
+    OperationalOrderList: { type: object, required: [items, total, page, pageSize, channelCounts, channelOptions, statusOptions, currencySymbol], properties: { manualChannelOptions: { type: array, description: "Tipos que se registran sin mesa desde Pedidos: mostrador (venta por mostrador), recojo y delivery.", items: { $ref: "#/components/schemas/Option" } }, items: { type: array, items: { $ref: "#/components/schemas/Order" } }, total: { type: integer }, page: { type: integer }, pageSize: { type: integer }, channelCounts: { type: object, additionalProperties: { type: integer } }, channelOptions: { type: array, items: { $ref: "#/components/schemas/Option" } }, statusOptions: { type: array, items: { $ref: "#/components/schemas/Option" } }, currencySymbol: { type: string } } }
+    KitchenTicket: { type: object, required: [id, orderId, roundNumber, code, channel, status, customerName, tableName, notes, createdAt, updatedAt, items], properties: { origin: { type: string, enum: [standard, counter] }, id: { type: string, description: Identificador opaco de ronda y estación }, destination: { type: string, enum: [kitchen, bar] }, orderId: { type: string, format: uuid }, roundNumber: { type: integer, minimum: 0 }, code: { type: string }, channel: { type: string, enum: [salon, mostrador, recojo, delivery, whatsapp] }, status: { type: string, enum: [confirmado, preparando, listo] }, customerName: { type: string }, tableName: { type: string }, notes: { type: string }, createdAt: { type: string, format: date-time }, updatedAt: { type: string, format: date-time }, targetMinutes: { type: [integer, "null"], minimum: 1 }, items: { type: array, items: { $ref: "#/components/schemas/OrderItem" } } } }
     UserAssignment: { type: object, required: [roleId, locationId], properties: { roleId: { type: string, format: uuid }, locationId: { type: string, format: uuid } } }
     UserInput: { type: object, required: [fullName, email, assignments], properties: { fullName: { type: string }, email: { type: string, format: email }, password: { type: string, minLength: 8, writeOnly: true }, assignments: { type: array, minItems: 1, items: { $ref: "#/components/schemas/UserAssignment" } } } }
     AllergenInput: { type: object, required: [name], properties: { name: { type: string, minLength: 2, maxLength: 60, description: Se recortan y colapsan los espacios } } }

@@ -62,6 +62,7 @@ function CustomerDialog({initial,documentTypes,busy,close,save}:{initial:Custome
     <FormField label="Ciudad"><Input readOnly tabIndex={-1} {...register("addresses.0.city")} placeholder="Según la dirección"/></FormField>
     <FormField className="span-2" label="Referencia" optional error={addressError?.reference?.message}><Input {...register("addresses.0.reference")} placeholder="Punto de referencia para el repartidor"/></FormField>
     <label className="switch-row compact"><input type="checkbox" {...register("vipOverride")}/><span/><b>Marcar como VIP</b></label>
+    <label className="switch-row compact"><input type="checkbox" {...register("marketingConsent")}/><span/><b>Acepta promociones por WhatsApp</b></label>
    </div></FormSection></div>
   </ModalBody><ModalFooter><Button action="cancel" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" icon="check" disabled={busy} loading={busy}>{busy?"Guardando…":"Guardar"}</Button></ModalFooter></ModalForm></Dialog></div>
 }

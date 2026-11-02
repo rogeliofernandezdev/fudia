@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"github.com/foods-platform/foods-backend/internal/modules/concierge/application"
 	"github.com/foods-platform/foods-backend/internal/modules/concierge/domain"
+	customercontracts "github.com/foods-platform/foods-backend/internal/modules/customers/contracts"
 	ordercontracts "github.com/foods-platform/foods-backend/internal/modules/orders/contracts"
 	shared "github.com/foods-platform/foods-backend/internal/platform/httpapi"
 	"github.com/foods-platform/foods-backend/internal/platform/requestscope"
@@ -165,5 +166,25 @@ func (h *Handler) SaveConciergeDeliveryFees(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	out, err := h.service.SaveDeliveryFees(r.Context(), conciergeScope(r), in)
+	respond(w, 200, out, err)
+}
+
+// GetConciergeCustomer recibe el número en el cuerpo, nunca en la URL.
+func (h *Handler) GetConciergeCustomer(w http.ResponseWriter, r *http.Request) {
+	var in application.CustomerLookup
+	if json.NewDecoder(r.Body).Decode(&in) != nil {
+		shared.Fail(w, 400, "invalid_customer_contact", "Revisa el número del cliente.")
+		return
+	}
+	out, err := h.service.CustomerProfile(r.Context(), r.PathValue("token"), in)
+	respond(w, 200, out, err)
+}
+func (h *Handler) RecordConciergeMarketingConsent(w http.ResponseWriter, r *http.Request) {
+	var in customercontracts.ConsentEvidence
+	if json.NewDecoder(r.Body).Decode(&in) != nil {
+		shared.Fail(w, 400, "invalid_customer_contact", "Revisa el número y la respuesta del cliente.")
+		return
+	}
+	out, err := h.service.RecordMarketingConsent(r.Context(), r.PathValue("token"), in)
 	respond(w, 200, out, err)
 }

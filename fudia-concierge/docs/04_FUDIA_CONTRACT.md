@@ -72,3 +72,26 @@ el número ya existe (también guardado sin código de país) y si no lo crea co
 preferido WhatsApp. El pedido nuevo queda enlazado (`orders.customer_id`); una ronda
 que se suma a una comanda abierta registra al cliente sin cambiar el cliente de esa
 comanda. Concierge no hace llamadas adicionales para esto.
+
+## Venta por mostrador
+
+`GET /v1/public/tables/{token}` incluye `serviceType` (`table` | `counter`).
+Con un QR de mostrador, `POST .../orders` crea un pedido independiente por cada
+`requestId` (`channel=recojo`, `origin=counter`, sin mesa) y exige
+`customerName`; `POST .../bill` responde `409 counter_has_no_bill`. El backend
+decide el flujo por el QR, nunca por un campo del cuerpo.
+
+## Cliente y consentimiento promocional
+
+POST /v1/integrations/concierge/{token}/customer
+
+Cuerpo `{customerPhone}` (el número nunca viaja en la URL). Devuelve `known`,
+`customerName` y `marketingConsent` (`pending`, `asked`, `granted`,
+`declined`, `withdrawn`) en la empresa del QR.
+
+POST /v1/integrations/concierge/{token}/marketing-consent
+
+Cuerpo `{customerPhone, conversationId, requestId, decision, evidence}` con
+`decision` `asked|granted|declined|withdrawn`. Idempotente por `requestId`;
+`asked` se registra una sola vez por cliente y empresa. `404
+customer_not_found` si el número aún no es cliente de esa empresa.

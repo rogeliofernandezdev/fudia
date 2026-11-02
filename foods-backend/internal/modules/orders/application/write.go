@@ -13,19 +13,22 @@ import (
 
 func (a *Orders) Create(ctx context.Context, s scope, in domain.OrderInput) (domain.Order, error) {
 	var result domain.Order
-	in.Channel = domain.NormalizeChannel(strings.TrimSpace(in.Channel))
+	// `mostrador` registra una venta por mostrador (sin mesa); se conserva para
+	// distinguir su origen y se lee como Recojo en local.
+	in.Channel = strings.TrimSpace(in.Channel)
 	in.CustomerName = strings.TrimSpace(in.CustomerName)
+	in.TableID = strings.TrimSpace(in.TableID)
 	if !domain.ValidOrderChannel(in.Channel) || len(in.Items) == 0 || in.DeliveryFee < 0 {
 		return result, orderFailure(apperror.Invalid, "invalid_order", "El canal y al menos un producto son obligatorios.")
+	}
+	if in.Channel == domain.ChannelCounter {
+		in.Address, in.Reference, in.DeliveryFee = "", "", 0
 	}
 	if message := deliverycontracts.ValidateContact(in.Channel, in.CustomerName, in.CustomerPhone, in.Address, in.Reference); message != "" {
 		return result, orderFailure(apperror.Invalid, "invalid_order", message)
 	}
-	if in.Channel == "salon" && strings.TrimSpace(in.TableID) == "" {
-		return result, orderFailure(apperror.Invalid, "table_required", "Los pedidos de Salón deben estar asociados a una mesa.")
-	}
-	if in.Channel != "salon" && strings.TrimSpace(in.TableID) != "" {
-		return result, orderFailure(apperror.Invalid, "table_not_allowed", "Solo los pedidos de Salón pueden ocupar una mesa.")
+	if code, message := domain.TableRequirement(in.Channel, in.TableID, ""); code != "" {
+		return result, orderFailure(apperror.Invalid, code, message)
 	}
 	if pointErr := a.resolveDeliveryPoint(ctx, s, &in); pointErr != nil {
 		return result, pointErr
@@ -45,12 +48,15 @@ func (a *Orders) Create(ctx context.Context, s scope, in domain.OrderInput) (dom
 		customerID = &in.CustomerID
 	}
 	if in.TableID != "" {
-		var lockedTableID string
-		_ = lockedTableID
-		if err = func() error { var err error; lockedTableID, err = a.repo.LockTable(tx.Context(), s, in); return err }(); errors.Is(err, ErrNotFound) {
+		var tableServiceType string
+		if err = func() error { var err error; tableServiceType, err = a.repo.LockTable(tx.Context(), s, in); return err }(); errors.Is(err, ErrNotFound) {
 			return result, orderFailure(apperror.Invalid, "invalid_order", "La mesa no existe.")
 		} else if err != nil {
 			return result, orderFailure(apperror.Unavailable, "order_unavailable", "No pudimos bloquear la mesa para abrir la comanda.")
+		}
+		// Un mostrador nunca abre una cuenta de mesa: se valida bajo el bloqueo.
+		if code, message := domain.TableRequirement(in.Channel, in.TableID, tableServiceType); code != "" {
+			return result, orderFailure(apperror.Conflict, code, message)
 		}
 		var occupied bool
 		if err = func() error { var err error; occupied, err = a.repo.TableOccupied(tx.Context(), s, in); return err }(); err != nil {

@@ -32,6 +32,10 @@ Antes de actuar, lee el mensaje junto con el estado y la conversación reciente,
 
 En pedidos sin mesa no hay cuenta ni mozo: si request_bill o request_human lo indican, explica que se paga al recibir o recoger y comparte el teléfono del local si existe.
 
+### Mostrador
+
+En la venta por mostrador no hay cuenta abierta: si request_bill devuelve counter_has_no_bill, explica en una línea que cada pedido se paga en caja al recogerlo en el mostrador. check_order_status muestra el estado del último pedido.
+
 ## Ejemplos
 
 Cliente: «La cuenta por favor»

@@ -6,6 +6,17 @@
 
 ## Última revisión
 
+Venta por mostrador (2026-11-02, migración 000102): una mesa marcada «Venta por
+mostrador» (`tables.service_type=counter`) usa el mismo QR y el mismo Concierge,
+pero cada pedido es independiente: no ocupa la mesa, no exige mozo ni cuenta
+abierta, va a Cocina como siempre y a la bandeja del POS con origen «Mostrador»,
+y se cobra en cualquier momento. El cajero registra la misma venta desde Pedidos
+(tipo «Mostrador», sin elegir un mostrador físico). Concierge reconoce al
+cliente por su número, pide su nombre si es nuevo y, tras el primer pedido,
+pregunta una sola vez por el consentimiento promocional (guardado por empresa
+con fecha y evidencia, revocable). La mesa tradicional no cambia. Pendiente:
+probar el flujo en WhatsApp real y la impresión del QR en sitio.
+
 Homologación de planes (2026-10-23): planes acumulativos con módulos Disponibles.
 Emprende vende y atiende en un local e incluye Concierge; Impulso suma Inventario,
 Compras, Kardex, Recetas, Reservas y Costos y gastos; Escala tiene los módulos de

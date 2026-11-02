@@ -129,8 +129,13 @@ func TestPickupUnifiesLegacyOrdersWithoutRewritingHistory(t *testing.T) {
 		if created.Channel != "recojo" || created.TableID != "" || created.DeliveryFee != "0.00" {
 			t.Fatalf("new pickup: %+v", created)
 		}
-		if err := pool.QueryRow(ctx, `SELECT channel FROM orders WHERE id=$1`, created.ID).Scan(&stored); err != nil || stored != "recojo" {
-			t.Fatalf("new channel not canonical: %q %v", stored, err)
+		// `mostrador` registra una venta por mostrador: se lee como recojo, conserva su código y su origen.
+		wantOrigin := map[string]string{"mostrador": "counter", "recojo": "standard"}[alias]
+		if created.Origin != wantOrigin {
+			t.Fatalf("origin for %s: %+v", alias, created)
+		}
+		if err := pool.QueryRow(ctx, `SELECT channel FROM orders WHERE id=$1`, created.ID).Scan(&stored); err != nil || stored != alias {
+			t.Fatalf("new channel not kept: %q %v", stored, err)
 		}
 	}
 }

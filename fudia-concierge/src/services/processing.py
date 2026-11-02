@@ -146,8 +146,26 @@ def recovery_reply(
             "No pudimos completar tu solicitud. Revisa tu pedido e "
             "inténtalo nuevamente, o pide ayuda al personal de tu mesa."
         )
+    if effect.kind == "marketing_consent":
+        if effect.result.get("decision") != "asked":
+            return str(effect.result.get("reply", "")) or (
+                "Guardamos tu preferencia sobre las promociones."
+            )
+        # The question follows the order it was appended to.
+        previous = ProcessingRecord(
+            message_id=record.message_id,
+            effects=[item for item in record.effects if item is not effect],
+        )
+        question = str(effect.result.get("question", ""))
+        return f"{recovery_reply(previous, session)}\n\n{question}".strip()
     if effect.kind == "create_order":
         order = effect.result.get("order", {})
+        if effect.payload.get("mode") == "counter":
+            return (
+                f"Tu pedido {order.get('code', '')} fue registrado. "
+                f"Total: {_money('', order.get('total', '0'))}. "
+                "Recógelo en el mostrador y págalo en caja."
+            )
         fulfillment = effect.payload.get("order", {}).get("fulfillment")
         if effect.payload.get("mode") == "delivery":
             how = (

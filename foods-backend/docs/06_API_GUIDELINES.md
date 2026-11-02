@@ -148,10 +148,12 @@ manuales de Salón a su autor original cuando pertenece a la misma empresa.
 
 ## Alta manual de delivery
 
-Los tipos manuales son `recojo` («Recojo en local») y `delivery`. Mostrador ya
-no es una modalidad separada: el catálogo `channelOptions` lo omite. Las altas
-con el alias histórico `mostrador` se normalizan a `recojo`; las lecturas de
-Pedidos, Cocina y POS también. Los filtros `recojo` y `mostrador` incluyen ambos
+Los tipos manuales son `mostrador` (venta por mostrador), `recojo` («Recojo en
+local») y `delivery`, publicados en `manualChannelOptions`. Mostrador no es una
+modalidad de entrega separada: el catálogo `channelOptions` de pestañas lo
+omite y las lecturas de Pedidos, Cocina y POS lo devuelven como `recojo` con
+`origin=counter`. Desde la venta por mostrador (2026-11-02) el alta con
+`mostrador` se guarda como `mostrador` (antes se normalizaba a `recojo`). Los filtros `recojo` y `mostrador` incluyen ambos
 códigos en Pedidos/Cocina; los conteos y el desglose del dashboard los suman una
 sola vez bajo `recojo`. No se reescribe la base ni se pierde auditoría. El origen
 WhatsApp y sus vínculos de Concierge permanecen intactos, sin inferirlos desde
@@ -265,3 +267,27 @@ La descripción permanece en el contrato para editar sin perder información.
 - Delivery y recojo de Concierge (migración 000083): `GET .../{token}/delivery-options`, `POST .../{token}/delivery-quote` (ubicación en el cuerpo, nunca en la URL), `POST .../{token}/delivery-orders` y `GET .../{token}/orders/{orderId}?conversationId=`. La distancia es en línea recta (haversine, redondeada a 0.01 km) entre `locations.latitude/longitude` y el pin del cliente; se aplica el primer rango de `delivery_fee_tiers` cuyo límite la cubre. El pedido se crea sin mesa con canal `delivery` o `recojo`, `status=confirmado` y enviado a cocina; guarda `delivery_latitude`, `delivery_longitude` y `delivery_distance_km`. La tarifa aceptada (`quotedFee`) debe coincidir con la vigente (`409 delivery_fee_changed`); `requestId` es idempotente en `concierge_delivery_requests` y su reintento devuelve el mismo pedido aunque cambien las tarifas.
 - Alta manual de delivery con mapa: `POST /v1/admin/orders` acepta `deliveryLatitude` y `deliveryLongitude` (ambos o ninguno, solo `delivery`; en otros canales se descartan). El servidor calcula `delivery_distance_km` desde el local activo y la deja en `null` si el local no tiene coordenadas. `POST /v1/admin/delivery-quote` (`orders.manage`, punto en el cuerpo) sugiere el costo con las mismas tarifas de Concierge; a diferencia de Concierge, el costo enviado en el alta es editable por el cajero y no se compara con la tarifa.
 - `GET|PUT /v1/admin/concierge-settings/delivery-fees` (`organizations.read` / `organizations.manage`) lee y reemplaza los rangos del local activo: hasta 10, límites distintos de 0.01 a 50 km y costos de 0 a 999 con dos decimales. Una lista vacía deja solo recojo. El cálculo puro vive en `delivery/domain` y se publica en `delivery/contracts`.
+
+## Venta por mostrador y consentimiento promocional
+
+- `POST /v1/admin/tables`, `PATCH /v1/admin/tables/{id}` y el lote aceptan
+  `serviceType` (`table` por defecto, `counter` para venta por mostrador; otro
+  valor responde 400 `invalid_service_type`). Omitirlo en la edición conserva el
+  tipo actual; cambiarlo con una cuenta abierta responde 409 `table_in_use`.
+  `GET /v1/public/tables/{token}` incluye `serviceType`.
+- `POST /v1/integrations/concierge/{token}/orders` decide el flujo por el tipo
+  del QR. Con un mostrador cada `requestId` crea un pedido independiente
+  (`channel=recojo`, `origin=counter`, `customerName` obligatorio); `/bill`
+  responde 409 `counter_has_no_bill`.
+- `POST /v1/integrations/concierge/{token}/customer` (número en el cuerpo)
+  devuelve `known`, `customerName` y `marketingConsent`.
+  `POST /v1/integrations/concierge/{token}/marketing-consent` registra `asked`,
+  `granted`, `declined` o `withdrawn` con evidencia; idempotente por
+  `requestId`, 404 `customer_not_found` si el número no es cliente de la empresa
+  del QR. Ambos exigen la credencial de Concierge y derivan la empresa del QR.
+- `GET /v1/admin/pos/orders` agrega `origin` e `itemsText` (productos del
+  pedido en una consulta agregada, sin consultas por fila). `Order` y
+  `KitchenTicket` agregan `origin`; `Customer` agrega `marketingConsentStatus` y
+  `marketingConsentUpdatedAt`.
+- `POST /v1/admin/payments` (y el cobro dividido) cobran una venta por mostrador
+  en cualquier estado activo; el resto de reglas de cobro no cambia.

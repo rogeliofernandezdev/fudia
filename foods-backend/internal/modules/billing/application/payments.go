@@ -84,14 +84,14 @@ type PaymentRepository interface {
 	RequireShiftAssignment(ctx context.Context, s scope, shiftID string) error
 	OrderPayments(ctx context.Context, s scope, orderID string) ([]domain.PaymentView, error)
 	Payment(ctx context.Context, s scope, id string) (domain.PaymentView, error)
-	LockPaymentOrder(ctx context.Context, s scope, in domain.PaymentInput) (string, string, float64, bool, bool, bool, error)
+	LockPaymentOrder(ctx context.Context, s scope, in domain.PaymentInput) (string, string, float64, bool, string, bool, error)
 	PaidForOrder(ctx context.Context, s scope, in domain.PaymentInput) (float64, error)
 	CreatePayment(ctx context.Context, s scope, in domain.PaymentInput, shiftID string) (string, error)
 	SaleMovement(ctx context.Context, s scope, in domain.PaymentInput, shiftID string, id string, orderCode string) (int64, error)
 	LockRefundPayment(ctx context.Context, s scope, id string) (bool, string, string, float64, bool, bool, float64, error)
 	CreateRefund(ctx context.Context, s scope, id string, in domain.RefundInput, shiftID string) (string, error)
 	RefundMovement(ctx context.Context, s scope, in domain.RefundInput, shiftID string, refundID string, orderCode string) (int64, error)
-	LockBatchOrder(ctx context.Context, s scope, in domain.PaymentBatchInput) (string, string, float64, bool, bool, bool, error)
+	LockBatchOrder(ctx context.Context, s scope, in domain.PaymentBatchInput) (string, string, float64, bool, string, bool, error)
 	BatchPaid(ctx context.Context, s scope, in domain.PaymentBatchInput) (float64, error)
 	CreateBatchPayment(ctx context.Context, s scope, in domain.PaymentBatchInput, shiftID string, p domain.PaymentLine) (string, error)
 	BatchSaleMovement(ctx context.Context, s scope, shiftID string, id string, p domain.PaymentLine, orderCode string) (int64, error)
@@ -129,12 +129,12 @@ func (a *Payments) Create(ctx context.Context, s scope, in domain.PaymentInput) 
 		return result, err
 	}
 
-	var orderCode, status string
-	var completed, salon, billClosed bool
+	var orderCode, status, channel string
+	var completed, billClosed bool
 	var total, paid float64
 	err = func() error {
 		var err error
-		orderCode, status, total, completed, salon, billClosed, err = a.repo.LockPaymentOrder(tx.Context(), s, in)
+		orderCode, status, total, completed, channel, billClosed, err = a.repo.LockPaymentOrder(tx.Context(), s, in)
 		return err
 	}()
 	if errors.Is(err, ErrNotFound) {
@@ -149,7 +149,8 @@ func (a *Payments) Create(ctx context.Context, s scope, in domain.PaymentInput) 
 	if err = func() error { var err error; paid, err = a.repo.PaidForOrder(tx.Context(), s, in); return err }(); err != nil {
 		return result, paymentFailure(apperror.Unavailable, "payments_unavailable", "No pudimos validar el saldo pendiente.")
 	}
-	if completed || status == "cancelado" || (salon && !billClosed) || (!salon && status != "listo" && status != "en_camino" && status != "entregado") {
+	salon := channel == "salon"
+	if !domain.PaymentReady(channel, status, completed, billClosed) {
 		return result, paymentFailure(apperror.Conflict, "order_not_ready_for_payment", "Cierra la cuenta de la mesa antes de cobrar. El pedido debe seguir abierto.")
 	}
 	remaining := math.Max(0, total-paid)
@@ -327,12 +328,12 @@ func (a *Payments) CreateBatch(ctx context.Context, s scope, in domain.PaymentBa
 		return result, err
 	}
 
-	var orderCode, status string
-	var completed, salon, billClosed bool
+	var orderCode, status, channel string
+	var completed, billClosed bool
 	var orderTotal, paid float64
 	err = func() error {
 		var err error
-		orderCode, status, orderTotal, completed, salon, billClosed, err = a.repo.LockBatchOrder(tx.Context(), s, in)
+		orderCode, status, orderTotal, completed, channel, billClosed, err = a.repo.LockBatchOrder(tx.Context(), s, in)
 		return err
 	}()
 	if errors.Is(err, ErrNotFound) {
@@ -347,7 +348,8 @@ func (a *Payments) CreateBatch(ctx context.Context, s scope, in domain.PaymentBa
 	if err = func() error { var err error; paid, err = a.repo.BatchPaid(tx.Context(), s, in); return err }(); err != nil {
 		return result, paymentFailure(apperror.Unavailable, "payments_unavailable", "No pudimos validar el saldo pendiente.")
 	}
-	if completed || status == "cancelado" || (salon && !billClosed) || (!salon && status != "listo" && status != "en_camino" && status != "entregado") {
+	salon := channel == "salon"
+	if !domain.PaymentReady(channel, status, completed, billClosed) {
 		return result, paymentFailure(apperror.Conflict, "order_not_ready_for_payment", "Cierra la cuenta de la mesa antes de cobrar. El pedido debe seguir abierto.")
 	}
 	remaining := math.Max(0, orderTotal-paid)

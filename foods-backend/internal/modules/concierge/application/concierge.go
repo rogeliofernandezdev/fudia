@@ -9,6 +9,8 @@ import (
 	menucontracts "github.com/foods-platform/foods-backend/internal/modules/menu/contracts"
 	ordercontracts "github.com/foods-platform/foods-backend/internal/modules/orders/contracts"
 	orgcontracts "github.com/foods-platform/foods-backend/internal/modules/organizations/contracts"
+	servicecontracts "github.com/foods-platform/foods-backend/internal/modules/service/contracts"
+	customercontracts "github.com/foods-platform/foods-backend/internal/modules/customers/contracts"
 	"github.com/foods-platform/foods-backend/internal/platform/apperror"
 	"github.com/foods-platform/foods-backend/internal/platform/requestscope"
 	"strings"
@@ -20,6 +22,8 @@ type scope = requestscope.Scope
 type QRContext struct {
 	Scope                                                              scope
 	TableID, TableName, OrganizationName, LocationName, CurrencySymbol string
+	// ServiceType decide el flujo del QR: mesa con cuenta abierta o mostrador.
+	ServiceType servicecontracts.ServiceType
 }
 type MenuResult struct {
 	orgcontracts.RestaurantBranding
@@ -33,6 +37,7 @@ type Menu interface {
 }
 type Orders interface {
 	SubmitTable(context.Context, scope, string, string, ordercontracts.QROrderInput) (ordercontracts.TableSubmission, error)
+	SubmitCounter(ctx context.Context, s scope, counterTableID, token string, in ordercontracts.QROrderInput) (ordercontracts.TableSubmission, error)
 	TableBill(context.Context, scope, string) (ordercontracts.Order, error)
 	ConciergeDeliveryReplay(ctx context.Context, s scope, requestID string) (ordercontracts.Order, bool, error)
 	SubmitConciergeDelivery(ctx context.Context, s scope, in ordercontracts.ConciergeDeliveryInput) (ordercontracts.TableSubmission, error)
@@ -44,6 +49,7 @@ type Concierge struct {
 	orders   Orders
 	audit    audit.Repository
 	branding orgcontracts.BrandingReader
+	customers Customers
 }
 
 func New(repo Repository, menu Menu, orders Orders, audit audit.Repository) *Concierge {
@@ -51,6 +57,17 @@ func New(repo Repository, menu Menu, orders Orders, audit audit.Repository) *Con
 }
 func (a *Concierge) WithBranding(reader orgcontracts.BrandingReader) *Concierge {
 	a.branding = reader
+	return a
+}
+
+// Customers reconoce al comensal por su número y guarda su consentimiento promocional.
+type Customers interface {
+	WhatsAppProfile(ctx context.Context, s scope, phone string) (customercontracts.WhatsAppProfile, error)
+	RecordWhatsAppConsent(ctx context.Context, s scope, in customercontracts.ConsentEvidence) (customercontracts.WhatsAppProfile, error)
+}
+
+func (a *Concierge) WithCustomers(customers Customers) *Concierge {
+	a.customers = customers
 	return a
 }
 func conciergeFailure(k apperror.Kind, c, m string) error { return apperror.New(k, c, m) }
@@ -121,10 +138,17 @@ func (a *Concierge) Modifiers(ctx context.Context, token, id string) (menucontra
 	}
 	return a.menu.PublicModifiers(ctx, qr.Scope, id)
 }
+// Submit es el único punto que decide el flujo de un pedido por QR según el
+// tipo de atención: la mesa conserva su cuenta abierta, ocupación y rondas; el
+// mostrador crea un pedido independiente por cliente que va a preparación y a
+// la bandeja de caja, sin ocupar la mesa ni exigir mozo.
 func (a *Concierge) Submit(ctx context.Context, token string, in ordercontracts.QROrderInput) (ordercontracts.TableSubmission, error) {
 	qr, err := a.resolve(ctx, token)
 	if err != nil {
 		return ordercontracts.TableSubmission{}, err
+	}
+	if qr.ServiceType == servicecontracts.ServiceTypeCounter {
+		return a.orders.SubmitCounter(ctx, qr.Scope, qr.TableID, token, in)
 	}
 	return a.orders.SubmitTable(ctx, qr.Scope, qr.TableID, token, in)
 }
@@ -140,6 +164,9 @@ func (a *Concierge) Bill(ctx context.Context, token string, in domain.BillReques
 	in.RequestID = strings.TrimSpace(in.RequestID)
 	if in.ConversationID == "" || len(in.ConversationID) > 160 || len(in.CustomerPhone) > 32 || len(in.RequestID) > 160 {
 		return result, conciergeFailure(apperror.Invalid, "invalid_bill_request", "Revisa los datos de la solicitud de cuenta.")
+	}
+	if qr.ServiceType == servicecontracts.ServiceTypeCounter {
+		return result, conciergeFailure(apperror.Conflict, "counter_has_no_bill", "En el mostrador no hay cuenta abierta: cada pedido se paga en caja.")
 	}
 
 	out, err := a.orders.TableBill(ctx, qr.Scope, qr.TableID)

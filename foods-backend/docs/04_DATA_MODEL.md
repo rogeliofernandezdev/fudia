@@ -29,6 +29,55 @@ por empresa y número evita duplicados concurrentes. El pedido nuevo guarda
 `orders.customer_id`; una ronda sumada a una comanda abierta registra al cliente
 sin reemplazar el cliente de esa comanda.
 
+## Venta por mostrador (migración 000102)
+
+`tables.service_type` (`table` | `counter`, `domain.ServiceType` en Service,
+publicado en `service/contracts`) es el tipo de atención de la mesa; la migración
+deja todas las mesas existentes como `table`. No hay módulo ni tabla nueva ni
+columna booleana adicional, y el tipo no depende del nombre.
+
+- El QR es el mismo. `concierge/application.Submit` es el único punto que decide
+  el flujo según `QRContext.ServiceType`: `table` conserva la cuenta abierta, la
+  ocupación y las rondas (`SubmitTable`); `counter` llama a
+  `Orders.SubmitCounter`.
+- Un pedido de mostrador se guarda con `channel='mostrador'`, sin `table_id`
+  ni mozo, `status='confirmado'` y enviado a preparación como los demás. Usa el
+  mismo registro de los pedidos sin mesa de Concierge (`submitWithoutTable`):
+  idempotencia por `requestId` en `concierge_delivery_requests`, prerregistro
+  del cliente, consumo de inventario/recetas y auditoría
+  `concierge.counter_order.created` con `counterTableId`. El QR se valida con
+  `FOR SHARE` (`ShareCounterQR`): varios clientes piden a la vez y el QR nunca se
+  bloquea por pedidos abiertos; un cambio de tipo en curso espera.
+- El cajero registra la misma venta desde Pedidos con `POST /v1/admin/orders`
+  `channel=mostrador`, sin elegir un mostrador físico.
+- `domain.Origin` expone `origin=counter`; las lecturas siguen normalizando el
+  canal a `recojo` (pestañas, filtros, conteos, dashboard y propinas sin
+  cambios). Los pedidos históricos `mostrador` se leen con el mismo origen.
+- `domain.TableRequirement` reemplaza las validaciones de mesa del alta: Salón
+  exige una mesa tradicional (`counter_not_table` si es un mostrador), el resto
+  nunca ocupa mesa. Salón y el dashboard excluyen los mostradores del mapa y del
+  conteo de mesas.
+- Cobro: `billing/domain.PaymentReady` centraliza cuándo se cobra. La venta por
+  mostrador se cobra en cualquier estado activo (preparación y pago son
+  independientes); Salón sigue exigiendo cuenta cerrada y entregas, y recojo y
+  delivery el estado Por entregar o posterior.
+- Consumo concurrente: `LockQuantityProducts` usa `FOR NO KEY UPDATE`. Con
+  `FOR UPDATE`, dos pedidos simultáneos del mismo producto se interbloqueaban
+  (40P01) con el `KEY SHARE` que la FK de `order_items` ya había tomado.
+
+## Consentimiento promocional por WhatsApp (migración 000102)
+
+`customers.marketing_consent` sigue siendo el valor vigente por empresa (quien
+rechaza o retira queda en `false` y fuera de campañas).
+`customer_marketing_consents` guarda cada evento con empresa, local, cliente,
+`decision` (`asked`, `granted`, `declined`, `withdrawn`), `source` (`whatsapp`,
+`admin`), evidencia (texto literal del cliente o «Actualizado en Clientes»),
+conversación, autor y fecha; `request_id` es único por empresa para que los
+reintentos no dupliquen evidencia. `asked` se registra una sola vez por cliente
+y empresa. El estado expuesto (`marketingConsentStatus`) es el último evento;
+sin eventos, `granted` si el valor ya estaba activo y `pending` si no. Editar el
+interruptor en Clientes registra el evento `admin` en la misma transacción.
+
 ## Entrega y cierre de pedidos de mesa
 
 La mesa solo tiene estados Libre/Ocupada. El primer pedido guardado crea una

@@ -7,8 +7,10 @@ from uuid import uuid4
 from src.domain.models import CartLine, CartModifier, CartSelection, MenuItem
 from src.services.confirmation import explicit_confirmation
 from src.services.delivery_tools import (
+    COUNTER_PAYMENT,
     DeliveryTools,
     apply_quote,
+    counter_summary,
     delivery_order,
     delivery_summary,
 )
@@ -150,6 +152,15 @@ class OrderTools:
                         "missing": delivery["missing"],
                         "delivery": delivery,
                     }
+            counter: dict[str, Any] | None = None
+            if session.mode == "counter":
+                counter = counter_summary(session)
+                if counter["missing"]:
+                    return {
+                        "ok": False,
+                        "code": "customer_name_required",
+                        "missing": counter["missing"],
+                    }
             session.awaiting_confirmation = True
             if not session.pending_order_request_id:
                 session.pending_order_request_id = uuid4().hex
@@ -157,6 +168,8 @@ class OrderTools:
             result: dict[str, Any] = {"cart": cart}
             if delivery is not None:
                 result["delivery"] = delivery
+            if counter is not None:
+                result["counter"] = counter
             await self.context.journal.local_effect("confirmation", result)
             return {
                 "ok": True,
@@ -469,15 +482,29 @@ class OrderTools:
         lines = order_lines(session.cart)
         if session.mode == "delivery":
             return await self._confirm_delivery_order(request_id, lines)
+        counter = session.mode == "counter"
+        customer_name = session.delivery.customer_name if counter else ""
+        if counter and not customer_name:
+            self.context.invalidate_confirmation()
+            return {
+                "ok": False,
+                "code": "customer_name_required",
+                "missing": ["customerName"],
+            }
+        payload: dict[str, Any] = {
+            "token": self.context.token(),
+            "phone": session.phone,
+            "conversationId": session.conversation_id,
+            "lines": lines,
+        }
+        if counter:
+            # Same endpoint as the table: foods-backend creates an independent
+            # counter order because of the QR, not because of this payload.
+            payload.update({"mode": "counter", "customerName": customer_name})
         await self.context.journal.before_effect(
             "create_order",
             request_id,
-            {
-                "token": self.context.token(),
-                "phone": session.phone,
-                "conversationId": session.conversation_id,
-                "lines": lines,
-            },
+            payload,
         )
         try:
             result = await self.context.fudia.create_order(
@@ -486,6 +513,7 @@ class OrderTools:
                 lines,
                 conversation_id=session.conversation_id,
                 request_id=request_id,
+                customer_name=customer_name,
             )
         except FudiaError as exc:
             definitive = 400 <= exc.status_code < 500
@@ -502,6 +530,9 @@ class OrderTools:
             "total": str(result.total),
         }
         await self.context.journal.after_effect({"order": order})
+        if counter:
+            # Independent order: the next one in this chat is a new order.
+            return {"ok": True, "order": order, "payment": COUNTER_PAYMENT}
         return {"ok": True, "order": order}
 
     async def _confirm_delivery_order(

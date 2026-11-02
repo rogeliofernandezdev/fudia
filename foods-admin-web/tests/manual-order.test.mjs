@@ -10,7 +10,7 @@ const root=new URL("../src/modules/operations/",import.meta.url);
 function compile(path,resolve=require,context={}){const exports={};vm.runInNewContext(ts.transpileModule(readFileSync(new URL(path,root),"utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText,{exports,require:resolve,...context});return exports}
 const resolver=compile("../../shared/forms/zod-resolver.ts");
 const schema=compile("orders/domain/manual-order-schema.ts",name=>name==="@/shared/forms/zod-resolver"?resolver:require(name));
-const fields={...schema.emptyManualOrder,customerName:" Ana ",customerPhone:"+51 (999) 123-456",address:" Av. Perú 100 ",reference:"Puerta azul",deliveryFee:"5"};
+const fields={...schema.emptyManualOrder,channel:"delivery",customerName:" Ana ",customerPhone:"+51 (999) 123-456",address:" Av. Perú 100 ",reference:"Puerta azul",deliveryFee:"5"};
 const line={lineKey:"line-1",productId:"product-1",name:"Plato",itemType:"product",qty:2,unitPrice:25,note:"Sin cebolla",selections:[]};
 const channels=[{value:"delivery",label:"Delivery"},{value:"recojo",label:"Recojo en local"},{value:"mostrador",label:"Mostrador"},{value:"whatsapp",label:"WhatsApp"},{value:"salon",label:"Salón"}];
 
@@ -19,9 +19,16 @@ test("pedido manual: delivery exige cliente, teléfono válido, dirección y env
  for(const patch of [{customerName:" "},{customerPhone:""},{customerPhone:"abc999123456"},{customerPhone:"123"},{customerPhone:"1234567890123456"},{address:" "},{deliveryFee:""},{deliveryFee:"-1"},{deliveryFee:"NaN"},{channel:"whatsapp"},{channel:"salon"}])assert.equal(schema.manualOrderSchema.safeParse({...fields,...patch}).success,false,JSON.stringify(patch));
  assert.equal(schema.manualOrderSchema.safeParse({...fields,customerPhone:"999123456",deliveryFee:"0"}).success,true);
 });
-test("pedido manual: recojo en local reemplaza mostrador sin pedir datos de delivery",()=>{
- assert.equal(schema.isManualOrderChannel("mostrador"),false);
- assert.equal(schema.manualOrderSchema.safeParse({...fields,channel:"mostrador"}).success,false);
+test("pedido manual: venta por mostrador sin mesa ni datos de delivery es el valor inicial",()=>{
+ assert.equal(schema.emptyManualOrder.channel,"mostrador");
+ assert.equal(schema.isManualOrderChannel("mostrador"),true);
+ const counter={...schema.emptyManualOrder,customerName:"",customerPhone:"",address:"",deliveryFee:""};
+ assert.equal(schema.manualOrderSchema.safeParse(counter).success,true);
+ const sale=schema.manualOrderPayload({...counter,address:"Av. ignorada",lines:[line]});
+ assert.equal(sale.channel,"mostrador");assert.equal(sale.deliveryFee,0);assert.equal(sale.address,"");assert.equal(sale.sendToKitchen,true);
+ assert.equal("tableId" in sale,false,"el cajero no elige un mostrador físico");
+});
+test("pedido manual: recojo en local sin pedir datos de delivery",()=>{
  const pickup={...fields,channel:"recojo",customerName:"",customerPhone:"",address:"",deliveryFee:""};
  assert.equal(schema.manualOrderSchema.safeParse(pickup).success,true);
  const payload=schema.manualOrderPayload({...pickup,lines:[line]});
@@ -76,7 +83,7 @@ test("pedido manual: datos primero, misma comanda, volver conserva productos y n
  assert.equal(rendered.find(node=>node.type==="LocationMap").props.addressLabel,"Dirección de entrega");
  assert.ok(rendered.some(node=>node.type==="MoneyInput"&&node.props.symbol==="S/"));
  const channelTabs=rendered.find(node=>node.type==="Tabs");assert.equal(channelTabs.props.label,"Tipo de atención");assert.equal(channelTabs.props.value,"delivery");
- assert.deepEqual(channelTabs.props.items.map(item=>item.label),["Delivery","Recojo en local"]);assert.ok(channelTabs.props.items.every(item=>item.icon));
+ assert.deepEqual(channelTabs.props.items.map(item=>item.label),["Delivery","Recojo en local","Mostrador"]);assert.ok(channelTabs.props.items.every(item=>item.icon));
  assert.equal(rendered.some(node=>node.type==="ChoiceGroup"||node.type==="FormSection"),false,"sin radios propios ni títulos de sección");
  assert.equal(rendered.find(node=>node.type==="LocationMap").props.hint,false);
  assert.equal(rendered.some(node=>node.type==="ComandaCatalog"),false);

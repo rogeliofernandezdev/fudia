@@ -767,8 +767,11 @@ paneles: a la izquierda quién y extras; a la derecha «Dirección de entrega»
 mapa a la altura del panel. `LocationMap addressError` marca el buscador en rojo
 y muestra el mensaje bajo él, como cualquier campo; el mapa se redimensiona
 cuando su contenedor cambia de alto (por ejemplo, al aparecer errores). En tablet y móvil es una
-sola columna con el mapa bajo la dirección (176 px en móvil). Recojo conserva
-el ancho de 580 px con solo Nombre y Teléfono opcionales.
+sola columna con el mapa bajo la dirección (176 px en móvil). Mostrador y Recojo
+conservan el ancho de 580 px con solo Nombre y Teléfono opcionales. Las pestañas
+vienen de `manualChannelOptions` (Mostrador | Recojo en local | Delivery) y
+Mostrador (icono `store`) es la inicial: la venta por mostrador es el alta más
+frecuente del cajero y no pide elegir un mostrador físico.
 
 Marcar o mover el pin guarda el punto (viaja en el alta) y cotiza con las
 tarifas del local, las mismas de Concierge: llena «Costo de envío»
@@ -1429,6 +1432,14 @@ descargar y alternar al detalle HTML del informe sin depender del visor nativo.
   la acción de cobrar es iconográfica, usa `RowActionButton` y muestra tooltip,
   igual que el resto de acciones de fila. El turno de caja se presenta como
   contexto compacto y no como una segunda cabecera de página.
+- Venta por mostrador en la bandeja del POS (2026-11-02): la columna
+  «Preparación» muestra el estado del pedido con `orderStatus` (matriz de
+  operación, sin tonos locales) junto a «Cobro», porque preparación y pago son
+  independientes. Un pedido con `origin=counter` muestra en «Canal» el origen
+  «Mostrador» (icono `store`) y bajo el cliente una línea `ink-500` de 12 px
+  con el número `PED-…` y los productos (`itemsText`), recortada con elipsis a
+  260 px. En móvil la tarjeta repite origen y preparación en la fila del canal.
+  Se cobra aunque Cocina no haya terminado.
 - El skeleton del POS conserva la geometría de cabecera, columnas, filas y
   acciones; el detalle reproduce resumen, productos y pagos. No se reemplaza
   por barras genéricas ni por un spinner aislado.
@@ -2007,7 +2018,10 @@ atención se representa una sola vez con icono: el avatar de la columna Pedido
 (`order-row-icon`, tono por tipo; `serviceChannel` de `order-meta.ts`). La
 columna Canal muestra solo el texto y, si el pedido llegó por el QR de WhatsApp,
 una segunda línea discreta «vía WhatsApp» (`order-channel-origin`, icono
-`share` de 14 px, `ink-500`). Los pedidos QR también muestran su mozo.
+`share` de 14 px, `ink-500`). Los pedidos QR también muestran su mozo. La
+venta por mostrador (`origin=counter`, del cajero o del QR de mostrador por
+Concierge) queda en Recojo y usa la misma segunda línea con icono `store` y el
+texto «Mostrador»; en Cocina la comanda agrega «· Mostrador» junto al número.
 
 Pedidos reutiliza esta misma estructura del detalle de Salón: fecha en el contexto
 del cuerpo y cantidades circulares por producto, sin conteo agregado de unidades.
@@ -2278,7 +2292,7 @@ registrar pagos ni simular una boleta o factura.
 
 Los módulos de directorio, como Clientes, usan la tabla estandarizada en escritorio y tarjetas equivalentes en móvil. Toda consulta remota debe incluir skeleton, error recuperable, vacío contextual y paginación compartida. Las acciones de fila son únicamente iconos homologados con tooltip; alta y edición usan las primitivas `Input`, `Select`, `Textarea`, `Button`, `Status` y `ConfirmDialog`. Los formularios extensos se agrupan por secciones visuales, sin añadir texto explicativo que no ayude a completar la tarea.
 
-Formulario de cliente (`ModalForm` + `ModalBody`, un solo scroll con barra fina), documento primero y rejilla de dos columnas alineada: «Documento» (`documentTypeOptions` del API) y «Número de documento»; «Nombre» a ancho completo; «Teléfono» (obligatorio) y «Correo electrónico» (opcional). No hay selector de tipo de cliente: el documento lo define (RUC → empresa y la etiqueta pasa a «Razón social»; DNI, CE o pasaporte → persona; sin documento conserva el tipo guardado y el número queda deshabilitado). En ≤760 px el documento conserva su fila (tipo en columna angosta de 120 px como mínimo y número al lado) y teléfono y correo se apilan. Debajo, sin desplegables, la dirección de entrega (una sola por cliente, opcional, sin «Agregar dirección» ni tarjetas): `LocationMap` con la etiqueta «Dirección de entrega · Opcional» ubica el pin; «Distrito» y «Ciudad» son de solo lectura (fondo `cloud-50`, borde punteado) y se llenan desde la sugerencia elegida; luego «Referencia» y el interruptor «Marcar como VIP». Si la dirección queda en blanco no se valida ni se guarda; las direcciones antiguas adicionales se conservan sin mostrarse al editar. No se piden canal preferido, comunicaciones, preferencias ni notas internas: ningún flujo (POS, Comanda, Concierge) los usa y los valores existentes se conservan al guardar. El detalle muestra documento, teléfono, correo y VIP en una fila de cuatro (dos en móvil) y la dirección de entrega. Pie: `Button action="cancel"` y «Guardar» como única acción primaria.
+Formulario de cliente (`ModalForm` + `ModalBody`, un solo scroll con barra fina), documento primero y rejilla de dos columnas alineada: «Documento» (`documentTypeOptions` del API) y «Número de documento»; «Nombre» a ancho completo; «Teléfono» (obligatorio) y «Correo electrónico» (opcional). No hay selector de tipo de cliente: el documento lo define (RUC → empresa y la etiqueta pasa a «Razón social»; DNI, CE o pasaporte → persona; sin documento conserva el tipo guardado y el número queda deshabilitado). En ≤760 px el documento conserva su fila (tipo en columna angosta de 120 px como mínimo y número al lado) y teléfono y correo se apilan. Debajo, sin desplegables, la dirección de entrega (una sola por cliente, opcional, sin «Agregar dirección» ni tarjetas): `LocationMap` con la etiqueta «Dirección de entrega · Opcional» ubica el pin; «Distrito» y «Ciudad» son de solo lectura (fondo `cloud-50`, borde punteado) y se llenan desde la sugerencia elegida; luego «Referencia» y los interruptores «Marcar como VIP» y «Acepta promociones por WhatsApp» (este último refleja el consentimiento que Concierge pregunta y guarda con fecha y evidencia; desactivarlo lo retira y queda registrado como retiro desde Clientes). Si la dirección queda en blanco no se valida ni se guarda; las direcciones antiguas adicionales se conservan sin mostrarse al editar. No se piden canal preferido, preferencias ni notas internas: ningún flujo (POS, Comanda, Concierge) los usa y los valores existentes se conservan al guardar. El detalle muestra documento, teléfono, correo y VIP en una fila de cuatro (dos en móvil) y la dirección de entrega. Pie: `Button action="cancel"` y «Guardar» como única acción primaria.
 
 
 ### Disponibilidad de módulos
@@ -2651,6 +2665,18 @@ PostgreSQL para mantener compatibilidad durante el despliegue.
 - «Agregar productos» reutiliza la comanda con solo líneas nuevas y aparece únicamente con cuenta Abierta. «Cerrar cuenta» es primaria y aparece solo después de entregar todos los productos de todas las rondas. Después se muestra el enlace a cobro solo con entrega completa, permiso y saldo; no se ofrecen más consumos ni reapertura.
 - Cocina y Barra reutilizan el mismo KDS con selector de estación alimentado por backend, permisos independientes y las mismas primitivas visuales.
 - En móvil (390 px) las filas permiten wrap sin desbordar; la entrega global y las demás acciones del pie conservan 44 px y ancho disponible. No se duplican clases de los estilos base.
+
+### Mesas y venta por mostrador (2026-11-02)
+
+- Mesas y zonas no crea un módulo nuevo: el alta por lote y la edición en línea
+  agregan la columna «Atención». En lectura muestra el texto «Mesa» o
+  «Mostrador», sin color ni chip; en alta y edición es el interruptor compartido
+  `switch-row compact` «Venta por mostrador», desactivado por defecto, sin marco
+  de tarjeta dentro de la fila (`.table-counter-switch`, 44 px táctiles en
+  `table-qr.css`). El tipo no depende del nombre de la mesa.
+- El QR es el mismo; el modal del QR dice «Código QR del mostrador» para un
+  mostrador. Salón no muestra mostradores en el mapa: no se ocupan ni abren
+  cuenta.
 
 ### Tope mensual de Fudia Concierge (Plataforma)
 

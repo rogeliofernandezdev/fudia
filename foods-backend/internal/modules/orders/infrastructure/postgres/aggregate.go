@@ -26,6 +26,7 @@ const netPaidSQL = `
 func scanOrder(row pgx.Row) (domain.Order, error) {
 	var o domain.Order
 	err := row.Scan(&o.ID, &o.Code, &o.Channel, &o.Status, &o.CustomerID, &o.CustomerName, &o.CustomerPhone, &o.Address, &o.Reference, &o.TableID, &o.TableName, &o.Notes, &o.Subtotal, &o.DeliveryFee, &o.Total, &o.CreatedAt, &o.UpdatedAt, &o.CompletedAt, &o.WaiterID, &o.WaiterName, &o.CollectedByNames, &o.BillClosedAt, &o.DeliveryLatitude, &o.DeliveryLongitude, &o.DeliveryDistanceKm)
+	o.Origin = domain.Origin(o.Channel)
 	o.Channel = domain.NormalizeChannel(o.Channel)
 	o.AccountState = "open"
 	if o.BillClosedAt != "" {

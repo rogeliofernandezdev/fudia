@@ -582,3 +582,11 @@ y sin operaciones. Revisar Mesas en 390 y 1280 px: «Libre» con `Status.green`,
 contenedores originales, dos/cuatro columnas sin desborde. Los símbolos de
 éxito y confirmación positiva deben computar `rgb(3, 192, 86)` y check blanco;
 confirmación destructiva conserva el rojo, Cancelar neutro y botones móviles de 44 px.
+
+Venta por mostrador (2026-11-02): `table-batch.test.mjs` comprueba que el alta
+por lote y la edición envían `serviceType`, que la casilla «Venta por mostrador»
+existe en ambas filas y que inicia desactivada. `manual-order.test.mjs` cubre
+Mostrador como tipo inicial del alta manual, sin mesa, dirección ni envío.
+`pos-payment-flow.test.mjs` verifica en la bandeja el origen «Mostrador», el
+número con los productos, el estado de preparación y que se puede cobrar antes
+de que Cocina termine, mientras Recojo sigue esperando «Por entregar».

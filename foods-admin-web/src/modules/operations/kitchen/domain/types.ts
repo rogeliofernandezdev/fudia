@@ -28,6 +28,8 @@ export type KitchenTicket={
   roundNumber:number;
   code:string;
   channel:string;
+  /** "counter" en la venta por mostrador. */
+  origin?:string;
   status:KitchenStatus;
   customerName:string;
   tableName:string;

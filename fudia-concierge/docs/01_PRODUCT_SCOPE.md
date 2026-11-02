@@ -36,3 +36,29 @@ Saludos, agradecimientos y comentarios personales o de ánimo («estoy triste»,
 ## Fuera del alcance actual
 
 Pagos ejecutados dentro de WhatsApp, distancia por ruta, zonas por polígono, asignación de repartidores y seguimiento en mapa, promociones autónomas, audio/imagen y reservas. Concierge no implementa lógica fiscal ni sustituye Caja/POS.
+
+## Venta por mostrador
+
+- Una mesa marcada «Venta por mostrador» en Admin Web usa el mismo QR y el mismo
+  bot. foods-backend decide el flujo por el tipo del QR; Concierge solo lo refleja
+  (`mode="counter"`).
+- El bot identifica el local y al cliente por su número: saluda por su nombre si
+  ya es cliente y, si es nuevo, le pide el nombre con el que caja lo llamará.
+- El cliente elige productos y cantidades con la carta real, confirma y cada
+  confirmación crea un pedido independiente (código `PED-…`) que va a preparación
+  y a la bandeja de caja. No hay cuenta abierta, mozo, pago previo ni delivery;
+  se recoge en el mostrador y se paga en caja.
+- Cada número tiene su propia sesión; varios clientes pueden pedir a la vez con
+  el mismo QR.
+
+## Consentimiento promocional
+
+Después del primer pedido confirmado, Concierge pregunta una sola vez por
+empresa, al final de la confirmación y sin interrumpir la compra: «¿Te gustaría
+recibir ofertas, promociones y beneficios exclusivos de [restaurante] por
+WhatsApp?», con las opciones «Sí, quiero recibirlos» y «No, gracias». La
+respuesta se reconoce sin el modelo en el siguiente mensaje; cualquier otro
+mensaje continúa el pedido. «Ya no quiero promociones» retira el consentimiento
+en cualquier momento. foods-backend guarda pregunta, respuesta y retiro con fecha
+y el texto literal del cliente; quien rechaza o retira queda fuera de campañas.
+Aplica a mesa, mostrador y pedidos sin mesa.

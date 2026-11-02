@@ -2,7 +2,10 @@ import type {IconName} from "@/design-system";
 import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
 
 /** Owner: operations/orders — presentación compartida por Pedidos y Salón. */
-export const channelIcons:Record<string,IconName>={salon:"utensils",mostrador:"box",recojo:"box",delivery:"truck",whatsapp:"share"};
+export const channelIcons:Record<string,IconName>={salon:"utensils",mostrador:"store",recojo:"box",delivery:"truck",whatsapp:"share"};
+
+/** Origen visible del pedido: la venta por mostrador se distingue dentro de Recojo en local. */
+export const originLabel=(origin?:string)=>origin==="counter"?"Mostrador":"";
 
 /** Tipo de atención del canal guardado: un pedido QR por WhatsApp se atiende en Salón. */
 export const serviceChannel=(channel:string)=>channel==="whatsapp"?"salon":channel==="mostrador"?"recojo":channel;

@@ -48,16 +48,19 @@ func (r *Orders) AuditConciergeDeliveryCreated(ctx context.Context, s scope, in 
 		INSERT INTO audit_log(
 		  organization_id,location_id,user_id,action,entity_type,entity_id,metadata
 		)
-		VALUES($1,$2,NULL,'concierge.delivery_order.created','order',$3,
+		VALUES($1,$2,NULL,
+		  CASE WHEN $6::text='mostrador' THEN 'concierge.counter_order.created' ELSE 'concierge.delivery_order.created' END,
+		  'order',$3,
 		  jsonb_build_object(
 		    'source','fudia_concierge',
 		    'conversationId',$4::text,
 		    'requestId',$5::text,
 		    'channel',$6::text,
 		    'deliveryFee',$7::numeric,
-		    'distanceKm',$8::numeric
+		    'distanceKm',$8::numeric,
+		    'counterTableId',NULLIF($9::text,'')
 		  ))
-	`, s.OrganizationID, s.LocationID, orderID, in.ConversationID, in.RequestID, in.Channel, in.DeliveryFee, in.DistanceKm)
+	`, s.OrganizationID, s.LocationID, orderID, in.ConversationID, in.RequestID, in.Channel, in.DeliveryFee, in.DistanceKm, in.CounterTableID)
 	return orderError(err)
 }
 

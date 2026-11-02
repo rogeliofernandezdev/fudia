@@ -158,7 +158,7 @@ export function KitchenBoard(){
                 <div className="kitchen-ticket-head">
                   <div className="kitchen-ticket-identity">
                     <b>{subject}</b>
-                    <small>{ticket.code}{ticket.targetMinutes&&ticket.status!=="listo"?` · Objetivo ${ticket.targetMinutes} min`:""}</small>
+                    <small>{ticket.code}{ticket.origin==="counter"?" · Mostrador":""}{ticket.targetMinutes&&ticket.status!=="listo"?` · Objetivo ${ticket.targetMinutes} min`:""}</small>
                   </div>
                   <span className={`kitchen-ticket-time ${tone}`}><Icon name={urgencyMeta.icon} size={14}/><strong>{elapsedText}</strong>{urgencyMeta.label&&<span>· {urgencyMeta.label}</span>}</span>
                 </div>

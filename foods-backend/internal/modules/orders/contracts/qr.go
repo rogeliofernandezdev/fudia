@@ -46,6 +46,8 @@ type ConciergeDeliveryInput struct {
 	DistanceKm     *float64                `json:"distanceKm"`
 	DeliveryFee    float64                 `json:"deliveryFee"`
 	Items          []domain.OrderItemInput `json:"items"`
+	// CounterTableID es el mostrador del QR que originó una venta por mostrador; solo se audita.
+	CounterTableID string `json:"-"`
 }
 
 // ConciergeOrderState indica si el pedido de una conversación sigue en
@@ -54,3 +56,6 @@ type ConciergeOrderState struct {
 	Order  domain.Order
 	Active bool
 }
+
+// Origin publica el origen del pedido ("counter" para la venta por mostrador).
+func Origin(channel string) string { return domain.Origin(channel) }

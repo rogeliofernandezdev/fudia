@@ -22,6 +22,8 @@ type Order struct {
 	ID            string             `json:"id"`
 	Code          string             `json:"code"`
 	Channel       string             `json:"channel"`
+	// Origin es "counter" para la venta por mostrador y "standard" en otro caso.
+	Origin        string             `json:"origin"`
 	Status        string             `json:"status"`
 	CompletedAt   string             `json:"completedAt,omitempty"`
 	BillClosedAt  string             `json:"billClosedAt,omitempty"`
@@ -153,6 +155,7 @@ type KitchenTicket struct {
 	RoundNumber   int         `json:"roundNumber"`
 	Code          string      `json:"code"`
 	Channel       string      `json:"channel"`
+	Origin        string      `json:"origin"`
 	Status        string      `json:"status"`
 	CustomerName  string      `json:"customerName"`
 	TableName     string      `json:"tableName"`

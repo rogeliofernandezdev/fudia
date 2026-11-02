@@ -45,11 +45,11 @@ type FloorRepository interface {
 	RenameTableZone(context.Context, scope, string, string) (int64, error)
 	DeactivateZone(context.Context, scope, string) (int64, error)
 	Tables(context.Context, scope, FloorFilter) (TablePage, error)
-	LockTable(context.Context, scope, string) (bool, error)
+	LockTable(context.Context, scope, string) (bool, domain.ServiceType, error)
 	ActiveZone(context.Context, scope, string) error
 	TableOccupied(context.Context, scope, string) (bool, error)
-	CreateTable(context.Context, scope, string, int, string, bool) (domain.Table, error)
-	UpdateTable(context.Context, scope, string, string, int, string, bool, bool) (domain.Table, error)
+	CreateTable(context.Context, scope, string, int, string, bool, domain.ServiceType) (domain.Table, error)
+	UpdateTable(context.Context, scope, string, string, int, string, bool, bool, domain.ServiceType) (domain.Table, error)
 	DeactivateTable(context.Context, scope, string) (int64, error)
 	RegenerateQR(context.Context, scope, string) (domain.Table, error)
 	TableQR(context.Context, string) (domain.TableQR, error)
@@ -66,6 +66,9 @@ func NewFloor(repo FloorRepository, work unitofwork.Manager, audit audit.Reposit
 }
 func serviceFailure(kind apperror.Kind, code, message string) error {
 	return apperror.New(kind, code, message)
+}
+func invalidServiceType() error {
+	return serviceFailure(apperror.Invalid, "invalid_service_type", "Selecciona si es una mesa o una venta por mostrador.")
 }
 func (a *Floor) Zones(ctx context.Context, s scope, f FloorFilter) (ZonePage, error) {
 	f.Status = strings.TrimSpace(f.Status)
@@ -207,6 +210,10 @@ func (a *Floor) CreateTable(ctx context.Context, s scope, in domain.TableInput) 
 	if strings.TrimSpace(in.Name) == "" {
 		return result, serviceFailure(apperror.Invalid, "invalid_request", "El nombre de la mesa es obligatorio.")
 	}
+	serviceType := domain.ServiceTypeOrDefault(in.ServiceType)
+	if !serviceType.Valid() {
+		return result, invalidServiceType()
+	}
 	seats := 2
 	if in.Seats != nil && *in.Seats > 0 {
 		seats = *in.Seats
@@ -227,7 +234,7 @@ func (a *Floor) CreateTable(ctx context.Context, s scope, in domain.TableInput) 
 	}
 	var t table
 	err = func() error {
-		v, e := a.repo.CreateTable(tx.Context(), s, strings.TrimSpace(in.Name), seats, strings.TrimSpace(in.Zone), qrEnabled)
+		v, e := a.repo.CreateTable(tx.Context(), s, strings.TrimSpace(in.Name), seats, strings.TrimSpace(in.Zone), qrEnabled, serviceType)
 		t = v
 		return e
 	}()
@@ -249,6 +256,9 @@ func (a *Floor) UpdateTable(ctx context.Context, s scope, id string, in domain.T
 	if strings.TrimSpace(in.Name) == "" {
 		return result, serviceFailure(apperror.Invalid, "invalid_request", "El nombre de la mesa es obligatorio.")
 	}
+	if in.ServiceType != nil && *in.ServiceType != "" && !in.ServiceType.Valid() {
+		return result, invalidServiceType()
+	}
 	seats := 2
 	if in.Seats != nil && *in.Seats > 0 {
 		seats = *in.Seats
@@ -268,7 +278,8 @@ func (a *Floor) UpdateTable(ctx context.Context, s scope, id string, in domain.T
 	defer tx.Rollback(ctx)
 
 	var currentActive bool
-	err = func() error { v, e := a.repo.LockTable(tx.Context(), s, id); currentActive = v; return e }()
+	var currentType domain.ServiceType
+	err = func() error { v, kind, e := a.repo.LockTable(tx.Context(), s, id); currentActive, currentType = v, kind; return e }()
 	if errors.Is(err, ErrNotFound) {
 		return result, serviceFailure(apperror.NotFound, "table_not_found", "La mesa no existe.")
 	}
@@ -279,6 +290,20 @@ func (a *Floor) UpdateTable(ctx context.Context, s scope, id string, in domain.T
 		return result, serviceFailure(apperror.Invalid, "invalid_zone", "La zona seleccionada no existe o está inactiva en este local.")
 	} else if err != nil {
 		return result, serviceFailure(apperror.Unavailable, "zones_unavailable", "No pudimos validar la zona de la mesa.")
+	}
+	// Omitir el tipo conserva el actual: un cliente anterior no convierte un mostrador en mesa.
+	serviceType := currentType
+	if in.ServiceType != nil && *in.ServiceType != "" {
+		serviceType = *in.ServiceType
+	}
+	if serviceType != currentType {
+		var occupied bool
+		if err = func() error { v, e := a.repo.TableOccupied(tx.Context(), s, id); occupied = v; return e }(); err != nil {
+			return result, serviceFailure(apperror.Unavailable, "table_unavailable", "No pudimos validar el estado de la mesa.")
+		}
+		if occupied {
+			return result, serviceFailure(apperror.Conflict, "table_in_use", "No puedes cambiar el tipo de atención de una mesa con una cuenta abierta.")
+		}
 	}
 	if currentActive && !active {
 		var occupied bool
@@ -292,7 +317,7 @@ func (a *Floor) UpdateTable(ctx context.Context, s scope, id string, in domain.T
 
 	var t table
 	err = func() error {
-		v, e := a.repo.UpdateTable(tx.Context(), s, id, strings.TrimSpace(in.Name), seats, strings.TrimSpace(in.Zone), active, qrEnabled)
+		v, e := a.repo.UpdateTable(tx.Context(), s, id, strings.TrimSpace(in.Name), seats, strings.TrimSpace(in.Zone), active, qrEnabled, serviceType)
 		t = v
 		return e
 	}()
@@ -313,7 +338,7 @@ func (a *Floor) DeactivateTable(ctx context.Context, s scope, id string) error {
 	}
 	defer tx.Rollback(ctx)
 	var active bool
-	err = func() error { v, e := a.repo.LockTable(tx.Context(), s, id); active = v; return e }()
+	err = func() error { v, _, e := a.repo.LockTable(tx.Context(), s, id); active = v; return e }()
 	if errors.Is(err, ErrNotFound) || !active {
 		return serviceFailure(apperror.NotFound, "table_not_found", "La mesa no existe o ya está inactiva.")
 	}
@@ -385,7 +410,11 @@ func (a *Floor) Batch(ctx context.Context, s scope, input []domain.TableInput) (
 		if item.QrEnabled != nil {
 			enabled = *item.QrEnabled
 		}
-		items = append(items, domain.TableBatchItem{Name: name, Seats: seats, Zone: strings.TrimSpace(item.Zone), QrEnabled: enabled})
+		serviceType := domain.ServiceTypeOrDefault(item.ServiceType)
+		if !serviceType.Valid() {
+			return out, invalidServiceType()
+		}
+		items = append(items, domain.TableBatchItem{Name: name, Seats: seats, Zone: strings.TrimSpace(item.Zone), QrEnabled: enabled, ServiceType: serviceType})
 	}
 	if len(items) == 0 {
 		return out, serviceFailure(apperror.Invalid, "invalid_request", "Agrega al menos una mesa con nombre.")

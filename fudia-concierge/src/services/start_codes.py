@@ -57,8 +57,17 @@ def table_label(name: str) -> str:
     return value if value.lower().startswith("mesa") else f"Mesa {value}"
 
 
-def start_message(table_name: str, code: str) -> str:
-    return f"¡Hola! 👋 Quiero ver la carta.\n{table_label(table_name)} · {code}"
+def service_label(name: str, service_type: str = "table") -> str:
+    """A counter keeps its own name («Mostrador», «Barra»); a table is
+    always presented as «Mesa …»."""
+    if service_type == "counter":
+        return " ".join(name.split())
+    return table_label(name)
+
+
+def start_message(table_name: str, code: str, service_type: str = "table") -> str:
+    label = service_label(table_name, service_type)
+    return f"¡Hola! 👋 Quiero ver la carta.\n{label} · {code}"
 
 
 def looks_like_start_message(text: str) -> bool:
@@ -66,4 +75,6 @@ def looks_like_start_message(text: str) -> bool:
     expired code apart from ordinary text that happens to look like one."""
     plain = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode()
     lowered = plain.lower()
-    return "ver la carta" in lowered or bool(re.search(r"\bmesa\b", lowered))
+    return "ver la carta" in lowered or bool(
+        re.search(r"\b(mesa|mostrador)\b", lowered)
+    )

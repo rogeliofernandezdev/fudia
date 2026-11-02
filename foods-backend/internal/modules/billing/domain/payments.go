@@ -28,11 +28,15 @@ type FiscalDocumentRef struct {
 	Status       string `json:"status"`
 }
 type PosOrderSummary struct {
-	WaiterID        string   `json:"waiterId"`
-	BillClosed      bool     `json:"billClosed"`
-	ID              string   `json:"id"`
-	Code            string   `json:"code"`
-	Channel         string   `json:"channel"`
+	WaiterID   string `json:"waiterId"`
+	BillClosed bool   `json:"billClosed"`
+	ID         string `json:"id"`
+	Code       string `json:"code"`
+	Channel    string `json:"channel"`
+	// Origin es "counter" para la venta por mostrador; los productos se resumen
+	// para que la bandeja de caja los muestre sin abrir el detalle.
+	Origin          string   `json:"origin"`
+	ItemsText       string   `json:"itemsText"`
 	Status          string   `json:"status"`
 	CustomerName    string   `json:"customerName"`
 	TableName       string   `json:"tableName"`

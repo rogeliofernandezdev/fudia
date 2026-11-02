@@ -234,3 +234,25 @@ botellas» se acepte, que agregar después una presentación fraccionaria tambi�
 se rechace y que una bolsa de 0,5 kg siga permitida. Las unitarias de
 `inventory/domain` y `inventory/application` cubren la regla y que la
 presentación rechazada nunca se guarda.
+
+## Venta por mostrador
+
+`counter_service_integration_test.go` recorre, con PostgreSQL efímero, los
+escenarios acordados: alta de mesa (tipo por defecto) y de mostrador, tipo
+inválido, edición del tipo ida y vuelta (omitirlo conserva el actual; con cuenta
+abierta responde 409), QR público de ambos tipos, flujo de mesa intacto (segunda
+ronda en la misma cuenta y cuenta solicitada), pedido de mostrador por QR sin
+mesa y enviado a preparación, idempotencia del `requestId`, otro cliente con el
+mismo QR, ocho pedidos simultáneos (seis clientes y un `requestId` repetido →
+siete pedidos, sin interbloqueo), mostrador fuera del mapa de Salón y sin
+ocupación, alta del cajero `mostrador` sin mesa y rechazo de una cuenta de Salón
+en un mostrador, comanda en Cocina con origen y producto Sin preparación fuera del
+KDS, consumo y reversión de porciones al cancelar, bandeja del POS con origen,
+productos y estados, cobro antes de preparar, prerregistro sin duplicados,
+consentimiento (pregunta única, respuesta, idempotencia, retiro con evidencia y
+cliente inexistente) y aislamiento entre empresas.
+`pickup_channels_integration_test.go` comprueba que `mostrador` se conserva en
+el alta con `origin=counter`. Unitarias: `orders/domain/counter_test.go`
+(origen y `TableRequirement`), `service/domain` (tipo por defecto y valores
+válidos), `billing/domain/payment_readiness_test.go` y
+`customers/application` (validación del consentimiento).

@@ -8,15 +8,18 @@
 .table-editing-row .table-actions{white-space:nowrap}
 
 /* Tablas administrativas de Mesas y Zonas: dimensiones propias, tokens compartidos. */
-.tables-management-table{min-width:var(--size-760)}
+.tables-management-table{min-width:var(--size-900)}
 .zones-management-table{min-width:var(--size-540)}
+/* Con la columna «Atención» los campos editables conservan un ancho legible en todo tamaño. */
+.tables-management-table .ds-input,
+.tables-management-table .ds-select{min-width:var(--size-100)}
 @media (width<=700px){
   .tables-management-table :is(th,td):first-child,
   .zones-management-table :is(th,td):first-child{min-width:var(--size-190)}
-  .tables-management-table .ds-input,
-  .tables-management-table .ds-select{min-width:var(--size-100)}
 }
 /* Táctil y móvil: «Escanear» conserva el área táctil de 44 px del sistema. */
 @media (width<=600px),(any-pointer:coarse){
   .qr-cell-btn{height:var(--control-height)}
 }
+/* Casilla «Venta por mostrador» dentro de la fila editable: sin marco de tarjeta, 44 px táctiles. */
+.tables-management-table .table-counter-switch{min-height:var(--control-height);padding:0;border:0;white-space:nowrap}

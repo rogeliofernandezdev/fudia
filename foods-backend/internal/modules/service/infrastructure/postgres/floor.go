@@ -45,7 +45,7 @@ func scanZone(row pgx.Row) (domain.Zone, error) {
 }
 func scanTable(row pgx.Row) (domain.Table, error) {
 	var v domain.Table
-	err := row.Scan(&v.ID, &v.Name, &v.Seats, &v.Zone, &v.Active, &v.QrToken, &v.QrEnabled)
+	err := row.Scan(&v.ID, &v.Name, &v.Seats, &v.Zone, &v.Active, &v.QrToken, &v.QrEnabled, &v.ServiceType)
 	return v, serviceError(err)
 }
 func (r *Floor) Zones(ctx context.Context, s scope, f application.FloorFilter) (application.ZonePage, error) {
@@ -117,7 +117,7 @@ func (r *Floor) DeactivateZone(ctx context.Context, s scope, id string) (int64, 
 func (r *Floor) Tables(ctx context.Context, s scope, f application.FloorFilter) (application.TablePage, error) {
 	out := application.TablePage{Items: []domain.Table{}, Page: f.Page, PageSize: f.Size}
 	query := "%" + f.Query + "%"
-	rows, err := r.db(ctx).Query(ctx, `SELECT id,name,seats,zone,active,qr_token,qr_enabled FROM tables WHERE organization_id=$1 AND location_id=$2 AND name ILIKE $3 AND ($4='' OR active=($4='active')) ORDER BY name LIMIT $5 OFFSET $6`, s.OrganizationID, s.LocationID, query, f.Status, f.Size, (f.Page-1)*f.Size)
+	rows, err := r.db(ctx).Query(ctx, `SELECT id,name,seats,zone,active,qr_token,qr_enabled,service_type FROM tables WHERE organization_id=$1 AND location_id=$2 AND name ILIKE $3 AND ($4='' OR active=($4='active')) ORDER BY name LIMIT $5 OFFSET $6`, s.OrganizationID, s.LocationID, query, f.Status, f.Size, (f.Page-1)*f.Size)
 	if err != nil {
 		return out, err
 	}
@@ -135,15 +135,16 @@ func (r *Floor) Tables(ctx context.Context, s scope, f application.FloorFilter) 
 	err = r.db(ctx).QueryRow(ctx, `SELECT count(*) FROM tables WHERE organization_id=$1 AND location_id=$2 AND name ILIKE $3 AND ($4='' OR active=($4='active'))`, s.OrganizationID, s.LocationID, query, f.Status).Scan(&out.Total)
 	return out, err
 }
-func (r *Floor) LockTable(ctx context.Context, s scope, id string) (bool, error) {
+func (r *Floor) LockTable(ctx context.Context, s scope, id string) (bool, domain.ServiceType, error) {
 	var active bool
+	var serviceType domain.ServiceType
 	err := r.db(ctx).QueryRow(ctx, `
-		SELECT active
+		SELECT active,service_type
 		FROM tables
 		WHERE id=$1 AND organization_id=$2 AND location_id=$3
 		FOR UPDATE
-	`, id, s.OrganizationID, s.LocationID).Scan(&active)
-	return active, serviceError(err)
+	`, id, s.OrganizationID, s.LocationID).Scan(&active, &serviceType)
+	return active, serviceType, serviceError(err)
 }
 func (r *Floor) ActiveZone(ctx context.Context, s scope, name string) error {
 	if name == "" {
@@ -168,20 +169,20 @@ func (r *Floor) TableOccupied(ctx context.Context, s scope, id string) (bool, er
 		`, s.OrganizationID, s.LocationID, id).Scan(&occupied)
 	return occupied, err
 }
-func (r *Floor) CreateTable(ctx context.Context, s scope, name string, seats int, zone string, qr bool) (domain.Table, error) {
+func (r *Floor) CreateTable(ctx context.Context, s scope, name string, seats int, zone string, qr bool, serviceType domain.ServiceType) (domain.Table, error) {
 	return scanTable(r.db(ctx).QueryRow(ctx, `
-		INSERT INTO tables(organization_id,location_id,name,seats,zone,active,qr_token,qr_enabled)
-		VALUES($1,$2,$3,$4,$5,true,`+qrTokenSQL+`,$6)
-		RETURNING id,name,seats,zone,active,qr_token,qr_enabled
-	`, s.OrganizationID, s.LocationID, name, seats, zone, qr))
+		INSERT INTO tables(organization_id,location_id,name,seats,zone,active,qr_token,qr_enabled,service_type)
+		VALUES($1,$2,$3,$4,$5,true,`+qrTokenSQL+`,$6,$7)
+		RETURNING id,name,seats,zone,active,qr_token,qr_enabled,service_type
+	`, s.OrganizationID, s.LocationID, name, seats, zone, qr, serviceType))
 }
-func (r *Floor) UpdateTable(ctx context.Context, s scope, id, name string, seats int, zone string, active, qr bool) (domain.Table, error) {
+func (r *Floor) UpdateTable(ctx context.Context, s scope, id, name string, seats int, zone string, active, qr bool, serviceType domain.ServiceType) (domain.Table, error) {
 	return scanTable(r.db(ctx).QueryRow(ctx, `
 		UPDATE tables
-		SET name=$4,seats=$5,zone=$6,active=$7,qr_enabled=$8,updated_at=now()
+		SET name=$4,seats=$5,zone=$6,active=$7,qr_enabled=$8,service_type=$9,updated_at=now()
 		WHERE id=$1 AND organization_id=$2 AND location_id=$3
-		RETURNING id,name,seats,zone,active,qr_token,qr_enabled
-	`, id, s.OrganizationID, s.LocationID, name, seats, zone, active, qr))
+		RETURNING id,name,seats,zone,active,qr_token,qr_enabled,service_type
+	`, id, s.OrganizationID, s.LocationID, name, seats, zone, active, qr, serviceType))
 }
 func (r *Floor) DeactivateTable(ctx context.Context, s scope, id string) (int64, error) {
 	tag, err := r.db(ctx).Exec(ctx, `
@@ -191,13 +192,13 @@ func (r *Floor) DeactivateTable(ctx context.Context, s scope, id string) (int64,
 	return tag.RowsAffected(), err
 }
 func (r *Floor) RegenerateQR(ctx context.Context, s scope, id string) (domain.Table, error) {
-	return scanTable(r.db(ctx).QueryRow(ctx, `UPDATE tables SET qr_token=`+qrTokenSQL+`,updated_at=now() WHERE id=$1 AND organization_id=$2 AND location_id=$3 RETURNING id,name,seats,zone,active,qr_token,qr_enabled`, id, s.OrganizationID, s.LocationID))
+	return scanTable(r.db(ctx).QueryRow(ctx, `UPDATE tables SET qr_token=`+qrTokenSQL+`,updated_at=now() WHERE id=$1 AND organization_id=$2 AND location_id=$3 RETURNING id,name,seats,zone,active,qr_token,qr_enabled,service_type`, id, s.OrganizationID, s.LocationID))
 }
 func (r *Floor) TableQR(ctx context.Context, token string) (domain.TableQR, error) {
 	var v domain.TableQR
 	err := r.db(ctx).QueryRow(ctx, `
 		SELECT t.name,t.seats,t.zone,o.trade_name,l.name,
-		       COALESCE(om.active,false)
+		       COALESCE(om.active,false),t.service_type
 		FROM tables t
 		JOIN organizations o ON o.id=t.organization_id AND o.active
 		JOIN locations l
@@ -209,7 +210,7 @@ func (r *Floor) TableQR(ctx context.Context, token string) (domain.TableQR, erro
 		 AND om.module_key='whatsapp_bot'
 		WHERE t.qr_token=$1 AND t.active=true AND t.qr_enabled=true
 		LIMIT 1
-	`, token).Scan(&v.Name, &v.Seats, &v.Zone, &v.OrgName, &v.LocName, &v.ConciergeEnabled)
+	`, token).Scan(&v.Name, &v.Seats, &v.Zone, &v.OrgName, &v.LocName, &v.ConciergeEnabled, &v.ServiceType)
 	return v, serviceError(err)
 }
 
@@ -217,6 +218,7 @@ const tableBatchSQL = `
 	WITH input AS MATERIALIZED (
 		SELECT item->>'name' AS name, (item->>'seats')::integer AS seats,
 		       item->>'zone' AS zone, (item->>'qrEnabled')::boolean AS qr_enabled,
+		       COALESCE(NULLIF(item->>'serviceType',''),'table') AS service_type,
 		       position
 		FROM jsonb_array_elements($3::jsonb) WITH ORDINALITY AS entries(item,position)
 	), locked_zones AS MATERIALIZED (
@@ -228,11 +230,11 @@ const tableBatchSQL = `
 		SELECT zone FROM input
 		WHERE zone<>'' AND NOT EXISTS (SELECT 1 FROM locked_zones WHERE name=input.zone)
 	), created AS (
-		INSERT INTO tables(organization_id,location_id,name,seats,zone,active,qr_token,qr_enabled)
-		SELECT $1,$2,name,seats,zone,true,` + qrTokenSQL + `,qr_enabled
+		INSERT INTO tables(organization_id,location_id,name,seats,zone,active,qr_token,qr_enabled,service_type)
+		SELECT $1,$2,name,seats,zone,true,` + qrTokenSQL + `,qr_enabled,service_type
 		FROM input WHERE NOT EXISTS (SELECT 1 FROM invalid_zones)
 		ORDER BY name
-		RETURNING id,name,seats,zone,active,qr_token,qr_enabled
+		RETURNING id,name,seats,zone,active,qr_token,qr_enabled,service_type
 	), audited AS (
 		INSERT INTO audit_log(organization_id,location_id,user_id,action,entity_type,entity_id,metadata)
 		SELECT $1::uuid,$2::uuid,$4::uuid,'table.batch_created','table',NULL,
@@ -244,7 +246,7 @@ const tableBatchSQL = `
 	       jsonb_build_object('items',COALESCE((
 		SELECT jsonb_agg(jsonb_build_object(
 			'id',c.id,'name',c.name,'seats',c.seats,'zone',c.zone,'active',c.active,
-			'qrToken',c.qr_token,'qrEnabled',c.qr_enabled
+			'qrToken',c.qr_token,'qrEnabled',c.qr_enabled,'serviceType',c.service_type
 		) ORDER BY i.position)
 		FROM created c JOIN input i ON i.name=c.name
 	       ),'[]'::jsonb))

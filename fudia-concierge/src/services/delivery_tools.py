@@ -26,6 +26,30 @@ NOT_IN_DELIVERY_MODE = {
 }
 
 
+COUNTER_PAYMENT = "Se recoge en el mostrador y se paga en caja."
+COUNTER_PICKUP_ONLY = {
+    "ok": False,
+    "code": "counter_pickup_only",
+    "message": (
+        "En el mostrador cada pedido se recoge en el local y se paga en caja; "
+        "no hay delivery."
+    ),
+}
+
+
+def counter_summary(session: ConversationSession) -> dict[str, Any]:
+    """What a counter order needs: the cart and the name the cashier calls."""
+    cart = cart_payload(session)
+    name = session.delivery.customer_name
+    return {
+        "fulfillment": "counter",
+        "customerName": name,
+        "total": _money(Decimal(cart["total"])),
+        "payment": COUNTER_PAYMENT,
+        "missing": [] if name else ["customerName"],
+    }
+
+
 def _money(value: Decimal | None) -> str:
     return str((value or Decimal("0")).quantize(Decimal("0.01")))
 
@@ -143,6 +167,10 @@ class DeliveryTools:
     ) -> dict[str, Any]:
         if name == "get_delivery_options":
             return await self._options()
+        if self.context.session.mode == "counter":
+            if name == "set_delivery_details":
+                return await self._set_counter_name(args)
+            return dict(COUNTER_PICKUP_ONLY)
         if self.context.session.mode != "delivery":
             return dict(NOT_IN_DELIVERY_MODE)
         if name == "set_fulfillment":
@@ -210,6 +238,19 @@ class DeliveryTools:
         if reference:
             delivery.reference = reference
         return await self._changed()
+
+    async def _set_counter_name(self, args: dict[str, Any]) -> dict[str, Any]:
+        """At the counter only the name applies; there is no address."""
+        name = str(args.get("customerName", "")).strip()
+        if len(name) > 160:
+            return {"ok": False, "code": "delivery_details_too_long"}
+        if not name:
+            return {"ok": False, "code": "customer_name_required"}
+        self.context.session.delivery.customer_name = name
+        self.context.invalidate_confirmation()
+        summary = counter_summary(self.context.session)
+        await self.context.journal.local_effect("delivery", summary)
+        return {"ok": True, "counter": summary}
 
     async def _changed(self) -> dict[str, Any]:
         # Fulfillment, address or fee changes need a new confirmation.

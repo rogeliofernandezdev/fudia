@@ -68,6 +68,6 @@ test("Mesas y Zonas comparten DataTable y sus dimensiones responsive tokenizadas
   assert.equal((src.match(/<DataTable /g)||[]).length,2);
   assert.equal((src.match(/<\/DataTable>/g)||[]).length,2);
   assert.doesNotMatch(src,/className="table-wrap hover-scroll"/);
-  assert.match(css,/\.tables-management-table\{min-width:var\(--size-760\)\}/);
+  assert.match(css,/\.tables-management-table\{min-width:var\(--size-900\)\}/);
   assert.match(css,/\.zones-management-table\{min-width:var\(--size-540\)\}/);
 });

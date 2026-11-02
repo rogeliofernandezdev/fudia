@@ -137,3 +137,18 @@ func (r *Orders) OpenTableOrder(ctx context.Context, s scope, tableID string) (d
 	`, s.OrganizationID, s.LocationID, tableID))
 	return out, orderError(err)
 }
+
+// ShareCounterQR comprueba que el QR siga activo y sea de mostrador. FOR SHARE
+// no serializa pedidos simultáneos del mismo QR; solo espera a una edición del
+// mostrador (que toma FOR UPDATE), de modo que un cambio de tipo no se cruce.
+func (r *Orders) ShareCounterQR(ctx context.Context, s scope, tableID string, token string) error {
+	var id string
+	err := r.db(ctx).QueryRow(ctx, `
+		SELECT id::text
+		FROM tables
+		WHERE id=$1 AND organization_id=$2 AND location_id=$3
+		  AND qr_token=$4 AND active AND qr_enabled AND service_type='counter'
+		FOR SHARE
+	`, tableID, s.OrganizationID, s.LocationID, token).Scan(&id)
+	return orderError(err)
+}

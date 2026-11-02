@@ -44,8 +44,8 @@ type paymentProjectionRepo struct {
 func (*paymentProjectionRepo) CurrentShift(context.Context, requestscope.Scope) (string, error) {
 	return "shift-1", nil
 }
-func (*paymentProjectionRepo) LockPaymentOrder(context.Context, requestscope.Scope, domain.PaymentInput) (string, string, float64, bool, bool, bool, error) {
-	return "ORDER-1", "listo", 20, false, false, false, nil
+func (*paymentProjectionRepo) LockPaymentOrder(context.Context, requestscope.Scope, domain.PaymentInput) (string, string, float64, bool, string, bool, error) {
+	return "ORDER-1", "listo", 20, false, "recojo", false, nil
 }
 func (*paymentProjectionRepo) PaidForOrder(context.Context, requestscope.Scope, domain.PaymentInput) (float64, error) {
 	return 0, nil

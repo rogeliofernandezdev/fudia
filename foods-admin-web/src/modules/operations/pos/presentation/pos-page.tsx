@@ -1,6 +1,7 @@
 "use client";
 import {DataTable} from "@/design-system/data-table";
 import {canChargeAccount,canCollectOrder} from "../../orders/domain/service-flow";
+import {orderStatus,originLabel} from "../../orders/presentation/order-meta";
 import {Dialog} from "@/design-system/dialog";
 import "./pos.css";
 import Link from "next/link";
@@ -157,13 +158,15 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
       :orders.isError?<ErrorState title="No pudimos cargar los pedidos" text={orders.error.message} onRetry={()=>void orders.refetch()}/>
       :!items.length?<EmptyState icon="receipt" title={q?"Sin coincidencias":paymentStatus==="paid"?"Aún no hay pedidos pagados":paymentStatus==="all"?"Aún no hay pedidos":"No hay pedidos con ese estado de cobro"} text={q?"Prueba con otro término de búsqueda.":"Los pedidos aparecerán aquí según su estado de cobro."}/>
       :<DataTable label="Pedidos para cobrar" containerClassName="hover-scroll pos-table-wrap" className="pos-table">
-        <thead><tr><th>Pedido</th><th>Canal</th><th className="pos-money">Total</th><th className="pos-money">Pagado</th><th className="pos-money">Saldo</th><th>Cobro</th><th className="pos-th-actions">Acciones</th></tr></thead>
+        <thead><tr><th>Pedido</th><th>Canal</th><th>Preparación</th><th className="pos-money">Total</th><th className="pos-money">Pagado</th><th className="pos-money">Saldo</th><th>Cobro</th><th className="pos-th-actions">Acciones</th></tr></thead>
         <tbody>{items.map((item,index)=>{
           const meta=paymentMeta[item.paymentStatus];
+          const preparation=orderStatus(item.status);
           const subject=item.tableName||item.customerName||item.code;
           return <tr className={index%2?"alternate":""} key={item.id}>
-            <td><span className="row-icon pos-row-icon"><Icon name="receipt" size={18}/></span><b>{subject}</b></td>
-            <td><span className="pos-channel-cell"><Icon name={channelIcons[item.channel]??"receipt"} size={14}/>{channelLabel[item.channel]??item.channel}</span></td>
+            <td><span className="row-icon pos-row-icon"><Icon name="receipt" size={18}/></span><b>{subject}</b>{item.origin==="counter"&&<small className="pos-counter-items">{[item.code,item.itemsText].filter(Boolean).join(" · ")}</small>}</td>
+            <td><span className="pos-channel-cell"><Icon name={item.origin==="counter"?"store":channelIcons[item.channel]??"receipt"} size={14}/>{originLabel(item.origin)||channelLabel[item.channel]||item.channel}</span></td>
+            <td><Status tone={preparation.tone}>{preparation.label}</Status></td>
             <td className="pos-money"><b>{money(Number(item.total))}</b></td>
             <td className="pos-money">{money(Number(item.paidAmount))}</td>
             <td className="pos-money"><strong className="pos-balance">{money(Number(item.remainingAmount))}</strong></td>
@@ -177,8 +180,8 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
         const meta=paymentMeta[item.paymentStatus];
         const subject=item.tableName||item.customerName||item.code;
         return <article key={item.id}>
-          <header><span className="row-icon pos-row-icon"><Icon name="receipt" size={18}/></span><div><b>{subject}</b></div><Status tone={meta.tone}>{meta.label}</Status></header>
-          <div className="pos-card-channel"><Icon name={channelIcons[item.channel]??"receipt"} size={14}/><span>{channelLabel[item.channel]??item.channel}</span></div>
+          <header><span className="row-icon pos-row-icon"><Icon name="receipt" size={18}/></span><div><b>{subject}</b>{item.origin==="counter"&&<small className="pos-counter-items">{[item.code,item.itemsText].filter(Boolean).join(" · ")}</small>}</div><Status tone={meta.tone}>{meta.label}</Status></header>
+          <div className="pos-card-channel"><Icon name={item.origin==="counter"?"store":channelIcons[item.channel]??"receipt"} size={14}/><span>{originLabel(item.origin)||channelLabel[item.channel]||item.channel}</span><Status tone={orderStatus(item.status).tone}>{orderStatus(item.status).label}</Status></div>
           <dl><div><dt>Total</dt><dd>{money(Number(item.total))}</dd></div><div><dt>Pagado</dt><dd>{money(Number(item.paidAmount))}</dd></div><div className="remaining"><dt>Saldo</dt><dd>{money(Number(item.remainingAmount))}</dd></div></dl>
           <footer>{actionsFor(item)}</footer>
         </article>;

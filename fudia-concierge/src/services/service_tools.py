@@ -34,6 +34,16 @@ class ServiceTools:
         if name == "check_order_status":
             return await self._order_status()
 
+        if self.context.session.mode == "counter" and name == "request_bill":
+            return {
+                "ok": False,
+                "code": "counter_has_no_bill",
+                "message": (
+                    "En el mostrador no hay cuenta abierta: cada pedido se "
+                    "paga en caja al recogerlo."
+                ),
+            }
+
         if self.context.session.mode == "delivery" and name in {
             "request_bill",
             "request_human",

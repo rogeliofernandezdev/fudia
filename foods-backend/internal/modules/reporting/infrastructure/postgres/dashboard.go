@@ -130,7 +130,7 @@ func loadDashboardOperations(ctx context.Context, tx database.Executor, s scope,
 		  COALESCE((SELECT sum(GREATEST(total-paid,0)) FROM active_orders),'0')::text,
 		  (SELECT count(*) FROM active_orders WHERE total>paid AND paid<=0),
 		  (SELECT count(*) FROM active_orders WHERE total>paid AND paid>0),
-		  (SELECT count(*) FROM tables WHERE organization_id=$1 AND location_id=$2 AND active),
+		  (SELECT count(*) FROM tables WHERE organization_id=$1 AND location_id=$2 AND active AND service_type='table'),
 		  (SELECT count(*) FROM tables t WHERE t.organization_id=$1 AND t.location_id=$2 AND t.active
 		    AND EXISTS(SELECT 1 FROM active_orders o WHERE o.channel='salon' AND o.table_id=t.id)),
 		  (SELECT count(*) FROM active_orders WHERE status='confirmado'),

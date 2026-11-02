@@ -136,6 +136,50 @@ abre, de modo que reprocesar ese mensaje no cuenta dos veces.
   nivel (`lite`/`flash`) en `POST .../conversations/{conversationId}/usage`
   (best effort, un intento, no retrasa la respuesta si falla).
 
+## Venta por mostrador
+
+Un QR de mostrador (`serviceType=counter` en `/v1/public/tables/{token}`) usa el
+mismo inicio por `/start` («Mostrador · K7P2»: el nombre del mostrador, sin
+«Mesa») y abre `mode="counter"`. La bienvenida es la misma carta con «📍
+Mostrador» y la línea «Pide aquí, recoge en el mostrador y paga en caja.». Antes
+de responder, Concierge consulta al cliente por su número
+(`POST .../customer`): si ya tiene nombre lo saluda («Hola, Ana.») y cierra con
+«¿Qué deseas pedir?»; si es nuevo (o solo tiene el nombre genérico «Cliente
+WhatsApp ####») cierra con «Para empezar, ¿a nombre de quién va el pedido?».
+
+1. El cliente arma el carrito como en mesa.
+2. `set_delivery_details` guarda solo `customerName`; `prepare_confirmation` y
+   `confirm_order` responden `customer_name_required` mientras falte.
+3. `confirm_order` envía la ronda al mismo `POST .../orders` con `customerName`;
+   foods-backend crea un pedido independiente porque el QR es de mostrador.
+4. El carrito se vacía y el siguiente envío es otro pedido con otro `requestId`.
+
+No hay cuenta (`request_bill` → `counter_has_no_bill`), delivery
+(`set_fulfillment` → `counter_pickup_only`) ni fin de atención por pedido: la
+sesión sigue en mostrador hasta otro QR o hasta que expire. El bloque «[Estado
+de la atención]» indica «Modo: venta por mostrador» y si falta el nombre.
+
+## Consentimiento promocional
+
+Tras el primer pedido confirmado de la atención (mesa, mostrador o sin mesa),
+si foods-backend informa `marketingConsent=pending`, la respuesta del turno
+termina con la pregunta acordada, en texto plano y sin emojis:
+
+```
+¿Te gustaría recibir ofertas, promociones y beneficios exclusivos de La Panchita por WhatsApp?
+
+- Sí, quiero recibirlos
+- No, gracias
+```
+
+La pregunta se registra (`asked`) antes de mostrarse y nunca se repite en esa
+empresa. El siguiente mensaje se compara sin el modelo con las respuestas
+(`consent_answer`: «sí», «Sí, quiero recibirlos», «no», «No, gracias»…); si
+coincide se guarda `granted` o `declined` con el texto literal y se responde en
+una línea. Cualquier otro mensaje sigue la conversación normal sin interrumpir la
+compra. «Ya no quiero promociones» o «darme de baja de las ofertas»
+(`asks_to_withdraw`) registra `withdrawn` en cualquier momento.
+
 ## Pedido sin mesa: recojo o delivery
 
 1. El cliente arma el carrito con la carta real, igual que en mesa.

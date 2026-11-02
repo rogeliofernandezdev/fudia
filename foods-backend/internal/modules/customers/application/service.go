@@ -3,11 +3,13 @@ package application
 import (
 	"context"
 	"errors"
+	customercontracts "github.com/foods-platform/foods-backend/internal/modules/customers/contracts"
 	"github.com/foods-platform/foods-backend/internal/modules/customers/domain"
 	deliverycontracts "github.com/foods-platform/foods-backend/internal/modules/delivery/contracts"
 	"github.com/foods-platform/foods-backend/internal/platform/apperror"
 	"github.com/foods-platform/foods-backend/internal/platform/requestscope"
 	"strings"
+	"unicode/utf8"
 )
 
 var (
@@ -29,7 +31,9 @@ type Page struct {
 type Repository interface {
 	List(context.Context, string, Filter) (Page, error)
 	Get(context.Context, string, string) (domain.Customer, error)
-	Save(context.Context, string, string, domain.Input) (domain.Customer, error)
+	Save(context.Context, requestscope.Scope, string, domain.Input) (domain.Customer, error)
+	WhatsAppProfile(ctx context.Context, organizationID, digits string) (customercontracts.WhatsAppProfile, error)
+	RecordWhatsAppConsent(ctx context.Context, s requestscope.Scope, digits string, in customercontracts.ConsentEvidence) (customercontracts.WhatsAppProfile, error)
 	SetActive(context.Context, string, string, bool) error
 	Audit(context.Context, requestscope.Scope, string, string)
 }
@@ -72,7 +76,7 @@ func (s *Service) Save(ctx context.Context, scope requestscope.Scope, id string,
 			return domain.Customer{}, apperror.New(apperror.Invalid, "invalid_address", "Revisa la ubicación marcada en las direcciones del cliente.")
 		}
 	}
-	c, err := s.repository.Save(ctx, scope.OrganizationID, id, in)
+	c, err := s.repository.Save(ctx, scope, id, in)
 	switch {
 	case errors.Is(err, ErrNotFound):
 		return c, notFound()
@@ -111,4 +115,54 @@ func validPoint(latitude, longitude *float64) bool {
 		return latitude == nil && longitude == nil
 	}
 	return deliverycontracts.ValidCoordinates(*latitude, *longitude)
+}
+
+// WhatsAppProfile reconoce al comensal por su número dentro de la empresa del
+// QR: si ya es cliente, su nombre y su consentimiento promocional.
+func (s *Service) WhatsAppProfile(ctx context.Context, scope requestscope.Scope, phone string) (customercontracts.WhatsAppProfile, error) {
+	digits, ok := whatsAppDigits(phone)
+	if !ok {
+		return customercontracts.WhatsAppProfile{}, invalidWhatsApp()
+	}
+	out, err := s.repository.WhatsAppProfile(ctx, scope.OrganizationID, digits)
+	if err != nil {
+		return out, unavailable("No pudimos consultar al cliente.")
+	}
+	return out, nil
+}
+
+// RecordWhatsAppConsent guarda la pregunta o la respuesta promocional con su
+// fecha y el texto literal del cliente. Rechazar o retirar deja al cliente
+// fuera de las campañas (marketing_consent=false).
+func (s *Service) RecordWhatsAppConsent(ctx context.Context, scope requestscope.Scope, in customercontracts.ConsentEvidence) (customercontracts.WhatsAppProfile, error) {
+	digits, ok := whatsAppDigits(in.CustomerPhone)
+	in.ConversationID = strings.TrimSpace(in.ConversationID)
+	in.RequestID = strings.TrimSpace(in.RequestID)
+	in.Evidence = strings.TrimSpace(in.Evidence)
+	if !ok || !customercontracts.ValidConsentDecision(in.Decision) || in.RequestID == "" || len(in.RequestID) > 160 ||
+		len(in.ConversationID) > 160 || utf8.RuneCountInString(in.Evidence) > 500 {
+		return customercontracts.WhatsAppProfile{}, invalidWhatsApp()
+	}
+	out, err := s.repository.RecordWhatsAppConsent(ctx, scope, digits, in)
+	if errors.Is(err, ErrNotFound) {
+		return out, notFound()
+	}
+	if err != nil {
+		return out, unavailable("No pudimos registrar la preferencia del cliente.")
+	}
+	return out, nil
+}
+
+func whatsAppDigits(phone string) (string, bool) {
+	var digits strings.Builder
+	for _, c := range phone {
+		if c >= '0' && c <= '9' {
+			digits.WriteRune(c)
+		}
+	}
+	value := digits.String()
+	return value, len(value) >= 7 && len(value) <= 15
+}
+func invalidWhatsApp() error {
+	return apperror.New(apperror.Invalid, "invalid_customer_contact", "Revisa el número y la respuesta del cliente.")
 }

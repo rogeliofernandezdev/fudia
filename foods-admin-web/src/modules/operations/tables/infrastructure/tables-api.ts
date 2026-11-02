@@ -13,7 +13,7 @@ export function listActiveZones(){
 }
 export async function createTables(items:RowDraft[]){
  try{
-  return await apiFetch<{items:Table[]}>("tables/batch",{method:"POST",body:JSON.stringify({items:items.map(row=>({name:row.name.trim(),seats:Number(row.seats)||2,zone:row.zone.trim()}))})});
+  return await apiFetch<{items:Table[]}>("tables/batch",{method:"POST",body:JSON.stringify({items:items.map(row=>({name:row.name.trim(),seats:Number(row.seats)||2,zone:row.zone.trim(),serviceType:row.serviceType}))})});
  }catch(error){
   // tables_not_saved: PostgreSQL rejected the batch, so nothing was saved and the specific error is kept.
   if(error instanceof TypeError||(error instanceof ApiClientError&&error.code!=="tables_not_saved"&&(error.status>=500||error.code==="invalid_server_response"))){
@@ -32,6 +32,7 @@ export function saveTable(draft:RowDraft){
    zone:draft.zone,
    active:draft.active,
    qrEnabled:draft.qrEnabled??true,
+   serviceType:draft.serviceType,
   }),
  });
 }

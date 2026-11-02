@@ -32,14 +32,15 @@ func (r *Orders) CustomerActive(ctx context.Context, s scope, in domain.OrderInp
 	err := r.db(ctx).QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM customers WHERE id=$1 AND organization_id=$2 AND active)`, in.CustomerID, s.OrganizationID).Scan(&ok)
 	return ok, orderError(err)
 }
+// LockTable bloquea la mesa y devuelve su tipo de atención (table o counter).
 func (r *Orders) LockTable(ctx context.Context, s scope, in domain.OrderInput) (string, error) {
-	var lockedTableID string
+	var serviceType string
 	err := r.db(ctx).QueryRow(ctx, `
-			SELECT id
+			SELECT service_type
 			FROM tables
 			WHERE id=$1 AND organization_id=$2 AND location_id=$3 AND active
-			FOR UPDATE`, in.TableID, s.OrganizationID, s.LocationID).Scan(&lockedTableID)
-	return lockedTableID, orderError(err)
+			FOR UPDATE`, in.TableID, s.OrganizationID, s.LocationID).Scan(&serviceType)
+	return serviceType, orderError(err)
 }
 func (r *Orders) TableOccupied(ctx context.Context, s scope, in domain.OrderInput) (bool, error) {
 	var occupied bool

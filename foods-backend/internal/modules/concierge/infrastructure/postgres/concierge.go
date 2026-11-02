@@ -33,7 +33,7 @@ func (r *Concierge) ResolveQR(ctx context.Context, token string) (application.QR
 	var out application.QRContext
 	err := r.db(ctx).QueryRow(ctx, `
 		SELECT t.organization_id::text,t.location_id::text,t.id::text,t.name,
-		       o.trade_name,l.name,p.currency_symbol
+		       o.trade_name,l.name,p.currency_symbol,t.service_type
 		FROM tables t
 		JOIN organizations o ON o.id=t.organization_id AND o.active
 		JOIN locations l ON l.id=t.location_id AND l.organization_id=t.organization_id AND l.active
@@ -53,6 +53,7 @@ func (r *Concierge) ResolveQR(ctx context.Context, token string) (application.QR
 		&out.OrganizationName,
 		&out.LocationName,
 		&out.CurrencySymbol,
+		&out.ServiceType,
 	)
 	if err != nil {
 		return application.QRContext{}, conciergeError(err)

@@ -27,6 +27,9 @@ export type Customer={
   preferences:string;
   notes:string;
   marketingConsent:boolean;
+  /** Último evento de consentimiento promocional (WhatsApp o Clientes) y su fecha. */
+  marketingConsentStatus?:"pending"|"asked"|"granted"|"declined"|"withdrawn";
+  marketingConsentUpdatedAt?:string|null;
   vipOverride:boolean;
   visitCount:number;
   totalSpent:string;

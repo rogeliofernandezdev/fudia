@@ -134,20 +134,20 @@ func (r *Payments) Payment(ctx context.Context, s scope, id string) (domain.Paym
 	)
 	return item, billingError(err)
 }
-func (r *Payments) LockPaymentOrder(ctx context.Context, s scope, in domain.PaymentInput) (string, string, float64, bool, bool, bool, error) {
+func (r *Payments) LockPaymentOrder(ctx context.Context, s scope, in domain.PaymentInput) (string, string, float64, bool, string, bool, error) {
 	var orderCode string
 	var status string
 	var total float64
 	var completed bool
-	var salon bool
+	var channel string
 	var billClosed bool
 	err := r.db(ctx).QueryRow(ctx, `
-		SELECT o.code,o.status,o.total::float8,o.completed_at IS NOT NULL,o.channel='salon',o.bill_closed_at IS NOT NULL
+		SELECT o.code,o.status,o.total::float8,o.completed_at IS NOT NULL,o.channel,o.bill_closed_at IS NOT NULL
 		FROM orders o
 		WHERE o.id=$1 AND o.organization_id=$2 AND o.location_id=$3
 		FOR UPDATE
-	`, in.OrderID, s.OrganizationID, s.LocationID).Scan(&orderCode, &status, &total, &completed, &salon, &billClosed)
-	return orderCode, status, total, completed, salon, billClosed, billingError(err)
+	`, in.OrderID, s.OrganizationID, s.LocationID).Scan(&orderCode, &status, &total, &completed, &channel, &billClosed)
+	return orderCode, status, total, completed, channel, billClosed, billingError(err)
 }
 func (r *Payments) PaidForOrder(ctx context.Context, s scope, in domain.PaymentInput) (float64, error) {
 	var paid float64
@@ -217,20 +217,20 @@ func (r *Payments) RefundMovement(ctx context.Context, s scope, in domain.Refund
 		`, s.OrganizationID, s.LocationID, shiftID, refundID, in.Amount, "Devolución "+orderCode, in.Note, s.UserID)
 	return tag.RowsAffected(), billingError(err)
 }
-func (r *Payments) LockBatchOrder(ctx context.Context, s scope, in domain.PaymentBatchInput) (string, string, float64, bool, bool, bool, error) {
+func (r *Payments) LockBatchOrder(ctx context.Context, s scope, in domain.PaymentBatchInput) (string, string, float64, bool, string, bool, error) {
 	var orderCode string
 	var status string
 	var orderTotal float64
 	var completed bool
-	var salon bool
+	var channel string
 	var billClosed bool
 	err := r.db(ctx).QueryRow(ctx, `
-		SELECT o.code,o.status,o.total::float8,o.completed_at IS NOT NULL,o.channel='salon',o.bill_closed_at IS NOT NULL
+		SELECT o.code,o.status,o.total::float8,o.completed_at IS NOT NULL,o.channel,o.bill_closed_at IS NOT NULL
 		FROM orders o
 		WHERE o.id=$1 AND o.organization_id=$2 AND o.location_id=$3
 		FOR UPDATE
-	`, in.OrderID, s.OrganizationID, s.LocationID).Scan(&orderCode, &status, &orderTotal, &completed, &salon, &billClosed)
-	return orderCode, status, orderTotal, completed, salon, billClosed, billingError(err)
+	`, in.OrderID, s.OrganizationID, s.LocationID).Scan(&orderCode, &status, &orderTotal, &completed, &channel, &billClosed)
+	return orderCode, status, orderTotal, completed, channel, billClosed, billingError(err)
 }
 func (r *Payments) BatchPaid(ctx context.Context, s scope, in domain.PaymentBatchInput) (float64, error) {
 	var paid float64
@@ -332,7 +332,9 @@ func (r *Payments) POSOrders(ctx context.Context, s scope, f application.POSFilt
 		         ELSE 'partial'
 		       END,
 		       to_char(o.created_at,'YYYY-MM-DD"T"HH24:MI:SSOF'),
-		       payment_summary.payment_methods,o.bill_closed_at IS NOT NULL,COALESCE(o.waiter_id::text,'')
+		       payment_summary.payment_methods,o.bill_closed_at IS NOT NULL,COALESCE(o.waiter_id::text,''),
+		       COALESCE((SELECT string_agg(trim_scale(i.qty)::text||' × '||i.name,', ' ORDER BY i.created_at,i.id)
+		         FROM order_items i WHERE i.order_id=o.id AND i.organization_id=o.organization_id),'')
 	`+baseFrom+`
 		WHERE `+where+`
 		ORDER BY o.created_at DESC,o.id DESC
@@ -349,10 +351,11 @@ func (r *Payments) POSOrders(ctx context.Context, s scope, f application.POSFilt
 		if err := rows.Scan(
 			&item.ID, &item.Code, &item.Channel, &item.Status, &item.CustomerName, &item.TableName,
 			&item.Total, &item.PaidAmount, &item.RemainingAmount, &item.PaymentStatus, &item.CreatedAt,
-			&item.PaymentMethods, &item.BillClosed, &item.WaiterID,
+			&item.PaymentMethods, &item.BillClosed, &item.WaiterID, &item.ItemsText,
 		); err != nil {
 			return out, err
 		}
+		item.Origin = ordercontracts.Origin(item.Channel)
 		item.Channel = ordercontracts.NormalizeChannel(item.Channel)
 		items = append(items, item)
 	}

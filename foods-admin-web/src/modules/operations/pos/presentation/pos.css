@@ -26,7 +26,7 @@
 .pos-toolbar{display:grid;grid-template-columns:minmax(var(--size-260),1fr) var(--size-190);gap:var(--space-2-5);align-items:center;padding:var(--space-3) var(--space-3-5);border-bottom:var(--stroke-1) solid var(--line);background:var(--cloud-50)}
 
 /* Tabla */
-.pos-table-wrap table{min-width:var(--size-860)}
+.pos-table-wrap table{min-width:var(--size-960)}
 .pos-table th.pos-money{text-align:right;white-space:nowrap}
 .pos-table td.pos-money{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;font-size:var(--font-size-control)}
 .pos-table td.pos-money>b{font-size:var(--font-size-control)}
@@ -35,12 +35,14 @@
 .pos-row-icon{color:var(--primary-700);background:var(--primary-100)}
 .pos-channel-cell{display:inline-flex;align-items:center;gap:var(--space-1-5);color:var(--ink-600);font-size:var(--font-size-label);font-weight:var(--weight-semibold);white-space:nowrap}
 .pos-actions{display:flex;align-items:center;justify-content:center;gap:var(--space-2)}
+/* Venta por mostrador: número del pedido y productos bajo el cliente, en una línea. */
+.pos-counter-items{display:block;max-width:var(--size-260);overflow:hidden;color:var(--ink-500);font-size:var(--font-size-label);font-weight:var(--weight-medium);text-overflow:ellipsis;white-space:nowrap}
 
 /* Tarjetas equivalentes para móvil */
 .pos-order-cards>article{position:relative}
 .pos-order-cards article>header{grid-template-columns:var(--size-38) minmax(0,1fr) auto}
 .pos-order-cards header .status{align-self:start}
-.pos-card-channel{display:flex;align-items:center;gap:var(--space-1-5);width:fit-content;margin-top:var(--space-3);color:var(--ink-600);font-size:var(--font-size-label);font-weight:var(--weight-bold)}
+.pos-card-channel{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-1-5);width:fit-content;margin-top:var(--space-3);color:var(--ink-600);font-size:var(--font-size-label);font-weight:var(--weight-bold)}
 .pos-order-cards dl{grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:var(--space-3)}
 .pos-order-cards dl div{min-width:0}
 .pos-order-cards dl .remaining{background:var(--primary-50)}

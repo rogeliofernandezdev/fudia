@@ -12,6 +12,10 @@ class ChatMessage(BaseModel):
     content: str
 
 
+# Tipo de atención del QR: mesa con cuenta abierta o venta por mostrador.
+ServiceType = Literal["table", "counter"]
+
+
 class TableContext(BaseModel):
     name: str
     seats: int
@@ -19,6 +23,19 @@ class TableContext(BaseModel):
     organizationName: str
     locationName: str
     conciergeEnabled: bool = False
+    serviceType: ServiceType = "table"
+
+
+ConsentStatus = Literal["pending", "asked", "granted", "declined", "withdrawn"]
+ConsentDecision = Literal["asked", "granted", "declined", "withdrawn"]
+
+
+class CustomerProfile(BaseModel):
+    """Comensal reconocido por su número en la empresa del QR."""
+
+    known: bool = False
+    customerName: str = ""
+    marketingConsent: ConsentStatus = "pending"
 
 
 class MenuItem(BaseModel):
@@ -131,7 +148,7 @@ class GeoPoint(BaseModel):
 
 
 Fulfillment = Literal["delivery", "pickup"]
-SessionMode = Literal["table", "delivery"]
+SessionMode = Literal["table", "delivery", "counter"]
 
 
 class DeliveryDetails(BaseModel):
@@ -211,6 +228,8 @@ class ConversationSession(BaseModel):
     table: TableContext | None = None
     # "table": atención en mesa abierta por QR. "delivery": la atención en
     # mesa terminó y el bot toma pedidos de delivery o recojo del mismo local.
+    # "counter": QR de mostrador; cada pedido confirmado es independiente,
+    # va a preparación y se paga en caja.
     mode: SessionMode = "table"
     venue: VenueContext | None = None
     delivery: DeliveryDetails = Field(default_factory=DeliveryDetails)
@@ -220,6 +239,11 @@ class ConversationSession(BaseModel):
     pending_order_request_id: str | None = None
     last_order_id: str | None = None
     handoff_pending: bool = False
+    # Consentimiento promocional: foods-backend recuerda si ya se preguntó en
+    # esta empresa; la respuesta se espera en el siguiente mensaje sin
+    # interrumpir la compra.
+    consent_checked: bool = False
+    consent_prompt_pending: bool = False
 
     def memory(self) -> CustomerMemory | None:
         """What outlives the session: the venue of the last QR context."""
@@ -289,6 +313,7 @@ EffectKind = Literal[
     "create_order",
     "request_handoff",
     "request_bill",
+    "marketing_consent",
 ]
 EffectStatus = Literal["pending", "done", "failed", "unknown"]
 ProcessingStage = Literal[

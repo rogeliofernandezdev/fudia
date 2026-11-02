@@ -238,7 +238,8 @@ TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
         "name": "set_delivery_details",
         "description": (
             "Guarda el nombre del cliente y, para delivery, la dirección "
-            "escrita y la referencia. Usa texto vacío para no cambiar un dato."
+            "escrita y la referencia. En el mostrador solo se guarda el "
+            "nombre. Usa texto vacío para no cambiar un dato."
         ),
         "parameters": {
             "type": "object",

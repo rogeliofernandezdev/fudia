@@ -61,7 +61,7 @@ func TestTableWritesWorkWhenPgcryptoIsOutsideSearchPath(t *testing.T) {
 	if !token.MatchString(out.Items[0].QrToken) || out.Items[0].QrToken == out.Items[1].QrToken {
 		t.Fatalf("unexpected QR tokens: %q %q", out.Items[0].QrToken, out.Items[1].QrToken)
 	}
-	single, err := repo.CreateTable(txCtx, s, "Mesa 3", 2, "", true)
+	single, err := repo.CreateTable(txCtx, s, "Mesa 3", 2, "", true, domain.ServiceTypeTable)
 	if err != nil || !token.MatchString(single.QrToken) {
 		t.Fatalf("single table without resolvable pgcrypto: %+v err=%v", single, err)
 	}

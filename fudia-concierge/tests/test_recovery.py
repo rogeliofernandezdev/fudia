@@ -17,7 +17,9 @@ import pytest
 from src.api.webhook import _outbound_statuses
 from src.domain.models import (
     BillSummary,
+    ConsentStatus,
     ConversationSession,
+    CustomerProfile,
     InboundMessage,
     MenuItem,
     MenuResponse,
@@ -66,11 +68,34 @@ class Backend:
         self.die_after_order = False
         self.die_after_bill = False
         self.opened: dict[str, str] = {}
+        self.consent_status: ConsentStatus = "granted"
+        self.consent_requests: list[str] = []
 
     async def open_conversation(
         self, token: str, conversation_id: str, kind: str
     ) -> None:
         self.opened[conversation_id] = kind
+
+    async def get_customer(self, token: str, phone: str) -> CustomerProfile:
+        return CustomerProfile(
+            known=True, customerName="Ana", marketingConsent=self.consent_status
+        )
+
+    async def record_marketing_consent(
+        self,
+        token: str,
+        phone: str,
+        conversation_id: str,
+        request_id: str,
+        decision: str,
+        evidence: str,
+    ) -> CustomerProfile:
+        self.consent_requests.append(request_id)
+        if decision != "asked" or self.consent_status == "pending":
+            self.consent_status = decision  # type: ignore[assignment]
+        return CustomerProfile(
+            known=True, customerName="Ana", marketingConsent=self.consent_status
+        )
 
     async def report_usage(
         self,
@@ -111,6 +136,7 @@ class Backend:
         lines: list[dict[str, Any]],
         conversation_id: str,
         request_id: str,
+        customer_name: str = "",
     ) -> OrderResult:
         self.order_calls.append(request_id)
         if request_id not in self.orders:

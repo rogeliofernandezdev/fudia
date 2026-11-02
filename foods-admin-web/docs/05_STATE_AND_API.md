@@ -266,9 +266,9 @@ La desactivación sigue bloqueada cuando hay productos activos asociados.
 
 ## Alta manual desde Pedidos
 
-«Nuevo pedido» abre un formulario breve de datos, con Delivery inicialmente seleccionado.
-Los tipos seleccionables (Recojo en local y Delivery) toman sus etiquetas de
-`channelOptions` del API. Salón conserva su toma de comanda por mesa; WhatsApp
+«Nuevo pedido» abre un formulario breve de datos, con Mostrador inicialmente
+seleccionado. Los tipos seleccionables (Mostrador, Recojo en local y Delivery)
+toman valores y etiquetas de `manualChannelOptions` del API. Salón conserva su toma de comanda por mesa; WhatsApp
 conserva el ingreso por Concierge y no se ofrece como origen manual.
 Delivery exige cliente, teléfono válido y dirección; referencia, notas y costo
 de envío completan la entrega. «Continuar» valida estos datos y abre `ComandaView`,
@@ -279,13 +279,24 @@ vuelve al formulario conservando productos, elecciones y notas. Avanzar o volver
 no realiza peticiones de creación ni genera pedidos parciales. El catálogo
 operativo es paginado y presenta la disponibilidad real del local.
 
-`recojo` unifica pedidos presenciales y encargos para retirar. `mostrador` deja
-de ser seleccionable: el API mantiene el alias histórico para clientes antiguos,
-normaliza altas y lecturas a `recojo` y suma ambos códigos en filtros, conteos y
-reportes, sin reescribir registros ni auditorías. Caja, Ventas y Cocina muestran
-«Recojo en local». No se infiere el origen a partir del retiro: WhatsApp y los
-vínculos existentes de Concierge se conservan; esta simplificación no crea un
-nuevo catálogo ni un selector de origen.
+`recojo` unifica pedidos presenciales y encargos para retirar. La **venta por
+mostrador** (2026-11-02) se registra con `channel=mostrador`: un pedido sin mesa
+ni mozo, sin pedir un mostrador físico, con nombre, teléfono y notas opcionales,
+que va a preparación y se cobra en Caja en cualquier momento (preparación y pago
+son independientes: `canChargeAccount` lo permite si `origin==="counter"`). El
+API lo lee como `channel=recojo` (misma pestaña de Pedidos y Cocina, mismos
+filtros y conteos) y expone `origin=counter`; la presentación lo identifica con
+`originLabel` de `order-meta.ts` («Mostrador», icono `store`). Los pedidos
+históricos guardados como `mostrador` también se muestran con ese origen. El
+origen WhatsApp y los vínculos de Concierge se conservan sin inferirlos del
+retiro. Los pedidos de mostrador creados por Concierge desde el QR de mostrador
+siguen el mismo contrato.
+
+`Table.serviceType` (`table`|`counter`) llega en `GET /tables` y se envía en el
+alta por lote y en la edición. La bandeja del POS (`POSOrderSummary`) agrega
+`origin` e `itemsText` (productos resumidos por el backend); el detalle
+(`Order`, `KitchenTicket`) agrega `origin`. `Customer` expone
+`marketingConsentStatus` y `marketingConsentUpdatedAt` de solo lectura.
 
 La acción explícita «Registrar y enviar a cocina» hace POST al endpoint existente
 `/v1/admin/orders` con `sendToKitchen=true`; no guarda al pulsar Enter desde un
