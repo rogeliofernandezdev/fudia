@@ -28,7 +28,7 @@ test("el wizard identifica y enfoca por id el primer dato inválido de cada paso
   assert.equal(validation.validateComboStep(value,products,2).field,"combo-group-0-product");
 });
 test("cupos, recargos y fechas se validan antes de avanzar o guardar",()=>{
-  const value=draft();value.groups[0].options[0].quota="11";
+  const value=draft();value.groups[0].options[0].quota="0";
   assert.equal(validation.validateComboDraft(value,products).field,"combo-group-0-quota-0");
   value.groups[0].options[0].quota="5";value.groups[0].options[0].surcharge="abc";
   assert.equal(validation.validateComboDraft(value,products).field,"combo-group-0-surcharge-0");

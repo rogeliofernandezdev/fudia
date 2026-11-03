@@ -58,7 +58,7 @@ function mount({products=[base,cause],locationId="local-a",organizationId="org-a
  return{page,wizard,composition,queries,invalidations,setCanManage:value=>{canManage=value},setProducts:value=>{products=value},edit:value=>{page();mutations[1].onSuccess(value)},saved:value=>{page();mutations[0].onSuccess({id:"menu"},value)}};
 }
 const quotaInput=view=>view.find(node=>node.type==="Input"&&node.props.id?.includes("-quota-"));
-// Reservar y Costo extra están siempre a la vista en cada línea de opción.
+// Tope y Costo extra están siempre a la vista en cada línea de opción.
 const adjust=ui=>ui.composition();
 const template=ui=>ui.composition().find(node=>node.type==="Button"&&node.props.children==="Usar plantilla Menú del día").props.onClick();
 
@@ -85,15 +85,18 @@ test("menús y combos: las acciones siguen el permiso asignado, también al revo
  assert.equal(ui.queries.filter(query=>query.queryKey.includes("combo-picker")).at(-1).enabled,false);
 });
 
-test("Reservar parte del saldo disponible del API, incluidos cero y stock fraccionario",()=>{
- for(const [availableQuantity,expected] of [[15,"15"],[12,"12"],[0,"0"],[2.75,"2"],[null,""]]){
-  assert.equal(quantities.createComboOption({...base,availableQuantity}).quota,expected);
+test("toda opción nueva empieza sin tope: vende hasta agotar el stock compartido",()=>{
+ for(const availableQuantity of [15,12,2.75,null]){
+  assert.equal(quantities.createComboOption({...base,availableQuantity}).quota,"");
+ }
+ for(const [availableQuantity,expected] of [[15,15],[0,0],[2.75,2],[null,null]]){
+  assert.equal(quantities.availableUnits({...base,availableQuantity}),expected);
  }
 });
 
-test("no permite incorporar una opción agotada ni reservar cero",()=>{
- for(const quota of ["","0","1"]){assert.equal(quantities.isReservationValid(quota,{...base,availableQuantity:0}),false);}
- assert.equal(quantities.isReservationValid("0",base),false);
+test("no permite incorporar una opción agotada ni un tope de cero",()=>{
+ for(const quota of ["","0","1"]){assert.equal(quantities.isCapValid(quota,{...base,availableQuantity:0}),false);}
+ assert.equal(quantities.isCapValid("0",base),false);
  const ui=mount({products:[{...base,availableQuantity:0}]});
  ui.composition().find(node=>node.type==="Button"&&node.props.id==="combo-add-group").props.onClick();
  const picker=ui.composition().find(node=>node.type==="ComboOptionPicker");
@@ -101,23 +104,23 @@ test("no permite incorporar una opción agotada ni reservar cero",()=>{
  assert.equal(ui.wizard().node.props.draft.groups[0].options.length,0);
 });
 
-test("agregar una opción precarga el saldo actual y permite reservar menos",()=>{
+test("agregar una opción la deja sin tope y permite fijar uno",()=>{
  const ui=mount({products:[{...base,availableQuantity:12}]});
  ui.composition().find(node=>node.type==="Button"&&node.props.id==="combo-add-group").props.onClick();
  const picker=ui.composition().find(node=>node.type==="ComboOptionPicker");
  picker.props.onPick(picker.props.products.find(product=>product.id==="lomo"));
- let input=quotaInput(adjust(ui));assert.equal(input.props.value,"12");assert.equal(input.props.max,12);assert.equal(input.props.step,"1");
+ let input=quotaInput(adjust(ui));assert.equal(input.props.value,"");assert.equal(input.props.placeholder,"Sin tope");assert.equal(input.props.max,undefined);assert.equal(input.props.step,"1");
  input.props.onChange({target:{value:"7"}});assert.equal(quotaInput(ui.composition()).props.value,"7");
  ui.setProducts([{...base,availableQuantity:10}]);input=quotaInput(ui.composition());
- assert.equal(input.props.value,"7","el refresco no pisa una cantidad elegida");assert.equal(input.props.max,10);
+ assert.equal(input.props.value,"7","el refresco no pisa una cantidad elegida");assert.equal(input.props.max,undefined,"el tope no depende del stock de hoy");
 });
 
-test("la plantilla Menú del día aplica la misma regla a entrada y segundo",()=>{
+test("la plantilla Menú del día deja sin tope la entrada y el segundo",()=>{
  const ui=mount();
  template(ui);
  const draft=ui.wizard().node.props.draft;
- assert.equal(draft.groups.find(group=>group.name==="Entrada").options[0].quota,"12");
- assert.equal(draft.groups.find(group=>group.name==="Segundo").options[0].quota,"15");
+ assert.equal(draft.groups.find(group=>group.name==="Entrada").options[0].quota,"");
+ assert.equal(draft.groups.find(group=>group.name==="Segundo").options[0].quota,"");
 });
 
 test("la plantilla reconoce sinónimos: sopas y ensaladas van a la entrada, refrescos a bebidas",()=>{
@@ -139,11 +142,13 @@ test("la plantilla reconoce sinónimos: sopas y ensaladas van a la entrada, refr
 test("un producto sin control no se confunde con cero disponible",()=>{
  const ui=mount({products:[{...base,availableQuantity:null}]});
  template(ui);
- const input=quotaInput(adjust(ui));assert.equal(input.props.value,"");assert.equal(input.props.placeholder,"Sin límite");assert.equal(input.props.max,undefined);
+ const input=quotaInput(adjust(ui));assert.equal(input.props.value,"");assert.equal(input.props.placeholder,"Sin tope");assert.equal(input.props.max,undefined);
 });
 
-test("la validación compartida rechaza excedentes, negativos y fracciones antes de continuar",()=>{
- for(const quota of ["16","-1","1.5","abc"]){
+test("la validación compartida rechaza cero, negativos y fracciones antes de continuar",()=>{
+ const valid={groups:[{name:"Segundo",required:true,minSelections:1,maxSelections:1,options:[{productId:"lomo",quota:"40",surcharge:""}]}]};
+ assert.equal(validation.validateComboStep(valid,[base],2),null,"el tope puede superar el stock de hoy");
+ for(const quota of ["0","-1","1.5","abc"]){
   const value={groups:[{name:"Segundo",required:true,minSelections:1,maxSelections:1,options:[{productId:"lomo",quota,surcharge:""}]}]};
   assert.equal(validation.validateComboStep(value,[base],2).field,"combo-group-0-quota-0");
  }
@@ -152,18 +157,18 @@ test("la validación compartida rechaza excedentes, negativos y fracciones antes
  ui.wizard().view.find(node=>node.type==="MoneyInput"&&node.props.id==="combo-price").props.onChange({target:{value:"15,50"}});
  assert.equal(ui.wizard().node.props.draft.price,"15.50","la coma decimal se normaliza");
  template(ui);
- quotaInput(adjust(ui)).props.onChange({target:{value:"13"}});
+ quotaInput(adjust(ui)).props.onChange({target:{value:"0"}});
  assert.equal(quotaInput(ui.composition()).props["aria-invalid"],true);
  const lineError=ui.composition().find(node=>node.props?.className==="field-error combo-option-error");
- assert.match(lineError.props.children,/sin superar la cantidad disponible/,"la línea avisa sin abrir nada");
+ assert.match(lineError.props.children,/mayor a cero o déjalo vacío/,"la línea avisa sin abrir nada");
  ui.wizard().view.find(node=>node.type==="Button"&&node.props.id==="combo-submit").props.onClick();
  assert.equal(ui.page().some(node=>node.props?.title==="Menú registrado"),false);
  assert.equal(quotaInput(ui.composition()).props["aria-describedby"],"combo-group-0-option-0-error","el error queda junto al campo, no arriba de la hoja");
 });
 
-test("editar conserva la reserva persistida sin sustituirla por el saldo",()=>{
+test("editar conserva el tope persistido sin sustituirlo por el saldo",()=>{
  const ui=mount();ui.edit({id:"combo",name:"Menú",description:"",price:"25",availableFrom:null,availableUntil:null,groups:[{name:"Segundo",required:true,minSelections:1,maxSelections:1,options:[{productId:"lomo",quota:4,surcharge:"0.00"}]}]});
- assert.equal(quotaInput(adjust(ui)).props.value,"4");assert.equal(quotaInput(ui.composition()).props.max,15);
+ assert.equal(quotaInput(adjust(ui)).props.value,"4");assert.equal(quotaInput(ui.composition()).props.max,undefined);
 });
 
 test("las cantidades del selector se aíslan por empresa/local y se refrescan con el wizard abierto",()=>{
@@ -174,11 +179,11 @@ test("las cantidades del selector se aíslan por empresa/local y se refrescan co
  assert.equal(query(a).refetchInterval,10000);assert.equal(query(a).enabled,true);
 });
 
-test("el payload persiste la reserva precargada y no quedan campos antiguos en el wizard",async()=>{
+test("el payload envía sin tope una opción nueva y no quedan campos antiguos en el wizard",async()=>{
  let payload;
  const api=compile("infrastructure/combos-api.ts",name=>name==="@/shared/api/client"?{apiFetch:async(_,options)=>{payload=JSON.parse(options.body);return{id:"combo"}}}:name==="../domain/sale-window"?saleWindow:require(name));
  await api.saveCombo({name:"Menú",description:"",price:"25",availableFrom:"2026-10-18T00:00",availableUntil:"2026-10-24T23:59",availableDays:[],groups:[{name:"Segundo",required:true,minSelections:1,maxSelections:1,options:[quantities.createComboOption(base)]}]},null,"America/Lima");
- assert.equal(payload.groups[0].options[0].quota,15);
+ assert.equal(payload.groups[0].options[0].quota,null);
  assert.deepEqual([payload.availableFrom,payload.availableUntil],["2026-10-18T05:00:00.000Z","2026-10-25T04:59:00.000Z"],"el API recibe las fechas en la hora del local");
  for(const file of ["domain/types.ts","domain/wizard-validation.ts","presentation/combos-page.tsx"]){assert.equal(read(file).includes("defaultDailyQuota"),false,file)}
 });
@@ -229,17 +234,21 @@ test("«Costo extra» reemplaza a «Recargo» y explica que se suma si eligen el
  const ui=mount();
  template(ui);
  const view=ui.composition();
- const hints=view.filter(node=>node.type==="FieldLabel");
+ const hints=view.filter(node=>node.type==="FieldLabel"&&node.props.hint?.startsWith("Monto"));
  assert.ok(hints.length>1,"ayuda en la fila de títulos y en cada línea (visible en móvil)");
  assert.ok(hints.every(node=>node.props.hint==="Monto que se suma si se elige este plato."));
  assert.equal(hints[0].props.children,"Costo extra");
- const label=view.find(node=>node.type==="label"&&node.props.className==="combo-cell-label");
+ const caps=view.filter(node=>node.type==="FieldLabel"&&node.props.hint?.startsWith("Máximo"));
+ assert.ok(caps.length>1,"el tope explica en títulos y en cada línea que es diario y no separa porciones");
+ assert.match(caps[0].props.hint,/cada día.*No separa porciones.*Vacío: hasta agotar/);
+ assert.equal(caps[0].props.children,"Tope");
+ const label=view.find(node=>node.type==="label"&&node.props.className==="combo-cell-label"&&node.props.htmlFor?.includes("-surcharge-"));
  assert.equal(label.props.children,"Costo extra");assert.match(label.props.htmlFor,/-surcharge-/);
  assert.doesNotMatch(read("presentation/combos-page.tsx"),/>Recargo</,"sin «Recargo» en la interfaz");
  const css=read("presentation/combo-editor.css");
  assert.match(css,/\.combo-option-table \{[^}]*overflow: clip;/,"clip: enfocar la ayuda no desplaza las columnas");
- assert.match(css,/\.combo-option-head > :not\(:first-child\) \{\s*justify-self: end;/,"Reservar y Costo extra terminan en el borde derecho de su campo");
- assert.match(css,/\.combo-option-head > :nth-child\(2\) \{\s*padding-right: calc\(var\(--space-2-5\) \+ var\(--stroke-1\)\);/,"Reservar termina con el texto del sufijo");
+ assert.match(css,/\.combo-option-head > :not\(:first-child\) \{\s*justify-self: end;/,"Tope y Costo extra terminan en el borde derecho de su campo");
+ assert.match(css,/\.combo-option-head > :nth-child\(2\) \{\s*padding-right: calc\(var\(--space-2-5\) \+ var\(--stroke-1\)\);/,"Tope termina con el texto del sufijo");
 });
 
 test("elegir un plato cierra el buscador: no salta al siguiente ni crece la lista bajo el cursor",()=>{

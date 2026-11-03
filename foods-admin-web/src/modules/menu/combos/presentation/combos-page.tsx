@@ -12,7 +12,7 @@ import {useSession} from "@/providers/session-context";
 import {formatRegionalCalendarDate,formatRegionalDateTime} from "@/shared/i18n/regional-format";
 import {useDebouncedValue} from "@/shared/hooks/use-debounced-value";
 import type {Combo,ComboDetail,Draft,Group,Product} from "../domain/types";
-import {createComboOption,isReservationValid,reservationLimit} from "../domain/option-quantity";
+import {createComboOption,isCapValid,availableUnits} from "../domain/option-quantity";
 import {validateComboDraft,type WizardIssue} from "../domain/wizard-validation";
 import {applySaleWindow,changeSaleDate,fullDaySchedule,isOutsideDates,isoToZonedInput,saleWindowOf,zonedInputToIso,type SaleWindow} from "../domain/sale-window";
 import {belongsToGroup,normalize} from "../domain/option-groups";
@@ -23,6 +23,7 @@ const blank:Draft={name:"",description:"",price:"",groups:[],availableFrom:"",av
 const templates:Group[]=[{name:"Entrada",required:true,minSelections:1,maxSelections:1,options:[]},{name:"Segundo",required:true,minSelections:1,maxSelections:1,options:[]},{name:"Postre",required:false,minSelections:0,maxSelections:1,options:[]},{name:"Bebidas",required:false,minSelections:0,maxSelections:1,options:[]}];
 /** Ayuda de «Costo extra»: «Recargo» sonaba a penalización. */
 const EXTRA_COST_HINT="Monto que se suma si se elige este plato.";
+const CAP_HINT="Máximo que este menú vende de este plato cada día. No separa porciones: la carta usa el mismo stock. Vacío: hasta agotar.";
 const DAYS=[{d:1,n:"Lun"},{d:2,n:"Mar"},{d:3,n:"Mié"},{d:4,n:"Jue"},{d:5,n:"Vie"},{d:6,n:"Sáb"},{d:0,n:"Dom"}];
 const SALE_WINDOWS:{value:SaleWindow;label:string}[]=[{value:"always",label:"Siempre"},{value:"days",label:"Elegir días"}];
 /** Identidad de cada parte: tono suave e icono propio, como las tarjetas del Dashboard. Las partes nuevas rotan los tonos.
@@ -235,7 +236,7 @@ function ComboEditor({draft,setDraft,products,productsLoading,productsError,retr
     if(saleWindow==="days"&&!draft.availableDays.length&&!draft.availableFrom&&!draft.availableUntil){showIssue({step:3,field:"combo-days",message:"Elige al menos un día o una fecha."});return;}
     finish();
   }
-  function addTemplate(){update({...draft,groups:templates.map(group=>({...group,options:products.filter(product=>product.active&&reservationLimit(product)!==0&&belongsToGroup(product,group.name)).map(createComboOption)}))})}
+  function addTemplate(){update({...draft,groups:templates.map(group=>({...group,options:products.filter(product=>product.active&&availableUnits(product)!==0&&belongsToGroup(product,group.name)).map(createComboOption)}))})}
   function addGroup(){const index=draft.groups.length;update({...draft,groups:[...draft.groups,{name:"",required:true,minSelections:1,maxSelections:1,options:[]}]});reveal(`combo-group-${index}-name`)}
   function groupAt(index:number,next:Group){update({...draft,groups:draft.groups.map((group,position)=>position===index?next:group)})}
   function removeGroup(index:number){update({...draft,groups:draft.groups.filter((_,position)=>position!==index)})}
@@ -308,7 +309,7 @@ function ComboEditor({draft,setDraft,products,productsLoading,productsError,retr
 
 type CompositionProps={draft:Draft;products:Product[];productsLoading:boolean;productsError:boolean;retryProducts:()=>void;currencySymbol:string;currencyPosition:"before"|"after";errorFor:(field:string)=>string|undefined;addTemplate:()=>void;addGroup:()=>void;groupAt:(index:number,group:Group)=>void;removeGroup:(index:number)=>void};
 
-/** Partes del menú: el nombre es el título editable y cada opción una línea con su reserva y costo extra a la vista. */
+/** Partes del menú: el nombre es el título editable y cada opción una línea con su tope y costo extra a la vista. */
 function CompositionStep({draft,products,productsLoading,productsError,retryProducts,currencySymbol,currencyPosition,errorFor,addTemplate,addGroup,groupAt,removeGroup}:CompositionProps){
   if(productsLoading)return <div className="combo-parts-loading" role="status" aria-label="Cargando productos">{Array.from({length:3},(_,index)=><i key={index}/>)}</div>;
   if(productsError)return <ErrorState className="combo-parts-state" title="No pudimos cargar los productos" text="Revisa tu conexión e inténtalo de nuevo." onRetry={retryProducts}/>;
@@ -345,25 +346,25 @@ function CompositionStep({draft,products,productsLoading,productsError,retryProd
         </header>
         {nameError&&<small id={`${prefix}-name-error`} className="field-error" role="alert">{nameError}</small>}
         {group.options.length>0&&<div className="combo-option-table">
-          <div className="combo-option-head"><span aria-hidden="true">Opción</span><span aria-hidden="true">Reservar</span><FieldLabel hint={EXTRA_COST_HINT}>Costo extra</FieldLabel></div>
+          <div className="combo-option-head"><span aria-hidden="true">Opción</span><FieldLabel hint={CAP_HINT}>Tope</FieldLabel><FieldLabel hint={EXTRA_COST_HINT}>Costo extra</FieldLabel></div>
           <ul className="combo-part-options">
             {group.options.map((option,optIndex)=>{
               const product=products.find(p=>p.id===option.productId);
-              const limit=product?reservationLimit(product):null;
+              const limit=product?availableUnits(product):null;
               const quotaId=`${prefix}-quota-${optIndex}`,surchargeId=`${prefix}-surcharge-${optIndex}`,errorId=`${prefix}-option-${optIndex}-error`;
-              const quotaInvalid=Boolean(product&&!isReservationValid(option.quota,product))||Boolean(errorFor(quotaId));
-              const message=product&&!isReservationValid(option.quota,product)?`Ingresa un entero sin superar la cantidad disponible (${limit??"sin límite"}).`:errorFor(quotaId)??errorFor(surchargeId);
+              const quotaInvalid=Boolean(product&&!isCapValid(option.quota,product))||Boolean(errorFor(quotaId));
+              const message=product&&!isCapValid(option.quota,product)?"Escribe un entero mayor a cero o déjalo vacío.":errorFor(quotaId)??errorFor(surchargeId);
               const name=product?.name??"Producto eliminado";
               const soldOut=option.quota==="0"||limit===0;
               const setOption=(next:typeof option)=>groupAt(index,{...group,options:group.options.map((item,position)=>position===optIndex?next:item)});
               return <li className="combo-option" key={option.productId}>
                 <span className="combo-option-name"><span className="combo-option-title"><b>{name}</b>{soldOut&&<Status tone="gray">Agotado</Status>}</span><small>{product?.categoryName??"Sin categoría"}</small></span>
-                <label className="combo-option-cell"><span className="combo-cell-label">Reservar</span>
+                <div className="combo-option-cell"><FieldLabel hint={CAP_HINT}><label htmlFor={quotaId} className="combo-cell-label">Tope</label></FieldLabel>
                   <span className={quotaInvalid?"money-input suffix combo-quota invalid":"money-input suffix combo-quota"}>
-                    <Input id={quotaId} type="number" inputMode="numeric" min="0" step="1" max={limit??undefined} value={option.quota} onChange={e=>setOption({...option,quota:e.target.value})} placeholder="Sin límite" aria-invalid={quotaInvalid} aria-describedby={message?errorId:undefined}/>
-                    {limit!==null&&<span>de {limit}</span>}
+                    <Input id={quotaId} type="number" inputMode="numeric" min="1" step="1" value={option.quota} onChange={e=>setOption({...option,quota:e.target.value})} placeholder="Sin tope" aria-invalid={quotaInvalid} aria-describedby={message?errorId:undefined}/>
+                    <span aria-hidden="true">al día</span>
                   </span>
-                </label>
+                </div>
                 <div className="combo-option-cell"><FieldLabel hint={EXTRA_COST_HINT}><label htmlFor={surchargeId} className="combo-cell-label">Costo extra</label></FieldLabel>
                   <MoneyInput id={surchargeId} symbol={currencySymbol} position={currencyPosition} value={option.surcharge} onChange={e=>setOption({...option,surcharge:decimal(e.target.value)})} placeholder="0.00" aria-invalid={Boolean(errorFor(surchargeId))}/>
                 </div>
@@ -373,7 +374,7 @@ function CompositionStep({draft,products,productsLoading,productsError,retryProd
             })}
           </ul>
         </div>}
-        <ComboOptionPicker inputId={`${prefix}-product`} partName={group.name} products={products} excluded={group.options.map(option=>option.productId)} invalid={Boolean(productError)} describedBy={productError?`${prefix}-product-error`:undefined} onPick={product=>{if(product.active&&reservationLimit(product)!==0)groupAt(index,{...group,options:[...group.options,createComboOption(product)]})}}/>
+        <ComboOptionPicker inputId={`${prefix}-product`} partName={group.name} products={products} excluded={group.options.map(option=>option.productId)} invalid={Boolean(productError)} describedBy={productError?`${prefix}-product-error`:undefined} onPick={product=>{if(product.active&&availableUnits(product)!==0)groupAt(index,{...group,options:[...group.options,createComboOption(product)]})}}/>
         {productError&&<small id={`${prefix}-product-error`} className="field-error" role="alert">{productError}</small>}
       </section>;
     })}

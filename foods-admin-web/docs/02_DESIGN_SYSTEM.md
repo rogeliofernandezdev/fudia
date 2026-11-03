@@ -1320,7 +1320,7 @@ descargar y alternar al detalle HTML del informe sin depender del visor nativo.
   dos platos principales sin contabilizar la bebida como si fuera otro plato. Las opciones se seleccionan
   entre productos existentes; no se duplican fichas ni controles de disponibilidad.
   En composición se muestra siempre la obligatoriedad y la regla de elección de cada
-  parte; Reservar y Costo extra se editan directamente en cada línea. La disponibilidad del menú se deriva de las partes obligatorias.
+  parte; Tope (máximo diario del menú, vacío por defecto, no separa porciones) y Costo extra se editan directamente en cada línea. La disponibilidad del menú se deriva de las partes obligatorias.
 - «Cuándo se vende» es un selector de dos píldoras (`radiogroup`): «Siempre» (por
   defecto) y «Elegir días». La selección usa tinte `primary-50` / `primary-300` /
   `primary-700`, nunca azul sólido. **No existe «Solo hoy»**: obligaba a crear un

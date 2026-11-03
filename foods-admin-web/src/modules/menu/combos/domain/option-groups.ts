@@ -1,5 +1,5 @@
 import type {Product} from "./types";
-import {reservationLimit} from "./option-quantity";
+import {availableUnits} from "./option-quantity";
 
 export type ComboPickOption={value:string;label:string;category:string;limit:number|null};
 export type ComboPickGroup={label:string;options:ComboPickOption[]};
@@ -40,7 +40,7 @@ export function buildOptionGroups(products:Product[],excluded:string[],partName:
     const category=product.categoryName?.trim()||NO_CATEGORY;
     const key=normalize(category);
     const section=sections.get(key)??{label:capitalize(category),options:[],matches:belongsToGroup(product,partName)};
-    section.options.push({value:product.id,label:product.name,category:capitalize(category),limit:reservationLimit(product)});
+    section.options.push({value:product.id,label:product.name,category:capitalize(category),limit:availableUnits(product)});
     sections.set(key,section);
   }
   return Array.from(sections.values())

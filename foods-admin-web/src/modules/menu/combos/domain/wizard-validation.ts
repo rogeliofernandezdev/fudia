@@ -1,5 +1,5 @@
 import type {Draft,Product} from "./types";
-import {isReservationValid} from "./option-quantity";
+import {isCapValid} from "./option-quantity";
 
 export type WizardIssue={step:number;field:string;message:string};
 const amount=(value:string)=>/^\d+(\.\d{1,2})?$/.test(value);
@@ -22,7 +22,7 @@ export function validateComboStep(draft:Draft,products:Product[],step:number):Wi
         const product=products.find(item=>item.id===option.productId&&item.active);
         if(!product||selected.has(option.productId))return issue(`${prefix}-product`,`Revisa los productos de ${group.name}: deben estar activos y no repetirse.`);
         selected.add(option.productId);
-        if(!isReservationValid(option.quota,product))return issue(`${prefix}-quota-${position}`,`Revisa la cantidad reservada de ${product.name}. Debe ser un entero y no superar la cantidad disponible.`);
+        if(!isCapValid(option.quota,product))return issue(`${prefix}-quota-${position}`,`Revisa el tope de ${product.name}: escribe un entero mayor a cero o déjalo vacío.`);
         if(option.surcharge.trim()&&!amount(option.surcharge))return issue(`${prefix}-surcharge-${position}`,`Ingresa un costo extra válido para ${product.name}.`);
       }
     }

@@ -21,8 +21,11 @@ Los combos consumen las existencias de sus componentes: Orders agrega las
 cantidades de cada plato suelto y de todas las selecciones de combos antes de
 solicitar el consumo transaccional a Inventory. Menu informa `remaining` por
 componente y `quotaRemaining` por alternativa del menú, local y día operativo.
-El cupo del menú es un límite adicional, no crea existencias independientes.
+El cupo del menú («Tope» en la interfaz) es un límite diario adicional, no reserva
+existencias: carta y menú consumen el mismo stock y el contador se reinicia cada
+día operativo. Al registrar la alternativa solo se exige que tenga stock (≥ 1);
+el tope puede superar las existencias del día.
 Una alternativa agotada no puede añadirse a un combo nuevo ni venderse; un
 cupo explícito debe ser mayor que cero. `none` no limita cantidades mientras
-no se marque agotado. Al editar, las reservas del propio pedido se reutilizan
+no se marque agotado. Al editar, los consumos del propio pedido se reutilizan
 una sola vez. El backend revalida existencias y cupos al guardar el pedido.

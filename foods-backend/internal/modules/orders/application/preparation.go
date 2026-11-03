@@ -312,7 +312,7 @@ func (a *Orders) prepareItems(ctx context.Context, s scope, existingOrderID stri
 			allowedForOrder = existingUsage
 		}
 		if plannedOptionUsage[key] > allowedForOrder {
-			return nil, 0, orderFailure(apperror.Conflict, "combo_option_quota_exceeded", optionName+" ya alcanzó el cupo reservado para este menú.")
+			return nil, 0, orderFailure(apperror.Conflict, "combo_option_quota_exceeded", optionName+" ya alcanzó el tope de hoy en este menú.")
 		}
 	}
 	return prepared, subtotal, nil

@@ -276,7 +276,7 @@
   color: var(--danger-600);
 }
 
-/* Opciones como tabla ligera: reserva y costo extra siempre a la vista, con una sola fila de títulos por parte. */
+/* Opciones como tabla ligera: tope y costo extra siempre a la vista, con una sola fila de títulos por parte. */
 /* `clip` recorta el radio sin volver desplazable la tabla: el tooltip oculto ya no la corre al enfocar la ayuda. */
 .combo-option-table {
   min-width: 0;
@@ -375,14 +375,14 @@
   display: none;
 }
 
-/* «Reservar» y «Costo extra» terminan en el borde derecho de su campo (pedido del usuario, 2026-10-20); «Opción»
+/* «Tope» y «Costo extra» terminan en el borde derecho de su campo (pedido del usuario, 2026-10-20); «Opción»
    sigue a la izquierda. La ayuda se ancla a la etiqueta, no a la «i»: se abre hacia abajo desde ese borde derecho
-   con el ancho de su columna (140 px), así no tapa «Reservar» ni queda cortada por el `overflow:clip` de la tabla. */
+   con el ancho de su columna (140 px), así no tapa «Tope» ni queda cortada por el `overflow:clip` de la tabla. */
 .combo-option-head > :not(:first-child) {
   justify-self: end;
 }
 
-/* «Reservar» termina donde termina el texto del sufijo («de 10»): mismo relleno que el adorno del campo más su borde. */
+/* «Tope» termina donde termina el texto del sufijo («al día»): mismo relleno que el adorno del campo más su borde. */
 .combo-option-head > :nth-child(2) {
   padding-right: calc(var(--space-2-5) + var(--stroke-1));
 }
@@ -734,7 +734,7 @@
     display: none;
   }
 
-  /* Móvil: nombre y papelera arriba; Reservar y Costo extra debajo con su etiqueta visible. */
+  /* Móvil: nombre y papelera arriba; Tope y Costo extra debajo con su etiqueta visible. */
   .combo-option {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) var(--size-44);
     padding: var(--space-2-5) var(--space-1) var(--space-3) var(--space-3);

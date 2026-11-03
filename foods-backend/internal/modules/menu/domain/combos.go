@@ -36,7 +36,7 @@ func ValidateCombo(in ComboInput) string {
 	for _, group := range in.Groups {
 		for _, option := range group.Options {
 			if option.Quota != nil && *option.Quota <= 0 {
-				return "La cantidad reservada debe ser mayor a cero."
+				return "El tope diario debe ser mayor a cero."
 			}
 		}
 		groupName := strings.TrimSpace(group.Name)
