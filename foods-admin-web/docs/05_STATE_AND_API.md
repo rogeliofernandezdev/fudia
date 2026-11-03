@@ -464,3 +464,23 @@ el formulario y se revalida si cambian las opciones. Solo el cobro administrativ
 envía `shiftId`. Cajeros y colaboradores conservan el turno asignado. El cobro
 identifica al actor y no cambia al abridor. Devoluciones usan `assignedShift`,
 sin heredar la elección administrativa de caja.
+
+## Campana de avisos del personal
+
+`modules/notifications` es un slice independiente: `NotificationBell` hace su
+propia consulta (`useNotices`) y el shell solo lo monta en la barra superior,
+antes del selector de local, y le pasa `canOpen` para saber qué pantallas puede
+abrir el usuario. La consulta `GET /api/admin/notices` (BFF → `/v1/admin/notices`)
+usa la clave `["staff-notices", empresa, local, usuario]`, se refresca cada 15 s,
+al recuperar foco y al abrir la campana, y solo se activa con `tables.read` o
+`cash.manage`; sin esos permisos la campana no se muestra. El backend decide qué
+avisos ve cada rol y devuelve los textos redactados: el panel no arma mensajes
+ni filtra por rol.
+
+Abrir un aviso lo marca como leído al instante (actualización optimista con
+reversión si falla) y navega a la primera pantalla permitida para su tipo:
+pedidos y llamados de mesa → Salón; ventas por mostrador, delivery y recojo →
+Punto de venta; cuenta pedida → Punto de venta o Salón; comanda lista → Salón si
+tiene mesa y Pedidos si no. «Marcar como leídos» aplica a todos los visibles del
+usuario. La lista tiene skeleton, error con Reintentar y estado vacío; un aviso
+nuevo se anuncia por `aria-live` sin robar el foco.

@@ -347,3 +347,9 @@ test("pedido manual: CSS único, responsive, estados remotos y actualización de
  const text=css.toString();assert.ok(text.includes("100dvh"));assert.ok(text.includes("overflow-y:auto"));assert.ok(text.includes("overflow-x:hidden"));assert.ok(text.includes("@media(max-width:600px)"));
  const catalog=readFileSync(new URL("salon/presentation/comanda-catalog.tsx",root),"utf8");assert.ok(catalog.includes("MenuRows"));assert.ok(catalog.includes("salonCatalog.refetch()"));assert.ok(catalog.includes("comboCatalog.refetch()"));
 });
+test("pedido manual: en móvil Mostrador, Recojo y Delivery comparten una fila sin pestañas ocultas",()=>{
+ const css=readFileSync(new URL("orders/presentation/manual-order.css",root),"utf8");
+ const mobile=css.slice(css.indexOf("@media(max-width:600px)"));
+ assert.match(mobile,/\.manual-order-channel\.ds-tabs button\{flex:1 1 0;gap:var\(--space-1\);padding-inline:var\(--space-1\)\}/,"«Mostrador» cabe sin partirse");
+ assert.match(mobile,/\.manual-order-type \.manual-order-channel\.ds-tabs:has\(>button:last-child:nth-child\(odd\)\)::after\{content:none\}/);
+});

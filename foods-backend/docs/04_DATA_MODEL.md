@@ -78,6 +78,48 @@ y empresa. El estado expuesto (`marketingConsentStatus`) es el último evento;
 sin eventos, `granted` si el valor ya estaba activo y `pending` si no. Editar el
 interruptor en Clientes registra el evento `admin` en la misma transacción.
 
+## Avisos al personal (migración 000103)
+
+`staff_notices` alimenta la campana del panel. Cada fila pertenece a una empresa
+y un local, tiene `kind` (`table_order`, `counter_order`, `delivery_order`,
+`pickup_order`, `order_ready`, `bill_requested`, `assistance_requested`),
+`audience` (`service`, `cashier`, `all`), título y detalle ya redactados, y
+opcionalmente `order_id` (FK con `ON DELETE CASCADE`) y `table_id`.
+`dedupe_key` es único por empresa: un reintento del mismo evento (mismo pedido y
+`requestId`, misma comanda lista, misma solicitud de atención) no duplica el aviso.
+`staff_notice_reads` guarda la lectura por usuario: un aviso compartido sigue sin
+leer para cada mozo o cajero hasta que lo abra.
+
+| Evento | Publica | Audiencia |
+| --- | --- | --- |
+| Pedido o ronda por QR de mesa | Concierge | `service` |
+| Venta por mostrador desde su QR | Concierge | `cashier` |
+| Delivery o recojo por WhatsApp | Concierge | `cashier` |
+| Cuenta pedida (solo si se registró la solicitud) | Concierge | `all` |
+| Llamado al personal (handoff) | Concierge | `service` |
+| Comanda de Cocina/Barra lista | Orders | `service` con mesa; `all` sin mesa |
+
+Las audiencias se resuelven al leer con la autorización de Identity en el local:
+`tables.read` ve `service`, `cash.manage` ve `cashier`, y cualquiera de las dos ve
+`all`. La lectura cubre las últimas 24 horas (30 avisos como máximo). Los avisos
+se publican después del commit del evento con mejor esfuerzo: un fallo no revierte
+el pedido ni la cuenta. Los textos los redacta `notifications/domain`; los
+módulos que publican solo entregan los hechos mediante `notifications/contracts`.
+Los pedidos registrados por el propio personal desde Pedidos no generan avisos.
+
+### Avisos al cliente por WhatsApp (migración 000104)
+
+`customer_notices` es la bandeja de salida de los avisos «pedido listo». Cuando
+Cocina/Barra marca lista una comanda y con ello el pedido queda `listo`, Orders
+registra un aviso si el pedido es de mostrador o recojo y tiene una conversación
+de Concierge (`concierge_delivery_requests`). Guarda el teléfono y la
+conversación del pedido; `UNIQUE (order_id, kind)` avisa una sola vez. Concierge
+reclama con `FOR UPDATE SKIP LOCKED` (reserva de 60 s en `claimed_until`, máximo
+5 intentos, avisos de las últimas 2 horas, pedidos no cancelados) y confirma con
+`status='dispatched'`. Los textos los redacta Concierge; el backend entrega
+código, forma de entrega (`counter`/`pickup`), empresa y local. Mesa, delivery y
+pedidos registrados por el personal no avisan al cliente.
+
 ## Entrega y cierre de pedidos de mesa
 
 La mesa solo tiene estados Libre/Ocupada. El primer pedido guardado crea una

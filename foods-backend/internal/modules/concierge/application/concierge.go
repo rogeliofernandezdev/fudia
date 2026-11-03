@@ -7,12 +7,14 @@ import (
 	"github.com/foods-platform/foods-backend/internal/modules/concierge/domain"
 	deliverycontracts "github.com/foods-platform/foods-backend/internal/modules/delivery/contracts"
 	menucontracts "github.com/foods-platform/foods-backend/internal/modules/menu/contracts"
+	noticecontracts "github.com/foods-platform/foods-backend/internal/modules/notifications/contracts"
 	ordercontracts "github.com/foods-platform/foods-backend/internal/modules/orders/contracts"
 	orgcontracts "github.com/foods-platform/foods-backend/internal/modules/organizations/contracts"
 	servicecontracts "github.com/foods-platform/foods-backend/internal/modules/service/contracts"
 	customercontracts "github.com/foods-platform/foods-backend/internal/modules/customers/contracts"
 	"github.com/foods-platform/foods-backend/internal/platform/apperror"
 	"github.com/foods-platform/foods-backend/internal/platform/requestscope"
+	"math"
 	"strings"
 )
 
@@ -50,6 +52,7 @@ type Concierge struct {
 	audit    audit.Repository
 	branding orgcontracts.BrandingReader
 	customers Customers
+	notices  noticecontracts.Publisher
 }
 
 func New(repo Repository, menu Menu, orders Orders, audit audit.Repository) *Concierge {
@@ -69,6 +72,27 @@ type Customers interface {
 func (a *Concierge) WithCustomers(customers Customers) *Concierge {
 	a.customers = customers
 	return a
+}
+// WithNotices avisa al personal de pedidos, cuentas y llamados que llegan por WhatsApp.
+func (a *Concierge) WithNotices(notices noticecontracts.Publisher) *Concierge {
+	a.notices = notices
+	return a
+}
+
+// notify publica un aviso después de registrar el evento; un fallo no afecta al comensal.
+func (a *Concierge) notify(ctx context.Context, s scope, notice noticecontracts.Notice) {
+	if a.notices != nil {
+		_ = a.notices.Publish(ctx, s, notice)
+	}
+}
+
+// productCount suma las cantidades pedidas para el aviso al personal.
+func productCount(items []ordercontracts.OrderItemInput) int {
+	total := 0.0
+	for _, item := range items {
+		total += item.Qty
+	}
+	return int(math.Round(total))
 }
 func conciergeFailure(k apperror.Kind, c, m string) error { return apperror.New(k, c, m) }
 
@@ -148,9 +172,23 @@ func (a *Concierge) Submit(ctx context.Context, token string, in ordercontracts.
 		return ordercontracts.TableSubmission{}, err
 	}
 	if qr.ServiceType == servicecontracts.ServiceTypeCounter {
-		return a.orders.SubmitCounter(ctx, qr.Scope, qr.TableID, token, in)
+		out, err := a.orders.SubmitCounter(ctx, qr.Scope, qr.TableID, token, in)
+		if err == nil {
+			o := out.Order
+			a.notify(ctx, qr.Scope, noticecontracts.CounterOrder(qr.TableName, o.ID, o.Code, o.CustomerName, productCount(in.Items), noticecontracts.Money(qr.CurrencySymbol, o.Total)))
+		}
+		return out, err
 	}
-	return a.orders.SubmitTable(ctx, qr.Scope, qr.TableID, token, in)
+	out, err := a.orders.SubmitTable(ctx, qr.Scope, qr.TableID, token, in)
+	if err == nil {
+		// Mismo criterio de idempotencia que Orders: sin requestId cuenta la conversación.
+		requestID := strings.TrimSpace(in.RequestID)
+		if requestID == "" {
+			requestID = strings.TrimSpace(in.ConversationID)
+		}
+		a.notify(ctx, qr.Scope, noticecontracts.TableOrder(qr.TableID, qr.TableName, out.Order.ID, strings.TrimSpace(in.CustomerName), productCount(in.Items), requestID))
+	}
+	return out, err
 }
 func (a *Concierge) Bill(ctx context.Context, token string, in domain.BillRequestInput) (Bill, error) {
 	var result Bill
@@ -174,8 +212,13 @@ func (a *Concierge) Bill(ctx context.Context, token string, in domain.BillReques
 		return result, err
 	}
 
-	if _, err = a.repo.RecordBillRequest(ctx, s, qr, out, in); err != nil {
+	recorded, err := a.repo.RecordBillRequest(ctx, s, qr, out, in)
+	if err != nil {
 		return result, conciergeFailure(apperror.Unavailable, "bill_unavailable", "No pudimos registrar la solicitud de cuenta.")
+	}
+	// Un reintento con el mismo requestId no se registra de nuevo ni vuelve a avisar.
+	if recorded > 0 {
+		a.notify(ctx, s, noticecontracts.BillRequested(qr.TableID, qr.TableName, out.ID, noticecontracts.Money(qr.CurrencySymbol, out.RemainingAmount), in.RequestID))
 	}
 
 	return Bill{
@@ -230,6 +273,7 @@ func (a *Concierge) Handoff(ctx context.Context, token string, in domain.Handoff
 	if err != nil {
 		return result, conciergeFailure(apperror.Unavailable, "handoff_unavailable", "No pudimos recuperar la solicitud de atención.")
 	}
+	a.notify(ctx, s, noticecontracts.AssistanceRequested(qr.TableID, qr.TableName, out.Reason, id))
 	return out, nil
 
 }

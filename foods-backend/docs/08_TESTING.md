@@ -256,3 +256,24 @@ el alta con `origin=counter`. Unitarias: `orders/domain/counter_test.go`
 (origen y `TableRequirement`), `service/domain` (tipo por defecto y valores
 válidos), `billing/domain/payment_readiness_test.go` y
 `customers/application` (validación del consentimiento).
+
+## Avisos al personal
+
+`staff_notices_integration_test.go` recorre, con PostgreSQL efímero, la campana
+con tres roles reales (mozo con `tables.read`, cajero con `cash.manage`, cocinero
+sin audiencias): pedido por QR de mesa y su reintento (un solo aviso), ronda
+adicional (otro aviso), venta por mostrador solo para caja, cuenta pedida para
+mozos y caja sin duplicar el reintento, llamado al mozo solo para mozos, comanda
+de mostrador lista para ambos, campana vacía para cocina y para otra empresa,
+lectura por usuario de un aviso compartido, 404 al marcar un aviso no visible o
+ajeno y «marcar todo» por usuario. Unitarias en `notifications/domain`
+(audiencias por permisos, normalización y textos de cada aviso). La limpieza de
+`seedInventoryScope` borra `staff_notices` antes que pedidos y locales.
+
+`customer_notices_integration_test.go` cubre el aviso «pedido listo» al cliente:
+sin aviso antes de terminar Cocina, aviso único para el pedido de mostrador de
+Concierge con código, forma de entrega, teléfono, conversación, empresa y local;
+ninguno para mesa ni para el mostrador registrado por el personal; 401 sin clave
+de Concierge; reclamo reservado, vencido y vuelto a entregar; confirmación
+idempotente y 404 para un aviso inexistente. Unitarias en
+`notifications/domain/customer_test.go` (canales que avisan y validación).

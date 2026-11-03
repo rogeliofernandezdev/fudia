@@ -291,6 +291,24 @@ class OrderResult(BaseModel):
     total: Decimal
 
 
+class CustomerNotice(BaseModel):
+    """Aviso de foods-backend para el cliente de una conversación.
+
+    Solo trae hechos del pedido; Concierge redacta el mensaje.
+    """
+
+    id: str
+    kind: Literal["order_ready"] = "order_ready"
+    orderId: str = ""
+    orderCode: str = ""
+    # counter: venta por mostrador; pickup: recojo en el local.
+    fulfillment: Literal["counter", "pickup"] = "counter"
+    customerPhone: str = ""
+    conversationId: str = ""
+    organizationName: str = ""
+    locationName: str = ""
+
+
 class InboundMessage(BaseModel):
     message_id: str
     phone: str
@@ -304,6 +322,8 @@ class InboundMessage(BaseModel):
     # Per-conversation order assigned atomically by Redis at enqueue; filled
     # in on delivery (0 for direct, unqueued calls).
     sequence: int = 0
+    # Aviso de foods-backend encolado por NoticeRelay: no es texto del cliente.
+    notice: CustomerNotice | None = None
 
 
 EffectKind = Literal[

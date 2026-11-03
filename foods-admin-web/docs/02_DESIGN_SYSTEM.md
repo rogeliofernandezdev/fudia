@@ -127,6 +127,12 @@ Reglas:
   acompañar una etiqueta visible; no usarlo solo para comunicar información ni
   como control sin etiqueta. El valor por defecto sigue tenue. Rojo exige una
   intención real de egreso, caída o error.
+- Contador de la campana de avisos: única variante sólida roja fuera de las
+  acciones destructivas, aprobada el 2026-11-02 (como el punto rojo de la
+  campana en la referencia). Píldora `danger-600` con cifra blanca (máximo
+  «99+») y borde de 2 px `surface`, solo mientras haya avisos sin leer. No se
+  reutiliza en menús, pestañas ni estados; dentro del popover el aviso sin leer
+  se marca con un punto `primary-600` y título en negrita.
 - Transparencias por paso (`ink-950-alpha-8`, `primary-600-alpha-24`…), no
   porcentajes sueltos.
 
@@ -771,7 +777,11 @@ sola columna con el mapa bajo la dirección (176 px en móvil). Mostrador y Reco
 conservan el ancho de 580 px con solo Nombre y Teléfono opcionales. Las pestañas
 vienen de `manualChannelOptions` (Mostrador | Recojo en local | Delivery) y
 Mostrador (icono `store`) es la inicial: la venta por mostrador es el alta más
-frecuente del cajero y no pide elegir un mostrador físico.
+frecuente del cajero y no pide elegir un mostrador físico. Excepción acotada al
+estándar móvil de dos pestañas deslizables: en ≤600 px los tres tipos comparten
+una sola fila en partes iguales (`.manual-order-channel`, sin el relleno del
+último par) para que Delivery no quede oculto; «Recojo en local» puede ocupar
+dos líneas dentro de su área de 44 px.
 
 Marcar o mover el pin guarda el punto (viaja en el alta) y cotiza con las
 tarifas del local, las mismas de Concierge: llena «Costo de envío»
@@ -2022,6 +2032,8 @@ una segunda línea discreta «vía WhatsApp» (`order-channel-origin`, icono
 venta por mostrador (`origin=counter`, del cajero o del QR de mostrador por
 Concierge) queda en Recojo y usa la misma segunda línea con icono `store` y el
 texto «Mostrador»; en Cocina la comanda agrega «· Mostrador» junto al número.
+En móvil (≤700 px), donde la columna Canal se oculta, el origen baja como línea
+discreta «Mostrador» bajo el cliente (`order-mobile-origin`), antes de la fecha.
 
 Pedidos reutiliza esta misma estructura del detalle de Salón: fecha en el contexto
 del cuerpo y cantidades circulares por producto, sin conteo agregado de unidades.

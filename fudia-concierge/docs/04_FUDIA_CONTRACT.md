@@ -81,6 +81,25 @@ Con un QR de mostrador, `POST .../orders` crea un pedido independiente por cada
 `customerName`; `POST .../bill` responde `409 counter_has_no_bill`. El backend
 decide el flujo por el QR, nunca por un campo del cuerpo.
 
+## Avisos al cliente («pedido listo»)
+
+Cuando Cocina/Barra deja listo todo un pedido de mostrador o recojo creado por
+Concierge, foods-backend registra un aviso en su bandeja de salida. Estas rutas
+son globales (sin `{token}`) y usan la misma clave `X-Fudia-Concierge-Key`:
+
+- `GET /v1/integrations/concierge/notices/pending?limit=20` reserva hasta 50
+  avisos por 60 s y devuelve `{items:[{id, kind:"order_ready", orderId,
+  orderCode, fulfillment:"counter"|"pickup", customerPhone, conversationId,
+  organizationName, locationName, createdAt}]}`. Un reclamo no confirmado vence
+  y el aviso vuelve (máximo 5 intentos, avisos de las últimas 2 horas, pedidos no
+  cancelados).
+- `POST /v1/integrations/concierge/notices/{id}/dispatched` confirma que el aviso
+  ya está encolado; es idempotente (`204`), `404` si no existe.
+
+foods-backend solo entrega hechos; Concierge redacta el mensaje. Los pedidos de
+mesa (los entrega el mozo), los de delivery y los registrados por el personal no
+generan aviso.
+
 ## Cliente y consentimiento promocional
 
 POST /v1/integrations/concierge/{token}/customer

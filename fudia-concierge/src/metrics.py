@@ -91,6 +91,11 @@ PROCESSING_RECOVERIES = Counter(
     "Messages answered from persisted effects instead of re-running the model.",
     ["effect", "result"],
 )
+CUSTOMER_NOTICES = Counter(
+    "fudia_concierge_customer_notices_total",
+    "Customer notices from foods-backend (order ready) by relay and preparation result.",
+    ["result"],
+)
 MESSAGES_SUPERSEDED = Counter(
     "fudia_concierge_messages_superseded_total",
     "Messages or replies dropped because a newer QR context replaced them.",

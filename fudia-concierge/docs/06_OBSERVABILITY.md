@@ -68,6 +68,7 @@ Para llamadas LLM se registran modelo, nivel (`lite`/`flash`), latencia, número
 - `fudia_concierge_processing_recoveries_total` (`effect`, `result`);
 - `fudia_concierge_messages_superseded_total` (`phase`);
 - `fudia_concierge_outbound_replies_total` (`state`);
+- `fudia_concierge_customer_notices_total` (`result`: `relayed`, `no_phone`, `relay_failed`, `prepared`, `outside_window`);
 - `fudia_concierge_queue_order_gaps_total`;
 - `fudia_concierge_queue_trimmed_total` (`stream`);
 - `fudia_concierge_queue_pending`, `fudia_concierge_queue_dead_letter`, `fudia_concierge_queue_stream_length` (estado compartido de Redis: agregar con `max`).

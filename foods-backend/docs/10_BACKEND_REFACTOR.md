@@ -41,6 +41,7 @@ archivos, credenciales y diagnóstico también se inyectan desde composición.
 | `reporting` | Dashboard y proyecciones operativas con snapshot coherente |
 | `audit` | Puerto y adaptador de auditoría compartida |
 | `delivery` | Validación pura de contacto utilizada por Orders |
+| `notifications` | Avisos al personal (campana): publicación por contrato, audiencias por permisos y lectura por usuario |
 
 Cocina pertenece al cumplimiento de pedidos en `orders`. La configuración de
 recetas pertenece a `menu`; su consumo y valorización pertenecen a `inventory`.

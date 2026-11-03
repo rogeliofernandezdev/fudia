@@ -309,6 +309,30 @@ paths:
       responses:
         "200": { description: Mesa activa, content: { application/json: { schema: { $ref: "#/components/schemas/PublicTableContext" } } } }
         "404": { description: QR inexistente, inactivo o deshabilitado }
+  /v1/integrations/concierge/notices/pending:
+    get:
+      operationId: claimConciergeCustomerNotices
+      summary: Reclama avisos pendientes para clientes de WhatsApp («pedido listo»)
+      description: >-
+        Bandeja de salida global para Fudia Concierge (clave X-Fudia-Concierge-Key). Se registra un aviso cuando
+        Cocina/Barra deja listo todo un pedido de mostrador o recojo creado por Concierge. Cada consulta reserva
+        hasta `limit` avisos por 60 s; si Concierge no confirma con /dispatched, el reclamo vence y el aviso vuelve
+        a entregarse (máximo 5 intentos, avisos de las últimas 2 horas, pedidos no cancelados). Concierge redacta
+        el mensaje y deduplica por id.
+      parameters:
+        - { in: query, name: limit, schema: { type: integer, minimum: 1, maximum: 50, default: 20 } }
+      responses:
+        "200": { description: Avisos reservados, content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/ConciergeCustomerNotice" } } } } } } }
+        "401": { description: Clave de Concierge inválida }
+  /v1/integrations/concierge/notices/{id}/dispatched:
+    post:
+      operationId: markConciergeCustomerNoticeDispatched
+      summary: Confirma que Concierge encoló el aviso en la conversación del cliente
+      parameters: [{ $ref: "#/components/parameters/EntityId" }]
+      responses:
+        "204": { description: Aviso despachado; repetir la operación no cambia nada }
+        "401": { description: Clave de Concierge inválida }
+        "404": { description: Aviso inexistente }
   /v1/integrations/concierge/{token}/menu:
     get:
       operationId: listConciergeMenu
@@ -1902,6 +1926,37 @@ paths:
         "204": { description: Solicitud marcada como atendida }
         "404": { description: Solicitud inexistente o ya atendida }
         "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/notices:
+    get:
+      operationId: listStaffNotices
+      summary: Campana del personal con los avisos de las últimas 24 horas del local activo
+      description: >-
+        Pedidos por QR de mesa (mozos), ventas por mostrador y pedidos de delivery o recojo (caja),
+        cuenta pedida (mozos y caja), llamado al mozo (mozos) y comandas listas (mozos; también caja si no hay mesa).
+        Las audiencias se resuelven por permisos del usuario en el local: tables.read para mozos y cash.manage para caja.
+        Devuelve hasta 30 avisos recientes y el total sin leer del usuario. Sin audiencias devuelve una lista vacía.
+      security: [{ sessionCookie: [] }]
+      responses:
+        "200": { description: Avisos recientes y cuántos siguen sin leer, content: { application/json: { schema: { $ref: "#/components/schemas/StaffNoticeFeed" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/notices/read:
+    post:
+      operationId: markAllStaffNoticesRead
+      summary: Marca como leídos todos los avisos visibles para el usuario
+      security: [{ sessionCookie: [] }]
+      responses:
+        "204": { description: Avisos marcados como leídos para este usuario }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/notices/{id}/read:
+    post:
+      operationId: markStaffNoticeRead
+      summary: Marca un aviso como leído para el usuario
+      security: [{ sessionCookie: [] }]
+      parameters: [{ $ref: "#/components/parameters/EntityId" }]
+      responses:
+        "204": { description: Aviso marcado como leído; repetir la operación no cambia nada }
+        "404": { description: El aviso no existe o no está dirigido al usuario }
+        "403": { $ref: "#/components/responses/Forbidden" }
   /v1/operations/orders:
     get:
       operationId: listOperationalOrders
@@ -2185,6 +2240,38 @@ components:
     Unauthorized: { description: Sesión inválida, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
     Forbidden: { description: Permiso insuficiente, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
   schemas:
+    ConciergeCustomerNotice:
+      type: object
+      required: [id, kind, orderId, orderCode, fulfillment, customerPhone, conversationId, organizationName, locationName, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        kind: { type: string, enum: [order_ready] }
+        orderId: { type: string, format: uuid }
+        orderCode: { type: string, description: Código PED- del pedido }
+        fulfillment: { type: string, enum: [counter, pickup], description: "counter: mostrador; pickup: recojo en el local" }
+        customerPhone: { type: string, description: Número de WhatsApp con el que se creó el pedido }
+        conversationId: { type: string }
+        organizationName: { type: string }
+        locationName: { type: string }
+        createdAt: { type: string, format: date-time }
+    StaffNotice:
+      type: object
+      required: [id, kind, title, detail, createdAt, read]
+      properties:
+        id: { type: string, format: uuid }
+        kind: { type: string, enum: [table_order, counter_order, delivery_order, pickup_order, order_ready, bill_requested, assistance_requested] }
+        title: { type: string, maxLength: 120, description: Texto final redactado por el backend }
+        detail: { type: string, maxLength: 240 }
+        orderId: { type: string, format: uuid }
+        tableId: { type: string, format: uuid }
+        createdAt: { type: string, format: date-time }
+        read: { type: boolean, description: Lectura del usuario autenticado }
+    StaffNoticeFeed:
+      type: object
+      required: [items, unread]
+      properties:
+        items: { type: array, maxItems: 30, items: { $ref: "#/components/schemas/StaffNotice" } }
+        unread: { type: integer, minimum: 0 }
     FiscalRequest:
       type: object
       description: "Comprobante pedido en el cobro que completa la cuenta; none o ausente no emite. Se valida en la transacción del pago: 400 invalid_fiscal_customer o invalid_fiscal_document; 409 fiscal_requires_full_payment, einvoicing_not_enabled, einvoicing_series_missing, order_has_fiscal_document o fiscal_total_mismatch revierten el pago completo."

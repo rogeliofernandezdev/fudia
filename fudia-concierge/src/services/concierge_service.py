@@ -27,6 +27,7 @@ from src.domain.models import (
 )
 from src.graph.app import build_graph
 from src.metrics import (
+    CUSTOMER_NOTICES,
     LOCK_LOST,
     MESSAGES_SUPERSEDED,
     PROCESSING_RECOVERIES,
@@ -41,6 +42,7 @@ from src.services.consent import (
     consent_question,
     consent_reply,
 )
+from src.services.customer_notices import CUSTOMER_WINDOW_SECONDS, order_ready_text
 from src.services.delivery_tools import apply_quote, delivery_summary
 from src.services.formatting import whatsapp_text
 from src.services.menu_tools import unavailable_carta_reply
@@ -299,8 +301,10 @@ class ConciergeService:
         lock_ttl_seconds: float = 30.0,
         clock: Callable[[], float] = time.time,
         table_idle_seconds: float = 10_800.0,
+        customer_window_seconds: float = CUSTOMER_WINDOW_SECONDS,
     ) -> None:
         self.store = store
+        self.customer_window_seconds = customer_window_seconds
         self.table_idle_seconds = table_idle_seconds
         self.fudia = fudia
         self.conversation_lock = (
@@ -444,6 +448,8 @@ class ConciergeService:
 
         channel_key = message.sender_phone_id.strip() or "default"
         identity = conversation_identity(message.phone, channel_key)
+        if message.notice is not None:
+            return await self._process_notice(message, channel_key, identity)
         if len(message.text) > self.max_message_chars:
             return await self._prepare_unlocked(
                 message, identity, record, TOO_LONG_REPLY
@@ -470,6 +476,70 @@ class ConciergeService:
             finally:
                 await self.conversation_lock.release(identity, lease.token)
         await self._report_usage(meter, message, record)
+        return record
+
+    async def _process_notice(
+        self,
+        message: InboundMessage,
+        channel_key: str,
+        identity: str,
+    ) -> ProcessingRecord:
+        """Aviso de foods-backend: sin modelo ni límite de frecuencia, bajo el
+        mismo lock que los mensajes del cliente para no intercalarse con un turno."""
+        lease = ConversationLease(
+            self.conversation_lock,
+            identity,
+            await self.conversation_lock.acquire(identity),
+        )
+        try:
+            return await self._guarded(
+                lease, self._notice_locked(message, channel_key, lease)
+            )
+        finally:
+            await self.conversation_lock.release(identity, lease.token)
+
+    async def _notice_locked(
+        self,
+        message: InboundMessage,
+        channel_key: str,
+        lease: ConversationLease,
+    ) -> ProcessingRecord:
+        record = await self.store.get_record(message.message_id)
+        if record is not None and record.prepared:
+            return record
+        record = record or ProcessingRecord(message_id=message.message_id)
+        record.conversation = lease.identity
+        record.attempts += 1
+        notice = message.notice
+        session = await self.store.get(message.phone, channel_key)
+        if (
+            notice is None
+            or session is None
+            or not session.last_activity_at
+            or self.clock() - session.last_activity_at > self.customer_window_seconds
+        ):
+            # Fuera de la ventana de 24 h de WhatsApp no se envía texto libre;
+            # el personal ya ve el pedido listo en el panel.
+            record.stage = "superseded"
+            await self.store.commit(lease, None, record)
+            CUSTOMER_NOTICES.labels(result="outside_window").inc()
+            log_event(
+                logger,
+                "concierge.customer_notice.skipped",
+                message=fingerprint(message.message_id),
+                reason="outside_window",
+            )
+            return record
+        reply = order_ready_text(notice)
+        # El aviso queda en el historial para que el siguiente turno lo conozca.
+        session.messages.append(ChatMessage(role="assistant", content=reply))
+        session.messages = session.messages[-20:]
+        record.reply = reply
+        record.stage = "reply_ready"
+        # Sin conversation_id: se avisa aunque el cliente ya esté en otro QR.
+        record.conversation_id = ""
+        await self.store.commit(lease, session, record)
+        CUSTOMER_NOTICES.labels(result="prepared").inc()
         return record
 
     async def _report_usage(
@@ -937,13 +1007,20 @@ class ConciergeService:
         session: ConversationSession,
         journal: TurnJournal,
     ) -> str:
-        """After the first confirmed order of the attention, ask once per
-        company (foods-backend remembers it) for promotional consent."""
+        """After the first confirmed counter order, ask once per company
+        (foods-backend remembers it) for promotional consent. Table and
+        delivery conversations keep their current flow; withdrawal works in
+        every mode."""
         created = any(
             effect.kind == "create_order" and effect.status == "done"
             for effect in journal.record.effects
         )
-        if not created or session.consent_checked or not session.qr_token:
+        if (
+            not created
+            or session.mode != "counter"
+            or session.consent_checked
+            or not session.qr_token
+        ):
             return ""
         session.consent_checked = True
         token = session.qr_token

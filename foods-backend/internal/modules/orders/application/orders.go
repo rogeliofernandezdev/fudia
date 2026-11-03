@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	audit "github.com/foods-platform/foods-backend/internal/modules/audit/application"
+	noticecontracts "github.com/foods-platform/foods-backend/internal/modules/notifications/contracts"
 	"github.com/foods-platform/foods-backend/internal/modules/orders/domain"
 	"github.com/foods-platform/foods-backend/internal/platform/apperror"
 	"github.com/foods-platform/foods-backend/internal/platform/requestscope"
@@ -15,14 +16,45 @@ type scope = requestscope.Scope
 var ErrNotFound = errors.New("order record not found")
 
 type Orders struct {
-	stock OrderStock
-	repo  OrderRepository
-	work  unitofwork.Manager
-	audit audit.Repository
+	stock   OrderStock
+	repo    OrderRepository
+	work    unitofwork.Manager
+	audit   audit.Repository
+	notices noticecontracts.Publisher
 }
 
 func New(repo OrderRepository, work unitofwork.Manager, audit audit.Repository, stock OrderStock) *Orders {
 	return &Orders{repo: repo, work: work, audit: audit, stock: stock}
+}
+
+// WithNotices avisa al personal cuando una comanda queda lista para entregar.
+func (a *Orders) WithNotices(notices noticecontracts.Publisher) *Orders {
+	a.notices = notices
+	return a
+}
+
+// noticeReady publica, después del commit y con mejor esfuerzo, que una comanda está lista.
+func (a *Orders) noticeReady(ctx context.Context, s scope, orderID, ticketID, station string) {
+	if a.notices == nil {
+		return
+	}
+	o, err := a.repo.Record(ctx, s, orderID)
+	if err != nil {
+		return
+	}
+	_ = a.notices.Publish(ctx, s, noticecontracts.OrderReady(ticketID, station, o.ID, o.TableID, o.TableName, o.Code, o.CustomerName))
+	// Con todo el pedido listo, el cliente de WhatsApp que pidió en mostrador o
+	// para recoger recibe un aviso; Concierge lo envía desde la bandeja de salida.
+	if o.Status != "listo" {
+		return
+	}
+	conversationID, err := a.repo.ConciergeConversation(ctx, s, o.ID)
+	if err != nil {
+		return
+	}
+	if customer, ok := noticecontracts.OrderReadyForCustomer(o.ID, o.Channel, o.CustomerPhone, conversationID); ok {
+		_ = a.notices.PublishCustomer(ctx, s, customer)
+	}
 }
 func orderFailure(kind apperror.Kind, code, message string) error {
 	return apperror.New(kind, code, message)
@@ -50,6 +82,8 @@ type OrderRepository interface {
 	SaveConciergeDeliveryRequest(ctx context.Context, s scope, in ConciergeDeliveryInput, orderID string) error
 	AuditConciergeDeliveryCreated(ctx context.Context, s scope, in ConciergeDeliveryInput, orderID string) error
 	ConciergeOrderActive(ctx context.Context, s scope, conversationID string, orderID string) (bool, error)
+	// ConciergeConversation devuelve la conversación de WhatsApp que creó un pedido sin mesa.
+	ConciergeConversation(ctx context.Context, s scope, orderID string) (string, error)
 	LockPaidCompletion(ctx context.Context, s scope, id string) (float64, string, bool, error)
 	CompletionPaid(ctx context.Context, s scope, id string) (float64, error)
 	CompletionPending(ctx context.Context, s scope, id string) (bool, error)

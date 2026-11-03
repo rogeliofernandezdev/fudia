@@ -6,6 +6,25 @@
 
 ## Última revisión
 
+Avisos al personal (2026-11-02, migración 000103): campana en la barra superior
+del panel, como componente independiente (`modules/notifications`), con
+contador rojo de avisos sin leer. Los mozos reciben los pedidos y rondas por QR
+de mesa, los llamados al personal y las comandas listas de sus mesas; caja recibe
+las ventas por mostrador y los pedidos de delivery o recojo por WhatsApp; ambos
+reciben la cuenta pedida y las comandas listas sin mesa. La audiencia sale de los
+permisos del usuario en el local (`tables.read`, `cash.manage`) y la lectura es
+por usuario. El panel consulta cada 15 s.
+
+Aviso «pedido listo» por WhatsApp (2026-11-02, migración 000104): cuando Cocina/
+Barra termina todo un pedido de mostrador o recojo hecho por Concierge,
+foods-backend deja un aviso en su bandeja de salida (`customer_notices`) y el
+worker de Concierge lo reclama, lo encola en la conversación del cliente y lo
+envía («✅ Tu pedido PED-… está listo.»), solo dentro de la ventana de 24 h de
+WhatsApp. Mesa, delivery y pedidos del personal no avisan al cliente. Pendiente:
+probarlo con WhatsApp real; aviso de delivery «en camino»; plantillas aprobadas
+por Meta para avisar fuera de la ventana; notificaciones push (PWA) y aviso al
+mozo asignado en lugar de a todos.
+
 Venta por mostrador (2026-11-02, migración 000102): una mesa marcada «Venta por
 mostrador» (`tables.service_type=counter`) usa el mismo QR y el mismo Concierge,
 pero cada pedido es independiente: no ocupa la mesa, no exige mozo ni cuenta

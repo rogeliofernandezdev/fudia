@@ -127,6 +127,8 @@
 }
 
 .orders-table td:first-child .order-mobile-registered{display:none}
+/* Venta por mostrador: en móvil la columna Canal se oculta y el origen baja bajo el cliente. */
+.orders-table td:first-child .order-mobile-origin{display:none}
 
 
 .orders-table td:nth-child(5){
@@ -1246,6 +1248,7 @@
   }
 
   .orders-table td:first-child .order-mobile-registered{display:block;max-width:none;white-space:normal;overflow-wrap:normal;word-break:normal}
+  .orders-table td:first-child .order-mobile-origin{display:block}
   .orders-table .order-mobile-registered time{display:block;white-space:normal;overflow-wrap:normal;word-break:normal;line-height:var(--line-height-snug)}
 
   .orders-loading{

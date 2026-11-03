@@ -159,9 +159,28 @@ No hay cuenta (`request_bill` → `counter_has_no_bill`), delivery
 sesión sigue en mostrador hasta otro QR o hasta que expire. El bloque «[Estado
 de la atención]» indica «Modo: venta por mostrador» y si falta el nombre.
 
+## Aviso de pedido listo
+
+Cuando Cocina/Barra termina todo un pedido de mostrador o de recojo hecho por
+WhatsApp, el cliente recibe, en texto plano y sin el modelo:
+
+```
+✅ Tu pedido PED-0142 está listo.
+Recógelo en el mostrador de La Panchita · Miraflores.
+```
+
+En recojo: «✅ Tu pedido PED-0142 está listo para recoger.» y «Te esperamos en
+La Panchita · Miraflores.». El aviso entra como un mensaje más de la
+conversación (mismo orden y lock), queda en el historial como respuesta del
+asistente y se envía aunque el cliente ya haya escaneado otro QR. Solo se envía
+dentro de la ventana de 24 h de WhatsApp (23 h desde el último mensaje del
+cliente); fuera de ella, o sin sesión, se descarta (`superseded`) y el personal
+lo sigue viendo en la campana del panel.
+
 ## Consentimiento promocional
 
-Tras el primer pedido confirmado de la atención (mesa, mostrador o sin mesa),
+Tras el primer pedido confirmado en la venta por mostrador (la mesa y los
+pedidos sin mesa no la muestran),
 si foods-backend informa `marketingConsent=pending`, la respuesta del turno
 termina con la pregunta acordada, en texto plano y sin emojis:
 
@@ -178,7 +197,8 @@ empresa. El siguiente mensaje se compara sin el modelo con las respuestas
 coincide se guarda `granted` o `declined` con el texto literal y se responde en
 una línea. Cualquier otro mensaje sigue la conversación normal sin interrumpir la
 compra. «Ya no quiero promociones» o «darme de baja de las ofertas»
-(`asks_to_withdraw`) registra `withdrawn` en cualquier momento.
+(`asks_to_withdraw`) registra `withdrawn` en cualquier momento y en cualquier modo (mesa,
+mostrador o sin mesa).
 
 ## Pedido sin mesa: recojo o delivery
 

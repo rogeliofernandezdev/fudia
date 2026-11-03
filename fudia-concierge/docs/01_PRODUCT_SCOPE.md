@@ -48,6 +48,8 @@ Pagos ejecutados dentro de WhatsApp, distancia por ruta, zonas por polígono, as
   confirmación crea un pedido independiente (código `PED-…`) que va a preparación
   y a la bandeja de caja. No hay cuenta abierta, mozo, pago previo ni delivery;
   se recoge en el mostrador y se paga en caja.
+- Cuando Cocina/Barra termina el pedido, el cliente recibe por WhatsApp «Tu
+  pedido PED-… está listo» con el mostrador del local (también en recojo).
 - Cada número tiene su propia sesión; varios clientes pueden pedir a la vez con
   el mismo QR.
 
@@ -61,4 +63,5 @@ respuesta se reconoce sin el modelo en el siguiente mensaje; cualquier otro
 mensaje continúa el pedido. «Ya no quiero promociones» retira el consentimiento
 en cualquier momento. foods-backend guarda pregunta, respuesta y retiro con fecha
 y el texto literal del cliente; quien rechaza o retira queda fuera de campañas.
-Aplica a mesa, mostrador y pedidos sin mesa.
+Se pregunta solo en la venta por mostrador; la mesa y los pedidos sin mesa
+conservan su flujo. El retiro funciona en cualquier modo.

@@ -20,6 +20,7 @@ from src.infrastructure.start_codes import RedisTableStartCodes
 from src.infrastructure.state_store import RedisConversationStore
 from src.infrastructure.whatsapp_adapter import MetaWhatsAppAdapter
 from src.services.concierge_service import ConciergeService
+from src.services.customer_notices import NoticeRelay
 from src.services.queue_worker import QueueWorker
 
 
@@ -126,6 +127,8 @@ def create_app(
         maintenance_interval_seconds=(
             cfg.queue_maintenance_interval_seconds
         ),
+        notices=NoticeRelay(fudia, inbound_queue, cfg.whatsapp_phone_id),
+        notice_poll_seconds=cfg.customer_notice_poll_seconds,
     )
 
     app.state.settings = cfg

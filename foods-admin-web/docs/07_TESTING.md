@@ -590,3 +590,13 @@ Mostrador como tipo inicial del alta manual, sin mesa, dirección ni envío.
 `pos-payment-flow.test.mjs` verifica en la bandeja el origen «Mostrador», el
 número con los productos, el estado de preparación y que se puede cobrar antes
 de que Cocina termine, mientras Recojo sigue esperando «Por entregar».
+`manual-order.test.mjs` también fija que en móvil los tres tipos del alta manual
+comparten una fila y `order-channels.test.mjs` que Pedidos muestra el origen
+«Mostrador» bajo el cliente cuando se oculta la columna Canal.
+
+`notification-bell.test.mjs` fija la campana de avisos: destino de cada tipo de
+aviso en orden de preferencia, antigüedad corta y contador «99+», montaje
+independiente desde el shell (el shell no consulta avisos y la campana no importa
+el shell), skeleton/error/vacío y anuncio `aria-live`, refresco de 15 s solo con
+`tables.read` o `cash.manage`, endpoints del contrato OpenAPI, área táctil de
+44 px y rojo reservado al contador sin leer.

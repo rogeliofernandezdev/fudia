@@ -9,6 +9,7 @@ import (
 
 	"github.com/foods-platform/foods-backend/internal/modules/concierge/domain"
 	deliverycontracts "github.com/foods-platform/foods-backend/internal/modules/delivery/contracts"
+	noticecontracts "github.com/foods-platform/foods-backend/internal/modules/notifications/contracts"
 	ordercontracts "github.com/foods-platform/foods-backend/internal/modules/orders/contracts"
 	"github.com/foods-platform/foods-backend/internal/platform/apperror"
 )
@@ -195,7 +196,12 @@ func (a *Concierge) SubmitDelivery(ctx context.Context, token string, in Deliver
 		order.DistanceKm = &distance
 		order.DeliveryFee = quoted.fee
 	}
-	return a.orders.SubmitConciergeDelivery(ctx, qr.Scope, order)
+	out, err := a.orders.SubmitConciergeDelivery(ctx, qr.Scope, order)
+	if err == nil {
+		o := out.Order
+		a.notify(ctx, qr.Scope, noticecontracts.RemoteOrder(order.Channel, o.ID, o.Code, o.CustomerName, productCount(order.Items), noticecontracts.Money(qr.CurrencySymbol, o.Total)))
+	}
+	return out, err
 }
 
 func (a *Concierge) OrderStatus(ctx context.Context, token, orderID, conversationID string) (domain.OrderStatusView, error) {

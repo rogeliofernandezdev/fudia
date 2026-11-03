@@ -13,6 +13,9 @@ import (
 	menugcs "github.com/foods-platform/foods-backend/internal/modules/menu/infrastructure/gcs"
 	menupg "github.com/foods-platform/foods-backend/internal/modules/menu/infrastructure/postgres"
 	menuhttp "github.com/foods-platform/foods-backend/internal/modules/menu/transport/http"
+	noticeapp "github.com/foods-platform/foods-backend/internal/modules/notifications/application"
+	noticepg "github.com/foods-platform/foods-backend/internal/modules/notifications/infrastructure/postgres"
+	noticehttp "github.com/foods-platform/foods-backend/internal/modules/notifications/transport/http"
 	orderapp "github.com/foods-platform/foods-backend/internal/modules/orders/application"
 	orderpg "github.com/foods-platform/foods-backend/internal/modules/orders/infrastructure/postgres"
 	orderhttp "github.com/foods-platform/foods-backend/internal/modules/orders/transport/http"
@@ -63,7 +66,9 @@ func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages) *httpapi.API {
 	inventoryRepo := inventorypg.NewStock(db)
 	stock := inventoryapp.NewStock(inventoryRepo, work, audit)
 	menu := menuapp.NewCatalog(menupg.NewCatalog(db), work, audit, menufiles.Images{Directory: "./uploads/products"}).WithProductImages(images)
-	orders := orderapp.New(orderpg.New(db), work, audit, stock)
+	identityService := identityapp.New(identitypg.New(db), credentials.Credentials{})
+	notices := noticeapp.New(noticepg.New(db), identityService)
+	orders := orderapp.New(orderpg.New(db), work, audit, stock).WithNotices(notices)
 
 	accessRepo := subscriptionpg.NewAccess(db)
 	access := subscriptionapp.NewAccess(accessRepo)
@@ -76,7 +81,6 @@ func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages) *httpapi.API {
 	paymentsRepo := billingpg.NewPayments(db)
 	methods := billingapp.NewMethods(billingpg.NewMethods(db), work)
 	identityAdminRepo := identitypg.NewAdministration(db)
-	identityService := identityapp.New(identitypg.New(db), credentials.Credentials{})
 	tips := billingapp.NewTips(paymentsRepo, work)
 	platform.WithTips(tips)
 	organizations.WithTips(tips)
@@ -94,7 +98,7 @@ func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages) *httpapi.API {
 		EInvoicing:             einvoicingHandler,
 		Subscriptions:          subscriptionhttp.New(subscriptions),
 		Platform:               platformhttp.New(platform),
-		Concierge:              conciergehttp.New(conciergeapp.New(conciergepg.New(db), menu, orders, audit).WithBranding(profiles).WithCustomers(customers), func() string { return os.Getenv("FUDIA_CONCIERGE_API_KEY") }),
+		Concierge:              conciergehttp.New(conciergeapp.New(conciergepg.New(db), menu, orders, audit).WithBranding(profiles).WithCustomers(customers).WithNotices(notices), func() string { return os.Getenv("FUDIA_CONCIERGE_API_KEY") }),
 		ConciergeUsage:         conciergehttp.NewUsage(conciergeapp.NewUsage(conciergepg.NewUsage(db), conciergepg.New(db), work, audit)),
 		MenuCatalog:            menuhttp.NewCatalog(menu),
 		Payments:               billinghttp.NewPayments(payments),
@@ -111,6 +115,7 @@ func newAPI(db *pgxpool.Pool, images *menuapp.ProductImages) *httpapi.API {
 		InventoryStock:         inventoryhttp.NewStock(stock),
 		Purchasing:             purchasehttp.New(purchaseapp.New(purchasepg.New(db), work, audit, inventoryapp.NewPurchaseLedger(inventoryRepo))),
 		Orders:                 orderhttp.New(orders),
+		Notices:                noticehttp.New(notices),
 		InventoryUnits:         inventoryhttp.NewUnits(inventoryapp.NewUnits(inventorypg.NewUnits(db))),
 	})
 }

@@ -144,6 +144,9 @@ func (a *Orders) tryStationTicket(ctx context.Context, s scope, id, status strin
 		return true, orderFailure(apperror.Unavailable, "kitchen_unavailable", "No pudimos guardar la preparación.")
 	}
 	_ = a.audit.Record(ctx, s, "preparation."+status, "order", orderID)
+	if status == "listo" {
+		a.noticeReady(ctx, s, orderID, id, destination)
+	}
 	return true, nil
 }
 func (a *Orders) UpdateKitchen(ctx context.Context, s scope, id string, in OrderStatusInput) error {
@@ -186,6 +189,7 @@ func (a *Orders) UpdateKitchen(ctx context.Context, s scope, id string, in Order
 		action := "kitchen.round.started"
 		if in.Status == "listo" {
 			action = "kitchen.round.ready"
+			a.noticeReady(ctx, s, roundOrderID, id, "kitchen")
 		}
 		_ = a.audit.Record(ctx, s, action, "order_round", id)
 		return nil
@@ -222,6 +226,7 @@ func (a *Orders) UpdateKitchen(ctx context.Context, s scope, id string, in Order
 	action := "kitchen.started"
 	if in.Status == "listo" {
 		action = "kitchen.ready"
+		a.noticeReady(ctx, s, id, id, "kitchen")
 	}
 	_ = a.audit.Record(ctx, s, action, "order", id)
 	return nil

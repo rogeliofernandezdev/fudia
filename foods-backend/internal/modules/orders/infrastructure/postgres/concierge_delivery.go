@@ -87,3 +87,14 @@ func (r *Orders) ConciergeOrderActive(ctx context.Context, s scope, conversation
 	`, s.OrganizationID, s.LocationID, orderID, conversationID).Scan(&active)
 	return active, orderError(err)
 }
+
+// ConciergeConversation devuelve la conversación que creó un pedido de delivery,
+// recojo o mostrador desde Concierge; ErrNotFound si lo registró el personal.
+func (r *Orders) ConciergeConversation(ctx context.Context, s scope, orderID string) (string, error) {
+	var conversationID string
+	err := r.db(ctx).QueryRow(ctx, `
+		SELECT d.conversation_id FROM concierge_delivery_requests d
+		WHERE d.organization_id=$1 AND d.location_id=$2 AND d.order_id=$3
+		ORDER BY d.created_at LIMIT 1`, s.OrganizationID, s.LocationID, orderID).Scan(&conversationID)
+	return conversationID, orderError(err)
+}

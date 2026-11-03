@@ -286,7 +286,7 @@ async def test_already_answered_consent_is_never_asked_again() -> None:
 
 
 @pytest.mark.asyncio
-async def test_table_flow_keeps_rounds_and_also_asks_consent_once() -> None:
+async def test_table_flow_is_unchanged_and_never_asks_consent() -> None:
     fudia = FakeFudia()
     fudia.consent_status = "pending"
     agent = OrderingAgent()
@@ -297,7 +297,8 @@ async def test_table_flow_keeps_rounds_and_also_asks_consent_once() -> None:
 
     await service.handle_message(PHONE, "Quiero un lomo")
     reply = await service.handle_message(PHONE, "Sí")
-    assert reply.endswith(QUESTION)
+    assert reply == "Tu pedido fue registrado."
+    assert fudia.consent_calls == []
     assert "customer_name" not in fudia.order_calls[-1] or not fudia.order_calls[-1].get("customer_name")
     session = await store.get(PHONE)
     assert session is not None and session.mode == "table"
@@ -326,3 +327,15 @@ def test_recovery_reply_rebuilds_counter_order_and_question() -> None:
         "Tu pedido PED-009 fue registrado. Total: 25.00. "
         f"Recógelo en el mostrador y págalo en caja.\n\n{QUESTION}"
     )
+
+
+@pytest.mark.asyncio
+async def test_withdrawal_works_outside_the_counter() -> None:
+    fudia = FakeFudia()
+    agent = OrderingAgent()
+    service = ConciergeService(MemoryConversationStore(), fudia, agent)
+    await service.handle_message(PHONE, QR)
+    reply = await service.handle_message(PHONE, "Ya no quiero promociones")
+    assert reply == "Listo, ya no te enviaremos promociones de Restaurante Demo por WhatsApp."
+    assert fudia.consent_calls[-1]["decision"] == "withdrawn"
+    assert agent.messages == []

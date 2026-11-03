@@ -27,4 +27,7 @@
  .manual-order-fields{grid-template-columns:minmax(0,1fr)}
  .manual-order-map .location-map-canvas{height:var(--size-176)}
  .manual-order-actions>.button{flex:1}
+ /* Mostrador, Recojo y Delivery caben en una fila: ningún tipo queda oculto tras deslizar. */
+ .manual-order-channel.ds-tabs button{flex:1 1 0;gap:var(--space-1);padding-inline:var(--space-1)}
+ .manual-order-type .manual-order-channel.ds-tabs:has(>button:last-child:nth-child(odd))::after{content:none}
 }

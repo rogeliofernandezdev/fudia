@@ -65,6 +65,8 @@ class Settings(BaseSettings):
     queue_retention_seconds: int = Field(default=86_400, ge=3_600)
     queue_dead_letter_retention_seconds: int = Field(default=1_209_600, ge=86_400)
     queue_maintenance_interval_seconds: float = Field(default=300.0, ge=10)
+    # Avisos «pedido listo» de foods-backend: frecuencia de consulta de su bandeja.
+    customer_notice_poll_seconds: float = Field(default=10.0, ge=2, le=300)
     # Processing records: finished ones, and ones that may still be needed to
     # recover an operation (must outlive the dead-letter retention).
     processing_record_ttl_seconds: int = Field(default=259_200, ge=3_600)

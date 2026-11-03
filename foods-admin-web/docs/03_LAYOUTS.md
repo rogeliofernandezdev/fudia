@@ -1,6 +1,10 @@
 # Layouts
 
 Sidebar: Control, Operación, Carta y producción, Abastecimiento y Configuración. Topbar compacta.
+La topbar muestra, a la derecha, la campana de avisos (área táctil de 44 px), el
+local activo y la cuenta. En escritorio la campana abre un popover de 380 px
+alineado a la derecha; en móvil (≤600 px) es una hoja fija bajo la topbar con
+margen lateral de 16 px, y cada aviso mide al menos 64 px de alto.
 Gestión: título, acciones, filtros, listado, paginación y detalle.
 
 ## Dispositivo móvil de referencia

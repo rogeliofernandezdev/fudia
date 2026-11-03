@@ -20,6 +20,7 @@ from src.observability import (
     fingerprint,
     log_event,
 )
+from src.services.customer_notices import NoticeRelay
 from src.services.outbox import DeliveryOutcome, ReplyDispatcher, WhatsAppSender
 from src.services.ports import (
     ConversationBusyError,
@@ -68,6 +69,8 @@ class QueueWorker:
         reconcile_seconds: float = 30.0,
         maintenance_interval_seconds: float = 300.0,
         max_resends: int = 1,
+        notices: NoticeRelay | None = None,
+        notice_poll_seconds: float = 10.0,
     ) -> None:
         if max_concurrency < 1:
             raise ValueError(
@@ -92,6 +95,8 @@ class QueueWorker:
         )
         self.turn_wait_seconds = turn_wait_seconds
         self.maintenance_interval_seconds = maintenance_interval_seconds
+        self.notices = notices
+        self.notice_poll_seconds = notice_poll_seconds
         self._stop = asyncio.Event()
         self._in_flight: set[
             asyncio.Future[None]
@@ -100,6 +105,11 @@ class QueueWorker:
     async def run(self) -> None:
         await self.queue.start()
         maintenance = asyncio.create_task(self._maintain())
+        relay = (
+            asyncio.create_task(self._relay_notices())
+            if self.notices is not None
+            else None
+        )
         try:
             while not self._stop.is_set():
                 capacity = (
@@ -123,11 +133,14 @@ class QueueWorker:
             await self._cancel_in_flight()
             raise
         finally:
-            maintenance.cancel()
-            try:
-                await maintenance
-            except asyncio.CancelledError:
-                pass
+            for background in (maintenance, relay):
+                if background is None:
+                    continue
+                background.cancel()
+                try:
+                    await background
+                except asyncio.CancelledError:
+                    pass
             await self._drain()
 
     def _start_delivery(
@@ -330,6 +343,23 @@ class QueueWorker:
                     errorType=type(exc).__name__,
                 )
             await asyncio.sleep(self.maintenance_interval_seconds)
+
+    async def _relay_notices(self) -> None:
+        """Consulta la bandeja de avisos de foods-backend. Cada réplica la
+        consulta; foods-backend reserva cada aviso y la cola deduplica por id."""
+        assert self.notices is not None
+        while True:
+            try:
+                await self.notices.poll_once()
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:
+                log_event(
+                    logger,
+                    "concierge.customer_notice.poll_failed",
+                    errorType=type(exc).__name__,
+                )
+            await asyncio.sleep(self.notice_poll_seconds)
 
     async def stop(self) -> None:
         self._stop.set()

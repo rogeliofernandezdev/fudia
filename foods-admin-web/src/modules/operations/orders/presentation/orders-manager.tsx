@@ -69,6 +69,7 @@ export function OrdersManager(){
        {secondary&&<small>{secondary}</small>}
        {service==="salon"&&<small className="order-staff">Mozo: {o.waiterName||"Sin asignar"}</small>}
        {Boolean(o.collectedByNames?.length)&&<small className="order-staff">Cobrado por: {o.collectedByNames!.join(" · ")}</small>}
+       {o.origin==="counter"&&<small className="order-mobile-origin">{originLabel(o.origin)}</small>}
        <small className="order-mobile-registered"><time dateTime={o.createdAt}>{registeredAt(o.createdAt,location?.country,location?.timezone)}</time></small>
       </td>
       <td><span className="order-channel-cell">{channelLabel(service)}{o.channel==="whatsapp"&&<small className="order-channel-origin"><Icon name="share" size={14}/>vía WhatsApp</small>}{o.origin==="counter"&&<small className="order-channel-origin"><Icon name="store" size={14}/>{originLabel(o.origin)}</small>}</span></td>

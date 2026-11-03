@@ -10,6 +10,9 @@ import (
 	conciergepg "github.com/foods-platform/foods-backend/internal/modules/concierge/infrastructure/postgres"
 	conciergehttp "github.com/foods-platform/foods-backend/internal/modules/concierge/transport/http"
 	customerapp "github.com/foods-platform/foods-backend/internal/modules/customers/application"
+	noticeapp "github.com/foods-platform/foods-backend/internal/modules/notifications/application"
+	noticepg "github.com/foods-platform/foods-backend/internal/modules/notifications/infrastructure/postgres"
+	noticehttp "github.com/foods-platform/foods-backend/internal/modules/notifications/transport/http"
 	customerpg "github.com/foods-platform/foods-backend/internal/modules/customers/infrastructure/postgres"
 	customerhttp "github.com/foods-platform/foods-backend/internal/modules/customers/transport/http"
 	einvoicingapp "github.com/foods-platform/foods-backend/internal/modules/einvoicing/application"
@@ -67,8 +70,9 @@ func (d syncDispatcher) Dispatch(id string) { _ = d.documents.Process(context.Ba
 
 // The integration suite exercises exactly the adapters composed by cmd/api.
 func New(db *pgxpool.Pool) *integrationAPI {
-	orders := orderapp.New(orderpg.New(db), database.NewUnitOfWork(db), auditpg.New(db), inventoryapp.NewStock(inventorypg.NewStock(db), database.NewUnitOfWork(db), auditpg.New(db)))
 	identityService := identityapp.New(identitypg.New(db), credentials.Credentials{})
+	notices := noticeapp.New(noticepg.New(db), identityService)
+	orders := orderapp.New(orderpg.New(db), database.NewUnitOfWork(db), auditpg.New(db), inventoryapp.NewStock(inventorypg.NewStock(db), database.NewUnitOfWork(db), auditpg.New(db))).WithNotices(notices)
 	tips := billingapp.NewTips(billingpg.NewPayments(db), database.NewUnitOfWork(db))
 	access := subscriptionapp.NewAccess(subscriptionpg.NewAccess(db))
 	taxRepository := orgpg.NewTaxes(db)
@@ -81,13 +85,14 @@ func New(db *pgxpool.Pool) *integrationAPI {
 	payments := billingapp.NewPayments(billingpg.NewPayments(db), database.NewUnitOfWork(db), auditpg.New(db), billingapp.NewMethods(billingpg.NewMethods(db), database.NewUnitOfWork(db)), orders).WithAuthorization(identityService).WithTips(tips).WithFiscal(fiscal)
 	return &integrationAPI{db: db, fiscal: fiscal, API: NewWithHandlers(Handlers{
 		Tips:                   billinghttp.NewTips(tips),
+		Notices:                noticehttp.New(notices),
 		RestaurantProfile:      orghttp.New(orgapp.New(orgpg.New(db), database.NewUnitOfWork(db), subscriptionapp.NewAccess(subscriptionpg.NewAccess(db)), auditpg.New(db))).WithProfiles(orgapp.NewRestaurantProfiles(orgpg.NewRestaurantProfiles(db), menuapp.NewCatalog(menupg.NewCatalog(db), database.NewUnitOfWork(db), auditpg.New(db), menufiles.Images{Directory: "./uploads/products"}).RestaurantMedia())),
 		SpecialTaxes:           orghttp.NewSpecialTaxes(orgapp.NewSpecialTaxes(taxRepository, auditpg.New(db))),
 		Organizations:          orghttp.New(orgapp.New(orgpg.New(db), database.NewUnitOfWork(db), subscriptionapp.NewAccess(subscriptionpg.NewAccess(db)), auditpg.New(db)).WithTips(tips)),
 		EInvoicing:             einvoicinghttp.New(fiscal, fiscalSettings, func() string { return os.Getenv("FUDIA_EINVOICING_WORKER_KEY") }),
 		Subscriptions:          subscriptionhttp.New(subscriptionapp.New(subscriptionpg.New(db), database.NewUnitOfWork(db), auditpg.New(db))),
 		Platform:               platformhttp.New(platformapp.New(platformpg.New(db), database.NewUnitOfWork(db), orgapp.New(orgpg.New(db), database.NewUnitOfWork(db), subscriptionapp.NewAccess(subscriptionpg.NewAccess(db)), auditpg.New(db)), subscriptionapp.New(subscriptionpg.New(db), database.NewUnitOfWork(db), auditpg.New(db)), credentials.Credentials{}, platformdiag.Diagnostics{}, platformdiag.Diagnostics{}).WithTips(tips)),
-		Concierge:              conciergehttp.New(conciergeapp.New(conciergepg.New(db), menuapp.NewCatalog(menupg.NewCatalog(db), database.NewUnitOfWork(db), auditpg.New(db), menufiles.Images{Directory: "./uploads/products"}), orders, auditpg.New(db)).WithCustomers(customerapp.New(customerpg.New(db))), func() string { return os.Getenv("FUDIA_CONCIERGE_API_KEY") }),
+		Concierge:              conciergehttp.New(conciergeapp.New(conciergepg.New(db), menuapp.NewCatalog(menupg.NewCatalog(db), database.NewUnitOfWork(db), auditpg.New(db), menufiles.Images{Directory: "./uploads/products"}), orders, auditpg.New(db)).WithCustomers(customerapp.New(customerpg.New(db))).WithNotices(notices), func() string { return os.Getenv("FUDIA_CONCIERGE_API_KEY") }),
 		ConciergeUsage:         conciergehttp.NewUsage(conciergeapp.NewUsage(conciergepg.NewUsage(db), conciergepg.New(db), database.NewUnitOfWork(db), auditpg.New(db))),
 		MenuCatalog:            menuhttp.NewCatalog(menuapp.NewCatalog(menupg.NewCatalog(db), database.NewUnitOfWork(db), auditpg.New(db), menufiles.Images{Directory: "./uploads/products"})),
 		Payments:               billinghttp.NewPayments(payments),

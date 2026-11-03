@@ -4,6 +4,15 @@ import "net/http"
 
 func (a *API) Routes() *http.ServeMux {
 	m := http.NewServeMux()
+	if a.handlers.Notices != nil {
+		// Campana del panel: cada usuario ve solo las audiencias de sus permisos en el local.
+		m.Handle("GET /v1/admin/notices", a.auth(a.requirePermission("orders.read", http.HandlerFunc(a.handlers.Notices.Feed))))
+		m.Handle("POST /v1/admin/notices/read", a.auth(a.requirePermission("orders.read", http.HandlerFunc(a.handlers.Notices.MarkAllRead))))
+		m.Handle("POST /v1/admin/notices/{id}/read", a.auth(a.requirePermission("orders.read", http.HandlerFunc(a.handlers.Notices.MarkRead))))
+		// Bandeja de salida de avisos al cliente: solo Concierge con su clave de servicio.
+		m.Handle("GET /v1/integrations/concierge/notices/pending", a.conciergeServiceAuth(http.HandlerFunc(a.handlers.Notices.ClaimCustomer)))
+		m.Handle("POST /v1/integrations/concierge/notices/{id}/dispatched", a.conciergeServiceAuth(http.HandlerFunc(a.handlers.Notices.MarkCustomerDispatched)))
+	}
 	if a.handlers.Tips != nil {
 		m.Handle("GET /v1/admin/tip-settings", a.auth(a.requirePermission("organizations.read", http.HandlerFunc(a.handlers.Tips.GetSettings))))
 		m.Handle("PUT /v1/admin/tip-settings", a.auth(a.requirePermission("organizations.manage", http.HandlerFunc(a.handlers.Tips.UpdateSettings))))

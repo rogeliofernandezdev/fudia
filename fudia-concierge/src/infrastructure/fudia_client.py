@@ -11,6 +11,7 @@ from src.domain.models import (
     BillSummary,
     ComboDetail,
     ConsentDecision,
+    CustomerNotice,
     CustomerProfile,
     DeliveryOptions,
     DeliveryQuote,
@@ -29,6 +30,8 @@ from src.services.ports import FudiaError as FudiaError
 def _endpoint_label(path: str) -> str:
     if path.endswith("/usage"):
         return "usage"
+    if "/concierge/notices/" in path:
+        return "notices"
     if path.endswith("/conversations"):
         return "conversations"
     if "/menu" in path:
@@ -457,6 +460,23 @@ class FudiaClient:
             ),
             retryable=True,
             json={"conversationId": conversation_id, "kind": kind},
+        )
+
+    async def pending_customer_notices(self, limit: int = 20) -> list[CustomerNotice]:
+        """Reclama avisos al cliente pendientes (reservados por 60 s en foods-backend)."""
+        data = await self._json(
+            "GET",
+            "/v1/integrations/concierge/notices/pending",
+            params={"limit": limit},
+        )
+        return [CustomerNotice.model_validate(item) for item in data.get("items", [])]
+
+    async def mark_customer_notice_dispatched(self, notice_id: str) -> None:
+        # Idempotente en foods-backend: se puede reintentar sin riesgo.
+        await self._json(
+            "POST",
+            f"/v1/integrations/concierge/notices/{quote(notice_id, safe='')}/dispatched",
+            retryable=True,
         )
 
     async def report_usage(

@@ -133,6 +133,22 @@ dead-letter avanzan ese valor.
 - Cada respuesta guarda su `conversation_id`; si al enviarla el contexto ya es
   otro, se marca `superseded` y no se envía.
 
+## Avisos de foods-backend («pedido listo»)
+
+`NoticeRelay` corre dentro de cada worker (`CUSTOMER_NOTICE_POLL_SECONDS`, 10 s
+por defecto): reclama la bandeja de foods-backend, encola cada aviso como
+`InboundMessage` con `notice` y `message_id = "notice:<id>"`, y luego confirma
+`/dispatched`. Garantías:
+
+- La deduplicación por `message_id` de la cola evita encolar dos veces el mismo
+  aviso aunque el reclamo venza o se pierda la confirmación.
+- Si no se pudo encolar, no se confirma: el reclamo vence (60 s) y vuelve.
+- En el worker sigue el ciclo normal: orden por conversación, lock con fencing,
+  registro de procesamiento, envío con reconciliación y dead-letter. No pasa por
+  el límite de frecuencia ni por el modelo.
+- La respuesta no lleva `conversation_id`, así que un cambio de QR no la descarta.
+- Fuera de la ventana de 24 h de WhatsApp o sin sesión queda `superseded`.
+
 ## Envío y reconciliación con Meta
 
 1. `reply_ready → sending` (persistido antes de llamar a Meta).
@@ -287,6 +303,7 @@ repositorio sin autorización explícita.
 | Nivel | Cómo | Cubre |
 | --- | --- | --- |
 | Unitarias | `pytest -q` (`tests/test_recovery.py`) | Los 10 criterios de aceptación con store, lock y cola en memoria. |
+| Unitarias | `pytest -q tests/test_customer_notices.py` | Aviso «pedido listo»: texto, relay sin duplicar y sin confirmar lo no encolado, ventana de 24 h, historial y envío de punta a punta por el worker. |
 | Integración Redis | `FUDIA_REDIS_INTEGRATION=1 REDIS_URL=... pytest -q tests/test_redis_integration.py` | Commit condicionado, `touch` sin robo, orden y reintentos, retención, requeue de dead-letter, worker de punta a punta. |
 | Carga Redis | `FUDIA_REDIS_LOAD_TEST=1 REDIS_URL=... pytest -q tests/test_capacity_redis.py` | Throughput de Streams. |
 | Externa | Entorno autorizado | Meta (firma, envío, estados con `biz_opaque_callback_data`), Vertex/OpenAI y foods-backend real. |

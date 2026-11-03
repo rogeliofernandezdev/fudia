@@ -41,6 +41,13 @@ type Handlers struct {
 		ProcessDocument(http.ResponseWriter, *http.Request)
 		Sweep(http.ResponseWriter, *http.Request)
 	}
+	Notices interface {
+		Feed(http.ResponseWriter, *http.Request)
+		MarkRead(http.ResponseWriter, *http.Request)
+		MarkAllRead(http.ResponseWriter, *http.Request)
+		ClaimCustomer(http.ResponseWriter, *http.Request)
+		MarkCustomerDispatched(http.ResponseWriter, *http.Request)
+	}
 	Concierge              ConciergeHandler
 	ConciergeUsage         ConciergeUsageHandler
 	Platform               PlatformHandler
