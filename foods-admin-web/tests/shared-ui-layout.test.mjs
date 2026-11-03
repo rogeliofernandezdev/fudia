@@ -22,7 +22,7 @@ test("los botones móviles comparten radio de píldora sin cambiar la geometría
  assert.equal(declaration(css,".button","border-radius","(width<=600px)"),"var(--radius-pill)");
  const modal=sheet("design-system/styles/modal.css");
  assert.equal(declaration(modal,".modal-close","border-radius"),"var(--radius-control)");
- for(const [file,selector] of [["modules/menu/availability/presentation/product-availability.css",".availability-actions .button"],["modules/setup/presentation/restaurant-setup.css",".restaurant-setup .button"],["modules/setup/presentation/restaurant-setup-tour.css",".setup-tour .button"]])assert.equal(declaration(sheet(file),selector,"border-radius"),undefined,"el módulo hereda la forma del botón compartido");
+ for(const [file,selector] of [["modules/menu/availability/presentation/product-availability.css",".availability-actions .button"]])assert.equal(declaration(sheet(file),selector,"border-radius"),undefined,"el módulo hereda la forma del botón compartido");
 });
 test("franjas de lectura igualan etiqueta y valor y alinean la fecha al extremo derecho",()=>{
  const css=sheet("design-system/styles/modal.css");

@@ -43,12 +43,14 @@ test("Dashboard se conserva para quien tiene acceso y sin opciones no hay bucles
  assert.equal(navigation.accessibleLandingRedirect("/dashboard",{...none,user:{platformAdmin:true},modules:{}}),null);
 });
 
-test("puesta en marcha tiene prioridad únicamente cuando es accesible",()=>{
- const setup={...context,setupRequired:true};
- assert.equal(navigation.firstAccessibleRoute(setup),"/settings/getting-started");
- const restricted={...setup,menuAccess:["caja"],permissions:["organizations.manage","cash.read"]};
- assert.equal(navigation.firstAccessibleRoute(restricted),"/cash");
- assert.equal(navigation.firstAccessibleRoute({...setup,modules:{...context.modules,locales:false}}),"/dashboard");
+test("el administrador entra al Dashboard aunque la configuración siga pendiente; los demás roles a su opción activa",()=>{
+ assert.equal(navigation.firstAccessibleRoute({...context,setupRequired:true}),"/dashboard");
+ assert.equal(navigation.firstAccessibleRoute({...context,user:{platformAdmin:true},modules:{}}),"/dashboard");
+ const waiter={...context,menuAccess:["pedidos"],permissions:["orders.read","orders.manage","organizations.manage"],setupRequired:true};
+ assert.equal(navigation.firstAccessibleRoute(waiter),"/orders");
+ const kitchen={...context,menuAccess:["cocina"],permissions:["orders.read"]};
+ assert.equal(navigation.firstAccessibleRoute(kitchen),"/kitchen");
+ assert.equal(navigation.navigationGroups.flatMap(group=>group.items).some(item=>item.name==="Puesta en marcha"),false);
 });
 
 test("Emprende presenta venta, atención y Concierge sin abastecimiento ni control",()=>{

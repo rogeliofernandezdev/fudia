@@ -53,8 +53,9 @@ redirigir a `firstAccessibleRoute`, igual que login y cambio de local. Si se abr
 shell reemplaza la ruta por ese mismo destino permitido sin mostrar el contenido
 del Dashboard ni el aviso de acceso denegado durante la transición. No se infiere
 el destino por el nombre del rol. Sin opciones válidas se entra a `/no-access`;
-los enlaces genéricos de regreso al inicio usan `/`. Puesta en marcha solo tiene
-prioridad si también es accesible. Las demás rutas restringidas mantienen su
+los enlaces genéricos de regreso al inicio usan `/`. Quien puede abrir el
+Dashboard (administradores) entra ahí; los demás roles, a su primera opción
+activa. La configuración pendiente no altera ese destino. Las demás rutas restringidas mantienen su
 aviso y la autorización definitiva del API no cambia.
 
 Carta y productos usa las etiquetas «Ver carta y productos» y «Administrar carta

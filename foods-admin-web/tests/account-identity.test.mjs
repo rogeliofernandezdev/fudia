@@ -83,12 +83,8 @@ test("empresa: identidad junto al icono del menú, separada del buscador y del l
   assert.match(css,/@media \(width<=600px\)[\s\S]*\.topbar-identity\{flex:1;max-width:none;gap:var\(--space-2\)/);
 });
 
-test("el aviso inicial comparte la alineación global del título y listado",()=>{
+test("sin Puesta en marcha: el shell no muestra aviso ni recorrido de configuración inicial",()=>{
   const shell=read("src/shell/admin-shell.tsx");
-  assert.match(shell,/<div className="content">\{setupRequired[\s\S]*className="setup-reminder"/);
-  const css=read("src/shell/styles/shell.css");
-  assert.equal((css.match(/\.setup-reminder\{/g)??[]).length,1);
-  assert.match(css,/\.setup-reminder\{[^}]*margin:0 0 var\(--space-5\)/);
-  assert.match(css,/\.setup-reminder>span\{[^}]*min-width:0/);
-  assert.match(css,/\.setup-reminder>svg\{flex-shrink:0\}/);
+  assert.doesNotMatch(shell,/setup-reminder|RestaurantSetupTour|setupRequired/);
+  assert.doesNotMatch(read("src/shell/styles/shell.css"),/\.setup-reminder/);
 });

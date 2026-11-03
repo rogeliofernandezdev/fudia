@@ -344,7 +344,7 @@ La navegación comparte su selección con los accesos de Configuración mediante
 Cocina usa `chefHat`, Carta y productos `dish`, Mesas y zonas `grid`, Caja y turnos
 `cashShift` (reloj con importe), Apps de delivery `apps`, Repartidores `motorbike`,
 Personal y asistencias `userCheck`, Locales `mapPin`, Mi restaurante `store`,
-Puesta en marcha `checklist`, Países y WhatsApp `whatsapp`, Impuestos de plataforma
+Países y WhatsApp `whatsapp`, Impuestos de plataforma
 `tax` (recibo con porcentaje, `IconReceiptTax`) y Concierge `chatbot`.
 Los glifos nuevos pertenecen al mismo set Tabler; se mantienen tamaño, trazo y
 color compartidos. Los demás accesos conservan su símbolo de dominio.
@@ -2409,45 +2409,6 @@ un resumen de solo lectura con plan, estado, precio/ciclo, renovación, prueba,
 condiciones, uso frente a límites, módulos incluidos y último pago. Cambiar
 plan, estado o registrar cobros sigue siendo una acción exclusiva de Plataforma.
 
-### Puesta en marcha operativa
-
-La ruta compone una única pantalla del módulo `setup`. La cabecera de bienvenida
-reúne la acción «Iniciar recorrido guiado» y el avance esencial real. La hoja de
-ruta usa pasos numerados sobre fondo neutro, selección azul suave y estados
-textuales. El detalle tiene altura natural, instrucciones breves, un consejo
-y una acción para abrir la sección con guía; no usa un panel lateral oscuro ni
-reserva grandes espacios vacíos. En móvil la hoja de ruta tiene scroll horizontal
-y las modalidades de atención se presentan como radios en filas.
-
-El recorrido acompaña las pantallas reales con un panel contextual minimizable
-y un contorno en el área explicada. «Anterior» y «Siguiente» navegan por las
-opciones permitidas; el último paso vuelve a la revisión. Recorrer la guía no
-marca requisitos como completos: la API conserva esa autoridad. La carga se
-comparte por empresa y local, y se consulta de nuevo al regresar al resumen.
-
-
-Después de crear la empresa, su Administrador entra a
-`/settings/getting-started`. El asistente lee contadores reales de la API,
-no simula datos ni duplica formularios: deriva al mantenimiento correspondiente
-y comprueba los cambios al regresar. Son obligatorios el tipo de atención, una
-categoría, un producto vendible y una caja; las mesas solo son obligatorias para
-salón o modalidad mixta.
-
-El onboarding de una empresa nueva ya deja Salón como tipo de atención, la
-categoría «General», «Mesa 1» y «Mesa 2» (2 personas, zona «Principal») y la
-«Caja principal»: Forma de atención, Mesas y Caja aparecen completos y el
-paso de Carta solo espera el primer producto. Todo sigue siendo editable; no se crean
-productos, pedidos ni turnos de caja de ejemplo.
-
-Los pasos opcionales se construyen desde los módulos activos de la suscripción.
-Inventario, recetas y proveedores no aparecen cuando el plan no los incluye;
-en particular, el plan básico nunca muestra Recetas. Mientras la puesta en
-marcha siga pendiente, la navegación conserva un recordatorio visible y el
-login del Administrador de empresa abre primero el asistente. Carga, error y
-estado listo respetan los patrones visuales generales y el flujo funciona desde
-390 px.
-
-
 ### Nombres de navegación
 
 - Los nombres de navegación evitan repetir el nombre del grupo. Dentro de
@@ -2464,13 +2425,16 @@ estado listo respetan los patrones visuales generales y el flujo funciona desde
 - Después del login nunca se redirige de forma fija a `/dashboard`.
 - La entrada se calcula con el mismo catálogo que construye el sidebar y respeta,
   en este orden, módulo contratado, acceso de menú y permiso mínimo de lectura.
-- Se abre la primera opción realmente accesible según el orden de navegación.
-  Ejemplos predeterminados: Mesero → Pedidos, Cocinero → Cocina, Cajero → Punto
+- Si la cuenta puede abrir el Dashboard (Administrador de empresa o de
+  plataforma), entra al Dashboard. Si no, se abre la primera opción realmente
+  accesible según el orden de navegación. Ejemplos predeterminados: Mesero → Pedidos, Cocinero → Cocina, Cajero → Punto
   de venta y Almacenero → Inventario.
 - El logo de FUDIA y el cambio de local reutilizan exactamente la misma regla.
 - Si ningún módulo satisface las tres condiciones, la cuenta entra a
   `/no-access`, donde se informa que debe revisarse su rol. No se muestra un
   Dashboard bloqueado como página inicial.
+- No existe Puesta en marcha: ni menú, ni aviso de configuración pendiente, ni
+  recorrido guiado. Una configuración pendiente no cambia la ruta inicial.
 
 
 ### Convención de URL

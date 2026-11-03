@@ -883,24 +883,12 @@ test("una sesión activa no se reemplaza silenciosamente",()=>{
   assert.ok(login.includes("useState(hasSession)")&&login.includes("if(!hasSession)return;"),"Sin cookie el login no muestra «Validando sesión» ni consulta el contexto");
 });
 
-test("la puesta en marcha guía según los módulos contratados",()=>{
-  const setup=read("src/modules/setup/presentation/setup-steps.ts");
-  const route=read("src/app/(admin)/settings/getting-started/page.tsx");
-  const layout=read("src/app/(admin)/layout.tsx");
-  assert.ok(route.includes('from "@/modules/setup"'),"La ruta consume la pantalla que muestra el avance real");
-  assert.equal(layout.includes("RestaurantOnboardingGate"),false,"El layout no puede ocultar el asistente real con una bienvenida duplicada");
-  assert.equal(existsSync(join(root,"src/modules/setup/presentation/restaurant-onboarding-gate.tsx")),false,"No queda un gate sin estilos compitiendo con la puesta en marcha");
+test("Puesta en marcha no existe en el panel",()=>{
+  assert.equal(existsSync(join(root,"src/modules/setup")),false,"No queda el módulo del asistente");
+  assert.equal(existsSync(join(root,"src/app/(admin)/settings/getting-started")),false,"No queda la ruta del asistente");
   const navigation=read("src/shell/navigation.ts");
-  const session=read("src/shared/session/session-api.ts");
-  const shell=read("src/shell/admin-shell.tsx");
-
-  assert.ok(setup.includes("setup.modules.inventario"),"Inventario solo aparece cuando el plan lo habilita");
-  assert.ok(setup.includes("setup.modules.recetas"),"Recetas solo aparece cuando el plan lo habilita");
-  assert.ok(setup.includes("setup.modules.compras"),"Compras solo aparece cuando el plan lo habilita");
-  assert.ok(setup.includes('setup.serviceMode==="dine_in"||setup.serviceMode==="mixed"'),"Las mesas son obligatorias únicamente para atención en salón");
-  assert.ok(session.includes("setupRequired:boolean"),"El contexto informa si la empresa sigue pendiente");
-  assert.ok(navigation.includes("return pageRoutes.gettingStarted"),"El Administrador entra primero al asistente pendiente");
-  assert.ok(shell.includes("Configuración inicial pendiente"),"La navegación mantiene un recordatorio de configuración");
+  assert.equal(navigation.includes("Puesta en marcha"),false,"El menú no ofrece Puesta en marcha");
+  assert.equal(navigation.includes("setupRequired"),false,"El ingreso no depende de la configuración pendiente");
 });
 
 

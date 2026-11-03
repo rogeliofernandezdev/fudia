@@ -532,9 +532,7 @@ body {
     --control-height: var(--size-48);
   }
 
-  :root,
-  .setup-tour,
-  .restaurant-setup {
+  :root {
     --control-height: var(--size-44);
     --font-size-control: var(--font-size-md);
   }

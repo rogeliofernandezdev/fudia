@@ -21,10 +21,10 @@ export const navigationGroups:NavGroup[]=[
  {label:"DELIVERY",items:[{href:pageRoutes.delivery,name:"Delivery propio",icon:"truck",module:"delivery"},{href:pageRoutes.deliveryApps,name:"Apps de delivery",icon:"apps",module:"delivery_apps"},{href:pageRoutes.couriers,name:"App repartidores",icon:"motorbike",module:"repartidores"}]},
  {label:"NEGOCIO",items:[{href:pageRoutes.customers,name:"Clientes",icon:"user",module:"clientes",permission:"customers.read"},{href:pageRoutes.crm,name:"CRM y fidelización",icon:"heart",module:"crm"},{href:pageRoutes.loyaltyPoints,name:"Plaza puntos",icon:"star",module:"puntos"},{href:pageRoutes.offers,name:"Ofertas y descuentos",icon:"tag",module:"ofertas"},{href:pageRoutes.staff,name:"Personal y asistencias",icon:"userCheck",module:"personal"},{href:pageRoutes.locations,name:"Locales",icon:"mapPin",module:"locales",permission:"organizations.read"}]},
  {label:"INTELIGENCIA",items:[{href:pageRoutes.expenses,name:"Costos y gastos",icon:"wallet",module:"costos",permission:"expenses.read"},{href:pageRoutes.businessIntelligence,name:"Restaurant BI",icon:"pie",module:"bi"},{href:pageRoutes.appManager,name:"App manager",icon:"phoneApp",module:"app_manager"}]},
- {label:"CONFIGURACIÓN",items:[{href:pageRoutes.gettingStarted,name:"Puesta en marcha",icon:"checklist",module:"locales",access:"locales",permission:"organizations.read"},{href:pageRoutes.organizationSettings,name:"Mi restaurante",icon:"store",module:"locales",access:"locales",permission:"organizations.read"},{href:pageRoutes.taxSettings,name:"Fiscal y moneda",icon:"percent",module:"fiscal",permission:"organizations.read"},{href:pageRoutes.paymentMethods,name:"Medios de pago",icon:"payment",module:"fiscal",access:"fiscal",permission:"organizations.read"},{href:pageRoutes.usersSettings,name:"Usuarios y roles",icon:"users",module:"usuarios",permission:"users.read"},{href:pageRoutes.billingSettings,name:"Facturación",icon:"receipt",module:"facturacion",permission:"organizations.read"},{href:pageRoutes.modulesSettings,name:"Módulos",icon:"layers",module:"fiscal",platformAdminOnly:true},{href:pageRoutes.companiesSettings,name:"Empresas y planes",icon:"contract",module:"locales",platformAdminOnly:true},{href:pageRoutes.platformGlobalSettings,name:"Países y WhatsApp",icon:"whatsapp",module:"integraciones",platformAdminOnly:true},{href:pageRoutes.integrationsSettings,name:"Integraciones",icon:"plug",module:"integraciones"},{href:pageRoutes.concierge,name:"Fudia Concierge",icon:"chatbot",module:"whatsapp_bot",permission:"organizations.read"}]}
+ {label:"CONFIGURACIÓN",items:[{href:pageRoutes.organizationSettings,name:"Mi restaurante",icon:"store",module:"locales",access:"locales",permission:"organizations.read"},{href:pageRoutes.taxSettings,name:"Fiscal y moneda",icon:"percent",module:"fiscal",permission:"organizations.read"},{href:pageRoutes.paymentMethods,name:"Medios de pago",icon:"payment",module:"fiscal",access:"fiscal",permission:"organizations.read"},{href:pageRoutes.usersSettings,name:"Usuarios y roles",icon:"users",module:"usuarios",permission:"users.read"},{href:pageRoutes.billingSettings,name:"Facturación",icon:"receipt",module:"facturacion",permission:"organizations.read"},{href:pageRoutes.modulesSettings,name:"Módulos",icon:"layers",module:"fiscal",platformAdminOnly:true},{href:pageRoutes.companiesSettings,name:"Empresas y planes",icon:"contract",module:"locales",platformAdminOnly:true},{href:pageRoutes.platformGlobalSettings,name:"Países y WhatsApp",icon:"whatsapp",module:"integraciones",platformAdminOnly:true},{href:pageRoutes.integrationsSettings,name:"Integraciones",icon:"plug",module:"integraciones"},{href:pageRoutes.concierge,name:"Fudia Concierge",icon:"chatbot",module:"whatsapp_bot",permission:"organizations.read"}]}
 ];
 
-type AccessContext=Pick<SessionContextResponse,"user"|"modules"|"menuAccess"|"permissions"|"setupRequired"|"cashCollection">;
+type AccessContext=Pick<SessionContextResponse,"user"|"modules"|"menuAccess"|"permissions"|"cashCollection">;
 
 export function accessKey(item:NavItem){return item.access??item.module}
 
@@ -50,9 +50,10 @@ export function visibleNavigation(context:AccessContext){
     .filter(group=>group.items.length>0);
 }
 
+/** Dashboard when the account can open it (administrators); otherwise the role's first active option. */
 export function firstAccessibleRoute(context:AccessContext){
-  const setup=navigationItemForPath(pageRoutes.gettingStarted);
-  if(!context.user.platformAdmin&&context.setupRequired&&(context.permissions.includes("*")||context.permissions.includes("organizations.manage"))&&setup&&canOpenNavigationItem(setup,context))return pageRoutes.gettingStarted;
+  const dashboard=navigationItemForPath(pageRoutes.dashboard);
+  if(dashboard&&canOpenNavigationItem(dashboard,context))return pageRoutes.dashboard;
   return visibleNavigation(context)[0]?.items[0]?.href??pageRoutes.noAccess;
 }
 

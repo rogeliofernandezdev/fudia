@@ -111,11 +111,10 @@ Una empresa nueva queda creada en una sola transacción con:
 No se crean datos comerciales ficticios como productos, proveedores, clientes,
 recetas, mesas o movimientos.
 
-Al primer ingreso, el Administrador de empresa recibe un asistente persistente
-de puesta en marcha. Este valida la operación real (tipo de atención, carta,
-caja y mesas cuando corresponda) y muestra pasos opcionales según los módulos
-contratados. Inventario y Compras son pasos opcionales cuando el plan los
-incluye (desde Impulso); Recetas nunca es obligatorio.
+El panel administrativo no muestra un asistente de puesta en marcha: al
+ingresar, el Administrador de empresa entra al Dashboard y los demás roles a su
+primera opción activa. Los endpoints `restaurant-setup` del API se conservan,
+pero ningún cliente los consume.
 
 ### ✅ Medios de pago
 
