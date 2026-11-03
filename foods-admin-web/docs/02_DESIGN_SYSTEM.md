@@ -523,7 +523,7 @@ La variante se decide por la intención, no por cuántos botones haya:
 
 | Variante | Cuándo usarla | Ejemplos |
 | --- | --- | --- |
-| `primary` | Completar la tarea principal o avanzar el flujo; como máximo una por superficie | Guardar, Registrar cobro, Enviar a cocina, Confirmar entrega, Imprimir en una vista previa |
+| `primary` | Completar la tarea principal o avanzar el flujo; como máximo una por superficie | Guardar, Cobrar, Enviar a cocina, Confirmar entrega, Imprimir en una vista previa |
 | `secondary` | Consultar información o ejecutar una alternativa a la tarea dominante | Ver resumen de pago, Descargar PDF, Editar, Agregar productos, Reintentar |
 | `ghost` | Volver o abandonar un formulario sin persistir | Anterior, Cancelar |
 | `danger-outline` | Iniciar una acción destructiva con confirmación posterior | Anular, Cancelar pedido |
@@ -1526,8 +1526,8 @@ descargar y alternar al detalle HTML del informe sin depender del visor nativo.
   La espera reproduce saldo, métodos, monto y acciones con skeleton. Falta de
   turno ofrece «Ir a Caja»; errores de pedido/caja ofrecen «Reintentar»; una cuenta
   pagada o cerrada no permite otro cobro. El formulario conserva «Cancelar» y
-  la acción principal «Cobrar S/ X» (importe que se cobrará, con propina; sin
-  monto válido dice «Registrar cobro»), bloquea cierre/envíos mientras registra y
+  la acción principal «Cobrar» («Cobrando…» mientras registra); no repite el
+  importe porque ya está en el visor. Bloquea cierre/envíos mientras registra y
   guarda únicamente tras la acción explícita del usuario. El ojo de la tabla sigue
   abriendo el detalle sin añadir otro botón de cobro.
 - **Cobro en dos columnas (2026-11-03):** a la izquierda, un visor fijo en
@@ -1548,9 +1548,12 @@ descargar y alternar al detalle HTML del informe sin depender del visor nativo.
   teclado numérico en pantalla: el campo usa el teclado decimal del dispositivo.
   El campo «Monto entregado por el cliente» mide 52 px con la cifra en 28 px /
   800, sin relleno vertical, para que el número llene el campo centrado.
-  En ≤620 px se apila: el visor queda fijo arriba y compacto (importe y vuelto en
-  una fila; mozo y caja en la siguiente) y solo se desplaza la captura; medios y
-  montos rápidos en 2 columnas.
+  En ≤620 px se apila: el visor queda fijo arriba y compacto. Primera fila: importe
+  a la izquierda y vuelto a la derecha en una columna de 140 px; tras una línea
+  fina, el mozo a la izquierda y la caja en esa misma columna de 140 px (alineada
+  con el vuelto, aunque no haya mozo), solo con icono y nombre (las etiquetas «Atendió:» y «Caja:»
+  quedan para lectores de pantalla) y recortados con puntos suspensivos. Solo se
+  desplaza la captura; medios y montos rápidos en 2 columnas.
 - La configuración presenta la jerarquía Empresa → Perfiles por país → Locales.
   País, moneda e impuesto se editan en el perfil fiscal de la empresa; cada local
   selecciona un perfil existente. Los tipos de cambio se gestionan en una vista

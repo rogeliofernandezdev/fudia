@@ -52,8 +52,8 @@ test("el cobro envía solo el tipo de propina porcentual y el monto libre",async
 test("el formulario de cobro no ofrece propina entregada en mano y muestra al mozo",()=>{
  const source=readFileSync(new URL("../src/modules/operations/pos/presentation/pos-dialogs.tsx",import.meta.url),"utf8");
  assert.doesNotMatch(source,/Entregada directamente|tipDirectToStaff|Porcentaje \(%\)/);
- assert.match(source,/Atendió: <b>\{order\.waiterName\}<\/b>/);
- assert.match(source,/<div className="pos-checkout-meta">[\s\S]*Atendió: <b>\{order\.waiterName\}<\/b>[\s\S]*Caja: <b>\{shiftName\}<\/b>/,"el mozo queda en el visor fijo junto a la caja");
+ assert.match(source,/Atendió: <\/span><b>\{order\.waiterName\}<\/b>/);
+ assert.match(source,/<div className="pos-checkout-meta">[\s\S]*Atendió: <\/span><b>\{order\.waiterName\}<\/b>[\s\S]*Caja: <\/span><b>\{shiftName\}<\/b>/,"el mozo queda en el visor fijo junto a la caja");
  assert.equal((source.match(/Atendió:/g)??[]).length,1,"el mozo no se repite dentro de la propina");
 });
 

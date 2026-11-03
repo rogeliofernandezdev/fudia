@@ -82,8 +82,8 @@ export function PaymentForm({order,methods,shiftName,shiftOptions=[],selectedShi
           </div>
           {selected?.affectsCash&&<div className={"pos-checkout-result"+result.tone} role="status" aria-live="polite"><span>{result.label}</span><strong>{result.value}</strong></div>}
           {(order.waiterName||shiftOptions.length<=1)&&<div className="pos-checkout-meta">
-            {order.waiterName&&<p><Icon name="user" size={16}/><span>Atendió: <b>{order.waiterName}</b></span></p>}
-            {shiftOptions.length<=1&&<p><Icon name="register" size={16}/><span>Caja: <b>{shiftName}</b></span></p>}
+            {order.waiterName&&<p><Icon name="user" size={16}/><span><span className="pos-checkout-meta-label">Atendió: </span><b>{order.waiterName}</b></span></p>}
+            {shiftOptions.length<=1&&<p className="shift"><Icon name="register" size={16}/><span><span className="pos-checkout-meta-label">Caja: </span><b>{shiftName}</b></span></p>}
           </div>}
         </aside>
         <div className="pos-checkout-main">
@@ -134,7 +134,7 @@ export function PaymentForm({order,methods,shiftName,shiftOptions=[],selectedShi
           {offerFiscal&&fiscalOptions&&<CheckoutFiscalSection options={fiscalOptions} value={fiscal} onChange={next=>{setFiscal(next);setFiscalErrors({})}} errors={fiscalErrors} disabled={busy}/>}
         </div>
       </ModalBody>
-      <ModalFooter><Button type="button" action="cancel" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy||(shiftOptions.length>1&&!selectedShiftId)} loading={busy}>{busy?"Registrando…":collected>0?`Cobrar ${formatMoney(collected)}`:"Registrar cobro"}</Button></ModalFooter>
+      <ModalFooter><Button type="button" action="cancel" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy||(shiftOptions.length>1&&!selectedShiftId)} loading={busy}>{busy?"Cobrando…":"Cobrar"}</Button></ModalFooter>
     </ModalForm>;
 }
 

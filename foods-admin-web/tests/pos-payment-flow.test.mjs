@@ -186,7 +186,7 @@ test("el envío se bloquea durante el cobro y conserva separados los detalles de
  assert.match(route,/key=\{params\.orderId\?\?""\}/);
 });
 
-test("el formulario de pago muestra Cobrar con el importe y envía solo al confirmar",()=>{
+test("el formulario de pago tiene Cobrar y envía solo al confirmar",()=>{
  for(const busy of [false,true]){
   let defaults,saved=0;
   const {PaymentForm}=compile("pos-dialogs.tsx",name=>{
@@ -204,7 +204,7 @@ test("el formulario de pago muestra Cobrar con el importe y envía solo al confi
   const tree=PaymentForm({order:{...detail.order,paidAmount:detail.paidAmount,remainingAmount:detail.remainingAmount,paymentStatus:detail.paymentStatus},methods:catalog,shiftName:"Caja principal",currency:{symbol:"S/",position:"before"},busy,formatMoney:String,close:()=>{},save:()=>saved++});
   const all=nodes(tree),submit=all.find(node=>node.type==="Button"&&node.props.type==="submit"),form=all.find(node=>node.type==="ModalForm");
   assert.ok(submit);
-  assert.equal(submit.props.children,busy?"Registrando…":"Cobrar 30","la acción principal muestra el importe que se cobrará");
+  assert.equal(submit.props.children,busy?"Cobrando…":"Cobrar","el importe ya está en el visor: el botón no lo repite");
   assert.equal(submit.props.disabled,busy);
   assert.equal(form.props.inert,busy);
   assert.equal(tree.type,"ModalForm","el formulario compartido evita padding heredado y márgenes negativos del pie");
