@@ -34,6 +34,15 @@ func TestComboStockSharedPortionsAndExhaustedOptions(t *testing.T) {
 	if _, err := pool.Exec(ctx, `INSERT INTO product_availability(organization_id,location_id,product_id,business_date,portion_quantity,sold_quantity) SELECT $1,l.id,$3,(now() AT TIME ZONE l.timezone)::date,3,0 FROM locations l WHERE l.id=$2`, s.OrganizationID, s.LocationID, dish); err != nil {
 		t.Fatal(err)
 	}
+	over := 4
+	overCap := menudomain.ComboInput{Name: "Menú con tope excesivo", Price: "12", Groups: []menudomain.ComboGroupInput{{Name: "Segundo", Required: true, MinSelections: 1, MaxSelections: 1, Options: []menudomain.ComboOptionInput{{ProductID: dish, Quota: &over}}}}}
+	if _, err := catalog.SaveCombo(ctx, s, "", overCap); err == nil {
+		t.Fatal("a cap above the available portions must be rejected")
+	}
+	overCap.Name, overCap.Groups[0].Options[0].Quota = "Menú sin tope", nil
+	if _, err := catalog.SaveCombo(ctx, s, "", overCap); err != nil {
+		t.Fatalf("an empty cap sells everything available: %v", err)
+	}
 	quota := 3
 	definition := menudomain.ComboInput{Name: "Menú prueba", Price: "12", Groups: []menudomain.ComboGroupInput{{Name: "Segundo", Required: true, MinSelections: 1, MaxSelections: 1, Options: []menudomain.ComboOptionInput{{ProductID: dish, Quota: &quota}}}}}
 	created, err := catalog.SaveCombo(ctx, s, "", definition)

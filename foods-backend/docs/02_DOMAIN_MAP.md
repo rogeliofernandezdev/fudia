@@ -23,8 +23,9 @@ solicitar el consumo transaccional a Inventory. Menu informa `remaining` por
 componente y `quotaRemaining` por alternativa del menú, local y día operativo.
 El cupo del menú («Tope» en la interfaz) es un límite diario adicional, no reserva
 existencias: carta y menú consumen el mismo stock y el contador se reinicia cada
-día operativo. Al registrar la alternativa solo se exige que tenga stock (≥ 1);
-el tope puede superar las existencias del día.
+día operativo. Al registrar la alternativa el tope no puede superar las existencias del
+local; vacío vende hasta agotar lo disponible. Lo disponible son las porciones del
+día (`portions`) o el stock físico del local (`inventory`); `none` no tiene máximo.
 Una alternativa agotada no puede añadirse a un combo nuevo ni venderse; un
 cupo explícito debe ser mayor que cero. `none` no limita cantidades mientras
 no se marque agotado. Al editar, los consumos del propio pedido se reutilizan

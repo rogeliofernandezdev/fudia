@@ -85,9 +85,9 @@ test("menús y combos: las acciones siguen el permiso asignado, también al revo
  assert.equal(ui.queries.filter(query=>query.queryKey.includes("combo-picker")).at(-1).enabled,false);
 });
 
-test("toda opción nueva empieza sin tope: vende hasta agotar el stock compartido",()=>{
- for(const availableQuantity of [15,12,2.75,null]){
-  assert.equal(quantities.createComboOption({...base,availableQuantity}).quota,"");
+test("toda opción nueva empieza con lo disponible; sin control queda vacía",()=>{
+ for(const [availableQuantity,expected] of [[15,"15"],[12,"12"],[2.75,"2"],[null,""]]){
+  assert.equal(quantities.createComboOption({...base,availableQuantity}).quota,expected);
  }
  for(const [availableQuantity,expected] of [[15,15],[0,0],[2.75,2],[null,null]]){
   assert.equal(quantities.availableUnits({...base,availableQuantity}),expected);
@@ -104,23 +104,23 @@ test("no permite incorporar una opción agotada ni un tope de cero",()=>{
  assert.equal(ui.wizard().node.props.draft.groups[0].options.length,0);
 });
 
-test("agregar una opción la deja sin tope y permite fijar uno",()=>{
+test("agregar una opción la llena con lo disponible y permite reducirlo",()=>{
  const ui=mount({products:[{...base,availableQuantity:12}]});
  ui.composition().find(node=>node.type==="Button"&&node.props.id==="combo-add-group").props.onClick();
  const picker=ui.composition().find(node=>node.type==="ComboOptionPicker");
  picker.props.onPick(picker.props.products.find(product=>product.id==="lomo"));
- let input=quotaInput(adjust(ui));assert.equal(input.props.value,"");assert.equal(input.props.placeholder,"Sin tope");assert.equal(input.props.max,undefined);assert.equal(input.props.step,"1");
+ let input=quotaInput(adjust(ui));assert.equal(input.props.value,"12");assert.equal(input.props.placeholder,"Sin tope");assert.equal(input.props.max,12,"el tope se acota a lo disponible");assert.equal(input.props.step,"1");
  input.props.onChange({target:{value:"7"}});assert.equal(quotaInput(ui.composition()).props.value,"7");
  ui.setProducts([{...base,availableQuantity:10}]);input=quotaInput(ui.composition());
- assert.equal(input.props.value,"7","el refresco no pisa una cantidad elegida");assert.equal(input.props.max,undefined,"el tope no depende del stock de hoy");
+ assert.equal(input.props.value,"7","el refresco no pisa una cantidad elegida");assert.equal(input.props.max,10,"el máximo sigue al stock refrescado");
 });
 
-test("la plantilla Menú del día deja sin tope la entrada y el segundo",()=>{
+test("la plantilla Menú del día llena la entrada y el segundo con lo disponible",()=>{
  const ui=mount();
  template(ui);
  const draft=ui.wizard().node.props.draft;
- assert.equal(draft.groups.find(group=>group.name==="Entrada").options[0].quota,"");
- assert.equal(draft.groups.find(group=>group.name==="Segundo").options[0].quota,"");
+ assert.equal(draft.groups.find(group=>group.name==="Entrada").options[0].quota,"12");
+ assert.equal(draft.groups.find(group=>group.name==="Segundo").options[0].quota,"15");
 });
 
 test("la plantilla reconoce sinónimos: sopas y ensaladas van a la entrada, refrescos a bebidas",()=>{
@@ -147,7 +147,11 @@ test("un producto sin control no se confunde con cero disponible",()=>{
 
 test("la validación compartida rechaza cero, negativos y fracciones antes de continuar",()=>{
  const valid={groups:[{name:"Segundo",required:true,minSelections:1,maxSelections:1,options:[{productId:"lomo",quota:"40",surcharge:""}]}]};
- assert.equal(validation.validateComboStep(valid,[base],2),null,"el tope puede superar el stock de hoy");
+ assert.equal(validation.validateComboStep(valid,[base],2).field,"combo-group-0-quota-0","el tope no puede superar lo disponible");
+ assert.match(validation.validateComboStep(valid,[base],2).message,/15 unidades disponibles/);
+ assert.equal(validation.validateComboStep({groups:[{...valid.groups[0],options:[{productId:"lomo",quota:"15",surcharge:""}]}]},[base],2),null,"igual a lo disponible es válido");
+ assert.equal(validation.validateComboStep({groups:[{...valid.groups[0],options:[{productId:"lomo",quota:"",surcharge:""}]}]},[base],2),null,"vacío consume todo lo disponible");
+ assert.equal(quantities.isCapValid("40",{...base,availableQuantity:null}),true,"sin control no hay máximo");
  for(const quota of ["0","-1","1.5","abc"]){
   const value={groups:[{name:"Segundo",required:true,minSelections:1,maxSelections:1,options:[{productId:"lomo",quota,surcharge:""}]}]};
   assert.equal(validation.validateComboStep(value,[base],2).field,"combo-group-0-quota-0");
@@ -160,7 +164,7 @@ test("la validación compartida rechaza cero, negativos y fracciones antes de co
  quotaInput(adjust(ui)).props.onChange({target:{value:"0"}});
  assert.equal(quotaInput(ui.composition()).props["aria-invalid"],true);
  const lineError=ui.composition().find(node=>node.props?.className==="field-error combo-option-error");
- assert.match(lineError.props.children,/mayor a cero o déjalo vacío/,"la línea avisa sin abrir nada");
+ assert.match(lineError.props.children,/de 1 a 12 o déjalo vacío/,"la línea avisa el máximo sin abrir nada");
  ui.wizard().view.find(node=>node.type==="Button"&&node.props.id==="combo-submit").props.onClick();
  assert.equal(ui.page().some(node=>node.props?.title==="Menú registrado"),false);
  assert.equal(quotaInput(ui.composition()).props["aria-describedby"],"combo-group-0-option-0-error","el error queda junto al campo, no arriba de la hoja");
@@ -168,7 +172,7 @@ test("la validación compartida rechaza cero, negativos y fracciones antes de co
 
 test("editar conserva el tope persistido sin sustituirlo por el saldo",()=>{
  const ui=mount();ui.edit({id:"combo",name:"Menú",description:"",price:"25",availableFrom:null,availableUntil:null,groups:[{name:"Segundo",required:true,minSelections:1,maxSelections:1,options:[{productId:"lomo",quota:4,surcharge:"0.00"}]}]});
- assert.equal(quotaInput(adjust(ui)).props.value,"4");assert.equal(quotaInput(ui.composition()).props.max,undefined);
+ assert.equal(quotaInput(adjust(ui)).props.value,"4");assert.equal(quotaInput(ui.composition()).props.max,15,"el máximo es lo disponible hoy");
 });
 
 test("las cantidades del selector se aíslan por empresa/local y se refrescan con el wizard abierto",()=>{
@@ -179,11 +183,12 @@ test("las cantidades del selector se aíslan por empresa/local y se refrescan co
  assert.equal(query(a).refetchInterval,10000);assert.equal(query(a).enabled,true);
 });
 
-test("el payload envía sin tope una opción nueva y no quedan campos antiguos en el wizard",async()=>{
+test("el payload envía lo disponible como tope de una opción nueva y vacío como null",async()=>{
  let payload;
  const api=compile("infrastructure/combos-api.ts",name=>name==="@/shared/api/client"?{apiFetch:async(_,options)=>{payload=JSON.parse(options.body);return{id:"combo"}}}:name==="../domain/sale-window"?saleWindow:require(name));
- await api.saveCombo({name:"Menú",description:"",price:"25",availableFrom:"2026-10-18T00:00",availableUntil:"2026-10-24T23:59",availableDays:[],groups:[{name:"Segundo",required:true,minSelections:1,maxSelections:1,options:[quantities.createComboOption(base)]}]},null,"America/Lima");
- assert.equal(payload.groups[0].options[0].quota,null);
+ await api.saveCombo({name:"Menú",description:"",price:"25",availableFrom:"2026-10-18T00:00",availableUntil:"2026-10-24T23:59",availableDays:[],groups:[{name:"Segundo",required:true,minSelections:1,maxSelections:1,options:[quantities.createComboOption(base),quantities.createComboOption({...base,id:"libre",availableQuantity:null})]}]},null,"America/Lima");
+ assert.equal(payload.groups[0].options[0].quota,15);
+ assert.equal(payload.groups[0].options[1].quota,null,"sin control no envía tope");
  assert.deepEqual([payload.availableFrom,payload.availableUntil],["2026-10-18T05:00:00.000Z","2026-10-25T04:59:00.000Z"],"el API recibe las fechas en la hora del local");
  for(const file of ["domain/types.ts","domain/wizard-validation.ts","presentation/combos-page.tsx"]){assert.equal(read(file).includes("defaultDailyQuota"),false,file)}
 });

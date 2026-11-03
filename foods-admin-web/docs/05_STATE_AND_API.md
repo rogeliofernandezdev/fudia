@@ -172,18 +172,26 @@ servidor, para mostrar «Fuera de fecha» en un menú activo que no se vende por
 
 ## Cantidades en Menús y combos
 
-El selector usa `availableQuantity` del listado de Productos solo para saber si
-una opción está agotada hoy (`availableUnits` = 0 la excluye). Cada opción tiene
-un **«Tope»** opcional con sufijo «al día» (contrato `quota`): el máximo que ese
+El selector usa `availableQuantity` del listado de Productos: `availableUnits` = 0
+excluye la opción y, si el producto controla cantidad, es el máximo del tope.
+«Lo disponible» depende del control del producto: porciones del día menos las
+vendidas (platos por porciones), stock físico del local en Inventario (bebidas y
+mercadería por inventario, p. ej. gaseosa con 24 unidades → «de 24») o sin número
+(sin control: tope vacío, sin máximo ni sufijo).
+Cada opción tiene un **«Tope»** opcional con sufijo «de N» (lo disponible hoy;
+sin sufijo si el producto no controla cantidad, contrato `quota`): el máximo que ese
 menú vende de esa opción por día operativo del local. El tope **no separa
 porciones**: carta, comanda y menú consumen el mismo stock, y la opción se agota
 cuando se acaba el stock aunque le quede tope. El contador se reinicia cada día,
 también en menús que se venden «Siempre».
 
-Selección manual y plantilla Menú del día comparten `createComboOption`, que deja
-el tope vacío («Sin tope»: vende hasta agotar). La ayuda del encabezado lo explica.
-La validación compartida acepta vacío o un entero mayor a cero; no compara con el
-stock de hoy, porque el tope rige también días con otra cantidad. La caché incluye
+Selección manual y plantilla Menú del día comparten `createComboOption`, que
+llena el tope con lo disponible hoy (parte entera); el usuario puede reducirlo o
+vaciarlo («Sin tope»: vende hasta agotar). Sin control de cantidad queda vacío. La ayuda del encabezado lo explica.
+La validación compartida acepta vacío (consume todo lo disponible) o un entero
+de 1 a lo disponible: con 10 registrados, 20 se rechaza junto al campo
+(«Escribe un entero de 1 a 10 o déjalo vacío.») y el backend lo vuelve a
+validar al guardar (2026-11-03, pedido del usuario). La caché incluye
 empresa/local; se consulta al abrir la hoja y se refresca cada diez segundos
 mientras permanece abierta. Editar un menú conserva los topes persistidos.
 Guardar no realiza un movimiento de stock.

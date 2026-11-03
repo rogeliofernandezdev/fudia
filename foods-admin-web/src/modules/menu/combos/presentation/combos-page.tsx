@@ -23,7 +23,7 @@ const blank:Draft={name:"",description:"",price:"",groups:[],availableFrom:"",av
 const templates:Group[]=[{name:"Entrada",required:true,minSelections:1,maxSelections:1,options:[]},{name:"Segundo",required:true,minSelections:1,maxSelections:1,options:[]},{name:"Postre",required:false,minSelections:0,maxSelections:1,options:[]},{name:"Bebidas",required:false,minSelections:0,maxSelections:1,options:[]}];
 /** Ayuda de «Costo extra»: «Recargo» sonaba a penalización. */
 const EXTRA_COST_HINT="Monto que se suma si se elige este plato.";
-const CAP_HINT="Máximo que este menú vende de este plato cada día. No separa porciones: la carta usa el mismo stock. Vacío: hasta agotar.";
+const CAP_HINT="Máximo que este menú vende de este plato cada día, sin superar lo disponible. No separa porciones: la carta usa el mismo stock. Vacío: hasta agotar.";
 const DAYS=[{d:1,n:"Lun"},{d:2,n:"Mar"},{d:3,n:"Mié"},{d:4,n:"Jue"},{d:5,n:"Vie"},{d:6,n:"Sáb"},{d:0,n:"Dom"}];
 const SALE_WINDOWS:{value:SaleWindow;label:string}[]=[{value:"always",label:"Siempre"},{value:"days",label:"Elegir días"}];
 /** Identidad de cada parte: tono suave e icono propio, como las tarjetas del Dashboard. Las partes nuevas rotan los tonos.
@@ -353,7 +353,7 @@ function CompositionStep({draft,products,productsLoading,productsError,retryProd
               const limit=product?availableUnits(product):null;
               const quotaId=`${prefix}-quota-${optIndex}`,surchargeId=`${prefix}-surcharge-${optIndex}`,errorId=`${prefix}-option-${optIndex}-error`;
               const quotaInvalid=Boolean(product&&!isCapValid(option.quota,product))||Boolean(errorFor(quotaId));
-              const message=product&&!isCapValid(option.quota,product)?"Escribe un entero mayor a cero o déjalo vacío.":errorFor(quotaId)??errorFor(surchargeId);
+              const message=product&&!isCapValid(option.quota,product)?(limit===null?"Escribe un entero mayor a cero o déjalo vacío.":`Escribe un entero de 1 a ${limit} o déjalo vacío.`):errorFor(quotaId)??errorFor(surchargeId);
               const name=product?.name??"Producto eliminado";
               const soldOut=option.quota==="0"||limit===0;
               const setOption=(next:typeof option)=>groupAt(index,{...group,options:group.options.map((item,position)=>position===optIndex?next:item)});
@@ -361,8 +361,8 @@ function CompositionStep({draft,products,productsLoading,productsError,retryProd
                 <span className="combo-option-name"><span className="combo-option-title"><b>{name}</b>{soldOut&&<Status tone="gray">Agotado</Status>}</span><small>{product?.categoryName??"Sin categoría"}</small></span>
                 <div className="combo-option-cell"><FieldLabel hint={CAP_HINT}><label htmlFor={quotaId} className="combo-cell-label">Tope</label></FieldLabel>
                   <span className={quotaInvalid?"money-input suffix combo-quota invalid":"money-input suffix combo-quota"}>
-                    <Input id={quotaId} type="number" inputMode="numeric" min="1" step="1" value={option.quota} onChange={e=>setOption({...option,quota:e.target.value})} placeholder="Sin tope" aria-invalid={quotaInvalid} aria-describedby={message?errorId:undefined}/>
-                    <span aria-hidden="true">al día</span>
+                    <Input id={quotaId} type="number" inputMode="numeric" min="1" step="1" max={limit??undefined} value={option.quota} onChange={e=>setOption({...option,quota:e.target.value})} placeholder="Sin tope" aria-invalid={quotaInvalid} aria-describedby={message?errorId:undefined}/>
+                    {limit!==null&&<span aria-hidden="true">de {limit}</span>}
                   </span>
                 </div>
                 <div className="combo-option-cell"><FieldLabel hint={EXTRA_COST_HINT}><label htmlFor={surchargeId} className="combo-cell-label">Costo extra</label></FieldLabel>

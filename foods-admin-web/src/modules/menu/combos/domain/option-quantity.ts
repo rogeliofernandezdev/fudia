@@ -5,15 +5,17 @@ export function availableUnits(product:Product):number|null{
   return product.availableQuantity==null?null:Math.max(0,Math.floor(product.availableQuantity));
 }
 
-/** A new option starts without a daily cap: it sells until the shared stock runs out. */
+/** A new option starts capped at today's available units; without quantity control it stays empty. */
 export function createComboOption(product:Product):Option{
-  return {productId:product.id,surcharge:"",quota:""};
+  const limit=availableUnits(product);
+  return {productId:product.id,surcharge:"",quota:limit===null?"":String(limit)};
 }
 
-/** The cap only limits this menu per day; it reserves nothing, so today's stock is not its upper bound. */
+/** The cap never exceeds the units available today; empty sells everything available. */
 export function isCapValid(quota:string,product:Product):boolean{
-  if(availableUnits(product)===0)return false;
+  const limit=availableUnits(product);
+  if(limit===0)return false;
   if(!quota)return true;
   const value=Number(quota);
-  return /^\d+$/.test(quota)&&Number.isSafeInteger(value)&&value>0;
+  return /^\d+$/.test(quota)&&Number.isSafeInteger(value)&&value>0&&(limit===null||value<=limit);
 }

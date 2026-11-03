@@ -76,7 +76,7 @@ func (a *Catalog) SaveCombo(ctx context.Context, s scope, id string, in domain.C
 				return result, menuFailure(apperror.Conflict, "combo_option_conflict", "No pudimos guardar una de las alternativas.")
 			}
 			if tag == 0 {
-				return result, menuFailure(apperror.Conflict, "combo_option_invalid", "Una alternativa no está disponible o está agotada en el local.")
+				return result, menuFailure(apperror.Conflict, "combo_option_invalid", "Una alternativa no está disponible o su tope supera las existencias del local.")
 			}
 		}
 	}

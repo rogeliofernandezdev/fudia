@@ -1,5 +1,5 @@
 import type {Draft,Product} from "./types";
-import {isCapValid} from "./option-quantity";
+import {availableUnits,isCapValid} from "./option-quantity";
 
 export type WizardIssue={step:number;field:string;message:string};
 const amount=(value:string)=>/^\d+(\.\d{1,2})?$/.test(value);
@@ -22,7 +22,7 @@ export function validateComboStep(draft:Draft,products:Product[],step:number):Wi
         const product=products.find(item=>item.id===option.productId&&item.active);
         if(!product||selected.has(option.productId))return issue(`${prefix}-product`,`Revisa los productos de ${group.name}: deben estar activos y no repetirse.`);
         selected.add(option.productId);
-        if(!isCapValid(option.quota,product))return issue(`${prefix}-quota-${position}`,`Revisa el tope de ${product.name}: escribe un entero mayor a cero o déjalo vacío.`);
+        if(!isCapValid(option.quota,product))return issue(`${prefix}-quota-${position}`,`Revisa el tope de ${product.name}: ${availableUnits(product)===null?"escribe un entero mayor a cero":`no puede superar las ${availableUnits(product)} unidades disponibles`} o déjalo vacío.`);
         if(option.surcharge.trim()&&!amount(option.surcharge))return issue(`${prefix}-surcharge-${position}`,`Ingresa un costo extra válido para ${product.name}.`);
       }
     }

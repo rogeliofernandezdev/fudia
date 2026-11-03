@@ -41,8 +41,8 @@ func (r *Catalog) CreateComboOption(ctx context.Context, s scope, id string, gro
  AND ($6::integer IS NULL OR $6>0)
  AND EXISTS(SELECT 1 FROM locations l LEFT JOIN product_availability pa ON pa.organization_id=p.organization_id AND pa.location_id=l.id AND pa.product_id=p.id AND pa.business_date=(now() AT TIME ZONE l.timezone)::date
  WHERE l.id=$8 AND l.organization_id=p.organization_id AND l.active AND COALESCE(pa.manual_status,'available')<>'sold_out'
- AND (p.quantity_control='none' OR (p.quantity_control='portions' AND COALESCE(pa.portion_quantity,0)-COALESCE(pa.sold_quantity,0)>=1)
- OR (p.quantity_control='inventory' AND COALESCE((SELECT sb.quantity FROM inventory_items ii JOIN stock_balances sb ON sb.organization_id=ii.organization_id AND sb.inventory_item_id=ii.id AND sb.location_id=l.id WHERE ii.organization_id=p.organization_id AND ii.product_id=p.id AND ii.active),0)>=1)))`, s.OrganizationID, groupID, option.ProductID, normalizedSurcharge(option.Surcharge), optionIndex, option.Quota, id, s.LocationID)
+ AND (p.quantity_control='none' OR (p.quantity_control='portions' AND COALESCE(pa.portion_quantity,0)-COALESCE(pa.sold_quantity,0)>=COALESCE($6,1))
+ OR (p.quantity_control='inventory' AND COALESCE((SELECT sb.quantity FROM inventory_items ii JOIN stock_balances sb ON sb.organization_id=ii.organization_id AND sb.inventory_item_id=ii.id AND sb.location_id=l.id WHERE ii.organization_id=p.organization_id AND ii.product_id=p.id AND ii.active),0)>=COALESCE($6,1))))`, s.OrganizationID, groupID, option.ProductID, normalizedSurcharge(option.Surcharge), optionIndex, option.Quota, id, s.LocationID)
 	return tag.RowsAffected(), menuError(err)
 }
 func (r *Catalog) BusinessDate(ctx context.Context, s scope) (time.Time, error) {
