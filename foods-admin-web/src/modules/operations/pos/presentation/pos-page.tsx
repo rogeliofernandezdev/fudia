@@ -9,7 +9,7 @@ import dynamic from "next/dynamic";
 import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Button,EmptyState,ErrorState,Icon,IconName,PageHeader,Pagination,RowActionButton,SearchField,Select,Status,ModalHeader,ModalFooter,ModalWorkspace,ModalItemList,ModalItemNote,ModalItemComponents,DetailContact,DetailTimeline,Skeleton,Tabs} from "@/design-system";
-import {useFeedback,useMoney,useSession} from "@/providers";
+import {useCurrency,useFeedback,useMoney,useSession} from "@/providers";
 import {formatRegionalDateTime} from "@/shared/i18n/regional-format";
 import {useDebouncedValue} from "@/shared/hooks/use-debounced-value";
 import {pageRoutes} from "@/shared/routing/page-routes";
@@ -233,6 +233,7 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
 
 function POSPaymentEntry({loading,error,data,shiftLoading,shiftError,shiftName,shiftOptions=[],selectedShiftId="",selectShift,methodsLoading,methodsError,methods,retryMethods,canCollect,busy,formatMoney,close,retryOrder,retryShift,save}:{loading:boolean;error?:string;data?:POSOrderDetail;shiftLoading:boolean;shiftError?:string;shiftName:string|null;shiftOptions?:POSCollectionShift[];selectedShiftId?:string;selectShift?:(id:string)=>void;methodsLoading:boolean;methodsError?:string;methods?:PaymentMethodOption[];retryMethods:()=>void;canCollect:boolean;busy:boolean;formatMoney:(value:number)=>string;close:()=>void;retryOrder:()=>void;retryShift:()=>void;save:(draft:PaymentDraft)=>void}){
   const fiscal=useCheckoutOptions();
+  const currency=useCurrency();
   let state:{title:string;text:string;icon?:IconName;retry?:()=>void;cash?:boolean}|undefined;
   let form:React.ReactNode;
   if(!canCollect)state={title:"No puedes registrar cobros",text:"Necesitas permiso de cobro o una asignación activa a un turno abierto.",icon:"lock"};
@@ -246,20 +247,22 @@ function POSPaymentEntry({loading,error,data,shiftLoading,shiftError,shiftName,s
     else if(!canChargeAccount(data.order))state=data.order.channel==="salon"?{title:"Cuenta no disponible para cobro",text:"El mozo debe entregar todos los productos y cerrar la cuenta antes de cobrar.",icon:"clock"}:{title:"Pedido no listo",text:"El pedido todavía no está listo para cobrar.",icon:"clock"};
     else if(!shiftName&&!shiftOptions.length)state={title:"Necesitas un turno de caja",text:"Abre un turno o únete a una caja para registrar el cobro.",icon:"register",cash:true};
     else if(!methods?.length)state={title:"Sin medios de pago para ventas",text:"Activa al menos un medio para ventas en Configuración › Medios de pago.",icon:"wallet"};
-    else form=<PaymentForm methods={methods} order={{...data.order,paidAmount:data.paidAmount,remainingAmount:data.remainingAmount,paymentStatus:data.paymentStatus}} shiftName={shiftName??""} shiftOptions={shiftOptions} selectedShiftId={selectedShiftId} selectShift={selectShift} busy={busy} formatMoney={formatMoney} close={close} save={save} tipPolicy={data.tipPolicy} registeredTip={data.tip} fiscalOptions={fiscal.data?.enabled?fiscal.data:undefined}/>;
+    else form=<PaymentForm methods={methods} order={{...data.order,paidAmount:data.paidAmount,remainingAmount:data.remainingAmount,paymentStatus:data.paymentStatus}} shiftName={shiftName??""} shiftOptions={shiftOptions} selectedShiftId={selectedShiftId} selectShift={selectShift} busy={busy} formatMoney={formatMoney} currency={currency} close={close} save={save} tipPolicy={data.tipPolicy} registeredTip={data.tip} fiscalOptions={fiscal.data?.enabled?fiscal.data:undefined}/>;
   }
-  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className="crud-modal pos-payment-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="pos-payment-entry-title" aria-busy={busy||(!state&&!form)}>
+  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className={"crud-modal pos-payment-modal modal-panel-in"+(state?"":" pos-checkout-modal")} role="dialog" aria-modal="true" aria-labelledby="pos-payment-entry-title" aria-busy={busy||(!state&&!form)}>
 
     <ModalHeader title={data?.order.tableName||data?.order.customerName||"Cobrar saldo"} titleId="pos-payment-entry-title" icon="cash" subtitle="Cobro" onClose={close} busy={busy} closeLabel="Cerrar"/>
     {form??(state?state.retry?<ErrorState title={state.title} text={state.text} onRetry={state.retry}/>:<EmptyState icon={state.icon} title={state.title} text={state.text} action={state.cash?cashLink():undefined}/>:<POSPaymentLoading/>)}
   </Dialog></div>;
 }
 
-function POSPaymentLoading(){return <div className="modal-body pos-payment-body pos-payment-loading" aria-label="Cargando formulario de cobro" aria-busy="true">
-  <div className="pos-payment-overview"><i/><i/></div><i/>
-  <div className="pos-payment-loading-methods">{Array.from({length:4},(_,index)=><i key={index}/>)}</div>
-  <div className="pos-payment-loading-field"><i/><b/></div>
-  <div className="pos-payment-loading-actions"><i/><i/></div>
+function POSPaymentLoading(){return <div className="modal-body pos-payment-body pos-checkout pos-payment-loading" aria-label="Cargando formulario de cobro" aria-busy="true">
+  <div className="pos-checkout-summary"><i/><b/></div>
+  <div className="pos-checkout-main">
+    <div className="pos-payment-loading-methods">{Array.from({length:4},(_,index)=><i key={index}/>)}</div>
+    <div className="pos-payment-loading-field"><i/><b/></div>
+    <div className="pos-payment-loading-tender">{Array.from({length:4},(_,index)=><i key={index}/>)}</div>
+  </div>
 </div>}
 
 /** Detalle de cobro con el patrón de Detalle de pedido: cabecera con mesa o cliente, identidad, tarjeta, pestañas y resumen fijo. */

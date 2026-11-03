@@ -14,7 +14,7 @@ vm.runInNewContext(ts.transpileModule(readFileSync(new URL("../src/modules/opera
 const serviceFlowExports={};
 vm.runInNewContext(ts.transpileModule(readFileSync(new URL("../src/modules/operations/orders/domain/service-flow.ts",import.meta.url),"utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{exports:serviceFlowExports});
 const detail={order:{waiterId:"waiter",billClosedAt:"2026-10-07T13:00:00Z",id:"order-1",code:"PED-001",channel:"salon",status:"entregado",tableName:"Mesa 04",customerName:"",total:"40",createdAt:"2026-10-07T12:00:00Z",items:[]},paidAmount:"10",remainingAmount:"30",paymentStatus:"partial",payments:[]};
-const primitives=Object.fromEntries(["Button","EmptyState","ErrorState","FormField","Icon","Input","PageHeader","Pagination","RowActionButton","SearchField","Select","Status","Textarea","ModalHeader","ModalForm","ModalBody","ModalFooter","ModalWorkspace","ModalItemList","DetailHero","DetailContact","DetailFacts","DetailTimeline","Tabs","Skeleton"].map(name=>[name,name]));
+const primitives=Object.fromEntries(["Button","MoneyInput","FormDisclosure","EmptyState","ErrorState","FormField","Icon","Input","PageHeader","Pagination","RowActionButton","SearchField","Select","Status","Textarea","ModalHeader","ModalForm","ModalBody","ModalFooter","ModalWorkspace","ModalItemList","DetailHero","DetailContact","DetailFacts","DetailTimeline","Tabs","Skeleton"].map(name=>[name,name]));
 function nodes(tree){const result=[];function visit(node){if(!node||typeof node!=="object")return;if(Array.isArray(node)){node.forEach(visit);return}result.push(node);visit(node.props?.children);visit(node.props?.action);visit(node.props?.summary);visit(node.props?.status);visit(node.props?.steps?.map?.(step=>step.aside))}visit(tree);return result}
 function compile(file,resolve,extra=""){
  const exports={};
@@ -37,7 +37,7 @@ function mountPage({canManage=true,shift=true,busy=false,initialOrderId="order-1
   if(name.endsWith("/tips"))return tipCalculation;
    if(name==="@/design-system")return primitives;
   if(name==="@/design-system/dialog")return{Dialog:"Dialog"};
-  if(name==="@/providers")return{useFeedback:()=>({notify:value=>notices.push(value)}),useMoney:()=>value=>`S/ ${value}`,useSession:()=>({can:()=>canManage,user:{id:userId},location:{country:"PE",timezone:"America/Lima"}})};
+  if(name==="@/providers")return{useCurrency:()=>({symbol:"S/",position:"before",decimals:2}),useFeedback:()=>({notify:value=>notices.push(value)}),useMoney:()=>value=>`S/ ${value}`,useSession:()=>({can:()=>canManage,user:{id:userId},location:{country:"PE",timezone:"America/Lima"}})};
   if(name==="@/providers/settings-context")return{useSettings:()=>({currencySymbol:"S/",currencyDecimals:2,currencyPosition:"before"})};
   if(name==="@/shared/i18n/regional-format")return{formatRegionalNumber:value=>String(value),formatRegionalDateTime:()=>"Hoy"};
   if(name==="@/shared/hooks/use-debounced-value")return{useDebouncedValue:value=>value};
@@ -186,7 +186,7 @@ test("el envío se bloquea durante el cobro y conserva separados los detalles de
  assert.match(route,/key=\{params\.orderId\?\?""\}/);
 });
 
-test("el formulario de pago tiene Registrar cobro y envía solo al confirmar",()=>{
+test("el formulario de pago muestra Cobrar con el importe y envía solo al confirmar",()=>{
  for(const busy of [false,true]){
   let defaults,saved=0;
   const {PaymentForm}=compile("pos-dialogs.tsx",name=>{
@@ -194,17 +194,17 @@ test("el formulario de pago tiene Registrar cobro y envía solo al confirmar",()
    if(name==="@/design-system")return primitives;
    if(name==="@/design-system/dialog")return{Dialog:"Dialog"};
    if(name==="@/shared/i18n/regional-format")return{formatRegionalNumber:String};
-   if(name==="react-hook-form")return{useForm:options=>{defaults=options.defaultValues;return{register:()=>({}),handleSubmit:save=>()=>save(defaults),formState:{errors:{}}}},useWatch:()=>"cash"};
+   if(name==="react-hook-form")return{useForm:options=>{defaults=options.defaultValues;return{register:()=>({}),handleSubmit:save=>()=>save(defaults),formState:{errors:{}}}},useWatch:({name})=>({method:"cash",amount:"30.00"})[name]??""};
    if(name==="react")return{...require(name),useState:value=>[typeof value==="function"?value():value,()=>{}]};
    if(name==="@/modules/einvoicing")return{CheckoutFiscalSection:"CheckoutFiscalSection",blankFiscalDraft:()=>({documentType:"none",customerDocumentType:"",customerDocumentNumber:"",customerName:"",customerAddress:""}),fiscalRequest:()=>undefined,validateFiscalDraft:()=>({})};
    if(name.endsWith("pos-schema"))return compile("../domain/pos-schema.ts",name=>name.endsWith("tips/domain/calculation")?tipCalculation:require(name));
    if(name.startsWith("../"))return{};
    return require(name);
   });
-  const tree=PaymentForm({order:{...detail.order,paidAmount:detail.paidAmount,remainingAmount:detail.remainingAmount,paymentStatus:detail.paymentStatus},methods:catalog,shiftName:"Caja principal",busy,formatMoney:String,close:()=>{},save:()=>saved++});
+  const tree=PaymentForm({order:{...detail.order,paidAmount:detail.paidAmount,remainingAmount:detail.remainingAmount,paymentStatus:detail.paymentStatus},methods:catalog,shiftName:"Caja principal",currency:{symbol:"S/",position:"before"},busy,formatMoney:String,close:()=>{},save:()=>saved++});
   const all=nodes(tree),submit=all.find(node=>node.type==="Button"&&node.props.type==="submit"),form=all.find(node=>node.type==="ModalForm");
   assert.ok(submit);
-  assert.equal(submit.props.children,busy?"Registrando…":"Registrar cobro");
+  assert.equal(submit.props.children,busy?"Registrando…":"Cobrar 30","la acción principal muestra el importe que se cobrará");
   assert.equal(submit.props.disabled,busy);
   assert.equal(form.props.inert,busy);
   assert.equal(tree.type,"ModalForm","el formulario compartido evita padding heredado y márgenes negativos del pie");
@@ -336,11 +336,11 @@ test("el cobro usa el catálogo de medios de pago y la nota de caja sigue a Impa
    if(name.startsWith("../"))return{};
    return require(name);
   });
-  const all=nodes(PaymentForm({order:{...detail.order,paidAmount:detail.paidAmount,remainingAmount:detail.remainingAmount,paymentStatus:detail.paymentStatus},methods:catalog,shiftName:"Caja principal",busy:false,formatMoney:String,close:()=>{},save:()=>{}}));
-  const labels=all.filter(node=>node.type==="label"&&String(node.props.className).startsWith("pos-method")).map(node=>node.props.children.at(-1).props.children);
+  const all=nodes(PaymentForm({order:{...detail.order,paidAmount:detail.paidAmount,remainingAmount:detail.remainingAmount,paymentStatus:detail.paymentStatus},methods:catalog,shiftName:"Caja principal",currency:{symbol:"S/",position:"before"},busy:false,formatMoney:String,close:()=>{},save:()=>{}}));
+  const labels=all.filter(node=>node.type==="span"&&node.props.className==="pos-method-name").map(node=>node.props.children);
   assert.deepEqual(labels,["Efectivo","Tarjeta","Yape","Plin"],"las opciones vienen del catálogo, en su orden");
   assert.equal(defaults.method,"cash","el primer medio activo queda seleccionado");
-  assert.equal(all.some(node=>node.props?.className==="pos-cash-impact"),watched==="cash","solo un medio que impacta caja anuncia el efectivo esperado");
+  assert.equal(all.some(node=>node.props?.className==="pos-cash-impact"),false,"el cobro no repite un aviso sobre la caja que ya se eligió");
   assert.equal(all.some(node=>node.type==="FormField"&&node.props.label==="Referencia"),watched!=="cash");
  }
  const source=readFileSync(new URL("pos-dialogs.tsx",root),"utf8");
@@ -386,4 +386,46 @@ test("venta por mostrador: la bandeja muestra origen, número, productos y prepa
  assert.ok(charge&&!charge.props.disabled,"preparación y pago son independientes");
  assert.equal(serviceFlowExports.canChargeAccount({...counter,origin:"counter",status:"cancelado"}),false);
  assert.equal(serviceFlowExports.canChargeAccount({...counter,origin:undefined}),false,"recojo sigue esperando que esté listo");
+});
+
+test("montos rápidos de efectivo: exacto y redondeos 1-2-5 sin catálogo de billetes",()=>{
+ const {cashSuggestions}=compile("../domain/pos-schema.ts",name=>name.endsWith("tips/domain/calculation")?tipCalculation:require(name));
+ assert.deepEqual([...cashSuggestions(10)],[10,20,50,100]);
+ assert.deepEqual([...cashSuggestions(19.85)],[19.85,20,50,100]);
+ assert.deepEqual([...cashSuggestions(37.5)],[37.5,40,50,100]);
+ assert.deepEqual([...cashSuggestions(8.5)],[8.5,9,10,20]);
+ assert.deepEqual([...cashSuggestions(0)],[]);
+});
+
+test("cobro en dos paneles: el visor muestra falta o vuelto y el pago parcial queda plegado",()=>{
+ for(const [received,label,result] of [["","Vuelto","—"],["20","Falta","10"],["50","Vuelto","20"]]){
+  const {PaymentForm}=compile("pos-dialogs.tsx",name=>{
+   if(name.endsWith("/tips"))return tipCalculation;
+   if(name==="@/design-system")return primitives;
+   if(name==="@/design-system/dialog")return{Dialog:"Dialog"};
+   if(name==="@/shared/i18n/regional-format")return{formatRegionalNumber:String};
+   if(name==="react-hook-form")return{useForm:()=>({register:()=>({}),setValue:()=>{},handleSubmit:()=>()=>{},formState:{errors:{}}}),useWatch:({name})=>({method:"cash",amount:"30.00",receivedAmount:received})[name]??""};
+   if(name==="react")return{...require(name),useState:value=>[typeof value==="function"?value():value,()=>{}]};
+   if(name==="@/modules/einvoicing")return{CheckoutFiscalSection:"CheckoutFiscalSection",blankFiscalDraft:()=>({}),fiscalRequest:()=>undefined,validateFiscalDraft:()=>({})};
+   if(name.endsWith("pos-schema"))return compile("../domain/pos-schema.ts",name=>name.endsWith("tips/domain/calculation")?tipCalculation:require(name));
+   if(name.startsWith("../"))return{};
+   return require(name);
+  });
+  const all=nodes(PaymentForm({order:{...detail.order,paidAmount:detail.paidAmount,remainingAmount:detail.remainingAmount,paymentStatus:detail.paymentStatus},methods:catalog,shiftName:"Caja principal",currency:{symbol:"S/",position:"before"},busy:false,formatMoney:String,close:()=>{},save:()=>{}}));
+  const summary=all.find(node=>node.type==="aside"&&node.props.className==="pos-checkout-summary");
+  assert.ok(summary,"el resumen vive en el visor lateral");
+  const box=all.find(node=>String(node.props?.className).startsWith("pos-checkout-result"));
+  assert.deepEqual(Array.from(box.props.children,child=>child.props.children),[label,result]);
+  const partial=all.find(node=>node.type==="FormDisclosure");
+  assert.equal(partial.props.open,false,"el monto parcial no distrae en el cobro completo");
+  assert.equal(all.some(node=>String(node.props?.className).includes("pos-keypad")),false,"sin teclado en pantalla: se escribe directo en el campo");
+ }
+});
+
+test("cada medio de pago tiene color propio sin depender de su nombre",()=>{
+ const {paymentMethodTones}=compile("pos-dialogs.tsx",name=>name==="@/design-system"?primitives:name.endsWith("pos-schema")?{}:name==="react-hook-form"?{}:name==="@/modules/einvoicing"?{}:name.endsWith("/tips")?tipCalculation:name.startsWith("@/")||name.startsWith("../")?{}:require(name));
+ const tones=paymentMethodTones([{code:"a",name:"Efectivo",affectsCash:true},{code:"b",name:"Tarjeta",affectsCash:false},{code:"c",name:"Yape",affectsCash:false},{code:"d",name:"Plin",affectsCash:false}]);
+ assert.equal(tones.a,"brand","el efectivo es verde");
+ assert.equal(new Set([tones.b,tones.c,tones.d]).size,3,"los demás medios no comparten tono");
+ assert.equal([tones.b,tones.c,tones.d].includes("brand"),false);
 });

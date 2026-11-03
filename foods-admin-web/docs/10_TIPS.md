@@ -11,9 +11,12 @@ usa los valores y canales del catálogo de onboarding. La validación pertenece 
 paso del local y los valores se conservan al avanzar o volver.
 
 - **Locales → editar o nuevo local:** sección «Propinas» dentro del formulario del local (2026-11-01; reemplaza el botón «Propinas» de cada fila). Empieza con el selector «Funcionamiento» y muestra el resto solo si no están desactivadas. Solo la ve el administrador reservado (`editable` del API); para otros usuarios no aparece. Se envían únicamente si se cambiaron, junto con el local y en la misma transacción: un local nuevo sin cambios sigue heredando la configuración de la empresa. Sin pestañas de alcance ni casilla de herencia.
-- **POS → Cobrar (incluye el cobro de una mesa):** la sección «Propina» muestra
-  primero «Atendió: <mozo>» (`order.waiterName` del detalle del pedido; se omite
-  si la atención no tiene mozo, p. ej. mostrador o delivery). La aceptación
+- **POS → Cobrar (incluye el cobro de una mesa):** «Atendió: <mozo>»
+  (`order.waiterName` del detalle del pedido; se omite si la atención no tiene
+  mozo, p. ej. mostrador o delivery) está siempre visible en el visor fijo del
+  cobro, junto a la caja, y no se repite en la propina. «Propina» es un bloque
+  plegable (`FormDisclosure`, cerrado al abrir el cobro; su resumen muestra el
+  importe una vez aceptada). La aceptación
   inicia sin marcar. El porcentaje no se escribe: es el configurado para el local
   y se muestra en el texto «10 % sobre el consumo de S/ 17.00…». El selector
   «Tipo de propina» (Porcentaje del local / Monto libre) aparece solo si el local

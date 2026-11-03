@@ -63,4 +63,21 @@ export function cashChange(amount:string|undefined,received:string|undefined){
   const charged=Number(amount),tendered=Number(received);
   return Number.isFinite(charged)&&charged>0&&Number.isFinite(tendered)&&tendered>=charged?Math.round((tendered-charged)*100)/100:null;
 }
+/**
+ * Montos rápidos de efectivo, como en los POS de mostrador: el importe exacto y los
+ * siguientes redondeos de la serie 1-2-5 a partir de su orden de magnitud. Es aritmética
+ * genérica, no un catálogo de billetes; sirve para cualquier moneda.
+ */
+export function cashSuggestions(total:number,decimals=2,limit=4){
+  if(!Number.isFinite(total)||total<=0)return [];
+  const scale=10**decimals,exact=Math.ceil(total*scale-1e-6)/scale;
+  const values=[exact];
+  for(let power=10**Math.floor(Math.log10(exact));values.length<limit&&power<=exact*1000;power*=10){
+    for(const factor of [1,2,5]){
+      const rounded=Math.ceil(exact/(power*factor))*power*factor;
+      if(rounded>exact&&!values.includes(rounded)&&values.length<limit)values.push(rounded);
+    }
+  }
+  return values.sort((a,b)=>a-b);
+}
 export const refundResolver=resolverFor<RefundDraft>(refundSchema);

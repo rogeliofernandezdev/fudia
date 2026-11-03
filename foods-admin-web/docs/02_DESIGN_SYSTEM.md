@@ -1526,9 +1526,31 @@ descargar y alternar al detalle HTML del informe sin depender del visor nativo.
   La espera reproduce saldo, métodos, monto y acciones con skeleton. Falta de
   turno ofrece «Ir a Caja»; errores de pedido/caja ofrecen «Reintentar»; una cuenta
   pagada o cerrada no permite otro cobro. El formulario conserva «Cancelar» y
-  «Registrar cobro», bloquea cierre/envíos mientras registra y guarda únicamente
-  tras la acción explícita del usuario. El ojo de la tabla sigue abriendo el
-  detalle sin añadir otro botón de cobro.
+  la acción principal «Cobrar S/ X» (importe que se cobrará, con propina; sin
+  monto válido dice «Registrar cobro»), bloquea cierre/envíos mientras registra y
+  guarda únicamente tras la acción explícita del usuario. El ojo de la tabla sigue
+  abriendo el detalle sin añadir otro botón de cobro.
+- **Cobro en dos columnas (2026-11-03):** a la izquierda, un visor fijo en
+  `navigation-900` con «Saldo a cobrar» (o «Total a cobrar» si hay propina o pago
+  parcial) en 48 px y blanco, una línea por dato de apoyo (pagado, propina,
+  pendiente) en `navigation-text`, el recuadro «Vuelto» / «Falta» y, abajo tras una
+  línea fina, «Atendió: <mozo>» (si la atención tiene mozo) y «Caja: <caja>».
+  El recuadro usa `navigation-950` con «—» mientras no hay efectivo; Vuelto
+  `brand-100` / `brand-800` y Falta `warning-100` / `warning-800`. A la derecha,
+  en este orden: caja (si hay varias), «Medio de pago», «Efectivo recibido» con
+  montos rápidos (o «Referencia» si no es efectivo), «Propina» y «Cobrar solo una
+  parte» plegados con `FormDisclosure`, y al final el comprobante. Solo la columna
+  derecha se desplaza. Los medios de pago son botones de 72 px con `IconTile` encima del
+  nombre y marca de check al elegirlos; el efectivo es verde (`brand`) y los demás
+  toman `peach`, `digital`, `sky`, `teal` y `rose` según su orden en el catálogo
+  (`paymentMethodTones`), nunca por nombre. Los montos rápidos son «Exacto» y los
+  siguientes redondeos 1-2-5 (`cashSuggestions`), en píldoras de 44 px. No hay
+  teclado numérico en pantalla: el campo usa el teclado decimal del dispositivo.
+  El campo «Monto entregado por el cliente» mide 52 px con la cifra en 28 px /
+  800, sin relleno vertical, para que el número llene el campo centrado.
+  En ≤620 px se apila: el visor queda fijo arriba y compacto (importe y vuelto en
+  una fila; mozo y caja en la siguiente) y solo se desplaza la captura; medios y
+  montos rápidos en 2 columnas.
 - La configuración presenta la jerarquía Empresa → Perfiles por país → Locales.
   País, moneda e impuesto se editan en el perfil fiscal de la empresa; cada local
   selecciona un perfil existente. Los tipos de cambio se gestionan en una vista
@@ -1821,7 +1843,7 @@ en las órdenes y los ajustes de inventario, sin cambios del contrato ni de stoc
 
 ## Facturación electrónica
 
-- **Cobro (POS):** sección «Comprobante» después de «Medio de pago», solo si la
+- **Cobro (POS):** sección «Comprobante» al final de la columna de captura, solo si la
   facturación está activa para el local y el monto salda la cuenta. «Sin
   comprobante / Boleta / Factura» usa `Tabs` (cambia el modo del formulario) con
   el valor inicial configurado por local. Boleta: «Documento» opcional y

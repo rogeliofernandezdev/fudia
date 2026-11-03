@@ -376,7 +376,7 @@ test("pos cobra pedidos y sincroniza efectivo con caja",()=>{
   assert.ok(page.includes("No estás asignado a una caja abierta"),"POS explica claramente cuando falta turno");
   assert.ok(page.includes("PaymentForm"),"POS registra cobros desde la bandeja dentro del modal estable");
   assert.ok(page.includes("RefundDialog"),"POS permite devolver pagos existentes");
-  assert.ok(dialogs.includes("incrementará automáticamente el efectivo esperado"),"El cobro en efectivo comunica su impacto en Caja");
+  assert.equal(dialogs.includes("incrementará automáticamente el efectivo esperado"),false,"El cobro no repite un aviso sobre la caja ya elegida");
   assert.ok(dialogs.includes("La devolución saldrá del efectivo esperado"),"La devolución en efectivo comunica su impacto en Caja");
   assert.ok(api.includes('apiFetch<Payment>("payments"'),"POS registra pagos en el límite oficial");
   assert.ok(api.includes("/refund"),"POS registra devoluciones ligadas al pago original");
@@ -939,7 +939,7 @@ test("el POS comparte patrones de tabla, móvil y modales",()=>{
   assert.ok(dialogs.includes("FormField"),"Cobro y devolución usan campos compartidos");
   assert.equal(dialogs.includes('type="submit" icon="check"'),false,"El botón primario no duplica el icono aportado por el estilo global");
   assert.equal(dialogs.includes('className="modal-busy"'),false,"La mutación no cubre ni oculta el contexto del formulario");
-  assert.ok(styles.includes(".pos-method>i:after"),"El método de pago tiene un radio visible");
+  assert.ok(styles.includes(".pos-method.active .pos-method-check{opacity:1"),"El método elegido muestra una marca visible además del borde");
   assert.ok(designSystem.includes("Punto de venta (`/pos`)"),"El comportamiento queda documentado en la autoridad visual local");
 });
 

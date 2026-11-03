@@ -716,7 +716,9 @@ vacía al descargar su código. Los medios provienen del catálogo; cuando
 cobro y se muestra «Vuelto» calculado, también en pagos parciales. Recibido y vuelto
 son ayudas locales: el API recibe solo el monto cobrado para no inflar Caja.
 Cobro y devolución usan `ModalForm` → `ModalBody` + `ModalFooter`: el formulario
-no añade padding, el cuerpo aplica el margen compartido y es el único scroll.
+no añade padding y el cuerpo aplica el margen compartido. En la devolución el
+cuerpo es el único scroll; el cobro usa dos columnas (`pos-checkout`): el visor
+izquierdo queda fijo y solo la columna de captura se desplaza.
 El pie queda al ras del panel, sin márgenes negativos ni estilos sticky propios;
 conserva las acciones visibles en móvil.
 
