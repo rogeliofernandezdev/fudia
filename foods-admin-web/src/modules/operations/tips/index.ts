@@ -1,5 +1,5 @@
 export type {TipPolicy,TipInput,TipReceipt,TipReport,TipPayout,TipWorkspace} from "./domain/types";
-export {calculateTip,canCollectTip} from "./domain/calculation";
+export {calculateTip,canCollectTip,tipInputValue} from "./domain/calculation";
 export {TipPayoutDialog} from "./presentation/tip-payout-dialog";
 
 export type {TipSettings} from "./domain/types";

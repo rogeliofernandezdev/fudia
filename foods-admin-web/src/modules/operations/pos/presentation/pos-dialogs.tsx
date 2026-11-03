@@ -3,19 +3,21 @@ import {Dialog} from "@/design-system/dialog";
 import {useState} from "react";
 import {useForm,useWatch} from "react-hook-form";
 import {Button,FormField,FormSection,Icon,Input,Select,Textarea,ModalHeader,ModalForm,ModalBody,ModalFooter} from "@/design-system";
-import {calculateTip,canCollectTip,type TipPolicy,type TipReceipt} from "../../tips";
+import {calculateTip,canCollectTip,tipInputValue,type TipPolicy,type TipReceipt} from "../../tips";
+import {formatRegionalNumber} from "@/shared/i18n/regional-format";
 import {CheckoutFiscalSection,blankFiscalDraft,fiscalRequest,validateFiscalDraft,type CheckoutOptions,type FiscalDraft,type FiscalErrors} from "@/modules/einvoicing";
 import {cashChange,paymentResolverFor,refundResolver} from "../domain/pos-schema";
-import type {POSCollectionShift,Payment,PaymentDraft,PaymentMethodOption,POSOrderSummary,RefundDraft} from "../domain/types";
+import type {POSCollectionShift,Payment,PaymentDraft,PaymentMethodOption,POSOrder,POSOrderSummary,RefundDraft} from "../domain/types";
 
 /** El icono sigue a «Impacta caja»; el nombre y el orden vienen del catálogo. */
 export function paymentMethodIcon(affectsCash:boolean){return affectsCash?"cash" as const:"wallet" as const}
 
-export function PaymentForm({order,methods,shiftName,shiftOptions=[],selectedShiftId="",selectShift,busy,formatMoney,close,save,tipPolicy,registeredTip,fiscalOptions}:{order:POSOrderSummary;methods:PaymentMethodOption[];shiftName:string;shiftOptions?:POSCollectionShift[];selectedShiftId?:string;selectShift?:(id:string)=>void;busy:boolean;formatMoney:(value:number)=>string;close:()=>void;save:(draft:PaymentDraft)=>void;tipPolicy?:TipPolicy;registeredTip?:TipReceipt;fiscalOptions?:CheckoutOptions}){
+export function PaymentForm({order,methods,shiftName,shiftOptions=[],selectedShiftId="",selectShift,busy,formatMoney,close,save,tipPolicy,registeredTip,fiscalOptions}:{order:POSOrderSummary&Pick<POSOrder,"waiterName">;methods:PaymentMethodOption[];shiftName:string;shiftOptions?:POSCollectionShift[];selectedShiftId?:string;selectShift?:(id:string)=>void;busy:boolean;formatMoney:(value:number)=>string;close:()=>void;save:(draft:PaymentDraft)=>void;tipPolicy?:TipPolicy;registeredTip?:TipReceipt;fiscalOptions?:CheckoutOptions}){
   const tipAllowed=canCollectTip(tipPolicy,order.channel,Boolean(registeredTip));
   const tipBase=Math.max(0,Number(order.total)-Number(order.deliveryFee??0));
+  const tipPercentage=tipPolicy?.percentage??0;
   const{control,register,handleSubmit,formState:{errors}}=useForm<PaymentDraft>({
-    defaultValues:{method:methods[0]?.code??"",amount:Number(order.remainingAmount).toFixed(tipPolicy?.decimals??2),reference:"",receivedAmount:"",tipEnabled:false,tipKind:"percentage",tipValue:String(tipPolicy?.percentage??0),tipDirectToStaff:false},
+    defaultValues:{method:methods[0]?.code??"",amount:Number(order.remainingAmount).toFixed(tipPolicy?.decimals??2),reference:"",receivedAmount:"",tipEnabled:false,tipKind:tipPercentage>0?"percentage":"fixed",tipValue:""},
     resolver:paymentResolverFor(methods,Number(order.remainingAmount),tipPolicy,tipBase),
     mode:"onSubmit",
     reValidateMode:"onChange",
@@ -26,9 +28,8 @@ export function PaymentForm({order,methods,shiftName,shiftOptions=[],selectedShi
   const enabled=useWatch({control,name:"tipEnabled"});
   const kind=useWatch({control,name:"tipKind"})??"percentage";
   const value=useWatch({control,name:"tipValue"})??"";
-  const direct=useWatch({control,name:"tipDirectToStaff"});
-  const tip=calculateTip(Boolean(enabled)&&tipAllowed,kind,value,tipBase,tipPolicy?.decimals??2);
-  const collected=(Number(amount)||0)+(direct?0:tip);
+  const tip=calculateTip(Boolean(enabled)&&tipAllowed,kind,tipInputValue(kind,tipPolicy,value),tipBase,tipPolicy?.decimals??2);
+  const collected=(Number(amount)||0)+tip;
   const selected=methods.find(option=>option.code===method);
   const change=cashChange(String(collected),received);
   // One document per order: it is requested by the payment that settles the account.
@@ -66,13 +67,13 @@ export function PaymentForm({order,methods,shiftName,shiftOptions=[],selectedShi
         </FormSection>
         {offerFiscal&&fiscalOptions&&<CheckoutFiscalSection options={fiscalOptions} value={fiscal} onChange={next=>{setFiscal(next);setFiscalErrors({})}} errors={fiscalErrors} disabled={busy}/>}
         {tipAllowed&&<FormSection icon="percent" title="Propina" bare>
+          {order.waiterName&&<div className="pos-shift-note"><Icon name="user" size={14}/><span>Atendió: <b>{order.waiterName}</b></span></div>}
           <label className="pos-tip-toggle"><input type="checkbox" {...register("tipEnabled")}/><span>El cliente acepta dejar propina</span></label>
           {enabled&&<div className="pos-payment-fields">
-            <FormField label="Tipo de propina"><Select {...register("tipKind")}><option value="percentage">Porcentaje</option>{tipPolicy?.allowFixed&&<option value="fixed">Monto libre</option>}</Select></FormField>
-            <FormField label={kind==="percentage"?"Porcentaje (%)":"Monto de la propina"} error={errors.tipValue?.message}><Input type="number" min={kind==="percentage"?"0.01":10**-(tipPolicy?.decimals??2)} max={kind==="percentage"?100:undefined} step={kind==="percentage"?"0.01":10**-(tipPolicy?.decimals??2)} {...register("tipValue")} aria-invalid={Boolean(errors.tipValue)}/></FormField>
-            <p className="pos-tip-help">Sobre el consumo de {formatMoney(tipBase)}. Se registra una sola vez por cuenta.</p>
-            <label className="pos-tip-toggle"><input type="checkbox" {...register("tipDirectToStaff")}/><span>Entregada directamente al personal</span></label>
-            <div className="pos-cash-change"><span>{direct?"Propina directa al personal":"Propina a cobrar"}</span><strong>{formatMoney(tip)}</strong></div>
+            {tipPercentage>0&&tipPolicy?.allowFixed&&<FormField label="Tipo de propina" error={errors.tipKind?.message}><Select {...register("tipKind")}><option value="percentage">Porcentaje del local</option><option value="fixed">Monto libre</option></Select></FormField>}
+            {kind==="fixed"&&<FormField label="Monto de la propina" error={errors.tipValue?.message}><Input type="number" min={10**-(tipPolicy?.decimals??2)} step={10**-(tipPolicy?.decimals??2)} inputMode="decimal" {...register("tipValue")} aria-invalid={Boolean(errors.tipValue)} placeholder="0.00"/></FormField>}
+            <p className="pos-tip-help">{kind==="percentage"?`${formatRegionalNumber(tipPercentage,tipPolicy?.country,{maximumFractionDigits:2})} % sobre el consumo de ${formatMoney(tipBase)}. `:""}Se registra una sola vez por cuenta.</p>
+            <div className="pos-cash-change"><span>Propina a cobrar</span><strong>{formatMoney(tip)}</strong></div>
           </div>}
         </FormSection>}
         {registeredTip&&<p className="pos-tip-help">Propina ya registrada: {formatMoney(Number(registeredTip.amount))}. No se vuelve a cobrar.</p>}
@@ -92,7 +93,7 @@ export function PaymentForm({order,methods,shiftName,shiftOptions=[],selectedShi
         </FormField>}
         </div>
         </FormSection>
-        {tip>0&&!direct&&<div className="pos-cash-change" role="status"><span>Total a cobrar con propina</span><strong>{formatMoney(collected)}</strong></div>}
+        {tip>0&&<div className="pos-cash-change" role="status"><span>Total a cobrar con propina</span><strong>{formatMoney(collected)}</strong></div>}
         {selected?.affectsCash&&<div className="pos-cash-impact"><Icon name="cash" size={14}/><span>Entrega el efectivo a la caja indicada. El consumo incrementará automáticamente el efectivo esperado del turno.</span></div>}
       </ModalBody>
       <ModalFooter><Button type="button" kind="ghost" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy||(shiftOptions.length>1&&!selectedShiftId)} loading={busy}>{busy?"Registrando…":"Registrar cobro"}</Button></ModalFooter>

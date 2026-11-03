@@ -752,6 +752,16 @@ pastilla de estado ni formateador de dinero.
   preparación y cuenta está en `02_DESIGN_SYSTEM.md`; no se sobrescribe por pantalla.
 - `useMoney()`: importe con símbolo, posición y decimales de la empresa y
   separadores del país del local; conserva el signo. Nunca `toFixed` + símbolo.
+- `Tooltip({label,content,className,children})`: tooltip de contenido para un
+  disparador visual (foto o icono). El disparador es un `button` con nombre
+  accesible `label` y `aria-describedby` mientras está abierto; abre con hover
+  de puntero fino, foco visible de teclado y toque o pulsación larga en táctil
+  (sin el menú nativo de la imagen), y cierra con Escape o al tocar fuera. La
+  burbuja vive en un portal (`--z-tooltip`), fondo `ink-950`, texto `surface`,
+  ancho máximo 280 px o el viewport menos 16 px por lado; abre arriba y baja si
+  no cabe (`placeTooltip`). El consumidor no renderiza `Tooltip` si no hay
+  contenido. Las etiquetas de una línea siguen con `[data-tooltip]`.
+  Lo protege `tests/tooltip.test.mjs`.
 
 ## Refinamiento de pestañas y modales compartidos
 

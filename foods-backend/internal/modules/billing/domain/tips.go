@@ -32,10 +32,10 @@ type TipPolicy struct {
 	ChannelOptions []TipChannelOption `json:"channelOptions"`
 	Inherited      bool               `json:"inherited"`
 	// Editable is set only by the settings endpoint: the actor may change them.
-	Editable bool `json:"editable"`
-	Country        string             `json:"country"`
-	Currency       string             `json:"currency"`
-	Decimals       int                `json:"decimals"`
+	Editable bool   `json:"editable"`
+	Country  string `json:"country"`
+	Currency string `json:"currency"`
+	Decimals int    `json:"decimals"`
 }
 
 type TipChannelOption struct {
@@ -46,10 +46,14 @@ type TipSettingsInput struct {
 	TipSettings
 	Inherit bool `json:"inherit"`
 }
+
+// TipInput is the customer's acceptance. A percentage tip always applies the
+// location's configured percentage; Value is only read for a fixed amount.
 type TipInput struct {
-	Kind          string  `json:"kind"`
-	Value         float64 `json:"value"`
-	DirectToStaff bool    `json:"directToStaff"`
+	Kind  string  `json:"kind"`
+	Value float64 `json:"value,omitempty"`
+	// Deprecated: a tip handed to staff is not recorded; true is rejected.
+	DirectToStaff bool `json:"directToStaff,omitempty"`
 }
 type TipView struct {
 	ID            string `json:"id"`

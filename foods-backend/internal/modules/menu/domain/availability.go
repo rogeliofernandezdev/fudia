@@ -1,9 +1,12 @@
 package domain
 
+// AvailabilityItem incluye descripción y alérgenos para la ficha del plato en la carta de la comanda.
 type AvailabilityItem struct {
 	ImageView
 	ProductID       string   `json:"productId"`
 	Name            string   `json:"name"`
+	Description     string   `json:"description"`
+	Allergens       []string `json:"allergens"`
 	Price           string   `json:"price"`
 	CategoryID      *string  `json:"categoryId"`
 	CategoryName    *string  `json:"categoryName"`

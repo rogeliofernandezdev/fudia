@@ -12,6 +12,7 @@ const source=read("src/modules/operations/salon/presentation/comanda-catalog.tsx
 const exports={};
 vm.runInNewContext(ts.transpileModule(source+"\nexport {CategoryFilters,MenuItem,ComboItem,categoryTone};",{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText,{exports,require:name=>{
  if(name==="@/design-system")return Object.fromEntries(["Button","EmptyState","ErrorState","Icon","Modal","ModalBody","ModalFooter","NumberStepper","SearchField","Skeleton"].map(name=>[name,name]));
+ if(name==="@/design-system/tooltip")return {Tooltip:"Tooltip"};
  if(name.startsWith(".")||name.startsWith("@/"))return {};
  return require(name);
 }});
@@ -117,4 +118,28 @@ test("acentos de categorías cumplen contraste AA en fondos suaves y seleccionad
   assert.ok(contrast(base.color,base.background)>=4.5,`${tone}: fondo tenue`);
   assert.ok(contrast(selected.color,selected.background)>=4.5,`${tone}: selección`);
  }
+});
+test("la foto o el icono del plato abre la descripción y los alérgenos; sin datos no hay tooltip vacío",()=>{
+ const money=value=>`S/ ${value}`;
+ const p={id:"p",name:"Ají de pollo",price:"22",imageUrl:"/aji.jpg",description:"Pollo deshilachado en crema de ají amarillo.",allergens:["Leche","Gluten"]};
+ const view=nodes(exports.MenuItem({p,qty:0,money,onPick:()=>{}}));
+ const tooltip=view.find(node=>node.type==="Tooltip");
+ assert.ok(tooltip,"la imagen es el disparador del tooltip");
+ assert.equal(tooltip.props.className,"cmd-item-visual");
+ assert.equal(tooltip.props.label,"Ver descripción y alérgenos de Ají de pollo");
+ assert.ok(nodes(tooltip.props.children).some(node=>node.type==="img"),"envuelve la foto del plato");
+ const content=nodes(tooltip.props.content.type(tooltip.props.content.props));
+ const text=content.flatMap(node=>[node.props.children].flat()).filter(child=>typeof child==="string").join(" ");
+ assert.match(text,/Pollo deshilachado en crema de ají amarillo\./);
+ assert.match(text,/Leche, Gluten/);
+ assert.doesNotMatch(text,/[A-Z]{2,}-[0-9A-F]{4,}/,"sin códigos generados");
+ assert.equal(view.filter(node=>node.type==="button").length,1,"el + sigue siendo el único botón nativo de la tarjeta");
+ const noAllergens=nodes(exports.MenuItem({p:{...p,allergens:[]},qty:0,money,onPick:()=>{}})).find(node=>node.type==="Tooltip");
+ const noAllergensText=nodes(noAllergens.props.content.type(noAllergens.props.content.props)).flatMap(node=>[node.props.children].flat()).filter(child=>typeof child==="string").join(" ");
+ assert.match(noAllergensText,/no registrados/,"aclara que no se registraron alérgenos");
+ const onlyAllergens=nodes(exports.MenuItem({p:{...p,description:"  "},qty:0,money,onPick:()=>{}})).find(node=>node.type==="Tooltip");
+ assert.ok(onlyAllergens,"los alérgenos solos también abren el tooltip");
+ const plain=nodes(exports.MenuItem({p:{...p,description:"",allergens:[]},qty:0,money,onPick:()=>{}}));
+ assert.equal(plain.some(node=>node.type==="Tooltip"),false,"sin descripción ni alérgenos no hay disparador");
+ assert.equal(plain.find(node=>node.props.className==="cmd-item-visual").props["aria-hidden"],"true");
 });

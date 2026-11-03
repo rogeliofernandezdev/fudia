@@ -1,0 +1,10 @@
+/* Tooltip de contenido (`Tooltip`): burbuja oscura de `[data-tooltip]` con texto de varias líneas.
+   Vive en un portal con posición fija calculada para no salirse del viewport.
+   El disparador se resetea con :where() para que la clase visual del consumidor mande. */
+:where(.ds-tooltip-trigger){font:inherit;color:inherit;text-align:inherit;background:transparent;border:0;padding:0;-webkit-touch-callout:none}
+.ds-tooltip{position:fixed;left:0;top:0;z-index:var(--z-tooltip);display:grid;gap:var(--space-1-5);width:max-content;max-width:min(var(--size-280),calc(100vw - var(--space-8)));padding:var(--space-2-5) var(--space-3);color:var(--surface);background:var(--ink-950);border-radius:var(--radius-control);box-shadow:var(--elevation-3);font-size:var(--font-size-control);font-weight:var(--weight-regular);line-height:var(--line-height-snug);text-align:left;overflow-wrap:anywhere;visibility:hidden}
+.ds-tooltip[data-ready]{visibility:visible;animation:ds-tooltip-in var(--duration-fast) var(--easing-out)}
+.ds-tooltip p{margin:0}
+.ds-tooltip b{font-weight:var(--weight-semibold)}
+@keyframes ds-tooltip-in{from{opacity:0}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){.ds-tooltip[data-ready]{animation:none}}

@@ -105,8 +105,8 @@ export type PaymentDraft={
  fiscal?:FiscalRequest;
  tipEnabled?:boolean;
  tipKind?:"percentage"|"fixed";
+ /** Monto libre; el porcentaje no se escribe, viene de la configuración. */
  tipValue?:string;
- tipDirectToStaff?:boolean;
   method:PaymentMethod;
   amount:string;
   reference:string;

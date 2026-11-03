@@ -15,6 +15,7 @@ export {Dialog} from "./dialog";
 export {Modal, ModalHeader, ModalBusy, ModalWorkspace, ModalItemList, ModalItemNote, ModalItemComponents, type ModalItemComponent, ModalForm, ModalBody, ModalFooter, ModalCancel, ModalLoading, ModalError, useModal, type ModalSize} from "./modal";
 export {MoneyInput, NumberStepper, InlineNotice, FormDisclosure} from "./form-controls";
 export {FormField} from "./form-field";
+export {Tooltip} from "./tooltip";
 export {LocationMap, type Coordinates} from "./location-map";
 
 export {RemoteModalSkeleton} from "./remote-modal-skeleton";

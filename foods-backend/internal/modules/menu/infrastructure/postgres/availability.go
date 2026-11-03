@@ -22,7 +22,7 @@ func (r *Catalog) Availability(ctx context.Context, s scope, f application.Catal
 		return nil, 0, err
 	}
 	rows, err := r.db(ctx).Query(ctx, `
-		SELECT p.id,p.name,p.price::text,p.category_id,c.name,p.image_url,p.quantity_control,
+		SELECT p.id,p.name,COALESCE(p.description,''),COALESCE(p.allergens,'{}'),p.price::text,p.category_id,c.name,p.image_url,p.quantity_control,
 		       pa.portion_quantity,COALESCE(pa.sold_quantity,0),COALESCE(pa.manual_status,'available'),COALESCE(pa.note,''),
 		       (p.available_from IS NULL OR now() >= p.available_from)
 		       AND (p.available_until IS NULL OR now() <= p.available_until)
@@ -54,7 +54,7 @@ func (r *Catalog) Availability(ctx context.Context, s scope, f application.Catal
 	for rows.Next() {
 		var raw domain.AvailabilitySnapshot
 		item := &raw.Item
-		if err = rows.Scan(&item.ProductID, &item.Name, &item.Price, &item.CategoryID, &item.CategoryName, &item.ImageURL, &item.QuantityControl, &item.PortionQuantity, &item.SoldQuantity, &raw.ManualStatus, &item.Note, &raw.ScheduleAvailable, &raw.IsCombo, &raw.InventoryQuantity, &item.InventoryUnit, &raw.MinimumStock); err != nil {
+		if err = rows.Scan(&item.ProductID, &item.Name, &item.Description, &item.Allergens, &item.Price, &item.CategoryID, &item.CategoryName, &item.ImageURL, &item.QuantityControl, &item.PortionQuantity, &item.SoldQuantity, &raw.ManualStatus, &item.Note, &raw.ScheduleAvailable, &raw.IsCombo, &raw.InventoryQuantity, &item.InventoryUnit, &raw.MinimumStock); err != nil {
 			return nil, 0, err
 		}
 		items = append(items, raw)

@@ -11,9 +11,17 @@ usa los valores y canales del catálogo de onboarding. La validación pertenece 
 paso del local y los valores se conservan al avanzar o volver.
 
 - **Locales → editar o nuevo local:** sección «Propinas» dentro del formulario del local (2026-11-01; reemplaza el botón «Propinas» de cada fila). Empieza con el selector «Funcionamiento» y muestra el resto solo si no están desactivadas. Solo la ve el administrador reservado (`editable` del API); para otros usuarios no aparece. Se envían únicamente si se cambiaron, junto con el local y en la misma transacción: un local nuevo sin cambios sigue heredando la configuración de la empresa. Sin pestañas de alcance ni casilla de herencia.
-- **POS → Cobrar:** aceptación sin marcar por defecto; porcentaje o monto libre;
-  entrega directa al personal opcional. El efectivo recibido y el vuelto toman
-  en cuenta la propina retenida, manteniendo `amount` como consumo.
+- **POS → Cobrar (incluye el cobro de una mesa):** la sección «Propina» muestra
+  primero «Atendió: <mozo>» (`order.waiterName` del detalle del pedido; se omite
+  si la atención no tiene mozo, p. ej. mostrador o delivery). La aceptación
+  inicia sin marcar. El porcentaje no se escribe: es el configurado para el local
+  y se muestra en el texto «10 % sobre el consumo de S/ 17.00…». El selector
+  «Tipo de propina» (Porcentaje del local / Monto libre) aparece solo si el local
+  permite monto libre; el campo «Monto de la propina» solo con monto libre. No
+  existe «Entregada directamente al personal» (2026-11-03): una propina recibida
+  en mano no se registra. El efectivo recibido y el vuelto toman en cuenta la
+  propina, manteniendo `amount` como consumo. El cobro envía `{kind:"percentage"}`
+  o `{kind:"fixed",value}`; el backend aplica el porcentaje de la configuración.
 - **POS → Ver detalle → Ver precuenta:** PDF de 80 mm con sugerencia voluntaria,
   antes de cobrar. Previsualizar pago mantiene el ticket de cobros confirmados.
 - **Caja → Cerrar turno:** si hay saldo pendiente, muestra una sección opcional de entrega con trabajador autocompletable, importe y efectivo separado/transferencia. La casilla inicia desmarcada. El mismo botón de cierre envía conteo y entrega en una sola petición y transacción; no abre otro modal. Sin entrega, el saldo queda pendiente para un próximo turno. Las propinas no modifican ingresos, egresos ni efectivo esperado de caja.
@@ -38,7 +46,10 @@ La entrega conserva `requestKey` al reintentar. Un conflicto tras una respuesta
 incierta requiere revisar el reporte antes de iniciar otra entrega; no se genera
 automáticamente una clave nueva para esconder el conflicto.
 
-Pruebas de frontend: importes separados, propina porcentual/libre, monedas sin
+Los reportes, el ticket y el detalle siguen mostrando «Directa al personal» solo
+para propinas históricas registradas así.
+
+Pruebas de frontend: importes separados, propina porcentual de configuración/libre, monedas sin
 centavos, vuelto, reglas de sugerencia y contenido/tamaño de PDFs. La revisión
 visual usa componentes reales con datos controlados, en escritorio y desde 390 px,
 incluyendo pantalla de 640 px de alto. Las pruebas de impresión física siguen las

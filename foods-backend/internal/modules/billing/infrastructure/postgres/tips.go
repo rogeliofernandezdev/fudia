@@ -61,9 +61,9 @@ func (r *Payments) TipOrderContext(ctx context.Context, s scope, id string) (str
 }
 func (r *Payments) InsertTip(ctx context.Context, s scope, orderID, paymentID, shiftID string, base float64, in domain.TipInput, amount float64, affectsCash bool) error {
 	var id string
-	err := r.db(ctx).QueryRow(ctx, `INSERT INTO payment_tips(organization_id,location_id,payment_id,order_id,shift_id,kind,value,base_amount,amount,method,affects_cash,direct_to_staff,created_by)
- SELECT $1,$2,p.id,p.order_id,p.shift_id,$6,$7,$8,$9,p.method,$10,$11,$12 FROM payments p
- WHERE p.id=$3 AND p.organization_id=$1 AND p.location_id=$2 AND p.order_id=$4 AND p.shift_id=$5 RETURNING id::text`, s.OrganizationID, s.LocationID, paymentID, orderID, shiftID, in.Kind, in.Value, base, amount, affectsCash, in.DirectToStaff, s.UserID).Scan(&id)
+	err := r.db(ctx).QueryRow(ctx, `INSERT INTO payment_tips(organization_id,location_id,payment_id,order_id,shift_id,kind,value,base_amount,amount,method,affects_cash,created_by)
+ SELECT $1,$2,p.id,p.order_id,p.shift_id,$6,$7,$8,$9,p.method,$10,$11 FROM payments p
+ WHERE p.id=$3 AND p.organization_id=$1 AND p.location_id=$2 AND p.order_id=$4 AND p.shift_id=$5 RETURNING id::text`, s.OrganizationID, s.LocationID, paymentID, orderID, shiftID, in.Kind, in.Value, base, amount, affectsCash, s.UserID).Scan(&id)
 	if err != nil {
 		return billingError(err)
 	}

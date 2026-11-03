@@ -2686,7 +2686,7 @@ components:
         total: { type: integer, minimum: 0 }
         page: { type: integer, minimum: 1 }
         pageSize: { type: integer, minimum: 1 }
-    ProductAvailability: { allOf: [{ $ref: "#/components/schemas/ProductImage" }, { type: object, required: [productId, name, quantityControl, status, source, manualStatus, soldQuantity, note, businessDate], properties: { productId: { type: string, format: uuid }, name: { type: string }, categoryName: { type: [string, "null"] }, imageUrl: { type: [string, "null"] }, quantityControl: { type: string, enum: [none, portions, inventory] }, status: { type: string, enum: [available, low, sold_out, unavailable] }, source: { type: string, enum: [always, portions, inventory, manual_override, schedule, combo_components] }, manualStatus: { type: string, enum: [available, sold_out] }, portionQuantity: { type: [integer, "null"] }, soldQuantity: { type: integer, minimum: 0 }, remaining: { type: [number, "null"], minimum: 0 }, inventoryUnit: { type: [string, "null"] }, note: { type: string }, businessDate: { type: string, format: date } } } ] }
+    ProductAvailability: { allOf: [{ $ref: "#/components/schemas/ProductImage" }, { type: object, required: [productId, name, description, allergens, quantityControl, status, source, manualStatus, soldQuantity, note, businessDate], properties: { productId: { type: string, format: uuid }, name: { type: string }, description: { type: string, description: "Descripción del plato; cadena vacía si no tiene." }, allergens: { type: array, items: { type: string }, description: "Nombres legibles de los alérgenos asignados al producto; lista vacía si no tiene." }, categoryName: { type: [string, "null"] }, imageUrl: { type: [string, "null"] }, quantityControl: { type: string, enum: [none, portions, inventory] }, status: { type: string, enum: [available, low, sold_out, unavailable] }, source: { type: string, enum: [always, portions, inventory, manual_override, schedule, combo_components] }, manualStatus: { type: string, enum: [available, sold_out] }, portionQuantity: { type: [integer, "null"] }, soldQuantity: { type: integer, minimum: 0 }, remaining: { type: [number, "null"], minimum: 0 }, inventoryUnit: { type: [string, "null"] }, note: { type: string }, businessDate: { type: string, format: date } } } ] }
     InventoryItem: { type: object, required: [inventoryItemId, productId, sku, name, kind, active, unit, unitCountable, quantity, minimumStock, status, updatedAt], properties: { inventoryItemId: { type: string, format: uuid }, productId: { type: [string, "null"], format: uuid }, sku: { type: string }, name: { type: string }, kind: { type: string, enum: [product, ingredient] }, categoryName: { type: [string, "null"] }, active: { type: boolean }, unit: { type: string }, unitCountable: { type: boolean, description: "La unidad se cuenta por piezas y sus niveles de stock requieren enteros." }, quantity: { type: string }, minimumStock: { type: string }, status: { type: string, enum: [ok, low, out] }, updatedAt: { type: string, format: date-time } } }
     InventoryPresentation: { type: object, required: [id, presentationType, unitsPerPresentation, name, isDefault], properties: { id: { type: string, format: uuid }, presentationType: { type: string, pattern: "^[a-z][a-z0-9_-]{0,31}$" }, unitsPerPresentation: { type: string }, name: { type: string }, isDefault: { type: boolean } } }
     InventoryPresentationInput: { type: object, required: [presentationType, unitsPerPresentation], properties: { presentationType: { type: string, pattern: "^[a-z][a-z0-9_-]{0,31}$" }, unitsPerPresentation: { type: number, exclusiveMinimum: 0, exclusiveMaximum: 100000000000, multipleOf: 0.001, description: "Unidad base siempre 1. Conversión por artículo. Admite fracciones solo si la unidad base no es contable (InventoryUnit.countable); con unidades contables debe ser al menos 1 o responde 400 invalid_presentation_content. Aplica al crear artículos, agregar presentaciones y registrar entradas." }, isDefault: { type: boolean, default: false } } }
@@ -2850,11 +2850,12 @@ components:
             channelOptions: { type: array, items: { type: object, required: [value, label], properties: { value: { type: string }, label: { type: string } } } }
     TipInput:
       type: object
-      required: [kind, value]
+      description: "Aceptación de propina del cliente. percentage aplica siempre el porcentaje configurado para el local; el cliente no lo elige. fixed (monto libre) solo se acepta si el local lo permite."
+      required: [kind]
       properties:
         kind: { type: string, enum: [percentage, fixed] }
-        value: { type: number, exclusiveMinimum: 0, maximum: 1000000000, description: Porcentaje hasta 100 o monto fijo con los decimales de la moneda }
-        directToStaff: { type: boolean, default: false, description: No entra en caja ni en propinas pendientes }
+        value: { type: number, exclusiveMinimum: 0, maximum: 1000000000, description: "Obligatorio solo con fixed: monto con los decimales de la moneda. Con percentage se ignora y se usa el porcentaje configurado." }
+        directToStaff: { type: boolean, deprecated: true, description: "Retirado. Una propina entregada en mano al personal no se registra en el cobro; true devuelve 400 direct_tip_not_recorded." }
     TipReceipt:
       type: object
       required: [id, paymentId, orderCode, amount, methodName, affectsCash, directToStaff, createdByName, createdAt]
@@ -2865,7 +2866,7 @@ components:
         amount: { type: string }
         methodName: { type: string }
         affectsCash: { type: boolean }
-        directToStaff: { type: boolean }
+        directToStaff: { type: boolean, description: "Solo para registros históricos: los cobros nuevos no registran propinas entregadas en mano." }
         createdByName: { type: string }
         createdAt: { type: string, format: date-time }
     TipPayoutInput:

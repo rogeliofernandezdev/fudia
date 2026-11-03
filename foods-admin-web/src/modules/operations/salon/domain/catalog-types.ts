@@ -1,4 +1,4 @@
-export type CatalogProduct={id:string;name:string;price:string;categoryId:string|null;imageUrl:string|null;availabilityStatus?:"available"|"low"|"sold_out"|"unavailable";remaining?:number|null};
+export type CatalogProduct={id:string;name:string;description?:string;allergens?:string[];price:string;categoryId:string|null;imageUrl:string|null;availabilityStatus?:"available"|"low"|"sold_out"|"unavailable";remaining?:number|null};
 export type ComboSelection={groupId:string;groupName:string;productId:string;name:string;surcharge:number};
 export type ConfiguredCombo={productId:string;name:string;unitPrice:number;selections:ComboSelection[];imageUrl?:string|null;availability?:ComboDetail};
 export type ProductList={items:CatalogProduct[];total:number};

@@ -109,12 +109,16 @@ func TestTipsCollectionPayoutIsolationAndClosingSnapshot(t *testing.T) {
 		return call("POST", "/v1/admin/payments", in)
 	}
 	order := makeOrder(110, 10)
-	expect(pay(order, "cash", 50, map[string]any{"kind": "percentage", "value": 10}), 201)
+	// The percentage comes from the location's settings, not from the client.
+	expect(pay(order, "cash", 50, map[string]any{"kind": "percentage", "value": 50}), 201)
 	// Partial consumption payments cannot accidentally collect a second tip.
 	expect(pay(order, "cash", 60, map[string]any{"kind": "fixed", "value": 5}), 409)
 	expect(pay(order, "card", 60, nil), 201)
 	expect(pay(makeOrder(20, 0), "card", 20, map[string]any{"kind": "fixed", "value": 5}), 201)
-	expect(pay(makeOrder(10, 0), "cash", 10, map[string]any{"kind": "fixed", "value": 3, "directToStaff": true}), 201)
+	// A tip handed to staff is not recorded, and the rejection reverts the payment.
+	handed := makeOrder(10, 0)
+	expect(pay(handed, "cash", 10, map[string]any{"kind": "fixed", "value": 3, "directToStaff": true}), 400)
+	expect(pay(handed, "cash", 10, nil), 201)
 	detail := call("GET", "/v1/admin/pos/orders/"+order, nil)
 	expect(detail, 200)
 	var d struct {
@@ -139,7 +143,7 @@ func TestTipsCollectionPayoutIsolationAndClosingSnapshot(t *testing.T) {
 		return out
 	}
 	w := workspace(shift.ID)
-	if w.Report.CashCollected != "10.00" || w.Report.OtherCollected != "5.00" || w.Report.Direct != "3.00" || w.Available != "15.00" {
+	if w.Report.CashCollected != "10.00" || w.Report.OtherCollected != "5.00" || w.Report.Direct != "0" || w.Available != "15.00" {
 		t.Fatalf("report: %+v", w)
 	}
 	payout := func(id, key, method string, amount float64) *httptest.ResponseRecorder {

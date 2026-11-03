@@ -5,4 +5,6 @@ export function calculateTip(enabled:boolean,kind:string,value:string|number,bas
  const amount=kind==="percentage"?base*input/100:input;
  return Math.round(amount*10**decimals)/10**decimals;
 }
-export function canCollectTip(policy:TipPolicy|undefined,channel:string,registered:boolean){return Boolean(!registered&&policy?.mode==="collect"&&policy.channels.includes(channel==="mostrador"?"recojo":channel))}
+export function canCollectTip(policy:TipPolicy|undefined,channel:string,registered:boolean){return Boolean(!registered&&policy?.mode==="collect"&&(policy.percentage>0||policy.allowFixed)&&policy.channels.includes(channel==="mostrador"?"recojo":channel))}
+/** El porcentaje viene de la configuración del local; solo el monto libre lo escribe el cajero. */
+export function tipInputValue(kind:string,policy:Pick<TipPolicy,"percentage">|undefined,value:string|undefined){return kind==="percentage"?Number(policy?.percentage??0):Number(value)}

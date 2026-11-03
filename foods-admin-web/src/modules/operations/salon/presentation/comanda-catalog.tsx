@@ -4,6 +4,7 @@
 import {useEffect,useRef,useState,type KeyboardEvent,type RefObject} from "react";
 import {useInfiniteQuery,useQuery} from "@tanstack/react-query";
 import {Button,EmptyState,ErrorState,Icon,Modal,ModalBody,ModalFooter,SearchField,Skeleton} from "@/design-system";
+import {Tooltip} from "@/design-system/tooltip";
 import {useMoney} from "@/providers";
 import type {CatalogProduct,ComboGroup,ComboOption,ComboSelection,ComboSummary,ConfiguredCombo} from "../domain/catalog-types";
 import {getOrderCombo,listOrderCategories,listOrderCombos,listSalonProducts} from "../infrastructure/catalog-api";
@@ -302,10 +303,17 @@ function MenuItem({p,qty,reserved=0,money,onPick,disabled=false}:{p:CatalogProdu
   const stockMax=typeof p.remaining==="number"&&Number.isFinite(p.remaining)?Math.max(0,Math.floor(p.remaining+reserved)):undefined;
   const atLimit=stockMax!==undefined&&qty>=stockMax;
   const label=unavailable?`${p.name}, no disponible`:qty>0?`Agregar otro ${p.name}, llevas ${qty}`:`Agregar ${p.name}`;
+  const description=p.description?.trim()??"";
+  const allergens=p.allergens??[];
+  const visual=<><Icon name="dish" size={24}/>{p.imageUrl&&<img className="cmd-item-thumb" src={p.imageUrl} alt="" loading="lazy" onError={event=>{event.currentTarget.hidden=true}}/>}</>;
   return(
     <li>
       <article className={"cmd-item"+(qty>0?" picked":"")+(unavailable?" unavailable":"")} aria-label={p.name}>
-        <span className="cmd-item-visual" aria-hidden="true"><Icon name="dish" size={24}/>{p.imageUrl&&<img className="cmd-item-thumb" src={p.imageUrl} alt="" loading="lazy" onError={event=>{event.currentTarget.hidden=true}}/>}</span>
+        {description||allergens.length?(
+          <Tooltip className="cmd-item-visual" label={`Ver descripción y alérgenos de ${p.name}`} content={<ProductDetails description={description} allergens={allergens}/>}>{visual}</Tooltip>
+        ):(
+          <span className="cmd-item-visual" aria-hidden="true">{visual}</span>
+        )}
         <div className="cmd-item-copy">
           <strong>{p.name}</strong>
           <div className="cmd-item-bottom">
@@ -320,6 +328,14 @@ function MenuItem({p,qty,reserved=0,money,onPick,disabled=false}:{p:CatalogProdu
       </article>
     </li>
   );
+}
+
+/** Ficha breve del plato: descripción y alérgenos asignados en Carta y productos. */
+function ProductDetails({description,allergens}:{description:string;allergens:string[]}){
+  return <>
+    {description&&<p>{description}</p>}
+    <p><b>Alérgenos: </b>{allergens.length?allergens.join(", "):"no registrados"}</p>
+  </>;
 }
 
 /** Filas en carga con la misma geometría que la carta. */

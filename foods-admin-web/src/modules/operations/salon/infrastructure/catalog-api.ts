@@ -9,12 +9,14 @@ export async function listSalonProducts(input:{categoryId:string;q:string;page:n
  if(input.categoryId)params.set("categoryId",input.categoryId);
  if(input.q.trim())params.set("q",input.q.trim());
  if(input.productIds?.length)params.set("productIds",input.productIds.join(","));
- const data=await apiFetch<{items:Array<{productId:string;name:string;price:string;categoryId:string|null;imageUrl:string|null;status:"available"|"low"|"sold_out"|"unavailable";remaining:number|null}>;total:number}>(`product-availability?${params.toString()}`);
+ const data=await apiFetch<{items:Array<{productId:string;name:string;description:string;allergens:string[];price:string;categoryId:string|null;imageUrl:string|null;status:"available"|"low"|"sold_out"|"unavailable";remaining:number|null}>;total:number}>(`product-availability?${params.toString()}`);
  return{
   total:data.total,
   items:data.items.map(item=>({
    id:item.productId,
    name:item.name,
+   description:item.description?.trim()??"",
+   allergens:item.allergens??[],
    price:item.price,
    categoryId:item.categoryId,
    imageUrl:item.imageUrl,

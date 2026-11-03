@@ -21,6 +21,7 @@ import "@/design-system/styles/icon-tile.css";
 import "@/design-system/styles/stat-card.css";
 import "@/design-system/styles/form-section.css";
 import "@/design-system/styles/detail-view.css";
+import "@/design-system/styles/tooltip.css";
 import {Providers} from "@/providers/providers";
 const jakarta=Plus_Jakarta_Sans({subsets:["latin"],variable:"--font-jakarta",display:"swap"});
 export const metadata:Metadata={title:{default:"FudIA · Gestión de restaurantes",template:"%s · FudIA"},description:"Administración integral de restaurantes"};

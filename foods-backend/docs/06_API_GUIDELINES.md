@@ -179,6 +179,11 @@ de repartidores, zonas o seguimiento geográfico sigue fuera de este alcance.
 
 ## Lookups de catálogo
 
+`GET /v1/admin/product-availability` (y su alias de Operación) incluye en cada
+producto `description` (cadena vacía si no tiene) y `allergens` (nombres
+legibles asignados al producto, lista vacía si no tiene) para la ficha del plato
+en la carta de la comanda; no se necesita otra consulta ni un catálogo local.
+
 `PATCH /v1/admin/product-availability/{productId}` (y su alias de Operación)
 exige `menu.manage` y `reason` no vacío de hasta 240 caracteres para cambios
 manuales de cupo o Agotado/Reactivar. Estado y cantidad conservan sus invariantes;

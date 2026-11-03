@@ -309,6 +309,7 @@ hover > reposo**. Un estado de mayor prioridad nunca se pierde por otro menor
 `--z-raised` 1, `--z-sticky` 10, `--z-header` 20, `--z-popover` 30,
 `--z-tour` 60, `--z-drawer` 90, `--z-task` 100 (pantalla completa como la
 comanda), `--z-modal` 110, `--z-sheet` 120, `--z-confirm` 130,
+`--z-tooltip` 135 (tooltip de contenido, visible sobre modales y hojas),
 `--z-feedback` 140, `--z-loader` 200. No se escriben números sueltos.
 
 ## Iconos
@@ -829,6 +830,15 @@ tope, la línea muestra «Máximo disponible: N» en `warning-800`. El backend v
 validar al guardar y responde con el mismo criterio («La cantidad excede las existencias:
 solo quedan N porciones/unidades de {producto}»; «{producto} está agotado por hoy» si
 se agotó manualmente).
+La foto o el icono del plato es el disparador de `Tooltip` cuando el producto
+tiene descripción o alérgenos (`description` y `allergens` de
+`GET /v1/admin/product-availability`): hover con puntero fino, foco de teclado
+y toque o pulsación larga en táctil muestran la descripción y «Alérgenos:» con
+los nombres asignados en Carta y productos, o «no registrados» si solo hay
+descripción. Sin descripción ni alérgenos la imagen queda decorativa, sin
+disparador ni burbuja vacía. La burbuja abre sobre la imagen (debajo si no cabe),
+alineada a su borde izquierdo y acotada a 16 px del viewport, así que no tapa
+el + de la tarjeta. No muestra códigos generados.
 La carta conserva siempre un único botón circular + para agregar una unidad,
 incluso si el producto ya está seleccionado. Solo el resumen de la comanda usa
 `NumberStepper appearance="soft"` con disminuir, cantidad y aumentar. En una
@@ -2101,8 +2111,10 @@ natural. Respetar contraste, foco de teclado, estados de carga y sesión activa.
   `.table-actions button.danger`, `.ds-icon-button`, `.ds-icon-button:hover`
   y `.standard-actions`. `globals.css` solo conserva reglas complementarias
   no duplicadas (como `.ds-icon-button svg`, `:focus-visible` y `:disabled`).
-- Los tooltips reutilizan el patrón `[data-tooltip]` de `table-actions.css`;
-  no se añaden reglas de tooltip en otras hojas.
+- Los tooltips de etiqueta (una línea en botones iconográficos) reutilizan el
+  patrón `[data-tooltip]` de `table-actions.css`. Los tooltips de contenido
+  (descripción, listas) usan el componente `Tooltip`, dueño único de
+  `tooltip.css`. No se añaden reglas de tooltip en otras hojas.
 - No se permiten bloques posteriores que reescriban una clase para corregir
   estilos anteriores.
 - Las diferencias de estado, tamaño o dispositivo usan clases modificadoras,

@@ -42,13 +42,24 @@ otros países. La moneda y los decimales proceden del perfil fiscal del local.
 `PaymentInput` y las líneas de pago dividido admiten `tip` opcional:
 
 ```json
-{"kind":"percentage","value":10,"directToStaff":false}
+{"kind":"percentage"}
+{"kind":"fixed","value":5}
 ```
 
-`kind:fixed` interpreta value como dinero. El backend recalcula el porcentaje
-sobre el total del consumo, excluyendo el costo de delivery; redondea según los
-decimales de la moneda y rechaza montos fijos con precisión incompatible. No acepta
-una propina cuando el modo es sugerencia/desactivado o el canal no está habilitado.
+`kind:percentage` aplica siempre el porcentaje configurado para el local
+(formulario de Locales); el cliente no lo elige y un `value` enviado se ignora
+(2026-11-03). `kind:fixed` (monto libre) interpreta value como dinero y solo se
+acepta si la configuración lo permite (`allowFixed`). El backend calcula el
+porcentaje sobre el total del consumo, excluyendo el costo de delivery; redondea
+según los decimales de la moneda y rechaza montos fijos con precisión
+incompatible. No acepta una propina cuando el modo es sugerencia/desactivado o el
+canal no está habilitado.
+
+Una propina entregada en mano al personal no se registra en el cobro: no pasa por
+el restaurante. `directToStaff:true` queda retirado del contrato y devuelve 400
+`direct_tip_not_recorded`, revirtiendo también el pago. La columna
+`payment_tips.direct_to_staff` se conserva para los registros históricos, que los
+reportes siguen mostrando como «Directa al personal».
 
 El campo `amount` del pago continúa siendo exclusivamente consumo. Una aceptación
 de propina corresponde a la cuenta completa y se registra **una vez por pedido**,
@@ -61,12 +72,10 @@ cualquier error revierte también el pago y sus movimientos de caja.
 | Sugerencia sin aceptar | No cambia | No cambia | No cambia |
 | Propina cobrada en efectivo | No cambia | Aumenta | No cambia |
 | Propina cobrada por otro medio | No cambia | Aumenta | No cambia |
-| Entrega directa al personal | No cambia | No cambia | No cambia |
 | Entrega al trabajador desde el efectivo separado | No cambia | Disminuye | No cambia |
 | Entrega por transferencia | No cambia | Disminuye | No cambia |
 
-Una propina directa se registra informativamente, sin movimiento ni deuda a cargo
-del restaurante. No se procesa ningún cargo con tarjeta desde este desarrollo:
+No se procesa ningún cargo con tarjeta desde este desarrollo:
 se registra el cobro realizado con el medio seleccionado, igual que el POS actual.
 
 ## Entrega y trazabilidad
@@ -110,7 +119,7 @@ no una orden de transferencia bancaria.
 
 ## Reportes, cierres y documentos
 
-`CashShiftReport.tips` incluye recibido en efectivo, otros medios, directo,
+`CashShiftReport.tips` incluye recibido en efectivo, otros medios, directo (solo histórico),
 entregado en efectivo, por transferencia, pendiente, recibos y entregas detalladas.
 El pendiente del reporte se refiere a las propinas recaudadas en ese turno. El
 `available` del espacio de entrega incluye además turnos anteriores permitidos.
@@ -120,8 +129,8 @@ otro turno no altera esa copia. Reportes históricos previos a esta migración n
 inventan información de propinas.
 
 La precuenta de 80 mm presenta una sugerencia voluntaria cuando está configurada.
-El ticket distingue consumo y propina aceptada, medio, total recibido y entrega
-directa. El formato del documento y el visor PDF compartido se conservan.
+El ticket distingue consumo y propina aceptada, medio y total recibido (y la
+entrega directa de registros históricos). El formato del documento y el visor PDF compartido se conservan.
 
 Las devoluciones actuales continúan revirtiendo **consumo**. No devuelven ni borran
 automáticamente una propina, especialmente si ya fue entregada al trabajador. Una
@@ -132,7 +141,8 @@ flujo; requiere un movimiento propio, no manipular los importes de ventas.
 
 Las pruebas de dominio cubren porcentaje, monto fijo, redondeo, precisión monetaria
 y valores inválidos. La integración con PostgreSQL comprueba herencia, pagos
-parciales, efectivo/tarjeta/directo, transacciones revertidas, idempotencia,
+parciales, efectivo/tarjeta, rechazo de propina entregada en mano, porcentaje
+tomado de la configuración, transacciones revertidas, idempotencia,
 entregas concurrentes, privacidad entre cajeros, destinatarios de otra empresa y
 conservación del cierre.
 

@@ -147,10 +147,18 @@ func (a *Tips) RecordPayment(ctx context.Context, s scope, orderID, paymentID, s
 	if p.Mode != "collect" || !enabled {
 		return paymentFailure(apperror.Invalid, "tips_disabled", "La gestión de propinas no está habilitada para esta atención.")
 	}
+	if in.DirectToStaff {
+		return paymentFailure(apperror.Invalid, "direct_tip_not_recorded", "La propina entregada en mano al personal no se registra en el cobro.")
+	}
 	if in.Kind == "fixed" && !p.AllowFixed {
 		return paymentFailure(apperror.Invalid, "fixed_tip_disabled", "El local no permite propinas por monto fijo.")
 	}
-	amount, valid := domain.TipAmount(*in, base, p.Decimals)
+	tip := *in
+	if tip.Kind == "percentage" {
+		// The percentage is the location's configuration, never the client's.
+		tip.Value = p.Percentage
+	}
+	amount, valid := domain.TipAmount(tip, base, p.Decimals)
 	if !valid {
 		return paymentFailure(apperror.Invalid, "invalid_tip", "Ingresa una propina válida en la moneda del local.")
 	}
@@ -161,7 +169,7 @@ func (a *Tips) RecordPayment(ctx context.Context, s scope, orderID, paymentID, s
 	if existing != nil {
 		return paymentFailure(apperror.Conflict, "tip_already_recorded", "La propina de esta cuenta ya fue registrada.")
 	}
-	if err = a.repo.InsertTip(ctx, s, orderID, paymentID, shiftID, base, *in, amount, affectsCash); err != nil {
+	if err = a.repo.InsertTip(ctx, s, orderID, paymentID, shiftID, base, tip, amount, affectsCash); err != nil {
 		return paymentFailure(apperror.Unavailable, "tips_unavailable", "No pudimos registrar la propina. El cobro no se confirmó.")
 	}
 	return nil
