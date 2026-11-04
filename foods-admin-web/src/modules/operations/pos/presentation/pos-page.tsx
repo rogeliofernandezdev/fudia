@@ -17,9 +17,10 @@ import type {POSCollectionShift,Payment,PaymentDraft,PaymentMethodOption,POSOrde
 import {createPayment,getPOSCollectionAccess,getPOSOrder,listPOSOrders,listSalesPaymentMethods,refundPayment} from "../infrastructure/pos-api";
 import {collectionShift} from "../domain/collection-shift";
 import {PaymentForm} from "./pos-dialogs";
-import {fiscalStatusView,useCheckoutOptions} from "@/modules/einvoicing";
+import {deliveredDocument,FiscalStatus,ticketNoticeFor,useCheckoutOptions} from "@/modules/einvoicing";
 const RefundDialog=dynamic(()=>import("./pos-dialogs").then(module=>module.RefundDialog),{ssr:false});
 const PaymentTicketDialog=dynamic(()=>import("@/modules/sales").then(module=>module.PaymentTicketDialog),{ssr:false});
+const FiscalPrintDialog=dynamic(()=>import("@/modules/einvoicing").then(module=>module.FiscalPrintDialog),{ssr:false});
 
 const paymentMeta={
   pending:{label:"Sin pagos",tone:"gray" as const},
@@ -45,7 +46,8 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
   const[paymentOrderId,setPaymentOrderId]=useState<string|null>(initialOrderId||null);
   const[detailId,setDetailId]=useState<string|null>(null);
   const[refundTarget,setRefundTarget]=useState<Payment|null>(null);
-  const[ticketTarget,setTicketTarget]=useState<{orderId:string;paymentId?:string;mode?:"payment"|"prebill"}|null>(null);
+  const[ticketTarget,setTicketTarget]=useState<{orderId:string;paymentId?:string;mode?:"payment"|"prebill";notice?:string}|null>(null);
+  const[fiscalTarget,setFiscalTarget]=useState<{documentId:string;orderId:string;paymentId?:string;wait?:boolean}|null>(null);
 
   const current=useQuery({
     queryKey:["pos-cash-access",organization?.id,location?.id,user?.id],
@@ -98,7 +100,9 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
       setSelectedCash(null);
       refresh();
       const fiscal=item.fiscalDocument;
-      notify({tone:"success",title:"Cobro registrado",message:fiscal?`${fiscal.label} ${fiscal.number} · estado: ${fiscalStatusView[fiscal.status].label.toLowerCase()}.`:"El pago quedó asociado al turno activo.",onClose:()=>setTicketTarget({orderId:variables.orderId,paymentId:item.id})});
+      // With a document the printout replaces the payment ticket: it waits briefly for the tax authority, then prints.
+      if(fiscal){setFiscalTarget({documentId:fiscal.id,orderId:variables.orderId,paymentId:item.id,wait:true});return;}
+      notify({tone:"success",title:"Cobro registrado",message:"El pago quedó asociado al turno activo.",onClose:()=>setTicketTarget({orderId:variables.orderId,paymentId:item.id})});
     },
     onError:error=>{void current.refetch();void qc.invalidateQueries({queryKey:["session-context"]});notify({tone:"danger",title:"No se pudo registrar el cobro",message:error.message});},
   });
@@ -224,10 +228,15 @@ export function POSPage({initialOrderId=""}:{initialOrderId?:string}){
       retry={()=>void detail.refetch()}
       close={()=>setDetailId(null)}
       refund={setRefundTarget}
-      ticket={()=>{setDetailId(null);setTicketTarget({orderId:detailId})}}
+      ticket={()=>{
+        // Reprint what was delivered: the electronic document, or the payment ticket.
+        const document=deliveredDocument(detail.data?.fiscalDocument);setDetailId(null);
+        if(document)setFiscalTarget({documentId:document.id,orderId:detailId});else setTicketTarget({orderId:detailId,notice:ticketNoticeFor(detail.data?.fiscalDocument)});
+      }}
       prebill={()=>{setDetailId(null);setTicketTarget({orderId:detailId,mode:"prebill"})}}
     />}
     {ticketTarget&&<PaymentTicketDialog {...ticketTarget} close={()=>setTicketTarget(null)}/>}
+    {fiscalTarget&&<FiscalPrintDialog documentId={fiscalTarget.documentId} wait={fiscalTarget.wait} close={()=>setFiscalTarget(null)} onShowTicket={()=>{setFiscalTarget(null);setTicketTarget({orderId:fiscalTarget.orderId,paymentId:fiscalTarget.paymentId});}}/>}
   </div>;
 }
 
@@ -240,14 +249,14 @@ function POSPaymentEntry({loading,error,data,shiftLoading,shiftError,shiftName,s
   else if(error)state={title:"No pudimos cargar el pedido",text:error,retry:retryOrder};
   else if(shiftError)state={title:"No pudimos validar tu caja",text:shiftError,retry:retryShift};
   else if(methodsError)state={title:"No pudimos cargar los medios de pago",text:methodsError,retry:retryMethods};
-  else if(!loading&&!shiftLoading&&!methodsLoading&&!fiscal.isLoading){
+  else if(!loading&&!shiftLoading&&!methodsLoading&&(fiscal.isFetchedAfterMount||fiscal.isError)){
     if(!data)state={title:"Pedido no disponible",text:"No pudimos encontrar este pedido en el local activo.",retry:retryOrder};
     else if(data.paymentStatus==="paid"||Number(data.remainingAmount)<=0)state={title:"El pedido ya está pagado",text:"No tiene saldo pendiente de cobro.",icon:"circleCheck"};
     else if(data.order.completedAt||data.order.status==="cancelado")state={title:"El pedido está cerrado",text:"No se pueden registrar nuevos cobros.",icon:"lock"};
     else if(!canChargeAccount(data.order))state=data.order.channel==="salon"?{title:"Cuenta no disponible para cobro",text:"El mozo debe entregar todos los productos y cerrar la cuenta antes de cobrar.",icon:"clock"}:{title:"Pedido no listo",text:"El pedido todavía no está listo para cobrar.",icon:"clock"};
     else if(!shiftName&&!shiftOptions.length)state={title:"Necesitas un turno de caja",text:"Abre un turno o únete a una caja para registrar el cobro.",icon:"register",cash:true};
     else if(!methods?.length)state={title:"Sin medios de pago para ventas",text:"Activa al menos un medio para ventas en Configuración › Medios de pago.",icon:"wallet"};
-    else form=<PaymentForm methods={methods} order={{...data.order,paidAmount:data.paidAmount,remainingAmount:data.remainingAmount,paymentStatus:data.paymentStatus}} shiftName={shiftName??""} shiftOptions={shiftOptions} selectedShiftId={selectedShiftId} selectShift={selectShift} busy={busy} formatMoney={formatMoney} currency={currency} close={close} save={save} tipPolicy={data.tipPolicy} registeredTip={data.tip} fiscalOptions={fiscal.data?.enabled?fiscal.data:undefined}/>;
+    else form=<PaymentForm methods={methods} order={{...data.order,paidAmount:data.paidAmount,remainingAmount:data.remainingAmount,paymentStatus:data.paymentStatus}} shiftName={shiftName??""} shiftOptions={shiftOptions} selectedShiftId={selectedShiftId} selectShift={selectShift} busy={busy} formatMoney={formatMoney} currency={currency} close={close} save={save} tipPolicy={data.tipPolicy} registeredTip={data.tip} fiscalOptions={fiscal.data?.enabled?fiscal.data:undefined} fiscalIssue={fiscal.data&&!fiscal.data.enabled?fiscal.data.issue:undefined}/>;
   }
   return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={close} className={"crud-modal pos-payment-modal modal-panel-in"+(state?"":" pos-checkout-modal")} role="dialog" aria-modal="true" aria-labelledby="pos-payment-entry-title" aria-busy={busy||(!state&&!form)}>
 
@@ -295,6 +304,7 @@ export function POSDetailDialog({loading,error,data,canManage,hasShift,formatMon
             <div className="pos-detail-status" aria-label="Estado de pago"><Status tone={paymentMeta[data.paymentStatus].tone}>{paymentMeta[data.paymentStatus].label}</Status><span>{data.order.code}</span></div>
             <p><Icon name="clock" size={14}/><time dateTime={data.order.createdAt}>{formatDateTime(data.order.createdAt)}</time></p>
             <p><Icon name={channelIcons[data.order.channel]??"receipt"} size={14}/><span>{[channelLabel[data.order.channel]??data.order.channel,data.order.channel==="salon"&&`Atendido por ${data.order.waiterName||"sin asignar"}`].filter(Boolean).join(" · ")}</span></p>
+            {data.fiscalDocument&&<p className="pos-detail-fiscal"><Icon name={data.fiscalDocument.documentType==="invoice"?"invoice":"receipt"} size={14}/><span>{data.fiscalDocument.label} {data.fiscalDocument.number}</span>{data.fiscalDocument.status!=="ACCEPTED"&&<FiscalStatus status={data.fiscalDocument.status}/>}</p>}
           </div>
           {data.order.customerName&&<DetailContact name={data.order.customerName}/>}
         </section>

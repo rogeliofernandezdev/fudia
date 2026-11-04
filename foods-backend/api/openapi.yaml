@@ -885,17 +885,17 @@ paths:
   /v1/admin/einvoicing/settings:
     get:
       operationId: getEInvoicingSettings
-      description: "Activación por perfil fiscal, series por local y proveedores registrados. entitled indica si el plan o el piloto incluyen el módulo facturacion. Permiso organizations.read."
+      description: "Proveedor, ambiente y estado (ready) por perfil fiscal, series por local y proveedores registrados. entitled indica si el plan o el piloto incluyen el módulo facturacion. Permiso organizations.read."
       security: [{ sessionCookie: [] }]
       responses: { "200": { description: Configuración de facturación, content: { application/json: { schema: { $ref: "#/components/schemas/EInvoicingSettings" } } } }, "403": { $ref: "#/components/responses/Forbidden" } }
   /v1/admin/einvoicing/profiles/{id}:
     parameters: [{ $ref: "#/components/parameters/EntityId" }]
     put:
       operationId: saveEInvoicingProfile
-      description: "Activa o desactiva la emisión del perfil fiscal. Al activar exige el módulo en el plan, un emisor válido (Perú: RUC con dígito verificador y razón social en Mi restaurante) y las credenciales que el proveedor necesita en ese ambiente (sunat en producción: usuario y clave SOL y certificado). Un proveedor de pruebas no admite production. Permiso organizations.manage; auditoría einvoicing.profile.updated."
+      description: "Guarda proveedor y ambiente del perfil fiscal. No existe un interruptor propio: el módulo facturacion es la única activación y el perfil emite cuando emisor y credenciales están completos (ready en la configuración). Exige el módulo activo y un país soportado. Un proveedor de pruebas no admite production. Permiso organizations.manage; auditoría einvoicing.profile.updated."
       security: [{ sessionCookie: [] }]
-      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [enabled, provider, environment], properties: { enabled: { type: boolean }, provider: { type: string }, environment: { type: string, enum: [test, production] } } } } } }
-      responses: { "200": { description: Configuración actualizada, content: { application/json: { schema: { $ref: "#/components/schemas/EInvoicingSettings" } } } }, "400": { description: invalid_einvoicing_settings }, "404": { description: profile_not_found }, "409": { description: einvoicing_not_entitled, einvoicing_issuer_incomplete, einvoicing_credentials_missing o einvoicing_unsupported_country } }
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [provider, environment], properties: { provider: { type: string }, environment: { type: string, enum: [test, production] } } } } } }
+      responses: { "200": { description: Configuración actualizada, content: { application/json: { schema: { $ref: "#/components/schemas/EInvoicingSettings" } } } }, "400": { description: invalid_einvoicing_settings }, "404": { description: profile_not_found }, "409": { description: einvoicing_not_entitled o einvoicing_unsupported_country } }
   /v1/admin/einvoicing/profiles/{id}/credentials:
     parameters: [{ $ref: "#/components/parameters/EntityId" }]
     put:
@@ -915,7 +915,7 @@ paths:
   /v1/admin/einvoicing/checkout-options:
     get:
       operationId: getEInvoicingCheckoutOptions
-      description: "Comprobantes que ofrece el cobro del local de la sesión. enabled=false cuando el módulo, el perfil o el país no permiten emitir. Cualquier usuario autenticado."
+      description: "Comprobantes que ofrece el cobro del local de la sesión. El módulo facturacion es la única activación: enabled=true cuando además el emisor, las credenciales del proveedor y las series del local están completos. Con el módulo activo y la configuración incompleta, enabled=false e issue explica qué falta. Cualquier usuario autenticado."
       security: [{ sessionCookie: [] }]
       responses: { "200": { description: Opciones del cobro, content: { application/json: { schema: { $ref: "#/components/schemas/EInvoicingCheckoutOptions" } } } } }
   /v1/admin/fiscal-documents:
@@ -2320,6 +2320,20 @@ components:
             files: { type: array, items: { type: string, enum: [xml, cdr] } }
             attempts: { type: integer }
             nextAttemptAt: { type: [string, "null"], format: date-time }
+            printout:
+              description: "Representación impresa definida por el país. Existe desde que el comprobante está firmado, aunque SUNAT aún no responda; es null antes de firmar y para comprobantes rechazados o anulados."
+              oneOf:
+                - type: "null"
+                - type: object
+                  required: [title, issuer, issuerTaxIdLabel, amountInWords, qrData, legends]
+                  properties:
+                    title: { type: string, description: "Perú: BOLETA DE VENTA ELECTRÓNICA o FACTURA ELECTRÓNICA" }
+                    issuer: { type: object, properties: { taxId: { type: string }, legalName: { type: string }, tradeName: { type: string }, address: { type: string } } }
+                    issuerTaxIdLabel: { type: string, description: "Perú: RUC" }
+                    amountInWords: { type: string, description: "Leyenda del importe en letras, p. ej. SON: DIEZ CON 00/100 SOLES" }
+                    qrData: { type: string, description: "Contenido del código QR (Perú: RUC|tipo|serie|número|IGV|total|fecha|tipo doc|número doc|valor resumen|)" }
+                    legends: { type: array, items: { type: string } }
+                    notice: { type: string, description: "Presente en ambiente de pruebas: el documento no tiene validez tributaria" }
     EInvoicingCheckoutOptions:
       type: object
       required: [enabled, defaultDocument, documentTypes, customerDocumentTypes, identityThreshold, currency]
@@ -2331,11 +2345,12 @@ components:
         identityThreshold: { type: string, description: "Total de boleta desde el cual se identifica al cliente; vacío si el país no lo exige" }
         invoiceCustomerDocumentType: { type: string, description: "Documento del cliente que exige la factura (Perú: RUC)" }
         currency: { type: string }
+        issue: { type: string, description: "Con el módulo activo y enabled=false: qué falta configurar (emisor, credenciales o series). Ausente si el módulo no está activo o el país no está soportado." }
     EInvoicingSettings:
       type: object
       properties:
         entitled: { type: boolean }
-        profiles: { type: array, items: { type: object, properties: { fiscalProfileId: { type: string, format: uuid }, country: { type: string }, countryName: { type: string }, currency: { type: string }, default: { type: boolean }, supported: { type: boolean }, enabled: { type: boolean }, provider: { type: string }, environment: { type: string }, issuerIssue: { type: string, description: "Dato del emisor que impide activar (p. ej. RUC inválido en Mi restaurante)" }, credentials: { type: object, properties: { configured: { type: boolean }, required: { type: boolean }, updatedAt: { type: string }, metadata: { type: object, additionalProperties: { type: string } }, fields: { type: array, items: { type: object, properties: { key: { type: string }, label: { type: string }, type: { type: string, enum: [text, secret, file] }, accept: { type: string }, required: { type: boolean } } } } } } } } }
+        profiles: { type: array, items: { type: object, properties: { fiscalProfileId: { type: string, format: uuid }, country: { type: string }, countryName: { type: string }, currency: { type: string }, default: { type: boolean }, supported: { type: boolean }, ready: { type: boolean, description: "Módulo activo, país soportado, emisor y credenciales completos" }, issue: { type: string, description: "Qué falta para emitir; vacío si ready" }, provider: { type: string }, environment: { type: string }, issuerIssue: { type: string, description: "Dato del emisor que impide emitir (p. ej. RUC inválido en Mi restaurante)" }, credentials: { type: object, properties: { configured: { type: boolean }, required: { type: boolean }, updatedAt: { type: string }, metadata: { type: object, additionalProperties: { type: string } }, fields: { type: array, items: { type: object, properties: { key: { type: string }, label: { type: string }, type: { type: string, enum: [text, secret, file] }, accept: { type: string }, required: { type: boolean } } } } } } } } }
         locations: { type: array, items: { type: object, properties: { locationId: { type: string, format: uuid }, name: { type: string }, fiscalProfileId: { type: string, format: uuid }, country: { type: string }, supported: { type: boolean }, defaultDocument: { type: string }, series: { type: array, items: { type: object, properties: { documentType: { type: string }, label: { type: string }, series: { type: string }, suggested: { type: string }, lastNumber: { type: integer } } } } } } }
         providerOptions: { type: array, items: { type: object, properties: { value: { type: string }, label: { type: string } } } }
         environmentLabels: { type: object, additionalProperties: { type: string } }
@@ -2801,7 +2816,7 @@ components:
     CashOperation: { type: object, required: [id, operationType, amount, reason, note, createdAt], properties: { id: { type: string, format: uuid }, operationType: { type: string, enum: [cash_pull, deposit, transfer] }, amount: { type: string }, reason: { type: string }, note: { type: string }, createdAt: { type: string, format: date-time } } }
     POSOrderSummary: { type: object, required: [id, code, channel, status, customerName, tableName, total, paidAmount, remainingAmount, paymentStatus, paymentMethods, createdAt], properties: { origin: { type: string, enum: [standard, counter], description: "counter identifica la venta por mostrador (Concierge o cajero); channel sigue siendo recojo." }, itemsText: { type: string, description: "Productos del pedido como «2 × Ceviche, 1 × Chicha», para la bandeja de caja." }, waiterId: { type: string, description: "Mozo vinculado a la atención por el flujo de comanda; vacío si no hay responsable." }, billClosed: { type: boolean, description: La cuenta está cerrada para cobro }, id: { type: string, format: uuid }, code: { type: string }, channel: { type: string }, status: { type: string }, customerName: { type: string }, tableName: { type: string }, total: { type: string }, paidAmount: { type: string }, remainingAmount: { type: string }, paymentStatus: { type: string, enum: [pending, partial, paid] }, paymentMethods: { type: array, uniqueItems: true, items: { type: string }, description: "Nombres del catálogo de la empresa usados en pagos con importe neto positivo; sin duplicados, ordenados por nombre. Incluye medios ahora inactivos y devuelve un arreglo vacío si no hay cobros vigentes." }, createdAt: { type: string, format: date-time } } }
     POSOrderList: { type: object, required: [items, total, amountTotal, page, pageSize], properties: { items: { type: array, items: { $ref: "#/components/schemas/POSOrderSummary" } }, total: { type: integer }, amountTotal: { type: string, description: Cobrado neto de todo el filtro en la moneda del local }, page: { type: integer }, pageSize: { type: integer } } }
-    POSOrderDetail: { type: object, required: [order, paidAmount, remainingAmount, paymentStatus, payments, receiptContext], properties: { tipPolicy: { $ref: "#/components/schemas/TipPolicy" }, tip: { $ref: "#/components/schemas/TipReceipt" }, receiptContext: { $ref: "#/components/schemas/PaymentReceiptContext" }, order: { $ref: "#/components/schemas/Order" }, paidAmount: { type: string }, remainingAmount: { type: string }, paymentStatus: { type: string, enum: [pending, partial, paid] }, payments: { type: array, items: { $ref: "#/components/schemas/Payment" } } } }
+    POSOrderDetail: { type: object, required: [order, paidAmount, remainingAmount, paymentStatus, payments, receiptContext], properties: { tipPolicy: { $ref: "#/components/schemas/TipPolicy" }, tip: { $ref: "#/components/schemas/TipReceipt" }, receiptContext: { $ref: "#/components/schemas/PaymentReceiptContext" }, order: { $ref: "#/components/schemas/Order" }, paidAmount: { type: string }, remainingAmount: { type: string }, paymentStatus: { type: string, enum: [pending, partial, paid] }, payments: { type: array, items: { $ref: "#/components/schemas/Payment" } }, fiscalDocument: { $ref: "#/components/schemas/FiscalDocumentRef", description: "Comprobante electrónico entregado por el pedido; ausente si se cobró sin comprobante. Las reimpresiones muestran este documento en lugar del ticket de pago (salvo rechazado)." } } }
     PaymentReceiptContext:
       type: object
       description: Identidad actual del restaurante/local y formato monetario para ticket operativo no fiscal. No emite boleta, factura, serie fiscal ni aceptación SUNAT.

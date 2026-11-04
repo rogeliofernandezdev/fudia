@@ -1,3 +1,4 @@
+import type {FiscalDocumentRef} from "@/modules/einvoicing";
 import type {TipPolicy,TipReceipt} from "@/modules/operations/tips";
 export type Sale={
   id:string;code:string;channel:string;status:string;customerName:string;tableName:string;
@@ -20,5 +21,7 @@ export type SaleDetail={
   order:Pick<Sale,"id"|"code"|"channel"|"status"|"customerName"|"tableName"|"total"|"createdAt">&{waiterName?:string;subtotal:string;deliveryFee:string;notes:string;items?:SaleItem[]};
   paidAmount:string;remainingAmount:string;paymentStatus:"pending"|"partial"|"paid";
   payments:SalePayment[];
+  /** Electronic document delivered for the order; absent when charged without one. */
+  fiscalDocument?:FiscalDocumentRef;
 };
 export type PaymentReceiptContext={organizationName:string;legalName:string;taxId:string;locationName:string;address:string;phone:string;country:string;timezone:string;currency:string;currencySymbol:string;currencyPosition:"before"|"after";currencyDecimals:number};

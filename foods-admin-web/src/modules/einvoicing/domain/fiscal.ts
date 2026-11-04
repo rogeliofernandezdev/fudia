@@ -1,5 +1,5 @@
 import type {IconName} from "@/design-system";
-import type {CheckoutOptions,FiscalDraft,FiscalRequest,FiscalStatus} from "./types";
+import type {CheckoutOptions,FiscalDocumentRef,FiscalDraft,FiscalRequest,FiscalStatus} from "./types";
 
 /** Central mapping of fiscal document states: tone from the state matrix and a business label. */
 export const fiscalStatusView:Record<FiscalStatus,{tone:"sky"|"green"|"orange"|"red"|"gray";label:string}>={
@@ -49,4 +49,19 @@ export function fiscalRequest(options:CheckoutOptions|undefined,draft:FiscalDraf
  if(!options?.enabled||draft.documentType==="none")return undefined;
  const documentType=draft.documentType==="invoice"?invoiceDocumentType(options):draft.customerDocumentType;
  return {documentType:draft.documentType,customer:{documentType,documentNumber:documentType?draft.customerDocumentNumber.trim():"",name:draft.customerName.trim(),address:draft.documentType==="invoice"?draft.customerAddress.trim():""}};
+}
+
+/**
+ * Reprints show what was delivered at checkout: the electronic document when
+ * the order has one with fiscal value; otherwise (none, rejected, cancelled)
+ * the payment ticket.
+ */
+export function deliveredDocument(ref?:FiscalDocumentRef|null):FiscalDocumentRef|null{
+ return ref&&ref.status!=="REJECTED"&&ref.status!=="CANCELLED"?ref:null;
+}
+
+/** Context for a payment ticket printed because the order's document has no fiscal value. */
+export function ticketNoticeFor(ref?:FiscalDocumentRef|null){
+ if(!ref||deliveredDocument(ref))return undefined;
+ return `${ref.label} ${ref.number} · ${fiscalStatusView[ref.status].label}. Este ticket no es un comprobante fiscal.`;
 }

@@ -164,6 +164,7 @@
 .pos-detail-identity p{display:flex;align-items:center;gap:var(--space-1-5);margin:0;color:var(--ink-500);font-size:var(--font-size-label)}
 .pos-detail-identity p>svg{flex:none}
 .pos-detail-identity p>span{min-width:0;overflow-wrap:anywhere}
+.pos-detail-identity .pos-detail-fiscal{flex-wrap:wrap}
 .pos-detail-panel{min-width:0;padding-inline:var(--space-4)}
 .pos-detail-empty{margin:0;font-size:var(--font-size-base);line-height:var(--line-height-normal);color:var(--ink-500)}
 .pos-detail-paid b{color:var(--ink-600)}

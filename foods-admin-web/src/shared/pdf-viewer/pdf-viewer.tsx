@@ -6,7 +6,7 @@ import type {PdfViewerProps} from "./types";
 type ViewerWindow=Window&{FudiaPdfViewer?:{dispose:()=>Promise<void>}};
 const channel="fudia-pdf-viewer";
 
-export function PdfViewerModal({document:pdf,filename,title,subtitle,size="lg",onClose,loading=false,error,onRetry,notice,details}:PdfViewerProps){
+export function PdfViewerModal({document:pdf,filename,title,subtitle,size="lg",onClose,loading=false,error,errorTitle="No pudimos preparar el PDF",onRetry,notice,details}:PdfViewerProps){
  const id=useId();
  const[showDetails,setShowDetails]=useState(false);
  const releaseRef=useRef<(()=>Promise<void>)|null>(null),closing=useRef(false);
@@ -21,7 +21,7 @@ export function PdfViewerModal({document:pdf,filename,title,subtitle,size="lg",o
  return <div className="modal-backdrop modal-overlay-in"><Dialog className={`crud-modal pdf-viewer-modal pdf-viewer-${size} modal-panel-in`} onResponseClose={onClose} aria-labelledby={`${id}-title`}>
   <ModalHeader title={title} subtitle={subtitle} titleId={`${id}-title`} icon="receipt" onClose={()=>void close()} closeLabel="Cerrar visor PDF"/>
   {(notice||details)&&<div className="pdf-viewer-context">{notice&&<div>{notice}</div>}{details&&<Button kind="ghost" icon="eye" onClick={()=>setShowDetails(value=>!value)}>{showDetails?"Ver PDF":"Ver detalle"}</Button>}</div>}
-  {showDetails?<div className="pdf-viewer-details">{details}</div>:error?<div className="pdf-viewer-state"><ErrorState title="No pudimos preparar el PDF" text={error} onRetry={onRetry}/></div>
+  {showDetails?<div className="pdf-viewer-details">{details}</div>:error?<div className="pdf-viewer-state"><ErrorState title={errorTitle} text={error} onRetry={onRetry}/></div>
    :loading?<PdfLoading/>:!pdf?<div className="pdf-viewer-state"><ErrorState title="No hay un PDF disponible" text="Vuelve a generar el documento para previsualizarlo." onRetry={onRetry}/></div>:<PdfFrame document={pdf} filename={filename} releaseRef={releaseRef} onRetry={onRetry}/>}
  </Dialog></div>;
 }

@@ -47,22 +47,23 @@ export function EInvoicingSettingsPage(){
 
 function ProfilePanel({profile,settings,canManage,onCredentials}:{profile:ProfileSetting;settings:EInvoicingSettings;canManage:boolean;onCredentials:()=>void}){
  const{notify}=useFeedback();const client=useQueryClient();
- const[draft,setDraft]=useState<ProfileSettingsInput>({enabled:profile.enabled,provider:profile.provider,environment:profile.environment});
- const dirty=draft.enabled!==profile.enabled||draft.provider!==profile.provider||draft.environment!==profile.environment;
- const save=useMutation({mutationFn:()=>saveProfileSettings(profile.fiscalProfileId,draft),onSuccess:()=>{void client.invalidateQueries({queryKey:["einvoicing-settings"]});void client.invalidateQueries({queryKey:["einvoicing-checkout"]});notify({tone:"success",title:"Facturación guardada",message:draft.enabled?"Los locales de este país ya pueden emitir comprobantes.":"Los cobros de este país ya no emiten comprobantes."})},onError:error=>notify({tone:"danger",title:"No se pudo guardar",message:error.message})});
+ const[draft,setDraft]=useState<ProfileSettingsInput>({provider:profile.provider,environment:profile.environment});
+ const dirty=draft.provider!==profile.provider||draft.environment!==profile.environment;
+ const save=useMutation({mutationFn:()=>saveProfileSettings(profile.fiscalProfileId,draft),onSuccess:()=>{void client.invalidateQueries({queryKey:["einvoicing-settings"]});void client.invalidateQueries({queryKey:["einvoicing-checkout"]});notify({tone:"success",title:"Facturación guardada",message:"Se guardaron el proveedor y el ambiente de este país."})},onError:error=>notify({tone:"danger",title:"No se pudo guardar",message:error.message})});
  const locked=!canManage||!profile.supported||save.isPending;
  return <section className="panel management einvoicing-profile-panel">
   <form className="einvoicing-profile" onSubmit={event=>{event.preventDefault();if(dirty&&!locked)save.mutate()}}>
-   <header className="einvoicing-profile-head"><div><h2 className="modal-section-title">{profile.countryName} · {profile.currency}</h2></div><Status tone={profile.enabled?"green":"gray"}>{profile.enabled?"Emitiendo":"Sin emitir"}</Status></header>
+   <header className="einvoicing-profile-head"><div><h2 className="modal-section-title">{profile.countryName} · {profile.currency}</h2></div>{profile.supported&&<Status tone={profile.ready?"green":"gray"}>{profile.ready?"Lista para emitir":"Falta configurar"}</Status>}</header>
    {!profile.supported?<p className="pos-tip-help">La facturación electrónica aún no está disponible para este país.</p>:<>
-    <label className="switch-row compact"><input type="checkbox" checked={draft.enabled} disabled={locked} onChange={event=>setDraft({...draft,enabled:event.target.checked})}/><span/><b>Emitir comprobantes electrónicos</b></label>
+    <p className="pos-tip-help">El módulo Facturación es la única activación: con el emisor, las credenciales y las series de cada local completos, el cobro ofrece boleta y factura.</p>
     <div className="einvoicing-profile-fields">
      <FormField label="Proveedor"><Select disabled={locked} value={draft.provider} onChange={event=>setDraft({...draft,provider:event.target.value})}>{settings.providerOptions.map(option=><option key={option.value} value={option.value}>{option.label}</option>)}</Select></FormField>
      <FormField label="Ambiente"><Select disabled={locked} value={draft.environment} onChange={event=>setDraft({...draft,environment:event.target.value as ProfileSettingsInput["environment"]})}>{Object.entries(settings.environmentLabels).map(([value,label])=><option key={value} value={value}>{label}</option>)}</Select></FormField>
     </div>
     {profile.issuerIssue&&<InlineNotice tone="warning" title="Completa los datos del emisor" action={<Link className="button secondary" href={pageRoutes.organizationSettings}>Ir a Mi restaurante</Link>}>{profile.issuerIssue}</InlineNotice>}
+    {!profile.ready&&profile.issue&&profile.issue!==profile.issuerIssue&&<InlineNotice tone="warning" title="Falta configurar">{profile.issue}</InlineNotice>}
     <CredentialsSummary profile={profile} pendingProvider={draft.provider!==profile.provider} canManage={canManage} onEdit={onCredentials}/>
-    {canManage&&dirty&&<div className="einvoicing-profile-actions"><Button kind="ghost" disabled={save.isPending} onClick={()=>setDraft({enabled:profile.enabled,provider:profile.provider,environment:profile.environment})}>Cancelar</Button><Button type="submit" icon="check" disabled={save.isPending} loading={save.isPending}>{save.isPending?"Guardando…":"Guardar"}</Button></div>}
+    {canManage&&dirty&&<div className="einvoicing-profile-actions"><Button kind="ghost" disabled={save.isPending} onClick={()=>setDraft({provider:profile.provider,environment:profile.environment})}>Cancelar</Button><Button type="submit" icon="check" disabled={save.isPending} loading={save.isPending}>{save.isPending?"Guardando…":"Guardar"}</Button></div>}
    </>}
   </form>
  </section>;

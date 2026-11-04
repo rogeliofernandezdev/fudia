@@ -13,7 +13,6 @@ import (
 )
 
 type ProfileSettingsInput struct {
-	Enabled     bool   `json:"enabled"`
 	Provider    string `json:"provider"`
 	Environment string `json:"environment"`
 }
@@ -29,12 +28,16 @@ type ProfileSettings struct {
 	Currency        string `json:"currency"`
 	Default         bool   `json:"default"`
 	Supported       bool   `json:"supported"`
-	Enabled         bool   `json:"enabled"`
 	Provider        string `json:"provider"`
 	Environment     string `json:"environment"`
-	// Credentials of the selected provider; IssuerIssue blocks enabling.
+	// Credentials of the selected provider; IssuerIssue blocks issuing.
 	Credentials CredentialStatus `json:"credentials"`
 	IssuerIssue string           `json:"issuerIssue"`
+	// Ready: with the module active, the profile issues as soon as issuer and
+	// credentials are complete (each location still needs its series). Issue
+	// explains what is missing.
+	Ready bool   `json:"ready"`
+	Issue string `json:"issue"`
 }
 type LocationSeries struct {
 	DocumentType string `json:"documentType"`
@@ -99,17 +102,29 @@ func (a *Settings) View(ctx context.Context, s scope) (SettingsView, error) {
 		if p.Provider == "" {
 			p.Provider, p.Environment = defaultProvider, domain.EnvironmentTest
 		}
-		item := ProfileSettings{FiscalProfileID: p.FiscalProfileID, Country: p.Country, CountryName: p.CountryName, Currency: p.Currency, Default: p.Default, Supported: supported, Enabled: p.Enabled, Provider: p.Provider, Environment: p.Environment}
+		item := ProfileSettings{FiscalProfileID: p.FiscalProfileID, Country: p.Country, CountryName: p.CountryName, Currency: p.Currency, Default: p.Default, Supported: supported, Provider: p.Provider, Environment: p.Environment}
 		if supported {
 			if issue := j.ValidateIssuer(issuer); issue != nil {
 				item.IssuerIssue = issue.Message
+				item.Issue = issue.Message
 			}
 		}
 		if provider, ok := a.registry.Provider(p.Provider); ok {
 			if item.Credentials, err = a.credentialStatus(ctx, s, p.FiscalProfileID, provider, p.Environment); err != nil {
 				return out, failure(apperror.Unavailable, "einvoicing_unavailable", "No pudimos cargar las credenciales.")
 			}
+			if supported && item.Issue == "" {
+				var known *apperror.Error
+				if err := verifyCredentials(ctx, a.repo, a.cipher, s, p.FiscalProfileID, provider, p.Environment); errors.As(err, &known) && known.Kind == apperror.Conflict {
+					item.Issue = known.Message
+				} else if err != nil {
+					return out, err
+				}
+			}
+		} else if supported && item.Issue == "" {
+			item.Issue = "Elige el proveedor de facturación."
 		}
+		item.Ready = entitled && supported && item.Issue == ""
 		out.Profiles = append(out.Profiles, item)
 	}
 	for _, l := range locations {
@@ -142,28 +157,15 @@ func (a *Settings) SaveProfile(ctx context.Context, s scope, profileID string, i
 	if err != nil {
 		return SettingsView{}, failure(apperror.Unavailable, "einvoicing_unavailable", "No pudimos validar el perfil fiscal.")
 	}
-	j, supported := a.registry.Jurisdiction(country)
-	if in.Enabled && !supported {
+	if _, supported := a.registry.Jurisdiction(country); !supported {
 		return SettingsView{}, failure(apperror.Conflict, "einvoicing_unsupported_country", "La facturación electrónica aún no está disponible para este país.")
 	}
-	if in.Enabled {
-		entitled, err := a.access.ModuleEntitled(ctx, s.OrganizationID, domain.ModuleKey)
-		if err != nil {
-			return SettingsView{}, failure(apperror.Unavailable, "einvoicing_unavailable", "No pudimos validar la facturación electrónica.")
-		}
-		if !entitled {
-			return SettingsView{}, failure(apperror.Conflict, "einvoicing_not_entitled", "Tu plan no incluye facturación electrónica.")
-		}
-		issuer, err := a.repo.Issuer(ctx, s)
-		if err != nil {
-			return SettingsView{}, failure(apperror.Unavailable, "einvoicing_unavailable", "No pudimos validar los datos del emisor.")
-		}
-		if issue := j.ValidateIssuer(issuer); issue != nil {
-			return SettingsView{}, failure(apperror.Conflict, "einvoicing_issuer_incomplete", issue.Message)
-		}
-		if err := a.checkCredentials(ctx, s, profileID, provider, in.Environment); err != nil {
-			return SettingsView{}, err
-		}
+	entitled, err := a.access.ModuleEntitled(ctx, s.OrganizationID, domain.ModuleKey)
+	if err != nil {
+		return SettingsView{}, failure(apperror.Unavailable, "einvoicing_unavailable", "No pudimos validar la facturación electrónica.")
+	}
+	if !entitled {
+		return SettingsView{}, failure(apperror.Conflict, "einvoicing_not_entitled", "Tu plan no incluye facturación electrónica.")
 	}
 	if err := a.repo.SaveProfileSettings(ctx, s, profileID, in); err != nil {
 		return SettingsView{}, failure(apperror.Unavailable, "einvoicing_unavailable", "No pudimos guardar la configuración de facturación.")
@@ -221,21 +223,22 @@ func (a *Settings) SaveLocation(ctx context.Context, s scope, locationID string,
 	return a.View(ctx, s)
 }
 
-// checkCredentials requires, before enabling, the credentials the provider
-// needs in that environment, and re-validates them (e.g. production needs a
-// certificate that beta did not).
-func (a *Settings) checkCredentials(ctx context.Context, s scope, profileID string, provider ports.Provider, environment string) error {
-	sealed, found, err := a.repo.Credentials(ctx, s, profileID, provider.Key())
+// verifyCredentials requires the credentials the provider needs in that
+// environment and re-validates them (e.g. production needs a certificate that
+// beta did not). A missing or invalid credential is a Conflict with a message
+// for the user.
+func verifyCredentials(ctx context.Context, repo Repository, cipher Cipher, s scope, profileID string, provider ports.Provider, environment string) error {
+	sealed, found, err := repo.Credentials(ctx, s, profileID, provider.Key())
 	if err != nil {
 		return failure(apperror.Unavailable, "einvoicing_unavailable", "No pudimos leer las credenciales.")
 	}
 	if !found {
 		if provider.RequiresCredentials(environment) {
-			return failure(apperror.Conflict, "einvoicing_credentials_missing", "Configura las credenciales de "+provider.Label()+" antes de activar este ambiente.")
+			return failure(apperror.Conflict, "einvoicing_credentials_missing", "Configura las credenciales de "+provider.Label()+" para este ambiente.")
 		}
 		return nil
 	}
-	values, err := openCredentials(a.cipher, sealed, s.OrganizationID, profileID, provider.Key())
+	values, err := openCredentials(cipher, sealed, s.OrganizationID, profileID, provider.Key())
 	if err != nil {
 		return failure(apperror.Unavailable, "einvoicing_credentials_unavailable", "No pudimos descifrar las credenciales guardadas.")
 	}

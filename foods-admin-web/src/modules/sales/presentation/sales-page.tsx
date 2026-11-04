@@ -4,6 +4,7 @@ import {useState} from "react";
 import dynamic from "next/dynamic";
 import {useQuery} from "@tanstack/react-query";
 import {Button,DataTable,EmptyState,ErrorState,FormField,Icon,Input,PageHeader,Pagination,RowActionButton,SearchField,Status} from "@/design-system";
+import {deliveredDocument,ticketNoticeFor} from "@/modules/einvoicing";
 import {useMoney,useSession} from "@/providers";
 import {formatRegionalCalendarDate,formatRegionalDateTime} from "@/shared/i18n/regional-format";
 import {useDebouncedValue} from "@/shared/hooks/use-debounced-value";
@@ -12,6 +13,7 @@ import type {Sale} from "../domain/types";
 import {localToday,periodRange,salesPeriods,type DateRange,type SalesPeriod} from "../domain/sales-periods";
 import {SaleDetailDialog} from "./sale-detail-dialog";
 const PaymentTicketDialog=dynamic(()=>import("./payment-ticket-dialog").then(module=>module.PaymentTicketDialog),{ssr:false});
+const FiscalPrintDialog=dynamic(()=>import("@/modules/einvoicing").then(module=>module.FiscalPrintDialog),{ssr:false});
 
 const channelLabel:Record<string,string>={salon:"Salón",mostrador:"Recojo en local",recojo:"Recojo en local",delivery:"Delivery",whatsapp:"WhatsApp"};
 const paymentMethodsLabel=(sale:Sale)=>(sale.paymentMethods??[]).join(" · ")||"—";
@@ -25,8 +27,9 @@ export function SalesPage(){
   const[detailId,setDetailId]=useState<string|null>(null);
   const[from,setFrom]=useState("");
   const[to,setTo]=useState("");
-  const[ticketId,setTicketId]=useState<string|null>(null);
+  const[ticket,setTicket]=useState<{orderId:string;notice?:string}|null>(null);
   const[period,setPeriod]=useState<SalesPeriod>("today");
+  const[fiscal,setFiscal]=useState<{documentId:string;orderId:string}|null>(null);
   // Los periodos rápidos se recalculan con la fecha del local en cada render: al pasar la medianoche local, «Hoy» avanza solo.
   const range:DateRange=period==="custom"?{from,to}:periodRange(period,localToday(location?.timezone));
   const invalidRange=Boolean(range.from&&range.to&&range.from>range.to);
@@ -48,8 +51,13 @@ export function SalesPage(){
       :<SalesResults items={sales.data.items} money={money} date={date} view={setDetailId}/>}
       {!invalidRange&&!sales.isLoading&&!sales.isError&&<Pagination page={page} size={size} total={sales.data?.total??0} onPage={setPage} onSize={v=>{setSize(v);setPage(1)}}/>}
     </section>
-    {detailId&&<SaleDetailDialog loading={detail.isLoading} error={detail.error?.message} data={detail.data} money={money} date={date} close={()=>setDetailId(null)} retry={()=>void detail.refetch()} ticket={()=>{setDetailId(null);setTicketId(detailId)}}/>}
-    {ticketId&&<PaymentTicketDialog orderId={ticketId} close={()=>setTicketId(null)}/>}
+    {detailId&&<SaleDetailDialog loading={detail.isLoading} error={detail.error?.message} data={detail.data} money={money} date={date} close={()=>setDetailId(null)} retry={()=>void detail.refetch()} ticket={()=>{
+      // Reprint what was delivered: the electronic document, or the payment ticket.
+      const document=deliveredDocument(detail.data?.fiscalDocument);setDetailId(null);
+      if(document)setFiscal({documentId:document.id,orderId:detailId});else setTicket({orderId:detailId,notice:ticketNoticeFor(detail.data?.fiscalDocument)});
+    }}/>}
+    {ticket&&<PaymentTicketDialog orderId={ticket.orderId} notice={ticket.notice} close={()=>setTicket(null)}/>}
+    {fiscal&&<FiscalPrintDialog documentId={fiscal.documentId} close={()=>setFiscal(null)} onShowTicket={()=>{setFiscal(null);setTicket({orderId:fiscal.orderId});}}/>}
   </>;
 }
 

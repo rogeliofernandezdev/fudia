@@ -31,4 +31,7 @@ type Issuer interface {
 	Request(ctx context.Context, s requestscope.Scope, orderID string, request FiscalRequest) (DocumentRef, error)
 	// Dispatch hands the stored document to the asynchronous sender after commit.
 	Dispatch(documentID string)
+	// OrderDocument returns the document issued for an order of the session
+	// location, or nil when the order was charged without one.
+	OrderDocument(ctx context.Context, s requestscope.Scope, orderID string) (*DocumentRef, error)
 }

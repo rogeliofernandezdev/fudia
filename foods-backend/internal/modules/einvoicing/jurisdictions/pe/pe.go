@@ -120,6 +120,37 @@ func (Peru) DocumentLabel(documentType string) string {
 func (Peru) FiscalCode(documentType string) string {
 	return map[string]string{domain.TypeInvoice: "01", domain.TypeReceipt: "03", domain.TypeCreditNote: "07"}[documentType]
 }
+
+var printTitles = map[string]string{domain.TypeInvoice: "FACTURA ELECTRÓNICA", domain.TypeReceipt: "BOLETA DE VENTA ELECTRÓNICA"}
+var printNames = map[string]string{domain.TypeInvoice: "Factura Electrónica", domain.TypeReceipt: "Boleta de Venta Electrónica"}
+
+// Printout follows SUNAT's printed representation: title, amount in words
+// (legend 1000), QR «RUC|tipo|serie|número|IGV|total|fecha|tipo doc|número
+// doc|valor resumen|» and the representation legend.
+func (p Peru) Printout(s ports.PrintSource) ports.Printout {
+	customerNumber := s.Customer.DocumentNumber
+	if customerNumber == "" {
+		customerNumber = "-"
+	}
+	qr := strings.Join([]string{
+		s.Issuer.TaxID, p.FiscalCode(s.DocumentType), s.Series, fmt.Sprint(s.Number), twoDecimals(s.TaxTotal), twoDecimals(s.Total),
+		s.IssueDate, p.CustomerFiscalCode(s.Customer.DocumentType), customerNumber, s.DigestValue,
+	}, "|") + "|"
+	return ports.Printout{
+		Title: printTitles[s.DocumentType], Issuer: s.Issuer, IssuerTaxIDLabel: "RUC",
+		AmountInWords: "SON: " + AmountInWords(s.Total, s.Currency), QRData: qr,
+		Legends: []string{"Representación impresa de la " + printNames[s.DocumentType] + ".", "Consulte su validez en www.sunat.gob.pe"},
+	}
+}
+
+func twoDecimals(value string) string {
+	r, ok := new(big.Rat).SetString(strings.TrimSpace(value))
+	if !ok {
+		return "0.00"
+	}
+	return r.FloatString(2)
+}
+
 func (Peru) CustomerFiscalCode(customerDocumentType string) string {
 	code, ok := map[string]string{"DNI": "1", "CE": "4", "RUC": "6", "PASAPORTE": "7"}[strings.ToUpper(customerDocumentType)]
 	if !ok {

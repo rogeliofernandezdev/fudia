@@ -2,6 +2,7 @@
 import {useState} from "react";
 import {Button,DetailContact,DetailTimeline,EmptyState,ErrorState,Icon,Skeleton,Status,Tabs,ModalHeader,ModalFooter,ModalWorkspace,ModalItemList,ModalItemNote,ModalItemComponents,type IconName} from "@/design-system";
 import {Dialog} from "@/design-system/dialog";
+import {FiscalStatus} from "@/modules/einvoicing";
 import type {SaleDetail} from "../domain/types";
 import "./sales.css";
 
@@ -44,6 +45,7 @@ export function SaleDetailDialog({loading,error,data,money,date,close,retry,tick
             {status&&<div className="sales-detail-status" aria-label="Estado de pago"><Status tone={status.tone}>{status.label}</Status></div>}
             <p><Icon name="clock" size={14}/><time dateTime={data.order.createdAt}>{date(data.order.createdAt)}</time></p>
             <p><Icon name={channelIcons[data.order.channel]??"receipt"} size={14}/><span>{[channels[data.order.channel]??data.order.channel,data.order.channel==="salon"&&`Atendido por ${data.order.waiterName||"sin asignar"}`].filter(Boolean).join(" · ")}</span></p>
+            {data.fiscalDocument&&<p className="sales-detail-fiscal"><Icon name={data.fiscalDocument.documentType==="invoice"?"invoice":"receipt"} size={14}/><span>{data.fiscalDocument.label} {data.fiscalDocument.number}</span>{data.fiscalDocument.status!=="ACCEPTED"&&<FiscalStatus status={data.fiscalDocument.status}/>}</p>}
           </div>
           {data.order.customerName&&<DetailContact name={data.order.customerName}/>}
         </section>

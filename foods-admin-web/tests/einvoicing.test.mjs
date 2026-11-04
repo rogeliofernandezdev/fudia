@@ -78,3 +78,85 @@ test("el detalle descarga XML y CDR por el BFF sin corromper binarios",()=>{
  const proxy=read("app/api/admin/[...path]/route.ts");
  assert.ok(proxy.includes("await response.arrayBuffer()")&&proxy.includes("Content-Disposition"));
 });
+
+test("el módulo Facturación es la única activación: sin segundo interruptor y con aviso en el cobro",()=>{
+ const page=read("modules/einvoicing/presentation/einvoicing-settings-page.tsx");
+ assert.equal(page.includes("Emitir comprobantes electrónicos"),false,"no existe un interruptor por perfil fiscal");
+ assert.equal(/draft\.enabled|profile\.enabled/.test(page),false,"el perfil solo guarda proveedor y ambiente");
+ assert.ok(page.includes('profile.ready?"Lista para emitir":"Falta configurar"'),"el estado se deriva de la configuración real");
+ const types=read("modules/einvoicing/domain/types.ts");
+ assert.ok(types.includes('export type ProfileSettingsInput={provider:string;environment:"test"|"production"};'));
+ const form=read("modules/operations/pos/presentation/pos-dialogs.tsx");
+ assert.ok(form.includes('{!offerFiscal&&settles&&fiscalIssue&&<InlineNotice tone="warning" title="Boleta y factura no disponibles">{fiscalIssue}</InlineNotice>}'),"el cobro explica qué falta en vez de ocultarlo");
+ assert.ok(read("modules/operations/pos/presentation/pos-page.tsx").includes("fiscalIssue={fiscal.data&&!fiscal.data.enabled?fiscal.data.issue:undefined}"));
+});
+
+test("el cobro consulta la facturación vigente al abrirse y Mi restaurante la invalida al guardar",()=>{
+ const hook=read("modules/einvoicing/presentation/checkout-fiscal-section.tsx");
+ assert.ok(hook.includes('staleTime:0,refetchOnMount:"always"'),"un cambio de RUC, credenciales o series se ve en el siguiente cobro");
+ assert.ok(read("modules/operations/pos/presentation/pos-page.tsx").includes("(fiscal.isFetchedAfterMount||fiscal.isError)"),"el formulario espera la respuesta fresca, no la caché");
+ const company=read("modules/organizations/presentation/organization-admin.tsx");
+ assert.ok(company.includes('client.invalidateQueries({queryKey:["einvoicing-checkout"]})')&&company.includes('client.invalidateQueries({queryKey:["einvoicing-settings"]})'));
+});
+
+const printout=compile("modules/einvoicing/domain/fiscal-printout.ts");
+const signed={title:"BOLETA DE VENTA ELECTRÓNICA",issuer:{taxId:"20000000001",legalName:"A Mi Manera E.I.R.L.",tradeName:"La Rinconada",address:"San Juan Bautista, Ayacucho"},issuerTaxIdLabel:"RUC",
+ amountInWords:"SON: DIEZ CON 00/100 SOLES",qrData:"20000000001|03|B001|1|1.53|10.00|2026-11-03|1|46351741|abc=|",legends:["Representación impresa de la Boleta de Venta Electrónica.","Consulte su validez en www.sunat.gob.pe"],notice:"Ambiente de pruebas: sin validez tributaria."};
+
+test("el cobro espera a la autoridad unos segundos y luego entrega el comprobante firmado",()=>{
+ assert.equal(printout.AUTHORITY_WAIT_MS<=10000,true,"la espera no bloquea la caja");
+ assert.equal(printout.fiscalPrintPhase({status:"SENDING",printout:null},false),"waiting");
+ assert.equal(printout.fiscalPrintPhase({status:"SENDING",printout:signed},false),"waiting","dentro de la espera aún se intenta mostrarlo aceptado");
+ assert.equal(printout.fiscalPrintPhase({status:"ACCEPTED",printout:signed},false),"ready");
+ assert.equal(printout.fiscalPrintPhase({status:"OBSERVED",printout:signed},false),"ready");
+ assert.equal(printout.fiscalPrintPhase({status:"SENDING",printout:signed},true),"pending","firmado pero sin respuesta se imprime igual");
+ assert.equal(printout.fiscalPrintPhase({status:"ERROR",printout:signed},false),"pending","un error temporal no sigue esperando");
+ assert.equal(printout.fiscalPrintPhase({status:"ERROR",printout:null},false),"unsigned");
+ assert.equal(printout.fiscalPrintPhase({status:"PENDING",printout:null},true),"unsigned");
+ assert.equal(printout.fiscalPrintPhase({status:"REJECTED",printout:null},false),"rejected","un rechazo nunca se imprime");
+});
+
+test("la representación impresa usa los textos legales del API, el número fiscal y el QR",()=>{
+ const detail={id:"doc-1",documentType:"receipt",label:"Boleta",number:"B001-1",issueDate:"2026-11-03",orderCode:"PED-75157E9E",digestValue:"abc=",status:"ACCEPTED",
+  customer:{documentType:"DNI",documentNumber:"46351741",name:"Rogelio Fernandez",address:""},
+  breakdown:{lines:[{no:1,description:"Papa a la Huancaína",quantity:"1",unitPrice:"10",netAmount:"8.47",taxAmount:"1.53",total:"10.00"}],taxes:[{code:"general",name:"IGV",rate:"0.18",amount:"1.53"}],netTotal:"8.47",taxTotal:"1.53",total:"10.00"},
+  printout:signed};
+ const format={money:value=>`S/ ${Number(value).toFixed(2)}`,date:value=>value,quantity:value=>String(Number(value)),percent:rate=>`${Number(rate)*100} %`};
+ const rows=printout.fiscalPrintoutRows(detail,format),texts=rows.map(row=>row.text);
+ for(const expected of ["La Rinconada","A Mi Manera E.I.R.L.","RUC: 20000000001","BOLETA DE VENTA ELECTRÓNICA","B001-1","Cliente: Rogelio Fernandez","DNI: 46351741","Pedido: PED-75157E9E","SON: DIEZ CON 00/100 SOLES","Valor resumen: abc=","Representación impresa de la Boleta de Venta Electrónica.","AMBIENTE DE PRUEBAS: SIN VALIDEZ TRIBUTARIA."])
+  assert.ok(texts.includes(expected),expected);
+ assert.ok(rows.some(row=>row.text==="IGV 18 %"&&row.right==="S/ 1.53"));
+ assert.ok(rows.some(row=>row.text==="TOTAL"&&row.right==="S/ 10.00"&&row.bold));
+ assert.equal(rows.filter(row=>row.qr).length,1,"un único QR");
+ assert.ok(!texts.some(text=>/no es un comprobante fiscal/i.test(text)),"no se confunde con el ticket de pago");
+ const anonymous=printout.fiscalPrintoutRows({...detail,customer:{documentType:"",documentNumber:"",name:"",address:""}},format).map(row=>row.text);
+ assert.ok(!anonymous.some(text=>text.startsWith("Cliente:")),"la boleta anónima no inventa un cliente");
+ assert.throws(()=>printout.fiscalPrintoutRows({...detail,printout:null},format),/firmado/);
+});
+
+test("con comprobante el cobro abre la representación impresa en lugar del ticket de pago",()=>{
+ const pos=read("modules/operations/pos/presentation/pos-page.tsx");
+ assert.ok(pos.includes("if(fiscal){setFiscalTarget({documentId:fiscal.id,orderId:variables.orderId,paymentId:item.id,wait:true});return;}"));
+ assert.ok(pos.includes("<FiscalPrintDialog documentId={fiscalTarget.documentId} wait={fiscalTarget.wait}"),"solo el cobro espera la respuesta; la reimpresión no");
+ assert.ok(pos.includes("setTicketTarget({orderId:fiscalTarget.orderId,paymentId:fiscalTarget.paymentId})"),"si no se puede imprimir queda el ticket de pago");
+ const dialog=read("modules/einvoicing/presentation/fiscal-print-dialog.tsx");
+ assert.ok(dialog.includes("prepared?.key===key"),"las consultas de estado no regeneran el PDF");
+ assert.ok(read("modules/einvoicing/presentation/fiscal-documents-page.tsx").includes("Ver comprobante"),"se reimprime desde Comprobantes");
+ assert.ok(!read("modules/einvoicing/infrastructure/fiscal-printout-pdf.ts").includes("SUNAT"),"el contenido legal viene del API");
+});
+
+test("la reimpresión muestra lo que se entregó: comprobante con valor fiscal o ticket de pago",()=>{
+ const ref=status=>({id:"doc-1",documentType:"receipt",label:"Boleta",number:"B001-1",status});
+ for(const status of ["ACCEPTED","OBSERVED","PENDING","SENDING","ERROR"])assert.equal(fiscal.deliveredDocument(ref(status))?.id,"doc-1",status);
+ for(const status of ["REJECTED","CANCELLED"])assert.equal(fiscal.deliveredDocument(ref(status)),null,status);
+ assert.equal(fiscal.deliveredDocument(undefined),null,"sin comprobante: ticket de pago");
+ assert.equal(fiscal.ticketNoticeFor(ref("REJECTED")),"Boleta B001-1 · Rechazado. Este ticket no es un comprobante fiscal.");
+ assert.equal(fiscal.ticketNoticeFor(ref("ACCEPTED")),undefined);
+ assert.equal(fiscal.ticketNoticeFor(undefined),undefined);
+ for(const page of ["modules/sales/presentation/sales-page.tsx","modules/operations/pos/presentation/pos-page.tsx"]){
+  const source=read(page);
+  assert.ok(source.includes("deliveredDocument(detail.data?.fiscalDocument)")&&source.includes("ticketNoticeFor(detail.data?.fiscalDocument)"),page);
+ }
+ for(const dialog of ["modules/sales/presentation/sale-detail-dialog.tsx","modules/operations/pos/presentation/pos-page.tsx"])
+  assert.ok(read(dialog).includes('{data.fiscalDocument.label} {data.fiscalDocument.number}'),`${dialog} identifica el comprobante entregado`);
+});

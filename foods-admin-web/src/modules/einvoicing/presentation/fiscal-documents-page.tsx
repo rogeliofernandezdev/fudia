@@ -1,25 +1,22 @@
 "use client";
 import {useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
-import {Button,DetailFacts,DetailHero,EmptyState,ErrorState,Icon,ModalFooter,ModalHeader,PageHeader,Pagination,RowActionButton,SearchField,Select,Skeleton,Status,TableSkeleton} from "@/design-system";
+import {Button,DetailFacts,DetailHero,EmptyState,ErrorState,Icon,ModalFooter,ModalHeader,PageHeader,Pagination,RowActionButton,SearchField,Select,Skeleton,TableSkeleton} from "@/design-system";
 import {DataTable} from "@/design-system/data-table";
 import {Dialog} from "@/design-system/dialog";
 import {useFeedback,useMoney,useSession} from "@/providers";
 import {useDebouncedValue} from "@/shared/hooks/use-debounced-value";
 import {formatRegionalCalendarDate,formatRegionalNumber} from "@/shared/i18n/regional-format";
 import {fiscalStatusView} from "../domain/fiscal";
-import type {FiscalDocumentSummary,FiscalFileKind} from "../domain/types";
+import type {FiscalFileKind} from "../domain/types";
 import {fiscalDocumentFileUrl,getFiscalDocument,listFiscalDocuments,retryFiscalDocument} from "../infrastructure/einvoicing-api";
+import {FiscalPrintDialog} from "./fiscal-print-dialog";
+import {FiscalStatus} from "./fiscal-status";
 import "./einvoicing.css";
 
 const fileLabels:Record<FiscalFileKind,string>={xml:"XML firmado",cdr:"CDR de SUNAT"};
 const fileKinds:FiscalFileKind[]=["xml","cdr"];
 const columns=["Comprobante","Fecha","Cliente","Total","Estado","Acciones"];
-
-export function FiscalStatus({status}:{status:FiscalDocumentSummary["status"]}){
- const view=fiscalStatusView[status]??fiscalStatusView.PENDING;
- return <Status tone={view.tone}>{view.label}</Status>;
-}
 
 export function FiscalDocumentsPage(){
  const{organization,location,can}=useSession();
@@ -57,8 +54,10 @@ export function FiscalDocumentDialog({id,canRetry,close}:{id:string;canRetry:boo
  const{location}=useSession();const{notify}=useFeedback();const money=useMoney();const client=useQueryClient();
  const detail=useQuery({queryKey:["fiscal-document",id],queryFn:()=>getFiscalDocument(id)});
  const retry=useMutation({mutationFn:()=>retryFiscalDocument(id),onSuccess:document=>{client.setQueryData(["fiscal-document",id],document);void client.invalidateQueries({queryKey:["fiscal-documents"]});notify({tone:"success",title:"Comprobante reenviado",message:`${document.label} ${document.number} · estado: ${fiscalStatusView[document.status].label.toLowerCase()}.`})},onError:error=>notify({tone:"danger",title:"No se pudo reenviar",message:error.message})});
+ const[printing,setPrinting]=useState(false);
  const data=detail.data;
  const percent=(rate:string)=>`${formatRegionalNumber(Math.round(Number(rate)*1_000_000)/10_000,location?.country,{maximumFractionDigits:4})} %`;
+ if(printing)return <FiscalPrintDialog documentId={id} close={()=>setPrinting(false)}/>;
  return <div className="modal-backdrop modal-overlay-in"><Dialog onResponseClose={()=>{if(!retry.isPending)close()}} className="crud-modal modal-panel-in" role="dialog" aria-modal="true" aria-labelledby="fiscal-document-title">
   <ModalHeader title={data?`${data.label} ${data.number}`:"Comprobante"} titleId="fiscal-document-title" icon="receipt" onClose={close} busy={retry.isPending} closeLabel="Cerrar"/>
   <div className="modal-body">{detail.isLoading?<div className="organization-field-skeleton" role="status" aria-busy="true" aria-label="Cargando comprobante"><Skeleton height="var(--size-44)"/><Skeleton height="var(--size-120)"/></div>:detail.isError||!data?<ErrorState title="No pudimos cargar el comprobante" text={detail.error?.message??""} onRetry={()=>void detail.refetch()}/>:<>
@@ -72,7 +71,7 @@ export function FiscalDocumentDialog({id,canRetry,close}:{id:string;canRetry:boo
     {label:"Intentos de envío",value:String(data.attempts)},
     ...(data.providerCode&&data.status!=="ACCEPTED"?[{label:"Código de respuesta",value:data.providerCode}]:[]),
    ]}/>
-   {data.files.length>0&&<div className="fiscal-files">{fileKinds.filter(kind=>data.files.includes(kind)).map(kind=><a key={kind} className="button secondary" href={fiscalDocumentFileUrl(data.id,kind)} download><Icon name="download" size={16}/>{fileLabels[kind]}</a>)}</div>}
+   {(data.printout||data.files.length>0)&&<div className="fiscal-files">{data.printout&&<Button kind="secondary" icon="eye" onClick={()=>setPrinting(true)}>Ver comprobante</Button>}{fileKinds.filter(kind=>data.files.includes(kind)).map(kind=><a key={kind} className="button secondary" href={fiscalDocumentFileUrl(data.id,kind)} download><Icon name="download" size={16}/>{fileLabels[kind]}</a>)}</div>}
    <h3 className="modal-section-title fiscal-section-title">Detalle</h3>
    <table className="fiscal-lines"><thead><tr><th>Descripción</th><th className="num">Cant.</th><th className="num">Importe</th></tr></thead><tbody>{data.breakdown.lines.map(line=><tr key={line.no}><td>{line.description}</td><td className="num">{Number(line.quantity)}</td><td className="num">{money(Number(line.total))}</td></tr>)}</tbody></table>
    <dl className="fiscal-totals">

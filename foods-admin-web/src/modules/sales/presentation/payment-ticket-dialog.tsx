@@ -7,7 +7,7 @@ import {loadRestaurantReportLogo} from "@/shared/api/restaurant-branding";
 import {getSaleDetail} from "../infrastructure/sales-api";
 import type {SaleDetail} from "../domain/types";
 
-export function PaymentTicketDialog({orderId,paymentId,close,mode="payment"}:{orderId:string;paymentId?:string;mode?:"payment"|"prebill";close:()=>void}){
+export function PaymentTicketDialog({orderId,paymentId,close,mode="payment",notice}:{orderId:string;paymentId?:string;mode?:"payment"|"prebill";close:()=>void;notice?:string}){
  const{organization,location}=useSession();
  const detail=useQuery({queryKey:["payment-ticket",organization?.id,location?.id,orderId],queryFn:()=>getSaleDetail(orderId),staleTime:0,refetchOnMount:"always",refetchOnWindowFocus:false});
  const[prepared,setPrepared]=useState<{document:Blob;filename:string;source:SaleDetail;paymentId?:string;mode?:"payment"|"prebill"}|null>(null);
@@ -25,7 +25,7 @@ export function PaymentTicketDialog({orderId,paymentId,close,mode="payment"}:{or
  },[detail.data,detail.isFetching,paymentId,mode,attempt]);
  const current=prepared?.source===detail.data&&prepared?.paymentId===paymentId&&(prepared?.mode??"payment")===mode?prepared:null;
  const failure=detail.isError?detail.error.message:error?.source===detail.data&&error?.paymentId===paymentId&&(error?.mode??"payment")===mode?error?.message:null;
- return <PdfViewer title={mode==="prebill"?"Precuenta":"Ticket de pago"} subtitle="Ticket · 80 mm" size="sm" document={current?.document??null} filename={current?.filename??"ticket.pdf"} onClose={close}
+ return <PdfViewer title={mode==="prebill"?"Precuenta":"Ticket de venta"} subtitle="Ticket · 80 mm" size="sm" document={current?.document??null} filename={current?.filename??"ticket.pdf"} onClose={close} notice={notice}
   loading={detail.isPending||detail.isFetching||(!current&&!failure)} error={failure}
   onRetry={()=>{setError(null);setPrepared(null);if(detail.isError)void detail.refetch();else setAttempt(value=>value+1);}}/>;
 }

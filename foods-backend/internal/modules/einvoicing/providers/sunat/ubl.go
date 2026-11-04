@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/beevik/etree"
+	"github.com/foods-platform/foods-backend/internal/modules/einvoicing/jurisdictions/pe"
 	"github.com/foods-platform/foods-backend/internal/modules/einvoicing/ports"
 )
 
@@ -80,7 +81,7 @@ func buildInvoice(d ports.Document) *etree.Document {
 	text(root, "cbc:ID", d.FormattedNumber)
 	text(root, "cbc:IssueDate", d.IssueDate)
 	text(root, "cbc:InvoiceTypeCode", d.FiscalCode).CreateAttr("listID", operationType)
-	text(root, "cbc:Note", AmountInWords(d.Breakdown.Total, d.Currency)).CreateAttr("languageLocaleID", "1000")
+	text(root, "cbc:Note", pe.AmountInWords(d.Breakdown.Total, d.Currency)).CreateAttr("languageLocaleID", "1000")
 	text(root, "cbc:DocumentCurrencyCode", d.Currency)
 
 	signature := child(root, "cac:Signature")

@@ -46,14 +46,33 @@ func (r *Repository) IssueContext(ctx context.Context, s scope) (application.Iss
 	var out application.IssueContext
 	err := r.db(ctx).QueryRow(ctx, `
 		SELECT p.id,p.country_code,p.currency,(now() AT TIME ZONE l.timezone)::date::text,
-		       COALESCE(e.enabled,false),COALESCE(e.provider,''),COALESCE(e.environment,'test'),COALESCE(ls.default_document,'none')
+		       COALESCE(e.provider,''),COALESCE(e.environment,'test'),COALESCE(ls.default_document,'none')
 		FROM locations l
 		JOIN organization_fiscal_profiles p ON p.id=l.fiscal_profile_id AND p.organization_id=l.organization_id
 		LEFT JOIN einvoicing_profile_settings e ON e.fiscal_profile_id=p.id
 		LEFT JOIN einvoicing_location_settings ls ON ls.location_id=l.id
 		WHERE l.id=NULLIF($1,'')::uuid AND l.organization_id=$2`, s.LocationID, s.OrganizationID).
-		Scan(&out.FiscalProfileID, &out.Country, &out.Currency, &out.BusinessDate, &out.Enabled, &out.Provider, &out.Environment, &out.DefaultDocument)
+		Scan(&out.FiscalProfileID, &out.Country, &out.Currency, &out.BusinessDate, &out.Provider, &out.Environment, &out.DefaultDocument)
 	return out, classify(err)
+}
+
+func (r *Repository) LocationSeries(ctx context.Context, s scope) (map[string]string, error) {
+	rows, err := r.db(ctx).Query(ctx, `
+		SELECT document_type,series FROM einvoicing_series
+		WHERE organization_id=$1 AND location_id=NULLIF($2,'')::uuid`, s.OrganizationID, s.LocationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[string]string{}
+	for rows.Next() {
+		var documentType, series string
+		if err := rows.Scan(&documentType, &series); err != nil {
+			return nil, err
+		}
+		out[documentType] = series
+	}
+	return out, rows.Err()
 }
 
 // NextNumber reserves the next correlative; the UPDATE locks the series row
@@ -287,6 +306,16 @@ func (r *Repository) Document(ctx context.Context, s scope, id string) (applicat
 	return d, b, err
 }
 
+func (r *Repository) OrderDocument(ctx context.Context, s scope, orderID string) (application.DocumentRow, error) {
+	var d application.DocumentRow
+	err := scanDocument(r.db(ctx).QueryRow(ctx, `
+		SELECT `+documentColumns+`
+		FROM fiscal_documents d JOIN orders o ON o.id=d.order_id AND o.organization_id=d.organization_id
+		WHERE d.order_id=$1 AND d.organization_id=$2 AND d.location_id=NULLIF($3,'')::uuid
+		ORDER BY d.created_at DESC,d.id LIMIT 1`, orderID, s.OrganizationID, s.LocationID), &d)
+	return d, classify(err)
+}
+
 func (r *Repository) RetryDocument(ctx context.Context, s scope, id string) (int64, error) {
 	tag, err := r.db(ctx).Exec(ctx, `
 		UPDATE fiscal_documents SET status='PENDING',next_attempt_at=now(),updated_at=now()
@@ -302,7 +331,7 @@ func (r *Repository) RetryDocument(ctx context.Context, s scope, id string) (int
 
 func (r *Repository) Settings(ctx context.Context, s scope) ([]application.ProfileSettingRow, []application.LocationSettingRow, error) {
 	rows, err := r.db(ctx).Query(ctx, `
-		SELECT p.id::text,p.country_code,COALESCE(c.name,p.country_code),p.currency,p.is_default,COALESCE(e.enabled,false),COALESCE(e.provider,''),COALESCE(e.environment,'test')
+		SELECT p.id::text,p.country_code,COALESCE(c.name,p.country_code),p.currency,p.is_default,COALESCE(e.provider,''),COALESCE(e.environment,'test')
 		FROM organization_fiscal_profiles p LEFT JOIN einvoicing_profile_settings e ON e.fiscal_profile_id=p.id
 		LEFT JOIN platform_countries c ON c.code=p.country_code
 		WHERE p.organization_id=$1 AND p.active ORDER BY p.is_default DESC,p.country_code`, s.OrganizationID)
@@ -312,7 +341,7 @@ func (r *Repository) Settings(ctx context.Context, s scope) ([]application.Profi
 	profiles := []application.ProfileSettingRow{}
 	for rows.Next() {
 		var p application.ProfileSettingRow
-		if err = rows.Scan(&p.FiscalProfileID, &p.Country, &p.CountryName, &p.Currency, &p.Default, &p.Enabled, &p.Provider, &p.Environment); err != nil {
+		if err = rows.Scan(&p.FiscalProfileID, &p.Country, &p.CountryName, &p.Currency, &p.Default, &p.Provider, &p.Environment); err != nil {
 			rows.Close()
 			return nil, nil, err
 		}
@@ -359,11 +388,11 @@ func (r *Repository) ProfileCountry(ctx context.Context, s scope, profileID stri
 }
 func (r *Repository) SaveProfileSettings(ctx context.Context, s scope, profileID string, in application.ProfileSettingsInput) error {
 	_, err := r.db(ctx).Exec(ctx, `
-		INSERT INTO einvoicing_profile_settings(fiscal_profile_id,organization_id,enabled,provider,environment,updated_by)
-		VALUES($1,$2,$3,$4,$5,NULLIF($6,'')::uuid)
-		ON CONFLICT (fiscal_profile_id) DO UPDATE SET enabled=excluded.enabled,provider=excluded.provider,
+		INSERT INTO einvoicing_profile_settings(fiscal_profile_id,organization_id,provider,environment,updated_by)
+		VALUES($1,$2,$3,$4,NULLIF($5,'')::uuid)
+		ON CONFLICT (fiscal_profile_id) DO UPDATE SET provider=excluded.provider,
 		  environment=excluded.environment,updated_by=excluded.updated_by,updated_at=now()`,
-		profileID, s.OrganizationID, in.Enabled, in.Provider, in.Environment, s.UserID)
+		profileID, s.OrganizationID, in.Provider, in.Environment, s.UserID)
 	return err
 }
 func (r *Repository) LocationCountry(ctx context.Context, s scope, locationID string) (string, error) {
@@ -481,10 +510,10 @@ func (r *Repository) SaveCredentials(ctx context.Context, s scope, profileID, pr
 func (r *Repository) ProfileSetting(ctx context.Context, s scope, profileID string) (application.ProfileSettingRow, error) {
 	var p application.ProfileSettingRow
 	err := r.db(ctx).QueryRow(ctx, `
-		SELECT p.id::text,p.country_code,p.currency,p.is_default,COALESCE(e.enabled,false),COALESCE(e.provider,''),COALESCE(e.environment,'test')
+		SELECT p.id::text,p.country_code,p.currency,p.is_default,COALESCE(e.provider,''),COALESCE(e.environment,'test')
 		FROM organization_fiscal_profiles p LEFT JOIN einvoicing_profile_settings e ON e.fiscal_profile_id=p.id
 		WHERE p.id=$1 AND p.organization_id=$2 AND p.active`, profileID, s.OrganizationID).
-		Scan(&p.FiscalProfileID, &p.Country, &p.Currency, &p.Default, &p.Enabled, &p.Provider, &p.Environment)
+		Scan(&p.FiscalProfileID, &p.Country, &p.Currency, &p.Default, &p.Provider, &p.Environment)
 	return p, classify(err)
 }
 

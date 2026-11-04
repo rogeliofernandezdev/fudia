@@ -10,7 +10,8 @@ import "./einvoicing.css";
 /** Checkout never waits for invoicing: while loading or on error no section is shown. */
 export function useCheckoutOptions(){
  const{organization,location}=useSession();
- return useQuery({queryKey:["einvoicing-checkout",organization?.id,location?.id],queryFn:getCheckoutOptions,staleTime:60_000,retry:false});
+ // Issuer, credentials and series change elsewhere: each charge reads the current state.
+ return useQuery({queryKey:["einvoicing-checkout",organization?.id,location?.id],queryFn:getCheckoutOptions,staleTime:0,refetchOnMount:"always",retry:false});
 }
 
 // «Sin comprobante», «Boleta» or «Factura» switch the form mode, so they use the

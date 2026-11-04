@@ -14,7 +14,7 @@ vm.runInNewContext(ts.transpileModule(readFileSync(new URL("../src/modules/opera
 const serviceFlowExports={};
 vm.runInNewContext(ts.transpileModule(readFileSync(new URL("../src/modules/operations/orders/domain/service-flow.ts",import.meta.url),"utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{exports:serviceFlowExports});
 const detail={order:{waiterId:"waiter",billClosedAt:"2026-10-07T13:00:00Z",id:"order-1",code:"PED-001",channel:"salon",status:"entregado",tableName:"Mesa 04",customerName:"",total:"40",createdAt:"2026-10-07T12:00:00Z",items:[]},paidAmount:"10",remainingAmount:"30",paymentStatus:"partial",payments:[]};
-const primitives=Object.fromEntries(["Button","MoneyInput","FormDisclosure","EmptyState","ErrorState","FormField","Icon","Input","PageHeader","Pagination","RowActionButton","SearchField","Select","Status","Textarea","ModalHeader","ModalForm","ModalBody","ModalFooter","ModalWorkspace","ModalItemList","DetailHero","DetailContact","DetailFacts","DetailTimeline","Tabs","Skeleton"].map(name=>[name,name]));
+const primitives=Object.fromEntries(["Button","MoneyInput","FormDisclosure","InlineNotice","IconTile","EmptyState","ErrorState","FormField","Icon","Input","PageHeader","Pagination","RowActionButton","SearchField","Select","Status","Textarea","ModalHeader","ModalForm","ModalBody","ModalFooter","ModalWorkspace","ModalItemList","DetailHero","DetailContact","DetailFacts","DetailTimeline","Tabs","Skeleton"].map(name=>[name,name]));
 function nodes(tree){const result=[];function visit(node){if(!node||typeof node!=="object")return;if(Array.isArray(node)){node.forEach(visit);return}result.push(node);visit(node.props?.children);visit(node.props?.action);visit(node.props?.summary);visit(node.props?.status);visit(node.props?.steps?.map?.(step=>step.aside))}visit(tree);return result}
 function compile(file,resolve,extra=""){
  const exports={};
@@ -46,7 +46,7 @@ function mountPage({canManage=true,shift=true,busy=false,initialOrderId="order-1
   if(name.endsWith("service-flow"))return serviceFlowExports;
   if(name.endsWith("order-meta"))return orderMetaExports;
   if(name.endsWith("shift-attribution"))return{cashShiftAttribution:()=>({name:"Ana"})};
-  if(name==="@/modules/einvoicing")return{useCheckoutOptions:()=>({isLoading:false,data:undefined}),fiscalStatusView:{ACCEPTED:{label:"Aceptado"},PENDING:{label:"Emitiendo"}}};
+  if(name==="@/modules/einvoicing")return{useCheckoutOptions:()=>({isLoading:false,isFetchedAfterMount:true,data:undefined}),fiscalStatusView:{ACCEPTED:{label:"Aceptado"},PENDING:{label:"Emitiendo"}}};
   if(name.startsWith("@/")||name.startsWith("../")||name.startsWith("./"))return{};
   return require(name);
  };

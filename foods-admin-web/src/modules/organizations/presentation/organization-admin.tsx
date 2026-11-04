@@ -44,7 +44,7 @@ export function CompanySettings(){
  const save=useMutation({
   // Company first: a failed identity upload must not discard already valid legal data.
   mutationFn:async()=>{const images=profile.dirty;if(companyDirty){client.setQueryData(["organization"],await updateOrganization(value));setDraft({});setSubmitted(false);}await profile.persist();return images;},
-  onSuccess:images=>notify({tone:"success",title:"Cambios guardados",message:images?"Tu restaurante quedó actualizado. Las imágenes se optimizan en segundo plano.":"Los datos de tu restaurante quedaron actualizados."}),
+  onSuccess:images=>{void client.invalidateQueries({queryKey:["einvoicing-checkout"]});void client.invalidateQueries({queryKey:["einvoicing-settings"]});notify({tone:"success",title:"Cambios guardados",message:images?"Tu restaurante quedó actualizado. Las imágenes se optimizan en segundo plano.":"Los datos de tu restaurante quedaron actualizados."})},
   onError:e=>notify({tone:"danger",title:"No se pudo guardar",message:e.message}),
  });
  const locked=!canManage||save.isPending;

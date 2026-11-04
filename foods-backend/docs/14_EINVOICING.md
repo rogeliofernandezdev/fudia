@@ -5,8 +5,9 @@ Emite boletas y facturas de Perú desde el cobro: genera el XML UBL 2.1, lo
 firma con el certificado de la empresa, lo envía por SOAP a SUNAT y guarda el
 XML firmado y el CDR. Probado contra SUNAT beta con CDR aceptado (factura,
 boleta con DNI, boleta anónima e IGV reducido MYPE). Falta la nota de crédito, el
-resumen diario y la comunicación de baja, la emisión posterior desde Ventas, la
-representación impresa con QR y la cola de Cloud Tasks. Este documento es
+resumen diario y la comunicación de baja, la emisión posterior desde Ventas y
+la cola de Cloud Tasks. La representación impresa con QR se entrega desde el
+cobro (2026-11-04). Este documento es
 la referencia del módulo `einvoicing` (contexto EInvoicing; clave comercial
 `facturacion`). Antes de escribir código, aplicar además `04_DATA_MODEL.md`,
 `05_DATABASE_GUIDELINES.md`, `06_API_GUIDELINES.md` y `07_SECURITY.md`.
@@ -15,20 +16,22 @@ la referencia del módulo `einvoicing` (contexto EInvoicing; clave comercial
 
 | Pieza | Dónde |
 | --- | --- |
-| Tablas | `einvoicing_profile_settings` (activación por perfil fiscal), `einvoicing_location_settings` (comprobante sugerido al cobrar), `einvoicing_series` (serie y último número por local y tipo), `fiscal_documents` (cabecera, estado y valor resumen de la firma; la fila PENDING es el outbox), `fiscal_document_lines`, `fiscal_document_taxes`, `einvoicing_credentials` (credenciales cifradas por perfil fiscal y proveedor, o de plataforma), `fiscal_document_files` (XML firmado y CDR). |
+| Tablas | `einvoicing_profile_settings` (proveedor y ambiente por perfil fiscal; la columna `enabled` se eliminó en la migración 000105), `einvoicing_location_settings` (comprobante sugerido al cobrar), `einvoicing_series` (serie y último número por local y tipo), `fiscal_documents` (cabecera, estado y valor resumen de la firma; la fila PENDING es el outbox), `fiscal_document_lines`, `fiscal_document_taxes`, `einvoicing_credentials` (credenciales cifradas por perfil fiscal y proveedor, o de plataforma), `fiscal_document_files` (XML firmado y CDR). |
 | Dominio | `domain.Compute`: desglose exacto desde el monto cobrado (precios con impuesto), por línea y por componente del impuesto vigente; absorbe hasta 5 céntimos de redondeo en la última línea y rechaza diferencias mayores (`fiscal_total_mismatch`). |
 | Perú | `jurisdictions/pe`: boleta `03` y factura `01`; factura con RUC válido (dígito verificador) y razón social; boleta anónima hasta S/ 700, identificada con DNI, CE, RUC o pasaporte; series `B###` y `F###` sugeridas por posición del local. |
 | Proveedor SUNAT | `providers/sunat` (motor propio): XML UBL 2.1 (`ubl.go`), firma XMLDSig enveloped RSA-SHA1 con C14N inclusivo (`sign.go`), ZIP + `sendBill` SOAP con WS-Security y lectura del CDR (`soap.go`), importe en letras (`words.go`). Beta usa el usuario público de SUNAT y un certificado autofirmado en memoria; producción exige usuario SOL secundario, clave SOL y certificado `.pfx` de la empresa. |
 | Resultado SUNAT | CDR con código `0` → ACCEPTED; con notas → OBSERVED; fault 2000–3999 o 1033 → REJECTED (definitivo, guarda el XML); cualquier otro fault, HTTP sin XML (beta responde 401 si se envía muy rápido) o red → ERROR con reintento. |
 | Proveedor de pruebas | `providers/fake` (solo ambiente de pruebas, sin red): acepta todo; un nombre con «[rechazar]» devuelve rechazo y «[error]» una falla temporal. |
 | Credenciales | Cada proveedor declara sus campos (`CredentialFields`, tipos texto, secreto o archivo en base64) y los valida (`ValidateCredentials`, que devuelve solo metadatos visibles: usuario, titular y vencimiento del certificado). Se cifran con AES-256-GCM (`internal/platform/secretbox`) y datos asociados `einvoicing|organización|perfil|proveedor`, con versión de llave para rotar. El API nunca las devuelve. |
-| Emisor | `ValidateIssuer` de la jurisdicción (Perú: RUC con dígito verificador y razón social de Mi restaurante) bloquea la activación; la dirección es la del local. |
+| Emisor | `ValidateIssuer` de la jurisdicción (Perú: RUC con dígito verificador y razón social de Mi restaurante) bloquea la emisión mientras sea inválido; la dirección es la del local. |
 | Archivos | `GET /v1/admin/fiscal-documents/{id}/files/{xml|cdr}` del local de la sesión; se guardan en PostgreSQL (`bytea`), pocos KB por comprobante. |
+| Representación impresa | `Jurisdiction.Printout` arma el contenido legal (Perú: «BOLETA DE VENTA ELECTRÓNICA» / «FACTURA ELECTRÓNICA», «SON: … SOLES», QR `RUC\|tipo\|serie\|número\|IGV\|total\|fecha\|tipo doc\|número doc\|valor resumen\|` y la leyenda «Representación impresa de …»). `GET /v1/admin/fiscal-documents/{id}` lo devuelve en `printout` desde que el documento está firmado, aunque SUNAT aún no responda; es `null` antes de firmar y para rechazados o anulados. En ambiente de pruebas lleva `notice` «sin validez tributaria». El XML firmado y el valor resumen se guardan también cuando el envío falla, así el reintento conserva la misma firma (el XML es determinista). La web solo maqueta el ticket de 80 mm y dibuja el QR. |
+| Reimpresión | `contracts.Issuer.OrderDocument` devuelve el comprobante más reciente del pedido en el local de la sesión; `GET /v1/admin/pos/orders/{id}` (detalle de cobro y de Ventas) lo expone en `fiscalDocument`. La web reimprime lo que se entregó: el comprobante si tiene valor fiscal; el ticket de pago si no hubo comprobante o si fue rechazado o anulado, con un aviso. |
 | Cobro | `PaymentInput.fiscal` y `PaymentBatchInput.fiscal`; Billing llama a `einvoicing/contracts.Issuer.Request` dentro de su transacción solo en el pago que salda la cuenta. Un error revierte el pago completo. Tras el commit, `Dispatch` envía en segundo plano. |
 | Envío | `dispatch.InProcess` en el API; `POST /internal/einvoicing/documents/{id}/process` y `POST /internal/einvoicing/sweep` con `X-Fudia-Worker-Key` (`FUDIA_EINVOICING_WORKER_KEY`) para Cloud Tasks y Cloud Scheduler. Reintentos: 1, 2, 4… hasta 60 minutos; un SENDING abandonado 5 minutos se retoma. |
 | Habilitación | `subscriptions.Access.ModuleEntitled`, con la misma regla que la sesión (`domain.ModuleEnabled`): `facturacion` es un módulo disponible (2026-11-01) y exige estar activo y en el plan (Impulso y Escala). La migración 000099 lo agrega a esos planes y lo activa para sus suscriptores; emitir sigue apagado hasta que la empresa activa su perfil fiscal. |
 | API | `GET /v1/admin/einvoicing/settings`, `PUT /v1/admin/einvoicing/profiles/{id}`, `PUT /v1/admin/einvoicing/profiles/{id}/credentials`, `PUT /v1/admin/einvoicing/locations/{id}`, `GET /v1/admin/einvoicing/checkout-options`, `GET /v1/admin/fiscal-documents[/{id}]`, `GET /v1/admin/fiscal-documents/{id}/files/{kind}`, `POST /v1/admin/fiscal-documents/{id}/retry`. |
-| Web | Módulo `src/modules/einvoicing`: sección «Comprobante» del cobro del POS, Configuración › Facturación (activación, credenciales armadas con los campos del proveedor, series) y Comprobantes (detalle con descarga de XML y CDR). |
+| Web | Módulo `src/modules/einvoicing`: sección «Comprobante» del cobro del POS, Configuración › Facturación (estado derivado «Lista para emitir» / «Falta configurar», credenciales armadas con los campos del proveedor, series) y Comprobantes (detalle con descarga de XML y CDR). |
 | Variables | `FUDIA_EINVOICING_MASTER_KEY` (32 bytes en base64, desde Secret Manager), `FUDIA_EINVOICING_KEY_VERSION` (por defecto 1), `FUDIA_EINVOICING_PREVIOUS_KEYS` (`versión:base64,…` para leer lo cifrado con llaves anteriores) y `FUDIA_EINVOICING_WORKER_KEY`. Sin llave maestra no se guardan credenciales ni se envía a producción. |
 
 Pruebas: `domain/document_test.go`, `jurisdictions/pe/pe_test.go`,
@@ -74,7 +77,7 @@ Decisión del 2026-11-01. Tres niveles, de mayor a menor alcance:
 | Nivel | Quién decide | Efecto cuando está apagado |
 | --- | --- | --- |
 | Plan | Plataforma. El módulo `facturacion` se incluye desde **Impulso** (también en Escala por ser acumulativo); Emprende no lo incluye. | El cobro no muestra ninguna opción de comprobante electrónico. |
-| Empresa | El administrador puede desactivar el módulo (`organization_modules.active`) o dejar la emisión inactiva en el perfil fiscal. | Igual que sin plan; se conservan configuración e historial y puede reactivarse. |
+| Empresa | El administrador activa o desactiva el módulo (`organization_modules.active`). Es la **única** activación (2026-11-03): no existe un interruptor por perfil fiscal. Con el módulo activo, un local emite en cuanto tiene emisor válido, credenciales del proveedor para el ambiente y series de cada tipo; si falta algo, `checkout-options` responde `enabled=false` con `issue` y el cobro lo explica. | Igual que sin plan; se conservan configuración e historial y puede reactivarse. |
 | Venta | El cajero, según lo que pida el cliente: **Sin comprobante**, **Boleta** o **Factura** (tipos del catálogo del país). | «Sin comprobante» no crea documento, no consume correlativo ni llama al proveedor; queda el ticket operativo actual. |
 
 - El valor inicial del selector en el cobro se configura por local. El valor
@@ -129,6 +132,8 @@ Responsabilidad: reglas del país, sin red ni credenciales.
 - `ValidateIssue(draft)`: obligatorios y umbrales. Ejemplo PE: factura exige RUC;
   boleta con importe mayor al umbral exige documento de identidad.
 - `FormatNumber(series, number)`: número fiscal visible, p. ej. `F001-123`.
+- `Printout(source)`: textos legales y contenido del QR de la representación
+  impresa; el cliente no conoce títulos, leyendas ni formato del QR del país.
 - `TaxBreakdown(lines, components)`: desglose con los componentes de impuesto
   vigentes en la fecha de emisión (ver «Impuestos»).
 - `CancellationPolicy()`: cómo se anula (nota de crédito, baja, plazos).
@@ -142,7 +147,7 @@ Responsabilidad: transporte, sin reglas de negocio.
 - `CredentialFields()` y `RequiresCredentials(environment)`: qué pide el
   proveedor y en qué ambiente es obligatorio.
 - `ValidateCredentials(environment, values) -> metadata`: valida al guardar y
-  al activar; los metadatos no son secretos.
+  al comprobar si el perfil está listo; los metadatos no son secretos.
 - `Issue(ctx, document) -> Result`: estado, código y mensaje, valor resumen y
   archivos (XML firmado, CDR) que el núcleo guarda.
 - Pendientes: `Status` para respuestas con ticket y `Cancel` para bajas.
@@ -154,7 +159,7 @@ reintento nunca produce dos comprobantes.
 
 | Nivel | Qué guarda |
 | --- | --- |
-| Perfil fiscal (país) | Emisión activa o inactiva, proveedor y ambiente `test` o `production`. El emisor sale de Mi restaurante (RUC y razón social) y del local (dirección). |
+| Perfil fiscal (país) | Proveedor y ambiente `test` o `production` (sin interruptor propio; `ready` e `issue` se derivan del emisor y las credenciales). El emisor sale de Mi restaurante (RUC y razón social) y del local (dirección). |
 | Local | Series habilitadas por tipo neutro de comprobante, su último correlativo y el valor inicial del selector en el cobro (inicial: Sin comprobante). |
 | Cliente | Tipo y número de documento ya existentes en Customers; Customers expone un contrato de lectura. |
 
@@ -190,6 +195,13 @@ cobro (billing) con campo opcional `fiscal`
        → worker: jurisdicción calcula → proveedor emite
        → ACCEPTED | OBSERVED | REJECTED | ERROR
        → reintento idempotente o nota/anulación según la jurisdicción
+
+POS tras el cobro con comprobante (sin ticket de pago):
+  consulta el documento cada segundo hasta 8 s
+  ├─ ACCEPTED | OBSERVED → abre el PDF del comprobante
+  ├─ sin respuesta o ERROR, ya firmado → abre el PDF con aviso; sigue consultando
+  ├─ REJECTED → no imprime; muestra el motivo y ofrece el ticket de pago
+  └─ sin firmar (p. ej. credenciales) → muestra el motivo y ofrece el ticket de pago
 
 venta cerrada sin comprobante → «Emitir comprobante» en Ventas → mismo Request
 ```

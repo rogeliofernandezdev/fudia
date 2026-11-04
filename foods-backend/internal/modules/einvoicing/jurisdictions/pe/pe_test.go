@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/foods-platform/foods-backend/internal/modules/einvoicing/domain"
+	"github.com/foods-platform/foods-backend/internal/modules/einvoicing/ports"
 )
 
 func TestValidRUC(t *testing.T) {
@@ -45,6 +46,41 @@ func TestValidateIssue(t *testing.T) {
 		if (c.field == "") != (err == nil) || (err != nil && err.Field != c.field) {
 			t.Errorf("%s: want field %q, got %v", c.name, c.field, err)
 		}
+	}
+}
+
+func TestAmountInWords(t *testing.T) {
+	for amount, want := range map[string]string{
+		"80.30": "OCHENTA CON 30/100 SOLES", "85.30": "OCHENTA Y CINCO CON 30/100 SOLES", "0.50": "CERO CON 50/100 SOLES",
+		"100.00": "CIEN CON 00/100 SOLES", "121.00": "CIENTO VEINTIUNO CON 00/100 SOLES", "1000": "MIL CON 00/100 SOLES",
+		"21000.05": "VEINTIUN MIL CON 05/100 SOLES", "1500250.99": "UN MILLON QUINIENTOS MIL DOSCIENTOS CINCUENTA CON 99/100 SOLES",
+	} {
+		if got := AmountInWords(amount, "PEN"); got != want {
+			t.Errorf("%s: %s", amount, got)
+		}
+	}
+	if got := AmountInWords("10", "USD"); got != "DIEZ CON 00/100 DÓLARES AMERICANOS" {
+		t.Errorf("usd: %s", got)
+	}
+}
+
+func TestPrintout(t *testing.T) {
+	p := New()
+	issuer := ports.Issuer{TaxID: "20000000001", LegalName: "A MI MANERA E.I.R.L.", TradeName: "La Rinconada", Address: "Jr. Lima 123"}
+	receipt := p.Printout(ports.PrintSource{DocumentType: domain.TypeReceipt, Series: "B001", Number: 1, IssueDate: "2026-11-03", Currency: "PEN",
+		Issuer: issuer, Customer: domain.Customer{DocumentType: "DNI", DocumentNumber: "46351741", Name: "Ana"}, TaxTotal: "1.5300", Total: "10", DigestValue: "abc="})
+	if receipt.Title != "BOLETA DE VENTA ELECTRÓNICA" || receipt.IssuerTaxIDLabel != "RUC" || receipt.AmountInWords != "SON: DIEZ CON 00/100 SOLES" {
+		t.Fatalf("receipt printout: %+v", receipt)
+	}
+	if want := "20000000001|03|B001|1|1.53|10.00|2026-11-03|1|46351741|abc=|"; receipt.QRData != want {
+		t.Fatalf("qr: %s", receipt.QRData)
+	}
+	if len(receipt.Legends) == 0 || receipt.Legends[0] != "Representación impresa de la Boleta de Venta Electrónica." {
+		t.Fatalf("legends: %v", receipt.Legends)
+	}
+	anonymous := p.Printout(ports.PrintSource{DocumentType: domain.TypeInvoice, Series: "F001", Number: 7, IssueDate: "2026-11-03", Currency: "PEN", Issuer: issuer, TaxTotal: "0", Total: "5.5", DigestValue: "x"})
+	if anonymous.Title != "FACTURA ELECTRÓNICA" || anonymous.QRData != "20000000001|01|F001|7|0.00|5.50|2026-11-03|0|-|x|" {
+		t.Fatalf("invoice printout: %+v", anonymous)
 	}
 }
 

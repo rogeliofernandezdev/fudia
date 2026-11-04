@@ -20,21 +20,6 @@ import (
 	dsig "github.com/russellhaering/goxmldsig"
 )
 
-func TestAmountInWords(t *testing.T) {
-	for amount, want := range map[string]string{
-		"80.30": "OCHENTA CON 30/100 SOLES", "85.30": "OCHENTA Y CINCO CON 30/100 SOLES", "0.50": "CERO CON 50/100 SOLES",
-		"100.00": "CIEN CON 00/100 SOLES", "121.00": "CIENTO VEINTIUNO CON 00/100 SOLES", "1000": "MIL CON 00/100 SOLES",
-		"21000.05": "VEINTIUN MIL CON 05/100 SOLES", "1500250.99": "UN MILLON QUINIENTOS MIL DOSCIENTOS CINCUENTA CON 99/100 SOLES",
-	} {
-		if got := AmountInWords(amount, "PEN"); got != want {
-			t.Errorf("%s: %s", amount, got)
-		}
-	}
-	if got := AmountInWords("10", "USD"); got != "DIEZ CON 00/100 DÓLARES AMERICANOS" {
-		t.Errorf("usd: %s", got)
-	}
-}
-
 func TestInvoiceXMLAndSignatureVerify(t *testing.T) {
 	p := New()
 	s, err := p.testSigner()

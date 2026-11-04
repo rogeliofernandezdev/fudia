@@ -87,6 +87,8 @@ export type POSOrderDetail={
   remainingAmount:string;
   paymentStatus:PaymentStatus;
   payments:Payment[];
+  /** Electronic document delivered for the order; absent when charged without one. */
+  fiscalDocument?:FiscalDocumentRef;
 };
 
 export type POSOrdersResponse={

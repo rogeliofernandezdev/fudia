@@ -40,6 +40,8 @@ type POSOrderDetail struct {
 	RemainingAmount string                       `json:"remainingAmount"`
 	PaymentStatus   string                       `json:"paymentStatus"`
 	Payments        []domain.PaymentView         `json:"payments"`
+	// FiscalDocument is the electronic document delivered for the order, if any.
+	FiscalDocument *domain.FiscalDocumentRef `json:"fiscalDocument,omitempty"`
 }
 type PaymentOrders interface {
 	RequireDelivered(context.Context, scope, string, string) error
@@ -489,6 +491,9 @@ func (a *Payments) Get(ctx context.Context, s scope, id string) (POSOrderDetail,
 		RemainingAmount: strconv.FormatFloat(remaining, 'f', 2, 64),
 		PaymentStatus:   domain.PaymentStatus(total, paid),
 		Payments:        payments,
+	}
+	if out.FiscalDocument, err = a.orderFiscalDocument(ctx, s, o.ID); err != nil {
+		return result, err
 	}
 	if a.tips != nil {
 		policy, e := a.tips.Policy(ctx, s, false)

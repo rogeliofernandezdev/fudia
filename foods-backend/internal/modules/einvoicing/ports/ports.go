@@ -50,6 +50,36 @@ type Jurisdiction interface {
 	DocumentLabel(documentType string) string
 	FiscalCode(documentType string) string
 	CustomerFiscalCode(customerDocumentType string) string
+	// Printout returns the legal content of the printed representation
+	// (title, amount in words, QR, legends); clients only lay it out.
+	Printout(source PrintSource) Printout
+}
+
+// PrintSource is the stored, signed document a printout is made from.
+type PrintSource struct {
+	DocumentType string
+	Series       string
+	Number       int
+	IssueDate    string
+	Currency     string
+	Issuer       Issuer
+	Customer     domain.Customer
+	TaxTotal     string
+	Total        string
+	DigestValue  string
+}
+
+// Printout is the printed representation of an electronic document. It
+// exists once the document is signed, before the authority answers.
+type Printout struct {
+	Title            string   `json:"title"`
+	Issuer           Issuer   `json:"issuer"`
+	IssuerTaxIDLabel string   `json:"issuerTaxIdLabel"`
+	AmountInWords    string   `json:"amountInWords"`
+	QRData           string   `json:"qrData"`
+	Legends          []string `json:"legends"`
+	// Notice marks documents without fiscal value (test environment).
+	Notice string `json:"notice,omitempty"`
 }
 
 type Issuer struct {

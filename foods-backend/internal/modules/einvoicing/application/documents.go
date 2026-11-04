@@ -52,25 +52,71 @@ func (a *Documents) WithCipher(c Cipher) *Documents         { a.cipher = c; retu
 
 func failure(k apperror.Kind, code, message string) error { return apperror.New(k, code, message) }
 
+// Setup codes that mean "the module is active but this location still needs
+// configuration"; checkout explains them instead of hiding the section.
+var pendingSetupCodes = map[string]bool{
+	"einvoicing_issuer_incomplete":   true,
+	"einvoicing_provider_missing":    true,
+	"einvoicing_credentials_missing": true,
+	"einvoicing_series_missing":      true,
+}
+
 // issueSetup resolves what is needed to issue at the session location, or the
-// reason it cannot: not entitled, disabled or a country without rules.
+// reason it cannot. The facturacion module is the only switch: with it active,
+// a location issues as soon as issuer, credentials and series are complete.
 func (a *Documents) issueSetup(ctx context.Context, s scope) (IssueContext, ports.Jurisdiction, error) {
 	entitled, err := a.access.ModuleEntitled(ctx, s.OrganizationID, domain.ModuleKey)
 	if err != nil {
 		return IssueContext{}, nil, failure(apperror.Unavailable, "einvoicing_unavailable", "No pudimos validar la facturación electrónica.")
 	}
-	ic, err := a.repo.IssueContext(ctx, s)
-	if err != nil && !errors.Is(err, ErrNotFound) {
-		return ic, nil, failure(apperror.Unavailable, "einvoicing_unavailable", "No pudimos cargar la facturación del local.")
+	if !entitled {
+		return IssueContext{}, nil, failure(apperror.Conflict, "einvoicing_not_enabled", "La facturación electrónica no está activa para esta empresa.")
 	}
-	if !entitled || !ic.Enabled {
-		return ic, nil, failure(apperror.Conflict, "einvoicing_not_enabled", "La facturación electrónica no está activa para este local.")
+	ic, err := a.repo.IssueContext(ctx, s)
+	if errors.Is(err, ErrNotFound) {
+		return ic, nil, failure(apperror.Conflict, "einvoicing_not_enabled", "El local no tiene un perfil fiscal para emitir comprobantes.")
+	}
+	if err != nil {
+		return ic, nil, failure(apperror.Unavailable, "einvoicing_unavailable", "No pudimos cargar la facturación del local.")
 	}
 	j, ok := a.registry.Jurisdiction(ic.Country)
 	if !ok {
 		return ic, nil, failure(apperror.Conflict, "einvoicing_unsupported_country", "La facturación electrónica aún no está disponible para el país de este local.")
 	}
-	return ic, j, nil
+	if ic.Provider == "" {
+		if options := a.registry.ProviderOptions(); len(options) > 0 {
+			ic.Provider, ic.Environment = options[0].Value, domain.EnvironmentTest
+		}
+	}
+	return ic, j, a.ready(ctx, s, ic, j)
+}
+
+// ready checks the configuration a location needs before offering documents.
+func (a *Documents) ready(ctx context.Context, s scope, ic IssueContext, j ports.Jurisdiction) error {
+	issuer, err := a.repo.Issuer(ctx, s)
+	if err != nil {
+		return failure(apperror.Unavailable, "einvoicing_unavailable", "No pudimos validar los datos del emisor.")
+	}
+	if issue := j.ValidateIssuer(issuer); issue != nil {
+		return failure(apperror.Conflict, "einvoicing_issuer_incomplete", issue.Message)
+	}
+	provider, ok := a.registry.Provider(ic.Provider)
+	if !ok {
+		return failure(apperror.Conflict, "einvoicing_provider_missing", "Elige el proveedor de facturación en Configuración › Facturación.")
+	}
+	if err := verifyCredentials(ctx, a.repo, a.cipher, s, ic.FiscalProfileID, provider, ic.Environment); err != nil {
+		return err
+	}
+	series, err := a.repo.LocationSeries(ctx, s)
+	if err != nil {
+		return failure(apperror.Unavailable, "einvoicing_unavailable", "No pudimos leer las series del local.")
+	}
+	for _, option := range j.DocumentTypes() {
+		if series[option.Value] == "" {
+			return failure(apperror.Conflict, "einvoicing_series_missing", "Configura las series de este local en Configuración › Facturación.")
+		}
+	}
+	return nil
 }
 
 // Request implements contracts.Issuer inside the payment transaction.
@@ -193,16 +239,18 @@ func (a *Documents) Process(ctx context.Context, id string) error {
 	}
 	doc.Credentials = credentials
 	result, err := provider.Issue(ctx, *doc)
+	// The signed XML and its hash are kept even when the send fails: the
+	// printed representation only needs the signature, not the answer.
+	if len(result.Files) > 0 || result.DigestValue != "" {
+		if saveErr := a.repo.SaveFiles(ctx, claimed.OrganizationID, id, result.DigestValue, result.Files); saveErr != nil {
+			return a.repo.FailDocument(ctx, id, "No se pudo guardar el XML o la constancia de SUNAT.", retry)
+		}
+	}
 	if err != nil {
 		return a.repo.FailDocument(ctx, id, err.Error(), retry)
 	}
 	if result.Status != domain.StatusAccepted && result.Status != domain.StatusObserved {
 		result.Status = domain.StatusRejected
-	}
-	if len(result.Files) > 0 || result.DigestValue != "" {
-		if err := a.repo.SaveFiles(ctx, claimed.OrganizationID, id, result.DigestValue, result.Files); err != nil {
-			return a.repo.FailDocument(ctx, id, "No se pudo guardar el XML o la constancia de SUNAT.", retry)
-		}
 	}
 	return a.repo.CompleteDocument(ctx, id, result)
 }
@@ -287,7 +335,36 @@ type DocumentDetail struct {
 	Files             []string         `json:"files"`
 	Attempts          int              `json:"attempts"`
 	NextAttemptAt     *string          `json:"nextAttemptAt"`
+	// Printout is null until the document is signed, and for rejected or
+	// cancelled documents, which have no fiscal value to print.
+	Printout *ports.Printout `json:"printout"`
 }
+
+const testEnvironmentNotice = "Ambiente de pruebas: sin validez tributaria."
+
+// printout builds the printed representation once the document is signed.
+func (a *Documents) printout(ctx context.Context, s scope, row DocumentRow, breakdown domain.Breakdown) (*ports.Printout, error) {
+	if row.DigestValue == "" || row.Status == domain.StatusRejected || row.Status == domain.StatusCancelled {
+		return nil, nil
+	}
+	j, ok := a.registry.Jurisdiction(row.Country)
+	if !ok {
+		return nil, nil
+	}
+	issuer, err := a.repo.Issuer(ctx, s)
+	if err != nil {
+		return nil, err
+	}
+	out := j.Printout(ports.PrintSource{
+		DocumentType: row.DocumentType, Series: row.Series, Number: row.Number, IssueDate: row.IssueDate, Currency: row.Currency,
+		Issuer: issuer, Customer: row.Customer, TaxTotal: breakdown.TaxTotal, Total: breakdown.Total, DigestValue: row.DigestValue,
+	})
+	if row.Environment == domain.EnvironmentTest {
+		out.Notice = testEnvironmentNotice
+	}
+	return &out, nil
+}
+
 type DocumentsPage struct {
 	Items         []DocumentSummary `json:"items"`
 	Total         int               `json:"total"`
@@ -347,11 +424,30 @@ func (a *Documents) Get(ctx context.Context, s scope, id string) (DocumentDetail
 	if p, ok := a.registry.Provider(row.Provider); ok {
 		providerLabel = p.Label()
 	}
+	printout, err := a.printout(ctx, s, row, breakdown)
+	if err != nil {
+		return DocumentDetail{}, failure(apperror.Unavailable, "fiscal_documents_unavailable", "No pudimos preparar la representación impresa.")
+	}
 	return DocumentDetail{
 		DocumentSummary: a.summary(row), Customer: row.Customer, Breakdown: breakdown, ProviderLabel: providerLabel,
 		Environment: row.Environment, ProviderReference: row.ProviderReference, PDFURL: row.PDFURL, XMLURL: row.XMLURL,
 		CDRURL: row.CDRURL, DigestValue: row.DigestValue, ProviderCode: row.ProviderCode, Files: row.Files, Attempts: row.Attempts, NextAttemptAt: row.NextAttemptAt,
+		Printout: printout,
 	}, nil
+}
+
+// OrderDocument implements contracts.Issuer for the sale detail: reprints
+// show the document delivered at checkout instead of the payment ticket.
+func (a *Documents) OrderDocument(ctx context.Context, s scope, orderID string) (*contracts.DocumentRef, error) {
+	row, err := a.repo.OrderDocument(ctx, s, orderID)
+	if errors.Is(err, ErrNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, failure(apperror.Unavailable, "fiscal_documents_unavailable", "No pudimos leer el comprobante del pedido.")
+	}
+	summary := a.summary(row)
+	return &contracts.DocumentRef{ID: summary.ID, DocumentType: summary.DocumentType, Label: summary.Label, Number: summary.Number, Status: summary.Status}, nil
 }
 
 // Retry sends again a document that failed for a temporary reason.
@@ -376,6 +472,9 @@ type CheckoutOptions struct {
 	IdentityThreshold     string                         `json:"identityThreshold"`
 	InvoiceCustomerType   string                         `json:"invoiceCustomerDocumentType"`
 	Currency              string                         `json:"currency"`
+	// Issue explains why an active module cannot issue yet at this location
+	// (issuer, credentials or series); empty when not entitled or unsupported.
+	Issue string `json:"issue,omitempty"`
 }
 
 // CheckoutOptions tells the POS whether to offer documents and which ones.
@@ -384,6 +483,9 @@ func (a *Documents) CheckoutOptions(ctx context.Context, s scope) (CheckoutOptio
 	ic, j, err := a.issueSetup(ctx, s)
 	var known *apperror.Error
 	if errors.As(err, &known) && known.Kind == apperror.Conflict {
+		if pendingSetupCodes[known.Code] {
+			off.Issue = known.Message
+		}
 		return off, nil
 	}
 	if err != nil {

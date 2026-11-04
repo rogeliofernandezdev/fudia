@@ -2,7 +2,7 @@
 import {Dialog} from "@/design-system/dialog";
 import {useState} from "react";
 import {useForm,useWatch} from "react-hook-form";
-import {Button,FormDisclosure,FormField,FormSection,Icon,IconTile,Input,MoneyInput,Select,Textarea,ModalHeader,ModalForm,ModalBody,ModalFooter,type IconTileTone} from "@/design-system";
+import {Button,FormDisclosure,FormField,FormSection,Icon,IconTile,InlineNotice,Input,MoneyInput,Select,Textarea,ModalHeader,ModalForm,ModalBody,ModalFooter,type IconTileTone} from "@/design-system";
 import {calculateTip,canCollectTip,tipInputValue,type TipPolicy,type TipReceipt} from "../../tips";
 import {formatRegionalNumber} from "@/shared/i18n/regional-format";
 import {CheckoutFiscalSection,blankFiscalDraft,fiscalRequest,validateFiscalDraft,type CheckoutOptions,type FiscalDraft,type FiscalErrors} from "@/modules/einvoicing";
@@ -22,7 +22,7 @@ export function paymentMethodTones(methods:PaymentMethodOption[]){
   return Object.fromEntries(methods.map(method=>[method.code,method.affectsCash?"brand":digitalTones[digital++%digitalTones.length]])) as Record<string,IconTileTone>;
 }
 
-export function PaymentForm({order,methods,shiftName,shiftOptions=[],selectedShiftId="",selectShift,busy,formatMoney,currency,close,save,tipPolicy,registeredTip,fiscalOptions}:{order:POSOrderSummary&Pick<POSOrder,"waiterName">;methods:PaymentMethodOption[];shiftName:string;shiftOptions?:POSCollectionShift[];selectedShiftId?:string;selectShift?:(id:string)=>void;busy:boolean;formatMoney:(value:number)=>string;currency:{symbol:string;position:"before"|"after"};close:()=>void;save:(draft:PaymentDraft)=>void;tipPolicy?:TipPolicy;registeredTip?:TipReceipt;fiscalOptions?:CheckoutOptions}){
+export function PaymentForm({order,methods,shiftName,shiftOptions=[],selectedShiftId="",selectShift,busy,formatMoney,currency,close,save,tipPolicy,registeredTip,fiscalOptions,fiscalIssue}:{order:POSOrderSummary&Pick<POSOrder,"waiterName">;methods:PaymentMethodOption[];shiftName:string;shiftOptions?:POSCollectionShift[];selectedShiftId?:string;selectShift?:(id:string)=>void;busy:boolean;formatMoney:(value:number)=>string;currency:{symbol:string;position:"before"|"after"};close:()=>void;save:(draft:PaymentDraft)=>void;tipPolicy?:TipPolicy;registeredTip?:TipReceipt;fiscalOptions?:CheckoutOptions;/** Module active but this location cannot issue yet: explained instead of hiding the receipt. */fiscalIssue?:string}){
   const tipAllowed=canCollectTip(tipPolicy,order.channel,Boolean(registeredTip));
   const tipBase=Math.max(0,Number(order.total)-Number(order.deliveryFee??0));
   const tipPercentage=tipPolicy?.percentage??0;
@@ -132,6 +132,7 @@ export function PaymentForm({order,methods,shiftName,shiftOptions=[],selectedShi
             </FormDisclosure>
           </div>
           {offerFiscal&&fiscalOptions&&<CheckoutFiscalSection options={fiscalOptions} value={fiscal} onChange={next=>{setFiscal(next);setFiscalErrors({})}} errors={fiscalErrors} disabled={busy}/>}
+          {!offerFiscal&&settles&&fiscalIssue&&<InlineNotice tone="warning" title="Boleta y factura no disponibles">{fiscalIssue}</InlineNotice>}
         </div>
       </ModalBody>
       <ModalFooter><Button type="button" action="cancel" onClick={close} disabled={busy}>Cancelar</Button><Button type="submit" disabled={busy||(shiftOptions.length>1&&!selectedShiftId)} loading={busy}>{busy?"Cobrando…":"Cobrar"}</Button></ModalFooter>

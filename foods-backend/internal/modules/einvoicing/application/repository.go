@@ -25,7 +25,6 @@ type IssueContext struct {
 	Country         string
 	Currency        string
 	BusinessDate    string
-	Enabled         bool
 	Provider        string
 	Environment     string
 	DefaultDocument string
@@ -98,7 +97,6 @@ type ProfileSettingRow struct {
 	CountryName     string
 	Currency        string
 	Default         bool
-	Enabled         bool
 	Provider        string
 	Environment     string
 }
@@ -118,6 +116,9 @@ type SeriesRow struct {
 
 type Repository interface {
 	IssueContext(ctx context.Context, s scope) (IssueContext, error)
+	// LocationSeries maps each document type to the series configured for the
+	// session location (empty map when none).
+	LocationSeries(ctx context.Context, s scope) (map[string]string, error)
 	NextNumber(ctx context.Context, s scope, documentType string) (string, int, error)
 	InsertDocument(ctx context.Context, s scope, in NewDocument) (string, error)
 	ClaimDocument(ctx context.Context, id string) (ClaimedDocument, bool, error)
@@ -125,6 +126,8 @@ type Repository interface {
 	FailDocument(ctx context.Context, id, message string, retryMinutes int) error
 	DueDocuments(ctx context.Context, limit int) ([]string, error)
 	Documents(ctx context.Context, s scope, f DocumentFilter) ([]DocumentRow, int, error)
+	// OrderDocument is the latest document of an order at the session location.
+	OrderDocument(ctx context.Context, s scope, orderID string) (DocumentRow, error)
 	Document(ctx context.Context, s scope, id string) (DocumentRow, domain.Breakdown, error)
 	RetryDocument(ctx context.Context, s scope, id string) (int64, error)
 

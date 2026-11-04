@@ -11,6 +11,8 @@ export type PdfViewerProps={
  onClose:()=>void;
  loading?:boolean;
  error?:string|null;
+ /** Título del estado de error; por defecto «No pudimos preparar el PDF». */
+ errorTitle?:string;
  onRetry?:()=>void;
  notice?:ReactNode;
  details?:ReactNode;

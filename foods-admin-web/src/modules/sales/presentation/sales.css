@@ -44,6 +44,7 @@
 .sales-detail-identity p{display:flex;align-items:center;gap:var(--space-1-5);margin:0;color:var(--ink-500);font-size:var(--font-size-label)}
 .sales-detail-identity p>svg{flex:none}
 .sales-detail-identity p>span{min-width:0;overflow-wrap:anywhere}
+.sales-detail-identity .sales-detail-fiscal{flex-wrap:wrap}
 .sales-detail-panel{min-width:0;padding-inline:var(--space-4)}
 .sales-detail-lines .modal-item-row>div{min-width:0;overflow-wrap:anywhere}
 .sales-detail-empty{margin:0;color:var(--ink-500);font-size:var(--font-size-base);line-height:var(--line-height-normal)}

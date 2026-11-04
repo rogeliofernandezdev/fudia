@@ -38,6 +38,19 @@ func (a *Payments) requestFiscal(ctx context.Context, s scope, orderID string, i
 	return &domain.FiscalDocumentRef{ID: ref.ID, DocumentType: ref.DocumentType, Label: ref.Label, Number: ref.Number, Status: ref.Status}, nil
 }
 
+// orderFiscalDocument tells reprints which document was delivered: the
+// electronic one when the order has it, the payment ticket otherwise.
+func (a *Payments) orderFiscalDocument(ctx context.Context, s scope, orderID string) (*domain.FiscalDocumentRef, error) {
+	if a.fiscal == nil {
+		return nil, nil
+	}
+	ref, err := a.fiscal.OrderDocument(ctx, s, orderID)
+	if err != nil || ref == nil {
+		return nil, err
+	}
+	return &domain.FiscalDocumentRef{ID: ref.ID, DocumentType: ref.DocumentType, Label: ref.Label, Number: ref.Number, Status: ref.Status}, nil
+}
+
 func (a *Payments) dispatchFiscal(ref *domain.FiscalDocumentRef) {
 	if ref != nil && a.fiscal != nil {
 		a.fiscal.Dispatch(ref.ID)

@@ -5,6 +5,8 @@ package fake
 
 import (
 	"context"
+	"crypto/sha1"
+	"encoding/base64"
 	"errors"
 	"strings"
 
@@ -26,12 +28,16 @@ func (Provider) ValidateCredentials(string, map[string]string) (map[string]strin
 	return map[string]string{}, nil
 }
 func (Provider) Issue(_ context.Context, document ports.Document) (ports.Result, error) {
+	// A deterministic digest stands in for the signature, so the printed
+	// representation works in simulation too.
+	sum := sha1.Sum([]byte(document.ID))
+	digest := base64.StdEncoding.EncodeToString(sum[:])
 	name := strings.ToLower(document.Customer.Name)
 	switch {
 	case strings.Contains(name, "[error]"):
-		return ports.Result{}, errors.New("proveedor simulado no disponible")
+		return ports.Result{DigestValue: digest}, errors.New("proveedor simulado no disponible")
 	case strings.Contains(name, "[rechazar]"):
-		return ports.Result{Status: domain.StatusRejected, Code: "2800", Message: "Rechazo simulado por el proveedor de pruebas."}, nil
+		return ports.Result{Status: domain.StatusRejected, Code: "2800", Message: "Rechazo simulado por el proveedor de pruebas.", DigestValue: digest}, nil
 	}
-	return ports.Result{Status: domain.StatusAccepted, Reference: "SIM-" + document.FormattedNumber, Code: "0", Message: "Aceptado por el proveedor simulado."}, nil
+	return ports.Result{Status: domain.StatusAccepted, Reference: "SIM-" + document.FormattedNumber, Code: "0", Message: "Aceptado por el proveedor simulado.", DigestValue: digest}, nil
 }

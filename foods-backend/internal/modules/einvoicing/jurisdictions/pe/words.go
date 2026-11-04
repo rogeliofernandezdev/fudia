@@ -1,4 +1,4 @@
-package sunat
+package pe
 
 import (
 	"fmt"

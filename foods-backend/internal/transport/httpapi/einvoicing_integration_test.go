@@ -126,9 +126,10 @@ func TestCheckoutIssuesElectronicReceiptsAndInvoices(t *testing.T) {
 		return st, attempts
 	}
 
-	// Without the module nothing is offered and enabling is refused.
+	// Without the module nothing is offered and configuring is refused.
 	var options struct {
 		Enabled           bool   `json:"enabled"`
+		Issue             string `json:"issue"`
 		DefaultDocument   string `json:"defaultDocument"`
 		IdentityThreshold string `json:"identityThreshold"`
 		DocumentTypes     []struct {
@@ -136,10 +137,10 @@ func TestCheckoutIssuesElectronicReceiptsAndInvoices(t *testing.T) {
 		} `json:"documentTypes"`
 	}
 	_ = json.Unmarshal(call(e.CheckoutOptions, "GET", "", nil, 200).Body.Bytes(), &options)
-	if options.Enabled {
-		t.Fatal("checkout must not offer documents without the module")
+	if options.Enabled || options.Issue != "" {
+		t.Fatal("checkout must not offer documents nor setup notices without the module")
 	}
-	enable := `{"enabled":true,"provider":"fake","environment":"test"}`
+	enable := `{"provider":"fake","environment":"test"}`
 	if w := call(e.SaveProfile, "PUT", enable, map[string]string{"id": profileID}, 409); code(w) != "einvoicing_not_entitled" {
 		t.Fatalf("not entitled: %s", w.Body.String())
 	}
@@ -151,18 +152,32 @@ func TestCheckoutIssuesElectronicReceiptsAndInvoices(t *testing.T) {
 		ON CONFLICT (organization_id,module_key) DO UPDATE SET active=true`, s.OrganizationID); err != nil {
 		t.Fatal(err)
 	}
-	if w := call(e.SaveProfile, "PUT", enable, map[string]string{"id": profileID}, 409); code(w) != "einvoicing_issuer_incomplete" {
-		t.Fatalf("an invalid issuer RUC must block enabling: %s", w.Body.String())
+	// A seeded tax ID may have a valid check digit by chance; force an invalid one.
+	if _, err := pool.Exec(ctx, `UPDATE organizations SET tax_id='20100047219' WHERE id=$1`, s.OrganizationID); err != nil {
+		t.Fatal(err)
+	}
+	// The module is the only switch: checkout explains what is still missing.
+	_ = json.Unmarshal(call(e.CheckoutOptions, "GET", "", nil, 200).Body.Bytes(), &options)
+	if options.Enabled || options.Issue == "" {
+		t.Fatalf("an invalid issuer RUC must be explained at checkout: %+v", options)
+	}
+	if w := pay(order([3]string{"Café", "1", "6.00"}), "6", `{"documentType":"receipt"}`, 409); code(w) != "einvoicing_issuer_incomplete" {
+		t.Fatalf("receipt with an invalid issuer: %s", w.Body.String())
 	}
 	if _, err := pool.Exec(ctx, `UPDATE organizations SET tax_id=$2 WHERE id=$1`, s.OrganizationID, testRUC()); err != nil {
 		t.Fatal(err)
 	}
-	call(e.SaveProfile, "PUT", `{"enabled":true,"provider":"fake","environment":"production"}`, map[string]string{"id": profileID}, 400)
+	call(e.SaveProfile, "PUT", `{"provider":"fake","environment":"production"}`, map[string]string{"id": profileID}, 400)
 	call(e.SaveProfile, "PUT", enable, map[string]string{"id": profileID}, 200)
+	_ = json.Unmarshal(call(e.CheckoutOptions, "GET", "", nil, 200).Body.Bytes(), &options)
+	if options.Enabled || !strings.Contains(options.Issue, "series") {
+		t.Fatalf("a location without series is explained at checkout: %+v", options)
+	}
 	call(e.SaveLocation, "PUT", `{"defaultDocument":"receipt","series":{"receipt":"F001","invoice":"F001"}}`, map[string]string{"id": s.LocationID}, 400)
 	call(e.SaveLocation, "PUT", `{"defaultDocument":"receipt","series":{"receipt":"B001","invoice":"F001"}}`, map[string]string{"id": s.LocationID}, 200)
+	options.Issue = ""
 	_ = json.Unmarshal(call(e.CheckoutOptions, "GET", "", nil, 200).Body.Bytes(), &options)
-	if !options.Enabled || options.DefaultDocument != "receipt" || len(options.DocumentTypes) != 3 || options.IdentityThreshold != "700.00" {
+	if !options.Enabled || options.Issue != "" || options.DefaultDocument != "receipt" || len(options.DocumentTypes) != 3 || options.IdentityThreshold != "700.00" {
 		t.Fatalf("checkout options: %+v", options)
 	}
 
@@ -214,8 +229,17 @@ func TestCheckoutIssuesElectronicReceiptsAndInvoices(t *testing.T) {
 	call(e.Retry, "POST", "", map[string]string{"id": rejectedID}, 409)
 
 	// A payment without a document behaves as before.
-	if w := pay(order([3]string{"Agua", "1", "4.00"}), "4", `{"documentType":"none"}`, 201); bytes.Contains(w.Body.Bytes(), []byte("fiscalDocument")) {
+	water := order([3]string{"Agua", "1", "4.00"})
+	if w := pay(water, "4", `{"documentType":"none"}`, 201); bytes.Contains(w.Body.Bytes(), []byte("fiscalDocument")) {
 		t.Fatalf("no document requested: %s", w.Body.String())
+	}
+	// The sale detail tells reprints what was delivered: the document, or the
+	// payment ticket when there is none.
+	if body := call(api.getPOSOrder, "GET", "", map[string]string{"id": first}, 200).Body.String(); !strings.Contains(body, `"fiscalDocument":{"id":"`+receiptID+`"`) || !strings.Contains(body, `"number":"B001-1"`) {
+		t.Fatalf("sale detail with its document: %s", body)
+	}
+	if body := call(api.getPOSOrder, "GET", "", map[string]string{"id": water}, 200).Body.String(); strings.Contains(body, "fiscalDocument") {
+		t.Fatalf("sale detail without document: %s", body)
 	}
 
 	// An enrolled profile issues with the legal special rate of the day, as a
@@ -268,6 +292,21 @@ func TestCheckoutIssuesElectronicReceiptsAndInvoices(t *testing.T) {
 	_ = json.Unmarshal(call(e.Get, "GET", "", map[string]string{"id": receiptID}, 200).Body.Bytes(), &detail)
 	if detail.Label != "Boleta" || len(detail.Breakdown.Lines) != 2 || len(detail.Breakdown.Taxes) != 1 {
 		t.Fatalf("detail: %+v", detail)
+	}
+	// The printed representation exists once signed, even while the send
+	// keeps failing; a rejected document has none.
+	printout := func(id string) string {
+		return call(e.Get, "GET", "", map[string]string{"id": id}, 200).Body.String()
+	}
+	if body := printout(receiptID); !strings.Contains(body, `"title":"BOLETA DE VENTA ELECTRÓNICA"`) || !strings.Contains(body, `|03|B001|1|12.25|80.30|`) ||
+		!strings.Contains(body, `"amountInWords":"SON: OCHENTA CON 30/100 SOLES"`) || !strings.Contains(body, `"notice":"Ambiente de pruebas`) {
+		t.Fatalf("accepted receipt printout: %s", body)
+	}
+	if body := printout(errorID); !strings.Contains(body, `"status":"ERROR"`) || !strings.Contains(body, `"qrData":"`) {
+		t.Fatalf("a signed document awaiting the authority is printable: %s", body)
+	}
+	if body := printout(rejectedID); !strings.Contains(body, `"printout":null`) {
+		t.Fatalf("a rejected document is not printable: %s", body)
 	}
 	other := seedInventoryScope(t, pool)
 	r = httptest.NewRequest("GET", "/x", nil)
@@ -345,9 +384,13 @@ func TestCheckoutSendsToSUNATWithEncryptedCredentials(t *testing.T) {
 	}
 	call(api.openCashShift, "POST", fmt.Sprintf(`{"cashRegisterId":%q,"openingAmount":100}`, registerID), nil, 201)
 
-	// Beta works without stored credentials; production does not.
-	call(e.SaveProfile, "PUT", `{"enabled":true,"provider":"sunat","environment":"production"}`, map[string]string{"id": profileID}, 409)
-	call(e.SaveProfile, "PUT", `{"enabled":true,"provider":"sunat","environment":"test"}`, map[string]string{"id": profileID}, 200)
+	// Beta works without stored credentials; production does not: settings and
+	// checkout explain it instead of a separate on/off switch.
+	call(e.SaveProfile, "PUT", `{"provider":"sunat","environment":"production"}`, map[string]string{"id": profileID}, 200)
+	if view := call(e.Settings, "GET", "", nil, 200).Body.String(); !strings.Contains(view, `"ready":false`) || !strings.Contains(view, "credenciales") {
+		t.Fatalf("production without credentials is not ready: %s", view)
+	}
+	call(e.SaveProfile, "PUT", `{"provider":"sunat","environment":"test"}`, map[string]string{"id": profileID}, 200)
 	call(e.SaveLocation, "PUT", `{"defaultDocument":"receipt","series":{"receipt":"B001","invoice":"F001"}}`, map[string]string{"id": s.LocationID}, 200)
 
 	// Credentials are stored encrypted and never returned.
@@ -364,8 +407,11 @@ func TestCheckoutSendsToSUNATWithEncryptedCredentials(t *testing.T) {
 		t.Fatalf("settings must show metadata, never secrets: %s", view)
 	}
 	call(e.SaveCredentials, "PUT", `{"provider":"sunat","values":{"desconocido":"x"}}`, map[string]string{"id": profileID}, 400)
-	if w := call(e.SaveProfile, "PUT", `{"enabled":true,"provider":"sunat","environment":"production"}`, map[string]string{"id": profileID}, 409); !strings.Contains(w.Body.String(), "certificado") {
+	if w := call(e.SaveProfile, "PUT", `{"provider":"sunat","environment":"production"}`, map[string]string{"id": profileID}, 200); !strings.Contains(w.Body.String(), "certificado") || !strings.Contains(w.Body.String(), `"ready":false`) {
 		t.Fatalf("production needs a certificate: %s", w.Body.String())
+	}
+	if view := call(e.SaveProfile, "PUT", `{"provider":"sunat","environment":"test"}`, map[string]string{"id": profileID}, 200).Body.String(); !strings.Contains(view, `"ready":true`) {
+		t.Fatalf("beta with SOL credentials is ready: %s", view)
 	}
 
 	if err := pool.QueryRow(ctx, `INSERT INTO products(organization_id,sku,name,price) VALUES($1,$2,'Aji de gallina',32) RETURNING id`, s.OrganizationID, fmt.Sprintf("SUNAT-%d", time.Now().UnixNano())).Scan(&productID); err != nil {
@@ -400,5 +446,8 @@ func TestCheckoutSendsToSUNATWithEncryptedCredentials(t *testing.T) {
 	detail := call(e.Get, "GET", "", map[string]string{"id": paid.FiscalDocument.ID}, 200).Body.String()
 	if !strings.Contains(detail, `"files":["cdr","xml"]`) || !strings.Contains(detail, `"digestValue":"`) {
 		t.Fatalf("detail lists the stored files: %s", detail)
+	}
+	if !strings.Contains(detail, `"qrData":"`+ruc+`|03|`) {
+		t.Fatalf("the printout QR carries the signed document: %s", detail)
 	}
 }

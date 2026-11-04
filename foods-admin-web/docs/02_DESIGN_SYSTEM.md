@@ -561,7 +561,7 @@ otra acción. Los estados de negocio mantienen su matriz independiente.
 Un detalle de solo lectura puede tener únicamente una acción secundaria: no se
 convierte en primaria por ser la única. «Ver resumen de pago» usa `eye`, abre
 el documento operativo existente y no cobra ni emite un comprobante fiscal.
-No se usa «Ver ticket de pago» como etiqueta del botón.
+No se usa «Ver ticket de venta» como etiqueta del botón.
 
 Todos los `Button` de texto usan `radius-pill` en móvil (≤600 px), incluidos
 primarios y secundarios, con la altura táctil compartida de al menos 44 px.
@@ -980,11 +980,22 @@ En móvil (≤600 px) forman una cuadrícula de 2×2; debajo de 480 px se oculta
 ### Ticket de pago para el comensal
 
 Tras confirmar el cobro y cerrar el aviso global se abre el PDF real del ticket.
-Formato de rollo de 80 mm, área útil de 70 mm, negro sobre blanco, nombre del
-restaurante, datos del local, fecha del cobro, mesa/cliente, consumo con cantidad,
-precio e importe, total y medios de pago reales. Los pagos parciales muestran
-saldo y nunca se presentan como cuenta pagada. Se identifica como no fiscal;
-no inventa serie, impuesto, QR tributario ni aprobación SUNAT.
+Formato de rollo de 80 mm, área útil de 70 mm, negro sobre blanco. Regla
+(2026-11-04): el ticket sigue sección por sección a la representación impresa
+de la boleta y lo que la boleta o factura no imprime, el ticket tampoco.
+Nombre comercial, razón social, RUC y dirección; línea; «TICKET DE VENTA» (o
+«PRECUENTA») y el código `PED-` en negrita; línea; «Fecha de emisión» sin hora y
+el cliente si existe; línea; una fila por producto «cantidad x nombre» con su
+importe y el delivery como una fila más («1 x Delivery»); línea; TOTAL. Sin
+mesa, mozo, opciones del producto, propina, medios de pago ni «Gracias por su
+visita». El bloque fiscal de la boleta (valor de venta, IGV, importe en letras,
+QR y leyendas) se reemplaza por «No es un comprobante fiscal». Excepciones que
+evitan confusiones: un pago parcial muestra «Pagado», «Saldo pendiente» y «PAGO
+PARCIAL» (nunca parece cuenta pagada) y la precuenta conserva la propina
+sugerida y «CUENTA POR PAGAR». El título nunca dice «electrónico» ni lleva
+serie-correlativo: en Perú «ticket» es también un comprobante de pago, así que
+no inventa serie, impuesto, QR tributario ni aprobación SUNAT. El modal se
+titula «Ticket de venta».
 La previsualización usa `PdfViewer`, con el visor oficial completo de Mozilla
 PDF.js alojado en el mismo origen. No depende del visor nativo ni cambia a papel
 HTML en Android. La zona del visor utiliza controles y superficies gris oscuro,
@@ -1846,14 +1857,43 @@ en las órdenes y los ajustes de inventario, sin cambios del contrato ni de stoc
 
 ## Facturación electrónica
 
+- **Cobro (POS):** si el módulo está activo pero el local aún no puede emitir
+  (emisor, credenciales o series), el pago que salda la cuenta muestra un
+  `InlineNotice` `warning` «Boleta y factura no disponibles» con el motivo del API,
+  en lugar de ocultar la opción.
 - **Cobro (POS):** sección «Comprobante» al final de la columna de captura, solo si la
   facturación está activa para el local y el monto salda la cuenta. «Sin
   comprobante / Boleta / Factura» usa `Tabs` (cambia el modo del formulario) con
   el valor inicial configurado por local. Boleta: «Documento» opcional y
   «Número»; el nombre aparece solo con documento. Factura: identificación
   fiscal (etiqueta del API, «RUC» en Perú), «Razón social» y «Dirección»
-  opcional. Errores en línea; el backend valida de nuevo. El aviso de éxito
-  dice «Boleta B001-4 · estado: emitiendo.».
+  opcional. Errores en línea; el backend valida de nuevo. Con comprobante no
+  hay aviso de éxito ni ticket de pago: se abre `FiscalPrintDialog` (mismo
+  `PdfViewer` `sm`, «Comprobante · 80 mm») con la franja de contexto
+  «Cobro registrado. Enviando el comprobante…» y `Spinner`. Espera hasta 8 s la
+  respuesta de la autoridad y abre el PDF; si el documento ya está firmado,
+  «Imprimir sin esperar» (`ghost`) lo abre antes. Sin respuesta a tiempo se
+  imprime igual con el `Status` del comprobante y «Firmado; la confirmación se
+  reintenta sola.»; Observado muestra el motivo. Rechazado o sin firmar no
+  imprime: `ErrorState` con el motivo del API y «Ver ticket de venta»
+  (`ghost`, icono `eye`). «Sin comprobante» conserva el ticket de venta.
+- **Representación impresa (80 mm):** emisor (nombre comercial, razón social,
+  RUC, dirección), título y número fiscal, fecha de emisión, cliente solo si
+  fue identificado, `PED-`, líneas, «Valor de venta», cada impuesto, TOTAL,
+  importe en letras, QR de 30 mm, «Valor resumen» y las leyendas del API; en
+  pruebas cierra con «AMBIENTE DE PRUEBAS: SIN VALIDEZ TRIBUTARIA.». Textos
+  legales y QR vienen de `printout`; la web solo maqueta con el renderizador
+  compartido `src/shared/ticket/ticket-80mm.ts` (también lo usa el ticket de
+  pago) y nunca dice «No es un comprobante fiscal».
+- **Reimpresión en Ventas y en el detalle de cobro del POS:** el detalle trae
+  `fiscalDocument` y la identidad agrega una línea con icono `receipt`/`invoice`
+  y «Boleta B001-1»; el `Status` del comprobante aparece solo si no está
+  Aceptado (color solo para excepciones). «Previsualizar» abre lo que se
+  entregó al cobrar (`deliveredDocument`): el comprobante sin espera si tiene
+  valor fiscal (aceptado, observado o pendiente de confirmación) y el ticket de
+  pago si no hubo comprobante. Con comprobante Rechazado o Anulado abre el
+  ticket de pago con la franja «Boleta B001-1 · Rechazado. Este ticket no es un
+  comprobante fiscal.» (`ticketNoticeFor`).
 - **Comprobantes** (`/receipts`, menú Control): búsqueda por número, cliente o
   pedido, filtro de estado, tabla Comprobante · Fecha · Cliente · Total ·
   Estado. El detalle usa `DetailHero` (total y estado), `DetailFacts`, una
@@ -1861,14 +1901,20 @@ en las órdenes y los ajustes de inventario, sin cambios del contrato ni de stoc
   impuesto con su tasa y «Total». «XML firmado» y «CDR de SUNAT» son botones
   secundarios con icono `download` cuando el API los lista en `files`; el
   código de respuesta solo se muestra si el comprobante no fue aceptado.
+  «Ver comprobante» (secundario, icono `eye`) aparece antes de los archivos
+  cuando el API entrega `printout` y reemplaza el detalle por el PDF; al
+  cerrarlo vuelve al detalle.
   «Reenviar» (secundario) solo con error de envío. El número fiscal y `PED-`
   son las únicas referencias visibles.
 - **Estados fiscales** (mapeo central `fiscalStatusView`): Emitiendo `sky`,
   Aceptado `green`, Observado `orange`, Con error `orange`, Rechazado `red`,
   Anulado `gray`.
-- **Configuración › Facturación:** un panel por país (interruptor «Emitir
-  comprobantes electrónicos», Proveedor y Ambiente; Guardar/Cancelar solo con
-  cambios) y la tabla «Series por local» con edición en modal (serie por tipo,
+- **Configuración › Facturación:** un panel por país con `Status` derivado
+  («Lista para emitir» `green` / «Falta configurar» `gray`), una línea que
+  explica que el módulo Facturación es la única activación, Proveedor y
+  Ambiente (Guardar/Cancelar solo con cambios) y un aviso `warning` con lo que
+  falta. No existe un interruptor «Emitir comprobantes electrónicos» (2026-11-03).
+  Debajo, la tabla «Series por local» con edición en modal (serie por tipo,
   sugerida por el API, y «Comprobante sugerido al cobrar»). Una serie que ya
   emitió comprobantes queda de solo lectura. Sin el módulo en el plan se muestra
   un vacío que lo explica.
