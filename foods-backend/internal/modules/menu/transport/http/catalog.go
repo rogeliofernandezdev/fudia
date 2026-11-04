@@ -34,7 +34,14 @@ func (h *Catalog) ListCategories(w http.ResponseWriter, r *http.Request) {
 	respond(w, 200, out, err)
 }
 func (h *Catalog) ListProducts(w http.ResponseWriter, r *http.Request) {
-	out, err := h.service.Products(r.Context(), menuScope(r), catalogFilter(r))
+	filter := catalogFilter(r)
+	ids, ok := productIDsParam(r)
+	if !ok {
+		shared.Fail(w, 400, "invalid_product_ids", "Selecciona entre 1 y 100 productos válidos.")
+		return
+	}
+	filter.ProductIDs = ids
+	out, err := h.service.Products(r.Context(), menuScope(r), filter)
 	respond(w, 200, out, err)
 }
 func (h *Catalog) GetProduct(w http.ResponseWriter, r *http.Request) {

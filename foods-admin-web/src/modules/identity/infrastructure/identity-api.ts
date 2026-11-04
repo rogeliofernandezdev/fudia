@@ -1,3 +1,4 @@
+import type {RoleRequirements} from "../domain/role-requirements";
 import {apiFetch} from "@/shared/api/client";
 import type {OrganizationSubscription,SubscriptionPlan} from "@/modules/platform";
 import type {Location,MyProfile,MyProfileDraft,PermissionGroup,Role,RoleDraft,User,UserDraft} from "../domain/types";
@@ -16,7 +17,7 @@ export function listLocations(){
 }
 
 export function getPermissionCatalog(){
-  return apiFetch<{groups:PermissionGroup[];menuGroups:PermissionGroup[]}>("permission-catalog");
+  return apiFetch<{groups:PermissionGroup[];menuGroups:PermissionGroup[];requirements?:RoleRequirements}>("permission-catalog");
 }
 
 export function saveUser(draft:UserDraft){

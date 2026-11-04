@@ -7,6 +7,11 @@ import (
 	"strings"
 )
 
+// listOrderSQL pone primero los pedidos abiertos y luego los más recientes. Debe
+// coincidir literalmente con el índice de expresión orders_list_order_idx
+// (migración 000109); TestListOrderMatchesIndex lo comprueba.
+const listOrderSQL = `CASE WHEN status='cancelado' OR completed_at IS NOT NULL OR (status='entregado' AND channel<>'salon') THEN 1 ELSE 0 END, created_at DESC`
+
 func (r *Orders) List(ctx context.Context, s scope, f application.Filter) (application.Page, error) {
 	out := application.Page{Page: f.Page, PageSize: f.Size}
 	page, size, q, channel, status := f.Page, f.Size, strings.TrimSpace(f.Query), f.Channel, f.Status
@@ -15,7 +20,7 @@ func (r *Orders) List(ctx context.Context, s scope, f application.Filter) (appli
 	if err := r.db(ctx).QueryRow(ctx, `SELECT count(*) FROM orders WHERE `+where, s.OrganizationID, s.LocationID, q, channel, status).Scan(&total); err != nil {
 		return out, err
 	}
-	rows, err := r.db(ctx).Query(ctx, `SELECT `+orderColumns+` FROM orders WHERE `+where+` ORDER BY CASE WHEN status='cancelado' OR completed_at IS NOT NULL OR (status='entregado' AND channel<>'salon') THEN 1 ELSE 0 END, created_at DESC LIMIT $6 OFFSET $7`, s.OrganizationID, s.LocationID, q, channel, status, size, (page-1)*size)
+	rows, err := r.db(ctx).Query(ctx, `SELECT `+orderColumns+` FROM orders WHERE `+where+` ORDER BY `+listOrderSQL+` LIMIT $6 OFFSET $7`, s.OrganizationID, s.LocationID, q, channel, status, size, (page-1)*size)
 	if err != nil {
 		return out, err
 	}

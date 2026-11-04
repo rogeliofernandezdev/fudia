@@ -3,7 +3,6 @@ package postgres
 import (
 	"context"
 	"encoding/json"
-	menucontracts "github.com/foods-platform/foods-backend/internal/modules/menu/contracts"
 	"github.com/foods-platform/foods-backend/internal/modules/orders/domain"
 	"github.com/jackc/pgx/v5"
 )
@@ -33,117 +32,6 @@ func scanOrder(row pgx.Row) (domain.Order, error) {
 		o.AccountState = "awaiting_payment"
 	}
 	return o, err
-}
-func (r *Orders) Items(ctx context.Context, s scope, orderID, roundID string) ([]domain.OrderItem, error) {
-	rows, err := r.db(ctx).Query(ctx, `SELECT id,COALESCE(product_id::text,''),name,qty::text,unit_price::text,note,item_type FROM order_items WHERE order_id=$1 AND organization_id=$2 AND ($3='' OR kitchen_round_id::text=$3) ORDER BY created_at,id`, orderID, s.OrganizationID, roundID)
-	if err != nil {
-		return nil, err
-	}
-	items := []domain.OrderItem{}
-	indexByID := map[string]int{}
-	for rows.Next() {
-		var it domain.OrderItem
-		if err := rows.Scan(&it.ID, &it.ProductID, &it.Name, &it.Qty, &it.UnitPrice, &it.Note, &it.ItemType); err != nil {
-			rows.Close()
-			return nil, err
-		}
-		indexByID[it.ID] = len(items)
-		items = append(items, it)
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	selectionRows, err := r.db(ctx).Query(ctx, `
-		SELECT s.order_item_id::text,s.group_id::text,s.group_name,s.option_product_id::text,s.option_name,s.surcharge::text
-		FROM order_item_combo_selections s
-		JOIN order_items i ON i.id=s.order_item_id AND i.organization_id=s.organization_id
-		WHERE i.order_id=$1 AND i.organization_id=$2
-		  AND ($3='' OR i.kitchen_round_id::text=$3)
-		ORDER BY s.created_at,s.id`, orderID, s.OrganizationID, roundID)
-	if err != nil {
-		return nil, err
-	}
-	for selectionRows.Next() {
-		var itemID string
-		var sel domain.OrderItemSelection
-		if err := selectionRows.Scan(&itemID, &sel.GroupID, &sel.GroupName, &sel.ProductID, &sel.Name, &sel.Surcharge); err != nil {
-			selectionRows.Close()
-			return nil, err
-		}
-		if idx, ok := indexByID[itemID]; ok {
-			items[idx].Selections = append(items[idx].Selections, sel)
-		}
-	}
-	if err := selectionRows.Err(); err != nil {
-		selectionRows.Close()
-		return nil, err
-	}
-	selectionRows.Close()
-
-	modifierRows, err := r.db(ctx).Query(ctx, `
-		SELECT m.order_item_id::text,m.group_id::text,m.group_name,
-		       m.option_id::text,m.option_name,m.surcharge::text
-		FROM order_item_modifier_selections m
-		JOIN order_items i ON i.id=m.order_item_id AND i.organization_id=m.organization_id
-		WHERE i.order_id=$1 AND i.organization_id=$2
-		  AND ($3='' OR i.kitchen_round_id::text=$3)
-		ORDER BY m.created_at,m.id`, orderID, s.OrganizationID, roundID)
-	if err != nil {
-		return nil, err
-	}
-	defer modifierRows.Close()
-	for modifierRows.Next() {
-		var itemID string
-		var modifier domain.OrderItemModifier
-		if err := modifierRows.Scan(
-			&itemID, &modifier.GroupID, &modifier.GroupName,
-			&modifier.OptionID, &modifier.Name, &modifier.Surcharge,
-		); err != nil {
-			return nil, err
-		}
-		if idx, ok := indexByID[itemID]; ok {
-			items[idx].Modifiers = append(items[idx].Modifiers, modifier)
-		}
-	}
-	if err := modifierRows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-func (r *Orders) ServiceItems(ctx context.Context, s scope, orderID string) ([]domain.OrderServiceItem, error) {
-	rows, err := r.db(ctx).Query(ctx, `SELECT id::text,order_item_id::text,COALESCE(product_id::text,''),name,qty::text,destination,status FROM order_service_items WHERE organization_id=$1 AND order_id=$2 ORDER BY created_at,id`, s.OrganizationID, orderID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []domain.OrderServiceItem{}
-	for rows.Next() {
-		var item domain.OrderServiceItem
-		if err = rows.Scan(&item.ID, &item.OrderItemID, &item.ProductID, &item.Name, &item.Qty, &item.Destination, &item.Status); err != nil {
-			return nil, err
-		}
-		for _, destination := range menucontracts.ServiceDestinations {
-			if destination["value"] == item.Destination {
-				item.DestinationLabel = destination["shortLabel"]
-			}
-		}
-		item.StatusLabel = map[string]string{"nuevo": "Sin enviar", "confirmado": "Pendiente", "preparando": "Preparando", "listo": "Por entregar", "entregado": "Entregado"}[item.Status]
-		items = append(items, item)
-	}
-	return items, rows.Err()
-}
-func (r *Orders) NetPaid(ctx context.Context, s scope, orderID string) (float64, error) {
-	var paid float64
-	err := r.db(ctx).QueryRow(ctx, `
-		SELECT COALESCE(sum(
-		  p.amount-COALESCE((SELECT sum(pr.amount) FROM payment_refunds pr WHERE pr.payment_id=p.id AND pr.organization_id=p.organization_id),0)
-		),0)::float8
-		FROM payments p
-		WHERE p.order_id=$1 AND p.organization_id=$2 AND p.location_id=$3
-	`, orderID, s.OrganizationID, s.LocationID).Scan(&paid)
-	return paid, err
 }
 func (r *Orders) QuantityUsage(ctx context.Context, s scope, orderID string) (map[string]float64, error) {
 	usage := map[string]float64{}

@@ -132,6 +132,20 @@ func (a *Catalog) Combo(ctx context.Context, s scope, id string) (domain.Combo, 
 	}
 	return out, nil
 }
+// OrderComboDetails resuelve varios menús con las mismas reglas que OrderCombo, en
+// el orden pedido. Si uno no existe o no está disponible, falla todo el lote con
+// ese mismo error, igual que antes fallaba la comanda al pedirlos por separado.
+func (a *Catalog) OrderComboDetails(ctx context.Context, s scope, ids []string) ([]domain.OrderCombo, error) {
+	out := make([]domain.OrderCombo, 0, len(ids))
+	for _, id := range ids {
+		combo, err := a.OrderCombo(ctx, s, id)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, combo)
+	}
+	return out, nil
+}
 func (a *Catalog) OrderCombo(ctx context.Context, s scope, id string) (domain.OrderCombo, error) {
 	var out domain.OrderCombo
 	day, err := a.repo.BusinessDate(ctx, s)

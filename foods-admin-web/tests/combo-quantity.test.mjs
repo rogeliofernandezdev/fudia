@@ -25,6 +25,7 @@ function mount({products=[base,cause],locationId="local-a",organizationId="org-a
  const {CombosPage}=compile("presentation/combos-page.tsx",name=>{
   if(name==="react")return{
    useEffect:()=>{},
+   useMemo:factory=>factory(),
    useState:initial=>{const owner=active,i=owner.cursor++;if(!(i in owner.state))owner.state[i]=typeof initial==="function"?initial():initial;return[owner.state[i],next=>{owner.state[i]=typeof next==="function"?next(owner.state[i]):next}]},
    useRef:initial=>{const i=active.refCursor++;return active.refs[i]??(active.refs[i]={current:initial})},
   };
@@ -178,9 +179,13 @@ test("editar conserva el tope persistido sin sustituirlo por el saldo",()=>{
 test("las cantidades del selector se aíslan por empresa/local y se refrescan con el wizard abierto",()=>{
  const a=mount(),b=mount({locationId:"local-b"}),c=mount({organizationId:"org-b"});
  for(const ui of [a,b,c])ui.composition();
- const query=ui=>ui.queries.filter(query=>query.queryKey.includes("combo-picker")).at(-1);
- assert.notDeepEqual(query(a).queryKey,query(b).queryKey);assert.notDeepEqual(query(a).queryKey,query(c).queryKey);
- assert.equal(query(a).refetchInterval,10000);assert.equal(query(a).enabled,true);
+ const query=(ui,key)=>ui.queries.filter(query=>query.queryKey.includes(key)).at(-1);
+ assert.notDeepEqual(query(a,"combo-picker").queryKey,query(b,"combo-picker").queryKey);assert.notDeepEqual(query(a,"combo-picker").queryKey,query(c,"combo-picker").queryKey);
+ // La carta completa se descarga al abrir; cada 10 s solo se refrescan las opciones elegidas.
+ assert.equal(query(a,"combo-picker").refetchInterval,undefined);assert.equal(query(a,"combo-picker").enabled,true);
+ const chosen=query(a,"combo-picker-chosen");
+ assert.equal(chosen.refetchInterval,10000);
+ assert.notDeepEqual(chosen.queryKey,query(b,"combo-picker-chosen").queryKey);assert.notDeepEqual(chosen.queryKey,query(c,"combo-picker-chosen").queryKey);
 });
 
 test("el payload envía lo disponible como tope de una opción nueva y vacío como null",async()=>{

@@ -40,3 +40,10 @@ export function listOrderCombos(input:{q:string;page:number;pageSize:number}){
 export function getOrderCombo(id:string){
  return apiFetch<ComboDetail>(`order-combos/${id}`);
 }
+/** Varios menús de la comanda en una petición por cada 20 (antes, una por menú). Si uno falla, falla el lote, como antes `Promise.all`. */
+export async function listOrderComboDetails(ids:string[]){
+ const batches=[];
+ for(let index=0;index<ids.length;index+=20)batches.push(ids.slice(index,index+20));
+ const pages=await Promise.all(batches.map(batch=>apiFetch<{items:ComboDetail[]}>(`order-combo-details?${new URLSearchParams({ids:batch.join(",")}).toString()}`)));
+ return pages.flatMap(page=>page.items);
+}

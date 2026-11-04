@@ -34,32 +34,29 @@ func (a *Orders) Kitchen(ctx context.Context, s scope, channel, destination stri
 	if err != nil {
 		return out, orderFailure(apperror.Unavailable, "kitchen_unavailable", "No pudimos cargar las comandas de cocina.")
 	}
-	for _, item := range legacy {
-		items, err := a.repo.Items(ctx, s, item.ID, "")
-		if err != nil {
-			return out, orderFailure(apperror.Unavailable, "kitchen_unavailable", "No pudimos cargar los productos de las comandas.")
-		}
-		target, err := a.repo.TargetMinutes(ctx, s, item.ID, "")
-		if err != nil {
-			return out, orderFailure(apperror.Unavailable, "kitchen_unavailable", "No pudimos calcular los tiempos de preparación.")
-		}
-		out.Items = append(out.Items, domain.KitchenTicket{ID: item.ID, OrderID: item.ID, Code: item.Code, Channel: item.Channel, Status: item.Status, CustomerName: item.CustomerName, TableName: item.TableName, Notes: item.Notes, CreatedAt: item.CreatedAt, UpdatedAt: item.UpdatedAt, TargetMinutes: target, Items: items})
-		out.Counts[item.Status]++
-	}
 	rounds, err := a.repo.KitchenRounds(ctx, s, channel, destination)
 	if err != nil {
 		return out, orderFailure(apperror.Unavailable, "kitchen_unavailable", "No pudimos cargar las rondas de cocina.")
 	}
+	refs := make([]domain.TicketRef, 0, len(legacy)+len(rounds))
+	for _, item := range legacy {
+		refs = append(refs, domain.TicketRef{OrderID: item.ID})
+	}
 	for _, ticket := range rounds {
+		refs = append(refs, domain.TicketRef{OrderID: ticket.OrderID, RoundID: ticket.ID})
+	}
+	contents, err := a.repo.TicketContents(ctx, s, refs)
+	if err != nil {
+		return out, orderFailure(apperror.Unavailable, "kitchen_unavailable", "No pudimos cargar los productos de las comandas.")
+	}
+	for i, item := range legacy {
+		out.Items = append(out.Items, domain.KitchenTicket{ID: item.ID, OrderID: item.ID, Code: item.Code, Channel: item.Channel, Status: item.Status, CustomerName: item.CustomerName, TableName: item.TableName, Notes: item.Notes, CreatedAt: item.CreatedAt, UpdatedAt: item.UpdatedAt, TargetMinutes: contents[i].TargetMinutes, Items: contents[i].Items})
+		out.Counts[item.Status]++
+	}
+	for i, ticket := range rounds {
+		content := contents[len(legacy)+i]
 		ticket.Code = fmt.Sprintf("%s · R%d", ticket.Code, ticket.RoundNumber)
-		ticket.Items, err = a.repo.Items(ctx, s, ticket.OrderID, ticket.ID)
-		if err != nil {
-			return out, orderFailure(apperror.Unavailable, "kitchen_unavailable", "No pudimos cargar los productos de una ronda.")
-		}
-		ticket.TargetMinutes, err = a.repo.TargetMinutes(ctx, s, ticket.OrderID, ticket.ID)
-		if err != nil {
-			return out, orderFailure(apperror.Unavailable, "kitchen_unavailable", "No pudimos calcular el tiempo de una ronda.")
-		}
+		ticket.Items, ticket.TargetMinutes = content.Items, content.TargetMinutes
 		out.Items = append(out.Items, ticket)
 		out.Counts[ticket.Status]++
 	}

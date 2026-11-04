@@ -103,6 +103,7 @@ El proveedor por defecto es Gemini en Vertex AI. El router, `menu` y `service` u
 - timeouts explícitos para HTTP;
 - backoff limitado;
 - retries automáticos en GET;
+- lecturas de carta idénticas reutilizadas solo dentro del turno (`TurnScopedFudia`, ver `04_FUDIA_CONTRACT.md`);
 - retry de creación de ronda únicamente porque `requestId` vuelve la operación idempotente;
 - retries de envío WhatsApp;
 - timeout por llamada al modelo, reintentos del SDK ante 408/429/5xx y topes de salida y de vueltas de tools;

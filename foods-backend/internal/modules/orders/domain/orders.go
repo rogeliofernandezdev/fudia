@@ -148,6 +148,18 @@ type OrderServiceItem struct {
 	Destination      string `json:"destination"`
 	Status           string `json:"status"`
 }
+// TicketRef identifica una comanda de Cocina: el pedido y, si existe, su ronda.
+type TicketRef struct {
+	OrderID string
+	RoundID string
+}
+
+// TicketContent son las líneas y el tiempo objetivo de una comanda.
+type TicketContent struct {
+	Items         []OrderItem
+	TargetMinutes *int
+}
+
 type KitchenTicket struct {
 	Destination   string      `json:"destination"`
 	ID            string      `json:"id"`

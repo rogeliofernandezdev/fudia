@@ -133,6 +133,14 @@ func (a *Administration) SaveRole(ctx context.Context, s requestscope.Scope, id 
 	if err != nil {
 		return out, failure(apperror.Unavailable, "role_catalog_unavailable", "No pudimos consultar los accesos del plan de la empresa.")
 	}
+	// Las pantallas y acciones marcadas arrastran las acciones que el API exige para usarlas.
+	inPlan := map[string]bool{}
+	for _, value := range domain.RoleCatalogValues(catalog.Permissions) {
+		inPlan[value] = true
+	}
+	in.Permissions = domain.CompleteRolePermissions(in.MenuAccess, in.Permissions, func(permission string) bool {
+		return catalog.Unrestricted || inPlan[permission]
+	})
 	if _, ok := domain.NormalizeRoleCatalogValues(in.MenuAccess, catalog.Menus); !ok {
 		return out, failure(apperror.Invalid, "role_outside_plan", "Selecciona únicamente opciones incluidas y activas en el plan de la empresa.")
 	}

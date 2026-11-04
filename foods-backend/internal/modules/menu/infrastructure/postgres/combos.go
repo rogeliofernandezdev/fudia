@@ -126,7 +126,8 @@ func (r *Catalog) OrderCombos(ctx context.Context, s scope, f application.Catalo
 				        AND ssel.option_product_id=o.option_product_id
 				        AND ord.location_id=l.id
 				        AND ord.status<>'cancelado'
-				        AND (ord.created_at AT TIME ZONE l.timezone)::date=$3::date
+				        AND ord.created_at >= ($3::date::timestamp AT TIME ZONE l.timezone)
+				        AND ord.created_at < (($3::date + 1)::timestamp AT TIME ZONE l.timezone)
 				    ),0) < o.default_quota
 				  )
 			  ) < GREATEST(g.min_selections,1)
@@ -265,10 +266,15 @@ func (r *Catalog) OrderCombo(ctx context.Context, s scope, id string, day time.T
 		return out, false, err
 	}
 	rows.Close()
-	for i := range out.Groups {
-		g := &out.Groups[i]
-		options, err := r.db(ctx).Query(ctx, `
-			SELECT o.option_product_id,p.name,o.surcharge::text,
+	// Las opciones de todos los grupos en una consulta (antes, una por grupo). El
+	// cupo del día compara created_at con los límites del día local para usar el
+	// índice por fecha, en vez de convertir cada fila.
+	groupIndex := make(map[string]int, len(out.Groups))
+	for i, g := range out.Groups {
+		groupIndex[g.ID] = i
+	}
+	options, err := r.db(ctx).Query(ctx, `
+			SELECT o.group_id::text,o.option_product_id,p.name,o.surcharge::text,
 			       p.active
 			       AND (p.available_from IS NULL OR now() >= p.available_from)
 			       AND (p.available_until IS NULL OR now() <= p.available_until)
@@ -286,7 +292,8 @@ func (r *Catalog) OrderCombo(ctx context.Context, s scope, id string, day time.T
 			             AND ssel.option_product_id=o.option_product_id
 			             AND ord.location_id=l.id
 			             AND ord.status<>'cancelado'
-			             AND (ord.created_at AT TIME ZONE l.timezone)::date=$4::date
+			             AND ord.created_at >= ($4::date::timestamp AT TIME ZONE l.timezone)
+			             AND ord.created_at < (($4::date + 1)::timestamp AT TIME ZONE l.timezone)
 			         ),0))::float8 END
 			FROM menu_combo_options o
 			JOIN menu_combo_groups g ON g.id=o.group_id AND g.organization_id=o.organization_id
@@ -294,24 +301,24 @@ func (r *Catalog) OrderCombo(ctx context.Context, s scope, id string, day time.T
 			JOIN locations l ON l.id=$3 AND l.organization_id=o.organization_id AND l.active
 			LEFT JOIN product_availability pa ON pa.organization_id=p.organization_id AND pa.location_id=l.id
 			  AND pa.product_id=p.id AND pa.business_date=$4
-			WHERE o.group_id=$1 AND o.organization_id=$2
-			ORDER BY o.sort_order,o.id`, g.ID, s.OrganizationID, s.LocationID, day.Format("2006-01-02"))
-		if err != nil {
+			WHERE g.combo_product_id=$1 AND o.organization_id=$2
+			ORDER BY g.sort_order,g.id,o.sort_order,o.id`, id, s.OrganizationID, s.LocationID, day.Format("2006-01-02"))
+	if err != nil {
+		return out, false, err
+	}
+	defer options.Close()
+	for options.Next() {
+		var groupID string
+		var o domain.OrderComboOption
+		if err = options.Scan(&groupID, &o.ProductID, &o.Name, &o.Surcharge, &o.Available, &o.QuotaRemaining); err != nil {
 			return out, false, err
 		}
-		for options.Next() {
-			var o domain.OrderComboOption
-			if err = options.Scan(&o.ProductID, &o.Name, &o.Surcharge, &o.Available, &o.QuotaRemaining); err != nil {
-				options.Close()
-				return out, false, err
-			}
-			g.Options = append(g.Options, o)
+		if i, ok := groupIndex[groupID]; ok {
+			out.Groups[i].Options = append(out.Groups[i].Options, o)
 		}
-		err = options.Err()
-		options.Close()
-		if err != nil {
-			return out, false, err
-		}
+	}
+	if err = options.Err(); err != nil {
+		return out, false, err
 	}
 	return out, available, nil
 }

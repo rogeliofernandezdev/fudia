@@ -160,3 +160,21 @@ func TestAuthorizeUsesAccessReadWithTheSession(t *testing.T) {
 		t.Fatalf("platform administrator rejected: %v", err)
 	}
 }
+
+// El 403 nombra la acción faltante con la etiqueta del editor de roles, también con
+// los permisos leídos al autenticar; una acción fuera del catálogo conserva el texto general.
+func TestForbiddenNamesTheMissingPermission(t *testing.T) {
+	s := New(&memorySessions{}, credentials{})
+	scope := requestscope.Scope{UserID: "u", OrganizationID: "o", LocationID: "l"}
+	ctx := WithAccess(context.Background(), scope, domain.Access{Permissions: []string{"menu.read"}})
+	var failure *apperror.Error
+	err := s.Authorize(ctx, scope, "inventory.read")
+	if !errors.As(err, &failure) || failure.Code != "forbidden" ||
+		failure.Message != "Tu rol no incluye el permiso «Ver inventario». Pide a un administrador que lo agregue en Usuarios y roles." {
+		t.Fatalf("unexpected forbidden error: %#v", err)
+	}
+	err = s.Authorize(context.Background(), scope, "unknown.permission")
+	if !errors.As(err, &failure) || failure.Message != "No tienes permisos para realizar esta acción." {
+		t.Fatalf("unknown permission must keep the generic text: %#v", err)
+	}
+}

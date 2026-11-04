@@ -7,7 +7,7 @@ import {useMoney,useSession} from "@/providers";
 import {useQuery} from "@tanstack/react-query";
 import {lineAvailability,productUsage} from "../domain/draft-availability";
 import type {ComboDetail} from "../../salon/domain/catalog-types";
-import {getOrderCombo,listSelectedProductAvailability} from "../../salon/infrastructure/catalog-api";
+import {listOrderComboDetails,listSelectedProductAvailability} from "../../salon/infrastructure/catalog-api";
 import {useFeedback} from "@/providers/feedback-provider";
 import {CatalogProduct,ComboConfigurator,ComboSelection,ConfiguredCombo,ComandaCatalog} from "../../salon/presentation/comanda-catalog";
 import type {Draft,FloorTable,LineDraft} from "../../salon/domain/types";
@@ -71,7 +71,7 @@ export function ComandaView({initial,mode,allTables,busy,close,save,channelLabel
     staleTime:0,
   });
   const selectedComboIds=Array.from(new Set(v.lines.filter(line=>line.itemType==="combo").map(line=>line.productId))).sort();
-  const selectedCombos=useQuery({queryKey:["order-selected-combos",location?.id,selectedComboIds],queryFn:()=>Promise.all(selectedComboIds.map(getOrderCombo)),enabled:selectedComboIds.length>0,refetchInterval:10000,refetchIntervalInBackground:false,refetchOnWindowFocus:"always",staleTime:0});
+  const selectedCombos=useQuery({queryKey:["order-selected-combos",location?.id,selectedComboIds],queryFn:()=>listOrderComboDetails(selectedComboIds),enabled:selectedComboIds.length>0,refetchInterval:10000,refetchIntervalInBackground:false,refetchOnWindowFocus:"always",staleTime:0});
   useEffect(()=>{if(selectedCombos.data)recordComboAvailability(selectedCombos.data)},[selectedCombos.data,selectedCombos.dataUpdatedAt,recordComboAvailability]);
   const stockFor=(line:LineDraft,lines:LineDraft[],details=comboAvailabilityRef.current)=>lineAvailability(line,lines,initial.lines,availabilityRef.current,details);
   useEffect(()=>{if(selectedAvailability.data)recordAvailability(selectedAvailability.data.items)},[selectedAvailability.data,selectedAvailability.dataUpdatedAt,recordAvailability]);

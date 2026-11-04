@@ -14,13 +14,14 @@ function compile(path,resolve){
 function nodes(tree,result=[]){if(Array.isArray(tree)){tree.forEach(node=>nodes(node,result));return result}if(tree&&typeof tree==="object"){result.push(tree);nodes(tree.props?.children,result);nodes(tree.props?.action,result)}return result}
 const active={id:"admin",fullName:"Panchita",email:"owner@example.test",active:true,platformAdmin:false,assignments:[]};
 const inactive={...active,id:"waiter",active:false,fullName:"Mozo"};
-function mount({max=6,usage=6,items=[active,inactive],pending=false,error=false,fetching=false,readPlan=true,manage=true,hasData=true}={}){
+function mount({max=6,usage=6,items=[active,inactive],pending=false,error=false,fetching=false,revalidating=false,readPlan=true,manage=true,hasData=true}={}){
  const state=[],mutations=[],queries=[],invalidations=[],written=[];let cursor=0,mutationCursor=0,retries=0;
  const session={organization:{id:"panchita"},user:{id:"owner",platformAdmin:false},modules:{usuarios:true},can:permission=>permission==="users.manage"?manage:readPlan};
  const subscription={data:hasData?{plan:{maxUsers:max},usage:{users:usage}}:undefined,isLoading:pending,isError:error,isFetching:fetching,refetch:()=>{retries++}};
  const capacity=compile("modules/identity/application/use-subscription-capacity.ts",name=>{
   if(name==="@/providers/session-context")return {useSession:()=>session};
   if(name==="./use-organization-subscription")return {useOrganizationSubscription:()=>subscription};
+  if(name==="@tanstack/react-query")return {useQueryClient:()=>({getQueryState:()=>({isInvalidated:revalidating})})};
   return require(name);
  });
  const {UsersRolesManager}=compile("modules/identity/presentation/users-roles-manager.tsx",name=>{
@@ -70,13 +71,15 @@ test("el cupo usa el uso activo remoto y no los resultados de búsqueda/paginaci
 });
 
 test("carga, error, refresco y falta de acceso bloquean el alta; el error ofrece reintentar",()=>{
- for(const options of [{pending:true,hasData:false},{fetching:true,usage:1},{error:true,usage:1},{readPlan:false},{hasData:false}]){
+ for(const options of [{pending:true,hasData:false},{fetching:true,revalidating:true,usage:1},{error:true,usage:1},{readPlan:false},{hasData:false}]){
   const ui=mount(options),first=ui.render();assert.equal(first.button.props.disabled,true);
   first.button.props.onClick();assert.equal(ui.render().view.some(node=>node.type?.name==="UserDialog"),false);
  }
  const ui=mount({error:true}),first=ui.render();assert.match(first.header.props.description,/No pudimos comprobar el límite de usuarios/);
  first.view.find(node=>node.type==="Button"&&node.props.children==="Reintentar").props.onClick();assert.equal(ui.retries,1);
  assert.equal(mount({manage:false}).render().button,undefined);
+ // El refresco periódico (sin un cambio previo) no deshabilita el alta un instante.
+ assert.equal(mount({fetching:true,usage:1}).render().button.props.disabled,false);
  assert.ok(mount({pending:true,hasData:false}).render().view.some(node=>node.type==="TableSkeleton"));
 });
 

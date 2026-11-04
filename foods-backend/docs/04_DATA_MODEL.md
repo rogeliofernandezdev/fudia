@@ -156,6 +156,12 @@ evalúan la misma regla bajo bloqueo del pedido. Cerrar cuenta y cobrar exigen
 estado Entregado y ausencia de productos pendientes en todas las rondas.
 No hay reapertura después del cierre ni botón adicional para liberar la mesa.
 
+`orders.paid_amount` (migración 000110) guarda el cobrado neto del pedido (cobros
+menos devoluciones). Lo recalculan triggers de `payments` y `payment_refunds` en la
+misma transacción del documento; ningún código lo escribe. Lo usa el listado de POS
+para filtrar «por cobrar» y totalizar (índice parcial `orders_pos_unpaid_idx`).
+Ver `05_DATABASE_GUIDELINES.md`.
+
 `products.service_destination` (`kitchen`, `bar`, `direct`; el catálogo único `menu/domain.ServiceDestinations` entrega `label` y `shortLabel`, y `direct` se muestra como «Sin preparación (lo entrega el mozo)», antes «Entrega directa») configura Cocina, Barra o Sin preparación sin
 inferirlo de nombres/categorías ni del control de cantidad. Cada venta conserva
 una copia de destino, producto, cantidad y estado en `order_service_items`.

@@ -9,6 +9,7 @@ import {Skeleton} from "@/design-system/skeleton";
 import {createLookupSelectStyles} from "@/design-system/search-select-styles";
 import {Button,ConfirmDialog,FieldLabel,Icon,Input,PageHeader,RowActionButton,Status,Textarea,ModalHeader,ModalFooter,ModalForm} from "@/design-system";
 import {useFeedback,useSession} from "@/providers";
+import {isPermissionError,missingPermissionLabel} from "@/shared/api/client";
 import {
  getRecipe,
  listRecipeInventory,
@@ -61,6 +62,11 @@ export function RecipesPage(){
 
  const recipes=useQuery({queryKey:["recipes",q],queryFn:()=>listRecipes(q)});
  const ingredientDefaults=useQuery({queryKey:["recipe-inventory-options","initial"],queryFn:()=>listRecipeInventory(""),enabled:Boolean(draft)});
+ // Sin «Ver inventario» no se puede listar ni buscar insumos: se explica qué falta y no se ofrece reintentar.
+ const ingredientsForbidden=isPermissionError(ingredientDefaults.error);
+ // Los insumos salen de GET inventory/products, que solo exige «Ver inventario»: se nombra
+ // aunque un backend anterior responda el texto genérico.
+ const ingredientsPermission=missingPermissionLabel(ingredientDefaults.error)||"Ver inventario";
 
  const save=useMutation({
   mutationFn:saveRecipe,
@@ -179,7 +185,7 @@ export function RecipesPage(){
     <label className="ds-input-shell"><Icon name="search" size={18}/><Input value={q} onChange={e=>setQ(e.target.value)} placeholder="Buscar producto con receta..."/></label>
    </div>
    {recipes.isLoading?<RecipeListSkeleton/>:recipes.isError?
-    <div className="catalog-state error"><Icon name="alert" size={24}/><b>No pudimos cargar las recetas</b><p>{recipes.error.message}</p><Button kind="secondary" icon="refresh" onClick={()=>recipes.refetch()}>Reintentar</Button></div>
+    <div className="catalog-state error"><Icon name="alert" size={24}/><b>{missingPermissionLabel(recipes.error)?`Falta el permiso «${missingPermissionLabel(recipes.error)}»`:isPermissionError(recipes.error)?"Falta un permiso para ver las recetas":"No pudimos cargar las recetas"}</b><p>{recipes.error.message}</p>{!isPermissionError(recipes.error)&&<Button kind="secondary" icon="refresh" onClick={()=>recipes.refetch()}>Reintentar</Button>}</div>
    :!items.length?
     <div className="catalog-state"><Icon name="cookingPot" size={24}/><b>Aún no hay recetas configuradas</b><p>Configura una receta cuando quieras descontar insumos automáticamente al vender un producto preparado.</p>{canManage&&<Button icon="plus" onClick={openNew}>Nueva receta</Button>}</div>
    :<DataTable label="Listado de recetas" containerClassName="hover-scroll"><thead><tr><th>Producto</th><th>Rendimiento</th><th>Insumos</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>{items.map((r,i)=><tr className={i%2?"alternate":""} key={r.id}><td><b>{r.productName}</b></td><td>{r.yieldQuantity}</td><td>{r.itemCount}</td><td><Status active={r.active}>{r.active?"Activa":"Inactiva"}</Status></td><td>{canManage?<div className="table-actions"><RowActionButton action="edit" label={loadingId===r.productId?"Cargando receta":"Editar receta"} disabled={loadingId===r.productId||statusChange.isPending} onClick={()=>void edit(r.productId)}/><RowActionButton action={r.active?"deactivate":"activate"} stateLabel={`Estado de ${r.productName}`} label={r.active?"Desactivar receta":"Activar receta"} disabled={statusChange.isPending||loadingId===r.productId} onClick={()=>r.active?setStatusTarget(r):statusChange.mutate({productId:r.productId,active:true})}/></div>:<span className="recipe-read-only">Solo lectura</span>}</td></tr>)}</tbody></DataTable>}
@@ -237,10 +243,11 @@ export function RecipesPage(){
          <span className="recipe-section-icon"><Icon name="stock" size={18}/></span>
          <span><b>Insumos de la receta</b><small>Indica la cantidad consumida para el rendimiento definido arriba.</small></span>
         </div>
-        <Button type="button" kind="secondary" icon="plus" disabled={save.isPending||draft.items.some(item=>!item.inventoryItemId)} onClick={addIngredient}>Agregar insumo</Button>
+        <Button type="button" kind="secondary" icon="plus" disabled={save.isPending||ingredientsForbidden||draft.items.some(item=>!item.inventoryItemId)} onClick={addIngredient}>Agregar insumo</Button>
        </header>
 
-       {ingredientDefaults.isError&&draft.items.length===0?<div className="recipe-inline-state error"><Icon name="alert" size={18}/><span><b>No pudimos cargar los insumos</b><small>Reintenta la carga o busca un insumo cuando agregues una fila.</small></span><Button kind="secondary" icon="refresh" onClick={()=>ingredientDefaults.refetch()}>Reintentar</Button></div>
+       {ingredientsForbidden?<div className="recipe-inline-state error" role="alert"><Icon name="alert" size={18}/><span><b>{`Falta el permiso «${ingredientsPermission}»`}</b><small>Tu rol no puede ver los insumos. Pide a un administrador que lo agregue a tu rol en Usuarios y roles.</small></span></div>
+       :ingredientDefaults.isError&&draft.items.length===0?<div className="recipe-inline-state error"><Icon name="alert" size={18}/><span><b>No pudimos cargar los insumos</b><small>Reintenta la carga o busca un insumo cuando agregues una fila.</small></span><Button kind="secondary" icon="refresh" onClick={()=>ingredientDefaults.refetch()}>Reintentar</Button></div>
        :draft.items.length===0?<div className={attempted?"recipe-inline-state warning":"recipe-inline-state"}><Icon name="stock" size={20}/><span><b>Agrega al menos un insumo</b><small>La receta necesita un insumo con cantidad válida para poder guardarse.</small></span></div>
        :<div className="recipe-ingredients-grid">
         <div className="recipe-ingredients-head" aria-hidden="true"><span>Insumo</span><span>Cantidad</span><span>Merma %</span><span>Acción</span></div>

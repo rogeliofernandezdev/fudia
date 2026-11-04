@@ -340,5 +340,10 @@ tiene su propia referencia Meta y reconciliación; se guarda avance después de
 cada aceptación. Un reintento continúa en la parte pendiente. Las URLs viven
 solo en Redis privado y caducan; si una entrega se retrasa hasta su caducidad,
 el cliente puede volver a solicitar la carta para obtener enlaces nuevos.
+Las páginas se adjuntan pida la carta el agente de carta o el de pedidos: el
+registro de tools usa una sola instancia de `MenuTools` por turno, compartida con
+`OrderTools`, y la respuesta lee su `media` (antes, en turnos de pedido, las
+páginas quedaban en otra instancia y no se enviaban;
+`tests/test_carta_media_by_intent.py`, 2026-11-04).
 Las garantías comerciales existentes no cambian. No se cambia el perfil global
 del bot ni se envían campañas. Ver `../../docs/09_RESTAURANT_IDENTITY.md`.

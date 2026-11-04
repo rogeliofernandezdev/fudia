@@ -13,6 +13,21 @@ export class ApiClientError extends Error {
   }
 }
 
+/**
+ * El rol no tiene la acción que exige el endpoint (403). Reintentar no lo resuelve:
+ * la pantalla muestra el mensaje del backend, que nombra el permiso que falta y dónde
+ * se agrega, sin botón de reintento.
+ */
+export function isPermissionError(error:unknown):error is ApiClientError{
+  return error instanceof ApiClientError&&(error.status===403||error.code==="forbidden");
+}
+
+/** Etiqueta del permiso que falta, tal como la nombra el mensaje del backend («Ver inventario»); "" si no la trae. */
+export function missingPermissionLabel(error:unknown){
+  if(!isPermissionError(error))return "";
+  return /«([^»]+)»/.exec(error.message)?.[1]??"";
+}
+
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   return authenticatedFetch<T>(`/api/admin/${path}`, init);
 }

@@ -72,6 +72,7 @@ from src.services.start_codes import (
 )
 from src.services.tool_registry import ToolRegistry
 from src.services.tooling import cart_payload
+from src.services.turn_cache import TurnScopedFudia
 from src.services.usage_meter import TokenMeter, current_meter, metering
 from src.services.welcome import welcome_message
 
@@ -374,8 +375,9 @@ class ConciergeService:
             # Tools must mutate the very session the journal checkpoints.
             if journal is not None:
                 session = journal.session
+            # Identical catalog reads within this agent turn reach the backend once.
             registry = ToolRegistry(
-                self.fudia,
+                TurnScopedFudia(self.fudia),
                 session,
                 user_message,
                 journal,

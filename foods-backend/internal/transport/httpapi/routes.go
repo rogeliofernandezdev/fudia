@@ -71,7 +71,8 @@ func (a *API) Routes() *http.ServeMux {
 	m.Handle("PATCH /v1/admin/me", a.auth(http.HandlerFunc(a.updateMyProfile)))
 	m.Handle("GET /v1/admin/subscription", a.auth(a.requirePermission("subscription.read", http.HandlerFunc(a.getOrganizationSubscription))))
 	m.Handle("GET /v1/admin/plans", a.auth(http.HandlerFunc(a.listAvailableSubscriptionPlans)))
-	m.Handle("GET /v1/admin/settings", a.auth(a.requirePermission("organizations.read", http.HandlerFunc(a.getOrgSettings))))
+	// Moneda, decimales e impuesto: todo usuario del panel los necesita para mostrar montos.
+	m.Handle("GET /v1/admin/settings", a.auth(http.HandlerFunc(a.getOrgSettings)))
 	m.Handle("GET /v1/admin/concierge-settings", a.auth(a.requirePermission("organizations.read", http.HandlerFunc(a.getConciergeSettings))))
 	m.Handle("GET /v1/admin/concierge-settings/delivery-fees", a.auth(a.requirePermission("organizations.read", http.HandlerFunc(a.getConciergeDeliveryFees))))
 	m.Handle("PUT /v1/admin/concierge-settings/delivery-fees", a.auth(a.requirePermission("organizations.manage", http.HandlerFunc(a.saveConciergeDeliveryFees))))
@@ -219,6 +220,7 @@ func (a *API) Routes() *http.ServeMux {
 	m.Handle("GET /v1/admin/combos/{id}", a.auth(a.requirePermission("menu.read", http.HandlerFunc(a.getCombo))))
 	m.Handle("GET /v1/admin/order-combos", a.auth(a.requirePermission("orders.manage", http.HandlerFunc(a.listOrderCombos))))
 	m.Handle("GET /v1/admin/order-combos/{id}", a.auth(a.requirePermission("orders.manage", http.HandlerFunc(a.getOrderCombo))))
+	m.Handle("GET /v1/admin/order-combo-details", a.auth(a.requirePermission("orders.manage", http.HandlerFunc(a.getOrderComboDetails))))
 	m.Handle("POST /v1/admin/combos", a.auth(a.requirePermission("menu.manage", http.HandlerFunc(a.saveCombo))))
 	m.Handle("PATCH /v1/admin/combos/{id}", a.auth(a.requirePermission("menu.manage", http.HandlerFunc(a.saveCombo))))
 	m.Handle("PATCH /v1/admin/combos/{id}/status", a.auth(a.requirePermission("menu.manage", http.HandlerFunc(a.updateComboStatus))))

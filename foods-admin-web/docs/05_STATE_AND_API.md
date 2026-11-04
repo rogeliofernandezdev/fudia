@@ -6,7 +6,7 @@ El selector consulta `locations/available`; el backend incluye todos los locales
 activos de la empresa para el rol reservado Administrador de empresa y mantiene
 los otros roles limitados a sus asignaciones. El plan no decide permisos del
 usuario. La caché usa `available-locations` con empresa y usuario, se revalida
-al recuperar el foco y se invalida al guardar/desactivar locales o modificar
+al recuperar el foco si tiene más de un minuto y se invalida al guardar/desactivar locales o modificar
 usuarios/roles. Cambiar de local conserva el flujo de sesión y limpia los datos
 remotos antes de cargar el contexto autorizado del destino.
 
@@ -132,8 +132,10 @@ Errores de opciones o equipo bloquean la asignación y ofrecen Reintentar.
 Locales y Mi perfil comparten la lectura de suscripción, con caché por empresa
 y usuario y refresco al recuperar foco. «Nuevo local» consulta `maxLocations`
 y el uso activo devueltos por el API; no deduce capacidad por nombre de plan,
-filas de una página o total de locales inactivos. Carga/error/refresco bloquean
-el alta y el error ofrece reintento. Crear, editar y desactivar invalidan el uso.
+filas de una página o total de locales inactivos. La carga, el error y la recarga
+que sigue a un cambio (alta, edición o desactivación invalidan la suscripción)
+bloquean el alta; el refresco periódico de 30 s ya no deshabilita los botones un
+instante (`isInvalidated` de la consulta). El error ofrece reintento. Crear, editar y desactivar invalidan el uso.
 El backend conserva la validación transaccional definitiva del límite.
 
 Usuarios reutiliza `useSubscriptionCapacity`, igual que Locales: máximo y uso
@@ -153,6 +155,27 @@ se cargan con `next/dynamic` cuando la acción realmente se abre.
 
 El prefetch de datos se incorpora solo en rutas frecuentes y cuando la medición
 demuestre que reduce latencia sin duplicar tráfico.
+
+Refrescos y cargas revisados (2026-11-04):
+
+- Comanda: los menús elegidos se piden juntos con `GET order-combo-details?ids=`
+  (hasta 20 por petición; si uno falla, falla el lote como antes `Promise.all`).
+  Antes era una petición por menú cada 10 s.
+- Catálogo de la comanda: con una sola página cargada se refresca cada 10 s como
+  antes; con varias, TanStack las volvería a pedir todas, así que solo se refresca la
+  disponibilidad de lo cargado (`order-catalog-availability`, lotes de 100) y la carta
+  completa al recuperar foco.
+- Cocina refresca cada 10 s mientras la pantalla está visible; una pestaña oculta o
+  minimizada deja de consultar y se actualiza al volver.
+- Al recuperar foco, la sesión y Mi perfil se revalidan siempre (decisión de
+  seguridad); avisos y locales disponibles solo si están vencidos.
+- `LocationMap` (Mapbox y su CSS), `TimezoneSelect` y el reparto de propinas de Caja
+  (`react-select`) se cargan con `next/dynamic` al mostrarse, no con la página. En el
+  build de producción, la carga inicial (sin comprimir) bajó: Caja 471 → 381 KB de
+  JS; Clientes 221 → 169 KB de CSS; Organización 454 → 370 KB de JS y 224 → 171 KB
+  de CSS. Ninguna de esas rutas trae ya `react-select` ni el CSS de Mapbox al abrir.
+- Se mantienen a propósito: el perfil del restaurante consulta cada 60 s para
+  renovar URLs firmadas antes de que expiren, y Productos cada 10 s con el listado visible.
 
 ## Fechas de venta en Menús y combos
 
@@ -192,8 +215,10 @@ La validación compartida acepta vacío (consume todo lo disponible) o un entero
 de 1 a lo disponible: con 10 registrados, 20 se rechaza junto al campo
 («Escribe un entero de 1 a 10 o déjalo vacío.») y el backend lo vuelve a
 validar al guardar (2026-11-03, pedido del usuario). La caché incluye
-empresa/local; se consulta al abrir la hoja y se refresca cada diez segundos
-mientras permanece abierta. Editar un menú conserva los topes persistidos.
+empresa/local; la carta completa se consulta al abrir la hoja y, mientras permanece
+abierta, cada diez segundos se refrescan solo las opciones elegidas
+(`GET products?productIds=`, lotes de 100, clave `combo-picker-chosen`), con la misma
+cantidad que el listado. Antes se descargaba toda la carta cada diez segundos. Editar un menú conserva los topes persistidos.
 Guardar no realiza un movimiento de stock.
 
 ## Estado de productos
@@ -479,7 +504,7 @@ propia consulta (`useNotices`) y el shell solo lo monta en la barra superior,
 antes del selector de local, y le pasa `canOpen` para saber qué pantallas puede
 abrir el usuario. La consulta `GET /api/admin/notices` (BFF → `/v1/admin/notices`)
 usa la clave `["staff-notices", empresa, local, usuario]`, se refresca cada 15 s,
-al recuperar foco y al abrir la campana, y solo se activa con `tables.read` o
+al recuperar foco si la respuesta tiene más de 10 s y siempre al abrir la campana, y solo se activa con `tables.read` o
 `cash.manage`; sin esos permisos la campana no se muestra. El backend decide qué
 avisos ve cada rol y devuelve los textos redactados: el panel no arma mensajes
 ni filtra por rol.

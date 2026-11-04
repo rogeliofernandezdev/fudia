@@ -58,29 +58,20 @@ func (a *Orders) Floor(ctx context.Context, s scope) ([]domain.FloorTable, error
 }
 func (a *Orders) Get(ctx context.Context, s scope, id string) (domain.Order, error) {
 	var result domain.Order
-	o, err := a.repo.Record(ctx, s, id)
+	o, paid, err := a.repo.Detail(ctx, s, id)
 	if errors.Is(err, ErrNotFound) {
 		return result, orderFailure(apperror.NotFound, "order_not_found", "El pedido no existe.")
 	}
 	if err != nil {
 		return result, orderFailure(apperror.Unavailable, "order_unavailable", "No pudimos cargar el pedido.")
 	}
-	o.ServiceItems, err = a.repo.ServiceItems(ctx, s, o.ID)
-	if err != nil {
-		return result, orderFailure(apperror.Unavailable, "order_unavailable", "No pudimos consultar las entregas.")
-	}
-	o.Items, err = a.repo.Items(ctx, s, o.ID, "")
-	if err != nil {
-		return result, orderFailure(apperror.Unavailable, "order_unavailable", "No pudimos cargar los productos del pedido.")
-	}
 	for _, it := range o.Items {
 		if q, parseErr := strconv.ParseFloat(it.Qty, 64); parseErr == nil {
 			o.ItemCount += int(q)
 		}
 	}
-	if err = a.paymentSummary(ctx, s, &o); err != nil {
+	if err = domain.ApplyPaymentSummary(&o, paid); err != nil {
 		return result, orderFailure(apperror.Unavailable, "order_unavailable", "No pudimos cargar el estado de cobro del pedido.")
 	}
 	return o, nil
-
 }

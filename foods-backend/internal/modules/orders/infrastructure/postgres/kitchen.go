@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/foods-platform/foods-backend/internal/modules/orders/application"
 	"github.com/foods-platform/foods-backend/internal/modules/orders/domain"
+	"github.com/jackc/pgx/v5"
 )
 
 func (r *Orders) LegacyKitchenOrders(ctx context.Context, s scope, channel, destination string) ([]domain.Order, error) {
@@ -133,9 +134,7 @@ func (r *Orders) ServiceTickets(ctx context.Context, s scope, channel, destinati
 	}
 	return tickets, rows.Err()
 }
-func (r *Orders) TargetMinutes(ctx context.Context, s scope, orderID, roundID string) (*int, error) {
-	var target int
-	err := r.db(ctx).QueryRow(ctx, `
+const targetMinutesSQL = `
 		SELECT COALESCE(MAX(prep_minutes),0)
 		FROM (
 			SELECT p.prep_minutes
@@ -155,14 +154,49 @@ func (r *Orders) TargetMinutes(ctx context.Context, s scope, orderID, roundID st
 			WHERE oi.order_id=$1 AND oi.organization_id=$2
 			  AND ($3='' OR oi.kitchen_round_id::text=$3)
 			  AND p.prep_minutes IS NOT NULL AND p.prep_minutes>0
-		) preparation_times`, orderID, s.OrganizationID, roundID).Scan(&target)
-	if err != nil {
+		) preparation_times`
+
+func targetMinutes(row pgx.Row) (*int, error) {
+	var target int
+	if err := row.Scan(&target); err != nil {
 		return nil, err
 	}
 	if target <= 0 {
 		return nil, nil
 	}
 	return &target, nil
+}
+
+func (r *Orders) TargetMinutes(ctx context.Context, s scope, orderID, roundID string) (*int, error) {
+	return targetMinutes(r.db(ctx).QueryRow(ctx, targetMinutesSQL, orderID, s.OrganizationID, roundID))
+}
+
+// TicketContents lee líneas y tiempo objetivo de varias comandas en una sola ida y
+// vuelta; antes eran cuatro consultas por comanda en cada refresco de Cocina.
+func (r *Orders) TicketContents(ctx context.Context, s scope, refs []domain.TicketRef) ([]domain.TicketContent, error) {
+	out := make([]domain.TicketContent, len(refs))
+	if len(refs) == 0 {
+		return out, nil
+	}
+	batch := &pgx.Batch{}
+	for _, ref := range refs {
+		queueItems(batch, s, ref.OrderID, ref.RoundID)
+		batch.Queue(targetMinutesSQL, ref.OrderID, s.OrganizationID, ref.RoundID)
+	}
+	results := r.db(ctx).SendBatch(ctx, batch)
+	var err error
+	for i := range refs {
+		if out[i].Items, err = readItems(results); err != nil {
+			break
+		}
+		if out[i].TargetMinutes, err = targetMinutes(results.QueryRow()); err != nil {
+			break
+		}
+	}
+	if err = closeBatch(results, err); err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 func (r *Orders) LockStationOrder(ctx context.Context, s scope, id string, destination string) (string, error) {
 	var orderID string

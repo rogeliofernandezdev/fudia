@@ -2,12 +2,17 @@
 import {Dialog} from "@/design-system/dialog";
 import {cashShiftAttribution,cashShiftTeamName} from "../domain/shift-attribution";
 import {useRef,useState} from "react";
-import {TipClosingSection,type TipWorkspace} from "../../tips";
+import dynamic from "next/dynamic";
+import type {TipWorkspace} from "../../tips";
 import {CashReportContent} from "./cash-report-content";
 import {useForm,useWatch} from "react-hook-form";
-import {Button,FormField,FormSection,Icon,Input,Status,Tabs,Textarea,ModalHeader,ModalFooter,ModalItemList,ModalWorkspace,DetailHero,DetailContact,DetailFacts,DetailTimeline} from "@/design-system";
+import {Button,FormField,FormSection,Icon,Input,Skeleton,Status,Tabs,Textarea,ModalHeader,ModalFooter,ModalItemList,ModalWorkspace,DetailHero,DetailContact,DetailFacts,DetailTimeline} from "@/design-system";
 import {cashMovementResolver,cashRegisterResolver,closeCashShiftResolver,openCashShiftResolver} from "../domain/cash-schema";
 import type {CashMovementDraft,CashMovementType,CashRegister,CashRegisterDraft,CashShift,CashShiftReport,CloseCashShiftDraft,OpenCashShiftDraft} from "../domain/types";
+
+// El reparto de propinas usa react-select: se descarga al cerrar un turno con propinas,
+// no con la página de Caja.
+const TipClosingSection=dynamic(()=>import("../../tips").then(module=>module.TipClosingSection),{ssr:false,loading:()=><Skeleton height="var(--size-48)"/>});
 
 export function CashRegisterDialog({initial,busy,close,save}:{initial?:CashRegister|null;busy:boolean;close:()=>void;save:(draft:CashRegisterDraft)=>void}){
   const editing=Boolean(initial);

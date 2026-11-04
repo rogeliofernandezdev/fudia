@@ -816,6 +816,7 @@ paths:
   /v1/admin/settings:
     get:
       operationId: getOrganizationSettings
+      description: "Moneda, decimales e impuesto que todo usuario del panel necesita para mostrar montos: basta una sesión válida, sin organizations.read. Cambiarlos (PATCH) exige organizations.manage."
       security: [{ sessionCookie: [] }]
       responses: { "200": { description: Configuración monetaria y fiscal, content: { application/json: { schema: { $ref: "#/components/schemas/OrganizationSettings" } } } }, "401": { $ref: "#/components/responses/Unauthorized" }, "403": { $ref: "#/components/responses/Forbidden" } }
     patch:
@@ -1051,9 +1052,11 @@ paths:
         - { in: query, name: q, schema: { type: string } }
         - { in: query, name: categoryId, schema: { type: string, format: uuid } }
         - { in: query, name: status, schema: { type: string, enum: [active, inactive] } }
+        - { in: query, name: productIds, style: form, explode: false, description: "Acota el listado a un lote de hasta 100 UUID; el editor de menús lo usa para refrescar solo las opciones elegidas.", schema: { type: array, minItems: 1, maxItems: 100, items: { type: string, format: uuid } } }
         - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
         - { in: query, name: pageSize, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
       responses:
+        "400": { description: productIds inválido }
         "200": { description: Productos y cantidad disponible del local actual, content: { application/json: { schema: { type: object, required: [items, total], properties: { serviceDestinationOptions: { type: array, items: { $ref: "#/components/schemas/ServiceDestinationOption" } }, items: { type: array, items: { $ref: "#/components/schemas/ProductListItem" } }, total: { type: integer } } } } } }
         "401": { $ref: "#/components/responses/Unauthorized" }
     post:
@@ -1138,6 +1141,20 @@ paths:
         "200": { description: Menú para configurar una comanda, content: { application/json: { schema: { $ref: "#/components/schemas/OrderComboDetail" } } } }
         "404": { description: Menú no encontrado }
         "409": { description: Menú no disponible }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/admin/order-combo-details:
+    get:
+      operationId: getOrderComboDetails
+      summary: Varios menús de la comanda en una petición, con las mismas reglas que getOrderCombo
+      description: La comanda refresca cada 10 s los menús elegidos. Si alguno no existe o no está disponible, responde ese mismo error para todo el lote.
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: query, name: ids, required: true, style: form, explode: false, description: "Entre 1 y 20 UUID de menús distintos, en el orden en que se devuelven.", schema: { type: array, minItems: 1, maxItems: 20, uniqueItems: true, items: { type: string, format: uuid } } }
+      responses:
+        "200": { description: Menús en el orden pedido, content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/OrderComboDetail" } } } } } } }
+        "400": { description: Lista de menús inválida }
+        "404": { description: Algún menú no existe }
+        "409": { description: Algún menú no está disponible }
         "403": { $ref: "#/components/responses/Forbidden" }
   /v1/admin/product-availability:
     get:
@@ -2206,6 +2223,7 @@ paths:
     get: { operationId: listRoles, security: [{ sessionCookie: [] }], responses: { "200": { description: Roles con accesos y permisos efectivos de los módulos contratados y activos. No modifica las asignaciones almacenadas. }, "503": { description: No se pudo consultar el alcance del plan } } }
     post:
       operationId: createRole
+      description: "Agrega a permissions las acciones que exigen los accesos y acciones elegidos (MenuRequirements y PermissionRequirements), si el plan las incluye."
       security: [{ sessionCookie: [] }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/RoleInput" } } } }
       responses: { "201": { description: Rol personalizado creado }, "400": { description: Accesos o permisos no disponibles para el plan de la empresa } }
@@ -2222,7 +2240,7 @@ paths:
   /v1/admin/permission-catalog:
     get:
       operationId: getPermissionCatalog
-      description: "Empresa: devuelve únicamente accesos y acciones de módulos contratados, activos y disponibles; los grupos vacíos se omiten. Plataforma mantiene el catálogo completo. No concede permisos ni habilita módulos."
+      description: "Empresa: devuelve únicamente accesos y acciones de módulos contratados, activos y disponibles; los grupos vacíos se omiten. Plataforma mantiene el catálogo completo. No concede permisos ni habilita módulos. requirements.menus y requirements.permissions indican, solo para opciones del plan, las acciones que exige cada pantalla o acción (p. ej. recetas → menu.read, inventory.read); guardar un rol las agrega automáticamente."
       security: [{ sessionCookie: [] }]
       responses: { "200": { description: Catálogo efectivo de accesos y permisos }, "503": { description: No se pudo consultar el alcance del plan } }
   /v1/admin/users:
@@ -2249,7 +2267,7 @@ components:
   responses:
     BadRequest: { description: Solicitud inválida, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
     Unauthorized: { description: Sesión inválida, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
-    Forbidden: { description: Permiso insuficiente, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+    Forbidden: { description: "Permiso insuficiente. code=forbidden; message nombra la acción que falta con su etiqueta del editor de roles y dónde agregarla.", content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
   schemas:
     ConciergeCustomerNotice:
       type: object

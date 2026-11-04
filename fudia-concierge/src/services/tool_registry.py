@@ -66,9 +66,10 @@ class ToolRegistry:
         context = ToolContext(fudia, session, user_message, journal)
         self.journal = context.journal
         self.menu = MenuTools(context)
-        self.order = OrderTools(context)
-        self.service = ServiceTools(context)
         self.delivery = DeliveryTools(context)
+        # One MenuTools per turn: the reply reads `self.menu.media` for any intent.
+        self.order = OrderTools(context, self.menu, self.delivery)
+        self.service = ServiceTools(context)
 
     async def execute_for(
         self,

@@ -2423,6 +2423,12 @@ Formulario de cliente (`ModalForm` + `ModalBody`, un solo scroll con barra fina)
 - `active` representa si un módulo está habilitado para una empresa (por plan si es **Disponible**, como piloto si está **En desarrollo**); no representa su estado de desarrollo.
 - El Administrador de plataforma ve todos los módulos en navegación y catálogo, incluso si están inactivos o no terminados.
 - Los usuarios de empresa solo ven módulos disponibles, incluidos en su plan, activos para su organización y permitidos por su rol. Emprende incluye «Menús y combos» y «Fudia Concierge»; «Inventario», «Compras», «Kárdex», «Recetas», «Reservas» y «Costos y gastos» aparecen desde Impulso. No hay pantallas ni controles específicos de un plan: todo depende de los módulos efectivos.
+- Editor de roles (2026-11-04): en «Acciones», las que exigen las pantallas o
+  acciones marcadas aparecen marcadas, sin poder quitarse, con una línea 12 px
+  `ink-500` «Necesario para Recetas, Administrar recetas» y un check `primary-300`
+  (`requiredPermissions`, datos `requirements` de `permission-catalog`). Se guardan
+  junto a las marcadas; el backend las agrega igual. Evita roles con pantallas que
+  fallan por falta de una acción (p. ej. Recetas sin «Ver inventario»).
 - Usuarios y roles muestra únicamente accesos y acciones de módulos efectivos del plan. Los contadores y la vista previa cuentan esos mismos elementos; se omiten grupos vacíos. La empresa no recibe el catálogo comercial completo de Plataforma.
 - **Piloto** (decisión del 2026-11-01): el Administrador de plataforma puede activar un módulo **En desarrollo** para una sola empresa desde Módulos, con confirmación «Activar piloto» (`ConfirmDialog` tono success). Ningún plan lo incluye, los cambios de plan no lo apagan y la tarjeta muestra «Piloto activo en esta empresa.». Mientras está activo, la empresa ve sus pantallas como cualquier módulo efectivo; desactivarlo pide la confirmación habitual.
 - Un módulo **Planificado** nunca puede activarse para una empresa; el backend rechaza cualquier intento (`module_not_ready`) aunque el frontend falle, y lo ignora aunque haya datos antiguos activos.

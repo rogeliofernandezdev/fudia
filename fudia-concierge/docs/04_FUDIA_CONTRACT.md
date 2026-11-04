@@ -13,6 +13,15 @@ Cada producto trae también `remaining`: porciones o unidades que quedan hoy en 
 Al agregar al carrito (producto suelto, con modificadores o combo y cada opción elegida), Concierge suma lo que ya está en el carrito y, si se pasa, responde `insufficient_stock` con `available` e `inCart` sin agregar nada; el agente dice cuántos quedan y pregunta si agrega esa cantidad.
 Es una validación temprana: al confirmar, foods-backend vuelve a validar con bloqueo y responde `insufficient_stock` o `insufficient_portions` si otra mesa pidió antes.
 
+Dentro de un mismo turno del agente, `TurnScopedFudia` (`src/services/turn_cache.py`) reutiliza
+las lecturas idénticas de carta: `search_menu`, `get_product`, `get_combo`, `get_modifiers` y
+`get_delivery_options`, con la misma clave de método y argumentos. Las llamadas concurrentes
+iguales comparten una petición, un fallo nunca se reutiliza y cualquier escritura (pedido,
+cuenta, cotización, derivación, consentimiento) descarta el memo. Estado del pedido, derivación,
+cliente y mesa siempre consultan al backend, y el memo muere al terminar el turno: no hay caché
+entre mensajes. Un turno de combo (buscar, ver opciones y agregar dos veces) bajó de 8 a 5 GET
+(2026-11-04).
+
 ## Conversaciones y consumo
 
 POST /v1/integrations/concierge/{token}/conversations

@@ -47,7 +47,9 @@ func (h *Administration) GetPermissionCatalog(w http.ResponseWriter, r *http.Req
 		shared.Fail(w, 503, "role_catalog_unavailable", "No pudimos consultar los accesos del plan de la empresa.")
 		return
 	}
-	shared.WriteJSON(w, 200, map[string]any{"groups": out.Permissions, "menuGroups": out.Menus})
+	menus, permissions := out.RequirementsFor()
+	shared.WriteJSON(w, 200, map[string]any{"groups": out.Permissions, "menuGroups": out.Menus,
+		"requirements": map[string]any{"menus": menus, "permissions": permissions}})
 }
 func (h *Administration) ListUsers(w http.ResponseWriter, r *http.Request) {
 	page, size := shared.PageParams(r)

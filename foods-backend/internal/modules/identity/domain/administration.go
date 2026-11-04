@@ -46,6 +46,20 @@ var PermissionCatalog = []map[string]any{
 	{"group": "Abastecimiento y análisis", "items": []map[string]string{{"value": "inventory.read", "label": "Ver inventario"}, {"value": "inventory.manage", "label": "Administrar inventario"}, {"value": "inventory.transfer", "label": "Transferir stock entre locales"}, {"value": "purchases.read", "label": "Ver compras"}, {"value": "purchases.manage", "label": "Crear y administrar compras"}, {"value": "purchases.approve", "label": "Aprobar órdenes de compra"}, {"value": "purchases.receive", "label": "Recibir compras"}, {"value": "expenses.read", "label": "Ver gastos"}, {"value": "expenses.manage", "label": "Registrar y administrar gastos"}, {"value": "expenses.void", "label": "Anular gastos"}, {"value": "reports.read", "label": "Ver reportes"}, {"value": "audit.read", "label": "Ver auditoría"}}},
 	{"group": "Delivery", "items": []map[string]string{{"value": "delivery.read", "label": "Ver entregas asignadas"}, {"value": "delivery.manage", "label": "Actualizar entregas"}}},
 }
+// PermissionLabel devuelve la etiqueta de una acción en el catálogo de roles, o ""
+// si no está en el catálogo.
+func PermissionLabel(permission string) string {
+	for _, group := range PermissionCatalog {
+		items, _ := group["items"].([]map[string]string)
+		for _, item := range items {
+			if item["value"] == permission {
+				return item["label"]
+			}
+		}
+	}
+	return ""
+}
+
 var MenuAccessCatalog = []map[string]any{
 	{"group": "Control", "items": []map[string]string{{"value": "dashboard", "label": "Reportes"}}},
 	{"group": "Operación", "items": []map[string]string{{"value": "pos", "label": "Punto de venta"}, {"value": "pedidos", "label": "Pedidos"}, {"value": "cocina", "label": "Cocina"}, {"value": "mesas", "label": "Mesas y zonas"}, {"value": "caja", "label": "Caja y turnos"}, {"value": "reservas", "label": "Reservas"}, {"value": "call_center", "label": "Call center"}, {"value": "carta_qr", "label": "Carta digital QR"}, {"value": "kiosco", "label": "Kiosco de autoservicio"}}},

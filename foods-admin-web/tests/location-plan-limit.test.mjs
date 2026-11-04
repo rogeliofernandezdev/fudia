@@ -13,13 +13,14 @@ function compile(path,resolve){
 }
 function nodes(tree,result=[]){if(Array.isArray(tree)){tree.forEach(node=>nodes(node,result));return result}if(tree&&typeof tree==="object"){result.push(tree);nodes(tree.props?.children,result);nodes(tree.props?.action,result)}return result}
 const local={id:"local",name:"La Panchita",country:"PE",currency:"PEN",active:true};
-function mount({max=1,usage=1,items=[local],pending=false,error=false,fetching=false,manage=true,readPlan=true,hasData=true}={}){
+function mount({max=1,usage=1,items=[local],pending=false,error=false,fetching=false,revalidating=false,manage=true,readPlan=true,hasData=true}={}){
  const mutations=[],queries=[],invalidations=[];let cursor=0,retries=0;
  const state=[];
  const subscription={data:hasData?{plan:{maxLocations:max},usage:{locations:usage}}:undefined,isLoading:pending,isError:error,isFetching:fetching,refetch:()=>{retries++}};
  const capacity=compile("modules/identity/application/use-subscription-capacity.ts",name=>{
   if(name==="@/providers/session-context")return {useSession:()=>({can:()=>readPlan})};
   if(name==="./use-organization-subscription")return {useOrganizationSubscription:()=>subscription};
+  if(name==="@tanstack/react-query")return {useQueryClient:()=>({getQueryState:()=>({isInvalidated:revalidating})})};
   return require(name);
  });
  const {LocationsManager}=compile("modules/organizations/presentation/organization-admin.tsx",name=>{
@@ -83,7 +84,7 @@ test("el límite usa el total activo del API, no filas de la página ni locales 
 });
 
 test("carga, refresco, error y falta de permiso no habilitan creación sin validar capacidad",()=>{
- for(const options of [{pending:true,hasData:false},{fetching:true,usage:0},{error:true,usage:0},{hasData:false},{readPlan:false}]){
+ for(const options of [{pending:true,hasData:false},{fetching:true,revalidating:true,usage:0},{error:true,usage:0},{hasData:false},{readPlan:false}]){
   const ui=mount(options),initial=ui.render();
   assert.equal(initial.button.props.disabled,true);
   initial.button.props.onClick();assert.equal(ui.render().view.some(node=>node.type?.name==="LocationDialog"),false);
@@ -92,6 +93,8 @@ test("carga, refresco, error y falta de permiso no habilitan creación sin valid
  assert.match(view.header.props.description,/No pudimos comprobar/);
  view.view.find(node=>node.type==="Button"&&node.props.children==="Reintentar").props.onClick();assert.equal(ui.retries,1);
  assert.equal(mount({manage:false}).render().button,undefined);
+ // El refresco periódico (sin un cambio previo) no deshabilita el alta un instante.
+ assert.equal(mount({fetching:true,usage:0}).render().button.props.disabled,false);
  assert.ok(mount({pending:true,hasData:false}).render().view.some(node=>node.type==="TableSkeleton"));
 });
 

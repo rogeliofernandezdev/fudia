@@ -100,6 +100,8 @@ type OrderRepository interface {
 	KitchenRounds(context.Context, scope, string, string) ([]domain.KitchenTicket, error)
 	ServiceTickets(context.Context, scope, string, string) ([]domain.KitchenTicket, error)
 	TargetMinutes(context.Context, scope, string, string) (*int, error)
+	// TicketContents devuelve, en el mismo orden, líneas y tiempo objetivo de cada comanda.
+	TicketContents(ctx context.Context, s scope, refs []domain.TicketRef) ([]domain.TicketContent, error)
 	LockStationOrder(ctx context.Context, s scope, id string, destination string) (string, error)
 	StationStatus(ctx context.Context, s scope, orderID string, id string, destination string) (string, error)
 	UpdateStationItems(ctx context.Context, s scope, orderID string, id string, destination string, status string, current string) (int64, error)
@@ -142,6 +144,8 @@ type OrderRepository interface {
 	Items(ctx context.Context, s scope, orderID, roundID string) ([]domain.OrderItem, error)
 	ServiceItems(ctx context.Context, s scope, orderID string) ([]domain.OrderServiceItem, error)
 	NetPaid(ctx context.Context, s scope, orderID string) (float64, error)
+	// Detail devuelve el pedido con entregas y líneas, y lo cobrado neto, en una ida y vuelta.
+	Detail(ctx context.Context, s scope, id string) (domain.Order, float64, error)
 	QuantityUsage(ctx context.Context, s scope, orderID string) (map[string]float64, error)
 	InsertItems(ctx context.Context, s scope, orderID, roundID string, items []domain.PreparedOrderItem) error
 	SyncServiceStatus(ctx context.Context, s scope, id string) error

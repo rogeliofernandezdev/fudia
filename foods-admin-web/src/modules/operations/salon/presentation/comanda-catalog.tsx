@@ -1,13 +1,13 @@
 "use client";
 /* eslint-disable @next/next/no-img-element -- Menu images come from tenant-configured product URLs. */
 
-import {useEffect,useRef,useState,type KeyboardEvent,type RefObject} from "react";
+import {useEffect,useMemo,useRef,useState,type KeyboardEvent,type RefObject} from "react";
 import {useInfiniteQuery,useQuery} from "@tanstack/react-query";
 import {Button,EmptyState,ErrorState,Icon,Modal,ModalBody,ModalFooter,SearchField,Skeleton} from "@/design-system";
 import {Tooltip} from "@/design-system/tooltip";
 import {useMoney} from "@/providers";
 import type {CatalogProduct,ComboGroup,ComboOption,ComboSelection,ComboSummary,ConfiguredCombo} from "../domain/catalog-types";
-import {getOrderCombo,listOrderCategories,listOrderCombos,listSalonProducts} from "../infrastructure/catalog-api";
+import {getOrderCombo,listOrderCategories,listOrderCombos,listSalonProducts,listSelectedProductAvailability} from "../infrastructure/catalog-api";
 
 export type {CatalogProduct,ComboSelection,ConfiguredCombo} from "../domain/catalog-types";
 
@@ -59,7 +59,10 @@ export function ComandaCatalog({qtyByProduct,reservedByProduct={},availabilityBy
     getNextPageParam:(last,all)=>all.length*pageSize<last.total?all.length+1:undefined,
     enabled:!combos,
     staleTime:10000,
-    refetchInterval:10000,
+    // Con una sola página, refrescarla cuesta una petición. Con más páginas, TanStack
+    // volvería a pedirlas todas cada 10 s: se refresca solo la disponibilidad de lo
+    // cargado (loadedAvailability, lotes de 100) y la carta completa al recuperar foco.
+    refetchInterval:query=>(query.state.data?.pages.length??1)>1?false:10000,
     refetchIntervalInBackground:false,
     refetchOnWindowFocus:"always",
   });
@@ -72,12 +75,30 @@ export function ComandaCatalog({qtyByProduct,reservedByProduct={},availabilityBy
     staleTime:30000,
   });
   const active=combos?comboCatalog:salonCatalog;
-  const salonItems=salonCatalog.data?.pages.flatMap(page=>page.items)??[];
   const loadedPages=salonCatalog.data?.pages;
+  const loadedIds=loadedPages&&loadedPages.length>1?loadedPages.flatMap(page=>page.items.map(item=>item.id)):[];
+  const loadedAvailability=useQuery({
+    queryKey:["order-catalog-availability",cat,q,loadedIds],
+    queryFn:()=>listSelectedProductAvailability(loadedIds),
+    enabled:!combos&&loadedIds.length>0,
+    refetchInterval:10000,
+    refetchIntervalInBackground:false,
+    placeholderData:previous=>previous,
+  });
+  const fresh=loadedAvailability.data;
+  const freshAt=loadedAvailability.dataUpdatedAt;
+  const catalogAt=salonCatalog.dataUpdatedAt;
+  // Una respuesta anterior a la última carga de la carta no la sobrescribe.
+  const salonPages=useMemo(()=>{
+    if(!loadedPages||!fresh||freshAt<catalogAt)return loadedPages;
+    const byId=new Map(fresh.items.map(item=>[item.id,item]));
+    return loadedPages.map(page=>({...page,items:page.items.map(item=>byId.get(item.id)??item)}));
+  },[loadedPages,fresh,freshAt,catalogAt]);
+  const salonItems=salonPages?.flatMap(page=>page.items)??[];
   // Solo las páginas cargadas disparan el aviso; el callback más reciente se lee desde un ref.
   const availabilityRef=useRef(onAvailability);
   useEffect(()=>{availabilityRef.current=onAvailability});
-  useEffect(()=>{if(loadedPages)availabilityRef.current?.(loadedPages.flatMap(page=>page.items))},[loadedPages]);
+  useEffect(()=>{if(salonPages)availabilityRef.current?.(salonPages.flatMap(page=>page.items))},[salonPages]);
   const comboItems=comboCatalog.data?.pages.flatMap(page=>page.items)??[];
 
   useEffect(()=>{

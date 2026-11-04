@@ -1,8 +1,14 @@
 "use client";
 
 import {useMemo,useId,type Ref} from "react";
-import SearchSelect,{type SelectInstance,type StylesConfig} from "react-select";
+import dynamic from "next/dynamic";
+import type {SelectInstance,StylesConfig} from "react-select";
 import {timezoneOptions,type TimezoneOption} from "@/shared/format/timezones";
+import {Skeleton} from "./skeleton";
+
+// react-select se descarga cuando un formulario muestra el selector (alta de local u
+// onboarding), no con Organización o Plataforma; mientras tanto ocupa el alto del control.
+const SearchSelect=dynamic(()=>import("react-select"),{ssr:false,loading:()=><Skeleton height="var(--control-height)"/>}) as unknown as typeof import("react-select").default;
 
 const styles:StylesConfig<TimezoneOption,false>={
   control:(base,state)=>({...base,minHeight:"var(--control-height)",height:"var(--control-height)",borderRadius:"var(--radius-control)",borderColor:state.selectProps["aria-invalid"]?"var(--danger)":state.isFocused?"var(--primary-600)":"var(--line)",boxShadow:state.isFocused?"0 0 0 var(--stroke-2) var(--primary-100)":"none",backgroundColor:"var(--surface)",fontSize:"var(--font-size-control)","&:hover":{borderColor:"var(--primary-600)"}}),

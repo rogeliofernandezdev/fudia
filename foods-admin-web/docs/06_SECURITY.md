@@ -34,6 +34,12 @@ La interfaz oculta el cierre a otros usuarios y la API lo rechaza aunque sean
 administradores. Los informes históricos conservan sus autores originales.
 
 La UI representa permisos, pero backend autoriza. No guardar tokens en localStorage.
+Un 403 (`isPermissionError` en `shared/api/client.ts`) no se presenta como fallo
+temporal: la pantalla muestra el mensaje del backend, que nombra el permiso que falta
+y dónde agregarlo, sin «Reintentar». Recetas lo aplica al listado y a los insumos:
+el título de insumos nombra siempre «Ver inventario» (único permiso que exige su
+lista), aunque el backend responda el texto genérico, y sin ese permiso tampoco
+ofrece «Agregar insumo».
 Proteger mutaciones contra CSRF y pedir motivo para acciones sensibles.
 La creación, edición y activación de cajas usa `cash.registers.manage`.
 `cash.manage` solo habilita operar turnos; no muestra «Registrar caja», edición

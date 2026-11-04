@@ -94,6 +94,29 @@ Los roles mantienen dos dimensiones independientes:
 - `menu_access`: opciones y rutas administrativas que el usuario puede abrir.
 - `permissions`: acciones de lectura o modificación autorizadas dentro de esas rutas.
 
+Las dos dimensiones son independientes, pero una pantalla o acción no sirve sin
+las acciones que su API exige. `identity/domain/role_requirements.go` define esos
+requisitos (`MenuRequirements`: p. ej. Recetas → `menu.read` e `inventory.read`;
+Usuarios → `users.read` y `organizations.read`; `PermissionRequirements`: p. ej.
+`X.manage` → `X.read`, `orders.manage` → `menu.read`, `cash.manage` →
+`orders.read`). `SaveRole` los agrega de forma transitiva al guardar, solo si el
+plan los incluye; `permission-catalog` los publica filtrados por plan para que el
+editor los muestre bloqueados con su motivo, y la migración 000108 completó los
+roles personalizados existentes. Los roles predefinidos ya los cumplen (prueba
+`TestDefaultRolesSatisfyRequirements`). Solo se agregan lecturas o acciones que la
+pantalla ya necesitaba: no amplían lo que el rol puede modificar.
+
+`GET /v1/admin/settings` (moneda, decimales e impuesto) solo exige sesión: todo
+usuario del panel los necesita para mostrar montos. Antes exigía
+`organizations.read` y los roles operativos recibían 403 con valores por defecto.
+
+Un 403 por permiso conserva el código `forbidden` y nombra la acción que falta con
+la etiqueta del editor de roles: «Tu rol no incluye el permiso «Ver inventario».
+Pide a un administrador que lo agregue en Usuarios y roles.» (`forbidden` en
+`identity/application/session.go`, `PermissionLabel` en el catálogo). Una acción que
+no está en el catálogo conserva el texto general. El mensaje no revela datos: solo
+la etiqueta pública de la acción que el usuario intentó usar.
+
 El catálogo presenta `menu.read` como «Ver carta y productos» y `menu.manage`
 como «Administrar carta y productos», coherentes con el módulo. El cambio de
 etiquetas no modifica códigos, asignaciones ni validaciones de autorización.

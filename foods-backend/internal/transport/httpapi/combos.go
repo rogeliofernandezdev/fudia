@@ -14,6 +14,9 @@ func (a *API) getCombo(w http.ResponseWriter, r *http.Request) { a.handlers.Menu
 func (a *API) getOrderCombo(w http.ResponseWriter, r *http.Request) {
 	a.handlers.MenuCatalog.GetOrderCombo(w, r)
 }
+func (a *API) getOrderComboDetails(w http.ResponseWriter, r *http.Request) {
+	a.handlers.MenuCatalog.GetOrderComboDetails(w, r)
+}
 func (a *API) saveCombo(w http.ResponseWriter, r *http.Request) {
 	a.handlers.MenuCatalog.SaveCombo(w, r)
 }

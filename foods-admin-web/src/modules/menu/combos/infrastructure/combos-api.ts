@@ -14,6 +14,13 @@ export async function listComboProducts(){
     if(!result.items.length||items.length>=result.total||(!Number.isFinite(result.total)&&result.items.length<100))return {items};
   }
 }
+/** Solo las opciones elegidas, para refrescar sus cantidades sin volver a descargar toda la carta (lotes de 100). */
+export async function listComboProductsByIds(ids:string[]){
+  const batches:string[][]=[];
+  for(let index=0;index<ids.length;index+=100)batches.push(ids.slice(index,index+100));
+  const pages=await Promise.all(batches.map(batch=>apiFetch<{items:Product[]}>(`products?${new URLSearchParams({page:"1",pageSize:"100",status:"active",productIds:batch.join(",")}).toString()}`)));
+  return {ids,items:pages.flatMap(page=>page.items)};
+}
 export function getCombo(id:string){return apiFetch<ComboDetail>(`combos/${id}`)}
 /** `timeZone` es la zona del local activo: las fechas de venta se interpretan en su hora, no en la del navegador. */
 export function saveCombo(value:Draft,editingId:string|null,timeZone?:string|null){

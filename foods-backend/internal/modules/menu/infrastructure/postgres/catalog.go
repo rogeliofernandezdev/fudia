@@ -220,8 +220,13 @@ func (r *Catalog) Categories(ctx context.Context, s scope, f application.Catalog
 func (r *Catalog) Products(ctx context.Context, s scope, f application.CatalogFilter) (application.ProductPage, error) {
 	out := application.ProductPage{Page: f.Page, PageSize: f.Size}
 	search, status, categoryID, page, size := "%"+strings.TrimSpace(f.Query)+"%", f.Status, f.CategoryID, f.Page, f.Size
+	// productIds acota el listado a un lote (editor de menús: refresca solo las opciones elegidas).
+	var productIDs []string
+	if len(f.ProductIDs) > 0 {
+		productIDs = f.ProductIDs
+	}
 	var total int
-	err := r.db(ctx).QueryRow(ctx, `SELECT count(*) FROM products p WHERE p.organization_id=$1 AND (p.name ILIKE $2 OR p.sku ILIKE $2) AND ($3='' OR p.category_id::text=$3) AND ($4='' OR ($4='active' AND p.active) OR ($4='inactive' AND NOT p.active)) AND NOT EXISTS (SELECT 1 FROM menu_combos mc WHERE mc.product_id=p.id)`, s.OrganizationID, search, categoryID, status).Scan(&total)
+	err := r.db(ctx).QueryRow(ctx, `SELECT count(*) FROM products p WHERE p.organization_id=$1 AND (p.name ILIKE $2 OR p.sku ILIKE $2) AND ($3='' OR p.category_id::text=$3) AND ($4='' OR ($4='active' AND p.active) OR ($4='inactive' AND NOT p.active)) AND NOT EXISTS (SELECT 1 FROM menu_combos mc WHERE mc.product_id=p.id) AND ($5::uuid[] IS NULL OR p.id=ANY($5::uuid[]))`, s.OrganizationID, search, categoryID, status, productIDs).Scan(&total)
 	if err != nil {
 		return out, err
 	}
@@ -249,7 +254,8 @@ func (r *Catalog) Products(ctx context.Context, s scope, f application.CatalogFi
 		  AND ($3='' OR p.category_id::text=$3)
 		  AND ($4='' OR ($4='active' AND p.active) OR ($4='inactive' AND NOT p.active))
 		  AND NOT EXISTS (SELECT 1 FROM menu_combos mc WHERE mc.product_id=p.id)
-		ORDER BY p.updated_at DESC,p.name LIMIT $5 OFFSET $6`, s.OrganizationID, search, categoryID, status, size, (page-1)*size, s.LocationID)
+		  AND ($8::uuid[] IS NULL OR p.id=ANY($8::uuid[]))
+		ORDER BY p.updated_at DESC,p.name LIMIT $5 OFFSET $6`, s.OrganizationID, search, categoryID, status, size, (page-1)*size, s.LocationID, productIDs)
 	if err != nil {
 		return out, err
 	}

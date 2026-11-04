@@ -3,7 +3,7 @@ import {DataTable} from "@/design-system/data-table";
 import {Dialog} from "@/design-system/dialog";
 import "./combo-editor.css";
 import "./combo-rules.css";
-import {useEffect,useRef,useState} from "react";
+import {useEffect,useMemo,useRef,useState} from "react";
 import {useMutation,useQuery,useQueryClient} from "@tanstack/react-query";
 import {Button,ConfirmDialog,EmptyState,ErrorState,FieldLabel,FormField,Icon,IconButton,Input,MoneyInput,PageHeader,Pagination,RemoteModalSkeleton,RowActionButton,Select,Status,Textarea,ModalHeader,ModalFooter,ModalError,ModalItemList,ModalWorkspace,IconTile,Skeleton,type IconTileTone} from "@/design-system";
 import {useFeedback} from "@/providers";
@@ -17,7 +17,7 @@ import {validateComboDraft,type WizardIssue} from "../domain/wizard-validation";
 import {applySaleWindow,changeSaleDate,fullDaySchedule,isOutsideDates,isoToZonedInput,saleWindowOf,zonedInputToIso,type SaleWindow} from "../domain/sale-window";
 import {belongsToGroup,normalize} from "../domain/option-groups";
 import {ComboOptionPicker} from "./combo-option-picker";
-import {getCombo,listComboProducts,listCombos,saveCombo,setComboActive} from "../infrastructure/combos-api";
+import {getCombo,listComboProducts,listComboProductsByIds,listCombos,saveCombo,setComboActive} from "../infrastructure/combos-api";
 
 const blank:Draft={name:"",description:"",price:"",groups:[],availableFrom:"",availableUntil:"",availableDays:[]};
 const templates:Group[]=[{name:"Entrada",required:true,minSelections:1,maxSelections:1,options:[]},{name:"Segundo",required:true,minSelections:1,maxSelections:1,options:[]},{name:"Postre",required:false,minSelections:0,maxSelections:1,options:[]},{name:"Bebidas",required:false,minSelections:0,maxSelections:1,options:[]}];
@@ -59,7 +59,20 @@ export function CombosPage(){
   const[status,setStatus]=useState("");
   const debouncedSearch=useDebouncedValue(search);
   const combos=useQuery({queryKey:["combos",page,size,debouncedSearch,status],queryFn:()=>listCombos(page,size,debouncedSearch,status)});
-  const products=useQuery({queryKey:["products","combo-picker",organization?.id,location?.id],queryFn:listComboProducts,enabled:Boolean(canManage&&draft&&location?.id),staleTime:0,refetchInterval:draft?10000:false});
+  // La carta completa se descarga al abrir la hoja; cada 10 s solo se refrescan las
+  // opciones ya elegidas (antes, toda la carta cada 10 s mientras la hoja seguía abierta).
+  const products=useQuery({queryKey:["products","combo-picker",organization?.id,location?.id],queryFn:listComboProducts,enabled:Boolean(canManage&&draft&&location?.id),staleTime:0});
+  const chosenIds=Array.from(new Set(draft?.groups.flatMap(group=>group.options.map(option=>option.productId)).filter(Boolean)??[])).sort();
+  const chosen=useQuery({queryKey:["products","combo-picker-chosen",organization?.id,location?.id,chosenIds],queryFn:()=>listComboProductsByIds(chosenIds),enabled:Boolean(canManage&&draft&&location?.id&&products.data&&chosenIds.length),refetchInterval:10000,placeholderData:previous=>previous});
+  const pickerProducts=useMemo(()=>{
+    const items=products.data?.items??[];
+    const fresh=chosen.data;
+    // Solo se aplica la respuesta del lote que la pidió; un elegido ausente ya no está activo.
+    if(!fresh||!products.dataUpdatedAt||chosen.dataUpdatedAt<products.dataUpdatedAt)return items;
+    const byId=new Map(fresh.items.map(item=>[item.id,item]));
+    const asked=new Set(fresh.ids);
+    return items.flatMap(item=>byId.get(item.id)??(asked.has(item.id)?[]:[item]));
+  },[products.data,products.dataUpdatedAt,chosen.data,chosen.dataUpdatedAt]);
   const detail=useQuery({queryKey:["combo-detail",selected],queryFn:()=>getCombo(selected!),enabled:Boolean(selected)});
   const save=useMutation({
     mutationFn:(value:Draft)=>saveCombo(value,editingId,location?.timezone),
@@ -127,7 +140,7 @@ export function CombosPage(){
     {selected&&<ComboDetailDialog query={detail} currencySymbol={settings.currencySymbol} close={()=>setSelected(null)}/>}
     <ConfirmDialog open={canManage&&Boolean(statusTarget)} title={`${statusTarget?.active?"Desactivar":"Activar"} menú`} description={statusTarget?.active?`“${statusTarget.name}” dejará de estar disponible para nuevas ventas, pero conservará su historial.`:`“${statusTarget?.name??""}” volverá a estar disponible para la operación.`} confirmLabel={statusTarget?.active?"Desactivar":"Activar"} pending={changeStatus.isPending} onCancel={()=>setStatusTarget(null)} onConfirm={()=>canManage&&statusTarget&&changeStatus.mutate(statusTarget)}/>
     {canManage&&!draft&&editingId&&loadForEdit.isPending&&<RemoteModalSkeleton className="combo-editor" label="Cargando menú o combo" rows={8} close={()=>{cancelledEdit.current=editingId;setEditingId(null)}}/>}
-    {canManage&&draft&&<ComboEditor draft={draft} setDraft={setDraft} products={products.data?.items??[]} productsLoading={products.isLoading} productsError={products.isError} retryProducts={()=>products.refetch()} currencySymbol={settings.currencySymbol} currencyPosition={settings.currencyPosition} money={money} busy={save.isPending} editing={Boolean(editingId)} close={closeEditor} finish={()=>{if(canManage)save.mutate(draft)}}/>}
+    {canManage&&draft&&<ComboEditor draft={draft} setDraft={setDraft} products={pickerProducts} productsLoading={products.isLoading} productsError={products.isError} retryProducts={()=>products.refetch()} currencySymbol={settings.currencySymbol} currencyPosition={settings.currencyPosition} money={money} busy={save.isPending} editing={Boolean(editingId)} close={closeEditor} finish={()=>{if(canManage)save.mutate(draft)}}/>}
   </>
 }
 

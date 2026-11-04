@@ -262,7 +262,8 @@ func (r *Orders) ExternalOptionUsage(ctx context.Context, s scope, key domain.Co
 			  AND ssel.option_product_id=$4
 			  AND ord.location_id=$5
 			  AND ord.status<>'cancelado'
-			  AND (ord.created_at AT TIME ZONE l.timezone)::date=(now() AT TIME ZONE l.timezone)::date
+			  AND ord.created_at >= (date_trunc('day',now() AT TIME ZONE l.timezone) AT TIME ZONE l.timezone)
+			  AND ord.created_at < ((date_trunc('day',now() AT TIME ZONE l.timezone) + interval '1 day') AT TIME ZONE l.timezone)
 			  AND ($6='' OR ord.id::text<>$6)`,
 		s.OrganizationID, key.ComboProductID, key.GroupName, key.ProductID, s.LocationID, existingOrderID).Scan(&externalUsage)
 	return externalUsage, orderError(err)

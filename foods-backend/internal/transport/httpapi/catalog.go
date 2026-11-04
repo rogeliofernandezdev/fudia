@@ -64,6 +64,7 @@ type MenuCatalogHandler interface {
 	ListOrderCombos(http.ResponseWriter, *http.Request)
 	GetCombo(http.ResponseWriter, *http.Request)
 	GetOrderCombo(http.ResponseWriter, *http.Request)
+	GetOrderComboDetails(http.ResponseWriter, *http.Request)
 	SaveCombo(http.ResponseWriter, *http.Request)
 	UpdateComboStatus(http.ResponseWriter, *http.Request)
 	ListCategories(http.ResponseWriter, *http.Request)

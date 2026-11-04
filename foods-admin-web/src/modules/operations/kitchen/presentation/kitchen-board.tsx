@@ -88,7 +88,10 @@ export function KitchenBoard(){
     queryKey:["kitchen-tickets",channel,destination],
     queryFn:()=>listKitchenTickets(channel,destination),
     refetchInterval:10000,
-    refetchIntervalInBackground:true,
+    // Una pantalla de cocina visible sigue refrescando; una pestaña oculta o minimizada
+    // no (nadie la ve) y se actualiza al recuperar el foco.
+    refetchIntervalInBackground:false,
+    refetchOnWindowFocus:"always",
     placeholderData:keepPreviousData,
   });
 

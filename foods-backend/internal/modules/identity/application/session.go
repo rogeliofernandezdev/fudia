@@ -120,7 +120,7 @@ func (s *Service) Authorize(ctx context.Context, scope requestscope.Scope, permi
 		if cached.access.Allows(permission) {
 			return nil
 		}
-		return apperror.New(apperror.Forbidden, "forbidden", "No tienes permisos para realizar esta acción.")
+		return forbidden(permission)
 	}
 	// Without access read at authentication (direct calls), keep the per-check lookups;
 	// a failed platform lookup still checks tenant roles.
@@ -132,9 +132,18 @@ func (s *Service) Authorize(ctx context.Context, scope requestscope.Scope, permi
 		return apperror.New(apperror.Unavailable, "permissions_unavailable", "No pudimos validar tus permisos.")
 	}
 	if !allowed {
-		return apperror.New(apperror.Forbidden, "forbidden", "No tienes permisos para realizar esta acción.")
+		return forbidden(permission)
 	}
 	return nil
+}
+
+// forbidden nombra la acción que falta con la misma etiqueta del editor de roles,
+// para que el usuario sepa qué pedir y a quién. El código sigue siendo «forbidden».
+func forbidden(permission string) error {
+	if label := domain.PermissionLabel(permission); label != "" {
+		return apperror.New(apperror.Forbidden, "forbidden", "Tu rol no incluye el permiso «"+label+"». Pide a un administrador que lo agregue en Usuarios y roles.")
+	}
+	return apperror.New(apperror.Forbidden, "forbidden", "No tienes permisos para realizar esta acción.")
 }
 func unavailable(message string) error {
 	return apperror.New(apperror.Unavailable, "session_unavailable", message)

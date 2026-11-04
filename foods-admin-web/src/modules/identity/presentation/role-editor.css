@@ -45,6 +45,11 @@
 .re-acc-item input{position:absolute;inset-block-start:50%;inset-inline-start:var(--space-2);width:var(--size-1);height:var(--size-1);margin:0;opacity:0;pointer-events:none}
 .re-acc-item i{width:var(--size-17);height:var(--size-17);display:grid;place-items:center;border:var(--stroke-1-5) solid var(--line-strong);border-radius:var(--radius-control);background:var(--surface);color:transparent;flex-shrink:0;transition:var(--transition-surface)}
 .re-acc-item.checked i{border-color:var(--primary-600);background:var(--primary-600);color:var(--surface)}
+/* Acción requerida por una pantalla o acción marcada: marcada, sin poder quitarse, con su motivo. */
+.re-acc-item-copy{display:grid;gap:var(--space-0-5);min-width:0}
+.re-acc-item-copy small{color:var(--ink-500);font-size:var(--font-size-xs);font-weight:var(--weight-regular);line-height:var(--line-height-snug)}
+.re-acc-item.required{cursor:default}
+.re-acc-item.required i{border-color:var(--primary-300);background:var(--primary-300)}
 
 @media (hover:hover) and (pointer:fine){
   .re-acc-header:hover{background:var(--cloud-25)}

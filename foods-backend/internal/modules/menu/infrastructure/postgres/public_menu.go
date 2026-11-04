@@ -147,7 +147,8 @@ func (r *Catalog) PublicComboGroups(ctx context.Context, s scope, id string, day
 			             AND sel.option_product_id=o.option_product_id
 			             AND ord.location_id=l.id
 			             AND ord.status<>'cancelado'
-			             AND (ord.created_at AT TIME ZONE l.timezone)::date=$4::date
+			             AND ord.created_at >= ($4::date::timestamp AT TIME ZONE l.timezone)
+			             AND ord.created_at < (($4::date + 1)::timestamp AT TIME ZONE l.timezone)
 			         ),0) < o.default_quota
 			       )
 			FROM menu_combo_options o

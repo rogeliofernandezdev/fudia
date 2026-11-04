@@ -24,10 +24,17 @@ def _plain(value: Decimal) -> int | float:
 
 
 class OrderTools:
-    def __init__(self, context: ToolContext) -> None:
+    def __init__(
+        self,
+        context: ToolContext,
+        menu: MenuTools | None = None,
+        delivery: DeliveryTools | None = None,
+    ) -> None:
         self.context = context
-        self.menu = MenuTools(context)
-        self.delivery = DeliveryTools(context)
+        # The registry passes its own instances: the carta pages that search_menu
+        # stores in `menu.media` must be the ones the reply attaches.
+        self.menu = menu or MenuTools(context)
+        self.delivery = delivery or DeliveryTools(context)
 
     async def execute(
         self,

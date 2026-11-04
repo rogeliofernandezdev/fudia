@@ -107,6 +107,13 @@ func TestProductListAvailableQuantityUsesLocalDayAndOrderConsumption(t *testing.
 	assertQuantity(list(s.LocationID, ""), portions, 15)
 	assertQuantity(list(otherLocation, ""), portions, 90)
 	assertQuantity(list(otherLocation, ""), inventory, 99)
+	// productIds acota el lote (editor de menús) sin cambiar la cantidad calculada.
+	only := list(s.LocationID, "productIds="+portions+","+inventory)
+	if len(only) != 2 {
+		t.Fatalf("productIds must limit the listing: %+v", only)
+	}
+	assertQuantity(only, portions, 15)
+	assertQuantity(only, inventory, 2.5)
 	if rec := updateAvailabilityRequest(t, api, s, portions, `{"status":"sold_out","reason":"Agotado en cocina"}`); rec.Code != 204 {
 		t.Fatalf("mark exhausted: %d %s", rec.Code, rec.Body.String())
 	}
