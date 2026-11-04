@@ -233,7 +233,8 @@ inferior a ancho completo, persistente en todos los tamaños. No usa panel later
 `.modal-summary-lines`, `.modal-summary-line` y `.modal-summary-total` son sus
 estilos únicos, no duplicados por módulo. El detalle Pedidos/Salón lo usa en un
 panel de hasta 760 px; los formularios sin resumen continúan con `ModalBody`.
-Todo el fondo del resumen usa gris muy claro `cloud-50`; el estado abierto usa azul tenue.
+El resumen usa superficie blanca; el importe principal es una ficha `primary-100`
+(`brand-50` saldada) y el estado abierto usa azul tenue.
 
 `.modal-body` es el único scroll del modal y su barra fina está siempre visible
 cuando hay desbordamiento; no combinarlo con `hover-scroll`. El cuerpo nunca desplaza en
@@ -274,10 +275,11 @@ etiqueta/valor: columna de etiqueta de 120 px, valor flexible, 12 px entre
 columnas y 10 px entre filas, alineados a la primera línea del texto.
 Los nombres largos envuelven; no se truncan. La lista móvil conserva el fondo de la franja.
 La carga usa la misma retícula. El único dueño de este layout es `modal.css`.
-En el detalle de pedidos, las acciones inferiores comparten el mismo fondo.
+En los detalles con resumen, el pie de acciones comparte la superficie blanca
+del resumen y conserva su línea fina superior sobre los botones.
 La cabecera del resumen agrupa título y estado, con separador inferior. Los
-importes secundarios se distribuyen en columnas equilibradas y el saldo en una
-región sin tarjeta, separada con `line` vertical también en móvil. A 390 px
+importes secundarios se distribuyen en columnas equilibradas (cifras seminegrita)
+y el saldo en una ficha tintada `primary-100` con radio de tarjeta, también en móvil. A 390 px
 Subtotal, Pagado y Saldo pendiente se mantienen en una fila.
 `Status({icon,emphasis})` permite reforzar un estado de lectura sin hacerlo
 parecer una acción: icono de la familia existente y peso 700. Cuenta abierta usa
@@ -315,7 +317,7 @@ La hoja «Arma tu menú o combo» (`ComboEditor`) tampoco lleva subtítulo («NU
 Los módulos no redefinen estas piezas; solo añaden su propio contexto (por ejemplo
 el destino compartido o el estado de preparación en Pedidos/Salón). Los cuerpos
 desplazables con `tabIndex` no muestran contorno azul al recibir foco.
-El resumen inferior usa `cloud-50` y un límite superior neutro de 1 px. Estos estilos tienen un solo dueño
+El resumen inferior usa `surface` y un límite superior neutro de 1 px. Estos estilos tienen un solo dueño
 en el design system, no se duplican por módulo.
 
 Reglas:

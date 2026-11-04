@@ -81,7 +81,14 @@ test("productos, notas y cuenta tienen límites propios y cantidades circulares 
  assert.match(quantityRule,/color:var\(--primary-700\)/);
  assert.doesNotMatch(quantityRule,/cursor|box-shadow|#[\da-f]+/i);
  assert.match(renderDetail({skeleton:true}),/--radius-pill/);
- assert.match(css,/\.modal-summary\{[^}]*border-top:var\(--stroke-1\) solid var\(--line\)[^}]*background:var\(--cloud-50\)/);
+ assert.match(css,/\.modal-summary\{[^}]*border-top:var\(--stroke-1\) solid var\(--line\)[^}]*background:var\(--surface\)/);
+ assert.match(css,/\.modal-workspace:has\(>\.modal-summary\)\+\.modal-footer\{background:var\(--surface\)\}/,"el pie de acciones comparte la superficie del resumen y conserva su línea");
+ assert.match(css,/\.modal-summary-total\{[^}]*border-radius:var\(--radius-card\);background:var\(--primary-100\)/,"el importe principal es la única ficha tintada");
+ assert.match(css,/\.modal-summary-total\{width:max-content;max-width:100%;min-width:min\(100%,var\(--modal-summary-action-width\)\);justify-self:end/,"la ficha se ajusta al ancho de la acción principal");
+ assert.match(css,/\.modal-workspace:has\(>\.modal-summary\)\+\.modal-footer \.button\.primary\{min-width:var\(--modal-summary-action-width\)\}/,"la acción principal comparte el ancho de la ficha");
+ assert.doesNotMatch(css.match(/\.modal-summary-total\{([^}]*)\}/)?.[1]??"",/border-left/);
+ assert.match(css,/\.modal-summary\.is-paid \.modal-summary-total\{background:var\(--brand-50\)\}/);
+ assert.match(css,/\.modal-summary-line b\{[^}]*font-weight:var\(--weight-semibold\)/);
  assert.doesNotMatch(css.match(/\.modal-item-list\{([^}]*)\}/)?.[1]??"",/border|background/);
  assert.match(css,/\.modal-detail-notes\{[^}]*background:var\(--cloud-50\)/);
 });

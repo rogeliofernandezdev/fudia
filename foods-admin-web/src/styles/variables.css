@@ -470,6 +470,8 @@
   --font-size-label: var(--font-size-xs);
   --modal-label-weight: var(--weight-semibold);
   --modal-value-weight: var(--weight-regular);
+  /* Ancho compartido por la ficha del importe del resumen y la acción principal del pie de detalle. */
+  --modal-summary-action-width: var(--size-176);
   --motion-dialog-duration: var(--duration-dialog);
   --motion-dialog-easing: var(--easing-out);
 

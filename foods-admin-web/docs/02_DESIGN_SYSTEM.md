@@ -2008,20 +2008,30 @@ del cuerpo, antes de Productos. No se cargan estados ni responsables en la cabec
 `ModalWorkspace` organiza una sola columna: cuerpo desplazable con productos y notas,
 seguido de «Resumen de cuenta» inferior persistente a ancho completo.
 No se usa una columna lateral de cuenta, ni se declara como estándar: fue rechazada.
-El resumen de cuenta usa fondo neutro muy claro `cloud-50` en toda su superficie
-y una línea superior neutra de 1 px (`line`),
-sin tarjeta anidada ni altura artificial. Las notas usan `cloud-50`,
+El resumen de cuenta usa superficie blanca (`surface`) y una línea superior
+neutra de 1 px (`line`), sin altura artificial. Las notas usan `cloud-50`,
 pero se agrupan en un bloque compacto dentro del cuerpo, no en el resumen.
-La franja de acciones del detalle comparte `cloud-50`, cuando existe.
+La franja de acciones del detalle comparte la superficie blanca del resumen
+(`.modal-workspace:has(>.modal-summary)+.modal-footer`) y conserva su línea
+fina superior `line` sobre los botones, que separa importes y acciones. Los demás pies de
+modal conservan `cloud-50`. (Cambio de 2026-11-04: el pie gris se percibía
+«apagado».)
+El importe principal (Saldo pendiente, Total pagado, Precio) es la única ficha
+tintada del resumen: `primary-100` con radio de tarjeta y relleno 12/16 px
+(8/12 px a ≤700 px), estirada a la altura de las cifras; saldada, `brand-50`.
+Por simetría, ficha y acción principal del pie comparten el ancho
+`--modal-summary-action-width` (176 px) y el borde derecho: la ficha se ajusta
+al botón (nunca el botón a la columna). Una etiqueta más larga solo ensancha el
+botón. A ≤600 px la ficha ocupa su columna y el botón la fila completa.
+Subtotal, Delivery y Pagado usan cifras seminegrita `ink-950` sobre blanco.
 Los importes pagados usan `brand-800` para conservar contraste legible sobre ese fondo.
 El estado de cuenta va alineado a la derecha de «Resumen de cuenta» (en todos los
 resúmenes `modal-summary`), con icono `receipt` y la
 variante `Status emphasis`: Cuenta abierta usa fondo tenue `sky-100`
 con texto e icono `sky-800`, sin borde, sombra ni hover. Todos los estados
-usan fondos tenues, nunca etiquetas sólidas. El resumen conserva su
-fondo neutro `cloud-50`. Una línea neutra separa la identidad de
+usan fondos tenues, nunca etiquetas sólidas. Una línea neutra separa la identidad de
 los importes. Subtotal y Pagado ocupan columnas equilibradas separadas por una
-línea vertical discreta, la misma que separa el saldo. A 390 px Subtotal, Pagado
+línea vertical discreta; el saldo se separa por su ficha tintada. A 390 px Subtotal, Pagado
 y Saldo pendiente permanecen en una misma fila, con cifras de 18 px. Nunca se
 agregan botones a usuarios sin permisos para hacer más visible el pie.
 

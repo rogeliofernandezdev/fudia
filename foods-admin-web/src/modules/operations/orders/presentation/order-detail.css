@@ -51,7 +51,7 @@
 .order-detail-paid.has-payment b{color:var(--amount-paid)}
 .order-detail-totals.is-paid .modal-summary-total span{color:var(--brand-700)}
 .order-detail-totals.is-paid .modal-summary-total strong{color:var(--amount-paid)}
-.order-detail-actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:var(--space-3);flex-shrink:0;background:var(--cloud-50)}
+.order-detail-actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:var(--space-3);flex-shrink:0}
 .order-detail-notice{flex:1 1 var(--size-170);min-width:0;display:flex;align-items:flex-start;gap:var(--space-2);margin:0;color:var(--ink-600);font-size:var(--font-size-label);line-height:var(--line-height-normal)}
 .order-detail-notice>svg{flex-shrink:0}
 .order-detail-notice.is-success{color:var(--brand-700)}
