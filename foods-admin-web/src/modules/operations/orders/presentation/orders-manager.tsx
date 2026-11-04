@@ -18,14 +18,16 @@ import {ComandaView} from "./comanda-view";
 import type {Draft} from "../../salon/domain/types";
 import {addOrderConsumption} from "../infrastructure/service-api";
 import {OrderDetailContent,OrderDetailSkeleton,orderDetailTitleId} from "./order-detail-dialog";
+import {useOrderDeepLink} from "./use-order-deep-link";
 import {channelIcons,orderStatus,originLabel,registeredAt,serviceChannel} from "./order-meta";
 
 const columns=["Pedido","Canal","Estado","Registrado","Total","Acciones"];
 
-export function OrdersManager(){
+export function OrdersManager({initialOrderId}:{initialOrderId?:string}={}){
  const qc=useQueryClient();const{notify}=useFeedback();const settings=useSettings();const money=useMoney();const{can,location}=useSession();const canManage=can("orders.manage");
  const[q,setQ]=useState("");const debouncedQ=useDebouncedValue(q);const[channel,setChannel]=useState("");const[status,setStatus]=useState("abiertos");const[page,setPage]=useState(1);const[size,setSize]=useState(10);
  const[detailId,setDetailId]=useState<string|null>(null);const[cancelTarget,setCancelTarget]=useState<Order|null>(null);
+ useOrderDeepLink(initialOrderId,setDetailId);
  const[creating,setCreating]=useState(false);
  const[adding,setAdding]=useState<{order:Order;draft:Draft;requestKey:string}|null>(null);
  const list=useQuery({queryKey:["orders",debouncedQ,channel,status,page,size],queryFn:()=>listOrders({q:debouncedQ,channel,status,page,pageSize:size}),placeholderData:keepPreviousData});

@@ -595,7 +595,11 @@ comparten una fila y `order-channels.test.mjs` que Pedidos muestra el origen
 «Mostrador» bajo el cliente cuando se oculta la columna Canal.
 
 `notification-bell.test.mjs` fija la campana de avisos: destino de cada tipo de
-aviso en orden de preferencia, antigüedad corta y contador «99+», montaje
+aviso en orden de preferencia, enlace con `?orderId=` que abre el detalle en
+Salón/Pedidos (y el cobro en POS solo para cuenta pedida) y consumo del parámetro,
+tono por tipo y jerarquía leído/sin leer, aviso emergente (portal, solo con la
+campana cerrada, todo el aviso abre el detalle, sin «Ver», vibración tras
+interacción, movimiento reducido), antigüedad corta y contador «99+», montaje
 independiente desde el shell (el shell no consulta avisos y la campana no importa
 el shell), skeleton/error/vacío y anuncio `aria-live`, refresco de 15 s solo con
 `tables.read` o `cash.manage`, endpoints del contrato OpenAPI, área táctil de

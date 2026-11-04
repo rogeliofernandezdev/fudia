@@ -1934,6 +1934,9 @@ paths:
         Pedidos por QR de mesa (mozos), ventas por mostrador y pedidos de delivery o recojo (caja),
         cuenta pedida (mozos y caja), llamado al mozo (mozos) y comandas listas (mozos; también caja si no hay mesa).
         Las audiencias se resuelven por permisos del usuario en el local: tables.read para mozos y cash.manage para caja.
+        Solo lista avisos pendientes: sale de la lista (y del total sin leer) el aviso cuyo pedido ya se atendió
+        (comanda lista entregada o en camino, cuenta pedida con pedido completado, pedido nuevo cuya comanda ya está lista
+        o pedido completado, y cualquier pedido cancelado). Los llamados al mozo permanecen sus 24 horas.
         Devuelve hasta 30 avisos recientes y el total sin leer del usuario. Sin audiencias devuelve una lista vacía.
       security: [{ sessionCookie: [] }]
       responses:

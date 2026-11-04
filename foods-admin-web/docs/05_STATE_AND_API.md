@@ -484,10 +484,25 @@ al recuperar foco y al abrir la campana, y solo se activa con `tables.read` o
 avisos ve cada rol y devuelve los textos redactados: el panel no arma mensajes
 ni filtra por rol.
 
+El backend solo devuelve avisos pendientes: cuando el pedido se atiende (comanda
+lista entregada, cuenta pagada, pedido nuevo cuya comanda ya está lista, o pedido
+cancelado) el aviso desaparece de la lista y del contador en la siguiente
+consulta. Abrir un aviso no lo quita: si no se atendió, sigue visible como leído.
+
 Abrir un aviso lo marca como leído al instante (actualización optimista con
 reversión si falla) y navega a la primera pantalla permitida para su tipo:
 pedidos y llamados de mesa → Salón; ventas por mostrador, delivery y recojo →
 Punto de venta; cuenta pedida → Punto de venta o Salón; comanda lista → Salón si
-tiene mesa y Pedidos si no. «Marcar como leídos» aplica a todos los visibles del
+tiene mesa y Pedidos si no. Si el aviso trae `orderId`, Salón y Pedidos abren
+directamente el detalle de ese pedido (`?orderId=`), listo para actuar (por
+ejemplo, el mozo pulsa «Confirmar entrega»); en Punto de venta solo la cuenta
+pedida abre el cobro del pedido. `useOrderDeepLink` consume el parámetro al
+abrir el detalle y devuelve la URL a la pantalla, así el mismo aviso puede
+reabrirlo. Las acciones del detalle siguen sujetas a los permisos de siempre.
+Los avisos que aparecen entre dos lecturas del feed (`freshNotices`) se
+anuncian por `aria-live` y, con la campana cerrada, se muestran como aviso
+emergente (portal a `body`, porque la topbar atraparía el `position:fixed`).
+Tocarlo hace lo mismo que elegirlo en la lista: lo marca como leído y abre su detalle.
+«Marcar como leídos» aplica a todos los visibles del
 usuario. La lista tiene skeleton, error con Reintentar y estado vacío; un aviso
 nuevo se anuncia por `aria-live` sin robar el foco.

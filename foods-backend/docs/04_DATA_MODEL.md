@@ -101,7 +101,14 @@ leer para cada mozo o cajero hasta que lo abra.
 
 Las audiencias se resuelven al leer con la autorización de Identity en el local:
 `tables.read` ve `service`, `cash.manage` ve `cashier`, y cualquiera de las dos ve
-`all`. La lectura cubre las últimas 24 horas (30 avisos como máximo). Los avisos
+`all`. La lectura cubre las últimas 24 horas (30 avisos como máximo) y solo lista
+los pendientes: un aviso sale de la campana y del contador cuando su pedido ya se
+atendió (comanda lista → en camino o entregado; cuenta pedida → pedido completado;
+pedido nuevo → la cocina ya marcó lista esa comanda, es decir, existe un aviso
+`order_ready` posterior del mismo pedido, o el pedido se completó; cualquier pedido
+cancelado). Los pedidos por QR llegan ya confirmados y cada ronda avisa sobre el
+mismo pedido, por eso el pedido nuevo no se resuelve por estado. Los llamados al
+mozo siguen visibles sus 24 horas. Marcar como leído no aplica este filtro. Los avisos
 se publican después del commit del evento con mejor esfuerzo: un fallo no revierte
 el pedido ni la cuenta. Los textos los redacta `notifications/domain`; los
 módulos que publican solo entregan los hechos mediante `notifications/contracts`.

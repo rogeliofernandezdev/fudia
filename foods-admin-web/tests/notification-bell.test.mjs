@@ -27,6 +27,40 @@ test("avisos: cada tipo lleva a la pantalla donde se atiende, en orden de prefer
  assert.deepEqual([...rules.noticeTargets({kind:"order_ready"})],[routes.orders,routes.pos]);
 });
 
+test("avisos: Salón y Pedidos abren el detalle del pedido; POS solo cobra la cuenta pedida",()=>{
+ const ready={kind:"order_ready",orderId:"o-1",tableId:"t1"};
+ assert.equal(rules.noticeHref(routes.diningRoom,ready),"/dining-room?orderId=o-1");
+ assert.equal(rules.noticeHref(routes.orders,{kind:"order_ready",orderId:"o 2"}),"/orders?orderId=o%202");
+ assert.equal(rules.noticeHref(routes.pos,{kind:"bill_requested",orderId:"o-3"}),"/pos?orderId=o-3");
+ assert.equal(rules.noticeHref(routes.pos,{kind:"counter_order",orderId:"o-4"}),"/pos","un pedido nuevo no abre el cobro");
+ assert.equal(rules.noticeHref(routes.diningRoom,{kind:"assistance_requested"}),"/dining-room","sin pedido llega a la pantalla");
+ const bell=read("src/modules/notifications/presentation/notification-bell.tsx");
+ assert.match(bell,/router\.push\(noticeHref\(target,notice\)\)/);
+ for(const page of ["src/app/(admin)/orders/page.tsx","src/app/(admin)/dining-room/page.tsx"])assert.match(read(page),/initialOrderId=\{params\.orderId\}/,page);
+ for(const manager of ["src/modules/operations/orders/presentation/orders-manager.tsx","src/modules/operations/salon/presentation/salon-manager.tsx"])assert.match(read(manager),/useOrderDeepLink\(initialOrderId,setDetailId\)/,manager);
+ assert.match(read("src/modules/operations/orders/presentation/use-order-deep-link.ts"),/router\.replace\(pathname,\{scroll:false\}\)/,"el parámetro se consume para que el aviso pueda reabrir el detalle");
+});
+
+test("avisos: tono por tipo, jerarquía sin leer y aviso emergente",()=>{
+ assert.equal(rules.noticeTone("order_ready"),"brand");
+ assert.equal(rules.noticeTone("bill_requested"),"peach");
+ assert.equal(rules.noticeTone("assistance_requested"),"sky");
+ assert.equal(rules.noticeTone("table_order"),"primary");
+ const items=[{id:"n3",read:false},{id:"n2",read:true},{id:"n1",read:false}];
+ assert.deepEqual([...rules.freshNotices(items,new Set(["n1"]))].map(item=>item.id),["n3"],"solo los nuevos sin leer emergen");
+ const bell=read("src/modules/notifications/presentation/notification-bell.tsx");
+ assert.match(bell,/tone=\{item\.read\?"neutral":noticeTone\(item\.kind\)\}/,"leído neutro, sin leer con su tono");
+ assert.match(bell,/createPortal\(<section className="notification-toast"/,"el aviso emergente sale de la barra superior");
+ assert.match(bell,/if\(!openRef\.current\)\{/,"no emerge con la campana abierta");
+ assert.match(bell,/className="notification-toast-main" onClick=\{\(\)=>choose\(toast\.notice\)\}/,"tocar el aviso abre el detalle como en la lista");
+ assert.doesNotMatch(bell,/>Ver<\/Button>/,"sin botón «Ver» redundante");
+ assert.match(bell,/navigator\.userActivation\?\.hasBeenActive\)navigator\.vibrate\?\./,"vibra solo tras interacción, sin sonido");
+ const css=read("src/modules/notifications/presentation/notification-bell.css");
+ assert.match(css,/\.notification-item\[data-read=false\]\{background:var\(--primary-50\)\}/);
+ assert.match(css,/\.notification-toast\{position:fixed;[^}]*z-index:var\(--z-toast\)/);
+ assert.match(css,/@media \(prefers-reduced-motion:reduce\)\{[^}]*\.notification-toast\{animation:none/);
+});
+
 test("avisos: antigüedad corta y contador acotado",()=>{
  const now=Date.parse("2026-11-02T15:00:00Z");
  assert.equal(rules.noticeAge("2026-11-02T14:59:40Z",now),"Ahora");

@@ -17,6 +17,7 @@ import {useMoney} from "@/providers";
 import {canManageOrderService} from "../../orders/domain/order-actions";
 import {addOrderConsumption} from "../../orders/infrastructure/service-api";
 import {OrderDetailContent,OrderDetailSkeleton,orderDetailTitleId} from "../../orders/presentation/order-detail-dialog";
+import {useOrderDeepLink} from "../../orders/presentation/use-order-deep-link";
 import {isEditableOrder,parseIsoDate,statusMeta} from "../../orders/presentation/order-meta";
 
 /* ── helpers ── */
@@ -53,7 +54,7 @@ const draftFromOrder=(o:Order):Draft=>({
 /* ═══════════════════════════════════════════════════
    SalonManager — vista operativa del mozo
 ═══════════════════════════════════════════════════ */
-export function SalonManager(){
+export function SalonManager({initialOrderId}:{initialOrderId?:string}={}){
   const qc=useQueryClient();
   const{notify}=useFeedback();
   const{can,user}=useSession();
@@ -62,6 +63,7 @@ export function SalonManager(){
 
   const[q,setQ]=useState("");
   const[detailId,setDetailId]=useState<string|null>(null);
+  useOrderDeepLink(initialOrderId,setDetailId);
   const[draft,setDraft]=useState<Draft|null>(null);
   const[editingOrderId,setEditingOrderId]=useState<string|null>(null);
   const[cancelTarget,setCancelTarget]=useState<Order|null>(null);

@@ -25,6 +25,29 @@ var _ application.Repository = (*Notices)(nil)
 // visible filtra los avisos del local de las últimas 24 horas dirigidos a las audiencias del usuario.
 const visible = `n.organization_id=$1 AND n.location_id=$2 AND n.audience=ANY($3::text[]) AND n.created_at>now()-interval '24 hours'`
 
+// pending excluye de la campana los avisos cuyo pedido ya se atendió:
+//   - comanda lista: el pedido ya va en camino o se entregó;
+//   - cuenta pedida: el pedido ya se completó (pagado);
+//   - pedido nuevo (QR de mesa o mostrador, delivery, recojo): la cocina ya marcó
+//     lista esa comanda (hay un aviso «listo» posterior del mismo pedido) o el pedido
+//     se completó. No se usa el estado: los pedidos por QR llegan ya confirmados y
+//     cada ronda nueva avisa sobre el mismo pedido;
+//   - cualquier pedido cancelado.
+//
+// Los llamados al mozo y los avisos sin pedido siguen visibles sus 24 horas. Marcar
+// como leído no usa este filtro, para que un aviso atendido mientras se abría no falle.
+const pending = visible + ` AND NOT EXISTS (
+	SELECT 1 FROM orders o
+	WHERE o.id=n.order_id AND o.organization_id=n.organization_id
+	  AND (o.status='cancelado' OR CASE
+	    WHEN n.kind='order_ready' THEN o.status IN ('en_camino','entregado')
+	    WHEN n.kind='bill_requested' THEN o.completed_at IS NOT NULL
+	    WHEN n.kind IN ('table_order','counter_order','delivery_order','pickup_order') THEN o.completed_at IS NOT NULL OR EXISTS (
+	      SELECT 1 FROM staff_notices ready
+	      WHERE ready.organization_id=n.organization_id AND ready.order_id=n.order_id
+	        AND ready.kind='order_ready' AND ready.created_at>=n.created_at AND ready.id<>n.id)
+	    ELSE false END))`
+
 func (r *Notices) Insert(ctx context.Context, s scope, in domain.Input) error {
 	_, err := r.db(ctx).Exec(ctx, `
 		INSERT INTO staff_notices(organization_id,location_id,kind,audience,title,detail,order_id,table_id,dedupe_key)
@@ -38,7 +61,7 @@ func (r *Notices) Feed(ctx context.Context, s scope, audiences []string, limit i
 	out := domain.Feed{Items: []domain.Notice{}}
 	if err := r.db(ctx).QueryRow(ctx, `
 		SELECT count(*) FROM staff_notices n
-		WHERE `+visible+` AND NOT EXISTS (SELECT 1 FROM staff_notice_reads nr WHERE nr.notice_id=n.id AND nr.user_id=$4)`,
+		WHERE `+pending+` AND NOT EXISTS (SELECT 1 FROM staff_notice_reads nr WHERE nr.notice_id=n.id AND nr.user_id=$4)`,
 		s.OrganizationID, s.LocationID, audiences, s.UserID).Scan(&out.Unread); err != nil {
 		return out, err
 	}
@@ -46,7 +69,7 @@ func (r *Notices) Feed(ctx context.Context, s scope, audiences []string, limit i
 		SELECT n.id::text,n.kind,n.title,n.detail,COALESCE(n.order_id::text,''),COALESCE(n.table_id::text,''),n.created_at,
 		       EXISTS (SELECT 1 FROM staff_notice_reads nr WHERE nr.notice_id=n.id AND nr.user_id=$4)
 		FROM staff_notices n
-		WHERE `+visible+`
+		WHERE `+pending+`
 		ORDER BY n.created_at DESC,n.id DESC
 		LIMIT $5`, s.OrganizationID, s.LocationID, audiences, s.UserID, limit)
 	if err != nil {

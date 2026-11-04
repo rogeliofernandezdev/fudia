@@ -232,8 +232,15 @@ func TestStaffNoticesEndToEnd(t *testing.T) {
 	if f := feed(cashier); f.Items[0].ID != shared || f.Items[0].Read {
 		t.Fatalf("cashier keeps the shared notice unread: %+v", f)
 	}
+	// La comanda de mostrador ya está lista: su aviso de pedido nuevo salió de la campana de caja.
+	var counterNotice string
+	if err := pool.QueryRow(ctx, `SELECT id::text FROM staff_notices WHERE order_id=$1 AND kind='counter_order'`, counterOrder.ID).Scan(&counterNotice); err != nil {
+		t.Fatalf("counter notice: %v", err)
+	}
+	if kinds(feed(cashier))["counter_order"] != 0 {
+		t.Fatalf("attended counter order must leave the feed: %+v", feed(cashier))
+	}
 	// Un aviso que el usuario no ve (o de otra empresa) no existe para él.
-	counterNotice := feed(cashier).Items[len(feed(cashier).Items)-1].ID
 	for _, owner := range []scope{waiter, foreign} {
 		if w = call(owner, "POST", "/v1/admin/notices/"+counterNotice+"/read", "", api.handlers.Notices.MarkRead, "id", counterNotice); w.Code != 404 {
 			t.Fatalf("%s must not read a hidden notice: %d %s", owner.Name, w.Code, w.Body.String())

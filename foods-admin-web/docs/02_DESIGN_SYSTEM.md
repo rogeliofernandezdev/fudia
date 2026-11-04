@@ -1718,7 +1718,17 @@ descargar y alternar al detalle HTML del informe sin depender del visor nativo.
   se maneja exclusivamente desde el botón de acción de la tabla. Los
   formularios de edición no incluyen switches de estado activo/inactivo.
 - Notificaciones viven en un popover compacto desde la campana, con contador,
-  categoría visual, tiempo y enlace al historial; no usan mensajes flotantes aislados.
+  categoría visual, tiempo y enlace al historial. Jerarquía: un aviso sin leer
+  tiene fondo `primary-50`, título en negrita, punto azul e `IconTile` (40 px)
+  con el tono de su tipo (`noticeTone`: listo `brand`, cuenta pedida `peach`,
+  llamado `sky`, pedidos nuevos `primary`); uno leído va sin fondo, con título
+  medio `ink-700` e icono `neutral`.
+- Aviso emergente (2026-11-04): solo cuando llega un aviso nuevo con la campana
+  cerrada, abajo a la derecha (380 px; en móvil a todo el ancho con margen de 16 px),
+  por encima de los modales (`--z-toast`). Todo el aviso es un botón que abre el
+  detalle igual que en la lista; la X lo descarta. Sin botón «Ver» ni sonido; el
+  móvil vibra brevemente si el usuario ya interactuó. Se retira a los 8 s y se
+  pausa al señalarlo o enfocarlo. Si llegan varios, indica «y N avisos más».
 - El éxito de un registro se comunica mediante la alerta global después de que la
   API confirme la operación. Nunca se anticipa éxito ni se pierde el error remoto.
 
