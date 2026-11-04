@@ -28,7 +28,7 @@ export function CashReportDialog({shiftId,close}:{shiftId:string;close:()=>void}
  },[report.data,attempt]);
  const current=pdf?.source===report.data?pdf:null;
  const failure=report.isError?report.error.message:error?.source===report.data?error?.message:null;
- return <PdfViewer title={report.data?.shift.cashRegisterName??"Vista previa del cierre"} subtitle="Informe de caja" size="lg" document={current?.document??null} filename={current?.filename??"informe-de-caja.pdf"} onClose={close}
+ return <PdfViewer title={report.data?.shift.cashRegisterName??"Vista previa del cierre"} size="lg" document={current?.document??null} filename={current?.filename??"informe-de-caja.pdf"} onClose={close}
   loading={report.isLoading||(!current&&!failure)} error={failure}
   onRetry={()=>{setError(null);setPdf(null);if(report.isError)void report.refetch();else setAttempt(value=>value+1);}}
   notice={report.data&&!report.data.persisted?`Este turno ${report.data.shift.status==="open"?"sigue abierto; sus datos pueden cambiar":"es anterior al informe persistido; el detalle se reconstruyó con los registros disponibles"}.`:undefined}

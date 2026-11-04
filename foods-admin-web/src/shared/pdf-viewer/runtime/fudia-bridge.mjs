@@ -1,7 +1,7 @@
 /* Owner: shared/pdf-viewer — adapter around Mozilla's unchanged full viewer. */
 const protocol="fudia-pdf-viewer";
 const controller=new AbortController(),signal=controller.signal;
-let app,session,disposed=false;
+let app,session,disposed=false,receiptCapped=false;
 // PDF.js creates URLs for downloads, attachments, images and print pages.
 // Track only this isolated viewer realm, including URLs its download manager keeps.
 const blobUrls=new Set();let released=false;
@@ -119,10 +119,25 @@ window.addEventListener("message",async event=>{
  try{
   await initialized;
   if(disposed)return;
+  const receipt=data.zoom==="receipt";
+  window.PDFViewerApplicationOptions.set("defaultZoomValue",receipt?"page-width":"page-fit");
+  if(receipt&&!receiptCapped){receiptCapped=true;app.eventBus.on("scalechanging",capReceiptScale,{signal});}
   await app.open({data:new Uint8Array(data.data),filename:String(data.filename||"documento.pdf").replace(/[\\/\r\n]/g,"-")});
   if(!disposed)post("loaded",{pages:app.pdfDocument?.numPages});
  }catch{if(!disposed)post("error");}
 },{signal});
+
+// Recibos de 80 mm (ticket, precuenta, comprobante): «ajustar página» agranda los
+// documentos cortos, así que un ticket se vería mayor que su comprobante. Se abren
+// ajustados al ancho (PDF.js lee `defaultZoomValue` al abrir cada documento) con una
+// escala máxima común: todos los recibos se ven del mismo tamaño sin importar su alto
+// y el PDF impreso no cambia.
+const RECEIPT_MAX_SCALE=1;
+function capReceiptScale(event){
+ if(disposed||event.presetValue!=="page-width"||event.scale<=RECEIPT_MAX_SCALE)return;
+ // Fuera del despacho del evento: un cambio de escala anidado no debe reentrar en PDF.js.
+ queueMicrotask(()=>{if(!disposed)app.pdfViewer.currentScale=RECEIPT_MAX_SCALE;});
+}
 
 async function dispose(){
  if(disposed)return;

@@ -53,10 +53,11 @@ export function FiscalPrintDialog({documentId,close,onShowTicket,wait=false}:{do
  else if(phase==="unsigned"){error=data.statusMessage||"El comprobante aún no está firmado. Se reintentará automáticamente.";errorTitle="Comprobante aún no disponible";notice=<span className="fiscal-print-notice"><FiscalStatus status={data.status}/>{ticket}</span>;}
  else if(phase==="pending")notice=<span className="fiscal-print-notice" role="status"><FiscalStatus status={data.status}/>Firmado; la confirmación se reintenta sola.</span>;
  else if(data.status==="OBSERVED")notice=<span className="fiscal-print-notice"><FiscalStatus status={data.status}/>{data.statusMessage}</span>;
- else notice=<span className="fiscal-print-notice"><FiscalStatus status={data.status}/></span>;
+ // Aceptado es el caso normal: sin franja. Solo se informa lo que el cajero debe atender.
+ else if(data.status!=="ACCEPTED")notice=<span className="fiscal-print-notice"><FiscalStatus status={data.status}/></span>;
  const current=prepared?.key===key?prepared:null;
  if(!error&&printable&&failure?.key===key)error=failure.message;
- return <PdfViewer title={title} subtitle="Comprobante · 80 mm" size="sm" document={current?.document??null} filename={data?`${data.number}-80mm.pdf`:"comprobante.pdf"} onClose={close}
+ return <PdfViewer title={title} size="sm" document={current?.document??null} filename={data?`${data.number}-80mm.pdf`:"comprobante.pdf"} onClose={close}
   loading={!error&&(!data||phase==="waiting"||(printable&&!current))} error={error} errorTitle={errorTitle} notice={notice}
   onRetry={detail.isError||phase==="unsigned"?()=>void detail.refetch():printable?()=>{setFailure(null);setPrepared(null);setAttempt(value=>value+1);}:undefined}/>;
 }

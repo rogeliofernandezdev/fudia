@@ -22,13 +22,14 @@ export function PdfViewerModal({document:pdf,filename,title,subtitle,size="lg",o
   <ModalHeader title={title} subtitle={subtitle} titleId={`${id}-title`} icon="receipt" onClose={()=>void close()} closeLabel="Cerrar visor PDF"/>
   {(notice||details)&&<div className="pdf-viewer-context">{notice&&<div>{notice}</div>}{details&&<Button kind="ghost" icon="eye" onClick={()=>setShowDetails(value=>!value)}>{showDetails?"Ver PDF":"Ver detalle"}</Button>}</div>}
   {showDetails?<div className="pdf-viewer-details">{details}</div>:error?<div className="pdf-viewer-state"><ErrorState title={errorTitle} text={error} onRetry={onRetry}/></div>
-   :loading?<PdfLoading/>:!pdf?<div className="pdf-viewer-state"><ErrorState title="No hay un PDF disponible" text="Vuelve a generar el documento para previsualizarlo." onRetry={onRetry}/></div>:<PdfFrame document={pdf} filename={filename} releaseRef={releaseRef} onRetry={onRetry}/>}
+   :loading?<PdfLoading/>:!pdf?<div className="pdf-viewer-state"><ErrorState title="No hay un PDF disponible" text="Vuelve a generar el documento para previsualizarlo." onRetry={onRetry}/></div>:<PdfFrame document={pdf} filename={filename} receipt={size==="sm"} releaseRef={releaseRef} onRetry={onRetry}/>}
  </Dialog></div>;
 }
 
 function PdfLoading(){return <div className="pdf-viewer-state" role="status" aria-label="Cargando PDF" aria-busy="true"><Skeleton width="65%"/><Skeleton width="85%"/><Skeleton width="75%"/><Skeleton width="100%" height="var(--size-220)"/></div>;}
 
-function PdfFrame({document:pdf,filename,releaseRef,onRetry}:{document:Blob;filename:string;releaseRef:React.RefObject<(()=>Promise<void>)|null>;onRetry?:()=>void}){
+/** `receipt`: tickets y comprobantes de 80 mm se muestran a la misma escala (no «ajustar página», que agranda los cortos). */
+function PdfFrame({document:pdf,filename,receipt,releaseRef,onRetry}:{document:Blob;filename:string;receipt:boolean;releaseRef:React.RefObject<(()=>Promise<void>)|null>;onRetry?:()=>void}){
  const frame=useRef<HTMLIFrameElement>(null),connect=useRef<(()=>void)|null>(null);
  const[state,setState]=useState<"loading"|"opening"|"ready"|"error">("loading"),[error,setError]=useState("");
  const[attempt,setAttempt]=useState(0);
@@ -49,7 +50,7 @@ function PdfFrame({document:pdf,filename,releaseRef,onRetry}:{document:Blob;file
    if(event.data.type==="connected"){
     if(sent)return;
     sent=true;window.clearTimeout(timeout);setState("opening");
-    try{const data=await pdf.arrayBuffer();if(!cancelled)send("open",{data,filename},[data]);}
+    try{const data=await pdf.arrayBuffer();if(!cancelled)send("open",{data,filename,zoom:receipt?"receipt":"page-fit"},[data]);}
     catch{if(!cancelled){window.clearTimeout(timeout);setError("No pudimos leer el documento. Vuelve a generarlo.");setState("error");}}
    }else if(event.data.type==="loaded"){
     window.clearTimeout(timeout);setState("ready");
@@ -67,7 +68,7 @@ function PdfFrame({document:pdf,filename,releaseRef,onRetry}:{document:Blob;file
    cancelled=true;window.clearTimeout(timeout);window.removeEventListener("message",listener);
    connect.current=null;releaseRef.current=null;void dispose().catch(()=>{});
   };
- },[pdf,filename,attempt,releaseRef]);
+ },[pdf,filename,receipt,attempt,releaseRef]);
  return <div className="pdf-viewer-frame" aria-busy={state==="loading"||state==="opening"}>
   <iframe key={attempt} ref={frame} title={`PDF · ${filename}`} onLoad={()=>connect.current?.()} allow="fullscreen" allowFullScreen sandbox="allow-scripts allow-same-origin allow-modals allow-downloads allow-popups"/>
   {state==="loading"&&<div className="pdf-viewer-overlay"><PdfLoading/></div>}

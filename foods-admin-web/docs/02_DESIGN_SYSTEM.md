@@ -1879,7 +1879,7 @@ en las órdenes y los ajustes de inventario, sin cambios del contrato ni de stoc
   fiscal (etiqueta del API, «RUC» en Perú), «Razón social» y «Dirección»
   opcional. Errores en línea; el backend valida de nuevo. Con comprobante no
   hay aviso de éxito ni ticket de pago: se abre `FiscalPrintDialog` (mismo
-  `PdfViewer` `sm`, «Comprobante · 80 mm») con la franja de contexto
+  `PdfViewer` `sm`, sin subtítulo: el título ya es «Factura F001-1») con la franja de contexto
   «Cobro registrado. Enviando el comprobante…» y `Spinner`. Espera hasta 8 s la
   respuesta de la autoridad y abre el PDF; si el documento ya está firmado,
   «Imprimir sin esperar» (`ghost`) lo abre antes. Sin respuesta a tiempo se
@@ -1887,6 +1887,8 @@ en las órdenes y los ajustes de inventario, sin cambios del contrato ni de stoc
   reintenta sola.»; Observado muestra el motivo. Rechazado o sin firmar no
   imprime: `ErrorState` con el motivo del API y «Ver ticket de venta»
   (`ghost`, icono `eye`). «Sin comprobante» conserva el ticket de venta.
+  Aceptado es el caso normal y no muestra franja de estado (2026-11-04): solo se
+  informa lo que el cajero debe atender (pendiente, observado, rechazado).
 - **Representación impresa (80 mm):** emisor (nombre comercial, razón social,
   RUC, dirección), título y número fiscal, fecha de emisión, cliente solo si
   fue identificado, `PED-`, líneas, «Valor de venta», cada impuesto, TOTAL,

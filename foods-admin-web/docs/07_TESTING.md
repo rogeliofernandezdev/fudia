@@ -3,7 +3,8 @@
 ## Visor PDF compartido
 
 `pdf-viewer.test.mjs` verifica versión alineada del visor oficial completo,
-motor/worker locales, protocolo de transferencia, impresión de PDF.js, fallos,
+motor/worker locales, protocolo de transferencia, escala común de recibos de 80 mm
+(ancho con tope 100 %; A4 conserva ajustar página), impresión de PDF.js, fallos,
 límites de canvas y liberación de listeners/URLs. Los tests de ticket y caja
 conservan el formato y contenido de sus generadores.
 El harness `node tests/helpers/pdf-viewer-preview.mjs` permite comprobar el

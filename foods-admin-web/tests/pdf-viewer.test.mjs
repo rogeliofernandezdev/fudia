@@ -19,7 +19,7 @@ function setup(){
  for(const id of ["printButton","downloadButton","previous","viewBookmark","secondaryToolbarButtonContainer"])elements.set(id,element(id));
  const document={...target(),body:element("body"),documentElement:{style:{setProperty:(...args)=>calls.push(["style",...args])}},createElement:()=>({...element(),getBoundingClientRect:()=>({height:140})}),getElementById:id=>elements.get(id),fullscreenElement:null};
  const parent={document:target(),postMessage:message=>messages.push(message)};
- const options={setAll:value=>calls.push(["options",value])};
+ const options={setAll:value=>calls.push(["options",value]),set:(key,value)=>calls.push(["option",key,value])};
  const app={initializedPromise:Promise.resolve(),eventBus:{on(){},dispatch:(...args)=>calls.push(["dispatch",...args])},pdfDocument:{numPages:7},pdfViewer:{printingAllowed:true},supportsPrinting:true,
   open:async args=>calls.push(["open",args]),close:async()=>calls.push(["close"]),unbindEvents:()=>calls.push(["unbindEvents"]),unbindWindowEvents:()=>calls.push(["unbindWindowEvents"]),
   triggerPrinting:async()=>calls.push(["print"]),afterPrint:()=>calls.push(["afterPrint"])};
@@ -27,7 +27,7 @@ function setup(){
  const revoked=[];let nextUrl=0;
  const URL={createObjectURL:()=>`blob:fixture-${++nextUrl}`,revokeObjectURL:url=>revoked.push(url)};
  const ResizeObserver=class{constructor(callback){resizeActions=callback;}observe(){}disconnect(){calls.push(["disconnectObserver"]);}};
- const context={window,parent,document,URL,ResizeObserver,location:{origin:"http://fudia.test"},matchMedia:()=>({matches:true}),AbortController,ArrayBuffer,Uint8Array,console};
+ const context={window,parent,document,URL,ResizeObserver,location:{origin:"http://fudia.test"},matchMedia:()=>({matches:true}),queueMicrotask,AbortController,ArrayBuffer,Uint8Array,console};
  vm.runInNewContext(read(runtime+"fudia-bridge.mjs"),context);
  const emit=async(target,type,event={})=>{for(const entry of handlers.get(target)??[])if(entry.type===type&&!entry.options.signal?.aborted)await entry.handler(event);};
  const message=(type,patch={})=>emit(window,"message",{source:parent,origin:context.location.origin,data:{channel:"fudia-pdf-viewer",session:"current",type,...patch}});
@@ -60,6 +60,32 @@ test("visor: transferencia de bytes solo desde el padre y el mismo origen/sesió
  const data=new ArrayBuffer(5);await s.message("open",{data,filename:"ticket.pdf"});
  const opened=s.calls.find(call=>call[0]==="open")[1];assert.equal(opened.data.buffer,data);assert.equal(opened.filename,"ticket.pdf");assert.equal("url" in opened,false);
  assert.equal(s.messages.at(-1).type,"loaded");assert.equal(s.messages.at(-1).pages,7);
+});
+
+test("visor: recibos de 80 mm a la misma escala, ajustados al ancho con tope",async()=>{
+ const open=async(zoom,pageWidthScale)=>{
+  const s=setup();const listeners=[],options=[];
+  s.app.eventBus.on=(name,handler,opts)=>listeners.push({name,handler,opts});
+  s.window.PDFViewerApplicationOptions.set=(key,value)=>options.push([key,value]);
+  s.app.pdfViewer={printingAllowed:true,currentScale:pageWidthScale};
+  await s.initialize();await s.message("connect");await s.message("open",{data:new ArrayBuffer(4),filename:"ticket.pdf",zoom});
+  const cap=listeners.find(entry=>entry.name==="scalechanging");
+  // PDF.js aplica el zoom inicial al abrir y avisa con scalechanging.
+  cap?.handler({presetValue:"page-width",scale:pageWidthScale});await Promise.resolve();
+  return {zoomOption:options.find(([key])=>key==="defaultZoomValue")?.[1],scale:s.app.pdfViewer.currentScale,capped:Boolean(cap)};
+ };
+ // PDF.js lee defaultZoomValue al abrir cada documento: el recibo abre ajustado al ancho, con tope 100 %.
+ assert.deepEqual(await open("receipt",1.46),{zoomOption:"page-width",scale:1,capped:true});
+ // En un móvil angosto el ancho manda: el recibo nunca se desborda.
+ assert.deepEqual(await open("receipt",0.9),{zoomOption:"page-width",scale:0.9,capped:true});
+ // Reportes A4 conservan «ajustar página» y no se limitan.
+ assert.deepEqual(await open("page-fit",1.46),{zoomOption:"page-fit",scale:1.46,capped:false});
+ const bridge=read(runtime+"fudia-bridge.mjs");
+ assert.match(bridge,/const RECEIPT_MAX_SCALE=1;/);
+ assert.doesNotMatch(bridge,/pagesinit/,"el zoom inicial lo aplica PDF.js; no se corrige después");
+ const frame=read("src/shared/pdf-viewer/pdf-viewer.tsx");
+ assert.match(frame,/receipt=\{size==="sm"\}/);
+ assert.match(frame,/zoom:receipt\?"receipt":"page-fit"/);
 });
 
 test("visor: impresión delegada al servicio de PDF.js y fallo permite descargar",async()=>{

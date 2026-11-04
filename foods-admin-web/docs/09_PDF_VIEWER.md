@@ -27,12 +27,21 @@ durante la visualización. Cambiarlo carga un documento nuevo y libera el anteri
 El llamador conserva permisos, descarga autenticada/generación y errores de esa
 operación. No añadir botones externos de imprimir o abrir.
 El zoom inicial es «Ajuste de la página»: muestra la hoja completa inmediatamente,
-sin abrir impresión. No cambia el formato de 80 mm ni A4. La barra conserva
+sin abrir impresión. No cambia el formato de 80 mm ni A4. Excepción para recibos
+(`size="sm"`: ticket, precuenta y comprobante electrónico de 80 mm): «ajustar
+página» agrandaba los documentos cortos y el ticket se veía mayor que su
+comprobante. Los recibos abren ajustados al ancho (`defaultZoomValue` se fija
+antes de cada apertura, porque PDF.js lo lee al abrir) con tope de 100 %, el
+tamaño real de 80 mm (`RECEIPT_MAX_SCALE` en `fudia-bridge.mjs`). Corregir el
+zoom después de `pagesinit` no sirve: PDF.js aplica su zoom inicial más tarde y lo
+pisa. Así todos se ven del mismo tamaño sin importar su alto y el PDF impreso no
+cambia: no se rellena el ticket con espacio en blanco, que gastaría papel térmico. La barra conserva
 zoom +/− y oculta el selector de escala; «Herramientas → Ajustar al ancho» permite
 ampliar la lectura sin ese desplegable. `size="sm"` conserva el
 modal de ticket de 480 px y `size="lg"` el informe de 960 px; respetan el límite
-del viewport y las hojas móviles del sistema visual. `subtitle` conserva el
-contexto de la cabecera original.
+del viewport y las hojas móviles del sistema visual. Los visores de ticket,
+comprobante e informe de caja no usan `subtitle`: la cabecera solo lleva icono,
+título y X («Comprobante · 80 mm» repetía el título y el propio PDF).
 La barra, superficie de lectura y acciones del visor usan gris oscuro neutro,
 con controles claros y hoja blanca, como un visor PDF de escritorio. La cabecera
 del modal conserva FudIA. El tema reside en tokens `pdf-viewer-*` de

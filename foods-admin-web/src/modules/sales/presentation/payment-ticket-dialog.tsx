@@ -25,7 +25,7 @@ export function PaymentTicketDialog({orderId,paymentId,close,mode="payment",noti
  },[detail.data,detail.isFetching,paymentId,mode,attempt]);
  const current=prepared?.source===detail.data&&prepared?.paymentId===paymentId&&(prepared?.mode??"payment")===mode?prepared:null;
  const failure=detail.isError?detail.error.message:error?.source===detail.data&&error?.paymentId===paymentId&&(error?.mode??"payment")===mode?error?.message:null;
- return <PdfViewer title={mode==="prebill"?"Precuenta":"Ticket de venta"} subtitle="Ticket · 80 mm" size="sm" document={current?.document??null} filename={current?.filename??"ticket.pdf"} onClose={close} notice={notice}
+ return <PdfViewer title={mode==="prebill"?"Precuenta":"Ticket de venta"} size="sm" document={current?.document??null} filename={current?.filename??"ticket.pdf"} onClose={close} notice={notice}
   loading={detail.isPending||detail.isFetching||(!current&&!failure)} error={failure}
   onRetry={()=>{setError(null);setPrepared(null);if(detail.isError)void detail.refetch();else setAttempt(value=>value+1);}}/>;
 }
